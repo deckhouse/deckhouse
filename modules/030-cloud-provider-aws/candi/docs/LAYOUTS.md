@@ -19,14 +19,14 @@ Additionally, you can enable the creation of default security groups (unless [`d
 The following groups and rules will be created:
 
 - `<prefix>-node` — assigned to cluster nodes:
-  - allow any outgoing traffic to `0.0.0.0/0`;
-  - allow any incoming traffic from the `<prefix>-loadbalancer` group;
-  - allow any incoming traffic from nodes in the same `<prefix>-node` group;
-  - allow incoming traffic over the `ICMP` protocol from CIDRs listed in [`publicNetworkAllowList`](cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist) (default `0.0.0.0/0`).
+  - allow any outgoing traffic to `0.0.0.0/0`
+  - allow any incoming traffic from the `<prefix>-loadbalancer` group
+  - allow any incoming traffic from nodes in the same `<prefix>-node` group
+  - allow incoming traffic over the `ICMP` protocol from CIDRs listed in [`publicNetworkAllowList`](cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist) (default `0.0.0.0/0`)
 - `<prefix>-loadbalancer` — used by load balancers:
-  - allow any incoming traffic from CIDRs in [`publicNetworkAllowList`](cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist);
-  - allow any outgoing traffic to the `<prefix>-node` group.
-- `<prefix>-ssh-accessible` — created when [`sshAllowList`](cluster_configuration.html#awsclusterconfiguration-sshallowlist) is set; allows incoming traffic over the `TCP` protocol on port 22 from the listed CIDRs (default `0.0.0.0/0`). Assigned to master nodes or to the bastion host in the `WithNAT` layout.
+  - allow any incoming traffic from CIDRs in [`publicNetworkAllowList`](cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist)
+  - allow any outgoing traffic to the `<prefix>-node` group
+- `<prefix>-ssh-accessible` — created when [`sshAllowList`](cluster_configuration.html#awsclusterconfiguration-sshallowlist) is set; allows incoming traffic over the `TCP` protocol on port 22 from the listed CIDRs (default `0.0.0.0/0`). Assigned to master nodes or to the bastion host in the `WithNAT` layout
 
 {% alert level="warning" %}
 When [`disableDefaultSecurityGroup: true`](cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup) is set, you must create all required security groups yourself and specify them in [`additionalSecurityGroups`](cluster_configuration.html#awsclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups). For load balancers, set groups with the `service.beta.kubernetes.io/aws-load-balancer-security-groups` annotation.
@@ -34,9 +34,9 @@ When [`disableDefaultSecurityGroup: true`](cluster_configuration.html#awscluster
 
 Attach custom security groups (created in the cloud in advance) via [`additionalSecurityGroups`](cluster_configuration.html#awsclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups):
 
-- for master nodes — in the [`masterNodeGroup.instanceClass.additionalSecurityGroups`](cluster_configuration.html#awsclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) parameter of the [AWSClusterConfiguration](cluster_configuration.html#awsclusterconfiguration) resource;
-- for static nodes — in the [`nodeGroups[].instanceClass.additionalSecurityGroups`](cluster_configuration.html#awsclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) parameter of the [AWSClusterConfiguration](cluster_configuration.html#awsclusterconfiguration) resource;
-- for ephemeral nodes — in the [`spec.additionalSecurityGroups`](cr.html#awsinstanceclass-v1-spec-additionalsecuritygroups) parameter of the [AWSInstanceClass](cr.html#awsinstanceclass) resource.
+- for master nodes — in the [`masterNodeGroup.instanceClass.additionalSecurityGroups`](cluster_configuration.html#awsclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) parameter of the [AWSClusterConfiguration](cluster_configuration.html#awsclusterconfiguration) resource
+- for static nodes — in the [`nodeGroups[].instanceClass.additionalSecurityGroups`](cluster_configuration.html#awsclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) parameter of the [AWSClusterConfiguration](cluster_configuration.html#awsclusterconfiguration) resource
+- for ephemeral nodes — in the [`spec.additionalSecurityGroups`](cr.html#awsinstanceclass-v1-spec-additionalsecuritygroups) parameter of the [AWSInstanceClass](cr.html#awsinstanceclass) resource
 
 Example of the layout configuration:
 
@@ -94,14 +94,14 @@ Additionally, you can enable the creation of default security groups (unless [`d
 The following groups and rules will be created:
 
 - `<prefix>-node` — assigned to cluster nodes:
-  - allow any outgoing traffic to `0.0.0.0/0`;
-  - allow any incoming traffic from the `<prefix>-loadbalancer` group;
-  - allow any incoming traffic from nodes in the same `<prefix>-node` group;
-  - allow incoming traffic over the `ICMP` protocol from CIDRs listed in [`publicNetworkAllowList`](cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist) (default `0.0.0.0/0`).
+  - allow any outgoing traffic to `0.0.0.0/0`
+  - allow any incoming traffic from the `<prefix>-loadbalancer` group
+  - allow any incoming traffic from nodes in the same `<prefix>-node` group
+  - allow incoming traffic over the `ICMP` protocol from CIDRs listed in [`publicNetworkAllowList`](cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist) (default `0.0.0.0/0`)
 - `<prefix>-loadbalancer` — used by load balancers:
-  - allow any incoming traffic from CIDRs in [`publicNetworkAllowList`](cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist);
-  - allow any outgoing traffic to the `<prefix>-node` group.
-- `<prefix>-ssh-accessible` — created when [`sshAllowList`](cluster_configuration.html#awsclusterconfiguration-sshallowlist) is set; allows incoming traffic over the `TCP` protocol on port 22 from the listed CIDRs (default `0.0.0.0/0`). Assigned to master nodes or to the bastion host in the `WithNAT` layout.
+  - allow any incoming traffic from CIDRs in [`publicNetworkAllowList`](cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist)
+  - allow any outgoing traffic to the `<prefix>-node` group
+- `<prefix>-ssh-accessible` — created when [`sshAllowList`](cluster_configuration.html#awsclusterconfiguration-sshallowlist) is set; allows incoming traffic over the `TCP` protocol on port 22 from the listed CIDRs (default `0.0.0.0/0`). Assigned to master nodes or to the bastion host in the `WithNAT` layout
 
 {% alert level="warning" %}
 When [`disableDefaultSecurityGroup: true`](cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup) is set, you must create all required security groups yourself and specify them in [`additionalSecurityGroups`](cluster_configuration.html#awsclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups). For load balancers, set groups with the `service.beta.kubernetes.io/aws-load-balancer-security-groups` annotation.
@@ -109,9 +109,9 @@ When [`disableDefaultSecurityGroup: true`](cluster_configuration.html#awscluster
 
 Attach custom security groups (created in the cloud in advance) via [`additionalSecurityGroups`](cluster_configuration.html#awsclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups):
 
-- for master nodes — in the [`masterNodeGroup.instanceClass.additionalSecurityGroups`](cluster_configuration.html#awsclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) parameter of the [AWSClusterConfiguration](cluster_configuration.html#awsclusterconfiguration) resource;
-- for static nodes — in the [`nodeGroups[].instanceClass.additionalSecurityGroups`](cluster_configuration.html#awsclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) parameter of the [AWSClusterConfiguration](cluster_configuration.html#awsclusterconfiguration) resource;
-- for ephemeral nodes — in the [`spec.additionalSecurityGroups`](cr.html#awsinstanceclass-v1-spec-additionalsecuritygroups) parameter of the [AWSInstanceClass](cr.html#awsinstanceclass) resource.
+- for master nodes — in the [`masterNodeGroup.instanceClass.additionalSecurityGroups`](cluster_configuration.html#awsclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) parameter of the [AWSClusterConfiguration](cluster_configuration.html#awsclusterconfiguration) resource
+- for static nodes — in the [`nodeGroups[].instanceClass.additionalSecurityGroups`](cluster_configuration.html#awsclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) parameter of the [AWSClusterConfiguration](cluster_configuration.html#awsclusterconfiguration) resource
+- for ephemeral nodes — in the [`spec.additionalSecurityGroups`](cr.html#awsinstanceclass-v1-spec-additionalsecuritygroups) parameter of the [AWSInstanceClass](cr.html#awsinstanceclass) resource
 
 Example of the layout configuration:
 

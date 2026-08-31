@@ -19,16 +19,16 @@ Additionally, you can enable the creation of a security group using the [`intern
 
 The following inbound rules will be created:
 
-- allow incoming traffic over the `TCP` protocol on port 22 from CIDRs listed in [`sshAllowList`](cluster_configuration.html#openstackclusterconfiguration-sshallowlist) (default `0.0.0.0/0`);
-- allow incoming traffic over the `ICMP` protocol from `0.0.0.0/0`;
-- allow incoming traffic over the `TCP` protocol on ports 30000–32767 for NodePort usage (UDP NodePorts are not opened by default);
-- allow any incoming traffic from nodes in the same security group.
+- allow incoming traffic over the `TCP` protocol on port 22 from CIDRs listed in [`sshAllowList`](cluster_configuration.html#openstackclusterconfiguration-sshallowlist) (default `0.0.0.0/0`)
+- allow incoming traffic over the `ICMP` protocol from `0.0.0.0/0`
+- allow incoming traffic over the `TCP` protocol on ports 30000–32767 for NodePort usage (UDP NodePorts are not opened by default)
+- allow any incoming traffic from nodes in the same security group
 
 Attach custom security groups (created in the cloud in advance) via [`additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups):
 
-- for master nodes — in the [`masterNodeGroup.instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration) resource;
-- for static nodes — in the [`nodeGroups[].instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration) resource;
-- for ephemeral nodes — in the [`spec.additionalSecurityGroups`](cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) parameter of the [OpenStackInstanceClass](cr.html#openstackinstanceclass) resource.
+- for master nodes — in the [`masterNodeGroup.instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration) resource
+- for static nodes — in the [`nodeGroups[].instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration) resource
+- for ephemeral nodes — in the [`spec.additionalSecurityGroups`](cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) parameter of the [OpenStackInstanceClass](cr.html#openstackinstanceclass) resource
 
 Example of the layout configuration:
 
@@ -133,16 +133,16 @@ Additionally, you can enable the creation of a security group using the [`intern
 
 The following inbound rules will be created:
 
-- allow incoming traffic over the `TCP` protocol on port 22 from CIDRs listed in [`sshAllowList`](cluster_configuration.html#openstackclusterconfiguration-sshallowlist) (default `0.0.0.0/0`);
-- allow incoming traffic over the `ICMP` protocol from `0.0.0.0/0`;
-- allow incoming traffic over the `TCP` protocol on ports 30000–32767 for NodePort usage (UDP NodePorts are not opened by default);
-- allow any incoming traffic from nodes in the same security group.
+- allow incoming traffic over the `TCP` protocol on port 22 from CIDRs listed in [`sshAllowList`](cluster_configuration.html#openstackclusterconfiguration-sshallowlist) (default `0.0.0.0/0`)
+- allow incoming traffic over the `ICMP` protocol from `0.0.0.0/0`
+- allow incoming traffic over the `TCP` protocol on ports 30000–32767 for NodePort usage (UDP NodePorts are not opened by default)
+- allow any incoming traffic from nodes in the same security group
 
 Attach custom security groups (created in the cloud in advance) via [`additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups):
 
-- for master nodes — in the [`masterNodeGroup.instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration) resource;
-- for static nodes — in the [`nodeGroups[].instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration) resource;
-- for ephemeral nodes — in the [`spec.additionalSecurityGroups`](cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) parameter of the [OpenStackInstanceClass](cr.html#openstackinstanceclass) resource.
+- for master nodes — in the [`masterNodeGroup.instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration) resource
+- for static nodes — in the [`nodeGroups[].instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration) resource
+- for ephemeral nodes — in the [`spec.additionalSecurityGroups`](cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) parameter of the [OpenStackInstanceClass](cr.html#openstackinstanceclass) resource
 
 Example of the layout configuration:
 

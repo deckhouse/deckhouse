@@ -290,9 +290,9 @@ apiVersions:
               Defines whether SecurityGroups must be configured for the internal network ports.
 
               When enabled, DKP creates a security group named after the cluster `prefix` with the following default inbound rules:
-              - TCP/22 (SSH) from `0.0.0.0/0` by default;
-              - ICMP from `0.0.0.0/0`;
-              - TCP NodePorts `30000–32767` from `0.0.0.0/0`.
+              - TCP/22 (SSH) from `0.0.0.0/0` by default
+              - ICMP from `0.0.0.0/0`
+              - TCP NodePorts `30000–32767` from `0.0.0.0/0`
 
               For details, see [Huawei Cloud: Layouts](layouts.html#standard).
             type: boolean

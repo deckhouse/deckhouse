@@ -16,11 +16,11 @@ Additionally, you can enable the creation of a security group using the [`intern
 
 The following inbound rules will be created:
 
-- allow incoming traffic over the `TCP` protocol on port 22 from `0.0.0.0/0`;
-- allow incoming traffic over the `ICMP` protocol from `0.0.0.0/0`;
-- allow incoming traffic over the `TCP` protocol on ports 30000–32767 for NodePort usage (UDP NodePorts are not opened by default).
+- allow incoming traffic over the `TCP` protocol on port 22 from `0.0.0.0/0`
+- allow incoming traffic over the `ICMP` protocol from `0.0.0.0/0`
+- allow incoming traffic over the `TCP` protocol on ports 30000–32767 for NodePort usage (UDP NodePorts are not opened by default)
 
-The “all inbound traffic from nodes in the same security group” rule is not created by default in Huawei Cloud.
+Unlike OpenStack, the module does not add a rule that allows all inbound traffic between nodes in the same security group. By default, only the ports and protocols listed above are open between cluster nodes.
 
 Attach custom security groups for CloudEphemeral nodes in the [HuaweiCloudInstanceClass](cr.html#huaweicloudinstanceclass) resource via [`spec.securityGroups`](cr.html#huaweicloudinstanceclass-v1-spec-securitygroups). They are applied together with the group created by the module.
 
@@ -64,11 +64,11 @@ Additionally, you can enable the creation of a security group using the [`intern
 
 The following inbound rules will be created:
 
-- allow incoming traffic over the `TCP` protocol on port 22 from `0.0.0.0/0`;
-- allow incoming traffic over the `ICMP` protocol from `0.0.0.0/0`;
-- allow incoming traffic over the `TCP` protocol on ports 30000–32767 for NodePort usage (UDP NodePorts are not opened by default).
+- allow incoming traffic over the `TCP` protocol on port 22 from `0.0.0.0/0`
+- allow incoming traffic over the `ICMP` protocol from `0.0.0.0/0`
+- allow incoming traffic over the `TCP` protocol on ports 30000–32767 for NodePort usage (UDP NodePorts are not opened by default)
 
-The “all inbound traffic from nodes in the same security group” rule is not created by default in Huawei Cloud.
+Unlike OpenStack, the module does not add a rule that allows all inbound traffic between nodes in the same security group. By default, only the ports and protocols listed above are open between cluster nodes.
 
 Attach custom security groups for CloudEphemeral nodes in the [HuaweiCloudInstanceClass](cr.html#huaweicloudinstanceclass) resource via [`spec.securityGroups`](cr.html#huaweicloudinstanceclass-v1-spec-securitygroups). They are applied together with the group created by the module.
 
