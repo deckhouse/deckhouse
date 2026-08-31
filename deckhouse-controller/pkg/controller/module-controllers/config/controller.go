@@ -26,6 +26,7 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
@@ -43,6 +44,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
@@ -100,8 +102,10 @@ func RegisterController(
 
 	if err := ctrl.NewControllerManagedBy(runtimeManager).
 		Named(controllerName).
-		For(&v1alpha1.ModuleConfig{}).
-		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
+		// the config filter must not gate the watches below: a package version
+		// promotion is a label and status change, invisible to a global
+		// generation or annotation predicate
+		For(&v1alpha1.ModuleConfig{}, builder.WithPredicates(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{}))).
 		Watches(&v1alpha1.Module{}, ctrlhandler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
 			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: obj.(*v1alpha1.Module).Name}}}
 		}), builder.WithPredicates(predicate.Funcs{
@@ -115,6 +119,28 @@ func RegisterController(
 			GenericFunc: func(_ event.GenericEvent) bool {
 				return false
 			},
+		})).
+		// a promoted or refreshed package version recomputes the decisions a
+		// draft window left on defaults: the stage gauges and the licensing gates
+		Watches(&v1alpha1.ModulePackageVersion{}, ctrlhandler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
+			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: obj.(*v1alpha1.ModulePackageVersion).Spec.PackageName}}}
+		}), builder.WithPredicates(predicate.Funcs{
+			CreateFunc: func(e event.CreateEvent) bool {
+				mpv, ok := e.Object.(*v1alpha1.ModulePackageVersion)
+				return ok && !mpv.IsDraft()
+			},
+			UpdateFunc: func(e event.UpdateEvent) bool {
+				oldMPV, okOld := e.ObjectOld.(*v1alpha1.ModulePackageVersion)
+				newMPV, okNew := e.ObjectNew.(*v1alpha1.ModulePackageVersion)
+				if !okOld || !okNew {
+					return false
+				}
+
+				return oldMPV.IsDraft() != newMPV.IsDraft() ||
+					!equality.Semantic.DeepEqual(oldMPV.Status.PackageMetadata, newMPV.Status.PackageMetadata)
+			},
+			DeleteFunc:  func(_ event.DeleteEvent) bool { return false },
+			GenericFunc: func(_ event.GenericEvent) bool { return false },
 		})).
 		WithOptions(controller.Options{
 			MaxConcurrentReconciles: maxConcurrentReconciles,
@@ -140,6 +166,46 @@ type reconciler struct {
 	configValidator  *configtools.Validator
 	exts             extenders.IExtendersStack
 	logger           *log.Logger
+}
+
+// embeddedByAnnotation reports whether the module v2 sync marked the module as
+// shipped in the image. The annotation lives on the shared object metadata, so
+// the v1 view carries it too.
+func embeddedByAnnotation(module *v1alpha1.Module) bool {
+	return module.Annotations[v1alpha2.ModuleAnnotationEmbedded] == "true"
+}
+
+// packageVersionOf resolves the package version the module runs, by the spec
+// triple of its v2 resource. A module without a resource or a full triple and
+// a dev module name no version; the callers then read the empty metadata
+// state, the answer an unknown module gets.
+func (r *reconciler) packageVersionOf(ctx context.Context, moduleName string) *v1alpha1.ModulePackageVersion {
+	moduleV2 := new(v1alpha2.Module)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleName}, moduleV2); err != nil {
+		if !apierrors.IsNotFound(err) {
+			r.logger.Warn("failed to get the module v2 resource", slog.String("name", moduleName), log.Err(err))
+		}
+
+		return nil
+	}
+
+	// a dev module runs a mutable tag the catalog publishes no version for
+	if moduleV2.IsDev() || moduleV2.Spec.PackageRepositoryName == "" || moduleV2.Spec.PackageVersion == "" {
+		return nil
+	}
+
+	name := v1alpha1.MakeModulePackageVersionName(moduleV2.Spec.PackageRepositoryName, moduleName, moduleV2.Spec.PackageVersion)
+
+	mpv := new(v1alpha1.ModulePackageVersion)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: name}, mpv); err != nil {
+		if !apierrors.IsNotFound(err) {
+			r.logger.Warn("failed to get the module package version", slog.String("name", name), log.Err(err))
+		}
+
+		return nil
+	}
+
+	return mpv
 }
 
 type moduleManager interface {
@@ -322,13 +388,9 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 			return ctrl.Result{}, err
 		}
 
-		// Reset deprecated and experimental metrics when module is disabled
-		if module.IsDeprecated() {
-			r.metricStorage.GaugeSet(telemetry.WrapName(metrics.DeprecatedModuleIsEnabled), 0.0, map[string]string{metrics.LabelModule: moduleConfig.GetName()})
-		}
-		if module.IsExperimental() {
-			r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 0.0, map[string]string{metrics.LabelModule: moduleConfig.GetName()})
-		}
+		// a disabled module raises no stage alerts, whatever its stage says
+		r.metricStorage.GaugeSet(telemetry.WrapName(metrics.DeprecatedModuleIsEnabled), 0.0, map[string]string{metrics.LabelModule: moduleConfig.GetName()})
+		r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 0.0, map[string]string{metrics.LabelModule: moduleConfig.GetName()})
 
 		// skip disabled modules
 		r.logger.Debug("skip disabled module", slog.String("name", module.Name))
@@ -348,13 +410,20 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 		}
 	}
 
-	if module.IsExperimental() {
-		r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 1.0, map[string]string{metrics.LabelModule: moduleConfig.GetName()})
+	// the stage lives in the package version metadata; a draft or missing
+	// version reads as no stage, and the promotion re-runs this reconcile
+	mpv := r.packageVersionOf(ctx, module.Name)
+
+	experimental, deprecated := 0.0, 0.0
+	if mpv.IsModuleExperimental() {
+		experimental = 1.0
+	}
+	if mpv.IsModuleDeprecated() {
+		deprecated = 1.0
 	}
 
-	if module.IsDeprecated() {
-		r.metricStorage.GaugeSet(telemetry.WrapName(metrics.DeprecatedModuleIsEnabled), 1.0, map[string]string{metrics.LabelModule: moduleConfig.GetName()})
-	}
+	r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), experimental, map[string]string{metrics.LabelModule: moduleConfig.GetName()})
+	r.metricStorage.GaugeSet(telemetry.WrapName(metrics.DeprecatedModuleIsEnabled), deprecated, map[string]string{metrics.LabelModule: moduleConfig.GetName()})
 
 	if err := r.addFinalizer(ctx, moduleConfig); err != nil {
 		r.logger.Error("failed to add finalizer", slog.String("module", module.Name), log.Err(err))
@@ -368,7 +437,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	}
 
 	// skip embedded modules
-	if module.IsEmbedded() {
+	if embeddedByAnnotation(module) {
 		r.logger.Debug("skip embedded module", slog.String("name", module.Name))
 		return ctrl.Result{}, nil
 	}
@@ -475,7 +544,7 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	}
 
 	// clear downloaded module
-	if !module.IsEmbedded() && !module.IsEnabledByBundle(r.edition.Name, r.edition.Bundle) {
+	if !embeddedByAnnotation(module) && !r.edition.IsEnabled(utils.EditionLicensing(r.packageVersionOf(ctx, module.Name))) {
 		err := utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 			module.Properties.UpdatePolicy = ""
 			module.Properties.Source = ""
@@ -556,6 +625,8 @@ func (r *reconciler) disableModule(ctx context.Context, module *v1alpha1.Module)
 		return fmt.Errorf("delete module documentation: %w", err)
 	}
 
+	enabledByBundle := r.edition.IsEnabled(utils.EditionLicensing(r.packageVersionOf(ctx, module.Name)))
+
 	return utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
 		if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionFalse) {
 			return false
@@ -571,7 +642,7 @@ func (r *reconciler) disableModule(ctx context.Context, module *v1alpha1.Module)
 			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, "", "")
 			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
 		default:
-			if !module.IsEnabledByBundle(r.edition.Name, r.edition.Bundle) {
+			if !enabledByBundle {
 				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
 			}
 		}
