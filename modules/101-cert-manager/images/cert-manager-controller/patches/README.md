@@ -15,3 +15,5 @@ GHSA:
 - GHSA-gcjh-h69q-9w9g
 - GHSA-hrxh-6v49-42gf
 
+Rebuild note: force image rebuild against builder/golang-bookworm (Go 1.25.13) to clear fixable stdlib CVEs.
+
