@@ -48,7 +48,9 @@
 // every rebuild of a release (a dev build always counts as v2.0.0), so its
 // status is refreshed when the module files change and left alone when they
 // match - a no-change restart rewrites nothing. A complete release version is
-// never touched.
+// never touched. Both the version an embedded package carries and the one the
+// bootstrap writes into the Module spec come from app.EmbeddedPackageVersion,
+// because the reconciler composes the version's name back out of that spec.
 package pkgsync
 
 import (
@@ -99,9 +101,11 @@ type syncer struct {
 // Sync ensures the package objects of the old module stack for the given
 // Deckhouse version and embedded modules dir. The repositories go first, so
 // the version stubs find them in place. A source naming no valid version (no
-// module source, an unparsable version, an illegal object name, an unreadable
-// module dir, broken schema files) is skipped with a warning; an API failure
-// stops the sync.
+// module source, an unparsable release version, an illegal object name, an
+// unreadable module dir, broken schema files) is skipped with a warning; an
+// API failure stops the sync. An embedded module skipped here reconciles
+// nowhere, since the Module reconciler resolves the same version - see
+// known-hazards.md.
 func Sync(ctx context.Context, reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, embeddedModulesDir string, logger *log.Logger) error {
 	return newSyncer(reader, writer, dc, deckhouseVersion, embeddedModulesDir, logger).sync(ctx)
 }

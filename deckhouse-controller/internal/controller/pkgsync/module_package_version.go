@@ -52,10 +52,7 @@ func (s *syncer) syncModulePackageVersions(ctx context.Context) error {
 // syncVersionsFromImage walks the embedded modules dir and ensures a complete
 // version for every module the running image ships.
 func (s *syncer) syncVersionsFromImage(ctx context.Context) error {
-	version, ok := s.embeddedVersion()
-	if !ok {
-		return nil
-	}
+	version := app.EmbeddedPackageVersion(s.deckhouseVersion)
 
 	entries, err := os.ReadDir(s.embeddedModulesDir)
 	if err != nil {
@@ -73,27 +70,6 @@ func (s *syncer) syncVersionsFromImage(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-// embeddedVersion returns the version the embedded packages carry: the
-// deckhouse version without the prerelease and metadata parts, so it stays
-// stable across builds of one release. A "dev" binary counts as v2.0.0,
-// matching the package runtime. Any other non-semver version names no
-// versions and skips the embedded sync with a warning.
-func (s *syncer) embeddedVersion() (string, bool) {
-	if s.deckhouseVersion == "dev" {
-		return "v2.0.0", true
-	}
-
-	parsed, err := semver.NewVersion(s.deckhouseVersion)
-	if err != nil {
-		s.logger.Warn("deckhouse version is not a semver, skip the embedded package versions",
-			slog.String("version", s.deckhouseVersion), log.Err(err))
-
-		return "", false
-	}
-
-	return fmt.Sprintf("v%d.%d.%d", parsed.Major(), parsed.Minor(), parsed.Patch()), true
 }
 
 // ensureEmbeddedVersion ensures the complete version of one module shipped in
