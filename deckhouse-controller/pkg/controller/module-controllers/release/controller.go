@@ -632,12 +632,16 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 	}
 
 	// mirror the deployed release into the module v2 resource; reconciles heal
-	// drift, and the pull override check above keeps its precedence
-	if err = pkgsync.EnsureModule(ctx, r.apiReader, r.client, release.GetModuleName(),
-		pkgsync.OriginFromDeployedRelease(release.GetModuleSource(), release.GetModuleVersion()), r.log); err != nil {
-		r.log.Error("failed to mirror the release into the module v2", slog.String("module", release.GetModuleName()), log.Err(err))
+	// drift, and the pull override check above keeps its precedence. A module
+	// still shipped in the image runs its embedded copy while the release is
+	// only staged, so the module keeps its embedded facts.
+	if !r.installer.IsEmbeddedPresent(release.GetModuleName()) {
+		if err = pkgsync.EnsureModule(ctx, r.apiReader, r.client, release.GetModuleName(),
+			pkgsync.OriginFromDeployedRelease(release.GetModuleSource(), release.GetModuleVersion()), r.log); err != nil {
+			r.log.Error("failed to mirror the release into the module v2", slog.String("module", release.GetModuleName()), log.Err(err))
 
-		return res, fmt.Errorf("mirror the release into the module v2: %w", err)
+			return res, fmt.Errorf("mirror the release into the module v2: %w", err)
+		}
 	}
 
 	ownerRef := metav1.OwnerReference{
@@ -1286,6 +1290,15 @@ func (r *reconciler) runReleaseDeploy(ctx context.Context, release *v1alpha1.Mod
 
 	if overridden {
 		r.log.Debug("module is overridden, skip the module v2 mirror",
+			slog.String("module", release.GetModuleName()))
+
+		return nil
+	}
+
+	// a module still shipped in the image runs its embedded copy while the
+	// release is only staged, so the module keeps its embedded facts
+	if r.installer.IsEmbeddedPresent(release.GetModuleName()) {
+		r.log.Debug("module is still embedded, skip the module v2 mirror",
 			slog.String("module", release.GetModuleName()))
 
 		return nil
