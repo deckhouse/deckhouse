@@ -133,3 +133,5 @@ shell:
   - export GOPROXY=$(cat /run/secrets/GOPROXY)
   - CGO_ENABLED=1 GOOS=linux GOARCH=amd64 go build -ldflags="-w -s" -o /d8-bcheck d8-bcheck.go
   - mv /src/scripts/* /
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_version)) }}

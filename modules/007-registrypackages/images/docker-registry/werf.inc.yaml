@@ -78,3 +78,5 @@ shell:
   - mv bin/registry /
   - mv /src/scripts/* /
   - chmod +x /auth_server /registry /install /uninstall
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_version)) }}
