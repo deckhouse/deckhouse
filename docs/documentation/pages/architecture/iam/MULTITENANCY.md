@@ -95,17 +95,16 @@ The module consists of the following components:
   - Validating the Project and ProjectTemplate custom resources.
   - Validating Namespace if [`.spec.settings.allowNamespacesWithoutProjects=false`](/modules/multitenancy-manager/configuration.html#parameters-allownamespaceswithoutprojects) is set in the `multitenancy-manager` module parameters.
   - Creating the resources specified in the ProjectTemplate custom resource based on the parameters set in Project.
+  - Managing the grants mechanism for cluster-scoped resources — the
+    [`GrantableClusterResourceDefinition`](/modules/multitenancy-manager/cr.html#grantableclusterresourcedefinition),
+    [`GrantableClusterResourceReference`](/modules/multitenancy-manager/cr.html#grantableclusterresourcereference),
+    [`ClusterResourceGrantPolicy`](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy), and
+    [`AvailableClusterResource`](/modules/multitenancy-manager/cr.html#availableclusterresource) custom resources. It
+    renders the per-project `AvailableClusterResource` catalogs and runs the validating/mutating admission webhooks
+    (`/is-granted`, `/defaults`, `/protect`) that enforce which cluster resources a project may reference and
+    substitute per-project defaults on CREATE.
 
    > **Warning.** Multitenancy-manager has `cluster-admin` permissions, which allow it to create any objects described in the ProjectTemplate resource.
-
-- **Cluster-objects-controller**: manages the grants mechanism — the custom resources
-  [`GrantableClusterResourceDefinition`](/modules/multitenancy-manager/cr.html#grantableclusterresourcedefinition),
-  [`GrantableClusterResourceReference`](/modules/multitenancy-manager/cr.html#grantableclusterresourcereference),
-  [`ClusterResourceGrantPolicy`](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy), and
-  [`AvailableClusterResource`](/modules/multitenancy-manager/cr.html#availableclusterresource). It renders the
-  per-project `AvailableClusterResource` catalogs and runs the validating/mutating admission webhooks
-  (`/is-granted`, `/defaults`, `/protect`) that enforce which cluster resources a project may reference and
-  substitute per-project defaults on CREATE.
 
 ## Module interactions
 
@@ -115,4 +114,6 @@ The module interacts with the following components:
   - Managing the Project and ProjectTemplate custom resources.
   - Validating the Project and ProjectTemplate custom resources and the standard Namespace resource.
   - Creating the resources specified in the ProjectTemplate custom resource based on the parameters set in Project.
-  - Grant admission: the cluster-objects-controller webhooks validate and default references to granted cluster resources (e.g. `StorageClass`, `ClusterIssuer`, `ClusterRole`) in objects created within project namespaces, and reject manual creation of `AvailableClusterResource` objects.
+  - Managing the GrantableClusterResourceDefinition, GrantableClusterResourceReference, ClusterResourceGrantPolicy, and AvailableClusterResource custom resources.
+  - Validating the AvailableClusterResource custom resources.
+  - Creating validation admission webhooks based on conditions in GrantableClusterResourceDefinition and GrantableClusterResourceReference custom resources.

@@ -87,18 +87,17 @@ description: Как устроена мультитенантность в Deckh
   - управление кастомными ресурсами Project и ProjectTemplate;
   - валидация кастомных ресурсов Project и ProjectTemplate;
   - валидация стандартного ресурса Namespace если в параметрах модуля `multitenancy-manager` задано [`.spec.settings.allowNamespacesWithoutProjects=false`](/modules/multitenancy-manager/configuration.html#parameters-allownamespaceswithoutprojects);
-  - создание ресурсов, указанных в кастомном ресурсе ProjectTemplate, на основе параметров, заданных в Project.
+  - создание ресурсов, указанных в кастомном ресурсе ProjectTemplate, на основе параметров, заданных в Project;
+  - управление механизмом грантов для кластерных ресурсов — кастомными ресурсами
+    [`GrantableClusterResourceDefinition`](/modules/multitenancy-manager/cr.html#grantableclusterresourcedefinition),
+    [`GrantableClusterResourceReference`](/modules/multitenancy-manager/cr.html#grantableclusterresourcereference),
+    [`ClusterResourceGrantPolicy`](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy) и
+    [`AvailableClusterResource`](/modules/multitenancy-manager/cr.html#availableclusterresource). Формирует
+    каталоги `AvailableClusterResource` для проектов и запускает валидирующие/мутирующие admission-вебхуки
+    (`/is-granted`, `/defaults`, `/protect`), которые контролируют, какие кластерные ресурсы проект может
+    ссылать, и подставляют дефолты проекта при CREATE.
 
    > **Внимание.** Multitenancy-manager имеет права `cluster-admin`, что позволяет создавать любые объекты, описанные в ресурсе ProjectTemplate.
-
-- **Cluster-objects-controller** — управляет механизмом грантов: кастомными ресурсами
-  [`GrantableClusterResourceDefinition`](/modules/multitenancy-manager/cr.html#grantableclusterresourcedefinition),
-  [`GrantableClusterResourceReference`](/modules/multitenancy-manager/cr.html#grantableclusterresourcereference),
-  [`ClusterResourceGrantPolicy`](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy) и
-  [`AvailableClusterResource`](/modules/multitenancy-manager/cr.html#availableclusterresource). Формирует
-  каталоги `AvailableClusterResource` для проектов и запускает валидирующие/мутирующие admission-вебхуки
-  (`/is-granted`, `/defaults`, `/protect`), которые контролируют, какие кластерные ресурсы проект может
-  ссылать, и подставляют дефолты проекта при CREATE.
 
 ## Взаимодействия модуля
 
@@ -108,4 +107,6 @@ description: Как устроена мультитенантность в Deckh
   - управление кастомными ресурсами Project и ProjectTemplate;
   - валидация кастомных ресурсов Project, ProjectTemplate, а также стандартного ресурса Namespace;
   - создание ресурсов, указанных в кастомном ресурсе ProjectTemplate, на основе параметров, заданных в Project.
-  - грант-валидация: вебхуки cluster-objects-controller валидируют и подставляют дефолты для ссылок на грантуемые кластерные ресурсы (напр. `StorageClass`, `ClusterIssuer`, `ClusterRole`) в объектах, созданных в неймспейсах проектов, и отклоняют ручное создание объектов `AvailableClusterResource`.
+  - управление кастомными ресурсами GrantableClusterResourceDefinition, GrantableClusterResourceReference, ClusterResourceGrantPolicy и AvailableClusterResource.
+  - валидация кастомных ресурсов AvailableClusterResource.
+  - создание validation admission-вебхуков на основе условий, заданных в кастомных ресурсах GrantableClusterResourceDefinition и GrantableClusterResourceReference.
