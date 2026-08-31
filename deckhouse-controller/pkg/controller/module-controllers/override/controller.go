@@ -37,7 +37,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/modulesync"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
@@ -65,7 +65,7 @@ func RegisterController(runtimeManager manager.Manager,
 	r := &reconciler{
 		init:                new(sync.WaitGroup),
 		client:              runtimeManager.GetClient(),
-		moduleSync:          modulesync.New(runtimeManager.GetClient(), runtimeManager.GetAPIReader(), dc.GetClock(), logger),
+		apiReader:           runtimeManager.GetAPIReader(),
 		log:                 logger,
 		loader:              loader,
 		moduleManager:       mm,
@@ -96,9 +96,10 @@ func RegisterController(runtimeManager manager.Manager,
 }
 
 type reconciler struct {
-	init                *sync.WaitGroup
-	client              client.Client
-	moduleSync          *modulesync.Syncer
+	init   *sync.WaitGroup
+	client client.Client
+	// apiReader bypasses the manager cache, so the module v2 mirror sees its own prior writes
+	apiReader           client.Reader
 	loader              *moduleloader.Loader
 	log                 *log.Logger
 	dependencyContainer dependency.Container
@@ -297,7 +298,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 
 		// mirror the override into the module v2 resource; running every scan
 		// interval also heals drift
-		if err = r.moduleSync.EnsureModule(ctx, mpo.Name, modulesync.OriginFromPullOverride(module.Properties.Source, mpo.Spec.ImageTag)); err != nil {
+		if err = pkgsync.EnsureModule(ctx, r.apiReader, r.client, mpo.Name, pkgsync.OriginFromPullOverride(module.Properties.Source, mpo.Spec.ImageTag), r.log); err != nil {
 			r.log.Error("failed to mirror the module pull override into the module v2", slog.String("name", mpo.Name), log.Err(err))
 			return ctrl.Result{}, err
 		}
@@ -326,7 +327,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 	}
 
 	// mirror the override into the module v2 resource before the restart
-	if err = r.moduleSync.EnsureModule(ctx, mpo.Name, modulesync.OriginFromPullOverride(module.Properties.Source, mpo.Spec.ImageTag)); err != nil {
+	if err = pkgsync.EnsureModule(ctx, r.apiReader, r.client, mpo.Name, pkgsync.OriginFromPullOverride(module.Properties.Source, mpo.Spec.ImageTag), r.log); err != nil {
 		r.log.Error("failed to mirror the module pull override into the module v2", slog.String("name", mpo.Name), log.Err(err))
 		return ctrl.Result{}, err
 	}

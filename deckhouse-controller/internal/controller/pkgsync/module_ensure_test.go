@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package modulesync
+package pkgsync
 
 import (
 	"context"
@@ -21,33 +21,28 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-func testModuleConfig(name string) *v1alpha1.ModuleConfig {
-	enabled := true
+func newEnsureClient(t *testing.T, objects ...client.Object) client.Client {
+	t.Helper()
 
-	return &v1alpha1.ModuleConfig{
-		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Spec: v1alpha1.ModuleConfigSpec{
-			Enabled:      &enabled,
-			Version:      2,
-			Settings:     v1alpha1.MakeMappedFields(map[string]any{"logLevel": "Debug"}),
-			UpdatePolicy: "test-alpha",
-		},
-	}
+	_, cl := newTestSyncer(t, testVersion, t.TempDir(), objects...)
+
+	return cl
 }
 
 func TestEnsureModule(t *testing.T) {
 	t.Run("creates a missing module and seeds the config fields", func(t *testing.T) {
-		s := newTestSyncer(t, emptyEmbeddedDir(t), testModuleConfig("echo"))
+		cl := newEnsureClient(t, testModuleConfig("echo"))
 
-		err := s.EnsureModule(context.Background(), "echo", OriginFromDeployedRelease("example", "v1.0.0"))
+		err := EnsureModule(context.Background(), cl, cl, "echo", OriginFromDeployedRelease("example", "v1.0.0"), log.NewNop())
 		require.NoError(t, err)
 
-		module := getV2Module(t, s, "echo")
+		module := getV2Module(t, cl, "echo")
 		assert.Equal(t, "v1.0.0", module.Spec.PackageVersion)
 		assert.Equal(t, "example", module.Spec.PackageRepositoryName)
 		assert.Equal(t, "test-alpha", module.Spec.UpdatePolicy)
@@ -58,12 +53,12 @@ func TestEnsureModule(t *testing.T) {
 	t.Run("seeds the config fields when the version arrives on an empty module", func(t *testing.T) {
 		existing := &v1alpha2.Module{ObjectMeta: metav1.ObjectMeta{Name: "echo"}}
 
-		s := newTestSyncer(t, emptyEmbeddedDir(t), existing, testModuleConfig("echo"))
+		cl := newEnsureClient(t, existing, testModuleConfig("echo"))
 
-		err := s.EnsureModule(context.Background(), "echo", OriginFromPullOverride("example", "dev-tag"))
+		err := EnsureModule(context.Background(), cl, cl, "echo", OriginFromPullOverride("example", "dev-tag"), log.NewNop())
 		require.NoError(t, err)
 
-		module := getV2Module(t, s, "echo")
+		module := getV2Module(t, cl, "echo")
 		assert.Equal(t, "dev-tag", module.Spec.PackageVersion)
 		assert.True(t, module.IsDev())
 		assert.Equal(t, "test-alpha", module.Spec.UpdatePolicy, "seeding must carry the config fields")
@@ -75,12 +70,12 @@ func TestEnsureModule(t *testing.T) {
 			Spec:       v1alpha2.ModuleSpec{PackageRepositoryName: "example", PackageVersion: "v1.0.0", UpdatePolicy: "manual"},
 		}
 
-		s := newTestSyncer(t, emptyEmbeddedDir(t), existing, testModuleConfig("echo"))
+		cl := newEnsureClient(t, existing, testModuleConfig("echo"))
 
-		err := s.EnsureModule(context.Background(), "echo", OriginFromDeployedRelease("example", "v1.1.0"))
+		err := EnsureModule(context.Background(), cl, cl, "echo", OriginFromDeployedRelease("example", "v1.1.0"), log.NewNop())
 		require.NoError(t, err)
 
-		module := getV2Module(t, s, "echo")
+		module := getV2Module(t, cl, "echo")
 		assert.Equal(t, "v1.1.0", module.Spec.PackageVersion)
 		assert.Equal(t, "manual", module.Spec.UpdatePolicy, "config fields belong to the config mirror after seeding")
 	})
@@ -93,12 +88,12 @@ func TestEnsureModuleConfig(t *testing.T) {
 			Spec:       v1alpha2.ModuleSpec{PackageRepositoryName: "example", PackageVersion: "v1.0.0"},
 		}
 
-		s := newTestSyncer(t, emptyEmbeddedDir(t), existing)
+		cl := newEnsureClient(t, existing)
 
-		err := s.EnsureModuleConfig(context.Background(), testModuleConfig("echo"))
+		err := EnsureModuleConfig(context.Background(), cl, cl, testModuleConfig("echo"), log.NewNop())
 		require.NoError(t, err)
 
-		module := getV2Module(t, s, "echo")
+		module := getV2Module(t, cl, "echo")
 		assert.Equal(t, "test-alpha", module.Spec.UpdatePolicy)
 		assert.Equal(t, map[string]any{"logLevel": "Debug"}, module.Spec.Settings.GetMap())
 	})
@@ -109,15 +104,15 @@ func TestEnsureModuleConfig(t *testing.T) {
 				Name:        "echo",
 				Annotations: map[string]string{v1alpha2.ModuleAnnotationEmbedded: "true"},
 			},
-			Spec: v1alpha2.ModuleSpec{PackageRepositoryName: embeddedRepositoryName, PackageVersion: "v1.77.0"},
+			Spec: v1alpha2.ModuleSpec{PackageRepositoryName: repositoryNameEmbedded, PackageVersion: "v1.77.0"},
 		}
 
-		s := newTestSyncer(t, emptyEmbeddedDir(t), existing)
+		cl := newEnsureClient(t, existing)
 
-		err := s.EnsureModuleConfig(context.Background(), testModuleConfig("echo"))
+		err := EnsureModuleConfig(context.Background(), cl, cl, testModuleConfig("echo"), log.NewNop())
 		require.NoError(t, err)
 
-		module := getV2Module(t, s, "echo")
+		module := getV2Module(t, cl, "echo")
 		assert.True(t, module.IsEmbedded(), "the config mirror must not strip the embedded annotation")
 		assert.Equal(t, "test-alpha", module.Spec.UpdatePolicy)
 	})
@@ -125,19 +120,19 @@ func TestEnsureModuleConfig(t *testing.T) {
 	t.Run("skips a module that has no package version yet", func(t *testing.T) {
 		existing := &v1alpha2.Module{ObjectMeta: metav1.ObjectMeta{Name: "echo"}}
 
-		s := newTestSyncer(t, emptyEmbeddedDir(t), existing)
+		cl := newEnsureClient(t, existing)
 
-		err := s.EnsureModuleConfig(context.Background(), testModuleConfig("echo"))
+		err := EnsureModuleConfig(context.Background(), cl, cl, testModuleConfig("echo"), log.NewNop())
 		require.NoError(t, err)
 
-		module := getV2Module(t, s, "echo")
+		module := getV2Module(t, cl, "echo")
 		assert.Nil(t, module.Spec.Settings, "config fields must not materialize a spec without a version")
 	})
 
 	t.Run("skips a config whose module does not exist", func(t *testing.T) {
-		s := newTestSyncer(t, emptyEmbeddedDir(t))
+		cl := newEnsureClient(t)
 
-		err := s.EnsureModuleConfig(context.Background(), testModuleConfig("ghost"))
+		err := EnsureModuleConfig(context.Background(), cl, cl, testModuleConfig("ghost"), log.NewNop())
 		require.NoError(t, err)
 	})
 }

@@ -45,7 +45,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/modulesync"
 	pkgruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
@@ -78,8 +77,6 @@ type Controller struct {
 	ctrl ctrlmanager.Manager
 	// sync is held for the whole bootstrap, so a waiter cannot observe a half-restored tree
 	sync *sync.WaitGroup
-
-	syncer *modulesync.Syncer
 
 	manager *pkgruntime.Runtime
 
@@ -195,15 +192,9 @@ func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, lo
 
 	settingsCh := make(chan addonutils.Values, 1)
 
-	// the bootstrap owns the module catalog, so orphaned modules are deleted
-	syncer := modulesync.New(runtime.GetClient(), runtime.GetAPIReader(), dc.GetClock(), logger.Named(controllerName),
-		modulesync.WithOrphanDeletion())
-
 	return &Controller{
 		ctrl: runtime,
 		sync: synced,
-
-		syncer: syncer,
 
 		manager: manager,
 
@@ -341,17 +332,14 @@ func (c *Controller) Start(ctx context.Context) error {
 		return fmt.Errorf("wait for cache sync")
 	}
 
-	modules, err := c.syncer.Sync(ctx)
-	if err != nil {
-		return fmt.Errorf("sync module resources: %w", err)
-	}
-
 	// The old module stack recorded its packages in module releases, and the
 	// image ships the embedded modules; give each of them a package version
-	// object, and the user module sources their repositories, while the
-	// controllers still wait for the sync. Runs after the module sync, so a
-	// deployed duplicate it superseded no longer counts.
-	if err := pkgsync.Sync(ctx, c.ctrl.GetAPIReader(), c.ctrl.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, c.logger.Named("pkgsync")); err != nil {
+	// object, the user module sources their repositories and every module its
+	// v1alpha2 resource, while the controllers still wait for the sync. The
+	// bootstrap owns the module catalog, so orphaned modules are deleted.
+	modules, err := pkgsync.Sync(ctx, c.ctrl.GetAPIReader(), c.ctrl.GetClient(), c.dc,
+		app.Version, app.EmbeddedModulesDir, c.logger.Named("pkgsync"), pkgsync.WithOrphanDeletion())
+	if err != nil {
 		return fmt.Errorf("sync package objects: %w", err)
 	}
 

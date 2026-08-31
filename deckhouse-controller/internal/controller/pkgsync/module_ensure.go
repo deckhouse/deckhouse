@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package modulesync
+package pkgsync
 
 // This file is for the old module stack controllers: on their events they
 // mirror what changed into the v1alpha2 Module, one module at a time, with
-// the same field mapping the startup Sync uses. The file dies together with
-// those controllers.
+// the same field mapping the startup sync uses. All reads go through reader,
+// and callers pass a direct (uncached) one, so a mirror sees its own prior
+// writes. The file dies together with those controllers.
 
 import (
 	"context"
@@ -29,6 +30,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // OriginFromPullOverride is the origin of a module a ready ModulePullOverride pins.
@@ -45,19 +47,21 @@ func OriginFromDeployedRelease(repositoryName, version string) Origin {
 // is the first to put a version on the module, it also fills the ModuleConfig
 // fields: they were gated on the version until now, and no config event will
 // replay them.
-func (s *Syncer) EnsureModule(ctx context.Context, name string, origin Origin) error {
+func EnsureModule(ctx context.Context, reader client.Reader, writer client.Client, moduleName string, origin Origin, logger *log.Logger) error {
+	s := &syncer{reader: reader, writer: writer, logger: logger}
+
 	moduleV2 := new(v1alpha2.Module)
-	if err := s.reader.Get(ctx, client.ObjectKey{Name: name}, moduleV2); err != nil {
+	if err := s.reader.Get(ctx, client.ObjectKey{Name: moduleName}, moduleV2); err != nil {
 		if !apierrors.IsNotFound(err) {
-			return fmt.Errorf("get module '%s': %w", name, err)
+			return fmt.Errorf("get module '%s': %w", moduleName, err)
 		}
 
-		conf, err := s.moduleConfig(ctx, name)
+		conf, err := s.moduleConfig(ctx, moduleName)
 		if err != nil {
 			return err
 		}
 
-		if _, err := s.createModuleV2(ctx, name, origin, conf); err != nil {
+		if _, err := s.createModuleV2(ctx, moduleName, origin, conf); err != nil {
 			return err
 		}
 
@@ -68,7 +72,7 @@ func (s *Syncer) EnsureModule(ctx context.Context, name string, origin Origin) e
 	var conf *v1alpha1.ModuleConfig
 	if origin.Known() && moduleV2.Spec.PackageVersion == "" {
 		var err error
-		if conf, err = s.moduleConfig(ctx, name); err != nil {
+		if conf, err = s.moduleConfig(ctx, moduleName); err != nil {
 			return err
 		}
 	}
@@ -79,7 +83,9 @@ func (s *Syncer) EnsureModule(ctx context.Context, name string, origin Origin) e
 // EnsureModuleConfig mirrors the config fields onto the v1alpha2 Module. A
 // module that does not exist or carries no version yet is skipped: the
 // version mirror fills the config fields when it seeds the module.
-func (s *Syncer) EnsureModuleConfig(ctx context.Context, conf *v1alpha1.ModuleConfig) error {
+func EnsureModuleConfig(ctx context.Context, reader client.Reader, writer client.Client, conf *v1alpha1.ModuleConfig, logger *log.Logger) error {
+	s := &syncer{reader: reader, writer: writer, logger: logger}
+
 	moduleV2 := new(v1alpha2.Module)
 	if err := s.reader.Get(ctx, client.ObjectKey{Name: conf.Name}, moduleV2); err != nil {
 		if !apierrors.IsNotFound(err) {
@@ -102,7 +108,7 @@ func (s *Syncer) EnsureModuleConfig(ctx context.Context, conf *v1alpha1.ModuleCo
 }
 
 // moduleConfig reads the module's live config; a missing or deleting config is nil.
-func (s *Syncer) moduleConfig(ctx context.Context, name string) (*v1alpha1.ModuleConfig, error) {
+func (s *syncer) moduleConfig(ctx context.Context, name string) (*v1alpha1.ModuleConfig, error) {
 	conf := new(v1alpha1.ModuleConfig)
 	if err := s.reader.Get(ctx, client.ObjectKey{Name: name}, conf); err != nil {
 		if !apierrors.IsNotFound(err) {

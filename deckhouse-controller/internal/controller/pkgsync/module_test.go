@@ -72,7 +72,17 @@ func testDeployedRelease(module, sourceName, version string) *v1alpha1.ModuleRel
 }
 
 func testModuleConfig(name string) *v1alpha1.ModuleConfig {
-	return &v1alpha1.ModuleConfig{ObjectMeta: metav1.ObjectMeta{Name: name}}
+	enabled := true
+
+	return &v1alpha1.ModuleConfig{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec: v1alpha1.ModuleConfigSpec{
+			Enabled:      &enabled,
+			Version:      2,
+			Settings:     v1alpha1.MakeMappedFields(map[string]any{"logLevel": "Debug"}),
+			UpdatePolicy: "test-alpha",
+		},
+	}
 }
 
 func getV2Module(t *testing.T, cl client.Client, name string) *v1alpha2.Module {

@@ -136,11 +136,11 @@ func WithOrphanDeletion() Option {
 // version, an illegal object name, an unreadable module dir, broken schema
 // files) is skipped with a warning; an API failure stops the sync. An
 // embedded module skipped here reconciles nowhere, since the Module
-// reconciler resolves the same version - see known-hazards.md.
-func Sync(ctx context.Context, reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, embeddedModulesDir string, logger *log.Logger) error {
-	_, err := newSyncer(reader, writer, dc, deckhouseVersion, embeddedModulesDir, logger).sync(ctx)
-
-	return err
+// reconciler resolves the same version - see known-hazards.md. The returned
+// Modules carry what was written: the caller hands them straight to the
+// package runtime without re-reading the cluster.
+func Sync(ctx context.Context, reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, embeddedModulesDir string, logger *log.Logger, opts ...Option) ([]v1alpha2.Module, error) {
+	return newSyncer(reader, writer, dc, deckhouseVersion, embeddedModulesDir, logger, opts...).sync(ctx)
 }
 
 // newSyncer builds a syncer for the given Deckhouse version and embedded modules dir.

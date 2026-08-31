@@ -49,8 +49,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/modulesync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
@@ -93,7 +93,7 @@ func RegisterController(
 	r := &reconciler{
 		init:                 new(sync.WaitGroup),
 		client:               runtimeManager.GetClient(),
-		moduleSync:           modulesync.New(runtimeManager.GetClient(), runtimeManager.GetAPIReader(), dc.GetClock(), logger),
+		apiReader:            runtimeManager.GetAPIReader(),
 		log:                  logger,
 		moduleManager:        mm,
 		metricStorage:        ms,
@@ -152,9 +152,10 @@ type Installer interface {
 }
 
 type reconciler struct {
-	init                *sync.WaitGroup
-	client              client.Client
-	moduleSync          *modulesync.Syncer
+	init   *sync.WaitGroup
+	client client.Client
+	// apiReader bypasses the manager cache, so the module v2 mirror sees its own prior writes
+	apiReader           client.Reader
 	log                 *log.Logger
 	dependencyContainer dependency.Container
 	exts                extenders.IExtendersStack
@@ -632,8 +633,8 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 
 	// mirror the deployed release into the module v2 resource; reconciles heal
 	// drift, and the pull override check above keeps its precedence
-	if err = r.moduleSync.EnsureModule(ctx, release.GetModuleName(),
-		modulesync.OriginFromDeployedRelease(release.GetModuleSource(), release.GetModuleVersion())); err != nil {
+	if err = pkgsync.EnsureModule(ctx, r.apiReader, r.client, release.GetModuleName(),
+		pkgsync.OriginFromDeployedRelease(release.GetModuleSource(), release.GetModuleVersion()), r.log); err != nil {
 		r.log.Error("failed to mirror the release into the module v2", slog.String("module", release.GetModuleName()), log.Err(err))
 
 		return res, fmt.Errorf("mirror the release into the module v2: %w", err)
@@ -1291,8 +1292,8 @@ func (r *reconciler) runReleaseDeploy(ctx context.Context, release *v1alpha1.Mod
 	}
 
 	// mirror the deployed release into the module v2 resource
-	if err = r.moduleSync.EnsureModule(ctx, release.GetModuleName(),
-		modulesync.OriginFromDeployedRelease(release.GetModuleSource(), release.GetModuleVersion())); err != nil {
+	if err = pkgsync.EnsureModule(ctx, r.apiReader, r.client, release.GetModuleName(),
+		pkgsync.OriginFromDeployedRelease(release.GetModuleSource(), release.GetModuleVersion()), r.log); err != nil {
 		return fmt.Errorf("mirror the release into the module v2: %w", err)
 	}
 

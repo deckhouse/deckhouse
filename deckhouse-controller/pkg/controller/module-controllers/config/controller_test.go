@@ -25,7 +25,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
-	"github.com/jonboulle/clockwork"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -33,7 +32,6 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/modulesync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
@@ -115,7 +113,7 @@ func (suite *ControllerTestSuite) buildReconciler() {
 	rec := &reconciler{
 		init:             new(sync.WaitGroup),
 		client:           suite.Client(),
-		moduleSync:       modulesync.New(suite.Client(), suite.Client(), clockwork.NewRealClock(), log.NewNop()),
+		apiReader:        suite.Client(),
 		logger:           log.NewNop(),
 		handler:          newMockHandler(suite.conversionsStore),
 		conversionsStore: suite.conversionsStore,

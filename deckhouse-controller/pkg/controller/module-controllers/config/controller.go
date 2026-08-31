@@ -25,7 +25,6 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
-	"github.com/jonboulle/clockwork"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -41,8 +40,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/modulesync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
@@ -80,7 +79,7 @@ func RegisterController(
 	r := &reconciler{
 		init:             new(sync.WaitGroup),
 		client:           runtimeManager.GetClient(),
-		moduleSync:       modulesync.New(runtimeManager.GetClient(), runtimeManager.GetAPIReader(), clockwork.NewRealClock(), logger),
+		apiReader:        runtimeManager.GetAPIReader(),
 		logger:           logger,
 		handler:          handler,
 		conversionsStore: conversionsStore,
@@ -128,9 +127,10 @@ func RegisterController(
 }
 
 type reconciler struct {
-	init             *sync.WaitGroup
-	client           client.Client
-	moduleSync       *modulesync.Syncer
+	init   *sync.WaitGroup
+	client client.Client
+	// apiReader bypasses the manager cache, so the module v2 mirror sees its own prior writes
+	apiReader        client.Reader
 	conversionsStore *conversion.ConversionsStore
 	edition          *d8edition.Edition
 	handler          *confighandler.Handler
@@ -235,7 +235,7 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 
 	// mirror the config into the module v2 resource; runs for every module
 	// kind, including the embedded and system ones processModule skips
-	if err := r.moduleSync.EnsureModuleConfig(ctx, storedConfig); err != nil {
+	if err := pkgsync.EnsureModuleConfig(ctx, r.apiReader, r.client, storedConfig, r.logger); err != nil {
 		r.logger.Error("failed to mirror the module config into the module v2", slog.String("name", moduleConfig.Name), log.Err(err))
 
 		return ctrl.Result{Requeue: true}, nil

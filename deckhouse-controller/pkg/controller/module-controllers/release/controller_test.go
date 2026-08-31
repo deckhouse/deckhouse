@@ -51,7 +51,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	installermock "github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/installer/mock"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/modulesync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
@@ -1005,7 +1004,7 @@ type: Opaque
 
 	rec := &reconciler{
 		client:               suite.Suite.Client(),
-		moduleSync:           modulesync.New(suite.Suite.Client(), suite.Suite.Client(), dependency.NewMockedContainer().GetClock(), log.NewNop()),
+		apiReader:            suite.Suite.Client(),
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		dependencyContainer:  dependency.NewDependencyContainer(),
 		log:                  logger,
