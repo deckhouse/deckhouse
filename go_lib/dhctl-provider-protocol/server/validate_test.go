@@ -43,28 +43,26 @@ func TestValidateService(t *testing.T) {
 		wantCode       codes.Code
 		wantMessage    string
 		wantErrors     string
-		wantWarnings   validatev1.Violations
+		wantWarnings   []string
 		wantCalled     bool
 	}{
 		{
 			name:         "refuses to start without an address",
-			validator:    validOutput,
+			validator:    validConfiguration,
 			omitAddress:  true,
 			wantStartErr: true,
 		},
 		{
-			name:       "carries violations to the caller",
-			validator:  violations,
-			input:      bootstrapInput(),
-			wantErrors: "Secret/d8-credentials: credential Secret is required",
-			wantWarnings: validatev1.Violations{
-				{Path: "NodeGroup/worker", Code: "replicas_zero", Message: "replicas is 0"},
-			},
-			wantCalled: true,
+			name:         "carries violations to the caller",
+			validator:    violations,
+			input:        bootstrapInput(),
+			wantErrors:   "Secret/d8-credentials: credential Secret is required",
+			wantWarnings: []string{"NodeGroup/worker: replicas is 0"},
+			wantCalled:   true,
 		},
 		{
 			name:       "reports a valid configuration as valid",
-			validator:  validOutput,
+			validator:  validConfiguration,
 			input:      bootstrapInput(),
 			wantCalled: true,
 		},
@@ -72,14 +70,14 @@ func TestValidateService(t *testing.T) {
 			// The whitelist runs at the trust boundary, before the validator sees
 			// the input.
 			name:        "rejects an unknown operation",
-			validator:   validOutput,
+			validator:   validConfiguration,
 			input:       validatev1.Input{ProviderName: "dvp", Operation: "nonsense"},
 			wantCode:    codes.InvalidArgument,
 			wantMessage: `operation unknown: "nonsense"`,
 		},
 		{
 			name:        "rejects a missing operation",
-			validator:   validOutput,
+			validator:   validConfiguration,
 			input:       validatev1.Input{ProviderName: "dvp"},
 			wantCode:    codes.InvalidArgument,
 			wantMessage: "operation required",
@@ -109,7 +107,7 @@ func TestValidateService(t *testing.T) {
 		},
 		{
 			name:           "serves nothing after it is stopped",
-			validator:      validOutput,
+			validator:      validConfiguration,
 			input:          bootstrapInput(),
 			stopBeforeCall: true,
 			wantCode:       codes.Unavailable,
@@ -123,7 +121,7 @@ func TestValidateService(t *testing.T) {
 			var services []server.Service
 			if test.validator != nil {
 				services = append(services, server.NewValidateService(validatorFunc(
-					func(ctx context.Context, input validatev1.Input) (validatev1.Output, error) {
+					func(ctx context.Context, input validatev1.Input) (*validatev1.ValidateResponse, error) {
 						called = true
 
 						return test.validator(ctx, input)
@@ -170,7 +168,7 @@ func TestValidateService(t *testing.T) {
 				return
 			}
 
-			output, err := validator.Validate(context.Background(), test.input)
+			resp, err := validator.Validate(context.Background(), test.input)
 
 			if got := called; got != test.wantCalled {
 				t.Errorf("validator called = %v, want %v", got, test.wantCalled)
@@ -186,12 +184,17 @@ func TestValidateService(t *testing.T) {
 				t.Fatalf("Validate() = %v", err)
 			}
 
-			if got := output.Errors.String(); got != test.wantErrors {
-				t.Errorf("Errors().String() = %q, want %q", got, test.wantErrors)
+			if got := violationsText(resp.GetErrors()); got != test.wantErrors {
+				t.Errorf("errors text = %q, want %q", got, test.wantErrors)
 			}
 
-			if got := output.Warnings; !reflect.DeepEqual(got, test.wantWarnings) {
-				t.Errorf("Warnings = %+v, want %+v", got, test.wantWarnings)
+			var warnings []string
+			for _, warning := range resp.GetWarnings() {
+				warnings = append(warnings, violationsText([]*validatev1.ViolationResponse{warning}))
+			}
+
+			if !reflect.DeepEqual(warnings, test.wantWarnings) {
+				t.Errorf("warnings = %q, want %q", warnings, test.wantWarnings)
 			}
 		})
 	}
@@ -199,32 +202,40 @@ func TestValidateService(t *testing.T) {
 
 // validatorFunc adapts a function to server.Validator, which a validator binary
 // implements with a type of its own.
-type validatorFunc func(ctx context.Context, input validatev1.Input) (validatev1.Output, error)
+type validatorFunc func(ctx context.Context, input validatev1.Input) (*validatev1.ValidateResponse, error)
 
-func (fn validatorFunc) Validate(ctx context.Context, input validatev1.Input) (validatev1.Output, error) {
+func (fn validatorFunc) Validate(ctx context.Context, input validatev1.Input) (*validatev1.ValidateResponse, error) {
 	return fn(ctx, input)
 }
 
 var errCheckFailed = errors.New("dependency would not answer")
 
-func validOutput(context.Context, validatev1.Input) (validatev1.Output, error) {
-	return validatev1.Output{}, nil
+func validConfiguration(context.Context, validatev1.Input) (*validatev1.ValidateResponse, error) {
+	return &validatev1.ValidateResponse{}, nil
 }
 
-func violations(context.Context, validatev1.Input) (validatev1.Output, error) {
-	var output validatev1.Output
-	output.AddError("Secret/d8-credentials", "credential_secret_required", "masked", "credential Secret is required")
-	output.AddWarning("NodeGroup/worker", "replicas_zero", nil, "replicas is 0")
-
-	return output, nil
+func violations(context.Context, validatev1.Input) (*validatev1.ValidateResponse, error) {
+	return &validatev1.ValidateResponse{
+		Errors: []*validatev1.ViolationResponse{{
+			Path:    "Secret/d8-credentials",
+			Code:    "credential_secret_required",
+			Message: "credential Secret is required",
+			Value:   "masked",
+		}},
+		Warnings: []*validatev1.ViolationResponse{{
+			Path:    "NodeGroup/worker",
+			Code:    "replicas_zero",
+			Message: "replicas is 0",
+		}},
+	}, nil
 }
 
-func panics(context.Context, validatev1.Input) (validatev1.Output, error) {
+func panics(context.Context, validatev1.Input) (*validatev1.ValidateResponse, error) {
 	panic("validator bug")
 }
 
-func fails(context.Context, validatev1.Input) (validatev1.Output, error) {
-	return validatev1.Output{}, errCheckFailed
+func fails(context.Context, validatev1.Input) (*validatev1.ValidateResponse, error) {
+	return nil, errCheckFailed
 }
 
 func bootstrapInput() validatev1.Input {
@@ -288,4 +299,21 @@ func requireUnavailable(t *testing.T, validator client.Client, input validatev1.
 		case <-time.After(5 * time.Millisecond):
 		}
 	}
+}
+
+// violationsText renders violations the way a caller would print them.
+func violationsText(violations []*validatev1.ViolationResponse) string {
+	lines := make([]string, 0, len(violations))
+
+	for _, violation := range violations {
+		if violation.GetPath() == "" {
+			lines = append(lines, violation.GetMessage())
+
+			continue
+		}
+
+		lines = append(lines, violation.GetPath()+": "+violation.GetMessage())
+	}
+
+	return strings.Join(lines, "\n")
 }

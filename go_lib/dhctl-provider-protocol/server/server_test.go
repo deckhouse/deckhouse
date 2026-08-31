@@ -65,10 +65,11 @@ func TestConfigValidate(t *testing.T) {
 
 func TestConfigMerge(t *testing.T) {
 	tests := []struct {
-		name  string
-		base  server.Config
-		other server.Config
-		want  server.Config
+		name     string
+		base     server.Config
+		other    server.Config
+		want     server.Config
+		wantOpts int
 	}{
 		{
 			name: "keeps the base when the other is empty",
@@ -81,6 +82,15 @@ func TestConfigMerge(t *testing.T) {
 			other: server.Config{Network: "tcp", Address: "127.0.0.1:0"},
 			want:  server.Config{Network: "tcp", Address: "127.0.0.1:0"},
 		},
+		{
+			// A caller passing options takes over the whole set — the message-size
+			// limits included, which is why NewConfig() is the base to start from.
+			name:     "lets the caller replace the protocol's options",
+			base:     server.NewConfig(),
+			other:    server.Config{Address: "/tmp/v.sock", GRPCOptions: []grpc.ServerOption{grpc.ConnectionTimeout(0)}},
+			want:     server.Config{Network: "unix", Address: "/tmp/v.sock"},
+			wantOpts: 1,
+		},
 	}
 
 	for _, test := range tests {
@@ -89,6 +99,10 @@ func TestConfigMerge(t *testing.T) {
 
 			if got.Network != test.want.Network || got.Address != test.want.Address {
 				t.Errorf("Merge() = %+v, want %+v", got, test.want)
+			}
+
+			if test.wantOpts != 0 && len(got.GRPCOptions) != test.wantOpts {
+				t.Errorf("GRPCOptions = %d, want %d", len(got.GRPCOptions), test.wantOpts)
 			}
 		})
 	}

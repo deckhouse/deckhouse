@@ -66,16 +66,10 @@ func NewClient(conn grpc.ClientConnInterface, config Config) Client {
 	}
 }
 
-func (c Client) Validate(ctx context.Context, input validatev1.Input) (validatev1.Output, error) {
+func (c Client) Validate(ctx context.Context, input validatev1.Input) (*validatev1.ValidateResponse, error) {
 	req, err := input.ToRequest()
 	if err != nil {
-		return validatev1.Output{}, err
+		return nil, err
 	}
-
-	resp, err := c.service.Validate(ctx, req, c.config.GRPCOptions...)
-	if err != nil {
-		return validatev1.Output{}, err
-	}
-
-	return validatev1.OutputFromResponse(resp), nil
+	return c.service.Validate(ctx, req, c.config.GRPCOptions...)
 }

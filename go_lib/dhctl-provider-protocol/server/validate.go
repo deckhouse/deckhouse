@@ -23,13 +23,12 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/errs"
 )
 
-// Validator is the check itself, in plain Go: an Output says what is wrong with the
-// configuration, an error means the check could not be made and reaches the caller
-// as Internal.
-//
-// A validator implements this and nothing else of the protocol.
+// Validator is the check itself: the response says what is wrong with the
+// configuration — errors block the caller's operation, warnings do not — and an error
+// means the check could not be made and reaches the caller as Internal.
+
 type Validator interface {
-	Validate(ctx context.Context, input validatev1.Input) (validatev1.Output, error)
+	Validate(ctx context.Context, input validatev1.Input) (*validatev1.ValidateResponse, error)
 }
 
 func NewValidateService(validator Validator) Service {
@@ -55,10 +54,10 @@ func (s *validateService) Validate(ctx context.Context, req *validatev1.Validate
 		return nil, errs.ToStatus(err)
 	}
 
-	output, err := s.validator.Validate(ctx, input)
+	resp, err := s.validator.Validate(ctx, input)
 	if err != nil {
 		return nil, errs.ToStatus(err)
 	}
 
-	return output.ToResponse(), nil
+	return resp, nil
 }

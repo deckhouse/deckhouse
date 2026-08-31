@@ -33,8 +33,12 @@ and requires the execute bit.
 dhctl invokes the binary with the socket it has created:
 
 ```
-validator serve --address=<unix socket path>
+validator serve --address=<address> [--network=<network>]
 ```
+
+`--network` defaults to `unix`, which is what dhctl uses; the `server` package also
+accepts `tcp`, where `--address` is `host:port`. There is no default address — the
+caller allocates one per run and passes it in.
 
 The validator listens on that socket and serves until it is stopped. Notes that
 matter in practice:
@@ -58,9 +62,13 @@ matter in practice:
 
 gRPC over the unix socket, no TLS (the socket's file permissions are the boundary).
 
-Message limit: **8 MiB** in each direction, applied by both sides. gRPC's 4 MiB
-default is too small — the payload carries every NodeGroup, InstanceClass and
-credential Secret of a cluster.
+Message limit: **8 MiB** in each direction, the default on both sides. gRPC's own
+4 MiB is too small — the payload carries every NodeGroup, InstanceClass and credential
+Secret of a cluster.
+
+`GRPCOptions` in a `Config` replace that default set rather than adding to it, so a
+caller that passes options of its own starts from `NewConfig()` and appends to its
+options; otherwise the limits go back to gRPC's.
 
 ## Service: validate
 
@@ -86,7 +94,7 @@ message ValidateRequest {
 `input_json` is a JSON object. It stays JSON rather than becoming protobuf messages
 because every field that carries substance is an arbitrary Kubernetes object — a
 `google.protobuf.Struct` would be exactly as untyped while costing a conversion layer
-on both sides. The Go definition is `validatev1.Input` in [`validate`](validate).
+on both sides. The Go definition is `Input` in [`api/validate/v1`](api/validate/v1).
 
 ```json
 {
@@ -125,11 +133,11 @@ neither side may log it, attach it to traces, or quote it in an error.
 
 ```proto
 message ValidateResponse {
-  repeated Violation errors = 1;
-  repeated Violation warnings = 2;
+  repeated ViolationResponse errors   = 1;
+  repeated ViolationResponse warnings = 2;
 }
 
-message Violation {
+message ViolationResponse {
   string path = 1;
   string code = 2;
   string message = 3;
@@ -139,7 +147,8 @@ message Violation {
 
 An empty response means the configuration is valid. `errors` block the caller's
 operation; `warnings` do not. Violations arrive in the order the validator recorded
-them, and that order is what a caller prints.
+them, and that order is what a caller prints. Rendering is the caller's: `path`,
+`": "` and `message` per line, with the path dropped when empty.
 
 `value` is display-only and already rendered as a string. A validator reporting a
 sensitive field sends a placeholder such as `"masked"` instead of the value.
@@ -160,31 +169,45 @@ blocks the operation instead of counting as "validated".
 
 ## Implementing a validator in Go
 
-Import [`api/validate/v1`](api/validate/v1) and [`server`](server); see the
-runnable example in the `server` package documentation.
+Import [`api/validate/v1`](api/validate/v1) and [`server`](server).
 
 ```go
 type myValidator struct{}
 
-func (myValidator) Validate(_ context.Context, input validatev1.Input) (validatev1.Output, error) {
-	var output validatev1.Output
+func (myValidator) Validate(_ context.Context, input validatev1.Input) (*validatev1.ValidateResponse, error) {
+	resp := &validatev1.ValidateResponse{}
 	if input.CloudProviderVars == nil || len(input.CloudProviderVars.Secrets) == 0 {
-		output.AddError("Secret/d8-credentials", "credential_secret_required", nil,
-			`credential Secret "d8-credentials" is required`)
+		resp.Errors = append(resp.Errors, &validatev1.ViolationResponse{
+			Path:    "Secret/d8-credentials",
+			Code:    "credential_secret_required",
+			Message: `credential Secret "d8-credentials" is required`,
+		})
 	}
-	return output, nil
+	return resp, nil
 }
 
 func main() {
-	address := flag.String("address", "", "unix socket to serve on")
-	flag.Parse()
+	if len(os.Args) < 2 || os.Args[1] != "serve" {
+		fmt.Fprintf(os.Stderr, "usage: %s serve --address=<address> [--network=<network>]\n", os.Args[0])
+		os.Exit(2)
+	}
+
+	flags := flag.NewFlagSet("serve", flag.ExitOnError)
+	address := flags.String("address", "", "address to serve on")
+	network := flags.String("network", server.DefaultNetwork, "network to serve on: unix or tcp")
+
+	if err := flags.Parse(os.Args[2:]); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 
 	ctx, unhook := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer unhook()
 
-	service := server.NewValidateService(myValidator{})
-
-	validator, err := server.Start(server.Config{Address: *address}, service)
+	validator, err := server.Start(
+		server.Config{Network: *network, Address: *address},
+		server.NewValidateService(myValidator{}),
+	)
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
@@ -199,8 +222,8 @@ func main() {
 }
 ```
 
-The `Output` and the `error` mean different things, and the split is the whole point
-of the contract: an `Output` carries what is wrong with the configuration — the check
+The response and the `error` mean different things, and the split is the whole point
+of the contract: the response carries what is wrong with the configuration — the check
 working correctly — while an `error` means the check could not be made. Panics are
 recovered and reported as `Internal` with the stack, so a bug surfaces instead of
 looking like a process that died mid-call.
@@ -215,22 +238,43 @@ conn, err := grpc.NewClient("unix://"+socket, grpc.WithTransportCredentials(inse
 // …
 defer conn.Close()
 
-output, err := client.NewClient(conn, client.Config{
-	GRPCOptions: []grpc.CallOption{grpc.WaitForReady(true)},
-}).Validate(ctx, input)
+// NewConfig() carries the protocol's message-size limits; appending keeps them.
+config := client.NewConfig()
+config.GRPCOptions = append(config.GRPCOptions, grpc.WaitForReady(true))
+
+resp, err := client.NewClient(conn, config).Validate(ctx, input)
 if err != nil {
 	return err // the validator failed
 }
-if len(output.Errors) > 0 {
-	return errors.New(output.Errors.String()) // the configuration is wrong
+if len(resp.GetErrors()) > 0 {
+	return errors.New(violationsText(resp.GetErrors())) // the configuration is wrong
 }
 return nil
 ```
 
+The text is the caller's to render — the protocol carries the fields, not the wording:
+
+```go
+func violationsText(violations []*validatev1.ViolationResponse) string {
+	lines := make([]string, 0, len(violations))
+
+	for _, violation := range violations {
+		if violation.GetPath() == "" {
+			lines = append(lines, violation.GetMessage())
+
+			continue
+		}
+
+		lines = append(lines, violation.GetPath()+": "+violation.GetMessage())
+	}
+
+	return strings.Join(lines, "\n")
+}
+```
+
 ## Adding an action
 
-Each action is its own service in [`api/pb`](api/pb), its own package in
-[`api`](api) and its own `server.Service`
-constructor, so a binary that does not implement one simply does not pass it to
-`server.Start` and a caller sees `Unimplemented`. The full recipe is in the module
-documentation ([`doc.go`](doc.go)).
+Each action is its own service under [`api/pb`](api/pb), its own package under
+[`api`](api) and its own `server.Service` constructor, so a binary that does not
+implement one simply does not pass it to `server.Start` and a caller sees
+`Unimplemented`. The full recipe is in the module documentation ([`doc.go`](doc.go)).

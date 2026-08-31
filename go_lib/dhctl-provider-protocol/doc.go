@@ -22,7 +22,8 @@
 //
 //   - api/<action>/v<N> — one package per action and wire version. It holds the
 //     generated zz_generated.*.go AND the hand-written half of the contract: the
-//     payload, the result and the conversions to and from the wire types.
+//     payload with its rules and conversions, plus the helpers for building and
+//     rendering the violations the response carries.
 //
 //     Both halves share the package, so the zz_generated. prefix is what tells them
 //     apart: `make generate` deletes and rewrites exactly those files, everything
