@@ -83,16 +83,18 @@ func renderManifests(
 		return nil, fmt.Errorf("no images for kubernetes version %q", vcp.Spec.KubernetesVersion)
 	}
 
-	// konnectivity-agent is the only VCP-baked tenant-node ref (control-plane images run in the parent, keep the in-cluster base). Its baked ref hits the
-	// in-cluster proxy unreachable from tenant nodes, so rebase onto the external registry (the pod carries a matching deckhouse-registry imagePullSecret).
-	// imageBaseOverride is set only in Direct/Proxy; in Unmanaged it is empty and the baked ref is already external, so this is a no-op.
+	// konnectivity-agent runs in two pods with different registry reach.
+	// - host-side apiserver (IMAGE_KONNECTIVITY_AGENT_CP) uses the in-cluster registry
+	// - tenant-node addon (IMAGE_KONNECTIVITY_AGENT) rebased onto the external registry
 	fixed := table.Fixed
+	konnAgentCPImage := fixed.KonnectivityAgent
 	fixed.KonnectivityAgent = rebaseImageRef(fixed.KonnectivityAgent, imageBaseOverride)
 
 	replacer := buildManifestReplacer(
 		vcp,
 		versioned,
 		fixed,
+		konnAgentCPImage,
 		apiAdvertiseAddress,
 		string(globalData["cluster-uuid"]),
 		egressDestinations,
@@ -141,6 +143,7 @@ func buildManifestReplacer(
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 	versioned versionedImages,
 	fixed fixedImages,
+	konnAgentCPImage string,
 	apiAdvertiseAddress string,
 	clusterUUID string,
 	egressDestinations []string,
@@ -156,6 +159,7 @@ func buildManifestReplacer(
 		"${IMAGE_KINE}", fixed.Kine,
 		"${IMAGE_KONNECTIVITY_SERVER}", fixed.KonnectivityServer,
 		"${IMAGE_KONNECTIVITY_AGENT}", fixed.KonnectivityAgent,
+		"${IMAGE_KONNECTIVITY_AGENT_CP}", konnAgentCPImage,
 		"${IMAGE_CILIUM}", fixed.Cilium,
 		"${IMAGE_CILIUM_OPERATOR}", fixed.CiliumOperator,
 		"${VCP_NAME}", vcp.Name,

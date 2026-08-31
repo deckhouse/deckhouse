@@ -153,7 +153,7 @@ spec:
         resources:
           requests: {cpu: 50m, memory: 64Mi}
       - name: konnectivity-agent-cp
-        image: ${IMAGE_KONNECTIVITY_AGENT}
+        image: ${IMAGE_KONNECTIVITY_AGENT_CP}
         command:
         - /proxy-agent
         args:
