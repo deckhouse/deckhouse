@@ -18,11 +18,11 @@ allowedTopologies:
 - matchLabelExpressions:
   - key: failure-domain.beta.kubernetes.io/region
     values:
-    - {{ $.Values.csiVsphere.internal.providerClusterConfiguration.region }}
+    - {{ $.Values.csiVsphere.internal.providerClusterConfiguration.region | quote }}
   - key: failure-domain.beta.kubernetes.io/zone
     values:
   {{- range $storageClass.zones}}
-    - {{ . }}
+    - {{ . | quote }}
   {{- end }}
 allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer

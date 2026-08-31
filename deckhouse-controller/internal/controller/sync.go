@@ -45,12 +45,6 @@ const (
 	embeddedRepositoryName = "embedded"
 )
 
-// dummyModules are modules that should be skipped.
-var dummyModules = []string{
-	"000-common",
-	"007-registrypackages",
-}
-
 // placement is where a module's package comes from, as the bootstrap derives it.
 type placement struct {
 	repository string
@@ -114,7 +108,7 @@ func (c *Controller) embeddedPlacements(ctx context.Context) (map[string]placeme
 	g.SetLimit(embeddedLoadWorkers)
 
 	for i, entry := range entries {
-		if !entry.IsDir() || slices.Contains(dummyModules, entry.Name()) {
+		if !entry.IsDir() || slices.Contains(app.DummyModules, entry.Name()) {
 			continue
 		}
 
@@ -143,13 +137,16 @@ func (c *Controller) embeddedPlacements(ctx context.Context) (map[string]placeme
 
 	placements := make(map[string]placement, len(names))
 
+	// an embedded module carries the running Deckhouse version reduced to major.minor.patch — the
+	// same version pkgsync names its ModulePackageVersion after, and the one the runtime reports
+	version := app.EmbeddedPackageVersion(app.Version)
+
 	for _, name := range names {
 		if name == "" {
 			continue
 		}
 
-		// an embedded module carries the running Deckhouse version — the runtime's edition version verbatim
-		placements[name] = placement{repository: embeddedRepositoryName, version: app.Version, embedded: true}
+		placements[name] = placement{repository: embeddedRepositoryName, version: version, embedded: true}
 	}
 
 	return placements, nil

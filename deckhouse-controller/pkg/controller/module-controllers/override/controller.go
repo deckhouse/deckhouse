@@ -138,7 +138,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			return ctrl.Result{}, nil
 		}
 		r.log.Error("failed to get module pull override", slog.String("name", req.Name), log.Err(err))
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
 	// handle delete event
@@ -415,13 +415,13 @@ func (r *reconciler) deleteModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		if err := r.client.Get(ctx, client.ObjectKey{Name: mpo.GetName()}, module); err != nil {
 			if !apierrors.IsNotFound(err) {
 				r.log.Error("failed to get the module", slog.String("name", mpo.GetName()), log.Err(err))
-				return ctrl.Result{Requeue: true}, nil
+				return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 			}
 
 			controllerutil.RemoveFinalizer(mpo, v1alpha1.ModulePullOverrideFinalizer)
 			if err = r.client.Update(ctx, mpo); err != nil {
 				r.log.Error("failed to remove finalizer for the module pull override", slog.String("name", mpo.Name), log.Err(err))
-				return ctrl.Result{Requeue: true}, nil
+				return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 			}
 
 			return ctrl.Result{}, nil
@@ -433,13 +433,13 @@ func (r *reconciler) deleteModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		})
 		if err != nil {
 			r.log.Error("failed to update the module status", slog.String("name", mpo.Name), log.Err(err))
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 		}
 
 		controllerutil.RemoveFinalizer(mpo, v1alpha1.ModulePullOverrideFinalizer)
 		if err = r.client.Update(ctx, mpo); err != nil {
 			r.log.Error("failed to remove finalizer for the module pull override", slog.String("name", mpo.Name), log.Err(err))
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 		}
 	}
 

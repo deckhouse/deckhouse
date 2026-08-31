@@ -269,7 +269,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 			return ctrl.Result{}, nil
 		}
 		r.log.Error("failed to get module release", slog.String("release", req.Name), log.Err(err))
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
 	r.resetConfigurationErrorMetric(release)
@@ -303,7 +303,7 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 	if err != nil {
 		r.log.Error("failed to update module release before handling", slog.String("release", release.GetName()), log.Err(err))
 
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
 	if !res.IsZero() {
@@ -315,9 +315,9 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 		controllerutil.AddFinalizer(release, v1alpha1.ModuleReleaseFinalizerMetricsRegistered)
 		if err := r.client.Update(ctx, release); err != nil {
 			r.log.Error("failed to add metrics finalizer to module release", slog.String("release", release.GetName()), log.Err(err))
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 		}
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
 	switch release.GetPhase() {
@@ -326,10 +326,10 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 		release.Status.TransitionTime = metav1.NewTime(r.dependencyContainer.GetClock().Now().UTC())
 		if err = r.client.Status().Update(ctx, release); err != nil {
 			r.log.Error("failed to update module release status", slog.String("release", release.GetName()), log.Err(err))
-			return ctrl.Result{Requeue: true}, nil
+			return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 		}
 		// process to the next phase
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 
 	case v1alpha1.ModuleReleasePhaseSuperseded, v1alpha1.ModuleReleasePhaseSuspended, v1alpha1.ModuleReleasePhaseSkipped:
 		if len(release.Labels) == 0 || (release.Labels[v1alpha1.ModuleReleaseLabelStatus] != strings.ToLower(release.GetPhase())) {
@@ -339,7 +339,7 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 			release.Labels[v1alpha1.ModuleReleaseLabelStatus] = strings.ToLower(release.GetPhase())
 			if err = r.client.Update(ctx, release); err != nil {
 				r.log.Error("failed to update module release status", slog.String("release", release.GetName()), log.Err(err))
-				return ctrl.Result{Requeue: true}, nil
+				return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 			}
 		}
 
@@ -364,7 +364,7 @@ func (r *reconciler) handleRelease(ctx context.Context, release *v1alpha1.Module
 	exists, err := utils.ModulePullOverrideExists(ctx, r.client, release.GetModuleName())
 	if err != nil {
 		r.log.Error("failed to get module pull override", slog.String("module", release.GetModuleName()), log.Err(err))
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 	if exists {
 		r.log.Info("module is overridden, skip release processing", slog.String("module", release.GetModuleName()))
@@ -402,7 +402,7 @@ func (r *reconciler) preHandleCheck(ctx context.Context, release *v1alpha1.Modul
 			return ctrl.Result{}, fmt.Errorf("update with retry: %w", err)
 		}
 
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
 	return ctrl.Result{}, nil
@@ -602,7 +602,7 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 			return res, fmt.Errorf("update module release: %w", err)
 		}
 
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
 	if !controllerutil.ContainsFinalizer(source, v1alpha1.ModuleSourceFinalizerReleaseExists) {
@@ -1832,7 +1832,7 @@ func (r *reconciler) deleteRelease(ctx context.Context, release *v1alpha1.Module
 			return ctrl.Result{}, fmt.Errorf("update: %w", err)
 		}
 
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
 	// The metric is already reset in the handleRelease function, so we can release the finalizer

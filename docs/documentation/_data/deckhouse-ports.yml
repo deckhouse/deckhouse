@@ -96,7 +96,7 @@ groups:
     description:
       en: "Deckhouse controller metrics"
       ru: "Метрики контроллера Deckhouse"
-  - ports: "8096"
+  - ports: "4296"
     protocol: TCP
     description:
       en: "`control-plane-manager` metrics"

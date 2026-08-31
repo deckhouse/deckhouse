@@ -52,6 +52,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -99,6 +100,8 @@ type DeckhouseController struct {
 
 	moduleLoader   *moduleloader.Loader
 	packageRuntime *packageruntime.Runtime
+
+	dc dependency.Container
 
 	deckhouseConfigCh <-chan utils.Values
 
@@ -386,7 +389,9 @@ func NewDeckhouseController(
 	if app.PackageSystemEnabled() {
 		logger.Info("Package system controllers are enabled")
 
-		pkgRuntime.Run()
+		if err = pkgRuntime.Run(); err != nil {
+			return nil, fmt.Errorf("run package runtime: %w", err)
+		}
 
 		err = packagerepository.RegisterController(runtimeManager, dc, logger.Named("package-repository-controller"))
 		if err != nil {
@@ -447,6 +452,8 @@ func NewDeckhouseController(
 		packageRuntime:     pkgRuntime,
 		preflightCountDown: preflightCountDown,
 
+		dc: dc,
+
 		deckhouseConfigCh: deckhouseConfigCh,
 
 		embeddedPolicy: embeddedPolicy,
@@ -464,6 +471,13 @@ func setModulesEnvironment(operator *addonoperator.AddonOperator) {
 
 // Start loads and ensures modules from FS, starts controllers and runs deckhouse config event loop
 func (c *DeckhouseController) Start(ctx context.Context) error {
+	// give the old module stack its package system objects before any
+	// controller runs; the sync reads through the API reader, so it does not
+	// need the manager cache
+	if err := pkgsync.Sync(ctx, c.runtimeManager.GetAPIReader(), c.runtimeManager.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, c.log.Named("pkgsync")); err != nil {
+		return fmt.Errorf("sync package objects: %w", err)
+	}
+
 	// run preflight check
 	c.startModulesControllers(ctx)
 

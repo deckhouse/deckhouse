@@ -48,6 +48,9 @@ message BootstrapStart {
   string state = 7;
   string post_bootstrap_script = 8;
   BootstrapStartOptions options = 9;
+  // kubeconfig points the kube provider straight at the API server. connection_config is still
+  // required: this operation reaches the nodes over ssh.
+  string kubeconfig = 10;
 }
 
 message BootstrapPhaseEnd {

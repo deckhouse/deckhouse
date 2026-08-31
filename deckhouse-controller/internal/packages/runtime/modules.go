@@ -34,6 +34,7 @@ import (
 	taskdummy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/dummy"
 	taskload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/load"
 	taskundeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/undeploy"
+	taskuninstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/uninstall"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
@@ -151,8 +152,9 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module, force bool) 
 //
 // The pipeline is UpdateModule's without the Deploy task: the files already sit under
 // app.EmbeddedModulesDir, so ReadyOnFilesystem holds from the start and only Load runs.
-// The version is the running edition's, because an embedded module carries no package
-// version of its own, so it cannot change while the process lives — but EventRemove clears
+// The version is the running edition's reduced to major.minor.patch — the same one the
+// Module spec and its ModulePackageVersion carry — because an embedded module has no
+// package version of its own, so it cannot change while the process lives — but EventRemove clears
 // the stored version, so a delete-then-recreate still lands here with the previous instance
 // registered, and Disable goes ahead of Load to tear it down.
 //
@@ -169,7 +171,7 @@ func (r *Runtime) UpdateEmbeddedModule(module Module) {
 	}
 
 	name := module.Name
-	version := r.edition.Version
+	version := app.EmbeddedPackageVersion(r.edition.Version)
 	enabledChanged := r.global.SetConfigEnabled(name, module.Enabled)
 
 	if !r.packages.NeedUpdate(name, version, module.Settings.Checksum(), module.SettingsVersion, module.Maintenance) {
@@ -233,9 +235,9 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, packageP
 }
 
 // loadEmbeddedModule builds a Module from an embedded package directory and registers it,
-// as loadModule does for a downloaded one. The definition's version is overwritten with
-// the running edition's, and the repository the Load task passes is empty — an embedded
-// module has none, so no registry values are injected.
+// as loadModule does for a downloaded one. The definition's version is overwritten with the
+// running edition's, reduced to the version the image's packages carry, and the repository the
+// Load task passes is empty — an embedded module has none, so no registry values are injected.
 func (r *Runtime) loadEmbeddedModule(ctx context.Context, _ registry.Remote, packagePath string) (string, error) {
 	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "loadEmbeddedModule")
 	defer span.End()
@@ -248,7 +250,7 @@ func (r *Runtime) loadEmbeddedModule(ctx context.Context, _ registry.Remote, pac
 		return "", status.NewError("LoadFailed", err)
 	}
 
-	conf.Definition.Version = r.edition.Version
+	conf.Definition.Version = app.EmbeddedPackageVersion(r.edition.Version)
 
 	module, err := r.registerModule(ctx, conf)
 	if err != nil {
@@ -297,46 +299,74 @@ func (r *Runtime) registerModule(ctx context.Context, conf *modules.Config) (*mo
 	return module, nil
 }
 
-// RemoveModule removes a module and cancels all its running operations.
-// After undeploy, a cleanup goroutine removes the Store entry and stops the queue.
-// See RemoveApp for detailed rationale on the async cleanup pattern.
-func (r *Runtime) RemoveModule(name string) {
+// RemoveModule removes a module, cancels all its running operations and reports whether the
+// teardown has finished. After undeploy, a cleanup goroutine removes the Store entry and stops
+// the queue. See RemoveApp for the idempotence contract and the async cleanup rationale.
+func (r *Runtime) RemoveModule(name string) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	switch r.packages.RemovalState(name) {
+	case lifecycle.RemovalDone:
+		return true
+
+	case lifecycle.RemovalInFlight:
+		r.logger.Debug("module removal is still in flight", slog.String("name", name))
+
+		return false
+	}
 
 	r.scheduler.RemoveNode(name)
 
 	ctx := r.packages.HandleEvent(lifecycle.EventRemove, name)
 	if ctx == nil {
-		return
+		return true
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, app.NamespaceDeckhouse, false, r.nelmService, r.queueService, r.logger))
+	} else {
+		// A failed Load may roll the instance out of r.modules while the previous release is still live.
+		r.queueService.Enqueue(ctx, name, taskuninstall.NewTask(name, app.NamespaceDeckhouse, r.nelmService, r.logger))
 	}
 
 	cleanup := queue.WithOnDone(r.cleanupModule(name))
 
 	r.queueService.Enqueue(ctx, name, taskundeploy.NewModuleTask(name, r.moduleDeployer, r.logger), cleanup)
+
+	return false
 }
 
 // RemoveEmbeddedModule removes an embedded module and cancels all its running operations.
 // It is RemoveModule without Undeploy: the image carries the files, so nothing was ever placed
-// on disk for the deployer to take back. The cleanup therefore rides on Disable, or runs on its
-// own when the module never loaded and there is nothing to disable.
-func (r *Runtime) RemoveEmbeddedModule(name string) {
+// on disk for the deployer to take back. Cleanup always rides on Dummy after Disable, or after
+// Uninstall when the module instance is unavailable.
+func (r *Runtime) RemoveEmbeddedModule(name string) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	switch r.packages.RemovalState(name) {
+	case lifecycle.RemovalDone:
+		return true
+
+	case lifecycle.RemovalInFlight:
+		r.logger.Debug("embedded module removal is still in flight", slog.String("name", name))
+
+		return false
+	}
 
 	r.scheduler.RemoveNode(name)
 
 	ctx := r.packages.HandleEvent(lifecycle.EventRemove, name)
 	if ctx == nil {
-		return
+		return true
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, app.NamespaceDeckhouse, false, r.nelmService, r.queueService, r.logger))
+	} else {
+		// A failed Load may roll the instance out of r.modules while the previous release is still live.
+		r.queueService.Enqueue(ctx, name, taskuninstall.NewTask(name, app.NamespaceDeckhouse, r.nelmService, r.logger))
 	}
 
 	// The teardown rides the last task in the package's queue, never runs inline: it stops that queue
@@ -344,6 +374,8 @@ func (r *Runtime) RemoveEmbeddedModule(name string) {
 	// running and about to want r.mu itself — it would deadlock both. RemoveModule anchors it on
 	// Undeploy; an embedded module has nothing to undeploy, so it anchors on a dummy task.
 	r.queueService.Enqueue(ctx, name, taskdummy.NewTask(name, r.logger), queue.WithOnDone(r.cleanupModule(name)))
+
+	return false
 }
 
 // cleanupModule returns the teardown that drops the Store entry, stops the queue and deletes the

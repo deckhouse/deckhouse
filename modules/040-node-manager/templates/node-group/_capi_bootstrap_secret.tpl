@@ -3,9 +3,16 @@
 {{- $ng := index . 1 }}
 {{- $zone_name := index . 2 }}
 {{- $bootstrap_secret_name := index . 3 }}
+{{- /* An immutable node boots from a per-machine NodeBootstrapConfig the
+       node-controller bootstrap provider renders (the MachineDeployment points
+       at it through bootstrap.configRef), so helm renders no bootstrap secret
+       for it. A bashible node still gets its group-wide cloud-init secret. */}}
+{{- if ne ($ng.systemType | default "Mutable") "Immutable" }}
 {{- $bootstrap_token := pluck $ng.name $context.Values.nodeManager.internal.bootstrapTokens | first }}
 {{- /*
-  Not rendered at all until this NodeGroup has a bootstrap token.
+  And not rendered until this NodeGroup has a bootstrap token either. The two conditions are
+  independent: the one above is about which mechanism boots the node, this one about whether the
+  token that mechanism needs has been ordered yet.
 
   The token is ordered by a hook that does not run on NodeGroup events, so a render can see a
   NodeGroup the hook has not ordered a token for yet — a window of seconds, right after the
@@ -35,6 +42,7 @@ type: Opaque
 data:
   format: {{ "cloud-config" | b64enc}}
   value: {{ include "node_group_capi_cloud_init_cloud_config" (list $context $ng $bootstrap_token) | b64enc }}
+{{- end }}
 {{- end }}
 {{- end }}
 

@@ -1,4 +1,4 @@
-2851
+2861
 1GB
 2GB
 5XX
@@ -522,6 +522,7 @@ etcdutl
 eth
 EuropeClouds
 eventsExporter
+EVS
 existingZoneToSubnetIDMap
 explorative
 expr
@@ -621,6 +622,7 @@ govc
 GPG
 GPU
 GPUs
+GracefulShutdownPostpone
 grafana
 Grafana
 GrafanaAdditionalDatasource
@@ -634,6 +636,7 @@ Graylog
 grep
 gRPC
 GRPC
+GuestInfo
 gz
 Habr
 hardcoded
@@ -833,6 +836,7 @@ kube
 kubeadm
 KubeadmConfigTemplateData
 kubeall
+KubeClusterExtension
 kubeconfig
 kubeconfigGeneratorMasterCA
 kubeconfigs
@@ -895,6 +899,7 @@ logLevel
 Logstash
 loki
 longtermStorageClass
+loopback
 LowNodeUtilization
 LRS
 lsblk
@@ -1074,6 +1079,7 @@ NogeGroup
 nonreplicated
 NoOps
 noProxyAddressList
+NoRunningPodsWithLabel
 NoSchedule
 NoSQL
 NotIn
@@ -1207,6 +1213,7 @@ PodMonitor
 PodMonitors
 PodNetwork
 podSubnetCIDR
+PodsWithLabelAreRunningOnNode
 Poly
 portForwarding
 POSIX
@@ -1608,6 +1615,7 @@ uninstalling
 Unlabel
 UNPACKEDSIZE
 unschedulable
+Uplink
 uploadproxy
 upmeter
 UpmeterHookProbe
@@ -1720,6 +1728,7 @@ VxLAN
 VXLAN
 VzZS
 WaitingForDisruptiveApproval
+WaitingForShutdownSignal
 WAL
 waypoint
 Waypoint
@@ -1950,8 +1959,8 @@ ZvirtInstanceClass
 внутренного
 внутрикластерное
 внутрикластерной
-внутрикластерным
 внутрикластерный
+внутрикластерным
 воркеров
 выгрузок
 выдаватель
@@ -2048,6 +2057,7 @@ ZvirtInstanceClass
 зеркалирование
 зеркалировании
 зеркалирования
+зеркалированный
 зеркалировать
 иcпользовать
 ИБ
@@ -2204,7 +2214,6 @@ ZvirtInstanceClass
 масштабируется
 Мб
 МБ
-МиБ
 медиафайлов
 медиафайлы
 межкластерная
@@ -2222,6 +2231,7 @@ ZvirtInstanceClass
 меш
 меша
 меше
+МиБ
 мигрирована
 микросегментация
 микросервисов
