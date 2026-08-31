@@ -47,12 +47,6 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func revisionsDiscovery(_ context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	var globalVersion string
 	var versionsToInstall = make([]string, 0)
-	var supportedVersions = make([]string, 0) //nolint:prealloc
-
-	var supportedVersionsResult = input.Values.Get("istio.internal.versionMap").Map()
-	for versionResult := range supportedVersionsResult {
-		supportedVersions = append(supportedVersions, versionResult)
-	}
 
 	switch {
 	case input.ConfigValues.Exists("istio.globalVersion"):
