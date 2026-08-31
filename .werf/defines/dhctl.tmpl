@@ -55,10 +55,6 @@ import:
   add: /src
   to: /
   before: install
-- image: minget-common-artifact
-  add: /usr/bin/minget
-  to: /minget
-  before: install
 {{- if $context.includeImagesDigests }}
 - image: images-digests
   add: /images_digests.json
@@ -72,6 +68,7 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   install:
+  - pm install minget -d /minget
   - cd /dhctl
 {{- if $context.includeImagesDigests }}
   - cp /images_digests.json pkg/config/digests/images_digests.json
