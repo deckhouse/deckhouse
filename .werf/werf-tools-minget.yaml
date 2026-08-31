@@ -1,0 +1,7 @@
+---
+image: minget-common-artifact
+final: false
+fromImage: builder/distroless
+shell:
+  install:
+  - pm install minget
