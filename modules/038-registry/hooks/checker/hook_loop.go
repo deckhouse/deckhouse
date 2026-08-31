@@ -30,16 +30,32 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	deckhouse_types "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	deckhouse_types_v2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 )
 
 const (
 	modulesSnapName             = "modules"
+	packageVersionsSnapName     = "package-versions"
 	deckhouseDeploymentSnapName = "deckhouse-deployment"
 
 	moduleDigestsValuesPath = "global.modulesImages.digests"
 	registryBaseValuesPath  = "global.modulesImages.registry.base"
 )
+
+// embeddedModuleModel carries the package triple of an embedded module; the
+// triple addresses the package version holding the critical flag.
+type embeddedModuleModel struct {
+	Name           string `json:"name"`
+	RepositoryName string `json:"repositoryName"`
+	PackageVersion string `json:"packageVersion"`
+}
+
+// packageVersionModel carries the critical flag of one module package version.
+type packageVersionModel struct {
+	Name     string `json:"name"`
+	Critical bool   `json:"critical"`
+}
 
 var _ = sdk.RegisterFunc(
 	&go_hook.HookConfig{
@@ -56,10 +72,10 @@ var _ = sdk.RegisterFunc(
 				Name:                         modulesSnapName,
 				ExecuteHookOnEvents:          go_hook.Bool(false),
 				ExecuteHookOnSynchronization: go_hook.Bool(false),
-				ApiVersion:                   "deckhouse.io/v1alpha1",
+				ApiVersion:                   "deckhouse.io/v1alpha2",
 				Kind:                         "Module",
 				FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-					var module deckhouse_types.Module
+					var module deckhouse_types_v2.Module
 
 					err := sdk.FromUnstructured(obj, &module)
 					if err != nil {
@@ -70,11 +86,31 @@ var _ = sdk.RegisterFunc(
 						return nil, nil
 					}
 
-					if !module.Properties.Critical {
-						return nil, nil
+					return embeddedModuleModel{
+						Name:           module.Name,
+						RepositoryName: module.Spec.PackageRepositoryName,
+						PackageVersion: module.Spec.PackageVersion,
+					}, nil
+				},
+			},
+			{
+				Name:                         packageVersionsSnapName,
+				ExecuteHookOnEvents:          go_hook.Bool(false),
+				ExecuteHookOnSynchronization: go_hook.Bool(false),
+				ApiVersion:                   "deckhouse.io/v1alpha1",
+				Kind:                         "ModulePackageVersion",
+				FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+					var version deckhouse_types.ModulePackageVersion
+
+					err := sdk.FromUnstructured(obj, &version)
+					if err != nil {
+						return nil, fmt.Errorf("failed to convert ModulePackageVersion object to struct: %v", err)
 					}
 
-					return strcase.ToCamel(module.Name), nil
+					return packageVersionModel{
+						Name:     version.Name,
+						Critical: version.Status.PackageMetadata != nil && version.Status.PackageMetadata.Critical,
+					}, nil
 				},
 			},
 			{
@@ -150,10 +186,53 @@ var _ = sdk.RegisterFunc(
 	},
 )
 
-func getModulesImagesDigests(_ context.Context, input *go_hook.HookInput) (map[string]string, error) {
-	moduleNames, err := helpers.SnapshotToList[string](input, modulesSnapName)
+// criticalModuleNames joins the embedded modules with their package versions
+// and keeps the critical ones. The checker gates registry switching, so
+// incomplete data is an error to retry on, never a shorter list: a module
+// whose package version is not synced yet must not silently pass the check.
+func criticalModuleNames(input *go_hook.HookInput) ([]string, error) {
+	modules, err := helpers.SnapshotToList[embeddedModuleModel](input, modulesSnapName)
 	if err != nil {
 		return nil, fmt.Errorf("cannot get modules snapshot: %w", err)
+	}
+
+	if len(modules) == 0 {
+		return nil, fmt.Errorf("modules snapshot contains no entries")
+	}
+
+	versions, err := helpers.SnapshotToList[packageVersionModel](input, packageVersionsSnapName)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get package versions snapshot: %w", err)
+	}
+
+	criticalByName := make(map[string]bool, len(versions))
+	for _, version := range versions {
+		criticalByName[version.Name] = version.Critical
+	}
+
+	moduleNames := make([]string, 0, len(modules))
+	for _, module := range modules {
+		if module.RepositoryName == "" || module.PackageVersion == "" {
+			return nil, fmt.Errorf("the %q module has no package version yet", module.Name)
+		}
+
+		critical, ok := criticalByName[deckhouse_types.MakeModulePackageVersionName(module.RepositoryName, module.Name, module.PackageVersion)]
+		if !ok {
+			return nil, fmt.Errorf("the %q module package version is not synced yet", module.Name)
+		}
+
+		if critical {
+			moduleNames = append(moduleNames, strcase.ToCamel(module.Name))
+		}
+	}
+
+	return moduleNames, nil
+}
+
+func getModulesImagesDigests(_ context.Context, input *go_hook.HookInput) (map[string]string, error) {
+	moduleNames, err := criticalModuleNames(input)
+	if err != nil {
+		return nil, err
 	}
 
 	if len(moduleNames) == 0 {
