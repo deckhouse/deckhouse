@@ -28,6 +28,7 @@ import (
 	"time"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -137,6 +138,31 @@ type fakeCLIRegistryClient struct {
 	resolveTagErr error
 	getPackageErr error
 	manifestErr   error
+
+	// availableRepos, when non-nil, lists the cfg.Repository values this fake
+	// serves; every other repository answers ErrPackageNotFound. nil keeps
+	// the legacy behavior: any repository is served.
+	availableRepos map[string]bool
+	// repoErrs, when non-nil, maps cfg.Repository to an error every call
+	// against that repository returns (takes precedence over availableRepos).
+	repoErrs map[string]error
+}
+
+// repoGate applies the per-repository behavior configured via repoErrs and
+// availableRepos. A nil error means the call may proceed to the path maps.
+func (f *fakeCLIRegistryClient) repoGate(cfg *registry.ClientConfig) error {
+	if cfg == nil {
+		return nil
+	}
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	if err, ok := f.repoErrs[cfg.Repository]; ok {
+		return err
+	}
+	if f.availableRepos != nil && !f.availableRepos[cfg.Repository] {
+		return registry.ErrPackageNotFound
+	}
+	return nil
 }
 
 func (f *fakeCLIRegistryClient) recordRepo(cfg *registry.ClientConfig) {
@@ -160,6 +186,9 @@ func (f *fakeCLIRegistryClient) ListTags(_ context.Context, _ pkgLog.Logger, cfg
 	if f.listTagsErr != nil {
 		return nil, f.listTagsErr
 	}
+	if err := f.repoGate(cfg); err != nil {
+		return nil, err
+	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	tags, ok := f.tags[path]
@@ -174,6 +203,9 @@ func (f *fakeCLIRegistryClient) ResolveTag(_ context.Context, _ pkgLog.Logger, c
 	atomic.AddInt32(&f.resolveTagCalls, 1)
 	if f.resolveTagErr != nil {
 		return "", f.resolveTagErr
+	}
+	if err := f.repoGate(cfg); err != nil {
+		return "", err
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -196,6 +228,9 @@ func (f *fakeCLIRegistryClient) GetPackage(_ context.Context, _ pkgLog.Logger, c
 	if f.getPackageErr != nil {
 		return 0, "", nil, f.getPackageErr
 	}
+	if err := f.repoGate(cfg); err != nil {
+		return 0, "", nil, err
+	}
 	return int64(len(f.packageBody)), f.layerDigest, io.NopCloser(bytes.NewReader(f.packageBody)), nil
 }
 
@@ -204,6 +239,9 @@ func (f *fakeCLIRegistryClient) GetRawManifest(_ context.Context, _ pkgLog.Logge
 	atomic.AddInt32(&f.manifestCalls, 1)
 	if f.manifestErr != nil {
 		return nil, "", f.manifestErr
+	}
+	if err := f.repoGate(cfg); err != nil {
+		return nil, "", err
 	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
@@ -308,6 +346,27 @@ func newTestProxy(t *testing.T, registryClient registry.Client, getter registry.
 	// Serve() normally initializes p.config; do the equivalent for CLIHandler tests.
 	p.config = Config{}
 	return p
+}
+
+// newCLITestServer mounts the proxy's CLI handler on a fresh test server.
+func newCLITestServer(t *testing.T, p *Proxy) *httptest.Server {
+	t.Helper()
+	mux := http.NewServeMux()
+	mux.HandleFunc(cliImagesPathPrefix, p.CLIHandler())
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	return srv
+}
+
+// getStatus GETs urlPath from srv and returns the status code, draining the
+// body so connections are reused.
+func getStatus(t *testing.T, srv *httptest.Server, urlPath string) int {
+	t.Helper()
+	resp, err := http.Get(srv.URL + urlPath)
+	require.NoError(t, err)
+	_, _ = io.Copy(io.Discard, resp.Body)
+	_ = resp.Body.Close()
+	return resp.StatusCode
 }
 
 func TestCLIHandler_ListTags_HappyPath(t *testing.T) {
@@ -576,49 +635,13 @@ func TestCLIHandler_GetManifest_NotFound(t *testing.T) {
 	assert.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
 
-func TestCLIRegistryRepository(t *testing.T) {
-	t.Parallel()
-
-	cases := map[string]string{
-		// Edition repositories collapse to the shared root.
-		"registry.deckhouse.io/deckhouse/ee":            "registry.deckhouse.io/deckhouse",
-		"registry.deckhouse.io/deckhouse/ce":            "registry.deckhouse.io/deckhouse",
-		"registry.deckhouse.io/deckhouse/be":            "registry.deckhouse.io/deckhouse",
-		"registry.deckhouse.io/deckhouse/se":            "registry.deckhouse.io/deckhouse",
-		"registry.deckhouse.io/deckhouse/se-plus":       "registry.deckhouse.io/deckhouse",
-		"registry.deckhouse.io/deckhouse/fe/":           "registry.deckhouse.io/deckhouse",
-		"registry.company.com:5000/mirror/deckhouse/ee": "registry.company.com:5000/mirror/deckhouse",
-		// Repositories without an edition segment are the root already.
-		"dev-registry.deckhouse.io/sys/deckhouse-oss": "dev-registry.deckhouse.io/sys/deckhouse-oss",
-		"registry.company.com/deckhouse":              "registry.company.com/deckhouse",
-		"registry.company.com/ee-mirror":              "registry.company.com/ee-mirror",
-		"registry.company.com/deckhouse/EE":           "registry.company.com/deckhouse/EE",
-		"registry.local:5000":                         "registry.local:5000",
-		// CSE keeps its editionless artifacts (the installer) under
-		// deckhouse/cse, so that path is a root of its own.
-		"registry-cse.deckhouse.ru/deckhouse/cse": "registry-cse.deckhouse.ru/deckhouse/cse",
-		// Stripping never eats the last path segment and leaves a bare host,
-		// nor empties the repository outright.
-		"registry.example.com/ee": "registry.example.com/ee",
-		"registry.local/se":       "registry.local/se",
-		"/ee":                     "/ee",
-		"//ee":                    "//ee",
-	}
-
-	for in, want := range cases {
-		in, want := in, want
-		t.Run(in, func(t *testing.T) {
-			t.Parallel()
-			assert.Equal(t, want, cliRegistryRepository(in))
-		})
-	}
-}
-
-// TestCLIHandler_ResolvesArtifactsAtRegistryRoot: every /v1/images/* route
-// reads from the registry root above the cluster's edition repository, for
-// both deckhouse-cli and its plugins.
+// TestCLIHandler_ResolvesArtifactsAtRegistryRoot: with the official registry
+// layout (CLI artifacts above the edition segment) the first request probes
+// the cluster repository, finds nothing there and falls through to the
+// registry root; every later request goes straight to the remembered root.
 func TestCLIHandler_ResolvesArtifactsAtRegistryRoot(t *testing.T) {
 	fake := &fakeCLIRegistryClient{
+		availableRepos: map[string]bool{"registry.deckhouse.io/deckhouse": true},
 		tags: map[string][]string{
 			"deckhouse-cli":             {"v1.0.0"},
 			"deckhouse-cli/plugins/foo": {"v0.1.0"},
@@ -658,10 +681,13 @@ func TestCLIHandler_ResolvesArtifactsAtRegistryRoot(t *testing.T) {
 	}
 
 	repos := fake.seenRepos()
-	// tags, tags, manifest, resolve + pull: five registry calls.
-	require.Len(t, repos, 5)
-	for _, repo := range repos {
-		assert.Equal(t, "registry.deckhouse.io/deckhouse", repo, "edition segment must be dropped for CLI artifacts")
+	// The first request probes the cluster repo and falls through to the
+	// root; the remaining ones (tags, manifest, resolve + pull) hit the
+	// remembered root directly: six registry calls in total.
+	require.Len(t, repos, 6)
+	assert.Equal(t, "registry.deckhouse.io/deckhouse/ee", repos[0], "the cluster repository probes first")
+	for _, repo := range repos[1:] {
+		assert.Equal(t, "registry.deckhouse.io/deckhouse", repo, "CLI artifacts are served from the registry root")
 	}
 	// The rest of the registry config travels unchanged.
 	cfg, err := getter.Get(registry.DefaultRepository)
@@ -692,4 +718,198 @@ func TestCLIHandler_KeepsRepositoryWithoutEdition(t *testing.T) {
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
 	assert.Equal(t, []string{"dev-registry.deckhouse.io/sys/deckhouse-oss"}, fake.seenRepos())
+}
+
+// TestCLIHandler_MirroredLayoutServedFromClusterRepo: a registry filled by
+// `d8 mirror push registry.local/dest/ee` keeps the CLI artifacts under the
+// cluster repository itself; every route serves from there and the trimmed
+// root is never consulted.
+func TestCLIHandler_MirroredLayoutServedFromClusterRepo(t *testing.T) {
+	fake := &fakeCLIRegistryClient{
+		availableRepos: map[string]bool{"registry.local/dest/ee": true},
+		tags: map[string][]string{
+			"deckhouse-cli/plugins/foo": {"v0.1.0"},
+		},
+		tagToManifestDigest: map[string]string{
+			"deckhouse-cli/plugins/foo:v0.1.0": "sha256:feedface",
+		},
+		rawManifests: map[string]string{
+			"deckhouse-cli/plugins/foo:v0.1.0": `{"schemaVersion":2}`,
+		},
+		packageBody: []byte("plugin-binary"),
+		layerDigest: "abc123",
+	}
+	getter := &fakeCLIGetter{cfg: &registry.ClientConfig{
+		Repository: "registry.local/dest/ee",
+		Scheme:     "https",
+	}}
+	p := newTestProxy(t, fake, getter, nil)
+	srv := newCLITestServer(t, p)
+
+	for _, urlPath := range []string{
+		"/v1/images/deckhouse-cli/plugins/foo/tags",
+		"/v1/images/deckhouse-cli/plugins/foo/manifests/v0.1.0",
+		"/v1/images/deckhouse-cli/plugins/foo/images/v0.1.0",
+	} {
+		assert.Equal(t, http.StatusOK, getStatus(t, srv, urlPath), urlPath)
+	}
+
+	// tags, manifest, resolve + pull: four calls, all at the cluster repo.
+	repos := fake.seenRepos()
+	require.Len(t, repos, 4)
+	for _, repo := range repos {
+		assert.Equal(t, "registry.local/dest/ee", repo, "mirrored artifacts are served as pushed")
+	}
+}
+
+// TestCLIHandler_BothLayoutsPreferTheClusterRepo: when both roots hold CLI
+// artifacts (e.g. sibling mirrors of two editions under one prefix), the
+// cluster's own repository wins.
+func TestCLIHandler_BothLayoutsPreferTheClusterRepo(t *testing.T) {
+	fake := &fakeCLIRegistryClient{
+		availableRepos: map[string]bool{
+			"registry.local/dest/ee": true,
+			"registry.local/dest":    true,
+		},
+		tags: map[string][]string{"deckhouse-cli/plugins/foo": {"v0.1.0"}},
+	}
+	getter := &fakeCLIGetter{cfg: &registry.ClientConfig{Repository: "registry.local/dest/ee"}}
+	p := newTestProxy(t, fake, getter, nil)
+	srv := newCLITestServer(t, p)
+
+	require.Equal(t, http.StatusOK, getStatus(t, srv, "/v1/images/deckhouse-cli/plugins/foo/tags"))
+	assert.Equal(t, []string{"registry.local/dest/ee"}, fake.seenRepos())
+}
+
+// TestCLIHandler_NotFoundInAllRoots: when no candidate root holds the image,
+// the client gets 404 and both candidates were probed; the next request
+// probes again (failures are not remembered).
+func TestCLIHandler_NotFoundInAllRoots(t *testing.T) {
+	fake := &fakeCLIRegistryClient{availableRepos: map[string]bool{}}
+	getter := &fakeCLIGetter{cfg: &registry.ClientConfig{Repository: "registry.deckhouse.io/deckhouse/ee"}}
+	p := newTestProxy(t, fake, getter, nil)
+	srv := newCLITestServer(t, p)
+
+	require.Equal(t, http.StatusNotFound, getStatus(t, srv, "/v1/images/deckhouse-cli/plugins/foo/tags"))
+	require.Equal(t, http.StatusNotFound, getStatus(t, srv, "/v1/images/deckhouse-cli/plugins/foo/images/v0.1.0"))
+
+	assert.Equal(t, []string{
+		"registry.deckhouse.io/deckhouse/ee", "registry.deckhouse.io/deckhouse",
+		"registry.deckhouse.io/deckhouse/ee", "registry.deckhouse.io/deckhouse",
+	}, fake.seenRepos())
+}
+
+// TestCLIHandler_ErrorOnClusterRepoFallsToRoot: a cluster repo hidden behind
+// 401/403 (registries that mask existence) does not block the artifacts
+// served by the trimmed root, and the root is remembered.
+func TestCLIHandler_ErrorOnClusterRepoFallsToRoot(t *testing.T) {
+	fake := &fakeCLIRegistryClient{
+		repoErrs:       map[string]error{"registry.deckhouse.io/deckhouse/ee": &transport.Error{StatusCode: http.StatusForbidden}},
+		availableRepos: map[string]bool{"registry.deckhouse.io/deckhouse": true},
+		tags:           map[string][]string{"deckhouse-cli/plugins/foo": {"v0.1.0"}},
+	}
+	getter := &fakeCLIGetter{cfg: &registry.ClientConfig{Repository: "registry.deckhouse.io/deckhouse/ee"}}
+	p := newTestProxy(t, fake, getter, nil)
+	srv := newCLITestServer(t, p)
+
+	require.Equal(t, http.StatusOK, getStatus(t, srv, "/v1/images/deckhouse-cli/plugins/foo/tags"))
+	require.Equal(t, http.StatusOK, getStatus(t, srv, "/v1/images/deckhouse-cli/plugins/foo/tags"))
+
+	// The second request skips the failing cluster repo entirely.
+	assert.Equal(t, []string{
+		"registry.deckhouse.io/deckhouse/ee", "registry.deckhouse.io/deckhouse",
+		"registry.deckhouse.io/deckhouse",
+	}, fake.seenRepos())
+}
+
+// TestCLIHandler_NetworkErrorDoesNotPinRoot: a network failure on the cluster
+// repo serves the request from the trimmed root but is not remembered - the
+// next request probes the cluster repo again.
+func TestCLIHandler_NetworkErrorDoesNotPinRoot(t *testing.T) {
+	fake := &fakeCLIRegistryClient{
+		repoErrs:       map[string]error{"registry.deckhouse.io/deckhouse/ee": errors.New("connection reset")},
+		availableRepos: map[string]bool{"registry.deckhouse.io/deckhouse": true},
+		tags:           map[string][]string{"deckhouse-cli/plugins/foo": {"v0.1.0"}},
+	}
+	getter := &fakeCLIGetter{cfg: &registry.ClientConfig{Repository: "registry.deckhouse.io/deckhouse/ee"}}
+	p := newTestProxy(t, fake, getter, nil)
+	srv := newCLITestServer(t, p)
+
+	require.Equal(t, http.StatusOK, getStatus(t, srv, "/v1/images/deckhouse-cli/plugins/foo/tags"))
+	require.Equal(t, http.StatusOK, getStatus(t, srv, "/v1/images/deckhouse-cli/plugins/foo/tags"))
+
+	assert.Equal(t, []string{
+		"registry.deckhouse.io/deckhouse/ee", "registry.deckhouse.io/deckhouse",
+		"registry.deckhouse.io/deckhouse/ee", "registry.deckhouse.io/deckhouse",
+	}, fake.seenRepos())
+}
+
+// TestCLIHandler_BadGatewayWhenAllRootsFailHard: with no root serving the
+// image and at least one failing with a non-404 error, the client gets 502,
+// not a misleading 404.
+func TestCLIHandler_BadGatewayWhenAllRootsFailHard(t *testing.T) {
+	fake := &fakeCLIRegistryClient{
+		repoErrs:       map[string]error{"registry.deckhouse.io/deckhouse/ee": errors.New("boom")},
+		availableRepos: map[string]bool{},
+	}
+	getter := &fakeCLIGetter{cfg: &registry.ClientConfig{Repository: "registry.deckhouse.io/deckhouse/ee"}}
+	p := newTestProxy(t, fake, getter, nil)
+	srv := newCLITestServer(t, p)
+
+	assert.Equal(t, http.StatusBadGateway, getStatus(t, srv, "/v1/images/deckhouse-cli/plugins/foo/tags"))
+}
+
+// TestCLIHandler_RegistrySwitchReprobes: rewriting the deckhouse-registry
+// secret (registry switch) changes the cluster repository; the remembered
+// root no longer matches and the new repository is probed from scratch.
+func TestCLIHandler_RegistrySwitchReprobes(t *testing.T) {
+	fake := &fakeCLIRegistryClient{
+		availableRepos: map[string]bool{
+			"registry.deckhouse.io/deckhouse": true,
+			"registry.new/dh/ee":              true,
+		},
+		tags: map[string][]string{"deckhouse-cli/plugins/foo": {"v0.1.0"}},
+	}
+	getter := &fakeCLIGetter{cfg: &registry.ClientConfig{Repository: "registry.deckhouse.io/deckhouse/ee"}}
+	p := newTestProxy(t, fake, getter, nil)
+	srv := newCLITestServer(t, p)
+
+	require.Equal(t, http.StatusOK, getStatus(t, srv, "/v1/images/deckhouse-cli/plugins/foo/tags"))
+
+	getter.cfg = &registry.ClientConfig{Repository: "registry.new/dh/ee"}
+	require.Equal(t, http.StatusOK, getStatus(t, srv, "/v1/images/deckhouse-cli/plugins/foo/tags"))
+
+	assert.Equal(t, []string{
+		"registry.deckhouse.io/deckhouse/ee", "registry.deckhouse.io/deckhouse",
+		"registry.new/dh/ee",
+	}, fake.seenRepos())
+}
+
+// TestCLIHandler_ArtifactsMoveReprobes: when the artifacts move between the
+// roots (a re-mirror with a different layout), a 404 on the remembered root
+// falls through within the same request and the memo follows the move.
+func TestCLIHandler_ArtifactsMoveReprobes(t *testing.T) {
+	fake := &fakeCLIRegistryClient{
+		availableRepos: map[string]bool{"registry.local/dest": true},
+		tags:           map[string][]string{"deckhouse-cli/plugins/foo": {"v0.1.0"}},
+	}
+	getter := &fakeCLIGetter{cfg: &registry.ClientConfig{Repository: "registry.local/dest/ee"}}
+	p := newTestProxy(t, fake, getter, nil)
+	srv := newCLITestServer(t, p)
+
+	require.Equal(t, http.StatusOK, getStatus(t, srv, "/v1/images/deckhouse-cli/plugins/foo/tags"))
+
+	// The user re-mirrors: the artifacts now live under the cluster repo.
+	fake.mu.Lock()
+	fake.availableRepos = map[string]bool{"registry.local/dest/ee": true}
+	fake.mu.Unlock()
+
+	require.Equal(t, http.StatusOK, getStatus(t, srv, "/v1/images/deckhouse-cli/plugins/foo/tags"))
+	require.Equal(t, http.StatusOK, getStatus(t, srv, "/v1/images/deckhouse-cli/plugins/foo/tags"))
+
+	assert.Equal(t, []string{
+		"registry.local/dest/ee", "registry.local/dest",
+		"registry.local/dest", "registry.local/dest/ee",
+		"registry.local/dest/ee",
+	}, fake.seenRepos())
 }
