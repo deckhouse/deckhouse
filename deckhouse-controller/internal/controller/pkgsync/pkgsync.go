@@ -43,7 +43,11 @@
 //	     spec.packageVersion follow the module's origin - the image beats a
 //	     ready pull override, which beats the newest deployed release; the
 //	     settings, enablement and update policy follow the ModuleConfig; the
-//	     embedded and dev annotations mark how the module is served
+//	     embedded and dev annotations mark how the module is served. The
+//	     repository names go through the same source mapping as the versions
+//	     above, and an embedded module carries the version its package
+//	     version is named with, so the spec triple always composes an
+//	     existing version name
 //
 // A version stays a draft until its metadata lands, so no observer takes a
 // half-created version for a complete one; a fill interrupted mid-way heals on

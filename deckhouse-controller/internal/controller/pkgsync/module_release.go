@@ -131,7 +131,7 @@ func (s *syncer) resolveReleases(ctx context.Context) (releaseFacts, error) {
 		}
 
 		facts.origins[moduleName] = Origin{
-			RepositoryName: source,
+			RepositoryName: repositoryNameForSource(source),
 			PackageVersion: "v" + item.version.String(),
 		}
 

@@ -81,6 +81,12 @@ func TestEnsureModule(t *testing.T) {
 	})
 }
 
+func TestOriginConstructorsMapSourceNames(t *testing.T) {
+	assert.Equal(t, "deckhouse-modules", OriginFromDeployedRelease("deckhouse", "v1.4.3").RepositoryName)
+	assert.Equal(t, "deckhouse-modules", OriginFromPullOverride("deckhouse", "pr1234").RepositoryName)
+	assert.Equal(t, "example", OriginFromDeployedRelease("example", "v1.0.0").RepositoryName)
+}
+
 func TestEnsureModuleConfig(t *testing.T) {
 	t.Run("mirrors the config fields onto a versioned module", func(t *testing.T) {
 		existing := &v1alpha2.Module{

@@ -29,8 +29,8 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 )
 
-// testVersion is the Deckhouse version the module tests run under; the module
-// pass writes it into embedded module specs verbatim.
+// testVersion is the Deckhouse version the module tests run under; embedded
+// module specs carry its normalized form, "v1.77.0".
 const testVersion = "v1.77.0-test"
 
 func writeEmbeddedModule(t *testing.T, embeddedDir, dirName, moduleName string) {
@@ -123,8 +123,26 @@ func TestSyncOriginPrecedence(t *testing.T) {
 
 		module := getV2Module(t, cl, "echo")
 		assert.Equal(t, repositoryNameEmbedded, module.Spec.PackageRepositoryName)
-		assert.Equal(t, testVersion, module.Spec.PackageVersion)
+		assert.Equal(t, "v1.77.0", module.Spec.PackageVersion,
+			"the spec carries the version the embedded package version is named with")
 		assert.True(t, module.IsEmbedded())
+
+		assert.Contains(t, listVersionNames(t, cl), "embedded-echo-v1.77.0",
+			"the spec triple must compose the embedded version name")
+	})
+
+	t.Run("a non-semver build version fills the spec verbatim", func(t *testing.T) {
+		embeddedDir := t.TempDir()
+		writeEmbeddedModule(t, embeddedDir, "380-echo", "echo")
+
+		s, cl := newTestSyncer(t, "latest", embeddedDir)
+
+		syncOK(t, s)
+
+		module := getV2Module(t, cl, "echo")
+		assert.Equal(t, "latest", module.Spec.PackageVersion,
+			"a version that names no package version must still place the module")
+		assert.Empty(t, listVersionNames(t, cl))
 	})
 
 	t.Run("newest deployed release wins and supersedes the older one", func(t *testing.T) {
@@ -221,6 +239,35 @@ func TestSyncModules(t *testing.T) {
 		assert.Empty(t, module.Spec.PackageVersion, "the sync must not touch a module it does not own")
 	})
 
+	t.Run("deckhouse source maps to the deckhouse-modules repository", func(t *testing.T) {
+		s, cl := newTestSyncer(t, testVersion, t.TempDir(),
+			testDeployedRelease("parca", "deckhouse", "1.4.3"),
+		)
+
+		syncOK(t, s)
+
+		module := getV2Module(t, cl, "parca")
+		assert.Equal(t, "deckhouse-modules", module.Spec.PackageRepositoryName)
+
+		name := v1alpha1.MakeModulePackageVersionName(module.Spec.PackageRepositoryName, module.Name, module.Spec.PackageVersion)
+		assert.Contains(t, listVersionNames(t, cl), name, "the spec triple must compose the stub name")
+	})
+
+	t.Run("heals a repository recorded under its source name", func(t *testing.T) {
+		existing := &v1alpha2.Module{
+			ObjectMeta: metav1.ObjectMeta{Name: "parca"},
+			Spec:       v1alpha2.ModuleSpec{PackageRepositoryName: "deckhouse", PackageVersion: "v1.4.3"},
+		}
+
+		s, cl := newTestSyncer(t, testVersion, t.TempDir(), existing)
+
+		syncOK(t, s)
+
+		module := getV2Module(t, cl, "parca")
+		assert.Equal(t, "deckhouse-modules", module.Spec.PackageRepositoryName,
+			"a raw source name left by an older write must heal")
+	})
+
 	t.Run("keeps a module no source claims but a repository backs", func(t *testing.T) {
 		existing := &v1alpha2.Module{
 			ObjectMeta: metav1.ObjectMeta{Name: "echo"},
@@ -301,6 +348,17 @@ func TestFillModuleV2(t *testing.T) {
 
 		assert.Equal(t, "chosen", module.Spec.PackageRepositoryName)
 		assert.Equal(t, "v1.0.0", module.Spec.PackageVersion, "the version still comes from the origin")
+	})
+
+	t.Run("config source goes through the repository mapping", func(t *testing.T) {
+		module := &v1alpha2.Module{}
+
+		conf := testModuleConfig("echo")
+		conf.Spec.Source = "deckhouse"
+
+		fillModuleV2(module, Origin{RepositoryName: "example", PackageVersion: "v1.0.0"}, conf)
+
+		assert.Equal(t, "deckhouse-modules", module.Spec.PackageRepositoryName)
 	})
 
 	t.Run("config without a source keeps the origin repository", func(t *testing.T) {

@@ -33,14 +33,18 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-// OriginFromPullOverride is the origin of a module a ready ModulePullOverride pins.
-func OriginFromPullOverride(repositoryName, imageTag string) Origin {
-	return Origin{RepositoryName: repositoryName, PackageVersion: imageTag, Dev: true}
+// OriginFromPullOverride is the origin of a module a ready ModulePullOverride
+// pins. A module source name maps to the name of the PackageRepository serving
+// the same registry path.
+func OriginFromPullOverride(sourceName, imageTag string) Origin {
+	return Origin{RepositoryName: repositoryNameForSource(sourceName), PackageVersion: imageTag, Dev: true}
 }
 
-// OriginFromDeployedRelease is the origin of a module a deployed ModuleRelease serves.
-func OriginFromDeployedRelease(repositoryName, version string) Origin {
-	return Origin{RepositoryName: repositoryName, PackageVersion: version}
+// OriginFromDeployedRelease is the origin of a module a deployed ModuleRelease
+// serves. A module source name maps to the name of the PackageRepository
+// serving the same registry path.
+func OriginFromDeployedRelease(sourceName, version string) Origin {
+	return Origin{RepositoryName: repositoryNameForSource(sourceName), PackageVersion: version}
 }
 
 // EnsureModule converges one v1alpha2 Module with its origin. When the write

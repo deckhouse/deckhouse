@@ -66,14 +66,21 @@ func (s *syncer) syncModules(ctx context.Context, embedded []embeddedModule, fro
 
 // originsFromImage returns an origin for every module the running image ships.
 func (s *syncer) originsFromImage(embedded []embeddedModule) map[string]Origin {
+	// an embedded module carries the version its package version is named
+	// with, so the spec triple always resolves to the embedded version name
+	version, ok := s.embeddedVersion()
+	if !ok {
+		// a non-semver build names no package version, but the modules still
+		// must be placed; the raw version keeps them filled
+		version = s.deckhouseVersion
+	}
+
 	origins := make(map[string]Origin, len(embedded))
 
 	for _, module := range embedded {
-		// an embedded module carries the running Deckhouse version - the
-		// runtime's edition version verbatim
 		origins[module.def.Name] = Origin{
 			RepositoryName: repositoryNameEmbedded,
-			PackageVersion: s.deckhouseVersion,
+			PackageVersion: version,
 			Embedded:       true,
 		}
 	}
@@ -109,7 +116,7 @@ func (s *syncer) originsFromModulePullOverrides(ctx context.Context) (map[string
 			continue
 		}
 
-		origin := Origin{RepositoryName: moduleV1.Properties.Source, PackageVersion: mpo.Spec.ImageTag, Dev: true}
+		origin := Origin{RepositoryName: repositoryNameForSource(moduleV1.Properties.Source), PackageVersion: mpo.Spec.ImageTag, Dev: true}
 
 		// a module without a source gives no repository to pull from; claiming
 		// it here would only hide the release that does know one
@@ -153,6 +160,10 @@ func (s *syncer) liveModuleConfigs(ctx context.Context) (map[string]*v1alpha1.Mo
 // fillModuleV2 writes the origin, its annotations and the config's settings
 // onto the module. Pure field mapping, no cluster access.
 func fillModuleV2(moduleV2 *v1alpha2.Module, origin Origin, conf *v1alpha1.ModuleConfig) {
+	// a repository recorded under its source name heals to the mapped name,
+	// whatever else this write touches
+	moduleV2.Spec.PackageRepositoryName = repositoryNameForSource(moduleV2.Spec.PackageRepositoryName)
+
 	// a module of unknown origin keeps the spec another writer gave it
 	if origin.Known() {
 		moduleV2.Spec.PackageRepositoryName = origin.RepositoryName
@@ -198,7 +209,7 @@ func fillModuleV2(moduleV2 *v1alpha2.Module, origin Origin, conf *v1alpha1.Modul
 	// last. An embedded module keeps "embedded" - it ships in the image, and
 	// no repository serves it.
 	if conf.Spec.Source != "" && !moduleV2.IsEmbedded() {
-		moduleV2.Spec.PackageRepositoryName = conf.Spec.Source
+		moduleV2.Spec.PackageRepositoryName = repositoryNameForSource(conf.Spec.Source)
 	}
 }
 
