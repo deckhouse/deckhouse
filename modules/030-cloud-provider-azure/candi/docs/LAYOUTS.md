@@ -51,7 +51,7 @@ The module creates a Network Security Group (NSG) named after the cluster prefix
 
 The following rules will be created:
 
-- `AllowIcmp` — inbound ICMP from any source;
-- `AllowSsh` — inbound TCP/22 from CIDRs in `sshAllowList` (from any source if the list is not set).
+- `AllowIcmp` — allow incoming traffic over the `ICMP` protocol from any source;
+- `AllowSsh` — allow incoming traffic over the `TCP` protocol on port 22 from CIDRs listed in `sshAllowList` (from any source if the list is not set).
 
-The module does not add extra ports (for example, HTTP/HTTPS) to this NSG. Configure them manually in Azure. You cannot attach a pre-created custom NSG to nodes through module parameters — only `sshAllowList` is available to restrict SSH.
+You cannot attach a pre-created custom NSG to nodes through module parameters. Use `sshAllowList` to restrict SSH access.

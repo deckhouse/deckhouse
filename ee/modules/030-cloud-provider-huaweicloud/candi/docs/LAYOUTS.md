@@ -16,13 +16,13 @@ Additionally, you can enable the creation of a security group using the `interna
 
 The following inbound rules will be created:
 
-- TCP/22 (SSH) from `0.0.0.0/0`;
-- ICMP from `0.0.0.0/0`;
-- TCP NodePorts `30000–32767` from `0.0.0.0/0` (UDP NodePorts are not opened by default).
+- allow incoming traffic over the `TCP` protocol on port 22 from `0.0.0.0/0`;
+- allow incoming traffic over the `ICMP` protocol from `0.0.0.0/0`;
+- allow incoming traffic over the `TCP` protocol on ports 30000–32767 for NodePort usage (UDP NodePorts are not opened by default).
 
-Unlike OpenStack, the “all inbound traffic from nodes in the same security group” rule is not created by default in Huawei Cloud.
+The “all inbound traffic from nodes in the same security group” rule is not created by default in Huawei Cloud.
 
-The module does not add HTTP/HTTPS or other application ports to the managed security group. Create such rules manually in a separate security group and attach it to the nodes. For CloudEphemeral nodes, additional security groups are set in `HuaweiCloudInstanceClass` via `spec.securityGroups` and are applied together with the group created by the module.
+Attach custom security groups for CloudEphemeral nodes in the `HuaweiCloudInstanceClass` resource via `spec.securityGroups`. They are applied together with the group created by the module.
 
 Example of the layout configuration:
 

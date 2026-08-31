@@ -183,7 +183,7 @@ apiVersions:
               - ICMP из `0.0.0.0/0`;
               - TCP NodePort `30000–32767` из `0.0.0.0/0`.
 
-              Подробнее и про подключение собственных групп безопасности — в разделе [схем размещения](layouts.html#standard).
+              Подробнее — в разделе [схем размещения](layouts.html#standard).
           enableEIP:
             description: |
                 Включите Elastic IP для мастер узлов.

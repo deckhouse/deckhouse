@@ -294,10 +294,6 @@ entries:
                             en: Integration with Huawei Cloud services
                             ru: Интеграция со службами Huawei Cloud
                           url: /admin/integrations/private/huaweicloud/services.html
-                        - title:
-                            en: FAQ
-                            ru: FAQ
-                          url: /modules/cloud-provider-huaweicloud/faq.html
                     - title:
                         ru: Интеграция с Dynamix
                       folders:

@@ -14,7 +14,3 @@ metadata:
 spec:
   machineSize: Standard_F4
 ```
-
-## Configuring security policies on nodes
-
-Default Network Security Group rules are described in the [layouts](layouts.html#network-security-group) section. You cannot attach a pre-created custom NSG to nodes via module parameters — only [`sshAllowList`](cluster_configuration.html#azureclusterconfiguration-sshallowlist) is available to restrict SSH.

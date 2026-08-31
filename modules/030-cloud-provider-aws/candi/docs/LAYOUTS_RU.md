@@ -123,15 +123,21 @@ tags:
 Будут созданы следующие группы и правила:
 
 - `<prefix>-node` — назначается узлам кластера:
-  - весь исходящий трафик в `0.0.0.0/0`;
-  - весь входящий трафик от группы `<prefix>-loadbalancer`;
-  - весь входящий трафик от узлов той же группы `<prefix>-node`;
-  - ICMP из CIDR, указанных в `publicNetworkAllowList` (по умолчанию `0.0.0.0/0`).
+  - разрешение любого исходящего трафика в `0.0.0.0/0`;
+  - разрешение любого входящего трафика от группы `<prefix>-loadbalancer`;
+  - разрешение любого входящего трафика от узлов той же группы `<prefix>-node`;
+  - разрешение входящего трафика по протоколу `ICMP` из CIDR, указанных в `publicNetworkAllowList` (по умолчанию `0.0.0.0/0`).
 - `<prefix>-loadbalancer` — используется балансировщиками нагрузки:
-  - весь входящий трафик из CIDR в `publicNetworkAllowList`;
-  - весь исходящий трафик к группе `<prefix>-node`.
-- `<prefix>-ssh-accessible` — создаётся, если задан `sshAllowList`; разрешает TCP/22 из указанных CIDR (по умолчанию `0.0.0.0/0`). Назначается master-узлам (или bastion в схеме WithNAT).
+  - разрешение любого входящего трафика из CIDR в `publicNetworkAllowList`;
+  - разрешение любого исходящего трафика к группе `<prefix>-node`.
+- `<prefix>-ssh-accessible` — создаётся, если задан `sshAllowList`; разрешает входящий трафик по протоколу `TCP` и порту 22 из указанных CIDR (по умолчанию `0.0.0.0/0`). Назначается master-узлам или bastion-хосту в схеме `WithNAT`.
 
-Модуль не добавляет в эти группы правила для HTTP/HTTPS и других прикладных портов. Такие разрешения нужно создавать вручную в отдельной группе безопасности и подключать её через `additionalSecurityGroups` в `masterNodeGroup` / `nodeGroups` и в `AWSInstanceClass`.
+{% alert level="warning" %}
+При `disableDefaultSecurityGroup: true` необходимо самостоятельно создать все необходимые группы безопасности и указать их в `additionalSecurityGroups`. Для балансировщиков нагрузки группы задаются аннотацией `service.beta.kubernetes.io/aws-load-balancer-security-groups`.
+{% endalert %}
 
-При `disableDefaultSecurityGroup: true` необходимо самостоятельно создать все необходимые группы и явно указать их в `additionalSecurityGroups`. Для балансировщиков нагрузки укажите группы через аннотацию `service.beta.kubernetes.io/aws-load-balancer-security-groups`.
+Собственные группы безопасности (созданные в облаке заранее) подключаются через `additionalSecurityGroups`:
+
+- для master-узлов — в секции `masterNodeGroup` ресурса `AWSClusterConfiguration`;
+- для статических узлов — в секции `nodeGroups` ресурса `AWSClusterConfiguration`;
+- для эфемерных узлов — в ресурсе `AWSInstanceClass`.

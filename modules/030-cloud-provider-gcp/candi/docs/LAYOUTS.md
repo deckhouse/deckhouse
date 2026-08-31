@@ -143,7 +143,11 @@ provider:
 
 The module creates the following firewall rules in the cluster VPC:
 
-- `<prefix>-ssh-and-ping` — ICMP and TCP/22 to nodes with the `<prefix>` network tag from CIDRs in `sshAllowList` (default `0.0.0.0/0`);
-- `<prefix>-intercommunication` — all traffic between nodes with the `<prefix>` network tag, and from the pod subnet (`podSubnetCIDR`).
+- `<prefix>-ssh-and-ping` — allow incoming traffic over the `ICMP` and `TCP` (port 22) protocols to nodes with the `<prefix>` network tag from CIDRs listed in `sshAllowList` (default `0.0.0.0/0`);
+- `<prefix>-intercommunication` — allow any traffic between nodes with the `<prefix>` network tag, and from the pod subnet (`podSubnetCIDR`).
 
-Additional ports (for example, HTTP/HTTPS from the internet) are not opened by these rules. Create custom firewall rules in GCP and apply them to nodes via additional network tags (`additionalNetworkTags` in `masterNodeGroup` / `nodeGroups` and in `GCPInstanceClass`).
+Apply custom firewall rules to nodes via additional network tags (`additionalNetworkTags`):
+
+- for master nodes — in the `masterNodeGroup` section of `GCPClusterConfiguration`;
+- for static nodes — in the `nodeGroups` section of `GCPClusterConfiguration`;
+- for ephemeral nodes — in the `GCPInstanceClass` resource.

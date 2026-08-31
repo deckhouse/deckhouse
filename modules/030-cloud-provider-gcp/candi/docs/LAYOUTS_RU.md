@@ -146,7 +146,11 @@ provider:
 
 Модуль создаёт следующие правила файрвола в VPC кластера:
 
-- `<prefix>-ssh-and-ping` — ICMP и TCP/22 к узлам с network tag `<prefix>` из CIDR в `sshAllowList` (по умолчанию `0.0.0.0/0`);
-- `<prefix>-intercommunication` — весь трафик между узлами с network tag `<prefix>`, а также из подсети подов (`podSubnetCIDR`).
+- `<prefix>-ssh-and-ping` — разрешение входящего трафика по протоколам `ICMP` и `TCP` (порт 22) к узлам с network tag `<prefix>` из CIDR, указанных в `sshAllowList` (по умолчанию `0.0.0.0/0`);
+- `<prefix>-intercommunication` — разрешение любого трафика между узлами с network tag `<prefix>`, а также из подсети подов (`podSubnetCIDR`).
 
-Дополнительные порты (например, HTTP/HTTPS из интернета) этими правилами не открываются. Создайте собственные правила файрвола в GCP и примените их к узлам через дополнительные network tags (`additionalNetworkTags` в `masterNodeGroup` / `nodeGroups` и в `GCPInstanceClass`).
+Собственные правила файрвола применяются к узлам через дополнительные network tags (`additionalNetworkTags`):
+
+- для master-узлов — в секции `masterNodeGroup` ресурса `GCPClusterConfiguration`;
+- для статических узлов — в секции `nodeGroups` ресурса `GCPClusterConfiguration`;
+- для эфемерных узлов — в ресурсе `GCPInstanceClass`.

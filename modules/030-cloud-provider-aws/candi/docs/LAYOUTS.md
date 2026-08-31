@@ -121,15 +121,21 @@ Additionally, you can enable the creation of default security groups (unless `di
 The following groups and rules will be created:
 
 - `<prefix>-node` — assigned to cluster nodes:
-  - all egress traffic to `0.0.0.0/0`;
-  - all ingress traffic from the `<prefix>-loadbalancer` group;
-  - all ingress traffic from nodes in the same `<prefix>-node` group;
-  - ICMP from CIDRs listed in `publicNetworkAllowList` (default `0.0.0.0/0`).
+  - allow any outgoing traffic to `0.0.0.0/0`;
+  - allow any incoming traffic from the `<prefix>-loadbalancer` group;
+  - allow any incoming traffic from nodes in the same `<prefix>-node` group;
+  - allow incoming traffic over the `ICMP` protocol from CIDRs listed in `publicNetworkAllowList` (default `0.0.0.0/0`).
 - `<prefix>-loadbalancer` — used by load balancers:
-  - all ingress traffic from CIDRs in `publicNetworkAllowList`;
-  - all egress traffic to the `<prefix>-node` group.
-- `<prefix>-ssh-accessible` — created when `sshAllowList` is set; allows TCP/22 from the listed CIDRs (default `0.0.0.0/0`). Assigned to master nodes (or the bastion in the WithNAT layout).
+  - allow any incoming traffic from CIDRs in `publicNetworkAllowList`;
+  - allow any outgoing traffic to the `<prefix>-node` group.
+- `<prefix>-ssh-accessible` — created when `sshAllowList` is set; allows incoming traffic over the `TCP` protocol on port 22 from the listed CIDRs (default `0.0.0.0/0`). Assigned to master nodes or to the bastion host in the `WithNAT` layout.
 
-The module does not add HTTP/HTTPS or other application ports to these groups. Create such rules manually in a separate security group and attach it via `additionalSecurityGroups` in `masterNodeGroup` / `nodeGroups` and in `AWSInstanceClass`.
+{% alert level="warning" %}
+When `disableDefaultSecurityGroup: true` is set, you must create all required security groups yourself and specify them in `additionalSecurityGroups`. For load balancers, set groups with the `service.beta.kubernetes.io/aws-load-balancer-security-groups` annotation.
+{% endalert %}
 
-When `disableDefaultSecurityGroup: true` is set, you must manually create all required security groups and explicitly specify them in `additionalSecurityGroups`. For load balancers, specify groups using the `service.beta.kubernetes.io/aws-load-balancer-security-groups` annotation.
+Attach custom security groups (created in the cloud in advance) via `additionalSecurityGroups`:
+
+- for master nodes — in the `masterNodeGroup` section of `AWSClusterConfiguration`;
+- for static nodes — in the `nodeGroups` section of `AWSClusterConfiguration`;
+- for ephemeral nodes — in the `AWSInstanceClass` resource.

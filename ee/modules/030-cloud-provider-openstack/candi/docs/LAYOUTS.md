@@ -19,12 +19,16 @@ Additionally, you can enable the creation of a security group using the `interna
 
 The following inbound rules will be created:
 
-- TCP/22 (SSH) from CIDRs listed in `sshAllowList` (default `0.0.0.0/0`);
-- ICMP from `0.0.0.0/0`;
-- TCP NodePorts `30000–32767` from `0.0.0.0/0` (UDP NodePorts are not opened by default);
-- all inbound traffic from nodes in the same security group.
+- allow incoming traffic over the `TCP` protocol on port 22 from CIDRs listed in `sshAllowList` (default `0.0.0.0/0`);
+- allow incoming traffic over the `ICMP` protocol from `0.0.0.0/0`;
+- allow incoming traffic over the `TCP` protocol on ports 30000–32767 for NodePort usage (UDP NodePorts are not opened by default);
+- allow any incoming traffic from nodes in the same security group.
 
-The module does not add HTTP/HTTPS or other application ports to the managed security group. Create such rules manually in a separate security group and attach it via `additionalSecurityGroups` in `masterNodeGroup` / `nodeGroups` and in `OpenStackInstanceClass`.
+Attach custom security groups (created in the cloud in advance) via `additionalSecurityGroups`:
+
+- for master nodes — in the `masterNodeGroup` section of `OpenStackClusterConfiguration`;
+- for static nodes — in the `nodeGroups` section of `OpenStackClusterConfiguration`;
+- for ephemeral nodes — in the `OpenStackInstanceClass` resource.
 
 Example of the layout configuration:
 
