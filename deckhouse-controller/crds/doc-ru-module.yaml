@@ -42,7 +42,7 @@ spec:
                     messages:
                       description: |-
                         Тексты предупреждений об отключении модуля на разных языках.
-                        
+
                         Если для выбранного языка текст не задан, используется значение поля `message`.
                 requirements:
                   description: Зависимости модуля — набор условий, которые должны выполняться чтобы Deckhouse Kubernetes Platform (DKP) мог запустить модуль.
@@ -71,9 +71,6 @@ spec:
               description: |
                 Определяет поведение модуля.
               properties:
-                packageName:
-                  description: |
-                    Название пакета модуля для установки.
                 packageRepositoryName:
                   description: |
                     Название репозитория, где находится пакет.
@@ -127,55 +124,3 @@ spec:
                     version:
                       description: |
                         Семантическая версия установленного модуля.
-                internalConditions:
-                  description: |
-                    Внутренние условия модуля.
-                  items:
-                    description: |
-                      Условие, описывающее один аспект текущего состояния модуля.
-                    properties:
-                      lastTransitionTime:
-                        description: |
-                          Последнее время перехода условия из одного статуса в другой.
-                      message:
-                        description: |
-                          Человеко-читаемое сообщение, указывающее детали перехода.
-                      observedGeneration:
-                        description: |
-                          Значение `.metadata.generation`, на котором было установлено условие.
-                          Позволяет определить актуальность условия для текущего состояния ресурса.
-                      reason:
-                        description: |
-                          Программный идентификатор причины последнего перехода условия.
-                      status:
-                        description: |
-                          Статус условия. Может быть `True`, `False` или `Unknown`.
-                      type:
-                        description: |
-                          Тип условия в CamelCase или в формате `foo.example.com/CamelCase`.
-                resourceConditions:
-                  description: |
-                    Условия, связанные с ресурсами модуля.
-                  items:
-                    description: |
-                      Условие, описывающее один аспект текущего состояния модуля.
-                    properties:
-                      lastTransitionTime:
-                        description: |
-                          Последнее время перехода условия из одного статуса в другой.
-                      message:
-                        description: |
-                          Человеко-читаемое сообщение, указывающее детали перехода.
-                      observedGeneration:
-                        description: |
-                          Значение `.metadata.generation`, на котором было установлено условие.
-                          Позволяет определить актуальность условия для текущего состояния ресурса.
-                      reason:
-                        description: |
-                          Программный идентификатор причины последнего перехода условия.
-                      status:
-                        description: |
-                          Статус условия. Может быть `True`, `False` или `Unknown`.
-                      type:
-                        description: |
-                          Тип условия в CamelCase или в формате `foo.example.com/CamelCase`.

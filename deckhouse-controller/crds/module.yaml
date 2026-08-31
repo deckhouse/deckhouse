@@ -163,6 +163,9 @@ spec:
                 description: Module _weight_ (priority).
                 type: integer
             type: object
+          spec:
+            type: object
+            x-kubernetes-preserve-unknown-fields: true
           status:
             properties:
               conditions:
@@ -301,11 +304,6 @@ spec:
                 description: Version of the settings schema. Distinct from packageVersion,
                   which selects the module package.
                 type: number
-              updatePolicy:
-                description: Update policy for the module package.
-                type: string
-                x-doc-examples:
-                - test-alpha.
             required:
             - packageVersion
             type: object
@@ -383,44 +381,12 @@ spec:
                     description: Semantic version of the installed module.
                     type: string
                 type: object
-              hooksState:
-                description: Hooks status report.
-                type: string
               lastAppliedConfiguration:
                 description: |-
                   LastAppliedConfiguration is the effective settings (user configuration merged
                   with config-schema defaults) that drove the most recent successful apply.
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
-              phase:
-                description: Module phase.
-                enum:
-                - Unavailable
-                - Available
-                - Downloading
-                - DownloadingError
-                - Reconciling
-                - Installing
-                - HooksDisabled
-                - WaitSyncTasks
-                - Downloaded
-                - Conflict
-                - Ready
-                - Error
-                type: string
-                x-doc-examples:
-                - Unavailable
-                - Available
-                - Downloading
-                - DownloadingError
-                - Reconciling
-                - Installing
-                - HooksDisabled
-                - WaitSyncTasks
-                - Downloaded
-                - Conflict
-                - Ready
-                - Error
               summary:
                 description: |-
                   Summary aggregates the high-level user-facing state, message and
