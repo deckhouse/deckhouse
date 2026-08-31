@@ -1763,6 +1763,59 @@ ccc: ddd
 		})
 	})
 
+	// nodeCapacity is resolved for every node group now, not only for the ones that scale from zero.
+	// The MCM MachineDeployment keeps these annotations gated on minPerZone: widening the MCM
+	// provider's node template is a separate change from the clusterapi capacity fix.
+	Context("MCM scale-from-zero annotations", func() {
+		const mdName = "myprefix-worker-02320933"
+
+		assertAnnotations := func(present bool) {
+			md := f.KubernetesResource("MachineDeployment", "d8-cloud-instance-manager", mdName)
+			Expect(md.Exists()).To(BeTrue())
+
+			annotations := md.Field("metadata.annotations").Map()
+			if present {
+				Expect(annotations["cluster-autoscaler.kubernetes.io/scale-from-zero"].String()).To(Equal("true"))
+				Expect(annotations["cluster-autoscaler.kubernetes.io/node-cpu"].String()).To(Equal("2"))
+				Expect(annotations["cluster-autoscaler.kubernetes.io/node-memory"].String()).To(Equal("2Gi"))
+			} else {
+				Expect(annotations).ToNot(HaveKey("cluster-autoscaler.kubernetes.io/scale-from-zero"))
+				Expect(annotations).ToNot(HaveKey("cluster-autoscaler.kubernetes.io/node-cpu"))
+				Expect(annotations).ToNot(HaveKey("cluster-autoscaler.kubernetes.io/node-memory"))
+			}
+		}
+
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerAWS)
+			f.ValuesSetFromYaml("nodeManager.internal.nodeGroups.0.nodeCapacity", `{cpu: "2", memory: "2Gi"}`)
+			setBashibleAPIServerTLSValues(f)
+		})
+
+		Context("minPerZone is zero", func() {
+			BeforeEach(func() {
+				f.ValuesSet("nodeManager.internal.nodeGroups.0.cloudInstances.minPerZone", 0)
+				f.HelmRender()
+			})
+
+			It("annotates the MachineDeployment", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				assertAnnotations(true)
+			})
+		})
+
+		Context("minPerZone is above zero", func() {
+			BeforeEach(func() {
+				f.ValuesSet("nodeManager.internal.nodeGroups.0.cloudInstances.minPerZone", 2)
+				f.HelmRender()
+			})
+
+			It("does not annotate the MachineDeployment", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				assertAnnotations(false)
+			})
+		})
+	})
+
 	Context("CAPI", func() {
 		assertClusterResources := func(f *Config, clusterName string) {
 			cluster := f.KubernetesResource("Cluster", "d8-cloud-instance-manager", clusterName)
