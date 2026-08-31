@@ -176,7 +176,7 @@ apiVersions:
               Список адресов рекурсивных DNS внутренней сети.
           internalNetworkSecurity: &internalNetworkSecurity_ru
             description: |
-              Флаг, который определяет необходимость настройки групп безопасности на портах внутренней сети.
+              Флаг, который определяет необходимость настройки групп безопасности ([SecurityGroups](./cr.html#huaweicloudinstanceclass-v1-spec-securitygroups)) на портах внутренней сети.
 
               При включении DKP создаёт группу безопасности с именем префикса кластера (`prefix`) и следующими правилами входящего трафика по умолчанию:
               - TCP/22 (SSH) из `0.0.0.0/0` по умолчанию;
@@ -192,14 +192,14 @@ apiVersions:
         description: |
           Настройки для [схемы размещения `VpcPeering`](./layouts.html#vpcpeering).
         properties:
-          internalNetworkCIDR: &internalNetworkCIDR_ru
-            description: |
-              Адресация для внутренней сети узлов кластера.
+          internalNetworkCIDR:
+            <<: *internalNetworkCIDR_ru
           internalNetworkDNSServers:
             description: |
               Список адресов рекурсивных DNS внутренней сети узлов кластера.
-          internalNetworkSecurity:
-            <<: *internalNetworkSecurity_ru
+          internalNetworkSecurity: &internalNetworkSecurity_ru
+            description: |
+              Флаг, который определяет необходимость настройки [SecurityGroups](./cr.html#huaweicloudinstanceclass-v1-spec-securitygroups) на портах внутренней сети.
           subnet:
             description: |
               Имя подсети в сети VPC.
