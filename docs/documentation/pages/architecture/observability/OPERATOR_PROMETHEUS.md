@@ -7,7 +7,7 @@ description: Architecture of the operator-prometheus  module in Deckhouse Kubern
 
 The [`operator-prometheus`](/modules/operator-prometheus/) module installs [Prometheus Operator](https://github.com/coreos/prometheus-operator), which automates the deployment and management of [Prometheus](https://github.com/prometheus/prometheus) installations.
 
-For more details about the module configuration as well as Prometheus Operator operation, refer to [the module documentation](/modules/operator-prometheus/) section.
+For more details about the module configuration as well as the Prometheus Operator operation, refer to [the module documentation](/modules/operator-prometheus/) section.
 
 ## Module architecture
 
