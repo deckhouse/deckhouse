@@ -50,13 +50,13 @@ variables:
       - "1.36"
     description: "Kubernetes version (candi/version_map.yml)."
 
-  UPDATE_IMAGE_TAG:
-    value: ""
-    description: "Target image tag for deckhouse update. Leave empty to skip the update step; set a value to run deckhouse update after cluster create."
-
   BRANCH:
     value: ""
     description: "Custom branch/image tag for e2e-framework (optional). Leave empty to auto-resolve from the current pipeline via e2e-ensure-build. If set and not prefixed with 'pr' (e.g. release/main build), e2e-ensure-build is skipped and this value is used as-is."
+
+  UPDATE_IMAGE_TAG:
+    value: ""
+    description: "Target image tag for deckhouse update. Leave empty to skip the update step; set a value to run deckhouse update after cluster create."
 
 # ---------------------------------------------------------------------------
 # Find edition build on existing branch/tag pipeline and play/wait if needed
