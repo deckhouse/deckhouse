@@ -238,7 +238,7 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 	if err := pkgsync.EnsureModuleConfig(ctx, r.apiReader, r.client, storedConfig, r.logger); err != nil {
 		r.logger.Error("failed to mirror the module config into the module v2", slog.String("name", moduleConfig.Name), log.Err(err))
 
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
 	module := new(v1alpha1.Module)
