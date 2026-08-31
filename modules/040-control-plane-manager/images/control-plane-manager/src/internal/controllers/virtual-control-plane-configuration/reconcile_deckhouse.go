@@ -622,26 +622,8 @@ func buildTargetDeckhouseDeployment(
 		return nil, fmt.Errorf("unmarshal deckhouse Deployment: %w", err)
 	}
 
-	registrySecret := constants.VirtualResourceName(deckhouseRegistrySecretName, vcp.Name)
-
 	deployment.Name = constants.VirtualResourceName(deckhouseDeploymentName, vcp.Name)
-	if deployment.Labels == nil {
-		deployment.Labels = map[string]string{}
-	}
-	deployment.Labels[constants.VirtualControlPlaneScopeLabelKey] = vcp.Name
-
-	if deployment.Spec.Selector == nil {
-		deployment.Spec.Selector = &metav1.LabelSelector{}
-	}
-	if deployment.Spec.Selector.MatchLabels == nil {
-		deployment.Spec.Selector.MatchLabels = map[string]string{}
-	}
-	deployment.Spec.Selector.MatchLabels[constants.VirtualControlPlaneScopeLabelKey] = vcp.Name
-
-	if deployment.Spec.Template.Labels == nil {
-		deployment.Spec.Template.Labels = map[string]string{}
-	}
-	deployment.Spec.Template.Labels[constants.VirtualControlPlaneScopeLabelKey] = vcp.Name
+	applyVCPScope(deployment, vcp.Name)
 
 	// A mutable image tag never changes the pod template on a parent rebuild, so the tenant keeps stale content.
 	// The parent's resolved digest here changes with the content and rolls the pod,
@@ -653,11 +635,7 @@ func buildTargetDeckhouseDeployment(
 		deployment.Spec.Template.Annotations["control-plane.deckhouse.io/parent-image-digest"] = parentImageDigest
 	}
 
-	for i := range deployment.Spec.Template.Spec.ImagePullSecrets {
-		if deployment.Spec.Template.Spec.ImagePullSecrets[i].Name == deckhouseRegistrySecretName {
-			deployment.Spec.Template.Spec.ImagePullSecrets[i].Name = registrySecret
-		}
-	}
+	renameImagePullSecret(deployment, deckhouseRegistrySecretName, constants.VirtualResourceName(deckhouseRegistrySecretName, vcp.Name))
 
 	return deployment, nil
 }

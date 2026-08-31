@@ -21,11 +21,45 @@ import (
 	"fmt"
 	"strings"
 
+	"control-plane-manager/internal/constants"
+
+	appsv1 "k8s.io/api/apps/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 )
+
+// applyVCPScope stamps the VCP scope settings on a vcp-owned deployment
+func applyVCPScope(dep *appsv1.Deployment, vcpName string) {
+	if dep.Labels == nil {
+		dep.Labels = map[string]string{}
+	}
+	dep.Labels[constants.VirtualControlPlaneScopeLabelKey] = vcpName
+
+	if dep.Spec.Selector == nil {
+		dep.Spec.Selector = &metav1.LabelSelector{}
+	}
+	if dep.Spec.Selector.MatchLabels == nil {
+		dep.Spec.Selector.MatchLabels = map[string]string{}
+	}
+	dep.Spec.Selector.MatchLabels[constants.VirtualControlPlaneScopeLabelKey] = vcpName
+
+	if dep.Spec.Template.Labels == nil {
+		dep.Spec.Template.Labels = map[string]string{}
+	}
+	dep.Spec.Template.Labels[constants.VirtualControlPlaneScopeLabelKey] = vcpName
+}
+
+// renameImagePullSecret rewrites a Deployment pod template imagePullSecret from the embedded manifest placeholder name to the per-VCP scoped name.
+func renameImagePullSecret(dep *appsv1.Deployment, from, to string) {
+	for i := range dep.Spec.Template.Spec.ImagePullSecrets {
+		if dep.Spec.Template.Spec.ImagePullSecrets[i].Name == from {
+			dep.Spec.Template.Spec.ImagePullSecrets[i].Name = to
+		}
+	}
+}
 
 // parseManifestDocs splits a multi-doc YAML blob (config-Secret template) into unstructured
 // objects, skipping blank docs. If defaultNamespace is non-empty it is set on objects that lack one.

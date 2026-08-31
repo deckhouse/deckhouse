@@ -411,9 +411,12 @@ func (r *reconciler) reconcileKubeconfigSecret(
 	apiserverService *corev1.Service,
 	pkiSecret *corev1.Secret,
 ) (*corev1.Secret, reconcile.Result, error) {
-	endpoint := apiServerHTTPSURL(apiserverService.Spec.ClusterIP)
 	name := constants.VirtualResourceName(constants.VirtualKubeconfigSecretName, vcp.Name)
-	return r.reconcileKubeconfigSecretFiles(ctx, vcp, apiserverService, pkiSecret, name, componentKubeconfigFiles, endpoint)
+	return r.reconcileKubeconfigSecretFiles(ctx, vcp, apiserverService, pkiSecret, kubeconfigSpec{
+		Name:     name,
+		Files:    componentKubeconfigFiles,
+		Endpoint: apiServerHTTPSURL(apiserverService.Spec.ClusterIP),
+	})
 }
 
 func (r *reconciler) reconcileAdminKubeconfigSecret(
@@ -424,7 +427,11 @@ func (r *reconciler) reconcileAdminKubeconfigSecret(
 	endpoint string,
 ) (*corev1.Secret, reconcile.Result, error) {
 	name := constants.VirtualResourceName(constants.VirtualAdminKubeconfigSecretName, vcp.Name)
-	return r.reconcileKubeconfigSecretFiles(ctx, vcp, apiserverService, pkiSecret, name, adminKubeconfigFiles, endpoint)
+	return r.reconcileKubeconfigSecretFiles(ctx, vcp, apiserverService, pkiSecret, kubeconfigSpec{
+		Name:     name,
+		Files:    adminKubeconfigFiles,
+		Endpoint: endpoint,
+	})
 }
 
 func (r *reconciler) reconcileClientsKubeconfigSecret(
@@ -435,7 +442,18 @@ func (r *reconciler) reconcileClientsKubeconfigSecret(
 	endpoint string,
 ) (*corev1.Secret, reconcile.Result, error) {
 	name := constants.VirtualResourceName(constants.VirtualClientsKubeconfigSecretName, vcp.Name)
-	return r.reconcileKubeconfigSecretFiles(ctx, vcp, apiserverService, pkiSecret, name, clientsKubeconfigFiles, endpoint)
+	return r.reconcileKubeconfigSecretFiles(ctx, vcp, apiserverService, pkiSecret, kubeconfigSpec{
+		Name:     name,
+		Files:    clientsKubeconfigFiles,
+		Endpoint: endpoint,
+	})
+}
+
+// kubeconfigSpec identifies one kubeconfig Secret to reconcile
+type kubeconfigSpec struct {
+	Name     string
+	Files    []kubeconfig.File
+	Endpoint string
 }
 
 func (r *reconciler) reconcileKubeconfigSecretFiles(
@@ -443,11 +461,9 @@ func (r *reconciler) reconcileKubeconfigSecretFiles(
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 	apiserverService *corev1.Service,
 	pkiSecret *corev1.Secret,
-	name string,
-	files []kubeconfig.File,
-	endpoint string,
+	spec kubeconfigSpec,
 ) (*corev1.Secret, reconcile.Result, error) {
-	target := buildTargetKubeconfigSecret(vcp, name)
+	target := buildTargetKubeconfigSecret(vcp, spec.Name)
 	if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
 		return nil, reconcile.Result{}, err
 	}
@@ -455,12 +471,12 @@ func (r *reconciler) reconcileKubeconfigSecretFiles(
 	current, err := r.getSecret(ctx, target.Namespace, target.Name)
 	notFound := apierrors.IsNotFound(err)
 	if err != nil && !notFound {
-		return nil, reconcile.Result{}, fmt.Errorf("get kubeconfig Secret %s: %w", name, err)
+		return nil, reconcile.Result{}, fmt.Errorf("get kubeconfig Secret %s: %w", spec.Name, err)
 	}
 	// getSecret always returns a Secret, so on NotFound Data is nil and nothing is reused
-	data, err := buildTargetKubeconfigSecretData(apiserverService, pkiSecret, files, endpoint, current.Data)
+	data, err := buildTargetKubeconfigSecretData(apiserverService, pkiSecret, spec.Files, spec.Endpoint, current.Data)
 	if err != nil {
-		return nil, reconcile.Result{}, fmt.Errorf("generate kubeconfig Secret %s data: %w", name, err)
+		return nil, reconcile.Result{}, fmt.Errorf("generate kubeconfig Secret %s data: %w", spec.Name, err)
 	}
 	target.Data = data
 

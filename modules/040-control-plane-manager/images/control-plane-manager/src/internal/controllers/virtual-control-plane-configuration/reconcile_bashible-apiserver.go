@@ -639,32 +639,10 @@ func buildTargetBashibleDeployment(vcp *controlplanev1alpha1.VirtualControlPlane
 	tlsSecret := constants.VirtualResourceName(bashibleTLSSecretName, vcp.Name)
 	filesCM := constants.VirtualResourceName(bashibleFilesConfigMapName, vcp.Name)
 	kubeconfigSecret := constants.VirtualResourceName(constants.VirtualClientsKubeconfigSecretName, vcp.Name)
-	registrySecret := constants.VirtualResourceName(bashibleRegistrySecretName, vcp.Name)
 
 	deployment.Name = constants.VirtualResourceName(bashibleDeploymentName, vcp.Name)
-	if deployment.Labels == nil {
-		deployment.Labels = map[string]string{}
-	}
-	deployment.Labels[constants.VirtualControlPlaneScopeLabelKey] = vcp.Name
-
-	if deployment.Spec.Selector == nil {
-		deployment.Spec.Selector = &metav1.LabelSelector{}
-	}
-	if deployment.Spec.Selector.MatchLabels == nil {
-		deployment.Spec.Selector.MatchLabels = map[string]string{}
-	}
-	deployment.Spec.Selector.MatchLabels[constants.VirtualControlPlaneScopeLabelKey] = vcp.Name
-
-	if deployment.Spec.Template.Labels == nil {
-		deployment.Spec.Template.Labels = map[string]string{}
-	}
-	deployment.Spec.Template.Labels[constants.VirtualControlPlaneScopeLabelKey] = vcp.Name
-
-	for i := range deployment.Spec.Template.Spec.ImagePullSecrets {
-		if deployment.Spec.Template.Spec.ImagePullSecrets[i].Name == bashibleRegistrySecretName {
-			deployment.Spec.Template.Spec.ImagePullSecrets[i].Name = registrySecret
-		}
-	}
+	applyVCPScope(deployment, vcp.Name)
+	renameImagePullSecret(deployment, bashibleRegistrySecretName, constants.VirtualResourceName(bashibleRegistrySecretName, vcp.Name))
 
 	for i := range deployment.Spec.Template.Spec.Volumes {
 		vol := &deployment.Spec.Template.Spec.Volumes[i]
