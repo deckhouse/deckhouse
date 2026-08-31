@@ -95,13 +95,13 @@ func (s *syncer) devModuleRepository(ctx context.Context, moduleName string, fro
 	}
 
 	if conf != nil && conf.Spec.Source != "" {
-		return repositoryNameForSource(conf.Spec.Source), nil
+		return v1alpha1.PackageRepositoryNameForModuleSource(conf.Spec.Source), nil
 	}
 
 	// the embedded sentinel names no repository to pull a dev tag from
 	if moduleV2 != nil && moduleV2.Spec.PackageRepositoryName != "" &&
 		moduleV2.Spec.PackageRepositoryName != repositoryNameEmbedded {
-		return repositoryNameForSource(moduleV2.Spec.PackageRepositoryName), nil
+		return v1alpha1.PackageRepositoryNameForModuleSource(moduleV2.Spec.PackageRepositoryName), nil
 	}
 
 	repository, err := s.repositoryFromPackageVersions(ctx, moduleName)
@@ -174,5 +174,5 @@ func (s *syncer) repositoryFromModuleSources(ctx context.Context, moduleName str
 		sourceName = source.Name
 	}
 
-	return repositoryNameForSource(sourceName), nil
+	return v1alpha1.PackageRepositoryNameForModuleSource(sourceName), nil
 }

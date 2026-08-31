@@ -131,7 +131,7 @@ func (s *syncer) resolveReleases(ctx context.Context) (releaseFacts, error) {
 		}
 
 		facts.origins[moduleName] = Origin{
-			RepositoryName: repositoryNameForSource(source),
+			RepositoryName: v1alpha1.PackageRepositoryNameForModuleSource(source),
 			PackageVersion: "v" + item.version.String(),
 		}
 
@@ -159,7 +159,7 @@ func (s *syncer) stubForRelease(release *v1alpha1.ModuleRelease, version *semver
 	}
 
 	packageVersion := "v" + version.String()
-	repository := repositoryNameForSource(source)
+	repository := v1alpha1.PackageRepositoryNameForModuleSource(source)
 
 	name := v1alpha1.MakeModulePackageVersionName(repository, moduleName, packageVersion)
 	if !s.validName(name, moduleName) {

@@ -31,7 +31,7 @@ import (
 // their repositories itself with live registry credentials, like the
 // "deckhouse" repository from the deckhouse module templates; a snapshot of
 // the source credentials would go stale.
-var excludedModuleSources = []string{moduleSourceNameDeckhouse, moduleSourceNameFlant}
+var excludedModuleSources = []string{v1alpha1.ModuleSourceNameDeckhouse, moduleSourceNameFlant}
 
 // syncPackageRepositories ensures a PackageRepository for every module source
 // except the excluded ones, so the repositories are in place before the
@@ -63,7 +63,7 @@ func (s *syncer) syncPackageRepositories(ctx context.Context) error {
 // fields the source does not carry (scan interval, login, password) are never
 // touched, so user edits to them survive a restart.
 func (s *syncer) ensurePackageRepository(ctx context.Context, source *v1alpha1.ModuleSource) error {
-	name := repositoryNameForSource(source.Name)
+	name := v1alpha1.PackageRepositoryNameForModuleSource(source.Name)
 	desired := registryFromSource(source)
 
 	repo := new(v1alpha1.PackageRepository)

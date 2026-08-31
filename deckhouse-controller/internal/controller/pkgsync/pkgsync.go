@@ -83,17 +83,9 @@ import (
 // Names of the repositories the module packages come from during the migration
 // off the module sources.
 const (
-	// moduleSourceNameDeckhouse is the built-in module source shipped with the platform.
-	moduleSourceNameDeckhouse = "deckhouse"
-
 	// moduleSourceNameFlant is the module source present on the clusters
 	// managed by Flant.
 	moduleSourceNameFlant = "flant"
-
-	// repositoryNameDeckhouseModules serves the modules of the "deckhouse"
-	// ModuleSource. The plain "deckhouse" name belongs to the application-packages
-	// repository, while the module source points at <registry>/modules.
-	repositoryNameDeckhouseModules = "deckhouse-modules"
 
 	// repositoryNameEmbedded stands for the Deckhouse image itself and
 	// resolves to no PackageRepository object.
@@ -192,14 +184,4 @@ func (s *syncer) sync(ctx context.Context) ([]v1alpha2.Module, error) {
 	}
 
 	return s.syncModules(ctx, embedded, releases.origins)
-}
-
-// repositoryNameForSource maps a ModuleSource name to the name of the
-// PackageRepository serving the same registry path.
-func repositoryNameForSource(sourceName string) string {
-	if sourceName == moduleSourceNameDeckhouse {
-		return repositoryNameDeckhouseModules
-	}
-
-	return sourceName
 }

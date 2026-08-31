@@ -139,6 +139,73 @@ func newStorageModule(t *testing.T, name, stage, exclusiveGroup string) *modulet
 
 // newModuleCR builds a v1alpha1.Module custom resource so that the cli.Get
 // lookup in the handler returns an object instead of a NotFound error.
+// newModulePackageCR builds the catalog entry of a module: the existence proof
+// and the repository availability the source checks read.
+func newModulePackageCR(name string, repositories ...string) *v1alpha1.ModulePackage {
+	return &v1alpha1.ModulePackage{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Status:     v1alpha1.ModulePackageStatus{AvailableRepositories: repositories},
+	}
+}
+
+// newPackageRepositoryCR builds a repository object, marking its name part of
+// the scanned world for the source checks.
+func newPackageRepositoryCR(name string) *v1alpha1.PackageRepository {
+	return &v1alpha1.PackageRepository{ObjectMeta: metav1.ObjectMeta{Name: name}}
+}
+
+// newModuleV2CR builds the module v2 resource carrying the spec triple the
+// metadata checks resolve the package version by.
+func newModuleV2CR(name, repository, version string) *v1alpha2.Module {
+	return &v1alpha2.Module{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec:       v1alpha2.ModuleSpec{PackageRepositoryName: repository, PackageVersion: version},
+	}
+}
+
+// newMPVCR builds the module's package version with the given stage; draft
+// versions carry the draft label and no metadata.
+func newMPVCR(name, repository, version, stage string, draft bool) *v1alpha1.ModulePackageVersion {
+	mpv := &v1alpha1.ModulePackageVersion{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: v1alpha1.MakeModulePackageVersionName(repository, name, version),
+		},
+		Spec: v1alpha1.ModulePackageVersionSpec{
+			PackageName:           name,
+			PackageRepositoryName: repository,
+			PackageVersion:        version,
+		},
+	}
+
+	if draft {
+		mpv.Labels = map[string]string{v1alpha1.ModulePackageVersionLabelDraft: "true"}
+
+		return mpv
+	}
+
+	mpv.Status.PackageMetadata = &v1alpha1.ModulePackageVersionStatusMetadata{Stage: stage}
+
+	return mpv
+}
+
+// newMPVWithMandatoryCR adds mandatory and conditional parent requirements to
+// a complete package version.
+func newMPVWithMandatoryCR(name, repository, version string, mandatory, conditional []string) *v1alpha1.ModulePackageVersion {
+	mpv := newMPVCR(name, repository, version, "", false)
+
+	requirements := &v1alpha1.PackageModulesRequirements{}
+	for _, parent := range mandatory {
+		requirements.Mandatory = append(requirements.Mandatory, v1alpha1.PackageModuleDependency{Name: parent})
+	}
+	for _, parent := range conditional {
+		requirements.Conditional = append(requirements.Conditional, v1alpha1.PackageModuleDependency{Name: parent})
+	}
+
+	mpv.Status.PackageMetadata.Requirements = &v1alpha1.PackageRequirements{Modules: requirements}
+
+	return mpv
+}
+
 func newModuleCR(name string, availableSources []string, stage string) *v1alpha1.Module {
 	return &v1alpha1.Module{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
@@ -650,67 +717,84 @@ func TestModuleConfigValidationHandler_ModuleResolution(t *testing.T) {
 		operation           string
 		newConfig           *v1alpha1.ModuleConfig
 		oldConfig           *v1alpha1.ModuleConfig
-		moduleCR            *v1alpha1.Module
+		objs                []client.Object
 		expectCheckEnabling bool
 		wantAllowed         bool
 		wantMessage         string
 		wantWarning         string
 	}{
 		{
-			name:        "module CR found, disabled config without source is allowed",
+			name:        "known module, disabled config without source is allowed",
 			operation:   "UPDATE",
 			newConfig:   newModuleConfigFull(moduleName, boolPtr(false), "", ""),
 			oldConfig:   newModuleConfigFull(moduleName, boolPtr(false), "", ""),
-			moduleCR:    newModuleCR(moduleName, []string{"alpha"}, ""),
+			objs:        []client.Object{newModulePackageCR(moduleName, "alpha")},
 			wantAllowed: true,
 		},
 		{
-			name:        "config referencing an unavailable source is rejected",
+			name:        "config referencing an unavailable source of a scanned repository is rejected",
 			operation:   "UPDATE",
 			newConfig:   newModuleConfigFull(moduleName, boolPtr(false), "beta", ""),
 			oldConfig:   newModuleConfigFull(moduleName, boolPtr(false), "", ""),
-			moduleCR:    newModuleCR(moduleName, []string{"alpha"}, ""),
+			objs:        []client.Object{newModulePackageCR(moduleName, "alpha"), newPackageRepositoryCR("beta")},
 			wantAllowed: false,
 			wantMessage: "unavailable source",
+		},
+		{
+			name:        "config referencing a source with no repository yet is allowed with a warning",
+			operation:   "UPDATE",
+			newConfig:   newModuleConfigFull(moduleName, boolPtr(false), "beta", ""),
+			oldConfig:   newModuleConfigFull(moduleName, boolPtr(false), "", ""),
+			objs:        []client.Object{newModulePackageCR(moduleName, "alpha")},
+			wantAllowed: true,
+			wantWarning: "no repository to validate against yet",
+		},
+		{
+			// the fail-open answer of the source check must not skip the
+			// checks that follow it: the nonexistent update policy still rejects
+			name:        "an unscanned source does not short-circuit the remaining checks",
+			operation:   "UPDATE",
+			newConfig:   newModuleConfigFull(moduleName, boolPtr(false), "beta", "missing-policy"),
+			oldConfig:   newModuleConfigFull(moduleName, boolPtr(false), "", ""),
+			objs:        []client.Object{newModulePackageCR(moduleName, "alpha")},
+			wantAllowed: false,
+			wantMessage: "the 'missing-policy' module policy does not exist",
 		},
 		{
 			name:        "config referencing an available source is allowed",
 			operation:   "UPDATE",
 			newConfig:   newModuleConfigFull(moduleName, boolPtr(false), "alpha", ""),
 			oldConfig:   newModuleConfigFull(moduleName, boolPtr(false), "", ""),
-			moduleCR:    newModuleCR(moduleName, []string{"alpha", "beta"}, ""),
+			objs:        []client.Object{newModulePackageCR(moduleName, "alpha", "beta")},
+			wantAllowed: true,
+		},
+		{
+			name:      "the deckhouse source maps to the deckhouse-modules repository",
+			operation: "UPDATE",
+			newConfig: newModuleConfigFull(moduleName, boolPtr(false), "deckhouse", ""),
+			oldConfig: newModuleConfigFull(moduleName, boolPtr(false), "", ""),
+			objs: []client.Object{
+				newModulePackageCR(moduleName, "deckhouse-modules"),
+			},
 			wantAllowed: true,
 		},
 		{
 			name:                "enabled module with multiple sources and no source specified warns",
 			operation:           "CREATE",
 			newConfig:           newModuleConfigFull(moduleName, boolPtr(true), "", ""),
-			moduleCR:            newModuleCR(moduleName, []string{"alpha", "beta"}, ""),
+			objs:                []client.Object{newModulePackageCR(moduleName, "alpha", "beta")},
 			expectCheckEnabling: true,
 			wantAllowed:         true,
 			wantWarning:         "multiple sources",
 		},
 		{
-			// migration scenario: an embedded module pinned to a source that does
-			// not offer it (stale/mistyped .spec.source) must be rejected at
-			// admission, not silently accepted to stall later.
-			name:        "embedded module referencing an unavailable source is rejected",
+			name:        "module the catalog does not know is allowed with a warning",
 			operation:   "UPDATE",
-			newConfig:   newModuleConfigFull(moduleName, boolPtr(false), "beta", ""),
+			newConfig:   newModuleConfigFull(moduleName, boolPtr(false), "", ""),
 			oldConfig:   newModuleConfigFull(moduleName, boolPtr(false), "", ""),
-			moduleCR:    newEmbeddedModuleCR(moduleName, []string{"alpha"}),
-			wantAllowed: false,
-			wantMessage: "unavailable source",
-		},
-		{
-			// the embedded module is published in the chosen source, so pinning it
-			// for migration is allowed.
-			name:        "embedded module referencing an available source is allowed",
-			operation:   "UPDATE",
-			newConfig:   newModuleConfigFull(moduleName, boolPtr(false), "alpha", ""),
-			oldConfig:   newModuleConfigFull(moduleName, boolPtr(false), "", ""),
-			moduleCR:    newEmbeddedModuleCR(moduleName, []string{"alpha", "beta"}),
+			objs:        nil,
 			wantAllowed: true,
+			wantWarning: "module not found",
 		},
 	}
 
@@ -728,7 +812,7 @@ func TestModuleConfigValidationHandler_ModuleResolution(t *testing.T) {
 				dependencyExtender.CheckEnablingMock.Expect(moduleName).Return(nil)
 			}
 
-			handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, false, tt.moduleCR)
+			handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, false, tt.objs...)
 
 			review := newModuleConfigAdmissionReview(tt.operation, tt.newConfig, tt.oldConfig)
 
@@ -945,13 +1029,14 @@ func TestModuleConfigValidationHandler_CELTransition(t *testing.T) {
 			// OpenAPI settings check — we only care about CEL here.
 			validator := configtools.NewValidator(nil, conversion.NewConversionsStore())
 
-			// For UPDATE operations, a Module CR must be present in the fake client so
-			// that resolveModuleSource does not short-circuit before validateCELTransition
-			// is reached. For CREATE the CR is intentionally absent so that
-			// checkExperimentalFromModuleCR rejects the request with "not found".
+			// For UPDATE operations, the module must be known to the catalog so
+			// that resolveModuleSource does not short-circuit before
+			// validateCELTransition is reached. For CREATE the entry is
+			// intentionally absent so that the enabling check rejects the
+			// request with "not found".
 			var objs []client.Object
 			if tt.operation == "UPDATE" {
-				objs = append(objs, newModuleCR(moduleName, []string{}, ""))
+				objs = append(objs, newModulePackageCR(moduleName))
 			}
 			handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator, objs...)
 
@@ -1169,7 +1254,7 @@ func TestModuleConfigValidationHandler_UpdatePolicy(t *testing.T) {
 			// old=true,new=true: no enabling transition, no dependency check
 			dependencyExtender := moduledependency.NewIExtenderMock(t)
 
-			objs := []client.Object{newModuleCR(moduleName, []string{"alpha"}, "")}
+			objs := []client.Object{newModulePackageCR(moduleName, "alpha")}
 			if tt.registerPolicy {
 				objs = append(objs, newUpdatePolicy(policyName))
 			}
@@ -1265,7 +1350,10 @@ func TestModuleConfigValidationHandler_ExperimentalOnUpdate(t *testing.T) {
 
 			var objs []client.Object
 			if tt.registerModuleCR {
-				objs = append(objs, newModuleCR(moduleName, []string{"alpha"}, tt.moduleCRStage))
+				objs = append(objs,
+					newModulePackageCR(moduleName, "alpha"),
+					newModuleV2CR(moduleName, "alpha", "v1.0.0"),
+					newMPVCR(moduleName, "alpha", "v1.0.0", tt.moduleCRStage, false))
 			}
 
 			handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, tt.allowExperimental, objs...)
@@ -1298,14 +1386,12 @@ func TestModuleConfigValidationHandler_ExperimentalOnUpdate(t *testing.T) {
 func TestModuleConfigValidationHandler_DependencyFallbackFromModuleCR(t *testing.T) {
 	const moduleName = "dependent-module"
 
-	requirements := map[string]string{"log-shipper": ">= 0.0.0", "loki": ">= 0.0.0"}
-
 	tests := []struct {
 		name           string
 		operation      string
 		newConfig      *v1alpha1.ModuleConfig
 		oldConfig      *v1alpha1.ModuleConfig
-		moduleCR       *v1alpha1.Module
+		objs           []client.Object
 		enabledParents map[string]bool
 		dependencyErr  error
 		wantAllowed    bool
@@ -1315,7 +1401,7 @@ func TestModuleConfigValidationHandler_DependencyFallbackFromModuleCR(t *testing
 			name:           "create: both required parents disabled is rejected from the Module CR",
 			operation:      "CREATE",
 			newConfig:      newModuleConfig(moduleName, boolPtr(true), nil),
-			moduleCR:       newModuleCRWithRequirements(moduleName, []string{"deckhouse"}, "", requirements),
+			objs:           []client.Object{newModulePackageCR(moduleName, "deckhouse-modules"), newModuleV2CR(moduleName, "deckhouse-modules", "v1.0.0"), newMPVWithMandatoryCR(moduleName, "deckhouse-modules", "v1.0.0", []string{"log-shipper", "loki"}, nil)},
 			enabledParents: map[string]bool{},
 			wantAllowed:    false,
 			wantMessage:    "depends on disabled module(s)",
@@ -1324,7 +1410,7 @@ func TestModuleConfigValidationHandler_DependencyFallbackFromModuleCR(t *testing
 			name:           "create: one required parent disabled is rejected from the Module CR",
 			operation:      "CREATE",
 			newConfig:      newModuleConfig(moduleName, boolPtr(true), nil),
-			moduleCR:       newModuleCRWithRequirements(moduleName, []string{"deckhouse"}, "", requirements),
+			objs:           []client.Object{newModulePackageCR(moduleName, "deckhouse-modules"), newModuleV2CR(moduleName, "deckhouse-modules", "v1.0.0"), newMPVWithMandatoryCR(moduleName, "deckhouse-modules", "v1.0.0", []string{"log-shipper", "loki"}, nil)},
 			enabledParents: map[string]bool{"loki": true},
 			wantAllowed:    false,
 			wantMessage:    "depends on disabled module(s): log-shipper",
@@ -1333,7 +1419,7 @@ func TestModuleConfigValidationHandler_DependencyFallbackFromModuleCR(t *testing
 			name:           "create: disabled conditional parent is skipped",
 			operation:      "CREATE",
 			newConfig:      newModuleConfig(moduleName, boolPtr(true), nil),
-			moduleCR:       newModuleCRWithRequirements(moduleName, []string{"deckhouse"}, "", map[string]string{"loki": ">= 0.0.0 !optional"}),
+			objs:           []client.Object{newModulePackageCR(moduleName, "deckhouse-modules"), newModuleV2CR(moduleName, "deckhouse-modules", "v1.0.0"), newMPVWithMandatoryCR(moduleName, "deckhouse-modules", "v1.0.0", nil, []string{"loki"})},
 			enabledParents: map[string]bool{},
 			wantAllowed:    true,
 		},
@@ -1341,7 +1427,7 @@ func TestModuleConfigValidationHandler_DependencyFallbackFromModuleCR(t *testing
 			name:           "create: disabled mandatory parent is rejected next to a conditional one",
 			operation:      "CREATE",
 			newConfig:      newModuleConfig(moduleName, boolPtr(true), nil),
-			moduleCR:       newModuleCRWithRequirements(moduleName, []string{"deckhouse"}, "", map[string]string{"loki": ">= 0.0.0 !optional", "log-shipper": ">= 0.0.0"}),
+			objs:           []client.Object{newModulePackageCR(moduleName, "deckhouse-modules"), newModuleV2CR(moduleName, "deckhouse-modules", "v1.0.0"), newMPVWithMandatoryCR(moduleName, "deckhouse-modules", "v1.0.0", []string{"log-shipper"}, []string{"loki"})},
 			enabledParents: map[string]bool{},
 			wantAllowed:    false,
 			wantMessage:    "depends on disabled module(s): log-shipper",
@@ -1350,7 +1436,7 @@ func TestModuleConfigValidationHandler_DependencyFallbackFromModuleCR(t *testing
 			name:           "create: all required parents enabled is allowed",
 			operation:      "CREATE",
 			newConfig:      newModuleConfig(moduleName, boolPtr(true), nil),
-			moduleCR:       newModuleCRWithRequirements(moduleName, []string{"deckhouse"}, "", requirements),
+			objs:           []client.Object{newModulePackageCR(moduleName, "deckhouse-modules"), newModuleV2CR(moduleName, "deckhouse-modules", "v1.0.0"), newMPVWithMandatoryCR(moduleName, "deckhouse-modules", "v1.0.0", []string{"log-shipper", "loki"}, nil)},
 			enabledParents: map[string]bool{"loki": true, "log-shipper": true},
 			wantAllowed:    true,
 		},
@@ -1359,32 +1445,32 @@ func TestModuleConfigValidationHandler_DependencyFallbackFromModuleCR(t *testing
 			operation:      "UPDATE",
 			newConfig:      newModuleConfigFull(moduleName, boolPtr(true), "deckhouse", ""),
 			oldConfig:      newModuleConfigFull(moduleName, boolPtr(false), "", ""),
-			moduleCR:       newModuleCRWithRequirements(moduleName, []string{"deckhouse"}, "", requirements),
+			objs:           []client.Object{newModulePackageCR(moduleName, "deckhouse-modules"), newModuleV2CR(moduleName, "deckhouse-modules", "v1.0.0"), newMPVWithMandatoryCR(moduleName, "deckhouse-modules", "v1.0.0", []string{"log-shipper", "loki"}, nil)},
 			enabledParents: map[string]bool{"loki": true, "log-shipper": true},
 			wantAllowed:    true,
 		},
 		{
-			name:           "module CR without requirements is allowed",
+			name:           "module without requirements is allowed",
 			operation:      "CREATE",
 			newConfig:      newModuleConfig(moduleName, boolPtr(true), nil),
-			moduleCR:       newModuleCR(moduleName, []string{"deckhouse"}, ""),
+			objs:           []client.Object{newModulePackageCR(moduleName, "deckhouse-modules"), newModuleV2CR(moduleName, "deckhouse-modules", "v1.0.0"), newMPVCR(moduleName, "deckhouse-modules", "v1.0.0", "", false)},
 			enabledParents: map[string]bool{},
 			wantAllowed:    true,
 		},
 		{
-			name:           "update: missing Module CR skips the dependency fallback and is allowed",
+			name:           "update: unknown module skips the dependency fallback and is allowed",
 			operation:      "UPDATE",
 			newConfig:      newModuleConfigFull(moduleName, boolPtr(true), "deckhouse", ""),
 			oldConfig:      newModuleConfigFull(moduleName, boolPtr(false), "", ""),
-			moduleCR:       nil,
+			objs:           nil,
 			enabledParents: map[string]bool{},
 			wantAllowed:    true,
 		},
 		{
-			name:           "extender rejection takes precedence over the Module CR fallback",
+			name:           "extender rejection takes precedence over the package version fallback",
 			operation:      "CREATE",
 			newConfig:      newModuleConfig(moduleName, boolPtr(true), nil),
-			moduleCR:       newModuleCRWithRequirements(moduleName, []string{"deckhouse"}, "", requirements),
+			objs:           []client.Object{newModulePackageCR(moduleName, "deckhouse-modules"), newModuleV2CR(moduleName, "deckhouse-modules", "v1.0.0"), newMPVWithMandatoryCR(moduleName, "deckhouse-modules", "v1.0.0", []string{"log-shipper", "loki"}, nil)},
 			enabledParents: map[string]bool{"loki": true, "log-shipper": true},
 			dependencyErr:  fmt.Errorf("module %q depends on a disabled module", moduleName),
 			wantAllowed:    false,
@@ -1404,12 +1490,7 @@ func TestModuleConfigValidationHandler_DependencyFallbackFromModuleCR(t *testing
 			dependencyExtender := moduledependency.NewIExtenderMock(t)
 			dependencyExtender.CheckEnablingMock.Expect(moduleName).Return(tt.dependencyErr)
 
-			var objs []client.Object
-			if tt.moduleCR != nil {
-				objs = append(objs, tt.moduleCR)
-			}
-
-			handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, false, objs...)
+			handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, false, tt.objs...)
 
 			review := newModuleConfigAdmissionReview(tt.operation, tt.newConfig, tt.oldConfig)
 
@@ -1445,7 +1526,7 @@ func TestModuleConfigValidationHandler_ConfigValidation(t *testing.T) {
 		dependencyExtender := moduledependency.NewIExtenderMock(t)
 
 		// nil validator returns an error for settings supplied without spec.version
-		handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, false, newModuleCR(moduleName, []string{"alpha"}, ""))
+		handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, false, newModulePackageCR(moduleName, "alpha"))
 
 		cfg := newModuleConfigFull(moduleName, boolPtr(true), "alpha", "")
 		cfg.Spec.Version = 0
@@ -1473,7 +1554,7 @@ func TestModuleConfigValidationHandler_ConfigValidation(t *testing.T) {
 		// a validator with a (empty) conversions store but no values validator emits
 		// a warning for a spec.version without spec.settings
 		validator := configtools.NewValidator(nil, conversion.NewConversionsStore())
-		handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator, newModuleCR(moduleName, []string{"alpha"}, ""))
+		handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator, newModulePackageCR(moduleName, "alpha"))
 
 		cfg := newModuleConfigFull(moduleName, boolPtr(true), "alpha", "")
 		cfg.Spec.Version = 1
@@ -1504,7 +1585,7 @@ func TestModuleConfigValidationHandler_StorageModuleNotFound(t *testing.T) {
 
 	// the Module CR is found and advertises multiple sources, so a "multiple sources"
 	// warning is produced before the storage lookup fails
-	moduleCR := newModuleCR(moduleName, []string{"alpha", "beta"}, "")
+	moduleCR := newModulePackageCR(moduleName, "alpha", "beta")
 	handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, false, moduleCR)
 
 	review := newModuleConfigAdmissionReview(
@@ -1563,7 +1644,7 @@ func TestModuleConfigValidationHandler_ExclusiveGroup(t *testing.T) {
 			// must not be consulted.
 			dependencyExtender := moduledependency.NewIExtenderMock(t)
 
-			moduleCR := newModuleCR(moduleName, []string{"alpha"}, "")
+			moduleCR := newModulePackageCR(moduleName, "alpha")
 			handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, false, moduleCR)
 
 			review := newModuleConfigAdmissionReview(
@@ -1598,15 +1679,31 @@ func TestModuleConfigValidationHandler_Experimental(t *testing.T) {
 		allowedExperimental []string
 		storageStage        string
 		moduleCRStage       string
+		draftMPV            bool
+		noMPV               bool
 		expectCheckEnabling bool
 		wantAllowed         bool
 		wantMessage         string
+		wantWarning         string
 	}{
 		{
 			name:         "experimental module (per storage definition) is rejected by default",
 			storageStage: moduletypes.ExperimentalModuleStage,
 			wantAllowed:  false,
 			wantMessage:  "experimental",
+		},
+		{
+			name:                "a draft package version passes the gate with a warning",
+			draftMPV:            true,
+			expectCheckEnabling: true,
+			wantAllowed:         true,
+			wantWarning:         "metadata is not loaded yet",
+		},
+		{
+			name:                "a version the catalog does not carry passes the gate silently",
+			noMPV:               true,
+			expectCheckEnabling: true,
+			wantAllowed:         true,
 		},
 		{
 			name:                "experimental module (per Module CR) is rejected by default",
@@ -1668,8 +1765,14 @@ func TestModuleConfigValidationHandler_Experimental(t *testing.T) {
 				dependencyExtender.CheckEnablingMock.Expect(moduleName).Return(nil)
 			}
 
-			moduleCR := newModuleCR(moduleName, []string{"alpha"}, tt.moduleCRStage)
-			handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, tt.allowExperimental, tt.allowedExperimental, configtools.NewValidator(nil, nil), moduleCR)
+			objs := []client.Object{
+				newModulePackageCR(moduleName, "alpha"),
+				newModuleV2CR(moduleName, "alpha", "v1.0.0"),
+			}
+			if !tt.noMPV {
+				objs = append(objs, newMPVCR(moduleName, "alpha", "v1.0.0", tt.moduleCRStage, tt.draftMPV))
+			}
+			handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, tt.allowExperimental, tt.allowedExperimental, configtools.NewValidator(nil, nil), objs...)
 
 			// CREATE that enables the module triggers the experimental gate
 			review := newModuleConfigAdmissionReview("CREATE", newModuleConfigFull(moduleName, boolPtr(true), "alpha", ""), nil)
@@ -1678,6 +1781,10 @@ func TestModuleConfigValidationHandler_Experimental(t *testing.T) {
 
 			if tt.wantAllowed {
 				assert.True(t, resp.Allowed)
+				if tt.wantWarning != "" {
+					require.NotEmpty(t, resp.Warnings)
+					assert.Contains(t, strings.Join(resp.Warnings, " "), tt.wantWarning)
+				}
 				return
 			}
 

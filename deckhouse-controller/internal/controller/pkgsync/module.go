@@ -113,7 +113,7 @@ func (s *syncer) liveModuleConfigs(ctx context.Context) (map[string]*v1alpha1.Mo
 func fillModuleV2(moduleV2 *v1alpha2.Module, origin Origin, conf *v1alpha1.ModuleConfig) {
 	// a repository recorded under its source name heals to the mapped name,
 	// whatever else this write touches
-	moduleV2.Spec.PackageRepositoryName = repositoryNameForSource(moduleV2.Spec.PackageRepositoryName)
+	moduleV2.Spec.PackageRepositoryName = v1alpha1.PackageRepositoryNameForModuleSource(moduleV2.Spec.PackageRepositoryName)
 
 	// a module of unknown origin keeps the spec another writer gave it
 	if origin.Known() {
@@ -162,7 +162,7 @@ func fillModuleV2(moduleV2 *v1alpha2.Module, origin Origin, conf *v1alpha1.Modul
 	// last. An embedded module keeps "embedded" - it ships in the image, and
 	// no repository serves it.
 	if conf.Spec.Source != "" && !moduleV2.IsEmbedded() {
-		moduleV2.Spec.PackageRepositoryName = repositoryNameForSource(conf.Spec.Source)
+		moduleV2.Spec.PackageRepositoryName = v1alpha1.PackageRepositoryNameForModuleSource(conf.Spec.Source)
 	}
 }
 

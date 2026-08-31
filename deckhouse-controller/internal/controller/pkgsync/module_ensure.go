@@ -44,7 +44,7 @@ func OriginFromPullOverride(imageTag string) Origin {
 // serves. A module source name maps to the name of the PackageRepository
 // serving the same registry path.
 func OriginFromDeployedRelease(sourceName, version string) Origin {
-	return Origin{RepositoryName: repositoryNameForSource(sourceName), PackageVersion: version}
+	return Origin{RepositoryName: v1alpha1.PackageRepositoryNameForModuleSource(sourceName), PackageVersion: version}
 }
 
 // EnsureModule converges one v1alpha2 Module with its origin. When the write

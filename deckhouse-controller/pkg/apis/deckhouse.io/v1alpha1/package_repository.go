@@ -26,6 +26,15 @@ const (
 	PackageRepositoryResource = "packagerepositories"
 	PackageRepositoryKind     = "PackageRepository"
 
+	// ModuleSourceNameDeckhouse is the built-in module source shipped with the platform.
+	ModuleSourceNameDeckhouse = "deckhouse"
+
+	// PackageRepositoryNameDeckhouseModules serves the modules of the
+	// "deckhouse" ModuleSource. The plain "deckhouse" name belongs to the
+	// application-packages repository, while the module source points at
+	// <registry>/modules.
+	PackageRepositoryNameDeckhouseModules = "deckhouse-modules"
+
 	PackageRepositoryPhaseActive      = "Active"
 	PackageRepositoryPhaseTerminating = "Terminating"
 
@@ -189,4 +198,24 @@ type PackageRepositoryList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	Items []PackageRepository `json:"items"`
+}
+
+// PackageRepositoryNameForModuleSource maps a ModuleSource name to the name of
+// the PackageRepository serving the same registry path.
+func PackageRepositoryNameForModuleSource(sourceName string) string {
+	if sourceName == ModuleSourceNameDeckhouse {
+		return PackageRepositoryNameDeckhouseModules
+	}
+
+	return sourceName
+}
+
+// ModuleSourceNameForPackageRepository is the inverse mapping, for the
+// messages and reads that speak the module source vocabulary.
+func ModuleSourceNameForPackageRepository(repositoryName string) string {
+	if repositoryName == PackageRepositoryNameDeckhouseModules {
+		return ModuleSourceNameDeckhouse
+	}
+
+	return repositoryName
 }

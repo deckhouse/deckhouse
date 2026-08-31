@@ -150,22 +150,6 @@ func listRepositoryNames(t *testing.T, cl client.Client) []string {
 	return names
 }
 
-func TestRepositoryNameForSource(t *testing.T) {
-	cases := []struct {
-		source string
-		want   string
-	}{
-		{source: "deckhouse", want: "deckhouse-modules"},
-		{source: "example", want: "example"},
-		{source: "deckhouse-prod", want: "deckhouse-prod"},
-		{source: "", want: ""},
-	}
-
-	for _, c := range cases {
-		assert.Equal(t, c.want, repositoryNameForSource(c.source), c.source)
-	}
-}
-
 func TestSyncIsIdempotent(t *testing.T) {
 	dir := t.TempDir()
 	writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\nstage: General Availability\n")
