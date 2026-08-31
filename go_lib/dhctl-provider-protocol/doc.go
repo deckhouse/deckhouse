@@ -12,31 +12,31 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package protocol declares nothing; it documents the module. A host starts a cloud
-// provider plugin as a subprocess and calls it over gRPC on a unix socket. See
-// README.md for the wire specification.
+// Package protocol declares nothing; it documents the module. dhctl starts a cloud
+// provider's validator binary as a subprocess and calls it over gRPC on a unix
+// socket. See README.md for the wire specification.
 //
 // # Packages
 //
 //   - <action> — one package per action: its payload, its result, its vocabulary,
-//     the function a plugin implements, the rules that hold regardless of transport,
-//     and the conversions to that action's wire types. A plugin imports this and
-//     nothing else. Today: validate.
+//     the rules that hold regardless of transport, and the conversions to that
+//     action's wire types. A validator imports this and nothing else of the
+//     protocol. Today: validate.
 //   - api/pb — .proto sources: one service per action, plus its messages.
 //   - api/gen — generated from api/pb by `make proto`. Never edited by hand.
-//   - server — what a plugin binary runs.
+//   - server — what a validator binary runs.
 //   - client — what a host uses: one method per action, no wire types exposed.
 //
 // # Adding an action
 //
-// Validation is the first action, not the only conceivable one — a plugin could serve
+// Validation is the first action, not the only conceivable one — a binary could serve
 // its own schemas, config migrations or plan rules. A new one is:
 //
-//  1. api/pb: its own service and messages, so a plugin that does not implement it
+//  1. api/pb: its own service and messages, so a binary that does not implement it
 //     simply does not pass it to server.Start and a caller sees Unimplemented;
 //  2. make proto;
-//  3. <action>: the payload, the result, the plugin function type, the action's own
-//     rules, and its conversions;
+//  3. <action>: the payload, the result, the action's own rules, and its
+//     conversions;
 //  4. server and client: the two transport halves — a server.Service constructor
 //     and a method on client.Client.
 //
@@ -49,6 +49,6 @@
 // flat api/pb holds v1 alone — two versions in one Go package would collide on
 // message names), api/gen the generated code, and the action package the second
 // pair of conversions. The server registers both versions on one listener, and
-// plugins keep implementing the same plain Go functions, unaware of which version a
-// caller used.
+// validators keep implementing the same plain Go interfaces, unaware of which
+// version a caller used.
 package protocol

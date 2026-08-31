@@ -26,7 +26,10 @@ var (
 	ErrMethodUnimplemented = errors.New("method unimplemented")
 )
 
-func MapToStatus(err error) error {
+// ToStatus maps a sentinel-wrapped error to its gRPC status. Anything unrecognised
+// is Internal: the caller must fail closed rather than read an unknown failure as
+// "checked".
+func ToStatus(err error) error {
 	switch {
 	case err == nil:
 		return nil

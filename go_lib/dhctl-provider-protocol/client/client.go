@@ -29,20 +29,20 @@ import (
 const MaxMessageSize = 8 * 1024 * 1024
 
 type Client struct {
-	validate protogen.ValidateServiceClient
-	cfg      Config
-}
-
-type Config struct {
+	service     protogen.ValidateServiceClient
 	callOptions []grpc.CallOption
 }
 
-type Option func(*Config)
+type options struct {
+	callOptions []grpc.CallOption
+}
+
+type Option func(*options)
 
 // WithCallOptions appends call options after the protocol's own.
-func WithCallOptions(opts ...grpc.CallOption) Option {
-	return func(cfg *Config) {
-		cfg.callOptions = append(cfg.callOptions, opts...)
+func WithCallOptions(callOptions ...grpc.CallOption) Option {
+	return func(o *options) {
+		o.callOptions = append(o.callOptions, callOptions...)
 	}
 }
 
@@ -50,7 +50,7 @@ func WithCallOptions(opts ...grpc.CallOption) Option {
 // and of how readiness is awaited. The message-size limits are part of the
 // protocol, so they are applied here rather than left for a caller to remember.
 func NewClient(conn grpc.ClientConnInterface, opts ...Option) Client {
-	cfg := Config{
+	applied := options{
 		callOptions: []grpc.CallOption{
 			grpc.MaxCallRecvMsgSize(MaxMessageSize),
 			grpc.MaxCallSendMsgSize(MaxMessageSize),
@@ -58,25 +58,25 @@ func NewClient(conn grpc.ClientConnInterface, opts ...Option) Client {
 	}
 
 	for _, opt := range opts {
-		opt(&cfg)
+		opt(&applied)
 	}
 
 	return Client{
-		validate: protogen.NewValidateServiceClient(conn),
-		cfg:      cfg,
+		service:     protogen.NewValidateServiceClient(conn),
+		callOptions: applied.callOptions,
 	}
 }
 
 func (c Client) Validate(ctx context.Context, input validate.Input) (validate.Output, error) {
-	req, err := validate.ToPBRequest(input)
+	req, err := input.ToRequest()
 	if err != nil {
 		return validate.Output{}, err
 	}
 
-	out, err := c.validate.Validate(ctx, req, c.cfg.callOptions...)
+	resp, err := c.service.Validate(ctx, req, c.callOptions...)
 	if err != nil {
 		return validate.Output{}, err
 	}
 
-	return validate.FromPBResponse(out), nil
+	return validate.OutputFromResponse(resp), nil
 }

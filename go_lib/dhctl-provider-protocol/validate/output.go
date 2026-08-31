@@ -29,8 +29,8 @@ type Output struct {
 	warnings Violations
 }
 
-func (r *Output) AddError(path, code string, value any, message string) {
-	r.errors.Add(Violation{
+func (o *Output) AddError(path, code string, value any, message string) {
+	o.errors.Add(Violation{
 		Path:    path,
 		Code:    code,
 		Message: message,
@@ -38,8 +38,8 @@ func (r *Output) AddError(path, code string, value any, message string) {
 	})
 }
 
-func (r *Output) AddWarning(path, code string, value any, message string) {
-	r.warnings.Add(Violation{
+func (o *Output) AddWarning(path, code string, value any, message string) {
+	o.warnings.Add(Violation{
 		Path:    path,
 		Code:    code,
 		Message: message,
@@ -47,20 +47,20 @@ func (r *Output) AddWarning(path, code string, value any, message string) {
 	})
 }
 
-func (r Output) Errors() Violations {
-	return r.errors.Sorted()
+func (o Output) Errors() Violations {
+	return o.errors.Sorted()
 }
 
-func (r Output) Warnings() Violations {
-	return r.warnings.Sorted()
+func (o Output) Warnings() Violations {
+	return o.warnings.Sorted()
 }
 
-func (r Output) HasErrors() bool {
-	return len(r.errors) > 0
+func (o Output) HasErrors() bool {
+	return len(o.errors) > 0
 }
 
-func (r Output) HasWarnings() bool {
-	return len(r.warnings) > 0
+func (o Output) HasWarnings() bool {
+	return len(o.warnings) > 0
 }
 
 type Violation struct {
@@ -76,15 +76,20 @@ func (v *Violations) Add(violation Violation) {
 	*v = append(*v, violation)
 }
 
+// Sorted orders by code, then path, so the text a caller prints is stable across
+// runs.
 func (v Violations) Sorted() Violations {
-	ret := slices.Clone(v)
-	slices.SortStableFunc(ret, func(a, b Violation) int {
-		if by := cmp.Compare(a.Code, b.Code); by != 0 {
-			return by
+	sorted := slices.Clone(v)
+
+	slices.SortStableFunc(sorted, func(a, b Violation) int {
+		if byCode := cmp.Compare(a.Code, b.Code); byCode != 0 {
+			return byCode
 		}
+
 		return cmp.Compare(a.Path, b.Path)
 	})
-	return ret
+
+	return sorted
 }
 
 func (v Violations) String() string {
@@ -109,20 +114,20 @@ func (v Violations) String() string {
 	return builder.String()
 }
 
-func ToPBResponse(result Output) *protogen.ValidateResponse {
+func (o Output) ToResponse() *protogen.ValidateResponse {
 	return &protogen.ValidateResponse{
-		Errors:   toPBViolations(result.Errors()),
-		Warnings: toPBViolations(result.Warnings()),
+		Errors:   o.Errors().toProto(),
+		Warnings: o.Warnings().toProto(),
 	}
 }
 
-// FromPBResponse rebuilds a Result, so a host renders its text with the same code
-// the plugin would have used.
-func FromPBResponse(resp *protogen.ValidateResponse) Output {
-	var result Output
+// OutputFromResponse rebuilds an Output, so a caller renders its text with the same
+// code the validator would have used.
+func OutputFromResponse(resp *protogen.ValidateResponse) Output {
+	var output Output
 
 	for _, violation := range resp.GetErrors() {
-		result.AddError(
+		output.AddError(
 			violation.GetPath(),
 			violation.GetCode(),
 			valueOrNil(violation.GetValue()),
@@ -131,7 +136,7 @@ func FromPBResponse(resp *protogen.ValidateResponse) Output {
 	}
 
 	for _, violation := range resp.GetWarnings() {
-		result.AddWarning(
+		output.AddWarning(
 			violation.GetPath(),
 			violation.GetCode(),
 			valueOrNil(violation.GetValue()),
@@ -139,32 +144,32 @@ func FromPBResponse(resp *protogen.ValidateResponse) Output {
 		)
 	}
 
-	return result
+	return output
 }
 
-// toPBViolations renders Value with fmt.Sprint: it is display-only, and a plugin
-// that must not disclose a value sends a placeholder instead of the value.
-func toPBViolations(violations Violations) []*protogen.Violation {
-	if len(violations) == 0 {
+// toProto renders Value with fmt.Sprint: it is display-only, and a validator that
+// must not disclose a value sends a placeholder instead of the value.
+func (v Violations) toProto() []*protogen.Violation {
+	if len(v) == 0 {
 		return nil
 	}
 
-	ret := make([]*protogen.Violation, 0, len(violations))
+	wire := make([]*protogen.Violation, 0, len(v))
 
-	for _, violation := range violations {
-		wire := &protogen.Violation{
+	for _, violation := range v {
+		encoded := &protogen.Violation{
 			Path:    violation.Path,
 			Code:    violation.Code,
 			Message: violation.Message,
 		}
 		if violation.Value != nil {
-			wire.Value = fmt.Sprint(violation.Value)
+			encoded.Value = fmt.Sprint(violation.Value)
 		}
 
-		ret = append(ret, wire)
+		wire = append(wire, encoded)
 	}
 
-	return ret
+	return wire
 }
 
 func valueOrNil(value string) any {

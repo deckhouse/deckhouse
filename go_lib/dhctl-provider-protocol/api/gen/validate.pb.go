@@ -87,7 +87,7 @@ func (x *ValidateRequest) GetInputJson() []byte {
 // Blocking problems go to errors, non-blocking ones to warnings; an empty response
 // means the configuration is valid.
 //
-// A failure of the plugin itself is NOT reported here — it is a gRPC status:
+// A failure of the validator itself is NOT reported here — it is a gRPC status:
 // InvalidArgument, Unimplemented or Internal.
 type ValidateResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -148,7 +148,7 @@ type Violation struct {
 	// Stable machine-readable identifier, e.g. "credential_secret_required".
 	Code    string `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
 	Message string `protobuf:"bytes,3,opt,name=message,proto3" json:"message,omitempty"`
-	// Display-only. A plugin handling a sensitive field sends a placeholder such as
+	// Display-only. A validator handling a sensitive field sends a placeholder such as
 	// "masked" instead of the value.
 	Value         string `protobuf:"bytes,4,opt,name=value,proto3" json:"value,omitempty"`
 	unknownFields protoimpl.UnknownFields

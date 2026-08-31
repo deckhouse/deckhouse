@@ -22,11 +22,11 @@ import "validate.proto";
 
 option go_package = "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/gen";
 
-// ValidateService is the validate action: a plugin checks a cloud provider's
-// configuration before the host touches any infrastructure.
+// ValidateService is the validate action: a validator checks a cloud provider's
+// configuration before the caller touches any infrastructure.
 //
-// One service per action. A plugin registers what it implements, and a caller learns
-// a missing action from gRPC's Unimplemented rather than from a negotiation.
+// One service per action. A validator registers what it implements, and a caller
+// learns a missing action from gRPC's Unimplemented rather than from a negotiation.
 service ValidateService {
   rpc Validate(ValidateRequest) returns (ValidateResponse);
 }

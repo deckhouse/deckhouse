@@ -35,22 +35,24 @@ const (
 )
 
 type Config struct {
-	Network  string
-	Address  string
-	GrpcOpts []grpc.ServerOption
+	Network     string
+	Address     string
+	GRPCOptions []grpc.ServerOption
 }
 
-func NewConfig() Config {
+// DefaultConfig is what Start starts from; a caller's Config overrides it field by
+// field.
+func DefaultConfig() Config {
 	return Config{
 		Network: DefaultNetwork,
-		GrpcOpts: []grpc.ServerOption{
+		GRPCOptions: []grpc.ServerOption{
 			grpc.MaxRecvMsgSize(MaxMessageSize),
 			grpc.MaxSendMsgSize(MaxMessageSize),
 		},
 	}
 }
 
-// Validate requires an address: the host allocates a fresh short path per call and
+// Validate requires an address: the caller allocates a fresh short path per run and
 // passes it in. A default would put the socket at a world-writable well-known path,
 // where a stale file breaks bind and anyone could have created the socket first.
 func (c Config) Validate() error {
@@ -74,8 +76,8 @@ func (c Config) Merge(other Config) Config {
 		c.Address = other.Address
 	}
 
-	if len(other.GrpcOpts) > 0 {
-		c.GrpcOpts = append(c.GrpcOpts, other.GrpcOpts...)
+	if len(other.GRPCOptions) > 0 {
+		c.GRPCOptions = append(c.GRPCOptions, other.GRPCOptions...)
 	}
 
 	return c
@@ -85,9 +87,9 @@ func (c Config) Merge(other Config) Config {
 // functions in api/gen take a grpc.ServiceRegistrar, so an action's service is a
 // thin wrapper over one of them — see NewValidateService.
 //
-// A plugin may also pass a service of its own (health, reflection, its own
-// protobuf API): Start registers whatever it is given and knows nothing about the
-// actions themselves.
+// A caller may also pass a service of its own (health, reflection, its own protobuf
+// API): Start registers whatever it is given and knows nothing about the actions
+// themselves.
 type Service interface {
 	Register(registrar grpc.ServiceRegistrar)
 }
@@ -101,15 +103,15 @@ type Service interface {
 // An action whose service is not passed answers Unimplemented, which is how a
 // caller learns it is missing.
 func Start(ctx context.Context, cfg Config, services ...Service) (func() error, error) {
-	cfg = NewConfig().Merge(cfg)
+	cfg = DefaultConfig().Merge(cfg)
 	if err := cfg.Validate(); err != nil {
 		return nil, fmt.Errorf("config validation: %w", err)
 	}
 
 	// Interceptor first, cfg's options after: a caller's option of the same kind
 	// wins, since gRPC keeps the last one.
-	opts := append([]grpc.ServerOption{grpc.ChainUnaryInterceptor(panicRecovery)}, cfg.GrpcOpts...)
-	grpcServer := grpc.NewServer(opts...)
+	options := append([]grpc.ServerOption{grpc.ChainUnaryInterceptor(recoverPanic)}, cfg.GRPCOptions...)
+	grpcServer := grpc.NewServer(options...)
 
 	for _, service := range services {
 		service.Register(grpcServer)
@@ -152,12 +154,12 @@ func Start(ctx context.Context, cfg Config, services ...Service) (func() error, 
 	return stop, nil
 }
 
-func panicRecovery(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) { //nolint:nonamedreturns // the deferred recover has to replace the returned error
+//nolint:nonamedreturns // the deferred recover has to replace the returned error
+func recoverPanic(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
 	defer func() {
-		if r := recover(); r != nil {
-			err = status.Errorf(codes.Internal, "panic in %s: %v\n%s", info.FullMethod, r, debug.Stack())
+		if recovered := recover(); recovered != nil {
+			err = status.Errorf(codes.Internal, "panic in %s: %v\n%s", info.FullMethod, recovered, debug.Stack())
 		}
 	}()
-
 	return handler(ctx, req)
 }

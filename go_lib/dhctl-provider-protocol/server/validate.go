@@ -24,6 +24,9 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/validate"
 )
 
+// Validator is what the validator implements: the check itself, in plain Go. An
+// Output says what is wrong with the configuration; an error means the check could
+// not be made and reaches the caller as Internal.
 type Validator interface {
 	Validate(ctx context.Context, input validate.Input) (validate.Output, error)
 }
@@ -42,19 +45,19 @@ func (s *validateService) Register(registrar grpc.ServiceRegistrar) {
 }
 
 func (s *validateService) Validate(ctx context.Context, req *protogen.ValidateRequest) (*protogen.ValidateResponse, error) {
-	input, err := validate.FromPBRequest(req)
+	input, err := validate.InputFromRequest(req)
 	if err != nil {
 		return nil, errs.StatusInvalidRequest(err)
 	}
 
 	if err := input.Validate(); err != nil {
-		return nil, errs.MapToStatus(err)
+		return nil, errs.ToStatus(err)
 	}
 
-	out, err := s.validator.Validate(ctx, input)
+	output, err := s.validator.Validate(ctx, input)
 	if err != nil {
-		return nil, errs.MapToStatus(err)
+		return nil, errs.ToStatus(err)
 	}
 
-	return validate.ToPBResponse(out), nil
+	return output.ToResponse(), nil
 }

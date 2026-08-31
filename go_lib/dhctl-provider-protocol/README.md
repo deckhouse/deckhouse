@@ -1,21 +1,21 @@
-# dhctl provider plugin protocol
+# dhctl provider validator protocol
 
-This document specifies the protocol between a host (dhctl) and a cloud provider
-plugin binary. The Go implementation of both sides lives in this module; a plugin in
-another language implements the same gRPC service.
+This document specifies the protocol between dhctl and a cloud provider's validator
+binary. The Go implementation of both sides lives in this module; a validator written
+in another language implements the same gRPC service.
 
 ## Overview
 
-A plugin is a standalone executable shipped in the provider's OCI bundle. The host
+The validator is a standalone executable shipped in the provider's OCI bundle. dhctl
 starts it as a subprocess, calls it over gRPC on a unix socket, and stops it when the
-call is done. There is one action today — `Validate`, run before the host touches any
+call is done. There is one action today — `Validate`, run before dhctl touches any
 infrastructure — and the protocol is shaped so more can be added without breaking
-existing plugins.
+existing binaries.
 
 ## Binary location
 
 The binary must be named `validator` and live in a provider-named directory inside
-the host's download root:
+dhctl's download root:
 
 ```
 <download-root>/
@@ -24,34 +24,34 @@ the host's download root:
 ```
 
 The provider's terraform-manager image is unpacked into the download root, so a
-plugin shipped at `/validator` inside that image lands at
-`<download-root>/<provider-name>/validator` on disk. The host discovers it by that
-path and requires the execute bit.
+binary shipped at `/validator` inside that image lands at
+`<download-root>/<provider-name>/validator` on disk. dhctl discovers it by that path
+and requires the execute bit.
 
 ## Invocation
 
-The host invokes the binary with the socket it has created:
+dhctl invokes the binary with the socket it has created:
 
 ```
 validator serve --address=<unix socket path>
 ```
 
-The plugin listens on that socket and serves until it is stopped. Notes that matter
-in practice:
+The validator listens on that socket and serves until it is stopped. Notes that
+matter in practice:
 
 - **Socket path length.** A unix socket path is capped at 104 bytes on darwin and
-  108 on Linux; over the limit, `bind` fails with `invalid argument`. The host
-  allocates a short path.
-- **Readiness.** The plugin does not announce readiness and serves no health
-  service. A host waits for the socket file to appear, or calls with
+  108 on Linux; over the limit, `bind` fails with `invalid argument`. dhctl allocates
+  a short path.
+- **Readiness.** The validator does not announce readiness and serves no health
+  service. The caller waits for the socket file to appear, or calls with
   `grpc.WaitForReady(true)` and a context deadline — `WaitForReady` waits
-  indefinitely on its own. Either way the host must also watch the process: one that
-  exits early (an old binary that does not know `serve`) has to fail the operation
-  rather than wait out the deadline.
-- **Shutdown.** The host sends `SIGTERM` and the plugin stops gracefully. A plugin
+  indefinitely on its own. Either way the caller must also watch the process: one
+  that exits early (an old binary that does not know `serve`) has to fail the
+  operation rather than wait out the deadline.
+- **Shutdown.** dhctl sends `SIGTERM` and the validator stops gracefully. A binary
   built with this module's `server` package installs no signal handler of its own;
-  the binary wires signals to the context it passes to `Start`.
-- **stdout/stderr** are the plugin's own. They carry diagnostics only — no part of
+  it wires signals to the context it passes to `Start`.
+- **stdout/stderr** belong to the validator. They carry diagnostics only — no part of
   the protocol travels through them.
 
 ## Transport
@@ -110,10 +110,10 @@ on both sides. The Go definition is `validate.Input` in [`validate`](validate).
 | `layout` | string | Provider layout name |
 | `operation` | string | One of `"bootstrap"`, `"converge"`, `"destroy"` |
 | `providerClusterConfiguration` | object | Parsed `providerClusterConfiguration` section |
-| `vars` | object | Structured provider data the host collected: module `settings` (the full ModuleConfig object), `nodeGroups`, `instanceClasses`, credential `secrets`. Absent when there was nothing to collect — a plugin must tolerate its absence |
+| `vars` | object | Structured provider data dhctl collected: module `settings` (the full ModuleConfig object), `nodeGroups`, `instanceClasses`, credential `secrets`. Absent when there was nothing to collect — a validator must tolerate its absence |
 
 `operation` is required, and a value outside the three above is rejected with
-`InvalidArgument`: a plugin decides what to check from this field, and an unknown
+`InvalidArgument`: a validator decides what to check from this field, and an unknown
 value would silently get the checks of some other phase.
 
 `vars.secrets` holds credential Secrets — objects of type
@@ -136,42 +136,42 @@ message Violation {
 }
 ```
 
-An empty response means the configuration is valid. `errors` block the host's
+An empty response means the configuration is valid. `errors` block the caller's
 operation; `warnings` do not. Violations are ordered by `code` then `path`, so the
-text a host prints is stable across runs.
+text a caller prints is stable across runs.
 
-`value` is display-only and already rendered as a string. A plugin reporting a
+`value` is display-only and already rendered as a string. A validator reporting a
 sensitive field sends a placeholder such as `"masked"` instead of the value.
 
 ### Statuses
 
-A failure of the plugin itself is never a violation — it is a gRPC status:
+A failure of the validator itself is never a violation — it is a gRPC status:
 
 | Code | Meaning |
 |---|---|
-| `OK` | The plugin ran. The response says whether the configuration is valid |
+| `OK` | The validator ran. The response says whether the configuration is valid |
 | `InvalidArgument` | The request was malformed or its `operation` was rejected |
-| `Unimplemented` | The plugin does not serve this action |
-| `Internal` | The plugin failed or panicked. A panic carries its stack in the message |
+| `Unimplemented` | The validator does not serve this action |
+| `Internal` | The validator failed or panicked. A panic carries its stack in the message |
 
-A host must fail closed: any status other than `OK`, and any response it cannot read,
+The caller must fail closed: any status other than `OK`, and any response it cannot read,
 blocks the operation instead of counting as "validated".
 
-## Implementing a plugin in Go
+## Implementing a validator in Go
 
-Import [`validate`](validate) and [`server`](server); see the runnable
-example in the `server` package documentation.
+Import [`validate`](validate) and [`server`](server); see the runnable example in the
+`server` package documentation.
 
 ```go
 type myValidator struct{}
 
-func (myValidator) Validate(_ context.Context, input validate.Input) (validate.Result, error) {
-	var result validate.Result
+func (myValidator) Validate(_ context.Context, input validate.Input) (validate.Output, error) {
+	var output validate.Output
 	if input.CloudProviderVars == nil || len(input.CloudProviderVars.Secrets) == 0 {
-		result.AddError("Secret/d8-credentials", "credential_secret_required", nil,
+		output.AddError("Secret/d8-credentials", "credential_secret_required", nil,
 			`credential Secret "d8-credentials" is required`)
 	}
-	return result, nil
+	return output, nil
 }
 
 func main() {
@@ -189,7 +189,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	<-ctx.Done() // SIGTERM from the host
+	<-ctx.Done() // SIGTERM from dhctl
 
 	if err := stop(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
@@ -198,29 +198,29 @@ func main() {
 }
 ```
 
-The `Result` and the `error` mean different things, and the split is the whole point
-of the contract: a `Result` carries what is wrong with the configuration — the plugin
-working correctly — while an `error` means the plugin could not decide. Panics are
-recovered and reported as `Internal` with the stack, so a bug in a plugin surfaces
-instead of looking like a process that died mid-call.
+The `Output` and the `error` mean different things, and the split is the whole point
+of the contract: an `Output` carries what is wrong with the configuration — the check
+working correctly — while an `error` means the check could not be made. Panics are
+recovered and reported as `Internal` with the stack, so a bug surfaces instead of
+looking like a process that died mid-call.
 
-## Calling a plugin in Go
+## Calling a validator in Go
 
-Import [`validate`](validate) and [`client`](client). The host owns the
-process, the socket and the deadlines:
+Import [`validate`](validate) and [`client`](client). The caller owns the process, the
+socket and the deadlines:
 
 ```go
 conn, err := grpc.NewClient("unix://"+socket, grpc.WithTransportCredentials(insecure.NewCredentials()))
 // …
 defer conn.Close()
 
-result, err := client.NewClient(conn, client.WithCallOptions(grpc.WaitForReady(true))).
+output, err := client.NewClient(conn, client.WithCallOptions(grpc.WaitForReady(true))).
 	Validate(ctx, input)
 if err != nil {
-	return err // the plugin failed
+	return err // the validator failed
 }
-if result.HasErrors() {
-	return errors.New(result.Errors().String()) // the configuration is wrong
+if output.HasErrors() {
+	return errors.New(output.Errors().String()) // the configuration is wrong
 }
 return nil
 ```
@@ -228,6 +228,6 @@ return nil
 ## Adding an action
 
 Each action is its own service in [`api/pb`](api/pb) and its own `server.Service`
-constructor, so a plugin that does not implement one simply does not pass it to
+constructor, so a binary that does not implement one simply does not pass it to
 `server.Start` and a caller sees `Unimplemented`. The full recipe is in the module
 documentation ([`doc.go`](doc.go)).

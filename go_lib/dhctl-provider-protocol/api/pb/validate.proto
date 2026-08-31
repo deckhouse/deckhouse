@@ -31,7 +31,7 @@ message ValidateRequest {
 // Blocking problems go to errors, non-blocking ones to warnings; an empty response
 // means the configuration is valid.
 //
-// A failure of the plugin itself is NOT reported here — it is a gRPC status:
+// A failure of the validator itself is NOT reported here — it is a gRPC status:
 // InvalidArgument, Unimplemented or Internal.
 message ValidateResponse {
   repeated Violation errors   = 1;
@@ -44,7 +44,7 @@ message Violation {
   // Stable machine-readable identifier, e.g. "credential_secret_required".
   string code    = 2;
   string message = 3;
-  // Display-only. A plugin handling a sensitive field sends a placeholder such as
+  // Display-only. A validator handling a sensitive field sends a placeholder such as
   // "masked" instead of the value.
   string value = 4;
 }

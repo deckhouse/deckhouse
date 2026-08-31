@@ -14,97 +14,296 @@
 
 package validate
 
-import "testing"
+import (
+	"reflect"
+	"testing"
 
-func TestOutputZeroValueIsUsable(t *testing.T) {
-	var output Output
+	protogen "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/gen"
+)
 
-	if output.HasErrors() {
-		t.Error("HasErrors() = true on a zero Output")
+func TestOutputAddError(t *testing.T) {
+	tests := []struct {
+		name       string
+		violations Violations
+		want       Violations
+	}{
+		{name: "records nothing by default"},
+		{
+			name:       "records a violation",
+			violations: Violations{{Path: "Secret/d8-credentials", Code: "secret_required", Message: "required", Value: "masked"}},
+			want:       Violations{{Path: "Secret/d8-credentials", Code: "secret_required", Message: "required", Value: "masked"}},
+		},
+		{
+			name: "orders what it recorded",
+			violations: Violations{
+				{Path: "z", Code: "b_code", Message: "second"},
+				{Path: "a", Code: "a_code", Message: "first"},
+			},
+			want: Violations{
+				{Path: "a", Code: "a_code", Message: "first"},
+				{Path: "z", Code: "b_code", Message: "second"},
+			},
+		},
 	}
-	if output.HasWarnings() {
-		t.Error("HasWarnings() = true on a zero Output")
-	}
-	if got := output.Errors().String(); got != "" {
-		t.Errorf("Errors().String() = %q, want empty", got)
-	}
-}
 
-// The host prints this text verbatim and plugins compare whole strings, so the
-// order is part of the contract.
-func TestOutputOrdersViolationsByCodeThenPath(t *testing.T) {
-	var output Output
-	output.AddError("z", "b_code", nil, "second")
-	output.AddError("a", "a_code", nil, "first")
-	output.AddError("b", "a_code", nil, "middle")
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var output Output
+			for _, violation := range test.violations {
+				output.AddError(violation.Path, violation.Code, violation.Value, violation.Message)
+			}
 
-	want := "a: first\nb: middle\nz: second"
-	if got := output.Errors().String(); got != want {
-		t.Fatalf("Errors().String() =\n%s\nwant\n%s", got, want)
-	}
-}
+			if got := output.Errors(); !reflect.DeepEqual(got, test.want) {
+				t.Errorf("Errors() = %+v, want %+v", got, test.want)
+			}
 
-func TestOutputErrorOmitsEmptyPath(t *testing.T) {
-	var output Output
-	output.AddError("", "internal", nil, "state is not initialized")
+			if got, want := output.HasErrors(), len(test.want) > 0; got != want {
+				t.Errorf("HasErrors() = %v, want %v", got, want)
+			}
 
-	if got := output.Errors().String(); got != "state is not initialized" {
-		t.Fatalf("Errors().String() = %q", got)
-	}
-}
-
-// Warnings never turn a valid configuration into an invalid one.
-func TestOutputWarningsAreNotBlocking(t *testing.T) {
-	var output Output
-	output.AddWarning("NodeGroup/worker", "replicas_zero", nil, "replicas is 0")
-
-	if output.HasErrors() {
-		t.Error("HasErrors() = true with only warnings")
-	}
-	if !output.HasWarnings() {
-		t.Error("HasWarnings() = false with a warning")
-	}
-	if got := len(output.Warnings()); got != 1 {
-		t.Errorf("Warnings() = %d, want 1", got)
-	}
-}
-
-func TestOutputRoundTripKeepsTextAndKinds(t *testing.T) {
-	var output Output
-	output.AddError("NodeGroup/master", "node_group_required", nil, `NodeGroup "master" is required`)
-	output.AddError("Secret/d8-credentials.data.secret", "invalid_kubeconfig", "masked", "invalid kubeconfig")
-	output.AddWarning("", "layout_empty", nil, "layout is not set")
-
-	got := FromPBResponse(ToPBResponse(output))
-
-	if got.Errors().String() != output.Errors().String() {
-		t.Fatalf("Errors().String() =\n%s\nwant\n%s", got.Errors().String(), output.Errors().String())
-	}
-	if len(got.Warnings()) != 1 {
-		t.Fatalf("Warnings() = %d, want 1", len(got.Warnings()))
-	}
-	if value := got.Errors()[0].Value; value != "masked" {
-		t.Errorf("Value = %v, want %q", value, "masked")
+			// Errors and warnings are separate ledgers.
+			if output.HasWarnings() {
+				t.Error("HasWarnings() = true, want false")
+			}
+		})
 	}
 }
 
-// A non-string Value is rendered, not dropped: rules report rejected values of any
-// type and the wire form is display-only.
-func TestViolationsRenderNonStringValue(t *testing.T) {
-	var output Output
-	output.AddError("DVPInstanceClass/worker.spec.etcdDisk", "etcd_disk_forbidden", 3, "etcdDisk is not allowed here")
+func TestOutputAddWarning(t *testing.T) {
+	tests := []struct {
+		name       string
+		violations Violations
+		want       Violations
+	}{
+		{name: "records nothing by default"},
+		{
+			name:       "records a warning",
+			violations: Violations{{Path: "NodeGroup/worker", Code: "replicas_zero", Message: "replicas is 0"}},
+			want:       Violations{{Path: "NodeGroup/worker", Code: "replicas_zero", Message: "replicas is 0"}},
+		},
+	}
 
-	resp := ToPBResponse(output)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var output Output
+			for _, violation := range test.violations {
+				output.AddWarning(violation.Path, violation.Code, violation.Value, violation.Message)
+			}
 
-	if got := resp.GetErrors()[0].GetValue(); got != "3" {
-		t.Fatalf("Value = %q, want %q", got, "3")
+			if got := output.Warnings(); !reflect.DeepEqual(got, test.want) {
+				t.Errorf("Warnings() = %+v, want %+v", got, test.want)
+			}
+
+			if got, want := output.HasWarnings(), len(test.want) > 0; got != want {
+				t.Errorf("HasWarnings() = %v, want %v", got, want)
+			}
+
+			// A warning never makes a configuration invalid.
+			if output.HasErrors() {
+				t.Error("HasErrors() = true with only warnings")
+			}
+		})
 	}
 }
 
-func TestOutputOfNilResponseIsEmpty(t *testing.T) {
-	output := FromPBResponse(nil)
-
-	if output.HasErrors() || output.HasWarnings() {
-		t.Fatalf("Output = %+v, want empty", output)
+func TestViolationsSorted(t *testing.T) {
+	tests := []struct {
+		name       string
+		violations Violations
+		want       Violations
+	}{
+		{name: "handles the empty set", violations: Violations{}, want: Violations{}},
+		{
+			name: "orders by code, then path",
+			violations: Violations{
+				{Path: "z", Code: "b_code"},
+				{Path: "b", Code: "a_code"},
+				{Path: "a", Code: "a_code"},
+			},
+			want: Violations{
+				{Path: "a", Code: "a_code"},
+				{Path: "b", Code: "a_code"},
+				{Path: "z", Code: "b_code"},
+			},
+		},
+		{
+			name: "keeps repeats in the order they were added",
+			violations: Violations{
+				{Path: "a", Code: "a_code", Message: "first"},
+				{Path: "a", Code: "a_code", Message: "second"},
+			},
+			want: Violations{
+				{Path: "a", Code: "a_code", Message: "first"},
+				{Path: "a", Code: "a_code", Message: "second"},
+			},
+		},
 	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			source := append(Violations{}, test.violations...)
+
+			if got := test.violations.Sorted(); !reflect.DeepEqual(got, test.want) {
+				t.Errorf("Sorted() = %+v, want %+v", got, test.want)
+			}
+
+			// Sorting must not reorder the caller's own slice.
+			if !reflect.DeepEqual(test.violations, source) {
+				t.Errorf("receiver = %+v, want it untouched: %+v", test.violations, source)
+			}
+		})
+	}
+}
+
+func TestViolationsString(t *testing.T) {
+	tests := []struct {
+		name       string
+		violations Violations
+		want       string
+	}{
+		{name: "renders the empty set as empty text"},
+		{
+			name:       "renders path and message",
+			violations: Violations{{Path: "NodeGroup/master", Code: "required", Message: "is required"}},
+			want:       "NodeGroup/master: is required",
+		},
+		{
+			name:       "drops an empty path",
+			violations: Violations{{Code: "internal", Message: "state is not initialized"}},
+			want:       "state is not initialized",
+		},
+		{
+			// The caller prints this verbatim and validators compare whole strings,
+			// so the order is part of the contract.
+			name: "renders one line per violation in order",
+			violations: Violations{
+				{Path: "z", Code: "b_code", Message: "second"},
+				{Path: "a", Code: "a_code", Message: "first"},
+			},
+			want: "a: first\nz: second",
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := test.violations.String(); got != test.want {
+				t.Errorf("String() =\n%s\nwant\n%s", got, test.want)
+			}
+		})
+	}
+}
+
+func TestOutputToResponse(t *testing.T) {
+	tests := []struct {
+		name         string
+		errors       Violations
+		warnings     Violations
+		wantErrors   []*protogen.Violation
+		wantWarnings []*protogen.Violation
+	}{
+		{name: "sends nothing when the configuration is valid"},
+		{
+			name:         "splits errors from warnings",
+			errors:       Violations{{Path: "a", Code: "a_code", Message: "blocking"}},
+			warnings:     Violations{{Path: "b", Code: "b_code", Message: "advisory"}},
+			wantErrors:   []*protogen.Violation{{Path: "a", Code: "a_code", Message: "blocking"}},
+			wantWarnings: []*protogen.Violation{{Path: "b", Code: "b_code", Message: "advisory"}},
+		},
+		{
+			// A non-string Value is rendered, not dropped: rules report rejected
+			// values of any type and the wire form is display-only.
+			name:       "renders a non-string value",
+			errors:     Violations{{Path: "DVPInstanceClass/worker.spec.etcdDisk", Code: "forbidden", Message: "not allowed", Value: 3}},
+			wantErrors: []*protogen.Violation{{Path: "DVPInstanceClass/worker.spec.etcdDisk", Code: "forbidden", Message: "not allowed", Value: "3"}},
+		},
+		{
+			name:       "leaves an absent value empty",
+			errors:     Violations{{Path: "a", Code: "a_code", Message: "blocking"}},
+			wantErrors: []*protogen.Violation{{Path: "a", Code: "a_code", Message: "blocking"}},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			var output Output
+			for _, violation := range test.errors {
+				output.AddError(violation.Path, violation.Code, violation.Value, violation.Message)
+			}
+
+			for _, violation := range test.warnings {
+				output.AddWarning(violation.Path, violation.Code, violation.Value, violation.Message)
+			}
+
+			resp := output.ToResponse()
+
+			if got := violationsOf(resp.GetErrors()); !reflect.DeepEqual(got, violationsOf(test.wantErrors)) {
+				t.Errorf("Errors = %+v, want %+v", got, violationsOf(test.wantErrors))
+			}
+
+			if got := violationsOf(resp.GetWarnings()); !reflect.DeepEqual(got, violationsOf(test.wantWarnings)) {
+				t.Errorf("Warnings = %+v, want %+v", got, violationsOf(test.wantWarnings))
+			}
+		})
+	}
+}
+
+func TestOutputFromResponse(t *testing.T) {
+	tests := []struct {
+		name         string
+		resp         *protogen.ValidateResponse
+		wantErrors   Violations
+		wantWarnings Violations
+	}{
+		{
+			// Fail open is not an option, but neither is inventing a violation: no
+			// response means nothing was reported.
+			name: "reads a missing response as valid",
+		},
+		{
+			name: "reads errors and warnings",
+			resp: &protogen.ValidateResponse{
+				Errors:   []*protogen.Violation{{Path: "a", Code: "a_code", Message: "blocking", Value: "masked"}},
+				Warnings: []*protogen.Violation{{Path: "b", Code: "b_code", Message: "advisory"}},
+			},
+			wantErrors:   Violations{{Path: "a", Code: "a_code", Message: "blocking", Value: "masked"}},
+			wantWarnings: Violations{{Path: "b", Code: "b_code", Message: "advisory"}},
+		},
+		{
+			// An empty wire value means "no value", not the empty string.
+			name: "reads an empty value as absent",
+			resp: &protogen.ValidateResponse{
+				Errors: []*protogen.Violation{{Path: "a", Code: "a_code", Message: "blocking", Value: ""}},
+			},
+			wantErrors: Violations{{Path: "a", Code: "a_code", Message: "blocking"}},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			output := OutputFromResponse(test.resp)
+
+			if got := output.Errors(); !reflect.DeepEqual(got, test.wantErrors.Sorted()) {
+				t.Errorf("Errors() = %+v, want %+v", got, test.wantErrors)
+			}
+
+			if got := output.Warnings(); !reflect.DeepEqual(got, test.wantWarnings.Sorted()) {
+				t.Errorf("Warnings() = %+v, want %+v", got, test.wantWarnings)
+			}
+		})
+	}
+}
+
+// violationsOf compares wire violations by value instead of by protobuf internals.
+func violationsOf(wire []*protogen.Violation) Violations {
+	violations := make(Violations, 0, len(wire))
+	for _, violation := range wire {
+		violations = append(violations, Violation{
+			Path:    violation.GetPath(),
+			Code:    violation.GetCode(),
+			Message: violation.GetMessage(),
+			Value:   valueOrNil(violation.GetValue()),
+		})
+	}
+
+	return violations
 }
