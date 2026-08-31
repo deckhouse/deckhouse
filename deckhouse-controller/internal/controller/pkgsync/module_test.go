@@ -134,8 +134,8 @@ func TestSyncOriginPrecedence(t *testing.T) {
 
 		module := getV2Module(t, cl, "echo")
 		assert.Equal(t, "latest", module.Spec.PackageVersion,
-			"a version that names no package version must still place the module")
-		assert.Empty(t, listVersionNames(t, cl))
+			"the spec and the version name carry the same string")
+		assert.Contains(t, listVersionNames(t, cl), "embedded-echo-latest")
 	})
 
 	t.Run("newest deployed release wins and supersedes the older one", func(t *testing.T) {

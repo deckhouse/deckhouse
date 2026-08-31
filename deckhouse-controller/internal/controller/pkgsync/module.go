@@ -28,6 +28,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 )
@@ -67,12 +68,7 @@ func (s *syncer) syncModules(ctx context.Context, embedded []embeddedModule, fro
 func (s *syncer) originsFromImage(embedded []embeddedModule) map[string]Origin {
 	// an embedded module carries the version its package version is named
 	// with, so the spec triple always resolves to the embedded version name
-	version, ok := s.embeddedVersion()
-	if !ok {
-		// a non-semver build names no package version, but the modules still
-		// must be placed; the raw version keeps them filled
-		version = s.deckhouseVersion
-	}
+	version := app.EmbeddedPackageVersion(s.deckhouseVersion)
 
 	origins := make(map[string]Origin, len(embedded))
 
