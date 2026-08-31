@@ -43,6 +43,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/installer"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	d8utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
@@ -400,7 +401,7 @@ func (l *Loader) cleanupDeletedModules(ctx context.Context) error {
 	statusUpdatedCount := 0
 
 	for _, module := range modulesList.Items {
-		if module.IsEmbedded() && l.modules[module.Name] == nil {
+		if embeddedByAnnotation(&module) && l.modules[module.Name] == nil {
 			ctx, deleteSpan := otel.Tracer("module-loader").Start(ctx, "deleteEmbeddedModule")
 			deleteSpan.SetAttributes(attribute.String("module.name", module.Name))
 
@@ -459,26 +460,41 @@ func (l *Loader) cleanupDeletedModules(ctx context.Context) error {
 		attribute.Int("status_updated_modules", statusUpdatedCount),
 	)
 
-	l.syncModuleVersions(modulesList.Items)
+	l.syncModuleVersions(ctx)
 
 	return nil
 }
 
-// syncModuleVersions propagates Module.Properties.Version into each BasicModule.
-// Embedded modules are intentionally NOT filtered out: Properties.Version for
-// them holds the Deckhouse release version, which kubeall expects to see.
-func (l *Loader) syncModuleVersions(modules []v1alpha1.Module) {
-	for i := range modules {
-		m := &modules[i]
-		if m.Properties.Version == "" {
+// syncModuleVersions propagates the module v2 spec.packageVersion into each
+// BasicModule. Embedded modules are intentionally NOT filtered out: their
+// version is the Deckhouse release version, which kubeall expects to see.
+func (l *Loader) syncModuleVersions(ctx context.Context) {
+	modules := new(v1alpha2.ModuleList)
+	if err := l.client.List(ctx, modules); err != nil {
+		// the version feeds a metric; the modules themselves run without it
+		l.logger.Warn("failed to list the module v2 resources", log.Err(err))
+
+		return
+	}
+
+	for i := range modules.Items {
+		m := &modules.Items[i]
+		if m.Spec.PackageVersion == "" {
 			continue
 		}
 		mod, ok := l.modules[m.Name]
 		if !ok {
 			continue
 		}
-		mod.GetBasicModule().SetVersion(m.Properties.Version)
+		mod.GetBasicModule().SetVersion(m.Spec.PackageVersion)
 	}
+}
+
+// embeddedByAnnotation reports whether the module v2 sync marked the module as
+// shipped in the image. The annotation lives on the shared object metadata, so
+// the v1 view carries it too.
+func embeddedByAnnotation(module *v1alpha1.Module) bool {
+	return module.Annotations[v1alpha2.ModuleAnnotationEmbedded] == "true"
 }
 
 // ensureModule makes the cluster Module object match the module definition

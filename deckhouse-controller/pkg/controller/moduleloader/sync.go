@@ -61,7 +61,7 @@ func (l *Loader) deleteStaleModuleReleases(ctx context.Context) error {
 
 	for _, module := range modules.Items {
 		// handle too long disabled modules
-		if module.DisabledByModuleConfigMoreThan(deleteReleasesAfter) && !module.IsEmbedded() {
+		if module.DisabledByModuleConfigMoreThan(deleteReleasesAfter) && !embeddedByAnnotation(&module) {
 			// delete module releases of a stale module
 			l.logger.Debug("the module disabled too long, delete module releases", slog.String("name", module.Name))
 			moduleReleases := new(v1alpha1.ModuleReleaseList)
@@ -129,7 +129,7 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 		}
 
 		// skip embedded module
-		if module.IsEmbedded() {
+		if embeddedByAnnotation(module) {
 			l.logger.Info("module is embedded, skip restoring module pull override", slog.String("name", mpo.Name))
 			continue
 		}
@@ -140,13 +140,17 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 			continue
 		}
 
-		// source must be
-		if module.Properties.Source == "" {
-			l.logger.Info("module does not have an active source, skip restoring module pull override process", slog.String("name", mpo.Name))
+		// the override itself names no source; the module's other resources do
+		sourceName, err := l.restoreSourceName(ctx, moduleName)
+		if err != nil {
+			return err
+		}
+		if sourceName == "" {
+			l.logger.Info("no resource names the module's source, skip restoring module pull override process", slog.String("name", mpo.Name))
 			continue
 		}
 
-		err := utils.Update[*v1alpha1.Module](ctx, l.client, module, func(module *v1alpha1.Module) bool {
+		err = utils.Update[*v1alpha1.Module](ctx, l.client, module, func(module *v1alpha1.Module) bool {
 			module.Properties.Version = mpo.Spec.ImageTag
 			return true
 		})
@@ -178,8 +182,8 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 
 		// get relevant module source
 		source := new(v1alpha1.ModuleSource)
-		if err = l.client.Get(ctx, client.ObjectKey{Name: module.Properties.Source}, source); err != nil {
-			return fmt.Errorf("get the module source '%s' for the module '%s': %w", module.Properties.Source, mpo.Name, err)
+		if err = l.client.Get(ctx, client.ObjectKey{Name: sourceName}, source); err != nil {
+			return fmt.Errorf("get the module source '%s' for the module '%s': %w", sourceName, mpo.Name, err)
 		}
 
 		if err = l.installer.Restore(ctx, source, moduleName, mpo.Spec.ImageTag); err != nil {
@@ -190,6 +194,55 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+// restoreSourceName resolves which module source serves an overridden module:
+// the source of its deployed release, else the single source offering it. The
+// override itself names none. An empty result means no resource knows the
+// source, and the module cannot be restored.
+func (l *Loader) restoreSourceName(ctx context.Context, moduleName string) (string, error) {
+	releases := new(v1alpha1.ModuleReleaseList)
+	if err := l.client.List(ctx, releases, client.MatchingLabels{"module": moduleName}); err != nil {
+		return "", fmt.Errorf("list module releases of the '%s' module: %w", moduleName, err)
+	}
+
+	for i := range releases.Items {
+		release := &releases.Items[i]
+		if release.Status.Phase != v1alpha1.ModuleReleasePhaseDeployed || !release.DeletionTimestamp.IsZero() {
+			continue
+		}
+
+		if source := release.GetModuleSource(); source != "" {
+			return source, nil
+		}
+	}
+
+	sources := new(v1alpha1.ModuleSourceList)
+	if err := l.client.List(ctx, sources); err != nil {
+		return "", fmt.Errorf("list module sources: %w", err)
+	}
+
+	sourceName := ""
+
+	for i := range sources.Items {
+		source := &sources.Items[i]
+
+		offered := slices.ContainsFunc(source.Status.AvailableModules, func(module v1alpha1.AvailableModule) bool {
+			return module.Name == moduleName
+		})
+		if !offered {
+			continue
+		}
+
+		// several sources offer the module: picking one would be a guess
+		if sourceName != "" {
+			return "", nil
+		}
+
+		sourceName = source.Name
+	}
+
+	return sourceName, nil
 }
 
 // restoreModulesByReleases checks ModuleReleases with Deployed status and restores them on the FS

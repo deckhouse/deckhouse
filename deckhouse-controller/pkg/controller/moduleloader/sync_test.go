@@ -110,8 +110,8 @@ func newTestLoader(t *testing.T, inst Installer, objects ...client.Object) *Load
 
 // --- object builders -------------------------------------------------------
 
-func testModuleSource(name, repo string) *v1alpha1.ModuleSource {
-	return &v1alpha1.ModuleSource{
+func testModuleSource(name, repo string, offered ...string) *v1alpha1.ModuleSource {
+	source := &v1alpha1.ModuleSource{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
 		Spec: v1alpha1.ModuleSourceSpec{
 			Registry: v1alpha1.ModuleSourceSpecRegistry{
@@ -121,6 +121,12 @@ func testModuleSource(name, repo string) *v1alpha1.ModuleSource {
 			},
 		},
 	}
+
+	for _, module := range offered {
+		source.Status.AvailableModules = append(source.Status.AvailableModules, v1alpha1.AvailableModule{Name: module})
+	}
+
+	return source
 }
 
 func testModule(name, source string, availableSources ...string) *v1alpha1.Module {
@@ -147,6 +153,17 @@ func testDeployedRelease(module, sourceName, version string) *v1alpha1.ModuleRel
 		Spec:   v1alpha1.ModuleReleaseSpec{ModuleName: module, Version: version, Weight: 900},
 		Status: v1alpha1.ModuleReleaseStatus{Phase: v1alpha1.ModuleReleasePhaseDeployed},
 	}
+}
+
+// embedded marks the module the way the module v2 sync does, with the shared
+// metadata annotation.
+func embedded(module *v1alpha1.Module) *v1alpha1.Module {
+	if module.Annotations == nil {
+		module.Annotations = make(map[string]string)
+	}
+	module.Annotations[v1alpha2.ModuleAnnotationEmbedded] = "true"
+
+	return module
 }
 
 // enabled marks the module as enabled by ModuleConfig, which restoreModulesByOverrides
@@ -299,7 +316,7 @@ func TestRestoreModulesByOverrides(t *testing.T) {
 
 		calls := new(installerCalls)
 		l := newTestLoader(t, newRecordingInstaller(calls, nil),
-			testModuleSource("example", testRepo),
+			testModuleSource("example", testRepo, "echo"),
 			enabled(testModule("echo", "example", "example")),
 			testReadyMPO("echo", "v1.0.0", testNodeName),
 		)
@@ -314,13 +331,49 @@ func TestRestoreModulesByOverrides(t *testing.T) {
 		assert.Equal(t, testRepo, reg.Base)
 	})
 
+	t.Run("the deployed release names the source ahead of the offer list", func(t *testing.T) {
+		t.Setenv("DECKHOUSE_NODE_NAME", testNodeName)
+
+		calls := new(installerCalls)
+		l := newTestLoader(t, newRecordingInstaller(calls, nil),
+			testModuleSource("example", testRepo, "echo"),
+			testModuleSource("other", "other.registry/repo", "echo"),
+			testDeployedRelease("echo", "example", "1.0.0"),
+			enabled(testModule("echo", "example", "example")),
+			testReadyMPO("echo", "dev-tag", testNodeName),
+		)
+
+		require.NoError(t, l.restoreModulesByOverrides(context.Background()))
+
+		require.Equal(t, []installerCall{{"echo", "dev-tag"}}, calls.restore)
+		reg, ok := l.registries["echo"]
+		require.True(t, ok)
+		assert.Equal(t, testRepo, reg.Base, "the release's source wins over an ambiguous offer list")
+	})
+
+	t.Run("no resource names the source, the override is skipped", func(t *testing.T) {
+		t.Setenv("DECKHOUSE_NODE_NAME", testNodeName)
+
+		calls := new(installerCalls)
+		l := newTestLoader(t, newRecordingInstaller(calls, nil),
+			testModuleSource("example", testRepo, "echo"),
+			testModuleSource("other", "other.registry/repo", "echo"),
+			enabled(testModule("echo", "example", "example")),
+			testReadyMPO("echo", "dev-tag", testNodeName),
+		)
+
+		require.NoError(t, l.restoreModulesByOverrides(context.Background()))
+
+		assert.Empty(t, calls.restore, "an ambiguous offer list restores nothing")
+	})
+
 	t.Run("embedded module is skipped", func(t *testing.T) {
 		t.Setenv("DECKHOUSE_NODE_NAME", testNodeName)
 
 		calls := new(installerCalls)
 		l := newTestLoader(t, newRecordingInstaller(calls, nil),
-			testModuleSource("example", testRepo),
-			testModule("echo", v1alpha1.ModuleSourceEmbedded, "example"),
+			testModuleSource("example", testRepo, "echo"),
+			embedded(testModule("echo", v1alpha1.ModuleSourceEmbedded, "example")),
 			testReadyMPO("echo", "v1.0.0", testNodeName),
 		)
 
@@ -334,7 +387,7 @@ func TestRestoreModulesByOverrides(t *testing.T) {
 
 		calls := new(installerCalls)
 		l := newTestLoader(t, newRecordingInstaller(calls, nil),
-			testModuleSource("example", testRepo),
+			testModuleSource("example", testRepo, "echo"),
 			enabled(testModule("echo", "example", "example")),
 			testReadyMPO("echo", "v1.0.0", "some-old-master"),
 		)
@@ -398,7 +451,7 @@ func TestDeleteStaleModuleReleases(t *testing.T) {
 
 	t.Run("embedded module is never pruned", func(t *testing.T) {
 		l := newTestLoader(t, newRecordingInstaller(new(installerCalls), nil),
-			staleModule("echo", v1alpha1.ModuleSourceEmbedded),
+			embedded(staleModule("echo", v1alpha1.ModuleSourceEmbedded)),
 			testDeployedRelease("echo", "example", "1.0.0"),
 		)
 
