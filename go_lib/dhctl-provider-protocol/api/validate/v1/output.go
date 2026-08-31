@@ -21,8 +21,17 @@ import (
 
 // Output aggregates violations. The zero value is ready to use.
 type Output struct {
-	Errors   Violations
-	Warnings Violations
+	Errors   Violations `json:"errors,omitempty"`
+	Warnings Violations `json:"warnings,omitempty"`
+}
+
+type Violations []Violation
+
+type Violation struct {
+	Path    string `json:"path,omitempty"`
+	Code    string `json:"code"`
+	Message string `json:"message"`
+	Value   any    `json:"value"`
 }
 
 func (o *Output) AddError(path, code string, value any, message string) {
@@ -49,15 +58,6 @@ func (o Output) ToResponse() *ValidateResponse {
 		Warnings: o.Warnings.ToResponse(),
 	}
 }
-
-type Violation struct {
-	Path    string `json:"path,omitempty"`
-	Code    string `json:"code,omitempty"`
-	Message string `json:"message"`
-	Value   any    `json:"value,omitempty"`
-}
-
-type Violations []Violation
 
 func (v *Violations) Add(violation Violation) {
 	*v = append(*v, violation)
