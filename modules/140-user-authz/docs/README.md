@@ -75,9 +75,7 @@ The manage role grants access only to system namespaces (starting with `d8-` or 
 Manage roles are intended for assigning rights to manage the entire platform or a part of it (the [subsystem](#subsystems-of-the-role-based-model)), but not the users applications themselves. Using a manage role you can enable, for example, a security administrator to manage cluster security modules. Thus, the security administrator will be able to configure authentication, authorization, security policies, and other respective parameters.
 
 {% alert level="warning" %}
-A manage role limits which modules and namespaces a subject can address, but it does not limit the privileges a subject can obtain through the modules it is allowed to manage. This matters most for the `security` subsystem: the right to manage authentication and authorization is equivalent to full control over the cluster.
-
-A subject that can manage the `user-authn` module can still create local users. Deleting or recreating a user whose email already carries a grant requires holding at least that grant. A subject that can manage the `user-authz` module can modify authorization rules, but cannot grant an access level higher than the one they already hold. Treat a `security` subsystem manage role as a cluster administrator role when planning access.
+A manage role limits which modules and namespaces a subject can address. Creating a local user or group whose name is not already a grant subject remains ordinary CRUD. Occupying an email or group that already carries a grant, or writing a ClusterAuthorizationRule, is an assignment: the requester must already hold covering permissions or an explicit can-assign range on the target roles. A `security` subsystem manager can assign basic access up to `ClusterAdmin` and security roles up to the named admin level, and cannot assign SuperAdmin or `cluster-admin`. The `user-authn` edit permission alone does not assign occupied SuperAdmin identities.
 {% endalert %}
 
 The manage role defines access rights:
