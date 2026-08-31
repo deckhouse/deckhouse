@@ -1727,6 +1727,10 @@ entries:
                 ru: Модуль observability
               url: /architecture/observability/observability.html
             - title:
+                en: Operator-prometheus module
+                ru: Модуль operator-prometheus
+              url: /architecture/observability/operator-prometheus.html              
+            - title:
                 en: Upmeter module
                 ru: Модуль upmeter
               url: /architecture/observability/upmeter.html
