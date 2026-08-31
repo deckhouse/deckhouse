@@ -1,0 +1,13 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
+metadata:
+  name: deckhouse-test-module-v1.0.0
+  labels:
+    packages.deckhouse.io/package: test-module
+    packages.deckhouse.io/repository: deckhouse
+    packages.deckhouse.io/draft: "true"
+spec:
+  packageName: test-module
+  packageRepositoryName: deckhouse
+  packageVersion: "v1.0.0"

@@ -224,11 +224,10 @@ func NewDeckhouseController(
 		opts.Cache.ByObject[&v1alpha1.Application{}] = cache.ByObject{}
 	}
 
-	// Module package controllers (feature flag)
-	if app.ModulePackagesEnabled() {
-		opts.Cache.ByObject[&v1alpha1.ModulePackage{}] = cache.ByObject{}
-		opts.Cache.ByObject[&v1alpha1.ModulePackageVersion{}] = cache.ByObject{}
-	}
+	// the module packages and their versions are synced and read on every
+	// cluster during the transition, whatever the feature flags say
+	opts.Cache.ByObject[&v1alpha1.ModulePackage{}] = cache.ByObject{}
+	opts.Cache.ByObject[&v1alpha1.ModulePackageVersion{}] = cache.ByObject{}
 
 	admission, serveWebhooks := app.TakeOverAdmissionServer()
 	if serveWebhooks {
@@ -414,16 +413,18 @@ func NewDeckhouseController(
 		if err != nil {
 			return nil, fmt.Errorf("register application controller: %w", err)
 		}
+
+		// the version promoter runs wherever the package system does: pkgsync
+		// leaves draft stubs on every such cluster, and nothing else fills them
+		err = modulepackageversion.RegisterController(preflightCountDown, runtimeManager, dc, logger)
+		if err != nil {
+			return nil, fmt.Errorf("register module package version controller: %w", err)
+		}
 	}
 
 	// Module package controllers (feature flag)
 	if app.ModulePackagesEnabled() {
 		logger.Info("Module package controllers are enabled")
-
-		err = modulepackageversion.RegisterController(preflightCountDown, runtimeManager, dc, logger)
-		if err != nil {
-			return nil, fmt.Errorf("register module package version controller: %w", err)
-		}
 
 		err = module.RegisterController(preflightCountDown, runtimeManager, pkgRuntime, logger)
 		if err != nil {

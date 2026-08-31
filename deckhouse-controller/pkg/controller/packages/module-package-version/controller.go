@@ -50,6 +50,15 @@ const (
 
 	defaultRequeue = 15 * time.Second
 
+	// repositoryWait is how long a draft waits for its missing repository:
+	// the platform-shipped ones appear only after the first helm converge.
+	repositoryWait = 30 * time.Second
+
+	// imageWait is how long a draft waits after a failed registry fetch: a
+	// version absent from the registry, e.g. on an air-gapped cluster, stays
+	// a draft and must not spin the error backoff forever.
+	imageWait = 5 * time.Minute
+
 	// defaultPathSegment is the registry sub-path for v2 module images.
 	defaultPathSegment = "version"
 
@@ -122,13 +131,12 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// handle create/update events
-	if err := r.handleCreateOrUpdate(ctx, mpv); err != nil {
+	result, err := r.handleCreateOrUpdate(ctx, mpv)
+	if err != nil {
 		logger.Warn("failed to handle module package version", log.Err(err))
-
-		return ctrl.Result{}, err
 	}
 
-	return ctrl.Result{}, nil
+	return result, err
 }
 
 // handleCreateOrUpdate processes draft ModulePackageVersions through a promotion pipeline:
@@ -142,7 +150,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 //  6. Add a finalizer and remove the draft label, completing promotion
 //
 // Non-draft resources are skipped since they have already been promoted.
-func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpv *v1alpha1.ModulePackageVersion) error {
+func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpv *v1alpha1.ModulePackageVersion) (ctrl.Result, error) {
 	logger := r.logger.With(
 		slog.String("name", mpv.Name),
 		slog.String("package", mpv.Spec.PackageName),
@@ -153,23 +161,29 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpv *v1alpha1.Mod
 	if !mpv.IsDraft() {
 		logger.Debug("package is not draft")
 
-		return nil
+		return ctrl.Result{}, nil
 	}
 
 	repo := new(v1alpha1.PackageRepository)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: mpv.Spec.PackageRepositoryName}, repo); err != nil {
-		original := mpv.DeepCopy()
-		r.setMetadataLoadedConditionFalse(
-			mpv,
+		if ferr := r.failMetadataLoaded(ctx, mpv,
 			v1alpha1.ModulePackageVersionConditionReasonGetPackageRepoErr,
 			fmt.Sprintf("failed to get repository '%s': %s", mpv.Spec.PackageRepositoryName, err.Error()),
-		)
-
-		if err := r.client.Status().Patch(ctx, mpv, client.MergeFrom(original)); err != nil {
-			return fmt.Errorf("patch status '%s': %w", mpv.Name, err)
+		); ferr != nil {
+			return ctrl.Result{}, ferr
 		}
 
-		return fmt.Errorf("get repository '%s': %w", mpv.Spec.PackageRepositoryName, err)
+		// a repository yet to be created is a wait, not a failure: some, like
+		// the platform-shipped ones, appear only after the first converge
+		if apierrors.IsNotFound(err) {
+			logger.Debug("repository is not created yet, wait for it",
+				slog.String("repository", mpv.Spec.PackageRepositoryName),
+			)
+
+			return ctrl.Result{RequeueAfter: repositoryWait}, nil
+		}
+
+		return ctrl.Result{}, fmt.Errorf("get repository '%s': %w", mpv.Spec.PackageRepositoryName, err)
 	}
 
 	// Pick "version" by default; legacy images live under "release".
@@ -188,36 +202,33 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpv *v1alpha1.Mod
 
 	img, err := r.registry.GetImageReader(ctx, remote, versionPath, version)
 	if err != nil {
-		original := mpv.DeepCopy()
-		r.setMetadataLoadedConditionFalse(
-			mpv,
+		if ferr := r.failMetadataLoaded(ctx, mpv,
 			v1alpha1.ModulePackageVersionConditionReasonGetImageErr,
 			fmt.Sprintf("get image: %s", err.Error()),
-		)
-
-		if err := r.client.Status().Patch(ctx, mpv, client.MergeFrom(original)); err != nil {
-			return fmt.Errorf("patch status '%s': %w", mpv.Name, err)
+		); ferr != nil {
+			return ctrl.Result{}, ferr
 		}
 
-		return fmt.Errorf("get image for '%s': %w", mpv.Name, err)
+		// a version the registry does not serve, e.g. on an air-gapped
+		// cluster, stays a draft; the condition is the observable, and a
+		// bounded wait keeps the retries quiet
+		logger.Debug("failed to get the image, wait and retry", log.Err(err))
+
+		return ctrl.Result{RequeueAfter: imageWait}, nil
 	}
 
 	defer img.Close()
 
 	meta, err := r.parseVersionMetadataByImage(ctx, img)
 	if err != nil {
-		original := mpv.DeepCopy()
-		r.setMetadataLoadedConditionFalse(
-			mpv,
+		if ferr := r.failMetadataLoaded(ctx, mpv,
 			v1alpha1.ModulePackageVersionConditionReasonFetchErr,
 			fmt.Sprintf("fetch package metadata: %s", err.Error()),
-		)
-
-		if err := r.client.Status().Patch(ctx, mpv, client.MergeFrom(original)); err != nil {
-			return fmt.Errorf("patch status '%s': %w", mpv.Name, err)
+		); ferr != nil {
+			return ctrl.Result{}, ferr
 		}
 
-		return fmt.Errorf("fetch package metadata '%s': %w", mpv.Name, err)
+		return ctrl.Result{}, fmt.Errorf("fetch package metadata '%s': %w", mpv.Name, err)
 	}
 
 	original := mpv.DeepCopy()
@@ -225,7 +236,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpv *v1alpha1.Mod
 	r.setMetadataLoadedConditionTrue(mpv)
 
 	if err = r.client.Status().Patch(ctx, mpv, client.MergeFrom(original)); err != nil {
-		return fmt.Errorf("patch status '%s': %w", mpv.Name, err)
+		return ctrl.Result{}, fmt.Errorf("patch status '%s': %w", mpv.Name, err)
 	}
 
 	original = mpv.DeepCopy()
@@ -250,13 +261,34 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpv *v1alpha1.Mod
 	// The version lives and dies with its repository: a pre-created draft has no
 	// owner until it is promoted here.
 	if err = controllerutil.SetControllerReference(repo, mpv, r.client.Scheme()); err != nil {
-		return fmt.Errorf("set controller reference '%s': %w", mpv.Name, err)
+		return ctrl.Result{}, fmt.Errorf("set controller reference '%s': %w", mpv.Name, err)
 	}
 
 	delete(mpv.Labels, v1alpha1.ModulePackageVersionLabelDraft)
 
 	if err = r.client.Patch(ctx, mpv, client.MergeFrom(original)); err != nil {
-		return fmt.Errorf("patch '%s': %w", mpv.Name, err)
+		return ctrl.Result{}, fmt.Errorf("patch '%s': %w", mpv.Name, err)
+	}
+
+	return ctrl.Result{}, nil
+}
+
+// failMetadataLoaded records the failure on the version. A retry hitting the
+// same failure rewrites nothing, so a stuck draft does not patch its status on
+// every attempt.
+func (r *reconciler) failMetadataLoaded(ctx context.Context, mpv *v1alpha1.ModulePackageVersion, reason, message string) error {
+	current := metautils.FindStatusCondition(mpv.Status.Conditions, v1alpha1.ModulePackageVersionConditionTypeMetadataLoaded)
+	if current != nil && current.Status == metav1.ConditionFalse &&
+		current.Reason == reason && current.Message == message &&
+		mpv.Status.ObservedGeneration == mpv.Generation {
+		return nil
+	}
+
+	original := mpv.DeepCopy()
+	r.setMetadataLoadedConditionFalse(mpv, reason, message)
+
+	if err := r.client.Status().Patch(ctx, mpv, client.MergeFrom(original)); err != nil {
+		return fmt.Errorf("patch status '%s': %w", mpv.Name, err)
 	}
 
 	return nil

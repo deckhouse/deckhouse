@@ -217,8 +217,21 @@ stage: Sandbox
 		suite.setupController("registry-error-reconcile.yaml", withDependencyContainer(dc))
 
 		mpv := suite.getModulePackageVersion("deckhouse-test-module-v1.0.0")
-		_, err := suite.ctr.Reconcile(ctx, suite.Request(mpv.Name, ""))
-		require.Error(suite.T(), err)
+		result, err := suite.ctr.Reconcile(ctx, suite.Request(mpv.Name, ""))
+		require.NoError(suite.T(), err, "an unreachable image is a wait, not a failure")
+		require.Equal(suite.T(), imageWait, result.RequeueAfter)
+	})
+
+	suite.Run("missing repository waits for it", func() {
+		suite.setupController("missing-repository-reconcile.yaml")
+
+		mpv := suite.getModulePackageVersion("deckhouse-test-module-v1.0.0")
+		result, err := suite.ctr.Reconcile(ctx, suite.Request(mpv.Name, ""))
+		require.NoError(suite.T(), err, "a repository yet to be created is a wait, not a failure")
+		require.Equal(suite.T(), repositoryWait, result.RequeueAfter)
+
+		after := suite.getModulePackageVersion(mpv.Name)
+		require.True(suite.T(), after.IsDraft(), "the draft stays until the repository appears")
 	})
 
 	suite.Run("broken schema fails the promotion", func() {
