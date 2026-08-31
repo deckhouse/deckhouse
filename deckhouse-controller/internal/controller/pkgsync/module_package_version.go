@@ -196,7 +196,7 @@ func (s *syncer) specForRelease(release *v1alpha1.ModuleRelease) (string, v1alph
 	}
 
 	version := "v" + parsed.String()
-	repository := repositoryNameForSource(source)
+	repository := RepositoryNameForSource(source)
 
 	name := v1alpha1.MakeModulePackageVersionName(repository, moduleName, version)
 	if !s.validName(name, moduleName) {

@@ -154,7 +154,7 @@ func TestRepositoryNameForSource(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		assert.Equal(t, c.want, repositoryNameForSource(c.source), c.source)
+		assert.Equal(t, c.want, RepositoryNameForSource(c.source), c.source)
 	}
 }
 
