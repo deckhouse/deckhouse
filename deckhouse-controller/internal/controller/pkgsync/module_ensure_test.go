@@ -176,3 +176,39 @@ func TestEnsureModuleConfig(t *testing.T) {
 		require.NoError(t, err)
 	})
 }
+
+func TestDeleteModuleConfig(t *testing.T) {
+	t.Run("clears the config fields and keeps the origin", func(t *testing.T) {
+		enabled := true
+		existing := &v1alpha2.Module{
+			ObjectMeta: metav1.ObjectMeta{Name: "echo"},
+			Spec: v1alpha2.ModuleSpec{
+				PackageRepositoryName: "example",
+				PackageVersion:        "v1.0.0",
+				UpdatePolicy:          "test-alpha",
+				Enabled:               &enabled,
+				SettingsVersion:       1,
+			},
+		}
+
+		cl := newEnsureClient(t, existing)
+
+		err := DeleteModuleConfig(context.Background(), cl, cl, "echo", log.NewNop())
+		require.NoError(t, err)
+
+		module := getV2Module(t, cl, "echo")
+		assert.Empty(t, module.Spec.UpdatePolicy)
+		assert.Nil(t, module.Spec.Enabled)
+		assert.Nil(t, module.Spec.Settings)
+		assert.Zero(t, module.Spec.SettingsVersion)
+		assert.Equal(t, "example", module.Spec.PackageRepositoryName, "the origin must survive the config removal")
+		assert.Equal(t, "v1.0.0", module.Spec.PackageVersion)
+	})
+
+	t.Run("tolerates a module that does not exist", func(t *testing.T) {
+		cl := newEnsureClient(t)
+
+		err := DeleteModuleConfig(context.Background(), cl, cl, "ghost", log.NewNop())
+		require.NoError(t, err)
+	})
+}

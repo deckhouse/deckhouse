@@ -137,6 +137,48 @@ func EnsureModuleConfig(ctx context.Context, reader client.Reader, writer client
 	return s.patchModuleV2(ctx, moduleV2, Origin{}, conf)
 }
 
+// DeleteModuleConfig clears the config fields of the v1alpha2 Module when its
+// ModuleConfig is deleted, so the mirror does not keep serving settings the
+// cluster no longer holds. The origin fields stay untouched: they report where
+// the package came from, not what the config asked for.
+func DeleteModuleConfig(ctx context.Context, reader client.Reader, writer client.Client, moduleName string, logger *log.Logger) error {
+	s := &syncer{reader: reader, writer: writer, logger: logger}
+
+	moduleV2 := new(v1alpha2.Module)
+	if err := s.reader.Get(ctx, client.ObjectKey{Name: moduleName}, moduleV2); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("get module '%s': %w", moduleName, err)
+		}
+
+		return nil
+	}
+
+	patch := client.MergeFrom(moduleV2.DeepCopy())
+
+	moduleV2.Spec.Settings = nil
+	moduleV2.Spec.SettingsVersion = 0
+	moduleV2.Spec.Maintenance = ""
+	moduleV2.Spec.Enabled = nil
+	moduleV2.Spec.UpdatePolicy = ""
+
+	data, err := patch.Data(moduleV2)
+	if err != nil {
+		return fmt.Errorf("build patch for the module '%s': %w", moduleName, err)
+	}
+
+	if string(data) == "{}" {
+		return nil
+	}
+
+	if err := s.writer.Patch(ctx, moduleV2, client.RawPatch(patch.Type(), data)); err != nil {
+		return fmt.Errorf("patch module '%s': %w", moduleName, err)
+	}
+
+	s.logger.Debug("module config fields cleared", slog.String("name", moduleName))
+
+	return nil
+}
+
 // moduleConfig reads the module's live config; a missing or deleting config is nil.
 func (s *syncer) moduleConfig(ctx context.Context, name string) (*v1alpha1.ModuleConfig, error) {
 	conf := new(v1alpha1.ModuleConfig)

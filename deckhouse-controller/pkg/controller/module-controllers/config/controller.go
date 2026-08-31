@@ -508,6 +508,14 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 0.0, map[string]string{metrics.LabelModule: moduleConfig.GetName()})
 	r.metricStorage.GaugeSet(telemetry.WrapName(metrics.DeprecatedModuleIsEnabled), 0.0, map[string]string{metrics.LabelModule: moduleConfig.GetName()})
 
+	// mirror the config removal into the module v2 resource; the config
+	// fields must not outlive their config
+	if err := pkgsync.DeleteModuleConfig(ctx, r.apiReader, r.client, moduleConfig.Name, r.logger); err != nil {
+		r.logger.Error("failed to mirror the module config removal into the module v2", slog.String("name", moduleConfig.Name), log.Err(err))
+
+		return ctrl.Result{}, err
+	}
+
 	module := new(v1alpha1.Module)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleConfig.Name}, module); err != nil {
 		if apierrors.IsNotFound(err) {
