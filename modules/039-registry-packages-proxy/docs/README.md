@@ -97,7 +97,9 @@ Allowed `<IMAGE>` values:
 - `deckhouse-cli`
 - `deckhouse-cli/plugins/<PLUGIN>` (single path segment for `<PLUGIN>`)
 
-Deckhouse CLI artifacts are published once for all editions, at the registry root one level above the cluster's edition repository. The proxy takes the repository from the `d8-system/deckhouse-registry` secret and drops the trailing edition segment (`ce`, `be`, `se`, `se-plus`, `ee`, `fe`). For example, a cluster with the `registry.deckhouse.io/deckhouse/ee` repository reads the images from `registry.deckhouse.io/deckhouse/deckhouse-cli` and `registry.deckhouse.io/deckhouse/deckhouse-cli/plugins/<PLUGIN>`. A repository without an edition segment is used as is. The credentials come from the same secret in both cases.
+Deckhouse CLI artifacts can live at one of two places. The official registry publishes them once for all editions, at the registry root one level above the cluster's edition repository. A registry filled by `d8 mirror push` keeps them right under the cluster repository, exactly as pushed.
+
+The proxy takes the repository from the `d8-system/deckhouse-registry` secret and probes the candidate roots in order: first the repository as is, then the repository without the trailing edition segment (`ce`, `be`, `se`, `se-plus`, `ee`, `fe`). The root that answers is remembered and tried first afterwards; a 404 on the remembered root or a repository change in the secret triggers a re-probe. For example, a cluster with the `registry.deckhouse.io/deckhouse/ee` repository reads the images from `registry.deckhouse.io/deckhouse/deckhouse-cli` and `registry.deckhouse.io/deckhouse/deckhouse-cli/plugins/<PLUGIN>`, while a cluster mirrored to `registry.local/dest/ee` reads them from `registry.local/dest/ee/deckhouse-cli/plugins/<PLUGIN>`. A repository without an edition segment is used as is. The credentials come from the same secret in all cases.
 
 Example:
 
