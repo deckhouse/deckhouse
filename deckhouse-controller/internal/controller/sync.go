@@ -462,8 +462,9 @@ func (c *Controller) loadModules(ctx context.Context, modules []v1alpha2.Module)
 }
 
 // cleanupPackages hands the runtime every package the cluster still claims, so it drops the rest.
-// A terminating instance is claimed too, unlike in loadModules: reclaiming it belongs to its own
-// teardown, and over-keeping is the safe direction for a pass that deletes.
+// A terminating instance is left out, as in loadModules: the runtime forgets its teardown across a
+// restart and never loads a terminating object, so the remover answers "nothing left to tear down"
+// and this pass is the last owner of its release.
 func (c *Controller) cleanupPackages(ctx context.Context, modules []v1alpha2.Module) error {
 	// this list decides what is deleted, so a lagging watch would read as an application gone
 	applications := new(v1alpha1.ApplicationList)
@@ -474,6 +475,10 @@ func (c *Controller) cleanupPackages(ctx context.Context, modules []v1alpha2.Mod
 	preserveApps := make([]pkgruntime.PreserveApplication, 0, len(applications.Items))
 	for i := range applications.Items {
 		application := &applications.Items[i]
+
+		if !application.DeletionTimestamp.IsZero() {
+			continue
+		}
 
 		preserveApps = append(preserveApps, pkgruntime.PreserveApplication{
 			Namespace:   application.Namespace,
@@ -487,6 +492,10 @@ func (c *Controller) cleanupPackages(ctx context.Context, modules []v1alpha2.Mod
 	preserveModules := make([]pkgruntime.PreserveModule, 0, len(modules))
 	for i := range modules {
 		module := &modules[i]
+
+		if !module.DeletionTimestamp.IsZero() {
+			continue
+		}
 
 		preserveModules = append(preserveModules, pkgruntime.PreserveModule{
 			Name:       module.Name,
