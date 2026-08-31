@@ -1,16 +1,38 @@
 # Feature-gates test helpers. Source after ./scripts/functions.sh.
 
 CPM_E2E_FG_STATE_DIR="${CPM_E2E_FG_STATE_DIR:-${TMPDIR:-/tmp}/cpm-e2e-feature-gates}"
-CPM_E2E_FEATURE_GATES_MAP="${CPM_E2E_FEATURE_GATES_MAP:-/deckhouse/candi/feature_gates_map.yml}"
 CPM_E2E_FG_MODULECONFIG="${CPM_E2E_FG_STATE_DIR}/moduleconfig-target.yaml"
 
 CPM_E2E_FG_COMPONENT_KEYS="${CPM_E2E_FG_COMPONENT_KEYS:-apiserver kubeControllerManager kubeScheduler}"
 CPM_E2E_FG_POD_COMPONENTS="${CPM_E2E_FG_POD_COMPONENTS:-kube-apiserver kube-controller-manager kube-scheduler}"
 
+# Resolve feature_gates_map.yml: explicit env, test fixtures/ (SSH remote-fixtures),
+# repo checkout, or Deckhouse node path.
+_resolve_feature_gates_map() {
+  if [ -n "${CPM_E2E_FEATURE_GATES_MAP:-}" ]; then
+    printf '%s' "$CPM_E2E_FEATURE_GATES_MAP"
+    return 0
+  fi
+  for candidate in \
+    "./fixtures/feature_gates_map.yml" \
+    "../../../../../../candi/feature_gates_map.yml" \
+    "/deckhouse/candi/feature_gates_map.yml"
+  do
+    if [ -f "$candidate" ]; then
+      printf '%s' "$candidate"
+      return 0
+    fi
+  done
+  printf '%s' "/deckhouse/candi/feature_gates_map.yml"
+}
+
+CPM_E2E_FEATURE_GATES_MAP="$(_resolve_feature_gates_map)"
+
 _feature_gates_map_json() {
   map_file="$1"
   if [ ! -f "$map_file" ]; then
     e2e_log "feature gates map not found: $map_file"
+    e2e_log "set CPM_E2E_FEATURE_GATES_MAP, add remote-fixtures entry, or use a Deckhouse checkout"
     return 1
   fi
   if ! command -v yq >/dev/null 2>&1; then
@@ -37,7 +59,7 @@ feature_gates_enabled_for_version() {
   version="$1"
   map_file="$2"
   map_json=$(_feature_gates_map_json "$map_file") || return 1
-  printf '%s' "$map_json" | jq --arg ver "$version" '
+  printf '%s' "$map_json" | pipe_jq "yq -o=json $map_file (feature gates for $version)" --arg ver "$version" '
     .[$ver] as $v
     | if $v == null then error("kubernetes version \($ver) not found in feature gates map") else $v end
     | (($v.deprecated // []) + ($v.forbidden // [])) as $exclude
@@ -53,7 +75,7 @@ feature_gates_for_component() {
   component_key="$2"
   map_file="$3"
   map_json=$(_feature_gates_map_json "$map_file") || return 1
-  printf '%s' "$map_json" | jq -r --arg ver "$version" --arg component "$component_key" '
+  printf '%s' "$map_json" | pipe_jq "yq -o=json $map_file (gates for $component_key@$version)" -r --arg ver "$version" --arg component "$component_key" '
     .[$ver] as $v
     | if $v == null then error("kubernetes version \($ver) not found in feature gates map") else $v end
     | (($v.deprecated // []) + ($v.forbidden // [])) as $exclude
@@ -76,10 +98,10 @@ write_feature_gates_moduleconfig() {
     printf '%s\n' '  enabled: true'
     printf '%s\n' '  settings:'
     printf '%s\n' '    enabledFeatureGates:'
-    printf '%s' "$gates_json" | jq -r '.[] | "    - " + .'
+    printf '%s' "$gates_json" | pipe_jq "enabledFeatureGates json" -r '.[] | "    - " + .'
     printf '%s\n' '  version: 3'
   } > "$output_file"
-  gate_count=$(printf '%s' "$gates_json" | jq 'length')
+  gate_count=$(printf '%s' "$gates_json" | pipe_jq "enabledFeatureGates json" 'length')
   e2e_log "wrote ModuleConfig with ${gate_count} enabledFeatureGates to $output_file"
 }
 
@@ -95,10 +117,11 @@ prepare_feature_gates_test() {
 
   version=$(kubernetes_version)
   e2e_log "detected Kubernetes version $version"
+  e2e_log "using feature gates map: $map_file"
 
   enabled_gates=$(feature_gates_enabled_for_version "$version" "$map_file") || return 1
   printf '%s' "$enabled_gates" > "$state_dir/enabled-feature-gates.json"
-  gate_count=$(printf '%s' "$enabled_gates" | jq 'length')
+  gate_count=$(printf '%s' "$enabled_gates" | pipe_jq "enabled feature gates for $version" 'length')
   e2e_log "selected ${gate_count} enabled feature gates for version $version"
 
   for pod_component in $CPM_E2E_FG_POD_COMPONENTS; do

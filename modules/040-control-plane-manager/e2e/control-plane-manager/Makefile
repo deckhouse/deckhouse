@@ -3,6 +3,11 @@
 # Export all variables from .env to sub-scripts
 export
 
+TESTS_DIR := tests
+TEST_NAMES := $(sort $(notdir $(wildcard $(TESTS_DIR)/*)))
+
+.DEFAULT_GOAL := help
+
 .PHONY: help install test check-env
 
 help:
@@ -15,6 +20,11 @@ help:
 	@echo "  make install              - Install chainsaw (and jq/yq if missing) on the remote host"
 	@echo "  make test                 - Run all tests on the remote host over SSH"
 	@echo "  make test TEST=<name>     - Run a single scenario (e.g. TEST=basic-audit-policy)"
+	@echo ""
+	@echo "Available tests:"
+	@for name in $(TEST_NAMES); do \
+		echo "  $$name"; \
+	done
 	@echo ""
 
 check-env:
