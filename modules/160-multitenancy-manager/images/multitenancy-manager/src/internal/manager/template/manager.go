@@ -84,7 +84,7 @@ func (m *Manager) Handle(ctx context.Context, template *v1alpha2.ProjectTemplate
 	projects, err := m.projectsByTemplate(ctx, template)
 	if err != nil {
 		m.logger.Error(err, "failed to get projects for the template", "template", template.Name)
-		return ctrl.Result{Requeue: true}, nil
+		return ctrl.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 	if len(projects) != 0 {
 		m.logger.Info("process projects for the template", "template", template.Name, "projectsNum", len(projects))

@@ -653,14 +653,14 @@ namespace: d8-ingress-gateway
 			Expect(admin.Exists()).To(BeTrue())
 			Expect(admin.Field("rules.0.resources").String()).To(MatchJSON(`["issuers"]`))
 
-			useEdit := f.KubernetesGlobalResource("ClusterRole", "d8:use:capability:module:cert-manager:edit")
+			useEdit := f.KubernetesGlobalResource("ClusterRole", "d8:namespace-capability:cert-manager:edit")
 			Expect(useEdit.Exists()).To(BeTrue())
 			Expect(useEdit.Field("rules.0.resources").String()).To(MatchJSON(`["certificates"]`))
 			Expect(useEdit.Field("rules").String()).NotTo(ContainSubstring("issuers"))
 
-			useAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:use:capability:module:cert-manager:admin")
+			useAdmin := f.KubernetesGlobalResource("ClusterRole", "d8:namespace-capability:cert-manager:admin")
 			Expect(useAdmin.Exists()).To(BeTrue())
-			Expect(useAdmin.Field(`metadata.labels.rbac\.deckhouse\.io/aggregate-to-kubernetes-as`).String()).To(Equal("admin"))
+			Expect(useAdmin.Field(`metadata.labels.rbac\.deckhouse\.io/aggregate-to-namespace-as`).String()).To(Equal("admin"))
 			Expect(useAdmin.Field("rules.0.resources").String()).To(MatchJSON(`["issuers"]`))
 		})
 	})

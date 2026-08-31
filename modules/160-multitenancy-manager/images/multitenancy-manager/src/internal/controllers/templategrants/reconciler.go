@@ -32,6 +32,7 @@ package templategrants
 import (
 	"context"
 	"fmt"
+	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -115,7 +116,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		// A referenced library policy is not present yet (the template webhook normally rejects this,
 		// but a create-after-template race is possible). Retry until every reference resolves.
 		log.V(1).Info("requeue: a referenced grant policy is missing", "template", tmpl.Name)
-		return reconcile.Result{Requeue: true}, nil
+		return reconcile.Result{RequeueAfter: 5 * time.Second}, nil
 	}
 	log.V(1).Info("template grants materialized", "template", tmpl.Name, "managedPolicies", len(desired))
 	return reconcile.Result{}, nil
