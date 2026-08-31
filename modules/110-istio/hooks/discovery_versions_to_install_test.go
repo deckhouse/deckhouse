@@ -76,7 +76,7 @@ globalVersion: "1.27" # default version "from openapi/values.yaml"
 		})
 	})
 
-	Context("No globalVersion in CM and globalVersion was previously discovered", func() {
+	Context("No globalVersion in ModuleConfig and globalVersion was previously discovered", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("") // to re-init fake api client (reset KubeState)
 
@@ -102,7 +102,7 @@ globalVersion: "1.27" # default version "from openapi/values.yaml"
 		})
 	})
 
-	Context("No globalVersion in CM and the global service without annotation", func() {
+	Context("No globalVersion in ModuleConfig and the global service without annotation", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("") // to re-init fake api client (reset KubeState)
 
@@ -147,7 +147,7 @@ spec: {}
 		})
 	})
 
-	Context("No globalVersion in CM and the global service with annotation", func() {
+	Context("No globalVersion in ModuleConfig and the global service with annotation", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("") // to re-init fake api client (reset KubeState)
 
@@ -194,7 +194,7 @@ spec: {}
 		})
 	})
 
-	Context("globalVersion in CM and the global service with annotation", func() {
+	Context("globalVersion in ModuleConfig and the global service with annotation", func() {
 		BeforeEach(func() {
 			f.KubeStateSet("") // to re-init fake api client (reset KubeState)
 
@@ -233,7 +233,7 @@ spec: {}
 
 			f.RunHook()
 		})
-		It("globalVersion should be gathered from CM", func() {
+		It("globalVersion should be gathered from ModuleConfig", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("istio.internal.versionsToInstall").AsStringSlice()).To(Equal([]string{"1.25"}))
 			Expect(f.ValuesGet("istio.internal.globalVersion").String()).To(Equal("1.25"))

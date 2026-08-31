@@ -50,7 +50,7 @@ func revisionsDiscovery(_ context.Context, input *go_hook.HookInput, dc dependen
 
 	switch {
 	case input.ConfigValues.Exists("istio.globalVersion"):
-		// globalVersion is set in CM — use it
+		// globalVersion is set in ModuleConfig — use it
 		globalVersion = input.ConfigValues.Get("istio.globalVersion").String()
 	case input.Values.Exists("istio.internal.globalVersion"):
 		// globalVersion was previously discovered — use it
