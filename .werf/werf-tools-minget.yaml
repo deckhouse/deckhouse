@@ -1,7 +1,16 @@
 ---
-image: minget-common-artifact
+image: minget-artifact
 final: false
 from: {{ index $.Images "builder/distroless" }}
 shell:
   install:
   - pm install minget
+---
+image: minget-common-artifact
+final: false
+from: {{ index $.Images "base/distroless-fin" }}
+import:
+- image: minget-artifact
+  add: /usr/bin/minget
+  to: /usr/bin/minget
+  before: install
