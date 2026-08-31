@@ -416,7 +416,7 @@ apiVersions:
           - `false` — allows both IMDSv1 and IMDSv2
           - `true` — allows only IMDSv2 and requires a session token to access instance metadata
 
-          > **Warning.** When IMDSv2 is enabled, the hop limit retains the default value of `1`. As a result, the instance metadata service is unavailable from pods, even if the applications running in those pods support IMDSv2. This limitation does not affect DKP components because they use the host network. Before enabling IMDSv2, make sure that applications requiring access to instance metadata support IMDSv2 and run using the host network.
+          > **Warning.** When IMDSv2 is enabled, DKP sets the IMDS hop limit to `1`. If the AWS account defaults or the AMI provide a higher value, it is lowered to `1` on the next converge. As a result, the instance metadata service is unavailable from pods, even if the applications running in those pods support IMDSv2. This limitation does not affect DKP components because they use the host network. Before enabling IMDSv2, make sure that applications requiring access to instance metadata support IMDSv2 and run using the host network.
 
           To apply the change to master, static, and bastion nodes, run [`dhctl converge`](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html#adding-cloudpermanent-nodes-to-a-cloud-cluster). CloudEphemeral nodes are recreated automatically.
       sshAllowList:
