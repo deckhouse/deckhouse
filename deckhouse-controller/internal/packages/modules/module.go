@@ -310,19 +310,43 @@ func (m *Module) GetSettingsChecksum() string {
 	return m.values.GetSettingsChecksum()
 }
 
-// ValidateSettings converts settings to the latest schema version (if a converter
-// is available and settingsVersion > 0), then validates against OpenAPI schema
-// and calls the settings check hook if defined.
-func (m *Module) ValidateSettings(ctx context.Context, settingsVersion int, settings addonutils.Values) (settingscheck.Result, error) {
-	// Convert to latest schema version before validation
-	if m.converter != nil && settingsVersion > 0 {
-		var err error
-		_, settings, err = m.converter.ConvertToLatest(settingsVersion, settings)
-		if err != nil {
-			return settingscheck.Result{}, fmt.Errorf("convert settings: %w", err)
-		}
+// convertSettings converts settings to the latest schema version.
+// A zero settingsVersion (ModuleConfig without spec.version) is read as version 1:
+// the chain is what materializes fields the latest schema requires, so skipping it
+// leaves an unversioned config permanently invalid.
+func (m *Module) convertSettings(settingsVersion int, settings addonutils.Values) (addonutils.Values, error) {
+	if m.converter == nil {
+		return settings, nil
 	}
-	if err := m.values.ValidateSettings(settings); err != nil {
+
+	if settingsVersion == 0 {
+		settingsVersion = 1
+	}
+
+	// the converter skips a nil document, and an absent spec.settings is exactly
+	// the case the chain has to fill in
+	if settings == nil {
+		settings = addonutils.Values{}
+	}
+
+	_, converted, err := m.converter.ConvertToLatest(settingsVersion, settings)
+	if err != nil {
+		return nil, fmt.Errorf("convert settings: %w", err)
+	}
+
+	return converted, nil
+}
+
+// ValidateSettings converts settings to the latest schema version (if a converter
+// is available), then validates against OpenAPI schema and calls the settings check
+// hook if defined.
+func (m *Module) ValidateSettings(ctx context.Context, settingsVersion int, settings addonutils.Values) (settingscheck.Result, error) {
+	settings, err := m.convertSettings(settingsVersion, settings)
+	if err != nil {
+		return settingscheck.Result{}, err
+	}
+
+	if err = m.values.ValidateSettings(settings); err != nil {
 		return settingscheck.Result{}, err
 	}
 
@@ -357,18 +381,14 @@ func (m *Module) GetValues() addonutils.Values {
 	)
 }
 
-// ApplySettings applies settings values
 // ApplySettings converts settings to the latest schema version (if a converter
 // is available), then applies them to the values storage.
 func (m *Module) ApplySettings(settingsVersion int, settings addonutils.Values) error {
-	// Convert to latest schema version before applying
-	if m.converter != nil && settingsVersion > 0 {
-		var err error
-		_, settings, err = m.converter.ConvertToLatest(settingsVersion, settings)
-		if err != nil {
-			return fmt.Errorf("convert settings: %w", err)
-		}
+	settings, err := m.convertSettings(settingsVersion, settings)
+	if err != nil {
+		return err
 	}
+
 	return m.values.ApplySettings(settings)
 }
 
