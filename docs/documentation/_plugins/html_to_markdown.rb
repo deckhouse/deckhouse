@@ -47,6 +47,13 @@ module Jekyll
 
     DEFAULT_CODE_LANGUAGE = "plaintext"
 
+    # Stands in for a `<br>` while a run of inline content is assembled, so that
+    # collapsing whitespace can tell an intentional line break from the
+    # incidental newlines of the HTML source layout. A NUL never occurs in the
+    # rendered documentation; it becomes a real newline (or a space, in headings
+    # and table cells) once the surrounding whitespace is collapsed.
+    HARD_BREAK = "\u0000"
+
     module_function
 
     # Converts a full rendered page (`h1.docs__title` + `div.post-content`).
@@ -81,7 +88,7 @@ module Jekyll
         @headings = []
 
         title_node = doc.at_css("h1.docs__title")
-        title = title_node ? collapse(inline(title_node)).strip : ""
+        title = title_node ? flow_inline(inline(title_node)).strip : ""
         @headings << Heading.new(1, title, title_node && title_node["id"]) unless title.empty?
 
         body_node = doc.at_css("div.post-content")
@@ -112,7 +119,7 @@ module Jekyll
         skipping = false
 
         flush = lambda do
-          text = collapse(pending).strip
+          text = flow_text(pending).strip
           out << text unless text.empty?
           pending = +""
         end
@@ -179,11 +186,19 @@ module Jekyll
 
       def heading(el)
         level = el.name[1].to_i
-        text = collapse(inline(el)).gsub(/\s*\n\s*/, " ").strip
+        text = flow_inline(inline(el)).strip
         return "" if text.empty?
 
-        @headings << Heading.new(level, text, el["id"])
-        "#{'#' * level} #{text}"
+        id = el["id"].to_s
+        @headings << Heading.new(level, text, id)
+
+        line = "#{'#' * level} #{text}"
+        # Publish the HTML anchor as a kramdown/Pandoc heading attribute so an
+        # in-page link (`cr.md#customresourcedefinition`) resolves. The text
+        # alone is not enough: for Cyrillic the HTML slug is not what a Markdown
+        # renderer would derive from the heading.
+        line += " {##{id}}" unless id.empty?
+        line
       end
 
       # A `<p>` normally holds inline content only, but `render-jsonschema.rb`
@@ -191,7 +206,7 @@ module Jekyll
       def paragraph(el)
         return blocks(el) if el.element_children.any? { |child| !inline?(child) && !dropped?(child) }
 
-        collapse(inline(el)).strip
+        flow_text(inline(el)).strip
       end
 
       def alert(el)
@@ -215,7 +230,7 @@ module Jekyll
 
       def native_details(el)
         summary_el = el.at_css("summary")
-        summary = summary_el ? collapse(inline(summary_el)).strip : ""
+        summary = summary_el ? flow_inline(inline(summary_el)).strip : ""
         summary = "Details" if summary.empty?
 
         body_source = el.dup
@@ -346,7 +361,7 @@ module Jekyll
         el.element_children.each do |child|
           case child.name
           when "dt"
-            items << { term: collapse(inline(child)).strip, definitions: [] }
+            items << { term: flow_inline(inline(child)).strip, definitions: [] }
           when "dd"
             items << { term: "", definitions: [] } if items.empty?
             items.last[:definitions] << blocks(child).strip
@@ -378,7 +393,7 @@ module Jekyll
       end
 
       def table_cell(cell)
-        collapse(inline(cell)).gsub(/\s*\n\s*/, " ").strip.gsub("|", "\\|")
+        flow_inline(inline(cell)).strip.gsub("|", "\\|")
       end
 
       def blockquote(el)
@@ -416,7 +431,7 @@ module Jekyll
 
       def inline_for(el)
         case el.name
-        when "br" then "\n"
+        when "br" then HARD_BREAK
         when "code", "kbd", "samp", "tt" then code_span(el)
         when "strong", "b" then emphasize(inline(el), "**")
         when "em", "i", "var", "cite" then emphasize(inline(el), "*")
@@ -451,7 +466,7 @@ module Jekyll
 
       def link(el)
         href = el["href"].to_s.strip
-        text = collapse(inline(el)).strip
+        text = flow_inline(inline(el)).strip
 
         return text if href.empty? || href.start_with?("javascript:")
 
@@ -472,6 +487,12 @@ module Jekyll
       # --- helpers ---------------------------------------------------------
 
       def absolutize(href)
+        # A link to this same site, written out in full, is still an internal
+        # link: reduce it to a root-relative path so it is rewritten like any
+        # other. Only the remaining absolute URLs (other hosts) are left as-is.
+        same_site = same_site_path(href)
+        href = same_site unless same_site.nil?
+
         return href if href.match?(%r{\A[a-z][a-z0-9+.\-]*:}i) || href.start_with?("//")
 
         path =
@@ -491,6 +512,18 @@ module Jekyll
 
         path = @link_rewriter.call(path) if @link_rewriter
         @base_url.empty? ? path : "#{@base_url}#{path}"
+      end
+
+      # Returns the root-relative path of an absolute link that points back at
+      # this site (`@base_url`), or nil when it does not. A host that merely
+      # starts with @base_url (`deckhouse.iodev`) is not this site.
+      def same_site_path(href)
+        return nil if @base_url.empty? || !href.start_with?(@base_url)
+
+        rest = href[@base_url.length..]
+        return "/" if rest.empty?
+
+        rest.start_with?("/", "#", "?") ? rest : nil
       end
 
       # Prefixes the first line with `marker` and aligns the rest under it, so
@@ -530,9 +563,26 @@ module Jekyll
         text.gsub(/[ \t\r\f\v]*\n[ \t\r\f\v]*/, "\n").gsub(/[ \t]{2,}/, " ")
       end
 
+      # Renders a run of inline content as a single paragraph: the newlines of
+      # the HTML source layout collapse to spaces, and only an explicit `<br>`
+      # (carried through as HARD_BREAK) becomes a real line break.
+      def flow_text(text)
+        collapse(text).gsub(/\s*\n\s*/, " ").gsub(/[ \t]*#{HARD_BREAK}[ \t]*/, "\n")
+      end
+
+      # flow_text for contexts that cannot hold a line break — headings and
+      # table cells — where a `<br>` degrades to a space.
+      def flow_inline(text)
+        collapse(text).gsub(/\s*\n\s*/, " ").gsub(HARD_BREAK, " ").gsub(/[ \t]{2,}/, " ")
+      end
+
       # Trims trailing whitespace and collapses runs of blank lines, leaving
       # fenced code blocks untouched.
       def normalize(text)
+        # Any HARD_BREAK that escaped flow_text/flow_inline would print as a NUL;
+        # drop it as a last resort (the flow helpers cover every real path).
+        text = text.delete(HARD_BREAK)
+
         fence = nil
         blank = 0
         lines = []

@@ -102,6 +102,14 @@ var inlineTags = map[string]bool{
 
 const defaultCodeLanguage = "plaintext"
 
+// hardBreak stands in for a `<br>` while a run of inline content is being
+// assembled, so that flowText can tell an intentional line break from the
+// incidental newlines of the HTML source layout. It is a NUL, which never
+// occurs in the rendered documentation, and is turned into a real `\n` (or a
+// space, in headings and table cells) once the surrounding whitespace has been
+// collapsed.
+const hardBreak = "\x00"
+
 var (
 	collapseNewlines = regexp.MustCompile(`[ \t\r\f\v]*\n[ \t\r\f\v]*`)
 	collapseSpaces   = regexp.MustCompile(`[ \t]{2,}`)
@@ -122,7 +130,7 @@ func ConvertPage(source string, opts Options) (Page, error) {
 
 	var title string
 	if node := findFirst(doc, matchTag("h1", "docs__title")); node != nil {
-		title = strings.TrimSpace(collapse(c.inline(node)))
+		title = strings.TrimSpace(flowInline(c.inline(node)))
 		if title != "" {
 			c.headings = append(c.headings, Heading{Level: 1, Text: title, ID: attr(node, "id")})
 		}
@@ -194,7 +202,7 @@ func (c *converter) blocks(node *html.Node) string {
 	)
 
 	flush := func() {
-		text := strings.TrimSpace(collapse(pending.String()))
+		text := strings.TrimSpace(flowText(pending.String()))
 		if text != "" {
 			out = append(out, text)
 		}
@@ -296,14 +304,24 @@ func (c *converter) heading(el *html.Node) string {
 		return ""
 	}
 
-	text := strings.TrimSpace(innerNewlines.ReplaceAllString(collapse(c.inline(el)), " "))
+	text := strings.TrimSpace(flowInline(c.inline(el)))
 	if text == "" {
 		return ""
 	}
 
-	c.headings = append(c.headings, Heading{Level: level, Text: text, ID: attr(el, "id")})
+	id := attr(el, "id")
+	c.headings = append(c.headings, Heading{Level: level, Text: text, ID: id})
 
-	return strings.Repeat("#", level) + " " + text
+	line := strings.Repeat("#", level) + " " + text
+	if id != "" {
+		// Publish the HTML anchor as a kramdown/Pandoc heading attribute so that
+		// an in-page link (`cr.md#customresourcedefinition`) resolves. The text
+		// alone is not enough: for Cyrillic the HTML slug is not what a Markdown
+		// renderer would derive from the heading.
+		line += " {#" + id + "}"
+	}
+
+	return line
 }
 
 // paragraph renders a `<p>`. It normally holds inline content only, but the
@@ -315,7 +333,7 @@ func (c *converter) paragraph(el *html.Node) string {
 		}
 	}
 
-	return strings.TrimSpace(collapse(c.inline(el)))
+	return strings.TrimSpace(flowText(c.inline(el)))
 }
 
 func (c *converter) alert(el *html.Node) string {
@@ -360,7 +378,7 @@ func (c *converter) nativeDetails(el *html.Node) string {
 
 	summaryNode := findFirst(el, matchTag("summary", ""))
 	if summaryNode != nil {
-		if text := strings.TrimSpace(collapse(c.inline(summaryNode))); text != "" {
+		if text := strings.TrimSpace(flowInline(c.inline(summaryNode))); text != "" {
 			summary = text
 		}
 
@@ -608,7 +626,7 @@ func (c *converter) definitionList(el *html.Node) string {
 
 		switch child.Data {
 		case "dt":
-			items = append(items, entry{term: strings.TrimSpace(collapse(c.inline(child)))})
+			items = append(items, entry{term: strings.TrimSpace(flowInline(c.inline(child)))})
 		case "dd":
 			if len(items) == 0 {
 				items = append(items, entry{})
@@ -686,7 +704,7 @@ func (c *converter) table(el *html.Node) string {
 }
 
 func (c *converter) tableCell(cell *html.Node) string {
-	text := strings.TrimSpace(innerNewlines.ReplaceAllString(collapse(c.inline(cell)), " "))
+	text := strings.TrimSpace(flowInline(c.inline(cell)))
 
 	return strings.ReplaceAll(text, "|", `\|`)
 }
@@ -734,7 +752,7 @@ func (c *converter) inline(node *html.Node) string {
 func (c *converter) inlineFor(el *html.Node) string {
 	switch el.Data {
 	case "br":
-		return "\n"
+		return hardBreak
 	case "code", "kbd", "samp", "tt":
 		return codeSpan(el)
 	case "strong", "b":
@@ -796,7 +814,7 @@ func emphasize(text, marker string) string {
 
 func (c *converter) link(el *html.Node) string {
 	href := strings.TrimSpace(attr(el, "href"))
-	text := strings.TrimSpace(collapse(c.inline(el)))
+	text := strings.TrimSpace(flowInline(c.inline(el)))
 
 	if href == "" || strings.HasPrefix(href, "javascript:") {
 		return text
@@ -820,7 +838,12 @@ func (c *converter) image(el *html.Node) string {
 }
 
 func (c *converter) absolutize(href string) string {
-	if absoluteScheme.MatchString(href) || strings.HasPrefix(href, "//") {
+	// A link to this same site, written out in full, is still an internal link:
+	// reduce it to a root-relative path so it is rewritten like any other. Only
+	// then are the remaining absolute URLs (other hosts) left untouched.
+	if rest, ok := sameSitePath(href, c.opts.BaseURL); ok {
+		href = rest
+	} else if absoluteScheme.MatchString(href) || strings.HasPrefix(href, "//") {
 		return href
 	}
 
@@ -857,6 +880,25 @@ func (c *converter) absolutize(href string) string {
 	}
 
 	return c.opts.BaseURL + path
+}
+
+// sameSitePath returns the root-relative path of an absolute link that points
+// back at this site (`baseURL`), so it can be rewritten as an internal link.
+// A host that merely starts with baseURL (`deckhouse.iodev`) is not this site.
+func sameSitePath(href, baseURL string) (string, bool) {
+	if baseURL == "" || !strings.HasPrefix(href, baseURL) {
+		return "", false
+	}
+
+	rest := href[len(baseURL):]
+	switch {
+	case rest == "":
+		return "/", true
+	case strings.HasPrefix(rest, "/"), strings.HasPrefix(rest, "#"), strings.HasPrefix(rest, "?"):
+		return rest, true
+	default:
+		return "", false
+	}
 }
 
 // --- helpers ----------------------------------------------------------------
@@ -1010,6 +1052,25 @@ func collapse(text string) string {
 	return collapseSpaces.ReplaceAllString(collapseNewlines.ReplaceAllString(text, "\n"), " ")
 }
 
+var hardBreakPad = regexp.MustCompile(`[ \t]*` + hardBreak + `[ \t]*`)
+
+// flowText renders a run of inline content as a single paragraph: the newlines
+// of the HTML source layout collapse to spaces, and only an explicit `<br>`
+// (carried through as hardBreak) becomes a real line break.
+func flowText(text string) string {
+	text = innerNewlines.ReplaceAllString(collapse(text), " ")
+
+	return hardBreakPad.ReplaceAllString(text, "\n")
+}
+
+// flowInline is flowText for contexts that cannot hold a line break — headings
+// and table cells — where a `<br>` degrades to a space.
+func flowInline(text string) string {
+	text = innerNewlines.ReplaceAllString(collapse(text), " ")
+
+	return collapseSpaces.ReplaceAllString(strings.ReplaceAll(text, hardBreak, " "), " ")
+}
+
 func longestBacktickRun(text string) int {
 	longest := 0
 	for _, run := range backtickRun.FindAllString(text, -1) {
@@ -1067,6 +1128,10 @@ func indent(text, marker string) string {
 // normalize trims trailing whitespace and collapses runs of blank lines,
 // leaving fenced code blocks untouched.
 func normalize(text string) string {
+	// Any hardBreak that escaped flowText/flowInline would print as a NUL;
+	// drop it as a last resort (the flow helpers cover every real path).
+	text = strings.ReplaceAll(text, hardBreak, "")
+
 	var (
 		lines []string
 		fence string

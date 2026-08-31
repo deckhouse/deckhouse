@@ -141,6 +141,8 @@
     "baseUrl" site.BaseURL
     "title" site.Title
     "description" (default "" site.Params.description)
+    "llmsIntro" (T "ai_llms_external_modules_intro")
+    "llmsVersionNote" (T "ai_llms_version_note")
     "documents" $documents
   | jsonify -}}
 {{- else -}}

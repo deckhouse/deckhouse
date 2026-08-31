@@ -1,3 +1,5 @@
+ai_llms_external_modules_intro: Ниже приведена документация внешних модулей Deckhouse Platform.
+ai_llms_version_note: Версия модулей Deckhouse Platform, описанная в документации, может отличаться от версии, используемой в конкретном кластере.
 allowed_values: допустимые значения
 additional_property_name: имя параметра (ключ объекта)
 pattern_property_name: регулярное выражение для имени параметра

@@ -291,6 +291,13 @@ func pipelineBlocker(state condmap.State, chain []string) (string, bool) {
 	return firstFalse(state, chain)
 }
 
+// isInstallComplete reports whether the first install actually landed. intScaled
+// alone is not enough: the status service commits currentVersion and
+// lastAppliedConfiguration under intManifestsApplied.
+func isInstallComplete(state condmap.State) bool {
+	return state.AllIntEqual(metav1.ConditionTrue, intManifestsApplied, intScaled)
+}
+
 // buildMapper returns the standard set of mappers in evaluation order.
 func buildMapper() condmap.Mapper {
 	return condmap.Mapper{
@@ -353,7 +360,7 @@ func mapInstalled(state condmap.State) metav1.Condition {
 	if cond, ok := pipelineBlocker(state, installPipeline); ok {
 		return emit(state, ConditionInstalled, metav1.ConditionFalse, cond)
 	}
-	if state.IntEqual(intScaled, metav1.ConditionTrue) {
+	if isInstallComplete(state) {
 		return emit(state, ConditionInstalled, metav1.ConditionTrue, intScaled)
 	}
 
@@ -423,6 +430,10 @@ func mapReady(state condmap.State) metav1.Condition {
 
 	if ok {
 		return emit(state, ConditionReady, metav1.ConditionFalse, blocker)
+	}
+	// On first install readiness tracks Installed, so it waits for the same gate.
+	if ph == phaseInstall && !isInstallComplete(state) {
+		return metav1.Condition{}
 	}
 	if state.IntEqual(intScaled, metav1.ConditionTrue) {
 		return emit(state, ConditionReady, metav1.ConditionTrue, intScaled)

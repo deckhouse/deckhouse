@@ -152,8 +152,9 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module, force bool) 
 //
 // The pipeline is UpdateModule's without the Deploy task: the files already sit under
 // app.EmbeddedModulesDir, so ReadyOnFilesystem holds from the start and only Load runs.
-// The version is the running edition's, because an embedded module carries no package
-// version of its own, so it cannot change while the process lives — but EventRemove clears
+// The version is the running edition's reduced to major.minor.patch — the same one the
+// Module spec and its ModulePackageVersion carry — because an embedded module has no
+// package version of its own, so it cannot change while the process lives — but EventRemove clears
 // the stored version, so a delete-then-recreate still lands here with the previous instance
 // registered, and Disable goes ahead of Load to tear it down.
 //
@@ -170,7 +171,7 @@ func (r *Runtime) UpdateEmbeddedModule(module Module) {
 	}
 
 	name := module.Name
-	version := r.edition.Version
+	version := app.EmbeddedPackageVersion(r.edition.Version)
 	enabledChanged := r.global.SetConfigEnabled(name, module.Enabled)
 
 	if !r.packages.NeedUpdate(name, version, module.Settings.Checksum(), module.SettingsVersion, module.Maintenance) {
@@ -234,9 +235,9 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, packageP
 }
 
 // loadEmbeddedModule builds a Module from an embedded package directory and registers it,
-// as loadModule does for a downloaded one. The definition's version is overwritten with
-// the running edition's, and the repository the Load task passes is empty — an embedded
-// module has none, so no registry values are injected.
+// as loadModule does for a downloaded one. The definition's version is overwritten with the
+// running edition's, reduced to the version the image's packages carry, and the repository the
+// Load task passes is empty — an embedded module has none, so no registry values are injected.
 func (r *Runtime) loadEmbeddedModule(ctx context.Context, _ registry.Remote, packagePath string) (string, error) {
 	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "loadEmbeddedModule")
 	defer span.End()
@@ -249,7 +250,7 @@ func (r *Runtime) loadEmbeddedModule(ctx context.Context, _ registry.Remote, pac
 		return "", status.NewError("LoadFailed", err)
 	}
 
-	conf.Definition.Version = r.edition.Version
+	conf.Definition.Version = app.EmbeddedPackageVersion(r.edition.Version)
 
 	module, err := r.registerModule(ctx, conf)
 	if err != nil {
