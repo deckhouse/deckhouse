@@ -83,3 +83,5 @@ imageSpec:
       cfssl-newkey: {{ $version }}
       cfssl-scan: {{ $version }}
       cfssljson: {{ $version }}
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_version)) }}
