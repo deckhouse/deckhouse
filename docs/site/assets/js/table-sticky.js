@@ -15,7 +15,117 @@ $(document).ready(function(){
       const rightSidebar = document.querySelector('.layout-sidebar__sidebar_right');
       rightSidebar.style.minWidth = '0';
     }
+
+    initStabilityTableTooltips();
 })
+
+function initStabilityTableTooltips() {
+  let lang = document.documentElement.lang;
+
+  if (lang.length === 0) {
+    if (window.location.href.includes("deckhouse.ru") || window.location.href.includes("ru.localhost")) {
+      lang = "ru";
+    } else {
+      lang = "en";
+    }
+  }
+
+  const description = {
+    ru: {
+      'experiments': {
+        title: 'Эксперименты.',
+        text: 'Проверка функциональности, эксперименты и тестирование.',
+      },
+      'pilot-operation': {
+        title: 'Опытная эксплуатация.',
+        text: 'Проверка функциональности, эксперименты и тестирование. Точечное использование опытными пользователями в окружениях, приравненных к production.',
+      },
+      'limited-operation': {
+        title: 'Ограниченная эксплуатация.',
+        text: 'Окружения разработки, пилотные проекты, малозначимые production-окружения.',
+      },
+      'industrial-operation': {
+        title: 'Промышленная эксплуатация.',
+        text: 'Production-окружения и приравненные к ним.',
+      },
+      'critical-systems': {
+        title: 'Промышленная эксплуатация в ответственных системах.',
+        text: 'Критически важные production-окружения и приравненные к ним.',
+      },
+      'discontinuation': {
+        title: 'Отказ от использования.',
+        text: 'Необходимо выводить из использования.',
+      },
+    },
+    en: {
+      'experiments': {
+        title: 'Experiments.',
+        text: 'Functionality checks, experiments, and testing.',
+      },
+      'pilot-operation': {
+        title: 'Beta testing.',
+        text: 'Functionality checks, experiments, and testing. Limited use by experienced users in environments equivalent to production.',
+      },
+      'limited-operation': {
+        title: 'Limited use.',
+        text: 'Development environments, pilot projects, low-impact production environments.',
+      },
+      'industrial-operation': {
+        title: 'Production use.',
+        text: 'Production environments and those equivalent to them.',
+      },
+      'critical-systems': {
+        title: 'Production use in critical systems.',
+        text: 'Mission-critical production environments and those equivalent to them.',
+      },
+      'discontinuation': {
+        title: 'Deprecated.',
+        text: 'Should be phased out of use.',
+      },
+    },
+  };
+
+  const texts = description[lang] || description.en;
+
+  function createTooltipContent(title, text) {
+    const container = document.createElement('div');
+    container.innerHTML = `<strong>${title}</strong> ${text}`;
+
+    return container;
+  }
+
+  function initTooltip(selector, content) {
+    const elements = document.querySelectorAll(selector);
+    if (elements.length === 0) return;
+
+    elements.forEach(element => {
+      tippy(element, {
+        placement: 'top',
+        arrow: false,
+        animation: 'scale',
+        theme: 'light-large',
+        allowHTML: true,
+        content: createTooltipContent(content.title, content.text),
+        trigger: 'mouseenter',
+        hideOnClick: false,
+        delay: [300, 1000],
+        offset: [0, 10],
+        duration: [300],
+        zIndex: 90,
+        popperOptions: {
+          strategy: 'fixed',
+        },
+      });
+    });
+  }
+
+  initTooltip('.stability__table--experiments', texts['experiments']);
+  initTooltip('.stability__table--pilot-operation', texts['pilot-operation']);
+  initTooltip('.stability__table--limited-operation', texts['limited-operation']);
+  initTooltip('.stability__table--industrial-operation', texts['industrial-operation']);
+  initTooltip('.stability__table--critical-systems', texts['critical-systems']);
+  initTooltip('.stability__table--discontinuation', texts['discontinuation']);
+}
 
 class ScrollPosition {
   constructor(tableContainer, tableWrapper) {

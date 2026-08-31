@@ -47,7 +47,7 @@ During its life cycle, the module goes through the following stages:
 
 Depending on the stage of the module lifecycle and the release channel from which the specific module version was installed, the overall stability can be determined by the following table:
 
-<table class="supported_versions table__small" style="width: 100%; max-width: 100%; table-layout: auto;">
+<table class="supported_versions table__small stability__table">
 <thead class="versioning-table">
     <tr class="header-row">
       <th rowspan="2">Lifecycle Stage</th>
@@ -64,35 +64,35 @@ Depending on the stage of the module lifecycle and the release channel from whic
   <tbody>
     <tr>
       <td><strong>Experimental</strong></td>
-      <td style="background-color:#FFCDD2">Experiments</td>
-      <td style="background-color:#FFCDD2">Experiments</td>
-      <td style="background-color:#FFCDD2">Experiments</td>
-      <td style="background-color:#FFE0B2">Beta testing</td>
-      <td style="background-color:#FFE0B2">Beta testing</td>
+      <td class="stability__table--experiments"></td>
+      <td class="stability__table--experiments"></td>
+      <td class="stability__table--experiments"></td>
+      <td class="stability__table--pilot-operation"></td>
+      <td class="stability__table--pilot-operation"></td>
     </tr>
     <tr>
       <td><strong>Preview</strong></td>
-      <td style="background-color:#FFCDD2">Experiments</td>
-      <td style="background-color:#BBDEFB">Limited use</td>
-      <td style="background-color:#BBDEFB">Limited use</td>
-      <td style="background-color:#C8E6C9">Production use</td>
-      <td style="background-color:#C8E6C9">Production use</td>
+      <td class="stability__table--experiments"></td>
+      <td class="stability__table--limited-operation"></td>
+      <td class="stability__table--limited-operation"></td>
+      <td class="stability__table--industrial-operation"></td>
+      <td class="stability__table--industrial-operation"></td>
     </tr>
     <tr>
       <td><strong>General Availability</strong></td>
-      <td style="background-color:#FFCDD2">Experiments</td>
-      <td style="background-color:#BBDEFB">Limited use</td>
-      <td style="background-color:#BBDEFB">Limited use</td>
-      <td style="background-color:#C8E6C9">Production use</td>
-      <td style="background-color:#A5D6A7">Production use in critical systems</td>
+      <td class="stability__table--experiments"></td>
+      <td class="stability__table--limited-operation"></td>
+      <td class="stability__table--limited-operation"></td>
+      <td class="stability__table--industrial-operation"></td>
+      <td class="stability__table--critical-systems"></td>
     </tr>
     <tr>
       <td><strong>Deprecated</strong></td>
-      <td style="background-color:#F5F5F5">Deprecated</td>
-      <td style="background-color:#F5F5F5">Deprecated</td>
-      <td style="background-color:#F5F5F5">Deprecated</td>
-      <td style="background-color:#F5F5F5">Deprecated</td>
-      <td style="background-color:#F5F5F5">Deprecated</td>
+      <td class="stability__table--discontinuation"></td>
+      <td class="stability__table--discontinuation"></td>
+      <td class="stability__table--discontinuation"></td>
+      <td class="stability__table--discontinuation"></td>
+      <td class="stability__table--discontinuation"></td>
     </tr>
   </tbody>
 </table>

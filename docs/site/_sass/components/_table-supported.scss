@@ -226,3 +226,52 @@
         opacity: 0;
     }
 }
+
+.stability__table {
+    thead tr {
+        &.header-row th:not(:first-child), &.sub-header th {
+            text-align: center; 
+        }
+    }
+
+    tbody tr td {
+        box-sizing: border-box;
+        height: 71px;
+        width: 132px;
+    }
+
+    &--experiments,
+    &--pilot-operation,
+    &--limited-operation,
+    &--industrial-operation,
+    &--critical-systems,
+    &--discontinuation {
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: 28px 28px;
+    }
+
+    &--experiments {
+        background-image: url(/images/experiments.svg);
+    }
+
+    &--pilot-operation {
+        background-image: url(/images/pilot-operation.svg);
+    }
+
+    &--limited-operation {
+        background-image: url(/images/limited-operation.svg);
+    }
+
+    &--industrial-operation {
+        background-image: url(/images/industrial-operation.svg);
+    }
+
+    &--critical-systems {
+        background-image: url(/images/critical-systems.svg);
+    }
+
+    &--discontinuation {
+        background-image: url(/images/discontinuation-of-use.svg);
+    }
+}
