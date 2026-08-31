@@ -78,6 +78,11 @@ var _ = Describe("Module :: registry :: helm template :: custom-certificate", fu
 			createdSecret := f.KubernetesResource("Secret", "d8-system", "registry-ingress-tls-customcertificate")
 			Expect(createdSecret.Exists()).To(BeTrue())
 			Expect(createdSecret.Field("data").String()).To(Equal(`{"tls.crt":"Q1JUQ1JUQ1JU","tls.key":"S0VZS0VZS0VZ"}`))
+
+			ingress := f.KubernetesResource("Ingress", "d8-system", "registry")
+			Expect(ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/proxy-ssl-use-controller-certificate").String()).To(Equal("true"))
+			Expect(ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/ingress-nginx-hsts").String()).To(Equal("true"))
+			Expect(ingress.Field("metadata.annotations.nginx\\.ingress\\.kubernetes\\.io/configuration-snippet").Exists()).To(BeFalse())
 		})
 
 	})
