@@ -604,7 +604,7 @@ Password reset, 2FA reset, and lock/unlock operations are performed via the [Use
 
 Use the `d8 iam user` commands for administrative actions on local users. They create a UserOperation resource with `initiatorType: admin`, wait for the operation to complete, and print the result.
 
-You can delete, recreate, or run a UserOperation (`ResetPassword`, `Reset2FA`, `Lock`, `Unlock`) against a local user whose email or group membership already carries a grant only if you can assign those roles (covering permissions or an explicit can-assign range). `initiatorType: self` does not bypass that check. The built-in self-service password page still works: it creates the UserOperation as the `user-api` service account.
+You can delete, recreate, or run a UserOperation (`ResetPassword`, `Reset2FA`, `Lock`, `Unlock`) against a local user whose email or group membership already carries a grant only if you can assign those roles (covering permissions or an explicit can-assign range). `initiatorType: self` does not bypass that check.
 
 Connecting a DexProvider that can assert an already granted email or group is the same assignment. An OpenID Connect, LDAP, or other provider that does not filter the groups claim to an explicit list can assert any existing grant, including SuperAdmin, so only a requester who can assign those roles may create or update it. A SAML provider with `filterGroups: true` and a GitHub provider that lists both organizations and teams are checked only against those listed identities.
 
