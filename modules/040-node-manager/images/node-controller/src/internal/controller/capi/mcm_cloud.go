@@ -41,6 +41,7 @@ import (
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/machineclass"
+	"github.com/deckhouse/node-controller/internal/network"
 )
 
 func (r *MachineDeploymentReconciler) reconcileCloudMCMs(
@@ -555,6 +556,17 @@ func (r *MachineDeploymentReconciler) readPodSubnet(ctx context.Context) (string
 	if err := sigsyaml.Unmarshal(raw, &cfg); err != nil {
 		return "", fmt.Errorf("unmarshal cluster configuration: %w", err)
 	}
+
+	// ModuleConfig control-plane-manager wins over the deprecated ClusterConfiguration field when
+	// set — see cluster.go's readClusterConfiguration for why this must not diverge.
+	mcNetwork, err := network.FromModuleConfig(ctx, r.Client)
+	if err != nil {
+		return "", fmt.Errorf("resolve network settings: %w", err)
+	}
+	if mcNetwork.PodSubnetCIDR != "" {
+		return mcNetwork.PodSubnetCIDR, nil
+	}
+
 	return cfg.PodSubnetCIDR, nil
 }
 

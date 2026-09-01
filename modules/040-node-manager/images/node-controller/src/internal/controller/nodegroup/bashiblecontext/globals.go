@@ -25,6 +25,8 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	sigsyaml "sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/node-controller/internal/network"
 )
 
 const (
@@ -104,6 +106,22 @@ func (s *Service) readClusterConfiguration(ctx context.Context) *bashibleCluster
 	if err := sigsyaml.Unmarshal(raw, cfg); err != nil {
 		return nil
 	}
+
+	// The three network parameters are being migrated to ModuleConfig control-plane-manager;
+	// ModuleConfig wins over the deprecated ClusterConfiguration field when set. Fail-open, like the
+	// rest of this function: an unreadable ModuleConfig must not take down the whole bashible
+	// context, it just leaves these three at whatever the secret already gave them.
+	mcNetwork, _ := network.FromModuleConfig(ctx, s.reader())
+	if mcNetwork.PodSubnetNodeCIDRPrefix != "" {
+		cfg.PodSubnetNodeCIDRPrefix = mcNetwork.PodSubnetNodeCIDRPrefix
+	}
+	if mcNetwork.PodSubnetCIDR != "" {
+		cfg.PodSubnetCIDR = mcNetwork.PodSubnetCIDR
+	}
+	if mcNetwork.ServiceSubnetCIDR != "" {
+		cfg.ServiceSubnetCIDR = mcNetwork.ServiceSubnetCIDR
+	}
+
 	return cfg
 }
 

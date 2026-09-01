@@ -37,6 +37,7 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/network"
 )
 
 func newScheme() *runtime.Scheme {
@@ -1100,6 +1101,37 @@ func TestLoadClusterConfig_SecretNotFound(t *testing.T) {
 	}
 	if cfg.PodSubnetNodeCIDRPrefix != 24 {
 		t.Fatalf("expected default PodSubnetNodeCIDRPrefix 24, got %d", cfg.PodSubnetNodeCIDRPrefix)
+	}
+}
+
+// podSubnetNodeCIDRPrefix is being migrated to ModuleConfig control-plane-manager, and the
+// IP-exhaustion warning downstream of loadClusterConfig must key off the value the control plane
+// actually runs with, not a stale ClusterConfiguration field.
+func TestLoadClusterConfig_ModuleConfigOverridesPodSubnetNodeCIDRPrefix(t *testing.T) {
+	s := newScheme()
+	gvk := network.ModuleConfigGVK()
+	s.AddKnownTypeWithName(gvk, &unstructured.Unstructured{})
+	s.AddKnownTypeWithName(gvk.GroupVersion().WithKind("ModuleConfigList"), &unstructured.UnstructuredList{})
+
+	mc := &unstructured.Unstructured{}
+	mc.SetGroupVersionKind(gvk)
+	mc.SetName(network.ModuleConfigName)
+	if err := unstructured.SetNestedMap(mc.Object, map[string]interface{}{
+		"podSubnetNodeCIDRPrefix": "23",
+	}, "spec", "settings", "network"); err != nil {
+		t.Fatalf("set network group: %v", err)
+	}
+
+	sec := clusterConfigSecret("Cloud", "my-prefix", "Containerd", 22)
+	c := fake.NewClientBuilder().WithScheme(s).WithObjects(sec, mc).Build()
+	w := &NodeGroupValidator{Client: c, decoder: admission.NewDecoder(s)}
+
+	cfg, err := w.loadClusterConfig(context.Background())
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if cfg.PodSubnetNodeCIDRPrefix != 23 {
+		t.Fatalf("expected ModuleConfig's PodSubnetNodeCIDRPrefix 23 to win over ClusterConfiguration's 22, got %d", cfg.PodSubnetNodeCIDRPrefix)
 	}
 }
 

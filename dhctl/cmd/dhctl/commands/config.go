@@ -56,6 +56,10 @@ func loadConfigForRender(ctx context.Context, command string, opts *options.Opti
 		return nil, fmt.Errorf("%s requires ClusterConfiguration: everything it renders is built out of the cluster domain, Kubernetes version and cluster type it carries", command)
 	}
 
+	if err := metaConfig.RequireNetwork(); err != nil {
+		return nil, err
+	}
+
 	return metaConfig, nil
 }
 

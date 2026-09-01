@@ -141,6 +141,9 @@ func (v *moduleConfigValidator) validate(ctx context.Context, review *kwhmodel.A
 			if res, err := v.validateControlPlaneManagerKubernetesVersion(ctx, nil, rawModuleConfigSettings(cfg)); res != nil || err != nil {
 				return res, err
 			}
+			if res, err := v.validateControlPlaneManagerNetwork(ctx, nil, rawModuleConfigSettings(cfg), cfg.GetAnnotations()); res != nil || err != nil {
+				return res, err
+			}
 		}
 		return v.validateDelete(ctx, cfg)
 
@@ -397,6 +400,9 @@ func (v *moduleConfigValidator) validateCommon(
 			return rejectResult(result.Error)
 		}
 		if res, err := v.validateControlPlaneManagerKubernetesVersion(ctx, result.Settings, oldSettingsForKubernetesVersionGuard); res != nil || err != nil {
+			return res, err
+		}
+		if res, err := v.validateControlPlaneManagerNetwork(ctx, result.Settings, oldSettingsForKubernetesVersionGuard, cfg.GetAnnotations()); res != nil || err != nil {
 			return res, err
 		}
 	}
