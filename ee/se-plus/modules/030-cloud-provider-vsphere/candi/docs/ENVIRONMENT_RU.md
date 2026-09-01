@@ -390,10 +390,10 @@ govc permissions.ls /<DATACENTER_NAME>/datastore/<DATASTORE_NAME>
 
 DKP подключается к vCenter по TLS и проверяет его сертификат. Если сертификат vCenter выпущен собственным или корпоративным центром сертификации, передайте цепочку сертификатов этого центра в параметре `caBundle`. Проверка сертификата при этом остаётся включённой.
 
-Цепочку укажите в формате PEM. Место настройки зависит от того, как создаётся кластер:
+Цепочку укажите в формате PEM. Настройка одна и та же, но путь к ней зависит от того, где описано подключение к vCenter:
 
-- при установке кластера используйте параметр [`provider.caBundle`](cluster_configuration.html#vsphereclusterconfiguration-provider-cabundle) ресурса VsphereClusterConfiguration;
-- в уже работающем кластере используйте параметр [`caBundle`](configuration.html#parameters-cabundle) настроек модуля.
+- при установке кластера подключение описано в секции `provider` ресурса VsphereClusterConfiguration рядом с параметром `provider.server`, поэтому цепочка задаётся в параметре [`provider.caBundle`](cluster_configuration.html#vsphereclusterconfiguration-provider-cabundle);
+- в уже работающем кластере подключение описано на верхнем уровне настроек модуля рядом с параметром `host`, поэтому цепочка задаётся в параметре [`caBundle`](configuration.html#parameters-cabundle).
 
 Параметр `insecure: true` полностью отключает проверку сертификата vCenter. Задайте либо `caBundle`, либо `insecure: true`. Конфигурацию, в которой одновременно заданы непустой `caBundle` и `insecure: true`, DKP отклоняет.
 

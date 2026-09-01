@@ -390,10 +390,10 @@ govc permissions.ls /<DATACENTER_NAME>/datastore/<DATASTORE_NAME>
 
 DKP connects to vCenter over TLS and verifies its certificate. If the vCenter certificate is issued by a custom or enterprise certificate authority, pass the certificate chain of that authority in the `caBundle` parameter. Certificate verification stays enabled in this case.
 
-Specify the chain in PEM format. Where you set it depends on how the cluster is created:
+Specify the chain in PEM format. It is the same setting, but its path depends on where the vCenter connection is described:
 
-- When installing a cluster, use the [`provider.caBundle`](cluster_configuration.html#vsphereclusterconfiguration-provider-cabundle) parameter of the VsphereClusterConfiguration resource.
-- In a running cluster, use the [`caBundle`](configuration.html#parameters-cabundle) parameter of the module settings.
+- When installing a cluster, the connection is described in the `provider` section of the VsphereClusterConfiguration resource next to the `provider.server` parameter, so the chain is set in [`provider.caBundle`](cluster_configuration.html#vsphereclusterconfiguration-provider-cabundle).
+- In a running cluster, the connection is described at the top level of the module settings next to the `host` parameter, so the chain is set in [`caBundle`](configuration.html#parameters-cabundle).
 
 The `insecure: true` parameter disables vCenter certificate verification completely. Set either `caBundle` or `insecure: true`. DKP rejects a configuration that sets a non-empty `caBundle` and `insecure: true` at the same time.
 
