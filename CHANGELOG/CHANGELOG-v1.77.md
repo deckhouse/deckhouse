@@ -941,6 +941,7 @@
  - **[candi]** Updated base images to v1.3.22 to address yq CVEs. [#21864](https://github.com/deckhouse/deckhouse/pull/21864)
  - **[candi]** base_images - fix base/distroless final image [#22345](https://github.com/deckhouse/deckhouse/pull/22345)
     low
+ - **[candi]** minget removed from alt_base_images [#22723](https://github.com/deckhouse/deckhouse/pull/22723)
  - **[candi]** update base images [#22177](https://github.com/deckhouse/deckhouse/pull/22177)
  - **[cloud-provider-aws]** Removed the legacy d8-cni-configuration hook and Helm template. [#20834](https://github.com/deckhouse/deckhouse/pull/20834)
  - **[cloud-provider-aws]** Reverted the removal of the legacy d8-cni-configuration hook and Helm template. [#21043](https://github.com/deckhouse/deckhouse/pull/21043)
