@@ -72,7 +72,7 @@ spec:
             # The pod has no kubeconfig: it authenticates as a tenant
             # ServiceAccount through the mounted token
             - name: KUBERNETES_SERVICE_HOST
-              value: "${VCP_API_VIP}"
+              value: "${VCP_APISERVER_HOST}"
             - name: KUBERNETES_SERVICE_PORT
               value: "6443"
             - name: USE_NELM

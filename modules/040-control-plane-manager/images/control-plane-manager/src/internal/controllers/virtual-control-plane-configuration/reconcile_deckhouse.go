@@ -74,10 +74,16 @@ var deckhouseModuleConfigsYAML []byte
 // The deckhouse-controller pod runs in the parent cluster (vcp-<name>) with
 // the tenant admin kubeconfig (not-self-hosted mode), and the tenant cluster
 // is seeded with the resources dhctl bootstrap would otherwise create.
+// apiserverHost is the tenant apiserver ClusterIP, used as the deckhouse pod's KUBERNETES_SERVICE_HOST.
+// It must be the in-cluster ClusterIP, not the ALB VIP: the ALB is an L4 (TCP) proxy that resets
+// long-lived connections (idle timeout, drain on config reload), and client-go does not always
+// re-establish the watch after such a reset, leaving the tenant deckhouse deaf to cluster events.
+// Dialing the ClusterIP keeps the watches on the in-cluster kube-proxy path. The ClusterIP is already
+// in the apiserver serving cert SANs (it is the PKI advertiseAddress), so TLS validates.
 func (r *reconciler) reconcileDeckhouse(
 	ctx context.Context,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
-	albVIP string,
+	apiserverHost string,
 	tenantCA []byte,
 	tr *tenantRegistry,
 ) (reconcile.Result, error) {
@@ -123,7 +129,7 @@ func (r *reconciler) reconcileDeckhouse(
 	}
 
 	// 8. Parent: the deckhouse Deployment itself.
-	if err := r.reconcileDeckhouseDeployment(ctx, vcp, albVIP); err != nil {
+	if err := r.reconcileDeckhouseDeployment(ctx, vcp, apiserverHost); err != nil {
 		return reconcile.Result{}, fmt.Errorf("reconcile deckhouse Deployment: %w", err)
 	}
 
@@ -567,14 +573,14 @@ func reconcileTenantDeckhouseServiceAccount(ctx context.Context, tc client.Clien
 func (r *reconciler) reconcileDeckhouseDeployment(
 	ctx context.Context,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
-	albVIP string,
+	apiserverHost string,
 ) error {
 	image, err := r.getParentDeckhouseImage(ctx)
 	if err != nil {
 		return fmt.Errorf("get parent deckhouse image: %w", err)
 	}
 
-	target, err := buildTargetDeckhouseDeployment(vcp, image, albVIP, r.parentDeckhouseImageDigest(ctx))
+	target, err := buildTargetDeckhouseDeployment(vcp, image, apiserverHost, r.parentDeckhouseImageDigest(ctx))
 	if err != nil {
 		return err
 	}
@@ -607,13 +613,13 @@ func (r *reconciler) reconcileDeckhouseDeployment(
 func buildTargetDeckhouseDeployment(
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 	image string,
-	albVIP string,
+	apiserverHost string,
 	parentImageDigest string,
 ) (*appsv1.Deployment, error) {
 	rendered := strings.NewReplacer(
 		"${NAMESPACE}", vcp.Namespace,
 		"${IMAGE_DECKHOUSE}", image,
-		"${VCP_API_VIP}", albVIP,
+		"${VCP_APISERVER_HOST}", apiserverHost,
 		"${TOKEN_SECRET_NAME}", constants.VirtualResourceName(constants.VirtualDeckhouseTokenSecretName, vcp.Name),
 	).Replace(deckhouseDeploymentYAML)
 
