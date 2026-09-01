@@ -42,15 +42,15 @@ func IsLeftoverWrap(project *v1alpha3.Project) bool {
 // CompleteLeftover finishes a leftover wrap project. A live namespace is
 // inferred into a real template. A terminating or missing namespace means the
 // user already deleted it: the leftover Project is deleted so Helm never
-// recreates the namespace. deleted is true when the Project was marked for
+// recreates the namespace. The bool is true when the Project was marked for
 // deletion (or was already deleting).
-func (m *Manager) CompleteLeftover(ctx context.Context, project *v1alpha3.Project) (deleted bool, err error) {
+func (m *Manager) CompleteLeftover(ctx context.Context, project *v1alpha3.Project) (bool, error) {
 	if !IsLeftoverWrap(project) {
 		return false, nil
 	}
 
 	namespace := new(corev1.Namespace)
-	err = m.client.Get(ctx, client.ObjectKey{Name: project.Name}, namespace)
+	err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, namespace)
 	switch {
 	case apierrors.IsNotFound(err):
 		if err := m.deleteLeftoverProject(ctx, project); err != nil {
