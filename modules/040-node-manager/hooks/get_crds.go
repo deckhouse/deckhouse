@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 
 	cljson "github.com/clarketm/json"
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -47,19 +46,6 @@ const (
 	useMCMAnnotation          = "node.deckhouse.io/use-mcm"
 	manualRolloutIDAnnotation = "manual-rollout-id"
 )
-
-// InstanceClassCrdInfo is a name+spec of a cloud InstanceClass CRD (kind is dynamic).
-type InstanceClassCrdInfo struct {
-	Name string
-	Spec interface{}
-}
-
-func applyInstanceClassCrdFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	return InstanceClassCrdInfo{
-		Name: obj.GetName(),
-		Spec: obj.Object["spec"],
-	}, nil
-}
 
 // applyNodeGroupCrdFilter returns name, spec, status.engine and use-mcm annotation from the NodeGroup.
 func applyNodeGroupCrdFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -90,15 +76,14 @@ func applyMachineDeploymentCrdFilter(obj *unstructured.Unstructured) (go_hook.Fi
 	}, nil
 }
 
-func applyCloudProviderSecretKindZonesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+func applyCloudProviderSecretZonesFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	secretData, err := decodeDataFromSecret(obj)
 	if err != nil {
 		return nil, err
 	}
 
 	return map[string]interface{}{
-		"instanceClassKind": secretData["instanceClassKind"],
-		"zones":             secretData["zones"],
+		"zones": secretData["zones"],
 	}, nil
 }
 
@@ -106,13 +91,6 @@ var getCRDsHookConfig = &go_hook.HookConfig{
 	Queue:        "/modules/node-manager",
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
-		// ics MUST stay at index 0: detectInstanceClassKind reads config.Kubernetes[0].Kind.
-		{
-			Name:       "ics",
-			ApiVersion: "",
-			Kind:       "",
-			FilterFunc: applyInstanceClassCrdFilter,
-		},
 		{
 			Name:       "ngs",
 			ApiVersion: "deckhouse.io/v1",
@@ -152,7 +130,7 @@ var getCRDsHookConfig = &go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"d8-node-manager-cloud-provider"},
 			},
-			FilterFunc: applyCloudProviderSecretKindZonesFilter,
+			FilterFunc: applyCloudProviderSecretZonesFilter,
 		},
 	},
 	Schedule: []go_hook.ScheduleConfig{
@@ -171,26 +149,6 @@ var _ = sdk.RegisterFunc(getCRDsHookConfig, getCRDsHandler)
 // updateEpoch, serialized labels/taints and the node_group_info metric are owned by
 // node-controller now.
 func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
-	// Dynamically bind the 'ics' snapshot to the InstanceClass kind advertised by the
-	// cloud-provider secret. On a kind change we adjust the binding and re-run.
-	kindInUse, kindFromSecret := detectInstanceClassKind(input, getCRDsHookConfig)
-	if kindInUse != kindFromSecret {
-		if kindFromSecret == "" {
-			input.Logger.Info("InstanceClassKind has changed: disable binding 'ics'")
-			*input.BindingActions = append(*input.BindingActions, go_hook.BindingAction{
-				Name: "ics", Action: "Disable", Kind: "", ApiVersion: "",
-			})
-		} else {
-			input.Logger.Info("InstanceClassKind has changed: update kind for binding 'ics'",
-				slog.String("from", kindInUse), slog.String("to", kindFromSecret))
-			*input.BindingActions = append(*input.BindingActions, go_hook.BindingAction{
-				Name: "ics", Action: "UpdateKind", Kind: kindFromSecret, ApiVersion: "",
-			})
-		}
-		getCRDsHookConfig.Kubernetes[0].Kind = kindFromSecret
-		return nil
-	}
-
 	// Default zones. Take them from machine_deployments and cloud_provider_secret.zones.
 	defaultZones := set.New()
 	for machineInfo, err := range sdkobjectpatch.SnapshotIter[MachineDeploymentCrdInfo](input.Snapshots.Get("machine_deployments")) {
@@ -220,18 +178,6 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 		}
 	}
 
-	// instanceClass names, keyed by name. Only used to validate that a CloudEphemeral
-	// NodeGroup references an existing instanceClass; node-controller renders the
-	// provider templates and reads the instanceClass spec itself, so the spec is no
-	// longer overlaid into helm values.
-	instanceClasses := make(map[string]interface{})
-	for ic, err := range sdkobjectpatch.SnapshotIter[InstanceClassCrdInfo](input.Snapshots.Get("ics")) {
-		if err != nil {
-			return fmt.Errorf("failed to iterate over 'ics' snapshots: %w", err)
-		}
-		instanceClasses[ic.Name] = ic.Spec
-	}
-
 	finalNodeGroups := make([]interface{}, 0)
 
 	for nodeGroup, err := range sdkobjectpatch.SnapshotIter[NodeGroupCrdInfo](input.Snapshots.Get("ngs")) {
@@ -243,37 +189,6 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 		ngForValues["name"] = nodeGroup.Name
 		ngForValues["engine"] = string(calculateNodeGroupEngine(input, nodeGroup))
 		ngForValues["manualRolloutID"] = nodeGroup.ManualRolloutID
-
-		// A NodeGroup with a wrong classReference.kind or a missing instanceClass is kept
-		// out of helm rendering; node-controller renders the CAPI/MCM templates and the
-		// instanceClass is read by it directly, so it is no longer overlaid into values.
-		// Fall back to the last valid values and skip the raw element; the diagnostic
-		// status is published by node-controller.
-		if nodeGroup.Spec.NodeType == ngv1.NodeTypeCloudEphemeral && kindInUse != "" {
-			classRefKind := nodeGroup.Spec.CloudInstances.ClassReference.Kind
-			if classRefKind != kindInUse {
-				input.Logger.Error("invalid NodeGroup classReference.kind",
-					slog.String("name", nodeGroup.Name),
-					slog.String("kind", classRefKind),
-					slog.String("expected", kindInUse))
-				if saved, ok := lastGoodNodeGroup(input, nodeGroup.Name); ok {
-					finalNodeGroups = append(finalNodeGroups, saved)
-				}
-				continue
-			}
-
-			nodeGroupInstanceClassName := nodeGroup.Spec.CloudInstances.ClassReference.Name
-			if _, ok := instanceClasses[nodeGroupInstanceClassName]; !ok {
-				input.Logger.Error("NodeGroup instance class not found",
-					slog.String("name", nodeGroup.Name),
-					slog.String("instance_class", nodeGroupInstanceClassName),
-					slog.String("kind", classRefKind))
-				if saved, ok := lastGoodNodeGroup(input, nodeGroup.Name); ok {
-					finalNodeGroups = append(finalNodeGroups, saved)
-				}
-				continue
-			}
-		}
 
 		if nodeGroup.Spec.NodeType == ngv1.NodeTypeStatic {
 			if staticValue, has := input.Values.GetOk("nodeManager.internal.static"); has {
@@ -307,24 +222,6 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 
 	input.Values.Set("nodeManager.internal.nodeGroups", finalNodeGroups)
 	return nil
-}
-
-// lastGoodNodeGroup returns the previously stored values of a NodeGroup by name,
-// used to keep an invalid NodeGroup on its last valid configuration instead of
-// pushing a raw element without instanceClass into helm rendering.
-func lastGoodNodeGroup(input *go_hook.HookInput, name string) (map[string]interface{}, bool) {
-	if !input.Values.Exists("nodeManager.internal.nodeGroups") {
-		return nil, false
-	}
-	for _, saved := range input.Values.Get("nodeManager.internal.nodeGroups").Array() {
-		if saved.Map()["name"].String() != name {
-			continue
-		}
-		if m, ok := saved.Value().(map[string]interface{}); ok {
-			return m, true
-		}
-	}
-	return nil, false
 }
 
 func nodeGroupForValues(nodeGroupSpec *ngv1.NodeGroupSpec) map[string]interface{} {
@@ -368,23 +265,6 @@ func nodeGroupForValues(nodeGroupSpec *ngv1.NodeGroupSpec) map[string]interface{
 		res["nodeDrainTimeoutSecond"] = nodeGroupSpec.NodeDrainTimeoutSecond
 	}
 	return res
-}
-
-var detectInstanceClassKind = func(input *go_hook.HookInput, config *go_hook.HookConfig) (string, string) {
-	var fromSecret string
-	secretInfoSnapshots := input.Snapshots.Get("cloud_provider_secret")
-
-	if len(secretInfoSnapshots) > 0 {
-		var secretInfo map[string]interface{}
-		err := secretInfoSnapshots[0].UnmarshalTo(&secretInfo)
-		if err == nil {
-			if kind, ok := secretInfo["instanceClassKind"].(string); ok {
-				fromSecret = kind
-			}
-		}
-	}
-
-	return config.Kubernetes[0].Kind, fromSecret
 }
 
 func calculateNodeGroupEngine(input *go_hook.HookInput, nodeGroup NodeGroupCrdInfo) ngv1.NodeGroupEngine {
