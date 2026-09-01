@@ -59,7 +59,7 @@ func Validate(ctx context.Context, binaryPath string, input config.ProviderInput
 		return err
 	}
 
-	if warningsStr := violationsToErrString(resp.GetWarnings()); len(warningsStr) > 0 {
+	if warningsStr := violationsToWarnString(resp.GetWarnings()); len(warningsStr) > 0 {
 		reportWarnings(ctx, input.ProviderName, warningsStr)
 	}
 
