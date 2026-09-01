@@ -57,7 +57,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the Virtualization API component of the [`virtualization`](/modules/virtualization/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
 
-![Architecture of the Virtualization API component of virtualization module](../../../images/architecture/virtualization/c4-l2-virtualization-api.png)
+![Architecture of the Virtualization API component of virtualization module](../../images/architecture/virtualization/c4-l2-virtualization-api.png)
 
 ## Virtualization API components
 

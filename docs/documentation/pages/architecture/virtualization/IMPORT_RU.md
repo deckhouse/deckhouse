@@ -6,7 +6,7 @@ search: image import, image upload, import image, upload image, disk import, dis
 description: Описание импорта и загрузки образов и дисков ВМ в модуле virtualization в Deckhouse Kubernetes Platform.
 ---
 
-Virtualization-controller компонента [Virtualization-API](api.html) модуля [`virtualization`](/modules/virtualization/) позволяет импортировать образы и диски ВМ из различных источников в PVC-тома, используемые в качестве дисков ВМ, управляемых KubeVirt. 
+Virtualization-controller компонента [Virtualization-API](api.html) модуля [`virtualization`](/modules/virtualization/) позволяет импортировать образы и диски ВМ из различных источников в PVC-тома, используемые в качестве дисков ВМ, управляемых KubeVirt.
 
 {% alert level="info" %}
 [KubeVirt](https://github.com/kubevirt/kubevirt) — это Open Source-проект, который позволяет запускать, развёртывать и управлять ВМ с использованием Kubernetes в качестве платформы оркестрации. Он обеспечивает совместную работу традиционных ВМ и контейнерных рабочих нагрузок в одном кластере Kubernetes, предоставляя единую плоскость управления.
@@ -43,7 +43,7 @@ Virtualization-controller в процессе импорта образа или
 
 Взаимодействия компонентов модуля [`virtualization`](/modules/virtualization/) при импорте и загрузке образов и дисков ВМ изображены на следующей диаграмме:
 
-![Взаимодействия компонентов модуля virtualization при импорте и загрузке образов и дисков ВМ](../../../images/architecture/virtualization/c4-l2-virtualization-import.ru.png)
+![Взаимодействия компонентов модуля virtualization при импорте и загрузке образов и дисков ВМ](../../images/architecture/virtualization/c4-l2-virtualization-import.ru.png)
 
 В процессе импорта образов и дисков ВМ происходит взаимодействие со следующими внешними компонентами:
 

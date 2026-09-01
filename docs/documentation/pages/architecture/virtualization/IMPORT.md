@@ -5,7 +5,7 @@ search: image import, image upload, import image, upload image, disk import, dis
 description: Description of importing and uploading VM images and disks in virtualization module in Deckhouse Kubernetes Platform.
 ---
 
-Virtualization-controller of the [Virtualization-API](api.html) component of the [`virtualization`](/modules/virtualization/) module allows you to import VM images and dusks from different sources into PVC volumes used as VM disks managed by KubeVirt.
+Virtualization-controller of the [Virtualization-API](api.html) component of the [`virtualization`](/modules/virtualization/) module allows you to import VM images and disks from different sources into PVC volumes used as VM disks managed by KubeVirt.
 
 {% alert level="info" %}
 [KubeVirt](https://github.com/kubevirt/kubevirt) is an open-source project that allows you to launch, deploy, and manage VMs using Kubernetes as an orchestration platform. It enables cooperation between traditional VMs and container workloads in the same Kubernetes cluster, providing a single control plane.
@@ -42,7 +42,7 @@ The following simplifications are made in the diagram:
 
 Interactions of [`virtualization`](/modules/virtualization/) module components while importing and uploading VM images and disks are shown in the following diagram:
 
-![Interactions of virtualization module components while importing and uploading VM images and disks](../../../images/architecture/virtualization/c4-l2-virtualization-import.png)
+![Interactions of virtualization module components while importing and uploading VM images and disks](../../images/architecture/virtualization/c4-l2-virtualization-import.png)
 
 During the processes of importing and uploading VM images and disks [`virtualization`](/modules/virtualization/) module components interact with the following external components:
 
