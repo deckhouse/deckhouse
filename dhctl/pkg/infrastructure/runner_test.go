@@ -445,3 +445,50 @@ var destructiveChangesReportWithoutVM = &destructiveChangesReport{
 	changes:      destructivelyChangedWithoutVM,
 	hasVMChanges: false,
 }
+
+func TestRunnerRefreshVariablesAndReplanBeforeVMDestruction(t *testing.T) {
+	executor := &fakeExecutor{}
+
+	runner := newTestRunner(executor).
+		WithVariables([]byte("old variables"))
+
+	oldPlanFile, err := os.CreateTemp("", "old-plan")
+	require.NoError(t, err)
+
+	oldPlanPath := oldPlanFile.Name()
+	require.NoError(t, oldPlanFile.Close())
+
+	t.Cleanup(func() {
+		_ = os.Remove(oldPlanPath)
+		_ = os.Remove(runner.variablesPath)
+		_ = os.Remove(runner.planPath)
+	})
+
+	runner.planPath = oldPlanPath
+	runner.changesInPlan = plan.HasDestructiveChanges
+	runner.planDestructiveChanges = destructivelyChanged
+	runner.hasVMDestruction = true
+
+	refreshCalls := 0
+
+	runner.WithVariablesRefresher(func(context.Context) ([]byte, error) {
+		refreshCalls++
+
+		executor.planResp = fakeResponse{code: 0}
+
+		return []byte("new variables"), nil
+	})
+
+	err = runner.refreshVariablesAndReplanBeforeVMDestruction(t.Context())
+	require.NoError(t, err)
+
+	require.Equal(t, 1, refreshCalls)
+	require.Equal(t, plan.HasNoChanges, runner.GetChangesInPlan())
+	require.False(t, runner.HasVMDestruction())
+	require.Nil(t, runner.GetPlanDestructiveChanges())
+	require.NotEqual(t, oldPlanPath, runner.GetPlanPath())
+
+	actualVariables, err := os.ReadFile(runner.variablesPath)
+	require.NoError(t, err)
+	require.Equal(t, []byte("new variables"), actualVariables)
+}
