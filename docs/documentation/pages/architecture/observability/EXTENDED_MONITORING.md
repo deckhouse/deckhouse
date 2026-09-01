@@ -27,7 +27,7 @@ The following simplifications are made in the diagram:
 
 The Level 2 C4 architecture of the [`extended-monitoring`](/modules/extended-monitoring/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagrams.
 
-![Extended-monitoring module architecture](../../../images/architecture/observability/c4-l2-extended-monitoring.png)
+![Extended-monitoring module architecture](../../images/architecture/observability/c4-l2-extended-monitoring.png)
 
 ## Module components
 

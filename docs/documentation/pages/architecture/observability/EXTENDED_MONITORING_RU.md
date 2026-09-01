@@ -28,7 +28,7 @@ description: Архитектура модуля extended-monitoring в Deckhous
 
 Архитектура модуля [`extended-monitoring`](/modules/extended-monitoring/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-![Архитектура модуля extended-monitoring](../../../images/architecture/observability/c4-l2-extended-monitoring.ru.png)
+![Архитектура модуля extended-monitoring](../../images/architecture/observability/c4-l2-extended-monitoring.ru.png)
 
 ## Компоненты модуля
 
