@@ -22,6 +22,7 @@
     WERF_ENV: {!{$edition}!}
     STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
     DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+    REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
   run: |
     set -euo pipefail
     function regctl_copy() {
@@ -64,6 +65,7 @@
     WERF_ENV: {!{$edition}!}
     STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
     DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+    REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
   run: |
     set -euo pipefail
     function regctl_copy() {

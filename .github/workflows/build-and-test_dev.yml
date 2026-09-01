@@ -664,6 +664,7 @@ jobs:
         env:
           DEV_REGISTRY: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           set -euo pipefail
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -990,6 +991,7 @@ jobs:
         env:
           DEV_REGISTRY: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           set -euo pipefail
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1315,6 +1317,7 @@ jobs:
         env:
           DEV_REGISTRY: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           set -euo pipefail
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1640,6 +1643,7 @@ jobs:
         env:
           DEV_REGISTRY: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           set -euo pipefail
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1965,6 +1969,7 @@ jobs:
         env:
           DEV_REGISTRY: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           set -euo pipefail
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -2290,6 +2295,7 @@ jobs:
         env:
           DEV_REGISTRY: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           set -euo pipefail
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -2615,6 +2621,7 @@ jobs:
         env:
           DEV_REGISTRY: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           set -euo pipefail
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
