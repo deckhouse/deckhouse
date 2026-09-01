@@ -82,3 +82,9 @@ Updated operator dependencies. Fixes CVEs:
 - CVE-2026-2303 (`go.mongodb.org/mongo-driver` -> `v1.17.7`)
 
 (previously split across 013/014/015/016/017/018; consolidated into one patch)
+
+### 999-FixCVE.patch
+
+Fixes:
+GO-2026-5932
+CVE-2026-56854 (`golang.org/x/crypto` -> `v0.55.0`)
