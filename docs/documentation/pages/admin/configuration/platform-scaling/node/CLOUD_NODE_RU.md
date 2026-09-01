@@ -12,6 +12,10 @@ lang: ru
 
 Ниже приведены инструкции по добавлению и настройке каждого типа.
 
+{% alert level="info" %}
+Чтобы заменить образ ОС, измените ссылку на него в `<PROVIDER>InstanceClass` или `<PROVIDER>ClusterConfiguration`. Имя в конфигурации должно измениться — обновление образа «на месте» с тем же именем узлы не перезаказывает. Подробнее — в разделе [«Как заменить образ ОС в облачном кластере»](/products/kubernetes-platform/documentation/v1/faq.html#как-заменить-образ-ос-в-облачном-кластере).
+{% endalert %}
+
 ## Добавление CloudEphemeral-узлов в облачном кластере
 
 CloudEphemeral-узлы автоматически создаются и управляются в кластере с помощью Machine Controller Manager (MCM) или Cluster API (в зависимости от конфигурации) — оба компонента входят в состав модуля [`node-manager`](/modules/node-manager/) в DKP.
