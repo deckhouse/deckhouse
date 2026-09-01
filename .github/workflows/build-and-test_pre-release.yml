@@ -359,6 +359,7 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1075,6 +1076,7 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1478,6 +1480,7 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1881,6 +1884,7 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -2284,6 +2288,7 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -2687,6 +2692,7 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -3090,6 +3096,7 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -4902,6 +4909,7 @@ jobs:
         if: ${{ steps.check-tag-for-release-branch.outputs.result == 'true' }}
         env:
           IMAGE_TO: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss:${{ github.ref_name }}"
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
           COMPARE_MAX_ATTEMPTS: 10
           COMPARE_RETRY_DELAY: 30
         run: |

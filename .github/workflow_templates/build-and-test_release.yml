@@ -200,6 +200,7 @@ jobs:
         if: ${{ steps.check-tag.outputs.result == 'true' }}
         env:
           IMAGE_TO: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/fe:${{ github.ref_name }}"
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
           COMPARE_MAX_ATTEMPTS: 10
           COMPARE_RETRY_DELAY: 30
         run: |
