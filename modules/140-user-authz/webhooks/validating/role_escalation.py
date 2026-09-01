@@ -58,7 +58,28 @@ PRIVILEGED_USERS = {
     "system:serviceaccount:kube-system:clusterrole-aggregation-controller",
 }
 
-CONFIG = """
+# Cluster administrators apply platform manifests (Commander e2e SSA-patches
+# d8:commander:commander-admin with * on deckhouse.io). Same break-glass set as
+# system_resources.py — a namespace admin is never in these groups.
+BYPASS_GROUPS = {
+    "system:masters",
+    "kubeadm:cluster-admins",
+}
+
+# Platform ClusterRoles live under the reserved d8: prefix (cluster_roles.py). Commander
+# materializes d8:commander:* with cluster-admin rules; Deckhouse ships d8:project:*. The
+# escalation threat is a tenant Role or a d8:custom:* ClusterRole, not those names.
+def is_platform_owned_clusterrole(kind: str, name: str) -> bool:
+    return kind == "ClusterRole" and name.startswith("d8:") and not name.startswith("d8:custom:")
+
+
+_EXCLUDE_BYPASS_GROUPS = "\n".join(
+    f"""  - name: exclude-group-{group.replace(":", "-")}
+    expression: '!("{group}" in request.userInfo.groups)'"""
+    for group in sorted(BYPASS_GROUPS)
+)
+
+CONFIG = f"""
 configVersion: v1
 kubernetesValidating:
 - name: rbacv2-role-escalation.deckhouse.io
@@ -70,6 +91,7 @@ kubernetesValidating:
     name: exclude-deckhouse
   - expression: ("system:serviceaccount:kube-system:clusterrole-aggregation-controller" != request.userInfo.username)
     name: exclude-aggregation-controller
+{_EXCLUDE_BYPASS_GROUPS}
   rules:
   - apiGroups:   ["rbac.authorization.k8s.io"]
     apiVersions: ["*"]
@@ -104,8 +126,14 @@ def rule_grants_protected(rule: dict) -> bool:
 
 
 def validate(ctx: DotMap) -> Optional[str]:
-    username = ctx.review.request.userInfo.username
+    user_info = ctx.review.request.userInfo
+    if hasattr(user_info, "toDict"):
+        user_info = user_info.toDict()
+    username = (user_info or {}).get("username")
     if username in PRIVILEGED_USERS:
+        return None
+    groups = set((user_info or {}).get("groups") or [])
+    if groups & BYPASS_GROUPS:
         return None
 
     obj = ctx.review.request.object
@@ -114,6 +142,8 @@ def validate(ctx: DotMap) -> Optional[str]:
 
     kind = obj.get("kind") or "Role"
     name = obj.get("metadata", {}).get("name", "")
+    if is_platform_owned_clusterrole(kind, name):
+        return None
     rules = obj.get("rules") or []
 
     for rule in rules:

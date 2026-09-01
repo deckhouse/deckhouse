@@ -137,6 +137,36 @@ class TestRoleEscalationValidation(unittest.TestCase):
         )
         tests.assert_validation_allowed(self, out, None)
 
+    def test_commander_admin_clusterrole_is_allowed(self):
+        # Commander SSA-patches d8:commander:commander-admin with * on every API, including
+        # deckhouse.io project-management resources. That is a platform ClusterRole, not a tenant
+        # escalation.
+        out = self.run_hook(
+            binding_context(
+                "ClusterRole",
+                "d8:commander:commander-admin",
+                [rule(["*"], ["*"], ["*"])],
+            )
+        )
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_platform_clusterrole_prefix_is_allowed(self):
+        out = self.run_hook(
+            binding_context("ClusterRole", "d8:project:admin", [PRB_WRITE])
+        )
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_namespaced_role_with_platform_looking_name_is_still_denied(self):
+        out = self.run_hook(
+            binding_context("Role", "d8:commander:commander-admin", [PRB_WRITE], namespace="team-a")
+        )
+        tests.assert_validation_deny(self, out, expected_deny("Role", "d8:commander:commander-admin"))
+
+    def test_system_masters_is_allowed(self):
+        ctx = binding_context("Role", "escalate", [PRB_WRITE], namespace="team-a")
+        ctx.review.request.userInfo.groups = ["system:masters"]
+        tests.assert_validation_allowed(self, self.run_hook(ctx), None)
+
 
 if __name__ == "__main__":
     unittest.main()

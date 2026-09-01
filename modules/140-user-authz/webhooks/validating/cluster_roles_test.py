@@ -113,6 +113,12 @@ class TestClusterRolesValidation(unittest.TestCase):
                     'Use the "d8:custom:" prefix for custom roles and capabilities.',
                 )
 
+    def test_commander_prefix_is_allowed(self):
+        # Commander writes d8:commander:* on managed clusters; the prefix is reserved for that
+        # module, not for tenants (tenants still cannot take d8:system / d8:namespace / …).
+        out = self.run_hook(binding_context("d8:commander:commander-admin", rules=SOME_RULES))
+        tests.assert_validation_allowed(self, out, None)
+
     def test_builtin_kind_labels_are_reserved(self):
         for kind in ["role", "capability"]:
             with self.subTest(kind=kind):

@@ -234,7 +234,9 @@ def validate(ctx: DotMap) -> Optional[str]:
     selectors = (obj.get("aggregationRule") or {}).get("clusterRoleSelectors") or []
 
     # The d8: name prefix is reserved; users may only create objects under d8:custom:.
-    if name.startswith("d8:") and not name.startswith("d8:custom:"):
+    # Commander materializes its global roles as d8:commander:* on managed clusters
+    # (e2e SSA-patches d8:commander:commander-admin); that prefix is Commander's, not a tenant's.
+    if name.startswith("d8:") and not name.startswith("d8:custom:") and not name.startswith("d8:commander:"):
         # Exception: allow an UPDATE of a built-in role that changes ONLY its
         # custom.meta.deckhouse.io/* annotations (display title/description) — no privilege change.
         if request.operation == "UPDATE" and _only_custom_meta_annotation_change(
