@@ -318,6 +318,44 @@ class TestIdentityCollection(unittest.TestCase):
         self.assertEqual(assign.membership_groups(snaps, email="admin@deckhouse.io"),
                          ["superadmins"])
 
+    def test_membership_walks_nested_groups(self):
+        snaps = {
+            assign.USER_SNAP: [{"filterResult": {
+                "name": "admin", "email": "admin@deckhouse.io", "groups": [],
+            }}],
+            assign.GROUP_SNAP: [
+                {"filterResult": {
+                    "name": "inner",
+                    "members": [{"kind": "User", "name": "admin"}],
+                }},
+                {"filterResult": {
+                    "name": "superadmins",
+                    "members": [{"kind": "Group", "name": "inner"}],
+                }},
+            ],
+            assign.CAR_SNAP: [],
+            assign.AR_SNAP: [],
+            assign.CRB_SNAP: [],
+        }
+        self.assertEqual(assign.membership_groups(snaps, email="admin@deckhouse.io"),
+                         ["inner", "superadmins"])
+
+    def test_membership_nested_group_cycle_stops(self):
+        snaps = {
+            assign.GROUP_SNAP: [
+                {"filterResult": {
+                    "name": "a",
+                    "members": [{"kind": "Group", "name": "b"},
+                                {"kind": "User", "name": "admin"}],
+                }},
+                {"filterResult": {
+                    "name": "b",
+                    "members": [{"kind": "Group", "name": "a"}],
+                }},
+            ],
+        }
+        self.assertEqual(assign.groups_containing_user(snaps, "admin"), ["a", "b"])
+
     def test_occupied_roles_ignore_system_subjects(self):
         snaps = {
             assign.CAR_SNAP: [{"filterResult": {

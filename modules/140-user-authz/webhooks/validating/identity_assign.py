@@ -344,20 +344,67 @@ def user_record(snapshots: Any, *, name: str = "", email: str = "") -> Optional[
     return None
 
 
+def _group_by_name(snapshots: Any) -> dict:
+    by_name = {}
+    for fr in iter_filter_results(snapshots, GROUP_SNAP):
+        name = fr.get("name")
+        if isinstance(name, str) and name and name not in by_name:
+            by_name[name] = fr
+    return by_name
+
+
+def _member_refs(fr: dict) -> List[Tuple[str, str]]:
+    """(kind, name) from a Group snapshot. A bare string is a User name (tests)."""
+    found: List[Tuple[str, str]] = []
+    for member in _list(fr.get("members")):
+        if isinstance(member, str) and member:
+            found.append(("User", member))
+            continue
+        item = _dict(member)
+        kind = item.get("kind")
+        name = item.get("name")
+        if kind in ("User", "Group") and isinstance(name, str) and name:
+            found.append((kind, name))
+    return found
+
+
+def _ancestor_groups(by_name: dict, seeds: Iterable[str]) -> List[str]:
+    """Parents of seeds, including the seeds. Cycle-safe. Same walk as user-authn groups.go."""
+    parents: dict = {}
+    for name, fr in by_name.items():
+        for kind, member in _member_refs(fr):
+            if kind == "Group":
+                parents.setdefault(member, []).append(name)
+
+    found: List[str] = []
+    seen: Set[str] = set()
+    queue: List[str] = []
+    for seed in seeds:
+        if isinstance(seed, str) and seed and seed not in seen:
+            seen.add(seed)
+            found.append(seed)
+            queue.append(seed)
+    i = 0
+    while i < len(queue):
+        child = queue[i]
+        i += 1
+        for parent in parents.get(child, []):
+            if parent not in seen:
+                seen.add(parent)
+                found.append(parent)
+                queue.append(parent)
+    return found
+
+
 def groups_containing_user(snapshots: Any, user_name: str) -> List[str]:
     if not isinstance(user_name, str) or not user_name:
         return []
-    found = []
-    seen: Set[str] = set()
-    for fr in iter_filter_results(snapshots, GROUP_SNAP):
-        members = [m for m in _list(fr.get("members")) if isinstance(m, str)]
-        if user_name not in members:
-            continue
-        group_name = fr.get("name")
-        if isinstance(group_name, str) and group_name and group_name not in seen:
-            seen.add(group_name)
-            found.append(group_name)
-    return found
+    by_name = _group_by_name(snapshots)
+    direct = []
+    for name, fr in by_name.items():
+        if any(kind == "User" and member == user_name for kind, member in _member_refs(fr)):
+            direct.append(name)
+    return _ancestor_groups(by_name, direct)
 
 
 def membership_groups(snapshots: Any, *, user_name: str = "", email: str = "",
@@ -378,6 +425,7 @@ def membership_groups(snapshots: Any, *, user_name: str = "", email: str = "",
     if rec:
         add(groups_containing_user(snapshots, rec.get("name") or ""))
         add(_list(rec.get("groups")))
+    add(_ancestor_groups(_group_by_name(snapshots), found))
     return found
 
 
@@ -918,7 +966,7 @@ USER_JQ_FILTER = """
 GROUP_JQ_FILTER = """
 {
   "name": (.spec.name // .metadata.name),
-  "members": [.spec.members[]? | select(.kind == "User") | .name]
+  "members": [.spec.members[]? | select(.kind == "User" or .kind == "Group") | {kind, name}]
 }
 """
 
