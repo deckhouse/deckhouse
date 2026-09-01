@@ -392,13 +392,49 @@ func TestSyncInstanceClassConsumers(t *testing.T) {
 		}
 	})
 
+	t.Run("a panic in the sweep does not kill the sweeps after it", func(t *testing.T) {
+		exploded := false
+		c := fake.NewClientBuilder().WithScheme(classUsageScheme(t)).WithObjects(
+			testClassRegistration(),
+			instanceClass(testClassKind, "used", nil),
+			classUsageNodeGroup("alpha", testClassKind, "used", v1.NodeTypeCloudEphemeral),
+		).WithInterceptorFuncs(interceptor.Funcs{
+			List: func(ctx context.Context, cl client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+				if _, ok := list.(*unstructured.UnstructuredList); ok && !exploded {
+					exploded = true
+					panic("boom inside the sweep")
+				}
+				return cl.List(ctx, list, opts...)
+			},
+		}).Build()
+
+		r := newClassSweeper(c)
+		// controller-runtime recovers a Reconcile panic and keeps the worker, so the sweep has
+		// to survive one too.
+		func() {
+			defer func() {
+				if recover() == nil {
+					t.Error("the injected panic did not reach the caller")
+				}
+			}()
+			r.sweepInstanceClassConsumers(context.Background())
+		}()
+
+		r.sweepInstanceClassConsumers(context.Background())
+
+		got, found := classConsumers(t, c, testClassKind, "used")
+		if !found || !slices.Equal(got, []string{"alpha"}) {
+			t.Errorf("used consumers = %v (found=%v), want [alpha] from the sweep after the panic", got, found)
+		}
+	})
+
 	t.Run("concurrent sweeps do not race", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(classUsageScheme(t)).WithObjects(
 			testClassRegistration(),
 			instanceClass(testClassKind, "used", nil),
 			classUsageNodeGroup("alpha", testClassKind, "used", v1.NodeTypeCloudEphemeral),
 		).WithInterceptorFuncs(interceptor.Funcs{
-			// Pruned writes, so every worker also touches the unstorable-kinds memo.
+			// Pruned writes, so the goroutine that wins the sweep also writes the memo.
 			Patch: func(context.Context, client.WithWatch, client.Object, client.Patch, ...client.PatchOption) error {
 				return nil
 			},

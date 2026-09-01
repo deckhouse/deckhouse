@@ -1,8 +1,8 @@
 # TEST FIXTURE. Minimal InstanceClass CRD standing in for a provider-owned one, so the consumer
 # sync has a registered kind to write status.nodeGroupConsumers on. Schema-free.
 #
-# No `subresources` section, like every real provider's InstanceClass — checked in all eleven
-# candi/openapi/instance_class.yaml (and the DVP crds/ one).
+# No `subresources` section, like every real provider's InstanceClass — checked in eleven files:
+# ten candi/openapi/instance_class.yaml plus the DVP one under crds/.
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:

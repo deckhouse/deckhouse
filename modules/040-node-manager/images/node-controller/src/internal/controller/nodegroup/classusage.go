@@ -40,9 +40,9 @@ type usageKey struct {
 	Name string
 }
 
-// sweepInstanceClassConsumers coalesces the calls of the reconcile workers: at most one sweep
-// runs at a time, a caller that finds one running marks it dirty and returns, and the running
-// sweep repeats once per dirty mark, so no event goes unswept and no worker waits on another.
+// sweepInstanceClassConsumers coalesces the calls of the reconcile workers: one sweep runs at a
+// time, a caller that finds one running marks it dirty and returns, and the running sweep repeats
+// once more if any mark arrived while it was working.
 func (r *Status) sweepInstanceClassConsumers(ctx context.Context) {
 	r.sweepMu.Lock()
 	if r.sweeping {
@@ -53,6 +53,18 @@ func (r *Status) sweepInstanceClassConsumers(ctx context.Context) {
 	r.sweeping = true
 	r.sweepMu.Unlock()
 
+	// From a defer, so a panic in the sweep leaves neither the flag set for the life of the pod
+	// nor the mark this pass consumed unswept: an unwound pass swept nothing.
+	swept := false
+	defer func() {
+		r.sweepMu.Lock()
+		r.sweeping = false
+		if !swept {
+			r.sweepDirty = true
+		}
+		r.sweepMu.Unlock()
+	}()
+
 	for {
 		if err := r.syncInstanceClassConsumers(ctx); err != nil {
 			log.FromContext(ctx).Error(err, "sync instance class consumers")
@@ -60,7 +72,7 @@ func (r *Status) sweepInstanceClassConsumers(ctx context.Context) {
 
 		r.sweepMu.Lock()
 		if !r.sweepDirty {
-			r.sweeping = false
+			swept = true
 			r.sweepMu.Unlock()
 			return
 		}
