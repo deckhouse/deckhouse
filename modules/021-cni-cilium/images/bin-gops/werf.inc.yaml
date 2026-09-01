@@ -1,8 +1,8 @@
 # #####################################################################
-# Description: gops — утилита диагностики Go-процессов. Используется в runtime
+# Description: gops, a diagnostic tool for Go processes, used at runtime
 # Target: agent, hubble-relay
 # Sources:
-# - cilium/cilium: images/runtime/Dockerfile (стадия go-builder)
+# - cilium/cilium: images/runtime/Dockerfile (go-builder stage)
 # - cilium/cilium: images/runtime/build-gops.sh
 # #####################################################################
 
@@ -41,8 +41,6 @@ secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
 shell:
-  beforeInstall:
-  - pm install binutils
   install:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
@@ -50,7 +48,6 @@ shell:
   - |
     {{- $buildContext := deepCopy $ -}}
     {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
-    {{- $_ := set $buildContext "BuildCommand" `go build -ldflags "-s -w" -o /out/gops github.com/google/gops` -}}
+    {{- $_ := set $buildContext "BuildCommand" `go build -ldflags "-s -w" -o /out/usr/bin/gops github.com/google/gops` -}}
     {{- include "image-build.build" $buildContext | indent 4 }}
-  - strip /out/gops
   - go version -m /out/usr/bin/gops | grep -q "GOARCH=amd64"
