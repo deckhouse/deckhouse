@@ -175,11 +175,16 @@ func needsTemplate(project *v1alpha3.Project) bool {
 }
 
 func (m *Manager) migrateProject(ctx context.Context, project *v1alpha3.Project) error {
+	if IsLeftoverWrap(project) {
+		_, err := m.CompleteLeftover(ctx, project)
+		return err
+	}
+
 	namespace := new(corev1.Namespace)
 	err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, namespace)
 	switch {
 	case apierrors.IsNotFound(err):
-		// No namespace yet, so there is no state to preserve; the minimal template renders it.
+		// Handmade project, namespace not created yet: no state to preserve.
 		namespace = &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: project.Name}}
 	case err != nil:
 		return fmt.Errorf("get the '%s' namespace: %w", project.Name, err)
@@ -193,34 +198,7 @@ func (m *Manager) migrateProject(ctx context.Context, project *v1alpha3.Project)
 		}
 	}
 
-	template := TemplateFor(namespace)
-	parameters := ParametersFor(namespace, template)
-
-	m.logger.Info("migrate the project to a template", "project", project.Name, "template", template)
-	if err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
-		current := new(v1alpha3.Project)
-		if err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, current); err != nil {
-			return fmt.Errorf("get the '%s' project: %w", project.Name, err)
-		}
-		if !needsTemplate(current) {
-			return nil
-		}
-		current.Spec.ProjectTemplateName = template
-		// Seed parameters for leftover namespace-managed projects and for empty specs so the
-		// first Helm render stays a no-op (NotRestricted / existing PSS). Do not wipe a
-		// hand-made project that already carries parameters.
-		overwriteParams := current.Labels[v1alpha3.ProjectLabelManagedByNamespace] == v1alpha3.ManagedByNamespace ||
-			len(current.Spec.Parameters) == 0
-		if overwriteParams && len(parameters) > 0 {
-			current.Spec.Parameters = parameters
-		}
-		delete(current.Labels, v1alpha3.ProjectLabelManagedByNamespace)
-		return m.client.Update(ctx, current)
-	}); err != nil {
-		return fmt.Errorf("update the '%s' project: %w", project.Name, err)
-	}
-
-	return nil
+	return m.applyInferredTemplate(ctx, project, namespace)
 }
 
 // sweepRetiredMarkers walks every namespace and peels leftover managed-by-namespace

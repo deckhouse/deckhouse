@@ -39,6 +39,7 @@ import (
 	"controller/apis/deckhouse.io/v1alpha2"
 	"controller/apis/deckhouse.io/v1alpha3"
 	"controller/internal/helm"
+	namespacemanager "controller/internal/manager/namespace"
 	"controller/internal/render"
 	rolebinding "controller/internal/rolebinding"
 	"controller/internal/startup"
@@ -125,6 +126,22 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 
 // Handle ensures project`s resources
 func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.Result, error) {
+	if namespacemanager.IsLeftoverWrap(project) {
+		deleted, err := namespacemanager.New(m.client, m.logger).CompleteLeftover(ctx, project)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if deleted {
+			return ctrl.Result{}, nil
+		}
+		if err := m.client.Get(ctx, client.ObjectKey{Name: project.Name}, project); err != nil {
+			if apierrors.IsNotFound(err) {
+				return ctrl.Result{}, nil
+			}
+			return ctrl.Result{}, fmt.Errorf("get the '%s' project: %w", project.Name, err)
+		}
+	}
+
 	// add finalizer and remove labels
 	if err := m.prepareProject(ctx, project); err != nil {
 		m.logger.Error(err, "failed to update the project", "project", project.Name)
@@ -449,9 +466,12 @@ func (m *Manager) Delete(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 // keeps verbatim, and that spelling used to mean "a project without a template" — so manifests and
 // GitOps repositories still carry it. Without this fallback such a project would look for a template
 // named "" and never get its namespace. Virtual projects are skipped: they are platform-owned and
-// carry their own template.
+// carry their own template. Leftover wrap projects are skipped too: writing "simple" here would
+// pin the wrong template after a failed migrate.
 func (m *Manager) ensureTemplateName(ctx context.Context, project *v1alpha3.Project) error {
-	if project.Spec.ProjectTemplateName != "" || project.Labels[v1alpha3.ProjectLabelVirtualProject] == "true" {
+	if project.Spec.ProjectTemplateName != "" ||
+		project.Labels[v1alpha3.ProjectLabelVirtualProject] == "true" ||
+		namespacemanager.IsLeftoverWrap(project) {
 		return nil
 	}
 

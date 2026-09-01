@@ -17,7 +17,6 @@ limitations under the License.
 package project
 
 import (
-	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -33,13 +32,13 @@ import (
 func TestEnqueueProjectForNamespace(t *testing.T) {
 	t.Run("deleted unowned ns refreshes virtual default", func(t *testing.T) {
 		ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "t-lvlns"}}
-		reqs := enqueueProjectForNamespace(context.Background(), ns)
+		reqs := namespaceProjectRequests(ns)
 		assert.Equal(t, []string{projectmanager.DefaultProjectName}, requestNames(reqs))
 	})
 
 	t.Run("upmeter probe refreshes virtual deckhouse", func(t *testing.T) {
 		ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "upmeter-probe-namespace-foo"}}
-		reqs := enqueueProjectForNamespace(context.Background(), ns)
+		reqs := namespaceProjectRequests(ns)
 		assert.Equal(t, []string{projectmanager.DeckhouseProjectName}, requestNames(reqs))
 	})
 
@@ -48,8 +47,28 @@ func TestEnqueueProjectForNamespace(t *testing.T) {
 			Name:   "team",
 			Labels: map[string]string{v1alpha3.ResourceLabelProject: "team"},
 		}}
-		reqs := enqueueProjectForNamespace(context.Background(), ns)
+		reqs := namespaceProjectRequests(ns)
 		assert.Equal(t, []string{"team"}, requestNames(reqs))
+	})
+
+	t.Run("adopt wakes virtual default and the new project", func(t *testing.T) {
+		oldNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "team"}}
+		newNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+			Name:   "team",
+			Labels: map[string]string{v1alpha3.ResourceLabelProject: "team"},
+		}}
+		reqs := namespaceProjectRequests(oldNS, newNS)
+		assert.ElementsMatch(t, []string{projectmanager.DefaultProjectName, "team"}, requestNames(reqs))
+	})
+
+	t.Run("heritage change wakes both virtual projects", func(t *testing.T) {
+		oldNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "probe"}}
+		newNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+			Name:   "probe",
+			Labels: map[string]string{v1alpha3.ResourceLabelHeritage: v1alpha3.ResourceHeritageDeckhouse},
+		}}
+		reqs := namespaceProjectRequests(oldNS, newNS)
+		assert.ElementsMatch(t, []string{projectmanager.DefaultProjectName, projectmanager.DeckhouseProjectName}, requestNames(reqs))
 	})
 }
 
