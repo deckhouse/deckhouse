@@ -1,9 +1,12 @@
 # #####################################################################
-# Description: CNI-плагин loopback (only) — . Используется в runtime # TODO(tden): дописать заголовок
-# Target: agent # TODO(tden): проверить использование
+# Description: CNI plugins from containernetworking/plugins, installed onto the node by the agent
+# Target: agent
 # Sources:
-# - cilium/cilium: images/runtime/Dockerfile (стадия go-builder)
-# - cilium/cilium:images/runtime/build-cni.sh
+# - cilium/cilium: images/runtime/Dockerfile (go-builder stage)
+# - cilium/cilium: images/runtime/build-cni.sh
+# Notes:
+# - Only loopback is built, the other plugins from the repository are not needed
+# - The /cni/loopback path in the agent image must not be changed
 # #####################################################################
 
 {{- $cniVersion := include "get_oss_version_by_id" (list "cni-plugins" $) }}
@@ -25,7 +28,11 @@ shell:
   - git clone --depth 1 --branch v{{ $cniVersion }} $(cat /run/secrets/SOURCE_REPO)/containernetworking/plugins.git /src
   - cd /src
   - git apply --verbose --allow-empty /patches/*.patch
-  - rm -rf /src/.git
+  # Upstream builds from the committed vendor/ directory, we cannot: the patch
+  # bumps go.mod/go.sum but not vendor/modules.txt, so vendoring goes
+  # inconsistent and the build fails. Dependencies are fetched from GOPROXY
+  # instead, go.sum from the patch keeps that verifiable
+  - rm -rf /src/vendor /src/.git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "builder/golang" }}
@@ -41,17 +48,14 @@ secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
 shell:
-  beforeInstall:
-  - pm install binutils
   install:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src
-  - export FLAGS='-s -w -X github.com/containernetworking/plugins/pkg/utils/buildversion.BuildVersion=v{{ $cniVersion }}' # TODO(tden): нормально ли иметь такой формат?
+  - export FLAGS='-s -w -X github.com/containernetworking/plugins/pkg/utils/buildversion.BuildVersion=v{{ $cniVersion }}'
   - |
     {{- $buildContext := deepCopy $ -}}
     {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
-    {{- $_ := set $buildContext "BuildCommand" `go build -mod=mod -ldflags "${FLAGS}" -o /out/cni/loopback ./plugins/main/loopback` -}}
+    {{- $_ := set $buildContext "BuildCommand" `go build -mod=readonly -ldflags "${FLAGS}" -o /out/cni/loopback ./plugins/main/loopback` -}}
     {{- include "image-build.build" $buildContext | indent 4 }}
-  - strip /out/cni/loopback
   - go version -m /out/cni/loopback | grep -q "GOARCH=amd64"
