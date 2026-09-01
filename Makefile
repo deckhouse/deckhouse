@@ -459,9 +459,7 @@ BASE_LIMIT_KEYS := REGISTRY_PATH \
                 builder/golang-1.25 \
                 builder/golang-1.26 \
                 builder/golang-1.27 \
-                builder/golang \
-                minget-0.1 \
-                minget
+                builder/golang
 
 .PHONY: update-container-factory
 update-container-factory: ## Download container-factory digests and update candi/alt_base_images.yml
