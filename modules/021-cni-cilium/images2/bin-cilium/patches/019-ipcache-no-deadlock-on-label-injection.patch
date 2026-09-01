@@ -1,0 +1,64 @@
+diff --git a/pkg/ipcache/metadata.go b/pkg/ipcache/metadata.go
+index 1f41ae64..d8be860f 100644
+--- a/pkg/ipcache/metadata.go
++++ b/pkg/ipcache/metadata.go
+@@ -34,6 +34,9 @@ var (
+
+ 	LabelInjectorName = "ipcache-inject-labels"
+
++	// policyMapUpdateTimeout bounds the wait in UpdatePolicyMaps().
++	policyMapUpdateTimeout = 3 * time.Minute
++
+ 	injectLabelsControllerGroup = controller.NewGroup("ipcache-inject-labels")
+ )
+
+@@ -546,7 +549,6 @@ func (ipc *IPCache) doInjectLabels(ctx context.Context, modifiedPrefixes []netip
+ 	}
+
+ 	ipc.mutex.Lock()
+-	defer ipc.mutex.Unlock()
+ 	for p, entry := range entriesToReplace {
+ 		prefix := p.String()
+ 		meta := ipc.getK8sMetadata(prefix)
+@@ -613,14 +615,17 @@ func (ipc *IPCache) doInjectLabels(ctx context.Context, modifiedPrefixes []netip
+ 			}
+ 		}
+ 	}
++	for prefix, id := range entriesToDelete {
++		ipc.deleteLocked(prefix.String(), id.Source)
++	}
++	// Don't hold lock while calling UpdatePolicyMaps, as it will otherwise run into a deadlock
++	ipc.mutex.Unlock()
++
+ 	if len(idsToDelete) > 0 {
+ 		if ipc.UpdatePolicyMaps(ctx, nil, idsToDelete) {
+ 			mutated = true
+ 		}
+ 	}
+-	for prefix, id := range entriesToDelete {
+-		ipc.deleteLocked(prefix.String(), id.Source)
+-	}
+
+ 	return remainingPrefixes, mutated, err
+ }
+@@ -650,7 +655,19 @@ func (ipc *IPCache) UpdatePolicyMaps(ctx context.Context, addedIdentities, delet
+ 	}
+
+ 	policyImplementedWG := ipc.DatapathHandler.UpdatePolicyMaps(ctx, &wg)
+-	policyImplementedWG.Wait()
++
++	implemented := make(chan struct{})
++	go func() {
++		policyImplementedWG.Wait()
++		close(implemented)
++	}()
++	select {
++	case <-implemented:
++	case <-ctx.Done():
++	case <-time.After(policyMapUpdateTimeout):
++		log.WithField(logfields.Duration, policyMapUpdateTimeout).
++			Warning("Timed out waiting for policy map updates to be applied to all endpoints")
++	}
+
+ 	return mutated
+ }

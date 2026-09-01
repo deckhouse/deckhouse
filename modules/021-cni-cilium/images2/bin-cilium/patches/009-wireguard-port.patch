@@ -1,0 +1,39 @@
+diff --git a/.github/actions/bpftrace/scripts/check-encryption-leaks.bt b/.github/actions/bpftrace/scripts/check-encryption-leaks.bt
+index 66130419e0..ad0b988a4c 100644
+--- a/.github/actions/bpftrace/scripts/check-encryption-leaks.bt
++++ b/.github/actions/bpftrace/scripts/check-encryption-leaks.bt
+@@ -31,7 +31,7 @@
+ #define PORT_VXLAN 8472
+ #define PORT_GENEVE 6081
+ #define PORT_DNS 53
+-#define PORT_WIREGUARD 51871
++#define PORT_WIREGUARD 4287
+
+ #define TYPE_PROXY_L7_IP4 1
+ #define TYPE_PROXY_L7_IP6 2
+diff --git a/bpf/node_config.h b/bpf/node_config.h
+index 737ce86f8a..81f5c84e3b 100644
+--- a/bpf/node_config.h
++++ b/bpf/node_config.h
+@@ -291,7 +291,7 @@ DEFINE_IPV6(HOST_IP, 0xbe, 0xef, 0x0, 0x0, 0x0, 0x0, 0x0, 0x1, 0x0, 0x0, 0xa, 0x
+
+ #ifdef ENABLE_WIREGUARD
+ # define WG_IFINDEX	42
+-# define WG_PORT    51871
++# define WG_PORT    4287
+ # ifdef ENCRYPTION_STRICT_MODE
+ #  define STRICT_IPV4_NET	0
+ #  define STRICT_IPV4_NET_SIZE	8
+diff --git a/pkg/wireguard/types/types.go b/pkg/wireguard/types/types.go
+index 889e2a4548..bd71b55e13 100644
+--- a/pkg/wireguard/types/types.go
++++ b/pkg/wireguard/types/types.go
+@@ -6,7 +6,7 @@ package types
+
+ const (
+ 	// ListenPort is the port on which the WireGuard tunnel device listens on
+-	ListenPort = 51871
++	ListenPort = 4287
+ 	// IfaceName is the name of the WireGuard tunnel device
+ 	IfaceName = "cilium_wg0"
+ 	// PrivKeyFilename is the name of the WireGuard private key file

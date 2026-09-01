@@ -1,15 +1,11 @@
 # #####################################################################
-# Description: gops — утилита диагностики Go-процессов. Используется в runtime.
-# Target: агент, hubble-relay.
-# Хлебные крошки:
-# - cilium/cilium: images/runtime/Dockerfile (стадия go-builder)
-# - cilium/cilium: images/runtime/build-gops.sh
+# Build gops binaries
+# Based on https://github.com/cilium/cilium/blob/v1.17.4/images/runtime/Dockerfile (gops-cni-builder stage)
+# and https://github.com/cilium/cilium/blob/v1.17.4/images/runtime/build-gops.sh
 # #####################################################################
-
-{{- $gopsVersion := include "get_oss_version_by_id" (list "gops" $) }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-from: {{ index $.Images "builder/src" }}
+fromImage: common/src-artifact
 final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
@@ -22,10 +18,10 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $gopsVersion }} $(cat /run/secrets/SOURCE_REPO)/google/gops.git /src
-  - cd /src
-    git apply --verbose --allow-empty /patches/*.patch
-  - rm -rf /src/.git
+  - git clone --depth 1 --branch v{{ include "get_oss_version_by_id" (list "gops" $ ) }} $(cat /run/secrets/SOURCE_REPO)/google/gops.git /src/gops
+  - cd /src/gops
+  - ls /patches/*.patch >/dev/null 2>&1 && git apply --verbose --allow-empty /patches/*.patch
+  - rm -rf /src/gops/.git
 ---
 image: {{ .ModuleName }}/gops-artifact
 from: {{ index $.Images "builder/golang" }}

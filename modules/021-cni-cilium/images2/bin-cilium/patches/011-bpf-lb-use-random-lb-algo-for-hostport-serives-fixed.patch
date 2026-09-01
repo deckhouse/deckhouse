@@ -1,0 +1,110 @@
+From be5b6700ea9160665c79c904b5692af28316b053 Mon Sep 17 00:00:00 2001
+From: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+Date: Thu, 31 Jul 2025 17:13:02 +0300
+Subject: [PATCH] bpf: lb: use random lb algo for hostport serives, fixed lb
+ algo selection logic in run-time
+
+Signed-off-by: Dmitriy Andreychenko <dmitriy.andreychenko@flant.com>
+---
+ bpf/lib/lb.h | 34 ++++++++++++++++++++++++++--------
+ 1 file changed, 26 insertions(+), 8 deletions(-)
+
+diff --git a/bpf/lib/lb.h b/bpf/lib/lb.h
+index 15dacfa4df..9a6fee3035 100644
+--- a/bpf/lib/lb.h
++++ b/bpf/lib/lb.h
+@@ -692,7 +692,6 @@ struct lb6_service *lb6_lookup_backend_slot(struct __ctx_buff *ctx __maybe_unuse
+ 	return NULL;
+ }
+ 
+-#if defined(LB_SELECTION_PER_SERVICE) || LB_SELECTION == LB_SELECTION_RANDOM
+ static __always_inline __u32
+ lb6_select_backend_id_random(struct __ctx_buff *ctx,
+ 			     struct lb6_key *key,
+@@ -705,7 +704,6 @@ lb6_select_backend_id_random(struct __ctx_buff *ctx,
+ 
+ 	return be ? be->backend_id : 0;
+ }
+-#endif  /* defined(LB_SELECTION_PER_SERVICE) || LB_SELECTION == LB_SELECTION_RANDOM */
+ 
+ #if defined(LB_SELECTION_PER_SERVICE) || LB_SELECTION == LB_SELECTION_MAGLEV
+ static __always_inline __u32
+@@ -751,9 +749,16 @@ lb6_select_backend_id(struct __ctx_buff *ctx, struct lb6_key *key,
+ 	case LB_SELECTION_RANDOM:
+ 		return lb6_select_backend_id_random(ctx, key, tuple, svc);
+ 	default:
+-		return 0;
++#if LB_SELECTION == LB_SELECTION_RANDOM
++		return lb6_select_backend_id_random(ctx, key, tuple, svc);
++#elif LB_SELECTION == LB_SELECTION_MAGLEV
++		return lb6_select_backend_id_maglev(ctx, key, tuple, svc);
++#else
++# error "Invalid load balancer backend selection algorithm!"
++#endif /* LB_SELECTION */
+ 	}
+ }
++
+ #elif LB_SELECTION == LB_SELECTION_RANDOM
+ # define lb6_select_backend_id	lb6_select_backend_id_random
+ #elif LB_SELECTION == LB_SELECTION_MAGLEV
+@@ -984,7 +989,11 @@ static __always_inline int lb6_local(const void *map, struct __ctx_buff *ctx,
+ 		}
+ #endif
+ 		if (backend_id == 0) {
+-			backend_id = lb6_select_backend_id(ctx, key, tuple, svc);
++			if (lb6_svc_is_hostport(svc)) {
++				backend_id = lb6_select_backend_id_random(ctx, key, tuple, svc);
++			} else {
++				backend_id = lb6_select_backend_id(ctx, key, tuple, svc);
++			}
+ 			backend = lb6_lookup_backend(ctx, backend_id);
+ 			if (backend == NULL)
+ 				goto no_service;
+@@ -1412,7 +1421,6 @@ struct lb4_service *lb4_lookup_backend_slot(struct __ctx_buff *ctx __maybe_unuse
+ 	return NULL;
+ }
+ 
+-#if defined(LB_SELECTION_PER_SERVICE) || LB_SELECTION == LB_SELECTION_RANDOM
+ static __always_inline __u32
+ lb4_select_backend_id_random(struct __ctx_buff *ctx,
+ 			     struct lb4_key *key,
+@@ -1425,7 +1433,6 @@ lb4_select_backend_id_random(struct __ctx_buff *ctx,
+ 
+ 	return be ? be->backend_id : 0;
+ }
+-#endif /* LB_SELECTION_PER_SERVICE || LB_SELECTION == LB_SELECTION_RANDOM */
+ 
+ #if defined(LB_SELECTION_PER_SERVICE) || LB_SELECTION == LB_SELECTION_MAGLEV
+ static __always_inline __u32
+@@ -1474,7 +1481,13 @@ lb4_select_backend_id(struct __ctx_buff *ctx, struct lb4_key *key,
+ 	case LB_SELECTION_RANDOM:
+ 		return lb4_select_backend_id_random(ctx, key, tuple, svc);
+ 	default:
+-		return 0;
++#if LB_SELECTION == LB_SELECTION_RANDOM
++		return lb4_select_backend_id_random(ctx, key, tuple, svc);
++#elif LB_SELECTION == LB_SELECTION_MAGLEV
++		return lb4_select_backend_id_maglev(ctx, key, tuple, svc);
++#else
++# error "Invalid load balancer backend selection algorithm!"
++#endif /* LB_SELECTION */
+ 	}
+ }
+ #elif LB_SELECTION == LB_SELECTION_RANDOM
+@@ -1747,7 +1760,12 @@ static __always_inline int lb4_local(const void *map, struct __ctx_buff *ctx,
+ #endif
+ 		if (backend_id == 0) {
+ 			/* No CT entry has been found, so select a svc endpoint */
+-			backend_id = lb4_select_backend_id(ctx, key, tuple, svc);
++			if (lb4_svc_is_hostport(svc)) {
++				backend_id = lb4_select_backend_id_random(ctx, key, tuple, svc);
++			} else {
++				backend_id = lb4_select_backend_id(ctx, key, tuple, svc);
++			}
++
+ 			backend = lb4_lookup_backend(ctx, backend_id);
+ 			if (backend == NULL)
+ 				goto no_service;
+-- 
+2.34.1
+
