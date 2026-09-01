@@ -59,6 +59,76 @@ func GetReadyEndpoints(
 	return getEndpoints(ctx, kubeCl, true)
 }
 
+// GetReadyHostsForNodes returns sorted unique InternalIP addresses of the
+// specified nodes that are currently published as ready API server endpoints.
+func GetReadyHostsForNodes(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+	nodeNames []string,
+) ([]string, error) {
+	if len(nodeNames) == 0 {
+		return nil, errors.New("no control-plane nodes specified")
+	}
+
+	endpoints, err := GetReadyEndpoints(ctx, kubeCl)
+	if err != nil {
+		return nil, err
+	}
+
+	readyHosts := make(map[string]struct{}, len(endpoints))
+	for _, endpoint := range endpoints {
+		host, _, err := net.SplitHostPort(endpoint)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"split API server endpoint %q: %w",
+				endpoint,
+				err,
+			)
+		}
+
+		readyHosts[host] = struct{}{}
+	}
+
+	hosts := make(map[string]struct{}, len(nodeNames))
+
+	for _, nodeName := range nodeNames {
+		node, err := kubeCl.CoreV1().
+			Nodes().
+			Get(ctx, nodeName, metav1.GetOptions{})
+		if err != nil {
+			return nil, fmt.Errorf(
+				"get control-plane node %q: %w",
+				nodeName,
+				err,
+			)
+		}
+
+		found := false
+
+		for _, address := range node.Status.Addresses {
+			if address.Type != corev1.NodeInternalIP || address.Address == "" {
+				continue
+			}
+
+			if _, ok := readyHosts[address.Address]; !ok {
+				continue
+			}
+
+			hosts[address.Address] = struct{}{}
+			found = true
+		}
+
+		if !found {
+			return nil, fmt.Errorf(
+				"control-plane node %q has no ready API server endpoint",
+				nodeName,
+			)
+		}
+	}
+
+	return slices.Sorted(maps.Keys(hosts)), nil
+}
+
 // getEndpoints returns sorted unique API server endpoints in host:port format.
 // It merges non-terminating kube-apiserver Pods with the kubernetes EndpointSlice.
 // Readiness is intentionally not checked; callers that require ready endpoints
