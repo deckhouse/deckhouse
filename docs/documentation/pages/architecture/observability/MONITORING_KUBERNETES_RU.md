@@ -21,7 +21,7 @@ description: Архитектура модуля monitoring-kubernetes в Deckho
 
 Архитектура модуля [`monitoring-kubernetes`](/modules/monitoring-kubernetes/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
 
-![Архитектура модуля monitoring-kubernetes](../../../images/architecture/observability/c4-l2-monitoring-kubernetes.ru.png)
+![Архитектура модуля monitoring-kubernetes](../../images/architecture/observability/c4-l2-monitoring-kubernetes.ru.png)
 
 ## Компоненты модуля
 
