@@ -1,8 +1,8 @@
 # TEST FIXTURE. Minimal InstanceClass CRD standing in for a provider-owned one, so the consumer
 # sync has a registered kind to write status.nodeGroupConsumers on. Schema-free.
 #
-# No `subresources` section, exactly like every real provider's InstanceClass: the status is part
-# of the main resource, and a patch of the status subresource would not reach it.
+# No `subresources` section, like every real provider's InstanceClass — checked in all eleven
+# candi/openapi/instance_class.yaml (and the DVP crds/ one).
 apiVersion: apiextensions.k8s.io/v1
 kind: CustomResourceDefinition
 metadata:

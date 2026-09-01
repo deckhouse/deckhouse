@@ -63,11 +63,12 @@ type Status struct {
 	cache            cache.Cache
 	conditionService ngconditions.Service
 
-	// sweepMu serializes syncInstanceClassConsumers across the workers of this controller: the
-	// sweep is a cluster-wide read-then-write over objects no single NodeGroup owns, so two of
-	// them would race and the loser could republish a stale NodeGroup list.
-	sweepMu sync.Mutex
-	// unstorableConsumers holds the kinds whose CRD schema prunes the consumers field away.
+	// sweepMu guards the two flags below and nothing else; it is never held across a sweep.
+	sweepMu    sync.Mutex
+	sweeping   bool
+	sweepDirty bool
+	// unstorableConsumers holds the kinds whose accepted consumers patch did not come back in
+	// the response. Only a sweep touches it, and the flags above keep sweeps from overlapping.
 	unstorableConsumers map[schema.GroupVersionKind]bool
 }
 
@@ -115,12 +116,9 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	logger := log.FromContext(ctx)
 	logger.V(1).Info("reconciling nodegroup status", "name", req.Name)
 
-	// A cluster-wide sweep, so it runs before the NodeGroup read: a delete event arrives with
-	// the object already gone and must still clear the class it used to hold. The error is
-	// logged, not returned, so an unwritable InstanceClass cannot block the NodeGroup status.
-	if err := r.syncInstanceClassConsumers(ctx); err != nil {
-		logger.Error(err, "sync instance class consumers")
-	}
+	// A cluster-wide sweep, so it runs before the NodeGroup read: on a delete event the object
+	// is already gone and the class it referenced still has to be cleared.
+	r.sweepInstanceClassConsumers(ctx)
 
 	ng, err := nodecommon.GetNodeGroup(ctx, r.Client, req.Name)
 	if err != nil {
