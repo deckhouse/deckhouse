@@ -308,6 +308,7 @@ type NodeRunnerOptions struct {
 	StateCache                       dstate.Cache
 	AdditionalStateSaverDestinations []SaverDestination
 	Hook                             InfraActionHook
+	VariablesRefresher               VariablesRefresher
 }
 
 func (f *Context) GetConvergeNodeRunner(ctx context.Context, metaConfig *config.MetaConfig, opts NodeRunnerOptions, automaticSettings AutomaticSettings) (RunnerInterface, error) {
@@ -323,6 +324,7 @@ func (f *Context) GetConvergeNodeRunner(ctx context.Context, metaConfig *config.
 
 	r := f.newRunner(metaConfig, opts.StateCache, executor).
 		WithVariables(metaConfig.NodeGroupConfig(opts.NodeGroupName, opts.NodeIndex, opts.NodeCloudConfig)).
+		WithVariablesRefresher(opts.VariablesRefresher).
 		WithSkipChangesOnDeny(true).
 		WithName(opts.NodeName).
 		WithHook(opts.Hook)
