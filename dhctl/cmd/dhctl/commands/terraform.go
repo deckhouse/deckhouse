@@ -93,6 +93,7 @@ func DefineInfrastructureCheckCommand(cmd *kingpin.CmdClause, opts *options.Opti
 	app.DefineOutputFlag(cmd, &opts.Converge)
 	app.DefineSSHFlags(cmd, &opts.SSH, nil)
 	app.DefineBecomeFlags(cmd, &opts.Become)
+	app.DefineCacheFlags(cmd, &opts.Cache)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)

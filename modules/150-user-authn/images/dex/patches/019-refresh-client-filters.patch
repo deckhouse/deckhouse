@@ -1,0 +1,644 @@
+diff --git a/server/client_filters_test.go b/server/client_filters_test.go
+new file mode 100644
+index 0000000..c962a99
+--- /dev/null
++++ b/server/client_filters_test.go
+@@ -0,0 +1,461 @@
++package server
++
++import (
++	"bytes"
++	"context"
++	"encoding/json"
++	"net/http"
++	"net/http/httptest"
++	"net/url"
++	"path"
++	"strings"
++	"testing"
++	"time"
++
++	"github.com/stretchr/testify/require"
++	"golang.org/x/crypto/bcrypt"
++
++	"github.com/dexidp/dex/connector"
++	"github.com/dexidp/dex/server/internal"
++	"github.com/dexidp/dex/storage"
++)
++
++func TestApplyClientAccessFilters(t *testing.T) {
++	tests := []struct {
++		name           string
++		client         storage.Client
++		claims         storage.Claims
++		expectedGroups []string
++		expectedErr    bool
++	}{
++		{
++			name:           "no allowlists keeps groups",
++			claims:         storage.Claims{Email: "jane@example.com", Groups: []string{"d8-users", "d8-users-test"}},
++			expectedGroups: []string{"d8-users", "d8-users-test"},
++		},
++		{
++			name:           "email allow-list accepts matching address",
++			client:         storage.Client{AllowedEmails: []string{"jane@example.com"}},
++			claims:         storage.Claims{Email: "jane@example.com", Groups: []string{"d8-users"}},
++			expectedGroups: []string{"d8-users"},
++		},
++		{
++			name:        "email allow-list rejects other address",
++			client:      storage.Client{AllowedEmails: []string{"jane@example.com"}},
++			claims:      storage.Claims{Email: "john@example.com"},
++			expectedErr: true,
++		},
++		{
++			name:           "group allow-list keeps intersection and drops the rest",
++			client:         storage.Client{AllowedGroups: []string{"d8-users"}},
++			claims:         storage.Claims{Email: "both@example.com", Groups: []string{"d8-users", "d8-users-test"}},
++			expectedGroups: []string{"d8-users"},
++		},
++		{
++			name:        "group allow-list rejects empty intersection",
++			client:      storage.Client{AllowedGroups: []string{"d8-users-test"}},
++			claims:      storage.Claims{Email: "jane@example.com", Groups: []string{"d8-users"}},
++			expectedErr: true,
++		},
++		{
++			name:        "group allow-list rejects user with no groups",
++			client:      storage.Client{AllowedGroups: []string{"d8-users"}},
++			claims:      storage.Claims{Email: "jane@example.com"},
++			expectedErr: true,
++		},
++	}
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			claims := tc.claims
++			err := applyClientAccessFilters(tc.client, &claims)
++			if tc.expectedErr {
++				require.Error(t, err)
++				var nae *NotAllowedError
++				require.ErrorAs(t, err, &nae)
++				return
++			}
++			require.NoError(t, err)
++			require.Equal(t, tc.expectedGroups, claims.Groups)
++		})
++	}
++}
++
++func TestHandlePasswordLoginClientFilters(t *testing.T) {
++	ctx := t.Context()
++	hash, err := bcrypt.GenerateFromPassword([]byte("correct-password"), bcrypt.DefaultCost)
++	require.NoError(t, err)
++
++	tests := []struct {
++		name          string
++		allowedGroups []string
++		userGroups    []string
++		expectedCode  int
++	}{
++		{
++			name:          "login allowed when user is in allowedGroups",
++			allowedGroups: []string{"d8-users"},
++			userGroups:    []string{"d8-users"},
++			expectedCode:  http.StatusSeeOther,
++		},
++		{
++			name:          "login denied when user is only in another group",
++			allowedGroups: []string{"d8-users"},
++			userGroups:    []string{"d8-users-test"},
++			expectedCode:  http.StatusUnauthorized,
++		},
++	}
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			httpServer, s := newTestServer(t, func(c *Config) {
++				c.SkipApprovalScreen = false
++				c.Now = time.Now
++			})
++			defer httpServer.Close()
++
++			sc := storage.Connector{
++				ID:              "local",
++				Type:            "local",
++				Name:            "Local",
++				ResourceVersion: "1",
++			}
++			require.NoError(t, s.storage.CreateConnector(ctx, sc))
++			if _, err := s.OpenConnector(sc); err != nil {
++				t.Fatalf("open connector: %v", err)
++			}
++			require.NoError(t, s.storage.CreateClient(ctx, storage.Client{
++				ID:            "client_1",
++				Secret:        "secret",
++				RedirectURIs:  []string{"cb"},
++				Name:          "test",
++				AllowedGroups: tc.allowedGroups,
++			}))
++			require.NoError(t, s.storage.CreateAuthRequest(ctx, storage.AuthRequest{
++				ID:                  "test",
++				ClientID:            "client_1",
++				ConnectorID:         "local",
++				RedirectURI:         "cb",
++				Expiry:              time.Now().Add(100 * time.Second),
++				ResponseTypes:       []string{responseTypeCode},
++				ForceApprovalPrompt: true,
++			}))
++			require.NoError(t, s.storage.CreatePassword(ctx, storage.Password{
++				Email:    "jane@example.com",
++				Username: "jane",
++				UserID:   "jane-id",
++				Hash:     hash,
++				Groups:   tc.userGroups,
++			}))
++
++			rr := httptest.NewRecorder()
++			path := "/auth/local/login?state=test&back=&login=jane@example.com&password=correct-password"
++			s.handlePasswordLogin(rr, httptest.NewRequest("POST", path, nil))
++			require.Equal(t, tc.expectedCode, rr.Code)
++		})
++	}
++}
++
++func TestHandleRefreshTokenClientFilters(t *testing.T) {
++	now := time.Now()
++	accessDeniedBody := `{"error":"access_denied","error_description":"User is not allowed."}`
++
++	tests := []struct {
++		name           string
++		allowedEmails  []string
++		allowedGroups  []string
++		storedGroups   []string
++		storedEmail    string
++		policy         *RefreshTokenPolicy
++		refreshGroups  []string
++		refreshEmail   string
++		expectedStatus int
++		expectedBody   string
++	}{
++		{
++			name:           "refresh allowed when stored groups still match allowedGroups",
++			allowedGroups:  []string{"d8-users"},
++			storedGroups:   []string{"d8-users"},
++			storedEmail:    "jane@example.com",
++			policy:         &RefreshTokenPolicy{rotateRefreshTokens: false, reuseInterval: time.Hour, now: func() time.Time { return now }},
++			expectedStatus: http.StatusOK,
++		},
++		{
++			name:           "refresh denied after allowedGroups no longer contains stored group",
++			allowedGroups:  []string{"d8-users-test"},
++			storedGroups:   []string{"d8-users"},
++			storedEmail:    "jane@example.com",
++			policy:         &RefreshTokenPolicy{rotateRefreshTokens: false, reuseInterval: time.Hour, now: func() time.Time { return now }},
++			expectedStatus: http.StatusUnauthorized,
++			expectedBody:   accessDeniedBody,
++		},
++		{
++			name:           "refresh denied after allowedEmails no longer contains stored email",
++			allowedEmails:  []string{"other@example.com"},
++			storedGroups:   []string{"d8-users"},
++			storedEmail:    "jane@example.com",
++			policy:         &RefreshTokenPolicy{rotateRefreshTokens: false, reuseInterval: time.Hour, now: func() time.Time { return now }},
++			expectedStatus: http.StatusUnauthorized,
++			expectedBody:   accessDeniedBody,
++		},
++		{
++			name:           "refresh denied when upstream refresh returns groups outside allowedGroups",
++			allowedGroups:  []string{"d8-users"},
++			storedGroups:   []string{"d8-users"},
++			storedEmail:    "jane@example.com",
++			policy:         &RefreshTokenPolicy{rotateRefreshTokens: true, now: func() time.Time { return now }},
++			refreshGroups:  []string{"d8-users-test"},
++			refreshEmail:   "jane@example.com",
++			expectedStatus: http.StatusUnauthorized,
++			expectedBody:   accessDeniedBody,
++		},
++	}
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			httpServer, s := newTestServer(t, func(c *Config) {
++				c.RefreshTokenPolicy = tc.policy
++				c.Now = func() time.Time { return now }
++			})
++			defer httpServer.Close()
++
++			createRefreshFilterFixtures(t, s.storage, tc.storedEmail, tc.storedGroups, tc.allowedEmails, tc.allowedGroups)
++
++			if tc.refreshGroups != nil {
++				s.mu.Lock()
++				orig := s.connectors["test"]
++				s.connectors["test"] = Connector{
++					ResourceVersion: orig.ResourceVersion,
++					Connector: groupsRefreshConnector{
++						email:  tc.refreshEmail,
++						groups: tc.refreshGroups,
++					},
++				}
++				s.mu.Unlock()
++			}
++
++			tokenData, err := internal.Marshal(&internal.RefreshToken{RefreshId: "test", Token: "bar"})
++			require.NoError(t, err)
++
++			u, err := url.Parse(s.issuerURL.String())
++			require.NoError(t, err)
++			u.Path = path.Join(u.Path, "/token")
++
++			form := url.Values{}
++			form.Set("grant_type", "refresh_token")
++			form.Set("refresh_token", tokenData)
++
++			req, err := http.NewRequest(http.MethodPost, u.String(), bytes.NewBufferString(form.Encode()))
++			require.NoError(t, err)
++			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++			req.SetBasicAuth("test", "barfoo")
++
++			rr := httptest.NewRecorder()
++			s.ServeHTTP(rr, req)
++			require.Equal(t, tc.expectedStatus, rr.Code)
++			if tc.expectedBody != "" {
++				require.JSONEq(t, tc.expectedBody, rr.Body.String())
++			}
++			if tc.expectedStatus == http.StatusOK {
++				var ref struct {
++					Error string `json:"error"`
++				}
++				require.NoError(t, json.Unmarshal(rr.Body.Bytes(), &ref))
++				require.Empty(t, ref.Error)
++				_, err := s.storage.GetRefresh(t.Context(), "test")
++				require.NoError(t, err)
++				return
++			}
++			_, err = s.storage.GetRefresh(t.Context(), "test")
++			require.ErrorIs(t, err, storage.ErrNotFound)
++		})
++	}
++}
++
++func createRefreshFilterFixtures(t *testing.T, s storage.Storage, email string, groups, allowedEmails, allowedGroups []string) {
++	t.Helper()
++	ctx := t.Context()
++
++	require.NoError(t, s.CreateClient(ctx, storage.Client{
++		ID:            "test",
++		Secret:        "barfoo",
++		RedirectURIs:  []string{"foo://bar.com/", "https://auth.example.com"},
++		Name:          "dex client",
++		AllowedEmails: allowedEmails,
++		AllowedGroups: allowedGroups,
++	}))
++	require.NoError(t, s.CreateConnector(ctx, storage.Connector{
++		ID:   "test",
++		Type: "mockCallback",
++		Name: "mockCallback",
++	}))
++	require.NoError(t, s.CreateRefresh(ctx, storage.RefreshToken{
++		ID:          "test",
++		Token:       "bar",
++		Nonce:       "foo",
++		ClientID:    "test",
++		ConnectorID: "test",
++		Scopes:      []string{"openid", "email", "profile", "groups"},
++		CreatedAt:   time.Now().UTC().Round(time.Millisecond),
++		LastUsed:    time.Now().UTC().Round(time.Millisecond),
++		Claims: storage.Claims{
++			UserID:        "1",
++			Username:      "jane",
++			Email:         email,
++			EmailVerified: true,
++			Groups:        groups,
++		},
++	}))
++	require.NoError(t, s.CreateOfflineSessions(ctx, storage.OfflineSessions{
++		UserID:  "1",
++		ConnID:  "test",
++		Refresh: map[string]*storage.RefreshTokenRef{"test": {ID: "test", ClientID: "test"}},
++	}))
++}
++
++// groupsRefreshConnector returns a fixed email and group set from Refresh,
++// so tests can simulate an upstream directory change without LDAP.
++type groupsRefreshConnector struct {
++	email  string
++	groups []string
++}
++
++func (c groupsRefreshConnector) Refresh(_ context.Context, _ connector.Scopes, ident connector.Identity) (connector.Identity, error) {
++	ident.Email = c.email
++	ident.Groups = append([]string(nil), c.groups...)
++	return ident, nil
++}
++
++func TestHandlePasswordLoginClientFiltersEmailDeny(t *testing.T) {
++	ctx := t.Context()
++	hash, err := bcrypt.GenerateFromPassword([]byte("correct-password"), bcrypt.DefaultCost)
++	require.NoError(t, err)
++
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.SkipApprovalScreen = false
++		c.Now = time.Now
++	})
++	defer httpServer.Close()
++
++	sc := storage.Connector{ID: "local", Type: "local", Name: "Local", ResourceVersion: "1"}
++	require.NoError(t, s.storage.CreateConnector(ctx, sc))
++	if _, err := s.OpenConnector(sc); err != nil {
++		t.Fatalf("open connector: %v", err)
++	}
++	require.NoError(t, s.storage.CreateClient(ctx, storage.Client{
++		ID:            "client_1",
++		Secret:        "secret",
++		RedirectURIs:  []string{"cb"},
++		Name:          "test",
++		AllowedEmails: []string{"other@example.com"},
++	}))
++	require.NoError(t, s.storage.CreateAuthRequest(ctx, storage.AuthRequest{
++		ID:                  "test",
++		ClientID:            "client_1",
++		ConnectorID:         "local",
++		RedirectURI:         "cb",
++		Expiry:              time.Now().Add(100 * time.Second),
++		ResponseTypes:       []string{responseTypeCode},
++		ForceApprovalPrompt: true,
++	}))
++	require.NoError(t, s.storage.CreatePassword(ctx, storage.Password{
++		Email:    "jane@example.com",
++		Username: "jane",
++		UserID:   "jane-id",
++		Hash:     hash,
++	}))
++
++	rr := httptest.NewRecorder()
++	s.handlePasswordLogin(rr, httptest.NewRequest("POST",
++		"/auth/local/login?state=test&back=&login=jane@example.com&password=correct-password", nil))
++	require.Equal(t, http.StatusUnauthorized, rr.Code)
++}
++
++func TestHandlePasswordGrantClientFilters(t *testing.T) {
++	tests := []struct {
++		name          string
++		allowedEmails []string
++		allowedGroups []string
++		expectedCode  int
++	}{
++		{
++			name:         "password grant allowed when no allow-list",
++			expectedCode: http.StatusOK,
++		},
++		{
++			name:          "password grant denied when email is not listed",
++			allowedEmails: []string{"other@example.com"},
++			expectedCode:  http.StatusUnauthorized,
++		},
++		{
++			name:          "password grant denied when groups do not intersect",
++			allowedGroups: []string{"d8-users"},
++			expectedCode:  http.StatusUnauthorized,
++		},
++	}
++
++	for _, tc := range tests {
++		t.Run(tc.name, func(t *testing.T) {
++			httpServer, s := newTestServer(t, func(c *Config) {
++				c.PasswordConnector = "test"
++				c.Now = time.Now
++			})
++			defer httpServer.Close()
++			mockConnectorDataTestStorage(t, s.storage)
++			require.NoError(t, s.storage.UpdateClient(t.Context(), "test", func(old storage.Client) (storage.Client, error) {
++				old.AllowedEmails = tc.allowedEmails
++				old.AllowedGroups = tc.allowedGroups
++				return old, nil
++			}))
++
++			u, err := url.Parse(s.issuerURL.String())
++			require.NoError(t, err)
++			u.Path = path.Join(u.Path, "/token")
++			v := url.Values{}
++			v.Set("scope", "openid email")
++			v.Set("grant_type", "password")
++			v.Set("username", "test")
++			v.Set("password", "test")
++			req, err := http.NewRequest(http.MethodPost, u.String(), bytes.NewBufferString(v.Encode()))
++			require.NoError(t, err)
++			req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
++			req.SetBasicAuth("test", "barfoo")
++
++			rr := httptest.NewRecorder()
++			s.ServeHTTP(rr, req)
++			require.Equal(t, tc.expectedCode, rr.Code, rr.Body.String())
++			if tc.expectedCode == http.StatusUnauthorized {
++				require.Contains(t, rr.Body.String(), "access_denied")
++			}
++		})
++	}
++}
++
++func TestHandleTokenExchangeClientFilters(t *testing.T) {
++	ctx := t.Context()
++	httpServer, s := newTestServer(t, func(c *Config) {
++		c.Storage.CreateClient(ctx, storage.Client{
++			ID:            "client_1",
++			Secret:        "secret_1",
++			AllowedEmails: []string{"other@example.com"},
++		})
++	})
++	defer httpServer.Close()
++
++	vals := make(url.Values)
++	vals.Set("grant_type", grantTypeTokenExchange)
++	vals.Set("connector_id", "mock")
++	vals.Set("scope", "openid")
++	vals.Set("requested_token_type", tokenTypeAccess)
++	vals.Set("subject_token_type", tokenTypeID)
++	vals.Set("subject_token", "foobar")
++	vals.Set("client_id", "client_1")
++	vals.Set("client_secret", "secret_1")
++
++	rr := httptest.NewRecorder()
++	req := httptest.NewRequest(http.MethodPost, httpServer.URL+"/token", strings.NewReader(vals.Encode()))
++	req.Header.Set("content-type", "application/x-www-form-urlencoded")
++	s.handleToken(rr, req)
++	require.Equal(t, http.StatusUnauthorized, rr.Code, rr.Body.String())
++	require.Contains(t, rr.Body.String(), "access_denied")
++}
+diff --git a/server/handlers.go b/server/handlers.go
+index 8bcec46..e8567ee 100644
+--- a/server/handlers.go
++++ b/server/handlers.go
+@@ -773,6 +773,22 @@ func (e *NotAllowedError) Error() string {
+ 	return "not allowed: " + e.Reason
+ }
+ 
++// applyClientAccessFilters enforces DexClient allowedEmails / allowedGroups on
++// the claims that will be issued. Groups are reduced to the intersection with
++// allowedGroups. An empty allow-list means no restriction.
++func applyClientAccessFilters(client storage.Client, claims *storage.Claims) error {
++	if len(client.AllowedEmails) > 0 && !slices.Contains(client.AllowedEmails, claims.Email) {
++		return &NotAllowedError{Reason: fmt.Sprintf("Email %s not allowed", claims.Email)}
++	}
++	if len(client.AllowedGroups) > 0 {
++		claims.Groups = groups.Filter(claims.Groups, client.AllowedGroups)
++		if len(claims.Groups) == 0 {
++			return &NotAllowedError{Reason: fmt.Sprintf("Email %s not in allowed groups", claims.Email)}
++		}
++	}
++	return nil
++}
++
+ // recordOfflineSessionFailedAttempt increments the failed-attempt counter on
+ // the OfflineSessions object for (identity.UserID, connID) and applies a
+ // lockout when the configured threshold is reached.
+@@ -851,21 +867,11 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
+ 
+ 	client, err := s.storage.GetClient(ctx, authReq.ClientID)
+ 	if err != nil {
+-		return "", false, fmt.Errorf("failed to retrieve client")
++		return "", false, fmt.Errorf("failed to retrieve client: %w", err)
+ 	}
+ 
+-	if len(client.AllowedEmails) > 0 {
+-		allowed := slices.Contains(client.AllowedEmails, claims.Email)
+-		if !allowed {
+-			return "", false, &NotAllowedError{Reason: fmt.Sprintf("Email %s not allowed", claims.Email)}
+-		}
+-	}
+-
+-	if len(client.AllowedGroups) > 0 {
+-		claims.Groups = groups.Filter(claims.Groups, client.AllowedGroups)
+-		if len(claims.Groups) == 0 {
+-			return "", false, &NotAllowedError{Reason: fmt.Sprintf("Email %s not in allowed groups", claims.Email)}
+-		}
++	if err := applyClientAccessFilters(client, &claims); err != nil {
++		return "", false, err
+ 	}
+ 
+ 	updater := func(a storage.AuthRequest) (storage.AuthRequest, error) {
+@@ -1805,6 +1811,16 @@ func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, cli
+ 		Groups:            identity.Groups,
+ 	}
+ 
++	if err := applyClientAccessFilters(client, &claims); err != nil {
++		s.logger.WarnContext(r.Context(), "password grant denied by client access filter",
++			"client_id", client.ID,
++			"email", claims.Email,
++			"err", err,
++		)
++		s.tokenErrHelper(w, errAccessDenied, "User is not allowed.", http.StatusUnauthorized)
++		return
++	}
++
+ 	accessToken, _, err := s.newAccessToken(ctx, client.ID, claims, scopes, nonce, connID)
+ 	if err != nil {
+ 		s.logger.ErrorContext(r.Context(), "password grant failed to create new access token", "err", err)
+@@ -2009,6 +2025,15 @@ func (s *Server) handleTokenExchange(w http.ResponseWriter, r *http.Request, cli
+ 		EmailVerified:     identity.EmailVerified,
+ 		Groups:            identity.Groups,
+ 	}
++	if err := applyClientAccessFilters(client, &claims); err != nil {
++		s.logger.WarnContext(r.Context(), "token exchange denied by client access filter",
++			"client_id", client.ID,
++			"email", claims.Email,
++			"err", err,
++		)
++		s.tokenErrHelper(w, errAccessDenied, "User is not allowed.", http.StatusUnauthorized)
++		return
++	}
+ 	resp := accessTokenResponse{
+ 		IssuedTokenType: requestedTokenType,
+ 		TokenType:       "bearer",
+diff --git a/server/handlers_test.go b/server/handlers_test.go
+index 4611e91..603b467 100644
+--- a/server/handlers_test.go
++++ b/server/handlers_test.go
+@@ -1088,6 +1088,8 @@ func TestHandleRefreshTokenHonorsAdminLock(t *testing.T) {
+ 	s.ServeHTTP(rr, req)
+ 	require.Equal(t, http.StatusTooManyRequests, rr.Code, rr.Body.String())
+ 	require.Contains(t, rr.Body.String(), "Account locked")
++	_, err = s.storage.GetRefresh(ctx, "test")
++	require.NoError(t, err, "administrator lock must not delete the refresh token")
+ }
+ 
+ func TestHandleConnectorCallbackWithSkipApproval(t *testing.T) {
+diff --git a/server/refreshhandlers.go b/server/refreshhandlers.go
+index 162fe87..13d53af 100644
+--- a/server/refreshhandlers.go
++++ b/server/refreshhandlers.go
+@@ -47,6 +47,10 @@ func newAccountLockedRefreshError() *refreshError {
+ 	return &refreshError{msg: errAccessDenied, desc: "Account locked", code: http.StatusTooManyRequests}
+ }
+ 
++func newAccessDeniedRefreshError() *refreshError {
++	return &refreshError{msg: errAccessDenied, desc: "User is not allowed.", code: http.StatusUnauthorized}
++}
++
+ var (
+ 	invalidErr = newBadRequestError("Refresh token is invalid or has already been claimed by another client.")
+ 	expiredErr = newBadRequestError("Refresh token expired.")
+@@ -56,6 +60,15 @@ func (s *Server) refreshTokenErrHelper(w http.ResponseWriter, err *refreshError)
+ 	s.tokenErrHelper(w, err.msg, err.desc, err.code)
+ }
+ 
++func (s *Server) deleteRefreshToken(ctx context.Context, id string) {
++	if id == "" {
++		return
++	}
++	if err := s.storage.DeleteRefresh(ctx, id); err != nil && !errors.Is(err, storage.ErrNotFound) {
++		s.logger.ErrorContext(ctx, "failed to delete refresh token", "token_id", id, "err", err)
++	}
++}
++
+ func (s *Server) extractRefreshTokenFromRequest(r *http.Request) (*internal.RefreshToken, *refreshError) {
+ 	code := r.PostFormValue("refresh_token")
+ 	if code == "" {
+@@ -707,6 +720,23 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+ 		return
+ 	}
+ 
++	// Fail closed against the current DexClient allow-lists before rotating
++	// the refresh token. Login already stored the intersection of groups; a
++	// later change of allowedGroups must revoke that session.
++	// storedClaims is a copy: applyClientAccessFilters is a check, not a
++	// transformation of the token in storage.
++	storedClaims := rCtx.storageToken.Claims
++	if err := applyClientAccessFilters(client, &storedClaims); err != nil {
++		s.logger.WarnContext(r.Context(), "refresh denied by client access filter",
++			"client_id", client.ID,
++			"email", rCtx.storageToken.Claims.Email,
++			"err", err,
++		)
++		s.deleteRefreshToken(r.Context(), rCtx.storageToken.ID)
++		s.refreshTokenErrHelper(w, newAccessDeniedRefreshError())
++		return
++	}
++
+ 	newToken, ident, rerr := s.refreshTokenWithRetry(r.Context(), rCtx)
+ 	if rerr != nil {
+ 		s.refreshTokenErrHelper(w, rerr)
+@@ -722,6 +752,23 @@ func (s *Server) handleRefreshToken(w http.ResponseWriter, r *http.Request, clie
+ 		Groups:            ident.Groups,
+ 	}
+ 
++	// Connector Refresh may have returned a newer email or group set (LDAP
++	// re-queries the directory when it is actually contacted). Filter again
++	// so an upstream membership change is enforced on this response.
++	if err := applyClientAccessFilters(client, &claims); err != nil {
++		s.logger.WarnContext(r.Context(), "refresh denied by client access filter after upstream refresh",
++			"client_id", client.ID,
++			"email", claims.Email,
++			"err", err,
++		)
++		s.deleteRefreshToken(r.Context(), rCtx.storageToken.ID)
++		if newToken != nil && newToken.RefreshId != rCtx.storageToken.ID {
++			s.deleteRefreshToken(r.Context(), newToken.RefreshId)
++		}
++		s.refreshTokenErrHelper(w, newAccessDeniedRefreshError())
++		return
++	}
++
+ 	accessToken, _, err := s.newAccessToken(r.Context(), client.ID, claims, rCtx.scopes, rCtx.storageToken.Nonce, rCtx.storageToken.ConnectorID)
+ 	if err != nil {
+ 		s.logger.ErrorContext(r.Context(), "failed to create new access token", "err", err)

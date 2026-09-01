@@ -8,6 +8,7 @@ git:
 shell:
   beforeInstall:
   - pm install python@3.12 jq gnu-glibc gawk coreutils grep bash iproute2 bridge-utils procps util-linux findutils curl -d /out
+  - rm -rf /out/usr/lib/python3*/site-packages/pip* /out/usr/bin/pip3*
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 from: {{ index $.Images "base/distroless-fin" }}

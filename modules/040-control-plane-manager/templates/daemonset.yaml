@@ -47,10 +47,9 @@ memory: 10Mi
 {{- $_ := set $tpl_context "scheduler" dict }}
 {{- $_ := set $tpl_context "settings" dict }}
 {{- with .Values.controlPlaneManager.internal.resourcesRequests }}
-  {{- $_ := set $tpl_context.settings "resourcesRequests" (dict
-    "milliCPU" .milliCpuControlPlane
-    "memoryBytes" .memoryControlPlane
-  ) }}
+  {{- with .components }}
+    {{- $_ := set $tpl_context.settings "resourcesRequests" (dict "components" .) }}
+  {{- end }}
 {{- end }}
 
 {{- $allowedKubernetesVersions := list }}
@@ -336,12 +335,16 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        - name: KUBERNETES_VERSION
-          value: {{ $.Values.global.clusterConfiguration.kubernetesVersion | quote }}
         - name: ALLOWED_KUBERNETES_VERSIONS
           value: {{ $allowedKubernetesVersions | sortAlpha | join  "," | quote }}
         - name: AUTOMATIC_KUBERNETES_VERSION
           value: {{ $automaticVersion | quote }}
+        - name: DESIRED_KUBERNETES_VERSION
+          value: {{ $.Values.global.discovery.targetKubernetesVersion | quote }}
+        - name: KUBERNETES_UPDATE_MODE
+          value: {{ if $.Values.global.discovery.kubernetesVersionIsDefault }}"Automatic"{{ else }}"Manual"{{ end }}
+        - name: MAX_USED_KUBERNETES_VERSION
+          value: {{ $.Values.controlPlaneManager.internal.maxUsedKubernetesVersion | quote }}
         - name: NODE_NAME
           valueFrom:
             fieldRef:

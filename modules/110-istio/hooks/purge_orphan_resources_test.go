@@ -332,9 +332,6 @@ metadata:
 			f.ValuesSetFromYaml("istio", []byte(`
 internal:
   versionMap:
-    "1.21":
-      revision: "v1x21"
-      supportsOperator: true
     "1.25":
       revision: "v1x25"
       supportsOperator: true
@@ -362,10 +359,10 @@ metadata:
 apiVersion: install.istio.io/v1alpha1
 kind: IstioOperator
 metadata:
-  name: v1x21
+  name: v1x25
   namespace: d8-istio
 spec:
-  revision: v1x21
+  revision: v1x25
 ---
 apiVersion: sailoperator.io/v1
 kind: Istio
@@ -403,7 +400,7 @@ metadata:
 		It("Should keep operator-free resources and clean operator-supported ones", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
-			Expect(f.KubernetesResource("IstioOperator", "d8-istio", "v1x21").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("IstioOperator", "d8-istio", "v1x25").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Istio", "d8-istio", "v1x25").Exists()).To(BeFalse())
 
 			Expect(f.KubernetesResource("Istio", "d8-istio", "v1x27").Exists()).To(BeTrue())

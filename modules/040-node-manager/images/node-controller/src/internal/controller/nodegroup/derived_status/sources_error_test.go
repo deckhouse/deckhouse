@@ -101,14 +101,26 @@ func TestReadClusterConfiguration_ForbiddenIsAnError(t *testing.T) {
 	require.ErrorContains(t, err, "read cluster configuration secret")
 }
 
+// Raw, not newTestService: that helper seeds the cluster ConfigMap, which is where the version comes
+// from now, and this case is about both sources being absent.
 func TestReadClusterConfiguration_NotFoundIsEmpty(t *testing.T) {
-	s := newTestService(t)
+	s := newTestServiceRaw(t)
 
 	version, cri, err := s.readClusterConfiguration(t.Context())
 
 	require.NoError(t, err)
 	require.Nil(t, version)
 	require.Empty(t, cri)
+}
+
+// The version has its own source now, so it needs its own unavailability case: an unreadable
+// ConfigMap must abort the pass rather than publish a NodeGroup with no version clamp.
+func TestReadTargetKubernetesVersion_ForbiddenIsAnError(t *testing.T) {
+	s := newDeniedSecretService(t, clusterKubernetesConfigMapName)
+
+	_, err := s.readTargetKubernetesVersion(t.Context())
+
+	require.ErrorContains(t, err, "read cluster kubernetes configmap")
 }
 
 func TestReadClusterUUID_ForbiddenIsAnError(t *testing.T) {

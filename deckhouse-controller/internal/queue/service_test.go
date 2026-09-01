@@ -215,11 +215,13 @@ func TestService_Dump(t *testing.T) {
 	time.Sleep(50 * time.Millisecond)
 
 	// Get dump
-	dumpBytes := svc.Dump()
-	require.NotEmpty(t, dumpBytes, "dump should not be empty")
+	dump := svc.Dump()
+	require.NotEmpty(t, dump.Queues, "dump should not be empty")
 
-	dumpStr := string(dumpBytes)
-	assert.Contains(t, dumpStr, "test-task", "dump should contain task name")
+	queueDump, found := dump.Queues["test-queue"]
+	require.True(t, found, "dump should contain the queue")
+	require.NotEmpty(t, queueDump.Tasks, "queue should contain the task")
+	assert.Contains(t, queueDump.Tasks[0].Name, "test-task", "dump should contain task name")
 
 	wg.Wait()
 }

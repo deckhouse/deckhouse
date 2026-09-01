@@ -1,0 +1,172 @@
+---
+apiVersion: deckhouse.io/v1
+kind: InitConfiguration
+deckhouse:
+  imagesRepo: 'registry.deckhouse.io/deckhouse/ee'
+  registryDockerCfg: 'eyJhdXRocyI6IHsgInJlZ2lzdHJ5LmRlY2tob3VzZS5pbyI6IHt9fX0='
+  devBranch: 'main'
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: deckhouse
+spec:
+  enabled: true
+  version: 1
+  settings:
+    bundle: Minimal
+    logLevel: Info
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cert-manager
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: documentation
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: local-path-provisioner
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: global
+spec:
+  enabled: true
+  settings:
+    modules:
+      publicDomainTemplate: "%s.k8s.smoke.flant.com"
+      storageClass: localpath-all
+      placement:
+        customTolerationKeys:
+          - node
+  version: 2
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: vertical-pod-autoscaler
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: istio
+spec:
+  version: 3
+  enabled: true
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prom-rules-mutating
+  labels:
+    app: prom-rules-mutating
+  annotations:
+    dhctl.deckhouse.io/bootstrap-resource-place: before-deckhouse
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prom-rules-mutating
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: prom-rules-mutating
+    spec:
+      nodeSelector:
+        node.deckhouse.io/group: master
+      containers:
+        - name: shell-operator
+          image: registry.flant.com/deckhouse/ssdlc-tools/tools-base-images/prod-image:e2e_prometheus_rules_mutating-v0.1.0
+          imagePullPolicy: Always
+          env:
+            - name: SHELL_OPERATOR_LISTEN_PORT
+              value: "11115"
+            - name: VALIDATING_WEBHOOK_LISTEN_PORT
+              value: "11114"
+            - name: SHELL_OPERATOR_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: LOG_LEVEL
+              value: Debug
+            - name: VALIDATING_WEBHOOK_SERVICE_NAME
+              value: mutating-service
+            - name: VALIDATING_WEBHOOK_CONFIGURATION_NAME
+              value: "prom-rules-mutating"
+          livenessProbe:
+            httpGet:
+              port: 11114
+              path: /healthz
+              scheme: HTTPS
+      serviceAccountName: prom-rules-mutating
+      hostNetwork: true
+      dnsPolicy: ClusterFirstWithHostNet
+      tolerations:
+        - operator: "Exists"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mutating-service
+  annotations:
+    dhctl.deckhouse.io/bootstrap-resource-place: before-deckhouse
+spec:
+  ports:
+    - name: webhook
+      port: 443
+      targetPort: 11114
+      protocol: TCP
+  selector:
+    app: prom-rules-mutating
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prom-rules-mutating
+  annotations:
+    dhctl.deckhouse.io/bootstrap-resource-place: before-deckhouse
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: prom-rules-mutating
+  annotations:
+    dhctl.deckhouse.io/bootstrap-resource-place: before-deckhouse
+rules:
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources: ["validatingwebhookconfigurations"]
+    verbs: ["create", "list", "update"]
+  - apiGroups: ["admissionregistration.k8s.io"]
+    resources: ["mutatingwebhookconfigurations"]
+    verbs: ["create", "list", "update"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prom-rules-mutating
+  annotations:
+    dhctl.deckhouse.io/bootstrap-resource-place: before-deckhouse
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: prom-rules-mutating
+subjects:
+  - kind: ServiceAccount
+    name: prom-rules-mutating
+    namespace: default

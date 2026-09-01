@@ -31,7 +31,7 @@ spec:
 
 ### Checking provider connectivity
 
-The web UI  provider details page has a **Check connection** action. It creates a [DexProviderCheck](cr.html#dexprovidercheck) resource and waits for the hook to write the result to its status.
+The web UI provider details page has a "Check connection" action. It creates a [DexProviderCheck](cr.html#dexprovidercheck) resource and waits for the `user-authn` controller to write the result to its `status`.
 
 The check verifies that:
 
@@ -483,6 +483,8 @@ spec:
 
 {% endraw %}
 
+The DexClient group and email allow-lists are enforced on login and on every refresh-token request. Changing the lists denies further refresh for sessions that no longer match; those users must sign in again.
+
 After the `DexClient` custom resource is created, Dex will register a client with a `dex-client-myname@mynamespace` ID (**clientID**).
 
 The client access password (**clientSecret**) will be stored in the secret object:
@@ -501,6 +503,42 @@ data:
 
 {% endraw %}
 
+### Granting an application access to the Kubernetes API
+
+A [DexClient](cr.html#dexclient) or a [DexAuthenticator](cr.html#dexauthenticator) can be allowed to obtain tokens that the Kubernetes API server accepts. To do that, set one of the following annotations on the resource to `"true"`:
+
+* `dexclient.deckhouse.io/allow-access-to-kubernetes` on a DexClient.
+* `dexauthenticator.deckhouse.io/allow-access-to-kubernetes` on a DexAuthenticator.
+
+{% raw %}
+
+The following is a DexClient configuration example:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexClient
+metadata:
+  name: myname
+  namespace: mynamespace
+  annotations:
+    dexclient.deckhouse.io/allow-access-to-kubernetes: "true"
+spec:
+  redirectURIs:
+  - https://app.example.com/callback
+```
+
+{% endraw %}
+
+The annotation registers the client as a trusted peer of the privileged `kubernetes` OAuth2 client, allowing it to request ID tokens intended for the API server. In such a token, the username is determined by the `email` claim and groups by the `groups` claim. As a result, the application accesses the API server on behalf of the authenticated user and with the permissions granted to that user.
+
+{% alert level="warning" %}
+Access granted this way applies at the cluster level, even though DexClient and DexAuthenticator are namespaced resources. Therefore, only a subject with permissions to modify the `user-authn` module configuration can add the annotation or change its value to `"true"`. For example, this permission is granted by the `d8:manage:permission:module:user-authn:edit` role. Permissions to create DexClient or DexAuthenticator resources in an individual namespace are not sufficient.
+
+Adding the annotation is restricted regardless of its value, including `"false"`. This is required for compatibility with DKP versions earlier than 1.78, where access is granted based on the presence of the annotation regardless of its value. If access to the Kubernetes API server is not required, do not add the annotation.
+
+The restriction does not apply to resources that already have the annotation. A user with permissions to modify such a resource can continue to modify it, including removing the annotation or changing its value to disable access.
+{% endalert %}
+
 ## Local Authentication
 
 Local authentication provides user verification and access management with support for configurable password policies, two-factor authentication (2FA), and group management.  
@@ -508,7 +546,53 @@ The implementation complies with OWASP recommendations, ensuring reliable protec
 
 ### Creating a user
 
-Create a password and enter its hash encoded in base64 in the `password` field. The email address must be in lowercase.
+The recommended way to create a local user is the [`d8 iam user create`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-user-create) command. It supports interactive password entry, automatic password generation, group assignment, and time-to-live (TTL) for temporary users.
+
+Examples:
+
+Interactive password prompt (default when stdin is a terminal):
+
+```shell
+d8 iam user create anton --email anton@abc.com
+```
+
+Automatically generate a password (the generated password is shown in the command output once):
+
+```shell
+d8 iam user create anton --email anton@abc.com --generate-password
+```
+
+Read the password from stdin (for CI/CD pipelines):
+
+```shell
+echo "s3cret" | d8 iam user create anton --email anton@abc.com --password-stdin
+```
+
+Use a pre-computed bcrypt hash (e.g. from htpasswd):
+
+```shell
+d8 iam user create anton --email anton@abc.com --password-hash '$2y$10$abcdef...'
+```
+
+Create the user and add them to groups (auto-creating groups if missing):
+
+```shell
+d8 iam user create anton --email anton@abc.com --generate-password --member-of admins --create-groups
+```
+
+Create a temporary user with a TTL:
+
+```shell
+d8 iam user create anton --email anton@abc.com --generate-password --ttl 24h
+```
+
+Preview the manifest without applying it:
+
+```shell
+d8 iam user create anton --email anton@abc.com --generate-password --dry-run -o yaml
+```
+
+As an alternative, you can create the [User](cr.html#user) resource manually. Create a password and enter its hash encoded in base64 in the `password` field. The email address must be in lowercase.
 
 Use the command below to calculate the password hash:
 
@@ -543,6 +627,36 @@ spec:
 ```
 
 {% endraw %}
+
+[Authorization rules](/modules/user-authz/cr.html#authorizationrule) grant permissions to users based on the email address from the issued token. Therefore, a User resource cannot be created if its `spec.email` value matches a `User` subject in an existing [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) or [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) resource. This prevents permissions from being unintentionally granted to a new user.
+
+If the match is intentional, for example, if the authorization rule was created in advance, use a different email address or add the `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"` annotation to the User resource.
+
+Email addresses are converted to lowercase when matched, as this is how they are stored in the token. For example, `Admin@Example.com` matches the `admin@example.com` subject.
+
+The restriction does not apply to existing users whose email addresses match subjects in authorization rules. Such users continue to work, and a warning is issued when a match is detected.
+
+Consider this restriction when managing users and authorization rules declaratively. If a user and the corresponding rule are created at the same time, the rule may be created first, causing creation of the User resource to be rejected. To allow such a match, add the `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"` annotation to the User manifest.
+
+Deleting a user does not automatically remove the corresponding subject from the authorization rule. As long as the subject remains in the rule, permissions continue to be granted to the specified email address, and a warning is issued that no corresponding user exists. If a user with the same email address is created later, that user receives these permissions. If this behavior is not required, remove the corresponding subject from the authorization rule.
+
+### Deleting a user
+
+To delete a local user, use the [`d8 iam user delete`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-user-delete) command. By default, it also removes the user from all [Group](cr.html#group) resources they belong to.
+
+Examples:
+
+Delete the user (and automatically remove them from all groups):
+
+```shell
+d8 iam user delete anton
+```
+
+Delete the user but keep their references in groups:
+
+```shell
+d8 iam user delete anton --keep-memberships
+```
 
 ### Local user operations
 
@@ -608,9 +722,180 @@ Self-service password reset is available only for local accounts (the built-in `
 
 When a user resets their password, the new password must comply with the password policy, and the user's active sessions are terminated — re-authentication is required.
 
+#### Creating UserOperation manually
+
+When the `d8 iam user` CLI is unavailable (e.g. in CI/CD, GitOps, or automation pipelines), you can create a [UserOperation](cr.html#useroperation) resource directly. Use `apiVersion: deckhouse.io/v1` and set `initiatorType: admin`.
+
+Example — reset a local user's password (the `newPasswordHash` contains a bcrypt hash without Base64 encoding; the hook encodes it automatically):
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: reset-password-admin
+spec:
+  user: admin
+  type: ResetPassword
+  initiatorType: admin
+  resetPassword:
+    newPasswordHash: "$2y$10$..."
+```
+
+Example — lock a local user for 1 hour:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: lock-admin-1h
+spec:
+  user: admin
+  type: Lock
+  initiatorType: admin
+  lock:
+    for: "1h"
+```
+
+Example — permanent lock:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: lock-admin-permanent
+spec:
+  user: admin
+  type: Lock
+  initiatorType: admin
+  lock:
+    for: "permanent"
+```
+
+Example — unlock:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: unlock-admin
+spec:
+  user: admin
+  type: Unlock
+  initiatorType: admin
+```
+
+Example — reset 2FA:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: reset-2fa-admin
+spec:
+  user: admin
+  type: Reset2FA
+  initiatorType: admin
+```
+
+#### Operations on external users (LDAP/Crowd)
+
+For users authenticated through external providers (LDAP, Atlassian Crowd), use the [`spec.target`](cr.html#useroperation-v1-spec-target) field instead of `spec.user`. Only the `Lock` and `Unlock` operation types are supported for external users.
+
+Example — lock an external user by `connectorID` + email for 30 minutes:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: lock-external-user
+spec:
+  target:
+    connectorID: my-ldap
+    email: jane.doe@example.org
+  type: Lock
+  initiatorType: admin
+  lock:
+    for: "30m"
+```
+
+#### UserOperation lifecycle and side effects
+
+Using a UserOperation object has the following specifics:
+
+- A UserOperation is a **single-use** object: after creation, the hook processes it and writes the result to `status.phase` (`Succeeded` or `Failed`).
+- Completed operations are **automatically deleted** after 24 hours.
+- A UserOperation is **immutable**: its specification cannot be changed after creation.
+- To perform a new action, create a new UserOperation.
+
+{% alert level="warning" %}
+The `ResetPassword`, `Reset2FA`, and `Lock` operations terminate all active sessions of the user (they delete the user's Dex OfflineSessions and RefreshToken objects). The user will be forced to re-authenticate.
+{% endalert %}
+
+#### Checking operation status
+
+To check the operation status, follow these steps:
+
+1. Get the list of all operations:
+
+   ```shell
+   d8 k get useroperations
+   ```
+
+1. Get the full status of an operation:
+
+   ```shell
+   d8 k get useroperation <name> -o yaml
+   ```
+
+1. Get only the completion status:
+
+   ```shell
+   d8 k get useroperation <name> -o jsonpath='{.status.phase}'
+   ```
+
+#### Automatic system operations
+
+The system automatically creates a UserOperation with `initiatorType: system` in the following case:
+
+- Automatic user lockout after the number of failed login attempts exceeds [`passwordPolicy.lockout.maxAttempts`](configuration.html#parameters-passwordpolicy-lockout-maxattempts). The lockout lasts for [`lockout.lockDuration`](configuration.html#parameters-passwordpolicy-lockout-lockduration); afterwards the user is unlocked automatically. An administrator can also unlock the user manually with `d8 iam user unlock` or a UserOperation of type `Unlock`.
+
 ### Adding a user to a group
 
-Users can be grouped to manage access rights. Example manifest of the Group resource for a group:
+Users can be grouped to manage access rights. The recommended way to manage groups is the [`d8 iam group`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-group) command.
+
+Examples:
+
+Create a group:
+
+```shell
+d8 iam group create admins
+```
+
+Add a user to a group:
+
+```shell
+d8 iam group add-member admins user anton
+```
+
+Add a nested group:
+
+```shell
+d8 iam group add-member admins group devops
+```
+
+Remove a user from a group:
+
+```shell
+d8 iam group remove-member admins user anton
+```
+
+Delete a group:
+
+```shell
+d8 iam group delete admins
+```
+
+As an alternative, you can create the [Group](cr.html#group) resource manually. Example manifest of the Group resource for a group:
 
 {% raw %}
 
@@ -629,6 +914,48 @@ spec:
 {% endraw %}
 
 Where `members` is a list of users belonging to the group.
+
+The group name is stored in the issued token without modification. It is indistinguishable from a group name received from an external authentication provider. Therefore, a Group resource cannot be created if its `spec.name` value matches a `Group` subject in an existing [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) or [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule) resource. This prevents permissions from being unintentionally granted to members of a new group.
+
+If the match is intentional, use a different group name or add the `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"` annotation to the Group resource.
+
+Unlike email addresses, group names are not converted to lowercase when matched. Therefore, group names that differ only in letter case are considered different.
+
+The restriction does not apply to existing groups whose names match subjects in authorization rules. Such groups continue to work, and a warning is issued when a match is detected.
+
+Consider this restriction when managing groups and authorization rules declaratively. If a group and the corresponding rule are created at the same time, the rule may be created first, causing creation of the Group resource to be rejected. To allow such a match, add the `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"` annotation to the Group manifest.
+
+Deleting a group does not automatically remove the corresponding subject from the authorization rule. As long as the subject remains in the rule, permissions continue to be granted to a group with the specified name. If a group with the same name is created later, its members receive these permissions. If this behavior is not required, remove the corresponding subject from the authorization rule.
+
+### Viewing users and groups
+
+Use the [`d8 iam get`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-get) and [`d8 iam list`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-list) commands to view users, groups, and their effective access (groups, grants, and access level).
+
+Examples:
+
+List all users with effective access:
+
+```shell
+d8 iam list users
+```
+
+Details for a specific user (groups, grants, access level):
+
+```shell
+d8 iam get user anton
+```
+
+List all groups:
+
+```shell
+d8 iam list groups
+```
+
+Details for a specific group (members, grants):
+
+```shell
+d8 iam get group admins
+```
 
 ### Password policy
 

@@ -1,3 +1,5 @@
+ai_llms_external_modules_intro: The content below is for Deckhouse Platform external modules.
+ai_llms_version_note: The Deckhouse Platform modules version described in the documentation may differ from the version used in a specific cluster.
 allowed_values: allowed values
 additional_property_name: item (key) name
 pattern_property_name: regular expression for parameter name

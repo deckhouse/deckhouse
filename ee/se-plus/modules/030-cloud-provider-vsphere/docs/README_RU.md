@@ -3,11 +3,15 @@ title: "Cloud provider — VMware vSphere"
 description: "Управление облачными ресурсами в Deckhouse Kubernetes Platform на базе VMware vSphere."
 ---
 
-Взаимодействие с облачными ресурсами провайдера на базе VMware vSphere осуществляется с помощью модуля `cloud-provider-vsphere`. Он предоставляет возможность модулю [управления узлами](/node-manager/) использовать ресурсы vSphere при заказе узлов для описанной [группы узлов](/node-manager/cr.html#nodegroup).
+Модуль `cloud-provider-vsphere` обеспечивает интеграцию Deckhouse Kubernetes Platform с [VMware vSphere](https://www.vmware.com/products/vsphere.html). Он предоставляет возможность модулю [`node-manager`](/modules/node-manager/) использовать ресурсы vSphere при заказе узлов для [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
-Функционал модуля `cloud-provider-vsphere`:
-- Управляет ресурсами vSphere с помощью модуля `cloud-controller-vsphere`:
-  * Создает сетевые маршруты для сети `PodNetwork` на стороне vSphere.
-  * Актуализирует метаданные vSphere VirtualMachines и Kubernetes Nodes. Удаляет из Kubernetes узлы, которых уже нет в vSphere.
-- Заказывает диски в vSphere на datastore через механизм First-Class Disk с помощью компонента `CSI storage`.
-- Регистрируется в модуле [node-manager](/node-manager/), чтобы [VsphereInstanceClass'ы](cr.html#vsphereinstanceclass) можно было использовать при описании [NodeGroup](/node-manager/cr.html#nodegroup).
+Функции модуля `cloud-provider-vsphere`:
+
+- Управление ресурсами vSphere через `cloud-controller-manager`:
+  - создаёт сетевые маршруты для сети `PodNetwork` на стороне vSphere;
+  - актуализирует метаданные виртуальных машин и узлов Kubernetes и удаляет из Kubernetes узлы, которых больше нет в vSphere.
+- Заказ дисков через CSI на datastore. По умолчанию используются CNS-тома с изменением размера на лету. Режим First-Class Disk (FCD) доступен как legacy и настраивается параметром [`compatibilityFlag`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-compatibilityflag).
+- Заказ базовой инфраструктуры и CloudPermanent-узлов с помощью [Terraform/OpenTofu-провайдера](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-vsphere.html#взаимодействия-модуля) `terraform-provider-vsphere`.
+- Заказ CloudEphemeral-узлов через Machine Controller Manager (MCM). Параметры виртуальных машин задаются в ресурсе [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass).
+- Регистрация в модуле [`node-manager`](/modules/node-manager/), чтобы [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) можно было указывать при описании [NodeGroup](/modules/node-manager/cr.html#nodegroup).
+- Автоматическое включение CNI для новых кластеров. По умолчанию используется [`cni-cilium`](/modules/cni-cilium/).

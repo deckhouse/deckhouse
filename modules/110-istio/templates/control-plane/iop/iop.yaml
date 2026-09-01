@@ -145,6 +145,8 @@ spec:
     {{- range $multicluster := $.Values.istio.internal.multiclusters }}
     {{- with $multicluster.rootCA }}
     - pem: {{ . | quote }}
+      trustDomains:
+        - {{ $.Values.global.discovery.clusterDomain }}
     {{- end }}
     {{- end }}
   {{- end }}

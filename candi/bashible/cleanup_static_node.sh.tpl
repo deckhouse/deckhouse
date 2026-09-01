@@ -68,7 +68,7 @@ SYSTEMD_FILES=(
   /lib/systemd/system/containerd-deckhouse*
   /etc/systemd/system/d8-shutdown-inhibitor*
   /lib/systemd/system/d8-shutdown-inhibitor*
-  /etc/systemd/logind.conf.d/99-node-d8-shutdown-inhibitor.conf
+  /etc/systemd/logind.conf.d/*d8-shutdown-inhibitor.conf
   /etc/systemd/system/kubelet*
   /lib/systemd/system/kubelet*
 )

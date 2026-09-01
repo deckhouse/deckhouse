@@ -1,5 +1,5 @@
 <section class="cards-blocks">
-<div class="cards-blocks__content container">
+<div class="cards-blocks__content">
 <h2 class="cards-blocks__title text_h2">
 Что дальше?
 </h2>
@@ -27,7 +27,6 @@
 </div>
 </div>
 
-<div style="width: 30%">&nbsp;</div>
 </div>
 </div>
 </section>
@@ -71,7 +70,6 @@
 </div>
 </div>
 
-<div style="width: 30%">&nbsp;</div>
 </div>
 </div>
 </section>

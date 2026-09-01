@@ -35,6 +35,9 @@ const (
 	// ModuleAnnotationDev marks a module restored from a development pull override.
 	ModuleAnnotationDev = "modules.deckhouse.io/dev"
 
+	// ModuleAnnotationHash holds the digest a dev module was last handed to the runtime on.
+	ModuleAnnotationHash = "modules.deckhouse.io/hash"
+
 	// ModuleAnnotationEmbedded marks a module that is embedded in the Deckhouse image.
 	ModuleAnnotationEmbedded = "modules.deckhouse.io/embedded"
 )

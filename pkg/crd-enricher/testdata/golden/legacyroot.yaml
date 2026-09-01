@@ -1,0 +1,28 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: legacyroots.example.io
+spec:
+  group: example.io
+  names:
+    kind: LegacyRoot
+    plural: legacyroots
+    singular: legacyroot
+  preserveUnknownFields: false
+  scope: Cluster
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        properties:
+          spec:
+            properties:
+              name:
+                description: Name carries a field marker as well.
+                type: string
+                x-doc-examples:
+                - first
+            type: object
+        type: object
+    served: true
+    storage: true

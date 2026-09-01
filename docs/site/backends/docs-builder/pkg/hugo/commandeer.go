@@ -15,6 +15,7 @@
 package hugo
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -45,7 +46,7 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-func (c *command) Run() error {
+func (c *command) Run(ctx context.Context) error {
 	// Close the HugoSites when the build is done. Each HugoSites owns a
 	// dynacache whose background goroutine keeps the whole site model
 	// reachable; without Close() that graph never becomes eligible for GC
@@ -59,7 +60,7 @@ func (c *command) Run() error {
 		return fmt.Errorf("load config: %w", err)
 	}
 
-	err = b.build()
+	err = b.build(ctx)
 	if err != nil {
 		return fmt.Errorf("build: %w", err)
 	}
@@ -114,7 +115,7 @@ func (c *command) PreRun() error {
 	return nil
 }
 
-func Build(flags *Flags, logger *log.Logger) error {
+func Build(ctx context.Context, flags *Flags, logger *log.Logger) error {
 	cmd := &command{flags: flags, logger: logger}
 
 	err := cmd.PreRun()
@@ -122,7 +123,7 @@ func Build(flags *Flags, logger *log.Logger) error {
 		return fmt.Errorf("pre run: %w", err)
 	}
 
-	err = cmd.Run()
+	err = cmd.Run(ctx)
 	if err != nil {
 		return fmt.Errorf("run: %w", err)
 	}

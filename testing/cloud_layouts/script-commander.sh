@@ -298,7 +298,7 @@ function prepare_environment() {
     ZVIRT_USERNAME="${LAYOUT_ZVIRT_USERNAME}"
     ZVIRT_PASSWORD="${LAYOUT_ZVIRT_PASSWORD}"
     ssh_user="altlinux"
-    bastion_host="185.120.186.151"
+    bastion_host="185.120.186.12"
     bastion_user="ubuntu"
     ssh_bastion="-J ${bastion_user}@${bastion_host}"
 

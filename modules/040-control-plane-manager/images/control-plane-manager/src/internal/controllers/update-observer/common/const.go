@@ -17,12 +17,14 @@ limitations under the License.
 package common
 
 const (
-	ControllerName         = "update-observer"
-	ConfigMapName          = "d8-cluster-kubernetes"
-	SecretName             = "d8-cluster-configuration"
-	KubeSystemNamespace    = "kube-system"
-	HeritageLabelKey       = "heritage"
-	DeckhouseLabel         = "deckhouse"
+	ControllerName      = "update-observer"
+	ConfigMapName       = "d8-cluster-kubernetes"
+	KubeSystemNamespace = "kube-system"
+	HeritageLabelKey    = "heritage"
+	DeckhouseLabel      = "deckhouse"
+	// The object's own name, selected on by the webhook forbidding its deletion — same as the label
+	// dhctl puts on the d8-cluster-configuration Secret.
+	NameLabelKey           = "name"
 	K8sVersionLabelKey     = "k8s-version"
 	MaxK8sVersionLabelKey  = "max-k8s-version"
 	LastUpToDateTime       = "lastUpToDateTime"

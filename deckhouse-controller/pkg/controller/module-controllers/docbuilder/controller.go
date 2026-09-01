@@ -47,6 +47,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	d8http "github.com/deckhouse/deckhouse/go_lib/dependency/http"
 	"github.com/deckhouse/deckhouse/go_lib/module"
 	docsbuilder "github.com/deckhouse/deckhouse/go_lib/module/docs-builder"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -69,8 +70,13 @@ func RegisterController(mgr manager.Manager, dc dependency.Container, logger *lo
 		client:               mgr.GetClient(),
 		downloadedModulesDir: app.DownloadedModulesDir(),
 		dc:                   dependency.NewDependencyContainer(),
-		docsBuilder:          docsbuilder.NewClient(dc.GetHTTPClient()),
-		logger:               logger,
+		// Every build triggers a full-site rebuild on the docs-builder; give the
+		// call room to finish (configurable via DOCUMENTATION_BUILD_TIMEOUT)
+		// instead of the default 10s HTTP client timeout, which cancels healthy
+		// builds under load. Safe to raise because the builder now honors the
+		// request context and aborts abandoned builds.
+		docsBuilder: docsbuilder.NewClient(dc.GetHTTPClient(d8http.WithTimeout(app.DocumentationBuildTimeout()))),
+		logger:      logger,
 	}
 
 	err := ctrl.NewControllerManagedBy(mgr).

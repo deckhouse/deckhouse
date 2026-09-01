@@ -1,13 +1,17 @@
 ---
 title: "Cloud provider — VMware vSphere"
-description: "Managing cloud resources in Deckhouse Kubernetes Platform based on VMware vSphere."
+description: "Cloud resource management in Deckhouse Kubernetes Platform using VMware vSphere."
 ---
 
-The `cloud-provider-vsphere` module is responsible for interacting with the [VMware vSphere-based](https://www.vmware.com/products/vsphere.html) cloud resources. It allows the [node manager](/node-manager/) module to use vSphere resources for provisioning nodes for the specified [node group](/node-manager/cr.html#nodegroup) (a group of nodes that are acted upon as if they were a single entity).
+The `cloud-provider-vsphere` module integrates Deckhouse Kubernetes Platform with [VMware vSphere](https://www.vmware.com/products/vsphere.html). It allows the [`node-manager`](/modules/node-manager/) module to use vSphere resources when provisioning nodes for a [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
-The `cloud-provider-vsphere` module:
-- Manages vSphere resources using the `cloud-controller-manager` (CCM) module:
-  * The CCM module creates network routes for the `PodNetwork` network on the vSphere side.
-  * The CCM module updates the metadata of the vSphere VirtualMachines and Kubernetes Nodes and deletes nodes that are no longer in vSphere.
-- Provisions disks on datastore in vSphere via the First-Class Disk mechanism using the `CSI storage` component.
-- Registers with the [node-manager](/node-manager/) module so that [VsphereInstanceClasses](cr.html#vsphereinstanceclass) can be used when creating the [NodeGroup](/node-manager/cr.html#nodegroup).
+Features of the `cloud-provider-vsphere` module:
+
+- Managing vSphere resources via `cloud-controller-manager`:
+  - creates network routes for the `PodNetwork` network on the vSphere side;
+  - updates virtual machine and Kubernetes node metadata and removes from Kubernetes nodes that no longer exist in vSphere.
+- Provisioning disks via CSI on datastore. By default, CNS volumes with online resize are used. First-Class Disk (FCD) mode is available as legacy and is configured with the [`compatibilityFlag`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-compatibilityflag) parameter.
+- Provisioning base infrastructure and CloudPermanent nodes using the [Terraform/OpenTofu provider](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-vsphere.html#module-interactions) `terraform-provider-vsphere`.
+- Provisioning CloudEphemeral nodes via Machine Controller Manager (MCM). Virtual machine parameters are set in the [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) resource.
+- Registering with [`node-manager`](/modules/node-manager/) so that [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) can be used when describing a [NodeGroup](/modules/node-manager/cr.html#nodegroup).
+- Enabling CNI for new clusters automatically. By default, [`cni-cilium`](/modules/cni-cilium/) is used.

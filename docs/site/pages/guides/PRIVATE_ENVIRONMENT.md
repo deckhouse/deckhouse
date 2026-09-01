@@ -59,7 +59,9 @@ Server requirements:
 ## Preparing a private container registry
 
 {% alert level="warning" %}
-DKP supports only the Bearer token authentication scheme for container registries.
+DKP supports Basic and Bearer token authentication schemes for container registries (Basic is tried first; if it fails, Bearer is used).
+
+If a reverse proxy is placed in front of the registry, it must correctly forward the Registry API v2 header `Docker-Distribution-API-Version: registry/2.0`. Otherwise the Basic check may fail, and the subsequent Bearer attempt may fail with the error `couldn't find bearer realm parameter`.
 {% endalert %}
 
 You may use any supported private container registry. Compatibility has been tested and is guaranteed for the following: [Nexus](https://github.com/sonatype/nexus-public), [Harbor](https://github.com/goharbor/harbor), [Artifactory](https://jfrog.com/artifactory/), [Docker Registry](https://docs.docker.com/registry/), and [Quay](https://quay.io/).

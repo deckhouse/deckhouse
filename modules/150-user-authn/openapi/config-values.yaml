@@ -176,7 +176,11 @@ properties:
         type: object
         required: ["maxAttempts", "lockDuration"]
         description: |
-          Temporary user lockout settings after consecutive failed login attempts.
+          Automatic temporary lockout after consecutive failed login attempts.
+
+          This section only controls lockout after a failed password. An administrator
+          lock via UserOperation (`d8 iam user lock`) works independently and does not
+          require `passwordPolicy` or this `lockout` block.
         properties:
           maxAttempts:
             type: integer

@@ -121,6 +121,7 @@ bin/protoc:
 protoc:
 	bin/protoc -I pkg/server/api/dhctl --go_out=pkg/server --go-grpc_out=pkg/server \
 	pkg/server/api/dhctl/common.proto \
+	pkg/server/api/dhctl/phase_catalog.proto \
 	pkg/server/api/dhctl/status.proto \
 	pkg/server/api/dhctl/check.proto \
 	pkg/server/api/dhctl/bootstrap.proto \

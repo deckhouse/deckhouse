@@ -7,19 +7,19 @@ metadata:
   name: {{ $crd.encodedName }}
   namespace: d8-{{ $context.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $context (dict "app" "dex")) | nindent 2 }}
-id: {{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator
-name: {{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator
-secret: {{ $crd.credentials.appDexSecret }}
+id: {{ printf "%s-%s-dex-authenticator" $crd.name $crd.namespace | quote }}
+name: {{ printf "%s-%s-dex-authenticator" $crd.name $crd.namespace | quote }}
+secret: {{ $crd.credentials.appDexSecret | quote }}
     {{- if $crd.spec.allowedEmails }}
 allowedEmails:
 {{- range $email := $crd.spec.allowedEmails }}
-  - {{ $email }}
+  - {{ $email | quote }}
 {{- end }}
     {{- end }}
     {{- if $crd.spec.allowedGroups }}
 allowedGroups:
 {{- range $group := $crd.spec.allowedGroups }}
-  - {{ $group }}
+  - {{ $group | quote }}
 {{- end }}
     {{- end }}
 redirectURIs:
