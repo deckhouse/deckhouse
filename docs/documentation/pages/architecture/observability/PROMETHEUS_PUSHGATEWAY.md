@@ -25,7 +25,7 @@ The level-2 C4 architecture of the [`prometheus-pushgateway`](/modules/prometheu
 
 ## Module components
 
-The module consists of one or more **<INSTANCE_NAME>** (StatefulSet) components, which in turn consist of a single prometheus-pushgateway container. Since Prometheus Pushgateway stores data in memory, the number of replicas in the StatefulSet cannot be greater than one; otherwise, the data cannot be deleted correctly. In the [`settings.instances`](https://deckhouse.ru/modules/prometheus-pushgateway/stable/configuration.html#parameters-instances) parameter of the module, you can specify a list of instances, for each of which a separate Pushgateway with the <INSTANCE_NAME> name will be created.
+The module consists of one or more **\<INSTANCE_NAME\>** (StatefulSet) components, which in turn consist of a single prometheus-pushgateway container. Since Prometheus Pushgateway stores data in memory, the number of replicas in the StatefulSet cannot be greater than one; otherwise, the data cannot be deleted correctly. In the [`settings.instances`](https://deckhouse.ru/modules/prometheus-pushgateway/stable/configuration.html#parameters-instances) parameter of the module, you can specify a list of instances, for each of which a separate Pushgateway with the \<INSTANCE_NAME\> name will be created.
 
 ## Module interactions
 

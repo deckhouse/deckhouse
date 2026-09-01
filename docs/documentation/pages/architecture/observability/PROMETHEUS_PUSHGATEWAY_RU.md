@@ -25,7 +25,7 @@ description: Архитектура модуля prometheus-pushgateway в Deckh
 
 ## Компоненты модуля
 
-Модуль состоит из одного или нескольких компонентов **<INSTANCE_NAME>** (StatefulSet), в свою очередь состоящих из одного контейнера prometheus-pushgateway. Поскольку Prometheus Pushgateway хранит данные в памяти, количество реплик в StatefulSet не может быть больше одной, в противном случае данные не могут быть удалены корректно. В параметре [`settings.instances`](https://deckhouse.ru/modules/prometheus-pushgateway/stable/configuration.html#parameters-instances) модуля можно указать список инстансов, для каждого из которых будет создан отдельный Pushgateway с именем <INSTANCE_NAME>, где <INSTANCE_NAME> — имя инстанса.
+Модуль состоит из одного или нескольких компонентов **\<INSTANCE_NAME\>** (StatefulSet), в свою очередь состоящих из одного контейнера prometheus-pushgateway. Поскольку Prometheus Pushgateway хранит данные в памяти, количество реплик в StatefulSet не может быть больше одной, в противном случае данные не могут быть удалены корректно. В параметре [`settings.instances`](https://deckhouse.ru/modules/prometheus-pushgateway/stable/configuration.html#parameters-instances) модуля можно указать список инстансов, для каждого из которых будет создан отдельный Pushgateway с именем \<INSTANCE_NAME\>, где \<INSTANCE_NAME\> — имя инстанса.
 
 ## Взаимодействия модуля
 
