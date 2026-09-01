@@ -60,10 +60,7 @@ func newRootCmd() *cobra.Command {
 	}
 
 	cmd.SetContext(setupSignalHandler(context.Background()))
-	cmd.AddCommand(
-		newServeCmd(logger),
-	)
-
+	cmd.AddCommand(newServeCmd(logger))
 	return cmd
 }
 
