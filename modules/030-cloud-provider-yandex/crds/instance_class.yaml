@@ -74,7 +74,6 @@ spec:
                 x-doc-examples:
                 - '[b0csh41c1or82vuch89v, e2lgddi5svochh5fbq96]'
               assignPublicIPAddress:
-                default: false
                 description: Should a public external IPv4 address be assigned to
                   a provisioned Yandex Compute Instance.
                 type: boolean
@@ -82,7 +81,6 @@ spec:
                 x-doc-examples:
                 - "false"
               coreFraction:
-                default: 100
                 description: |-
                   Percent of reserved CPU capacity on a Yandex Compute Instance.
 
@@ -103,14 +101,12 @@ spec:
                 x-doc-examples:
                 - "4"
               diskSizeGB:
-                default: 50
                 description: Yandex Compute Instance disk size in gibibytes.
                 type: integer
                 x-doc-default: "50"
                 x-doc-examples:
                 - "20"
               diskType:
-                default: network-hdd
                 description: |-
                   Instance [disk type](https://cloud.yandex.com/en-ru/docs/compute/concepts/disk#disks_types).
 
@@ -132,7 +128,6 @@ spec:
                 x-doc-examples:
                 - "20"
               gpus:
-                default: 0
                 description: Number of GPUs on a Yandex Compute Instance.
                 type: integer
                 x-doc-default: "0"
@@ -170,7 +165,6 @@ spec:
                 - SoftwareAccelerated
                 type: string
               platformID:
-                default: standard-v3
                 description: |-
                   Platform ID.
 
@@ -178,7 +172,6 @@ spec:
                 type: string
                 x-doc-default: standard-v3
               preemptible:
-                default: false
                 description: |-
                   Should a provisioned Yandex Compute Instance be preemptible.
 
@@ -187,7 +180,6 @@ spec:
                 x-doc-default: "false"
             required:
             - cores
-            - imageID
             - memory
             type: object
           status:
@@ -206,8 +198,7 @@ spec:
         type: object
     served: true
     storage: true
-    subresources:
-      status: {}
+    subresources: {}
   - name: v1alpha1
     schema:
       openAPIV3Schema:
@@ -256,7 +247,6 @@ spec:
                 x-doc-examples:
                 - '[b0csh41c1or82vuch89v, e2lgddi5svochh5fbq96]'
               assignPublicIPAddress:
-                default: false
                 description: Should a public external IPv4 address be assigned to
                   a provisioned Yandex Compute Instance.
                 type: boolean
@@ -264,7 +254,6 @@ spec:
                 x-doc-examples:
                 - "false"
               coreFraction:
-                default: 100
                 description: |-
                   Percent of reserved CPU capacity on a Yandex Compute Instance.
 
@@ -285,14 +274,12 @@ spec:
                 x-doc-examples:
                 - "4"
               diskSizeGB:
-                default: 20
                 description: Yandex Compute Instance disk size in gibibytes.
                 type: integer
                 x-doc-default: "20"
                 x-doc-examples:
                 - "50"
               diskType:
-                default: network-hdd
                 description: |-
                   Instance disk type.
 
@@ -308,7 +295,6 @@ spec:
                 x-doc-examples:
                 - network-hdd
               gpus:
-                default: 0
                 description: Number of GPUs on a Yandex Compute Instance.
                 type: integer
                 x-doc-default: "0"
@@ -346,7 +332,6 @@ spec:
                 - SOFTWARE_ACCELERATED
                 type: string
               platformID:
-                default: standard-v2
                 description: |-
                   Platform ID.
 
@@ -354,7 +339,6 @@ spec:
                 type: string
                 x-doc-default: standard-v2
               preemptible:
-                default: false
                 description: |-
                   Should a provisioned Yandex Compute Instance be preemptible.
 
@@ -363,7 +347,6 @@ spec:
                 x-doc-default: "false"
             required:
             - cores
-            - imageID
             - memory
             type: object
         required:

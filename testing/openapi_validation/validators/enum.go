@@ -80,12 +80,6 @@ var (
 			// v1alpha1 : SOFTWARE_ACCELERATED - migrated in v1
 			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.networkType",
 		},
-		// disk types: network-ssd, network-hdd
-		"modules/030-cloud-provider-yandex/candi/openapi/instance_class.yaml": {
-			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.diskType",
-			// v1alpha1 : SOFTWARE_ACCELERATED - migrated in v1
-			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.networkType",
-		},
 		"candi/openapi/cluster_configuration.yaml": {
 			// vSphere
 			"apiVersions[0].openAPISpec.properties.cloud.properties.provider",
