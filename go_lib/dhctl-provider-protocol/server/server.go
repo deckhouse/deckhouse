@@ -32,7 +32,7 @@ const (
 	// gRPC's own 4 MiB default is too small for a payload carrying every
 	// NodeGroup, InstanceClass and credential Secret of a cluster.
 	MaxMessageSize = 8 * 1024 * 1024
-	DefaultNetwork = "unix"
+	DefaultNetwork = "tcp"
 )
 
 // Service registers itself on a gRPC server. Each wire version of an action

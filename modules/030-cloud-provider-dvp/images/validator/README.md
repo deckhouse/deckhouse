@@ -15,7 +15,7 @@ The command tree is cobra: `validator` alone prints help, `validator serve --hel
 lists the flags.
 
 `--address` is `host:port`: dhctl binds a loopback address per run and passes it in,
-so there is no default. `--network` defaults to `unix`, which the protocol's `server`
+so there is no default. `--network` defaults to `tcp`, which the protocol's `server`
 package also accepts, and then `--address` is a socket path instead. The binary serves
 until `SIGTERM`, then stops gracefully. Diagnostics go to stderr; no part of the protocol travels through
 stdout.

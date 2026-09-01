@@ -37,7 +37,7 @@ validator serve --address=<address> [--network=<network>]
 ```
 
 `--address` is `host:port`; dhctl binds a loopback address per run, so there is no
-default. `--network` defaults to `unix`, which the `server` package also accepts, and
+default. `--network` defaults to `tcp`, which the `server` package also accepts, and
 then `--address` is a socket path instead.
 
 The validator listens on that address and serves until it is stopped. Notes that
