@@ -83,12 +83,14 @@ locals {
   _ic_name       = try(local._ng.spec.cloudInstances.classReference.name, "")
   instance_class = try(module.migration.instanceClasses[local._ic_name].spec, {})
 
-  namespace      = try(module.migration.settings.spec.settings.provider.parameters.namespace, "")
-  ssh_public_key = try(module.migration.settings.spec.settings.nodes.parameters.sshPublicKey, "")
-  region         = try(module.migration.settings.spec.settings.nodes.parameters.region, "")
-  actual_zones   = try(module.migration.settings.spec.settings.nodes.parameters.zones, [])
-  zones          = try(local._ng.spec.cloudInstances.zones, null) != null ? tolist(setintersection(local.actual_zones, local._ng.spec.cloudInstances.zones)) : local.actual_zones
-  zone           = length(local.actual_zones) > 0 ? element(local.zones, var.nodeIndex) : ""
+  namespace        = try(module.migration.settings.spec.settings.provider.parameters.namespace, "")
+  ssh_public_key   = try(module.migration.settings.spec.settings.nodes.parameters.sshPublicKey, "")
+  ssh_ca_keys      = try(module.migration.settings.spec.settings.nodes.parameters.sshCAKeys, [])
+  additional_users = try(module.migration.settings.spec.settings.nodes.parameters.additionalUsers, [])
+  region           = try(module.migration.settings.spec.settings.nodes.parameters.region, "")
+  actual_zones     = try(module.migration.settings.spec.settings.nodes.parameters.zones, [])
+  zones            = try(local._ng.spec.cloudInstances.zones, null) != null ? tolist(setintersection(local.actual_zones, local._ng.spec.cloudInstances.zones)) : local.actual_zones
+  zone             = length(local.actual_zones) > 0 ? element(local.zones, var.nodeIndex) : ""
 
   ipv4_address = try(module.migration.settings.spec.settings.nodes.parameters.ipAddresses[var.nodeGroupName], null) == null ? "Auto" : (
     var.nodeIndex + 1 > length(try(module.migration.settings.spec.settings.nodes.parameters.ipAddresses[var.nodeGroupName], [])) ? "Auto" :

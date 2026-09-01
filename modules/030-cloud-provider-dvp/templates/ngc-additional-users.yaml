@@ -1,0 +1,68 @@
+{{- if .Values.cloudProviderDvp.nodes.parameters.additionalUsers }}
+apiVersion: deckhouse.io/v1alpha1
+kind: NodeGroupConfiguration
+metadata:
+  name: dvp-additional-users.sh
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  weight: 10
+  nodeGroups: ["*"]
+  bundles: ["*"]
+  content: |
+    # Copyright 2026 Flant JSC
+    #
+    # Licensed under the Apache License, Version 2.0 (the "License");
+    # you may not use this file except in compliance with the License.
+    # You may obtain a copy of the License at
+    #
+    #     http://www.apache.org/licenses/LICENSE-2.0
+    #
+    # Unless required by applicable law or agreed to in writing, software
+    # distributed under the License is distributed on an "AS IS" BASIS,
+    # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+    # See the License for the specific language governing permissions and
+    # limitations under the License.
+
+    # Unlike cloud-init (see cloudinit-merge module), this runs continuously
+    # via bashible, so it can add users to an already-bootstrapped cluster
+    # (day-2) without recreating any VM. These users get no keys/passwd of
+    # their own - access is via sshCAKeys (host-wide TrustedUserCAKeys) or
+    # an out-of-band key/cert.
+    #
+    # No group ("sudo"/"wheel") is granted: it differs per OS family, and
+    # the sudoers.d entry below already grants access directly.
+    #
+    # System/service accounts (UID < 1000) are never touched, even if
+    # accidentally listed here - useradd is a no-op for them anyway, but we
+    # must also refuse to grant them a NOPASSWD sudoers entry.
+    {{- range $dvpAdditionalUserIndex, $dvpAdditionalUserName := .Values.cloudProviderDvp.nodes.parameters.additionalUsers }}
+    {{- /*
+    Unvalidated input here is a root command/sudoers injection primitive
+    (see NodesParameters.AdditionalUsers in pkg/api/settings/settings.go).
+    The sudoers filename below uses the loop index, not the name - keep it
+    that way, see the comment near bb-sync-file.
+    */ -}}
+    {{- if not (regexMatch "^[a-z_][a-z0-9_.-]{0,31}$" $dvpAdditionalUserName) }}
+    {{- fail (printf "cloud-provider-dvp: nodes.parameters.additionalUsers: %q is not a valid Linux user name (must match ^[a-z_][a-z0-9_.-]{0,31}$: start with a lowercase letter or underscore, then up to 31 lowercase letters/digits/underscores/hyphens/dots)" $dvpAdditionalUserName) }}
+    {{- end }}
+    {{- if eq $dvpAdditionalUserName "default" }}
+    {{- fail "cloud-provider-dvp: nodes.parameters.additionalUsers: \"default\" is a reserved cloud-init keyword (it already refers to the image's own default user, see cloudinit-merge module) and cannot be used as an additional user name" }}
+    {{- end }}
+    _DVP_UID="$(id -u {{ $dvpAdditionalUserName | quote }} 2>/dev/null || true)"
+    if [ -n "$_DVP_UID" ] && [ "$_DVP_UID" -lt 1000 ]; then
+      echo "dvp-additional-users: refusing to manage {{ $dvpAdditionalUserName }} - it is an existing system account (uid=$_DVP_UID), not one we created" >&2
+    else
+      if [ -z "$_DVP_UID" ]; then
+        useradd --create-home --shell /bin/bash {{ $dvpAdditionalUserName | quote }}
+      fi
+
+    # Index-based filename, not name-based: sudo's #includedir silently
+    # skips filenames containing a "." (backup-file convention), which would
+    # silently disable sudo for dotted names like "s.lastname".
+    bb-sync-file /etc/sudoers.d/90-{{ $dvpAdditionalUserIndex }} - << "EOF"
+    {{ $dvpAdditionalUserName }} ALL=(ALL) NOPASSWD:ALL
+    EOF
+    chmod 0440 /etc/sudoers.d/90-{{ $dvpAdditionalUserIndex }}
+    fi
+    {{- end }}
+{{- end }}
