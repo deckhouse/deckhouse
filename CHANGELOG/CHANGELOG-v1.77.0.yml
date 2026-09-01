@@ -196,6 +196,13 @@ candi:
         Node cleanup now removes the d8-shutdown-inhibitor logind drop-in under both its current and legacy
         names.
       pull_request: https://github.com/deckhouse/deckhouse/pull/22530
+    - summary: >-
+        Fix a flaky containerd-integrity check that could trigger spurious full containerd wipes and reboots.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22624
+    - summary: >-
+        Bump base images to v0.5.85, moving the Go builders to 1.25.13 and clearing Go stdlib CVEs in
+        prebuilt images.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22684
 cert-manager:
   features:
     - summary: Auto-enable cainjector when cluster resources require cert-manager CA injection annotations.
@@ -217,6 +224,10 @@ chrony:
   fixes:
     - summary: bump x/net and x/text in the chrony_exporter patch to clear 23 CVEs
       pull_request: https://github.com/deckhouse/deckhouse/pull/22230
+    - summary: >-
+        Added a GO-2026-5932 VEX waiver for chrony-exporter, which pulls golang.org/x/crypto only for
+        bcrypt through prometheus/exporter-toolkit.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22610
 ci:
   features:
     - summary: Add k8s 1.36 to CI.
@@ -311,6 +322,8 @@ ci:
       pull_request: https://github.com/deckhouse/deckhouse/pull/22367
     - summary: Fix image used in Tests
       pull_request: https://github.com/deckhouse/deckhouse/pull/22495
+    - summary: Add REGCTL_CONFIG
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22705
 cilium-hubble:
   features:
     - summary: Added authorization to the Cilium Hubble UI.
@@ -454,6 +467,11 @@ cloud-provider-dvp:
       pull_request: https://github.com/deckhouse/deckhouse/pull/21780
     - summary: Fix CVEs
       pull_request: https://github.com/deckhouse/deckhouse/pull/22319
+    - summary: >-
+        Extends the VEX suppression for a kin-openapi vulnerability to also match its GitHub advisory
+        ID, so certified-build vulnerability scans stop flagging an already-analyzed, non-exploitable
+        finding.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22622
 cloud-provider-dynamix:
   features:
     - summary: Migrated Dynamix, GCP, and OpenStack templates to define from helm-lib.
@@ -712,6 +730,18 @@ cni-cilium:
         Bumped golang.org/x/mod to v0.40.0 and github.com/cilium/ebpf to v0.22.0 (with an eBPF loader
         compat patch) to fix CVE-2026-56864, CVE-2026-56865 and CVE-2026-10722.
       pull_request: https://github.com/deckhouse/deckhouse/pull/22588
+    - summary: >-
+        Fix cilium-envoy image build failing in airgapped/isolated environments on a missing Rust crate_universe
+        dependency.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22612
+      impact: >-
+        Disable Rust crate repinning and skip Envoy's unused dynamic-modules Rust SDK repo to fix cilium-envoy
+        builds in airgapped environments.
+    - summary: >-
+        Restore cilium-agent startup on nodes with BPF JIT hardening enabled by tolerating ErrRestrictedKernel
+        in the eBPF probe.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22646
+      impact: cilium-agent pods are restarted on all nodes.
 cni-flannel:
   features:
     - summary: Fixed securityContext and added SecurityPolicyException
@@ -924,6 +954,16 @@ common:
       impact: x-kubernetes-sensitive-data fix will restarts the kube-apiserver (control-plane) component.
     - summary: Bumped golang.org/x/mod to v0.40.0 in the CoreDNS build to fix CVE-2026-56864 and CVE-2026-56865.
       pull_request: https://github.com/deckhouse/deckhouse/pull/22587
+    - summary: >-
+        Bump golang.org/x/net, golang.org/x/text, golang.org/x/sys and google.golang.org/grpc in CSI sidecar
+        patches to fix the vulnerabilities they carry.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22614
+    - summary: >-
+        Fixed a kubelet panic when decreasing a container memory limit in place while pod-level memory
+        usage stats are unavailable.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22623
+    - summary: Close CVEs in the Kubernetes 1.31 csi-external-attacher and csi-external-resizer images.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22687
 control-plane-manager:
   features:
     - summary: >-
@@ -1335,6 +1375,12 @@ deckhouse:
       pull_request: https://github.com/deckhouse/deckhouse/pull/22545
     - summary: Guard PodMonitors on CRD availability.
       pull_request: https://github.com/deckhouse/deckhouse/pull/22498
+    - summary: Fix ModuleConfig admission rejecting a module with a disabled conditional dependency
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22642
+    - summary: validate the hardlink target when extracting module and package images
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22643
+    - summary: Fix an empty package status after a successful install
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22651
 deckhouse-controller:
   features:
     - summary: validation check oldself
@@ -1910,6 +1956,14 @@ docs:
       pull_request: https://github.com/deckhouse/deckhouse/pull/22436
     - summary: Fix the upmeter web UI Ingress name in SLA documentation
       pull_request: https://github.com/deckhouse/deckhouse/pull/22471
+    - summary: Add InPlaceOrRecreate to VPA modes list and move Auto to a warning alert.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22611
+    - summary: >-
+        Documented the identity collision rules for local Group and User objects and the allow-access-to-kubernetes
+        annotation, and corrected the described scope of a security subsystem manage role.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22635
+    - summary: add static cluster OS change for master nodes and Stronghold backup alerts
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22637
 documentation:
   features:
     - summary: Update editions availability info for stronghold module.
@@ -1933,6 +1987,8 @@ documentation:
       pull_request: https://github.com/deckhouse/deckhouse/pull/21934
     - summary: Fixed documentation for the DKP edition change.
       pull_request: https://github.com/deckhouse/deckhouse/pull/22381
+    - summary: Bump docs-builder dependencies.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22664
 istio:
   features:
     - summary: Add explicit configuration option `ambient.enabled` to manage Istio ambient mesh.
@@ -2098,6 +2154,9 @@ local-path-provisioner:
       impact: >-
         Unsafe custom HelperPod settings in the `local-path-config` ConfigMap are no longer accepted.
         Default DKP installations are unaffected.
+    - summary: Fix CVEs in the Go dependencies of the `local-path-provisioner` image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22615
+      impact: The `local-path-provisioner` Deployment will be restarted.
 metallb:
   features:
     - summary: Added RBACv1 roles (User and ClusterAdmin) for MetalLoadBalancerClass resource.
@@ -2438,6 +2497,39 @@ node-manager:
         Fix d8-shutdown-inhibitor failing to start on nodes where another package overrides the logind
         inhibit delay.
       pull_request: https://github.com/deckhouse/deckhouse/pull/22530
+    - summary: >-
+        Bumped golang.org/x/crypto, x/net, x/sys and x/text in caps-controller-manager and x/mod in bashible-apiserver
+        to fix 25 CVEs, and added GO-2026-5932 VEX waivers for caps-controller-manager, capi-controller-manager
+        and bashible-apiserver.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22610
+    - summary: Fix NodeCapacity calculation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22719
+    - summary: >-
+        Hide the CAPS SSH key and sudo password in SSHCredentials from users without the `sshcredentials/sensitive`
+        subresource.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22632
+      impact: >-
+        The SSH key and sudo password in `SSHCredentials` (used by CAPS to reach static nodes) are now
+
+        returned as `<omitted>` to callers without `get` on the `sshcredentials/sensitive` subresource,
+
+        masked in the audit log, and encrypted in etcd when `apiserver.encryptionEnabled` is on.
+
+        `d8:manage:infrastructure:viewer` and `:manager` no longer see these values. CAPS still does,
+        and
+
+        so does every holder of a `deckhouse.io` wildcard, since `*` matches subresources: `SuperAdmin`,
+
+        the `kubeadm:cluster-admins` group, and the `deckhouse` and `webhook-handler` SAs of `d8-system`.
+
+
+        For masked readers the `last-applied-configuration` annotation disappears from `get -o yaml`,
+
+        and creating an `SSHCredentials` with `<omitted>` fails with `422 Invalid` — editing still works.
+
+        Treat previously exposed keys as leaked and rotate them. With `apiserver.encryptionEnabled` on,
+
+        rewrite existing objects to encrypt them: `d8 k get sshcredentials -o json | d8 k replace -f -`.
 openvpn:
   fixes:
     - summary: OpenVPN added to the BE.
@@ -2490,6 +2582,10 @@ registry:
       pull_request: https://github.com/deckhouse/deckhouse/pull/22229
     - summary: bump x/net and x/text in nodeservices-manager to clear 23 CVEs
       pull_request: https://github.com/deckhouse/deckhouse/pull/22227
+    - summary: >-
+        Bumped golang.org/x/sys to v0.47.0 in syncer, mirrorer and registry-proxy to fix CVE-2026-39824,
+        and added GO-2026-5932 VEX waivers for nodeservices-manager, docker-auth and docker-distribution.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22610
 registry-packages-proxy:
   features:
     - summary: Added handling of deckhouse-cli artefacts to registry-packages-proxy.
@@ -2524,6 +2620,14 @@ registry-packages-proxy:
         The proxy serves `deckhouse-cli` and `deckhouse-cli/plugins/<name>` images from the registry root
         above the cluster's edition repository.
       pull_request: https://github.com/deckhouse/deckhouse/pull/22391
+    - summary: >-
+        Added a GO-2026-5932 VEX waiver for the golang.org/x/crypto/openpgp advisory, which has no fixed
+        version and is not in the binary's execute path.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22610
+    - summary: >-
+        deckhouse-cli and plugin downloads now work in registries filled by `d8 mirror push`; the proxy
+        probes the cluster repo first, then the edition-trimmed root, and remembers the working one.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22661
 registrypackages:
   features:
     - summary: Added oss.yaml files for cloud provider modules.
@@ -2562,6 +2666,16 @@ registrypackages:
       pull_request: https://github.com/deckhouse/deckhouse/pull/22206
     - summary: Close open CVEs in the `containerd` image by bumping `runc` and `pidumount` Go dependencies
       pull_request: https://github.com/deckhouse/deckhouse/pull/22308
+    - summary: Bump vulnerable dependencies in the d8-bcheck image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22658
+    - summary: >-
+        Close CVEs in `cfssl`, `docker-registry` and `rpp-get` by bumping vulnerable Go dependencies,
+        and build `yq` from `pm` at 4.53.6.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22684
+    - summary: >-
+        Publish the VEX mitigations for cfssl, docker-registry and d8-bcheck that the build was silently
+        skipping.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22687
 service-with-healthchecks:
   features:
     - summary: Added RBACv1 roles (User and Editor) for ServiceWithHealthchecks resource.
@@ -2586,6 +2700,10 @@ terraform-manager:
       pull_request: https://github.com/deckhouse/deckhouse/pull/20859
     - summary: Remove redundant bootstrapped check from enabled script.
       pull_request: https://github.com/deckhouse/deckhouse/pull/21048
+    - summary: >-
+        Added GO-2026-5932 VEX waivers for base-opentofu and terraform-manager-dvp, where opentofu verifies
+        provider signatures through ProtonMail/go-crypto instead of the unmaintained golang.org/x/crypto/openpgp.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22610
 testing:
   features:
     - summary: >-
@@ -2634,6 +2752,10 @@ tools:
         Fixed module release validation incorrectly failing for `!optional` dependencies when the required
         module doesn't exist in the cluster.
       pull_request: https://github.com/deckhouse/deckhouse/pull/21943
+    - summary: >-
+        Bump d8-cli to v0.33.14 - `d8 data export|import` works in editions that ship storage-volume-data-manager
+        instead of storage-foundation
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22712
 user-authn:
   features:
     - summary: >-
@@ -2931,6 +3053,8 @@ user-authn:
         to grant it cluster-wide.
     - summary: Commander releases older than 1.18 can grant Kubernetes API access on DexClient again.
       pull_request: https://github.com/deckhouse/deckhouse/pull/22521
+    - summary: Administrator lock now blocks login, password grant, and refresh without passwordPolicy.lockout.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22630
 user-authz:
   features:
     - summary: >-
