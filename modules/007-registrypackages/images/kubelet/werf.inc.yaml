@@ -3,9 +3,9 @@
   {{- $patch := $value.patch | toString }}
   {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
   {{- /* Final image name carries the minor only: a patch bump must not rename the image. */}}
-  {{- $image_suffix := $version | replace "." "-" }}
+  {{- $minor_version := $version | replace "." "-" }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_suffix }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $minor_version }}
 from: {{ index $.Images "builder/scratch" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
@@ -44,7 +44,7 @@ shell:
   setup:
   - /kubelet --version
 ---
-{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_suffix)) }}
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $minor_version)) }}
 {{- end }}
 
 
@@ -56,10 +56,14 @@ shell:
   {{- $version := $key | toString }}
   {{- $patch := $value.patch | toString }}
   {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
-  {{- /* Final image name carries the minor only: a patch bump must not rename the image. */}}
-  {{- $image_suffix := $version | replace "." "-" }}
+  {{- /* Final image name carries the minor only: a patch bump must not rename the image.
+
+         This name is also the digest map key two Go readers look the extension up by —
+         dhctl/pkg/immutable/digests.go and node-controller's nodeconfig/sources.go —
+         so renaming it means changing them in the same commit. */}}
+  {{- $minor_version := $version | replace "." "-" }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-{{ $image_suffix }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-{{ $minor_version }}
 from: {{ index $.Images "builder/scratch" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
@@ -81,7 +85,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact-{{ $image_version }}
 final: false
 from: {{ index $.Images "builder/distroless" }}
 import:
-- image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_suffix }}
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $minor_version }}
   add: /kubelet
   to: /sysext/opt/deckhouse/bin/kubelet
   before: install
@@ -112,6 +116,6 @@ shell:
   - veritysetup verify /out/kubelet.raw /out/kubelet.verity "$(cat /out/kubelet.roothash)"
 {{- include "olcedar sysext sign" "kubelet" }}
 ---
-{{- include "vex mitigation" (list $ (printf "%s/%s-sysext-%s" $.ModuleName $.ImageName $image_suffix)) }}
+{{- include "vex mitigation" (list $ (printf "%s/%s-sysext-%s" $.ModuleName $.ImageName $minor_version)) }}
 {{- end }}
 {{- end }}

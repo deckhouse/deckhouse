@@ -13,7 +13,7 @@
 # limitations under the License.
 # bashible: parallel-group=pkg-batch
 {{- /* Digest map keys are built from the minor: the kubelet image name no longer carries a patch. */}}
-{{- $kubernetesMajorVersion := .kubernetesVersion | toString | replace "." "" }}
+{{- $kubernetesMinorVersion := .kubernetesVersion | toString | replace "." "" }}
 {{- $kubernetesCniVersion := "1.9.1" | replace "." "" }}
 
 __step_start=$(date +%s.%N)
@@ -39,14 +39,14 @@ __rpp_wait() {
     'BEGIN{printf "[bashible-timing] step=035_install_kubelet.sh section=wait_%s dur=%.3fs\n", n, e-s}'
 }
 
-__rpp_wait "kubelet"        "{{ index .images.registrypackages (printf "kubelet%s" $kubernetesMajorVersion) }}" &
-__rpp_wait "crictl"         "{{ index .images.registrypackages (printf "crictl%s" $kubernetesMajorVersion) }}" &
+__rpp_wait "kubelet"        "{{ index .images.registrypackages (printf "kubelet%s" $kubernetesMinorVersion) }}" &
+__rpp_wait "crictl"         "{{ index .images.registrypackages (printf "crictl%s" $kubernetesMinorVersion) }}" &
 __rpp_wait "kubernetes-cni" "{{ index .images.registrypackages (printf "kubernetesCni%s" $kubernetesCniVersion) }}" &
 wait
 __sec wait_prefetch_total
 
 rpp-get install \
-  "kubelet:{{ index .images.registrypackages (printf "kubelet%s" $kubernetesMajorVersion) }}" \
-  "crictl:{{ index .images.registrypackages (printf "crictl%s" $kubernetesMajorVersion) }}" \
+  "kubelet:{{ index .images.registrypackages (printf "kubelet%s" $kubernetesMinorVersion) }}" \
+  "crictl:{{ index .images.registrypackages (printf "crictl%s" $kubernetesMinorVersion) }}" \
   "kubernetes-cni:{{ index .images.registrypackages (printf "kubernetesCni%s" $kubernetesCniVersion) }}"
 __sec pkg_install

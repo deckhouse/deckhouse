@@ -75,12 +75,28 @@ func TestSysextDigests(t *testing.T) {
 	}{
 		{
 			name:    "the installer ships no kubelet extension for this version",
-			images:  func(packages map[string]any) { delete(packages, "kubeletSysext1349") },
+			images:  func(packages map[string]any) { delete(packages, "kubeletSysext134") },
 			wantErr: []string{`no "kubelet" system extension digest for Kubernetes 1.34`},
 		},
 		{
-			name: "the newest patch wins, and the suffix compares as a number",
+			// The image name carries the minor alone, so the key is exact. This
+			// is the shape the build produces; the two rows below cover the
+			// patch-suffixed names older releases wrote.
+			name:   "the minor-only name is the key",
+			images: func(map[string]any) {},
+			want:   extension{Name: kubeletExtension, Digest: immutabletest.KubeletDigest, RequestedBy: platformExtensionRequestedBy},
+		},
+		{
+			name: "a leftover patch-suffixed name does not outrank the minor-only one",
 			images: func(packages map[string]any) {
+				packages["kubeletSysext13410"] = wrongDigest
+			},
+			want: extension{Name: kubeletExtension, Digest: immutabletest.KubeletDigest, RequestedBy: platformExtensionRequestedBy},
+		},
+		{
+			name: "with only patch-suffixed names the newest patch wins, and the suffix compares as a number",
+			images: func(packages map[string]any) {
+				delete(packages, "kubeletSysext134")
 				packages["kubeletSysext13410"] = immutabletest.KubeletDigest
 				packages["kubeletSysext1349"] = wrongDigest
 			},
@@ -100,7 +116,7 @@ func TestSysextDigests(t *testing.T) {
 		},
 		{
 			name:   "an image whose name merely starts the same way is not a candidate",
-			images: func(packages map[string]any) { packages["containerdSysextArtifact224"] = wrongDigest },
+			images: func(packages map[string]any) { packages["containerdSysextArtifact227"] = wrongDigest },
 			want:   extension{Name: containerdExtension, Digest: immutabletest.ContainerdDigest, RequestedBy: platformExtensionRequestedBy},
 		},
 	}

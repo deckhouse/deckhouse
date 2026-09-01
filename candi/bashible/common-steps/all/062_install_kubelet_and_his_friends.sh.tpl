@@ -13,7 +13,7 @@
 # limitations under the License.
 
 {{- /* Digest map key is built from the minor: the kubelet image name no longer carries a patch. */}}
-{{- $kubernetesVersion := .kubernetesVersion | toString | replace "." "" }}
+{{- $kubernetesMinorVersion := .kubernetesVersion | toString | replace "." "" }}
 {{- $kubernetesCniVersion := "1.9.1" | replace "." "" }}
 
 # d8 is the largest registrypackage. Step 004 deliberately skips it; the 001 prefetch
@@ -34,7 +34,7 @@ post-install-kubelet() {
 
 bb-package-install "kubernetes-cni:{{ index .images.registrypackages (printf "kubernetesCni%s" $kubernetesCniVersion) | toString }}"
 
-bb-package-install "kubelet:{{ index .images.registrypackages (printf "kubelet%s" $kubernetesVersion) | toString }}"
+bb-package-install "kubelet:{{ index .images.registrypackages (printf "kubelet%s" $kubernetesMinorVersion) | toString }}"
 
 if grep -qF '# "\e[5~": history-search-backward' /etc/inputrc; then
   sed -i 's/\# \"\\e\[5~\": history-search-backward/\"\\e\[5~\": history-search-backward/' /etc/inputrc

@@ -92,10 +92,10 @@ func MetaConfig(t *testing.T) *config.MetaConfig {
 		},
 		Images: map[string]map[string]any{
 			"registrypackages": {
-				"containerdSysext224":    ContainerdDigest,
+				"containerdSysext2":      ContainerdDigest,
 				"kubernetesCniSysext162": CNIDigest,
-				"kubeletSysext1349":      KubeletDigest,
-				"kubeletSysext1336":      "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+				"kubeletSysext134":       KubeletDigest,
+				"kubeletSysext133":       "sha256:0000000000000000000000000000000000000000000000000000000000000000",
 				"nodeletSysext":          NodeletDigest,
 			},
 			"nodeManager": {

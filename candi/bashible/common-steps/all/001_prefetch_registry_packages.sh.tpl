@@ -12,15 +12,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Prefetch registry packages in the background so steps 003-006 can run in parallel with
-# the network download. Step 007 (007_fetch_registry_packages.sh) waits for this systemd
-# unit to finish; if for any reason this prefetch doesn't run (missing systemd, missing
-# rpp-get, etc.) step 007 falls back to running the fetch inline as before.
+# Prefetch registry packages in the background so the steps that follow can run in parallel
+# with the network download: this step starts the systemd unit `rpp-prefetch.service` and
+# returns. Every install step then blocks on its own package with
+# `bb-rpp-wait-fetched <name> <digest>` (031_install_containerd, 034_ctr_import_local_images,
+# 035_install_kubelet, ...), so an install starts as soon as its own package is on disk.
+# 007_fetch_registry_packages.sh is a no-op stub kept as a pointer to this arrangement.
 #
-# Package list MUST stay identical to 007_fetch_registry_packages.sh.tpl.
+# The list below MUST cover every package those install steps request. A package missing
+# here is not lost — bb-rpp-wait-fetched gives up once the unit is done and the step fetches
+# it inline — but it is then downloaded serially, which is what the prefetch exists to avoid.
 
 {{- /* Digest map keys are built from the minor/major: the image name no longer carries a patch. */}}
-{{- $kubernetesVersion := .kubernetesVersion | toString | replace "." "" }}
+{{- $kubernetesMinorVersion := .kubernetesVersion | toString | replace "." "" }}
 {{- $kubernetesCniVersion := "1.9.1" | replace "." "" }}
 
 {{- $containerd := "containerd1"}}
@@ -101,8 +105,8 @@ if ! systemd-run \
       \"virt-what:{{ .images.registrypackages.virtWhat125 }}\" \
       \"containerd:{{ index .images.registrypackages $containerd }}\" \
       \"kubernetes-cni:{{ index .images.registrypackages (printf "kubernetesCni%s" $kubernetesCniVersion) | toString }}\" \
-      \"kubelet:{{ index .images.registrypackages (printf "kubelet%s" $kubernetesVersion) | toString }}\" \
-      \"crictl:{{ index .images.registrypackages (printf "crictl%s" (.kubernetesVersion | replace "." "")) | toString }}\" \
+      \"kubelet:{{ index .images.registrypackages (printf "kubelet%s" $kubernetesMinorVersion) | toString }}\" \
+      \"crictl:{{ index .images.registrypackages (printf "crictl%s" $kubernetesMinorVersion) | toString }}\" \
       \"registry-proxy:{{ .images.registrypackages.registryProxy }}\" \
       \"kubernetes-api-proxy:{{ .images.registrypackages.kubernetesApiProxy }}\" \
       \"toml-merge:{{ .images.registrypackages.tomlMerge01 }}\" \

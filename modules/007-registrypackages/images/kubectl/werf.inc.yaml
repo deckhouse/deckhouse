@@ -3,9 +3,9 @@
   {{- $patch := $value.patch | toString }}
   {{- $image_version := printf "%s.%s" $version $patch | replace "." "-" }}
   {{- /* Final image name carries the minor only: a patch bump must not rename the image. */}}
-  {{- $image_suffix := $version | replace "." "-" }}
+  {{- $minor_version := $version | replace "." "-" }}
 ---
-image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $image_suffix }}
+image: {{ $.ModuleName }}/{{ $.ImageName }}-{{ $minor_version }}
 from: {{ index $.Images "builder/scratch" }}
 import:
 - image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact-{{ $image_version }}
@@ -43,5 +43,5 @@ shell:
   setup:
   - /kubectl version --client=true
 ---
-{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $image_suffix)) }}
+{{- include "vex mitigation" (list $ (printf "%s/%s-%s" $.ModuleName $.ImageName $minor_version)) }}
 {{- end }}
