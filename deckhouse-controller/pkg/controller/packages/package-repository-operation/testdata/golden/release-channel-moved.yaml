@@ -46,10 +46,13 @@ metadata:
     kind: PackageRepository
     name: deckhouse
     uid: ""
-  resourceVersion: "2"
+  resourceVersion: "3"
 status:
   availableRepositories:
   - deckhouse
+  releaseChannels:
+    deckhouse:
+      stable: v1.0.0
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
