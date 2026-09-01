@@ -27,6 +27,7 @@ spec:
         cpu: 50m
         memory: 200Mi
 {{- end }}
+{{- if (include "helm_lib_ha_enabled" .) }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
@@ -39,6 +40,7 @@ spec:
   selector:
     matchLabels:
       app: "bashible-apiserver"
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
