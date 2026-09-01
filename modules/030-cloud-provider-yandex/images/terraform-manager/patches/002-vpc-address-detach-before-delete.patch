@@ -1,0 +1,128 @@
+diff --git a/yandex/resource_yandex_vpc_address.go b/yandex/resource_yandex_vpc_address.go
+index 186ff8a..8370927 100644
+--- a/yandex/resource_yandex_vpc_address.go
++++ b/yandex/resource_yandex_vpc_address.go
+@@ -8,9 +8,11 @@ import (
+ 	"github.com/hashicorp/terraform-plugin-sdk/v2/diag"
+ 
+ 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
++	"github.com/yandex-cloud/go-genproto/yandex/cloud/compute/v1"
+ 	"github.com/yandex-cloud/go-genproto/yandex/cloud/vpc/v1"
+ 	"github.com/yandex-cloud/terraform-provider-yandex/common"
+ 	"google.golang.org/genproto/protobuf/field_mask"
++	"google.golang.org/grpc/codes"
+ )
+ 
+ const yandexVPCAddressDefaultTimeout = 30 * time.Second
+@@ -375,20 +377,108 @@ func resourceYandexVPCAddressDelete(d *schema.ResourceData, meta interface{}) er
+ 	ctx, cancel := context.WithTimeout(config.Context(), d.Timeout(schema.TimeoutDelete))
+ 	defer cancel()
+ 
+-	op, err := config.sdk.WrapOperation(config.sdk.VPC().Address().Delete(ctx, req))
++	deleteAddress := func() error {
++		op, err := config.sdk.WrapOperation(config.sdk.VPC().Address().Delete(ctx, req))
++		if err != nil {
++			return err
++		}
++
++		if err := op.Wait(ctx); err != nil {
++			return err
++		}
++
++		_, err = op.Response()
++		return err
++	}
++
++	err := deleteAddress()
++
++	// An address that is still assigned to a compute instance cannot be deleted:
++	// the API answers FailedPrecondition. Terraform gives no way to guarantee
++	// that the instance drops the address before this resource is destroyed, so
++	// release it here and retry. Deleting an address the caller has removed from
++	// configuration implies detaching it first.
++	if err != nil && isStatusWithCode(err, codes.FailedPrecondition) {
++		if detachErr := detachAddressFromInstances(ctx, config, d); detachErr != nil {
++			return addressError("releasing address %q before deletion: %s", d.Id(), detachErr)
++		}
++
++		err = deleteAddress()
++	}
++
+ 	if err != nil {
+ 		return handleAddressNotFoundError(err, d, d.Id())
+ 	}
+ 
+-	err = op.Wait(ctx)
++	return nil
++}
++
++// detachAddressFromInstances removes the one-to-one NAT that holds the given
++// address from every compute instance using it.
++//
++// The VPC API does not report which resource occupies an address, so instances
++// in the address folder are scanned for a matching NAT address.
++func detachAddressFromInstances(ctx context.Context, config *Config, d *schema.ResourceData) error {
++	address, err := config.sdk.VPC().Address().Get(ctx, &vpc.GetAddressRequest{AddressId: d.Id()})
+ 	if err != nil {
+ 		return err
+ 	}
+ 
+-	_, err = op.Response()
++	value := address.GetExternalIpv4Address().GetAddress()
++	if value == "" {
++		return fmt.Errorf("address %q has no external IPv4 value to look up", d.Id())
++	}
++
++	folderID, err := getFolderID(d, config)
+ 	if err != nil {
+ 		return err
+ 	}
+ 
++	detached := false
++	pageToken := ""
++
++	for {
++		resp, err := config.sdk.Compute().Instance().List(ctx, &compute.ListInstancesRequest{
++			FolderId:  folderID,
++			PageSize:  defaultListSize,
++			PageToken: pageToken,
++		})
++		if err != nil {
++			return err
++		}
++
++		for _, instance := range resp.GetInstances() {
++			for _, iface := range instance.GetNetworkInterfaces() {
++				if iface.GetPrimaryV4Address().GetOneToOneNat().GetAddress() != value {
++					continue
++				}
++
++				op, err := config.sdk.WrapOperation(config.sdk.Compute().Instance().RemoveOneToOneNat(ctx,
++					&compute.RemoveInstanceOneToOneNatRequest{
++						InstanceId:            instance.GetId(),
++						NetworkInterfaceIndex: iface.GetIndex(),
++					}))
++				if err != nil {
++					return err
++				}
++
++				if err := op.Wait(ctx); err != nil {
++					return err
++				}
++
++				detached = true
++			}
++		}
++
++		pageToken = resp.GetNextPageToken()
++		if pageToken == "" {
++			break
++		}
++	}
++
++	if !detached {
++		return fmt.Errorf("address %q is reported as in use, but no instance in folder %q holds it", d.Id(), folderID)
++	}
++
+ 	return nil
+ }
