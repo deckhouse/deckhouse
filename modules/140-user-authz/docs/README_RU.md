@@ -358,25 +358,19 @@ create:
 create,get:
     - pods/attach
     - pods/exec
-    - pods/proxy
-    - services/proxy
 delete,deletecollection:
     - pods
 read:
     - secrets
-update:
-    - pods/ephemeralcontainers
 ```
 
 {{site.data.i18n.common.role[page.lang] | capitalize }} `Editor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`):
 
 ```text
 create:
-    - pods/binding
+    - serviceaccounts/token
 patch:
     - pods/resize
-read-write:
-    - serviceaccounts/token
 write:
     - apps/deployments
     - apps/statefulsets

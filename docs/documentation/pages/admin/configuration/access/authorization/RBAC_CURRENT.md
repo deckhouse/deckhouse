@@ -109,12 +109,8 @@ create:
 create,get:
     - pods/attach
     - pods/exec
-    - pods/proxy
-    - services/proxy
 delete,deletecollection:
     - pods
-update:
-    - pods/ephemeralcontainers
 read:
     - secrets
 ```
@@ -123,7 +119,7 @@ read:
 
 ```text
 create:
-    - pods/binding
+    - serviceaccounts/token
 patch:
     - pods/resize
 read-write:
@@ -142,7 +138,6 @@ read-write:
     - persistentvolumeclaims
     - policy/poddisruptionbudgets
     - serviceaccounts
-    - serviceaccounts/token
     - services
 write:
     - secrets
@@ -182,13 +177,13 @@ update:
     - namespaces/finalize
 read-write:
     - deckhouse.io/clusterauthorizationrules
-    - nodes/log
-    - nodes/metrics
-    - nodes/proxy
-    - nodes/stats
     - nodes/configz
     - nodes/healthz
+    - nodes/log
+    - nodes/metrics
     - nodes/pods
+    - nodes/proxy
+    - nodes/stats
 write:
     - limitranges
     - namespaces

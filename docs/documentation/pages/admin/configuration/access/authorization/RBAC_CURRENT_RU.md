@@ -105,12 +105,8 @@ create:
 create,get:
     - pods/attach
     - pods/exec
-    - pods/proxy
-    - services/proxy
 delete,deletecollection:
     - pods
-update:
-    - pods/ephemeralcontainers
 read:
     - secrets
 ```
@@ -119,7 +115,7 @@ read:
 
 ```text
 create:
-    - pods/binding
+    - serviceaccounts/token
 patch:
     - pods/resize
 read-write:
@@ -138,7 +134,6 @@ read-write:
     - persistentvolumeclaims
     - policy/poddisruptionbudgets
     - serviceaccounts
-    - serviceaccounts/token
     - services
 write:
     - secrets
@@ -174,17 +169,17 @@ write:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterAdmin` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`):
 
 ```text
-read-write:
-    - deckhouse.io/clusterauthorizationrules
-    - nodes/log
-    - nodes/metrics
-    - nodes/proxy
-    - nodes/stats
-    - nodes/configz
-    - nodes/healthz
-    - nodes/pods
 update:
     - namespaces/finalize
+read-write:
+    - deckhouse.io/clusterauthorizationrules
+    - nodes/configz
+    - nodes/healthz
+    - nodes/log
+    - nodes/metrics
+    - nodes/pods
+    - nodes/proxy
+    - nodes/stats
 write:
     - limitranges
     - namespaces

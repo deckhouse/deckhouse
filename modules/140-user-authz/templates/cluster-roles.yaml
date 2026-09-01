@@ -247,8 +247,6 @@
   resources:
   - pods/attach
   - pods/exec
-  - pods/proxy
-  - services/proxy
   verbs:
   - create
   - get
@@ -261,24 +259,12 @@
 - apiGroups:
   - ""
   resources:
-  - pods/ephemeralcontainers
-  verbs:
-  - update
-- apiGroups:
-  - ""
-  resources:
   - secrets
   verbs:
   {{- include "user_authz_verbs" "r" }}
 {{- end -}}
 
 {{- define "user_authz_editor_rules" }}
-- apiGroups:
-  - ""
-  resources:
-  - pods/binding
-  verbs:
-  - create
 - apiGroups:
   - ""
   resources:
@@ -290,7 +276,7 @@
   resources:
   - serviceaccounts/token
   verbs:
-  {{- include "user_authz_verbs" "rw" }}
+  - create
 - apiGroups:
   - ""
   resources:
