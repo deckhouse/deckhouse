@@ -392,10 +392,6 @@ entries:
                     en: Short-term storage
                     ru: Кратковременное хранение
                   url: /virtualization-platform/documentation/admin/platform-management/logging/storage.html
-                - title:
-                    en: Lightweight logs
-                    ru: Легковесные логи
-                  url: /virtualization-platform/documentation/admin/platform-management/logging/lightweight.html
             - title:
                 en: Virtualization
                 ru: Виртуализация
