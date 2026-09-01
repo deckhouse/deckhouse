@@ -44,13 +44,9 @@ properties:
           description: 'Имя способа доступа к API-серверу (без пробелов, маленькими буквами).'
         masterURI:
           description: |
-            Если планируется использовать TCP-прокси, для адреса TCP-прокси должен быть сконфигурирован сертификат на стороне API-сервера. Например, в случае, если API-сервер доступен по трем адресам (`192.168.0.10`, `192.168.0.11` и `192.168.0.12`), а ходить к API-серверу клиент будет через TCP-балансер (например, `192.168.0.15`), необходимо перегенерировать сертификаты для API-серверов:
-            * отредактировать `kubeadm-config`: `d8 k -n kube-system edit configmap kubeadm-config`, добавив в `.apiServer.certSANs` адрес `192.168.0.15`;
-            * сохранить получившийся конфиг: `kubeadm config view > kubeadmconf.yaml`;
-            * удалить старые сертификаты API-сервера: `mv /etc/kubernetes/pki/apiserver.* /tmp/`;
-            * перевыпустить новые сертификаты: `kubeadm init phase certs apiserver --config=kubeadmconf.yaml`;
-            * перезапустить контейнер с API-сервером: `docker ps -a | grep 'kube-apiserver' | grep -v pause| awk '{print $1}' | xargs docker restart`;
-            * повторить данное действие для всех master-узлов.
+            Если планируется использовать TCP-прокси, для адреса TCP-прокси должен быть сконфигурирован сертификат на стороне API-сервера.
+
+            Например, если API-сервер доступен по трем адресам (`192.168.0.10`, `192.168.0.11` и `192.168.0.12`), а клиент обращается к API-серверу через TCP-балансер (например, `192.168.0.15`), необходимо добавить адрес TCP-балансера в [параметр `apiserver.certSANs`](/modules/control-plane-manager/configuration.html#parameters-apiserver-certsans) в настройках модуля `control-plane-manager`.
         masterCA:
           description: |
             CA для доступа к API-серверу.
