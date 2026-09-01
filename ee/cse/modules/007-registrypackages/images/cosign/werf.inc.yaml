@@ -23,6 +23,9 @@ imageSpec:
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
 from: {{ index $.Images "builder/distroless" }}
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
+  to: /
 shell:
   install:
-   - pm install cosign@2.6.5 -d /cosign
+   - pm install cosign@{{ $version }}

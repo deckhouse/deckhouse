@@ -4,4 +4,4 @@
 
 set -Eeo pipefail
 mkdir -p /opt/deckhouse/bin
-cp -f cosign /opt/deckhouse/bin
+cp -f /usr/bin/cosign /opt/deckhouse/bin
