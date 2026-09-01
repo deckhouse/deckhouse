@@ -29,6 +29,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
+	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -90,7 +91,7 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, logger lo
 			predicate.GenerationChangedPredicate{},
 			customPredicate[client.Object]{logger: logger},
 		))).
-		Watches(&corev1.Namespace{}, handler.EnqueueRequestsFromMapFunc(enqueueProjectForNamespace),
+		Watches(&corev1.Namespace{}, namespaceProjectHandler{},
 			builder.WithPredicates(namespaceWatchPredicate{})).
 		Watches(&corev1.ResourceQuota{}, handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, object client.Object) []reconcile.Request {
 			if object.GetName() != v1alpha3.ProjectQuotaName {
@@ -105,10 +106,55 @@ func Register(runtimeManager manager.Manager, helmClient *helm.Client, logger lo
 		Complete(projectController)
 }
 
-// enqueueProjectForNamespace wakes the owning real project and/or the virtual
-// project that inventories unowned namespaces. A deleted ns without a project
-// label must refresh virtual status or the inventory keeps a dead name.
-func enqueueProjectForNamespace(_ context.Context, object client.Object) []reconcile.Request {
+// namespaceProjectHandler wakes the owning real project and the virtual project
+// that inventories unowned namespaces. Update maps both the old and the new
+// object: after adopt the new ns is owned, so only the old side still names
+// virtual default/deckhouse.
+type namespaceProjectHandler struct{}
+
+var _ handler.EventHandler = namespaceProjectHandler{}
+
+func (namespaceProjectHandler) Create(_ context.Context, e event.CreateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+	enqueueNamespaceProjects(q, e.Object)
+}
+
+func (namespaceProjectHandler) Update(_ context.Context, e event.UpdateEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+	enqueueNamespaceProjects(q, e.ObjectOld, e.ObjectNew)
+}
+
+func (namespaceProjectHandler) Delete(_ context.Context, e event.DeleteEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+	enqueueNamespaceProjects(q, e.Object)
+}
+
+func (namespaceProjectHandler) Generic(_ context.Context, e event.GenericEvent, q workqueue.TypedRateLimitingInterface[reconcile.Request]) {
+	enqueueNamespaceProjects(q, e.Object)
+}
+
+func enqueueNamespaceProjects(q workqueue.TypedRateLimitingInterface[reconcile.Request], objects ...client.Object) {
+	for _, req := range namespaceProjectRequests(objects...) {
+		q.Add(req)
+	}
+}
+
+func namespaceProjectRequests(objects ...client.Object) []reconcile.Request {
+	seen := make(map[string]struct{})
+	var reqs []reconcile.Request
+	for _, object := range objects {
+		if object == nil {
+			continue
+		}
+		for _, req := range requestsForNamespace(object) {
+			if _, ok := seen[req.Name]; ok {
+				continue
+			}
+			seen[req.Name] = struct{}{}
+			reqs = append(reqs, req)
+		}
+	}
+	return reqs
+}
+
+func requestsForNamespace(object client.Object) []reconcile.Request {
 	var reqs []reconcile.Request
 	if proj, ok := object.GetLabels()[v1alpha3.ResourceLabelProject]; ok {
 		reqs = append(reqs, reconcile.Request{NamespacedName: client.ObjectKey{Name: proj}})
