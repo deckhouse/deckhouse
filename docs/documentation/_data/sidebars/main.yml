@@ -1171,6 +1171,10 @@ entries:
                 en: Managed PostgreSQL
                 ru: Managed PostgreSQL
               url: /user/managed-services/postgres/
+            - title:
+                en: FAQ
+                ru: Частые вопросы
+              url: /user/managed-services/faq/
         - title:
             en: Monitoring
             ru: Мониторинг

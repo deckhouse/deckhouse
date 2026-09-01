@@ -5,27 +5,25 @@ description: "Администрирование managed-сервиса PostgreS
 lang: ru
 ---
 
-Managed PostgreSQL реализуется средствами модуля [`managed-postgres`](/modules/managed-postgres/). На этой странице описано, что и как может настраивать администратор кластера через PostgresClass: ограничения ресурсов, топологию, проверки параметров, значения по умолчанию и привязку к узлам.
+Managed PostgreSQL реализуется средствами модуля [`managed-postgres`](/modules/managed-postgres/). На этой странице описано, что и как может настраивать администратор кластера через [PostgresClass](/modules/managed-postgres/cr.html#postgresclass-v1alpha1): ограничения ресурсов, топологию, проверки параметров, значения по умолчанию и привязку к узлам.
 
-Включение модуля, требования к установке и справочник параметров смотрите [в документации модуля managed-postgres](/modules/managed-postgres/). Пользовательские операции с сервисом описаны [в разделе «Managed PostgreSQL»](/user/managed-services/postgres/).
+Включение модуля, требования к установке и справочник параметров смотрите [в документации модуля `managed-postgres`](/modules/managed-postgres/). Пользовательские операции с сервисом описаны [в разделе «Managed PostgreSQL»](../../../user/managed-services/postgres.html).
 
-После включения модуль создаёт PostgresClass `default` с базовыми настройками, чтобы пользователи могли сразу создавать сервисы PostgreSQL. Для production-окружений рекомендуется готовить отдельные классы с явными политиками (например, `production-v1`, `staging-v1`) и выдавать пользователям их имена.
+После включения модуль создаёт PostgresClass `default` с базовыми настройками, чтобы пользователи могли сразу создавать ресурсы Postgres. Для production-окружений рекомендуется готовить отдельные классы с явными настройками и ограничениями (например, `production-v1`, `staging-v1`) и выдавать пользователям их имена.
 
 ## Зависимости для отдельных функций
 
-Некоторые функции модуля требуют предварительной настройки других модулей Deckhouse Kubernetes Platform:
+Некоторые функции модуля требуют дополнительной настройки компонентов Deckhouse Kubernetes Platform или инфраструктуры кластера:
 
 | Функция | Требование | Раздел |
 |---------|-----------|--------------|
 | Резервное копирование (PostgresSnapshot) | Включённый модуль `snapshot-controller` и StorageClass с поддержкой снимков | [snapshot-controller](/modules/snapshot-controller/) |
 | TLS через `cert-manager` | Включённый модуль `cert-manager` и настроенный ClusterIssuer или Issuer | [cert-manager](/modules/cert-manager/) |
-| Размещение на выделенных узлах | Лейблы на узлах (например, `node.deckhouse.io/group=pg`) и taints при необходимости | [Управление узлами](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html) |
+| Размещение на выделенных узлах | Лейблы на узлах (например, `node.deckhouse.io/group=pg`) и taints при необходимости | [Управление узлами](../../../admin/configuration/platform-scaling/node/node-management.html) |
 
-Все перечисленные модули являются стандартными компонентами Deckhouse Kubernetes Platform.
+## Пример создания PostgresClass
 
-## Полный пример конфигурации
-
-Перед применением полного примера убедитесь, что в вашем кластере достаточно ресурсов. Чтобы оценить доступные ресурсы, выполните:
+Перед применением примера убедитесь, что в кластере достаточно ресурсов. Чтобы оценить доступные ресурсы, выполните:
 
 ```shell
 d8 k describe node worker-0 | grep -A 5 "Allocated resources"
@@ -33,6 +31,7 @@ d8 k describe node worker-0 | grep -A 5 "Allocated resources"
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 Allocated resources:
   (Total limits may be over 100 percent, i.e., overcommitted.)
@@ -41,8 +40,10 @@ Allocated resources:
   cpu                3176m (80%)       500m (12%)
   memory             8342837084 (71%)  6400Mi (57%)
 ```
+{:.nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
-Ниже приведён канонический полный пример PostgresClass, объединяющий все основные настройки. Этот манифест можно использовать как отправную точку и адаптировать под конкретные требования. Описание каждой секции приведено в соответствующих разделах ниже.
+Ниже приведён пример PostgresClass `production-v1`, который можно использовать вместо PostgresClass `default` и адаптировать под требования к ресурсам, топологии, параметрам PostgreSQL и размещению на узлах. Отдельные параметры примера подробнее описаны в следующих разделах.
 
 Создайте файл `postgresclass-production.yaml` со следующим содержимым:
 
@@ -215,17 +216,17 @@ Spec:
 Events:       <none>
 ```
 
-Если проверка завершилась успешно, настройка PostgresClass завершена. Пользователи могут создавать сервисы PostgreSQL, указывая этот класс в параметре `postgresClassName: production-v1` ресурса Postgres.
+Если проверка завершилась успешно, настройка PostgresClass завершена. Пользователи могут создавать [ресурсы Postgres](/modules/managed-postgres/cr.html#postgres-v1alpha1), указывая этот класс в параметре `postgresClassName: production-v1`.
 
 ## Управление изменениями PostgresClass
 
-После создания PostgresClass его спецификацию (`spec`) нельзя изменить применением обновлённого манифеста. Чтобы изменить политики, создайте новый PostgresClass с другим именем и используйте его для новых ресурсов Postgres.
+После создания PostgresClass его спецификацию (`spec`) нельзя изменить применением обновлённого манифеста. Чтобы изменить настройки и ограничения, создайте новый PostgresClass с другим именем и используйте его для новых ресурсов Postgres.
 
 ### Изменение и удаление PostgresClass
 
 Сообщите пользователям о появлении нового класса и предложите использовать его для новых ресурсов Postgres.
 
-Если нужно удалить старый класс, сначала проверьте, используется ли он существующими ресурсами Postgres. Выполните команду:
+Чтобы удалить старый класс, сначала проверьте, используется ли он существующими ресурсами Postgres. Выполните команду:
 
 ```shell
 d8 k get postgres --all-namespaces -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,CLASS:.spec.postgresClassName | grep production-v1
@@ -247,23 +248,21 @@ postgresclass.managed-services.deckhouse.io "production-v1" deleted
 
 После удаления PostgresClass действует следующее:
 
-- Сервисы PostgreSQL, созданные на основе удалённого PostgresClass, продолжают работать. Их настройки остаются прежними, так как они были зафиксированы при создании.
+- Ресурсы Postgres, созданные на основе удалённого PostgresClass, продолжают работать. Их настройки остаются прежними, так как они были зафиксированы при создании.
 - Пользователи не могут создать новый ресурс Postgres со ссылкой на удалённый класс. При попытке создать ресурс Postgres с `postgresClassName: production-v1` они получат ошибку.
-
-(Возможно стоит сделать пример, что класс был удален, а кластеры на его основе продолжают работать и что теперь создать ссылаясь на старый больше нельзя.)
 
 ### Рекомендации
 
 При работе с PostgresClass учитывайте следующее:
 
 - Ведите учёт активных классов и следите за их использованием.
-- При изменении политик создавайте новый класс, а не перезаписывайте существующий.
+- При изменении настроек и ограничений создавайте новый класс, а не перезаписывайте существующий.
 
 ## Ограничение ресурсов CPU и памяти
 
-Политики [`spec.sizingPolicies`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-sizingpolicies) определяют допустимые комбинации CPU и памяти для сервисов PostgreSQL. Администратор задаёт несколько диапазонов ядер, для каждого из которых определены минимальная и максимальная память, а также шаг.
+Политики [`spec.sizingPolicies`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-sizingpolicies) определяют допустимые комбинации CPU и памяти для экземпляров PostgreSQL. Администратор задаёт несколько диапазонов ядер, для каждого из которых определены минимальная и максимальная память, а также шаг.
 
-Полезно применять, когда в одном кластере работают несколько независимых команд, создающих сервисы PostgreSQL без согласования с администратором. Политики предотвращают создание ресурсов Postgres с нереалистичными ресурсами и обеспечивают предсказуемую утилизацию узлов.
+Полезно применять, когда в одном кластере работают несколько независимых команд, создающих ресурсы Postgres без согласования с администратором. Политики предотвращают создание ресурсов Postgres с нереалистичными ресурсами и обеспечивают предсказуемую утилизацию узлов.
 
 Выбор политики происходит по количеству ядер CPU. Параметр [`coreFractions`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-sizingpolicies-corefractions) определяет, какой процент от лимитов CPU (`limits`) составит гарантированный запрос (`requests`). Например, если администратор указал `coreFractions: [50, 100]`, пользователь при создании ресурса Postgres может выбрать `coreFraction: 50` или `coreFraction: 100`.
 
@@ -279,7 +278,7 @@ postgresclass.managed-services.deckhouse.io "production-v1" deleted
 - `limits` и `requests` равны (4 ядра).
 - Под получает гарантированное выделение ресурсов, но теряется возможность переиспользовать неиспользуемые ядра другими подами.
 
-Ниже приведён сокращённый фрагмент `spec.sizingPolicies`. Полный вариант приведён [в разделе «Полный пример конфигурации»](#полный-пример-конфигурации).
+Ниже приведён сокращённый фрагмент `spec.sizingPolicies`. Полный вариант приведён [в разделе «Пример создания PostgresClass»](#пример-создания-postgresclass).
 
 ```yaml
 spec:
@@ -312,7 +311,7 @@ spec:
 
 ## Управление отказоустойчивостью через зоны доступности
 
-Поле [`spec.topology`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology) определяет, как сервисы распределяются по зонам доступности. Доступны три режима:
+Поле [`spec.topology`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology) определяет, как экземпляры PostgreSQL распределяются по зонам доступности. Доступны три режима:
 
 - `Ignored` — стандартное планирование без привязки к зонам;
 - `Zonal` — все экземпляры размещаются в одной зоне (минимальная задержка между репликами);
@@ -322,7 +321,7 @@ spec:
 
 Администратор указывает разрешённые варианты ([`allowedTopologies`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology-allowedtopologies)), топологию по умолчанию ([`defaultTopology`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology-defaulttopology)) и список доступных зон ([`allowedZones`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology-allowedzones)).
 
-Ниже приведён сокращённый фрагмент `spec.topology`. Полный вариант приведён [в разделе «Полный пример конфигурации»](#полный-пример-конфигурации).
+Ниже приведён сокращённый фрагмент `spec.topology`. Полный вариант приведён [в разделе «Пример создания PostgresClass»](#пример-создания-postgresclass).
 
 ```yaml
 spec:
@@ -346,9 +345,16 @@ spec:
 
 Полезно применять для защиты от типичных ошибок конфигурации, которые могут привести к проблемам производительности. Например, слишком большое значение `shared_buffers` может оставить PostgreSQL недостаточно памяти для других операций, а большое количество подключений — увеличить общее потребление памяти.
 
-В правилах доступны переменные: `configuration.maxConnections`, `configuration.workMem`, `configuration.sharedBuffers`, `configuration.walKeepSize`, `instance.memory.size`, `instance.cpu.cores`.
+В правилах доступны следующие переменные:
 
-Ниже приведён сокращённый фрагмент `spec.validations`. Полный набор правил приведён [в разделе «Полный пример конфигурации»](#полный-пример-конфигурации).
+- `configuration.maxConnections`;
+- `configuration.workMem`;
+- `configuration.sharedBuffers`;
+- `configuration.walKeepSize`;
+- `instance.memory.size`;
+- `instance.cpu.cores`.
+
+Ниже приведён сокращённый фрагмент `spec.validations`. Полный набор правил приведён [в разделе «Пример создания PostgresClass»](#пример-создания-postgresclass).
 
 ```yaml
 spec:
@@ -367,12 +373,12 @@ spec:
 
 Если администратор не указал значения в `configuration`, контроллер модуля применяет:
 
-- `maxConnections`: 100
-- `sharedBuffers`: 25% от `memory.size`
-- `workMem`: `(memory.size - sharedBuffers) * 4 / maxConnections`
-- `walKeepSize`: 512Mi
+- `maxConnections`: `100`;
+- `sharedBuffers`: 25% от `memory.size`;
+- `workMem`: `(memory.size - sharedBuffers) * 4 / maxConnections`;
+- `walKeepSize`: `512Mi`.
 
-Ниже приведён сокращённый фрагмент `spec.configuration` и `spec.overridableConfiguration`. Полный вариант приведён [в разделе «Полный пример конфигурации»](#полный-пример-конфигурации).
+Ниже приведён сокращённый фрагмент `spec.configuration` и `spec.overridableConfiguration`. Полный вариант приведён [в разделе «Пример создания PostgresClass»](#пример-создания-postgresclass).
 
 ```yaml
 spec:
@@ -387,7 +393,7 @@ spec:
 
 В этом примере:
 
-- `maxConnections` и `sharedBuffers` по умолчанию равны 200 и 1 Gi соответственно.
+- `maxConnections` и `sharedBuffers` по умолчанию равны 200 и 1Gi соответственно.
 - Пользователь может переопределить `maxConnections`, `sharedBuffers` и `walKeepSize`.
 - `workMem` не входит в `overridableConfiguration` — пользователь не может его изменить.
 
@@ -420,17 +426,17 @@ workMem = 12Gi / 200
 workMem = 61.44Mi
 ```
 
-(Возможно, стоит уточнить назначение множителя `* 4` в формуле. Я предполагаю, что это коэффициент запаса, поэтому ниже написал «применяет коэффициент запаса», но это нужно подтвердить. Возможно, этот множитель корректнее описать иначе.)
+Множитель `* 4` — коэффициент запаса на случай нескольких одновременных операций сортировки и хэширования в рамках одного запроса.
 
-Контроллер рассчитывает `workMem` по приведённой выше формуле с учётом объёма памяти экземпляра, `sharedBuffers` и `maxConnections`.
+Контроллер рассчитывает `workMem` по приведённой выше формуле с учётом объёма памяти экземпляра, `sharedBuffers`, `maxConnections` и коэффициента запаса.
 
 ## Привязка к выделенным узлам
 
 Стандартные механизмы — [`spec.nodeSelector`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-nodeselector), [`spec.tolerations`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-tolerations) и [`spec.nodeAffinity`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-nodeaffinity) — позволяют указать, на каких узлах могут размещаться поды PostgreSQL.
 
-Размещение на выделенных узлах помогает изолировать сервисы PostgreSQL от пользовательских приложений и сделать использование ресурсов дисковой подсистемы и сети более предсказуемым.
+Размещение на выделенных узлах помогает изолировать экземпляры PostgreSQL от пользовательских приложений и сделать использование ресурсов дисковой подсистемы и сети более предсказуемым.
 
-Ниже приведён сокращённый фрагмент `spec.nodeAffinity`, `spec.nodeSelector` и `spec.tolerations`. Полный вариант приведён [в разделе «Полный пример конфигурации»](#полный-пример-конфигурации).
+Ниже приведён сокращённый фрагмент `spec.nodeAffinity`, `spec.nodeSelector` и `spec.tolerations`. Полный вариант приведён [в разделе «Пример создания PostgresClass»](#пример-создания-postgresclass).
 
 ```yaml
 spec:
@@ -457,4 +463,6 @@ spec:
 - На узлах установлен taint `primary-role=pg:NoSchedule`, который препятствует размещению подов без соответствующего toleration.
 - `tolerations` разрешает размещение подов PostgreSQL на таких узлах.
 
-Пользователь не заботится о выборе узлов. Поды автоматически размещаются на подготовленной инфраструктуре в соответствии с политиками администратора.
+Пользователь не заботится о выборе узлов. Поды автоматически размещаются на подготовленной инфраструктуре в соответствии с настройками PostgresClass.
+
+Если правилам размещения не соответствует ни один узел, ресурсы Postgres пользователей останутся в состоянии `Pending` — см. [диагностику в разделе «Частые вопросы»](../../../user/managed-services/faq.html#экземпляры-postgresql-остаются-в-состоянии-pending).

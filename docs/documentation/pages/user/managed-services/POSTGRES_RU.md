@@ -1,15 +1,18 @@
 ---
-description: Создание, настройка и эксплуатация сервисов PostgreSQL с помощью модуля managed-postgres.
+description: Создание, настройка и эксплуатация PostgreSQL с помощью модуля managed-postgres.
 title: "Managed PostgreSQL"
 permalink: ru/user/managed-services/postgres/
 lang: ru
+relatedLinks:
+  - title: "Частые вопросы"
+    url: "faq.html"
 ---
 
-Модуль `managed-postgres` позволяет создавать и настраивать сервисы PostgreSQL с помощью ресурса Postgres. Пользователь задаёт требуемую конфигурацию, а модуль создаёт сервис и поддерживает его состояние с учётом PostgresClass, который определяет доступные параметры и ограничения. PostgresClass создаёт и настраивает администратор кластера.
+Модуль `managed-postgres` позволяет создавать и настраивать PostgreSQL с помощью ресурса Postgres. Пользователь задаёт требуемую конфигурацию, а модуль создаёт и поддерживает экземпляры PostgreSQL с учётом PostgresClass, который определяет доступные параметры и ограничения. PostgresClass создаёт и настраивает администратор кластера.
 
-В руководстве используются два сквозных примера:
+В руководстве используются два примера:
 
-- `app-postgres` — основной пример для создания и эксплуатации PostgreSQL: ресурсы, режим `Cluster`, репликация, пользователи, базы данных, параметры PostgreSQL, TLS и наблюдаемость;
+- `app-postgres` — [основной пример](#основной-пример-создание-postgres) для создания и эксплуатации PostgreSQL: ресурсы, режим `Cluster`, репликация, пользователи, базы данных, параметры PostgreSQL, TLS и наблюдаемость;
 - `snapshot-pg` — отдельный пример для создания и восстановления снимков, поскольку для него требуется StorageClass с поддержкой CSI-снимков.
 
 {% alert level="info" %}
@@ -18,7 +21,7 @@ lang: ru
 
 ## Проверка доступных ресурсов
 
-Перед созданием сервиса PostgreSQL проверьте доступные ресурсы worker-узлов. Это позволяет подобрать значения CPU и памяти для примера с учётом реальной загрузки кластера.
+Перед созданием Postgres проверьте доступные ресурсы worker-узлов. Это позволяет подобрать значения CPU и памяти для примера с учётом реальной загрузки кластера.
 
 Сначала посмотрите список узлов:
 
@@ -31,15 +34,15 @@ d8 k get nodes -o wide
 Пример вывода:
 
 ```console
-NAME                                       STATUS   ROLES    AGE   VERSION
-dbalabantest-worker-55ca0efd-lzl6j-pwnhx   Ready    worker   25d   v1.34.9
-dbalabantest-worker-55ca0efd-lzl6j-vxfwg   Ready    worker   43m   v1.34.9
+NAME       STATUS   ROLES    AGE   VERSION
+worker-1   Ready    worker   25d   v1.34.9
+worker-2   Ready    worker   43m   v1.34.9
 ```
 
 Проверьте занятые ресурсы первого worker-узла:
 
 ```shell
-d8 k describe node dbalabantest-worker-55ca0efd-lzl6j-pwnhx | grep -A 5 "Allocated resources"
+d8 k describe node worker-1 | grep -A 5 "Allocated resources"
 ```
 
 Пример вывода:
@@ -56,7 +59,7 @@ Allocated resources:
 Проверьте второй worker-узел:
 
 ```shell
-d8 k describe node dbalabantest-worker-55ca0efd-lzl6j-vxfwg | grep -A 5 "Allocated resources"
+d8 k describe node worker-2 | grep -A 5 "Allocated resources"
 ```
 
 Пример вывода:
@@ -80,15 +83,18 @@ d8 k get storageclass
 
 Пример вывода тестового стенда:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                   PROVISIONER            RECLAIMPOLICY   VOLUMEBINDINGMODE      ALLOWVOLUMEEXPANSION
 local                  csi.dvp.deckhouse.io   Delete          WaitForFirstConsumer   true
 replicated (default)   csi.dvp.deckhouse.io   Delete          WaitForFirstConsumer   true
 ```
+{:.nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Параметр [`spec.instance.persistentVolumeClaim.storageClassName`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-instance-persistentvolumeclaim-storageclassname) задаётся только при создании Postgres и не может быть изменён позднее.
 
-## Сквозной пример: создание сервиса PostgreSQL
+## Основной пример: создание Postgres
 
 Создайте неймспейс:
 
@@ -96,7 +102,7 @@ replicated (default)   csi.dvp.deckhouse.io   Delete          WaitForFirstConsum
 d8 k create namespace postgres
 ```
 
-Основной сквозной пример `app-postgres` сразу содержит параметры, которые далее разбираются по отдельным разделам:
+Для создания PostgreSQL используется ресурс Postgres. В нём указываются PostgresClass, ресурсы экземпляров, режим работы, топология и репликация, логические базы данных и пользователи, параметры PostgreSQL, TLS и наблюдаемость. Ниже эти настройки рассматриваются отдельно на основном примере `app-postgres`.
 
 ```yaml
 apiVersion: managed-services.deckhouse.io/v1alpha1
@@ -145,22 +151,25 @@ spec:
 d8 k apply -f postgres.yaml
 ```
 
-Проверьте состояние:
+Проверьте состояние созданного Postgres:
 
 ```shell
 d8 k get postgres app-postgres -n postgres -o wide
 ```
 
-После завершения развёртывания основные условия должны перейти в `True`.
+После завершения развёртывания основные условия должны перейти в `True` — что означает каждое условие, см. в разделе [«Проверка состояния»](#проверка-состояния).
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME           AVAILABLE   CONFIGURATIONVALID   LASTVALIDCONFIGURATIONAPPLIED   SCALEDTOLASTVALIDCONFIGURATION   DATABASESSYNCED   USERSSYNCED
 app-postgres   True        True                 True                            True                             True              True
 ```
+{:.nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
-Далее этот же `app-postgres` используется для объяснения пользовательских настроек. Если требуется изменить параметр, измените соответствующий фрагмент `postgres.yaml` и примените тот же файл повторно.
+Далее параметры `app-postgres` разбираются в разделах [«Выбор PostgresClass»](#выбор-postgresclass), [«Настройка ресурсов Postgres»](#настройка-ресурсов-postgres), [«Выбор режима работы»](#выбор-режима-работы), [«Настройка топологии и режима репликации»](#настройка-топологии-и-режима-репликации), [«Создание логической базы данных и пользователя»](#создание-логической-базы-данных-и-пользователя), [«Настройка параметров PostgreSQL»](#настройка-параметров-postgresql), [«Настройка TLS»](#настройка-tls) и [«Настройка наблюдаемости»](#настройка-наблюдаемости). Если требуется изменить параметр, измените соответствующий фрагмент `postgres.yaml` и примените тот же файл повторно.
 
 ## Выбор PostgresClass
 
@@ -189,13 +198,13 @@ d8 k get postgresclass <CLASS_NAME> -o yaml
 При выборе PostgresClass учитывайте допустимые значения CPU, памяти и `coreFraction`, доступные топологии и параметры PostgreSQL, разрешённые для переопределения. Если конфигурация Postgres не соответствует ограничениям выбранного класса, API отклонит её при применении.
 {% endalert %}
 
-Административные политики описаны [в разделе «Ограничение ресурсов CPU и памяти»](/admin/configuration/managed-services/postgres/#ограничение-ресурсов-cpu-и-памяти), [разделе «Управление отказоустойчивостью через зоны доступности»](/admin/configuration/managed-services/postgres/#управление-отказоустойчивостью-через-зоны-доступности) и [разделе «Автоматическая проверка настроек PostgreSQL»](/admin/configuration/managed-services/postgres/#автоматическая-проверка-настроек-postgresql).
+Настройки и ограничения PostgresClass описаны [в разделе «Ограничение ресурсов CPU и памяти»](/admin/configuration/managed-services/postgres/#ограничение-ресурсов-cpu-и-памяти), [разделе «Управление отказоустойчивостью через зоны доступности»](/admin/configuration/managed-services/postgres/#управление-отказоустойчивостью-через-зоны-доступности) и [разделе «Автоматическая проверка настроек PostgreSQL»](/admin/configuration/managed-services/postgres/#автоматическая-проверка-настроек-postgresql).
 
 ### Ограничения размещения
 
 PostgresClass также может определять правила размещения экземпляров PostgreSQL с помощью `nodeSelector`, `nodeAffinity` и `tolerations`. Эти правила применяются автоматически при выборе класса и не указываются в ресурсе Postgres.
 
-## Настройка ресурсов сервиса
+## Настройка ресурсов Postgres
 
 Для каждого экземпляра PostgreSQL можно задать количество CPU, долю гарантированного CPU и объём памяти.
 
@@ -224,7 +233,7 @@ requests.cpu: 500m
 
 Подробнее — [в разделе «Ограничение ресурсов CPU и памяти»](/admin/configuration/managed-services/postgres/#ограничение-ресурсов-cpu-и-памяти).
 
-### Изменение ресурсов существующего сервиса
+### Изменение ресурсов существующего Postgres
 
 Ресурсы Postgres можно изменять повторным применением манифеста, если новые значения разрешены выбранным PostgresClass. Сначала узнайте текущие значения ресурсов командой:
 
@@ -328,7 +337,7 @@ spec.instance.memory.size: Invalid value: 734003200: memory setting does not fit
 
 ## Выбор режима работы
 
-От выбора режима работы зависит состав сервиса PostgreSQL: `Cluster` создаёт основной экземпляр и реплики, состав которых зависит от выбранного режима репликации. А `Standalone` — один экземпляр PostgreSQL без реплик.
+От выбора режима работы зависит состав экземпляров PostgreSQL: `Cluster` создаёт основной экземпляр и реплики, состав которых зависит от выбранного режима репликации. А `Standalone` — один экземпляр PostgreSQL без реплик.
 
 ### Режим Cluster
 
@@ -355,7 +364,7 @@ spec:
   type: Standalone
 ```
 
-После создания Postgres будет запущен один экземпляр PostgreSQL:
+После создания Postgres будет запущен один экземпляр PostgreSQL. Проверьте созданные экземпляры PostgreSQL:
 
 ```shell
 d8 k get pods -n postgres \
@@ -370,7 +379,7 @@ NAME                     STATUS    NODE
 d8ms-pg-app-postgres-1   Running   worker-1
 ```
 
-В режиме `Standalone` также создаются стандартные сервисы PostgreSQL:
+Проверьте сервисы Kubernetes, созданные для подключения к PostgreSQL:
 
 ```shell
 d8 k get svc -n postgres | grep app-postgres
@@ -378,11 +387,14 @@ d8 k get svc -n postgres | grep app-postgres
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 d8ms-pg-app-postgres-r    ClusterIP   10.223.234.52    <none>   5432/TCP
 d8ms-pg-app-postgres-ro   ClusterIP   10.223.70.248    <none>   5432/TCP
 d8ms-pg-app-postgres-rw   ClusterIP   10.223.120.250   <none>   5432/TCP
 ```
+{:.nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Проверьте, на какие экземпляры направлены сервисы, через эндпоинты:
 
@@ -402,7 +414,7 @@ d8ms-pg-app-postgres-rw   10.112.2.31:5432   42h
 
 ## Настройка топологии и режима репликации
 
-В режиме `Cluster` топология определяет размещение экземпляров PostgreSQL по узлам и зонам доступности. Она позволяет управлять тем, где будут размещены экземпляры, чтобы учитывать требования к отказоустойчивости сервиса.
+В режиме `Cluster` топология определяет размещение экземпляров PostgreSQL по узлам и зонам доступности. Она позволяет управлять тем, где будут размещены экземпляры, чтобы учитывать требования к отказоустойчивости PostgreSQL.
 
 ### Настройка топологии
 
@@ -416,9 +428,9 @@ d8ms-pg-app-postgres-rw   10.112.2.31:5432   42h
 
 Доступные значения топологии и зоны определяются выбранным PostgresClass. Для `Zonal` и `TransZonal` инфраструктура кластера должна предоставлять соответствующие зоны доступности. Подробнее — [в разделе «Управление отказоустойчивостью через зоны доступности»](/admin/configuration/managed-services/postgres/#управление-отказоустойчивостью-через-зоны-доступности).
 
-#### Размещение без выбора зоны (пока с багом)
+#### Размещение без выбора зоны
 
-При `topology: Ignored` размещением экземпляров управляет планировщик Kubernetes. Режим обеспечивает разнесение экземпляров по разным узлам без дополнительных настроек со стороны пользователя. В основном примере используется этот режим:
+При `topology: Ignored` размещением экземпляров управляет планировщик Kubernetes. Режим обеспечивает разнесение экземпляров по разным узлам без дополнительных настроек со стороны пользователя. В [основном примере](#основной-пример-создание-postgres) используется этот режим:
 
 ```yaml
 spec:
@@ -543,8 +555,9 @@ d8 k get pods -n postgres \
 Пример вывода:
 
 ```console
-d8ms-pg-app-postgres-1   1/1   Running
-d8ms-pg-app-postgres-2   1/1   Running
+NAME                     READY   STATUS
+d8ms-pg-app-postgres-1   1/1     Running
+d8ms-pg-app-postgres-2   1/1     Running
 ```
 
 Проверьте режим репликации, как описано [в разделе «Проверка режима репликации»](#проверка-режима-репликации). Для `Availability` ожидается одна реплика со `sync_state = async`:
@@ -574,7 +587,7 @@ d8ms-pg-app-postgres-rw-8nx8s   IPv4   5432   10.112.2.249
 
 #### Режим Consistency
 
-Режим `Consistency`, используемый в основном примере, создаёт основной экземпляр PostgreSQL и одну синхронную реплику:
+Режим `Consistency`, используемый в [основном примере](#основной-пример-создание-postgres), создаёт основной экземпляр PostgreSQL и одну синхронную реплику:
 
 ```yaml
 spec:
@@ -683,9 +696,10 @@ d8 k get pods -n postgres \
 Пример вывода:
 
 ```console
-d8ms-pg-app-postgres-1   1/1   Running
-d8ms-pg-app-postgres-2   1/1   Running
-d8ms-pg-app-postgres-3   1/1   Running
+NAME                     READY   STATUS
+d8ms-pg-app-postgres-1   1/1     Running
+d8ms-pg-app-postgres-2   1/1     Running
+d8ms-pg-app-postgres-3   1/1     Running
 ```
 
 Проверьте режим репликации, как описано [в разделе «Проверка режима репликации»](#проверка-режима-репликации). Для `ConsistencyAndAvailability` ожидаются две реплики — со `sync_state = quorum` и `sync_state = async`:
@@ -741,15 +755,18 @@ d8 k get pods -n postgres \
 После завершения обновления проверка `pg_stat_replication` должна показывать синхронную и асинхронную реплики:
 
 ```console
-d8ms-pg-app-postgres-3 | streaming | async
-d8ms-pg-app-postgres-2 | streaming | quorum
+     application_name      |   state   | sync_state
+---------------------------+-----------+------------
+ d8ms-pg-app-postgres-3    | streaming | async
+ d8ms-pg-app-postgres-2    | streaming | quorum
+(2 rows)
 ```
 
 При обратном переходе с `ConsistencyAndAvailability` на `Consistency` число экземпляров уменьшается с трёх до двух, а оставшаяся реплика работает в режиме `streaming | quorum`.
 
 ## Создание логической базы данных и пользователя
 
-В основном сквозном примере создаются пользователь `app-rw` и логическая база данных `app`:
+В [основном примере](#основной-пример-создание-postgres) создаются пользователь `app-rw` и логическая база данных `app`:
 
 ```yaml
 spec:
@@ -932,7 +949,7 @@ d8ms-pg-app-postgres-rw   ClusterIP   5432/TCP
 
 ### Подключение из кластера
 
-Для подключения из кластера используйте соответствующий сервис PostgreSQL и учётные данные из Secret пользователя. В сквозном примере приложение с правами на запись подключается к сервису `d8ms-pg-app-postgres-rw` от имени пользователя `app-rw` к базе данных `app`.
+Для подключения из кластера используйте соответствующий сервис PostgreSQL и учётные данные из Secret пользователя. В [основном примере](#основной-пример-создание-postgres) приложение с правами на запись подключается к сервису `d8ms-pg-app-postgres-rw` от имени пользователя `app-rw` к базе данных `app`.
 
 Для проверки подключения не требуется устанавливать `psql` на control-plane-узел. Для этого можно использовать временный клиентский Pod:
 
@@ -974,7 +991,7 @@ d8 k run postgres-client \
 
 #### Публикация PostgreSQL для внешнего доступа
 
-Способ публикации зависит от сетевой инфраструктуры кластера. На проверенном стенде внешний балансировщик нагрузки принимает подключения к `185.120.186.172:5432` и перенаправляет их на `NodePort` `30001` узла кластера. Отдельный Service направляет этот трафик на основной экземпляр PostgreSQL.
+Способ публикации зависит от сетевой инфраструктуры кластера. В этом примере внешний балансировщик нагрузки принимает подключения к `<EXTERNAL_IP>:5432` и перенаправляет их на `NodePort` `30001` узла кластера. Отдельный Service направляет этот трафик на основной экземпляр PostgreSQL.
 
 Не изменяйте созданный модулем сервис `d8ms-pg-app-postgres-rw`. Создайте отдельный Service для внешнего доступа:
 
@@ -1011,19 +1028,22 @@ d8 k get svc app-postgres-external -n postgres -o wide
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                    TYPE       CLUSTER-IP      EXTERNAL-IP   PORT(S)          AGE   SELECTOR
 app-postgres-external   NodePort   10.223.111.45   <none>        5432:30001/TCP   4s    cnpg.internal.managed.deckhouse.io/cluster=d8ms-pg-app-postgres,cnpg.internal.managed.deckhouse.io/instanceRole=primary
 ```
+{:.nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 На внешнем балансировщике нагрузки настройте приём TCP-соединений на порту `5432` и перенаправление на `NodePort` `30001` узла кластера. В текущем примере создана такая схема:
 
 ```text
-185.120.186.172:5432
+<EXTERNAL_IP>:5432
         |
-провайдерский балансировщик нагрузки
+внешний балансировщик нагрузки
         |
-10.222.12.217:30001
+<NODE_IP>:30001
         |
 NodePort
         |
@@ -1052,7 +1072,7 @@ d8 k run nodeport-test \
   --env="PGPASSWORD=$PGPASSWORD" \
   -- \
   psql \
-    -h 10.12.1.69 \
+    -h <NODE_IP> \
     -p 30001 \
     -U app-rw \
     -d app \
@@ -1064,7 +1084,7 @@ d8 k run nodeport-test \
 ```console
  current_database | pg_is_in_recovery | inet_server_addr
 ------------------+-------------------+------------------
- app              | f                 | 10.112.2.214
+ app              | f                 | <POD_IP>
 (1 row)
 ```
 
@@ -1084,7 +1104,7 @@ d8 k get secret app-postgres-rw -n postgres \
 Создайте в DBeaver подключение PostgreSQL и укажите:
 
 ```text
-Host:     185.120.186.172
+Host:     <EXTERNAL_IP>
 Port:     5432
 Database: app
 Username: app-rw
@@ -1106,11 +1126,14 @@ SELECT
 
 На проверенном стенде запрос вернул:
 
+<!-- markdownlint-disable MD031 -->
 ```console
  current_database | session_user | inet_server_addr | inet_server_port | pg_is_in_recovery
 ------------------+--------------+------------------+------------------+-------------------
- app              | app-rw       | 10.112.2.214     |             5432 | f
+ app              | app-rw       | <POD_IP>         |             5432 | f
 ```
+{:.nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 Значение `pg_is_in_recovery = f` подтверждает подключение к основному экземпляру PostgreSQL.
 
@@ -1141,7 +1164,7 @@ openssl x509 \
 Для `app-postgres` сертификат содержит DNS-имя сервиса `-rw`:
 
 ```console
-d8ms-pg-app-postgres-postgres-rw.185.120.186.172.sslip.io
+d8ms-pg-app-postgres-postgres-rw.<EXTERNAL_IP>.sslip.io
 ```
 
 При использовании режима `verify-full` клиент проверяет соответствие имени сервера сертификату, поэтому для подключения используйте DNS-имя из SAN.
@@ -1169,16 +1192,16 @@ openssl verify \
 /tmp/app-postgres-server.crt: OK
 ```
 
-Перенесите CA-сертификат на компьютер, с которого выполняется подключение. Например, если к control-plane-узлу доступен SSH, скопируйте сертификат с помощью `scp`:
+Перенесите CA-сертификат на компьютер, с которого выполняется подключение. Например, если к узлу кластера доступен SSH, скопируйте сертификат с помощью `scp`:
 
 ```shell
-scp root@185.120.186.172:/tmp/app-postgres-ca.crt ~/app-postgres-ca.crt
+scp user@<NODE_IP>:/tmp/app-postgres-ca.crt ~/app-postgres-ca.crt
 ```
 
 В DBeaver укажите параметры подключения:
 
 ```text
-Host:     d8ms-pg-app-postgres-postgres-rw.185.120.186.172.sslip.io
+Host:     d8ms-pg-app-postgres-postgres-rw.<EXTERNAL_IP>.sslip.io
 Port:     5432
 Database: app
 Username: app-rw
@@ -1209,10 +1232,10 @@ SELECT
 
 Успешное выполнение запроса и значение `pg_is_in_recovery = f` подтверждают подключение к основному экземпляру PostgreSQL.
 
-Если при использовании `verify-full` вместо DNS-имени из SAN указать IP-адрес `185.120.186.172`, проверка имени сервера завершится ошибкой:
+Если при использовании `verify-full` вместо DNS-имени из SAN указать IP-адрес `<EXTERNAL_IP>`, проверка имени сервера завершится ошибкой:
 
 ```console
-The hostname 185.120.186.172 could not be verified by hostnameverifier PgjdbcHostnameVerifier.
+The hostname <EXTERNAL_IP> could not be verified by hostnameverifier PgjdbcHostnameVerifier.
 ```
 
 Таким образом, для подключения с `verify-full` используйте DNS-имя, указанное в SAN серверного сертификата.
@@ -1230,7 +1253,7 @@ The hostname 185.120.186.172 could not be verified by hostnameverifier PgjdbcHos
 
 ### Изменение разрешённого параметра
 
-В основном примере `app-postgres` используется PostgresClass `default`, который разрешает изменять параметр `maxConnections`.
+В [основном примере](#основной-пример-создание-postgres) `app-postgres` использует PostgresClass `default`, который разрешает изменять параметр `maxConnections`.
 
 Измените значение:
 
@@ -1403,9 +1426,9 @@ d8 k exec -n postgres "$PRIMARY" -- \
 
 ## Настройка наблюдаемости
 
-Для сервиса PostgreSQL можно включить мониторинг с алертами, полностью отключить мониторинг или оставить мониторинг без алертов. Режим наблюдаемости задаётся параметром [`spec.observability`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-observability).
+Для Postgres можно включить мониторинг с алертами, полностью отключить мониторинг или оставить мониторинг без алертов. Режим наблюдаемости задаётся параметром [`spec.observability`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-observability).
 
-В основном сквозном примере включены мониторинг и алерты:
+В [основном примере](#основной-пример-создание-postgres) включены мониторинг и алерты:
 
 ```yaml
 spec:
@@ -1453,7 +1476,7 @@ EnabledWithoutAlerts   → no-alerts
 
 Для создания снимков используется ресурс PostgresSnapshot. StorageClass, в котором размещён Postgres, должен использовать CSI-драйвер с поддержкой snapshots, а в кластере должен быть доступен соответствующий VolumeSnapshotClass.
 
-В основном сквозном примере используется StorageClass `replicated`, для которого провайдер в рассматриваемой конфигурации не поддерживает создание снимков. Поэтому для демонстрации используется отдельный StorageClass `snapshot-local` на `sds-local-volume` с LVM Thin.
+В [основном примере](#основной-пример-создание-postgres) используется StorageClass `replicated`, для которого провайдер в рассматриваемой конфигурации не поддерживает создание снимков. Поэтому для демонстрации используется отдельный StorageClass `snapshot-local` на `sds-local-volume` с LVM Thin.
 
 Проверьте доступные классы снимков:
 
@@ -1463,10 +1486,13 @@ d8 k get volumesnapshotclass
 
 Для `snapshot-local` доступен следующий класс снимков:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                              DRIVER                           DELETIONPOLICY
 sds-local-volume-snapshot-class   local.csi.storage.deckhouse.io   Delete
 ```
+{:.nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 ### Создание снимка
 
@@ -1575,10 +1601,13 @@ d8 k get volumesnapshot -n postgres
 
 Пример вывода:
 
+<!-- markdownlint-disable MD031 -->
 ```console
 NAME                         READYTOUSE   SOURCEPVC               RESTORESIZE   SNAPSHOTCLASS
 d8ms-pg-snapshot-pg-backup   true         d8ms-pg-snapshot-pg-1   2Gi           sds-local-volume-snapshot-class
 ```
+{:.nowrap-default }
+<!-- markdownlint-enable MD031 -->
 
 `READYTOUSE=true` подтверждает готовность снимка к восстановлению.
 
@@ -1685,7 +1714,7 @@ d8 k run snapshot-restore-check \
 
 Наличие только `BEFORE_SNAPSHOT` подтверждает, что восстановлено состояние базы данных на момент создания снимка.
 
-## Проверка состояния и диагностика
+## Проверка состояния
 
 Состояние сервиса отражается в `status.conditions` ресурса Postgres.
 
@@ -1720,32 +1749,4 @@ d8 k get postgres app-postgres -n postgres -o wide -w
 d8 k get postgres app-postgres -n postgres -o yaml
 ```
 
-Если сервис не переходит в готовое состояние, проверьте Pod, события и PVC:
-
-```shell
-d8 k get pods -n postgres -o wide
-d8 k get events -n postgres --sort-by=.lastTimestamp
-d8 k get pvc -n postgres
-```
-
-Для сценариев со снимками дополнительно проверьте:
-
-```shell
-d8 k get volumesnapshotclass
-d8 k get volumesnapshot -n postgres
-```
-
-Если `d8 k apply` отклоняет изменение, сначала проверьте сообщение об ошибке и правила выбранного PostgresClass. Административные ограничения описаны [в «Руководстве администратора»](/admin/configuration/managed-services/postgres/).
-
-### Экземпляры PostgreSQL остаются в состоянии Pending
-
-Если экземпляры PostgreSQL остаются в состоянии `Pending`, проверьте события Pod:
-
-```shell
-d8 k get pods -n postgres
-d8 k describe pod <POD_NAME> -n postgres
-```
-
-Где `<POD_NAME>` — имя Pod экземпляра PostgreSQL.
-
-Одной из причин может быть отсутствие узлов, соответствующих правилам размещения выбранного PostgresClass (`nodeSelector`, `nodeAffinity` или `tolerations`). Если подходящих узлов нет, обратитесь к администратору кластера или выберите другой доступный PostgresClass.
+Если сервис не переходит в готовое состояние, диагностика — [в разделе «Частые вопросы»](faq.html).
