@@ -33,20 +33,14 @@ The Level 2 C4 architecture of the [`extended-monitoring`](/modules/extended-mon
 
 The module consists of the following components:
 
-1. **Extended-monitoring-exporter**: Prometheus exporter that collects additional metrics, and also includes ready-made alerts and dashboards that allow you to detect and diagnose incidents faster:
-
-   * Collects and expounds metrics for free space and inodes on nodes, as well as for objects with a label `extended-monitoring.deckhouse.io/enabled =""` in the namespace.
-   * Automatically generates alerts when the thresholds are reached.
+1. **Extended-monitoring-exporter**: Prometheus exporter that сollects and expounds metrics for free space and inodes on nodes, as well as for objects with a label `extended-monitoring.deckhouse.io/enabled =""` in the namespace. For more details about сonfiguration of extended-monitoring metrics, refer to the [corresponding documentation section](/modules/extended-monitoring/configuration.html). The module also contains Prometheus rules, based on which the Prometheus generates alerts. This allows you to detect and diagnose incidents faster.
 
    It consists of the following containers:
 
    * **extended-monitoring-exporter**: Main container. This exporter is developed by Flant.
    * **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC, providing secure access to exporter metrics. It is an [open source project](https://github.com/brancz/kube-rbac-proxy).
 
-1. **Image-availability-exporter**: Prometheus exporter that performs container image monitoring:
-
-   * Adds metrics and sends alerts about unavailability of container images to registry for all types of workload (Deployments, StatefulSets, DaemonSets, CronJobs).
-   * Helps to find out in advance about possible problems with launching or updating pods.
+1. **Image-availability-exporter**: Prometheus exporter that monitors container images of pods running in cluster. Image-availability-exporter adds metrics about unavailability of container images to registry for all types of workload (Deployments, StatefulSets, DaemonSets, CronJobs). The module also contains appropriate Prometheus rules, based on which the Prometheus generates alerts. This helps to find out in advance about possible problems with launching or updating pods.
 
    It consists of the following containers:
 
@@ -63,7 +57,7 @@ The module consists of the following components:
 1. **X509-certificate-exporter**: Prometheus exporter that provides certificate control:
 
    * Scans the cluster's Secrets and generates metrics about the expiration of x509 certificates.
-   * Allows you not to miss critical moments and update certificates on time, avoiding application downtime due to expired certificates.
+   * The module also contains appropriate Prometheus rules, based on which the Prometheus generates alerts. This allows you not to miss critical moments and update certificates on time, avoiding application downtime due to expired certificates.
 
    It consists of the following containers:
 
