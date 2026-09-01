@@ -16,7 +16,10 @@ metadata:
   name: {{ $machineDeploymentName }}
   annotations:
     zone: {{ $zone_name | quote }}
-    {{- if $ng.nodeCapacity }}
+    {{- /* nodeCapacity is now resolved for every group; these annotations stay scale-from-zero only,
+           because widening the MCM provider's node template is a separate change from the
+           clusterapi capacity fix. */ -}}
+    {{- if and $ng.nodeCapacity (eq (int $ng.cloudInstances.minPerZone) 0) }}
     cluster-autoscaler.kubernetes.io/scale-from-zero: "true"
     cluster-autoscaler.kubernetes.io/node-region: {{ $context.Values.nodeManager.internal.cloudProvider.region | quote }}
     cluster-autoscaler.kubernetes.io/node-cpu: {{ $ng.nodeCapacity.cpu | quote }}

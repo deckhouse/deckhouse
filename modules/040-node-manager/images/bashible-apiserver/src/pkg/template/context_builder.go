@@ -401,6 +401,12 @@ func (bc *bashibleContext) AddToChecksum(checksumCollector hash.Hash) error {
 		}
 	}
 
+	// nodeCapacity is metadata for the autoscaler's template NodeInfo, not node configuration: no
+	// bashible step reads it. Excluding it keeps configurationChecksum stable now that get_crds
+	// resolves it for every node group and not only for the scale-from-zero ones — otherwise the
+	// newly published key would re-run node configuration across the whole fleet.
+	delete(bcCopy.NodeGroup, "nodeCapacity")
+
 	bcData, err := yaml.Marshal(bcCopy)
 	if err != nil {
 		return errors.Wrap(err, "marshal bashibleContext for checksum collect failed")
