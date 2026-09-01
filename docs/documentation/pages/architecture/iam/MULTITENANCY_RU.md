@@ -47,7 +47,7 @@ description: Как устроена мультитенантность в Deckh
 ### Управление доступом к кластерным ресурсам
 
 Проекты регулярно ссылаются на кластерные ресурсы: `PersistentVolumeClaim` указывает `StorageClass`,
-`Certificate` — `ClusterIssuer`, `RoleBinding` — `ClusterRole`. Модуль также управляет для каждого
+`Certificate` — `ClusterIssuer`, `RoleBinding` — `ClusterRole`. Модуль также задаёт для каждого
 проекта, **какие** кластерные ресурсы можно использовать из неймспейсов проектов, и какое значение
 используется по умолчанию. Это отдельный механизм от RBAC: RBAC решает, *кто может создать* объект,
 гранты — *какие кластерные ресурсы этот объект может ссылать*.
@@ -88,7 +88,7 @@ description: Как устроена мультитенантность в Deckh
   - валидация кастомных ресурсов Project и ProjectTemplate;
   - валидация стандартного ресурса Namespace если в параметрах модуля `multitenancy-manager` задано [`.spec.settings.allowNamespacesWithoutProjects=false`](/modules/multitenancy-manager/configuration.html#parameters-allownamespaceswithoutprojects);
   - создание ресурсов, указанных в кастомном ресурсе ProjectTemplate, на основе параметров, заданных в Project;
-  - управление механизмом грантов для кластерных ресурсов — кастомными ресурсами
+  - управление механизмом грантов для кластерных ресурсов при помощи следующих кастомных ресурсов:
     [`GrantableClusterResourceDefinition`](/modules/multitenancy-manager/cr.html#grantableclusterresourcedefinition),
     [`GrantableClusterResourceReference`](/modules/multitenancy-manager/cr.html#grantableclusterresourcereference),
     [`ClusterResourceGrantPolicy`](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy) и
