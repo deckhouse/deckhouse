@@ -59,6 +59,12 @@ const (
 	deckhouseClusterConfigurationSecretName = "d8-cluster-configuration"
 	deckhouseClusterUUIDConfigMapName       = "d8-cluster-uuid"
 
+	// d8-cluster-is-bootstraped appears in tenant kube-system once node is Ready.
+	clusterIsBootstrappedConfigMapName = "d8-cluster-is-bootstraped"
+	// Restart marker on the tenant deckhouse pod template: the enabled-module list is not recomputed on the
+	// clusterIsBootstrapped transition, so restart the pod once to force it. Workaround until deckhouse subscribes to it.
+	clusterIsBootstrappedAnnotation = "control-plane.deckhouse.io/cluster-is-bootstrapped"
+
 	// The ModuleConfig CRD is installed by the running deckhouse pod itself,
 	// so its absence right after the Deployment rollout is expected.
 	requeueIntervalOnMissingModuleConfigCRD = 10 * time.Second
@@ -122,8 +128,14 @@ func (r *reconciler) reconcileDeckhouse(
 		return reconcile.Result{}, fmt.Errorf("reconcile deckhouse ServiceAccount token: %w", err)
 	}
 
-	// 8. Parent: the deckhouse Deployment itself.
-	if err := r.reconcileDeckhouseDeployment(ctx, vcp, albVIP); err != nil {
+	// 8. Parent: the deckhouse Deployment. Restart the pod once the tenant reports bootstrapped, so it
+	//    recomputes the enabled-module list (not re-evaluated on the clusterIsBootstrapped transition).
+	isBootstrapped, err := tenantClusterIsBootstrapped(ctx, tc)
+	if err != nil {
+		log.FromContext(ctx).Error(err, "check tenant cluster is bootstrapped; treating as not bootstrapped")
+		isBootstrapped = false
+	}
+	if err := r.reconcileDeckhouseDeployment(ctx, vcp, albVIP, isBootstrapped); err != nil {
 		return reconcile.Result{}, fmt.Errorf("reconcile deckhouse Deployment: %w", err)
 	}
 
@@ -568,6 +580,7 @@ func (r *reconciler) reconcileDeckhouseDeployment(
 	ctx context.Context,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 	albVIP string,
+	isBootstrapped bool,
 ) error {
 	image, err := r.getParentDeckhouseImage(ctx)
 	if err != nil {
@@ -584,10 +597,17 @@ func (r *reconciler) reconcileDeckhouseDeployment(
 
 	current, err := r.getDeployment(ctx, target.Namespace, target.Name)
 	if apierrors.IsNotFound(err) {
+		if isBootstrapped {
+			setClusterIsBootstrappedAnnotation(target)
+		}
 		return r.createDeployment(ctx, target)
 	}
 	if err != nil {
 		return err
+	}
+
+	if isBootstrapped || hasClusterIsBootstrappedAnnotation(current) {
+		setClusterIsBootstrappedAnnotation(target)
 	}
 
 	if equality.Semantic.DeepEqual(current.Spec, target.Spec) &&
@@ -638,6 +658,32 @@ func buildTargetDeckhouseDeployment(
 	renameImagePullSecret(deployment, deckhouseRegistrySecretName, constants.VirtualResourceName(deckhouseRegistrySecretName, vcp.Name))
 
 	return deployment, nil
+}
+
+// tenantClusterIsBootstrapped reports whether the tenant finished bootstrapping, signalled by the
+// d8-cluster-is-bootstraped ConfigMap deckhouse creates in kube-system once a worker node is Ready.
+func tenantClusterIsBootstrapped(ctx context.Context, tc client.Client) (bool, error) {
+	cm := &corev1.ConfigMap{}
+	err := tc.Get(ctx, client.ObjectKey{Namespace: constants.KubeSystemNamespace, Name: clusterIsBootstrappedConfigMapName}, cm)
+	if apierrors.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func setClusterIsBootstrappedAnnotation(d *appsv1.Deployment) {
+	if d.Spec.Template.Annotations == nil {
+		d.Spec.Template.Annotations = map[string]string{}
+	}
+	d.Spec.Template.Annotations[clusterIsBootstrappedAnnotation] = ""
+}
+
+func hasClusterIsBootstrappedAnnotation(d *appsv1.Deployment) bool {
+	_, ok := d.Spec.Template.Annotations[clusterIsBootstrappedAnnotation]
+	return ok
 }
 
 func reconcileTenantModuleConfigs(ctx context.Context, tc client.Client) (reconcile.Result, error) {
