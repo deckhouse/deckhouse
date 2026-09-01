@@ -1727,6 +1727,10 @@ entries:
                 ru: Модуль observability
               url: /architecture/observability/observability.html
             - title:
+                en: Prometheus-pushgateway module
+                ru: Модуль prometheus-pushgateway
+              url: /architecture/observability/prometheus-pushgateway.html              
+            - title:
                 en: Upmeter module
                 ru: Модуль upmeter
               url: /architecture/observability/upmeter.html
