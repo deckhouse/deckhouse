@@ -259,6 +259,8 @@ A `User` or `Group` subject is matched by name against the user identity in the 
 
 If the match is intentional, for example, if the ClusterAuthorizationRule has been written in advance, set the `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"` annotation on the User or Group. The annotation only acknowledges the name collision. It does not let a requester assign roles they cannot cover or that sit outside their can-assign range.
 
+Deleting a ClusterAuthorizationRule uses the same can-assign check as creating or updating it. You can remove a grant only if you could assign those roles.
+
 Write an email for the `User` subject in lowercase. It's recorded to the token in lowercase so a subject spelled `Admin@Example.com` won't match `admin@example.com`. A `Group`-type subject names are matched exactly, since group names are not lowercased anywhere.
 
 This restriction is applied during the User and Group resource creation only and doesn't prevent adding existing users or groups to a ClusterAuthorizationRule. If a matching User or Group already exists, it receives the privileges immediately after it's added to the rule.

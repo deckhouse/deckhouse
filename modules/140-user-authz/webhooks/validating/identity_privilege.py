@@ -15,8 +15,9 @@
 # limitations under the License.
 
 
-# Identity can-assign admission: User, Group, ClusterAuthorizationRule,
-# UserOperation, DexProvider, and can-assign-* labels on ClusterRole.
+# Identity can-assign admission: User, Group, ClusterAuthorizationRule
+# (including DELETE), UserOperation, DexProvider, and can-assign-* labels
+# on ClusterRole.
 # Kernel is identity_assign.py.
 
 from typing import Any, List, Optional
@@ -77,7 +78,7 @@ kubernetesValidating:
     scope:       "Cluster"
   - apiGroups:   ["deckhouse.io"]
     apiVersions: ["*"]
-    operations:  ["CREATE", "UPDATE"]
+    operations:  ["CREATE", "UPDATE", "DELETE"]
     resources:   ["clusterauthorizationrules"]
     scope:       "Cluster"
   - apiGroups:   ["deckhouse.io"]
@@ -236,13 +237,14 @@ def validate_group(req, snapshots, actor: List[str], catalog: dict) -> Optional[
 
 
 def validate_car(req, actor: List[str], catalog: dict) -> Optional[str]:
-    spec = _spec(req.object)
+    obj = req.oldObject if req.operation == "DELETE" else req.object
+    spec = _spec(obj)
     targets = assign.car_target_roles(spec)
     leftover = assign.can_assign(actor, targets, catalog)
     if leftover is None:
         return None
     rng = assign.actor_range(actor, catalog)
-    return assign.deny_car_message(_meta_name(req.object) or "obj", leftover, rng)
+    return assign.deny_car_message(_meta_name(obj) or "obj", leftover, rng)
 
 
 def validate_clusterrole(req) -> Optional[str]:

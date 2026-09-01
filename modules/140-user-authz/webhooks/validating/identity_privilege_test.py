@@ -292,6 +292,28 @@ class TestIdentityAssignHook(unittest.TestCase):
             extra_snaps=extra))
         self.assertFalse(out.validations.data[0]["allowed"])
 
+    def test_nested_group_membership_protects_user_delete(self):
+        extra = {
+            assign.USER_SNAP: [{"filterResult": {
+                "name": "admin", "email": "admin@deckhouse.io", "groups": [],
+            }}],
+            assign.GROUP_SNAP: [
+                {"filterResult": {
+                    "name": "inner",
+                    "members": [{"kind": "User", "name": "admin"}],
+                }},
+                {"filterResult": {
+                    "name": PRIVILEGED_GROUP,
+                    "members": [{"kind": "Group", "name": "inner"}],
+                }},
+            ],
+        }
+        out = self.run_hook(isolated_helpdesk_ctx(
+            "User", "DELETE", None, old_spec={"email": "admin@deckhouse.io"},
+            extra_snaps=extra))
+        self.assertFalse(out.validations.data[0]["allowed"])
+        self.assertIn("user-authz:super-admin", out.validations.data[0]["message"])
+
     def test_user_spec_groups_superadmin_is_denied(self):
         out = self.run_hook(isolated_helpdesk_ctx(
             "User", "CREATE",
@@ -322,6 +344,78 @@ class TestIdentityAssignHook(unittest.TestCase):
             {"accessLevel": "User",
              "additionalRoles": [{"name": "cluster-write-all"}],
              "subjects": [{"kind": "User", "name": "eve@corp"}]},
+            username=CLUSTER_ADMIN))
+        self.assertFalse(out.validations.data[0]["allowed"])
+
+    def test_clusteradmin_cannot_delete_superadmin_car(self):
+        out = self.run_hook(ctx(
+            "ClusterAuthorizationRule", "DELETE", None,
+            old_spec={"accessLevel": "SuperAdmin",
+                      "subjects": [{"kind": "User", "name": "eve@corp"}]},
+            username=CLUSTER_ADMIN))
+        self.assertFalse(out.validations.data[0]["allowed"])
+        self.assertIn("user-authz:super-admin", out.validations.data[0]["message"])
+
+    def test_clusteradmin_can_delete_clusteradmin_car(self):
+        out = self.run_hook(ctx(
+            "ClusterAuthorizationRule", "DELETE", None,
+            old_spec={"accessLevel": "ClusterAdmin",
+                      "subjects": [{"kind": "User", "name": "peer@corp"}]},
+            username=CLUSTER_ADMIN))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_superadmin_can_delete_superadmin_car(self):
+        out = self.run_hook(ctx(
+            "ClusterAuthorizationRule", "DELETE", None,
+            old_spec={"accessLevel": "SuperAdmin",
+                      "subjects": [{"kind": "User", "name": "eve@corp"}]},
+            username=SUPERADMIN))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_security_manager_cannot_delete_superadmin_car(self):
+        extra = {assign.CRB_SNAP: [{"filterResult": {
+            "name": "sec",
+            "role": "d8:manage:security:manager",
+            "userSubjects": [SECURITY],
+            "groupSubjects": [],
+            "saSubjects": [],
+        }}]}
+        out = self.run_hook(ctx(
+            "ClusterAuthorizationRule", "DELETE", None,
+            old_spec={"accessLevel": "SuperAdmin",
+                      "subjects": [{"kind": "User", "name": "peer@corp"}]},
+            username=SECURITY, extra_snaps=extra))
+        self.assertFalse(out.validations.data[0]["allowed"])
+
+    def test_security_manager_can_delete_clusteradmin_car(self):
+        extra = {assign.CRB_SNAP: [{"filterResult": {
+            "name": "sec",
+            "role": "d8:manage:security:manager",
+            "userSubjects": [SECURITY],
+            "groupSubjects": [],
+            "saSubjects": [],
+        }}]}
+        out = self.run_hook(ctx(
+            "ClusterAuthorizationRule", "DELETE", None,
+            old_spec={"accessLevel": "ClusterAdmin",
+                      "subjects": [{"kind": "User", "name": "peer@corp"}]},
+            username=SECURITY, extra_snaps=extra))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_deckhouse_sa_can_delete_superadmin_car(self):
+        out = self.run_hook(ctx(
+            "ClusterAuthorizationRule", "DELETE", None,
+            old_spec={"accessLevel": "SuperAdmin",
+                      "subjects": [{"kind": "User", "name": "eve@corp"}]},
+            username="system:serviceaccount:d8-system:deckhouse"))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_clusteradmin_cannot_delete_car_with_cluster_admin_additional_role(self):
+        out = self.run_hook(ctx(
+            "ClusterAuthorizationRule", "DELETE", None,
+            old_spec={"accessLevel": "User",
+                      "additionalRoles": [{"name": "cluster-admin"}],
+                      "subjects": [{"kind": "User", "name": "eve@corp"}]},
             username=CLUSTER_ADMIN))
         self.assertFalse(out.validations.data[0]["allowed"])
 
@@ -649,12 +743,12 @@ class TestIdentityAssignConfigContract(unittest.TestCase):
                 ops.extend(rule["operations"])
         self.assertEqual(sorted(set(ops)), ["CREATE"])
 
-    def test_car_operations_are_create_and_update_only(self):
+    def test_car_operations_include_delete(self):
         car_ops = []
         for rule in self.validating["rules"]:
             if "clusterauthorizationrules" in rule["resources"]:
                 car_ops.extend(rule["operations"])
-        self.assertEqual(sorted(set(car_ops)), ["CREATE", "UPDATE"])
+        self.assertEqual(sorted(set(car_ops)), ["CREATE", "DELETE", "UPDATE"])
 
     def test_snapshots_include_crb_and_clusterroles(self):
         kinds = [b["kind"] for b in self.config["kubernetes"]]
@@ -735,7 +829,10 @@ class TestAssignSnapshotJQFilters(unittest.TestCase):
             ]},
         })
         self.assertEqual(out["name"], "superadmins")
-        self.assertEqual(out["members"], ["admin"])
+        self.assertEqual(out["members"], [
+            {"kind": "User", "name": "admin"},
+            {"kind": "Group", "name": "other"},
+        ])
 
 
 if __name__ == "__main__":
