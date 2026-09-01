@@ -25,6 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -290,4 +291,44 @@ func TestMigrate_ProjectWithoutNamespace(t *testing.T) {
 	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, got))
 	assert.Equal(t, TemplateSimple, got.Spec.ProjectTemplateName)
 	assert.Nil(t, got.Spec.Parameters)
+}
+
+func TestMigrate_DeletesLeftoverWrapWhenNamespaceGone(t *testing.T) {
+	managed := project("foo", map[string]string{v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace}, "")
+	m, c := newManager(t, managed)
+
+	require.NoError(t, m.Migrate(context.Background()))
+
+	got := new(v1alpha3.Project)
+	err := c.Get(context.Background(), client.ObjectKey{Name: "foo"}, got)
+	require.True(t, apierrors.IsNotFound(err) || !got.DeletionTimestamp.IsZero(), "leftover wrap must not stay as a live project: %v", err)
+	if err == nil {
+		assert.Empty(t, got.Spec.ProjectTemplateName)
+	}
+}
+
+func TestMigrate_DeletesLeftoverWrapWhenNamespaceTerminating(t *testing.T) {
+	now := metav1.Now()
+	ns := namespace("foo", map[string]string{
+		v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace,
+	}, nil)
+	ns.Finalizers = []string{v1alpha3.NamespaceFinalizerManagedProject}
+	ns.DeletionTimestamp = &now
+	managed := project("foo", map[string]string{v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace}, "")
+	m, c := newManager(t, ns, managed)
+
+	require.NoError(t, m.Migrate(context.Background()))
+
+	updated := new(corev1.Namespace)
+	err := c.Get(context.Background(), client.ObjectKey{Name: "foo"}, updated)
+	if err == nil {
+		assert.False(t, controllerutil.ContainsFinalizer(updated, v1alpha3.NamespaceFinalizerManagedProject))
+	}
+
+	got := new(v1alpha3.Project)
+	err = c.Get(context.Background(), client.ObjectKey{Name: "foo"}, got)
+	require.True(t, apierrors.IsNotFound(err) || !got.DeletionTimestamp.IsZero(), "leftover wrap must not be templated over a terminating namespace")
+	if err == nil {
+		assert.Empty(t, got.Spec.ProjectTemplateName)
+	}
 }
