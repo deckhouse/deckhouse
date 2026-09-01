@@ -106,6 +106,14 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	logger := log.FromContext(ctx)
 	logger.V(1).Info("reconciling nodegroup status", "name", req.Name)
 
+	// Consumers are a cluster-wide view, so this runs before the NodeGroup read: a delete event
+	// arrives with the object already gone and must still clear the class it used to hold. The
+	// error is logged, not returned: the NodeGroup status is this controller's primary duty and
+	// an unwritable InstanceClass must not block it; statusResyncInterval retries.
+	if err := syncInstanceClassConsumers(ctx, r.Client); err != nil {
+		logger.Error(err, "sync instance class consumers")
+	}
+
 	ng, err := nodecommon.GetNodeGroup(ctx, r.Client, req.Name)
 	if err != nil {
 		if errors.IsNotFound(err) {
