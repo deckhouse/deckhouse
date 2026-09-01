@@ -344,4 +344,70 @@ func TestEnsureTemplateName(t *testing.T) {
 		require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "deckhouse"}, got))
 		assert.Empty(t, got.Spec.ProjectTemplateName)
 	})
+
+	t.Run("leftover wrap is not pinned to simple", func(t *testing.T) {
+		project := &v1alpha3.Project{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   "foo",
+				Labels: map[string]string{v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace},
+			},
+		}
+		m, c := newManager(t, project)
+		require.NoError(t, m.ensureTemplateName(context.Background(), project))
+		assert.Empty(t, project.Spec.ProjectTemplateName)
+
+		got := new(v1alpha3.Project)
+		require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, got))
+		assert.Empty(t, got.Spec.ProjectTemplateName)
+		assert.Equal(t, v1alpha3.ManagedByNamespace, got.Labels[v1alpha3.ProjectLabelManagedByNamespace])
+	})
+}
+
+func TestHandle_DeletesLeftoverWrapWhenNamespaceGone(t *testing.T) {
+	leftover := &v1alpha3.Project{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "foo",
+			Labels: map[string]string{v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace},
+		},
+	}
+	m, c := newManager(t, leftover)
+	fh := &fakeHelmClient{applyResult: helm.ReleaseOutcome{Applied: true}}
+	m.helmClient = fh
+
+	_, err := m.Handle(context.Background(), leftover)
+	require.NoError(t, err)
+	assert.Zero(t, fh.analyzeCalls)
+
+	got := new(v1alpha3.Project)
+	err = c.Get(context.Background(), client.ObjectKey{Name: "foo"}, got)
+	require.True(t, apierrors.IsNotFound(err) || !got.DeletionTimestamp.IsZero())
+}
+
+func TestHandle_RequeuesLeftoverWrapWhenNamespaceGetFails(t *testing.T) {
+	leftover := &v1alpha3.Project{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "foo",
+			Labels: map[string]string{v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace},
+		},
+	}
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, v1alpha3.AddToScheme(scheme))
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(leftover).WithInterceptorFuncs(interceptor.Funcs{
+		Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			if _, ok := obj.(*corev1.Namespace); ok {
+				return errors.New("namespace get failed")
+			}
+			return c.Get(ctx, key, obj, opts...)
+		},
+	}).Build()
+	m := New(c, &fakeHelmClient{}, logr.Discard())
+
+	_, err := m.Handle(context.Background(), leftover.DeepCopy())
+	require.Error(t, err)
+
+	got := new(v1alpha3.Project)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, got))
+	assert.Empty(t, got.Spec.ProjectTemplateName)
+	assert.Equal(t, v1alpha3.ManagedByNamespace, got.Labels[v1alpha3.ProjectLabelManagedByNamespace])
 }
