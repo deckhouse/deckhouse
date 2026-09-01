@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 23,
+  "version": 24,
   "statements": [
     {
       "vulnerability": {
@@ -652,6 +652,76 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
       "impact_statement": "Уязвимая функция NewNTUnicodeString находится в golang.org/x/sys/windows. Образ собирается под Linux, поэтому пакет windows не компилируется ни в один из бинарей образа независимо от того, какой из них тянет модуль golang.org/x/sys.",
+      "timestamp": "2026-09-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-47262"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd@v1.7.29"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/containerd/containerd поступает транзитивно через helm (go_lib/dependency/helm -> helm.sh/helm/v3/pkg/registry) и используется только как клиент OCI-реестра. Уязвимость — DoS рантайма при разборе групп во время запуска контейнера. В deckhouse-controller CRI-плагин containerd, его рантайм и механизм checkpoint/restore не собираются и не запускаются, уязвимый код не в пути выполнения.",
+      "timestamp": "2026-09-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-53488"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd@v1.7.29"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/containerd/containerd поступает транзитивно через helm (go_lib/dependency/helm -> helm.sh/helm/v3/pkg/registry) и используется только как клиент OCI-реестра. Уязвимость — передача LABEL из конфига образа в restart-monitor CRI-плагина. В deckhouse-controller CRI-плагин containerd, его рантайм и механизм checkpoint/restore не собираются и не запускаются, уязвимый код не в пути выполнения.",
+      "timestamp": "2026-09-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-50195"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd@v1.7.29"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/containerd/containerd поступает транзитивно через helm (go_lib/dependency/helm -> helm.sh/helm/v3/pkg/registry) и используется только как клиент OCI-реестра. Уязвимость — подмена тега образа при импорте CRI-checkpoint. В deckhouse-controller CRI-плагин containerd, его рантайм и механизм checkpoint/restore не собираются и не запускаются, уязвимый код не в пути выполнения.",
+      "timestamp": "2026-09-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-53489"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd@v1.7.29"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/containerd/containerd поступает транзитивно через helm (go_lib/dependency/helm -> helm.sh/helm/v3/pkg/registry) и используется только как клиент OCI-реестра. Уязвимость — чтение произвольного файла лога через симлинк при CRI checkpoint restore. В deckhouse-controller CRI-плагин containerd, его рантайм и механизм checkpoint/restore не собираются и не запускаются, уязвимый код не в пути выполнения.",
+      "timestamp": "2026-09-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-53492"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/containerd/containerd@v1.7.29"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Зависимость github.com/containerd/containerd поступает транзитивно через helm (go_lib/dependency/helm -> helm.sh/helm/v3/pkg/registry) и используется только как клиент OCI-реестра. Уязвимость — подмена CDI-аннотаций при CRI checkpoint restore. В deckhouse-controller CRI-плагин containerd, его рантайм и механизм checkpoint/restore не собираются и не запускаются, уязвимый код не в пути выполнения.",
       "timestamp": "2026-09-01T12:00:00Z"
     }
   ],
