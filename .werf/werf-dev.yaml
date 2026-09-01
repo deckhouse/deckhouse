@@ -40,6 +40,13 @@ shell:
 
 {{ include "dev_prebuild_docker_properties" . }}
 ---
+image: minget-artifact
+final: false
+from: {{ index $.Images "builder/distroless" }}
+shell:
+  install:
+  - pm install minget
+---
 {{ include "dev_image" . }}
 {{ include "controller_and_install_image_labels" . }}
 ---
