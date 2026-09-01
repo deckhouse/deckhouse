@@ -23,6 +23,8 @@ import (
 	"slices"
 	"strconv"
 
+	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
@@ -40,8 +42,28 @@ const (
 // GetEndpoints returns sorted unique API server endpoints in host:port format.
 // It merges non-terminating kube-apiserver Pods with the kubernetes EndpointSlice.
 // Readiness is intentionally not checked; callers that require ready endpoints
+// must use GetReadyEndpoints.
+func GetEndpoints(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+) ([]string, error) {
+	return getEndpoints(ctx, kubeCl, false)
+}
+
+// GetReadyEndpoints returns sorted unique endpoints that are ready to accept
+// connections. Terminating and explicitly not-ready endpoints are excluded.
+func GetReadyEndpoints(
+	ctx context.Context,
+	kubeCl *client.KubernetesClient,
+) ([]string, error) {
+	return getEndpoints(ctx, kubeCl, true)
+}
+
+// getEndpoints returns sorted unique API server endpoints in host:port format.
+// It merges non-terminating kube-apiserver Pods with the kubernetes EndpointSlice.
+// Readiness is intentionally not checked; callers that require ready endpoints
 // must apply their own safety filtering.
-func GetEndpoints(ctx context.Context, kubeCl *client.KubernetesClient) ([]string, error) {
+func getEndpoints(ctx context.Context, kubeCl *client.KubernetesClient, readyOnly bool) ([]string, error) {
 	endpoints := make(map[string]struct{})
 
 	pods, err := kubeCl.CoreV1().
@@ -57,6 +79,10 @@ func GetEndpoints(ctx context.Context, kubeCl *client.KubernetesClient) ([]strin
 		pod := &pods.Items[i]
 
 		if pod.DeletionTimestamp != nil || pod.Status.PodIP == "" {
+			continue
+		}
+
+		if readyOnly && !podIsReady(pod.Status.Conditions) {
 			continue
 		}
 
@@ -92,6 +118,9 @@ func GetEndpoints(ctx context.Context, kubeCl *client.KubernetesClient) ([]strin
 	}
 
 	for _, endpoint := range endpointSlice.Endpoints {
+		if readyOnly && !endpointIsReady(endpoint.Conditions) {
+			continue
+		}
 		for _, address := range endpoint.Addresses {
 			for _, port := range ports {
 				hostPort := net.JoinHostPort(
@@ -108,4 +137,26 @@ func GetEndpoints(ctx context.Context, kubeCl *client.KubernetesClient) ([]strin
 	}
 
 	return slices.Sorted(maps.Keys(endpoints)), nil
+}
+
+func podIsReady(conditions []corev1.PodCondition) bool {
+	for _, condition := range conditions {
+		if condition.Type != corev1.PodReady {
+			continue
+		}
+
+		return condition.Status == corev1.ConditionTrue
+	}
+
+	return false
+}
+
+func endpointIsReady(conditions discoveryv1.EndpointConditions) bool {
+	if conditions.Terminating != nil && *conditions.Terminating {
+		return false
+	}
+
+	// Ready=nil means that readiness is unknown. EndpointSlice consumers
+	// interpret an unknown value as ready for backward compatibility.
+	return conditions.Ready == nil || *conditions.Ready
 }
