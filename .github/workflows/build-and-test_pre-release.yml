@@ -364,6 +364,7 @@ jobs:
           # obtained, so signing is skipped rather than failing the build.
           WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
           WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1085,6 +1086,7 @@ jobs:
           # obtained, so signing is skipped rather than failing the build.
           WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
           WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1493,6 +1495,7 @@ jobs:
           # obtained, so signing is skipped rather than failing the build.
           WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
           WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1901,6 +1904,7 @@ jobs:
           # obtained, so signing is skipped rather than failing the build.
           WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
           WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -2309,6 +2313,7 @@ jobs:
           # obtained, so signing is skipped rather than failing the build.
           WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
           WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -2717,6 +2722,7 @@ jobs:
           # obtained, so signing is skipped rather than failing the build.
           WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
           WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -3125,6 +3131,7 @@ jobs:
           # obtained, so signing is skipped rather than failing the build.
           WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
           WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -4937,6 +4944,7 @@ jobs:
         if: ${{ steps.check-tag-for-release-branch.outputs.result == 'true' }}
         env:
           IMAGE_TO: "${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/sys/deckhouse-oss:${{ github.ref_name }}"
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
           COMPARE_MAX_ATTEMPTS: 10
           COMPARE_RETRY_DELAY: 30
         run: |
