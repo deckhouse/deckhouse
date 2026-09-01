@@ -1,33 +1,24 @@
 # #####################################################################
-# Description: gops, a diagnostic tool for Go processes, used at runtime
-# Target: agent, hubble-relay
+# Description: check-wg-kernel-compat, verifies the node kernel can run WireGuard before the agent enables it
+# Target: final image
 # Sources:
-# - cilium/cilium: images/runtime/Dockerfile (go-builder stage)
-# - cilium/cilium: images/runtime/build-gops.sh
+# - Deckhouse specific, no upstream counterpart
 # #####################################################################
----
-{{- $gopsVersion := include "get_oss_version_by_id" (list "gops" $) }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src
 from: {{ index $.Images "builder/src" }}
 final: false
 git:
-- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
-  to: /patches
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/src
+  to: /src
   stageDependencies:
     install:
     - '**/*'
-secrets:
-- id: SOURCE_REPO
-  value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $gopsVersion }} $(cat /run/secrets/SOURCE_REPO)/google/gops.git /src
   - cd /src
-  - git apply --verbose --allow-empty /patches/*.patch
-  - rm -rf /src/.git
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}
+image: {{ .ModuleName }}/{{ .ImageName }}-build
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
@@ -48,6 +39,19 @@ shell:
   - |
     {{- $buildContext := deepCopy $ -}}
     {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
-    {{- $_ := set $buildContext "BuildCommand" `go build -ldflags "-s -w" -o /out/usr/bin/gops github.com/google/gops` -}}
+    {{- $_ := set $buildContext "BuildCommand" `go build -ldflags "-s -w" -o /out/check-wg-kernel-compat .` -}}
     {{- include "image-build.build" $buildContext | indent 4 }}
-  - go version -m /out/usr/bin/gops | grep -q "GOARCH=amd64"
+  - chown 64535:64535 /out/check-wg-kernel-compat
+  - chmod 0755 /out/check-wg-kernel-compat
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+from: {{ index $.Images "base/distroless-fin" }}
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-build
+  add: /out/check-wg-kernel-compat
+  to: /check-wg-kernel-compat
+  before: install
+{{- include "image mount points" . }}
+imageSpec:
+  config:
+    entrypoint: ["/check-wg-kernel-compat"]
