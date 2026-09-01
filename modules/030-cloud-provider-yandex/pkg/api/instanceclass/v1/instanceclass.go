@@ -38,7 +38,6 @@ var (
 
 // +kubebuilder:object:root=true
 // +kubebuilder:resource:scope=Cluster,categories=cloudinstanceclasses
-// +kubebuilder:subresource:status
 // +kubebuilder:printcolumn:name="Node Groups",type=string,JSONPath=.status.nodeGroupConsumers,description="NodeGroups which use this instance class."
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=.metadata.creationTimestamp
 // +kubebuilder:metadata:labels="heritage=deckhouse"
@@ -71,7 +70,6 @@ type YandexInstanceClassSpec struct {
 	// +kubebuilder:validation:Enum=5;20;50;100
 	// +deckhouse:XDocExamples:value="20"
 	// +deckhouse:XDocDefault:value="100"
-	// +kubebuilder:default=100
 	// +optional
 	CoreFraction int `json:"coreFraction,omitempty"`
 
@@ -79,7 +77,6 @@ type YandexInstanceClassSpec struct {
 	// +deckhouse:ru:description:value="Количество графических адаптеров у создаваемых виртуальных машин."
 	// +deckhouse:XDocExamples:value="4"
 	// +deckhouse:XDocDefault:value="0"
-	// +kubebuilder:default=0
 	// +optional
 	GPUs int `json:"gpus,omitempty"`
 
@@ -95,7 +92,8 @@ type YandexInstanceClassSpec struct {
 	// +deckhouse:ru:description:value=
 	// +deckhouse:ru:description:value="По умолчанию используется образ, указанный в параметре [masterNodeGroup.instanceClass.imageID](cluster_configuration.html#yandexclusterconfiguration-masternodegroup-instanceclass-imageid)."
 	// +deckhouse:XDocExamples:value="fd83ica41cade1mj35sr"
-	ImageID string `json:"imageID"`
+	// +optional
+	ImageID string `json:"imageID,omitempty"`
 
 	// Platform ID.
 	//
@@ -104,7 +102,6 @@ type YandexInstanceClassSpec struct {
 	// +deckhouse:ru:description:value=
 	// +deckhouse:ru:description:value="[Список существующих платформ](https://cloud.yandex.com/docs/compute/concepts/vm-platforms)."
 	// +deckhouse:XDocDefault:value="standard-v3"
-	// +kubebuilder:default="standard-v3"
 	// +optional
 	PlatformID string `json:"platformID,omitempty"`
 
@@ -115,7 +112,6 @@ type YandexInstanceClassSpec struct {
 	// +deckhouse:ru:description:value=
 	// +deckhouse:ru:description:value="Подробнее о прерываемых виртуальных машинах можно узнать в [документации провайдера](https://cloud.yandex.ru/docs/compute/concepts/preemptible-vm)."
 	// +deckhouse:XDocDefault:value="false"
-	// +kubebuilder:default=false
 	// +optional
 	Preemptible bool `json:"preemptible,omitempty"`
 
@@ -130,7 +126,6 @@ type YandexInstanceClassSpec struct {
 	// +kubebuilder:validation:Enum=network-ssd;network-hdd;network-ssd-nonreplicated;network-ssd-io-m3
 	// +deckhouse:XDocExamples:value="network-hdd"
 	// +deckhouse:XDocDefault:value="\"network-hdd\""
-	// +kubebuilder:default="network-hdd"
 	// +optional
 	DiskType string `json:"diskType,omitempty"`
 
@@ -138,7 +133,6 @@ type YandexInstanceClassSpec struct {
 	// +deckhouse:ru:description:value="Размер диска у виртуальных машин. Значение указывается в `ГиБ`."
 	// +deckhouse:XDocExamples:value="20"
 	// +deckhouse:XDocDefault:value="50"
-	// +kubebuilder:default=50
 	// +optional
 	DiskSizeGB int `json:"diskSizeGB,omitempty"`
 
@@ -146,7 +140,6 @@ type YandexInstanceClassSpec struct {
 	// +deckhouse:ru:description:value="Необходимость присвоения публичных IP-адресов виртуальным машинам."
 	// +deckhouse:XDocExamples:value="false"
 	// +deckhouse:XDocDefault:value="false"
-	// +kubebuilder:default=false
 	// +optional
 	AssignPublicIPAddress bool `json:"assignPublicIPAddress,omitempty"`
 
