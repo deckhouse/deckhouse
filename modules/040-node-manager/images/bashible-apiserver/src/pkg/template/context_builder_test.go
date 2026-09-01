@@ -235,6 +235,21 @@ updateEpoch: "1680009541"
 		}
 	})
 
+	// nodeCapacity is resolved for every node group and not only for the ones that scale from zero.
+	// It is metadata for the autoscaler's template NodeInfo that no bashible step reads, so it must
+	// stay out of the checksum: otherwise publishing it for a group with minPerZone above zero
+	// re-runs node configuration on every node of that group.
+	t.Run("nodeCapacity does not affect checksum", func(t *testing.T) {
+		bc.NodeGroup["nodeCapacity"] = map[string]interface{}{"cpu": "4", "memory": "8Gi"}
+
+		newHash := hash(t, &bc)
+
+		if expectedHash != newHash {
+			t.Errorf("%s != %s", expectedHash, newHash)
+			return
+		}
+	})
+
 	t.Run("changing kubelet seccompDefault affects checksum", func(t *testing.T) {
 		bc.NodeGroup["kubelet"].(map[string]interface{})["seccompDefault"] = true
 

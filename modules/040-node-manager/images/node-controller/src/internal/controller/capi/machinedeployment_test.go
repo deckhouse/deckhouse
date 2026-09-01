@@ -189,9 +189,9 @@ func TestSerializeNodeGroupTaints(t *testing.T) {
 	})
 }
 
-func TestSetScaleFromZeroCapacityAnnotations(t *testing.T) {
+func TestSetCapacityAnnotations(t *testing.T) {
 	annotations := map[string]interface{}{}
-	setScaleFromZeroCapacityAnnotations(annotations, "4", "8Gi")
+	setCapacityAnnotations(annotations, "4", "8Gi")
 
 	for key, want := range map[string]string{
 		"capacity.cluster-autoscaler.kubernetes.io/cpu":    "4",
@@ -206,7 +206,7 @@ func TestSetScaleFromZeroCapacityAnnotations(t *testing.T) {
 		}
 	}
 
-	setScaleFromZeroCapacityAnnotations(annotations, "", "")
+	setCapacityAnnotations(annotations, "", "")
 	if got := annotations["capacity.cluster-autoscaler.kubernetes.io/cpu"]; got != "4" {
 		t.Fatalf("empty cpu overwrote existing annotation: %v", got)
 	}
