@@ -7,21 +7,7 @@ description: Architecture of the monitoring-kubernetes module in Deckhouse Kuber
 
 The [`monitoring-kubernetes`](/modules/monitoring-kubernetes/) module provides transparent and timely monitoring of the status of all cluster nodes and key infrastructure components.
 
-Module features:
-
-* Provides an opportunity to plan infrastructure resources (Capacity planning).
-* Monitors the container runtime version (docker, containerd) on each node and checks it for compliance with the allowed versions.
-* Monitors the performance of the cluster monitoring subsystem itself (Dead man's switch).
-* Gets metrics about the availability of file descriptors, sockets, free space, and inodes on each node.
-* Monitors the correct operation of key monitoring components: kube-state-metrics, node-exporter, kube-dns.
-* Checks the status of all nodes (`NotReady`, `drain`, `cordon`) and promptly reports problems.
-* Monitors time synchronization and notifies about deviations.
-* Detects cases of prolonged CPU steal overrun (when the node does not receive the required CPU time).
-* Controls the status of the Conntrack table on the nodes.
-* Shows pods with incorrect statuses, for example, if kubelet failed to do its job.
-* Allows you to export metrics to external monitoring systems for a single point of control.
-
-For more details about module configuration, refer to the [corresponding documentation section](/modules/monitoring-kubernetes/configuration.html).
+For more details about module features and configuration, refer to the [corresponding documentation section](/modules/monitoring-kubernetes/configuration.html).
 
 ## Module architecture
 
