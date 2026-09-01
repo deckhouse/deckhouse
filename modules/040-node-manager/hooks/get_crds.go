@@ -412,21 +412,40 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 				continue
 			}
 
-			// check #3 - node capacity planning: scale from zero check
+			// check #3 - node capacity planning
+			//
+			// The autoscaler needs a template NodeInfo for every node group it discovers, not only for
+			// the ones that scale from zero. Groups are discovered from the
+			// cluster-api-autoscaler-node-group-{min,max}-size annotations, which are written
+			// unconditionally, so while a discovered group has no registered Node — a single-replica
+			// group whose Node is still booting, or any group mid-churn — the clusterapi provider has
+			// nothing to build a NodeInfo from. ResourcesLeft then fails with "No node info for:
+			// <group>", which aborts scale-up for every other group in the cluster as well. So the
+			// capacity is resolved for every group that can hold a machine.
 			instanceClassSpec := instanceClasses[nodeGroupInstanceClassName]
 			if nodeGroup.Spec.CloudInstances.MinPerZone != nil && nodeGroup.Spec.CloudInstances.MaxPerZone != nil {
-				if *nodeGroup.Spec.CloudInstances.MinPerZone == 0 && *nodeGroup.Spec.CloudInstances.MaxPerZone > 0 {
-					// capacity calculation required only for scaling from zero, we can save some time in the other cases
+				if *nodeGroup.Spec.CloudInstances.MaxPerZone > 0 {
+					scaleFromZero := *nodeGroup.Spec.CloudInstances.MinPerZone == 0
 					nodeCapacity, err := capacity.CalculateNodeTemplateCapacity(nodeGroupInstanceClassKind, instanceClassSpec, instanceTypeCatalog)
 					if err != nil {
-						errorMsg := fmt.Sprintf("Capacity calculation failed for instance class '%s'. The instance type is not found in built-in types and no capacity is set. ScaleFromZero will not work. Please set capacity in the %s '%s' or use a supported instance type.", nodeGroupInstanceClassKind, nodeGroupInstanceClassKind, nodeGroup.Spec.CloudInstances.ClassReference.Name)
-						input.Logger.Error("Calculate capacity failed", slog.String("node_group", nodeGroupInstanceClassKind), slog.Any("spec", instanceClassSpec), log.Err(err))
-						setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, errorMsg)
-						nodeGroupErrors = append(nodeGroupErrors, fmt.Sprintf("• NodeGroup '%s': %s", nodeGroup.Name, errorMsg))
-						continue
+						// Scale-from-zero alone still rejects the NodeGroup: there an unresolved capacity
+						// means the group can never be scaled up at all.
+						if scaleFromZero {
+							errorMsg := fmt.Sprintf("Capacity calculation failed for instance class '%s'. The instance type is not found in built-in types and no capacity is set. ScaleFromZero will not work. Please set capacity in the %s '%s' or use a supported instance type.", nodeGroupInstanceClassKind, nodeGroupInstanceClassKind, nodeGroup.Spec.CloudInstances.ClassReference.Name)
+							input.Logger.Error("Calculate capacity failed", slog.String("node_group", nodeGroupInstanceClassKind), slog.Any("spec", instanceClassSpec), log.Err(err))
+							setNodeGroupStatus(input.PatchCollector, nodeGroup.Name, errorStatusField, errorMsg)
+							nodeGroupErrors = append(nodeGroupErrors, fmt.Sprintf("• NodeGroup '%s': %s", nodeGroup.Name, errorMsg))
+							continue
+						}
+						// Everywhere else it is not fatal: the group keeps working and its
+						// MachineDeployment carries no capacity annotations, exactly as before this
+						// calculation was widened.
+						input.Logger.Warn("Calculate capacity failed, MachineDeployment will carry no capacity annotations",
+							slog.String("node_group", nodeGroup.Name),
+							slog.String("instance_class_kind", nodeGroupInstanceClassKind), log.Err(err))
+					} else {
+						ngForValues["nodeCapacity"] = nodeCapacity
 					}
-
-					ngForValues["nodeCapacity"] = nodeCapacity
 				}
 			}
 

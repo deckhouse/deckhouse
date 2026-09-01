@@ -287,7 +287,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 		if serializedTaints != "" {
 			annotations["capacity.cluster-autoscaler.kubernetes.io/taints"] = serializedTaints
 		}
-		setScaleFromZeroCapacityAnnotations(annotations, capacityCPU, capacityMemory)
+		setCapacityAnnotations(annotations, capacityCPU, capacityMemory)
 
 		commonLabels := map[string]interface{}{
 			"heritage":   "deckhouse",
@@ -620,7 +620,10 @@ type nodeCapacityValues struct {
 }
 
 // readNodeCapacity loads CPU/memory previously calculated by get_crds and published
-// via the d8-node-manager-capi-node-capacity ConfigMap for scale-from-zero.
+// via the d8-node-manager-capi-node-capacity ConfigMap. get_crds resolves it for every NodeGroup
+// that can hold a machine, not only for the scale-from-zero ones: the autoscaler needs a template
+// NodeInfo for every group it discovers, and a discovered group with neither a registered Node nor
+// a template makes ResourcesLeft fail cluster-wide with "No node info for: <group>".
 func (r *MachineDeploymentReconciler) readNodeCapacity(ctx context.Context, ngName string) (cpu, memory string) {
 	cm := &corev1.ConfigMap{}
 	if err := r.APIReader.Get(ctx, types.NamespacedName{
@@ -640,7 +643,9 @@ func (r *MachineDeploymentReconciler) readNodeCapacity(ctx context.Context, ngNa
 	return capacity.CPU, capacity.Memory
 }
 
-func setScaleFromZeroCapacityAnnotations(annotations map[string]interface{}, cpu, memory string) {
+// setCapacityAnnotations advertises the node template the autoscaler's clusterapi provider builds
+// its NodeInfo from. Not scale-from-zero only — see readNodeCapacity.
+func setCapacityAnnotations(annotations map[string]interface{}, cpu, memory string) {
 	if cpu != "" {
 		annotations["capacity.cluster-autoscaler.kubernetes.io/cpu"] = cpu
 	}

@@ -33,8 +33,9 @@ const (
 	clusterConfigSecretNamespace = "kube-system"
 	clusterUUIDConfigMapName     = "d8-cluster-uuid"
 	clusterUUIDConfigMapNS       = "kube-system"
-	// nodeCapacityConfigMapName is rendered by helm from get_crds nodeCapacity values
-	// so CAPI MachineDeployments can advertise CPU/memory for scale-from-zero.
+	// nodeCapacityConfigMapName is rendered by helm from get_crds nodeCapacity values so CAPI
+	// MachineDeployments can advertise CPU/memory to the autoscaler. It carries every NodeGroup that
+	// can hold a machine, not only the scale-from-zero ones.
 	nodeCapacityConfigMapName = "d8-node-manager-capi-node-capacity"
 )
 

@@ -1397,6 +1397,86 @@ spec:
 		})
 	})
 
+	// The autoscaler needs a template NodeInfo for every node group it discovers, not only for the
+	// ones that scale from zero: a discovered group with no registered Node and no template makes
+	// ResourcesLeft fail with "No node info for: <group>", aborting scale-up cluster-wide.
+	Context("Fixed size group: with a capacity", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: test
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    minPerZone: 1
+    maxPerZone: 1
+    classReference:
+      kind: D8TestInstanceClass
+      name: cap
+    zones: [a,b]
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: D8TestInstanceClass
+metadata:
+  name: cap
+spec:
+  type: test
+  capacity:
+    cpu: 4
+    memory: 8Gi
+`))
+			f.RunHook()
+		})
+
+		It("must publish nodeCapacity even though the group never scales from zero", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			assertNodeCapacity(f, v1alpha1.InstanceType{
+				CPU:    resource.MustParse("4"),
+				Memory: resource.MustParse("8Gi"),
+			})
+		})
+	})
+
+	// Outside scale-from-zero an unresolved capacity must stay non-fatal: the group keeps working and
+	// its MachineDeployment simply carries no capacity annotations, exactly as before the calculation
+	// was widened.
+	Context("Fixed size group: can't find a capacity", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: test
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    minPerZone: 1
+    maxPerZone: 3
+    classReference:
+      kind: D8TestInstanceClass
+      name: caperror
+    zones: [a,b]
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: D8TestInstanceClass
+metadata:
+  name: caperror
+spec: {}
+`))
+			f.RunHook()
+		})
+
+		It("must not reject the NodeGroup", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cloudInstances").Exists()).To(BeTrue())
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeCapacity").Exists()).To(BeFalse())
+		})
+	})
+
 	const (
 		staticNodeGroupWithStaticInstances = `
 ---
