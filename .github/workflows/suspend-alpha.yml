@@ -252,6 +252,7 @@ jobs:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           WERF_ENV: CE
           SKIP_PUSH_FOR_SUSPEND: ${{vars.SKIP_PUSH_FOR_SUSPEND}}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
@@ -323,6 +324,7 @@ jobs:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           WERF_ENV: EE
           SKIP_PUSH_FOR_SUSPEND: ${{vars.SKIP_PUSH_FOR_SUSPEND}}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
@@ -394,6 +396,7 @@ jobs:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           WERF_ENV: FE
           SKIP_PUSH_FOR_SUSPEND: ${{vars.SKIP_PUSH_FOR_SUSPEND}}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
@@ -465,6 +468,7 @@ jobs:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           WERF_ENV: BE
           SKIP_PUSH_FOR_SUSPEND: ${{vars.SKIP_PUSH_FOR_SUSPEND}}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
@@ -536,6 +540,7 @@ jobs:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           WERF_ENV: SE
           SKIP_PUSH_FOR_SUSPEND: ${{vars.SKIP_PUSH_FOR_SUSPEND}}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
@@ -607,6 +612,7 @@ jobs:
           DECKHOUSE_REGISTRY_HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
           WERF_ENV: SE-plus
           SKIP_PUSH_FOR_SUSPEND: ${{vars.SKIP_PUSH_FOR_SUSPEND}}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # SRC_NAME is a name of image from werf.yaml.
           # SRC is a source image name.
