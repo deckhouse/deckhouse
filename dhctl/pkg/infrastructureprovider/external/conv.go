@@ -45,7 +45,19 @@ func toWireInput(input config.ProviderInput) (validatev1.Input, error) {
 	}, nil
 }
 
-func violationsToString(violations []*validatev1.ViolationResponse) []string {
+func violationsToErrString(violations []*validatev1.ViolationResponse) []string {
+	lines := make([]string, 0, len(violations))
+	for _, violation := range violations {
+		if violation.Path == "" {
+			lines = append(lines, violation.Message)
+		} else {
+			lines = append(lines, fmt.Sprintf("%s: %s", violation.Path, violation.Message))
+		}
+	}
+	return lines
+}
+
+func violationsToWarnString(violations []*validatev1.ViolationResponse) []string {
 	lines := make([]string, 0, len(violations))
 	for _, violation := range violations {
 		if violation.Path == "" {

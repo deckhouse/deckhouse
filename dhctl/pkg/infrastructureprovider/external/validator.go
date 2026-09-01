@@ -27,6 +27,7 @@ import (
 
 	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/client"
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
@@ -58,10 +59,24 @@ func Validate(ctx context.Context, binaryPath string, input config.ProviderInput
 		return err
 	}
 
-	if strErrors := violationsToString(resp.GetErrors()); len(strErrors) > 0 {
-		return fmt.Errorf("provider validation failed: %s", strings.Join(strErrors, "\n"))
+	if warningsStr := violationsToErrString(resp.GetWarnings()); len(warningsStr) > 0 {
+		reportWarnings(ctx, input.ProviderName, warningsStr)
+	}
+
+	if errorsStr := violationsToErrString(resp.GetErrors()); len(errorsStr) > 0 {
+		return fmt.Errorf("provider validation failed: %s", strings.Join(errorsStr, "\n"))
 	}
 	return nil
+}
+
+func reportWarnings(ctx context.Context, providerName string, warnings []string) {
+	logger := dhlog.FromContext(ctx)
+	logger.WarnContext(ctx, "=================================================================")
+	logger.WarnContext(ctx, fmt.Sprintf("WARNING: %q provider validation.", providerName))
+	for _, warn := range warnings {
+		logger.WarnContext(ctx, fmt.Sprintf(" - %s", warn))
+	}
+	logger.WarnContext(ctx, "=================================================================")
 }
 
 // validate spawns one validator, asks it, and tears it back down. Each step
