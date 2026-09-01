@@ -83,7 +83,7 @@ var deckhouseModuleConfigsYAML []byte
 func (r *reconciler) reconcileDeckhouse(
 	ctx context.Context,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
-	albVIP string,
+	apiserverClusterIP string,
 	tenantCA []byte,
 	tr *tenantRegistry,
 ) (reconcile.Result, error) {
@@ -135,7 +135,7 @@ func (r *reconciler) reconcileDeckhouse(
 		log.FromContext(ctx).Error(err, "check tenant cluster is bootstrapped; treating as not bootstrapped")
 		isBootstrapped = false
 	}
-	if err := r.reconcileDeckhouseDeployment(ctx, vcp, albVIP, isBootstrapped); err != nil {
+	if err := r.reconcileDeckhouseDeployment(ctx, vcp, apiserverClusterIP, isBootstrapped); err != nil {
 		return reconcile.Result{}, fmt.Errorf("reconcile deckhouse Deployment: %w", err)
 	}
 
@@ -579,7 +579,7 @@ func reconcileTenantDeckhouseServiceAccount(ctx context.Context, tc client.Clien
 func (r *reconciler) reconcileDeckhouseDeployment(
 	ctx context.Context,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
-	albVIP string,
+	apiserverClusterIP string,
 	isBootstrapped bool,
 ) error {
 	image, err := r.getParentDeckhouseImage(ctx)
@@ -587,7 +587,7 @@ func (r *reconciler) reconcileDeckhouseDeployment(
 		return fmt.Errorf("get parent deckhouse image: %w", err)
 	}
 
-	target, err := buildTargetDeckhouseDeployment(vcp, image, albVIP, r.parentDeckhouseImageDigest(ctx))
+	target, err := buildTargetDeckhouseDeployment(vcp, image, apiserverClusterIP, r.parentDeckhouseImageDigest(ctx))
 	if err != nil {
 		return err
 	}
@@ -627,13 +627,13 @@ func (r *reconciler) reconcileDeckhouseDeployment(
 func buildTargetDeckhouseDeployment(
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 	image string,
-	albVIP string,
+	apiserverClusterIP string,
 	parentImageDigest string,
 ) (*appsv1.Deployment, error) {
 	rendered := strings.NewReplacer(
 		"${NAMESPACE}", vcp.Namespace,
 		"${IMAGE_DECKHOUSE}", image,
-		"${VCP_API_VIP}", albVIP,
+		"${APISERVER_CLUSTER_IP}", apiserverClusterIP,
 		"${TOKEN_SECRET_NAME}", constants.VirtualResourceName(constants.VirtualDeckhouseTokenSecretName, vcp.Name),
 	).Replace(deckhouseDeploymentYAML)
 

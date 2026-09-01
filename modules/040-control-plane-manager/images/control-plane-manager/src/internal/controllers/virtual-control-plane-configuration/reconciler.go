@@ -159,7 +159,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
-	if res, err := r.reconcileDeckhouse(ctx, vcp, albVIP, pkiSecret.Data["ca.crt"], tenantReg); err != nil || !res.IsZero() {
+	if res, err := r.reconcileDeckhouse(ctx, vcp, apiserverService.Spec.ClusterIP, pkiSecret.Data["ca.crt"], tenantReg); err != nil || !res.IsZero() {
 		return res, err
 	}
 
