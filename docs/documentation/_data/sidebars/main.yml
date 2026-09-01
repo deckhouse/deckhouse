@@ -1743,13 +1743,41 @@ entries:
                 ru: Обзор
               url: /architecture/managed-services/
             - title:
+                en: Managed-cassandra module
+                ru: Модуль managed-cassandra
+              url: /architecture/managed-services/managed-cassandra.html
+            - title:
+                en: Managed-clickhouse module
+                ru: Модуль managed-clickhouse
+              url: /architecture/managed-services/managed-clickhouse.html
+            - title:
+                en: Managed-hive-metastore module
+                ru: Модуль managed-hive-metastore
+              url: /architecture/managed-services/managed-hive-metastore.html
+            - title:
+                en: Managed-kafka module
+                ru: Модуль managed-kafka
+              url: /architecture/managed-services/managed-kafka.html
+            - title:
                 en: Managed-memcached module
                 ru: Модуль managed-memcached
               url: /architecture/managed-services/managed-memcached.html
             - title:
+                en: Managed-opensearch module
+                ru: Модуль managed-opensearch
+              url: /architecture/managed-services/managed-opensearch.html
+            - title:
                 en: Managed-postgres module
                 ru: Модуль managed-postgres
-              url: /architecture/managed-services/managed-postgres.html              
+              url: /architecture/managed-services/managed-postgres.html
+            - title:
+                en: Managed-starrocks module
+                ru: Модуль managed-starrocks
+              url: /architecture/managed-services/managed-starrocks.html
+            - title:
+                en: Managed-trino module
+                ru: Модуль managed-trino
+              url: /architecture/managed-services/managed-trino.html
         - title:
             en: Virtualization subsystem
             ru: Подсистема Virtualization
