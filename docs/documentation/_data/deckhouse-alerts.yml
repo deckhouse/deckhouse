@@ -2968,21 +2968,20 @@ alerts:
            d8 s module enable control-plane-manager
            ```
 
-        2. Read what the obsolete fields currently hold:
+        2. Migrate the values straight from the Secret into ModuleConfig using following command:
 
            ```bash
-           d8 k -n kube-system get secret d8-cluster-configuration -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d | grep -E '^(podSubnetCIDR|serviceSubnetCIDR|podSubnetNodeCIDRPrefix):'
+           CC=$(d8 k -n kube-system get secret d8-cluster-configuration -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d)
+           d8 k patch moduleconfig control-plane-manager --type merge -p "$(jq -n \
+             --arg podSubnetCIDR "$(echo "$CC" | grep '^podSubnetCIDR:' | awk '{print $2}' | tr -d '"')" \
+             --arg serviceSubnetCIDR "$(echo "$CC" | grep '^serviceSubnetCIDR:' | awk '{print $2}' | tr -d '"')" \
+             --arg podSubnetNodeCIDRPrefix "$(echo "$CC" | grep '^podSubnetNodeCIDRPrefix:' | awk '{print $2}' | tr -d '"')" \
+             '{spec: {version: 3, settings: {network: ({podSubnetCIDR: $podSubnetCIDR, serviceSubnetCIDR: $serviceSubnetCIDR, podSubnetNodeCIDRPrefix: $podSubnetNodeCIDRPrefix} | with_entries(select(.value != "")))}}}')"
            ```
 
-        3. If ModuleConfig has no `network` section yet, set it to the same values, so the cluster keeps the network it runs today (replace the values below with what you saw in step 2 - all three must match exactly, or the change is rejected):
+           Once a field is set in ModuleConfig this way, it cannot be migrated again: the network group is immutable once set.
 
-           ```bash
-           d8 k patch moduleconfig control-plane-manager --type merge -p '{"spec":{"version":3,"settings":{"network":{"podSubnetCIDR":"10.111.0.0/16","serviceSubnetCIDR":"10.222.0.0/16","podSubnetNodeCIDRPrefix":"24"}}}}'
-           ```
-
-           Once ModuleConfig is updated, this step cannot be repeated: the network group is immutable once set.
-
-        4. Remove all three fields from ClusterConfiguration:
+        3. Remove all three fields from ClusterConfiguration:
 
            ```bash
            d8 system edit cluster-configuration
