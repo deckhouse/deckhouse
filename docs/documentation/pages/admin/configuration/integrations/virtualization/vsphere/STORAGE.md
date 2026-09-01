@@ -13,11 +13,7 @@ The following storage types are used in VMware vSphere for Kubernetes cluster da
 Deckhouse Kubernetes Platform (DKP) automatically creates a StorageClass for each Datastore and DatastoreCluster
 that is tagged as a `zone`.
 
-You can specify:
-
-- The default StorageClass name ([`default`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-default)).
-- Exclusions via the [`exclude`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-exclude) field in a form of a list of names or patterns for StorageClasses
-  that should not be created.
+Unnecessary StorageClasses are filtered out by the [`exclude`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-exclude) parameter, which takes a list of names or regular expressions.
 
 Example configuration using ModuleConfig:
 
@@ -31,11 +27,12 @@ spec:
   enabled: true
   settings:
     storageClass:
-      default: fast-lun102
       exclude:
         - ".*-lun101-.*"
         - slow-lun103
 ```
+
+To set the default StorageClass, use the [`global.defaultClusterStorageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass) global parameter.
 
 ### SPBM storage policies
 
@@ -62,10 +59,10 @@ The parameter applies to master nodes and to static nodes created by the install
 
 DKP supports Online Resize PersistentVolume starting with vSphere 7.0U2. Due to [specifics](https://github.com/kubernetes-csi/external-resizer/issues/44) of the CSI volume-resizer and the vSphere API, perform the following steps after resizing a PVC:
 
-1. Run `d8 k cordon <node_name>` for the node that hosts the Pod.
+1. Run `d8 k cordon <NODE_NAME>` for the node that hosts the Pod.
 1. Delete the Pod that uses the PVC.
 1. Wait for the resize operation to complete. The PVC must no longer have the `Resizing` condition, while the `FileSystemResizePending` condition is not an issue.
-1. Run `d8 k uncordon <node_name>`.
+1. Run `d8 k uncordon <NODE_NAME>`.
 
 ## Load balancing
 
@@ -109,9 +106,9 @@ For PersistentVolume to function correctly, the datastore must be accessible fro
 Assign tags:
 
 ```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
+govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
 
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName2>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
+govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
 ```

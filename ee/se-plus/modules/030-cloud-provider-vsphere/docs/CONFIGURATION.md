@@ -15,29 +15,47 @@ The module is automatically enabled for all cloud clusters deployed in vSphere.
 
 {% include module-conversion.liquid %}
 
-If the cluster control plane is hosted on a virtual machines or bare-metal servers, the cloud provider uses the settings from the `cloud-provider-vsphere` module in the Deckhouse configuration (see below). Otherwise, if the cluster control plane is hosted in a cloud, the cloud provider uses the [VsphereClusterConfiguration](cluster_configuration.html#vsphereclusterconfiguration) structure for configuration.
+The source of the settings depends on where the cluster control plane is hosted.
+If the control plane runs on virtual machines or bare metal, the module uses its own settings described below.
+If the control plane is hosted in a cloud, the module uses the [VsphereClusterConfiguration](cluster_configuration.html#vsphereclusterconfiguration) resource.
 
-You can configure the number and parameters of ordering machines in the cloud via the [`NodeGroup`](/node-manager/cr.html#nodegroup) custom resource of the `node-manager` module. Also, in this custom resource, you can specify the instance class's name for the above group of nodes (the `cloudInstances.ClassReference` parameter of NodeGroup). In the case of the vSphere cloud provider, the instance class is the [`VsphereInstanceClass`](cr.html#vsphereinstanceclass) custom resource that stores specific parameters of the machines.
+The number of nodes and their provisioning parameters are set in the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource of the `node-manager` module.
+The same resource specifies the instance class of the node group in the `cloudInstances.classReference` parameter.
+For vSphere, the instance class is the [VsphereInstanceClass](cr.html#vsphereinstanceclass) custom resource that describes the parameters of the virtual machines.
+
+## Connecting to vCenter
+
+The vCenter address and credentials are set by the [`host`](#parameters-host), [`username`](#parameters-username), and [`password`](#parameters-password) parameters.
+
+The module connects to vCenter over TLS and verifies its certificate.
+If the certificate is issued by a custom or enterprise certificate authority, pass the certificate chain in the [`caBundle`](#parameters-cabundle) parameter.
+The [`insecure`](#parameters-insecure) parameter set to `true` disables certificate verification completely.
+Set either `caBundle` or `insecure: true`, since these parameters are not accepted together.
 
 ## Storage
 
-The module automatically creates a StorageClass for each Datastore and DatastoreCluster in the zone (or zones).
+The module creates a StorageClass for each Datastore and DatastoreCluster in the zones in use.
+If SPBM storage policies are configured in vSphere, the module additionally creates a StorageClass for each combination of a Datastore and a policy.
 
-Also, it can set the name of StorageClass that will be used in the cluster by default (the [default](#parameters-storageclass-default) parameter), and
-filter out the unnecessary StorageClasses (the [exclude](#parameters-storageclass-exclude) parameter).
+Unnecessary StorageClasses are filtered out by the [`exclude`](#parameters-storageclass-exclude) parameter, which takes names or regular expressions.
+The expression is matched against the Datastore name, so an exclusion removes both the base StorageClass and all StorageClasses with storage policies for that Datastore.
+
+To set the default StorageClass, use the [`global.defaultClusterStorageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass) global parameter.
+The module's [`default`](#parameters-storageclass-default) parameter is deprecated.
 
 ### CSI
 
-By default, the storage subsystem uses CNS volumes with the ability of online-resize. FCD volumes are also supported, but only in the legacy or migration modes. You can set this via the [compatibilityFlag](#parameters-storageclass-compatibilityflag) parameter.
+By default, the storage subsystem uses CNS volumes with online resize support.
+The legacy mode with FCD volumes is also supported, but resizing is not available in it.
+The mode is selected by the [`compatibilityFlag`](#parameters-storageclass-compatibilityflag) parameter.
 
-### Important information concerning the increase of the PVC size
+### Expanding a PersistentVolumeClaim
 
-Due to the [nature](https://github.com/kubernetes-csi/external-resizer/issues/44) f volume-resizer, CSI, and vSphere API, you have to do the following after increasing the PVC size:
+Due to [specifics](https://github.com/kubernetes-csi/external-resizer/issues/44) of the CSI volume-resizer and the vSphere API, perform the following steps after expanding a PersistentVolumeClaim:
 
-1. On the node where the Pod is located, run the `d8 k cordon <node_name>` command.
-2. Delete the Pod.
-3. Make sure that the resize was successful. The PVC object must *not have* the `Resizing` condition.
-   > The `FileSystemResizePending` state is OK.
-4. On the node where the Pod is located, run the `d8 k uncordon <node_name>` command.
+1. Run `d8 k cordon <NODE_NAME>` for the node that hosts the Pod.
+1. Delete the Pod that uses the PersistentVolumeClaim.
+1. Wait for the operation to complete. The PersistentVolumeClaim must no longer have the `Resizing` condition, while the `FileSystemResizePending` condition is not an issue.
+1. Run `d8 k uncordon <NODE_NAME>`.
 
 {% include module-settings.liquid %}

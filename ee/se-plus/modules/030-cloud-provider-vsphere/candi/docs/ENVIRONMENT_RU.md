@@ -38,15 +38,6 @@ description: "Настройка VMware vSphere для работы облачн
      - Пользователю должна быть назначена роль, указанная в предыдущем пункте.
 - На созданный Datacenter должен быть назначен тег из категории, указанной в параметре [`regionTagCategory`](/modules/cloud-provider-vsphere/configuration.html#parameters-regiontagcategory) (по умолчанию — `k8s-region`). Этот тег определяет регион.
 
-## Список необходимых ресурсов vSphere
-
-* **User** с необходимым [набором привилегий](#список-необходимых-привилегий).
-* **Network** с DHCP и доступом в интернет.
-* **Datacenter** с соответствующим тегом [`k8s-region`](#создание-тегов-и-категорий-тегов).
-* **Cluster** с соответствующим тегом [`k8s-zone`](#создание-тегов-и-категорий-тегов).
-* **Datastore** в любом количестве с соответствующими [тегами](#настройка-datastore).
-* **Template** — [подготовленный](#подготовка-образа-виртуальной-машины) образ виртуальной машины.
-
 ## Список необходимых привилегий
 
 > О том, как создать и назначить роль пользователю, читайте в разделах [«Настройка через vSphere Client»](#настройка-через-vsphere-client) и [«Настройка через govc»](#настройка-через-govc).
@@ -207,7 +198,7 @@ description: "Настройка VMware vSphere для работы облачн
         <code>VApp.PowerOn</code><br/>
         <code>VApp.ResourceConfig</code>
       </td>
-      <td>Управление операциями, связанными с развертыванием и конфигурацией vApp и OVF-шаблонов, используемых при создании виртуальных машин.</td>
+      <td>Операции с vApp и OVF-шаблонами. Требуются, если шаблоны виртуальных машин или сами машины входят в состав vApp.</td>
     </tr>
     <tr>
       <td>Virtual Machine > Change Configuration</td>
@@ -339,7 +330,7 @@ description: "Настройка VMware vSphere для работы облачн
         <code>VirtualMachine.State.RemoveSnapshot</code><br/>
         <code>VirtualMachine.State.RenameSnapshot</code>
       </td>
-      <td>Управление снимками виртуальных машин и томов в сценариях, где эта функциональность используется компонентами платформы.</td>
+      <td>Создание, удаление и переименование снимков в vSphere. Используются подсистемой хранения при работе с ресурсами VolumeSnapshot.</td>
     </tr>
   </tbody>
 </table>
@@ -412,8 +403,8 @@ description: "Настройка VMware vSphere для работы облачн
 
 ```shell
 export GOVC_URL=example.com
-export GOVC_USERNAME=<username>@vsphere.local
-export GOVC_PASSWORD=<password>
+export GOVC_USERNAME=<USERNAME>@vsphere.local
+export GOVC_PASSWORD=<PASSWORD>
 export GOVC_INSECURE=1
 ```
 
@@ -439,14 +430,14 @@ govc tags.create -d "Kubernetes Zone Test 2" -c k8s-zone test-zone-2
 Назначьте тег «региона» на Datacenter:
 
 ```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>
 ```
 
 Назначьте теги «зон» на объекты Cluster:
 
 ```shell
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/host/<ClusterName1>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
+govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/host/<CLUSTER_NAME_1>
+govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/host/<CLUSTER_NAME_2>
 ```
 
 #### Настройка Datastore с использованием govc
@@ -458,11 +449,11 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
 Для автоматического создания StorageClass в кластере Kubernetes назначьте созданные ранее теги «региона» и «зоны» на объекты Datastore:
 
 ```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
+govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
 
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName2>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
+govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
 ```
 
 #### Создание и назначение роли с использованием govc
@@ -518,12 +509,45 @@ govc role.create deckhouse \
 {% endalert %}
 
 ```shell
-govc permissions.set -principal <username>@vsphere.local -role deckhouse /
+govc permissions.set -principal <USERNAME>@vsphere.local -role deckhouse /
 ```
 
 {% alert level="info" %}
 Описание привилегий vSphere приведено в [документации VMware](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-security/defined-privileges.html).
 {% endalert %}
+
+#### Область назначения роли
+
+Назначайте роль на корневом объекте vCenter, как показано в командах выше. Компонентам DKP нужен доступ к объектам за пределами директории с виртуальными машинами кластера:
+
+- CSI-драйвер определяет топологию томов по хостам ESXi, связанным с Datastore, поэтому обращается к объектам Cluster и Host;
+- компонент обнаружения ресурсов ищет диски CNS в пределах vCenter, для чего используется привилегия `Cns.Searchable`;
+- установщик создаёт пул ресурсов в объекте Cluster и директорию в Datacenter.
+
+Если ограничить роль директорией виртуальных машин, эти операции завершатся ошибкой.
+
+#### Диагностика нехватки привилегий
+
+CSI-драйвер проверяет привилегии учётной записи на каждом Datastore и исключает те, на которых привилегий недостаточно. Такой Datastore не попадает в список доступных, и заказ PersistentVolume через соответствующий StorageClass не проходит.
+
+Если для размеченного тегами Datastore не создаётся рабочий StorageClass, проверьте привилегии учётной записи на этом объекте:
+
+```shell
+govc permissions.ls /<DATACENTER_NAME>/datastore/<DATASTORE_NAME>
+```
+
+### Проверка TLS-сертификата vCenter
+
+DKP подключается к vCenter по TLS и проверяет его сертификат. Если сертификат vCenter выпущен собственным или корпоративным центром сертификации, передайте цепочку сертификатов этого центра в параметре `caBundle`. Проверка сертификата при этом остаётся включённой.
+
+Цепочку укажите в формате PEM. Место настройки зависит от того, как создаётся кластер:
+
+- при установке кластера используйте параметр [`provider.caBundle`](cluster_configuration.html#vsphereclusterconfiguration-provider-cabundle) ресурса VsphereClusterConfiguration;
+- в уже работающем кластере используйте параметр [`caBundle`](configuration.html#parameters-cabundle) настроек модуля.
+
+Параметр `insecure: true` полностью отключает проверку сертификата vCenter. Задайте либо `caBundle`, либо `insecure: true`. Конфигурацию, в которой одновременно заданы непустой `caBundle` и `insecure: true`, DKP отклоняет.
+
+Для подключения к NSX-T цепочка сертификатов задаётся отдельным параметром `nsxt.caBundle`, который аналогично несовместим с `nsxt.insecureFlag: true`.
 
 ### Требования к образу виртуальной машины
 
@@ -631,24 +655,27 @@ DKP использует интерфейс `ens192`, как интерфейс 
 
 ### Сети
 
-Для работы кластера необходим VLAN с DHCP и доступом в интернет:
+Кластеру требуется VLAN с DHCP и доступом в интернет. Схема зависит от типа адресов в этом VLAN:
 
-* Если VLAN публичный (публичные адреса), нужна вторая сеть, в которой необходимо развернуть сеть узлов кластера (в этой сети DHCP не нужен).
-* Если VLAN внутренний (приватные адреса), эта же сеть будет сетью узлов кластера.
+- если VLAN использует публичные адреса, создайте вторую сеть для узлов кластера, DHCP в ней не требуется;
+- если VLAN использует приватные адреса, эта же сеть служит сетью узлов кластера.
 
 ### Входящий трафик
 
-* Если у вас имеется внутренний балансировщик запросов, можно обойтись им и направлять трафик напрямую на frontend-узлы кластера.
-* Если балансировщика нет, для организации отказоустойчивых LoadBalancer'ов рекомендуется использовать MetalLB в режиме BGP. В кластере будут созданы frontend-узлы с двумя интерфейсами. Для этого дополнительно потребуются:
-  * отдельный VLAN для обмена трафиком между BGP-роутерами и MetalLB. В этом VLAN'e должны быть DHCP и доступ в интернет;
-  * IP-адреса BGP-роутеров;
-  * ASN (номер автономной системы) на BGP-роутере;
-  * ASN (номер автономной системы) в кластере;
-  * диапазон, из которого анонсировать адреса.
+Балансировать входящий трафик можно двумя способами:
+
+- направить трафик напрямую на frontend-узлы кластера через существующий внутренний балансировщик нагрузки;
+- развернуть MetalLB в режиме BGP, если внутреннего балансировщика нет. Frontend-узлы кластера получают два интерфейса, и дополнительно потребуются:
+
+  - отдельный VLAN для обмена трафиком между BGP-роутерами и MetalLB с DHCP и доступом в интернет;
+  - IP-адреса BGP-роутеров;
+  - номер автономной системы (ASN) на BGP-роутере;
+  - номер автономной системы (ASN) в кластере;
+  - диапазон адресов для анонсирования.
 
 ### Использование хранилища данных
 
-В кластере может одновременно использоваться различное количество типов хранилищ. В минимальной конфигурации потребуются:
+Кластер может одновременно использовать несколько типов хранилищ. Минимальная конфигурация включает:
 
-* Datastore, в котором Kubernetes-кластер будет заказывать PersistentVolume;
-* Datastore, в котором будут заказываться root-диски для виртуальной машины (это может быть тот же Datastore, что и для PersistentVolume).
+- Datastore, в котором кластер заказывает PersistentVolume;
+- Datastore, в котором заказываются root-диски виртуальных машин. Это может быть тот же Datastore, что и для PersistentVolume.

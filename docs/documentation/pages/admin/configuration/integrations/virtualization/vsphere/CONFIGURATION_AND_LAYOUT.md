@@ -240,7 +240,7 @@ A detailed list of privileges required for Deckhouse Kubernetes Platform to work
         <code>VApp.PowerOn</code><br/>
         <code>VApp.ResourceConfig</code>
       </td>
-      <td>Managing operations related to deployment and configuration of vApp and OVF templates used when creating virtual machines.</td>
+      <td>Operations with vApp and OVF templates. Required if the virtual machine templates or the machines themselves belong to a vApp.</td>
     </tr>
     <tr>
       <td>Virtual Machine > Change Configuration</td>
@@ -372,7 +372,7 @@ A detailed list of privileges required for Deckhouse Kubernetes Platform to work
         <code>VirtualMachine.State.RemoveSnapshot</code><br/>
         <code>VirtualMachine.State.RenameSnapshot</code>
       </td>
-      <td>Managing snapshots of virtual machines and volumes in scenarios where this functionality is used by platform components.</td>
+      <td>Creating, deleting, and renaming snapshots in vSphere. Used by the storage subsystem when working with VolumeSnapshot resources.</td>
     </tr>
   </tbody>
 </table>

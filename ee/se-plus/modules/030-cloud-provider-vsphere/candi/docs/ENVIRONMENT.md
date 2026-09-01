@@ -38,18 +38,9 @@ The following prerequisites must be met for Deckhouse Kubernetes Platform to wor
      - The user must be assigned the role specified in the previous item.
 - A tag from the category specified in the [`regionTagCategory`](/modules/cloud-provider-vsphere/configuration.html#parameters-regiontagcategory) parameter must be assigned to the created Datacenter (default: `k8s-region`). This tag defines the region.
 
-## List of required vSphere resources
-
-* **User** with required [set of privileges](#list-of-required-privileges).
-* **Network** with DHCP server and access to the Internet.
-* **Datacenter** with a tag in [`k8s-region`](#creating-tags-and-tag-categories) category.
-* **Cluster** with a tag in [`k8s-zone`](#creating-tags-and-tag-categories) category.
-* **Datastore** with required [tags](#datastore-configuration).
-* **Template** — [prepared](#preparing-a-virtual-machine-image) VM image.
-
 ## List of required privileges
 
-> Read the [Configuration via vSphere Client](#configuration-via-vsphere-client) and [Configuration via govc](#configuration-via-govc) sections for details on how to create and assign a role to a user.
+> Read the [Configuration in vSphere Client](#configuration-in-vsphere-client) and [Configuration via govc](#configuration-via-govc) sections for details on how to create and assign a role to a user.
 
 A detailed list of privileges required for Deckhouse Kubernetes Platform to work in vSphere:
 
@@ -207,7 +198,7 @@ A detailed list of privileges required for Deckhouse Kubernetes Platform to work
         <code>VApp.PowerOn</code><br/>
         <code>VApp.ResourceConfig</code>
       </td>
-      <td>Managing operations related to deployment and configuration of vApp and OVF templates used when creating virtual machines.</td>
+      <td>Operations with vApp and OVF templates. Required if the virtual machine templates or the machines themselves belong to a vApp.</td>
     </tr>
     <tr>
       <td>Virtual Machine > Change Configuration</td>
@@ -339,7 +330,7 @@ A detailed list of privileges required for Deckhouse Kubernetes Platform to work
         <code>VirtualMachine.State.RemoveSnapshot</code><br/>
         <code>VirtualMachine.State.RenameSnapshot</code>
       </td>
-      <td>Managing snapshots of virtual machines and volumes in scenarios where this functionality is used by platform components.</td>
+      <td>Creating, deleting, and renaming snapshots in vSphere. Used by the storage subsystem when working with VolumeSnapshot resources.</td>
     </tr>
   </tbody>
 </table>
@@ -412,8 +403,8 @@ Make sure to specify the username together with the domain, for example: `userna
 
 ```shell
 export GOVC_URL=example.com
-export GOVC_USERNAME=<username>@vsphere.local
-export GOVC_PASSWORD=<password>
+export GOVC_USERNAME=<USERNAME>@vsphere.local
+export GOVC_PASSWORD=<PASSWORD>
 export GOVC_INSECURE=1
 ```
 
@@ -439,14 +430,14 @@ govc tags.create -d "Kubernetes Zone Test 2" -c k8s-zone test-zone-2
 Attach the "region" tag to Datacenter:
 
 ```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>
 ```
 
 Attach "zone" tags to the Cluster objects:
 
 ```shell
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/host/<ClusterName1>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
+govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/host/<CLUSTER_NAME_1>
+govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/host/<CLUSTER_NAME_2>
 ```
 
 #### Datastore configuration with govc
@@ -458,11 +449,11 @@ For dynamic PersistentVolume provisioning, a Datastore must be available on **ea
 Assign the "region" and "zone" tags to the Datastore objects to automatically create a StorageClass in the Kubernetes cluster:
 
 ```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
+govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
 
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName2>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
+govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
 ```
 
 #### Creating and assigning a role with govc
@@ -518,12 +509,45 @@ Make sure to specify the username together with the domain, for example: `userna
 {% endalert %}
 
 ```shell
-govc permissions.set -principal <username>@vsphere.local -role deckhouse /
+govc permissions.set -principal <USERNAME>@vsphere.local -role deckhouse /
 ```
 
 {% alert level="info" %}
 For a description of vSphere privileges, refer to the [VMware documentation](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-security/defined-privileges.html).
 {% endalert %}
+
+#### Role assignment scope
+
+Assign the role on the vCenter root object, as shown in the commands above. DKP components need access to objects outside the directory with the cluster virtual machines:
+
+- The CSI driver determines volume topology by the ESXi hosts attached to a Datastore, so it accesses Cluster and Host objects.
+- The resource discovery component searches for CNS disks within vCenter, which uses the `Cns.Searchable` privilege.
+- The installer creates a resource pool in the Cluster object and a directory in the Datacenter.
+
+If you limit the role to the virtual machine directory, these operations fail.
+
+#### Diagnosing missing privileges
+
+The CSI driver checks the account privileges on each Datastore and excludes those where the privileges are insufficient. Such a Datastore does not appear in the list of available ones, and ordering a PersistentVolume through the corresponding StorageClass fails.
+
+If a tagged Datastore does not produce a working StorageClass, check the account privileges on that object:
+
+```shell
+govc permissions.ls /<DATACENTER_NAME>/datastore/<DATASTORE_NAME>
+```
+
+### vCenter TLS certificate verification
+
+DKP connects to vCenter over TLS and verifies its certificate. If the vCenter certificate is issued by a custom or enterprise certificate authority, pass the certificate chain of that authority in the `caBundle` parameter. Certificate verification stays enabled in this case.
+
+Specify the chain in PEM format. Where you set it depends on how the cluster is created:
+
+- When installing a cluster, use the [`provider.caBundle`](cluster_configuration.html#vsphereclusterconfiguration-provider-cabundle) parameter of the VsphereClusterConfiguration resource.
+- In a running cluster, use the [`caBundle`](configuration.html#parameters-cabundle) parameter of the module settings.
+
+The `insecure: true` parameter disables vCenter certificate verification completely. Set either `caBundle` or `insecure: true`. DKP rejects a configuration that sets a non-empty `caBundle` and `insecure: true` at the same time.
+
+For the NSX-T connection, the certificate chain is set by the separate `nsxt.caBundle` parameter, which is likewise incompatible with `nsxt.insecureFlag: true`.
 
 ### VM image requirements
 
@@ -623,23 +647,27 @@ DKP uses the `ens192` interface as the default interface for VMs in vSphere. The
 
 ### Networking
 
-A VLAN with DHCP and Internet access is required for the running cluster:
+The cluster requires a VLAN with DHCP and Internet access. The layout depends on the type of addresses in that VLAN:
 
-* If the VLAN is public (public addresses), then you have to create a second network to deploy cluster nodes (DHCP is not needed in this network).
-* If the VLAN is private (private addresses), then this network can be used for cluster nodes.
+- If the VLAN uses public addresses, create a second network for the cluster nodes. DHCP is not required in it.
+- If the VLAN uses private addresses, the same network serves as the cluster node network.
 
 ### Inbound traffic
 
-* You can use an internal load balancer (if present) and direct traffic directly to the front nodes of the cluster.
-* If there is no load balancer, you can use MetalLB in BGP mode to organize fault-tolerant load balancers (recommended). In this case, front nodes of the cluster will have two interfaces. For this, you will need:
-  * A dedicated VLAN for traffic exchange between BGP routers and MetalLB. This VLAN must have DHCP and Internet access.
-  * IP addresses of BGP routers.
-  * ASN — the AS number on the BGP router.
-  * ASN — the AS number in the cluster.
-  * A range to announce addresses from.
+Inbound traffic can be balanced in two ways:
+
+- Direct traffic to the cluster frontend nodes through an existing internal load balancer.
+- Deploy MetalLB in BGP mode if there is no internal load balancer. The cluster frontend nodes get two interfaces, and the following is also required:
+
+  - A dedicated VLAN for traffic exchange between BGP routers and MetalLB, with DHCP and Internet access.
+  - IP addresses of the BGP routers.
+  - Autonomous system number (ASN) on the BGP router.
+  - Autonomous system number (ASN) in the cluster.
+  - A range of addresses to announce.
 
 ### Using the datastore
 
-Various types of storage can be used in the cluster; for the minimum configuration, you will need:
-* Datastore for provisioning PersistentVolumes to the Kubernetes cluster.
-* Datastore for provisioning root disks for the VMs (it can be the same Datastore as for PersistentVolume).
+The cluster can use several storage types at the same time. The minimum configuration includes:
+
+- A Datastore where the cluster provisions PersistentVolumes.
+- A Datastore where the root disks of the virtual machines are provisioned. It can be the same Datastore as for PersistentVolumes.

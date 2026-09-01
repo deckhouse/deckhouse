@@ -11,11 +11,9 @@ lang: ru
 - Datastore — для размещения root-дисков виртуальных машин;
 - CNS-диски (Container Native Storage) — для автоматического создания PersistentVolume’ов через CSI.
 
-Deckhouse Kubernetes Platform автоматически создаёт StorageClass для каждого Datastore и DatastoreCluster, маркированных как `zone`.  
-Можно указать:
+Deckhouse Kubernetes Platform автоматически создаёт StorageClass для каждого Datastore и DatastoreCluster, маркированных как `zone`.
 
-- имя StorageClass по умолчанию ([`default`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-default));
-- исключения через [`exclude`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-exclude) — список имен или шаблонов StorageClass, которые не нужно создавать.
+Ненужные StorageClass исключаются параметром [`exclude`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-exclude), который принимает список имён или регулярных выражений.
 
 Пример настройки через ModuleConfig:
 
@@ -29,11 +27,12 @@ spec:
   enabled: true
   settings:
     storageClass:
-      default: fast-lun102
       exclude:
         - ".*-lun101-.*"
         - slow-lun103
 ```
+
+Чтобы задать StorageClass по умолчанию, используйте глобальный параметр [`global.defaultClusterStorageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass).
 
 ### Политики хранения SPBM
 
@@ -60,10 +59,10 @@ spec:
 
 Deckhouse Kubernetes Platform поддерживает Online Resize PersistentVolume, начиная с версии vSphere 7.0U2. Из-за [особенностей](https://github.com/kubernetes-csi/external-resizer/issues/44) работы volume-resizer CSI и API vSphere после изменения размера PVC выполните следующие действия:
 
-1. Выполните `d8 k cordon <имя_узла>` для узла, на котором работает под.
+1. Выполните `d8 k cordon <NODE_NAME>` для узла, на котором работает под.
 1. Удалите под, использующий PVC.
 1. Дождитесь завершения операции Resize. У PVC не должно остаться condition `Resizing`, при этом состояние `FileSystemResizePending` не является проблемой.
-1. Выполните `d8 k uncordon <имя_узла>`.
+1. Выполните `d8 k uncordon <NODE_NAME>`.
 
 ## Балансировка нагрузки
 
@@ -98,9 +97,9 @@ Pазметку **Datastore** также можно сделать через **
 Назначьте теги:
 
 ```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
+govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
 
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName2>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
+govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
 ```

@@ -260,8 +260,8 @@ spec:
 
 ```shell
 export GOVC_URL=example.com
-export GOVC_USERNAME=<username>@vsphere.local
-export GOVC_PASSWORD=<password>
+export GOVC_USERNAME=<USERNAME>@vsphere.local
+export GOVC_PASSWORD=<PASSWORD>
 export GOVC_INSECURE=1
 ```
 
@@ -287,14 +287,14 @@ govc tags.create -d "Kubernetes Zone Test 2" -c k8s-zone test-zone-2
 Назначьте тег «региона» на Datacenter:
 
 ```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>
 ```
 
 Назначьте теги «зон» на объекты Cluster:
 
 ```shell
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/host/<ClusterName1>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
+govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/host/<CLUSTER_NAME_1>
+govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/host/<CLUSTER_NAME_2>
 ```
 
 #### Настройка Datastore с использованием govc
@@ -306,11 +306,11 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
 Для автоматического создания StorageClass в кластере Kubernetes назначьте созданные ранее теги «региона» и «зоны» на объекты Datastore:
 
 ```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
+govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
 
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName2>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
+govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
 ```
 
 #### Создание и назначение роли с использованием govc
@@ -366,7 +366,7 @@ govc role.create deckhouse \
 {% endalert %}
 
 ```shell
-govc permissions.set -principal <username>@vsphere.local -role deckhouse /
+govc permissions.set -principal <USERNAME>@vsphere.local -role deckhouse /
 ```
 
 {% alert level="info" %}
@@ -375,13 +375,13 @@ govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 
 ### Область назначения роли
 
-Назначайте роль на корневом объекте vCenter, как показано в командах выше. Компонентам DKP нужен доступ к объектам за пределами папки с виртуальными машинами кластера:
+Назначайте роль на корневом объекте vCenter, как показано в командах выше. Компонентам DKP нужен доступ к объектам за пределами директории с виртуальными машинами кластера:
 
 - CSI-драйвер определяет топологию томов по хостам ESXi, связанным с Datastore, поэтому обращается к объектам Cluster и Host;
 - компонент обнаружения ресурсов ищет диски CNS в пределах vCenter, для чего используется привилегия `Cns.Searchable`;
-- установщик создаёт пул ресурсов в объекте Cluster и папку в Datacenter.
+- установщик создаёт пул ресурсов в объекте Cluster и директорию в Datacenter.
 
-Если ограничить роль папкой виртуальных машин, эти операции завершатся ошибкой.
+Если ограничить роль директорией виртуальных машин, эти операции завершатся ошибкой.
 
 ### Диагностика нехватки привилегий
 
@@ -390,5 +390,5 @@ CSI-драйвер проверяет привилегии учётной зап
 Если для размеченного тегами Datastore не создаётся рабочий StorageClass, проверьте привилегии учётной записи на этом объекте:
 
 ```shell
-govc permissions.ls /<DatacenterName>/datastore/<DatastoreName>
+govc permissions.ls /<DATACENTER_NAME>/datastore/<DATASTORE_NAME>
 ```
