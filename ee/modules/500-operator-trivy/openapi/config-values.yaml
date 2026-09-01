@@ -2,7 +2,7 @@ type: object
 properties:
   storageClass:
     type: string
-    x-examples: [ "ceph-ssd", "false" ]
+    x-examples: ["ceph-ssd", "false"]
     description: |-
       The name of StorageClass that will be used in the cluster by default.
 
@@ -27,9 +27,8 @@ properties:
     items:
       type: string
     x-examples:
-    -
-      - Class
-      - Target
+      - - Class
+        - Target
   severities:
     type: array
     description: |
@@ -44,9 +43,8 @@ properties:
         - HIGH
         - CRITICAL
     x-examples:
-    -
-      - UNKNOWN
-      - CRITICAl
+      - - UNKNOWN
+        - CRITICAl
   linkCVEtoBDU:
     type: boolean
     default: false
@@ -78,11 +76,10 @@ properties:
         value:
           type: string
     x-examples:
-    -
-      - key: "key1"
-        operator: "Equal"
-        value: "value1"
-        effect: "NoSchedule"
+      - - key: "key1"
+          operator: "Equal"
+          value: "value1"
+          effect: "NoSchedule"
   nodeSelector:
     type: object
     additionalProperties:
@@ -115,18 +112,16 @@ properties:
     items:
       type: string
     x-examples:
-    -
-      - app
-      - env
+      - - app
+        - env
 
   insecureRegistries:
     type: array
     description: |
       List of container registry addresses to which insecure HTTPS connections (not passed TLS certificate verification) or HTTP connections are allowed.
     x-examples:
-    -
-      - my.registry.com
-      - http-only.registry.io
+      - - my.registry.com
+        - http-only.registry.io
     items:
       type: string
   additionalRegistryCA:
@@ -143,20 +138,42 @@ properties:
         ca:
           type: string
     x-doc-examples:
-    - |
-      ```yaml
-      additionalRegistryCA:
-        - name: example CA
-          ca: |
-            -----BEGIN CERTIFICATE-----
-            .................
-            -----END CERTIFICATE-----
-        - name: CA with intermediate CA
-          ca: |
-            -----BEGIN CERTIFICATE-----
-            .................
-            -----END CERTIFICATE-----
-            -----BEGIN CERTIFICATE-----
-            .................
-            -----END CERTIFICATE-----
-      ```
+      - |
+        ```yaml
+        additionalRegistryCA:
+          - name: example CA
+            ca: |
+              -----BEGIN CERTIFICATE-----
+              .................
+              -----END CERTIFICATE-----
+          - name: CA with intermediate CA
+            ca: |
+              -----BEGIN CERTIFICATE-----
+              .................
+              -----END CERTIFICATE-----
+              -----BEGIN CERTIFICATE-----
+              .................
+              -----END CERTIFICATE-----
+        ```
+  cisBenchmark:
+    type: object
+    description: |
+      CIS Benchmark report generation controls.
+    properties:
+      enabled:
+        type: boolean
+        default: true
+        description: |
+          Enables or disables built-in CIS Benchmark report collection.
+      reportVerbosity:
+        type: enum
+        description: |
+          Controls the amount of data that built-in report would accumulate.
+
+          Can either aggregate the results into a high-level summary, providing a quick pass/fail count or a verbose report detailing every single resource check and failure.
+        default: All
+        x-doc-default: All
+        x-examples: ["All", "Summary"]
+        enum:
+          - All
+          - Summary
