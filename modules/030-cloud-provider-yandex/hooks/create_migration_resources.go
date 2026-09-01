@@ -64,6 +64,8 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc:                   internal.FilterModuleConfig,
 		},
 		// Binding 2: the existing master NodeGroup - used to detect a hybrid cluster (Static master).
+		// Read-only snapshot: the hook writes into the module namespace, so it must run from
+		// OnAfterHelm only - see the note on binding 1.
 		{
 			Name:       "master_node_group",
 			ApiVersion: "deckhouse.io/v1",
@@ -71,10 +73,13 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{"master"},
 			},
-			FilterFunc: internal.FilterNodeGroup,
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   internal.FilterNodeGroup,
 		},
 		// Binding 3: the candi discovery-data Secret - the infrastructure run's recorded output,
-		// read when the legacy PCC does not carry discovery data.
+		// read when the legacy PCC does not carry discovery data. Read-only snapshot for the same
+		// reason as binding 2.
 		{
 			Name:       "candi_discovery_data",
 			ApiVersion: "v1",
@@ -87,7 +92,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			NameSelector: &types.NameSelector{
 				MatchNames: []string{internal.CandiDiscoverySecretName},
 			},
-			FilterFunc: internal.FilterCandiDiscoverySecret,
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   internal.FilterCandiDiscoverySecret,
 		},
 	},
 }, handleMigrationResources)
