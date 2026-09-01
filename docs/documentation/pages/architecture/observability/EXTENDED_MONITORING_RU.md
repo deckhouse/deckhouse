@@ -34,7 +34,7 @@ description: Архитектура модуля extended-monitoring в Deckhous
 
 Модуль состоит из следующих компонентов:
 
-1. **Extended-monitoring-exporter** — экспортер Prometheus, собирает и экспортирует метрики по свободному месту и inode на узлах, а также по объектам с лейблом `extended-monitoring.deckhouse.io/enabled=""` в неймспейсе. Подробнее с настройкой extended-monitoring метрик можно ознакомиться [в разделе документации модуля](/modules/extended-monitoring/configuration.html). В модуле также содержатся Prometheus-правил, на основе которых Prometheus создает алерты. Это позволяет быстрее обнаруживать и диагностировать инциденты.
+1. **Extended-monitoring-exporter** — экспортер Prometheus, собирает и экспортирует метрики по свободному месту и inode на узлах, а также по объектам с лейблом `extended-monitoring.deckhouse.io/enabled=""` в неймспейсе. Подробнее с настройкой extended-monitoring метрик можно ознакомиться [в разделе документации модуля](/modules/extended-monitoring/configuration.html). В модуле также содержатся Prometheus-правила, на основе которых Prometheus создает алерты. Это позволяет быстрее обнаруживать и диагностировать инциденты.
 
    Состоит из следующих контейнеров:
 

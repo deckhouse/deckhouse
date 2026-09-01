@@ -47,7 +47,7 @@ The module consists of the following components:
     * **image-availability-exporter**: Main container. This exporter is developed by Flant.
     * **kube-rbac-proxy**: Sidecar container providing authorized access to exporter metrics (described above).
 
-1. **Events-exporter**: Prometheus exporter that collects Kubernetes events and displays them as metrics, which allows you to track the dynamics of changes and respond faster to incidents.
+1. **Events-exporter**: Prometheus exporter that collects Kubernetes events and displays them as metrics, which allow you to track the dynamics of changes and respond faster to incidents.
 
    It consists of the following containers:
 
