@@ -185,7 +185,7 @@ func TestValidate(t *testing.T) {
 			name:    "fails closed on a violation with no detail",
 			mode:    modeBlank,
 			input:   convergeInput(),
-			wantErr: "failed provider validation",
+			wantErr: "provider validation failed",
 		},
 		{
 			// Fail closed: a bundle whose binary predates the gRPC protocol blocks

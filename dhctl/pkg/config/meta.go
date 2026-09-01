@@ -30,7 +30,7 @@ import (
 	"github.com/iancoleman/strcase"
 	"sigs.k8s.io/yaml"
 
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/initconfig"
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/moduleconfig"
@@ -243,7 +243,7 @@ func applyNodeGroupReplicasFromCloudProviderVars(m *MetaConfig) error {
 	// Only a flow that reads the count from the NodeGroups needs it known, and only
 	// an operation that acts on it: legacy takes it from ProviderClusterConfiguration,
 	// destroy removes the nodes regardless and must stay possible.
-	mustKnowNodeCount := !m.HasLegacyProviderConfig() && m.Operation != proto.OperationDestroy
+	mustKnowNodeCount := !m.HasLegacyProviderConfig() && m.Operation != string(validatev1.OperationDestroy)
 
 	if masterNg, hasMaster := m.CloudProviderVars.NodeGroups[masterNodeGroupName]; hasMaster && m.MasterNodeGroupSpec.Replicas == 0 {
 		if mustKnowNodeCount {
