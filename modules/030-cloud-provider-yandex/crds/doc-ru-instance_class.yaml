@@ -120,8 +120,7 @@ spec:
         type: object
     served: true
     storage: true
-    subresources:
-      status: {}
+    subresources: {}
   - name: v1alpha1
     schema:
       openAPIV3Schema:
