@@ -130,32 +130,6 @@ func StartValidatorProcess(ctx context.Context, binaryPath string, endpoint Endp
 	return ret, nil
 }
 
-// waitReady blocks until the endpoint accepts a connection: the protocol has no
-// readiness service. ctx is the process's own, so this returns the moment the process
-// is gone — there is nothing left to wait for — and readyTimeout bounds the rest.
-func (v *ValidatorProcess) waitReady(ctx context.Context, endpoint Endpoint) error {
-	deadline, cancel := context.WithTimeout(ctx, readyTimeout)
-	defer cancel()
-
-	ticker := time.NewTicker(readyProbe)
-	defer ticker.Stop()
-
-	for {
-		if endpoint.Accepting(readyProbe) {
-			return nil
-		}
-
-		select {
-		case <-deadline.Done():
-			if ctx.Err() != nil {
-				return errors.New("exited before listening")
-			}
-			return fmt.Errorf("did not listen on %s within %s", endpoint, readyTimeout)
-		case <-ticker.C:
-		}
-	}
-}
-
 // Stop gracefully stops the validator process. It is safe to call multiple times and
 // reports the same result every time.
 //
@@ -180,6 +154,32 @@ func (v *ValidatorProcess) Stop() error {
 	})
 
 	return v.stopErr
+}
+
+// waitReady blocks until the endpoint accepts a connection: the protocol has no
+// readiness service. ctx is the process's own, so this returns the moment the process
+// is gone — there is nothing left to wait for — and readyTimeout bounds the rest.
+func (v *ValidatorProcess) waitReady(ctx context.Context, endpoint Endpoint) error {
+	deadline, cancel := context.WithTimeout(ctx, readyTimeout)
+	defer cancel()
+
+	ticker := time.NewTicker(readyProbe)
+	defer ticker.Stop()
+
+	for {
+		if endpoint.Accepting(readyProbe) {
+			return nil
+		}
+
+		select {
+		case <-deadline.Done():
+			if ctx.Err() != nil {
+				return errors.New("exited before listening")
+			}
+			return fmt.Errorf("did not listen on %s within %s", endpoint, readyTimeout)
+		case <-ticker.C:
+		}
+	}
 }
 
 // isOrdinaryStop reports whether err is one of the ways a validator we asked to stop
