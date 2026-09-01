@@ -170,6 +170,34 @@ func (r *reconciler) releaseExists(ctx context.Context, sourceName, moduleName, 
 	return true, nil
 }
 
+// releaseUpToDate reports whether the module already has everything the recorded
+// checksum implies: the target ModuleRelease is present in the cluster and the
+// step-by-step chain of ModuleReleases up to the recorded target version is complete.
+// It performs only cheap reads from the controller cache (no registry I/O), so it is
+// safe to call on the steady-state path to decide whether a module whose release channel
+// has not moved can be skipped entirely.
+//
+// version is the target version recorded in the ModuleSource status; it must be a valid
+// semver (releaseChainToTargetComplete returns an error otherwise). A false result means
+// the module must be re-processed even though its channel digest is unchanged - either the
+// target release is missing or intermediate releases were mirrored after it was created.
+func (r *reconciler) releaseUpToDate(ctx context.Context, sourceName, moduleName, checksum, version string) (bool, error) {
+	exists, err := r.releaseExists(ctx, sourceName, moduleName, checksum)
+	if err != nil {
+		return false, fmt.Errorf("check release exists: %w", err)
+	}
+	if !exists {
+		return false, nil
+	}
+
+	complete, err := r.releaseChainToTargetComplete(ctx, moduleName, version)
+	if err != nil {
+		return false, fmt.Errorf("check release chain to target: %w", err)
+	}
+
+	return complete, nil
+}
+
 // releaseEnsureAllowed reports whether a release for the module may be ensured from
 // the given source at all. It is a pure policy predicate over already-fetched data
 // (no cluster I/O): it does not decide whether there is actually something to fetch -
