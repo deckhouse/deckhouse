@@ -215,6 +215,7 @@ jobs:
           WERF_ENV: CE
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
           DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           set -euo pipefail
           function regctl_copy() {
@@ -457,6 +458,7 @@ jobs:
           WERF_ENV: EE
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
           DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           set -euo pipefail
           function regctl_copy() {
@@ -699,6 +701,7 @@ jobs:
           WERF_ENV: FE
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
           DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           set -euo pipefail
           function regctl_copy() {
@@ -941,6 +944,7 @@ jobs:
           WERF_ENV: BE
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
           DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           set -euo pipefail
           function regctl_copy() {
@@ -1183,6 +1187,7 @@ jobs:
           WERF_ENV: SE
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
           DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           set -euo pipefail
           function regctl_copy() {
@@ -1425,6 +1430,7 @@ jobs:
           WERF_ENV: SE-plus
           STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
           DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           set -euo pipefail
           function regctl_copy() {
