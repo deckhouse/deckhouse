@@ -300,6 +300,23 @@ rules:
   - get
   - list
   - watch
+# InstanceClasses - patch status.nodeGroupConsumers (the deletion webhook reads it).
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - awsinstanceclasses
+  - azureinstanceclasses
+  - dvpinstanceclasses
+  - gcpinstanceclasses
+  - yandexinstanceclasses
+  - dynamixinstanceclasses
+  - huaweicloudinstanceclasses
+  - openstackinstanceclasses
+  - vcdinstanceclasses
+  - vsphereinstanceclasses
+  - zvirtinstanceclasses
+  verbs:
+  - patch
 # ConfigMaps - read for cluster configuration
 - apiGroups:
   - ""
