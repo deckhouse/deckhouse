@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 22,
+  "version": 23,
   "statements": [
     {
       "vulnerability": {
@@ -473,8 +473,134 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "Уязвимость находится в golang.org/x/text/unicode/norm. Модуль поступает с бинарём shell-operator v1.15.3 из базового образа common/shell-operator. Единственный путь до неё — отладочный клиент pkg/debug: его http.Client в DialContext всегда подключается к unix-сокету и игнорирует адрес из URL, а сами URL собираются с константной authority (http://unix/queue/list, http://unix/hook/..., http://unix/config/list). В нормализацию попадает неизменяемая строка unix, на которую злоумышленник повлиять не может.",
       "timestamp": "2026-08-27T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25681"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Пакет попадает в образ с бинарём yq 4.47.1, который импортируется из base-образа tools/yq (digest зафиксирован в candi/base_images.yml). Уязвимость находится в парсере golang.org/x/net/html. yq обращается к нему единственный раз — через golang.org/x/net/html/charset в decoder_xml.go, где charset.NewReaderLabel назначается xml.Decoder.CharsetReader. Вебхуки webhook-handler вызывают yq только для YAML и JSON, разбор XML не выполняется, код не в пути выполнения.",
+      "timestamp": "2026-09-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27136"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Пакет попадает в образ с бинарём yq 4.47.1, который импортируется из base-образа tools/yq (digest зафиксирован в candi/base_images.yml). Уязвимость находится в парсере golang.org/x/net/html. yq обращается к нему единственный раз — через golang.org/x/net/html/charset в decoder_xml.go, где charset.NewReaderLabel назначается xml.Decoder.CharsetReader. Вебхуки webhook-handler вызывают yq только для YAML и JSON, разбор XML не выполняется, код не в пути выполнения.",
+      "timestamp": "2026-09-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33814"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Пакет попадает в образ с бинарём yq 4.47.1, который импортируется из base-образа tools/yq (digest зафиксирован в candi/base_images.yml). Уязвимость находится в HTTP/2-транспорте golang.org/x/net/http2. Из модуля golang.org/x/net yq импортирует только html/charset; http2 в бинарь не попадает.",
+      "timestamp": "2026-09-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39821"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.42.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Пакет попадает в образ с бинарём yq 4.47.1, который импортируется из base-образа tools/yq (digest зафиксирован в candi/base_images.yml). Уязвимость находится в golang.org/x/net/idna, который подтягивается только через http2 и http/httpguts. Из модуля golang.org/x/net yq импортирует только html/charset; idna в бинарь не попадает.",
+      "timestamp": "2026-09-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-25681"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Пакет попадает в образ с бинарём shell-operator v1.15.3 из базового образа common/shell-operator. Уязвимость находится в парсере golang.org/x/net/html. Он подтягивается транзитивно через github.com/kennygrant/sanitize, а shell-operator вызывает оттуда только sanitize.BaseName для нормализации имени хука — эта функция состоит из регулярных замен и HTML не разбирает. Парсер x/net/html не вызывается.",
+      "timestamp": "2026-09-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27136"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Пакет попадает в образ с бинарём shell-operator v1.15.3 из базового образа common/shell-operator. Уязвимость находится в парсере golang.org/x/net/html. Он подтягивается транзитивно через github.com/kennygrant/sanitize, а shell-operator вызывает оттуда только sanitize.BaseName для нормализации имени хука — эта функция состоит из регулярных замен и HTML не разбирает. Парсер x/net/html не вызывается.",
+      "timestamp": "2026-09-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33814"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Пакет попадает в образ с бинарём shell-operator v1.15.3 из базового образа common/shell-operator. Уязвимость — зацикливание HTTP/2-транспорта при некорректном SETTINGS_MAX_FRAME_SIZE от сервера. Единственный путь до неё — отладочный клиент pkg/debug: его http.Client в DialContext всегда подключается к unix-сокету и игнорирует адрес из URL, а сами URL собираются с константной authority (http://unix/queue/list, http://unix/hook/...). Клиент обращается к отладочному серверу самого shell-operator внутри того же контейнера. Кадр SETTINGS приходит от него же, а не от внешней стороны, поэтому злоумышленник на вход повлиять не может.",
+      "timestamp": "2026-09-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39821"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/net@v0.52.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Пакет попадает в образ с бинарём shell-operator v1.15.3 из базового образа common/shell-operator. Уязвимость — отсутствие отбраковки ASCII-only Punycode-меток в golang.org/x/net/idna. Единственный путь до неё — отладочный клиент pkg/debug: его http.Client в DialContext всегда подключается к unix-сокету и игнорирует адрес из URL, а сами URL собираются с константной authority (http://unix/queue/list, http://unix/hook/...). Клиент обращается к отладочному серверу самого shell-operator внутри того же контейнера. В idna.ToASCII попадает неизменяемая строка unix, на которую злоумышленник повлиять не может.",
+      "timestamp": "2026-09-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-537c-gmf6-5ccf"
+      },
+      "products": [
+        {
+          "@id": "pkg:pypi/cryptography@44.0.1"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Уязвимость относится к копии OpenSSL, статически влинкованной в wheel-пакет cryptography 44.0.1 (закреплён в src/requirements.txt образа). Python-вебхуки используют cryptography только для локального разбора сертификатов X.509; TLS-соединения через встроенный OpenSSL не устанавливаются, уязвимый код не в пути выполнения.",
+      "timestamp": "2026-09-01T12:00:00Z"
     }
   ],
   "timestamp": "2026-03-04T12:00:00Z",
-  "last_updated": "2026-08-27T12:00:00Z"
+  "last_updated": "2026-09-01T12:00:00Z"
 }
