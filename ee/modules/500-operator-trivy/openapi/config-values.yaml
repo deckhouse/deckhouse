@@ -166,7 +166,7 @@ properties:
         description: |
           Enables or disables built-in CIS Benchmark report collection.
       reportVerbosity:
-        type: enum
+        type: string
         description: |
           Controls the amount of data that built-in report would accumulate.
 
