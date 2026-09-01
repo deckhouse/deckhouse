@@ -67,9 +67,7 @@ variable "timeouts" {
 
 locals {
   disk_destructive_params = {
-    "additionalDisk" = {
-      "storageClass" = var.storage_class
-    }
+    "additionalDisk" = {}
   }
 
   disk_destructive_params_json      = jsonencode(local.disk_destructive_params)

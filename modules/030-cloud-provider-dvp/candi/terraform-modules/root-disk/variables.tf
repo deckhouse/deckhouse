@@ -70,7 +70,6 @@ variable "timeouts" {
 locals {
   root_disk_destructive_params = {
     "rootDisk" = {
-      "storageClass" = var.storage_class
       "image" = {
         "type" = var.image.kind
         "name" = var.image.name
