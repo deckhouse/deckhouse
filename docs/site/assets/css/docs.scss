@@ -2832,6 +2832,10 @@ select#contact-select {
   &:has(.icon--copy) {
     min-width: 0;
   }
+
+  .tippy-arrow {
+    color: #eff3f9;
+  }
 }
 
 .tippy-box[data-theme~='light'] {

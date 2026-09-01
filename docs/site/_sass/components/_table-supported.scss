@@ -234,10 +234,17 @@
         }
     }
 
+    thead th {
+        @include breakpoints.max-w(xl) {
+            min-width: 100px;
+        }
+    }
+
     tbody tr td {
         box-sizing: border-box;
         height: 71px;
         width: 132px;
+        min-width: 100px;
     }
 
     &--experiments,

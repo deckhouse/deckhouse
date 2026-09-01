@@ -99,22 +99,22 @@ function initStabilityTableTooltips() {
     if (elements.length === 0) return;
 
     elements.forEach(element => {
-      tippy(element, {
+      const tooltip = tippy(element, {
         placement: 'top',
-        arrow: false,
-        animation: 'scale',
+        arrow: true,
         theme: 'light-large',
         allowHTML: true,
         content: createTooltipContent(content.title, content.text),
-        trigger: 'mouseenter',
-        hideOnClick: false,
-        delay: [300, 1000],
+        delay: [300, 0],
         offset: [0, 10],
         duration: [300],
         zIndex: 90,
-        popperOptions: {
-          strategy: 'fixed',
-        },
+      });
+
+      element.addEventListener('click', () => {
+        setTimeout(() => {
+          tooltip.hide();
+        }, 2000);
       });
     });
   }
