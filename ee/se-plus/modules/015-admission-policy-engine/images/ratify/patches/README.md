@@ -19,3 +19,8 @@ Fixes CVEs, including:
 - CVE-2026-56852 (`golang.org/x/text` -> `v0.39.0`)
 - GHSA-hrxh-6v49-42gf (`google.golang.org/grpc` -> `v1.82.1`)
 - CVE-2026-50151, CVE-2026-50162, CVE-2026-50163 (`oras.land/oras-go/v2` -> `v2.6.2`)
+
+### 999-FixCVE.patch
+
+Fixes:
+CVE-2026-56854 (`golang.org/x/crypto` -> `v0.55.0`)

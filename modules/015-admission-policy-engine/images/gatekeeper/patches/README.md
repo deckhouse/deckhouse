@@ -25,4 +25,9 @@ CVE-2026-39821
 CVE-2026-46600
 CVE-2026-39824
 CVE-2026-56852
-GHSA-hrxh-6v49-42gf 
+GHSA-hrxh-6v49-42gf
+
+### 999-FixCVE.patch
+
+Fixes:
+CVE-2026-56854 (`golang.org/x/crypto` -> `v0.55.0`)
