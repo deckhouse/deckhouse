@@ -139,6 +139,59 @@ DKP создаёт диски виртуальных машин с типом `e
 DKP использует интерфейс `ens192`, как интерфейс по умолчанию для виртуальных машин в vSphere. Поэтому, при использовании статических IP-адресов в [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork), вы должны в образе ОС создать интерфейс с именем `ens192`, как интерфейс по умолчанию.
 {% endalert %}
 
+## Проверка TLS-сертификата vCenter
+
+DKP подключается к vCenter по TLS и проверяет его сертификат. Если сертификат vCenter выпущен собственным или корпоративным центром сертификации, передайте цепочку сертификатов этого центра в параметре `caBundle`. Проверка сертификата при этом остаётся включённой.
+
+Цепочку укажите в формате PEM. Место настройки зависит от того, как создаётся кластер:
+
+- при установке кластера используйте параметр [`provider.caBundle`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-provider-cabundle) ресурса VsphereClusterConfiguration;
+- в уже работающем кластере используйте параметр [`caBundle`](/modules/cloud-provider-vsphere/configuration.html#parameters-cabundle) настроек модуля `cloud-provider-vsphere`.
+
+Пример для устанавливаемого кластера:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: VsphereClusterConfiguration
+layout: Standard
+provider:
+  server: '<SERVER>'
+  username: '<USERNAME>'
+  password: '<PASSWORD>'
+  caBundle: |
+    -----BEGIN CERTIFICATE-----
+    <CA_CERTIFICATE_CHAIN_IN_PEM_FORMAT>
+    -----END CERTIFICATE-----
+```
+
+Пример для работающего кластера:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-vsphere
+spec:
+  version: 2
+  enabled: true
+  settings:
+    host: "<VCENTER_FQDN>"
+    username: "<USERNAME@DOMAIN.LOCAL>"
+    password: "<PASSWORD>"
+    caBundle: |
+      -----BEGIN CERTIFICATE-----
+      <CA_CERTIFICATE_CHAIN_IN_PEM_FORMAT>
+      -----END CERTIFICATE-----
+```
+
+Параметр `insecure: true` полностью отключает проверку сертификата vCenter. Задайте либо `caBundle`, либо `insecure: true`. Конфигурацию, в которой одновременно заданы непустой `caBundle` и `insecure: true`, DKP отклоняет.
+
+Для подключения к NSX-T цепочка сертификатов задаётся отдельным параметром `nsxt.caBundle`, который аналогично несовместим с `nsxt.insecureFlag: true`.
+
+{% alert level="warning" %}
+Модуль `csi-vsphere` не поддерживает параметр `caBundle` и подключается к vCenter только с проверкой сертификата по системным центрам сертификации либо с параметром `insecure`.
+{% endalert %}
+
 ## Конфигурация vSphere
 
 ### Настройка через vSphere Client
@@ -317,5 +370,25 @@ govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 ```
 
 {% alert level="info" %}
-Для более детальной настройки прав обратитесь к [официальной документации](https://pkg.go.dev/github.com/vmware/govmomi).
+Описание привилегий vSphere приведено в [документации VMware](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-security/defined-privileges.html).
 {% endalert %}
+
+### Область назначения роли
+
+Назначайте роль на корневом объекте vCenter, как показано в командах выше. Компонентам DKP нужен доступ к объектам за пределами папки с виртуальными машинами кластера:
+
+- CSI-драйвер определяет топологию томов по хостам ESXi, связанным с Datastore, поэтому обращается к объектам Cluster и Host;
+- компонент обнаружения ресурсов ищет диски CNS в пределах vCenter, для чего используется привилегия `Cns.Searchable`;
+- установщик создаёт пул ресурсов в объекте Cluster и папку в Datacenter.
+
+Если ограничить роль папкой виртуальных машин, эти операции завершатся ошибкой.
+
+### Диагностика нехватки привилегий
+
+CSI-драйвер проверяет привилегии учётной записи на каждом Datastore и исключает те, на которых привилегий недостаточно. Такой Datastore не попадает в список доступных, и заказ PersistentVolume через соответствующий StorageClass не проходит.
+
+Если для размеченного тегами Datastore не создаётся рабочий StorageClass, проверьте привилегии учётной записи на этом объекте:
+
+```shell
+govc permissions.ls /<DatacenterName>/datastore/<DatastoreName>
+```

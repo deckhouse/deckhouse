@@ -34,7 +34,6 @@ vmFolderPath: dev
 regionTagCategory: k8s-region
 zoneTagCategory: k8s-zone
 region: X1
-internalNetworkCIDR: 192.168.199.0/24
 masterNodeGroup:
   replicas: 1
   zones:
@@ -65,12 +64,16 @@ zones:
 
 Обязательные параметры [ресурса VsphereClusterConfiguration](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration):
 
+- `layout` — название схемы размещения. Поддерживается только `Standard`;
+- `provider` — параметры подключения к vCenter;
 - `region` — тег, присвоенный объекту Datacenter;
 - `zoneTagCategory` и `regionTagCategory` — категории тегов, по которым распознаются регионы и зоны;
-- `internalNetworkCIDR` — подсеть для назначения внутренних IP-адресов;
+- `zones` — список зон, доступных для размещения узлов;
+- `masterNodeGroup` — параметры группы master-узлов;
 - `vmFolderPath` — путь до папки, в которой будут размещаться виртуальные машины кластера;
-- `sshPublicKey` — публичный SSH-ключ для доступа к узлам;
-- `zones` — список зон, доступных для размещения узлов.
+- `sshPublicKey` — публичный SSH-ключ для доступа к узлам.
+
+Параметр `internalNetworkCIDR` необязательный. DKP применяет его, только если в `masterInstanceClass` заданы `additionalNetworks`, и выделяет адреса master-узлов из этой подсети начиная с десятого адреса. Если группа master-узлов использует одну сеть, параметр можно не указывать.
 
 {% alert level="info" %}
 Все узлы, размещённые в разных зонах, должны иметь доступ к общим datastore с аналогичными тегами зоны.

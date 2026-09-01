@@ -75,6 +75,8 @@ An example configuration and description of the available parameters are provide
    - `internalNetworkNames`: List of vSphere networks for connecting created nodes.
    - `sshKeys`: Public SSH keys that will be added to the created virtual machines.
 
+   To keep vCenter TLS certificate verification enabled, set the `caBundle` parameter with the certificate authority chain instead of the `insecure` parameter. For details, refer to the [vCenter TLS certificate verification](../virtualization/vsphere/authorization.html#vcenter-tls-certificate-verification) section.
+
 1. Apply the module configuration:
 
    ```shell
@@ -234,10 +236,10 @@ Before you begin, make sure that the following conditions are met:
   echo "$METADATA_B64"
   ```
 
-- The virtual machine is connected to the network specified in the [`internalNetworkNames`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-internalnetworknames) parameter of the `cloud-provider-vsphere` module configuration.
+- The virtual machine is connected to the network specified in the [`internalNetworkNames`](/modules/cloud-provider-vsphere/configuration.html#parameters-internalnetworknames) parameter of the `cloud-provider-vsphere` module configuration.
 - One of the package managers (`apt`/`apt-get`, `yum`, or `rpm`) for a supported OS is installed on the virtual machine.
 
-1. Create a file with a NodeGroup resource and the CloudStatic node type. For example, `cloud-static-nodegroup.yaml`:
+1. Create a NodeGroup resource with the `CloudStatic` node type:
 
    ```shell
    d8 k apply -f - <<EOF
@@ -247,6 +249,7 @@ Before you begin, make sure that the following conditions are met:
      name: cloud-static
    spec:
      nodeType: CloudStatic
+   EOF
    ```
 
 1. Make sure that the NodeGroup has been created and synchronized:

@@ -37,16 +37,34 @@ spec:
         - slow-lun103
 ```
 
+### SPBM storage policies
+
+If storage policies (SPBM, Storage Policy Based Management) are configured in vSphere, DKP discovers them and additionally creates a StorageClass for each combination of a Datastore and a policy. When you order a PersistentVolume through such a StorageClass, vSphere applies the corresponding policy to the volume.
+
+The StorageClass name combines the Datastore name and the policy name. DKP converts it to lowercase, replaces spaces with hyphens, and removes the remaining characters except hyphens and dots. For example, the `lun_1` Datastore and the `Gold Policy` policy produce the `lun1-gold-policy` StorageClass.
+
+For DKP to discover the policies, the vSphere account needs the `StorageProfile.View` privilege.
+
+Policies apply to volumes in any scenario where the `cloud-provider-vsphere` module runs, including a hybrid cluster. You cannot pick a policy for an individual StorageClass, since the StorageClass set is generated automatically.
+
+Limitations:
+
+- StorageClasses with policies are created only for Datastore objects, and are not created for DatastoreCluster objects.
+- The [`exclude`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-exclude) parameter is matched against the Datastore name, so it removes both the base StorageClass and all StorageClasses with policies for that Datastore.
+
+### Storage policy for node disks
+
+Disks of the virtual machines created by the installer get their storage policy from the [`storagePolicyID`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-storagepolicyid) parameter of the VsphereClusterConfiguration resource. The parameter takes the ID of an SPBM policy.
+
+The parameter applies to master nodes and to static nodes created by the installer. Nodes ordered through a VsphereInstanceClass do not get the policy from this parameter. In a hybrid cluster, where the VsphereClusterConfiguration resource is not used, you cannot set a storage policy for node disks.
+
 ### Resizing a volume (PVCs)
 
-DKP supports Online Resize PersistentVolume starting with vSphere 7.0U2.
-However, due to CSI and vSphere API specifics, additional steps are required after resizing a PVC:
+DKP supports Online Resize PersistentVolume starting with vSphere 7.0U2. Due to [specifics](https://github.com/kubernetes-csi/external-resizer/issues/44) of the CSI volume-resizer and the vSphere API, perform the following steps after resizing a PVC:
 
-1. Run `d8 k cordon <node_name>`.
+1. Run `d8 k cordon <node_name>` for the node that hosts the Pod.
 1. Delete the Pod that uses the PVC.
-1. Wait for the resize operation to complete:
-   - Ensure the PVC no longer has the `Resizing` condition.
-   - It's safe to ignore the `FileSystemResizePending` status.
+1. Wait for the resize operation to complete. The PVC must no longer have the `Resizing` condition, while the `FileSystemResizePending` condition is not an issue.
 1. Run `d8 k uncordon <node_name>`.
 
 ## Load balancing
@@ -75,16 +93,6 @@ Make sure there is connectivity between BGP routers and frontend nodes in the de
 
 The storage subsystem uses CNS disks by default, with support for online resizing.  
 Legacy mode with FCD disks is also supported. The subsystem behavior is configured via the [`compatibilityFlag`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-compatibilityflag) parameter.
-
-## Important information on PVC size expansion
-
-Due to [specifics](https://github.com/kubernetes-csi/external-resizer/issues/44) of the CSI volume-resizer and vSphere API, after increasing a PVC size, you must perform the following steps:
-
-1. On the node hosting the Pod, run `d8 k cordon <node_name>`.
-1. Delete the Pod.
-1. Ensure the resize operation completed successfully — the PVC **must not** have the `Resizing` condition.  
-   > The `FileSystemResizePending` condition is not an issue.
-1. On the node hosting the Pod, run `d8 k uncordon <node_name>`
 
 ## Datastore configuration
 

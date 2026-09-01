@@ -130,6 +130,59 @@ For more details, see the [documentation](https://techdocs.broadcom.com/us/en/vm
 DKP uses the `ens192` interface as the default interface for VMs in vSphere. Therefore, when using static IP addresses in [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork), you must create an interface named `ens192` in the OS image as the default interface.
 {% endalert %}
 
+## vCenter TLS certificate verification
+
+DKP connects to vCenter over TLS and verifies its certificate. If the vCenter certificate is issued by a custom or enterprise certificate authority, pass the certificate chain of that authority in the `caBundle` parameter. Certificate verification stays enabled in this case.
+
+Specify the chain in PEM format. Where you set it depends on how the cluster is created:
+
+- When installing a cluster, use the [`provider.caBundle`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-provider-cabundle) parameter of the VsphereClusterConfiguration resource.
+- In a running cluster, use the [`caBundle`](/modules/cloud-provider-vsphere/configuration.html#parameters-cabundle) parameter of the `cloud-provider-vsphere` module settings.
+
+Example for a cluster being installed:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: VsphereClusterConfiguration
+layout: Standard
+provider:
+  server: '<SERVER>'
+  username: '<USERNAME>'
+  password: '<PASSWORD>'
+  caBundle: |
+    -----BEGIN CERTIFICATE-----
+    <CA_CERTIFICATE_CHAIN_IN_PEM_FORMAT>
+    -----END CERTIFICATE-----
+```
+
+Example for a running cluster:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-vsphere
+spec:
+  version: 2
+  enabled: true
+  settings:
+    host: "<VCENTER_FQDN>"
+    username: "<USERNAME@DOMAIN.LOCAL>"
+    password: "<PASSWORD>"
+    caBundle: |
+      -----BEGIN CERTIFICATE-----
+      <CA_CERTIFICATE_CHAIN_IN_PEM_FORMAT>
+      -----END CERTIFICATE-----
+```
+
+The `insecure: true` parameter disables vCenter certificate verification completely. Set either `caBundle` or `insecure: true`. DKP rejects a configuration that sets a non-empty `caBundle` and `insecure: true` at the same time.
+
+For the NSX-T connection, the certificate chain is set by the separate `nsxt.caBundle` parameter, which is likewise incompatible with `nsxt.insecureFlag: true`.
+
+{% alert level="warning" %}
+The `csi-vsphere` module does not support the `caBundle` parameter and connects to vCenter either with certificate verification against the system certificate authorities or with the `insecure` parameter.
+{% endalert %}
+
 ## vSphere configuration
 
 ### Configuration in vSphere Client
@@ -176,7 +229,7 @@ In the "Inventory" tab, select the Datastore, open the "Summary" panel, then cho
 
    ![Creating and assigning a role, step 1](/modules/cloud-provider-vsphere/images/role-setup/Screenshot-1.png)
 
-1. Click "NEW", enter a role name (for example, `deckhouse`), and add the privileges from the [list](/modules/cloud-provider-vsphere/environment.htmllist-of-required-privileges).
+1. Click "NEW", enter a role name (for example, `deckhouse`), and add the privileges from the [list](/modules/cloud-provider-vsphere/environment.html#list-of-required-privileges).
 
    ![Creating and assigning a role, step 2](/modules/cloud-provider-vsphere/images/role-setup/Screenshot-2.png)
 
@@ -308,5 +361,25 @@ govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 ```
 
 {% alert level="info" %}
-For more detailed permission configuration, refer to [the official documentation](https://pkg.go.dev/github.com/vmware/govmomi).
+For a description of vSphere privileges, refer to the [VMware documentation](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-security/defined-privileges.html).
 {% endalert %}
+
+### Role assignment scope
+
+Assign the role on the vCenter root object, as shown in the commands above. DKP components need access to objects outside the folder with the cluster virtual machines:
+
+- The CSI driver determines volume topology by the ESXi hosts attached to a Datastore, so it accesses Cluster and Host objects.
+- The resource discovery component searches for CNS disks within vCenter, which uses the `Cns.Searchable` privilege.
+- The installer creates a resource pool in the Cluster object and a folder in the Datacenter.
+
+If you limit the role to the virtual machine folder, these operations fail.
+
+### Diagnosing missing privileges
+
+The CSI driver checks the account privileges on each Datastore and excludes those where the privileges are insufficient. Such a Datastore does not appear in the list of available ones, and ordering a PersistentVolume through the corresponding StorageClass fails.
+
+If a tagged Datastore does not produce a working StorageClass, check the account privileges on that object:
+
+```shell
+govc permissions.ls /<DatacenterName>/datastore/<DatastoreName>
+```
