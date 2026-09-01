@@ -65,10 +65,11 @@ func RegisterController(runtimeManager manager.Manager,
 		init:                new(sync.WaitGroup),
 		client:              runtimeManager.GetClient(),
 		log:                 logger,
-		loader:              loader,
+		installer:           loader.Installer(),
 		moduleManager:       mm,
 		dependencyContainer: dc,
 		edition:             edition,
+		shutdownFunc:        func() error { return syscall.Kill(1, syscall.SIGUSR2) },
 	}
 
 	r.init.Add(1)
@@ -96,11 +97,15 @@ func RegisterController(runtimeManager manager.Manager,
 type reconciler struct {
 	init                *sync.WaitGroup
 	client              client.Client
-	loader              *moduleloader.Loader
+	installer           Installer
 	log                 *log.Logger
 	dependencyContainer dependency.Container
 	moduleManager       moduleManager
 	edition             *d8edition.Edition
+
+	// shutdownFunc restarts Deckhouse after a module is (re)deployed or rolled back.
+	// It is a field so tests can inject a no-op instead of signalling PID 1.
+	shutdownFunc func() error
 }
 
 type moduleManager interface {
@@ -108,6 +113,16 @@ type moduleManager interface {
 	GetModule(moduleName string) *addonmodules.BasicModule
 	RunModuleWithNewOpenAPISchema(moduleName, moduleSource, modulePath string) error
 	AreModulesInited() bool
+}
+
+// Installer is the subset of the module installer the override controller needs to
+// resolve a tag digest and (re)deploy a module. Depending on this narrow interface
+// (instead of the concrete loader) keeps the deploy path mockable in tests.
+type Installer interface {
+	GetImageDigest(ctx context.Context, source *v1alpha1.ModuleSource, moduleName, version string) (string, error)
+	Download(ctx context.Context, source *v1alpha1.ModuleSource, moduleName, version string) (string, error)
+	Install(ctx context.Context, module, version, tempModulePath string) error
+	Uninstall(ctx context.Context, module string) error
 }
 
 func (r *reconciler) preflight(ctx context.Context) error {
@@ -269,7 +284,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
 
-	digest, err := r.loader.Installer().GetImageDigest(ctx, source, mpo.Name, mpo.Spec.ImageTag)
+	digest, err := r.installer.GetImageDigest(ctx, source, mpo.Name, mpo.Spec.ImageTag)
 	if err != nil {
 		mpo.Status.Message = fmt.Sprintf("Download error: %v", err)
 		if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
@@ -313,7 +328,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 
 	defer func() {
 		r.log.Info("restart Deckhouse because ModulePullOverride image was updated", slog.String("name", mpo.Name))
-		if err = syscall.Kill(1, syscall.SIGUSR2); err != nil {
+		if err = r.shutdownFunc(); err != nil {
 			r.log.Fatal("failed to send SIGUSR2 signal", log.Err(err))
 		}
 	}()
@@ -357,7 +372,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 
 // deployModule downloads module on tmp, validates and installs
 func (r *reconciler) deployModule(ctx context.Context, source *v1alpha1.ModuleSource, mpo *v1alpha2.ModulePullOverride) error {
-	modulePath, err := r.loader.Installer().Download(ctx, source, mpo.Name, mpo.Spec.ImageTag)
+	modulePath, err := r.installer.Download(ctx, source, mpo.Name, mpo.Spec.ImageTag)
 	if err != nil {
 		return fmt.Errorf("download the module '%s': %w", mpo.Name, err)
 	}
@@ -399,7 +414,7 @@ func (r *reconciler) deployModule(ctx context.Context, source *v1alpha1.ModuleSo
 		return fmt.Errorf("validation error: %w", err)
 	}
 
-	if err = r.loader.Installer().Install(ctx, mpo.Name, mpo.Spec.ImageTag, modulePath); err != nil {
+	if err = r.installer.Install(ctx, mpo.Name, mpo.Spec.ImageTag, modulePath); err != nil {
 		return fmt.Errorf("install the module '%s': %w", mpo.Name, err)
 	}
 
@@ -414,14 +429,14 @@ func (r *reconciler) deployModule(ctx context.Context, source *v1alpha1.ModuleSo
 func (r *reconciler) deleteModuleOverride(ctx context.Context, mpo *v1alpha2.ModulePullOverride) (ctrl.Result, error) {
 	if controllerutil.ContainsFinalizer(mpo, v1alpha2.ModulePullOverrideFinalizer) {
 		if mpo.Spec.Rollback {
-			if err := r.loader.Installer().Uninstall(ctx, mpo.Name); err != nil {
+			if err := r.installer.Uninstall(ctx, mpo.Name); err != nil {
 				return ctrl.Result{}, fmt.Errorf("uninstall the module '%s': %w", mpo.Name, err)
 			}
 
 			// restart deckhouse
 			defer func() {
 				r.log.Info("restart deckhouse because module rollback", slog.String("name", mpo.Name))
-				if err := syscall.Kill(1, syscall.SIGUSR2); err != nil {
+				if err := r.shutdownFunc(); err != nil {
 					r.log.Fatal("failed to send SIGUSR2 signal", log.Err(err))
 				}
 			}()

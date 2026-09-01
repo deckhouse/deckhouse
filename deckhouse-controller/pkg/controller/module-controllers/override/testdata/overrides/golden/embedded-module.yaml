@@ -1,0 +1,21 @@
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModulePullOverride
+metadata:
+  name: test-module
+  resourceVersion: "1000"
+spec:
+  imageTag: main
+  scanInterval: 15s
+status:
+  message: The module is embedded
+  updatedAt: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: test-module
+  resourceVersion: "999"
+properties:
+  source: Embedded
+status: {}

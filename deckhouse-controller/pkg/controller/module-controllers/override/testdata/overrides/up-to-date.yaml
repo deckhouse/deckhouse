@@ -1,0 +1,33 @@
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModulePullOverride
+metadata:
+  name: test-module
+  finalizers:
+  - modules.deckhouse.io/mpo-finalizer
+spec:
+  imageTag: main
+  scanInterval: 15s
+status:
+  message: Ready
+  imageDigest: sha256:cafe
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: test-module
+properties:
+  source: dev
+status:
+  conditions:
+  - type: EnabledByModuleConfig
+    status: "True"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: dev
+spec:
+  registry:
+    repo: registry.example.com/deckhouse/modules
+    scheme: HTTPS
