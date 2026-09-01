@@ -1,14 +1,14 @@
 # #####################################################################
-# Description: gops — утилита диагностики Go-процессов. Используется в runtime.
-# Target: агент, hubble-relay.
-# Хлебные крошки:
+# Description: gops — утилита диагностики Go-процессов. Используется в runtime
+# Target: agent, hubble-relay
+# Sources:
 # - cilium/cilium: images/runtime/Dockerfile (стадия go-builder)
 # - cilium/cilium: images/runtime/build-gops.sh
 # #####################################################################
 
 {{- $gopsVersion := include "get_oss_version_by_id" (list "gops" $) }}
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-src
 from: {{ index $.Images "builder/src" }}
 final: false
 git:
@@ -24,14 +24,14 @@ shell:
   install:
   - git clone --depth 1 --branch v{{ $gopsVersion }} $(cat /run/secrets/SOURCE_REPO)/google/gops.git /src
   - cd /src
-    git apply --verbose --allow-empty /patches/*.patch
+  - git apply --verbose --allow-empty /patches/*.patch
   - rm -rf /src/.git
 ---
-image: {{ .ModuleName }}/gops-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src
   add: /src
   to: /src
   before: install
@@ -42,16 +42,15 @@ secrets:
   value: {{ .GOPROXY }}
 shell:
   beforeInstall:
-  - pm install bash git binutils
+  - pm install binutils
   install:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - cd /src/gops
-  - mkdir -p "/out/linux/amd64/bin"
+  - cd /src
   - |
     {{- $buildContext := deepCopy $ -}}
     {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
-    {{- $_ := set $buildContext "BuildCommand" `go build -ldflags "-s -w" -o "/out/linux/amd64/bin/gops" github.com/google/gops` -}}
+    {{- $_ := set $buildContext "BuildCommand" `go build -ldflags "-s -w" -o /out/gops github.com/google/gops` -}}
     {{- include "image-build.build" $buildContext | indent 4 }}
-  - strip /out/linux/amd64/bin/gops
----
+  - strip /out/gops
+  - go version -m /out/usr/bin/gops | grep -q "GOARCH=amd64"
