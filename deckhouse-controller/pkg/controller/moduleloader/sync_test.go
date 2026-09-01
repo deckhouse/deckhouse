@@ -163,7 +163,7 @@ func testReadyMPO(name, imageTag, deployedOn string) *v1alpha2.ModulePullOverrid
 	return &v1alpha2.ModulePullOverride{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        name,
-			Annotations: map[string]string{v1alpha1.ModulePullOverrideAnnotationDeployedOn: deployedOn},
+			Annotations: map[string]string{v1alpha2.ModulePullOverrideAnnotationDeployedOn: deployedOn},
 		},
 		Spec:   v1alpha2.ModulePullOverrideSpec{ImageTag: imageTag},
 		Status: v1alpha2.ModulePullOverrideStatus{Message: v1alpha1.ModulePullOverrideMessageReady},
