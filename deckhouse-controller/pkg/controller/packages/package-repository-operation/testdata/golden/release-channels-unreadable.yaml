@@ -50,6 +50,10 @@ metadata:
 status:
   availableRepositories:
   - deckhouse
+  releaseChannels:
+    deckhouse:
+      alpha: v0.9.0
+      stable: v0.9.0
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion

@@ -310,19 +310,30 @@ func (r *reconciler) delete(ctx context.Context, packageRepository *v1alpha1.Pac
 	return nil
 }
 
-// cleanupApplicationPackage removes repoName from pkg.Status.AvailableRepositories.
+// cleanupApplicationPackage drops repoName from the list of repositories offering the package and
+// from the release channel matrix.
 // Lifecycle of the ApplicationPackage CR itself is handled by Kubernetes GC via ownerRefs;
 // this function only updates the status. Returns nil (no-op) when the package was not
 // contributed by repoName.
 func (r *reconciler) cleanupApplicationPackage(ctx context.Context, pkg *v1alpha1.ApplicationPackage, repoName string) error {
-	if !slices.Contains(pkg.Status.AvailableRepositories, repoName) {
-		return nil
+	original := pkg.DeepCopy()
+
+	var update bool
+
+	if slices.Contains(pkg.Status.AvailableRepositories, repoName) {
+		update = true
+		pkg.Status.AvailableRepositories = slices.DeleteFunc(pkg.Status.AvailableRepositories, func(name string) bool {
+			return name == repoName
+		})
 	}
 
-	original := pkg.DeepCopy()
-	pkg.Status.AvailableRepositories = slices.DeleteFunc(pkg.Status.AvailableRepositories, func(name string) bool {
-		return name == repoName
-	})
+	if pkg.Status.ReleaseChannels.RemoveChannels(repoName) {
+		update = true
+	}
+
+	if !update {
+		return nil
+	}
 
 	if err := r.client.Status().Patch(ctx, pkg, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("patch application package %s status: %w", pkg.Name, err)
@@ -330,19 +341,30 @@ func (r *reconciler) cleanupApplicationPackage(ctx context.Context, pkg *v1alpha
 	return nil
 }
 
-// cleanupModulePackage removes repoName from pkg.Status.AvailableRepositories.
+// cleanupModulePackage drops repoName from the list of repositories offering the package and from
+// the release channel matrix.
 // Lifecycle of the ModulePackage CR itself is handled by Kubernetes GC via ownerRefs;
 // this function only updates the status. Returns nil (no-op) when the package was not
 // contributed by repoName.
 func (r *reconciler) cleanupModulePackage(ctx context.Context, pkg *v1alpha1.ModulePackage, repoName string) error {
-	if !slices.Contains(pkg.Status.AvailableRepositories, repoName) {
-		return nil
+	original := pkg.DeepCopy()
+
+	var update bool
+
+	if slices.Contains(pkg.Status.AvailableRepositories, repoName) {
+		update = true
+		pkg.Status.AvailableRepositories = slices.DeleteFunc(pkg.Status.AvailableRepositories, func(name string) bool {
+			return name == repoName
+		})
 	}
 
-	original := pkg.DeepCopy()
-	pkg.Status.AvailableRepositories = slices.DeleteFunc(pkg.Status.AvailableRepositories, func(name string) bool {
-		return name == repoName
-	})
+	if pkg.Status.ReleaseChannels.RemoveChannels(repoName) {
+		update = true
+	}
+
+	if !update {
+		return nil
+	}
 
 	if err := r.client.Status().Patch(ctx, pkg, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("patch module package %s status: %w", pkg.Name, err)
