@@ -428,6 +428,60 @@ func TestSyncInstanceClassConsumers(t *testing.T) {
 		}
 	})
 
+	t.Run("a panic does not drop the mark the sweep had already taken", func(t *testing.T) {
+		blocked, release := make(chan struct{}), make(chan struct{})
+		var releaseOnce sync.Once
+		unblock := func() { releaseOnce.Do(func() { close(release) }) }
+		t.Cleanup(unblock)
+
+		passes := 0
+		c := fake.NewClientBuilder().WithScheme(classUsageScheme(t)).WithObjects(
+			testClassRegistration(),
+			instanceClass(testClassKind, "used", nil),
+			classUsageNodeGroup("alpha", testClassKind, "used", v1.NodeTypeCloudEphemeral),
+		).WithInterceptorFuncs(interceptor.Funcs{
+			// One class List per pass of the sweep, so this counts the passes.
+			List: func(ctx context.Context, cl client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+				if _, ok := list.(*unstructured.UnstructuredList); !ok {
+					return cl.List(ctx, list, opts...)
+				}
+				passes++
+				switch passes {
+				case 1:
+					close(blocked)
+					<-release
+				case 2:
+					panic("boom in the pass the mark bought")
+				}
+				return cl.List(ctx, list, opts...)
+			},
+		}).Build()
+
+		r := newClassSweeper(c)
+		done := make(chan struct{})
+		go func() {
+			defer close(done)
+			defer func() {
+				if recover() == nil {
+					t.Error("the injected panic did not reach the caller")
+				}
+			}()
+			r.sweepInstanceClassConsumers(context.Background())
+		}()
+		<-blocked
+
+		// The mark this leaves is taken by the second pass, and that pass is the one that panics.
+		r.sweepInstanceClassConsumers(context.Background())
+		unblock()
+		<-done
+
+		before := passes
+		r.sweepInstanceClassConsumers(context.Background())
+		if got := passes - before; got != 2 {
+			t.Errorf("the sweep after the panic made %d passes, want 2: the mark the panicked pass took has to be re-armed", got)
+		}
+	})
+
 	t.Run("concurrent sweeps do not race", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(classUsageScheme(t)).WithObjects(
 			testClassRegistration(),

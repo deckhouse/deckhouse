@@ -53,15 +53,17 @@ func (r *Status) sweepInstanceClassConsumers(ctx context.Context) {
 	r.sweeping = true
 	r.sweepMu.Unlock()
 
-	// From a defer, so a panic in the sweep neither leaves the flag set for the life of the pod
-	// nor drops the mark this pass consumed: a pass that did not finish has to be repeated.
+	// The clean exit below clears sweeping under the same lock that reads sweepDirty, so no
+	// worker can leave a mark nobody consumes. This defer is the unwinding path only: a pass
+	// that panicked did not finish, so it clears the flag and leaves a mark for the next call.
 	swept := false
 	defer func() {
+		if swept {
+			return
+		}
 		r.sweepMu.Lock()
 		r.sweeping = false
-		if !swept {
-			r.sweepDirty = true
-		}
+		r.sweepDirty = true
 		r.sweepMu.Unlock()
 	}()
 
@@ -72,6 +74,7 @@ func (r *Status) sweepInstanceClassConsumers(ctx context.Context) {
 
 		r.sweepMu.Lock()
 		if !r.sweepDirty {
+			r.sweeping = false
 			swept = true
 			r.sweepMu.Unlock()
 			return
