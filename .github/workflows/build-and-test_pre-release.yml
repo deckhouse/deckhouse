@@ -308,6 +308,7 @@ jobs:
           VAULT_ROLE: "dh-signer_dh-signer"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -615,6 +616,7 @@ jobs:
           VAULT_ROLE: "dh-signer_dh-signer"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -922,6 +924,7 @@ jobs:
           VAULT_ROLE: "dh-signer_dh-signer"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1229,6 +1232,7 @@ jobs:
           VAULT_ROLE: "dh-signer_dh-signer"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1536,6 +1540,7 @@ jobs:
           VAULT_ROLE: "dh-signer_dh-signer"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1843,6 +1848,7 @@ jobs:
           VAULT_ROLE: "dh-signer_dh-signer"
           REGISTRY_USER: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_USER }}
           REGISTRY_PASSWORD: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_PASSWORD }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -3492,6 +3498,7 @@ jobs:
           IMAGE_TO: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/sys/deckhouse-oss:${{ github.ref_name }}"
           COMPARE_MAX_ATTEMPTS: 10
           COMPARE_RETRY_DELAY: 30
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Tags from git are used and each tag is checked in the registry.
           # This is done because the regctl ls tag takes a long time to execute
