@@ -320,8 +320,6 @@ write:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterAdmin` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`):
 
 ```text
-update:
-    - namespaces/finalize
 read-write:
     - deckhouse.io/clusterauthorizationrules
     - nodes/configz
@@ -331,6 +329,8 @@ read-write:
     - nodes/pods
     - nodes/proxy
     - nodes/stats
+update:
+    - namespaces/finalize
 write:
     - limitranges
     - namespaces
