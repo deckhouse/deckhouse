@@ -1,0 +1,161 @@
+diff --git a/pkg/ipam/hostscope.go b/pkg/ipam/hostscope.go
+index 6d58007461..d5446b8df7 100644
+--- a/pkg/ipam/hostscope.go
++++ b/pkg/ipam/hostscope.go
+@@ -5,8 +5,10 @@ package ipam
+
+ import (
+ 	"fmt"
++	"github.com/cilium/cilium/pkg/k8s/watchers"
+ 	"math/big"
+ 	"net"
++	"strings"
+
+ 	"github.com/cilium/cilium/pkg/ip"
+ 	"github.com/cilium/cilium/pkg/ipam/service/ipallocator"
+@@ -15,12 +17,16 @@ import (
+ type hostScopeAllocator struct {
+ 	allocCIDR *net.IPNet
+ 	allocator *ipallocator.Range
++
++	// for k8s lister
++	k8swatcher *watchers.K8sWatcher
+ }
+
+-func newHostScopeAllocator(n *net.IPNet) Allocator {
++func newHostScopeAllocator(n *net.IPNet, k8sEventReg K8sEventRegister) Allocator {
+ 	return &hostScopeAllocator{
+-		allocCIDR: n,
+-		allocator: ipallocator.NewCIDRRange(n),
++		allocCIDR:  n,
++		allocator:  ipallocator.NewCIDRRange(n),
++		k8swatcher: k8sEventReg.(*watchers.K8sWatcher),
+ 	}
+ }
+
+@@ -52,12 +58,35 @@ func (h *hostScopeAllocator) Release(ip net.IP, pool Pool) error {
+ }
+
+ func (h *hostScopeAllocator) AllocateNext(owner string, pool Pool) (*AllocationResult, error) {
+-	ip, err := h.allocator.AllocateNext()
++	var result AllocationResult
++	var err error
++	if h.k8swatcher != nil {
++		names := strings.Split(owner, "/")
++		pod, err := h.k8swatcher.GetCachedPod(names[0], names[1])
++		if err != nil {
++			return nil, fmt.Errorf("get pod %s info failed %v. ", owner, err)
++		}
++		if pod.Annotations != nil {
++			if pod.Annotations[customPodIpAddr] != "" {
++				result.IP = net.ParseIP(pod.Annotations[customPodIpAddr])
++				if result.IP == nil {
++					return nil, fmt.Errorf("customer invalid ip: %s. ", pod.Annotations[customPodIpAddr])
++				}
++				err = h.allocator.Allocate(result.IP)
++				if err != nil {
++					return nil, fmt.Errorf("customer ip is not avaliable %s: %w", result.IP.String(), err)
++				}
++				return &result, nil
++			}
++		}
++	}
++
++	result.IP, err = h.allocator.AllocateNext()
+ 	if err != nil {
+ 		return nil, err
+ 	}
+
+-	return &AllocationResult{IP: ip}, nil
++	return &result, nil
+ }
+
+ func (h *hostScopeAllocator) AllocateNextWithoutSyncUpstream(owner string, pool Pool) (*AllocationResult, error) {
+diff --git a/pkg/ipam/ipam.go b/pkg/ipam/ipam.go
+index d8f88e6468..d3e514ced6 100644
+--- a/pkg/ipam/ipam.go
++++ b/pkg/ipam/ipam.go
+@@ -13,6 +13,7 @@ import (
+ 	"github.com/cilium/cilium/pkg/datapath/types"
+ 	ipamOption "github.com/cilium/cilium/pkg/ipam/option"
+ 	"github.com/cilium/cilium/pkg/k8s/client"
++	"github.com/cilium/cilium/pkg/k8s/watchers"
+ 	"github.com/cilium/cilium/pkg/logging"
+ 	"github.com/cilium/cilium/pkg/logging/logfields"
+ 	"github.com/cilium/cilium/pkg/node"
+@@ -101,7 +102,7 @@ func NewIPAM(
+ // ConfigureAllocator initializes the IPAM allocator according to the configuration.
+ // As a precondition, the NodeAddressing must be fully initialized - therefore the method
+ // must be called after Daemon.WaitForNodeInformation.
+-func (ipam *IPAM) ConfigureAllocator() {
++func (ipam *IPAM) ConfigureAllocator(k8swatcher *watchers.K8sWatcher) {
+ 	switch ipam.config.IPAMMode() {
+ 	case ipamOption.IPAMKubernetes, ipamOption.IPAMClusterPool:
+ 		log.WithFields(logrus.Fields{
+@@ -110,11 +111,11 @@ func (ipam *IPAM) ConfigureAllocator() {
+ 		}).Infof("Initializing %s IPAM", ipam.config.IPAMMode())
+
+ 		if ipam.config.IPv6Enabled() {
+-			ipam.IPv6Allocator = newHostScopeAllocator(ipam.nodeAddressing.IPv6().AllocationCIDR().IPNet)
++			ipam.IPv6Allocator = newHostScopeAllocator(ipam.nodeAddressing.IPv6().AllocationCIDR().IPNet, k8swatcher)
+ 		}
+
+ 		if ipam.config.IPv4Enabled() {
+-			ipam.IPv4Allocator = newHostScopeAllocator(ipam.nodeAddressing.IPv4().AllocationCIDR().IPNet)
++			ipam.IPv4Allocator = newHostScopeAllocator(ipam.nodeAddressing.IPv4().AllocationCIDR().IPNet, k8swatcher)
+ 		}
+ 	case ipamOption.IPAMMultiPool:
+ 		log.Info("Initializing MultiPool IPAM")
+diff --git a/pkg/ipam/service/ipallocator/allocator.go b/pkg/ipam/service/ipallocator/allocator.go
+index 5e81cf4ee3..782e1e476d 100644
+--- a/pkg/ipam/service/ipallocator/allocator.go
++++ b/pkg/ipam/service/ipallocator/allocator.go
+@@ -114,18 +114,11 @@ func (r *Range) CIDR() net.IPNet {
+ // or has already been reserved.  ErrFull will be returned if there
+ // are no addresses left.
+ func (r *Range) Allocate(ip net.IP) error {
+-	ok, offset := r.contains(ip)
+-	if !ok {
+-		return &ErrNotInRange{r.net.String()}
+-	}
+-
+-	allocated, err := r.alloc.Allocate(offset)
++	_, offset := r.contains(ip)
++	_, err := r.alloc.Allocate(offset)
+ 	if err != nil {
+ 		return err
+ 	}
+-	if !allocated {
+-		return ErrAllocated
+-	}
+ 	return nil
+ }
+
+diff --git a/pkg/ipam/types.go b/pkg/ipam/types.go
+index 6abe6fee6e..af9c2ced99 100644
+--- a/pkg/ipam/types.go
++++ b/pkg/ipam/types.go
+@@ -17,6 +17,10 @@ import (
+ 	"github.com/cilium/cilium/pkg/option"
+ )
+
++const (
++	customPodIpAddr = "cni.cilium.io/ipAddress"
++)
++
+ // AllocationResult is the result of an allocation
+ type AllocationResult struct {
+ 	// IP is the allocated IP
+diff --git a/daemon/cmd/ipam.go b/daemon/cmd/ipam.go
+index acb9a61c64..9cfe792e30 100644
+--- a/daemon/cmd/ipam.go
++++ b/daemon/cmd/ipam.go
+@@ -585,7 +585,7 @@ func (d *Daemon) startIPAM() {
+ 	bootstrapStats.ipam.Start()
+ 	log.Info("Initializing node addressing")
+ 	// Set up ipam conf after init() because we might be running d.conf.KVStoreIPv4Registration
+-	d.ipam.ConfigureAllocator()
++	d.ipam.ConfigureAllocator(d.k8sWatcher)
+ 	bootstrapStats.ipam.End(true)
+ }
+
