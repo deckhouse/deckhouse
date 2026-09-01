@@ -41,7 +41,7 @@ with SIGTERM. There is no default address: the caller picks one per run.`,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			validator, err := server.Start(
 				server.Config{Network: cfg.network, Address: cfg.address},
-				server.NewValidateService(dvpValidator{}),
+				server.NewValidateService(Validator{}),
 			)
 			if err != nil {
 				return fmt.Errorf("start validator: %w", err)

@@ -26,9 +26,9 @@ import (
 	dvppreflight "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/preflight"
 )
 
-type dvpValidator struct{}
+type Validator struct{}
 
-func (dvpValidator) Validate(ctx context.Context, input validatev1.Input) (*validatev1.ValidateResponse, error) {
+func (Validator) Validate(ctx context.Context, input validatev1.Input) (*validatev1.ValidateResponse, error) {
 	ret, err := validate(ctx, input)
 	if err != nil {
 		return nil, err

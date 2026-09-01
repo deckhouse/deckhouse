@@ -22,20 +22,20 @@ import (
 	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 )
 
-type Client struct {
+type ValidateClient struct {
 	service validatev1.ValidateServiceClient
 	config  Config
 }
 
 // NewValidateClient creates a new client with the given configuration.
-func NewValidateClient(conn grpc.ClientConnInterface, config Config) Client {
-	return Client{
+func NewValidateClient(conn grpc.ClientConnInterface, config Config) ValidateClient {
+	return ValidateClient{
 		service: validatev1.NewValidateServiceClient(conn),
 		config:  NewConfig().Merge(config),
 	}
 }
 
-func (c Client) Validate(ctx context.Context, input validatev1.Input) (*validatev1.ValidateResponse, error) {
+func (c ValidateClient) Validate(ctx context.Context, input validatev1.Input) (*validatev1.ValidateResponse, error) {
 	req, err := input.ToRequest()
 	if err != nil {
 		return nil, err

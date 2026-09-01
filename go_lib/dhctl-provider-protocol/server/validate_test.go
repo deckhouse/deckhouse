@@ -244,7 +244,7 @@ func bootstrapInput() validatev1.Input {
 
 // connect talks to the server the way dhctl would: over the wire, so the conversions
 // and the statuses are exercised too.
-func connect(t *testing.T, address string) client.Client {
+func connect(t *testing.T, address string) client.ValidateClient {
 	t.Helper()
 
 	conn, err := grpc.NewClient("unix://"+address, grpc.WithTransportCredentials(insecure.NewCredentials()))
@@ -279,7 +279,7 @@ func requireStatus(t *testing.T, err error, want codes.Code, message string) {
 }
 
 // requireUnavailable waits for the socket to stop accepting after a Stop.
-func requireUnavailable(t *testing.T, validator client.Client, input validatev1.Input) {
+func requireUnavailable(t *testing.T, validator client.ValidateClient, input validatev1.Input) {
 	t.Helper()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
