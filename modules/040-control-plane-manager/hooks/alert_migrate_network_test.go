@@ -17,6 +17,7 @@ limitations under the License.
 package hooks
 
 import (
+	"encoding/base64"
 	"fmt"
 
 	. "github.com/onsi/ginkgo"
@@ -26,18 +27,11 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-// The whole document, not lone keys: global.clusterConfiguration is validated against the
-// ClusterConfiguration schema after every hook run, and a fragment fails that. Empty values omit
-// the fields, which the schema now allows.
-func clusterConfigurationNetworkValues(podSubnetCIDR, serviceSubnetCIDR, podSubnetNodeCIDRPrefix string) string {
-	doc := `
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
-clusterType: Static
-clusterDomain: cluster.local
-defaultCRI: Containerd
-kubernetesVersion: "1.34"
-`
+// clusterConfigurationSecretYAML builds a d8-cluster-configuration Secret carrying only the network
+// fields under test, base64-encoded the way a real Secret's data map is (the test framework does not
+// auto-encode a plain "data:" block).
+func clusterConfigurationSecretYAML(podSubnetCIDR, serviceSubnetCIDR, podSubnetNodeCIDRPrefix string) string {
+	doc := "apiVersion: deckhouse.io/v1\nkind: ClusterConfiguration\nclusterType: Static\nclusterDomain: cluster.local\n"
 	if podSubnetCIDR != "" {
 		doc += fmt.Sprintf("podSubnetCIDR: %s\n", podSubnetCIDR)
 	}
@@ -47,7 +41,17 @@ kubernetesVersion: "1.34"
 	if podSubnetNodeCIDRPrefix != "" {
 		doc += fmt.Sprintf("podSubnetNodeCIDRPrefix: %q\n", podSubnetNodeCIDRPrefix)
 	}
-	return doc
+
+	return fmt.Sprintf(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cluster-configuration
+  namespace: kube-system
+data:
+  cluster-configuration.yaml: %s
+`, base64.StdEncoding.EncodeToString([]byte(doc)))
 }
 
 var _ = Describe("Modules :: control-plane-manager :: hooks :: alert_migrate_network ::", func() {
@@ -63,10 +67,22 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: alert_migrate_net
 		return false
 	}
 
+	Context("no d8-cluster-configuration Secret", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(""))
+			f.RunHook()
+		})
+
+		It("does not fire", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(metricIsSet()).To(BeFalse())
+		})
+	})
+
 	DescribeTable("D8ObsoleteNetworkFieldsInClusterConfiguration metric",
 		func(podSubnetCIDR, serviceSubnetCIDR, podSubnetNodeCIDRPrefix string, expectSet bool) {
-			f.ValuesSetFromYaml("global.clusterConfiguration", []byte(
-				clusterConfigurationNetworkValues(podSubnetCIDR, serviceSubnetCIDR, podSubnetNodeCIDRPrefix)))
+			f.BindingContexts.Set(f.KubeStateSet(
+				clusterConfigurationSecretYAML(podSubnetCIDR, serviceSubnetCIDR, podSubnetNodeCIDRPrefix)))
 			f.RunHook()
 
 			Expect(f).To(ExecuteSuccessfully())
@@ -80,15 +96,25 @@ var _ = Describe("Modules :: control-plane-manager :: hooks :: alert_migrate_net
 		Entry("all three present — fires", "10.111.0.0/16", "10.222.0.0/16", "24", true),
 	)
 
-	// Presence in ClusterConfiguration is what fires the alert, not whether ModuleConfig already
-	// resolves the value - the whole point is to prompt removing the deprecated field once it does.
-	It("fires even when ModuleConfig already overrides the value", func() {
-		f.ValuesSet("controlPlaneManager.network.podSubnetCIDR", "10.111.0.0/16")
-		f.ValuesSetFromYaml("global.clusterConfiguration", []byte(
-			clusterConfigurationNetworkValues("10.111.0.0/16", "", "")))
-		f.RunHook()
+	Context("fields removed from the Secret after a previous run had them", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(
+				clusterConfigurationSecretYAML("10.111.0.0/16", "10.222.0.0/16", "24")))
+			f.RunHook()
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(metricIsSet()).To(BeTrue())
 
-		Expect(f).To(ExecuteSuccessfully())
-		Expect(metricIsSet()).To(BeTrue())
+			f.BindingContexts.Set(f.KubeStateSet(clusterConfigurationSecretYAML("", "", "")))
+			f.RunHook()
+		})
+
+		// This is the regression the Values-based version of this hook could not detect: it read
+		// global.clusterConfiguration.podSubnetCIDR, which the discovery hook keeps populated with
+		// the ModuleConfig-resolved value even after the deprecated field is gone from the Secret,
+		// so the metric never cleared. Reading the Secret directly does not have that problem.
+		It("clears the metric", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(metricIsSet()).To(BeFalse())
+		})
 	})
 })
