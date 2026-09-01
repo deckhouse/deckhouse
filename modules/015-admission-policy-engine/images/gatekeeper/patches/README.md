@@ -1,5 +1,7 @@
 ## Patches
 
+Baseline change to trigger admission-policy-engine image rebuild for CVE scanning on release-1.73.
+
 ### 001-cve.patch
 
 Fixes:
