@@ -18,6 +18,10 @@ package crd
 
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+// IstioOperator describes the legacy `install.istio.io/v1alpha1` resource. The module
+// does not render it anymore: Istio 1.25 is reconciled through the sail operator's
+// `sailoperator.io/v1` Istio CR and newer versions run operator-free. Only the revision
+// is read, to discover and clean up leftovers from retired versions.
 type IstioOperator struct {
 	metav1.TypeMeta `json:",inline"`
 	// Standard object's metadata.
@@ -25,26 +29,9 @@ type IstioOperator struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the behavior of a node group.
 	Spec IstioOperatorSpec `json:"spec"`
-
-	Status IstioOperatorStatus `json:"status"`
 }
 
 type IstioOperatorSpec struct {
 	Revision string `json:"revision"`
-}
-
-type IstioOperatorStatus struct {
-	Status          string                       `json:"status"`
-	ComponentStatus IstioOperatorComponentStatus `json:"componentStatus"`
-}
-
-type IstioOperatorComponentStatus struct {
-	Pilot IstioOperatorComponentStatusDetails `json:"Pilot"`
-}
-
-type IstioOperatorComponentStatusDetails struct {
-	Error  string `json:"error"`
-	Status string `json:"status"`
 }

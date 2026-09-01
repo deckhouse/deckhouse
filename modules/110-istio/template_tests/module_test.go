@@ -542,6 +542,19 @@ podAntiAffinity:
 
 			Expect(deploymentOperatorV25.Field("spec.template.spec.containers.0.image").String()).To(Equal(`registry.example.com@imageHash-istio-operatorV1x25x2`))
 
+			// The only operator left is the sail operator, so it always gets its
+			// /etc/sail-operator config volume and scrapes over TLS on 8443.
+			Expect(deploymentOperatorV25.Field("spec.template.spec.containers.0.ports").String()).To(MatchJSON(`
+				[{"containerPort":8443,"name":"https-metrics","protocol":"TCP"}]`))
+			Expect(deploymentOperatorV25.Field("spec.template.spec.containers.0.volumeMounts").String()).To(MatchJSON(`
+				[{"mountPath":"/etc/sail-operator","name":"operator-config","readOnly":true}]`))
+			Expect(deploymentOperatorV25.Field("spec.template.spec.volumes.0.name").String()).To(Equal(`operator-config`))
+
+			podMonitorOperatorV25 := f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-operator-v1x25x2")
+			Expect(podMonitorOperatorV25.Exists()).To(BeTrue())
+			Expect(podMonitorOperatorV25.Field("spec.podMetricsEndpoints.0.port").String()).To(Equal(`https-metrics`))
+			Expect(podMonitorOperatorV25.Field("spec.podMetricsEndpoints.0.scheme").String()).To(Equal(`https`))
+
 			Expect(mwh.Field("webhooks.0.clientConfig.service.name").String()).To(Equal(`istiod-v1x25x2`))
 			// caBundle must be the root cert (b64("myroot")), not the signing cert: istiod advertises
 			// root-cert.pem as its webhook trust anchor, so the module must render the same to stay

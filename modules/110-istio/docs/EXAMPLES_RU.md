@@ -874,7 +874,7 @@ spec:
       enabled: true
 ```
 
-Дождитесь применения манифеста `Istio` / `IstioOperator` в неймспейсе `d8-istio` и обновления конфигурации сайдкаров; при необходимости перезапустите прикладные поды после появления трафика, если метрики ещё не видны на дашбордах.
+Дождитесь применения манифеста `Istio` в неймспейсе `d8-istio` и обновления конфигурации сайдкаров; при необходимости перезапустите прикладные поды после появления трафика, если метрики ещё не видны на дашбордах.
 
 ### Проверка метрик и логов
 
@@ -960,7 +960,7 @@ spec:
           address: "jaeger-collector.observability.svc.cluster.local:9411"
 ```
 
-Дождитесь применения CR `Istio`/`IstioOperator` из `d8-istio`; при проблемах с дашбордами перегенерируйте трафик и перепроверьте сайдкары.
+Дождитесь применения CR `Istio` из `d8-istio`; при проблемах с дашбордами перегенерируйте трафик и перепроверьте сайдкары.
 
 #### Kiali
 
@@ -968,7 +968,7 @@ spec:
 
 #### Пример — mesh-wide OTLP через ModuleConfig
 
-Разверните Collector, доступный из меша, включите Telemetry API и укажите [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry). Модуль добавит провайдер `deckhouse-tracing` и `spec.tracing` в `d8-main` — не дописывайте OTLP вручную в `meshConfig` CR `Istio` / `IstioOperator`.
+Разверните Collector, доступный из меша, включите Telemetry API и укажите [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry). Модуль добавит провайдер `deckhouse-tracing` и `spec.tracing` в `d8-main` — не дописывайте OTLP вручную в `meshConfig` CR `Istio`.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
