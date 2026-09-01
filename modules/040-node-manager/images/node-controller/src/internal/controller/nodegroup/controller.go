@@ -20,11 +20,13 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -60,6 +62,13 @@ type Status struct {
 	register.Base
 	cache            cache.Cache
 	conditionService ngconditions.Service
+
+	// sweepMu serializes syncInstanceClassConsumers across the workers of this controller: the
+	// sweep is a cluster-wide read-then-write over objects no single NodeGroup owns, so two of
+	// them would race and the loser could republish a stale NodeGroup list.
+	sweepMu sync.Mutex
+	// unstorableConsumers holds the kinds whose CRD schema prunes the consumers field away.
+	unstorableConsumers map[schema.GroupVersionKind]bool
 }
 
 func (r *Status) Setup(_ context.Context, mgr ctrl.Manager) error {
@@ -106,11 +115,10 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	logger := log.FromContext(ctx)
 	logger.V(1).Info("reconciling nodegroup status", "name", req.Name)
 
-	// Consumers are a cluster-wide view, so this runs before the NodeGroup read: a delete event
-	// arrives with the object already gone and must still clear the class it used to hold. The
-	// error is logged, not returned: the NodeGroup status is this controller's primary duty and
-	// an unwritable InstanceClass must not block it; statusResyncInterval retries.
-	if err := syncInstanceClassConsumers(ctx, r.Client); err != nil {
+	// A cluster-wide sweep, so it runs before the NodeGroup read: a delete event arrives with
+	// the object already gone and must still clear the class it used to hold. The error is
+	// logged, not returned, so an unwritable InstanceClass cannot block the NodeGroup status.
+	if err := r.syncInstanceClassConsumers(ctx); err != nil {
 		logger.Error(err, "sync instance class consumers")
 	}
 

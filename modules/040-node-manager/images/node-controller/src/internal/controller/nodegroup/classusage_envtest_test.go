@@ -17,6 +17,8 @@ limitations under the License.
 package nodegroup
 
 import (
+	"strings"
+
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 
@@ -39,9 +41,9 @@ func createTestInstanceClass(name string) *unstructured.Unstructured {
 	return class
 }
 
-func createTestClassRegistration() {
-	secret := registrationSecret(testenv.UniqueName("cloud-provider-d8test"), map[string][]byte{
-		nodecommon.InstanceClassKindKey:       []byte(testClassKind),
+func createClassRegistration(kind string) {
+	secret := registrationSecret(testenv.UniqueName("cloud-provider-"+strings.ToLower(kind)), map[string][]byte{
+		nodecommon.InstanceClassKindKey:       []byte(kind),
 		nodecommon.InstanceClassAPIVersionKey: []byte("v1"),
 	})
 	Expect(k8sClient.Create(suiteCtx, secret)).To(Succeed())
@@ -64,16 +66,15 @@ func classConsumerNodeGroup(name, className string) *v1.NodeGroup {
 	}
 }
 
-// instanceClassConsumers returns status.nodeGroupConsumers of the class and asserts the field is
-// there at all: an absent field and an empty list are different answers to the deletion webhook.
+// instanceClassConsumers returns status.nodeGroupConsumers of the class; an absent field yields
+// nil, which is how every reader treats a class nobody references.
 func instanceClassConsumers(g Gomega, name string) []string {
 	class := &unstructured.Unstructured{}
 	class.SetGroupVersionKind(classGVK(testClassKind))
 	g.Expect(k8sClient.Get(suiteCtx, types.NamespacedName{Name: name}, class)).To(Succeed())
 
-	consumers, found, err := unstructured.NestedStringSlice(class.Object, "status", "nodeGroupConsumers")
+	consumers, _, err := unstructured.NestedStringSlice(class.Object, "status", "nodeGroupConsumers")
 	g.Expect(err).NotTo(HaveOccurred())
-	g.Expect(found).To(BeTrue(), "status.nodeGroupConsumers of %s must be published, not absent", name)
 	return consumers
 }
 
@@ -83,7 +84,10 @@ var _ = Describe("InstanceClass consumers", func() {
 	})
 
 	It("publishes the consuming NodeGroup and clears it once the group is gone", func() {
-		createTestClassRegistration()
+		// The unserved kind sorts first, so the served one is reached only if a missing CRD
+		// does not abandon the rest of the sweep.
+		createClassRegistration(absentClassKind)
+		createClassRegistration(testClassKind)
 		usedName := testenv.UniqueName("used-class")
 		spareName := testenv.UniqueName("spare-class")
 		createTestInstanceClass(usedName)
@@ -92,11 +96,14 @@ var _ = Describe("InstanceClass consumers", func() {
 		ngName := uniqueNG("class-consumer")
 		ng := createNodeGroup(classConsumerNodeGroup(ngName, usedName))
 
-		By("publishing the consumer on the referenced class and an empty list on the spare one")
+		By("publishing the consumer on the referenced class and leaving the spare one free")
 		Eventually(func(g Gomega) {
 			g.Expect(instanceClassConsumers(g, usedName)).To(Equal([]string{ngName}))
 			g.Expect(instanceClassConsumers(g, spareName)).To(BeEmpty())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("skipping the registered kind that has no CRD instead of failing the whole sweep")
+		Expect(newClassSweeper(k8sClient).syncInstanceClassConsumers(suiteCtx)).To(Succeed())
 
 		By("clearing the consumer after the NodeGroup is deleted")
 		Expect(k8sClient.Delete(suiteCtx, ng)).To(Succeed())
