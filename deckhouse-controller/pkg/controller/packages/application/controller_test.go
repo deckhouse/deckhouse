@@ -706,8 +706,12 @@ func newPackageManagerStub(t *testing.T) *packageManagerStub {
 	}
 }
 
+type updatedApp struct {
+	app packageruntime.App
+}
+
 func (s *packageManagerStub) UpdateApp(app packageruntime.App) {
-	s.updated = append(s.updated, app)
+	s.updated = append(s.updated, updatedApp{app: app})
 }
 
 func (s *packageManagerStub) RemoveApp(namespace, name string) bool {
