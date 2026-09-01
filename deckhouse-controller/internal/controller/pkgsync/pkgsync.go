@@ -32,6 +32,13 @@
 //	  └─ ModulePackage <module>, empty: the catalog entry no scan would
 //	     create, since no repository offers an embedded package
 //
+//	global hooks dir (the running image)
+//	  ├─ embedded-global-<deckhouse version>, complete: the global module
+//	  │  ships in the image like an embedded one, but carries no definition
+//	  │  file, so only its settings/values schemas come off disk and its
+//	  │  metadata stays empty
+//	  └─ ModulePackage global, empty: as for an embedded module
+//
 //	deployed or pending ModuleRelease
 //	  └─ <repository>-<module>-<version>, where the "deckhouse" source maps
 //	     to the "deckhouse-modules" repository; a draft stub - the
@@ -80,6 +87,10 @@ const (
 	// repositoryNameEmbedded stands for the Deckhouse image itself and
 	// resolves to no PackageRepository object.
 	repositoryNameEmbedded = "embedded"
+
+	// packageNameGlobal is the reserved name of the global module, whose files
+	// live in the global hooks dir rather than under the embedded modules dir.
+	packageNameGlobal = "global"
 )
 
 // syncer creates the missing package versions once at start, while the
@@ -94,24 +105,25 @@ type syncer struct {
 
 	deckhouseVersion   string
 	embeddedModulesDir string
+	globalHooksDir     string
 
 	logger *log.Logger
 }
 
 // Sync ensures the package objects of the old module stack for the given
-// Deckhouse version and embedded modules dir. The repositories go first, so
-// the version stubs find them in place. A source naming no valid version (no
-// module source, an unparsable release version, an illegal object name, an
-// unreadable module dir, broken schema files) is skipped with a warning; an
-// API failure stops the sync. An embedded module skipped here reconciles
-// nowhere, since the Module reconciler resolves the same version - see
-// known-hazards.md.
-func Sync(ctx context.Context, reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, embeddedModulesDir string, logger *log.Logger) error {
-	return newSyncer(reader, writer, dc, deckhouseVersion, embeddedModulesDir, logger).sync(ctx)
+// Deckhouse version, embedded modules dir and global hooks dir. The
+// repositories go first, so the version stubs find them in place. A source
+// naming no valid version (no module source, an unparsable release version, an
+// illegal object name, an unreadable module dir, broken or missing schema
+// files) is skipped with a warning; an API failure stops the sync. An embedded
+// module skipped here reconciles nowhere, since the Module reconciler resolves
+// the same version - see known-hazards.md.
+func Sync(ctx context.Context, reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, embeddedModulesDir, globalHooksDir string, logger *log.Logger) error {
+	return newSyncer(reader, writer, dc, deckhouseVersion, embeddedModulesDir, globalHooksDir, logger).sync(ctx)
 }
 
-// newSyncer builds a syncer for the given Deckhouse version and embedded modules dir.
-func newSyncer(reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, embeddedModulesDir string, logger *log.Logger) *syncer {
+// newSyncer builds a syncer for the given Deckhouse version, embedded modules dir and global hooks dir.
+func newSyncer(reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, embeddedModulesDir, globalHooksDir string, logger *log.Logger) *syncer {
 	return &syncer{
 		reader: reader,
 		writer: writer,
@@ -119,6 +131,7 @@ func newSyncer(reader client.Reader, writer client.Client, dc dependency.Contain
 
 		deckhouseVersion:   deckhouseVersion,
 		embeddedModulesDir: embeddedModulesDir,
+		globalHooksDir:     globalHooksDir,
 
 		logger: logger,
 	}
@@ -134,9 +147,9 @@ func (s *syncer) sync(ctx context.Context) error {
 	return s.syncModulePackageVersions(ctx)
 }
 
-// repositoryNameForSource maps a ModuleSource name to the name of the
+// RepositoryNameForSource maps a ModuleSource name to the name of the
 // PackageRepository serving the same registry path.
-func repositoryNameForSource(sourceName string) string {
+func RepositoryNameForSource(sourceName string) string {
 	if sourceName == moduleSourceNameDeckhouse {
 		return repositoryNameDeckhouseModules
 	}

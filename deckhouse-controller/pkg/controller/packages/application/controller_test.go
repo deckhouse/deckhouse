@@ -45,7 +45,6 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	packagestatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
 	"github.com/deckhouse/deckhouse/go_lib/project"
@@ -188,13 +187,6 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		assert.True(suite.T(), result.IsZero(), "a settled application must not be requeued")
 
 		require.Len(suite.T(), suite.manager.updated, 1)
-		assert.Equal(suite.T(), registry.Remote{
-			Name:         "deckhouse",
-			Repository:   "registry.example.com/test",
-			DockerConfig: "test-docker-cfg",
-			CA:           "test-ca",
-			Scheme:       "https",
-		}, suite.manager.updated[0].repo)
 		assert.Equal(suite.T(), packageruntime.App{
 			Name:       appName,
 			Namespace:  appNamespace,
@@ -455,7 +447,8 @@ func TestRelinkFailureKeepsTheApplicationOutOfTheRuntime(t *testing.T) {
 
 	cl := seedFakeClient(t, "successful-reconcile.yaml", interceptor.Funcs{
 		SubResourcePatch: func(context.Context, client.Client, string, client.Object, client.Patch,
-			...client.SubResourcePatchOption) error {
+			...client.SubResourcePatchOption,
+		) error {
 			return patchErr
 		},
 	})
@@ -479,7 +472,8 @@ func TestDeleteFailureKeepsTheFinalizer(t *testing.T) {
 	// released and the package is not.
 	cl := seedFakeClient(t, "delete-after-version-edit.yaml", interceptor.Funcs{
 		SubResourcePatch: func(ctx context.Context, cl client.Client, name string, obj client.Object,
-			patch client.Patch, opts ...client.SubResourcePatchOption) error {
+			patch client.Patch, opts ...client.SubResourcePatchOption,
+		) error {
 			if _, ok := obj.(*v1alpha1.ApplicationPackage); ok {
 				return patchErr
 			}
@@ -536,7 +530,8 @@ func TestDeleteWaitsForRuntimeTeardown(t *testing.T) {
 func TestDeleteDistinguishesAMissingVersionFromAnUnreadableOne(t *testing.T) {
 	cl := seedFakeClient(t, "delete-after-version-edit.yaml", interceptor.Funcs{
 		Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object,
-			opts ...client.GetOption) error {
+			opts ...client.GetOption,
+		) error {
 			if _, ok := obj.(*v1alpha1.ApplicationPackageVersion); ok {
 				return apierrors.NewInternalError(errors.New("etcd is unavailable"))
 			}
@@ -704,12 +699,11 @@ func newPackageManagerStub(t *testing.T) *packageManagerStub {
 }
 
 type updatedApp struct {
-	repo registry.Remote
-	app  packageruntime.App
+	app packageruntime.App
 }
 
-func (s *packageManagerStub) UpdateApp(repo registry.Remote, app packageruntime.App) {
-	s.updated = append(s.updated, updatedApp{repo: repo, app: app})
+func (s *packageManagerStub) UpdateApp(app packageruntime.App) {
+	s.updated = append(s.updated, updatedApp{app: app})
 }
 
 func (s *packageManagerStub) RemoveApp(namespace, name string) bool {

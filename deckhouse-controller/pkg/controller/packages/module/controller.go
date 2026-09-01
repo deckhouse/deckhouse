@@ -60,6 +60,10 @@ const (
 	// removalRequeueAfter is how often a running teardown is re-checked. It completes in a queue
 	// callback the API server never sees, so the only way to notice is to ask the runtime again.
 	removalRequeueAfter = 5 * time.Second
+
+	// globalModuleName is the reserved name of the global module, which the runtime builds
+	// itself out of the global hooks dir.
+	globalModuleName = "global"
 )
 
 // RegisterController registers the Module controller with the manager.
@@ -106,7 +110,8 @@ type reconciler struct {
 // packageManager registers and unregisters modules in the package runtime.
 type packageManager interface {
 	UpdateModulesSettings(name string, settingsVersion int, settings addonutils.Values, maintenance string, enabled *bool)
-	UpdateModule(repo registry.Remote, module packageruntime.Module, force bool)
+	UpdateGlobalSettings(settingsVersion int, settings addonutils.Values)
+	UpdateModule(module packageruntime.Module, force bool)
 	GetModuleDigest(ctx context.Context, repo registry.Remote, name, tag string) (string, error)
 	UpdateEmbeddedModule(module packageruntime.Module)
 	// RemoveModule tears the module down and reports whether the teardown has finished.
@@ -185,6 +190,12 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1alpha2.
 		original = module.DeepCopy()
 	}
 
+	// The global module is routed ahead of every annotation: the runtime holds the module
+	// itself, so nothing about it is ever loaded, deployed or removed.
+	if module.Name == globalModuleName {
+		return r.handleGlobal(ctx, module, original)
+	}
+
 	// An embedded module ships inside the image: it has a package and a version like any other,
 	// but no repository to pull it from. The annotation is read before the dev one, the way the
 	// bootstrap and the runtime do — embedded wins while the image ships the module.
@@ -211,12 +222,12 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1alpha2.
 		return fmt.Errorf("get package repository '%s': %w", module.Spec.PackageRepositoryName, err)
 	}
 
-	if err := r.relink(ctx, module, mpv); err != nil {
+	if err := r.relink(ctx, module, pkg, mpv); err != nil {
 		logger.Error("failed to relink the module", log.Err(err))
 		return err
 	}
 
-	r.manager.UpdateModule(registry.BuildRemote(repo), packageruntime.Module{
+	r.manager.UpdateModule(packageruntime.Module{
 		Name: module.Name,
 		Definition: modules.Definition{
 			Name:    module.Name,
@@ -226,6 +237,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, module *v1alpha2.
 		SettingsVersion: module.Spec.SettingsVersion,
 		Maintenance:     module.Spec.Maintenance,
 		Enabled:         module.Spec.Enabled,
+		Repository:      registry.BuildRemote(repo),
 	}, false)
 
 	return r.commit(ctx, module, original, pkg, mpv)
@@ -247,7 +259,7 @@ func (r *reconciler) handleEmbedded(ctx context.Context, module, original *v1alp
 
 	// relink drops the downloaded version a module the image started shipping after it had
 	// already been released still points at.
-	if err := r.relink(ctx, module, mpv); err != nil {
+	if err := r.relink(ctx, module, pkg, mpv); err != nil {
 		logger.Error("failed to relink the module", log.Err(err))
 		return err
 	}
@@ -259,6 +271,30 @@ func (r *reconciler) handleEmbedded(ctx context.Context, module, original *v1alp
 		Maintenance:     module.Spec.Maintenance,
 		Enabled:         module.Spec.Enabled,
 	})
+
+	return r.commit(ctx, module, original, pkg, mpv)
+}
+
+// handleGlobal hands the global module's settings to the package runtime. It passes the same
+// package and version gate as an embedded module — the bootstrap fills both from the global
+// hooks dir before any Module is written — but the runtime built the module itself at startup,
+// so the settings are the only thing that crosses over.
+func (r *reconciler) handleGlobal(ctx context.Context, module, original *v1alpha2.Module) error {
+	logger := r.logger.With(slog.String("name", module.Name))
+
+	logger.Debug("handle global module")
+
+	pkg, mpv, err := r.resolvePackage(ctx, module)
+	if err != nil {
+		return err
+	}
+
+	if err := r.relink(ctx, module, pkg, mpv); err != nil {
+		logger.Error("failed to relink the module", log.Err(err))
+		return err
+	}
+
+	r.manager.UpdateGlobalSettings(module.Spec.SettingsVersion, module.Spec.Settings.GetMap())
 
 	return r.commit(ctx, module, original, pkg, mpv)
 }
@@ -356,7 +392,16 @@ func (r *reconciler) handleDev(ctx context.Context, module, original *v1alpha2.M
 		}
 	}
 
-	r.manager.UpdateModule(remote, packageruntime.Module{
+	// The version recorded in the package would name the released version the module has just
+	// left behind, so it is released together with the reference to the package below.
+	if name := ctrlutils.OwnerRefName(module, v1alpha1.ModulePackageKind); name != "" {
+		if err := r.detachPackage(ctx, name); err != nil {
+			logger.Error("failed to detach the module package", slog.String("package", name), log.Err(err))
+			return fmt.Errorf("detach module package '%s': %w", name, err)
+		}
+	}
+
+	r.manager.UpdateModule(packageruntime.Module{
 		Name: module.Name,
 		Definition: modules.Definition{
 			Name:    module.Name,
@@ -366,6 +411,7 @@ func (r *reconciler) handleDev(ctx context.Context, module, original *v1alpha2.M
 		SettingsVersion: module.Spec.SettingsVersion,
 		Maintenance:     module.Spec.Maintenance,
 		Enabled:         module.Spec.Enabled,
+		Repository:      remote,
 	}, forced)
 
 	ctrlutils.DropOwnerReferences(module, v1alpha1.ModulePackageVersionKind, v1alpha1.ModulePackageKind)
@@ -398,6 +444,12 @@ func (r *reconciler) handleDelete(ctx context.Context, module *v1alpha2.Module) 
 		remove = r.manager.RemoveEmbeddedModule
 	}
 
+	// Global has nothing to tear down — it was never deployed or loaded — and tearing it down
+	// anyway would drop the module the whole runtime renders against.
+	if module.Name == globalModuleName {
+		remove = removeNothing
+	}
+
 	// The runtime tears the module down asynchronously — the Disable task uninstalls the Helm
 	// release, Undeploy takes the files off disk, and the cleanup riding the last task drops the
 	// state — so the remover is polled until it reports the teardown finished.
@@ -425,6 +477,18 @@ func (r *reconciler) handleDelete(ctx context.Context, module *v1alpha2.Module) 
 		}
 	}
 
+	// The package is named after the module, so the reference and the name agree; the reference is
+	// still preferred, and the name only carries a module attached before the reference was written.
+	pkgName := ctrlutils.OwnerRefName(module, v1alpha1.ModulePackageKind)
+	if pkgName == "" {
+		pkgName = module.Name
+	}
+
+	if err := r.detachPackage(ctx, pkgName); err != nil {
+		logger.Error("failed to detach the module package", slog.String("package", pkgName), log.Err(err))
+		return ctrl.Result{}, err
+	}
+
 	if !controllerutil.ContainsFinalizer(module, v1alpha2.ModuleFinalizerStatisticRegistered) {
 		return ctrl.Result{}, nil
 	}
@@ -440,16 +504,27 @@ func (r *reconciler) handleDelete(ctx context.Context, module *v1alpha2.Module) 
 	return ctrl.Result{}, nil
 }
 
-// relink marks mpv as used by the module, releasing the version it switched away from.
-// Releasing first keeps the flags correct across a version bump.
-func (r *reconciler) relink(ctx context.Context, module *v1alpha2.Module, mpv *v1alpha1.ModulePackageVersion) error {
+// removeNothing is the remover of a module the runtime never placed: the teardown is done
+// before it starts.
+func removeNothing(string) bool { return true }
+
+// relink marks mpv as used by the module and records the version in pkg, releasing the version
+// the module switched away from. Releasing first keeps the flags correct across a version bump.
+//
+// Only the version is ever switched away from: a module package is named after its module, so the
+// module cannot move to another one and there is no old package to release here.
+func (r *reconciler) relink(ctx context.Context, module *v1alpha2.Module, pkg *v1alpha1.ModulePackage, mpv *v1alpha1.ModulePackageVersion) error {
 	if old := ctrlutils.OwnerRefName(module, v1alpha1.ModulePackageVersionKind); old != "" && old != mpv.Name {
 		if err := r.detachVersion(ctx, old); err != nil {
 			return err
 		}
 	}
 
-	return r.attachVersion(ctx, mpv)
+	if err := r.attachVersion(ctx, mpv); err != nil {
+		return err
+	}
+
+	return r.attachPackage(ctx, module, pkg)
 }
 
 // attachVersion marks the version as used, so it cannot be deleted under the module.
@@ -463,6 +538,47 @@ func (r *reconciler) attachVersion(ctx context.Context, mpv *v1alpha1.ModulePack
 
 	if err := r.client.Status().Patch(ctx, mpv, patch); err != nil {
 		return fmt.Errorf("patch module package version status: %w", err)
+	}
+
+	return nil
+}
+
+// attachPackage records the module and the version it runs on in the package status, so a
+// reader of the package can tell which version is in use without listing modules.
+func (r *reconciler) attachPackage(ctx context.Context, module *v1alpha2.Module, pkg *v1alpha1.ModulePackage) error {
+	patch := client.MergeFrom(pkg.DeepCopy())
+
+	if !pkg.AddInstalledModule(module.Spec.PackageVersion) {
+		return nil
+	}
+
+	if err := r.client.Status().Patch(ctx, pkg, patch); err != nil {
+		return fmt.Errorf("patch module package status '%s': %w", pkg.Name, err)
+	}
+
+	return nil
+}
+
+// detachPackage clears the named package's used-by entry. A package that is already gone,
+// or was never recorded, needs no cleanup.
+func (r *reconciler) detachPackage(ctx context.Context, name string) error {
+	pkg := new(v1alpha1.ModulePackage)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: name}, pkg); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+
+		return fmt.Errorf("get module package '%s': %w", name, err)
+	}
+
+	patch := client.MergeFrom(pkg.DeepCopy())
+
+	if !pkg.RemoveInstalledModule() {
+		return nil
+	}
+
+	if err := r.client.Status().Patch(ctx, pkg, patch); err != nil {
+		return fmt.Errorf("patch module package status '%s': %w", name, err)
 	}
 
 	return nil

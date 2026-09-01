@@ -21,8 +21,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strconv"
-	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	"k8s.io/apimachinery/pkg/api/equality"
@@ -39,10 +37,15 @@ import (
 )
 
 // syncModulePackageVersions ensures a version object for every module package
-// the old stack carries: embedded modules come out complete with the disk
-// metadata and schemas, deployed and pending releases become draft stubs.
+// the old stack carries: embedded modules and the global one come out complete
+// with the disk metadata and schemas, deployed and pending releases become
+// draft stubs.
 func (s *syncer) syncModulePackageVersions(ctx context.Context) error {
 	if err := s.syncVersionsFromImage(ctx); err != nil {
+		return err
+	}
+
+	if err := s.syncGlobalVersion(ctx); err != nil {
 		return err
 	}
 
@@ -99,12 +102,6 @@ func (s *syncer) ensureEmbeddedVersion(ctx context.Context, dirName, version str
 
 	meta := def.ConvertToStatusMetadata()
 
-	// an embedded module carries its weight in the directory name prefix, which
-	// the definition file usually omits
-	if meta.Weight == 0 {
-		meta.Weight = weightFromDirName(dirName)
-	}
-
 	settingsRaw, valuesRaw, err := loader.LoadEmbeddedSchemas(moduleDir)
 	if err != nil {
 		s.logger.Warn("module dir holds no readable schemas, skip its package version",
@@ -130,20 +127,54 @@ func (s *syncer) ensureEmbeddedVersion(ctx context.Context, dirName, version str
 	return s.ensureFilled(ctx, name, spec, meta, schemas)
 }
 
-// weightFromDirName parses the "<weight>-<name>" contract of the embedded
-// modules dir; a name without the prefix yields zero.
-func weightFromDirName(dirName string) int32 {
-	prefix, _, found := strings.Cut(dirName, "-")
-	if !found {
-		return 0
+// syncGlobalVersion ensures the complete version of the global module, which
+// the image ships like an embedded one and names the same way.
+//
+// It differs from an embedded module in what disk can tell about it: the global
+// hooks dir holds no definition file - the hooks are compiled into the binary -
+// so the metadata stays empty and only the settings and values schemas are
+// filled. An empty metadata object rather than none keeps every reader that
+// reaches into it, such as the exclusive group and stage getters, off a nil
+// dereference. The version is written even when the dir yields no schemas at
+// all: the image always ships them, and the package and the version are what
+// the module controller gates registration on, so withholding them over an
+// unreadable dir would strand the global Module rather than degrade it.
+func (s *syncer) syncGlobalVersion(ctx context.Context) error {
+	version := app.EmbeddedPackageVersion(s.deckhouseVersion)
+
+	name := v1alpha1.MakeModulePackageVersionName(repositoryNameEmbedded, packageNameGlobal, version)
+	if !s.validName(name, packageNameGlobal) {
+		return nil
 	}
 
-	weight, err := strconv.Atoi(prefix)
+	settingsRaw, valuesRaw, err := loader.LoadGlobalSchemas(s.globalHooksDir)
 	if err != nil {
-		return 0
+		s.logger.Warn("global hooks dir holds no readable schemas, skip its package version",
+			slog.String("dir", s.globalHooksDir), log.Err(err))
+
+		return nil
 	}
 
-	return int32(weight)
+	schemas, err := v1alpha1.ParsePackageSchemas(settingsRaw, valuesRaw)
+	if err != nil {
+		s.logger.Warn("global schemas do not parse, skip its package version",
+			slog.String("dir", s.globalHooksDir), log.Err(err))
+
+		return nil
+	}
+
+	// no repository offers the global package either, so the sync creates its catalog entry
+	if err := s.ensureModulePackageExists(ctx, packageNameGlobal); err != nil {
+		return err
+	}
+
+	spec := v1alpha1.ModulePackageVersionSpec{
+		PackageName:           packageNameGlobal,
+		PackageRepositoryName: repositoryNameEmbedded,
+		PackageVersion:        version,
+	}
+
+	return s.ensureFilled(ctx, name, spec, new(v1alpha1.ModulePackageVersionStatusMetadata), schemas)
 }
 
 // syncVersionsFromReleases ensures a draft stub for every deployed or pending release.
@@ -196,7 +227,7 @@ func (s *syncer) specForRelease(release *v1alpha1.ModuleRelease) (string, v1alph
 	}
 
 	version := "v" + parsed.String()
-	repository := repositoryNameForSource(source)
+	repository := RepositoryNameForSource(source)
 
 	name := v1alpha1.MakeModulePackageVersionName(repository, moduleName, version)
 	if !s.validName(name, moduleName) {

@@ -62,6 +62,13 @@ spec:
                   Versions the release channels of each repository point to, keyed by repository name and then
                   by release channel name.
                 type: object
+              usedBy:
+                description: Information about module using this package.
+                properties:
+                  version:
+                    description: Version of the package used by this module.
+                    type: string
+                type: object
             type: object
         type: object
         x-doc-examples:

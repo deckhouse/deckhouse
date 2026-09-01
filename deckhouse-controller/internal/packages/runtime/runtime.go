@@ -586,8 +586,11 @@ func (r *Runtime) scheduleGlobal(enabled []string) {
 		}
 	}
 
-	settings, _ := r.packages.GetPendingSettings(r.global.GetName())
-	r.queueService.Enqueue(ctx, r.global.GetName(), taskconfigure.NewTask(r.global, settings, 0, nelm.Managed, r.status, r.logger))
+	// Late-bound, as for every other package: the settings a Module handed over through
+	// UpdateGlobalSettings since the last pass are picked up here, and their schema version
+	// with them, so the conversions in the global hooks dir apply.
+	settings, settingsVersion := r.packages.GetPendingSettings(r.global.GetName())
+	r.queueService.Enqueue(ctx, r.global.GetName(), taskconfigure.NewTask(r.global, settings, settingsVersion, nelm.Managed, r.status, r.logger))
 
 	// Enable initializes and syncs the global hooks; its OnStartup step is a no-op
 	// because global has no OnStartup hooks. globalrun then runs BeforeAll, ensures

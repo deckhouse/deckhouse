@@ -145,7 +145,7 @@ func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, lo
 		return nil, fmt.Errorf("register deckhouse controller metrics: %w", err)
 	}
 
-	manager, err := pkgruntime.Build(runtime.GetClient(), dc, ms, logger)
+	manager, err := pkgruntime.Build(runtime.GetClient(), nil, dc, ms, logger)
 	if err != nil {
 		return nil, fmt.Errorf("create runtime: %w", err)
 	}
@@ -165,7 +165,7 @@ func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, lo
 		return nil, fmt.Errorf("register module controller: %w", err)
 	}
 
-	err = application.RegisterController(synced, runtime, manager, logger)
+	err = application.RegisterController(runtime, manager, nil, logger)
 	if err != nil {
 		return nil, fmt.Errorf("register application controller: %w", err)
 	}
@@ -191,17 +191,6 @@ func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, lo
 	}
 
 	settingsCh := make(chan addonutils.Values, 1)
-
-	// if serveWebhooks {
-	// 	// GetWebhookServer, not the server above: this call adds it to the runnables.
-	// 	validation.RegisterAdmissionHandlers(
-	// 		runtime.GetWebhookServer(),
-	// 		runtime.GetClient(),
-	// 		manager,
-	// 		ms,
-	// 		settingsContainer,
-	// 	)
-	// }
 
 	return &Controller{
 		ctrl: runtime,
@@ -356,7 +345,7 @@ func (c *Controller) Start(ctx context.Context) error {
 	// object, and the user module sources their repositories, while the
 	// controllers still wait for the sync. Runs after the resolver, so a
 	// deployed duplicate it superseded no longer counts.
-	if err := pkgsync.Sync(ctx, c.ctrl.GetAPIReader(), c.ctrl.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, c.logger.Named("pkgsync")); err != nil {
+	if err := pkgsync.Sync(ctx, c.ctrl.GetAPIReader(), c.ctrl.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, app.GlobalHooksDir, c.logger.Named("pkgsync")); err != nil {
 		return fmt.Errorf("sync package objects: %w", err)
 	}
 

@@ -87,7 +87,7 @@ func TestSyncVersionsFromImage(t *testing.T) {
 		s, cl := newTestSyncer(t, "v1.80.0", dir)
 		require.NoError(t, s.sync(ctx))
 
-		assert.Empty(t, listVersionNames(t, cl))
+		assert.Empty(t, listModuleVersionNames(t, cl))
 	})
 
 	t.Run("multi-type schema fields parse", func(t *testing.T) {
@@ -230,7 +230,7 @@ func TestSyncVersionsFromImage(t *testing.T) {
 		s, cl := newTestSyncer(t, "v1.80.0", dir)
 		require.NoError(t, s.sync(ctx))
 
-		assert.Empty(t, listVersionNames(t, cl))
+		assert.Empty(t, listModuleVersionNames(t, cl))
 	})
 
 	t.Run("completes an existing draft in place", func(t *testing.T) {
@@ -306,6 +306,119 @@ func TestSyncVersionsFromImage(t *testing.T) {
 	})
 }
 
+func TestSyncGlobalVersion(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("creates a complete version from the legacy openapi files", func(t *testing.T) {
+		globalDir := t.TempDir()
+		writeLegacyOpenAPI(t, globalDir,
+			"type: object\nproperties:\n  modules:\n    type: object\n",
+			"type: object\nproperties:\n  discovery:\n    type: object\n")
+
+		s, cl := newTestSyncerWithGlobal(t, "v1.80.0", t.TempDir(), globalDir)
+		require.NoError(t, s.sync(ctx))
+
+		mpv := getVersion(t, cl, "embedded-global-v1.80.0")
+		assert.Equal(t, "global", mpv.Spec.PackageName)
+		assert.Equal(t, "embedded", mpv.Spec.PackageRepositoryName)
+		assert.Equal(t, "v1.80.0", mpv.Spec.PackageVersion)
+		assert.False(t, mpv.IsDraft(), "the global version must come out complete")
+		assert.True(t, mpv.IsLegacy())
+
+		require.NotNil(t, mpv.Status.PackageSchemas)
+		require.NotNil(t, mpv.Status.PackageSchemas.SettingsSchema)
+		assert.Contains(t, mpv.Status.PackageSchemas.SettingsSchema.OpenAPIV3Schema.Properties, "modules")
+		require.NotNil(t, mpv.Status.PackageSchemas.ValuesSchema)
+		assert.Contains(t, mpv.Status.PackageSchemas.ValuesSchema.OpenAPIV3Schema.Properties, "discovery")
+
+		cond := metautils.FindStatusCondition(mpv.Status.Conditions, v1alpha1.ModulePackageVersionConditionTypeMetadataLoaded)
+		require.NotNil(t, cond)
+		assert.Equal(t, metav1.ConditionTrue, cond.Status)
+	})
+
+	t.Run("carries empty metadata", func(t *testing.T) {
+		globalDir := t.TempDir()
+		writeLegacyOpenAPI(t, globalDir, "type: object\n", "")
+
+		s, cl := newTestSyncerWithGlobal(t, "v1.80.0", t.TempDir(), globalDir)
+		require.NoError(t, s.sync(ctx))
+
+		mpv := getVersion(t, cl, "embedded-global-v1.80.0")
+		require.NotNil(t, mpv.Status.PackageMetadata, "an empty object, not none: readers reach into it")
+		assert.Equal(t, new(v1alpha1.ModulePackageVersionStatusMetadata), mpv.Status.PackageMetadata,
+			"the global hooks dir holds no definition to fill any of it from")
+	})
+
+	t.Run("creates the catalog entry no repository offers", func(t *testing.T) {
+		globalDir := t.TempDir()
+		writeLegacyOpenAPI(t, globalDir, "type: object\n", "")
+
+		s, cl := newTestSyncerWithGlobal(t, "v1.80.0", t.TempDir(), globalDir)
+		require.NoError(t, s.sync(ctx))
+
+		pkg := getPackage(t, cl, "global")
+		assert.Equal(t, map[string]string{"heritage": "deckhouse"}, pkg.Labels)
+	})
+
+	t.Run("prefers settings.yaml over the legacy name", func(t *testing.T) {
+		globalDir := t.TempDir()
+		writeLegacyOpenAPI(t, globalDir, "type: object\nproperties:\n  legacy:\n    type: string\n", "")
+		writeOpenAPI(t, globalDir, "type: object\nproperties:\n  modern:\n    type: string\n", "")
+
+		s, cl := newTestSyncerWithGlobal(t, "v1.80.0", t.TempDir(), globalDir)
+		require.NoError(t, s.sync(ctx))
+
+		mpv := getVersion(t, cl, "embedded-global-v1.80.0")
+		require.NotNil(t, mpv.Status.PackageSchemas.SettingsSchema)
+		assert.Contains(t, mpv.Status.PackageSchemas.SettingsSchema.OpenAPIV3Schema.Properties, "modern")
+	})
+
+	t.Run("a dir holding no schemas still names the package and the version", func(t *testing.T) {
+		s, cl := newTestSyncerWithGlobal(t, "v1.80.0", t.TempDir(), t.TempDir())
+		require.NoError(t, s.sync(ctx))
+
+		// the image always ships the schemas; withholding the objects over a dir that
+		// somehow holds none would leave the module controller unable to register global
+		mpv := getVersion(t, cl, "embedded-global-v1.80.0")
+		assert.Nil(t, mpv.Status.PackageSchemas, "no schemas on disk, none in the status")
+		assert.False(t, mpv.IsDraft(), "nothing is left to fill in, so the version is complete")
+		assert.NotEmpty(t, getPackage(t, cl, "global"))
+	})
+
+	t.Run("a missing global hooks dir still names the package and the version", func(t *testing.T) {
+		s, cl := newTestSyncerWithGlobal(t, "v1.80.0", t.TempDir(), filepath.Join(t.TempDir(), "absent"))
+		require.NoError(t, s.sync(ctx))
+
+		mpv := getVersion(t, cl, "embedded-global-v1.80.0")
+		assert.Nil(t, mpv.Status.PackageSchemas)
+	})
+
+	t.Run("a broken schema skips the version", func(t *testing.T) {
+		globalDir := t.TempDir()
+		writeLegacyOpenAPI(t, globalDir, "{not a schema", "")
+
+		s, cl := newTestSyncerWithGlobal(t, "v1.80.0", t.TempDir(), globalDir)
+		require.NoError(t, s.sync(ctx))
+
+		assert.Empty(t, listVersionNames(t, cl), "an unparsable schema is a broken image, not an empty one")
+		assert.Empty(t, listPackageNames(t, cl), "no version, no catalog entry either")
+	})
+
+	t.Run("keeps a version matching the disk untouched", func(t *testing.T) {
+		globalDir := t.TempDir()
+		writeLegacyOpenAPI(t, globalDir, "type: object\n", "")
+
+		s, cl := newTestSyncerWithGlobal(t, "v1.80.0", t.TempDir(), globalDir)
+		require.NoError(t, s.sync(ctx))
+		before := getVersion(t, cl, "embedded-global-v1.80.0")
+
+		require.NoError(t, s.sync(ctx))
+
+		after := getVersion(t, cl, before.Name)
+		assert.Equal(t, before.ResourceVersion, after.ResourceVersion, "a no-change pass rewrites nothing")
+	})
+}
+
 func TestSyncVersionsFromReleases(t *testing.T) {
 	ctx := context.Background()
 
@@ -322,7 +435,7 @@ func TestSyncVersionsFromReleases(t *testing.T) {
 			"deckhouse-modules-parca-v1.4.3",
 			"deckhouse-modules-console-v1.60.1",
 			"external-foo-v2.0.0",
-		}, listVersionNames(t, cl))
+		}, listModuleVersionNames(t, cl))
 
 		mpv := getVersion(t, cl, "deckhouse-modules-parca-v1.4.3")
 		assert.Equal(t, "parca", mpv.Spec.PackageName)
@@ -347,7 +460,7 @@ func TestSyncVersionsFromReleases(t *testing.T) {
 
 		require.NoError(t, s.sync(ctx))
 
-		assert.Empty(t, listVersionNames(t, cl))
+		assert.Empty(t, listModuleVersionNames(t, cl))
 	})
 
 	t.Run("keeps an existing version untouched", func(t *testing.T) {

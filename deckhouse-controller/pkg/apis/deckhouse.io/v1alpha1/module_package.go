@@ -68,6 +68,10 @@ type ModulePackage struct {
 
 // ModulePackageStatus reports the repositories offering the package.
 type ModulePackageStatus struct {
+	// Information about module using this package.
+	// +optional
+	UsedBy *ModulePackageStatusInstance `json:"usedBy,omitempty"`
+
 	// List of repository names where this module package is available.
 	// +optional
 	AvailableRepositories []string `json:"availableRepositories,omitempty"`
@@ -76,6 +80,65 @@ type ModulePackageStatus struct {
 	// by release channel name.
 	// +optional
 	ReleaseChannels PackageReleaseChannels `json:"releaseChannels,omitempty"`
+}
+
+// ModulePackageStatusInstance identifies module using the package, and at which version.
+type ModulePackageStatusInstance struct {
+	// Version of the package used by this module.
+	// +optional
+	Version string `json:"version,omitempty"`
+}
+
+// IsModuleInstalled reports whether a module is recorded as using this package.
+func (m *ModulePackage) IsModuleInstalled() bool {
+	return m.Status.UsedBy != nil && m.Status.UsedBy.Version != ""
+}
+
+// GetModuleVersion returns the version the module uses, or an empty string if none is recorded.
+func (m *ModulePackage) GetModuleVersion() string {
+	if m.Status.UsedBy == nil {
+		return ""
+	}
+
+	return m.Status.UsedBy.Version
+}
+
+// UpdateModuleVersion updates the version for an installed module. Returns true if updated.
+func (m *ModulePackage) UpdateModuleVersion(version string) bool {
+	if m.Status.UsedBy == nil || m.Status.UsedBy.Version == version {
+		return false
+	}
+
+	m.Status.UsedBy.Version = version
+
+	return true
+}
+
+// AddInstalledModule records the module as using this package at the given version, and
+// reports whether that changed the status. A module package is named after its module, so
+// re-adding refreshes the recorded version instead of adding a second entry.
+func (m *ModulePackage) AddInstalledModule(version string) bool {
+	if m.IsModuleInstalled() {
+		return m.UpdateModuleVersion(version)
+	}
+
+	m.Status.UsedBy = &ModulePackageStatusInstance{
+		Version: version,
+	}
+
+	return true
+}
+
+// RemoveInstalledModule drops the module recorded as using this package, and reports
+// whether that changed the status.
+func (m *ModulePackage) RemoveInstalledModule() bool {
+	if !m.IsModuleInstalled() {
+		return false
+	}
+
+	m.Status.UsedBy = nil
+
+	return true
 }
 
 // +kubebuilder:object:root=true
