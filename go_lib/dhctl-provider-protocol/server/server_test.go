@@ -87,8 +87,8 @@ func TestConfigMerge(t *testing.T) {
 			// limits included, which is why NewConfig() is the base to start from.
 			name:     "lets the caller replace the protocol's options",
 			base:     server.NewConfig(),
-			other:    server.Config{Address: "/tmp/v.sock", GRPCOptions: []grpc.ServerOption{grpc.ConnectionTimeout(0)}},
-			want:     server.Config{Network: "unix", Address: "/tmp/v.sock"},
+			other:    server.Config{Address: "127.0.0.1:0", GRPCOptions: []grpc.ServerOption{grpc.ConnectionTimeout(0)}},
+			want:     server.Config{Network: server.DefaultNetwork, Address: "127.0.0.1:0"},
 			wantOpts: 1,
 		},
 	}
@@ -110,17 +110,16 @@ func TestConfigMerge(t *testing.T) {
 
 func TestStart(t *testing.T) {
 	tests := []struct {
-		name         string
-		services     int
-		omitAddress  bool
-		wantStartErr bool
+		name        string
+		network     string // empty means the protocol's default, tcp
+		services    int
+		omitAddress bool
 	}{
 		{
-			// The caller allocates the socket path; there is no default to fall
-			// back on.
-			name:         "refuses to start without an address",
-			omitAddress:  true,
-			wantStartErr: true,
+			// A caller that names no address gets loopback on a port the kernel
+			// picks, and reads it back from Addr.
+			name:        "falls back to the default address",
+			omitAddress: true,
 		},
 		{
 			// A server with no action serves nothing but still listens: a caller
@@ -131,13 +130,29 @@ func TestStart(t *testing.T) {
 			name:     "registers every service it is given",
 			services: 2,
 		},
+		{
+			// dhctl dials loopback, but the protocol takes a unix socket too and a
+			// caller may switch to it.
+			name:    "listens on a unix socket too",
+			network: "unix",
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
+			network := test.network
+			if network == "" {
+				network = server.DefaultNetwork
+			}
+
 			address := ""
-			if !test.omitAddress {
+
+			switch {
+			case test.omitAddress:
+			case network == "unix":
 				address = socketPath(t)
+			default:
+				address = loopbackAddress(t)
 			}
 
 			registrars := make([]*countingService, test.services)
@@ -148,17 +163,7 @@ func TestStart(t *testing.T) {
 				services = append(services, registrars[i])
 			}
 
-			running, err := server.Start(server.Config{Address: address}, services...)
-
-			if test.wantStartErr {
-				if err == nil {
-					_ = running.Stop()
-					t.Fatal("Start() = nil, want an error")
-				}
-
-				return
-			}
-
+			running, err := server.Start(server.Config{Network: test.network, Address: address}, services...)
 			if err != nil {
 				t.Fatalf("Start() = %v", err)
 			}
@@ -169,9 +174,20 @@ func TestStart(t *testing.T) {
 				}
 			}
 
-			// The socket exists by the time Start returns, so a caller may connect
+			// Addr is the whole point of the default address: the port is the
+			// kernel's, so this is the only way to learn where to dial.
+			addr := running.Addr()
+			if addr == nil {
+				t.Fatal("Addr() = nil, want the listening address")
+			}
+
+			if test.omitAddress && !strings.HasPrefix(addr.String(), "127.0.0.1:") {
+				t.Errorf("Addr() = %s, want a loopback address", addr)
+			}
+
+			// The listener is up by the time Start returns, so a caller may connect
 			// right away.
-			conn, err := net.Dial("unix", address)
+			conn, err := net.Dial(addr.Network(), addr.String())
 			if err != nil {
 				t.Fatalf("Dial() = %v", err)
 			}
@@ -210,6 +226,26 @@ func (s *countingService) calls() int {
 	defer s.mu.Unlock()
 
 	return s.registered
+}
+
+// loopbackAddress reserves a loopback port and hands it back, the way the host picks
+// one before spawning a validator. The window between the close and the server's bind
+// is the same race the host lives with.
+func loopbackAddress(t *testing.T) string {
+	t.Helper()
+
+	listener, err := net.Listen(server.DefaultNetwork, "127.0.0.1:0")
+	if err != nil {
+		t.Fatalf("Listen() = %v", err)
+	}
+
+	address := listener.Addr().String()
+
+	if err := listener.Close(); err != nil {
+		t.Fatalf("Close() = %v", err)
+	}
+
+	return address
 }
 
 // socketPath builds a path outside t.TempDir, which spells the test's name into it

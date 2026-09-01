@@ -24,6 +24,7 @@ import (
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 )
 
@@ -33,6 +34,7 @@ const (
 	// NodeGroup, InstanceClass and credential Secret of a cluster.
 	MaxMessageSize = 8 * 1024 * 1024
 	DefaultNetwork = "tcp"
+	DefaultAddress = "127.0.0.1:0"
 )
 
 // Service registers itself on a gRPC server. Each wire version of an action
@@ -52,6 +54,7 @@ type Config struct {
 func NewConfig() Config {
 	return Config{
 		Network: DefaultNetwork,
+		Address: DefaultAddress,
 		GRPCOptions: []grpc.ServerOption{
 			grpc.MaxRecvMsgSize(MaxMessageSize),
 			grpc.MaxSendMsgSize(MaxMessageSize),
@@ -102,6 +105,7 @@ func Start(config Config, services ...Service) (*Server, error) {
 	for _, service := range services {
 		service.Register(grpcServer)
 	}
+	reflection.Register(grpcServer)
 
 	listener, err := net.Listen(config.Network, config.Address)
 	if err != nil {
@@ -110,6 +114,7 @@ func Start(config Config, services ...Service) (*Server, error) {
 
 	s := &Server{
 		srv:       grpcServer,
+		addr:      listener.Addr(),
 		serveDone: make(chan error, 1),
 	}
 
@@ -121,9 +126,18 @@ func Start(config Config, services ...Service) (*Server, error) {
 
 type Server struct {
 	srv       *grpc.Server
+	addr      net.Addr
 	serveDone chan error
 	stopOnce  sync.Once
 	stopErr   error
+}
+
+func (s *Server) Addr() net.Addr {
+	if s == nil {
+		return nil
+	}
+
+	return s.addr
 }
 
 func (s *Server) Stop() error {

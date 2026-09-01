@@ -36,7 +36,7 @@ func newServeCmd() *cobra.Command {
 		Long: `Serve implements the validate action of the dhctl provider validator protocol.
 
 dhctl starts this command with the address it has chosen, calls it once and stops it
-with SIGTERM. There is no default address: the caller picks one per run.`,
+with SIGTERM. Without --address it serves on loopback on a port the kernel picks.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			validator, err := server.Start(
@@ -57,7 +57,7 @@ with SIGTERM. There is no default address: the caller picks one per run.`,
 		},
 	}
 
-	cmd.Flags().StringVar(&cfg.address, "address", "",
+	cmd.Flags().StringVar(&cfg.address, "address", server.DefaultAddress,
 		"address to serve on: host:port, or a socket path when --network=unix")
 	cmd.Flags().StringVar(&cfg.network, "network", server.DefaultNetwork,
 		"network to serve on: unix or tcp")

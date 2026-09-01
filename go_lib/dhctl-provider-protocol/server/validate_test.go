@@ -36,22 +36,14 @@ func TestValidateService(t *testing.T) {
 	tests := []struct {
 		name           string
 		validator      validatorFunc // nil registers no service
-		omitAddress    bool
 		input          validatev1.Input
 		stopBeforeCall bool
-		wantStartErr   bool
 		wantCode       codes.Code
 		wantMessage    string
 		wantErrors     string
 		wantWarnings   []string
 		wantCalled     bool
 	}{
-		{
-			name:         "refuses to start without an address",
-			validator:    validConfiguration,
-			omitAddress:  true,
-			wantStartErr: true,
-		},
 		{
 			name:         "carries violations to the caller",
 			validator:    violations,
@@ -128,22 +120,9 @@ func TestValidateService(t *testing.T) {
 					})))
 			}
 
-			address := ""
-			if !test.omitAddress {
-				address = socketPath(t)
-			}
-
-			running, err := server.Start(server.Config{Address: address}, services...)
-
-			if test.wantStartErr {
-				if err == nil {
-					_ = running.Stop()
-					t.Fatal("Start() = nil, want an error")
-				}
-
-				return
-			}
-
+			// No address: the default puts the server on loopback and Addr says
+			// which port it got.
+			running, err := server.Start(server.Config{}, services...)
 			if err != nil {
 				t.Fatalf("Start() = %v", err)
 			}
@@ -156,7 +135,7 @@ func TestValidateService(t *testing.T) {
 				}
 			})
 
-			validator := connect(t, address)
+			validator := connect(t, running.Addr().String())
 
 			if test.stopBeforeCall {
 				if err := running.Stop(); err != nil {
@@ -242,12 +221,12 @@ func bootstrapInput() validatev1.Input {
 	return validatev1.Input{ProviderName: "dvp", Operation: validatev1.OperationBootstrap}
 }
 
-// connect talks to the server the way dhctl would: over the wire, so the conversions
-// and the statuses are exercised too.
+// connect talks to the server the way dhctl would: over the wire on loopback, so the
+// conversions and the statuses are exercised too.
 func connect(t *testing.T, address string) client.ValidateClient {
 	t.Helper()
 
-	conn, err := grpc.NewClient("unix://"+address, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(address, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		t.Fatalf("NewClient() = %v", err)
 	}
