@@ -8,7 +8,7 @@
 # - Only loopback is built, the other plugins from the repository are not needed
 # - The /cni/loopback path in the agent image must not be changed
 # #####################################################################
-
+---
 {{- $cniVersion := include "get_oss_version_by_id" (list "cni-plugins" $) }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-src
