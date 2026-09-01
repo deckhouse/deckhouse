@@ -196,6 +196,19 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		require.NoError(suite.T(), err)
 	})
 
+	suite.Run("module dir is absent, docs are in the downloaded dir", func() {
+		require.NoError(suite.T(), os.RemoveAll(filepath.Join(suite.tmpDir, "modules", "testmodule")))
+		suite.prepareDownloadedModuleOpenAPI("testmodule", "v1.0.0")
+		dependency.TestDC.HTTPClient.DoMock.Set(docBuildResponder("/api/v1/doc/testmodule/v1.0.0"))
+
+		suite.setupController("downloaded-dir.yaml")
+
+		md := suite.getModuleDocumentation("testmodule")
+		res, err := suite.ctr.createOrUpdateReconcile(context.TODO(), md)
+		assert.False(suite.T(), res.Requeue)
+		require.NoError(suite.T(), err)
+	})
+
 	suite.Run("with empty dir", func() {
 		suite.setupController("empty-dir.yaml")
 
@@ -210,6 +223,15 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 // has something to read.
 func (suite *ControllerTestSuite) prepareModuleOpenAPI(module string) {
 	openapiDir := filepath.Join(suite.tmpDir, "modules", module, "openapi")
+	_ = os.MkdirAll(openapiDir, 0o777)
+	_ = os.WriteFile(filepath.Join(openapiDir, "config-values.yaml"), []byte("{}"), 0o666)
+}
+
+// prepareDownloadedModuleOpenAPI lays the openapi config down into the module's
+// downloaded dir <module>/<version>, the one the module is unpacked into before
+// being mounted at modules/<module>.
+func (suite *ControllerTestSuite) prepareDownloadedModuleOpenAPI(module, version string) {
+	openapiDir := filepath.Join(suite.tmpDir, module, version, "openapi")
 	_ = os.MkdirAll(openapiDir, 0o777)
 	_ = os.WriteFile(filepath.Join(openapiDir, "config-values.yaml"), []byte("{}"), 0o666)
 }
