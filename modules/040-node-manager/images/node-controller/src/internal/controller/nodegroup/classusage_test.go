@@ -23,8 +23,10 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -48,7 +50,7 @@ func newClassSweeper(c client.Client) *Status {
 const (
 	testClassKind  = "D8TestInstanceClass"
 	otherClassKind = "D8OtherInstanceClass"
-	// absentClassKind is registered by the envtest spec without a CRD behind it.
+	// absentClassKind stands for a kind that is registered with no CRD installed for it.
 	absentClassKind = "D8AbsentInstanceClass"
 )
 
@@ -159,7 +161,7 @@ func TestSyncInstanceClassConsumers(t *testing.T) {
 		if !found || !slices.Equal(got, []string{"alpha", "beta"}) {
 			t.Errorf("used consumers = %v (found=%v), want [alpha beta]", got, found)
 		}
-		// An absent field already reads as "no consumers", so the spare class is not written to.
+		// The spare class has no consumers and no field, so the sweep leaves it alone.
 		if got, found = classConsumers(t, c, testClassKind, "spare"); found {
 			t.Errorf("spare consumers = %v, want the field left absent", got)
 		}
@@ -282,7 +284,7 @@ func TestSyncInstanceClassConsumers(t *testing.T) {
 			instanceClass(testClassKind, "used", nil),
 			classUsageNodeGroup("alpha", testClassKind, "used", v1.NodeTypeCloudEphemeral),
 		).WithInterceptorFuncs(interceptor.Funcs{
-			// The apiserver accepts the write and prunes the field away, as the DVP CRD does.
+			// An accepted write that does not come back: the DVP-CRD case.
 			Patch: func(context.Context, client.WithWatch, client.Object, client.Patch, ...client.PatchOption) error {
 				patches++
 				return nil
@@ -301,6 +303,95 @@ func TestSyncInstanceClassConsumers(t *testing.T) {
 		}
 	})
 
+	t.Run("a kind whose crd is missing is skipped and the rest still run", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(classUsageScheme(t)).WithObjects(
+			registrationSecret("cloud-provider-absent", map[string][]byte{
+				nodecommon.InstanceClassKindKey:       []byte(absentClassKind),
+				nodecommon.InstanceClassAPIVersionKey: []byte("v1"),
+			}),
+			testClassRegistration(),
+			instanceClass(testClassKind, "used", nil),
+			classUsageNodeGroup("alpha", testClassKind, "used", v1.NodeTypeCloudEphemeral),
+		).WithInterceptorFuncs(interceptor.Funcs{
+			// What a RESTMapper answers for a kind whose CRD is not installed.
+			List: func(ctx context.Context, cl client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+				if u, ok := list.(*unstructured.UnstructuredList); ok && u.GetKind() == absentClassKind+"List" {
+					return &meta.NoKindMatchError{
+						GroupKind:        schema.GroupKind{Group: v1.GroupVersion.Group, Kind: absentClassKind},
+						SearchedVersions: []string{"v1"},
+					}
+				}
+				return cl.List(ctx, list, opts...)
+			},
+		}).Build()
+
+		// The absent kind sorts before the served one, so it is swept first.
+		if err := newClassSweeper(c).syncInstanceClassConsumers(context.Background()); err != nil {
+			t.Fatalf("sync: %v", err)
+		}
+
+		got, found := classConsumers(t, c, testClassKind, "used")
+		if !found || !slices.Equal(got, []string{"alpha"}) {
+			t.Errorf("used consumers = %v (found=%v), want [alpha]", got, found)
+		}
+	})
+
+	t.Run("a sweep arriving during another one is coalesced and the sweep re-runs", func(t *testing.T) {
+		blocked, release := make(chan struct{}), make(chan struct{})
+		var blockOnce, releaseOnce sync.Once
+		unblock := func() { releaseOnce.Do(func() { close(release) }) }
+		t.Cleanup(unblock)
+
+		ng := classUsageNodeGroup("alpha", testClassKind, "used", v1.NodeTypeCloudEphemeral)
+		c := fake.NewClientBuilder().WithScheme(classUsageScheme(t)).WithObjects(
+			testClassRegistration(),
+			instanceClass(testClassKind, "used", nil),
+			ng,
+		).WithInterceptorFuncs(interceptor.Funcs{
+			List: func(ctx context.Context, cl client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+				if _, ok := list.(*unstructured.UnstructuredList); ok {
+					blockOnce.Do(func() {
+						close(blocked)
+						<-release
+					})
+				}
+				return cl.List(ctx, list, opts...)
+			},
+		}).Build()
+
+		r := newClassSweeper(c)
+		first := make(chan struct{})
+		go func() {
+			defer close(first)
+			r.sweepInstanceClassConsumers(context.Background())
+		}()
+		<-blocked
+
+		// The running sweep already holds a NodeGroup snapshot taken before this delete.
+		if err := c.Delete(context.Background(), ng); err != nil {
+			t.Fatalf("delete nodegroup: %v", err)
+		}
+
+		second := make(chan struct{})
+		go func() {
+			defer close(second)
+			r.sweepInstanceClassConsumers(context.Background())
+		}()
+		select {
+		case <-second:
+		case <-time.After(5 * time.Second):
+			t.Fatal("the second sweep waited for the running one instead of marking it dirty")
+		}
+
+		unblock()
+		<-first
+
+		got, found := classConsumers(t, c, testClassKind, "used")
+		if !found || len(got) != 0 {
+			t.Errorf("used consumers = %v (found=%v), want an empty list from the re-run sweep", got, found)
+		}
+	})
+
 	t.Run("concurrent sweeps do not race", func(t *testing.T) {
 		c := fake.NewClientBuilder().WithScheme(classUsageScheme(t)).WithObjects(
 			testClassRegistration(),
@@ -313,15 +404,15 @@ func TestSyncInstanceClassConsumers(t *testing.T) {
 			},
 		}).Build()
 
+		// Through the production entry point: it is the coalescing wrapper, not the sweep body,
+		// that keeps two sweeps off the unstorable-kinds memo at once.
 		sweeper := newClassSweeper(c)
 		var wg sync.WaitGroup
 		for range 8 {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				if err := sweeper.syncInstanceClassConsumers(context.Background()); err != nil {
-					t.Errorf("sync: %v", err)
-				}
+				sweeper.sweepInstanceClassConsumers(context.Background())
 			}()
 		}
 		wg.Wait()

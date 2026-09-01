@@ -40,13 +40,39 @@ type usageKey struct {
 	Name string
 }
 
+// sweepInstanceClassConsumers coalesces the calls of the reconcile workers: at most one sweep
+// runs at a time, a caller that finds one running marks it dirty and returns, and the running
+// sweep repeats once per dirty mark, so no event goes unswept and no worker waits on another.
+func (r *Status) sweepInstanceClassConsumers(ctx context.Context) {
+	r.sweepMu.Lock()
+	if r.sweeping {
+		r.sweepDirty = true
+		r.sweepMu.Unlock()
+		return
+	}
+	r.sweeping = true
+	r.sweepMu.Unlock()
+
+	for {
+		if err := r.syncInstanceClassConsumers(ctx); err != nil {
+			log.FromContext(ctx).Error(err, "sync instance class consumers")
+		}
+
+		r.sweepMu.Lock()
+		if !r.sweepDirty {
+			r.sweeping = false
+			r.sweepMu.Unlock()
+			return
+		}
+		r.sweepDirty = false
+		r.sweepMu.Unlock()
+	}
+}
+
 // syncInstanceClassConsumers publishes status.nodeGroupConsumers on every registered
 // InstanceClass: the sorted names of the CloudEphemeral NodeGroups pointing at it. A class that
 // lost its consumers is cleared to an empty list; a class that never had the field keeps none.
 func (r *Status) syncInstanceClassConsumers(ctx context.Context) error {
-	r.sweepMu.Lock()
-	defer r.sweepMu.Unlock()
-
 	gvks, err := nodecommon.RegisteredInstanceClassGVKs(ctx, r.Client)
 	if err != nil {
 		return fmt.Errorf("list registered instance class kinds: %w", err)
@@ -73,8 +99,7 @@ func (r *Status) syncInstanceClassConsumers(ctx context.Context) error {
 		key := usageKey{Kind: ref.Kind, Name: ref.Name}
 		consumers[key] = append(consumers[key], ng.Name)
 	}
-	// Sorted so the published order does not depend on the list order, which would otherwise
-	// churn the patch and the printer column on every pass.
+	// Sorted, so the published order does not depend on the order the NodeGroups were listed in.
 	for key := range consumers {
 		slices.Sort(consumers[key])
 	}
@@ -96,7 +121,8 @@ func (r *Status) applyConsumersForKind(ctx context.Context, gvk schema.GroupVers
 	list := &unstructured.UnstructuredList{}
 	list.SetGroupVersionKind(gvk.GroupVersion().WithKind(gvk.Kind + "List"))
 	if err := r.Client.List(ctx, list); err != nil {
-		// A provider can register before its CRD is served; the kind joins on a later pass.
+		// A provider can register before its CRD is served: skip the kind, the next sweep
+		// retries it.
 		if meta.IsNoMatchError(err) {
 			log.FromContext(ctx).V(1).Info("instance class kind is not served yet", "gvk", gvk.String())
 			return nil
@@ -126,16 +152,16 @@ func (r *Status) applyConsumersForKind(ctx context.Context, gvk schema.GroupVers
 			errs = append(errs, fmt.Errorf("marshal consumers patch for %s/%s: %w", gvk.Kind, item.GetName(), err))
 			continue
 		}
-		// A body of our own rather than MergeFrom: the patch must carry this one field and
-		// nothing else the read brought along.
+		// The body is built here rather than diffed from the object, so the patch carries this
+		// one field and nothing else.
 		if err := r.Client.Patch(ctx, item, client.RawPatch(types.MergePatchType, body)); err != nil {
 			errs = append(errs, fmt.Errorf("patch %s/%s consumers: %w", gvk.Kind, item.GetName(), err))
 			continue
 		}
 
-		// The DVP CRD declares no status in its schema, so the apiserver accepts the patch and
-		// prunes it (modules/030-cloud-provider-dvp/crds/instance_class.yaml). Such a kind can
-		// never converge, so it is dropped once an accepted write is seen not to stick.
+		// An accepted write that does not come back in the response is a kind that will not
+		// keep the field, so it is dropped after this one attempt. The DVP CRD schema declares
+		// no status at all: modules/030-cloud-provider-dvp/crds/instance_class.yaml.
 		stored, _, err := unstructured.NestedStringSlice(item.Object, "status", "nodeGroupConsumers")
 		if err != nil || !slices.Equal(stored, desired) {
 			r.markConsumersUnstorable(ctx, gvk)
@@ -150,5 +176,9 @@ func (r *Status) markConsumersUnstorable(ctx context.Context, gvk schema.GroupVe
 		r.unstorableConsumers = map[schema.GroupVersionKind]bool{}
 	}
 	r.unstorableConsumers[gvk] = true
-	log.FromContext(ctx).V(1).Info("instance class kind does not store consumers, skipping it", "gvk", gvk.String())
+	log.FromContext(ctx).Info("instance class kind does not keep status.nodeGroupConsumers, skipping it from now on: "+
+		"its classes publish no consumers and the deletion webhook stops blocking their deletion "+
+		"(internal/webhook/instanceclass_webhook.go reads len(status.nodeGroupConsumers)); "+
+		"the CRD schema has to declare the field, as in modules/030-cloud-provider-dvp/crds/instance_class.yaml it does not",
+		"gvk", gvk.String())
 }
