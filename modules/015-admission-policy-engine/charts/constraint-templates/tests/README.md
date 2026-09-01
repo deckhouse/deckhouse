@@ -9,6 +9,8 @@ This directory contains the testing infrastructure for Gatekeeper ConstraintTemp
 | [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md)       | **Comprehensive testing guide (EN)** — everything a newcomer needs to write tests from scratch |
 | [docs/TESTING_GUIDE_RU.md](docs/TESTING_GUIDE_RU.md) | **Comprehensive testing guide (RU)** — everything a newcomer needs to write tests from scratch |
 | [AGENTS.md](AGENTS.md)                               | AI agent prompt for writing constraint tests                                                   |
+| [tools/bench_rules.py](tools/bench_rules.py)         | Per-constraint Rego evaluation **time** benchmark (which rule is slow)                        |
+| [tools/rulebench.sh](tools/rulebench.sh)             | Per-constraint Rego evaluation **time + memory** benchmark (which rule allocates)              |
 
 ## How tests are organized
 
@@ -26,7 +28,12 @@ Validation schemas for all test YAML files:
 tests/
 ├── docs/                     # Human documentation
 ├── openapi/                  # JSON Schema validation files
-├── tools/constraint_testgen/ # Go code generator tool
+├── tools/
+│   ├── constraint_testgen/   # Go code generator tool
+│   ├── bench_rules.py        # Per-rule evaluation time benchmark (opa eval CLI)
+│   ├── rulebench.sh          # Wrapper for rulebench/ (works around its module boundary)
+│   └── rulebench/            # Per-rule evaluation time + memory benchmark (OPA Go SDK,
+│                              # own go.mod/go.sum - isolated from the repo's root module)
 ├── test_cases/
 │   ├── run_all_tests.sh      # Master test runner
 │   ├── libs/                 # Library with test files (simlink to templates/libs folder)
@@ -182,4 +189,114 @@ go run $constraint_testgen coverage -tests-root ./ -format table
 ```
 
 For detailed instructions, see [docs/TESTING_GUIDE.md](docs/TESTING_GUIDE.md).
+
+## Measuring per-rule cost (time & memory)
+
+Gatekeeper's own metrics (`gatekeeper_audit_duration_seconds`,
+`gatekeeper_validation_request_duration_seconds`) are aggregates across every
+active constraint in one audit run / webhook call — they cannot tell you which
+individual rule is expensive, and they carry no memory signal at all. Two
+tools isolate each ConstraintTemplate's compiled Rego and benchmark it
+directly, reusing the constraint's own `rendered/test_samples/` fixtures —
+the same objects already used to verify correctness with `gator verify`.
+
+Both share the same caveat: sample selection is filename-convention based
+(`*allowed*` / `*disallowed*`, falling back to the first two files) — treat
+absolute numbers as approximate, the relative ranking across constraints is
+the useful part. See each tool's docstring/doc-comment for details.
+
+**What these numbers are (and aren't) representative of.** Both tools
+measure exactly what the **webhook** does for one admission review: one
+object, one constraint, no cluster listing. They are directly representative
+of webhook/admission-request latency. They are **not** representative of the
+**audit** loop's total cost: measured on a live cluster with
+[`../../../../tools/audit_cycle_cost.sh`](../../../../tools/audit_cycle_cost.sh)
+(diffs Go-runtime counters across one real audit cycle's exact start/end, no
+`--enable-pprof` needed), pure Rego-eval time was under 2% of that cycle's
+actual CPU — the rest is API discovery (scales with CRD count in the
+cluster), LIST calls, JSON unmarshalling, and per-constraint status PATCH
+writes, none of which these two tools exercise. Use `bench_rules.py`/
+`rulebench` to compare rules against each other and to reason about the
+webhook path; use `audit_cycle_cost.sh` (and
+[`../../../../tools/live_resource_check.sh`](../../../../tools/live_resource_check.sh)
+for the broader live picture) for the real audit-loop cost. See
+`../../../../tools/README.md` for that whole live-cluster side of the
+toolkit, with a worked example.
+
+### Time: `tools/bench_rules.py`
+
+Shells out to `opa eval --count N --metrics` for a single
+`data.<pkg>.violation` evaluation. No extra dependencies beyond `opa` itself.
+
+```bash
+# Generate rendered/ fixtures first (see "Quick start" above), then:
+cd modules/015-admission-policy-engine/charts/constraint-templates/tests/test_cases/constraints
+python3 ../../tools/bench_rules.py . --count 500 --format table
+python3 ../../tools/bench_rules.py . --count 500 --format table -j 8   # faster, more CPU contention
+python3 ../../tools/bench_rules.py . --count 500 --format table -j 1   # slowest, most precise
+```
+
+Output is a table sorted by evaluation cost (µs), with a one-off Rego
+compile-time column for reference — that maps to Gatekeeper's own
+`gatekeeper_constraint_template_ingestion_duration_seconds` and is paid once
+per template, not per request. Constraints are benchmarked concurrently
+(`-j`/`--jobs`, default `min(4, cpu_count)`) since each `opa eval` subprocess
+mostly waits on its child process — measured on a full 39-constraint,
+`--count 500` run: ~2m27s sequential (`-j1`) vs ~1m02s at the default job
+count. Pass `-j1` if you want zero cross-benchmark CPU contention (ranking
+stays the same either way; only the exact µs values get a bit noisier under
+concurrency, similar to normal run-to-run jitter).
+
+### Time + memory: `tools/rulebench`
+
+`opa eval`'s metrics are timers only — no bytes-allocated or allocs-per-op
+signal. [`tools/rulebench`](tools/rulebench/main.go) is a small standalone Go
+tool (own `go.mod`/`go.sum`, so it depends on
+`github.com/open-policy-agent/opa` without touching the repo's root
+`go.mod`) that builds a `rego.PreparedEvalQuery` once per constraint with
+OPA's own Go SDK and drives it with `testing.Benchmark` + `ReportAllocs()`,
+reporting `ns/op`, `B/op` (bytes allocated per evaluation), and `allocs/op` —
+the real heap pressure a rule puts on Gatekeeper's garbage collector, not
+just wall-clock time.
+
+`rulebench` has its own `go.mod`, so plain `go run ../../tools/rulebench .`
+fails from outside that module (`main module ... does not contain package
+...`) — `go run <relative-path>` resolves in the module of the *current*
+directory, and `test_cases/constraints` belongs to the repo's root module,
+not to rulebench's. Use the [`tools/rulebench.sh`](tools/rulebench.sh)
+wrapper instead, which resolves the constraints-root argument to an absolute
+path and `cd`s into rulebench's own module directory before running it:
+
+```bash
+# Generate rendered/ fixtures first (see "Quick start" above), then:
+cd modules/015-admission-policy-engine/charts/constraint-templates/tests/test_cases/constraints
+../../tools/rulebench.sh .                   # all constraints
+../../tools/rulebench.sh . allow-privileged  # one constraint
+```
+
+Like `bench_rules.py`, constraints run concurrently by default (up to
+`min(4, cpu_count)` at once) — results are collected and printed in original
+order afterwards, so concurrent runs never interleave output. Unlike
+`bench_rules.py`'s `-j1`, there's no CLI flag for forcing sequential
+execution (Go doesn't fork a fresh process per benchmark the way the CLI
+tool does), so use the `RULEBENCH_JOBS` environment variable instead:
+`RULEBENCH_JOBS=1 ../../tools/rulebench.sh .`. Concurrency's effect here is
+smaller than for `bench_rules.py` (`testing.Benchmark` calibrates against
+wall-clock time, so contention mostly makes each benchmark's calibration
+noisier rather than proportionally faster — measured: ~13% faster at the
+default job count) — but importantly, `B/op` and `allocs/op` are exact
+integer counters unaffected by contention either way; only `ns/op` gets
+noisier, and only by about as much as normal run-to-run jitter already is.
+
+In practice the two tools agree closely: the rules that are slowest under
+`opa eval` are also the ones allocating the most under `rulebench` — both
+point at the same root cause (per-container SPE exception resolution), which
+is good corroboration from two independent measurement paths. The memory
+spread across rules is also notably narrower than the time spread — most
+rules share a common per-eval allocation floor from OPA itself, on top of
+which SPE-heavy rules add a large multiplier. A third, independent
+corroboration exists too: on a live cluster, the observed audit-cycle
+allocation count divided by (synced objects × active constraints) landed
+almost exactly in this range — see the worked example in
+`../../../../tools/README.md`.
 
