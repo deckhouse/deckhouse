@@ -1,6 +1,6 @@
 module rulebench
 
-go 1.26.5
+go 1.26.4
 
 require (
 	github.com/open-policy-agent/opa v1.15.1
