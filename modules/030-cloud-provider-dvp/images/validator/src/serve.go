@@ -15,7 +15,9 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/spf13/cobra"
 
@@ -27,7 +29,7 @@ type serveConfig struct {
 	address string
 }
 
-func newServeCmd() *cobra.Command {
+func newServeCmd(logger *slog.Logger) *cobra.Command {
 	cfg := serveConfig{}
 
 	cmd := &cobra.Command{
@@ -39,15 +41,31 @@ dhctl starts this command with the address it has chosen, calls it once and stop
 with SIGTERM. Without --address it serves on loopback on a port the kernel picks.`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
+			ctx := cmd.Context()
+
 			validator, err := server.Start(
 				server.Config{Network: cfg.network, Address: cfg.address},
 				server.NewValidateService(Validator{}),
 			)
+
 			if err != nil {
 				return fmt.Errorf("start validator: %w", err)
 			}
 
-			<-cmd.Context().Done()
+			addr := validator.Addr()
+			if addr != nil {
+				logger.Info("Serve validator", "address", addr.String())
+			} else {
+				logger.Info("Serve validator")
+			}
+
+			<-ctx.Done()
+			reason := ctx.Err()
+			if reason == context.Canceled {
+				logger.Info("shutting down", "reason", "signal")
+			} else {
+				logger.Info("shutting down", "reason", reason)
+			}
 
 			if err := validator.Stop(); err != nil {
 				return fmt.Errorf("stop validator: %w", err)

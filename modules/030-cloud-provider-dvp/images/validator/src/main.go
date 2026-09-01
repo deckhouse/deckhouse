@@ -17,11 +17,14 @@ package main
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/spf13/cobra"
+
+	dkplog "github.com/deckhouse/deckhouse/pkg/log"
 )
 
 func main() {
@@ -33,6 +36,19 @@ func main() {
 }
 
 func newRootCmd() *cobra.Command {
+	logLevel := slog.Level(
+		dkplog.LogLevelFromStr(
+			os.Getenv("LOG_LEVEL"),
+		),
+	)
+
+	loghandler := dkplog.NewLogger(
+		dkplog.WithHandlerType(dkplog.JSONHandlerType),
+		dkplog.WithLevel(logLevel),
+	).Named("validator").Handler()
+
+	logger := slog.New(loghandler)
+
 	cmd := &cobra.Command{
 		Use:           "validator",
 		Short:         "DVP cloud provider validator for dhctl",
@@ -45,7 +61,7 @@ func newRootCmd() *cobra.Command {
 
 	cmd.SetContext(setupSignalHandler(context.Background()))
 	cmd.AddCommand(
-		newServeCmd(),
+		newServeCmd(logger),
 	)
 
 	return cmd
