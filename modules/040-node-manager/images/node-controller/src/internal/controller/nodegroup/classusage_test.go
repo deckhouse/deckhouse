@@ -18,8 +18,13 @@ package nodegroup
 
 import (
 	"context"
+	"errors"
 	"slices"
+	"strings"
+	"sync"
 	"testing"
+
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,14 +34,22 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/register"
 )
+
+func newClassSweeper(c client.Client) *Status {
+	return &Status{Base: register.Base{Client: c}}
+}
 
 const (
 	testClassKind  = "D8TestInstanceClass"
 	otherClassKind = "D8OtherInstanceClass"
+	// absentClassKind is registered by the envtest spec without a CRD behind it.
+	absentClassKind = "D8AbsentInstanceClass"
 )
 
 func classUsageScheme(t *testing.T) *runtime.Scheme {
@@ -117,8 +130,8 @@ func getClass(t *testing.T, c client.Client, kind, name string) *unstructured.Un
 	return u
 }
 
-// classConsumers returns status.nodeGroupConsumers and whether the field is present at all: an
-// absent field and an empty list are different answers to the deletion webhook.
+// classConsumers returns status.nodeGroupConsumers and whether the field is present at all: the
+// sweep writes an empty list only over a field that is there, so presence is part of the answer.
 func classConsumers(t *testing.T, c client.Client, kind, name string) ([]string, bool) {
 	t.Helper()
 	got, found, err := unstructured.NestedStringSlice(getClass(t, c, kind, name).Object, "status", "nodeGroupConsumers")
@@ -138,7 +151,7 @@ func TestSyncInstanceClassConsumers(t *testing.T) {
 			classUsageNodeGroup("alpha", testClassKind, "used", v1.NodeTypeCloudEphemeral),
 		).Build()
 
-		if err := syncInstanceClassConsumers(context.Background(), c); err != nil {
+		if err := newClassSweeper(c).syncInstanceClassConsumers(context.Background()); err != nil {
 			t.Fatalf("sync: %v", err)
 		}
 
@@ -146,9 +159,9 @@ func TestSyncInstanceClassConsumers(t *testing.T) {
 		if !found || !slices.Equal(got, []string{"alpha", "beta"}) {
 			t.Errorf("used consumers = %v (found=%v), want [alpha beta]", got, found)
 		}
-		got, found = classConsumers(t, c, testClassKind, "spare")
-		if !found || len(got) != 0 {
-			t.Errorf("spare consumers = %v (found=%v), want an empty list", got, found)
+		// An absent field already reads as "no consumers", so the spare class is not written to.
+		if got, found = classConsumers(t, c, testClassKind, "spare"); found {
+			t.Errorf("spare consumers = %v, want the field left absent", got)
 		}
 	})
 
@@ -159,13 +172,12 @@ func TestSyncInstanceClassConsumers(t *testing.T) {
 			classUsageNodeGroup("static", testClassKind, "used", v1.NodeTypeStatic),
 		).Build()
 
-		if err := syncInstanceClassConsumers(context.Background(), c); err != nil {
+		if err := newClassSweeper(c).syncInstanceClassConsumers(context.Background()); err != nil {
 			t.Fatalf("sync: %v", err)
 		}
 
-		got, found := classConsumers(t, c, testClassKind, "used")
-		if !found || len(got) != 0 {
-			t.Errorf("used consumers = %v (found=%v), want an empty list", got, found)
+		if got, found := classConsumers(t, c, testClassKind, "used"); found {
+			t.Errorf("used consumers = %v, want the field left absent", got)
 		}
 	})
 
@@ -177,13 +189,12 @@ func TestSyncInstanceClassConsumers(t *testing.T) {
 			classUsageNodeGroup("worker", otherClassKind, "used", v1.NodeTypeCloudEphemeral),
 		).Build()
 
-		if err := syncInstanceClassConsumers(context.Background(), c); err != nil {
+		if err := newClassSweeper(c).syncInstanceClassConsumers(context.Background()); err != nil {
 			t.Fatalf("sync: %v", err)
 		}
 
-		got, found := classConsumers(t, c, testClassKind, "used")
-		if !found || len(got) != 0 {
-			t.Errorf("used consumers = %v (found=%v), want an empty list", got, found)
+		if got, found := classConsumers(t, c, testClassKind, "used"); found {
+			t.Errorf("used consumers = %v, want the field left absent", got)
 		}
 	})
 
@@ -196,7 +207,7 @@ func TestSyncInstanceClassConsumers(t *testing.T) {
 			classUsageNodeGroup("alpha", testClassKind, "used", v1.NodeTypeCloudEphemeral),
 		).Build()
 
-		if err := syncInstanceClassConsumers(context.Background(), c); err != nil {
+		if err := newClassSweeper(c).syncInstanceClassConsumers(context.Background()); err != nil {
 			t.Fatalf("sync: %v", err)
 		}
 
@@ -211,13 +222,109 @@ func TestSyncInstanceClassConsumers(t *testing.T) {
 			classUsageNodeGroup("alpha", testClassKind, "used", v1.NodeTypeCloudEphemeral),
 		).Build()
 
-		if err := syncInstanceClassConsumers(context.Background(), c); err != nil {
+		if err := newClassSweeper(c).syncInstanceClassConsumers(context.Background()); err != nil {
 			t.Fatalf("sync: %v", err)
 		}
 
 		if _, found := classConsumers(t, c, testClassKind, "used"); found {
 			t.Error("used got status.nodeGroupConsumers with no provider registered")
 		}
+	})
+
+	t.Run("a class that lost its consumers is cleared to an empty list", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(classUsageScheme(t)).WithObjects(
+			testClassRegistration(),
+			instanceClass(testClassKind, "used", []string{"alpha"}),
+		).Build()
+
+		if err := newClassSweeper(c).syncInstanceClassConsumers(context.Background()); err != nil {
+			t.Fatalf("sync: %v", err)
+		}
+
+		// NestedStringSlice errors on null, so this also pins the empty list to [].
+		got, found := classConsumers(t, c, testClassKind, "used")
+		if !found || len(got) != 0 {
+			t.Errorf("used consumers = %v (found=%v), want an empty list", got, found)
+		}
+	})
+
+	t.Run("a failing class does not abandon the rest of its kind", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(classUsageScheme(t)).WithObjects(
+			testClassRegistration(),
+			instanceClass(testClassKind, "aaa-bad", nil),
+			instanceClass(testClassKind, "zzz-good", nil),
+			classUsageNodeGroup("alpha", testClassKind, "aaa-bad", v1.NodeTypeCloudEphemeral),
+			classUsageNodeGroup("beta", testClassKind, "zzz-good", v1.NodeTypeCloudEphemeral),
+		).WithInterceptorFuncs(interceptor.Funcs{
+			Patch: func(ctx context.Context, cl client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+				if obj.GetName() == "aaa-bad" {
+					return apierrors.NewConflict(schema.GroupResource{Resource: "d8testinstanceclasses"}, obj.GetName(), errors.New("conflict"))
+				}
+				return cl.Patch(ctx, obj, patch, opts...)
+			},
+		}).Build()
+
+		err := newClassSweeper(c).syncInstanceClassConsumers(context.Background())
+		if err == nil || !strings.Contains(err.Error(), "aaa-bad") {
+			t.Fatalf("err = %v, want the aaa-bad failure reported", err)
+		}
+
+		got, found := classConsumers(t, c, testClassKind, "zzz-good")
+		if !found || !slices.Equal(got, []string{"beta"}) {
+			t.Errorf("zzz-good consumers = %v (found=%v), want [beta] despite the failure on aaa-bad", got, found)
+		}
+	})
+
+	t.Run("a kind that prunes the patch is dropped after one attempt", func(t *testing.T) {
+		patches := 0
+		c := fake.NewClientBuilder().WithScheme(classUsageScheme(t)).WithObjects(
+			testClassRegistration(),
+			instanceClass(testClassKind, "used", nil),
+			classUsageNodeGroup("alpha", testClassKind, "used", v1.NodeTypeCloudEphemeral),
+		).WithInterceptorFuncs(interceptor.Funcs{
+			// The apiserver accepts the write and prunes the field away, as the DVP CRD does.
+			Patch: func(context.Context, client.WithWatch, client.Object, client.Patch, ...client.PatchOption) error {
+				patches++
+				return nil
+			},
+		}).Build()
+
+		sweeper := newClassSweeper(c)
+		for range 2 {
+			if err := sweeper.syncInstanceClassConsumers(context.Background()); err != nil {
+				t.Fatalf("sync: %v", err)
+			}
+		}
+
+		if patches != 1 {
+			t.Errorf("patches = %d, want 1: a kind that never stores the field must be dropped", patches)
+		}
+	})
+
+	t.Run("concurrent sweeps do not race", func(t *testing.T) {
+		c := fake.NewClientBuilder().WithScheme(classUsageScheme(t)).WithObjects(
+			testClassRegistration(),
+			instanceClass(testClassKind, "used", nil),
+			classUsageNodeGroup("alpha", testClassKind, "used", v1.NodeTypeCloudEphemeral),
+		).WithInterceptorFuncs(interceptor.Funcs{
+			// Pruned writes, so every worker also touches the unstorable-kinds memo.
+			Patch: func(context.Context, client.WithWatch, client.Object, client.Patch, ...client.PatchOption) error {
+				return nil
+			},
+		}).Build()
+
+		sweeper := newClassSweeper(c)
+		var wg sync.WaitGroup
+		for range 8 {
+			wg.Add(1)
+			go func() {
+				defer wg.Done()
+				if err := sweeper.syncInstanceClassConsumers(context.Background()); err != nil {
+					t.Errorf("sync: %v", err)
+				}
+			}()
+		}
+		wg.Wait()
 	})
 
 	t.Run("an up to date class is not patched", func(t *testing.T) {
@@ -228,7 +335,7 @@ func TestSyncInstanceClassConsumers(t *testing.T) {
 		).Build()
 
 		before := getClass(t, c, testClassKind, "used").GetResourceVersion()
-		if err := syncInstanceClassConsumers(context.Background(), c); err != nil {
+		if err := newClassSweeper(c).syncInstanceClassConsumers(context.Background()); err != nil {
 			t.Fatalf("sync: %v", err)
 		}
 

@@ -41,10 +41,13 @@ type usageKey struct {
 }
 
 // syncInstanceClassConsumers publishes status.nodeGroupConsumers on every registered
-// InstanceClass: the sorted names of the CloudEphemeral NodeGroups pointing at it. A class
-// nobody references gets an empty list, which is what the deletion webhook reads as "free".
-func syncInstanceClassConsumers(ctx context.Context, c client.Client) error {
-	gvks, err := nodecommon.RegisteredInstanceClassGVKs(ctx, c)
+// InstanceClass: the sorted names of the CloudEphemeral NodeGroups pointing at it. A class that
+// lost its consumers is cleared to an empty list; a class that never had the field keeps none.
+func (r *Status) syncInstanceClassConsumers(ctx context.Context) error {
+	r.sweepMu.Lock()
+	defer r.sweepMu.Unlock()
+
+	gvks, err := nodecommon.RegisteredInstanceClassGVKs(ctx, r.Client)
 	if err != nil {
 		return fmt.Errorf("list registered instance class kinds: %w", err)
 	}
@@ -53,7 +56,7 @@ func syncInstanceClassConsumers(ctx context.Context, c client.Client) error {
 	}
 
 	ngList := &v1.NodeGroupList{}
-	if err := c.List(ctx, ngList); err != nil {
+	if err := r.Client.List(ctx, ngList); err != nil {
 		return fmt.Errorf("list nodegroups: %w", err)
 	}
 
@@ -78,17 +81,21 @@ func syncInstanceClassConsumers(ctx context.Context, c client.Client) error {
 
 	var errs []error
 	for _, gvk := range gvks {
-		if err := applyConsumersForKind(ctx, c, gvk, consumers); err != nil {
+		if err := r.applyConsumersForKind(ctx, gvk, consumers); err != nil {
 			errs = append(errs, err)
 		}
 	}
 	return errors.Join(errs...)
 }
 
-func applyConsumersForKind(ctx context.Context, c client.Client, gvk schema.GroupVersionKind, consumers map[usageKey][]string) error {
+func (r *Status) applyConsumersForKind(ctx context.Context, gvk schema.GroupVersionKind, consumers map[usageKey][]string) error {
+	if r.unstorableConsumers[gvk] {
+		return nil
+	}
+
 	list := &unstructured.UnstructuredList{}
 	list.SetGroupVersionKind(gvk.GroupVersion().WithKind(gvk.Kind + "List"))
-	if err := c.List(ctx, list); err != nil {
+	if err := r.Client.List(ctx, list); err != nil {
 		// A provider can register before its CRD is served; the kind joins on a later pass.
 		if meta.IsNoMatchError(err) {
 			log.FromContext(ctx).V(1).Info("instance class kind is not served yet", "gvk", gvk.String())
@@ -97,6 +104,7 @@ func applyConsumersForKind(ctx context.Context, c client.Client, gvk schema.Grou
 		return fmt.Errorf("list %s at %s: %w", gvk.Kind, gvk.Version, err)
 	}
 
+	var errs []error
 	for i := range list.Items {
 		item := &list.Items[i]
 		desired := consumers[usageKey{Kind: gvk.Kind, Name: item.GetName()}]
@@ -104,9 +112,10 @@ func applyConsumersForKind(ctx context.Context, c client.Client, gvk schema.Grou
 			desired = make([]string, 0)
 		}
 
-		// A malformed field falls through to the patch that repairs it.
-		current, found, err := unstructured.NestedStringSlice(item.Object, "status", "nodeGroupConsumers")
-		if err == nil && found && slices.Equal(current, desired) {
+		// An absent field compares equal to an empty list, so a class nobody references is
+		// left alone. A malformed one falls through to the patch that repairs it.
+		current, _, err := unstructured.NestedStringSlice(item.Object, "status", "nodeGroupConsumers")
+		if err == nil && slices.Equal(current, desired) {
 			continue
 		}
 
@@ -114,13 +123,32 @@ func applyConsumersForKind(ctx context.Context, c client.Client, gvk schema.Grou
 			"status": map[string]any{"nodeGroupConsumers": desired},
 		})
 		if err != nil {
-			return fmt.Errorf("marshal consumers patch for %s/%s: %w", gvk.Kind, item.GetName(), err)
+			errs = append(errs, fmt.Errorf("marshal consumers patch for %s/%s: %w", gvk.Kind, item.GetName(), err))
+			continue
 		}
-		// RawPatch rather than MergeFrom: a merge patch built from the object would carry
-		// `annotations: null` and wipe the annotations of the class.
-		if err := c.Patch(ctx, item, client.RawPatch(types.MergePatchType, body)); err != nil {
-			return fmt.Errorf("patch %s/%s consumers: %w", gvk.Kind, item.GetName(), err)
+		// A body of our own rather than MergeFrom: the patch must carry this one field and
+		// nothing else the read brought along.
+		if err := r.Client.Patch(ctx, item, client.RawPatch(types.MergePatchType, body)); err != nil {
+			errs = append(errs, fmt.Errorf("patch %s/%s consumers: %w", gvk.Kind, item.GetName(), err))
+			continue
+		}
+
+		// The DVP CRD declares no status in its schema, so the apiserver accepts the patch and
+		// prunes it (modules/030-cloud-provider-dvp/crds/instance_class.yaml). Such a kind can
+		// never converge, so it is dropped once an accepted write is seen not to stick.
+		stored, _, err := unstructured.NestedStringSlice(item.Object, "status", "nodeGroupConsumers")
+		if err != nil || !slices.Equal(stored, desired) {
+			r.markConsumersUnstorable(ctx, gvk)
+			break
 		}
 	}
-	return nil
+	return errors.Join(errs...)
+}
+
+func (r *Status) markConsumersUnstorable(ctx context.Context, gvk schema.GroupVersionKind) {
+	if r.unstorableConsumers == nil {
+		r.unstorableConsumers = map[schema.GroupVersionKind]bool{}
+	}
+	r.unstorableConsumers[gvk] = true
+	log.FromContext(ctx).V(1).Info("instance class kind does not store consumers, skipping it", "gvk", gvk.String())
 }
