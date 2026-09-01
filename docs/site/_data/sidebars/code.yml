@@ -104,6 +104,10 @@ entries:
           ru: Интеграция с внешним Vault
         url: /code/documentation/user/external-vault.html
       - title:
+          en: DefectDojo integration
+          ru: Интеграция с DefectDojo
+        url: /code/documentation/user/defect-dojo.html
+      - title:
           en: External status checks
           ru: Внешние проверки статуса
         url: /code/documentation/user/external-status-checks.html
