@@ -110,19 +110,23 @@ Provider selection is in `meta_config_validator_provider.go` (`selectValidator`)
   (`external.NewBinaryValidator`); if the provider's schema is in candi, a default prefix check;
   otherwise an error.
 
-The external validator runs the bundle's `validator` binary as a subprocess. Contract in full:
-**[`go_lib/dhctl-provider-protocol/PROTOCOL.md`](../../../go_lib/dhctl-provider-protocol/PROTOCOL.md)**
-(types in `go_lib/dhctl-provider-protocol/types.go`). Summary:
+The external validator runs the bundle's `validator` binary as a subprocess and calls it over
+gRPC. Contract in full:
+**[`go_lib/dhctl-provider-protocol/README.md`](../../../go_lib/dhctl-provider-protocol/README.md)**
+(types in `go_lib/dhctl-provider-protocol/api/validate/v1`). Summary:
 
-- **Invocation:** `<download-root>/<provider>/validator validate`.
-- **Transport:** JSON `ValidateRequest` on **stdin**, JSON `ValidateResponse` on **stdout**;
-  stderr is ignored; exit code is always `0` (non-zero = the binary crashed).
-- **Input** (`ValidateInput`): `providerName`, `operation` (`bootstrap`/`converge`/`destroy`),
-  `clusterPrefix`, `layout`, `providerClusterConfiguration`, and `vars` (`CloudProviderVars`:
-  module `settings`, `nodeGroups`, `instanceClasses`, credential `secrets`) — the only channel
-  for provider resources.
-- **Output** (`ValidateResponse`): `{}` on success, `{"error": "..."}` on a validation failure.
-  Validation **never mutates** the config.
+- **Invocation:** `<download-root>/<provider>/validator serve --network=tcp --address=127.0.0.1:<port>`.
+  dhctl reserves a free loopback port per call, spawns the binary, waits for the address to
+  accept a connection, calls it once and stops it with `SIGTERM`.
+- **Transport:** gRPC, no TLS; stdout/stderr carry diagnostics only (stderr is logged at WARN).
+- **Input** (`validatev1.Input`, JSON inside `input_json`): `providerName`, `operation`
+  (`bootstrap`/`converge`/`destroy`), `clusterPrefix`, `layout`, `providerClusterConfiguration`,
+  and `vars` (`CloudProviderVars`: module `settings`, `nodeGroups`, `instanceClasses`, credential
+  `secrets`) — the only channel for provider resources.
+- **Output** (`validatev1.ValidateResponse`): `errors` block the operation, `warnings` are logged;
+  an empty response means valid. A failure of the validator itself is a gRPC status
+  (`InvalidArgument`, `Unimplemented`, `Internal`), never a violation. dhctl fails closed: any
+  status other than `OK` blocks the operation. Validation **never mutates** the config.
 
 `vcd`'s `legacyMode` rewrite is the one provider-side config mutation; it is **not** part of
 validation — it is an explicit `vcd.EnsureLegacyMode` call in the infrastructure layer
@@ -177,33 +181,34 @@ vmResource:
 
 ### Validator invocation
 
-dhctl runs `/tmp/dhctl/dvp/validator validate` and writes to its stdin:
+dhctl runs `/tmp/dhctl/dvp/validator serve --network=tcp --address=127.0.0.1:<port>` and calls
+`dhctl.provider.validate.v1.ValidateService/Validate` with this payload in `input_json`:
 
 ```json
 {
-  "input": {
-    "providerName": "dvp",
-    "operation": "bootstrap",
-    "clusterPrefix": "my-cluster",
+  "providerName": "dvp",
+  "operation": "bootstrap",
+  "clusterPrefix": "my-cluster",
+  "layout": "Standard",
+  "providerClusterConfiguration": {
+    "apiVersion": "deckhouse.io/v1",
+    "kind": "DVPClusterConfiguration",
     "layout": "Standard",
-    "providerClusterConfiguration": {
-      "apiVersion": "deckhouse.io/v1",
-      "kind": "DVPClusterConfiguration",
-      "layout": "Standard",
-      "provider": { "kubeconfigDataBase64": "eyJ...", "namespace": "team-d8-candi" }
-    },
-    "vars": {
-      "settings": { "region": "default" },
-      "nodeGroups": { "worker": { "replicas": 1 } },
-      "instanceClasses": { "worker": { "virtualMachine": { "cpu": { "cores": 4 } } } },
-      "secrets": { "credentials": { "kubeconfig": "..." } }
-    }
+    "provider": { "kubeconfigDataBase64": "eyJ...", "namespace": "team-d8-candi" }
+  },
+  "vars": {
+    "settings": { "region": "default" },
+    "nodeGroups": { "worker": { "replicas": 1 } },
+    "instanceClasses": { "worker": { "virtualMachine": { "cpu": { "cores": 4 } } } },
+    "secrets": { "credentials": { "kubeconfig": "..." } }
   }
 }
 ```
 
-Success — stdout `{}`, exit `0`. Validation failure — stdout `{"error": "namespace team-d8-candi
-not found"}`, exit `0`. A non-zero exit means the binary itself crashed.
+A valid configuration is an empty response. A failure comes back as
+`errors: [{path: "...", code: "...", message: "namespace team-d8-candi not found"}]`, which dhctl
+renders as `<path>: <message>` per line. A binary that exits before answering — an old one that
+does not know `serve`, for instance — blocks the operation.
 
 ### End-to-end flow (converge)
 
@@ -212,7 +217,8 @@ not found"}`, exit `0`. A non-zero exit means the binary itself crashed.
    points the `dvp` symlink at it. Nothing is written into `deckhouse/candi`.
 2. The provider is built (`fsprovider.GetDi`): `mergeBundleSettings` reads
    `/tmp/dhctl/dvp/terraform-manager/terraform_versions.yml` (+ `plan_rules.yml`) → `store["dvp"]`.
-3. `selectValidator("dvp")` finds `/tmp/dhctl/dvp/validator` → runs the validate protocol above.
+3. `selectValidator("dvp")` finds `/tmp/dhctl/dvp/validator` → spawns it on a loopback port and
+   runs the validate protocol above.
 4. `DownloadPlugin` links `/tmp/dhctl/dvp/terraform-manager/terraform-provider-kubernetes` as the
    opentofu plugin — no registry pull needed.
 
