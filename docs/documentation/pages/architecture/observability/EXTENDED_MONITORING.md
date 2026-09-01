@@ -33,7 +33,7 @@ The Level 2 C4 architecture of the [`extended-monitoring`](/modules/extended-mon
 
 The module consists of the following components:
 
-1. **Extended-monitoring-exporter**: Prometheus exporter that сollects and expounds metrics for free space and inodes on nodes, as well as for objects with a label `extended-monitoring.deckhouse.io/enabled =""` in the namespace. For more details about сonfiguration of extended-monitoring metrics, refer to the [corresponding documentation section](/modules/extended-monitoring/configuration.html). The module also contains Prometheus rules, based on which the Prometheus generates alerts. This allows you to detect and diagnose incidents faster.
+1. **Extended-monitoring-exporter**: Prometheus exporter that collects and expounds metrics for free space and inodes on nodes, as well as for objects with a label `extended-monitoring.deckhouse.io/enabled =""` in the namespace. For more details about configuration of extended-monitoring metrics, refer to the [corresponding documentation section](/modules/extended-monitoring/configuration.html). The module also contains Prometheus rules, based on which the Prometheus generates alerts. This allows you to detect and diagnose incidents faster.
 
    It consists of the following containers:
 
