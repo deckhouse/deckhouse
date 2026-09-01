@@ -24,8 +24,10 @@ variables:
       - "Zvirt"
       - "VCD"
       - "Huawei"
-      - "StaticPrivate"
-    description: "Cloud provider for e2e-framework (providers without CSE)."
+      - "Static"
+      - "DVPCSE"
+      - "StaticCSE"
+    description: "Cloud provider for e2e-framework."
 
   E2E_EDITION:
     value: "FE"
@@ -37,6 +39,7 @@ variables:
       - "BE"
       - "SE"
       - "SE-plus"
+      - "CSE"
     description: "Deckhouse edition to install (maps to build_* job / image tag suffix)."
 
   KUBERNETES_VERSION:
@@ -135,7 +138,7 @@ e2e-prestart:
 
 # ---------------------------------------------------------------------------
 # Per-provider jobs (PROVIDER values from e2e-framework CloudProviderFactory,
-# excluding *CSE* and Custom; Static omitted — no CI template).
+# excluding Custom).
 # ---------------------------------------------------------------------------
 
 # --- Yandex ---
@@ -484,7 +487,7 @@ e2e-static-private-create:
     - .e2e-static-private-create-cluster
     - .e2e-provider-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "StaticPrivate"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Static"
 
 e2e-static-private-delete:
   extends:
@@ -496,7 +499,7 @@ e2e-static-private-delete:
     - job: e2e-prestart
       artifacts: true
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "StaticPrivate"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Static"
 
 e2e-static-private-delete-auto:
   extends:
@@ -510,4 +513,72 @@ e2e-static-private-delete-auto:
       artifacts: true
     - job: e2e-static-private-create
   rules:
-    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "StaticPrivate"
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "Static"
+
+# --- StaticCSE ---
+e2e-static-cse-create:
+  extends:
+    - .e2e-static-cse-create-cluster
+    - .e2e-provider-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "StaticCSE"
+
+e2e-static-cse-delete:
+  extends:
+    - .e2e-static-cse-delete-cluster
+  stage: e2e-delete
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "StaticCSE"
+
+e2e-static-cse-delete-auto:
+  extends:
+    - .e2e-static-cse-delete-cluster
+  stage: e2e-delete
+  when: on_success
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-static-cse-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "StaticCSE"
+
+# --- DVPCSE ---
+e2e-dvp-cse-create:
+  extends:
+    - .e2e-dvp-cse-create-cluster
+    - .e2e-provider-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "DVPCSE"
+
+e2e-dvp-cse-delete:
+  extends:
+    - .e2e-dvp-cse-delete-cluster
+  stage: e2e-delete
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "DVPCSE"
+
+e2e-dvp-cse-delete-auto:
+  extends:
+    - .e2e-dvp-cse-delete-cluster
+  stage: e2e-delete
+  when: on_success
+  needs:
+    - job: e2e-ensure-build
+      artifacts: true
+    - job: e2e-prestart
+      artifacts: true
+    - job: e2e-dvp-cse-create
+  rules:
+    - if: $CI_PIPELINE_SOURCE =~ /^(web|api)$/ && $E2E_PROVIDER == "DVPCSE"
