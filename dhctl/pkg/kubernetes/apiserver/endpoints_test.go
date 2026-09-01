@@ -195,3 +195,132 @@ func TestGetReadyEndpoints(t *testing.T) {
 		endpoints,
 	)
 }
+
+func TestGetReadyHostsForNodes(t *testing.T) {
+	kubeCl := client.NewFakeKubernetesClient()
+
+	createNode := func(name, internalIP string) {
+		t.Helper()
+
+		_, err := kubeCl.CoreV1().Nodes().Create(
+			t.Context(),
+			&corev1.Node{
+				ObjectMeta: metav1.ObjectMeta{Name: name},
+				Status: corev1.NodeStatus{
+					Addresses: []corev1.NodeAddress{
+						{
+							Type:    corev1.NodeInternalIP,
+							Address: internalIP,
+						},
+					},
+				},
+			},
+			metav1.CreateOptions{},
+		)
+		require.NoError(t, err)
+	}
+
+	createReadyPod := func(name, nodeName, ip string) {
+		t.Helper()
+
+		_, err := kubeCl.CoreV1().
+			Pods("kube-system").
+			Create(
+				t.Context(),
+				&corev1.Pod{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      name,
+						Namespace: "kube-system",
+						Labels: map[string]string{
+							"component": "kube-apiserver",
+							"tier":      "control-plane",
+						},
+					},
+					Spec: corev1.PodSpec{
+						NodeName: nodeName,
+					},
+					Status: corev1.PodStatus{
+						PodIP: ip,
+						Conditions: []corev1.PodCondition{
+							{
+								Type:   corev1.PodReady,
+								Status: corev1.ConditionTrue,
+							},
+						},
+					},
+				},
+				metav1.CreateOptions{},
+			)
+		require.NoError(t, err)
+	}
+
+	createNode("master-0", "10.0.0.1")
+	createNode("master-1", "10.0.0.2")
+	createNode("master-2", "10.0.0.3")
+
+	createReadyPod(
+		"kube-apiserver-master-1",
+		"master-1",
+		"10.0.0.2",
+	)
+	createReadyPod(
+		"kube-apiserver-master-2",
+		"master-2",
+		"10.0.0.3",
+	)
+
+	portName := "https"
+	port := int32(6443)
+	ready := true
+
+	_, err := kubeCl.DiscoveryV1().
+		EndpointSlices("default").
+		Create(
+			t.Context(),
+			&discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "kubernetes",
+					Namespace: "default",
+				},
+				AddressType: discoveryv1.AddressTypeIPv4,
+				Endpoints: []discoveryv1.Endpoint{
+					{
+						Addresses: []string{"10.0.0.2"},
+						Conditions: discoveryv1.EndpointConditions{
+							Ready: &ready,
+						},
+					},
+					{
+						Addresses: []string{"10.0.0.3"},
+						Conditions: discoveryv1.EndpointConditions{
+							Ready: &ready,
+						},
+					},
+				},
+				Ports: []discoveryv1.EndpointPort{
+					{Name: &portName, Port: &port},
+				},
+			},
+			metav1.CreateOptions{},
+		)
+	require.NoError(t, err)
+
+	hosts, err := GetReadyHostsForNodes(
+		t.Context(),
+		kubeCl,
+		[]string{"master-2", "master-1"},
+	)
+	require.NoError(t, err)
+	require.Equal(t, []string{"10.0.0.2", "10.0.0.3"}, hosts)
+
+	_, err = GetReadyHostsForNodes(
+		t.Context(),
+		kubeCl,
+		[]string{"master-0"},
+	)
+	require.ErrorContains(
+		t,
+		err,
+		`control-plane node "master-0" has no ready API server endpoint`,
+	)
+}
