@@ -53,8 +53,8 @@ func (r *Status) sweepInstanceClassConsumers(ctx context.Context) {
 	r.sweeping = true
 	r.sweepMu.Unlock()
 
-	// From a defer, so a panic in the sweep leaves neither the flag set for the life of the pod
-	// nor the mark this pass consumed unswept: an unwound pass swept nothing.
+	// From a defer, so a panic in the sweep neither leaves the flag set for the life of the pod
+	// nor drops the mark this pass consumed: a pass that did not finish has to be repeated.
 	swept := false
 	defer func() {
 		r.sweepMu.Lock()
