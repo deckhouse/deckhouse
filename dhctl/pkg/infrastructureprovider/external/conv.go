@@ -17,7 +17,6 @@ package external
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
 
 	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 
@@ -48,27 +47,12 @@ func toWireInput(input config.ProviderInput) (validatev1.Input, error) {
 
 func violationsToString(violations []*validatev1.ViolationResponse) []string {
 	lines := make([]string, 0, len(violations))
-	for _, v := range violations {
-		lines = append(lines, violationToString(v))
+	for _, violation := range violations {
+		if violation.Path == "" {
+			lines = append(lines, violation.Message)
+		} else {
+			lines = append(lines, fmt.Sprintf("%s: %s", violation.Path, violation.Message))
+		}
 	}
 	return lines
-}
-
-func violationToString(violation *validatev1.ViolationResponse) string {
-	msg := violation.GetMessage()
-	path := violation.GetPath()
-	value := violation.GetValue()
-
-	var builder strings.Builder
-
-	if path != "" {
-		fmt.Fprintf(&builder, "%s: ", path)
-	}
-
-	builder.WriteString(msg)
-
-	if value != "" {
-		fmt.Fprintf(&builder, ", %q", value)
-	}
-	return builder.String()
 }

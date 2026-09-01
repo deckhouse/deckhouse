@@ -27,7 +27,6 @@ import (
 
 	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/client"
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
@@ -38,7 +37,6 @@ const (
 )
 
 func Validate(ctx context.Context, binaryPath string, input config.ProviderInput) error {
-	logger := dhlog.FromContext(ctx)
 	ctx, span := telemetry.StartSpan(ctx, "external.validate")
 	defer span.End()
 
@@ -60,12 +58,8 @@ func Validate(ctx context.Context, binaryPath string, input config.ProviderInput
 		return err
 	}
 
-	for _, warning := range violationsToString(resp.GetWarnings()) {
-		logger.WarnContext(ctx, fmt.Sprintf("provider %s validation warning: %s", input.ProviderName, warning))
-	}
-
-	if errs := violationsToString(resp.GetErrors()); len(errs) > 0 {
-		return fmt.Errorf("provider validation failed: %s", strings.Join(errs, "\n"))
+	if strErrors := violationsToString(resp.GetErrors()); len(strErrors) > 0 {
+		return fmt.Errorf("provider validation failed: %s", strings.Join(strErrors, "\n"))
 	}
 	return nil
 }
