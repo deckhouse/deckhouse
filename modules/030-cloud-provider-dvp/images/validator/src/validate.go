@@ -56,29 +56,28 @@ func validate(_ context.Context, input validatev1.Input) (cpvalapi.Result, error
 }
 
 func toResponse(result cpvalapi.Result) *validatev1.ValidateResponse {
-	resp := &validatev1.ValidateResponse{}
+	ret := &validatev1.ValidateResponse{}
 
 	for _, violation := range result.Errors() {
-		resp.Errors = append(resp.Errors, toViolation(violation))
+		ret.Errors = append(ret.Errors, toViolationResponse(violation))
 	}
 
 	for _, violation := range result.Warnings() {
-		resp.Warnings = append(resp.Warnings, toViolation(violation))
+		ret.Warnings = append(ret.Warnings, toViolationResponse(violation))
 	}
 
-	return resp
+	return ret
 }
 
-func toViolation(violation cpvalapi.Violation) *validatev1.ViolationResponse {
-	wire := &validatev1.ViolationResponse{
+func toViolationResponse(violation cpvalapi.Violation) *validatev1.ViolationResponse {
+	ret := &validatev1.ViolationResponse{
 		Path:    violation.Path,
 		Code:    violation.Code,
 		Message: violation.Message,
 	}
 
 	if violation.Value != nil {
-		wire.Value = fmt.Sprint(violation.Value)
+		ret.Value = fmt.Sprint(violation.Value)
 	}
-
-	return wire
+	return ret
 }
