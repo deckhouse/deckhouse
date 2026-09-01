@@ -35,6 +35,7 @@ import (
 	sigsyaml "sigs.k8s.io/yaml"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/network"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -308,6 +309,21 @@ func (r *ClusterReconciler) readClusterConfiguration(ctx context.Context) (*clus
 	cfg := &clusterConfiguration{}
 	if err := sigsyaml.Unmarshal(raw, cfg); err != nil {
 		return nil, fmt.Errorf("unmarshal cluster configuration: %w", err)
+	}
+
+	// The two CIDRs are being migrated to ModuleConfig control-plane-manager; ModuleConfig wins over
+	// the deprecated ClusterConfiguration field when set, so the CAPI Cluster's clusterNetwork keeps
+	// matching what the control plane actually runs with. Read via r.Client (cached), not
+	// r.APIReader: unlike the secret above, the cache now watches ModuleConfig cluster-wide.
+	mcNetwork, err := network.FromModuleConfig(ctx, r.Client)
+	if err != nil {
+		return nil, fmt.Errorf("resolve network settings: %w", err)
+	}
+	if mcNetwork.PodSubnetCIDR != "" {
+		cfg.PodSubnetCIDR = mcNetwork.PodSubnetCIDR
+	}
+	if mcNetwork.ServiceSubnetCIDR != "" {
+		cfg.ServiceSubnetCIDR = mcNetwork.ServiceSubnetCIDR
 	}
 
 	return cfg, nil

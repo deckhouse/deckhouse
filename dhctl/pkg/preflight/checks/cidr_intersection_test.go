@@ -50,7 +50,7 @@ func TestGetCidrFromMetaConfig(t *testing.T) {
 				},
 			},
 			expectError: true,
-			errorMsg:    "missing podSubnetCIDR field in ClusterConfiguration",
+			errorMsg:    "podSubnetCIDR is set neither in ModuleConfig control-plane-manager (spec.settings.network) nor in ClusterConfiguration",
 		},
 		{
 			metaConfig: &config.MetaConfig{
@@ -59,14 +59,14 @@ func TestGetCidrFromMetaConfig(t *testing.T) {
 				},
 			},
 			expectError: true,
-			errorMsg:    "missing serviceSubnetCIDR field in ClusterConfiguration",
+			errorMsg:    "serviceSubnetCIDR is set neither in ModuleConfig control-plane-manager (spec.settings.network) nor in ClusterConfiguration",
 		},
 		{
 			metaConfig: &config.MetaConfig{
 				ClusterConfig: map[string]json.RawMessage{},
 			},
 			expectError: true,
-			errorMsg:    "missing podSubnetCIDR field in ClusterConfiguration",
+			errorMsg:    "podSubnetCIDR is set neither in ModuleConfig control-plane-manager (spec.settings.network) nor in ClusterConfiguration",
 		},
 	}
 
@@ -177,7 +177,7 @@ func TestCheckCidrIntersection(t *testing.T) {
 				},
 			}},
 			wantErr: func(t assert.TestingT, err error, i ...any) bool {
-				return assert.ErrorContains(t, err, "missing podSubnetCIDR field in ClusterConfiguration")
+				return assert.ErrorContains(t, err, "podSubnetCIDR is set neither in ModuleConfig control-plane-manager (spec.settings.network) nor in ClusterConfiguration")
 			},
 		},
 		{
@@ -188,7 +188,7 @@ func TestCheckCidrIntersection(t *testing.T) {
 				},
 			}},
 			wantErr: func(t assert.TestingT, err error, i ...any) bool {
-				return assert.ErrorContains(t, err, "missing serviceSubnetCIDR field in ClusterConfiguration")
+				return assert.ErrorContains(t, err, "serviceSubnetCIDR is set neither in ModuleConfig control-plane-manager (spec.settings.network) nor in ClusterConfiguration")
 			},
 		},
 		{
@@ -304,7 +304,7 @@ func TestCheckCidrIntersectionStatic(t *testing.T) {
 				},
 			}},
 			wantErr: func(t assert.TestingT, err error, i ...any) bool {
-				return assert.ErrorContains(t, err, "missing podSubnetCIDR field in ClusterConfiguration")
+				return assert.ErrorContains(t, err, "podSubnetCIDR is set neither in ModuleConfig control-plane-manager (spec.settings.network) nor in ClusterConfiguration")
 			},
 		},
 		{
@@ -318,7 +318,7 @@ func TestCheckCidrIntersectionStatic(t *testing.T) {
 				},
 			}},
 			wantErr: func(t assert.TestingT, err error, i ...any) bool {
-				return assert.ErrorContains(t, err, "missing serviceSubnetCIDR field in ClusterConfiguration")
+				return assert.ErrorContains(t, err, "serviceSubnetCIDR is set neither in ModuleConfig control-plane-manager (spec.settings.network) nor in ClusterConfiguration")
 			},
 		},
 		{

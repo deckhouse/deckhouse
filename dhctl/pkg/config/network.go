@@ -144,18 +144,6 @@ func (m *MetaConfig) Network() NetworkSettings {
 	return out
 }
 
-// NetworkFromClusterConfiguration lists the parameters whose value still comes from the deprecated
-// ClusterConfiguration, for the bootstrap warning.
-func (m *MetaConfig) NetworkFromClusterConfiguration() []string {
-	var out []string
-	for _, p := range m.networkParams() {
-		if p.mc == "" && p.cc != "" {
-			out = append(out, p.name)
-		}
-	}
-	return out
-}
-
 // RequireNetwork fails when either CIDR is set in neither document.
 //
 // This obligation used to belong to the ClusterConfiguration schema, which listed both CIDRs as
