@@ -147,11 +147,13 @@ func CacheOptions() (cache.Options, client.Options) {
 			// No MachineHealthCheck entry: the controller only creates it and never reads it
 			// back, so an informer would never even start. Add a scope here if that changes.
 			newUnstructured("infrastructure.cluster.x-k8s.io", "v1alpha1", "DeckhouseControlPlane"): machineNS,
-			// The NodeGroup webhook reads only ModuleConfig "global"; without this scope the
-			// lazily-created informer would watch and cache every ModuleConfig cluster-wide.
-			newUnstructured("deckhouse.io", "v1alpha1", "ModuleConfig"): {
-				Field: fields.SelectorFromSet(fields.Set{"metadata.name": "global"}),
-			},
+			// Unfiltered on purpose: field selectors have no OR, and this binary now reads two
+			// ModuleConfig objects by name — "global" (cluster prefix) and "control-plane-manager"
+			// (network CIDRs). A name FieldSelector can pin exactly one, so narrowing it would
+			// silently starve whichever consumer came second. ModuleConfig objects are small and
+			// bounded by the module count, so one unscoped informer is cheaper than a live GET on
+			// either hot path.
+			newUnstructured("deckhouse.io", "v1alpha1", "ModuleConfig"): {},
 		},
 	}
 

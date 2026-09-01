@@ -1513,5 +1513,63 @@ apiserver:
 				Expect(supCR.Field("rules").String()).To(ContainSubstring("controlplaneoperations"))
 			})
 		})
+
+		// Regression guard for the ClusterConfiguration -> ModuleConfig network migration:
+		// cluster_configuration.go (the global hook) is the sole decider of whether podSubnetCIDR,
+		// serviceSubnetCIDR and podSubnetNodeCIDRPrefix come from ModuleConfig or the deprecated
+		// ClusterConfiguration field, and it always writes its answer into
+		// global.clusterConfiguration.* before Helm ever runs - these templates read only that key
+		// and are untouched by the migration. Values distinct from every other Context's baseline
+		// here catch a template that stopped reading it, regardless of which document the hook
+		// resolved it from.
+		Context("network parameters resolved into candi/control-plane templates and the DaemonSet", func() {
+			const (
+				podSubnetCIDR           = "10.123.0.0/16"
+				serviceSubnetCIDR       = "10.124.0.0/16"
+				podSubnetNodeCIDRPrefix = "23"
+			)
+
+			BeforeEach(func() {
+				f.ValuesSet("global.clusterConfiguration.podSubnetCIDR", podSubnetCIDR)
+				f.ValuesSet("global.clusterConfiguration.serviceSubnetCIDR", serviceSubnetCIDR)
+				f.ValuesSet("global.clusterConfiguration.podSubnetNodeCIDRPrefix", podSubnetNodeCIDRPrefix)
+				f.HelmRender()
+			})
+
+			decodeManifest := func(secretKey string) corev1.Pod {
+				secret := f.KubernetesResource("Secret", "kube-system", "d8-control-plane-manager-config")
+				Expect(secret.Exists()).To(BeTrue())
+				raw, err := base64.StdEncoding.DecodeString(secret.Field(secretKey).String())
+				Expect(err).ShouldNot(HaveOccurred())
+				var pod corev1.Pod
+				Expect(yaml.Unmarshal(raw, &pod)).To(Succeed())
+				return pod
+			}
+
+			It("sets --cluster-cidr and --node-cidr-mask-size on kube-controller-manager", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				pod := decodeManifest(`data.kube-controller-manager\.yaml\.tpl`)
+				Expect(pod.Spec.Containers[0].Command).To(ContainElements(
+					fmt.Sprintf("--cluster-cidr=%s", podSubnetCIDR),
+					fmt.Sprintf("--node-cidr-mask-size=%s", podSubnetNodeCIDRPrefix),
+				))
+			})
+
+			It("sets --service-cluster-ip-range on kube-apiserver", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				pod := decodeManifest(`data.kube-apiserver\.yaml\.tpl`)
+				Expect(pod.Spec.Containers[0].Command).To(ContainElement(
+					fmt.Sprintf("--service-cluster-ip-range=%s", serviceSubnetCIDR),
+				))
+			})
+
+			It("sets SERVICE_SUBNET_CIDR on the control-plane-manager DaemonSet", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				ds := f.KubernetesResource("DaemonSet", "kube-system", "d8-control-plane-manager")
+				Expect(ds.Exists()).To(BeTrue())
+				Expect(ds.Field(`spec.template.spec.containers.0.env.#(name==SERVICE_SUBNET_CIDR).value`).String()).
+					To(Equal(serviceSubnetCIDR))
+			})
+		})
 	})
 })

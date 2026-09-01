@@ -57,6 +57,7 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/clusterprefix"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/network"
 )
 
 var webhookLog = logf.Log.WithName("nodegroup-webhook")
@@ -557,6 +558,20 @@ func (w *NodeGroupValidator) loadClusterConfig(ctx context.Context) (*ClusterCon
 	if match := regexp.MustCompile(`podSubnetNodeCIDRPrefix:\s*"?(\d+)"?`).FindSubmatch(configYAML); match != nil {
 		if _, err := fmt.Sscanf(string(match[1]), "%d", &config.PodSubnetNodeCIDRPrefix); err != nil {
 			return nil, fmt.Errorf("failed to parse podSubnetNodeCIDRPrefix: %w", err)
+		}
+	}
+
+	// podSubnetNodeCIDRPrefix is being migrated to ModuleConfig control-plane-manager the same way
+	// the cluster prefix above is: ModuleConfig wins over the regex-parsed ClusterConfiguration
+	// value when set, so the IP-exhaustion warning below matches --node-cidr-mask-size on a
+	// migrated cluster instead of a stale/default prefix.
+	mcNetwork, err := network.FromModuleConfig(ctx, w.Client)
+	if err != nil {
+		return nil, fmt.Errorf("resolve network settings: %w", err)
+	}
+	if mcNetwork.PodSubnetNodeCIDRPrefix != "" {
+		if _, err := fmt.Sscanf(mcNetwork.PodSubnetNodeCIDRPrefix, "%d", &config.PodSubnetNodeCIDRPrefix); err != nil {
+			return nil, fmt.Errorf("failed to parse ModuleConfig podSubnetNodeCIDRPrefix: %w", err)
 		}
 	}
 

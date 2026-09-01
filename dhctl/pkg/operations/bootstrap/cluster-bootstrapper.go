@@ -751,6 +751,14 @@ func (b *ClusterBootstrapper) bootstrapPreparation(ctx context.Context, bctx *bo
 
 	dhlog.FromContext(ctx).DebugContext(ctx, "MetaConfig was loaded")
 
+	// Both CIDRs lost their ClusterConfiguration schema requirement now that they may live in
+	// ModuleConfig instead (see RequireNetwork); bootstrap is the one caller that must still refuse
+	// to proceed when neither document sets them, and it must do so here — before any infrastructure
+	// is created — rather than render an empty --service-cluster-ip-range into a master manifest.
+	if err := metaConfig.RequireNetwork(); err != nil {
+		return err
+	}
+
 	if err := config.ApplyCNIBootstrap(ctx, metaConfig, &b.Options.Global); err != nil {
 		return fmt.Errorf("apply cni bootstrap: %w", err)
 	}

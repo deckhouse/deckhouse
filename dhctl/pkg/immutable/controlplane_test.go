@@ -56,7 +56,7 @@ func TestClusterParams(t *testing.T) {
 		ClusterType:             config.CloudClusterType,
 	}, params)
 
-	for _, key := range []string{"clusterDomain", "serviceSubnetCIDR", "podSubnetCIDR", "podSubnetNodeCIDRPrefix"} {
+	for _, key := range []string{"clusterDomain", "serviceSubnetCIDR", "podSubnetCIDR"} {
 		t.Run("missing "+key, func(t *testing.T) {
 			metaConfig := immutabletest.MetaConfig(t)
 			delete(metaConfig.ClusterConfig, key)
@@ -65,6 +65,18 @@ func TestClusterParams(t *testing.T) {
 			require.ErrorContains(t, err, key+" is empty in the cluster configuration")
 		})
 	}
+
+	// Unlike the two CIDRs, podSubnetNodeCIDRPrefix has a sane default (config.DefaultPodSubnetNodeCIDRPrefix):
+	// ClusterConfigMap's network substitution (see clusterParams above) always sets it, so a
+	// cluster configuration missing it renders with "24" instead of failing.
+	t.Run("missing podSubnetNodeCIDRPrefix defaults to 24", func(t *testing.T) {
+		metaConfig := immutabletest.MetaConfig(t)
+		delete(metaConfig.ClusterConfig, "podSubnetNodeCIDRPrefix")
+
+		params, err := clusterParams(metaConfig)
+		require.NoError(t, err)
+		require.Equal(t, config.DefaultPodSubnetNodeCIDRPrefix, params.PodSubnetNodeCIDRPrefix)
+	})
 }
 
 // TestResolveControlPlaneImages pins what the templates are handed: bare

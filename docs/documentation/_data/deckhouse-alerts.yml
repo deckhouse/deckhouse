@@ -2950,6 +2950,51 @@ alerts:
         The obsolete kubernetesVersion field is still present in ClusterConfiguration.
       severity: "6"
       markupFormat: markdown
+    - name: D8ObsoleteNetworkFieldsInClusterConfiguration
+      sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
+      moduleUrl: 040-control-plane-manager
+      module: control-plane-manager
+      edition: ce
+      description: |-
+        `ClusterConfiguration` still carries one or more of the obsolete `podSubnetCIDR`, `serviceSubnetCIDR`, `podSubnetNodeCIDRPrefix` fields. The place to manage the cluster's network is the `network` section of ModuleConfig `control-plane-manager`.
+
+        This fires simply because a field is present, even if ModuleConfig `control-plane-manager` already overrides it - the goal is to remove the deprecated field, not just override it.
+
+        **To resolve this alert:**
+
+        1. If ModuleConfig `control-plane-manager` does not exist, create it:
+
+           ```bash
+           d8 s module enable control-plane-manager
+           ```
+
+        2. Read what the obsolete fields currently hold:
+
+           ```bash
+           d8 k -n kube-system get secret d8-cluster-configuration -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d | grep -E '^(podSubnetCIDR|serviceSubnetCIDR|podSubnetNodeCIDRPrefix):'
+           ```
+
+        3. If ModuleConfig has no `network` section yet, set it to the same values, so the cluster keeps the network it runs today (replace the values below with what you saw in step 2 - all three must match exactly, or the change is rejected):
+
+           ```bash
+           d8 k patch moduleconfig control-plane-manager --type merge -p '{"spec":{"version":3,"settings":{"network":{"podSubnetCIDR":"10.111.0.0/16","serviceSubnetCIDR":"10.222.0.0/16","podSubnetNodeCIDRPrefix":"24"}}}}'
+           ```
+
+           Once ModuleConfig is updated, this step cannot be repeated: the network group is immutable once set.
+
+        4. Remove all three fields from ClusterConfiguration:
+
+           ```bash
+           d8 system edit cluster-configuration
+           ```
+
+           Delete `podSubnetCIDR`, `serviceSubnetCIDR` and `podSubnetNodeCIDRPrefix`, then save.
+
+        Once all three fields are removed from `ClusterConfiguration`, this alert is resolved.
+      summary: |
+        Obsolete network fields are still present in ClusterConfiguration.
+      severity: "6"
+      markupFormat: markdown
     - name: D8ObsoletePublishAPIinUserAuthn
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/mc-migration.yaml
       moduleUrl: 040-control-plane-manager
