@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 24,
+  "version": 25,
   "statements": [
     {
       "vulnerability": {
@@ -722,6 +722,104 @@
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Зависимость github.com/containerd/containerd поступает транзитивно через helm (go_lib/dependency/helm -> helm.sh/helm/v3/pkg/registry) и используется только как клиент OCI-реестра. Уязвимость — подмена CDI-аннотаций при CRI checkpoint restore. В deckhouse-controller CRI-плагин containerd, его рантайм и механизм checkpoint/restore не собираются и не запускаются, уязвимый код не в пути выполнения.",
+      "timestamp": "2026-09-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-69725"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/go-chi/chi/v5@v5.2.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Модуль github.com/go-chi/chi/v5 приходит транзитивно через github.com/flant/addon-operator, который поднимает на нём свой HTTP-сервер. Уязвимость находится в middleware.RedirectSlashes пакета github.com/go-chi/chi/v5/middleware. Прогон govulncheck по бинарю deckhouse-controller показывает, что этот символ не вызывается: addon-operator не добавляет его в цепочку обработчиков. Код не в пути выполнения.",
+      "timestamp": "2026-09-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-72815"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/go-chi/chi/v5@v5.2.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Модуль github.com/go-chi/chi/v5 приходит транзитивно через github.com/flant/addon-operator, который поднимает на нём свой HTTP-сервер. Уязвимость находится в middleware.RealIP пакета github.com/go-chi/chi/v5/middleware. Прогон govulncheck по бинарю deckhouse-controller показывает, что этот символ не вызывается: addon-operator не добавляет его в цепочку обработчиков. Код не в пути выполнения.",
+      "timestamp": "2026-09-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-72816"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/go-chi/chi/v5@v5.2.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Модуль github.com/go-chi/chi/v5 приходит транзитивно через github.com/flant/addon-operator, который поднимает на нём свой HTTP-сервер. Уязвимость находится в middleware.RealIP пакета github.com/go-chi/chi/v5/middleware. Прогон govulncheck по бинарю deckhouse-controller показывает, что этот символ не вызывается: addon-operator не добавляет его в цепочку обработчиков. Код не в пути выполнения.",
+      "timestamp": "2026-09-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-72817"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/go-chi/chi/v5@v5.2.2"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Модуль github.com/go-chi/chi/v5 приходит транзитивно через github.com/flant/addon-operator, который поднимает на нём свой HTTP-сервер. Уязвимость находится в middleware.RealIP пакета github.com/go-chi/chi/v5/middleware. Прогон govulncheck по бинарю deckhouse-controller показывает, что этот символ не вызывается: addon-operator не добавляет его в цепочку обработчиков. Код не в пути выполнения.",
+      "timestamp": "2026-09-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33813"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/image@v0.38.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Модуль golang.org/x/image приходит транзитивно через github.com/flant/addon-operator -> github.com/goccy/go-graphviz. Из модуля используются только декодеры bmp и tiff и парсер шрифтов sfnt. Уязвимость находится в golang.org/x/image/webp, который не импортируется и в бинарь не попадает.",
+      "timestamp": "2026-09-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46601"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/image@v0.38.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Модуль golang.org/x/image приходит транзитивно через github.com/flant/addon-operator -> github.com/goccy/go-graphviz. Из модуля используются только декодеры bmp и tiff и парсер шрифтов sfnt. Уязвимость находится в golang.org/x/image/webp, который не импортируется и в бинарь не попадает.",
+      "timestamp": "2026-09-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46603"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/image@v0.38.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "Модуль golang.org/x/image приходит транзитивно через github.com/flant/addon-operator -> github.com/goccy/go-graphviz. Из модуля используются только декодеры bmp и tiff и парсер шрифтов sfnt. Уязвимость находится в golang.org/x/image/vp8l, который не импортируется и в бинарь не попадает.",
       "timestamp": "2026-09-01T12:00:00Z"
     }
   ],
