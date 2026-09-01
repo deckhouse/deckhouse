@@ -37,7 +37,8 @@ resource "kubernetes_manifest" "kubernetes-data-disk" {
   }
   lifecycle {
     ignore_changes = [
-      object.spec.persistentVolumeClaim.storageClassName
+      object.spec.persistentVolumeClaim.storageClassName,
+      object.metadata.finalizers,
     ]
   }
 }
