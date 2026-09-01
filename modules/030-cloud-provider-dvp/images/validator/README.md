@@ -75,7 +75,7 @@ go build -o /tmp/dvp-validator .
 Start the validator:
 
 ```bash
-/tmp/dvp-validator serve --network=tcp --address=127.0.0.1:18443 &
+/tmp/dvp-validator serve --network=tcp --address=127.0.0.1:18443
 ```
 
 Call it with `grpcurl` from `src` (that is where the relative `-import-path` points).
@@ -109,13 +109,9 @@ EOF
 )
 
 grpcurl -plaintext \
-  -import-path ../../../../../go_lib/dhctl-provider-protocol/api/pb \
-  -proto validate/v1/validate.proto \
   -d "{\"input_json\": \"$INPUT\"}" \
   127.0.0.1:18443 dhctl.provider.validate.v1.ValidateService/Validate
 # {"errors":[{"path":"Secret/d8-credentials","code":"credential_secret_required", …},
 #             {"path":"NodeGroup/master","code":"master_node_group_required", …}]}
-
-kill %1
 ```
 
