@@ -331,15 +331,14 @@
              d8 s module enable control-plane-manager
              ```
 
-          2. Migrate the values straight from the Secret into ModuleConfig using following command:
+          2. Migrate the values straight from the Secret into ModuleConfig in one command (requires `yq` and `jq`; only fields still present in `ClusterConfiguration` are included, so this is also safe to run when one or two of the three were already migrated):
 
              ```bash
-             CC=$(d8 k -n kube-system get secret d8-cluster-configuration -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d)
-             d8 k patch moduleconfig control-plane-manager --type merge -p "$(jq -n \
-               --arg podSubnetCIDR "$(echo "$CC" | grep '^podSubnetCIDR:' | awk '{print $2}' | tr -d '"')" \
-               --arg serviceSubnetCIDR "$(echo "$CC" | grep '^serviceSubnetCIDR:' | awk '{print $2}' | tr -d '"')" \
-               --arg podSubnetNodeCIDRPrefix "$(echo "$CC" | grep '^podSubnetNodeCIDRPrefix:' | awk '{print $2}' | tr -d '"')" \
-               '{spec: {version: 3, settings: {network: ({podSubnetCIDR: $podSubnetCIDR, serviceSubnetCIDR: $serviceSubnetCIDR, podSubnetNodeCIDRPrefix: $podSubnetNodeCIDRPrefix} | with_entries(select(.value != "")))}}}')"
+             d8 k patch moduleconfig control-plane-manager --type merge -p "$(
+               d8 k -n kube-system get secret d8-cluster-configuration -o jsonpath='{.data.cluster-configuration\.yaml}' | base64 -d \
+                 | yq -o=json '{"podSubnetCIDR": .podSubnetCIDR, "serviceSubnetCIDR": .serviceSubnetCIDR, "podSubnetNodeCIDRPrefix": .podSubnetNodeCIDRPrefix}' \
+                 | jq -c '{spec: {version: 3, settings: {network: with_entries(select(.value != null))}}}'
+             )"
              ```
 
              Once a field is set in ModuleConfig this way, it cannot be migrated again: the network group is immutable once set.
