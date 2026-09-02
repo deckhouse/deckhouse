@@ -1,4 +1,3 @@
----
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
 metadata:
@@ -12,9 +11,12 @@ spec:
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
 status:
-  message: ""
+  message: ''
   modules:
-    - name: enabledmodule
+  - name: enabledmodule
+  - name: disabledmodule
+  - name: withpolicymodule
+  - name: notthissourcemodule
 ---
 apiVersion: deckhouse.io/v1alpha2
 kind: ModuleUpdatePolicy
@@ -26,62 +28,28 @@ spec:
     mode: Manual
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: Module
+kind: ModuleConfig
 metadata:
   name: disabledmodule
-properties:
+spec:
+  enabled: false
   source: test-source-1
-  availableSources:
-    - test-source-1
-status:
-  phase: Available
-  conditions:
-    - type: EnabledByModuleConfig
-      status: "False"
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: Module
+kind: ModuleConfig
 metadata:
   name: enabledmodule
-properties:
-  version: 1.2.2
+spec:
+  enabled: true
   source: test-source-1
-  availableSources:
-    - test-source-1
-status:
-  phase: Available
-  conditions:
-    - type: EnabledByModuleConfig
-      status: "True"
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: Module
-metadata:
-  name: withpolicymodule
-properties:
-  source: test-source-1
-  updatePolicy: test-alpha
-  availableSources:
-    - test-source-1
-status:
-  phase: Available
-  conditions:
-    - type: EnabledByModuleConfig
-      status: "True"
----
-apiVersion: deckhouse.io/v1alpha1
-kind: Module
+kind: ModuleConfig
 metadata:
   name: notthissourcemodule
-properties:
+spec:
+  enabled: true
   source: test-source-2
-  availableSources:
-    - test-source-1
-status:
-  phase: Available
-  conditions:
-    - type: EnabledByModuleConfig
-      status: "True"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -89,3 +57,5 @@ metadata:
   name: withpolicymodule
 spec:
   updatePolicy: test-alpha
+  enabled: true
+  source: test-source-1
