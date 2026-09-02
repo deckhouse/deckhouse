@@ -1689,7 +1689,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
     text-decoration: none;
 }
 
-.docs a:not(.alert__info):hover {
+.docs a:not(.alert__info, .anchorjs-link):hover {
     text-decoration: underline;
 }
 
@@ -1757,6 +1757,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
     padding: 2px 4px;
     background: #eef2ff;
     white-space: normal;
+    word-wrap: break-word;
     border-radius: 4px;
 
     @include breakpoints.max-w(s) {
@@ -1939,10 +1940,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
     @include breakpoints.max-w(xs) {
       border-left: 2px solid #0066FF;
     }
-}
-
-.docs .anchorjs-link:hover {
-    text-decoration: none;
 }
 
 .docs {
