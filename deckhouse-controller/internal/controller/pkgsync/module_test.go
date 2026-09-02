@@ -191,9 +191,12 @@ func TestSyncModulesDisposesUnbackedModules(t *testing.T) {
 		testModule("dropped", "embedded", "v1.79.0", map[string]string{v1alpha2.ModuleAnnotationEmbedded: "true"}),
 		// an embedded module a real repository took over keeps the spec another writer gave it
 		testModule("migrated", "deckhouse-modules", "v2.0.0", map[string]string{v1alpha2.ModuleAnnotationEmbedded: "true"}),
-		// a module with a version and no origin is left alone, apart from the dev mark
+		// a downloaded module with a version and no origin keeps running from its files: only the dev mark goes
 		testModule("stale", "deckhouse-modules", "v0.1.0", map[string]string{v1alpha2.ModuleAnnotationDev: "true"}),
+		// a downloaded module whose files are gone was uninstalled with its release
+		testModule("gone", "deckhouse-modules", "v0.2.0", nil),
 	)
+	require.NoError(t, os.MkdirAll(filepath.Join(s.downloadedModulesDir, "stale"), 0o755))
 
 	require.NoError(t, s.syncModules(ctx))
 
@@ -207,8 +210,10 @@ func TestSyncModulesDisposesUnbackedModules(t *testing.T) {
 	assert.False(t, stale.IsDev())
 	assert.Equal(t, "v0.1.0", stale.Spec.PackageVersion)
 
-	err := cl.Get(ctx, client.ObjectKey{Name: "offered"}, new(v1alpha2.Module))
-	assert.True(t, apierrors.IsNotFound(err))
+	for _, name := range []string{"offered", "dropped", "gone"} {
+		err := cl.Get(ctx, client.ObjectKey{Name: name}, new(v1alpha2.Module))
+		assert.True(t, apierrors.IsNotFound(err), name)
+	}
 }
 
 func TestSyncModulesNormalizesConditions(t *testing.T) {

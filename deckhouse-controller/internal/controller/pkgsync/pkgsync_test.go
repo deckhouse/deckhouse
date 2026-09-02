@@ -46,7 +46,7 @@ func newTestSyncer(t *testing.T, version, embeddedDir string, objects ...client.
 		WithObjects(objects...).
 		Build()
 
-	return newSyncer(cl, cl, dependency.NewMockedContainer(), version, embeddedDir, log.NewNop()), cl
+	return newSyncer(cl, cl, dependency.NewMockedContainer(), version, embeddedDir, t.TempDir(), log.NewNop()), cl
 }
 
 func writeModuleYAML(t *testing.T, dir, content string) {

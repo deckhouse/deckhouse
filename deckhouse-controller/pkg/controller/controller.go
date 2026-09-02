@@ -473,7 +473,7 @@ func (c *DeckhouseController) Start(ctx context.Context) error {
 	// give the old module stack its package system objects before any
 	// controller runs; the sync reads through the API reader, so it does not
 	// need the manager cache
-	if err := pkgsync.Sync(ctx, c.runtimeManager.GetAPIReader(), c.runtimeManager.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, c.log.Named("pkgsync")); err != nil {
+	if err := pkgsync.Sync(ctx, c.runtimeManager.GetAPIReader(), c.runtimeManager.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, app.DownloadedModulesDir(), c.log.Named("pkgsync")); err != nil {
 		return fmt.Errorf("sync package objects: %w", err)
 	}
 

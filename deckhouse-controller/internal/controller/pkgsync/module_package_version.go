@@ -151,7 +151,7 @@ func versionFromDir(moduleDir string) (*v1alpha1.ModulePackageVersionStatusMetad
 // restore and the release controller at deploy, so the metadata reaches the
 // readers without the package feature and its promoter.
 func EnsureModulePackageVersion(ctx context.Context, reader client.Reader, writer client.Client, dc dependency.Container, spec v1alpha1.ModulePackageVersionSpec, moduleDir string, logger *log.Logger) error {
-	return newSyncer(reader, writer, dc, "", "", logger).ensureDraftFilled(ctx, spec, moduleDir)
+	return newSyncer(reader, writer, dc, "", "", "", logger).ensureDraftFilled(ctx, spec, moduleDir)
 }
 
 // ensureDraftFilled fills the version named by the spec from the module files
