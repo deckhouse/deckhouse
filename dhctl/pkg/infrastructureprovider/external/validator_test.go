@@ -185,15 +185,16 @@ func TestValidate(t *testing.T) {
 			name:    "fails closed on a violation with no detail",
 			mode:    modeBlank,
 			input:   convergeInput(),
-			wantErr: "provider validation failed",
+			wantErr: `provider "dvp" validation failed`,
 		},
 		{
 			// Fail closed: a bundle whose binary predates the gRPC protocol blocks
-			// the operation instead of counting as validated.
+			// the operation instead of counting as validated. Such a binary exits on
+			// the unknown subcommand, so what dhctl sees is an endpoint nobody bound.
 			name:    "fails closed on a binary without the serve subcommand",
 			mode:    modeLegacy,
 			input:   convergeInput(),
-			wantErr: "did not start",
+			wantErr: "did not listen on",
 		},
 	}
 

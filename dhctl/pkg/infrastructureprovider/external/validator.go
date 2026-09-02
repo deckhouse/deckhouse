@@ -56,7 +56,7 @@ func Validate(ctx context.Context, binaryPath string, input config.ProviderInput
 
 	resp, err := validate(ctx, binaryPath, wireInput)
 	if err != nil {
-		return err
+		return fmt.Errorf("run provider %q validator: %w", input.ProviderName, err)
 	}
 
 	if warningsStr := violationsToWarnString(resp.GetWarnings()); len(warningsStr) > 0 {
@@ -64,7 +64,7 @@ func Validate(ctx context.Context, binaryPath string, input config.ProviderInput
 	}
 
 	if errorsStr := violationsToErrString(resp.GetErrors()); len(errorsStr) > 0 {
-		return fmt.Errorf("provider validation failed: %s", strings.Join(errorsStr, "\n"))
+		return fmt.Errorf("provider %q validation failed: %s", input.ProviderName, strings.Join(errorsStr, "\n"))
 	}
 	return nil
 }
@@ -79,29 +79,29 @@ func validate(ctx context.Context, binaryPath string, input validatev1.Input) (_
 
 	ep, err := NewTCPEndpoint()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("create tcp endpoint: %w", err)
 	}
 
 	defer func() {
 		if err := ep.Free(); err != nil {
-			retErr = errors.Join(retErr, err)
+			retErr = errors.Join(retErr, fmt.Errorf("free endpoint: %w", err))
 		}
 	}()
 
 	process, err := StartValidatorProcess(ctx, binaryPath, ep)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("start validator process %q: %w", binaryPath, err)
 	}
 
 	defer func() {
 		if err := process.Stop(); err != nil {
-			retErr = errors.Join(retErr, err)
+			retErr = errors.Join(retErr, fmt.Errorf("stop validator process %q: %w", binaryPath, err))
 		}
 	}()
 
 	resp, err := requestValidate(ctx, ep, input)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("call validator on %s: %w", ep, err)
 	}
 
 	if err := ctx.Err(); err != nil {
@@ -118,7 +118,7 @@ func requestValidate(ctx context.Context, ep Endpoint, input validatev1.Input) (
 	)
 
 	if err != nil {
-		return nil, fmt.Errorf("connect to provider validator: %w", err)
+		return nil, err
 	}
 
 	defer func() { _ = conn.Close() }()

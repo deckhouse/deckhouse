@@ -49,8 +49,6 @@ const (
 	addressFlag     = "--address="
 )
 
-var errNotStarted = errors.New("validator process did not start")
-
 // ValidatorProcess manages a running validator process. Its whole lifetime hangs on
 // one context: cancelling it signals the process.
 type ValidatorProcess struct {
@@ -74,7 +72,6 @@ func StartValidatorProcess(ctx context.Context, binaryPath string, endpoint Endp
 	}
 
 	withStop := func(err error) error {
-		err = fmt.Errorf("%w: %s: %w", errNotStarted, binaryPath, err)
 		if stopErr := ret.Stop(); stopErr != nil {
 			return errors.Join(err, stopErr)
 		}
