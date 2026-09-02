@@ -1504,12 +1504,9 @@ func (r *reconciler) placeModule(ctx context.Context, release *v1alpha1.ModuleRe
 	}
 
 	module := new(v1alpha2.Module)
-	if err := r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, module); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return fmt.Errorf("get the module: %w", err)
-		}
-
-		module = &v1alpha2.Module{
+	err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, module)
+	if apierrors.IsNotFound(err) {
+		created := &v1alpha2.Module{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: v1alpha2.ModuleGVK.GroupVersion().String(),
 				Kind:       v1alpha2.ModuleKind,
@@ -1522,11 +1519,21 @@ func (r *reconciler) placeModule(ctx context.Context, release *v1alpha1.ModuleRe
 			},
 		}
 
-		if err := r.client.Create(ctx, module); err != nil {
+		err = r.client.Create(ctx, created)
+		if err == nil {
+			return nil
+		}
+
+		if !apierrors.IsAlreadyExists(err) {
 			return fmt.Errorf("create the module: %w", err)
 		}
 
-		return nil
+		// the source controller placed the offered module meanwhile: move that object
+		err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, module)
+	}
+
+	if err != nil {
+		return fmt.Errorf("get the module: %w", err)
 	}
 
 	patch := client.MergeFrom(module.DeepCopy())

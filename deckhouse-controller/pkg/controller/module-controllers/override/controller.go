@@ -349,11 +349,8 @@ func (r *reconciler) moduleEnabled(ctx context.Context, name string, module *v1a
 // onto the image tag otherwise, marked dev and overridden.
 func (r *reconciler) ensureDevModule(ctx context.Context, mpo *v1alpha2.ModulePullOverride, repository string) error {
 	module := new(v1alpha2.Module)
-	if err := r.client.Get(ctx, client.ObjectKey{Name: mpo.Name}, module); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return fmt.Errorf("get the module: %w", err)
-		}
-
+	err := r.client.Get(ctx, client.ObjectKey{Name: mpo.Name}, module)
+	if apierrors.IsNotFound(err) {
 		module = &v1alpha2.Module{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: v1alpha2.ModuleGVK.GroupVersion().String(),
@@ -369,28 +366,40 @@ func (r *reconciler) ensureDevModule(ctx context.Context, mpo *v1alpha2.ModulePu
 			},
 		}
 
-		if err := r.client.Create(ctx, module); err != nil {
+		err = r.client.Create(ctx, module)
+		if err != nil && !apierrors.IsAlreadyExists(err) {
 			return fmt.Errorf("create the module: %w", err)
 		}
-	} else {
-		patch := client.MergeFrom(module.DeepCopy())
 
-		if module.Annotations == nil {
-			module.Annotations = make(map[string]string)
-		}
-		module.Annotations[v1alpha2.ModuleAnnotationDev] = "true"
-		module.Spec.PackageRepositoryName = repository
-		module.Spec.PackageVersion = mpo.Spec.ImageTag
-
-		data, err := patch.Data(module)
+		// the source controller placed the offered module meanwhile: move that object
 		if err != nil {
-			return fmt.Errorf("build patch: %w", err)
+			module = new(v1alpha2.Module)
+			err = r.client.Get(ctx, client.ObjectKey{Name: mpo.Name}, module)
 		}
+	}
 
-		if string(data) != "{}" {
-			if err := r.client.Patch(ctx, module, client.RawPatch(patch.Type(), data)); err != nil {
-				return fmt.Errorf("patch the module: %w", err)
-			}
+	if err != nil {
+		return fmt.Errorf("get the module: %w", err)
+	}
+
+	patch := client.MergeFrom(module.DeepCopy())
+
+	if module.Annotations == nil {
+		module.Annotations = make(map[string]string)
+	}
+	module.Annotations[v1alpha2.ModuleAnnotationDev] = "true"
+	module.Spec.PackageRepositoryName = repository
+	module.Spec.PackageVersion = mpo.Spec.ImageTag
+
+	data, err := patch.Data(module)
+	if err != nil {
+		return fmt.Errorf("build patch: %w", err)
+	}
+
+	// a module just created by this override carries the placement already
+	if string(data) != "{}" {
+		if err := r.client.Patch(ctx, module, client.RawPatch(patch.Type(), data)); err != nil {
+			return fmt.Errorf("patch the module: %w", err)
 		}
 	}
 

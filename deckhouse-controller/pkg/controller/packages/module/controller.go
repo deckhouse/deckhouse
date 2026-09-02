@@ -145,6 +145,18 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return res, nil
 	}
 
+	// a module a source offers and nothing installed has no package to run
+	if !module.IsInstalled() {
+		res, err := r.handleNotInstalled(ctx, module)
+		if err != nil {
+			r.logger.Warn("failed to handle not installed module", slog.String("name", req.Name), log.Err(err))
+
+			return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
+		}
+
+		return res, nil
+	}
+
 	// handle create/update events
 	if err := r.handleCreateOrUpdate(ctx, module); err != nil {
 		r.logger.Warn("failed to handle module", slog.String("name", req.Name), log.Err(err))
@@ -378,6 +390,58 @@ func (r *reconciler) handleDev(ctx context.Context, module, original *v1alpha2.M
 	}
 
 	return nil
+}
+
+// handleNotInstalled settles a module a source offers and nothing installed: the runtime never
+// runs it, so it holds no finalizer, no package version and no owner reference. A module the
+// runtime ran before its package was uninstalled is torn down first, and the version it was
+// attached to is released, so the version can be garbage collected.
+func (r *reconciler) handleNotInstalled(ctx context.Context, module *v1alpha2.Module) (ctrl.Result, error) {
+	logger := r.logger.With(slog.String("name", module.Name))
+	logger.Debug("handle not installed module")
+
+	remove := r.manager.RemoveModule
+	if module.IsEmbedded() {
+		remove = r.manager.RemoveEmbeddedModule
+	}
+
+	// a module the runtime never loaded reports the teardown finished at once
+	if !remove(module.Name) {
+		logger.Info("module is still being removed by the runtime")
+
+		return ctrl.Result{RequeueAfter: removalRequeueAfter}, nil
+	}
+
+	if name := ctrlutils.OwnerRefName(module, v1alpha1.ModulePackageVersionKind); name != "" {
+		if err := r.detachVersion(ctx, name); err != nil {
+			logger.Error("failed to detach the module package version", slog.String("mpv", name), log.Err(err))
+
+			return ctrl.Result{}, err
+		}
+	}
+
+	patch := client.MergeFrom(module.DeepCopy())
+	ctrlutils.DropOwnerReferences(module, v1alpha1.ModulePackageVersionKind, v1alpha1.ModulePackageKind)
+	delete(module.Annotations, v1alpha2.ModuleAnnotationHash)
+	delete(module.Annotations, v1alpha2.ModuleAnnotationRegistrySpecChanged)
+	controllerutil.RemoveFinalizer(module, v1alpha2.ModuleFinalizerStatisticRegistered)
+
+	data, err := patch.Data(module)
+	if err != nil {
+		return ctrl.Result{}, fmt.Errorf("build patch for the module '%s': %w", module.Name, err)
+	}
+
+	if string(data) == "{}" {
+		return ctrl.Result{}, nil
+	}
+
+	if err := r.client.Patch(ctx, module, client.RawPatch(patch.Type(), data)); err != nil {
+		logger.Error("failed to patch the module", log.Err(err))
+
+		return ctrl.Result{}, fmt.Errorf("patch module '%s': %w", module.Name, err)
+	}
+
+	return ctrl.Result{}, nil
 }
 
 // handleDelete unregisters the module from the package runtime and, once the runtime reports the
