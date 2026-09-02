@@ -69,7 +69,7 @@ func kubeProviderThroughBastion(
 
 	// Mirrors newKubeconfigKubeProvider of pkg/operations/bootstrap:
 	// a kubeconfig-backed client needs no SSH runner, hence the nil.
-	kubeConfig := &kube.Config{KubeConfig: path}
+	kubeConfig := &kube.Config{KubeConfig: path, KubeConfigContext: opts.Kube.ConfigContext}
 	runner, err := provider.GetRunnerInterface(ctx, kubeConfig, sshProviderInitializer.GetSettings(), nil)
 	if err != nil {
 		stop()

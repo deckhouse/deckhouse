@@ -42,6 +42,10 @@ import (
 type fakeBastion struct {
 	address  string
 	channels atomic.Int64
+
+	// blackhole leaves a channel request unanswered, which is what a dial to a
+	// destroyed master looks like: it ends on a deadline rather than a refusal.
+	blackhole atomic.Bool
 }
 
 func startFakeBastion(t *testing.T, hostKey ssh.Signer, target string) *fakeBastion {
@@ -77,8 +81,18 @@ func (b *fakeBastion) serve(conn net.Conn, serverConfig *ssh.ServerConfig, targe
 	go ssh.DiscardRequests(requests)
 
 	for newChannel := range newChannels {
+		// Anything but a forward is the SSH client keeping itself alive, and a
+		// refusal there makes it drop the connection and reconnect.
 		if newChannel.ChannelType() != "direct-tcpip" {
-			newChannel.Reject(ssh.UnknownChannelType, "only direct-tcpip")
+			channel, channelRequests, err := newChannel.Accept()
+			if err != nil {
+				continue
+			}
+			go ssh.DiscardRequests(channelRequests)
+			go io.Copy(io.Discard, channel)
+			continue
+		}
+		if b.blackhole.Load() {
 			continue
 		}
 		channel, channelRequests, err := newChannel.Accept()

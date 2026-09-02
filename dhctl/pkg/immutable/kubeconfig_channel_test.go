@@ -22,6 +22,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/tools/clientcmd"
+	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
 )
 
 const serverKubeconfig = `
@@ -110,4 +111,72 @@ func TestTheWrittenKubeconfigKeepsTheNameItWasIssuedFor(t *testing.T) {
 	stop()
 	_, err = os.Stat(path)
 	require.ErrorIs(t, err, os.ErrNotExist, "the copy must not outlive the channel")
+}
+
+const proxiedKubeconfig = `
+apiVersion: v1
+kind: Config
+current-context: ctx
+clusters:
+- name: cluster
+  cluster:
+    server: https://master-0.example:6443
+    proxy-url: http://127.0.0.1:1
+    certificate-authority: ca.crt
+contexts:
+- name: ctx
+  context:
+    cluster: cluster
+    user: user
+users:
+- name: user
+  user:
+    client-certificate: client.crt
+`
+
+// The local end of the forward is reached directly. A proxy the operator set for
+// the real server address is applied to every request client-go makes through
+// it — http.ProxyURL exempts no address, loopback included — so the retargeted
+// copy must not carry it.
+func TestTheWrittenKubeconfigDropsTheProxyOfTheAddressItLeft(t *testing.T) {
+	_, written := writeAndReopen(t, proxiedKubeconfig)
+
+	require.Empty(t, written.Clusters["cluster"].ProxyURL,
+		"a proxy for the real server address would swallow the loopback connection")
+}
+
+// The copy lives in the temporary directory, and client-go resolves the file
+// references of a kubeconfig against the directory it was loaded from: a
+// relative certificate-authority would stop resolving on the way over.
+func TestTheWrittenKubeconfigKeepsPointingAtTheFilesItReferences(t *testing.T) {
+	dir, written := writeAndReopen(t, proxiedKubeconfig)
+
+	require.Equal(t, filepath.Join(dir, "ca.crt"),
+		written.Clusters["cluster"].CertificateAuthority,
+		"a relative path resolves against the copy's own directory, where nothing lives")
+	require.Equal(t, filepath.Join(dir, "client.crt"),
+		written.AuthInfos["user"].ClientCertificate,
+		"the user's files travel the same way the cluster's do")
+}
+
+// writeAndReopen runs the channel over the given kubeconfig with no bastion, and
+// returns the directory the original lives in together with the copy it wrote,
+// which is what the Kubernetes client is built from.
+func writeAndReopen(t *testing.T, content string) (string, *clientcmdapi.Config) {
+	t.Helper()
+
+	dir := t.TempDir()
+	original := filepath.Join(dir, "admin.kubeconfig")
+	require.NoError(t, os.WriteFile(original, []byte(content), 0o600))
+
+	path, stop, err := OpenKubeconfigChannel(t.Context(), nil, nil, original, "", t.TempDir())
+	require.NoError(t, err)
+	defer stop()
+
+	raw, err := os.ReadFile(path)
+	require.NoError(t, err)
+	written, err := clientcmd.Load(raw)
+	require.NoError(t, err)
+
+	return dir, written
 }
