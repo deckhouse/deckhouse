@@ -55,11 +55,6 @@ func TestOnlyAnImmutableGroupBuildsItsOwnPayload(t *testing.T) {
 			build: build,
 			want:  false,
 		},
-		"an immutable group on a bootstrap that renders nothing": {
-			group: config.TerraNodeGroupSpec{Name: "front", SystemType: "Immutable"},
-			build: nil,
-			want:  false,
-		},
 	}
 
 	for name, tc := range cases {
@@ -67,6 +62,19 @@ func TestOnlyAnImmutableGroupBuildsItsOwnPayload(t *testing.T) {
 			require.Equal(t, tc.want, payloadBuilderFor(tc.group, tc.build) != nil)
 		})
 	}
+}
+
+// The group decides on its own whether its machines boot from a document; nothing
+// about the rest of the cluster - the master's kind least of all - may turn that off.
+// A caller that brings no builder to an immutable group is broken, and it is
+// better to stop it than to create machines that wait in the installer for good.
+func TestAnImmutableGroupWithNoBuilderIsAProgrammerError(t *testing.T) {
+	t.Parallel()
+
+	front := config.TerraNodeGroupSpec{Name: "front", SystemType: "Immutable"}
+	require.PanicsWithValue(t, `no payload builder for the immutable node group "front"`, func() {
+		payloadBuilderFor(front, nil)
+	})
 }
 
 // An immutable group never asks the cluster for its cloud config: what the

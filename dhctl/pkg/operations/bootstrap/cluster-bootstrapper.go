@@ -1412,28 +1412,20 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 		).Run(ctx, action)
 	}
 
-	// An immutable master boots from a payload rendered per node, and it is tracked by no SSH
-	// address: converge builds its session from that cache and an unreachable host stalls it.
-	// A machine of an immutable CloudPermanent group boots from a document rendered for
-	// it: the group's published cloud config is a bashible script the node cannot run,
-	// and waiting for one leaves it in the installer forever. The provider carries it in
-	// the way it carries a master's, so nothing here needs the machine's address.
-	var buildNodePayload operations.ImmutablePayloadBuilder
-	if bctx.immutable != nil {
-		buildNodePayload = func(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName, nodeName string) (string, error) {
-			payload, _, err := immutable.BuildJoinPayloadFromCluster(ctx, kubeCl, bctx.metaConfig, nodeName,
-				immutableCustomization(bctx, nodeName), "", nodeGroupName)
-			return payload, err
-		}
+	// A machine of an immutable group boots from a document rendered for it, carried in by
+	// the provider: in a cloud it has no customization and no address yet. Whether a group
+	// boots this way is its own systemType, never the master's: see payloadBuilderFor.
+	buildNodePayload := func(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName, nodeName string) (string, error) {
+		payload, _, err := immutable.BuildJoinPayloadFromCluster(ctx, kubeCl, bctx.metaConfig, nodeName, nil, "", nodeGroupName)
+		return payload, err
 	}
 
+	// An immutable master boots from a payload rendered per node, and it is tracked by no SSH
+	// address: converge builds its session from that cache and an unreachable host stalls it.
 	var buildPayload masterPayloadBuilder
 	if bctx.immutable != nil {
-		// Nothing describes a machine in a cloud — the documents are refused there — so the
-		// customization this passes is always nil here.
 		buildPayload = func(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeName string) (string, error) {
-			payload, _, err := immutable.BuildJoinPayloadFromCluster(ctx, kubeCl, metaConfig, nodeName,
-				immutableCustomization(bctx, nodeName), immutableNodeAddress(bctx, nodeName), global.MasterNodeGroupName)
+			payload, _, err := immutable.BuildJoinPayloadFromCluster(ctx, kubeCl, metaConfig, nodeName, nil, "", global.MasterNodeGroupName)
 			return payload, err
 		}
 	}
