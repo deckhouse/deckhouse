@@ -60,9 +60,12 @@ status:
   size: 0
   transitionTime: "2024-05-03T20:55:49Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: parca
-properties:
-  source: Embedded
+  annotations:
+    modules.deckhouse.io/embedded: 'true'
+spec:
+  packageRepositoryName: embedded
+  packageVersion: v1.80.0

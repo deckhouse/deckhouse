@@ -59,18 +59,21 @@ status:
   pullDuration: 0s
   transitionTime: "2019-10-17T15:33:00Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: parca-kube-unsuitable
   resourceVersion: "1000"
-properties: {}
+spec:
+  packageRepositoryName: foxtrot-kube-unsuitable
+  packageVersion: v0.0.1
 status:
   conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
     message: 'ModuleRelease could not be applied, not met requirements: see details
       in the module release v1.4.3'
     reason: ReleaseRequirementsCheck
     status: "False"
     type: LastReleaseDeployed
+  lastAppliedConfiguration: null
+  tracking: null

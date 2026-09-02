@@ -61,15 +61,21 @@ status:
   pullDuration: 0s
   transitionTime: "2024-05-03T20:55:49Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: parca-kube-suitable
-  resourceVersion: "1000"
-properties: {}
+  resourceVersion: "1001"
+spec:
+  packageRepositoryName: foxtrot-kube-suitable
+  packageVersion: v1.4.3
+  releaseChannel: Stable
 status:
   conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: ""
+    reason: Deployed
     status: "True"
     type: LastReleaseDeployed
+  lastAppliedConfiguration: null
+  tracking: null
