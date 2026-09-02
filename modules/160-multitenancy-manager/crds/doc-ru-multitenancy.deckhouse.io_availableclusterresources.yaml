@@ -4,12 +4,56 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Read-only каталог доступных кластерных ресурсов для проекта (механизм грантов модуля `multitenancy-manager`). `metadata.name` совпадает с именем грантуемого ресурса (см. [`GrantableClusterResourceDefinition`](cr.html#grantableclusterresourcedefinition)).
+            Содержит информацию о cluster-wide-ресурсах, доступных проекту, и значении, используемом по умолчанию.
 
-            **Кто создаёт:** только контроллер `multitenancy-manager` (автоматически, по одному объекту на каждое определение в неймспейсе каждого совпавшего проекта).
-            **Ручное создание:** запрещено — отклоняется вебхуком `/protect`.
-            **Назначение:** пользователи проекта (тенанты) читают его, чтобы узнать, какие имена кластерных ресурсов доступны и какой является дефолтом. Данные содержатся только в `status` (`available` — список доступных имён с флагом дефолта; `default` — дефолт проекта; `grantedResourceKind` — справочно).
+            Ресурс автоматически создаётся и обновляется контроллером `multitenancy-manager` в неймспейсе проекта для каждого зарегистрированного ресурса GrantableClusterResourceDefinition.
+            Имя AvailableClusterResource совпадает с именем соответствующего GrantableClusterResourceDefinition.
 
-            Просмотр: `d8 k get available -n <проект>` (список) или `d8 k get available storageclasses -n <проект> -o yaml` (детали).
+            Информация о доступных cluster-wide-ресурсах и значении по умолчанию содержится в поле `status`.
 
-            Подробности — в разделе [«Для пользователей проекта (тенантов)»](usage_ru.html#для-пользователей-проекта-тенантов).
+            Подробнее о просмотре доступных cluster-wide-ресурсов — [в разделе «Примеры использования»](usage.html#для-пользователей-проекта).
+
+            > **Внимание**. Ресурс предназначен только для чтения. Ручное создание AvailableClusterResource запрещено.
+          properties:
+            status:
+              description: Состояние доступности cluster-wide-ресурсов для проекта.
+              properties:
+                available:
+                  description: Список доступных проекту cluster-wide-ресурсов с указанием значения, используемого по умолчанию.
+                  items:
+                    description: Информация о доступном проекту cluster-wide-ресурсе.
+                    properties:
+                      default:
+                        description: Означает, что cluster-wide-ресурс используется в проекте по умолчанию.
+                        type: boolean
+                      name:
+                        description: Имя доступного проекту cluster-wide-ресурса.
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  type: array
+                  x-kubernetes-list-map-keys:
+                  - name
+                  x-kubernetes-list-type: map
+                availableCount:
+                  description: |-
+                    Количество доступных проекту cluster-wide-ресурсов.
+
+                    Используется при выводе списка ресурсов. Имена доступных cluster-wide-ресурсов содержатся в [`status.available`](#availableclusterresource-v1alpha1-status-available).
+                  type: integer
+                default:
+                  description: |-
+                    Имя cluster-wide-ресурса, используемого в проекте по умолчанию.
+
+                    Значение может автоматически подставляться в соответствующее поле создаваемого ресурса, если поле не заполнено или указанное значение недоступно проекту. Если значение по умолчанию не задано, поле остаётся пустым.
+                  type: string
+                grantedResourceKind:
+                  description: Тип (kind) cluster-wide-ресурса.
+                  type: string
+                observedGeneration:
+                  description: Поколение ресурса (generation), на основе которого контроллер сформировал текущий `status`.
+                  format: int64
+                  type: integer
+              type: object
+          type: object

@@ -60,6 +60,7 @@ spec:
               may reject unrecognized values.
               More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
+            x-doc-skip: true
           kind:
             description: |-
               Kind is a string value representing the REST resource this object represents.
@@ -67,9 +68,11 @@ spec:
               Cannot be updated.
               In CamelCase.
               More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            x-doc-skip: true
             type: string
           metadata:
             type: object
+            x-doc-skip: true
           status:
             description: status defines the observed catalog for this project.
             properties:

@@ -44,26 +44,26 @@ description: Как устроена мультитенантность в Deckh
 
 Эти инструменты можно комбинировать, чтобы настроить проект в соответствии с требованиями вашего приложения.
 
-### Управление доступом к кластерным ресурсам
+### Управление доступом к cluster-wide-ресурсам
 
-Проекты регулярно ссылаются на кластерные ресурсы: `PersistentVolumeClaim` указывает `StorageClass`,
-`Certificate` — `ClusterIssuer`, `RoleBinding` — `ClusterRole`. Модуль также задаёт для каждого
-проекта, **какие** кластерные ресурсы можно использовать из неймспейсов проектов, и какое значение
-используется по умолчанию. Это отдельный механизм от RBAC: RBAC решает, *кто может создать* объект,
-гранты — *какие кластерные ресурсы этот объект может ссылать*.
+Объекты в неймспейсах проектов могут ссылаться на cluster-wide-ресурсы. Например, PersistentVolumeClaim может использовать StorageClass,
+Certificate — ClusterIssuer, RoleBinding — ClusterRole. Модуль позволяет администраторам
+кластера определять, какие cluster-wide-ресурсы можно использовать из неймспейсов
+проектов, и какое значение используется по умолчанию.
+
+Механизм работает независимо от RBAC. RBAC определяет, *кто может создавать и изменять* объекты, а механизм управления доступом к cluster-wide-ресурсам — *какие ресурсы* могут использовать эти объекты.
 
 Механизм использует четыре кастомных ресурса:
 
-- [`GrantableClusterResourceDefinition`](/modules/multitenancy-manager/cr.html#grantableclusterresourcedefinition) (`gcrd`, cluster-scoped) — регистрирует кластерный ресурс как управляемый грантами (поставляется платформой и модулями).
-- [`GrantableClusterResourceReference`](/modules/multitenancy-manager/cr.html#grantableclusterresourcereference) (`gcrr`, cluster-scoped) — объявляет, какое поле какого CRD валидируется/подставляется (поставляется модулями).
-- [`ClusterResourceGrantPolicy`](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy) (`crgp`, cluster-scoped) — списки разрешений/запретов и дефолты администратора для проекта (единственный ручной шаг для контроля доступа).
-- [`AvailableClusterResource`](/modules/multitenancy-manager/cr.html#availableclusterresource) (`available`, namespaced, read-only) — формируемый контроллером каталог, который проект читает, чтобы узнать доступные ресурсы.
+* [GrantableClusterResourceDefinition](/modules/multitenancy-manager/cr.html#grantableclusterresourcedefinition) — регистрирует тип cluster-wide-ресурсов, доступом к которому можно управлять. Такие ресурсы поставляются DKP или разработчиками модулей;
+* [GrantableClusterResourceReference](/modules/multitenancy-manager/cr.html#grantableclusterresourcereference) — определяет, где используется зарегистрированный cluster-wide-ресурс. Например, какое поле ресурса содержит ссылку на него. Такие ресурсы поставляются модулями;
+* [ClusterResourceGrantPolicy](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy) — задаёт правила доступа. Администратор кластера с помощью лейблов выбирает проекты, на которые распространяется политика, определяет разрешённые и запрещённые ресурсы, а также ресурс, используемый по умолчанию;
+* [AvailableClusterResource](/modules/multitenancy-manager/cr.html#availableclusterresource) — создаваемый контроллером список cluster-wide-ресурсов, доступных проекту, который предназначен только для чтения.
 
-Пока администратор не создал `ClusterResourceGrantPolicy`, все ресурсы доступны (разрешающий дефолт).
-Валидация применяется только к неймспейсам проектов; существующие объекты при UPDATE сохраняют
-значения (grandfathering).
+Пока администратор не создал ClusterResourceGrantPolicy, все ресурсы доступны всем проектам по умолчанию.
+Проверка доступа выполняется только для объектов в неймспейсах проектов. Если политика доступа изменяется, уже используемые существующими объектами cluster-wide-ресурсы остаются доступными для этих объектов.
 
-Полное руководство — в [руководстве по использованию модуля](/modules/multitenancy-manager/usage_ru.html#управление-доступом-к-кластерным-ресурсам-гранты).
+Подробное описание механизма управления доступом приведено [в документации модуля `multitenancy-manager`](/modules/multitenancy-manager/#управление-доступом-к-cluster-wide-ресурсам).
 
 ## Архитектура модуля
 

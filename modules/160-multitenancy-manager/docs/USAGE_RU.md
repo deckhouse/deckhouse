@@ -309,87 +309,27 @@ data:
        heritage: my-custom-label
    ```
 
-## Управление доступом к кластерным ресурсам (гранты)
+## Управление доступом к cluster-wide-ресурсам
 
-Проекты routinely ссылаются на кластерные ресурсы: `PersistentVolumeClaim` указывает `StorageClass`,
-`Certificate` — `ClusterIssuer`, `RoleBinding` — `ClusterRole`. Модуль `multitenancy-manager` позволяет
-администраторам кластера управлять для каждого проекта, **какие** кластерные ресурсы можно использовать
-из неймспейсов проектов, и какое значение используется по умолчанию.
+Модуль позволяет управлять доступом проектов к cluster-wide-ресурсам,
+таким как StorageClass, ClusterIssuer, ClusterRole и другим.
 
-Это отдельный механизм от RBAC: RBAC решает, *кто может создать* объект, гранты — *какие кластерные
-ресурсы этот объект может ссылаться*. Пользователю нужно и то, и другое — RBAC-право на создание PVC *и*
-грант, разрешающий выбранный `StorageClass`.
+Описание механизма, используемых ресурсов и cluster-wide-ресурсов, зарегистрированных платформой,
+приведено [на странице описания модуля](./#управление-доступом-к-cluster-wide-ресурсам).
 
-### Как это работает
-
-Механизм — пятиступенчатый конвейер:
-
-1. **Определения** ([`GrantableClusterResourceDefinition`](cr.html#grantableclusterresourcedefinition),
-   короткое имя `gcrd`) регистрируют, какие кластерные ресурсы контролируются. Deckhouse поставляет набор
-   регистраций по умолчанию; разработчики модулей могут добавлять свои.
-2. **Ссылки** ([`GrantableClusterResourceReference`](cr.html#grantableclusterresourcereference),
-   короткое имя `gcrr`) объявляют, *где* грантуемый ресурс используется — какое поле какого CRD
-   валидируется и/или подставляется по умолчанию. Deckhouse поставляет ссылки для встроенных путей;
-   разработчики модулей могут регистрировать пути для своих CRD.
-3. **Администратор** создаёт
-   [`ClusterResourceGrantPolicy`](cr.html#clusterresourcegrantpolicy) (короткое имя `crgp`) — это
-   единственный ручной шаг для контроля доступа. Политика выбирает проекты по меткам и для каждого
-   ресурса задаёт разрешённые/запрещённые имена и дефолт проекта.
-4. **Контроллер** формирует каталог
-   [`AvailableClusterResource`](cr.html#availableclusterresource) (короткое имя `available`) в
-   неймспейсе каждого совпавшего проекта — read-only список того, что проект может использовать.
-5. **Вебхуки** валидируют ссылки при CREATE/UPDATE и подставляют дефолты при CREATE.
-
-```mermaid
-flowchart LR
-    A["Разработчик модуля / Платформа<br/>поставляет GCRD + GCRR"] --> C
-    B["Администратор кластера<br/>создаёт CRGP"] --> C["Контроллер"]
-    C --> D["AvailableClusterResource<br/>в неймспейсе каждого проекта"]
-    E["Пользователь создаёт объект<br/>напр. PVC"] --> F["Мутирующий вебхук<br/>/defaults"]
-    F --> G["Валидирующий вебхук<br/>/is-granted"]
-    D -. доступные имена .-> G
-    G --> H["Объект создан<br/>или отклонён"]
-```
-
-Пока администратор не создал `ClusterResourceGrantPolicy`, **все** ресурсы доступны (разрешающий
-дефолт). **Квотирование** ресурсов не является частью этой системы — оно делегировано стандартному
-Kubernetes `ResourceQuota`. Валидация применяется только к неймспейсам проектов.
-
-### Матрица владения CRD
-
-| CRD | Короткое имя | Область | Кто создаёт | Ручное создание | Назначение |
-| --- | --- | --- | --- | --- | --- |
-| `GrantableClusterResourceDefinition` | `gcrd` | Кластер | Разработчик модуля / Платформа | Разрешено для кастомных ресурсов | Регистрирует кластерный ресурс как управляемый грантами |
-| `GrantableClusterResourceReference` | `gcrr` | Кластер | Разработчик модуля | Разрешено для полей кастомных CRD | Объявляет, где грантуемый ресурс используется (путь валидации/дефолтинга) |
-| `ClusterResourceGrantPolicy` | `crgp` | Кластер | Администратор кластера | **Обязательно** — только ручное | Списки разрешений/запретов и дефолты для проекта |
-| `AvailableClusterResource` | `available` | Неймспейс | Контроллер (автоматически) | **Запрещено** — защищено вебхуком | Read-only каталог доступных ресурсов для проекта |
-
-### Ресурсы, регистрируемые платформой
-
-Эти регистрации поставляются по умолчанию (из Helm-чарта модуля), поэтому механизм работает «из коробки».
-Везде `defaultAvailability: All` — ничего не ограничено, пока администратор не сузит доступ политикой.
-
-| Имя определения | Грантируемый ресурс | Зарегистрированные пути | Режим дефолтинга |
-| --- | --- | --- | --- |
-| `storageclasses` | `StorageClass` (storage.k8s.io) | PVC `.spec.storageClassName` | Coerce |
-| `loadbalancerclasses` | value-backed (без k8s-объекта) | Service `.spec.loadBalancerClass` (guard `type: LoadBalancer`) | FillEmpty |
-| `clusterissuers` | `ClusterIssuer` (cert-manager.io) | Certificate `.spec.issuerRef.name` (guard `kind: ClusterIssuer`); аннотация Ingress `cert-manager.io/cluster-issuer` | FillEmpty / None |
-| `clusterroles` | `ClusterRole` (rbac.authorization.k8s.io) | RoleBinding `.roleRef.name` (guard `kind: ClusterRole`) | None |
-
-Регистрация `clusterroles` исключает все `ClusterRole` без лейбла `rbac.deckhouse.io/delegatable` —
-по умолчанию в `RoleBinding` доступны только роли уровня неймспейса (`d8:use:role:*` и устаревшие роли
-`user-authz:*`).
+Далее приведены основные сценарии настройки и использования механизма.
 
 ### Для администраторов кластера
 
-#### Сценарий 1 — Ограничение StorageClasses для проекта
+Ниже приведены примеры настройки доступа проектов к cluster-wide-ресурсам с помощью ClusterResourceGrantPolicy.
 
-Разрешить только `fast-ssd` и `standard` в production-проектах, а пустые PVC дефолтить на `fast-ssd`:
+#### Ограничение StorageClass для проекта
+
+Чтобы разрешить проектам использовать только StorageClass с именами `fast-ssd` и `standard`, а `fast-ssd` использовать по умолчанию, создайте следующий [ресурс ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy):
 
 {% raw %}
 
 ```yaml
----
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterResourceGrantPolicy
 metadata:
@@ -408,28 +348,23 @@ spec:
 
 {% endraw %}
 
-PVC, созданный без `spec.storageClassName`, патчится на `fast-ssd`. PVC с `StorageClass`, которого нет
-в списке, отклоняется. Поскольку путь использует режим **Coerce**, PVC, чей `storageClassName` был
-предзаполнен встроенным admission Kubernetes (кластерным дефолтом) значением, недоступным проекту,
-*перезаписывается* на дефолт проекта, а не отклоняется.
+При создании PersistentVolumeClaim без значения `spec.storageClassName` в это поле автоматически подставляется `fast-ssd`. Если указан StorageClass, которого нет в списке разрешённых, создание PersistentVolumeClaim отклоняется.
 
-Проверьте, что видит проект:
+Для StorageClass используется режим подстановки значения по умолчанию [`Coerce`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-defaulting). Если встроенный admission-контроллер Kubernetes уже подставил в `spec.storageClassName` класс по умолчанию, недоступный проекту, значение заменяется на `fast-ssd`, а создание PersistentVolumeClaim не отклоняется.
+
+Чтобы проверить, какие StorageClass доступны проекту, выполните следующую команду:
 
 ```shell
-d8 k get available storageclasses -n <имя-проекта> -o yaml
+d8 k get available storageclasses -n <PROJECT_NAME> -o yaml
 ```
 
-#### Сценарий 2 — Ограничение ClusterIssuers для проекта
+#### Ограничение ClusterIssuer для проекта
 
-Регистрация `clusterissuers` содержит два пути: `Certificate.spec.issuerRef.name` (guard
-`issuerRef.kind == ClusterIssuer`, дефолтинг **FillEmpty**) и аннотацию Ingress
-`cert-manager.io/cluster-issuer` (дефолтинг **None** — это переключатель функции, поэтому валидируется,
-но никогда не подставляется автоматически).
+Чтобы разрешить проектам использовать только ClusterIssuer с именами `letsencrypt-prod` и `vault-issuer`, а `letsencrypt-prod` использовать по умолчанию, создайте следующий [ресурс ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy):
 
 {% raw %}
 
 ```yaml
----
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterResourceGrantPolicy
 metadata:
@@ -448,21 +383,28 @@ spec:
 
 {% endraw %}
 
-`Certificate` с `issuerRef.kind == ClusterIssuer` и пустым `issuerRef.name` при создании заполняется
-значением `letsencrypt-prod`. `Certificate` с запрещённым issuer отклоняется. Аннотация Ingress
-валидируется по тому же allow-списку, но никогда не подставляется.
+Политика применяется к ClusterIssuer, указанному одним из следующих способов:
 
-> Регистрация `clusterissuers` поставляется только при включённом модуле `cert-manager`.
+- в поле `.spec.issuerRef.name` ресурса Certificate, если в `.spec.issuerRef.kind` указано ClusterIssuer;
+- в аннотации `cert-manager.io/cluster-issuer` ресурса Ingress.
 
-#### Сценарий 3 — Ограничение ClusterRoles в RoleBinding
+При создании Certificate с ClusterIssuer без значения `.spec.issuerRef.name` в это поле автоматически подставляется `letsencrypt-prod`. Если указан ClusterIssuer, которого нет в списке разрешённых, создание Certificate отклоняется.
 
-По умолчанию в `RoleBinding` доступны только delegatable ClusterRoles (всё без лейбла
-`rbac.deckhouse.io/delegatable` исключается). Чтобы выдать проекту дополнительные ClusterRoles:
+Для аннотации `cert-manager.io/cluster-issuer` значение по умолчанию не подставляется. Если аннотация указана, её значение проверяется по тому же списку разрешённых ClusterIssuer.
+
+{% alert level="info" %}
+Управление доступом к ClusterIssuer доступно только при включённом [модуле `cert-manager`](/modules/cert-manager/).
+{% endalert %}
+
+#### Предоставление доступа к дополнительным ClusterRole
+
+По умолчанию в RoleBinding можно использовать только ClusterRole с лейблом `rbac.deckhouse.io/delegatable`.
+
+Чтобы разрешить проектам команды `payments` использовать дополнительные ClusterRole, создайте следующий [ресурс ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy):
 
 {% raw %}
 
 ```yaml
----
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterResourceGrantPolicy
 metadata:
@@ -482,20 +424,22 @@ spec:
 
 {% endraw %}
 
-Записи `allowed`/`allowedSelector` *объединяются с* набором исключённых по умолчанию, поэтому
-delegatable-роли остаются доступными. Путь использует дефолтинг **None** — автоподстановка ClusterRole
-в RoleBinding бессмысленна, выполняется только валидация.
+Политика дополнительно разрешает использовать:
 
-#### Сценарий 4 — Ограничение LoadBalancerClasses
+- ClusterRole с именем `my-custom-role`;
+- ClusterRole, соответствующие селектору `shared: "true"`.
 
-`loadbalancerclasses` — **value-backed** ресурс: объекта k8s нет, «имена» — это просто значения
-`Service.spec.loadBalancerClass`. Путь ограничен guard `spec.type == LoadBalancer` и использует
-дефолтинг **FillEmpty**.
+ClusterRole с лейблом `rbac.deckhouse.io/delegatable` при этом остаются доступными.
+
+При создании или изменении RoleBinding указанная в нём ClusterRole проверяется на доступность проекту. Значение ClusterRole автоматически не подставляется.
+
+#### Ограничение LoadBalancerClass для сервиса
+
+Чтобы разрешить проектам использовать только LoadBalancerClass со значениями `internal-lb` и `edge-lb`, а `internal-lb` использовать по умолчанию, создайте следующий [ресурс ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy):
 
 {% raw %}
 
 ```yaml
----
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterResourceGrantPolicy
 metadata:
@@ -514,18 +458,21 @@ spec:
 
 {% endraw %}
 
-`LoadBalancer`-Service, созданный без `spec.loadBalancerClass`, заполняется значением `internal-lb`.
-Service с запрещённым классом отклоняется.
+В отличие от StorageClass, ClusterIssuer и ClusterRole, ресурс LoadBalancerClass не является отдельным ресурсом Kubernetes. Политика определяет допустимые значения поля `.spec.loadBalancerClass` для сервисов типа `LoadBalancer`.
 
-#### Сценарий 5 — Полное открытие ресурса для конкретных проектов
+При создании Service типа `LoadBalancer` без значения `.spec.loadBalancerClass` в это поле автоматически подставляется `internal-lb`. Если указано значение, которого нет в списке разрешённых, создание Service отклоняется.
 
-Используйте `availabilityDefault: All`, чтобы полностью открыть ресурс для совпавших проектов
-(перекрывает `defaultAvailability` регистрации), без allow-списка:
+На Service других типов политика не распространяется.
+
+#### Предоставление доступа ко всем ресурсам определённого типа
+
+Чтобы разрешить определённым проектам использовать все ресурсы выбранного типа без явного перечисления, установите [`availabilityDefault: All`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-availabilitydefault).
+
+Следующая политика разрешает всем проектам с лейблом `environment: sandbox` использовать любые StorageClass:
 
 {% raw %}
 
 ```yaml
----
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterResourceGrantPolicy
 metadata:
@@ -541,18 +488,17 @@ spec:
 
 {% endraw %}
 
-Это редко нужно — allow-список уже задаёт базу `None` и является обычным способом ограничить.
-`availabilityDefault` нужен, чтобы перевернуть базу *без* списка.
+Обычно для управления доступом достаточно явно указывать разрешённые ресурсы с помощью [`allowed`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-allowed) или [`allowedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-allowedselector). Используйте параметр `availabilityDefault: All`, если выбранным проектам необходимо предоставить доступ ко всем ресурсам указанного типа.
 
-#### Сценарий 6 — Запрет конкретных ресурсов, разрешение остальных
+#### Запрет отдельных ресурсов
 
-Используйте список `denied` (или `deniedSelector`), чтобы исключить конкретные имена, оставив остальное
-доступным:
+Чтобы запретить проектам использовать отдельные ресурсы, оставив остальные доступными, используйте параметр [`denied`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-denied) или [`deniedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-deniedselector).
+
+Следующая политика запрещает проектам с лейблом `environment: dev` использовать StorageClass с именами `expensive-nvme` и `archived-hdd`:
 
 {% raw %}
 
 ```yaml
----
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterResourceGrantPolicy
 metadata:
@@ -570,17 +516,17 @@ spec:
 
 {% endraw %}
 
-`denied` перекрывает `allowed`/`allowedSelector`: имя, совпавшее с обоими, запрещается.
+Запрет имеет приоритет над разрешением. Если ресурс соответствует одновременно `denied` или `deniedSelector` и `allowed` или `allowedSelector`, он считается недоступным.
 
-#### Сценарий 7 — Использование label-селекторов для динамических списков
+#### Управление доступом с помощью label-селекторов
 
-`allowedSelector` и `deniedSelector` выдают или исключают объекты по лейблу, что избавляет от
-перечисления всех имён:
+Чтобы управлять доступом к ресурсам без перечисления их имён, используйте параметры [`allowedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-allowedselector) и [`deniedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-deniedselector). Селекторы позволяют разрешать или запрещать ресурсы на основе их лейблов.
+
+Следующая политика разрешает проектам с лейблом `tier: shared` использовать StorageClass с лейблом `shared: "true"`, за исключением StorageClass с лейблом `deprecated: "true"`:
 
 {% raw %}
 
 ```yaml
----
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterResourceGrantPolicy
 metadata:
@@ -601,50 +547,19 @@ spec:
 
 {% endraw %}
 
-### Как работают валидация и дефолтинг
+### Для пользователей проекта
 
-**Порядок определения доступности.** Для данного имени объекта доступность определяется в следующем
-порядке (первое совпадение выигрывает):
+Пользователи проекта могут просматривать доступные им cluster-wide-ресурсы, а также проверять значения, используемые по умолчанию.
 
-1. фильтры `excluded` на `GrantableClusterResourceDefinition` — жёсткий запрет, независимо от политики;
-2. `denied` / `deniedSelector` на совпавшей записи политики;
-3. `allowed` / `allowedSelector` на совпавшей записи политики;
-4. `availabilityDefault` записи политики;
-5. `defaultAvailability` определения.
+#### Просмотр доступных cluster-wide-ресурсов
 
-**Режимы дефолтинга** (задаются на путь в `GrantableClusterResourceReference`):
+В неймспейсе каждого проекта автоматически создаётся [ресурс AvailableClusterResource](cr.html#availableclusterresource) для каждого зарегистрированного
+ресурса. С их помощью можно узнать, какие cluster-wide-ресурсы доступны проекту и какой ресурс используется по умолчанию.
 
-- `None` — только валидация, значение никогда не подставляется (напр. аннотации-переключатели,
-  roleRef в RoleBinding).
-- `FillEmpty` — подставить дефолт проекта в *пустое* поле при CREATE (напр. issuerRef в Certificate,
-  loadBalancerClass в Service).
-- `Coerce` — перезаписать *недоступное или пустое* значение на дефолт проекта при CREATE (напр.
-  storageClassName в PVC, где встроенный admission мог предзаполнить кластерный дефолт).
-
-**Определение значения по умолчанию.** Дефолт проекта берётся из `default` записи политики, если задан;
-иначе из `defaultFrom` определения (аннотация, помечающая кластерный дефолт-объект); иначе пусто.
-
-**Grandfathering.** При UPDATE уже присутствующие в объекте значения не отклоняются — существующие
-объекты продолжают работать после сужения политики. Валидации подвергаются только CREATE и изменения
-полей при UPDATE.
-
-**Системные запросы.** Запросы от системных service accounts (напр. собственных контроллеров платформы)
-обходят валидацию грантов, поэтому компоненты платформы не блокируются.
-
-### Для пользователей проекта (тенантов)
-
-#### Обнаружение доступных кластерных ресурсов
-
-В неймспейсе каждого проекта создаётся объект `AvailableClusterResource` на каждое зарегистрированное
-определение. Читайте их, чтобы узнать, какие кластерные ресурсы разрешено использовать и какой является
-дефолтом:
+Чтобы посмотреть все доступные cluster-wide-ресурсы проекта, выполните следующую команду:
 
 ```shell
-# Список всех доступных кластерных ресурсов в проекте:
-d8 k get available -n <имя-проекта>
-
-# Полная информация по одному ресурсу (имена + какой дефолт):
-d8 k get available storageclasses -n <имя-проекта> -o yaml
+d8 k get available -n <PROJECT_NAME>
 ```
 
 Пример вывода:
@@ -655,99 +570,41 @@ storageclasses      StorageClass fast-ssd     2           5m
 clusterissuers      ClusterIssuer letsencrypt 2           5m
 ```
 
-#### Понимание отказов
+Чтобы просмотреть подробную информацию о ресурсах определённого типа (например, StorageClass), выполните следующую команду:
 
-Если создание/обновление отклонено с сообщением вида `resource <name> is not available to project
-<project>`, указанное значение отсутствует в allow-списке проекта. Проверьте каталог
-`AvailableClusterResource` — если имени нет, попросите администратора кластера добавить его (или
-используйте имя из списка).
+```shell
+d8 k get available storageclasses -n <PROJECT_NAME> -o yaml
+```
 
-#### Понимание автоподстановки дефолтов
+#### Отказ в использовании cluster-wide-ресурса
 
-Для путей с дефолтингом `FillEmpty` или `Coerce` пустое поле (или, для Coerce, недоступное значение)
-при CREATE автоматически заменяется на дефолт проекта. Значение можно не указывать — но всегда можно
-задать его явно любым именем из каталога `AvailableClusterResource`.
+Если при создании или изменении объекта указанный cluster-wide-ресурс недоступен проекту, операция отклоняется с сообщением:
+
+```text
+resource <RESOURCE_NAME> is not available to project <PROJECT_NAME>
+```
+
+В этом случае проверьте доступные ресурсы с помощью AvailableClusterResource. Используйте ресурс из списка доступных или попросите администратора кластера добавить необходимый ресурс.
+
+#### Автоматическая подстановка значений по умолчанию
+
+Для некоторых кластерных ресурсов администратор может задать значение по умолчанию. Если при создании объекта соответствующее значение не указано, оно подставляется автоматически.
+
+Например, если для StorageClass по умолчанию задан `fast-ssd`, при создании PersistentVolumeClaim без `.spec.storageClassName` в это поле может быть автоматически подставлено значение `fast-ssd`.
+
+Значение можно указать явно, выбрав любой доступный проекту ресурс из соответствующего AvailableClusterResource.
 
 ### Для разработчиков модулей
 
-#### Регистрация пути валидации для существующего грантуемого ресурса
+#### Настройка проверки ссылки на cluster-wide-ресурс
 
-Если CRD вашего модуля содержит поле, ссылающееся на уже зарегистрированный грантуемый кластерный
-ресурс (напр. `StorageClass`), поставьте `GrantableClusterResourceReference` в вашем Helm-чарте, чтобы
-поле валидировалось и (опционально) подставлялось по умолчанию для проектов.
+Если ресурс модуля содержит поле со ссылкой на cluster-wide-ресурс, уже зарегистрированный с помощью [GrantableClusterResourceDefinition](cr.html#grantableclusterresourcedefinition), создайте [GrantableClusterResourceReference](cr.html#grantableclusterresourcereference). Он определяет, в каких ресурсах и полях используется cluster-wide-ресурс, а также позволяет настроить проверку доступности и автоматическую подстановку значения по умолчанию.
 
-Шаблон ссылки:
+Например, чтобы настроить проверку StorageClass, указанного в поле `.spec.storageClassName` ресурса PostgresDatabase, добавьте в Helm-чарт модуля следующий ресурс:
 
 {% raw %}
 
 ```yaml
----
-apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: GrantableClusterResourceReference
-metadata:
-  name: mycrd-storageclasses
-  labels:
-    heritage: deckhouse
-    module: my-module
-spec:
-  grantableClusterResourceName: storageclasses   # Существующий GrantableClusterResourceDefinition
-  rule:
-    apiGroups:   ["my.example.com"]
-    apiVersions: ["v1"]
-    resources:    ["postgresdatabases"]
-  fieldPaths:
-    - path: $.spec.storageClassName
-      defaulting: Coerce
-```
-
-{% endraw %}
-
-Ключевые поля:
-
-- `grantableClusterResourceName` — `metadata.name` определения `GrantableClusterResourceDefinition`, по
-  которому валидируется путь.
-- `rule` — к каким usage-объектам применяется ссылка (apiGroups/apiVersions/resources во множественном
-  числе).
-- `fieldPaths` — version-scoped расположения грантуемого имени. Требуется минимум одна запись. У каждой
-  записи: `path` (JSONPath до имени), опциональный режим `defaulting`, опциональный guard `match` и
-  опциональные `apiGroups`/`apiVersions` для ограничения записи конкретными версиями.
-
-Выбирайте режим `defaulting` на путь:
-
-- `None` — только валидация. Используйте для аннотаций-переключателей (их отсутствие осмысленно) или
-  полей, которые не следует автоподставлять (напр. `roleRef.name` в RoleBinding).
-- `FillEmpty` — подставить дефолт проекта при CREATE, если поле пусто. Используйте для полей, которые
-  ресурсу нужны, но пользователь их часто опускает (напр. `issuerRef.name` в Certificate).
-- `Coerce` — перезаписать недоступное *или* пустое значение на дефолт проекта при CREATE. Используйте
-  для полей, которые встроенный admission может предзаполнить недоступным проекту значением (напр.
-  `storageClassName` в PVC).
-
-Используйте guard `match`, чтобы применять путь только при выполнении предиката — напр. валидировать
-`issuerRef.name` только при `issuerRef.kind == ClusterIssuer`, или `loadBalancerClass` только при
-`spec.type == LoadBalancer`:
-
-{% raw %}
-
-```yaml
-  fieldPaths:
-    - path: $.spec.loadBalancerClass
-      match:
-        fieldPath: $.spec.type
-        equals: LoadBalancer
-      defaulting: FillEmpty
-```
-
-{% endraw %}
-
-Для CRD с несколькими API-версиями предоставьте version-scoped записи и unscoped fallback — выигрывает
-запись, чьи `apiGroups`/`apiVersions` совпадают с GVK запроса; запись с пустой областью — fallback.
-
-Пример: CRD `PostgresDatabase`, ссылающийся на `StorageClass`:
-
-{% raw %}
-
-```yaml
----
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: GrantableClusterResourceReference
 metadata:
@@ -758,9 +615,9 @@ metadata:
 spec:
   grantableClusterResourceName: storageclasses
   rule:
-    apiGroups:   ["postgres.example.com"]
+    apiGroups: ["postgres.example.com"]
     apiVersions: ["*"]
-    resources:    ["postgresdatabases"]
+    resources: ["postgresdatabases"]
   fieldPaths:
     - path: $.spec.storageClassName
       defaulting: Coerce
@@ -768,71 +625,59 @@ spec:
 
 {% endraw %}
 
-#### Регистрация совершенно нового грантуемого ресурса
+В этом примере `storageclasses` — имя существующего GrantableClusterResourceDefinition, а `Coerce` позволяет при создании PostgresDatabase подставить доступный проекту StorageClass по умолчанию, если значение отсутствует или недоступно проекту.
 
-Чтобы сделать новый кластерный ресурс управляемым грантами, поставьте
-`GrantableClusterResourceDefinition` в вашем чарте, затем один или несколько
-`GrantableClusterResourceReference` для путей, которые на него ссылаются:
+Описание параметров GrantableClusterResourceReference, режимов подстановки значений по умолчанию, условий `match` и настройки ресурсов с несколькими API-версиями приведено [в описании ресурса](cr.html#grantableclusterresourcereference).
 
-{% raw %}
+#### Регистрация нового cluster-wide-ресурса
 
-```yaml
----
-apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: GrantableClusterResourceDefinition
-metadata:
-  name: myclusterresources
-  labels:
-    heritage: deckhouse
-    module: my-module
-spec:
-  grantedResource:
-    apiGroup: my.example.com
-    kind: MyClusterResource
-  enforcement: Managed          # Managed = наши вебхуки; External = ваш собственный вебхук
-  defaultAvailability: All      # All = доступен, пока политика не сузит; None = закрыт по умолчанию
-  # defaultFrom:                # Опционально: аннотация, помечающая кластерный дефолт-объект
-  #   annotationKey: my.example.com/is-default
-  excluded:                     # Опционально: объекты, никогда не доступные тенантам (жёсткий запрет)
-    - matchExpressions:
-        - key: my.example.com/internal
-          operator: Exists
-```
+Чтобы добавить управление доступом к новому cluster-wide-ресурсу, выполните следующее:
 
-{% endraw %}
+1. Создайте ресурс [GrantableClusterResourceDefinition](cr.html#grantableclusterresourcedefinition), чтобы зарегистрировать cluster-wide-ресурс в механизме управления доступом.
+1. Создайте один или несколько ресурсов [GrantableClusterResourceReference](cr.html#grantableclusterresourcereference), чтобы определить поля, в которых используются ссылки на него.
 
-Выбор `enforcement`:
+   Например, чтобы зарегистрировать ресурс MyClusterResource, добавьте в Helm-чарт модуля следующий ресурс:
 
-- `Managed` — гранты обеспечивает вебхук платформы (обычный выбор).
-- `External` — гранты обеспечивает собственный вебхук вашего модуля; регистрация информационная.
+   {% raw %}
 
-Выбор `defaultAvailability`:
+   ```yaml
+   apiVersion: multitenancy.deckhouse.io/v1alpha1
+   kind: GrantableClusterResourceDefinition
+   metadata:
+     name: myclusterresources
+     labels:
+       heritage: deckhouse
+       module: my-module
+   spec:
+     grantedResource:
+       apiGroup: my.example.com
+       kind: MyClusterResource
+     enforcement: Managed
+     defaultAvailability: All
+     excluded:
+       - matchExpressions:
+           - key: my.example.com/internal
+             operator: Exists
+   ```
 
-- `All` — ресурс доступен, пока политика не сузит его (разрешающий; платформенный дефолт).
-- `None` — ресурс закрыт, пока политика явно его не откроет (ограничивающий).
+   {% endraw %}
 
-Затем зарегистрируйте пути объектами `GrantableClusterResourceReference`, как показано выше.
+   В этом примере зарегистрированные ресурсы по умолчанию доступны проектам. Ресурсы с меткой `my.example.com/internal` исключаются из доступных.
 
-#### Использование `x-deckhouse-grantable-resource` в настройках DKP-приложений
+   Описание параметров ресурса GrantableClusterResourceDefinition и доступных режимов управления приведено [в описании ресурса](cr.html#grantableclusterresourcedefinition).
 
-Для настроек DKP-приложений (не «сырых» CRD) используйте OpenAPI-расширение
-`x-deckhouse-grantable-resource` на строковом поле. `deckhouse-controller` автоматически валидирует поле
-по совпадающим грантам и подставляет дефолт проекта — ручная регистрация ссылки не нужна.
+1. После регистрации cluster-wide-ресурса настройте ссылки на него с помощью GrantableClusterResourceReference, как описано [в подразделе «Настройка проверки ссылки на cluster-wide-ресурс»](#настройка-проверки-ссылки-на-cluster-wide-ресурс).
 
-См. [руководство по разработке приложений](/products/kubernetes-platform/documentation/v1/architecture/marketplace/application-development.html) — схема и примеры.
+#### Использование x-deckhouse-grantable-resource в настройках приложений DKP
 
-#### Наблюдаемость для разработчиков
+Для управления доступом к cluster-wide-ресурсам в настройках приложений DKP используйте OpenAPI-расширение `x-deckhouse-grantable-resource`. В этом случае deckhouse-контроллер автоматически проверяет доступность указанного ресурса и при необходимости подставляет значение по умолчанию. Создавать GrantableClusterResourceReference вручную не требуется.
 
-- `GrantableClusterResourceDefinition.status.references` — обратный индекс объектов
-  `GrantableClusterResourceReference`, привязанных к определению (их имена и совпавшие ресурсы).
-- `GrantableClusterResourceReference.status.bound` — `true`, когда указанное определение существует.
-- `GrantableClusterResourceReference.status.conditions[Bound]` — `Resolved` при привязке или
-  `UnknownResource`, когда определения не существует (опечатка или отсутствующая регистрация).
+Описание расширения и примеры использования приведены [в разделе «Разработка приложений»](/products/kubernetes-platform/documentation/v1/architecture/marketplace/application-development.html#подстановка-значения-из-грантов-на-ресурсы-кластера-x-deckhouse-grantable-resource).
 
-### Мониторинг и алерты
+#### Проверка состояния регистрации ресурса
 
-- **Алерт** `ClusterResourceGrantPolicyViolation`: срабатывает, когда существующие объекты в проекте
-  нарушают текущие гранты (напр. после сужения политики). Он информационный — объекты не сломаны
-  (grandfathering), но администратор оповещается о расхождении.
-- **Grafana-дашборд**: *Security → Cluster Resource Grant Violations*.
-- **Метрика**: `d8_cluster_objects_grant_violated`.
+Состояние GrantableClusterResourceDefinition и связанных с ним ресурсов GrantableClusterResourceReference можно проверить в поле `status`:
+
+- [`GrantableClusterResourceDefinition.status.references`](cr.html#grantableclusterresourcedefinition-v1alpha1-status-references) — содержит список связанных ресурсов `GrantableClusterResourceReference` и информацию о ресурсах, к которым они применяются;
+- [`GrantableClusterResourceReference.status.bound`](cr.html#grantableclusterresourcereference-v1alpha1-status-bound) — указывает, найден ли соответствующий GrantableClusterResourceDefinition;
+- `GrantableClusterResourceReference.status.conditions[Bound]` — содержит состояние привязки: `Resolved`, если определение найдено, или `UnknownResource`, если оно отсутствует. Состояние `UnknownResource` может указывать на ошибку в имени GrantableClusterResourceDefinition или на отсутствие необходимой регистрации.

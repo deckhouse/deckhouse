@@ -4,14 +4,110 @@ spec:
       schema:
         openAPIV3Schema:
           description: |
-            Объявляет путь валидации/дефолтинга для ссылки на грантуемый кластерный ресурс (механизм грантов модуля `multitenancy-manager`).
+            Регистрирует места использования cluster-wide-ресурса в других ресурсах Kubernetes.
 
-            **Кто создаёт:** разработчики модулей.
-            **Ручное создание:** разрешено — для полей собственных кастомных CRD, ссылающихся на зарегистрированный ресурс.
-            **Назначение:** определяет, ГДЕ грантируемый ресурс используется — какое поле (`fieldPaths[].path`, JSONPath) какого usage-объекта (по `rule`: apiGroups/apiVersions/resources во множественном числе) валидируется и/или подставляется по умолчанию. Ссылка отделена от владельца определения (`grantableClusterResourceName` указывает на [`GrantableClusterResourceDefinition`](cr.html#grantableclusterresourcedefinition)).
+            GrantableClusterResourceReference определяет ресурсы Kubernetes и поля, содержащие ссылки на cluster-wide-ресурс, зарегистрированный с помощью GrantableClusterResourceDefinition. Для таких полей можно настроить проверку доступности указанного cluster-wide-ресурса и автоматическую подстановку значения по умолчанию.
 
-            Режим дефолтинга на путь (`fieldPaths[].defaulting`): `None` — только валидация; `FillEmpty` — подставить дефолт проекта в пустое поле при CREATE; `Coerce` — перезаписать недоступное или пустое значение на дефолт проекта при CREATE. Опциональный guard `match` включает путь только при выполнении предиката. Для CRD с несколькими версиями используйте version-scoped записи (`apiGroups`/`apiVersions`) и unscoped fallback.
+            Один GrantableClusterResourceDefinition может быть связан с несколькими GrantableClusterResourceReference, если cluster-wide-ресурс используется в разных ресурсах или полях.
 
-            В статусе: `bound` — связан ли с существующим определением; `conditions[Bound]` — `Resolved` или `UnknownResource` (определение не найдено).
+            GrantableClusterResourceReference создаётся разработчиком модуля при добавлении ссылки на зарегистрированный cluster-wide-ресурс.
 
-            Подробности — в разделе [«Для разработчиков модулей»](usage_ru.html#для-разработчиков-модулей).
+            Подробнее о регистрации ссылок на cluster-wide-ресурсы — [в разделе «Примеры использования»](usage.html#для-разработчиков-модулей).
+          properties:
+            spec:
+              description: Параметры GrantableClusterResourceReference.
+              properties:
+                fieldPaths:
+                  description: |-
+                    Список полей ресурсов Kubernetes, содержащих ссылки на cluster-wide-ресурс.
+
+                    Для каждого поля можно ограничить применимость определёнными API-группами и версиями, задать условие проверки и настроить подстановку значения по умолчанию.
+
+                    Требуется указать хотя бы один элемент. Если используются настройки для отдельных API-групп или версий, добавьте также элемент без `apiGroups` и `apiVersions`, который будет применяться в остальных случаях.
+                  items:
+                    description: |-
+                      Настройки поля, содержащего ссылку на cluster-wide-ресурс.
+
+                      Если API-группа и версия ресурса соответствуют нескольким элементам, применяется элемент с явно указанными `apiGroups` или `apiVersions`. Элемент без ограничений по API-группе и версии используется в остальных случаях.
+                    properties:
+                      apiGroups:
+                        description: |-
+                          API-группы, для которых применяются настройки поля.
+
+                          Если параметр не задан, настройки применяются ко всем API-группам, соответствующим `spec.rule`.
+                      apiVersions:
+                        description: |-
+                          Версии API, для которых применяются настройки поля.
+
+                          Если параметр не задан, настройки применяются ко всем версиям API, соответствующим `spec.rule`.
+                      defaulting:
+                        description: |-
+                          Режим подстановки значения по умолчанию. 
+
+                          Допустимые значения:
+
+                          - `None` — значение не подставляется, выполняется только проверка доступности указанного cluster-wide-ресурса;
+                          - `FillEmpty` — значение по умолчанию подставляется при создании объекта, если поле не заполнено;
+                          - `Coerce` — значение по умолчанию подставляется при создании объекта, если поле не заполнено или указанный cluster-wide-ресурс недоступен проекту.
+                      match:
+                        description: |-
+                          Условие применения настроек поля.
+
+                          Если условие не выполняется, проверка доступности и подстановка значения для этого поля не выполняются.
+                        properties:
+                          equals:
+                            description: Значение, которому должно соответствовать поле, указанное в `fieldPath`.
+                          fieldPath:
+                            description: JSONPath к полю, значение которого проверяется условием.
+                          in:
+                            description: Список допустимых значений поля, указанного в `fieldPath`.
+                      path:
+                        description: |-
+                          JSONPath к строковому полю, содержащему имя cluster-wide-ресурса.
+
+                          Путь может указывать в том числе на аннотацию, например `$.metadata.annotations['cert-manager.io/cluster-issuer']`.
+                grantableClusterResourceName:
+                  description: Имя ресурса GrantableClusterResourceDefinition, регистрирующего cluster-wide-ресурс, на который ссылаются поля.
+                rule:
+                  description: Правило выбора ресурсов Kubernetes, к которым применяется GrantableClusterResourceReference.
+                  properties:
+                    apiGroups:
+                      description: |-
+                        API-группы ресурсов Kubernetes.
+
+                        Используйте `*`, чтобы выбрать все API-группы.
+                    apiVersions:
+                      description: |-
+                        Версии API ресурсов Kubernetes.
+
+                        Используйте `*`, чтобы выбрать все версии.
+                    resources:
+                      description: Имена ресурсов Kubernetes во множественном числе (например, `ingresses`).
+            status:
+              description: Состояние GrantableClusterResourceReference
+              properties:
+                bound:
+                  description: Означает, что GrantableClusterResourceDefinition, указанный в `spec.grantableClusterResourceName`, существует.
+                conditions:
+                  description: Текущее состояние GrantableClusterResourceReference, включая состояние связи с GrantableClusterResourceDefinition.
+                  items:
+                    description: Информация об одном из аспектов текущего состояния ресурса.
+                    properties:
+                      lastTransitionTime:
+                        description: |-
+                          Время последнего изменения состояния условия.
+                      message:
+                        description: |-
+                          Сообщение с дополнительной информацией о состоянии условия.
+                      observedGeneration:
+                        description: |-
+                          Поколение ресурса, на основе которого сформировано состояние условия.
+                      reason:
+                        description: |-
+                          Причина последнего изменения состояния условия.
+                      status:
+                        description: Состояние условия.
+                      type:
+                        description: Тип условия.
+                observedGeneration:
+                  description: Последнее поколение ресурса, обработанное контроллером.

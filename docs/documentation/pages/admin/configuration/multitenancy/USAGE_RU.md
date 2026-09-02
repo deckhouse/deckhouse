@@ -295,31 +295,22 @@ data:
        heritage: my-custom-label
    ```
 
-## Выдача кластерных ресурсов проектам
+## Управление доступом к cluster-wide-ресурсам
 
-Модуль `multitenancy-manager` позволяет администраторам кластера задавать для каждого проекта, какие
-кластерные ресурсы (напр. `StorageClass`, `ClusterIssuer`, `ClusterRole`, `LoadBalancerClass`) можно
+Модуль `multitenancy-manager` позволяет администраторам кластера определять для каждого проекта, какие
+cluster-wide-ресурсы (например, StorageClass, ClusterIssuer, ClusterRole, LoadBalancerClass) можно
 использовать из неймспейсов проектов, и какое значение используется по умолчанию.
 
-Это отдельный механизм от RBAC: RBAC решает, *кто может создать* объект, гранты — *какие кластерные
-ресурсы этот объект может ссылаться*.
+Механизм работает независимо от RBAC. RBAC определяет, *кто может создавать и изменять* объекты, а механизм управления доступом к cluster-wide-ресурсам — *какие ресурсы* могут использовать эти объекты.
 
 В механизме участвуют четыре кастомных ресурса:
 
-- `GrantableClusterResourceDefinition` (`gcrd`, cluster-scoped) — регистрирует кластерный ресурс как
-  управляемый грантами (поставляется платформой и модулями).
-- `GrantableClusterResourceReference` (`gcrr`, cluster-scoped) — объявляет, какое поле какого CRD
-  валидируется/подставляется (поставляется модулями).
-- `ClusterResourceGrantPolicy` (`crgp`, cluster-scoped) — списки разрешений/запретов и дефолты
-  администратора для проекта (единственный ручной шаг для контроля доступа).
-- `AvailableClusterResource` (`available`, namespaced, read-only) — формируемый контроллером каталог,
-  который проект читает, чтобы узнать доступные ресурсы.
+- [GrantableClusterResourceDefinition](/modules/multitenancy-manager/cr.html#grantableclusterresourcedefinition) — регистрирует тип cluster-wide-ресурсов, доступом к которому можно управлять. Такие ресурсы поставляются DKP или разработчиками модулей;
+- [GrantableClusterResourceReference](/modules/multitenancy-manager/cr.html#grantableclusterresourcereference) — определяет, где используется зарегистрированный cluster-wide-ресурс. Например, какое поле ресурса содержит ссылку на него. Такие ресурсы поставляются модулями;
+- [ClusterResourceGrantPolicy](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy) — задаёт правила доступа. Администратор кластера с помощью лейблов выбирает проекты, на которые распространяется политика, определяет разрешённые и запрещённые ресурсы, а также ресурс, используемый по умолчанию;
+- [AvailableClusterResource](/modules/multitenancy-manager/cr.html#availableclusterresource) — создаваемый контроллером список cluster-wide-ресурсов, доступных проекту, который предназначен только для чтения.
 
-Пока администратор не создал `ClusterResourceGrantPolicy`, все ресурсы доступны (разрешающий дефолт).
-Валидация применяется только к неймспейсам проектов; существующие объекты при UPDATE сохраняют свои
-значения (grandfathering).
+Пока администратор не создал ClusterResourceGrantPolicy, все ресурсы доступны всем проектам по умолчанию.
+Проверка доступа выполняется только для объектов в неймспейсах проектов. Если политика доступа изменяется, уже используемые существующими объектами cluster-wide-ресурсы остаются доступными для этих объектов.
 
-Полное руководство — сценарии для администратора (ограничение StorageClasses, ClusterIssuers,
-ClusterRoles, LoadBalancerClasses), обнаружение ресурсов тенантами, руководство для разработчиков
-модулей, правила валидации и дефолтинга, мониторинг — см. в
-[руководстве по использованию модуля multitenancy-manager](/products/kubernetes-platform/documentation/v1/modules/160-multitenancy-manager/usage_ru.html#управление-доступом-к-кластерным-ресурсам-гранты).
+Подробное описание механизма управления доступом приведено [в документации модуля `multitenancy-manager`](/modules/multitenancy-manager/#управление-доступом-к-cluster-wide-ресурсам).
