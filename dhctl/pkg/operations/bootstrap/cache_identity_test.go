@@ -130,10 +130,11 @@ func TestPrimaryCacheIdentity(t *testing.T) {
 		},
 		{
 			// The machines of an immutable cluster, which refuses --ssh-host and names them here.
+			// sha256("master-0"): the names, not the pairs.
 			name:        "an immutable cluster is named after the machines --master-host names",
 			meta:        staticConfig(),
 			masterHosts: []string{"master-0=10.0.0.11"},
-			expected:    "master-21f49ca6d401876a5410f57d1cb0a48b",
+			expected:    "master-039d00b17e10d07f52111429fc7d82e2",
 		},
 		{
 			// A static bootstrap of the current host is legal and carries neither an --ssh-host nor
@@ -353,6 +354,29 @@ func TestCacheIdentitySeparatesStaticClusters(t *testing.T) {
 	require.NoError(t, err, "and the second cluster is not refused by it")
 }
 
+// An address is where the typo lands. Three masters, the third mistyped: the first two are pushed
+// and recorded, the run dies waiting on the third, and the rerun with the address corrected has to
+// come back to the same directory. Under an identity that carried the addresses it opened an empty
+// one, payloadAlreadyPushed answered false for machines that are already installed, dhctl pushed
+// again and took the terminal 401 - and the handoff material it needed was in the directory it had
+// just left.
+func TestPrimaryCacheIdentityNamesImmutableMachinesNotTheirAddresses(t *testing.T) {
+	identity := func(masterHosts ...string) string {
+		return primaryCacheIdentity(staticConfig(), nil, masterHosts, options.KubeOptions{})
+	}
+
+	require.Equal(t,
+		identity("master-0=10.0.0.11", "master-1=10.0.0.12", "master-2=10.0.0.13"),
+		identity("master-0=10.0.0.11", "master-1=10.0.0.12", "master-2=10.0.0.23"),
+		"a corrected address is the same cluster, and its records are in the directory the first run wrote")
+
+	require.Equal(t, identity("master-0 = 10.0.0.11"), identity("master-0=10.0.0.11"),
+		"the spaces an operator puts around the separator belong to neither half")
+
+	require.NotEqual(t, identity("master-0=10.0.0.11"), identity("master-9=10.0.0.11"),
+		"a renamed machine is a different cluster, as the node name is what it registers under")
+}
+
 // The machines of an immutable cluster are named by --master-host, and --ssh-host is refused
 // there, so nothing else was left for the identity to read: ClusterPrefix and ProviderName are
 // cloud-only, and the kube flags are unset during a bootstrap. Two clusters collapsed onto one
@@ -363,10 +387,15 @@ func TestPrimaryCacheIdentityNamesImmutableClustersApart(t *testing.T) {
 		return primaryCacheIdentity(staticConfig(), nil, masterHosts, options.KubeOptions{})
 	}
 
-	require.NotEqual(t, identity("master-0=10.0.0.11"), identity("master-0=10.0.0.21"),
-		"two clusters of different machines are two caches")
+	require.NotEqual(t, identity("master-0=10.0.0.11"), identity("kube-0=10.0.0.11"),
+		"two clusters of differently named machines are two caches")
 	require.NotEqual(t, legacyIdentity, identity("master-0=10.0.0.11"),
 		"the collapsed identity is what this arm exists to avoid")
+
+	// The trade the machine-name identity makes: two clusters that call their machines the same
+	// names are one identity, and reportImmutableAddressChange (steps_immutable.go) is what says
+	// so. The alternative was the split a mistyped address caused on the rerun of a single one.
+	require.Equal(t, identity("master-0=10.0.0.11"), identity("master-0=10.0.0.21"))
 
 	require.Equal(t,
 		identity("master-0=10.0.0.11", "master-1=10.0.0.12"),

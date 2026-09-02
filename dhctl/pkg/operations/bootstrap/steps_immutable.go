@@ -22,6 +22,7 @@ import (
 	"maps"
 	"net/http/httptrace"
 	"slices"
+	"strings"
 	"sync/atomic"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -134,9 +135,16 @@ func (b *ClusterBootstrapper) detectImmutableMaster(ctx context.Context, bctx *b
 		return err
 	}
 
+	firstMaster, err := electFirstImmutableMaster(ctx, bctx, b.Options.Bootstrap.MasterHostsRaw, hosts)
+	if err != nil {
+		return err
+	}
+
+	reportImmutableAddressChange(ctx, bctx.stateCache, hosts)
+
 	dhlog.FromContext(ctx).InfoContext(ctx, "Master NodeGroup asks for an immutable system: bootstrapping without SSH and bashible")
 	bctx.immutable = &immutableBootstrap{
-		masterNodeName: firstImmutableMasterName(bctx.metaConfig, b.Options.Bootstrap.MasterHostsRaw),
+		masterNodeName: firstMaster,
 		hosts:          hosts,
 		customizations: matched,
 	}
@@ -144,15 +152,107 @@ func (b *ClusterBootstrapper) detectImmutableMaster(ctx context.Context, bctx *b
 	return nil
 }
 
-// firstImmutableMasterName is the node the cluster starts on: the prefix names
-// it in a cloud, and the operator's first --master-host where there is no
-// prefix. ParseHosts refused a nameless pair, ValidateInputs an empty list.
-func firstImmutableMasterName(metaConfig *config.MetaConfig, raw []string) string {
-	if metaConfig.ClusterType == config.CloudClusterType {
-		return firstMasterNodeName(metaConfig)
+// firstMasterCacheKey names the machine the cluster was started on. Named like the other keys of
+// this path (pkg/immutable/constants.go).
+const firstMasterCacheKey = "immutable-control-plane-first-master"
+
+// electFirstImmutableMaster is the node the cluster starts on: the prefix names it in a cloud, and
+// the operator's first --master-host where there is no prefix.
+//
+// Recorded rather than recomputed: the election reads the flag order while the cache identity
+// sorts, so a rerun with the pairs reordered reused the cache, found no record for the machine now
+// first and handed it a Bootstrap: true control plane beside the live one.
+func electFirstImmutableMaster(ctx context.Context, bctx *bootstrapContext, raw []string, hosts map[string]string) (string, error) {
+	if bctx.metaConfig.ClusterType == config.CloudClusterType {
+		return firstMasterNodeName(bctx.metaConfig), nil
 	}
-	name, _ := immutable.ParseHost(raw[0])
-	return name
+
+	inCache, err := bctx.stateCache.InCache(ctx, firstMasterCacheKey)
+	if err != nil {
+		return "", fmt.Errorf("look up %s in the state cache: %w", firstMasterCacheKey, err)
+	}
+
+	if !inCache {
+		// ParseHosts refused a nameless pair, ValidateInputs an empty list.
+		name, _ := immutable.ParseHost(raw[0])
+		if err := bctx.stateCache.Save(ctx, firstMasterCacheKey, []byte(name)); err != nil {
+			return "", fmt.Errorf("record the first master in the state cache: %w", err)
+		}
+
+		return name, nil
+	}
+
+	recorded, err := bctx.stateCache.Load(ctx, firstMasterCacheKey)
+	if err != nil {
+		return "", fmt.Errorf("load %s from the state cache: %w", firstMasterCacheKey, err)
+	}
+
+	name := string(recorded)
+	if _, given := hosts[name]; !given {
+		return "", fmt.Errorf(
+			"this cluster was started on %s and --master-host names only %s: the first master is where the "+
+				"control plane already runs and the handoff material in the state cache is its own, so name %s too",
+			name, strings.Join(slices.Sorted(maps.Keys(hosts)), ", "), name)
+	}
+
+	return name, nil
+}
+
+// immutableHostsCacheKey records the addresses the machines were reached at, for no other purpose
+// than telling the operator they changed.
+const immutableHostsCacheKey = "immutable-control-plane-hosts"
+
+// reportImmutableAddressChange says which machines this run puts at other addresses than the last
+// one did. The cluster is named by its machine names (cache_identity.go), so other addresses now
+// share one working directory, and what it records as pushed was pushed to the addresses of then.
+func reportImmutableAddressChange(ctx context.Context, stateCache state.Cache, hosts map[string]string) {
+	if len(hosts) == 0 {
+		return
+	}
+
+	previous, err := loadImmutableHosts(ctx, stateCache)
+	if err != nil {
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Cannot read the addresses of the previous run: %v", err))
+	}
+
+	// A name gone from the list is a different identity and so a different directory: only an
+	// address can differ here.
+	moved := make([]string, 0, len(hosts))
+	for _, name := range slices.Sorted(maps.Keys(hosts)) {
+		was, known := previous[name]
+		if !known || was == hosts[name] {
+			continue
+		}
+		moved = append(moved, fmt.Sprintf("%s was %s, now %s", name, was, hosts[name]))
+	}
+
+	if len(moved) > 0 {
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
+			"This cluster is named after its machines, so this run continues in the state cache of the run that "+
+				"gave them other addresses (%s); what that run recorded as pushed, it pushed to the old ones",
+			strings.Join(moved, "; ")))
+	}
+
+	if err := stateCache.SaveStruct(ctx, immutableHostsCacheKey, hosts); err != nil {
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Cannot record the addresses of the machines: %v", err))
+	}
+}
+
+func loadImmutableHosts(ctx context.Context, stateCache state.Cache) (map[string]string, error) {
+	inCache, err := stateCache.InCache(ctx, immutableHostsCacheKey)
+	if err != nil {
+		return nil, fmt.Errorf("look up %s in the state cache: %w", immutableHostsCacheKey, err)
+	}
+	if !inCache {
+		return nil, nil
+	}
+
+	var hosts map[string]string
+	if err := stateCache.LoadStruct(ctx, immutableHostsCacheKey, &hosts); err != nil {
+		return nil, fmt.Errorf("load %s from the state cache: %w", immutableHostsCacheKey, err)
+	}
+
+	return hosts, nil
 }
 
 // remainingMasterNames are the machines that join the cluster the first master
