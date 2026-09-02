@@ -60,8 +60,12 @@ spec:
           readOnly: true
           metadata:
             description: Distribution CA certificates.
-        - path: /var/log/kube-audit
+        {{- if .apiserver.auditPolicy }}
+          {{- if eq .apiserver.auditLog.output "File" }}
+        - path: {{ .apiserver.auditLog.path }}
           readOnly: false
           metadata:
             description: Optional file-based audit log directory.
+          {{- end }}
+        {{- end }}
 {{- end }}
