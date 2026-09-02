@@ -99,7 +99,7 @@ func MetaConfig(t *testing.T) *config.MetaConfig {
 				"nodeletSysext":          NodeletDigest,
 			},
 			"nodeManager": {
-				"olcedar": OSImageDigest,
+				"engine": OSImageDigest,
 			},
 			"common": {
 				"pause": PauseDigest,

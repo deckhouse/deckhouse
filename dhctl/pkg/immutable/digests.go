@@ -165,7 +165,7 @@ func digestGroup(images map[string]any, key string) (map[string]string, error) {
 	return group, nil
 }
 
-// osImageDigest picks the olcedar image of this release. Absent means the
+// osImageDigest picks the Deckhouse Engine image of this release. Absent means the
 // installer image did not ship it, and bootstrap stops here rather than at the
 // node: a config naming no OS image is one the node cannot install from.
 func osImageDigest(images map[string]any) (osImage, error) {

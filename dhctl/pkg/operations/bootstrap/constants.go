@@ -38,8 +38,8 @@ var (
 	// next step, so a couple of minutes is generous.
 	waitNodeRegistered = waitBudget{attempts: 120, interval: time.Second}
 
-	// The machine may be powering on when the bootstrap starts, and olcedar-init
-	// opens the port about thirty seconds into the boot. Ten minutes.
+	// The machine may be powering on when the bootstrap starts, and the Deckhouse
+	// Engine init opens the port about thirty seconds into the boot. Ten minutes.
 	waitMaintenancePort = waitBudget{attempts: 120, interval: 5 * time.Second}
 
 	// The preflight asks a different question than the wait above: not "has this

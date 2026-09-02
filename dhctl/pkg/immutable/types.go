@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // Package immutable builds the cloud-init payloads that boot control-plane
-// nodes on the immutable olcedar OS (no sshd, no bashible). No cluster key travels
+// nodes on the immutable Deckhouse Engine OS (no sshd, no bashible). No cluster key travels
 // in a payload: the node generates the PKI; dhctl gets kubeconfig via handoff.go.
 package immutable
 
@@ -145,7 +145,8 @@ type kernel struct {
 
 // network holds the hostname and the interfaces the node brings up. No ntp,
 // deliberately: the NodeConfig CRD has the field, but nothing on the node reads
-// it — olcedar-init parses it and never uses it, nodelet ignores it entirely.
+// it — the Deckhouse Engine init parses it and never uses it, nodelet ignores
+// it entirely.
 type network struct {
 	Hostname   string             `json:"hostname,omitempty"`
 	Interfaces []networkInterface `json:"interfaces,omitempty"`

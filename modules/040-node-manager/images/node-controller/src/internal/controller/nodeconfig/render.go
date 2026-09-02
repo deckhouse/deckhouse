@@ -157,7 +157,7 @@ func renderKernel() internalv1alpha1.Kernel {
 	}
 }
 
-// renderNetwork keeps the hostname the node booted with. The olcedar init
+// renderNetwork keeps the hostname the node booted with. The Deckhouse Engine init
 // renders it from this config on every boot, so losing it here would leave the
 // node nameless after a reboot.
 func renderNetwork(node *corev1.Node) internalv1alpha1.Network {
@@ -181,7 +181,7 @@ func renderExtensions(digests map[string]string) []internalv1alpha1.Extension {
 }
 
 // renderKubelet maps the NodeGroup's kubelet settings onto the node. Settings
-// an olcedar node cannot honour are clamped (a refused config leaves the node
+// a Deckhouse Engine node cannot honour are clamped (a refused config leaves the node
 // with none) and reported as Warning events (recordClampedSettings).
 func renderKubelet(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv1alpha1.Kubelet {
 	kubelet := internalv1alpha1.Kubelet{
@@ -306,7 +306,7 @@ func renderNodeLabels(ng *v1.NodeGroup) map[string]internalv1alpha1.NodeLabelVal
 	labels := map[string]internalv1alpha1.NodeLabelValue{
 		nodecommon.NodeGroupLabel: internalv1alpha1.NodeLabelValue(ng.Name),
 		nodecommon.NodeTypeLabel:  internalv1alpha1.NodeLabelValue(ng.Spec.NodeType),
-		// An olcedar node is cgroup v2 by construction, and the cluster learns
+		// A Deckhouse Engine node is cgroup v2 by construction, and the cluster learns
 		// that from this label alone (node-manager raises alerts otherwise).
 		// The installer sets it on the first master; the render must keep it.
 		cgroupLabel: cgroupV2Value,

@@ -30,11 +30,11 @@ import (
 // What dhctl fills the NodeConfig with when the cluster configuration names
 // nothing. The names the node is addressed by live in constants.go.
 const (
-	// osImageName is the olcedar image in images_digests.json. It is delivered by
+	// osImageName is the Deckhouse Engine image in images_digests.json. It is delivered by
 	// digest, not by tag: the node records the digest at install and decides a
 	// rootfs update by comparing it, which a moving tag makes impossible.
 	nodeManagerDigestsKey = "nodeManager"
-	osImageName           = "olcedar"
+	osImageName           = "engine"
 
 	// systemDiskSize tells the initramfs which disk to install onto. The
 	// threshold sits between the etcd (10Gi) and system (50Gi) disks: exact
@@ -210,7 +210,7 @@ func nodeKubelet(metaConfig *config.MetaConfig, kubernetesVersion string, podsPe
 		NodeLabels: map[string]string{
 			global.NodeGroupLabel: nodeGroupOrMaster(nodeGroupName),
 			nodeTypeLabel:         nodeType,
-			cgroupLabel:           "cgroup2fs", // olcedar's only layout; bashible probes it in 092_set_cgroup_type.sh.tpl
+			cgroupLabel:           "cgroup2fs", // Deckhouse Engine's only layout; bashible probes it in 092_set_cgroup_type.sh.tpl
 		},
 		// Nobody can approve a serving CSR until Deckhouse is installed, and
 		// kubelet blocks on it. bashible does the same on the first master

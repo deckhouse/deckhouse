@@ -49,7 +49,7 @@ type clusterInputs struct {
 	// feature gates depend on it (bashible turns DRA gates on by version), so a
 	// node not told the version cannot follow.
 	KubernetesVersion string
-	// OSImage is the olcedar image of this release, pinned by digest. The node
+	// OSImage is the Deckhouse Engine image of this release, pinned by digest. The node
 	// compares it with the digest it recorded at install and updates its root
 	// when they differ, so a tag here would make every update undecidable.
 	OSImage internalv1alpha1.OSImage

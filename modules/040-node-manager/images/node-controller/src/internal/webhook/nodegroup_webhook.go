@@ -713,7 +713,7 @@ func adoptingBashibleNodes(req admission.Request, ng, oldNG *v1.NodeGroup) bool 
 
 // getBashibleNodes returns the group's nodes that bashible has configured: the
 // label bashible sets once and never removes. The checksum annotation is blind
-// here (approval-waiting nodes delete it); olcedar nodes never get the label.
+// here (approval-waiting nodes delete it); Deckhouse Engine nodes never get the label.
 func (w *NodeGroupValidator) getBashibleNodes(ctx context.Context, nodeGroupName string) ([]string, error) {
 	webhookLog.Info("listing Nodes", "filter", "bashible-first-run-finished", "nodeGroup", nodeGroupName)
 	// Unwrapped: the caller says which group it was listing for.

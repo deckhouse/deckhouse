@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package nodeconfig renders a NodeConfig object for every node of an olcedar
+// Package nodeconfig renders a NodeConfig object for every node of a Deckhouse Engine
 // NodeGroup: the on-node agent reconciles the node towards it. This controller
 // writes that desired state from the NodeGroup plus live cluster state.
 package nodeconfig

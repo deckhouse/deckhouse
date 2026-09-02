@@ -1294,10 +1294,11 @@ func TestImmutableStaticPreflightsNeedNoSSHHost(t *testing.T) {
 	require.NoError(t, runner.Run(ctx, preflight.PhasePostInfra))
 }
 
-// olcedar-init closes the maintenance port the moment it accepts the document (constants.go), so
-// the machine can be correctly configured while the reply is lost on the way back. Recorded only
-// after a reply, the rerun found no record, pushed again, and the agent of the now-installed node
-// refused the second document terminally: a machine nothing was wrong with, and no way forward.
+// The Deckhouse Engine init closes the maintenance port the moment it accepts the document
+// (constants.go), so the machine can be correctly configured while the reply is lost on the way
+// back. Recorded only after a reply, the rerun found no record, pushed again, and the agent of the
+// now-installed node refused the second document terminally: a machine nothing was wrong with, and
+// no way forward.
 func TestBootstrapImmutableFirstMasterSurvivesALostReply(t *testing.T) {
 	b, bctx := immutableTestBootstrapper(t)
 	bctx.immutable.masterNodeName = "example-master-0"

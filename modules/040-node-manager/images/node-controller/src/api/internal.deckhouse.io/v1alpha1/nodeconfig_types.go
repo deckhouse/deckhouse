@@ -20,7 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// NodeConfig is the desired state of a Deckhouse olcedar node, stored at
+// NodeConfig is the desired state of a Deckhouse Engine node, stored at
 // /config/nodeconfig.yaml and as a cluster CRD (crds/nodeconfig.yaml, generated).
 // Keep identical with nodelet's internal/config/types.go and dhctl's spec-only mirrors.
 // +kubebuilder:object:root=true

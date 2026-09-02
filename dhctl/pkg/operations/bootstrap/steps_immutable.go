@@ -524,9 +524,10 @@ func (b *ClusterBootstrapper) handImmutableJoinPayload(ctx context.Context, bctx
 }
 
 // pushRecordedPayload records the machine dhctl is about to hand a document to, and then hands it
-// over. The record goes first because olcedar-init closes the port the moment it accepts the
-// document (constants.go): a reply lost on the way back would otherwise read as a machine that was
-// never pushed to, and the rerun's second document is refused by the installed agent for good.
+// over. The record goes first because the Deckhouse Engine init closes the port the moment it
+// accepts the document (constants.go): a reply lost on the way back would otherwise read as a
+// machine that was never pushed to, and the rerun's second document is refused by the installed
+// agent for good.
 func (b *ClusterBootstrapper) pushRecordedPayload(ctx context.Context, bctx *bootstrapContext, nodeName, address string, document, nodeConfig []byte) error {
 	if err := savePushedPayload(ctx, bctx.stateCache, nodeName, address); err != nil {
 		return err
