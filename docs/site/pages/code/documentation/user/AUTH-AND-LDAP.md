@@ -235,7 +235,7 @@ Optional parameters:
 - `group_sync.scope` — scope of group search (0 — Base, 1 — SingleLevel, 2 — WholeSubtree).
 - `group_sync.prefix` — defines which attribute to use for determining the parent group name. If missing, the default value is used.
 - `group_sync.top_level_group` — the top-level group to which all synchronized groups will be added.
-- `group_sync.name_mask` — regular expression used to extract the group name from the CN attribute.
+- `group_sync.name_mask` — regular expression used to extract the group name from the CN (Common Name) attribute.
 - `group_sync.owner` — name of the user to be assigned as group owner (default is `root`).
 
 ### `role_mapping` section
