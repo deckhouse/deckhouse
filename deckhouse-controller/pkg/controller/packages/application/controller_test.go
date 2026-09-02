@@ -45,6 +45,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	packagestatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
 	"github.com/deckhouse/deckhouse/go_lib/project"
@@ -192,6 +193,13 @@ func (suite *ControllerTestSuite) TestReconcile() {
 			Namespace:  appNamespace,
 			Definition: apps.Definition{Name: packageName, Version: "v1.0.1"},
 			Settings:   map[string]any{"host": "app.example.com"},
+			Repository: registry.Remote{
+				Name:         "deckhouse",
+				Repository:   "registry.example.com/test",
+				DockerConfig: "test-docker-cfg",
+				Scheme:       "https",
+				CA:           "test-ca",
+			},
 		}, suite.manager.updated[0].app)
 	})
 
