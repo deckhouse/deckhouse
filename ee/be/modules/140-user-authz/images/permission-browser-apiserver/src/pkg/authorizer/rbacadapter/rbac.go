@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/client-go/informers"
 	rbaclisters "k8s.io/client-go/listers/rbac/v1"
@@ -62,26 +61,14 @@ func NewRBACAuthorizer(informerFactory informers.SharedInformerFactory) *RBACAut
 
 // Authorize implements authorizer.Authorizer
 func (r *RBACAuthorizer) Authorize(ctx context.Context, attrs authorizer.Attributes) (authorizer.Decision, string, error) {
-	user := attrs.GetUser()
-	if user == nil {
+	u := attrs.GetUser()
+	if u == nil {
 		return authorizer.DecisionNoOpinion, "", nil
 	}
 
-	userName := user.GetName()
-	userGroups := user.GetGroups()
-
-	// Check ClusterRoleBindings for cluster-scoped or namespaced requests
-	if allowed, reason := r.checkClusterRoleBindings(attrs, userName, userGroups); allowed {
-		klog.V(5).Infof("RBAC: allowed by ClusterRoleBinding: %s", reason)
+	if allowed, reason := r.rulesFor(ctx, u).allows(attrs, false); allowed {
+		klog.V(5).Infof("RBAC: allowed: %s", reason)
 		return authorizer.DecisionAllow, reason, nil
-	}
-
-	// Check RoleBindings for namespaced requests
-	if attrs.GetNamespace() != "" {
-		if allowed, reason := r.checkRoleBindings(attrs, userName, userGroups); allowed {
-			klog.V(5).Infof("RBAC: allowed by RoleBinding: %s", reason)
-			return authorizer.DecisionAllow, reason, nil
-		}
 	}
 
 	return authorizer.DecisionNoOpinion, "", nil
@@ -96,104 +83,14 @@ func (r *RBACAuthorizer) Authorize(ctx context.Context, attrs authorizer.Attribu
 // RBAC explicitly grants, while still denying access that would only be
 // possible through a CAR-generated cluster-wide binding outside the CAR's
 // limitNamespaces scope.
-func (r *RBACAuthorizer) AllowsIndependently(_ context.Context, attrs authorizer.Attributes) bool {
-	user := attrs.GetUser()
-	if user == nil {
+func (r *RBACAuthorizer) AllowsIndependently(ctx context.Context, attrs authorizer.Attributes) bool {
+	u := attrs.GetUser()
+	if u == nil {
 		return false
 	}
 
-	userName := user.GetName()
-	userGroups := user.GetGroups()
-
-	if allowed, _ := r.checkClusterRoleBindingsFiltered(attrs, userName, userGroups, true); allowed {
-		return true
-	}
-
-	if attrs.GetNamespace() != "" {
-		if allowed, _ := r.checkRoleBindings(attrs, userName, userGroups); allowed {
-			return true
-		}
-	}
-
-	return false
-}
-
-// checkClusterRoleBindings checks if the user has access via ClusterRoleBindings
-func (r *RBACAuthorizer) checkClusterRoleBindings(attrs authorizer.Attributes, userName string, userGroups []string) (bool, string) {
-	return r.checkClusterRoleBindingsFiltered(attrs, userName, userGroups, false)
-}
-
-// checkClusterRoleBindingsFiltered checks ClusterRoleBindings, optionally
-// skipping CAR-generated bindings (see IsCARManagedClusterRoleBinding).
-func (r *RBACAuthorizer) checkClusterRoleBindingsFiltered(attrs authorizer.Attributes, userName string, userGroups []string, skipCARManaged bool) (bool, string) {
-	bindings, err := r.clusterRoleBindingLister.List(labels.Everything())
-	if err != nil {
-		klog.Errorf("Failed to list ClusterRoleBindings: %v", err)
-		return false, ""
-	}
-
-	for _, binding := range bindings {
-		if skipCARManaged && IsCARManagedClusterRoleBinding(binding) {
-			continue
-		}
-		if !r.subjectMatches(binding.Subjects, userName, userGroups, "") {
-			continue
-		}
-
-		// Get the ClusterRole
-		role, err := r.clusterRoleLister.Get(binding.RoleRef.Name)
-		if err != nil {
-			klog.V(5).Infof("Failed to get ClusterRole %s: %v", binding.RoleRef.Name, err)
-			continue
-		}
-
-		if r.ruleAllows(role.Rules, attrs) {
-			return true, fmt.Sprintf("RBAC: allowed by ClusterRoleBinding %q of ClusterRole %q to user %q",
-				binding.Name, role.Name, userName)
-		}
-	}
-
-	return false, ""
-}
-
-// checkRoleBindings checks if the user has access via RoleBindings in the namespace
-func (r *RBACAuthorizer) checkRoleBindings(attrs authorizer.Attributes, userName string, userGroups []string) (bool, string) {
-	namespace := attrs.GetNamespace()
-	bindings, err := r.roleBindingLister.RoleBindings(namespace).List(labels.Everything())
-	if err != nil {
-		klog.Errorf("Failed to list RoleBindings in namespace %s: %v", namespace, err)
-		return false, ""
-	}
-
-	for _, binding := range bindings {
-		if !r.subjectMatches(binding.Subjects, userName, userGroups, namespace) {
-			continue
-		}
-
-		var rules []rbacv1.PolicyRule
-		if binding.RoleRef.Kind == "ClusterRole" {
-			role, err := r.clusterRoleLister.Get(binding.RoleRef.Name)
-			if err != nil {
-				klog.V(5).Infof("Failed to get ClusterRole %s: %v", binding.RoleRef.Name, err)
-				continue
-			}
-			rules = role.Rules
-		} else {
-			role, err := r.roleLister.Roles(namespace).Get(binding.RoleRef.Name)
-			if err != nil {
-				klog.V(5).Infof("Failed to get Role %s/%s: %v", namespace, binding.RoleRef.Name, err)
-				continue
-			}
-			rules = role.Rules
-		}
-
-		if r.ruleAllows(rules, attrs) {
-			return true, fmt.Sprintf("RBAC: allowed by RoleBinding %q of %s %q to user %q",
-				binding.Name, binding.RoleRef.Kind, binding.RoleRef.Name, userName)
-		}
-	}
-
-	return false, ""
+	allowed, _ := r.rulesFor(ctx, u).allows(attrs, true)
+	return allowed
 }
 
 // subjectMatches checks if any subject in the list matches the user

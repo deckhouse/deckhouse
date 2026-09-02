@@ -14,8 +14,13 @@ import (
 	"context"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 )
+
+type subjectBinder interface {
+	BindSubject(context.Context, user.Info) context.Context
+}
 
 // filteredReadReason explains an allow that RBAC did not grant. It names the
 // mechanism so an operator reading a BulkSubjectAccessReview response can tell
@@ -66,6 +71,14 @@ var _ authorizer.Authorizer = (*IdentityReadAuthorizer)(nil)
 // cluster serves there is no ground to answer anything but plain RBAC.
 func NewIdentityReadAuthorizer(inner authorizer.Authorizer, registry ResourceRegistry) *IdentityReadAuthorizer {
 	return &IdentityReadAuthorizer{inner: inner, registry: registry}
+}
+
+// BindSubject forwards a per-request RBAC snapshot to the wrapped authorizer.
+func (a *IdentityReadAuthorizer) BindSubject(ctx context.Context, u user.Info) context.Context {
+	if b, ok := a.inner.(subjectBinder); ok {
+		return b.BindSubject(ctx, u)
+	}
+	return ctx
 }
 
 // Authorize implements authorizer.Authorizer.
