@@ -208,6 +208,13 @@ var _ = Describe("NodeConfig controller", func() {
 			ng.Spec.Kubelet = &deckhousev1.KubeletSpec{MaxPods: ptr.To[int32](1500)}
 			ng.Spec.Disruptions = &deckhousev1.DisruptionsSpec{ApprovalMode: deckhousev1.DisruptionApprovalModeRollingUpdate}
 		})
+		// A taint with no effect, which the NodeGroup CRD takes because it leaves
+		// effect optional. Written raw: a typed client always serializes the empty
+		// effect, which the enum then refuses — only YAML gets one in.
+		Expect(k8sClient.Patch(ctx, &deckhousev1.NodeGroup{ObjectMeta: metav1.ObjectMeta{Name: ngName}},
+			client.RawPatch(types.MergePatchType,
+				[]byte(`{"spec":{"nodeTemplate":{"taints":[{"key":"dedicated","value":"frontend"}]}}}`)))).To(Succeed())
+
 		nodeName := testenv.UniqueName("node")
 		createNode(ctx, nodeName, ngName)
 
@@ -222,6 +229,9 @@ var _ = Describe("NodeConfig controller", func() {
 			messages := clampWarnings(ctx, g, ngName)
 			g.Expect(messages).To(ContainElement(ContainSubstring("maxPods")))
 			g.Expect(messages).To(ContainElement(ContainSubstring("approvalMode")))
+			// The taint kubelet cannot register a node with: named, so the
+			// operator knows which one the nodes did not get.
+			g.Expect(messages).To(ContainElement(ContainSubstring("dedicated")))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
@@ -729,6 +739,43 @@ var _ = Describe("NodeConfig controller", func() {
 			g.Expect(ops).To(HaveLen(1))
 			g.Expect(ops[0].Spec.ConfigGeneration).To(HaveValue(Equal(current)))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// User story: As a cluster operator, I want a disruption that failed to be
+	// retried slowly, so that a node nothing can interrupt is not drained again
+	// on every pass until somebody notices.
+	It("waits before asking again to interrupt a node whose disruption failed", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-retry")
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName)
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
+
+		// A group of one is interrupted without a drain, which keeps this spec
+		// about the retry rather than about the eviction.
+		ng := &deckhousev1.NodeGroup{}
+		Expect(k8sClient.Get(ctx, types.NamespacedName{Name: ngName}, ng)).To(Succeed())
+		ng.Status.Nodes = 1
+		Expect(k8sClient.Status().Update(ctx, ng)).To(Succeed())
+
+		generation := publishedGeneration(ctx, nodeName)
+		requestDisruption(ctx, nodeName, generation)
+
+		var first string
+		Eventually(func(g Gomega) {
+			ops := approvals(ctx, g, nodeName)
+			g.Expect(ops).To(HaveLen(1))
+			first = ops[0].Name
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the operation failing")
+		failOperation(ctx, first)
+
+		// The node goes on asking, so without a wait the very next pass mints
+		// another approval and interrupts the node again for the same revision.
+		touchNodeGroup(ctx, ngName)
+		Consistently(func(g Gomega) {
+			g.Expect(approvals(ctx, g, nodeName)).To(HaveLen(1))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 
 	// User story: As a cluster operator, I want a re-IPed node registered under
@@ -1480,6 +1527,20 @@ func findOperation(ctx context.Context, g Gomega, nodeName string) *v1alpha1.Nod
 		}
 	}
 	return nil
+}
+
+// failOperation is a disruption that did not work out: a deadline that ran out,
+// or a pod nothing could evict.
+func failOperation(ctx context.Context, name string) {
+	GinkgoHelper()
+
+	Eventually(func(g Gomega) {
+		op := &v1alpha1.NodeOperation{}
+		g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: name}, op)).To(Succeed())
+		op.Status.Phase = v1alpha1.NodeOperationPhaseFailed
+		op.Status.FinishedAt = ptr.To(metav1.Now())
+		g.Expect(k8sClient.Status().Update(ctx, op)).To(Succeed())
+	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 }
 
 // requestDisruption is what the agent does when the config it was given cannot
