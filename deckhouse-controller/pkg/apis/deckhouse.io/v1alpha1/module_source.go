@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"sort"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -164,4 +166,28 @@ type ModuleSourceList struct {
 	metav1.ListMeta `json:"metadata"`
 
 	Items []ModuleSource `json:"items"`
+}
+
+// Offering returns the names of the sources whose last scan lists the module,
+// sorted. A source being deleted offers nothing.
+func (l *ModuleSourceList) Offering(module string) []string {
+	names := make([]string, 0, len(l.Items))
+
+	for idx := range l.Items {
+		source := &l.Items[idx]
+		if !source.DeletionTimestamp.IsZero() {
+			continue
+		}
+
+		for _, available := range source.Status.AvailableModules {
+			if available.Name == module {
+				names = append(names, source.Name)
+				break
+			}
+		}
+	}
+
+	sort.Strings(names)
+
+	return names
 }

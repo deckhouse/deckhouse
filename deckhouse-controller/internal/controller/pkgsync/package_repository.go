@@ -63,7 +63,7 @@ func (s *syncer) syncPackageRepositories(ctx context.Context) error {
 // fields the source does not carry (scan interval, login, password) are never
 // touched, so user edits to them survive a restart.
 func (s *syncer) ensurePackageRepository(ctx context.Context, source *v1alpha1.ModuleSource) error {
-	name := repositoryNameForSource(source.Name)
+	name := RepositoryNameForSource(source.Name)
 	desired := registryFromSource(source)
 
 	repo := new(v1alpha1.PackageRepository)

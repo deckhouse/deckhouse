@@ -199,23 +199,23 @@ func UpdateStatus[Object client.Object](ctx context.Context, cli client.Client, 
 	return nil
 }
 
-// GetUpdatePolicyByModule returns policy for the module, if no policy, embeddedPolicy is returned
+// GetUpdatePolicyByModule returns the policy the module config names for the module.
+// Without a config, a config naming no policy or a policy that does not exist, the
+// embedded policy is returned.
 func GetUpdatePolicyByModule(ctx context.Context, cli client.Client, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, moduleName string) (*v1alpha2.ModuleUpdatePolicy, error) {
-	module := new(v1alpha1.Module)
-	if err := cli.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
+	config := new(v1alpha1.ModuleConfig)
+	if err := cli.Get(ctx, client.ObjectKey{Name: moduleName}, config); err != nil {
 		if !apierrors.IsNotFound(err) {
-			return nil, fmt.Errorf("get the '%s' module: %w", moduleName, err)
+			return nil, fmt.Errorf("get the '%s' module config: %w", moduleName, err)
 		}
-	} else {
-		if module.Properties.UpdatePolicy != "" {
-			policy := new(v1alpha2.ModuleUpdatePolicy)
-			if err = cli.Get(ctx, client.ObjectKey{Name: module.Properties.UpdatePolicy}, policy); err != nil {
-				if !apierrors.IsNotFound(err) {
-					return nil, fmt.Errorf("get the '%s' update policy: %w", moduleName, err)
-				}
-			} else {
-				return policy, nil
+	} else if config.Spec.UpdatePolicy != "" {
+		policy := new(v1alpha2.ModuleUpdatePolicy)
+		if err = cli.Get(ctx, client.ObjectKey{Name: config.Spec.UpdatePolicy}, policy); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, fmt.Errorf("get the '%s' update policy: %w", config.Spec.UpdatePolicy, err)
 			}
+		} else {
+			return policy, nil
 		}
 	}
 
@@ -229,6 +229,33 @@ func GetUpdatePolicyByModule(ctx context.Context, cli client.Client, embeddedPol
 		},
 		Spec: *embeddedPolicy.Get(),
 	}, nil
+}
+
+// ModuleMetadata returns the package metadata of the version the module runs, read
+// from its ModulePackageVersion. Nil means unknown: a dev module follows a tag no
+// version describes, a module without a package triple has nothing to look up, and
+// a draft version has not published its metadata yet.
+func ModuleMetadata(ctx context.Context, cli client.Client, module *v1alpha2.Module) (*v1alpha1.ModulePackageVersionStatusMetadata, error) {
+	if module.IsDev() || module.Spec.PackageRepositoryName == "" || module.Spec.PackageVersion == "" {
+		return nil, nil
+	}
+
+	name := v1alpha1.MakeModulePackageVersionName(module.Spec.PackageRepositoryName, module.Name, module.Spec.PackageVersion)
+
+	mpv := new(v1alpha1.ModulePackageVersion)
+	if err := cli.Get(ctx, client.ObjectKey{Name: name}, mpv); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("get the '%s' module package version: %w", name, err)
+	}
+
+	if mpv.IsDraft() {
+		return nil, nil
+	}
+
+	return mpv.Status.PackageMetadata, nil
 }
 
 // ModulePullOverrideExists checks if module pull override for the module exists

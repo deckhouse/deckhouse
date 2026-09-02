@@ -87,3 +87,10 @@ status:
   pullDuration: 0s
   size: 0
   transitionTime: "2026-07-01T00:00:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: console
+spec:
+  updatePolicy: test-alpha

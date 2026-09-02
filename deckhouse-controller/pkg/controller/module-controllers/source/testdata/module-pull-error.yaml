@@ -49,3 +49,10 @@ status:
   conditions:
     - type: EnabledByModuleConfig
       status: "True"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: errormodule
+spec:
+  updatePolicy: test-alpha

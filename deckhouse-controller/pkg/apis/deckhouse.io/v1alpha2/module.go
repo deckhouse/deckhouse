@@ -17,6 +17,9 @@ limitations under the License.
 package v1alpha2
 
 import (
+	"time"
+
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -231,4 +234,80 @@ func (m *Module) IsDev() bool {
 // IsEmbedded returns true if the module is embedded in the Deckhouse image.
 func (m *Module) IsEmbedded() bool {
 	return m.Annotations[ModuleAnnotationEmbedded] == "true"
+}
+
+// GetVersion returns the version of the module package.
+func (m *Module) GetVersion() string {
+	return m.Spec.PackageVersion
+}
+
+// IsCondition reports whether the named condition is present with the given status.
+func (m *Module) IsCondition(condType string, status metav1.ConditionStatus) bool {
+	cond := meta.FindStatusCondition(m.Status.Conditions, condType)
+
+	return cond != nil && cond.Status == status
+}
+
+// HasCondition reports whether the named condition is present.
+func (m *Module) HasCondition(condType string) bool {
+	return meta.FindStatusCondition(m.Status.Conditions, condType) != nil
+}
+
+// DisabledByModuleConfigMoreThan reports whether the module config has kept the module
+// disabled for at least the timeout.
+func (m *Module) DisabledByModuleConfigMoreThan(timeout time.Duration) bool {
+	cond := meta.FindStatusCondition(m.Status.Conditions, v1alpha1.ModuleConditionEnabledByModuleConfig)
+	if cond == nil || cond.Status != metav1.ConditionFalse {
+		return false
+	}
+
+	return time.Since(cond.LastTransitionTime.Time) >= timeout
+}
+
+// +kubebuilder:object:generate=false
+type ConditionOption func(opts *ConditionSettings)
+
+// WithTimer overrides the clock the condition transition time is taken from.
+func WithTimer(fn func() time.Time) ConditionOption {
+	return func(opts *ConditionSettings) {
+		opts.Timer = fn
+	}
+}
+
+// +kubebuilder:object:generate=false
+type ConditionSettings struct {
+	Timer func() time.Time
+}
+
+// SetConditionTrue sets the condition to True. The reason must not be empty: the schema
+// requires one on every condition.
+func (m *Module) SetConditionTrue(condType, reason string, opts ...ConditionOption) {
+	m.setCondition(condType, metav1.ConditionTrue, reason, "", opts)
+}
+
+// SetConditionFalse sets the condition to False with the reason and message.
+func (m *Module) SetConditionFalse(condType, reason, message string, opts ...ConditionOption) {
+	m.setCondition(condType, metav1.ConditionFalse, reason, message, opts)
+}
+
+// SetConditionUnknown sets the condition to Unknown with the reason and message.
+func (m *Module) SetConditionUnknown(condType, reason, message string, opts ...ConditionOption) {
+	m.setCondition(condType, metav1.ConditionUnknown, reason, message, opts)
+}
+
+// setCondition converges the condition. The transition time moves only when the status
+// changes, so a repeated write of the same state leaves the object untouched.
+func (m *Module) setCondition(condType string, status metav1.ConditionStatus, reason, message string, opts []ConditionOption) {
+	settings := &ConditionSettings{Timer: time.Now}
+	for _, opt := range opts {
+		opt(settings)
+	}
+
+	meta.SetStatusCondition(&m.Status.Conditions, metav1.Condition{
+		Type:               condType,
+		Status:             status,
+		Reason:             reason,
+		Message:            message,
+		LastTransitionTime: metav1.Time{Time: settings.Timer()},
+	})
 }

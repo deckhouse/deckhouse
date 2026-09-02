@@ -134,12 +134,26 @@ func (s *syncer) sync(ctx context.Context) error {
 	return s.syncModulePackageVersions(ctx)
 }
 
-// repositoryNameForSource maps a ModuleSource name to the name of the
+// RepositoryNameForSource maps a ModuleSource name to the name of the
 // PackageRepository serving the same registry path.
-func repositoryNameForSource(sourceName string) string {
+func RepositoryNameForSource(sourceName string) string {
 	if sourceName == moduleSourceNameDeckhouse {
 		return repositoryNameDeckhouseModules
 	}
 
 	return sourceName
+}
+
+// SourceNameForRepository maps a PackageRepository name back to the ModuleSource
+// serving the same registry path. The embedded repository stands for the image
+// and names no source.
+func SourceNameForRepository(repositoryName string) string {
+	switch repositoryName {
+	case repositoryNameDeckhouseModules:
+		return moduleSourceNameDeckhouse
+	case repositoryNameEmbedded:
+		return ""
+	}
+
+	return repositoryName
 }
