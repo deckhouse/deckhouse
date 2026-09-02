@@ -64,35 +64,35 @@ Depending on the stage of the module lifecycle and the release channel from whic
   <tbody>
     <tr>
       <td><strong>Experimental</strong></td>
-      <td class="stability__table--experiments"></td>
-      <td class="stability__table--experiments"></td>
-      <td class="stability__table--experiments"></td>
-      <td class="stability__table--pilot-operation"></td>
-      <td class="stability__table--pilot-operation"></td>
+      <td class="stability__table--experiments"><span class="stability__table-label">Experiments</span></td>
+      <td class="stability__table--experiments"><span class="stability__table-label">Experiments</span></td>
+      <td class="stability__table--experiments"><span class="stability__table-label">Experiments</span></td>
+      <td class="stability__table--pilot-operation"><span class="stability__table-label">Beta testing</span></td>
+      <td class="stability__table--pilot-operation"><span class="stability__table-label">Beta testing</span></td>
     </tr>
     <tr>
       <td><strong>Preview</strong></td>
-      <td class="stability__table--experiments"></td>
-      <td class="stability__table--limited-operation"></td>
-      <td class="stability__table--limited-operation"></td>
-      <td class="stability__table--industrial-operation"></td>
-      <td class="stability__table--industrial-operation"></td>
+      <td class="stability__table--experiments"><span class="stability__table-label">Experiments</span></td>
+      <td class="stability__table--limited-operation"><span class="stability__table-label">Limited use</span></td>
+      <td class="stability__table--limited-operation"><span class="stability__table-label">Limited use</span></td>
+      <td class="stability__table--industrial-operation"><span class="stability__table-label">Production use</span></td>
+      <td class="stability__table--industrial-operation"><span class="stability__table-label">Production use</span></td>
     </tr>
     <tr>
       <td><strong>General Availability</strong></td>
-      <td class="stability__table--experiments"></td>
-      <td class="stability__table--limited-operation"></td>
-      <td class="stability__table--limited-operation"></td>
-      <td class="stability__table--industrial-operation"></td>
-      <td class="stability__table--critical-systems"></td>
+      <td class="stability__table--experiments"><span class="stability__table-label">Experiments</span></td>
+      <td class="stability__table--limited-operation"><span class="stability__table-label">Limited use</span></td>
+      <td class="stability__table--limited-operation"><span class="stability__table-label">Limited use</span></td>
+      <td class="stability__table--industrial-operation"><span class="stability__table-label">Production use</span></td>
+      <td class="stability__table--critical-systems"><span class="stability__table-label">Production use in critical systems</span></td>
     </tr>
     <tr>
       <td><strong>Deprecated</strong></td>
-      <td class="stability__table--discontinuation"></td>
-      <td class="stability__table--discontinuation"></td>
-      <td class="stability__table--discontinuation"></td>
-      <td class="stability__table--discontinuation"></td>
-      <td class="stability__table--discontinuation"></td>
+      <td class="stability__table--discontinuation"><span class="stability__table-label">Deprecated</span></td>
+      <td class="stability__table--discontinuation"><span class="stability__table-label">Deprecated</span></td>
+      <td class="stability__table--discontinuation"><span class="stability__table-label">Deprecated</span></td>
+      <td class="stability__table--discontinuation"><span class="stability__table-label">Deprecated</span></td>
+      <td class="stability__table--discontinuation"><span class="stability__table-label">Deprecated</span></td>
     </tr>
   </tbody>
 </table>

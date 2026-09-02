@@ -65,35 +65,35 @@ description: Семантическое версионирование, кана
   <tbody>
     <tr>
       <td><strong>Experimental</strong></td>
-      <td class="stability__table--experiments"></td>
-      <td class="stability__table--experiments"></td>
-      <td class="stability__table--experiments"></td>
-      <td class="stability__table--pilot-operation"></td>
-      <td class="stability__table--pilot-operation"></td>
+      <td class="stability__table--experiments"><span class="stability__table-label">Эксперименты</span></td>
+      <td class="stability__table--experiments"><span class="stability__table-label">Эксперименты</span></td>
+      <td class="stability__table--experiments"><span class="stability__table-label">Эксперименты</span></td>
+      <td class="stability__table--pilot-operation"><span class="stability__table-label">Опытная эксплуатация</span></td>
+      <td class="stability__table--pilot-operation"><span class="stability__table-label">Опытная эксплуатация</span></td>
     </tr>
     <tr>
       <td><strong>Preview</strong></td>
-      <td class="stability__table--experiments"></td>
-      <td class="stability__table--limited-operation"></td>
-      <td class="stability__table--limited-operation"></td>
-      <td class="stability__table--industrial-operation"></td>
-      <td class="stability__table--industrial-operation"></td>
+      <td class="stability__table--experiments"><span class="stability__table-label">Эксперименты</span></td>
+      <td class="stability__table--limited-operation"><span class="stability__table-label">Ограниченная эксплуатация</span></td>
+      <td class="stability__table--limited-operation"><span class="stability__table-label">Ограниченная эксплуатация</span></td>
+      <td class="stability__table--industrial-operation"><span class="stability__table-label">Промышленная эксплуатация</span></td>
+      <td class="stability__table--industrial-operation"><span class="stability__table-label">Промышленная эксплуатация</span></td>
     </tr>
     <tr>
       <td><strong>General Availability</strong></td>
-      <td class="stability__table--experiments"></td>
-      <td class="stability__table--limited-operation"></td>
-      <td class="stability__table--limited-operation"></td>
-      <td class="stability__table--industrial-operation"></td>
-      <td class="stability__table--critical-systems"></td>
+      <td class="stability__table--experiments"><span class="stability__table-label">Эксперименты</span></td>
+      <td class="stability__table--limited-operation"><span class="stability__table-label">Ограниченная эксплуатация</span></td>
+      <td class="stability__table--limited-operation"><span class="stability__table-label">Ограниченная эксплуатация</span></td>
+      <td class="stability__table--industrial-operation"><span class="stability__table-label">Промышленная эксплуатация</span></td>
+      <td class="stability__table--critical-systems"><span class="stability__table-label">Промышленная эксплуатация в ответственных системах</span></td>
     </tr>
     <tr>
       <td><strong>Deprecated</strong></td>
-      <td class="stability__table--discontinuation"></td>
-      <td class="stability__table--discontinuation"></td>
-      <td class="stability__table--discontinuation"></td>
-      <td class="stability__table--discontinuation"></td>
-      <td class="stability__table--discontinuation"></td>
+      <td class="stability__table--discontinuation"><span class="stability__table-label">Отказ от использования</span></td>
+      <td class="stability__table--discontinuation"><span class="stability__table-label">Отказ от использования</span></td>
+      <td class="stability__table--discontinuation"><span class="stability__table-label">Отказ от использования</span></td>
+      <td class="stability__table--discontinuation"><span class="stability__table-label">Отказ от использования</span></td>
+      <td class="stability__table--discontinuation"><span class="stability__table-label">Отказ от использования</span></td>
     </tr>
   </tbody>
 </table>

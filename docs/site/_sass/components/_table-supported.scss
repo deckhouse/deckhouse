@@ -230,7 +230,7 @@
 .stability__table {
     thead tr {
         &.header-row th:not(:first-child), &.sub-header th {
-            text-align: center; 
+            text-align: center;
         }
     }
 
@@ -245,6 +245,20 @@
         height: 71px;
         width: 132px;
         min-width: 100px;
+    }
+
+    /* The caption remains in the markup for screen readers and builds that do not use this CSS
+       (PDF, Markdown export); on the website, the icon and tooltip convey the meaning. */
+    &-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        border: 0;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
     }
 
     &--experiments,
