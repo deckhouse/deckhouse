@@ -225,6 +225,9 @@ def _fr_role_names(fr: dict, *, namespaced: bool) -> List[str]:
     basic = basic_role_for_level(fr.get("accessLevel"), cap=cap)
     if basic:
         names.append(basic)
+    # AuthorizationRule has no additionalRoles field; ignore a forged snapshot key.
+    if namespaced:
+        return names
     for role in _list(fr.get("additionalRoles")):
         if isinstance(role, str) and role:
             names.append(role)
@@ -239,7 +242,8 @@ def _match_user_subject(subjects: Sequence[str], email: str, *, lowercase_needle
 
 
 def collect_roles_for_identity(snapshots: Any, kind: str, name: str, *,
-                               lowercase_user: bool) -> List[str]:
+                               lowercase_user: bool,
+                               include_namespaced: bool = True) -> List[str]:
     """Role names already attached to this token identity via CAR / AR / CRB."""
     if not isinstance(name, str) or not name:
         return []
@@ -263,7 +267,10 @@ def collect_roles_for_identity(snapshots: Any, kind: str, name: str, *,
             seen.add(role)
             found.append(role)
 
-    for snap_name, namespaced in ((CAR_SNAP, False), (AR_SNAP, True)):
+    sources = [(CAR_SNAP, False)]
+    if include_namespaced:
+        sources.append((AR_SNAP, True))
+    for snap_name, namespaced in sources:
         for fr in iter_filter_results(snapshots, snap_name):
             subjects = _subjects(fr, key)
             if kind == "user":
@@ -301,12 +308,15 @@ def actor_roles(user_info: Any, snapshots: Any) -> List[str]:
                 seen.add(role)
                 found.append(role)
 
-    add_all(collect_roles_for_identity(snapshots, "user", username, lowercase_user=False))
+    add_all(collect_roles_for_identity(
+        snapshots, "user", username, lowercase_user=False, include_namespaced=False))
     sa = sa_key(username)
     if sa:
-        add_all(collect_roles_for_identity(snapshots, "sa", sa, lowercase_user=False))
+        add_all(collect_roles_for_identity(
+            snapshots, "sa", sa, lowercase_user=False, include_namespaced=False))
     for group in groups:
-        add_all(collect_roles_for_identity(snapshots, "group", group, lowercase_user=False))
+        add_all(collect_roles_for_identity(
+            snapshots, "group", group, lowercase_user=False, include_namespaced=False))
     return found
 
 
@@ -395,7 +405,8 @@ def basic_level_of(name: str, entry: Optional[CatalogEntry]) -> Optional[str]:
     for level, role in BASIC_LEVEL_ROLE.items():
         if name == role:
             return level
-    if entry and entry.access_level in BASIC_ORDER:
+    if (entry and entry.access_level in BASIC_ORDER
+            and is_platform_range_role(name)):
         return entry.access_level
     return None
 
@@ -576,28 +587,39 @@ def union_rules(role_names: Sequence[str], catalog: dict) -> List[dict]:
     return rules
 
 
+def _has_coverable_rules(rules: Sequence[dict]) -> bool:
+    for rule in rules:
+        if isinstance(rule, dict) and _servant_atoms(rule):
+            return True
+    return False
+
+
 def can_assign(actor_role_names: Sequence[str], target_role_names: Sequence[str],
                catalog: dict) -> Optional[List[str]]:
     """
     None means allow. A list is the leftover target roles the actor cannot assign.
+
+    Cover is evaluated per target and only when that target has a non-empty
+    rule set. An emptied ClusterRole (including SuperAdmin) is not covered;
+    is_disaster then runs inside role_in_range instead of being skipped.
     """
     targets = [n for n in target_role_names if isinstance(n, str) and n]
     if not targets:
         return None
 
     rng = actor_range(actor_role_names, catalog)
-    missing = [n for n in targets if n not in catalog]
-
-    if not missing:
-        actor_rules = union_rules(actor_role_names, catalog)
-        target_rules = union_rules(targets, catalog)
-        if covers(actor_rules, target_rules):
-            return None
-
+    actor_rules = union_rules(actor_role_names, catalog)
     leftover = []
     for name in targets:
-        if not role_in_range(name, catalog.get(name), rng):
+        entry = catalog.get(name)
+        if entry is None:
             leftover.append(name)
+            continue
+        if _has_coverable_rules(entry.rules) and covers(actor_rules, entry.rules):
+            continue
+        if role_in_range(name, entry, rng):
+            continue
+        leftover.append(name)
     if not leftover:
         return None
     return leftover

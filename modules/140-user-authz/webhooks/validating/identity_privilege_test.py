@@ -342,7 +342,7 @@ class TestIdentityAssignHook(unittest.TestCase):
             extra_snaps=extra))
         self.assertFalse(out.validations.data[0]["allowed"])
 
-    def test_admin_ar_can_write_admin_car(self):
+    def test_admin_ar_cannot_write_admin_car(self):
         extra = {assign.AR_SNAP: [{"filterResult": {
             "name": "ns-admin",
             "namespace": "app",
@@ -357,7 +357,30 @@ class TestIdentityAssignHook(unittest.TestCase):
             {"accessLevel": "Admin",
              "subjects": [{"kind": "User", "name": "x@corp"}]},
             extra_snaps=extra))
-        tests.assert_validation_allowed(self, out, None)
+        self.assertFalse(out.validations.data[0]["allowed"])
+
+    def test_emptied_superadmin_role_does_not_admit_superadmin_car(self):
+        extra = {
+            assign.CRB_SNAP: [{"filterResult": {
+                "name": "sec",
+                "role": "d8:manage:security:manager",
+                "userSubjects": [SECURITY],
+                "groupSubjects": [],
+                "saSubjects": [],
+            }}],
+            assign.CROLE_SNAP: [clusterrole("user-authz:super-admin", [], {
+                "can-assign-basic-max": "SuperAdmin",
+                "can-assign-scope": "system",
+                "can-assign-max-level": "superadmin",
+            })],
+        }
+        out = self.run_hook(ctx(
+            "ClusterAuthorizationRule", "CREATE",
+            {"accessLevel": "SuperAdmin",
+             "subjects": [{"kind": "User", "name": "eve@corp"}]},
+            username=SECURITY, extra_snaps=extra))
+        self.assertFalse(out.validations.data[0]["allowed"])
+        self.assertIn("user-authz:super-admin", out.validations.data[0]["message"])
 
     def test_crb_security_manager_can_write_clusteradmin_car(self):
         extra = {assign.CRB_SNAP: [{"filterResult": {
