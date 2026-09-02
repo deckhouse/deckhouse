@@ -105,3 +105,31 @@ func PushNodeConfig(ctx context.Context, address string, document []byte) error 
 
 	return fmt.Errorf("push the node configuration to %s: %s: %s", address, response.Status, errorQuote(response))
 }
+
+// AgentHoldsPort reports that the port is held by the agent of a node that
+// already has its configuration, rather than by the init waiting for one.
+//
+// Asked without a token, and answered without one: the endpoint says which of
+// the two servers is running, never which machine this is. A machine that does
+// not answer it at all is not an agent as far as this is concerned — an older
+// image serves no such path, and the caller checks it the long way.
+func AgentHoldsPort(ctx context.Context, address string) (bool, error) {
+	response, err := do(ctx, http.MethodGet, "http://"+address+whoamiPath, nil)
+	if err != nil {
+		return false, fmt.Errorf("ask %s which server holds its maintenance port: %w", address, err)
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode != http.StatusOK {
+		return false, nil
+	}
+
+	role, err := io.ReadAll(io.LimitReader(response.Body, maxPushErrorBody))
+	if err != nil {
+		return false, fmt.Errorf("read what holds the maintenance port of %s: %w", address, err)
+	}
+	return string(bytes.TrimSpace(role)) == agentRole, nil
+}
+
+// agentRole is what the agent's maintenance server answers on whoamiPath.
+const agentRole = "agent"

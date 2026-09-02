@@ -415,6 +415,7 @@ func (b *ClusterBootstrapper) checkMachineIsAvailable(ctx context.Context, bctx 
 	loop := libretry.NewSilentLoop(fmt.Sprintf("Reaching %s", name), checkMachinesAvailable.attempts, checkMachinesAvailable.interval)
 
 	var inventory *immutable.Inventory
+	var alreadyANode bool
 	err = retryWithFreshChannel(ctx, loop,
 		func(ctx context.Context) (string, func(), error) {
 			return b.openImmutableChannelTo(ctx, address, port, "machine check")
@@ -424,6 +425,22 @@ func (b *ClusterBootstrapper) checkMachineIsAvailable(ctx context.Context, bctx 
 			// left to fail is the machine at the other end of it.
 			tryCtx, cancel := context.WithTimeout(ctx, checkMachineTimeout)
 			defer cancel()
+
+			// Whichever server holds the port answers this, and a machine that is
+			// already a node has nothing here to check: no inventory to read, and a
+			// document it took long ago. Asked before the inventory, because the
+			// agent refuses that one and the refusal reads like a broken machine.
+			// The machine is asked rather than the state cache: a run killed
+			// mid-push leaves a record behind, and only the machine knows what it
+			// took.
+			agent, err := immutable.AgentHoldsPort(tryCtx, endpoint)
+			if err != nil {
+				return err
+			}
+			if agent {
+				alreadyANode = true
+				return nil
+			}
 
 			fetched, err := immutable.FetchInventory(tryCtx, endpoint)
 			if err != nil {
@@ -437,11 +454,19 @@ func (b *ClusterBootstrapper) checkMachineIsAvailable(ctx context.Context, bctx 
 		// that never answered is an address, a power state or a boot; a machine that
 		// answered badly is on the line and running something else.
 		if errors.Is(err, immutable.ErrInventoryUnusable) {
-			return fmt.Errorf("%s at %s answers, but not with an inventory: %w. Check that the machine booted "+
-				"the immutable image and is waiting for a configuration", name, address, err)
+			return fmt.Errorf("%s at %s answers, but neither as a machine waiting for a configuration nor as a "+
+				"node of this cluster: %w. Check the address, and that the machine booted the immutable image. "+
+				"To go on regardless: --preflight-skip-check %s",
+				name, address, err, checks.ImmutableMachinesAvailabilityCheckName)
 		}
 		return fmt.Errorf("could not reach %s at %s: %w. Check the address, that the machine is powered on, "+
 			"and that it booted the immutable image and is waiting for a configuration", name, address, err)
+	}
+
+	if alreadyANode {
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
+			"%s at %s is already a node: it is holding a configuration and is not checked against one", name, address))
+		return nil
 	}
 
 	// An image too old to serve one leaves nothing to check against. Said here,
