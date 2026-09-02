@@ -23,6 +23,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -143,23 +144,34 @@ func (r *Reconciler) reconcileAllNodes(ctx context.Context, logger logr.Logger) 
 
 	var firstErr error
 	failed := 0
+	requeue := time.Duration(0)
 	p := newPass()
 	for i := range nodes.Items {
 		// The listing already carries the Node, so it is rendered from that
 		// rather than fetched again once per node.
-		if _, err := r.reconcileNodeObject(ctx, &nodes.Items[i], logger, p); err != nil {
+		result, err := r.reconcileNodeObject(ctx, &nodes.Items[i], logger, p)
+		if err != nil {
 			logger.V(1).Info("cannot render the NodeConfig of a node", "node", nodes.Items[i].Name, "error", err.Error())
 			failed++
 			if firstErr == nil {
 				firstErr = err
 			}
+			continue
+		}
+		// A node waiting out a disruption backoff has nothing else to wake it,
+		// and this pass covers the whole fleet: the soonest wait wins.
+		if result.RequeueAfter == 0 {
+			continue
+		}
+		if requeue == 0 || result.RequeueAfter < requeue {
+			requeue = result.RequeueAfter
 		}
 	}
 	if firstErr != nil {
-		firstErr = fmt.Errorf("render the NodeConfig of %d of %d nodes: %w", failed, len(nodes.Items), firstErr)
+		return ctrl.Result{}, fmt.Errorf("render the NodeConfig of %d of %d nodes: %w", failed, len(nodes.Items), firstErr)
 	}
 
-	return ctrl.Result{}, firstErr
+	return ctrl.Result{RequeueAfter: requeue}, nil
 }
 
 // nodeIsReady reports the kubelet's own verdict, which is what "broken" means
@@ -228,7 +240,7 @@ func (r *Reconciler) reconcileNodeObject(ctx context.Context, node *corev1.Node,
 	if current == nil {
 		return ctrl.Result{}, nil
 	}
-	return ctrl.Result{}, r.reconcileDisruption(ctx, ng, node, current, logger)
+	return r.reconcileDisruption(ctx, ng, node, current, logger)
 }
 
 // apply creates or patches the object and returns it as it now stands — nil

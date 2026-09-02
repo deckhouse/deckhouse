@@ -22,6 +22,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -32,9 +33,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	sigsyaml "sigs.k8s.io/yaml"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
@@ -692,6 +695,95 @@ func kubebuilderMarkers(t *testing.T, path string) map[string]map[string]string 
 	return markers
 }
 
+// The shipped CRD is what the API server enforces; the render applies the same
+// numbers itself, for the bootstrap file path that never reaches it. One that
+// drifts gives a bootstrapping node different values than a day-2 one.
+func TestRenderDefaultsMatchTheShippedCRD(t *testing.T) {
+	schema := nodeConfigCRDSchema(t)
+
+	kubelet := func(field string) map[string]any {
+		return crdField(t, schema, "spec", "kubelet", field)
+	}
+	require.Equal(t, float64(maxPodsCeiling), kubelet("maxPods")["maximum"])
+	require.Equal(t, float64(defaultMaxPodsFor(intstr.FromInt(defaultPodSubnetNodeCIDRPrefix))), kubelet("maxPods")["default"])
+	require.Equal(t, defaultContainerLogMaxSize, kubelet("containerLogMaxSize")["default"])
+	require.Equal(t, float64(defaultContainerLogMaxFiles), kubelet("containerLogMaxFiles")["default"])
+	require.Equal(t, float64(defaultMaxConcurrentDownloads),
+		crdField(t, schema, "spec", "containerRuntime", "maxConcurrentDownloads")["default"])
+}
+
+// nodeConfigCRDSchema reads the NodeConfig CRD the module ships, located the way
+// the envtest suites locate it, and returns its single version's schema.
+func nodeConfigCRDSchema(t *testing.T) map[string]any {
+	t.Helper()
+
+	paths := testenv.NodeManagerCRDPaths(testenv.NodeConfigCRDFile)
+	require.Len(t, paths, 1)
+	raw, err := os.ReadFile(paths[0])
+	require.NoError(t, err, "the shipped NodeConfig CRD must be readable at %s", paths[0])
+
+	var crd struct {
+		Spec struct {
+			Versions []struct {
+				Schema struct {
+					OpenAPIV3Schema map[string]any `json:"openAPIV3Schema"`
+				} `json:"schema"`
+			} `json:"versions"`
+		} `json:"spec"`
+	}
+	require.NoError(t, sigsyaml.Unmarshal(raw, &crd))
+	require.Len(t, crd.Spec.Versions, 1)
+	return crd.Spec.Versions[0].Schema.OpenAPIV3Schema
+}
+
+// crdField walks the schema down a property path to one field.
+func crdField(t *testing.T, schema map[string]any, path ...string) map[string]any {
+	t.Helper()
+
+	node := schema
+	for _, name := range path {
+		properties, ok := node["properties"].(map[string]any)
+		require.True(t, ok, "nothing above %s has properties", name)
+		node, ok = properties[name].(map[string]any)
+		require.True(t, ok, "the CRD has no %s", name)
+	}
+	return node
+}
+
+// A NodeGroup leaves a taint's effect optional (crds/node_group.yaml:1944) and
+// kubelet cannot register a node with an effectless taint — it exits, and the
+// node never joins. Such a taint is dropped and reported instead.
+func TestRenderTaintsDropsWhatKubeletCannotRegister(t *testing.T) {
+	ng := &v1.NodeGroup{
+		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
+		Spec: v1.NodeGroupSpec{NodeTemplate: &v1.NodeTemplate{Taints: []corev1.Taint{
+			{Key: "dedicated", Value: "frontend"},
+			{Key: "ship-class", Value: "frigate", Effect: corev1.TaintEffectNoExecute},
+		}}},
+	}
+
+	// A machine that has not joined yet: registration taints are only rendered
+	// for one.
+	spec := renderSpec(ng, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0"}}, clusterInputs{})
+	require.Equal(t, []internalv1alpha1.Taint{
+		{Key: "ship-class", Value: "frigate", Effect: string(corev1.TaintEffectNoExecute)},
+	}, spec.Kubelet.RegisterWithTaints)
+
+	recorder := record.NewFakeRecorder(10)
+	r := &Reconciler{}
+	r.Recorder = recorder
+	r.recordClampedSettings(ng)
+	close(recorder.Events)
+
+	var messages []string
+	for event := range recorder.Events {
+		messages = append(messages, event)
+	}
+	require.Len(t, messages, 1, "the operator has to be told which taint the nodes do not get")
+	require.Contains(t, messages[0], "dedicated")
+	require.Contains(t, messages[0], settingClampedEvent)
+}
+
 // kubelet compares label namespaces by suffix. Equality here dropped legal
 // labels silently, and let through two that do not exist upstream at all —
 // which kubelet refuses, taking the node down with it.
@@ -762,10 +854,16 @@ func TestRenderedSpecPassesTheAgentSchema(t *testing.T) {
 			}}},
 		},
 		{
-			// crds/node_group.yaml:1944: effect is not required, key and value are bare strings.
-			name: "taint with no effect and a long key",
+			// crds/node_group.yaml:1944: key and value are bare strings. A taint
+			// with no effect is not here — it never reaches the object, kubelet
+			// having no way to register one (TestRenderTaintsDropsWhatKubeletCannotRegister).
+			name: "taint with a long key and value",
 			spec: v1.NodeGroupSpec{NodeTemplate: &v1.NodeTemplate{Taints: []corev1.Taint{
-				{Key: "dedicated.example.com/" + strings.Repeat("a", 300), Value: strings.Repeat("b", 80)},
+				{
+					Key:    "dedicated.example.com/" + strings.Repeat("a", 300),
+					Value:  strings.Repeat("b", 80),
+					Effect: corev1.TaintEffectNoSchedule,
+				},
 			}}},
 		},
 		{

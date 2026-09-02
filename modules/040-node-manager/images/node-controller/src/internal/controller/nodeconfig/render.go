@@ -297,6 +297,11 @@ func (r *Reconciler) recordClampedSettings(ng *v1.NodeGroup) {
 			fmt.Sprintf("disruptions windows: an immutable node holds a single update window; the nodes of this group are configured with the first of the %d given",
 				len(windows)))
 	}
+	for _, key := range effectlessTaints(ng) {
+		r.Recorder.Event(ng, corev1.EventTypeWarning, settingClampedEvent,
+			fmt.Sprintf("nodeTemplate.taints: %q has no effect, and kubelet cannot register a node with such a taint; the nodes of this group are not tainted with it",
+				key))
+	}
 }
 
 // renderNodeLabels returns the labels kubelet registers the node with: the
@@ -352,6 +357,11 @@ func renderTaints(ng *v1.NodeGroup) []internalv1alpha1.Taint {
 	}
 	taints := make([]internalv1alpha1.Taint, 0, len(ng.Spec.NodeTemplate.Taints))
 	for _, taint := range ng.Spec.NodeTemplate.Taints {
+		// kubelet registers no taint without an effect: it exits, and the node
+		// never joins. Dropped here and reported (recordClampedSettings).
+		if taint.Effect == "" {
+			continue
+		}
 		taints = append(taints, internalv1alpha1.Taint{
 			Key:    taint.Key,
 			Value:  taint.Value,
@@ -359,6 +369,22 @@ func renderTaints(ng *v1.NodeGroup) []internalv1alpha1.Taint {
 		})
 	}
 	return taints
+}
+
+// effectlessTaints names the taints of a group that kubelet cannot register a
+// node with. A NodeGroup leaves effect optional (crds/node_group.yaml:1944), so
+// a taint written without one reaches the render.
+func effectlessTaints(ng *v1.NodeGroup) []string {
+	if ng.Spec.NodeTemplate == nil {
+		return nil
+	}
+	var keys []string
+	for _, taint := range ng.Spec.NodeTemplate.Taints {
+		if taint.Effect == "" {
+			keys = append(keys, taint.Key)
+		}
+	}
+	return keys
 }
 
 // isControlPlaneNode reports whether the node runs the control plane. The label
