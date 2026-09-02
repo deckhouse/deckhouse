@@ -1,0 +1,28 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  name: v1.33.0
+  resourceVersion: "999"
+spec:
+  version: v1.33.0
+status:
+  approved: false
+  phase: Deployed
+  transitionTime: null
+---
+apiVersion: deckhouse.io/v1alpha1
+approved: false
+kind: DeckhouseRelease
+metadata:
+  annotations:
+    release.deckhouse.io/suspended: "true"
+  name: v1.33.1
+  resourceVersion: "1001"
+spec:
+  version: v1.33.1
+status:
+  approved: false
+  phase: Pending
+  transitionTime: null
