@@ -331,7 +331,7 @@
              d8 s module enable control-plane-manager
              ```
 
-          2. Migrate the values straight from the Secret into ModuleConfig in one command (requires `yq` and `jq`; only fields still present in `ClusterConfiguration` are included, so this is also safe to run when one or two of the three were already migrated):
+          2. Migrate the values straight from the Secret into ModuleConfig using the following command:
 
              ```bash
              d8 k patch moduleconfig control-plane-manager --type merge -p "$(
