@@ -600,7 +600,7 @@ jobs:
           # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
           # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
           # obtained, so signing is skipped rather than failing the build.
-          WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "dh-engine-signer"
           WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
           REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
@@ -1346,7 +1346,7 @@ jobs:
           # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
           # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
           # obtained, so signing is skipped rather than failing the build.
-          WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "dh-engine-signer"
           WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
           REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
@@ -1747,7 +1747,7 @@ jobs:
           # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
           # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
           # obtained, so signing is skipped rather than failing the build.
-          WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "dh-engine-signer"
           WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
           REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
@@ -2148,7 +2148,7 @@ jobs:
           # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
           # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
           # obtained, so signing is skipped rather than failing the build.
-          WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "dh-engine-signer"
           WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
           REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
@@ -2549,7 +2549,7 @@ jobs:
           # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
           # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
           # obtained, so signing is skipped rather than failing the build.
-          WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "dh-engine-signer"
           WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
           REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
@@ -2950,7 +2950,7 @@ jobs:
           # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
           # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
           # obtained, so signing is skipped rather than failing the build.
-          WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "dh-engine-signer"
           WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
           REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
@@ -3351,7 +3351,7 @@ jobs:
           # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
           # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
           # obtained, so signing is skipped rather than failing the build.
-          WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "dh-engine-signer"
           WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
           REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |

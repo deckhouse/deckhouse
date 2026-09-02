@@ -206,7 +206,20 @@ spec:
     name: moduleslibrary
   updatePolicy:
     updateMode: {{ pluck .Values.werf.env .Values.vpa.updateMode | first | default .Values.vpa.updateMode._default | quote }}
-
+  resourcePolicy:
+    containerPolicies:
+      - containerName: web
+        minAllowed:
+          memory: {{ pluck .Values.web.env .Values.resources.requests.memory.moduleslibrary.web | first | default .Values.resources.requests.memory.moduleslibrary.web._default }}
+        maxAllowed:
+          cpu: {{ pluck .Values.web.env .Values.resources.limits.cpu.moduleslibrary.web | first | default .Values.resources.limits.cpu.moduleslibrary.web._default }}
+          memory: {{ pluck .Values.web.env .Values.resources.limits.memory.moduleslibrary.web | first | default .Values.resources.limits.memory.moduleslibrary.web._default }}
+      - containerName: builder
+        minAllowed:
+          memory: {{ pluck .Values.web.env .Values.resources.requests.memory.moduleslibrary.builder | first | default .Values.resources.requests.memory.moduleslibrary.builder._default }}
+        maxAllowed:
+          cpu: {{ pluck .Values.web.env .Values.resources.limits.cpu.moduleslibrary.builder | first | default .Values.resources.limits.cpu.moduleslibrary.builder._default }}
+          memory: {{ pluck .Values.web.env .Values.resources.limits.memory.moduleslibrary.builder | first | default .Values.resources.limits.memory.moduleslibrary.builder._default }}
 ---
 apiVersion: policy/v1
 kind: PodDisruptionBudget
