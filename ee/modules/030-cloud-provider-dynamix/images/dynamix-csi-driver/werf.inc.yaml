@@ -1,5 +1,5 @@
-{{- $version := "feat/cloudapi-sep-minimal-permissions" }}
-{{- $version_common := "v0.5.0" }}
+{{- $version := "v0.7.2" }}
+{{- $version_common := "feat/cloudapi-sep-minimal-permissions" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 fromImage: common/distroless
