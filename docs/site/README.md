@@ -474,6 +474,112 @@ Below are some data structures used in the Jekyll projects.
   }
   ```
 
+## Link rewriting in HTML output
+
+The documentation site has two build pipelines — Jekyll for the main portal (`docs/documentation`) and Hugo for the external modules docs builder (`docs/site/backends/docs-builder-template`). Both have the same link-rewriting feature with matching config keys and semantics; the only difference is how a link is marked as "do not touch" (see Behavior).
+
+### Jekyll implementation
+
+The plugin at `docs/documentation/_plugins/link_rewrite.rb` post-processes the generated HTML and rewrites `<a href>` links according to the rules from `_config.yml`. It runs on `:post_render` for both `:documents` and `:pages`, edits `<a>` tags in the output via a regex (the rest of the HTML is preserved byte-for-byte), and only touches files with `.html` output — `sitemap.xml`, `search.json` and other artifacts are ignored.
+
+Configuration in `docs/documentation/_config.yml`:
+
+```yaml
+# Link rewriting in generated HTML (see _plugins/link_rewrite.rb).
+# When enabled, an <a href="..."> whose host is not in whitelistHosts (and is
+# not a subdomain of a listed host) is unwrapped — the tag is dropped, the link
+# text stays. Per-link opt-out: <a data-keep-link="true">.
+linkRewriteEnable: true
+linkRewrite:
+  whitelistHosts:
+    - deckhouse.ru
+    - deckhouse.io
+    - flant.com
+    - flant.ru
+  # Ruby regexp syntax; use \1, \2 for capture groups in the replacement.
+  replace:
+    - from: '^https?://old\.example\.com/(.*)$'
+      to:   'https://new.example.com/\1'
+  # Regex patterns for explicit removal (Ruby regexp syntax).
+  remove:
+    - '^https?://internal\.example\.com/.*$'
+```
+
+### Hugo implementation
+
+Hugo has no hook to post-process a page's final HTML (render hooks fire only for Markdown-originated elements). So the logic lives in a shared partial that both the Markdown render hook and the HTML templates call:
+
+- `layouts/_partials/helpers/rewrite-href.html` — the decision logic (replace → remove → whitelist). Takes `{href, keep}`, returns `{strip, href}` via `return`. This is the single source of truth, mirroring the Jekyll plugin.
+- `layouts/_partials/helpers/rewrite-link.html` — a thin formatter over the decision helper. Takes `{href, inner, attrs, keep}` and emits either the `<a>` tag or the bare link text.
+- `layouts/_markup/render-link.html` — the Markdown link render hook; delegates to `rewrite-link` (covers Markdown links, including auto-linked bare URLs from `linkify: true`).
+
+Unlike Jekyll — which post-processes the whole HTML output and therefore catches every `<a>` automatically — the Hugo side only rewrites links that are routed through the helper. Markdown links are covered by the render hook. Links emitted directly by HTML templates must call the helper explicitly; the ones that can carry external or rule-targetable URLs already do:
+
+- `layouts/_partials/related-links.html` (external "see also" links)
+- `layouts/_partials/module-oss.html` (upstream/source links)
+- `layouts/_partials/module-requirements.html` (cross-doc links, incl. the architecture link caught by `remove`)
+
+Pure-UI anchors (`href="#"`, `href="javascript:void(0)"`, tab toggles, anchorjs icons) and internal structural navigation (`sidebar`, version dropdown) are intentionally left as raw `<a>`: they are relative or non-navigational, so the rewriter would be a no-op on them anyway. **When adding a new template link that may point outside the module docs, render it through `helpers/rewrite-link` (or `helpers/rewrite-href`) instead of a raw `<a>`.**
+
+Configuration in `config/_default/hugo.yaml` under `params`:
+
+```yaml
+params:
+  linkRewriteEnable: true
+  linkRewrite:
+    whitelistHosts:
+      - deckhouse.ru
+      - deckhouse.io
+      - flant.com
+      - flant.ru
+    # Go regexp syntax (RE2); use $1, $2 for capture groups in the replacement.
+    replace:
+      - from: '^https?://old\.example\.com/(.*)$'
+        to: 'https://new.example.com/$1'
+    # Regex patterns for explicit removal (Go RE2 syntax).
+    remove:
+      - '^.*/products/kubernetes-platform/documentation/architecture/.*$'
+```
+
+### Per-link opt-out
+
+To keep a specific link even if its host is not in `whitelistHosts`, mark it in the Markdown source. The syntax differs between the two pipelines — Hugo/goldmark does not accept inline Kramdown-style attributes on links (`{:data-keep-link="true"}` in a Hugo source silently becomes plain text after the closing paren), so the Hugo hook uses the link title as the marker instead.
+
+**Jekyll** — Kramdown IAL, `data-keep-link` attribute:
+
+```markdown
+[text](https://github.com/foo){:data-keep-link="true"}
+```
+
+Renders to `<a href="https://github.com/foo" data-keep-link="true">text</a>`. The plugin skips any `<a>` element that has the `data-keep-link` attribute (its value does not matter).
+
+**Hugo** — Markdown link title equal to the literal string `keep-link`:
+
+```markdown
+[text](https://github.com/foo "keep-link")
+```
+
+Renders to `<a href="https://github.com/foo">text</a>`. The `keep-link` marker is consumed by the hook and is **not** emitted as a `title` attribute (no browser tooltip). Any other title value is passed through as usual — `[t](https://deckhouse.io "hover text")` → `<a href="https://deckhouse.io" title="hover text">t</a>`. Comparison is exact and case-sensitive: only the literal string `keep-link` works.
+
+The opt-out short-circuits the whole pipeline: a marked link is not touched by `replace`, `remove`, or the whitelist check. This matters for relative links too — if a link would otherwise be caught by a `remove` pattern, mark it to keep it.
+
+### Behavior (shared)
+
+Pipeline for every `<a href>`, in order:
+
+1. **Opt-out** — if the link is marked (`data-keep-link` in Jekyll, `title="keep-link"` in Hugo), the whole pipeline is short-circuited.
+2. **`replace`** — applied to **every** link, relative or absolute, and applied **iteratively**: the first matching rule rewrites the href, then the scan restarts from the top, repeating until a full pass changes nothing. This lets rules chain (rule A's output feeds rule B). A rule may also rewrite an absolute URL into a relative one (e.g. `https://deckhouse.ru/documentation/v1/foo.html` → `/reference/api/foo.html`) — the result then skips the whitelist check. Loop protection: a hard cap of 5 passes plus cycle detection (a repeated href value) guarantee termination; if the rules do not converge (e.g. `a → aa` or an `x → y`, `y → x` ping-pong), a build-log warning is emitted and the last value is kept. Keep rules non-overlapping to avoid this.
+3. **`remove`** — a list of regex patterns matched against the (possibly rewritten) href. If any pattern matches, the `<a>` tag is unwrapped (text stays). Works on relative and absolute links alike. Use this when you want to strip a specific link that would otherwise not be caught by the whitelist rule — for instance, a relative link that points to a page you don't ship.
+4. **`whitelistHosts`** — applied only to absolute http(s) URLs. If the host (or one of its parent domains) is listed, the link is kept as is; otherwise the `<a>` tag is unwrapped.
+
+Additional behavior:
+
+- Unwrapping means the `<a>` tag is dropped but the link text (with any inline formatting like `<b>`, `<code>`) stays in place.
+- Host matching is case-insensitive. An entry in `whitelistHosts` matches the host itself and any of its subdomains — e.g. `deckhouse.ru` matches `deckhouse.ru`, `www.deckhouse.ru`, `registry.deckhouse.ru`.
+- Per-link opt-outs (see the section above) short-circuit the whole pipeline — a marked link is never touched by `replace` or the whitelist check.
+- `linkRewriteEnable: false` (or the key being absent) disables the feature entirely — the HTML is left untouched.
+- Regex flavour differs between the two implementations: Jekyll uses Ruby regexp (backrefs `\1`, `\2`), Hugo uses Go RE2 (`$1`, `$2`, no backreferences in patterns). Keep patterns simple to avoid divergence between the two configs.
+
 ## Search
 
 This feature allows you to display a contextual message above the "ready" search message to inform users about what they're searching in.

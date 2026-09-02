@@ -1,0 +1,17 @@
+{{- /*
+  Markdown link render hook. Delegates to the shared helper so that links from
+  Markdown and links emitted by HTML templates go through the same logic.
+
+  Per-link opt-out via the Markdown link title: [text](url "keep-link").
+  Hugo/goldmark does not accept inline Kramdown-style attributes on links, so the
+  title attribute is used as the marker (equivalent to Jekyll's data-keep-link).
+  The "keep-link" marker is consumed here and not emitted as a title attribute.
+
+  See layouts/_partials/helpers/rewrite-href.html for the rewrite logic and config.
+*/ -}}
+{{- $keep := eq .Title "keep-link" -}}
+{{- $attrs := "" -}}
+{{- if and (not $keep) .Title -}}
+  {{- $attrs = printf " title=\"%s\"" .Title -}}
+{{- end -}}
+{{- partial "helpers/rewrite-link" (dict "href" .Destination "inner" .Text "attrs" $attrs "keep" $keep) -}}
