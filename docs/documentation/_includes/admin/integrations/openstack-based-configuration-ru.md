@@ -32,6 +32,21 @@
 ![resources](../../../../images/cloud-provider-openstack/openstack-standard.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1hjmDn2aJj3ru3kBR6Jd6MAW3NWJZMNkend_K43cMN0w/edit --->
 
+Дополнительно возможно создание группы безопасности отдельным свойством [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standard-internalnetworksecurity) (по умолчанию `true`). Группа создаётся с именем префикса кластера (`prefix`) и назначается узлам.
+
+Будут созданы следующие правила входящего трафика:
+
+- разрешение входящего трафика по протоколу `TCP` и порту 22 из CIDR, указанных в [`sshAllowList`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-sshallowlist) (по умолчанию `0.0.0.0/0`);
+- разрешение входящего трафика по протоколу `ICMP` из `0.0.0.0/0`;
+- разрешение входящего трафика по протоколу `TCP` и портам 30000–32767 для использования `NodePort` (UDP NodePort по умолчанию не открываются);
+- разрешение любого входящего трафика от узлов, входящих в ту же группу безопасности.
+
+Собственные группы безопасности, созданные в облаке заранее, подключаются через `additionalSecurityGroups`:
+
+- для master-узлов — в параметре [`masterNodeGroup.instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration);
+- для статических узлов — в параметре [`nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration);
+- для эфемерных узлов — в параметре [`spec.additionalSecurityGroups`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) ресурса [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
+
 Пример конфигурации схемы размещения:
 
 ```yaml
@@ -138,6 +153,21 @@ provider:
 ![resources](../../../../images/cloud-provider-openstack/openstack-standardwithnorouter.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1gkuJhyGza0bXB2lcjdsQewWLEUCjqvTkkba-c5LtS_E/edit --->
 
+Дополнительно возможно создание группы безопасности отдельным свойством [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standardwithnorouter-internalnetworksecurity) (по умолчанию `true`). Группа создаётся с именем префикса кластера (`prefix`) и назначается узлам.
+
+Будут созданы следующие правила входящего трафика:
+
+- разрешение входящего трафика по протоколу `TCP` и порту 22 из CIDR, указанных в [`sshAllowList`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-sshallowlist) (по умолчанию `0.0.0.0/0`);
+- разрешение входящего трафика по протоколу `ICMP` из `0.0.0.0/0`;
+- разрешение входящего трафика по протоколу `TCP` и портам 30000–32767 для использования `NodePort` (UDP NodePort по умолчанию не открываются);
+- разрешение любого входящего трафика от узлов, входящих в ту же группу безопасности.
+
+Собственные группы безопасности, созданные в облаке заранее, подключаются через `additionalSecurityGroups`:
+
+- для master-узлов — в параметре [`masterNodeGroup.instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration);
+- для статических узлов — в параметре [`nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration);
+- для эфемерных узлов — в параметре [`spec.additionalSecurityGroups`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) ресурса [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
+
 Пример конфигурации схемы размещения:
 
 ```yaml
@@ -223,6 +253,8 @@ virtual IP создается в публичной сети, он все рав
 ![resources](../../../../images/cloud-provider-openstack/openstack-simple.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1l-vKRNA1NBPIci3Ya8r4dWL5KA9my7_wheFfMR38G10/edit --->
 
+В данной схеме размещения модуль не создаёт группы безопасности. Их нужно подготовить в облаке заранее и указать через [`additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups).
+
 Пример конфигурации схемы размещения:
 
 ```yaml
@@ -297,7 +329,7 @@ Master-узел и узлы кластера подключаются к сущ�
 
 {% alert level="warning" %}
 В данной схеме размещения не происходит управление SecurityGroups, а подразумевается, что они были ранее созданы.
-Для настройки политик безопасности необходимо явно указывать `additionalSecurityGroups` в [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) для masterNodeGroup и других nodeGroups, а также `additionalSecurityGroups` при создании [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) в кластере.
+Для настройки политик безопасности необходимо явно указывать [`additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) в [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) для masterNodeGroup и других nodeGroups, а также [`additionalSecurityGroups`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) при создании [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) в кластере.
 {% endalert %}
 
 ![resources](../../../../images/cloud-provider-openstack/openstack-simplewithinternalnetwork.png)
@@ -542,33 +574,6 @@ spec:
     operator: Equal
     value: frontend
 ```
-
-### Настройка и политики безопасности на узлах кластера
-
-Вариантов, зачем может понадобиться ограничить или, наоборот, расширить входящий или исходящий трафик на виртуальных
-машинах кластера, может быть множество. Например:
-
-* Разрешить подключение к узлам кластера с виртуальных машин из другой подсети.
-* Разрешить подключение к портам статического узла для работы приложения.
-* Ограничить доступ к внешним ресурсам или другим ВМ в облаке по требованию службы безопасности.
-
-Для всего этого следует применять дополнительные группы безопасности (security groups). Можно использовать только группы безопасности, предварительно
-созданные в облаке.
-
-#### Установка дополнительных групп безопасности (security groups) на статических и master-узлах
-
-Данный параметр можно задать либо при создании кластера, либо в уже существующем кластере. В обоих случаях дополнительные
-группы безопасности указываются в [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration):
-
-* для master-узлов — в секции `masterNodeGroup` в поле `additionalSecurityGroups`;
-* для статических узлов — в секции `nodeGroups` в конфигурации, описывающей желаемую nodeGroup, а также в поле `additionalSecurityGroups`.
-
-Поле `additionalSecurityGroups` представляет собой массив строк с именами групп безопасности.
-
-#### Установка дополнительных групп безопасности (security groups) на ephemeral-узлах
-
-Необходимо прописать параметр `additionalSecurityGroups` для всех [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) в кластере, которым нужны дополнительные
-групп безопасности.
 
 ### Как загрузить образ в {{ site.data.admin.cloud-types.types[page.cloud_type].name }}
 

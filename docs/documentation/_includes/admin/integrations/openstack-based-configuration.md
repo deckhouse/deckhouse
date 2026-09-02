@@ -39,6 +39,21 @@ with a bastion host.
 ![Standard layout in OpenStack](../../../../images/cloud-provider-openstack/openstack-standard.png)
 <!--- Source: https://docs.google.com/drawings/d/1hjmDn2aJj3ru3kBR6Jd6MAW3NWJZMNkend_K43cMN0w/edit --->
 
+Additionally, you can enable the creation of a security group using the [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standard-internalnetworksecurity) property (default `true`). The group is named after the cluster prefix (`prefix`) and is assigned to the nodes.
+
+The following inbound rules will be created:
+
+- Allow incoming traffic over the `TCP` protocol on port 22 from the CIDRs listed in [`sshAllowList`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-sshallowlist) (default `0.0.0.0/0`).
+- Allow incoming traffic over the `ICMP` protocol from `0.0.0.0/0`.
+- Allow incoming traffic over the `TCP` protocol on ports 30000–32767 for `NodePort` usage (UDP NodePorts are not opened by default).
+- Allow any incoming traffic from nodes in the same security group.
+
+Custom security groups created in the cloud beforehand are attached via `additionalSecurityGroups`:
+
+- For master nodes, in the [`masterNodeGroup.instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) resource.
+- For static nodes, in the [`nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) resource.
+- For ephemeral nodes, in the [`spec.additionalSecurityGroups`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) parameter of the [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) resource.
+
 Example layout configuration:
 
 ```yaml
@@ -144,6 +159,21 @@ This layout should be used if you want all nodes in the cluster to be directly a
 ![StandardWithNoRouter layout in OpenStack](../../../../images/cloud-provider-openstack/openstack-standardwithnorouter.png)
 <!--- Source: https://docs.google.com/drawings/d/1gkuJhyGza0bXB2lcjdsQewWLEUCjqvTkkba-c5LtS_E/edit --->
 
+Additionally, you can enable the creation of a security group using the [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standardwithnorouter-internalnetworksecurity) property (default `true`). The group is named after the cluster prefix (`prefix`) and is assigned to the nodes.
+
+The following inbound rules will be created:
+
+- Allow incoming traffic over the `TCP` protocol on port 22 from the CIDRs listed in [`sshAllowList`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-sshallowlist) (default `0.0.0.0/0`).
+- Allow incoming traffic over the `ICMP` protocol from `0.0.0.0/0`.
+- Allow incoming traffic over the `TCP` protocol on ports 30000–32767 for `NodePort` usage (UDP NodePorts are not opened by default).
+- Allow any incoming traffic from nodes in the same security group.
+
+Custom security groups created in the cloud beforehand are attached via `additionalSecurityGroups`:
+
+- For master nodes, in the [`masterNodeGroup.instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) resource.
+- For static nodes, in the [`nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) resource.
+- For ephemeral nodes, in the [`spec.additionalSecurityGroups`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) parameter of the [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) resource.
+
 Example layout configuration:
 
 ```yaml
@@ -227,6 +257,8 @@ An internal LoadBalancer with the virtual IP in the public network is only acces
 ![Simple layout in OpenStack](../../../../images/cloud-provider-openstack/openstack-simple.png)
 <!--- Source: https://docs.google.com/drawings/d/1l-vKRNA1NBPIci3Ya8r4dWL5KA9my7_wheFfMR38G10/edit --->
 
+In this layout, the module does not create security groups. Prepare them in the cloud beforehand and specify them via [`additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups).
+
 Example layout configuration:
 
 ```yaml
@@ -300,8 +332,8 @@ This layout can be useful if you need to merge a Kubernetes cluster with existin
 {% alert level="warning" %}
 This layout does not involve the management of SecurityGroups (it is assumed they were created beforehand).
 To configure security policies, you must explicitly specify both
-`additionalSecurityGroups` in the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) for the masterNodeGroup and other nodeGroups,
-and `additionalSecurityGroups` when creating [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) in the cluster.
+[`additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) in the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) for the masterNodeGroup and other nodeGroups,
+and [`additionalSecurityGroups`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) when creating [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) in the cluster.
 {% endalert %}
 
 ![SimpleWithInternalNetwork layout in OpenStack](../../../../images/cloud-provider-openstack/openstack-simplewithinternalnetwork.png)
@@ -554,33 +586,6 @@ spec:
     operator: Equal
     value: frontend
 ```
-
-### Node security policies and configuration
-
-There are many reasons why you might want to restrict or allow incoming or outgoing traffic on cluster VMs.
-For example:
-
-- Allow connections to cluster nodes from VMs in a different subnet.
-- Allow access to specific ports on a static node for application traffic.
-- Restrict access to external resources or other VMs in the cloud per security team requirements.
-
-To manage this, you should use additional security groups.
-Only security groups that were pre-created in the cloud can be used.
-
-#### Assigning additional security groups to static and master nodes
-
-You can specify additional security groups either during cluster creation or in an existing cluster.
-In both cases, specify them in the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) resource:
-
-- **For master nodes**: Under the `masterNodeGroup` section using the `additionalSecurityGroups` field.
-- **For static nodes**: Under the `nodeGroups` section of the corresponding node group configuration and also in the `additionalSecurityGroups` field.
-
-The `additionalSecurityGroups` field is an array of strings representing the names of the security groups.
-
-#### Assigning additional security groups to ephemeral nodes
-
-To assign additional security groups to ephemeral nodes,
-specify the `additionalSecurityGroups` parameter in all relevant [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) resources used by these nodes.
 
 ### Uploading an image to {{ site.data.admin.cloud-types.types[page.cloud_type].name }}
 

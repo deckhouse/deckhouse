@@ -29,6 +29,18 @@ A list of services required for Deckhouse Kubernetes Platform to work in Huawei 
 ![Standard layout in Huawei CLoud](../../../../images/cloud-provider-huawei/huawei-standard.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10811&t=Qb5yyWumzPiTBtfL-0 --->
 
+Additionally, you can enable the creation of a security group using the [`internalNetworkSecurity`](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration-standard-internalnetworksecurity) property (default `true`). The group is named after the cluster prefix and is assigned to the nodes.
+
+The following inbound rules will be created:
+
+- Allow incoming traffic over the `TCP` protocol on port 22 from `0.0.0.0/0`.
+- Allow incoming traffic over the `ICMP` protocol from `0.0.0.0/0`.
+- Allow incoming traffic over the `TCP` protocol on ports 30000–32767 for `NodePort` usage (UDP NodePorts are not opened by default).
+
+Unlike OpenStack, the module does not add a rule that allows all inbound traffic between nodes in the same security group. By default, only the ports and protocols listed above are open between cluster nodes.
+
+Attach custom security groups for CloudEphemeral nodes in the [HuaweiCloudInstanceClass](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass) resource via [`spec.securityGroups`](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass-v1-spec-securitygroups). They are applied together with the group created by the module.
+
 Example configuration:
 
 ```yaml
@@ -67,6 +79,18 @@ masterNodeGroup:
 
 ![VpcPeering layout in Huawei Cloud](../../../../images/cloud-provider-huawei/huawei-vpc-peering-ru.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11715&t=Qb5yyWumzPiTBtfL-0 --->
+
+Additionally, you can enable the creation of a security group using the [`internalNetworkSecurity`](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration-vpcpeering-internalnetworksecurity) property (default `true`). The group is named after the cluster prefix and is assigned to the nodes.
+
+The following inbound rules will be created:
+
+- Allow incoming traffic over the `TCP` protocol on port 22 from `0.0.0.0/0`.
+- Allow incoming traffic over the `ICMP` protocol from `0.0.0.0/0`.
+- Allow incoming traffic over the `TCP` protocol on ports 30000–32767 for `NodePort` usage (UDP NodePorts are not opened by default).
+
+Unlike OpenStack, the module does not add a rule that allows all inbound traffic between nodes in the same security group. By default, only the ports and protocols listed above are open between cluster nodes.
+
+Attach custom security groups for CloudEphemeral nodes in the [HuaweiCloudInstanceClass](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass) resource via [`spec.securityGroups`](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass-v1-spec-securitygroups). They are applied together with the group created by the module.
 
 Example configuration:
 

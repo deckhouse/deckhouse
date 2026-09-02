@@ -177,10 +177,19 @@ In DKP, they can be used to:
 - Open access to applications running on static nodes.
 - Restrict or allow access to external resources based on security policies.
 
-{% alert level="info" %}
-DKP does not create security groups automatically.
-In the cluster configuration, you must specify existing security groups created manually via the AWS Console or other means.
-{% endalert %}
+Unless the [`disableDefaultSecurityGroup: true`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup) parameter is set, DKP creates the following default security groups:
+
+- `<prefix>-node`, assigned to cluster nodes:
+  - Allows any outgoing traffic to `0.0.0.0/0`.
+  - Allows any incoming traffic from the `<prefix>-loadbalancer` group.
+  - Allows any incoming traffic from nodes in the same `<prefix>-node` group.
+  - Allows incoming traffic over the `ICMP` protocol from the CIDRs listed in [`publicNetworkAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist) (default `0.0.0.0/0`).
+- `<prefix>-loadbalancer`, used by load balancers:
+  - Allows any incoming traffic from the CIDRs listed in [`publicNetworkAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist).
+  - Allows any outgoing traffic to the `<prefix>-node` group.
+- `<prefix>-ssh-accessible`, created if [`sshAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-sshallowlist) is set. It allows incoming traffic over the `TCP` protocol on port 22 from the listed CIDRs (default `0.0.0.0/0`). It is assigned to master nodes or to the bastion host in the WithNAT layout.
+
+In addition to the default groups, you can attach custom security groups created in the cloud beforehand.
 
 You can assign additional security groups in the following cases:
 
