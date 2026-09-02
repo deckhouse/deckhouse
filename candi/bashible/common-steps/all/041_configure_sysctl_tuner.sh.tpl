@@ -117,9 +117,17 @@ sysctl -w kernel.panic_on_oops=1
 {{- end }}
 sysctl -w kernel.panic={{ $fencingTime }}
 
-# we use tee for work with globs
-echo 256 | tee /sys/block/*/queue/nr_requests >/dev/null 2>&1 # put more in the request queue, increase throughput
-echo 256 | tee /sys/block/*/queue/read_ahead_kb >/dev/null # the most controversial thing, Netflix recommends increasing a little, but you need to test on different setups, this number looks safe
+# Tune only physical devices: they have a ../device symlink, virtual ones (loop, dm, md,
+# ram, zram) do not. On stacked devices nr_requests is either absent or derived from the
+# devices below, and writing it freezes the queue until in-flight I/O drains, which hangs.
+# Iterate instead of globbing into tee: tee holds every target open at once and hits
+# RLIMIT_NOFILE on nodes with many loop devices (the containerd erofs snapshotter mounts
+# every image layer over one), so the real disks that sort after loop* got nothing.
+for queue in /sys/block/*/queue; do
+  [ -e "${queue%/queue}/device" ] || continue
+  echo 256 | timeout 5 tee "$queue/nr_requests" >/dev/null 2>&1 # put more in the request queue, increase throughput
+  echo 256 | timeout 5 tee "$queue/read_ahead_kb" >/dev/null 2>&1 # the most controversial thing, Netflix recommends increasing a little, but you need to test on different setups, this number looks safe
+done
 transparent_hugepage_current=$(grep -o '\[.*\]' /sys/kernel/mm/transparent_hugepage/enabled | tr -d '[]')
 if [ "$transparent_hugepage_current" != "never" ]; then
   echo never | tee /sys/kernel/mm/transparent_hugepage/enabled >/dev/null
