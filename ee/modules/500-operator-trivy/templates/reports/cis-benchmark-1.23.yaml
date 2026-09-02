@@ -1,3 +1,6 @@
+{{ $cisEnabled := dig "cisBenchmark" "enabled" true .Values.operatorTrivy }}
+{{ $cisReportType := dig "cisBenchmark" "reportVerbosity" "All" .Values.operatorTrivy | lower }}
+{{ if $cisEnabled }}
 ---
 apiVersion: aquasecurity.github.io/v1alpha1
 kind: ClusterComplianceReport
@@ -6,7 +9,7 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" .Chart.Name)) | nindent 2 }}
 spec:
   cron: 0 */6 * * *
-  reportType: all
+  reportType: {{ $cisReportType | quote }}
   compliance:
     id: cis
     title: CIS Kubernetes Benchmarks v1.23
@@ -915,3 +918,4 @@ spec:
         checks:
           - id: AVD-KSV-0110
         severity: MEDIUM
+{{ end }} # if $cisEnabled
