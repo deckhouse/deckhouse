@@ -41,6 +41,7 @@ func DefineConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *kingp
 	app.DefineSSHFlags(cmd, &opts.SSH, config.NewConnectionConfigParser(opts))
 	app.DefineBecomeFlags(cmd, &opts.Become)
 	app.DefineKubeFlags(cmd, &opts.Kube)
+	app.DefineCacheFlags(cmd, &opts.Cache)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
@@ -135,6 +136,7 @@ func DefineAutoConvergeCommand(cmd *kingpin.CmdClause, opts *options.Options) *k
 	app.DefineSSHFlags(cmd, &opts.SSH, config.NewConnectionConfigParser(opts))
 	app.DefineBecomeFlags(cmd, &opts.Become)
 	app.DefineKubeFlags(cmd, &opts.Kube)
+	app.DefineCacheFlags(cmd, &opts.Cache)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {
 		ctx := kpcontext.ExtractContext(c)
@@ -191,6 +193,7 @@ func DefineConvergeMigrationCommand(cmd *kingpin.CmdClause, opts *options.Option
 	app.DefineSSHFlags(cmd, &opts.SSH, config.NewConnectionConfigParser(opts))
 	app.DefineBecomeFlags(cmd, &opts.Become)
 	app.DefineKubeFlags(cmd, &opts.Kube)
+	app.DefineCacheFlags(cmd, &opts.Cache)
 	app.DefineCheckHasTerraformStateBeforeMigrateToTofu(cmd, &opts.Converge)
 
 	return cmd.Action(func(c *kingpin.ParseContext) error {

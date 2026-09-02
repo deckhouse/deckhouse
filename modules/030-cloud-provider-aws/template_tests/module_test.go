@@ -95,6 +95,7 @@ const moduleValues = `
     providerSecretAccessKey: myprovsecretaccesskey
     zones: ["zonea", "zoneb"]
     region: myregion
+    imdsv2: false
     instances:
       ami: ami-aaabbbccc
       associatePublicIPAddress: true
@@ -243,6 +244,7 @@ var _ = Describe("Module :: cloud-provider-aws :: helm template ::", func() {
     "providerAccessKeyId":"myprovacckeyid",
     "providerSecretAccessKey":"myprovsecretaccesskey",
     "region":"myregion",
+    "imdsv2":false,
     "tags":{
       "aaa": "aaa"
     }
@@ -543,6 +545,52 @@ storageclass.kubernetes.io/is-default-class: "true"
 				vpa := f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "node-termination-handler")
 				Expect(vpa.Exists()).To(BeFalse())
 			})
+		})
+	})
+
+	Context("IMDSv2 convergence alert", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus-crd"]`)
+			f.ValuesSetFromYaml("cloudProviderAws", moduleValues)
+			f.HelmRender()
+		})
+
+		It("Should not render when IMDSv2 is not requested", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			rule := f.KubernetesResource("PrometheusRule", moduleNamespace, "cloud-provider-aws-imdsv2")
+			Expect(rule.Exists()).To(BeFalse())
+		})
+
+		It("Should alert on the instances still allowing IMDSv1 when IMDSv2 is requested", func() {
+			f.ValuesSet("cloudProviderAws.internal.imdsv2", true)
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			rule := f.KubernetesResource("PrometheusRule", moduleNamespace, "cloud-provider-aws-imdsv2")
+			Expect(rule.Exists()).To(BeTrue())
+			Expect(rule.Field("spec.groups").String()).To(ContainSubstring("D8CloudProviderAWSIMDSv2NotConverged"))
+			Expect(rule.Field("spec.groups").String()).To(ContainSubstring("cloud_data_discovery_aws_instances_imdsv1_allowed"))
+		})
+	})
+
+	Context("Cloud data discoverer", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("cloudProviderAws", moduleValues)
+			f.HelmRender()
+		})
+
+		It("Should know the node instance profile to observe the IMDS state of the instances", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
+			Expect(deployment.Exists()).To(BeTrue())
+			Expect(deployment.Field("spec.template.spec.containers.0.env").String()).To(ContainSubstring("AWS_NODE_IAM_INSTANCE_PROFILE"))
+			Expect(deployment.Field("spec.template.spec.containers.0.env").String()).To(ContainSubstring("myiamprofile"))
 		})
 	})
 

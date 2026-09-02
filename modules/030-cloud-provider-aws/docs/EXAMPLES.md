@@ -24,14 +24,14 @@ spec:
 
 The following parameters are supported in addition to the existing [upstream](https://cloud-provider-aws.sigs.k8s.io/service_controller/) ones:
 
-1. `service.beta.kubernetes.io/aws-load-balancer-type` — if it has the `none` value, then the Target Group will **only** be created (without any LoadBalancer).
+1. `service.beta.kubernetes.io/aws-load-balancer-type` — if it has the `none` value, then the target group will **only** be created (without any LoadBalancer).
 2. `service.beta.kubernetes.io/aws-load-balancer-backend-protocol` — this parameter is used together with `service.beta.kubernetes.io/aws-load-balancer-type: none`:
    * Possible values:
      * `tcp` (default);
      * `tls`;
      * `http`;
      * `https`.
-   * **Caution!** The `cloud-controller-manager` (CCM) will try to recreate the Target Group in response to changes in this field. If the Target Group has NLB or ALB attached to it, the CCM will fail to delete it and get stuck in this state forever.  You have to manually disconnect NLB or ALB from the Target Group.
+   * **Caution!** The `cloud-controller-manager` (CCM) will try to recreate the target group in response to changes in this field. If the target group has NLB or ALB attached to it, the CCM will fail to delete it and get stuck in this state forever.  You have to manually disconnect NLB or ALB from the target group.
 
 ## Configuring security policies on nodes
 

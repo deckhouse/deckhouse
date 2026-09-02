@@ -1,0 +1,43 @@
+{{- if (.Values.global.enabledModules | has "prometheus-metrics-adapter") }}
+{{- /*
+  Two PodMetrics (cpu/memory) for all control-plane static pods.
+  <<.LabelMatchers>> supplies namespace+pod from the request; the hook selects
+  the right pods via component=/tier=control-plane. Container is not hardcoded —
+  static pods have a single real container (exclude the POD sandbox).
+
+  Lookback window = 7d. Memory uses the same subquery form as cpu so short
+  series after a pod restart still resolve (plain avg_over_time[window] is flakier).
+*/}}
+---
+apiVersion: deckhouse.io/v1beta1
+kind: PodMetric
+metadata:
+  name: d8-cpm-autotune-cpu
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | nindent 2 }}
+spec:
+  query: |
+    sum(
+      avg_over_time(
+        rate(
+          container_cpu_usage_seconds_total{<<.LabelMatchers>>,container!="POD",container!=""}[5m]
+        )[7d:5m]
+      )
+    ) by (<<.GroupBy>>)
+---
+apiVersion: deckhouse.io/v1beta1
+kind: PodMetric
+metadata:
+  name: d8-cpm-autotune-memory
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "d8-control-plane-manager")) | nindent 2 }}
+spec:
+  query: |
+    round(
+      sum(
+        avg_over_time(
+          container_memory_working_set_bytes{<<.LabelMatchers>>,container!="POD",container!=""}[7d:5m]
+        )
+      ) by (<<.GroupBy>>)
+    )
+{{- end }}

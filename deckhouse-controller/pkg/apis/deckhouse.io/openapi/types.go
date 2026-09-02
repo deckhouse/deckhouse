@@ -15,6 +15,8 @@
 package openapi
 
 import (
+	"slices"
+
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -26,12 +28,12 @@ type SchemaURL string
 // It is a forked subset of apiextensionsv1.JSONSchemaProps that drops all x-kubernetes-*
 // extensions and adds Deckhouse-specific x-deckhouse-* extensions as typed fields.
 type OpenAPIV3Schema struct {
-	ID          string    `json:"id,omitempty"`
-	Schema      SchemaURL `json:"$schema,omitempty"`
-	Ref         *string   `json:"$ref,omitempty"`
-	Description string    `json:"description,omitempty"`
-	Type        string    `json:"type,omitempty"`
-	Format      string    `json:"format,omitempty"`
+	ID          string        `json:"id,omitempty"`
+	Schema      SchemaURL     `json:"$schema,omitempty"`
+	Ref         *string       `json:"$ref,omitempty"`
+	Description string        `json:"description,omitempty"`
+	Type        StringOrArray `json:"type,omitempty"`
+	Format      string        `json:"format,omitempty"`
 
 	Title string `json:"title,omitempty"`
 	// default is a default value for undefined object fields.
@@ -86,10 +88,10 @@ type OpenAPIV3Schema struct {
 
 	// x-deckhouse-validations describes a list of validation rules written in the CEL expression language.
 	// +optional
-	// +patchMergeKey=rule
+	// +patchMergeKey=expression
 	// +patchStrategy=merge
 	// +listType=map
-	// +listMapKey=rule
+	// +listMapKey=expression
 	XValidations []ValidationRule `json:"x-deckhouse-validations,omitempty"`
 
 	// x-deckhouse-ui-advanced marks a settings field as "advanced", hiding it behind
@@ -133,6 +135,16 @@ type OpenAPIV3SchemaOrStringArray struct {
 	Property []string         `json:"-"`
 }
 
+// StringOrArray keeps the JSON Schema "type" field, which holds either one
+// type name or a list of alternatives (e.g. [integer, string]). A single name
+// marshals back to the plain string form.
+type StringOrArray []string
+
+// Contains reports whether the type list names the given type.
+func (s StringOrArray) Contains(value string) bool {
+	return slices.Contains(s, value)
+}
+
 // SchemaDependencies represent a dependencies property.
 type SchemaDependencies map[string]OpenAPIV3SchemaOrStringArray
 
@@ -146,10 +158,12 @@ type ExternalDocumentation struct {
 }
 
 // ValidationRule describes a validation rule written in the CEL expression language.
+// The expression key matches the shape module and application schema files use
+// and the values CEL validator reads.
 type ValidationRule struct {
-	// Rule represents the expression which will be evaluated by CEL.
-	// The `self` variable in the CEL expression is bound to the scoped value.
-	Rule string `json:"rule"`
+	// Expression is the CEL expression evaluated against the scoped value.
+	// The `self` variable in the expression is bound to that value.
+	Expression string `json:"expression"`
 
 	// Message represents the message displayed when validation fails.
 	Message string `json:"message,omitempty"`

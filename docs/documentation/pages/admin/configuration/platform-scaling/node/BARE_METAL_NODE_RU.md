@@ -73,6 +73,8 @@ lang: ru
      > **Важно**. Поле `privateSSHKey` должно содержать приватный SSH-ключ, закодированный в формате Base64.
      > Приватный ключ должен соответствовать открытому ключу, добавленному в `~/.ssh/authorized_keys` на сервере.
 
+     Подробнее о защите конфиденциальных данных SSHCredentials — в [FAQ модуля `node-manager`](/modules/node-manager/faq.html#почему-ssh-ключ-и-sudo-пароль-в-sshcredentials-отображаются-как-omitted).
+
 1. Создать объект [StaticInstance](/modules/node-manager/cr.html#staticinstance) для каждого сервера:
 
    ```yaml

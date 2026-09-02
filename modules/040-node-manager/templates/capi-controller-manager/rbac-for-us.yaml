@@ -304,6 +304,30 @@ rules:
     - patch
     - update
     - watch
+  ## deckhouse bootstrap provider (immutable NodeGroups): the MachineSet clones a
+  ## NodeBootstrapConfig from the template per Machine, and the Machine controller
+  ## reads the config's status for the bootstrap data secret.
+  ##
+  ## The template needs write access too, tempting as it is to cut: the
+  ## MachineDeployment controller patches the templates it references, to label
+  ## them and to own them. Read-only here leaves every immutable worker
+  ## unbuilt — the MachineDeployment never gets past
+  ##   failed to patch NodeBootstrapConfigTemplate ...: forbidden
+  ## and no MachineSet is ever created (measured on a live cluster).
+  - apiGroups:
+    - bootstrap.deckhouse.io
+    resources:
+    - nodebootstrapconfigs
+    - nodebootstrapconfigs/status
+    - nodebootstrapconfigtemplates
+    verbs:
+    - create
+    - delete
+    - get
+    - list
+    - patch
+    - update
+    - watch
   ## cluster access
   - apiGroups:
       - ""

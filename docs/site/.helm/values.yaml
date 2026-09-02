@@ -94,6 +94,16 @@ resources:
           web-test: 512Mi
           web-test2: 512Mi
   limits:
+    cpu:
+      moduleslibrary:
+        # Explicit per-container CPU limits for the web container.
+        web:
+          _default: 50m
+          web-production: 500m
+        # Explicit per-container CPU limits for the builder container.
+        builder:
+          _default: 1
+          web-production: 2
     memory:
       moduleslibrary:
         # Explicit per-container limits for the web container.

@@ -238,6 +238,10 @@ var (
 			"properties.internal.properties.providerClusterConfiguration.properties.edgeGateway.properties.type",
 			"properties.internal.properties.providerClusterConfiguration.properties.edgeGateway.properties.NSX-V.properties.externalNetworkType",
 		},
+		"modules/030-cloud-provider-yandex/openapi/config-values.yaml": {
+			// ignore Yandex Cloud disk types
+			"properties.storageClass.properties.provision.items.properties.type",
+		},
 		"modules/030-cloud-provider-yandex/openapi/values.yaml": {
 			// ignore internal values
 			"properties.internal.properties.providerDiscoveryData.properties.apiVersion",

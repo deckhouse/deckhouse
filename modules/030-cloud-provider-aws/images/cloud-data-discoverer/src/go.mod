@@ -28,7 +28,7 @@ require (
 
 require (
 	github.com/alecthomas/kingpin v2.2.6+incompatible
-	github.com/prometheus/client_golang v1.12.1 // indirect
+	github.com/prometheus/client_golang v1.12.1
 	k8s.io/apimachinery v0.25.5
 	k8s.io/client-go v0.25.5 // indirect
 )

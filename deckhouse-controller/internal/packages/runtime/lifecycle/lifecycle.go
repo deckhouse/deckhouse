@@ -51,6 +51,7 @@ type Package struct {
 	settingsVersion int               // schema version of pending settings (from ModuleConfig.Spec.Version)
 	settings        addonutils.Values // pending settings, updated by Update, consumed by GetPendingSettings
 	maintenance     string            // pending maintenance mode, consumed by GetPendingMaintenance
+	removing        bool              // EventRemove was issued and its teardown has not finished
 
 	ctx    context.Context         // root context, cancelled on version change or remove
 	cancel context.CancelCauseFunc // cancels root and all children

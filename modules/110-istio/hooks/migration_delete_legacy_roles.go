@@ -31,7 +31,7 @@ import (
 )
 
 // This hook deletes legacy roles and rolebindings created by operator (not DH) in both scopes
-// TODO: Remove this hook after 1.67
+// TODO: Remove this hook together with sail operator and 1.25 version of Istio
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},

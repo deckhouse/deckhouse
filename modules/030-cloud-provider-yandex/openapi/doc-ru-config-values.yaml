@@ -3,6 +3,28 @@ properties:
     description: Список Network ID, которые будут считаться `ExternalIP` при перечислении адресов у Node.
   storageClass:
     properties:
+      provision:
+        description: |
+          Определяет дополнительные StorageClass'ы или переопределяет параметры создаваемых по умолчанию.
+        items:
+          properties:
+            name:
+              description: |
+                Имя создаваемого StorageClass'а.
+            type:
+              description: |
+                Тип диска.
+            blockSize:
+              description: |
+                Размер блока дисков, создаваемых этим StorageClass.
+
+                Если параметр не указан, используется размер блока по умолчанию для Yandex Cloud — `4Ki`.
+
+                Размер блока определяет максимальный размер сетевого диска: для блока `4Ki` он составляет `8Ti`, а при каждом следующем увеличении размера блока удваивается — вплоть до `256Ti` для блока `128Ki`.
+
+                После создания диска изменить размер его блока нельзя. Изменение параметра `blockSize` приводит к пересозданию StorageClass, но не изменяет размер блока у ранее созданных томов.
+
+                Подробнее в [официальной документации Yandex Cloud](https://cloud.yandex.ru/docs/compute/operations/disk-create/empty-disk-blocksize).
       exclude:
         description: |
           Полные имена (или regex-выражения имен) StorageClass, которые не будут созданы в кластере.

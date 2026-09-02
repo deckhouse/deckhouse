@@ -33,3 +33,73 @@ webhooks:
     resources:
     - nodegroups
     scope: Cluster
+- name: nodeuser.validation.node-controller.deckhouse.io
+  admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: {{ .Values.nodeManager.internal.nodeControllerWebhookCert.ca | b64enc }}
+    service:
+      name: node-controller-webhook
+      namespace: d8-cloud-instance-manager
+      path: /validate-deckhouse-io-v1-nodeuser
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  sideEffects: None
+  rules:
+  - apiGroups:
+    - deckhouse.io
+    apiVersions:
+    - "*"
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - nodeusers
+    scope: Cluster
+- name: staticinstance.validation.node-controller.deckhouse.io
+  admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: {{ .Values.nodeManager.internal.nodeControllerWebhookCert.ca | b64enc }}
+    service:
+      name: node-controller-webhook
+      namespace: d8-cloud-instance-manager
+      path: /validate-deckhouse-io-v1alpha1-staticinstance
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  sideEffects: None
+  rules:
+  - apiGroups:
+    - deckhouse.io
+    apiVersions:
+    - "*"
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - staticinstances
+    scope: Cluster
+{{- if (((.Values.global).clusterConfiguration).cloud) }}
+- name: instanceclass.validation.node-controller.deckhouse.io
+  admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: {{ .Values.nodeManager.internal.nodeControllerWebhookCert.ca | b64enc }}
+    service:
+      name: node-controller-webhook
+      namespace: d8-cloud-instance-manager
+      path: /validate-instanceclass-delete
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  sideEffects: None
+  rules:
+  - apiGroups:
+    - deckhouse.io
+    apiVersions:
+    - "*"
+    operations:
+    - DELETE
+    resources:
+    - {{ .Values.global.clusterConfiguration.cloud.provider | lower }}instanceclasses
+    scope: Cluster
+{{- end }}

@@ -20,6 +20,7 @@ werf-giterminism.yaml
 ^go_lib/.+$
 ^helm_lib/.+$
 ^jq_lib/.+$
+^pkg/.+$
 ^python_lib/.+$
 ^shell_lib/.+$
 ^testing/.+$

@@ -1,0 +1,107 @@
+include:
+  - '.gitlab/notify-failure.yml'
+  - '.gitlab/helpers.yml'
+  - '.gitlab/build.yml'
+
+.svace_secrets:
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: gitlab-access-aud
+  secrets:
+    SVACE_ANALYZE_HOST:
+      vault: 24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI/SVACE_ANALYZE_HOST@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    SVACE_ANALYZE_SSH_USER:
+      vault: 24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI/SVACE_ANALYZE_SSH_USER@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    SVACER_URL:
+      vault: 24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI/SVACER_URL@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    SVACER_IMPORT_USER:
+      vault: 24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI/SVACER_IMPORT_USER@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    SVACER_IMPORT_PASSWORD:
+      vault: 24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI/SVACER_IMPORT_PASSWORD@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    # isolate_ssh_add
+    ISOLATE_SSH_PRIVATE_KEY:
+      vault: 24cb1d7c-717a-4f92-8547-26f632916a7a/Svace_CI/SVACE_ANALYZE_SSH_PRIVATE_KEY@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_DEV_REGISTRY_HOST:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host/DECKHOUSE_DEV_REGISTRY_HOST@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_DEV_REGISTRY_USER:
+      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken/login@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+    DECKHOUSE_DEV_REGISTRY_PASSWORD:
+      vault: 101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken/password@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+
+.svace_build_base:
+  variables:
+    VAULT_AUTH_PATH: fox
+    VAULT_AUTH_ROLE: deckhouse
+    SVACE_ENABLED: "true"
+    WERF_SIGN_ELF_FILES: "0"
+    WERF_SIGN_MANIFEST: "1"
+    WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
+
+.svace_analyze_base:
+  image: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/svace:${CI_IMAGES_TAG}
+  stage: test
+  timeout: 4h
+  variables:
+      VAULT_AUTH_PATH: fox
+      VAULT_AUTH_ROLE: deckhouse
+
+.svace_analyze:
+  variables:
+    PROJECT_GROUP: ${CI_PROJECT_NAME}
+    COMMIT_REF_NAME: ${CI_COMMIT_REF_NAME}
+    COMMIT_HASH: ${CI_COMMIT_SHA}
+    SVACE_ANALYZE_DIR: "svace-analyze"
+
+  allow_failure:
+    exit_codes: 11
+
+  retry:
+    max: 1
+    exit_codes:
+      - 12
+      - 137
+  script:
+    # Start ssh agent if it isn't running already
+    - !reference [.scripts, isolate_ssh_add]
+
+    # Add Svace analyze host to known_hosts
+    - |
+      export ISOLATE_KNOWN_HOSTS="${CI_PROJECT_DIR}/.ssh-known_hosts"
+      HOST="$(echo "${SVACE_ANALYZE_HOST}" | sed -E 's/.*@([^:]+).*/\1/')"
+      ssh-keyscan -t ed25519 -H "${HOST}" >> "${ISOLATE_KNOWN_HOSTS}"
+
+    # Start Svace analysis
+    - bash ./.gitlab/scripts/svace-analysis.sh
+
+build-fe:main:
+  extends:
+    - .rules:on_schedule_svace_analyze
+    - .build_fe
+    - .svace_build_base
+    - .svace_secrets
+
+analyze-deckhouse:
+  extends:
+    - .rules:on_schedule_svace_analyze
+    - .svace_analyze_base
+    - .svace_analyze
+    - .svace_secrets
+    - .notify

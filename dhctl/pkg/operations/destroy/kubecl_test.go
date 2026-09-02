@@ -49,4 +49,9 @@ func TestCleanupsDoesNotPanic(t *testing.T) {
 	require.NotPanics(t, cleanupTest)
 	// double call not panic
 	require.NotPanics(t, cleanupTest)
+
+	// A managed cluster reaches destroy without an SSH provider, and a request that never built
+	// providers at all reaches it without either.
+	require.NotPanics(t, func() { newKubeClientProvider(kubeProvider, nil).Cleanup(t.Context(), true) })
+	require.NotPanics(t, func() { newKubeClientProvider(nil, nil).Cleanup(t.Context(), true) })
 }

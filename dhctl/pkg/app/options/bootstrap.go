@@ -22,9 +22,6 @@ import (
 
 // BootstrapOptions covers everything specific to the bootstrap flow.
 type BootstrapOptions struct {
-	InternalNodeIP string
-	DevicePath     string
-
 	ResourcesPath    string
 	ResourcesTimeout time.Duration
 	DeckhouseTimeout time.Duration
@@ -32,11 +29,18 @@ type BootstrapOptions struct {
 	PostBootstrapScriptTimeout time.Duration
 	PostBootstrapScriptPath    string
 
+	// KubeconfigOut is where the admin kubeconfig of a freshly bootstrapped
+	// cluster is written; empty means "do not write it". On a cluster of
+	// immutable nodes it is the only way in — those nodes run no SSH server.
+	KubeconfigOut string
+
 	ForceAbortFromCache             bool
 	DontUsePublicControlPlaneImages bool
 
 	KubeadmBootstrap   bool
 	MasterNodeSelector bool
+
+	SkipPhases []string
 }
 
 // NewBootstrapOptions returns BootstrapOptions with the previous package-level defaults.
@@ -50,14 +54,14 @@ func NewBootstrapOptions() BootstrapOptions {
 
 func (o *BootstrapOptions) ToSpanAttributes() []otattribute.KeyValue {
 	return []otattribute.KeyValue{
-		otattribute.String("bootstrap.internalNodeIP", o.InternalNodeIP),
-		otattribute.String("bootstrap.devicePath", o.DevicePath),
 		otattribute.String("bootstrap.resourcesPath", o.ResourcesPath),
 		otattribute.String("bootstrap.resourcesTimeout", o.ResourcesTimeout.String()),
 		otattribute.String("bootstrap.deckhouseTimeout", o.DeckhouseTimeout.String()),
 		otattribute.String("bootstrap.postBootstrapScriptTimeout", o.PostBootstrapScriptTimeout.String()),
 		otattribute.String("bootstrap.postBootstrapScriptPath", o.PostBootstrapScriptPath),
+		otattribute.String("bootstrap.kubeconfigOut", o.KubeconfigOut),
 		otattribute.Bool("bootstrap.forceAbortFromCache", o.ForceAbortFromCache),
 		otattribute.Bool("bootstrap.dontUsePublicControlPlaneImages", o.DontUsePublicControlPlaneImages),
+		otattribute.StringSlice("bootstrap.skipPhases", o.SkipPhases),
 	}
 }

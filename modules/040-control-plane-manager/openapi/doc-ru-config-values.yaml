@@ -48,6 +48,7 @@ properties:
           - `ExtendedResourceToleration`;
           - `PodNodeSelector`;
           - `PodTolerationRestriction`;
+          - `NodeRestriction`;
           - `EventRateLimit`, который использует следующую конфигурацию:
 
             ```yaml
@@ -60,7 +61,11 @@ properties:
               cacheSize: 2000
             ```
 
-          > Admission-плагин `PodNodeSelector` [не требует](https://github.com/kubernetes/kubernetes/blob/f0ea54070bec90dd829b7054117d670f9f90839f/plugin/pkg/admission/podnodeselector/admission.go#L74-L97) указания глобальной конфигурации, он использует только аннотации на пространстве имен (namespace'ах).
+          > Admission-плагин `PodNodeSelector` [не требует указания глобальной конфигурации](https://github.com/kubernetes/kubernetes/blob/f0ea54070bec90dd829b7054117d670f9f90839f/plugin/pkg/admission/podnodeselector/admission.go#L74-L97), он использует только аннотации на неймспейсах.
+
+          При установке DKP Kubernetes включает стандартные admission-плагины. Дополнительно к ним модуль включает несколько дополнительных. Подробнее — в разделе [«Admission-плагины, включаемые по умолчанию»](./#admission-плагины-включаемые-по-умолчанию).
+
+          Значения `PodNodeSelector` и `PodTolerationRestriction` сохранены в списке допустимых значений только для обратной совместимости: эти плагины включены всегда, поэтому их указание ни на что не влияет и не приводит к ошибке.
       bindToWildcard:
         description: |
           Прослушивание на `0.0.0.0`.
@@ -300,6 +305,8 @@ properties:
   resourcesRequests:
     description: |
       Количество ресурсов CPU и памяти, выделяемых компонентам control plane на каждом master-узле.
+
+      Если запросы CPU или памяти не заданы явно, модуль раз в сутки автоматически рассчитывает запросы соответствующего ресурса для компонентов control plane на основе среднего потребления за предыдущие 7 дней. Явное указание значения для CPU или памяти отключает автоматический расчёт запросов этого ресурса для всех компонентов control plane. В этом случае заданный объём распределяется между компонентами в фиксированных пропорциях.
 
       Эти настройки не применяются, если control plane кластера управляется облачным провайдером, например Google Kubernetes Engine или Azure Kubernetes Service.
       Подробнее об единицах измерения ресурсов — в [документации Kubernetes](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes).
