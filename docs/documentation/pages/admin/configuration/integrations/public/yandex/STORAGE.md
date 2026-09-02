@@ -52,7 +52,7 @@ In this example, DKP will not create StorageClass resources for any `network-ssd
 
 ### Creating additional StorageClasses and block size
 
-The [`settings.storageClass.provision`](/modules/cloud-provider-yandex/configuration.html#parameters-storageclass-provision) parameter lets you create additional StorageClasses or override the parameters of StorageClasses created by the module by default.
+The [`settings.storageClass.provision`](/modules/cloud-provider-yandex/configuration.html#parameters-storageclass-provision) parameter lets you create additional StorageClasses or override the parameters of StorageClasses created by DKP by default.
 
 Use the [`blockSize`](/modules/cloud-provider-yandex/configuration.html#parameters-storageclass-provision-blocksize) parameter to set the [block size](https://yandex.cloud/en/docs/compute/operations/disk-create/empty-disk-blocksize) for provisioned disks. The block size determines the maximum disk size: `8Ti` for `4Ki`, and it doubles with each next block size up to `256Ti` for `128Ki`.
 

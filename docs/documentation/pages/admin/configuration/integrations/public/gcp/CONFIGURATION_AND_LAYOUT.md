@@ -26,7 +26,7 @@ Deckhouse Kubernetes Platform (DKP) supports two layouts for deploying resources
 ![Standard layout in GCP](../../../../images/cloud-provider-gcp/gcp-standard.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10164&t=Qb5yyWumzPiTBtfL-0 --->
 
-The module creates the following firewall rules in the cluster VPC:
+DKP creates the following firewall rules in the cluster VPC:
 
 - `<prefix>-ssh-and-ping`: Allows incoming traffic over the `ICMP` and `TCP` (port 22) protocols to nodes with the `<prefix>` network tag from the CIDRs listed in [`sshAllowList`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (default `0.0.0.0/0`).
 - `<prefix>-intercommunication`: Allows any traffic between nodes with the `<prefix>` network tag, as well as from the pod subnet ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)).
@@ -109,7 +109,7 @@ provider:
 ![WithoutNAT layout in GCP](../../../../images/cloud-provider-gcp/gcp-withoutnat.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10296&t=Qb5yyWumzPiTBtfL-0 --->
 
-The module creates the following firewall rules in the cluster VPC:
+DKP creates the following firewall rules in the cluster VPC:
 
 - `<prefix>-ssh-and-ping`: Allows incoming traffic over the `ICMP` and `TCP` (port 22) protocols to nodes with the `<prefix>` network tag from the CIDRs listed in [`sshAllowList`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (default `0.0.0.0/0`).
 - `<prefix>-intercommunication`: Allows any traffic between nodes with the `<prefix>` network tag, as well as from the pod subnet ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)).

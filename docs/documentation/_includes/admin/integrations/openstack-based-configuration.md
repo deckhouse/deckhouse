@@ -1,6 +1,6 @@
 ## List of required OpenStack services
 
-The following {{ site.data.admin.cloud-types.types[page.cloud_type].name }} services must be available for Deckhouse Kubernetes Platform to operate:
+The following {{ site.data.admin.cloud-types.types[page.cloud_type].name }} services must be available for Deckhouse Kubernetes Platform (DKP) to operate:
 
 | Service                      |                         API Version                      |
 | :------------------------- | :--------------------------------------------------------: |
@@ -257,7 +257,7 @@ An internal LoadBalancer with the virtual IP in the public network is only acces
 ![Simple layout in OpenStack](../../../../images/cloud-provider-openstack/openstack-simple.png)
 <!--- Source: https://docs.google.com/drawings/d/1l-vKRNA1NBPIci3Ya8r4dWL5KA9my7_wheFfMR38G10/edit --->
 
-In this layout, the module does not create security groups. Prepare them in the cloud beforehand and specify them via [`additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups).
+In this layout, DKP does not create security groups. Prepare them in the cloud beforehand and specify them via [`additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups).
 
 Example layout configuration:
 

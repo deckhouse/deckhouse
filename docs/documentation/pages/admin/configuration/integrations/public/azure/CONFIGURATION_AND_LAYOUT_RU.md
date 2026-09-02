@@ -18,14 +18,14 @@ Standard — поддерживаемая схема размещения:
 - При отсутствии внешнего IP у master-узла требуется bastion-хост и VNet-пиринг между кластерами.
 - Поддерживается пиринг между VNet кластера и другими VNet.
 
-Модуль создаёт Network Security Group (NSG) с именем префикса кластера и привязывает её к подсети узлов.
+Deckhouse Kubernetes Platform (DKP) создаёт Network Security Group (NSG) с именем префикса кластера и привязывает её к подсети узлов.
 
 Будут созданы следующие правила:
 
 - `AllowIcmp` — разрешение входящего трафика по протоколу `ICMP` из любого источника;
 - `AllowSsh` — разрешение входящего трафика по протоколу `TCP` и порту 22 из CIDR, указанных в [`sshAllowList`](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration-sshallowlist) (если список не задан — из любого источника).
 
-Подключить заранее созданную собственную NSG к узлам через параметры модуля нельзя. Для ограничения SSH используйте [`sshAllowList`](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration-sshallowlist).
+Подключить заранее созданную собственную NSG к узлам через параметры DKP нельзя. Для ограничения SSH используйте [`sshAllowList`](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration-sshallowlist).
 
 Пример конфигурации размещения:
 

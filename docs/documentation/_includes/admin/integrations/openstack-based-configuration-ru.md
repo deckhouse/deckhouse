@@ -1,6 +1,6 @@
 ## Список необходимых сервисов OpenStack
 
-Для работы Deckhouse Kubernetes Platform должны быть доступны следующие сервисы {{ site.data.admin.cloud-types.types[page.cloud_type].name }}:
+Для работы Deckhouse Kubernetes Platform (DKP) должны быть доступны следующие сервисы {{ site.data.admin.cloud-types.types[page.cloud_type].name }}:
 
 | Сервис                     |                         Версия API                         |
 | :------------------------- | :--------------------------------------------------------: |
@@ -253,7 +253,7 @@ virtual IP создается в публичной сети, он все рав
 ![resources](../../../../images/cloud-provider-openstack/openstack-simple.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1l-vKRNA1NBPIci3Ya8r4dWL5KA9my7_wheFfMR38G10/edit --->
 
-В данной схеме размещения модуль не создаёт группы безопасности. Их нужно подготовить в облаке заранее и указать через [`additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups).
+В данной схеме размещения DKP не создаёт группы безопасности. Их нужно подготовить в облаке заранее и указать через [`additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups).
 
 Пример конфигурации схемы размещения:
 

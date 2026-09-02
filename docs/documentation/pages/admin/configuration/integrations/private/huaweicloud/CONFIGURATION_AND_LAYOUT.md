@@ -7,7 +7,7 @@ This section describes the cluster layouts in Huawei Cloud infrastructure and th
 
 ## List of required Huawei Cloud services
 
-A list of services required for Deckhouse Kubernetes Platform to work in Huawei Cloud:
+A list of services required for Deckhouse Kubernetes Platform (DKP) to work in Huawei Cloud:
 
 | Service                         | API version |
 |:--------------------------------|:-----------:|
@@ -37,9 +37,9 @@ The following inbound rules will be created:
 - Allow incoming traffic over the `ICMP` protocol from `0.0.0.0/0`.
 - Allow incoming traffic over the `TCP` protocol on ports 30000–32767 for `NodePort` usage (UDP NodePorts are not opened by default).
 
-Unlike OpenStack, the module does not add a rule that allows all inbound traffic between nodes in the same security group. By default, only the ports and protocols listed above are open between cluster nodes.
+Unlike OpenStack, DKP does not add a rule that allows all inbound traffic between nodes in the same security group. By default, only the ports and protocols listed above are open between cluster nodes.
 
-Attach custom security groups for CloudEphemeral nodes in the [HuaweiCloudInstanceClass](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass) resource via [`spec.securityGroups`](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass-v1-spec-securitygroups). They are applied together with the group created by the module.
+Attach custom security groups for CloudEphemeral nodes in the [HuaweiCloudInstanceClass](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass) resource via [`spec.securityGroups`](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass-v1-spec-securitygroups). They are applied together with the group created by DKP.
 
 Example configuration:
 
@@ -88,9 +88,9 @@ The following inbound rules will be created:
 - Allow incoming traffic over the `ICMP` protocol from `0.0.0.0/0`.
 - Allow incoming traffic over the `TCP` protocol on ports 30000–32767 for `NodePort` usage (UDP NodePorts are not opened by default).
 
-Unlike OpenStack, the module does not add a rule that allows all inbound traffic between nodes in the same security group. By default, only the ports and protocols listed above are open between cluster nodes.
+Unlike OpenStack, DKP does not add a rule that allows all inbound traffic between nodes in the same security group. By default, only the ports and protocols listed above are open between cluster nodes.
 
-Attach custom security groups for CloudEphemeral nodes in the [HuaweiCloudInstanceClass](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass) resource via [`spec.securityGroups`](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass-v1-spec-securitygroups). They are applied together with the group created by the module.
+Attach custom security groups for CloudEphemeral nodes in the [HuaweiCloudInstanceClass](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass) resource via [`spec.securityGroups`](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass-v1-spec-securitygroups). They are applied together with the group created by DKP.
 
 Example configuration:
 

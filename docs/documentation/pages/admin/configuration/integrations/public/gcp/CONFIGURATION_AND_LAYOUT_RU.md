@@ -22,7 +22,7 @@ DKP поддерживает две схемы размещения ресурс
 ![resources](../../../../images/cloud-provider-gcp/gcp-standard.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10164&t=Qb5yyWumzPiTBtfL-0 --->
 
-Модуль создаёт следующие правила файрвола в VPC кластера:
+DKP создаёт следующие правила файрвола в VPC кластера:
 
 - `<prefix>-ssh-and-ping` — разрешение входящего трафика по протоколам `ICMP` и `TCP` (порт 22) к узлам с network tag `<prefix>` из CIDR, указанных в [`sshAllowList`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (по умолчанию `0.0.0.0/0`);
 - `<prefix>-intercommunication` — разрешение любого трафика между узлами с network tag `<prefix>`, а также из подсети подов ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)).
@@ -104,7 +104,7 @@ provider:
 ![resources](../../../../images/cloud-provider-gcp/gcp-withoutnat.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10296&t=Qb5yyWumzPiTBtfL-0 --->
 
-Модуль создаёт следующие правила файрвола в VPC кластера:
+DKP создаёт следующие правила файрвола в VPC кластера:
 
 - `<prefix>-ssh-and-ping` — разрешение входящего трафика по протоколам `ICMP` и `TCP` (порт 22) к узлам с network tag `<prefix>` из CIDR, указанных в [`sshAllowList`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (по умолчанию `0.0.0.0/0`);
 - `<prefix>-intercommunication` — разрешение любого трафика между узлами с network tag `<prefix>`, а также из подсети подов ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)).

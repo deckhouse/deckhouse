@@ -18,14 +18,14 @@ Standard is the supported deployment layout with the following characteristics:
 - If the master node does not have a public IP, a bastion host and VNet peering between clusters are required.
 - Peering between the cluster's VNet and other VNets is supported.
 
-The module creates a Network Security Group (NSG) named after the cluster prefix and associates it with the node subnet.
+Deckhouse Kubernetes Platform (DKP) creates a Network Security Group (NSG) named after the cluster prefix and associates it with the node subnet.
 
 The following rules will be created:
 
 - `AllowIcmp`: Allows incoming traffic over the `ICMP` protocol from any source.
 - `AllowSsh`: Allows incoming traffic over the `TCP` protocol on port 22 from the CIDRs listed in [`sshAllowList`](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration-sshallowlist). If the list is not set, traffic is allowed from any source.
 
-You cannot attach a pre-created custom NSG to nodes through the module parameters. To restrict SSH access, use [`sshAllowList`](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration-sshallowlist).
+You cannot attach a pre-created custom NSG to nodes through the DKP parameters. To restrict SSH access, use [`sshAllowList`](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration-sshallowlist).
 
 Example configuration:
 
