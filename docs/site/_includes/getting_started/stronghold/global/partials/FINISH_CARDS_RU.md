@@ -1,7 +1,7 @@
 <section class="cards-blocks">
 <div class="cards-blocks__content">
 <h2 class="cards-blocks__title text_h2">
-Главное
+Начало работы с кластером
 </h2>
 <div class="cards-blocks__cards">
 
