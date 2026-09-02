@@ -45,6 +45,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
@@ -447,7 +448,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		// selection.
 		var embeddedTargetSource string
 		if module != nil && module.IsEmbedded() {
-			chosenSource := configuredSource(config)
+			chosenSource := pkgsync.ConfiguredSource(config)
 
 			var conflict bool
 			embeddedTargetSource, conflict = resolveEmbeddedTargetSource(chosenSource, offering)
@@ -660,7 +661,7 @@ func (r *reconciler) sourcesOfConfig(ctx context.Context, obj client.Object) []r
 	}
 
 	names := sources.Offering(config.Name)
-	if chosen := configuredSource(config); chosen != "" && !slices.Contains(names, chosen) {
+	if chosen := pkgsync.ConfiguredSource(config); chosen != "" && !slices.Contains(names, chosen) {
 		names = append(names, chosen)
 	}
 
