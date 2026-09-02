@@ -1,0 +1,20 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1.33.0
+spec:
+  version: "v1.33.0"
+status:
+  phase: Deployed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: DeckhouseRelease
+metadata:
+  name: v1.33.1
+  annotations:
+    release.deckhouse.io/suspended: "true"
+spec:
+  version: "v1.33.1"
+status:
+  phase: Suspended
