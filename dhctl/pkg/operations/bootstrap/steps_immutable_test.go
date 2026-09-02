@@ -50,6 +50,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/preflight/checks"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
@@ -826,6 +827,106 @@ spec:
 	require.ErrorContains(t, err, "systemType: Immutable")
 	require.ErrorContains(t, err, "--master-host")
 	require.Nil(t, bctx.immutable)
+}
+
+// immutableDetectBootstrapper is the smallest bootstrapper detectImmutableMaster runs against: a
+// static cluster whose master NodeGroup asks for an immutable system, no detection done yet, and
+// the state cache of the caller so that two runs share one directory - which is what one cache
+// identity means.
+func immutableDetectBootstrapper(t *testing.T, stateCache state.Cache, masterHosts ...string) (*ClusterBootstrapper, *bootstrapContext) {
+	t.Helper()
+
+	b, bctx := immutableTestBootstrapper(t)
+	b.Options.Bootstrap.MasterHostsRaw = masterHosts
+	bctx.stateCache = stateCache
+	bctx.metaConfig.ClusterType = config.StaticClusterType
+	bctx.metaConfig.ResourcesYAML = `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: master
+spec:
+  nodeType: Static
+  systemType: Immutable
+`
+	bctx.immutable = nil
+
+	return b, bctx
+}
+
+func immutableTestStateCache(t *testing.T) state.Cache {
+	t.Helper()
+
+	stateCache, err := cache.NewStateCache(t.TempDir())
+	require.NoError(t, err)
+
+	return stateCache
+}
+
+// The cache identity sorts the machines while the election read the raw flag order, so a rerun
+// with the pairs reordered reused the cache and elected a different machine: it found no record
+// for the one now first, handed it ControlPlaneConfig{Bootstrap: true} and installed a second
+// control plane beside the live one.
+func TestImmutableFirstMasterIsRecordedNotRecomputed(t *testing.T) {
+	stateCache := immutableTestStateCache(t)
+
+	b, bctx := immutableDetectBootstrapper(t, stateCache, "master-0=10.0.0.11", "master-1=10.0.0.12")
+	require.NoError(t, b.detectImmutableMaster(t.Context(), bctx))
+	require.Equal(t, "master-0", bctx.immutable.masterNodeName, "the operator chooses on a genuinely first run")
+
+	rerun, rerunCtx := immutableDetectBootstrapper(t, stateCache, "master-1=10.0.0.12", "master-0=10.0.0.11")
+	require.NoError(t, rerun.detectImmutableMaster(t.Context(), rerunCtx))
+	require.Equal(t, "master-0", rerunCtx.immutable.masterNodeName,
+		"the machine the cluster was started on is the machine it is resumed on")
+}
+
+// A rerun that drops the machine the cluster runs on has nothing to resume: the handoff material
+// in the cache is that machine's, and every other name it is handed only fails the mTLS check.
+func TestImmutableFirstMasterMustBeAmongTheGivenMachines(t *testing.T) {
+	stateCache := immutableTestStateCache(t)
+
+	b, bctx := immutableDetectBootstrapper(t, stateCache, "master-0=10.0.0.11", "master-1=10.0.0.12")
+	require.NoError(t, b.detectImmutableMaster(t.Context(), bctx))
+
+	rerun, rerunCtx := immutableDetectBootstrapper(t, stateCache, "master-1=10.0.0.12", "master-2=10.0.0.13")
+	err := rerun.detectImmutableMaster(t.Context(), rerunCtx)
+
+	require.ErrorContains(t, err, "master-0", "the message names the machine the cluster was started on")
+	require.ErrorContains(t, err, "master-1", "and the machines this run was given")
+	require.ErrorContains(t, err, "master-2")
+	require.Nil(t, rerunCtx.immutable, "nothing may reach the phase that pushes a payload")
+}
+
+// The identity of an immutable cluster is its machine names, so a rerun that corrects an address
+// keeps the directory the first run wrote - and every record in it, what was pushed and to where,
+// is of the address it was written with. Said out loud, because a working directory that quietly
+// serves other machines than it was filled for is what the identity change makes possible.
+func TestImmutableSaysWhenTheAddressesChange(t *testing.T) {
+	stateCache := immutableTestStateCache(t)
+
+	detect := func(t *testing.T, masterHosts ...string) string {
+		t.Helper()
+
+		var log bytes.Buffer
+		ctx := dhlog.ToContext(t.Context(), slog.New(slog.NewTextHandler(&log, nil)))
+
+		b, bctx := immutableDetectBootstrapper(t, stateCache, masterHosts...)
+		require.NoError(t, b.detectImmutableMaster(ctx, bctx))
+
+		return log.String()
+	}
+
+	require.NotContains(t, detect(t, "master-0=10.0.0.11", "master-1=10.0.0.12"), "10.0.0.12",
+		"a first run has nothing to compare against")
+
+	changed := detect(t, "master-0=10.0.0.11", "master-1=10.0.0.22")
+	require.Contains(t, changed, "master-1")
+	require.Contains(t, changed, "10.0.0.12")
+	require.Contains(t, changed, "10.0.0.22")
+	require.NotContains(t, changed, "master-0", "only the machine that moved is named")
+
+	require.NotContains(t, detect(t, "master-0=10.0.0.11", "master-1=10.0.0.22"), "10.0.0.22",
+		"the same addresses again are not news")
 }
 
 // The preflight is where an operator learns they named a machine that is not

@@ -28,6 +28,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
@@ -60,8 +61,8 @@ func primaryCacheIdentity(m *config.MetaConfig, hosts []sshconfig.Host, masterHo
 
 	// An immutable cluster refuses --ssh-host and names its machines with --master-host instead,
 	// so without this arm nothing above or below it reads anything and every such cluster shares
-	// one directory. The pairs are the identity: the name in each is the node's, so a run that
-	// renames a machine is a different cluster.
+	// one directory. The machine names are the identity: a run that renames one is a different
+	// cluster, and a rerun that corrects a mistyped address is the same one.
 	if names := canonMasterHosts(masterHosts); len(names) > 0 {
 		return "master-" + stringsutil.Sha256EncodeWithFirstLettersOfHash(strings.Join(names, ","), 32)
 	}
@@ -79,20 +80,24 @@ func primaryCacheIdentity(m *config.MetaConfig, hosts []sshconfig.Host, masterHo
 	return m.CachePath()
 }
 
-// canonMasterHosts is canonHosts for the raw "name=address" pairs of --master-host, sorted and
-// de-duplicated the same way and for the same reason.
+// canonMasterHosts is canonHosts for the machine names of the raw "name=address" pairs of
+// --master-host, sorted and de-duplicated the same way and for the same reason.
+//
+// Names only, and split by the one normaliser of the flag: an address is where the typo lands, and
+// a rerun that corrects one has to come back to the directory holding what was already pushed and
+// the certificate the running master booted with.
 func canonMasterHosts(raw []string) []string {
-	pairs := make([]string, 0, len(raw))
+	names := make([]string, 0, len(raw))
 
 	for _, pair := range raw {
-		if trimmed := strings.TrimSpace(pair); trimmed != "" {
-			pairs = append(pairs, trimmed)
+		if name, _ := immutable.ParseHost(pair); name != "" {
+			names = append(names, name)
 		}
 	}
 
-	slices.Sort(pairs)
+	slices.Sort(names)
 
-	return slices.Compact(pairs)
+	return slices.Compact(names)
 }
 
 func canonHosts(hosts []sshconfig.Host) []string {
