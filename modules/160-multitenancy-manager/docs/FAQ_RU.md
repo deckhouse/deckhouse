@@ -4,9 +4,13 @@ title: "Модуль multitenancy-manager: FAQ"
 
 ## Управление доступом к cluster-wide-ресурсам
 
-### Что делать, если PersistentVolumeClaim отклонён с ошибкой "resource not available to project"?
+### Что делать, если PersistentVolumeClaim отклонён с ошибкой «is not available to project»?
 
-Указанный в `spec.storageClassName` StorageClass недоступен проекту.
+Указанный в `spec.storageClassName` StorageClass недоступен проекту. Вебхук отклоняет такой запрос с сообщением вида:
+
+```text
+[multitenancy] PersistentVolumeClaim "<OBJECT_NAME>" references "<RESOURCE_NAME>" which is not available to project "<PROJECT_NAME>". Ask the cluster administrator to grant it.
+```
 
 Чтобы просмотреть доступные StorageClass, выполните следующую команду:
 
@@ -36,7 +40,7 @@ d8 k get available -n <PROJECT_NAME>
 
 ### Что произойдёт с существующими объектами после ограничения доступа?
 
-Существующие объекты продолжат использовать ранее заданные значения. При обновлении объекта проверка выполняется только для изменённых полей, поэтому изменение политики доступа не нарушает работу уже созданных объектов.
+Существующие объекты продолжат использовать ранее заданные значения. При обновлении объекта проверяются только новые значения, поэтому изменение политики доступа не нарушает работу уже созданных объектов.
 
 Если существующий объект должен использовать другой cluster-wide-ресурс, явно измените соответствующее поле на доступное проекту значение.
 
@@ -58,7 +62,9 @@ d8 k get available -n <PROJECT_NAME>
 
 ### Что происходит, если ClusterResourceGrantPolicy отсутствует?
 
-Если для ресурса не задана ни одна политика ClusterResourceGrantPolicy, он доступен всем проектам по умолчанию.
+Если для ресурса не задана ни одна политика ClusterResourceGrantPolicy, его доступность определяется регистрацией: ресурс доступен всем проектам, если в GrantableClusterResourceDefinition задано [`defaultAvailability: All`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultavailability) (значение по умолчанию) и ресурс не попадает под фильтры [`excluded`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-excluded).
+
+Например, определение `clusterroles`, поставляемое DKP, исключает все ClusterRole без лейбла `rbac.deckhouse.io/delegatable`, поэтому такие роли недоступны в RoleBinding даже при отсутствии политик.
 
 Чтобы ограничить доступ, создайте [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy) и укажите проекты и доступные им cluster-wide-ресурсы.
 
@@ -80,7 +86,7 @@ d8 k get available -n <PROJECT_NAME>
 
 1. **Регистрация cluster-wide-ресурса**. Убедитесь, что для значения `resourceName` существует соответствующий [ресурс GrantableClusterResourceDefinition](cr.html#grantableclusterresourcedefinition).
 
-1. Регистрация ссылки. Если ожидается проверка определённого поля, убедитесь, что оно зарегистрировано с помощью [GrantableClusterResourceReference](cr.html#grantableclusterresourcereference) и ссылка успешно связана с соответствующим GrantableClusterResourceDefinition.
+1. **Регистрация ссылки**. Если ожидается проверка определённого поля, убедитесь, что оно зарегистрировано с помощью [GrantableClusterResourceReference](cr.html#grantableclusterresourcereference) и ссылка успешно связана с соответствующим GrantableClusterResourceDefinition.
 
 Описание состояния регистрации приведено [в разделе «Проверка состояния регистрации ресурса»](usage.html#проверка-состояния-регистрации-ресурса).
 
@@ -100,12 +106,12 @@ d8 k get available -n <PROJECT_NAME>
 
 ### Что произойдёт при включении управления доступом на существующем кластере?
 
-Существующие объекты продолжат использовать ранее заданные значения. Проверка доступа применяется к новым объектам, а при обновлении существующих объектов — только к изменённым полям.
+Существующие объекты продолжат использовать ранее заданные значения. Проверка доступа применяется к новым объектам, а при обновлении существующих объектов — только к новым значениям.
 
 Поэтому перед созданием политик доступа изменять существующие объекты не требуется.
 
 ### Что произойдёт с объектами, созданными до ограничения доступа?
 
-Такие объекты продолжат использовать ранее заданные значения. Новые объекты и изменяемые поля существующих объектов проверяются в соответствии с текущими политиками доступа.
+Такие объекты продолжат использовать ранее заданные значения. Новые объекты и новые значения в полях существующих объектов проверяются в соответствии с текущими политиками доступа.
 
 Если существующий объект использует cluster-wide-ресурс, который больше не доступен проекту, срабатывает [алерт `ClusterResourceGrantPolicyViolation`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#multitenancy-manager-clusterresourcegrantpolicyviolation).

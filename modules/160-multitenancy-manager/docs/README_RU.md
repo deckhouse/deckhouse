@@ -113,7 +113,7 @@ flowchart LR
     G --> H["Объект создан<br/>или отклонён"]
 </pre>
 
-Пока администратор не создал ClusterResourceGrantPolicy, все ресурсы доступны всем проектам по умолчанию.
+Пока администратор не создал ClusterResourceGrantPolicy, доступность ресурсов определяется их регистрацией: ресурсы доступны всем проектам, если в GrantableClusterResourceDefinition задано `defaultAvailability: All` (значение по умолчанию) и ресурс не попадает под фильтры `excluded`.
 
 Квотирование ресурсов не является частью данного механизма — оно делегировано стандартному
 ресурсу Kubernetes ResourceQuota.
@@ -128,17 +128,17 @@ flowchart LR
 
 Если на cluster-wide-ресурс распространяется несколько правил, его доступность определяется в следующем порядке:
 
-1. Значение [`excluded`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-excluded) в GrantableClusterResourceDefinition — ресурс недоступен независимо от настроек политик.
-1. Значение [`denied`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-denied) и [`deniedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-deniedselector) в соответствующей записи ClusterResourceGrantPolicy.
-1. Значение [`allowed`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-allowed) и [`allowedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-allowedselector) в соответствующей записи ClusterResourceGrantPolicy.
-1. Значение [`availabilityDefault`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-availabilitydefault) в соответствующей записи ClusterResourceGrantPolicy.
-1. Значение [`defaultAvailability`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultavailability) в GrantableClusterResourceDefinition.
+1. Значение [`excluded`](./cr.html#grantableclusterresourcedefinition-v1alpha1-spec-excluded) в GrantableClusterResourceDefinition — ресурс недоступен независимо от настроек политик.
+1. Значение [`denied`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-denied) и [`deniedSelector`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-deniedselector) в соответствующей записи ClusterResourceGrantPolicy.
+1. Значение [`allowed`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-allowed) и [`allowedSelector`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-allowedselector) в соответствующей записи ClusterResourceGrantPolicy.
+1. Значение [`availabilityDefault`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-availabilitydefault) в соответствующей записи ClusterResourceGrantPolicy.
+1. Значение [`defaultAvailability`](./cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultavailability) в GrantableClusterResourceDefinition.
 
 Применяется первое подходящее правило.
 
 #### Подстановка значений по умолчанию
 
-Поведение при создании объекта зависит от режима, заданного [в GrantableClusterResourceReference](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-defaulting):
+Поведение при создании объекта зависит от режима, заданного [в GrantableClusterResourceReference](./cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-defaulting):
 
 * `None` — значение проверяется на доступность, но не подставляется автоматически;
 * `FillEmpty` — если значение не указано, подставляется значение по умолчанию для проекта;
@@ -146,13 +146,13 @@ flowchart LR
 
 Значение по умолчанию для проекта определяется в следующем порядке:
 
-1. Значение [`default`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-default) из соответствующей записи ClusterResourceGrantPolicy.
-1. Значение, определённое с помощью [`defaultFrom`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultfrom) в GrantableClusterResourceDefinition.
+1. Значение [`default`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-default) из соответствующей записи ClusterResourceGrantPolicy.
+1. Значение, определённое с помощью [`defaultFrom`](./cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultfrom) в GrantableClusterResourceDefinition.
 1. Если значение не найдено, оно не подставляется.
 
 #### Проверка существующих объектов
 
-При изменении политики доступа значения, уже используемые существующими объектами, сохраняются. При обновлении объекта проверка выполняется только для изменённых полей.
+При изменении политики доступа значения, уже используемые существующими объектами, сохраняются. При обновлении объекта проверяются только новые значения: если значение в поле не изменилось, оно остаётся допустимым даже после ограничения доступа.
 
 Это позволяет существующим объектам продолжать работу после ограничения доступа к cluster-wide-ресурсам.
 
@@ -182,13 +182,15 @@ DKP регистрирует следующие cluster-wide-ресурсы:
 Регистрация `clusterroles` исключает все объекты ClusterRole без лейбла `rbac.deckhouse.io/delegatable`. По умолчанию в RoleBinding доступны только роли уровня неймспейса (`d8:use:role:*` и устаревшие роли
 `user-authz:*`).
 
+Определение `clusterissuers` регистрируется только при включённом модуле `cert-manager`.
+
 ### Ресурсы механизма управления доступом
 
 | Ресурс | Область | Кто создаёт | Ручное создание | Назначение |
 | --- | --- | --- | --- | --- |
-| [GrantableClusterResourceDefinition](/modules/multitenancy-manager/cr.html#grantableclusterresourcedefinition) | Кластер | Разработчик модуля или DKP | Разрешено для кастомных ресурсов | Регистрирует тип cluster-wide-ресурса, доступом к которому можно управлять |
-| [GrantableClusterResourceReference](/modules/multitenancy-manager/cr.html#grantableclusterresourcereference) | Кластер | Разработчик модуля | Разрешено для полей кастомных ресурсов | Определяет, где используется зарегистрированный cluster-wide-ресурс |
-| [ClusterResourceGrantPolicy](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy) | Кластер | Администратор кластера | Обязательно | Определяет доступные и запрещённые ресурсы, а также ресурс, используемый проектом по умолчанию |
-| [AvailableClusterResource](/modules/multitenancy-manager/cr.html#availableclusterresource) | Неймспейс | Контроллер (автоматически) | Запрещено (защищено вебхуком) | Read-only каталог доступных ресурсов для проекта |
+| [GrantableClusterResourceDefinition](./cr.html#grantableclusterresourcedefinition) | Кластер | Разработчик модуля или DKP | Разрешено для кастомных ресурсов | Регистрирует тип cluster-wide-ресурса, доступом к которому можно управлять |
+| [GrantableClusterResourceReference](./cr.html#grantableclusterresourcereference) | Кластер | Разработчик модуля | Разрешено для полей кастомных ресурсов | Определяет, где используется зарегистрированный cluster-wide-ресурс |
+| [ClusterResourceGrantPolicy](./cr.html#clusterresourcegrantpolicy) | Кластер | Администратор кластера | Обязательно | Определяет доступные и запрещённые ресурсы, а также ресурс, используемый проектом по умолчанию |
+| [AvailableClusterResource](./cr.html#availableclusterresource) | Неймспейс | Контроллер (автоматически) | Запрещено (защищено вебхуком) | Read-only каталог доступных ресурсов для проекта |
 
 Подробные сценарии настройки доступа, просмотр доступных ресурсов в проектах, правила проверки и подстановки значений по умолчанию, а также рекомендации для разработчиков модулей приведены [в разделе «Примеры использования»](usage.html#управление-доступом-к-cluster-wide-ресурсам).

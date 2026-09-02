@@ -13,7 +13,7 @@ spec:
 
             Подробнее о просмотре доступных cluster-wide-ресурсов — [в разделе «Примеры использования»](usage.html#для-пользователей-проекта).
 
-            > **Внимание**. Ресурс предназначен только для чтения. Ручное создание AvailableClusterResource запрещено.
+            > **Внимание.** Ресурс предназначен только для чтения. Ручное создание AvailableClusterResource запрещено.
           properties:
             status:
               description: Состояние доступности cluster-wide-ресурсов для проекта.
@@ -25,35 +25,19 @@ spec:
                     properties:
                       default:
                         description: Означает, что cluster-wide-ресурс используется в проекте по умолчанию.
-                        type: boolean
                       name:
                         description: Имя доступного проекту cluster-wide-ресурса.
-                        type: string
-                    required:
-                    - name
-                    type: object
-                  type: array
-                  x-kubernetes-list-map-keys:
-                  - name
-                  x-kubernetes-list-type: map
                 availableCount:
                   description: |-
                     Количество доступных проекту cluster-wide-ресурсов.
 
                     Используется при выводе списка ресурсов. Имена доступных cluster-wide-ресурсов содержатся в [`status.available`](#availableclusterresource-v1alpha1-status-available).
-                  type: integer
                 default:
                   description: |-
                     Имя cluster-wide-ресурса, используемого в проекте по умолчанию.
 
-                    Значение может автоматически подставляться в соответствующее поле создаваемого ресурса, если поле не заполнено или указанное значение недоступно проекту. Если значение по умолчанию не задано, поле остаётся пустым.
-                  type: string
+                    Значение может автоматически подставляться в соответствующее поле создаваемого ресурса, если поле не заполнено или указанное значение недоступно проекту. Поле остаётся пустым, если значение по умолчанию не задано или недоступно проекту.
                 grantedResourceKind:
                   description: Тип (kind) cluster-wide-ресурса.
-                  type: string
                 observedGeneration:
                   description: Поколение ресурса (generation), на основе которого контроллер сформировал текущий `status`.
-                  format: int64
-                  type: integer
-              type: object
-          type: object

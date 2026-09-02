@@ -60,7 +60,7 @@ Certificate — ClusterIssuer, RoleBinding — ClusterRole. Модуль поз�
 * [ClusterResourceGrantPolicy](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy) — задаёт правила доступа. Администратор кластера с помощью лейблов выбирает проекты, на которые распространяется политика, определяет разрешённые и запрещённые ресурсы, а также ресурс, используемый по умолчанию;
 * [AvailableClusterResource](/modules/multitenancy-manager/cr.html#availableclusterresource) — создаваемый контроллером список cluster-wide-ресурсов, доступных проекту, который предназначен только для чтения.
 
-Пока администратор не создал ClusterResourceGrantPolicy, все ресурсы доступны всем проектам по умолчанию.
+Пока администратор не создал ClusterResourceGrantPolicy, доступность ресурсов определяется их регистрацией: ресурсы доступны всем проектам, если в GrantableClusterResourceDefinition задано `defaultAvailability: All` (значение по умолчанию) и ресурс не попадает под фильтры `excluded`.
 Проверка доступа выполняется только для объектов в неймспейсах проектов. Если политика доступа изменяется, уже используемые существующими объектами cluster-wide-ресурсы остаются доступными для этих объектов.
 
 Подробное описание механизма управления доступом приведено [в документации модуля `multitenancy-manager`](/modules/multitenancy-manager/#управление-доступом-к-cluster-wide-ресурсам).
