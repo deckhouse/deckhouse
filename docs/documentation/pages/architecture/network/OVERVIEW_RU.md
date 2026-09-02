@@ -19,6 +19,7 @@ extractedLinksMax: 0
 * [`cilium-hubble`](/modules/cilium-hubble/) — обеспечивает визуализацию сетевого стека кластера, если включен Cilium CNI;
 * [`ingress-nginx`](/modules/ingress-nginx/) — устанавливает и управляет [Ingress NGINX Controller](https://kubernetes.github.io/ingress-nginx/) с помощью кастомных ресурсов. Архитектура модуля описана на [соответствующей странице](ingress-nginx.html) данного подраздела.
 * [`metallb`](/modules/metallb/) — реализует механизм LoadBalancer для сервисов в bare-metal-кластерах.
+* [`istio`](/modules/istio/) — реализует Service Mesh на основе Istio для централизованного управления сетевым трафиком в кластере. Архитектура модуля описана на [соответствующей странице](istio.html) данного подраздела.
 
 Также в подразделе описаны:
 

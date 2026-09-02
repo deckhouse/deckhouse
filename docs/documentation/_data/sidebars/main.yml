@@ -1615,6 +1615,10 @@ entries:
                 ru: Модуль ingress-nginx
               url: /architecture/network/ingress-nginx.html
             - title:
+                en: Istio module
+                ru: Модуль istio
+              url: /architecture/network/istio.html
+            - title:
                 en: Metallb module
                 ru: Модуль metallb
               url: /architecture/network/metallb.html
@@ -1622,6 +1626,10 @@ entries:
                 en: DNS modules
                 ru: Модули управления DNS
               url: /architecture/network/dns-modules.html
+            - title:
+                en: Istio module
+                ru: Модуль istio
+              url: /architecture/network/istio.html
             - title:
                 en: Cluster-level Istio architecture
                 ru: Архитектура Istio на уровне кластера
