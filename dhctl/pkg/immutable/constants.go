@@ -56,12 +56,13 @@ const (
 	collectedPath = "/bootstrap/collected"
 )
 
-// The port a machine takes its configuration on, held by olcedar-init before
-// the OS is installed and by the agent's maintenance server afterwards.
+// The port a machine takes its configuration on, held by the Deckhouse Engine
+// init before the OS is installed and by the agent's maintenance server
+// afterwards.
 const (
-	// MaintenancePort is where olcedar-init waits for a node configuration.
-	// olcedar-init serves it only while the node has none and closes it the
-	// moment the document is accepted.
+	// MaintenancePort is where the Deckhouse Engine init waits for a node
+	// configuration. It holds the port only while the node has no configuration
+	// and closes it the moment the document is accepted.
 	MaintenancePort = 50000
 
 	// nodeConfigPushPath is the path both servers on this port accept.

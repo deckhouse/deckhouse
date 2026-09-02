@@ -1,4 +1,4 @@
-# Copy of the real original: olcedar's
+# Copy of the real original: the engine's
 # images/rootfs/config/etc/systemd/system/nodelet.service, baked into /etc by
 # the image build. /etc always wins over this extension's copy in /usr/lib,
 # so a unit change here cannot reach a running node via the extension alone.

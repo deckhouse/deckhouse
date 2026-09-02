@@ -22,7 +22,7 @@ limitations under the License.
 // by group and version: an APIService that names a service takes the entire
 // group version with it, and the CRDs of that group version stop being served.
 // NodeConfig is a CRD in internal.deckhouse.io/v1alpha1, so a template
-// aggregated there would take the object every olcedar node reads out of the
+// aggregated there would take the object every Deckhouse Engine node reads out of the
 // cluster.
 // +kubebuilder:object:generate=true
 // +groupName=templates.internal.deckhouse.io

@@ -370,7 +370,7 @@ rules:
   - kubernetes.io/kube-apiserver-client
   verbs:
   - approve
-# NodeConfigs - the per-node desired state of olcedar nodes. The node-config
+# NodeConfigs - the per-node desired state of Deckhouse Engine nodes. The node-config
 # controller renders one object per node of an immutable NodeGroup; the on-node
 # agent watches it and owns its status, which is why status is not listed here.
 # NodeOperations - the record of every interruption of a node: node-manager

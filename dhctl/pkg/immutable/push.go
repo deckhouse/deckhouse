@@ -32,7 +32,7 @@ const pushTimeout = 30 * time.Second
 const maxPushErrorBody = 512
 
 // errPathUnknown means the server on the port does not serve the path, so
-// whatever holds it is neither olcedar-init nor the agent.
+// whatever holds it is neither the Deckhouse Engine init nor the agent.
 var errPathUnknown = errors.New("the maintenance server does not serve this path")
 
 // ErrMaintenanceTokenRequired means the port is held by the agent of a node

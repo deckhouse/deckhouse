@@ -115,7 +115,7 @@ const (
 	phaseReady = "Ready"
 
 	// cgroupLabel tells the cluster which cgroup layout the node runs;
-	// cgroupV2Value is the only answer an olcedar node has. Read by
+	// cgroupV2Value is the only answer a Deckhouse Engine node has. Read by
 	// hooks/cntrd_v2_support.go; the installer writes the same pair.
 	cgroupLabel   = "node.deckhouse.io/cgroup"
 	cgroupV2Value = "cgroup2fs"
@@ -139,12 +139,12 @@ const (
 	configurationAppliedCondition = "ConfigurationApplied"
 )
 
-// nodeManagerDigestsKey and osImageName locate the olcedar image of this
+// nodeManagerDigestsKey and osImageName locate the Deckhouse Engine image of this
 // release. Pinned by digest, not by tag: the node decides a rootfs update by
 // comparing it with what it recorded at install, and a tag that moves lies.
 const (
 	nodeManagerDigestsKey = "nodeManager"
-	osImageName           = "olcedar"
+	osImageName           = "engine"
 )
 
 // systemDiskSelectorSize is the fallback diskSelector when the provisioner

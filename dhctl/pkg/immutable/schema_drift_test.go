@@ -233,7 +233,7 @@ func TestCustomizableSubtreesMirrorTheNodeConfigCRD(t *testing.T) {
 	// The two the payload refuses on purpose. Neither is drift, and neither may
 	// be added without the reason beside it going away first.
 	refusedOnPurpose := map[string]string{
-		"spec.network.ntp":  "nothing on the node reads it: olcedar-init parses it and never uses it, nodelet ignores it",
+		"spec.network.ntp":  "nothing on the node reads it: the Deckhouse Engine init parses it and never uses it, nodelet ignores it",
 		"spec.storage.wipe": "on a machine with a single disk, wiping it destroys the installation media the OS is copied from",
 	}
 
