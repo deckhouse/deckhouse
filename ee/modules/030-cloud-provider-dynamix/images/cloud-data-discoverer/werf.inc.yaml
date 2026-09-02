@@ -1,4 +1,4 @@
-{{- $version := "v0.7.2" }}
+{{- $version := "feat/cloudapi-sep-minimal-permissions" }}
 {{- $version_common := "feat/cloudapi-sep-minimal-permissions" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
