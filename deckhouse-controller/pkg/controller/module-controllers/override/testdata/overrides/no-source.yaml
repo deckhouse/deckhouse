@@ -7,11 +7,13 @@ spec:
   imageTag: main
   scanInterval: 15s
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: test-module
 status:
   conditions:
-  - type: EnabledByModuleConfig
+  - type: EnabledByModuleManager
     status: "True"
+    reason: Enabled
+    lastTransitionTime: "2000-01-01T00:00:00Z"

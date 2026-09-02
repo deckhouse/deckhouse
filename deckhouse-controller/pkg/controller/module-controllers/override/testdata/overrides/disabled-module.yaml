@@ -10,13 +10,17 @@ status:
   message: Ready
   imageDigest: sha256:cafe
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: test-module
-properties:
-  source: dev
-status:
-  conditions:
-  - type: EnabledByModuleConfig
-    status: "False"
+spec:
+  packageRepositoryName: dev
+  packageVersion: v1.0.0
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: test-module
+spec:
+  enabled: false

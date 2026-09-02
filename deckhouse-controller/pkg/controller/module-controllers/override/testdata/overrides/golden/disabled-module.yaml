@@ -11,16 +11,14 @@ status:
   message: The module disabled
   updatedAt: null
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: test-module
   resourceVersion: "999"
-properties:
-  source: dev
+spec:
+  packageRepositoryName: dev
+  packageVersion: v1.0.0
 status:
-  conditions:
-  - lastProbeTime: null
-    lastTransitionTime: null
-    status: "False"
-    type: EnabledByModuleConfig
+  lastAppliedConfiguration: null
+  tracking: null
