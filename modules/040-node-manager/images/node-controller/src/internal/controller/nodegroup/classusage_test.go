@@ -277,7 +277,7 @@ func TestSyncInstanceClassConsumers(t *testing.T) {
 		}
 	})
 
-	t.Run("a kind that prunes the patch is dropped after one attempt", func(t *testing.T) {
+	t.Run("a kind that prunes the patch is not patched again within the cooldown", func(t *testing.T) {
 		patches := 0
 		c := fake.NewClientBuilder().WithScheme(classUsageScheme(t)).WithObjects(
 			testClassRegistration(),
@@ -292,14 +292,88 @@ func TestSyncInstanceClassConsumers(t *testing.T) {
 		}).Build()
 
 		sweeper := newClassSweeper(c)
+		clock := time.Now()
+		sweeper.now = func() time.Time { return clock }
+
 		for range 2 {
 			if err := sweeper.syncInstanceClassConsumers(context.Background()); err != nil {
 				t.Fatalf("sync: %v", err)
 			}
 		}
+		clock = clock.Add(statusResyncInterval - time.Second)
+		if err := sweeper.syncInstanceClassConsumers(context.Background()); err != nil {
+			t.Fatalf("sync: %v", err)
+		}
 
 		if patches != 1 {
-			t.Errorf("patches = %d, want 1: a kind that never stores the field must be dropped", patches)
+			t.Errorf("patches = %d, want 1: a kind that does not store the field is left alone until the cooldown expires", patches)
+		}
+	})
+
+	t.Run("a kind that prunes the patch is retried after the cooldown", func(t *testing.T) {
+		patches := 0
+		c := fake.NewClientBuilder().WithScheme(classUsageScheme(t)).WithObjects(
+			testClassRegistration(),
+			instanceClass(testClassKind, "used", nil),
+			classUsageNodeGroup("alpha", testClassKind, "used", v1.NodeTypeCloudEphemeral),
+		).WithInterceptorFuncs(interceptor.Funcs{
+			Patch: func(context.Context, client.WithWatch, client.Object, client.Patch, ...client.PatchOption) error {
+				patches++
+				return nil
+			},
+		}).Build()
+
+		sweeper := newClassSweeper(c)
+		clock := time.Now()
+		sweeper.now = func() time.Time { return clock }
+
+		if err := sweeper.syncInstanceClassConsumers(context.Background()); err != nil {
+			t.Fatalf("sync: %v", err)
+		}
+		clock = clock.Add(statusResyncInterval + time.Second)
+		if err := sweeper.syncInstanceClassConsumers(context.Background()); err != nil {
+			t.Fatalf("sync: %v", err)
+		}
+
+		// A provider that fixes its CRD schema has to be picked up by the running pod: the memo
+		// is a cooldown, not a switch that stays off until someone restarts it.
+		if patches != 2 {
+			t.Errorf("patches = %d, want 2: the kind must be retried once the cooldown expires", patches)
+		}
+	})
+
+	t.Run("a class that prunes the patch does not stop the rest of its kind", func(t *testing.T) {
+		// The first class the pass reaches is the one whose write is accepted and pruned.
+		var patched []string
+		c := fake.NewClientBuilder().WithScheme(classUsageScheme(t)).WithObjects(
+			testClassRegistration(),
+			instanceClass(testClassKind, "aaa-pruned", nil),
+			instanceClass(testClassKind, "zzz-stored", nil),
+			classUsageNodeGroup("alpha", testClassKind, "aaa-pruned", v1.NodeTypeCloudEphemeral),
+			classUsageNodeGroup("beta", testClassKind, "zzz-stored", v1.NodeTypeCloudEphemeral),
+		).WithInterceptorFuncs(interceptor.Funcs{
+			Patch: func(ctx context.Context, cl client.WithWatch, obj client.Object, patch client.Patch, opts ...client.PatchOption) error {
+				pruned := len(patched) == 0
+				patched = append(patched, obj.GetName())
+				if pruned {
+					return nil
+				}
+				return cl.Patch(ctx, obj, patch, opts...)
+			},
+		}).Build()
+
+		if err := newClassSweeper(c).syncInstanceClassConsumers(context.Background()); err != nil {
+			t.Fatalf("sync: %v", err)
+		}
+
+		if len(patched) != 2 {
+			t.Fatalf("patched = %v, want both classes of the kind attempted in the same pass", patched)
+		}
+		name := patched[1]
+		want := map[string]string{"aaa-pruned": "alpha", "zzz-stored": "beta"}[name]
+		got, found := classConsumers(t, c, testClassKind, name)
+		if !found || !slices.Equal(got, []string{want}) {
+			t.Errorf("%s consumers = %v (found=%v), want [%s]", name, got, found, want)
 		}
 	})
 

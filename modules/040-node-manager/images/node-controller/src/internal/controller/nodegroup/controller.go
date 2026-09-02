@@ -67,9 +67,12 @@ type Status struct {
 	sweepMu    sync.Mutex
 	sweeping   bool
 	sweepDirty bool
-	// unstorableConsumers holds the kinds whose accepted consumers patch did not come back in
-	// the response. Only a sweep touches it, and the flags above keep sweeps from overlapping.
-	unstorableConsumers map[schema.GroupVersionKind]bool
+	// unstorableConsumers holds, per kind, when its accepted consumers patch last failed to come
+	// back in the response; the kind is skipped for statusResyncInterval and then retried. Only a
+	// sweep touches it, and the flags above keep sweeps from overlapping.
+	unstorableConsumers map[schema.GroupVersionKind]time.Time
+	// now reads the clock for that cooldown; nil means time.Now.
+	now func() time.Time
 }
 
 func (r *Status) Setup(_ context.Context, mgr ctrl.Manager) error {
