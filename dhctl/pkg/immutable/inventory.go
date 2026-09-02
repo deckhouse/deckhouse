@@ -375,6 +375,12 @@ func checkNodeIP(spec nodeSpec) error {
 	if spec.Kubelet.NodeIP == "" {
 		return nil
 	}
+	// Before the comparison below and not inside it: the shape is the document's
+	// own business, and a machine on DHCP declares nothing to compare against.
+	nodeIP, err := parseNodeIP(spec.Kubelet.NodeIP)
+	if err != nil {
+		return err
+	}
 
 	var declared []string
 	for _, iface := range spec.Network.Interfaces {
@@ -386,7 +392,7 @@ func checkNodeIP(spec nodeSpec) error {
 	if len(declared) == 0 {
 		return nil
 	}
-	if slices.ContainsFunc(declared, func(addr string) bool { return addressIs(addr, spec.Kubelet.NodeIP) }) {
+	if slices.ContainsFunc(declared, func(addr string) bool { return addressIs(addr, nodeIP) }) {
 		return nil
 	}
 
@@ -395,13 +401,27 @@ func checkNodeIP(spec nodeSpec) error {
 		spec.Kubelet.NodeIP, strings.Join(declared, ", "))
 }
 
+// parseNodeIP reads what kubelet is handed as --node-ip. An interface address
+// has to carry a prefix, so a CIDR is what an operator has under their cursor
+// while filling this in — and kubelet takes a bare address, or never registers.
+// The NodeConfig CRD carries the same rule as an isIP validation, and never
+// sees this document, which travels to the machine as a file.
+func parseNodeIP(nodeIP string) (netip.Addr, error) {
+	if address, err := netip.ParseAddr(nodeIP); err == nil {
+		return address, nil
+	}
+	if prefix, err := netip.ParsePrefix(nodeIP); err == nil {
+		return netip.Addr{}, fmt.Errorf(
+			"spec.kubelet.nodeIP %s carries a prefix length, which kubelet does not take: write it as %s",
+			nodeIP, prefix.Addr())
+	}
+	return netip.Addr{}, fmt.Errorf(
+		"spec.kubelet.nodeIP %s is not an IP address: kubelet registers the node under it and would refuse to start", nodeIP)
+}
+
 // addressIs reports whether a declared address, written as a CIDR or as a bare
 // address, is the given one.
-func addressIs(declared, address string) bool {
-	want, err := netip.ParseAddr(address)
-	if err != nil {
-		return declared == address
-	}
+func addressIs(declared string, want netip.Addr) bool {
 	if prefix, err := netip.ParsePrefix(declared); err == nil {
 		return prefix.Addr() == want
 	}
