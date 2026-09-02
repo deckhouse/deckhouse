@@ -247,16 +247,20 @@ func (r *Reconciler) reconcileDrain(ctx context.Context, op *v1alpha1.NodeOperat
 		if err := r.startDrain(ctx, op, node, logger); err != nil {
 			return ctrl.Result{}, err
 		}
-		return ctrl.Result{RequeueAfter: waitPollInterval}, r.recordDrainRequested(ctx, op, node)
+		if err := r.recordDrainRequested(ctx, op, node); err != nil {
+			return ctrl.Result{}, err
+		}
+	} else if drained(op, node) {
+		return ctrl.Result{}, r.setPhase(ctx, op, v1alpha1.NodeOperationPhaseCompleted, "Drained",
+			"The workload has left the node, which stays unschedulable", logger)
 	}
-	// The Node event carrying the marker is the normal wake-up; one dropped
-	// event must not strand the operation until the manager's next full
-	// resync, hence the requeue.
-	if !drained(op, node) {
-		return ctrl.Result{RequeueAfter: waitPollInterval}, nil
-	}
-	return ctrl.Result{}, r.setPhase(ctx, op, v1alpha1.NodeOperationPhaseCompleted, "Drained",
-		"The workload has left the node, which stays unschedulable", logger)
+
+	// The eviction has been asked for and is still owed: that ask is this
+	// operation's hand-over, so it is under way from here. The Node event
+	// carrying the answer is the normal wake-up; the requeue covers a dropped
+	// one, which would otherwise strand the operation until the next resync.
+	return ctrl.Result{RequeueAfter: waitPollInterval}, r.setPhase(ctx, op, v1alpha1.NodeOperationPhaseInProgress,
+		"Draining", "The draining controller is emptying the node", logger)
 }
 
 // ensureDrained runs the eviction this operation needs as a Drain operation of
