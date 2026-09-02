@@ -26,6 +26,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -199,6 +200,39 @@ var _ = Describe("Bootstrap secrets controller", func() {
 			"an expiring token of a rejected group must still be replaced")
 	})
 
+	// The zones a group spreads over come from the cloud-provider registration Secret, and the
+	// zones name the per-zone CAPI Secrets a MachineDeployment's dataSecretName points at. A
+	// provider that gains a zone touches no NodeGroup, so without a watch on that Secret the
+	// capi controller creates the new zone's MachineDeployment while its dataSecretName points
+	// at nothing, and the zone's nodes cannot bootstrap for a whole resyncInterval.
+	It("writes the secret of a zone the provider has just gained", func() {
+		className := testenv.UniqueName("class")
+		createInstanceClass(className)
+		createCloudProviderRegistration(capiRegistration(`["zone-a"]`))
+
+		name := testenv.UniqueName("zones")
+		createNodeGroup(capiCloudNodeGroup(name, className))
+
+		Eventually(func() error {
+			return k8sClient.Get(suiteCtx, capiSecretKey(name, "zone-a"), &corev1.Secret{})
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
+
+		By("adding a zone to the provider registration and nothing else")
+		reg := &corev1.Secret{}
+		regKey := types.NamespacedName{
+			Namespace: nodecommon.CloudProviderSecretNamespace,
+			Name:      nodecommon.CloudProviderSecretName,
+		}
+		Expect(k8sClient.Get(suiteCtx, regKey, reg)).To(Succeed())
+		reg.Data["zones"] = []byte(`["zone-a","zone-b"]`)
+		Expect(k8sClient.Update(suiteCtx, reg)).To(Succeed())
+
+		Eventually(func() error {
+			return k8sClient.Get(suiteCtx, capiSecretKey(name, "zone-b"), &corev1.Secret{})
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed(),
+			"a new zone must get its bootstrap secret without waiting out the resync")
+	})
+
 	// A candi update arrives as a chart upgrade, which only rewrites this
 	// ConfigMap. Without the watch on it the Secrets would keep handing out the
 	// previous bootstrap script until the next NodeGroup event.
@@ -339,6 +373,53 @@ func rejectingRegistration() map[string][]byte {
 	return map[string][]byte{
 		"type":                          []byte(`"dvp"`),
 		nodecommon.InstanceClassKindKey: []byte("DVPInstanceClass"),
+	}
+}
+
+// capiRegistration is a provider that serves CAPI only — no machineClassKind, so the engine
+// follows from the registration alone — and publishes the given JSON list of zones.
+func capiRegistration(zonesJSON string) map[string][]byte {
+	return map[string][]byte{
+		"type":                                []byte(`"yandex"`),
+		"capiClusterKind":                     []byte("YandexCluster"),
+		nodecommon.InstanceClassKindKey:       []byte(yandexInstanceClassKind),
+		nodecommon.InstanceClassAPIVersionKey: []byte(yandexInstanceClassVersion),
+		"zones":                               []byte(zonesJSON),
+	}
+}
+
+func createInstanceClass(name string) {
+	GinkgoHelper()
+	ic := &unstructured.Unstructured{Object: map[string]any{
+		"apiVersion": deckhousev1.GroupVersion.Group + "/" + yandexInstanceClassVersion,
+		"kind":       yandexInstanceClassKind,
+		"metadata":   map[string]any{"name": name},
+		"spec":       map[string]any{"cores": int64(2), "memory": int64(4096)},
+	}}
+	Expect(k8sClient.Create(suiteCtx, ic)).To(Succeed())
+	DeferCleanup(func() {
+		Expect(client.IgnoreNotFound(k8sClient.Delete(suiteCtx, ic))).To(Succeed())
+	})
+}
+
+func capiCloudNodeGroup(name, className string) *deckhousev1.NodeGroup {
+	ng := staticNodeGroup(name)
+	ng.Spec.NodeType = deckhousev1.NodeTypeCloudEphemeral
+	// No spec zones: the group must take the provider's, which is what this exercises.
+	ng.Spec.CloudInstances = &deckhousev1.CloudInstancesSpec{
+		ClassReference: deckhousev1.ClassReference{Kind: yandexInstanceClassKind, Name: className},
+		MinPerZone:     1,
+		MaxPerZone:     1,
+	}
+	return ng
+}
+
+// capiSecretKey mirrors the per-zone name capi gives a new MachineDeployment's dataSecretName
+// (capiSecretNames, itself mirroring capi/capi_cloud.go:441).
+func capiSecretKey(ngName, zone string) types.NamespacedName {
+	return types.NamespacedName{
+		Namespace: nodecommon.MachineNamespace,
+		Name:      ngName + "-" + sha256Hash(testClusterUUID+zone),
 	}
 }
 

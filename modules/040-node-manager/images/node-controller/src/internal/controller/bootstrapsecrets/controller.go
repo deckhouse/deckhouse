@@ -107,23 +107,35 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 	// A candi update arrives as a chart upgrade: without this watch the Secrets
 	// would keep the old script until the next NodeGroup event.
 	w.Watches(&corev1.ConfigMap{}, handler.EnqueueRequestsFromMapFunc(r.allNodeGroups),
-		builder.WithPredicates(inMachineNamespace(bootstrap.TemplatesConfigMapName)))
+		builder.WithPredicates(named(nodecommon.MachineNamespace, bootstrap.TemplatesConfigMapName)))
 
 	// The image digests are baked literally into every bootstrap.sh, and every
 	// release rewrites them: same argument as the templates above.
 	w.Watches(&corev1.ConfigMap{}, handler.EnqueueRequestsFromMapFunc(r.allNodeGroups),
-		builder.WithPredicates(inMachineNamespace(imagesDigestsConfigMapName)))
+		builder.WithPredicates(named(nodecommon.MachineNamespace, imagesDigestsConfigMapName)))
 
 	// The token Secret is created empty and filled by kube-controller-manager moments
 	// later — cluster install. A node bootstrapping in that window bakes in
 	// PACKAGES_PROXY_TOKEN=passthrough, which rpp-get never re-reads (config.go resolveToken).
 	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.allNodeGroups),
-		builder.WithPredicates(inMachineNamespace(bashiblecontext.PackagesProxyTokenSecretName)))
+		builder.WithPredicates(named(nodecommon.MachineNamespace, bashiblecontext.PackagesProxyTokenSecretName)))
+
+	// The zones a group spreads over come from this Secret (derived_status/sources.go:79), and
+	// the zones name the per-zone CAPI bootstrap Secrets (capiSecretNames). A provider that gains
+	// a zone bumps neither the generation nor an annotation of any NodeGroup, so ForPredicates
+	// lets nothing through: capi creates the new zone's MachineDeployment while its
+	// dataSecretName points at a Secret nobody has written, and the zone's nodes cannot
+	// bootstrap for a whole resyncInterval. The nodegroup status controller watches the same
+	// object for its own reasons (nodegroup/controller.go:95).
+	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.allNodeGroups),
+		builder.WithPredicates(named(nodecommon.CloudProviderSecretNamespace, nodecommon.CloudProviderSecretName)))
 }
 
-func inMachineNamespace(name string) predicate.Predicate {
+// named selects one object by namespace and name. Both watched namespaces are covered by the
+// Secret and ConfigMap scopes of common/cache.go, so no watch here starts an informer of its own.
+func named(namespace, name string) predicate.Predicate {
 	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		return obj.GetNamespace() == nodecommon.MachineNamespace && obj.GetName() == name
+		return obj.GetNamespace() == namespace && obj.GetName() == name
 	})
 }
 
