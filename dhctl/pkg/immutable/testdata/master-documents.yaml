@@ -8,7 +8,7 @@ spec:
   apiServerEndpoints:
   - https://$MY_IP:6443
   containerRuntime:
-    maxConcurrentDownloads: 3
+    maxConcurrentDownloads: 8
     sandboxImage: dev-registry.deckhouse.io/sys/deckhouse-oss@sha256:4444444444444444444444444444444444444444444444444444444444444444
   extensions:
   - digest: sha256:1111111111111111111111111111111111111111111111111111111111111111
