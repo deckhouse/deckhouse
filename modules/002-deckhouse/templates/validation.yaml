@@ -52,19 +52,36 @@ spec:
       expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl", "observability"].exists(e, (e == request.userInfo.username)))'
     - name: 'exclude-kinds'
       expression: '!(has(request.kind) && ["StorageClass", "DeckhouseRelease", "ModuleRelease"].exists(e, (e == request.kind.kind)))'
+    # Let non-system users trigger `kubectl rollout restart` on protected objects.
+    # matchConditions are ANDed, so a false condition switches the whole policy off
+    # for the request: this one may only do that when the old and the new object
+    # differ at most in the restartedAt annotation of the pod template.
     - name: 'exclude-restartedAt'
-      expression: '!((has(object.spec) && has(object.spec.template) && has(object.spec.template.metadata)
-          && has(oldObject.spec) && has(oldObject.spec.template) && has(oldObject.spec.template.metadata))
-          && ((!has(oldObject.spec.template.metadata.annotations) && has(object.spec.template.metadata.annotations)
-          && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations)
-          || (has(oldObject.spec.template.metadata.annotations) && has(object.spec.template.metadata.annotations)
-          && !("kubectl.kubernetes.io/restartedAt" in oldObject.spec.template.metadata.annotations)
-          && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations)
-          || (has(oldObject.spec.template.metadata.annotations) && has(object.spec.template.metadata.annotations)
-          && "kubectl.kubernetes.io/restartedAt" in oldObject.spec.template.metadata.annotations
-          && "kubectl.kubernetes.io/restartedAt" in object.spec.template.metadata.annotations
-          && oldObject.spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"]
-          != object.spec.template.metadata.annotations["kubectl.kubernetes.io/restartedAt"])))'
+      expression: |
+        !(
+          request.operation == "UPDATE"
+          && has(object.spec) && has(object.spec.template) && has(object.spec.template.metadata)
+          && has(oldObject.spec) && has(oldObject.spec.template) && has(oldObject.spec.template.metadata)
+          && has(object.spec.template.metadata.annotations)
+          // the pod template annotations differ at most in restartedAt
+          && object.spec.template.metadata.annotations.all(k, k == "kubectl.kubernetes.io/restartedAt"
+               || (has(oldObject.spec.template.metadata.annotations) && k in oldObject.spec.template.metadata.annotations
+                   && oldObject.spec.template.metadata.annotations[k] == object.spec.template.metadata.annotations[k]))
+          && (!has(oldObject.spec.template.metadata.annotations)
+              || oldObject.spec.template.metadata.annotations.all(k, k == "kubectl.kubernetes.io/restartedAt"
+                   || k in object.spec.template.metadata.annotations))
+          // nothing else differs, apart from the metadata fields the API server bumps on every write
+          && object.spec.template.metadata.all(k, k == "annotations" || (k in oldObject.spec.template.metadata && oldObject.spec.template.metadata[k] == object.spec.template.metadata[k]))
+          && oldObject.spec.template.metadata.all(k, k == "annotations" || k in object.spec.template.metadata)
+          && object.spec.template.all(k, k == "metadata" || (k in oldObject.spec.template && oldObject.spec.template[k] == object.spec.template[k]))
+          && oldObject.spec.template.all(k, k == "metadata" || k in object.spec.template)
+          && object.spec.all(k, k == "template" || (k in oldObject.spec && oldObject.spec[k] == object.spec[k]))
+          && oldObject.spec.all(k, k == "template" || k in object.spec)
+          && object.metadata.all(k, k in ["generation", "resourceVersion", "managedFields"] || (k in oldObject.metadata && oldObject.metadata[k] == object.metadata[k]))
+          && oldObject.metadata.all(k, k in ["generation", "resourceVersion", "managedFields"] || k in object.metadata)
+          && object.all(k, k in ["metadata", "spec"] || (k in oldObject && oldObject[k] == object[k]))
+          && oldObject.all(k, k in ["metadata", "spec"] || k in object)
+        )
     - name: 'exclude-heritage-bypass-delete'
       expression: |
         !(
@@ -74,18 +91,23 @@ spec:
           && "security.deckhouse.io/heritage-bypass" in oldObject.metadata.labels
           && oldObject.metadata.labels["security.deckhouse.io/heritage-bypass"] == "delete"
         )
+    # Let non-system users tune the scan interval of a protected ModuleSource,
+    # under the same rule as the restart exemption above: the old and the new
+    # object may differ in spec.scanInterval and in nothing else.
     - name: 'exclude-module-source-scan-interval'
       expression: |
         !(
           request.operation == "UPDATE"
           && has(request.kind) && request.kind.kind == "ModuleSource"
-          && (
-            (!has(oldObject.spec.scanInterval) && has(object.spec.scanInterval))
-            || (has(oldObject.spec.scanInterval) && !has(object.spec.scanInterval))
-            || (has(oldObject.spec.scanInterval) && has(object.spec.scanInterval)
-                && oldObject.spec.scanInterval != object.spec.scanInterval)
-          )
-          && object.spec.registry == oldObject.spec.registry
+          && has(object.spec) && has(oldObject.spec)
+          // the spec differs at most in scanInterval
+          && object.spec.all(k, k == "scanInterval" || (k in oldObject.spec && oldObject.spec[k] == object.spec[k]))
+          && oldObject.spec.all(k, k == "scanInterval" || k in object.spec)
+          // nothing else differs, apart from the metadata fields the API server bumps on every write
+          && object.metadata.all(k, k in ["generation", "resourceVersion", "managedFields"] || (k in oldObject.metadata && oldObject.metadata[k] == object.metadata[k]))
+          && oldObject.metadata.all(k, k in ["generation", "resourceVersion", "managedFields"] || k in object.metadata)
+          && object.all(k, k in ["metadata", "spec"] || (k in oldObject && oldObject[k] == object[k]))
+          && oldObject.all(k, k in ["metadata", "spec"] || k in object)
         )
   validations:
     - expression: |
@@ -207,6 +229,58 @@ spec:
   - Deny
   - Audit
 
+---
+{{- $policyName := "d8a5e-prefix.deckhouse.io" }}
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["*"]
+        apiVersions: ["*"]
+        operations:  ["CREATE", "UPDATE", "DELETE"]
+        resources:   ["*"]
+  matchConditions:
+    - name: 'exclude-groups'
+      expression: '!(["system:nodes", "system:serviceaccounts:kube-system", "system:serviceaccounts:d8-system", "system:serviceaccounts:d8-cni-cilium"].exists(e, (e in request.userInfo.groups)))'
+    - name: 'exclude-users'
+      expression: '!(["system:sudouser", "system:apiserver", "system:kube-controller-manager", "system:kube-scheduler", "system:volume-scheduler", "dhctl"].exists(e, (e == request.userInfo.username)))'
+    # exclude SA from namespaces prefixed with `d8-`
+    # the ansible module creates these objects from its controller in `d8-ansible`
+    - name: 'exclude-d8-namespaces'
+      expression: '!(["system:serviceaccount:d8-"].exists(e, (request.userInfo.username.startsWith(e))))'
+    # allow users to delete runner pods
+    - name: 'exclude-delete-pods-operations'
+      expression: '!(request.operation == "DELETE" && request.resource.resource == "pods")'
+  validations:
+    # deny all operations with any objects with `d8a5e-` prefix, except for Pods deletions
+    - expression: |
+        !(
+          (has(object.metadata) && has(object.metadata.name) && object.metadata.name.startsWith("d8a5e-")) ||
+          (has(oldObject.metadata) && has(oldObject.metadata.name) && oldObject.metadata.name.startsWith("d8a5e-"))
+        )
+      messageExpression: "'Creating, updating and deleting objects with the ansible module prefix is forbidden'"
+      reason: Forbidden
+  auditAnnotations:
+    - key: 'source-user'
+      valueExpression: "'User: ' + string(request.userInfo.username) + ' tries to change object with the ansible module prefix'"
+
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions:
+  - Deny
+  - Audit
+
 {{- if ne .Values.global.deckhouseVersion "dev" }}
 
 {{- $policyName := "label-objects.deckhouse.io" }}
@@ -289,113 +363,6 @@ spec:
           values:
             - "deckhouse"
 {{- end }}
----
-{{- $policyName := "update-policy-label-objects.deckhouse.io" }}
-apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
-kind: ValidatingAdmissionPolicy
-metadata:
-  name: {{ $policyName }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
-spec:
-  failurePolicy: Fail
-  matchConstraints:
-    resourceRules:
-      - apiGroups:   ["deckhouse.io"]
-        apiVersions: ["*"]
-        operations:  ["UPDATE"]
-        resources:   ["modulereleases"]
-  validations:
-    - expression: request.userInfo.username.startsWith("system:serviceaccount:d8-")
-        || ! ("modules.deckhouse.io/update-policy" in object.metadata.labels)
-        || ! ("modules.deckhouse.io/update-policy" in oldObject.metadata.labels)
-        || object.metadata.labels["modules.deckhouse.io/update-policy"] == oldObject.metadata.labels["modules.deckhouse.io/update-policy"]
-      reason: Forbidden
-      messageExpression: "'Manual update-policy change is forbidden. Please, remove the update-policy label to automatically find a new suitable policy'"
----
-apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
-kind: ValidatingAdmissionPolicyBinding
-metadata:
-  name: {{ $policyName }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
-spec:
-  policyName: "update-policy-label-objects.deckhouse.io"
-  validationActions: [Deny]
-
----
-{{/* Check update windows in the deckhouse ModuleConfig */}}
-{{- $policyName := "mc-update-windows.deckhouse.io" }}
-apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
-kind: ValidatingAdmissionPolicy
-metadata:
-  name: {{ $policyName }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
-spec:
-  failurePolicy: Fail
-  matchConstraints:
-    resourceRules:
-    - apiGroups:   ["deckhouse.io"]
-      apiVersions: ["*"]
-      operations:  ["CREATE", "UPDATE"]
-      resources:   ["moduleconfigs"]
-  matchConditions:
-    - name: 'deckhouse-mc'
-      expression: 'object.metadata.name == "deckhouse"'
-    - name: 'windows-are-set'
-      expression: |
-        has(object.spec.settings.update) &&
-        has(object.spec.settings.update.windows) &&
-        object.spec.settings.update.windows.size() > 0
-  validations:
-    - expression: 'object.spec.settings.update.windows.all(w, int(string(w.from).replace(":", "")) < int(string(w.to).replace(":", "")))'
-      reason: Forbidden
-      messageExpression: "'Invalid update windows. Start time (windows.from) should be less than the end time of the update window (windows.to)'"
----
-apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
-kind: ValidatingAdmissionPolicyBinding
-metadata:
-  name: {{ $policyName }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
-spec:
-  policyName: {{ $policyName }}
-  validationActions: [Deny, Audit]
-{{/* End deckhouse windows validation */}}
-
----
-{{/* Check update windows in the ModuleUpdatePolicy */}}
-{{- $policyName := "mup-update-windows.deckhouse.io" }}
-apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
-kind: ValidatingAdmissionPolicy
-metadata:
-  name: {{ $policyName }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
-spec:
-  failurePolicy: Fail
-  matchConstraints:
-    resourceRules:
-      - apiGroups:   ["deckhouse.io"]
-        apiVersions: ["*"]
-        operations:  ["CREATE", "UPDATE"]
-        resources:   ["moduleupdatepolicies"]
-  matchConditions:
-    - name: 'windows-are-set'
-      expression: |
-        has(object.spec.update) &&
-        has(object.spec.update.windows) &&
-        object.spec.update.windows.size() > 0
-  validations:
-    - expression: 'object.spec.update.windows.all(w, int(string(w.from).replace(":", "")) < int(string(w.to).replace(":", "")))'
-      reason: Forbidden
-      messageExpression: "'Invalid update windows. Start time (windows.from) should be less than the end time of the update window (windows.to)'"
----
-apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
-kind: ValidatingAdmissionPolicyBinding
-metadata:
-  name: {{ $policyName }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse") ) | nindent 2 }}
-spec:
-  policyName: {{ $policyName }}
-  validationActions: [Deny, Audit]
-{{/* End mup windows validation */}}
 ---
 {{- $policyName := "default-cluster-storage-class.deckhouse.io" }}
 apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}

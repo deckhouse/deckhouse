@@ -79,7 +79,7 @@ func TestProvidersSettings(t *testing.T) {
 	for _, p := range tofuProviders {
 		assertSettings(t, s, p, func(t *testing.T, settings settings.ProviderSettings) {
 			require.True(t, settings.UseOpenTofu())
-			require.Equal(t, settings.InfrastructureVersion(), "1.12.0")
+			require.Equal(t, settings.InfrastructureVersion(), "1.12.5")
 			require.Nil(t, settings.VMResource())
 		})
 	}

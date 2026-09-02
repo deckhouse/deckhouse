@@ -40,9 +40,9 @@ DHCTL_TESTS_OPENSSH_IMAGE=lscr.io/linuxserver/openssh-server:10.0_p1-r9-ls209
 OS_NAME := $(shell uname)
 PLATFORM_NAME := $(shell uname -m)
 ifndef OS
-	ifeq ($(UNAME), Linux)
+	ifeq ($(OS_NAME), Linux)
 		OS = linux
-	else ifeq ($(UNAME), Darwin)
+	else ifeq ($(OS_NAME), Darwin)
 		OS = darwin
 	endif
 endif
@@ -121,6 +121,7 @@ bin/protoc:
 protoc:
 	bin/protoc -I pkg/server/api/dhctl --go_out=pkg/server --go-grpc_out=pkg/server \
 	pkg/server/api/dhctl/common.proto \
+	pkg/server/api/dhctl/phase_catalog.proto \
 	pkg/server/api/dhctl/status.proto \
 	pkg/server/api/dhctl/check.proto \
 	pkg/server/api/dhctl/bootstrap.proto \

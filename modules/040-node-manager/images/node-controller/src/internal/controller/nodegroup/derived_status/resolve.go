@@ -22,14 +22,13 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	sigsyaml "sigs.k8s.io/yaml"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	"github.com/deckhouse/node-controller/internal/capacity"
-	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
 const (
@@ -40,78 +39,31 @@ const (
 	staticConfigKey             = "static-cluster-configuration.yaml"
 )
 
-func (s *Service) ResolveNodeGroup(ctx context.Context, ng *v1.NodeGroup, rawSpec map[string]interface{}) (ResolvedNodeGroup, string, error) {
-	result, check, err := s.ComputeWithCloudChecks(ctx, ng)
+// ResolveNodeGroup returns the NodeGroup with everything this package resolves on top of its spec,
+// plus the validation error the checks produced. The two travel separately on purpose: the error
+// is a statement about the NodeGroup, not about this pass, so a caller retries on the returned
+// error but not on a non-empty validation string.
+func (s *Service) ResolveNodeGroup(ctx context.Context, ng *v1.NodeGroup) (ResolvedNodeGroup, string, error) {
+	snap, err := s.BuildSnapshot(ctx, ng)
 	if err != nil {
 		return ResolvedNodeGroup{}, "", err
 	}
+	result, err := Derive(ctx, ng, snap)
+	if err != nil {
+		return ResolvedNodeGroup{}, "", err
+	}
+	check := Validate(ng, snap)
 
 	in := ResolveInput{
 		Name:            ng.Name,
 		ManualRolloutID: ng.GetAnnotations()[manualRolloutIDAnnotation],
 		NodeType:        ng.Spec.NodeType,
-		RawSpec:         rawSpec,
+		Spec:            ng.Spec,
+		Static:          snap.StaticConfig,
 		CloudProcessed:  check.Processed,
-	}
-	if ng.Spec.NodeType == v1.NodeTypeStatic {
-		in.Static = s.readStatic(ctx)
 	}
 
 	return ResolveNodeGroup(in, result), check.Error, nil
-}
-
-func (s *Service) runCloudChecks(ctx context.Context, ng *v1.NodeGroup, cloudProvider map[string]interface{}) (CloudCheckResult, error) {
-	kindInUse, _ := cloudProvider[nodecommon.InstanceClassKindKey].(string)
-
-	in := CloudCheckInput{
-		NodeType:  ng.Spec.NodeType,
-		KindInUse: kindInUse,
-	}
-	if ng.Spec.CloudInstances != nil {
-		in.ClassRefKind = ng.Spec.CloudInstances.ClassReference.Kind
-		in.ClassRefName = ng.Spec.CloudInstances.ClassReference.Name
-		in.MinPerZone = ng.Spec.CloudInstances.MinPerZone
-		in.MaxPerZone = ng.Spec.CloudInstances.MaxPerZone
-		in.SpecZones = ng.Spec.CloudInstances.Zones
-	}
-
-	if in.NodeType == v1.NodeTypeCloudEphemeral && kindInUse != "" {
-		// The provider names a kind but no version to read it at. Reporting it as a validation
-		// error is what every consumer already handles: rendering is skipped, and the bashible
-		// context keeps the entry it published last instead of dropping the cloud fields.
-		version := instanceClassAPIVersion(cloudProvider)
-		if version == "" {
-			return CloudCheckResult{Error: fmt.Sprintf(
-				"Cloud provider has not published %s yet. The %s cannot be read until it does.",
-				nodecommon.InstanceClassAPIVersionKey, kindInUse)}, nil
-		}
-
-		// A failed List must not reach the checks: an empty name set reads as "instance class
-		// not found", which marks the NodeGroup invalid and stops its MachineDeployments from
-		// being rendered. Surface the error so the reconcile retries instead.
-		names, err := s.readInstanceClassNames(ctx, version, kindInUse)
-		if err != nil {
-			return CloudCheckResult{}, err
-		}
-		in.KnownClassNames = names
-		in.DefaultZones = s.readDefaultZones(ctx, cloudProvider)
-		if in.MinPerZone == 0 && in.MaxPerZone > 0 &&
-			in.ClassRefKind == kindInUse && containsString(in.KnownClassNames, in.ClassRefName) {
-			in.CapacityErr = s.capacityError(ctx, version, in.ClassRefKind, in.ClassRefName)
-		}
-	}
-
-	return RunCloudChecks(in), nil
-}
-
-func (s *Service) capacityError(ctx context.Context, version, kind, name string) error {
-	spec, err := s.readInstanceClassSpec(ctx, version, kind, name)
-	if err != nil || spec == nil {
-		return err
-	}
-	catalog := s.readInstanceTypesCatalog(ctx)
-	_, err = capacity.CalculateNodeTemplateCapacity(kind, spec, catalog)
-	return err
 }
 
 func (s *Service) readInstanceClassNames(ctx context.Context, version, kind string) ([]string, error) {
@@ -127,14 +79,21 @@ func (s *Service) readInstanceClassNames(ctx context.Context, version, kind stri
 	return names, nil
 }
 
-func (s *Service) readStatic(ctx context.Context) map[string]interface{} {
+// readStatic returns the static cluster configuration. An absent Secret is a cluster that has none
+// and yields nothing; an unreadable one is returned, because a silent nil drops the static block
+// from the published element and shifts the configuration checksum on every static node.
+func (s *Service) readStatic(ctx context.Context) (map[string]interface{}, error) {
 	secret := &corev1.Secret{}
-	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: staticConfigSecretNamespace, Name: staticConfigSecretName}, secret); err != nil {
-		return nil
+	err := s.Client.Get(ctx, types.NamespacedName{Namespace: staticConfigSecretNamespace, Name: staticConfigSecretName}, secret)
+	if apierrors.IsNotFound(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read static cluster configuration secret: %w", err)
 	}
 	raw, ok := secret.Data[staticConfigKey]
 	if !ok {
-		return nil
+		return nil, nil
 	}
 	if decoded, err := base64.StdEncoding.DecodeString(string(raw)); err == nil {
 		raw = decoded
@@ -144,11 +103,11 @@ func (s *Service) readStatic(ctx context.Context) map[string]interface{} {
 		InternalNetworkCIDRs []interface{} `json:"internalNetworkCIDRs"`
 	}
 	if err := sigsyaml.Unmarshal(raw, &cfg); err != nil {
-		return nil
+		return nil, nil
 	}
 	cidrs := cfg.InternalNetworkCIDRs
 	if cidrs == nil {
 		cidrs = []interface{}{}
 	}
-	return map[string]interface{}{"internalNetworkCIDRs": cidrs}
+	return map[string]interface{}{"internalNetworkCIDRs": cidrs}, nil
 }

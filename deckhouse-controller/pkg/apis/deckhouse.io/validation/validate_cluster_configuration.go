@@ -30,6 +30,7 @@ import (
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
 	v1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/labels"
@@ -227,23 +228,97 @@ func parseVersion(version string) (*semver.Version, error) {
 	return semver.NewVersion(version)
 }
 
+// The cluster-level facts the downgrade check resolves "Automatic" against — Deckhouse's own
+// bookkeeping, not ClusterConfiguration fields.
+type kubernetesVersionBaseline struct {
+	// The highest version the cluster has ever converged onto; "" is the single unset marker.
+	MaxUsed string
+	// What "Automatic" currently resolves to.
+	DeckhouseDefault string
+	// Only the ConfigMap carries it, so it stays empty when that object is missing. Kept here so the
+	// ModuleConfig webhook takes the floor and the membership list from one snapshot.
+	AvailableVersions []string
+}
+
+// kubernetesVersionBaselineFromSecret reads the baseline out of the d8-cluster-configuration Secret.
+func kubernetesVersionBaselineFromSecret(secret *v1.Secret) kubernetesVersionBaseline {
+	if secret == nil {
+		return kubernetesVersionBaseline{}
+	}
+
+	// Trimmed, so a present-but-empty key counts as unset: it gates a parseVersion call whose failure
+	// would take the whole webhook fail-closed.
+	return kubernetesVersionBaseline{
+		MaxUsed:          strings.TrimSpace(string(secret.Data["maxUsedControlPlaneKubernetesVersion"])),
+		DeckhouseDefault: strings.TrimSpace(string(secret.Data["deckhouseDefaultKubernetesVersion"])),
+	}
+}
+
+// Resolves the facts from the d8-cluster-kubernetes ConfigMap, falling back to the
+// d8-cluster-configuration Secret per field. The Secret's default key was only ever raised, so after
+// a Deckhouse downgrade the ConfigMap is the honest one.
+func kubernetesVersionBaselineFor(ctx context.Context, cli client.Client, secret *v1.Secret) kubernetesVersionBaseline {
+	baseline := kubernetesVersionBaselineFromSecret(secret)
+
+	cm := new(v1.ConfigMap)
+	if err := cli.Get(ctx, client.ObjectKey{
+		Name:      clusterKubernetesConfigMapName,
+		Namespace: kubeSystemNamespace,
+	}, cm); err != nil {
+		if !apierrors.IsNotFound(err) {
+			log.Warn("cannot read the d8-cluster-kubernetes ConfigMap, falling back to the Secret baseline", log.Err(err))
+		}
+		return baseline
+	}
+
+	// Logged: a quiet fallback to a stale source looks like nothing needing correction.
+	spec := new(clusterKubernetesSpec)
+	if err := yaml.Unmarshal([]byte(cm.Data["spec"]), spec); err != nil {
+		log.Warn("cannot parse d8-cluster-kubernetes data.spec, keeping the Secret baseline", log.Err(err))
+	} else if automaticVersion := strings.TrimSpace(spec.AutomaticVersion); automaticVersion != "" {
+		baseline.DeckhouseDefault = automaticVersion
+	}
+
+	status := new(clusterKubernetesStatus)
+	if err := yaml.Unmarshal([]byte(cm.Data["status"]), status); err != nil {
+		log.Warn("cannot parse d8-cluster-kubernetes data.status, keeping the Secret baseline", log.Err(err))
+	} else {
+		if maxUsed := strings.TrimSpace(status.MaxUsedVersion); maxUsed != "" {
+			baseline.MaxUsed = maxUsed
+		}
+		baseline.AvailableVersions = status.AvailableVersions
+	}
+
+	return baseline
+}
+
 // validateKubernetesVersionDowngrade validates that Kubernetes version downgrade
 // does not exceed 1 minor version. It handles "Automatic" version by resolving
-// it to actual version from secret data.
+// it to an actual version from the supplied baseline.
 //
 // Rules:
 //   - Upgrade is always allowed (no restrictions)
 //   - Downgrade is allowed only if it's within 1 minor version
 //   - Multiple downgrades are dissalowed. If maxUsedControlPlaneKubernetesVersion > oldVersion
 //     use maxUsedControlPlaneKubernetesVersion instead of oldVersion
-//   - When oldVersion is "Automatic", uses maxUsedControlPlaneKubernetesVersion from secret
+//   - When oldVersion is "Automatic", uses baseline.MaxUsed
 //     (maximum version that was ever used in the cluster)
-//   - When newVersion is "Automatic", uses deckhouseDefaultKubernetesVersion from secret
+//   - When newVersion is "Automatic", uses baseline.DeckhouseDefault
 //     (default version that Deckhouse will use for Automatic)
 //   - Also checks maxUsedControlPlaneKubernetesVersion to prevent downgrade below max used version
-func validateKubernetesVersionDowngrade(oldVersion, newVersion string, secret *v1.Secret) (*kwhvalidating.ValidatorResult, error) {
+func validateKubernetesVersionDowngrade(oldVersion, newVersion string, baseline kubernetesVersionBaseline) (*kwhvalidating.ValidatorResult, error) {
 	// oldVersion can be either "Automatic" or semver (e.g., "1.23.4")
 	// newVersion can be either "Automatic" or semver (e.g., "1.23.5")
+	//
+	// Optional since the field moved to ModuleConfig, and an absent value means what "Automatic"
+	// means — normalized rather than handed to the semver parser as "".
+	if oldVersion == "" {
+		oldVersion = automaticKubernetesVersion
+	}
+	if newVersion == "" {
+		newVersion = automaticKubernetesVersion
+	}
+
 	if oldVersion == newVersion {
 		return allowResult(nil)
 	}
@@ -255,25 +330,13 @@ func validateKubernetesVersionDowngrade(oldVersion, newVersion string, secret *v
 	// minorSubCheck validates that downgrade does not exceed 1 minor version.
 	// It allows upgrade without restrictions and only checks downgrade scenarios.
 	var minorSubCheck = func(oldVersionSemver, newVersionSemver *semver.Version) (*kwhvalidating.ValidatorResult, error) {
-		// Only check downgrade, allow upgrade without restrictions
-		if oldVersionSemver.LessThan(newVersionSemver) || oldVersionSemver.Equal(newVersionSemver) {
+		if !hooks.KubernetesVersionBelowFloor(newVersionSemver, oldVersionSemver) {
 			return allowResult(nil)
 		}
 
-		// Check if downgrading more than 1 minor version
-		if oldVersionSemver.Major() > newVersionSemver.Major() {
-			return rejectResult(
-				fmt.Sprintf("can not downgrade kubernetes version more than 1 minor version. %s=%s newKubernetesVersion=%s", nameForOldVersion, oldVersionSemver, newVersionSemver),
-			)
-		}
-
-		if oldVersionSemver.Minor() > newVersionSemver.Minor()+1 {
-			return rejectResult(
-				fmt.Sprintf("can not downgrade kubernetes version more than 1 minor version. %s=%s newKubernetesVersion=%s", nameForOldVersion, oldVersionSemver, newVersionSemver),
-			)
-		}
-
-		return allowResult(nil)
+		return rejectResult(
+			fmt.Sprintf("can not downgrade kubernetes version more than 1 minor version. %s=%s newKubernetesVersion=%s", nameForOldVersion, oldVersionSemver, newVersionSemver),
+		)
 	}
 
 	// automaticOnlyGreaterCheck is used when newVersion is "Automatic".
@@ -297,20 +360,19 @@ func validateKubernetesVersionDowngrade(oldVersion, newVersion string, secret *v
 	selectedChecker = minorSubCheck
 
 	var maxUsedVersionSemver *semver.Version
-	maxUsedVersionB64, exists := secret.Data["maxUsedControlPlaneKubernetesVersion"]
-	if exists {
+	if baseline.MaxUsed != "" {
 		var err error
-		maxUsedVersionSemver, err = parseVersion(string(maxUsedVersionB64))
+		maxUsedVersionSemver, err = parseVersion(baseline.MaxUsed)
 
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse max used version: %w", err)
 		}
 	}
 
-	// Resolve oldVersion: if it's "Automatic", get an actual version from secret
+	// Resolve oldVersion: if it's "Automatic", get an actual version from the baseline
 	var oldVersionSemver *semver.Version
 	if oldVersion == "Automatic" {
-		// Corner case: If maxUsedControlPlaneKubernetesVersion is not set in secret,
+		// Corner case: If maxUsedControlPlaneKubernetesVersion is not available,
 		// we cannot determine the actual version that was used, so we allow the change.
 		// This can happen during initial cluster setup or if a secret is incomplete.
 		if maxUsedVersionSemver == nil {
@@ -326,19 +388,18 @@ func validateKubernetesVersionDowngrade(oldVersion, newVersion string, secret *v
 		}
 	}
 
-	// Resolve newVersion: if it's "Automatic", get actual version from secret
+	// Resolve newVersion: if it's "Automatic", get actual version from the baseline
 	var newVersionSemver *semver.Version
 	if newVersion == "Automatic" {
-		automaticVersionB64, exists := secret.Data["deckhouseDefaultKubernetesVersion"]
-		// Corner case: If deckhouseDefaultKubernetesVersion is not set in secret,
+		// Corner case: If deckhouseDefaultKubernetesVersion is not available,
 		// we cannot determine what Automatic will resolve to, so we allow the change.
-		// This can happen during initial cluster setup or if secret is incomplete.
-		if !exists {
+		// This can happen during initial cluster setup or if the source is incomplete.
+		if baseline.DeckhouseDefault == "" {
 			return allowResult(nil)
 		}
 
 		var err error
-		newVersionSemver, err = parseVersion(string(automaticVersionB64))
+		newVersionSemver, err = parseVersion(baseline.DeckhouseDefault)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse automatic version: %w", err)
 		}
@@ -464,8 +525,13 @@ func clusterConfigurationHandler(mm moduleManager, cli client.Client, _ *config.
 			return nil, fmt.Errorf("unmarshal cluster configuration: %w", err)
 		}
 
-		k8sVersionValidator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
-			if clusterConf.KubernetesVersion == "Automatic" {
+		k8sVersionValidator := kwhvalidating.ValidatorFunc(func(ctx context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
+			// In this document the sentinel is "Automatic", and an absent field means the same.
+			if !isClusterConfigurationPinned(clusterConf.KubernetesVersion) {
+				return allowResult(nil)
+			}
+			// ModuleConfig supersedes this field; a leftover pin must not gate the write.
+			if moduleConfigOwnsKubernetesVersion(ctx, cli) {
 				return allowResult(nil)
 			}
 			return validateKubernetesVersion(clusterConf.KubernetesVersion, mm)
@@ -494,8 +560,14 @@ func clusterConfigurationHandler(mm moduleManager, cli client.Client, _ *config.
 							return validateUnsafeConfigChanges(oldClusterConf, clusterConf, unsafeMode)
 						})
 
-						k8sDowngradeValidator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
-							return validateKubernetesVersionDowngrade(oldClusterConf.KubernetesVersion, clusterConf.KubernetesVersion, secret)
+						k8sDowngradeValidator := kwhvalidating.ValidatorFunc(func(ctx context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {
+							// See k8sVersionValidator: when ModuleConfig owns the version this
+							// field is inert, so changing (or removing) it cannot downgrade
+							// anything and must not be blocked.
+							if moduleConfigOwnsKubernetesVersion(ctx, cli) {
+								return allowResult(nil)
+							}
+							return validateKubernetesVersionDowngrade(oldClusterConf.KubernetesVersion, clusterConf.KubernetesVersion, kubernetesVersionBaselineFor(ctx, cli, secret))
 						})
 
 						criChangeValidator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {

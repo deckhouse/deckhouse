@@ -169,9 +169,14 @@ shell:
   - sudo -u cilium sed -i '33i )' WORKSPACE
   - sudo -u cilium sed -i '\#"/usr/include"#a \        "/usr/lib/llvm-18.1/lib64/clang/18/include",' bazel/toolchains/BUILD
   - sudo -u cilium sed -i '\#-Wno-deprecated-builtins#a \        "--gcc-install-dir=/usr/bin/../lib64/gcc/x86_64-alt-linux/13",' bazel/toolchains/BUILD
-  # For building envoy in isolate env need to set Rust crate_universe and disbale CARGO_BAZEL_REPIN
-  - sudo -u cilium bash -c 'printf "\ncommon --repo_env=CARGO_BAZEL_REPIN=1\n" >> .bazelrc'
+  # For building envoy in isolate env need to set Rust crate_universe and disable CARGO_BAZEL_REPIN
+  - sudo -u cilium bash -c 'printf "\ncommon --repo_env=CARGO_BAZEL_REPIN=0\n" >> .bazelrc'
   - sudo -u cilium sed -i 's/^\tCARGO_BAZEL_REPIN=true /\t/' Makefile
+  # envoy_dependency_imports_extra() unconditionally materializes the dynamic_modules_rust_sdk_crate_index
+  # crate_universe repo (Rust SDK for Envoy dynamic modules, unused by cilium-envoy), which requires network
+  # access unavailable under --nofetch and isn't part of the prepared bazel-deps snapshot.
+  # See https://github.com/envoyproxy/envoy/issues/38314
+  - sudo -u cilium sed -i '/envoy_dependency_imports_extra()/d;/dependency_imports_extra\.bzl", "envoy_dependency_imports_extra"/d' WORKSPACE
   #
   - export BAZEL_OUTPUT_BASE=$(sudo -u cilium PATH=${PATH} bazel info output_base)
   - sudo -u cilium PATH=${PATH} mkdir -p ${BAZEL_OUTPUT_BASE}/external

@@ -223,6 +223,12 @@ spec:
                             type: string
                         type: object
                     type: object
+                  exclusiveGroup:
+                    description: Indicates the group where only one module can be
+                      active at a time.
+                    type: string
+                    x-doc-examples:
+                    - cni
                   licensing:
                     description: Licensing information for different editions.
                     properties:

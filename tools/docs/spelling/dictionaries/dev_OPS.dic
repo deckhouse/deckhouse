@@ -1,4 +1,4 @@
-2816
+2850
 1GB
 2GB
 5XX
@@ -164,6 +164,7 @@ Burstable
 BusyBox
 BypassFwMark
 CAA
+cacerts
 caef
 CAInjector
 camelCase
@@ -521,6 +522,7 @@ etcdutl
 eth
 EuropeClouds
 eventsExporter
+EVS
 existingZoneToSubnetIDMap
 explorative
 expr
@@ -620,6 +622,7 @@ govc
 GPG
 GPU
 GPUs
+GracefulShutdownPostpone
 grafana
 Grafana
 GrafanaAdditionalDatasource
@@ -633,6 +636,7 @@ Graylog
 grep
 gRPC
 GRPC
+GuestInfo
 gz
 Habr
 hardcoded
@@ -642,6 +646,7 @@ hasn
 hdd
 healthcheck
 healthchecks
+healthz
 HEC
 helmignore
 helthcheck
@@ -730,6 +735,7 @@ InitContainer
 initContainers
 InitContainers
 initiatorType
+inline
 Inline
 inode
 inodes
@@ -778,8 +784,10 @@ ISP
 isSudoer
 IssueBasic
 issuerName
+IST
 istio
 istio-api-proxy
+istioctl
 istiod
 IstioFederation
 IstioMulticluster
@@ -828,6 +836,7 @@ kube
 kubeadm
 KubeadmConfigTemplateData
 kubeall
+KubeClusterExtension
 kubeconfig
 kubeconfigGeneratorMasterCA
 kubeconfigs
@@ -890,6 +899,7 @@ logLevel
 Logstash
 loki
 longtermStorageClass
+loopback
 LowNodeUtilization
 LRS
 lsblk
@@ -1069,6 +1079,7 @@ NogeGroup
 nonreplicated
 NoOps
 noProxyAddressList
+NoRunningPodsWithLabel
 NoSchedule
 NoSQL
 NotIn
@@ -1122,6 +1133,7 @@ OpenStackClusterConfiguration
 OpenStackEE
 OpenStackInstanceClass
 OpenStackInstanceClasses
+OpenTelemetry
 opentofu
 Opentofu
 OpenTofu
@@ -1139,6 +1151,7 @@ ORM
 os
 OSes
 OSI
+OTLP
 Outlier
 outlierDetection
 overprovisioned
@@ -1200,6 +1213,7 @@ PodMonitor
 PodMonitors
 PodNetwork
 podSubnetCIDR
+PodsWithLabelAreRunningOnNode
 Poly
 portForwarding
 POSIX
@@ -1317,6 +1331,7 @@ ReplicatedStorageClass
 ReplicatedStoragePool
 ReplicationController
 repo
+Repointing
 repos
 reprovisioning
 repurposed
@@ -1419,6 +1434,7 @@ SIGTERM
 SimpleWithInternalNetwork
 Sitemap
 SizingPolicy
+SkyWalking
 SLA
 smokeMini
 snaphost
@@ -1593,6 +1609,7 @@ uninstalling
 Unlabel
 UNPACKEDSIZE
 unschedulable
+Uplink
 uploadproxy
 upmeter
 UpmeterHookProbe
@@ -1705,7 +1722,12 @@ VxLAN
 VXLAN
 VzZS
 WaitingForDisruptiveApproval
+WaitingForShutdownSignal
 WAL
+waypoint
+Waypoint
+WaypointInstance
+waypoints
 WebAuthn
 webgraphviz
 webhook
@@ -1810,6 +1832,7 @@ ZvirtInstanceClass
 Алертинг
 алертинга
 алертов
+алертом
 алерту
 алерты
 Алерты
@@ -1865,6 +1888,7 @@ ZvirtInstanceClass
 БД
 бекенды
 беспроблемный
+бесшовно
 биллинга
 биндинг
 биндинга
@@ -1929,6 +1953,7 @@ ZvirtInstanceClass
 внутренного
 внутрикластерное
 внутрикластерной
+внутрикластерный
 внутрикластерным
 воркеров
 выгрузок
@@ -2026,6 +2051,7 @@ ZvirtInstanceClass
 зеркалирование
 зеркалировании
 зеркалирования
+зеркалированный
 зеркалировать
 иcпользовать
 ИБ
@@ -2196,6 +2222,10 @@ ZvirtInstanceClass
 мержит
 Метадата
 метаинформацию
+меш
+меша
+меше
+МиБ
 мигрирована
 микросегментация
 микросервисов
@@ -2226,6 +2256,7 @@ ZvirtInstanceClass
 мультимастерном
 мультимастерный
 мультимастерными
+мультиплатформенного
 мультиплатформенной
 мультитенантности
 мультитенантность
@@ -2362,6 +2393,7 @@ ZvirtInstanceClass
 перегенерации
 перегенерация
 перегенерировать
+перегенерируйте
 Перегенерируйте
 передеплоятся
 перезагрузится
@@ -2389,6 +2421,7 @@ ZvirtInstanceClass
 перенастраиваются
 переоткрытии
 переподключиться
+перепубликует
 переразвернуть
 Переразвертывание
 переразвёртывание
@@ -2573,10 +2606,12 @@ ZvirtInstanceClass
 сайдкар
 Сайдкар
 сайдкара
+сайдкарами
 сайдкаров
 сайдкаром
 сайдкары
 самоподписанном
+самоподписанному
 самоподписанные
 самоподписанный
 самоподписанных
@@ -2648,6 +2683,8 @@ ZvirtInstanceClass
 сопоставление
 сопоставления
 Сохраняеем
+спанов
+спаны
 спецзаголовки
 спринты
 стейта
@@ -2657,6 +2694,7 @@ ZvirtInstanceClass
 Столярова
 Стрибог
 субресурс
+субресурса
 сущностей
 сущностям
 сущностями
@@ -2701,6 +2739,7 @@ ZvirtInstanceClass
 тредами
 трейсов
 трейсы
+тренд
 трендов
 тренды
 триал

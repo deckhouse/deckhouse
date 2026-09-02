@@ -6,6 +6,10 @@
 .form {
   &__request {
     font-size: 16px;
+
+    @include breakpoints.max-w(m) {
+        font-size: 14px;
+    }
   }
 
   &__row {
@@ -34,6 +38,10 @@
     &-request {
       margin: 0;
       margin-bottom: 16px;
+
+      @include breakpoints.min-w(xs) {
+        margin-bottom: 10px;
+      }
     }
 
     &-approval {
@@ -105,6 +113,15 @@
   .сommunication-method {
     margin-top: 32px;
     margin-bottom: 16px;
+
+    @include breakpoints.max-w(m) {
+      margin-top: 28px;
+      margin-bottom: 14px;
+    }
+
+    @include breakpoints.max-w(s) {
+      margin-top: 20px;
+    }
   }
 
   &__h0n3y {
@@ -162,6 +179,18 @@
       border: 2px solid variables.$ntrl-200;
       font-size: 16px;
       border-radius: 1px;
+
+      @include breakpoints.max-w(m) {
+        font-size: 14px;
+      }
+
+      @include breakpoints.max-w(s) {
+        min-height: 38px;
+      }
+
+      @include breakpoints.max-w(xs) {
+        padding: 8px 16px;
+      }
       
       &::placeholder {
         color: variables.$ntrl-200;
@@ -189,15 +218,27 @@
     width: 100%;
     align-items: flex-start;
 
+    @include breakpoints.max-w(m) {
+      margin-top: 28px;
+    }
+
     label {
       display: inline-flex;
-      gap: 10.5px;
+      gap: .75em;
       align-items: flex-start;
       text-align: left;
       user-select: none;
       font-size: 14px;
       color: #6e7084;
       cursor: pointer;
+
+      @include breakpoints.max-w(m) {
+        gap: .6em;
+      }
+
+      @include breakpoints.max-w(s) {
+        font-size: 12px;
+      }
 
       a {
         color: variables.$color-alt;

@@ -26,8 +26,10 @@ import (
 	"io"
 	"log/slog"
 	"reflect"
+	"strings"
 
 	"github.com/goccy/go-yaml"
+	"github.com/google/go-containerregistry/pkg/authn"
 
 	registryClient "github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry/client"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
@@ -37,13 +39,15 @@ import (
 )
 
 const (
-	packageVersionSegment = "version"
-	packageReleaseSegment = "release"
+	packageVersionSegment        = "version"
+	packageReleaseSegment        = "release"
+	packageReleaseChannelSegment = "release-channel"
 
-	packagesServiceName       = "packages"
-	packageServiceName        = "package"
-	packageVersionServiceName = "package_version"
-	packageReleaseServiceName = "package_release"
+	packagesServiceName              = "packages"
+	packageServiceName               = "package"
+	packageVersionServiceName        = "package_version"
+	packageReleaseServiceName        = "package_release"
+	packageReleaseChannelServiceName = "package_release_channel"
 )
 
 type ServiceManagerInterface[T any] interface {
@@ -117,7 +121,7 @@ func (m *ServiceManager[T]) Service(registryURL string, config utils.RegistryCon
 
 	c := registryClient.New(registryURL,
 		append(authOpts,
-			client.WithInsecure(config.Scheme == "http"),
+			client.WithInsecure(strings.ToLower(config.Scheme) == "http"),
 			client.WithCA(config.CA),
 			client.WithUserAgent(config.UserAgent),
 			client.WithLogger(m.logger),
@@ -152,7 +156,8 @@ func (m *ServiceManager[T]) createAuthOptions(registryURL, dockerCFG, login, pas
 		opts = append(opts, opt)
 		m.logger.Debug("init auth from docker config")
 	default:
-		return nil, errors.New("there is no authorization data")
+		opts = append(opts, client.WithAuth(authn.Anonymous))
+		m.logger.Debug("init anonymous auth")
 	}
 
 	return opts, nil
@@ -197,8 +202,9 @@ type PackageService struct {
 	client registry.Client
 
 	*BasicService
-	packageVersion *PackageVersionService
-	packageRelease *PackageReleaseService
+	packageVersion        *PackageVersionService
+	packageRelease        *PackageReleaseService
+	packageReleaseChannel *PackageReleaseChannelService
 
 	logger *log.Logger
 }
@@ -208,9 +214,10 @@ func NewPackageService(client registry.Client, logger *log.Logger) *PackageServi
 	return &PackageService{
 		client: client,
 
-		BasicService:   NewBasicService(packageServiceName, client, logger),
-		packageVersion: NewPackageVersionService(NewBasicService(packageVersionServiceName, client.WithSegment(packageVersionSegment), logger)),
-		packageRelease: NewPackageReleaseService(NewBasicService(packageReleaseServiceName, client.WithSegment(packageReleaseSegment), logger)),
+		BasicService:          NewBasicService(packageServiceName, client, logger),
+		packageVersion:        NewPackageVersionService(NewBasicService(packageVersionServiceName, client.WithSegment(packageVersionSegment), logger)),
+		packageRelease:        NewPackageReleaseService(NewBasicService(packageReleaseServiceName, client.WithSegment(packageReleaseSegment), logger)),
+		packageReleaseChannel: NewPackageReleaseChannelService(NewBasicService(packageReleaseChannelServiceName, client.WithSegment(packageReleaseChannelSegment), logger)),
 
 		logger: logger,
 	}
@@ -224,6 +231,12 @@ func (s *PackageService) Versions() *PackageVersionService {
 // Release returns the service for accessing <package>/release path (legacy v1alpha1 modules).
 func (s *PackageService) Release() *PackageReleaseService {
 	return s.packageRelease
+}
+
+// ReleaseChannels returns the service for accessing <package>/release-channel path, where the version
+// image a channel points to is published under the channel name.
+func (s *PackageService) ReleaseChannels() *PackageReleaseChannelService {
+	return s.packageReleaseChannel
 }
 
 // GetRoot gets path of the registry root
@@ -242,13 +255,25 @@ func NewPackageVersionService(basicService *BasicService) *PackageVersionService
 }
 
 // PackageReleaseService provides access to the <package>/release path for legacy v1alpha1 modules.
+// A release image carries the same metadata files as a version one, so the reads are the same.
 type PackageReleaseService struct {
-	*BasicService
+	*PackageVersionService
 }
 
 func NewPackageReleaseService(basicService *BasicService) *PackageReleaseService {
 	return &PackageReleaseService{
-		BasicService: basicService,
+		PackageVersionService: NewPackageVersionService(basicService),
+	}
+}
+
+// PackageReleaseChannelService reads the <package>/release-channel path, where each tag names a channel.
+type PackageReleaseChannelService struct {
+	*PackageVersionService
+}
+
+func NewPackageReleaseChannelService(basicService *BasicService) *PackageReleaseChannelService {
+	return &PackageReleaseChannelService{
+		PackageVersionService: NewPackageVersionService(basicService),
 	}
 }
 
@@ -294,8 +319,8 @@ func (s *PackageVersionService) ReadPackageDefinition(ctx context.Context, tag s
 	}
 }
 
-// HasModuleDefinition checks whether the version image contains a module.yaml (or module.yml) file.
-// This is used as a fallback to identify legacy modules when neither type labels nor package.yaml are present.
+// HasModuleDefinition checks whether the image contains a module.yaml (or module.yml) file.
+// It tells a module image apart from one that carries the version alone.
 //
 // Returns (false, nil) if the image does not exist.
 func (s *PackageVersionService) HasModuleDefinition(ctx context.Context, tag string) (bool, error) {
@@ -359,7 +384,8 @@ func (s *PackageVersionService) extractPackageVersionMetadata(rc io.ReadCloser) 
 	defer rc.Close()
 
 	drr := &packageVersionReader{
-		versionReader: bytes.NewBuffer(nil),
+		versionReader:   bytes.NewBuffer(nil),
+		changelogReader: bytes.NewBuffer(nil),
 	}
 
 	err := drr.untarMetadata(rc)

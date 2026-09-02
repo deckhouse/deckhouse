@@ -159,6 +159,9 @@ linters-settings:
     exclude-rules:
       enum:
         - "spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.bundles.items"
+        # A filesystem name is not a mode to capitalise: the value is passed to
+        # mkfs.<type> on the node verbatim, and "Ext4" names no program.
+        - "spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.storage.properties.mounts.items.properties.filesystem"
   no-cyrillic:
     exclude-rules:
       files:

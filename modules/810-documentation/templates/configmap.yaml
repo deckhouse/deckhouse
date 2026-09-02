@@ -22,8 +22,10 @@ data:
       default_type  application/octet-stream;
 
       # Add MIME type for ES modules (.mjs files)
+      # and for the per-page Markdown of the AI export (.md files).
       types {
         application/javascript mjs;
+        text/markdown md;
       }
 
       client_body_temp_path /tmp/client_temp;
@@ -96,6 +98,10 @@ data:
         error_page 403 404 /$redirection_lang/404.html;
 
         charset utf-8;
+        # `charset` only appends the encoding to the types listed here, and the
+        # default list has no text/markdown: the per-page Markdown of the AI
+        # export would be served without a charset and a browser would guess it.
+        charset_types text/html text/xml text/plain text/vnd.wap.wml application/javascript application/rss+xml text/markdown;
         access_log     /dev/stdout json_combined;
 
         add_header Set-Cookie $set_lang_cookie;
@@ -146,6 +152,24 @@ data:
         # Search index for embedder modules
         location ~* ^/(?<lang>ru|en)/modules/search-embedded-modules-index.json$  {
             try_files /embedded-modules/$lang/search-embedded-modules-index.json =404;
+        }
+
+        # AI export of the modules from sources (see internal/aiexport of docs-builder).
+        # The per-page .md files are served by the generic module location below.
+        location ~* ^/(?<lang>ru|en)/modules/embedded-llms\.txt$  {
+            try_files /embedded-modules/$lang/embedded-llms.txt =404;
+        }
+
+        location ~* ^/(?<lang>ru|en)/modules/embedded-corpus\.json$  {
+            try_files /embedded-modules/$lang/embedded-corpus.json =404;
+        }
+
+        location ~* ^/(?<lang>ru|en)/modules/external-llms\.txt$  {
+            try_files /modules/$lang/external-llms.txt =404;
+        }
+
+        location ~* ^/(?<lang>ru|en)/modules/external-corpus\.json$  {
+            try_files /modules/$lang/external-corpus.json =404;
         }
 
         # Modules from source index page

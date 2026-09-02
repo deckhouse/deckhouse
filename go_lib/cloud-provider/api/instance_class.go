@@ -20,26 +20,27 @@ import (
 	"strings"
 )
 
-// InstanceClass is a provider-specific instance class resource.
-type InstanceClass struct {
-	TypeMeta   `json:",inline"`
-	ObjectMeta `json:"metadata,omitempty"`
-
-	Spec   InstanceClassSpec   `json:"spec,omitempty"`
-	Status InstanceClassStatus `json:"status,omitempty"`
+// InstanceClassObject is a provider InstanceClass resource usable by common validation rules.
+//
+// Implementations are instantiated with pointer types, so every provider-defined method
+// must be nil-safe. GetName is promoted from metav1.ObjectMeta and is not nil-safe:
+// callers must check for an absent object before using it.
+type InstanceClassObject interface {
+	// GetName returns the resource name.
+	GetName() string
+	// GroupVersionKind returns the GroupVersionKind for the resource.
+	GroupVersionKind() GroupVersionKind
+	// GetEtcdDisk returns the etcd disk value for error reporting, or nil when the
+	// class defines no dedicated etcd disk. Providers may return any printable
+	// representation (the raw field, a map, etc.); the value is shown to the operator
+	// in admission errors. Absence is expressed as nil, so callers can test for a
+	// dedicated disk with GetEtcdDisk() != nil.
+	GetEtcdDisk() any
+	// GetNodeGroupConsumers returns names of NodeGroups that use the class.
+	GetNodeGroupConsumers() []string
 }
 
-// InstanceClassSpec holds provider-specific instance class parameters.
-type InstanceClassSpec struct {
-	EtcdDisk map[string]any `json:"etcdDisk,omitempty"`
-}
-
-// InstanceClassStatus holds runtime status fields populated by the provider module.
-type InstanceClassStatus struct {
-	NodeGroupConsumers []any `json:"nodeGroupConsumers,omitempty"`
-}
-
-// BuildInstanceClassName returns the DVPInstanceClass name generated for a NodeGroup.
+// BuildInstanceClassName returns the InstanceClass name generated for a NodeGroup.
 func BuildInstanceClassName(nodeGroupName string) string {
 	const (
 		// Kubernetes DNS-1123 labels are limited to 63 characters.

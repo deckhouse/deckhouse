@@ -17,31 +17,14 @@ limitations under the License.
 package hooks
 
 import (
-	"context"
-	"encoding/base64"
-	"fmt"
+	"encoding/json"
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-	v1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
-
-const clusterConfigurationYaml = `---
-apiVersion: deckhouse.io/v1
-kind: ClusterConfiguration
-clusterType: Cloud
-kubernetesVersion: "%s"
-podSubnetCIDR: "10.111.0.0/16"
-podSubnetNodeCIDRPrefix: "24"
-serviceSubnetCIDR: "10.222.0.0/16"
-cloud:
-  provider: OpenStack
-`
 
 var _ = Describe("Istio hooks :: discovery_preflight_check ::", func() {
 	initValues := `
@@ -53,18 +36,25 @@ istio:
 `
 	f := HookExecutionConfigInit(initValues, "")
 
-	Context("Cluster configuration secret with Automatic kubernetesVersion", func() {
+	// Published from the d8-cluster-configuration Secret: its presence is what tells the hook that
+	// Deckhouse owns the Kubernetes version. Set everywhere below except the managed-cluster context.
+	setClusterConfiguration := func() {
+		f.ValuesSetFromYaml("global.clusterConfiguration", []byte(`
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+podSubnetCIDR: 10.111.0.0/16
+serviceSubnetCIDR: 10.222.0.0/16
+clusterDomain: cluster.local
+`))
+	}
+
+	Context("kubernetesVersionIsDefault is true", func() {
 		BeforeEach(func() {
-			ccYaml := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(clusterConfigurationYaml, "Automatic")))
-			f.BindingContexts.Set(f.KubeStateSet(`
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: d8-cluster-configuration
-  namespace: kube-system
-data:
-  cluster-configuration.yaml: ` + ccYaml))
+			setClusterConfiguration()
+			f.ValuesSet("global.discovery.targetKubernetesVersion", "1.36")
+			f.ValuesSet("global.discovery.kubernetesVersionIsDefault", true)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
@@ -84,22 +74,16 @@ data:
 		})
 	})
 
-	Context("Cluster configuration secret with fixed kubernetesVersion", func() {
+	Context("kubernetesVersionIsDefault is false", func() {
 		BeforeEach(func() {
-			ccYaml := base64.StdEncoding.EncodeToString([]byte(fmt.Sprintf(clusterConfigurationYaml, "1.32")))
-			f.BindingContexts.Set(f.KubeStateSet(`
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: d8-cluster-configuration
-  namespace: kube-system
-data:
-  cluster-configuration.yaml: ` + ccYaml))
+			setClusterConfiguration()
+			f.ValuesSet("global.discovery.targetKubernetesVersion", "1.34")
+			f.ValuesSet("global.discovery.kubernetesVersionIsDefault", false)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
-		It("Should not mark kubernetes version as automatic", func() {
+		It("Should not mark kube version as automatic", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			isAutomatic, exists := requirements.GetValue(isK8sVersionAutomaticKey)
@@ -108,53 +92,55 @@ data:
 		})
 	})
 
-	Context("Cluster configuration secret is read directly when snapshot is empty", func() {
+	// A published false skips the gate (requirements/check.go returns true early), so "could not
+	// determine" must not become false. kubernetesVersionIsDefault defaults to false in the schema and
+	// so looks like a real pin; targetKubernetesVersion has no default and marks "not resolved yet".
+	Context("global discovery has not published a target version", func() {
 		BeforeEach(func() {
-			f.KubeStateSet("")
-
-			secret := &v1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      clusterConfigurationSecretName,
-					Namespace: clusterConfigurationSecretNamespace,
-				},
-				Data: map[string][]byte{
-					"cluster-configuration.yaml": []byte(fmt.Sprintf(clusterConfigurationYaml, "Automatic")),
-				},
-			}
-			_, err := dependency.TestDC.MustGetK8sClient().
-				CoreV1().
-				Secrets(clusterConfigurationSecretNamespace).
-				Create(context.TODO(), secret, metav1.CreateOptions{})
-			Expect(err).NotTo(HaveOccurred())
-
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.32.5")
+			setClusterConfiguration()
+			f.ValuesSet("global.discovery.targetKubernetesVersion", "")
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
-		It("Should detect Automatic from secret instead of global discovery", func() {
-			Expect(f).To(ExecuteSuccessfully())
-
-			isAutomatic, exists := requirements.GetValue(isK8sVersionAutomaticKey)
-			Expect(exists).To(BeTrue())
-			Expect(isAutomatic).To(BeEquivalentTo(true))
+		It("Should fail instead of silently disabling the compatibility gate", func() {
+			Expect(f).NotTo(ExecuteSuccessfully())
+			Expect(f.GoHookError.Error()).To(ContainSubstring("global.discovery.targetKubernetesVersion is empty"))
 		})
 	})
 
-	Context("No cluster configuration secret", func() {
+	// Managed cluster: no ClusterConfiguration, the provider owns the Kubernetes version. The gate
+	// would block Deckhouse updates over a version this cluster never runs, so it must stay skipped —
+	// as it was before the move, when the absent Secret left a real version that is never "Automatic".
+	Context("managed cluster without ClusterConfiguration", func() {
+		f := HookExecutionConfigInit(initValues, "")
+
 		BeforeEach(func() {
-			f.KubeStateSet("")
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.32.5")
+			// isDefault=true on purpose: nothing is pinned in a managed cluster either, and the gate
+			// must be skipped regardless.
+			f.ValuesSet("global.discovery.targetKubernetesVersion", "1.36")
+			f.ValuesSet("global.discovery.kubernetesVersionIsDefault", true)
 			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
 			f.RunHook()
 		})
 
-		It("Should fallback to global discovery kubernetes version", func() {
+		It("Should report the version as not automatic and still publish the compatibility map", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			isAutomatic, exists := requirements.GetValue(isK8sVersionAutomaticKey)
 			Expect(exists).To(BeTrue())
 			Expect(isAutomatic).To(BeEquivalentTo(false))
+
+			compatibilityMap, exists := requirements.GetValue(istioToK8sCompatibilityMapKey)
+			Expect(exists).To(BeTrue())
+
+			// Compared against the values, not a literal: the point is that the map still reaches the
+			// requirement despite the early return, and a hard-coded copy would go stale on the next
+			// Istio revision bump — which is how this broke before.
+			var fromValues map[string][]string
+			Expect(json.Unmarshal([]byte(f.ValuesGet("istio.internal.istioToK8sCompatibilityMap").String()), &fromValues)).To(Succeed())
+			Expect(fromValues).NotTo(BeEmpty())
+			Expect(compatibilityMap).To(BeEquivalentTo(fromValues))
 		})
 	})
 })

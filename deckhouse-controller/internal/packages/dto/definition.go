@@ -16,11 +16,13 @@ package dto
 
 import (
 	"fmt"
+	"slices"
 
 	"github.com/Masterminds/semver/v3"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 )
 
@@ -63,8 +65,9 @@ type ModuleDefinition struct {
 	TypeMeta   `yaml:",inline"`
 	Definition `yaml:",inline"`
 
-	Weight   int  `yaml:"weight" json:"weight"`
-	Critical bool `yaml:"critical,omitempty" json:"critical,omitempty"`
+	Weight         int    `yaml:"weight,omitempty" json:"weight,omitempty"`
+	Critical       bool   `yaml:"critical,omitempty" json:"critical,omitempty"`
+	ExclusiveGroup string `yaml:"exclusiveGroup,omitempty" json:"exclusiveGroup,omitempty"`
 }
 
 // Licensing describes package availability and default bundle enablement by edition.
@@ -256,11 +259,12 @@ func (d *ModuleDefinition) Convert() (modules.Definition, error) {
 	}
 
 	return modules.Definition{
-		Name:     d.Name,
-		Version:  d.Version,
-		Critical: d.Critical,
-		Weight:   uint32(d.Weight),
-		Stage:    d.Stage,
+		Name:           d.Name,
+		Version:        d.Version,
+		Critical:       d.Critical,
+		Weight:         uint32(d.Weight),
+		ExclusiveGroup: d.ExclusiveGroup,
+		Stage:          d.Stage,
 		DisableOptions: modules.DisableOptions{
 			Confirmation: d.DisableOptions.Confirmation,
 			Messages: modules.DisableMessages{
@@ -280,6 +284,40 @@ func (d *ModuleDefinition) Convert() (modules.Definition, error) {
 		},
 		Licensing: toEditionLicensing(d.Licensing),
 	}, nil
+}
+
+// ConvertToStatusMetadata projects the parsed definition onto the MPV status
+// metadata. The projection has two writers - the module-package-version
+// controller fills draft versions from the package repository, the startup
+// version sync fills embedded versions from the image disk - and both must
+// produce identical metadata for the same definition. Only fields present on
+// ModuleDefinition are surfaced; the remaining module-only status fields
+// (category, version-compatibility) are not populated here.
+func (d *ModuleDefinition) ConvertToStatusMetadata() *v1alpha1.ModulePackageVersionStatusMetadata {
+	return &v1alpha1.ModulePackageVersionStatusMetadata{
+		Stage:          d.Stage,
+		Description:    descriptionToCR(d.Descriptions),
+		Weight:         int32(d.Weight),
+		Critical:       d.Critical,
+		ExclusiveGroup: d.ExclusiveGroup,
+		DisableOptions: disableOptionsToCR(d.DisableOptions),
+		Licensing:      licensingToCR(d.Licensing),
+		Requirements:   requirementsToCR(d.Requirements),
+	}
+}
+
+// descriptionToCR projects the localized descriptions, returning nil when
+// neither translation is set, so the status field omits like every other
+// optional block of the projection.
+func descriptionToCR(d Descriptions) *v1alpha1.PackageDescription {
+	if d.Ru == "" && d.En == "" {
+		return nil
+	}
+
+	return &v1alpha1.PackageDescription{
+		Ru: d.Ru,
+		En: d.En,
+	}
 }
 
 // toEditionLicensing maps the parsed licensing onto the shared edition.Licensing
@@ -459,4 +497,134 @@ func validateBucketCollisions(mandatory, conditional map[string]*semver.Constrai
 	}
 
 	return nil
+}
+
+// disableOptionsToCR projects parsed disable protection onto the CR shape, returning nil
+// when no disable protection is configured so the field omits cleanly.
+func disableOptionsToCR(opts DisableOptions) *v1alpha1.PackageDisableOptions {
+	messages := disableMessagesToCR(opts)
+	if !opts.Confirmation && messages == nil {
+		return nil
+	}
+
+	return &v1alpha1.PackageDisableOptions{
+		Confirmation: opts.Confirmation,
+		Messages:     messages,
+	}
+}
+
+// disableMessagesToCR projects the localized confirmation messages, returning nil when
+// neither translation is set.
+func disableMessagesToCR(opts DisableOptions) *v1alpha1.PackageDisableMessages {
+	if opts.Messages.Ru == "" && opts.Messages.En == "" {
+		return nil
+	}
+
+	return &v1alpha1.PackageDisableMessages{
+		Ru: opts.Messages.Ru,
+		En: opts.Messages.En,
+	}
+}
+
+// requirementsToCR projects parsed package requirements onto the v1alpha1
+// PackageRequirements CR shape. Returns nil when no requirements are configured
+// so the status field omits cleanly via omitempty.
+func requirementsToCR(r Requirements) *v1alpha1.PackageRequirements {
+	kubernetes := versionConstraintToCR(r.Kubernetes.Constraint)
+	deckhouse := versionConstraintToCR(r.Deckhouse.Constraint)
+	modulesCR := moduleRequirementsToCR(r.Modules)
+
+	if kubernetes == nil && deckhouse == nil && modulesCR == nil {
+		return nil
+	}
+
+	return &v1alpha1.PackageRequirements{
+		Kubernetes: kubernetes,
+		Deckhouse:  deckhouse,
+		Modules:    modulesCR,
+	}
+}
+
+// licensingToCR projects parsed licensing onto the v1alpha1 PackageLicensing CR shape.
+func licensingToCR(l Licensing) *v1alpha1.PackageLicensing {
+	if len(l.Editions) == 0 {
+		return nil
+	}
+
+	editions := make(map[string]v1alpha1.PackageEditionLicense, len(l.Editions))
+	for name, e := range l.Editions {
+		editions[name] = v1alpha1.PackageEditionLicense{
+			Available:        e.Available,
+			EnabledInBundles: slices.Clone(e.EnabledInBundles),
+		}
+	}
+
+	return &v1alpha1.PackageLicensing{Editions: editions}
+}
+
+// versionConstraintToCR wraps a raw semver constraint string into the v1alpha1
+// VersionConstraint CR shape, returning nil when the string is empty.
+func versionConstraintToCR(raw string) *v1alpha1.VersionConstraint {
+	if len(raw) == 0 {
+		return nil
+	}
+
+	return &v1alpha1.VersionConstraint{Constraint: raw}
+}
+
+// moduleRequirementsToCR projects ModulesRequirements onto the v1alpha1
+// PackageModulesRequirements CR shape, returning nil when mandatory, conditional,
+// anyOf, and noneOf are all empty.
+func moduleRequirementsToCR(mr ModulesRequirements) *v1alpha1.PackageModulesRequirements {
+	if len(mr.Mandatory) == 0 && len(mr.Conditional) == 0 && len(mr.AnyOf) == 0 && len(mr.NoneOf) == 0 {
+		return nil
+	}
+
+	return &v1alpha1.PackageModulesRequirements{
+		Mandatory:   moduleDependenciesToCR(mr.Mandatory),
+		Conditional: moduleDependenciesToCR(mr.Conditional),
+		AnyOf:       moduleGroupsToCR(mr.AnyOf),
+		NoneOf:      moduleGroupsToCR(mr.NoneOf),
+	}
+}
+
+// moduleDependenciesToCR projects a slice of ModuleDependency onto the
+// v1alpha1 PackageModuleDependency CR slice. Returns nil for empty input so
+// the parent CR omitempty fields render cleanly.
+func moduleDependenciesToCR(deps []ModuleDependency) []v1alpha1.PackageModuleDependency {
+	if len(deps) == 0 {
+		return nil
+	}
+
+	out := make([]v1alpha1.PackageModuleDependency, 0, len(deps))
+	for _, dep := range deps {
+		out = append(out, v1alpha1.PackageModuleDependency{
+			Name:       dep.Name,
+			Constraint: dep.Constraint,
+		})
+	}
+
+	return out
+}
+
+// moduleGroupsToCR projects a slice of ModuleGroup onto the v1alpha1
+// PackageModuleGroup CR slice. Used for both anyOf and noneOf - the shape is
+// identical at the CR layer; the bucket semantics live on the field they're
+// attached to. Returns nil for empty input so the parent CR omitempty field
+// renders cleanly.
+func moduleGroupsToCR(groups []ModuleGroup) []v1alpha1.PackageModuleGroup {
+	if len(groups) == 0 {
+		return nil
+	}
+
+	out := make([]v1alpha1.PackageModuleGroup, 0, len(groups))
+	for _, g := range groups {
+		out = append(out, v1alpha1.PackageModuleGroup{
+			Name:        g.Name,
+			Description: g.Description,
+			Modules:     moduleDependenciesToCR(g.Modules),
+		})
+	}
+
+	return out
 }

@@ -1,0 +1,32 @@
+diff --git a/istioctl/pkg/cli/context.go b/istioctl/pkg/cli/context.go
+index 2572e3a..5e5d910 100644
+--- a/istioctl/pkg/cli/context.go
++++ b/istioctl/pkg/cli/context.go
+@@ -113,6 +113,7 @@ func (i *instance) getImpersonateConfig() rest.ImpersonationConfig {
+ }
+ 
+ func (i *instance) CLIClientWithRevision(rev string) (kube.CLIClient, error) {
++	rev = "v1x27"
+ 	if i.clients == nil {
+ 		i.clients = make(map[string]kube.CLIClient)
+ 	}
+diff --git a/istioctl/pkg/clioptions/control_plane.go b/istioctl/pkg/clioptions/control_plane.go
+index 0ca06f2..c18d791 100644
+--- a/istioctl/pkg/clioptions/control_plane.go
++++ b/istioctl/pkg/clioptions/control_plane.go
+@@ -25,6 +25,14 @@ type ControlPlaneOptions struct {
+ // AttachControlPlaneFlags attaches control-plane flags to a Cobra command.
+ // (Currently just --revision)
+ func (o *ControlPlaneOptions) AttachControlPlaneFlags(cmd *cobra.Command) {
+-	cmd.PersistentFlags().StringVarP(&o.Revision, "revision", "r", "",
++	cmd.PersistentFlags().StringVarP(&o.Revision, "revision", "r", "v1x27",
+ 		"Control plane revision")
++	prevPreRun := cmd.PersistentPreRunE
++	cmd.PersistentPreRunE = func(c *cobra.Command, args []string) error {
++		o.Revision = "v1x27"
++		if prevPreRun != nil {
++			return prevPreRun(c, args)
++		}
++		return nil
++	}
+ }

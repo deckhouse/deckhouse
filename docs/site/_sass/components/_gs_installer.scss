@@ -1,0 +1,47 @@
+@use "components/common/_variables.scss";
+@use "components/common/_mixins";
+@use 'components/common/_breakpoints.scss';
+
+.gs-installer__image {
+  width: 70%;
+  margin: 16px auto;
+
+  @include breakpoints.max-w(l) {
+    width: 100%;
+    margin: 0;
+  }
+}
+
+.download__container {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+
+  p {
+    margin: 0;
+  }
+
+  &--btns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  &--btn {
+    padding: 0 15px;
+    border: 2px solid rgba(0, 102, 255, 0.1);
+    border-radius: 10px;
+    color: #0066ff;
+    font-size: 14px;
+    font-weight: 600;
+    letter-spacing: normal;
+    line-height: 24px;
+    text-decoration: none !important;
+
+    &:hover {
+      background-color: #06f;
+      color: white;
+    }
+  }
+}

@@ -40,6 +40,7 @@ import (
 	"net/http"
 	"reflect"
 	"regexp"
+	"sort"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
@@ -55,6 +56,7 @@ import (
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/clusterprefix"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
 var webhookLog = logf.Log.WithName("nodegroup-webhook")
@@ -77,6 +79,20 @@ func SetupWithManager(mgr ctrl.Manager) error {
 			Client:  mgr.GetClient(),
 			decoder: decoder,
 		},
+	})
+
+	// Migrated shell webhooks (modules/040-node-manager/webhooks/validating). The uniqueness
+	// checks list live via the APIReader: an informer-backed read could miss a just-created
+	// object and let a conflicting one through, and these writes are rare enough that live
+	// LISTs cost nothing.
+	hookServer.Register("/validate-deckhouse-io-v1-nodeuser", &webhook.Admission{
+		Handler: &NodeUserValidator{Reader: mgr.GetAPIReader()},
+	})
+	hookServer.Register("/validate-deckhouse-io-v1alpha1-staticinstance", &webhook.Admission{
+		Handler: &StaticInstanceValidator{Reader: mgr.GetAPIReader()},
+	})
+	hookServer.Register("/validate-instanceclass-delete", &webhook.Admission{
+		Handler: &InstanceClassDeleteValidator{},
 	})
 
 	// Unified conversion webhook (NodeGroup + Instance) with cluster state access.
@@ -129,12 +145,44 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 		if oldNG.Spec.NodeType != ng.Spec.NodeType {
 			return admission.Denied(".spec.nodeType field is immutable")
 		}
+		// Only a value that is already set is frozen: a group with none must be
+		// able to record what it is (the master NodeGroup predates its manifest).
+		// Changing or dropping a set value re-creates every machine in the group.
+		if oldNG.Spec.SystemType != "" && oldNG.Spec.SystemType != ng.Spec.SystemType {
+			return admission.Denied(".spec.systemType field is immutable once set")
+		}
+	}
+
+	// Checked on CREATE as well as UPDATE: recreating a deleted group under
+	// the same name with systemType: Immutable arrives as a CREATE and would
+	// otherwise adopt the old, still-labelled bashible nodes unchecked.
+	if adoptingBashibleNodes(req, ng, oldNG) {
+		bashibleNodes, err := w.getBashibleNodes(ctx, ng.Name)
+		if err != nil {
+			webhookLog.Error(err, "failed to list the group's bashible nodes")
+			return admission.Errored(http.StatusInternalServerError, fmt.Errorf("list bashible nodes of %s: %w", ng.Name, err))
+		}
+		if len(bashibleNodes) > 0 {
+			return admission.Denied(fmt.Sprintf(
+				"it is forbidden to set .spec.systemType to %q on a NodeGroup whose nodes are already configured by bashible: %s. "+
+					"To change it, create a NodeGroup under a different name",
+				v1.SystemTypeImmutable, strings.Join(bashibleNodes, " ")))
+		}
 	}
 
 	if ng.Spec.CloudInstances != nil {
 		if ng.Spec.CloudInstances.MaxPerZone < ng.Spec.CloudInstances.MinPerZone {
 			return admission.Denied("it is forbidden to set maxPerZone lower than minPerZone for NodeGroup")
 		}
+	}
+
+	validationMessage, err := w.validateInstanceClassKind(ctx, ng, oldNG)
+	if err != nil {
+		webhookLog.Error(err, "failed to validate InstanceClass kind")
+		return admission.Errored(http.StatusInternalServerError, err)
+	}
+	if validationMessage != "" {
+		return admission.Denied(validationMessage)
 	}
 
 	if ng.Spec.Kubelet != nil && ng.Spec.Kubelet.MaxPods != nil {
@@ -174,6 +222,10 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 
 	if ng.Spec.CRI != nil && ng.Spec.CRI.Type == v1.CRITypeDocker {
 		return admission.Denied("it is forbidden to set cri type to Docker")
+	}
+
+	if nodecommon.IsCSEEdition() && ng.Spec.CRI != nil && ng.Spec.CRI.Type == v1.CRITypeContainerd {
+		return admission.Denied("CRI Containerd (containerd v1) is not supported in the CSE edition, use ContainerdV2")
 	}
 
 	if ng.Spec.CRI != nil {
@@ -319,7 +371,7 @@ func (w *NodeGroupValidator) Handle(ctx context.Context, req admission.Request) 
 
 	if req.Operation == "UPDATE" {
 		if ng.Spec.Kubelet != nil && ng.Spec.Kubelet.MemorySwap != nil {
-			if ng.Spec.Kubelet.MemorySwap.Behavior == "LimitedSwap" {
+			if ng.Spec.Kubelet.MemorySwap.SwapBehavior == "LimitedSwap" {
 				unsupportedNodes, err := w.getNodesWithoutContainerdV2Support(ctx, ng.Name)
 				if err != nil {
 					webhookLog.Error(err, "failed to get nodes without cgroup v2 support")
@@ -438,7 +490,11 @@ func getCRIType(ng *v1.NodeGroup, defaultCRI string) string {
 	if defaultCRI != "" {
 		return defaultCRI
 	}
-	return "Containerd"
+	// CSE builds with no containerd v1 package, so its implicit default cannot be v1.
+	if nodecommon.IsCSEEdition() {
+		return string(v1.CRITypeContainerdV2)
+	}
+	return string(v1.CRITypeContainerd)
 }
 
 // ClusterConfig holds relevant fields from d8-cluster-configuration Secret
@@ -639,22 +695,104 @@ func (w *NodeGroupValidator) getNodesWithCustomContainerd(ctx context.Context, n
 	return names, nil
 }
 
+// adoptingBashibleNodes reports whether this admission would put nodes that
+// already exist under systemType: Immutable — a group created under that type,
+// or one that had no type recorded until now.
+func adoptingBashibleNodes(req admission.Request, ng, oldNG *v1.NodeGroup) bool {
+	if ng.Spec.SystemType != v1.SystemTypeImmutable {
+		return false
+	}
+	if req.Operation == "CREATE" {
+		return true
+	}
+	return oldNG != nil && oldNG.Spec.SystemType == ""
+}
+
+// getBashibleNodes returns the group's nodes that bashible has configured: the
+// label bashible sets once and never removes. The checksum annotation is blind
+// here (approval-waiting nodes delete it); olcedar nodes never get the label.
+func (w *NodeGroupValidator) getBashibleNodes(ctx context.Context, nodeGroupName string) ([]string, error) {
+	webhookLog.Info("listing Nodes", "filter", "bashible-first-run-finished", "nodeGroup", nodeGroupName)
+	// Unwrapped: the caller says which group it was listing for.
+	return w.nodeNames(ctx, client.MatchingLabels{
+		"node.deckhouse.io/group":                       nodeGroupName,
+		"node.deckhouse.io/bashible-first-run-finished": "true",
+	})
+}
+
 // getNodesWithoutContainerdV2Support returns nodes that don't support containerd v2.
 // Returns error for transient failures (timeout, permission denied, etc.)
 func (w *NodeGroupValidator) getNodesWithoutContainerdV2Support(ctx context.Context, nodeGroupName string) ([]string, error) {
-	nodeList := &corev1.NodeList{}
 	webhookLog.Info("listing Nodes", "filter", "containerd-v2-unsupported", "nodeGroup", nodeGroupName)
-	err := w.Client.List(ctx, nodeList, client.MatchingLabels{
+	names, err := w.nodeNames(ctx, client.MatchingLabels{
 		"node.deckhouse.io/containerd-v2-unsupported": "",
 		"node.deckhouse.io/group":                     nodeGroupName,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("failed to list nodes without containerd v2 support: %w", err)
 	}
+	return names, nil
+}
 
+// nodeNames returns the names of the nodes carrying the labels.
+func (w *NodeGroupValidator) nodeNames(ctx context.Context, selector client.MatchingLabels) ([]string, error) {
+	nodeList := &corev1.NodeList{}
+	if err := w.Client.List(ctx, nodeList, selector); err != nil {
+		return nil, err
+	}
 	var names []string
 	for _, node := range nodeList.Items {
 		names = append(names, node.Name)
 	}
 	return names, nil
+}
+
+func (w *NodeGroupValidator) validateInstanceClassKind(
+	ctx context.Context,
+	ng, oldNG *v1.NodeGroup,
+) (string, error) {
+	if ng.Spec.CloudInstances == nil {
+		return "", nil
+	}
+
+	kind := ng.Spec.CloudInstances.ClassReference.Kind
+
+	if oldNG != nil &&
+		oldNG.Spec.CloudInstances != nil &&
+		oldNG.Spec.CloudInstances.ClassReference.Kind == kind {
+		return "", nil
+	}
+
+	gvks, err := nodecommon.RegisteredInstanceClassGVKs(ctx, w.Client)
+	if err != nil {
+		return "", fmt.Errorf("get registered InstanceClass kinds: %w", err)
+	}
+
+	supportedSet := make(map[string]struct{}, len(gvks))
+	for _, gvk := range gvks {
+		supportedSet[gvk.Kind] = struct{}{}
+	}
+
+	if _, ok := supportedSet[kind]; ok {
+		return "", nil
+	}
+
+	supportedKinds := make([]string, 0, len(supportedSet))
+	for supportedKind := range supportedSet {
+		supportedKinds = append(supportedKinds, supportedKind)
+	}
+	sort.Strings(supportedKinds)
+
+	if len(supportedKinds) == 0 {
+		return fmt.Sprintf(
+			"spec.cloudInstances.classReference.kind %q is not supported: no InstanceClass kinds are registered in the cluster",
+			kind,
+		), nil
+	}
+
+	return fmt.Sprintf(
+		"spec.cloudInstances.classReference.kind %q is not supported; registered kinds: %s",
+		kind,
+		strings.Join(supportedKinds, ", "),
+	), nil
 }

@@ -147,7 +147,7 @@ func (c *Controller) Reconcile(ctx context.Context, _ ctrl.Request) (ctrl.Result
 	r := &Reconciler{
 		Client:        c.Client,
 		Context:       &Service{Client: c.Client, Reader: c.apiReader},
-		DerivedStatus: &derived_status.Service{Client: c.Client, Reader: c.apiReader},
+		DerivedStatus: &derived_status.Service{Client: c.Client},
 	}
 	if err := r.Assemble(ctx); err != nil {
 		logger.Error(err, "failed to assemble bashible-apiserver-context")

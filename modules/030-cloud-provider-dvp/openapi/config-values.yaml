@@ -174,8 +174,8 @@ properties:
     - parameters
     type: object
 required:
-- nodes
 - provider
+- nodes
 type: object
 x-config-version: 2
 x-doc-search:

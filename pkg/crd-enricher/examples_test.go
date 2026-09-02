@@ -123,7 +123,7 @@ func TestGenerateExamplesRoot(t *testing.T) {
 		},
 	}
 
-	e.generateExamples(spec, names, "v1alpha1", root)
+	e.generateExamples(spec, names, "v1alpha1", root, nil)
 
 	examples, ok := root["x-doc-examples"].([]any)
 	if !ok || len(examples) != 1 {
@@ -162,7 +162,7 @@ func TestGenerateExamplesExplicitRootWins(t *testing.T) {
 		},
 	}
 
-	e.generateExamples(spec, names, "v1", root)
+	e.generateExamples(spec, names, "v1", root, nil)
 
 	if !reflect.DeepEqual(root["x-doc-examples"], hand) {
 		t.Fatalf("explicit root example overwritten: %#v", root["x-doc-examples"])
@@ -170,7 +170,8 @@ func TestGenerateExamplesExplicitRootWins(t *testing.T) {
 }
 
 func TestGenerateExamplesTreeScope(t *testing.T) {
-	e := &Enricher{exampleScope: exampleScopeTree}
+	e := &Enricher{}
+	fs := &fileState{exampleScope: exampleScopeTree}
 	spec := map[string]any{"group": "deckhouse.io"}
 	names := map[string]any{"kind": "Foo"}
 	registry := map[string]any{
@@ -186,7 +187,7 @@ func TestGenerateExamplesTreeScope(t *testing.T) {
 		"properties": map[string]any{"spec": specNode},
 	}
 
-	e.generateExamples(spec, names, "v1", root)
+	e.generateExamples(spec, names, "v1", root, fs)
 
 	if _, ok := registry["x-doc-examples"]; !ok {
 		t.Error("nested registry node did not receive a composite example")

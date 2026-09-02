@@ -54,7 +54,7 @@ var _ runtime.Object = (*Application)(nil)
 // +genclient
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Namespaced,shortName=app
+// +kubebuilder:resource:scope=Namespaced
 // +kubebuilder:printcolumn:name=Package,type=string,JSONPath=.spec.packageName
 // +kubebuilder:printcolumn:name=Version,type=string,JSONPath=.spec.packageVersion
 // +kubebuilder:printcolumn:name=Repository,type=string,JSONPath=.spec.packageRepositoryName,priority=1

@@ -66,7 +66,7 @@ discovery:
 const istioValues = `
     registry: {}
     internal:
-      globalVersion: "1.21.6"
+      globalVersion: "1.25.2"
       versionMap:
         "1.29.6":
           revision: "v1x29x6"
@@ -85,12 +85,6 @@ const istioValues = `
           fullVersion: "1.25.2"
           imageSuffix: "V1x25x2"
           supportsAmbient: true
-          supportsOperator: true
-        "1.21.6":
-          revision: "v1x21x6"
-          fullVersion: "1.21.6"
-          imageSuffix: "V1x21x6"
-          supportsAmbient: false
           supportsOperator: true
       kialiSigningKey: "kiali"
       remoteAuthnKeypair:
@@ -241,8 +235,8 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			f.ValuesSet("istio.telemetryAPI.enabled", true)
 			f.ValuesSet("istio.tracing.enabled", true)
 			f.ValuesSet("istio.tracing.collector.zipkin.address", "jaeger-collector.tracing.svc:9411")
-			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.21.6"]`)
-			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2","1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.27.9"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2","1.27.9"]`)
 			f.HelmRender()
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
@@ -262,17 +256,6 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			}
 			Expect(foundZipkinEP).To(BeTrue())
 			Expect(istioV25.Field("spec.values.meshConfig.defaultConfig.tracing").Exists()).To(BeFalse())
-
-			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
-			Expect(iopV21.Field("spec.meshConfig.defaultConfig.tracing").Exists()).To(BeFalse())
-			foundZipkinIOP := false
-			for _, ep := range iopV21.Field("spec.meshConfig.extensionProviders").Array() {
-				if ep.Get("name").String() == "deckhouse-tracing" {
-					Expect(ep.Get("zipkin.address").String()).To(Equal("jaeger-collector.tracing.svc:9411"))
-					foundZipkinIOP = true
-				}
-			}
-			Expect(foundZipkinIOP).To(BeTrue())
 		})
 
 		It("adds OpenTelemetry tracing to d8-main and deckhouse-tracing extension provider when collector.opentelemetry is set", func() {
@@ -315,8 +298,8 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.21.6"]`)
-			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2","1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.27.9"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2","1.27.9"]`)
 			f.ValuesSet("istio.telemetryAPI.enabled", true)
 			f.HelmRender()
 		})
@@ -329,10 +312,6 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(istioV25.Field("spec.values.telemetry.enabled").String()).To(Equal("true"))
 			Expect(istioV25.Field("spec.values.telemetry.v2.enabled").String()).To(Equal("false"))
 
-			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
-			Expect(iopV21.Field("spec.meshConfig.defaultProviders.metrics.0").String()).To(Equal("prometheus"))
-			Expect(iopV21.Field("spec.values.telemetry.enabled").String()).To(Equal("true"))
-			Expect(iopV21.Field("spec.values.telemetry.v2.enabled").String()).To(Equal("false"))
 		})
 	})
 
@@ -483,39 +462,25 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 		})
 	})
 
-	Context("Istio config analyzer for control plane 1.21", func() {
+	Context("Retired 1.21 revision is absent from regular and operator resources after cleanup", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.versionMap", `
-"1.21":
-  revision: "v1x21"
-  fullVersion: "1.21.6"
-  imageSuffix: "V1x21x6"
-  supportsAmbient: false
-  supportsOperator: true
-`)
-			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.21"]`)
-			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.21"]`)
-			f.ValuesSet("istio.internal.globalVersion", "1.21")
+			f.ValuesSetFromYaml("istio.internal.versionMap.1\\.21\\.6", `{"revision":"v1x21x6","fullVersion":"1.21.6","imageSuffix":"V1x21x6","supportsAmbient":false,"supportsOperator":true}`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2"]`)
+			f.HelmRender()
 		})
 
-		It("renders istio config analyzer for control plane 1.21", func() {
-			f.HelmRender()
+		It("renders only the retained operator-backed revision", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
-
-			deployment := f.KubernetesResource("Deployment", "d8-istio", "istio-config-analyzer-v1x21")
-			Expect(deployment.Exists()).To(BeTrue())
-			Expect(deployment.Field("spec.template.spec.containers.0.name").String()).To(Equal("istio-config-analyzer"))
-			Expect(deployment.Field("spec.template.spec.containers.0.args").String()).To(ContainSubstring("--revision=v1x21"))
-			Expect(deployment.Field("spec.template.spec.containers.0.image").String()).To(ContainSubstring("configAnalyzerV1x21x6"))
-
-			podMonitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-config-analyzer-v1x21")
-			Expect(podMonitor.Exists()).To(BeTrue())
-
-			clusterRole := f.KubernetesGlobalResource("ClusterRole", "d8:istio:config-analyzer:v1x21")
-			Expect(clusterRole.Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Istio", "d8-istio", "v1x21x6").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x21x6").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Deployment", "d8-istio", "operator-v1x21x6").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Istio", "d8-istio", "v1x25x2").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Deployment", "d8-istio", "operator-v1x25x2").Exists()).To(BeTrue())
 		})
 	})
 
@@ -524,8 +489,8 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.21.6"]`)
-			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2","1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.27.9"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2","1.27.9"]`)
 			f.ValuesSetFromYaml("istio.internal.applicationNamespaces", `[foo,bar]`)
 			f.HelmRender()
 		})
@@ -539,10 +504,8 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 
 			// 1.25 uses sailoperator.io Istio CR, not IstioOperator
 			istioV25 := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
-			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
 
 			deploymentOperatorV25 := f.KubernetesResource("Deployment", "d8-istio", "operator-v1x25x2")
-			deploymentOperatorV21 := f.KubernetesResource("Deployment", "d8-istio", "operator-v1x21x6")
 
 			secretD8RegistryFoo := f.KubernetesResource("Secret", "foo", "d8-istio-sidecar-registry")
 			secretD8RegistryBar := f.KubernetesResource("Secret", "bar", "d8-istio-sidecar-registry")
@@ -552,9 +515,9 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			serviceGlobal := f.KubernetesResource("Service", "d8-istio", "istiod")
 
 			Expect(istioV25.Exists()).To(BeTrue())
-			Expect(iopV21.Exists()).To(BeTrue())
+
 			Expect(deploymentOperatorV25.Exists()).To(BeTrue())
-			Expect(deploymentOperatorV21.Exists()).To(BeTrue())
+
 			Expect(secretCacerts.Exists()).To(BeTrue())
 
 			Expect(secretD8RegistryFoo.Exists()).To(BeTrue())
@@ -567,19 +530,31 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(istioV25.Field("metadata.name").String()).To(Equal(`v1x25x2`))
 			Expect(istioV25.Field("spec.values.meshConfig.rootNamespace").String()).To(Equal(`d8-istio`))
 			Expect(istioV25.Field("spec.values.global.proxy.image").String()).To(Equal(`registry.example.com@imageHash-istio-proxyv2V1x25x2`))
-
-			Expect(iopV21.Field("spec.revision").String()).To(Equal(`v1x21x6`))
-			Expect(iopV21.Field("spec.meshConfig.rootNamespace").String()).To(Equal(`d8-istio`))
+			Expect(istioV25.Field("spec.values.pilot.affinity").String()).To(MatchYAML(`
+podAntiAffinity:
+  requiredDuringSchedulingIgnoredDuringExecution:
+  - labelSelector:
+      matchLabels:
+        app: istiod
+        istio.io/rev: v1x25x2
+    topologyKey: kubernetes.io/hostname
+`))
 
 			Expect(deploymentOperatorV25.Field("spec.template.spec.containers.0.image").String()).To(Equal(`registry.example.com@imageHash-istio-operatorV1x25x2`))
-			Expect(deploymentOperatorV21.Field("spec.template.spec.containers.0.image").String()).To(Equal(`registry.example.com@imageHash-istio-operatorV1x21x6`))
 
-			Expect(iopV21.Field("spec.values.global.proxy.image").String()).To(Equal(`registry.example.com@imageHash-istio-proxyv2V1x21x6`))
-			Expect(iopV21.Field("spec.values.pilot.image").String()).To(Equal(`registry.example.com@imageHash-istio-pilotV1x21x6`))
+			Expect(mwh.Field("webhooks.0.clientConfig.service.name").String()).To(Equal(`istiod-v1x25x2`))
+			// caBundle must be the root cert (b64("myroot")), not the signing cert: istiod advertises
+			// root-cert.pem as its webhook trust anchor, so the module must render the same to stay
+			// consistent for plugged intermediate CAs (where cert != root).
+			Expect(mwh.Field("webhooks.0.clientConfig.caBundle").String()).To(Equal(`bXlyb290`)) // b64("myroot")
 
-			Expect(mwh.Field("webhooks.0.clientConfig.service.name").String()).To(Equal(`istiod-v1x21x6`))
-			Expect(mwh.Field("webhooks.0.clientConfig.caBundle").String()).To(Equal(`bXljZXJ0`)) // b64("mycert")
-			Expect(serviceGlobal.Field("spec.selector").String()).To(MatchJSON(`{"app":"istiod","istio.io/rev":"v1x21x6"}`))
+			// Validating webhooks are never patched by istiod (their config names do not match
+			// VALIDATION_WEBHOOK_CONFIG_NAME), so the rendered caBundle is the sole source of truth
+			// and must also be the root cert, not the signing cert.
+			vwhRev := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-istio-validator-v1x25x2")
+			Expect(vwhRev.Exists()).To(BeTrue())
+			Expect(vwhRev.Field("webhooks.0.clientConfig.caBundle").String()).To(Equal(`bXlyb290`)) // b64("myroot")
+			Expect(serviceGlobal.Field("spec.selector").String()).To(MatchJSON(`{"app":"istiod","istio.io/rev":"v1x25x2"}`))
 
 			Expect(secretCacerts.Field("data").String()).To(MatchJSON(`
 				{
@@ -589,9 +564,8 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 					"root-cert.pem":"bXlyb290"
 				}
 `))
-
-			Expect(iopV21.Field("spec.meshConfig.caCertificates").Exists()).To(BeFalse())
-			Expect(iopV21.Field("spec.values.meshNetworks").Exists()).To(BeFalse())
+			// No istio.internal.ca.source set in these values, so the provenance annotation must be absent.
+			Expect(secretCacerts.Field(`metadata.annotations.istio\.deckhouse\.io/ca-source`).Exists()).To(BeFalse())
 
 			Expect(f.KubernetesResource("Deployment", "d8-istio", "metadata-exporter").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "metadata-exporter").Exists()).To(BeFalse())
@@ -614,13 +588,73 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 		})
 	})
 
+	Context("CA provenance source is set (ca.secretRef)", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.27.9"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2","1.27.9"]`)
+			f.ValuesSet("istio.internal.ca.source", "secretRef:my-pki/my-istio-ca")
+			f.HelmRender()
+		})
+
+		It("stamps the provenance annotation on the cacerts Secret", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			secretCacerts := f.KubernetesResource("Secret", "d8-istio", "cacerts")
+			Expect(secretCacerts.Exists()).To(BeTrue())
+			// The annotation lets the generate_ca hook recognize this Secret as its own secretRef
+			// material after a restart wipes the volatile istio.internal.ca.* values.
+			Expect(secretCacerts.Field(`metadata.annotations.istio\.deckhouse\.io/ca-source`).String()).
+				To(Equal("secretRef:my-pki/my-istio-ca"))
+		})
+	})
+
+	Context("istiod CA-bundle checksum ignores the provenance source but tracks material", func() {
+		// The checksum drives istiod pod rollouts. It must hash only the mounted CA material
+		// (cert/key/chain/root), NOT istio.internal.ca.source — otherwise a provenance-only change
+		// (e.g. on upgrade, or repointing secretRef to a Secret with identical material) would roll
+		// istiod needlessly.
+		caChecksum := func(source string) string {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.27.9"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2","1.27.9"]`)
+			if source != "" {
+				f.ValuesSet("istio.internal.ca.source", source)
+			}
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			return f.KubernetesResource("Istio", "d8-istio", "v1x25x2").
+				Field("spec.values.pilot.podAnnotations.istio-mtls-ca-bundle-checksum").String()
+		}
+
+		It("is stable when only istio.internal.ca.source changes", func() {
+			noSource := caChecksum("")
+			Expect(noSource).NotTo(BeEmpty())
+			Expect(caChecksum("selfSigned")).To(Equal(noSource))
+			Expect(caChecksum("secretRef:my-pki/my-istio-ca")).To(Equal(noSource))
+		})
+
+		It("changes when the mounted CA material changes", func() {
+			baseline := caChecksum("selfSigned")
+			f.ValuesSet("istio.internal.ca.cert", "a-different-cert")
+			f.HelmRender()
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			changed := f.KubernetesResource("Istio", "d8-istio", "v1x25x2").
+				Field("spec.values.pilot.podAnnotations.istio-mtls-ca-bundle-checksum").String()
+			Expect(changed).NotTo(Equal(baseline))
+		})
+	})
+
 	Context("There are user extension providers", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.21.6"]`)
-			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2","1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.27.9"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2","1.27.9"]`)
 			f.ValuesSetFromYaml("istio.dataPlane.extensionProviders", `
 - name: authservice-grpc
   envoyExtAuthzGrpc:
@@ -634,17 +668,12 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			istioV25 := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
-			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
 
 			Expect(istioV25.Field("spec.values.meshConfig.extensionProviders.0.name").String()).To(Equal(`d8-main`))
 			Expect(istioV25.Field("spec.values.meshConfig.extensionProviders.1.name").String()).To(Equal(`authservice-grpc`))
 			Expect(istioV25.Field("spec.values.meshConfig.extensionProviders.1.envoyExtAuthzGrpc.service").String()).To(Equal(`authservice.d8-istio.svc.cluster.local`))
 			Expect(istioV25.Field("spec.values.meshConfig.extensionProviders.1.envoyExtAuthzGrpc.port").Int()).To(Equal(int64(10003)))
 
-			Expect(iopV21.Field("spec.meshConfig.extensionProviders.0.name").String()).To(Equal(`d8-main`))
-			Expect(iopV21.Field("spec.meshConfig.extensionProviders.1.name").String()).To(Equal(`authservice-grpc`))
-			Expect(iopV21.Field("spec.meshConfig.extensionProviders.1.envoyExtAuthzGrpc.service").String()).To(Equal(`authservice.d8-istio.svc.cluster.local`))
-			Expect(iopV21.Field("spec.meshConfig.extensionProviders.1.envoyExtAuthzGrpc.port").Int()).To(Equal(int64(10003)))
 		})
 	})
 
@@ -653,7 +682,7 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.21.6","1.25.2","1.27.9","1.29.6"]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.27.9","1.29.6"]`)
 			f.ValuesSet("istio.jwksResolverAdditionalRootCA", jwksResolverAdditionalRootCA)
 			f.HelmRender()
 		})
@@ -661,16 +690,14 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 		It("passes the certificate to pilot configuration for supported Istio versions", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
 			istioV25 := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
-			jwksExtraRootCAV21 := f.KubernetesResource("ConfigMap", "d8-istio", "pilot-jwks-extra-cacerts-v1x21x6")
+
 			jwksExtraRootCAV25 := f.KubernetesResource("ConfigMap", "d8-istio", "pilot-jwks-extra-cacerts-v1x25x2")
 			jwksExtraRootCAV27 := f.KubernetesResource("ConfigMap", "d8-istio", "pilot-jwks-extra-cacerts-v1x27x9")
 			jwksExtraRootCAV29 := f.KubernetesResource("ConfigMap", "d8-istio", "pilot-jwks-extra-cacerts-v1x29x6")
 
-			Expect(iopV21.Exists()).To(BeTrue())
 			Expect(istioV25.Exists()).To(BeTrue())
-			Expect(jwksExtraRootCAV21.Exists()).To(BeTrue())
+
 			Expect(jwksExtraRootCAV25.Exists()).To(BeTrue())
 			Expect(jwksExtraRootCAV27.Exists()).To(BeTrue())
 			Expect(jwksExtraRootCAV29.Exists()).To(BeTrue())
@@ -678,9 +705,8 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			deplV27 := f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x27x9")
 			deplV29 := f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x29x6")
 
-			Expect(iopV21.Field("spec.values.pilot.jwksResolverExtraRootCA").String()).To(Equal(jwksResolverAdditionalRootCA))
 			Expect(istioV25.Field("spec.values.pilot.jwksResolverExtraRootCA").String()).To(Equal(jwksResolverAdditionalRootCA))
-			Expect(jwksExtraRootCAV21.Field("data.extra\\.pem").String()).To(Equal(jwksResolverAdditionalRootCA))
+
 			Expect(jwksExtraRootCAV25.Field("data.extra\\.pem").String()).To(Equal(jwksResolverAdditionalRootCA))
 			Expect(jwksExtraRootCAV27.Field("data.extra\\.pem").String()).To(Equal(jwksResolverAdditionalRootCA))
 			Expect(jwksExtraRootCAV29.Field("data.extra\\.pem").String()).To(Equal(jwksResolverAdditionalRootCA))
@@ -698,8 +724,8 @@ var _ = Describe("Module :: istio :: helm template :: main", func() {
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.21.6"]`)
-			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2"]`)
 			f.ValuesSet("istio.federation.enabled", true)
 			f.ValuesSetFromYaml("istio.internal.federations", `
 - name: neighbour-0
@@ -785,9 +811,14 @@ test.deckhouse.io/annotation: test-value
 				"eyJuZWlnaGJvdXItMCI6eyJjbHVzdGVyVVVJRCI6InItZS1tLW8tdC1lIiwicm9vdENBIjoiLS0tUk9PVCBDQS0tLSJ9fQ==",
 			))
 
-			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
-			Expect(iopV21.Field("spec.meshConfig.caCertificates").String()).To(MatchJSON(`[{"pem": "---ROOT CA---", "trustDomains": ["n.n0"]}]`))
-			Expect(iopV21.Field("spec.values.meshNetworks").Exists()).To(BeFalse())
+			istio := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
+			Expect(istio.Exists()).To(BeTrue())
+			Expect(istio.Field("spec.values.meshConfig.caCertificates").String()).To(MatchYAML(`
+- pem: "---ROOT CA---"
+  trustDomains:
+  - n.n0
+`))
+			Expect(istio.Field("spec.values.global.meshNetworks").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "istio-ingressgateway").Exists()).To(BeTrue())
 		})
 	})
@@ -797,8 +828,8 @@ test.deckhouse.io/annotation: test-value
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.21.6"]`)
-			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2"]`)
 			f.ValuesSet("istio.federation.enabled", true)
 			f.ValuesSetFromYaml("istio.internal.federations", `
 - name: cluster-a
@@ -890,8 +921,8 @@ cluster-b:
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.21.6"]`)
-			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2"]`)
 			f.ValuesSet("istio.federation.enabled", true)
 			f.ValuesSetFromYaml("istio.internal.federations", `
 - name: cluster-a
@@ -1000,15 +1031,15 @@ cluster-b:
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.21.6"]`)
-			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2"]`)
 			f.HelmRender()
 		})
-		It("CLOUD_PROVIDER env should be 'none'", func() {
+		It("CLOUD_PLATFORM proxy metadata should be 'none'", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
-			Expect(iopV21.Exists()).To(BeTrue())
-			Expect(iopV21.Field("spec.meshConfig.defaultConfig.proxyMetadata.CLOUD_PLATFORM").String()).To(Equal("none"))
+			istio := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
+			Expect(istio.Exists()).To(BeTrue())
+			Expect(istio.Field("spec.values.meshConfig.defaultConfig.proxyMetadata.CLOUD_PLATFORM").String()).To(Equal("none"))
 		})
 	})
 
@@ -1018,15 +1049,15 @@ cluster-b:
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSet("global.clusterConfiguration.cloud.provider", "AWS")
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.21.6"]`)
-			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2"]`)
 			f.HelmRender()
 		})
-		It("CLOUD_PROVIDER env should be 'aws'", func() {
+		It("CLOUD_PLATFORM proxy metadata should be 'aws'", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
-			Expect(iopV21.Exists()).To(BeTrue())
-			Expect(iopV21.Field("spec.meshConfig.defaultConfig.proxyMetadata.CLOUD_PLATFORM").String()).To(Equal("aws"))
+			istio := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
+			Expect(istio.Exists()).To(BeTrue())
+			Expect(istio.Field("spec.values.meshConfig.defaultConfig.proxyMetadata.CLOUD_PLATFORM").String()).To(Equal("aws"))
 		})
 	})
 
@@ -1035,8 +1066,8 @@ cluster-b:
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.21.6"]`)
-			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25.2"]`)
 			f.ValuesSet("istio.multicluster.enabled", true)
 			f.ValuesSet("istio.internal.multiclustersNeedIngressGateway", true)
 			f.ValuesSetFromYaml("istio.internal.multiclusters", `
@@ -1154,12 +1185,14 @@ users:
 				"eyJuZWlnaGJvdXItMCI6eyJjbHVzdGVyVVVJRCI6InItZS1tLW8tdC1lIiwicm9vdENBIjoiLS0tUk9PVCBDQS0tLSJ9fQ==",
 			))
 
-			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
-			Expect(iopV21.Field("spec.meshConfig.caCertificates").Array()).To(HaveLen(1))
-			Expect(iopV21.Field("spec.meshConfig.caCertificates.0.pem").Exists()).To(BeTrue())
-			Expect(iopV21.Field("spec.meshConfig.caCertificates.0.pem").String()).To(Equal("---ROOT CA---"))
-			Expect(iopV21.Field("spec.meshConfig.caCertificates.0.trustDomains").Exists()).To(BeFalse())
-			Expect(iopV21.Field("spec.values.global.meshNetworks").String()).To(MatchYAML(`
+			istio := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
+			Expect(istio.Exists()).To(BeTrue())
+			Expect(istio.Field("spec.values.meshConfig.caCertificates").String()).To(MatchYAML(`
+- pem: "---ROOT CA---"
+  trustDomains:
+  - my.domain
+`))
+			Expect(istio.Field("spec.values.global.meshNetworks").String()).To(MatchYAML(`
 a-b-c-1-2-3:
   endpoints:
   - fromRegistry: neighbour-0
@@ -1176,27 +1209,28 @@ a-b-c-1-2-3:
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2"]`)
 			f.HelmRender()
 		})
 
-		It("", func() {
+		It("renders default pilot resources and VPA policy", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
-			Expect(iopV21.Field("spec.values.pilot.resources").String()).To(MatchYAML(`
+			istio := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
+			Expect(istio.Exists()).To(BeTrue())
+			Expect(istio.Field("spec.values.pilot.resources").String()).To(MatchYAML(`
 requests:
   cpu: 50m
   memory: 256Mi
   ephemeral-storage: 50Mi
 limits: {}
 `))
-			vpa := f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "istiod-v1x21x6")
+			vpa := f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "istiod-v1x25x2")
 			Expect(vpa.Field("spec").String()).To(MatchYAML(`
 targetRef:
   apiVersion: apps/v1
   kind: Deployment
-  name: istiod-v1x21x6
+  name: istiod-v1x25x2
 updatePolicy:
   updateMode: InPlaceOrRecreate
 resourcePolicy:
@@ -1218,7 +1252,7 @@ resourcePolicy:
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2"]`)
 			f.ValuesSetFromYaml("istio.controlPlane.resourcesManagement", `
 mode: Static
 static:
@@ -1232,11 +1266,12 @@ static:
 			f.HelmRender()
 		})
 
-		It("", func() {
+		It("renders static pilot resources and disables VPA updates", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
-			Expect(iopV21.Field("spec.values.pilot.resources").String()).To(MatchYAML(`
+			istio := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
+			Expect(istio.Exists()).To(BeTrue())
+			Expect(istio.Field("spec.values.pilot.resources").String()).To(MatchYAML(`
 requests:
   cpu: 11m
   memory: 22Mi
@@ -1245,12 +1280,12 @@ limits:
   cpu: "33"
   memory: 44Gi
 `))
-			vpa := f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "istiod-v1x21x6")
+			vpa := f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "istiod-v1x25x2")
 			Expect(vpa.Field("spec").String()).To(MatchYAML(`
 targetRef:
   apiVersion: apps/v1
   kind: Deployment
-  name: istiod-v1x21x6
+  name: istiod-v1x25x2
 updatePolicy:
   updateMode: "Off"
 `))
@@ -1262,14 +1297,15 @@ updatePolicy:
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2"]`)
 			f.HelmRender()
 		})
 
-		It("", func() {
+		It("renders empty sidecar resources", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
-			Expect(iopV21.Field("spec.values.global.proxy.resources").String()).To(MatchYAML(`{}`))
+			istio := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
+			Expect(istio.Exists()).To(BeTrue())
+			Expect(istio.Field("spec.values.global.proxy.resources").String()).To(MatchYAML(`{}`))
 		})
 	})
 
@@ -1278,7 +1314,7 @@ updatePolicy:
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2"]`)
 			f.ValuesSetFromYaml("istio.sidecar.resourcesManagement", `
 mode: Static
 static:
@@ -1291,10 +1327,11 @@ static:
 			f.HelmRender()
 		})
 
-		It("", func() {
+		It("renders custom static sidecar resources", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
-			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
-			Expect(iopV21.Field("spec.values.global.proxy.resources").String()).To(MatchYAML(`
+			istio := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
+			Expect(istio.Exists()).To(BeTrue())
+			Expect(istio.Field("spec.values.global.proxy.resources").String()).To(MatchYAML(`
 requests:
   cpu: 200m
   memory: 256Mi
@@ -1309,7 +1346,7 @@ limits:
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2"]`)
 			f.ValuesSetFromYaml("istio.controlPlane.resourcesManagement", `
 mode: VPA
 vpa:
@@ -1326,11 +1363,12 @@ vpa:
 			f.HelmRender()
 		})
 
-		It("", func() {
+		It("renders initial VPA policy and corresponding pilot resources", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
-			Expect(iopV21.Field("spec.values.pilot.resources").String()).To(MatchYAML(`
+			istio := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
+			Expect(istio.Exists()).To(BeTrue())
+			Expect(istio.Field("spec.values.pilot.resources").String()).To(MatchYAML(`
 limits:
   cpu: 253m
   memory: "1342177280"
@@ -1339,12 +1377,12 @@ requests:
   cpu: 101m
   memory: 512Mi
 `))
-			vpa := f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "istiod-v1x21x6")
+			vpa := f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "istiod-v1x25x2")
 			Expect(vpa.Field("spec").String()).To(MatchYAML(`
 targetRef:
   apiVersion: apps/v1
   kind: Deployment
-  name: istiod-v1x21x6
+  name: istiod-v1x25x2
 resourcePolicy:
   containerPolicies:
   - containerName: discovery
@@ -1366,7 +1404,7 @@ updatePolicy:
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2"]`)
 			f.ValuesSetFromYaml("istio.controlPlane.resourcesManagement", `
 mode: VPA
 vpa:
@@ -1383,11 +1421,12 @@ vpa:
 			f.HelmRender()
 		})
 
-		It("", func() {
+		It("renders VPA policy and pilot resources for whole-number quantities", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
-			Expect(iopV21.Field("spec.values.pilot.resources").String()).To(MatchYAML(`
+			istio := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
+			Expect(istio.Exists()).To(BeTrue())
+			Expect(istio.Field("spec.values.pilot.resources").String()).To(MatchYAML(`
 limits:
   cpu: 7500m
   memory: "833"
@@ -1396,12 +1435,12 @@ requests:
   cpu: "3"
   memory: "333"
 `))
-			vpa := f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "istiod-v1x21x6")
+			vpa := f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "istiod-v1x25x2")
 			Expect(vpa.Field("spec").String()).To(MatchYAML(`
 targetRef:
   apiVersion: apps/v1
   kind: Deployment
-  name: istiod-v1x21x6
+  name: istiod-v1x25x2
 resourcePolicy:
   containerPolicies:
   - containerName: discovery
@@ -1423,7 +1462,7 @@ updatePolicy:
 			f.ValuesSetFromYaml("global", globalValues)
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
-			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.21.6"]`)
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25.2","1.27.9"]`)
 			f.ValuesSetFromYaml("istio.controlPlane.extraEnvs", `
 GODEBUG: "gctrace=1"
 MY_VAR: "myvalue"
@@ -1431,38 +1470,28 @@ MY_VAR: "myvalue"
 			f.HelmRender()
 		})
 
-		It("should add custom env vars to istiod in both IOP and sailoperator Istio CR", func() {
+		It("adds custom env vars to operator-backed and operator-free istiod", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
+			By("adding custom and reserved variables to the 1.25 Sail Operator resource")
 			istioV25 := f.KubernetesResource("Istio", "d8-istio", "v1x25x2")
-			iopV21 := f.KubernetesResource("IstioOperator", "d8-istio", "v1x21x6")
 			Expect(istioV25.Exists()).To(BeTrue())
-			Expect(iopV21.Exists()).To(BeTrue())
-
-			// istioV25 (sailoperator): spec.values.pilot.env is a map
-			By("istios.yaml: custom env vars are present in spec.values.pilot.env")
 			Expect(istioV25.Field("spec.values.pilot.env.GODEBUG").String()).To(Equal("gctrace=1"))
 			Expect(istioV25.Field("spec.values.pilot.env.MY_VAR").String()).To(Equal("myvalue"))
-
-			By("istios.yaml: reserved env vars are still present")
 			Expect(istioV25.Field("spec.values.pilot.env.ISTIO_MULTIROOT_MESH").String()).To(Equal("true"))
 			Expect(istioV25.Field("spec.values.pilot.env.ENABLE_ENHANCED_RESOURCE_SCOPING").String()).To(Equal("true"))
 
-			// iopV21 (IstioOperator): spec.components.pilot.k8s.env is a list of {name, value}
-			By("iop.yaml: custom env vars are present in spec.components.pilot.k8s.env")
-			Expect(iopV21.Field("spec.components.pilot.k8s.env.2.name").String()).To(Equal("GODEBUG"))
-			Expect(iopV21.Field("spec.components.pilot.k8s.env.2.value").String()).To(Equal("gctrace=1"))
-			Expect(iopV21.Field("spec.components.pilot.k8s.env.3.name").String()).To(Equal("MY_VAR"))
-			Expect(iopV21.Field("spec.components.pilot.k8s.env.3.value").String()).To(Equal("myvalue"))
-
-			By("iop.yaml: reserved env vars are still present")
-			Expect(iopV21.Field("spec.components.pilot.k8s.env.0.name").String()).To(Equal("ISTIO_MULTIROOT_MESH"))
-			Expect(iopV21.Field("spec.components.pilot.k8s.env.0.value").String()).To(Equal("true"))
-			Expect(iopV21.Field("spec.components.pilot.k8s.env.1.name").String()).To(Equal("ENABLE_ENHANCED_RESOURCE_SCOPING"))
-			Expect(iopV21.Field("spec.components.pilot.k8s.env.1.value").String()).To(Equal("true"))
-
-			By("iop.yaml: custom env vars are placed after the reserved ones, total count is 4")
-			Expect(iopV21.Field("spec.components.pilot.k8s.env").Array()).To(HaveLen(4))
+			By("adding custom variables to the directly rendered 1.27 deployment")
+			deploymentV27 := f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x27x9")
+			Expect(deploymentV27.Exists()).To(BeTrue())
+			envValues := make(map[string]string)
+			for _, env := range deploymentV27.Field("spec.template.spec.containers.0.env").Array() {
+				if env.Get("value").Exists() {
+					envValues[env.Get("name").String()] = env.Get("value").String()
+				}
+			}
+			Expect(envValues).To(HaveKeyWithValue("GODEBUG", "gctrace=1"))
+			Expect(envValues).To(HaveKeyWithValue("MY_VAR", "myvalue"))
 		})
 	})
 
@@ -1919,6 +1948,66 @@ MY_VAR: "myvalue"
 			clusterRole := f.KubernetesGlobalResource("ClusterRole", "d8:istio:config-analyzer:v1x29")
 			Expect(clusterRole.Exists()).To(BeTrue())
 			Expect(clusterRole.Field("rules").String()).To(ContainSubstring("backendtlspolicies"))
+		})
+
+		It("renders istiod ClusterRole with 1.29 gateway API BackendTLSPolicy permissions", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			istiodClusterRole := f.KubernetesGlobalResource("ClusterRole", "d8:istio:control-plane:iop:istiod-v1x29")
+			Expect(istiodClusterRole.Exists()).To(BeTrue())
+			Expect(istiodClusterRole.Field("rules").String()).To(ContainSubstring("backendtlspolicies"))
+			Expect(istiodClusterRole.Field("rules").String()).To(ContainSubstring("backendtlspolicies/status"))
+		})
+	})
+
+	Context("joint install of operator-backed 1.25 and operator-free 1.29", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.versionMap", `
+"1.25":
+  revision: "v1x25"
+  fullVersion: "1.25.2"
+  imageSuffix: "V1x25x2"
+  supportsAmbient: true
+  supportsOperator: true
+"1.29":
+  revision: "v1x29"
+  fullVersion: "1.29.6"
+  imageSuffix: "V1x29x6"
+  supportsAmbient: true
+  supportsOperator: false
+`)
+			// Canary upgrade path: keep 1.25 as global, install 1.29 as additional revision.
+			f.ValuesSetFromYaml("istio.internal.versionsToInstall", `["1.25","1.29"]`)
+			f.ValuesSetFromYaml("istio.internal.operatorVersionsToInstall", `["1.25"]`)
+			f.ValuesSet("istio.internal.globalVersion", "1.25")
+			f.HelmRender()
+		})
+
+		It("renders Sail operator control plane for 1.25 and helm istiod for 1.29", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			istioV25 := f.KubernetesResource("Istio", "d8-istio", "v1x25")
+			Expect(istioV25.Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Deployment", "d8-istio", "operator-v1x25").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x25").Exists()).To(BeFalse())
+
+			Expect(f.KubernetesResource("Deployment", "d8-istio", "istiod-v1x29").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Service", "d8-istio", "istiod-v1x29").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("ConfigMap", "d8-istio", "istio-v1x29").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("IstioOperator", "d8-istio", "v1x29").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Istio", "d8-istio", "v1x29").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("Deployment", "d8-istio", "operator-v1x29").Exists()).To(BeFalse())
+
+			istiodClusterRoleV29 := f.KubernetesGlobalResource("ClusterRole", "d8:istio:control-plane:iop:istiod-v1x29")
+			Expect(istiodClusterRoleV29.Exists()).To(BeTrue())
+			Expect(istiodClusterRoleV29.Field("rules").String()).To(ContainSubstring("backendtlspolicies"))
+
+			istiodClusterRoleV25 := f.KubernetesGlobalResource("ClusterRole", "d8:istio:control-plane:iop:istiod-v1x25")
+			Expect(istiodClusterRoleV25.Exists()).To(BeTrue())
+			Expect(istiodClusterRoleV25.Field("rules").String()).NotTo(ContainSubstring("backendtlspolicies"))
 		})
 	})
 

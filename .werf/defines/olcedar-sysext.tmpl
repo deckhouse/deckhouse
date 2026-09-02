@@ -19,13 +19,6 @@
   add: /d8
   to: /usr/bin/d8
   before: install
-- from: {{ index .Images "systemd-260.4" }}
-  add: /usr/lib/systemd
-  to: /usr/lib/systemd
-  includePaths:
-  - systemd-keyutil
-  - libsystemd-shared-260.so
-  before: install
 {{- end }}
 
 # The OIDC token is minted inside the build rather than passed in: a GitHub

@@ -87,6 +87,11 @@ spec:
           imgs := input.review.object.spec.initContainers[_].image
         }
 
+        retrieve_images[imgs] {
+          count(input.review.object.spec.ephemeralContainers[_].image) > 0
+          imgs := input.review.object.spec.ephemeralContainers[_].image
+        }
+
         # Base Gatekeeper violation
         violation[{"msg": msg}] {
           not input.review.operation == "DELETE"

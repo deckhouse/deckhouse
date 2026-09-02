@@ -1,0 +1,7 @@
+istio:
+  fixes:
+    - summary: Add missing tools to proxyv2 images so the application-aware proxy termination hook works
+        correctly.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22031
+    - summary: Fix graceful draining of established HTTP connections when application pods terminate.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22064

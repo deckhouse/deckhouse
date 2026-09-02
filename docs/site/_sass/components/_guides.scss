@@ -4,7 +4,7 @@
 
 div.alert__wrap {
   display: block;
-  padding: 0 15px;
+  padding: 0 16px;
   margin: 15px 0;
   font-size: 16px;
   line-height: 24px;
@@ -12,10 +12,6 @@ div.alert__wrap {
   border: 2px solid;
 
   @include breakpoints.max-w(xl) {
-    padding: 0 10px;
-  }
-
-  @include breakpoints.max-w(xs) {
     padding: 0 12px;
   }
 
@@ -23,12 +19,13 @@ div.alert__wrap {
     padding-left: 40px;
 
     @include breakpoints.max-w(s) {
-      padding-left: 30px;
+      padding-left: 0;
+      padding-top: 34px;
     }
   }
 
   & a {
-    color: variables.$color-alt;
+    color: variables.$primary-700;
   }
 
   & p {
@@ -48,7 +45,7 @@ div.alert__wrap {
     }
 
     @include breakpoints.max-w(s) {
-      padding: 10px 0;
+      padding: 12px 0;
     }
 
     @include breakpoints.max-w(xs) {
@@ -63,26 +60,22 @@ div.alert__wrap {
   }
 
   &.info {
-    border-color: variables.$color-alt;
-
-    & .icon--info {
-      fill: variables.$color-alt;
-    }
+    border-color: variables.$primary-700;
   }
 
   &.warning {
-    border-color: variables.$color-warning;
-
-    & .icon--warning {
-      fill: variables.$color-warning;
-    }
+    border-color: #FFC27B;
   }
 
   &.danger {
-    border-color: variables.$color-danger;
+    border-color: #F3455A;
+  }
 
-    & .icon--danger {
-      fill: variables.$color-danger;
+  .alert__info {
+    border-bottom: 1px dashed #0064FF;
+
+    &:hover {
+      border-bottom: 1px solid #0064FF;
     }
   }
 }

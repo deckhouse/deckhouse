@@ -16,143 +16,111 @@ package api
 
 import (
 	"encoding/json"
+	"reflect"
 	"testing"
 )
 
-func TestModuleConfigSpecProviderParameters(t *testing.T) {
+// testSettings is a minimal ModuleSettingsObject implementation for decoding tests.
+type testSettings struct {
+	Provider testSection `json:"provider,omitempty"`
+	Nodes    testSection `json:"nodes,omitempty"`
+	Storage  testSection `json:"storage,omitempty"`
+	CCM      testSection `json:"ccm,omitempty"`
+}
+
+type testSection struct {
+	Disabled   bool              `json:"disabled,omitempty"`
+	Parameters map[string]string `json:"parameters,omitempty"`
+}
+
+func (s *testSettings) HasProviderSection() bool {
+	return s != nil && !reflect.DeepEqual(s.Provider, testSection{})
+}
+
+func (s *testSettings) HasNodesSection() bool {
+	return s != nil && !reflect.DeepEqual(s.Nodes, testSection{})
+}
+
+func (s *testSettings) HasStorageSection() bool {
+	return s != nil && !reflect.DeepEqual(s.Storage, testSection{})
+}
+
+func (s *testSettings) HasCCMSection() bool {
+	return s != nil && !reflect.DeepEqual(s.CCM, testSection{})
+}
+
+var _ ModuleSettingsObject = (*testSettings)(nil)
+
+func TestModuleConfigDecodesTypedSettings(t *testing.T) {
 	t.Parallel()
 
 	raw := `{
+		"metadata": {"name": "cloud-provider-test"},
 		"spec": {
+			"enabled": true,
+			"version": 2,
 			"settings": {
-				"provider": {
-					"parameters": {
-						"namespace": "d8-cloud-provider-dvp"
-					}
-				}
+				"provider": {"parameters": {"namespace": "d8-cloud-provider-test"}},
+				"nodes": {"disabled": true}
 			}
 		}
 	}`
 
-	var moduleConfig ModuleConfig
+	var moduleConfig ModuleConfig[*testSettings]
 	if err := json.Unmarshal([]byte(raw), &moduleConfig); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}
 
-	if moduleConfig.Spec.Settings.Provider == nil ||
-		moduleConfig.Spec.Settings.Provider.Parameters["namespace"] != "d8-cloud-provider-dvp" {
-		t.Fatalf("Provider.Parameters = %#v, want namespace parameter", moduleConfig.Spec.Settings.Provider)
+	if moduleConfig.Name != "cloud-provider-test" {
+		t.Fatalf("Name = %q, want cloud-provider-test", moduleConfig.Name)
+	}
+	if moduleConfig.Spec.Version != 2 {
+		t.Fatalf("Spec.Version = %d, want 2", moduleConfig.Spec.Version)
+	}
+	if moduleConfig.Spec.Enabled == nil || !*moduleConfig.Spec.Enabled {
+		t.Fatalf("Spec.Enabled = %v, want true", moduleConfig.Spec.Enabled)
+	}
+	if got := moduleConfig.Spec.Settings.Provider.Parameters["namespace"]; got != "d8-cloud-provider-test" {
+		t.Fatalf("Settings.Provider.Parameters[namespace] = %q, want d8-cloud-provider-test", got)
 	}
 }
 
-func TestModuleConfigSpecSubsystemDisabled(t *testing.T) {
+func TestModuleConfigSettingsSectionPresence(t *testing.T) {
 	t.Parallel()
 
-	raw := `{
-		"spec": {
-			"settings": {
-				"nodes": {
-					"disabled": true
-				},
-				"storage": {
-					"disabled": false
-				}
-			}
-		}
-	}`
+	raw := `{"spec": {"settings": {"provider": {"parameters": {"namespace": "ns"}}, "storage": {"disabled": true}}}}`
 
-	var moduleConfig ModuleConfig
+	var moduleConfig ModuleConfig[*testSettings]
 	if err := json.Unmarshal([]byte(raw), &moduleConfig); err != nil {
 		t.Fatalf("Unmarshal() error = %v", err)
 	}
 
-	if moduleConfig.Spec.Settings.Nodes == nil || moduleConfig.Spec.Settings.Nodes.Disabled == nil || !*moduleConfig.Spec.Settings.Nodes.Disabled {
-		t.Fatalf("Nodes.Disabled = %#v, want true", moduleConfig.Spec.Settings.Nodes)
+	settings := moduleConfig.Spec.Settings
+	if !settings.HasProviderSection() {
+		t.Fatal("HasProviderSection() = false, want true")
 	}
-	if moduleConfig.Spec.Settings.Storage == nil || moduleConfig.Spec.Settings.Storage.Disabled == nil || *moduleConfig.Spec.Settings.Storage.Disabled {
-		t.Fatalf("Storage.Disabled = %#v, want false", moduleConfig.Spec.Settings.Storage)
+	if !settings.HasStorageSection() {
+		t.Fatal("HasStorageSection() = false, want true")
 	}
-}
-
-func TestModuleConfigCcmSubsystem(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name       string
-		json       string
-		wantNil    bool
-		wantDisabled bool
-	}{
-		{
-			name: "ccm disabled true",
-			json: `{
-		"spec": {
-			"settings": {
-				"ccm": {
-					"disabled": true
-				}
-			}
-		}
-	}`,
-			wantNil:       false,
-			wantDisabled:  true,
-		},
-		{
-			name: "ccm disabled false",
-			json: `{
-		"spec": {
-			"settings": {
-				"ccm": {
-					"disabled": false
-				}
-			}
-		}
-	}`,
-			wantNil:       false,
-			wantDisabled:  false,
-		},
+	if settings.HasNodesSection() {
+		t.Fatal("HasNodesSection() = true, want false")
 	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			var mc ModuleConfig
-			if err := json.Unmarshal([]byte(tt.json), &mc); err != nil {
-				t.Fatalf("Unmarshal() error = %v", err)
-			}
-
-			if tt.wantNil {
-				if mc.Spec.Settings.CCM != nil {
-					t.Fatalf("Ccm = %#v, want nil", mc.Spec.Settings.CCM)
-				}
-				return
-			}
-
-			if mc.Spec.Settings.CCM == nil || mc.Spec.Settings.CCM.Disabled == nil {
-				t.Fatalf("Ccm.Disabled = %#v, want non-nil", mc.Spec.Settings.CCM)
-			}
-			if *mc.Spec.Settings.CCM.Disabled != tt.wantDisabled {
-				t.Fatalf("Ccm.Disabled = %v, want %v", *mc.Spec.Settings.CCM.Disabled, tt.wantDisabled)
-			}
-		})
+	if settings.HasCCMSection() {
+		t.Fatal("HasCCMSection() = true, want false")
 	}
 }
 
-func TestModuleConfigCcmAbsent(t *testing.T) {
+func TestModuleConfigNilSettingsIsSafe(t *testing.T) {
 	t.Parallel()
 
-	raw := `{
-		"spec": {
-			"settings": {
-			}
-		}
-	}`
+	moduleConfig := ModuleConfig[*testSettings]{}
 
-	var mc ModuleConfig
-	if err := json.Unmarshal([]byte(raw), &mc); err != nil {
-		t.Fatalf("Unmarshal() error = %v", err)
+	if moduleConfig.Spec.Settings.HasProviderSection() {
+		t.Fatal("HasProviderSection() on nil settings = true, want false")
 	}
-
-	if mc.Spec.Settings.CCM != nil {
-		t.Fatalf("Ccm = %#v, want nil", mc.Spec.Settings.CCM)
+	if moduleConfig.Spec.Settings.HasNodesSection() ||
+		moduleConfig.Spec.Settings.HasStorageSection() ||
+		moduleConfig.Spec.Settings.HasCCMSection() {
+		t.Fatal("section predicates on nil settings must be false")
 	}
 }

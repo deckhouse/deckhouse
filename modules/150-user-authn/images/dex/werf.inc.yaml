@@ -76,3 +76,5 @@ shell:
       {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags "${LDFLAGS}" -tags netgo -o dex ./cmd/dex`) | indent 6 }}
     - chown 64535:64535 dex
     - chmod 0700 dex
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

@@ -43,6 +43,7 @@ const (
 	autoConvergeCmd       = "converge-periodical"
 	terraformGroupCmd     = "terraform"
 	exporterCmd           = "converge-exporter"
+	phaseCatalogCmd       = "phase-catalog"
 )
 
 var commandList = []Command{
@@ -66,12 +67,6 @@ var commandList = []Command{
 		Help: "Commands to run a single phase of the bootstrap process.",
 	},
 	{
-		Name:       "execute-bashible-bundle",
-		Help:       "Prepare the master node and install Kubernetes.",
-		DefineFunc: bootstrap.DefineBootstrapExecuteBashibleCommand,
-		Parent:     "bootstrap-phase",
-	},
-	{
 		Name:       "create-resources",
 		Help:       "Create resources in a Kubernetes cluster.",
 		DefineFunc: bootstrap.DefineCreateResourcesCommand,
@@ -93,12 +88,6 @@ var commandList = []Command{
 		Name:       "base-infra",
 		Help:       "Create base infrastructure for a cloud Kubernetes cluster.",
 		DefineFunc: bootstrap.DefineBaseInfrastructureCommand,
-		Parent:     "bootstrap-phase",
-	},
-	{
-		Name:       "exec-post-bootstrap",
-		Help:       "Test scp upload and ssh execution of the uploaded script.",
-		DefineFunc: bootstrap.DefineExecPostBootstrapScript,
 		Parent:     "bootstrap-phase",
 	},
 	{
@@ -130,6 +119,11 @@ var commandList = []Command{
 		Name:       "destroy",
 		Help:       "Destroy Kubernetes cluster.",
 		DefineFunc: commands.DefineDestroyCommand,
+	},
+	{
+		Name:       phaseCatalogCmd,
+		Help:       "Print the phase and subphase title catalog as JSON.",
+		DefineFunc: commands.DefinePhaseCatalogCommand,
 	},
 	{
 		Name:       "session",

@@ -153,7 +153,7 @@ func newMetaConfig(t *testing.T, clusterConfig map[string]json.RawMessage, modul
 	// Empty CRI is unsupported, so ConfigProvider falls back to legacy Unmanaged
 	// mode with default registry parameters — same path the un-exported
 	// useDefault(false) used to take directly.
-	cfg, err := registry.NewConfigProvider(nil, nil).Config("", true)
+	cfg, err := registry.NewConfigProvider(nil, nil).Config("", true, true)
 	require.NoError(t, err)
 	m.Registry = cfg
 	return m

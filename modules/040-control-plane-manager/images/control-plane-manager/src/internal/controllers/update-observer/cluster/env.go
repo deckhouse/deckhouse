@@ -29,6 +29,49 @@ type VersionSettings struct {
 	Automatic string
 }
 
+// Every field comes from the container environment, rendered by templates/daemonset.yaml; nothing is
+// resolved here. A malformed value is an error, not a default: a guessed version would be written
+// into the ConfigMap and read back as if declared.
+func LoadConfigurationFromEnv() (*Configuration, error) {
+	desiredVersion, err := requiredVersionFromEnv(desiredKubernetesVersionEnv)
+	if err != nil {
+		return nil, err
+	}
+
+	maxUsedVersion, err := requiredVersionFromEnv(maxUsedKubernetesVersionEnv)
+	if err != nil {
+		return nil, err
+	}
+
+	updateMode := UpdateMode(strings.TrimSpace(os.Getenv(kubernetesUpdateModeEnv)))
+	switch updateMode {
+	case UpdateModeAutomatic, UpdateModeManual:
+	default:
+		return nil, fmt.Errorf("invalid %s: %q, want %q or %q",
+			kubernetesUpdateModeEnv, updateMode, UpdateModeAutomatic, UpdateModeManual)
+	}
+
+	return &Configuration{
+		DesiredVersion: desiredVersion,
+		UpdateMode:     updateMode,
+		MaxUsedVersion: maxUsedVersion,
+	}, nil
+}
+
+func requiredVersionFromEnv(name string) (string, error) {
+	raw := strings.TrimSpace(os.Getenv(name))
+	if raw == "" {
+		return "", fmt.Errorf("%s is not set", name)
+	}
+
+	normalized, err := version.Normalize(raw)
+	if err != nil {
+		return "", fmt.Errorf("invalid %s %q: %w", name, raw, err)
+	}
+
+	return normalized, nil
+}
+
 func LoadVersionSettingsFromEnv() (VersionSettings, error) {
 	supportedVersionsEnv := os.Getenv(supportedKubernetesVersionsEnv)
 	automaticVersion := os.Getenv(automaticKubernetesVersionEnv)
@@ -59,6 +102,8 @@ func LoadVersionSettingsFromEnv() (VersionSettings, error) {
 	}, nil
 }
 
+// Not only informational: the ModuleConfig admission webhook rejects a kubernetesVersion outside this
+// list, so changing the formula changes what operators may set.
 func (s VersionSettings) Available(maxUsedVersion string) []string {
 	for i, v := range s.Supported {
 		if v == maxUsedVersion {
@@ -67,6 +112,7 @@ func (s VersionSettings) Available(maxUsedVersion string) []string {
 		}
 	}
 
-	// maxVersion not found in supported list (shouldn't happen)
+	// Not in the supported list: usually older than everything this release ships. It can also be
+	// newer, after a Deckhouse downgrade — the admission floor check catches that case.
 	return s.Supported
 }

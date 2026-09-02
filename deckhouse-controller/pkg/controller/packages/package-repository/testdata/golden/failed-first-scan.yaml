@@ -1,0 +1,62 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  annotations:
+    packages.deckhouse.io/registry-spec-checksum: 2720f396ada9d3a58be0d5f8fd16c26a
+  finalizers:
+  - packages.deckhouse.io/package-version-exists
+  name: deckhouse
+  resourceVersion: "4"
+spec:
+  registry:
+    ca: test-ca
+    dockerCfg: test-docker-cfg
+    repo: registry.example.com/test
+    scheme: https
+  scanInterval: 6h0m0s
+status: {}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
+metadata:
+  labels:
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-scan-1234567890
+  resourceVersion: "1"
+spec:
+  packageRepositoryName: deckhouse
+  type: Update
+  update:
+    fullScan: true
+    timeout: 5m
+status:
+  conditions:
+  - lastTransitionTime: null
+    message: list all tags
+    reason: ScanFailed
+    status: "True"
+    type: Completed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepositoryOperation
+metadata:
+  labels:
+    packages.deckhouse.io/operation-trigger: auto
+    packages.deckhouse.io/operation-type: Update
+    packages.deckhouse.io/repository: deckhouse
+  name: deckhouse-scan-1571326380
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    controller: true
+    kind: PackageRepository
+    name: deckhouse
+    uid: ""
+  resourceVersion: "1"
+spec:
+  packageRepositoryName: deckhouse
+  type: Update
+  update:
+    fullScan: true
+    timeout: 5m
+status: {}

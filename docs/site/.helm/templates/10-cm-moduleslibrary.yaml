@@ -19,8 +19,10 @@ data:
       default_type  application/octet-stream;
 
       # Add MIME type for ES modules (.mjs files)
+      # and for the per-page Markdown of the AI export (.md files).
       types {
         application/javascript mjs;
+        text/markdown md;
       }
 
       client_body_temp_path /tmp/client_temp;
@@ -87,6 +89,10 @@ data:
         proxy_intercept_errors on;
 
         charset utf-8;
+        # `charset` only appends the encoding to the types listed here, and the
+        # default list has no text/markdown: the per-page Markdown of the AI
+        # export would be served without a charset and a browser would guess it.
+        charset_types text/html text/xml text/plain text/vnd.wap.wml application/javascript application/rss+xml text/markdown;
         access_log     /dev/stdout json_combined;
 
         rewrite ^/modules$ /modules/ redirect;
@@ -113,14 +119,24 @@ data:
             try_files /$lang/search-external-modules-index/search.json =404;
         }
 
+        # AI export of the modules from sources (see internal/aiexport of docs-builder).
+        # The per-page .md files are served by the generic module locations below.
+        location ~* ^/modules/external-llms\.txt$  {
+            try_files /$lang/modules/external-llms.txt =404;
+        }
+
+        location ~* ^/modules/external-corpus\.json$  {
+            try_files /$lang/modules/external-corpus.json =404;
+        }
+
         # Search index for embedded modules
-        location ~* ^/modules/search-embedded-modules-index.json$  {
-            set $module "$1";
-            set $module_doc "$2";
+        location ~* ^/modules/(search-embedded-modules-index\.json|embedded-corpus\.json|embedded-llms\.txt)$  {
             # $channel_name is mapped to $channel_version (see map above)
             set $channel_name "stable";
 
-            rewrite ^/modules/search-embedded-modules-index.json$ /deckhouse-{{ $.Values.werf.env }}/${channel_version}/modules/$lang/search-embedded-modules-index.json break;
+            rewrite ^/modules/embedded-corpus\.json$ /deckhouse-{{ $.Values.werf.env }}/${channel_version}/modules/$lang/embedded-corpus.json break;
+            rewrite ^/modules/embedded-llms\.txt$ /deckhouse-{{ $.Values.werf.env }}/${channel_version}/modules/$lang/embedded-llms.txt break;
+            rewrite ^/modules/search-embedded-modules-index\.json$ /deckhouse-{{ $.Values.werf.env }}/${channel_version}/modules/$lang/search-embedded-modules-index.json break;
 
             limit_except GET {
                 deny all;

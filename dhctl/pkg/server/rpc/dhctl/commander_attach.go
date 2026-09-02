@@ -186,13 +186,13 @@ func (s *Service) commanderAttach(ctx context.Context, p *attachParams) *pb.Comm
 	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing SSH client", func(ctx context.Context) error {
 		var cleanup func() error
 		var sshProviderInitializer *providerinitializer.SSHProviderInitializer
-		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, s.params.IsDebug, s.params.TmpDir)
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, s.params.IsDebug, s.params.TmpDir, helper.WithKubeConfig(p.request.Kubeconfig))
 		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("creating provider: %w", err)
 		}
 
-		sshProvider, err = sshProviderInitializer.GetSSHProvider(ctx)
+		sshProvider, err = helper.SSHProviderOrNil(ctx, sshProviderInitializer, p.request.Kubeconfig)
 		if err != nil {
 			return fmt.Errorf("getting ssh provider: %w", err)
 		}
@@ -230,10 +230,16 @@ func (s *Service) commanderAttach(ctx context.Context, p *attachParams) *pb.Comm
 	})
 
 	result, attachErr := attacher.Attach(ctx)
+
+	var trimErr error
+	if result != nil {
+		result.CheckResult, trimErr = trimCheckResult(result.CheckResult)
+	}
+
 	resultData, marshalResultErr := json.Marshal(result)
 	state, stateErr := extractLastState(ctx)
 
-	err = errors.Join(attachErr, stateErr, marshalResultErr)
+	err = errors.Join(attachErr, trimErr, stateErr, marshalResultErr)
 
 	return &pb.CommanderAttachResult{State: string(state), Result: string(resultData), Err: util.ErrToString(err)}
 }
@@ -260,6 +266,12 @@ func (s *Service) commanderAttachServerTransitions() []fsm.Transition {
 
 //nolint:musttag
 func (s *Service) attachSwitchPhaseData(onPhaseData phases.OnPhaseFuncData[attach.PhaseData]) (*pb.CommanderAttachResponse, error) {
+	var err error
+	onPhaseData.CompletedPhaseData.CheckResult, err = trimCheckResult(onPhaseData.CompletedPhaseData.CheckResult)
+	if err != nil {
+		return nil, err
+	}
+
 	phaseDataBytes, err := json.Marshal(onPhaseData.CompletedPhaseData)
 	if err != nil {
 		return nil, err
