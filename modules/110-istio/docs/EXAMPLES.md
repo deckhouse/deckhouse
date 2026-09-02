@@ -964,8 +964,6 @@ To see traces inside Kiali UI, configure [`tracing.kiali`](configuration.html#pa
 
 #### Example — mesh-wide OTLP via ModuleConfig
 
-{% alert level="info" %}OpenTelemetry export in the chart follows [Distributed tracing with OpenTelemetry](https://istio.io/v1.25/docs/tasks/observability/distributed-tracing/opentelemetry/) on Istio 1.25+. On Istio 1.21 use Zipkin/Jaeger via [`tracing.collector.zipkin`](configuration.html#parameters-tracing-collector) or upgrade the control-plane revision.{% endalert %}
-
 Deploy a Collector reachable from the mesh, then enable Telemetry API mode and point [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry) at it. The module adds extension provider `deckhouse-tracing` and `spec.tracing` on `d8-main`—do not patch the generated `Istio` / `IstioOperator` `meshConfig` for mesh-wide OTLP.
 
 ```yaml
@@ -1108,10 +1106,10 @@ d8 k -n <debug-namespace> run istioctl-debug \
 Select the minor version of Istio used by the target control plane:
 
 ```shell
-export ISTIOCTL_VERSION=1.21
+export ISTIOCTL_VERSION=1.29
 ```
 
-Available values are `1.21`, `1.25`, `1.27` and `1.29`. You can also run a specific binary directly: `istioctl-1.21`, `istioctl-1.25`, `istioctl-1.27` or `istioctl-1.29`.
+Available values are `1.25`, `1.27`, and `1.29`. You can also run a specific binary directly: `istioctl-1.25`, `istioctl-1.27`, or `istioctl-1.29`.
 
 Example:
 
@@ -1147,25 +1145,23 @@ UID `1337` is reserved by Istio for the `istio-proxy` sidecar container. Do not 
   * Additional versions handle namespaces or Pods with explicitly configured versions (`istio.io/rev: v1x25` label for namespace or Pod). They are configured by the [`additionalVersions`](configuration.html#parameters-additionalversions) parameter.
 * Istio declares backward compatibility between data-plane and control-plane in the range of two minor versions:
 ![Istio data-plane and control-plane compatibility](images/istio-extended-support.png)
-* Upgrade algorithm (i.e. from `1.21` to `1.25`):
-  * Configure additional version in the [additionalVersions](configuration.html#parameters-additionalversions) parameter (`additionalVersions: ["1.25"]`).
-* Wait for the corresponding pod `istiod-v1x25-xxx-yyy` to appear in `d8-istio` namespace.
-* For every application namespace with istio enabled:
-  * Change `istio-injection: enabled` label to `istio.io/rev: v1x25`.
-  * Recreate the Pods in namespace (one at a time), simultaneously monitoring the application's workability.
-* Reconfigure `globalVersion` to `1.25` and remove the `additionalVersions` configuration.
+* Upgrade algorithm (for example, from `1.25` to `1.27`):
+  * Configure the target version in the [additionalVersions](configuration.html#parameters-additionalversions) parameter (`additionalVersions: ["1.27"]`).
+* Wait for the corresponding pod `istiod-v1x27-xxx-yyy` to appear in the `d8-istio` namespace.
+* For every application namespace with Istio enabled:
+  * Change the `istio-injection: enabled` label to `istio.io/rev: v1x27`.
+  * Recreate the Pods in the namespace one at a time while monitoring application health.
+* Reconfigure `globalVersion` to `1.27` and remove the `additionalVersions` configuration.
 * Make sure, the old `istiod` pod has gone.
 * Change application namespace labels to `istio-injection: enabled`.
 
-To find all Pods with old Istio revision (in the example — version 21), execute the command:
+To find all Pods with the old Istio revision (version 1.25 in this example), execute the command:
 
 ```shell
-d8 k get pods -A -o json | jq --arg revision "v1x21" \
+d8 k get pods -A -o json | jq --arg revision "v1x25" \
   '.items[] | select(.metadata.annotations."sidecar.istio.io/status" // "{}" | fromjson |
    .revision == $revision) | .metadata.namespace + "/" + .metadata.name'
 ```
-
-{% alert level="warning" %}Upgrading to Istio 1.25 is only possible from version 1.21.{% endalert %}
 
 <span id="auto-upgrading-istio-data-plane"></span>
 

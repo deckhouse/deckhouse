@@ -1,0 +1,95 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - application.deckhouse.io/statistic-registered
+  name: test-app
+  namespace: foobar
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: false
+    kind: ApplicationPackageVersion
+    name: deckhouse-test-v1.0.1
+    uid: version-uid
+  - apiVersion: deckhouse.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: false
+    kind: ApplicationPackage
+    name: test
+    uid: package-uid
+  resourceVersion: "2"
+spec:
+  packageName: test
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1
+status:
+  lastAppliedConfiguration: null
+  tracking: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackage
+metadata:
+  name: old-test
+  resourceVersion: "2"
+  uid: old-package-uid
+status:
+  availableRepositories:
+  - deckhouse
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackage
+metadata:
+  name: test
+  resourceVersion: "2"
+  uid: package-uid
+status:
+  availableRepositories:
+  - deckhouse
+  usedBy:
+  - name: test-app
+    namespace: foobar
+    version: v1.0.1
+  usedByCount: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackageVersion
+metadata:
+  name: deckhouse-old-test-v1.0.1
+  resourceVersion: "2"
+  uid: old-version-uid
+spec:
+  packageName: old-test
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1
+status: {}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ApplicationPackageVersion
+metadata:
+  name: deckhouse-test-v1.0.1
+  resourceVersion: "2"
+  uid: version-uid
+spec:
+  packageName: test
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1
+status:
+  usedBy:
+  - name: test-app
+    namespace: foobar
+  usedByCount: 1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  name: deckhouse
+  resourceVersion: "1"
+spec:
+  registry:
+    ca: test-ca
+    dockerCfg: test-docker-cfg
+    repo: registry.example.com/test
+    scheme: https
+status: {}

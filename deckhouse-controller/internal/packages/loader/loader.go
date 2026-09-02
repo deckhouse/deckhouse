@@ -20,6 +20,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -37,6 +38,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules/global"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/tools/verity"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -248,6 +250,19 @@ func resolveEmbeddedPath(packagePath string) (string, error) {
 	}
 
 	return matches[0], nil
+}
+
+// LoadEmbeddedDefinition loads the package definition of an embedded module
+// (package.yaml with a module.yaml fallback), without the hooks, values and
+// schemas LoadEmbeddedConf brings. The path may name the module directly or
+// carry the on-disk weight prefix.
+func LoadEmbeddedDefinition(moduleDir string) (*dto.ModuleDefinition, error) {
+	moduleDir, err := resolveEmbeddedPath(moduleDir)
+	if err != nil {
+		return nil, fmt.Errorf("resolve embedded path: %w", err)
+	}
+
+	return loadModulePackageDefinition(moduleDir)
 }
 
 // LoadModuleConf loads a module package from the given directory on the filesystem.
@@ -463,16 +478,45 @@ func loadModulePackageDefinition(packageDir string) (*dto.ModuleDefinition, erro
 
 	return &dto.ModuleDefinition{
 		Definition: dto.Definition{
-			Name:         def.Name,
-			Stage:        def.Stage,
-			Descriptions: descriptions,
-			Requirements: requirements,
-			Licensing:    legacyModuleLicensing(def.Accessibility),
+			Name:           def.Name,
+			Stage:          def.Stage,
+			Descriptions:   descriptions,
+			Requirements:   requirements,
+			Licensing:      legacyModuleLicensing(def.Accessibility),
+			DisableOptions: legacyModuleDisableOptions(def.DisableOptions),
 		},
 		Weight:         int(def.Weight),
 		Critical:       def.Critical,
 		ExclusiveGroup: def.ExclusiveGroup,
 	}, nil
+}
+
+// legacyModuleDisableOptions projects the legacy disable options onto the dto
+// shape. A language without its own message falls back to the deprecated
+// single message field, following the documented legacy rule.
+func legacyModuleDisableOptions(opts *v1alpha1.ModuleDisableOptions) dto.DisableOptions {
+	if opts == nil {
+		return dto.DisableOptions{}
+	}
+
+	// the deprecated single message is the documented fallback for a language
+	// without its own text
+	fallback := opts.Message //nolint:staticcheck
+
+	ru := opts.Messages.Ru
+	if ru == "" {
+		ru = fallback
+	}
+
+	en := opts.Messages.En
+	if en == "" {
+		en = fallback
+	}
+
+	return dto.DisableOptions{
+		Confirmation: opts.Confirmation,
+		Messages:     dto.DisableMessages{Ru: ru, En: en},
+	}
 }
 
 // legacyOptionalSuffix marks a legacy module.yaml parentModules dependency as
@@ -493,8 +537,10 @@ func legacyModuleRequirements(parentModules map[string]string) dto.ModulesRequir
 		conditional []dto.ModuleDependency
 	)
 
-	for name, constraint := range parentModules {
-		raw, optional := strings.CutSuffix(constraint, legacyOptionalSuffix)
+	// sorted names keep the projection deterministic: map order changes
+	// between runs, and the status is compared order-sensitively
+	for _, name := range slices.Sorted(maps.Keys(parentModules)) {
+		raw, optional := strings.CutSuffix(parentModules[name], legacyOptionalSuffix)
 		dep := dto.ModuleDependency{
 			Name:       name,
 			Constraint: strings.TrimSpace(raw),

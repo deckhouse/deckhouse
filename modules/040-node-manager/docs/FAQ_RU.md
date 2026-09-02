@@ -221,6 +221,30 @@ StaticInstance, находящийся в состоянии `Pending` можн�
 
 Необходимо выполнить [очистку узла](#как-вручную-очистить-статический-узел), затем [добавить](#как-добавить-статический-узел-в-кластер-cluster-api-provider-static) узел под управление CAPS.
 
+### Почему SSH-ключ и sudo-пароль в SSHCredentials отображаются как `<omitted>`?
+
+Параметры [`privateSSHKey`](cr.html#sshcredentials-v1alpha1-spec-privatesshkey), [`sudoPassword`](cr.html#sshcredentials-v1alpha1-spec-sudopassword) (`v1alpha1`) и [`sudoPasswordEncoded`](cr.html#sshcredentials-v1alpha2-spec-sudopasswordencoded) (`v1alpha2`) ресурса [SSHCredentials](cr.html#sshcredentials) содержат конфиденциальные данные и защищены от просмотра.
+
+Если у пользователя нет прав на чтение конфиденциальных данных SSHCredentials, API возвращает `<omitted>` вместо фактического значения. При этом остальные параметры — [`user`](cr.html#sshcredentials-v1alpha1-spec-user), [`sshPort`](cr.html#sshcredentials-v1alpha1-spec-sshport), [`sshExtraArgs`](cr.html#sshcredentials-v1alpha1-spec-sshextraargs) — и метаданные ресурса остаются доступными пользователям, которым разрешено чтение SSHCredentials.
+
+Дополнительно kube-apiserver защищает эти данные следующим образом:
+
+- удаляет аннотацию `kubectl.kubernetes.io/last-applied-configuration` из ответов API, если она может содержать копию конфиденциальных значений;
+- заменяет конфиденциальные значения на `"******"` в [событиях аудита](/products/kubernetes-platform/documentation/v1/admin/configuration/security/events/kubernetes-api-audit.html) независимо от прав пользователя и уровня аудита;
+- шифрует ресурс в etcd с использованием того же механизма, что и для секретов Kubernetes, если включён параметр [`apiserver.encryptionEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-encryptionenabled) модуля [`control-plane-manager`](/modules/control-plane-manager/).
+
+Незамаскированные значения доступны контроллеру [CAPS](./#cluster-api-provider-static), которому они необходимы для подключения к узлу по SSH, а также пользователям с уровнем доступа [`SuperAdmin`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/rbac-current.html#высокоуровневые-роли-используемые-для-реализации-модели) и участникам группы [`kubeadm:cluster-admins`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/cluster-admin-access-model.html).
+
+Роли [`d8:manage:infrastructure:viewer`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/rbac-experimental.html#подсистемы-ролевой-модели) и [`d8:manage:infrastructure:manager`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/rbac-experimental.html#подсистемы-ролевой-модели) позволяют читать ресурс SSHCredentials, но не предоставляют доступ к SSH-ключу и sudo-паролю.
+
+Чтобы проверить, может ли пользователь читать конфиденциальные данные SSHCredentials, выполните:
+
+```shell
+d8 k auth can-i get sshcredentials/sensitive --as=<user>
+```
+
+Значение `<omitted>` означает, что фактическое значение скрыто от текущего пользователя. Это поведение применяется как к `v1alpha1`, так и к `v1alpha2`, поэтому использование другой версии API не позволяет получить скрытые данные.
+
 ## Как изменить NodeGroup у статического узла?
 
 <span id='как-изменить-nodegroup-у-статичного-узла'><span>

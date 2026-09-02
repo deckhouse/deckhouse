@@ -18,7 +18,12 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
+	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	apitypes "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -49,7 +54,7 @@ func (r *reconciler) processNextPackage(ctx context.Context, op *v1alpha1.Packag
 	r.logger.Info("processing package",
 		slog.String("package", currentPackage.Name))
 
-	processResult, err := svc.ProcessPackageVersions(ctx, currentPackage.Name, op)
+	result, err := svc.ScanPackageVersions(ctx, currentPackage.Name, op)
 	if err != nil {
 		r.logger.Error("failed to process package versions",
 			slog.String("package", currentPackage.Name),
@@ -58,28 +63,32 @@ func (r *reconciler) processNextPackage(ctx context.Context, op *v1alpha1.Packag
 
 	// ProcessPackageVersions contract: (nil, err) on hard failure, (result, nil) on success.
 	// A nil result therefore implies err != nil — safe to use err.Error() downstream.
-	if processResult == nil {
+	if result == nil {
 		return r.dequeuePackageWithError(ctx, op, currentPackage.Name, err)
 	}
 
-	// Ensure the appropriate package resource based on detected type.
+	repo := svc.GetRepository()
+
+	// Ensure the appropriate package resource for the package type.
 	// Skip resource creation for unrecognized packages (e.g. legacy modules without metadata).
-	switch processResult.PackageType {
+	switch packageType(result, repo, currentPackage.Name) {
 	case operations.PackageTypeModule:
-		if ensureErr := svc.EnsureModulePackage(ctx, currentPackage.Name); ensureErr != nil {
+		channels := r.scanReleaseChannels(ctx, svc, currentPackage.Name)
+		if ensureErr := r.ensureModulePackage(ctx, currentPackage.Name, repo.Name, repo.UID, channels); ensureErr != nil {
 			r.logger.Error("failed to ensure module package resource",
 				slog.String("package", currentPackage.Name),
 				log.Err(ensureErr))
 		}
 	case operations.PackageTypeApplication:
-		if ensureErr := svc.EnsureApplicationPackage(ctx, currentPackage.Name); ensureErr != nil {
+		channels := r.scanReleaseChannels(ctx, svc, currentPackage.Name)
+		if ensureErr := r.ensureApplicationPackage(ctx, currentPackage.Name, repo.Name, repo.UID, channels); ensureErr != nil {
 			r.logger.Error("failed to ensure application package resource",
 				slog.String("package", currentPackage.Name),
 				log.Err(ensureErr))
 		}
 	}
 
-	return r.dequeuePackageWithResult(ctx, op, currentPackage.Name, processResult)
+	return r.dequeuePackageWithResult(ctx, op, currentPackage.Name, result)
 }
 
 // dequeuePackageWithError removes the head of the Discovered queue and records the
@@ -112,7 +121,8 @@ func (r *reconciler) dequeuePackageWithError(ctx context.Context, op *v1alpha1.P
 	if err := r.client.Status().Patch(ctx, op, client.MergeFrom(original)); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
 	}
-	return ctrl.Result{Requeue: true}, nil
+
+	return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 }
 
 // dequeuePackageWithResult removes the head of the Discovered queue and records the
@@ -126,7 +136,7 @@ func (r *reconciler) dequeuePackageWithError(ctx context.Context, op *v1alpha1.P
 // knew the package but couldn't ingest some of its versions.
 //
 // Precondition: Packages non-nil and Discovered non-empty (guaranteed by caller).
-func (r *reconciler) dequeuePackageWithResult(ctx context.Context, op *v1alpha1.PackageRepositoryOperation, packageName string, result *operations.PackageProcessResult) (ctrl.Result, error) {
+func (r *reconciler) dequeuePackageWithResult(ctx context.Context, op *v1alpha1.PackageRepositoryOperation, packageName string, result *operations.Result) (ctrl.Result, error) {
 	original := op.DeepCopy()
 
 	if len(op.Status.Packages.Discovered) > 0 {
@@ -161,5 +171,196 @@ func (r *reconciler) dequeuePackageWithResult(ctx context.Context, op *v1alpha1.
 	if err := r.client.Status().Patch(ctx, op, client.MergeFrom(original)); err != nil {
 		return ctrl.Result{}, fmt.Errorf("update operation status: %w", err)
 	}
-	return ctrl.Result{Requeue: true}, nil
+
+	return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
+}
+
+// packageType falls back to the type the repository already recorded: an incremental scan that lists
+// no version has no image to detect it from, and would otherwise skip the package entirely.
+func packageType(result *operations.Result, repo *v1alpha1.PackageRepository, packageName string) operations.PackageType {
+	if result.PackageType != "" {
+		return result.PackageType
+	}
+
+	for _, pkg := range repo.Status.Packages {
+		if pkg.Name == packageName {
+			return operations.PackageType(pkg.Type)
+		}
+	}
+
+	return ""
+}
+
+// scanReleaseChannels reads what this repository's channels point to, or nil to keep the known matrix.
+// Read per package, not per version: a channel can move onto a version the cluster already holds.
+func (r *reconciler) scanReleaseChannels(ctx context.Context, svc *operations.OperationService, packageName string) map[string]string {
+	channels, err := svc.ScanReleaseChannels(ctx, packageName)
+	if err != nil {
+		r.logger.Warn("failed to scan release channels",
+			slog.String("package", packageName),
+			log.Err(err))
+
+		return nil
+	}
+
+	return channels
+}
+
+// ensureModulePackage creates the ModulePackage for a scanned module, lists the repository among the
+// ones offering it and records where its release channels point.
+func (r *reconciler) ensureModulePackage(ctx context.Context, packageName, repoName string, repoUID apitypes.UID, channels map[string]string) error {
+	pkg := new(v1alpha1.ModulePackage)
+	err := r.client.Get(ctx, client.ObjectKey{Name: packageName}, pkg)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("get module package: %w", err)
+	}
+
+	// err - apierrors.IsNotFound
+	if err != nil {
+		// Create new ModulePackage with this repository as a non-controller owner.
+		pkg = &v1alpha1.ModulePackage{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: v1alpha1.ModulePackageGVK.GroupVersion().String(),
+				Kind:       v1alpha1.ModulePackageKind,
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:   packageName,
+				Labels: map[string]string{"heritage": "deckhouse"},
+			},
+		}
+		ensureSharedOwnerReference(pkg, repoName, repoUID)
+
+		if err = r.client.Create(ctx, pkg); err != nil {
+			return fmt.Errorf("create module package: %w", err)
+		}
+	} else {
+		// Existing — make sure we are listed as an owner so a single repo deletion
+		// does not cascade-delete a package that other repositories still contribute.
+		original := pkg.DeepCopy()
+
+		if update := ensureSharedOwnerReference(pkg, repoName, repoUID); update {
+			if err := r.client.Patch(ctx, pkg, client.MergeFrom(original)); err != nil {
+				return fmt.Errorf("sync module package: %w", err)
+			}
+		}
+	}
+
+	original := pkg.DeepCopy()
+
+	var update bool
+
+	if !slices.Contains(pkg.Status.AvailableRepositories, repoName) {
+		update = true
+		pkg.Status.AvailableRepositories = append(pkg.Status.AvailableRepositories, repoName)
+	}
+
+	if pkg.Status.ReleaseChannels.SetChannels(repoName, channels) {
+		update = true
+	}
+
+	if !update {
+		return nil
+	}
+
+	if err := r.client.Status().Patch(ctx, pkg, client.MergeFrom(original)); err != nil {
+		return fmt.Errorf("update module package status: %w", err)
+	}
+
+	return nil
+}
+
+// ensureApplicationPackage creates the ApplicationPackage for a scanned package, lists the repository
+// among the ones offering it and records where its release channels point.
+func (r *reconciler) ensureApplicationPackage(ctx context.Context, packageName, repoName string, repoUID apitypes.UID, channels map[string]string) error {
+	pkg := new(v1alpha1.ApplicationPackage)
+	err := r.client.Get(ctx, client.ObjectKey{Name: packageName}, pkg)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("get application package: %w", err)
+	}
+
+	// err - apierrors.IsNotFound
+	if err != nil {
+		// Create new ApplicationPackage with this repository as a non-controller owner.
+		pkg = &v1alpha1.ApplicationPackage{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: v1alpha1.ApplicationPackageGVK.GroupVersion().String(),
+				Kind:       v1alpha1.ApplicationPackageKind,
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name: packageName,
+				Labels: map[string]string{
+					"heritage": "deckhouse",
+				},
+			},
+		}
+		ensureSharedOwnerReference(pkg, repoName, repoUID)
+
+		if err := r.client.Create(ctx, pkg); err != nil {
+			return fmt.Errorf("create application package: %w", err)
+		}
+	} else {
+		// Existing — make sure we are listed as an owner so a single repo deletion
+		// does not cascade-delete a package that other repositories still contribute.
+		original := pkg.DeepCopy()
+		if ensureSharedOwnerReference(pkg, repoName, repoUID) {
+			if err := r.client.Patch(ctx, pkg, client.MergeFrom(original)); err != nil {
+				return fmt.Errorf("sync application package owner refs: %w", err)
+			}
+		}
+	}
+
+	original := pkg.DeepCopy()
+
+	var update bool
+
+	if !slices.Contains(pkg.Status.AvailableRepositories, repoName) {
+		update = true
+		pkg.Status.AvailableRepositories = append(pkg.Status.AvailableRepositories, repoName)
+	}
+
+	if pkg.Status.ReleaseChannels.SetChannels(repoName, channels) {
+		update = true
+	}
+
+	if !update {
+		return nil
+	}
+
+	if err := r.client.Status().Patch(ctx, pkg, client.MergeFrom(original)); err != nil {
+		return fmt.Errorf("update application package status: %w", err)
+	}
+
+	return nil
+}
+
+// ensureSharedOwnerReference appends s.repo as a non-controller owner of obj if it is not
+// already present. ApplicationPackage / ModulePackage CRs can be contributed by several
+// repositories, so no single repository should be the sole controller-owner — otherwise
+// Kubernetes GC would cascade-delete the package when that one repo is removed, even if
+// other repos still contribute it. Returns true if obj.OwnerReferences was modified.
+func ensureSharedOwnerReference(obj client.Object, repoName string, repoUID apitypes.UID) bool {
+	refs := obj.GetOwnerReferences()
+	for _, ref := range refs {
+		if ref.Kind != v1alpha1.PackageRepositoryKind {
+			continue
+		}
+		// Match by UID when both sides have one (real cluster); otherwise fall back
+		// to Name (PackageRepository names are cluster-unique, and UIDs may be empty
+		// in test fixtures).
+		if ref.UID != "" && ref.UID == repoUID {
+			return false
+		}
+		if ref.Name == repoName {
+			return false
+		}
+	}
+	refs = append(refs, metav1.OwnerReference{
+		APIVersion: v1alpha1.PackageRepositoryGVK.GroupVersion().String(),
+		Kind:       v1alpha1.PackageRepositoryKind,
+		Name:       repoName,
+		UID:        repoUID,
+		Controller: &[]bool{false}[0],
+	})
+	obj.SetOwnerReferences(refs)
+	return true
 }

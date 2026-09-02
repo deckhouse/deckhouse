@@ -37,8 +37,7 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
 final: false
 from: {{ index $.Images "builder/golang" }}
 mount:
-  - fromPath: ~/go-pkg-cache
-    to: /go/pkg
+{{ include "mount points for golang builds" . }}
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
     add: /src
@@ -54,4 +53,3 @@ shell:
     - chmod 0755 /dvp-cloud-controller-manager
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName )) }}
-

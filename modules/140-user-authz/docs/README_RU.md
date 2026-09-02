@@ -71,7 +71,13 @@ Manage-роль не дает доступа к пространству имё�
 Manage-роль определяет доступ только к системным пространствам имён (начинающимся с `d8-` или `kube-`), и только к тем из них, в которых работают модули соответствующей подсистемы роли.
 {% endalert %}
 
-Manage-роли предназначены для назначения прав на управление всей платформой или её частью ([подсистемой](#подсистемы-ролевой-модели)), но не самими приложениями пользователей. С помощью manage-роли можно, например, дать возможность администратору безопасности управлять модулями, ответственными за функции безопасности кластера. Тогда администратор безопасности сможет настраивать аутентификацию, авторизацию, политики безопасности и т. п., но не сможет управлять остальными функциями кластера (например, настройками сети и мониторинга) и изменять настройки в пространстве имён приложений пользователей.
+Manage-роли предназначены для назначения прав на управление всей платформой или её частью ([подсистемой](#подсистемы-ролевой-модели)), но не самими приложениями пользователей. С помощью manage-роли можно, например, дать возможность администратору безопасности управлять модулями, отвечающими за безопасность кластера. В таком случае администратор безопасности сможет настраивать аутентификацию, авторизацию, политики безопасности и другие соответствующие параметры.
+
+{% alert level="warning" %}
+Manage-роль ограничивает, к каким модулям и неймспейсам обращается субъект, но не ограничивает привилегии, которые он может получить через доступные ему модули. Это особенно важно учитывать для подсистемы `security`: право управлять аутентификацией и авторизацией равносильно полному контролю над кластером.
+
+Субъект, который может управлять модулем `user-authn`, способен зарегистрировать провайдер идентификации или сбросить учётные данные любого локального пользователя. Субъект, который может управлять модулем `user-authz`, способен изменить правила авторизации. В обоих случаях он может получить идентичность с любыми привилегиями, включая администратора кластера, поэтому при планировании доступа считайте manage-роль подсистемы `security` равной роли администратора кластера.
+{% endalert %}
 
 Manage-роль определяет права на доступ:
 
@@ -369,7 +375,6 @@ write:
     - batch/cronjobs
     - batch/jobs
     - cert-manager.io/certificates
-    - cert-manager.io/issuers
     - configmaps
     - deckhouse.io/dexauthenticators
     - deckhouse.io/dexclients
@@ -424,8 +429,8 @@ read-write:
     - deckhouse.io/authorizationrules
 write:
     - autoscaling.k8s.io/verticalpodautoscalercheckpoints
+    - cert-manager.io/issuers
     - deckhouse.io/applications
-    - deckhouse.io/securitypolicyexceptions
     - extensions.istio.io/wasmplugins
     - rbac.authorization.k8s.io/rolebindings
     - rbac.authorization.k8s.io/roles
@@ -467,12 +472,12 @@ write:
     - apps/daemonsets
     - autoscaling.k8s.io/verticalpodautoscalercheckpoints
     - cert-manager.io/clusterissuers
+    - cert-manager.io/issuers
     - deckhouse.io/applications
     - deckhouse.io/hubblemonitoringconfigs
     - deckhouse.io/instances
     - deckhouse.io/keepalivedinstances
     - deckhouse.io/nodegroups
-    - deckhouse.io/securitypolicyexceptions
     - extensions.istio.io/wasmplugins
     - extensions/daemonsets
     - gateway.networking.k8s.io/gatewayclasses
@@ -485,11 +490,11 @@ write:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterAdmin` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`):
 
 ```text
+create:
+    - deckhouse.io/dexauthenticators/allow-access-to-kubernetes
+    - deckhouse.io/dexclients/allow-access-to-kubernetes
 get,list,patch,update,watch:
     - control-plane.deckhouse.io/controlplanenodes
-list,watch:
-    - dex.coreos.com/offlinesessionses
-    - dex.coreos.com/passwords
 patch,update:
     - deckhouse.io/vcdaffinityrules
     - infrastructure.cluster.x-k8s.io/deckhouseclusters
@@ -532,6 +537,7 @@ read-write:
     - deckhouse.io/packagerepositories
     - deckhouse.io/packagerepositoryoperations
     - deckhouse.io/sshcredentials
+    - deckhouse.io/useraccounts
     - deckhouse.io/useroperations
     - deckhouse.io/users
     - nodes/configz
@@ -566,6 +572,7 @@ write:
     - deckhouse.io/projects
     - deckhouse.io/projecttemplates
     - deckhouse.io/securitypolicies
+    - deckhouse.io/securitypolicyexceptions
     - deckhouse.io/vcdinstanceclasses
     - deckhouse.io/vsphereinstanceclasses
     - deckhouse.io/yandexinstanceclasses

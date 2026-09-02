@@ -32,7 +32,7 @@ metadata:
     nginx.ingress.kubernetes.io/configuration-snippet: |-
       {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
   name: {{ $ingName }}
-  namespace: {{ $crd.namespace }}
+  namespace: {{ $crd.namespace | quote }}
   {{- $labels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
   {{- if $ingTruncated }}
   {{- $_ := set $labels "deckhouse.io/name-truncated" "true" }}
@@ -76,7 +76,7 @@ metadata:
     nginx.ingress.kubernetes.io/configuration-snippet: |-
       {{- include "helm_lib_module_ingress_configuration_snippet" $ | nindent 6 }}
   name: {{ $signOutIngressName }}
-  namespace: {{ $crd.namespace }}
+  namespace: {{ $crd.namespace | quote }}
   {{- $labels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
   {{- if $signOutIngTruncated }}
   {{- $_ := set $labels "deckhouse.io/name-truncated" "true" }}
@@ -94,7 +94,7 @@ spec:
             name: {{ $svcName }}
             port:
               number: 443
-        path: {{ $app.signOutURL }}
+        path: {{ $app.signOutURL | quote }}
         pathType: ImplementationSpecific
     {{- if (include "helm_lib_module_https_ingress_tls_enabled" $context ) }}
       {{- if $app.ingressSecretName }}

@@ -88,7 +88,11 @@ spec:
         Secret) on any trigger, so extra workers only duplicate the same full assembly and
         race on the one output object; a single worker + the controller's debounce collapse
         any burst into 1-2 builds regardless of the NodeGroup count. Its debounce state is
-        also unsynchronized and relies on this. */}}
+        also unsynchronized and relies on this.
+
+        node-config is deliberately not listed: it is only correct with one worker, so it caps
+        itself in code (nodeconfig.Reconciler.MaxConcurrentReconciles) rather than depending on
+        this string, where one typo in any segment discards the whole per-controller map. */}}
         - --max-concurrent-reconciles=10,bashible-context=1
         - --leader-elect={{ include "helm_lib_is_ha_to_value" (list . "true" "false") }}
         - -v=2

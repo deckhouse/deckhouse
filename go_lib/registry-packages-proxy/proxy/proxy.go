@@ -46,6 +46,11 @@ type Proxy struct {
 	cache          cache.Cache
 	logger         log.Logger
 	config         Config
+
+	// cliRepo remembers which candidate root serves the CLI artifacts for the
+	// current cluster repository; see requestCLIArtifacts. The zero value is
+	// ready to use.
+	cliRepo cliRepoMemo
 }
 
 type RPPClientBinaryServer struct {
@@ -591,11 +596,13 @@ func (h *cliHandler) serveHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// cliClientConfig resolves the default registry config and returns a private
-// copy with SignCheck stamped in. Callers must NOT mutate the value returned
-// directly by the getter: the watcher rewrites those entries under a write
-// lock while readers still hold a pointer to them.
-func (h *cliHandler) cliClientConfig(w http.ResponseWriter, logger log.Logger) (*registry.ClientConfig, bool) {
+// cliBaseConfig resolves the default registry config and returns a private
+// copy with SignCheck stamped in. Repository still names the cluster
+// repository: requestCLIArtifacts rewrites it to each candidate CLI artifacts
+// root in turn. Callers must NOT mutate the value returned directly by the
+// getter: the watcher rewrites those entries under a write lock while readers
+// still hold a pointer to them.
+func (h *cliHandler) cliBaseConfig(w http.ResponseWriter, logger log.Logger) (*registry.ClientConfig, bool) {
 	cfg, err := h.proxy.getter.Get(registry.DefaultRepository)
 	if err != nil {
 		logger.Errorf("get registry config: %v", err)
@@ -621,12 +628,14 @@ func (h *cliHandler) handleListTags(w http.ResponseWriter, r *http.Request, imag
 	logger := h.proxy.logger
 	logger.Infof("CLI list-tags for image %q from client %s", imagePath, clientIP)
 
-	cfg, ok := h.cliClientConfig(w, logger)
+	base, ok := h.cliBaseConfig(w, logger)
 	if !ok {
 		return
 	}
 
-	tags, err := h.proxy.registryClient.ListTags(r.Context(), logger, cfg, imagePath)
+	tags, _, err := requestCLIArtifacts(&h.proxy.cliRepo, logger, base, func(cfg *registry.ClientConfig) ([]string, error) {
+		return h.proxy.registryClient.ListTags(r.Context(), logger, cfg, imagePath)
+	})
 	if err != nil {
 		if errors.Is(err, registry.ErrPackageNotFound) {
 			http.Error(w, "image not found", http.StatusNotFound)
@@ -662,12 +671,20 @@ func (h *cliHandler) handleGetManifest(w http.ResponseWriter, r *http.Request, i
 	logger := h.proxy.logger
 	logger.Infof("CLI get-manifest for image %q ref %q from client %s", imagePath, ref, clientIP)
 
-	cfg, ok := h.cliClientConfig(w, logger)
+	base, ok := h.cliBaseConfig(w, logger)
 	if !ok {
 		return
 	}
 
-	manifest, mediaType, err := h.proxy.registryClient.GetRawManifest(r.Context(), logger, cfg, imagePath, ref)
+	type rawManifest struct {
+		bytes     []byte
+		mediaType string
+	}
+
+	res, _, err := requestCLIArtifacts(&h.proxy.cliRepo, logger, base, func(cfg *registry.ClientConfig) (rawManifest, error) {
+		manifest, mediaType, err := h.proxy.registryClient.GetRawManifest(r.Context(), logger, cfg, imagePath, ref)
+		return rawManifest{bytes: manifest, mediaType: mediaType}, err
+	})
 	if err != nil {
 		if errors.Is(err, registry.ErrPackageNotFound) {
 			http.Error(w, "manifest not found", http.StatusNotFound)
@@ -678,6 +695,7 @@ func (h *cliHandler) handleGetManifest(w http.ResponseWriter, r *http.Request, i
 		return
 	}
 
+	manifest, mediaType := res.bytes, res.mediaType
 	if mediaType == "" {
 		mediaType = "application/vnd.oci.image.manifest.v1+json"
 	}
@@ -705,12 +723,16 @@ func (h *cliHandler) handlePullImage(w http.ResponseWriter, r *http.Request, ima
 
 	logger.Infof("CLI pull image %q version %q platform %q from client %s", imagePath, version, platformString(platform), clientIP)
 
-	cfg, ok := h.cliClientConfig(w, logger)
+	base, ok := h.cliBaseConfig(w, logger)
 	if !ok {
 		return
 	}
 
-	manifestDigest, err := h.proxy.registryClient.ResolveTag(r.Context(), logger, cfg, imagePath, version, platform)
+	// cfg is the config of the root that resolved the tag; the package pull
+	// below must stay on the same root.
+	manifestDigest, cfg, err := requestCLIArtifacts(&h.proxy.cliRepo, logger, base, func(cfg *registry.ClientConfig) (string, error) {
+		return h.proxy.registryClient.ResolveTag(r.Context(), logger, cfg, imagePath, version, platform)
+	})
 	if err != nil {
 		if errors.Is(err, registry.ErrPackageNotFound) {
 			http.Error(w, "version not found", http.StatusNotFound)

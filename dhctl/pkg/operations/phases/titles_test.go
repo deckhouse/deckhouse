@@ -21,18 +21,38 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// allDeclaredPhases projects every operation tree UNGATED. The catalog must cover every
+// code any cluster shape can emit, not just the shape of one config: gating here would hide
+// the phases of, say, a static cluster from a cloud-shaped run of the test.
+func allDeclaredPhases() []PhaseWithSubPhases {
+	ret := make([]PhaseWithSubPhases, 0)
+	for _, op := range []Operation{
+		OperationBootstrap,
+		OperationConverge,
+		OperationCheck,
+		OperationDestroy,
+		OperationCommanderAttach,
+		OperationCommanderDetach,
+	} {
+		ret = append(ret, project(operationNodes(op))...)
+	}
+
+	return ret
+}
+
 func emittedPhases(t *testing.T) map[OperationPhase]struct{} {
 	t.Helper()
 
 	ret := make(map[OperationPhase]struct{})
+	// allPhases carries the codes no tree declares: phases announced outside the walk
+	// (CommanderUUIDWasChecked) and converge state values that are persisted, never rendered.
 	for _, ph := range allPhases() {
 		ret[ph] = struct{}{}
 	}
-	for _, operationPhases := range allOperationPhases() {
-		for _, ph := range operationPhases {
-			ret[ph.Phase] = struct{}{}
-		}
+	for _, ph := range allDeclaredPhases() {
+		ret[ph.Phase] = struct{}{}
 	}
+
 	return ret
 }
 
@@ -40,16 +60,12 @@ func emittedSubPhases(t *testing.T) map[OperationSubPhase]struct{} {
 	t.Helper()
 
 	ret := make(map[OperationSubPhase]struct{})
-	for _, sp := range allSubPhases() {
-		ret[sp] = struct{}{}
-	}
-	for _, operationPhases := range allOperationPhases() {
-		for _, ph := range operationPhases {
-			for _, sp := range ph.SubPhases {
-				ret[sp] = struct{}{}
-			}
+	for _, ph := range allDeclaredPhases() {
+		for _, sp := range ph.SubPhases {
+			ret[sp] = struct{}{}
 		}
 	}
+
 	return ret
 }
 

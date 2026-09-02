@@ -9,6 +9,9 @@ metadata:
 provisioner: yandex.csi.flant.com
 parameters:
   typeID: {{ $storageClass.type | quote }}
+{{- if $storageClass.blockSize }}
+  blockSize: {{ $storageClass.blockSize | quote }}
+{{- end }}
 allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
 {{- end }}

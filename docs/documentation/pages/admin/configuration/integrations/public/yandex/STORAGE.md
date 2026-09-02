@@ -50,6 +50,33 @@ settings:
 
 In this example, DKP will not create StorageClass resources for any `network-ssd` or `network-hdd` disks.
 
+### Creating additional StorageClasses and block size
+
+The [`settings.storageClass.provision`](/modules/cloud-provider-yandex/configuration.html#parameters-storageclass-provision) parameter lets you create additional StorageClasses or override the parameters of StorageClasses created by the module by default.
+
+Use the [`blockSize`](/modules/cloud-provider-yandex/configuration.html#parameters-storageclass-provision-blocksize) parameter to set the [block size](https://yandex.cloud/en/docs/compute/operations/disk-create/empty-disk-blocksize) for provisioned disks. The block size determines the maximum disk size: `8Ti` for `4Ki`, and it doubles with each next block size up to `256Ti` for `128Ki`.
+
+An example StorageClass with the `64Ki` block size:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 1
+  settings:
+    storageClass:
+      provision:
+      - name: network-ssd-64k
+        type: network-ssd
+        blockSize: 64Ki
+```
+
+{% alert level="warning" %}
+After a disk is created, its block size cannot be changed. Changing the `blockSize` parameter recreates the StorageClass, but does not change the block size of previously provisioned volumes.
+{% endalert %}
+
 ### Setting the default StorageClass
 
 By default, DKP determines the StorageClass using the `storageclass.kubernetes.io/is-default-class=true` annotation.
@@ -329,14 +356,14 @@ Default values are configured in the cluster for placing load balancer resources
 
 The following annotations are supported by Yandex Cloud Controller Manager:
 
-1. `yandex.cpi.flant.com/target-group-network-id` — specifies the NetworkID in which the Target Group for this Service will be created. Overrides the corresponding default value.
+1. `yandex.cpi.flant.com/target-group-network-id` — specifies the NetworkID in which the target group for this Service will be created. Overrides the corresponding default value.
 1. `yandex.cpi.flant.com/listener-subnet-id` — sets the SubnetID for the Listeners of the LB created for this Service. Overrides the corresponding default value.
 1. `yandex.cpi.flant.com/listener-address-ipv4` — sets a predefined IPv4 address for the Listeners (supported for both internal and external LBs).
 1. `yandex.cpi.flant.com/loadbalancer-external` — enables creation of an external LB for this Service (use it when you need to explicitly create an external load balancer). Overrides the default behavior.
 1. `yandex.cpi.flant.com/target-group-name-prefix` — specifies the name prefix of the target group used by the LoadBalancer. The annotation on the Service identifies the target group but does not select nodes. To include nodes in the target group, set the same annotation value in [`spec.nodeTemplate.annotations`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-annotations) in the NodeGroup. Yandex Cloud Controller Manager includes all suitable nodes carrying this annotation value, regardless of their NodeGroup. The target group name is formed as `<ANNOTATION_VALUE><YANDEX_CLOUD_CLUSTER_NAME><NETWORK_ID>`.
 
-If separate Target Groups are created for the control plane or master nodes, add the label `node.kubernetes.io/exclude-from-external-load-balancers: ""` to the master nodes. This prevents the controller from automatically adding master nodes to new Target Groups for load balancers.
-If you create your own load balancer for master nodes and want YCC to also be able to place its load balancers on master nodes, pre-create a Target Group with a name matching the pattern `${CLUSTER-NAME}${VPC.ID}`.
+If separate target groups are created for the control plane or master nodes, add the label `node.kubernetes.io/exclude-from-external-load-balancers: ""` to the master nodes. This prevents the controller from automatically adding master nodes to new target groups for load balancers.
+If you create your own load balancer for master nodes and want YCC to also be able to place its load balancers on master nodes, pre-create a target group with a name matching the pattern `${CLUSTER-NAME}${VPC.ID}`.
 
 #### Using a separate target group for a NodeGroup
 
@@ -412,9 +439,9 @@ This automatic transition is performed only between target groups managed by Yan
 
 After the prefix is changed or removed, the previous target group may remain empty. If it is no longer used by any load balancers, delete it manually.
 
-#### Target Group health checks
+#### Target group health checks
 
-Health check parameters (for LB Target Groups created by the controller):
+Health check parameters (for LB target groups created by the controller):
 
 1. `yandex.cpi.flant.com/healthcheck-interval-seconds` — how often to run the check, in seconds (default: 2).
 1. `yandex.cpi.flant.com/healthcheck-timeout-seconds` — how long to wait for an endpoint response, in seconds. If no response is received within this time, the check is considered failed (default: 1).

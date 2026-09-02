@@ -72,7 +72,13 @@ The manage role does not grant access to the namespace of user applications.
 The manage role grants access only to system namespaces (starting with `d8-` or `kube-`), and only to those system namespaces where the modules of the corresponding role subsystem are running.
 {% endalert %}
 
-Manage roles are intended for assigning rights to manage the entire platform or a part of it (the [subsystem](#subsystems-of-the-role-based-model)), but not the users applications themselves. The manage role, for example, can allow a security administrator to manage security modules (responsible for the security functions of the cluster). Thus, the security administrator will be able to configure authentication, authorization, security policies, etc., but will not be able to manage other cluster functions (such as network and monitoring settings) or change settings in the namespaces of users applications.
+Manage roles are intended for assigning rights to manage the entire platform or a part of it (the [subsystem](#subsystems-of-the-role-based-model)), but not the users applications themselves. Using a manage role you can enable, for example, a security administrator to manage cluster security modules. Thus, the security administrator will be able to configure authentication, authorization, security policies, and other respective parameters.
+
+{% alert level="warning" %}
+A manage role limits which modules and namespaces a subject can address, but it does not limit the privileges a subject can obtain through the modules it is allowed to manage. This matters most for the `security` subsystem: the right to manage authentication and authorization is equivalent to full control over the cluster.
+
+A subject that can manage the `user-authn` module can register an identity provider or reset the credentials of any local user. A subject that can manage the `user-authz` module can modify authorization rules. In both cases, they can obtain an identity with any privileges, including cluster administrator, so treat a `security` subsystem manage role as a cluster administrator role when planning access.
+{% endalert %}
 
 The manage role defines access rights:
 - to cluster-wide Kubernetes resources;
@@ -363,7 +369,6 @@ write:
     - batch/cronjobs
     - batch/jobs
     - cert-manager.io/certificates
-    - cert-manager.io/issuers
     - configmaps
     - deckhouse.io/dexauthenticators
     - deckhouse.io/dexclients
@@ -418,8 +423,8 @@ read-write:
     - deckhouse.io/authorizationrules
 write:
     - autoscaling.k8s.io/verticalpodautoscalercheckpoints
+    - cert-manager.io/issuers
     - deckhouse.io/applications
-    - deckhouse.io/securitypolicyexceptions
     - extensions.istio.io/wasmplugins
     - rbac.authorization.k8s.io/rolebindings
     - rbac.authorization.k8s.io/roles
@@ -461,12 +466,12 @@ write:
     - apps/daemonsets
     - autoscaling.k8s.io/verticalpodautoscalercheckpoints
     - cert-manager.io/clusterissuers
+    - cert-manager.io/issuers
     - deckhouse.io/applications
     - deckhouse.io/hubblemonitoringconfigs
     - deckhouse.io/instances
     - deckhouse.io/keepalivedinstances
     - deckhouse.io/nodegroups
-    - deckhouse.io/securitypolicyexceptions
     - extensions.istio.io/wasmplugins
     - extensions/daemonsets
     - gateway.networking.k8s.io/gatewayclasses
@@ -479,11 +484,11 @@ write:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterAdmin` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`):
 
 ```text
+create:
+    - deckhouse.io/dexauthenticators/allow-access-to-kubernetes
+    - deckhouse.io/dexclients/allow-access-to-kubernetes
 get,list,patch,update,watch:
     - control-plane.deckhouse.io/controlplanenodes
-list,watch:
-    - dex.coreos.com/offlinesessionses
-    - dex.coreos.com/passwords
 patch,update:
     - deckhouse.io/vcdaffinityrules
     - infrastructure.cluster.x-k8s.io/deckhouseclusters
@@ -526,6 +531,7 @@ read-write:
     - deckhouse.io/packagerepositories
     - deckhouse.io/packagerepositoryoperations
     - deckhouse.io/sshcredentials
+    - deckhouse.io/useraccounts
     - deckhouse.io/useroperations
     - deckhouse.io/users
     - nodes/configz
@@ -560,6 +566,7 @@ write:
     - deckhouse.io/projects
     - deckhouse.io/projecttemplates
     - deckhouse.io/securitypolicies
+    - deckhouse.io/securitypolicyexceptions
     - deckhouse.io/vcdinstanceclasses
     - deckhouse.io/vsphereinstanceclasses
     - deckhouse.io/yandexinstanceclasses

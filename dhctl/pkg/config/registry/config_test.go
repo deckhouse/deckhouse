@@ -584,10 +584,11 @@ func TestConfigProvider_Config(t *testing.T) {
 	}
 
 	type input struct {
-		initConfig        *init_config.Config
-		deckhouseSettings *module_config.DeckhouseSettings
-		defaultCRI        constant.CRIType
-		isStatic          bool
+		initConfig             *init_config.Config
+		deckhouseSettings      *module_config.DeckhouseSettings
+		defaultCRI             constant.CRIType
+		noClusterConfiguration bool
+		isStatic               bool
 	}
 
 	type output struct {
@@ -705,6 +706,36 @@ func TestConfigProvider_Config(t *testing.T) {
 				legacyMode: true,
 			},
 		},
+		{
+			name: "deckhouseSettings + no ClusterConfiguration -> direct mode",
+			input: input{
+				deckhouseSettings:      &directSettings,
+				noClusterConfiguration: true,
+			},
+			output: output{
+				mode:       constant.ModeDirect,
+				legacyMode: false,
+			},
+		},
+		{
+			name: "deckhouseSettings proxy + no ClusterConfiguration -> error",
+			input: input{
+				deckhouseSettings:      &proxySettings,
+				noClusterConfiguration: true,
+			},
+			output: output{
+				err:    true,
+				errMsg: "bootstrap with registry mode",
+			},
+		},
+		{
+			name:  "no config + no ClusterConfiguration -> unmanaged legacy mode",
+			input: input{noClusterConfiguration: true},
+			output: output{
+				mode:       constant.ModeUnmanaged,
+				legacyMode: true,
+			},
+		},
 	}
 
 	for _, tt := range tests {
@@ -715,6 +746,7 @@ func TestConfigProvider_Config(t *testing.T) {
 			).Config(
 				tt.input.defaultCRI,
 				tt.input.isStatic,
+				!tt.input.noClusterConfiguration,
 			)
 
 			if tt.output.err {

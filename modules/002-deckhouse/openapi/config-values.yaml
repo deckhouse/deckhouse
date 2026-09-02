@@ -334,6 +334,72 @@ properties:
 
       If `allowExperimentalModules` is `true`, all experimental modules are allowed and this list is ignored.
 
+  reservedPublicHosts:
+    type: object
+    default: {}
+    x-doc-search: "reserved hostnames, ingress, httproute, public domain, multitenancy"
+    description: |
+      Settings of the reservation that keeps the hostnames of the DKP web interfaces from being claimed by a workload.
+
+      DKP renders those hostnames from the [`global.modules.publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) global parameter and reserves them cluster-wide: an Ingress, or a Gateway, GRPCRoute, HTTPRoute, ListenerSet or TLSRoute of the Gateway API, created outside a system namespace cannot name one of them. Using the settings in `reservedPublicHosts`, you can expand the set of reserved names (using the `additionalHosts` parameter) or reduce it (using the `excludedServices` parameter).
+
+      The reservation is per hostname and applies to every namespace. To exempt a whole namespace from the reservation instead, label the namespace with `security.deckhouse.io/reserved-hosts-bypass: "true"`.
+    x-examples:
+      - mode: Template
+        additionalHosts: ["admin.example.com"]
+        excludedServices: ["grafana"]
+    properties:
+      mode:
+        type: string
+        enum: ["Template", "List"]
+        default: Template
+        description: |
+          How much of the platform's domain is reserved.
+
+          Possible values:
+
+          - `Template`: Every hostname [`global.modules.publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) can render, plus its wildcard form where the template's `%s` is the whole first label. A module never has to ask to be covered, and a hostname is reserved as soon as the template can produce it, whether or not any Deckhouse module publishes it today. A hostname that a workload legitimately serves is given back with `excludedServices` below, or with the per-namespace label. The wildcard form is the exception: it is reserved by exact match and `excludedServices` cannot free it, so a workload that serves it needs the per-namespace label or `List` below.
+          - `List`: Only the hostnames of the services DKP knows it publishes. The hostnames in the list are hard-specified in the `reservedNames` parameter of the Helm template, which is included with the release and maintained manually. Any public domain not included in the list—which DKP will begin publishing later—remains unreserved until the list is updated in a DKP release.
+
+          The hostnames workloads already serve are recorded once, when `Template` first takes effect, and stay allowed. Switching from `List` to `Template` later takes that record then, so a workload that appeared while `List` was in force is grandfathered too.
+
+          The record is taken once and is not taken again. Switching to `List` and back to `Template` keeps the record of the first time, so a workload that claimed a reserved hostname in between is denied on its next write. Recording again on every return would make the reservation avoidable by switching to `List`, claiming the hostname and switching back.
+
+          Ecosystem applications are unaffected either way: `global.applications.publicDomainTemplate` puts the application name and its namespace in two different labels, so an application hostname has one label more than anything this reservation covers.
+        x-examples: ["Template", "List"]
+      additionalHosts:
+        type: array
+        default: []
+        description: |
+          Hostnames to reserve on top of the ones DKP publishes.
+
+          Every entry is a complete hostname, matched exactly and case-insensitively, the same way the built-in ones are. Wildcards are not supported.
+
+          The hostname specified in `additionalHosts` is reserved, even if the name of the corresponding service is listed in `excludedServices`.
+        x-examples:
+          - ["admin.example.com"]
+        items:
+          type: string
+          pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+      excludedServices:
+        type: array
+        default: []
+        description: |
+          Service names whose hostname must not be reserved.
+
+          Use it for a cluster where a workload outside a system namespace legitimately serves a path under one of those hostnames.
+
+          A name is the part [`global.modules.publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) substitutes, `grafana` for `grafana.example.com`, not the hostname itself. The hostname it renders to is published in the `excludedHosts` key of the `d8-reserved-public-hosts` ConfigMap in the `d8-system` namespace, which is where to check that the name did what was meant.
+
+          Under `mode: Template` any name works, because the reservation covers the whole domain and not only what Deckhouse publishes. Under `mode: List` only a name Deckhouse actually publishes has an effect, because only those are reserved there; the rest are listed in the `unknownExcludedServices` key of the same ConfigMap, which is where to look if a hostname stayed reserved unexpectedly.
+
+          Specifying a service name in `excludedServices` prevents the corresponding hostname from being reserved in all namespaces, including those where the platform itself hosts it.
+        x-examples:
+          - ["grafana"]
+        items:
+          type: string
+          pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+
   license:
     type: object
     description: |

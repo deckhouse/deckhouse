@@ -45,6 +45,33 @@ settings:
 
 В приведённом примере DKP не создаст StorageClass для всех `network-ssd` дисков и для `network-hdd`.
 
+### Создание дополнительных StorageClass и размер блока
+
+Параметр [`settings.storageClass.provision`](/modules/cloud-provider-yandex/configuration.html#parameters-storageclass-provision) позволяет создавать дополнительные StorageClass или переопределять параметры StorageClass, создаваемых модулем по умолчанию.
+
+С помощью параметра [`blockSize`](/modules/cloud-provider-yandex/configuration.html#parameters-storageclass-provision-blocksize) можно задать [размер блока](https://cloud.yandex.ru/docs/compute/operations/disk-create/empty-disk-blocksize) для создаваемых дисков. От размера блока зависит максимальный размер диска: для значения `4Ki` максимальный размер составляет `8Ti`, а при каждом последующем увеличении размера блока удваивается — вплоть до `256Ti` при `128Ki`.
+
+Пример StorageClass с размером блока `64Ki`:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 1
+  settings:
+    storageClass:
+      provision:
+      - name: network-ssd-64k
+        type: network-ssd
+        blockSize: 64Ki
+```
+
+{% alert level="warning" %}
+После создания диска изменить размер его блока нельзя. Изменение параметра `blockSize` приводит к пересозданию StorageClass, но не изменяет размер блока у ранее созданных томов.
+{% endalert %}
+
 ### Назначение StorageClass по умолчанию
 
 По умолчанию DKP выбирает StorageClass на основе аннотации `storageclass.kubernetes.io/is-default-class=true`.
@@ -403,9 +430,9 @@ Yandex Cloud не позволяет одному целевому ресурс�
 
 После изменения или удаления префикса прежняя целевая группа может остаться пустой. Если она больше не используется балансировщиками, удалите её вручную.
 
-#### Проверки состояния Target Group
+#### Проверки состояния целевой группы
 
-Параметры healthcheck’ов (для создаваемых LB Target Group):
+Параметры healthcheck’ов (для создаваемых целевых групп балансировщика):
 
 1. `yandex.cpi.flant.com/healthcheck-interval-seconds` — как часто запускать проверку, в секундах (по умолчанию 2).
 1. `yandex.cpi.flant.com/healthcheck-timeout-seconds` — сколько ждать ответа от эндпоинта, в секундах. Если за это время ответ не получен, проверка считается неуспешной (по умолчанию 1).

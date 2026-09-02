@@ -123,8 +123,19 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
     authn: {}
     selfSignedCA: {}
     resourcesRequests:
-      milliCpuControlPlane: 1024
-      memoryControlPlane: 536870912
+      components:
+        kubeApiserver:
+          milliCPU: 460
+          memoryBytes: "241591910"
+        etcd:
+          milliCPU: 358
+          memoryBytes: "187904819"
+        kubeControllerManager:
+          milliCPU: 102
+          memoryBytes: "53687091"
+        kubeScheduler:
+          milliCPU: 102
+          memoryBytes: "53687091"
 `
 
 	const defaultAudience = "https://kubernetes.default.svc.cluster.local"

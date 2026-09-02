@@ -2,6 +2,7 @@
 title: Системные требования
 permalink: ru/architecture/system-requirements/
 lang: ru
+draft: true
 search: system requirements, системные требования
 description: Варианты установки и предварительные требования для Deckhouse Kubernetes Platform — облако, bare metal и существующие кластеры Kubernetes.
 ---

@@ -304,7 +304,7 @@ func summarize(state condmap.State) (string, string, string) {
 			// Pipeline clear: install just completed (mirrors mapInstalled's
 			// success check) → ready; otherwise still waiting for dependent
 			// modules to converge.
-			if state.IntEqual(intScaled, metav1.ConditionTrue) {
+			if isInstallComplete(state) {
 				return summaryReady.state, summaryReady.message, summaryReady.tip
 			}
 			return adviseFor(phaseInstall, "Pending")

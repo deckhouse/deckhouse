@@ -71,6 +71,10 @@ func Derive(ctx context.Context, ng *v1.NodeGroup, snap Snapshot) (Result, error
 func deriveCloudFields(logger logr.Logger, ng *v1.NodeGroup, snap Snapshot, result *Result) {
 	result.Zones = resolveZones(ng, snap.DefaultZones)
 
+	// Not gated on CapacityErr: that error is the scale-from-zero diagnostic, and a failed
+	// calculation leaves the value nil anyway.
+	result.TemplateCapacity = snap.TemplateCapacity
+
 	if snap.CapacityErr != nil {
 		logger.Error(snap.CapacityErr, "failed to calculate node capacity", "nodeGroup", ng.Name)
 	} else {

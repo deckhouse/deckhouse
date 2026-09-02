@@ -225,6 +225,7 @@ document.addEventListener('DOMContentLoaded', function () {
         const filterBlock = document.querySelector('.filter__block');
         const isOpen = filterBlock !== null && filterBlock.classList.contains('show');
         if (filterBlock) filterBlock.classList.remove('show');
+        if (isOpen && body) body.classList.remove('filter-opened');
         return isOpen;
     }
 
@@ -374,4 +375,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
     syncHeaderDisplay();
     window.addEventListener('resize', syncHeaderDisplay);
+
+    //Step scrolling in Getting started on mobile devices
+    const activeStep = document.querySelector('.gs-steps__point-num_active');
+    if (activeStep) {
+        function centerActiveStep(behavior) {
+            activeStep.scrollIntoView({
+                inline: 'center',
+                block: 'nearest',
+                behavior: behavior
+            });
+        }
+
+        centerActiveStep('smooth');
+        window.addEventListener('resize', function () {
+            centerActiveStep('auto');
+        });
+    }
 });
