@@ -26,10 +26,8 @@ is granted to users with the following [access roles](../../admin/configuration/
 
 ## Viewing a scan report for your application
 
-To view scan results for your application, use the Grafana dashboard `Security / Trivy Image Vulnerability Overview`.
+To view scan results for your application, use the Deckhouse Console UI (`System / System management / Security / Vulnerabilities / By workloads` section).
 You can filter the results by namespace and resource.
-
-![Grafana dashboard example](../../images/operator-trivy/trivy-image-vulnerability-dashboard.png)
 
 ## Viewing CIS compliance check results
 
@@ -59,10 +57,6 @@ You can filter the results by namespace and resource.
 ## Viewing scan results
 
 Grafana dashboards:
-
-- `Security / Trivy Image Vulnerability Overview`: A summary of vulnerabilities in container images running in the cluster.
-
-  ![Grafana dashboard example](../../images/operator-trivy/trivy-image-vulnerability-dashboard.png)
 
 - `Security / CIS Kubernetes Benchmark`: Results of cluster compliance checks against the CIS Kubernetes Benchmark.
 

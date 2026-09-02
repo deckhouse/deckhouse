@@ -219,7 +219,3 @@ search: grafana, monitoring interface, dashboards, metrics visualization, web in
 - Runtime audit engine logs. Журнал регистрации событий безопасности аудита работы ядра Linux и API-сервера кластера.
 
   ![Runtime audit engine logs](../../images/grafana/runtime-audit-engine-logs.png)
-
-- Trivy Image Vulnerability Overview. Дашборд со сводной и детализированной информацией о сканировании образов контейнеров подов в пространствах имен, отмеченных аннотацией `security-scanning.deckhouse.io/enabled`.
-
-  ![Trivy Image Vulnerability Overview](../../images/grafana/trivy-image-vulnerability-overview.png)
