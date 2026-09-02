@@ -323,6 +323,12 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 
 	if err = r.deployModule(ctx, source, mpo); err != nil {
 		r.log.Error("failed to deploy module", slog.String("module", mpo.Name), log.Err(err))
+
+		mpo.Status.Message = fmt.Sprintf("Deploy error: %v", err)
+		if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
+			r.log.Error("failed to update the module pull override status", slog.String("name", mpo.Name), log.Err(uerr))
+		}
+
 		return ctrl.Result{}, err
 	}
 
@@ -406,11 +412,6 @@ func (r *reconciler) deployModule(ctx context.Context, source *v1alpha1.ModuleSo
 		}
 	}
 	if err := def.Validate(values, r.log); err != nil {
-		mpo.Status.Message = fmt.Sprintf("Validation error: %v", err)
-		if err := r.updateModulePullOverrideStatus(ctx, mpo); err != nil {
-			return fmt.Errorf("update mpo status: %w", err)
-		}
-
 		return fmt.Errorf("validation error: %w", err)
 	}
 

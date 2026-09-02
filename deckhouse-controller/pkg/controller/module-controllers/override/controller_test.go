@@ -188,22 +188,31 @@ func (suite *OverrideControllerTestSuite) TestHandleModuleOverride() {
 	// one-shot annotation is dropped so it triggers only once.
 	suite.Run("renew forces redeploy", func() {
 		moduleDir := filepath.Join(suite.TmpDir(), "downloaded")
-		writeValidModule(suite.T(), moduleDir)
 
+		var installed, restarts int
 		suite.setupController(suite.fetchTestFileData("renew-forces-redeploy.yaml"), withInstaller(&installermock.Installer{
 			// Same digest as status: only the renew annotation can trigger a redeploy.
 			GetImageDigestFunc: func(context.Context, *v1alpha1.ModuleSource, string, string) (string, error) {
 				return testDigest, nil
 			},
 			DownloadFunc: func(context.Context, *v1alpha1.ModuleSource, string, string) (string, error) {
+				// deployModule removes the returned path, so recreate it per download.
+				writeValidModule(suite.T(), moduleDir)
 				return moduleDir, nil
 			},
-		}))
+			InstallFunc: func(context.Context, string, string, string) error {
+				installed++
+				return nil
+			},
+		}), withShutdown(func() error { restarts++; return nil }))
 
 		repeatTest(func() {
 			_, err := suite.ctr.handleModuleOverride(context.TODO(), suite.getMPO(suite.testMPOName))
 			require.NoError(suite.T(), err)
 		})
+
+		assert.Equal(suite.T(), 1, installed, "the module must be installed exactly once")
+		assert.Equal(suite.T(), 1, restarts, "Deckhouse must be restarted exactly once")
 	})
 
 	// Any renew value other than "true" is ignored, so the annotation is kept and the
@@ -222,6 +231,28 @@ func (suite *OverrideControllerTestSuite) TestHandleModuleOverride() {
 			_, err := suite.ctr.handleModuleOverride(context.TODO(), suite.getMPO(suite.testMPOName))
 			require.NoError(suite.T(), err)
 		})
+	})
+
+	// A failed deploy must keep the renew request armed and must not restart Deckhouse,
+	// so the re-pull is retried instead of being consumed by the failed attempt.
+	suite.Run("renew survives a failed deploy", func() {
+		var restarts int
+		suite.setupController(suite.fetchTestFileData("renew-deploy-fails.yaml"), withInstaller(&installermock.Installer{
+			GetImageDigestFunc: func(context.Context, *v1alpha1.ModuleSource, string, string) (string, error) {
+				return testDigest, nil
+			},
+			DownloadFunc: func(context.Context, *v1alpha1.ModuleSource, string, string) (string, error) {
+				return "", errors.New("registry is unavailable")
+			},
+		}), withShutdown(func() error { restarts++; return nil }))
+
+		repeatTest(func() {
+			_, err := suite.ctr.handleModuleOverride(context.TODO(), suite.getMPO(suite.testMPOName))
+			require.Error(suite.T(), err)
+		})
+
+		assert.True(suite.T(), suite.getMPO(suite.testMPOName).IsRenewRequested(), "the renew annotation must survive")
+		assert.Zero(suite.T(), restarts, "Deckhouse must not be restarted when the deploy failed")
 	})
 }
 
@@ -358,6 +389,10 @@ type reconcilerOption func(*reconciler)
 
 func withInstaller(installer Installer) reconcilerOption {
 	return func(r *reconciler) { r.installer = installer }
+}
+
+func withShutdown(shutdown func() error) reconcilerOption {
+	return func(r *reconciler) { r.shutdownFunc = shutdown }
 }
 
 // writeValidModule materializes the minimal on-disk layout Definition.Validate needs
