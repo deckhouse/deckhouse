@@ -144,6 +144,7 @@ e2e-prestart:
     - !reference [.import_secrets, before_script]
 
 .e2e-provider-delete:
+  interruptible: false
   after_script:
     - chmod +x .gitlab/scripts/e2e-notify.sh
     - .gitlab/scripts/e2e-notify.sh delete
