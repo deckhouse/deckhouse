@@ -117,12 +117,9 @@ sysctl -w kernel.panic_on_oops=1
 {{- end }}
 sysctl -w kernel.panic={{ $fencingTime }}
 
-# Tune only physical devices: they have a ../device symlink, virtual ones (loop, dm, md,
-# ram, zram) do not. On stacked devices nr_requests is either absent or derived from the
-# devices below, and writing it freezes the queue until in-flight I/O drains, which hangs.
-# Iterate instead of globbing into tee: tee holds every target open at once and hits
-# RLIMIT_NOFILE on nodes with many loop devices (the containerd erofs snapshotter mounts
-# every image layer over one), so the real disks that sort after loop* got nothing.
+# Physical devices only (they have a ../device symlink): writing nr_requests freezes the
+# queue until in-flight I/O drains, which hangs on stacked devices (e.g. loop or dm). One
+# file at a time, because a glob into tee exhausts RLIMIT_NOFILE where loop devices are numerous.
 for queue in /sys/block/*/queue; do
   [ -e "${queue%/queue}/device" ] || continue
   echo 256 | timeout 5 tee "$queue/nr_requests" >/dev/null 2>&1 # put more in the request queue, increase throughput
