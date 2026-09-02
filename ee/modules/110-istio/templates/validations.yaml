@@ -131,7 +131,7 @@ spec:
         scope:       "Namespaced"
   variables:
     - name: isPublicService
-      expression: "'federation.istio.deckhouse.io/public-service' in object.metadata.labels"
+      expression: "has(object.metadata.labels) && 'federation.istio.deckhouse.io/public-service' in object.metadata.labels"
     - name: portsWithoutName
       expression: "has(object.spec.ports) ? object.spec.ports.filter(p, !has(p.name)) : []"
   validations:

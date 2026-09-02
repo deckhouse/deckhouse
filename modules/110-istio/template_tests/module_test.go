@@ -2186,7 +2186,7 @@ MY_VAR: "myvalue"
 				Expect(policy.Exists()).To(BeTrue())
 				Expect(policy.Field("spec.matchConstraints.resourceRules.0.resources.0").String()).To(Equal("services"))
 				Expect(policy.Field("spec.variables.0.expression").String()).To(Equal(
-					`'federation.istio.deckhouse.io/public-service' in object.metadata.labels`))
+					`has(object.metadata.labels) && 'federation.istio.deckhouse.io/public-service' in object.metadata.labels`))
 				Expect(policy.Field("spec.validations.0.expression").String()).To(Equal(
 					`!variables.isPublicService || object.spec.type != 'ExternalName'`))
 				Expect(policy.Field("spec.validations.1.expression").String()).To(Equal(
