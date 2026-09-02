@@ -131,16 +131,7 @@ internal:
           zoneb: mysubnetidb
   nodeGroups:
   - name: worker
-    instanceClass:
-      ami: myami
-      diskSizeGb: 50
-      diskType: gp2
-      iops: 42
-      instanceType: t2.medium
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.32"
-    cri:
-      type: "Containerd"
     cloudInstances:
       classReference:
         kind: AWSInstanceClass
@@ -187,17 +178,7 @@ internal:
       additionalTags: []
   nodeGroups:
   - name: worker
-    instanceClass:
-      flavorName: m1.large
-      imageName: ubuntu-18-04-cloud-amd64
-      machineType: mymachinetype
-      preemptible: true #optional
-      diskType: superdisk #optional
-      diskSizeGb: 42 #optional
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.32"
-    cri:
-      type: "Containerd"
     cloudInstances:
       classReference:
         kind: AzureInstanceClass
@@ -208,10 +189,6 @@ internal:
       - zonea
       - zoneb
   - name: aaa
-    instanceClass:
-      acceleratedNetworking: false
-      machineSize: test
-      urn: test
     nodeType: CloudEphemeral
     cloudInstances:
       classReference:
@@ -222,10 +199,6 @@ internal:
       zones:
       - zonea
   - name: bbb
-    instanceClass:
-      acceleratedNetworking: true
-      machineSize: bbb
-      urn: zzz
     nodeType: CloudEphemeral
     cloudInstances:
       classReference:
@@ -272,17 +245,7 @@ internal:
       serviceAccountJSON: '{"client_email":"client_email"}'
   nodeGroups:
   - name: worker
-    instanceClass: # maximum filled
-      flavorName: m1.large
-      imageName: ubuntu-18-04-cloud-amd64
-      machineType: mymachinetype
-      preemptible: true #optional
-      diskType: superdisk #optional
-      diskSizeGb: 42 #optional
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.32"
-    cri:
-      type: "Containerd"
     cloudInstances:
       classReference:
         kind: GCPInstanceClass
@@ -339,17 +302,7 @@ internal:
         aaa: xxx
   nodeGroups:
   - name: worker
-    instanceClass:
-      flavorName: m1.large
-      imageName: ubuntu-18-04-cloud-amd64
-      mainNetwork: shared
-      additionalNetworks:
-      - mynetwork
-      - mynetwork2
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.32"
-    cri:
-      type: "Containerd"
     cloudInstances:
       classReference:
         kind: OpenStackInstanceClass
@@ -360,18 +313,7 @@ internal:
       - zonea
       - zoneb
   - name: simple
-    instanceClass:
-      flavorName: m1.xlarge
-      additionalSecurityGroups:
-      - ic-groupa
-      - ic-groupb
-      additionalTags:
-        aaa: bbb
-        ccc: ddd
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.32"
-    cri:
-      type: "Containerd"
     cloudInstances:
       classReference:
         kind: OpenStackInstanceClass
@@ -415,23 +357,7 @@ internal:
       vmFolderPath: dev/test
   nodeGroups:
   - name: worker
-    instanceClass:
-      flavorName: m1.large
-      imageName: ubuntu-18-04-cloud-amd64
-      numCPUs: 3
-      memory: 3
-      rootDiskSize: 42
-      template: dev/test
-      mainNetwork: mymainnetwork
-      additionalNetworks: [aaa, bbb]
-      datastore: lun-111
-      runtimeOptions: # optional
-        nestedHardwareVirtualization: true
-        memoryReservation: 42
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.32"
-    cri:
-      type: "Containerd"
     cloudInstances:
       classReference:
         kind: VsphereInstanceClass
@@ -442,23 +368,7 @@ internal:
       - zonea
       - zoneb
   - name: worker-with-disabled-nested-virt
-    instanceClass:
-      flavorName: m1.large
-      imageName: ubuntu-18-04-cloud-amd64
-      numCPUs: 3
-      memory: 3
-      rootDiskSize: 42
-      template: dev/test
-      mainNetwork: mymainnetwork
-      additionalNetworks: [aaa, bbb]
-      datastore: lun-111
-      runtimeOptions: # optional
-        nestedHardwareVirtualization: false
-        memoryReservation: 42
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.32"
-    cri:
-      type: "Containerd"
     cloudInstances:
       classReference:
         kind: VsphereInstanceClass
@@ -506,27 +416,7 @@ internal:
         zoneb: subnetb
   nodeGroups:
   - name: worker
-    instanceClass:
-      flavorName: m1.large
-      imageName: ubuntu-18-04-cloud-amd64
-      platformID: myplaid
-      cores: 42
-      coreFraction: 50 #optional
-      memory: 42
-      gpus: 2
-      imageID: myimageid
-      preemptible: true #optional
-      diskType: ssd #optional
-      diskSizeGB: 42 #optional
-      assignPublicIPAddress: true #optional
-      mainSubnet: mymainsubnet
-      additionalSubnets: [aaa, bbb]
-      additionalLabels: # optional
-        my: label
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.32"
-    cri:
-      type: "Containerd"
     cloudInstances:
       classReference:
         kind: YandexInstanceClass
@@ -558,9 +448,6 @@ internal:
   nodeGroups:
   - name: worker
     nodeType: Static
-    kubernetesVersion: "1.32"
-    cri:
-      type: "Containerd"
 `
 
 const (
@@ -583,13 +470,6 @@ internal:
   nodeGroups:
   - name: worker
     nodeType: Static
-    staticInstances:
-      labelSelector:
-        matchLabels:
-          node-group: worker
-    kubernetesVersion: "1.23"
-    cri:
-      type: "Containerd"
 `
 )
 
@@ -1748,21 +1628,7 @@ internal:
       insecure: true
   nodeGroups:
   - name: without-labels-and-taints
-    serializedLabels: ""
-    serializedTaints: ""
-    nodeCapacity:
-      cpu: "2"
-      memory: "2Gi"
-    instanceClass:
-      rootDiskSizeGb: 20
-      sizingPolicy: s-c572-MSK1-S1-vDC1
-      storageProfile: vHDD
-      template: Ubuntu
-      placementPolicy: policy
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.24"
-    cri:
-      type: "Containerd"
     cloudInstances:
       classReference:
         kind: VcdInstanceClass
@@ -1773,21 +1639,7 @@ internal:
       - zonea
       - zoneb
   - name: with-labels-only
-    serializedLabels: "app=warp-drive-ai,environment=production"
-    serializedTaints: ""
-    nodeCapacity:
-      cpu: "2"
-      memory: "2Gi"
-    instanceClass:
-      rootDiskSizeGb: 20
-      sizingPolicy: s-c572-MSK1-S1-vDC1
-      storageProfile: vHDD
-      template: catalog/Ubuntu
-      placementPolicy: policy
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.24"
-    cri:
-      type: "Containerd"
     cloudInstances:
       classReference:
         kind: VcdInstanceClass
@@ -1797,21 +1649,7 @@ internal:
       zones:
       - zonea
   - name: with-taints-only
-    serializedLabels: ""
-    serializedTaints: "b=v:NoExecute,a,d:NoExecute,c=v1:"
-    nodeCapacity:
-      cpu: "2"
-      memory: "2Gi"
-    instanceClass:
-      rootDiskSizeGb: 20
-      sizingPolicy: s-c572-MSK1-S1-vDC1
-      storageProfile: vHDD
-      template: catalog/Ubuntu
-      placementPolicy: policy
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.24"
-    cri:
-      type: "Containerd"
     cloudInstances:
       classReference:
         kind: VcdInstanceClass
@@ -1821,21 +1659,7 @@ internal:
       zones:
       - zonea
   - name: with-labels-and-taints
-    serializedLabels: "app=warp-drive-ai,environment=production"
-    serializedTaints: "b=v:NoExecute,a,d:NoExecute,c=v1:"
-    nodeCapacity:
-      cpu: "2"
-      memory: "2Gi"
-    instanceClass:
-      rootDiskSizeGb: 20
-      sizingPolicy: s-c572-MSK1-S1-vDC1
-      storageProfile: vHDD
-      template: catalog/Ubuntu
-      placementPolicy: policy
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.24"
-    cri:
-      type: "Containerd"
     cloudInstances:
       classReference:
         kind: VcdInstanceClass
@@ -1907,19 +1731,7 @@ internal:
       insecure: true
   nodeGroups:
   - name: worker
-    nodeCapacity:
-      cpu: "2"
-      memory: "2Gi"
-    instanceClass:
-      rootDiskSizeGb: 20
-      sizingPolicy: s-c572-MSK1-S1-vDC1
-      storageProfile: vHDD
-      template: Ubuntu
-      placementPolicy: policy
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.24"
-    cri:
-      type: "Containerd"
     cloudInstances:
       classReference:
         kind: VcdInstanceClass
@@ -1930,19 +1742,7 @@ internal:
       - zonea
       - zoneb
   - name: worker-big
-    nodeCapacity:
-      cpu: "2"
-      memory: "2Gi"
-    instanceClass:
-      rootDiskSizeGb: 20
-      sizingPolicy: s-c572-MSK1-S1-vDC1
-      storageProfile: vHDD
-      template: catalog/Ubuntu
-      placementPolicy: policy
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.24"
-    cri:
-      type: "Containerd"
     cloudInstances:
       classReference:
         kind: VcdInstanceClass
@@ -2057,33 +1857,8 @@ internal:
         minPerZone: 4
         zones:
           - default
-      cri:
-        type: Containerd
-      instanceClass:
-        rootDisk:
-          image:
-            kind: ClusterVirtualImage
-            name: ubuntu-2204
-          size: 50Gi
-          storageClass: ceph-pool-r2-csi-rbd-immediate
-        virtualMachine:
-          bootloader: EFI
-          cpu:
-            coreFraction: 100%
-            cores: 4
-          memory:
-            size: 8Gi
-      kubelet:
-        containerLogMaxFiles: 4
-        containerLogMaxSize: 50Mi
-        resourceReservation:
-          mode: Auto
-        topologyManager: {}
-      kubernetesVersion: "1.32"
-      manualRolloutID: ""
       name: worker
       nodeType: CloudEphemeral
-      updateEpoch: "1746532947"
 `
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global", globalValues)

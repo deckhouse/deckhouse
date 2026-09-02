@@ -298,42 +298,16 @@ properties:
               type: string
               description: |
                 A name of the NodeGroup.
-            manualRolloutID:
-              type: string
-              description: |
-                Value of NodeGroup's annotation "manual-rollout-id".
             engine:
               type: string
               enum: ["None", "MCM", "CAPI"]
               description: |
                 Effective machinery selected for this NodeGroup.
-            static:
-              type: object
-              description: |
-                Settings for Static nodes.
-              properties:
-                internalNetworkCIDRs:
-                  type: array
-                  items:
-                    type: string
-                    pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[1-9][0-9]?$'
             nodeType:
               # See NodeGroup in candi/openapi/node_group.yaml
               type: string
               enum: ["CloudEphemeral", "CloudPermanent", "CloudStatic", "Static"]
-            systemType:
-              # See NodeGroup in modules/040-node-manager/crds/node_group.yaml
-              type: string
-              enum: ["Mutable", "Immutable"]
             gpu:
-              # This is a copy from NodeGroup object. We trust that hook will not change it.
-              type: object
-              additionalProperties: true
-            cri:
-              # This is a copy from NodeGroup object. We trust that hook will not change it.
-              type: object
-              additionalProperties: true
-            staticInstances:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
               additionalProperties: true
@@ -341,31 +315,6 @@ properties:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
               additionalProperties: true
-            nodeTemplate:
-              # This is a copy from NodeGroup object. We trust that hook will not change it.
-              type: object
-              additionalProperties: true
-            chaos:
-              # This is a copy from NodeGroup object. We trust that hook will not change it.
-              type: object
-              additionalProperties: true
-            operatingSystem:
-              # This is a copy from NodeGroup object. We trust that hook will not change it.
-              type: object
-              additionalProperties: true
-            disruptions:
-              # This is a copy from NodeGroup object. We trust that hook will not change it.
-              type: object
-              additionalProperties: true
-            kubelet:
-              # This is a copy from NodeGroup object. We trust that hook will not change it.
-              type: object
-              additionalProperties: true
-            nodeDrainTimeoutSecond:
-              type: [integer]
-              additionalProperties: true
-              minimum: 30
-              maximum: 7200
             fencing:
               # This is a copy from NodeGroup object. We trust that hook will not change it.
               type: object
