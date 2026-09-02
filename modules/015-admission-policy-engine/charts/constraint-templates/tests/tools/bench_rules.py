@@ -46,7 +46,7 @@ IMPORTANT - what this number is (and isn't) representative of: one
 evaluation here is exactly what the WEBHOOK does for one admission review
 (one object, one constraint, no cluster listing). It is NOT representative
 of the AUDIT path's total cost: on a live cluster (measured with
-../../../../tools/audit_cycle_cost.sh), pure Rego-eval time was under 2%
+../../../../../tools/audit_cycle_cost.sh), pure Rego-eval time was under 2%
 of one audit cycle's actual CPU - the rest is API discovery (scales with
 CRD count), LIST calls, JSON unmarshalling, and per-constraint status PATCH
 writes, none of which this script exercises. Use these numbers to compare
@@ -55,12 +55,15 @@ latency; use audit_cycle_cost.sh for the real audit-loop cost.
 
 Prerequisites: `opa` (see repo root Makefile for the pinned OPA_VERSION),
 Python 3 with PyYAML, and already-generated `rendered/` fixtures for the
-constraints you want to benchmark. From a constraint directory, or in bulk
+constraints you want to benchmark. Every relative path in this docstring,
+including the one above for audit_cycle_cost.sh, is relative to the
+`test_cases/constraints` working directory used in every example below -
+not to this file's own location. From a constraint directory, or in bulk
 for all constraints:
 
     go run ../../tools/constraint_testgen generate -bundle ./test-matrix.yaml
     # or use `make test constraint -- --name <name>` from the chart root,
-    # see ../../../README.md and ../../docs/TESTING_GUIDE.md
+    # see ../../README.md and ../../docs/TESTING_GUIDE.md
 
 Usage:
     python3 bench_rules.py <constraints_root> [--count N] [--format table|json] [--only NAME] [--jobs N]

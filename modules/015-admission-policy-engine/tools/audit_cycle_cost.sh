@@ -122,18 +122,26 @@ fetch_snapshot() {
 
 # Same, but retries once (re-establishing the port-forward, which is known to
 # drop on idle) before giving up loudly instead of returning garbage.
+#
+# IMPORTANT: this writes its result into the global $SNAP and must be called
+# directly (`take_snapshot_or_die start; before="$SNAP"`), never wrapped in
+# `$(...)`. A command substitution runs the function in a subshell, where
+# neither the final `exit 1` (only kills the subshell - the main script,
+# running under `set -uo pipefail` without `-e`, would just continue with an
+# empty snapshot) nor the `PF_PID=` update inside `start_port_forward` (the
+# parent's `trap cleanup EXIT` would keep the PID of the port-forward we
+# already killed, leaking the retried one) would be visible outside it.
+SNAP=""
 take_snapshot_or_die() {
-  local label="$1" snap
-  if snap="$(fetch_snapshot)"; then
-    printf '%s' "$snap"
+  local label="$1"
+  if SNAP="$(fetch_snapshot)"; then
     return 0
   fi
   echo "WARN: $label metrics snapshot looked empty/invalid - retrying port-forward once..." >&2
   kill "${PF_PID:-}" >/dev/null 2>&1
   wait "${PF_PID:-}" 2>/dev/null
   start_port_forward
-  if snap="$(fetch_snapshot)"; then
-    printf '%s' "$snap"
+  if SNAP="$(fetch_snapshot)"; then
     return 0
   fi
   echo "ERROR: could not fetch a valid $label metrics snapshot after retrying the port-forward." >&2
@@ -178,7 +186,8 @@ while :; do
 done
 
 before_wall=$(date +%s.%N)
-before="$(take_snapshot_or_die "start")"
+take_snapshot_or_die "start"
+before="$SNAP"
 echo "cycle started ($start_id) @ $(fmt_time "$before_wall") - snapshot taken"
 
 restart_before="$(kubectl -n "$NAMESPACE" get pod "$AUDIT_POD" -o jsonpath='{.status.containerStatuses[?(@.name=="manager")].restartCount}' 2>/dev/null)"
@@ -207,7 +216,8 @@ while :; do
   sleep 1
 done
 after_wall=$(date +%s.%N)
-after="$(take_snapshot_or_die "end")"
+take_snapshot_or_die "end"
+after="$SNAP"
 logged_duration="$(grep -oE '"duration":"[^"]+"' <<<"$fline" | head -1)"
 echo "cycle finished @ $(fmt_time "$after_wall") - snapshot taken (logged $logged_duration)"
 echo ""

@@ -245,14 +245,27 @@ func main() {
 
 	type entry struct{ group, name, dir string }
 	var entries []entry
-	for _, group := range []string{"operation", "security"} {
+	// Mirror bench_rules.py exactly: scan every directory under root (not a
+	// hardcoded {"operation", "security"} list) skipping "_"/"."-prefixed
+	// ones, so a new group is picked up by both tools instead of silently
+	// skipped by whichever one still hardcodes the old set.
+	groups, err := os.ReadDir(root)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "cannot read constraints root %s: %v\n", root, err)
+		os.Exit(1)
+	}
+	for _, g := range groups {
+		if !g.IsDir() || strings.HasPrefix(g.Name(), "_") || strings.HasPrefix(g.Name(), ".") {
+			continue
+		}
+		group := g.Name()
 		groupDir := filepath.Join(root, group)
 		dirs, err := os.ReadDir(groupDir)
 		if err != nil {
 			continue
 		}
 		for _, d := range dirs {
-			if !d.IsDir() {
+			if !d.IsDir() || strings.HasPrefix(d.Name(), ".") {
 				continue
 			}
 			// Substring match, same as bench_rules.py's --only, so the two
