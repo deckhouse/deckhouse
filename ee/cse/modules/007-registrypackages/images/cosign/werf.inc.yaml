@@ -7,9 +7,12 @@ import:
   add: /
   to: /
   includePaths:
-  - cosign
   - install
   - uninstall
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /usr/bin/cosign
+  to: /cosign
   before: setup
 imageSpec:
   config:
