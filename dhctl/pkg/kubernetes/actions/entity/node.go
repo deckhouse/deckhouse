@@ -16,16 +16,13 @@ package entity
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"maps"
-	"net"
 	"slices"
 	"strings"
 	"time"
 
-	"gopkg.in/yaml.v3"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -61,117 +58,115 @@ func (i *NodeIP) Name() string {
 	return i.InternalIP
 }
 
-func GetCloudConfig(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, nodeGroupName string, showDeckhouseLogs bool, apiserverHosts ...string) (string, error) {
+func GetCloudConfig(
+	ctx context.Context,
+	kubeProvider kubernetes.KubeClientProviderWithCtx,
+	nodeGroupName string,
+	showDeckhouseLogs bool,
+	apiserverHosts ...string,
+) (string, error) {
 	var cloudData string
 
 	name := fmt.Sprintf("Waiting for %s cloud config️", nodeGroupName)
 
-	return cloudData, dhlog.RunProcess(ctx, dhlog.FromContext(ctx), name, func(ctx context.Context) error {
-		if showDeckhouseLogs {
-			ctx, cancel := context.WithCancel(ctx)
-			defer cancel()
+	err := dhlog.RunProcess(
+		ctx,
+		dhlog.FromContext(ctx),
+		name,
+		func(ctx context.Context) error {
+			if showDeckhouseLogs {
+				logCtx, cancel := context.WithCancel(ctx)
+				defer cancel()
 
-			go func() {
-				for {
-					select {
-					case <-ctx.Done():
-						return
-					default:
-						kubeCl, err := kubeProvider.KubeClientCtx(ctx)
-						if err != nil {
-							dhlog.FromContext(ctx).DebugContext(
-								ctx,
-								fmt.Sprintf("Could not get Kubernetes client for Deckhouse log printer: %v", err),
-							)
+				go func() {
+					for {
+						select {
+						case <-logCtx.Done():
+							return
 
-							select {
-							case <-ctx.Done():
-								return
-							case <-time.After(time.Second):
+						default:
+							kubeCl, err := kubeProvider.KubeClientCtx(logCtx)
+							if err != nil {
+								dhlog.FromContext(logCtx).DebugContext(
+									logCtx,
+									fmt.Sprintf(
+										"Could not get Kubernetes client for Deckhouse log printer: %v",
+										err,
+									),
+								)
+
+								select {
+								case <-logCtx.Done():
+									return
+								case <-time.After(time.Second):
+								}
+
+								continue
 							}
 
-							continue
+							_, _ = deckhouse.NewLogPrinter(kubeCl).
+								WithLeaderElectionAwarenessMode(
+									types.NamespacedName{
+										Namespace: "d8-system",
+										Name:      "deckhouse-leader-election",
+									},
+								).
+								Print(logCtx)
 						}
-
-						_, _ = deckhouse.NewLogPrinter(kubeCl).
-							WithLeaderElectionAwarenessMode(
-								types.NamespacedName{
-									Namespace: "d8-system",
-									Name:      "deckhouse-leader-election",
-								},
-							).
-							Print(ctx)
 					}
-				}
-			}()
-		}
-
-		allPassedHosts := ""
-		if len(apiserverHosts) > 0 {
-			allPassedHosts = strings.Join(apiserverHosts, ",")
-		}
-
-		err := retry.NewSilentLoop(name, 225, 1*time.Second).RunContext(ctx, func() error {
-			if nodeGroupName == global.MasterNodeGroupName {
-				dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Waiting while all API-server endpoints '%s' will be available in bootstrap secret", allPassedHosts))
+				}()
 			}
+
+			allPassedHosts := strings.Join(apiserverHosts, ",")
+
+			if nodeGroupName == global.MasterNodeGroupName {
+				if len(apiserverHosts) > 0 {
+					dhlog.FromContext(ctx).InfoContext(
+						ctx,
+						fmt.Sprintf(
+							"Waiting while all API-server endpoints '%s' will be available in bootstrap secret",
+							allPassedHosts,
+						),
+					)
+				} else {
+					dhlog.FromContext(ctx).DebugContext(
+						ctx,
+						"Got empty API-server endpoints from arguments",
+					)
+				}
+			}
+
 			kubeCl, err := kubeProvider.KubeClientCtx(ctx)
 			if err != nil {
-				return err
+				return fmt.Errorf(
+					"get Kubernetes client while waiting for cloud config: %w",
+					err,
+				)
 			}
 
-			secret, err := kubeCl.CoreV1().
-				Secrets("d8-cloud-instance-manager").
-				Get(ctx, "manual-bootstrap-for-"+nodeGroupName, metav1.GetOptions{})
+			state, err := waitForCloudConfigSecret(
+				ctx,
+				kubeCl,
+				nodeGroupName,
+				apiserverHosts,
+				cloudConfigWaitTimeout,
+			)
 			if err != nil {
 				return err
 			}
 
-			if len(apiserverHosts) > 0 {
-				var endpoints []string
+			cloudData = state.cloudConfig
 
-				endpointsRaw := secret.Data["apiserverEndpoints"]
-				dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("Got raw apiserverEndpoints: %v", string(endpointsRaw)), "\n"))
-
-				err := yaml.Unmarshal(endpointsRaw, &endpoints)
-				if err != nil {
-					return fmt.Errorf("failed to unmarshal apiserver endpoints: %v", err)
-				}
-
-				hostsMap := make(map[string]struct{}, len(endpoints))
-
-				for _, endpoint := range endpoints {
-					host, _, err := net.SplitHostPort(endpoint)
-					if err != nil {
-						return fmt.Errorf("failed to split endpoint `%s` into host and port: %v", endpoint, err)
-					}
-
-					dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Got API-server host %s from secret", host))
-
-					hostsMap[host] = struct{}{}
-				}
-
-				for _, host := range apiserverHosts {
-					_, ok := hostsMap[host]
-					if !ok {
-						return fmt.Errorf("apiserver host '%s' not found in cloud config", host)
-					}
-				}
-			} else if nodeGroupName == global.MasterNodeGroupName {
-				dhlog.FromContext(ctx).DebugContext(ctx, "Got empty apiserver endpoints from arguments")
-			}
-
-			cloudData = base64.StdEncoding.EncodeToString(secret.Data["cloud-config"])
+			dhlog.FromContext(ctx).InfoContext(
+				ctx,
+				"Cloud configuration found!",
+			)
 
 			return nil
-		})
-		if err != nil {
-			return err
-		}
+		},
+	)
 
-		dhlog.FromContext(ctx).InfoContext(ctx, "Cloud configuration found!")
-		return nil
-	})
+	return cloudData, err
 }
 
 // errCreateNodeGroupTransient marks a Create/Patch failure that may succeed on retry (e.g. a
