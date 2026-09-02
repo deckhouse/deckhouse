@@ -1,0 +1,70 @@
+{{/*
+Description: cilium-agent and the binaries shipped alongside it, plus the BPF sources the agent compiles on the node
+Target: agent, operator (reuses the source artifact)
+Sources:
+- cilium/cilium: images/cilium/Dockerfile (builder stage)
+- cilium/cilium: Makefile (SUBDIRS_CILIUM_CONTAINER)
+Notes:
+- The set of binaries is owned by SUBDIRS_CILIUM_CONTAINER and must never be spelled out here, the make targets below expand it on their own
+- Debug symbol extraction is skipped: upstream forces NOSTRIP=1 only to feed its debug image, we leave NOSTRIP unset so make links with -s -w and the objcopy block is not needed
+*/}}
+---
+{{- $ciliumVersion := include "get_oss_version_by_id" (list "cilium" $) }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src
+from: {{ index $.Images "builder/src" }}
+final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
+  to: /patches
+  stageDependencies:
+    install:
+    - '**/*'
+secrets:
+- id: SOURCE_REPO
+  value: {{ .SOURCE_REPO }}
+shell:
+  install:
+  - git clone --depth 1 --branch v{{ $ciliumVersion }} $(cat /run/secrets/SOURCE_REPO)/cilium/cilium.git /src
+  - cd /src
+  - git apply --verbose --allow-empty /patches/*.patch
+  # Makefile.defs takes the build version from git and falls back to reading a
+  # GIT_VERSION file when there is no repository. Write that file before dropping
+  # .git, otherwise `cilium version` reports the tag with no commit behind it.
+  # The recorded sha is the upstream tag, our patches sit on top of it
+  - git show -s --format='format:%h %aI' > GIT_VERSION
+  - rm -rf /src/Documentation /src/.git
+---
+image: {{ .ModuleName }}/{{ .ImageName }}
+from: {{ index $.Images "builder/golang" }}
+final: false
+import:
+- image: {{ .ModuleName }}/{{ .ImageName }}-src
+  add: /src
+  to: /src
+  before: install
+mount:
+{{ include "mount points for golang builds" . }}
+secrets:
+- id: GOPROXY
+  value: {{ .GOPROXY }}
+shell:
+  beforeInstall:
+  - pm install make bash
+  install:
+  - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
+  - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
+  - cd /src
+  # The repository ships a vendor/ tree and Makefile.defs builds with -mod=vendor.
+  # Our patches bump go.mod, which leaves that tree inconsistent, so rebuild it
+  - go mod vendor && go mod verify
+  - |
+    {{- $buildContext := deepCopy $ -}}
+    {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
+    {{- $_ := set $buildContext "BuildCommand" `make PKG_BUILD=1 DESTDIR=/out build-container install-container-binary` -}}
+    {{- include "image-build.build" $buildContext | indent 4 }}
+  - make PKG_BUILD=1 DESTDIR=/out install-bash-completion licenses-all
+  - mv LICENSE.all /out/LICENSE.all
+  # The agent runs these from next to its binaries, upstream copies them the same way
+  - cp -t /out images/cilium/init-container.sh plugins/cilium-cni/install-plugin.sh plugins/cilium-cni/cni-uninstall.sh
+  - rm -rf /src/vendor

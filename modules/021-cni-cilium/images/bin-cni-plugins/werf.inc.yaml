@@ -48,6 +48,9 @@ shell:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
   - cd /src
+  # Fetch outside the traced build command, go.sum makes it verifiable and
+  # go mod verify guards the module cache, which the werf mount shares between builds
+  - go mod download && go mod verify
   - export FLAGS='-s -w -X github.com/containernetworking/plugins/pkg/utils/buildversion.BuildVersion=v{{ $cniVersion }}'
   - |
     {{- $buildContext := deepCopy $ -}}
