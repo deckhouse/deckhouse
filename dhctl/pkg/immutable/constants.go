@@ -67,6 +67,10 @@ const (
 
 	// nodeConfigPushPath is the path both servers on this port accept.
 	nodeConfigPushPath = "/config"
+
+	// whoamiPath tells which of the two servers holds the port. Unauthenticated
+	// on both, and it answers a role, never which machine this is.
+	whoamiPath = "/whoami"
 )
 
 // APIServerPort is where a control-plane node's own kube-apiserver listens.
