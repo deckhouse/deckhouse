@@ -17,16 +17,18 @@ limitations under the License.
 package hooks
 
 import (
+	"maps"
+	"slices"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-// get_crds builds the thin nodeManager.internal.nodeGroups blob: a passthrough of the
-// NodeGroup spec enriched with name, engine and defaulted cloudInstances.zones. Validation,
-// status, instanceClass overlay, capacity, CRI/kubernetesVersion resolution, updateEpoch and
-// serialized labels/taints are owned by node-controller and are intentionally NOT tested here.
+// get_crds builds the nodeManager.internal.nodeGroups blob: name, nodeType, engine, gpu,
+// fencing and the three read cloudInstances fields, with zones defaulted for CloudEphemeral.
+// Everything else about a NodeGroup is owned by node-controller and is not tested here.
 var _ = Describe("Modules :: node-manager :: hooks :: get_crds ::", func() {
 	const (
 		stateNGProper = `
@@ -147,43 +149,17 @@ metadata:
 				  {
 				    "nodeType": "CloudEphemeral",
 				    "cloudInstances": {
-				      "classReference": {
-				        "kind": "D8TestInstanceClass",
-				        "name": "proper1"
-				      },
 				      "zones": []
 				    },
-				    "kubelet": {
-				      "containerLogMaxSize": "50Mi",
-				      "containerLogMaxFiles": 4,
-				      "resourceReservation": {
-				        "mode": "Auto"
-				      },
-				      "topologyManager": {}
-				    },
 				    "engine": "None",
-				    "manualRolloutID": "",
 				    "name": "proper1"
 				  },
 				  {
 				    "nodeType": "CloudEphemeral",
 				    "cloudInstances": {
-				      "classReference": {
-				        "kind": "D8TestInstanceClass",
-				        "name": "proper2"
-				      },
 				      "zones": ["a","b"]
 				    },
-				    "kubelet": {
-				      "containerLogMaxSize": "50Mi",
-				      "containerLogMaxFiles": 4,
-				      "resourceReservation": {
-				        "mode": "Auto"
-				      },
-				      "topologyManager": {}
-				    },
 				    "engine": "None",
-				    "manualRolloutID": "",
 				    "name": "proper2"
 				  }
 				]
@@ -198,21 +174,21 @@ metadata:
 			f.RunHook()
 		})
 
-		It("Must pass through and overlay static settings for Static nodeType", func() {
+		It("Must publish name, nodeType and engine and no static overlay", func() {
 			Expect(f).To(ExecuteSuccessfully())
 
 			// NodeGroups are listed sorted by name: cp1 (index 0), static1 (index 1).
-			// CloudPermanent NG is a plain passthrough without zones or static overlay.
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.name").String()).To(Equal("cp1"))
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeType").String()).To(Equal("CloudPermanent"))
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.engine").String()).To(Equal("None"))
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.static").Exists()).To(BeFalse())
 
-			// Static NG carries the internal static overlay and engine None (no staticInstances).
+			// nodeManager.internal.static is set in the initial values, the Static NG must not
+			// pick it up.
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.1.name").String()).To(Equal("static1"))
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.1.nodeType").String()).To(Equal("Static"))
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.1.engine").String()).To(Equal("None"))
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.1.static.internalNetworkCIDRs").String()).To(MatchJSON(`["172.18.200.0/24"]`))
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.1.static").Exists()).To(BeFalse())
 		})
 	})
 
@@ -253,10 +229,10 @@ spec:
 			f.RunHook()
 		})
 
-		It("staticInstances must be passed through and engine must be CAPI", func() {
+		It("engine must be CAPI and staticInstances must not be published", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.staticInstances").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.engine").String()).To(Equal("CAPI"))
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.staticInstances").Exists()).To(BeFalse())
 		})
 	})
 
@@ -287,35 +263,6 @@ spec:
 		})
 	})
 
-	Context("NodeTemplate labels passthrough", func() {
-		BeforeEach(func() {
-			ng := `
----
-apiVersion: deckhouse.io/v1
-kind: NodeGroup
-metadata:
-  name: test
-spec:
-  nodeType: CloudEphemeral
-  nodeTemplate:
-    labels:
-      node-role.deckhouse.io/system: ""
-  cloudInstances:
-    classReference:
-      kind: D8TestInstanceClass
-      name: proper1
-    zones: [a,b]
-`
-			f.BindingContexts.Set(f.KubeStateSet(ng))
-			f.RunHook()
-		})
-
-		It("nodeTemplate labels must be passed through unchanged", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeTemplate.labels").String()).To(MatchJSON(`{"node-role.deckhouse.io/system": ""}`))
-		})
-	})
-
 	Context("NG referencing an unknown instance class kind", func() {
 		BeforeEach(func() {
 			ng := `
@@ -335,10 +282,90 @@ spec:
 			f.RunHook()
 		})
 
-		It("must be passed through to helm values as is", func() {
+		It("must reach helm values instead of being replaced by a last known good value", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.name").String()).To(Equal("improper"))
-			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.cloudInstances.classReference.kind").String()).To(Equal("ImproperInstanceClass"))
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.nodeType").String()).To(Equal("CloudEphemeral"))
+		})
+	})
+
+	Context("Published key set", func() {
+		const ngWithEverySpecField = `
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: everything
+  annotations:
+    manual-rollout-id: "1"
+spec:
+  nodeType: CloudEphemeral
+  systemType: Immutable
+  nodeDrainTimeoutSecond: 300
+  cri:
+    type: Containerd
+  gpu:
+    sharing: mig
+    mig:
+      partedConfig: all-1g.5gb
+  cloudInstances:
+    classReference:
+      kind: D8TestInstanceClass
+      name: everything
+    minPerZone: 1
+    maxPerZone: 3
+    maxUnavailablePerZone: 1
+    maxSurgePerZone: 1
+    quickShutdown: true
+    priority: 5
+    zones: [a]
+  nodeTemplate:
+    labels:
+      node-role.deckhouse.io/system: ""
+  chaos:
+    mode: DrainAndDelete
+  operatingSystem:
+    manageKernel: false
+  disruptions:
+    approvalMode: Manual
+  kubelet:
+    maxPods: 100
+  fencing:
+    mode: Watchdog
+---
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: staticng
+spec:
+  nodeType: Static
+  staticInstances:
+    count: 1
+    labelSelector:
+      matchLabels:
+        node-group: staticng
+`
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(ngWithEverySpecField))
+			f.RunHook()
+		})
+
+		// Guard against the blob growing back: the published element carries exactly the
+		// keys its helm-template and Go consumers read.
+		It("CloudEphemeral element must publish exactly the keys the consumers read", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			Expect(slices.Collect(maps.Keys(f.ValuesGet("nodeManager.internal.nodeGroups.0").Map()))).To(
+				ConsistOf("name", "nodeType", "engine", "gpu", "cloudInstances", "fencing"))
+			Expect(slices.Collect(maps.Keys(f.ValuesGet("nodeManager.internal.nodeGroups.0.cloudInstances").Map()))).To(
+				ConsistOf("minPerZone", "maxPerZone", "zones"))
+		})
+
+		It("Static element must publish exactly the keys the consumers read", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			Expect(slices.Collect(maps.Keys(f.ValuesGet("nodeManager.internal.nodeGroups.1").Map()))).To(
+				ConsistOf("name", "nodeType", "engine"))
 		})
 	})
 })

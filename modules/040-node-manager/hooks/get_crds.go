@@ -35,17 +35,22 @@ import (
 )
 
 type NodeGroupCrdInfo struct {
-	Name            string
-	Spec            ngv1.NodeGroupSpec
-	Engine          ngv1.NodeGroupEngine
-	UseMCM          bool
-	ManualRolloutID string
+	Name   string
+	Spec   ngv1.NodeGroupSpec
+	Engine ngv1.NodeGroupEngine
+	UseMCM bool
 }
 
-const (
-	useMCMAnnotation          = "node.deckhouse.io/use-mcm"
-	manualRolloutIDAnnotation = "manual-rollout-id"
-)
+// cloudInstancesForValues is the part of NodeGroup.spec.cloudInstances published to helm values.
+// The bounds stay nilable pointers with omitempty; cluster_autoscaler_deployment_requirements.go:71
+// reads them as `ng.CloudInstances.MinPerZone == nil`.
+type cloudInstancesForValues struct {
+	MinPerZone *int32   `json:"minPerZone,omitempty"`
+	MaxPerZone *int32   `json:"maxPerZone,omitempty"`
+	Zones      []string `json:"zones"`
+}
+
+const useMCMAnnotation = "node.deckhouse.io/use-mcm"
 
 // applyNodeGroupCrdFilter returns name, spec, status.engine and use-mcm annotation from the NodeGroup.
 func applyNodeGroupCrdFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -56,11 +61,10 @@ func applyNodeGroupCrdFilter(obj *unstructured.Unstructured) (go_hook.FilterResu
 	}
 
 	return NodeGroupCrdInfo{
-		Name:            nodeGroup.GetName(),
-		Spec:            nodeGroup.Spec,
-		Engine:          nodeGroup.Status.Engine,
-		UseMCM:          nodeGroup.GetAnnotations()[useMCMAnnotation] != "",
-		ManualRolloutID: nodeGroup.GetAnnotations()[manualRolloutIDAnnotation],
+		Name:   nodeGroup.GetName(),
+		Spec:   nodeGroup.Spec,
+		Engine: nodeGroup.Status.Engine,
+		UseMCM: nodeGroup.GetAnnotations()[useMCMAnnotation] != "",
 	}, nil
 }
 
@@ -143,11 +147,9 @@ var getCRDsHookConfig = &go_hook.HookConfig{
 
 var _ = sdk.RegisterFunc(getCRDsHookConfig, getCRDsHandler)
 
-// getCRDsHandler builds the thin nodeManager.internal.nodeGroups blob. It is a passthrough
-// of the NodeGroup spec enriched with name, engine and defaulted cloudInstances.zones.
-// All validation, status, instanceClass overlay, capacity, CRI/kubernetesVersion resolution,
-// updateEpoch, serialized labels/taints and the node_group_info metric are owned by
-// node-controller now.
+// getCRDsHandler builds the nodeManager.internal.nodeGroups blob: name, nodeType, engine,
+// gpu, fencing and the three read cloudInstances fields, with zones defaulted for
+// CloudEphemeral. Everything else about a NodeGroup is owned by node-controller.
 func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 	// Default zones. Take them from machine_deployments and cloud_provider_secret.zones.
 	defaultZones := set.New()
@@ -188,15 +190,6 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 		ngForValues := nodeGroupForValues(nodeGroup.Spec.DeepCopy())
 		ngForValues["name"] = nodeGroup.Name
 		ngForValues["engine"] = string(calculateNodeGroupEngine(input, nodeGroup))
-		ngForValues["manualRolloutID"] = nodeGroup.ManualRolloutID
-
-		if nodeGroup.Spec.NodeType == ngv1.NodeTypeStatic {
-			if staticValue, has := input.Values.GetOk("nodeManager.internal.static"); has {
-				if len(staticValue.Map()) > 0 {
-					ngForValues["static"] = staticValue.Value()
-				}
-			}
-		}
 
 		if nodeGroup.Spec.NodeType == ngv1.NodeTypeCloudEphemeral {
 			zones := nodeGroup.Spec.CloudInstances.Zones
@@ -205,9 +198,9 @@ func getCRDsHandler(_ context.Context, input *go_hook.HookInput) error {
 			}
 
 			if ngForValues["cloudInstances"] == nil {
-				ngForValues["cloudInstances"] = ngv1.CloudInstances{}
+				ngForValues["cloudInstances"] = cloudInstancesForValues{}
 			}
-			cloudInstances := ngForValues["cloudInstances"].(ngv1.CloudInstances)
+			cloudInstances := ngForValues["cloudInstances"].(cloudInstancesForValues)
 			cloudInstances.Zones = zones
 			ngForValues["cloudInstances"] = cloudInstances
 		}
@@ -228,41 +221,18 @@ func nodeGroupForValues(nodeGroupSpec *ngv1.NodeGroupSpec) map[string]interface{
 	res := make(map[string]interface{})
 
 	res["nodeType"] = nodeGroupSpec.NodeType
-	if nodeGroupSpec.SystemType != "" {
-		res["systemType"] = nodeGroupSpec.SystemType
-	}
-	if !nodeGroupSpec.CRI.IsEmpty() {
-		res["cri"] = nodeGroupSpec.CRI
-	}
 	if !nodeGroupSpec.GPU.IsEmpty() {
 		res["gpu"] = nodeGroupSpec.GPU
 	}
-	if nodeGroupSpec.StaticInstances != nil {
-		res["staticInstances"] = *nodeGroupSpec.StaticInstances
-	}
 	if !nodeGroupSpec.CloudInstances.IsEmpty() {
-		res["cloudInstances"] = nodeGroupSpec.CloudInstances
-	}
-	if !nodeGroupSpec.NodeTemplate.IsEmpty() {
-		res["nodeTemplate"] = nodeGroupSpec.NodeTemplate
-	}
-	if !nodeGroupSpec.Chaos.IsEmpty() {
-		res["chaos"] = nodeGroupSpec.Chaos
-	}
-	if !nodeGroupSpec.OperatingSystem.IsEmpty() {
-		res["operatingSystem"] = nodeGroupSpec.OperatingSystem
-	}
-	if !nodeGroupSpec.Disruptions.IsEmpty() {
-		res["disruptions"] = nodeGroupSpec.Disruptions
-	}
-	if !nodeGroupSpec.Kubelet.IsEmpty() {
-		res["kubelet"] = nodeGroupSpec.Kubelet
+		res["cloudInstances"] = cloudInstancesForValues{
+			MinPerZone: nodeGroupSpec.CloudInstances.MinPerZone,
+			MaxPerZone: nodeGroupSpec.CloudInstances.MaxPerZone,
+			Zones:      nodeGroupSpec.CloudInstances.Zones,
+		}
 	}
 	if !nodeGroupSpec.Fencing.IsEmpty() {
 		res["fencing"] = nodeGroupSpec.Fencing
-	}
-	if nodeGroupSpec.NodeDrainTimeoutSecond != nil {
-		res["nodeDrainTimeoutSecond"] = nodeGroupSpec.NodeDrainTimeoutSecond
 	}
 	return res
 }
