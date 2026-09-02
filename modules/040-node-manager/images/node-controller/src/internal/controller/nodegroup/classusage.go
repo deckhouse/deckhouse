@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"time"
 
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -129,7 +130,7 @@ func (r *Status) syncInstanceClassConsumers(ctx context.Context) error {
 }
 
 func (r *Status) applyConsumersForKind(ctx context.Context, gvk schema.GroupVersionKind, consumers map[usageKey][]string) error {
-	if r.unstorableConsumers[gvk] {
+	if failedAt, ok := r.unstorableConsumers[gvk]; ok && r.timeNow().Sub(failedAt) < statusResyncInterval {
 		return nil
 	}
 
@@ -174,13 +175,14 @@ func (r *Status) applyConsumersForKind(ctx context.Context, gvk schema.GroupVers
 			continue
 		}
 
-		// An accepted write that does not come back in the response is a kind that will not
-		// keep the field, so it is dropped after this one attempt. The DVP CRD schema declares
-		// no status at all: modules/030-cloud-provider-dvp/crds/instance_class.yaml.
+		// An accepted write that does not come back in the response is a kind that is not
+		// keeping the field: it is put on cooldown and retried later, in case its CRD schema
+		// gains the field. The DVP CRD schema declares no status at all:
+		// modules/030-cloud-provider-dvp/crds/instance_class.yaml.
 		stored, _, err := unstructured.NestedStringSlice(item.Object, "status", "nodeGroupConsumers")
 		if err != nil || !slices.Equal(stored, desired) {
 			r.markConsumersUnstorable(ctx, gvk)
-			break
+			continue
 		}
 	}
 	return errors.Join(errs...)
@@ -188,12 +190,19 @@ func (r *Status) applyConsumersForKind(ctx context.Context, gvk schema.GroupVers
 
 func (r *Status) markConsumersUnstorable(ctx context.Context, gvk schema.GroupVersionKind) {
 	if r.unstorableConsumers == nil {
-		r.unstorableConsumers = map[schema.GroupVersionKind]bool{}
+		r.unstorableConsumers = map[schema.GroupVersionKind]time.Time{}
 	}
-	r.unstorableConsumers[gvk] = true
-	log.FromContext(ctx).Info("instance class kind does not keep status.nodeGroupConsumers, skipping it from now on: "+
-		"its classes publish no consumers and the deletion webhook stops blocking their deletion "+
-		"(internal/webhook/instanceclass_webhook.go reads len(status.nodeGroupConsumers)); "+
+	r.unstorableConsumers[gvk] = r.timeNow()
+	log.FromContext(ctx).Info("instance class kind does not keep status.nodeGroupConsumers, skipping it until the cooldown expires: "+
+		"its classes publish no consumers and the deletion webhook denies nothing "+
+		"(internal/webhook/instanceclass_webhook.go denies on len(oldObject.Status.NodeGroupConsumers) > 0); "+
 		"the CRD schema has to declare the field, as in modules/030-cloud-provider-dvp/crds/instance_class.yaml it does not",
-		"gvk", gvk.String())
+		"gvk", gvk.String(), "cooldown", statusResyncInterval.String())
+}
+
+func (r *Status) timeNow() time.Time {
+	if r.now == nil {
+		return time.Now()
+	}
+	return r.now()
 }
