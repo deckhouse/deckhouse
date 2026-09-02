@@ -77,8 +77,11 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 		return nil
 	}
 
+	// A master that is not immutable is reached over SSH. Leaving the map unset makes an
+	// empty one, and an empty one reads as "single-master cluster": a destructive plan
+	// then scales 1→3→1 and destroys the masters that are healthy.
 	if ctx.SSHProviderInitializer == nil {
-		return nil
+		return fmt.Errorf("converge has no ssh connection configuration to reach the master nodes with")
 	}
 
 	var userPassedHosts []session.Host
@@ -101,7 +104,7 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 		nodesNames = append(nodesNames, nodeName)
 	}
 
-	nodeToHost, err := utils.CheckSSHHosts(userPassedHosts, nodesNames, string(c.convergeState.Phase), confirmHostsMapping(ctx))
+	nodeToHost, err := utils.CheckSSHHosts(userPassedHosts, nodesNames, string(c.convergeState.Phase), confirmOrProceed(ctx))
 	if err != nil {
 		return err
 	}
@@ -111,12 +114,11 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 	return nil
 }
 
-// confirmHostsMapping answers the node-to-host confirmation CheckSSHHosts asks on every
-// run. With no terminal nobody is there to answer, and a silent "no" used to cost the
-// whole control plane hook — the master was then recreated with no guard at all. The
-// mapping is accepted and written to the log instead; a destructive plan still has its
-// own approval.
-func confirmHostsMapping(ctx *context.Context) func(string) bool {
+// confirmOrProceed answers the questions converge asks before it recreates a master: the
+// node-to-host mapping, and whether to wait for each surviving master to be ready. With
+// no terminal the default "no" drops the very guard the question protects, so it is
+// accepted and logged instead; a destructive plan still has its own approval.
+func confirmOrProceed(ctx *context.Context) func(string) bool {
 	return func(msg string) bool {
 		if ctx.CommanderMode() || ctx.ChangesSettings().AutoApprove {
 			return true
@@ -124,7 +126,7 @@ func confirmHostsMapping(ctx *context.Context) func(string) bool {
 
 		if !input.IsTerminal() {
 			dhlog.FromContext(ctx.Ctx()).WarnContext(ctx.Ctx(),
-				fmt.Sprintf("Node to host mapping accepted without confirmation: no TTY.\n%s", msg))
+				fmt.Sprintf("Accepted without confirmation: no TTY.\n%s", msg))
 			return true
 		}
 
@@ -539,16 +541,6 @@ func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Contex
 
 	nodesToCheck := maputil.ExcludeKeys(c.nodeToHost, convergedNode)
 
-	confirm := func(msg string) bool {
-		return input.NewConfirmation().WithMessage(msg).Ask()
-	}
-
-	if ctx.ChangesSettings().AutoApprove {
-		confirm = func(_ string) bool {
-			return true
-		}
-	}
-
 	sshProvider, err := c.sshProviderForHooks(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("get ssh provider: %w", err)
@@ -564,7 +556,7 @@ func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Contex
 	).
 		WithSourceCommandName("converge").
 		WithNodeToConverge(convergedNode).
-		WithConfirm(confirm).
+		WithConfirm(confirmOrProceed(ctx)).
 		WithClientSwitcher(ctx.ClientSwitcher()), nil
 }
 

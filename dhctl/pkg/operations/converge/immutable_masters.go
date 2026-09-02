@@ -17,8 +17,11 @@ package converge
 import (
 	gocontext "context"
 	"fmt"
+	"time"
 
-	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
@@ -26,33 +29,46 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 )
 
+// Same budget as entity.GetNodeGroup and as the per-group read in
+// controller/immutable.go: converge itself restarts the apiservers it reads through.
+const (
+	nodeGroupListAttempts = 600
+	nodeGroupListInterval = 1 * time.Second
+)
+
 // masterGroupIsImmutable reports whether the cluster's control plane runs immutable
 // machines. They answer no sshd: everything converge does over SSH — creating a node
 // user and rebuilding the Kubernetes client through a master — has nothing to connect
 // to, and the node phases run against the client converge already holds.
 //
-// The probe runs on every converge of every cluster, so it answers with the classic
-// SSH path whenever the NodeGroups cannot be read: that path is what every cluster but
-// this one needs, and an unreadable list must not abort the phase for all of them.
-func masterGroupIsImmutable(ctx gocontext.Context, kubeGetter kubernetes.KubeClientProviderWithCtx) bool {
+// A read that keeps failing stops the converge instead of answering. Guessing the
+// classic path here creates a NodeUser and waits for bashible on machines that run
+// none, while the same object answers "immutable" to every other reader in the run.
+func masterGroupIsImmutable(ctx gocontext.Context, kubeGetter kubernetes.KubeClientProviderWithCtx) (bool, error) {
 	kubeCl, err := kubeGetter.KubeClientCtx(ctx)
 	if err != nil {
-		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Keeping the classic SSH path: get kube client to read NodeGroups: %v", err))
-		return false
+		return false, fmt.Errorf("get kube client to read NodeGroups: %w", err)
 	}
 
-	nodeGroups, err := entity.GetNodeGroups(ctx, kubeCl)
+	var nodeGroups []unstructured.Unstructured
+	err = retry.NewSilentLoop("List NodeGroups", nodeGroupListAttempts, nodeGroupListInterval).
+		RunContext(ctx, func() error {
+			var err error
+			nodeGroups, err = entity.GetNodeGroups(ctx, kubeCl)
+
+			return err
+		})
 	if err != nil {
-		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Keeping the classic SSH path: read NodeGroups to tell an immutable control plane from a classic one: %v", err))
-		return false
+		return false, fmt.Errorf("read NodeGroups to tell an immutable control plane from a classic one: %w", err)
 	}
 
 	for _, ng := range nodeGroups {
 		if ng.GetName() != global.MasterNodeGroupName {
 			continue
 		}
-		return immutable.NodeGroupIsImmutable(&ng)
+
+		return immutable.NodeGroupIsImmutable(&ng), nil
 	}
 
-	return false
+	return false, nil
 }
