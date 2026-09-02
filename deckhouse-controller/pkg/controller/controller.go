@@ -200,7 +200,7 @@ func NewDeckhouseController(
 					},
 				},
 				// for deckhouse.io apis
-				&v1alpha1.Module{}:              {},
+				&v1alpha2.Module{}:              {},
 				&v1alpha1.ModuleConfig{}:        {},
 				&v1alpha1.ModuleDocumentation{}: {},
 				&v1alpha1.ModuleRelease{}:       {},
@@ -225,7 +225,6 @@ func NewDeckhouseController(
 	if app.ModulePackagesEnabled() {
 		opts.Cache.ByObject[&v1alpha1.ModulePackage{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.ModulePackageVersion{}] = cache.ByObject{}
-		opts.Cache.ByObject[&v1alpha2.Module{}] = cache.ByObject{}
 	}
 
 	admission, serveWebhooks := app.TakeOverAdmissionServer()

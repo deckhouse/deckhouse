@@ -82,3 +82,10 @@ status:
   conditions:
     - type: EnabledByModuleConfig
       status: "True"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: withpolicymodule
+spec:
+  updatePolicy: test-alpha

@@ -71,6 +71,14 @@ const (
 	ModuleReasonInstalling                = "Installing"
 	ModuleReasonError                     = "Error"
 
+	// Reasons of the True and Unknown states. A v1alpha2 condition must carry a
+	// non-empty reason, so every state names one.
+	ModuleReasonEnabled    = "Enabled"
+	ModuleReasonReady      = "Ready"
+	ModuleReasonDeployed   = "Deployed"
+	ModuleReasonOverridden = "Overridden"
+	ModuleReasonUnknown    = "Unknown"
+
 	ModuleMessageBundle                    = "turned off by bundle"
 	ModuleMessageModuleConfig              = "turned off by module config"
 	ModuleMessageDynamicGlobalHookExtender = "turned off by global hook"

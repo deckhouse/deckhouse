@@ -154,7 +154,23 @@ func TestRepositoryNameForSource(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		assert.Equal(t, c.want, repositoryNameForSource(c.source), c.source)
+		assert.Equal(t, c.want, RepositoryNameForSource(c.source), c.source)
+	}
+}
+
+func TestSourceNameForRepository(t *testing.T) {
+	cases := []struct {
+		repository string
+		want       string
+	}{
+		{repository: "deckhouse-modules", want: "deckhouse"},
+		{repository: "embedded", want: ""},
+		{repository: "example", want: "example"},
+		{repository: "", want: ""},
+	}
+
+	for _, c := range cases {
+		assert.Equal(t, c.want, SourceNameForRepository(c.repository), c.repository)
 	}
 }
 
