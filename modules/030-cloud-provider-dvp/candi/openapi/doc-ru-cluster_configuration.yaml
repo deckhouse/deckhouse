@@ -61,7 +61,7 @@ apiVersions:
                             Процент гарантированной доли CPU, которая будет выделена для виртуальной машины.
 
                             Значение `Auto` передаёт выбор доли Vertical VirtualMachine Autoscaler родительского кластера DVP.
-                            Требуются редакция EE модуля `virtualization`, включённый модуль `vertical-pod-autoscaler`, а также фичагейты `VerticalVirtualMachineAutoscaler` и `HotplugCPUAndMemoryWithInPlaceResize` в его ModuleConfig.
+                            Требуются редакция EE модуля `virtualization` с включённым модулем `vertical-pod-autoscaler` — от этих двух условий автоскейлер включается сам — и фичагейт `HotplugCPUAndMemoryWithInPlaceResize` в ModuleConfig этого модуля.
                     memory:
                       description: |
                         Определяет параметры памяти для виртуальной машины.

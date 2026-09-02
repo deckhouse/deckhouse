@@ -179,7 +179,7 @@ apiVersions:
                             Guaranteed share of CPU that will be allocated to the virtual machine.
 
                             `Auto` hands the share over to the Vertical VirtualMachine Autoscaler of the parent DVP cluster.
-                            It requires the EE edition of the `virtualization` module, the enabled `vertical-pod-autoscaler` module, and the `VerticalVirtualMachineAutoscaler` and `HotplugCPUAndMemoryWithInPlaceResize` feature gates in its ModuleConfig.
+                            It requires the EE edition of the `virtualization` module with the `vertical-pod-autoscaler` module enabled — the autoscaler turns itself on from those two — and the `HotplugCPUAndMemoryWithInPlaceResize` feature gate in the ModuleConfig of that module.
                           example: "100%"
                     memory:
                       type: object

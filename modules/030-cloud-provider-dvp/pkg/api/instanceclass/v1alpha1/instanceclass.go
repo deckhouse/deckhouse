@@ -177,11 +177,11 @@ type InstanceClassVirtualMachineCPU struct {
 	// Guaranteed share of CPU fraction that will be allocated to the virtual machine.
 	//
 	// `Auto` hands the share over to the Vertical VirtualMachine Autoscaler, which picks it by the actual CPU usage of the node.
-	// It requires the EE edition of the `virtualization` module in the parent DVP cluster, the enabled `vertical-pod-autoscaler` module, and the `VerticalVirtualMachineAutoscaler` and `HotplugCPUAndMemoryWithInPlaceResize` feature gates in its ModuleConfig.
+	// It requires the EE edition of the `virtualization` module in the parent DVP cluster with the `vertical-pod-autoscaler` module enabled — the autoscaler turns itself on from those two — and the `HotplugCPUAndMemoryWithInPlaceResize` feature gate in the ModuleConfig of that module.
 	// +deckhouse:ru:description:value="Процент гарантированной доли CPU, которая будет выделена виртуальной машине."
 	// +deckhouse:ru:description:value=
 	// +deckhouse:ru:description:value="Значение `Auto` передаёт выбор доли Vertical VirtualMachine Autoscaler, который подбирает её по фактическому потреблению CPU узлом."
-	// +deckhouse:ru:description:value="Требуются редакция EE модуля `virtualization` в родительском кластере DVP, включённый модуль `vertical-pod-autoscaler`, а также фичагейты `VerticalVirtualMachineAutoscaler` и `HotplugCPUAndMemoryWithInPlaceResize` в его ModuleConfig."
+	// +deckhouse:ru:description:value="Требуются редакция EE модуля `virtualization` в родительском кластере DVP с включённым модулем `vertical-pod-autoscaler` — от этих двух условий автоскейлер включается сам — и фичагейт `HotplugCPUAndMemoryWithInPlaceResize` в ModuleConfig этого модуля."
 	// +kubebuilder:default="100%"
 	// +kubebuilder:validation:Pattern=`^(Auto|(100|[1-9][0-9]?)%)$`
 	// +deckhouse:XDocExample:value="100%"
