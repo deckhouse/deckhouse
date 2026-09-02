@@ -57,6 +57,17 @@ rules:
   - patch
   - delete
   - deletecollection
+# The spec of an operation is immutable, so update and patch would grant nothing.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeoperations
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - delete
 - apiGroups:
   - nfd.k8s-sigs.io
   resources:
@@ -112,6 +123,14 @@ rules:
   - patch
   - delete
   - deletecollection
+# The spec of an operation is immutable, so update and patch would grant nothing.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeoperations
+  verbs:
+  - create
+  - delete
 ---
 # Access level: Admin.
 # Includes User, PrivilegedUser, and Editor permissions.
@@ -151,7 +170,7 @@ rules: []
 ---
 # Access level: User.
 # Read access:
-# - public node-manager resources (instances, nodegroups)
+# - public node-manager resources (instances, nodegroups, nodeoperations)
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
@@ -165,6 +184,7 @@ rules:
   resources:
   - instances
   - nodegroups
+  - nodeoperations
   verbs:
   - get
   - list

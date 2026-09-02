@@ -55,18 +55,26 @@ var _ = Describe("Module :: node-manager :: helm template :: NodeConfigTemplate 
 })
 
 func nodeConfigTemplateVerbs(role object_store.KubeObject) []string {
+	return roleVerbs(role, "templates.internal.deckhouse.io", "nodeconfigtemplates")
+}
+
+// roleVerbs collects every verb the role grants on the resource, across all of
+// its rules.
+func roleVerbs(role object_store.KubeObject, apiGroup, resource string) []string {
 	var rules []rbacv1.PolicyRule
 	Expect(json.Unmarshal([]byte(role.Field("rules").String()), &rules)).To(Succeed())
 
+	var verbs []string
 	for _, rule := range rules {
-		if !slices.Contains(rule.APIGroups, "templates.internal.deckhouse.io") {
+		if !slices.Contains(rule.APIGroups, apiGroup) {
 			continue
 		}
-		if slices.Contains(rule.Resources, "nodeconfigtemplates") {
-			return rule.Verbs
+		if !slices.Contains(rule.Resources, resource) {
+			continue
 		}
+		verbs = append(verbs, rule.Verbs...)
 	}
-	return nil
+	return verbs
 }
 
 // kube-aggregator routes by group version: an APIService that names a service
