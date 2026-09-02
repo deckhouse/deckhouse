@@ -22,10 +22,11 @@ import (
 	"os"
 	"strconv"
 
+	"k8s.io/client-go/tools/clientcmd"
+
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
-	"k8s.io/client-go/tools/clientcmd"
 )
 
 // defaultAPIServerPort is what an https URL without one means.
