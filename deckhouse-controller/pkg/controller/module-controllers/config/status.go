@@ -36,6 +36,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	bootstrappedextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/bootstrapped"
 	d7sversionextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/deckhouseversion"
 	editionavailablextender "github.com/deckhouse/deckhouse/go_lib/dependency/extenders/editionavailable"
@@ -57,7 +58,7 @@ func (r *reconciler) refreshModule(ctx context.Context, moduleName string) error
 		Jitter:   0.1,
 	}
 
-	module := new(v1alpha1.Module)
+	module := new(v1alpha2.Module)
 	if err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 		return retry.RetryOnConflict(backoff, func() error {
 			if err := r.client.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
@@ -118,14 +119,14 @@ func (r *reconciler) refreshModuleConfig(ctx context.Context, configName string)
 }
 
 // refreshModuleStatus refreshes module status by addon-operator
-func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
+func (r *reconciler) refreshModuleStatus(module *v1alpha2.Module) {
 	basicModule := r.moduleManager.GetModule(module.Name)
 	if basicModule == nil {
 		return
 	}
 
 	if r.moduleManager.IsModuleEnabled(module.Name) {
-		module.SetConditionTrue(v1alpha1.ModuleConditionEnabledByModuleManager)
+		module.SetConditionTrue(v1alpha1.ModuleConditionEnabledByModuleManager, v1alpha1.ModuleReasonEnabled)
 
 		if module.Status.HooksState != basicModule.GetHookErrorsSummary() {
 			module.Status.HooksState = basicModule.GetHookErrorsSummary()
@@ -154,7 +155,7 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha1.Module) {
 		case modules.Ready:
 			if !basicModule.HasReadiness() {
 				module.Status.Phase = v1alpha1.ModulePhaseReady
-				module.SetConditionTrue(v1alpha1.ModuleConditionIsReady)
+				module.SetConditionTrue(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonReady)
 			}
 
 		case modules.Startup:
