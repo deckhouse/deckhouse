@@ -32,8 +32,9 @@
 #                     label, removing the other one first.
 #   delete          - from delete/delete-auto jobs' `after_script`.
 #                     Appends the cluster deletion result as a new line.
-#                     Never touches the e2e-framework::* label — that
-#                     reflects the create/test outcome only.
+#                     Manages only e2e-framework::cluster-not-deleted (set
+#                     on failure, cleared on success) — never touches the
+#                     create/test e2e-framework::<success|failed> label.
 #
 # finish/delete read NOTE_ID/MERGE_REQUEST_IID from the environment —
 # inherited via dotenv (needs:artifacts) from e2e-ensure-build.
@@ -147,17 +148,36 @@ else
   echo "Failed to update comment ${NOTE_ID} on MR ${MERGE_REQUEST_IID}" >&2
 fi
 
+mr_url="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/merge_requests/${MERGE_REQUEST_IID}"
+
 if [[ "${MODE}" == "finish" ]]; then
   OTHER_LABEL="failed"
   [[ "${STATUS_LABEL}" == "failed" ]] && OTHER_LABEL="success"
 
-  mr_url="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/merge_requests/${MERGE_REQUEST_IID}"
   if api PUT "${mr_url}" \
     --data-urlencode "remove_labels=e2e-framework::${OTHER_LABEL}" \
     --data-urlencode "add_labels=e2e-framework::${STATUS_LABEL}" >/dev/null; then
     echo "Set label e2e-framework::${STATUS_LABEL} on MR ${MERGE_REQUEST_IID}"
   else
     echo "Failed to set label on MR ${MERGE_REQUEST_IID}" >&2
+  fi
+fi
+
+if [[ "${MODE}" == "delete" ]]; then
+  # cluster-not-deleted only ever reflects deletion outcome, independent of
+  # the create/test e2e-framework::<success|failed> label managed above.
+  if [[ "${STATUS_LABEL}" == "success" ]]; then
+    label_args=(--data-urlencode "remove_labels=e2e-framework::cluster-not-deleted")
+    label_msg="cleared e2e-framework::cluster-not-deleted"
+  else
+    label_args=(--data-urlencode "add_labels=e2e-framework::cluster-not-deleted")
+    label_msg="set e2e-framework::cluster-not-deleted"
+  fi
+
+  if api PUT "${mr_url}" "${label_args[@]}" >/dev/null; then
+    echo "${label_msg} on MR ${MERGE_REQUEST_IID}"
+  else
+    echo "Failed to update cluster-not-deleted label on MR ${MERGE_REQUEST_IID}" >&2
   fi
 fi
 
