@@ -1,9 +1,9 @@
-{{- $version := "v0.1.8" }}
+{{- $version := "v0.1.9" }}
 {{- if ne $.Env "CSE" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
 final: false
-from: dev-registry.deckhouse.io/container-factory/olcedar:{{ $version }}
+from: dev-registry.deckhouse.io/container-factory/engine:{{ $version }}
 ---
 # The four files a boot slot consists of, and nothing else. The node fetches an
 # artifact as one layer, so the payload has to be the whole of it: the upstream
@@ -26,7 +26,7 @@ import:
   before: setup
 imageSpec:
   config:
-    labels: { "distro": "olcedar", "version": "{{ $version }}" }
+    labels: { "distro": "deckhouse-engine", "version": "{{ $version }}" }
     clearUser: true
     clearWorkingDir: true
     clearCmd: true
