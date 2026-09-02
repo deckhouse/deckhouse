@@ -884,6 +884,79 @@ func TestResolveAccessibleNamespaces_LimitNamespacesEqualsLabelSelector(t *testi
 	assert.ElementsMatch(t, fromLimit, fromSelector)
 }
 
+func TestResolveAccessibleNamespaces_TwoCARsUnion(t *testing.T) {
+	deckhouseLabels := map[string]string{"heritage": "deckhouse", "module": "user-authz"}
+	wildcard := []rbacv1.PolicyRule{{
+		APIGroups: []string{"*"}, Resources: []string{"*"}, Verbs: []string{"*"},
+	}}
+	objs := []runtime.Object{
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-a"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-b"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-out"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default"}},
+		&rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{Name: "user-authz:editor"},
+			Rules:      wildcard,
+		},
+		&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "user-authz:a:editor", Labels: deckhouseLabels},
+			Subjects:   []rbacv1.Subject{{Kind: rbacv1.UserKind, Name: "dual@example.io"}},
+			RoleRef:    rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "user-authz:editor"},
+		},
+		&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "user-authz:b:editor", Labels: deckhouseLabels},
+			Subjects:   []rbacv1.Subject{{Kind: rbacv1.UserKind, Name: "dual@example.io"}},
+			RoleRef:    rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "user-authz:editor"},
+		},
+	}
+	engine := newMTEngineFromConfig(t, `{
+		"crds": [
+			{"name": "a", "spec": {"limitNamespaces": ["ns-a"], "subjects": [{"kind": "User", "name": "dual@example.io"}]}},
+			{"name": "b", "spec": {"limitNamespaces": ["ns-b"], "subjects": [{"kind": "User", "name": "dual@example.io"}]}}
+		]
+	}`)
+	got, err := setupResolver(t, objs, engine).ResolveAccessibleNamespaces(
+		&user.DefaultInfo{Name: "dual@example.io", Groups: []string{"system:authenticated"}},
+	)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"ns-a", "ns-b"}, got)
+}
+
+func TestResolveAccessibleNamespaces_DefaultIsSystem(t *testing.T) {
+	deckhouseLabels := map[string]string{"heritage": "deckhouse", "module": "user-authz"}
+	wildcard := []rbacv1.PolicyRule{{
+		APIGroups: []string{"*"}, Resources: []string{"*"}, Verbs: []string{"*"},
+	}}
+	objs := []runtime.Object{
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-in"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default"}},
+		&rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{Name: "user-authz:editor"},
+			Rules:      wildcard,
+		},
+		&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "user-authz:editor:editor", Labels: deckhouseLabels},
+			Subjects:   []rbacv1.Subject{{Kind: rbacv1.UserKind, Name: "editor@example.io"}},
+			RoleRef:    rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "user-authz:editor"},
+		},
+	}
+	engine := newMTEngineFromConfig(t, `{
+		"crds": [{
+			"name": "editor",
+			"spec": {
+				"limitNamespaces": ["ns-in", "default"],
+				"subjects": [{"kind": "User", "name": "editor@example.io"}]
+			}
+		}]
+	}`)
+	got, err := setupResolver(t, objs, engine).ResolveAccessibleNamespaces(
+		&user.DefaultInfo{Name: "editor@example.io"},
+	)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"ns-in"}, got,
+		"default is a system namespace and stays hidden without allowAccessToSystemNamespaces")
+}
+
 // Helper functions
 
 // newMTEngineFromConfig writes a user-authz config.json with the supplied raw body
