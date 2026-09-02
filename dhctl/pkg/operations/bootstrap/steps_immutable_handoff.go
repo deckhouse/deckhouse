@@ -15,13 +15,11 @@
 package bootstrap
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"os"
 	"slices"
-	"strings"
 	"time"
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
@@ -173,14 +171,13 @@ func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bc
 // A dial to a machine that is booting hangs to gossh's 5s deadline, and that
 // error ends the tunnel's accept loop for good while its listener stays bound.
 //
-// Opening one is narrated into a buffer and replayed into the debug log: a wait
-// that runs for minutes opens a channel every few seconds, and the SSH progress
-// of each buries the only line that matters — what the node itself reports.
+// Opening one is narrated as plain lines: off the compact terminal, in the debug
+// file, for as long as the channel lives. Not a buffer replayed after open: the
+// channel logs on, and reading while it writes is a race that also drops the rest.
 func retryWithFreshChannel(ctx context.Context, loop *libretry.Loop, open func(context.Context) (string, func(), error), do func(address string) error) error {
 	return loop.RunContext(ctx, func() error {
-		var opening bytes.Buffer
-		address, stop, err := open(dhlog.ToContext(ctx, dhlog.NewBufferLogger(&opening)))
-		dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimSpace(opening.String()))
+		narrated := dhlog.NewBufferLogger(dhlog.NewLineWriter(dhlog.FromContext(ctx)))
+		address, stop, err := open(dhlog.ToContext(ctx, narrated))
 		// open must not hand back a closer together with an error: it is dropped here.
 		if err != nil {
 			return err

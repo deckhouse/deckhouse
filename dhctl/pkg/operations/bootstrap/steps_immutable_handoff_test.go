@@ -68,6 +68,29 @@ func TestHandoffRebuildsTheChannelAfterItDies(t *testing.T) {
 	}
 }
 
+// The channel narrates for as long as it lives, not only while it opens: the
+// tunnel reports every connection it forwards and the dial that kills it. A
+// buffer replayed once open returned kept only the opening, and reading it
+// while the tunnel still wrote was a data race (go test -race).
+func TestTheChannelKeepsNarratingAfterItOpens(t *testing.T) {
+	var narration bytes.Buffer
+	ctx := dhlog.ToContext(t.Context(), dhlog.NewBufferLogger(&narration))
+
+	openChannel := func(ctx context.Context) (string, func(), error) {
+		dhlog.FromContext(ctx).InfoContext(ctx, "the channel is open")
+		return "127.0.0.1:0", func() { dhlog.FromContext(ctx).InfoContext(ctx, "the channel is closing") }, nil
+	}
+
+	if err := retryWithFreshChannel(ctx, handoffTestLoop(t, 1), openChannel, func(string) error { return nil }); err != nil {
+		t.Fatal(err)
+	}
+	for _, said := range []string{"the channel is open", "the channel is closing"} {
+		if !strings.Contains(narration.String(), said) {
+			t.Fatalf("%q never reached the log; what the channel says after it opened is lost:\n%s", said, narration.String())
+		}
+	}
+}
+
 // One tunnel per attempt is only affordable if it is also closed per attempt:
 // 360 leaked listeners and their bastion connections are worse than the dead
 // listener this rebuild exists to survive.
