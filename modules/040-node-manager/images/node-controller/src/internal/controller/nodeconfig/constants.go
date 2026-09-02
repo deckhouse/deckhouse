@@ -16,6 +16,8 @@ limitations under the License.
 
 package nodeconfig
 
+import "time"
+
 const (
 	controllerName = "node-config"
 
@@ -137,6 +139,19 @@ const (
 	// running the spec that was published to it, as opposed to a rolled-back,
 	// quarantined or half-applied one.
 	configurationAppliedCondition = "ConfigurationApplied"
+
+	// disruptionApprovalExhaustedEvent names the Warning that says the cluster
+	// has stopped interrupting a node for a configuration revision.
+	disruptionApprovalExhaustedEvent = "DisruptionApprovalExhausted"
+)
+
+// A failed disruption takes the node out of service and changes nothing, so the
+// retries for one configuration revision are bounded: each attempt waits longer
+// than the one before, and after the last the revision is left alone.
+const (
+	maxDisruptionAttempts     = 3
+	disruptionRetryBackoff    = time.Minute
+	disruptionRetryBackoffMax = 10 * time.Minute
 )
 
 // nodeManagerDigestsKey and osImageName locate the Deckhouse Engine image of this
