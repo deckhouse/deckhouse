@@ -970,9 +970,38 @@ func TestMachinesArePreflightedAgainstTheirDocuments(t *testing.T) {
 		bctx.immutable.maintenancePort = port
 
 		err := b.checkMachinesAreAvailable(t.Context(), bctx)
-		require.ErrorContains(t, err, "answers, but not with an inventory")
+		require.ErrorContains(t, err, "answers, but neither as a machine waiting for a configuration")
+		require.ErrorContains(t, err, "--preflight-skip-check immutable-machines-availability",
+			"a check that refuses the run has to name the way past it")
 		require.NotContains(t, err.Error(), "could not reach",
 			"the machine was reached; only what it served was wrong")
+	})
+
+	t.Run("a machine that is already a node", func(t *testing.T) {
+		var inventoryReads int
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == "/whoami" {
+				_, _ = io.WriteString(w, "agent\n")
+				return
+			}
+			// What the agent answers on every other path: it holds the port, and it
+			// serves no inventory. Counted so the skip is proven, not inferred.
+			inventoryReads++
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+		}))
+		t.Cleanup(server.Close)
+		host, port := splitTestServerAddress(t, server)
+
+		b, bctx := immutableTestBootstrapper(t)
+		bctx.metaConfig.ClusterType = config.StaticClusterType
+		// Keyed by the name the bootstrapper actually checks, so the machine under
+		// test is the machine reached.
+		bctx.immutable.hosts = map[string]string{bctx.immutable.masterNodeName: host}
+		bctx.immutable.maintenancePort = port
+
+		require.NoError(t, b.checkMachinesAreAvailable(t.Context(), bctx),
+			"the machine this bootstrap configured itself must not fail its own preflight")
+		require.Zero(t, inventoryReads, "a machine that is already a node is not read at all")
 	})
 
 	t.Run("a machine the document cannot describe", func(t *testing.T) {
