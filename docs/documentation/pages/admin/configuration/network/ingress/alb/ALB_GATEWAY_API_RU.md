@@ -88,7 +88,7 @@ ListenerSet — расширение Gateway API. Объект ListenerSet оп�
 
 ### Валидация конфигурации
 
-Помимо настройки инфраструктуры Gateway API, модуль `alb` валидирует пользовательские настройки, чтобы не допустить применения конфликтующих конфигураций. Например, он выявляет конфликты между одинаковыми обработчиками трафика в разных объектах ListenerSet, если они ссылаются на один и тот же объект Gateway.
+Помимо настройки инфраструктуры Gateway API выполняется проверка пользовательских настроек перед применением, чтобы не допустить конфликта. Это позволяет выявляет конфликты между одинаковыми обработчиками трафика в разных объектах ListenerSet, если они ссылаются на один и тот же объект Gateway.
 
 ## Инлеты
 
@@ -126,7 +126,7 @@ spec:
   enabled: true
 ```
 
-Для создания управляемого объекта Gateway используйте ресурс ClusterALBInstance или ALBInstance.
+Создайте ClusterALBInstance или ALBInstance. Это приведет к созданию и настройке управляемого объекта Gateway.
 
 {% alert level="warning" %}
 Ручная модификация объектов Gateway, управляемых модулем, не допускается.
@@ -135,7 +135,7 @@ spec:
 {% tabs Примеры ресурсов Gateway %}
 {% tab "ClusterALBInstance" %}
 
-Пример манифеста ресурса ClusterALBInstance для создания общекластерного шлюза:
+Пример манифеста ClusterALBInstance для создания общекластерного шлюза:
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -180,13 +180,13 @@ spec:
 - Для ClusterALBInstance объекты ListenerSet могут располагаться в любом неймспейсе.
 - Для ALBInstance объекты ListenerSet должны располагаться в том же неймспейсе, что и родительский ALBInstance.
 
-В обоих случаях рекомендуется размещать объект ListenerSet в том же неймспейсе, что и связанные с ним объекты HTTPRoute, GRPCRoute и TLSRoute. Тогда не потребуются дополнительные настройки, например создание объектов ReferenceGrant.
+В обоих случаях рекомендуется размещать ListenerSet в одном пространстве имён со связанными ресурсами HTTPRoute, GRPCRoute и TLSRoute. В этом случае дополнительные настройки, например создание ReferenceGrant, не требуются.
 
-В ListenerSet для HTTP/HTTPS указывайте порты `80` и `443`. Это порты слушателей Gateway API. Они не совпадают с параметрами [`hostPort.httpPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport-httpport) / [`hostPort.httpsPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport-httpsport) инлета HostPort, которые задают порты на узле.
+В ListenerSet для HTTP/HTTPS указывайте порты `80` и `443`. Это порты слушателей Gateway API. Они не совпадают с параметрами [`hostPort.httpPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport-httpport) и [`hostPort.httpsPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport-httpsport) инлета HostPort, которые задают порты на узле.
 
-Объекты TCPRoute и UDPRoute, использующие TCP- и UDP-порты из [`additionalPorts`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-additionalports), привязываются непосредственно к соответствующему слушателю объекта Gateway.
+Объекты TCPRoute и UDPRoute, использующие TCP и UDP-порты из [`additionalPorts`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-additionalports), привязываются непосредственно к соответствующему слушателю объекта Gateway.
 
-Пример манифеста ресурса ListenerSet для управления приёмом входящих HTTP- и HTTPS-запросов через общекластерный шлюз:
+Пример манифеста ListenerSet для управления приёмом входящих HTTP- и HTTPS-запросов через общекластерный шлюз:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -230,7 +230,7 @@ spec:
 {% tabs Примеры HTTPRoute %}
 {% tab "HTTP" %}
 
-Пример маршрута для HTTP-трафика:
+Пример создания маршрута для HTTP-трафика:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -257,7 +257,7 @@ spec:
 {% endtab %}
 {% tab "HTTPS" %}
 
-Пример маршрута для HTTPS-трафика:
+Пример создания маршрута для HTTPS-трафика:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -335,7 +335,7 @@ d8 k get httproutes -A -l heritage=deckhouse -o json \
   | column -t -s $'\t'
 ```
 
-### Алгоритм выбора шлюза DKP по умолчанию при использовании нескольких ClusterALBInstance
+### Выбор шлюза DKP по умолчанию при использовании нескольких ClusterALBInstance
 
 В кластере может быть одновременно несколько общекластерных Gateway, помеченных как шлюз по умолчанию (флаг [`spec.defaultDeckhouseGateway: true`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-defaultdeckhousegateway) в параметрах соответствующих ClusterALBInstance). В этом случае шлюзом по умолчанию становится Gateway, созданный объектом ClusterALBInstance с наиболее ранним `creationTimestamp` (то есть созданный раньше остальных).
 
@@ -509,7 +509,7 @@ spec:
         protocol: TCP
 ```
 
-Контроллер добавит в управляемый объект Gateway слушатель для TCP/UDP-трафика с именем секции (`sectionName`), например `tcp-port-9000`. После этого можно создать объект TCPRoute и напрямую привязать его к этому слушателю, указав имя Gateway и соответствующий `sectionName`:
+Контроллер добавит в управляемый объект Gateway слушатель TCP/UDP-трафика с именем секции (`sectionName`), например `tcp-port-9000`. Чтобы привязать к нему TCPRoute, укажите в маршруте имя Gateway и соответствующее значение `sectionName`.
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -541,7 +541,7 @@ spec:
 
 ### Разделение публичной и административной зон {#public-and-admin-zones}
 
-Можно развернуть отдельные объекты Gateway для публичного и административного трафика, чтобы у каждой зоны была своя точка входа и политика доступа. Это похоже на выделение отдельного Ingress NGINX Controller (и IngressClass) под административную зону.
+Для публичного и административного трафика можно использовать отдельные объекты Gateway. Это позволяет задать для каждой зоны отдельную точку входа и собственные правила доступа. Такой подход аналогичен использованию отдельного Ingress NGINX Controller и IngressClass для административной зоны.
 
 Создайте отдельный объект Gateway для каждой зоны и ограничьте приём административного трафика с помощью [`spec.acceptRequestsFrom`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-acceptrequestsfrom). Решение о допуске соединения принимается по реальному адресу подключения, а не по заголовкам запроса.
 
@@ -595,7 +595,7 @@ spec:
 
 Модуль `alb` совместим с [`cert-manager`](/modules/cert-manager/). Слушатели `d8-http` / `d8-https` используются для HTTP-01 challenge. Для приложений выпускайте сертификат в Secret и ссылайтесь на него из `certificateRefs` в ListenerSet.
 
-Минимальный пример Certificate, который создаёт Secret `app-tls` для ListenerSet:
+Минимальный пример сертификата, который создаёт секрет `app-tls` для ListenerSet:
 
 ```yaml
 apiVersion: cert-manager.io/v1
@@ -612,7 +612,7 @@ spec:
     - app.example.com
 ```
 
-О выпуске сертификатов читайте в [«Документация модуля cert-manager»](/modules/cert-manager/). Для совместной работы с `ingress-nginx` используйте отдельный ClusterIssuer для каждого типа ALB.
+Подробнее о выпуске сертификатов в [документации модуля `cert-manager`](/modules/cert-manager/). Для совместной работы с `ingress-nginx` используйте отдельный ClusterIssuer для каждого типа ALB.
 
 ## Совместное использование с другими модулями и сторонними решениями {#совместное-использование-с-другими-модулями-и-сторонними-решениями}
 
