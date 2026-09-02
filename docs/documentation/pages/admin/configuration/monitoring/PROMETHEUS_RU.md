@@ -54,4 +54,6 @@ spec:
       value: monitoring
 ```
 
+Параметр `global.modules.storageClass` используется как значение по умолчанию при создании PVC. Если PVC для Prometheus уже существует, его `storageClassName` определяет effective `storageClass`, поэтому изменение глобального параметра не изменит существующие PVC. Глобальный параметр может повлиять на хранилище при переходе с `emptyDir` на PVC или если PVC еще не создан. Чтобы изменить StorageClass для `prometheus-main` или `prometheus-longterm`, укажите `storageClass` или `longtermStorageClass` соответственно в `ModuleConfig` модуля `prometheus`.
+
 Полное описание всех настроек доступно [в документации модуля `prometheus`](/modules/prometheus/configuration.html).
