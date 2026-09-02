@@ -36,9 +36,9 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/go_lib/bashiblecontext"
+	"github.com/deckhouse/deckhouse/go_lib/bashiblecontext/names"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
-	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
@@ -155,7 +155,7 @@ func newGoldenReconciler(t *testing.T) *Reconciler {
 			ObjectMeta: metav1.ObjectMeta{
 				Namespace: kubeSystemNS,
 				Name:      "bootstrap-token-abcdef",
-				Labels:    map[string]string{nodecommon.BootstrapTokenNodeGroupLabel: "cloud-worker"},
+				Labels:    map[string]string{names.BootstrapTokenNGLabel: "cloud-worker"},
 			},
 			Type: corev1.SecretTypeBootstrapToken,
 			// Deliberately not the [a-z0-9]{6}.[a-z0-9]{16} shape of a real bootstrap token:

@@ -27,7 +27,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/go_lib/bashiblecontext/names"
-	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
 const (
@@ -182,7 +181,7 @@ func (s *Service) readKubernetesCA() string {
 // readBootstrapTokens keeps the Service's read-or-nothing style: input.yaml is
 // rendered from whatever could be read, and a missing token is a missing key.
 func (s *Service) readBootstrapTokens(ctx context.Context) map[string]string {
-	tokens, err := nodecommon.BootstrapTokens(ctx, s.reader())
+	tokens, err := BootstrapTokens(ctx, s.reader())
 	if err != nil {
 		return map[string]string{}
 	}
