@@ -7,6 +7,7 @@ package registry
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -209,6 +210,11 @@ type contractStack struct {
 
 func newContractStack(t *testing.T, mtConfig string, objs []runtime.Object, scope staticResourceScope) contractStack {
 	t.Helper()
+	return newContractStackWithRegistry(t, mtConfig, objs, scope, projectRegistry())
+}
+
+func newContractStackWithRegistry(t *testing.T, mtConfig string, objs []runtime.Object, scope staticResourceScope, registry scopefilter.ResourceRegistry) contractStack {
+	t.Helper()
 	client := fake.NewSimpleClientset(objs...)
 	factory := informers.NewSharedInformerFactory(client, 0)
 	nsInformer := factory.Core().V1().Namespaces()
@@ -225,8 +231,7 @@ func newContractStack(t *testing.T, mtConfig string, objs []runtime.Object, scop
 	require.NoError(t, err)
 	engine.SetIndependentRBACChecker(rbac)
 
-	inner := composite.NewCompositeAuthorizer(engine, rbac)
-	auth := scopefilter.NewIdentityReadAuthorizer(inner, projectRegistry())
+	auth := scopefilter.NewIdentityReadAuthorizer(composite.NewCompositeAuthorizer(engine, rbac), registry)
 	return contractStack{
 		storage: NewBulkSARStorage(auth),
 		auth:    auth,
@@ -235,6 +240,13 @@ func newContractStack(t *testing.T, mtConfig string, objs []runtime.Object, scop
 
 func createBulkSAR(t *testing.T, storage *BulkSARStorage, subject string, groups []string, reqs []v1alpha1.SubjectAccessReviewRequest) []v1alpha1.SubjectAccessReviewResult {
 	t.Helper()
+	got, err := createBulkSARResult(storage, subject, groups, reqs)
+	require.NoError(t, err)
+	require.Len(t, got, len(reqs))
+	return got
+}
+
+func createBulkSARResult(storage *BulkSARStorage, subject string, groups []string, reqs []v1alpha1.SubjectAccessReviewRequest) ([]v1alpha1.SubjectAccessReviewResult, error) {
 	ctx := request.WithUser(context.Background(), &user.DefaultInfo{
 		Name:   contractAdminUser,
 		Groups: []string{"system:authenticated"},
@@ -246,11 +258,14 @@ func createBulkSAR(t *testing.T, storage *BulkSARStorage, subject string, groups
 			Requests: reqs,
 		},
 	}, nil, nil)
-	require.NoError(t, err)
+	if err != nil {
+		return nil, err
+	}
 	got, ok := out.(*v1alpha1.BulkSubjectAccessReview)
-	require.True(t, ok)
-	require.Len(t, got.Status.Results, len(reqs))
-	return got.Status.Results
+	if !ok {
+		return nil, errors.New("object is not a BulkSubjectAccessReview")
+	}
+	return got.Status.Results, nil
 }
 
 func authorizeUnbound(t *testing.T, auth authorizer.Authorizer, subject string, groups []string, reqs []v1alpha1.SubjectAccessReviewRequest) []reviewOutcome {

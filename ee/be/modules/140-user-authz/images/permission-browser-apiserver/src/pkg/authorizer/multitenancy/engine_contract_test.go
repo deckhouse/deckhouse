@@ -419,6 +419,182 @@ func TestEngine_GetNamespaceAccessType_PrivilegedDoesNotOverrideCAR(t *testing.T
 	assert.Nil(t, filter)
 }
 
+func TestEngine_Authorize_TwoCARsUnionNamespaces(t *testing.T) {
+	e := engineWithConsoleScope(t, `{
+		"crds": [
+			{
+				"name": "a",
+				"spec": {
+					"limitNamespaces": ["ns-a"],
+					"subjects": [{"kind": "User", "name": "dual@example.io"}]
+				}
+			},
+			{
+				"name": "b",
+				"spec": {
+					"limitNamespaces": ["ns-b"],
+					"subjects": [{"kind": "User", "name": "dual@example.io"}]
+				}
+			}
+		]
+	}`)
+	u := &mockUserInfo{name: "dual@example.io"}
+	got, _ := authorizeAs(t, e, u, "get", "", "pods", "ns-a")
+	assert.Equal(t, authorizer.DecisionNoOpinion, got)
+	got, _ = authorizeAs(t, e, u, "get", "", "pods", "ns-b")
+	assert.Equal(t, authorizer.DecisionNoOpinion, got)
+	got, reason := authorizeAs(t, e, u, "get", "", "pods", "ns-out")
+	assert.Equal(t, authorizer.DecisionDeny, got)
+	assert.Equal(t, noNamespaceAccessReason, reason)
+	got, reason = authorizeAs(t, e, u, "list", "", "pods", "")
+	assert.Equal(t, authorizer.DecisionDeny, got)
+	assert.Equal(t, namespaceLimitedAccessReason, reason)
+}
+
+func TestEngine_Authorize_MatchAnyGroupOverridesUserLimit(t *testing.T) {
+	e := engineWithConsoleScope(t, `{
+		"crds": [
+			{
+				"name": "user-limit",
+				"spec": {
+					"limitNamespaces": ["ns-in"],
+					"subjects": [{"kind": "User", "name": "union@example.io"}]
+				}
+			},
+			{
+				"name": "ops-any",
+				"spec": {
+					"namespaceSelector": {"matchAny": true},
+					"subjects": [{"kind": "Group", "name": "ops"}]
+				}
+			}
+		]
+	}`)
+	userOnly := &mockUserInfo{name: "union@example.io"}
+	got, _ := authorizeAs(t, e, userOnly, "list", "", "pods", "")
+	assert.Equal(t, authorizer.DecisionDeny, got)
+
+	withOps := &mockUserInfo{name: "union@example.io", groups: []string{"ops"}}
+	got, reason := authorizeAs(t, e, withOps, "list", "", "pods", "")
+	assert.Equal(t, authorizer.DecisionNoOpinion, got, "reason=%q", reason)
+	got, _ = authorizeAs(t, e, withOps, "get", "", "pods", "kube-system")
+	assert.Equal(t, authorizer.DecisionNoOpinion, got)
+}
+
+func TestEngine_Authorize_SelectorIgnoresSiblingLimitNamespaces(t *testing.T) {
+	e := engineWithNamespaces(t, `{
+		"crds": [{
+			"name": "both",
+			"spec": {
+				"limitNamespaces": ["ns-out"],
+				"namespaceSelector": {"labelSelector": {"matchLabels": {"pba-perf": "true"}}},
+				"subjects": [{"kind": "User", "name": "editor@example.io"}]
+			}
+		}]
+	}`, labeledNamespaces()...)
+	u := &mockUserInfo{name: "editor@example.io"}
+	got, _ := authorizeAs(t, e, u, "get", "", "pods", "ns-in")
+	assert.Equal(t, authorizer.DecisionNoOpinion, got)
+	got, _ = authorizeAs(t, e, u, "get", "", "pods", "ns-out")
+	assert.Equal(t, authorizer.DecisionDeny, got,
+		"limitNamespaces must be ignored when the same CAR sets namespaceSelector")
+}
+
+func TestEngine_Authorize_LimitNamespacesRegex(t *testing.T) {
+	e := engineWithConsoleScope(t, `{
+		"crds": [{
+			"name": "re",
+			"spec": {
+				"limitNamespaces": ["app-.*"],
+				"subjects": [{"kind": "User", "name": "regex@example.io"}]
+			}
+		}]
+	}`)
+	u := &mockUserInfo{name: "regex@example.io"}
+	got, _ := authorizeAs(t, e, u, "get", "", "pods", "app-prod")
+	assert.Equal(t, authorizer.DecisionNoOpinion, got)
+	got, _ = authorizeAs(t, e, u, "get", "", "pods", "ns-in")
+	assert.Equal(t, authorizer.DecisionDeny, got)
+}
+
+func TestEngine_Authorize_MatchExpressionsEqualsMatchLabels(t *testing.T) {
+	labelsEngine := engineWithNamespaces(t, editorLabelSelectorCARConfig, labeledNamespaces()...)
+	exprEngine := engineWithNamespaces(t, `{
+		"crds": [{
+			"name": "editor-expr",
+			"spec": {
+				"accessLevel": "Editor",
+				"namespaceSelector": {"labelSelector": {"matchExpressions": [{"key": "pba-perf", "operator": "In", "values": ["true"]}]}},
+				"subjects": [{"kind": "User", "name": "editor@example.io"}]
+			}
+		}]
+	}`, labeledNamespaces()...)
+	u := &mockUserInfo{name: "editor@example.io"}
+	for _, ns := range []string{"ns-in", "ns-out", "kube-system"} {
+		gotL, reasonL := authorizeAs(t, labelsEngine, u, "get", "", "pods", ns)
+		gotE, reasonE := authorizeAs(t, exprEngine, u, "get", "", "pods", ns)
+		assert.Equal(t, gotL, gotE, "ns=%s", ns)
+		assert.Equal(t, reasonL, reasonE, "ns=%s", ns)
+	}
+}
+
+func TestEngine_Authorize_SystemNamespaceSet(t *testing.T) {
+	editor := engineWithConsoleScope(t, editorCARConfig)
+	u := &mockUserInfo{name: "editor@example.io"}
+	for _, ns := range []string{"default", "kube-system", "kube-public", "d8-system", "d8-monitoring"} {
+		got, reason := authorizeAs(t, editor, u, "get", "", "pods", ns)
+		assert.Equal(t, authorizer.DecisionDeny, got, "ns=%s", ns)
+		assert.Equal(t, noNamespaceAccessReason, reason, "ns=%s", ns)
+	}
+}
+
+func TestEngine_Authorize_LimitDefaultStillDeniedWithoutSystemAccess(t *testing.T) {
+	e := engineWithConsoleScope(t, `{
+		"crds": [{
+			"name": "def",
+			"spec": {
+				"limitNamespaces": ["default"],
+				"subjects": [{"kind": "User", "name": "def@example.io"}]
+			}
+		}]
+	}`)
+	got, reason := authorizeAs(t, e, &mockUserInfo{name: "def@example.io"}, "get", "", "pods", "default")
+	assert.Equal(t, authorizer.DecisionDeny, got)
+	assert.Equal(t, noNamespaceAccessReason, reason,
+		"listing default in limitNamespaces does not grant a system namespace")
+}
+
+func TestEngine_Authorize_MatchAnyWithoutSystemAccessIsNoOpinion(t *testing.T) {
+	e := engineWithConsoleScope(t, `{
+		"crds": [{
+			"name": "any",
+			"spec": {
+				"accessLevel": "Editor",
+				"namespaceSelector": {"matchAny": true},
+				"subjects": [{"kind": "User", "name": "any@example.io"}]
+			}
+		}]
+	}`)
+	u := &mockUserInfo{name: "any@example.io"}
+	got, _ := authorizeAs(t, e, u, "list", "", "pods", "")
+	assert.Equal(t, authorizer.DecisionNoOpinion, got)
+	got, _ = authorizeAs(t, e, u, "get", "", "pods", "kube-system")
+	assert.Equal(t, authorizer.DecisionNoOpinion, got,
+		"MatchAny short-circuits hasAnyFilters even without allowAccessToSystemNamespaces")
+}
+
+func TestEngine_Authorize_VerbsDoNotChangeClusterScopedFilter(t *testing.T) {
+	editor := engineWithConsoleScope(t, editorCARConfig)
+	u := &mockUserInfo{name: "editor@example.io"}
+	for _, verb := range []string{"get", "list", "watch", "create", "update", "patch", "delete", "deletecollection"} {
+		got, reason := authorizeAs(t, editor, u, verb, "", "pods", "")
+		assert.Equal(t, authorizer.DecisionDeny, got, "verb=%s", verb)
+		assert.Equal(t, namespaceLimitedAccessReason, reason, "verb=%s", verb)
+		got, _ = authorizeAs(t, editor, u, verb, "", "nodes", "")
+		assert.Equal(t, authorizer.DecisionNoOpinion, got, "verb=%s nodes", verb)
+	}
+}
+
 func TestEngine_GetNamespaceAccessType_MatchAnyVsLimited(t *testing.T) {
 	any := engineWithConsoleScope(t, editorMatchAnyCARConfig)
 	limited := engineWithConsoleScope(t, editorCARConfig)
