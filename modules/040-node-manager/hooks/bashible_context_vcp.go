@@ -47,6 +47,13 @@ const bashibleExternalInputsVersion = 1
 
 const bashibleExternalInputsSecretName = "bashible-external-inputs"
 
+const (
+	bashibleContextSecretNamespace = "d8-cloud-instance-manager"
+	bashibleContextSecretName      = "bashible-apiserver-context"
+	// The key templates/bashible-apiserver/context-secret.yaml renders the context under.
+	bashibleContextSecretKey = "input.yaml"
+)
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/node-manager/bashible_context_vcp",
 	// After get_crds (10) and order_bootstrap_token (20): the tenant nodeGroups and per-NG tokens

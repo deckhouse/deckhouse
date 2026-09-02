@@ -360,3 +360,22 @@ func equalYAML(t *testing.T, a, b interface{}) bool {
 	require.NoError(t, err)
 	return string(rawA) == string(rawB)
 }
+
+type stubSnapshot struct{ value interface{} }
+
+func (s stubSnapshot) UnmarshalTo(out interface{}) error {
+	raw, err := json.Marshal(s.value)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(raw, out)
+}
+
+func (s stubSnapshot) String() string {
+	raw, _ := json.Marshal(s.value)
+	return string(raw)
+}
+
+type stubSnapshots map[string][]sdkpkg.Snapshot
+
+func (s stubSnapshots) Get(key string) []sdkpkg.Snapshot { return s[key] }
