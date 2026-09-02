@@ -8,14 +8,13 @@ spec:
   updatePolicy: Auto
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: Module
+kind: ModuleSource
 metadata:
-  name: test-module
-properties:
-  availableSources:
-    - test-source
+  name: test-source
+spec:
+  registry:
+    repo: registry.example.com/modules
 status:
-  phase: Available
-  conditions:
-    - type: EnabledByModuleConfig
-      status: "False" 
+  modules:
+    - name: test-module
+      version: v1.0.0

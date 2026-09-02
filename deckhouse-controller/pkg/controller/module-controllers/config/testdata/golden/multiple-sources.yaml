@@ -5,36 +5,9 @@ metadata:
   finalizers:
   - modules.deckhouse.io/module-registered
   name: test-module
-  resourceVersion: "1001"
+  resourceVersion: "1002"
 spec:
   enabled: true
 status:
+  message: 'several available sources: source-one, source-three, source-two'
   version: "1"
----
-apiVersion: deckhouse.io/v1alpha1
-kind: Module
-metadata:
-  name: test-module
-  resourceVersion: "1000"
-properties:
-  availableSources:
-  - source-one
-  - source-two
-  - source-three
-status:
-  conditions:
-  - lastProbeTime: null
-    lastTransitionTime: null
-    status: "True"
-    type: EnabledByModuleConfig
-  - lastProbeTime: null
-    lastTransitionTime: null
-    status: "False"
-    type: EnabledByModuleManager
-  - lastProbeTime: null
-    lastTransitionTime: null
-    message: several available sources
-    reason: Conflict
-    status: "False"
-    type: IsReady
-  phase: Conflict

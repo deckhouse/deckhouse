@@ -13,21 +13,23 @@ spec:
 status:
   version: "1"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: test-module
   resourceVersion: "1000"
-properties:
-  availableSources:
-  - old-source
-  - new-source
-  source: new-source
+spec:
+  enabled: true
+  packageRepositoryName: old-source
+  packageVersion: v1.0.0
   updatePolicy: Manual
 status:
   conditions:
-  - lastProbeTime: null
-    lastTransitionTime: null
+  - lastTransitionTime: null
+    message: ""
+    reason: Enabled
     status: "True"
     type: EnabledByModuleConfig
+  lastAppliedConfiguration: null
   phase: Ready
+  tracking: null
