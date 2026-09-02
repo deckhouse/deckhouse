@@ -27,6 +27,7 @@ import (
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
@@ -46,6 +47,26 @@ func TestNodesComeFromResources(t *testing.T) {
 
 	static := &config.MetaConfig{ClusterType: config.StaticClusterType}
 	require.False(t, nodesComeFromResources(static), "a static cluster builds no cloud nodes")
+}
+
+// A NodeConfig document in the resources describes a machine the installer
+// talks to, never an object to create. The full bootstrap takes it out before
+// anything reads the resources; `bootstrap-phase create-resources` runs this
+// node alone and used to send the document to the API, where the CRD refused it.
+func TestParseResourcesKeepsNodeConfigDocumentsOutOfTheQueues(t *testing.T) {
+	bctx := &bootstrapContext{metaConfig: &config.MetaConfig{
+		ClusterType: config.StaticClusterType,
+		ResourcesYAML: "apiVersion: " + immutable.PayloadAPIVersion + "\nkind: " + immutable.NodeConfigKind + "\n" +
+			"metadata:\n  name: master-0\nspec:\n  nodeName: master-0\n" +
+			"---\n" +
+			"apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: kept\n  namespace: default\n",
+	}}
+
+	require.NoError(t, (&ClusterBootstrapper{}).bootstrapParseResources(t.Context(), bctx))
+
+	queued := append(append(bctx.resourcesToCreateBefore, bctx.resourcesToCreateProvider...), bctx.resourcesToCreateAfter...)
+	require.Len(t, queued, 1)
+	require.Equal(t, "ConfigMap", queued[0].Object.GetKind(), "only the cluster object may be queued: %s", queued[0])
 }
 
 func newResource(t *testing.T, apiVersion, kind, name, namespace string, fields map[string]any) *template.Resource {
