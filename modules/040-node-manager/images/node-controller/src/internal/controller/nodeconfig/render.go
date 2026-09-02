@@ -26,6 +26,7 @@ import (
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
@@ -407,16 +408,16 @@ func isCloudNodeType(t v1.NodeType) bool {
 func renderContainerRuntime(ng *v1.NodeGroup, in clusterInputs) internalv1alpha1.ContainerRuntime {
 	runtime := internalv1alpha1.ContainerRuntime{
 		SandboxImage:           in.SandboxImage,
-		MaxConcurrentDownloads: defaultMaxConcurrentDownloads,
+		MaxConcurrentDownloads: ptr.To(defaultMaxConcurrentDownloads),
 	}
 	if ng.Spec.CRI == nil {
 		return runtime
 	}
 	switch {
 	case ng.Spec.CRI.ContainerdV2 != nil && ng.Spec.CRI.ContainerdV2.MaxConcurrentDownloads != nil:
-		runtime.MaxConcurrentDownloads = *ng.Spec.CRI.ContainerdV2.MaxConcurrentDownloads
+		runtime.MaxConcurrentDownloads = ptr.To(*ng.Spec.CRI.ContainerdV2.MaxConcurrentDownloads)
 	case ng.Spec.CRI.Containerd != nil && ng.Spec.CRI.Containerd.MaxConcurrentDownloads != nil:
-		runtime.MaxConcurrentDownloads = *ng.Spec.CRI.Containerd.MaxConcurrentDownloads
+		runtime.MaxConcurrentDownloads = ptr.To(*ng.Spec.CRI.Containerd.MaxConcurrentDownloads)
 	}
 	return runtime
 }

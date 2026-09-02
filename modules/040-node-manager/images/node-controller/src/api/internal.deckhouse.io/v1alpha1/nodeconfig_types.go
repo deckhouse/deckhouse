@@ -226,6 +226,7 @@ type Registry struct {
 	// Address is the registry host, optionally with a port, e.g.
 	// "registry.deckhouse.io" or "registry.example.com:5000".
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=`^\S+$`
 	Address string `json:"address"`
 	// Path is the repository path within the registry, e.g. "/deckhouse/ce".
 	// +optional
@@ -243,6 +244,7 @@ type Registry struct {
 	// Auth is the base64-encoded "user:password" pair, as it appears in the
 	// "auth" field of a docker config.
 	// +optional
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9+/]+={0,2}$`
 	Auth string `json:"auth,omitempty"`
 }
 
@@ -643,7 +645,7 @@ type ContainerRuntime struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:default=3
-	MaxConcurrentDownloads int `json:"maxConcurrentDownloads,omitempty"`
+	MaxConcurrentDownloads *int `json:"maxConcurrentDownloads,omitempty"`
 }
 
 // UpdatePolicy controls how/when the node is updated.

@@ -209,7 +209,7 @@ type resourceReservation struct {
 // containerRuntime configures containerd.
 type containerRuntime struct {
 	SandboxImage           string `json:"sandboxImage,omitempty"`
-	MaxConcurrentDownloads int    `json:"maxConcurrentDownloads,omitempty"`
+	MaxConcurrentDownloads *int   `json:"maxConcurrentDownloads,omitempty"`
 }
 
 type updatePolicy struct {

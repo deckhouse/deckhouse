@@ -18,6 +18,7 @@ package nodeconfig
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -1012,4 +1013,13 @@ func TestKeepBootstrapOnlyFieldsKeepsAnOperatorWrittenDiskSelector(t *testing.T)
 			require.Equal(t, tc.exp, desired.Storage)
 		})
 	}
+}
+
+// An explicit zero is containerd's "no limit"; it has to reach the object as a
+// zero, not vanish behind omitempty and come back as the CRD default.
+func TestAnExplicitZeroDownloadsReachesTheAPI(t *testing.T) {
+	ng := &v1.NodeGroup{Spec: v1.NodeGroupSpec{CRI: &v1.CRISpec{Containerd: &v1.ContainerdSpec{MaxConcurrentDownloads: ptr.To(0)}}}}
+	data, err := json.Marshal(renderContainerRuntime(ng, clusterInputs{}))
+	require.NoError(t, err)
+	require.Contains(t, string(data), `"maxConcurrentDownloads":0`)
 }
