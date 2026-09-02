@@ -78,7 +78,7 @@ func (s *syncer) syncModules(ctx context.Context) error {
 		tracked[module.Name] = struct{}{}
 
 		place := placements[module.Name]
-		if !place.placed() && disposable(module) {
+		if !place.placed() && s.disposable(module) {
 			s.logger.Info("module is not backed by a package, delete it", slog.String("name", module.Name))
 
 			// a module already gone is the outcome asked for
@@ -400,10 +400,21 @@ func (s *syncer) resolveModuleConfigs(ctx context.Context) (map[string]*v1alpha1
 }
 
 // disposable reports whether nothing backs an unplaced module: it carries no package version,
-// or it is an embedded module the image stopped shipping and no real repository has taken over.
-func disposable(module *v1alpha2.Module) bool {
-	return module.Spec.PackageVersion == "" ||
-		(module.IsEmbedded() && module.Spec.PackageRepositoryName == repositoryNameEmbedded)
+// it is an embedded module the image stopped shipping and no real repository has taken over,
+// or it is a downloaded module whose files are gone. A downloaded module still on disk stays:
+// a pull override deleted without a rollback leaves its files in use until the next deploy.
+func (s *syncer) disposable(module *v1alpha2.Module) bool {
+	if module.Spec.PackageVersion == "" {
+		return true
+	}
+
+	if module.IsEmbedded() || module.Spec.PackageRepositoryName == repositoryNameEmbedded {
+		return module.IsEmbedded() && module.Spec.PackageRepositoryName == repositoryNameEmbedded
+	}
+
+	_, err := os.Stat(filepath.Join(s.downloadedModulesDir, module.Name))
+
+	return errors.Is(err, os.ErrNotExist)
 }
 
 // createModule places a module the cluster does not carry yet.

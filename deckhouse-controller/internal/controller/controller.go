@@ -338,7 +338,7 @@ func (c *Controller) Start(ctx context.Context) error {
 	// image ships the embedded modules; give each of them a package version
 	// object, the user module sources their repositories and every module its
 	// v1alpha2 object, while the controllers still wait for the sync.
-	if err := pkgsync.Sync(ctx, c.ctrl.GetAPIReader(), c.ctrl.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, c.logger.Named("pkgsync")); err != nil {
+	if err := pkgsync.Sync(ctx, c.ctrl.GetAPIReader(), c.ctrl.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, app.DownloadedModulesDir(), c.logger.Named("pkgsync")); err != nil {
 		return fmt.Errorf("sync package objects: %w", err)
 	}
 

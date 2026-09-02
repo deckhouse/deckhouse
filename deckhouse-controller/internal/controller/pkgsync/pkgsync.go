@@ -52,8 +52,11 @@
 //	     a module without a config carries none
 //
 // A module claims one source: the image beats a pull override, which beats a
-// deployed release. A module none of them backs is deleted, so the objects
-// the old stack created for the modules it merely offered go away. A
+// deployed release. A module none of them backs is deleted: the objects the
+// old stack created for the modules it merely offered, an embedded module the
+// image stopped shipping, a downloaded module whose files are gone. A
+// downloaded module still on disk stays, since a pull override deleted
+// without a rollback leaves its files in use until the next deploy. A
 // condition written without a reason gets one, since the v1alpha2 schema
 // requires it.
 //
@@ -111,8 +114,9 @@ type syncer struct {
 	writer client.Client
 	dc     dependency.Container
 
-	deckhouseVersion   string
-	embeddedModulesDir string
+	deckhouseVersion     string
+	embeddedModulesDir   string
+	downloadedModulesDir string
 
 	logger *log.Logger
 }
@@ -125,19 +129,20 @@ type syncer struct {
 // API failure stops the sync. An embedded module skipped here reconciles
 // nowhere, since the Module reconciler resolves the same version - see
 // known-hazards.md.
-func Sync(ctx context.Context, reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, embeddedModulesDir string, logger *log.Logger) error {
-	return newSyncer(reader, writer, dc, deckhouseVersion, embeddedModulesDir, logger).sync(ctx)
+func Sync(ctx context.Context, reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, embeddedModulesDir, downloadedModulesDir string, logger *log.Logger) error {
+	return newSyncer(reader, writer, dc, deckhouseVersion, embeddedModulesDir, downloadedModulesDir, logger).sync(ctx)
 }
 
-// newSyncer builds a syncer for the given Deckhouse version and embedded modules dir.
-func newSyncer(reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, embeddedModulesDir string, logger *log.Logger) *syncer {
+// newSyncer builds a syncer for the given Deckhouse version and module dirs.
+func newSyncer(reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, embeddedModulesDir, downloadedModulesDir string, logger *log.Logger) *syncer {
 	return &syncer{
 		reader: reader,
 		writer: writer,
 		dc:     dc,
 
-		deckhouseVersion:   deckhouseVersion,
-		embeddedModulesDir: embeddedModulesDir,
+		deckhouseVersion:     deckhouseVersion,
+		embeddedModulesDir:   embeddedModulesDir,
+		downloadedModulesDir: downloadedModulesDir,
 
 		logger: logger,
 	}
