@@ -31,6 +31,8 @@ import (
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	k8stesting "k8s.io/client-go/testing"
 
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
@@ -79,13 +81,19 @@ func TestMasterGroupIsImmutable(t *testing.T) {
 	t.Run("a classic control plane keeps the SSH path", func(t *testing.T) {
 		kubeGetter, _ := gateClient(t, nodeGroup("master", ""), nodeGroup("worker", "Immutable"))
 
-		require.False(t, masterGroupIsImmutable(t.Context(), kubeGetter))
+		immutableMasters, err := masterGroupIsImmutable(t.Context(), kubeGetter)
+
+		require.NoError(t, err)
+		require.False(t, immutableMasters)
 	})
 
 	t.Run("an immutable control plane drops it", func(t *testing.T) {
 		kubeGetter, _ := gateClient(t, nodeGroup("master", "Immutable"), nodeGroup("worker", ""))
 
-		require.True(t, masterGroupIsImmutable(t.Context(), kubeGetter))
+		immutableMasters, err := masterGroupIsImmutable(t.Context(), kubeGetter)
+
+		require.NoError(t, err)
+		require.True(t, immutableMasters)
 	})
 
 	// A cluster whose master group was never written keeps the path every other
@@ -93,13 +101,42 @@ func TestMasterGroupIsImmutable(t *testing.T) {
 	t.Run("no master group at all", func(t *testing.T) {
 		kubeGetter, _ := gateClient(t, nodeGroup("worker", "Immutable"))
 
-		require.False(t, masterGroupIsImmutable(t.Context(), kubeGetter))
+		immutableMasters, err := masterGroupIsImmutable(t.Context(), kubeGetter)
+
+		require.NoError(t, err)
+		require.False(t, immutableMasters)
 	})
 
-	// The probe runs on every converge of every cluster. An apiserver restart, an RBAC
-	// gap or a CRD not yet served must leave the classic clusters on the path they
-	// always took instead of aborting their node phase.
-	t.Run("an unreadable NodeGroup list keeps the SSH path", func(t *testing.T) {
+	// Converge restarts the apiservers it reads through. One 503 answered "classic",
+	// and the very next reader of the same object answered "immutable".
+	t.Run("a transient list failure is retried", func(t *testing.T) {
+		kubeGetter, dyn := gateClient(t, nodeGroup("master", "Immutable"))
+
+		failed := false
+		dyn.PrependReactor("list", "nodegroups", func(k8stesting.Action) (bool, runtime.Object, error) {
+			if failed {
+				return false, nil, nil
+			}
+			failed = true
+
+			return true, nil, apierrors.NewInternalError(fmt.Errorf("apiserver is restarting"))
+		})
+
+		immutableMasters, err := masterGroupIsImmutable(t.Context(), kubeGetter)
+
+		require.True(t, failed, "the transient failure was never served")
+		require.NoError(t, err)
+		require.True(t, immutableMasters)
+	})
+
+	// Guessing "classic" here creates a NodeUser and waits for bashible on machines
+	// that run none, so an unreadable list stops the converge instead.
+	t.Run("a list that keeps failing stops the converge", func(t *testing.T) {
+		// Collapse the 600-attempt budget so the persistent failure is observable now.
+		wasInTestEnvironment := retry.InTestEnvironment
+		retry.InTestEnvironment = true
+		t.Cleanup(func() { retry.InTestEnvironment = wasInTestEnvironment })
+
 		kubeGetter, dyn := gateClient(t, nodeGroup("master", "Immutable"))
 
 		dyn.PrependReactor("list", "nodegroups", func(k8stesting.Action) (bool, runtime.Object, error) {
@@ -107,7 +144,9 @@ func TestMasterGroupIsImmutable(t *testing.T) {
 				nodeGroupGVR.GroupResource(), "", fmt.Errorf("converge may not list nodegroups"))
 		})
 
-		require.False(t, masterGroupIsImmutable(t.Context(), kubeGetter))
+		_, err := masterGroupIsImmutable(t.Context(), kubeGetter)
+
+		require.ErrorContains(t, err, "converge may not list nodegroups")
 	})
 }
 

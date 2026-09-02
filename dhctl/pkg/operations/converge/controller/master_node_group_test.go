@@ -15,6 +15,7 @@
 package controller
 
 import (
+	gocontext "context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -24,6 +25,7 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
@@ -50,6 +52,58 @@ func TestNewHookForUpdatePipelineFailsWithoutSSHHosts(t *testing.T) {
 
 	require.Error(t, err)
 	require.Nil(t, hook)
+}
+
+// A run started with kube flags and unreadable SSH keys carries no provider initializer
+// at all. The host map then stays empty, and an empty map is how a single-master cluster
+// is recognised: a destructive plan would scale 1→3→1 and queue the two healthy masters
+// for destruction.
+func TestNewHookForUpdatePipelineFailsWithoutSSHConfiguration(t *testing.T) {
+	convergeCtx := context.NewContext(t.Context(), context.Params{})
+
+	controller := NewMasterNodeGroupController(
+		NewNodeGroupController("master", state.NodeGroupInfrastructureState{
+			State: map[string][]byte{
+				"cluster-master-0": nil,
+				"cluster-master-1": nil,
+				"cluster-master-2": nil,
+			},
+		}, nil, nil),
+		false,
+	)
+
+	hook, err := controller.newHookForUpdatePipeline(convergeCtx, "cluster-master-0")
+
+	require.Error(t, err)
+	require.Nil(t, hook)
+}
+
+// The readiness gate asks one question per surviving master, and an answer of "no"
+// skips the check instead of failing it. With no terminal that answer defaulted to no,
+// so a master was retired with the others' readiness never looked at.
+func TestUpdatePipelineChecksSurvivingMastersWithoutTerminal(t *testing.T) {
+	convergeCtx := context.NewContext(t.Context(), context.Params{
+		KubeProvider: unreachableKubeProvider{},
+	})
+
+	nodeGroup := NewNodeGroupController("master", state.NodeGroupInfrastructureState{
+		State: map[string][]byte{"cluster-master-0": nil, "cluster-master-1": nil},
+	}, nil, nil)
+	nodeGroup.immutable = true
+
+	hook, err := NewMasterNodeGroupController(nodeGroup, false).
+		newHookForUpdatePipeline(convergeCtx, "cluster-master-0")
+	require.NoError(t, err)
+
+	pipeline, ok := hook.(*controlplane.HookForUpdatePipeline)
+	require.True(t, ok, "the update pipeline hook carries the readiness gate")
+
+	// Cancelled so the readiness loop gives up on the unreachable cluster at once.
+	checkCtx, cancel := gocontext.WithCancel(t.Context())
+	cancel()
+
+	require.Error(t, pipeline.IsAllNodesReady(checkCtx),
+		"cluster-master-1 was reported ready without a single check")
 }
 
 // An immutable master is never registered as an SSH host, so the provider lookup
@@ -140,5 +194,5 @@ func TestPopulateNodeToHostListsImmutableMastersByName(t *testing.T) {
 func TestHostsMappingConfirmedWithoutTerminal(t *testing.T) {
 	convergeCtx := context.NewContext(t.Context(), context.Params{})
 
-	require.True(t, confirmHostsMapping(convergeCtx)("master-0 -> 10.12.1.10"))
+	require.True(t, confirmOrProceed(convergeCtx)("master-0 -> 10.12.1.10"))
 }

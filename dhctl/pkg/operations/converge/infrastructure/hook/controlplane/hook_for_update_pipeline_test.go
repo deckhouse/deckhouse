@@ -65,6 +65,8 @@ func TestBeforeActionRetiresImmutableMasterWithoutSSHIP(t *testing.T) {
 			immutableNode,
 		).
 			WithNodeToConverge("cluster-master-0").
+			// A "no" stubs out the readiness gate so the branch below is what the test
+			// reaches; converge itself never answers no — see confirmOrProceed.
 			WithConfirm(func(_ string) bool { return false })
 	}
 
