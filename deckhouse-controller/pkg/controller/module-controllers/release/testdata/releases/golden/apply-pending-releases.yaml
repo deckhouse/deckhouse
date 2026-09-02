@@ -128,28 +128,40 @@ status:
   pullDuration: 0s
   transitionTime: null
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: commander
-  resourceVersion: "1000"
-properties: {}
+  resourceVersion: "1001"
+spec:
+  packageRepositoryName: test
+  packageVersion: v1.0.3
+  releaseChannel: Stable
 status:
   conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: ""
+    reason: Deployed
     status: "True"
     type: LastReleaseDeployed
+  lastAppliedConfiguration: null
+  tracking: null
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: parca
-  resourceVersion: "1000"
-properties: {}
+  resourceVersion: "1001"
+spec:
+  packageRepositoryName: test
+  packageVersion: v1.2.2
+  releaseChannel: Stable
 status:
   conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: ""
+    reason: Deployed
     status: "True"
     type: LastReleaseDeployed
+  lastAppliedConfiguration: null
+  tracking: null

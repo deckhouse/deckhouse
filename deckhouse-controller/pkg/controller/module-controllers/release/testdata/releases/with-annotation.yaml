@@ -47,7 +47,10 @@ status:
   size: 3087774
   transitionTime: "2024-05-05T10:41:06Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: deckhouse-commander
+spec:
+  packageRepositoryName: deckhouse-prod
+  packageVersion: v1.3.10

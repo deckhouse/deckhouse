@@ -53,11 +53,14 @@ spec:
   update:
     mode: Auto
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: testmodule
   labels:
     modules.deckhouse.io/update-policy: test-lts
+spec:
+  packageRepositoryName: test-source
+  packageVersion: v0.5.0
 status:
   phase: Ready
