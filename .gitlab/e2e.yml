@@ -86,7 +86,7 @@ e2e-ensure-build:
       token: $VAULT_ID_TOKEN
       file: false
   script:
-    - chmod +x .gitlab/scripts/e2e-ensure-build.sh
+    - chmod +x .gitlab/scripts/e2e-ensure-build.sh .gitlab/scripts/e2e-notify.sh
     - .gitlab/scripts/e2e-ensure-build.sh
   artifacts:
     access: none  # dotenv now carries COMMENT_TOKEN; needs:artifacts inheritance still works, only UI/API download is blocked.
@@ -122,8 +122,8 @@ e2e-prestart:
     - job: e2e-prestart
       artifacts: true
   after_script:
-    - chmod +x .gitlab/scripts/e2e-notify-finish.sh
-    - .gitlab/scripts/e2e-notify-finish.sh
+    - chmod +x .gitlab/scripts/e2e-notify.sh
+    - .gitlab/scripts/e2e-notify.sh finish
   before_script:
     - |
       # A job-level BRANCH is already statically set via the e2e-framework include
@@ -143,6 +143,11 @@ e2e-prestart:
       fi
     - !reference [.import_secrets, before_script]
 
+.e2e-provider-delete:
+  after_script:
+    - chmod +x .gitlab/scripts/e2e-notify.sh
+    - .gitlab/scripts/e2e-notify.sh delete
+
 # ---------------------------------------------------------------------------
 # Per-provider jobs (PROVIDER values from e2e-framework CloudProviderFactory,
 # excluding Custom).
@@ -159,6 +164,7 @@ e2e-yandex-create:
 e2e-yandex-delete:
   extends:
     - .e2e-yandex-delete-cluster
+    - .e2e-provider-delete
   stage: e2e-delete
   needs:
     - job: e2e-ensure-build
@@ -171,6 +177,7 @@ e2e-yandex-delete:
 e2e-yandex-delete-auto:
   extends:
     - .e2e-yandex-delete-cluster
+    - .e2e-provider-delete
   stage: e2e-delete
   when: on_success
   needs:
@@ -193,6 +200,7 @@ e2e-aws-create:
 e2e-aws-delete:
   extends:
     - .e2e-aws-delete-cluster
+    - .e2e-provider-delete
   stage: e2e-delete
   needs:
     - job: e2e-ensure-build
@@ -205,6 +213,7 @@ e2e-aws-delete:
 e2e-aws-delete-auto:
   extends:
     - .e2e-aws-delete-cluster
+    - .e2e-provider-delete
   stage: e2e-delete
   when: on_success
   needs:
@@ -227,6 +236,7 @@ e2e-azure-create:
 e2e-azure-delete:
   extends:
     - .e2e-azure-delete-cluster
+    - .e2e-provider-delete
   stage: e2e-delete
   needs:
     - job: e2e-ensure-build
@@ -239,6 +249,7 @@ e2e-azure-delete:
 e2e-azure-delete-auto:
   extends:
     - .e2e-azure-delete-cluster
+    - .e2e-provider-delete
   stage: e2e-delete
   when: on_success
   needs:
@@ -261,6 +272,7 @@ e2e-gcp-create:
 e2e-gcp-delete:
   extends:
     - .e2e-gcp-delete-cluster
+    - .e2e-provider-delete
   stage: e2e-delete
   needs:
     - job: e2e-ensure-build
@@ -273,6 +285,7 @@ e2e-gcp-delete:
 e2e-gcp-delete-auto:
   extends:
     - .e2e-gcp-delete-cluster
+    - .e2e-provider-delete
   stage: e2e-delete
   when: on_success
   needs:
@@ -295,6 +308,7 @@ e2e-openstack-create:
 e2e-openstack-delete:
   extends:
     - .e2e-openstack-delete-cluster
+    - .e2e-provider-delete
   stage: e2e-delete
   needs:
     - job: e2e-ensure-build
@@ -307,6 +321,7 @@ e2e-openstack-delete:
 e2e-openstack-delete-auto:
   extends:
     - .e2e-openstack-delete-cluster
+    - .e2e-provider-delete
   stage: e2e-delete
   when: on_success
   needs:
@@ -329,6 +344,7 @@ e2e-vsphere-create:
 e2e-vsphere-delete:
   extends:
     - .e2e-vsphere-delete-cluster
+    - .e2e-provider-delete
   stage: e2e-delete
   needs:
     - job: e2e-ensure-build
@@ -341,6 +357,7 @@ e2e-vsphere-delete:
 e2e-vsphere-delete-auto:
   extends:
     - .e2e-vsphere-delete-cluster
+    - .e2e-provider-delete
   stage: e2e-delete
   when: on_success
   needs:
@@ -363,6 +380,7 @@ e2e-dvp-create:
 e2e-dvp-delete:
   extends:
     - .e2e-dvp-delete-cluster
+    - .e2e-provider-delete
   stage: e2e-delete
   needs:
     - job: e2e-ensure-build
@@ -375,6 +393,7 @@ e2e-dvp-delete:
 e2e-dvp-delete-auto:
   extends:
     - .e2e-dvp-delete-cluster
+    - .e2e-provider-delete
   stage: e2e-delete
   when: on_success
   needs:
@@ -397,6 +416,7 @@ e2e-zvirt-create:
 e2e-zvirt-delete:
   extends:
     - .e2e-zvirt-delete-cluster
+    - .e2e-provider-delete
   stage: e2e-delete
   needs:
     - job: e2e-ensure-build
@@ -409,6 +429,7 @@ e2e-zvirt-delete:
 e2e-zvirt-delete-auto:
   extends:
     - .e2e-zvirt-delete-cluster
+    - .e2e-provider-delete
   stage: e2e-delete
   when: on_success
   needs:
@@ -431,6 +452,7 @@ e2e-vcd-create:
 e2e-vcd-delete:
   extends:
     - .e2e-vcd-delete-cluster
+    - .e2e-provider-delete
   stage: e2e-delete
   needs:
     - job: e2e-ensure-build
@@ -443,6 +465,7 @@ e2e-vcd-delete:
 e2e-vcd-delete-auto:
   extends:
     - .e2e-vcd-delete-cluster
+    - .e2e-provider-delete
   stage: e2e-delete
   when: on_success
   needs:
@@ -465,6 +488,7 @@ e2e-huawei-create:
 e2e-huawei-delete:
   extends:
     - .e2e-huawei-delete-cluster
+    - .e2e-provider-delete
   stage: e2e-delete
   needs:
     - job: e2e-ensure-build
@@ -477,6 +501,7 @@ e2e-huawei-delete:
 e2e-huawei-delete-auto:
   extends:
     - .e2e-huawei-delete-cluster
+    - .e2e-provider-delete
   stage: e2e-delete
   when: on_success
   needs:
@@ -499,6 +524,7 @@ e2e-static-private-create:
 e2e-static-private-delete:
   extends:
     - .e2e-static-private-delete-cluster
+    - .e2e-provider-delete
   stage: e2e-delete
   needs:
     - job: e2e-ensure-build
@@ -511,6 +537,7 @@ e2e-static-private-delete:
 e2e-static-private-delete-auto:
   extends:
     - .e2e-static-private-delete-cluster
+    - .e2e-provider-delete
   stage: e2e-delete
   when: on_success
   needs:
@@ -533,6 +560,7 @@ e2e-static-cse-create:
 e2e-static-cse-delete:
   extends:
     - .e2e-static-cse-delete-cluster
+    - .e2e-provider-delete
   stage: e2e-delete
   needs:
     - job: e2e-ensure-build
@@ -545,6 +573,7 @@ e2e-static-cse-delete:
 e2e-static-cse-delete-auto:
   extends:
     - .e2e-static-cse-delete-cluster
+    - .e2e-provider-delete
   stage: e2e-delete
   when: on_success
   needs:
@@ -567,6 +596,7 @@ e2e-dvp-cse-create:
 e2e-dvp-cse-delete:
   extends:
     - .e2e-dvp-cse-delete-cluster
+    - .e2e-provider-delete
   stage: e2e-delete
   needs:
     - job: e2e-ensure-build
@@ -579,6 +609,7 @@ e2e-dvp-cse-delete:
 e2e-dvp-cse-delete-auto:
   extends:
     - .e2e-dvp-cse-delete-cluster
+    - .e2e-provider-delete
   stage: e2e-delete
   when: on_success
   needs:

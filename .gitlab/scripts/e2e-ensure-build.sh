@@ -130,14 +130,6 @@ resolve_mr_iid() {
   echo "${MR_IID}"
 }
 
-post_start_comment() {
-  local mr_iid="$1"
-  local body="⏳ e2e test started: PROVIDER=${E2E_PROVIDER:-?} EDITION=${E2E_EDITION} K8S=${KUBERNETES_VERSION:-?} — [pipeline](${CI_PIPELINE_URL:-})"
-  api POST "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/merge_requests/${mr_iid}/notes" \
-    --data-urlencode "body=${body}" \
-    | jq -r '.id // empty'
-}
-
 compute_image_tag() {
   local tag_base="$1"
   local edition_lower="$2"
@@ -295,7 +287,7 @@ main() {
   local mr_iid="" note_id=""
   if mr_iid="$(resolve_mr_iid)"; then
     echo "MERGE_REQUEST_IID=${mr_iid}"
-    if note_id="$(post_start_comment "${mr_iid}")" && [[ -n "${note_id}" ]]; then
+    if note_id="$(COMMENT_TOKEN="${FOX_TOKEN}" .gitlab/scripts/e2e-notify.sh start "${mr_iid}")" && [[ -n "${note_id}" ]]; then
       echo "NOTE_ID=${note_id}"
     else
       echo "Failed to post start comment on MR ${mr_iid}" >&2
