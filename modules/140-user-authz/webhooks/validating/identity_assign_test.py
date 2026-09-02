@@ -139,6 +139,28 @@ class TestDescribeAndRange(unittest.TestCase):
     def test_empty_target_allows(self):
         self.assertIsNone(assign.can_assign([], [], default_catalog()))
 
+    def test_emptied_superadmin_rules_are_not_covered(self):
+        cat = default_catalog()
+        cat["user-authz:super-admin"] = entry(
+            "user-authz:super-admin", rules=[], labels=SUPER_LABELS)
+        leftover = assign.can_assign(
+            ["d8:manage:security:manager"], ["user-authz:super-admin"], cat)
+        self.assertEqual(leftover, ["user-authz:super-admin"])
+
+    def test_emptied_cluster_admin_rules_are_not_covered(self):
+        cat = default_catalog()
+        cat["cluster-admin"] = entry("cluster-admin", rules=[], labels=SUPER_LABELS)
+        leftover = assign.can_assign(
+            ["d8:manage:security:manager"], ["cluster-admin"], cat)
+        self.assertEqual(leftover, ["cluster-admin"])
+
+    def test_access_level_annotation_ignored_on_custom(self):
+        cat = default_catalog()
+        cat["pwn"] = entry("pwn", rules=STAR_ALL, access_level="User")
+        leftover = assign.can_assign(
+            ["d8:manage:security:manager"], ["pwn"], cat)
+        self.assertEqual(leftover, ["pwn"])
+
     def test_unknown_additional_role_fail_closed(self):
         leftover = assign.can_assign(
             ["user-authz:cluster-admin"], ["cluster-write-all"], default_catalog())
@@ -179,6 +201,23 @@ class TestIdentityCollection(unittest.TestCase):
         self.assertEqual(
             assign.actor_roles({"username": "sec@corp", "groups": []}, snaps),
             ["d8:manage:security:manager"])
+
+    def test_actor_roles_ignore_authorization_rules(self):
+        snaps = {
+            assign.CAR_SNAP: [],
+            assign.AR_SNAP: [{"filterResult": {
+                "name": "ns-admin",
+                "namespace": "app",
+                "accessLevel": "Admin",
+                "additionalRoles": ["cluster-admin"],
+                "userSubjects": ["eve@corp"],
+                "groupSubjects": [],
+                "saSubjects": [],
+            }}],
+            assign.CRB_SNAP: [],
+            assign.CROLE_SNAP: [],
+        }
+        self.assertEqual(assign.actor_roles({"username": "eve@corp", "groups": []}, snaps), [])
 
     def test_target_user_includes_spec_groups(self):
         snaps = {
