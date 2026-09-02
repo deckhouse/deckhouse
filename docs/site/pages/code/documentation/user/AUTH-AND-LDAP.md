@@ -166,7 +166,9 @@ providers:
     groups_attribute: 'gitlab_group'
 ```
 
-> If a user belongs to `admin_groups` but is not listed in `allowed_groups`, access will be denied. In this case, administrative privileges will not be granted either.
+{% alert level="info" %}
+If a user belongs to `admin_groups` but is not listed in `allowed_groups`, access will be denied. In this case, administrative privileges will not be granted either.
+{% endalert %}
 
 ## LDAP synchronization
 
@@ -249,7 +251,7 @@ Assigns roles to users based on group names (`cn`):
 LDAP Sync does not support transitivity for nested groups. See [Nested groups and transitivity](#nested-groups-and-transitivity) section for details and workarounds.
 {% endalert %}
 
-Deckhouse Code supports the following attributes to determine group membership (all values must be arrays of user DNs):
+Deckhouse Code supports the following attributes to determine group membership (all values are arrays of DNs):
 
 - `member`
 - `uniquemember`
@@ -324,7 +326,7 @@ Group and membership synchronization on sign-in runs only when a user signs in t
 
 #### LDAP as the source of truth
 
-To let users found in LDAP sign in immediately and send everyone else for administrator approval, set the following parameters in the `spec.appConfig.` section:
+To allow users found in LDAP to sign in immediately and require administrator approval for everyone else, set the following parameters in the `spec.appConfig.` section:
 
 ```yaml
 omniauth:
@@ -345,14 +347,12 @@ ldap:
 
 ### Troubleshooting synchronization issues
 
-#### Incorrect synchronization process
-
 If a previous sync job was not completed successfully, Redis may retain a lock preventing the next job from starting (the default `concurrency` is set to 1).
 
 To remove the lock:
 
 1. Connect to Redis using the databases specified in `config/redis.shared_state.yml` and `config/redis.queues.yml`.
-2. Delete the key `sidekiq:concurrency_limit:throttled_jobs:{ldap/sync_worker}` using the following commands:
+1. Delete the key `sidekiq:concurrency_limit:throttled_jobs:{ldap/sync_worker}` using the following commands:
 
    ```console
    keys *ldap*
@@ -363,7 +363,7 @@ To remove the lock:
 
 To synchronize groups immediately after they are changed on the LDAP side, follow these steps:
 1. Go to the LDAP synchronization worker page `/admin/sidekiq/cron/namespaces/default/jobs/ldap_sync_worker`.
-2. In the upper-right corner, click the "Enqueue Now" button and confirm in the dialog.
+1. In the upper-right corner, click the "Enqueue Now" button and confirm in the dialog.
    ![Ldap sync worker UI](/images/code/ldap_sync_worker_en.png)
 
 To see how the triggered synchronization finished, open the metrics page for the LDAP synchronization task:
@@ -377,13 +377,15 @@ To view the full synchronization logs:
 
    ![Ldap sync history table](/images/code/ldap_sync_history_en.png)
 
-2. Connect to the cluster and determine the Sidekiq pod name:
+1. Connect to the cluster and determine the Sidekiq pod name:
    `d8 k -n d8-code -l app.kubernetes.io/component=sidekiq get pod -o NAME`
 
-3. Run the log collection command, substituting the copied JID and pod name (POD_NAME):
+1. Run the log collection command, substituting the copied JID and pod name (POD_NAME):
    `d8 k -n d8-code logs POD_NAME | jq 'select(.jid=="JID")'`
 
-> Old logs are removed by rotation over time, so they may become unavailable. If needed, rerun the synchronization and collect the latest logs.
+{% alert level="info" %}
+Old logs are removed by rotation over time, so they may become unavailable. If needed, rerun the synchronization and collect the latest logs.
+{% endalert %}
 
 ### LDAP Sync behavior
 
@@ -434,7 +436,9 @@ The steps below describe a setup where users sign in through an OIDC provider (f
 - An LDAP directory with the same users and with groups whose names allow determining the role.
 - An LDAP service account with read access to the directory (the `bind_dn` and `password` parameters).
 
+{% alert level="info" %}
 The `uid` or email value in the OIDC provider must match the value of the corresponding attribute in LDAP, otherwise linking will not work (see [How the LDAP account is found](#how-the-ldap-account-is-found)).
+{% endalert %}
 
 ### Step 1. Configure the LDAP provider
 
@@ -519,10 +523,3 @@ Right after the first sign-in, the user has an account but no group or project m
 
 - the groups are created inside the group specified in `group_sync.top_level_group`;
 - the user is added to them with the role matching `role_mapping`.
-
-### How it works after the setup
-
-- A new employee is created in LDAP, signs in through the OIDC provider, their account is linked to LDAP, and they receive permissions after the next synchronization.
-- If a user is removed from LDAP, synchronization blocks the account; if the user is restored, it unblocks the account.
-- If a user is removed from an allowed group of the OIDC provider, the account is blocked on their next sign-in.
-- If the LDAP group composition changes, memberships and roles are updated on the next synchronization.
