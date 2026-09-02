@@ -68,7 +68,7 @@ The module core consists of the following components:
 
    - **virt-controller**: Main container.
    - **proxy** (aka **kube-api-rewriter**): A sidecar container that performs modification of API requests passing through it (described above).
-   - **kube-rbac-proxy**: A sidecar container providing authorized access to the metrics of the cdi-apiserver and proxy containers (described above).
+   - **kube-rbac-proxy**: A sidecar container providing authorized access to the metrics of the virt-controller and proxy containers (described above).
 
 1. **Virt-handler** (DaemonSet): A separate controller that runs on all nodes of the cluster. Virt-handler performs the following functions:
 
@@ -117,8 +117,6 @@ The module core interacts with the following components:
    - Watches for KubeVirt custom resources and manages KubeVirt components.
    - Watches for VirtualMachineInstance custom resources, updates their status, and manages the associated pods.
    - Authorizes requests for metrics.
-
-1. [**CDI (Containerized-Data-Importer)**](cdi.html): KubeVirt creates a DataVolume resource based on the disk specification and a link to the VM image in the `DataVolumeTemplate` section of the VirtualMachine resource. CDI imports a disk image to PVC from the source specified in the DataVolume. The created PVC is a disk of a virtual machine managed by KubeVirt.
 
 The following external components interact with the module core:
 
