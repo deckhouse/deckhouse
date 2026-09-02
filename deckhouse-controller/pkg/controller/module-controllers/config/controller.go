@@ -41,6 +41,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
@@ -102,14 +103,31 @@ func RegisterController(
 		Named(controllerName).
 		For(&v1alpha1.ModuleConfig{}).
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
-		// a module placed by a deploy picks up the config that waited for it
-		Watches(&v1alpha2.Module{}, ctrlhandler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
-			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: obj.(*v1alpha2.Module).Name}}}
+		// a module that gets its object, or its first package, picks up the config that waited
+		// for it; a module without a config has nothing to reconcile
+		Watches(&v1alpha2.Module{}, ctrlhandler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+			if err := r.client.Get(ctx, client.ObjectKey{Name: obj.GetName()}, new(v1alpha1.ModuleConfig)); err != nil {
+				return nil
+			}
+
+			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: obj.GetName()}}}
 		}), builder.WithPredicates(predicate.Funcs{
 			CreateFunc: func(_ event.CreateEvent) bool {
 				return true
 			},
-			UpdateFunc: func(_ event.UpdateEvent) bool { return false },
+			UpdateFunc: func(updateEvent event.UpdateEvent) bool {
+				oldModule, ok := updateEvent.ObjectOld.(*v1alpha2.Module)
+				if !ok {
+					return false
+				}
+
+				newModule, ok := updateEvent.ObjectNew.(*v1alpha2.Module)
+				if !ok {
+					return false
+				}
+
+				return !oldModule.IsInstalled() && newModule.IsInstalled()
+			},
 			DeleteFunc: func(_ event.DeleteEvent) bool {
 				return false
 			},
@@ -272,30 +290,52 @@ func (r *reconciler) handleNotInstalledModule(ctx context.Context, moduleConfig 
 		return ctrl.Result{}, err
 	}
 
-	// clear conflict metrics
+	if _, err := r.reportConflict(ctx, moduleConfig, offering); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, nil
+}
+
+// reportConflict tells the config about the sources of a module nothing installed: the
+// message and the alert while the config enables the module, several sources offer it and
+// none is picked, since no source installs such a module; a stale conflict message is
+// cleared and the alert withdrawn otherwise. Reports whether the module is in conflict.
+func (r *reconciler) reportConflict(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig, offering []string) (bool, error) {
 	metricGroup := fmt.Sprintf(metrics.ModuleConflictMetricGroupTemplate, moduleConfig.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
-	// several sources offer the module and the config picks none: no source may install it
-	if moduleConfig.IsEnabled() && moduleConfig.Spec.Source == "" && len(offering) > 1 {
-		r.logger.Debug("module has several available sources", slog.String("name", moduleConfig.Name))
+	conflict := pkgsync.CatalogConflict(moduleConfig.IsEnabled(), pkgsync.ConfiguredSource(moduleConfig), offering)
 
-		err = utils.UpdateStatus[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
-			moduleConfig.Status.Message = fmt.Sprintf("%s: %s", v1alpha1.ModuleMessageConflict, strings.Join(offering, ", "))
-			return true
-		})
-		if err != nil {
-			r.logger.Error("failed to update module config", slog.String("name", moduleConfig.Name), log.Err(err))
-			return ctrl.Result{}, err
+	message := ""
+	if conflict {
+		r.logger.Debug("module has several available sources", slog.String("name", moduleConfig.Name))
+		message = fmt.Sprintf("%s: %s", v1alpha1.ModuleMessageConflict, strings.Join(offering, ", "))
+	}
+
+	err := utils.UpdateStatus[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
+		// other writers own the other messages
+		if moduleConfig.Status.Message == message || (message == "" && !strings.HasPrefix(moduleConfig.Status.Message, v1alpha1.ModuleMessageConflict)) {
+			return false
 		}
 
+		moduleConfig.Status.Message = message
+
+		return true
+	})
+	if err != nil {
+		r.logger.Error("failed to update module config", slog.String("name", moduleConfig.Name), log.Err(err))
+		return false, err
+	}
+
+	if conflict {
 		// fire alert at Conflict
 		r.metricStorage.Grouped().GaugeSet(metricGroup, metrics.D8ModuleAtConflict, 1.0, map[string]string{
 			"module": moduleConfig.Name,
 		})
 	}
 
-	return ctrl.Result{}, nil
+	return conflict, nil
 }
 
 // offeringSources returns the module sources that list the module.
@@ -311,13 +351,36 @@ func (r *reconciler) offeringSources(ctx context.Context, moduleName string) ([]
 func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig, module *v1alpha2.Module) (ctrl.Result, error) {
 	defer r.logger.Debug("module config reconciled", slog.String("name", moduleConfig.Name))
 
-	// clear conflict metrics
-	metricGroup := fmt.Sprintf(metrics.ModuleConflictMetricGroupTemplate, module.Name)
-	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
-
 	if err := r.addFinalizer(ctx, moduleConfig); err != nil {
 		r.logger.Error("failed to add finalizer", slog.String("module", module.Name), log.Err(err))
 		return ctrl.Result{}, err
+	}
+
+	if module.IsInstalled() {
+		// an installed module comes from one source: no conflict
+		metricGroup := fmt.Sprintf(metrics.ModuleConflictMetricGroupTemplate, module.Name)
+		r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
+	} else {
+		// a module nothing installed is in conflict while the config enables it, several
+		// sources offer it and none is picked: the config and the module both tell
+		offering, err := r.offeringSources(ctx, moduleConfig.Name)
+		if err != nil {
+			r.logger.Error("failed to list module sources", slog.String("module", module.Name), log.Err(err))
+			return ctrl.Result{}, err
+		}
+
+		conflict, err := r.reportConflict(ctx, moduleConfig, offering)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		err = utils.UpdateStatus[*v1alpha2.Module](ctx, r.client, module, func(module *v1alpha2.Module) bool {
+			return module.ApplyCatalogState(conflict)
+		})
+		if err != nil {
+			r.logger.Error("failed to update the module status", slog.String("module", module.Name), log.Err(err))
+			return ctrl.Result{}, err
+		}
 	}
 
 	// the config fields of the module spec belong to the module config
@@ -590,15 +653,14 @@ func (r *reconciler) disableModule(ctx context.Context, module *v1alpha2.Module,
 			return false
 		}
 
-		switch module.Status.Phase {
-		case v1alpha1.ModulePhaseConflict,
-			v1alpha1.ModulePhaseDownloading,
-			v1alpha1.ModulePhaseDownloadingError:
-			// modules in Conflict should not be installed, and they cannot receive events, so set Available phase manually
-			// same thing if module is not installed
-			module.Status.Phase = v1alpha1.ModulePhaseAvailable
-			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, v1alpha1.ModuleReasonDisabled, "")
-			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
+		switch {
+		case !module.IsInstalled(),
+			module.Status.Phase == v1alpha1.ModulePhaseConflict,
+			module.Status.Phase == v1alpha1.ModulePhaseDownloading,
+			module.Status.Phase == v1alpha1.ModulePhaseDownloadingError:
+			// a module nothing installed goes back to the offered state: one in conflict or
+			// fetching its first release receives no event that would move it
+			module.SetNotInstalledStatus()
 		default:
 			if !r.enabledByBundle(metadata) {
 				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)

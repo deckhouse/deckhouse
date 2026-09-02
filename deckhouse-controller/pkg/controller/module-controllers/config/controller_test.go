@@ -188,6 +188,36 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		_, err := suite.r.handleModuleConfig(context.TODO(), suite.moduleConfig("test-module"))
 		require.NoError(suite.T(), err)
 	})
+
+	// the config enables a module nothing installed and several sources offer, picking none:
+	// the config reports the conflict and the module is in the conflict state
+	suite.Run("catalog module in conflict with multiple sources", func() {
+		suite.setupTestController("multiple-sources-catalog.yaml")
+		_, err := suite.r.handleModuleConfig(context.TODO(), suite.moduleConfig("test-module"))
+		require.NoError(suite.T(), err)
+	})
+
+	// the config enables a module nothing installed and a single source offers: the config
+	// fields are mirrored, the module stays offered until its deploy
+	suite.Run("enable catalog module", func() {
+		suite.setupTestController("catalog-enable-single.yaml")
+		_, err := suite.r.handleModuleConfig(context.TODO(), suite.moduleConfig("test-module"))
+		require.NoError(suite.T(), err)
+	})
+
+	// the config disables a module nothing installed that was fetching its first release
+	suite.Run("disable catalog module", func() {
+		suite.setupTestController("catalog-disable.yaml")
+		_, err := suite.r.handleModuleConfig(context.TODO(), suite.moduleConfig("test-module"))
+		require.NoError(suite.T(), err)
+	})
+
+	// the config picks a source for a module in conflict: the module is offered again
+	suite.Run("catalog module conflict resolved", func() {
+		suite.setupTestController("catalog-conflict-resolved.yaml")
+		_, err := suite.r.handleModuleConfig(context.TODO(), suite.moduleConfig("test-module"))
+		require.NoError(suite.T(), err)
+	})
 }
 
 func (suite *ControllerTestSuite) TestDeleteReconcile() {
