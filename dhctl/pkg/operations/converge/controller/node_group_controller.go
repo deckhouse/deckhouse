@@ -384,6 +384,14 @@ func (c *NodeGroupController) updateNodes(ctx *context.Context) error {
 				return err
 			}
 
+			// Master node infrastructure variables are refreshed immediately before
+			// VM destruction. Reading the bootstrap Secret after every master update
+			// would reintroduce the asynchronous Secret dependency for non-destructive
+			// plans and ordinary scale-up.
+			if c.name == global.MasterNodeGroupName {
+				return nil
+			}
+
 			// we hide deckhouse logs because we always have config
 			nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), ctx, c.name, global.HideDeckhouseLogs)
 			if err != nil {
