@@ -403,12 +403,6 @@ properties:
     description: |
       Cluster network parameters.
 
-      This is the preferred place to manage them. Edit with:
-
-      ```shell
-      d8 k edit mc control-plane-manager
-      ```
-
       Each parameter is resolved in the following order: this section, then the deprecated same-named field in `ClusterConfiguration`. A parameter set here wins; while it is unset, the deprecated field still decides.
 
       > **Warning.** These parameters describe the network of a running cluster. Changing any of them after the cluster is bootstrapped is **extremely dangerous** and can lead to complete cluster failure, so it is blocked by admission. It is **strongly recommended to recreate the cluster** instead. See [documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/#modifying-protected-parameters) for details.
