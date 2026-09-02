@@ -237,9 +237,22 @@ def validate_group(req, snapshots, actor: List[str], catalog: dict) -> Optional[
 
 
 def validate_car(req, actor: List[str], catalog: dict) -> Optional[str]:
-    obj = req.oldObject if req.operation == "DELETE" else req.object
-    spec = _spec(obj)
-    targets = assign.car_target_roles(spec)
+    new_spec = _spec(req.object)
+    old_spec = _spec(req.oldObject)
+    if req.operation == "DELETE":
+        targets = assign.car_target_roles(old_spec)
+        obj = req.oldObject
+    elif req.operation == "UPDATE":
+        targets = []
+        seen = set()
+        for name in assign.car_target_roles(old_spec) + assign.car_target_roles(new_spec):
+            if name not in seen:
+                seen.add(name)
+                targets.append(name)
+        obj = req.object
+    else:
+        targets = assign.car_target_roles(new_spec)
+        obj = req.object
     leftover = assign.can_assign(actor, targets, catalog)
     if leftover is None:
         return None
@@ -286,8 +299,12 @@ def validate_useroperation(req, snapshots, actor: List[str], catalog: dict) -> O
 
 
 def validate_dexprovider(req, snapshots, actor: List[str], catalog: dict) -> Optional[str]:
-    spec = _spec(req.object)
-    targets = assign.dex_target_roles(spec, snapshots)
+    new_targets = assign.dex_target_roles(_spec(req.object), snapshots)
+    if req.operation == "UPDATE":
+        old_targets = set(assign.dex_target_roles(_spec(req.oldObject), snapshots))
+        targets = [name for name in new_targets if name not in old_targets]
+    else:
+        targets = new_targets
     leftover = assign.can_assign(actor, targets, catalog)
     if leftover is None:
         return None

@@ -405,7 +405,7 @@ class TestIdentityCollection(unittest.TestCase):
             assign.dex_target_roles({"type": "OIDC"}, snaps),
             ["user-authz:super-admin"])
 
-    def test_closed_saml_targets_only_listed_groups(self):
+    def test_closed_saml_ignores_unlisted_group_grants(self):
         snaps = {
             assign.CAR_SNAP: [{"filterResult": {
                 "name": "g",
@@ -420,6 +420,35 @@ class TestIdentityCollection(unittest.TestCase):
         }
         spec = {"type": "SAML", "saml": {"filterGroups": True, "allowedGroups": ["devs"]}}
         self.assertEqual(assign.dex_target_roles(spec, snaps), [])
+
+    def test_closed_saml_includes_user_subject_grants(self):
+        snaps = {
+            assign.CAR_SNAP: [{"filterResult": {
+                "name": "g",
+                "accessLevel": "SuperAdmin",
+                "additionalRoles": [],
+                "userSubjects": ["root@corp"],
+                "groupSubjects": ["superadmins"],
+                "saSubjects": [],
+            }}],
+            assign.AR_SNAP: [],
+            assign.CRB_SNAP: [],
+        }
+        spec = {"type": "SAML", "saml": {"filterGroups": True, "allowedGroups": ["devs"]}}
+        self.assertEqual(assign.dex_target_roles(spec, snaps), ["user-authz:super-admin"])
+
+    def test_user_record_name_does_not_fallback_to_email(self):
+        snaps = {
+            assign.USER_SNAP: [
+                {"filterResult": {"name": "other", "email": "eve@corp", "groups": ["superadmins"]}},
+                {"filterResult": {"name": "eve", "email": "eve-real@corp", "groups": []}},
+            ],
+        }
+        rec = assign.user_record(snaps, name="eve", email="eve@corp")
+        self.assertEqual(rec["name"], "eve")
+        self.assertEqual(rec["email"], "eve-real@corp")
+        self.assertIsNone(assign.user_record(snaps, name="missing", email="eve@corp"))
+        self.assertEqual(assign.user_record(snaps, email="eve@corp")["name"], "other")
 
 
 if __name__ == "__main__":

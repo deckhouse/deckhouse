@@ -333,13 +333,17 @@ def is_human_identity(name: str) -> bool:
 def user_record(snapshots: Any, *, name: str = "", email: str = "") -> Optional[dict]:
     name = name if isinstance(name, str) else ""
     email = email.lower() if isinstance(email, str) and email else ""
+    if name:
+        for fr in iter_filter_results(snapshots, USER_SNAP):
+            if (fr.get("name") or "") == name:
+                return fr
+        return None
+    if not email:
+        return None
     for fr in iter_filter_results(snapshots, USER_SNAP):
-        fr_name = fr.get("name") or ""
-        fr_email = (fr.get("email") or "")
+        fr_email = fr.get("email") or ""
         fr_email_l = fr_email.lower() if isinstance(fr_email, str) else ""
-        if name and fr_name == name:
-            return fr
-        if email and fr_email_l == email:
+        if fr_email_l == email:
             return fr
     return None
 
@@ -429,7 +433,7 @@ def membership_groups(snapshots: Any, *, user_name: str = "", email: str = "",
     return found
 
 
-def occupied_grant_roles(snapshots: Any) -> List[str]:
+def occupied_grant_roles(snapshots: Any, *, users_only: bool = False) -> List[str]:
     """Roles already hanging on a human User or Group subject."""
     found: List[str] = []
     seen: Set[str] = set()
@@ -442,6 +446,8 @@ def occupied_grant_roles(snapshots: Any) -> List[str]:
 
     def human_subjects(fr: dict) -> bool:
         users = [s for s in _subjects(fr, "userSubjects") if is_human_identity(s)]
+        if users_only:
+            return bool(users)
         groups = [s for s in _subjects(fr, "groupSubjects") if is_human_identity(s)]
         return bool(users or groups)
 
@@ -518,6 +524,9 @@ def dex_target_roles(spec: Any, snapshots: Any) -> List[str]:
                 seen.add(role)
                 found.append(role)
 
+    # Closed claims bound groups only. The username is the email claim, which
+    # stays unbounded, so every User-subject grant remains a target.
+    add(occupied_grant_roles(snapshots, users_only=True))
     for email in emails:
         extra = membership_groups(snapshots, email=email)
         add(target_user_roles(snapshots, email, extra))
