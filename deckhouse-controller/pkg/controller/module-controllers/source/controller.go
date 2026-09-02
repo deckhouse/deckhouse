@@ -272,6 +272,25 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 		pulledModules = pulledModules[:maxModulesLimit]
 	}
 
+	// a module the source stopped offering loses this source: the object of a module nothing
+	// installed and no other source offers goes
+	pulled := make(map[string]struct{}, len(pulledModules))
+	for _, name := range pulledModules {
+		pulled[name] = struct{}{}
+	}
+
+	for _, available := range source.Status.AvailableModules {
+		if _, ok := pulled[available.Name]; ok {
+			continue
+		}
+
+		if err := r.cleanCatalogModule(ctx, source, available.Name); err != nil {
+			r.logger.Error("failed to clean the module the source stopped offering", slog.String("source_name", source.Name), slog.String("module_name", available.Name), log.Err(err))
+
+			return ctrl.Result{}, err
+		}
+	}
+
 	if err = r.processModules(ctx, source, opts, pulledModules); err != nil {
 		r.logger.Error("failed to process modules for the module source", slog.String("source_name", source.Name), log.Err(err))
 
@@ -649,8 +668,27 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 	}
 
 	// the modules the source installed die with their releases: the release controller
-	// uninstalls them, and the package sync drops their objects at the next start
+	// uninstalls them, and the package sync drops their objects at the next start. The modules
+	// the source merely offered lose it here: the object of a module no other source offers
+	// goes. A forced deletion does not wait for a failing cleanup.
 	if controllerutil.ContainsFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists) {
+		forced := source.GetAnnotations()[v1alpha1.ModuleSourceAnnotationForceDelete] == "true"
+
+		for _, available := range source.Status.AvailableModules {
+			err := r.cleanCatalogModule(ctx, source, available.Name)
+			if err == nil {
+				continue
+			}
+
+			if !forced {
+				r.logger.Error("failed to clean the module of the deleted source", slog.String("source_name", source.Name), slog.String("module_name", available.Name), log.Err(err))
+
+				return ctrl.Result{}, fmt.Errorf("clean the '%s' module: %w", available.Name, err)
+			}
+
+			r.logger.Warn("failed to clean the module of the force deleted source", slog.String("source_name", source.Name), slog.String("module_name", available.Name), log.Err(err))
+		}
+
 		controllerutil.RemoveFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists)
 		if err := r.client.Update(ctx, source); err != nil {
 			r.logger.Error("failed to update module source", slog.String("source_name", source.Name), log.Err(err))

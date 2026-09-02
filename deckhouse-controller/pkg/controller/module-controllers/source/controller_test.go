@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -723,6 +724,110 @@ spec:
 		assert.Equal(suite.T(), "Alpha", module.Spec.ReleaseChannel)
 		assert.Empty(suite.T(), module.Status.Phase, "the catalog state belongs to a module nothing installed")
 		assert.Empty(suite.T(), suite.releases().Items, "the module comes from the other source")
+	})
+}
+
+// A source that stops offering a module, or goes away, takes itself away from the module's
+// object; the object of a module nothing installed and no other source offers goes.
+func (suite *ControllerTestSuite) TestCatalogCleanup() {
+	const sources = `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 912e02634dd8b7222cc42906e35f1e79
+  name: test-source-1
+  finalizers:
+  - modules.deckhouse.io/module-exists
+spec:
+  scanInterval: 6h30m
+  registry:
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+status:
+  modules:
+  - name: gone
+  - name: shared
+  - name: installed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 912e02634dd8b7222cc42906e35f1e79
+  name: test-source-2
+spec:
+  scanInterval: 6h30m
+  registry:
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+status:
+  modules:
+  - name: shared
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: gone
+spec:
+  packageRepositoryName: test-source-1
+  releaseChannel: Stable
+status:
+  phase: Available
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: shared
+spec:
+  releaseChannel: Stable
+status:
+  phase: Available
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: installed
+spec:
+  packageRepositoryName: test-source-1
+  packageVersion: v1.0.0
+  releaseChannel: Stable
+`
+
+	assertCleaned := func() {
+		err := suite.Client().Get(context.TODO(), types.NamespacedName{Name: "gone"}, new(v1alpha2.Module))
+		assert.True(suite.T(), apierrors.IsNotFound(err), "no source offers the module any more")
+
+		shared := suite.module("shared")
+		assert.Equal(suite.T(), "test-source-2", shared.Spec.PackageRepositoryName, "the remaining source places the module")
+		assert.Equal(suite.T(), v1alpha1.ModulePhaseAvailable, shared.Status.Phase)
+
+		installed := suite.module("installed")
+		assert.Equal(suite.T(), "test-source-1", installed.Spec.PackageRepositoryName, "an installed module is not the catalog's to touch")
+		assert.Equal(suite.T(), "v1.0.0", installed.Spec.PackageVersion)
+	}
+
+	suite.Run("the source stops offering the modules", func() {
+		suite.setupTestControllerRaw(sources)
+
+		dc := newMockedContainerWithData(suite.T(), "v1.2.3", []string{}, []string{})
+		suite.r.dc = dc
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource("test-source-1"))
+		require.NoError(suite.T(), err)
+
+		assertCleaned()
+	})
+
+	suite.Run("the source is deleted", func() {
+		suite.setupTestControllerRaw(sources)
+
+		_, err := suite.r.deleteModuleSource(context.TODO(), suite.moduleSource("test-source-1"))
+		require.NoError(suite.T(), err)
+
+		assertCleaned()
+		assert.Empty(suite.T(), suite.moduleSource("test-source-1").Finalizers)
 	})
 }
 
