@@ -84,6 +84,10 @@ type ModulePackageStatus struct {
 
 // ModulePackageStatusInstance identifies module using the package, and at which version.
 type ModulePackageStatusInstance struct {
+	// Used PackageRepository.
+	// +optional
+	RepositoryName string `json:"repositoryName,omitempty"`
+
 	// Version of the package used by this module.
 	// +optional
 	Version string `json:"version,omitempty"`
@@ -104,11 +108,12 @@ func (m *ModulePackage) GetModuleVersion() string {
 }
 
 // UpdateModuleVersion updates the version for an installed module. Returns true if updated.
-func (m *ModulePackage) UpdateModuleVersion(version string) bool {
-	if m.Status.UsedBy == nil || m.Status.UsedBy.Version == version {
+func (m *ModulePackage) UpdateModuleVersion(version, repository string) bool {
+	if m.Status.UsedBy == nil || (m.Status.UsedBy.Version == version && m.Status.UsedBy.RepositoryName == repository) {
 		return false
 	}
 
+	m.Status.UsedBy.RepositoryName = repository
 	m.Status.UsedBy.Version = version
 
 	return true
@@ -117,13 +122,14 @@ func (m *ModulePackage) UpdateModuleVersion(version string) bool {
 // AddInstalledModule records the module as using this package at the given version, and
 // reports whether that changed the status. A module package is named after its module, so
 // re-adding refreshes the recorded version instead of adding a second entry.
-func (m *ModulePackage) AddInstalledModule(version string) bool {
+func (m *ModulePackage) AddInstalledModule(version, repository string) bool {
 	if m.IsModuleInstalled() {
-		return m.UpdateModuleVersion(version)
+		return m.UpdateModuleVersion(version, repository)
 	}
 
 	m.Status.UsedBy = &ModulePackageStatusInstance{
-		Version: version,
+		RepositoryName: repository,
+		Version:        version,
 	}
 
 	return true
