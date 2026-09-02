@@ -1474,6 +1474,13 @@ func TestBootstrapImmutableFirstMasterSurvivesALostReply(t *testing.T) {
 		}
 		if pushes.Add(1) == 1 {
 			// The document is taken and the port closes before the reply is flushed.
+			// Read first: net/http reads the body lazily, and hijacking before it is
+			// drained closes the connection under a client that is still sending —
+			// which is a push that never arrived, not a reply that was lost.
+			if _, err := io.Copy(io.Discard, r.Body); err != nil {
+				t.Errorf("read the accepted push: %v", err)
+				return
+			}
 			conn, _, err := w.(http.Hijacker).Hijack()
 			if err != nil {
 				t.Errorf("hijack the accepted push: %v", err)
