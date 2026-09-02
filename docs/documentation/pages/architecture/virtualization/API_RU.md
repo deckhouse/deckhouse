@@ -11,7 +11,7 @@ description: Архитектура компонента Virtualization API мо
 1. `virtualization.deckhouse.io` — основная группа, включает в себя следующие кастомные ресурсы:
 
    - [VirtualMachine](/modules/virtualization/cr.html#virtualmachine) — ресурс, описывающий конфигурацию и статус виртуальной машины (ВМ);
-   - [VirtualMachineClass](/modules/virtualization/cr.html#virtualmachineclass) — ресурс, описывающий набор параметров для ресурсов [VirtualMachine](/modules/virtualization/cr.html#virtualmachine), таких, как спецификации CPU и RAM, `NodeSelector` и `Tolerations`;
+   - [VirtualMachineClass](/modules/virtualization/cr.html#virtualmachineclass) — ресурс, описывающий набор параметров для ресурсов [VirtualMachine](/modules/virtualization/cr.html#virtualmachine), таких как спецификации CPU и RAM, `NodeSelector` и `Tolerations`;
    - [VirtualMachinePool](/modules/virtualization/early-access/cr.html#virtualmachinepool) — ресурс, декларативно управляющий группой одинаковых ВМ;
    - [VirtualDisk](/modules/virtualization/cr.html#virtualdisk) — ресурс, описывающий желаемую конфигурацию диска ВМ;
    - [VirtualImage](/modules/virtualization/cr.html#virtualimage) — ресурс, описывающий:
