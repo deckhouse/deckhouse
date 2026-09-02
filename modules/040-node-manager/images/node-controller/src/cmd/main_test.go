@@ -65,10 +65,24 @@ func TestAggregatedAPIServerDeathTakesTheProcessDown(t *testing.T) {
 // answering there, and every full-discovery client in the cluster fails.
 func TestReadinessWaitsForTheAggregatedAPIServer(t *testing.T) {
 	serving := make(chan struct{})
-	ready := aggregatedAPIReady(serving)
+	ready := aggregatedAPIReady(serving, time.Minute)
 
 	require.Error(t, ready(nil), "the pod was Ready before its aggregated API server answered")
 
 	close(serving)
 	require.NoError(t, ready(nil))
+}
+
+// The same readiness gates the five failurePolicy:Fail webhooks and the NodeGroup
+// conversion webhook, on the one replica a non-HA cluster runs. A gate with no
+// end turns an aggregated API server that cannot start — a missing RBAC binding
+// is enough — into a cluster that refuses every NodeGroup write, forever: the
+// config retry has no cap, and nothing but SIGTERM ends the process.
+func TestReadinessStopsWaitingForTheAggregatedAPIServer(t *testing.T) {
+	ready := aggregatedAPIReady(make(chan struct{}), 20*time.Millisecond)
+
+	require.Error(t, ready(nil), "the pod was Ready before its aggregated API server answered")
+
+	require.Eventually(t, func() bool { return ready(nil) == nil }, time.Second, 5*time.Millisecond,
+		"the webhooks stayed NotReady for as long as the aggregated API server did not answer")
 }

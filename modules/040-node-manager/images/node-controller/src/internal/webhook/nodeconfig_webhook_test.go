@@ -227,3 +227,122 @@ func TestValidateNodeConfigUpdateFillsInANetworkTheMachineNeverNamed(t *testing.
 		t.Fatalf("the webhook refused the render of a node that named no network, which stops every later update: %v", err)
 	}
 }
+
+// controllerRender reproduces the network keepBootstrapOnlyFields writes back
+// (internal/controller/nodeconfig/render.go): what the machine published, with
+// the rendered hostname and, for a machine that named no NIC, the rendered eth0.
+func controllerRender(published internalv1alpha1.Network, nodeName string) internalv1alpha1.Network {
+	rendered := *published.DeepCopy()
+	rendered.Hostname = nodeName
+	if len(rendered.Interfaces) == 0 {
+		rendered.Interfaces = []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}}
+	}
+	return rendered
+}
+
+// A machine can publish resolvers, time servers or routes and leave the NIC to
+// DHCP. The controller then fills the NIC in on every pass, so a carve-out that
+// only knows the wholly empty network denies that node's config for good.
+func TestValidateNodeConfigUpdateAcceptsTheRenderOverAnyPublishedNetwork(t *testing.T) {
+	tests := []struct {
+		name      string
+		published internalv1alpha1.Network
+	}{
+		{
+			name:      "nothing at all",
+			published: internalv1alpha1.Network{},
+		},
+		{
+			name:      "the hostname it booted with",
+			published: internalv1alpha1.Network{Hostname: "what-the-machine-said"},
+		},
+		{
+			name:      "resolvers and nothing else",
+			published: internalv1alpha1.Network{DNS: internalv1alpha1.DNS{Servers: []string{"10.0.0.53"}, Search: []string{"lan"}}},
+		},
+		{
+			name:      "time servers and nothing else",
+			published: internalv1alpha1.Network{NTP: internalv1alpha1.NTP{Servers: []string{"10.0.0.123"}}},
+		},
+		{
+			name:      "routes and nothing else",
+			published: internalv1alpha1.Network{Routes: []internalv1alpha1.Route{{Networks: []string{"10.1.0.0/16"}, Gateway: "10.0.0.1"}}},
+		},
+		{
+			name: "a NIC of its own, so nothing is filled in",
+			published: internalv1alpha1.Network{
+				DNS:        internalv1alpha1.DNS{Servers: []string{"10.0.0.53"}},
+				Interfaces: []internalv1alpha1.NetworkInterface{{Name: "bond0", Addresses: []string{"192.0.2.10/24"}}},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			old := &internalv1alpha1.NodeConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: "worker-0"},
+				Spec:       internalv1alpha1.NodeSpec{NodeName: "worker-0", Network: tt.published},
+			}
+			rendered := old.DeepCopy()
+			rendered.Spec.Network = controllerRender(tt.published, "worker-0")
+
+			if err := validateNodeConfigUpdate(old, rendered); err != nil {
+				t.Fatalf("the webhook refused the controller's own render, which stops every later update: %v", err)
+			}
+		})
+	}
+}
+
+// The carve-out may admit the rendered NIC and nothing else: on a machine that
+// named none, an operator-typed NIC is carried over for good and leaves the node
+// with no address after a reboot.
+func TestValidateNodeConfigUpdateRefusesAnOperatorEditBesideTheRenderedNIC(t *testing.T) {
+	published := internalv1alpha1.Network{DNS: internalv1alpha1.DNS{Servers: []string{"10.0.0.53"}}}
+
+	tests := []struct {
+		name  string
+		typed func(n *internalv1alpha1.Network)
+	}{
+		{
+			name:  "a NIC only the machine could name",
+			typed: func(n *internalv1alpha1.Network) { n.Interfaces[0].Name = "enp1s0" },
+		},
+		{
+			name: "an address on the rendered NIC",
+			typed: func(n *internalv1alpha1.Network) {
+				n.Interfaces[0].DHCP = false
+				n.Interfaces[0].Addresses = []string{"10.0.0.5/24"}
+			},
+		},
+		{
+			name:  "a resolver added beside the render",
+			typed: func(n *internalv1alpha1.Network) { n.DNS.Servers = append(n.DNS.Servers, "10.0.0.54") },
+		},
+		{
+			name: "a route added beside the render",
+			typed: func(n *internalv1alpha1.Network) {
+				n.Routes = []internalv1alpha1.Route{{Networks: []string{"10.1.0.0/16"}, Gateway: "10.0.0.1"}}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			old := &internalv1alpha1.NodeConfig{
+				ObjectMeta: metav1.ObjectMeta{Name: "worker-0"},
+				Spec:       internalv1alpha1.NodeSpec{NodeName: "worker-0", Network: published},
+			}
+			typedIn := old.DeepCopy()
+			typedIn.Spec.Network = controllerRender(published, "worker-0")
+			tt.typed(&typedIn.Spec.Network)
+
+			err := validateNodeConfigUpdate(old, typedIn)
+			if err == nil {
+				t.Fatal("the webhook let an operator edit through beside the render it carves out")
+			}
+			if !strings.Contains(err.Error(), "spec.network is written on the machine") {
+				t.Fatalf("expected the error to mention spec.network, got %q", err.Error())
+			}
+		})
+	}
+}
