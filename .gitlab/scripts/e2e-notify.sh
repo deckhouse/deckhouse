@@ -17,7 +17,8 @@
 # Posts/updates the e2e status comment on the linked MR.
 # Modes: start <mr_iid> | finish | delete.
 # `start` prints the note id on stdout for the caller to capture.
-# Framework fills <!-- e2e-cluster-endpoint:start/end --> itself.
+# Framework appends "SSH connection string: ..." itself; finish strips it
+# on success (matched by text, not markers).
 
 TESTS_STATUS_MARKER="<!-- e2e-tests-status -->"
 DELETE_STATUS_MARKER="<!-- e2e-delete-status -->"
@@ -69,9 +70,6 @@ case "${MODE}" in
     body="$(cat <<BODY
 ⏳ e2e test started: PROVIDER=${E2E_PROVIDER:-?} EDITION=${E2E_EDITION:-?} K8S=${KUBERNETES_VERSION:-?} — [pipeline](${CI_PIPELINE_URL:-})
 
-<!-- e2e-cluster-endpoint:start -->
-<!-- e2e-cluster-endpoint:end -->
-
 ⏳ Tests: running ${TESTS_STATUS_MARKER}
 BODY
 )"
@@ -115,22 +113,32 @@ fi
 case "${MODE}" in
   finish)
     if [[ "${STATUS_LABEL}" == "success" ]]; then
-      current_body="$(CURRENT_BODY="${current_body}" python3 <<'STRIP_ENDPOINT'
+      STARTED_EMOJI="✅"; TESTS_TEXT="✅ Tests: passed"; STRIP_SSH=1
+    else
+      STARTED_EMOJI="❌"; TESTS_TEXT="❌ Tests: failed"; STRIP_SSH=0
+    fi
+
+    current_body="$(STARTED_EMOJI="${STARTED_EMOJI}" STRIP_SSH="${STRIP_SSH}" CURRENT_BODY="${current_body}" python3 <<'UPDATE_STARTED'
 import os, re
 body = os.environ["CURRENT_BODY"]
-body = re.sub(
-    r"<!-- e2e-cluster-endpoint:start -->.*?<!-- e2e-cluster-endpoint:end -->\n?",
-    "",
-    body,
-    flags=re.DOTALL,
-)
+emoji = os.environ["STARTED_EMOJI"]
+body = re.sub(r"^[⏳✅❌] e2e test started:", emoji + " e2e test started:", body, flags=re.MULTILINE)
+if os.environ["STRIP_SSH"] == "1":
+    lines = body.split("\n")
+    out, skip_next = [], False
+    for line in lines:
+        if skip_next:
+            skip_next = False
+            continue
+        if "SSH connection string:" in line:
+            skip_next = True
+            continue
+        out.append(line)
+    body = "\n".join(out)
 print(body, end="")
-STRIP_ENDPOINT
+UPDATE_STARTED
 )"
-      new_body="$(upsert_status_line "${current_body}" "${TESTS_STATUS_MARKER}" "✅ Tests: passed")"
-    else
-      new_body="$(upsert_status_line "${current_body}" "${TESTS_STATUS_MARKER}" "❌ Tests: failed")"
-    fi
+    new_body="$(upsert_status_line "${current_body}" "${TESTS_STATUS_MARKER}" "${TESTS_TEXT}")"
     ;;
   delete)
     if [[ "${STATUS_LABEL}" == "success" ]]; then
