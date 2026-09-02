@@ -232,11 +232,11 @@ func GetUpdatePolicyByModule(ctx context.Context, cli client.Client, embeddedPol
 }
 
 // ModuleMetadata returns the package metadata of the version the module runs, read
-// from its ModulePackageVersion. Nil means unknown: a dev module follows a tag no
-// version describes, a module without a package triple has nothing to look up, and
-// a draft version has not published its metadata yet.
+// from its ModulePackageVersion. Nil means unknown: a module not installed has no
+// object, a dev module follows a tag no version describes, a module without a package
+// triple has nothing to look up, and a draft version has not published its metadata yet.
 func ModuleMetadata(ctx context.Context, cli client.Client, module *v1alpha2.Module) (*v1alpha1.ModulePackageVersionStatusMetadata, error) {
-	if module.IsDev() || module.Spec.PackageRepositoryName == "" || module.Spec.PackageVersion == "" {
+	if module == nil || module.IsDev() || module.Spec.PackageRepositoryName == "" || module.Spec.PackageVersion == "" {
 		return nil, nil
 	}
 
