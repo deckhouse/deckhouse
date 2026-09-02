@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
@@ -112,40 +113,50 @@ func createModuleConfig(name string) *v1alpha1.ModuleConfig {
 	}
 }
 
-func createModule(name string) *v1alpha1.Module {
-	return &v1alpha1.Module{
+func createModule(name string) *v1alpha2.Module {
+	return &v1alpha2.Module{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Status: v1alpha1.ModuleStatus{
-			Conditions: []v1alpha1.ModuleCondition{
+		Spec: v1alpha2.ModuleSpec{PackageRepositoryName: "deckhouse-modules", PackageVersion: "v1.0.0"},
+		Status: v1alpha2.ModuleStatus{
+			Conditions: []metav1.Condition{
 				{
-					Type:   v1alpha1.ModuleConditionEnabledByModuleManager,
-					Status: corev1.ConditionTrue,
+					Type:               v1alpha1.ModuleConditionEnabledByModuleManager,
+					Status:             metav1.ConditionTrue,
+					Reason:             v1alpha1.ModuleReasonEnabled,
+					LastTransitionTime: metav1.Now(),
 				},
 				{
-					Type:   v1alpha1.ModuleConditionEnabledByModuleConfig,
-					Status: corev1.ConditionTrue,
+					Type:               v1alpha1.ModuleConditionEnabledByModuleConfig,
+					Status:             metav1.ConditionTrue,
+					Reason:             v1alpha1.ModuleReasonEnabled,
+					LastTransitionTime: metav1.Now(),
 				},
 			},
 		},
 	}
 }
 
-func createDisabledModule(name string) *v1alpha1.Module {
-	return &v1alpha1.Module{
+func createDisabledModule(name string) *v1alpha2.Module {
+	return &v1alpha2.Module{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Status: v1alpha1.ModuleStatus{
-			Conditions: []v1alpha1.ModuleCondition{
+		Spec: v1alpha2.ModuleSpec{PackageRepositoryName: "deckhouse-modules", PackageVersion: "v1.0.0"},
+		Status: v1alpha2.ModuleStatus{
+			Conditions: []metav1.Condition{
 				{
-					Type:   v1alpha1.ModuleConditionEnabledByModuleManager,
-					Status: corev1.ConditionFalse,
+					Type:               v1alpha1.ModuleConditionEnabledByModuleManager,
+					Status:             metav1.ConditionFalse,
+					Reason:             v1alpha1.ModuleReasonDisabled,
+					LastTransitionTime: metav1.Now(),
 				},
 				{
-					Type:   v1alpha1.ModuleConditionEnabledByModuleConfig,
-					Status: corev1.ConditionFalse,
+					Type:               v1alpha1.ModuleConditionEnabledByModuleConfig,
+					Status:             metav1.ConditionFalse,
+					Reason:             v1alpha1.ModuleReasonDisabled,
+					LastTransitionTime: metav1.Now(),
 				},
 			},
 		},
@@ -469,6 +480,7 @@ func TestDeckhouseReleaseValidationHandler(t *testing.T) {
 			// Create scheme and fake client
 			scheme := runtime.NewScheme()
 			require.NoError(t, v1alpha1.AddToScheme(scheme))
+			require.NoError(t, v1alpha2.AddToScheme(scheme))
 			require.NoError(t, corev1.AddToScheme(scheme))
 
 			fakeClient := fake.NewClientBuilder().
@@ -592,6 +604,7 @@ func TestDeckhouseReleaseValidation_RequirementsCoverage(t *testing.T) {
 			// Create scheme and fake client
 			scheme := runtime.NewScheme()
 			require.NoError(t, v1alpha1.AddToScheme(scheme))
+			require.NoError(t, v1alpha2.AddToScheme(scheme))
 			require.NoError(t, corev1.AddToScheme(scheme))
 
 			fakeClient := fake.NewClientBuilder().

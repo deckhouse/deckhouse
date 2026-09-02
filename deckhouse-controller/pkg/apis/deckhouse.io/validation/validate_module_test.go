@@ -27,12 +27,12 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 )
 
 const deckhouseServiceAccount = "system:serviceaccount:d8-system:deckhouse"
 
-func newModuleAdmissionReview(operation, username string, module *v1alpha1.Module) *admissionv1.AdmissionReview {
+func newModuleAdmissionReview(operation, username string, module *v1alpha2.Module) *admissionv1.AdmissionReview {
 	review := &admissionv1.AdmissionReview{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: "admission.k8s.io/v1",
@@ -56,7 +56,7 @@ func newModuleAdmissionReview(operation, username string, module *v1alpha1.Modul
 // TestModuleValidationHandler verifies that only the deckhouse service account is
 // allowed to mutate Module objects; every other identity is rejected.
 func TestModuleValidationHandler(t *testing.T) {
-	module := &v1alpha1.Module{ObjectMeta: metav1.ObjectMeta{Name: "test-module"}}
+	module := &v1alpha2.Module{ObjectMeta: metav1.ObjectMeta{Name: "test-module"}, Spec: v1alpha2.ModuleSpec{PackageRepositoryName: "embedded", PackageVersion: "v1.80.0"}}
 
 	tests := []struct {
 		name        string

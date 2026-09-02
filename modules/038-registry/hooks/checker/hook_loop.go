@@ -27,15 +27,21 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	appsv1 "k8s.io/api/apps/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
-	deckhouse_types "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 )
 
 const (
 	modulesSnapName             = "modules"
+	packageVersionsSnapName     = "package-versions"
 	deckhouseDeploymentSnapName = "deckhouse-deployment"
+
+	// embeddedRepositoryName labels the package versions of the modules the image ships.
+	embeddedRepositoryName = "embedded"
 
 	moduleDigestsValuesPath = "global.modulesImages.digests"
 	registryBaseValuesPath  = "global.modulesImages.registry.base"
@@ -56,10 +62,10 @@ var _ = sdk.RegisterFunc(
 				Name:                         modulesSnapName,
 				ExecuteHookOnEvents:          go_hook.Bool(false),
 				ExecuteHookOnSynchronization: go_hook.Bool(false),
-				ApiVersion:                   "deckhouse.io/v1alpha1",
+				ApiVersion:                   "deckhouse.io/v1alpha2",
 				Kind:                         "Module",
 				FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-					var module deckhouse_types.Module
+					var module v1alpha2.Module
 
 					err := sdk.FromUnstructured(obj, &module)
 					if err != nil {
@@ -70,11 +76,30 @@ var _ = sdk.RegisterFunc(
 						return nil, nil
 					}
 
-					if !module.Properties.Critical {
-						return nil, nil
+					return embeddedModuleModel{Name: module.Name, Version: module.Spec.PackageVersion}, nil
+				},
+			},
+			// whether an embedded module is critical is what its package version says
+			{
+				Name:                         packageVersionsSnapName,
+				ExecuteHookOnEvents:          go_hook.Bool(false),
+				ExecuteHookOnSynchronization: go_hook.Bool(false),
+				ApiVersion:                   "deckhouse.io/v1alpha1",
+				Kind:                         "ModulePackageVersion",
+				LabelSelector: &metav1.LabelSelector{
+					MatchLabels: map[string]string{v1alpha1.ModulePackageVersionLabelRepository: embeddedRepositoryName},
+				},
+				FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+					var version v1alpha1.ModulePackageVersion
+
+					err := sdk.FromUnstructured(obj, &version)
+					if err != nil {
+						return nil, fmt.Errorf("failed to convert ModulePackageVersion object to struct: %v", err)
 					}
 
-					return strcase.ToCamel(module.Name), nil
+					critical := version.Status.PackageMetadata != nil && version.Status.PackageMetadata.Critical
+
+					return packageVersionModel{Package: version.Spec.PackageName, Version: version.Spec.PackageVersion, Critical: critical}, nil
 				},
 			},
 			{
@@ -151,9 +176,9 @@ var _ = sdk.RegisterFunc(
 )
 
 func getModulesImagesDigests(_ context.Context, input *go_hook.HookInput) (map[string]string, error) {
-	moduleNames, err := helpers.SnapshotToList[string](input, modulesSnapName)
+	moduleNames, err := criticalModuleNames(input)
 	if err != nil {
-		return nil, fmt.Errorf("cannot get modules snapshot: %w", err)
+		return nil, err
 	}
 
 	if len(moduleNames) == 0 {
@@ -192,4 +217,52 @@ func getModulesImagesDigests(_ context.Context, input *go_hook.HookInput) (map[s
 	}
 
 	return digests, nil
+}
+
+// embeddedModuleModel is an embedded module and the package version it runs.
+type embeddedModuleModel struct {
+	Name    string
+	Version string
+}
+
+// packageVersionModel is a package version of an embedded module and whether it is critical.
+type packageVersionModel struct {
+	Package  string
+	Version  string
+	Critical bool
+}
+
+// criticalModuleNames returns the camel-cased names of the critical embedded modules. A
+// module whose package version is not synced yet cannot be told apart from a non-critical
+// one and is skipped with a warning rather than failing the whole check.
+func criticalModuleNames(input *go_hook.HookInput) ([]string, error) {
+	modules, err := helpers.SnapshotToList[embeddedModuleModel](input, modulesSnapName)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get modules snapshot: %w", err)
+	}
+
+	versions, err := helpers.SnapshotToList[packageVersionModel](input, packageVersionsSnapName)
+	if err != nil {
+		return nil, fmt.Errorf("cannot get package versions snapshot: %w", err)
+	}
+
+	critical := make(map[string]bool, len(versions))
+	for _, version := range versions {
+		critical[version.Package+"/"+version.Version] = version.Critical
+	}
+
+	names := make([]string, 0, len(modules))
+	for _, module := range modules {
+		isCritical, synced := critical[module.Name+"/"+module.Version]
+		if !synced {
+			input.Logger.Warn("embedded module has no synced package version, skip it", "module", module.Name, "version", module.Version)
+			continue
+		}
+
+		if isCritical {
+			names = append(names, strcase.ToCamel(module.Name))
+		}
+	}
+
+	return names, nil
 }

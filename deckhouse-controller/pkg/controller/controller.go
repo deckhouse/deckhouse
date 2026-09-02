@@ -266,15 +266,15 @@ func NewDeckhouseController(
 
 	// instantiate ModuleDependency extender
 	moduledependency.Instance().SetModulesVersionHelper(func(moduleName string) (string, error) {
-		module := new(v1alpha1.Module)
+		module := new(v1alpha2.Module)
 		if err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
 			return runtimeManager.GetClient().Get(ctx, client.ObjectKey{Name: moduleName}, module)
 		}); err != nil {
 			return "", fmt.Errorf("on error: %w", err)
 		}
 
-		// set some version for the modules overridden by mpos
-		if module.IsCondition(v1alpha1.ModuleConditionIsOverridden, corev1.ConditionTrue) {
+		// a dev module follows a tag, so it reports a version no constraint rejects
+		if module.IsDev() {
 			return defaultModuleVersion, nil
 		}
 

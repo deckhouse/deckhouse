@@ -25,7 +25,7 @@ import (
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 )
 
 func moduleValidationHandler() http.Handler {
@@ -45,7 +45,7 @@ func moduleValidationHandler() http.Handler {
 		// logger is nil, because webhook has Info level for reporting about http handler
 		// and we get a log of useless spam here. So we decided to use Noop logger here
 		Logger: nil,
-		Obj:    &v1alpha1.Module{},
+		Obj:    &v1alpha2.Module{},
 	})
 
 	return kwhhttp.MustHandlerFor(kwhhttp.HandlerConfig{Webhook: wh, Logger: nil})
