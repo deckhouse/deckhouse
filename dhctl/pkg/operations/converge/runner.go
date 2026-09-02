@@ -460,7 +460,12 @@ func (r *runner) converge(ctx *convergecontext.Context) error {
 		// An immutable control plane answers no sshd: there is no node user to create and
 		// no master to rebuild the client through, and the node phases run against the
 		// client converge already holds.
-		if !masterGroupIsImmutable(ctx.Ctx(), ctx) {
+		immutableMasters, err := masterGroupIsImmutable(ctx.Ctx(), ctx)
+		if err != nil {
+			return err
+		}
+
+		if !immutableMasters {
 			err = r.switcher.SwitchToNodeUser(ctx.Ctx(), nodesStates[global.MasterNodeGroupName].State)
 			if err != nil {
 				return err
