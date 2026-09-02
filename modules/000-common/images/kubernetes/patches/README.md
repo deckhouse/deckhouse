@@ -17,17 +17,25 @@ localAPIEndpoint:
 
 > Consider finding a way to do it without patching the `kubeadm` or make a PR to the upstream.
 
+### old_certs.patch
+
+Logs a warning from the kube-apiserver x509 client-certificate authenticator
+when a request presents a client certificate that expires in less than seven
+days. The line carries the request's method, URI, user agent and remote
+address plus the certificate's issuer, subject, `NotBefore` and `NotAfter` —
+enough to identify the client that needs rotating.
+
+Why it is needed: upstream only feeds the remaining lifetime into the
+`apiserver_client_certificate_expiration_seconds` histogram, right next to
+where this patch hooks in. That histogram shows that *some* client is close to
+expiry but cannot say which one — it carries no identifying labels, and could
+not without unbounded cardinality.
+
 ### pdb-daemonset.patch
 
 Supports DaemonSets in disruption controller by adding /scale subresource to daemonsets API. It allows to control the eviction rate of DaemonSet pods.
 
 > Upstream PR https://github.com/kubernetes/kubernetes/pull/98307.
-
-### fix-mount-hostaliases.patch
-
-Fixes a bug where pods with hostNetwork ignored host aliases (k8s < 1.32):
-
-> https://github.com/kubernetes/kubernetes/pull/126460
 
 ### resource-quota-ignore-mechanism.patch
 
@@ -40,7 +48,7 @@ This patch ensures that the Memory Manager state file is removed during a gracef
 The Memory Manager stores the node memory state in a file. After a reboot, the amount of used memory may slightly differ from the previous state, which can make the stored state invalid and prevent the kubelet from starting. Removing the state file before shutdown ensures that the Memory Manager starts with a clean state after the reboot.
 See issue: https://github.com/kubernetes/kubernetes/issues/131253
 
-### kubelet-disable-k-panic-check
+### kubelet-disable-k-panic-check (1.33/1.34 only)
 
 Kubelet strictly checks that the `kernel.panic` parameter equals 10, now, regardless of kubelet settings, only a warning is used. The `kernel.panic` parameter itself is strictly controlled by the DKP platform
 
@@ -94,10 +102,10 @@ a context-only re-roll, no semantic change to `010` (see its README entry).
 Cluster-scoped CRDs are skipped (no namespace to classify/floor).
 
 This whole mechanism (namespaces + generic `--scope` + CRD coverage) is carried
-on every k8s version DKP builds — 1.32 through 1.36. The acl-filtering patch
-keeps its per-version number (`006` on 1.32, `005` on 1.33/1.34, `007` on
-1.35/1.36) since its position in each version's chain differs; the `010`
-re-roll applies per version too.
+on every k8s version DKP builds — 1.33 through 1.37. The acl-filtering patch
+keeps its per-version number (`005` on 1.33/1.34, `007` on 1.35/1.36/1.37)
+since its position in each version's chain differs; the `010` re-roll applies
+per version too.
 
 The filter's `RBACFloor`/`Classify` loopback calls are served through a shared
 TTL cache (default 1s, `SCOPEFILTER_RESOLVE_CACHE_TTL` /
@@ -160,9 +168,6 @@ Added a 5s timeout context wrapping the Delete call in DeleteMirrorPod, that kub
 See issues:
 - https://github.com/kubernetes/kubernetes/issues/139502
 
-### 014-cel-go-two-var-comprehensions.patch (1.32 only)
-
-Adapts `staging/src/k8s.io/apiserver/pkg/cel/environment/base.go` to `github.com/google/cel-go` v0.29.0, which is required to fix GHSA-gcjh-h69q-9w9g. In v0.29.0 `ext.TwoVarComprehensions` became variadic (`func(...TwoVarComprehensionsOption) cel.EnvOption`), so the `UnversionedLib(ext.TwoVarComprehensions)` tripwire no longer compiles. The call is replaced with a direct `ext.TwoVarComprehensions()` invocation, mirroring the upstream change from commit 8a3d0d68a20 ("Update the env option."), part of the k8s PR "Bump cel-go to v0.23.2" ([kubernetes/kubernetes#129844](https://github.com/kubernetes/kubernetes/pull/129844)), which introduced the variadic API and switched `base.go` to the direct call. Only 1.32 needs this patch; k8s 1.33+ already ship the adapted code.
 
 ### fix-container-memory-usage-in-resize-validation.patch (1.34+)
 
@@ -175,7 +180,7 @@ container** memory limit panics kubelet when the runtime reports no pod-level
 memory stats.
 
 Only the source change is carried, the upstream test case is dropped.
-`validateMemoryResizeAction` does not exist in 1.32/1.33, so the patch is
-carried on 1.34 (`014`), 1.35 (`014`) and 1.36 (`013`) only.
+`validateMemoryResizeAction` does not exist in 1.33, so the patch is
+carried on 1.34 (`014`), 1.35 (`014`), 1.36 (`013`) and 1.37 (`013`) only.
 
 > Upstream PR https://github.com/kubernetes/kubernetes/pull/141100
