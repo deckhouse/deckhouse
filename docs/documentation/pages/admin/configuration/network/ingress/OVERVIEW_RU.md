@@ -66,7 +66,7 @@ Kubernetes Gateway API и API Gateway выполняют разные функц
 
 ### Как выбрать реализацию ALB
 
-| Критерий | Ingress NGINX (`ingress-nginx`) | Gateway API (`alb`) | Istio (`istio`) |
+| Критерий | Ingress NGINX | Gateway API | Istio |
 | --- | --- | --- | --- |
 | Статус в DKP | General Availability | Preview (DKP ≥ 1.76) | Зависит от редакции и настройки |
 | API публикации | Ingress + аннотации | Gateway, ListenerSet, маршруты | Gateway, VirtualService, DestinationRule |
