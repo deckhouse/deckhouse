@@ -197,10 +197,10 @@ func (suite *ControllerTestSuite) TestReconcile() {
 				Name:         "deckhouse",
 				Repository:   "registry.example.com/test",
 				DockerConfig: "test-docker-cfg",
-				CA:           "test-ca",
 				Scheme:       "https",
+				CA:           "test-ca",
 			},
-		}, suite.manager.updated[0])
+		}, suite.manager.updated[0].app)
 	})
 
 	suite.Run("maintenance mode reaches the runtime", func() {
