@@ -69,16 +69,6 @@ func Validate(ctx context.Context, binaryPath string, input config.ProviderInput
 	return nil
 }
 
-func reportWarnings(ctx context.Context, providerName string, warnings []string) {
-	logger := dhlog.FromContext(ctx)
-	logger.WarnContext(ctx, "=================================================================")
-	logger.WarnContext(ctx, fmt.Sprintf("WARNING: %q provider validation.", providerName))
-	for _, warn := range warnings {
-		logger.WarnContext(ctx, fmt.Sprintf(" - %s", warn))
-	}
-	logger.WarnContext(ctx, "=================================================================")
-}
-
 // validate spawns one validator, asks it, and tears it back down. Each step
 // registers its own cleanup, so bailing out at any of them releases exactly what has
 // been taken so far.
@@ -136,4 +126,14 @@ func requestValidate(ctx context.Context, ep Endpoint, input validatev1.Input) (
 	return client.
 		NewValidateClient(conn, client.NewConfig()).
 		Validate(ctx, input)
+}
+
+func reportWarnings(ctx context.Context, providerName string, warnings []string) {
+	logger := dhlog.FromContext(ctx)
+	logger.WarnContext(ctx, "=================================================================")
+	logger.WarnContext(ctx, fmt.Sprintf("WARNING: %q provider validation.", providerName))
+	for _, warn := range warnings {
+		logger.WarnContext(ctx, fmt.Sprintf(" - %s", warn))
+	}
+	logger.WarnContext(ctx, "=================================================================")
 }
