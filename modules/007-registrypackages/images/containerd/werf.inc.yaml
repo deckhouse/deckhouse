@@ -307,7 +307,7 @@ import:
   before: setup
 imageSpec:
   config:
-    labels: { "distro": "olcedar", "sysext_level": "1.0", "containerd": "{{ $containerd_v2_version }}", "runc": "{{ index $containerd2runc $containerd_v2_version }}" }
+    labels: { "distro": "deckhouse-engine", "sysext_level": "1.0", "containerd": "{{ $containerd_v2_version }}", "runc": "{{ index $containerd2runc $containerd_v2_version }}" }
     clearUser: true
     clearWorkingDir: true
     clearCmd: true

@@ -115,7 +115,7 @@ import:
   before: setup
 imageSpec:
   config:
-    labels: {"distro": "olcedar", "sysext_level": "1.0", "version": "all", "kubernetes-cni": "{{ $cni_version }}", "flannel": "{{ $cni_flannel_version }}" }
+    labels: {"distro": "deckhouse-engine", "sysext_level": "1.0", "version": "all", "kubernetes-cni": "{{ $cni_version }}", "flannel": "{{ $cni_flannel_version }}" }
     clearUser: true
     clearWorkingDir: true
     clearCmd: true
