@@ -255,7 +255,9 @@ spec:
         description: Module represents a module instance managed via the package system.
         properties:
           spec:
-            description: Spec defines the behavior of a Module.
+            description: |-
+              Spec defines the behavior of a Module. A module a source offers and nothing
+              installed carries no package version, so the spec is optional.
             properties:
               enabled:
                 description: Enables or disables the module. Unset leaves the decision
@@ -284,15 +286,17 @@ spec:
                 x-doc-examples:
                 - deckhouse
               packageVersion:
-                description: Version of the module package to install
+                description: |-
+                  Version of the module package to install.
+                  Empty while a module source offers the module and nothing installed it.
                 type: string
                 x-doc-examples:
-                - v1.0.0.
+                - v1.0.0
               releaseChannel:
                 description: Release channel for the module package.
                 type: string
                 x-doc-examples:
-                - alpha.
+                - alpha
               settings:
                 description: Configuration settings for the module.
                 type: object
@@ -305,9 +309,7 @@ spec:
                 description: Update policy for the module package.
                 type: string
                 x-doc-examples:
-                - test-alpha.
-            required:
-            - packageVersion
+                - test-alpha
             type: object
           status:
             description: Status of a Module.
@@ -457,8 +459,6 @@ spec:
                 type: object
                 x-kubernetes-preserve-unknown-fields: true
             type: object
-        required:
-        - spec
         type: object
     served: true
     storage: true
