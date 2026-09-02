@@ -490,6 +490,7 @@ jobs:
           # obtained, so signing is skipped rather than failing the build.
           WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
           WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -930,6 +931,7 @@ jobs:
           # obtained, so signing is skipped rather than failing the build.
           WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
           WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1371,6 +1373,7 @@ jobs:
           # obtained, so signing is skipped rather than failing the build.
           WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
           WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1812,6 +1815,7 @@ jobs:
           # obtained, so signing is skipped rather than failing the build.
           WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
           WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -2253,6 +2257,7 @@ jobs:
           # obtained, so signing is skipped rather than failing the build.
           WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
           WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -2694,6 +2699,7 @@ jobs:
           # obtained, so signing is skipped rather than failing the build.
           WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
           WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -3037,6 +3043,7 @@ jobs:
           IMAGE_TO: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/fe:${{ github.ref_name }}"
           COMPARE_MAX_ATTEMPTS: 10
           COMPARE_RETRY_DELAY: 30
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           RELEASE_BRANCH=$(echo $GITHUB_REF_NAME | awk -F '.' '{printf "%s.%s", $1, $2}')
           LAST_TWO_TAGS="$(git ls-remote --tags origin | grep -F tags/${RELEASE_BRANCH} | awk -F '/' '{print $3}' | sort -V | tail -n 2)"

@@ -29,6 +29,7 @@ alertmanager
 Alertmanager
 alertmanagers
 Alertmanagers
+AliCloud
 AllocateSpace
 AllowedAddressPairs
 allowedBundles
@@ -269,6 +270,7 @@ ClusterVirtualImage
 cmctl
 CMD
 cmp
+CN
 CNAME
 CNCF
 CNCF’s
@@ -439,6 +441,7 @@ DN
 DNAT
 dns
 DNS
+DNs
 dnsEE
 Dnsmasq
 dnsPolicy
@@ -507,6 +510,7 @@ enableBasicAuth
 enablement
 enableMultiTenancy
 endofftopic
+Entra
 entrypoint
 enum
 env
@@ -795,6 +799,7 @@ jaeger
 jammy
 javascript
 JFrog
+JID
 JPA
 JQ
 js
@@ -1112,6 +1117,7 @@ okmeter
 Okmeter
 Okta
 Omniauth
+OmniAuth
 online
 OOM
 OPA
@@ -1189,6 +1195,7 @@ PersistentVolumeClaims
 PersistentVolumes
 php
 PID
+PKCE
 PKCS
 PKI
 plaintext
@@ -1373,6 +1380,7 @@ RWX
 S3
 SaaS
 SaaSUninstall
+Salesforce
 SAML
 SANs
 SASL
@@ -1432,6 +1440,7 @@ shouldn
 Sidekiq
 SIGTERM
 SimpleWithInternalNetwork
+SingleLevel
 Sitemap
 SizingPolicy
 SkyWalking
@@ -1623,6 +1632,7 @@ URLs
 UsePAM
 UserBasic
 username
+usernames
 UserOperation
 UTC
 UTF
@@ -1748,6 +1758,7 @@ WhateverInstanceClass
 whitelist
 Whitelist
 whitelistSourceRanges
+WholeSubtree
 Wiki
 wildcard
 wildcards
@@ -2827,6 +2838,7 @@ ZvirtInstanceClass
 ч
 чаржить
 чатами
+членств
 шаблонизатор
 шаблонизаторе
 шаблонизирования

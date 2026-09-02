@@ -71,6 +71,11 @@ type ModulePackageStatus struct {
 	// List of repository names where this module package is available.
 	// +optional
 	AvailableRepositories []string `json:"availableRepositories,omitempty"`
+
+	// Versions the release channels of each repository point to, keyed by repository name and then
+	// by release channel name.
+	// +optional
+	ReleaseChannels PackageReleaseChannels `json:"releaseChannels,omitempty"`
 }
 
 // +kubebuilder:object:root=true

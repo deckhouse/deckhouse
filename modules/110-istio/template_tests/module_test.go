@@ -1189,6 +1189,8 @@ users:
 			Expect(istio.Exists()).To(BeTrue())
 			Expect(istio.Field("spec.values.meshConfig.caCertificates").String()).To(MatchYAML(`
 - pem: "---ROOT CA---"
+  trustDomains:
+  - my.domain
 `))
 			Expect(istio.Field("spec.values.global.meshNetworks").String()).To(MatchYAML(`
 a-b-c-1-2-3:

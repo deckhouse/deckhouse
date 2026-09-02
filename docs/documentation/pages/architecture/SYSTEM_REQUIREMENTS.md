@@ -1,6 +1,7 @@
 ---
 title: System requirements
 permalink: en/architecture/system-requirements/
+draft: true
 description: Installation variants and prerequisites for Deckhouse Kubernetes Platform — cloud, bare-metal, and existing Kubernetes clusters.
 ---
 

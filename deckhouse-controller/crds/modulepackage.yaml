@@ -53,6 +53,15 @@ spec:
                 items:
                   type: string
                 type: array
+              releaseChannels:
+                additionalProperties:
+                  additionalProperties:
+                    type: string
+                  type: object
+                description: |-
+                  Versions the release channels of each repository point to, keyed by repository name and then
+                  by release channel name.
+                type: object
             type: object
         type: object
         x-doc-examples:

@@ -51,6 +51,15 @@ resource "aws_instance" "node" {
   user_data = var.cloud_config == "" ? "" : base64decode(var.cloud_config)
   iam_instance_profile = "${var.prefix}-node"
 
+  dynamic "metadata_options" {
+    for_each = var.imdsv2_managed ? [1] : []
+    content {
+      http_endpoint               = "enabled"
+      http_tokens                 = var.imdsv2 ? "required" : "optional"
+      http_put_response_hop_limit = 1
+    }
+  }
+
   root_block_device {
     volume_size = var.root_volume_size
     volume_type = var.root_volume_type
