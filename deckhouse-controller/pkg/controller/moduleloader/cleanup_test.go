@@ -25,7 +25,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -35,18 +35,18 @@ import (
 // is updating its EnabledByModuleConfig condition. The status update then hits the API
 // server with NotFound. This must not abort controller startup.
 func TestCleanupDeletedModules_ConcurrentDelete(t *testing.T) {
-	// source != Embedded so the module skips the delete branch and reaches the
-	// status-update branch — the exact path that crashed on prometheus-metrics-adapter.
+	// a module without a config reaches the status-update branch, the exact path that
+	// crashed on prometheus-metrics-adapter
 	module := testModule("prometheus-metrics-adapter", "deckhouse")
 
 	cl := fake.NewClientBuilder().
 		WithScheme(newTestScheme(t)).
 		WithObjects(module).
-		WithStatusSubresource(&v1alpha1.Module{}).
+		WithStatusSubresource(&v1alpha2.Module{}).
 		WithInterceptorFuncs(interceptor.Funcs{
 			// Another actor deletes the module between the Get and the status update.
 			SubResourceUpdate: func(_ context.Context, _ client.Client, _ string, obj client.Object, _ ...client.SubResourceUpdateOption) error {
-				return apierrors.NewNotFound(v1alpha1.ModuleGVR.GroupResource(), obj.GetName())
+				return apierrors.NewNotFound(v1alpha2.ModuleGVR.GroupResource(), obj.GetName())
 			},
 		}).
 		Build()
