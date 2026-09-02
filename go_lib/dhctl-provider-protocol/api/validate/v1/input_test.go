@@ -15,61 +15,9 @@
 package v1
 
 import (
-	"errors"
 	"reflect"
-	"strings"
 	"testing"
-
-	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/errs"
 )
-
-func TestInputValidate(t *testing.T) {
-	tests := []struct {
-		name      string
-		operation Operation
-		wantErr   error
-		wantText  string
-	}{
-		{name: "accepts bootstrap", operation: OperationBootstrap},
-		{name: "accepts converge", operation: OperationConverge},
-		{name: "accepts destroy", operation: OperationDestroy},
-		{
-			name:     "rejects missing operation",
-			wantErr:  errs.ErrInvalidRequest,
-			wantText: "operation required",
-		},
-		{
-			// An operation the validator does not recognise would silently get the
-			// checks of some other phase.
-			name:      "rejects unknown operation",
-			operation: "nonsense",
-			wantErr:   errs.ErrInvalidRequest,
-			wantText:  `operation unknown: "nonsense"`,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			err := Input{ProviderName: "dvp", Operation: test.operation}.Validate()
-
-			if test.wantErr == nil {
-				if err != nil {
-					t.Fatalf("Validate() = %v, want nil", err)
-				}
-
-				return
-			}
-
-			if !errors.Is(err, test.wantErr) {
-				t.Fatalf("Validate() = %v, want %v", err, test.wantErr)
-			}
-
-			if !strings.Contains(err.Error(), test.wantText) {
-				t.Errorf("Validate() = %q, want it to mention %q", err, test.wantText)
-			}
-		})
-	}
-}
 
 func TestInputToRequest(t *testing.T) {
 	tests := []struct {

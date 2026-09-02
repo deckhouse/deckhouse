@@ -17,8 +17,6 @@ package v1
 import (
 	"encoding/json"
 	"fmt"
-
-	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/errs"
 )
 
 // CredentialsSecretType marks a provider credential Secret, both in the
@@ -33,35 +31,34 @@ const (
 	OperationDestroy   Operation = "destroy"
 )
 
-// Input is everything a validator needs to check a cluster's configuration before
-// the caller touches infrastructure.
+// Input is the input payload for the validate call.
 type Input struct {
-	ProviderName          string             `json:"providerName"`
-	ClusterPrefix         string             `json:"clusterPrefix,omitempty"`
-	Layout                string             `json:"layout,omitempty"`
-	Operation             Operation          `json:"operation,omitempty"`
-	ProviderClusterConfig map[string]any     `json:"providerClusterConfiguration,omitempty"`
-	CloudProviderVars     *CloudProviderVars `json:"vars,omitempty"`
+	// ProviderName is the cloud provider identifier (e.g. "dvp", "aws").
+	ProviderName string `json:"providerName"`
+	// ClusterPrefix is an optional prefix applied to cloud resource names.
+	ClusterPrefix string `json:"clusterPrefix,omitempty"`
+	// Layout is the provider layout name (e.g. "Standard").
+	Layout string `json:"layout,omitempty"`
+	// Operation is one of OperationBootstrap, OperationConverge, OperationDestroy.
+	Operation Operation `json:"operation,omitempty"`
+	// ProviderClusterConfig holds the parsed providerClusterConfiguration section.
+	ProviderClusterConfig map[string]interface{} `json:"providerClusterConfiguration,omitempty"`
+	// CloudProviderVars is the structured provider data (node groups, instance
+	// classes, credential secrets, module settings) collected by dhctl.
+	CloudProviderVars *CloudProviderVars `json:"vars,omitempty"`
 }
 
-// CloudProviderVars is the provider data the caller collected from the cluster and
-// from the user's resources. Every map is name to the full resource object.
+// CloudProviderVars holds the structured data extracted from provider resources
+// and passed to the Terraform/OpenTofu configuration.
 type CloudProviderVars struct {
-	Settings        map[string]any            `json:"settings,omitempty"`
-	NodeGroups      map[string]map[string]any `json:"nodeGroups,omitempty"`
-	InstanceClasses map[string]map[string]any `json:"instanceClasses,omitempty"`
-	Secrets         map[string]map[string]any `json:"secrets,omitempty"`
-}
-
-func (i Input) Validate() error {
-	switch i.Operation {
-	case OperationBootstrap, OperationConverge, OperationDestroy:
-		return nil
-	case "":
-		return fmt.Errorf("%w: operation required", errs.ErrInvalidRequest)
-	default:
-		return fmt.Errorf("%w: operation unknown: %q", errs.ErrInvalidRequest, i.Operation)
-	}
+	// Settings holds module-level provider settings (from ModuleConfig).
+	Settings map[string]interface{} `json:"settings,omitempty"`
+	// NodeGroups maps node group name to its full resource object.
+	NodeGroups map[string]map[string]interface{} `json:"nodeGroups,omitempty"`
+	// InstanceClasses maps instance class name to its full resource object.
+	InstanceClasses map[string]map[string]interface{} `json:"instanceClasses,omitempty"`
+	// Secrets maps secret name to its full resource object.
+	Secrets map[string]map[string]interface{} `json:"secrets,omitempty"`
 }
 
 func (i Input) ToRequest() (*ValidateRequest, error) {

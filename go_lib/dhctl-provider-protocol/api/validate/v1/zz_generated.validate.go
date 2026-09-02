@@ -88,8 +88,7 @@ func (x *ValidateRequest) GetInputJson() []byte {
 // Blocking problems go to errors, non-blocking ones to warnings; an empty response
 // means the configuration is valid.
 //
-// A failure of the validator itself is NOT reported here — it is a gRPC status:
-// InvalidArgument, Unimplemented or Internal.
+// A failure of the validator itself is NOT reported here — it is a gRPC status.
 type ValidateResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Errors        []*ViolationResponse   `protobuf:"bytes,1,rep,name=errors,proto3" json:"errors,omitempty"`

@@ -15,44 +15,22 @@
 package errs
 
 import (
-	"errors"
-
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
-
-var (
-	ErrInvalidRequest      = errors.New("invalid request")
-	ErrMethodUnimplemented = errors.New("method unimplemented")
-)
-
-// ToStatus maps a sentinel-wrapped error to its gRPC status. Anything unrecognised
-// is Internal: the caller must fail closed rather than read an unknown failure as
-// "checked".
-func ToStatus(err error) error {
-	switch {
-	case err == nil:
-		return nil
-
-	case errors.Is(err, ErrInvalidRequest):
-		return StatusInvalidRequest(err)
-
-	case errors.Is(err, ErrMethodUnimplemented):
-		return StatusMethodUnimplemented(err)
-
-	default:
-		return StatusInternal(err)
-	}
-}
 
 func StatusInvalidRequest(err error) error {
 	return status.Error(codes.InvalidArgument, err.Error())
 }
 
-func StatusMethodUnimplemented(err error) error {
-	return status.Error(codes.Unimplemented, err.Error())
-}
-
 func StatusInternal(err error) error {
 	return status.Error(codes.Internal, err.Error())
+}
+
+// IsStatusErr reports whether err already carries a gRPC status — either directly or
+// wrapped, since status.FromError unwraps. A validator that built its error with
+// status picked the code deliberately, and the server must not override it.
+func IsStatusErr(err error) bool {
+	_, ok := status.FromError(err)
+	return ok
 }

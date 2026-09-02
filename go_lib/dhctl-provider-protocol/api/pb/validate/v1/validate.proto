@@ -42,8 +42,7 @@ message ValidateRequest {
 // Blocking problems go to errors, non-blocking ones to warnings; an empty response
 // means the configuration is valid.
 //
-// A failure of the validator itself is NOT reported here — it is a gRPC status:
-// InvalidArgument, Unimplemented or Internal.
+// A failure of the validator itself is NOT reported here — it is a gRPC status.
 message ValidateResponse {
   repeated ViolationResponse errors   = 1;
   repeated ViolationResponse warnings = 2;

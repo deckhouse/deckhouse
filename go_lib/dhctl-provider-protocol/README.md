@@ -119,10 +119,6 @@ on both sides. The Go definition is `Input` in [`api/validate/v1`](api/validate/
 | `providerClusterConfiguration` | object | Parsed `providerClusterConfiguration` section |
 | `vars` | object | Structured provider data dhctl collected: module `settings` (the full ModuleConfig object), `nodeGroups`, `instanceClasses`, credential `secrets`. Absent when there was nothing to collect — a validator must tolerate its absence |
 
-`operation` is required, and a value outside the three above is rejected with
-`InvalidArgument`: a validator decides what to check from this field, and an unknown
-value would silently get the checks of some other phase.
-
 `vars.secrets` holds credential Secrets — objects of type
 `cloud-provider.deckhouse.io/credentials`. The payload therefore carries credentials:
 neither side may log it, attach it to traces, or quote it in an error.
@@ -158,13 +154,23 @@ A failure of the validator itself is never a violation — it is a gRPC status:
 | Code | Meaning |
 |---|---|
 | `OK` | The validator ran. The response says whether the configuration is valid |
-| `InvalidArgument` | The request was malformed or its `operation` was rejected |
-| `Unimplemented` | The validator does not serve this action |
-| `Internal` | The validator failed or panicked. A panic carries its stack in the message |
+| `InvalidArgument` | The request did not decode |
+| `Unimplemented` | The server registered no service for this action |
+| `Internal` | The validator returned an error or panicked. A panic carries its stack in the message |
+| `Unavailable` | The server is gone: stopped, or it never came up |
 
-A validator asks for one of these by returning an error built on the sentinels in
-[`errs`](errs): `ErrInvalidRequest` becomes `InvalidArgument`, `ErrMethodUnimplemented`
-becomes `Unimplemented`, anything else becomes `Internal`.
+A plain error from a validator becomes `Internal` — the caller cannot tell a broken
+dependency from a bug, and either way nothing was validated. A validator that wants a
+different code builds its error with
+[`status`](https://pkg.go.dev/google.golang.org/grpc/status), and that code is passed
+through untouched:
+
+```go
+return nil, status.Error(codes.InvalidArgument, "layout is not supported")
+```
+
+Wrapping such an error in `fmt.Errorf` is pointless: the status is still found, but
+the wrapping text is dropped from the message.
 
 The caller must fail closed: any status other than `OK`, and any response it cannot read,
 blocks the operation instead of counting as "validated".

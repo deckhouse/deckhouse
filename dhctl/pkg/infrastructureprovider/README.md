@@ -125,8 +125,8 @@ gRPC. Contract in full:
   `secrets`) — the only channel for provider resources.
 - **Output** (`validatev1.ValidateResponse`): `errors` block the operation, `warnings` are logged;
   an empty response means valid. A failure of the validator itself is a gRPC status
-  (`InvalidArgument`, `Unimplemented`, `Internal`), never a violation. dhctl fails closed: any
-  status other than `OK` blocks the operation. Validation **never mutates** the config.
+  (`InvalidArgument`, `Unimplemented`, `Internal`, `Unavailable`), never a violation. dhctl fails closed:
+  any status other than `OK` blocks the operation. Validation **never mutates** the config.
 
 `vcd`'s `legacyMode` rewrite is the one provider-side config mutation; it is **not** part of
 validation — it is an explicit `vcd.EnsureLegacyMode` call in the infrastructure layer

@@ -59,8 +59,7 @@ the incoming state and then return successfully.
 A valid configuration is an empty response. Violations travel as `errors` (blocking)
 and `warnings` (not blocking); dhctl renders the blocking ones as the text of its
 error. A failure of the validator itself is never a violation — it is a gRPC status:
-`InvalidArgument` for a request the action rejects (an unknown `operation`, for
-instance), `Internal` for a check that could not be made or a panic.
+`Internal` for a check that could not be made or a panic.
 
 
 ## Build

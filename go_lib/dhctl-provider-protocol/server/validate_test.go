@@ -59,22 +59,6 @@ func TestValidateService(t *testing.T) {
 			wantCalled: true,
 		},
 		{
-			// The whitelist runs at the trust boundary, before the validator sees
-			// the input.
-			name:        "rejects an unknown operation",
-			validator:   validConfiguration,
-			input:       validatev1.Input{ProviderName: "dvp", Operation: "nonsense"},
-			wantCode:    codes.InvalidArgument,
-			wantMessage: `operation unknown: "nonsense"`,
-		},
-		{
-			name:        "rejects a missing operation",
-			validator:   validConfiguration,
-			input:       validatev1.Input{ProviderName: "dvp"},
-			wantCode:    codes.InvalidArgument,
-			wantMessage: "operation required",
-		},
-		{
 			// A panic is a bug, not a violation: without the stack the caller would
 			// see a connection that died mid-call and could not say why.
 			name:        "reports a panic as internal",
@@ -85,6 +69,9 @@ func TestValidateService(t *testing.T) {
 			wantCalled:  true,
 		},
 		{
+			// A plain error means the check could not be made, which is the server's
+			// fault as far as the caller can tell. Its text has to survive: it is all
+			// the caller gets to explain why nothing was validated.
 			name:        "reports a failed check as internal",
 			validator:   fails,
 			input:       bootstrapInput(),

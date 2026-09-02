@@ -25,7 +25,9 @@ import (
 
 // Validator is the check itself: the response says what is wrong with the
 // configuration — errors block the caller's operation, warnings do not — and an error
-// means the check could not be made and reaches the caller as Internal.
+// means the check could not be made at all and reaches the caller as Internal. A
+// validator that wants a different code builds its error with
+// google.golang.org/grpc/status, and that code is passed through untouched.
 
 type Validator interface {
 	Validate(ctx context.Context, input validatev1.Input) (*validatev1.ValidateResponse, error)
@@ -50,14 +52,10 @@ func (s *validateService) Validate(ctx context.Context, req *validatev1.Validate
 		return nil, errs.StatusInvalidRequest(err)
 	}
 
-	if err := input.Validate(); err != nil {
-		return nil, errs.ToStatus(err)
-	}
-
 	resp, err := s.validator.Validate(ctx, input)
-	if err != nil {
-		return nil, errs.ToStatus(err)
+	if err != nil && !errs.IsStatusErr(err) {
+		err = errs.StatusInternal(err)
 	}
 
-	return resp, nil
+	return resp, err
 }

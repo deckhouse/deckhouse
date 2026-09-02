@@ -195,12 +195,6 @@ func TestValidate(t *testing.T) {
 			input:   convergeInput(),
 			wantErr: "did not start",
 		},
-		{
-			name:    "fails closed on an unknown operation",
-			mode:    modeValid,
-			input:   config.ProviderInput{ProviderName: "dvp", Operation: "nonsense"},
-			wantErr: "operation unknown",
-		},
 	}
 
 	for _, test := range tests {
