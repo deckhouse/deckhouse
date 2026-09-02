@@ -16,15 +16,19 @@ package immutable
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"strconv"
+	"time"
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/provider"
 	"github.com/deckhouse/lib-connection/pkg/settings"
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
+	"github.com/deckhouse/lib-connection/pkg/ssh/gossh"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
@@ -110,25 +114,93 @@ func openBastionTunnel(ctx context.Context, sshConfig *sshconfig.Config, sett se
 		return nil, fmt.Errorf("connect to the bastion host %s: %w", sshConfig.BastionHost, err)
 	}
 
-	tunnel := sshClient.Tunnel(fmt.Sprintf("%s:%d:127.0.0.1:%d", masterIP, remotePort, localPort))
-	if err := tunnel.Up(ctx); err != nil {
+	goSSHClient, ok := sshClient.(*gossh.Client)
+	if !ok {
 		cleanupSSHProvider(ctx, sshProvider)
-		return nil, fmt.Errorf("forward %d to %s:%d through the bastion %s: %w", localPort, masterIP, remotePort, sshConfig.BastionHost, err)
+		return nil, fmt.Errorf("the bastion forward needs the modern SSH backend, got %T", sshClient)
 	}
 
+	local := net.JoinHostPort("127.0.0.1", strconv.Itoa(localPort))
+	listener, err := net.Listen("tcp", local)
+	if err != nil {
+		cleanupSSHProvider(ctx, sshProvider)
+		return nil, fmt.Errorf("listen on %s for the %s forward through the bastion %s: %w", local, purpose, sshConfig.BastionHost, err)
+	}
+
+	remote := net.JoinHostPort(masterIP, strconv.Itoa(remotePort))
 	// Debug: a wait rebuilds this channel per attempt — up to 360 of them over
 	// half an hour — and one line each would bury the node's own progress.
 	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf(
-		"%s tunnel through the bastion is up: %s", purpose, tunnel.String(),
+		"%s forward through the bastion is up: %s -> %s", purpose, local, remote,
 	))
 
-	// Nothing drains the tunnel's error channel: gossh sends there non-blocking,
-	// so an unread channel cannot stall the accept loop, and a request that hits
-	// an error fails on its own and the caller retries.
+	forwarded, stopForwarding := context.WithCancel(ctx)
+	go forwardThroughBastion(forwarded, goSSHClient, listener, remote)
+
 	return func() {
-		tunnel.Stop()
+		stopForwarding()
+		listener.Close()
 		cleanupSSHProvider(ctx, sshProvider)
 	}, nil
+}
+
+// bastionDialTimeout bounds one dial from the bastion to the master. It is the
+// deadline gossh puts on the same dial, kept because it is proven, without the
+// part that ends the whole forward when it fires.
+const bastionDialTimeout = 5 * time.Second
+
+// forwardThroughBastion serves the local end of the forward until it is closed.
+// gossh's own forward is not used for this: a dial of its that hits the deadline
+// ends its accept loop for good, and the port stays bound with nobody accepting
+// it — here that dial costs the one connection it was made for.
+func forwardThroughBastion(ctx context.Context, sshClient *gossh.Client, listener net.Listener, remote string) {
+	logger := dhlog.FromContext(ctx)
+
+	for {
+		local, err := listener.Accept()
+		if err != nil {
+			return
+		}
+
+		go func() {
+			defer local.Close()
+
+			if err := pipeThroughBastion(ctx, sshClient, local, remote); err != nil {
+				logger.DebugContext(ctx, fmt.Sprintf("forward a connection to %s through the bastion: %v", remote, err))
+			}
+		}()
+	}
+}
+
+// pipeThroughBastion carries one connection over a channel of its own. The SSH
+// client is taken per connection because the library replaces it on a reconnect.
+func pipeThroughBastion(ctx context.Context, sshClient *gossh.Client, local net.Conn, remote string) error {
+	client := sshClient.GetClient()
+	if client == nil {
+		return errors.New("the connection to the bastion is not live")
+	}
+
+	dialCtx, cancel := context.WithTimeout(ctx, bastionDialTimeout)
+	defer cancel()
+
+	remoteConn, err := client.DialContext(dialCtx, "tcp", remote)
+	if err != nil {
+		return fmt.Errorf("dial %s from the bastion: %w", remote, err)
+	}
+	defer remoteConn.Close()
+
+	logger := dhlog.FromContext(ctx)
+	go func() {
+		if _, err := io.Copy(remoteConn, local); err != nil {
+			logger.DebugContext(ctx, fmt.Sprintf("carry a request to %s through the bastion: %v", remote, err))
+		}
+	}()
+
+	if _, err := io.Copy(local, remoteConn); err != nil {
+		return fmt.Errorf("carry the answer of %s through the bastion: %w", remote, err)
+	}
+
+	return nil
 }
 
 // cleanupSSHProvider releases the connection to the bastion. Reported rather
