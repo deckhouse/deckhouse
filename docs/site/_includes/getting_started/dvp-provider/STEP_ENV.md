@@ -43,17 +43,19 @@ To deploy Deckhouse Kubernetes Platform on DVP, perform the initial setup in the
    EOF
    ```
 
-1. Enable kubeconfig issuance via API. Open the `user-authn` module settings (create a [ModuleConfig](../../../documentation/v1/reference/api/cr.html#moduleconfig) resource named `user-authn` if it does not exist):
+1. Enable kubeconfig issuance via API. Open the `control-plane-manager` module settings (create a [ModuleConfig](../../../documentation/v1/reference/api/cr.html#moduleconfig) resource named `control-plane-manager` if it does not exist):
 
    ```shell
-   d8 k edit mc user-authn
+   d8 k edit mc control-plane-manager
    ```
 
 1. Add the following section to the `settings` block and save:
 
    ```yaml
-   publishAPI:
-     enabled: true
+   apiserver:
+     publishAPI:
+       ingress:
+         enabled: true
    ```
 
 1. Generate a kubeconfig to be used in the cluster initial configuration file in the next step:

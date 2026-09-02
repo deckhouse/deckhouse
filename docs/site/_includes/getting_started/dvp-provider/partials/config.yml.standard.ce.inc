@@ -78,16 +78,31 @@ spec:
   settings:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
-    # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
-    # [<ru>] https://deckhouse.ru/modules/150-user-authn/configuration.html#parameters-publishapi
-    # [<en>] Enabling access to the API server through Ingress.
-    # [<en>] https://deckhouse.io/modules/150-user-authn/configuration.html#parameters-publishapi
-    publishAPI:
-      enabled: true
-      https:
-        mode: Global
-        global:
-          kubeconfigGeneratorMasterCA: ""
+---
+# [<en>] Control plane manager module settings.
+# [<en>] https://deckhouse.io/modules/040-control-plane-manager/configuration.html
+# [<ru>] Настройки модуля control-plane-manager.
+# [<ru>] https://deckhouse.ru/modules/040-control-plane-manager/configuration.html
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    apiserver:
+      # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
+      # [<ru>] https://deckhouse.ru/modules/040-control-plane-manager/configuration.html#parameters-apiserver-publishapi
+      # [<en>] Enabling access to the API server through Ingress.
+      # [<en>] https://deckhouse.io/modules/040-control-plane-manager/configuration.html#parameters-apiserver-publishapi
+      publishAPI:
+        ingress:
+          enabled: true
+          https:
+            mode: Global
+            global:
+              kubeconfigGeneratorMasterCA: ""
 ---
 # [<en>] Cloud provider DVP module settings.
 # [<en>] https://deckhouse.io/modules/030-cloud-provider-dvp/configuration.html
