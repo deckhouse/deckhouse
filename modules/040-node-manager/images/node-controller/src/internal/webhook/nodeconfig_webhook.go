@@ -74,32 +74,29 @@ func validateNodeConfigUpdate(old, updated *internalv1alpha1.NodeConfig) error {
 
 // validateNetworkUpdate refuses every network an update writes but the
 // machine's own. A machine publishes its addressing when it creates the object,
-// so no update ever has one to introduce; the sole exception is the fallback
-// the controller renders for a machine that named none, which says nothing only
-// the machine could know.
+// so no update ever has one to introduce; the sole exception is the NIC the
+// controller renders for a machine that named none, whatever else that machine
+// published beside it — resolvers, time servers, routes.
 func validateNetworkUpdate(old, updated *internalv1alpha1.Network) error {
 	if sameNetworkBesidesHostname(old, updated) {
 		return nil
 	}
-	if !sameNetworkBesidesHostname(old, &internalv1alpha1.Network{}) {
-		return fmt.Errorf("spec.network is written on the machine and cannot be changed here; " +
-			"delete this NodeConfig and let the node publish what it has")
+	if len(old.Interfaces) == 0 {
+		filled := *old
+		filled.Interfaces = ClusterFallbackInterfaces()
+		if sameNetworkBesidesHostname(&filled, updated) {
+			return nil
+		}
 	}
-	fallback := clusterFallbackNetwork()
-	if !sameNetworkBesidesHostname(updated, &fallback) {
-		return fmt.Errorf("spec.network is written on the machine and cannot be filled in here; " +
-			"delete this NodeConfig and let the node publish what it has")
-	}
-	return nil
+	return fmt.Errorf("spec.network is written on the machine and cannot be changed here; " +
+		"delete this NodeConfig and let the node publish what it has")
 }
 
-// clusterFallbackNetwork mirrors renderNetwork in
-// internal/controller/nodeconfig/render.go: what the cluster writes into a
-// NodeConfig whose machine named no network of its own.
-func clusterFallbackNetwork() internalv1alpha1.Network {
-	return internalv1alpha1.Network{
-		Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}},
-	}
+// ClusterFallbackInterfaces mirrors renderNetwork in
+// internal/controller/nodeconfig/render.go: the NIC the cluster writes into a
+// NodeConfig whose machine named none. Exported for the parity test there.
+func ClusterFallbackInterfaces() []internalv1alpha1.NetworkInterface {
+	return []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}}
 }
 
 // sameNetworkBesidesHostname compares what the machine owns. The hostname is

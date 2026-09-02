@@ -25,6 +25,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-logr/logr"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
@@ -191,7 +192,7 @@ func main() {
 		Storage:  nodebootstrap.NewTemplateStorage(directClient),
 		Serving:  serving,
 	})
-	if err := mgr.AddReadyzCheck("aggregated-api", aggregatedAPIReady(serving)); err != nil {
+	if err := mgr.AddReadyzCheck("aggregated-api", aggregatedAPIReady(serving, aggregatedAPIStartupGrace)); err != nil {
 		setupLog.Error(err, "unable to set up the aggregated API ready check")
 		os.Exit(1)
 	}
@@ -217,14 +218,23 @@ func serveAggregatedAPI(ctx context.Context, log logr.Logger, opts apiserver.Opt
 // routes to until its aggregated API server answers: kube-aggregator marks the
 // APIService Unavailable on a refused connection, and full discovery then fails
 // for every client in the cluster, immutable nodes or none.
-func aggregatedAPIReady(serving <-chan struct{}) healthz.Checker {
+//
+// The gate ends with grace. The same Endpoints carry the failurePolicy:Fail
+// webhooks, a non-HA cluster runs one replica, and the config retry behind that
+// channel has no cap: a gate with no end turns an API server that cannot start
+// into a cluster that refuses every NodeGroup write, with nothing to restart.
+func aggregatedAPIReady(serving <-chan struct{}, grace time.Duration) healthz.Checker {
+	deadline := time.Now().Add(grace)
 	return func(*http.Request) error {
 		select {
 		case <-serving:
 			return nil
 		default:
-			return errors.New("the aggregated API server is not answering yet")
 		}
+		if time.Now().After(deadline) {
+			return nil
+		}
+		return errors.New("the aggregated API server is not answering yet")
 	}
 }
 
@@ -234,6 +244,11 @@ const webhookCertDir = "/tmp/k8s-webhook-server/serving-certs"
 // apiserverPort is the port the aggregated API server binds to; the Service,
 // the container port and the APIService all name it.
 const apiserverPort = 4293
+
+// aggregatedAPIStartupGrace bounds the readiness gate above. A healthy start
+// needs one kube-apiserver read; past this the replica serves its webhooks with
+// the aggregated API still down, which is by far the smaller outage.
+const aggregatedAPIStartupGrace = time.Minute
 
 const defaultMaxConcurrentReconciles = 10
 
