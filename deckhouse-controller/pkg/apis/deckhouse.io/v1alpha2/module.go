@@ -85,8 +85,10 @@ type Module struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the behavior of a Module.
-	Spec ModuleSpec `json:"spec"`
+	// Spec defines the behavior of a Module. A module a source offers and nothing
+	// installed carries no package version, so the spec is optional.
+	// +optional
+	Spec ModuleSpec `json:"spec,omitempty"`
 
 	// Status of a Module.
 	Status ModuleStatus `json:"status,omitempty"`
@@ -99,17 +101,19 @@ type ModuleSpec struct {
 	// +crd-enricher:deckhouse:documentation:examples=deckhouse
 	PackageRepositoryName string `json:"packageRepositoryName,omitempty"`
 
-	// Version of the module package to install
-	// +crd-enricher:deckhouse:documentation:examples=v1.0.0.
-	PackageVersion string `json:"packageVersion"`
+	// Version of the module package to install.
+	// Empty while a module source offers the module and nothing installed it.
+	// +crd-enricher:deckhouse:documentation:examples=v1.0.0
+	// +optional
+	PackageVersion string `json:"packageVersion,omitempty"`
 
 	// Release channel for the module package.
-	// +crd-enricher:deckhouse:documentation:examples=alpha.
+	// +crd-enricher:deckhouse:documentation:examples=alpha
 	// +optional
 	ReleaseChannel string `json:"releaseChannel,omitempty"`
 
 	// Update policy for the module package.
-	// +crd-enricher:deckhouse:documentation:examples=test-alpha.
+	// +crd-enricher:deckhouse:documentation:examples=test-alpha
 	// +optional
 	UpdatePolicy string `json:"updatePolicy,omitempty"`
 
