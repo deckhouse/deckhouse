@@ -1,5 +1,6 @@
 ---
 title: "Deckhouse Code administrator guide"
+description: Administrator guide covering access setup, maintenance, and merge request approvals
 permalink: en/code/documentation/admin/
 lang: en
 ---

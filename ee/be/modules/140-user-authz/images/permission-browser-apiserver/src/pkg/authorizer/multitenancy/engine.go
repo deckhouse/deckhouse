@@ -27,7 +27,10 @@ import (
 )
 
 const (
-	noNamespaceAccessReason      = "user has no access to the namespace"
+	// Keep in sync with the webhook (webhook/internal/web/hook/handler.go): both
+	// answer the same question, and the wording must not let a caller tell a
+	// closed namespace from a missing one.
+	noNamespaceAccessReason      = "either you have no access to the namespace or the namespace does not exist"
 	namespaceLimitedAccessReason = "making cluster-scoped requests for namespaced resources is not allowed"
 )
 

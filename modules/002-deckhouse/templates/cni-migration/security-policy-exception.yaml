@@ -1,0 +1,149 @@
+{{- if .Values.global.internal.cniMigrationEnabled }}
+{{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: cni-migration-agent
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cni-migration-agent")) | nindent 2 }}
+spec:
+  securityContext:
+    privileged:
+      allowedValue: true
+      metadata:
+        description: |
+          The agent switches the CNI plugin on the node: it rewrites the host CNI
+          configuration and binaries, flushes iptables rules and cleans up the datapath
+          state of the CNI being replaced.
+    allowPrivilegeEscalation:
+      allowedValue: true
+      metadata:
+        description: |
+          Kubernetes rejects allowPrivilegeEscalation=false on a privileged container,
+          so it is implied by the privileged mode the agent requires.
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          Rewriting host CNI configuration and binaries and managing the node datapath
+          require root on the node.
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          UID 0 is required to enter host namespaces and to write to root-owned host
+          paths such as /etc/cni/net.d and /opt/cni/bin.
+    capabilities:
+      allowedValues:
+        drop:
+          - all
+      metadata:
+        description: |
+          The agent adds no capabilities explicitly; it relies on the privileged mode
+          required for host networking operations.
+    seccompProfile:
+      allowedValues:
+        - ""
+        - undefined
+      metadata:
+        description: |
+          The agent container runs privileged, so the container runtime applies no
+          seccomp profile to it.
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          The agent reconfigures node networking and reaches the API server through the
+          node-local kubernetes-api-proxy on 127.0.0.1, which stays available while the
+          cluster network is being switched over.
+    hostPID:
+      allowedValue: true
+      metadata:
+        description: |
+          The host PID namespace is required to enter the network namespaces of running
+          pods and to inspect processes of the CNI being replaced.
+    hostIPC:
+      allowedValue: true
+      metadata:
+        description: |
+          The host IPC namespace is required to reach the runtime sockets of the CNI
+          being replaced.
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          CNI configuration, binaries and datapath state live on the node, so they
+          cannot be provided through pod-local storage.
+    hostPath:
+      allowedValues:
+        - path: /proc
+          readOnly: true
+          metadata:
+            description: Host procfs used to look up network namespaces of running pods.
+        - path: /sys
+          readOnly: true
+          metadata:
+            description: Host sysfs used to inspect network interfaces and BPF state.
+        - path: /etc/cni/net.d
+          readOnly: false
+          metadata:
+            description: Host CNI configuration directory rewritten during the migration.
+        - path: /opt/cni/bin
+          readOnly: false
+          metadata:
+            description: Host CNI binary directory rewritten during the migration.
+        - path: /run
+          readOnly: false
+          metadata:
+            description: Host runtime directory with CNI and container runtime sockets.
+        - path: /sys/fs/bpf
+          readOnly: false
+          metadata:
+            description: BPF filesystem holding eBPF maps of the CNI being replaced.
+        - path: /lib/modules
+          readOnly: true
+          metadata:
+            description: Host kernel modules used for iptables operations.
+        - path: /var/lib/cni
+          readOnly: false
+          metadata:
+            description: Host CNI state directory cleaned up during the migration.
+        - path: /var/lib/cilium
+          readOnly: false
+          metadata:
+            description: Cilium state directory cleaned up during the migration.
+        - path: /var/log/cilium/hubble
+          readOnly: false
+          metadata:
+            description: Hubble log directory cleaned up during the migration.
+        - path: /var/run/cilium
+          readOnly: false
+          metadata:
+            description: Cilium runtime directory with the agent socket.
+        - path: /var/run/netns
+          readOnly: false
+          metadata:
+            description: Host network namespaces of running pods.
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: cni-migration-manager
+  namespace: d8-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "cni-migration-manager")) | nindent 2 }}
+spec:
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          The manager reaches the API server through the node-local kubernetes-api-proxy
+          on 127.0.0.1, which stays available while the cluster network is being
+          switched over.
+{{- end }}
+{{- end }}

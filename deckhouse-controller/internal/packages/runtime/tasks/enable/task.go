@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"path/filepath"
 	"sync"
 
 	bctx "github.com/flant/shell-operator/pkg/hook/binding_context"
@@ -121,10 +122,9 @@ func (t *task) Execute(ctx context.Context) error {
 			syncTask := taskhooksync.NewTask(t.pkg, hook, hookInfo, t.nelm, t.status, t.logger)
 
 			// queue = <name>/<queue>
-			queueName := fmt.Sprintf("%s/%s", t.pkg.GetName(), hookInfo.QueueName)
-
+			queueName := filepath.Join(t.pkg.GetName(), hookInfo.QueueName)
 			if hookInfo.KubernetesBinding.WaitForSynchronization {
-				queueName = fmt.Sprintf("%s/sync", queueName)
+				queueName = filepath.Join(queueName, "sync")
 				// Add to WaitGroup - we'll block until this completes
 				t.queue.Enqueue(ctx, queueName, syncTask, queue.WithWait(wg))
 				continue
@@ -160,13 +160,11 @@ func (t *task) initializeHooks(ctx context.Context) (map[string][]hookcontroller
 	ctx, span := otel.Tracer(taskTracer).Start(ctx, "InitializeHooks")
 	defer span.End()
 
-	if t.pkg.HooksInitialized() {
-		return map[string][]hookcontroller.BindingExecutionInfo{}, nil
+	if !t.pkg.HooksInitialized() {
+		// Initialize hook controllers and bind them to Kubernetes events and schedules
+		t.logger.Debug("initialize package hooks")
+		t.pkg.InitializeHooks()
 	}
-
-	// Initialize hook controllers and bind them to Kubernetes events and schedules
-	t.logger.Debug("initialize package hooks")
-	t.pkg.InitializeHooks()
 
 	t.logger.Debug("enable schedule hooks")
 

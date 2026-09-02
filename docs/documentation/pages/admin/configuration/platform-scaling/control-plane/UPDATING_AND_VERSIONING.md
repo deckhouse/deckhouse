@@ -14,6 +14,8 @@ The control plane update process in DKP is fully automated.
 
 ### Changing the Kubernetes version
 
+You can downgrade only one minor version from the highest version ever used in the cluster. Upgrades proceed one minor version at a time.
+
 1. Open the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) editor:
 
    ```shell
@@ -60,7 +62,8 @@ The `d8-cluster-kubernetes` ConfigMap displays:
 - **Version lists**:
   - `supportedVersions`: Lists minor Kubernetes versions supported in the current DKP release.
   - `availableVersions`: Lists versions that can be selected for upgrade or downgrade in the *current* cluster. The set is limited by the highest minor version ever installed on the cluster and by the rule that downgrade proceeds one minor at a time.
-  - `automaticVersion`: Minor version that will be used when the update mode is `Automatic`.
+- **`maxUsedKubernetesVersion`**: The highest minor version the cluster has ever converged onto. It only ever rises, and it is what limits how far the version can be rolled back.
+- **`automaticVersion`**: Minor version that will be used when the update mode is `Automatic`. It describes the installed DKP build rather than the state of the cluster.
 
 During `ControlPlaneUpdating`, `status.progress` reflects overall upgrade progress across intermediate minor versions. For a multi-hop upgrade (for example, 1.33 → 1.35), the percentage increases as each hop completes, not only when every control plane component reaches the final target.
 
@@ -86,6 +89,7 @@ data:
   spec: |
     desiredVersion: "1.32"
     updateMode: Manual
+    automaticVersion: "1.33"
   status: |
     currentVersion: "1.32"
     supportedVersions:
@@ -99,7 +103,6 @@ data:
     - "1.32"
     - "1.33"
     - "1.34"
-    automaticVersion: "1.33"
     phase: UpToDate
     controlPlane:
     - name: master-1
@@ -150,6 +153,7 @@ data:
   spec: |
     desiredVersion: "1.32"
     updateMode: Manual
+    automaticVersion: "1.33"
   status: |
     currentVersion: "1.33"
     supportedVersions:
@@ -162,7 +166,6 @@ data:
     - "1.32"
     - "1.33"
     - "1.34"
-    automaticVersion: "1.33"
     phase: ControlPlaneUpdating
     progress: 0%
     controlPlane:
@@ -214,6 +217,7 @@ data:
   spec: |
     desiredVersion: "1.32"
     updateMode: Manual
+    automaticVersion: "1.33"
   status: |
     currentVersion: "1.33"
     supportedVersions:
@@ -226,7 +230,6 @@ data:
     - "1.32"
     - "1.33"
     - "1.34"
-    automaticVersion: "1.33"
     phase: ControlPlaneUpdating
     progress: 60%
     controlPlane:
@@ -282,6 +285,7 @@ data:
   spec: |
     desiredVersion: "1.35"
     updateMode: Manual
+    automaticVersion: "1.33"
   status: |
     currentVersion: "1.34"
     supportedVersions:
@@ -294,7 +298,6 @@ data:
     - "1.33"
     - "1.34"
     - "1.35"
-    automaticVersion: "1.33"
     phase: ControlPlaneUpdating
     progress: 60%
     controlPlane:
@@ -344,6 +347,7 @@ data:
   spec: |
     desiredVersion: "1.33"
     updateMode: Manual
+    automaticVersion: "1.33"
   status: |
     currentVersion: "1.33"
     supportedVersions:
@@ -356,7 +360,6 @@ data:
     - "1.32"
     - "1.33"
     - "1.34"
-    automaticVersion: "1.33"
     phase: UpToDate
     controlPlane:
     - name: master-0
@@ -401,6 +404,7 @@ data:
   spec: |
     desiredVersion: "1.32"
     updateMode: Manual
+    automaticVersion: "1.33"
   status: |
     currentVersion: "1.32"
     supportedVersions:
@@ -414,7 +418,6 @@ data:
     - "1.32"
     - "1.33"
     - "1.34"
-    automaticVersion: "1.33"
     phase: ControlPlaneUpdating
     progress: 73%
     controlPlane:

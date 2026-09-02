@@ -1,0 +1,78 @@
+diff --git a/frontend/src/components/Nav/Masthead/UserDropdown.tsx b/frontend/src/components/Nav/Masthead/UserDropdown.tsx
+index c717ffe86..2f6c37a2b 100644
+--- a/frontend/src/components/Nav/Masthead/UserDropdown.tsx
++++ b/frontend/src/components/Nav/Masthead/UserDropdown.tsx
+@@ -10,6 +10,8 @@ import { AuthStrategy } from '../../../types/Auth';
+ import moment from 'moment';
+ import { KialiDispatch } from 'types/Redux';
+ import { LoginThunkActions } from '../../../actions/LoginThunkActions';
++import { LoginActions } from '../../../actions/LoginActions';
++import { store } from '../../../store/ConfigStore';
+ import { connect } from 'react-redux';
+ import * as API from '../../../services/Api';
+ import { kialiStyle } from 'styles/StyleUtils';
+@@ -50,6 +52,13 @@ const dropdownStyle = kialiStyle({
+   marginRight: '0.5rem'
+ });
+ 
++const DEX_LOGOUT_STORAGE_KEY = 'kiali-dex-logout';
++
++const headerAuthLogoutURL = (): string => {
++  const redirectURL = encodeURIComponent(`${window.location.origin}/`);
++  return `/logout?rd=${redirectURL}`;
++};
++
+ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+   constructor(props: UserProps) {
+     super(props);
+@@ -71,6 +80,8 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+       this.setState({ timeCountDownSeconds: this.timeLeft() / MILLISECONDS });
+     }, 1000);
+ 
++    window.addEventListener('storage', this.handleStorageLogout);
++
+     this.setState({
+       checkSessionTimerId: checkSessionTimerId,
+       timeLeftTimerId: timeLeftTimerId
+@@ -85,6 +96,8 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+     if (this.state.timeLeftTimerId) {
+       clearInterval(this.state.timeLeftTimerId);
+     }
++
++    window.removeEventListener('storage', this.handleStorageLogout);
+   }
+ 
+   timeLeft = (): number => {
+@@ -103,7 +116,22 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+     }
+   };
+ 
++  handleStorageLogout = (event: StorageEvent): void => {
++    if (event.key !== DEX_LOGOUT_STORAGE_KEY || !event.newValue) {
++      return;
++    }
++    // Do not call /logout or reload here: only the tab that clicked Logout runs sign_out.
++    // Mark this tab as logged out locally to stop XHR polling without racing oauth2-proxy CSRF.
++    store.dispatch(LoginActions.sessionExpired());
++  };
++
+   handleLogout = (): void => {
++    if (authenticationConfig.strategy === AuthStrategy.header) {
++      localStorage.setItem(DEX_LOGOUT_STORAGE_KEY, String(Date.now()));
++      window.location.assign(headerAuthLogoutURL());
++      return;
++    }
++
+     if (authenticationConfig.logoutEndpoint) {
+       API.logout()
+         .then(_ => {
+@@ -142,8 +170,7 @@ class UserDropdownComponent extends React.Component<UserProps, UserState> {
+     const clusterIsInSessionInfo = (cluster: string): boolean =>
+       this.props.session?.clusterInfo?.[cluster] !== undefined;
+ 
+-    const canLogout =
+-      authenticationConfig.strategy !== AuthStrategy.anonymous && authenticationConfig.strategy !== AuthStrategy.header;
++    const canLogout = authenticationConfig.strategy !== AuthStrategy.anonymous;
+ 
+     // We want to show a dropdown per cluster the user is not logged into yet.
+     // The clusters you are logged into are in session.clusterInfo and all

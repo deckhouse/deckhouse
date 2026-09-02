@@ -2,13 +2,15 @@
 apiVersion: deckhouse.io/v1alpha1
 kind: Application
 metadata:
+  finalizers:
+  - application.deckhouse.io/statistic-registered
   name: test-app
   namespace: foobar
-  resourceVersion: "1"
+  resourceVersion: "2"
 spec:
   packageName: test
   packageRepositoryName: deckhouse
-  packageVersion: v1.0.0
+  packageVersion: v1.0.1
 status:
   lastAppliedConfiguration: null
   tracking: null
@@ -16,10 +18,9 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackage
 metadata:
-  labels:
-    heritage: deckhouse
   name: test
   resourceVersion: "1"
+  uid: package-uid
 status:
   availableRepositories:
   - deckhouse
@@ -29,9 +30,24 @@ kind: ApplicationPackageVersion
 metadata:
   labels:
     packages.deckhouse.io/draft: "true"
-    packages.deckhouse.io/package: test
-    packages.deckhouse.io/repository: deckhouse
-  name: deckhouse-test-v1.0.0
+  name: deckhouse-test-v1.0.1
   resourceVersion: "1"
-spec: {}
+  uid: version-uid
+spec:
+  packageName: test
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1
+status: {}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  name: deckhouse
+  resourceVersion: "1"
+spec:
+  registry:
+    ca: test-ca
+    dockerCfg: test-docker-cfg
+    repo: registry.example.com/test
+    scheme: https
 status: {}

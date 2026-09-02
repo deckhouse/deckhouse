@@ -1,0 +1,38 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ValidationWebhook
+metadata:
+  name: node-manager-global-prefix
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+validationObject:
+  name: global-prefix-policy.deckhouse.io
+  group: main
+  rules:
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["*"]
+    operations:  ["UPDATE"]
+    resources:   ["moduleconfigs"]
+    scope:       "Cluster"
+handler:
+  python: |
+    def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
+        obj = ctx.review.request.object
+        if obj.metadata.name != "global":
+            return None, True
+
+        old_prefix = ctx.review.request.oldObject.spec.settings.get("prefix", "") or ""
+        new_prefix = obj.spec.settings.get("prefix", "") or ""
+
+        # The prefix names existing cloud infrastructure (security groups, route
+        # tables, resource groups, instances, base infra). Setting it (migration)
+        # or clearing it (e.g. before a downgrade) is allowed; changing an existing
+        # value to a different one would recreate/rename everything and is forbidden.
+        if old_prefix and new_prefix and old_prefix != new_prefix:
+            return (
+                'global.prefix is immutable: it names existing cloud infrastructure. '
+                f'Changing it from "{old_prefix}" to "{new_prefix}" would recreate all cloud '
+                'nodes and rename base infrastructure on the next converge. To stop managing '
+                'the prefix here, remove the field entirely instead of changing its value.',
+                False,
+            )
+        return None, True

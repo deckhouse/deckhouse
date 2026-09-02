@@ -28,7 +28,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 )
 
 func TestWaitNodeUserPresentOnNode(t *testing.T) {

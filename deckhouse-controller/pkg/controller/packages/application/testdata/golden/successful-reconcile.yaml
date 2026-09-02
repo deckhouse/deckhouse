@@ -12,18 +12,20 @@ metadata:
     controller: false
     kind: ApplicationPackageVersion
     name: deckhouse-test-v1.0.1
-    uid: ""
+    uid: version-uid
   - apiVersion: deckhouse.io/v1alpha1
     blockOwnerDeletion: true
     controller: false
     kind: ApplicationPackage
     name: test
-    uid: ""
-  resourceVersion: "2"
+    uid: package-uid
+  resourceVersion: "3"
 spec:
   packageName: test
   packageRepositoryName: deckhouse
   packageVersion: v1.0.1
+  settings:
+    host: app.example.com
 status:
   lastAppliedConfiguration: null
   tracking: null
@@ -31,10 +33,9 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackage
 metadata:
-  labels:
-    heritage: deckhouse
   name: test
   resourceVersion: "2"
+  uid: package-uid
 status:
   availableRepositories:
   - deckhouse
@@ -47,33 +48,14 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackageVersion
 metadata:
-  labels:
-    packages.deckhouse.io/package: test
-    packages.deckhouse.io/repository: deckhouse
   name: deckhouse-test-v1.0.1
   resourceVersion: "2"
+  uid: version-uid
 spec:
   packageName: test
   packageRepositoryName: deckhouse
   packageVersion: v1.0.1
 status:
-  conditions:
-  - lastTransitionTime: null
-    message: ""
-    reason: ""
-    status: "True"
-    type: IsEnriched
-  packageMetadata:
-    category: Misc
-    description:
-      en: example — test
-      ru: example — test
-    requirements:
-      deckhouse:
-        constraint: '>=1.0.0'
-      kubernetes:
-        constraint: '>=1.26'
-    stage: Preview
   usedBy:
   - name: test-app
     namespace: foobar

@@ -94,7 +94,7 @@ var _ = BeforeSuite(func() {
 	// The instance controller registered itself via its package init(); since only this package
 	// is compiled into the test binary, NewManager wires up just the instance controller.
 	By("starting the manager with the instance controller")
-	mgr, err := testenv.NewManager(cfg, scheme)
+	mgr, err := testenv.NewManager(suiteCtx, cfg, scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	go func() {

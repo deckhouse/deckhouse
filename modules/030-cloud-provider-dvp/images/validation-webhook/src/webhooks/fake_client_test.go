@@ -17,6 +17,7 @@ package webhooks
 import (
 	"testing"
 
+	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -26,10 +27,11 @@ import (
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpvaladmission "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/admission"
+	dvpicv1alpha1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/api/instanceclass/v1alpha1"
 	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/meta"
 )
 
-func newWebhookAdmissionStateBuilder(t *testing.T, objects ...runtime.Object) *cpvaladmission.StateBuilder {
+func newWebhookAdmissionStateBuilderFactory(t *testing.T, objects ...runtime.Object) *dvpval.AdmissionStateBuilderFactory {
 	t.Helper()
 
 	scheme := runtime.NewScheme()
@@ -38,10 +40,10 @@ func newWebhookAdmissionStateBuilder(t *testing.T, objects ...runtime.Object) *c
 	}
 
 	client := clientfake.NewClientBuilder().WithScheme(scheme).WithRuntimeObjects(objects...).Build()
-	return cpvaladmission.NewStateBuilder(client, cpvaladmission.StateBuilderConfig{
-		ModuleName:        dvpmeta.ModuleName,
-		NamespaceName:     dvpmeta.Namespace,
-		InstanceClassKind: dvpmeta.InstanceClassKind,
+	return dvpval.NewAdmissionStateBuilderFactory(client, cpvaladmission.StateBuilderConfig{
+		ModuleName:       dvpmeta.ModuleName,
+		NamespaceName:    dvpmeta.Namespace,
+		InstanceClassGVK: dvpicv1alpha1.GroupVersionKind,
 	})
 }
 
@@ -61,7 +63,7 @@ func dvpNodeGroupObject(name string, nodeType cpapi.NodeType) *unstructured.Unst
 	if name == "master" {
 		spec["cloudInstances"] = map[string]any{
 			"classReference": map[string]any{
-				"kind": dvpmeta.InstanceClassKind,
+				"kind": dvpicv1alpha1.GroupVersionKind.Kind,
 				"name": "master-dvp",
 			},
 		}
@@ -80,10 +82,10 @@ func dvpStaticNodeGroupObject(name string) *unstructured.Unstructured {
 
 func dvpInstanceClassObject(name string) *unstructured.Unstructured {
 	obj := &unstructured.Unstructured{}
-	obj.SetGroupVersionKind(schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: dvpmeta.InstanceClassKind})
+	obj.SetGroupVersionKind(schema.GroupVersionKind{Group: "deckhouse.io", Version: "v1alpha1", Kind: dvpicv1alpha1.GroupVersionKind.Kind})
 	obj.SetName(name)
 	if name == "master-dvp" {
-		obj.Object["spec"] = map[string]any{"etcdDisk": map[string]any{}}
+		obj.Object["spec"] = map[string]any{"etcdDisk": map[string]any{"size": "10Gi"}}
 	}
 	return obj
 }
@@ -103,5 +105,5 @@ func dvpCredentialSecret(token string) *corev1.Secret {
 }
 
 func validWebhookKubeconfigB64() string {
-	return "YXBpVmVyc2lvbjogdjEKa2luZDogQ29uZmlnCmNsdXN0ZXJzOgotIG5hbWU6IHRlc3QKICBjbHVzdGVyOgogICAgc2VydmVyOiBodHRwczovLzEyNy4wLjAuMTo2NDQzCiAgICBpbnNlY3VyZS1za2lwLXRscy12ZXJpZnk6IHRydWUKY29udGV4dHM6Ci0gbmFtZTogdGVzdAogIGNvbnRleHQ6CiAgICBjbHVzdGVyOiB0ZXN0CiAgICB1c2VyOiB0ZXN0CmN1cnJlbnQtY29udGV4dDogdGVzdAp1c2VyczoKLSBuYW1lOiB0ZXN0CiAgdXNlcjoKICAgIHRva2VuOiB0ZXN0LXRva2Vu"
+	return "YXBpVmVyc2lvbjogdjEKa2luZDogQ29uZmlnCmNsdXN0ZXJzOgotIG5hbWU6IHRlc3QKICBjbHVzdGVyOgogICAgc2VydmVyOiBodHRwczovLzEyNy4wLjAuMTo2NDQzCiAgICBpbnNlY3VyZS1za2lwLXRscy12ZXJpZnk6IHRydWUKY29udGV4dHM6Ci0gbmFtZTogdGVzdAogIGNvbnRleHQ6CiAgICBjbHVzdGVyOiB0ZXN0CiAgICB1c2VyOiB0ZXN0CmN1cnJlbnQtY29udGV4dDogdGVzdAp1c2VyczoKLSBuYW1lOiB0ZXN0CiAgdXNlcjoKICAgIHRva2VuOiB0ZXN0LXRva2Vu" // gitleaks:allow
 }

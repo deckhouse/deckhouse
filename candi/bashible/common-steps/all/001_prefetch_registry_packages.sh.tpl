@@ -20,11 +20,11 @@
 # Package list MUST stay identical to 007_fetch_registry_packages.sh.tpl.
 
 {{- $kubernetesVersion := printf "%s%s" (.kubernetesVersion | toString) (index .k8s .kubernetesVersion "patch" | toString) | replace "." "" }}
-{{- $kubernetesCniVersion := "1.6.2" | replace "." "" }}
+{{- $kubernetesCniVersion := "1.9.1" | replace "." "" }}
 
 {{- $containerd := "containerd1734"}}
 {{- if eq .cri "ContainerdV2" }}
-  {{- $containerd = "containerd226" }}
+  {{- $containerd = "containerd227" }}
 {{- end }}
 
 if ! command -v systemd-run >/dev/null 2>&1 || ! command -v systemctl >/dev/null 2>&1; then
@@ -87,7 +87,7 @@ if ! systemd-run \
     --collect \
     /bin/bash -c ". \"$env_file\" && exec /opt/deckhouse/bin/rpp-get fetch \
       \"d8:{{ .images.registrypackages.d8 }}\" \
-      \"yq:{{ .images.registrypackages.yq4471 }}\" \
+      \"yq:{{ .images.registrypackages.yq4536 }}\" \
       \"curl:{{ .images.registrypackages.d8Curl891 }}\" \
       \"e2fsprogs:{{ .images.registrypackages.e2fsprogs1472 }}\" \
       \"iptables:{{ .images.registrypackages.iptables189 }}\" \

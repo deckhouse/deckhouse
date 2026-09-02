@@ -18,8 +18,25 @@
 package v1alpha1
 
 import (
+	"reflect"
+
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+)
+
+const (
+	DVPInstanceClassGroupName = "deckhouse.io"
+	DVPInstanceClassVersion   = "v1alpha1"
+	DVPInstanceClassKind      = "DVPInstanceClass"
+)
+
+var (
+	_ cpapi.InstanceClassObject = (*DVPInstanceClass)(nil)
+
+	GroupVersionKind = schema.GroupVersionKind{Group: DVPInstanceClassGroupName, Version: DVPInstanceClassVersion, Kind: DVPInstanceClassKind}
 )
 
 // +kubebuilder:object:root=true
@@ -160,7 +177,6 @@ type InstanceClassVirtualMachineCPU struct {
 	// Guaranteed share of CPU fraction that will be allocated to the virtual machine.
 	// +deckhouse:ru:description:value="Процент гарантированной доли CPU, которая будет выделена виртуальной машине."
 	// +kubebuilder:default="100%"
-	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Pattern=`^100%$|^[1-9][0-9]?%$`
 	// +deckhouse:XDocExample:value="100%"
 	// +optional
@@ -221,4 +237,27 @@ type InstanceClassDisk struct {
 	// Name of the existing StorageClass that will be used to create the disk.
 	// +deckhouse:ru:description:value="Имя существующего StorageClass, который будет использоваться для создания дополнительного диска."
 	StorageClass string `json:"storageClass"`
+}
+
+// GroupVersionKind returns the GroupVersionKind for the resource.
+func (c *DVPInstanceClass) GroupVersionKind() cpapi.GroupVersionKind {
+	return cpapi.GroupVersionKind{Group: DVPInstanceClassGroupName, Version: DVPInstanceClassVersion, Kind: DVPInstanceClassKind}
+}
+
+// GetEtcdDisk returns the etcd disk value for error reporting, or nil when the class
+// defines no dedicated etcd disk.
+//
+// An empty etcdDisk object (size and storageClass both unset) is reported as nil:
+// the CRD schema marks both fields as required, so an empty object can never be valid,
+// and treating it as present would only mask misconfiguration.
+func (c *DVPInstanceClass) GetEtcdDisk() any {
+	if c == nil || reflect.DeepEqual(c.Spec.EtcdDisk, InstanceClassDisk{}) {
+		return nil
+	}
+	return &c.Spec.EtcdDisk
+}
+
+// GetNodeGroupConsumers returns names of NodeGroups that use the class.
+func (c *DVPInstanceClass) GetNodeGroupConsumers() []string {
+	return nil
 }

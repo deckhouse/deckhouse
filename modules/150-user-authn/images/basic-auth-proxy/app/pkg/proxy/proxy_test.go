@@ -232,9 +232,9 @@ func TestHandler_CacheKey_DomainSeparation(t *testing.T) {
 	h := newTestHandler(t, &fakeProvider{}, 10*time.Second, 2*time.Minute)
 
 	tests := []struct {
-		name             string
-		loginA, passwdA  string
-		loginB, passwdB  string
+		name            string
+		loginA, passwdA string
+		loginB, passwdB string
 	}{
 		{"plain concat collision", "ab", "cd", "a", "bcd"},
 		{"nul-byte collision", "attacker\x00", "X", "attacker", "\x00X"},
@@ -401,6 +401,279 @@ func TestHandler_ServeHTTP(t *testing.T) {
 					t.Fatal("expected upstream to be called at least once")
 				}
 				tt.assertLastRequest(t, *obs)
+			}
+		})
+	}
+}
+
+// TestHandler_ReservedIdentitiesFromDirectory is the e2e regression for the
+// privilege escalation available to a directory administrator: a group named
+// system:masters in LDAP/OIDC/Crowd used to reach kube-apiserver verbatim.
+// Assertions are on the headers observed by the upstream, so they pin the
+// behaviour through modifyRequest rather than through the helper alone.
+func TestHandler_ReservedIdentitiesFromDirectory(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		login      string
+		provGroups []string
+		wantStatus int
+		wantHits   int64
+		wantUser   string
+		wantGroups []string
+	}{
+		{
+			name:       "an ordinary directory group reaches the upstream unchanged",
+			login:      "alice",
+			provGroups: []string{"devs"},
+			wantStatus: http.StatusOK,
+			wantHits:   1,
+			wantUser:   "alice",
+			wantGroups: []string{"devs"},
+		},
+		{
+			name:       "a directory group named system:masters is dropped",
+			login:      "alice",
+			provGroups: []string{"devs", "system:masters"},
+			wantStatus: http.StatusOK,
+			wantHits:   1,
+			wantUser:   "alice",
+			wantGroups: []string{"devs"},
+		},
+		{
+			name:       "a directory group named system:authenticated is dropped",
+			login:      "alice",
+			provGroups: []string{"system:authenticated", "devs"},
+			wantStatus: http.StatusOK,
+			wantHits:   1,
+			wantUser:   "alice",
+			wantGroups: []string{"devs"},
+		},
+		{
+			name:       "a group that merely contains system: is kept",
+			login:      "alice",
+			provGroups: []string{"acme:system:masters", "not-system:masters", "systems"},
+			wantStatus: http.StatusOK,
+			wantHits:   1,
+			wantUser:   "alice",
+			wantGroups: []string{"acme:system:masters", "not-system:masters", "systems"},
+		},
+		{
+			name:       "a user with no directory groups authenticates without group headers",
+			login:      "alice",
+			provGroups: nil,
+			wantStatus: http.StatusOK,
+			wantHits:   1,
+			wantUser:   "alice",
+			wantGroups: nil,
+		},
+		{
+			name:       "a user whose every group is reserved still authenticates, with no group headers",
+			login:      "alice",
+			provGroups: []string{"system:masters", "system:authenticated"},
+			wantStatus: http.StatusOK,
+			wantHits:   1,
+			wantUser:   "alice",
+			wantGroups: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var (
+				upstreamHits atomic.Int64
+				lastHeaders  atomic.Pointer[http.Header]
+			)
+			upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				upstreamHits.Add(1)
+				headers := r.Header.Clone()
+				lastHeaders.Store(&headers)
+				w.WriteHeader(http.StatusOK)
+			}))
+			t.Cleanup(upstream.Close)
+
+			u, err := url.Parse(upstream.URL)
+			if err != nil {
+				t.Fatalf("parse upstream url: %v", err)
+			}
+
+			h := newTestHandler(t, &fakeProvider{groups: tt.provGroups}, 10*time.Second, 2*time.Minute)
+			h.reverseProxy = httputil.NewSingleHostReverseProxy(u)
+
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/namespaces", nil)
+			req.SetBasicAuth(tt.login, "ok")
+
+			h.ServeHTTP(rec, req)
+
+			if rec.Code != tt.wantStatus {
+				t.Fatalf("status: got %d, want %d", rec.Code, tt.wantStatus)
+			}
+			if got := upstreamHits.Load(); got != tt.wantHits {
+				t.Fatalf("upstream hits: got %d, want %d", got, tt.wantHits)
+			}
+			if tt.wantHits == 0 {
+				return
+			}
+
+			headers := lastHeaders.Load()
+			if headers == nil {
+				t.Fatal("expected the upstream to observe a request")
+			}
+			if got := headers.Get("X-Remote-User"); got != tt.wantUser {
+				t.Fatalf("X-Remote-User: got %q, want %q", got, tt.wantUser)
+			}
+			if got := headers.Values("X-Remote-Group"); !slices.Equal(got, tt.wantGroups) {
+				t.Fatalf("X-Remote-Group: got %v, want %v", got, tt.wantGroups)
+			}
+		})
+	}
+}
+
+// TestHandler_ReservedUsernameIsRefused drives modifyRequest directly rather
+// than ServeHTTP: RFC 7617 gives the first colon to the user-id/password
+// separator, so basic auth cannot carry a "system:"-prefixed login at all
+// (SetBasicAuth("system:masters", "pw") is read back as user "system"). The
+// guard is defence in depth at the choke point, for any caller that does not
+// source the login from r.BasicAuth.
+func TestHandler_ReservedUsernameIsRefused(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name       string
+		login      string
+		wantStatus int
+		wantHits   int64
+	}{
+		{
+			name:       "a user named system:masters is refused with the credentials failure",
+			login:      "system:masters",
+			wantStatus: http.StatusForbidden,
+			wantHits:   0,
+		},
+		{
+			name:       "a user named system:kube-controller-manager is refused",
+			login:      "system:kube-controller-manager",
+			wantStatus: http.StatusForbidden,
+			wantHits:   0,
+		},
+		{
+			name:       "a login that merely contains system: is proxied",
+			login:      "acme:system:bob",
+			wantStatus: http.StatusOK,
+			wantHits:   1,
+		},
+		{
+			name:       "an ordinary login is proxied",
+			login:      "alice",
+			wantStatus: http.StatusOK,
+			wantHits:   1,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var (
+				upstreamHits atomic.Int64
+				lastHeaders  atomic.Pointer[http.Header]
+			)
+			upstream := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				upstreamHits.Add(1)
+				headers := r.Header.Clone()
+				lastHeaders.Store(&headers)
+				w.WriteHeader(http.StatusOK)
+			}))
+			t.Cleanup(upstream.Close)
+
+			u, err := url.Parse(upstream.URL)
+			if err != nil {
+				t.Fatalf("parse upstream url: %v", err)
+			}
+
+			h := newTestHandler(t, &fakeProvider{}, 10*time.Second, 2*time.Minute)
+			h.reverseProxy = httputil.NewSingleHostReverseProxy(u)
+
+			rec := httptest.NewRecorder()
+			req := httptest.NewRequest(http.MethodGet, "/api/v1/namespaces", nil)
+
+			h.modifyRequest(rec, req, tt.login, []string{"devs"})
+
+			if rec.Code != tt.wantStatus {
+				t.Fatalf("status: got %d, want %d", rec.Code, tt.wantStatus)
+			}
+			if got := upstreamHits.Load(); got != tt.wantHits {
+				t.Fatalf("upstream hits: got %d, want %d", got, tt.wantHits)
+			}
+			if tt.wantHits == 0 {
+				if got := req.Header.Get("X-Remote-User"); got != "" {
+					t.Fatalf("X-Remote-User must not be set on a refused request, got %q", got)
+				}
+				return
+			}
+
+			headers := lastHeaders.Load()
+			if headers == nil {
+				t.Fatal("expected the upstream to observe a request")
+			}
+			if got := headers.Get("X-Remote-User"); got != tt.login {
+				t.Fatalf("X-Remote-User: got %q, want %q", got, tt.login)
+			}
+		})
+	}
+}
+
+// TestHandler_BasicAuthCannotCarryAReservedUsername pins the RFC 7617 parsing
+// that keeps the reserved-username case unreachable from the network: the
+// login is truncated at the first colon, so it can never bear the prefix.
+func TestHandler_BasicAuthCannotCarryAReservedUsername(t *testing.T) {
+	t.Parallel()
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/namespaces", nil)
+	req.SetBasicAuth("system:masters", "pw")
+
+	login, password, ok := req.BasicAuth()
+	if !ok {
+		t.Fatal("expected basic auth credentials to parse")
+	}
+	if login != "system" {
+		t.Fatalf("login: got %q, want %q", login, "system")
+	}
+	if password != "masters:pw" {
+		t.Fatalf("password: got %q, want %q", password, "masters:pw")
+	}
+	if isReservedIdentity(login) {
+		t.Fatalf("login %q must not be reserved after basic-auth parsing", login)
+	}
+}
+
+// TestIsReservedIdentity is a focused unit test for the predicate.
+func TestIsReservedIdentity(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		in   string
+		want bool
+	}{
+		{"system:masters is reserved", "system:masters", true},
+		{"system:authenticated is reserved", "system:authenticated", true},
+		{"the bare prefix is reserved", "system:", true},
+		{"a plain group is not reserved", "devs", false},
+		{"an embedded prefix is not reserved", "acme:system:masters", false},
+		{"a prefix without the colon is not reserved", "systems", false},
+		{"the empty string is not reserved", "", false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			if got := isReservedIdentity(tt.in); got != tt.want {
+				t.Fatalf("isReservedIdentity(%q): got %v, want %v", tt.in, got, tt.want)
 			}
 		})
 	}

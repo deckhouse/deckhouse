@@ -227,6 +227,20 @@ apiVersions:
           - `additionalSecurityGroups` в секции `nodeGroups.instanceClass`.
 
           Для настройки security group, используемых балансировщиками нагрузки, укажите их через аннотацию `service.beta.kubernetes.io/aws-load-balancer-security-groups`.
+      imdsv2:
+        description: |
+          Включает обязательное использование IMDSv2 и отключает IMDSv1 для EC2-инстансов кластера.
+
+          Рекомендуется использовать IMDSv2. Для доступа к метаданным инстанса IMDSv2 требует сессионный токен, что снижает риск несанкционированного доступа, в том числе при атаках SSRF (Server-Side Request Forgery).
+
+          Для обратной совместимости значение параметра по умолчанию — `false`. При этом, если параметр не задан в существующей конфигурации, DKP не изменяет текущие настройки сервиса метаданных инстансов. После явного указания параметра настройки IMDS переходят под управление DKP:
+
+          - `false` — разрешает использование IMDSv1 и IMDSv2;
+          - `true` — разрешает только IMDSv2 и требует сессионный токен для доступа к метаданным.
+
+          > **Внимание.** При включении IMDSv2 DKP выставляет лимит переходов (hop limit) IMDS в `1`. Если в настройках AWS-аккаунта или в AMI задано большее значение, при следующем converge оно будет понижено до `1`. Поэтому сервис метаданных недоступен из подов, даже если приложения в них поддерживают IMDSv2. На компоненты DKP это ограничение не влияет, поскольку они используют сеть узла. Перед включением IMDSv2 убедитесь, что приложения, которым требуется доступ к метаданным инстанса, поддерживают IMDSv2 и запускаются с использованием сети узла.
+
+          Чтобы применить изменение к master, static и bastion-узлам, выполните [`dhctl converge`](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html#добавление-cloudpermanent-узлов-в-облачном-кластере). CloudEphemeral-узлы пересоздаются автоматически.
       sshAllowList:
         description: |
           Список CIDR, разрешенных для подключения к узлам по SSH.
@@ -274,6 +288,6 @@ apiVersions:
         description: |
           Имя IAM-роли, которая будет привязана ко всем AWS-инстансам узлов кластера.
 
-          DKP всегда создает и привязывает к каждому AWS-инстансу узла кластера специальную IAM-роль с именем `<PREFIX>-node`, где `<PREFIX>` — значение параметра [cloud.prefix](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) общих параметров кластера. Вы можете указать в параметре `iamNodeRole` свою IAM-роль с бОльшими правами, но, важно чтобы она включала в себя политики IAM-роли, создаваемой DKP (роль `<PREFIX>-node`).
+          DKP всегда создает и привязывает к каждому AWS-инстансу узла кластера специальную IAM-роль с именем `<PREFIX>-node`, где `<PREFIX>` — значение параметра [`prefix`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-prefix) ModuleConfig `global`. В параметре `iamNodeRole` можно указать собственную IAM-роль с расширенным набором прав. При этом она должна включать все политики IAM-роли `<PREFIX>-node`, создаваемой DKP.
 
           Подробнее о IAM-ролях для AWS EC2 можно прочитать в [документации AWS](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html).

@@ -15,6 +15,8 @@ lang: ru
 
 ### Изменение версии Kubernetes
 
+Понижение версии возможно только на одну минорную назад от максимальной версии, когда-либо использовавшейся в кластере. Обновление вперёд — по одной минорной версии за раз.
+
 1. Откройте редактирование [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration):
 
    ```shell
@@ -61,9 +63,10 @@ lang: ru
 - **Списки версий**:
   - `supportedVersions` — минорные версии Kubernetes, поддерживаемые в текущем релизе DKP;
   - `availableVersions` — версии, доступные для выбора при обновлении или понижении в *данном* кластере. Набор ограничен максимальной когда-либо установленной минорной версией и правилом одного минорного шага при откате;
-  - `automaticVersion` — минорная версия, которая будет использована при режиме обновления `Automatic`.
+- **`maxUsedKubernetesVersion`** — максимальная минорная версия, до которой кластер когда-либо обновлялся. Значение только растёт и ограничивает глубину отката;
+- **`automaticVersion`** — минорная версия, которая будет использована при режиме обновления `Automatic`. Описывает установленную сборку DKP, а не состояние кластера.
 
-В фазе `ControlPlaneUpdating` поле `status.progress` отражает общий прогресс обновления с учётом промежуточных минорных версий. При многошаговом обновлении (например, 1.33 → 1.35) процент растёт по мере завершения каждого шага, а не только когда все компоненты control plane достигнут финальной целевой версии.
+В фазе `ControlPlaneUpdating` поле `status.progress` отражает общий прогресс обновления с учётом промежуточных минорных версий. При обновлении через несколько минорных версий (например, 1.33 → 1.35) процент растёт по мере завершения каждого шага, а не только когда все компоненты control plane достигнут финальной целевой версии.
 
 Минорные версии в ConfigMap (`spec`, `status`, а также метки `k8s-version` и `max-k8s-version`) задаются в том же формате, что и в ClusterConfiguration — без префикса `v` (например, `"1.33"`).
 
@@ -87,6 +90,7 @@ data:
   spec: |
     desiredVersion: "1.32"
     updateMode: Manual
+    automaticVersion: "1.33"
   status: |
     currentVersion: "1.32"
     supportedVersions:
@@ -100,7 +104,6 @@ data:
     - "1.32"
     - "1.33"
     - "1.34"
-    automaticVersion: "1.33"
     phase: UpToDate
     controlPlane:
     - name: master-1
@@ -151,6 +154,7 @@ data:
   spec: |
     desiredVersion: "1.32"
     updateMode: Manual
+    automaticVersion: "1.33"
   status: |
     currentVersion: "1.33"
     supportedVersions:
@@ -163,7 +167,6 @@ data:
     - "1.32"
     - "1.33"
     - "1.34"
-    automaticVersion: "1.33"
     phase: ControlPlaneUpdating
     progress: 0%
     controlPlane:
@@ -215,6 +218,7 @@ data:
   spec: |
     desiredVersion: "1.32"
     updateMode: Manual
+    automaticVersion: "1.33"
   status: |
     currentVersion: "1.33"
     supportedVersions:
@@ -227,7 +231,6 @@ data:
     - "1.32"
     - "1.33"
     - "1.34"
-    automaticVersion: "1.33"
     phase: ControlPlaneUpdating
     progress: 60%
     controlPlane:
@@ -269,7 +272,7 @@ metadata:
   uid: ba981996-f737-469c-9ce1-53aa46135994
 ```
 
-#### Промежуточный шаг многошагового обновления (например, 1.33 → 1.35)
+#### Промежуточный шаг обновления через несколько версий (например, 1.33 → 1.35)
 
 В конфигурации целевая версия Kubernetes может опережать текущую версию кластера на несколько минорных версий. В этом случае обновление выполняется поэтапно, через промежуточные минорные версии.
 
@@ -283,6 +286,7 @@ data:
   spec: |
     desiredVersion: "1.35"
     updateMode: Manual
+    automaticVersion: "1.33"
   status: |
     currentVersion: "1.34"
     supportedVersions:
@@ -295,7 +299,6 @@ data:
     - "1.33"
     - "1.34"
     - "1.35"
-    automaticVersion: "1.33"
     phase: ControlPlaneUpdating
     progress: 60%
     controlPlane:
@@ -345,6 +348,7 @@ data:
   spec: |
     desiredVersion: "1.33"
     updateMode: Manual
+    automaticVersion: "1.33"
   status: |
     currentVersion: "1.33"
     supportedVersions:
@@ -357,7 +361,6 @@ data:
     - "1.32"
     - "1.33"
     - "1.34"
-    automaticVersion: "1.33"
     phase: UpToDate
     controlPlane:
     - name: master-0
@@ -402,6 +405,7 @@ data:
   spec: |
     desiredVersion: "1.32"
     updateMode: Manual
+    automaticVersion: "1.33"
   status: |
     currentVersion: "1.32"
     supportedVersions:
@@ -415,7 +419,6 @@ data:
     - "1.32"
     - "1.33"
     - "1.34"
-    automaticVersion: "1.33"
     phase: ControlPlaneUpdating
     progress: 73%
     controlPlane:

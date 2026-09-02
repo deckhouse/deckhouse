@@ -35,6 +35,10 @@ properties:
           - password
           - domainName
           - region
+        not:
+          required:
+            - tenantName
+            - tenantID
         properties:
           authURL:
             type: string

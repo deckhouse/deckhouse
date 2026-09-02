@@ -17,6 +17,8 @@ limitations under the License.
 package register
 
 import (
+	"context"
+
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,11 +41,23 @@ type NeedsRecorder interface {
 	InjectRecorder(record.EventRecorder)
 }
 
+// NeedsSetup is run once before the controller is built. The context is the manager's own —
+// it is cancelled when the process is asked to stop, so a Setup that talks to the API server
+// does not outlive it.
 type NeedsSetup interface {
-	Setup(mgr ctrl.Manager) error
+	Setup(ctx context.Context, mgr ctrl.Manager) error
 }
 
 // NeedsForPredicates lets a reconciler filter events of its primary (For) object.
 type NeedsForPredicates interface {
 	ForPredicates() []predicate.Predicate
+}
+
+// NeedsMaxConcurrentReconciles lets a reconciler cap the number of workers it is
+// run with, for the ones whose correctness depends on that number rather than on
+// how they happen to be deployed. The cap wins over the flag: a reconciler that
+// is only correct single-threaded says so here, once, instead of depending on an
+// argument that one typo anywhere in the same string silently discards.
+type NeedsMaxConcurrentReconciles interface {
+	MaxConcurrentReconciles() int
 }

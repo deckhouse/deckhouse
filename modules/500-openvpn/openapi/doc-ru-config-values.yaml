@@ -103,6 +103,10 @@ properties:
       Тип сертификата, используемого для панели администратора OpenVPN.
 
       При использовании этого параметра полностью переопределяются глобальные настройки `global.modules.https`.
+    x-examples:
+      - mode: CertManager
+        certManager:
+          clusterIssuerName: letsencrypt
     properties:
       mode:
         description: |

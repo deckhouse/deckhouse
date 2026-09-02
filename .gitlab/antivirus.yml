@@ -1,0 +1,166 @@
+# Antivirus scans (Dr.Web / Kaspersky) — PR mode matching GitHub build-and-test_dev.
+# Runs on the dedicated antivirus runner after build_fe; delta-scans via ONLY_IMAGES
+# from changed_images.py (full scan fallback when CHANGED_COUNT > 0 but compact empty).
+
+.av_scan: &av_scan |
+  mkdir -p av-results
+  registry_image_path=/sys/deckhouse-oss
+  ref="pr${CI_MERGE_REQUEST_IID}"
+  ref_sanitized="$(echo "${ref}" | sed 's/[.\/]/-/g')"
+  SCAN_TIME="$(date '+%s')"
+  SCAN_ID="${SCAN_TIME}-${CI_PIPELINE_ID}-${ref_sanitized}"
+  echo "registry dev"
+  registry_host="${DECKHOUSE_DEV_REGISTRY_HOST}"
+  CONTAINER_NAME="registry_${AV_NAME}"
+  SCAN_ID+="-${CONTAINER_NAME}"
+  echo "SCAN_ID=${SCAN_ID}" > av.env
+  echo "CONTAINER_NAME=${CONTAINER_NAME}" >> av.env
+  echo "skipped=false" >> av.env
+  echo "${CONTAINER_NAME}"
+  ONLY_IMAGES="$(cat only_images.json 2>/dev/null || echo '[]')"
+  echo "----------------------------------------------"
+  if [[ -z "${ONLY_IMAGES:-}" || "${ONLY_IMAGES}" == "[]" || "${ONLY_IMAGES}" == "null" ]]; then
+    if [[ "${CHANGED_COUNT:-0}" == "0" ]]; then
+      echo "Skip ${AV_NAME} scan: no rebuilt images in this MR. Nothing to scan."
+      echo "skipped=true" >> av.env
+      echo "----------------------------------------------"
+      exit 0
+    fi
+    echo "Changed images detected (${CHANGED_COUNT}), but no module compact keys found."
+    echo "Run full ${AV_NAME} scan fallback to cover static/non-module images."
+    unset ONLY_IMAGES
+  else
+    keys_count="$(jq -r 'length' <<< "${ONLY_IMAGES}")"
+    echo "🎯 Delta-scan: forwarding ONLY_IMAGES (${keys_count} key(s)) to the ${AV_NAME} scanner."
+    jq -r '.[] | "    • " + .' <<< "${ONLY_IMAGES}"
+  fi
+  echo "----------------------------------------------"
+  if [[ -n "${ONLY_IMAGES:-}" ]]; then
+    docker exec -e ONLY_IMAGES="${ONLY_IMAGES}" "${CONTAINER_NAME}" \
+      scanner "${ref}" "${registry_host}${registry_image_path}" "${SCAN_ID}"
+  else
+    docker exec "${CONTAINER_NAME}" \
+      scanner "${ref}" "${registry_host}${registry_image_path}" "${SCAN_ID}"
+  fi
+  # Results live inside the scanner container (no host bind-mount here), so pull
+  # them into the workspace for artifacts and for reading the summary below.
+  WORKDIR="$(docker inspect -f '{{.Config.WorkingDir}}' "${CONTAINER_NAME}")"
+  docker cp "${CONTAINER_NAME}:${WORKDIR:-/}/scans/${SCAN_ID}" av-results/
+  RESULTS="av-results/${SCAN_ID}/scan_results_threats.md"
+  if [[ -f "${RESULTS}" ]]; then
+    THREAT_COUNT="$(sed -n 's/.*Images with threats | \([0-9]\+\) |.*/\1/p' "${RESULTS}" | head -1)"
+    ERRORS_COUNT="$(sed -n 's/.*Errors | \([0-9]\+\) |.*/\1/p' "${RESULTS}" | head -1)"
+    if [[ -n "${THREAT_COUNT}" && "${THREAT_COUNT}" -gt 0 ]]; then
+      echo "❌ THREATS DETECTED: ${THREAT_COUNT} images contain threats!"
+      exit 1
+    elif [[ -n "${ERRORS_COUNT}" && "${ERRORS_COUNT}" -gt 0 ]]; then
+      echo "❌ ERRORS DETECTED: ${ERRORS_COUNT}!"
+      exit 1
+    else
+      echo "✅ No threats detected (${THREAT_COUNT})"
+    fi
+  else
+    echo "⚠️ The scan results file was not found"
+    exit 1
+  fi
+  echo "✅ ${CONTAINER_NAME} scan completed for ${ref}"
+
+.av_cleanup: &av_cleanup |
+  if [[ -f av.env ]]; then
+    # shellcheck disable=SC1091
+    source av.env
+  fi
+  if [[ -z "${SCAN_ID:-}" ]]; then
+    echo "scan_id is empty, nothing to clean up"
+    exit 0
+  fi
+  docker exec "${CONTAINER_NAME}" rm -rf "scans/${SCAN_ID}" || true
+
+# Set MR labels like GitHub av_label_step (security/antivirus/success|failed).
+.av_set_labels: &av_set_labels |
+  if [[ -z "${CI_MERGE_REQUEST_IID:-}" ]]; then
+    echo "Not an MR, skip antivirus labels"
+    exit 0
+  fi
+  skipped=false
+  if [[ -f av.env ]]; then
+    # shellcheck disable=SC1091
+    source av.env
+  fi
+  echo "AV label update: job=${CI_JOB_STATUS} skipped=${skipped} changed_count=${CHANGED_COUNT:-}"
+  if [[ "${CHANGED_COUNT:-0}" == "0" || "${skipped}" == "true" ]]; then
+    echo "No rebuilt images / scan skipped — clear antivirus labels"
+    curl -sfS --request PUT \
+      --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+      --data-urlencode "remove_labels=security/antivirus/success,security/antivirus/failed" \
+      "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/merge_requests/${CI_MERGE_REQUEST_IID}" \
+      >/dev/null
+    exit 0
+  fi
+  if [[ "${CI_JOB_STATUS}" == "success" ]]; then
+    curl -sfS --request PUT \
+      --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+      --data-urlencode "add_labels=security/antivirus/success" \
+      --data-urlencode "remove_labels=security/antivirus/failed" \
+      "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/merge_requests/${CI_MERGE_REQUEST_IID}" \
+      >/dev/null
+  else
+    curl -sfS --request PUT \
+      --header "JOB-TOKEN: ${CI_JOB_TOKEN}" \
+      --data-urlencode "add_labels=security/antivirus/failed" \
+      --data-urlencode "remove_labels=security/antivirus/success" \
+      "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/merge_requests/${CI_MERGE_REQUEST_IID}" \
+      >/dev/null
+  fi
+
+.antivirus_base:
+  stage: test
+  tags:
+    - antivirus
+  needs:
+    - job: build_fe:mr
+      artifacts: true
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event" && $CI_PROJECT_PATH == "deckhouse/deckhouse"
+  variables:
+    VAULT_AUTH_PATH: fox
+    VAULT_AUTH_ROLE: deckhouse
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: gitlab-access-aud
+  secrets:
+    DECKHOUSE_DEV_REGISTRY_HOST:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host/DECKHOUSE_DEV_REGISTRY_HOST@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+  after_script:
+    - *av_cleanup
+    - *av_set_labels
+
+drweb_scan:
+  extends:
+    - .antivirus_base
+  variables:
+    AV_NAME: drweb
+  script:
+    - *av_scan
+  artifacts:
+    when: always
+    expire_in: 5 days
+    paths:
+      - av-results/
+      - av.env
+
+kaspersky_scan:
+  extends:
+    - .antivirus_base
+  variables:
+    AV_NAME: kaspersky
+  script:
+    - *av_scan
+  artifacts:
+    when: always
+    expire_in: 5 days
+    paths:
+      - av-results/
+      - av.env

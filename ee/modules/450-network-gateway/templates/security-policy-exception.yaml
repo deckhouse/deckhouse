@@ -1,0 +1,91 @@
+{{- if (.Values.global.enabledModules | has "admission-policy-engine") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: snat
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "snat")) | nindent 2 }}
+spec:
+  securityContext:
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          snat and iptables-wrapper-init must run as root because iptables-legacy requires
+          root to manage NAT rules on the host.
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          UID 0 is required for iptables operations and host network namespace access.
+    capabilities:
+      allowedValues:
+        add:
+          - NET_ADMIN
+          - NET_RAW
+        drop:
+          - ALL
+      metadata:
+        description: |
+          NET_ADMIN/NET_RAW are required to program SNAT iptables rules on the node
+          and by iptables-wrapper-init.
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          snat must join the host network namespace to apply NAT rules for gateway traffic.
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          hostPath is required to share the host xtables lock with other iptables users.
+    hostPath:
+      allowedValues:
+        - path: /run/xtables.lock
+          readOnly: false
+          metadata:
+            description: Host xtables lock used to serialize iptables updates.
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: dhcp
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "dhcp")) | nindent 2 }}
+spec:
+  securityContext:
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          dhcp (dnsmasq) must run as root to bind DHCP/BOOTP ports and manage host networking.
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          UID 0 is required for privileged DHCP ports and raw network operations.
+    capabilities:
+      allowedValues:
+        add:
+          - NET_ADMIN
+          - NET_BIND_SERVICE
+          - NET_RAW
+        drop:
+          - ALL
+      metadata:
+        description: |
+          NET_BIND_SERVICE is required to listen on DHCP ports; NET_ADMIN/NET_RAW are
+          required for DHCP/network management on the host.
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          dhcp must join the host network namespace to serve DHCP to clients on node interfaces.
+{{- end }}

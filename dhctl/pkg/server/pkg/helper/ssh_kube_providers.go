@@ -24,12 +24,14 @@ import (
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/util/callback"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 )
 
 type CreateProvidersOptions struct {
 	allowMissingHostsFromCache bool
+	kubeConfig                 string
 }
 
 type CreateProvidersOption func(*CreateProvidersOptions)
@@ -38,6 +40,29 @@ func AllowMissingHostsFromCache() CreateProvidersOption {
 	return func(o *CreateProvidersOptions) {
 		o.allowMissingHostsFromCache = true
 	}
+}
+
+func WithKubeConfig(kubeConfig string) CreateProvidersOption {
+	return func(o *CreateProvidersOptions) {
+		o.kubeConfig = kubeConfig
+	}
+}
+
+// SSHProviderOrNil returns nil, not the provider GetSSHProvider hands back alongside the sentinel:
+// initializer.go pairs the error with a hostless provider that passes every govalue.IsNil guard
+// downstream and only fails deep inside lib-connection once something dials it. A nil initializer
+// is safe to call here - its methods guard the nil receiver in initializer.go.
+func SSHProviderOrNil(ctx context.Context, initializer *providerinitializer.SSHProviderInitializer, kubeConfig string) (libcon.SSHProvider, error) {
+	sshProvider, err := initializer.GetSSHProvider(ctx)
+	if err == nil {
+		return sshProvider, nil
+	}
+
+	if kubeConfig != "" && errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
+		return nil, nil
+	}
+
+	return nil, err
 }
 
 func CreateProviders(ctx context.Context, config string, isDebug bool, tmpDir string, opts ...CreateProvidersOption) (*providerinitializer.SSHProviderInitializer, libcon.KubeProvider, func() error, error) {
@@ -56,10 +81,15 @@ func CreateProviders(ctx context.Context, config string, isDebug bool, tmpDir st
 		TmpDir:      tmpDir,
 	}
 
-	sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerinitializer.WithConnectionConfig(config))
+	providerOpts, err := providerOptions(config, options, cleanuper)
+	if err != nil {
+		return nil, nil, cleanuper.AsFunc(), err
+	}
+
+	sshProviderInitializer, kubeProvider, err := providerinitializer.GetProviders(ctx, params, providerOpts...)
 	if err != nil {
 		if !options.allowMissingHostsFromCache || !errors.Is(err, providerinitializer.ErrHostsFromCacheNotFound) {
-			return nil, nil, nil, fmt.Errorf("initializing providers: %w", err)
+			return nil, nil, cleanuper.AsFunc(), fmt.Errorf("initializing providers: %w", err)
 		}
 	}
 	if sshProviderInitializer != nil {
@@ -69,4 +99,25 @@ func CreateProviders(ctx context.Context, config string, isDebug bool, tmpDir st
 	}
 
 	return sshProviderInitializer, kubeProvider, cleanuper.AsFunc(), nil
+}
+
+func providerOptions(config string, options *CreateProvidersOptions, cleanuper *callback.Callback) ([]providerinitializer.ProviderOptions, error) {
+	if options.kubeConfig == "" {
+		return []providerinitializer.ProviderOptions{providerinitializer.WithConnectionConfig(config)}, nil
+	}
+
+	kubeConfigPath, cleanup, err := util.WriteDefaultTempFile([]byte(options.kubeConfig))
+	cleanuper.Add(cleanup)
+
+	if err != nil {
+		return nil, fmt.Errorf("writing kubeconfig: %w", err)
+	}
+
+	return []providerinitializer.ProviderOptions{
+		providerinitializer.WithConnectionConfig(config),
+		providerinitializer.WithConnectionConfigOnly(),
+		// The Commander generates the kubeconfig it sends, so its current-context is the only
+		// one that can be meant.
+		providerinitializer.WithKubeConfig(kubeConfigPath, "", false),
+	}, nil
 }

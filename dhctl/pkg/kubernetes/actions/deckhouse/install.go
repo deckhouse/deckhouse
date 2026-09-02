@@ -33,6 +33,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
@@ -40,7 +41,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/commander"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 )
 
 func prepareDeckhouseDeploymentForUpdate(
@@ -272,7 +272,14 @@ func CreateDeckhouseManifests(
 		// a transient error clearing (e.g. the ModuleConfig CRD appearing) in ~1s
 		// instead of dead-waiting; the total deadline stays 600 attempts × 1s.
 		runTask := func(task actions.ManifestTask) error {
-			return retry.NewSilentLoop(task.Name, 600, 1*time.Second).RunContext(
+			loopParams := retry.NewEmptyParams(
+				retry.WithName("%s", task.Name),
+				retry.WithAttempts(600),
+				retry.WithWait(1*time.Second),
+				retry.WithWhitelist(actions.ErrManifestTaskTransient),
+			)
+
+			return retry.NewSilentLoopWithParams(loopParams).RunContext(
 				ctx,
 				func() error {
 					return task.CreateOrUpdate(ctx)
@@ -744,6 +751,37 @@ func getClusterConfigTasks(kubeCl *client.KubernetesClient, cfg *config.Deckhous
 					Update(ctx, manifest.(*apiv1.Secret), metav1.UpdateOptions{})
 
 				return err
+			},
+		})
+
+		// A non-empty ClusterConfig is what distinguishes an installation running
+		// control-plane-manager from a managed one. Create-only, or an update would overwrite what
+		// update-observer wrote with the state of the world at install time.
+		tasks = append(tasks, actions.ManifestTask{
+			Name: `ConfigMap "d8-cluster-kubernetes"`,
+			Manifest: func() any {
+				return manifests.ClusterKubernetesConfigMap(cfg.KubernetesVersion, cfg.TrackDefaultKubernetesVersion)
+			},
+			CreateFunc: func(ctx context.Context, manifest any) error {
+				configMap := manifest.(*apiv1.ConfigMap)
+				_, err := kubeCl.
+					CoreV1().ConfigMaps(manifests.ClusterKubernetesCmNamespace).
+					Get(ctx, configMap.GetName(), metav1.GetOptions{})
+				if err != nil {
+					if apierrors.IsNotFound(err) {
+						_, err = kubeCl.
+							CoreV1().ConfigMaps(manifests.ClusterKubernetesCmNamespace).
+							Create(ctx, configMap, metav1.CreateOptions{})
+					}
+				} else {
+					dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
+				}
+
+				return err
+			},
+			UpdateFunc: func(ctx context.Context, _ any) error {
+				dhlog.FromContext(ctx).InfoContext(ctx, "Owned by update-observer. Skip!")
+				return nil
 			},
 		})
 	}

@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	dvpicv1alpha1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/api/instanceclass/v1alpha1"
 	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/meta"
 )
 
@@ -84,7 +85,7 @@ func dvpNodeGroupIntegrationObject(name, className string) *unstructured.Unstruc
 		"nodeType": string(cpapi.NodeTypeCloudPermanent),
 		"cloudInstances": map[string]any{
 			"classReference": map[string]any{
-				"kind": dvpmeta.InstanceClassKind,
+				"kind": dvpicv1alpha1.GroupVersionKind.Kind,
 				"name": className,
 			},
 		},

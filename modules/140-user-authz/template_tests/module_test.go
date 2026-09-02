@@ -325,6 +325,10 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 
 			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "user-authz-webhook").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "user-authz-webhook").Field("data.config\\.json").String()).To(MatchJSON(testCRDsWithCRDsKeyJSON))
+
+			// Mirrors enableMultiTenancy for the multitenancy.py validating webhook — rendered
+			// in the same block (and thus the same apply) as the namespace above.
+			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "d8-user-authz-multitenancy-state").Field("data.enableMultiTenancy").String()).To(Equal("true"))
 		})
 
 		It("Should configure user-authz-webhook to use local kube-apiserver endpoint", func() {
@@ -616,6 +620,46 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 				Expect(rules).To(ContainSubstring("accessiblenamespaces"))
 			})
 		})
+
+		// A cluster-wide read of `projects` would be answered by RBAC before the
+		// namespace ACL could narrow it, so it exists only where that ACL does not.
+		Context("Project visibility with multitenancy-manager enabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd", "multitenancy-manager"]`)
+				f.ValuesSet("global.deckhouseEdition", "EE")
+			})
+
+			It("user-authz:user should not read projects cluster-wide when the namespace ACL filters them", func() {
+				f.ValuesSet("userAuthz.enableMultiTenancy", true)
+				f.HelmRender()
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:user")
+				Expect(cr.Exists()).To(BeTrue())
+				Expect(cr.Field("rules").String()).NotTo(ContainSubstring(`"projects"`))
+			})
+
+			It("user-authz:user should read projects cluster-wide when nothing filters them", func() {
+				f.ValuesSet("userAuthz.enableMultiTenancy", false)
+				f.HelmRender()
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:user")
+				Expect(cr.Exists()).To(BeTrue())
+				Expect(cr.Field("rules").String()).To(ContainSubstring(`"projects"`))
+			})
+
+			It("user-authz:user should not read projects when multitenancy-manager is absent", func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd"]`)
+				f.ValuesSet("userAuthz.enableMultiTenancy", false)
+				f.HelmRender()
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:user")
+				Expect(cr.Exists()).To(BeTrue())
+				Expect(cr.Field("rules").String()).NotTo(ContainSubstring(`"projects"`))
+			})
+		})
 	})
 
 	Context("With CAR (incl. limitNamespaces) and not enabledMultiTenancy", func() {
@@ -627,6 +671,32 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		It("Helm should fail", func() {
 			Expect(f.RenderError).Should(HaveOccurred())
 			Expect(f.RenderError.Error()).Should(ContainSubstring("You must turn on userAuthz.enableMultiTenancy to use allowAccessToSystemNamespaces flag in your ClusterAuthorizationRule resources."))
+		})
+	})
+
+	Context("RBACv2 manage permission roles", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd"]`)
+			f.ValuesSet("global.deckhouseEdition", "EE")
+			f.HelmRender()
+		})
+
+		It("view_resources should not grant any node subresource", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			cr := f.KubernetesGlobalResource("ClusterRole", "d8:manage:permission:subsystem:kubernetes:view_resources")
+			Expect(cr.Exists()).To(BeTrue())
+
+			rules := cr.Field("rules").String()
+			// nodes/proxy is a raw passthrough to the privileged kubelet API: it allows running
+			// commands in any container on the node regardless of pods/exec permissions, and
+			// nodes/log allows reading arbitrary files under /var/log. Neither belongs in a role
+			// that aggregates into viewer. Upstream keeps them in system:kubelet-api-admin only.
+			Expect(rules).To(ContainSubstring(`"nodes"`))
+			Expect(rules).NotTo(ContainSubstring("nodes/proxy"))
+			Expect(rules).NotTo(ContainSubstring("nodes/log"))
+			Expect(rules).NotTo(ContainSubstring("nodes/metrics"))
+			Expect(rules).NotTo(ContainSubstring("nodes/stats"))
 		})
 	})
 

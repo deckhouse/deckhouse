@@ -165,6 +165,14 @@ osDistributions:
         note_content:
           ru: |
             Невозможна работа модуля runtime-audit-engine (из-за отсутствия поддержки ядром BPF Type Format (BTF)). Для <strong>РОСА «КОБАЛЬТ» Сервер</strong> рекомендуется установка ядра не ниже версии <b>5.15.33</b> (пакет <b>kernel-ml</b>)
+  sberlinux:
+    name: SberLinux
+    url: https://sbertech.ru/documents/platform-v-sber-linux-os
+    ru_support: true
+    en_support: false
+    versions:
+      - version: '9.8'
+        editions: [ce, be, se, se-plus, ee]
   '_mosos-arbat':
     name: 'МОС ОС'
     ru_support: true

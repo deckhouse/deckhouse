@@ -32,24 +32,27 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/yaml"
-	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
-	"sigs.k8s.io/controller-runtime/pkg/client"
+	"k8s.io/client-go/metadata"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/nelm"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 const (
+	// monitorTracer identifies tracing spans emitted by the resource monitor.
 	monitorTracer = "nelm-monitor"
 
-	// scanInterval defines how often the monitor checks for absent resources
+	// scanInterval defines how often the monitor checks for absent resources.
 	scanInterval = 4 * time.Minute
 
-	// default number of workers
+	// workerNumber limits concurrent Kubernetes API requests per monitor.
 	workerNumber = 5
+
+	// resourceListTimeout bounds one metadata list request.
+	resourceListTimeout = 30 * time.Second
 )
 
-// ErrAbsentManifest is returned when one or more expected resources are missing from the cluster
+// ErrAbsentManifest is returned when one or more expected resources are missing from the cluster.
 var ErrAbsentManifest = errors.New("absent manifest")
 
 // AbsentCallback is invoked when absent resources are detected
@@ -65,18 +68,32 @@ type resourcesMonitor struct {
 	once       sync.Once    // ensures Start() goroutine is created only once
 	wg         *sync.WaitGroup
 
-	name      string                                          // Helm release name
-	namespace string                                          // Release namespace
-	rendered  string                                          // rendered manifest YAML (cleared after parsing to save memory)
-	resources map[schema.GroupVersionKind]map[string]struct{} // expected resources: GVK+namespace -> set of resource names
+	name        string                              // Helm release name
+	namespace   string                              // Release namespace
+	rendered    string                              // rendered manifest YAML (cleared after parsing to save memory)
+	resources   map[resourceKey]map[string]struct{} // expected resources grouped by API endpoint and namespace
+	initialized bool                                // resources were successfully resolved through discovery
 
-	nelm  *nelm.Client
-	cache runtimecache.Cache
+	nelm       *nelm.Client
+	kubeClient resourceClient
 
 	logger *log.Logger
 }
 
-func newMonitor(cache runtimecache.Cache, nelm *nelm.Client, namespace, name, rendered string, logger *log.Logger) *resourcesMonitor {
+// resourceClient resolves API resources and provides direct metadata access.
+type resourceClient interface {
+	APIResource(apiVersion, kind string) (*metav1.APIResource, error)
+	Metadata() metadata.Interface
+}
+
+// resourceKey identifies one Kubernetes list endpoint and its namespace scope.
+type resourceKey struct {
+	GVR       schema.GroupVersionResource
+	Namespace string
+}
+
+// newMonitor creates a resource monitor without starting its event loop.
+func newMonitor(kubeClient resourceClient, nelm *nelm.Client, namespace, name, rendered string, logger *log.Logger) *resourcesMonitor {
 	return &resourcesMonitor{
 		wg:   new(sync.WaitGroup),
 		once: sync.Once{},
@@ -84,10 +101,10 @@ func newMonitor(cache runtimecache.Cache, nelm *nelm.Client, namespace, name, re
 		namespace: namespace,
 		name:      name,
 		rendered:  rendered,
-		resources: make(map[schema.GroupVersionKind]map[string]struct{}),
+		resources: make(map[resourceKey]map[string]struct{}),
 
-		cache: cache,
-		nelm:  nelm,
+		kubeClient: kubeClient,
+		nelm:       nelm,
 
 		logger: logger.Named(fmt.Sprintf("monitor.%s", name)),
 	}
@@ -211,7 +228,7 @@ func (m *resourcesMonitor) checkResources(ctx context.Context) error {
 
 	// Lazy initialization: parse manifest on first check (mutex protected)
 	m.mtx.Lock()
-	if len(m.resources) == 0 {
+	if !m.initialized {
 		if err := m.buildResourcesMap(); err != nil {
 			m.mtx.Unlock()
 			return fmt.Errorf("build namespaced gvk: %w", err)
@@ -237,8 +254,7 @@ func (m *resourcesMonitor) checkResources(ctx context.Context) error {
 	return nil
 }
 
-// buildResourcesMap parses the rendered manifest and builds an index of expected resources.
-// It groups resources by their GVK, storing the expected resource names.
+// buildResourcesMap resolves rendered objects and groups their names by API endpoint and namespace.
 func (m *resourcesMonitor) buildResourcesMap() error {
 	objs, err := m.parseManifest(m.rendered)
 	if err != nil {
@@ -246,6 +262,7 @@ func (m *resourcesMonitor) buildResourcesMap() error {
 	}
 
 	m.logger.Debug("build namespaced gvk", slog.Int("parsed", len(objs)))
+	resources := make(map[resourceKey]map[string]struct{})
 
 	for _, obj := range objs {
 		// Skip list kinds rendered by Helm, if any
@@ -260,15 +277,41 @@ func (m *resourcesMonitor) buildResourcesMap() error {
 			continue
 		}
 
-		key := obj.GroupVersionKind()
-		if m.resources[key] == nil {
-			m.resources[key] = make(map[string]struct{})
+		apiResource, err := m.kubeClient.APIResource(obj.APIVersion, obj.Kind)
+		if err != nil {
+			return fmt.Errorf("resolve resource %s %s: %w", obj.APIVersion, obj.Kind, err)
 		}
 
-		m.resources[key][name] = struct{}{}
+		groupVersion, err := schema.ParseGroupVersion(obj.APIVersion)
+		if err != nil {
+			return fmt.Errorf("parse apiVersion %q: %w", obj.APIVersion, err)
+		}
+
+		namespace := obj.Namespace
+		switch {
+		case !apiResource.Namespaced:
+			namespace = ""
+		case namespace == "":
+			namespace = m.namespace
+		}
+
+		key := resourceKey{
+			GVR: schema.GroupVersionResource{
+				Group:    groupVersion.Group,
+				Version:  groupVersion.Version,
+				Resource: apiResource.Name,
+			},
+			Namespace: namespace,
+		}
+		if resources[key] == nil {
+			resources[key] = make(map[string]struct{})
+		}
+
+		resources[key][name] = struct{}{}
 	}
 
-	// Clear rendered manifest to free memory (can be several MB for large releases)
+	m.resources = resources
+	m.initialized = true
 	m.rendered = ""
 
 	return nil
@@ -310,15 +353,15 @@ func (m *resourcesMonitor) parseManifest(rendered string) ([]*metav1.PartialObje
 	return res, nil
 }
 
-// checkResource checks if all expected resources of a given type are present in the cluster.
+// checkResource checks if all expected resources at one API endpoint are present in the cluster.
 // Returns ErrAbsentManifest if any expected resource is missing.
-func (m *resourcesMonitor) checkResource(ctx context.Context, res schema.GroupVersionKind) error {
+func (m *resourcesMonitor) checkResource(ctx context.Context, res resourceKey) error {
 	ctx, span := otel.Tracer(monitorTracer).Start(ctx, "checkResource")
 	defer span.End()
 
 	span.SetAttributes(attribute.String("name", m.name))
-	span.SetAttributes(attribute.String("namespace", m.namespace))
-	span.SetAttributes(attribute.String("gvk", res.String()))
+	span.SetAttributes(attribute.String("namespace", res.Namespace))
+	span.SetAttributes(attribute.String("gvr", res.GVR.String()))
 
 	// Early exit if context was already canceled
 	select {
@@ -328,11 +371,10 @@ func (m *resourcesMonitor) checkResource(ctx context.Context, res schema.GroupVe
 	}
 
 	m.logger.Debug("check resource",
-		slog.String("namespace", m.namespace),
-		slog.String("gvk", res.String()))
+		slog.String("namespace", res.Namespace),
+		slog.String("gvr", res.GVR.String()))
 
-	// List all resources of this type currently in the cluster
-	objects, err := m.listResources(ctx, m.namespace, res)
+	objects, err := m.listResources(ctx, res)
 	if err != nil {
 		return fmt.Errorf("list resources: %w", err)
 	}
@@ -340,8 +382,8 @@ func (m *resourcesMonitor) checkResource(ctx context.Context, res schema.GroupVe
 	span.SetAttributes(attribute.Int("resources", len(objects)))
 	m.logger.Debug("found resources",
 		slog.Int("resources", len(objects)),
-		slog.String("namespace", m.namespace),
-		slog.String("gvk", res.String()))
+		slog.String("namespace", res.Namespace),
+		slog.String("gvr", res.GVR.String()))
 
 	// Check if each expected resource name exists in the cluster
 	for obj := range m.resources[res] {
@@ -353,34 +395,31 @@ func (m *resourcesMonitor) checkResource(ctx context.Context, res schema.GroupVe
 	return nil
 }
 
-// listResources lists all resources of the given GVK in a namespace (or cluster-wide if ns is empty).
+// listResources directly lists resource metadata in the requested namespace scope.
 // Returns a set of resource names currently present in the cluster.
-func (m *resourcesMonitor) listResources(ctx context.Context, ns string, gvk schema.GroupVersionKind) (map[string]struct{}, error) {
-	objList := new(metav1.PartialObjectMetadataList)
+func (m *resourcesMonitor) listResources(ctx context.Context, res resourceKey) (map[string]struct{}, error) {
+	ctx, cancel := context.WithTimeout(ctx, resourceListTimeout)
+	defer cancel()
 
-	// Set the List kind for the API request (e.g., DeploymentList for Deployment)
-	objList.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   gvk.Group,
-		Version: gvk.Version,
-		Kind:    gvk.Kind + "List",
-	})
-
-	var opts []client.ListOption
-	if ns != "" {
-		// Namespace-scoped resources
-		opts = append(opts, client.InNamespace(ns))
+	resource := m.kubeClient.Metadata().Resource(res.GVR)
+	var (
+		objList *metav1.PartialObjectMetadataList
+		err     error
+	)
+	if res.Namespace == "" {
+		objList, err = resource.List(ctx, metav1.ListOptions{})
+	} else {
+		objList, err = resource.Namespace(res.Namespace).List(ctx, metav1.ListOptions{})
 	}
-	// Empty namespace means cluster-scoped resources (e.g., ClusterRole, CRD)
-
-	if err := m.cache.List(ctx, objList, opts...); err != nil {
-		return nil, fmt.Errorf("list objects: %w", err)
+	if err != nil {
+		return nil, fmt.Errorf("list metadata for %s in namespace %q: %w", res.GVR, res.Namespace, err)
 	}
 
 	// Convert to a set of names for fast lookup
-	res := make(map[string]struct{}, len(objList.Items))
+	objects := make(map[string]struct{}, len(objList.Items))
 	for _, obj := range objList.Items {
-		res[obj.GetName()] = struct{}{}
+		objects[obj.GetName()] = struct{}{}
 	}
 
-	return res, nil
+	return objects, nil
 }

@@ -18,6 +18,7 @@ package releaseupdater
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -194,4 +195,69 @@ func assertGaugeSet(t *testing.T, storage *metricstorage.MetricStorage, metricNa
 	}
 
 	assert.Equalf(t, want, set, "metric %s set=%v, want %v", metricName, set, want)
+}
+
+func TestKubernetesVersionCheck_AutomaticDetection(t *testing.T) {
+	clusterKubernetesCM := func(updateMode string) *corev1.ConfigMap {
+		return &corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: deckhouseClusterKubernetesConfigMap, Namespace: "kube-system"},
+			Data: map[string]string{
+				"spec": fmt.Sprintf("desiredVersion: \"1.34\"\nupdateMode: %s\n", updateMode),
+			},
+		}
+	}
+
+	tests := []struct {
+		name          string
+		objects       []client.Object
+		wantAutomatic bool
+	}{
+		{
+			name:          "ConfigMap updateMode Automatic",
+			objects:       []client.Object{clusterKubernetesCM("Automatic")},
+			wantAutomatic: true,
+		},
+		{
+			name:          "ConfigMap updateMode Manual",
+			objects:       []client.Object{clusterKubernetesCM("Manual")},
+			wantAutomatic: false,
+		},
+		{
+			name:          "nothing present (managed cluster / cold start) → not Automatic, fail-open",
+			objects:       nil,
+			wantAutomatic: false,
+		},
+		{
+			name: "empty updateMode → not Automatic",
+			objects: []client.Object{&corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Name: deckhouseClusterKubernetesConfigMap, Namespace: "kube-system"},
+				Data:       map[string]string{"spec": "desiredVersion: \"1.34\"\nupdateMode: \"\"\n"},
+			}},
+			wantAutomatic: false,
+		},
+		{
+			// data.spec is preserved byte-for-byte from a user-editable ConfigMap, so a hand-broken
+			// key must not fail the constructor: that error reaches both the DeckhouseRelease
+			// reconciler and its admission webhook and would stall release processing cluster-wide.
+			name: "malformed spec → not Automatic, constructor still succeeds",
+			objects: []client.Object{&corev1.ConfigMap{
+				ObjectMeta: metav1.ObjectMeta{Name: deckhouseClusterKubernetesConfigMap, Namespace: "kube-system"},
+				Data:       map[string]string{"spec": "\tdesiredVersion: [unclosed\nupdateMode: :::\n"},
+			}},
+			wantAutomatic: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			scheme := runtime.NewScheme()
+			require.NoError(t, v1alpha1.AddToScheme(scheme))
+			require.NoError(t, corev1.AddToScheme(scheme))
+
+			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.objects...).Build()
+			check, err := newKubernetesVersionCheck(fakeClient, nil)
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantAutomatic, check.isKubernetesVersionAutomatic())
+		})
+	}
 }

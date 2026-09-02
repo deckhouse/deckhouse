@@ -1,0 +1,63 @@
+{{- if (.Values.global.enabledModules | has "admission-policy-engine") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: flannel
+  namespace: d8-{{ .Chart.Name }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" "flannel")) | nindent 2 }}
+spec:
+  securityContext:
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          kube-flannel and iptables-wrapper-init must run as root to manage host
+          networking, CNI config and iptables/nftables rules.
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          UID 0 is required for host network namespace access and iptables operations.
+    capabilities:
+      allowedValues:
+        add:
+          - NET_ADMIN
+          - NET_RAW
+        drop:
+          - ALL
+      metadata:
+        description: |
+          NET_ADMIN/NET_RAW are required for flannel routing/masquerading, VXLAN offload
+          fixes and iptables-wrapper setup on the node.
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          Flannel must join the host network namespace to program pod routes and
+          VXLAN/host-gw datapath on the node.
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          hostPath volumes are required for CNI config, flannel runtime state and
+          the host xtables lock.
+    hostPath:
+      allowedValues:
+        - path: /etc/cni/net.d
+          readOnly: false
+          metadata:
+            description: Host CNI configuration directory where Flannel installs its config.
+        - path: /run/flannel
+          readOnly: false
+          metadata:
+            description: Flannel runtime state directory on the host.
+        - path: /run/xtables.lock
+          readOnly: false
+          metadata:
+            description: Host xtables lock used to serialize iptables updates.
+{{- end }}

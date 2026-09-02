@@ -77,6 +77,28 @@ pilotVx11x11x11x11: "old-pilot-img"
 		})
 	})
 
+	Context("Supported versions after retiring 1.21", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.modulesImages.digests.istio", []byte(`
+pilotV1x25x2: "pilot-1-25"
+pilotV1x27x9: "pilot-1-27"
+pilotV1x29x6: "pilot-1-29"
+`))
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.RunHook()
+		})
+
+		It("publishes only the supported Istio versions", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			versionMap := f.ValuesGet("istio.internal.versionMap").Map()
+			Expect(versionMap).To(HaveKey("1.25"))
+			Expect(versionMap).To(HaveKey("1.27"))
+			Expect(versionMap).To(HaveKey("1.29"))
+			Expect(versionMap).NotTo(HaveKey("1.21"))
+			Expect(versionMap).To(HaveLen(3))
+		})
+	})
+
 	Context("SupportsOperator boundary version 1.27.8", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.modulesImages.digests.istio", []byte(`pilotV1x27x8: "pilot-img"`))
@@ -102,6 +124,23 @@ pilotVx11x11x11x11: "old-pilot-img"
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.27.fullVersion").String()).To(Equal("1.27.9"))
 			Expect(f.ValuesGet("istio.internal.versionMap.1\\.27.supportsOperator").Bool()).To(BeFalse())
+		})
+	})
+
+	Context("Operator-free version 1.29.6", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.modulesImages.digests.istio", []byte(`pilotV1x29x6: "pilot-img"`))
+			f.BindingContexts.Set(f.KubeStateSet(``))
+			f.RunHook()
+		})
+
+		It("marks version as ambient-capable and operator-free", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.29.fullVersion").String()).To(Equal("1.29.6"))
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.29.revision").String()).To(Equal("v1x29"))
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.29.imageSuffix").String()).To(Equal("V1x29x6"))
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.29.supportsAmbient").Bool()).To(BeTrue())
+			Expect(f.ValuesGet("istio.internal.versionMap.1\\.29.supportsOperator").Bool()).To(BeFalse())
 		})
 	})
 

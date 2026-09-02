@@ -823,6 +823,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterAdmin.Exists()).To(BeTrue())
+			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
 
 			Expect(mcmDeploy.Exists()).To(BeTrue())
 			Expect(mcmServiceAccount.Exists()).To(BeTrue())
@@ -936,6 +937,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterAdmin.Exists()).To(BeTrue())
+			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
 
 			Expect(mcmDeploy.Exists()).To(BeTrue())
 			Expect(mcmServiceAccount.Exists()).To(BeTrue())
@@ -1031,6 +1033,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterAdmin.Exists()).To(BeTrue())
+			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
 
 			Expect(mcmDeploy.Exists()).To(BeTrue())
 			Expect(mcmServiceAccount.Exists()).To(BeTrue())
@@ -1249,6 +1252,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterAdmin.Exists()).To(BeTrue())
+			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
 
 			Expect(mcmDeploy.Exists()).To(BeTrue())
 			Expect(mcmServiceAccount.Exists()).To(BeTrue())
@@ -1351,6 +1355,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterAdmin.Exists()).To(BeTrue())
+			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
 
 			Expect(mcmDeploy.Exists()).To(BeTrue())
 			Expect(mcmServiceAccount.Exists()).To(BeTrue())
@@ -1385,6 +1390,44 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(roleBindings["bashible-mcm-bootstrapped-nodes"].Exists()).To(BeTrue())
 
 			assertBashibleAPIServerTLS(f)
+		})
+	})
+
+	// The node-agent ClusterRole grants its verbs cluster-wide, because both
+	// resources are cluster-scoped and RBAC cannot narrow them to "this node's
+	// own object". These policies are what narrows them, so a render that
+	// silently drops one gives every kubelet write access to every other node's
+	// objects.
+	//
+	// What is guarded here is that they are rendered, bound and scoped to
+	// kubelets. What the expressions decide is beyond a template test — inverting
+	// one leaves every assertion below green — and is checked by applying the
+	// rendered policies to a real apiserver.
+	Context("Node-controller admission policies", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerStatic)
+			setBashibleAPIServerTLSValues(f)
+			f.HelmRender()
+		})
+
+		It("constrains a kubelet to its own NodeConfig and NodeOperation", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			for _, name := range []string{
+				"nodeconfigs-own-node-only.deckhouse.io",
+				"nodeoperations-own-node-only.deckhouse.io",
+			} {
+				policy := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", name)
+				Expect(policy.Exists()).To(BeTrue(), "ValidatingAdmissionPolicy %s must be rendered", name)
+				Expect(policy.Field("spec.matchConditions.0.expression").String()).
+					To(ContainSubstring("system:nodes"), "%s must apply to kubelets only", name)
+				Expect(policy.Field("spec.validations").Array()).ToNot(BeEmpty(), "%s must validate something", name)
+
+				binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", name)
+				Expect(binding.Exists()).To(BeTrue(), "ValidatingAdmissionPolicyBinding %s must be rendered", name)
+				Expect(binding.Field("spec.policyName").String()).To(Equal(name))
+				Expect(binding.Field("spec.validationActions").String()).To(ContainSubstring("Deny"))
+			}
 		})
 	})
 
@@ -1444,6 +1487,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterAdmin.Exists()).To(BeTrue())
+			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
 
 			Expect(mcmDeploy.Exists()).To(BeFalse())
 			Expect(mcmServiceAccount.Exists()).To(BeFalse())
@@ -1542,6 +1586,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterAdmin.Exists()).To(BeTrue())
+			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
 
 			Expect(mcmDeploy.Exists()).To(BeFalse())
 			Expect(mcmServiceAccount.Exists()).To(BeFalse())
@@ -1579,6 +1624,44 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(staticMachineDeployment.Exists()).To(BeFalse())
 
 			assertBashibleAPIServerTLS(f)
+		})
+	})
+
+	Context("Static instances :: CAPS RBAC", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("nodeManager", nodeManagerConfigValues+nodeManagerStaticInstances)
+			f.ValuesSet("nodeManager.internal.capsControllerManagerEnabled", true)
+			setBashibleAPIServerTLSValues(f)
+			f.HelmRender()
+		})
+
+		// spec.privateSSHKey and spec.sudoPasswordEncoded of SSHCredentials are marked
+		// x-kubernetes-sensitive-data, so the apiserver returns "<omitted>" to anyone
+		// without the sshcredentials/sensitive subresource. CAPS needs the unmasked
+		// values to log in over SSH — losing this rule breaks node bootstrap.
+		It("grants the CAPS controller access to sshcredentials/sensitive", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			capsClusterRole := f.KubernetesGlobalResource("ClusterRole", "d8:node-manager:caps-controller-manager")
+			Expect(capsClusterRole.Exists()).To(BeTrue())
+
+			var sensitiveRule map[string]interface{}
+			for _, rule := range capsClusterRole.Field("rules").Array() {
+				r := rule.Value().(map[string]interface{})
+				resources, ok := r["resources"].([]interface{})
+				if !ok {
+					continue
+				}
+				for _, resource := range resources {
+					if resource == "sshcredentials/sensitive" {
+						sensitiveRule = r
+					}
+				}
+			}
+
+			Expect(sensitiveRule).ToNot(BeNil(), "no rule for sshcredentials/sensitive in d8:node-manager:caps-controller-manager")
+			Expect(sensitiveRule["apiGroups"]).To(ConsistOf("deckhouse.io"))
+			Expect(sensitiveRule["verbs"]).To(ConsistOf("get", "list", "watch"))
 		})
 	})
 

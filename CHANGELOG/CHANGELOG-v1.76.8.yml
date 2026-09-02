@@ -1,0 +1,59 @@
+cloud-provider-dvp:
+  fixes:
+    - summary: skip foreign nodes in cloud controller manager
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21779
+cni-cilium:
+  fixes:
+    - summary: Bump Go dependencies in the egress-gateway-agent image to fix known CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21608
+      impact: The egress-gateway-agent component will restart after the update.
+deckhouse:
+  fixes:
+    - summary: >-
+        Skip the multiple CNI check in the enable_cni hook while a CNI migration is in progress to avoid
+        a stuck Deckhouse queue.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21771
+deckhouse-controller:
+  fixes:
+    - summary: >-
+        Re-derive the module release chain and align the from-to gap check with the release updater so
+        intermediate releases are created instead of the chain freezing
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21596
+    - summary: ModuleDocumentation will not be created for embedded modules.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21652
+docs:
+  features:
+    - summary: Update node-termination-handler behaviour in cloud-provider-aws module architecture section
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21648
+ingress-nginx:
+  fixes:
+    - summary: Nginx version is updated to 1.30.4.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21666
+      impact: All Ingress-nginx controller pods will be restarted.
+kube-dns:
+  fixes:
+    - summary: Bump Go dependencies in the sts-pods-hosts-appender-webhook and coredns images to fix known
+        CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21627
+      impact: The coredns and kube-dns components will restart after the update.
+node-local-dns:
+  fixes:
+    - summary: Bump Go dependencies in the safe-updater and stale-dns-connections-cleaner images to fix
+        known CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21627
+      impact: The node-local-dns components will restart after the update.
+service-with-healthchecks:
+  fixes:
+    - summary: Bump Go dependencies in the service-with-healthchecks image to fix known CVEs.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21592
+      impact: The service-with-healthchecks components (controller, agent) will restart after the update.
+user-authn:
+  fixes:
+    - summary: >-
+        Fix Dex token refresh with upstream providers that rotate refresh tokens (GitLab), which logged
+        users out every `idTokenTTL`.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21687
+    - summary: backport fix of 21615
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21690
+    - summary: Accessing kubernetes api via gateway api fixed.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21773

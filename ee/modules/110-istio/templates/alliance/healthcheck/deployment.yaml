@@ -5,7 +5,7 @@ memory: 25Mi
 
 {{- if or .Values.istio.federation.enabled .Values.istio.multicluster.enabled }}
   {{- $versionInfo := get .Values.istio.internal.versionMap .Values.istio.internal.globalVersion }}
-  {{- $revision := get $versionInfo "revision" }}
+  {{- $fullVersion := get $versionInfo "fullVersion" }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -49,6 +49,9 @@ spec:
         app: alliance-healthcheck
         sidecar.istio.io/inject: "true"
         istio.io/rev: default
+        security.deckhouse.io/security-policy-exception.container.istio-init: alliance-healthcheck-istio-init
+      annotations:
+        istio.deckhouse.io/full-version: "{{ $fullVersion }}"
     spec:
       {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}

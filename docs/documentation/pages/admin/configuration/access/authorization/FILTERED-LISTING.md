@@ -20,7 +20,7 @@ For a client who does not request filtering, the behavior remains identical to t
 
 ## Using via Deckhouse CLI
 
-In DKP, you can use the [Deckhouse CLI tool](../../cli/d8/) to work with the filtered listing mechanism.
+In DKP, you can use the [Deckhouse CLI tool](../../../../cli/d8/) to work with the filtered listing mechanism.
 
 ### Resource filtering scopes
 
@@ -181,11 +181,25 @@ namespaces available to the user instead of `403 Forbidden`. Filtering of
 arbitrary resources via `--scope` is a generalization of the same mechanism,
 enabled explicitly.
 
+## Special case: projects
+
+A `Project` is cluster-scoped, but its visibility follows the same namespace
+boundary: a user sees a project when they can see any of its namespaces — the
+main one or an additional one. Filtering applies unconditionally here as well,
+so `d8 k get projects` returns the accessible subset instead of
+`403 Forbidden`, and a `get` of a project unavailable for the user answers `NotFound`.
+
+Because of that, access levels granted through a `ClusterAuthorizationRule` no
+longer carry a cluster-wide read of `projects`: the grant would let RBAC allow
+the listing before the filter could narrow it. As a result,
+`d8 k auth can-i list projects` answers `no` for such a user while the listing
+itself works and returns their projects. Writing projects is unaffected.
+
 ## Components involved
 
 | Component | Role |
 |---|---|
-| [Deckhouse CLI](../../cli/d8/)| Supports the `--scope` flag and transforms its values into headers |
+| [Deckhouse CLI](../../../../cli/d8/)| Supports the `--scope` flag and transforms its values into headers |
 | kube-apiserver (DKP patch) | Bypasses `403 Forbidden` and provides filtering at the storage layer |
 | [`user-authz`](/modules/user-authz/) (`permission-browser`) | Defines the access boundary via `AccessibleNamespaces` and `BulkSubjectAccessReview` |
 | [`multitenancy-manager`](/modules/multitenancy-manager/) | Provides namespace classification based on the `projects.deckhouse.io/project` label |

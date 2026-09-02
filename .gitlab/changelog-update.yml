@@ -34,8 +34,6 @@ changelog-update:
       file: false
   script:
     - |
-      set -euo pipefail
-
       # Resolve milestone: explicit var, else active GitLab milestone for this release branch.
       if [ -n "${CHANGELOG_MILESTONE:-}" ]; then
         MILESTONE="${CHANGELOG_MILESTONE}"

@@ -55,6 +55,12 @@ module ReferenceGenerator
       "d8 #{parts.join(' ')}"
     end
 
+    def build_long_description_id(parent_titles, current_name)
+      command_path = build_header_title(parent_titles, current_name)
+      command_slug = command_path.downcase.gsub(/[^a-z0-9]+/, '-').gsub(/\A-|-+\z/, '')
+      "#{command_slug}-long-description"
+    end
+
     def prepare_signature(signature)
       escaped = CGI.escapeHTML(signature)
       escaped += ' [options]' unless escaped.include?('[options]')
@@ -145,6 +151,13 @@ module ReferenceGenerator
       if data['description']
         description = escape_liquid_tags(data['description'])
         result += "<p>#{description}</p>\n"
+      end
+      if depth > 1 && data['longDescription'].to_s.strip != ''
+        long_description = CGI.escapeHTML(data['longDescription'].to_s)
+        long_description = escape_liquid_tags(long_description)
+        long_description = long_description.gsub(/\r\n?|\n/, '&#10;')
+        long_description_id = build_long_description_id(parent_titles, data['name'])
+        result += %Q(<div id="#{long_description_id}" markdown="0" class="details"><p class="details__lnk"><a href="javascript:void(0)" class="details__summary">{{ site.data.i18n.common['show_more'][page.lang] }}...</a></p><div class="details__content"><div class="expand" style="white-space: pre-wrap;">#{long_description}</div></div></div>\n)
       end
       if data['version'].to_s.strip != ''
         version = escape_liquid_tags(data['version'].to_s)

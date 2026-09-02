@@ -55,7 +55,7 @@ shell:
     - rm -rf examples
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-dex-artifact
-from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-bookworm" "builder/golang-alt-svace" ) }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-dex-src-artifact
@@ -76,3 +76,5 @@ shell:
       {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags "${LDFLAGS}" -tags netgo -o dex ./cmd/dex`) | indent 6 }}
     - chown 64535:64535 dex
     - chmod 0700 dex
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

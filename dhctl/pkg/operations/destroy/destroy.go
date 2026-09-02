@@ -251,14 +251,19 @@ func (d *ClusterDestroyer) DestroyCluster(ctx context.Context, autoApprove bool)
 }
 
 func (d *ClusterDestroyer) destroy(ctx context.Context, autoApprove bool) error {
-	if err := d.d8Destroyer.CheckCommanderUUID(ctx); err != nil {
-		return err
-	}
-
 	// populate cluster state in cache
 	metaConfig, err := d.configPreparator.PopulateMetaConfig(ctx, d.globalOptions)
 	if err != nil {
 		return err
+	}
+
+	// Refused here rather than by the cluster-type dispatch below, which would report a misleading
+	// "Unsupported cluster type: ''" for what is really an absent ClusterConfiguration. Keyed on
+	// the same field DoByClusterType dispatches on, so it can never reject a config that dispatch
+	// would have accepted.
+	if metaConfig.ClusterType == "" {
+		return fmt.Errorf("dhctl destroy does not support managed Kubernetes clusters: " +
+			"destroying a cluster whose control plane dhctl did not create is not implemented")
 	}
 
 	destroyer, err := config.DoByClusterType(ctx, metaConfig, d.infraProvider)
@@ -266,7 +271,17 @@ func (d *ClusterDestroyer) destroy(ctx context.Context, autoApprove bool) error 
 		return err
 	}
 
-	d.pipeline.SetClusterConfig(phases.ClusterConfig{ClusterType: metaConfig.ClusterType})
+	// Before the first announced phase: CheckCommanderUUID announces one, and that frame carries
+	// the phase list. Built with an empty cluster type, the list is missing all static-only
+	// phases (later frames are fine — SetClusterConfig rebuilds the list).
+	d.pipeline.SetClusterConfig(phases.ClusterConfig{
+		ClusterType:             metaConfig.ClusterType,
+		HasClusterConfiguration: metaConfig.HasClusterConfiguration(),
+	})
+
+	if err := d.d8Destroyer.CheckCommanderUUID(ctx); err != nil {
+		return err
+	}
 
 	err = destroyer.Prepare(ctx)
 	if err != nil {

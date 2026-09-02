@@ -31,6 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure/tofu"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kpcontext"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry/kptelemetry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
@@ -42,6 +43,7 @@ const (
 	autoConvergeCmd       = "converge-periodical"
 	terraformGroupCmd     = "terraform"
 	exporterCmd           = "converge-exporter"
+	phaseCatalogCmd       = "phase-catalog"
 )
 
 var commandList = []Command{
@@ -65,12 +67,6 @@ var commandList = []Command{
 		Help: "Commands to run a single phase of the bootstrap process.",
 	},
 	{
-		Name:       "execute-bashible-bundle",
-		Help:       "Prepare the master node and install Kubernetes.",
-		DefineFunc: bootstrap.DefineBootstrapExecuteBashibleCommand,
-		Parent:     "bootstrap-phase",
-	},
-	{
 		Name:       "create-resources",
 		Help:       "Create resources in a Kubernetes cluster.",
 		DefineFunc: bootstrap.DefineCreateResourcesCommand,
@@ -92,12 +88,6 @@ var commandList = []Command{
 		Name:       "base-infra",
 		Help:       "Create base infrastructure for a cloud Kubernetes cluster.",
 		DefineFunc: bootstrap.DefineBaseInfrastructureCommand,
-		Parent:     "bootstrap-phase",
-	},
-	{
-		Name:       "exec-post-bootstrap",
-		Help:       "Test scp upload and ssh execution of the uploaded script.",
-		DefineFunc: bootstrap.DefineExecPostBootstrapScript,
 		Parent:     "bootstrap-phase",
 	},
 	{
@@ -129,6 +119,11 @@ var commandList = []Command{
 		Name:       "destroy",
 		Help:       "Destroy Kubernetes cluster.",
 		DefineFunc: commands.DefineDestroyCommand,
+	},
+	{
+		Name:       phaseCatalogCmd,
+		Help:       "Print the phase and subphase title catalog as JSON.",
+		DefineFunc: commands.DefinePhaseCatalogCommand,
 	},
 	{
 		Name:       "session",
@@ -333,7 +328,15 @@ func runApplication(ctx context.Context, kpApp *kingpin.Application, opts *optio
 	initer := newActionIniter(opts)
 
 	// inject context.Context to kingpin.ParseContext
-	kpApp.Action(kpcontext.SetContextToAction(ctx))
+	//
+	// Actions run once the flags are parsed, so opts.Kube is populated here: stamp the context
+	// with the auth mode those flags produce. Every retry loop under this command reads it to
+	// tell an apiserver that cannot answer yet from credentials that will never be allowed.
+	kpApp.Action(func(c *kingpin.ParseContext) error {
+		return kpcontext.SetContextToAction(
+			providerinitializer.WithKubeAuthMode(ctx, &opts.Kube),
+		)(c)
+	})
 
 	kpApp.Action(kptelemetry.StartCommand)
 

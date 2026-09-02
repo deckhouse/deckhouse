@@ -32,6 +32,7 @@ allow_alerts=(
 "D8IstioPodsWithoutIstioSidecar" # Expected behaviour in clusters that start too quickly, and tests do start quickly
 "LoadAverageHigh" # Pointless, as test servers have minimal resources
 "D8SignatureErrorsDetected" # by default signatures not enabled for etcd keys
+"CertmanagerCertificateChallengePending" # This is normal for e2e tests
 )
 
 # In e2e tests with OS on older cores (AWS, Azure), ebpf_exporter does not initiliaze. Ignore this alerts

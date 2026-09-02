@@ -1,4 +1,6 @@
 @use "components/common/_variables.scss";
+@use 'components/common/_mixins.scss';
+@use 'components/common/_breakpoints.scss';
 
 .text {
     line-height: 1.5;
@@ -51,7 +53,20 @@
         margin-bottom: 16px;
         font-size: 24px;
         color: #262429;
-        line-height: 32px;
+        line-height: 1.25;
+
+        @include breakpoints.max-w(m) {
+            margin-bottom: 14px;
+            font-size: 20px;
+        }
+
+        @include breakpoints.max-w(s) {
+            font-size: 18px;
+        }
+
+        @include breakpoints.max-w(xs) {
+            font-size: 14px;
+        }
 
         > .anchorjs-link {
           display: none;
@@ -62,6 +77,12 @@
         margin: 0;
         margin-bottom: 32px;
         font-size: 16px;
+
+        @include breakpoints.max-w(m) {
+            margin-bottom: 14px;
+            font-size: 14px;
+            line-height: 1.25;
+        }
     }
 
     &_base {

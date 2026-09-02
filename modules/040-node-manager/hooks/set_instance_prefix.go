@@ -30,6 +30,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 func handleSetInstancePrefix(_ context.Context, input *go_hook.HookInput) error {
 	prefix, exists := input.Values.GetOk("nodeManager.instancePrefix")
 	if !exists {
+		// global.prefix (global ModuleConfig) is the new home for the cluster prefix;
+		// fall back to the deprecated ClusterConfiguration.cloud.prefix.
+		prefix, exists = input.Values.GetOk("global.prefix")
+	}
+	if !exists {
 		prefix = input.Values.Get("global.clusterConfiguration.cloud.prefix")
 	}
 

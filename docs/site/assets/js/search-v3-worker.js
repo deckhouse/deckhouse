@@ -1,16 +1,23 @@
 /*
- * Dedicated search worker protocol:
+ * Dedicated search worker protocol. Query syntax is owned by the main thread: both the
+ * query and the synonym map arrive sanitized, so this file has no rewrite rules of its
+ * own. What it does keep is the search itself - the same code runs in search-v3.js as
+ * the fallback for browsers without workers.
+ *
  * - Main -> Worker:
- *   1) { type: 'INIT', payload: { searchData, currentLang } }
+ *   1) { type: 'INIT', payload: { searchData, currentLang, synonyms } }
  *      Builds Lunr/Fuse indexes and module list in worker thread.
- *   2) { type: 'SEARCH', payload: { requestId, query } }
- *      Runs search for user query.
+ *   2) { type: 'SEARCH', payload: { requestId, query, requireAllWords } }
+ *      Runs search for an already sanitized user query. requireAllWords marks a
+ *      "key: value" pair, whose words all have to be present on the page.
  *
  * - Worker -> Main:
  *   1) { type: 'READY', payload: { availableModules } }
  *      Sent when initialization is complete and worker can accept SEARCH.
- *   2) { type: 'SEARCH_RESULT', payload: { requestId, results, highlightQuery } }
- *      Search result for a specific requestId.
+ *   2) { type: 'SEARCH_RESULT', payload: { requestId, results, highlightQuery, highlightTerms } }
+ *      Search result for a specific requestId. highlightTerms lists every term the
+ *      result set was matched by (original query, applied synonyms, fuzzy fallback),
+ *      so the UI can highlight synonyms too.
  *   3) { type: 'ERROR', payload: { message } }
  *      Initialization/runtime error.
  *      For search-time errors: { type: 'ERROR', payload: { requestId, message } }.
@@ -25,16 +32,10 @@ let lunrIndex = null;
 let searchDictionary = [];
 let fuseIndex = null;
 let availableModules = [];
-let synonyms = {
-  'update policy': ['moduleupdatepolicy'],
-  'dex Providers': ['dexprovider'],
-  'провайдеры аутентификации': ['dexprovider'],
-  'переопределение': ['modulepulloverride'],
-  'release.deckhouse.io/approved': ['Ручное подтверждение обновлений'],
-  moduleupdatepolicy: ['update policy', 'module update policy', 'политика обновления'],
-  dexprovider: ['провайдеры аутентификации', 'dex providers'],
-  modulepulloverride: ['переопределение']
-};
+// Synonyms arrive from the main thread with INIT (search-v3.js owns the list);
+// keeping a copy here would be dead code silently overwritten on every init.
+let synonyms = {};
+let normalizedSynonyms = null;
 
 function parseKeywords(keywords) {
   if (Array.isArray(keywords)) {
@@ -296,42 +297,6 @@ function getFuzzySuggestions(query) {
   return fuzzyResults.slice(0, 5);
 }
 
-// Sanitizes user query to avoid Lunr syntax/operator parse errors.
-function sanitizeQueryForSearch(query) {
-  const urlPattern = /^https?:\/\/[^\s]+$/i;
-  if (urlPattern.test(query)) {
-    try {
-      const url = new URL(query);
-      const domain = url.hostname.replace(/^www\./, '');
-      const pathSegments = url.pathname.split('/').filter(segment => segment.length > 0);
-      return [domain, ...pathSegments].join(' ');
-    } catch (e) {
-      return query.replace(/^https?:\/\//, '').replace(/[^\w\s-]/g, ' ').trim();
-    }
-  }
-
-  let sanitized = query;
-  let hasChanges = false;
-
-  if (/^[a-zA-Z]*:/.test(sanitized)) {
-    sanitized = sanitized.replace(/:/g, ' ');
-    hasChanges = true;
-  }
-
-  if (sanitized.includes('--')) {
-    sanitized = sanitized.replace(/--/g, ' ');
-    hasChanges = true;
-  }
-
-  const lunrOperatorPattern = /(\s|^)[+\-](\w+)/g;
-  if (lunrOperatorPattern.test(sanitized)) {
-    sanitized = sanitized.replace(lunrOperatorPattern, '$1$2');
-    hasChanges = true;
-  }
-
-  return hasChanges ? sanitized.trim() : query;
-}
-
 function normalizeSynonymKey(value) {
   return String(value || '')
     .toLowerCase()
@@ -339,21 +304,111 @@ function normalizeSynonymKey(value) {
     .trim();
 }
 
+// The INIT payload already carries normalized and sanitized entries; this pass only
+// guards against a caller passing a raw map, since lookups always go through
+// normalizeSynonymKey().
+function getNormalizedSynonyms() {
+  if (normalizedSynonyms) {
+    return normalizedSynonyms;
+  }
+
+  const source = synonyms || {};
+  normalizedSynonyms = {};
+  Object.keys(source).forEach((key) => {
+    const normalizedKey = normalizeSynonymKey(key);
+    if (!normalizedKey) {
+      return;
+    }
+    const values = Array.isArray(source[key]) ? source[key] : [source[key]];
+    normalizedSynonyms[normalizedKey] = (normalizedSynonyms[normalizedKey] || []).concat(values);
+  });
+
+  return normalizedSynonyms;
+}
+
+// Looks up synonyms for the whole query and for every word window inside it,
+// so "провайдеры аутентификации в dex" still expands to dexprovider.
 function getSynonymCandidates(query) {
   const normalizedQuery = normalizeSynonymKey(query);
-  if (!normalizedQuery || !synonyms) {
+  if (!normalizedQuery) {
     return [];
   }
 
-  const rawCandidates = synonyms[normalizedQuery];
-  if (!rawCandidates) {
-    return [];
+  const synonymMap = getNormalizedSynonyms();
+  const words = normalizedQuery.split(' ').filter(Boolean);
+  const lookupKeys = new Set([normalizedQuery]);
+  const maxWindow = Math.min(words.length, 4);
+  for (let size = maxWindow; size >= 1; size--) {
+    for (let start = 0; start + size <= words.length; start++) {
+      lookupKeys.add(words.slice(start, start + size).join(' '));
+    }
   }
 
-  const items = Array.isArray(rawCandidates) ? rawCandidates : [rawCandidates];
-  return items
-    .map((item) => sanitizeQueryForSearch(normalizeSynonymKey(item)))
-    .filter((item) => item && item !== normalizedQuery);
+  const candidates = [];
+  const seen = new Set([normalizedQuery]);
+  lookupKeys.forEach((key) => {
+    const rawCandidates = synonymMap[key];
+    if (!rawCandidates) {
+      return;
+    }
+    const items = Array.isArray(rawCandidates) ? rawCandidates : [rawCandidates];
+    items.forEach((item) => {
+      const candidate = normalizeSynonymKey(item);
+      if (!candidate || seen.has(candidate)) {
+        return;
+      }
+      seen.add(candidate);
+      candidates.push(candidate);
+    });
+  });
+
+  return candidates;
+}
+
+// Stop words are dropped when the index is built, so a required clause made of one
+// ("+and") empties the entire result set. The search pipeline keeps them, unlike the
+// indexing pipeline, so they have to be recognized explicitly.
+function isSearchStopWord(word) {
+  const lower = String(word == null ? '' : word).toLowerCase();
+  const filters = typeof lunr === 'undefined'
+    ? []
+    : [lunr.stopWordFilter, lunr.ru ? lunr.ru.stopWordFilter : null];
+
+  return filters.some((filter) => {
+    if (typeof filter !== 'function') return false;
+    try {
+      return !filter(lower);
+    } catch (error) {
+      return false;
+    }
+  });
+}
+
+// Lunr has no phrase queries: a multi-word synonym passed as a plain string is an OR
+// over its words, so "siem" would drag in every page that merely says "management"
+// (1031 hits against 3 for the phrase as a whole). Requiring every word instead
+// ("+security +information +event +management") keeps the match tied to the phrase.
+function buildPhraseQuery(phrase) {
+  const words = String(phrase == null ? '' : phrase).trim().split(/\s+/).filter(Boolean);
+  if (words.length < 2) {
+    return phrase;
+  }
+
+  // Bail out instead of risking a parse error on Lunr query operators (+ - : ^ ~ *).
+  if (words.some((word) => !/^[\p{L}\p{N}_./-]+$/u.test(word))) {
+    return phrase;
+  }
+
+  const required = words.filter((word) => !isSearchStopWord(word));
+
+  if (required.length === 0) {
+    return phrase;
+  }
+  if (required.length === 1) {
+    return required[0];
+  }
+
+  return required.map((word) => `+${word}`).join(' ');
 }
 
 // Extracts unique module names for synthetic "module page" results in UI.
@@ -379,11 +434,33 @@ function buildAvailableModules() {
   availableModules = Array.from(modules);
 }
 
-// Executes Lunr search and applies fuzzy fallback strategy.
-function runSearch(query) {
-  const sanitizedQuery = sanitizeQueryForSearch(query);
+// A query is an OR over its words, and a document may match just one of them, so
+// every word is highlighted on its own alongside the full string. Synonym phrases
+// are excluded from this: they are matched whole, see buildPhraseQuery().
+function expandQueryHighlightTerms(query) {
+  const value = String(query == null ? '' : query).trim();
+  if (!value) {
+    return [];
+  }
+  return /\s/.test(value) ? [value, ...value.split(/\s+/)] : [value];
+}
+
+// Executes Lunr search and applies fuzzy fallback strategy. The query arrives already
+// sanitized: query syntax belongs to the main thread, which also tells us here whether
+// the user typed a "key: value" pair (requireAllWords).
+function runSearch(query, requireAllWords) {
+  const sanitizedQuery = String(query == null ? '' : query);
+
+  // A query built only from operators ("*", "+") sanitizes down to nothing, and an empty
+  // Lunr query matches the entire corpus - 7154 pages on the current index.
+  if (!sanitizedQuery.trim()) {
+    return { results: [], highlightQuery: sanitizedQuery, highlightTerms: [] };
+  }
+
   let results = [];
   let highlightQuery = sanitizedQuery;
+  // Every term that contributed to the result set, so the UI highlights synonyms too.
+  const highlightTerms = expandQueryHighlightTerms(sanitizedQuery);
   const mergeSearchResults = (baseResults, synonymResults, synonymBoost = 1.15) => {
     const mergedByRef = new Map();
 
@@ -422,7 +499,24 @@ function runSearch(query) {
     }
   };
 
-  const initialSearch = searchWithFallback(sanitizedQuery);
+  // "kind: configmap" is a key/value pair, so both words are required: that is 29 pages
+  // against 381 when the same words are OR-ed. Pages that never mention them together
+  // are still reachable, because an empty strict result falls back to OR.
+  const searchKeyValueAware = (plainQuery) => {
+    if (requireAllWords) {
+      const strictQuery = buildPhraseQuery(plainQuery);
+      if (strictQuery !== plainQuery) {
+        const strictSearch = searchWithFallback(strictQuery);
+        if (strictSearch.results.length > 0) {
+          // Highlighting keeps the plain query: "+word" is a Lunr operator, not text.
+          return { results: strictSearch.results, highlightQuery: plainQuery };
+        }
+      }
+    }
+    return searchWithFallback(plainQuery);
+  };
+
+  const initialSearch = searchKeyValueAware(sanitizedQuery);
   results = initialSearch.results;
   highlightQuery = initialSearch.highlightQuery;
 
@@ -430,8 +524,13 @@ function runSearch(query) {
   const synonymResults = [];
   for (const synonymQuery of synonymCandidates) {
     try {
-      const synonymSearch = searchWithFallback(synonymQuery);
-      synonymResults.push(...synonymSearch.results);
+      const synonymSearch = searchWithFallback(buildPhraseQuery(synonymQuery));
+      if (synonymSearch.results.length > 0) {
+        synonymResults.push(...synonymSearch.results);
+        // The synonym is highlighted as written, not word by word: it was matched as
+        // a whole phrase, and its words on their own mean nothing to the reader.
+        highlightTerms.push(synonymQuery);
+      }
     } catch (synonymError) {
       // Ignore invalid synonym query and continue with next candidate.
     }
@@ -450,6 +549,7 @@ function runSearch(query) {
       const bestSuggestion = fuzzySuggestions[0].item;
       results = lunrIndex.search(bestSuggestion);
       highlightQuery = bestSuggestion;
+      highlightTerms.push(...expandQueryHighlightTerms(bestSuggestion));
     }
   }
 
@@ -460,6 +560,7 @@ function runSearch(query) {
       if (wordResults.length > 0) {
         results = wordResults;
         highlightQuery = suggestion.item;
+        highlightTerms.push(...expandQueryHighlightTerms(suggestion.item));
         break;
       }
     }
@@ -467,7 +568,8 @@ function runSearch(query) {
 
   return {
     results,
-    highlightQuery
+    highlightQuery,
+    highlightTerms: Array.from(new Set(highlightTerms.filter(Boolean)))
   };
 }
 
@@ -480,6 +582,7 @@ self.onmessage = (event) => {
       searchData = payload.searchData || { documents: [], parameters: [] };
       currentLang = payload.currentLang || 'en';
       synonyms = payload.synonyms || synonyms;
+      normalizedSynonyms = null;
       buildLunrIndex();
       buildSearchDictionary();
       buildFuseIndex();
@@ -508,13 +611,14 @@ self.onmessage = (event) => {
         throw new Error('Search index is not initialized');
       }
       const query = payload.query || '';
-      const result = runSearch(query);
+      const result = runSearch(query, payload.requireAllWords === true);
       self.postMessage({
         type: 'SEARCH_RESULT',
         payload: {
           requestId,
           results: result.results,
-          highlightQuery: result.highlightQuery
+          highlightQuery: result.highlightQuery,
+          highlightTerms: result.highlightTerms
         }
       });
     } catch (error) {

@@ -1,3 +1,37 @@
+// Rewrites applied to every query before it reaches Lunr, in order. The search box
+// takes plain text: the only operator left is a trailing "*" on a term of at least
+// three characters. Measured on the site index (562 documents, 6592 parameters):
+// "ingress~5" matched 2464 pages in 76 ms, a leading "*gress" cost 111 ms against
+// 2 ms for "ingres*", "*" alone meant the whole corpus (7154 hits, 993 ms), and
+// "content:nginx" silently narrowed 218 hits to 107 with nothing in the UI to show it.
+//
+// This table lives here only: the main thread sanitizes every query before it reaches
+// the worker (see searchWithWorker()) and sanitizes the synonym map it sends on INIT,
+// so search-v3-worker.js never sees raw user input. The rules are still idempotent,
+// because buildPhraseQuery() re-adds "+" to build conjunctions after this pass.
+const LUNR_SYNTAX_RULES = [
+  // Presence: "+ingress", "-nginx", "install --dry-run". The old rule captured (\w+),
+  // and \w is ASCII only, so "+кластер" stayed a working operator while "+ingress"
+  // did not - the lookahead makes this independent of the keyboard layout.
+  [/(^|\s)[+-]+(?=[^\s+-])/gu, '$1'],
+  // A dangling "+" or "-" is a parse error on its own.
+  [/(^|\s)[+-]+(?=\s|$)/gu, '$1'],
+  // Fuzzy matching: too blunt (an edit distance of 5 matches almost anything) and it
+  // throws on a non-numeric operand.
+  [/~\d*/gu, ' '],
+  // Boost: relevance is the job of the field boosts in buildLunrIndex().
+  [/\^\d*/gu, ' '],
+  // Wildcards: keep one trailing "*", drop the expensive forms. A star inside a term
+  // acts as a separator, mirroring how the colon is treated below.
+  [/\*+(?=[^\s*])/gu, ' '],
+  [/(^|\s)([^\s*]{0,2})\*+/gu, '$1$2'],
+  [/\*{2,}/gu, '*'],
+  // Field scoping: "kind: configmap" has to search for words. The index holds "kind",
+  // not "kind:" - lunr.trimmer strips it - so a space reproduces the indexed tokens.
+  // The pair itself stays meaningful, see isKeyValueQuery().
+  [/:/gu, ' ']
+];
+
 class ModuleSearch {
   constructor(options = {}) {
     this.searchInput = document.getElementById('search-input');
@@ -32,15 +66,16 @@ class ModuleSearch {
       parameterOther: [],
       document: []
     };
+    // Results shown per rendered block initially and added by each "show more"
+    // click. The four API subgroups share the 'api' counter, see displayResults().
+    this.pageSize = 5;
     this.displayedCounts = {
-      isResourceNameMatch: 5,
-      nameMatch: 5,
-      isResourceOther: 5,
-      parameterOther: 5,
-      document: 5
+      api: this.pageSize,
+      document: this.pageSize
     };
     this.isDataLoaded = false;
     this.isLoadingInBackground = false;
+    this.searchIndexLoadPromise = null; // Shared by concurrent loadSearchIndex() callers
     this.searchTimeout = null; // For debouncing search input
     this.useSearchWorker = typeof Worker !== 'undefined';
     this.workerCompatibilityChecked = false;
@@ -52,7 +87,7 @@ class ModuleSearch {
     this.workerPendingRequests = new Map();
     this.indexedDBAvailable = false; // Flag to track IndexedDB availability
     this.dbName = 'ModuleSearchDB';
-    this.dbVersion = 1;
+    this.dbVersion = 2; // Bump to drop caches built before the searchBoost field existed
     this.storeName = 'searchIndexes';
     this.cacheExpirationMs = 3600000; // 1 hour in milliseconds
 
@@ -63,16 +98,20 @@ class ModuleSearch {
       backgroundLoadDelay: 1000, // Delay before starting background loading (1 second)
       searchContext: '', // Search context message to display above ready message
       workerPath: '/assets/js/search-v3-worker.js',
-      synonyms: {
-        'update policy': ['moduleupdatepolicy'],
-        'dex Providers': ['dexprovider'],
-        'провайдеры аутентификации': ['dexprovider'],
-        'переопределение': ['modulepulloverride'],
-        'release.deckhouse.io/approved': ['Ручное подтверждение обновлений'],
-        moduleupdatepolicy: ['update policy', 'module update policy', 'политика обновления'],
-        dexprovider: ['провайдеры аутентификации', 'dex providers'],
-        modulepulloverride: ['переопределение']
-      },
+      // Groups of equivalent terms: every member expands to all the others, so
+      // links work in both directions without hand-written reverse entries.
+      // This is the single source of truth — the worker gets the derived map on INIT.
+      synonymGroups: [
+        ['moduleupdatepolicy', 'update policy', 'module update policy', 'политика обновления'],
+        ['dexprovider', 'dex providers', 'провайдеры аутентификации'],
+        ['modulepulloverride', 'переопределение'],
+        ['release.deckhouse.io/approved', 'ручное подтверждение обновлений'],
+        ['siem', 'Security Information and Event Management', 'kuma', 'kesl', 'kaspersky container security', 'Kaspersky Unified Monitoring and Analysis Platform'],
+        ['topologymanager', 'cpumanager', 'memorymanager']
+      ],
+      // One-way overrides, if some term must expand without the reverse link:
+      // { 'what user types': ['extra query', ...] }. Merged on top of the groups.
+      synonyms: {},
       ...options
     };
 
@@ -104,6 +143,7 @@ class ModuleSearch {
         noResults: `Results for "{query}" not found.\nTry different keywords or check your spelling.`,
         error: 'An error occurred during search.',
         showMorePattern: 'Show {count} more',
+        showMoreRemainingPattern: 'Show {count} more ({remaining} left)',
         modulesMore: '... and +{count} more'
       },
       ru: {
@@ -116,6 +156,7 @@ class ModuleSearch {
         noResults: "Нет результатов для \"{query}\".\nПопробуйте другие ключевые слова или проверьте правописание.",
         error: 'An error occurred during search.',
         showMorePattern: 'Показать еще {count}',
+        showMoreRemainingPattern: 'Показать еще {count} (осталось {remaining})',
         modulesMore: '... и ещё {count}'
       }
     };
@@ -338,7 +379,8 @@ class ModuleSearch {
           payload: {
             searchData: this.searchData,
             currentLang: this.currentLang,
-            synonyms: this.options.synonyms
+            // Derived map, not the raw options: the worker has no synonym data of its own.
+            synonyms: this.getNormalizedSynonyms()
           }
         });
 
@@ -361,8 +403,10 @@ class ModuleSearch {
     this.extractAvailableModules();
   }
 
-  // Sends a search request to worker and resolves by requestId.
-  searchWithWorker(query) {
+  // Sends a search request to worker and resolves by requestId. The query is sanitized
+  // here, not in the worker: query syntax is owned by the main thread, which passes the
+  // result of that reading along - requireAllWords for a "key: value" pair.
+  searchWithWorker(query, requireAllWords) {
     return new Promise((resolve, reject) => {
       if (!this.searchWorker || !this.workerInitialized) {
         reject(new Error('Search worker is not ready'));
@@ -376,7 +420,8 @@ class ModuleSearch {
         type: 'SEARCH',
         payload: {
           requestId,
-          query
+          query,
+          requireAllWords: requireAllWords === true
         }
       });
     });
@@ -409,9 +454,12 @@ class ModuleSearch {
 
         request.onupgradeneeded = (event) => {
           const db = event.target.result;
-          if (!db.objectStoreNames.contains(this.storeName)) {
-            db.createObjectStore(this.storeName, { keyPath: 'cacheKey' });
+          // Recreate the store on every version bump: cached indexes are disposable
+          // and may predate index format changes (e.g. the searchBoost field).
+          if (db.objectStoreNames.contains(this.storeName)) {
+            db.deleteObjectStore(this.storeName);
           }
+          db.createObjectStore(this.storeName, { keyPath: 'cacheKey' });
         };
       });
     } catch (error) {
@@ -614,7 +662,12 @@ class ModuleSearch {
         if (query.length > 0) {
           // There's a query, execute the search
           this.searchResults.style.display = 'flex';
-          this.handleSearch(query);
+          // Re-running an unchanged query would call resetPagination() and collapse
+          // blocks the user has already expanded (regaining focus after a "show more"
+          // click used to do exactly that). Rendered results are still in the DOM.
+          if (query !== this.lastQuery || !this.searchResults.querySelector('.result-item')) {
+            this.handleSearch(query);
+          }
         } else {
           // No query, show ready message
           this.updateUIState();
@@ -728,6 +781,15 @@ class ModuleSearch {
       }
     });
 
+    // A button inside the dropdown takes focus on mousedown, which blurs the input
+    // and forces the click handler to restore focus - and that focus event used to
+    // re-run the search. Suppressing the default keeps focus in the input all along.
+    this.searchResults.addEventListener('mousedown', (e) => {
+      if (e.target.closest('button')) {
+        e.preventDefault();
+      }
+    });
+
     // Prevent search results from closing when clicking on buttons inside results
     this.searchResults.addEventListener('click', (e) => {
       // If clicking on a button or interactive element, prevent closing
@@ -740,6 +802,11 @@ class ModuleSearch {
 
         // Keep focus on search input to prevent blur from hiding results
         this.searchInput.focus();
+
+        const showMoreButton = e.target.closest('.tile__pagination');
+        if (showMoreButton) {
+          this.loadMore(showMoreButton.dataset.groupType);
+        }
       }
     });
   }
@@ -772,6 +839,13 @@ class ModuleSearch {
       return;
     }
 
+    // An on-demand load is already running: joining it silently keeps its UI branch,
+    // which reports progress in the dropdown the user is looking at.
+    if (this.searchIndexLoadPromise) {
+      await this.searchIndexLoadPromise;
+      return;
+    }
+
     this.isLoadingInBackground = true;
 
     try {
@@ -783,11 +857,24 @@ class ModuleSearch {
     }
   }
 
-  async loadSearchIndex() {
+  // Single-flight wrapper: focus starts a load without awaiting it, and the first
+  // keystroke awaits one too. Without sharing the in-flight promise both ran, so the
+  // worker got a second INIT and rebuilt the index - hence lunr's "Overwriting
+  // existing registered function: lunr-multi-trimmer-en-ru".
+  loadSearchIndex() {
     if (this.isDataLoaded) {
-      return; // Already loaded
+      return Promise.resolve();
     }
+    if (!this.searchIndexLoadPromise) {
+      this.searchIndexLoadPromise = this.loadSearchIndexOnce()
+        .finally(() => {
+          this.searchIndexLoadPromise = null;
+        });
+    }
+    return this.searchIndexLoadPromise;
+  }
 
+  async loadSearchIndexOnce() {
     try {
       // Refresh language before reading cache to keep entries separated by page language.
       this.refreshLanguageDetection();
@@ -944,6 +1031,9 @@ class ModuleSearch {
   buildLunrIndex() {
     const searchData = this.searchData;
     const useRussianSupport = this.currentLang === 'ru' && typeof lunr.multiLanguage !== 'undefined';
+    // Inside lunr(function() {...}) `this` is the Lunr builder, so class methods have
+    // to be captured beforehand - calling this.normalizeKeywords() there throws.
+    const normalizeKeywords = (keywords) => this.normalizeKeywords(keywords);
 
     // Use multilingual support for Russian, default for English
     this.lunrIndex = lunr(function() {
@@ -967,7 +1057,7 @@ class ModuleSearch {
           const docData = {
             id: `doc_${docCounter}`,
             title: doc.title || '',
-            keywords: this.normalizeKeywords(doc.keywords),
+            keywords: normalizeKeywords(doc.keywords),
             module: doc.module || '',
             summary: doc.summary || '',
             content: doc.content || '',
@@ -992,7 +1082,7 @@ class ModuleSearch {
           const paramData = {
             id: `param_${paramCounter}`,
             title: param.name || '',
-            keywords: this.normalizeKeywords(param.keywords),
+            keywords: normalizeKeywords(param.keywords),
             module: param.module || '',
             resName: param.resName || '',
             content: param.content || '',
@@ -1033,6 +1123,19 @@ class ModuleSearch {
   // Converts parsed keywords to search text used by Lunr/boosting.
   normalizeKeywords(keywords) {
     return this.parseKeywords(keywords).join(' ');
+  }
+
+  // Converts the page-level searchBoost front matter value to a multiplier.
+  // The value is not capped: overriding a title match legitimately needs a large
+  // multiplier. Anything missing, non-numeric or non-positive falls back to 1.
+  normalizeSearchBoost(searchBoost) {
+    const value = typeof searchBoost === 'string' ? parseFloat(searchBoost) : searchBoost;
+
+    if (typeof value !== 'number' || !isFinite(value) || value <= 0) {
+      return 1;
+    }
+
+    return value;
   }
 
   buildSearchDictionary() {
@@ -1322,36 +1425,20 @@ class ModuleSearch {
       }
     }
 
-    // Apply comprehensive sanitization for all Lunr special operators and patterns
-    let sanitized = query;
-    let hasChanges = false;
+    // A query is plain text: everything Lunr would read as syntax is neutralized here.
+    const sanitized = LUNR_SYNTAX_RULES
+      .reduce((value, [pattern, replacement]) => value.replace(pattern, replacement), query)
+      .replace(/\s+/g, ' ')
+      .trim();
 
-    // Handle field patterns like "field:value" or queries starting with colon like ":version"
-    if (/^[a-zA-Z]*:/.test(sanitized)) {
-      sanitized = sanitized.replace(/:/g, ' ');
-      hasChanges = true;
-    }
+    return sanitized === query ? query : sanitized;
+  }
 
-    // Handle Lunr PRESENCE operator (--)
-    if (sanitized.includes('--')) {
-      sanitized = sanitized.replace(/--/g, ' ');
-      hasChanges = true;
-    }
-
-    // Handle other Lunr operators (+ and - at the beginning of words)
-    const lunrOperatorPattern = /(\s|^)[+\-](\w+)/g;
-    if (lunrOperatorPattern.test(sanitized)) {
-      sanitized = sanitized.replace(lunrOperatorPattern, '$1$2');
-      hasChanges = true;
-    }
-
-    if (hasChanges) {
-      sanitized = sanitized.trim();
-      // console.log(`Lunr operators detected, sanitized: "${query}" -> "${sanitized}"`);
-      return sanitized;
-    }
-
-    return query;
+  // A colon means the user pasted a "key: value" pair from a manifest, where both parts
+  // have to appear on the page. Sanitization has already turned the colon into a space
+  // by the time the query is searched, so the hint is read from the raw input.
+  isKeyValueQuery(query) {
+    return /[\p{L}\p{N}][ \t]*:[ \t]*[\p{L}\p{N}]/u.test(String(query == null ? '' : query));
   }
 
   normalizeSynonymKey(value) {
@@ -1361,21 +1448,86 @@ class ModuleSearch {
       .trim();
   }
 
+  // Builds the directed lookup map (normalized term -> extra queries) out of
+  // synonymGroups plus the optional one-way synonyms overrides. Keys are
+  // normalized here, because lookups always go through normalizeSynonymKey().
+  // Both sides are sanitized once, at build time: the map is looked up with an
+  // already-sanitized query, and the worker receives it ready to search with.
+  getNormalizedSynonyms() {
+    if (this.normalizedSynonyms) {
+      return this.normalizedSynonyms;
+    }
+
+    const normalized = {};
+    const addLink = (from, to) => {
+      const key = this.sanitizeQueryForSearch(this.normalizeSynonymKey(from));
+      const value = this.sanitizeQueryForSearch(this.normalizeSynonymKey(to));
+      if (!key || !value || key === value) {
+        return;
+      }
+      if (!normalized[key]) {
+        normalized[key] = [];
+      }
+      if (!normalized[key].includes(value)) {
+        normalized[key].push(value);
+      }
+    };
+
+    (this.options.synonymGroups || []).forEach((group) => {
+      const members = (Array.isArray(group) ? group : [group])
+        .filter((member) => typeof member === 'string' && member.trim().length > 0);
+      members.forEach((member) => {
+        members.forEach((other) => addLink(member, other));
+      });
+    });
+
+    const directed = this.options.synonyms || {};
+    Object.keys(directed).forEach((key) => {
+      const values = Array.isArray(directed[key]) ? directed[key] : [directed[key]];
+      values.forEach((value) => addLink(key, value));
+    });
+
+    this.normalizedSynonyms = normalized;
+    return normalized;
+  }
+
+  // Looks up synonyms for the whole query and for every word window inside it,
+  // so "провайдеры аутентификации в dex" still expands to dexprovider.
   getSynonymCandidates(query) {
     const normalizedQuery = this.normalizeSynonymKey(query);
-    if (!normalizedQuery || !this.options.synonyms) {
+    if (!normalizedQuery) {
       return [];
     }
 
-    const rawCandidates = this.options.synonyms[normalizedQuery];
-    if (!rawCandidates) {
-      return [];
+    const synonymMap = this.getNormalizedSynonyms();
+    const words = normalizedQuery.split(' ').filter(Boolean);
+    const lookupKeys = new Set([normalizedQuery]);
+    const maxWindow = Math.min(words.length, 4);
+    for (let size = maxWindow; size >= 1; size--) {
+      for (let start = 0; start + size <= words.length; start++) {
+        lookupKeys.add(words.slice(start, start + size).join(' '));
+      }
     }
 
-    const items = Array.isArray(rawCandidates) ? rawCandidates : [rawCandidates];
-    return items
-      .map((item) => this.sanitizeQueryForSearch(this.normalizeSynonymKey(item)))
-      .filter((item) => item && item !== normalizedQuery);
+    const candidates = [];
+    const seen = new Set([normalizedQuery]);
+    lookupKeys.forEach((key) => {
+      const rawCandidates = synonymMap[key];
+      if (!rawCandidates) {
+        return;
+      }
+      const items = Array.isArray(rawCandidates) ? rawCandidates : [rawCandidates];
+      items.forEach((item) => {
+        const candidate = this.normalizeSynonymKey(item);
+        if (!candidate || seen.has(candidate)) {
+          return;
+        }
+        seen.add(candidate);
+        candidates.push(candidate);
+      });
+    });
+
+    return candidates;
   }
 
   async handleSearch(query) {
@@ -1399,9 +1551,18 @@ class ModuleSearch {
     try {
       // Sanitize the query to handle URLs and other problematic patterns
       const sanitizedQuery = this.sanitizeQueryForSearch(query);
+      // Read from the raw input: sanitization has already turned the colon into a space.
+      const requireAllWords = this.isKeyValueQuery(query);
 
       this.lastQuery = query; // Keep original query for display
       this.resetPagination();
+
+      // A query built only from operators ("*", "+") sanitizes down to nothing, and an
+      // empty Lunr query matches the entire corpus - 7154 pages on the current index.
+      if (!sanitizedQuery.trim()) {
+        this.showNoResults(query);
+        return;
+      }
 
       // Clear any existing fuzzy search messages
       this.clearFuzzySearchMessages();
@@ -1409,12 +1570,18 @@ class ModuleSearch {
       // Search is executed in worker when available, otherwise in main thread.
       let results = [];
       let highlightQuery = sanitizedQuery; // Use sanitized query for highlighting
+      // Terms the result set was matched by: query itself plus applied synonyms
+      // and fuzzy fallbacks, so all of them get highlighted in snippets.
+      let highlightTerms = this.expandQueryHighlightTerms(sanitizedQuery);
 
       if (this.useSearchWorker && this.workerInitialized) {
         try {
-          const workerResponse = await this.searchWithWorker(query);
+          const workerResponse = await this.searchWithWorker(sanitizedQuery, requireAllWords);
           results = workerResponse.results || [];
           highlightQuery = workerResponse.highlightQuery || sanitizedQuery;
+          highlightTerms = (workerResponse.highlightTerms && workerResponse.highlightTerms.length > 0)
+            ? workerResponse.highlightTerms
+            : this.expandQueryHighlightTerms(highlightQuery);
         } catch (workerError) {
           console.warn('Worker search failed, falling back to main thread:', workerError);
           this.useSearchWorker = false;
@@ -1467,10 +1634,28 @@ class ModuleSearch {
           }
         };
 
+        // "kind: configmap" is a key/value pair, so both words are required: that is 29
+        // pages against 381 when the same words are OR-ed. Pages that never mention them
+        // together are still reachable, because an empty strict result falls back to OR.
+        const searchKeyValueAware = (plainQuery) => {
+          if (requireAllWords) {
+            const strictQuery = this.buildPhraseQuery(plainQuery);
+            if (strictQuery !== plainQuery) {
+              const strictSearch = searchWithFallback(strictQuery);
+              if (strictSearch.results.length > 0) {
+                // Highlighting keeps the plain query: "+word" is a Lunr operator, not text.
+                return { results: strictSearch.results, highlightQuery: plainQuery };
+              }
+            }
+          }
+          return searchWithFallback(plainQuery);
+        };
+
         try {
-          const initialSearch = searchWithFallback(sanitizedQuery);
+          const initialSearch = searchKeyValueAware(sanitizedQuery);
           results = initialSearch.results;
           highlightQuery = initialSearch.highlightQuery;
+          highlightTerms = this.expandQueryHighlightTerms(highlightQuery);
         } catch (error) {
           console.warn('Lunr search error with sanitized query:', error);
           this.showError('Search query contains invalid characters. Please try a different search term.');
@@ -1482,8 +1667,12 @@ class ModuleSearch {
         const synonymResults = [];
         for (const synonymQuery of synonymCandidates) {
           try {
-            const synonymSearch = searchWithFallback(synonymQuery);
-            synonymResults.push(...synonymSearch.results);
+            const synonymSearch = searchWithFallback(this.buildPhraseQuery(synonymQuery));
+            if (synonymSearch.results.length > 0) {
+              synonymResults.push(...synonymSearch.results);
+              // Highlighted as written: matched as a whole phrase, never word by word.
+              highlightTerms.push(synonymQuery);
+            }
           } catch (synonymError) {
             console.warn('Synonym search failed:', synonymError);
           }
@@ -1507,6 +1696,7 @@ class ModuleSearch {
             results = this.lunrIndex.search(bestSuggestion);
             // Use the fuzzy suggestion for highlighting
             highlightQuery = bestSuggestion;
+            highlightTerms.push(...this.expandQueryHighlightTerms(bestSuggestion));
           }
         }
 
@@ -1519,6 +1709,7 @@ class ModuleSearch {
               results = wordResults;
               // Use the fuzzy suggestion for highlighting
               highlightQuery = suggestion.item;
+              highlightTerms.push(...this.expandQueryHighlightTerms(suggestion.item));
               break;
             }
           }
@@ -1547,6 +1738,9 @@ class ModuleSearch {
         if (doc._indexBoost) {
           boost *= doc._indexBoost;
         }
+
+        // Apply per-document boost declared in page front matter
+        boost *= this.normalizeSearchBoost(doc.searchBoost);
 
         // Check if the search query matches the module name
         const queryLower = sanitizedQuery.toLowerCase();
@@ -1637,6 +1831,7 @@ class ModuleSearch {
       // Store current results and display them
       this.currentResults = this.groupResults(boostedResults);
       this.currentHighlightQuery = highlightQuery; // Store the query to use for highlighting
+      this.currentHighlightTerms = Array.from(new Set(highlightTerms.filter(Boolean)));
       this.displayResults();
 
     } catch (error) {
@@ -1723,20 +1918,32 @@ class ModuleSearch {
 
     let resultsHtml = '';
 
+    // Highlight by every matched term (query + synonyms), not just the raw query.
+    const highlightTerms = (this.currentHighlightTerms && this.currentHighlightTerms.length > 0)
+      ? this.currentHighlightTerms
+      : [this.currentHighlightQuery || this.lastQuery];
+
     // Display Modules as a row at the top
     if (this.currentResults.modules.length > 0) {
-      resultsHtml += this.renderModulesRow(this.currentResults.modules, this.currentHighlightQuery || this.lastQuery);
+      resultsHtml += this.renderModulesRow(this.currentResults.modules, highlightTerms);
     }
 
-    // Display API results in priority order
-    if (this.currentResults.isResourceNameMatch.length > 0 || this.currentResults.nameMatch.length > 0 || this.currentResults.isResourceOther.length > 0 || this.currentResults.parameterOther.length > 0) {
+    // The four API subgroups are a single list for the user: they share one header,
+    // so they are concatenated in priority order and paginated by one counter.
+    // Rendering them separately would put up to four "show more" buttons in the
+    // block, each extending its own subgroup somewhere in the middle of the list.
+    const apiResults = [
+      ...this.currentResults.isResourceNameMatch,
+      ...this.currentResults.nameMatch,
+      ...this.currentResults.isResourceOther,
+      ...this.currentResults.parameterOther
+    ];
+
+    if (apiResults.length > 0) {
       resultsHtml += `
         <div class="results-group">
           <div class="results-group-header">${this.t('api')}</div>
-          ${this.currentResults.isResourceNameMatch.length > 0 ? this.renderResultGroup(this.currentResults.isResourceNameMatch, this.currentHighlightQuery || this.lastQuery, 'isResourceNameMatch') : ''}
-          ${this.currentResults.nameMatch.length > 0 ? this.renderResultGroup(this.currentResults.nameMatch, this.currentHighlightQuery || this.lastQuery, 'nameMatch') : ''}
-          ${this.currentResults.isResourceOther.length > 0 ? this.renderResultGroup(this.currentResults.isResourceOther, this.currentHighlightQuery || this.lastQuery, 'isResourceOther') : ''}
-          ${this.currentResults.parameterOther.length > 0 ? this.renderResultGroup(this.currentResults.parameterOther, this.currentHighlightQuery || this.lastQuery, 'parameterOther') : ''}
+          ${this.renderResultGroup(apiResults, highlightTerms, 'api')}
         </div>
       `;
     }
@@ -1746,7 +1953,7 @@ class ModuleSearch {
       resultsHtml += `
         <div class="results-group">
           <div class="results-group-header">${this.t('documentation')}</div>
-          ${this.renderResultGroup(this.currentResults.document, this.currentHighlightQuery || this.lastQuery, 'document')}
+          ${this.renderResultGroup(this.currentResults.document, highlightTerms, 'document')}
         </div>
       `;
     }
@@ -1754,7 +1961,7 @@ class ModuleSearch {
     this.searchResults.innerHTML = resultsHtml;
   }
 
-  renderModulesRow(results, query) {
+  renderModulesRow(results, highlightTerms) {
     const moduleBadges = results.map(result => {
       if (result._isModulePage) {
         const moduleName = result._moduleName;
@@ -1785,7 +1992,7 @@ class ModuleSearch {
     return html;
   }
 
-  renderBreadcrumbsRow(breadcrumbs, query) {
+  renderBreadcrumbsRow(breadcrumbs, highlightTerms) {
     if (!Array.isArray(breadcrumbs) || breadcrumbs.length === 0) {
       return '';
     }
@@ -1817,7 +2024,7 @@ class ModuleSearch {
 
     const breadcrumbBadges = visibleItems.map((item, index) => {
       const separator = index > 0 ? '<span class="result-breadcrumbs-separator">→</span>' : '';
-      return `${separator}<span class="result-breadcrumbs">${this.highlightText(item, query)}</span>`;
+      return `${separator}<span class="result-breadcrumbs">${this.highlightText(item, highlightTerms)}</span>`;
     });
 
     if (isTruncated) {
@@ -1831,7 +2038,7 @@ class ModuleSearch {
     return `<div class="breadcrumbs-row">${breadcrumbBadges.join('')}</div>`;
   }
 
-  renderResultGroup(results, query, groupType) {
+  renderResultGroup(results, highlightTerms, groupType) {
     const displayedCount = this.displayedCounts[groupType];
     const topResults = results.slice(0, displayedCount);
 
@@ -1856,21 +2063,25 @@ class ModuleSearch {
 
       let title, module, description, breadcrumbs;
 
-      if (groupType === 'isResourceNameMatch' || groupType === 'nameMatch' || groupType === 'isResourceOther' || groupType === 'parameterOther') {
+      // Markup is chosen per result, not per group: the API block mixes subgroups,
+      // and doc.type is set for every grouped result by groupResults().
+      const isParameter = doc.type === 'parameter' || (!doc.title && !!doc.name);
+
+      if (isParameter) {
         // For configuration results (parameters) and isResource parameters
-        title = this.highlightText(doc.name || '', query);
+        title = this.highlightText(doc.name || '', highlightTerms);
         module = doc.module ? `<div class="result-module">${doc.module}</div>` : '';
         if (doc.resName != doc.name) {
           module += doc.resName ? `<div class="result-module">${doc.resName}</div>` : '';
         }
-        breadcrumbs = this.renderBreadcrumbsRow(doc.bc, query);
-        description = this.highlightText(this.getRelevantContentSnippet(doc.content || '', query) || '', query);
+        breadcrumbs = this.renderBreadcrumbsRow(doc.bc, highlightTerms);
+        description = this.highlightText(this.getRelevantContentSnippet(doc.content || '', highlightTerms), highlightTerms);
       } else {
         // For other documentation
-        title = this.highlightText(doc.title || '', query);
+        title = this.highlightText(doc.title || '', highlightTerms);
         module = doc.module ? `<div class="result-module">${doc.module}</div>` : '';
-        breadcrumbs = this.renderBreadcrumbsRow(doc.bc, query);
-        description = this.highlightText(this.getRelevantContentSnippet(doc.content || '', query) || '', query);
+        breadcrumbs = this.renderBreadcrumbsRow(doc.bc, highlightTerms);
+        description = this.highlightText(this.getRelevantContentSnippet(doc.content || '', highlightTerms), highlightTerms);
       }
 
       html += `
@@ -1883,28 +2094,59 @@ class ModuleSearch {
       `;
     });
 
+    // Without this button the group is capped at its initial count with no way
+    // to reach the rest of the matches. Clicks are handled by delegation in
+    // setupEventListeners(), which already keeps the dropdown open.
+    if (displayedCount < results.length) {
+      const remaining = results.length - displayedCount;
+      const nextBatch = Math.min(this.pageSize, remaining);
+      // The whole remainder goes in the label too: with only the batch size shown there
+      // was no way to tell whether one more click ends the list or forty do.
+      const label = remaining > nextBatch
+        ? this.t('showMoreRemainingPattern', { count: nextBatch, remaining })
+        : this.t('showMorePattern', { count: nextBatch });
+      html += `
+        <button type="button" class="tile__pagination" data-group-type="${groupType}">
+          <p class="tile__pagination--descr">${label}</p>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M8 1C8.55229 1 9 1.44772 9 2V7L14 7C14.5523 7 15 7.44772 15 8C15 8.55229 14.5523 9 14 9L9 9L9 14C9 14.5523 8.55229 15 8 15C7.44772 15 7 14.5523 7 14L7 9H2C1.44772 9 1 8.55229 1 8C1 7.44772 1.44772 7 2 7L7 7L7 2C7 1.44772 7.44772 1 8 1Z" fill="#0D69F2"/>
+          </svg>
+        </button>
+      `;
+    }
+
     return html;
   }
 
   loadMore(groupType) {
-    if (groupType === 'isResourceNameMatch' || groupType === 'nameMatch' || groupType === 'isResourceOther' || groupType === 'parameterOther' || groupType === 'document') {
-      this.displayedCounts[groupType] += 5;
-      this.displayResults();
+    if (!Object.prototype.hasOwnProperty.call(this.displayedCounts, groupType)) {
+      return;
+    }
+
+    // displayResults() replaces innerHTML, which resets the dropdown scroll:
+    // keep the position so the list grows below the button instead of jumping up.
+    const scrollTop = this.searchResults ? this.searchResults.scrollTop : 0;
+    this.displayedCounts[groupType] += this.pageSize;
+    this.displayResults();
+    if (this.searchResults) {
+      this.searchResults.scrollTop = scrollTop;
     }
   }
 
   resetPagination() {
     this.displayedCounts = {
-      isResourceNameMatch: 5,
-      nameMatch: 5,
-      isResourceOther: 5,
-      parameterOther: 5,
-      document: 5
+      api: this.pageSize,
+      document: this.pageSize
     };
   }
 
-  getRelevantContentSnippet(content, query) {
-    if (!content || !query) return '';
+  // Returns a plain-text snippet; callers highlight it once via highlightText().
+  // Every highlight term (query, its words, synonyms) participates in scoring, so a
+  // snippet mentioning only the synonym (dexprovider) still wins for a RU query.
+  getRelevantContentSnippet(content, terms) {
+    if (!content) return '';
+
+    const highlightTerms = this.normalizeHighlightTerms(terms);
 
     // Helper function to truncate text without cutting words
     const truncateText = (text, maxLength) => {
@@ -1924,61 +2166,196 @@ class ModuleSearch {
 
     // Split content into sentences or paragraphs
     const sentences = content.split(/[.!?]+/).filter(s => s.trim().length > 0);
+    if (sentences.length === 0) return '';
 
-    // Find sentences that contain the search query
-    const relevantSentences = sentences.filter(sentence =>
-      sentence.toLowerCase().includes(query.toLowerCase())
-    );
+    const scoredTerms = highlightTerms
+      .map((term) => ({ term, regex: this.buildHighlightRegex([term]) }))
+      .filter((entry) => entry.regex);
 
-    if (relevantSentences.length > 0) {
-      // Take the first relevant sentence and truncate if too long
-      let snippet = relevantSentences[0].trim();
-      if (snippet.length > 200) {
-        snippet = truncateText(snippet, 200);
-      }
-      return this.highlightText(snippet, query);
-    }
-
-    // If no exact matches, find sentences with partial matches
-    const queryWords = query.toLowerCase().split(/\s+/).filter(w => w.length > 2);
-    const scoredSentences = sentences.map(sentence => {
-      const lowerSentence = sentence.toLowerCase();
+    let best = null;
+    sentences.forEach((sentence) => {
+      // Score against tag-free text: a hit inside markup would never be highlighted.
+      const plainSentence = sentence.replace(/<[^>]*>/g, ' ');
+      let matchedTerms = 0;
       let score = 0;
-      queryWords.forEach(word => {
-        if (lowerSentence.includes(word)) {
-          score += word.length; // Longer words get higher scores
+
+      scoredTerms.forEach(({ term, regex }) => {
+        regex.lastIndex = 0;
+        if (regex.test(plainSentence)) {
+          matchedTerms++;
+          score += term.length; // Longer terms and whole phrases weigh more
         }
       });
-      return { sentence, score };
-    }).filter(item => item.score > 0);
 
-    if (scoredSentences.length > 0) {
-      // Sort by score and take the best match
-      scoredSentences.sort((a, b) => b.score - a.score);
-      let snippet = scoredSentences[0].sentence.trim();
-      if (snippet.length > 200) {
-        snippet = truncateText(snippet, 200);
+      if (matchedTerms === 0) return;
+
+      // Prefer sentences covering more distinct terms, then the heavier match.
+      const weight = matchedTerms * 1000 + score;
+      if (!best || weight > best.weight) {
+        best = { sentence, weight };
       }
-      return this.highlightText(snippet, query);
-    }
+    });
 
     // Fallback: take the first sentence and truncate
-    if (sentences.length > 0) {
-      let snippet = sentences[0].trim();
-      if (snippet.length > 200) {
-        snippet = truncateText(snippet, 200);
-      }
-      return snippet;
-    }
-
-    return '';
+    const snippet = (best ? best.sentence : sentences[0]).trim();
+    return snippet.length > 200 ? truncateText(snippet, 200) : snippet;
   }
 
-  highlightText(text, query) {
+  escapeRegExp(value) {
+    return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  // Flattens highlight input (string or array) into a unique term list: whole
+  // phrases first, then their separate words, longest first so phrases win.
+  normalizeHighlightTerms(terms) {
+    const source = Array.isArray(terms) ? terms : [terms];
+    const collected = [];
+    const seen = new Set();
+
+    const push = (value) => {
+      const term = String(value == null ? '' : value).trim();
+      if (term.length < 2) return;
+      const key = term.toLowerCase();
+      if (seen.has(key)) return;
+      seen.add(key);
+      collected.push(term);
+    };
+
+    // Terms arrive ready to use: query words are split by expandQueryHighlightTerms(),
+    // while a synonym phrase stays whole so "siem" does not mark every "management".
+    source.forEach(push);
+
+    return collected.sort((a, b) => b.length - a.length);
+  }
+
+  // A query is an OR over its words, and a document may match just one of them, so
+  // every word is highlighted on its own alongside the full string. Synonym phrases
+  // are excluded from this: they are matched whole, see buildPhraseQuery().
+  expandQueryHighlightTerms(query) {
+    const value = String(query == null ? '' : query).trim();
+    if (!value) {
+      return [];
+    }
+    return /\s/.test(value) ? [value, ...value.split(/\s+/)] : [value];
+  }
+
+  // Lunr has no phrase queries: a multi-word synonym passed as a plain string is an OR
+  // over its words, so "siem" would drag in every page that merely says "management"
+  // (1031 hits against 3 for the phrase as a whole). Requiring every word instead
+  // ("+security +information +event +management") keeps the match tied to the phrase.
+  buildPhraseQuery(phrase) {
+    const words = String(phrase == null ? '' : phrase).trim().split(/\s+/).filter(Boolean);
+    if (words.length < 2) {
+      return phrase;
+    }
+
+    // Bail out instead of risking a parse error on Lunr query operators (+ - : ^ ~ *).
+    if (words.some((word) => !/^[\p{L}\p{N}_./-]+$/u.test(word))) {
+      return phrase;
+    }
+
+    const required = words.filter((word) => !this.isSearchStopWord(word));
+
+    if (required.length === 0) {
+      return phrase;
+    }
+    if (required.length === 1) {
+      return required[0];
+    }
+
+    return required.map((word) => `+${word}`).join(' ');
+  }
+
+  // Stop words are dropped when the index is built, so a required clause made of one
+  // ("+and") empties the entire result set. The search pipeline keeps them, unlike the
+  // indexing pipeline, so they have to be recognized explicitly.
+  isSearchStopWord(word) {
+    const lower = String(word == null ? '' : word).toLowerCase();
+    const filters = typeof lunr === 'undefined'
+      ? []
+      : [lunr.stopWordFilter, lunr.ru ? lunr.ru.stopWordFilter : null];
+
+    return filters.some((filter) => {
+      if (typeof filter !== 'function') return false;
+      try {
+        return !filter(lower);
+      } catch (error) {
+        return false;
+      }
+    });
+  }
+
+  // Builds a regexp source for a single term, tolerating inflections so the
+  // query "провайдеры" also marks "провайдеров" in the text.
+  buildHighlightTermPattern(term) {
+    if (/\s/.test(term)) {
+      // Phrase: allow any whitespace run between words.
+      return term.split(/\s+/).map((word) => this.buildHighlightTermPattern(word)).join('\\s+');
+    }
+
+    const escaped = this.escapeRegExp(term);
+    if (term.length < 5 || !/^[\p{L}\p{N}]+$/u.test(term)) {
+      return escaped;
+    }
+
+    const isCyrillic = /\p{Script=Cyrillic}/u.test(term);
+    if (!isCyrillic) {
+      // Latin: allow a short suffix (plural, -ing, -ed).
+      return `${escaped}[\\p{L}]{0,2}`;
+    }
+
+    const cut = term.length >= 8 ? 3 : 2;
+    return `${this.escapeRegExp(term.slice(0, term.length - cut))}[\\p{L}]{0,4}`;
+  }
+
+  // Compiles (and caches) one alternation regex covering all highlight terms.
+  buildHighlightRegex(terms) {
+    const normalized = this.normalizeHighlightTerms(terms);
+    if (normalized.length === 0) return null;
+
+    if (!this.highlightRegexCache) {
+      this.highlightRegexCache = new Map();
+    }
+
+    const cacheKey = normalized.join('\u0000');
+    if (this.highlightRegexCache.has(cacheKey)) {
+      return this.highlightRegexCache.get(cacheKey);
+    }
+
+    const pattern = `(${normalized.map((term) => this.buildHighlightTermPattern(term)).join('|')})`;
+    let regex = null;
+    try {
+      // Lookbehind keeps matches at word starts, so a stem never lights up the
+      // middle of an unrelated word.
+      regex = new RegExp(`(?<![\\p{L}\\p{N}])${pattern}`, 'giu');
+    } catch (error) {
+      try {
+        regex = new RegExp(pattern, 'giu');
+      } catch (fallbackError) {
+        console.warn('Failed to build highlight regex:', fallbackError);
+        regex = null;
+      }
+    }
+
+    if (this.highlightRegexCache.size > 64) {
+      this.highlightRegexCache.clear();
+    }
+    this.highlightRegexCache.set(cacheKey, regex);
+    return regex;
+  }
+
+  highlightText(text, terms) {
     if (!text) return '';
 
-    const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-    return text.replace(regex, '<mark>$1</mark>');
+    const regex = this.buildHighlightRegex(terms);
+    if (!regex) return text;
+
+    // Snippets may carry markup, so only text between tags is marked up: otherwise
+    // a match inside an attribute (href="/dexprovider/") would corrupt the HTML.
+    return String(text)
+      .split(/(<[^>]*>)/)
+      .map((chunk) => (chunk.charAt(0) === '<' ? chunk : chunk.replace(regex, '<mark>$1</mark>')))
+      .join('');
   }
 
   buildTargetUrl(originalTargetUrl, moduleType = null, moduleName = null) {

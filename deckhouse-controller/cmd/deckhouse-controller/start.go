@@ -49,10 +49,10 @@ import (
 	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	"k8s.io/client-go/util/retry"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	d8Apis "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller"
 	debugserver "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/debug-server"
-	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -220,7 +220,7 @@ func runWithLeaderElection(ctx context.Context, operator *addonoperator.AddonOpe
 		identity = fmt.Sprintf("%s.%s.%s.pod.%s", podName, strings.ReplaceAll(podIP, ".", "-"), podNs, clusterDomain)
 	}
 
-	err := operator.WithLeaderElector(&leaderelection.LeaderElectionConfig{
+	elector, err := leaderelection.NewLeaderElector(leaderelection.LeaderElectionConfig{
 		// Create a leaderElectionConfig for leader election
 		Lock: &resourcelock.LeaseLock{
 			LeaseMeta: v1.ObjectMeta{
@@ -252,8 +252,13 @@ func runWithLeaderElection(ctx context.Context, operator *addonoperator.AddonOpe
 		ReleaseOnCancel: true,
 	})
 	if err != nil {
-		operator.Logger.Error("run with leader elector", log.Err(err))
+		logger.Fatal("create leader elector", log.Err(err))
 	}
+
+	// addon-operator does not run the election, it only reads the leader state in its
+	// /readyz handler: a non-leader replica reports readiness by proxying to the leader
+	// instead of to its own converge, which never runs there.
+	operator.LeaderElector = elector
 
 	go func() {
 		<-ctx.Done()
@@ -263,7 +268,7 @@ func runWithLeaderElection(ctx context.Context, operator *addonoperator.AddonOpe
 		}
 	}()
 
-	operator.LeaderElector.Run(ctx)
+	elector.Run(ctx)
 }
 
 func run(ctx context.Context, operator *addonoperator.AddonOperator, logger *log.Logger) error {

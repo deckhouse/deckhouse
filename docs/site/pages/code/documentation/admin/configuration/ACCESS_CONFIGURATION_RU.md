@@ -1,5 +1,6 @@
 ---
 title: "Настройка доступа"
+description: Как ограничить создание групп и проектов и управлять правами доступа
 permalink: ru/code/documentation/admin/install/access.html
 lang: ru
 ---

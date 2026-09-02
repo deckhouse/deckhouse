@@ -71,8 +71,17 @@ document.addEventListener("DOMContentLoaded", function () {
       // Default Source - Site
       const source_id = 'UC_GAZF8L';
 
+      const modalAttr = this.wrapper.dataset.modalWindow;
+
       // Default Assigned by - Anna Saprykina
-      const assigned_by_id = 7;
+      const default_assigned_by_id = 7;
+
+      // Assigned by for particular forms
+      const assigned_by_id_by_form = {
+        'request_access': 937,
+      };
+
+      const assigned_by_id = assigned_by_id_by_form[modalAttr] || default_assigned_by_id;
 
       const bitrixFields = {
         fields: {
@@ -82,18 +91,43 @@ document.addEventListener("DOMContentLoaded", function () {
         }
       }
 
-      const modalAttr = this.wrapper.dataset.modalWindow;
+      const isEn = FormData.language === 'en' || document.documentElement.lang === 'en';
 
-      if (modalAttr == 'request_access') {
+      if (isEn) {
+        const formTypeLabelsEn = {
+          'request_access': 'free trial',
+          'request_callback': 'callback',
+          'request_education': 'training',
+          'request_demo': 'demo',
+          'get_a_report': 'report',
+          'become_a_partner': 'partnership'
+        };
+
+        const label = formTypeLabelsEn[modalAttr] ? formTypeLabelsEn[modalAttr] + ' ' : '';
+        const reqType = label ? label + 'request' : 'request';
+
         if (FormData.company) {
-          bitrixFields.fields['TITLE'] += FormData.company + ' - запрос бесплатного триала';
+          bitrixFields.fields['TITLE'] = `${FormData.company} - ${reqType} from Deckhouse website`;
+        } else {
+          bitrixFields.fields['TITLE'] = `${reqType.charAt(0).toUpperCase() + reqType.slice(1)} from Deckhouse website`;
         }
       } else {
-        if (FormData.company) {
-          bitrixFields.fields['TITLE'] += FormData.company + ' - запрос ';
-        }
+        const formTypeLabelsRu = {
+          'request_access': 'бесплатного триала',
+          'request_callback': 'обратного звонка',
+          'request_education': 'обучения',
+          'request_demo': 'демо',
+          'get_a_report': 'отчета',
+          'become_a_partner': 'партнерства'
+        };
 
-        bitrixFields.fields['TITLE'] += 'с сайта Deckhouse ';
+        const label = formTypeLabelsRu[modalAttr] ? ' ' + formTypeLabelsRu[modalAttr] : '';
+
+        if (FormData.company) {
+          bitrixFields.fields['TITLE'] = FormData.company + ' - запрос' + label + ' с сайта Deckhouse';
+        } else {
+          bitrixFields.fields['TITLE'] = 'Запрос' + label + ' с сайта Deckhouse';
+        }
       }
 
       if (FormData.name) {
@@ -263,6 +297,7 @@ document.addEventListener("DOMContentLoaded", function () {
     openModal(e) {
       e.preventDefault();
       this.wrapper.style.display = 'flex';
+      document.body.classList.add('modal-opened');
       document.addEventListener('keydown', this.closeModalOnEscape.bind(this));
     }
 
@@ -272,6 +307,7 @@ document.addEventListener("DOMContentLoaded", function () {
       this.intro.style.display = 'block';
       this.success.style.display = 'none';
       this.error.style.display = 'none';
+      document.body.classList.remove('modal-opened');
     }
 
     closeModalOnEscape(e) {
@@ -280,6 +316,7 @@ document.addEventListener("DOMContentLoaded", function () {
         this.intro.style.display = 'block';
         this.success.style.display = 'none';
         this.error.style.display = 'none';
+        document.body.classList.remove('modal-opened');
       }
     }
 

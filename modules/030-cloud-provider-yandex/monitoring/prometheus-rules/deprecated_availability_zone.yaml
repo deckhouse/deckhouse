@@ -94,7 +94,7 @@
              - Get the route table name:
 
                ```bash
-               d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.global.clusterConfiguration.cloud.prefix'
+               d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller module values -g cloud-provider-yandex -o json | jq -c | jq '.global.prefix // .global.clusterConfiguration.cloud.prefix'
                ```
 
              - Get the NAT instance name:

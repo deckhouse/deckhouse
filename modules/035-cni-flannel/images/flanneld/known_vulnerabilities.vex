@@ -1,0 +1,24 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-035cni-flannel-flanneld-known-vulnerabilities",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.53.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 относится к пакету golang.org/x/crypto/openpgp, который является unmaintained и не имеет исправленной версии. В образе присутствует только модуль golang.org/x/crypto (используемый для других криптографических примитивов), тогда как сам пакет openpgp транзитивно не импортируется. Проверки govulncheck и go list -deps подтверждают, что openpgp отсутствует в графе импортов бинарного файла flanneld и уязвимый код не входит ни в один путь исполнения образа, поэтому уязвимость недостижима.",
+      "timestamp": "2026-07-24T12:00:00Z"
+    }
+  ],
+  "timestamp": "2026-07-24T12:00:00Z",
+  "last_updated": "2026-07-24T12:00:00Z"
+}

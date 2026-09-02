@@ -19,7 +19,7 @@ git:
     to: /src
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact
-from: {{ index $.Images ( eq $.SVACE_ENABLED "false" | ternary "builder/golang-alpine" "builder/golang-alpine-svace" ) }}
+from: {{ index $.Images "builder/golang" }}
 final: false
 import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
@@ -42,3 +42,5 @@ shell:
       {{- include "image-build.build" $buildContext | indent 6 }}
     - chown 64535:64535 self-signed-generator
     - chmod 0700 self-signed-generator
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

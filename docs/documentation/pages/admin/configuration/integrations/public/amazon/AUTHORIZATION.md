@@ -327,7 +327,7 @@ The `iamNodeRole` parameter in the AWSClusterConfiguration resource
 lets you override the default IAM role that DKP assigns to all EC2 instances of the cluster nodes.
 
 By default, DKP creates and assigns an IAM role named `<prefix>-node`,
-where `<prefix>` is the value of the global `cloud.prefix` parameter.
+where `<prefix>` is the value of the `global` ModuleConfig `prefix` parameter.
 This role includes the minimum permissions required for node operation.
 
 You can specify the IAM role name in the `iamNodeRole` parameter if you want to:

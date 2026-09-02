@@ -42,6 +42,7 @@ spec:
     metadata:
       labels:
         app: snat
+        security.deckhouse.io/security-policy-exception: snat
       annotations:
         {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
     spec:
@@ -66,8 +67,10 @@ spec:
           readOnlyRootFilesystem: true
           capabilities:
             add:
-            - NET_RAW
-            - NET_ADMIN
+             - NET_RAW
+             - NET_ADMIN
+            drop:
+              - ALL
         image: {{ include "helm_lib_module_image" (list . "snat") }}
         command: ["/usr/bin/python3", "/iptables-loop.py"]
         env:

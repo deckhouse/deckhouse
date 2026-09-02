@@ -179,6 +179,9 @@ spec:
           failureThreshold: 30
         securityContext:
           allowPrivilegeEscalation: false
+          capabilities:
+            drop:
+            - ALL
           runAsGroup: 1337
           runAsNonRoot: true
           runAsUser: 1337

@@ -25,6 +25,7 @@ import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
 	corev1 "k8s.io/api/core/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -87,6 +88,8 @@ var _ = BeforeSuite(func() {
 
 	scheme = k8sruntime.NewScheme()
 	Expect(clientgoscheme.AddToScheme(scheme)).To(Succeed())
+	// The provider-contract specs install one CRD per provider kind at runtime.
+	Expect(apiextensionsv1.AddToScheme(scheme)).To(Succeed())
 	Expect(deckhousev1.AddToScheme(scheme)).To(Succeed())
 	Expect(capiv1beta2.AddToScheme(scheme)).To(Succeed())
 	Expect(mcmv1alpha1.AddToScheme(scheme)).To(Succeed())
@@ -96,7 +99,7 @@ var _ = BeforeSuite(func() {
 	testEnv, cfg, k8sClient, err = testenv.Start(
 		scheme,
 		append(
-			testenv.CRDPaths(testenv.WithNodeGroupCRDFile()),
+			testenv.CRDPaths(testenv.WithNodeGroupCRDFile(), testenv.WithMachineSetCRDFile()),
 			filepath.Join(testdataDir(), "dvpinstanceclass-crd.yaml"),
 			filepath.Join(testdataDir(), "deckhousemachinetemplate-crd.yaml"),
 		)...,
@@ -112,9 +115,14 @@ var _ = BeforeSuite(func() {
 	cloudProvider := &corev1.Secret{}
 	cloudProvider.Namespace = cloudProviderSecretNamespace
 	cloudProvider.Name = cloudProviderSecretName
+	// The label is how RegisteredInstanceClassGVKs finds registrations; without it the suite's
+	// controllers would build no InstanceClass watches at all.
+	cloudProvider.Labels = map[string]string{common.CloudProviderRegistrationLabel: ""}
 	cloudProvider.Data = map[string][]byte{
-		"type":                          []byte(`"dvp"`),
-		"instanceClassKind":             []byte(`"DVPInstanceClass"`),
+		"type": []byte(`"dvp"`),
+		// Raw, unquoted, exactly as the registration template's b64enc writes it.
+		"instanceClassKind":             []byte("DVPInstanceClass"),
+		"instanceClassAPIVersion":       []byte("v1alpha1"),
 		"capiClusterKind":               []byte(`"DeckhouseCluster"`),
 		"capiClusterName":               []byte("dvp"),
 		"capiMachineTemplateKind":       []byte("DeckhouseMachineTemplate"),
@@ -158,8 +166,19 @@ var _ = BeforeSuite(func() {
 	uuidCM.Data = map[string]string{"cluster-uuid": "11111111-2222-3333-4444-555555555555"}
 	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, uuidCM))).To(Succeed())
 
+	By("publishing the cluster-kubernetes configmap")
+	// capi_cloud.go builds a derived_status.Service, which now resolves the target Kubernetes
+	// version from this ConfigMap instead of ClusterConfiguration.kubernetesVersion.
+	clusterKubernetesCM := &corev1.ConfigMap{}
+	clusterKubernetesCM.Namespace = "kube-system"
+	clusterKubernetesCM.Name = "d8-cluster-kubernetes"
+	clusterKubernetesCM.Data = map[string]string{
+		"spec": "desiredVersion: \"1.32\"\nupdateMode: Manual\n",
+	}
+	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, clusterKubernetesCM))).To(Succeed())
+
 	By("starting the manager with the capi controllers")
-	mgr, err := testenv.NewManager(cfg, scheme)
+	mgr, err := testenv.NewManager(suiteCtx, cfg, scheme)
 	Expect(err).NotTo(HaveOccurred())
 	go func() {
 		defer GinkgoRecover()

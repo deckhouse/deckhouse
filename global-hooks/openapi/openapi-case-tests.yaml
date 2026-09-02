@@ -41,6 +41,8 @@ positive:
     # public domain template contain %s in the middle of the domain template
     - modules:
         publicDomainTemplate: "example-%s.com"
+    # cluster prefix at the maximum allowed length (45 chars)
+    - prefix: "lysov-test-0000000000-1111111111-2222222222-3"
   values:
     # all-in
     - clusterConfiguration:
@@ -171,6 +173,10 @@ negative:
       resourcesRequests:
         masterNode:
           memory: "1Gigabyte"
+  # cluster prefix longer than 45 chars — cannot fit a cloud disk name (<=63 chars)
+  - prefix: "common-test-0000000000-1111111111-2222222222-3333333333"
+  # cluster prefix with an uppercase letter (violates the DNS-label pattern)
+  - prefix: "Common-test"
   values:
     # cluster configuration: not support k8s version
     - clusterConfiguration:

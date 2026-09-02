@@ -1,4 +1,4 @@
-{{- $prefix := .Values.global.clusterConfiguration.cloud.prefix | required "global.clusterConfiguration.cloud.prefix is required" }}
+{{- $prefix := (include "helm_lib_cluster_prefix" .) | required "global.prefix (or the deprecated global.clusterConfiguration.cloud.prefix) is required" }}
 apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
 kind: DynamixCluster
 metadata:

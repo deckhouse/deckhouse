@@ -37,9 +37,10 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 
+	"github.com/deckhouse/lib-dhctl/pkg/retry"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/pkg/logger"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/server/server/settings"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/retry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/stringsutil"
 )
 
@@ -202,6 +203,10 @@ func createDHCTLServerConn(ctx context.Context, address string) (*grpc.ClientCon
 	conn, err := grpc.NewClient(
 		"unix://"+address,
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(MaxMessageSize),
+			grpc.MaxCallSendMsgSize(MaxMessageSize),
+		),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("creating client connection: %w", err)

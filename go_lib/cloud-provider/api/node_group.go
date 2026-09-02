@@ -20,6 +20,10 @@ type NodeType string
 const (
 	// NodeTypeCloudPermanent marks a permanently provisioned cloud NodeGroup.
 	NodeTypeCloudPermanent NodeType = "CloudPermanent"
+	// NodeTypeCloudEphemeral marks an autoscaled cloud NodeGroup.
+	NodeTypeCloudEphemeral NodeType = "CloudEphemeral"
+	// NodeTypeStatic marks a NodeGroup of manually provisioned nodes.
+	NodeTypeStatic NodeType = "Static"
 )
 
 // NodeGroup is a typed view of the deckhouse.io NodeGroup resource.
@@ -47,6 +51,8 @@ type NodeGroupSpec struct {
 type CloudInstances struct {
 	ClassReference *ClassReference `json:"classReference,omitempty"`
 	MaxPerZone     int             `json:"maxPerZone,omitempty"`
+	MinPerZone     int             `json:"minPerZone,omitempty"`
+	Zones          []string        `json:"zones,omitempty"`
 }
 
 // ClassReference points a NodeGroup to an InstanceClass resource.

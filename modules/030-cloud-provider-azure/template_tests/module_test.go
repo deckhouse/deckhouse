@@ -31,6 +31,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	"github.com/tidwall/gjson"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
@@ -293,6 +294,13 @@ var _ = Describe("Module :: cloud-provider-azure :: helm template ::", func() {
 			Expect(ccmCRB.Exists()).To(BeTrue())
 			Expect(ccmSecret.Exists()).To(BeTrue())
 
+			// Fallback branch of helm_lib_cluster_prefix: global.prefix unset,
+			// so the CCM config falls back to ClusterConfiguration.cloud.prefix.
+			ccmCloudConfig, err := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(gjson.Get(string(ccmCloudConfig), "securityGroupName").String()).To(Equal("myprefix"))
+			Expect(gjson.Get(string(ccmCloudConfig), "routeTableName").String()).To(Equal("myprefix"))
+
 			Expect(azureCSIDriver.Exists()).To(BeTrue())
 			Expect(azureNodePluginDS.Exists()).To(BeTrue())
 			Expect(azureNodePluginDS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
@@ -332,6 +340,26 @@ var _ = Describe("Module :: cloud-provider-azure :: helm template ::", func() {
 			It("CSI controller should not be present on unsupported Kubernetes versions", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 				Expect(f.KubernetesResource("Deployment", moduleNamespace, "csi-controller").Exists()).To(BeFalse())
+			})
+		})
+
+		Context("With global.prefix (global ModuleConfig) set", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global", globalValues)
+				f.ValuesSet("global.modulesImages", GetModulesImages())
+				f.ValuesSetFromYaml("cloudProviderAzure", moduleValues)
+				f.ValuesSet("global.prefix", "mcprefix")
+				f.HelmRender()
+			})
+
+			It("uses global.prefix over the deprecated ClusterConfiguration.cloud.prefix", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				ccmSecret := f.KubernetesResource("Secret", moduleNamespace, "cloud-controller-manager")
+				Expect(ccmSecret.Exists()).To(BeTrue())
+				cloudConfig, err := base64.StdEncoding.DecodeString(ccmSecret.Field("data.cloud-config").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(gjson.Get(string(cloudConfig), "securityGroupName").String()).To(Equal("mcprefix"))
+				Expect(gjson.Get(string(cloudConfig), "routeTableName").String()).To(Equal("mcprefix"))
 			})
 		})
 	})

@@ -17,41 +17,71 @@ package protocol
 import (
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 
+	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
+	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
 )
 
 // StateBuilderConfig holds provider-specific settings for dhctl protocol state building.
 type StateBuilderConfig struct {
-	// InstanceClassKind is the provider InstanceClass resource kind.
-	InstanceClassKind string
 	// NamespaceName is the module namespace used for credential Secrets.
 	NamespaceName string
 	// ModuleName is the cloud-provider ModuleConfig name.
 	ModuleName string
 }
 
-// StateBuilder decodes dhctl provider input into a validation State.
-type StateBuilder struct {
+// StateBuilderFactory produces a fresh StateBuilder per dhctl validation request.
+//
+// It mirrors the admission factory so both surfaces are constructed the same way. Unlike
+// admission, the dhctl protocol delivers every resource in a single payload, so the builder
+// needs no chain of Add* steps: Build decodes the whole input at once.
+type StateBuilderFactory[
+	IC cpapi.InstanceClassObject,
+	S cpapi.ModuleSettingsObject,
+	PCC cpapi.ProviderClusterConfigObject,
+] struct {
 	config StateBuilderConfig
 }
 
-// NewStateBuilder creates a protocol state builder for the given provider configuration.
-func NewStateBuilder(config StateBuilderConfig) *StateBuilder {
-	return &StateBuilder{config: config}
+// NewStateBuilderFactory creates a protocol state builder factory for the given provider configuration.
+func NewStateBuilderFactory[
+	IC cpapi.InstanceClassObject,
+	S cpapi.ModuleSettingsObject,
+	PCC cpapi.ProviderClusterConfigObject,
+](config StateBuilderConfig) *StateBuilderFactory[IC, S, PCC] {
+	return &StateBuilderFactory[IC, S, PCC]{config: config}
+}
+
+// CreateBuilder returns a builder for a single dhctl validation request.
+func (f *StateBuilderFactory[IC, S, PCC]) CreateBuilder() *StateBuilder[IC, S, PCC] {
+	return &StateBuilder[IC, S, PCC]{config: f.config}
+}
+
+// StateBuilder decodes dhctl provider input into a validation State.
+type StateBuilder[
+	IC cpapi.InstanceClassObject,
+	S cpapi.ModuleSettingsObject,
+	PCC cpapi.ProviderClusterConfigObject,
+] struct {
+	config StateBuilderConfig
 }
 
 // Build decodes dhctl input and applies provider context from the builder configuration.
-func (b *StateBuilder) Build(input proto.ValidateInput) (*cpval.State, error) {
+func (b *StateBuilder[IC, S, PCC]) Build(input proto.ValidateInput) (*cpvalapi.State[IC, S, PCC], error) {
 	var err error
-	state := &cpval.State{
-		InstanceClassKind:           b.config.InstanceClassKind,
-		NamespaceName:               b.config.NamespaceName,
-		ModuleName:                  b.config.ModuleName,
-		LegacyProviderClusterConfig: input.ProviderClusterConfig,
+
+	state := &cpvalapi.State[IC, S, PCC]{
+		NamespaceName: b.config.NamespaceName,
+		ModuleName:    b.config.ModuleName,
+	}
+
+	state.ProviderClusterConfig, err = cpval.DecodeProviderClusterConfig[PCC](input.ProviderClusterConfig)
+	if err != nil {
+		return nil, err
 	}
 
 	if input.CloudProviderVars != nil {
-		state.ModuleConfig, err = cpval.DecodeModuleConfigForModule(b.config.ModuleName, input.CloudProviderVars.Settings)
+		state.ModuleConfig, err = cpval.DecodeModuleConfig[S](b.config.ModuleName, input.CloudProviderVars.Settings)
 		if err != nil {
 			return nil, err
 		}
@@ -61,12 +91,24 @@ func (b *StateBuilder) Build(input proto.ValidateInput) (*cpval.State, error) {
 			return nil, err
 		}
 
-		state.NodeGroups, err = cpval.DecodeNodeGroups(input.CloudProviderVars.NodeGroups)
+		nodeGroups, err := cpval.DecodeNodeGroups(input.CloudProviderVars.NodeGroups)
 		if err != nil {
 			return nil, err
 		}
 
-		state.InstanceClasses, err = cpval.DecodeInstanceClasses(input.CloudProviderVars.InstanceClasses)
+		// State.NodeGroups holds CloudPermanent NodeGroups only: keep this surface in sync
+		// with the admission state builder so a rule behaves the same in dhctl preflight
+		// and in the webhook.
+		state.NodeGroups = make([]cpapi.NodeGroup, 0, len(nodeGroups))
+		for _, nodeGroup := range nodeGroups {
+			if nodeGroup.Spec.NodeType != cpapi.NodeTypeCloudPermanent {
+				continue
+			}
+
+			state.NodeGroups = append(state.NodeGroups, nodeGroup)
+		}
+
+		state.InstanceClasses, err = cpval.DecodeInstanceClasses[IC](input.CloudProviderVars.InstanceClasses)
 		if err != nil {
 			return nil, err
 		}
@@ -76,7 +118,7 @@ func (b *StateBuilder) Build(input proto.ValidateInput) (*cpval.State, error) {
 		state.ModuleConfig.Name = b.config.ModuleName
 	}
 
-	state.MigrationStatus = cpval.MigrationStatusFromState(state)
+	state.MigrationStatus = cpvalapi.MigrationStatusFromState(state)
 
 	return state, nil
 }

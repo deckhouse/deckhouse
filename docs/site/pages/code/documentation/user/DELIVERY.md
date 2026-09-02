@@ -1,5 +1,6 @@
 ---
 title: "Delivery (CI/CD)"
+description: How to automate testing, build, and deployment with CI/CD pipelines
 permalink: en/code/documentation/user/delivery.html
 ---
 

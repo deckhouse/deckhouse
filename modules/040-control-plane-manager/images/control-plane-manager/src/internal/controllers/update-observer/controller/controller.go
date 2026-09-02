@@ -20,6 +20,7 @@ import (
 	"context"
 	"time"
 
+	"go.yaml.in/yaml/v2"
 	"golang.org/x/time/rate"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/util/workqueue"
@@ -63,12 +64,12 @@ type reconciler struct {
 	client client.Client
 }
 
-func RegisterController(manager manager.Manager) error {
+func RegisterController(mgr manager.Manager) error {
 	r := &reconciler{
-		client: manager.GetClient(),
+		client: mgr.GetClient(),
 	}
 
-	return ctrl.NewControllerManagedBy(manager).
+	return ctrl.NewControllerManagedBy(mgr).
 		WithOptions(controller.TypedOptions[reconcile.Request]{
 			MaxConcurrentReconciles: maxConcurrentReconciles,
 			CacheSyncTimeout:        cacheSyncTimeout,
@@ -82,9 +83,9 @@ func RegisterController(manager manager.Manager) error {
 		}).
 		Named(common.ControllerName).
 		Watches(
-			&corev1.Secret{},
+			&corev1.ConfigMap{},
 			&handler.EnqueueRequestForObject{},
-			builder.WithPredicates(getSecretPredicate()),
+			builder.WithPredicates(getConfigMapSpecPredicate()),
 		).
 		Watches(
 			&corev1.Node{},
@@ -106,22 +107,42 @@ func RegisterController(manager manager.Manager) error {
 		Complete(r)
 }
 
-func getSecretPredicate() predicate.Predicate {
+// Reacts only when data["spec"] changed: this controller writes that block itself, so the filter's
+// job is to keep its own write from feeding back.
+func getConfigMapSpecPredicate() predicate.Predicate {
+	parseSpec := func(cm *corev1.ConfigMap) Spec {
+		var spec Spec
+		_ = yaml.Unmarshal([]byte(cm.Data["spec"]), &spec)
+		return spec
+	}
+
+	isTarget := func(cm *corev1.ConfigMap) bool {
+		// Namespace too, so correctness does not depend on the cache scoping in manager.go.
+		return cm.Name == common.ConfigMapName && cm.Namespace == common.KubeSystemNamespace
+	}
+
 	return predicate.Funcs{
 		CreateFunc: func(e event.CreateEvent) bool {
-			secret, ok := e.Object.(*corev1.Secret)
+			cm, ok := e.Object.(*corev1.ConfigMap)
 			if !ok {
 				return false
 			}
-			return secret.Name == common.SecretName
+			return isTarget(cm)
 		},
 
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			secret, ok := e.ObjectNew.(*corev1.Secret)
-			if !ok {
+			newCM, ok1 := e.ObjectNew.(*corev1.ConfigMap)
+			oldCM, ok2 := e.ObjectOld.(*corev1.ConfigMap)
+			if !ok1 || !ok2 || !isTarget(newCM) {
 				return false
 			}
-			return secret.Name == common.SecretName
+			// fillConfigMap stamps lastReconciliationTime on every pass, so anything broader than
+			// data.spec would spin forever. Reacting to a *missing* status is the escape hatch: once
+			// UpToDate, Reconcile stops requeueing and a wiped status would never be restored.
+			if newCM.Data["spec"] != "" && newCM.Data["status"] == "" {
+				return true
+			}
+			return parseSpec(oldCM) != parseSpec(newCM)
 		},
 
 		DeleteFunc: func(e event.DeleteEvent) bool {
@@ -167,9 +188,9 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
 
-	clusterCfg, err := r.getClusterConfiguration(ctx)
+	clusterCfg, err := desiredConfiguration(configMap)
 	if err != nil {
-		logger.Error("Failed to get cluster configuration from secret", "namespace", common.KubeSystemNamespace, "name", common.SecretName, log.Err(err))
+		logger.Error("Failed to build the desired cluster configuration from the environment", log.Err(err))
 		return reconcile.Result{RequeueAfter: requeueInterval}, nil
 	}
 
@@ -203,7 +224,9 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 func determineReconcileTrigger(configMap *corev1.ConfigMap, clusterCfg *cluster.Configuration) ReconcileTrigger {
 	previousVersion, exists := configMap.GetLabels()[common.K8sVersionLabelKey]
 
-	if configMap.ResourceVersion == "" || !exists {
+	// A missing k8s-version label is the first-run signal: dhctl seeds the identifying labels and
+	// data.spec, and leaves this one for the first reconcile to write.
+	if !exists {
 		return ReconcileTriggerInit
 	}
 

@@ -78,7 +78,7 @@ var _ = BeforeSuite(func() {
 	// The node-template controller registered itself via its package init(); since only this
 	// package is compiled into the test binary, NewManager wires up just that controller.
 	By("starting the manager with the node-template controller")
-	mgr, err := testenv.NewManager(cfg, scheme)
+	mgr, err := testenv.NewManager(suiteCtx, cfg, scheme)
 	Expect(err).NotTo(HaveOccurred())
 
 	go func() {

@@ -95,6 +95,7 @@ func TestRenderMachineClass_AWSByteParity(t *testing.T) {
 
 	spec := mc["spec"].(map[string]interface{})
 	assert.Equal(t, "ami-default", spec["ami"], "ami falls back to cloudProvider default")
+	assert.NotContains(t, spec, "metadataOptions", "IMDSv1-compatible behavior is preserved by default")
 	assert.Equal(t, "eu-central-1", spec["region"])
 	assert.Equal(t, "m5.large", spec["machineType"])
 	assert.Equal(t, "kube-key", spec["keyName"])
@@ -111,4 +112,25 @@ func TestRenderMachineClass_AWSByteParity(t *testing.T) {
 	secretRef := spec["secretRef"].(map[string]interface{})
 	assert.Equal(t, meta["name"], secretRef["name"])
 	assert.Equal(t, "d8-cloud-instance-manager", secretRef["namespace"])
+}
+
+func TestRenderMachineClass_AWSIMDSv2(t *testing.T) {
+	tmpl, err := os.ReadFile(awsMachineClassTemplatePath)
+	require.NoError(t, err)
+
+	ctx := awsRenderContext()
+	cloudProvider := ctx["Values"].(map[string]interface{})["nodeManager"].(map[string]interface{})["internal"].(map[string]interface{})["cloudProvider"].(map[string]interface{})
+	cloudProvider["aws"].(map[string]interface{})["imdsv2"] = true
+
+	out, err := RenderMachineClass(tmpl, ctx)
+	require.NoError(t, err)
+
+	var mc map[string]interface{}
+	require.NoError(t, yaml.Unmarshal(out, &mc))
+	spec := mc["spec"].(map[string]interface{})
+	assert.Equal(t, map[string]interface{}{
+		"httpEndpoint":            "enabled",
+		"httpTokens":              "required",
+		"httpPutResponseHopLimit": float64(1),
+	}, spec["metadataOptions"])
 }

@@ -27,7 +27,7 @@ description: "Модуль descheduler Deckhouse Kubernetes Platform. Кажды
 
 ## Поставщик метрик
 
-Если в кластере зарегистрирована API-группа `metrics.k8s.io` (например, установлен [metrics-server](https://github.com/kubernetes-sigs/metrics-server)), модуль автоматически обнаруживает её и включает поставщик метрик **KubernetesMetrics** в политике `descheduler`. Это позволяет при установленной [стратегии утилизации](#стратегии) `LowNodeUtilization` использовать данные о **фактическом** потреблении ресурсов из Metrics API, а не полагаться исключительно на запросы и лимиты подов.
+Если в кластере зарегистрирована API-группа `metrics.k8s.io` (например, установлен [metrics-server](https://github.com/kubernetes-sigs/metrics-server)), модуль автоматически обнаруживает её и включает поставщик метрик **KubernetesMetrics** в политике `descheduler`. Это позволяет при установленной [стратегии утилизации](#стратегии) `LowNodeUtilization` использовать данные о **фактическом** потреблении ресурсов из Metrics API, а не полагаться исключительно на запросы и лимиты подов. Соответственно, значения в параметрах [thresholds](cr.html#descheduler-v1alpha2-spec-strategies-lownodeutilization-thresholds) и [targetThresholds](cr.html#descheduler-v1alpha2-spec-strategies-lownodeutilization-targetthresholds) начинают трактоваться как процент от фактического потребления, а не от запросов подов. На стратегию `HighNodeUtilization` это не влияет: она всегда использует запросы и лимиты подов.
 
 От пользователя не требуется никаких действий: модуль обнаруживает API-группу `metrics.k8s.io`, отслеживая ресурсы APIService, и настраивает политику автоматически. Если metrics-server установлен **после** запуска модуля, под `descheduler` будет автоматически перезапущен с обновлённой политикой.
 
@@ -56,9 +56,9 @@ description: "Модуль descheduler Deckhouse Kubernetes Platform. Кажды
 {% endalert %}
 
 {% alert level="warning" %}
-По умолчанию использование ресурсов узла учитывает [extended-ресурсы](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) и рассчитывается на основе запросов и лимитов подов ([requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits)), а не их фактического потребления. Такой подход обеспечивает согласованность с работой kube-scheduler, который использует аналогичный принцип при размещении подов на узлах.
+Использование ресурсов узла учитывает [extended-ресурсы](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) и рассчитывается на основе запросов и лимитов подов ([requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits)), а не их фактического потребления. Такой подход обеспечивает согласованность с работой kube-scheduler, который использует аналогичный принцип при размещении подов на узлах.
 
-Если в кластере доступна API-группа `metrics.k8s.io` (см. [Поставщик метрик](#поставщик-метрик)), стратегии утилизации могут дополнительно использовать данные о **фактическом** потреблении ресурсов из Metrics API. В этом случае метрики, отображаемые `kubectl top`, будут ближе к значениям, используемым descheduler.
+Стратегия всегда использует запросы и лимиты подов, независимо от того, доступна ли в кластере API-группа `metrics.k8s.io` (см. [Поставщик метрик](#поставщик-метрик)).
 {% endalert %}
 
 ### LowNodeUtilization
@@ -78,9 +78,9 @@ description: "Модуль descheduler Deckhouse Kubernetes Platform. Кажды
 Стратегия включается параметром [spec.strategies.lowNodeUtilization.enabled](cr.html#descheduler-v1alpha2-spec-strategies-lownodeutilization-enabled).
 
 {% alert level="warning" %}
-По умолчанию использование ресурсов узла учитывает [extended-ресурсы](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) и рассчитывается на основе запросов и лимитов подов ([requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits)), а не их фактического потребления. Такой подход обеспечивает согласованность с работой kube-scheduler, который использует аналогичный принцип при размещении подов на узлах.
+Если API-группа `metrics.k8s.io` в кластере **недоступна**, использование ресурсов узла учитывает [extended-ресурсы](https://kubernetes.io/docs/tasks/configure-pod-container/extended-resource/) и рассчитывается на основе запросов и лимитов подов ([requests and limits](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#requests-and-limits)), а не их фактического потребления. Такой подход обеспечивает согласованность с работой kube-scheduler, который использует аналогичный принцип при размещении подов на узлах.
 
-Если в кластере доступна API-группа `metrics.k8s.io` (см. [Поставщик метрик](#поставщик-метрик)), стратегии утилизации могут дополнительно использовать данные о **фактическом** потреблении ресурсов из Metrics API. В этом случае метрики, отображаемые `kubectl top`, будут ближе к значениям, используемым descheduler.
+Если API-группа `metrics.k8s.io` **доступна** (см. [Поставщик метрик](#поставщик-метрик)), стратегия использует данные о **фактическом** потреблении ресурсов из Metrics API *вместо* запросов и лимитов. В этом случае значения, которыми оперирует descheduler, близки к выводу `kubectl top`, но перестают совпадать с оценкой kube-scheduler: узел с исчерпанными запросами может считаться недостаточно нагруженным, и поды с него вытесняться не будут.
 {% endalert %}
 
 ### RemoveDuplicates

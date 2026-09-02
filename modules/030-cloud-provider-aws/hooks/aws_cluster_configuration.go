@@ -42,6 +42,7 @@ type InternalValues struct {
 	ProviderAccessKeyID       string            `json:"providerAccessKeyId"`
 	ProviderSecretAccessKey   string            `json:"providerSecretAccessKey"`
 	Region                    string            `json:"region"`
+	IMDSv2                    bool              `json:"imdsv2"`
 	Tags                      map[string]string `json:"tags"`
 }
 
@@ -142,6 +143,13 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 		}
 	}
 
+	var imdsv2 bool
+	if raw, ok := metaCfg.ProviderClusterConfig["imdsv2"]; ok && len(raw) != 0 {
+		if err := json.Unmarshal(raw, &imdsv2); err != nil {
+			return err
+		}
+	}
+
 	if raw, ok := metaCfg.ProviderClusterConfig["publicNetworkAllowList"]; ok && len(raw) != 0 {
 		var publicNetworkAllowList []string
 		if err := json.Unmarshal(raw, &publicNetworkAllowList); err != nil {
@@ -156,6 +164,7 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 	input.Values.Set("cloudProviderAws.internal.zoneToSubnetIdMap", discoveryData.ZoneToSubnetIDMap)
 	input.Values.Set("cloudProviderAws.internal.instances", discoveryData.Instances)
 	input.Values.Set("cloudProviderAws.internal.region", provider.Region)
+	input.Values.Set("cloudProviderAws.internal.imdsv2", imdsv2)
 	input.Values.Set("cloudProviderAws.internal.providerAccessKeyId", provider.ProviderAccessKeyID)
 	input.Values.Set("cloudProviderAws.internal.providerSecretAccessKey", provider.ProviderSecretAccessKey)
 	input.Values.Set("cloudProviderAws.internal.tags", tags)

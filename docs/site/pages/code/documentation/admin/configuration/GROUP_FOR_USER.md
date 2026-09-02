@@ -1,5 +1,6 @@
 ---
 title: "Create a group for users"
+description: How to create a group for users and add members to it
 permalink: en/code/documentation/admin/configuration/group.html
 ---
 

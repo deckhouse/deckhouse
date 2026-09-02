@@ -1,5 +1,6 @@
 ---
 title: "Access configuration"
+description: How to restrict group and project creation and control access rights
 permalink: en/code/documentation/admin/install/access.html
 ---
 

@@ -59,6 +59,7 @@ spec:
         checksum/config: {{ .Values.networkGateway | toYaml | sha256sum }}
       labels:
         app: dhcp
+        security.deckhouse.io/security-policy-exception: dhcp
     spec:
       hostNetwork: true
       dnsPolicy: ClusterFirstWithHostNet
@@ -87,6 +88,9 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "dnsmasq") }}
         command: ['dnsmasq', '-dK', '--dhcp-leasefile=/var/lib/dnsmasq/dhcp.leases']
         volumeMounts:
+        - name: network-gateway-config
+          mountPath: /etc/dnsmasq.conf
+          subPath: dnsmasq.conf
         - name: dhcp-config
           mountPath: /etc/dnsmasq.conf.d
         - name: dhcp-data
@@ -117,6 +121,6 @@ spec:
       resources:
         requests:
           storage: 32Mi
-      storageClassName: {{ $storageClass }}
+      storageClassName: {{ $storageClass | quote }}
 {{- end }}
 {{- end }}

@@ -43,9 +43,14 @@ func newReconciler(t *testing.T, objs ...client.Object) *Reconciler {
 	require.NoError(t, v1.AddToScheme(scheme))
 	// Every real cluster has the kube-dns Service; the assembly refuses to publish a context
 	// without a cluster DNS address, so the fixture must carry it.
+	// derived_status also requires d8-cluster-kubernetes for the target Kubernetes version.
 	objs = append(objs,
 		endpointSlice([]string{"10.0.0.1"}, "https", 6443),
 		kubeDNSService("10.222.0.10"),
+		&corev1.ConfigMap{
+			ObjectMeta: metav1.ObjectMeta{Name: "d8-cluster-kubernetes", Namespace: kubeSystemNS},
+			Data:       map[string]string{"spec": "desiredVersion: \"1.32\"\nupdateMode: Manual\n"},
+		},
 	)
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
 	return &Reconciler{
@@ -119,7 +124,8 @@ func TestAssemble_PreservesPriorOnValidationFailure(t *testing.T) {
 			},
 		},
 		secret(kubeSystemNS, cloudProviderSecretName, map[string][]byte{
-			"instanceClassKind": []byte(`"YandexInstanceClass"`),
+			"instanceClassKind":       []byte(`"YandexInstanceClass"`),
+			"instanceClassAPIVersion": []byte("v1alpha1"),
 		}),
 		secret(secretNamespace, secretName, map[string][]byte{
 			secretInputKey: priorInput,
@@ -147,7 +153,8 @@ func TestAssemble_OmitsFailingNodeGroupWithoutPrior(t *testing.T) {
 			},
 		},
 		secret(kubeSystemNS, cloudProviderSecretName, map[string][]byte{
-			"instanceClassKind": []byte(`"YandexInstanceClass"`),
+			"instanceClassKind":       []byte(`"YandexInstanceClass"`),
+			"instanceClassAPIVersion": []byte("v1alpha1"),
 		}),
 	)
 

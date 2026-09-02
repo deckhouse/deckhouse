@@ -19,6 +19,7 @@ status:
     reason: GetImageError
     status: "False"
     type: MetadataLoaded
+  used: false
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository

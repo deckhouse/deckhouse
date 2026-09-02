@@ -1,3 +1,7 @@
+# WARNING!
+# if you change this file please evaluate to change files
+# /global-hooks/openapi/config-values.yaml
+# /ee/cse/global-hooks/openapi/config-values.yaml
 x-config-version: 2
 type: object
 default: {}
@@ -37,6 +41,22 @@ properties:
 
       If not defined, the value is determined automatically as `true` for clusters with more than one master node. Otherwise, it is determined as`false`.
     x-examples: [ true, false ]
+  prefix:
+    type: string
+    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+    maxLength: 45
+    description: |
+      A prefix of the objects to be created in the cloud.
+
+      Is used, for example, to distinguish objects created for different clusters, to configure routing, etc.
+
+      This is the new home for the prefix that was previously set in `ClusterConfiguration.cloud.prefix`. If not set, the value from `ClusterConfiguration.cloud.prefix` is used.
+
+      The prefix is used to name cloud objects such as disks (e.g. `<prefix>-kubernetes-data-0`). Cloud object names are limited to 63 characters, so the prefix is capped at 45 characters to leave room for the generated suffix. Depending on the provider and the number of master nodes, the effective limit may be lower; this is additionally enforced by a bootstrap preflight check.
+
+      > **Warning.** This value names existing cloud infrastructure (security groups, route tables, resource groups, instances, etc.). It must match the prefix the cluster was bootstrapped with — setting a different value will break cloud integration. It is not intended to be changed in a running cluster.
+    x-examples:
+      - "kube"
   modules:
     description: |
       Common parameters of Deckhouse modules.
@@ -247,19 +267,18 @@ properties:
         pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
       publicDomainTemplate:
         type: string
-        pattern: '^(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)\.(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)\.(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+        pattern: '^(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)\.(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
         description: |
-          DNS name template with three `%s` keys used as the dynamic parts of the string.
+          DNS name template with two `%s` keys used as the dynamic parts of the string.
 
           Whenever a DNS is generated:
 
-          - First key is replaced with the component name.
-          - Second key is replaced with the application instance name.
-          - Third key is replaced with the application's namespace.
+          - First key is replaced with the application instance name.
+          - Second key is replaced with the application's namespace.
 
           The Deckhouse ecosystem applications use this template when creating Ingress resources.
 
-          For example, given the template `%s.%s.%s.kube.company.my`, the `web` component of an application instance named `grafana` running in the `monitoring` namespace will get an Ingress resource at the address `web.grafana.monitoring.kube.company.my`.
+          For example, given the template `%s.%s.kube.company.my`, the application instance named `grafana` running in the `monitoring` namespace will get an Ingress resource at the address `grafana.monitoring.kube.company.my`.
 
           **Usage notes:**
 
@@ -267,9 +286,9 @@ properties:
           - The domain specified in the template must not match or be a subdomain of the domain specified in the [`clusterDomain`](cr.html#clusterconfiguration-clusterdomain) parameter. Changing the `clusterDomain` value is not recommended unless necessary.
           - Before using the template, configure DNS services both in the networks where the cluster nodes will be located and in the networks from which clients will access the service web interfaces.
           - If the template domain matches the domain of the node network, use only A records to assign addresses of the frontend nodes to the platform service web interfaces.
-          For example, if the nodes are registered under the `company.my` zone, the template must be `%s.%s.%s.company.my`.
-        x-doc-examples: [ "%s.%s.%s.company.my", "%s.%s.%s.kube.company.my" ]
-        x-examples: [ "%s.%s.%s.kube.company.my" ]
+          For example, if the nodes are registered under the `company.my` zone, the template must be `%s.%s.company.my`.
+        x-doc-examples: [ "%s.%s.company.my", "%s.%s.kube.company.my" ]
+        x-examples: [ "%s.%s.kube.company.my" ]
       https:
         description: |
           HTTPS access implementation method used by the Deckhouse ecosystem applications.

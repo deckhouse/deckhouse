@@ -10,7 +10,7 @@ You can configure Deckhouse using:
 
 - **[Global settings](../../reference/api/global.html)**. Global settings are stored in the `ModuleConfig/global` custom resource. Global settings can be be thought of as a special `global` module that cannot be disabled.
 - **[Module settings](#configuring-the-module)**. Module settings are stored in the `ModuleConfig` custom resource; its name is the same as that of the module (in kebab-case).
-- **Custom resources.** Some modules are configured using the additional custom resources.
+- **[Custom resources](../../reference/api/cr.html).** Some modules are configured using the additional custom resources.
 
 An example of a set of custom resources for configuring Deckhouse:
 

@@ -41,7 +41,6 @@ const (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	// The Order below matters for ensure_crds_istio.go, it needs globalVersion to deploy proper CRDs
 	OnStartup:    &go_hook.OrderedConfig{Order: 5},
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 }, dependency.WithExternalDependencies(revisionsDiscovery))

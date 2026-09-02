@@ -1,11 +1,11 @@
 {{- if .Values.cloudProviderVcd.internal.affinityRules }}
-{{ $prefix := .Values.global.clusterConfiguration.cloud.prefix | required "global.clusterConfiguration.cloud.prefix is required" }}
+{{ $prefix := (include "helm_lib_cluster_prefix" .) | required "global.prefix (or the deprecated global.clusterConfiguration.cloud.prefix) is required" }}
 {{- range .Values.cloudProviderVcd.internal.affinityRules }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: VCDAffinityRule
 metadata:
-  name: {{ printf "%s-%s" $prefix .nodeGroupName | trunc 63 | trimSuffix "-" }}
+  name: {{ printf "%s-%s" $prefix .nodeGroupName | trunc 63 | trimSuffix "-" | quote }}
   {{- include "helm_lib_module_labels" (list $ . (dict "app" "infra-controller-manager")) | nindent 2 }}
 spec:
   polarity: {{ .polarity | toString | quote }}

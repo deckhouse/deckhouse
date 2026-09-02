@@ -58,7 +58,7 @@ periodSeconds: 10
 {{- $_ := set $capiConfig "hostNetwork" true -}}
 {{- $_ := set $capiConfig "dnsPolicy" "ClusterFirstWithHostNet" -}}
 {{- $_ := set $capiConfig "nodeSelectorStrategy" "master" -}}
-{{- $_ := set $capiConfig "tolerationsStrategies" (list "any-node" "uninitialized") -}}
+{{- $_ := set $capiConfig "tolerationsStrategies" (list "any-node" "with-uninitialized") -}}
 {{- $_ := set $capiConfig "additionalArgs" (include "capo_controller_manager_args" . | fromYamlArray) -}}
 {{- $_ := set $capiConfig "additionalPorts" (include "capo_controller_manager_ports" . | fromYamlArray) -}}
 {{- $_ := set $capiConfig "additionalVolumeMounts" (include "capo_controller_manager_volume_mounts" . | fromYamlArray) -}}

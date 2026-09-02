@@ -30,10 +30,19 @@ properties:
         - "Y25pOiBZMmxzYVhWdApjaWxpdW06IGV3b2dJQ0p0YjJSbElqb2dJbFpZVEVGT0lpd0tJQ0FpYldGemNYVmxjbUZrWlUxdlpHVWlPaUFpUWxCR0lncDkK"
       storageClasses:
         type: array
-        additionalProperties:
-          type: string
+        items:
+          type: object
+          additionalProperties: false
+          required: ["name", "type"]
+          properties:
+            name:
+              type: string
+            type:
+              type: string
+            blockSize:
+              type: string
         x-examples:
-          - [{"name": "test", "type": "test"}]
+          - [{"name": "test", "type": "test"}, {"name": "test-64k", "type": "test", "blockSize": "64Ki"}]
       providerClusterConfiguration:
         type: object
         description: |

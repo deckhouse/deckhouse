@@ -15,6 +15,7 @@
 package docs
 
 import (
+	"context"
 	"fmt"
 	"log/slog"
 	"os"
@@ -26,13 +27,22 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
+	"github.com/flant/docs-builder/internal/aiexport"
 	"github.com/flant/docs-builder/internal/metrics"
 	"github.com/flant/docs-builder/pkg/hugo"
 )
 
-func (svc *Service) Build() error {
-	svc.buildMu.Lock()
-	defer svc.buildMu.Unlock()
+func (svc *Service) Build(ctx context.Context) error {
+	// Acquire the build slot. Selecting on ctx means a caller whose request
+	// was already canceled — e.g. the client hit its timeout while an earlier
+	// build still held the slot — drops out here instead of queuing up yet
+	// another redundant full-site rebuild behind it.
+	select {
+	case svc.buildSem <- struct{}{}:
+	case <-ctx.Done():
+		return ctx.Err()
+	}
+	defer func() { <-svc.buildSem }()
 
 	start := time.Now()
 	status := "ok"
@@ -42,8 +52,22 @@ func (svc *Service) Build() error {
 		svc.metrics.HistogramObserve(metrics.DocsBuilderBuildDurationSeconds, dur, map[string]string{"status": status}, nil)
 	}()
 
-	err := svc.buildHugo()
+	// The request may have been canceled while we waited for the slot; skip
+	// the build rather than start work nobody is waiting for.
+	if err := ctx.Err(); err != nil {
+		status = "canceled"
+		return err
+	}
+
+	err := svc.buildHugo(ctx)
 	if err != nil {
+		// A canceled build is not a broken site: leave the last good render
+		// (and isReady) in place and don't count it as a failure.
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			status = "canceled"
+			return ctxErr
+		}
+
 		svc.isReady.Store(false)
 		status = "fail"
 
@@ -55,6 +79,16 @@ func (svc *Service) Build() error {
 	syncer.NoTimes = true
 
 	for _, lang := range []string{"ru", "en"} {
+		// The AI export writes the per-page Markdown, the llms.txt index and the corpus
+		// into `public/<lang>/modules`, so it has to run before that directory
+		// is synced to destDir below.
+		err = aiexport.Export(filepath.Join(svc.baseDir, "public"), lang, svc.logger.Named("ai_export"))
+		if err != nil {
+			// The docs themselves are fine without the AI export; degrade
+			// instead of failing the whole build over it.
+			svc.logger.Warn("ai export", slog.String("lang", lang), log.Err(err))
+		}
+
 		// Sync modules folder
 		glob := filepath.Join(svc.destDir, "public", lang, "modules/*")
 		err = removeGlob(glob)
@@ -89,7 +123,7 @@ func (svc *Service) Build() error {
 	return nil
 }
 
-func (svc *Service) buildHugo() error {
+func (svc *Service) buildHugo(ctx context.Context) error {
 	flags := &hugo.Flags{
 		LogLevel: "debug",
 		Source:   svc.baseDir,
@@ -99,7 +133,16 @@ func (svc *Service) buildHugo() error {
 	svc.metrics.Grouped().ExpireGroupMetricByName(metrics.DocsBuilderModuleRenderErrorGroup, metrics.DocsBuilderModuleRenderError)
 
 	for {
-		buildErr := hugo.Build(flags, svc.logger)
+		// A single hugo pass runs to completion once started, but this
+		// self-heal loop can rerun it once per broken module it strips —
+		// several full-site builds in one call. Bail between passes so a
+		// canceled request stops multiplying rebuilds instead of holding the
+		// build slot for every remaining broken module.
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
+		buildErr := hugo.Build(ctx, flags, svc.logger)
 		if buildErr == nil {
 			return nil
 		}

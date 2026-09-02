@@ -1,5 +1,6 @@
 ---
 title: "Непрерывная сборка и поставка ПО (CI/CD)"
+description: Как автоматизировать тестирование, сборку и развёртывание с помощью CI/CD-пайплайнов
 permalink: ru/code/documentation/user/delivery.html
 lang: ru
 ---

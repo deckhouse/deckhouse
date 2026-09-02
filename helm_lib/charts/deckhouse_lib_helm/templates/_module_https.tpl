@@ -87,6 +87,21 @@ certManager:
   {{- $https_values.certManager.clusterIssuerName -}}
 {{- end -}}
 
+{{- /* Usage: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name_for_gateway_api" . }} */ -}}
+{{- /* returns cluster issuer name compatible with gateway api scheme */ -}}
+{{- define "helm_lib_module_https_cert_manager_cluster_issuer_name_for_gateway_api" -}}
+  {{- $context := . -}} {{- /* Template context with .Values, .Chart, etc */ -}}
+  {{- $issuerName := include "helm_lib_module_https_cert_manager_cluster_issuer_name" $context -}}
+  {{- $moduleGateway := dict -}}
+  {{- include "helm_lib_module_gateway" (list . $moduleGateway) -}}
+  {{- if $moduleGateway -}}
+    {{- if or (eq $issuerName "letsencrypt") (eq $issuerName "letsencrypt-staging") }}
+      {{- $issuerName = printf "%s-gateway-%s" $issuerName $moduleGateway.name }}
+    {{- end }}
+  {{- end -}}
+  {{- $issuerName -}}
+{{- end -}}
+
 {{- /* Usage: {{ if (include "helm_lib_module_https_cert_manager_cluster_issuer_is_dns01_challenge_solver" .) }} */ -}}
 {{- define "helm_lib_module_https_cert_manager_cluster_issuer_is_dns01_challenge_solver" -}}
   {{- $context := . -}} {{- /* Template context with .Values, .Chart, etc */ -}}

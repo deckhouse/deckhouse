@@ -4,7 +4,7 @@ subsystems:
   - networking
 namespace: d8-istio
 requirements:
-  deckhouse: ">= 1.68.0"
+  deckhouse: ">= 1.72.0"
 descriptions:
   en: Implements Service Mesh for centralized management of network traffic in the cluster. Provides mutual TLS, authorization, traffic routing, load balancing, and observability.
   ru: Реализует Service Mesh для централизованного управления сетевым трафиком в кластере. Обеспечивает Mutual TLS, авторизацию, маршрутизацию трафика, балансировку нагрузки и наблюдаемость.

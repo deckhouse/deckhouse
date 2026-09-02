@@ -12,11 +12,37 @@ title: "Cloud provider — OpenStack: FAQ"
 
 Без ограничения по `node-selector` cloud-controller-manager может использовать в качестве таргетов балансировщика все подходящие узлы кластера. В результате добавление или удаление узлов, не связанных с обслуживаемой балансировщиком нагрузкой, может приводить к обновлению состава пула балансировщика. В крупных или часто изменяющихся кластерах такие обновления могут происходить регулярно, а в некоторых конфигурациях сопровождаться кратковременными нарушениями существующих соединений.
 
-С помощью `loadbalancer.openstack.org/node-selector` рекомендуется выбирать только те узлы, которые должны использоваться в качестве таргетов данного LoadBalancer.
+В поле `annotations` соответствующей конфигурации инлета ресурса [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) можно указать следующие аннотации:
 
-### Пример IngressNginxController
+* `loadbalancer.openstack.org/node-selector` — выбирает узлы, которые будут использоваться как таргеты LoadBalancer.
+* `loadbalancer.openstack.deckhouse.io/load-balancer-id` — указывает OpenStack CCM использовать заранее созданный Octavia-балансировщик.
+* `loadbalancer.openstack.deckhouse.io/load-balancer-address` — указывает OpenStack CCM привязать заранее выделенный floating IP к создаваемому им балансировщику.
 
-В примере поды Ingress-контроллера размещаются на frontend-узлах, а аннотация `loadbalancer.openstack.org/node-selector` ограничивает пул балансировщика этими же узлами:
+DKP автоматически добавит указанные аннотации в сгенерированный объект Service типа LoadBalancer.
+
+Если используется аннотация`loadbalancer.openstack.deckhouse.io/load-balancer-id`, балансировщик должен соответствовать следующим требованиям:
+
+* находиться в подсети кластера;
+* иметь состояние `ACTIVE`.
+
+Если используется `loadbalancer.openstack.deckhouse.io/load-balancer-id` для подключения заранее созданного балансировщика с произвольным именем, привяжите floating IP к его VIP-порту до создания кластера. В этом случае не указывайте аннотацию `loadbalancer.openstack.deckhouse.io/load-balancer-address`.
+
+Если используется только `loadbalancer.openstack.deckhouse.io/load-balancer-address`, floating IP должен соответствовать следующим требованиям:
+
+* не быть привязанным к порту;
+* находиться в floating-сети, настроенной для OpenStack CCM.
+
+Если указанный floating IP недоступен, OpenStack CCM не сможет назначить внешний IP-адрес объекту Service.
+
+Не добавляйте аннотации `loadbalancer.openstack.deckhouse.io/load-balancer-id` и `loadbalancer.openstack.deckhouse.io/load-balancer-address` к прикладным ресурсам Ingress. Указывайте их только в конфигурации IngressNginxController: DKP добавит их в созданный объект Service, который обрабатывает `openstack-cloud-controller-manager`.
+
+### IngressNginxController с заранее созданным балансировщиком
+
+В примере ниже:
+
+* поды Ingress-контроллера размещаются на frontend-узлах;
+* `loadbalancer.openstack.org/node-selector` ограничивает пул балансировщика этими же узлами;
+* `loadbalancer.openstack.deckhouse.io/load-balancer-id` указывает заранее созданный Octavia-балансировщик, к VIP-порту которого уже привязан floating IP.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -28,6 +54,34 @@ spec:
   inlet: LoadBalancerWithProxyProtocol
   loadBalancerWithProxyProtocol:
     annotations:
+      loadbalancer.openstack.deckhouse.io/load-balancer-id: "df7c6f73-8c68-4a11-a3e2-6268a655ce9b"
+      loadbalancer.openstack.org/node-selector: "node-role.deckhouse.io/frontend="
+      loadbalancer.openstack.org/proxy-protocol: "true"
+      loadbalancer.openstack.org/timeout-member-connect: "2000"
+  nodeSelector:
+    node-role.deckhouse.io/frontend: ""
+  tolerations:
+  - effect: NoExecute
+    key: dedicated.deckhouse.io
+    operator: Equal
+    value: frontend
+```
+
+### IngressNginxController с заранее выделенным floating IP
+
+В этом примере OpenStack CCM создает балансировщик и привязывает к нему указанный свободный floating IP:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: main
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancerWithProxyProtocol
+  loadBalancerWithProxyProtocol:
+    annotations:
+      loadbalancer.openstack.deckhouse.io/load-balancer-address: "203.0.113.10"
       loadbalancer.openstack.org/node-selector: "node-role.deckhouse.io/frontend="
       loadbalancer.openstack.org/proxy-protocol: "true"
       loadbalancer.openstack.org/timeout-member-connect: "2000"
@@ -66,6 +120,50 @@ spec:
 
 Необходимо прописать параметр `additionalSecurityGroups` для всех `OpenStackInstanceClass` в кластере, которым нужны дополнительные
 групп безопасности. Подробнее — [параметры модуля `cloud-provider-openstack`](/cloud-provider-openstack/configuration.html).
+
+## Как создать NodeGroup в зонах доступности?
+
+Кластер OpenStack разворачивается в одном регионе, который задается параметром [`provider.region`](cluster_configuration.html#openstackclusterconfiguration-provider-region) ресурса [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration). Создавать узлы можно только в зонах доступности этого региона. Использование зон из других регионов не поддерживается.
+
+Чтобы получить список зон доступности региона, выполните команду:
+
+```shell
+openstack --os-region-name <REGION> availability zone list --compute
+```
+
+Группы узлов типа CloudPermanent задаются в секции [`nodeGroups`](cluster_configuration.html#openstackclusterconfiguration-nodegroups) ресурса OpenStackClusterConfiguration. Для ограничения зон доступности используйте параметр [`nodeGroups[].zones`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-zones).
+
+Узлы типа CloudEphemeral создаются отдельным ресурсом [NodeGroup](/modules/node-manager/cr.html#nodegroup) с `nodeType: CloudEphemeral`. Зоны доступности для них задаются в параметре [`spec.cloudInstances.zones`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-zones). Если в OpenStackClusterConfiguration указан параметр [`zones`](cluster_configuration.html#openstackclusterconfiguration-zones), необходимые зоны также должны быть добавлены в него.
+
+{% alert level="info" %}
+Если при создании NodeGroup admission вебхук возвращает ошибку `unknown zone`, убедитесь, что указанная зона относится к региону `provider.region` и, при использовании параметра `zones`, включена в список зон OpenStackClusterConfiguration.
+{% endalert %}
+
+Узлы из другого региона можно добавить в кластер только вручную как Static-узлы. Модуль `cloud-provider-openstack` не создает такие узлы.
+
+{% alert level="warning" %}
+После изменения OpenStackClusterConfiguration выполните команду `dhctl converge`. Подробнее — в разделе [«Добавление и управление облачными узлами»](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html#добавление-cloudpermanent-узлов-в-облачном-кластере).
+{% endalert %}
+
+Пример NodeGroup для узлов типа CloudEphemeral:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: workers
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    classReference:
+      kind: OpenStackInstanceClass
+      name: workers
+    minPerZone: 1
+    maxPerZone: 1
+    zones:
+    - eu-3a
+    - eu-3b
+```
 
 ## Как поднять гибридный кластер?
 

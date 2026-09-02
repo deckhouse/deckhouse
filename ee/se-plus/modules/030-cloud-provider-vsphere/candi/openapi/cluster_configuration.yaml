@@ -428,10 +428,24 @@ apiVersions:
             type: boolean
             description:  Set to `true` if vCenter has a self-signed certificate.
             x-doc-default: false
+          caBundle:
+            type: string
+            description: |
+              PEM-encoded CA certificate chain used to verify the vCenter TLS certificate. Use this parameter instead of setting `insecure: true` when the vCenter certificate is signed by a custom or enterprise CA.
         required:
         - server
         - username
         - password
+        not:
+          allOf:
+          - required: [caBundle]
+          - properties:
+              caBundle:
+                minLength: 1
+          - required: [insecure]
+          - properties:
+              insecure:
+                enum: [true]
       nsxt:
         type: object
         description: |
@@ -499,6 +513,10 @@ apiVersions:
             x-examples:
               - true
               - false
+          caBundle:
+            type: string
+            description: |
+              A certificate authority (CA) certificate chain in PEM format used to verify the NSX-T TLS certificate. Use this parameter instead of `insecureFlag` if the NSX-T TLS certificate is signed by a custom or corporate certificate authority.
           loadBalancerClass:
             type: array
             description: |
@@ -528,6 +546,16 @@ apiVersions:
             - []
             - {"name": "LBC1", "ipPoolName": "pool2"}
             - {"name": "LBC1", "ipPoolName": "pool2", "tcpAppProfileName": "profile2" , "udpAppProfileName": "profile3"}
+        not:
+          allOf:
+          - required: [caBundle]
+          - properties:
+              caBundle:
+                minLength: 1
+          - required: [insecureFlag]
+          - properties:
+              insecureFlag:
+                enum: [true]
     oneOf:
     - required: [layout]
       properties:
