@@ -3,7 +3,7 @@ title: "Cloud provider — VMware vSphere: настройки"
 force_searchable: true
 ---
 
-Модуль автоматически включается для всех облачных кластеров, развернутых в vSphere.
+Модуль автоматически включается для всех облачных кластеров, развёрнутых в vSphere.
 
 {% include module-alerts.liquid %}
 
@@ -15,28 +15,47 @@ force_searchable: true
 
 {% include module-conversion.liquid %}
 
-Если control plane кластера размещен на виртуальных машинах или bare-metal-серверах, cloud-провайдер использует настройки модуля `cloud-provider-vsphere` в конфигурации Deckhouse (см. ниже). Иначе, если control plane кластера размещен в облаке, cloud-провайдер использует структуру [VsphereClusterConfiguration](cluster_configuration.html#vsphereclusterconfiguration) для настройки.
+Источник настроек зависит от того, где размещён control plane кластера.
+Если control plane работает на виртуальных машинах или bare metal, модуль использует собственные настройки, приведённые ниже.
+Если control plane размещён в облаке, модуль использует ресурс [VsphereClusterConfiguration](cluster_configuration.html#vsphereclusterconfiguration).
 
-Количество и параметры процесса заказа машин в облаке настраиваются в custom resource [`NodeGroup`](/node-manager/cr.html#nodegroup) модуля `node-manager`, в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр `cloudInstances.classReference` NodeGroup). Инстанс-класс для cloud-провайдера vSphere — это custom resource [`VsphereInstanceClass`](cr.html#vsphereinstanceclass), в котором указываются конкретные параметры самих машин.
+Количество узлов и параметры их заказа задаются в ресурсе [NodeGroup](/modules/node-manager/cr.html#nodegroup) модуля `node-manager`.
+Там же в параметре `cloudInstances.classReference` указывается инстанс-класс группы узлов.
+Инстанс-классом для vSphere служит кастомный ресурс [VsphereInstanceClass](cr.html#vsphereinstanceclass), который описывает параметры самих виртуальных машин.
 
-## Storage
+## Подключение к vCenter
 
-Модуль автоматически создает StorageClass для каждого Datastore и DatastoreCluster из зон (зоны).
+Адрес vCenter и учётные данные задаются параметрами [`host`](#parameters-host), [`username`](#parameters-username) и [`password`](#parameters-password).
 
-Также он позволяет настроить имя StorageClass'а, который будет использоваться в кластере по умолчанию (параметр [default](#parameters-storageclass-default)) и отфильтровать ненужные StorageClass'ы (параметр [exclude](#parameters-storageclass-exclude)).
+Модуль подключается к vCenter по TLS и проверяет его сертификат.
+Если сертификат выпущен собственным или корпоративным центром сертификации, передайте цепочку сертификатов в параметре [`caBundle`](#parameters-cabundle).
+Параметр [`insecure`](#parameters-insecure) со значением `true` полностью отключает проверку сертификата.
+Задайте либо `caBundle`, либо `insecure: true`, поскольку одновременно эти параметры не принимаются.
+
+## Хранилище
+
+Модуль создаёт StorageClass для каждого Datastore и DatastoreCluster из используемых зон.
+Если во vSphere настроены политики хранения SPBM, модуль дополнительно создаёт StorageClass для каждого сочетания Datastore и политики.
+
+Ненужные StorageClass исключаются параметром [`exclude`](#parameters-storageclass-exclude), который принимает имена или регулярные выражения.
+Выражение сопоставляется с именем Datastore, поэтому исключение убирает вместе с основным StorageClass и все StorageClass с политиками хранения для этого Datastore.
+
+Чтобы задать StorageClass по умолчанию, используйте глобальный параметр [`global.defaultClusterStorageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass).
+Параметр модуля [`default`](#parameters-storageclass-default) устарел.
 
 ### CSI
 
-Подсистема хранения по умолчанию использует CNS-диски с возможностью изменения их размера на лету. Но также поддерживается работа и в legacy-режиме с использованием FCD-дисков. Поведение настраивается параметром [compatibilityFlag](#parameters-storageclass-compatibilityflag).
+По умолчанию подсистема хранения использует диски CNS с возможностью изменения размера на лету.
+Также поддерживается работа в legacy-режиме с дисками FCD, в котором изменение размера недоступно.
+Режим выбирается параметром [`compatibilityFlag`](#parameters-storageclass-compatibilityflag).
 
-### Важная информация об увеличении размера PVC
+### Увеличение размера PersistentVolumeClaim
 
-Из-за [особенностей](https://github.com/kubernetes-csi/external-resizer/issues/44) работы volume-resizer CSI и vSphere API после увеличения размера PVC нужно сделать следующее:
+Из-за [особенностей](https://github.com/kubernetes-csi/external-resizer/issues/44) работы volume-resizer CSI и API vSphere после увеличения размера PersistentVolumeClaim выполните следующие действия:
 
-1. На узле, где находится под, выполнить команду `d8 k cordon <имя_узла>`.
-2. Удалить под.
-3. Убедиться, что изменение размера прошло успешно. В объекте PVC *не будет* condition `Resizing`.
-   > Состояние `FileSystemResizePending` не является проблемой.
-4. На узле, где находится под, выполнить команду `d8 k uncordon <имя_узла>`.
+1. Выполните `d8 k cordon <NODE_NAME>` для узла, на котором работает под.
+1. Удалите под, использующий PersistentVolumeClaim.
+1. Дождитесь завершения операции. У PersistentVolumeClaim не должно остаться condition `Resizing`, при этом состояние `FileSystemResizePending` не является проблемой.
+1. Выполните `d8 k uncordon <NODE_NAME>`.
 
 {% include module-settings.liquid %}

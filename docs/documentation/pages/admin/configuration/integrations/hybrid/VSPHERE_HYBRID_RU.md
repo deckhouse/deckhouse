@@ -20,12 +20,14 @@ description: Подготовка к гибридной интеграции с 
 Перед началом убедитесь, что выполнены следующие условия:
 
 - Кластер создан с параметром [`clusterType: Static`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clustertype).
-- Между сетью статических узлов и сетью виртуальных машин во vSphere настроена [сетевая связность](./overview.html#общие-сетевые-требования). Узлы vSphere, добавляемые в кластер, имеют доступ к Kubernetes API, DNS и необходимым адресам согласно разделам [«Сетевое взаимодействие»](../../../../reference/network_interaction.html) и [«Настройка сетевых политик»](../../configuration/network/policy/configuration.html). При использовании Cilium с туннелированием трафика подов выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), соответствующий сетевой связности между площадками.
+- Между сетью статических узлов и сетью виртуальных машин во vSphere настроена [сетевая связность](./overview.html#общие-сетевые-требования).
+- Узлы vSphere, добавляемые в кластер, имеют доступ к Kubernetes API, DNS и необходимым адресам согласно разделам [«Сетевое взаимодействие»](../../../../reference/network_interaction.html) и [«Настройка сетевых политик»](../../configuration/network/policy/configuration.html).
 - Выполнены требования из раздела [«Подключение и авторизация в VMware vSphere»](../virtualization/vsphere/authorization.html):
   - настроен доступ к vCenter;
   - подготовлена учётная запись vSphere с необходимыми привилегиями;
   - подготовлен шаблон виртуальной машины;
   - настроены сети, Datastore, теги регионов и зон.
+- При использовании Cilium с туннелированием трафика подов выбран режим [`tunnelMode`](/modules/cni-cilium/configuration.html#parameters-tunnelmode), соответствующий сетевой связности между площадками.
 
 ## Добавление автоматически создаваемых узлов
 
@@ -67,12 +69,14 @@ description: Подготовка к гибридной интеграции с 
    - `host` — адрес vCenter;
    - `username`, `password` — учётные данные пользователя vSphere;
    - `insecure` — отключение проверки TLS-сертификата vCenter;
-   - `vmFolderPath` — папка, в которой будут создаваться виртуальные машины;
+   - `vmFolderPath` — директория, в которой будут создаваться виртуальные машины;
    - `regionTagCategory`, `zoneTagCategory` — категории тегов региона и зоны;
    - `region` — тег региона;
    - `zones` — список зон, в которых можно создавать узлы;
    - `internalNetworkNames` — список сетей vSphere для подключения создаваемых узлов;
    - `sshKeys` — публичные SSH-ключи, которые будут добавлены на создаваемые виртуальные машины.
+
+   Чтобы сохранить проверку TLS-сертификата vCenter, вместо параметра `insecure` задайте параметр `caBundle` с цепочкой сертификатов удостоверяющего центра. Подробности приведены в разделе [«Проверка TLS-сертификата vCenter»](../virtualization/vsphere/authorization.html#проверка-tls-сертификата-vcenter).
 
 1. Примените конфигурацию модуля:
 
@@ -233,10 +237,10 @@ description: Подготовка к гибридной интеграции с 
   echo "$METADATA_B64"
   ```
 
-- Виртуальная машина подключена к сети, указанной в параметре [`internalNetworkNames`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-internalnetworknames) конфигурации модуля `cloud-provider-vsphere`.
+- Виртуальная машина подключена к сети, указанной в параметре [`internalNetworkNames`](/modules/cloud-provider-vsphere/configuration.html#parameters-internalnetworknames) конфигурации модуля `cloud-provider-vsphere`.
 - На виртуальной машине установлен один из пакетных менеджеров (`apt`/`apt-get`, `yum` или `rpm`) для поддерживаемой ОС.  В РЕД ОС по умолчанию могут отсутствовать `yum` и `which`, поэтому их необходимо заранее установить.
 
-1. Создайте файл с ресурсом NodeGroup и типом узлов `CloudStatic`. Например, `cloud-static-nodegroup.yaml`:
+1. Создайте ресурс NodeGroup с типом узлов `CloudStatic`:
 
    ```shell
    d8 k apply -f - <<EOF
@@ -246,6 +250,7 @@ description: Подготовка к гибридной интеграции с 
      name: cloud-static
    spec:
      nodeType: CloudStatic
+   EOF
    ```
 
 1. Убедитесь, что NodeGroup создана и синхронизирована:

@@ -60,7 +60,7 @@ spec:
                   properties:
                     nestedHardwareVirtualization:
                       description: |
-                        Включение [Hardware Assisted Virtualization](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/9-0/expose-hardware-assisted-virtualization.html) на созданных виртуальных машинах.
+                        Включение [Hardware Assisted Virtualization](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-virtual-machine-administration/configuring-virtual-machine-hardwarevsphere-vm-admin/configure-virtual-machine-cpu-resourcesvsphere-vm-admin/expose-hardware-assisted-virtualizationvsphere-vm-admin.html) на созданных виртуальных машинах.
                     cpuShares:
                       description: |
                         Относительная величина CPU Shares для создаваемых виртуальных машин.

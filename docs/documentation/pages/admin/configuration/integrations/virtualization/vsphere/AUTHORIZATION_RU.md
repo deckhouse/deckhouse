@@ -139,6 +139,59 @@ DKP создаёт диски виртуальных машин с типом `e
 DKP использует интерфейс `ens192`, как интерфейс по умолчанию для виртуальных машин в vSphere. Поэтому, при использовании статических IP-адресов в [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork), вы должны в образе ОС создать интерфейс с именем `ens192`, как интерфейс по умолчанию.
 {% endalert %}
 
+## Проверка TLS-сертификата vCenter
+
+DKP подключается к vCenter по TLS и проверяет его сертификат. Если сертификат vCenter выпущен собственным или корпоративным центром сертификации, передайте цепочку сертификатов этого центра в параметре `caBundle`. Проверка сертификата при этом остаётся включённой.
+
+Укажите цепочку сертификатов в формате PEM. Параметр используется одинаково, но путь к нему зависит от того, где настроено подключение к vCenter:
+
+- при установке кластера подключение описано в секции `provider` ресурса VsphereClusterConfiguration рядом с параметром `provider.server`, поэтому цепочка задаётся в параметре [`provider.caBundle`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-provider-cabundle);
+- в уже работающем кластере подключение описано на верхнем уровне настроек модуля `cloud-provider-vsphere` рядом с параметром `host`, поэтому цепочка задаётся в параметре [`caBundle`](/modules/cloud-provider-vsphere/configuration.html#parameters-cabundle).
+
+Пример для устанавливаемого кластера:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: VsphereClusterConfiguration
+layout: Standard
+provider:
+  server: '<SERVER>'
+  username: '<USERNAME>'
+  password: '<PASSWORD>'
+  caBundle: |
+    -----BEGIN CERTIFICATE-----
+    <CA_CERTIFICATE_CHAIN_IN_PEM_FORMAT>
+    -----END CERTIFICATE-----
+```
+
+Пример для работающего кластера:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-vsphere
+spec:
+  version: 2
+  enabled: true
+  settings:
+    host: "<VCENTER_FQDN>"
+    username: "<USERNAME@DOMAIN.LOCAL>"
+    password: "<PASSWORD>"
+    caBundle: |
+      -----BEGIN CERTIFICATE-----
+      <CA_CERTIFICATE_CHAIN_IN_PEM_FORMAT>
+      -----END CERTIFICATE-----
+```
+
+Параметр `insecure: true` полностью отключает проверку сертификата vCenter. Задайте либо `caBundle`, либо `insecure: true`. Конфигурацию, в которой одновременно заданы непустой `caBundle` и `insecure: true`, DKP отклоняет.
+
+Для подключения к NSX-T цепочка сертификатов задаётся отдельным параметром `nsxt.caBundle`, который аналогично несовместим с `nsxt.insecureFlag: true`.
+
+{% alert level="warning" %}
+Модуль `csi-vsphere` не поддерживает параметр `caBundle` и подключается к vCenter только с проверкой сертификата по системным центрам сертификации либо с параметром `insecure`.
+{% endalert %}
+
 ## Конфигурация vSphere
 
 ### Настройка через vSphere Client
@@ -207,8 +260,8 @@ DKP использует интерфейс `ens192`, как интерфейс 
 
 ```shell
 export GOVC_URL=example.com
-export GOVC_USERNAME=<username>@vsphere.local
-export GOVC_PASSWORD=<password>
+export GOVC_USERNAME=<USERNAME>@vsphere.local
+export GOVC_PASSWORD=<PASSWORD>
 export GOVC_INSECURE=1
 ```
 
@@ -234,14 +287,14 @@ govc tags.create -d "Kubernetes Zone Test 2" -c k8s-zone test-zone-2
 Назначьте тег «региона» на Datacenter:
 
 ```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>
 ```
 
 Назначьте теги «зон» на объекты Cluster:
 
 ```shell
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/host/<ClusterName1>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
+govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/host/<CLUSTER_NAME_1>
+govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/host/<CLUSTER_NAME_2>
 ```
 
 #### Настройка Datastore с использованием govc
@@ -253,11 +306,11 @@ govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
 Для автоматического создания StorageClass в кластере Kubernetes назначьте созданные ранее теги «региона» и «зоны» на объекты Datastore:
 
 ```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
+govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
 
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName2>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
+govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
 ```
 
 #### Создание и назначение роли с использованием govc
@@ -313,9 +366,29 @@ govc role.create deckhouse \
 {% endalert %}
 
 ```shell
-govc permissions.set -principal <username>@vsphere.local -role deckhouse /
+govc permissions.set -principal <USERNAME>@vsphere.local -role deckhouse /
 ```
 
 {% alert level="info" %}
-Для более детальной настройки прав обратитесь к [официальной документации](https://pkg.go.dev/github.com/vmware/govmomi).
+Описание привилегий vSphere приведено в [документации VMware](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-security/defined-privileges.html).
 {% endalert %}
+
+### Область назначения роли
+
+Назначайте роль на корневом объекте vCenter, как показано в командах выше. Компонентам DKP нужен доступ к объектам за пределами директории с виртуальными машинами кластера:
+
+- CSI-драйвер определяет топологию томов по хостам ESXi, связанным с Datastore, поэтому обращается к объектам Cluster и Host;
+- компонент обнаружения ресурсов ищет диски CNS в пределах vCenter, для чего используется привилегия `Cns.Searchable`;
+- установщик создаёт пул ресурсов в объекте Cluster и директорию в Datacenter.
+
+Если ограничить роль директорией виртуальных машин, эти операции завершатся ошибкой.
+
+### Диагностика нехватки привилегий
+
+CSI-драйвер проверяет привилегии учётной записи на каждом Datastore и исключает те, на которых привилегий недостаточно. Такой Datastore не попадает в список доступных, и заказ PersistentVolume через соответствующий StorageClass не проходит.
+
+Если для размеченного тегами Datastore не создаётся рабочий StorageClass, проверьте привилегии учётной записи на этом объекте:
+
+```shell
+govc permissions.ls /<DATACENTER_NAME>/datastore/<DATASTORE_NAME>
+```

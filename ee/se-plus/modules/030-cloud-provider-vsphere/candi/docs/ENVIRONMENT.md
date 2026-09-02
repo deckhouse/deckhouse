@@ -38,311 +38,152 @@ The following prerequisites must be met for Deckhouse Kubernetes Platform to wor
      - The user must be assigned the role specified in the previous item.
 - A tag from the category specified in the [`regionTagCategory`](/modules/cloud-provider-vsphere/configuration.html#parameters-regiontagcategory) parameter must be assigned to the created Datacenter (default: `k8s-region`). This tag defines the region.
 
-## List of required vSphere resources
-
-* **User** with required [set of privileges](#list-of-required-privileges).
-* **Network** with DHCP server and access to the Internet.
-* **Datacenter** with a tag in [`k8s-region`](#creating-tags-and-tag-categories) category.
-* **Cluster** with a tag in [`k8s-zone`](#creating-tags-and-tag-categories) category.
-* **Datastore** with required [tags](#datastore-configuration).
-* **Template** — [prepared](#preparing-a-virtual-machine-image) VM image.
-
 ## List of required privileges
 
-> Read the [Configuration via vSphere Client](#configuration-via-vsphere-client) and [Configuration via govc](#configuration-via-govc) sections for details on how to create and assign a role to a user.
+The role for the platform account includes the privileges listed below. The privileges are grouped by the tasks the platform performs in vSphere.
 
-A detailed list of privileges required for Deckhouse Kubernetes Platform to work in vSphere:
+To create the role and assign it to a user, refer to [Creating and assigning a role in vSphere Client](#creating-and-assigning-a-role-in-vsphere-client) and [Creating and assigning a role with govc](#creating-and-assigning-a-role-with-govc).
 
-<table>
-  <thead>
-    <tr>
-      <th>Privilege category in UI</th>
-      <th>Privileges in UI</th>
-      <th>Privileges in API</th>
-      <th>Purpose in Deckhouse</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>—</td>
-      <td>— (assigned by default when creating a role)</td>
-      <td>
-        <code>System.Anonymous</code><br/>
-        <code>System.Read</code><br/>
-        <code>System.View</code>
-      </td>
-      <td>Basic access to vSphere Inventory objects required for all Deckhouse vSphere integration components.</td>
-    </tr>
-    <tr>
-      <td>Cns</td>
-      <td>Searchable</td>
-      <td><code>Cns.Searchable</code></td>
-      <td>Search and mapping of Container Native Storage objects when the CSI driver works with Kubernetes volumes.</td>
-    </tr>
-    <tr>
-      <td>Datastore</td>
-      <td>
-        Allocate space,<br/>
-        Browse datastore,<br/>
-        Low level file operations
-      </td>
-      <td>
-        <code>Datastore.AllocateSpace</code><br/>
-        <code>Datastore.Browse</code><br/>
-        <code>Datastore.FileManagement</code>
-      </td>
-      <td>Disk provisioning when creating virtual machines and ordering <code>PersistentVolumes</code> in the cluster.</td>
-    </tr>
-    <tr>
-      <td>Folder</td>
-      <td>
-        Create folder,<br/>
-        Delete folder,<br/>
-        Move folder,<br/>
-        Rename folder
-      </td>
-      <td>
-        <code>Folder.Create</code><br/>
-        <code>Folder.Delete</code><br/>
-        <code>Folder.Move</code><br/>
-        <code>Folder.Rename</code>
-      </td>
-      <td>Grouping a Deckhouse Kubernetes Platform cluster in a single <code>Folder</code> in vSphere Inventory.</td>
-    </tr>
-    <tr>
-      <td>Global</td>
-      <td>
-        Global tag,<br/>
-        System tag
-      </td>
-      <td>
-        <code>Global.GlobalTag</code><br/>
-        <code>Global.SystemTag</code>
-      </td>
-      <td>Access to global and system tags used by Deckhouse Kubernetes Platform when working with vSphere objects.</td>
-    </tr>
-    <tr>
-      <td>vSphere Tagging</td>
-      <td>
-        Assign or Unassign vSphere Tag,<br/>
-        Assign or Unassign vSphere Tag on Object,<br/>
-        Create vSphere Tag,<br/>
-        Create vSphere Tag Category,<br/>
-        Delete vSphere Tag,<br/>
-        Delete vSphere Tag Category,<br/>
-        Edit vSphere Tag,<br/>
-        Edit vSphere Tag Category,<br/>
-        Modify UsedBy Field for Category,<br/>
-        Modify UsedBy Field for Tag
-      </td>
-      <td>
-        <code>InventoryService.Tagging.AttachTag</code><br/>
-        <code>InventoryService.Tagging.ObjectAttachable</code><br/>
-        <code>InventoryService.Tagging.CreateTag</code><br/>
-        <code>InventoryService.Tagging.CreateCategory</code><br/>
-        <code>InventoryService.Tagging.DeleteTag</code><br/>
-        <code>InventoryService.Tagging.DeleteCategory</code><br/>
-        <code>InventoryService.Tagging.EditTag</code><br/>
-        <code>InventoryService.Tagging.EditCategory</code><br/>
-        <code>InventoryService.Tagging.ModifyUsedByForCategory</code><br/>
-        <code>InventoryService.Tagging.ModifyUsedByForTag</code>
-      </td>
-      <td>Deckhouse Kubernetes Platform uses tags to identify the <code>Datacenter</code>, <code>Cluster</code>, and <code>Datastore</code> objects available to it, as well as to identify the virtual machines under its control.</td>
-    </tr>
-    <tr>
-      <td>Network</td>
-      <td>Assign network</td>
-      <td><code>Network.Assign</code></td>
-      <td>Connecting networks and port groups to Deckhouse Kubernetes Platform cluster virtual machines.</td>
-    </tr>
-    <tr>
-      <td>Resource</td>
-      <td>
-        Assign virtual machine to resource pool,<br/>
-        Create resource pool,<br/>
-        Modify resource pool,<br/>
-        Remove resource pool,<br/>
-        Rename resource pool
-      </td>
-      <td>
-        <code>Resource.AssignVMToPool</code><br/>
-        <code>Resource.CreatePool</code><br/>
-        <code>Resource.DeletePool</code><br/>
-        <code>Resource.EditPool</code><br/>
-        <code>Resource.RenamePool</code>
-      </td>
-      <td>Placement of Deckhouse Kubernetes Platform cluster virtual machines into the target resource pool and management of this pool.</td>
-    </tr>
-    <tr>
-      <td>VM Storage Policies (<em>Profile-driven Storage Privileges</em> in vSphere 7)</td>
-      <td>View VM storage policies (<em>Profile-driven storage view</em> in vSphere 7)</td>
-      <td><code>StorageProfile.View</code></td>
-      <td>Viewing storage policies used when creating virtual machines and dynamically provisioning volumes in the cluster.</td>
-    </tr>
-    <tr>
-      <td>vApp</td>
-      <td>
-        Add virtual machine,<br/>
-        Assign resource pool,<br/>
-        Create,<br/>
-        Delete,<br/>
-        Import,<br/>
-        Power Off,<br/>
-        Power On,<br/>
-        View OVF Environment,<br/>
-        vApp application configuration,<br/>
-        vApp instance configuration,<br/>
-        vApp resource configuration
-      </td>
-      <td>
-        <code>VApp.ApplicationConfig</code><br/>
-        <code>VApp.AssignResourcePool</code><br/>
-        <code>VApp.AssignVM</code><br/>
-        <code>VApp.Create</code><br/>
-        <code>VApp.Delete</code><br/>
-        <code>VApp.ExtractOvfEnvironment</code><br/>
-        <code>VApp.Import</code><br/>
-        <code>VApp.InstanceConfig</code><br/>
-        <code>VApp.PowerOff</code><br/>
-        <code>VApp.PowerOn</code><br/>
-        <code>VApp.ResourceConfig</code>
-      </td>
-      <td>Managing operations related to deployment and configuration of vApp and OVF templates used when creating virtual machines.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Change Configuration</td>
-      <td>
-        Add existing disk,<br/>
-        Add new disk,<br/>
-        Add or remove device,<br/>
-        Advanced configuration,<br/>
-        Set annotation,<br/>
-        Change CPU count,<br/>
-        Toggle disk change tracking,<br/>
-        Extend virtual disk,<br/>
-        Acquire disk lease,<br/>
-        Modify device settings,<br/>
-        Configure managedBy,<br/>
-        Change Memory,<br/>
-        Query unowned files,<br/>
-        Configure Raw device,<br/>
-        Reload from path,<br/>
-        Remove disk,<br/>
-        Rename,<br/>
-        Reset guest information,<br/>
-        Change resource,<br/>
-        Change Settings,<br/>
-        Change Swapfile placement,<br/>
-        Upgrade virtual machine compatibility
-      </td>
-      <td>
-        <code>VirtualMachine.Config.AddExistingDisk</code><br/>
-        <code>VirtualMachine.Config.AddNewDisk</code><br/>
-        <code>VirtualMachine.Config.AddRemoveDevice</code><br/>
-        <code>VirtualMachine.Config.AdvancedConfig</code><br/>
-        <code>VirtualMachine.Config.Annotation</code><br/>
-        <code>VirtualMachine.Config.CPUCount</code><br/>
-        <code>VirtualMachine.Config.ChangeTracking</code><br/>
-        <code>VirtualMachine.Config.DiskExtend</code><br/>
-        <code>VirtualMachine.Config.DiskLease</code><br/>
-        <code>VirtualMachine.Config.EditDevice</code><br/>
-        <code>VirtualMachine.Config.ManagedBy</code><br/>
-        <code>VirtualMachine.Config.Memory</code><br/>
-        <code>VirtualMachine.Config.QueryUnownedFiles</code><br/>
-        <code>VirtualMachine.Config.RawDevice</code><br/>
-        <code>VirtualMachine.Config.ReloadFromPath</code><br/>
-        <code>VirtualMachine.Config.RemoveDisk</code><br/>
-        <code>VirtualMachine.Config.Rename</code><br/>
-        <code>VirtualMachine.Config.ResetGuestInfo</code><br/>
-        <code>VirtualMachine.Config.Resource</code><br/>
-        <code>VirtualMachine.Config.Settings</code><br/>
-        <code>VirtualMachine.Config.SwapPlacement</code><br/>
-        <code>VirtualMachine.Config.UpgradeVirtualHardware</code>
-      </td>
-      <td>Managing the lifecycle of Deckhouse Kubernetes Platform cluster virtual machines.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Edit Inventory</td>
-      <td>
-        Create new,<br/>
-        Create from existing,<br/>
-        Remove,<br/>
-        Move
-      </td>
-      <td>
-        <code>VirtualMachine.Inventory.Create</code><br/>
-        <code>VirtualMachine.Inventory.CreateFromExisting</code><br/>
-        <code>VirtualMachine.Inventory.Delete</code><br/>
-        <code>VirtualMachine.Inventory.Move</code>
-      </td>
-      <td>Creating, deleting, and moving Deckhouse Kubernetes Platform cluster virtual machines in vSphere Inventory.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Guest Operations</td>
-      <td>Guest Operation Queries</td>
-      <td><code>VirtualMachine.GuestOperations.Query</code></td>
-      <td>Retrieving information from the guest operating system of virtual machines.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Interaction</td>
-      <td>
-        Answer question,<br/>
-        Device connection,<br/>
-        Guest operating system management by VIX API,<br/>
-        Power Off,<br/>
-        Power On,<br/>
-        Reset,<br/>
-        Configure CD media,<br/>
-        Install VMware Tools
-      </td>
-      <td>
-        <code>VirtualMachine.Interact.AnswerQuestion</code><br/>
-        <code>VirtualMachine.Interact.DeviceConnection</code><br/>
-        <code>VirtualMachine.Interact.GuestControl</code><br/>
-        <code>VirtualMachine.Interact.PowerOff</code><br/>
-        <code>VirtualMachine.Interact.PowerOn</code><br/>
-        <code>VirtualMachine.Interact.Reset</code><br/>
-        <code>VirtualMachine.Interact.SetCDMedia</code><br/>
-        <code>VirtualMachine.Interact.ToolsInstall</code>
-      </td>
-      <td>Managing virtual machine power state, device connections, and interaction with the guest operating system.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Provisioning</td>
-      <td>
-        Clone virtual machine,<br/>
-        Customize guest,<br/>
-        Deploy template,<br/>
-        Allow virtual machine download,<br/>
-        Allow virtual machine files upload,<br/>
-        Read customization specifications
-      </td>
-      <td>
-        <code>VirtualMachine.Provisioning.Clone</code><br/>
-        <code>VirtualMachine.Provisioning.Customize</code><br/>
-        <code>VirtualMachine.Provisioning.DeployTemplate</code><br/>
-        <code>VirtualMachine.Provisioning.GetVmFiles</code><br/>
-        <code>VirtualMachine.Provisioning.PutVmFiles</code><br/>
-        <code>VirtualMachine.Provisioning.ReadCustSpecs</code>
-      </td>
-      <td>Cloning virtual machine templates, customizing them, and deploying them when creating Deckhouse Kubernetes Platform cluster nodes.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Snapshot Management</td>
-      <td>
-        Create snapshot,<br/>
-        Remove Snapshot,<br/>
-        Rename Snapshot
-      </td>
-      <td>
-        <code>VirtualMachine.State.CreateSnapshot</code><br/>
-        <code>VirtualMachine.State.RemoveSnapshot</code><br/>
-        <code>VirtualMachine.State.RenameSnapshot</code>
-      </td>
-      <td>Managing snapshots of virtual machines and volumes in scenarios where this functionality is used by platform components.</td>
-    </tr>
-  </tbody>
-</table>
+### Basic access
+
+vSphere assigns these privileges automatically when any role is created. They give the platform components read access to vSphere Inventory objects.
+
+| Privilege in UI | Privilege in API |
+| --- | --- |
+| — | `System.Anonymous` |
+| — | `System.Read` |
+| — | `System.View` |
+
+### Region and zone tags
+
+The platform uses tags to identify the Datacenter, Cluster, and Datastore objects available to it, and to mark the virtual machines it manages.
+
+| Privilege in UI | Privilege in API |
+| --- | --- |
+| Global tag | `Global.GlobalTag` |
+| System tag | `Global.SystemTag` |
+| Assign or Unassign vSphere Tag | `InventoryService.Tagging.AttachTag` |
+| Assign or Unassign vSphere Tag on Object | `InventoryService.Tagging.ObjectAttachable` |
+| Create vSphere Tag | `InventoryService.Tagging.CreateTag` |
+| Create vSphere Tag Category | `InventoryService.Tagging.CreateCategory` |
+| Delete vSphere Tag | `InventoryService.Tagging.DeleteTag` |
+| Delete vSphere Tag Category | `InventoryService.Tagging.DeleteCategory` |
+| Edit vSphere Tag | `InventoryService.Tagging.EditTag` |
+| Edit vSphere Tag Category | `InventoryService.Tagging.EditCategory` |
+| Modify UsedBy Field for Category | `InventoryService.Tagging.ModifyUsedByForCategory` |
+| Modify UsedBy Field for Tag | `InventoryService.Tagging.ModifyUsedByForTag` |
+
+### Storage
+
+These privileges are required to place virtual machine disks, provision PersistentVolumes dynamically, and read SPBM storage policies. In vSphere 7, the `StorageProfile` category is named "Profile-driven storage".
+
+| Privilege in UI | Privilege in API |
+| --- | --- |
+| Searchable | `Cns.Searchable` |
+| Allocate space | `Datastore.AllocateSpace` |
+| Browse datastore | `Datastore.Browse` |
+| Low level file operations | `Datastore.FileManagement` |
+| View VM storage policies | `StorageProfile.View` |
+
+### Virtual machine placement
+
+The platform groups the cluster virtual machines in a dedicated directory, places them in a resource pool, and connects them to networks.
+
+| Privilege in UI | Privilege in API |
+| --- | --- |
+| Create folder | `Folder.Create` |
+| Delete folder | `Folder.Delete` |
+| Move folder | `Folder.Move` |
+| Rename folder | `Folder.Rename` |
+| Assign virtual machine to resource pool | `Resource.AssignVMToPool` |
+| Create resource pool | `Resource.CreatePool` |
+| Modify resource pool | `Resource.EditPool` |
+| Remove resource pool | `Resource.DeletePool` |
+| Rename resource pool | `Resource.RenamePool` |
+| Assign network | `Network.Assign` |
+
+### Creating virtual machines
+
+Virtual machines are created by cloning a prepared template and are registered in the vSphere inventory.
+
+| Privilege in UI | Privilege in API |
+| --- | --- |
+| Clone virtual machine | `VirtualMachine.Provisioning.Clone` |
+| Deploy template | `VirtualMachine.Provisioning.DeployTemplate` |
+| Customize guest | `VirtualMachine.Provisioning.Customize` |
+| Read customization specifications | `VirtualMachine.Provisioning.ReadCustSpecs` |
+| Allow virtual machine download | `VirtualMachine.Provisioning.GetVmFiles` |
+| Allow virtual machine files upload | `VirtualMachine.Provisioning.PutVmFiles` |
+| Create new | `VirtualMachine.Inventory.Create` |
+| Create from existing | `VirtualMachine.Inventory.CreateFromExisting` |
+| Remove | `VirtualMachine.Inventory.Delete` |
+| Move | `VirtualMachine.Inventory.Move` |
+
+### Configuring virtual machines
+
+The platform sets the virtual machine parameters at creation time and changes them when a node group or an instance class is modified.
+
+| Privilege in UI | Privilege in API |
+| --- | --- |
+| Add new disk | `VirtualMachine.Config.AddNewDisk` |
+| Add existing disk | `VirtualMachine.Config.AddExistingDisk` |
+| Remove disk | `VirtualMachine.Config.RemoveDisk` |
+| Extend virtual disk | `VirtualMachine.Config.DiskExtend` |
+| Acquire disk lease | `VirtualMachine.Config.DiskLease` |
+| Toggle disk change tracking | `VirtualMachine.Config.ChangeTracking` |
+| Configure Raw device | `VirtualMachine.Config.RawDevice` |
+| Change CPU count | `VirtualMachine.Config.CPUCount` |
+| Change Memory | `VirtualMachine.Config.Memory` |
+| Change resource | `VirtualMachine.Config.Resource` |
+| Change Swapfile placement | `VirtualMachine.Config.SwapPlacement` |
+| Add or remove device | `VirtualMachine.Config.AddRemoveDevice` |
+| Modify device settings | `VirtualMachine.Config.EditDevice` |
+| Change Settings | `VirtualMachine.Config.Settings` |
+| Advanced configuration | `VirtualMachine.Config.AdvancedConfig` |
+| Set annotation | `VirtualMachine.Config.Annotation` |
+| Rename | `VirtualMachine.Config.Rename` |
+| Configure managedBy | `VirtualMachine.Config.ManagedBy` |
+| Reset guest information | `VirtualMachine.Config.ResetGuestInfo` |
+| Query unowned files | `VirtualMachine.Config.QueryUnownedFiles` |
+| Reload from path | `VirtualMachine.Config.ReloadFromPath` |
+| Upgrade virtual machine compatibility | `VirtualMachine.Config.UpgradeVirtualHardware` |
+
+### Managing virtual machine state
+
+These privileges are required to power virtual machines on and off, connect devices, read information from the guest operating system, and work with snapshots.
+
+| Privilege in UI | Privilege in API |
+| --- | --- |
+| Power On | `VirtualMachine.Interact.PowerOn` |
+| Power Off | `VirtualMachine.Interact.PowerOff` |
+| Reset | `VirtualMachine.Interact.Reset` |
+| Answer question | `VirtualMachine.Interact.AnswerQuestion` |
+| Device connection | `VirtualMachine.Interact.DeviceConnection` |
+| Configure CD media | `VirtualMachine.Interact.SetCDMedia` |
+| Install VMware Tools | `VirtualMachine.Interact.ToolsInstall` |
+| Guest operating system management by VIX API | `VirtualMachine.Interact.GuestControl` |
+| Guest Operation Queries | `VirtualMachine.GuestOperations.Query` |
+| Create snapshot | `VirtualMachine.State.CreateSnapshot` |
+| Remove Snapshot | `VirtualMachine.State.RemoveSnapshot` |
+| Rename Snapshot | `VirtualMachine.State.RenameSnapshot` |
+
+### vApp
+
+Operations with vApp and OVF templates. Required if the virtual machine templates or the machines themselves belong to a vApp.
+
+| Privilege in UI | Privilege in API |
+| --- | --- |
+| Create | `VApp.Create` |
+| Delete | `VApp.Delete` |
+| Import | `VApp.Import` |
+| Add virtual machine | `VApp.AssignVM` |
+| Assign resource pool | `VApp.AssignResourcePool` |
+| Power On | `VApp.PowerOn` |
+| Power Off | `VApp.PowerOff` |
+| vApp application configuration | `VApp.ApplicationConfig` |
+| vApp instance configuration | `VApp.InstanceConfig` |
+| vApp resource configuration | `VApp.ResourceConfig` |
+| View OVF Environment | `VApp.ExtractOvfEnvironment` |
 
 ## vSphere configuration
 
@@ -412,8 +253,8 @@ Make sure to specify the username together with the domain, for example: `userna
 
 ```shell
 export GOVC_URL=example.com
-export GOVC_USERNAME=<username>@vsphere.local
-export GOVC_PASSWORD=<password>
+export GOVC_USERNAME=<USERNAME>@vsphere.local
+export GOVC_PASSWORD=<PASSWORD>
 export GOVC_INSECURE=1
 ```
 
@@ -439,14 +280,14 @@ govc tags.create -d "Kubernetes Zone Test 2" -c k8s-zone test-zone-2
 Attach the "region" tag to Datacenter:
 
 ```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>
 ```
 
 Attach "zone" tags to the Cluster objects:
 
 ```shell
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/host/<ClusterName1>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
+govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/host/<CLUSTER_NAME_1>
+govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/host/<CLUSTER_NAME_2>
 ```
 
 #### Datastore configuration with govc
@@ -458,11 +299,11 @@ For dynamic PersistentVolume provisioning, a Datastore must be available on **ea
 Assign the "region" and "zone" tags to the Datastore objects to automatically create a StorageClass in the Kubernetes cluster:
 
 ```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
+govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
 
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName2>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
+govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
 ```
 
 #### Creating and assigning a role with govc
@@ -518,12 +359,45 @@ Make sure to specify the username together with the domain, for example: `userna
 {% endalert %}
 
 ```shell
-govc permissions.set -principal <username>@vsphere.local -role deckhouse /
+govc permissions.set -principal <USERNAME>@vsphere.local -role deckhouse /
 ```
 
 {% alert level="info" %}
-For more detailed permission configuration, refer to [the official documentation](https://pkg.go.dev/github.com/vmware/govmomi).
+For a description of vSphere privileges, refer to the [VMware documentation](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-security/defined-privileges.html).
 {% endalert %}
+
+#### Role assignment scope
+
+Assign the role on the vCenter root object, as shown in the commands above. DKP components need access to objects outside the directory with the cluster virtual machines:
+
+- The CSI driver determines volume topology by the ESXi hosts attached to a Datastore, so it accesses Cluster and Host objects.
+- The resource discovery component searches for CNS disks within vCenter, which uses the `Cns.Searchable` privilege.
+- The installer creates a resource pool in the Cluster object and a directory in the Datacenter.
+
+If you limit the role to the virtual machine directory, these operations fail.
+
+#### Diagnosing missing privileges
+
+The CSI driver checks the account privileges on each Datastore and excludes those where the privileges are insufficient. Such a Datastore does not appear in the list of available ones, and ordering a PersistentVolume through the corresponding StorageClass fails.
+
+If a tagged Datastore does not produce a working StorageClass, check the account privileges on that object:
+
+```shell
+govc permissions.ls /<DATACENTER_NAME>/datastore/<DATASTORE_NAME>
+```
+
+### vCenter TLS certificate verification
+
+DKP connects to vCenter over TLS and verifies its certificate. If the vCenter certificate is issued by a custom or enterprise certificate authority, pass the certificate chain of that authority in the `caBundle` parameter. Certificate verification stays enabled in this case.
+
+Specify the chain in PEM format. It is the same setting, but its path depends on where the vCenter connection is described:
+
+- When installing a cluster, the connection is described in the `provider` section of the VsphereClusterConfiguration resource next to the `provider.server` parameter, so the chain is set in [`provider.caBundle`](cluster_configuration.html#vsphereclusterconfiguration-provider-cabundle).
+- In a running cluster, the connection is described at the top level of the module settings next to the `host` parameter, so the chain is set in [`caBundle`](configuration.html#parameters-cabundle).
+
+The `insecure: true` parameter disables vCenter certificate verification completely. Set either `caBundle` or `insecure: true`. DKP rejects a configuration that sets a non-empty `caBundle` and `insecure: true` at the same time.
+
+For the NSX-T connection, the certificate chain is set by the separate `nsxt.caBundle` parameter, which is likewise incompatible with `nsxt.insecureFlag: true`.
 
 ### VM image requirements
 
@@ -611,7 +485,7 @@ enabled
 {% endalert %}
 
 {% alert %}
-DKP creates VM disks of type `eagerZeroedThick`, but the type of disks of created VMs may be changed without notification according to the `VM Storage Policy` settings in vSphere.  
+DKP creates VM disks of type `eagerZeroedThick`, but the type of disks of created VMs may be changed without notification according to the `VM Storage Policy` settings in vSphere.
 For more details, see the [documentation](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-single-host-management-vmware-host-client-8-0/virtual-machine-management-with-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/configuring-virtual-machines-in-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/virtual-disk-configuration-vSphereSingleHostManagementVMwareHostClient/about-virtual-disk-provisioning-policies-vSphereSingleHostManagementVMwareHostClient.html).
 {% endalert %}
 
@@ -623,23 +497,27 @@ DKP uses the `ens192` interface as the default interface for VMs in vSphere. The
 
 ### Networking
 
-A VLAN with DHCP and Internet access is required for the running cluster:
+The cluster requires a VLAN with DHCP and Internet access. The layout depends on the type of addresses in that VLAN:
 
-* If the VLAN is public (public addresses), then you have to create a second network to deploy cluster nodes (DHCP is not needed in this network).
-* If the VLAN is private (private addresses), then this network can be used for cluster nodes.
+- If the VLAN uses public addresses, create a second network for the cluster nodes. DHCP is not required in it.
+- If the VLAN uses private addresses, the same network serves as the cluster node network.
 
 ### Inbound traffic
 
-* You can use an internal load balancer (if present) and direct traffic directly to the front nodes of the cluster.
-* If there is no load balancer, you can use MetalLB in BGP mode to organize fault-tolerant load balancers (recommended). In this case, front nodes of the cluster will have two interfaces. For this, you will need:
-  * A dedicated VLAN for traffic exchange between BGP routers and MetalLB. This VLAN must have DHCP and Internet access.
-  * IP addresses of BGP routers.
-  * ASN — the AS number on the BGP router.
-  * ASN — the AS number in the cluster.
-  * A range to announce addresses from.
+Inbound traffic can be balanced in two ways:
+
+- Direct traffic to the cluster frontend nodes through an existing internal load balancer.
+- Deploy MetalLB in BGP mode if there is no internal load balancer. The cluster frontend nodes get two interfaces, and the following is also required:
+
+  - A dedicated VLAN for traffic exchange between BGP routers and MetalLB, with DHCP and Internet access.
+  - IP addresses of the BGP routers.
+  - Autonomous system number (ASN) on the BGP router.
+  - Autonomous system number (ASN) in the cluster.
+  - A range of addresses to announce.
 
 ### Using the datastore
 
-Various types of storage can be used in the cluster; for the minimum configuration, you will need:
-* Datastore for provisioning PersistentVolumes to the Kubernetes cluster.
-* Datastore for provisioning root disks for the VMs (it can be the same Datastore as for PersistentVolume).
+The cluster can use several storage types at the same time. The minimum configuration includes:
+
+- A Datastore where the cluster provisions PersistentVolumes.
+- A Datastore where the root disks of the virtual machines are provisioned. It can be the same Datastore as for PersistentVolumes.

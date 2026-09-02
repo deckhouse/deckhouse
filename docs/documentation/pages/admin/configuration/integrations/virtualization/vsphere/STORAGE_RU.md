@@ -11,11 +11,9 @@ lang: ru
 - Datastore — для размещения root-дисков виртуальных машин;
 - CNS-диски (Container Native Storage) — для автоматического создания PersistentVolume’ов через CSI.
 
-Deckhouse Kubernetes Platform автоматически создаёт StorageClass для каждого Datastore и DatastoreCluster, маркированных как `zone`.  
-Можно указать:
+Deckhouse Kubernetes Platform автоматически создаёт StorageClass для каждого Datastore и DatastoreCluster, маркированных как `zone`.
 
-- имя StorageClass по умолчанию ([`default`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-default));
-- исключения через [`exclude`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-exclude) — список имен или шаблонов StorageClass, которые не нужно создавать.
+Ненужные StorageClass исключаются параметром [`exclude`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-exclude), который принимает список имён или регулярных выражений.
 
 Пример настройки через ModuleConfig:
 
@@ -29,22 +27,42 @@ spec:
   enabled: true
   settings:
     storageClass:
-      default: fast-lun102
       exclude:
         - ".*-lun101-.*"
         - slow-lun103
 ```
 
+Чтобы задать StorageClass по умолчанию, используйте глобальный параметр [`global.defaultClusterStorageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass).
+
+### Политики хранения SPBM
+
+Если в vSphere настроены политики хранения SPBM (Storage Policy Based Management), DKP обнаруживает их и дополнительно создаёт StorageClass для каждого сочетания Datastore и политики. Когда вы заказываете PersistentVolume через такой StorageClass, vSphere применяет к тому соответствующую политику.
+
+Имя StorageClass складывается из имени Datastore и имени политики. DKP приводит его к нижнему регистру, заменяет пробелы на дефисы и удаляет остальные символы, кроме дефиса и точки. Например, для Datastore `lun_1` и политики `Gold Policy` получается StorageClass `lun1-gold-policy`.
+
+Чтобы DKP обнаружил политики, учётной записи vSphere нужна привилегия `StorageProfile.View`.
+
+Политики применяются к томам в любом сценарии, где работает модуль `cloud-provider-vsphere`, включая гибридный кластер. Выбрать политику для отдельного StorageClass вручную нельзя, набор StorageClass формируется автоматически.
+
+Ограничения:
+
+- StorageClass с политиками создаются только для объектов Datastore, для DatastoreCluster они не создаются;
+- параметр [`exclude`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-exclude) сопоставляется с именем Datastore, поэтому он убирает вместе с базовым StorageClass и все StorageClass с политиками для этого Datastore.
+
+### Политика хранения для дисков узлов
+
+Диски виртуальных машин, которые создаёт установщик, получают политику хранения из параметра [`storagePolicyID`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-storagepolicyid) ресурса VsphereClusterConfiguration. В параметре указывается идентификатор политики SPBM.
+
+Параметр действует на master-узлы и на статические узлы, которые создаёт установщик. Узлы, заказываемые по VsphereInstanceClass, политику из этого параметра не получают. В гибридном кластере, где ресурс VsphereClusterConfiguration не используется, задать политику для дисков узлов нельзя.
+
 ### Изменение размера тома (PVC)
 
-Deckhouse Kubernetes Platform поддерживает Online Resize PersistentVolume, начиная с версии vSphere 7.0U2. Однако из-за особенностей CSI и API vSphere после изменения размера PVC требуется выполнить дополнительные действия:
+Deckhouse Kubernetes Platform поддерживает Online Resize PersistentVolume, начиная с версии vSphere 7.0U2. Из-за [особенностей](https://github.com/kubernetes-csi/external-resizer/issues/44) работы volume-resizer CSI и API vSphere после изменения размера PVC выполните следующие действия:
 
-1. Выполните `d8 k cordon <имя_узла>`.
+1. Выполните `d8 k cordon <NODE_NAME>` для узла, на котором работает под.
 1. Удалите под, использующий PVC.
-1. Дождитесь завершения операции Resize:
-   - убедитесь, что у PVC нет condition `Resizing`;
-   - `FileSystemResizePending` можно игнорировать.
-1. Выполните `d8 k uncordon <имя_узла>`.
+1. Дождитесь завершения операции Resize. У PVC не должно остаться condition `Resizing`, при этом состояние `FileSystemResizePending` не является проблемой.
+1. Выполните `d8 k uncordon <NODE_NAME>`.
 
 ## Балансировка нагрузки
 
@@ -68,16 +86,6 @@ Deckhouse Kubernetes Platform поддерживает Online Resize PersistentV
 
 Подсистема хранения по умолчанию использует CNS-диски с возможностью изменения их размера на лету. Но также поддерживается работа и в legacy-режиме с использованием FCD-дисков. Поведение подсистемы устанавливается с помощью [параметра `compatibilityFlag`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-compatibilityflag).
 
-## Важная информация об увеличении размера PVC
-
-Из-за [особенностей](https://github.com/kubernetes-csi/external-resizer/issues/44) работы volume-resizer CSI и vSphere API, после увеличения размера PVC нужно сделать следующее:
-
-1. На узле, где находится под, выполните команду `d8 k cordon <имя_узла>`.
-1. Удалите под.
-1. Убедитесь, что изменение размера прошло успешно. В объекте PVC *не будет* condition `Resizing`.
-   > Состояние `FileSystemResizePending` не является проблемой.
-1. На узле, где находится под, выполните команду `d8 k uncordon <имя_узла>`.
-
 ## Настройка Datastore
 
 {% alert %}
@@ -89,9 +97,9 @@ Pазметку **Datastore** также можно сделать через **
 Назначьте теги:
 
 ```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
+govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
 
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName2>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
+govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
 ```
