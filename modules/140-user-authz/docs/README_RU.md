@@ -447,6 +447,8 @@ delete,deletecollection:
     - acme.cert-manager.io/challenges
     - acme.cert-manager.io/orders
     - cert-manager.io/certificaterequests
+get,list:
+    - templates.internal.deckhouse.io/nodeconfigtemplates
 patch,update:
     - nodes
 read:
