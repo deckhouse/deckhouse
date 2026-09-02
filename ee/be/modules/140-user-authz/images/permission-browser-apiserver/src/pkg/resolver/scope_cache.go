@@ -85,11 +85,11 @@ func (c *ResourceScopeCache) IsNamespaced(group, resource string) bool {
 // multi-tenancy uses !known as "treat like namespaced" so a discovery hole
 // cannot fail-open. IsNamespaced stays fail-closed-as-cluster-scoped for
 // AccessibleNamespaces (a false namespaced=true would list every namespace).
-func (c *ResourceScopeCache) Scope(group, resource string) (namespaced, known bool) {
+func (c *ResourceScopeCache) Scope(group, resource string) (bool, bool) {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
-	namespaced, known = c.scopeMap[group+"/"+resource]
+	namespaced, known := c.scopeMap[group+"/"+resource]
 	return namespaced, known
 }
 
