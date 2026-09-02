@@ -745,6 +745,89 @@ func TestResolveAccessibleNamespaces_CARLimitOnly_Unchanged(t *testing.T) {
 		"CAR-only user must see exactly the CAR's limited namespaces")
 }
 
+// TestResolveAccessibleNamespaces_SuperAdminVsEditor locks the AccessibleNamespaces
+// split that BulkSAR must stay consistent with: SuperAdmin (matchAny, system
+// access) sees every namespace the CAR CRB can reach, including kube-system;
+// Editor (limitNamespaces) sees only the CAR ns and never a system ns.
+func TestResolveAccessibleNamespaces_SuperAdminVsEditor(t *testing.T) {
+	deckhouseLabels := map[string]string{"heritage": "deckhouse", "module": "user-authz"}
+	wildcard := []rbacv1.PolicyRule{{
+		APIGroups: []string{"*"}, Resources: []string{"*"}, Verbs: []string{"*"},
+	}}
+	objs := []runtime.Object{
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-in"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-out"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kube-system"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "d8-system"}},
+		&rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{Name: "user-authz:super-admin"},
+			Rules:      wildcard,
+		},
+		&rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{Name: "user-authz:editor"},
+			Rules:      wildcard,
+		},
+		&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "user-authz:super:super-admin", Labels: deckhouseLabels},
+			Subjects:   []rbacv1.Subject{{Kind: rbacv1.UserKind, Name: "super@example.io"}},
+			RoleRef:    rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "user-authz:super-admin"},
+		},
+		&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "user-authz:editor:editor", Labels: deckhouseLabels},
+			Subjects:   []rbacv1.Subject{{Kind: rbacv1.UserKind, Name: "editor@example.io"}},
+			RoleRef:    rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "user-authz:editor"},
+		},
+	}
+
+	superEngine := newMTEngineFromConfig(t, `{
+		"crds": [{
+			"name": "super",
+			"spec": {
+				"accessLevel": "SuperAdmin",
+				"allowAccessToSystemNamespaces": true,
+				"namespaceSelector": {"matchAny": true},
+				"subjects": [{"kind": "User", "name": "super@example.io"}]
+			}
+		}]
+	}`)
+	editorEngine := newMTEngineFromConfig(t, `{
+		"crds": [{
+			"name": "editor",
+			"spec": {
+				"accessLevel": "Editor",
+				"limitNamespaces": ["ns-in"],
+				"subjects": [{"kind": "User", "name": "editor@example.io"}]
+			}
+		}]
+	}`)
+
+	superNS, err := setupResolver(t, objs, superEngine).ResolveAccessibleNamespaces(
+		&user.DefaultInfo{Name: "super@example.io", Groups: []string{"system:authenticated"}},
+	)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"ns-in", "ns-out", "kube-system", "d8-system"}, superNS,
+		"SuperAdmin matchAny must list every namespace the CAR CRB can reach")
+
+	editorNS, err := setupResolver(t, objs, editorEngine).ResolveAccessibleNamespaces(
+		&user.DefaultInfo{Name: "editor@example.io", Groups: []string{"system:authenticated"}},
+	)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"ns-in"}, editorNS,
+		"Editor limitNamespaces must not leak ns-out or system namespaces")
+
+	editorResolver := setupResolver(t, objs, editorEngine)
+	editorUser := &user.DefaultInfo{Name: "editor@example.io", Groups: []string{"system:authenticated"}}
+	in, err := editorResolver.IsNamespaceAccessible(editorUser, "ns-in")
+	require.NoError(t, err)
+	assert.True(t, in)
+	out, err := editorResolver.IsNamespaceAccessible(editorUser, "ns-out")
+	require.NoError(t, err)
+	assert.False(t, out)
+	sys, err := editorResolver.IsNamespaceAccessible(editorUser, "kube-system")
+	require.NoError(t, err)
+	assert.False(t, sys)
+}
+
 // Helper functions
 
 // newMTEngineFromConfig writes a user-authz config.json with the supplied raw body
