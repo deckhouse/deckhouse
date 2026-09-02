@@ -1,15 +1,15 @@
 diff --git a/go.mod b/go.mod
-index 213d7d0..f19f92d 100644
+index a5eb68c..1516c7a 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,13 +1,15 @@
  module repository.basistech.ru/BASIS/terraform-provider-decort
-
+ 
 -go 1.20
 +go 1.23
 +
 +toolchain go1.23.5
-
+ 
  require (
  	github.com/google/uuid v1.4.0
  	github.com/hashicorp/terraform-plugin-docs v0.19.4
@@ -17,9 +17,9 @@ index 213d7d0..f19f92d 100644
  	github.com/sirupsen/logrus v1.9.0
 -	golang.org/x/net v0.23.0
 +	golang.org/x/net v0.33.0
- 	repository.basistech.ru/BASIS/decort-golang-sdk v1.9.2
+ 	repository.basistech.ru/BASIS/decort-golang-sdk v1.11.6
  )
-
+ 
 @@ -74,11 +76,11 @@ require (
  	github.com/yuin/goldmark-meta v1.1.0 // indirect
  	github.com/zclconf/go-cty v1.14.4 // indirect
@@ -36,7 +36,7 @@ index 213d7d0..f19f92d 100644
  	google.golang.org/genproto/googleapis/rpc v0.0.0-20231106174013-bbf56f31fb17 // indirect
  	google.golang.org/grpc v1.61.1 // indirect
 diff --git a/go.sum b/go.sum
-index c7822ef..0a78399 100644
+index 5c66ff3..dfa517b 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,4 +1,5 @@
@@ -210,4 +210,3 @@ index c7822ef..0a78399 100644
  gopkg.in/yaml.v2 v2.2.2/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
  gopkg.in/yaml.v2 v2.3.0 h1:clyUAQHOM3G0M3f5vQj7LuJrETvjVot3Z5el9nffUtU=
  gopkg.in/yaml.v2 v2.3.0/go.mod h1:hI93XBmqTisBFMUTm0b8Fm+jr3Dg1NNxqwp+5A1VGuI=
-
