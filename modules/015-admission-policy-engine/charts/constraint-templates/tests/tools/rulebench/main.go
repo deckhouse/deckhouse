@@ -81,7 +81,7 @@ type constraintTemplate struct {
 
 var pkgRe = regexp.MustCompile(`(?m)^package\s+(\S+)`)
 
-func extractRego(rendered string) (libs []string, regoSrc string, pkg string, v0 bool, err error) {
+func extractRego(rendered string) ([]string, string, string, bool, error) {
 	data, err := os.ReadFile(filepath.Join(rendered, "constraint-template.yaml"))
 	if err != nil {
 		return nil, "", "", false, err
@@ -94,6 +94,9 @@ func extractRego(rendered string) (libs []string, regoSrc string, pkg string, v0
 		return nil, "", "", false, fmt.Errorf("no targets")
 	}
 	t := ct.Spec.Targets[0]
+	var libs []string
+	var regoSrc string
+	var v0 bool
 	if len(t.Code) > 0 {
 		src := t.Code[0].Source
 		libs = src.Libs
@@ -107,7 +110,7 @@ func extractRego(rendered string) (libs []string, regoSrc string, pkg string, v0
 	if m == nil {
 		return nil, "", "", false, fmt.Errorf("no package clause")
 	}
-	pkg = m[1]
+	pkg := m[1]
 	return libs, regoSrc, pkg, v0, nil
 }
 
@@ -122,9 +125,10 @@ func containsAny(s string, keys ...string) bool {
 
 // findSamples mirrors bench_rules.py's find_samples(): best-effort (allowed, disallowed)
 // pair by filename convention, falling back to the first two distinct files.
-func findSamples(rendered string) (allowed, disallowed string) {
+func findSamples(rendered string) (string, string) {
 	samplesDir := filepath.Join(rendered, "test_samples")
 	var all []string
+	var allowed, disallowed string
 	_ = filepath.Walk(samplesDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil || info.IsDir() || filepath.Ext(path) != ".yaml" {
 			return nil
