@@ -113,7 +113,10 @@ func BootstrapAdditionalNode(
 		return err
 	}
 
-	nodeGroupSettings := cfg.FindTerraNodeGroup(ctx, nodeGroupName)
+	nodeGroupSettings, err := cfg.FindTerraNodeGroup(ctx, nodeGroupName)
+	if err != nil {
+		return err
+	}
 
 	cloudConfig, err = nodeCloudConfig(ctx, kubeCl, build, nodeGroupName, nodeName, cloudConfig)
 	if err != nil {
@@ -202,9 +205,12 @@ func BootstrapAdditionalNodeForParallelRun(
 	build ImmutablePayloadBuilder,
 ) error {
 	nodeName := NodeName(cfg, nodeGroupName, index)
-	nodeGroupSettings := cfg.FindTerraNodeGroup(ctx, nodeGroupName)
+	nodeGroupSettings, err := cfg.FindTerraNodeGroup(ctx, nodeGroupName)
+	if err != nil {
+		return err
+	}
 
-	cloudConfig, err := nodeCloudConfig(ctx, kubeCl, build, nodeGroupName, nodeName, cloudConfig)
+	cloudConfig, err = nodeCloudConfig(ctx, kubeCl, build, nodeGroupName, nodeName, cloudConfig)
 	if err != nil {
 		return err
 	}

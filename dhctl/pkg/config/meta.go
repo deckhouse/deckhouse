@@ -538,19 +538,32 @@ func (m *MetaConfig) GetClusterDomain() string {
 	return m.ClusterDomain
 }
 
-func (m *MetaConfig) FindTerraNodeGroup(ctx context.Context, nodeGroupName string) []byte {
-	for index, ng := range m.TerraNodeGroupSpecs {
-		if ng.Name == nodeGroupName {
-			var terraNodeGroups []json.RawMessage
-			err := json.Unmarshal(m.ProviderClusterConfig["nodeGroups"], &terraNodeGroups)
-			if err != nil {
-				dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprint(err))
-				return nil
-			}
-			return terraNodeGroups[index]
-		}
+// FindTerraNodeGroup returns the node group's raw provider cluster configuration
+// entry, or nil when there is none: an mc-flow cluster carries no nodeGroups there
+// at all. Nil settings is expected downstream, a parse failure is not.
+func (m *MetaConfig) FindTerraNodeGroup(_ context.Context, nodeGroupName string) ([]byte, error) {
+	raw := m.ProviderClusterConfig["nodeGroups"]
+	if len(raw) == 0 {
+		return nil, nil
 	}
-	return nil
+
+	for index, ng := range m.TerraNodeGroupSpecs {
+		if ng.Name != nodeGroupName {
+			continue
+		}
+		var terraNodeGroups []json.RawMessage
+		if err := json.Unmarshal(raw, &terraNodeGroups); err != nil {
+			return nil, fmt.Errorf("unmarshal node groups from provider cluster configuration: %w", err)
+		}
+		// An explicitly empty nodeGroups list still lets the specs be derived from
+		// the cluster NodeGroups, so the index need not address the raw list.
+		if index >= len(terraNodeGroups) {
+			return nil, nil
+		}
+		return terraNodeGroups[index], nil
+	}
+
+	return nil, nil
 }
 
 func (m *MetaConfig) IsStatic() bool {
