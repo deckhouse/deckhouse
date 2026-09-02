@@ -81,10 +81,19 @@ func resolvePath(path string) string {
 	return filepath.Join(dir, filepath.Base(absolute))
 }
 
+// impersonatedUser and impersonatedGroup are the identity every dhctl request
+// carries. The same one the kubectl proxy on a master is started with
+// (lib-connection pkg/ssh/base/kubeproxy: --as=dhctl --as-group=system:masters),
+// and "dhctl" is the username Deckhouse's admission policies exempt.
+const (
+	impersonatedUser  = "dhctl"
+	impersonatedGroup = "system:masters"
+)
+
 // RetargetKubeconfig points the collected admin kubeconfig at the address dhctl
 // reaches the API server on (e.g. a bastion's local forward) and at the name its
-// certificate is issued for. The retargeted copy is internal; the operator's copy
-// keeps the node's address. Pure.
+// certificate is issued for, and makes it act as impersonatedUser. The retargeted
+// copy is internal; the operator's copy keeps the node's address. Pure.
 func RetargetKubeconfig(_ context.Context, content []byte, server, serverName string) ([]byte, error) {
 	if server == "" {
 		return nil, errors.New("retarget the admin kubeconfig: server URL is empty")
@@ -100,6 +109,9 @@ func RetargetKubeconfig(_ context.Context, content []byte, server, serverName st
 	if len(kubeconfig.Clusters) == 0 {
 		return nil, errors.New("the collected admin kubeconfig names no cluster")
 	}
+	if len(kubeconfig.AuthInfos) == 0 {
+		return nil, errors.New("the collected admin kubeconfig names no user")
+	}
 
 	for _, cluster := range kubeconfig.Clusters {
 		cluster.Server = server
@@ -107,6 +119,16 @@ func RetargetKubeconfig(_ context.Context, content []byte, server, serverName st
 		// the operator's certSANs — all of them chosen before the VM existed, so a
 		// NAT address dhctl dials is in none of them. The node name always is.
 		cluster.TLSServerName = serverName
+	}
+
+	// The certificate the node signed names kubernetes-admin, and Deckhouse's
+	// admission policies exempt the username "dhctl" and nothing else: without
+	// this every write of a heritage: deckhouse object is denied for good.
+	for _, authInfo := range kubeconfig.AuthInfos {
+		authInfo.Impersonate = impersonatedUser
+		// The group comes along because impersonation replaces the identity whole:
+		// a user named dhctl with no groups is nobody's cluster-admin.
+		authInfo.ImpersonateGroups = []string{impersonatedGroup}
 	}
 
 	out, err := clientcmd.Write(*kubeconfig)

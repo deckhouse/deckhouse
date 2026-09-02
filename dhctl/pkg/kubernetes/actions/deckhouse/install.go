@@ -442,8 +442,8 @@ func getNSTask(kubeCl *client.KubernetesClient) actions.ManifestTask {
 		CreateFunc: func(ctx context.Context, manifest any) error {
 			ns := manifest.(*apiv1.Namespace)
 			// On a rerun the namespace is already there, ours from an earlier run or
-			// labelled by the Deckhouse chart. Leave it: writing it needs an admission
-			// decision (system-ns.deckhouse.io denies the create) and buys nothing.
+			// labelled by the Deckhouse chart. Leave it: the update a failed create
+			// falls through to is unconditional and strips every label it did not set.
 			if _, err := kubeCl.CoreV1().Namespaces().Get(ctx, ns.GetName(), metav1.GetOptions{}); err == nil {
 				dhlog.FromContext(ctx).InfoContext(ctx, "Already exists. Skip!")
 				return nil
