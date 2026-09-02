@@ -42,7 +42,7 @@ type NodeGroupCrdInfo struct {
 }
 
 // cloudInstancesForValues is the part of NodeGroup.spec.cloudInstances published to helm values.
-// The bounds stay nilable pointers with omitempty; cluster_autoscaler_deployment_requirements.go:71
+// The bounds stay nilable pointers with omitempty; handleClusterAutoscalerDeploymentRequirements
 // reads them as `ng.CloudInstances.MinPerZone == nil`.
 type cloudInstancesForValues struct {
 	MinPerZone *int32   `json:"minPerZone,omitempty"`
