@@ -53,6 +53,11 @@ type advice struct {
 	tip     string
 }
 
+// reasonHealthUnknown is a summary-local table key, not a reason the health monitor
+// writes: it stands for an intScaled the monitor has not confirmed, which carries no
+// reason of its own.
+const reasonHealthUnknown = "HealthUnknown"
+
 // summaryTable is the whole Summary policy in one place: phase → canonical
 // reason → what the user sees. It mirrors the scenarios enumerated in
 // summary_test.go one-to-one. The phase and the canonical reason both come
@@ -142,6 +147,25 @@ var summaryTable = map[phase]map[string]advice{
 			stateFailed,
 			"Update failed: Helm could not apply manifests for the new version; previous version is no longer serving",
 			"Resources in the cluster are inconsistent. Check helm history and events in the namespace. Resolve resource conflicts. If needed, roll back manually via helm rollback.",
+		},
+
+		// Workload gate. The manifests are applied, so the update is still in
+		// flight rather than failed — except a degraded workload, which is the
+		// health monitor's terminal verdict on the new version.
+		"Reconciling": {
+			stateUpdating,
+			"Update applied: the new version's workload is rolling out",
+			"Wait for the rollout to finish. If it stalls, check pod status and events.",
+		},
+		"Degraded": {
+			stateDegraded,
+			"Update applied but the workload health monitor reports degraded",
+			"Check pod status and logs to identify the root cause. Roll back the application version if the new one cannot start.",
+		},
+		reasonHealthUnknown: {
+			stateUpdating,
+			"Update applied: waiting for a workload the health monitor can confirm",
+			"Either no report has arrived yet, or the chart ships no Deployment or StatefulSet, the only kinds the health monitor watches.",
 		},
 	},
 
@@ -247,23 +271,21 @@ func summarize(state condmap.State) (string, string, string) {
 		return adviseFor(phaseInstall, reasonOf(state, blocker))
 
 	case phaseUpdate:
-		blocker, ok := pipelineBlocker(state, updatePipeline)
-		if !ok {
-			// "No blocker" is not the same as "update finished". firstFalse skips a
-			// transient ManifestsApplied=False/ApplyingManifests exactly as the
-			// mapper does, so the update pipeline reads clear during every re-apply
-			// window. But mapUpdateInstalled only flips UpdateInstalled (and mapReady
-			// only flips Ready) to True once ManifestsApplied is actually True; until
-			// then it returns empty and leaves the previous — possibly failed —
-			// conditions sticky. Mirror that success gate here, otherwise a mid-apply
-			// retry over a failed update would report Ready while the conditions a
-			// client also reads still say ManifestsApplyFailed.
-			if state.IntEqual(intManifestsApplied, metav1.ConditionTrue) {
-				return summaryReady.state, summaryReady.message, summaryReady.tip // update done
-			}
+		if blocker, ok := pipelineBlocker(state, updatePipeline); ok {
+			return adviseFor(phaseUpdate, reasonOf(state, blocker))
+		}
+		// "No blocker" is not the same as "update finished". firstFalse skips a
+		// transient ManifestsApplied=False/ApplyingManifests exactly as the mapper
+		// does, so the update pipeline reads clear during every re-apply window,
+		// while mapUpdateInstalled only flips UpdateInstalled to True once
+		// ManifestsApplied is actually True.
+		if !state.IntEqual(intManifestsApplied, metav1.ConditionTrue) {
 			return summaryUpdating.state, summaryUpdating.message, summaryUpdating.tip
 		}
-		return adviseFor(phaseUpdate, reasonOf(state, blocker))
+		if !state.IntEqual(intScaled, metav1.ConditionTrue) {
+			return adviseFor(phaseUpdate, workloadReason(state))
+		}
+		return summaryReady.state, summaryReady.message, summaryReady.tip
 
 	case phaseReconcile:
 		blocker, ok := firstFalse(state, reconcileSummaryChain)
@@ -293,6 +315,18 @@ var reconcileSummaryChain = []string{
 	intManifestsApplied,
 	intConfigured,
 	intScaled,
+}
+
+// workloadReason returns the health monitor's verdict on the package workload.
+// An absent or reasonless intScaled means the monitor has not reported at all,
+// which is not the same as reporting that there is nothing to observe.
+func workloadReason(state condmap.State) string {
+	reason, _ := state.GetIntReason(intScaled)
+	if reason == "" {
+		return reasonHealthUnknown
+	}
+
+	return reasonOf(state, intScaled)
 }
 
 // reasonOf returns the canonical external reason for a failing internal
