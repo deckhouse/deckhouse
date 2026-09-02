@@ -264,22 +264,35 @@ func (r *reconciler) ensureCatalogModule(ctx context.Context, name, channel stri
 		return module, nil
 	}
 
+	if err := r.placeCatalogModule(ctx, module, channel, config, offering); err != nil {
+		return nil, err
+	}
+
+	return module, nil
+}
+
+// placeCatalogModule writes where a module nothing installed would come from and its state:
+// the repository of the source the config picks or of the only offering source, the channel,
+// and the offered or the conflict state.
+func (r *reconciler) placeCatalogModule(ctx context.Context, module *v1alpha2.Module, channel string, config *v1alpha1.ModuleConfig, offering []string) error {
+	configured := pkgsync.ConfiguredSource(config)
+
 	patch := client.MergeFrom(module.DeepCopy())
-	module.Spec.PackageRepositoryName = pkgsync.CatalogRepository(pkgsync.ConfiguredSource(config), offering)
+	module.Spec.PackageRepositoryName = pkgsync.CatalogRepository(configured, offering)
 	module.Spec.ReleaseChannel = channel
 
 	data, err := patch.Data(module)
 	if err != nil {
-		return nil, fmt.Errorf("build patch for the '%s' module: %w", name, err)
+		return fmt.Errorf("build patch for the '%s' module: %w", module.Name, err)
 	}
 
 	if string(data) != "{}" {
 		if err := r.client.Patch(ctx, module, client.RawPatch(patch.Type(), data)); err != nil {
-			return nil, fmt.Errorf("patch the '%s' module: %w", name, err)
+			return fmt.Errorf("patch the '%s' module: %w", module.Name, err)
 		}
 	}
 
-	conflict := pkgsync.CatalogConflict(config != nil && config.IsEnabled(), pkgsync.ConfiguredSource(config), offering)
+	conflict := pkgsync.CatalogConflict(config != nil && config.IsEnabled(), configured, offering)
 
 	err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {
 		module.ApplyCatalogState(conflict)
@@ -287,10 +300,51 @@ func (r *reconciler) ensureCatalogModule(ctx context.Context, name, channel stri
 		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("update the '%s' module status: %w", name, err)
+		return fmt.Errorf("update the '%s' module status: %w", module.Name, err)
 	}
 
-	return module, nil
+	return nil
+}
+
+// cleanCatalogModule takes the source away from a module it stopped offering. The object of a
+// module nothing installed and no other source offers goes; one another source still offers is
+// placed on what remains. An installed module is not the catalog's to touch.
+func (r *reconciler) cleanCatalogModule(ctx context.Context, source *v1alpha1.ModuleSource, name string) error {
+	module, err := r.getModule(ctx, name)
+	if err != nil {
+		return err
+	}
+
+	if module == nil || module.IsInstalled() {
+		return nil
+	}
+
+	sources := new(v1alpha1.ModuleSourceList)
+	if err := r.client.List(ctx, sources); err != nil {
+		return fmt.Errorf("list module sources: %w", err)
+	}
+
+	// the status of this source lists the module until this scan is written
+	offering := slices.DeleteFunc(sources.Offering(name), func(offered string) bool {
+		return offered == source.Name
+	})
+
+	if len(offering) == 0 {
+		r.logger.Info("no source offers the module any more, delete it", slog.String("module_name", name), slog.String("source_name", source.Name))
+
+		if err := r.client.Delete(ctx, module); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("delete the '%s' module: %w", name, err)
+		}
+
+		return nil
+	}
+
+	config, err := r.moduleConfig(ctx, name)
+	if err != nil {
+		return err
+	}
+
+	return r.placeCatalogModule(ctx, module, module.Spec.ReleaseChannel, config, offering)
 }
 
 // moduleConfig returns the module config, nil when the operator wrote none.
