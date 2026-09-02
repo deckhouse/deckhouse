@@ -127,7 +127,10 @@ func (c *CloudPermanentNodeGroupController) updateNode(ctx *context.Context, nod
 	nodeGroupName := c.name
 
 	// Node group settings are only for the static node.
-	nodeGroupSettingsFromConfig := metaConfig.FindTerraNodeGroup(ctx.Ctx(), c.name)
+	nodeGroupSettingsFromConfig, err := metaConfig.FindTerraNodeGroup(ctx.Ctx(), c.name)
+	if err != nil {
+		return err
+	}
 
 	// The payload only reaches the machine when the VM is recreated: the cloud-init
 	// secret is immutable and its name carries the plan's destructive hash. Building it
