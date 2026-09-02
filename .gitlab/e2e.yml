@@ -4,11 +4,14 @@
 include:
   - project: 'deckhouse/ssdlc-tools/e2e-framework'
     file: '/ci-templates/e2e-framework.gitlab-ci.yml'
-    ref: 'main'
+    ref: 'add-comment-mr' #TODO remove after merge e2e-framework#58
     inputs:
       runner_tag: k8s-intteam-cloud-d8-ssdlc-runner
       vault_role: deckhouse
       branch: $BRANCH
+      note_id: $NOTE_ID
+      merge_request_iid: $MERGE_REQUEST_IID
+      comment_token: $COMMENT_TOKEN
 
 variables:
   E2E_PROVIDER:
@@ -86,6 +89,7 @@ e2e-ensure-build:
     - chmod +x .gitlab/scripts/e2e-ensure-build.sh
     - .gitlab/scripts/e2e-ensure-build.sh
   artifacts:
+    access: none  # dotenv now carries BOATSWAIN_TOKEN; needs:artifacts inheritance still works, only UI/API download is blocked.
     reports:
       dotenv: e2e-build.env
     expire_in: 3 days
@@ -117,6 +121,9 @@ e2e-prestart:
       artifacts: true
     - job: e2e-prestart
       artifacts: true
+  after_script:
+    - chmod +x .gitlab/scripts/e2e-notify-finish.sh
+    - .gitlab/scripts/e2e-notify-finish.sh
   before_script:
     - |
       # A job-level BRANCH is already statically set via the e2e-framework include

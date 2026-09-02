@@ -24,6 +24,10 @@
 # place that decides the final BRANCH value — downstream jobs only ever read
 # it from this job's dotenv artifact.
 #
+# Also resolves the linked merge request (if any) and posts a "started"
+# comment, writing its id (NOTE_ID) and the MR iid (MERGE_REQUEST_IID) to
+# the same dotenv artifact, so the create job can update that comment.
+#
 # Tag naming: .gitlab/build.yml
 # Play job:   https://docs.gitlab.com/api/jobs/#run-a-job
 # Pipelines:  https://docs.gitlab.com/api/pipelines/ (filter by sha)
@@ -100,6 +104,38 @@ resolve_image_tag_base() {
     return
   fi
   echo "${CI_COMMIT_REF_SLUG}"
+}
+
+MR_IID=""
+resolve_mr_iid() {
+  if [[ -n "${MR_IID}" ]]; then
+    echo "${MR_IID}"
+    return 0
+  fi
+  if [[ -n "${CI_MERGE_REQUEST_IID:-}" ]]; then
+    MR_IID="${CI_MERGE_REQUEST_IID}"
+    echo "${MR_IID}"
+    return 0
+  fi
+  if [[ -z "${CI_COMMIT_BRANCH:-}" ]]; then
+    return 1
+  fi
+  local mrs iid
+  mrs="$(api GET "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/merge_requests?state=opened&source_branch=${CI_COMMIT_BRANCH}&per_page=1")"
+  iid="$(echo "${mrs}" | jq -r '.[0].iid // empty')"
+  if [[ -z "${iid}" ]]; then
+    return 1
+  fi
+  MR_IID="${iid}"
+  echo "${MR_IID}"
+}
+
+post_start_comment() {
+  local mr_iid="$1"
+  local body="e2e test started: PROVIDER=${E2E_PROVIDER:-?} EDITION=${E2E_EDITION} — [pipeline](${CI_PIPELINE_URL:-})"
+  api POST "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/merge_requests/${mr_iid}/notes" \
+    --data-urlencode "body=${body}" \
+    | jq -r '.id // empty'
 }
 
 compute_image_tag() {
@@ -231,25 +267,47 @@ wait_for_job_success() {
 write_dotenv() {
   local branch="$1"
   local job_name="$2"
+  local note_id="$3"
+  local mr_iid="$4"
   # RESOLVED_BRANCH duplicates BRANCH under a name no job statically defines.
   # BRANCH itself is already set as a job-level variable via the e2e-framework
   # include (inputs.branch, baked in at pipeline-compile time), and GitLab
   # always prioritizes a job-level variable over a same-named dotenv variable
   # from `needs` — so plain BRANCH from this dotenv is silently dropped
   # downstream. Consumers must `export BRANCH="$RESOLVED_BRANCH"` themselves.
+  #
+  # COMMENT_TOKEN carries the same value as this job's own FOX_TOKEN, so
+  # downstream jobs don't need their own vault fetch to talk to the GitLab
+  # API (e.g. to update the e2e comment/labels). This artifact must stay
+  # access-restricted (artifacts:access: none) since it now holds a token.
   cat > "${DOTENV_FILE}" <<EOF
 BRANCH=${branch}
 RESOLVED_BRANCH=${branch}
 E2E_BUILD_JOB_NAME=${job_name}
+NOTE_ID=${note_id}
+MERGE_REQUEST_IID=${mr_iid}
+COMMENT_TOKEN=${FOX_TOKEN}
 EOF
-  echo "Wrote ${DOTENV_FILE}:"
-  cat "${DOTENV_FILE}"
+  grep -v '^COMMENT_TOKEN=' "${DOTENV_FILE}"
 }
 
 main() {
+  local mr_iid="" note_id=""
+  if mr_iid="$(resolve_mr_iid)"; then
+    echo "MERGE_REQUEST_IID=${mr_iid}"
+    if note_id="$(post_start_comment "${mr_iid}")" && [[ -n "${note_id}" ]]; then
+      echo "NOTE_ID=${note_id}"
+    else
+      echo "Failed to post start comment on MR ${mr_iid}" >&2
+      note_id=""
+    fi
+  else
+    echo "No merge request found for this pipeline; skipping e2e status comment"
+  fi
+
   if [[ -n "${CUSTOM_BRANCH}" && ! "${CUSTOM_BRANCH}" =~ ^[Pp][Rr] ]]; then
     echo "BRANCH='${CUSTOM_BRANCH}' provided and not pr-prefixed; using as-is (skipping build lookup)"
-    write_dotenv "${CUSTOM_BRANCH}" ""
+    write_dotenv "${CUSTOM_BRANCH}" "" "${note_id}" "${mr_iid}"
     return
   fi
 
@@ -299,7 +357,7 @@ main() {
       ;;
   esac
 
-  write_dotenv "${image_tag}" "${job_name}"
+  write_dotenv "${image_tag}" "${job_name}" "${note_id}" "${mr_iid}"
 }
 
 main "$@"
