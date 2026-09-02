@@ -63,7 +63,7 @@ spec:
         - --leader-election-lease-duration=25s
         - --leader-election-renew-deadline=20s
         command:
-        - cilium-operator
+        - cilium-operator-generic
         env:
         - name: GOPS_CONFIG_DIR
           value: /tmp/gops
