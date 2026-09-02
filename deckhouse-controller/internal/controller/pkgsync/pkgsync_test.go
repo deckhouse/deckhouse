@@ -189,7 +189,8 @@ func TestSyncIsIdempotent(t *testing.T) {
 	writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\nstage: General Availability\n")
 
 	s, cl := newTestSyncer(t, "v1.80.0", dir,
-		testModuleSource("external", "registry.example.io/external"),
+		// the source offers a module nothing installed
+		testSourceOffering("external", "offered"),
 		testRelease("parca", "deckhouse", "1.4.3", v1alpha1.ModuleReleasePhaseDeployed),
 		testRelease("console", "deckhouse", "1.60.1", v1alpha1.ModuleReleasePhasePending),
 	)
@@ -207,7 +208,7 @@ func TestSyncIsIdempotent(t *testing.T) {
 	for _, name := range listModuleNames(t, cl) {
 		modules[name] = getModule(t, cl, name).ResourceVersion
 	}
-	require.Len(t, modules, 2)
+	require.Len(t, modules, 3)
 
 	require.NoError(t, s.sync(ctx))
 
@@ -217,7 +218,7 @@ func TestSyncIsIdempotent(t *testing.T) {
 	}
 	assert.Equal(t, repositoryRV, getRepository(t, cl, "external").ResourceVersion)
 
-	assert.Len(t, listModuleNames(t, cl), 2)
+	assert.Len(t, listModuleNames(t, cl), 3)
 	for name, rv := range modules {
 		assert.Equal(t, rv, getModule(t, cl, name).ResourceVersion, name)
 	}

@@ -19,6 +19,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -185,8 +186,8 @@ func TestSyncModulesDisposesUnbackedModules(t *testing.T) {
 	writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
 
 	s, cl := newTestSyncer(t, "v1.80.0", dir,
-		// an object of the old catalog: no version, nothing backs it
-		testModule("offered", "", "", nil),
+		// no version and no source offers it
+		testModule("orphan", "", "", nil),
 		// an embedded module the image stopped shipping
 		testModule("dropped", "embedded", "v1.79.0", map[string]string{v1alpha2.ModuleAnnotationEmbedded: "true"}),
 		// an embedded module a real repository took over keeps the spec another writer gave it
@@ -210,10 +211,89 @@ func TestSyncModulesDisposesUnbackedModules(t *testing.T) {
 	assert.False(t, stale.IsDev())
 	assert.Equal(t, "v0.1.0", stale.Spec.PackageVersion)
 
-	for _, name := range []string{"offered", "dropped", "gone"} {
+	for _, name := range []string{"orphan", "dropped", "gone"} {
 		err := cl.Get(ctx, client.ObjectKey{Name: name}, new(v1alpha2.Module))
 		assert.True(t, apierrors.IsNotFound(err), name)
 	}
+}
+
+func TestSyncModulesOfferedCatalog(t *testing.T) {
+	ctx := context.Background()
+
+	dir := t.TempDir()
+	writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
+
+	s, cl := newTestSyncer(t, "v1.80.0", dir,
+		// the platform source offers the embedded module too: the image wins
+		testSourceOffering("deckhouse", "echo", "single", "shared", "chosen", "gone", "fetching"),
+		testSourceOffering("mirror", "shared", "chosen"),
+		// a source being deleted offers nothing
+		func() *v1alpha1.ModuleSource {
+			source := testSourceOffering("leaving", "leftover")
+			source.Finalizers = []string{"keep"}
+			source.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+			return source
+		}(),
+		// the config picks one of the two sources
+		testConfig("chosen", v1alpha1.ModuleConfigSpec{Source: "mirror"}),
+		// a downloaded module whose files are gone: still offered, so it becomes an offered module again
+		func() *v1alpha2.Module {
+			module := testModule("gone", "deckhouse-modules", "v0.2.0", map[string]string{v1alpha2.ModuleAnnotationDev: "true"})
+			module.Status.Phase = v1alpha1.ModulePhaseReady
+			module.Status.CurrentVersion = &v1alpha2.ModuleStatusVersion{Version: "v0.2.0"}
+			module.Status.Conditions = []metav1.Condition{
+				{Type: v1alpha1.ModuleConditionEnabledByModuleManager, Status: metav1.ConditionTrue, Reason: "Enabled", LastTransitionTime: metav1.Now()},
+				{Type: v1alpha1.ModuleConditionIsReady, Status: metav1.ConditionTrue, Reason: "Ready", LastTransitionTime: metav1.Now()},
+			}
+			return module
+		}(),
+		// an offered module fetching its first release keeps its way to the deploy
+		func() *v1alpha2.Module {
+			module := testModule("fetching", "deckhouse-modules", "", nil)
+			module.Status.Phase = v1alpha1.ModulePhaseDownloading
+			return module
+		}(),
+	)
+
+	require.NoError(t, s.syncModules(ctx))
+
+	assert.ElementsMatch(t, []string{"echo", "single", "shared", "chosen", "gone", "fetching"}, listModuleNames(t, cl))
+
+	echo := getModule(t, cl, "echo")
+	assert.True(t, echo.IsEmbedded())
+	assert.Equal(t, "v1.80.0", echo.Spec.PackageVersion)
+
+	single := getModule(t, cl, "single")
+	assert.Equal(t, "deckhouse-modules", single.Spec.PackageRepositoryName)
+	assert.Empty(t, single.Spec.PackageVersion)
+	assert.False(t, single.IsInstalled())
+	assert.Equal(t, v1alpha1.ModulePhaseAvailable, single.Status.Phase)
+	assert.True(t, single.IsCondition(v1alpha1.ModuleConditionIsReady, metav1.ConditionFalse))
+	assert.True(t, single.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, metav1.ConditionFalse))
+
+	shared := getModule(t, cl, "shared")
+	assert.Empty(t, shared.Spec.PackageRepositoryName, "two sources and no choice name no repository")
+	assert.Equal(t, v1alpha1.ModulePhaseAvailable, shared.Status.Phase)
+
+	chosen := getModule(t, cl, "chosen")
+	assert.Equal(t, "mirror", chosen.Spec.PackageRepositoryName)
+
+	gone := getModule(t, cl, "gone")
+	assert.Empty(t, gone.Spec.PackageVersion)
+	assert.Equal(t, "deckhouse-modules", gone.Spec.PackageRepositoryName)
+	assert.False(t, gone.IsDev())
+	assert.Equal(t, v1alpha1.ModulePhaseAvailable, gone.Status.Phase)
+	assert.Nil(t, gone.Status.CurrentVersion)
+	assert.True(t, gone.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, metav1.ConditionFalse))
+	assert.True(t, gone.IsCondition(v1alpha1.ModuleConditionIsReady, metav1.ConditionFalse))
+
+	fetching := getModule(t, cl, "fetching")
+	assert.Equal(t, v1alpha1.ModulePhaseDownloading, fetching.Status.Phase)
+
+	// a second pass finds nothing to write
+	rv := getModule(t, cl, "single").ResourceVersion
+	require.NoError(t, s.syncModules(ctx))
+	assert.Equal(t, rv, getModule(t, cl, "single").ResourceVersion)
 }
 
 func TestSyncModulesNormalizesConditions(t *testing.T) {
@@ -260,6 +340,8 @@ func TestModuleRepository(t *testing.T) {
 
 	_, cl := newTestSyncer(t, "v1.80.0", t.TempDir(),
 		testModule("placed", "deckhouse-modules", "v1.0.0", nil),
+		// a module nothing installed names the repository of its only offering source
+		testModule("catalog", "only", "", nil),
 		testModule("embedded", "embedded", "v1.80.0", map[string]string{v1alpha2.ModuleAnnotationEmbedded: "true"}),
 		testConfig("embedded", v1alpha1.ModuleConfigSpec{Source: "external"}),
 		testConfig("configured", v1alpha1.ModuleConfigSpec{Source: "deckhouse"}),
@@ -274,6 +356,7 @@ func TestModuleRepository(t *testing.T) {
 		want   string
 	}{
 		{module: "placed", want: "deckhouse-modules"},
+		{module: "catalog", want: "only"},
 		{module: "embedded", want: "external"},
 		{module: "configured", want: "deckhouse-modules"},
 		{module: "released", want: "external"},

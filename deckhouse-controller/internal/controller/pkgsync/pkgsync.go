@@ -46,19 +46,25 @@
 //	  └─ Module <module>: the image tag as the version, the dev annotation,
 //	     the repository resolved from the resources naming one
 //
+//	ModuleSource status (every source, the platform-owned ones too)
+//	  └─ Module <module> for every module a source lists and nothing
+//	     installed: the repository of the source the config picks or of the
+//	     only offering source, no version, the phase Available
+//
 //	ModuleConfig
 //	  └─ Module <module>: settings, settings version, maintenance, enabled
 //	     and update policy mirrored onto the module the other sources placed;
 //	     a module without a config carries none
 //
 // A module claims one source: the image beats a pull override, which beats a
-// deployed release. A module none of them backs is deleted: the objects the
-// old stack created for the modules it merely offered, an embedded module the
-// image stopped shipping, a downloaded module whose files are gone. A
-// downloaded module still on disk stays, since a pull override deleted
-// without a rollback leaves its files in use until the next deploy. A
-// condition written without a reason gets one, since the v1alpha2 schema
-// requires it.
+// deployed release, which beats a source merely offering the module. A module
+// none of them backs is deleted: an embedded module the image stopped
+// shipping, a downloaded module whose files are gone and no source offers. A
+// downloaded module whose files are gone but a source still offers becomes an
+// offered module again. A downloaded module still on disk stays, since a pull
+// override deleted without a rollback leaves its files in use until the next
+// deploy. A condition written without a reason gets one, since the v1alpha2
+// schema requires it.
 //
 // A version stays a draft until its metadata lands, so no observer takes a
 // half-created version for a complete one; a fill interrupted mid-way heals on

@@ -22,6 +22,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"sort"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -36,12 +37,14 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-// placement is where a module's package comes from, as the sync derives it.
+// placement is where a module's package comes from, as the sync derives it. An offered
+// placement names a module some source lists and nothing installed: it carries no version.
 type placement struct {
 	repository string
 	version    string
 	dev        bool
 	embedded   bool
+	offered    bool
 }
 
 // placed reports whether any source claims the module; the zero placement means none does.
@@ -51,19 +54,20 @@ func (p placement) placed() bool {
 
 // syncModules brings every Module in line with where its package comes from and with its
 // module config. A module the image ships, a pull override pins or a deployed release
-// installed gets its spec and annotations; the config fields mirror the ModuleConfig and are
-// cleared when it is gone; a module nothing backs any more is deleted. The conditions the
-// old stack left without a reason get one, so the object passes the v1alpha2 schema on its
-// next status write.
+// installed gets its spec and annotations; a module a source merely offers gets the
+// repository it would come from, no version and the offered status; the config fields mirror
+// the ModuleConfig and are cleared when it is gone; a module nothing backs any more is
+// deleted. The conditions the old stack left without a reason get one, so the object passes
+// the v1alpha2 schema on its next status write.
 func (s *syncer) syncModules(ctx context.Context) error {
-	placements, err := s.resolvePlacements(ctx)
-	if err != nil {
-		return fmt.Errorf("resolve module placements: %w", err)
-	}
-
 	configs, err := s.resolveModuleConfigs(ctx)
 	if err != nil {
 		return fmt.Errorf("resolve module configs: %w", err)
+	}
+
+	placements, err := s.resolvePlacements(ctx, configs)
+	if err != nil {
+		return fmt.Errorf("resolve module placements: %w", err)
 	}
 
 	existing := new(v1alpha2.ModuleList)
@@ -96,6 +100,12 @@ func (s *syncer) syncModules(ctx context.Context) error {
 		if err := s.normalizeModuleStatus(ctx, module); err != nil {
 			return err
 		}
+
+		if place.offered {
+			if err := s.ensureCatalogStatus(ctx, module); err != nil {
+				return err
+			}
+		}
 	}
 
 	for name, place := range placements {
@@ -103,8 +113,15 @@ func (s *syncer) syncModules(ctx context.Context) error {
 			continue
 		}
 
-		if err := s.createModule(ctx, name, place, configs[name]); err != nil {
+		module, err := s.createModule(ctx, name, place, configs[name])
+		if err != nil {
 			return err
+		}
+
+		if place.offered {
+			if err := s.ensureCatalogStatus(ctx, module); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -112,8 +129,9 @@ func (s *syncer) syncModules(ctx context.Context) error {
 }
 
 // resolvePlacements derives every module's package source, in precedence order: the running
-// image, then a pull override, then the newest deployed release.
-func (s *syncer) resolvePlacements(ctx context.Context) (map[string]placement, error) {
+// image, then a pull override, then the newest deployed release, then a source merely
+// offering the module.
+func (s *syncer) resolvePlacements(ctx context.Context, configs map[string]*v1alpha1.ModuleConfig) (map[string]placement, error) {
 	embedded, err := s.embeddedPlacements()
 	if err != nil {
 		return nil, fmt.Errorf("resolve embedded placements: %w", err)
@@ -129,10 +147,15 @@ func (s *syncer) resolvePlacements(ctx context.Context) (map[string]placement, e
 		return nil, fmt.Errorf("resolve release placements: %w", err)
 	}
 
-	// the first source claiming a name keeps it, so a lower-precedence source never overwrites a higher one
-	placements := make(map[string]placement, len(embedded)+len(overridden)+len(released))
+	offered, err := s.offeredPlacements(ctx, configs)
+	if err != nil {
+		return nil, fmt.Errorf("resolve offered placements: %w", err)
+	}
 
-	for _, source := range []map[string]placement{embedded, overridden, released} {
+	// the first source claiming a name keeps it, so a lower-precedence source never overwrites a higher one
+	placements := make(map[string]placement, len(embedded)+len(overridden)+len(released)+len(offered))
+
+	for _, source := range []map[string]placement{embedded, overridden, released, offered} {
 		for name, place := range source {
 			if _, ok := placements[name]; !ok {
 				placements[name] = place
@@ -141,6 +164,66 @@ func (s *syncer) resolvePlacements(ctx context.Context) (map[string]placement, e
 	}
 
 	return placements, nil
+}
+
+// offeredPlacements returns a placement for every module some ModuleSource lists. The
+// platform-owned sources count too: their exclusion is about creating package repositories,
+// not about the catalog. A source being deleted offers nothing. The repository is the one
+// of the source the module config picks, else of the only offering source, else empty.
+func (s *syncer) offeredPlacements(ctx context.Context, configs map[string]*v1alpha1.ModuleConfig) (map[string]placement, error) {
+	sources := new(v1alpha1.ModuleSourceList)
+	if err := s.reader.List(ctx, sources); err != nil {
+		return nil, fmt.Errorf("list module sources: %w", err)
+	}
+
+	offering := make(map[string][]string)
+
+	for idx := range sources.Items {
+		source := &sources.Items[idx]
+		if !source.DeletionTimestamp.IsZero() {
+			continue
+		}
+
+		for _, module := range source.Status.AvailableModules {
+			offering[module.Name] = append(offering[module.Name], source.Name)
+		}
+	}
+
+	placements := make(map[string]placement, len(offering))
+
+	for name, names := range offering {
+		sort.Strings(names)
+
+		placements[name] = placement{
+			offered:    true,
+			repository: CatalogRepository(ConfiguredSource(configs[name]), names),
+		}
+	}
+
+	return placements, nil
+}
+
+// ensureCatalogStatus puts a module nothing installed into the offered state, unless it is
+// already on its way from the catalog to a deploy. The status of the package the module ran
+// before its uninstall goes with the version.
+func (s *syncer) ensureCatalogStatus(ctx context.Context, module *v1alpha2.Module) error {
+	if module.HasCatalogPhase() {
+		return nil
+	}
+
+	original := module.DeepCopy()
+
+	module.SetNotInstalledStatus()
+	module.Status.CurrentVersion = nil
+	module.Status.Summary = nil
+
+	if err := s.writer.Status().Patch(ctx, module, client.MergeFrom(original)); err != nil {
+		return fmt.Errorf("patch module '%s' status: %w", module.Name, err)
+	}
+
+	s.logger.Debug("module is offered and not installed", slog.String("name", module.Name))
+
+	return nil
 }
 
 // embeddedPlacements returns a placement for every module the running image ships. A
@@ -417,8 +500,8 @@ func (s *syncer) disposable(module *v1alpha2.Module) bool {
 	return errors.Is(err, os.ErrNotExist)
 }
 
-// createModule places a module the cluster does not carry yet.
-func (s *syncer) createModule(ctx context.Context, name string, place placement, conf *v1alpha1.ModuleConfig) error {
+// createModule places a module the cluster does not carry yet and returns the object.
+func (s *syncer) createModule(ctx context.Context, name string, place placement, conf *v1alpha1.ModuleConfig) (*v1alpha2.Module, error) {
 	module := &v1alpha2.Module{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: v1alpha2.ModuleGVK.GroupVersion().String(),
@@ -430,22 +513,26 @@ func (s *syncer) createModule(ctx context.Context, name string, place placement,
 
 	if err := s.writer.Create(ctx, module); err != nil {
 		if !apierrors.IsAlreadyExists(err) {
-			return fmt.Errorf("create module '%s': %w", name, err)
+			return nil, fmt.Errorf("create module '%s': %w", name, err)
 		}
 
 		// something created the module between the list and this call, so converge it here:
 		// the sync runs once, and an object left as the racing writer made it stays that way
 		module = new(v1alpha2.Module)
 		if err := s.reader.Get(ctx, client.ObjectKey{Name: name}, module); err != nil {
-			return fmt.Errorf("get module '%s': %w", name, err)
+			return nil, fmt.Errorf("get module '%s': %w", name, err)
 		}
 
-		return s.patchModule(ctx, module, place, conf)
+		if err := s.patchModule(ctx, module, place, conf); err != nil {
+			return nil, err
+		}
+
+		return module, nil
 	}
 
 	s.logger.Debug("module created", slog.String("name", name), slog.String("version", place.version))
 
-	return nil
+	return module, nil
 }
 
 // patchModule writes placement, annotations and config fields in one patch, and nothing when
