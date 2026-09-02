@@ -2859,7 +2859,6 @@ GC
 GVKs
 SDK
 SecurityPolicyException
-adyakonov
 allocs
 args
 didn
@@ -2874,3 +2873,10 @@ pprof
 rulebench
 unmarshalling
 µs
+GOROOT
+PrepareForEval
+ReportAllocs
+TMPDIR
+benchmarkLock
+goroutines
+runN

@@ -35,7 +35,9 @@
 #   -s  number of `kubectl top` samples to take (default: 3)
 #   -i  seconds between samples (default: 15)
 #   -o  directory to write the full report + raw metrics into
-#       (default: ./ape-diag-<timestamp>)
+#       (default: $TMPDIR/ape-diag-<timestamp>, outside the repo on purpose -
+#       reports can contain cluster-specific data you don't want `git add`-ed
+#       by accident)
 #
 # Requires: kubectl (with access to the target cluster/context already
 # selected - this script never switches context), awk, curl. python3 is used
@@ -60,14 +62,24 @@ while getopts "n:s:i:o:h" opt; do
     i) INTERVAL="$OPTARG" ;;
     o) OUTDIR="$OPTARG" ;;
     h)
-      sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'
+      # Print the description block above (between the license and the first
+      # blank line) rather than a fixed line range - a fixed range silently
+      # rots whenever lines get added/removed above it (as happened once
+      # already, when the copyright header was inserted).
+      awk '
+        state==0 && /^# limitations under the License\.$/ { state=1; next }
+        state==1 && /^$/ { next }
+        state==1 && /^#/ { state=2; sub(/^# ?/, ""); print; next }
+        state==2 && /^#/ { sub(/^# ?/, ""); print; next }
+        state==2 { exit }
+      ' "$0"
       exit 0
       ;;
     *) exit 2 ;;
   esac
 done
 
-[ -n "$OUTDIR" ] || OUTDIR="./ape-diag-$(date +%Y%m%d-%H%M%S)"
+[ -n "$OUTDIR" ] || OUTDIR="${TMPDIR:-/tmp}/ape-diag-$(date +%Y%m%d-%H%M%S)"
 mkdir -p "$OUTDIR"
 REPORT="$OUTDIR/report.txt"
 : > "$REPORT"
@@ -239,13 +251,13 @@ done
 log "Large gatekeeper_sync counts for a kind (esp. Pod) scale with TOTAL"
 log "cluster size, not with how many SecurityPolicy/OperationPolicy CRs are"
 log "configured - a big number here for a kind you didn't expect usually"
-log "means a built-in constraint needs it unconditionally (see the"
-log "'architectural, not fixable' finding for D8DenyExecHeritage in the"
-log "main resource-audit report) rather than a misconfiguration."
+log "means a built-in constraint needs it unconditionally (D8DenyExecHeritage"
+log "forces a full-cluster Pod sync regardless of configuration - see"
+log "AGENTS.md finding 3) rather than a misconfiguration."
 log ""
 log "IMPORTANT: don't try to predict audit CPU from gatekeeper_constraints"
-log "count alone. Measured on adyakonov-cloud (audit_cycle_cost.sh): pure"
-log "Rego-eval time for one cycle's worth of (object, constraint) pairs is"
+log "count alone. Measured on a real cluster with audit_cycle_cost.sh: pure"
+log "Rego-eval time for one cycle's worth of (object, constraint) pairs was"
 log "under 2% of the CPU that cycle actually burned - the rest is API"
 log "discovery (scales with CRD count) + LIST calls + JSON unmarshalling +"
 log "constraint-status PATCH writes. Use audit_cycle_cost.sh (this"
@@ -259,11 +271,29 @@ if [ -n "$AUDIT_POD" ]; then
   LOG_FILE="$OUTDIR/audit_log_tail.txt"
   kubectl -n "$NAMESPACE" logs "$AUDIT_POD" -c manager --tail=3000 2>/dev/null \
     | grep -E 'audit_started|audit_finished' > "$LOG_FILE" || true
-  n_cycles=$(grep -c audit_finished "$LOG_FILE" 2>/dev/null || echo 0)
+  # grep -c already prints "0" (and exits 1) on no match - don't add a
+  # second "|| echo 0" branch on top of that, or a genuine zero-match run
+  # ends up as the two-line string "0\n0" and the numeric -gt test below
+  # errors out with "integer expression expected".
+  n_cycles=$(grep -c audit_finished "$LOG_FILE" 2>/dev/null)
   log "audit pod: $AUDIT_POD, cycles found in last 3000 log lines: $n_cycles"
   if [ "${n_cycles:-0}" -gt 0 ]; then
-    grep -oE '"duration":"[0-9.]+s"' "$LOG_FILE" | grep -oE '[0-9.]+' | awk '
-      { sum+=$1; n++; if ($1>max) max=$1; vals[n]=$1 }
+    # Go's time.Duration.String() only uses a bare "<seconds>s" suffix below
+    # one minute; at 60s+ it switches to "1m5.548640275s" / "1h2m3s" etc, so
+    # matching "[0-9.]+s" alone silently drops every cycle that ran a minute
+    # or longer - which, for an audit loop, is exactly the outliers section 5
+    # exists to catch. Parse the optional h/m components too.
+    grep -oE '"duration":"([0-9]+h)?([0-9]+m)?[0-9.]+s"' "$LOG_FILE" | tr -d '"' | sed 's/^duration://' | awk '
+      {
+        s = $0
+        h = 0; m = 0; sec = 0
+        if (match(s, /^[0-9]+h/)) { h = substr(s, 1, RLENGTH-1) + 0; s = substr(s, RLENGTH+1) }
+        if (match(s, /^[0-9]+m/)) { m = substr(s, 1, RLENGTH-1) + 0; s = substr(s, RLENGTH+1) }
+        sec = s + 0
+        total = h*3600 + m*60 + sec
+        sum += total; n++
+        if (total > max) max = total
+      }
       END {
         if (n==0) { print "  no duration fields parsed"; exit }
         avg=sum/n

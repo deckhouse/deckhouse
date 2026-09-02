@@ -45,11 +45,8 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"runtime"
 	"sort"
-	"strconv"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/open-policy-agent/opa/v1/ast"
@@ -235,6 +232,11 @@ func benchOne(name string, conDir string) []string {
 }
 
 func main() {
+	if len(os.Args) < 2 {
+		fmt.Fprintln(os.Stderr, "usage: rulebench <constraints_root> [only-name]")
+		fmt.Fprintln(os.Stderr, "  (normally invoked via ../rulebench.sh, not `go run .` directly - see that script)")
+		os.Exit(2)
+	}
 	root := os.Args[1]
 	only := ""
 	if len(os.Args) > 2 {
@@ -253,57 +255,26 @@ func main() {
 			if !d.IsDir() {
 				continue
 			}
-			if only != "" && d.Name() != only {
+			// Substring match, same as bench_rules.py's --only, so the two
+			// tools' "same arguments" really are the same.
+			if only != "" && !strings.Contains(d.Name(), only) {
 				continue
 			}
 			entries = append(entries, entry{group, d.Name(), filepath.Join(groupDir, d.Name())})
 		}
 	}
 
-	// Run up to `jobs` constraints concurrently - each benchmark spends most
-	// of its wall time inside testing.Benchmark's own calibration loop, so
-	// this cuts total runtime roughly by the job count on a full 39-constraint
-	// run. Results are collected into a slice indexed by position and printed
-	// at the end, in original order, so concurrent runs never interleave
-	// output - unlike bench_rules.py's -j flag, there's no "-j1 for max
-	// precision" escape hatch here since Go doesn't fork a fresh process per
-	// benchmark; if you need zero cross-benchmark contention, set jobs to 1
-	// below or GOMAXPROCS=1 in the environment.
-	jobs := runtime.NumCPU()
-	if jobs > 4 {
-		jobs = 4
-	}
-	if jobs < 1 {
-		jobs = 1
-	}
-	// RULEBENCH_JOBS=1 forces fully sequential execution - no cross-benchmark
-	// CPU contention, for when ns/op precision matters more than wall-clock
-	// time (B/op and allocs/op are deterministic either way, unaffected by
-	// contention - only the timing numbers get noisier under concurrency,
-	// and only by about as much as normal run-to-run jitter already is).
-	if v := os.Getenv("RULEBENCH_JOBS"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			jobs = n
-		}
-	}
-
-	results := make([][]string, len(entries))
-	sem := make(chan struct{}, jobs)
-	var wg sync.WaitGroup
-	for i, e := range entries {
-		wg.Add(1)
-		sem <- struct{}{}
-		go func(i int, e entry) {
-			defer wg.Done()
-			defer func() { <-sem }()
-			results[i] = benchOne(e.group+"/"+e.name, e.dir)
-		}(i, e)
-	}
-	wg.Wait()
-
+	// Deliberately sequential: testing.Benchmark's timed run is serialized
+	// process-wide by the testing package's own benchmarkLock
+	// ($GOROOT/src/testing/benchmark.go), so running these concurrently
+	// would not shorten the timed portion at all - only let unrelated
+	// goroutines' PrepareForEval/compile work overlap with someone else's
+	// timed window and leak a few stray allocations into that window's
+	// ReportAllocs() numbers. Not worth the complexity for a diagnostic tool
+	// whose whole point is trustworthy B/op and allocs/op numbers.
 	fmt.Printf("%-40s %-11s %10s  %10s  %13s   %s\n", "constraint", "sample", "ns/op", "B/op", "allocs/op", "file")
-	for _, lines := range results {
-		for _, line := range lines {
+	for _, e := range entries {
+		for _, line := range benchOne(e.group+"/"+e.name, e.dir) {
 			fmt.Println(line)
 		}
 	}

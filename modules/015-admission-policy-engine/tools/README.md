@@ -52,7 +52,7 @@ cd modules/015-admission-policy-engine/tools
 | `-n` | namespace to inspect | `d8-admission-policy-engine` |
 | `-s` | number of `kubectl top` samples | `3` |
 | `-i` | seconds between samples | `15` |
-| `-o` | output directory (report + raw data) | `./ape-diag-<timestamp>` |
+| `-o` | output directory (report + raw data) | `$TMPDIR/ape-diag-<timestamp>` |
 
 Requires `kubectl` (against an already-selected context — the script never
 switches context or namespace scope beyond what you pass in), `awk`, `curl`.
@@ -125,9 +125,9 @@ admission-policy-engine specifically, even if this module's pods are among
 the ones that got restarted. If Warnings are concentrated in this module's
 namespace alone, it's more likely actually about this module.
 
-## Worked example: adyakonov-cloud
+## Worked example: a small dev cluster
 
-Run against a real (small, 2-node, 143-pod) cluster:
+Run against a real, small (2-node, 143-pod) reference cluster:
 
 ```
 ## 1. Pods, restarts, last-restart reason
@@ -168,17 +168,20 @@ Reading this the way the sections above intend:
   memory limit is set, so nothing bounds it.
 - CPU on the audit pod is a flat 249m across both samples here (not spiky in
   this particular window), but section 5's log-based trend shows the real
-  picture: cycles normally take ~16s (already a third of the *pre-fix*
-  60-second `--audit-interval`), with one outlier at 46.6s (2.8× average).
+  picture: cycles normally take ~16s out of the manifest's current
+  `--audit-interval=60`, with one outlier at 46.6s (2.8× average) - already
+  a substantial fraction of the interval, and worth checking whether
+  lowering that interval (e.g. towards upstream Gatekeeper's own 300s
+  default) would help before touching anything else.
 - Section 1's restarts are `exitCode=0`/`Completed` — probe kills, not
   crashes. Section 7 shows Warning events at the same time spread across 12
   unrelated namespaces, correlated with node-level `FreeDiskSpaceFailed` —
   i.e. the restarts are largely **environmental** (this dev node was low on
   disk and image GC was thrashing), not a defect in admission-policy-engine.
-  The elevated *steady-state* memory and the audit-cycle length, on the other
-  hand, are real findings independent of that — see the module's
-  resource-audit report for the fixes (`--audit-interval` reduced to 300s,
-  explicit `limits` added matching the existing VPA `maxAllowed`).
+  The elevated *steady-state* memory and the audit-cycle length, on the
+  other hand, are real findings independent of that - see AGENTS.md's
+  "Known findings" for what's confirmed so far and what's still only a
+  recommendation, not something already merged.
 
 This is exactly the split this script is for: one run separated "real,
 fixable-or-architectural cost" from "noisy dev-cluster environment" without
@@ -215,7 +218,7 @@ counts (from `live_resource_check.sh` section 4) and the per-rule `ns/op`/
 `B/op` numbers from `rulebench` for the same active kinds — see the worked
 example below for how well that cross-check actually lines up in practice.
 
-### Worked example: one real audit cycle on adyakonov-cloud
+### Worked example: one real audit cycle on the reference cluster
 
 ```
 cycle started ("audit_id":"2026-09-01T10:42:16Z") @ 10:42:16
@@ -248,19 +251,21 @@ lower) — dividing the observed allocation count by that upper bound gives
 **~2 020 allocations per (pod, constraint) pair**, which lands almost exactly
 in the range `rulebench` measured in isolation for the most expensive
 templates (`allowed-proc-mount` disallowed: 1 934 allocs/op; `allow-privileged`
-disallowed: 1 432 allocs/op — see the main resource-audit report). Two
-unrelated methods — a synthetic per-rule Go benchmark, and a live-cluster
-counter diff — converge on the same order of magnitude, which is a much
-stronger signal than either one alone that the SPE-heavy rules really are
-where this module's CPU/memory goes.
+disallowed: 1 432 allocs/op — see the "Measuring per-rule cost" section of
+`../charts/constraint-templates/tests/README.md`). Two unrelated methods — a
+synthetic per-rule Go benchmark, and a live-cluster counter diff — converge
+on the same order of magnitude, which is a much stronger signal than either
+one alone that the SPE-heavy rules really are where this module's CPU/memory
+goes.
 
 A caveat worth stating plainly: this run happened to land on a normal-length
 cycle (avg logged duration on this cluster was ~8-16s; see
 `live_resource_check.sh` section 5). Re-run this a few times across different
-cycles before treating one sample as "the" cost — the earlier resource-audit
-report also caught an 8x outlier cycle (58s vs. ~8s normal) correlated with
-node disk pressure, which a single audit_cycle_cost.sh run right before or
-after that spike would have measured very differently.
+cycles before treating one sample as "the" cost — the same investigation
+also saw an 8x outlier cycle elsewhere (58s vs. ~8s normal) correlated with
+node disk pressure (see `live_resource_check.sh` section 7), which a single
+`audit_cycle_cost.sh` run right before or after that spike would have
+measured very differently.
 
 ## Estimating average CPU for a different cluster size
 
@@ -276,16 +281,16 @@ things.
 Audit is periodic and full-cluster, so its cost scales with **how much
 there is to sync and re-check** (dominated by pod count, since the built-in
 `D8DenyExecHeritage` constraint forces a full-cluster Pod sync regardless of
-configuration - see the main resource-audit report). It does *not* scale
-with admission traffic at all.
+configuration - see AGENTS.md finding 3). It does *not* scale with admission
+traffic at all.
 
 ```
 k = (measured CPU-seconds per cycle) / (pod count at measurement time)
 avg_millicores(pods, audit_interval_s) = 1000 * k * pods / audit_interval_s + idle_floor_millicores
 ```
 
-Calibration point from adyakonov-cloud (145 pods, 64 active constraints,
-measured via `audit_cycle_cost.sh`): 9.31 CPU-s/cycle → `k ≈ 0.0642`
+Calibration point from the reference cluster (145 pods, 64 active
+constraints, measured via `audit_cycle_cost.sh`): 9.31 CPU-s/cycle → `k ≈ 0.0642`
 CPU-s per pod per cycle. Idle floor (CPU between cycles, from
 `live_resource_check.sh` section 3) ≈ 15m. Projected:
 
@@ -300,18 +305,19 @@ CPU-s per pod per cycle. Idle floor (CPU between cycles, from
 
 Two things worth reading off this table directly:
 
-- The `--audit-interval` 60s→300s change (see the main resource-audit
-  report) is worth almost exactly the same **~4.3x** reduction in average
-  audit CPU at *every* cluster size - it's a multiplier on the whole model,
-  not a fixed offset.
-- **On this module's own earlier patch**: the static CPU `limit` set for
-  `gatekeeper-audit` (`1000m`, mirroring the webhook's own VPA `maxAllowed`
-  - see `../charts/constraint-templates/templates/audit-deployment.yaml`)
-  is already at or below the projected *average* (not peak) usage for
-  clusters above ~2500-5000 pods, even after the interval fix. On a cluster
-  that size, either enable the `vertical-pod-autoscaler` module for
-  admission-policy-engine, or raise that static limit and re-measure with
-  `audit_cycle_cost.sh` rather than trusting the extrapolation blindly.
+- Lowering `--audit-interval` from the manifest's current `60` towards
+  upstream Gatekeeper's own default of `300` (not yet done in this module -
+  see AGENTS.md finding 5) is worth almost exactly the same **~4.3x**
+  reduction in average audit CPU at *every* cluster size - it's a multiplier
+  on the whole model, not a fixed offset.
+- **If a static CPU `limit` is added for `gatekeeper-audit`** (there is none
+  today; a natural choice would be `1000m`, mirroring the webhook's own VPA
+  `maxAllowed` in `../templates/gatekeeper-deployment.yaml`), that number is
+  already at or below the projected *average* (not peak) usage for clusters
+  above ~2500-5000 pods, even after lowering the interval. On a cluster that
+  size, prefer enabling the `vertical-pod-autoscaler` module for
+  admission-policy-engine over a static guess, or re-measure with
+  `audit_cycle_cost.sh` before picking a limit.
 
 ### `gatekeeper-controller-manager` (webhook): scales with admission-request rate, not cluster size
 
@@ -325,7 +331,7 @@ per_request_ms ≈ (distinct matching ConstraintTemplate kinds) × (typical rule
 avg_millicores(creates_per_sec) = creates_per_sec * per_request_ms + idle_floor_millicores
 ```
 
-With ~14 distinct `D8*` kinds actually instantiated on adyakonov-cloud and a
+With ~14 distinct `D8*` kinds actually instantiated on the reference cluster and a
 typical `rulebench` "allowed" cost of ~15-25µs (most templates; a handful of
 SPE-heavy ones run 40-150µs), per-request cost is roughly 0.25-0.85ms.
 Observed idle floor (watch/reconcile/leader-election overhead across 41
@@ -341,7 +347,7 @@ watched GVKs, independent of admission traffic) ≈ 25m:
 The takeaway: **`gatekeeper-controller-manager`'s average CPU is dominated
 by its fixed ~25m watch/reconcile floor almost regardless of realistic
 admission churn** - this matches what was observed live (24-47m on
-adyakonov-cloud, a quiet dev cluster). Don't expect lowering constraint
+the reference cluster, a quiet dev cluster). Don't expect lowering constraint
 count or rule cost to move controller-manager's *average* CPU much; it
 mostly matters for webhook *tail latency* on individual requests, not
 aggregate CPU.
@@ -353,7 +359,7 @@ aggregate CPU.
   one at large scale - re-run `audit_cycle_cost.sh` on a bigger cluster if
   you can, and update `k` here.
 - Both models hold the constraint *set* roughly constant (~64 active
-  constraints, as configured on adyakonov-cloud: PSS baseline/restricted +
+  constraints, as configured on the reference cluster: PSS baseline/restricted +
   2 `SecurityPolicy` CRs). More `SecurityPolicy`/`OperationPolicy` CRs shift
   both models up roughly proportionally to how many additional constraint
   kinds they add.

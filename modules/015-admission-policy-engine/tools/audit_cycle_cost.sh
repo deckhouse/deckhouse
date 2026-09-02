@@ -57,7 +57,20 @@ while getopts "n:t:h" opt; do
   case "$opt" in
     n) NAMESPACE="$OPTARG" ;;
     t) TIMEOUT="$OPTARG" ;;
-    h) sed -n '2,30p' "$0" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    h)
+      # Print the description block above (between the license and the first
+      # blank line) rather than a fixed line range - a fixed range silently
+      # rots whenever lines get added/removed above it (as happened once
+      # already, when the copyright header was inserted).
+      awk '
+        state==0 && /^# limitations under the License\.$/ { state=1; next }
+        state==1 && /^$/ { next }
+        state==1 && /^#/ { state=2; sub(/^# ?/, ""); print; next }
+        state==2 && /^#/ { sub(/^# ?/, ""); print; next }
+        state==2 { exit }
+      ' "$0"
+      exit 0
+      ;;
     *) exit 2 ;;
   esac
 done
@@ -70,15 +83,18 @@ fi
 echo "audit pod: $AUDIT_POD"
 
 PORT=18900
-kubectl -n "$NAMESPACE" port-forward "pod/$AUDIT_POD" "${PORT}:8888" >/dev/null 2>&1 &
-PF_PID=$!
-cleanup() { kill "$PF_PID" >/dev/null 2>&1; wait "$PF_PID" 2>/dev/null; }
+start_port_forward() {
+  kubectl -n "$NAMESPACE" port-forward "pod/$AUDIT_POD" "${PORT}:8888" </dev/null >/dev/null 2>&1 &
+  PF_PID=$!
+  for _ in $(seq 1 20); do
+    curl -s -m 1 "http://127.0.0.1:${PORT}/metrics" -o /dev/null 2>/dev/null && break
+    sleep 0.3
+  done
+}
+cleanup() { kill "${PF_PID:-}" >/dev/null 2>&1; wait "${PF_PID:-}" 2>/dev/null; }
 trap cleanup EXIT
 
-for _ in $(seq 1 20); do
-  curl -s -m 1 "http://127.0.0.1:${PORT}/metrics" -o /dev/null 2>/dev/null && break
-  sleep 0.3
-done
+start_port_forward
 
 # `date -r <epoch>` means two different things on BSD/macOS (format an epoch
 # seconds value) and GNU/Linux (show a FILE's mtime, errors on a bare
@@ -87,6 +103,42 @@ done
 # uses the raw epoch floats directly and is unaffected either way).
 fmt_time() {
   date -u -d "@${1%.*}" +%T 2>/dev/null || date -u -r "${1%.*}" +%T 2>/dev/null || date -u +%T
+}
+
+# Fetches one /metrics scrape and only returns success if it actually looks
+# like a Gatekeeper metrics page (has process_cpu_seconds_total). A dead/
+# reconnecting port-forward can otherwise hand back an empty or truncated
+# body, which would silently turn into nonsense like "CPU-seconds consumed
+# -123.456s" further down - this is the guard against that.
+fetch_snapshot() {
+  local snap
+  snap="$(curl -s -m 2 "http://127.0.0.1:${PORT}/metrics" 2>/dev/null)"
+  if grep -q '^process_cpu_seconds_total ' <<<"$snap"; then
+    printf '%s' "$snap"
+    return 0
+  fi
+  return 1
+}
+
+# Same, but retries once (re-establishing the port-forward, which is known to
+# drop on idle) before giving up loudly instead of returning garbage.
+take_snapshot_or_die() {
+  local label="$1" snap
+  if snap="$(fetch_snapshot)"; then
+    printf '%s' "$snap"
+    return 0
+  fi
+  echo "WARN: $label metrics snapshot looked empty/invalid - retrying port-forward once..." >&2
+  kill "${PF_PID:-}" >/dev/null 2>&1
+  wait "${PF_PID:-}" 2>/dev/null
+  start_port_forward
+  if snap="$(fetch_snapshot)"; then
+    printf '%s' "$snap"
+    return 0
+  fi
+  echo "ERROR: could not fetch a valid $label metrics snapshot after retrying the port-forward." >&2
+  echo "       Refusing to print numbers computed from empty/partial data." >&2
+  exit 1
 }
 
 get_audit_interval() {
@@ -98,9 +150,18 @@ interval="$(get_audit_interval)"
 echo "configured --audit-interval: ${interval}s (this script's -t timeout should be a bit more than that)"
 echo ""
 
+# Seed last_id from whatever's ALREADY in the log before we start polling.
+# Without this, the first poll below would treat an in-progress or just-
+# finished cycle already sitting in the tail as "new" and break immediately -
+# taking the "before" snapshot mid-cycle (or after the cycle already ended)
+# and reporting a partial/near-zero cost. We're only done once we see an
+# audit_id that's DIFFERENT from whatever was already there when we started
+# looking.
+last_id="$(kubectl -n "$NAMESPACE" logs "$AUDIT_POD" -c manager --tail=50 2>/dev/null \
+  | grep 'audit_started' | tail -1 | grep -oE '"audit_id":"[^"]+"' | head -1)"
+
 echo "waiting for the start of a NEW audit cycle (up to ${TIMEOUT}s)..."
 deadline=$(( $(date +%s) + TIMEOUT ))
-last_id=""
 start_id=""
 while :; do
   line="$(kubectl -n "$NAMESPACE" logs "$AUDIT_POD" -c manager --tail=50 2>/dev/null | grep 'audit_started' | tail -1)"
@@ -109,7 +170,6 @@ while :; do
     start_id="$id"
     break
   fi
-  [ -n "$id" ] && last_id="$id"
   if [ "$(date +%s)" -gt "$deadline" ]; then
     echo "ERROR: timed out waiting for a new audit cycle to start" >&2
     exit 1
@@ -118,7 +178,7 @@ while :; do
 done
 
 before_wall=$(date +%s.%N)
-before="$(curl -s -m 2 "http://127.0.0.1:${PORT}/metrics")"
+before="$(take_snapshot_or_die "start")"
 echo "cycle started ($start_id) @ $(fmt_time "$before_wall") - snapshot taken"
 
 restart_before="$(kubectl -n "$NAMESPACE" get pod "$AUDIT_POD" -o jsonpath='{.status.containerStatuses[?(@.name=="manager")].restartCount}' 2>/dev/null)"
@@ -128,7 +188,7 @@ while :; do
   # --tail is generous on purpose: right after "audit_finished" Gatekeeper
   # immediately logs one burst line per constraint kind (status update), so a
   # small tail window can scroll the finished marker itself out of view
-  # before the next poll - this bit us during testing on adyakonov-cloud.
+  # before the next poll - this bit us during testing on a real cluster.
   fline="$(kubectl -n "$NAMESPACE" logs "$AUDIT_POD" -c manager --tail=500 2>/dev/null | grep 'audit_finished' | grep -F "$start_id")"
   if [ -n "$fline" ]; then break; fi
   restart_now="$(kubectl -n "$NAMESPACE" get pod "$AUDIT_POD" -o jsonpath='{.status.containerStatuses[?(@.name=="manager")].restartCount}' 2>/dev/null)"
@@ -147,7 +207,7 @@ while :; do
   sleep 1
 done
 after_wall=$(date +%s.%N)
-after="$(curl -s -m 2 "http://127.0.0.1:${PORT}/metrics")"
+after="$(take_snapshot_or_die "end")"
 logged_duration="$(grep -oE '"duration":"[^"]+"' <<<"$fline" | head -1)"
 echo "cycle finished @ $(fmt_time "$after_wall") - snapshot taken (logged $logged_duration)"
 echo ""

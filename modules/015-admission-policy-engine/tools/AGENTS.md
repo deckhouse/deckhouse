@@ -111,7 +111,7 @@ has changed since, or if the numbers don't match what you observe.
 
 3. **`D8DenyExecHeritage` forces full-cluster `Pod` sync unconditionally.**
    It's created regardless of any `SecurityPolicy` CR (see
-   `../charts/constraint-templates/templates/policies/security-policy/constraint.yaml`,
+   `../templates/policies/security-policy/constraint.yaml`,
    `deny_exec_heritage` block), and Gatekeeper's `Config` sync has no
    per-namespace scoping. **A "sync Pod only when needed" idea was
    investigated and rejected** - there's no configuration under which it
@@ -131,10 +131,14 @@ has changed since, or if the numbers don't match what you observe.
    common per-eval allocation floor from OPA itself (~12,000 B/op, ~230
    allocs/op) before any rule-specific logic runs.
 
-5. **`--audit-interval` was 60s** (upstream Gatekeeper's own default is
-   300s) - a straightforward, high-leverage fix (see the Deployment
-   manifests) that's worth almost exactly the same ~4.3x reduction in
-   average audit CPU at any cluster size.
+5. **`--audit-interval` is currently `60`** in
+   `../templates/audit-deployment.yaml` (upstream Gatekeeper's own default is
+   `300`) - this is a proposed, **not yet applied**, fix: lowering it towards
+   the upstream default is a straightforward, high-leverage change (worth
+   almost exactly the same ~4.3x reduction in average audit CPU at any
+   cluster size, per the projection in `README.md`), but no open PR sets it
+   as of this writing. Check the manifest yourself before assuming it's
+   done, and update this note once it lands.
 
 6. **`automount-service-account-token`'s test fixtures don't build** in
    `rulebench`/`bench_rules.py` - `data.lib.exclude_update.is_update` isn't

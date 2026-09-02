@@ -46,7 +46,7 @@ IMPORTANT - what this number is (and isn't) representative of: one
 evaluation here is exactly what the WEBHOOK does for one admission review
 (one object, one constraint, no cluster listing). It is NOT representative
 of the AUDIT path's total cost: on a live cluster (measured with
-../../../../../tools/audit_cycle_cost.sh), pure Rego-eval time was under 2%
+../../../../tools/audit_cycle_cost.sh), pure Rego-eval time was under 2%
 of one audit cycle's actual CPU - the rest is API discovery (scales with
 CRD count), LIST calls, JSON unmarshalling, and per-constraint status PATCH
 writes, none of which this script exercises. Use these numbers to compare
@@ -283,8 +283,16 @@ def main():
         for future in as_completed(future_to_idx):
             i = future_to_idx[future]
             name, group, _ = todo[i]
-            sys.stderr.write(f"benchmarked {group}/{name}\n")
-            results[i] = future.result()
+            try:
+                results[i] = future.result()
+                sys.stderr.write(f"benchmarked {group}/{name}\n")
+            except Exception as e:
+                # A single `opa` timeout/crash or a missing binary must not
+                # discard every other constraint's already-collected results -
+                # record it as an error row (same shape bench_one itself
+                # uses) and keep going.
+                sys.stderr.write(f"benchmarked {group}/{name}: FAILED ({e})\n")
+                results[i] = {"name": name, "group": group, "error": f"{type(e).__name__}: {e}"}
 
     if not results:
         sys.stderr.write("no constraints with rendered/ found - run constraint_testgen generate first (see ../../README.md)\n")

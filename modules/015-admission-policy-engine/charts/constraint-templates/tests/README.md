@@ -210,7 +210,7 @@ measure exactly what the **webhook** does for one admission review: one
 object, one constraint, no cluster listing. They are directly representative
 of webhook/admission-request latency. They are **not** representative of the
 **audit** loop's total cost: measured on a live cluster with
-[`../../../../tools/audit_cycle_cost.sh`](../../../../tools/audit_cycle_cost.sh)
+[`../../../tools/audit_cycle_cost.sh`](../../../tools/audit_cycle_cost.sh)
 (diffs Go-runtime counters across one real audit cycle's exact start/end, no
 `--enable-pprof` needed), pure Rego-eval time was under 2% of that cycle's
 actual CPU — the rest is API discovery (scales with CRD count in the
@@ -218,9 +218,9 @@ cluster), LIST calls, JSON unmarshalling, and per-constraint status PATCH
 writes, none of which these two tools exercise. Use `bench_rules.py`/
 `rulebench` to compare rules against each other and to reason about the
 webhook path; use `audit_cycle_cost.sh` (and
-[`../../../../tools/live_resource_check.sh`](../../../../tools/live_resource_check.sh)
+[`../../../tools/live_resource_check.sh`](../../../tools/live_resource_check.sh)
 for the broader live picture) for the real audit-loop cost. See
-`../../../../tools/README.md` for that whole live-cluster side of the
+`../../../tools/README.md` for that whole live-cluster side of the
 toolkit, with a worked example.
 
 ### Time: `tools/bench_rules.py`
@@ -274,19 +274,18 @@ cd modules/015-admission-policy-engine/charts/constraint-templates/tests/test_ca
 ../../tools/rulebench.sh . allow-privileged  # one constraint
 ```
 
-Like `bench_rules.py`, constraints run concurrently by default (up to
-`min(4, cpu_count)` at once) — results are collected and printed in original
-order afterwards, so concurrent runs never interleave output. Unlike
-`bench_rules.py`'s `-j1`, there's no CLI flag for forcing sequential
-execution (Go doesn't fork a fresh process per benchmark the way the CLI
-tool does), so use the `RULEBENCH_JOBS` environment variable instead:
-`RULEBENCH_JOBS=1 ../../tools/rulebench.sh .`. Concurrency's effect here is
-smaller than for `bench_rules.py` (`testing.Benchmark` calibrates against
-wall-clock time, so contention mostly makes each benchmark's calibration
-noisier rather than proportionally faster — measured: ~13% faster at the
-default job count) — but importantly, `B/op` and `allocs/op` are exact
-integer counters unaffected by contention either way; only `ns/op` gets
-noisier, and only by about as much as normal run-to-run jitter already is.
+Unlike `bench_rules.py`, this runs constraints **sequentially**, on purpose:
+Go's `testing` package serializes the actual timed portion of every
+`testing.Benchmark` call process-wide through its own package-level
+`benchmarkLock` (`$GOROOT/src/testing/benchmark.go`), so concurrent
+goroutines calling it don't run their timed loops in parallel at all — only
+their `PrepareForEval`/compile setup work can overlap, and letting that
+setup run concurrently with someone else's *timed* window can leak a few of
+its allocations into that window's `ReportAllocs()` numbers. Since this
+tool's whole point is a trustworthy `B/op`/`allocs/op`, that trade-off isn't
+worth chasing a small wall-clock win for - unlike `bench_rules.py`, which
+benchmarks via separate `opa` subprocesses with no such shared lock, so its
+`-j` concurrency is real.
 
 In practice the two tools agree closely: the rules that are slowest under
 `opa eval` are also the ones allocating the most under `rulebench` — both
@@ -298,5 +297,5 @@ which SPE-heavy rules add a large multiplier. A third, independent
 corroboration exists too: on a live cluster, the observed audit-cycle
 allocation count divided by (synced objects × active constraints) landed
 almost exactly in this range — see the worked example in
-`../../../../tools/README.md`.
+`../../../tools/README.md`.
 
