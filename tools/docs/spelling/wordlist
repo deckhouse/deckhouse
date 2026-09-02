@@ -1640,6 +1640,7 @@ UUID
 UUIDs
 uwsgi
 v1
+ValidatingAdmissionPolicies
 ValidatingAdmissionPolicy
 ValidatingAdmissionPolicyBinding
 ValidationWebhook

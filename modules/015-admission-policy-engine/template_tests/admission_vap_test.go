@@ -69,4 +69,54 @@ admissionPolicyEngine:
 		Expect(vapBinding.Field("spec.policyName").String()).To(Equal("deny-deckhouse-finalizers.deckhouse.io"))
 		Expect(vapBinding.Field("spec.validationActions").String()).To(MatchJSON(`["Deny","Audit"]`))
 	})
+
+	// Assign/AssignMetadata/ModifySet/AssignImage CRDs are imported from upstream Gatekeeper as-is
+	// (see crds/gatekeeper/update.sh), so content restrictions that Gatekeeper's own mutation webhook
+	// enforces (but that can't live in the vendored CRD schema) are enforced here instead.
+	It("renders VAPs validating Gatekeeper mutator resources", func() {
+		Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+		for _, policyName := range []string{
+			"deny-invalid-assign-location",
+			"deny-invalid-assignmetadata-location",
+			"deny-invalid-assignmetadata-value",
+			"deny-invalid-mutator-frommetadata-field",
+			"deny-invalid-assignmetadata-externaldata-datasource",
+			"deny-mutator-without-match-kinds",
+		} {
+			vap := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", policyName)
+			Expect(vap.Exists()).To(BeTrue(), "policy %s must be rendered", policyName)
+			Expect(vap.Field("spec.failurePolicy").String()).To(Equal("Fail"))
+			Expect(vap.Field("spec.matchConstraints.resourceRules.0.apiGroups").String()).To(
+				MatchJSON(`["mutations.gatekeeper.sh"]`),
+			)
+
+			vapBinding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", policyName)
+			Expect(vapBinding.Exists()).To(BeTrue(), "binding %s must be rendered", policyName)
+			Expect(vapBinding.Field("spec.policyName").String()).To(Equal(policyName))
+			Expect(vapBinding.Field("spec.validationActions").String()).To(MatchJSON(`["Deny"]`))
+		}
+
+		assignLocationVAP := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", "deny-invalid-assign-location")
+		Expect(assignLocationVAP.Field("spec.matchConstraints.resourceRules.0.resources").String()).To(
+			MatchJSON(`["assign"]`),
+		)
+
+		assignMetadataLocationVAP := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", "deny-invalid-assignmetadata-location")
+		Expect(assignMetadataLocationVAP.Field("spec.validations.0.expression").String()).To(
+			ContainSubstring(
+				`"^metadata\\.(labels|annotations)\\.([A-Za-z0-9_-]+|\"(\\\\.|[^\"\\\\])*\"|'(\\\\.|[^'\\\\])*')$"`,
+			),
+		)
+
+		matchKindsVAP := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", "deny-mutator-without-match-kinds")
+		Expect(matchKindsVAP.Field("spec.matchConstraints.resourceRules.0.resources").String()).To(
+			MatchJSON(`["assign", "assignmetadata", "modifyset", "assignimage"]`),
+		)
+
+		fromMetadataVAP := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", "deny-invalid-mutator-frommetadata-field")
+		Expect(fromMetadataVAP.Field("spec.matchConstraints.resourceRules.0.resources").String()).To(
+			MatchJSON(`["assign", "assignmetadata"]`),
+		)
+	})
 })

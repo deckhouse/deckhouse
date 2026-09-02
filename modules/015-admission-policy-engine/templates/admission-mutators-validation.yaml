@@ -1,0 +1,197 @@
+# The Assign/AssignMetadata/ModifySet/AssignImage CRDs (crds/gatekeeper/*.yaml) are imported from
+# upstream Gatekeeper as-is (see crds/gatekeeper/update.sh and the build-time diff check in
+# images/gatekeeper/werf.inc.yaml), so none of the restrictions below can be expressed in the CRD
+# schema itself. Gatekeeper's own mutation webhook enforces them anyway, but only *after* the object
+# is persisted, with confusing parser errors and, for a missing `match.kinds`, with no error at all
+# (see the `deny-mutator-without-match-kinds` policy below). These ValidatingAdmissionPolicies give
+# the same feedback immediately, at `kubectl apply` time.
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: "deny-invalid-assign-location"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["mutations.gatekeeper.sh"]
+        apiVersions: ["v1", "v1alpha1", "v1beta1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["assign"]
+  validations:
+    - expression: >-
+        !has(object.spec.location) ||
+        (object.spec.location != "metadata" && !object.spec.location.startsWith("metadata."))
+      message: >-
+        spec.location cannot target the "metadata" field (Gatekeeper limitation) - use the
+        AssignMetadata resource to add labels or annotations instead
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: "deny-invalid-assign-location"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper")) | nindent 2 }}
+spec:
+  policyName: "deny-invalid-assign-location"
+  validationActions: [Deny]
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: "deny-invalid-assignmetadata-location"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["mutations.gatekeeper.sh"]
+        apiVersions: ["v1", "v1alpha1", "v1beta1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["assignmetadata"]
+  validations:
+    - expression: >-
+        !has(object.spec.location) ||
+        object.spec.location.matches(
+          "^metadata\\.(labels|annotations)\\.([A-Za-z0-9_-]+|\"(\\\\.|[^\"\\\\])*\"|'(\\\\.|[^'\\\\])*')$"
+        )
+      message: >-
+        spec.location must be exactly metadata.labels.<key> or metadata.annotations.<key>; if <key>
+        contains characters other than letters, digits, "_" or "-" (for example a domain-prefixed key
+        like app.kubernetes.io/name), wrap it in quotes, e.g. metadata.annotations."app.kubernetes.io/name"
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: "deny-invalid-assignmetadata-location"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper")) | nindent 2 }}
+spec:
+  policyName: "deny-invalid-assignmetadata-location"
+  validationActions: [Deny]
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: "deny-invalid-assignmetadata-value"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["mutations.gatekeeper.sh"]
+        apiVersions: ["v1", "v1alpha1", "v1beta1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["assignmetadata"]
+  validations:
+    - expression: >-
+        !has(object.spec.parameters) || !has(object.spec.parameters.assign) ||
+        !has(object.spec.parameters.assign.value) ||
+        type(object.spec.parameters.assign.value) == string
+      message: >-
+        spec.parameters.assign.value must be a plain string for AssignMetadata (Gatekeeper limitation)
+        - Kubernetes label and annotation values are strings
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: "deny-invalid-assignmetadata-value"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper")) | nindent 2 }}
+spec:
+  policyName: "deny-invalid-assignmetadata-value"
+  validationActions: [Deny]
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: "deny-invalid-mutator-frommetadata-field"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["mutations.gatekeeper.sh"]
+        apiVersions: ["v1", "v1alpha1", "v1beta1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["assign", "assignmetadata"]
+  validations:
+    - expression: >-
+        !has(object.spec.parameters) || !has(object.spec.parameters.assign) ||
+        !has(object.spec.parameters.assign.fromMetadata) ||
+        !has(object.spec.parameters.assign.fromMetadata.field) ||
+        object.spec.parameters.assign.fromMetadata.field in ["namespace", "name"]
+      message: >-
+        spec.parameters.assign.fromMetadata.field only accepts "namespace" or "name" (Gatekeeper
+        limitation)
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: "deny-invalid-mutator-frommetadata-field"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper")) | nindent 2 }}
+spec:
+  policyName: "deny-invalid-mutator-frommetadata-field"
+  validationActions: [Deny]
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: "deny-invalid-assignmetadata-externaldata-datasource"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["mutations.gatekeeper.sh"]
+        apiVersions: ["v1", "v1alpha1", "v1beta1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["assignmetadata"]
+  validations:
+    - expression: >-
+        !has(object.spec.parameters) || !has(object.spec.parameters.assign) ||
+        !has(object.spec.parameters.assign.externalData) ||
+        !has(object.spec.parameters.assign.externalData.dataSource) ||
+        object.spec.parameters.assign.externalData.dataSource == "Username"
+      message: >-
+        spec.parameters.assign.externalData.dataSource only supports "Username" for AssignMetadata
+        (Gatekeeper limitation); "ValueAtLocation" is rejected because there is no source value at
+        `location` to read for a metadata mutation
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: "deny-invalid-assignmetadata-externaldata-datasource"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper")) | nindent 2 }}
+spec:
+  policyName: "deny-invalid-assignmetadata-externaldata-datasource"
+  validationActions: [Deny]
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicy") }}
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: "deny-mutator-without-match-kinds"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper")) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups: ["mutations.gatekeeper.sh"]
+        apiVersions: ["v1", "v1alpha1", "v1beta1"]
+        operations: ["CREATE", "UPDATE"]
+        resources: ["assign", "assignmetadata", "modifyset", "assignimage"]
+  validations:
+    - expression: >-
+        has(object.spec.match) && has(object.spec.match.kinds) && size(object.spec.match.kinds) > 0
+      message: >-
+        spec.match.kinds is required and must not be empty: the d8-admission-policy-engine-config
+        MutatingWebhookConfiguration rules are generated only from match.kinds across all mutators,
+        so a mutator without match.kinds silently never fires, even though an empty match.kinds
+        would otherwise mean "match everything" to Gatekeeper itself (Deckhouse-specific limitation)
+---
+apiVersion: {{ include "helm_lib_get_api_version_by_kind" (list . "ValidatingAdmissionPolicyBinding") }}
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: "deny-mutator-without-match-kinds"
+  {{- include "helm_lib_module_labels" (list . (dict "app" "gatekeeper")) | nindent 2 }}
+spec:
+  policyName: "deny-mutator-without-match-kinds"
+  validationActions: [Deny]

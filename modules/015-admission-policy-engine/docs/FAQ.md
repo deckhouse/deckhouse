@@ -461,6 +461,19 @@ Then, in order to fulfill the requirements of the above security policies, the f
       readOnlyRootFilesystem: true
 ```
 
+## Why is an Assign or AssignMetadata mutation rejected or silently ignored?
+
+The `Assign`, `AssignMetadata`, `ModifySet`, and `AssignImage` CRDs are imported from Gatekeeper without modification. However, the Gatekeeper mutation webhook enforces content restrictions that go beyond the CRD schema. The `admission-policy-engine` module enforces the checkable restrictions with built-in ValidatingAdmissionPolicies. As a result, `kubectl apply` rejects an invalid resource immediately instead of silently ignoring it or having Gatekeeper reject it later with an unclear parser error.
+
+The module enforces the following restrictions:
+
+- `deny-invalid-assign-location` — the `spec.location` field of `Assign` cannot target the `metadata` field (`metadata.name`, `.namespace`, `.labels`, `.annotations`). Use `AssignMetadata` to add labels or annotations.
+- `deny-invalid-assignmetadata-location` — the `spec.location` field of `AssignMetadata` must be exactly `metadata.labels.<KEY>` or `metadata.annotations.<KEY>`. If `<KEY>` contains characters other than letters, digits, `_`, or `-` (for example, a domain-prefixed key such as `app.kubernetes.io/name`), wrap it in quotes: `metadata.annotations."app.kubernetes.io/name"`.
+- `deny-invalid-assignmetadata-value` — the `spec.parameters.assign.value` field of `AssignMetadata` must be a string, because Kubernetes label and annotation values are strings.
+- `deny-invalid-mutator-frommetadata-field` — the `spec.parameters.assign.fromMetadata.field` field (in `Assign` and `AssignMetadata`) accepts only `namespace` or `name`.
+- `deny-invalid-assignmetadata-externaldata-datasource` — the `spec.parameters.assign.externalData.dataSource` field of `AssignMetadata` supports only `Username`. Unlike `Assign`, `AssignMetadata` doesn't support `ValueAtLocation`, because a metadata mutation has no source value at `location` to read.
+- `deny-mutator-without-match-kinds` — the `spec.match.kinds` field is required and must not be empty in `Assign`, `AssignMetadata`, `ModifySet`, and `AssignImage` resources. This restriction is specific to Deckhouse: the `d8-admission-policy-engine-config` MutatingWebhookConfiguration rules are generated only from the `match.kinds` field across all resources of these kinds. A resource without `match.kinds` never triggers a mutation, even though Gatekeeper itself treats an empty `match.kinds` as a match for all resources.
+
 ## Verification of image signatures
 
 {% alert level="warning" %}
