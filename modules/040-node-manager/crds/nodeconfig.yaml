@@ -375,11 +375,13 @@ spec:
                       Address is the registry host, optionally with a port, e.g.
                       "registry.deckhouse.io" or "registry.example.com:5000".
                     minLength: 1
+                    pattern: ^\S+$
                     type: string
                   auth:
                     description: |-
                       Auth is the base64-encoded "user:password" pair, as it appears in the
                       "auth" field of a docker config.
+                    pattern: ^[A-Za-z0-9+/]+={0,2}$
                     type: string
                   ca:
                     description: |-
