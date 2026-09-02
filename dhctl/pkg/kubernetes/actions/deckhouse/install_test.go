@@ -611,6 +611,35 @@ func TestNamespaceTaskKeepsExistingNamespace(t *testing.T) {
 		"an update is exactly what admission can deny, so it must not be attempted")
 }
 
+// dhctl acts as the username the policy exempts, so the same rerun now gets a plain
+// AlreadyExists — and the fall-through it would open leads to an unconditional Update
+// that replaces d8-system with the two-label manifest below, PSS labels and all.
+func TestNamespaceTaskKeepsExistingNamespaceWhenAdmissionAllowsTheCreate(t *testing.T) {
+	ctx := t.Context()
+	kubeCl := client.NewFakeKubernetesClient()
+
+	existing := &apiv1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name: "d8-system",
+		Labels: map[string]string{
+			"heritage":                           "deckhouse",
+			"kubernetes.io/metadata.name":        "d8-system",
+			"security.deckhouse.io/pod-policy":   "privileged",
+			"pod-security.kubernetes.io/enforce": "privileged",
+		},
+	}}
+	_, err := kubeCl.CoreV1().Namespaces().Create(ctx, existing, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	task := getNSTask(kubeCl)
+	require.NoError(t, task.CreateOrUpdate(ctx))
+
+	ns, err := kubeCl.CoreV1().Namespaces().Get(ctx, "d8-system", metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, existing.Labels, ns.Labels, "a rerun must leave the namespace it found alone")
+	require.Empty(t, namespaceActions(t, kubeCl, "update"),
+		"the update would strip every label the chart put there")
+}
+
 func TestNamespaceTaskCreatesMissingNamespace(t *testing.T) {
 	ctx := t.Context()
 	kubeCl := client.NewFakeKubernetesClient()
