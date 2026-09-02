@@ -112,7 +112,7 @@ func setModuleConfigEnabled(ctx context.Context, kubeClient k8s.Client, name str
 	}
 
 	if enabled {
-		// an installed module has an object; a module not installed yet must be offered by a source
+		// a module not installed yet must be offered by a source
 		installed, err := moduleInstalled(ctx, kubeClient, name)
 		if err != nil {
 			return err
@@ -173,9 +173,11 @@ func setModuleConfigEnabled(ctx context.Context, kubeClient k8s.Client, name str
 	return nil
 }
 
-// moduleInstalled reports whether the module has an object, which only an installed module has.
+// moduleInstalled reports whether a package backs the module. A module a source offers and
+// nothing installed has an object without a package version.
 func moduleInstalled(ctx context.Context, kubeClient k8s.Client, name string) (bool, error) {
-	if _, err := kubeClient.Dynamic().Resource(v1alpha2.ModuleGVR).Get(ctx, name, metav1.GetOptions{}); err != nil {
+	module, err := kubeClient.Dynamic().Resource(v1alpha2.ModuleGVR).Get(ctx, name, metav1.GetOptions{})
+	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return false, nil
 		}
@@ -183,7 +185,12 @@ func moduleInstalled(ctx context.Context, kubeClient k8s.Client, name string) (b
 		return false, fmt.Errorf("get the '%s' module: %w", name, err)
 	}
 
-	return true, nil
+	version, _, err := unstructured.NestedString(module.Object, "spec", "packageVersion")
+	if err != nil {
+		return false, fmt.Errorf("read the '%s' module version: %w", name, err)
+	}
+
+	return version != "", nil
 }
 
 // offeringSources names the module sources whose last scan lists the module.

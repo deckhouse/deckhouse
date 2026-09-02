@@ -266,19 +266,7 @@ func NewDeckhouseController(
 
 	// instantiate ModuleDependency extender
 	moduledependency.Instance().SetModulesVersionHelper(func(moduleName string) (string, error) {
-		module := new(v1alpha2.Module)
-		if err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
-			return runtimeManager.GetClient().Get(ctx, client.ObjectKey{Name: moduleName}, module)
-		}); err != nil {
-			return "", fmt.Errorf("on error: %w", err)
-		}
-
-		// a dev module follows a tag, so it reports a version no constraint rejects
-		if module.IsDev() {
-			return defaultModuleVersion, nil
-		}
-
-		return module.GetVersion(), nil
+		return moduleVersion(ctx, runtimeManager.GetClient(), moduleName)
 	})
 
 	bootstrappedHelper := func() (bool, error) {
@@ -462,6 +450,29 @@ func NewDeckhouseController(
 
 		log: logger,
 	}, nil
+}
+
+// moduleVersion reports the version of the module package for the module dependency
+// extender. A module a source offers and nothing installed is reported as not found, the
+// way a module without an object is: no version satisfies a dependency on it.
+func moduleVersion(ctx context.Context, cli client.Client, moduleName string) (string, error) {
+	module := new(v1alpha2.Module)
+	if err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+		return cli.Get(ctx, client.ObjectKey{Name: moduleName}, module)
+	}); err != nil {
+		return "", fmt.Errorf("on error: %w", err)
+	}
+
+	if !module.IsInstalled() {
+		return "", apierrors.NewNotFound(v1alpha2.ModuleGVR.GroupResource(), moduleName)
+	}
+
+	// a dev module follows a tag, so it reports a version no constraint rejects
+	if module.IsDev() {
+		return defaultModuleVersion, nil
+	}
+
+	return module.GetVersion(), nil
 }
 
 func setModulesEnvironment(operator *addonoperator.AddonOperator) {

@@ -430,6 +430,12 @@ func (c *Controller) loadModules(ctx context.Context, modules []v1alpha2.Module)
 			continue
 		}
 
+		// a module a source offers and nothing installed has no package to run
+		if !module.IsInstalled() {
+			c.logger.Debug("module is not installed, skip loading", slog.String("module", module.Name))
+			continue
+		}
+
 		// an embedded module is on disk already and its repository resolves to nothing
 		if module.IsEmbedded() {
 			c.manager.UpdateEmbeddedModule(runtimeModule(module))
@@ -495,7 +501,8 @@ func (c *Controller) cleanupPackages(ctx context.Context, modules []v1alpha2.Mod
 	for i := range modules {
 		module := &modules[i]
 
-		if !module.DeletionTimestamp.IsZero() {
+		// a terminating module and one nothing installed claim no package
+		if !module.DeletionTimestamp.IsZero() || !module.IsInstalled() {
 			continue
 		}
 
