@@ -28,6 +28,14 @@ rules:
   - patch
   - delete
   - deletecollection
+# The spec of an operation is immutable, so update and patch would grant nothing.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeoperations
+  verbs:
+  - create
+  - delete
 - apiGroups:
   - deckhouse.io
   resourceNames:
