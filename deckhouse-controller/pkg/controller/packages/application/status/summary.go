@@ -271,21 +271,28 @@ func summarize(state condmap.State) (string, string, string) {
 		return adviseFor(phaseInstall, reasonOf(state, blocker))
 
 	case phaseUpdate:
-		if blocker, ok := pipelineBlocker(state, updatePipeline); ok {
-			return adviseFor(phaseUpdate, reasonOf(state, blocker))
+		blocker, ok := pipelineBlocker(state, updatePipeline)
+		if !ok {
+			// "No blocker" is not the same as "update finished". firstFalse skips a
+			// transient ManifestsApplied=False/ApplyingManifests exactly as the
+			// mapper does, so the update pipeline reads clear during every re-apply
+			// window. But mapUpdateInstalled only flips UpdateInstalled (and mapReady
+			// only flips Ready) to True once ManifestsApplied is actually True; until
+			// then it returns empty and leaves the previous — possibly failed —
+			// conditions sticky. Mirror that success gate here, otherwise a mid-apply
+			// retry over a failed update would report Ready while the conditions a
+			// client also reads still say ManifestsApplyFailed.
+			if !state.IntEqual(intManifestsApplied, metav1.ConditionTrue) {
+				return summaryUpdating.state, summaryUpdating.message, summaryUpdating.tip
+			}
+			// The manifests landed, but only a positive health report makes the new
+			// version ready; anything else is still an update in flight.
+			if !state.IntEqual(intScaled, metav1.ConditionTrue) {
+				return adviseFor(phaseUpdate, workloadReason(state))
+			}
+			return summaryReady.state, summaryReady.message, summaryReady.tip
 		}
-		// "No blocker" is not the same as "update finished". firstFalse skips a
-		// transient ManifestsApplied=False/ApplyingManifests exactly as the mapper
-		// does, so the update pipeline reads clear during every re-apply window,
-		// while mapUpdateInstalled only flips UpdateInstalled to True once
-		// ManifestsApplied is actually True.
-		if !state.IntEqual(intManifestsApplied, metav1.ConditionTrue) {
-			return summaryUpdating.state, summaryUpdating.message, summaryUpdating.tip
-		}
-		if !state.IntEqual(intScaled, metav1.ConditionTrue) {
-			return adviseFor(phaseUpdate, workloadReason(state))
-		}
-		return summaryReady.state, summaryReady.message, summaryReady.tip
+		return adviseFor(phaseUpdate, reasonOf(state, blocker))
 
 	case phaseReconcile:
 		blocker, ok := firstFalse(state, reconcileSummaryChain)
