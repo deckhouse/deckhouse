@@ -422,6 +422,47 @@ To assign this operational policy, add the `operation-policy.deckhouse.io/enable
 d8 k label ns my-namespace operation-policy.deckhouse.io/enabled=true
 ```
 
+### Restricting GPU resource usage
+
+To prevent unauthorized GPU resource consumption, use the `gpuResourceRestriction` policy in [OperationPolicy](/modules/admission-policy-engine/cr.html#operationpolicy).
+This policy denies Pods that request GPU resources (matching configurable resource name patterns) unless the target namespace has a specific label.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: OperationPolicy
+metadata:
+  name: gpu-restriction
+spec:
+  enforcementAction: Deny
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          operation-policy.deckhouse.io/enabled: "true"
+  policies:
+    gpuResourceRestriction:
+      namespaceLabel:
+        key: "gpu.deckhouse.io/enabled"
+        value: "true"
+      gpuResourcePatterns:
+        - '^nvidia\.com/.*$'
+        - '^amd\.com/gpu$'
+```
+
+To allow GPU usage in a namespace, add the corresponding label:
+
+```shell
+d8 k label ns <NAMESPACE> gpu.deckhouse.io/enabled=true
+```
+
+The `namespaceLabel` parameter specifies the label (key and value) that must be present on the namespace to allow GPU resource usage. The `gpuResourcePatterns` parameter is an array of regex patterns matching GPU resource names in Pod specs; `resources.requests` and `resources.limits` of every container, init container, and ephemeral container are inspected. By default, the policy matches resources with names matching `^nvidia\.com/.*$`. You can extend the list with additional patterns (e.g., `^amd\.com/gpu$`, `^intel\.com/gpu$`). Patterns are not anchored implicitly, so use `^` and `$` to match the whole resource name.
+
+{% alert level="warning" %}
+The policy is applied to Pods, so a Deployment (or any other controller) requesting GPU resources is created successfully, and the denial is reported in the ReplicaSet events instead.
+
+The namespace label is read from the Gatekeeper cache. While a namespace is missing from that cache (for example, right after the Gatekeeper pods restart), the policy fails closed and denies Pods requesting GPU resources in that namespace.
+{% endalert %}
+
 ## Security policies
 
 Using the [SecurityPolicy](/modules/admission-policy-engine/cr.html#securitypolicy), you can create security policies that define container behavior restrictions in the cluster, such as host network access, privileges, AppArmor usage, and more.

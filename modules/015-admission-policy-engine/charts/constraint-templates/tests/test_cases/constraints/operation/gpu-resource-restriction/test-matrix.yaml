@@ -1,0 +1,482 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestMatrix
+metadata:
+  name: gpu-resource-restriction
+spec:
+  suiteName: d8-gpu-resource-restriction
+  outputTestDirectory: rendered
+  defaultObjectBase: admissionPod
+  defaultInventory: []
+  bases:
+    admissionPod:
+      document:
+        apiVersion: v1
+        kind: Pod
+        metadata:
+          namespace: testns
+        spec:
+          containers:
+            - image: nginx
+              name: nginx
+    namespaceWithGpuLabel:
+      document:
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: testns
+          labels:
+            gpu.deckhouse.io/enabled: "true"
+    namespaceWithWrongGpuLabelValue:
+      document:
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: testns
+          labels:
+            gpu.deckhouse.io/enabled: "false"
+    namespaceWithoutGpuLabel:
+      document:
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: testns
+    namespaceWithCustomGpuLabel:
+      document:
+        apiVersion: v1
+        kind: Namespace
+        metadata:
+          name: testns
+          labels:
+            custom.io/gpu-allowed: "yes"
+  namedExceptions: {}
+  blocks:
+    - name: operation-policy
+      gatorBlock: operation-policy
+      defaultObjectBase: ""
+      template: ../../templates/operation/gpu-resource-restriction.yaml
+      constraint: constraints/policy_1.yaml
+      cases:
+        # Allowed: Pod with GPU resources in namespace WITH the label
+        - name: example-allowed-gpu-with-label
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].resources
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: namespaceWithGpuLabel
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed
+                namespace: testns
+              spec:
+                containers:
+                  - name: gpu-app
+                    image: my.repo/app:latest
+                    resources:
+                      limits:
+                        nvidia.com/gpu: 1
+                      requests:
+                        nvidia.com/gpu: 1
+        # Denied: Pod with GPU resources in namespace WITHOUT the label
+        - name: example-disallowed-gpu-without-label
+          violations: "yes"
+          assertionMessage: 'container <gpu-app> requests GPU resources <nvidia.com/gpu>, but namespace <testns> does not have label <gpu.deckhouse.io/enabled: true>'
+          fields:
+            - path: spec.containers[].resources
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: namespaceWithoutGpuLabel
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed
+                namespace: testns
+              spec:
+                containers:
+                  - name: gpu-app
+                    image: my.repo/app:latest
+                    resources:
+                      limits:
+                        nvidia.com/gpu: 1
+                      requests:
+                        nvidia.com/gpu: 1
+        # Denied: namespace has the label but with an unexpected value
+        - name: example-disallowed-gpu-wrong-label-value
+          violations: "yes"
+          assertionMessage: 'container <gpu-app> requests GPU resources <nvidia.com/gpu>, but namespace <testns> does not have label <gpu.deckhouse.io/enabled: true>'
+          fields:
+            - path: spec.containers[].resources
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: namespaceWithWrongGpuLabelValue
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-wrong-value
+                namespace: testns
+              spec:
+                containers:
+                  - name: gpu-app
+                    image: my.repo/app:latest
+                    resources:
+                      limits:
+                        nvidia.com/gpu: 1
+        # Denied: namespace is not present in the Gatekeeper cache (policy fails closed)
+        - name: example-disallowed-gpu-namespace-not-cached
+          violations: "yes"
+          assertionMessage: 'container <gpu-app> requests GPU resources <nvidia.com/gpu>, but namespace <testns> is not present in the Gatekeeper cache, so the label <gpu.deckhouse.io/enabled> cannot be checked'
+          fields:
+            - path: spec.containers[].resources
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory: []
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-not-cached
+                namespace: testns
+              spec:
+                containers:
+                  - name: gpu-app
+                    image: my.repo/app:latest
+                    resources:
+                      limits:
+                        nvidia.com/gpu: 1
+        # Denied: several GPU resources in a single container are reported in one violation
+        - name: example-disallowed-multiple-gpu-resources
+          violations: "yes"
+          assertionMessage: 'container <gpu-app> requests GPU resources <nvidia.com/gpu, nvidia.com/mig-1g.5gb>, but namespace <testns> does not have label <gpu.deckhouse.io/enabled: true>'
+          fields:
+            - path: spec.containers[].resources
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: namespaceWithoutGpuLabel
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-multiple-resources
+                namespace: testns
+              spec:
+                containers:
+                  - name: gpu-app
+                    image: my.repo/app:latest
+                    resources:
+                      limits:
+                        nvidia.com/gpu: 1
+                        nvidia.com/mig-1g.5gb: 1
+                      requests:
+                        nvidia.com/mig-1g.5gb: 1
+        # Allowed: Pod WITHOUT GPU resources in namespace WITHOUT the label
+        - name: example-allowed-no-gpu-without-label
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].resources
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: namespaceWithoutGpuLabel
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-no-gpu
+                namespace: testns
+              spec:
+                containers:
+                  - name: cpu-app
+                    image: my.repo/app:latest
+                    resources:
+                      limits:
+                        cpu: 1
+                        memory: 128Mi
+                      requests:
+                        cpu: 1
+                        memory: 128Mi
+        # Allowed: container without the resources field at all
+        - name: example-allowed-without-resources
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].resources
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: namespaceWithoutGpuLabel
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-no-resources
+                namespace: testns
+              spec:
+                containers:
+                  - name: cpu-app
+                    image: my.repo/app:latest
+        # Allowed: resource name that does not match the configured patterns
+        - name: example-allowed-non-matching-resource-name
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].resources
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: namespaceWithoutGpuLabel
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-non-matching
+                namespace: testns
+              spec:
+                containers:
+                  - name: cpu-app
+                    image: my.repo/app:latest
+                    resources:
+                      limits:
+                        not-nvidia.com/gpu: 1
+                        example.com/fpga: 1
+        # Denied: GPU resource in limits only
+        - name: example-disallowed-gpu-limits-only
+          violations: "yes"
+          assertionMessage: 'container <gpu-app> requests GPU resources <nvidia.com/gpu>, but namespace <testns> does not have label <gpu.deckhouse.io/enabled: true>'
+          fields:
+            - path: spec.containers[].resources
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: namespaceWithoutGpuLabel
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-limits
+                namespace: testns
+              spec:
+                containers:
+                  - name: gpu-app
+                    image: my.repo/app:latest
+                    resources:
+                      limits:
+                        nvidia.com/gpu: 1
+        # Denied: GPU resource in requests only
+        - name: example-disallowed-gpu-requests-only
+          violations: "yes"
+          assertionMessage: 'container <gpu-app> requests GPU resources <nvidia.com/gpu>, but namespace <testns> does not have label <gpu.deckhouse.io/enabled: true>'
+          fields:
+            - path: spec.containers[].resources
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: namespaceWithoutGpuLabel
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-requests
+                namespace: testns
+              spec:
+                containers:
+                  - name: gpu-app
+                    image: my.repo/app:latest
+                    resources:
+                      requests:
+                        nvidia.com/gpu: 1
+        # Denied: only one of several containers requests GPU resources
+        - name: example-disallowed-gpu-multi-container
+          violations: "yes"
+          assertionMessage: 'container <gpu-app> requests GPU resources <nvidia.com/gpu>, but namespace <testns> does not have label <gpu.deckhouse.io/enabled: true>'
+          fields:
+            - path: spec.containers[].resources
+              scenario: multiContainer
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: namespaceWithoutGpuLabel
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-multi-container
+                namespace: testns
+              spec:
+                containers:
+                  - name: cpu-app
+                    image: my.repo/app:latest
+                    resources:
+                      limits:
+                        cpu: 1
+                        memory: 128Mi
+                  - name: gpu-app
+                    image: my.repo/app:latest
+                    resources:
+                      limits:
+                        nvidia.com/gpu: 1
+        # Denied: GPU resource in initContainers
+        - name: example-disallowed-gpu-init-container
+          violations: "yes"
+          assertionMessage: 'container <gpu-init> requests GPU resources <nvidia.com/gpu>, but namespace <testns> does not have label <gpu.deckhouse.io/enabled: true>'
+          fields:
+            - path: spec.containers[].resources
+              scenario: initContainer
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: namespaceWithoutGpuLabel
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-init
+                namespace: testns
+              spec:
+                containers:
+                  - name: cpu-app
+                    image: my.repo/app:latest
+                    resources:
+                      limits:
+                        cpu: 1
+                        memory: 128Mi
+                      requests:
+                        cpu: 1
+                        memory: 128Mi
+                initContainers:
+                  - name: gpu-init
+                    image: my.repo/init:latest
+                    resources:
+                      limits:
+                        nvidia.com/gpu: 1
+        # Denied: GPU resource in ephemeralContainers
+        - name: example-disallowed-gpu-ephemeral-container
+          violations: "yes"
+          assertionMessage: 'container <gpu-eph> requests GPU resources <nvidia.com/gpu>, but namespace <testns> does not have label <gpu.deckhouse.io/enabled: true>'
+          fields:
+            - path: spec.containers[].resources
+              scenario: ephemeralContainer
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: namespaceWithoutGpuLabel
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-ephemeral
+                namespace: testns
+              spec:
+                containers:
+                  - name: cpu-app
+                    image: my.repo/app:latest
+                    resources:
+                      limits:
+                        cpu: 1
+                        memory: 128Mi
+                      requests:
+                        cpu: 1
+                        memory: 128Mi
+                ephemeralContainers:
+                  - name: gpu-eph
+                    image: my.repo/eph:latest
+                    resources:
+                      limits:
+                        nvidia.com/gpu: 1
+    - name: operation-policy-custom-parameters
+      gatorBlock: operation-policy-custom-parameters
+      defaultObjectBase: ""
+      template: ../../templates/operation/gpu-resource-restriction.yaml
+      constraint: constraints/policy_2.yaml
+      cases:
+        # Allowed: custom vendor pattern in a namespace with the custom label
+        - name: example-allowed-custom-pattern-with-label
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].resources
+              scenario: positive
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: namespaceWithCustomGpuLabel
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-custom
+                namespace: testns
+              spec:
+                containers:
+                  - name: gpu-app
+                    image: my.repo/app:latest
+                    resources:
+                      limits:
+                        amd.com/gpu: 1
+        # Denied: custom vendor pattern without the custom label
+        - name: example-disallowed-custom-pattern
+          violations: "yes"
+          assertionMessage: 'container <gpu-app> requests GPU resources <amd.com/gpu>, but namespace <testns> does not have label <custom.io/gpu-allowed: yes>'
+          fields:
+            - path: spec.containers[].resources
+              scenario: negative
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: namespaceWithoutGpuLabel
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: disallowed-custom
+                namespace: testns
+              spec:
+                containers:
+                  - name: gpu-app
+                    image: my.repo/app:latest
+                    resources:
+                      limits:
+                        amd.com/gpu: 1
+        # Allowed: resource that is not covered by the configured patterns
+        - name: example-allowed-resource-outside-custom-patterns
+          violations: "no"
+          assertionMessage: ""
+          fields:
+            - path: spec.containers[].resources
+              scenario: absent
+          exception: ""
+          exceptionRef: ""
+          inventory:
+            - base: namespaceWithoutGpuLabel
+          object:
+            base: admissionPod
+            merge:
+              metadata:
+                name: allowed-outside-patterns
+                namespace: testns
+              spec:
+                containers:
+                  - name: gpu-app
+                    image: my.repo/app:latest
+                    resources:
+                      limits:
+                        nvidia.com/gpu: 1

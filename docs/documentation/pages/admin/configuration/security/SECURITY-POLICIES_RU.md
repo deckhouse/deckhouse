@@ -424,6 +424,47 @@ spec:
 d8 k label ns my-namespace operation-policy.deckhouse.io/enabled=true
 ```
 
+### Ограничение использования GPU-ресурсов
+
+Для предотвращения несанкционированного использования GPU-ресурсов применяйте политику `gpuResourceRestriction` в [OperationPolicy](/modules/admission-policy-engine/cr.html#operationpolicy).
+Эта политика запрещает создание подов, запрашивающих GPU-ресурсы (сопоставляемые по настраиваемым шаблонам имён ресурсов), если на целевом неймспейсе не установлен специальный лейбл.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: OperationPolicy
+metadata:
+  name: gpu-restriction
+spec:
+  enforcementAction: Deny
+  match:
+    namespaceSelector:
+      labelSelector:
+        matchLabels:
+          operation-policy.deckhouse.io/enabled: "true"
+  policies:
+    gpuResourceRestriction:
+      namespaceLabel:
+        key: "gpu.deckhouse.io/enabled"
+        value: "true"
+      gpuResourcePatterns:
+        - '^nvidia\.com/.*$'
+        - '^amd\.com/gpu$'
+```
+
+Чтобы разрешить использование GPU в неймспейсе, добавьте соответствующий лейбл:
+
+```shell
+d8 k label ns <NAMESPACE> gpu.deckhouse.io/enabled=true
+```
+
+Параметр `namespaceLabel` указывает лейбл (ключ и значение), который должен присутствовать на неймспейсе для разрешения использования GPU-ресурсов. Параметр `gpuResourcePatterns` — массив regex-шаблонов для сопоставления с именами GPU-ресурсов в спецификации пода; проверяются `resources.requests` и `resources.limits` всех контейнеров, init-контейнеров и ephemeral-контейнеров. По умолчанию политика сопоставляет ресурсы, имена которых соответствуют шаблону `^nvidia\.com/.*$`. Список можно расширить дополнительными шаблонами (например, `^amd\.com/gpu$`, `^intel\.com/gpu$`). Шаблоны не привязываются к границам строки автоматически, поэтому используйте `^` и `$`, чтобы сопоставлять имя ресурса целиком.
+
+{% alert level="warning" %}
+Политика применяется к подам, поэтому Deployment (или другой контроллер), запрашивающий GPU-ресурсы, будет создан успешно, а отказ появится в событиях ReplicaSet.
+
+Лейбл неймспейса читается из кэша Gatekeeper. Пока неймспейс отсутствует в кэше (например, сразу после перезапуска подов Gatekeeper), политика срабатывает в сторону запрета и отклоняет поды с GPU-ресурсами в этом неймспейсе.
+{% endalert %}
+
 ## Политики безопасности
 
 Используя [SecurityPolicy](/modules/admission-policy-engine/cr.html#securitypolicy),

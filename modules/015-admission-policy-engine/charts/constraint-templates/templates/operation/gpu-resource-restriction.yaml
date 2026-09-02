@@ -1,0 +1,131 @@
+apiVersion: templates.gatekeeper.sh/v1
+kind: ConstraintTemplate
+metadata:
+  name: d8gpuresourcerestriction
+  labels:
+    heritage: deckhouse
+    module: admission-policy-engine
+    security.deckhouse.io: operation-policy
+  annotations:
+    metadata.gatekeeper.sh/title: "GPU Resource Restriction"
+    metadata.gatekeeper.sh/version: 1.0.0
+    description: >-
+      Deny Pods that request GPU resources unless the namespace has the specified label.
+
+      The `namespaceLabel` parameter specifies the label that must be present on the namespace
+      to allow GPU resource usage. The `gpuResourcePatterns` parameter is an array of regex
+      patterns matching GPU resource names in Pod specs (e.g., `^nvidia\.com/.*$`).
+spec:
+  crd:
+    spec:
+      names:
+        kind: D8GpuResourceRestriction
+      validation:
+        openAPIV3Schema:
+          type: object
+          properties:
+            namespaceLabel:
+              type: object
+              description: "The label that must be present on the namespace to allow GPU resource usage."
+              properties:
+                key:
+                  type: string
+                  description: "Label key that must be present on the namespace."
+                value:
+                  type: string
+                  description: "Expected label value."
+            gpuResourcePatterns:
+              type: array
+              description: "List of regex patterns matching GPU resource names in Pod specs."
+              items:
+                type: string
+  targets:
+    - target: admission.k8s.gatekeeper.sh
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            libs:
+              - |
+                {{- include "constraint-templates.lib.common.container-review" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.match" . | nindent 16 }}
+            rego: |
+              package d8.operation_policies
+
+              import data.lib.common.input_containers
+              import data.lib.match.regex_any
+
+              # Namespace of the reviewed object. The API server fills metadata.namespace before
+              # admission, but fall back to review.namespace for requests that omit it.
+              namespace_name := name if {
+                name := object.get(input.review, ["object", "metadata", "namespace"], "")
+                name != ""
+              } else := object.get(input.review, "namespace", "")
+
+              # Namespace labels taken from the audit cache (requires Namespace in the Gatekeeper
+              # Config syncOnly list). Missing namespace yields an empty label set, so the policy
+              # fails closed.
+              namespace_labels := object.get(
+                data.inventory,
+                ["cluster", "v1", "Namespace", namespace_name, "metadata", "labels"],
+                {},
+              )
+
+              namespace_in_cache if {
+                object.get(data.inventory, ["cluster", "v1", "Namespace", namespace_name], null) != null
+              }
+
+              namespace_allows_gpu if {
+                namespace_labels[input.parameters.namespaceLabel.key] == input.parameters.namespaceLabel.value
+              }
+
+              # Resource names requested by a container (both requests and limits) that match
+              # any of the configured GPU patterns.
+              gpu_resources(container) := names if {
+                requested := {name |
+                  some name, _ in object.get(container, ["resources", "requests"], {})
+                  regex_any(input.parameters.gpuResourcePatterns, name)
+                }
+                limited := {name |
+                  some name, _ in object.get(container, ["resources", "limits"], {})
+                  regex_any(input.parameters.gpuResourcePatterns, name)
+                }
+                names := requested | limited
+              }
+
+              violation contains {"msg": msg} if {
+                not input.review.operation == "DELETE"
+                namespace_in_cache
+                not namespace_allows_gpu
+                container := input_containers[_]
+                resources := gpu_resources(container)
+                count(resources) > 0
+                msg := sprintf(
+                  "container <%v> requests GPU resources <%v>, but namespace <%v> does not have label <%v: %v>",
+                  [
+                    container.name,
+                    concat(", ", sort(resources)),
+                    namespace_name,
+                    input.parameters.namespaceLabel.key,
+                    input.parameters.namespaceLabel.value,
+                  ],
+                )
+              }
+
+              violation contains {"msg": msg} if {
+                not input.review.operation == "DELETE"
+                not namespace_in_cache
+                container := input_containers[_]
+                resources := gpu_resources(container)
+                count(resources) > 0
+                msg := sprintf(
+                  "container <%v> requests GPU resources <%v>, but namespace <%v> is not present in the Gatekeeper cache, so the label <%v> cannot be checked",
+                  [
+                    container.name,
+                    concat(", ", sort(resources)),
+                    namespace_name,
+                    input.parameters.namespaceLabel.key,
+                  ],
+                )
+              }

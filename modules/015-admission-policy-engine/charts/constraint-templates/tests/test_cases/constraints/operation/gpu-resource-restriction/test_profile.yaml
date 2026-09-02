@@ -1,0 +1,10 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestProfile
+metadata:
+  name: gpu-resource-restriction
+spec:
+  testDirectory: gpu-resource-restriction
+  suite:
+    expectedTestBlockNames:
+      - operation-policy
+      - operation-policy-custom-parameters

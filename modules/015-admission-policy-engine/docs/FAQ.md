@@ -640,3 +640,60 @@ Key data and checks available when validating `CONNECT` operations:
 - Use `input.review.operation == "CONNECT"` to check for `CONNECT` operations.
 - User information is available in `input.review.userInfo.username` and `input.review.userInfo.groups`.
 - The namespace is available in `input.review.namespace`.
+
+## How do I restrict GPU resource usage in namespaces?
+
+The `gpuResourceRestriction` policy in [OperationPolicy](/modules/admission-policy-engine/cr.html#operationpolicy) denies Pod creation when the Pod requests GPU resources and the namespace does not have a specific label allowing GPU usage.
+Both `resources.requests` and `resources.limits` of every container, init container, and ephemeral container are inspected.
+
+To set up GPU resource restriction:
+
+1. Create an `OperationPolicy` resource with the `gpuResourceRestriction` setting:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: OperationPolicy
+   metadata:
+     name: gpu-restriction
+   spec:
+     enforcementAction: Deny
+     match:
+       namespaceSelector:
+         labelSelector:
+           matchLabels:
+             operation-policy.deckhouse.io/enabled: "true"
+     policies:
+       gpuResourceRestriction:
+         namespaceLabel:
+           key: "gpu.deckhouse.io/enabled"
+           value: "true"
+         gpuResourcePatterns:
+           - '^nvidia\.com/.*$'
+           - '^amd\.com/gpu$'
+   ```
+
+   The `namespaceLabel` parameter specifies the label (key and value) that must be present on the namespace to allow GPU resource usage.
+   The `gpuResourcePatterns` parameter is an array of regex patterns matching GPU resource names in Pod specs.
+   Patterns are not anchored implicitly, so use `^` and `$` to match the whole resource name: without them, the `nvidia\.com/gpu` pattern also matches the `not-nvidia.com/gpu` resource name.
+
+1. Label the namespaces where the policy should be enforced:
+
+   ```shell
+   d8 k label ns my-namespace operation-policy.deckhouse.io/enabled=true
+   ```
+
+1. To allow GPU usage in a specific namespace, add the GPU label:
+
+   ```shell
+   d8 k label ns my-gpu-namespace gpu.deckhouse.io/enabled=true
+   ```
+
+After that, Pods requesting GPU resources (e.g., `nvidia.com/gpu: 1` in `resources.limits` or `resources.requests`) will only be allowed in namespaces with the `gpu.deckhouse.io/enabled: "true"` label.
+
+{% alert level="warning" %}
+The policy is applied to Pods, so a Deployment (or any other controller) requesting GPU resources is created successfully, and the denial is reported in the ReplicaSet events instead.
+
+The namespace label is read from the Gatekeeper cache. While a namespace is missing from that cache (for example, right after the Gatekeeper pods restart), the policy fails closed and denies Pods requesting GPU resources in that namespace.
+
+Devices requested via [Dynamic Resource Allocation](https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/) (`spec.resourceClaims`) are not extended resources and are not checked by this policy.
+{% endalert %}

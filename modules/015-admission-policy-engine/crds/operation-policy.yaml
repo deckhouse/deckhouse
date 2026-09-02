@@ -215,6 +215,53 @@ spec:
                         maxReplicas:
                           description: "The maximum number of replicas allowed, inclusive."
                           type: integer
+                    gpuResourceRestriction:
+                      type: object
+                      description: |
+                        Restricts GPU resource usage in Pods. When enabled, Pods requesting GPU resources
+                        will be denied unless the namespace has the specified label.
+
+                        The `namespaceLabel` parameter specifies the label that must be present on the namespace
+                        to allow GPU resource usage. The `gpuResourcePatterns` parameter is an array of regex
+                        patterns matching GPU resource names in Pod specs (e.g., `^nvidia\.com/.*$`).
+
+                        Both `resources.requests` and `resources.limits` of every container,
+                        init container, and ephemeral container are inspected.
+
+                        The namespace label is read from the Gatekeeper cache. If the namespace is not
+                        in the cache yet (for example, right after the Gatekeeper pods restart), the policy
+                        fails closed and Pods requesting GPU resources are denied.
+                      properties:
+                        namespaceLabel:
+                          type: object
+                          description: "The label that must be present on the namespace to allow GPU resource usage."
+                          properties:
+                            key:
+                              type: string
+                              default: "gpu.deckhouse.io/enabled"
+                              description: "Label key that must be present on the namespace."
+                            value:
+                              type: string
+                              default: "true"
+                              description: "Expected label value."
+                        gpuResourcePatterns:
+                          type: array
+                          description: |
+                            List of regex patterns matching GPU resource names in Pod specs.
+                            A resource name matching any of these patterns is considered a GPU resource.
+
+                            Patterns are not anchored implicitly: `nvidia.com/gpu` also matches
+                            the `not-nvidia.com/gpu` resource name. Use `^` and `$` to match
+                            the whole resource name.
+                          default:
+                            - '^nvidia\.com/.*$'
+                          minItems: 1
+                          items:
+                            type: string
+                          x-doc-examples:
+                            - - '^nvidia\.com/.*$'
+                              - '^amd\.com/gpu$'
+                              - '^intel\.com/gpu$'
                 match:
                   type: object
                   anyOf:
