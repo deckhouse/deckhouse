@@ -6,7 +6,7 @@ search: deckhouse virtualization container registry, dvcr
 description: Архитектура компонента DVCR модуля virtualization в Deckhouse Kubernetes Platform.
 ---
 
-Компонент Deckhouse Virtualization Container Registry (DVCR) модуля [`virtualization`](/modules/virtualization/) — это специализированное хранилище образов контейнеров для хранения и кеширования образов виртуальных машин (ВМ). Virtualization-controller компонента [Virtualization-API](api.html) модуля [`virtualization`](/modules/virtualization/) позволяет импортировать хранящиеся в DVCR образы в PVC-тома, используемые в качестве дисков ВМ, управляемых KubeVirt. Подробнее с описанием импорта и загрузки образов и дисков ВМ можно ознакомиться [на соответствующей странице документации](import.html).
+Компонент Deckhouse Virtualization Container Registry (DVCR) модуля [`virtualization`](/modules/virtualization/) — это специализированное хранилище образов контейнеров для хранения и кеширования образов виртуальных машин (ВМ). Virtualization-controller компонента [Virtualization-API](api.html) модуля [`virtualization`](/modules/virtualization/) позволяет импортировать хранящиеся в DVCR образы в PVC-тома, используемые в качестве дисков ВМ, управляемых KubeVirt. Подробнее об импорте и загрузке образов и дисков ВМ описано в разделе [«Импорт и загрузка образов и дисков ВМ»](import.html).
 
 {% alert level="info" %}
 [KubeVirt](https://github.com/kubevirt/kubevirt) — это Open Source-проект, который позволяет запускать, развёртывать и управлять ВМ с использованием Kubernetes в качестве платформы оркестрации. Он обеспечивает совместную работу традиционных ВМ и контейнерных рабочих нагрузок в одном кластере Kubernetes, предоставляя единую плоскость управления.
