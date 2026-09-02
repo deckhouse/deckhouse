@@ -75,7 +75,7 @@ Virtualization API состоит из следующих компонентов
      В качестве бэкенда virtualization-controller использует кастомные ресурсы из API-группы `kubevirt.io`.
 
    - валидация ресурсов из API-группы `virtualization.deckhouse.io` с помощью механизма [Validating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/);
-   - запуск подов `dvcr-importer`, `dvcr-uploader`, `pvc-importer` и др. для выполнения сценариев импорта и загрузки дисков и образов ВМ. Подробнее с описанием импорта и загрузки образов и дисков ВМ можно ознакомиться [на соответствующей странице документации](import.html);
+   - запуск подов `dvcr-importer`, `dvcr-uploader`, `pvc-importer` и др. для импорта и загрузки дисков и образов ВМ. Подробнее об импорте и загрузке образов и дисков ВМ описано в разделе [«Импорт и загрузка образов и дисков ВМ»](import.html);
    - выполнение операций над ВМ посредством запросов к некоторым субресурсам API-группы `subresources.virtualization.deckhouse.io`, например `virtualmachines/freeze` и `virtualmachines/unfreeze`.
 
    Компонент содержит следующие контейнеры:

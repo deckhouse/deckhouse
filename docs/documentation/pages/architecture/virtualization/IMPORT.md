@@ -46,5 +46,5 @@ Interactions of [`virtualization`](/modules/virtualization/) module components w
 
 During the processes of importing and uploading VM images and disks [`virtualization`](/modules/virtualization/) module components interact with the following external components:
 
-1. **External sources of VM disks and images**: Reads disks or VM images when implementing some scenarios for importing to DVCR storage.
+1. **External sources of VM disks and images**: Read disks or VM images when implementing some scenarios for importing to DVCR storage.
 1. **Ingress-controller**: Forwards user requests to upload VM image or disk to DVCR storage via HTTP endpoint of dvcr-uploader service.
