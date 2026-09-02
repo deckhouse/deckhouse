@@ -1543,6 +1543,20 @@ apiserver:
 			})
 		})
 
+		Context("With audit log path customized", func() {
+			BeforeEach(func() {
+				f.ValuesSet("controlPlaneManager.internal.auditPolicy", base64.StdEncoding.EncodeToString([]byte("rules: []")))
+				f.ValuesSetFromYaml("controlPlaneManager.apiserver.auditLog", `{output: File, path: /custom/audit/path}`)
+				f.HelmRender()
+			})
+
+			It("should render the customized path as a kube-apiserver hostPath exception", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "kube-apiserver").Field("spec.volumes.hostPath.allowedValues").String()).
+					To(ContainSubstring("/custom/audit/path"))
+			})
+		})
+
 		Context("With prometheus enabled", func() {
 			BeforeEach(func() {
 				f.ValuesSetFromYaml("global.enabledModules", `["prometheus"]`)
