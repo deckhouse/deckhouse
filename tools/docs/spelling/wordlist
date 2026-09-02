@@ -192,7 +192,6 @@ certExporter
 certmanager
 certManager
 certSANs
-CertificateSigningRequest
 cgroup
 cgroups
 ChaCha
@@ -265,10 +264,8 @@ ClusterResourceGrant
 ClusterResourceGrantPolicy
 ClusterRole
 ClusterRoleBinding
-ClusterRoleBindings
 clusterType
 ClusterVirtualImage
-ClusterXXXMetric
 cmctl
 CMD
 cmp
@@ -337,7 +334,6 @@ CSE
 csi
 CSI
 CSR
-CSRs
 css
 csv
 CUDA
@@ -423,9 +419,7 @@ DevOps
 DevOpsConf
 dex
 DexAuthenticator
-dexauthenticator
 DexClient
-dexclient
 DexProvider
 DHCP
 dhcpOptions
@@ -925,7 +919,6 @@ MachineControllerManager
 MachineDeployment
 machinedeployments
 MachineSet
-MachineSets
 machineSize
 machineType
 macOS
@@ -1139,7 +1132,6 @@ OpenStackClusterConfiguration
 OpenStackEE
 OpenStackInstanceClass
 OpenStackInstanceClasses
-OpenstackInstanceClasses
 OpenTelemetry
 opentofu
 Opentofu
@@ -1359,7 +1351,6 @@ RHEL
 RockSolid
 rolebinding
 RoleBinding
-RoleBindings
 roleRef
 RollingUpdate
 rollout
@@ -1614,7 +1605,6 @@ uncordoned
 uninstall
 uninstalled
 uninstalling
-unioned
 Unlabel
 UNPACKEDSIZE
 unschedulable
@@ -1812,7 +1802,6 @@ ZvirtInstanceClass
 автообновлений
 автообновления
 автоподменой
-авторизаторами
 авторизовывать
 авторизовываться
 авторизующий
@@ -2287,7 +2276,6 @@ ZvirtInstanceClass
 незапрошенных
 незашифрованном
 неизменяем
-неизменяемо
 неинтерактивном
 неймспейс
 неймспейса
