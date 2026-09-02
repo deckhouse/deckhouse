@@ -4,7 +4,7 @@
 include:
   - project: 'deckhouse/ssdlc-tools/e2e-framework'
     file: '/ci-templates/e2e-framework.gitlab-ci.yml'
-    ref: 'add-comment-mr' #TODO remove after merge e2e-framework#58
+    ref: 'main'
     inputs:
       runner_tag: k8s-intteam-cloud-d8-ssdlc-runner
       vault_role: deckhouse
