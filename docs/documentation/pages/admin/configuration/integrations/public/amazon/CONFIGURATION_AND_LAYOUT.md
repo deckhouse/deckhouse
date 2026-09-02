@@ -177,7 +177,7 @@ In DKP, they can be used to:
 - Open access to applications running on static nodes.
 - Restrict or allow access to external resources based on security policies.
 
-Unless the [`disableDefaultSecurityGroup: true`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup) parameter is set, DKP creates the following default security groups:
+Unless the [`disableDefaultSecurityGroup: true`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup) parameter is set, DKP creates the following default security groups when a cluster is created:
 
 - `<prefix>-node`, assigned to cluster nodes:
   - Allows any outgoing traffic to `0.0.0.0/0`.

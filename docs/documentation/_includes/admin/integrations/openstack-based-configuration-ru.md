@@ -32,7 +32,7 @@
 ![resources](../../../../images/cloud-provider-openstack/openstack-standard.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1hjmDn2aJj3ru3kBR6Jd6MAW3NWJZMNkend_K43cMN0w/edit --->
 
-Дополнительно возможно создание группы безопасности отдельным свойством [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standard-internalnetworksecurity) (по умолчанию `true`). Группа создаётся с именем префикса кластера (`prefix`) и назначается узлам.
+Свойство [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standard-internalnetworksecurity) (по умолчанию `true`) включает создание группы безопасности при создании кластера. DKP создаёт группу с именем префикса кластера (`prefix`) и назначает её узлам.
 
 Будут созданы следующие правила входящего трафика:
 
@@ -153,7 +153,7 @@ provider:
 ![resources](../../../../images/cloud-provider-openstack/openstack-standardwithnorouter.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1gkuJhyGza0bXB2lcjdsQewWLEUCjqvTkkba-c5LtS_E/edit --->
 
-Дополнительно возможно создание группы безопасности отдельным свойством [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standardwithnorouter-internalnetworksecurity) (по умолчанию `true`). Группа создаётся с именем префикса кластера (`prefix`) и назначается узлам.
+Свойство [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standardwithnorouter-internalnetworksecurity) (по умолчанию `true`) включает создание группы безопасности при создании кластера. DKP создаёт группу с именем префикса кластера (`prefix`) и назначает её узлам.
 
 Будут созданы следующие правила входящего трафика:
 

@@ -17,7 +17,7 @@ Two layouts are supported. Below is more information about each of them.
 ![resources](images/gcp-standard.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10164&t=IvETjbByf1MSQzcm-0 --->
 
-The module creates the following firewall rules in the cluster VPC:
+When a cluster is created, the module creates the following firewall rules in the cluster VPC:
 
 - `<prefix>-ssh-and-ping` — allow incoming traffic over the `ICMP` and `TCP` (port 22) protocols to nodes with the `<prefix>` network tag from CIDRs listed in [`sshAllowList`](cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (default `0.0.0.0/0`)
 - `<prefix>-intercommunication` — allow any traffic between nodes with the `<prefix>` network tag, and from the pod subnet ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr))
@@ -97,7 +97,7 @@ provider:
 ![resources](images/gcp-withoutnat.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10296&t=IvETjbByf1MSQzcm-0 --->
 
-The module creates the following firewall rules in the cluster VPC:
+When a cluster is created, the module creates the following firewall rules in the cluster VPC:
 
 - `<prefix>-ssh-and-ping` — allow incoming traffic over the `ICMP` and `TCP` (port 22) protocols to nodes with the `<prefix>` network tag from CIDRs listed in [`sshAllowList`](cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (default `0.0.0.0/0`)
 - `<prefix>-intercommunication` — allow any traffic between nodes with the `<prefix>` network tag, and from the pod subnet ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr))

@@ -168,7 +168,7 @@ vpcNetworkCIDR: 10.241.0.0/16
 - открыть доступ к приложениям, размещённым на статических узлах;
 - ограничить или разрешить доступ к внешним ресурсам в соответствии с требованиями безопасности.
 
-Если не задан параметр [`disableDefaultSecurityGroup: true`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup), DKP создаёт группы безопасности по умолчанию:
+Если не задан параметр [`disableDefaultSecurityGroup: true`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup), при создании кластера DKP создаёт группы безопасности по умолчанию:
 
 - `<prefix>-node` — назначается узлам кластера:
   - разрешение любого исходящего трафика в `0.0.0.0/0`;

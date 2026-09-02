@@ -15,7 +15,7 @@ In this scheme, an internal cluster network is created with a gateway to the pub
 ![resources](images/openstack-standard.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11038&t=IvETjbByf1MSQzcm-0 --->
 
-Additionally, you can enable the creation of a security group using the [`internalNetworkSecurity`](cluster_configuration.html#openstackclusterconfiguration-standard-internalnetworksecurity) property (default `true`). The group is named after the cluster prefix (`prefix`) and is assigned to the nodes.
+The [`internalNetworkSecurity`](cluster_configuration.html#openstackclusterconfiguration-standard-internalnetworksecurity) property (default `true`) enables the creation of a security group when a cluster is created. The module creates the group named after the cluster prefix (`prefix`) and assigns it to the nodes.
 
 The following inbound rules will be created:
 
@@ -129,7 +129,7 @@ An internal cluster network is created that does not have access to the public n
 ![resources](images/openstack-standardwithnorouter.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11560&t=IvETjbByf1MSQzcm-0 --->
 
-Additionally, you can enable the creation of a security group using the [`internalNetworkSecurity`](cluster_configuration.html#openstackclusterconfiguration-standardwithnorouter-internalnetworksecurity) property (default `true`). The group is named after the cluster prefix (`prefix`) and is assigned to the nodes.
+The [`internalNetworkSecurity`](cluster_configuration.html#openstackclusterconfiguration-standardwithnorouter-internalnetworksecurity) property (default `true`) enables the creation of a security group when a cluster is created. The module creates the group named after the cluster prefix (`prefix`) and assigns it to the nodes.
 
 The following inbound rules will be created:
 

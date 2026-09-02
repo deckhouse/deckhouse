@@ -39,7 +39,7 @@ with a bastion host.
 ![Standard layout in OpenStack](../../../../images/cloud-provider-openstack/openstack-standard.png)
 <!--- Source: https://docs.google.com/drawings/d/1hjmDn2aJj3ru3kBR6Jd6MAW3NWJZMNkend_K43cMN0w/edit --->
 
-Additionally, you can enable the creation of a security group using the [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standard-internalnetworksecurity) property (default `true`). The group is named after the cluster prefix (`prefix`) and is assigned to the nodes.
+The [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standard-internalnetworksecurity) property (default `true`) enables the creation of a security group when a cluster is created. DKP creates the group named after the cluster prefix (`prefix`) and assigns it to the nodes.
 
 The following inbound rules will be created:
 
@@ -159,7 +159,7 @@ This layout should be used if you want all nodes in the cluster to be directly a
 ![StandardWithNoRouter layout in OpenStack](../../../../images/cloud-provider-openstack/openstack-standardwithnorouter.png)
 <!--- Source: https://docs.google.com/drawings/d/1gkuJhyGza0bXB2lcjdsQewWLEUCjqvTkkba-c5LtS_E/edit --->
 
-Additionally, you can enable the creation of a security group using the [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standardwithnorouter-internalnetworksecurity) property (default `true`). The group is named after the cluster prefix (`prefix`) and is assigned to the nodes.
+The [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standardwithnorouter-internalnetworksecurity) property (default `true`) enables the creation of a security group when a cluster is created. DKP creates the group named after the cluster prefix (`prefix`) and assigns it to the nodes.
 
 The following inbound rules will be created:
 

@@ -18,7 +18,7 @@ Standard is the supported deployment layout with the following characteristics:
 - If the master node does not have a public IP, a bastion host and VNet peering between clusters are required.
 - Peering between the cluster's VNet and other VNets is supported.
 
-Deckhouse Kubernetes Platform (DKP) creates a Network Security Group (NSG) named after the cluster prefix and associates it with the node subnet.
+When a cluster is created, Deckhouse Kubernetes Platform (DKP) creates a Network Security Group (NSG) named after the cluster prefix and associates it with the node subnet.
 
 The following rules will be created:
 

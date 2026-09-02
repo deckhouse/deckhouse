@@ -14,7 +14,7 @@ description: "Описание схем размещения и взаимоде
 ![resources](images/aws-withoutnat.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10681&t=IvETjbByf1MSQzcm-0 --->
 
-Дополнительно возможно создание групп безопасности по умолчанию (если не задано [`disableDefaultSecurityGroup: true`](cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup)).
+Если не задано [`disableDefaultSecurityGroup: true`](cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup), при создании кластера модуль создаёт группы безопасности по умолчанию.
 
 Будут созданы следующие группы и правила:
 
@@ -91,7 +91,7 @@ tags:
 ![resources](images/aws-withnat.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-9864&t=IvETjbByf1MSQzcm-0 --->
 
-Дополнительно возможно создание групп безопасности по умолчанию (если не задано [`disableDefaultSecurityGroup: true`](cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup)).
+Если не задано [`disableDefaultSecurityGroup: true`](cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup), при создании кластера модуль создаёт группы безопасности по умолчанию.
 
 Будут созданы следующие группы и правила:
 

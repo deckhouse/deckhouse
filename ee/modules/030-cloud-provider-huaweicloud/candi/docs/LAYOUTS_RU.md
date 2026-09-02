@@ -12,7 +12,7 @@ description: "Схемы размещения Huawei Cloud для работы �
 ![Схема размещения Standard](images/huawei-standard.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10811&t=IvETjbByf1MSQzcm-0 --->
 
-Дополнительно возможно создание группы безопасности отдельным свойством [`internalNetworkSecurity`](cluster_configuration.html#huaweicloudclusterconfiguration-standard-internalnetworksecurity) (по умолчанию `true`). Группа создаётся с именем префикса кластера и назначается узлам.
+Свойство [`internalNetworkSecurity`](cluster_configuration.html#huaweicloudclusterconfiguration-standard-internalnetworksecurity) (по умолчанию `true`) включает создание группы безопасности при создании кластера. Модуль создаёт группу с именем префикса кластера и назначает её узлам.
 
 Будут созданы следующие правила входящего трафика:
 
@@ -60,7 +60,7 @@ masterNodeGroup:
 ![Схема размещения VpcPeering](images/huawei-vpc-peering-ru.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11715&t=IvETjbByf1MSQzcm-0 --->
 
-Дополнительно возможно создание группы безопасности отдельным свойством [`internalNetworkSecurity`](cluster_configuration.html#huaweicloudclusterconfiguration-vpcpeering-internalnetworksecurity) (по умолчанию `true`). Группа создаётся с именем префикса кластера и назначается узлам.
+Свойство [`internalNetworkSecurity`](cluster_configuration.html#huaweicloudclusterconfiguration-vpcpeering-internalnetworksecurity) (по умолчанию `true`) включает создание группы безопасности при создании кластера. Модуль создаёт группу с именем префикса кластера и назначает её узлам.
 
 Будут созданы следующие правила входящего трафика:
 
