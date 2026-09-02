@@ -132,7 +132,7 @@ resolve_mr_iid() {
 
 post_start_comment() {
   local mr_iid="$1"
-  local body="e2e test started: PROVIDER=${E2E_PROVIDER:-?} EDITION=${E2E_EDITION} — [pipeline](${CI_PIPELINE_URL:-})"
+  local body="⏳ e2e test started: PROVIDER=${E2E_PROVIDER:-?} EDITION=${E2E_EDITION} K8S=${KUBERNETES_VERSION:-?} — [pipeline](${CI_PIPELINE_URL:-})"
   api POST "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/merge_requests/${mr_iid}/notes" \
     --data-urlencode "body=${body}" \
     | jq -r '.id // empty'

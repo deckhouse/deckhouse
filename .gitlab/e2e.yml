@@ -89,7 +89,7 @@ e2e-ensure-build:
     - chmod +x .gitlab/scripts/e2e-ensure-build.sh
     - .gitlab/scripts/e2e-ensure-build.sh
   artifacts:
-    access: none  # dotenv now carries BOATSWAIN_TOKEN; needs:artifacts inheritance still works, only UI/API download is blocked.
+    access: none  # dotenv now carries COMMENT_TOKEN; needs:artifacts inheritance still works, only UI/API download is blocked.
     reports:
       dotenv: e2e-build.env
     expire_in: 3 days
