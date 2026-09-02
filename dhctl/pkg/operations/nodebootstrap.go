@@ -53,10 +53,14 @@ func NodeName(cfg *config.MetaConfig, nodeGroupName string, index int) string {
 
 // payloadBuilderFor returns the builder for one group: an immutable group boots
 // with a document the installer renders, every other group with the cloud config
-// the cluster publishes for it.
+// the cluster publishes for it. The group alone decides; a caller that brings no
+// builder to an immutable group would leave its machines in the installer for good.
 func payloadBuilderFor(ng config.TerraNodeGroupSpec, build ImmutablePayloadBuilder) ImmutablePayloadBuilder {
-	if build == nil || !immutable.SystemTypeIsImmutable(ng.SystemType) {
+	if !immutable.SystemTypeIsImmutable(ng.SystemType) {
 		return nil
+	}
+	if build == nil {
+		panic(fmt.Sprintf("no payload builder for the immutable node group %q", ng.Name))
 	}
 	return build
 }
