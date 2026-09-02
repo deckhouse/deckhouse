@@ -32,6 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 )
@@ -212,8 +213,8 @@ func activeSource(module *v1alpha2.Module, config *v1alpha1.ModuleConfig) string
 	return pkgsync.SourceNameForRepository(module.Spec.PackageRepositoryName)
 }
 
-// installedModule returns the module object, nil when the module is not installed.
-func (r *reconciler) installedModule(ctx context.Context, name string) (*v1alpha2.Module, error) {
+// getModule returns the module object, nil when the module has no object yet.
+func (r *reconciler) getModule(ctx context.Context, name string) (*v1alpha2.Module, error) {
 	module := new(v1alpha2.Module)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: name}, module); err != nil {
 		if apierrors.IsNotFound(err) {
@@ -221,6 +222,72 @@ func (r *reconciler) installedModule(ctx context.Context, name string) (*v1alpha
 		}
 
 		return nil, fmt.Errorf("get the '%s' module: %w", name, err)
+	}
+
+	return module, nil
+}
+
+// ensureCatalogModule keeps the object of a module nothing installed: created when missing,
+// its repository is the one of the source the config picks or of the only offering source,
+// its channel the one of its policy, its status the offered or the conflict state. The
+// returned object is the one the rest of the scan reads.
+func (r *reconciler) ensureCatalogModule(ctx context.Context, name, channel string, config *v1alpha1.ModuleConfig, offering []string) (*v1alpha2.Module, error) {
+	module := new(v1alpha2.Module)
+	err := r.client.Get(ctx, client.ObjectKey{Name: name}, module)
+	if apierrors.IsNotFound(err) {
+		module = &v1alpha2.Module{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: v1alpha2.ModuleGVK.GroupVersion().String(),
+				Kind:       v1alpha2.ModuleKind,
+			},
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+		}
+
+		err = r.client.Create(ctx, module)
+		if err != nil && !apierrors.IsAlreadyExists(err) {
+			return nil, fmt.Errorf("create the '%s' module: %w", name, err)
+		}
+
+		// another source scanning the module created the object meanwhile: converge that one
+		if err != nil {
+			module = new(v1alpha2.Module)
+			err = r.client.Get(ctx, client.ObjectKey{Name: name}, module)
+		}
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("get the '%s' module: %w", name, err)
+	}
+
+	// a deploy that raced this scan owns the object from now on
+	if module.IsInstalled() {
+		return module, nil
+	}
+
+	patch := client.MergeFrom(module.DeepCopy())
+	module.Spec.PackageRepositoryName = pkgsync.CatalogRepository(pkgsync.ConfiguredSource(config), offering)
+	module.Spec.ReleaseChannel = channel
+
+	data, err := patch.Data(module)
+	if err != nil {
+		return nil, fmt.Errorf("build patch for the '%s' module: %w", name, err)
+	}
+
+	if string(data) != "{}" {
+		if err := r.client.Patch(ctx, module, client.RawPatch(patch.Type(), data)); err != nil {
+			return nil, fmt.Errorf("patch the '%s' module: %w", name, err)
+		}
+	}
+
+	conflict := pkgsync.CatalogConflict(config != nil && config.IsEnabled(), pkgsync.ConfiguredSource(config), offering)
+
+	err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {
+		module.ApplyCatalogState(conflict)
+
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("update the '%s' module status: %w", name, err)
 	}
 
 	return module, nil

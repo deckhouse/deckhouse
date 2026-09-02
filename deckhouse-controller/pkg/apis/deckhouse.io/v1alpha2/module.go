@@ -280,6 +280,26 @@ func (m *Module) SetConflictStatus() {
 	m.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonConflict, v1alpha1.ModuleMessageConflict)
 }
 
+// ApplyCatalogState puts a module nothing installed into the conflict state while several
+// sources offer it and none is picked, and into the offered state otherwise. A module already
+// fetching its first release keeps its way to the deploy. Reports whether the status changed.
+func (m *Module) ApplyCatalogState(conflict bool) bool {
+	switch {
+	case conflict:
+		if m.Status.Phase == v1alpha1.ModulePhaseConflict {
+			return false
+		}
+
+		m.SetConflictStatus()
+	case m.Status.Phase == v1alpha1.ModulePhaseConflict, !m.HasCatalogPhase():
+		m.SetNotInstalledStatus()
+	default:
+		return false
+	}
+
+	return true
+}
+
 // IsCondition reports whether the named condition is present with the given status.
 func (m *Module) IsCondition(condType string, status metav1.ConditionStatus) bool {
 	cond := meta.FindStatusCondition(m.Status.Conditions, condType)

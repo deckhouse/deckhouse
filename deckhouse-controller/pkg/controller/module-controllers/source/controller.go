@@ -339,8 +339,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		logger = logger.With(slog.String("release_channel", policy.Spec.ReleaseChannel), slog.String("source_name", source.Name))
 
-		// the module has an object only once it is installed
-		module, err := r.installedModule(ctx, moduleName)
+		module, err := r.getModule(ctx, moduleName)
 		if err != nil {
 			logger.Warn("failed to get module, skipping", slog.String("name", moduleName), log.Err(err))
 			availableModule.Error = err.Error()
@@ -360,8 +359,32 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			continue
 		}
 
+		offering, err := r.offeringSources(ctx, source, moduleName)
+		if err != nil {
+			logger.Error("failed to list module sources, skipping", slog.String("name", moduleName), log.Err(err))
+			availableModule.Error = err.Error()
+			availableModule.Version = "unknown"
+			errorsExist = true
+			availableModules = append(availableModules, availableModule)
+			continue
+		}
+
+		// a module nothing installed has an object too: the repository it would come from, the
+		// channel of its policy and the offered or the conflict state
+		if module == nil || !module.IsInstalled() {
+			module, err = r.ensureCatalogModule(ctx, moduleName, policy.Spec.ReleaseChannel, config, offering)
+			if err != nil {
+				logger.Warn("failed to ensure the module, skipping", slog.String("name", moduleName), log.Err(err))
+				availableModule.Error = err.Error()
+				availableModule.Version = "unknown"
+				errorsExist = true
+				availableModules = append(availableModules, availableModule)
+				continue
+			}
+		}
+
 		// a module installed from this source follows the channel of its policy
-		if module != nil && !module.IsEmbedded() && activeSource(module, config) == source.Name {
+		if module.IsInstalled() && !module.IsEmbedded() && activeSource(module, config) == source.Name {
 			if err := r.ensureReleaseChannel(ctx, module, policy.Spec.ReleaseChannel); err != nil {
 				logger.Warn("failed to set the module release channel, skipping", slog.String("name", moduleName), log.Err(err))
 				availableModule.Error = err.Error()
@@ -421,16 +444,6 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		exists, err = r.releaseExists(ctx, source.Name, moduleName, availableModule.Checksum)
 		if err != nil {
 			logger.Error("failed to check if module has a release, skipping", slog.String("name", moduleName), log.Err(err))
-			availableModule.Error = err.Error()
-			availableModule.Version = "unknown"
-			errorsExist = true
-			availableModules = append(availableModules, availableModule)
-			continue
-		}
-
-		offering, err := r.offeringSources(ctx, source, moduleName)
-		if err != nil {
-			logger.Error("failed to list module sources, skipping", slog.String("name", moduleName), log.Err(err))
 			availableModule.Error = err.Error()
 			availableModule.Version = "unknown"
 			errorsExist = true
@@ -522,7 +535,7 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		if ensure {
 			logger.Debug("ensure release")
 
-			// a module not installed yet has no object to report the download on
+			// the first release of an offered module moves it out of the catalog
 			if module != nil {
 				err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {
 					if module.Status.Phase == v1alpha1.ModulePhaseAvailable || module.Status.Phase == v1alpha1.ModulePhaseConflict {

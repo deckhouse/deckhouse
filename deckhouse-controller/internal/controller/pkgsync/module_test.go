@@ -225,8 +225,10 @@ func TestSyncModulesOfferedCatalog(t *testing.T) {
 
 	s, cl := newTestSyncer(t, "v1.80.0", dir,
 		// the platform source offers the embedded module too: the image wins
-		testSourceOffering("deckhouse", "echo", "single", "shared", "chosen", "gone", "fetching"),
-		testSourceOffering("mirror", "shared", "chosen"),
+		testSourceOffering("deckhouse", "echo", "single", "shared", "chosen", "contested", "gone", "fetching"),
+		testSourceOffering("mirror", "shared", "chosen", "contested"),
+		// the config enables a module two sources offer and picks none: a conflict
+		testConfig("contested", v1alpha1.ModuleConfigSpec{Enabled: ptr.To(true)}),
 		// a source being deleted offers nothing
 		func() *v1alpha1.ModuleSource {
 			source := testSourceOffering("leaving", "leftover")
@@ -257,7 +259,7 @@ func TestSyncModulesOfferedCatalog(t *testing.T) {
 
 	require.NoError(t, s.syncModules(ctx))
 
-	assert.ElementsMatch(t, []string{"echo", "single", "shared", "chosen", "gone", "fetching"}, listModuleNames(t, cl))
+	assert.ElementsMatch(t, []string{"echo", "single", "shared", "chosen", "contested", "gone", "fetching"}, listModuleNames(t, cl))
 
 	echo := getModule(t, cl, "echo")
 	assert.True(t, echo.IsEmbedded())
@@ -277,6 +279,11 @@ func TestSyncModulesOfferedCatalog(t *testing.T) {
 
 	chosen := getModule(t, cl, "chosen")
 	assert.Equal(t, "mirror", chosen.Spec.PackageRepositoryName)
+
+	contested := getModule(t, cl, "contested")
+	assert.Empty(t, contested.Spec.PackageRepositoryName)
+	assert.Equal(t, v1alpha1.ModulePhaseConflict, contested.Status.Phase)
+	assert.True(t, contested.IsCondition(v1alpha1.ModuleConditionIsReady, metav1.ConditionFalse))
 
 	gone := getModule(t, cl, "gone")
 	assert.Empty(t, gone.Spec.PackageVersion)

@@ -38,13 +38,16 @@ import (
 )
 
 // placement is where a module's package comes from, as the sync derives it. An offered
-// placement names a module some source lists and nothing installed: it carries no version.
+// placement names a module some source lists and nothing installed: it carries no version,
+// and it is in conflict while the config enables the module, several sources offer it and
+// none is picked.
 type placement struct {
 	repository string
 	version    string
 	dev        bool
 	embedded   bool
 	offered    bool
+	conflict   bool
 }
 
 // placed reports whether any source claims the module; the zero placement means none does.
@@ -102,7 +105,7 @@ func (s *syncer) syncModules(ctx context.Context) error {
 		}
 
 		if place.offered {
-			if err := s.ensureCatalogStatus(ctx, module); err != nil {
+			if err := s.ensureCatalogStatus(ctx, module, place); err != nil {
 				return err
 			}
 		}
@@ -119,7 +122,7 @@ func (s *syncer) syncModules(ctx context.Context) error {
 		}
 
 		if place.offered {
-			if err := s.ensureCatalogStatus(ctx, module); err != nil {
+			if err := s.ensureCatalogStatus(ctx, module, place); err != nil {
 				return err
 			}
 		}
@@ -194,26 +197,29 @@ func (s *syncer) offeredPlacements(ctx context.Context, configs map[string]*v1al
 	for name, names := range offering {
 		sort.Strings(names)
 
+		conf := configs[name]
+		configured := ConfiguredSource(conf)
+
 		placements[name] = placement{
 			offered:    true,
-			repository: CatalogRepository(ConfiguredSource(configs[name]), names),
+			repository: CatalogRepository(configured, names),
+			conflict:   CatalogConflict(conf != nil && conf.IsEnabled(), configured, names),
 		}
 	}
 
 	return placements, nil
 }
 
-// ensureCatalogStatus puts a module nothing installed into the offered state, unless it is
-// already on its way from the catalog to a deploy. The status of the package the module ran
-// before its uninstall goes with the version.
-func (s *syncer) ensureCatalogStatus(ctx context.Context, module *v1alpha2.Module) error {
-	if module.HasCatalogPhase() {
+// ensureCatalogStatus puts a module nothing installed into the offered or the conflict
+// state, unless it is already on its way from the catalog to a deploy. The status of the
+// package the module ran before its uninstall goes with the version.
+func (s *syncer) ensureCatalogStatus(ctx context.Context, module *v1alpha2.Module, place placement) error {
+	original := module.DeepCopy()
+
+	if !module.ApplyCatalogState(place.conflict) {
 		return nil
 	}
 
-	original := module.DeepCopy()
-
-	module.SetNotInstalledStatus()
 	module.Status.CurrentVersion = nil
 	module.Status.Summary = nil
 
@@ -221,7 +227,7 @@ func (s *syncer) ensureCatalogStatus(ctx context.Context, module *v1alpha2.Modul
 		return fmt.Errorf("patch module '%s' status: %w", module.Name, err)
 	}
 
-	s.logger.Debug("module is offered and not installed", slog.String("name", module.Name))
+	s.logger.Debug("module is offered and not installed", slog.String("name", module.Name), slog.String("phase", module.Status.Phase))
 
 	return nil
 }
