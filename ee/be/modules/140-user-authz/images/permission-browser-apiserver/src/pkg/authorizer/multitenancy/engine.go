@@ -66,7 +66,7 @@ type IndependentRBACChecker interface {
 // Implemented by resolver.ResourceScopeCache. This package must not import
 // resolver (resolver already imports multitenancy).
 type ResourceScope interface {
-	Scope(group, resource string) (namespaced, known bool)
+	Scope(group, resource string) (bool, bool)
 }
 
 // Engine implements the multi-tenancy authorization logic from user-authz webhook
