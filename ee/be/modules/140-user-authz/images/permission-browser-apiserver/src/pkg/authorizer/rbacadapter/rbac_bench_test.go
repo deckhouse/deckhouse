@@ -121,9 +121,20 @@ func clusterAdminWorld() []runtime.Object {
 }
 
 func runBulk(b *testing.B, auth *RBACAuthorizer, userName string) {
+	runBulkCtx(b, auth, userName, false)
+}
+
+func runBulkBound(b *testing.B, auth *RBACAuthorizer, userName string) {
+	runBulkCtx(b, auth, userName, true)
+}
+
+func runBulkCtx(b *testing.B, auth *RBACAuthorizer, userName string, bind bool) {
 	b.Helper()
 	u := &user.DefaultInfo{Name: userName}
 	ctx := context.Background()
+	if bind {
+		ctx = auth.BindSubject(ctx, u)
+	}
 	b.ReportAllocs()
 	b.ResetTimer()
 	for b.Loop() {
@@ -157,4 +168,32 @@ func BenchmarkAuthorize_ClusterAdmin_258(b *testing.B) {
 func BenchmarkAuthorize_Nobody_258(b *testing.B) {
 	auth := benchAuthorizer(b, clusterAdminWorld()...)
 	runBulk(b, auth, "nobody@example.io")
+}
+
+func BenchmarkAuthorize_SuperAdmin_258_Bound(b *testing.B) {
+	auth := benchAuthorizer(b, superAdminWorld()...)
+	runBulkBound(b, auth, "super-admin@example.io")
+}
+
+func BenchmarkAuthorize_ClusterAdmin_258_Bound(b *testing.B) {
+	auth := benchAuthorizer(b, clusterAdminWorld()...)
+	runBulkBound(b, auth, "cluster-admin@example.io")
+}
+
+func editorWorld() []runtime.Object {
+	objs := []runtime.Object{
+		granularClusterRole("user-authz:editor", 45),
+		bind("user-authz:editor:editor", "user-authz:editor", "editor@example.io", true),
+	}
+	return append(objs, noiseBindings(benchNoiseCRBs)...)
+}
+
+func BenchmarkAuthorize_Editor_258(b *testing.B) {
+	auth := benchAuthorizer(b, editorWorld()...)
+	runBulk(b, auth, "editor@example.io")
+}
+
+func BenchmarkAuthorize_Editor_258_Bound(b *testing.B) {
+	auth := benchAuthorizer(b, editorWorld()...)
+	runBulkBound(b, auth, "editor@example.io")
 }
