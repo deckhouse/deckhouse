@@ -25,7 +25,6 @@ import (
 
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
@@ -37,12 +36,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
-	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -58,7 +57,6 @@ const (
 func RegisterController(runtimeManager manager.Manager,
 	mm moduleManager,
 	loader *moduleloader.Loader,
-	edition *d8edition.Edition,
 	dc dependency.Container,
 	logger *log.Logger) error {
 	r := &reconciler{
@@ -68,7 +66,6 @@ func RegisterController(runtimeManager manager.Manager,
 		loader:              loader,
 		moduleManager:       mm,
 		dependencyContainer: dc,
-		edition:             edition,
 	}
 
 	r.init.Add(1)
@@ -100,7 +97,6 @@ type reconciler struct {
 	log                 *log.Logger
 	dependencyContainer dependency.Container
 	moduleManager       moduleManager
-	edition             *d8edition.Edition
 }
 
 type moduleManager interface {
@@ -154,7 +150,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.ModulePullOverride) (ctrl.Result, error) {
 	defer r.log.Debug("module pull override reconciled", slog.String("name", mpo.Name))
 
-	module := new(v1alpha1.Module)
+	// a module the override installs for the first time has no object yet
+	module := new(v1alpha2.Module)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: mpo.Name}, module); err != nil {
 		if !apierrors.IsNotFound(err) {
 			r.log.Error("failed to get module", slog.String("name", mpo.Name), log.Err(err))
@@ -162,20 +159,11 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 			return ctrl.Result{}, fmt.Errorf("get: %w", err)
 		}
 
-		r.log.Warn("module not found", slog.String("name", mpo.Name))
-		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageModuleNotFound {
-			mpo.Status.Message = v1alpha1.ModulePullOverrideMessageModuleNotFound
-			if uerr := r.updateModulePullOverrideStatus(ctx, mpo); uerr != nil {
-				r.log.Error("failed to update module pull override", slog.String("name", mpo.Name), log.Err(uerr))
-				return ctrl.Result{}, uerr
-			}
-		}
-
-		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
+		module = nil
 	}
 
 	// skip embedded modules
-	if module.IsEmbedded() {
+	if module != nil && module.IsEmbedded() {
 		r.log.Debug("module is embedded, skip it", slog.String("name", mpo.Name))
 		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageModuleEmbedded {
 			mpo.Status.Message = v1alpha1.ModulePullOverrideMessageModuleEmbedded
@@ -188,12 +176,10 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
 
-	// the module must be enabled — explicitly by a ModuleConfig or by the bundle default
-	enabled := module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue)
-	// no ModuleConfig yet (the condition is absent or unknown) — fall back to the bundle default
-	if !module.HasCondition(v1alpha1.ModuleConditionEnabledByModuleConfig) ||
-		module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionUnknown) {
-		enabled = module.IsEnabledByBundle(r.edition.Name, r.edition.Bundle)
+	enabled, err := r.moduleEnabled(ctx, mpo.Name, module)
+	if err != nil {
+		r.log.Error("failed to check whether the module is enabled", slog.String("name", mpo.Name), log.Err(err))
+		return ctrl.Result{}, err
 	}
 
 	if !enabled {
@@ -211,8 +197,15 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
 
-	// source must be
-	if module.Properties.Source == "" {
+	// the override carries no source: the repository is resolved from the resources naming one
+	repository, err := pkgsync.ModuleRepository(ctx, r.client, mpo.Name)
+	if err != nil {
+		r.log.Error("failed to resolve the module repository", slog.String("name", mpo.Name), log.Err(err))
+		return ctrl.Result{}, err
+	}
+
+	sourceName := pkgsync.SourceNameForRepository(repository)
+	if sourceName == "" {
 		r.log.Debug("module does not have an active source, skip it", slog.String("name", mpo.Name))
 		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageNoSource {
 			mpo.Status.Message = v1alpha1.ModulePullOverrideMessageNoSource
@@ -225,13 +218,10 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		return ctrl.Result{RequeueAfter: defaultRequeueAfter}, nil
 	}
 
-	// set condition overridden for the module
-	err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-		module.SetConditionTrue(v1alpha1.ModuleConditionIsOverridden)
-		return true
-	})
-	if err != nil {
-		r.log.Error("failed to update module", slog.String("name", mpo.Name), log.Err(err))
+	// the module follows the override from here: the tag is its version, the dev annotation
+	// routes it, and the condition reports the override to the old stack
+	if err := r.ensureDevModule(ctx, mpo, repository); err != nil {
+		r.log.Error("failed to mark the module overridden", slog.String("name", mpo.Name), log.Err(err))
 		return ctrl.Result{}, err
 	}
 
@@ -252,9 +242,9 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 	}
 
 	source := new(v1alpha1.ModuleSource)
-	if err = r.client.Get(ctx, client.ObjectKey{Name: module.Properties.Source}, source); err != nil {
+	if err = r.client.Get(ctx, client.ObjectKey{Name: sourceName}, source); err != nil {
 		if !apierrors.IsNotFound(err) {
-			r.log.Error("failed to get the module source for the module pull override", slog.String("module_source", module.Properties.Source), slog.String("target", mpo.Name), log.Err(err))
+			r.log.Error("failed to get the module source for the module pull override", slog.String("module_source", sourceName), slog.String("target", mpo.Name), log.Err(err))
 			return ctrl.Result{}, fmt.Errorf("get: %w", err)
 		}
 
@@ -331,12 +321,88 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		Controller: ptr.To(true),
 	}
 
-	if err = utils.EnsureModuleDocumentation(ctx, r.client, mpo.Name, module.Properties.Source, mpo.Status.ImageDigest, mpo.Spec.ImageTag, modulePath, ownerRef); err != nil {
+	if err = utils.EnsureModuleDocumentation(ctx, r.client, mpo.Name, sourceName, mpo.Status.ImageDigest, mpo.Spec.ImageTag, modulePath, ownerRef); err != nil {
 		r.log.Error("failed to ensure module documentation for the module pull override", slog.String("name", mpo.Name), log.Err(err))
 		return ctrl.Result{}, fmt.Errorf("ensure module documentation: %w", err)
 	}
 
 	return ctrl.Result{RequeueAfter: mpo.Spec.ScanInterval.Duration}, nil
+}
+
+// moduleEnabled reports whether the module may be pulled: a module config decides explicitly,
+// and without one the module manager's effective state does. A module never installed and not
+// configured is off, so a first override needs a ModuleConfig with enabled: true.
+func (r *reconciler) moduleEnabled(ctx context.Context, name string, module *v1alpha2.Module) (bool, error) {
+	config := new(v1alpha1.ModuleConfig)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: name}, config); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return false, fmt.Errorf("get the module config: %w", err)
+		}
+	} else if config.Spec.Enabled != nil {
+		return *config.Spec.Enabled, nil
+	}
+
+	return module != nil && module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, metav1.ConditionTrue), nil
+}
+
+// ensureDevModule places the module by the override: created when it has no object, moved
+// onto the image tag otherwise, marked dev and overridden.
+func (r *reconciler) ensureDevModule(ctx context.Context, mpo *v1alpha2.ModulePullOverride, repository string) error {
+	module := new(v1alpha2.Module)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: mpo.Name}, module); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("get the module: %w", err)
+		}
+
+		module = &v1alpha2.Module{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: v1alpha2.ModuleGVK.GroupVersion().String(),
+				Kind:       v1alpha2.ModuleKind,
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        mpo.Name,
+				Annotations: map[string]string{v1alpha2.ModuleAnnotationDev: "true"},
+			},
+			Spec: v1alpha2.ModuleSpec{
+				PackageRepositoryName: repository,
+				PackageVersion:        mpo.Spec.ImageTag,
+			},
+		}
+
+		if err := r.client.Create(ctx, module); err != nil {
+			return fmt.Errorf("create the module: %w", err)
+		}
+	} else {
+		patch := client.MergeFrom(module.DeepCopy())
+
+		if module.Annotations == nil {
+			module.Annotations = make(map[string]string)
+		}
+		module.Annotations[v1alpha2.ModuleAnnotationDev] = "true"
+		module.Spec.PackageRepositoryName = repository
+		module.Spec.PackageVersion = mpo.Spec.ImageTag
+
+		data, err := patch.Data(module)
+		if err != nil {
+			return fmt.Errorf("build patch: %w", err)
+		}
+
+		if string(data) != "{}" {
+			if err := r.client.Patch(ctx, module, client.RawPatch(patch.Type(), data)); err != nil {
+				return fmt.Errorf("patch the module: %w", err)
+			}
+		}
+	}
+
+	return utils.UpdateStatus[*v1alpha2.Module](ctx, r.client, module, func(module *v1alpha2.Module) bool {
+		if module.IsCondition(v1alpha1.ModuleConditionIsOverridden, metav1.ConditionTrue) {
+			return false
+		}
+
+		module.SetConditionTrue(v1alpha1.ModuleConditionIsOverridden, v1alpha1.ModuleReasonOverridden)
+
+		return true
+	})
 }
 
 // deployModule downloads module on tmp, validates and installs
@@ -411,7 +477,7 @@ func (r *reconciler) deleteModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 			}()
 		}
 
-		module := new(v1alpha1.Module)
+		module := new(v1alpha2.Module)
 		if err := r.client.Get(ctx, client.ObjectKey{Name: mpo.GetName()}, module); err != nil {
 			if !apierrors.IsNotFound(err) {
 				r.log.Error("failed to get the module", slog.String("name", mpo.GetName()), log.Err(err))
@@ -427,17 +493,14 @@ func (r *reconciler) deleteModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 			return ctrl.Result{}, nil
 		}
 
-		err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(mpo *v1alpha1.Module) bool {
-			mpo.SetConditionFalse(v1alpha1.ModuleConditionIsOverridden, "", "")
-			return true
-		})
-		if err != nil {
-			r.log.Error("failed to update the module status", slog.String("name", mpo.Name), log.Err(err))
+		// the module no longer follows a tag; the sync at the next start places it by its release
+		if err := r.releaseDevModule(ctx, module); err != nil {
+			r.log.Error("failed to release the module from the override", slog.String("name", mpo.Name), log.Err(err))
 			return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 		}
 
 		controllerutil.RemoveFinalizer(mpo, v1alpha1.ModulePullOverrideFinalizer)
-		if err = r.client.Update(ctx, mpo); err != nil {
+		if err := r.client.Update(ctx, mpo); err != nil {
 			r.log.Error("failed to remove finalizer for the module pull override", slog.String("name", mpo.Name), log.Err(err))
 			return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 		}
@@ -452,4 +515,26 @@ func (r *reconciler) updateModulePullOverrideStatus(ctx context.Context, mpo *v1
 		return fmt.Errorf("update: %w", err)
 	}
 	return nil
+}
+
+// releaseDevModule drops the dev mark of a module whose override is gone and reports it.
+func (r *reconciler) releaseDevModule(ctx context.Context, module *v1alpha2.Module) error {
+	if _, ok := module.Annotations[v1alpha2.ModuleAnnotationDev]; ok {
+		patch := client.MergeFrom(module.DeepCopy())
+		delete(module.Annotations, v1alpha2.ModuleAnnotationDev)
+
+		if err := r.client.Patch(ctx, module, patch); err != nil {
+			return fmt.Errorf("patch the module: %w", err)
+		}
+	}
+
+	return utils.UpdateStatus[*v1alpha2.Module](ctx, r.client, module, func(module *v1alpha2.Module) bool {
+		if module.IsCondition(v1alpha1.ModuleConditionIsOverridden, metav1.ConditionFalse) {
+			return false
+		}
+
+		module.SetConditionFalse(v1alpha1.ModuleConditionIsOverridden, v1alpha1.ModuleReasonDisabled, "")
+
+		return true
+	})
 }
