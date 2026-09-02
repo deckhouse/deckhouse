@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Package pkgsync creates the PackageRepository and ModulePackageVersion
-// objects for the module packages the old module stack already carries in the
-// cluster, so the package system sees the repositories the modules come from
-// and the versions the cluster runs. Each synced resource lives in its own
-// file.
+// Package pkgsync creates the PackageRepository, ModulePackageVersion and
+// Module objects for the module packages the old module stack already carries
+// in the cluster, so the package system sees the repositories the modules come
+// from, the versions the cluster runs and the modules that run them. Each
+// synced resource lives in its own file.
 //
 // # Data sources
 //
@@ -29,14 +29,33 @@
 //	  ├─ embedded-<module>-<deckhouse version>, complete: the metadata and
 //	  │  the settings/values schemas are filled from the module files on
 //	  │  disk, no repository ever serves it
-//	  └─ ModulePackage <module>, empty: the catalog entry no scan would
-//	     create, since no repository offers an embedded package
+//	  ├─ ModulePackage <module>, empty: the catalog entry no scan would
+//	  │  create, since no repository offers an embedded package
+//	  └─ Module <module>: repository "embedded", the reduced Deckhouse
+//	     version, the embedded annotation
 //
 //	deployed or pending ModuleRelease
-//	  └─ <repository>-<module>-<version>, where the "deckhouse" source maps
-//	     to the "deckhouse-modules" repository; a draft stub - the
-//	     module-package-version controller fills it once a PackageRepository
-//	     exists
+//	  ├─ <repository>-<module>-<version>, where the "deckhouse" source maps
+//	  │  to the "deckhouse-modules" repository; a draft stub - the
+//	  │  module-package-version controller fills it once a PackageRepository
+//	  │  exists
+//	  └─ Module <module> from the newest deployed release: its repository
+//	     and version; an older deployed duplicate is superseded
+//
+//	ModulePullOverride
+//	  └─ Module <module>: the image tag as the version, the dev annotation,
+//	     the repository resolved from the resources naming one
+//
+//	ModuleConfig
+//	  └─ Module <module>: settings, settings version, maintenance, enabled
+//	     and update policy mirrored onto the module the other sources placed;
+//	     a module without a config carries none
+//
+// A module claims one source: the image beats a pull override, which beats a
+// deployed release. A module none of them backs is deleted, so the objects
+// the old stack created for the modules it merely offered go away. A
+// condition written without a reason gets one, since the v1alpha2 schema
+// requires it.
 //
 // A version stays a draft until its metadata lands, so no observer takes a
 // half-created version for a complete one; a fill interrupted mid-way heals on
@@ -125,13 +144,18 @@ func newSyncer(reader client.Reader, writer client.Client, dc dependency.Contain
 }
 
 // sync runs the passes in order: repositories first, so the version stubs
-// find them in place.
+// find them in place, then the versions, so the modules placed last resolve
+// to an existing one.
 func (s *syncer) sync(ctx context.Context) error {
 	if err := s.syncPackageRepositories(ctx); err != nil {
 		return err
 	}
 
-	return s.syncModulePackageVersions(ctx)
+	if err := s.syncModulePackageVersions(ctx); err != nil {
+		return err
+	}
+
+	return s.syncModules(ctx)
 }
 
 // RepositoryNameForSource maps a ModuleSource name to the name of the
