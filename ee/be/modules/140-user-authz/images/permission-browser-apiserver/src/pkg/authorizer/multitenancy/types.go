@@ -9,6 +9,7 @@ import (
 	"regexp"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/labels"
 )
 
 // NamespaceAccessType represents the result of namespace access evaluation.
@@ -28,6 +29,11 @@ type DirectoryEntry struct {
 	AllowAccessToSystemNamespaces bool
 	LimitNamespaces               []*regexp.Regexp
 	NamespaceSelectors            []*NamespaceSelector
+	// compiledSelectors are LabelSelectorAsSelector results from
+	// NamespaceSelectors, built once in renewDirectories. Tests that construct
+	// a DirectoryEntry by hand may leave this nil; the matcher then compiles
+	// on the fly.
+	compiledSelectors []labels.Selector
 	// If there is no LimitNamespaces nor NamespaceSelectors options, the user has access to all namespaces except system namespaces.
 	// If LimitNamespaces is present, we do not need to mind about allowed access to system namespaces.
 	// Thus presence of LimitNamespaces matters when we summarise rules from all CRs to get the allowed namespaces.

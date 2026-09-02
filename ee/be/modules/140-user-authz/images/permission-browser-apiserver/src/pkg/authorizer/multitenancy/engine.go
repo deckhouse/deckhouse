@@ -8,7 +8,6 @@ package multitenancy
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 	"regexp"
 	"strings"
@@ -17,10 +16,8 @@ import (
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
-	"k8s.io/client-go/discovery"
 	corev1listers "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
@@ -60,14 +57,26 @@ type IndependentRBACChecker interface {
 	AllowsIndependently(ctx context.Context, attrs authorizer.Attributes) bool
 }
 
+// ResourceScope reports whether a resource is namespaced. known is false when
+// the snapshot has never seen the group/resource (missing CRD, broken
+// APIService, empty cache). Callers that enforce namespace limits must treat
+// !known like namespaced: failing open would let a CAR ClusterRoleBinding
+// report Allow for a cluster-scoped list of a namespaced resource.
+//
+// Implemented by resolver.ResourceScopeCache. This package must not import
+// resolver (resolver already imports multitenancy).
+type ResourceScope interface {
+	Scope(group, resource string) (namespaced, known bool)
+}
+
 // Engine implements the multi-tenancy authorization logic from user-authz webhook
 type Engine struct {
 	configPath      string
 	lastAppliedStat os.FileInfo
 
-	nsLister        corev1listers.NamespaceLister
-	nsSynced        cache.InformerSynced
-	discoveryClient discovery.DiscoveryInterface
+	nsLister      corev1listers.NamespaceLister
+	nsSynced      cache.InformerSynced
+	resourceScope ResourceScope
 
 	// independentRBAC, when set, is consulted before returning Deny: requests
 	// explicitly granted by CAR-independent RBAC must not be denied by
@@ -76,10 +85,6 @@ type Engine struct {
 
 	mu        sync.RWMutex
 	directory map[string]map[string]DirectoryEntry
-
-	// Cache for namespaced resources
-	namespacedCache   map[string]bool
-	namespacedCacheMu sync.RWMutex
 }
 
 // SetIndependentRBACChecker wires the CAR-independent RBAC checker into the
@@ -88,15 +93,16 @@ func (e *Engine) SetIndependentRBACChecker(checker IndependentRBACChecker) {
 	e.independentRBAC = checker
 }
 
-// NewEngine creates a new multi-tenancy engine
-func NewEngine(configPath string, nsLister corev1listers.NamespaceLister, nsSynced cache.InformerSynced, discoveryClient discovery.DiscoveryInterface) (*Engine, error) {
+// NewEngine creates a new multi-tenancy engine. resourceScope may be nil: every
+// lookup then reports !known, which is fail-closed for filtered cluster-scoped
+// requests. Live discovery is never used on Authorize.
+func NewEngine(configPath string, nsLister corev1listers.NamespaceLister, nsSynced cache.InformerSynced, resourceScope ResourceScope) (*Engine, error) {
 	e := &Engine{
-		configPath:      configPath,
-		nsLister:        nsLister,
-		nsSynced:        nsSynced,
-		discoveryClient: discoveryClient,
-		directory:       make(map[string]map[string]DirectoryEntry),
-		namespacedCache: make(map[string]bool),
+		configPath:    configPath,
+		nsLister:      nsLister,
+		nsSynced:      nsSynced,
+		resourceScope: resourceScope,
+		directory:     make(map[string]map[string]DirectoryEntry),
 	}
 
 	// Initial config load
@@ -186,7 +192,7 @@ func (e *Engine) authorizeNamespacedRequest(ctx context.Context, attrs authorize
 
 	// Check namespace selectors
 	if denied && len(entry.NamespaceSelectors) > 0 {
-		match, err := e.namespaceLabelsMatchSelector(namespace, entry.NamespaceSelectors)
+		match, err := e.namespaceLabelsMatchSelector(namespace, entry)
 		if err != nil {
 			klog.Errorf("Error checking namespace labels: %v", err)
 		} else if match {
@@ -216,106 +222,22 @@ func (e *Engine) authorizeClusterScopedRequest(ctx context.Context, attrs author
 		return authorizer.DecisionNoOpinion, "", nil
 	}
 
-	group := attrs.GetAPIGroup()
-	version := attrs.GetAPIVersion()
-	resource := attrs.GetResource()
+	namespaced, known := false, false
+	if e.resourceScope != nil {
+		namespaced, known = e.resourceScope.Scope(attrs.GetAPIGroup(), attrs.GetResource())
+	}
 
-	// Check if resource is namespaced
-	namespaced, err := e.isResourceNamespaced(group, version, resource)
-	if err != nil {
-		klog.V(4).Infof("Could not determine if resource %s/%s/%s is namespaced: %v", group, version, resource, err)
+	// Known cluster-scoped resources are not limited by namespace filters.
+	// Everything else (namespaced, or unknown) is treated as namespaced so a
+	// discovery miss cannot fail-open through a CAR ClusterRoleBinding.
+	if known && !namespaced {
 		return authorizer.DecisionNoOpinion, "", nil
 	}
 
-	if namespaced {
-		// Cluster-scoped access to a namespaced resource granted by a non-CAR
-		// ClusterRoleBinding is a deliberate cluster-wide grant; do not deny it.
-		if e.independentRBAC != nil && e.independentRBAC.AllowsIndependently(ctx, attrs) {
-			return authorizer.DecisionNoOpinion, "", nil
-		}
-		return authorizer.DecisionDeny, namespaceLimitedAccessReason, nil
+	if e.independentRBAC != nil && e.independentRBAC.AllowsIndependently(ctx, attrs) {
+		return authorizer.DecisionNoOpinion, "", nil
 	}
-
-	return authorizer.DecisionNoOpinion, "", nil
-}
-
-// isResourceNamespaced checks if a resource is namespaced using discovery
-func (e *Engine) isResourceNamespaced(group, version, resource string) (bool, error) {
-	// Use schema.GroupVersionResource for type-safe cache key
-	gvr := schema.GroupVersionResource{
-		Group:    group,
-		Version:  version,
-		Resource: resource,
-	}
-	cacheKey := gvr.String()
-
-	// Check cache with proper defer unlock
-	var namespaced, ok bool
-	func() {
-		e.namespacedCacheMu.RLock()
-		defer e.namespacedCacheMu.RUnlock()
-		namespaced, ok = e.namespacedCache[cacheKey]
-	}()
-	if ok {
-		return namespaced, nil
-	}
-
-	// Query apiserver for preferred version of this API resource
-	gv, err := e.getPreferredGroupVersion(group, version)
-	if err != nil {
-		return false, err
-	}
-
-	resourceList, err := e.discoveryClient.ServerResourcesForGroupVersion(gv.String())
-	if err != nil {
-		return false, err
-	}
-
-	e.namespacedCacheMu.Lock()
-	defer e.namespacedCacheMu.Unlock()
-	for _, r := range resourceList.APIResources {
-		if r.Name == resource || strings.HasPrefix(r.Name, resource+"/") {
-			e.namespacedCache[cacheKey] = r.Namespaced
-			return r.Namespaced, nil
-		}
-	}
-
-	return false, nil
-}
-
-// getPreferredGroupVersion returns the preferred GroupVersion for a group.
-// Uses schema.GroupVersion for type-safe group/version handling.
-func (e *Engine) getPreferredGroupVersion(group, version string) (schema.GroupVersion, error) {
-	// If version is specified, use it
-	if version != "" {
-		return schema.GroupVersion{Group: group, Version: version}, nil
-	}
-
-	// For core API group
-	if group == "" {
-		return schema.GroupVersion{Version: "v1"}, nil
-	}
-
-	// Query apiserver for preferred version
-	apiGroupList, err := e.discoveryClient.ServerGroups()
-	if err != nil {
-		// Propagate discovery error. The caller will treat it as best-effort and return NoOpinion.
-		return schema.GroupVersion{}, fmt.Errorf("failed to discover server groups while resolving preferred version for group %q: %w", group, err)
-	}
-
-	for _, g := range apiGroupList.Groups {
-		if g.Name == group {
-			// Parse the preferred version string into GroupVersion
-			gv, parseErr := schema.ParseGroupVersion(g.PreferredVersion.GroupVersion)
-			if parseErr != nil {
-				return schema.GroupVersion{}, fmt.Errorf("failed to parse preferred version %q for group %q: %w", g.PreferredVersion.GroupVersion, group, parseErr)
-			}
-			return gv, nil
-		}
-	}
-
-	// Group not found - this should not happen in a properly functioning cluster
-	return schema.GroupVersion{}, fmt.Errorf("API group %q not found in server groups", group)
+	return authorizer.DecisionDeny, namespaceLimitedAccessReason, nil
 }
 
 // combineDirEntries combines multiple directory entries into one.
@@ -331,6 +253,9 @@ func (e *Engine) combineDirEntries(entries []DirectoryEntry) DirectoryEntry {
 
 		if len(entry.NamespaceSelectors) > 0 {
 			combined.NamespaceSelectors = append(combined.NamespaceSelectors, entry.NamespaceSelectors...)
+		}
+		if len(entry.compiledSelectors) > 0 {
+			combined.compiledSelectors = append(combined.compiledSelectors, entry.compiledSelectors...)
 		}
 		if len(entry.LimitNamespaces) > 0 {
 			combined.LimitNamespaces = append(combined.LimitNamespaces, entry.LimitNamespaces...)
@@ -372,9 +297,10 @@ func (e *Engine) affectedDirs(userName string, groups []string) []DirectoryEntry
 	return dirEntriesAffected
 }
 
-// namespaceLabelsMatchSelector checks if labels of a namespace match provided labelselector
-func (e *Engine) namespaceLabelsMatchSelector(namespaceName string, namespaceSelectors []*NamespaceSelector) (bool, error) {
-	if e.nsLister == nil {
+// namespaceLabelsMatchSelector checks if labels of a namespace match the
+// entry's selectors. Prefer compiledSelectors (built in renewDirectories).
+func (e *Engine) namespaceLabelsMatchSelector(namespaceName string, entry *DirectoryEntry) (bool, error) {
+	if e.nsLister == nil || entry == nil {
 		return false, nil
 	}
 
@@ -388,7 +314,16 @@ func (e *Engine) namespaceLabelsMatchSelector(namespaceName string, namespaceSel
 		labelsSet = labels.Set{}
 	}
 
-	for _, namespaceSelector := range namespaceSelectors {
+	if len(entry.compiledSelectors) > 0 {
+		for _, selector := range entry.compiledSelectors {
+			if selector.Matches(labelsSet) {
+				return true, nil
+			}
+		}
+		return false, nil
+	}
+
+	for _, namespaceSelector := range entry.NamespaceSelectors {
 		if namespaceSelector.LabelSelector != nil {
 			selector, err := metav1.LabelSelectorAsSelector(namespaceSelector.LabelSelector)
 			if err != nil {
@@ -462,6 +397,14 @@ func (e *Engine) renewDirectories() {
 				}
 			} else {
 				dirEntry.NamespaceSelectors = append(dirEntry.NamespaceSelectors, crd.Spec.NamespaceSelector)
+				if crd.Spec.NamespaceSelector.LabelSelector != nil {
+					selector, err := metav1.LabelSelectorAsSelector(crd.Spec.NamespaceSelector.LabelSelector)
+					if err != nil {
+						klog.Errorf("Cannot compile namespaceSelector from ClusterAuthorizationRule %q: %v", crd.Name, err)
+						return
+					}
+					dirEntry.compiledSelectors = append(dirEntry.compiledSelectors, selector)
+				}
 			}
 
 			directory[kind][name] = dirEntry
@@ -614,7 +557,7 @@ func (e *Engine) IsNamespaceAllowedWithFilter(namespace string, filter *Director
 
 	// Check namespace selectors if denied by patterns
 	if !allowed && len(filter.NamespaceSelectors) > 0 {
-		match, err := e.namespaceLabelsMatchSelector(namespace, filter.NamespaceSelectors)
+		match, err := e.namespaceLabelsMatchSelector(namespace, filter)
 		if err == nil && match {
 			allowed = true
 		}

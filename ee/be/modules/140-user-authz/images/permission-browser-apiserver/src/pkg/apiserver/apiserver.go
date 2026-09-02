@@ -154,7 +154,7 @@ func initAuthorizers(init *initResult, configPath string, scopeCache *resolver.R
 			configPath,
 			init.informerFactory.Core().V1().Namespaces().Lister(),
 			init.informerFactory.Core().V1().Namespaces().Informer().HasSynced,
-			init.clientset.Discovery(),
+			scopeCache,
 		)
 		if err != nil {
 			klog.Warningf("Failed to initialize multi-tenancy engine: %v. Multi-tenancy restrictions will not be applied.", err)
