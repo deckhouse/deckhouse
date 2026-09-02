@@ -14,27 +14,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# Posts/updates the e2e comment on the linked merge request. Three modes
-# (first arg):
+# Posts/updates the e2e comment on the linked merge request. The comment
+# has four independent sections, each updated in place without touching
+# the others:
+#   1) started        - fixed once, posted by `start`.
+#   2) cluster endpoint - owned entirely by the e2e-framework itself; we
+#                         only strip it on test success (see below).
+#   3) tests status    - updated by `finish`.
+#   4) deletion status - updated by `delete`.
 #
-#   start <mr_iid>  - from e2e-ensure-build. Posts the initial "started"
-#                     comment and prints the created note id on stdout
-#                     (all other output goes to stderr) so the caller can
-#                     capture it and write it to the dotenv artifact.
+# Three modes (first arg):
+#
+#   start <mr_iid>  - from e2e-ensure-build. Posts the initial comment
+#                     (all four sections, sections 3/4 as "pending") and
+#                     prints the created note id on stdout (all other
+#                     output goes to stderr) so the caller can capture it
+#                     and write it to the dotenv artifact.
 #   finish          - from the create job's `after_script`, so
 #                     CI_JOB_STATUS reflects create_cluster's result.
-#                     success: swap the "started" hourglass for a
-#                     checkmark and strip the cluster-endpoint block the
-#                     framework inserted while running. failure: swap the
-#                     hourglass for a red cross, keep the endpoint block
-#                     (useful for debugging a live/crashed cluster). Also
-#                     sets the final e2e-framework::<success|failed>
-#                     label, removing the other one first.
+#                     Updates only the tests-status line: "passed" on
+#                     success (also strips the cluster-endpoint block —
+#                     no longer needed once confirmed working) or
+#                     "failed" otherwise (endpoint block kept, useful for
+#                     debugging a live/crashed cluster). Also sets the
+#                     final e2e-framework::<success|failed> label,
+#                     removing the other one first.
 #   delete          - from delete/delete-auto jobs' `after_script`.
-#                     Appends the cluster deletion result as a new line.
-#                     Manages only e2e-framework::cluster-not-deleted (set
-#                     on failure, cleared on success) — never touches the
-#                     create/test e2e-framework::<success|failed> label.
+#                     Updates only the deletion-status line. Manages only
+#                     e2e-framework::cluster-not-deleted (set on failure,
+#                     cleared on success) — never touches the create/test
+#                     e2e-framework::<success|failed> label.
 #
 # finish/delete read NOTE_ID/MERGE_REQUEST_IID from the environment —
 # inherited via dotenv (needs:artifacts) from e2e-ensure-build.
@@ -45,11 +54,15 @@
 # Contract with the framework's own comment edits (adding the connection
 # endpoint during create_cluster): wrap that content in
 #   <!-- e2e-cluster-endpoint:start --> ... <!-- e2e-cluster-endpoint:end -->
-# so it can be located and stripped on success.
+# (already present, empty, in the comment `start` posts) so it can be
+# located and stripped on success.
 #
 # after_script runs in a separate shell from script/before_script and its
 # exit code doesn't affect the job result — finish/delete are best-effort
 # and never fail the job they're attached to.
+
+TESTS_STATUS_MARKER="<!-- e2e-tests-status -->"
+DELETE_STATUS_MARKER="<!-- e2e-delete-status -->"
 
 MODE="${1:?usage: e2e-notify.sh <start|finish|delete> [mr_iid]}"
 
@@ -70,10 +83,37 @@ api() {
     "${url}"
 }
 
+# Replace a single `<!-- marker -->rest of line` line with a new one,
+# leaving everything else in the body untouched.
+replace_status_line() {
+  local body="$1"
+  local marker="$2"
+  local new_line="$3"
+  MARKER="${marker}" NEW_LINE="${new_line}" CURRENT_BODY="${body}" python3 <<'REPLACE_LINE'
+import os, re
+body = os.environ["CURRENT_BODY"]
+marker = os.environ["MARKER"]
+new_line = os.environ["NEW_LINE"]
+pattern = re.escape(marker) + r".*"
+body = re.sub(pattern, lambda m: marker + new_line, body)
+print(body, end="")
+REPLACE_LINE
+}
+
 case "${MODE}" in
   start)
     mr_iid="${2:?usage: e2e-notify.sh start <mr_iid>}"
-    body="⏳ e2e test started: PROVIDER=${E2E_PROVIDER:-?} EDITION=${E2E_EDITION:-?} K8S=${KUBERNETES_VERSION:-?} — [pipeline](${CI_PIPELINE_URL:-})"
+    body="$(cat <<BODY
+⏳ e2e test started: PROVIDER=${E2E_PROVIDER:-?} EDITION=${E2E_EDITION:-?} K8S=${KUBERNETES_VERSION:-?} — [pipeline](${CI_PIPELINE_URL:-})
+
+<!-- e2e-cluster-endpoint:start -->
+<!-- e2e-cluster-endpoint:end -->
+
+${TESTS_STATUS_MARKER}⏳ Tests: running
+
+${DELETE_STATUS_MARKER}⏳ Cluster deletion: pending
+BODY
+)"
     note_id="$(api POST "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/merge_requests/${mr_iid}/notes" \
       --data-urlencode "body=${body}" | jq -r '.id // empty')"
     if [[ -z "${note_id}" ]]; then
@@ -114,8 +154,8 @@ fi
 case "${MODE}" in
   finish)
     if [[ "${STATUS_LABEL}" == "success" ]]; then
-      # Strip the framework's cluster-endpoint block, then swap the icon.
-      stripped_body="$(CURRENT_BODY="${current_body}" python3 <<'STRIP_ENDPOINT'
+      # No longer needed once confirmed working.
+      current_body="$(CURRENT_BODY="${current_body}" python3 <<'STRIP_ENDPOINT'
 import os, re
 body = os.environ["CURRENT_BODY"]
 body = re.sub(
@@ -127,18 +167,17 @@ body = re.sub(
 print(body, end="")
 STRIP_ENDPOINT
 )"
-      new_body="${stripped_body//⏳/✅}"
+      new_body="$(replace_status_line "${current_body}" "${TESTS_STATUS_MARKER}" "✅ Tests: passed")"
     else
-      new_body="${current_body//⏳/❌}"
+      new_body="$(replace_status_line "${current_body}" "${TESTS_STATUS_MARKER}" "❌ Tests: failed")"
     fi
     ;;
   delete)
     if [[ "${STATUS_LABEL}" == "success" ]]; then
-      DELETE_LINE="🗑️ cluster deleted: success — [job](${CI_JOB_URL:-})"
+      new_body="$(replace_status_line "${current_body}" "${DELETE_STATUS_MARKER}" "🗑️ Cluster deletion: success")"
     else
-      DELETE_LINE="⚠️ cluster deletion failed (status=${CI_JOB_STATUS:-unknown}) — [job](${CI_JOB_URL:-})"
+      new_body="$(replace_status_line "${current_body}" "${DELETE_STATUS_MARKER}" "⚠️ Cluster deletion: failed")"
     fi
-    new_body="$(printf '%s\n\n%s' "${current_body}" "${DELETE_LINE}")"
     ;;
 esac
 
