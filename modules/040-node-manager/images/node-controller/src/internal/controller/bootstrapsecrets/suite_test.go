@@ -19,6 +19,7 @@ package bootstrapsecrets
 import (
 	"context"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	. "github.com/onsi/ginkgo/v2"
@@ -46,6 +47,10 @@ const (
 
 	clusterUUIDConfigMapName = "d8-cluster-uuid"
 	clusterUUIDKey           = "cluster-uuid"
+
+	yandexInstanceClassCRDPath = "030-cloud-provider-yandex/candi/openapi/instance_class.yaml"
+	yandexInstanceClassKind    = "YandexInstanceClass"
+	yandexInstanceClassVersion = "v1"
 )
 
 var (
@@ -81,8 +86,15 @@ var _ = BeforeSuite(func() {
 	Expect(deckhousev1.AddToScheme(scheme)).To(Succeed())
 
 	By("bootstrapping the envtest environment with the NodeGroup CRD")
+	// The InstanceClass CRD is not decoration: a CAPI bootstrap Secret is written only for a
+	// group whose cloud checks passed, and check #2 resolves a real class of the kind the
+	// provider registered. Yandex is the shipped kind whose schema asks for the least.
+	crds := slices.Concat(
+		testenv.CRDPaths(testenv.WithNodeGroupCRDFile()),
+		testenv.ModuleCRDPaths(yandexInstanceClassCRDPath),
+	)
 	var err error
-	testEnv, _, k8sClient, err = testenv.Start(scheme, testenv.CRDPaths(testenv.WithNodeGroupCRDFile())...)
+	testEnv, _, k8sClient, err = testenv.Start(scheme, crds...)
 	Expect(err).NotTo(HaveOccurred())
 
 	By("creating the namespace the bootstrap secrets are written to")
