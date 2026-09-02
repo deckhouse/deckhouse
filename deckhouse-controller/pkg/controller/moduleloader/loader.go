@@ -22,7 +22,6 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
-	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -35,13 +34,13 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"gopkg.in/yaml.v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/module/installer"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	d8utils "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
@@ -54,6 +53,10 @@ import (
 
 const (
 	defaultModuleWeight = 900
+
+	// definitionLabelPrefix marks the labels the module definition owns on the Module: the
+	// tags and the cni/cloud-provider markers.
+	definitionLabelPrefix = "module.deckhouse.io/"
 
 	moduleOrderIdx = 2
 	moduleNameIdx  = 3
@@ -93,7 +96,10 @@ type Installer interface {
 }
 
 type Loader struct {
-	client         client.Client
+	client client.Client
+	// reader bypasses the manager cache: the package versions the loader completes are cached
+	// only when the module packages feature is on, and the loader runs everywhere.
+	reader         client.Reader
 	logger         *log.Logger
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer
 	modules        map[string]*moduletypes.Module
@@ -114,9 +120,10 @@ type Loader struct {
 	conversionsStore     *conversion.ConversionsStore
 }
 
-func New(client client.Client, version, modulesDir, globalDir string, dc dependency.Container, exts extenders.IExtendersStack, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, conversionsStore *conversion.ConversionsStore, logger *log.Logger) *Loader {
+func New(client client.Client, reader client.Reader, version, modulesDir, globalDir string, dc dependency.Container, exts extenders.IExtendersStack, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, conversionsStore *conversion.ConversionsStore, logger *log.Logger) *Loader {
 	return &Loader{
 		client:               client,
+		reader:               reader,
 		logger:               logger,
 		modulesDirs:          addonutils.SplitToPaths(modulesDir),
 		globalDir:            globalDir,
@@ -343,9 +350,17 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 				continue
 			}
 
+			embedded := strings.HasPrefix(def.Path, app.EmbeddedModulesDir)
+
 			l.logger.Debug("ensure module", slog.String("name", def.Name))
-			if err = l.ensureModule(ctx, def, strings.HasPrefix(def.Path, app.EmbeddedModulesDir)); err != nil {
-				return fmt.Errorf("ensure the '%s' embedded module: %w", def.Name, err)
+			if err = l.ensureModule(ctx, def, embedded); err != nil {
+				return fmt.Errorf("ensure the '%s' module: %w", def.Name, err)
+			}
+
+			if !embedded {
+				if err = l.ensurePackageVersion(ctx, def); err != nil {
+					return fmt.Errorf("ensure the '%s' module package version: %w", def.Name, err)
+				}
 			}
 
 			l.modules[def.Name] = module
@@ -361,15 +376,15 @@ func (l *Loader) LoadModulesFromFS(ctx context.Context) error {
 	return nil
 }
 
-// cleanupDeletedModules removes modules that no longer exist and updates status for modules without configs
+// cleanupDeletedModules marks the modules without a module config and hands every module its
+// version. The modules the image stopped shipping are deleted by the package sync at start.
 func (l *Loader) cleanupDeletedModules(ctx context.Context) error {
 	ctx, span := otel.Tracer("module-loader").Start(ctx, "cleanupDeletedModules")
 	defer span.End()
 
-	// clear deleted embedded modules
 	ctx, listSpan := otel.Tracer("module-loader").Start(ctx, "listModules")
 
-	modulesList := new(v1alpha1.ModuleList)
+	modulesList := new(v1alpha2.ModuleList)
 	if err := l.client.List(ctx, modulesList); err != nil {
 		listSpan.RecordError(err)
 		listSpan.End()
@@ -395,66 +410,40 @@ func (l *Loader) cleanupDeletedModules(ctx context.Context) error {
 	ctx, processSpan := otel.Tracer("module-loader").Start(ctx, "processModules")
 	defer processSpan.End()
 
-	deletedCount := 0
+	configured := make(map[string]struct{}, len(moduleConfigs.Items))
+	for _, config := range moduleConfigs.Items {
+		configured[config.Name] = struct{}{}
+	}
+
 	statusUpdatedCount := 0
 
 	for _, module := range modulesList.Items {
-		if module.IsEmbedded() && l.modules[module.Name] == nil {
-			ctx, deleteSpan := otel.Tracer("module-loader").Start(ctx, "deleteEmbeddedModule")
-			deleteSpan.SetAttributes(attribute.String("module.name", module.Name))
-
-			if err := l.client.Delete(ctx, &module); err != nil {
-				deleteSpan.RecordError(err)
-				deleteSpan.End()
-				return fmt.Errorf("delete the '%s' embedded module: %w", module.Name, err)
-			}
-			deletedCount++
-			deleteSpan.End()
-
-			// The module has just been deleted; skip the status update below so we
-			// don't try to update a non-existent module.
+		if _, found := configured[module.Name]; found {
 			continue
 		}
 
-		var found bool
-		ctx, configSearchSpan := otel.Tracer("module-loader").Start(ctx, "searchModuleConfig")
-		configSearchSpan.SetAttributes(attribute.String("module.name", module.Name))
+		ctx, statusUpdateSpan := otel.Tracer("module-loader").Start(ctx, "updateModuleStatus")
+		statusUpdateSpan.SetAttributes(attribute.String("module.name", module.Name))
 
-		for _, config := range moduleConfigs.Items {
-			if config.GetName() == module.Name {
-				found = true
-				break
-			}
-		}
-		configSearchSpan.SetAttributes(attribute.Bool("config.found", found))
-		configSearchSpan.End()
-
-		if !found {
-			ctx, statusUpdateSpan := otel.Tracer("module-loader").Start(ctx, "updateModuleStatus")
-			statusUpdateSpan.SetAttributes(attribute.String("module.name", module.Name))
-
-			err := ctrlutils.UpdateStatusWithRetry(ctx, l.client, &module, func() error {
-				module.SetConditionUnknown(v1alpha1.ModuleConditionEnabledByModuleConfig, "", "")
-				return nil
-			})
-			if err != nil {
-				statusUpdateSpan.RecordError(err)
-				statusUpdateSpan.End()
-				return fmt.Errorf("update status for the '%s' module: %w", module.Name, err)
-			}
-			statusUpdatedCount++
+		err := ctrlutils.UpdateStatusWithRetry(ctx, l.client, &module, func() error {
+			module.SetConditionUnknown(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonUnknown, "")
+			return nil
+		})
+		if err != nil {
+			statusUpdateSpan.RecordError(err)
 			statusUpdateSpan.End()
+			return fmt.Errorf("update status for the '%s' module: %w", module.Name, err)
 		}
+		statusUpdatedCount++
+		statusUpdateSpan.End()
 	}
 
 	processSpan.SetAttributes(
 		attribute.Int("total_modules", len(modulesList.Items)),
-		attribute.Int("deleted_modules", deletedCount),
 		attribute.Int("status_updated_modules", statusUpdatedCount),
 	)
 	span.SetAttributes(
 		attribute.Int("total_modules", len(modulesList.Items)),
-		attribute.Int("deleted_modules", deletedCount),
 		attribute.Int("status_updated_modules", statusUpdatedCount),
 	)
 
@@ -463,115 +452,125 @@ func (l *Loader) cleanupDeletedModules(ctx context.Context) error {
 	return nil
 }
 
-// syncModuleVersions propagates Module.Properties.Version into each BasicModule.
-// Embedded modules are intentionally NOT filtered out: Properties.Version for
-// them holds the Deckhouse release version, which kubeall expects to see.
-func (l *Loader) syncModuleVersions(modules []v1alpha1.Module) {
+// syncModuleVersions propagates the module version into each BasicModule. An embedded module
+// reports the running Deckhouse version as is, which kubeall expects, not the reduced package
+// version its Module carries.
+func (l *Loader) syncModuleVersions(modules []v1alpha2.Module) {
 	for i := range modules {
 		m := &modules[i]
-		if m.Properties.Version == "" {
-			continue
-		}
+
 		mod, ok := l.modules[m.Name]
 		if !ok {
 			continue
 		}
-		mod.GetBasicModule().SetVersion(m.Properties.Version)
+
+		version := m.Spec.PackageVersion
+		if m.IsEmbedded() {
+			version = l.version
+		}
+
+		if version == "" {
+			continue
+		}
+
+		mod.GetBasicModule().SetVersion(version)
 	}
 }
 
+// ensureModule writes what the module files say about the module onto its object: the
+// description annotations, the tag labels and, for an embedded module, the release channel of
+// the embedded policy. The object itself is placed by the package sync before the loader runs,
+// so a module without one is skipped.
 func (l *Loader) ensureModule(ctx context.Context, def *moduletypes.Definition, embedded bool) error {
-	module := new(v1alpha1.Module)
-	err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
-		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			if err := l.client.Get(ctx, client.ObjectKey{Name: def.Name}, module); err != nil {
-				if !apierrors.IsNotFound(err) {
-					return fmt.Errorf("get the %q module: %w", def.Name, err)
-				}
-				if !embedded {
-					l.logger.Warn("downloaded module does not exist, skip it", slog.String("name", def.Name))
-					return nil
-				}
-				module = &v1alpha1.Module{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       v1alpha1.ModuleGVK.Kind,
-						APIVersion: v1alpha1.ModuleGVK.GroupVersion().String(),
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:        def.Name,
-						Annotations: def.Annotations(),
-						Labels:      def.Labels(),
-					},
-					Properties: v1alpha1.ModuleProperties{
-						Weight:        def.Weight,
-						Stage:         def.Stage,
-						Source:        v1alpha1.ModuleSourceEmbedded,
-						Critical:      def.Critical,
-						Requirements:  def.Requirements,
-						Accessibility: def.Accessibility.ToV1Alpha1(),
-					},
-				}
-				l.logger.Debug("embedded module not found, create it", slog.String("name", def.Name))
-				if err = l.client.Create(ctx, module); err != nil {
-					return fmt.Errorf("create the '%s' embedded module: %w", def.Name, err)
-				}
-			}
+	module := new(v1alpha2.Module)
+	if err := l.client.Get(ctx, client.ObjectKey{Name: def.Name}, module); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return fmt.Errorf("get the %q module: %w", def.Name, err)
+		}
 
-			moduleCopy := module.DeepCopy()
+		l.logger.Warn("module does not exist, skip it", slog.String("name", def.Name))
 
-			module.Properties.Requirements = def.Requirements
-			module.Properties.Subsystems = def.Subsystems
-			module.Properties.Namespace = def.Namespace
-			module.Properties.Weight = def.Weight
-			module.Properties.Stage = def.Stage
-			module.Properties.DisableOptions = def.DisableOptions
-			module.Properties.ExclusiveGroup = def.ExclusiveGroup
-			module.Properties.Critical = def.Critical
-			module.Properties.Accessibility = def.Accessibility.ToV1Alpha1()
-
-			module.SetAnnotations(def.Annotations())
-			module.SetLabels(def.Labels())
-
-			if embedded {
-				// set deckhouse release channel to embedded modules
-				module.Properties.ReleaseChannel = l.embeddedPolicy.Get().ReleaseChannel
-
-				// set deckhouse version to embedded modules
-				module.Properties.Version = l.version
-
-				// A physically embedded module must always report Source == "Embedded".
-				// This branch runs for a def parsed from the embedded modules dir, i.e. the
-				// embedded copy is shipped on the filesystem right now, so the module is
-				// served by that copy and its active source cannot be an external one.
-				// The transition off the "Embedded" sentinel is done elsewhere (moduleloader
-				// restore, release deploy) only once the embedded copy is dropped on upgrade,
-				// and both are gated on !IsEmbeddedPresent - so it can never legitimately be
-				// external while we are here.
-				//
-				// Force the sentinel back, do not merely fill it when empty: a stale external
-				// value (e.g. left over from a pre-hardening erroneous flip, or written by a
-				// future regression) would otherwise stick across restarts and could only be
-				// cleared by manually deleting the Module resource. ensureModule runs on every
-				// startup over exactly the set of physically embedded modules, so it is the
-				// authoritative reconciliation point for this invariant.
-				if module.Properties.Source != v1alpha1.ModuleSourceEmbedded {
-					module.Properties.Source = v1alpha1.ModuleSourceEmbedded
-				}
-			}
-
-			if !reflect.DeepEqual(moduleCopy.Properties, module.Properties) ||
-				!reflect.DeepEqual(moduleCopy.Labels, module.Labels) ||
-				!reflect.DeepEqual(moduleCopy.Annotations, module.Annotations) {
-				return l.client.Update(ctx, module)
-			}
-
-			return nil
-		})
-	})
-	if err != nil {
-		return fmt.Errorf("on error: %w", err)
+		return nil
 	}
+
+	patch := client.MergeFrom(module.DeepCopy())
+
+	applyDefinition(module, def)
+
+	if embedded {
+		module.Spec.ReleaseChannel = l.embeddedPolicy.Get().ReleaseChannel
+	}
+
+	data, err := patch.Data(module)
+	if err != nil {
+		return fmt.Errorf("build patch for the %q module: %w", def.Name, err)
+	}
+
+	if string(data) == "{}" {
+		return nil
+	}
+
+	if err := l.client.Patch(ctx, module, client.RawPatch(patch.Type(), data)); err != nil {
+		return fmt.Errorf("patch the %q module: %w", def.Name, err)
+	}
+
 	return nil
+}
+
+// applyDefinition replaces the labels and annotations the definition owns with the current
+// ones, so a tag or a description dropped from the module files leaves the object too. Every
+// other key belongs to another writer and stays.
+func applyDefinition(module *v1alpha2.Module, def *moduletypes.Definition) {
+	for key := range module.Labels {
+		if strings.HasPrefix(key, definitionLabelPrefix) {
+			delete(module.Labels, key)
+		}
+	}
+
+	for key, value := range def.Labels() {
+		if module.Labels == nil {
+			module.Labels = make(map[string]string)
+		}
+
+		module.Labels[key] = value
+	}
+
+	delete(module.Annotations, v1alpha1.ModuleAnnotationDescriptionRu)
+	delete(module.Annotations, v1alpha1.ModuleAnnotationDescriptionEn)
+
+	for key, value := range def.Annotations() {
+		if module.Annotations == nil {
+			module.Annotations = make(map[string]string)
+		}
+
+		module.Annotations[key] = value
+	}
+}
+
+// ensurePackageVersion completes the package version of a downloaded module from its files,
+// which are certainly on disk once the loader parsed them. A dev module follows a tag no
+// version describes, and a module without a package triple names no version.
+func (l *Loader) ensurePackageVersion(ctx context.Context, def *moduletypes.Definition) error {
+	module := new(v1alpha2.Module)
+	if err := l.client.Get(ctx, client.ObjectKey{Name: def.Name}, module); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+
+		return fmt.Errorf("get the %q module: %w", def.Name, err)
+	}
+
+	if module.IsDev() || module.IsEmbedded() || module.Spec.PackageRepositoryName == "" || module.Spec.PackageVersion == "" {
+		return nil
+	}
+
+	spec := v1alpha1.ModulePackageVersionSpec{
+		PackageName:           def.Name,
+		PackageRepositoryName: module.Spec.PackageRepositoryName,
+		PackageVersion:        module.Spec.PackageVersion,
+	}
+
+	return pkgsync.EnsureModulePackageVersion(ctx, l.reader, l.client, l.dependencyContainer, spec, def.Path, l.logger)
 }
 
 func (l *Loader) ensureModuleSettings(ctx context.Context, module string, rawConfig []byte, conversions []v1alpha1.ModuleSettingsConversion) error {
