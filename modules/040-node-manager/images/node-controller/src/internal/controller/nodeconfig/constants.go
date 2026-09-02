@@ -178,10 +178,11 @@ const (
 	// maxPodsCeiling is what the agent's schema accepts (Maximum=1000), which is
 	// the top of the bashible ladder too, so only an operator's own number can
 	// still reach it.
-	maxPodsCeiling                = 1000
-	defaultContainerLogMaxSize    = "50Mi"
-	defaultContainerLogMaxFiles   = 4
-	defaultMaxConcurrentDownloads = 3
+	maxPodsCeiling              = 1000
+	defaultContainerLogMaxSize  = "50Mi"
+	defaultContainerLogMaxFiles = 4
+	// bashible's number (candi/bashible/common-steps/all/032_configure_containerd.sh.tpl).
+	defaultMaxConcurrentDownloads = 8
 )
 
 // reservedLabelNamespaces are the label namespaces a node may not put itself

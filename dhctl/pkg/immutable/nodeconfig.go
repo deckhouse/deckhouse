@@ -50,7 +50,7 @@ const (
 	// created through the API server, where CRD defaulting runs.
 	defaultContainerLogMaxSize    = "50Mi"
 	defaultContainerLogMaxFiles   = 4
-	defaultMaxConcurrentDownloads = 3
+	defaultMaxConcurrentDownloads = 8
 
 	// defaultPodSubnetNodeCIDRPrefix is what bashible falls back to when the
 	// cluster configuration names no prefix.

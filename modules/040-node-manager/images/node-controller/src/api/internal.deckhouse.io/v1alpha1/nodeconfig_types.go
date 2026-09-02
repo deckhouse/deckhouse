@@ -642,9 +642,10 @@ type ContainerRuntime struct {
 	// MaxConcurrentDownloads limits parallel image layer downloads. Zero is
 	// containerd's "no limit", and a NodeGroup takes any integer
 	// (crds/node_group.yaml:1638): a value it accepts must be accepted here.
+	// The default is bashible's (candi/bashible/common-steps/all/032_configure_containerd.sh.tpl).
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:default=3
+	// +kubebuilder:default=8
 	MaxConcurrentDownloads *int `json:"maxConcurrentDownloads,omitempty"`
 }
 
