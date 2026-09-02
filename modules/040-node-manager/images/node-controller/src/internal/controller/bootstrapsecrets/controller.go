@@ -165,11 +165,21 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("resolve NodeGroup %s: %w", ng.Name, err)
 	}
+	// Minted above every guard below, for the same reason it is minted above the immutable
+	// branch in writeCAPISecrets: nodebootstrap renders the group's token into every machine's
+	// userdata (nodebootstrap/render.go:45) and mints none. A rejected CloudEphemeral group
+	// still reaches nodeManager.internal.nodeGroups and still gets a cluster-autoscaler
+	// (hooks/cluster_autoscaler_deployment_requirements.go:59), so it can be scaled while
+	// rejected — and a token that stops being refreshed dies within its 4h validity.
+	token, err := EnsureToken(ctx, r.Client, ng.Name)
+	if err != nil {
+		r.Recorder.Event(ng, corev1.EventTypeWarning, eventReasonFailed, err.Error())
+		return ctrl.Result{}, err
+	}
+
 	// A validation error is a statement about the NodeGroup, not a failure of this
 	// pass — helm rendered no bootstrap Secret for such a group either — so it is
-	// reported and retried rather than returned as an error. No token is minted here
-	// either, unlike the hook: a group with no valid InstanceClass gets no machines,
-	// and if one appears anyway nodebootstrap fails loudly rather than silently.
+	// reported and retried rather than returned as an error.
 	if validationErr != "" {
 		logger.V(1).Info("NodeGroup failed validation, writing no bootstrap secret",
 			"nodeGroup", ng.Name, "error", validationErr)
@@ -180,7 +190,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{RequeueAfter: invalidRequeueInterval}, nil
 	}
 
-	if err := r.writeSecrets(ctx, ng, resolved); err != nil {
+	if err := r.writeSecrets(ctx, ng, resolved, token); err != nil {
 		// Without this the reason lives only in the controller log: the NodeGroup
 		// itself shows no sign of why its nodes cannot bootstrap.
 		r.Recorder.Event(ng, corev1.EventTypeWarning, eventReasonFailed, err.Error())
@@ -189,15 +199,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return ctrl.Result{RequeueAfter: resyncInterval}, nil
 }
 
-func (r *Reconciler) writeSecrets(ctx context.Context, ng *deckhousev1.NodeGroup, resolved derived_status.ResolvedNodeGroup) error {
-	// Minted before the branch, not inside the render: an immutable group leaves
-	// writeCAPISecrets with no Secret, yet nodebootstrap renders this token into every
-	// machine's userdata (nodebootstrap/render.go:45). The hook minted for every group too.
-	token, err := EnsureToken(ctx, r.Client, ng.Name)
-	if err != nil {
-		return err
-	}
-
+func (r *Reconciler) writeSecrets(ctx context.Context, ng *deckhousev1.NodeGroup, resolved derived_status.ResolvedNodeGroup, token string) error {
 	if ng.Spec.NodeType == deckhousev1.NodeTypeCloudEphemeral {
 		return r.writeCAPISecrets(ctx, ng, resolved, token)
 	}

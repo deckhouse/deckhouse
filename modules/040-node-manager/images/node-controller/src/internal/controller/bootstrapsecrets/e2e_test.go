@@ -19,6 +19,7 @@ package bootstrapsecrets
 import (
 	"encoding/base64"
 	"strings"
+	"time"
 
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
@@ -152,37 +153,50 @@ var _ = Describe("Bootstrap secrets controller", func() {
 	// (derived_status/validate.go:40) — and is scoped to this spec so the rest
 	// of the suite keeps running in a cluster with no cloud provider.
 	It("says on the NodeGroup why a rejected group gets no secret", func() {
-		create(&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: nodecommon.KubeSystemNamespace,
-				Name:      ngcommon.CloudProviderSecretName,
-			},
-			Data: map[string][]byte{"type": []byte(`"dvp"`), nodecommon.InstanceClassKindKey: []byte("DVPInstanceClass")},
-		})
-		DeferCleanup(func() {
-			Expect(client.IgnoreNotFound(k8sClient.Delete(suiteCtx, &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: nodecommon.KubeSystemNamespace,
-					Name:      ngcommon.CloudProviderSecretName,
-				},
-			}))).To(Succeed())
-		})
+		createCloudProviderRegistration(rejectingRegistration())
 
 		name := testenv.UniqueName("rejected")
-		ng := staticNodeGroup(name)
-		ng.Spec.NodeType = deckhousev1.NodeTypeCloudEphemeral
-		ng.Spec.CloudInstances = &deckhousev1.CloudInstancesSpec{
-			ClassReference: deckhousev1.ClassReference{Kind: "DVPInstanceClass", Name: "missing"},
-			MinPerZone:     1,
-			MaxPerZone:     1,
-			Zones:          []string{"zone-a"},
-		}
-		createNodeGroup(ng)
+		createNodeGroup(rejectedCloudNodeGroup(name))
 
 		Eventually(func(g Gomega) {
 			g.Expect(warningEventMessages(name, eventReasonSkipped)).
 				To(ContainElement(ContainSubstring(nodecommon.InstanceClassAPIVersionKey)))
 		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
+	})
+
+	// A rejected group is not a group without machines: the same handover publishes it to
+	// nodeManager.internal.nodeGroups, and cluster_autoscaler_deployment_requirements.go:59
+	// then deploys a cluster-autoscaler that scales it. Its machines authenticate with this
+	// token, so a pass that stops minting kills them within the 4h validity of tokens.go.
+	It("keeps minting and refreshing the token of a rejected group", func() {
+		createCloudProviderRegistration(rejectingRegistration())
+
+		name := testenv.UniqueName("rejected-token")
+		createNodeGroup(rejectedCloudNodeGroup(name))
+
+		Eventually(func(g Gomega) {
+			g.Expect(bootstrapTokenSecrets(name)).To(HaveLen(1))
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed(),
+			"a rejected group must still get the token its machines authenticate with")
+
+		By("rotating it on the next pass once it is about to expire")
+		// Under the rotation threshold of tokens.go but not expired yet, so
+		// CollectExpiredTokens leaves it and EnsureToken has to replace it.
+		stale := bootstrapTokenSecrets(name)[0]
+		stale.Data[expirationKey] = []byte(time.Now().Add(2 * time.Minute).Format(time.RFC3339))
+		Expect(k8sClient.Update(suiteCtx, &stale)).To(Succeed())
+
+		// An annotation write is the cheapest event this controller's predicates accept; the
+		// spec must not sit out the invalidRequeueInterval to see the next pass.
+		nudged := &deckhousev1.NodeGroup{}
+		Expect(k8sClient.Get(suiteCtx, types.NamespacedName{Name: name}, nudged)).To(Succeed())
+		nudged.Annotations = map[string]string{"bootstrap-secrets-test/nudge": "1"}
+		Expect(k8sClient.Update(suiteCtx, nudged)).To(Succeed())
+
+		Eventually(func(g Gomega) {
+			g.Expect(bootstrapTokenSecrets(name)).To(HaveLen(2))
+		}, eventuallyTimeout, eventuallyPoll).Should(Succeed(),
+			"an expiring token of a rejected group must still be replaced")
 	})
 
 	// A candi update arrives as a chart upgrade, which only rewrites this
@@ -299,6 +313,57 @@ func warningEventMessages(ngName, reason string) []string {
 		messages = append(messages, e.Message)
 	}
 	return messages
+}
+
+// createCloudProviderRegistration publishes the registration Secret a cloud provider module
+// writes (030-cloud-provider-*/templates/registration.yaml), scoped to one spec so the rest of
+// the suite keeps running in a cluster with no cloud provider.
+func createCloudProviderRegistration(data map[string][]byte) {
+	GinkgoHelper()
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: nodecommon.CloudProviderSecretNamespace,
+			Name:      nodecommon.CloudProviderSecretName,
+		},
+		Data: data,
+	}
+	Expect(k8sClient.Create(suiteCtx, secret)).To(Succeed())
+	DeferCleanup(func() {
+		Expect(client.IgnoreNotFound(k8sClient.Delete(suiteCtx, secret))).To(Succeed())
+	})
+}
+
+// rejectingRegistration takes the one path that needs no InstanceClass CRD: a provider that
+// published a kind but not the apiVersion to read it at (derived_status/validate.go:40).
+func rejectingRegistration() map[string][]byte {
+	return map[string][]byte{
+		"type":                          []byte(`"dvp"`),
+		nodecommon.InstanceClassKindKey: []byte("DVPInstanceClass"),
+	}
+}
+
+func rejectedCloudNodeGroup(name string) *deckhousev1.NodeGroup {
+	ng := staticNodeGroup(name)
+	ng.Spec.NodeType = deckhousev1.NodeTypeCloudEphemeral
+	ng.Spec.CloudInstances = &deckhousev1.CloudInstancesSpec{
+		ClassReference: deckhousev1.ClassReference{Kind: "DVPInstanceClass", Name: "missing"},
+		MinPerZone:     1,
+		MaxPerZone:     1,
+		Zones:          []string{"zone-a"},
+	}
+	return ng
+}
+
+// bootstrapTokenSecrets returns the bootstrap-token Secrets minted for one NodeGroup. Counted
+// rather than compared by value: two mints inside the same second share a creationTimestamp,
+// and BootstrapTokens then keeps whichever it saw first.
+func bootstrapTokenSecrets(ngName string) []corev1.Secret {
+	GinkgoHelper()
+	secrets := &corev1.SecretList{}
+	Expect(k8sClient.List(suiteCtx, secrets,
+		client.InNamespace(nodecommon.KubeSystemNamespace),
+		client.MatchingLabels{nodecommon.BootstrapTokenNodeGroupLabel: ngName})).To(Succeed())
+	return secrets.Items
 }
 
 func staticNodeGroup(name string) *deckhousev1.NodeGroup {
