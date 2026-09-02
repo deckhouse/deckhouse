@@ -29,6 +29,7 @@ import (
 	v1 "github.com/deckhouse/deckhouse/dhctl/pkg/apis/deckhouse/v1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/kubeerrors"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 )
 
@@ -82,7 +83,7 @@ func (s *inSecretStateStore) GetState(ctx *Context) (*State, error) {
 				return nil
 			}
 
-			if k8errors.IsForbidden(err) || k8errors.IsUnauthorized(err) {
+			if kubeerrors.IsPermanentAuthError(c, err) {
 				return fmt.Errorf("failed to get secret: %w", err)
 			}
 
@@ -125,7 +126,7 @@ func (s *inSecretStateStore) Delete(ctx *Context) error {
 				return nil
 			}
 
-			if k8errors.IsForbidden(err) || k8errors.IsUnauthorized(err) {
+			if kubeerrors.IsPermanentAuthError(c, err) {
 				return fmt.Errorf("failed to delete state secret: %w", err)
 			}
 

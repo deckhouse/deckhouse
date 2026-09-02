@@ -27,7 +27,11 @@ import (
 const (
 	configPath = "/etc/user-authz-webhook/config.json"
 
-	noNamespaceAccessReason      = "user has no access to the namespace"
+	// Deliberately ambiguous: a user who may not act in a namespace must not be
+	// able to tell an existing namespace from a missing one. Distinct answers
+	// turned the authorizer into a namespace-existence oracle for anyone whose
+	// access is limited by a ClusterAuthorizationRule.
+	noNamespaceAccessReason      = "either you have no access to the namespace or the namespace does not exist"
 	namespaceLimitedAccessReason = "making cluster-scoped requests for namespaced resources is not allowed"
 	internalErrorReason          = "webhook: kubernetes api request error"
 )
@@ -143,7 +147,11 @@ func (h *Handler) authorizeNamespacedRequest(request *WebhookRequest, entry *Dir
 	if request.Status.Denied && len(entry.NamespaceSelectors) > 0 {
 		match, err := h.namespaceLabelsMatchSelector(request.Spec.ResourceAttributes.Namespace, entry.NamespaceSelectors)
 		if err != nil {
-			request.Status.Reason = err.Error()
+			// The lookup fails for a namespace that does not exist as well as for a
+			// genuine cache problem. Neither may reach the user: `namespaces "x" not
+			// found` as the denial reason disclosed exactly what the deny is meant to
+			// hide. The operator still gets the detail from the log.
+			h.logger.Printf("namespace selector check for %q failed: %v", request.Spec.ResourceAttributes.Namespace, err)
 		} else if match {
 			request.Status.Denied = false
 			request.Status.Reason = ""

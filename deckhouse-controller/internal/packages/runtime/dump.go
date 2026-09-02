@@ -17,18 +17,16 @@ package runtime
 import (
 	"context"
 	"errors"
-	"fmt"
+	"path/filepath"
 
-	"sigs.k8s.io/yaml"
-
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules/global"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
-	"github.com/deckhouse/deckhouse/pkg/app"
 )
 
-// dump is the serialization envelope for the debug endpoint.
+// dump is the serialization envelope for the packages endpoint.
 type dump struct {
 	Apps    map[string]appDump    `json:"apps"`
 	Modules map[string]moduleDump `json:"modules"`
@@ -52,13 +50,13 @@ type globalDump struct {
 	global.Info
 }
 
-// DumpGlobal returns a YAML snapshot of the global module's package info.
+// DumpGlobal returns a snapshot of the global module's package info.
 //
 // The snapshot mirrors global.Info: instance name, running state, filesystem
 // path, current values, and the names of registered hooks. Returns nil when the
-// global module has not been initialized (r.global is nil), which the debug
-// handler surfaces as an empty body.
-func (r *Runtime) DumpGlobal() []byte {
+// global module has not been initialized (r.global is nil), which the handler
+// serves as a null document.
+func (r *Runtime) DumpGlobal() any {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -66,16 +64,13 @@ func (r *Runtime) DumpGlobal() []byte {
 		return nil
 	}
 
-	d := globalDump{
+	return globalDump{
 		Status: r.status.GetStatus(r.global.GetName()),
 		Info:   r.global.GetInfo(),
 	}
-
-	marshalled, _ := yaml.Marshal(d)
-	return marshalled
 }
 
-// Dump returns a YAML snapshot of all packages and their current state.
+// Dump returns a snapshot of all packages and their current state.
 //
 // Includes for each package:
 //   - Status: Current phase (Pending/Loaded/Running)
@@ -84,65 +79,85 @@ func (r *Runtime) DumpGlobal() []byte {
 //
 // Used for debugging and introspection of operator internal state.
 // Skips packages that have been removed from the manager.
-func (r *Runtime) Dump() []byte {
+func (r *Runtime) Dump() any {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	d := dump{
-		Apps:    make(map[string]appDump),
-		Modules: make(map[string]moduleDump),
+	snapshot := dump{
+		Apps:    make(map[string]appDump, len(r.apps)),
+		Modules: make(map[string]moduleDump, len(r.modules)),
 	}
 
-	for _, app := range r.apps {
-		d.Apps[app.GetName()] = appDump{
-			Status: r.status.GetStatus(app.GetName()),
-			Info:   app.GetInfo(),
+	for _, application := range r.apps {
+		snapshot.Apps[application.GetName()] = appDump{
+			Status: r.status.GetStatus(application.GetName()),
+			Info:   application.GetInfo(),
 		}
 	}
 
 	for _, module := range r.modules {
-		d.Modules[module.GetName()] = moduleDump{
+		snapshot.Modules[module.GetName()] = moduleDump{
 			Status: r.status.GetStatus(module.GetName()),
 			Info:   module.GetInfo(),
 		}
 	}
 
-	marshalled, _ := yaml.Marshal(d)
-	return marshalled
+	return snapshot
 }
 
-// DumpByName returns a YAML snapshot of a single package by name.
-// Checks apps first, then modules. Returns an empty dump if not found.
-func (r *Runtime) DumpByName(name string) []byte {
+// DumpByName returns a snapshot of a single package by name.
+// Checks apps first, then modules. Returns nil if not found.
+func (r *Runtime) DumpByName(name string) any {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	var marshalled []byte
-
-	if app := r.apps[name]; app != nil {
-		marshalled, _ = yaml.Marshal(appDump{
-			r.status.GetStatus(app.GetName()),
-			app.GetInfo(),
-		})
+	if application := r.apps[name]; application != nil {
+		return appDump{
+			Status: r.status.GetStatus(application.GetName()),
+			Info:   application.GetInfo(),
+		}
 	}
 
-	if mod := r.modules[name]; mod != nil {
-		marshalled, _ = yaml.Marshal(moduleDump{
-			r.status.GetStatus(mod.GetName()),
-			mod.GetInfo(),
-		})
+	if module := r.modules[name]; module != nil {
+		return moduleDump{
+			Status: r.status.GetStatus(module.GetName()),
+			Info:   module.GetInfo(),
+		}
 	}
 
-	return marshalled
+	return nil
 }
 
-// renderManifests renders the Helm chart for a loaded package. Used by the debug server.
-func (r *Runtime) renderManifests(ctx context.Context, name string) (string, error) {
+// Snapshots returns the hook snapshots of a package, reporting false when no
+// package with that name is loaded. The lookup runs under the lock and the dump
+// outside it, because collecting snapshots walks the hooks of the package.
+func (r *Runtime) Snapshots(name string) (any, bool) {
+	r.mu.RLock()
+	application := r.apps[name]
+	module := r.modules[name]
+	globalModule := r.global
+	r.mu.RUnlock()
+
+	switch {
+	case application != nil:
+		return application.GetHookSnapshotsDump(), true
+	case module != nil:
+		return module.GetHookSnapshotsDump(), true
+	// The global module is absent until the runtime initializes it.
+	case globalModule != nil && name == globalModule.GetName():
+		return globalModule.GetHookSnapshotsDump(), true
+	}
+
+	return nil, false
+}
+
+// Render renders the Helm chart of a loaded package.
+func (r *Runtime) Render(ctx context.Context, name string) (string, error) {
 	r.mu.Lock()
 
-	if app := r.apps[name]; app != nil {
+	if application := r.apps[name]; application != nil {
 		r.mu.Unlock()
-		return r.nelmService.Render(ctx, app.GetNamespace(), app)
+		return r.nelmService.Render(ctx, application.GetNamespace(), application)
 	}
 
 	if module := r.modules[name]; module != nil {
@@ -153,6 +168,12 @@ func (r *Runtime) renderManifests(ctx context.Context, name string) (string, err
 	r.mu.Unlock()
 
 	return "", errors.New("no package found")
+}
+
+// DumpQueues returns a snapshot of the task queues of one package, or of every
+// queue when name is empty.
+func (r *Runtime) DumpQueues(name string) any {
+	return r.queueService.Dump(r.collectQueues(name)...)
 }
 
 // collectQueues expands a package name into all its queue names (main + hook sub-queues).
@@ -167,20 +188,24 @@ func (r *Runtime) collectQueues(name string) []string {
 
 	var queues []string
 
-	if app := r.apps[name]; app != nil {
-		queues = append(queues, app.GetName())
-		for _, q := range app.GetHooksQueues() {
-			queues = append(queues, fmt.Sprintf("%s/%s", name, q))
-			queues = append(queues, fmt.Sprintf("%s/%s/sync", name, q))
+	if application := r.apps[name]; application != nil {
+		queues = append(queues, application.GetName())
+		for _, hookQueue := range application.GetHooksQueues() {
+			queues = append(queues, filepath.Join(name, hookQueue))
+			queues = append(queues, filepath.Join(name, hookQueue, "sync"))
 		}
 	}
 
-	if mod := r.modules[name]; mod != nil {
-		queues = append(queues, mod.GetName())
-		for _, q := range mod.GetHooksQueues() {
-			queues = append(queues, fmt.Sprintf("%s/%s", name, q))
-			queues = append(queues, fmt.Sprintf("%s/%s/sync", name, q))
+	if module := r.modules[name]; module != nil {
+		queues = append(queues, module.GetName())
+		for _, hookQueue := range module.GetHooksQueues() {
+			queues = append(queues, filepath.Join(name, hookQueue))
+			queues = append(queues, filepath.Join(name, hookQueue, "sync"))
 		}
+		// The CRD and webhook subtask queues are spawned once per module by the
+		// global run task — they are not per-hook-queue subqueues.
+		queues = append(queues, filepath.Join(name, "crd"))
+		queues = append(queues, filepath.Join(name, "webhooks"))
 	}
 
 	return queues

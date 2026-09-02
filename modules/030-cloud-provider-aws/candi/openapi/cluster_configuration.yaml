@@ -403,6 +403,22 @@ apiVersions:
           - `additionalSecurityGroups` in the `nodeGroups.instanceClass` section.
 
           To configure the security groups used by load balancers, specify them using the `service.beta.kubernetes.io/aws-load-balancer-security-groups` annotation.
+      imdsv2:
+        type: boolean
+        x-doc-default: false
+        description: |
+          Enables mandatory use of IMDSv2 and disables IMDSv1 for EC2 instances in the cluster.
+
+          Using IMDSv2 is recommended. IMDSv2 requires a session token to access instance metadata, which reduces the risk of unauthorized access, including through SSRF (Server-Side Request Forgery) attacks.
+
+          For backward compatibility, the default value of the parameter is `false`. However, if the parameter is not specified in an existing configuration, DKP does not change the current instance metadata service settings. Once the parameter is explicitly specified, the IMDS settings are managed by DKP:
+
+          - `false` — allows both IMDSv1 and IMDSv2
+          - `true` — allows only IMDSv2 and requires a session token to access instance metadata
+
+          > **Warning.** When IMDSv2 is enabled, DKP sets the IMDS hop limit to `1`. If the AWS account defaults or the AMI provide a higher value, it is lowered to `1` on the next converge. As a result, the instance metadata service is unavailable from pods, even if the applications running in those pods support IMDSv2. This limitation does not affect DKP components because they use the host network. Before enabling IMDSv2, make sure that applications requiring access to instance metadata support IMDSv2 and run using the host network.
+
+          To apply the change to master, static, and bastion nodes, run [`dhctl converge`](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html#adding-cloudpermanent-nodes-to-a-cloud-cluster). CloudEphemeral nodes are recreated automatically.
       sshAllowList:
         type: array
         items:
@@ -481,7 +497,7 @@ apiVersions:
         description: |
           The name of the IAM role that will be attached to all AWS instances of the cluster nodes.
 
-          DKP always creates and assigns a special IAM role named `<PREFIX>-node` to each AWS instance of the cluster nodes (`<PREFIX>` is the value of the parameter [cloud.prefix](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) in the common cluster parameters). You can specify your IAM-role with greater permissions in the `iamNodeRole` parameter, but it is important that it includes the IAM policies of the role created by DKP (the `<PREFIX>-node` role).
+          DKP always creates and assigns a special IAM role named `<PREFIX>-node` to each AWS instance of the cluster nodes (`<PREFIX>` is the value of the [`prefix`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-prefix) parameter in the ModuleConfig `global`). You can specify your IAM-role with greater permissions in the `iamNodeRole` parameter, but it is important that it includes the IAM policies of the role created by DKP (the `<PREFIX>-node` role).
 
           More details about IAM roles for AWS EC2 can be found in the [AWS documentation](https://docs.aws.amazon.com/AWSEC2/latest/UserGuide/iam-roles-for-amazon-ec2.html).
     allOf:

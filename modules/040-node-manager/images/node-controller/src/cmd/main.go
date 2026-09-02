@@ -38,10 +38,12 @@ import (
 	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 	ctrlwebhook "sigs.k8s.io/controller-runtime/pkg/webhook"
 
+	bootstrapv1alpha1 "github.com/deckhouse/node-controller/api/bootstrap.deckhouse.io/v1alpha1"
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
+	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
 	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/crdmigration"
@@ -63,6 +65,8 @@ func init() {
 	utilruntime.Must(deckhousev1.AddToScheme(scheme))
 	utilruntime.Must(deckhousev1alpha1.AddToScheme(scheme))
 	utilruntime.Must(deckhousev1alpha2.AddToScheme(scheme))
+	utilruntime.Must(internalv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(bootstrapv1alpha1.AddToScheme(scheme))
 	utilruntime.Must(mcmv1alpha1.AddToScheme(scheme))
 	//+kubebuilder:scaffold:scheme
 }
@@ -154,7 +158,7 @@ func main() {
 	}
 	setupLog.V(1).Info("max-concurrent-reconciles parsed", "default", defaultMaxConcurrent, "perController", perControllerMaxConcurrent)
 
-	if err = register.SetupAll(mgr, instrumentedClient, disabledControllers, defaultMaxConcurrent, perControllerMaxConcurrent); err != nil {
+	if err = register.SetupAll(ctx, mgr, instrumentedClient, disabledControllers, defaultMaxConcurrent, perControllerMaxConcurrent); err != nil {
 		setupLog.Error(err, "unable to setup controllers")
 		os.Exit(1)
 	}

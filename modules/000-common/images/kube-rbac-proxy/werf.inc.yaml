@@ -6,6 +6,14 @@ import:
   add: /kube-rbac-proxy
   to: /kube-rbac-proxy
   before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-coreutils-artifact
+  add: /coreutils/usr/bin/true
+  to: /bin/true
+  before: setup
+- image: common/pause
+  add: /pause
+  to: /pause
+  before: install
 {{- include "image mount points" . }}
 imageSpec:
   config:
@@ -52,5 +60,12 @@ shell:
   - cp /src/_output/kube-rbac-proxy-linux-$(go env GOARCH) /kube-rbac-proxy
   - chown 64535:64535 /kube-rbac-proxy
   - chmod 0755 /kube-rbac-proxy
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-coreutils-artifact
+from: {{ index $.Images "builder/distroless" }}
+final: false
+shell:
+  beforeInstall:
+  - pm install coreutils -d /coreutils
 ---
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

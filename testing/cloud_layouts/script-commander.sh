@@ -221,6 +221,27 @@ function prepare_environment() {
     }"
     ;;
 
+  "Huawei")
+    KEY_ID=$LAYOUT_HUAWEI_KEY_ID
+    KEY_SECRET=$LAYOUT_HUAWEI_KEY_SECRET
+    ssh_user="ubuntu"
+    values="{
+      \"branch\": \"${DEV_BRANCH}\",
+      \"prefix\": \"a${PREFIX}\",
+      \"kubernetesVersion\": \"${KUBERNETES_VERSION}\",
+      \"defaultCRI\": \"${CRI}\",
+      \"masterCount\": \"${MASTERS_COUNT}\",
+      \"keyId\": \"${KEY_ID}\",
+      \"keySecret\": \"${KEY_SECRET}\",
+      \"sshPrivateKey\": \"${SSH_KEY}\",
+      \"sshUser\": \"${ssh_user}\",
+      \"deckhouseDockercfg\": \"${DECKHOUSE_DOCKERCFG}\",
+      \"flantDockercfg\": \"${FOX_DOCKERCFG}\",
+      \"e2eLogAgentPullArtifact\": \"${E2E_LOG_AGENT_PULL_ARTIFACT}\",
+      \"e2eLogAgentToken\": \"${E2E_LOG_AGENT_TOKEN}\"
+    }"
+    ;;
+
   "DVP")
     KUBECONFIGDATABASE64=$LAYOUT_DVP_KUBECONFIGDATABASE64
     ssh_user="debian"
@@ -277,7 +298,7 @@ function prepare_environment() {
     ZVIRT_USERNAME="${LAYOUT_ZVIRT_USERNAME}"
     ZVIRT_PASSWORD="${LAYOUT_ZVIRT_PASSWORD}"
     ssh_user="altlinux"
-    bastion_host="185.120.186.151"
+    bastion_host="185.120.186.12"
     bastion_user="ubuntu"
     ssh_bastion="-J ${bastion_user}@${bastion_host}"
 
@@ -1007,6 +1028,8 @@ function wait_alerts_resolve() {
   "CertmanagerCertificateChallengeStuck" # This is normal for e2e tests
   "D8NodeLocalDNSKubeforwardRequestLatencyP95High" # Doesn't work with closed clusters
   "D8CloudProviderDVPMigrationPending" # Ignore migration DVP
+  "D8IstioConfigAnalysisWarning" # This is normal for e2e tests
+  "D8ObsoleteKubernetesVersionFieldInClusterConfiguration" # migration from ClusterConfiguration to ModuleConfig
   )
 
   # Alerts

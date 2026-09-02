@@ -1,5 +1,6 @@
 ---
 title: "Работа с Git"
+description: Основные команды Git для клонирования репозиториев и работы с ветками
 permalink: ru/code/documentation/user/git.html
 lang: ru
 ---

@@ -184,6 +184,14 @@ var _ = Describe("Module :: user-authn :: helm template :: dex authenticator", f
 			Expect(secret.Field("data.client-secret").String()).To(Equal("ZGV4U2VjcmV0"))
 			Expect(secret.Field("data.cookie-secret").String()).To(Equal("Y29va2llU2VjcmV0"))
 
+			// Even with access to the Kubernetes API the authenticator gets its own client
+			// secret, never the shared secret of the kubernetes OAuth2Client ("plainstring").
+			secretWithAccess := hec.KubernetesResource("Secret", "d8-test", "dex-authenticator-test-2")
+			Expect(secretWithAccess.Exists()).To(BeTrue())
+			Expect(secretWithAccess.Field("data.client-secret").String()).To(Equal("ZGV4U2VjcmV0"))
+			Expect(secretWithAccess.Field("data.client-secret").String()).NotTo(Equal("cGxhaW5zdHJpbmc="))
+			Expect(secretWithAccess.Field("data.cookie-secret").String()).To(Equal("Y29va2llU2VjcmV0"))
+
 			oauth2clientTest := hec.KubernetesResource("OAuth2Client", "d8-user-authn", "justForTest")
 			Expect(oauth2clientTest.Exists()).To(BeTrue())
 			Expect(oauth2clientTest.Field("redirectURIs").String()).To(MatchJSON(`["https://authenticator.example.com/dex-authenticator/callback","https://authenticator-two.example.com/dex-authenticator/callback"]`))

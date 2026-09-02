@@ -1,1 +1,1 @@
-{% include getting_started/dvp/global/partials/select_revision.html.liquid %}
+{% include getting_started/dvp/global/STEP_INSTALL.md %}

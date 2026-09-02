@@ -22,7 +22,7 @@ import (
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
-	"github.com/flant/addon-operator/pkg/utils"
+	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -106,6 +106,7 @@ func (suite *ControllerTestSuite) buildReconciler() {
 		handler:          newMockHandler(),
 		conversionsStore: conversionsStore,
 		moduleManager:    newMockModuleManager(),
+		packageManager:   &stubPackageManager{},
 		edition:          &d8edition.Edition{Name: "fe", Bundle: "Default"},
 		metricStorage:    metricstorage.NewMetricStorage(metricstorage.WithNewRegistry(), metricstorage.WithLogger(log.NewNop())),
 		configValidator:  nil, // Disable validation in tests to avoid schema issues
@@ -255,11 +256,17 @@ func (m *mockModuleManager) GetModuleEventsChannel() chan events.ModuleEvent {
 
 func newMockHandler() *confighandler.Handler {
 	// minimal handler for tests with dummy channels
-	deckhouseConfigCh := make(chan utils.Values, 10)
+	deckhouseConfigCh := make(chan addonutils.Values, 10)
 	configEventCh := make(chan config.Event, 10)
 
 	handler := confighandler.New(nil, conversionsStore, deckhouseConfigCh)
 	handler.StartInformer(context.Background(), configEventCh)
 
 	return handler
+}
+
+type stubPackageManager struct{}
+
+func (s *stubPackageManager) UpdateModulesSettings(_ string, _ int, _ addonutils.Values, _ string, _ *bool) {
+	// no-op
 }

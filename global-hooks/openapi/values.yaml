@@ -54,6 +54,15 @@ properties:
     # fake *-crd modules are required for backward compatibility with lib_helm library TODO: remove fake crd modules
     - [ "cert-manager", "vertical-pod-autoscaler", "vertical-pod-autoscaler-crd", "prometheus", "prometheus-crd", "operator-prometheus", "operator-prometheus" ]
     - [ "cert-manager", "prometheus" ]
+  capabilities:
+    type: array
+    items:
+      type: string
+    description: |
+      List of GVKs installed from the modules' crds directories.
+      Exposed to package charts as .Platform.capabilities.
+    x-examples:
+    - [ "deckhouse.io/v1alpha1/NodeGroup", "deckhouse.io/v1beta1/NodeGroup", "monitoring.coreos.com/v1/PrometheusRule" ]
   discovery:
     additionalProperties: true
     type: object
@@ -95,6 +104,22 @@ properties:
           Default storage class discovered from cloud provider in parent cluster.
           Used as fallback when global.defaultClusterStorageClass is not explicitly set by user.
         x-examples: [ "fast-ssd" ]
+      targetKubernetesVersion:
+        type: string
+        description: |
+          Operator-declared target Kubernetes version: ModuleConfig control-plane-manager
+          kubernetesVersion if pinned, else ClusterConfiguration.kubernetesVersion if pinned,
+          else the Deckhouse default. This is the declared goal, not the effective (throttled)
+          version control-plane-manager and node-manager converge to.
+        x-examples: [ "1.35", "1.34" ]
+      kubernetesVersionIsDefault:
+        type: boolean
+        default: false
+        description: |
+          True when the cluster tracks the Deckhouse default Kubernetes version: ModuleConfig
+          control-plane-manager kubernetesVersion is Default (or the deprecated Automatic alias),
+          or no version is pinned in ModuleConfig nor in ClusterConfiguration.
+        x-examples: [ true, false ]
       clusterDNSAddress:
         type: string
         pattern: '^([0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3})$'

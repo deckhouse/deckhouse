@@ -6,14 +6,24 @@ metadata:
 spec:
   packageName: test
   packageRepositoryName: deckhouse
-  packageVersion: v1.0.0
+  packageVersion: v1.0.1
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ApplicationPackage
 metadata:
-  labels:
-    heritage: deckhouse
   name: test
+  uid: package-uid
 status:
   availableRepositories:
     - deckhouse
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  name: deckhouse
+spec:
+  registry:
+    scheme: https
+    repo: registry.example.com/test
+    dockerCfg: test-docker-cfg
+    ca: test-ca

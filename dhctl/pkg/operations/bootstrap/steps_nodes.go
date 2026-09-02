@@ -26,7 +26,9 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
@@ -46,6 +48,7 @@ func BootstrapTerraNodes(
 	})
 }
 
+// BootstrapAdditionalMasterNodes creates every master past the first one.
 func BootstrapAdditionalMasterNodes(
 	ctx context.Context,
 	kubeCl *client.KubernetesClient,
@@ -60,18 +63,45 @@ func BootstrapAdditionalMasterNodes(
 		return nil
 	}
 
-	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Bootstrap additional master nodes", func(ctx context.Context) error {
-		masterCloudConfig, err := entity.GetCloudConfig(ctx, kubeCl, global.MasterNodeGroupName, global.ShowDeckhouseLogs)
-		if err != nil {
-			return err
-		}
+	immutableMaster := immutable.IsImmutableMaster(ctx, metaConfig)
 
-		for i := 1; i < metaConfig.MasterNodeGroupSpec.Replicas; i++ {
-			outputs, err := operations.BootstrapAdditionalMasterNode(ctx, kubeCl, metaConfig, i, masterCloudConfig, infrastructureContext, globalOptions)
+	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Bootstrap additional master nodes", func(ctx context.Context) error {
+		// The group's published cloud config is a bashible bundle, which an
+		// immutable node cannot run: its payload is rendered here instead, and it
+		// carries the node's own name — hence per node, below.
+		masterCloudConfig := ""
+		if !immutableMaster {
+			var err error
+			masterCloudConfig, err = entity.GetCloudConfig(ctx, kubernetes.NewSimpleKubeClientGetter(kubeCl), global.MasterNodeGroupName, global.ShowDeckhouseLogs)
 			if err != nil {
 				return err
 			}
-			addressTracker[fmt.Sprintf("%s-master-%d", metaConfig.ClusterPrefix, i)] = outputs.MasterIPForSSH
+		}
+
+		for i := 1; i < metaConfig.MasterNodeGroupSpec.Replicas; i++ {
+			nodeName := fmt.Sprintf("%s-master-%d", metaConfig.ClusterPrefix, i)
+
+			nodeCloudConfig := masterCloudConfig
+			if immutableMaster {
+				var err error
+				nodeCloudConfig, err = buildImmutableJoinPayload(ctx, kubeCl, metaConfig, nodeName)
+				if err != nil {
+					return fmt.Errorf("build the payload of %s: %w", nodeName, err)
+				}
+			}
+
+			outputs, err := operations.BootstrapAdditionalMasterNode(ctx, kubeCl, metaConfig, i, nodeCloudConfig, infrastructureContext, globalOptions)
+			if err != nil {
+				return err
+			}
+
+			// Converge builds its SSH session from this cache, and a host that
+			// answers no sshd stalls it. The first master is kept out of the same
+			// cache for the same reason.
+			if immutableMaster {
+				continue
+			}
+			addressTracker[nodeName] = outputs.MasterIPForSSH
 
 			state.SaveMasterHostsToCache(ctx, stateCache, addressTracker)
 		}

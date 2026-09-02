@@ -40,7 +40,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
@@ -48,12 +47,15 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/hooks"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule/rule/script"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
+
+// d8aPrefix is reserved for application objects by the d8a-prefix.deckhouse.io
+// admission policy.
+const d8aPrefix = "d8a-"
 
 // Application represents a running instance of a package.
 // It contains hooks, values storage, and configuration for execution.
@@ -73,6 +75,12 @@ type Application struct {
 	// running tracks whether OnStartup hooks have completed successfully.
 	// When true, subsequent OnStartup binding calls are skipped (idempotency guard).
 	running atomic.Bool
+
+	// initialized tracks whether hook controllers have been built for this instance,
+	// so the Enable task skips re-initialization on every reschedule. It is per-instance
+	// on purpose: hook controllers may live on process-global SDK-registry singletons,
+	// so inferring init state from controller presence would leak across instances.
+	initialized atomic.Bool
 
 	definition Definition        // Application definition
 	digests    map[string]string // Package digests
@@ -274,9 +282,25 @@ func BuildName(namespace, name string) string {
 	return fmt.Sprintf("%s.%s", namespace, name)
 }
 
+// GetInstance returns the application instance name.
+func (a *Application) GetInstance() string {
+	return a.instance
+}
+
+// GetPackage returns the application package name.
+func (a *Application) GetPackage() string {
+	return a.definition.Name
+}
+
 // GetNamespace returns the application namespace.
 func (a *Application) GetNamespace() string {
 	return a.namespace
+}
+
+// objectPrefix is forced onto the name of every object an application hook
+// creates or patches; package templates spell the same prefix by hand.
+func (a *Application) objectPrefix() string {
+	return d8aPrefix + a.instance
 }
 
 // GetVersion return the package version
@@ -287,11 +311,6 @@ func (a *Application) GetVersion() *semver.Version {
 // GetPath returns path to the package dir
 func (a *Application) GetPath() string {
 	return a.path
-}
-
-// GetEnabledScriptDescriptor is a stub that returns nil
-func (a *Application) GetEnabledScriptDescriptor() *script.Descriptor {
-	return nil
 }
 
 // GetHooksQueues returns package queues from all hooks
@@ -315,15 +334,14 @@ func (a *Application) GetHooksQueues() []string {
 	return slices.Compact(res)
 }
 
-// GetHookSnapshotsDump returns a YAML snapshot of hook controller snapshots.
-func (a *Application) GetHookSnapshotsDump() []byte {
-	d := make(map[string]interface{})
-	for _, h := range a.hooks.GetHooks() {
-		d[h.GetName()] = h.GetHookController().SnapshotsDump()
+// GetHookSnapshotsDump returns a snapshot of hook controller snapshots.
+func (a *Application) GetHookSnapshotsDump() map[string]any {
+	snapshots := make(map[string]any)
+	for _, hook := range a.hooks.GetHooks() {
+		snapshots[hook.GetName()] = hook.GetHookController().SnapshotsDump()
 	}
 
-	marshalled, _ := yaml.Marshal(d)
-	return marshalled
+	return snapshots
 }
 
 // GetValuesChecksum returns a checksum of the current values.
@@ -517,11 +535,10 @@ func (a *Application) GetConstraints() schedule.Constraints {
 	return a.definition.Constraints()
 }
 
-// HooksInitialized reports whether the package requires a hook initialize phase.
-// This is true when hooks have not yet been initialized (no controllers attached),
-// meaning the pkg needs to go through the full startup sequence before it can run.
+// HooksInitialized reports whether this instance has already built its hook
+// controllers. When true, the Enable task skips the initialize+sync phase.
 func (a *Application) HooksInitialized() bool {
-	return a.hooks.Initialized()
+	return a.initialized.Load()
 }
 
 // InitializeHooks initializes hook controllers and bind them to Kubernetes events and schedules
@@ -543,6 +560,8 @@ func (a *Application) InitializeHooks() {
 		hook.WithHookController(hookCtrl)
 		hook.WithTmpDir(os.TempDir())
 	}
+
+	a.initialized.Store(true)
 }
 
 // DisableHooks tears down all active hook bindings and clears the hook registry.
@@ -568,6 +587,14 @@ func (a *Application) DisableHooks() {
 		}
 	}
 
+	// Detach controllers so a subsequent InitializeHooks starts fresh. Hook objects
+	// may be process-global SDK-registry singletons, so a stale controller left here
+	// would make the next Enable wrongly believe this instance is already initialized.
+	for _, hook := range a.hooks.GetHooks() {
+		hook.WithHookController(nil)
+	}
+
+	a.initialized.Store(false)
 	a.running.Store(false)
 }
 
@@ -670,7 +697,7 @@ func (a *Application) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.Bin
 		// we have to check if there are some status patches to apply
 		if hookResult != nil && len(hookResult.ObjectPatcherOperations) > 0 {
 			for _, op := range hookResult.ObjectPatcherOperations {
-				op.SetObjectPrefix(a.instance)
+				op.SetObjectPrefix(a.objectPrefix())
 			}
 			patchErr := a.patcher.ExecuteOperations(hookResult.ObjectPatcherOperations)
 			if patchErr != nil {
@@ -683,7 +710,7 @@ func (a *Application) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.Bin
 
 	if len(hookResult.ObjectPatcherOperations) > 0 {
 		for _, op := range hookResult.ObjectPatcherOperations {
-			op.SetObjectPrefix(a.instance)
+			op.SetObjectPrefix(a.objectPrefix())
 		}
 		if err = a.patcher.ExecuteOperations(hookResult.ObjectPatcherOperations); err != nil {
 			return fmt.Errorf("exec operations: %w", err)

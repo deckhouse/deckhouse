@@ -22,9 +22,6 @@ import (
 	"sort"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
@@ -33,8 +30,6 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
-
-var nodeGroupListGVK = schema.GroupVersionKind{Group: v1.GroupVersion.Group, Version: v1.GroupVersion.Version, Kind: "NodeGroupList"}
 
 type Reconciler struct {
 	Client        client.Client
@@ -47,24 +42,16 @@ func (r *Reconciler) Assemble(ctx context.Context) error {
 
 	prior := r.readPriorNodeGroups(ctx)
 
-	ngList := &unstructured.UnstructuredList{}
-	ngList.SetGroupVersionKind(nodeGroupListGVK)
+	ngList := &v1.NodeGroupList{}
 	if err := r.Client.List(ctx, ngList); err != nil {
 		return fmt.Errorf("list nodegroups: %w", err)
 	}
 
 	nodeGroups := make([]map[string]interface{}, 0, len(ngList.Items))
 	for i := range ngList.Items {
-		obj := &ngList.Items[i]
-		rawSpec, _ := obj.Object["spec"].(map[string]interface{})
+		ng := &ngList.Items[i]
 
-		ng := &v1.NodeGroup{}
-		if err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.Object, ng); err != nil {
-			logger.Error(err, "skipping NodeGroup that failed to decode", "nodeGroup", obj.GetName())
-			continue
-		}
-
-		resolved, errStr, err := r.DerivedStatus.ResolveNodeGroup(ctx, ng, rawSpec)
+		resolved, errStr, err := r.DerivedStatus.ResolveNodeGroup(ctx, ng)
 		if err != nil {
 			return fmt.Errorf("resolve NodeGroup %s: %w", ng.Name, err)
 		}

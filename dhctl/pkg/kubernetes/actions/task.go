@@ -26,6 +26,7 @@ import (
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/kubeerrors"
 )
 
 type ManifestTask struct {
@@ -57,8 +58,8 @@ var ErrManifestTaskPermanent = fmt.Errorf("manifest task: permanent error, will 
 // reconciled yet?"), not just the manifest's own static content — that's exactly the kind of
 // propagation delay these loops exist to ride out, so treating every Invalid as permanent risks
 // aborting an operation that would have succeeded a few seconds later.
-func wrapManifestErr(prefix string, err error) error {
-	if errors.IsForbidden(err) || errors.IsUnauthorized(err) || stderrors.Is(err, ErrManifestTaskPermanent) {
+func wrapManifestErr(ctx context.Context, prefix string, err error) error {
+	if kubeerrors.IsPermanentAuthError(ctx, err) || stderrors.Is(err, ErrManifestTaskPermanent) {
 		return fmt.Errorf("%s: %w", prefix, err)
 	}
 	return fmt.Errorf("%w: %s: %w", ErrManifestTaskTransient, prefix, err)
@@ -73,13 +74,13 @@ func (task *ManifestTask) CreateOrUpdate(ctx context.Context) error {
 	err := task.CreateFunc(ctx, manifest)
 	if err != nil {
 		if !errors.IsAlreadyExists(err) {
-			return wrapManifestErr("create resource", err)
+			return wrapManifestErr(ctx, "create resource", err)
 		}
 		dhlog.FromContext(ctx).InfoContext(ctx, strings.TrimRight(fmt.Sprintf("%s already exists. Trying to update ... ", task.Name), "\n"))
 		err = task.UpdateFunc(ctx, manifest)
 		if err != nil {
 			dhlog.FromContext(ctx).ErrorContext(ctx, "ERROR!")
-			return wrapManifestErr("update resource", err)
+			return wrapManifestErr(ctx, "update resource", err)
 		}
 		dhlog.FromContext(ctx).InfoContext(ctx, "OK!")
 	}
@@ -93,13 +94,13 @@ func (task *ManifestTask) CreateOrUpdateSilent(ctx context.Context) error {
 	err := task.CreateFunc(ctx, manifest)
 	if err != nil {
 		if !errors.IsAlreadyExists(err) {
-			return wrapManifestErr("create resource", err)
+			return wrapManifestErr(ctx, "create resource", err)
 		}
 		dhlog.FromContext(ctx).DebugContext(ctx, strings.TrimRight(fmt.Sprintf("%s already exists. Trying to update ... ", task.Name), "\n"))
 		err = task.UpdateFunc(ctx, manifest)
 		if err != nil {
 			dhlog.FromContext(ctx).ErrorContext(ctx, "ERROR!")
-			return wrapManifestErr("update resource", err)
+			return wrapManifestErr(ctx, "update resource", err)
 		}
 		dhlog.FromContext(ctx).DebugContext(ctx, "OK!")
 	}
@@ -117,7 +118,7 @@ func (task *ManifestTask) Patch(ctx context.Context) error {
 
 	err = task.PatchFunc(ctx, patchBytes)
 	if err != nil {
-		return wrapManifestErr("Apply patch", err)
+		return wrapManifestErr(ctx, "Apply patch", err)
 	}
 
 	return nil
@@ -138,14 +139,14 @@ func (task *ManifestTask) PatchOrCreate(ctx context.Context) error {
 	}
 
 	if !errors.IsNotFound(err) {
-		return wrapManifestErr(fmt.Sprintf("Apply patch for '%s'", task.Name), err)
+		return wrapManifestErr(ctx, fmt.Sprintf("Apply patch for '%s'", task.Name), err)
 	}
 
 	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("%s is not found. Trying to create ... ", task.Name))
 	manifest := task.Manifest()
 	err = task.CreateFunc(ctx, manifest)
 	if err != nil {
-		return wrapManifestErr(fmt.Sprintf("Create '%s'", task.Name), err)
+		return wrapManifestErr(ctx, fmt.Sprintf("Create '%s'", task.Name), err)
 	}
 	return nil
 }

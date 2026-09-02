@@ -41,6 +41,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/deckhouse"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/kubeerrors"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook"
 )
 
@@ -60,7 +61,7 @@ func (i *NodeIP) Name() string {
 	return i.InternalIP
 }
 
-func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName string, showDeckhouseLogs bool, apiserverHosts ...string) (string, error) {
+func GetCloudConfig(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, nodeGroupName string, showDeckhouseLogs bool, apiserverHosts ...string) (string, error) {
 	var cloudData string
 
 	name := fmt.Sprintf("Waiting for %s cloud config️", nodeGroupName)
@@ -76,8 +77,29 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 					case <-ctx.Done():
 						return
 					default:
+						kubeCl, err := kubeProvider.KubeClientCtx(ctx)
+						if err != nil {
+							dhlog.FromContext(ctx).DebugContext(
+								ctx,
+								fmt.Sprintf("Could not get Kubernetes client for Deckhouse log printer: %v", err),
+							)
+
+							select {
+							case <-ctx.Done():
+								return
+							case <-time.After(time.Second):
+							}
+
+							continue
+						}
+
 						_, _ = deckhouse.NewLogPrinter(kubeCl).
-							WithLeaderElectionAwarenessMode(types.NamespacedName{Namespace: "d8-system", Name: "deckhouse-leader-election"}).
+							WithLeaderElectionAwarenessMode(
+								types.NamespacedName{
+									Namespace: "d8-system",
+									Name:      "deckhouse-leader-election",
+								},
+							).
 							Print(ctx)
 					}
 				}
@@ -93,6 +115,11 @@ func GetCloudConfig(ctx context.Context, kubeCl *client.KubernetesClient, nodeGr
 			if nodeGroupName == global.MasterNodeGroupName {
 				dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Waiting while all API-server endpoints '%s' will be available in bootstrap secret", allPassedHosts))
 			}
+			kubeCl, err := kubeProvider.KubeClientCtx(ctx)
+			if err != nil {
+				return err
+			}
+
 			secret, err := kubeCl.CoreV1().
 				Secrets("d8-cloud-instance-manager").
 				Get(ctx, "manual-bootstrap-for-"+nodeGroupName, metav1.GetOptions{})
@@ -183,7 +210,7 @@ func CreateNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeG
 					Resource(nodeGroupResource).
 					Patch(ctx, doc.GetName(), types.MergePatchType, content, metav1.PatchOptions{})
 				if err != nil {
-					if errors.IsForbidden(err) || errors.IsUnauthorized(err) {
+					if kubeerrors.IsPermanentAuthError(ctx, err) {
 						return err
 					}
 					return fmt.Errorf("%w: %w", errCreateNodeGroupTransient, err)
@@ -192,7 +219,7 @@ func CreateNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeG
 				return nil
 			}
 
-			if errors.IsForbidden(err) || errors.IsUnauthorized(err) {
+			if kubeerrors.IsPermanentAuthError(ctx, err) {
 				return err
 			}
 			return fmt.Errorf("%w: %w", errCreateNodeGroupTransient, err)
@@ -418,10 +445,22 @@ func GetNodeGroupTemplates(ctx context.Context, kubeCl *client.KubernetesClient)
 	return nodeTemplates, err
 }
 
-func DeleteNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName string) error {
+// DeleteNode removes the Node object of an already destroyed machine.
+//
+// The client is resolved per attempt rather than captured: deleting a master node switches the
+// converge over to a surviving one, which stops the kube client that was tunneled through the
+// node being removed. A captured client answers every later attempt with "use stopped kube
+// client", so the loop would burn all 450 of them; asking the provider each time hands back the
+// client for the master we are connected to now.
+func DeleteNode(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, nodeName string) error {
 	return retry.NewLoop(fmt.Sprintf("Delete Node %s", nodeName), 450, 1*time.Second).
 		RunContext(ctx, func() error {
-			err := kubeCl.CoreV1().Nodes().Delete(ctx, nodeName, metav1.DeleteOptions{})
+			kubeCl, err := kubeProvider.KubeClientCtx(ctx)
+			if err != nil {
+				return err
+			}
+
+			err = kubeCl.CoreV1().Nodes().Delete(ctx, nodeName, metav1.DeleteOptions{})
 			if errors.IsNotFound(err) {
 				// Node has already been deleted
 				return nil
@@ -430,10 +469,17 @@ func DeleteNode(ctx context.Context, kubeCl *client.KubernetesClient, nodeName s
 		})
 }
 
-func DeleteNodeGroup(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName string) error {
+// DeleteNodeGroup removes a NodeGroup, resolving the client per attempt for the same reason as
+// DeleteNode.
+func DeleteNodeGroup(ctx context.Context, kubeProvider kubernetes.KubeClientProviderWithCtx, nodeGroupName string) error {
 	return retry.NewLoop(fmt.Sprintf("Delete NodeGroup %s", nodeGroupName), 450, 1*time.Second).
 		RunContext(ctx, func() error {
-			err := kubeCl.Dynamic().Resource(nodeGroupResource).Delete(ctx, nodeGroupName, metav1.DeleteOptions{})
+			kubeCl, err := kubeProvider.KubeClientCtx(ctx)
+			if err != nil {
+				return err
+			}
+
+			err = kubeCl.Dynamic().Resource(nodeGroupResource).Delete(ctx, nodeGroupName, metav1.DeleteOptions{})
 			if errors.IsNotFound(err) {
 				// NodeGroup has already been deleted
 				return nil

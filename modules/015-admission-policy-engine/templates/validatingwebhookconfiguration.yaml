@@ -85,6 +85,11 @@ webhooks:
     apiVersions: ["*"]
     resources: ["pods/exec", "pods/attach"]
     operations: ["CONNECT"]
+  {{/* Ephemeral containers are attached through a subresource, which the `pods` rule does not match */}}
+  - apiGroups: [""]
+    apiVersions: ["*"]
+    resources: ["pods/ephemeralcontainers"]
+    operations: ["UPDATE"]
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   matchConditions:
     - name: 'exclude-virtualization'
@@ -133,6 +138,11 @@ webhooks:
     apiVersions: ["*"]
     resources: ["pods/exec", "pods/attach"]
     operations: ["CONNECT"]
+  {{/* Ephemeral containers are attached through a subresource, which the `pods` rule does not match */}}
+  - apiGroups: [""]
+    apiVersions: ["*"]
+    resources: ["pods/ephemeralcontainers"]
+    operations: ["UPDATE"]
 {{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   matchConditions:
     - name: 'exclude-virtualization'

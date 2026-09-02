@@ -210,18 +210,22 @@ document.addEventListener('DOMContentLoaded', function () {
         closeNavModal();
         hamburgerCollapse.classList.add('show');
         headerSidebar.classList.add('show');
+        if (body) body.classList.add('sidebar-opened');
+        ensureOverlay();
     }
 
     function closeBurgerSidebar() {
         closeNavModal();
         if (headerSidebar) headerSidebar.classList.remove('show');
         if (hamburgerCollapse) hamburgerCollapse.classList.remove('show');
+        if (body) body.classList.remove('sidebar-opened');
     }
 
     function closeFilter() {
         const filterBlock = document.querySelector('.filter__block');
         const isOpen = filterBlock !== null && filterBlock.classList.contains('show');
         if (filterBlock) filterBlock.classList.remove('show');
+        if (isOpen && body) body.classList.remove('filter-opened');
         return isOpen;
     }
 
@@ -279,7 +283,7 @@ document.addEventListener('DOMContentLoaded', function () {
         body.appendChild(overlay);
         overlay.addEventListener('click', function (e) {
             if (e.target !== overlay) return;
-            closeNavModal();
+            closeBurgerSidebar();
         });
     }
 
@@ -371,4 +375,21 @@ document.addEventListener('DOMContentLoaded', function () {
 
     syncHeaderDisplay();
     window.addEventListener('resize', syncHeaderDisplay);
+
+    //Step scrolling in Getting started on mobile devices
+    const activeStep = document.querySelector('.gs-steps__point-num_active');
+    if (activeStep) {
+        function centerActiveStep(behavior) {
+            activeStep.scrollIntoView({
+                inline: 'center',
+                block: 'nearest',
+                behavior: behavior
+            });
+        }
+
+        centerActiveStep('smooth');
+        window.addEventListener('resize', function () {
+            centerActiveStep('auto');
+        });
+    }
 });

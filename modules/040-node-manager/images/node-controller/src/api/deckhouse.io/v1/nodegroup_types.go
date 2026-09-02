@@ -33,6 +33,17 @@ const (
 	NodeTypeStatic         NodeType = "Static"
 )
 
+// SystemType selects how the node is managed: the classic mutable node
+// configured by bashible, or an immutable node the on-node agent (nodelet)
+// reconciles from a NodeConfig object.
+// +kubebuilder:validation:Enum=Mutable;Immutable
+type SystemType string
+
+const (
+	SystemTypeMutable   SystemType = "Mutable"
+	SystemTypeImmutable SystemType = "Immutable"
+)
+
 // CRIType defines the container runtime type
 // +kubebuilder:validation:Enum=Docker;Containerd;ContainerdV2;NotManaged
 type CRIType string
@@ -68,6 +79,12 @@ type NodeGroupSpec struct {
 	// NodeType specifies the type of nodes in this group
 	// +kubebuilder:validation:Required
 	NodeType NodeType `json:"nodeType"`
+
+	// SystemType selects how the node is managed. An Immutable node is
+	// reconciled from a NodeConfig object by the agent on the node instead of by
+	// bashible. Once the field names a value it cannot be changed.
+	// +optional
+	SystemType SystemType `json:"systemType,omitempty"`
 
 	// CRI specifies container runtime settings
 	// +optional
@@ -108,6 +125,10 @@ type NodeGroupSpec struct {
 	// GPU specifies GPU settings
 	// +optional
 	GPU *GPUSpec `json:"gpu,omitempty"`
+
+	// Fencing specifies fencing-controller settings
+	// +optional
+	Fencing *FencingSpec `json:"fencing,omitempty"`
 
 	// NodeDrainTimeoutSecond specifies the timeout for node drain operations
 	// +optional
@@ -388,6 +409,10 @@ type StaticResourceReservation struct {
 
 // TopologyManagerSpec defines topology manager settings
 type TopologyManagerSpec struct {
+	// Enabled turns topology management on for the node
+	// +optional
+	Enabled *bool `json:"enabled,omitempty"`
+
 	// Policy specifies the topology manager policy
 	// +optional
 	Policy string `json:"policy,omitempty"`
@@ -399,9 +424,9 @@ type TopologyManagerSpec struct {
 
 // MemorySwapSpec defines memory swap settings
 type MemorySwapSpec struct {
-	// Behavior specifies swap behavior
+	// SwapBehavior specifies how swap is handled on the node: NoSwap or LimitedSwap
 	// +optional
-	Behavior string `json:"behavior,omitempty"`
+	SwapBehavior string `json:"swapBehavior,omitempty"`
 
 	// Swappiness specifies swappiness
 	// +optional
@@ -414,9 +439,26 @@ type MemorySwapSpec struct {
 
 // LimitedSwapSpec defines limited swap settings
 type LimitedSwapSpec struct {
-	// SwapLimit specifies the swap limit
+	// Size specifies the size of the swap file to create, in GB (for example, "2G")
 	// +optional
-	SwapLimit string `json:"swapLimit,omitempty"`
+	Size string `json:"size,omitempty"`
+}
+
+// FencingSpec enables the fencing-controller for a node group
+type FencingSpec struct {
+	// Mode specifies the operating mode of the fencing-controller
+	Mode string `json:"mode,omitempty"`
+
+	// Watchdog specifies watchdog settings
+	// +optional
+	Watchdog *FencingWatchdogSpec `json:"watchdog,omitempty"`
+}
+
+// FencingWatchdogSpec defines watchdog settings for fencing
+type FencingWatchdogSpec struct {
+	// Timeout specifies the soft_margin the softdog kernel module is loaded with
+	// +optional
+	Timeout string `json:"timeout,omitempty"`
 }
 
 // UpdateSpec defines update settings
@@ -428,9 +470,9 @@ type UpdateSpec struct {
 
 // GPUSpec defines GPU settings
 type GPUSpec struct {
-	// Mode specifies the GPU mode
+	// Sharing specifies the GPU sharing strategy: Exclusive, TimeSlicing or MIG
 	// +optional
-	Mode string `json:"mode,omitempty"`
+	Sharing string `json:"sharing,omitempty"`
 
 	// MIG specifies MIG settings
 	// +optional
@@ -447,9 +489,33 @@ type GPUSpec struct {
 
 // MIGSpec defines MIG GPU settings
 type MIGSpec struct {
-	// Strategy specifies the MIG strategy
+	// PartedConfig specifies the MIG configuration name
 	// +optional
-	Strategy string `json:"strategy,omitempty"`
+	PartedConfig string `json:"partedConfig,omitempty"`
+
+	// CustomConfigs specifies per-GPU partitioning, used only when PartedConfig is "custom"
+	// +optional
+	CustomConfigs []MIGCustomConfig `json:"customConfigs,omitempty"`
+}
+
+// MIGCustomConfig defines the MIG slices to create on one GPU
+type MIGCustomConfig struct {
+	// Index specifies the GPU index on the node
+	Index *int `json:"index,omitempty"`
+
+	// Slices specifies the MIG slices to create
+	// +optional
+	Slices []MIGSlice `json:"slices,omitempty"`
+}
+
+// MIGSlice defines a group of identical MIG slices
+type MIGSlice struct {
+	// Profile specifies the MIG profile name
+	// +optional
+	Profile string `json:"profile,omitempty"`
+
+	// Count specifies the number of slices in the selected profile
+	Count *int `json:"count,omitempty"`
 }
 
 // TimeSlicingSpec defines time-slicing GPU settings

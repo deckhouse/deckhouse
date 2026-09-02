@@ -1,19 +1,22 @@
 ---
 title: "Cloud provider — DVP"
-description: "Интеграция Deckhouse Kubernetes Platform с платформой виртуализации Deckhouse Virtualization Platform. Развертывание кластеров DKP поверх DVP."
+description: "Интеграция Deckhouse Kubernetes Platform с платформой виртуализации Deckhouse Virtualization Platform."
 ---
 
-Взаимодействие с облачными ресурсами провайдера [DVP](https://deckhouse.ru/products/virtualization-platform/) осуществляется с помощью модуля `cloud-provider-dvp`. Он позволяет [модулю управления узлами `node-manager`](/modules/node-manager/) задействовать ресурсы DVP при создании узлов для [заданной группы узлов](/modules/node-manager/cr.html#nodegroup).
+Модуль `cloud-provider-dvp` обеспечивает интеграцию Deckhouse Kubernetes Platform с [Deckhouse Virtualization Platform](https://deckhouse.ru/products/virtualization-platform/). Он предоставляет возможность модулю [`node-manager`](/modules/node-manager/) использовать ресурсы DVP при заказе узлов для [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
-Основные возможности модуля `cloud-provider-dvp`:
+Функции модуля `cloud-provider-dvp`:
 
-- управление ресурсами DVP через модуль `cloud-controller-manager`;
-- заказ дисков с использованием компонента `CSI storage`;
-- интеграция с [модулем `node-manager`](/modules/node-manager/) для поддержки [DVPInstanceClass](cr.html#dvpinstanceclass) при описании [NodeGroup](/modules/node-manager/cr.html#nodegroup).
+- Управление ресурсами DVP через `cloud-controller-manager`: актуализирует метаданные виртуальных машин и узлов Kubernetes и удаляет из Kubernetes узлы, которых больше нет в DVP.
+- Заказ дисков через CSI-драйвер DVP (`csi.dvp.deckhouse.io`), чтобы из кластера можно было заказывать PersistentVolume.
+- Заказ базовой инфраструктуры и CloudPermanent-узлов с помощью [Terraform/OpenTofu-провайдера](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-dvp.html#взаимодействия-модуля) `terraform-provider-kubernetes`.
+- Заказ CloudEphemeral-узлов через Cluster API (CAPI). Параметры виртуальных машин задаются в ресурсе [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass).
+- Регистрация в модуле [`node-manager`](/modules/node-manager/), чтобы [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass) можно было указывать при описании [NodeGroup](/modules/node-manager/cr.html#nodegroup).
+- Автоматическое включение CNI для новых кластеров. По умолчанию используется [`cni-cilium`](/modules/cni-cilium/).
 
 {% alert level="warning" %}
-Если кластер был установлен со схемой DVPClusterConfiguration, необходима миграция на конфигурацию через ModuleConfig.
+Если кластер был установлен со схемой [DVPClusterConfiguration](/modules/cloud-provider-dvp/cluster_configuration.html#dvpclusterconfiguration), необходима миграция на конфигурацию через ModuleConfig.
 Пока миграция не выполнена, может срабатывать алерт `D8CloudProviderDVPMigrationPending`, а обновление Deckhouse — блокироваться.
 
-Инструкция: [Как мигрировать облачный провайдер на конфигурацию через ModuleConfig](/products/kubernetes-platform/documentation/v1/faq.html#subsystem-cluster_infrastructure).
+Инструкция: [Как мигрировать облачный провайдер на конфигурацию через ModuleConfig](/products/kubernetes-platform/documentation/v1/faq.html#как-мигрировать-облачный-провайдер-на-конфигурацию-через-modulec).
 {% endalert %}

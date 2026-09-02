@@ -31,7 +31,31 @@ Bashible — это ключевой компонент подсистемы Clu
 
 1. **Bashible-api-server** — [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/), развернутый на master-узлах. Генерирует bashible-скрипты из шаблонов, хранящихся в кастомных ресурсах. При обращении к kube-apiserver за ресурсами, содержащими бандлы bashible, kube-apiserver перенаправляет запрос в bashible-api-server и возвращает сформированный результат. Подробнее с описанием работы bashible и bashible-api-server можно ознакомиться в [соответствующем разделе документации](bashible.html).
 
-2. **Fencing-agent** (DaemonSet) и **fencing-controller** — компоненты, реализующие механизм fencing. Принцип работы компонентов подробно разобран [в описании параметра `spec.fencing.mode`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing-mode) ресурса NodeGroup. Подробнее о том, как механизм fencing обрабатывает разные типы узлов, можно почитать [в разделе «FAQ»](/modules/node-manager/faq.html#как-механизм-fencing-обрабатывает-разные-типы-узлов) документации модуля `node-manager`.
+1. **Node-controller** (Deployment) — контроллер, управляющий жизненным циклом кастомных ресурсов [NodeGroup](/modules/node-manager/cr.html#nodegroup). Node-controller выполняет следующие операции:
+
+   * управляет жизненным циклом кастомного ресурса [NodeGroup](/modules/node-manager/cr.html#nodegroup);
+   * реализует вебхуки для валидации кастомных ресурсов [NodeGroup](/modules/node-manager/cr.html#nodegroup) через механику [Validating Admission Controllers](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/);
+   * реализует вебхуки для конверсии кастомных ресурсов [NodeGroup](/modules/node-manager/cr.html#nodegroup) и [Instance](/modules/node-manager/cr.html#instance);
+   * выполняет очистку лейблов и taints ресурса Node, которые остаются после первого запуска [bashible](bashible.html) для инициализации узла;
+   * обеспечивает перевод узла кластера [в режим обслуживания (draining a node)](https://kubernetes.io/docs/tasks/administer-cluster/safely-drain-node/);
+   * применяет лейблы, taints и аннотации из секции [`spec.nodeTemplate`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate) кастомного ресурса NodeGroup ко всем принадлежащим к нему ресурсам Node;
+   * вычисляет и обновляет субресурс `status` кастомных ресурсов NodeGroup на основании агрегированной информации, полученной из соответствующих ресурсов Node и инфраструктурных кастомных ресурсов;
+   * устанавливает атрибут `spec.providerID = "static://"` для ресурсов Node типа Static при его отсутствии;
+   * управляет жизненным циклом обновления узлов: одобрение обновления, обработка прерываний в работе узлов, перевод узла кластера [в режим обслуживания (draining a node)](https://kubernetes.io/docs/tasks/administer-cluster/safely-drain-node/) и очистка после успешного обновления.
+
+   Компонент включает в себя следующие контейнеры:
+
+   * **node-controller** — основной контейнер;
+   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контроллера.
+
+1. **Node-group-exporter** (Deployment) — компонент, экспортирующий метрики ресурса NodeGroup в формате Prometheus, содержащие информацию о количестве узлов в каждой группе узлов: общее количество, количество узлов в статусе `Ready`, количество узлов в ошибке, минимальное и максимальное количество узлов в группе и т.д.
+
+   Компонент включает в себя следующие контейнеры:
+
+   * **node-group-exporter** — основной контейнер;
+   * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам экспортера.
+
+1. **Fencing-agent** (DaemonSet) и **fencing-controller** — компоненты, реализующие механизм fencing. Принцип работы компонентов подробно разобран [в описании параметра `spec.fencing.mode`](/modules/node-manager/cr.html#nodegroup-v1-spec-fencing-mode) ресурса NodeGroup. Подробнее о том, как механизм fencing обрабатывает разные типы узлов, можно почитать [в разделе «FAQ»](/modules/node-manager/faq.html#как-механизм-fencing-обрабатывает-разные-типы-узлов) документации модуля `node-manager`.
 
 ## Взаимодействия модуля
 
@@ -39,10 +63,10 @@ Bashible — это ключевой компонент подсистемы Clu
 
 1. **Kube-apiserver**:
 
-   * работа с ресурсами Node;
+   * работа с ресурсами Node и NodeGroup;
    * авторизация запросов на метрики.
 
-2. Файлы на узлах:
+1. Файлы на узлах:
 
    * `/dev/watchdog` - отправляет сигнал в Watchdog для сброса сторожевого таймера.
 
@@ -50,15 +74,16 @@ Bashible — это ключевой компонент подсистемы Clu
 
 1. **Kube-apiserver**:
 
+   * выполняет validating- и conversion-вебхуки node-controller;
    * пересылает в bashible-api-server запросы на ресурсы bashible.
 
-2. **Prometheus-main** — сбор метрик компонентов модуля `node-manager`.
+1. **Prometheus-main** — сбор метрик компонентов модуля `node-manager`.
 
 ## Особенности архитектуры, специфичные для CloudPermanent-узлов
 
 1. Узлы постоянны, создаются, управляются и удаляются пользователем. Пользователь управляет узлами не напрямую в инфраструктуре, а через утилиту **dhctl**, запущенную в инсталляторе DKP.
-2. `Terraform-manager` — [модуль](/modules/terraform-manager/), используемый для автоматического управления ресурсами облачной инфраструктуры. Он проверяет состояние Terraform и применяет недеструктивные изменения к инфраструктурным ресурсам. С архитектурой модуля можно ознакомиться на [соответствующей странице документации](../infrastructure/terraform-manager.html).
-3. **Csi-driver** — используется для заказа дисков в облачной инфраструктуре.
-4. **Cloud-controller-manager** — используется для заказа балансировщиков и прочих инфраструктурных ресурсов согласно своей спецификации.
-5. **Infrastructure-provider** — не требуется, вся работа с узлами осуществляется пользователем через утилиту **dhctl** и модуль **terraform-manager**.
-6. Автоматическое масштабирование узлов не поддерживается.
+1. `Terraform-manager` — [модуль](/modules/terraform-manager/), используемый для автоматического управления ресурсами облачной инфраструктуры. Он проверяет состояние Terraform и применяет недеструктивные изменения к инфраструктурным ресурсам. С архитектурой модуля можно ознакомиться на [соответствующей странице документации](../infrastructure/terraform-manager.html).
+1. **Csi-driver** — используется для заказа дисков в облачной инфраструктуре.
+1. **Cloud-controller-manager** — используется для заказа балансировщиков и прочих инфраструктурных ресурсов согласно своей спецификации.
+1. **Infrastructure-provider** — не требуется, вся работа с узлами осуществляется пользователем через утилиту **dhctl** и модуль **terraform-manager**.
+1. Автоматическое масштабирование узлов не поддерживается.

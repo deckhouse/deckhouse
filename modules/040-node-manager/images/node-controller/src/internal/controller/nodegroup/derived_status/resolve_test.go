@@ -23,15 +23,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 )
 
@@ -46,8 +45,26 @@ func newTestScheme(t *testing.T) *runtime.Scheme {
 
 func newTestService(t *testing.T, objs ...client.Object) *Service {
 	t.Helper()
+	if !hasClusterKubernetesConfigMap(objs) {
+		objs = append([]client.Object{kubernetesSourceConfigMap("1.32")}, objs...)
+	}
+	return newTestServiceRaw(t, objs...)
+}
+
+func newTestServiceRaw(t *testing.T, objs ...client.Object) *Service {
+	t.Helper()
 	c := fake.NewClientBuilder().WithScheme(newTestScheme(t)).WithObjects(objs...).Build()
 	return &Service{Client: c}
+}
+
+func hasClusterKubernetesConfigMap(objs []client.Object) bool {
+	for _, obj := range objs {
+		cm, ok := obj.(*corev1.ConfigMap)
+		if ok && cm.Name == clusterKubernetesConfigMapName && cm.Namespace == clusterConfigSecretNamespace {
+			return true
+		}
+	}
+	return false
 }
 
 func testSecret(ns, name string, data map[string][]byte) *corev1.Secret {
@@ -57,45 +74,78 @@ func testSecret(ns, name string, data map[string][]byte) *corev1.Secret {
 	}
 }
 
-func TestResolveInstanceClassVersion(t *testing.T) {
-	t.Run("nil mapper falls back to default version", func(t *testing.T) {
-		assert.Equal(t, instanceClassVersion, resolveInstanceClassVersion(nil, "VCDInstanceClass"))
+func TestDecodeRegistration_APIVersionIsNeverGuessed(t *testing.T) {
+	tests := []struct {
+		name       string
+		data       map[string][]byte
+		expVersion string
+	}{
+		{
+			name:       "published version is used verbatim",
+			data:       map[string][]byte{nodecommon.InstanceClassAPIVersionKey: []byte("v1")},
+			expVersion: "v1",
+		},
+		{
+			name:       "a provider serving only v1alpha1 is honoured",
+			data:       map[string][]byte{nodecommon.InstanceClassAPIVersionKey: []byte("v1alpha1")},
+			expVersion: "v1alpha1",
+		},
+		{
+			// No guessing: a version picked here would feed the instance-class checksum, and a
+			// wrong guess renames the MachineTemplate and recreates every node in the NodeGroup.
+			name: "provider registered without the key yields no version",
+			data: map[string][]byte{"instanceClassKind": []byte("YandexInstanceClass")},
+		},
+		{
+			name: "no provider secret at all yields no version",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.expVersion, DecodeRegistration(tc.data).InstanceClassAPIVersion)
+		})
+	}
+}
+
+// An unpublished version must reach the operator as a NodeGroup validation error rather than as a
+// reconcile error: every consumer already handles a validation error (rendering is skipped, the
+// bashible context keeps its previous entry), whereas a reconcile error stops the whole pass and
+// freezes the status of every NodeGroup, Static ones included.
+func TestRunCloudChecks_UnpublishedAPIVersionIsAValidationError(t *testing.T) {
+	ng := &v1.NodeGroup{
+		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
+		Spec: v1.NodeGroupSpec{
+			NodeType: v1.NodeTypeCloudEphemeral,
+			CloudInstances: &v1.CloudInstancesSpec{
+				ClassReference: v1.ClassReference{Kind: "YandexInstanceClass", Name: "worker"},
+			},
+		},
+	}
+
+	check := Validate(ng, Snapshot{
+		Provider: CloudProviderRegistration{InstanceClassKind: "YandexInstanceClass"},
 	})
 
-	t.Run("unknown kind falls back to default version", func(t *testing.T) {
-		mapper := meta.NewDefaultRESTMapper(nil)
-		assert.Equal(t, instanceClassVersion, resolveInstanceClassVersion(mapper, "UnknownInstanceClass"))
-	})
-
-	t.Run("v1-only kind resolves to v1", func(t *testing.T) {
-		gv := schema.GroupVersion{Group: instanceClassGroup, Version: "v1"}
-		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{gv})
-		mapper.Add(gv.WithKind("VCDInstanceClass"), meta.RESTScopeRoot)
-		assert.Equal(t, "v1", resolveInstanceClassVersion(mapper, "VCDInstanceClass"))
-	})
-
-	t.Run("multi-version kind resolves to preferred v1", func(t *testing.T) {
-		v1gv := schema.GroupVersion{Group: instanceClassGroup, Version: "v1"}
-		alphaGV := schema.GroupVersion{Group: instanceClassGroup, Version: "v1alpha1"}
-		mapper := meta.NewDefaultRESTMapper([]schema.GroupVersion{v1gv, alphaGV})
-		mapper.Add(v1gv.WithKind("YandexInstanceClass"), meta.RESTScopeRoot)
-		mapper.Add(alphaGV.WithKind("YandexInstanceClass"), meta.RESTScopeRoot)
-		assert.Equal(t, "v1", resolveInstanceClassVersion(mapper, "YandexInstanceClass"))
-	})
+	assert.Contains(t, check.Error, "has not published instanceClassAPIVersion")
+	assert.False(t, check.Processed)
 }
 
 func TestReadStatic_ParsesInternalNetworkCIDRs(t *testing.T) {
 	s := newTestService(t, testSecret(staticConfigSecretNamespace, staticConfigSecretName, map[string][]byte{
 		staticConfigKey: []byte("apiVersion: deckhouse.io/v1\nkind: StaticClusterConfiguration\ninternalNetworkCIDRs:\n- 172.18.200.0/24\n"),
 	}))
-	got := s.readStatic(context.Background())
+	got, err := s.readStatic(context.Background())
+	require.NoError(t, err)
 	assert.Equal(t, map[string]interface{}{
 		"internalNetworkCIDRs": []interface{}{"172.18.200.0/24"},
 	}, got)
 }
 
 func TestReadStatic_AbsentReturnsNil(t *testing.T) {
-	assert.Nil(t, newTestService(t).readStatic(context.Background()))
+	got, err := newTestService(t).readStatic(context.Background())
+	require.NoError(t, err)
+	assert.Nil(t, got)
 }
 
 func TestReadDefaultZonesIncludesExistingMCMMachineDeploymentZones(t *testing.T) {
@@ -106,9 +156,8 @@ func TestReadDefaultZonesIncludesExistingMCMMachineDeploymentZones(t *testing.T)
 	md.SetAnnotations(map[string]string{"zone": "zone-a"})
 
 	s := newTestService(t, md)
-	got := s.readDefaultZones(context.Background(), map[string]interface{}{
-		"zones": []interface{}{"zone-b", "zone-a"},
-	})
+	got, err := s.readDefaultZones(context.Background(), CloudProviderRegistration{Zones: []string{"zone-b", "zone-a"}})
+	require.NoError(t, err)
 
 	assert.Equal(t, []string{"zone-a", "zone-b"}, got)
 }
@@ -124,9 +173,8 @@ func TestResolveNodeGroup_StaticWiresNameRolloutAndStatic(t *testing.T) {
 		},
 		Spec: v1.NodeGroupSpec{NodeType: v1.NodeTypeStatic},
 	}
-	rawSpec := map[string]interface{}{"nodeType": "Static"}
 
-	resolved, errStr, err := s.ResolveNodeGroup(context.Background(), ng, rawSpec)
+	resolved, errStr, err := s.ResolveNodeGroup(context.Background(), ng)
 	require.NoError(t, err)
 	assert.Empty(t, errStr)
 	assert.Equal(t, "static1", resolved.Name)
@@ -140,7 +188,8 @@ func TestResolveNodeGroup_StaticWiresNameRolloutAndStatic(t *testing.T) {
 
 func TestResolveNodeGroup_CloudKindMismatchErrors(t *testing.T) {
 	s := newTestService(t, testSecret(cloudProviderSecretNamespace, cloudProviderSecretName, map[string][]byte{
-		"instanceClassKind": []byte(`"YandexInstanceClass"`),
+		"instanceClassKind":       []byte(`"YandexInstanceClass"`),
+		"instanceClassAPIVersion": []byte("v1alpha1"),
 	}))
 	ng := &v1.NodeGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
@@ -151,14 +200,8 @@ func TestResolveNodeGroup_CloudKindMismatchErrors(t *testing.T) {
 			},
 		},
 	}
-	rawSpec := map[string]interface{}{
-		"nodeType": "CloudEphemeral",
-		"cloudInstances": map[string]interface{}{
-			"classReference": map[string]interface{}{"kind": "AWSInstanceClass", "name": "worker"},
-		},
-	}
 
-	resolved, errStr, err := s.ResolveNodeGroup(context.Background(), ng, rawSpec)
+	resolved, errStr, err := s.ResolveNodeGroup(context.Background(), ng)
 	require.NoError(t, err)
 	assert.Contains(t, errStr, "Invalid classReference.kind 'AWSInstanceClass'. Expected 'YandexInstanceClass'.")
 	assert.NotContains(t, resolved.ToMap(), "instanceClass", "failed check must drop cloud overlays")

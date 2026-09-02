@@ -21,7 +21,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/deckhouse/deckhouse/pkg/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 )
 
 const defaultBundle = "Default"

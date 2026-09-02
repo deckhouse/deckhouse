@@ -1,0 +1,59 @@
+# K8S autoupdate
+
+include:
+  - '.gitlab/notify-failure.yml'
+  - '.gitlab/helpers.yml'
+
+k8s-autoupdate:
+  stage: test
+  extends:
+    - .rules:on_schedule_k8s_autoupdate
+    - .notify
+  image:
+    name: ${CI_REGISTRY}/deckhouse/ssdlc/ci-images/tools/golang-tools:${CI_IMAGES_TAG}
+  variables:
+    VAULT_AUTH_PATH: fox
+    VAULT_AUTH_ROLE: deckhouse
+    GIT_STRATEGY: clone
+    GIT_DEPTH: "1"
+    GIT_SUBMODULE_STRATEGY: none    
+    TEST_TIMEOUT: "15m"
+    DOCKER_BUILDKIT: "1"
+    WERF_LOG_TERMINAL_WIDTH: "200"
+    WERF_LOG_TIME: "true"
+    WERF_GIT_WORK_TREE_POOL_LIMIT: "10"
+    GOPROXY: "https://proxy.golang.org,direct"
+    # Script vars
+    GITLAB_TOKEN_TYPE: 'private'
+    GITLAB_API_V4_URL: ${CI_API_V4_URL}
+    TRUSTED_GITLAB_HOSTS: ${CI_SERVER_HOST}
+    PROJECT_ID: ${CI_PROJECT_ID}
+    # Optional script tunables (defaults are in k8s-autoupdate.sh)
+    SOURCE_BRANCH: 'chore/k8s-autoupdate'
+    TARGET_BRANCH: 'main'
+    COMMIT_MESSAGE: 'Automated Change: Update k8s patch version'
+    MR_TITLE: '[run ci] Automated Change: Update k8s patch version'
+    MR_TEMPLATE_PATH: '.github/k8s_autoupdate_pull_request_template.md'
+    GIT_USER_NAME: 'deckhouse-BOaTswain'
+    GIT_USER_EMAIL: 'deckhouse-boatswain@flant.com'
+
+  id_tokens:
+    VAULT_ID_TOKEN:
+      aud: gitlab-access-aud
+  secrets:
+    GITLAB_TOKEN:
+      vault: 6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/boatswain/BOATSWAIN_GITHUB_TOKEN/foxtoken@projects
+      token: $VAULT_ID_TOKEN
+      file: false
+  before_script:
+    - !reference [.scripts, read_werf_version]
+    - !reference [.scripts, install_werf]
+  script:
+    - |
+      set -euo pipefail
+
+      # Setup milestone resolution + git commit/push + MR create are centralized
+      # in k8s-autoupdate.sh (uses CI variables from this job), so we reuse it
+      # to avoid duplicating API and branch-management logic.
+      bash ./.gitlab/scripts/k8s-autoupdate.sh 
+

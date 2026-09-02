@@ -99,7 +99,7 @@
   logo: /images/logos/cni.svg
   license: Apache License 2.0
   id: kubernetes-cni
-  version: "1.6.2"
+  version: "1.9.1"
 - name: Flannel CNI Plugin
   link: https://github.com/flannel-io/cni-plugin
   description: CNI plugin for Flannel.
@@ -169,7 +169,7 @@
   logo: /images/logos/linux.svg
   license: MIT License
   id: yq
-  version: "4.47.1"
+  version: "4.53.6"
 - name: Amazon ECR credential provider
   link: https://github.com/kubernetes/cloud-provider-aws
   description: Kubelet image credential provider for Amazon ECR; binary ecr-credential-provider from kubernetes/cloud-provider-aws (not the AWS CCM).

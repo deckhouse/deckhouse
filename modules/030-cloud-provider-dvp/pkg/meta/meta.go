@@ -20,6 +20,4 @@ const (
 	ModuleName = "cloud-provider-dvp"
 	// Namespace is the Kubernetes namespace of the cloud-provider-dvp module.
 	Namespace = "d8-cloud-provider-dvp"
-	// InstanceClassKind is the DVP InstanceClass resource kind.
-	InstanceClassKind = "DVPInstanceClass"
 )

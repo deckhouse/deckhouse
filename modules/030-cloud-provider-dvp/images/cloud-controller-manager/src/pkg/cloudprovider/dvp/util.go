@@ -29,6 +29,11 @@ func MapNodeNameToVMName(nodeName types.NodeName) string {
 	return string(nodeName)
 }
 
+// IsManagedProviderID reports whether providerID identifies a DVP instance.
+func IsManagedProviderID(providerID string) bool {
+	return regExpProviderID.MatchString(providerID)
+}
+
 func ParseProviderID(providerID string) (string, error) {
 	matches := regExpProviderID.FindStringSubmatch(providerID)
 	if len(matches) == 2 {

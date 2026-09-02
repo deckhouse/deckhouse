@@ -1,8 +1,15 @@
-{{- /* Usage: {{ include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "test")) }} */ -}}
+{{- /* Usage: {{ include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "test") (dict "revisionScoped" true)) }} */ -}}
 {{- /* returns pod affinity spec */ -}}
 {{- define "helm_lib_pod_anti_affinity_for_ha" }}
 {{- $context := index . 0 -}} {{- /* Template context with .Values, .Chart, etc */ -}}
-{{- $labels := index . 1 }} {{- /* Match labels for podAntiAffinity label selector */ -}}
+{{- $labels := index . 1 -}} {{- /* Match labels for podAntiAffinity label selector */ -}}
+{{- $revisionScoped := false -}} {{- /* Whether to scope podAntiAffinity to pods from the same Deployment revision */ -}}
+{{- if ge (len .) 3 -}}
+  {{- $options := index . 2 -}}
+  {{- if hasKey $options "revisionScoped" -}}
+    {{- $revisionScoped = $options.revisionScoped -}}
+  {{- end -}}
+{{- end -}}
   {{- if (include "helm_lib_ha_enabled" $context) }}
 affinity:
   podAntiAffinity:
@@ -11,6 +18,10 @@ affinity:
         matchLabels:
     {{- range $key, $value := $labels }}
           {{ $key }}: {{ $value | quote }}
+    {{- end }}
+    {{- if $revisionScoped }}
+      matchLabelKeys:
+      - pod-template-hash
     {{- end }}
       topologyKey: kubernetes.io/hostname
   {{- end }}

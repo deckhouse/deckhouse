@@ -173,4 +173,19 @@ spec:
 			Expect(value).To(BeEquivalentTo("false"))
 		})
 	})
+
+	Context("Cluster has a few CNI ModuleConfigs during CNI migration", func() {
+		BeforeEach(func() {
+			requirements.RemoveValue(cniConfigurationSettledKey)
+			f.ValuesSet("global.internal.cniMigrationEnabled", true)
+			f.BindingContexts.Set(f.KubeStateSet(cniConfig("flannel") + cniMC("cni-cilium") + cniMC("cni-flannel")))
+			f.RunHook()
+		})
+
+		It("ExecuteSuccessfully without settling CNI configuration", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			_, exists := requirements.GetValue(cniConfigurationSettledKey)
+			Expect(exists).To(BeFalse())
+		})
+	})
 })

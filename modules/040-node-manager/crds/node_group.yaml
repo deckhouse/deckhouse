@@ -88,6 +88,22 @@ spec:
               type: object
               required:
                 - nodeType
+              # Written against spec rather than against the field: a transition
+              # rule on the field itself is skipped when the field is absent on
+              # either side, so `self == oldSelf` there would let an immutable
+              # group have its systemType removed and turn back into a bashible
+              # one.
+              #
+              # Only a value that is already set is frozen. A group that has none
+              # must still be able to record what it is: the bootstrap hook
+              # creates the master NodeGroup before dhctl applies the manifest
+              # naming its systemType, and every NodeGroup predating the field is
+              # in the same position. Setting it on a group that is already
+              # running bashible nodes is the harmful case, and deciding that
+              # needs to see the cluster, so the webhook denies that one.
+              x-kubernetes-validations:
+                - rule: "!has(oldSelf.systemType) ? true : (has(self.systemType) && self.systemType == oldSelf.systemType)"
+                  message: .spec.systemType field is immutable once set
               properties:
 
                 nodeType:
@@ -106,6 +122,20 @@ spec:
                     - Cloud
                     - Static
                     - Hybrid
+                systemType:
+                  description: |
+                    How the node is managed.
+
+                    Possible values:
+
+                    - `Mutable` — the classic node configured on the fly by bashible. This is what an unset field means.
+                    - `Immutable` — an agent on the node brings it to the state described in a NodeConfig object. bashible is not used.
+
+                    Once the field names a value, that value can no longer be changed or removed. A NodeGroup that names none can still record one — but not `Immutable` while it holds nodes bashible has already configured, since those nodes cannot be handed over to the on-node agent.
+                  type: string
+                  enum:
+                    - Mutable
+                    - Immutable
                 kubernetesVersion:
                   description: |
                     The desired minor version of Kubernetes.
@@ -129,7 +159,7 @@ spec:
                       description: |
                         Container runtime type.
 
-                        If not specified, the `defaultCRI` parameter value of the `node-manager` ModuleConfig is used.
+                        If not specified, the `defaultCRI` parameter value of ClusterConfiguration is used.
 
                         > **Note.** Docker support is deprecated.
                       enum:
@@ -238,20 +268,8 @@ spec:
                       properties:
                         kind:
                           description: |
-                            The object type (e.g., `OpenStackInstanceClass`). The object type is specified in the documentation of the corresponding `cloud-provider-` module.
+                            The kind of the `InstanceClass` object (e.g., `OpenStackInstanceClass`). Supported kinds are defined by the installed cloud provider modules and specified in their documentation.
                           type: string
-                          enum:
-                            - OpenStackInstanceClass
-                            - GCPInstanceClass
-                            - VsphereInstanceClass
-                            - AWSInstanceClass
-                            - YandexInstanceClass
-                            - AzureInstanceClass
-                            - VCDInstanceClass
-                            - ZvirtInstanceClass
-                            - DynamixInstanceClass
-                            - HuaweiCloudInstanceClass
-                            - DVPInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -578,7 +596,7 @@ spec:
                     Machinery used to manage nodes in this group.
 
                     The field value indicates which component manages the nodes:
-                    
+
                     - `None` — nodes in the group are not managed by Machine Controller Manager or CAPI.
                     - `MCM` — nodes in the group are managed by Machine Controller Manager.
                     - `CAPI` — nodes in the group are managed by Cluster API.
@@ -725,6 +743,22 @@ spec:
               type: object
               required:
                 - nodeType
+              # Written against spec rather than against the field: a transition
+              # rule on the field itself is skipped when the field is absent on
+              # either side, so `self == oldSelf` there would let an immutable
+              # group have its systemType removed and turn back into a bashible
+              # one.
+              #
+              # Only a value that is already set is frozen. A group that has none
+              # must still be able to record what it is: the bootstrap hook
+              # creates the master NodeGroup before dhctl applies the manifest
+              # naming its systemType, and every NodeGroup predating the field is
+              # in the same position. Setting it on a group that is already
+              # running bashible nodes is the harmful case, and deciding that
+              # needs to see the cluster, so the webhook denies that one.
+              x-kubernetes-validations:
+                - rule: "!has(oldSelf.systemType) ? true : (has(self.systemType) && self.systemType == oldSelf.systemType)"
+                  message: .spec.systemType field is immutable once set
               properties:
                 nodeType:
                   description: |
@@ -742,6 +776,20 @@ spec:
                     - Cloud
                     - Static
                     - Hybrid
+                systemType:
+                  description: |
+                    How the node is managed.
+
+                    Possible values:
+
+                    - `Mutable` — the classic node configured on the fly by bashible. This is what an unset field means.
+                    - `Immutable` — an agent on the node brings it to the state described in a NodeConfig object. bashible is not used.
+
+                    Once the field names a value, that value can no longer be changed or removed. A NodeGroup that names none can still record one — but not `Immutable` while it holds nodes bashible has already configured, since those nodes cannot be handed over to the on-node agent.
+                  type: string
+                  enum:
+                    - Mutable
+                    - Immutable
                 cri:
                   type: object
                   description: |
@@ -752,7 +800,7 @@ spec:
                       description: |
                         Container runtime type.
 
-                        The `defaultCRI` parameter value of the `node-manager` ModuleConfig is used if not specified.
+                        Value `defaultCRI` from the initial cluster configration (`cluster-configuration.yaml` parameter from the `d8-cluster-configuration` secret in the `kube-system` namespace) is used if not specified.
 
                         > **Note.** Docker support is deprecated.
                       enum:
@@ -901,20 +949,8 @@ spec:
                       properties:
                         kind:
                           description: |
-                            The object type (e.g., `OpenStackInstanceClass`). The object type is specified in the documentation of the corresponding `cloud-provider-` module.
+                            The kind of the `InstanceClass` object (e.g., `OpenStackInstanceClass`). Supported kinds are defined by the installed cloud provider modules and specified in their documentation.
                           type: string
-                          enum:
-                            - OpenStackInstanceClass
-                            - GCPInstanceClass
-                            - VsphereInstanceClass
-                            - AWSInstanceClass
-                            - YandexInstanceClass
-                            - AzureInstanceClass
-                            - VCDInstanceClass
-                            - ZvirtInstanceClass
-                            - DynamixInstanceClass
-                            - HuaweiCloudInstanceClass
-                            - DVPInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -1210,7 +1246,7 @@ spec:
                     Machinery used to manage nodes in this group.
 
                     The field value indicates which component manages the nodes:
-                    
+
                     - `None` — nodes in the group are not managed by MCM or CAPI.
                     - `MCM` — nodes in the group are managed by machine-controller-manager.
                     - `CAPI` — nodes in the group are managed by Cluster API.
@@ -1402,6 +1438,22 @@ spec:
               type: object
               required:
                 - nodeType
+              # Written against spec rather than against the field: a transition
+              # rule on the field itself is skipped when the field is absent on
+              # either side, so `self == oldSelf` there would let an immutable
+              # group have its systemType removed and turn back into a bashible
+              # one.
+              #
+              # Only a value that is already set is frozen. A group that has none
+              # must still be able to record what it is: the bootstrap hook
+              # creates the master NodeGroup before dhctl applies the manifest
+              # naming its systemType, and every NodeGroup predating the field is
+              # in the same position. Setting it on a group that is already
+              # running bashible nodes is the harmful case, and deciding that
+              # needs to see the cluster, so the webhook denies that one.
+              x-kubernetes-validations:
+                - rule: "!has(oldSelf.systemType) ? true : (has(self.systemType) && self.systemType == oldSelf.systemType)"
+                  message: .spec.systemType field is immutable once set
               properties:
                 nodeType:
                   description: |
@@ -1421,10 +1473,28 @@ spec:
                     - CloudPermanent
                     - CloudStatic
                     - Static
+                systemType:
+                  description: |
+                    How the node is managed.
+
+                    Possible values:
+
+                    - `Mutable` — the classic node configured on the fly by bashible. This is what an unset field means.
+                    - `Immutable` — an agent on the node brings it to the state described in a NodeConfig object. bashible is not used.
+
+                    Once the field names a value, that value can no longer be changed or removed. A NodeGroup that names none can still record one — but not `Immutable` while it holds nodes bashible has already configured, since those nodes cannot be handed over to the on-node agent.
+                  type: string
+                  enum:
+                    - Mutable
+                    - Immutable
                 nodeDrainTimeoutSecond:
                   type: integer
+                  minimum: 30
+                  maximum: 7200
                   description: |
                     Maximum duration (in seconds) for which the controller attempts to reschedule pods to a new machine during node draining.
+
+                    The range is the one the module's own settings have always enforced. A value outside it used to be accepted here and then rejected when the module read it, which stopped node-manager reconciling anything at all.
                 gpu:
                   x-doc-d8Editions:
                     - ee
@@ -1557,9 +1627,11 @@ spec:
                       description: |
                         Container runtime type.
 
-                        If not specified, the `defaultCRI` parameter value of the `node-manager` ModuleConfig is used.
+                        If not specified, the `defaultCRI` parameter value of ClusterConfiguration is used.
 
                         > **Note.** Docker support is deprecated.
+
+                        > **Note.** The CSE edition supports containerd v2 only.
                       enum:
                         - Docker
                         - Containerd
@@ -1828,20 +1900,8 @@ spec:
                       properties:
                         kind:
                           description: |
-                            The object type (e.g., `OpenStackInstanceClass`). The object type is specified in the documentation of the corresponding `cloud-provider-` module.
+                            The kind of the `InstanceClass` object (e.g., `OpenStackInstanceClass`). Supported kinds are defined by the installed cloud provider modules and specified in their documentation.
                           type: string
-                          enum:
-                            - OpenStackInstanceClass
-                            - GCPInstanceClass
-                            - VsphereInstanceClass
-                            - AWSInstanceClass
-                            - YandexInstanceClass
-                            - AzureInstanceClass
-                            - VCDInstanceClass
-                            - ZvirtInstanceClass
-                            - DynamixInstanceClass
-                            - HuaweiCloudInstanceClass
-                            - DVPInstanceClass
                         name:
                           description: |
                             The name of the required `InstanceClass` object (e.g., `finland-medium`).
@@ -2381,7 +2441,7 @@ spec:
                     Machinery used to manage nodes in this group.
 
                     The field value indicates which component manages the nodes:
-                    
+
                     - `None` — nodes in the group are not managed by Machine Controller Manager or CAPI.
                     - `MCM` — nodes in the group are managed by Machine Controller Manager.
                     - `CAPI` — nodes in the group are managed by Cluster API.

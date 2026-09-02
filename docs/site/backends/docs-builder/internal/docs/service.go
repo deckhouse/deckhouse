@@ -18,7 +18,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -49,11 +48,14 @@ type Service struct {
 	isReady              atomic.Bool
 	channelMappingEditor *channelMappingEditor
 
-	// buildMu serializes Build() calls: baseDir is a shared, on-disk Hugo
-	// working tree, and hugo.Build() gives every call its own in-memory
-	// site model, so concurrent builds both corrupt each other's output
-	// files and multiply memory use per concurrent call.
-	buildMu sync.Mutex
+	// buildSem serializes Build() calls (capacity 1): baseDir is a shared,
+	// on-disk Hugo working tree, and hugo.Build() gives every call its own
+	// in-memory site model, so concurrent builds both corrupt each other's
+	// output files and multiply memory use per concurrent call. It is a
+	// channel rather than a sync.Mutex so a caller whose triggering request
+	// was already canceled can drop out while waiting instead of queuing up
+	// yet another now-pointless full-site rebuild.
+	buildSem chan struct{}
 
 	logger  *log.Logger
 	metrics *metricsstorage.MetricStorage
@@ -64,6 +66,7 @@ func NewService(baseDir, destDir string, highAvailability bool, logger *log.Logg
 		baseDir:              baseDir,
 		destDir:              destDir,
 		channelMappingEditor: newChannelMappingEditor(baseDir),
+		buildSem:             make(chan struct{}, 1),
 		logger:               logger,
 		metrics:              ms,
 	}

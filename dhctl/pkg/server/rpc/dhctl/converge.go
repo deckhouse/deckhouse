@@ -313,10 +313,14 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 	var kubeProvider libcon.KubeProvider
 	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing SSH client", func(ctx context.Context) error {
 		var cleanup func() error
-		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, s.params.IsDebug, s.params.TmpDir)
+		sshProviderInitializer, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, s.params.IsDebug, s.params.TmpDir, helper.WithKubeConfig(p.request.Kubeconfig))
 		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("creating provider: %w", err)
+		}
+
+		if sshProviderInitializer == nil {
+			return errors.New("connection config is required, converge reaches the nodes over ssh")
 		}
 
 		return nil
@@ -336,10 +340,16 @@ func (s *Service) converge(ctx context.Context, p *convergeParams) *pb.ConvergeR
 	converger := converge.NewConverger(convergeParams)
 
 	result, convergeErr := converger.Converge(ctx)
+
+	var trimErr error
+	if result != nil {
+		result.CheckResult, trimErr = trimCheckResult(result.CheckResult)
+	}
+
 	resultData, marshalResultErr := json.Marshal(result)
 	state, stateErr := extractLastState(ctx)
 
-	err = errors.Join(convergeErr, stateErr, marshalResultErr)
+	err = errors.Join(convergeErr, trimErr, stateErr, marshalResultErr)
 
 	if err != nil {
 		span.SetStatus(otcodes.Error, err.Error())

@@ -58,7 +58,7 @@ apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
   name: {{ $baseName }}
-  namespace: {{ $crd.namespace }}
+  namespace: {{ $crd.namespace | quote }}
   {{- $vpaLabels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
   {{- if $truncated }}
   {{- $_ := set $vpaLabels "deckhouse.io/name-truncated" "true" }}
@@ -92,7 +92,7 @@ apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
   name: {{ $baseName }}
-  namespace: {{ $crd.namespace }}
+  namespace: {{ $crd.namespace | quote }}
   {{- $pdbLabels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
   {{- if $truncated }}
   {{- $_ := set $pdbLabels "deckhouse.io/name-truncated" "true" }}
@@ -110,7 +110,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: {{ $baseName }}
-  namespace: {{ $crd.namespace }}
+  namespace: {{ $crd.namespace | quote }}
   {{- $depLabels := dict "app" "dex-authenticator" "deckhouse.io/dex-authenticator-for" $crd.name }}
   {{- if $truncated }}
   {{- $_ := set $depLabels "deckhouse.io/name-truncated" "true" }}
@@ -163,7 +163,7 @@ spec:
       {{- include "helm_lib_tolerations" (tuple $context "system") | nindent 6 }}
 {{- end }}
       {{- include "helm_lib_priority_class" (tuple $context "cluster-low") | nindent 6 }}
-      {{- include "helm_lib_pod_anti_affinity_for_ha" (list $context (dict "app" "dex-authenticator" "name" $crd.name)) | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list $context (dict "app" "dex-authenticator" "name" $crd.name) (dict "revisionScoped" true)) | nindent 6 }}
       {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" . | nindent 6 }}
       imagePullSecrets:
       - name: registry-dex-authenticator
@@ -172,8 +172,8 @@ spec:
         emptyDir: {}
       initContainers:
       - args:
-        - {{ $baseName }}.{{ $crd.namespace }}
-        - {{ $baseName }}.{{ $crd.namespace }}.svc
+        - "{{ $baseName }}.{{ $crd.namespace }}"
+        - "{{ $baseName }}.{{ $crd.namespace }}.svc"
         image: {{ include "helm_lib_module_image" (list $context "selfSignedGenerator") }}
         name: self-signed-generator
         volumeMounts:
@@ -193,7 +193,7 @@ spec:
         image: {{ include "helm_lib_module_image" (list $context "dexAuthenticator") }}
         args:
         - --provider=oidc
-        - --client-id={{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator
+        - "--client-id={{ $crd.name }}-{{ $crd.namespace }}-dex-authenticator"
     {{- if ne (include "helm_lib_module_uri_scheme" $context ) "https" }}
         - --cookie-secure=false
     {{- end }}

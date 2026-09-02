@@ -59,6 +59,7 @@ type switchEditionChecker func(context.Context, *go_hook.HookInput, dependency.C
 
 var switchEditionCheckers = []switchEditionChecker{
 	controlPlaneSwitchEditionChecker,
+	containerdV1SwitchEditionChecker,
 }
 
 func checkSwitchDeckhouseEdition(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
@@ -128,7 +129,7 @@ func checkSwitchDeckhouseEdition(ctx context.Context, input *go_hook.HookInput, 
 
 	resErr := errors[0]
 	for _, nextErr := range errors[1:] {
-		resErr = fmt.Errorf("\n%w", nextErr)
+		resErr = fmt.Errorf("%w\n%w", resErr, nextErr)
 	}
 
 	return fmt.Errorf(

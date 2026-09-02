@@ -21,8 +21,11 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/resource"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/capacity"
+	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
 
 func ptr[T any](v T) *T { return &v }
@@ -190,6 +193,58 @@ func TestSerializeNodeGroupTaints(t *testing.T) {
 			t.Fatalf("taints not sorted: %q", got)
 		}
 	})
+}
+
+// The autoscaler's clusterapi provider builds its template NodeInfo from these annotations, and it
+// needs one for every group it discovers — not only the ones that scale from zero. TemplateCapacity
+// is resolved for every group that can hold a machine, so a fixed-size group carries them too.
+func TestBuildCAPIMachineDeploymentCapacityAnnotations(t *testing.T) {
+	ng := &deckhousev1.NodeGroup{}
+	ng.Name = "worker"
+	resolved := derived_status.ResolvedNodeGroup{
+		TemplateCapacity: &capacity.InstanceType{CPU: resource.MustParse("4"), Memory: resource.MustParse("8Gi")},
+	}
+
+	// minReplicas 1: a group that never scales from zero must still be annotated, otherwise the
+	// autoscaler fails cluster-wide with "No node info for: <group>" whenever the group's only
+	// Node is missing.
+	md := buildCAPIMachineDeployment(capiMDInput{ng: ng, resolved: resolved, minReplicas: 1, maxReplicas: 1})
+	annotations := md.Object["metadata"].(map[string]interface{})["annotations"].(map[string]interface{})
+
+	for key, want := range map[string]string{
+		"capacity.cluster-autoscaler.kubernetes.io/cpu":    "4",
+		"capacity.cluster-autoscaler.kubernetes.io/memory": "8Gi",
+	} {
+		got, ok := annotations[key].(string)
+		if !ok || got != want {
+			t.Fatalf("annotation %q = %v, want %q", key, annotations[key], want)
+		}
+		if _, err := resource.ParseQuantity(got); err != nil {
+			t.Fatalf("annotation %q has invalid Kubernetes quantity %q: %v", key, got, err)
+		}
+	}
+}
+
+// NodeCapacity is the scale-from-zero value published into the NodeGroup element; it must not be
+// what the annotations are read from, or fixed-size groups lose them again.
+func TestBuildCAPIMachineDeploymentIgnoresNodeCapacity(t *testing.T) {
+	ng := &deckhousev1.NodeGroup{}
+	ng.Name = "worker"
+	resolved := derived_status.ResolvedNodeGroup{
+		NodeCapacity: &capacity.InstanceType{CPU: resource.MustParse("4"), Memory: resource.MustParse("8Gi")},
+	}
+
+	md := buildCAPIMachineDeployment(capiMDInput{ng: ng, resolved: resolved})
+	annotations := md.Object["metadata"].(map[string]interface{})["annotations"].(map[string]interface{})
+
+	for _, key := range []string{
+		"capacity.cluster-autoscaler.kubernetes.io/cpu",
+		"capacity.cluster-autoscaler.kubernetes.io/memory",
+	} {
+		if got, ok := annotations[key]; ok {
+			t.Fatalf("annotation %q = %v, want absent", key, got)
+		}
+	}
 }
 
 func TestApplyMachineDeploymentSpecPatch(t *testing.T) {

@@ -48,6 +48,9 @@ message BootstrapStart {
   string state = 7;
   string post_bootstrap_script = 8;
   BootstrapStartOptions options = 9;
+  // kubeconfig points the kube provider straight at the API server. connection_config is still
+  // required: this operation reaches the nodes over ssh.
+  string kubeconfig = 10;
 }
 
 message BootstrapPhaseEnd {
@@ -70,6 +73,10 @@ message BootstrapStartOptions {
   int32 log_width = 3;
   google.protobuf.Duration resources_timeout = 4;
   google.protobuf.Duration deckhouse_timeout = 5;
+  // Top-level phase names to leave out of this bootstrap, as the --skip-phase flag takes them.
+  // Not every phase can be left out: the walk refuses the ones that produce what later phases
+  // read, and answers with the reason.
+  repeated string skip_phases = 6;
   OperationOptions common_options = 10;
 }
 

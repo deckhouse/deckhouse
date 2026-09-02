@@ -28,6 +28,7 @@ podSubnetCIDR: 10.111.0.0/16
 podSubnetNodeCIDRPrefix: "24"
 serviceSubnetCIDR: 10.222.0.0/16
 kubernetesVersion: 1.32
+defaultCRI: "ContainerdV2"
 clusterDomain: cluster.local
 ---
 apiVersion: deckhouse.io/v1
@@ -35,15 +36,6 @@ kind: InitConfiguration
 deckhouse:
   imagesRepo: registry.example.com/deckhouse
   registryDockerCfg: edsfkslfklsdfkl==
----
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: node-manager
-spec:
-  version: 3
-  settings:
-    defaultCRI: "ContainerdV2"
 ```
 
 For validation and values defaulting, each configuration object has its OpenAPI specification.

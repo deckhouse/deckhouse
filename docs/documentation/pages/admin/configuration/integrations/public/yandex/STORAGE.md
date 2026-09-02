@@ -50,6 +50,33 @@ settings:
 
 In this example, DKP will not create StorageClass resources for any `network-ssd` or `network-hdd` disks.
 
+### Creating additional StorageClasses and block size
+
+The [`settings.storageClass.provision`](/modules/cloud-provider-yandex/configuration.html#parameters-storageclass-provision) parameter lets you create additional StorageClasses or override the parameters of StorageClasses created by the module by default.
+
+Use the [`blockSize`](/modules/cloud-provider-yandex/configuration.html#parameters-storageclass-provision-blocksize) parameter to set the [block size](https://yandex.cloud/en/docs/compute/operations/disk-create/empty-disk-blocksize) for provisioned disks. The block size determines the maximum disk size: `8Ti` for `4Ki`, and it doubles with each next block size up to `256Ti` for `128Ki`.
+
+An example StorageClass with the `64Ki` block size:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 1
+  settings:
+    storageClass:
+      provision:
+      - name: network-ssd-64k
+        type: network-ssd
+        blockSize: 64Ki
+```
+
+{% alert level="warning" %}
+After a disk is created, its block size cannot be changed. Changing the `blockSize` parameter recreates the StorageClass, but does not change the block size of previously provisioned volumes.
+{% endalert %}
+
 ### Setting the default StorageClass
 
 By default, DKP determines the StorageClass using the `storageclass.kubernetes.io/is-default-class=true` annotation.
@@ -325,22 +352,96 @@ This allows you to control the load balancer’s network exposure and limit it t
 
 #### Service annotations
 
-Default values are configured in the cluster for placing load balancer resources (the network for the Target Group and the subnet for the Listener). These values are set automatically during cluster setup and can be overridden with annotations at the individual Service level.
+Default values are configured in the cluster for placing load balancer resources (the network for the target group and the subnet for the Listener). These values are set automatically during cluster setup and can be overridden with annotations at the individual Service level.
 
 The following annotations are supported by Yandex Cloud Controller Manager:
 
-1. `yandex.cpi.flant.com/target-group-network-id` — specifies the NetworkID in which the Target Group for this Service will be created. Overrides the corresponding default value.
+1. `yandex.cpi.flant.com/target-group-network-id` — specifies the NetworkID in which the target group for this Service will be created. Overrides the corresponding default value.
 1. `yandex.cpi.flant.com/listener-subnet-id` — sets the SubnetID for the Listeners of the LB created for this Service. Overrides the corresponding default value.
 1. `yandex.cpi.flant.com/listener-address-ipv4` — sets a predefined IPv4 address for the Listeners (supported for both internal and external LBs).
 1. `yandex.cpi.flant.com/loadbalancer-external` — enables creation of an external LB for this Service (use it when you need to explicitly create an external load balancer). Overrides the default behavior.
-1. `yandex.cpi.flant.com/target-group-name-prefix` — sets a Target Group name prefix in the format `<annotation value><Yandex cluster name><NetworkID>` (for a Service). A similar annotation can be set on a node to include the node in a non-standard Target Group (Target Groups will be created with names `<annotation value><Yandex cluster name><network id of the instance’s interfaces>`).
+1. `yandex.cpi.flant.com/target-group-name-prefix` — specifies the name prefix of the target group used by the LoadBalancer. The annotation on the Service identifies the target group but does not select nodes. To include nodes in the target group, set the same annotation value in [`spec.nodeTemplate.annotations`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-annotations) in the NodeGroup. Yandex Cloud Controller Manager includes all suitable nodes carrying this annotation value, regardless of their NodeGroup. The target group name is formed as `<ANNOTATION_VALUE><YANDEX_CLOUD_CLUSTER_NAME><NETWORK_ID>`.
 
-If separate Target Groups are created for the control plane or master nodes, add the label `node.kubernetes.io/exclude-from-external-load-balancers: ""` to the master nodes. This prevents the controller from automatically adding master nodes to new Target Groups for load balancers.
-If you create your own load balancer for master nodes and want YCC to also be able to place its load balancers on master nodes, pre-create a Target Group with a name matching the pattern `${CLUSTER-NAME}${VPC.ID}`.
+If separate target groups are created for the control plane or master nodes, add the label `node.kubernetes.io/exclude-from-external-load-balancers: ""` to the master nodes. This prevents the controller from automatically adding master nodes to new target groups for load balancers.
+If you create your own load balancer for master nodes and want YCC to also be able to place its load balancers on master nodes, pre-create a target group with a name matching the pattern `${CLUSTER-NAME}${VPC.ID}`.
 
-#### Target Group health checks
+#### Using a separate target group for a NodeGroup
 
-Health check parameters (for LB Target Groups created by the controller):
+By default, Yandex Cloud Controller Manager adds all suitable cluster nodes to the default target group. To assign nodes to a separate target group, use the `yandex.cpi.flant.com/target-group-name-prefix` annotation.
+
+1. In the NodeGroup whose nodes should be included in a separate target group, specify the `yandex.cpi.flant.com/target-group-name-prefix` annotation in the [`spec.nodeTemplate.annotations`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-annotations) parameter. For example:
+
+   ```yaml
+   spec:
+     nodeTemplate:
+       annotations:
+         yandex.cpi.flant.com/target-group-name-prefix: frontend-
+   ```
+
+   The annotation is propagated to the Node objects. Yandex Cloud Controller Manager adds all suitable nodes carrying the same annotation value to the target group, regardless of their NodeGroup.
+
+1. In the [Service](/modules/cloud-provider-yandex/examples.html#service-annotations) object of the LoadBalancer type, specify the same annotation with the same value. For example:
+
+   ```yaml
+   metadata:
+     annotations:
+       yandex.cpi.flant.com/target-group-name-prefix: frontend-
+   ```
+
+   The annotation on the Service identifies the target group used by the LoadBalancer but does not select nodes.
+
+1. Make sure that the values of `yandex.cpi.flant.com/target-group-name-prefix` in the NodeGroup and Service match. In the example above, both resources use the `frontend-` value.
+
+1. The target group will be created with a name generated according to the following pattern:
+
+   ```shell
+   <ANNOTATION_VALUE><YANDEX_CLOUD_CLUSTER_NAME><NETWORK_ID>
+   ```
+
+   For example, if the annotation value is `frontend-`, the cluster name is `my-cluster-`, and the network ID is `enp123456789`, the target group name will be:
+
+   ```shell
+   frontend-my-cluster-enp123456789
+   ```
+
+Configuration example:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: frontend
+spec:
+  nodeType: CloudEphemeral
+  nodeTemplate:
+    annotations:
+      yandex.cpi.flant.com/target-group-name-prefix: frontend-
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-frontend
+  annotations:
+    yandex.cpi.flant.com/target-group-name-prefix: frontend-
+spec:
+  type: LoadBalancer
+```
+
+{% alert level="warning" %}
+Yandex Cloud does not allow a single target, identified by the (`SubnetID, IP`) pair, to belong to multiple target groups at the same time.
+
+When the target group is changed, Yandex Cloud Controller Manager first removes the target from the current group and then adds it to the new one. This transition may cause a brief interruption in traffic handling.
+{% endalert %}
+
+Nodes with a dedicated target group prefix are excluded from the default target group. As a result, load balancers that use the default target group stop routing traffic to those nodes.
+
+This automatic transition is performed only between target groups managed by Yandex Cloud Controller Manager. If a target already belongs to another target group that is not managed by Yandex Cloud Controller Manager, remove it from that group before using the annotation.
+
+After the prefix is changed or removed, the previous target group may remain empty. If it is no longer used by any load balancers, delete it manually.
+
+#### Target group health checks
+
+Health check parameters (for LB target groups created by the controller):
 
 1. `yandex.cpi.flant.com/healthcheck-interval-seconds` — how often to run the check, in seconds (default: 2).
 1. `yandex.cpi.flant.com/healthcheck-timeout-seconds` — how long to wait for an endpoint response, in seconds. If no response is received within this time, the check is considered failed (default: 1).
@@ -365,6 +466,16 @@ dhctl converge
 ```
 
 This command reconciles the cluster state with the configuration defined in the resources.
+
+## Changing `networkType` does not recreate CloudEphemeral nodes
+
+In clusters that use Machine Controller Manager (MCM), changing the [`networkType`](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass-v1-spec-networktype) parameter in a YandexInstanceClass resource does not trigger automatic recreation of existing CloudEphemeral nodes. Although the MachineClass is updated, the network acceleration type of existing virtual machines in Yandex Cloud remains unchanged.
+
+DKP intentionally does not take the `networkType` parameter into account when determining whether CloudEphemeral nodes should be recreated in MCM. If it did, updating DKP would recreate CloudEphemeral nodes in all clusters where `networkType` is specified, even if its value had not changed.
+
+In Cluster API, the `networkType` parameter is taken into account when determining whether nodes should be recreated, so changing it automatically triggers node recreation. New CloudEphemeral NodeGroups in Yandex Cloud use Cluster API by default.
+
+If you changed `networkType` in an MCM-based cluster and want the new value to apply to existing CloudEphemeral nodes, recreate them manually — instructions in the [documentation](/modules/node-manager/faq.html#how-do-i-redeploy-ephemeral-machines-in-the-cloud-with-a-new-configuration).
 
 ## Integrating manually created VMs
 

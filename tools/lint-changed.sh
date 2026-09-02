@@ -26,7 +26,10 @@ set -Eeuo pipefail
 
 DIFF_BASE="${DIFF_BASE:-HEAD~1}"
 GOLANGCI_LINT_BIN="${GOLANGCI_LINT_BIN:-golangci-lint}"
-GOLANGCI_LINT_ARGS="${GOLANGCI_LINT_ARGS:---max-issues-per-linter 100 --max-same-issues 100}"
+# --new-from-merge-base mirrors the "$DIFF_BASE...HEAD" file selection below: a module
+# is linted whole, so without it a PR inherits every pre-existing issue of the module
+# it touches instead of only the ones its own lines introduce.
+GOLANGCI_LINT_ARGS="${GOLANGCI_LINT_ARGS:---max-issues-per-linter 100 --max-same-issues 100 --new-from-merge-base $DIFF_BASE}"
 
 # golangci-lint must already be on PATH — we deliberately don't install it
 # here (the CI tests image ships /usr/local/bin/golangci-lint). Fail fast

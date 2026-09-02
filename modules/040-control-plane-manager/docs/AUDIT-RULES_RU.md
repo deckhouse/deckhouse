@@ -318,6 +318,7 @@ users:
   - system:serviceaccount:d8-istio:alliance-ingressgateway
   - system:serviceaccount:d8-istio:alliance-metadata-exporter
   - system:serviceaccount:d8-istio:cni
+  - system:serviceaccount:d8-istio:config-analyzer
   - system:serviceaccount:d8-istio:ingress-gateway-controller
   - system:serviceaccount:d8-istio:kiali
   - system:serviceaccount:d8-istio:multicluster-api-proxy
@@ -341,6 +342,7 @@ users:
   - system:serviceaccount:d8-system:terraform-state-exporter
   - system:serviceaccount:d8-system:webhook-handler
   - system:serviceaccount:d8-user-authn:basic-auth-proxy
+  - system:serviceaccount:d8-user-authn:controller
   - system:serviceaccount:d8-user-authn:dex
   - system:serviceaccount:d8-user-authz:permission-browser-apiserver
   - system:serviceaccount:d8-user-authz:webhook
@@ -794,6 +796,7 @@ rules:
       - system:serviceaccount:d8-istio:alliance-ingressgateway
       - system:serviceaccount:d8-istio:alliance-metadata-exporter
       - system:serviceaccount:d8-istio:cni
+      - system:serviceaccount:d8-istio:config-analyzer
       - system:serviceaccount:d8-istio:ingress-gateway-controller
       - system:serviceaccount:d8-istio:kiali
       - system:serviceaccount:d8-istio:multicluster-api-proxy
@@ -817,6 +820,7 @@ rules:
       - system:serviceaccount:d8-system:terraform-state-exporter
       - system:serviceaccount:d8-system:webhook-handler
       - system:serviceaccount:d8-user-authn:basic-auth-proxy
+      - system:serviceaccount:d8-user-authn:controller
       - system:serviceaccount:d8-user-authn:dex
       - system:serviceaccount:d8-user-authz:permission-browser-apiserver
       - system:serviceaccount:d8-user-authz:webhook

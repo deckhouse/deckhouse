@@ -43,6 +43,7 @@
                 }
 
                 @include breakpoints.max-w(s) {
+                    padding: 6px 14px;
                     font-size: 13px;
                 }
 

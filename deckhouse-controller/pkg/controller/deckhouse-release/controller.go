@@ -49,6 +49,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
@@ -59,7 +60,6 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
-	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -267,7 +267,7 @@ func (r *deckhouseReleaseReconciler) createOrUpdateReconcile(ctx context.Context
 			return res, fmt.Errorf("update: %w", err)
 		}
 
-		return ctrl.Result{Requeue: true}, nil // process to the next phase
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil // process to the next phase
 
 	case v1alpha1.DeckhouseReleasePhaseSkipped, v1alpha1.DeckhouseReleasePhaseSuperseded, v1alpha1.DeckhouseReleasePhaseSuspended:
 		r.logger.Debug("release phase", slog.String("phase", dr.Status.Phase))

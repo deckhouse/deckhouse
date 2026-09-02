@@ -89,6 +89,28 @@ metadata:
 			Expect(label.String()).To(Equal("true"))
 		})
 
+		It("Pod policy labels should be present on d8-system namespace", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			ns := f.KubernetesGlobalResource("Namespace", "d8-system")
+			for name, value := range map[string]string{
+				`security\.deckhouse\.io/pod-policy`:                   "restricted",
+				`security\.deckhouse\.io/pod-policy-action`:            "warn",
+				`security\.deckhouse\.io/enable-security-policy-check`: "true",
+			} {
+				label := ns.Field("metadata.labels." + name)
+				Expect(label.Exists()).To(BeTrue())
+				Expect(label.String()).To(Equal(value))
+			}
+		})
+
+		It("Pod policy labels should not be present on kube-system namespace", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			ns := f.KubernetesGlobalResource("Namespace", "kube-system")
+			Expect(ns.Field(`metadata.labels.security\.deckhouse\.io/pod-policy`).Exists()).To(BeFalse())
+		})
+
 		It("Rules watcher label should not be present on kube-system namespace", func() {
 			Expect(f).To(ExecuteSuccessfully())
 

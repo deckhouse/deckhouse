@@ -353,10 +353,6 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
-            exit 1
-          fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
           echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
           echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
@@ -369,25 +365,13 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
-          MINIMAL_DDK_VERSION="v2.62.1"
-          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            minimal_ddk_major=${BASH_REMATCH[1]}
-            minimal_ddk_minor=${BASH_REMATCH[2]}
-            minimal_ddk_patch=${BASH_REMATCH[3]}
-          fi
-          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            werf_current_major=${BASH_REMATCH[1]}
-            werf_current_minor=${BASH_REMATCH[2]}
-            werf_current_patch=${BASH_REMATCH[3]}
-          fi
-          if (( werf_current_major > minimal_ddk_major )); then
+          if [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+-dk(\.*)? ]]; then
             werf_fallback=false
-          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          else
+          elif [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
             werf_fallback=true
+          else
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
+            exit 1
           fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
@@ -409,7 +393,7 @@ jobs:
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: |
             ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
@@ -501,6 +485,12 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
+          # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
+          # obtained, so signing is skipped rather than failing the build.
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "dh-engine-signer"
+          WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -804,10 +794,6 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
-            exit 1
-          fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
           echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
           echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
@@ -820,25 +806,13 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
-          MINIMAL_DDK_VERSION="v2.62.1"
-          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            minimal_ddk_major=${BASH_REMATCH[1]}
-            minimal_ddk_minor=${BASH_REMATCH[2]}
-            minimal_ddk_patch=${BASH_REMATCH[3]}
-          fi
-          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            werf_current_major=${BASH_REMATCH[1]}
-            werf_current_minor=${BASH_REMATCH[2]}
-            werf_current_patch=${BASH_REMATCH[3]}
-          fi
-          if (( werf_current_major > minimal_ddk_major )); then
+          if [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+-dk(\.*)? ]]; then
             werf_fallback=false
-          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          else
+          elif [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
             werf_fallback=true
+          else
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
+            exit 1
           fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
@@ -860,7 +834,7 @@ jobs:
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: |
             ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
@@ -952,6 +926,12 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
+          # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
+          # obtained, so signing is skipped rather than failing the build.
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "dh-engine-signer"
+          WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1256,10 +1236,6 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
-            exit 1
-          fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
           echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
           echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
@@ -1272,25 +1248,13 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
-          MINIMAL_DDK_VERSION="v2.62.1"
-          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            minimal_ddk_major=${BASH_REMATCH[1]}
-            minimal_ddk_minor=${BASH_REMATCH[2]}
-            minimal_ddk_patch=${BASH_REMATCH[3]}
-          fi
-          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            werf_current_major=${BASH_REMATCH[1]}
-            werf_current_minor=${BASH_REMATCH[2]}
-            werf_current_patch=${BASH_REMATCH[3]}
-          fi
-          if (( werf_current_major > minimal_ddk_major )); then
+          if [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+-dk(\.*)? ]]; then
             werf_fallback=false
-          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          else
+          elif [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
             werf_fallback=true
+          else
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
+            exit 1
           fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
@@ -1312,7 +1276,7 @@ jobs:
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: |
             ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
@@ -1404,6 +1368,12 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
+          # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
+          # obtained, so signing is skipped rather than failing the build.
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "dh-engine-signer"
+          WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1708,10 +1678,6 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
-            exit 1
-          fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
           echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
           echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
@@ -1724,25 +1690,13 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
-          MINIMAL_DDK_VERSION="v2.62.1"
-          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            minimal_ddk_major=${BASH_REMATCH[1]}
-            minimal_ddk_minor=${BASH_REMATCH[2]}
-            minimal_ddk_patch=${BASH_REMATCH[3]}
-          fi
-          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            werf_current_major=${BASH_REMATCH[1]}
-            werf_current_minor=${BASH_REMATCH[2]}
-            werf_current_patch=${BASH_REMATCH[3]}
-          fi
-          if (( werf_current_major > minimal_ddk_major )); then
+          if [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+-dk(\.*)? ]]; then
             werf_fallback=false
-          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          else
+          elif [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
             werf_fallback=true
+          else
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
+            exit 1
           fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
@@ -1764,7 +1718,7 @@ jobs:
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: |
             ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
@@ -1856,6 +1810,12 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
+          # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
+          # obtained, so signing is skipped rather than failing the build.
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "dh-engine-signer"
+          WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -2160,10 +2120,6 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
-            exit 1
-          fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
           echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
           echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
@@ -2176,25 +2132,13 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
-          MINIMAL_DDK_VERSION="v2.62.1"
-          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            minimal_ddk_major=${BASH_REMATCH[1]}
-            minimal_ddk_minor=${BASH_REMATCH[2]}
-            minimal_ddk_patch=${BASH_REMATCH[3]}
-          fi
-          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            werf_current_major=${BASH_REMATCH[1]}
-            werf_current_minor=${BASH_REMATCH[2]}
-            werf_current_patch=${BASH_REMATCH[3]}
-          fi
-          if (( werf_current_major > minimal_ddk_major )); then
+          if [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+-dk(\.*)? ]]; then
             werf_fallback=false
-          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          else
+          elif [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
             werf_fallback=true
+          else
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
+            exit 1
           fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
@@ -2216,7 +2160,7 @@ jobs:
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: |
             ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
@@ -2308,6 +2252,12 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
+          # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
+          # obtained, so signing is skipped rather than failing the build.
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "dh-engine-signer"
+          WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -2612,10 +2562,6 @@ jobs:
             exit 1
           fi
           WERF_VERSION="$(grep -E '^[[:space:]]*WERF_VERSION:' "$WERF_ENVS_FILE" | head -1 | sed -E 's/^[[:space:]]*WERF_VERSION:[[:space:]]*"?([^"#[:space:]]+)"?.*/\1/')"
-          if [[ ! "$WERF_VERSION" =~ ^v[0-9]+\.[0-9]+\.[0-9]+-dk\.[0-9]+$ ]]; then
-            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z-dk.W"
-            exit 1
-          fi
           echo "Detected WERF_VERSION=${WERF_VERSION}"
           echo "WERF_VERSION=${WERF_VERSION}" >> "$GITHUB_ENV"
           echo "werf_version=${WERF_VERSION}" >> "$GITHUB_OUTPUT"
@@ -2628,25 +2574,13 @@ jobs:
             echo "::error title=WERF version::WERF_VERSION is not set. Run read_werf_version_step before werf_install_step."
             exit 1
           fi
-          MINIMAL_DDK_VERSION="v2.62.1"
-          if [[ ${MINIMAL_DDK_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            minimal_ddk_major=${BASH_REMATCH[1]}
-            minimal_ddk_minor=${BASH_REMATCH[2]}
-            minimal_ddk_patch=${BASH_REMATCH[3]}
-          fi
-          if [[ ${WERF_VERSION} =~ v([0-9]+)\.([0-9]+)\.([0-9]+) ]]; then
-            werf_current_major=${BASH_REMATCH[1]}
-            werf_current_minor=${BASH_REMATCH[2]}
-            werf_current_patch=${BASH_REMATCH[3]}
-          fi
-          if (( werf_current_major > minimal_ddk_major )); then
+          if [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+-dk(\.*)? ]]; then
             werf_fallback=false
-          elif (( werf_current_minor > minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          elif (( werf_current_patch >= minimal_ddk_patch && werf_current_minor == minimal_ddk_minor && werf_current_major == minimal_ddk_major )); then
-            werf_fallback=false
-          else
+          elif [[ ${WERF_VERSION} =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
             werf_fallback=true
+          else
+            echo "::error title=WERF version::Invalid WERF_VERSION '${WERF_VERSION}' in ${WERF_ENVS_FILE}, expected format vX.Y.Z or vX.Y.Z-dk.W"
+            exit 1
           fi
           WERF_PATH="$RUNNER_TOOL_CACHE/werf-dk/${WERF_VERSION}"
           echo "$WERF_PATH" >> "$GITHUB_PATH"
@@ -2668,7 +2602,7 @@ jobs:
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: |
             ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
@@ -2760,6 +2694,12 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
+          # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
+          # obtained, so signing is skipped rather than failing the build.
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "dh-engine-signer"
+          WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -3103,6 +3043,7 @@ jobs:
           IMAGE_TO: "${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}/deckhouse/fe:${{ github.ref_name }}"
           COMPARE_MAX_ATTEMPTS: 10
           COMPARE_RETRY_DELAY: 30
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           RELEASE_BRANCH=$(echo $GITHUB_REF_NAME | awk -F '.' '{printf "%s.%s", $1, $2}')
           LAST_TWO_TAGS="$(git ls-remote --tags origin | grep -F tags/${RELEASE_BRANCH} | awk -F '/' '{print $3}' | sort -V | tail -n 2)"

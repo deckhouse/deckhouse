@@ -27,6 +27,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
 )
 
 // engine values, kept in sync with hooks/internal/v1.NodeGroupEngine*.
@@ -40,11 +41,18 @@ const useMCMAnnotation = "node.deckhouse.io/use-mcm"
 
 // CRI resolution constants, mirrors get_crds.go.
 const (
-	criTypeDocker           = "Docker"
-	criTypeContainerd       = "Containerd"
-	criTypeNotManaged       = "NotManaged"
-	nodeGroupDefaultCRIType = criTypeContainerd
+	criTypeDocker       = "Docker"
+	criTypeContainerd   = "Containerd"
+	criTypeContainerdV2 = "ContainerdV2"
+	criTypeNotManaged   = "NotManaged"
 )
+
+func nodeGroupDefaultCRIType() string {
+	if nodecommon.IsCSEEdition() {
+		return criTypeContainerdV2
+	}
+	return criTypeContainerd
+}
 
 // epochTimestampAccessor mirrors get_crds.go; overridable in tests.
 var epochTimestampAccessor = func() int64 {
@@ -56,13 +64,13 @@ var epochTimestampAccessor = func() int64 {
 // annotation. Exposed so the MachineDeployment controller can act on a freshly created
 // NodeGroup in its first reconcile instead of waiting for the status controller to publish
 // status.engine.
-func ComputeEngine(ng *v1.NodeGroup, cloudProvider map[string]interface{}) string {
+func ComputeEngine(ng *v1.NodeGroup, reg CloudProviderRegistration) string {
 	if ng.Status.Engine != "" {
 		return ng.Status.Engine
 	}
 
 	useMCM := ng.GetAnnotations()[useMCMAnnotation] != ""
-	defaultEngine := defaultCloudEphemeralEngine(cloudProvider, useMCM)
+	defaultEngine := defaultCloudEphemeralEngine(reg, useMCM)
 
 	switch ng.Spec.NodeType {
 	case v1.NodeTypeCloudEphemeral:
@@ -77,9 +85,9 @@ func ComputeEngine(ng *v1.NodeGroup, cloudProvider map[string]interface{}) strin
 	}
 }
 
-func defaultCloudEphemeralEngine(cloudProvider map[string]interface{}, useMCM bool) string {
-	hasMCM := nonEmptyString(cloudProvider["machineClassKind"])
-	hasCAPI := nonEmptyString(cloudProvider["capiClusterKind"])
+func defaultCloudEphemeralEngine(reg CloudProviderRegistration, useMCM bool) string {
+	hasMCM := reg.MachineClassKind != ""
+	hasCAPI := reg.CAPIClusterKind != ""
 
 	switch {
 	case hasMCM && hasCAPI:
@@ -94,11 +102,6 @@ func defaultCloudEphemeralEngine(cloudProvider map[string]interface{}, useMCM bo
 	default:
 		return engineNone
 	}
-}
-
-func nonEmptyString(v interface{}) bool {
-	s, ok := v.(string)
-	return ok && s != ""
 }
 
 // serializeLabels mirrors get_crds.serializeLabels.
@@ -165,7 +168,7 @@ func semverMajMin(ver *semver.Version) string {
 // resolveCRIType mirrors the CRI resolution block in get_crds.
 func resolveCRIType(ng *v1.NodeGroup, effectiveKubeVer *semver.Version, defaultCRI string) (string, error) {
 	v1_19_0, _ := semver.NewVersion("1.19.0")
-	defaultCRIType := nodeGroupDefaultCRIType
+	defaultCRIType := nodeGroupDefaultCRIType()
 	if effectiveKubeVer != nil && effectiveKubeVer.LessThan(v1_19_0) {
 		defaultCRIType = criTypeDocker
 	}
@@ -202,26 +205,18 @@ func resolveZones(ng *v1.NodeGroup, defaultZones []string) []string {
 	return defaultZones
 }
 
-func applyCloudSpecificDefaults(cloudProvider map[string]interface{}, instanceClassSpec interface{}) (interface{}, error) {
+func applyCloudSpecificDefaults(reg CloudProviderRegistration, instanceClassSpec interface{}) (interface{}, error) {
 	specMap, ok := instanceClassSpec.(map[string]interface{})
 	if !ok {
 		return instanceClassSpec, nil
 	}
-
-	providerName, _ := cloudProvider["type"].(string)
-	providerName = strings.ToLower(providerName)
-
-	raw, ok := cloudProvider[providerName]
-	if !ok {
-		return specMap, nil
-	}
-	cloudVariables, ok := raw.(map[string]interface{})
-	if !ok {
+	if reg.CloudVariables == nil {
 		return specMap, nil
 	}
 
+	providerName := strings.ToLower(reg.Type)
 	for _, fillFn := range fillCloudSpecificDefaults[providerName] {
-		if err := fillFn(cloudVariables, specMap); err != nil {
+		if err := fillFn(reg.CloudVariables, specMap); err != nil {
 			return nil, fmt.Errorf("fill %s defaults: %w", providerName, err)
 		}
 	}

@@ -22,6 +22,7 @@ import (
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	dvpicv1alpha1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/api/instanceclass/v1alpha1"
 	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/meta"
 )
 
@@ -100,7 +101,7 @@ func TestValidateMatchesDhctlBootstrapFailures(t *testing.T) {
 
 	validSecrets := map[string]map[string]any{cpapi.CredentialSecretName: testCredentialSecretObject()}
 	validNodeGroups := map[string]map[string]any{
-		"master": testNodeGroup("master", map[string]any{"kind": dvpmeta.InstanceClassKind, "name": "master-dvp"}),
+		"master": testNodeGroup("master", map[string]any{"kind": dvpicv1alpha1.GroupVersionKind.Kind, "name": "master-dvp"}),
 	}
 	validInstanceClasses := map[string]map[string]any{
 		"master-dvp": testInstanceClass("master-dvp", map[string]any{"etcdDisk": map[string]any{"size": "5Gi"}}),
@@ -144,7 +145,15 @@ func TestValidateMatchesDhctlBootstrapFailures(t *testing.T) {
 			},
 			nodeGroups:      validNodeGroups,
 			instanceClasses: validInstanceClasses,
-			want:            `Secret/d8-credentials.data.secret: secret must contain base64-encoded kubeconfig`,
+			want:            `Secret/d8-credentials.data.secret: invalid kubeconfig`,
+		},
+		{
+			name:                  "invalid provider cluster configuration kubeconfig",
+			secrets:               validSecrets,
+			nodeGroups:            validNodeGroups,
+			instanceClasses:       validInstanceClasses,
+			providerClusterConfig: testProviderClusterConfig(base64.StdEncoding.EncodeToString([]byte("not a kubeconfig"))),
+			want:                  `ProviderClusterConfiguration.provider.kubeconfigDataBase64: invalid kubeconfig`,
 		},
 		{
 			name:    "missing master nodegroup",
@@ -167,21 +176,13 @@ func TestValidateMatchesDhctlBootstrapFailures(t *testing.T) {
 			secrets: validSecrets,
 			nodeGroups: map[string]map[string]any{
 				"master": validNodeGroups["master"],
-				"worker": testNodeGroup("worker", map[string]any{"kind": dvpmeta.InstanceClassKind, "name": "worker"}),
+				"worker": testNodeGroup("worker", map[string]any{"kind": dvpicv1alpha1.GroupVersionKind.Kind, "name": "worker"}),
 			},
 			instanceClasses: map[string]map[string]any{
 				"master-dvp": testInstanceClass("master-dvp", map[string]any{"etcdDisk": map[string]any{"size": "5Gi"}}),
 				"worker":     testInstanceClass("worker", map[string]any{"etcdDisk": map[string]any{"size": "5Gi"}}),
 			},
 			want: `DVPInstanceClass/worker.spec.etcdDisk: InstanceClass.spec.etcdDisk can be used only when class is attached to NodeGroup master`,
-		},
-		{
-			name:                  "invalid provider cluster configuration kubeconfig",
-			secrets:               validSecrets,
-			nodeGroups:            validNodeGroups,
-			instanceClasses:       validInstanceClasses,
-			providerClusterConfig: testProviderClusterConfig(base64.StdEncoding.EncodeToString([]byte("not a kubeconfig"))),
-			want:                  `ProviderClusterConfiguration.provider.kubeconfigDataBase64: must contain base64-encoded kubeconfig`,
 		},
 	}
 
@@ -232,21 +233,6 @@ func TestValidateBootstrapRequiresCredentialSecretOnce(t *testing.T) {
 	}
 }
 
-func TestValidateRejectsInvalidPCCKubeconfigDuringMigration(t *testing.T) {
-	t.Parallel()
-
-	err := validate(context.Background(), proto.ValidateInput{
-		Operation:             proto.OperationBootstrap,
-		ProviderClusterConfig: testProviderClusterConfig("%%%-not-base64"),
-	})
-	if err == nil {
-		t.Fatal("validate() error = nil, want invalid PCC kubeconfig")
-	}
-	if !strings.Contains(err.Error(), `ProviderClusterConfiguration.provider.kubeconfigDataBase64: must contain base64-encoded kubeconfig`) {
-		t.Fatalf("validate() error = %q, want PCC kubeconfig error", err)
-	}
-}
-
 func TestValidateConvergeRunsPreflight(t *testing.T) {
 	t.Parallel()
 
@@ -281,5 +267,20 @@ func TestValidateDestroySkipsValidation(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("validate() error = %v, want nil for destroy", err)
+	}
+}
+
+func TestValidateRejectsInvalidPCCKubeconfigDuringMigration(t *testing.T) {
+	t.Parallel()
+
+	err := validate(context.Background(), proto.ValidateInput{
+		Operation:             proto.OperationBootstrap,
+		ProviderClusterConfig: testProviderClusterConfig("%%%-not-base64"),
+	})
+	if err == nil {
+		t.Fatal("validate() error = nil, want invalid PCC kubeconfig")
+	}
+	if !strings.Contains(err.Error(), `ProviderClusterConfiguration.provider.kubeconfigDataBase64: invalid kubeconfig`) {
+		t.Fatalf("validate() error = %q, want PCC kubeconfig error", err)
 	}
 }

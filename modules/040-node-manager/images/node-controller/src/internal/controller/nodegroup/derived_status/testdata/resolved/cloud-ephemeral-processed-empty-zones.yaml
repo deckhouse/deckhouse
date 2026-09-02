@@ -2,6 +2,8 @@ cloudInstances:
   classReference:
     kind: AWSInstanceClass
     name: worker
+  maxPerZone: 0
+  minPerZone: 0
   zones: []
 cri:
   type: Containerd

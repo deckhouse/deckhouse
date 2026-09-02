@@ -161,92 +161,10 @@ def prepare_car_binding_context(
         }}
       }},
       "snapshots": {{
-        "d8-user-authz-moduleconfig": [
+        "d8-user-authz-multitenancy-state": [
           {{
-            "object": {{
-              "apiVersion": "deckhouse.io/v1alpha1",
-              "kind": "ModuleConfig",
-              "metadata": {{
-                "creationTimestamp": "2025-07-29T02:01:51Z",
-                "finalizers": [
-                  "modules.deckhouse.io/module-registered"
-                ],
-                "generation": 19,
-                "managedFields": [
-                  {{
-                    "apiVersion": "deckhouse.io/v1alpha1",
-                    "fieldsType": "FieldsV1",
-                    "fieldsV1": {{
-                      "f:spec": {{
-                        ".": {{}},
-                        "f:enabled": {{}},
-                        "f:version": {{}}
-                      }}
-                    }},
-                    "manager": "dhctl",
-                    "operation": "Update",
-                    "time": "2025-07-29T02:01:51Z"
-                  }},
-                  {{
-                    "apiVersion": "deckhouse.io/v1alpha1",
-                    "fieldsType": "FieldsV1",
-                    "fieldsV1": {{
-                      "f:metadata": {{
-                        "f:finalizers": {{
-                          ".": {{}}
-                        }}
-                      }}
-                    }},
-                    "manager": "deckhouse-controller",
-                    "operation": "Update",
-                    "time": "2025-07-29T02:02:28Z"
-                  }},
-                  {{
-                    "apiVersion": "deckhouse.io/v1alpha1",
-                    "fieldsType": "FieldsV1",
-                    "fieldsV1": {{
-                      "f:status": {{
-                        ".": {{}},
-                        "f:message": {{}},
-                        "f:version": {{}}
-                      }}
-                    }},
-                    "manager": "deckhouse-controller",
-                    "operation": "Update",
-                    "subresource": "status",
-                    "time": "2025-07-29T02:02:28Z"
-                  }},
-                  {{
-                    "apiVersion": "deckhouse.io/v1alpha1",
-                    "fieldsType": "FieldsV1",
-                    "fieldsV1": {{
-                      "f:spec": {{
-                        "f:settings": {{
-                          ".": {{}},
-                          "f:enableMultiTenancy": {{}}
-                        }}
-                      }}
-                    }},
-                    "manager": "kubectl-edit",
-                    "operation": "Update",
-                    "time": "2025-07-29T23:27:00Z"
-                  }}
-                ],
-                "name": "user-authz",
-                "resourceVersion": "663947",
-                "uid": "71324cad-b74b-45ce-b122-1040558471ee"
-              }},
-              "spec": {{
-                "enabled": true,
-                "settings": {{
-                  {'' if module_enable_multitenancy_field is None else ('"enableMultiTenancy": true' if module_enable_multitenancy_field else '"enableMultiTenancy": false')}
-                }},
-                "version": 1
-              }},
-              "status": {{
-                "message": "",
-                "version": "1"
-              }}
+            "filterResult": {{
+              {'' if module_enable_multitenancy_field is None else ('"enableMultiTenancy": true' if module_enable_multitenancy_field else '"enableMultiTenancy": false')}
             }}
           }}
         ]
@@ -340,9 +258,41 @@ def build_three_not_multitenancy_related_cars() -> list[CAR]:
     ]
 
 
-def prepare_module_config_binding_context(module_enable_multitenancy_field: Optional[bool], cars: list[CAR] = []) -> str:
+def prepare_module_config_binding_context(
+        module_enable_multitenancy_field: Optional[bool],
+        cars: Optional[list[CAR]] = None,
+        current_multitenancy_state: Optional[bool] = None,
+        previous_enable_multitenancy_field: Optional[bool] = None) -> str:
+    """
+    module_enable_multitenancy_field is the enableMultiTenancy value submitted in this
+    request's spec.settings (None means the field is absent from the request).
+
+    previous_enable_multitenancy_field is the same, but for oldObject.spec.settings — i.e.
+    the value it had before this request (None means it was already absent). It's used to
+    tell "an unrelated edit that never touched enableMultiTenancy" (was and stays absent)
+    apart from "this request removes an explicit value" (was present, now absent) — only
+    the former is safe to resolve via current_multitenancy_state below.
+
+    current_multitenancy_state is the effective value mirrored into the
+    "d8-user-authz-multitenancy-state" ConfigMap (rendered by templates/namespace.yaml) —
+    it's used as a fallback when enableMultiTenancy is absent from both spec.settings and
+    oldObject.spec.settings, e.g. to reflect a schema default (CSE) that was never
+    explicitly written to spec.settings.
+    """
+    cars = cars or []
     cars_snapshot = ','.join(car.toSnapshotObject() for car in cars)
-    
+
+    if current_multitenancy_state is None:
+        multitenancy_state_snapshot = ""
+    else:
+        multitenancy_state_snapshot = f"""
+        {{
+          "filterResult": {{
+            "enableMultiTenancy": {"true" if current_multitenancy_state else "false"}
+          }}
+        }}
+        """
+
     return f"""
 {{
   "binding": "d8-user-authz-module-multitenancy-related-options.deckhouse.io",
@@ -538,7 +488,9 @@ def prepare_module_config_binding_context(module_enable_multitenancy_field: Opti
         }},
         "spec": {{
           "enabled": true,
-          "settings": {{}},
+          "settings": {{
+            {'' if previous_enable_multitenancy_field is None else ('"enableMultiTenancy": true' if previous_enable_multitenancy_field else '"enableMultiTenancy": false')}
+          }},
           "version": 1
         }},
         "status": {{
@@ -558,6 +510,9 @@ def prepare_module_config_binding_context(module_enable_multitenancy_field: Opti
   "snapshots": {{
     "d8-user-authz-cars": [
       {cars_snapshot if cars else ""}
+    ],
+    "d8-user-authz-multitenancy-state": [
+      {multitenancy_state_snapshot}
     ]
   }},
   "type": "Validating"

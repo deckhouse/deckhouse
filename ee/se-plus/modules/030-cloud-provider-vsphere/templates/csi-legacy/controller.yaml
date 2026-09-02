@@ -16,12 +16,29 @@
 - name: vsphere-csi-config-volume
   secret:
     secretName: csi-controller
+{{- if eq (include "vsphere_has_provider_caBundle" .) "true" }}
+- name: vsphere-ca-cert
+  secret:
+    secretName: vsphere-ca-certs
+{{- end }}
 {{- end }}
 
 {{- define "csi_controller_legacy_volume_mounts" }}
 - mountPath: /etc/cloud
   name: vsphere-csi-config-volume
   readOnly: true
+{{- if eq (include "vsphere_has_provider_caBundle" .) "true" }}
+- mountPath: /etc/vsphere-certs/ca.crt
+  name: vsphere-ca-cert
+  readOnly: true
+  subPath: ca.crt
+{{- end }}
+{{- end }}
+
+{{- define "csi_controller_legacy_pod_annotations" }}
+{{- if eq (include "vsphere_has_provider_caBundle" .) "true" }}
+ca-bundle-checksum: {{ include (print .Template.BasePath "/ca-secret.yaml") . | sha256sum }}
+{{- end }}
 {{- end }}
 
 {{- $csiControllerImage := include "helm_lib_module_image" (list . "vsphereCsiPluginLegacy") }}
@@ -34,6 +51,7 @@
 {{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_legacy_envs" . | fromYamlArray) }}
 {{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_legacy_volumes" . | fromYamlArray) }}
 {{- $_ := set $csiControllerConfig "additionalControllerVolumeMounts" (include "csi_controller_legacy_volume_mounts" . | fromYamlArray) }}
+{{- $_ := set $csiControllerConfig "additionalCsiControllerPodAnnotations" (include "csi_controller_legacy_pod_annotations" . | fromYaml) }}
 {{- $_ := set $csiControllerConfig "dnsPolicy" (include "helm_lib_dns_policy_bootstraping_state" (list . "Default" "ClusterFirstWithHostNet")) }}
 
 {{- if ne .Values.cloudProviderVsphere.internal.compatibilityFlag "none" }}

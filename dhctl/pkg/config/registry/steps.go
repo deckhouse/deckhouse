@@ -28,6 +28,7 @@ import (
 	"github.com/deckhouse/lib-dhctl/pkg/retry"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/kubeerrors"
 )
 
 const (
@@ -162,7 +163,7 @@ func getConditions(ctx context.Context, kubeClient client.KubeClient) ([]metav1.
 			// No status reported yet: equivalent to no conditions being ready.
 			return nil, nil
 		}
-		if apierrors.IsForbidden(err) || apierrors.IsUnauthorized(err) {
+		if kubeerrors.IsPermanentAuthError(ctx, err) {
 			return nil, fmt.Errorf("get secret '%s/%s': %w", secretsNamespace, stateSecretName, err)
 		}
 		return nil, fmt.Errorf("%w: get secret '%s/%s': %w", errRegistryCheckTransient, secretsNamespace, stateSecretName, err)

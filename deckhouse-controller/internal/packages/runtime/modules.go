@@ -16,6 +16,8 @@ package runtime
 
 import (
 	"context"
+	"errors"
+	"log/slog"
 	"slices"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -23,17 +25,19 @@ import (
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
 	taskdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/deploy"
 	taskdisable "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/disable"
+	taskdummy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/dummy"
 	taskload "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/load"
 	taskundeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/undeploy"
+	taskuninstall "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/uninstall"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/queue"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
-	"github.com/deckhouse/deckhouse/pkg/app"
 )
 
 // Module represents a module instance as received from the module controller.
@@ -43,6 +47,8 @@ type Module struct {
 	Definition      modules.Definition
 	Settings        addonutils.Values
 	SettingsVersion int // schema version from ModuleConfig.Spec.Version
+	Maintenance     string
+	Enabled         *bool
 }
 
 // UpdateModulesSettings applies a settings-and-enabled change to an
@@ -67,14 +73,16 @@ type Module struct {
 // dropped — there is no per-package store to stash them in yet; the eventual
 // UpdateModule registers the package and supplies its settings. Either way, an
 // untracked package has no node to reschedule, so no Reschedule happens here.
-func (r *Runtime) UpdateModulesSettings(name string, settingsVersion int, settings addonutils.Values, enabled *bool) {
+func (r *Runtime) UpdateModulesSettings(name string, settingsVersion int, settings addonutils.Values, maintenance string, enabled *bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	r.logger.Debug("update module settings", slog.String("name", name))
 
 	// Settings live in the per-package store; the ModuleConfig enabled intent
 	// lives in the global module (thread-safe for the scheduler's enabled getter).
 	// Reschedule if either actually changed.
-	settingsChanged := r.packages.UpdateSettings(name, settingsVersion, settings)
+	settingsChanged := r.packages.UpdateSettings(name, settingsVersion, settings, maintenance)
 	enabledChanged := r.global.SetConfigEnabled(name, enabled)
 
 	if settingsChanged || enabledChanged {
@@ -82,15 +90,22 @@ func (r *Runtime) UpdateModulesSettings(name string, settingsVersion int, settin
 	}
 }
 
-// UpdateModule handles module creation and version changes from the module controller.
+// UpdateModule handles module creation, version changes, and enabled intent from the module controller.
 //
 // Flow mirrors UpdateApp: version changes enqueue the full pipeline
 // (Disable → Deploy → Load), settings-only changes trigger
 // Reschedule to re-apply settings through the scheduler's schedule pipeline.
 // See UpdateApp for detailed flow documentation.
-func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
+//
+// force runs the pipeline even when nothing the runtime tracks changed and makes the
+// Deploy task discard the cached copy of the version. It is for callers that resolved the
+// image digest and found it changed under a tag the runtime still sees as unchanged, and
+// is transitional: it goes away once module tags are immutable.
+func (r *Runtime) UpdateModule(repo registry.Remote, module Module, force bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	r.logger.Debug("update module", slog.String("name", module.Name), slog.Bool("force", force))
 
 	if len(module.Settings) == 0 {
 		module.Settings = make(addonutils.Values)
@@ -98,13 +113,18 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 
 	name := module.Name
 	version := module.Definition.Version
+	enabledChanged := r.global.SetConfigEnabled(name, module.Enabled)
 
-	// Modules do not support maintenance mode, so it is always empty here.
-	if !r.packages.NeedUpdate(name, version, module.Settings.Checksum(), module.SettingsVersion, "") {
+	// A forced update skips change detection it would fail anyway.
+	if !force && !r.packages.NeedUpdate(name, version, module.Settings.Checksum(), module.SettingsVersion, module.Maintenance) {
+		if enabledChanged {
+			r.scheduler.Reschedule(name)
+		}
+
 		return
 	}
 
-	ctx := r.packages.Update(name, version, module.SettingsVersion, module.Settings, "")
+	ctx := r.packages.Update(name, version, module.SettingsVersion, module.Settings, module.Maintenance, force)
 	if ctx == nil {
 		r.scheduler.Reschedule(name)
 		return
@@ -113,8 +133,68 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module) {
 	r.status.NewStatus(name)
 
 	tasks := []queue.Task{
-		taskdeploy.NewModuleTask(name, version, repo, r.moduleDeployer, r.status, r.logger),
+		taskdeploy.NewModuleTask(name, version, repo, force, r.moduleDeployer, r.status, r.logger),
 		taskload.NewModuleTask(name, repo, r.loadModule, r.status, r.logger),
+	}
+
+	// If there's an existing module, disable it first
+	if pkg := r.modules[name]; pkg != nil {
+		tasks = slices.Insert(tasks, 0, taskdisable.NewTask(pkg, app.NamespaceDeckhouse, true, r.nelmService, r.queueService, r.logger))
+	}
+
+	for _, task := range tasks {
+		r.queueService.Enqueue(ctx, name, task)
+	}
+}
+
+// UpdateEmbeddedModule handles creation, settings and enabled intent of an embedded module —
+// one shipped inside the Deckhouse image rather than pulled from a repository.
+//
+// The pipeline is UpdateModule's without the Deploy task: the files already sit under
+// app.EmbeddedModulesDir, so ReadyOnFilesystem holds from the start and only Load runs.
+// The version is the running edition's reduced to major.minor.patch — the same one the
+// Module spec and its ModulePackageVersion carry — because an embedded module has no
+// package version of its own, so it cannot change while the process lives — but EventRemove clears
+// the stored version, so a delete-then-recreate still lands here with the previous instance
+// registered, and Disable goes ahead of Load to tear it down.
+//
+// Settings-only and enabled-only changes behave as in UpdateModule: they stash the new
+// values and Reschedule, so the scheduler re-runs Configure → Startup → Run with them.
+func (r *Runtime) UpdateEmbeddedModule(module Module) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	r.logger.Debug("update embedded module", slog.String("name", module.Name))
+
+	if len(module.Settings) == 0 {
+		module.Settings = make(addonutils.Values)
+	}
+
+	name := module.Name
+	version := app.EmbeddedPackageVersion(r.edition.Version)
+	enabledChanged := r.global.SetConfigEnabled(name, module.Enabled)
+
+	if !r.packages.NeedUpdate(name, version, module.Settings.Checksum(), module.SettingsVersion, module.Maintenance) {
+		if enabledChanged {
+			r.scheduler.Reschedule(name)
+		}
+
+		return
+	}
+
+	ctx := r.packages.Update(name, version, module.SettingsVersion, module.Settings, module.Maintenance, false)
+	if ctx == nil {
+		r.scheduler.Reschedule(name)
+		return
+	}
+
+	r.status.NewStatus(name)
+
+	// The image carries the module, so nothing has to place it on disk.
+	r.status.SetConditionTrue(name, status.ConditionReadyOnFilesystem)
+
+	tasks := []queue.Task{
+		taskload.NewEmbeddedTask(name, r.loadEmbeddedModule, r.status, r.logger),
 	}
 
 	// If there's an existing module, disable it first
@@ -144,6 +224,47 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, packageP
 	}
 
 	conf.Repository = repo
+
+	module, err := r.registerModule(ctx, conf)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return "", err
+	}
+
+	return module.GetVersion().String(), nil
+}
+
+// loadEmbeddedModule builds a Module from an embedded package directory and registers it,
+// as loadModule does for a downloaded one. The definition's version is overwritten with the
+// running edition's, reduced to the version the image's packages carry, and the repository the
+// Load task passes is empty — an embedded module has none, so no registry values are injected.
+func (r *Runtime) loadEmbeddedModule(ctx context.Context, _ registry.Remote, packagePath string) (string, error) {
+	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "loadEmbeddedModule")
+	defer span.End()
+
+	span.SetAttributes(attribute.String("path", packagePath))
+
+	conf, err := loader.LoadEmbeddedConf(ctx, packagePath, r.logger)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return "", status.NewError("LoadFailed", err)
+	}
+
+	conf.Definition.Version = app.EmbeddedPackageVersion(r.edition.Version)
+
+	module, err := r.registerModule(ctx, conf)
+	if err != nil {
+		span.SetStatus(codes.Error, err.Error())
+		return "", err
+	}
+
+	return module.GetVersion().String(), nil
+}
+
+// registerModule wires the runtime's shared managers into conf, builds the module and
+// publishes it to r.modules and the scheduler. Returns a status error, so both loaders
+// pass it straight to the Load task's condition.
+func (r *Runtime) registerModule(ctx context.Context, conf *modules.Config) (*modules.Module, error) {
 	conf.Patcher = r.objectPatcher
 	conf.ScheduleManager = r.scheduleManager
 	conf.KubeEventsManager = r.kubeEventsManager
@@ -151,12 +272,19 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, packageP
 
 	module, err := modules.NewModuleByConfig(conf.Definition.Name, conf, r.logger)
 	if err != nil {
-		span.SetStatus(codes.Error, err.Error())
-		return "", status.NewError("LoadFailed", err)
+		return nil, status.NewError("LoadFailed", err)
 	}
 
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	// The package was removed while this Load ran — r.mu is what serialises the two, so this is the
+	// last point either can win. Publishing now would give the scheduler a node for a package nothing
+	// tracks, and Enable would then register its hooks with the shared managers with no removal path
+	// left to disable them.
+	if err = ctx.Err(); err != nil {
+		return nil, err
+	}
 
 	// Optimistically register the module before AddNode so a successful
 	// schedule can resolve it; if AddNode rejects the addition (dependency
@@ -165,32 +293,95 @@ func (r *Runtime) loadModule(ctx context.Context, repo registry.Remote, packageP
 	r.modules[module.GetName()] = module
 	if err = r.scheduler.AddNode(module); err != nil {
 		delete(r.modules, module.GetName())
-		span.SetStatus(codes.Error, err.Error())
-		return "", status.NewError("DependencyCycle", err)
+		return nil, status.NewError("DependencyCycle", err)
 	}
 
-	return module.GetVersion().String(), nil
+	return module, nil
 }
 
-// RemoveModule removes a module and cancels all its running operations.
-// After undeploy, a cleanup goroutine removes the Store entry and stops the queue.
-// See RemoveApp for detailed rationale on the async cleanup pattern.
-func (r *Runtime) RemoveModule(name string) {
+// RemoveModule removes a module, cancels all its running operations and reports whether the
+// teardown has finished. After undeploy, a cleanup goroutine removes the Store entry and stops
+// the queue. See RemoveApp for the idempotence contract and the async cleanup rationale.
+func (r *Runtime) RemoveModule(name string) bool {
 	r.mu.Lock()
 	defer r.mu.Unlock()
+
+	switch r.packages.RemovalState(name) {
+	case lifecycle.RemovalDone:
+		return true
+
+	case lifecycle.RemovalInFlight:
+		r.logger.Debug("module removal is still in flight", slog.String("name", name))
+
+		return false
+	}
 
 	r.scheduler.RemoveNode(name)
 
 	ctx := r.packages.HandleEvent(lifecycle.EventRemove, name)
 	if ctx == nil {
-		return
+		return true
 	}
 
 	if pkg := r.modules[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, app.NamespaceDeckhouse, false, r.nelmService, r.queueService, r.logger))
+	} else {
+		// A failed Load may roll the instance out of r.modules while the previous release is still live.
+		r.queueService.Enqueue(ctx, name, taskuninstall.NewTask(name, app.NamespaceDeckhouse, r.nelmService, r.logger))
 	}
 
-	cleanup := queue.WithOnDone(func() {
+	cleanup := queue.WithOnDone(r.cleanupModule(name))
+
+	r.queueService.Enqueue(ctx, name, taskundeploy.NewModuleTask(name, r.moduleDeployer, r.logger), cleanup)
+
+	return false
+}
+
+// RemoveEmbeddedModule removes an embedded module and cancels all its running operations.
+// It is RemoveModule without Undeploy: the image carries the files, so nothing was ever placed
+// on disk for the deployer to take back. Cleanup always rides on Dummy after Disable, or after
+// Uninstall when the module instance is unavailable.
+func (r *Runtime) RemoveEmbeddedModule(name string) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	switch r.packages.RemovalState(name) {
+	case lifecycle.RemovalDone:
+		return true
+
+	case lifecycle.RemovalInFlight:
+		r.logger.Debug("embedded module removal is still in flight", slog.String("name", name))
+
+		return false
+	}
+
+	r.scheduler.RemoveNode(name)
+
+	ctx := r.packages.HandleEvent(lifecycle.EventRemove, name)
+	if ctx == nil {
+		return true
+	}
+
+	if pkg := r.modules[name]; pkg != nil {
+		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, app.NamespaceDeckhouse, false, r.nelmService, r.queueService, r.logger))
+	} else {
+		// A failed Load may roll the instance out of r.modules while the previous release is still live.
+		r.queueService.Enqueue(ctx, name, taskuninstall.NewTask(name, app.NamespaceDeckhouse, r.nelmService, r.logger))
+	}
+
+	// The teardown rides the last task in the package's queue, never runs inline: it stops that queue
+	// and waits up to 10s for it to drain, so from here — under r.mu, with a Load possibly still
+	// running and about to want r.mu itself — it would deadlock both. RemoveModule anchors it on
+	// Undeploy; an embedded module has nothing to undeploy, so it anchors on a dummy task.
+	r.queueService.Enqueue(ctx, name, taskdummy.NewTask(name, r.logger), queue.WithOnDone(r.cleanupModule(name)))
+
+	return false
+}
+
+// cleanupModule returns the teardown that drops the Store entry, stops the queue and deletes the
+// status once a removal's last task is done. It takes r.mu, so it never runs under the caller's.
+func (r *Runtime) cleanupModule(name string) func() {
+	return func() {
 		go func() {
 			r.mu.Lock()
 			defer r.mu.Unlock()
@@ -201,7 +392,36 @@ func (r *Runtime) RemoveModule(name string) {
 				delete(r.modules, name)
 			}
 		}()
-	})
+	}
+}
 
-	r.queueService.Enqueue(ctx, name, taskundeploy.NewModuleTask(name, r.moduleDeployer, r.logger), cleanup)
+// GetModuleDigest resolves the digest the tag currently points at. It is what a caller
+// pinning a module to a mutable dev tag compares against, because the runtime's own change
+// detection is blind to a repush under an unchanged tag.
+func (r *Runtime) GetModuleDigest(ctx context.Context, remote registry.Remote, name, tag string) (string, error) {
+	return r.registry.GetImageDigest(ctx, remote, name, tag)
+}
+
+// ValidateModuleExclusiveGroup returns an error if there is an enabled module with the same exclusive group.
+func (r *Runtime) ValidateModuleExclusiveGroup(group string) error {
+	r.mu.RLock()
+	defer r.mu.RUnlock()
+
+	var found bool
+	for name := range r.modules {
+		if r.modules[name].GetExclusiveGroup() != group {
+			continue
+		}
+
+		if r.scheduler.IsEnabled(name) {
+			found = true
+			break
+		}
+	}
+
+	if found {
+		return errors.New("module cannot be enabled because another module with same exclusiveGroup enabled")
+	}
+
+	return nil
 }

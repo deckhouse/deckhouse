@@ -37,7 +37,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
@@ -67,6 +66,12 @@ type Module struct {
 	// running tracks whether OnStartup hooks have completed successfully.
 	// When true, subsequent OnStartup binding calls are skipped (idempotency guard).
 	running atomic.Bool
+
+	// initialized tracks whether hook controllers have been built for this instance,
+	// so the Enable task skips re-initialization on every reschedule. It is per-instance
+	// on purpose: hook controllers may live on process-global SDK-registry singletons,
+	// so inferring init state from controller presence would leak across instances.
+	initialized atomic.Bool
 
 	definition Definition            // Module definition
 	digests    map[string]string     // Package digests
@@ -226,6 +231,11 @@ func (m *Module) GetName() string {
 	return m.name
 }
 
+// GetPackage returns the module package name.
+func (m *Module) GetPackage() string {
+	return m.definition.Name
+}
+
 // GetVersion return the package version
 func (m *Module) GetVersion() *semver.Version {
 	return m.version
@@ -274,18 +284,14 @@ func (m *Module) GetHooksQueues() []string {
 	return slices.Compact(res)
 }
 
-// GetHookSnapshotsDump returns a YAML snapshot of hook controller snapshots.
-// If include is provided, only hooks matching those names are included.
-func (m *Module) GetHookSnapshotsDump(include ...string) []byte {
-	d := make(map[string]any)
-	for _, h := range m.hooks.GetHooks() {
-		if len(include) == 0 || slices.Contains(include, h.GetName()) {
-			d[h.GetName()] = h.GetHookController().SnapshotsDump()
-		}
+// GetHookSnapshotsDump returns a snapshot of hook controller snapshots.
+func (m *Module) GetHookSnapshotsDump() map[string]any {
+	snapshots := make(map[string]any)
+	for _, hook := range m.hooks.GetHooks() {
+		snapshots[hook.GetName()] = hook.GetHookController().SnapshotsDump()
 	}
 
-	marshalled, _ := yaml.Marshal(d)
-	return marshalled
+	return snapshots
 }
 
 // GetValuesChecksum returns a checksum of the current values.
@@ -385,11 +391,15 @@ func (m *Module) GetConstraints() schedule.Constraints {
 	return m.definition.Constraints()
 }
 
-// HooksInitialized reports whether the package requires a hook initialize phase.
-// This is true when hooks have not yet been initialized (no controllers attached),
-// meaning the pkg needs to go through the full startup sequence before it can run.
+// GetExclusiveGroup returns the module's exclusive group, if any.
+func (m *Module) GetExclusiveGroup() string {
+	return m.definition.ExclusiveGroup
+}
+
+// HooksInitialized reports whether this instance has already built its hook
+// controllers. When true, the Enable task skips the initialize+sync phase.
 func (m *Module) HooksInitialized() bool {
-	return m.hooks.Initialized()
+	return m.initialized.Load()
 }
 
 // GetHooks returns all hooks for this module in arbitrary order.
@@ -407,6 +417,8 @@ func (m *Module) InitializeHooks() {
 		hook.WithHookController(hookCtrl)
 		hook.WithTmpDir(os.TempDir())
 	}
+
+	m.initialized.Store(true)
 }
 
 // DisableHooks tears down all active hook bindings and clears the hook registry.
@@ -432,6 +444,14 @@ func (m *Module) DisableHooks() {
 		}
 	}
 
+	// Detach controllers so a subsequent InitializeHooks starts fresh. Hook objects
+	// may be process-global SDK-registry singletons, so a stale controller left here
+	// would make the next Enable wrongly believe this instance is already initialized.
+	for _, hook := range m.hooks.GetHooks() {
+		hook.WithHookController(nil)
+	}
+
+	m.initialized.Store(false)
 	m.running.Store(false)
 }
 
@@ -551,6 +571,12 @@ func (m *Module) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.BindingC
 	if valuesPatch, has := hookResult.Patches[addonutils.MemoryValuesPatch]; has && valuesPatch != nil {
 		if err = m.values.ApplyValuesPatchWithLegacyRoot(*valuesPatch); err != nil {
 			return fmt.Errorf("apply hook values patch: %w", err)
+		}
+	}
+
+	if len(hookResult.BindingActions) > 0 {
+		if err = hooks.ApplyBindingActions(h.GetHookConfig().OnKubernetesEvents, h.GetHookController(), hookResult.BindingActions); err != nil {
+			return fmt.Errorf("apply binding actions: %w", err)
 		}
 	}
 

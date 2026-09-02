@@ -131,12 +131,6 @@
           "versions": [
             {
               "condition": {
-                "k8s": "1.31"
-              },
-              "version": "v1.31.6"
-            },
-            {
-              "condition": {
                 "k8s": "1.32"
               },
               "version": "v1.32.3"
@@ -175,12 +169,6 @@
           "license": "Apache License 2.0",
           "id": "csi-aws",
           "versions": [
-            {
-              "condition": {
-                "k8s": "1.31"
-              },
-              "version": "v1.54.0"
-            },
             {
               "condition": {
                 "k8s": "1.32"
@@ -257,12 +245,6 @@
           "versions": [
             {
               "condition": {
-                "k8s": "1.31"
-              },
-              "version": "v1.31.12"
-            },
-            {
-              "condition": {
                 "k8s": "1.32"
               },
               "version": "v1.32.11"
@@ -301,12 +283,6 @@
           "license": "Apache License 2.0",
           "id": "csi-azure",
           "versions": [
-            {
-              "condition": {
-                "k8s": "1.31"
-              },
-              "version": "v1.31.12"
-            },
             {
               "condition": {
                 "k8s": "1.32"
@@ -424,12 +400,6 @@
           "versions": [
             {
               "condition": {
-                "k8s": "1.31"
-              },
-              "version": "ccm/v30.1.4"
-            },
-            {
-              "condition": {
                 "k8s": "1.32"
               },
               "version": "ccm/v32.2.5"
@@ -468,12 +438,6 @@
           "license": "Apache License 2.0",
           "id": "csi-gcp",
           "versions": [
-            {
-              "condition": {
-                "k8s": "1.31"
-              },
-              "version": "v1.15.4"
-            },
             {
               "condition": {
                 "k8s": "1.32"
@@ -584,12 +548,6 @@
           "versions": [
             {
               "condition": {
-                "k8s": "1.31"
-              },
-              "version": "v1.31.4"
-            },
-            {
-              "condition": {
                 "k8s": "1.32"
               },
               "version": "v1.32.1"
@@ -628,12 +586,6 @@
           "license": "Apache License 2.0",
           "id": "csi-openstack",
           "versions": [
-            {
-              "condition": {
-                "k8s": "1.31"
-              },
-              "version": "v1.31.2"
-            },
             {
               "condition": {
                 "k8s": "1.32"
@@ -805,12 +757,6 @@
           "versions": [
             {
               "condition": {
-                "k8s": "1.31"
-              },
-              "version": "v1.31.1"
-            },
-            {
-              "condition": {
                 "k8s": "1.32"
               },
               "version": "v1.32.3"
@@ -849,12 +795,6 @@
           "license": "Apache License 2.0",
           "id": "csi-vsphere",
           "versions": [
-            {
-              "condition": {
-                "k8s": "1.31"
-              },
-              "version": "v3.5.1"
-            },
             {
               "condition": {
                 "k8s": "1.32"

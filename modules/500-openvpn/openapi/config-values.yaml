@@ -156,6 +156,10 @@ properties:
       What certificate type to use with the OpenVPN admin panel.
 
       This parameter completely overrides the `global.modules.https` settings.
+    x-examples:
+      - mode: CertManager
+        certManager:
+          clusterIssuerName: letsencrypt
     properties:
       mode:
         type: string

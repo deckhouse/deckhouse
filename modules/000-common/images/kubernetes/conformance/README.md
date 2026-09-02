@@ -79,28 +79,3 @@ You will get:
 `plugins/e2e/results/global/junit_01.xml`
 
 Optional: remove the tarball when done (`rm -f sb.tar.gz`).
-
----
-
-## 6. Add files to this module
-
-Place both files under the minor version directory that matches your cluster, for example:
-
-```text
-modules/000-common/images/kubernetes/conformance/<version>/e2e.log
-modules/000-common/images/kubernetes/conformance/<version>/junit_01.xml
-```
-
-Example: for Kubernetes **1.33** → use directory `1.33/`.
-
-Commit the changes and open a PR.
-
----
-
-## 7. PR labels (automation)
-
-After the workflow that validates conformance results is present on the **default branch**, add label:
-
-`tests/conformance/<version>`
-
-(for example `tests/conformance/1.33`). Automation reads `junit_01.xml` from this PR branch and, depending on the suite outcome, sets follow-up labels (`passed` / `failed`) and removes the trigger label so you can run the check again.

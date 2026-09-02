@@ -15,20 +15,58 @@ description: |-
 properties:
   ccm:
     additionalProperties: false
+    description: |-
+      Cloud Controller Manager (CCM) subsystem settings.
+
+      CCM integrates the cluster with the cloud provider — for example, it manages load balancers.
+      You can enable or disable CCM independently of other subsystems. For instance, leave CCM enabled
+      if you only need load balancer management in the cluster.
     properties:
       disabled:
         default: false
+        description: |-
+          Disables the Cloud Controller Manager.
+
+          Set to `true` if CCM is not required. Leave enabled (`false`) when you need cloud load balancer management.
         type: boolean
     type: object
   nodes:
     additionalProperties: false
+    description: |-
+      Nodes subsystem settings.
+
+      Controls node management in the cluster.
     properties:
       disabled:
         default: false
+        description: Disables the node management subsystem.
         type: boolean
       parameters:
         additionalProperties: false
+        description: Parameters of the nodes subsystem.
         properties:
+          additionalVMLabels:
+            additionalProperties:
+              type: string
+            description: |-
+              Additional labels that will be added to all virtual machine pods in the created cluster: both master and worker nodes.
+
+              This parameter can be used to allow existing or custom NetworkPolicy resources in the parent cluster to select VM pods by these labels. For example, you can add a label to VM pods and allow access to them only from a bastion pod or another trusted source.
+            type: object
+          ingressPorts:
+            default:
+            - 22
+            description: |-
+              List of virtual machine TCP ports for which ingress traffic will be allowed from any source: external IP addresses and any pods in the parent cluster.
+
+              Can be used to expose services that need to accept inbound TCP traffic from any source.
+
+              To disable this unrestricted ingress access, specify an empty array. In this case, access to VMs can be configured separately using custom NetworkPolicy resources that select VM pods by labels from the `additionalVMLabels` parameter.
+            items:
+              maximum: 65535
+              minimum: 1
+              type: integer
+            type: array
           ipAddresses:
             additionalProperties:
               items:
@@ -36,8 +74,24 @@ properties:
                 type: string
               type: array
             description: |-
-              Static IP addresses to be assigned to the network interfaces of the virtual machines. The number of addresses must match the number of replicas being created — each IP address will be assigned to a specific virtual machine replica.
-              For example, if 3 replicas are specified and the IP addresses provided are: ip1, ip2, and ip3, then ip1 will be assigned to the first replica, ip2 to the second, and ip3 to the third.
+              A map of static IP addresses for CloudPermanent NodeGroups.
+
+              The map key is the NodeGroup name, the value is a list of IP addresses assigned to nodes of that group.
+              The number of addresses must match the number of replicas — each IP address is assigned to a specific replica.
+
+              Example:
+
+              ```yaml
+              ipAddresses:
+                master:
+                  - 10.66.30.100
+                  - 10.66.30.101
+                  - 10.66.30.102
+                worker:
+                  - 10.66.30.200
+                  - 10.66.30.201
+              ```
+
               > These addresses must belong to the address range specified in the virtualization module configuration in the `virtualMachineCIDRs` parameter.
             type: object
           layout:
@@ -55,7 +109,7 @@ properties:
               To use this setting, the `topology.kubernetes.io/region` label must be set on DVP nodes.
               [Read more about topological labels](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion).
 
-              > To set the required label for a DVP node, follow the [NodeGroup documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+              > To set the required label for a DVP node, follow the [NodeGroup documentation](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
             type: string
           sshPublicKey:
             description: A public key for accessing nodes.
@@ -69,7 +123,7 @@ properties:
               To use this setting, the `topology.kubernetes.io/zone` label must be set on DVP nodes.
               [Read more about topological labels.](https://kubernetes.io/docs/reference/labels-annotations-taints/#topologykubernetesioregion)
 
-              > To set the required label for a DVP node, follow the [NodeGroup documentation](https://deckhouse.io/documentation/v1/modules/040-node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
+              > To set the required label for a DVP node, follow the [NodeGroup documentation](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-labels).
             items:
               type: string
             type: array
@@ -83,6 +137,8 @@ properties:
     type: object
   provider:
     additionalProperties: false
+    description: Settings for connecting to the parent Deckhouse Virtualization Platform
+      (DVP).
     properties:
       parameters:
         additionalProperties: false
@@ -113,14 +169,25 @@ properties:
     type: object
   storage:
     additionalProperties: false
+    description: |-
+      Storage subsystem settings.
+
+      Controls disk provisioning in the cluster.
     properties:
       disabled:
         default: false
+        description: |-
+          Disables the storage subsystem.
+
+          When set to `true`, disk provisioning in the cluster is unavailable.
         type: boolean
       parameters:
         additionalProperties: false
+        description: Parameters of the storage subsystem.
         properties:
           excludedStorageClasses:
+            description: A list of StorageClass names (or regex expressions for names)
+              to exclude from creation in the cluster.
             items:
               type: string
             type: array
@@ -129,8 +196,8 @@ properties:
     - parameters
     type: object
 required:
-- nodes
 - provider
+- nodes
 type: object
 x-config-version: 2
 x-doc-search:

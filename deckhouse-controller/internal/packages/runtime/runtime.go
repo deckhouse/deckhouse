@@ -19,10 +19,10 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"net/http"
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/Masterminds/semver/v3"
 	addonmodules "github.com/flant/addon-operator/pkg/module_manager/models/modules"
@@ -31,17 +31,17 @@ import (
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
 	kubeeventsmanager "github.com/flant/shell-operator/pkg/kube_events_manager"
 	schedulemanager "github.com/flant/shell-operator/pkg/schedule_manager"
-	"github.com/go-chi/chi/v5"
 	"go.opentelemetry.io/otel"
+	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/client-go/util/retry"
 	"k8s.io/client-go/util/workqueue"
-	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 	kclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/crd"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/cron"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
@@ -50,10 +50,12 @@ import (
 	symlinkdeploy "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/deployer/symlink"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/grants"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/health"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules/global"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/nelm"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/debug"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/socket"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/api/tcp"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/hookevent"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/lifecycle"
 	taskconfigure "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime/tasks/configure"
@@ -69,17 +71,32 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/pkg/app"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
 const (
+	// bootstrappedGlobalValue is the global value indicating completed cluster bootstrap.
 	bootstrappedGlobalValue = "clusterIsBootstrapped"
-	kubernetesVersionValue  = "kubernetesVersion"
-	deckhouseVersionValue   = "deckhouseVersion"
+	// kubernetesVersionValue is the global value containing the Kubernetes version.
+	kubernetesVersionValue = "kubernetesVersion"
+	// deckhouseVersionValue is the global value containing the Deckhouse version.
+	deckhouseVersionValue = "deckhouseVersion"
 
+	// runtimeTracer identifies tracing spans emitted by the package runtime.
 	runtimeTracer = "package-runtime"
+
+	// apiSocketPath is the Unix socket the package runtime API listens on.
+	apiSocketPath = "/tmp/deckhouse-debug.socket"
+	// apiTCPAddress and apiTCPPort are the loopback TCP endpoint serving the
+	// subset of the API that is safe for the pod network.
+	// 9652 is taken by the shell-operator debug server.
+	apiTCPAddress = "127.0.0.1"
+	apiTCPPort    = "9653"
+	// nelmMonitorRequestTimeout bounds discovery and metadata requests made by the NELM monitor client.
+	nelmMonitorRequestTimeout = 30 * time.Second
+	// apiShutdownTimeout bounds how long shutdown waits for in-flight API requests.
+	apiShutdownTimeout = 5 * time.Second
 )
 
 // Runtime orchestrates the full lifecycle of application packages: discovery,
@@ -100,10 +117,13 @@ type Runtime struct {
 	healthService    *health.Service    // Resources health monitor
 	appDeployer      deployerI          // Deploys and undeploys application package images
 	moduleDeployer   deployerI          // Deploys and undeploys module package images
+	registry         *registry.Service  // Registry service for managing package digests
 
-	status      *status.Service     // Tracks per-package condition chain
-	scheduler   *schedule.Scheduler // Evaluates enable/disable based on version constraints
-	debugServer *debug.Server       // Unix socket debug API
+	status       *status.Service     // Tracks per-package condition chain
+	scheduler    *schedule.Scheduler // Evaluates enable/disable based on version constraints
+	socketServer *socket.Server      // Full API surface over the Unix socket
+	tcpServer    *tcp.Server         // Subset safe for the pod network, over loopback TCP
+	apiServers   errgroup.Group      // Serve loops of both API servers
 
 	crdService        *crd.Service                        // Installs CRDs from package paths
 	objectPatcher     *objectpatch.ObjectPatcher          // Applies resource patches from hooks
@@ -129,7 +149,7 @@ type Runtime struct {
 
 // deployerI abstracts package image deployment to and removal from the filesystem.
 type deployerI interface {
-	Deploy(ctx context.Context, repo registry.Remote, packageName, deployedName, version string) error
+	Deploy(ctx context.Context, repo registry.Remote, packageName, deployedName, version string, force bool) error
 	Undeploy(ctx context.Context, deployedName string, keep bool) error
 	Cleanup(ctx context.Context, preserve []deployer.PreservePackage) error
 }
@@ -140,9 +160,9 @@ type moduleManagerI interface {
 	IsModuleEnabled(name string) bool
 }
 
-// New creates and initializes a Runtime with all subsystems wired together.
+// Build creates and initializes a Runtime with all subsystems wired together.
 // Blocks until the NELM cache completes its initial sync.
-func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManagerI, dc dependency.Container, metricStorage metricsstorage.Storage, logger *log.Logger) (*Runtime, error) {
+func Build(cli kclient.Client, moduleManager moduleManagerI, dc dependency.Container, metricStorage metricsstorage.Storage, logger *log.Logger) (*Runtime, error) {
 	r := new(Runtime)
 
 	r.apps = make(map[string]*apps.Application)
@@ -157,23 +177,29 @@ func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManag
 	r.scheduleManager = cron.NewManager(r.logger)
 	r.queueService = queue.NewService(logger)
 	r.status = status.NewService()
-	r.edition = edition
 
-	reg := registry.NewService(dc, logger)
+	edit, err := edition.Parse(app.Version)
+	if err != nil {
+		return nil, fmt.Errorf("new edition: %w", err)
+	}
+
+	r.edition = edit
+
+	r.registry = registry.NewService(dc, logger)
 	downloadedDir := app.DownloadedModulesDir()
 
 	appsDir := filepath.Join(downloadedDir, "apps")
 	modulesDir := filepath.Join(downloadedDir, "modules")
 
 	// Default to symlink backend (works everywhere, including MacOS)
-	r.appDeployer = symlinkdeploy.NewDeployer(reg, appsDir, logger)
-	r.moduleDeployer = symlinkdeploy.NewDeployer(reg, modulesDir, logger)
+	r.appDeployer = symlinkdeploy.NewDeployer(r.registry, appsDir, logger)
+	r.moduleDeployer = symlinkdeploy.NewDeployer(r.registry, modulesDir, logger)
 
 	// Prefer erofs backend when dm-verity is supported (better integrity guarantees)
 	if verity.IsSupported() {
 		logger.Info("erofs supported")
-		r.appDeployer = erofsdeploy.NewDeployer(reg, appsDir, logger)
-		r.moduleDeployer = erofsdeploy.NewDeployer(reg, modulesDir, logger)
+		r.appDeployer = erofsdeploy.NewDeployer(r.registry, appsDir, logger)
+		r.moduleDeployer = erofsdeploy.NewDeployer(r.registry, modulesDir, logger)
 	}
 
 	// Build object patcher with optimized rate limits for batch operations
@@ -200,10 +226,6 @@ func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManag
 	// Initialize scheduler with enabling/disabling callbacks
 	r.buildScheduler(cli)
 
-	if err := r.loadEmbedded(context.Background()); err != nil {
-		return nil, fmt.Errorf("load embedded: %w", err)
-	}
-
 	// Build NELM service with its own client and runtime cache for resource monitoring
 	if err := r.buildNelmService(); err != nil {
 		return nil, fmt.Errorf("build nelm service: %w", err)
@@ -219,109 +241,39 @@ func New(cli kclient.Client, edition *edition.Edition, moduleManager moduleManag
 		return nil, fmt.Errorf("build health service: %w", err)
 	}
 
-	if err := r.registerDebugServer("/tmp/deckhouse-debug.socket"); err != nil {
-		return nil, fmt.Errorf("register debug server: %w", err)
-	}
+	r.buildAPIServers()
 
 	return r, nil
 }
 
-// registerDebugServer starts a Unix socket HTTP server exposing debug endpoints
-// for package state introspection (/packages/dump, /packages/global/dump, /packages/queues/dump, /packages/render/{name}).
-func (r *Runtime) registerDebugServer(socketPath string) error {
-	r.debugServer = debug.NewServer(r.logger)
-	if err := r.debugServer.Start(socketPath); err != nil {
-		return fmt.Errorf("start debug server: %w", err)
+// loadGlobal loads the global module from the embedded directory and registers
+// it in the status service and the package store. Scheduler wiring happens
+// later in buildScheduler/AddNode, not here.
+func (r *Runtime) loadGlobal(ctx context.Context) error {
+	ctx, span := otel.Tracer(runtimeTracer).Start(ctx, "loadGlobal")
+	defer span.End()
+
+	r.logger.Debug("load global package")
+
+	conf, err := loader.LoadGlobalConf(ctx, r.logger)
+	if err != nil {
+		return fmt.Errorf("load global conf: %w", err)
 	}
 
-	r.debugServer.Register(http.MethodGet, "/packages/dump", func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Set("Content-Type", "application/yaml")
-		w.WriteHeader(http.StatusOK)
+	conf.Patcher = r.objectPatcher
+	conf.ScheduleManager = r.scheduleManager
+	conf.KubeEventsManager = r.kubeEventsManager
 
-		if name := req.URL.Query().Get("name"); name != "" {
-			w.Write(r.DumpByName(name)) //nolint:errcheck
-		} else {
-			w.Write(r.Dump()) //nolint:errcheck
-		}
-	})
+	r.global, err = global.NewModuleByConfig(conf, r.logger)
+	if err != nil {
+		return fmt.Errorf("new global module: %w", err)
+	}
 
-	r.debugServer.Register(http.MethodGet, "/packages/global/dump", func(w http.ResponseWriter, _ *http.Request) {
-		w.Header().Set("Content-Type", "application/yaml")
-		w.WriteHeader(http.StatusOK)
-
-		w.Write(r.DumpGlobal()) //nolint:errcheck
-	})
-
-	r.debugServer.Register(http.MethodGet, "/packages/queues/dump", func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Set("Content-Type", "application/yaml")
-		w.WriteHeader(http.StatusOK)
-
-		queues := r.collectQueues(req.URL.Query().Get("name"))
-		w.Write(r.queueService.Dump(queues...)) //nolint:errcheck
-	})
-
-	r.debugServer.Register(http.MethodGet, "/packages/scheduler/dump", func(w http.ResponseWriter, req *http.Request) {
-		w.Header().Set("Content-Type", "application/yaml")
-		w.WriteHeader(http.StatusOK)
-
-		if name := req.URL.Query().Get("name"); name != "" {
-			w.Write(r.scheduler.DumpByName(name)) //nolint:errcheck
-		} else {
-			w.Write(r.scheduler.Dump()) //nolint:errcheck
-		}
-	})
-
-	r.debugServer.Register(http.MethodGet, "/packages/render/{name}", func(w http.ResponseWriter, req *http.Request) {
-		packageName := chi.URLParam(req, "name")
-		if packageName == "" {
-			http.Error(w, "package name is required", http.StatusBadRequest)
-			return
-		}
-
-		rendered, err := r.renderManifests(req.Context(), packageName)
-		if err != nil {
-			if errors.Is(err, nelm.ErrPackageNotHelm) {
-				http.Error(w, "package has no Helm chart", http.StatusBadRequest)
-				return
-			}
-			http.Error(w, fmt.Sprintf("render failed: %v", err), http.StatusInternalServerError)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/yaml")
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(rendered)) //nolint:errcheck
-	})
-
-	r.debugServer.Register(http.MethodGet, "/packages/snapshots/{name}", func(w http.ResponseWriter, req *http.Request) {
-		packageName := chi.URLParam(req, "name")
-		if packageName == "" {
-			http.Error(w, "package name is required", http.StatusBadRequest)
-			return
-		}
-
-		r.mu.RLock()
-		app := r.apps[packageName]
-		mod := r.modules[packageName]
-		r.mu.RUnlock()
-
-		var data []byte
-		switch {
-		case app != nil:
-			data = app.GetHookSnapshotsDump()
-		case mod != nil:
-			data = mod.GetHookSnapshotsDump()
-		case packageName == r.global.GetName():
-			data = r.global.GetHookSnapshotsDump()
-		default:
-			http.Error(w, "package not found", http.StatusNotFound)
-			return
-		}
-
-		w.Header().Set("Content-Type", "application/yaml")
-		w.WriteHeader(http.StatusOK)
-		w.Write(data) //nolint:errcheck
-	})
+	r.status.NewStatus(r.global.GetName())
+	r.status.SetConditionTrue(r.global.GetName(), status.ConditionRequirementsMet)
+	r.status.SetConditionTrue(r.global.GetName(), status.ConditionReadyOnFilesystem)
+	r.status.SetConditionTrue(r.global.GetName(), status.ConditionLoaded)
+	r.packages.Update(r.global.GetName(), r.global.GetVersion().String(), 0, make(addonutils.Values), "", false)
 
 	return nil
 }
@@ -388,11 +340,7 @@ func (r *Runtime) buildKubeEventsManager() error {
 // NELM manages Helm releases and monitors their resources for drift detection.
 // This requires:
 //  1. A dedicated Kubernetes client with rate limits tuned for monitoring
-//  2. A controller-runtime cache for efficient resource queries
-//
-// The cache must be started and synced before the NELM service can function:
-//   - cache.Start() runs the cache informers in the background
-//   - cache.WaitForCacheSync() blocks until initial resource listing completes
+//  2. A metadata client for bounded, point-in-time resource queries
 //
 // Resource monitoring detects:
 //   - Missing resources (deleted outside of Helm)
@@ -404,32 +352,14 @@ func (r *Runtime) buildNelmService() error {
 	client.WithContextName(app.KubeContext())
 	client.WithConfigPath(app.KubeConfig())
 	client.WithRateLimiterSettings(app.HelmMonitorKubeClientQPS(), app.HelmMonitorKubeClientBurst())
+	client.WithTimeout(nelmMonitorRequestTimeout)
 	client.WithMetricPrefix("packages_nelm_monitor_")
 
 	if err := client.Init(); err != nil {
 		return fmt.Errorf("initialize nelm service client: %w", err)
 	}
 
-	// Create controller-runtime cache for efficient resource queries during monitoring
-	cache, err := runtimecache.New(client.RestConfig(), runtimecache.Options{})
-	if err != nil {
-		return fmt.Errorf("create runtime cache: %w", err)
-	}
-
-	// Start cache informers in background
-	go func() {
-		if err = cache.Start(context.Background()); err != nil {
-			r.logger.Error("failed to start cache", "error", err)
-		}
-	}()
-
-	// Wait for cache to complete initial sync before proceeding
-	// This ensures monitors have current resource state from the start
-	if !cache.WaitForCacheSync(context.Background()) {
-		return fmt.Errorf("cache sync failed")
-	}
-
-	r.nelmService = nelm.NewService(cache, r.scheduler.Reschedule, r.status, r.logger)
+	r.nelmService = nelm.NewService(client, r.scheduler.Reschedule, r.status, r.logger)
 
 	return nil
 }
@@ -586,10 +516,15 @@ func (r *Runtime) buildScheduler(cli kclient.Client) {
 		schedule.WithKubeVersionGetter(kubernetesVersionGetter))
 }
 
-// Run starts the scheduler event loop in a background goroutine. It listens for
-// schedule and disable events from the scheduler and dispatches them to the
-// appropriate handler, driving the enable/disable lifecycle for all packages.
-func (r *Runtime) Run() {
+// Run binds the API listeners and starts the scheduler event loop in a
+// background goroutine. The loop listens for schedule and disable events from
+// the scheduler and dispatches them to the appropriate handler, driving the
+// enable/disable lifecycle for all packages.
+func (r *Runtime) Run() error {
+	if err := r.startAPIServers(); err != nil {
+		return fmt.Errorf("start api servers: %w", err)
+	}
+
 	r.hookEventHandler.Start()
 	r.healthService.Start()
 
@@ -611,6 +546,8 @@ func (r *Runtime) Run() {
 			}
 		}
 	}()
+
+	return nil
 }
 
 // scheduleGlobal runs the global node's work whenever the scheduler schedules it,
@@ -659,7 +596,7 @@ func (r *Runtime) scheduleGlobal(enabled []string) {
 	enableTask := taskenable.NewTask(r.global, r.nelmService, r.queueService, r.status, r.logger)
 	r.queueService.Enqueue(ctx, r.global.GetName(), enableTask)
 
-	runTask := taskglobalrun.NewTask(r.global, enabledModules, r.crdService, r.queueService, r.status, r.logger)
+	runTask := taskglobalrun.NewTask(r.global, enabledModules, r.crdService, r.nelmService, r.objectPatcher, r.queueService, r.status, r.logger)
 	r.queueService.Enqueue(ctx, r.global.GetName(), runTask, onDone)
 }
 
@@ -800,6 +737,14 @@ func (r *Runtime) Stop() {
 
 	// Stop reflecting status to CRs (unblocks the status consumer loop)
 	r.status.Shutdown()
+
+	// Close the API listeners last so state stays introspectable during shutdown
+	ctx, cancel := context.WithTimeout(context.Background(), apiShutdownTimeout)
+	defer cancel()
+
+	if err := r.stopAPIServers(ctx); err != nil {
+		r.logger.Warn("stop api servers failed", log.Err(err))
+	}
 }
 
 // PreservePackage identifies one installed Package instance to preserve during Cleanup.
@@ -836,7 +781,113 @@ func (r *Runtime) Cleanup(ctx context.Context, preserves []PreservePackage) {
 	}
 
 	// do not cleanup modules namespace
-	r.nelmService.Cleanup(ctx, keepReleases, app.NamespaceDeckhouse)
+	if err := r.nelmService.Cleanup(ctx, keepReleases, app.NamespaceDeckhouse); err != nil {
+		r.logger.Warn("cleanup releases failed", log.Err(err))
+	}
+}
+
+// PreserveApplication identifies one installed application instance to preserve during CleanupV2.
+type PreserveApplication struct {
+	Namespace string
+	Name      string
+
+	PackageName string
+	Repository  string
+	Version     string
+}
+
+// PreserveModule identifies one installed module to preserve during CleanupV2. A module releases
+// under its own name in the Deckhouse namespace, and an embedded one owns such a release while
+// its package ships in the image, outside the deployer root.
+type PreserveModule struct {
+	Name       string
+	Repository string
+	Version    string
+
+	Embedded bool
+}
+
+// CleanupV2 removes package directories on disk — downloaded and mounted alike — and orphan nelm
+// releases in the cluster that no preserved application or module claims. Applications and modules
+// are passed apart because each deployer is scoped to its own root and a preserved package cannot
+// say which root it belongs to.
+//
+// Both lists are the whole desired state, so this runs once during bootstrap: after that state is
+// settled and before any package is deployed.
+func (r *Runtime) CleanupV2(ctx context.Context, preserveApps []PreserveApplication, preserveModules []PreserveModule) error {
+	// the image always ships modules, so an empty list is a state never read rather than one to act
+	// on — acting on it would drop every module on disk and uninstall every module release
+	if len(preserveModules) == 0 {
+		return errors.New("no module to preserve")
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	var errs error
+	if err := r.appDeployer.Cleanup(ctx, appPreservePackages(preserveApps)); err != nil {
+		errs = errors.Join(errs, fmt.Errorf("cleanup application packages: %w", err))
+	}
+
+	if err := r.moduleDeployer.Cleanup(ctx, modulePreservePackages(preserveModules)); err != nil {
+		errs = errors.Join(errs, fmt.Errorf("cleanup module packages: %w", err))
+	}
+
+	// every release is kept by name now, so the Deckhouse namespace is no longer exempt
+	if err := r.nelmService.Cleanup(ctx, releasePreserveKeys(preserveApps, preserveModules)); err != nil {
+		errs = errors.Join(errs, fmt.Errorf("cleanup releases: %w", err))
+	}
+
+	return errs
+}
+
+// appPreservePackages maps applications onto the packages the application deployer keys on.
+func appPreservePackages(preserves []PreserveApplication) []deployer.PreservePackage {
+	packages := make([]deployer.PreservePackage, 0, len(preserves))
+	for _, preserve := range preserves {
+		packages = append(packages, deployer.PreservePackage{
+			Name:       preserve.PackageName,
+			Repository: preserve.Repository,
+			Version:    preserve.Version,
+		})
+	}
+
+	return packages
+}
+
+// modulePreservePackages does the same for modules, skipping the embedded ones: their packages sit
+// outside the deployer root, so the module deployer can drop nothing of theirs.
+func modulePreservePackages(preserves []PreserveModule) []deployer.PreservePackage {
+	packages := make([]deployer.PreservePackage, 0, len(preserves))
+	for _, preserve := range preserves {
+		if preserve.Embedded {
+			continue
+		}
+
+		packages = append(packages, deployer.PreservePackage{
+			Name:       preserve.Name,
+			Repository: preserve.Repository,
+			Version:    preserve.Version,
+		})
+	}
+
+	return packages
+}
+
+// releasePreserveKeys returns the releases to keep, keyed "<namespace>/<release>". An embedded
+// module is kept here, unlike on disk: it owns a release as any other module does.
+func releasePreserveKeys(preserveApps []PreserveApplication, preserveModules []PreserveModule) map[string]struct{} {
+	keep := make(map[string]struct{}, len(preserveApps)+len(preserveModules))
+
+	for _, preserve := range preserveApps {
+		keep[preserve.Namespace+"/"+apps.BuildName(preserve.Namespace, preserve.Name)] = struct{}{}
+	}
+
+	for _, preserve := range preserveModules {
+		keep[app.NamespaceDeckhouse+"/"+preserve.Name] = struct{}{}
+	}
+
+	return keep
 }
 
 // GetStatus returns package status.
@@ -844,9 +895,14 @@ func (r *Runtime) GetStatus(name string) status.Status {
 	return r.status.GetStatus(name)
 }
 
-// GetStatusQueue returns the status queue for external access
-func (r *Runtime) GetStatusQueue() workqueue.TypedRateLimitingInterface[string] {
-	return r.status.Queue()
+// GetAppStatusQueue returns the application status queue for external access
+func (r *Runtime) GetAppStatusQueue() workqueue.TypedRateLimitingInterface[string] {
+	return r.status.AppQueue()
+}
+
+// GetModuleStatusQueue returns the module status queue for external access
+func (r *Runtime) GetModuleStatusQueue() workqueue.TypedRateLimitingInterface[string] {
+	return r.status.ModuleQueue()
 }
 
 // PauseScheduler suspends the scheduler so it stops firing enable/disable callbacks.

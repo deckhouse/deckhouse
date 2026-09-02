@@ -34,6 +34,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/kubeerrors"
 )
 
 var createUpdateNodeUsersDefaultOpts = retry.AttemptsWithWaitOpts(450, 1*time.Second)
@@ -47,8 +48,8 @@ var errNodeUserSaveTransient = fmt.Errorf("save NodeUser: transient error, may s
 
 // wrapNodeUserSaveErr tags err as transient unless it is a permanent authorization failure, so
 // the retry loop can whitelist errNodeUserSaveTransient.
-func wrapNodeUserSaveErr(prefix string, err error) error {
-	if k8errors.IsForbidden(err) || k8errors.IsUnauthorized(err) {
+func wrapNodeUserSaveErr(ctx context.Context, prefix string, err error) error {
+	if kubeerrors.IsPermanentAuthError(ctx, err) {
 		return fmt.Errorf("%s: %w", prefix, err)
 	}
 	return fmt.Errorf("%w: %s: %w", errNodeUserSaveTransient, prefix, err)
@@ -75,13 +76,13 @@ func CreateOrUpdateNodeUser(ctx context.Context, kubeProvider kubernetes.KubeCli
 		if err := createNodeUser(ctx, kubeCl, nodeUserResource); err != nil {
 			if k8errors.IsAlreadyExists(err) {
 				if err := updateNodeUser(ctx, kubeCl, nodeUserResource); err != nil {
-					return wrapNodeUserSaveErr("Failed to update NodeUser", err)
+					return wrapNodeUserSaveErr(ctx, "Failed to update NodeUser", err)
 				}
 
 				return nil
 			}
 
-			return wrapNodeUserSaveErr("Failed to create NodeUser", err)
+			return wrapNodeUserSaveErr(ctx, "Failed to create NodeUser", err)
 		}
 
 		return nil

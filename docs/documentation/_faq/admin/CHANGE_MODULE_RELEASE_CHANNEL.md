@@ -26,11 +26,11 @@ To change the release channel for a module from a source, follow these steps:
      name: my-module-policy
    spec:
      releaseChannel: Alpha
-     # If necessary, specify the update mode and update windows.
-     # update:
-     #   mode: AutoPatch
-     #   windows: []
+     update:
+       mode: Auto
    ```
+
+   If necessary, change the [update mode](./reference/api/cr.html#moduleupdatepolicy-v1alpha2-spec-update-mode) and configure [update windows](./reference/api/cr.html#moduleupdatepolicy-v1alpha2-spec-update-windows).
 
    Ensure that the policy has been created:
 

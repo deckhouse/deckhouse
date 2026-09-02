@@ -1,5 +1,6 @@
 ---
 title: "Документация Deckhouse Code"
+description: Документация Deckhouse Code по управлению репозиториями, code review и CI/CD
 permalink: ru/code/documentation/
 lang: ru
 ---

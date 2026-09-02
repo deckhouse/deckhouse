@@ -16,53 +16,12 @@
 
 {!{ define "promote_image_edition_steps" }!}
 {!{- $edition := index . 0 -}!}
-- name: Copy attestations ({!{$edition}!})
-  env:
-    WERF_ENV: {!{$edition}!}
-    STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
-    DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
-  run: |
-    set -euo pipefail
-    function regctl_copy() {
-      local attempt
-      for attempt in $(seq 1 5); do
-        regctl image copy "$@" && return 0
-        [[ $attempt -eq 5 ]] && return 1
-        echo "⚠️ [$(date -u)] regctl copy failed (attempt ${attempt}/5), retrying in 5s..."
-        sleep 5
-      done
-    }
-
-    REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
-    IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
-    STAGE_PATH="${STAGE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
-    PROD_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
-
-    DIGESTS_JSON="images_digests-att.json"
-
-    if ! regctl image get-file "${STAGE_PATH}/install:${IMAGE_TAG}" /deckhouse/candi/images_digests.json > "${DIGESTS_JSON}" 2>/dev/null; then
-      echo "⚠️ [$(date -u)] Could not read /deckhouse/candi/images_digests.json from '${STAGE_PATH}/install:${IMAGE_TAG}', skipping digest attestations copy"
-      exit 1
-    fi
-
-    while IFS= read -r IMG_DIGEST; do
-      [[ -z "${IMG_DIGEST}" ]] && continue
-      D_HEX="${IMG_DIGEST#sha256:}"
-      SRC_ATT="${STAGE_PATH}:sha256-${D_HEX}.att"
-      DST_ATT="${PROD_PATH}:sha256-${D_HEX}.att"
-      if regctl image manifest "${SRC_ATT}" >/dev/null 2>&1; then
-        echo "⚓️ 💫 [$(date -u)] Copying attestation '${SRC_ATT}' -> '${DST_ATT}'"
-        regctl_copy "${SRC_ATT}" "${DST_ATT}"
-      fi
-    done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
-
-    rm -rf ${DIGESTS_JSON}
-
 - name: Promote images from stage to prod ({!{$edition}!})
   env:
     WERF_ENV: {!{$edition}!}
     STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
     DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+    REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
   run: |
     set -euo pipefail
     function regctl_copy() {
@@ -108,11 +67,6 @@
       fi
     }
 
-    promote_with_att ""
-    promote_with_att "install"
-    promote_with_att "install-standalone"
-    promote_with_att "release-channel"
-
     DIGESTS_JSON="images_digests-promote.json"
 
     # Promote from images_digests.json
@@ -131,6 +85,54 @@
       echo "⚠️ [$(date -u)] Could not read /deckhouse/candi/images_digests.json from '${STAGE_PATH}/install:${IMAGE_TAG}'"
       exit 1
     fi
+
+    promote_with_att ""
+    promote_with_att "install"
+    promote_with_att "install-standalone"
+    promote_with_att "release-channel"
+
+- name: Copy attestations ({!{$edition}!})
+  env:
+    WERF_ENV: {!{$edition}!}
+    STAGE_REGISTRY_HOST: ${{ steps.secrets.outputs.DECKHOUSE_REGISTRY_STAGE_HOST }}
+    DECKHOUSE_REGISTRY_HOST: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+    REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
+  run: |
+    set -euo pipefail
+    function regctl_copy() {
+      local attempt
+      for attempt in $(seq 1 5); do
+        regctl image copy "$@" && return 0
+        [[ $attempt -eq 5 ]] && return 1
+        echo "⚠️ [$(date -u)] regctl copy failed (attempt ${attempt}/5), retrying in 5s..."
+        sleep 5
+      done
+    }
+
+    REGISTRY_SUFFIX=$(echo "${WERF_ENV}" | tr '[:upper:]' '[:lower:]')
+    IMAGE_TAG=$(werf slugify --format docker-tag "${CI_COMMIT_TAG}")
+    STAGE_PATH="${STAGE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
+    PROD_PATH="${DECKHOUSE_REGISTRY_HOST}/deckhouse/${REGISTRY_SUFFIX}"
+
+    DIGESTS_JSON="images_digests-att.json"
+
+    if ! regctl image get-file "${STAGE_PATH}/install:${IMAGE_TAG}" /deckhouse/candi/images_digests.json > "${DIGESTS_JSON}" 2>/dev/null; then
+      echo "⚠️ [$(date -u)] Could not read /deckhouse/candi/images_digests.json from '${STAGE_PATH}/install:${IMAGE_TAG}', skipping digest attestations copy"
+      exit 1
+    fi
+
+    while IFS= read -r IMG_DIGEST; do
+      [[ -z "${IMG_DIGEST}" ]] && continue
+      D_HEX="${IMG_DIGEST#sha256:}"
+      SRC_ATT="${STAGE_PATH}:sha256-${D_HEX}.att"
+      DST_ATT="${PROD_PATH}:sha256-${D_HEX}.att"
+      if regctl image manifest "${SRC_ATT}" >/dev/null 2>&1; then
+        echo "⚓️ 💫 [$(date -u)] Copying attestation '${SRC_ATT}' -> '${DST_ATT}'"
+        regctl_copy "${SRC_ATT}" "${DST_ATT}"
+      fi
+    done < <(jq -r '[.. | strings | select(test("^sha256:[a-f0-9]{64}$"))] | unique | .[]' "${DIGESTS_JSON}")
+
+    rm -rf ${DIGESTS_JSON}
 
 - name: Check DKP images manifests in public registry ({!{$edition}!})
   env:

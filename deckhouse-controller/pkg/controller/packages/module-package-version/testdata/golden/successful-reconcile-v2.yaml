@@ -9,6 +9,13 @@ metadata:
     packages.deckhouse.io/package: test-module
     packages.deckhouse.io/repository: deckhouse
   name: deckhouse-test-module-v1.0.0
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: true
+    kind: PackageRepository
+    name: deckhouse
+    uid: ""
   resourceVersion: "3"
 spec:
   packageName: test-module
@@ -35,6 +42,20 @@ status:
         en: EN disable message
         ru: RU disable message
     stage: GA
+  packageSchemas:
+    settingsSchema:
+      openAPIV3Schema:
+        properties:
+          logLevel:
+            type: string
+        type: object
+    valuesSchema:
+      openAPIV3Schema:
+        properties:
+          internal:
+            type: object
+        type: object
+  used: false
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: PackageRepository

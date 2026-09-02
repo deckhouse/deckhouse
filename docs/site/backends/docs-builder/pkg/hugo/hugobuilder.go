@@ -15,6 +15,7 @@
 package hugo
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -72,8 +73,8 @@ func (b *hugoBuilder) withConf(fn func(conf *commonConfig)) {
 	fn(b.conf)
 }
 
-func (b *hugoBuilder) build() error {
-	err := b.fullBuild()
+func (b *hugoBuilder) build(ctx context.Context) error {
+	err := b.fullBuild(ctx)
 	if err != nil {
 		return fmt.Errorf("full build: %w", err)
 	}
@@ -101,7 +102,7 @@ func (b *hugoBuilder) build() error {
 	return nil
 }
 
-func (b *hugoBuilder) buildSites() error {
+func (b *hugoBuilder) buildSites(ctx context.Context) error {
 	h, err := b.hugo()
 	if err != nil {
 		return fmt.Errorf("hugo: %w", err)
@@ -109,6 +110,14 @@ func (b *hugoBuilder) buildSites() error {
 
 	mu.Lock()
 	defer mu.Unlock()
+
+	// Last cancellation checkpoint before the heavy render. hugo's
+	// HugoSites.Build takes no context (v0.163.3 builds under an internal
+	// context.Background), so once this call starts it runs to completion;
+	// guarding here keeps a canceled request from kicking off a fresh pass.
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 
 	// NoBuildLock is true to prevent hugo creating lock file
 	// we use mutex to lock the entire hugo build
@@ -214,7 +223,7 @@ func (b *hugoBuilder) doWithPublishDirs(f func(sourceFs *filesystems.SourceFiles
 	return langCount, nil
 }
 
-func (b *hugoBuilder) fullBuild() error {
+func (b *hugoBuilder) fullBuild(ctx context.Context) error {
 	var (
 		g         errgroup.Group
 		langCount map[string]uint64
@@ -224,6 +233,9 @@ func (b *hugoBuilder) fullBuild() error {
 	b.logger.Info(hugo.BuildVersionString())
 
 	copyStaticFunc := func() error {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
 		cnt, err := b.copyStatic()
 		if err != nil {
 			return fmt.Errorf("error copying static files: %w", err)
@@ -232,7 +244,7 @@ func (b *hugoBuilder) fullBuild() error {
 		return nil
 	}
 	buildSitesFunc := func() error {
-		if err := b.buildSites(); err != nil {
+		if err := b.buildSites(ctx); err != nil {
 			return fmt.Errorf("error building site: %w", err)
 		}
 		return nil

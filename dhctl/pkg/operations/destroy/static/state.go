@@ -19,6 +19,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/deckhouse/lib-connection/pkg/ssh/session"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 )
 
@@ -64,6 +66,10 @@ func (s *State) NodeUser(ctx context.Context) (*NodesWithCredentials, error) {
 	}
 
 	return &creds, nil
+}
+
+func (s *State) MasterHosts(ctx context.Context) ([]session.Host, error) {
+	return state.GetMasterHostsIPs(ctx, s.cache)
 }
 
 func (s *State) SetNodeUserExists(ctx context.Context) error {

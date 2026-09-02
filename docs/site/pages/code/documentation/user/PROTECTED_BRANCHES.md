@@ -1,8 +1,7 @@
 ---
 title: "Protected branches"
-menuTitle: Protected branches
 force_searchable: true
-description: Protected branches
+description: How to restrict pushes and merges for important repository branches
 permalink: en/code/documentation/user/protected-branches.html
 lang: en
 weight: 50
