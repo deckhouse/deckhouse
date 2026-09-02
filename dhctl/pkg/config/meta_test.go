@@ -19,6 +19,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"testing"
@@ -27,6 +28,8 @@ import (
 	"github.com/Masterminds/sprig/v3"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
@@ -1063,4 +1066,89 @@ func TestTerraNodeGroupCarriesItsSystemType(t *testing.T) {
 
 	require.Equal(t, "Immutable", byName["front"].SystemType)
 	require.Empty(t, byName["worker"].SystemType, "a group that names no systemType keeps none")
+}
+
+func TestFindTerraNodeGroup(t *testing.T) {
+	legacy := json.RawMessage(`[{"name":"system","replicas":1},{"name":"worker","replicas":2}]`)
+
+	tests := []struct {
+		name    string
+		specs   []TerraNodeGroupSpec
+		pcc     map[string]json.RawMessage
+		group   string
+		want    []byte
+		wantErr string
+	}{
+		{
+			name:  "mc-flow: specs derived from the cluster node groups, no nodeGroups in the provider cluster configuration",
+			specs: []TerraNodeGroupSpec{{Name: "system"}, {Name: "worker"}},
+			pcc:   map[string]json.RawMessage{"layout": json.RawMessage(`"Standard"`)},
+			group: "worker",
+		},
+		{
+			name:  "legacy: the raw entry of the group at its index",
+			specs: []TerraNodeGroupSpec{{Name: "system"}, {Name: "worker"}},
+			pcc:   map[string]json.RawMessage{"nodeGroups": legacy},
+			group: "worker",
+			want:  []byte(`{"name":"worker","replicas":2}`),
+		},
+		{
+			name:  "legacy: an unknown group is not in the specs",
+			specs: []TerraNodeGroupSpec{{Name: "system"}, {Name: "worker"}},
+			pcc:   map[string]json.RawMessage{"nodeGroups": legacy},
+			group: "absent",
+		},
+		{
+			name:  "an explicitly empty nodeGroups list does not address the derived specs",
+			specs: []TerraNodeGroupSpec{{Name: "system"}, {Name: "worker"}},
+			pcc:   map[string]json.RawMessage{"nodeGroups": json.RawMessage(`[]`)},
+			group: "worker",
+		},
+		{
+			name:    "a malformed nodeGroups list stops the caller",
+			specs:   []TerraNodeGroupSpec{{Name: "worker"}},
+			pcc:     map[string]json.RawMessage{"nodeGroups": json.RawMessage(`{"worker":{}}`)},
+			group:   "worker",
+			wantErr: "unmarshal node groups from provider cluster configuration",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &MetaConfig{TerraNodeGroupSpecs: tt.specs, ProviderClusterConfig: tt.pcc}
+
+			settings, err := m.FindTerraNodeGroup(t.Context(), tt.group)
+
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				require.Nil(t, settings)
+				return
+			}
+			require.NoError(t, err)
+			if tt.want == nil {
+				require.Nil(t, settings)
+				return
+			}
+			require.JSONEq(t, string(tt.want), string(settings))
+		})
+	}
+}
+
+// An mc-flow cluster carries no nodeGroups in its provider cluster configuration
+// at all, so every node of every converge unmarshalled nil and logged a bare
+// "unexpected end of JSON input" at ERROR. An absent key is not a failure.
+func TestFindTerraNodeGroupOnMcFlowLogsNothing(t *testing.T) {
+	m, err := cloudMetaConfig(mcFlowResources).Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+	require.NotEmpty(t, m.TerraNodeGroupSpecs, "the specs come from the cluster node groups")
+	require.NotContains(t, m.ProviderClusterConfig, "nodeGroups")
+
+	var captured bytes.Buffer
+	ctx := dhlog.ToContext(t.Context(), slog.New(slog.NewTextHandler(&captured, nil)))
+
+	settings, err := m.FindTerraNodeGroup(ctx, "worker")
+
+	require.NoError(t, err)
+	require.Nil(t, settings)
+	require.Empty(t, captured.String(), "nothing to report: %s", captured.String())
 }
