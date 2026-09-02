@@ -16,21 +16,21 @@
 
 # Runs from the create job's `after_script`, so CI_JOB_STATUS reflects the
 # create_cluster result. Appends the e2e outcome to the comment posted by
-# e2e-ensure-build (COMMENT_ID/MERGE_REQUEST_IID, via dotenv) and sets a
+# e2e-ensure-build (NOTE_ID/MERGE_REQUEST_IID, via dotenv) and sets a
 # final e2e-framework::<success|failed> label, removing the other one first.
 #
 # after_script runs in a separate shell from script/before_script and its
 # exit code doesn't affect the job result — this script is best-effort and
 # never fails the job it's attached to.
 
-# BOATSWAIN_TOKEN arrives via dotenv (needs:artifacts) from e2e-ensure-build,
+# COMMENT_TOKEN arrives via dotenv (needs:artifacts) from e2e-ensure-build,
 # which fetched it once from vault — this job doesn't fetch its own secret.
-BOATSWAIN_TOKEN="${BOATSWAIN_TOKEN:-}"
-COMMENT_ID="${COMMENT_ID:-}"
+COMMENT_TOKEN="${COMMENT_TOKEN:-}"
+NOTE_ID="${NOTE_ID:-}"
 MERGE_REQUEST_IID="${MERGE_REQUEST_IID:-}"
 
-if [[ -z "${COMMENT_ID}" || -z "${MERGE_REQUEST_IID}" || -z "${BOATSWAIN_TOKEN}" ]]; then
-  echo "COMMENT_ID/MERGE_REQUEST_IID/BOATSWAIN_TOKEN not available; skipping e2e finish notification"
+if [[ -z "${NOTE_ID}" || -z "${MERGE_REQUEST_IID}" || -z "${COMMENT_TOKEN}" ]]; then
+  echo "NOTE_ID/MERGE_REQUEST_IID/COMMENT_TOKEN not available; skipping e2e finish notification"
   exit 0
 fi
 
@@ -40,7 +40,7 @@ api() {
   shift 2
   curl -sS --fail-with-body \
     --request "${method}" \
-    --header "PRIVATE-TOKEN: ${BOATSWAIN_TOKEN}" \
+    --header "PRIVATE-TOKEN: ${COMMENT_TOKEN}" \
     "$@" \
     "${url}"
 }
@@ -53,17 +53,17 @@ else
   STATUS_LINE="❌ e2e finished: failed (status=${CI_JOB_STATUS:-unknown}) — [job](${CI_JOB_URL:-})"
 fi
 
-note_url="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/merge_requests/${MERGE_REQUEST_IID}/notes/${COMMENT_ID}"
+note_url="${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/merge_requests/${MERGE_REQUEST_IID}/notes/${NOTE_ID}"
 
 current_body="$(api GET "${note_url}" | jq -r '.body // empty')"
 if [[ -z "${current_body}" ]]; then
-  echo "Could not fetch comment ${COMMENT_ID} on MR ${MERGE_REQUEST_IID}; skipping update" >&2
+  echo "Could not fetch comment ${NOTE_ID} on MR ${MERGE_REQUEST_IID}; skipping update" >&2
 else
   new_body="$(printf '%s\n\n%s' "${current_body}" "${STATUS_LINE}")"
   if api PUT "${note_url}" --data-urlencode "body=${new_body}" >/dev/null; then
-    echo "Updated comment ${COMMENT_ID} on MR ${MERGE_REQUEST_IID}"
+    echo "Updated comment ${NOTE_ID} on MR ${MERGE_REQUEST_IID}"
   else
-    echo "Failed to update comment ${COMMENT_ID} on MR ${MERGE_REQUEST_IID}" >&2
+    echo "Failed to update comment ${NOTE_ID} on MR ${MERGE_REQUEST_IID}" >&2
   fi
 fi
 
