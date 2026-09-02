@@ -55,4 +55,8 @@ spec:
 
 A `global.modules.storageClass` setting is used as the default value when creating a PVC. If a Prometheus PVC already exists, its `storageClassName` determines the effective `storageClass`, so changing the global setting does not change existing PVCs. The global setting can affect storage when switching from `emptyDir` to a PVC or when the PVC has not yet been created. To change the StorageClass for `prometheus-main` or `prometheus-longterm`, specify `storageClass` or `longtermStorageClass`, respectively, in the `prometheus` module's `ModuleConfig`.
 
+{% alert level="warning" %}
+Changing `storageClass` or `longtermStorageClass` in the `ModuleConfig` deletes and recreates the existing PVC. Before changing it, check the PersistentVolume reclaim policy and back up the data.
+{% endalert %}
+
 A complete description of all settings is available in the [prometheus module documentation](/modules/prometheus/configuration.html).
