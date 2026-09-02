@@ -672,7 +672,7 @@ If your provider uses the same mechanism, apply the corresponding changes to the
 
 Harbor installation is now complete! 🎉
 
-**Configuring Harbor**
+#### Configuring Harbor
 
 Create a project and credentials used to work with it.
 
