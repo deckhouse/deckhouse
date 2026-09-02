@@ -5,8 +5,8 @@ image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: cni-cilium/bin-cilium-src-artifact
-  add: /src/cilium
+- image: cni-cilium/bin-cilium-src
+  add: /src
   to: /src/cilium
   before: install
 mount:
@@ -36,8 +36,8 @@ import:
   add: /out/linux/amd64/usr/bin/hubble-relay
   to: /usr/local/bin/hubble-relay
   before: install
-- image: cni-cilium/gops-artifact
-  add: /out/linux/amd64/bin/gops
+- image: cni-cilium/bin-gops
+  add: /out/usr/bin/gops
   to: /bin/gops
   before: install
 {{- include "image mount points" . }}
