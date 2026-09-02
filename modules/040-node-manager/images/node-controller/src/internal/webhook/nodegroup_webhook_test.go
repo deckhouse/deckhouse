@@ -248,7 +248,7 @@ func TestValidation_SystemTypeAdoptionChecksNodes(t *testing.T) {
 			wantAllowed: true,
 		},
 		{
-			name:        "an olcedar node, which bashible never configured",
+			name:        "a Deckhouse Engine node, which bashible never configured",
 			nodes:       []client.Object{groupNode("master-0", "worker", false)},
 			wantAllowed: true,
 		},

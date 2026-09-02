@@ -72,7 +72,7 @@ func nodeConfigTemplateVerbs(role object_store.KubeObject) []string {
 // kube-aggregator routes by group version: an APIService that names a service
 // takes the whole group version to that service, and the CRDs of the same group
 // version stop being served. NodeConfig is a CRD in internal.deckhouse.io, and
-// every olcedar node reads it, so the aggregated template must live elsewhere.
+// every Deckhouse Engine node reads it, so the aggregated template must live elsewhere.
 var _ = Describe("Module :: node-manager :: helm template :: aggregated API group", func() {
 	f := SetupHelmConfig(``)
 
