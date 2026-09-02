@@ -35,6 +35,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -97,15 +98,7 @@ func (s *syncer) ensureEmbeddedVersion(ctx context.Context, dirName, version str
 		return err
 	}
 
-	meta := def.ConvertToStatusMetadata()
-
-	// an embedded module carries its weight in the directory name prefix, which
-	// the definition file usually omits
-	if meta.Weight == 0 {
-		meta.Weight = weightFromDirName(dirName)
-	}
-
-	settingsRaw, valuesRaw, err := loader.LoadEmbeddedSchemas(moduleDir)
+	meta, schemas, err := versionFromDir(moduleDir)
 	if err != nil {
 		s.logger.Warn("module dir holds no readable schemas, skip its package version",
 			slog.String("dir", moduleDir), log.Err(err))
@@ -113,12 +106,10 @@ func (s *syncer) ensureEmbeddedVersion(ctx context.Context, dirName, version str
 		return nil
 	}
 
-	schemas, err := v1alpha1.ParsePackageSchemas(settingsRaw, valuesRaw)
-	if err != nil {
-		s.logger.Warn("module schemas do not parse, skip its package version",
-			slog.String("dir", moduleDir), log.Err(err))
-
-		return nil
+	// an embedded module carries its weight in the directory name prefix, which
+	// the definition file usually omits
+	if meta.Weight == 0 {
+		meta.Weight = weightFromDirName(dirName)
 	}
 
 	spec := v1alpha1.ModulePackageVersionSpec{
@@ -128,6 +119,81 @@ func (s *syncer) ensureEmbeddedVersion(ctx context.Context, dirName, version str
 	}
 
 	return s.ensureFilled(ctx, name, spec, meta, schemas)
+}
+
+// versionFromDir reads what a version carries from the module files: the
+// definition as the metadata and the settings/values schemas.
+func versionFromDir(moduleDir string) (*v1alpha1.ModulePackageVersionStatusMetadata, *v1alpha1.PackageVersionStatusSchemas, error) {
+	def, err := loader.LoadEmbeddedDefinition(moduleDir)
+	if err != nil {
+		return nil, nil, fmt.Errorf("load definition: %w", err)
+	}
+
+	settingsRaw, valuesRaw, err := loader.LoadEmbeddedSchemas(moduleDir)
+	if err != nil {
+		return nil, nil, fmt.Errorf("load schemas: %w", err)
+	}
+
+	schemas, err := v1alpha1.ParsePackageSchemas(settingsRaw, valuesRaw)
+	if err != nil {
+		return nil, nil, fmt.Errorf("parse schemas: %w", err)
+	}
+
+	return def.ConvertToStatusMetadata(), schemas, nil
+}
+
+// EnsureModulePackageVersion completes the version of a module installed from a
+// repository with the module files in moduleDir: the version is created as a
+// draft when missing, its metadata and schemas are filled from the files and
+// the draft label is dropped. A version that is already complete is final:
+// the repository scan described it, and the disk must not overwrite that. The
+// callers run where the files are certainly on disk, the module loader after a
+// restore and the release controller at deploy, so the metadata reaches the
+// readers without the package feature and its promoter.
+func EnsureModulePackageVersion(ctx context.Context, reader client.Reader, writer client.Client, dc dependency.Container, spec v1alpha1.ModulePackageVersionSpec, moduleDir string, logger *log.Logger) error {
+	return newSyncer(reader, writer, dc, "", "", logger).ensureDraftFilled(ctx, spec, moduleDir)
+}
+
+// ensureDraftFilled fills the version named by the spec from the module files
+// unless it is already complete.
+func (s *syncer) ensureDraftFilled(ctx context.Context, spec v1alpha1.ModulePackageVersionSpec, moduleDir string) error {
+	name := v1alpha1.MakeModulePackageVersionName(spec.PackageRepositoryName, spec.PackageName, spec.PackageVersion)
+	if !s.validName(name, spec.PackageName) {
+		return nil
+	}
+
+	mpv := new(v1alpha1.ModulePackageVersion)
+
+	err := s.reader.Get(ctx, client.ObjectKey{Name: name}, mpv)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("get module package version '%s': %w", name, err)
+	}
+
+	missing := apierrors.IsNotFound(err)
+	if !missing && !mpv.IsDraft() {
+		return nil
+	}
+
+	meta, schemas, err := versionFromDir(moduleDir)
+	if err != nil {
+		s.logger.Warn("module dir holds no readable package files, leave its package version as is",
+			slog.String("dir", moduleDir), slog.String("name", name), log.Err(err))
+
+		return nil
+	}
+
+	if missing {
+		mpv, err = s.createStub(ctx, name, spec)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err := s.fillMetadata(ctx, mpv, meta, schemas); err != nil {
+		return err
+	}
+
+	return s.removeDraft(ctx, mpv)
 }
 
 // weightFromDirName parses the "<weight>-<name>" contract of the embedded
