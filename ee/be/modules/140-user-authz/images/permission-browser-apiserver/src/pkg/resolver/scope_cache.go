@@ -12,7 +12,11 @@ import (
 
 	"k8s.io/client-go/discovery"
 	"k8s.io/klog/v2"
+
+	"permission-browser-apiserver/pkg/authorizer/multitenancy"
 )
+
+var _ multitenancy.ResourceScope = (*ResourceScopeCache)(nil)
 
 const (
 	// defaultRefreshInterval is how often the scope cache refreshes from discovery.
@@ -74,6 +78,19 @@ func (c *ResourceScopeCache) IsNamespaced(group, resource string) bool {
 		return false
 	}
 	return namespaced
+}
+
+// Scope reports whether the resource is namespaced and whether the snapshot
+// contains it. Unlike IsNamespaced, a miss is not coerced to cluster-scoped:
+// multi-tenancy uses !known as "treat like namespaced" so a discovery hole
+// cannot fail-open. IsNamespaced stays fail-closed-as-cluster-scoped for
+// AccessibleNamespaces (a false namespaced=true would list every namespace).
+func (c *ResourceScopeCache) Scope(group, resource string) (namespaced, known bool) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	namespaced, known = c.scopeMap[group+"/"+resource]
+	return namespaced, known
 }
 
 // HasResource reports whether the discovery snapshot serves the resource at

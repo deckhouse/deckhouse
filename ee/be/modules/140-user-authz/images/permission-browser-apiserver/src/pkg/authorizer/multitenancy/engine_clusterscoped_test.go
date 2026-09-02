@@ -1,5 +1,5 @@
 /*
-Copyright 2025 Flant JSC
+Copyright 2026 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
@@ -7,45 +7,26 @@ package multitenancy
 
 import (
 	"context"
-	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
-	"k8s.io/client-go/discovery"
 )
 
-// stubDiscovery answers only the two methods Authorize uses on a cache miss.
-// Unused DiscoveryInterface methods panic via the nil embed — that is
-// deliberate: a new live call on the hot path must fail the test, not hide.
-type stubDiscovery struct {
-	discovery.DiscoveryInterface
-	err  error
-	list *metav1.APIResourceList
+// staticResourceScope is a test ResourceScope. Missing keys are unknown.
+type staticResourceScope map[string]bool
+
+func (s staticResourceScope) Scope(group, resource string) (namespaced, known bool) {
+	namespaced, known = s[group+"/"+resource]
+	return namespaced, known
 }
 
-func (s *stubDiscovery) ServerResourcesForGroupVersion(string) (*metav1.APIResourceList, error) {
-	if s.err != nil {
-		return nil, s.err
+func coreResourceScope() staticResourceScope {
+	return staticResourceScope{
+		"/pods":  true,
+		"/nodes": false,
 	}
-	if s.list != nil {
-		return s.list, nil
-	}
-	return &metav1.APIResourceList{GroupVersion: "v1"}, nil
-}
-
-func (s *stubDiscovery) ServerGroups() (*metav1.APIGroupList, error) {
-	if s.err != nil {
-		return nil, s.err
-	}
-	return &metav1.APIGroupList{}, nil
-}
-
-func gvrCacheKey(group, version, resource string) string {
-	return schema.GroupVersionResource{Group: group, Version: version, Resource: resource}.String()
 }
 
 const (
@@ -72,14 +53,10 @@ const (
 	}`
 )
 
-func engineWithKnownScopes(t *testing.T, config string, disco discovery.DiscoveryInterface) *Engine {
+func engineWithKnownScopes(t *testing.T, config string) *Engine {
 	t.Helper()
-	e, err := NewEngine(writeConfigJSON(t, config), nil, nil, disco)
+	e, err := NewEngine(writeConfigJSON(t, config), nil, nil, coreResourceScope())
 	require.NoError(t, err)
-	e.namespacedCacheMu.Lock()
-	e.namespacedCache[gvrCacheKey("", "", "pods")] = true
-	e.namespacedCache[gvrCacheKey("", "", "nodes")] = false
-	e.namespacedCacheMu.Unlock()
 	return e
 }
 
@@ -98,12 +75,11 @@ func authorizeResource(t *testing.T, e *Engine, userName, verb, resource, namesp
 
 // TestEngine_Authorize_ClusterScopedFilterContract locks the deny-only MT
 // answers that BulkSAR and the webhook must keep agreeing on for well-known
-// resources. Scope is injected via namespacedCache so this does not depend on
-// live discovery. A later ResourceScopeCache wiring must not change these
-// rows for pods/nodes.
+// resources. Scope is injected via ResourceScope so this does not depend on
+// live discovery.
 func TestEngine_Authorize_ClusterScopedFilterContract(t *testing.T) {
-	editor := engineWithKnownScopes(t, editorCARConfig, nil)
-	super := engineWithKnownScopes(t, superAdminCARConfig, nil)
+	editor := engineWithKnownScopes(t, editorCARConfig)
+	super := engineWithKnownScopes(t, superAdminCARConfig)
 
 	tests := []struct {
 		name     string
@@ -213,7 +189,7 @@ func TestEngine_Authorize_ClusterScopedFilterContract(t *testing.T) {
 // exception: a non-CAR ClusterRoleBinding that grants cluster-wide list of a
 // namespaced resource must not be denied by the CAR namespace filter.
 func TestEngine_Authorize_ClusterScopedIndependentRBAC(t *testing.T) {
-	editor := engineWithKnownScopes(t, editorCARConfig, nil)
+	editor := engineWithKnownScopes(t, editorCARConfig)
 	editor.SetIndependentRBACChecker(&clusterIndependentChecker{allowClusterScoped: true})
 
 	got := authorizeResource(t, editor, "editor@example.io", "list", "pods", "")
@@ -234,34 +210,36 @@ func (c *clusterIndependentChecker) AllowsIndependently(_ context.Context, attrs
 	return ok
 }
 
-// TestEngine_Authorize_DiscoveryMissFailsOpen documents today's fail-open
-// on a live discovery error: MT returns NoOpinion, so a CAR Editor CRB can
-// report Allow for cluster-scoped list of an unknown resource. The webhook
-// Denies the same miss. The ResourceScopeCache wiring is allowed to change
-// this one case to Deny; do not treat it as filter-strictness.
-func TestEngine_Authorize_DiscoveryMissFailsOpen(t *testing.T) {
-	disco := &stubDiscovery{err: errors.New("discovery unavailable")}
-	editor, err := NewEngine(writeConfigJSON(t, editorCARConfig), nil, nil, disco)
+func TestEngine_Authorize_UnknownResourceIsDenied(t *testing.T) {
+	editor := engineWithKnownScopes(t, editorCARConfig)
+
+	got := authorizeResource(t, editor, "editor@example.io", "list", "doesnotexist", "")
+	assert.Equal(t, authorizer.DecisionDeny, got,
+		"a resource absent from the scope snapshot must not fail-open")
+}
+
+func TestEngine_Authorize_NilScopeIsDenied(t *testing.T) {
+	editor, err := NewEngine(writeConfigJSON(t, editorCARConfig), nil, nil, nil)
 	require.NoError(t, err)
+
+	got := authorizeResource(t, editor, "editor@example.io", "list", "pods", "")
+	assert.Equal(t, authorizer.DecisionDeny, got,
+		"nil ResourceScope is !known and must Deny for a filtered user")
+}
+
+func TestEngine_Authorize_UnknownResourceIndependentRBAC(t *testing.T) {
+	editor, err := NewEngine(writeConfigJSON(t, editorCARConfig), nil, nil, staticResourceScope{})
+	require.NoError(t, err)
+	editor.SetIndependentRBACChecker(&clusterIndependentChecker{allowClusterScoped: true})
 
 	got := authorizeResource(t, editor, "editor@example.io", "list", "newcrds", "")
 	assert.Equal(t, authorizer.DecisionNoOpinion, got,
-		"current behavior: discovery error is NoOpinion (fail-open)")
-}
-
-func TestEngine_Authorize_UnknownResourceTreatedAsClusterScoped(t *testing.T) {
-	disco := &stubDiscovery{list: &metav1.APIResourceList{GroupVersion: "v1"}}
-	editor, err := NewEngine(writeConfigJSON(t, editorCARConfig), nil, nil, disco)
-	require.NoError(t, err)
-
-	got := authorizeResource(t, editor, "editor@example.io", "list", "doesnotexist", "")
-	assert.Equal(t, authorizer.DecisionNoOpinion, got,
-		"current behavior: resource absent from the GV list is treated as cluster-scoped")
+		"independent cluster-wide grant still skips the unknown-resource deny")
 }
 
 func TestEngine_GetNamespaceAccessType_SuperAdminVsEditor(t *testing.T) {
-	editor := engineWithKnownScopes(t, editorCARConfig, nil)
-	super := engineWithKnownScopes(t, superAdminCARConfig, nil)
+	editor := engineWithKnownScopes(t, editorCARConfig)
+	super := engineWithKnownScopes(t, superAdminCARConfig)
 
 	access, filter := editor.GetNamespaceAccessType(&mockUserInfo{name: "editor@example.io"})
 	assert.Equal(t, FilteredAccess, access)

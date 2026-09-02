@@ -1,5 +1,5 @@
 /*
-Copyright 2025 Flant JSC
+Copyright 2026 Flant JSC
 Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https://github.com/deckhouse/deckhouse/blob/main/ee/LICENSE
 */
 
@@ -13,13 +13,9 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/apiserver/pkg/endpoints/request"
-	"k8s.io/client-go/discovery"
-	fakediscovery "k8s.io/client-go/discovery/fake"
-	clienttesting "k8s.io/client-go/testing"
 
 	"permission-browser-apiserver/pkg/apis/authorization/v1alpha1"
 	"permission-browser-apiserver/pkg/authorizer/composite"
@@ -41,6 +37,13 @@ func (denyIndependent) AllowsIndependently(context.Context, authorizer.Attribute
 	return false
 }
 
+type staticResourceScope map[string]bool
+
+func (s staticResourceScope) Scope(group, resource string) (namespaced, known bool) {
+	namespaced, known = s[group+"/"+resource]
+	return namespaced, known
+}
+
 func writeMTConfig(t *testing.T, body string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "config.json")
@@ -48,21 +51,12 @@ func writeMTConfig(t *testing.T, body string) string {
 	return path
 }
 
-func newDiscoveryStub() discovery.DiscoveryInterface {
-	fake := &fakediscovery.FakeDiscovery{Fake: &clienttesting.Fake{}}
-	fake.Resources = []*metav1.APIResourceList{{
-		GroupVersion: "v1",
-		APIResources: []metav1.APIResource{
-			{Name: "pods", Namespaced: true},
-			{Name: "nodes", Namespaced: false},
-		},
-	}}
-	return fake
-}
-
 func mustMTEngine(t *testing.T, config string) *multitenancy.Engine {
 	t.Helper()
-	engine, err := multitenancy.NewEngine(writeMTConfig(t, config), nil, nil, newDiscoveryStub())
+	engine, err := multitenancy.NewEngine(writeMTConfig(t, config), nil, nil, staticResourceScope{
+		"/pods":  true,
+		"/nodes": false,
+	})
 	require.NoError(t, err)
 	engine.SetIndependentRBACChecker(denyIndependent{})
 	return engine
