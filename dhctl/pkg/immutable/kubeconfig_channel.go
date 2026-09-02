@@ -42,9 +42,9 @@ func OpenKubeconfigChannel(
 	sett settings.Settings,
 	kubeconfigPath, contextName, tmpDir string,
 ) (string, func(), error) {
-	content, err := os.ReadFile(kubeconfigPath)
+	content, err := readKubeconfigForChannel(kubeconfigPath)
 	if err != nil {
-		return "", nil, fmt.Errorf("read the kubeconfig %s: %w", kubeconfigPath, err)
+		return "", nil, err
 	}
 
 	host, port, err := kubeconfigServer(content, contextName)
@@ -76,6 +76,31 @@ func OpenKubeconfigChannel(
 		RemoveTemporaryKubeconfig(ctx, path)
 		stopTunnel()
 	}, nil
+}
+
+// readKubeconfigForChannel loads the operator's kubeconfig in the form the copy
+// is written from: file references made absolute, because the copy lives in
+// another directory, and no proxy, because the local end of the forward is
+// reached directly and http.ProxyURL exempts no address, loopback included.
+func readKubeconfigForChannel(path string) ([]byte, error) {
+	kubeconfig, err := clientcmd.LoadFromFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read the kubeconfig %s: %w", path, err)
+	}
+	if err := clientcmd.ResolveLocalPaths(kubeconfig); err != nil {
+		return nil, fmt.Errorf("resolve the file references of the kubeconfig %s: %w", path, err)
+	}
+
+	for _, cluster := range kubeconfig.Clusters {
+		cluster.ProxyURL = ""
+	}
+
+	content, err := clientcmd.Write(*kubeconfig)
+	if err != nil {
+		return nil, fmt.Errorf("serialize the kubeconfig %s: %w", path, err)
+	}
+
+	return content, nil
 }
 
 // kubeconfigServer is the address the kubeconfig's current cluster is reached
