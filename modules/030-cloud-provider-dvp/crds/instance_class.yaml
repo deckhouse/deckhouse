@@ -158,9 +158,12 @@ spec:
                     properties:
                       coreFraction:
                         default: 100%
-                        description: Guaranteed share of CPU fraction that will be
-                          allocated to the virtual machine.
-                        pattern: ^100%$|^[1-9][0-9]?%$
+                        description: |-
+                          Guaranteed share of CPU fraction that will be allocated to the virtual machine.
+
+                          `Auto` hands the share over to the Vertical VirtualMachine Autoscaler, which picks it by the actual CPU usage of the node.
+                          It requires the EE edition of the `virtualization` module in the parent DVP cluster, the enabled `vertical-pod-autoscaler` module, and the `VerticalVirtualMachineAutoscaler` and `HotplugCPUAndMemoryWithInPlaceResize` feature gates in its ModuleConfig.
+                        pattern: ^(Auto|(100|[1-9][0-9]?)%)$
                         type: string
                         x-doc-example: 100%
                       cores:

@@ -174,9 +174,12 @@ apiVersions:
                         coreFraction:
                           type: string
                           default: "100%"
-                          pattern: ^100%$|^[1-9][0-9]?%$
+                          pattern: ^(Auto|(100|[1-9][0-9]?)%)$
                           description: |
                             Guaranteed share of CPU that will be allocated to the virtual machine.
+
+                            `Auto` hands the share over to the Vertical VirtualMachine Autoscaler of the parent DVP cluster.
+                            It requires the EE edition of the `virtualization` module, the enabled `vertical-pod-autoscaler` module, and the `VerticalVirtualMachineAutoscaler` and `HotplugCPUAndMemoryWithInPlaceResize` feature gates in its ModuleConfig.
                           example: "100%"
                     memory:
                       type: object
