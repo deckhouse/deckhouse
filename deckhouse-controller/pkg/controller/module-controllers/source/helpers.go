@@ -201,7 +201,7 @@ func (r *reconciler) releaseEnsureAllowed(
 // activeSource names the source the module comes from: the one the config picks, otherwise
 // the one the installed module was placed from. Empty when neither decides.
 func activeSource(module *v1alpha2.Module, config *v1alpha1.ModuleConfig) string {
-	if chosen := configuredSource(config); chosen != "" {
+	if chosen := pkgsync.ConfiguredSource(config); chosen != "" {
 		return chosen
 	}
 
@@ -408,17 +408,6 @@ func fromToBridges(lower, higher *semver.Version, constraint v1alpha1.UpdateCons
 	}
 
 	return lower.Compare(from) >= 0 && lower.Compare(to) < 0
-}
-
-// configuredSource returns the source the operator selected in the module config
-// (.spec.source), or an empty string without a config or a selection. "Embedded" is the
-// sentinel for the built-in copy, not a real ModuleSource, so it counts as no selection.
-func configuredSource(config *v1alpha1.ModuleConfig) string {
-	if config == nil || config.Spec.Source == v1alpha1.ModuleSourceEmbedded {
-		return ""
-	}
-
-	return config.Spec.Source
 }
 
 // defaultModuleSourceName is the name of the built-in OSS ModuleSource that ships

@@ -80,6 +80,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -185,4 +186,38 @@ func SourceNameForRepository(repositoryName string) string {
 	}
 
 	return repositoryName
+}
+
+// ConfiguredSource returns the source the operator selected in the module config
+// (.spec.source), or an empty string without a config or a selection. "Embedded" is
+// the sentinel for the built-in copy, not a real ModuleSource, so it counts as no
+// selection.
+func ConfiguredSource(config *v1alpha1.ModuleConfig) string {
+	if config == nil || config.Spec.Source == v1alpha1.ModuleSourceEmbedded {
+		return ""
+	}
+
+	return config.Spec.Source
+}
+
+// CatalogRepository names the repository of a module nothing installed yet: the one
+// of the source the config picks, else of the only source offering the module. Empty
+// while several sources offer it and the config picks none.
+func CatalogRepository(configuredSource string, offering []string) string {
+	if configuredSource != "" {
+		return RepositoryNameForSource(configuredSource)
+	}
+
+	if len(offering) == 1 {
+		return RepositoryNameForSource(offering[0])
+	}
+
+	return ""
+}
+
+// CatalogConflict reports whether a module nothing installed yet is enabled, offered by
+// several sources and the config picks none of them. No source installs such a module
+// until the operator picks one.
+func CatalogConflict(enabled bool, configuredSource string, offering []string) bool {
+	return enabled && configuredSource == "" && len(offering) > 1
 }

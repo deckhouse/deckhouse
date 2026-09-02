@@ -245,6 +245,41 @@ func (m *Module) GetVersion() string {
 	return m.Spec.PackageVersion
 }
 
+// IsInstalled reports whether a package backs the module. A module a source offers and
+// nothing installed carries no package version.
+func (m *Module) IsInstalled() bool {
+	return m.Spec.PackageVersion != ""
+}
+
+// HasCatalogPhase reports whether the phase is one a module nothing installed passes
+// through: offered, in conflict between sources, or fetching its first release.
+func (m *Module) HasCatalogPhase() bool {
+	switch m.Status.Phase {
+	case v1alpha1.ModulePhaseAvailable,
+		v1alpha1.ModulePhaseConflict,
+		v1alpha1.ModulePhaseDownloading,
+		v1alpha1.ModulePhaseDownloadingError:
+		return true
+	}
+
+	return false
+}
+
+// SetNotInstalledStatus marks the module as offered by a source and not installed.
+func (m *Module) SetNotInstalledStatus() {
+	m.Status.Phase = v1alpha1.ModulePhaseAvailable
+	m.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, v1alpha1.ModuleReasonDisabled, "")
+	m.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
+}
+
+// SetConflictStatus marks a module nothing installed as offered by several sources with
+// none of them picked.
+func (m *Module) SetConflictStatus() {
+	m.Status.Phase = v1alpha1.ModulePhaseConflict
+	m.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, v1alpha1.ModuleReasonDisabled, "")
+	m.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonConflict, v1alpha1.ModuleMessageConflict)
+}
+
 // IsCondition reports whether the named condition is present with the given status.
 func (m *Module) IsCondition(condType string, status metav1.ConditionStatus) bool {
 	cond := meta.FindStatusCondition(m.Status.Conditions, condType)
