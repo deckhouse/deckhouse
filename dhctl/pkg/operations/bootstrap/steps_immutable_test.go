@@ -180,7 +180,7 @@ func TestPushImmutablePayloadStopsOnAnInstalledNode(t *testing.T) {
 	defer cancel()
 
 	started := time.Now()
-	err := b.pushImmutablePayload(ctx, bctx, "master-0", host, []byte("#cloud-config\n"), nil)
+	_, err := b.pushImmutablePayload(ctx, bctx, "master-0", host, []byte("#cloud-config\n"), nil)
 
 	require.ErrorIs(t, err, immutable.ErrMaintenanceTokenRequired)
 	require.Less(t, time.Since(started), waitMaintenancePort.interval,
@@ -211,6 +211,45 @@ func TestARefusedPushLeavesNoRecord(t *testing.T) {
 	pushed, err := payloadAlreadyPushed(t.Context(), bctx.stateCache, "master-0", host)
 	require.NoError(t, err)
 	require.False(t, pushed, "a machine that refused the document must not be recorded as configured")
+}
+
+// The other half of the record's contract. A push that never reached the machine leaves nothing
+// behind either: the loop spends its whole budget on a closed port, whose error wraps neither
+// sentinel, so the record outlived a machine that was handed nothing — and every rerun then read
+// it, skipped the push and sat out the half-hour install budget on a master nobody configured,
+// recoverable only by deleting the state cache, which no message mentions.
+func TestAPushThatNeverReachedTheMachineLeavesNoRecord(t *testing.T) {
+	shortMaintenanceWait(t, 3)
+
+	// A port that was bound and let go: the dial is refused rather than swallowed, which is what
+	// a machine whose maintenance port is not open yet answers.
+	listener, err := net.Listen("tcp", "127.0.0.1:0")
+	require.NoError(t, err)
+	closed, ok := listener.Addr().(*net.TCPAddr)
+	require.True(t, ok)
+	require.NoError(t, listener.Close())
+
+	b, bctx := immutableTestBootstrapper(t)
+	bctx.immutable.maintenancePort = closed.Port
+	host := closed.IP.String()
+
+	require.Error(t, b.pushRecordedPayload(t.Context(), bctx, "master-0", host, []byte("#cloud-config\n"), nil))
+
+	pushed, err := payloadAlreadyPushed(t.Context(), bctx.stateCache, "master-0", host)
+	require.NoError(t, err)
+	require.False(t, pushed, "a machine dhctl never reached must not be recorded as configured")
+}
+
+// shortMaintenanceWait gives the push loop a handful of quick attempts: these tests are about
+// what it does across attempts, not about the ten minutes the real budget waits between them.
+func shortMaintenanceWait(t *testing.T, attempts int) {
+	t.Helper()
+
+	immutabletest.NoRetryCollapse(t)
+
+	budget := waitMaintenancePort
+	waitMaintenancePort = waitBudget{attempts: attempts, interval: time.Millisecond}
+	t.Cleanup(func() { waitMaintenancePort = budget })
 }
 
 // The stand this check was written for: two disks of one size, and a selector
@@ -308,7 +347,8 @@ func TestEveryPushPathRefusesADocumentTheMachineCannotSatisfy(t *testing.T) {
 				bctx := &bootstrapContext{immutable: &immutableBootstrap{maintenancePort: machine.port}}
 				// The two documents differ on purpose: the machine takes the cloud-init,
 				// the check reads the NodeConfig inside it.
-				return b.pushImmutablePayload(ctx, bctx, "master-0", machine.host, []byte("#cloud-config\n"), []byte(ambiguousDiskDocument))
+				_, err := b.pushImmutablePayload(ctx, bctx, "master-0", machine.host, []byte("#cloud-config\n"), []byte(ambiguousDiskDocument))
+				return err
 			},
 		},
 		{
@@ -371,11 +411,7 @@ func TestEveryPushPathRefusesADocumentTheMachineCannotSatisfy(t *testing.T) {
 // would run once, against a machine still powering on, and never run again. It has
 // to run on the attempt that reaches the machine.
 func TestPushImmutablePayloadChecksTheMachineThatAnswersLate(t *testing.T) {
-	immutabletest.NoRetryCollapse(t)
-
-	budget := waitMaintenancePort
-	waitMaintenancePort = waitBudget{attempts: 4, interval: time.Millisecond}
-	t.Cleanup(func() { waitMaintenancePort = budget })
+	shortMaintenanceWait(t, 4)
 
 	var pushes, reads atomic.Int64
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -398,7 +434,7 @@ func TestPushImmutablePayloadChecksTheMachineThatAnswersLate(t *testing.T) {
 	b := &ClusterBootstrapper{Params: &Params{Options: options.New()}}
 	bctx := &bootstrapContext{immutable: &immutableBootstrap{maintenancePort: port}}
 
-	err := b.pushImmutablePayload(t.Context(), bctx, "master-0", host, []byte("#cloud-config\n"), []byte(ambiguousDiskDocument))
+	_, err := b.pushImmutablePayload(t.Context(), bctx, "master-0", host, []byte("#cloud-config\n"), []byte(ambiguousDiskDocument))
 
 	require.ErrorContains(t, err, "matches 2 disks", "the machine that answers late must be checked too")
 	require.Equal(t, int64(1), pushes.Load(),
@@ -1124,10 +1160,6 @@ func immutableTestBootstrapper(t *testing.T) (*ClusterBootstrapper, *bootstrapCo
 	}
 }
 
-// noRetryCollapse restores real retry behaviour: init_test.go collapses every
-// loop to one attempt, which would pass with no break predicate at all. Safe to
-// swap globally — nothing in this file runs in parallel.
-
 // testMachine stands in for a machine waiting in maintenance: it answers the
 // inventory read that precedes every push, and records what it was asked.
 type testMachine struct {
@@ -1300,6 +1332,8 @@ func TestImmutableStaticPreflightsNeedNoSSHHost(t *testing.T) {
 // now-installed node refused the second document terminally: a machine nothing was wrong with, and
 // no way forward.
 func TestBootstrapImmutableFirstMasterSurvivesALostReply(t *testing.T) {
+	shortMaintenanceWait(t, 4)
+
 	b, bctx := immutableTestBootstrapper(t)
 	bctx.immutable.masterNodeName = "example-master-0"
 
@@ -1333,12 +1367,16 @@ func TestBootstrapImmutableFirstMasterSurvivesALostReply(t *testing.T) {
 	require.NoError(t, b.bootstrapImmutableFirstMaster(t.Context(), bctx),
 		"a rerun must not dead-end on the machine dhctl configured itself")
 	require.Equal(t, host, bctx.immutable.masterIP, "the rerun still has to report the address")
+	require.Equal(t, int64(2), pushes.Load(),
+		"the 401 answering the retry of a push the machine took must not send the rerun back to it")
 }
 
 // A document the machine cannot satisfy never leaves dhctl, so the record written before the push
 // has to be retracted: kept, it would make the rerun with a corrected document skip the machine
 // and wait for a master that was handed nothing.
 func TestADocumentTheMachineRefusesLeavesNoPushRecord(t *testing.T) {
+	immutabletest.NoRetryCollapse(t)
+
 	// Two disks the rendered document's own ">=20Gi" system selector matches, so nothing in the
 	// operator's input is needed to make this machine ambiguous.
 	machine := newTestMachine(t, twoDisksOfOneSize)

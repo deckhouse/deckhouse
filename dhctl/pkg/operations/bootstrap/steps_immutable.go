@@ -20,7 +20,9 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"net/http/httptrace"
 	"slices"
+	"sync/atomic"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -533,15 +535,15 @@ func (b *ClusterBootstrapper) pushRecordedPayload(ctx context.Context, bctx *boo
 		return err
 	}
 
-	err := b.pushImmutablePayload(ctx, bctx, nodeName, address, document, nodeConfig)
+	handedOver, err := b.pushImmutablePayload(ctx, bctx, nodeName, address, document, nodeConfig)
 
-	// The two failures that prove the machine took nothing: the document never left dhctl, or it
-	// was refused by a node someone else installed — this push is only reached where no record of
-	// one to this machine exists. Every other failure keeps the record, a lost reply included,
-	// which is what it is here for. Without the retraction the message this refusal prints, "point
-	// --master-host at a machine waiting in maintenance, or re-image this one", cannot be acted on:
-	// the rerun would read the record and hand the re-imaged machine nothing.
-	if errors.Is(err, errDocumentUnfitForMachine) || errors.Is(err, immutable.ErrMaintenanceTokenRequired) {
+	// The record answers one question — may this machine be holding a document of ours — and only
+	// the push knows. A run where no attempt ever handed one over took nothing from dhctl: the
+	// record has to go, or the rerun reads it, skips the machine and waits out the install budget
+	// on a master nobody configured. Where one did, the record stays whatever the last attempt
+	// answered: an accepted push is followed by a 401 from the agent that comes up behind it, and
+	// retracting on that is what sent the rerun back to push a third time and dead-end.
+	if err != nil && !handedOver {
 		bctx.stateCache.Delete(ctx, pushedPayloadCacheKey(nodeName))
 	}
 
@@ -591,13 +593,14 @@ func payloadAlreadyPushed(ctx context.Context, stateCache state.Cache, nodeName,
 // pushImmutablePayload waits for the machine to open its maintenance port and
 // hands it document, the cloud-init. The wait is generous: the machine may still
 // be POSTing. nodeConfig is the document inside it, checked against the hardware.
-func (b *ClusterBootstrapper) pushImmutablePayload(ctx context.Context, bctx *bootstrapContext, nodeName, address string, document, nodeConfig []byte) error {
+func (b *ClusterBootstrapper) pushImmutablePayload(ctx context.Context, bctx *bootstrapContext, nodeName, address string, document, nodeConfig []byte) (bool, error) {
 	port := immutable.MaintenancePort
 	if bctx.immutable.maintenancePort != 0 {
 		port = bctx.immutable.maintenancePort
 	}
 
-	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), fmt.Sprintf("Hand %s its configuration", nodeName), func(ctx context.Context) error {
+	var handedOver bool
+	err := dhlog.RunProcess(ctx, dhlog.FromContext(ctx), fmt.Sprintf("Hand %s its configuration", nodeName), func(ctx context.Context) error {
 		// A channel per attempt: this wait starts while the machine is still
 		// powering on, so an early dial hangs to gossh's deadline, which ends the
 		// tunnel's accept loop for good and leaves a bound port nobody serves.
@@ -614,7 +617,9 @@ func (b *ClusterBootstrapper) pushImmutablePayload(ctx context.Context, bctx *bo
 			if err := checkMachineAgainstDocument(ctx, endpoint, nodeConfig); err != nil {
 				return err
 			}
-			return immutable.PushNodeConfig(ctx, endpoint, document)
+			taken, err := pushDocument(ctx, endpoint, document)
+			handedOver = handedOver || taken
+			return err
 		})
 
 		// Reached only where the state cache holds no record of a push to this machine, so it was
@@ -628,6 +633,29 @@ func (b *ClusterBootstrapper) pushImmutablePayload(ctx context.Context, bctx *bo
 
 		return err
 	})
+
+	return handedOver, err
+}
+
+// pushDocument hands the machine its document and reports whether the machine may now be holding
+// it. Two outcomes mean it may: the machine took it, or it took the whole request and the
+// connection died before it answered — the Deckhouse Engine init closes the port the moment it
+// accepts a document, so an accepted push looks exactly like a lost reply. Anything else is the
+// machine refusing, or dhctl never reaching it, and both are proof it holds nothing of ours.
+func pushDocument(ctx context.Context, endpoint string, document []byte) (bool, error) {
+	// The transport writes and reads on goroutines of its own, so these two are read back from a
+	// third once it has given up on the request.
+	var sent, answered atomic.Bool
+	traced := httptrace.WithClientTrace(ctx, &httptrace.ClientTrace{
+		WroteRequest:         func(info httptrace.WroteRequestInfo) { sent.Store(info.Err == nil) },
+		GotFirstResponseByte: func() { answered.Store(true) },
+	})
+
+	err := immutable.PushNodeConfig(traced, endpoint, document)
+	if err == nil {
+		return true, nil
+	}
+	return sent.Load() && !answered.Load(), err
 }
 
 // checkMachineAgainstDocument refuses a NodeConfig the machine cannot satisfy,

@@ -458,6 +458,48 @@ func TestCheckDocumentRefusesWhatTheMachineCannotSatisfy(t *testing.T) {
 `),
 			want: "192.168.0.5",
 		},
+		{
+			// An interface address has to carry a prefix, so an operator writing one has a CIDR
+			// under their cursor when they fill in nodeIP. kubelet takes --node-ip as a bare
+			// address and never registers with a prefix on it.
+			name:      "kubelet is given the interface CIDR instead of the address",
+			inventory: threeBlank,
+			document: nodeConfigWithSpec(`
+  network:
+    interfaces:
+    - name: eth0
+      dhcp: false
+      addresses: ["192.168.0.101/24"]
+  kubelet:
+    nodeIP: 192.168.0.101/24
+`),
+			want: "write it as 192.168.0.101",
+		},
+		{
+			// The shape of nodeIP is the document's own business: a machine left on DHCP declares
+			// no address to compare it against, and the check that does the comparing gives up
+			// before it ever looks at what was written.
+			name:      "a CIDR next to interfaces that declare no address",
+			inventory: threeBlank,
+			document: nodeConfigWithSpec(`
+  network:
+    interfaces:
+    - name: eth0
+      dhcp: true
+  kubelet:
+    nodeIP: 192.168.0.101/24
+`),
+			want: "write it as 192.168.0.101",
+		},
+		{
+			name:      "kubelet is given something that is not an address at all",
+			inventory: threeBlank,
+			document: nodeConfigWithSpec(`
+  kubelet:
+    nodeIP: master-0.example.com
+`),
+			want: "is not an IP address",
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
