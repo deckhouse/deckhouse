@@ -56,6 +56,23 @@ func TestHardDeadline(t *testing.T) {
 
 		require.Equal(t, startedAt.Add(operationTimeout), hardDeadline(op))
 	})
+
+	// A Drain hands the node to the draining controller rather than to the
+	// node, so it runs to the eviction's own deadline throughout — a group's
+	// drain timeout goes up to two hours, well past the node timeout.
+	t.Run("a Drain under way keeps the eviction's deadline", func(t *testing.T) {
+		drainEnds := time.Now().Add(time.Hour)
+		drain := &v1alpha1.NodeOperation{
+			ObjectMeta: metav1.ObjectMeta{CreationTimestamp: metav1.Time{Time: created}},
+			Spec:       v1alpha1.NodeOperationSpec{Type: v1alpha1.NodeOperationTypeDrain},
+			Status: v1alpha1.NodeOperationStatus{
+				StartedAt:     ptr.To(metav1.NewTime(time.Now())),
+				DrainDeadline: ptr.To(metav1.NewTime(drainEnds)),
+			},
+		}
+
+		require.Equal(t, drainEnds.Add(operationTimeout), hardDeadline(drain))
+	})
 }
 
 func TestTimedOut(t *testing.T) {

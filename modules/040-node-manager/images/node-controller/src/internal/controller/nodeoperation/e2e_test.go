@@ -53,6 +53,39 @@ var _ = Describe("NodeOperation controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
+	// A Drain hands the node to the draining controller rather than to the
+	// node's agent, but it is a hand-over all the same: without it the record
+	// never says when the eviction began, and nothing measures the wait.
+	It("marks a Drain InProgress from the moment the eviction is asked for", func(ctx context.Context) {
+		node := createNode(ctx, testenv.UniqueName("started"), false)
+		op := createOperation(ctx, node.Name, v1alpha1.NodeOperationTypeDrain, nil)
+
+		var startedAt metav1.Time
+		Eventually(func(g Gomega) {
+			fresh := getOperation(ctx, g, op.Name)
+			g.Expect(fresh.Status.Phase).To(Equal(v1alpha1.NodeOperationPhaseInProgress))
+			g.Expect(fresh.Status.StartedAt).NotTo(BeNil())
+			startedAt = *fresh.Status.StartedAt
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("its markers being cleared, so it has to ask again")
+		clearDrainAnnotations(ctx, node.Name)
+		waitForDrainRequest(ctx, node.Name)
+
+		Consistently(func(g Gomega) {
+			g.Expect(getOperation(ctx, g, op.Name).Status.StartedAt).To(HaveValue(Equal(startedAt)))
+		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the workload leaving")
+		markDrained(ctx, node.Name)
+
+		Eventually(func(g Gomega) {
+			fresh := getOperation(ctx, g, op.Name)
+			g.Expect(fresh.Status.Phase).To(Equal(v1alpha1.NodeOperationPhaseCompleted))
+			g.Expect(fresh.Status.StartedAt).To(HaveValue(Equal(startedAt)))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
 	// The status the controller writes is only as real as the CRD lets through:
 	// a property missing from the schema is pruned and the write is lost in
 	// silence, leaving the phase with nothing that says which spec it answers.
@@ -107,7 +140,8 @@ var _ = Describe("NodeOperation controller", func() {
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 
 		Consistently(func(g Gomega) {
-			g.Expect(getOperation(ctx, g, op.Name).Status.Phase).To(Equal(v1alpha1.NodeOperationPhasePending))
+			g.Expect(getOperation(ctx, g, op.Name).Status.Phase).
+				To(Equal(v1alpha1.NodeOperationPhaseInProgress), "somebody else's answer does not finish this eviction")
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 
 		By("the workload actually leaving this time")
