@@ -20,6 +20,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"k8s.io/utils/ptr"
+
 	constant "github.com/deckhouse/deckhouse/go_lib/registry/const"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
@@ -150,7 +152,7 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 		Kubelet: nodeKubelet(in.MetaConfig, kubernetesVersion, podsPerNode, in.NodeGroupName),
 		ContainerRuntime: containerRuntime{
 			SandboxImage:           pauseImage,
-			MaxConcurrentDownloads: defaultMaxConcurrentDownloads,
+			MaxConcurrentDownloads: ptr.To(defaultMaxConcurrentDownloads),
 		},
 		// The zeroth master is its own apiserver and its address is unknown
 		// while the payload is being built, so the endpoint stays a
