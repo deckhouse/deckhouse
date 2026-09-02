@@ -581,6 +581,175 @@ spec:
 	assert.Len(suite.T(), source.Status.AvailableModules, 0)
 }
 
+// A module some source offers and nothing installed has an object of its own: the catalog.
+func (suite *ControllerTestSuite) TestCatalogModules() {
+	const firstSource = `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 912e02634dd8b7222cc42906e35f1e79
+  name: test-source-1
+spec:
+  scanInterval: 6h30m
+  registry:
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+`
+
+	// the second source lists the module already, the first one pulls it in the scan under test
+	const secondSource = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 912e02634dd8b7222cc42906e35f1e79
+  name: test-source-2
+spec:
+  scanInterval: 6h30m
+  registry:
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+status:
+  modules:
+  - name: catalog
+`
+
+	scan := func(modules ...string) {
+		dc := newMockedContainerWithData(suite.T(), "v1.2.3", modules, []string{})
+		suite.r.dc = dc
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource("test-source-1"))
+		require.NoError(suite.T(), err)
+	}
+
+	suite.Run("a single source offers the module", func() {
+		suite.setupTestControllerRaw(firstSource)
+		scan("catalog")
+
+		module := suite.module("catalog")
+		assert.Equal(suite.T(), "test-source-1", module.Spec.PackageRepositoryName)
+		assert.Empty(suite.T(), module.Spec.PackageVersion)
+		assert.Equal(suite.T(), "Stable", module.Spec.ReleaseChannel, "the channel of the embedded policy")
+		assert.Equal(suite.T(), v1alpha1.ModulePhaseAvailable, module.Status.Phase)
+		assert.Equal(suite.T(), v1alpha1.ModuleReasonNotInstalled, conditionReason(module, v1alpha1.ModuleConditionIsReady))
+		assert.True(suite.T(), module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, "False"))
+		assert.Empty(suite.T(), suite.releases().Items, "a module nothing enabled fetches no release")
+	})
+
+	suite.Run("several sources offer the module and the config picks none", func() {
+		suite.setupTestControllerRaw(firstSource + secondSource + `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: catalog
+spec:
+  enabled: true
+`)
+		scan("catalog")
+
+		module := suite.module("catalog")
+		assert.Empty(suite.T(), module.Spec.PackageRepositoryName, "no source is picked")
+		assert.Equal(suite.T(), v1alpha1.ModulePhaseConflict, module.Status.Phase)
+		assert.Equal(suite.T(), v1alpha1.ModuleReasonConflict, conditionReason(module, v1alpha1.ModuleConditionIsReady))
+		assert.Empty(suite.T(), suite.releases().Items, "no source installs a module in conflict")
+	})
+
+	suite.Run("several sources offer the module and the config picks one", func() {
+		suite.setupTestControllerRaw(firstSource + secondSource + `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: catalog
+spec:
+  enabled: true
+  source: test-source-2
+`)
+		scan("catalog")
+
+		module := suite.module("catalog")
+		assert.Equal(suite.T(), "test-source-2", module.Spec.PackageRepositoryName)
+		assert.Equal(suite.T(), v1alpha1.ModulePhaseAvailable, module.Status.Phase)
+		assert.Empty(suite.T(), suite.releases().Items, "the other source installs the module")
+	})
+
+	suite.Run("an enabled module fetches its first release", func() {
+		suite.setupTestControllerRaw(firstSource + `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: catalog
+spec:
+  enabled: true
+`)
+		scan("catalog")
+
+		module := suite.module("catalog")
+		assert.Equal(suite.T(), "test-source-1", module.Spec.PackageRepositoryName)
+		assert.Empty(suite.T(), module.Spec.PackageVersion, "the deploy fills the version")
+		assert.Equal(suite.T(), v1alpha1.ModulePhaseDownloading, module.Status.Phase)
+		assert.NotEmpty(suite.T(), suite.releases().Items)
+	})
+
+	suite.Run("an installed module keeps its placement when another source offers it", func() {
+		suite.setupTestControllerRaw(firstSource + `
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: catalog
+spec:
+  packageRepositoryName: test-source-2
+  packageVersion: v1.0.0
+  releaseChannel: Alpha
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: catalog
+spec:
+  enabled: true
+`)
+		scan("catalog")
+
+		module := suite.module("catalog")
+		assert.Equal(suite.T(), "test-source-2", module.Spec.PackageRepositoryName)
+		assert.Equal(suite.T(), "v1.0.0", module.Spec.PackageVersion)
+		assert.Equal(suite.T(), "Alpha", module.Spec.ReleaseChannel)
+		assert.Empty(suite.T(), module.Status.Phase, "the catalog state belongs to a module nothing installed")
+		assert.Empty(suite.T(), suite.releases().Items, "the module comes from the other source")
+	})
+}
+
+func (suite *ControllerTestSuite) module(name string) *v1alpha2.Module {
+	module := new(v1alpha2.Module)
+	require.NoError(suite.T(), suite.Client().Get(context.TODO(), types.NamespacedName{Name: name}, module))
+
+	return module
+}
+
+func (suite *ControllerTestSuite) releases() *v1alpha1.ModuleReleaseList {
+	releases := new(v1alpha1.ModuleReleaseList)
+	require.NoError(suite.T(), suite.Client().List(context.TODO(), releases))
+
+	return releases
+}
+
+func conditionReason(module *v1alpha2.Module, condType string) string {
+	for _, cond := range module.Status.Conditions {
+		if cond.Type == condType {
+			return cond.Reason
+		}
+	}
+
+	return ""
+}
+
 func (suite *ControllerTestSuite) moduleSource(name string) *v1alpha1.ModuleSource {
 	source := new(v1alpha1.ModuleSource)
 	err := suite.Client().Get(context.TODO(), types.NamespacedName{Name: name}, source)

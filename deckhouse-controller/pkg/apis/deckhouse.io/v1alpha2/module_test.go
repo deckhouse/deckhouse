@@ -70,6 +70,31 @@ func TestModuleSetConflictStatus(t *testing.T) {
 	assertCondition(t, module, v1alpha1.ModuleConditionIsReady, metav1.ConditionFalse, v1alpha1.ModuleReasonConflict, v1alpha1.ModuleMessageConflict)
 }
 
+func TestModuleApplyCatalogState(t *testing.T) {
+	module := &Module{}
+
+	assert.True(t, module.ApplyCatalogState(false), "a fresh object gets the offered state")
+	assert.Equal(t, v1alpha1.ModulePhaseAvailable, module.Status.Phase)
+	assert.False(t, module.ApplyCatalogState(false), "the offered state is settled")
+
+	assert.True(t, module.ApplyCatalogState(true))
+	assert.Equal(t, v1alpha1.ModulePhaseConflict, module.Status.Phase)
+	assertCondition(t, module, v1alpha1.ModuleConditionIsReady, metav1.ConditionFalse, v1alpha1.ModuleReasonConflict, v1alpha1.ModuleMessageConflict)
+	assert.False(t, module.ApplyCatalogState(true), "the conflict state is settled")
+
+	assert.True(t, module.ApplyCatalogState(false), "a settled conflict goes back to offered")
+	assert.Equal(t, v1alpha1.ModulePhaseAvailable, module.Status.Phase)
+	assertCondition(t, module, v1alpha1.ModuleConditionIsReady, metav1.ConditionFalse, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
+
+	module.Status.Phase = v1alpha1.ModulePhaseDownloading
+	assert.False(t, module.ApplyCatalogState(false), "a module fetching its first release keeps its way")
+	assert.Equal(t, v1alpha1.ModulePhaseDownloading, module.Status.Phase)
+
+	module.Status.Phase = v1alpha1.ModulePhaseReady
+	assert.True(t, module.ApplyCatalogState(false), "the state of an uninstalled package goes")
+	assert.Equal(t, v1alpha1.ModulePhaseAvailable, module.Status.Phase)
+}
+
 func assertCondition(t *testing.T, module *Module, condType string, status metav1.ConditionStatus, reason, message string) {
 	t.Helper()
 
