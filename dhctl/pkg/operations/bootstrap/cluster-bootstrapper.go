@@ -1165,6 +1165,11 @@ func (b *ClusterBootstrapper) bootstrapPostInfraPreflights(ctx context.Context, 
 // (requireSplitResources): folded into a node that can be left out of a run, it would take the
 // user's resources with it, and createResources reports an empty queue as success.
 func (b *ClusterBootstrapper) bootstrapParseResources(ctx context.Context, bctx *bootstrapContext) error {
+	// NodeConfig documents describe machines, not objects to create. A full bootstrap
+	// took them out already; a run of this phase alone gets here with them still in.
+	if documents, rest := splitNodeCustomizations(bctx.metaConfig.ResourcesYAML); len(documents) > 0 {
+		bctx.metaConfig.ResourcesYAML = rest
+	}
 	if bctx.metaConfig.ResourcesYAML == "" {
 		return nil
 	}
