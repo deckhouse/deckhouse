@@ -1,5 +1,3 @@
-{{- /* vcp-gate */ -}}
-{{- if .Values.global.deckhouseSelfHosted }}
 ---
 apiVersion: v1
 kind: Service
@@ -17,5 +15,3 @@ spec:
     protocol: TCP
   selector:
     app: node-controller
-{{- end }}
-{{- /* /vcp-gate */ -}}

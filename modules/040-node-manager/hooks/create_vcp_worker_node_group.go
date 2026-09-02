@@ -40,8 +40,13 @@ func getDefaultVCPWorkerNg() (*unstructured.Unstructured, error) {
 		"metadata": map[string]interface{}{
 			"name": "worker",
 		},
+		// Manual, not the Automatic default: a one-worker tenant would cordon its only node and
+		// evict kube-dns with nowhere to put it. No NeedDrainNode guard covers a group named worker.
 		"spec": map[string]interface{}{
 			"nodeType": "Static",
+			"disruptions": map[string]interface{}{
+				"approvalMode": "Manual",
+			},
 		},
 	}
 	return sdk.ToUnstructured(&ng)

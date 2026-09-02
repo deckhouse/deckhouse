@@ -2,8 +2,6 @@
 cpu: 10m
 memory: 50Mi
 {{- end }}
-{{- /* vcp-gate */ -}}
-{{- if .Values.global.deckhouseSelfHosted }}
 
 {{- if (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
 ---
@@ -70,7 +68,9 @@ spec:
       automountServiceAccountToken: true
       serviceAccountName: node-controller
       terminationGracePeriodSeconds: 10
-{{- if not .Values.global.clusterIsBootstrapped }}
+{{- /* Self-hosted only: this rides the api-proxy on a master before kube-proxy exists. A tenant has
+no master, and its default/kubernetes already resolves to the ALB VIP the apiserver advertises. */ -}}
+{{- if and .Values.global.deckhouseSelfHosted (not .Values.global.clusterIsBootstrapped) }}
       hostNetwork: true
       dnsPolicy: Default
 {{- end }}
@@ -96,6 +96,9 @@ spec:
         itself in code (nodeconfig.Reconciler.MaxConcurrentReconciles) rather than depending on
         this string, where one typo in any segment discards the whole per-controller map. */}}
         - --max-concurrent-reconciles=10,bashible-context=1
+{{- if not .Values.global.deckhouseSelfHosted }}
+        - --disable-controllers={{ include "node_manager_nested_disabled_controllers" . }}
+{{- end }}
         - --leader-elect={{ include "helm_lib_is_ha_to_value" (list . "true" "false") }}
         - -v=2
         livenessProbe:
@@ -116,7 +119,7 @@ spec:
             {{- include "node_controller_resources" . | nindent 12 }}
         env:
       # KUBERNETES_SERVICE_HOST and KUBERNETES_SERVICE_PORT to kubernetes-api-proxy are needed on the bootstrap phase to make node-controller work without kube-proxy
-  {{- if not .Values.global.clusterIsBootstrapped }}
+  {{- if and .Values.global.deckhouseSelfHosted (not .Values.global.clusterIsBootstrapped) }}
         - name: KUBERNETES_SERVICE_HOST
           value: 127.0.0.1
         - name: KUBERNETES_SERVICE_PORT
@@ -193,5 +196,3 @@ spec:
       - name: cert
         secret:
           secretName: node-controller-webhook-tls
-{{- end }}
-{{- /* /vcp-gate */ -}}

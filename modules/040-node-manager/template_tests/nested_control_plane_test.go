@@ -23,10 +23,9 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/helm"
 )
 
-// In a virtual control plane tenant Deckhouse manages the cluster from the parent, which is what
-// global.deckhouseSelfHosted: false means. There the module owns the objects nodes bootstrap
-// against and nothing else — the workloads run in the parent, so a Pod rendered here would have
-// nowhere to run and would fight control-plane-manager for the same objects.
+// In a virtual control plane tenant Deckhouse manages the cluster from the parent
+// (global.deckhouseSelfHosted: false). bashible-apiserver stays there - it is an aggregated
+// APIService bound to the parent. node-controller runs here, where its NodeGroups and Nodes are.
 var _ = Describe("Module :: node-manager :: helm template :: nested control plane", func() {
 	f := SetupHelmConfig(``)
 
@@ -66,17 +65,51 @@ var _ = Describe("Module :: node-manager :: helm template :: nested control plan
 			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:manage:permission:module:node-manager:edit").Exists()).To(BeTrue())
 		})
 
-		It("renders no workload of its own", func() {
+		It("renders none of the workloads that belong to the parent", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 			Expect(f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "bashible-apiserver").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Service", "d8-cloud-instance-manager", "bashible-api").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Secret", "d8-cloud-instance-manager", "bashible-api-server-tls").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "node-controller").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "node-group-exporter").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "capi-controller-manager").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "machine-controller-manager").Exists()).To(BeFalse())
-			Expect(f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry").Exists()).To(BeFalse())
+		})
+
+		// The flag is asserted, not just the Deployment: losing it would start the cloud and olcedar
+		// controllers against a tenant that has neither.
+		It("renders node-controller with the tenant controller set", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deployment := f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "node-controller")
+			Expect(deployment.Exists()).To(BeTrue())
+			args := deployment.Field("spec.template.spec.containers.0.args").String()
+			Expect(args).To(ContainSubstring("--disable-controllers=bashible-context,"))
+			Expect(args).To(ContainSubstring("node-operation"))
+			Expect(args).NotTo(ContainSubstring("nodegroup-status"))
+			Expect(args).NotTo(ContainSubstring("bashible-cleanup"))
+
+			Expect(f.KubernetesResource("Secret", "d8-cloud-instance-manager", "deckhouse-registry").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Secret", "d8-cloud-instance-manager", "node-controller-webhook-tls").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Service", "d8-cloud-instance-manager", "node-controller-webhook").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:node-manager:node-controller").Exists()).To(BeTrue())
+		})
+
+		// A tenant has no master, so the bootstrap-phase api-proxy plumbing must not be rendered.
+		It("does not render the self-hosted bootstrap plumbing", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			pod := f.KubernetesResource("Deployment", "d8-cloud-instance-manager", "node-controller").Field("spec.template.spec")
+			Expect(pod.Get("hostNetwork").Exists()).To(BeFalse())
+			Expect(pod.Get("containers.0.env").String()).NotTo(ContainSubstring("KUBERNETES_SERVICE_HOST"))
+		})
+
+		// The one grant in rbac-for-us.yaml that goes to every kubelet, unused in a tenant.
+		It("does not grant the on-node agent RBAC", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:node-manager:node-agent").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:node-manager:node-agent").Exists()).To(BeFalse())
 		})
 
 		// The context is assembled by bashible_context_vcp.go from the contract the host
