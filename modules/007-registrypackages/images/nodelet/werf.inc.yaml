@@ -3,7 +3,7 @@
 # the node.
 #
 # The OS image carries its own copy of this extension as a seed under
-# /usr/share/nodelet, built in the olcedar repository; this image is the update
+# /usr/share/nodelet, built in the engine repository; this image is the update
 # the cluster delivers on top of it.
 #
 # The unit ships inside the image on purpose: the agent restarts only the units
@@ -94,7 +94,7 @@ import:
   before: setup
 imageSpec:
   config:
-    labels: { "distro": "olcedar", "sysext_level": "1.0", "version": "all" }
+    labels: { "distro": "deckhouse-engine", "sysext_level": "1.0", "version": "all" }
     clearUser: true
     clearWorkingDir: true
     clearCmd: true
