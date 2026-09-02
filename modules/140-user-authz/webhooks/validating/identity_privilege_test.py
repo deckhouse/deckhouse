@@ -356,6 +356,27 @@ class TestIdentityAssignHook(unittest.TestCase):
         self.assertFalse(out.validations.data[0]["allowed"])
         self.assertIn("user-authz:super-admin", out.validations.data[0]["message"])
 
+    def test_clusteradmin_cannot_downgrade_superadmin_car(self):
+        out = self.run_hook(ctx(
+            "ClusterAuthorizationRule", "UPDATE",
+            {"accessLevel": "User",
+             "subjects": [{"kind": "User", "name": "eve@corp"}]},
+            old_spec={"accessLevel": "SuperAdmin",
+                      "subjects": [{"kind": "User", "name": "eve@corp"}]},
+            username=CLUSTER_ADMIN))
+        self.assertFalse(out.validations.data[0]["allowed"])
+        self.assertIn("user-authz:super-admin", out.validations.data[0]["message"])
+
+    def test_clusteradmin_cannot_repoint_superadmin_car(self):
+        out = self.run_hook(ctx(
+            "ClusterAuthorizationRule", "UPDATE",
+            {"accessLevel": "SuperAdmin",
+             "subjects": [{"kind": "User", "name": "other@corp"}]},
+            old_spec={"accessLevel": "SuperAdmin",
+                      "subjects": [{"kind": "User", "name": "eve@corp"}]},
+            username=CLUSTER_ADMIN))
+        self.assertFalse(out.validations.data[0]["allowed"])
+
     def test_clusteradmin_can_delete_clusteradmin_car(self):
         out = self.run_hook(ctx(
             "ClusterAuthorizationRule", "DELETE", None,
@@ -678,12 +699,23 @@ class TestIdentityAssignHook(unittest.TestCase):
             {"type": "OIDC", "displayName": "corp", "oidc": {"allowedGroups": ["devs"]}}))
         self.assertFalse(out.validations.data[0]["allowed"])
 
-    def test_saml_filtered_ordinary_group_allowed(self):
+    def test_saml_filtered_ordinary_group_denied_when_superadmin_email_exists(self):
         out = self.run_hook(ctx(
             "DexProvider", "CREATE",
             {"type": "SAML", "displayName": "corp",
              "saml": {"filterGroups": True, "allowedGroups": ["devs"]}},
             username=CLUSTER_ADMIN))
+        self.assertFalse(out.validations.data[0]["allowed"])
+        self.assertIn("user-authz:super-admin", out.validations.data[0]["message"])
+
+    def test_saml_filtered_ordinary_group_allowed_if_superadmin_is_group_only(self):
+        context = ctx(
+            "DexProvider", "CREATE",
+            {"type": "SAML", "displayName": "corp",
+             "saml": {"filterGroups": True, "allowedGroups": ["devs"]}},
+            username=CLUSTER_ADMIN)
+        context.snapshots[assign.CAR_SNAP][0].filterResult.userSubjects = []
+        out = self.run_hook(context)
         tests.assert_validation_allowed(self, out, None)
 
     def test_saml_filtered_superadmin_group_denied(self):
@@ -701,13 +733,34 @@ class TestIdentityAssignHook(unittest.TestCase):
             username=SUPERADMIN))
         tests.assert_validation_allowed(self, out, None)
 
-    def test_github_closed_teams_ordinary_allowed(self):
+    def test_github_closed_teams_denied_when_superadmin_email_exists(self):
         out = self.run_hook(ctx(
             "DexProvider", "CREATE",
             {"type": "Github", "displayName": "gh",
              "github": {"orgs": [{"name": "acme", "teams": ["devs"]}]}},
             username=CLUSTER_ADMIN))
+        self.assertFalse(out.validations.data[0]["allowed"])
+
+    def test_clusteradmin_can_rotate_closed_saml_without_new_targets(self):
+        spec = {"type": "SAML", "displayName": "corp",
+                "saml": {"filterGroups": True, "allowedGroups": ["devs"], "ca": "new"}}
+        old = {"type": "SAML", "displayName": "corp",
+               "saml": {"filterGroups": True, "allowedGroups": ["devs"], "ca": "old"}}
+        out = self.run_hook(ctx(
+            "DexProvider", "UPDATE", spec, old_spec=old, username=CLUSTER_ADMIN))
         tests.assert_validation_allowed(self, out, None)
+
+    def test_clusteradmin_cannot_open_closed_saml(self):
+        context = ctx(
+            "DexProvider", "UPDATE",
+            {"type": "OIDC", "displayName": "corp", "oidc": {"issuer": "https://idp"}},
+            old_spec={"type": "SAML", "displayName": "corp",
+                      "saml": {"filterGroups": True, "allowedGroups": ["devs"]}},
+            username=CLUSTER_ADMIN)
+        context.snapshots[assign.CAR_SNAP][0].filterResult.userSubjects = []
+        out = self.run_hook(context)
+        self.assertFalse(out.validations.data[0]["allowed"])
+        self.assertIn("user-authz:super-admin", out.validations.data[0]["message"])
 
     def test_clusterrole_unrelated_label_change_allowed(self):
         out = self.run_hook(ctx(
