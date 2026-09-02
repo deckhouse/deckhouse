@@ -91,6 +91,10 @@ type ApplicationPackageStatus struct {
 
 // ApplicationPackageStatusInstance identifies one application using the package, and at which version.
 type ApplicationPackageStatusInstance struct {
+	// Used PackageRepository.
+	// +optional
+	RepositoryName string `json:"repositoryName,omitempty"`
+
 	// Namespace where the application is installed.
 	// +optional
 	Namespace string `json:"namespace,omitempty"`
@@ -131,10 +135,11 @@ func (a *ApplicationPackage) GetAppVersion(namespace string, appName string) str
 }
 
 // UpdateAppVersion updates the version for an installed app. Returns true if updated.
-func (a *ApplicationPackage) UpdateAppVersion(namespace, appName, version string) bool {
+func (a *ApplicationPackage) UpdateAppVersion(namespace, appName, version, repository string) bool {
 	for i := range a.Status.UsedBy {
 		if a.Status.UsedBy[i].Namespace == namespace && a.Status.UsedBy[i].Name == appName {
-			if a.Status.UsedBy[i].Version != version {
+			if a.Status.UsedBy[i].Version != version || a.Status.UsedBy[i].RepositoryName != repository {
+				a.Status.UsedBy[i].RepositoryName = repository
 				a.Status.UsedBy[i].Version = version
 				return true
 			}
@@ -148,15 +153,16 @@ func (a *ApplicationPackage) UpdateAppVersion(namespace, appName, version string
 // AddInstalledApp records an application as using this package at the given version, and
 // reports whether that changed the status. Idempotent: re-adding the same application
 // refreshes its version instead of appending a duplicate.
-func (a *ApplicationPackage) AddInstalledApp(namespace string, appName string, version string) bool {
+func (a *ApplicationPackage) AddInstalledApp(namespace, appName, version, repository string) bool {
 	if a.IsAppInstalled(namespace, appName) {
-		return a.UpdateAppVersion(namespace, appName, version)
+		return a.UpdateAppVersion(namespace, appName, version, repository)
 	}
 
 	a.Status.UsedBy = append(a.Status.UsedBy, ApplicationPackageStatusInstance{
-		Namespace: namespace,
-		Name:      appName,
-		Version:   version,
+		RepositoryName: repository,
+		Namespace:      namespace,
+		Name:           appName,
+		Version:        version,
 	})
 	a.Status.UsedByCount = int32(len(a.Status.UsedBy))
 
