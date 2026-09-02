@@ -37,6 +37,9 @@ spec:
                       namespace:
                         description: |
                           Неймспейс, в котором установлено приложение.
+                      repositoryName:
+                        description: Название PackageRepository, используемого этим приложением.
+                        type: string
                       version:
                         description: |
                           Версия пакета, используемая этим приложением.
