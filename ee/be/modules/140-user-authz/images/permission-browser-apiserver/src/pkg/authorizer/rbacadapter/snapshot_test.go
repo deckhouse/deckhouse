@@ -145,3 +145,38 @@ func TestBindSubject_IgnoresNilUser(t *testing.T) {
 	ctx := context.Background()
 	assert.Equal(t, ctx, auth.BindSubject(ctx, nil))
 }
+
+func TestSnapshot_ConsoleLikeAttrsMatchPerCall(t *testing.T) {
+	auth := newTestRBACAuthorizer(t, snapshotWorld()...)
+	alice := &user.DefaultInfo{Name: "alice"}
+	bob := &user.DefaultInfo{Name: "bob"}
+
+	cases := []*mockAttrs{
+		{user: alice, verb: "list", resource: "pods", isResource: true},
+		{user: alice, verb: "watch", resource: "pods", isResource: true},
+		{user: alice, verb: "get", resource: "pods", namespace: "ns-d", isResource: true},
+		{user: alice, verb: "list", resource: "pods", namespace: "ns-d", isResource: true},
+		{user: alice, verb: "delete", resource: "pods", namespace: "ns-d", isResource: true},
+		{user: alice, verb: "get", resource: "nodes", isResource: true},
+		{user: alice, verb: "list", apiGroup: "apps", resource: "deployments", isResource: true},
+		{user: alice, verb: "get", resource: "secrets", namespace: "ns-x", isResource: true},
+		{user: bob, verb: "list", resource: "secrets", isResource: true},
+		{user: bob, verb: "get", resource: "secrets", namespace: "ns-x", isResource: true},
+		{user: bob, verb: "list", resource: "pods", isResource: true},
+		{user: &user.DefaultInfo{Name: "nobody"}, verb: "list", resource: "pods", isResource: true},
+	}
+
+	for _, attrs := range cases {
+		unboundDecision, unboundReason, err := auth.Authorize(context.Background(), attrs)
+		require.NoError(t, err)
+		boundCtx := auth.BindSubject(context.Background(), attrs.user)
+		boundDecision, boundReason, err := auth.Authorize(boundCtx, attrs)
+		require.NoError(t, err)
+		assert.Equal(t, unboundDecision, boundDecision, "decision for %+v", attrs)
+		assert.Equal(t, unboundReason, boundReason, "reason for %+v", attrs)
+		assert.Equal(t,
+			auth.AllowsIndependently(context.Background(), attrs),
+			auth.AllowsIndependently(boundCtx, attrs),
+			"AllowsIndependently for %+v", attrs)
+	}
+}
