@@ -131,6 +131,16 @@ rules:
   verbs:
   - create
   - delete
+# A rendered template carries a live bootstrap token, so reading one is the
+# right to join a machine to the cluster. It belongs with the write verbs, not
+# with the read-only role.
+- apiGroups:
+  - templates.internal.deckhouse.io
+  resources:
+  - nodeconfigtemplates
+  verbs:
+  - get
+  - list
 ---
 # Access level: Admin.
 # Includes User, PrivilegedUser, and Editor permissions.
