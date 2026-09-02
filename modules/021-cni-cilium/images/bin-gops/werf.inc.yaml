@@ -1,10 +1,10 @@
-# #####################################################################
-# Description: gops, a diagnostic tool for Go processes, used at runtime
-# Target: agent, hubble-relay
-# Sources:
-# - cilium/cilium: images/runtime/Dockerfile (go-builder stage)
-# - cilium/cilium: images/runtime/build-gops.sh
-# #####################################################################
+{{/*
+Description: gops, a diagnostic tool for Go processes, used at runtime
+Target: agent, hubble-relay
+Sources:
+- cilium/cilium: images/runtime/Dockerfile (go-builder stage)
+- cilium/cilium: images/runtime/build-gops.sh
+*/}}
 ---
 {{- $gopsVersion := include "get_oss_version_by_id" (list "gops" $) }}
 ---

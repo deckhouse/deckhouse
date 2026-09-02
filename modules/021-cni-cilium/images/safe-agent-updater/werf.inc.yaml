@@ -1,5 +1,5 @@
 {{/*
-Description: check-wg-kernel-compat, verifies the node kernel can run WireGuard before the agent enables it
+Description: safe-agent-updater, orders agent restarts so a node never loses its datapath mid-update
 Target: final image
 Sources:
 - Deckhouse specific, no upstream counterpart
@@ -39,19 +39,19 @@ shell:
   - |
     {{- $buildContext := deepCopy $ -}}
     {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
-    {{- $_ := set $buildContext "BuildCommand" `go build -ldflags "-s -w" -o /out/check-wg-kernel-compat .` -}}
+    {{- $_ := set $buildContext "BuildCommand" `go build -ldflags "-s -w" -o /out/safe-agent-updater .` -}}
     {{- include "image-build.build" $buildContext | indent 4 }}
-  - chown 64535:64535 /out/check-wg-kernel-compat
-  - chmod 0755 /out/check-wg-kernel-compat
+  - chown 64535:64535 /out/safe-agent-updater
+  - chmod 0700 /out/safe-agent-updater
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "base/distroless-fin" }}
 import:
 - image: {{ .ModuleName }}/{{ .ImageName }}-build
-  add: /out/check-wg-kernel-compat
-  to: /check-wg-kernel-compat
+  add: /out/safe-agent-updater
+  to: /safe-agent-updater
   before: install
 {{- include "image mount points" . }}
 imageSpec:
   config:
-    entrypoint: ["/check-wg-kernel-compat"]
+    entrypoint: ["/safe-agent-updater"]
