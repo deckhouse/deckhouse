@@ -1196,6 +1196,48 @@ var _ = Describe("NodeConfig controller", func() {
 		Expect(err.Error()).To(ContainSubstring("spec.network is written on the machine"))
 	})
 
+	// User story: As a cluster operator, I want a DHCP machine that was handed
+	// its own resolvers to be configured by the cluster, so that publishing one
+	// field of the network does not freeze the node's config for good.
+	It("configures a static node that published resolvers but no NIC", func(ctx context.Context) {
+		ngName := testenv.UniqueName("static-imm")
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName, func(ng *deckhousev1.NodeGroup) {
+			ng.Spec.NodeType = deckhousev1.NodeTypeStatic
+			ng.Spec.CloudInstances = nil
+		})
+		nodeName := testenv.UniqueName("static")
+		createNode(ctx, nodeName, ngName)
+
+		// Resolvers and time servers the installer handed the machine; the NIC
+		// is left to DHCP, so the controller fills it in on every pass.
+		published := &internalv1alpha1.NodeConfig{
+			ObjectMeta: metav1.ObjectMeta{Name: nodeName},
+			Spec: internalv1alpha1.NodeSpec{
+				NodeName: nodeName,
+				OSImage:  internalv1alpha1.OSImage{Digest: testOSImageDigest},
+				Network: internalv1alpha1.Network{
+					DNS: internalv1alpha1.DNS{Servers: []string{"10.0.0.53"}},
+					NTP: internalv1alpha1.NTP{Servers: []string{"10.0.0.123"}},
+				},
+			},
+		}
+		Expect(k8sClient.Create(ctx, published)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, published) })
+
+		By("letting the controller render over it, admission and all")
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
+
+			g.Expect(nc.Spec.APIServerEndpoints).To(ConsistOf(apiServerEndpoints))
+			g.Expect(nc.Spec.Kubelet.CACert).NotTo(BeEmpty(), "the node never got its kubelet CA")
+			g.Expect(nc.Spec.Network.DNS.Servers).To(ConsistOf("10.0.0.53"))
+			g.Expect(nc.Spec.Network.NTP.Servers).To(ConsistOf("10.0.0.123"))
+			g.Expect(nc.Spec.Network.Hostname).To(Equal(nodeName))
+			g.Expect(nc.Spec.Network.Interfaces).To(ConsistOf(
+				internalv1alpha1.NetworkInterface{Name: "eth0", DHCP: true}))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
 	// User story: As a cluster operator, I want the first master to keep working
 	// after Deckhouse is installed, so that installing the very thing that
 	// manages the cluster does not take its control plane down.

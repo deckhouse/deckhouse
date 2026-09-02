@@ -44,6 +44,7 @@ import (
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/testenv"
+	"github.com/deckhouse/node-controller/internal/webhook"
 )
 
 // renderedStorage is what renderSpec always puts in the desired spec: the guess
@@ -1022,4 +1023,13 @@ func TestAnExplicitZeroDownloadsReachesTheAPI(t *testing.T) {
 	data, err := json.Marshal(renderContainerRuntime(ng, clusterInputs{}))
 	require.NoError(t, err)
 	require.Contains(t, string(data), `"maxConcurrentDownloads":0`)
+}
+
+// The NodeConfig webhook carves out exactly this NIC for a machine that named
+// none, from a copy of its own (webhook.ClusterFallbackInterfaces). Drift here
+// denies that node's config on every pass, permanently.
+func TestRenderedFallbackNICMatchesTheWebhookCarveOut(t *testing.T) {
+	rendered := renderNetwork(&corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0"}})
+
+	require.Equal(t, webhook.ClusterFallbackInterfaces(), rendered.Interfaces)
 }
