@@ -13,7 +13,7 @@ extractedLinksMax: 0
 В подсистему Observability входят следующие модули:
 
 * [`prometheus`](/modules/prometheus/) — разворачивает стек мониторинга с предустановленными параметрами для DKP и приложений, что упрощает начальную настройку;
-* [`operator-prometheus`](/modules/operator-prometheus/) — устанавливает [Prometheus Operator](https://github.com/coreos/prometheus-operator), который автоматизирует развёртывание и управление инстансами [Prometheus](https://prometheus.io/);
+* [`operator-prometheus`](/modules/operator-prometheus/) — устанавливает [Prometheus Operator](https://github.com/coreos/prometheus-operator), который автоматизирует развёртывание и управление инстансами [Prometheus](https://github.com/prometheus/prometheus);
 * [`prometheus-metrics-adapter`](/modules/prometheus-metrics-adapter/) — позволяет автоскейлерам HPA и VPA  использовать метрики мониторинга для принятия решений о масштабировании;
 * [`log-shipper`](/modules/log-shipper/) — упрощает настройку сбора логов в Kubernetes-кластере;
 * [`loki`](/modules/loki/) — разворачивает в кластере хранилище оперативных логов на базе [Grafana Loki](https://grafana.com/oss/loki/);

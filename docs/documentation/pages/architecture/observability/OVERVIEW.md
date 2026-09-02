@@ -12,7 +12,7 @@ This section describes the architecture of the Observability subsystem of Deckho
 The Observability subsystem includes the following modules:
 
 * [`prometheus`](/modules/prometheus/): Deploys a monitoring stack with predefined settings for DKP and applications, simplifying the initial configuration.
-* [`operator-prometheus`](/modules/operator-prometheus/): Installs [Prometheus Operator](https://github.com/coreos/prometheus-operator), which automates the deployment and management of [Prometheus](https://prometheus.io/) instances.
+* [`operator-prometheus`](/modules/operator-prometheus/): Installs [Prometheus Operator](https://github.com/coreos/prometheus-operator), which automates the deployment and management of [Prometheus](https://github.com/prometheus/prometheus) instances.
 * [`prometheus-metrics-adapter`](/modules/prometheus-metrics-adapter/): Allows HPA and VPA autoscalers to use monitoring metrics when making scaling decisions.
 * [`log-shipper`](/modules/log-shipper/): Simplifies log collection setup in Kubernetes clusters.
 * [`loki`](/modules/loki/): Deploys a short-term log storage system in the cluster based on [Grafana Loki](https://grafana.com/oss/loki/).
