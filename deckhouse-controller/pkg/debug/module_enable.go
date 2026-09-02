@@ -26,10 +26,12 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -110,17 +112,22 @@ func setModuleConfigEnabled(ctx context.Context, kubeClient k8s.Client, name str
 	}
 
 	if enabled {
-		unstructuredObjModule, err := kubeClient.Dynamic().Resource(v1alpha1.ModuleGVR).Get(ctx, name, metav1.GetOptions{})
+		// an installed module has an object; a module not installed yet must be offered by a source
+		installed, err := moduleInstalled(ctx, kubeClient, name)
 		if err != nil {
-			if apierrors.IsNotFound(err) {
-				return errors.New("module not found")
-			}
-			return fmt.Errorf("get the '%s' module: %w", name, err)
+			return err
 		}
 
-		sources, ok, _ := unstructured.NestedStringSlice(unstructuredObjModule.Object, "properties", "availableSources")
-		source, _, _ := unstructured.NestedString(unstructuredObjModule.Object, "properties", "source")
-		if ok && len(sources) > 1 && source == "" {
+		sources, err := offeringSources(ctx, kubeClient, name)
+		if err != nil {
+			return err
+		}
+
+		if !installed && len(sources) == 0 {
+			return errors.New("module not found")
+		}
+
+		if !installed && len(sources) > 1 {
 			fmt.Printf("Warning: module '%s' is enabled but didn’t run because multiple sources were found (%s), please specify a source in ModuleConfig resource\n", name, strings.Join(sources, ", "))
 		}
 	}
@@ -164,4 +171,32 @@ func setModuleConfigEnabled(ctx context.Context, kubeClient k8s.Client, name str
 	}
 
 	return nil
+}
+
+// moduleInstalled reports whether the module has an object, which only an installed module has.
+func moduleInstalled(ctx context.Context, kubeClient k8s.Client, name string) (bool, error) {
+	if _, err := kubeClient.Dynamic().Resource(v1alpha2.ModuleGVR).Get(ctx, name, metav1.GetOptions{}); err != nil {
+		if apierrors.IsNotFound(err) {
+			return false, nil
+		}
+
+		return false, fmt.Errorf("get the '%s' module: %w", name, err)
+	}
+
+	return true, nil
+}
+
+// offeringSources names the module sources whose last scan lists the module.
+func offeringSources(ctx context.Context, kubeClient k8s.Client, name string) ([]string, error) {
+	list, err := kubeClient.Dynamic().Resource(v1alpha1.ModuleSourceGVR).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return nil, fmt.Errorf("list module sources: %w", err)
+	}
+
+	sources := new(v1alpha1.ModuleSourceList)
+	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(list.UnstructuredContent(), sources); err != nil {
+		return nil, fmt.Errorf("convert module sources: %w", err)
+	}
+
+	return sources.Offering(name), nil
 }

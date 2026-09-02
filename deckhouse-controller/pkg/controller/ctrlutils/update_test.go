@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 )
 
 // TestUpdateStatusWithRetry_ConcurrentDelete reproduces the startup crash where a
@@ -36,28 +37,28 @@ import (
 // nothing left to update and must NOT be treated as a fatal error.
 func TestUpdateStatusWithRetry_ConcurrentDelete(t *testing.T) {
 	scheme := runtime.NewScheme()
-	require.NoError(t, v1alpha1.SchemeBuilder.AddToScheme(scheme))
+	require.NoError(t, v1alpha2.SchemeBuilder.AddToScheme(scheme))
 
-	module := &v1alpha1.Module{
+	module := &v1alpha2.Module{
 		ObjectMeta: metav1.ObjectMeta{Name: "prometheus-metrics-adapter"},
-		Properties: v1alpha1.ModuleProperties{Source: v1alpha1.ModuleSourceEmbedded},
+		Spec:       v1alpha2.ModuleSpec{PackageRepositoryName: "embedded", PackageVersion: "v1.80.0"},
 	}
 
 	cl := fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithObjects(module).
-		WithStatusSubresource(&v1alpha1.Module{}).
+		WithStatusSubresource(&v1alpha2.Module{}).
 		WithInterceptorFuncs(interceptor.Funcs{
 			// Simulate the object being deleted concurrently between the Get inside
 			// UpdateWithRetry and this status update.
 			SubResourceUpdate: func(_ context.Context, _ client.Client, _ string, obj client.Object, _ ...client.SubResourceUpdateOption) error {
-				return apierrors.NewNotFound(v1alpha1.ModuleGVR.GroupResource(), obj.GetName())
+				return apierrors.NewNotFound(v1alpha2.ModuleGVR.GroupResource(), obj.GetName())
 			},
 		}).
 		Build()
 
 	err := UpdateStatusWithRetry(context.Background(), cl, module, func() error {
-		module.SetConditionUnknown(v1alpha1.ModuleConditionEnabledByModuleConfig, "", "")
+		module.SetConditionUnknown(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonUnknown, "")
 		return nil
 	})
 
@@ -67,11 +68,11 @@ func TestUpdateStatusWithRetry_ConcurrentDelete(t *testing.T) {
 // TestUpdateWithRetry_ConcurrentDelete is the same guarantee for the non-status Update path.
 func TestUpdateWithRetry_ConcurrentDelete(t *testing.T) {
 	scheme := runtime.NewScheme()
-	require.NoError(t, v1alpha1.SchemeBuilder.AddToScheme(scheme))
+	require.NoError(t, v1alpha2.SchemeBuilder.AddToScheme(scheme))
 
-	module := &v1alpha1.Module{
+	module := &v1alpha2.Module{
 		ObjectMeta: metav1.ObjectMeta{Name: "prometheus-metrics-adapter"},
-		Properties: v1alpha1.ModuleProperties{Source: v1alpha1.ModuleSourceEmbedded},
+		Spec:       v1alpha2.ModuleSpec{PackageRepositoryName: "embedded", PackageVersion: "v1.80.0"},
 	}
 
 	cl := fake.NewClientBuilder().
@@ -79,13 +80,13 @@ func TestUpdateWithRetry_ConcurrentDelete(t *testing.T) {
 		WithObjects(module).
 		WithInterceptorFuncs(interceptor.Funcs{
 			Update: func(_ context.Context, _ client.WithWatch, obj client.Object, _ ...client.UpdateOption) error {
-				return apierrors.NewNotFound(v1alpha1.ModuleGVR.GroupResource(), obj.GetName())
+				return apierrors.NewNotFound(v1alpha2.ModuleGVR.GroupResource(), obj.GetName())
 			},
 		}).
 		Build()
 
 	err := UpdateWithRetry(context.Background(), cl, module, func() error {
-		module.Properties.Version = "v1.2.3"
+		module.Spec.PackageVersion = "v1.2.3"
 		return nil
 	})
 

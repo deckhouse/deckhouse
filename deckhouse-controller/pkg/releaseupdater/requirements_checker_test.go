@@ -31,16 +31,18 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
 
-func enabledModule(name string) *v1alpha1.Module {
-	return &v1alpha1.Module{
+func enabledModule(name string) *v1alpha2.Module {
+	return &v1alpha2.Module{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Status: v1alpha1.ModuleStatus{
-			Conditions: []v1alpha1.ModuleCondition{
-				{Type: v1alpha1.ModuleConditionEnabledByModuleManager, Status: corev1.ConditionTrue},
+		Spec:       v1alpha2.ModuleSpec{PackageRepositoryName: "src", PackageVersion: "v1.0.0"},
+		Status: v1alpha2.ModuleStatus{
+			Conditions: []metav1.Condition{
+				{Type: v1alpha1.ModuleConditionEnabledByModuleManager, Status: metav1.ConditionTrue, Reason: v1alpha1.ModuleReasonEnabled, LastTransitionTime: metav1.Now()},
 			},
 		},
 	}
@@ -124,10 +126,11 @@ func TestMigratedModulesCheck_DistinctErrors(t *testing.T) {
 		{
 			name: "disabled module is skipped -> allowed even with no source",
 			objects: []client.Object{
-				&v1alpha1.Module{
+				&v1alpha2.Module{
 					ObjectMeta: metav1.ObjectMeta{Name: moduleName},
-					Status: v1alpha1.ModuleStatus{Conditions: []v1alpha1.ModuleCondition{
-						{Type: v1alpha1.ModuleConditionEnabledByModuleManager, Status: corev1.ConditionFalse},
+					Spec:       v1alpha2.ModuleSpec{PackageRepositoryName: "src", PackageVersion: "v1.0.0"},
+					Status: v1alpha2.ModuleStatus{Conditions: []metav1.Condition{
+						{Type: v1alpha1.ModuleConditionEnabledByModuleManager, Status: metav1.ConditionFalse, Reason: v1alpha1.ModuleReasonDisabled, LastTransitionTime: metav1.Now()},
 					}},
 				},
 			},
@@ -139,6 +142,7 @@ func TestMigratedModulesCheck_DistinctErrors(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			scheme := runtime.NewScheme()
 			require.NoError(t, v1alpha1.AddToScheme(scheme))
+			require.NoError(t, v1alpha2.AddToScheme(scheme))
 			require.NoError(t, corev1.AddToScheme(scheme))
 
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.objects...).Build()
@@ -252,6 +256,7 @@ func TestKubernetesVersionCheck_AutomaticDetection(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			scheme := runtime.NewScheme()
 			require.NoError(t, v1alpha1.AddToScheme(scheme))
+			require.NoError(t, v1alpha2.AddToScheme(scheme))
 			require.NoError(t, corev1.AddToScheme(scheme))
 
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.objects...).Build()

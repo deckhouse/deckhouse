@@ -44,6 +44,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	deckhousev1alpha2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	kclient "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -471,7 +472,7 @@ func encodeDockerCfgAuthEntryFromAuthConfig(authConfig authn.AuthConfig) *docker
 func moduleEnabled(ctx context.Context, kubeCl *kclient.KubernetesClient, moduleName string) (bool, error) {
 	moduleUnstructured, err := kubeCl.
 		Dynamic().
-		Resource(deckhousev1alpha1.ModuleGVR).
+		Resource(deckhousev1alpha2.ModuleGVR).
 		Namespace("").
 		Get(ctx, moduleName, metav1.GetOptions{})
 	if err != nil {
@@ -486,7 +487,7 @@ func moduleEnabled(ctx context.Context, kubeCl *kclient.KubernetesClient, module
 		return false, fmt.Errorf("failed to marshal unstructured module: %w", err)
 	}
 
-	var module deckhousev1alpha1.Module
+	var module deckhousev1alpha2.Module
 	decoder := serializer.
 		NewCodecFactory(runtime.NewScheme()).
 		UniversalDeserializer()
@@ -494,6 +495,6 @@ func moduleEnabled(ctx context.Context, kubeCl *kclient.KubernetesClient, module
 		return false, fmt.Errorf("failed to decode module JSON: %w", err)
 	}
 
-	enabled := module.IsCondition(deckhousev1alpha1.ModuleConditionEnabledByModuleManager, v1.ConditionTrue)
+	enabled := module.IsCondition(deckhousev1alpha1.ModuleConditionEnabledByModuleManager, metav1.ConditionTrue)
 	return enabled, nil
 }
