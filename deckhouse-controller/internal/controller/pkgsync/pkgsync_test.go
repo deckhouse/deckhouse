@@ -18,6 +18,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -27,6 +28,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/project"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -40,7 +42,7 @@ func newTestSyncer(t *testing.T, version, embeddedDir string, objects ...client.
 
 	cl := fake.NewClientBuilder().
 		WithScheme(sc).
-		WithStatusSubresource(&v1alpha1.ModulePackageVersion{}, &v1alpha1.ModulePackage{}).
+		WithStatusSubresource(&v1alpha1.ModulePackageVersion{}, &v1alpha1.ModulePackage{}, &v1alpha1.ModuleRelease{}, &v1alpha2.Module{}).
 		WithObjects(objects...).
 		Build()
 
@@ -85,11 +87,17 @@ func testModuleSource(name, repo string) *v1alpha1.ModuleSource {
 	}
 }
 
+// testRelease builds a release the way the release controller leaves it: the phase is
+// mirrored into the status label the placement pass selects on.
 func testRelease(module, source, version, phase string) *v1alpha1.ModuleRelease {
 	return &v1alpha1.ModuleRelease{
 		ObjectMeta: metav1.ObjectMeta{
-			Name:   module + "-v" + version,
-			Labels: map[string]string{"source": source},
+			Name: module + "-v" + version,
+			Labels: map[string]string{
+				v1alpha1.ModuleReleaseLabelSource: source,
+				v1alpha1.ModuleReleaseLabelModule: module,
+				v1alpha1.ModuleReleaseLabelStatus: strings.ToLower(phase),
+			},
 		},
 		Spec:   v1alpha1.ModuleReleaseSpec{ModuleName: module, Version: version},
 		Status: v1alpha1.ModuleReleaseStatus{Phase: phase},
@@ -195,6 +203,12 @@ func TestSyncIsIdempotent(t *testing.T) {
 	require.Len(t, versions, 3)
 	repositoryRV := getRepository(t, cl, "external").ResourceVersion
 
+	modules := make(map[string]string)
+	for _, name := range listModuleNames(t, cl) {
+		modules[name] = getModule(t, cl, name).ResourceVersion
+	}
+	require.Len(t, modules, 2)
+
 	require.NoError(t, s.sync(ctx))
 
 	assert.Len(t, listVersionNames(t, cl), 3)
@@ -202,4 +216,32 @@ func TestSyncIsIdempotent(t *testing.T) {
 		assert.Equal(t, rv, getVersion(t, cl, name).ResourceVersion, name)
 	}
 	assert.Equal(t, repositoryRV, getRepository(t, cl, "external").ResourceVersion)
+
+	assert.Len(t, listModuleNames(t, cl), 2)
+	for name, rv := range modules {
+		assert.Equal(t, rv, getModule(t, cl, name).ResourceVersion, name)
+	}
+}
+
+func listModuleNames(t *testing.T, cl client.Client) []string {
+	t.Helper()
+
+	list := new(v1alpha2.ModuleList)
+	require.NoError(t, cl.List(context.Background(), list))
+
+	names := make([]string, 0, len(list.Items))
+	for _, item := range list.Items {
+		names = append(names, item.Name)
+	}
+
+	return names
+}
+
+func getModule(t *testing.T, cl client.Client, name string) *v1alpha2.Module {
+	t.Helper()
+
+	module := new(v1alpha2.Module)
+	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: name}, module))
+
+	return module
 }
