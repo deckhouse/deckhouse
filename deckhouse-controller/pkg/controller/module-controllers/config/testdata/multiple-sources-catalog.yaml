@@ -1,0 +1,59 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: test-module
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: test-module
+spec:
+  releaseChannel: Stable
+status:
+  phase: Available
+  conditions:
+    - type: EnabledByModuleManager
+      status: "False"
+      reason: Disabled
+      lastTransitionTime: "2024-01-01T00:00:00Z"
+    - type: IsReady
+      status: "False"
+      reason: NotInstalled
+      message: not installed
+      lastTransitionTime: "2024-01-01T00:00:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: source-one
+spec:
+  registry:
+    repo: registry.example.com/one
+status:
+  modules:
+    - name: test-module
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: source-two
+spec:
+  registry:
+    repo: registry.example.com/two
+status:
+  modules:
+    - name: test-module
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: source-three
+spec:
+  registry:
+    repo: registry.example.com/three
+status:
+  modules:
+    - name: test-module

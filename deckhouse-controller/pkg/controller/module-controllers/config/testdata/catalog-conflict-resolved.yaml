@@ -1,0 +1,54 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: test-module
+spec:
+  enabled: true
+  source: source-two
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: test-module
+spec:
+  releaseChannel: Stable
+  enabled: true
+status:
+  phase: Conflict
+  conditions:
+    - type: EnabledByModuleConfig
+      status: "True"
+      reason: Enabled
+      lastTransitionTime: "2024-01-01T00:00:00Z"
+    - type: EnabledByModuleManager
+      status: "False"
+      reason: Disabled
+      lastTransitionTime: "2024-01-01T00:00:00Z"
+    - type: IsReady
+      status: "False"
+      reason: Conflict
+      message: several available sources
+      lastTransitionTime: "2024-01-01T00:00:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: source-one
+spec:
+  registry:
+    repo: registry.example.com/one
+status:
+  modules:
+    - name: test-module
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: source-two
+spec:
+  registry:
+    repo: registry.example.com/two
+status:
+  modules:
+    - name: test-module
