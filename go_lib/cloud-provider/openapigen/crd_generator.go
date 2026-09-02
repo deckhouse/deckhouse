@@ -433,7 +433,8 @@ func GenerateCRD(versions []VersionSpec) ([]byte, error) {
 
 // GenerateCRDDescriptionRu generates a full Kubernetes CRD YAML with only Russian descriptions.
 // Uses the ru-markers schema directly — no kubebuilder validation pipeline.
-// Fields without +deckhouse:ru:description markers are absent from the output.
+// Every exported field is present in the output; fields without a
+// +deckhouse:ru:description marker simply carry no description.
 func GenerateCRDDescriptionRu(versions []VersionSpec) ([]byte, error) {
 	reg, err := markers.BuildDeckhouseDescriptionRuOpenAPIMarkerRegistry()
 	if err != nil {

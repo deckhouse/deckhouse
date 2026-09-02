@@ -18,25 +18,26 @@ import (
 	"strings"
 	"testing"
 
+	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
+	cpvalapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/api"
 	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/meta"
 )
 
 func TestShouldSkipState(t *testing.T) {
 	t.Parallel()
 
-	if !shouldSkipState(&cpval.State{
+	if !shouldSkipState(&dvpval.State{
 		MigrationStatus: cpapi.MigrationStatus{MigrationPending: true, LegacyPCCPresent: true},
 	}) {
 		t.Fatal("shouldSkipState(pending migration) = false, want true")
 	}
 
-	if shouldSkipState(&cpval.State{}) {
+	if shouldSkipState(&dvpval.State{}) {
 		t.Fatal("shouldSkipState(empty) = true, want false")
 	}
 
@@ -48,12 +49,12 @@ func TestShouldSkipState(t *testing.T) {
 func TestResultToAdmission(t *testing.T) {
 	t.Parallel()
 
-	warnings, err := resultToAdmission(cpval.Result{})
+	warnings, err := resultToAdmission(cpvalapi.Result{})
 	if err != nil || warnings != nil {
 		t.Fatalf("resultToAdmission() = (%v, %v), want (nil, nil)", warnings, err)
 	}
 
-	withWarnings := cpval.Result{}
+	withWarnings := cpvalapi.Result{}
 	withWarnings.AddWarning("spec.zone", "deprecated_zone", nil, "zone is deprecated")
 	warnings, err = resultToAdmission(withWarnings)
 	if err != nil {
@@ -63,7 +64,7 @@ func TestResultToAdmission(t *testing.T) {
 		t.Fatalf("resultToAdmission() warnings = %v, want formatted warning", warnings)
 	}
 
-	denied := cpval.Result{}
+	denied := cpvalapi.Result{}
 	denied.AddError("", "denied", nil, "denied")
 	warnings, err = resultToAdmission(denied)
 	if err == nil {
@@ -76,7 +77,7 @@ func TestResultToAdmission(t *testing.T) {
 		t.Fatalf("resultToAdmission() warnings = %v, want nil when only errors are present", warnings)
 	}
 
-	deniedWithWarnings := cpval.Result{}
+	deniedWithWarnings := cpvalapi.Result{}
 	deniedWithWarnings.AddError("spec.enabled", "disabled", nil, "module must be enabled")
 	deniedWithWarnings.AddWarning("spec.settings", "legacy_setting", nil, "setting is deprecated")
 	warnings, err = resultToAdmission(deniedWithWarnings)
@@ -87,7 +88,7 @@ func TestResultToAdmission(t *testing.T) {
 		t.Fatalf("resultToAdmission() warnings = %v, want warnings preserved on denial", warnings)
 	}
 
-	deniedWithValue := cpval.Result{}
+	deniedWithValue := cpvalapi.Result{}
 	deniedWithValue.AddError(
 		"Secret/d8-credentials.data.authScheme",
 		"unsupported_auth_scheme",

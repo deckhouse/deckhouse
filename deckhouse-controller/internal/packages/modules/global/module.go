@@ -20,7 +20,6 @@ import (
 	"fmt"
 	"maps"
 	"os"
-	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -37,7 +36,6 @@ import (
 	objectpatch "github.com/flant/shell-operator/pkg/kube/object_patch"
 	kubeeventsmanager "github.com/flant/shell-operator/pkg/kube_events_manager"
 	schedulemanager "github.com/flant/shell-operator/pkg/schedule_manager"
-	"github.com/goccy/go-yaml"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -189,18 +187,14 @@ func (m *Module) GetPath() string {
 	return m.path
 }
 
-// GetHookSnapshotsDump returns a YAML snapshot of hook controller snapshots.
-// If include is provided, only hooks matching those names are included.
-func (m *Module) GetHookSnapshotsDump(include ...string) []byte {
-	d := make(map[string]any)
-	for _, h := range m.hooks.GetHooks() {
-		if len(include) == 0 || slices.Contains(include, h.GetName()) {
-			d[h.GetName()] = h.GetHookController().SnapshotsDump()
-		}
+// GetHookSnapshotsDump returns a snapshot of hook controller snapshots.
+func (m *Module) GetHookSnapshotsDump() map[string]any {
+	snapshots := make(map[string]any)
+	for _, hook := range m.hooks.GetHooks() {
+		snapshots[hook.GetName()] = hook.GetHookController().SnapshotsDump()
 	}
 
-	marshalled, _ := yaml.Marshal(d)
-	return marshalled
+	return snapshots
 }
 
 // GetValuesChecksum returns a checksum of the current values.
@@ -479,7 +473,8 @@ func (m *Module) SetEnabledModules(enabledModules []string) {
 	}
 }
 
-// SetCapabilities injects GVK values, discovered during executing ModuleEnsureCRDs tasks, into .global.discovery.apiVersions values
+// SetCapabilities injects GVK values, discovered during executing ModuleEnsureCRDs tasks,
+// into the .capabilities global value, exposed to charts as .Platform.capabilities
 func (m *Module) SetCapabilities(apiVersions []string) {
 	if len(apiVersions) == 0 {
 		return
@@ -489,9 +484,14 @@ func (m *Module) SetCapabilities(apiVersions []string) {
 	sort.Strings(apiVersions)
 	data, _ := json.Marshal(apiVersions)
 
-	// backward compatibility: set apiVersions to .global.discovery.apiVersions
-	// TODO(ipaqsa): get rid of it further and add Capabilities field
 	patch := addonutils.ValuesPatch{Operations: []*sdkutils.ValuesPatchOperation{
+		{
+			Op:    "add",
+			Path:  "/capabilities",
+			Value: data,
+		},
+		// backward compatibility: set apiVersions to .global.discovery.apiVersions
+		// TODO(ipaqsa): get rid of it further
 		{
 			Op:    "add",
 			Path:  "/discovery/apiVersions",
@@ -500,7 +500,7 @@ func (m *Module) SetCapabilities(apiVersions []string) {
 	}}
 
 	if err := m.values.ApplyValuesPatch(patch); err != nil {
-		m.logger.Error(fmt.Sprintf("failed to set enabled modules to global: %v", err.Error()))
+		m.logger.Error(fmt.Sprintf("failed to set capabilities to global: %v", err.Error()))
 	}
 }
 

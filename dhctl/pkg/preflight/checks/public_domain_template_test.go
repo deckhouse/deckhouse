@@ -74,7 +74,7 @@ func TestCheckLocalhostDomain(t *testing.T) {
 			mockScript := &mocks.MockScript{}
 			tt.setupMock(mockNode, mockScript)
 
-			check := LocalhostDomainCheck{NodeInterface: mockNode}
+			check := LocalhostDomainCheck{NodeInterface: mockNode, globalOptions: candiOptionsFor(t, "check_localhost.sh.tpl")}
 			err := check.Run(t.Context())
 
 			if tt.expectedError != "" {
@@ -131,6 +131,26 @@ func TestCheckPublicDomainTemplate(t *testing.T) {
 				ClusterConfig: map[string]json.RawMessage{
 					"clusterDomain": []byte(`"cluster.local"`),
 				},
+			},
+		},
+		{
+			name: "no ClusterConfiguration",
+			metaConfig: &config.MetaConfig{
+				ModuleConfigs: []*config.ModuleConfig{
+					{
+						ObjectMeta: metav1.ObjectMeta{
+							Name: "global",
+						},
+						Spec: config.ModuleConfigSpec{
+							Settings: map[string]any{
+								"modules": map[string]any{
+									"publicDomainTemplate": "%s.example.com",
+								},
+							},
+						},
+					},
+				},
+				ClusterConfig: nil,
 			},
 		},
 		{

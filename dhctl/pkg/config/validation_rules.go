@@ -52,30 +52,15 @@ var xRulesValidators = map[string]func(oldValue json.RawMessage) error{
 }
 
 func UpdateReplicasRule(oldRaw, newRaw json.RawMessage) error {
-	var oldValue int
 	var newValue int
 
-	err := yaml.Unmarshal(oldRaw, &oldValue)
-	if err != nil {
-		return err
-	}
-
-	err = yaml.Unmarshal(newRaw, &newValue)
-	if err != nil {
+	if err := yaml.Unmarshal(newRaw, &newValue); err != nil {
 		return err
 	}
 
 	if newValue == 0 {
 		return fmt.Errorf("%w: the .masterNodeGroup.replicas zero value is not acceptable", ErrValidationRuleFailed)
 	}
-
-	if newValue < oldValue && newValue == 1 {
-		return fmt.Errorf(
-			"%w: can't reduce the number of master nodegroup replicas to 1, functionality will be available in future versions",
-			ErrValidationRuleFailed,
-		)
-	}
-
 	return nil
 }
 

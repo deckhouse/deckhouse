@@ -78,7 +78,7 @@ func TestBuildPackageURL(t *testing.T) {
 			name:     "endpoint with http scheme",
 			endpoint: "http://1.2.3.4:4219",
 			digest:   "sha256:abc123",
-			wantURL:  "https://1.2.3.4:4219/package?digest=sha256%3Aabc123",
+			wantURL:  "http://1.2.3.4:4219/package?digest=sha256%3Aabc123",
 		},
 		{
 			name:       "with repository",
@@ -94,6 +94,13 @@ func TestBuildPackageURL(t *testing.T) {
 			path:     "/custom/path",
 			wantURL:  "https://1.2.3.4:4219/package?digest=sha256%3Aabc123&path=%2Fcustom%2Fpath",
 		},
+		{
+			name:     "endpoint with trailing slash",
+			endpoint: "http://1.2.3.4:4219/",
+			digest:   "sha256:abc123",
+			wantURL:  "http://1.2.3.4:4219/package?digest=sha256%3Aabc123",
+		},
+
 	}
 
 	for _, tt := range tests {

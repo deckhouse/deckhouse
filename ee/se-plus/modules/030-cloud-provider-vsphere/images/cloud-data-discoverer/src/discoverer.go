@@ -7,7 +7,9 @@ package main
 
 import (
 	"context"
+	"crypto/x509"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 	"os"
@@ -77,12 +79,18 @@ func NewDiscoverer(logger *log.Logger) *Discoverer {
 		logger.Fatal("Failed to parse GOVMOMI_INSECURE env as bool", "error", err)
 	}
 
+	caBundle := os.Getenv("GOVMOMI_CA_BUNDLE")
+
 	parsedURL, err := url.Parse(fmt.Sprintf("https://%s:%s@%s/sdk", url.PathEscape(strings.TrimSpace(username)), url.PathEscape(strings.TrimSpace(password)), url.PathEscape(strings.TrimSpace(host))))
 	if err != nil {
 		logger.Fatal("Failed to build connection url", "error", err)
 	}
 
 	soapClient := soap.NewClient(parsedURL, insecureFlag)
+	if err := setCABundleIfNeed(logger, soapClient, insecureFlag, caBundle); err != nil {
+		logger.Fatal("Failed to set CA bundle", "error", err)
+	}
+
 	vimClient, err := vim25.NewClient(context.TODO(), soapClient)
 	if err != nil {
 		logger.Fatal("Failed to create vimClient client", "error", err)
@@ -142,6 +150,7 @@ func NewDiscoverer(logger *log.Logger) *Discoverer {
 			Username: username,
 			Password: password,
 			Insecure: insecureFlag,
+			CABundle: caBundle,
 		},
 	}
 
@@ -298,4 +307,26 @@ func vsphereZonedDataStoresToV1(in []vsphere.ZonedDataStore) []v1.VsphereDatasto
 		})
 	}
 	return result
+}
+
+func setCABundleIfNeed(logger *log.Logger, soapClient *soap.Client, insecure bool, caBundle string) error {
+	if caBundle == "" {
+		return nil
+	}
+
+	if insecure {
+		logger.Warn("Set insecure flag to true, CA bundle will be ignored")
+		return nil
+	}
+
+	logger.Debug("Setting up CA bundle for SOAP client")
+
+	pool := x509.NewCertPool()
+	if !pool.AppendCertsFromPEM([]byte(caBundle)) {
+		return errors.New("failed to parse CA bundle")
+	}
+
+	soapClient.DefaultTransport().TLSClientConfig.RootCAs = pool
+
+	return nil
 }

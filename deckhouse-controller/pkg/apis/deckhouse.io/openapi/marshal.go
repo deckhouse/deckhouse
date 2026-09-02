@@ -86,6 +86,38 @@ func (s *OpenAPIV3SchemaOrStringArray) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
+func (s StringOrArray) MarshalJSON() ([]byte, error) {
+	if len(s) == 1 {
+		return json.Marshal(s[0])
+	}
+	return json.Marshal([]string(s))
+}
+
+func (s *StringOrArray) UnmarshalJSON(data []byte) error {
+	var first byte
+	if len(data) > 1 {
+		first = data[0]
+	}
+	if first == '[' {
+		var parsed []string
+		if err := json.Unmarshal(data, &parsed); err != nil {
+			return err
+		}
+		*s = parsed
+		return nil
+	}
+	if string(data) == "null" {
+		*s = nil
+		return nil
+	}
+	var single string
+	if err := json.Unmarshal(data, &single); err != nil {
+		return err
+	}
+	*s = StringOrArray{single}
+	return nil
+}
+
 func (s OpenAPIV3SchemaOrArray) MarshalJSON() ([]byte, error) {
 	if len(s.JSONSchemas) > 0 {
 		return json.Marshal(s.JSONSchemas)

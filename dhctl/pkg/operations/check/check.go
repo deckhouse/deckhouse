@@ -116,6 +116,24 @@ func (s Statistics) Format(outputFormat string) ([]byte, error) {
 	return data, nil
 }
 
+// Trim returns a copy of the statistics with each infrastructure
+// plan reduced to what actually changed.
+// Unlike Format, which hides the plan entirely, this keeps the change itself
+// and drops only its surrounding static context.
+func (s Statistics) Trim() (Statistics, error) {
+	copied, err := copystructure.Copy(s)
+	if err != nil {
+		return Statistics{}, fmt.Errorf("unable to copy check statistics")
+	}
+
+	trimmedStatistics := copied.(Statistics)
+	for i, p := range trimmedStatistics.InfrastructurePlan {
+		trimmedStatistics.InfrastructurePlan[i] = p.Trim()
+	}
+
+	return trimmedStatistics, nil
+}
+
 type ClusterStateCheckResult struct {
 	Change             int
 	Plan               plan.Plan

@@ -6,6 +6,18 @@ lang: ru
 
 Вы можете настроить containerd v2 как основной container runtime на уровне всего кластера или для отдельных групп узлов. Этот вариант позволяет использовать cgroups v2, обеспечивает лучшую безопасность и более гибкое управление ресурсами.
 
+{% alert level="info" %}
+
+Чтобы посмотреть текущий тип container runtime, используемый по умолчанию в NodeGroup кластера, используйте команду:
+
+```shell
+d8 system edit cluster-configuration
+```
+
+Тип container runtime указывается [в параметре `defaultCRI`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri).
+
+{% endalert %}
+
 ## Требования
 
 Миграция на containerd v2 возможна при выполнении следующих условий:

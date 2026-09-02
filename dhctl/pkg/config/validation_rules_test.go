@@ -83,6 +83,58 @@ masterNodeGroup:
   replicas: 1`,
 			schema: testSchemaStore(t),
 		},
+		// The three cases below spell the phase as the wire does. The case above passes a Go
+		// constant and would keep passing if the value behind it were renamed, while Commander
+		// sends back the raw string dhctl printed - so the short circuit is pinned by literal.
+		"ok, unsafe change on the BaseInfra phase, by wire name": {
+			phase: "BaseInfra",
+			oldConfig: `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+masterNodeGroup:
+  replicas: 1`,
+			newConfig: `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Cloud
+masterNodeGroup:
+  replicas: 1`,
+			schema: testSchemaStore(t),
+		},
+		"ok, unsafe change on the FirstMaster phase, by wire name": {
+			phase: "FirstMaster",
+			oldConfig: `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+masterNodeGroup:
+  replicas: 1`,
+			newConfig: `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Cloud
+masterNodeGroup:
+  replicas: 1`,
+			schema: testSchemaStore(t),
+		},
+		"unsafe change on the InstallKubernetes phase is refused": {
+			phase: "InstallKubernetes",
+			oldConfig: `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+masterNodeGroup:
+  replicas: 1`,
+			newConfig: `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Cloud
+masterNodeGroup:
+  replicas: 1`,
+			schema:      testSchemaStore(t),
+			errContains: `ChangesValidationFailed: unsafe field has been changed: .clusterType`,
+		},
 		"ok, schema not found": {
 			phase: phases.FinalizationPhase,
 			oldConfig: `
@@ -139,7 +191,7 @@ unsafeObject:
 			schema:      testSchemaStore(t),
 			errContains: `ChangesValidationFailed: unsafe field has been changed: .unsafeObject`,
 		},
-		"unsafe rule, ok: updateReplicas": {
+		"unsafe rule, ok: updateReplicas scales up": {
 			phase: phases.FinalizationPhase,
 			oldConfig: `
 apiVersion: deckhouse.io/v1
@@ -155,7 +207,7 @@ masterNodeGroup:
   replicas: 3`,
 			schema: testSchemaStore(t),
 		},
-		"unsafe rule, failed: updateReplicas": {
+		"unsafe rule, ok: updateReplicas scales down to one": {
 			phase: phases.FinalizationPhase,
 			oldConfig: `
 apiVersion: deckhouse.io/v1
@@ -169,8 +221,24 @@ kind: ClusterConfiguration
 clusterType: Static
 masterNodeGroup:
   replicas: 1`,
+			schema: testSchemaStore(t),
+		},
+		"unsafe rule, failed: updateReplicas scales down to zero": {
+			phase: phases.FinalizationPhase,
+			oldConfig: `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+masterNodeGroup:
+  replicas: 3`,
+			newConfig: `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+masterNodeGroup:
+  replicas: 0`,
 			schema:      testSchemaStore(t),
-			errContains: `ChangesValidationFailed: validation rule failed: can't reduce the number of master nodegroup replicas to 1, functionality will be available in future versions`,
+			errContains: `ChangesValidationFailed: validation rule failed: the .masterNodeGroup.replicas zero value is not acceptable`,
 		},
 		"unsafe rule, ok: deleteZones": {
 			phase: phases.FinalizationPhase,

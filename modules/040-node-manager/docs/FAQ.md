@@ -266,6 +266,30 @@ You cannot change the IP address in the `StaticInstance` resource. If an incorre
 
 You need to [clean up the node](#how-do-i-clean-up-a-static-node-manually), then [hand over](#how-do-i-add-a-static-node-to-a-cluster-cluster-api-provider-static) the node under CAPS control.
 
+### Why are the SSH key and the sudo password of SSHCredentials shown as `<omitted>`?
+
+The [`privateSSHKey`](cr.html#sshcredentials-v1alpha1-spec-privatesshkey), [`sudoPassword`](cr.html#sshcredentials-v1alpha1-spec-sudopassword) (`v1alpha1`), and [`sudoPasswordEncoded`](cr.html#sshcredentials-v1alpha2-spec-sudopasswordencoded) (`v1alpha2`) fields of the [SSHCredentials](cr.html#sshcredentials) resource contain sensitive data and are protected from viewing.
+
+If a user has no permissions to read sensitive SSHCredentials data, the API returns `<omitted>` instead of the actual value. The other fields — [`user`](cr.html#sshcredentials-v1alpha1-spec-user), [`sshPort`](cr.html#sshcredentials-v1alpha1-spec-sshport), [`sshExtraArgs`](cr.html#sshcredentials-v1alpha1-spec-sshextraargs) — and the resource metadata remain available to users who are allowed to read SSHCredentials.
+
+Additionally, kube-apiserver protects this data as follows:
+
+- removes the `kubectl.kubernetes.io/last-applied-configuration` annotation from API responses if it may contain a copy of sensitive values;
+- replaces sensitive values with `"******"` in [audit events](/products/kubernetes-platform/documentation/v1/admin/configuration/security/events/kubernetes-api-audit.html), regardless of user permissions and audit level;
+- encrypts the resource in etcd using the same mechanism as for Kubernetes Secrets, if the [`apiserver.encryptionEnabled`](/modules/control-plane-manager/configuration.html#parameters-apiserver-encryptionenabled) parameter of the [`control-plane-manager`](/modules/control-plane-manager/) module is enabled.
+
+Unmasked values are available to the [CAPS](./#cluster-api-provider-static) controller, which needs them to connect to the node over SSH, as well as to users with the [`SuperAdmin`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/rbac-current.html#high-level-roles-used-in-the-current-model) access level and members of the [`kubeadm:cluster-admins`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/cluster-admin-access-model.html) group.
+
+The [`d8:manage:infrastructure:viewer`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/rbac-experimental.html#role-model-subsystems) and [`d8:manage:infrastructure:manager`](/products/kubernetes-platform/documentation/v1/admin/configuration/access/authorization/rbac-experimental.html#role-model-subsystems) roles allow reading the SSHCredentials resource, but do not grant access to the SSH key or the sudo password.
+
+To check whether a user can read sensitive SSHCredentials data, run:
+
+```shell
+d8 k auth can-i get sshcredentials/sensitive --as=<user>
+```
+
+The `<omitted>` value means the actual value is hidden from the current user. This behavior applies to both `v1alpha1` and `v1alpha2`, so using a different API version does not reveal the hidden data.
+
 ## How do I change the NodeGroup of a static node?
 
 Note that if a node is under [CAPS](./#cluster-api-provider-static) control, you **cannot** change the `NodeGroup` membership of such a node. The only alternative is to [delete StaticInstance](#can-i-delete-a-staticinstance) and create a new one.
@@ -1697,225 +1721,7 @@ To add a GPU node to the cluster, perform the following steps:
 1. Install the NVIDIA driver and NVIDIA Container Toolkit.
 
    Install the NVIDIA driver and NVIDIA Container Toolkit directly on the nodes, either manually or via the [NodeGroupConfiguration](cr.html#nodegroupconfiguration) resource.
-   Below are NodeGroupConfiguration examples for the `gpu` NodeGroup for various operating systems:
-
-   - [Ubuntu](#ubuntu)
-   - [Debian](#debian)
-   - [CentOS](#centos)
-
-   **Ubuntu**
-   {: #ubuntu .anchored}
-
-   > Tested for Ubuntu 22.04.
-
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: NodeGroupConfiguration
-   metadata:
-     name: install-cuda.sh
-   spec:
-     bundles:
-     - ubuntu-lts
-     content: |
-       #!/bin/bash
-       set -e
- 
-       # Checking if curl and wget are installed.
-       if ! command -v curl &> /dev/null || ! command -v wget &> /dev/null
-       then
-         echo "curl or wget is not installed. Installing..."
-         sudo apt update
-         sudo apt install -y curl wget
-       fi
- 
-       # Defining file paths.
-       CUDA_KEYRING_DEB="cuda-keyring_1.1-1_all.deb"
-       NVIDIA_GPG_KEY="/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg"
- 
-       # Updating repos.
-       sudo apt update
- 
-       # Installing CUDA keyring.
-       if [ ! -f "$CUDA_KEYRING_DEB" ]; then
-         wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/$CUDA_KEYRING_DEB
-         sudo dpkg -i $CUDA_KEYRING_DEB
-       fi
- 
-       # Adding NVIDIA Container Toolkit repos.
-       if [ ! -f "$NVIDIA_GPG_KEY" ]; then
-         curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
-           sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
-         curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
-           sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
-           sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-       fi
- 
-       # Checking and installing Linux headers.
-       if ! dpkg-query -W -f='${Status}' "linux-headers-$(uname -r)" 2>/dev/null | grep -q "ok installed"; then
-         echo "Installing linux headers..."
-         sudo apt install -y "linux-headers-$(uname -r)"
-       fi
- 
-       # Installing NVIDIA drivers.
-       if ! dpkg-query -W -f='${Status}' cuda-drivers-575 2>/dev/null | grep -q "ok installed"; then
-         echo "Installing CUDA drivers..."
-         sudo apt install -y cuda-drivers-575
-       fi
- 
-       # Installing NVIDIA Container Toolkit.
-       if ! dpkg-query -W -f='${Status}' nvidia-container-toolkit 2>/dev/null | grep -q "ok installed"; then
-         echo "Installing NVIDIA container toolkit..."
-         sudo apt install -y nvidia-container-toolkit
-       fi
- 
-     nodeGroups:
-     - gpu
-     weight: 5   
-   ```
-
-   **Debian**
-   {: #debian .anchored}
-
-   > Tested for Debian 12.
-
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: NodeGroupConfiguration
-   metadata:
-     name: install-cuda.sh
-   spec:
-     bundles:
-     - debian
-     content: |
-       #!/bin/bash
-       set -e
- 
-       # Checking if curl and wget are installed.
-       if ! command -v curl &> /dev/null || ! command -v wget &> /dev/null
-       then
-         echo "curl or wget is not installed. Installing..."
-         sudo apt update
-         sudo apt install -y curl wget
-       fi
- 
-       # Defining file paths.
-       CUDA_KEYRING_DEB="cuda-keyring_1.1-1_all.deb"
-       NVIDIA_GPG_KEY="/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg"
- 
-       # Updating repos.
-       sudo apt update
- 
-       # Installing CUDA keyring.
-       if [ ! -f "$CUDA_KEYRING_DEB" ]; then
-         wget https://developer.download.nvidia.com/compute/cuda/repos/debian12/x86_64/$CUDA_KEYRING_DEB
-         sudo dpkg -i $CUDA_KEYRING_DEB
-       fi
- 
-       # Adding NVIDIA Container Toolkit repos.
-       if [ ! -f "$NVIDIA_GPG_KEY" ]; then
-         curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | \
-           sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
-         curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | \
-           sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' | \
-           sudo tee /etc/apt/sources.list.d/nvidia-container-toolkit.list
-       fi
- 
-       # Checking and installing Linux headers.
-       if ! dpkg-query -W -f='${Status}' "linux-headers-$(uname -r)" 2>/dev/null | grep -q "ok installed"; then
-         echo "Installing linux headers..."
-         sudo apt install -y "linux-headers-$(uname -r)"
-       fi
- 
-       # Installing NVIDIA drivers.
-       if ! dpkg-query -W -f='${Status}' cuda-drivers-575 2>/dev/null | grep -q "ok installed"; then
-         echo "Installing CUDA drivers..."
-         sudo apt install -y cuda-drivers-575
-       fi
- 
-       # Installing NVIDIA Container Toolkit.
-       if ! dpkg-query -W -f='${Status}' nvidia-container-toolkit 2>/dev/null | grep -q "ok installed"; then
-         echo "Installing NVIDIA container toolkit..."
-         sudo apt install -y nvidia-container-toolkit
-       fi
- 
-     nodeGroups:
-     - gpu
-     weight: 5  
-   ```
-
-   **CentOS**
-   {: #centos .anchored}
-
-   > Tested for CentOS 9.
-
-   ```yaml
-   apiVersion: deckhouse.io/v1alpha1
-   kind: NodeGroupConfiguration
-   metadata:
-     name: install-cuda.sh
-   spec:
-     bundles:
-     - centos
-     content: |
-       #!/bin/bash
-       set -e
-       INSTALL_NEEDED=false
- 
-       # Checking if curl is installed.
-       if ! command -v curl &> /dev/null; then
-         echo "curl is not installed. Installing..."
-         sudo dnf install -y curl
-         INSTALL_NEEDED=true
-       fi
- 
-       # Checking if other necessary packages and dependencies are installed.
-       if ! rpm -q epel-release &> /dev/null; then
-         echo "EPEL release is not installed. Installing..."
-         sudo dnf install -y epel-release
-         INSTALL_NEEDED=true
-       fi
-       
-       # Checking if development tools are installed.
-       if ! rpm -q gcc kernel-devel-$(uname -r) &> /dev/null; then
-         echo "Development tools are not completely installed. Installing..."
-         sudo dnf update -y
-         sudo dnf install -y gcc make dracut kernel-devel-$(uname -r) elfutils-libelf-devel
-         INSTALL_NEEDED=true
-       fi
-       
-       # Installing NVIDIA drivers.
-       if ! rpm -q nvidia-driver-cuda nvidia-driver-cuda-libs &> /dev/null; then
-         echo "NVIDIA CUDA drivers and libs are not installed. Installing..."
-         sudo dnf config-manager --add-repo https://developer.download.nvidia.com/compute/cuda/repos/rhel9/x86_64/cuda-rhel9.repo
-         sudo rpm --import https://developer.download.nvidia.com/compute/cuda/repos/GPGKEY
-         sudo dnf clean all
-         sudo dnf install -y nvidia-driver-cuda nvidia-driver-cuda-libs nvidia-settings nvidia-persistenced
-         INSTALL_NEEDED=true
-       fi
- 
-       # Installing NVIDIA Container Toolkit.
-       if ! rpm -q nvidia-container-toolkit &> /dev/null; then
-         echo "NVIDIA container toolkit is not installed. Installing..."
-         curl -s -L https://nvidia.github.io/libnvidia-container/stable/rpm/nvidia-container-toolkit.repo | sudo tee /etc/yum.repos.d/nvidia-container-toolkit.repo
-         sudo dnf install -y nvidia-container-toolkit
-         INSTALL_NEEDED=true
-       fi
- 
-       # Creating bashible service if drivers were installed.
-       if [ "$INSTALL_NEEDED" = true ]; then
-         base64_timer="W1VuaXRdCkRlc2NyaXB0aW9uPWJhc2hpYmxlIHRpbWVyCgpbVGltZXJdCk9uQm9vdFNlYz0xbWluCk9uVW5pdEFjdGl2ZVNlYz0xbWluCgpbSW5zdGFsbF0KV2FudGVkQnk9bXVsdGktdXNlci50YXJnZXQK"
-         echo "$base64_timer" | base64 -d | sudo tee /etc/systemd/system/bashible.timer
-         sudo systemctl enable bashible.timer
-         base64_bashible="W1VuaXRdCkRlc2NyaXB0aW9uPUJhc2hpYmxlIHNlcnZpY2UKCltTZXJ2aWNlXQpFbnZpcm9ubWVudEZpbGU9L2V0Yy9lbnZpcm9ubWVudApFeGVjU3RhcnQ9L2Jpbi9iYXNoIC0tbm9wcm9maWxlIC0tbm9yYyAtYyAiL3Zhci9saWIvYmFzaGlibGUvYmFzaGlibGUuc2ggLS1tYXgtcmV0cmllcyAxMCIKUnVudGltZU1heFNlYz0zaAo="
-         echo "$base64_bashible" | base64 -d | sudo tee /etc/systemd/system/bashible.service
-         sudo systemctl enable bashible.service
-         sudo systemctl reboot
-       fi
- 
-     nodeGroups:
-     - gpu
-     weight: 5
-   ```
+   Current NodeGroupConfiguration examples for the `gpu` NodeGroup (Ubuntu, Debian, CentOS) are available in the [`gpu` module FAQ](/modules/gpu/faq.html#how-do-i-work-with-gpu-nodes).
 
 1. After the configuration is applied, perform a bootstrap and reboot the nodes so that settings are applied and the drivers get installed.
 

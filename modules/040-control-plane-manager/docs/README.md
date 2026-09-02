@@ -100,6 +100,8 @@ spec:
 
 The specified values are used as a common requests budget for control plane components on each master node. Deckhouse Kubernetes Platform (DKP) distributes this budget between control plane static pods when rendering their manifests.
 
+If CPU or memory requests are not explicitly specified, the module automatically calculates requests for the corresponding resource for each control plane component once a day based on the average usage over the previous seven days. Explicitly specifying the total amount of CPU or memory disables automatic request calculation for that resource for all control plane components. The specified amount is distributed among the components in fixed proportions.
+
 {% alert level="info" %}
 These settings do not apply if the cluster control plane is managed by a cloud provider, for example in GKE, AKS, or EKS.
 {% endalert %}
@@ -108,11 +110,27 @@ These settings do not apply if the cluster control plane is managed by a cloud p
 
 **Patch versions** of control plane components (i.e. within the minor version, for example, from `1.31.13` to `1.31.14`) are upgraded automatically together with the DKP version updates. You can't manage patch version upgrades.
 
-Upgrading **minor versions** of control plane components (e.g. from `1.32.*` to `1.33.*`) can be managed using the [`kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter. It specifies the automatic update mode (if set to `Automatic`) or the desired minor version of the control plane. The default control plane version (to use with `kubernetesVersion: Automatic`) as well as a list of supported Kubernetes versions can be found in [the documentation](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
+Upgrading **minor versions** of control plane components (e.g. from `1.32.*` to `1.33.*`) can be managed using the [`kubernetesVersion`](configuration.html#parameters-kubernetesversion) parameter of the `control-plane-manager` ModuleConfig. It specifies tracking the DKP default (if set to `Default`) or the desired minor version of the control plane. The default control plane version (to use with `kubernetesVersion: Default`) as well as a list of supported Kubernetes versions can be found in [the "Supported Kubernetes and OS versions"](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html) section.
+
+The cluster Kubernetes version is resolved in one order: `kubernetesVersion` in the `control-plane-manager` ModuleConfig, then the deprecated [`ClusterConfiguration.kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion), then the version the current Deckhouse release defaults to. The ModuleConfig setting wins whenever it is set, `Default` included; while it is unset, the deprecated field still decides. Deckhouse raises the `D8ObsoleteKubernetesVersionFieldInClusterConfiguration` alert for as long as the deprecated field is present at all — including when ModuleConfig already owns the version — and it clears once the field is removed from `ClusterConfiguration`.
+
+Example of pinning a Kubernetes version:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    kubernetesVersion: "1.33"
+```
 
 The control plane upgrade is performed in a safe way for both single-master and multi-master clusters. The API server may be temporarily unavailable during the upgrade. At the same time, it does not affect the operation of applications in the cluster and can be performed without scheduling a maintenance window.
 
-If the target version (set with the [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter) does not match the current control plane version in the cluster, a smart strategy for changing component versions is applied:
+If the target version (set with the [kubernetesVersion](configuration.html#parameters-kubernetesversion) parameter) does not match the current control plane version in the cluster, a smart strategy for changing component versions is applied:
 
 - General remarks
   - Updating in different NodeGroups is performed in parallel. Within each NodeGroup, nodes are updated sequentially, one at a time.
@@ -189,6 +207,59 @@ The module organizes secure metrics collection and provides a basic set of monit
 - `kube-scheduler`;
 - `kube-etcd`.
 
+## Admission plugins enabled by default
+
+When installing the Deckhouse Kubernetes Platform, in addition to the standard admission plugins enabled by Kubernetes, the module enables several additional ones. For more information about admission plugins, see the [Kubernetes documentation](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#validatingadmissionwebhook).
+
+### Standard admission plugins enabled by Kubernetes
+
+Kubernetes enables the following standard admission plugins:
+
+| Admission plugin | Type | Short description |
+| --- | --- | --- |
+| **NamespaceLifecycle** | Validating | Prevents the creation of new objects in namespaces that are in the process of being deleted (termination) or in non-existent namespaces. It also prevents the deletion of system namespaces: `default`, `kube-system`, and `kube-public`. |
+| **LimitRanger** | Mutating and Validating | Monitors incoming requests and checks whether they violate the limits specified in the LimitRange object within the namespace. It is used to enforce resource limits at the container and pod levels. |
+| **ServiceAccount** | Mutating and Validating | Automates the handling of ServiceAccounts. If a pod does not specify a `ServiceAccount`, it automatically assigns the `default` account from the same namespace. It also verifies that the specified ServiceAccount exists. |
+| **TaintNodesByCondition** | Mutating | A standard security plugin that automatically adds taints to newly created nodes based on their status (e.g., `NotReady` or `Unreachable`). This prevents pods from being scheduled on new nodes before their labels are updated to accurately reflect their declared state. |
+| **PodSecurity** | Validating | Checks new pods before they are launched and determines whether to allow them based on the requested security context and the restrictions set by the Pod Security Standards in the namespace where the pod will reside. |
+| **Priority** | Mutating and Validating | Uses the `priorityClassName` field and populates the integer priority value. If the priority class is not found, the pod is rejected. |
+| **DefaultTolerationSeconds** | Mutating | Sets default toleration values for Pods for the `notready:NoExecute` and `unreachable:NoExecute` taints if the Pod does not have its own tolerations. The default value is **5 minutes**. |
+| **DefaultStorageClass** | Mutating | Oversees the creation of PersistentVolumeClaim objects. If a specific StorageClass is not specified in the request, it automatically adds the StorageClass labeled `default`. This ensures that users who do not specify a StorageClass will receive the default StorageClass. |
+| **StorageObjectInUseProtection** | Mutating | Protects storage objects (such as PersistentVolumes) that are in use by pods from accidental deletion. Adds the `kubernetes.io/pvc-protection` or `kubernetes.io/pv-protection` finalizers, which prevent the resource from being deleted while it is in use. |
+| **PersistentVolumeClaimResize** | Validating | Performs additional checks on incoming requests to resize a PersistentVolumeClaim. By default, it prohibits resizing of all claims, except in cases where the claim’s StorageClass explicitly allows resizing by setting the `allowVolumeExpansion` parameter to `true`. |
+| **RuntimeClass** | Mutating and Validating | Takes the `RuntimeClass` into account when creating pods. Sets the `pod.Spec.Overhead` field according to the selected runtime class and validates requests. |
+| **CertificateApproval** | Validating | Monitors requests to approve `CertificateSigningRequests` and performs additional authorization checks to ensure the user has the rights to approve certificate requests. |
+| **CertificateSigning** | Validating | Monitors updates to the `status.certificate` field in a CertificateSigningRequest and verifies that the user has the rights to sign the certificate request, using the `spec.signerName` value specified in the CertificateSigningRequest resource. |
+| **ClusterTrustBundleAttest** | Validating | Analyzes and attests to the trustworthiness of the Kubernetes cluster. This may include verifying certificates, security configurations, and other parameters related to the cluster’s integrity. |
+| **CertificateSubjectRestriction** | Validating | Monitors the creation of CertificateSigningRequests where `spec.signerName` = `kubernetes.io/kube-apiserver-client`. Rejects requests that specify the `system:masters` group. |
+| **DefaultIngressClass** | Mutating | Monitors the creation of Ingress objects. If no Ingress class is specified in the request, it automatically adds the Ingress class labeled as “default.” |
+| **PodTopologyLabels** | Mutating | Adds topology labels (e.g., availability zone) to pods bound to a node, corresponding to the labels of that node. |
+| **MutatingAdmissionPolicy** | Validating and Mutating | A mechanism within the admission control system that allows objects to be modified when they are created or updated during the request admission process. |
+| **MutatingAdmissionWebhook** | Mutating | Invokes all mutating webhooks that correspond to the request. Webhooks can modify the object and are invoked sequentially. |
+| **ValidatingAdmissionPolicy** | Validating | Allows declarative validation to be embedded directly into the API, without using external HTTP calls. It checks the CEL for incoming requests that meet the criteria. It is enabled when both the `validatingadmissionpolicy` feature and the `admissionregistration.k8s.io/v1alpha1` group/version are active. If any of the `ValidatingAdmissionPolicy` policies fail, the request is rejected. |
+| **ValidatingAdmissionWebhook** | Validating | Invokes all validating webhooks that match the request to check the object. |
+| **ResourceQuota** | Validating | Monitors incoming requests and checks whether they violate the limits specified in the ResourceQuota object in the namespace. Used to limit the total consumption of resources (CPU, memory, number of objects) in the namespace. |
+
+### Additional admission plugins enabled by the module
+
+In addition to the [standard admission plugins enabled by Kubernetes](#standard-admission-plugins-enabled-by-kubernetes), the module enables the following admission plugins (which cannot be disabled):
+
+| Admission plugin | Type | Short description |
+| --- | --- | --- |
+| **EventRateLimit** | Validating | Addresses the issue of API server overload caused by requests to save new events. Allows you to configure limits at the namespace, user, or global level. |
+| **ExtendedResourceToleration** | Mutating | Automatically adds tolerations to pods requesting extended resources (e.g., GPU, FPGA). This allows you to allocate special nodes for such pods—nodes that are pre-tainted with the resource name—without manually adding tolerations to the pods. |
+| **NodeRestriction** | Validating | Restricts the set of Node and Pod objects that the kubelet can modify. Enhances cluster security. |
+| **PodNodeSelector** | Mutating and Validating | Defines and restricts which node selectors can be used within a namespace, based on reading the namespace annotation and global configuration. |
+| **PodTolerationRestriction** | Mutating and Validating | Checks the pod’s toleration for conflicts with tolerations specified at the namespace level. If there are no conflicts, it merges the pod’s and namespace’s tolerations. It also checks the pod against a “whitelist” of tolerations. |
+
+{% alert level="info" %}
+
+In addition to the admission plugins listed above (which are enabled by Kubernetes and the module), you can also enable some additional ones. To do this, use the [`apiserver.admissionPlugins`](configuration.html#parameters-apiserver-admissionplugins) parameter.
+
+The `PodNodeSelector` and `PodTolerationRestriction` plugins are still listed among the allowed values of that parameter for backward compatibility only: they are always enabled, so specifying them has no effect and causes no error.
+
+{% endalert %}
+
 ## Feature Gates
 
 You can configure feature gates using the [enabledFeatureGates](configuration.html#parameters-enabledFeatureGates) parameter of the `control-plane-manager` ModuleConfig.
@@ -214,7 +285,7 @@ spec:
 If a feature gate is not supported or is deprecated, the monitoring system generates the [D8ProblematicFeatureGateInUse](/products/kubernetes-platform/documentation/v1/reference/alerts.html#control-plane-manager-d8problematicfeaturegateinuse) alert indicating that the feature gate will not be applied.
 
 {% alert level="warning" %}
-The Kubernetes version update (controlled by the [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion) parameter) will not occur if the list of enabled feature gates for the new version of Kubernetes includes deprecated feature gates.
+The Kubernetes version update (controlled by the [kubernetesVersion](configuration.html#parameters-kubernetesversion) parameter) will not occur if the list of enabled feature gates for the new version of Kubernetes includes deprecated feature gates.
 {% endalert %}
 
 More information about feature gates is available in the [Kubernetes documentation](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/){:target="_blank"}.

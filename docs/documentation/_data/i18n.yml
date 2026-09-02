@@ -436,6 +436,9 @@ common:
   requirements_modules_optional_text_for_link:
     en: conditional-module-requirements
     ru: условные-зависимости
+  other_documentation:
+    en: Other documentation
+    ru: Другая документация
   ossListPageBlock1:
     en: |
       List of third-party software used in the Deckhouse Kubernetes Platform. Includes **only built-in modules** (doesn't include modules from sources).<br/><br/>
@@ -470,6 +473,31 @@ common:
   pdf_download_cancel:
     en: Cancel
     ru: Отмена
+  aiCorpusLlmsDescriptionRoot:
+    en: "All platform documentation in one file — Markdown of each page plus splitting into fragments. More than 10 MB; download for local and offline work, not for uploading to context."
+    ru: "Вся документация платформы одним файлом — Markdown каждой страницы плюс разбивка на фрагменты. Более 10 МБ; выгрузка для локальной и офлайн-работы, не для загрузки в контекст."
+  aiCorpusLlmsDescriptionEmbeddedModules:
+    en: "Embedded modules documentation in one file — Markdown of each page plus splitting into fragments. More than 5 MB; download for local and offline work, not for uploading to context."
+    ru: "Документация встроенных модулей одним файлом — Markdown каждой страницы плюс разбивка на фрагменты. Более 5 МБ; выгрузка для локальной и офлайн-работы, не для загрузки в контекст."
+  aiCorpusLlmsDescriptionExternalModules:
+    en: "External modules documentation in one file — Markdown of each page plus splitting into fragments. More than 10 MB; download for local and offline work, not for uploading to context."
+    ru: "Документация внешних модулей одним файлом — Markdown каждой страницы плюс разбивка на фрагменты. Более 10 МБ; выгрузка для локальной и офлайн-работы, не для загрузки в контекст."
+  aiLlmsNoteRoot:
+    en: "The Deckhouse Platform version described in the documentation may differ from the version used in a specific cluster."
+    ru: "Версия Deckhouse Platform, описанная в документации, может отличаться от версии, используемой в конкретном кластере."
+  aiLlmsRefDescriptionEmbeddedModules:
+    en: "Embedded modules documentation index. File in llms.txt format."
+    ru: "Индекс документации встроенных модулей. Файл в формате llms.txt."
+  aiLlmsRefDescriptionExternalModules:
+    en: "External modules documentation index. File in llms.txt format."
+    ru: "Индекс документации внешних модулей. Файл в формате llms.txt."
+  aiLlmsSummary:
+    en: "Documentation for the Deckhouse Kubernetes Platform: installation, administration, configuration, and use of the platform and its built-in modules."
+    ru: "Документация Deckhouse Kubernetes Platform: установка, администрирование, настройка и использование платформы и её встроенных модулей."
+  aiLlmsSummaryEmbedded:
+    en: "Documentation for the modules built into the Deckhouse Kubernetes Platform."
+    ru: "Документация модулей, встроенных в Deckhouse Kubernetes Platform."
+
 comparison:
   except_parameters:
     en: "Except for the following parameters:<br />"

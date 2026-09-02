@@ -1,18 +1,16 @@
 diff --git a/go.mod b/go.mod
-index 334541f..1e5151e 100644
+index 334541f..fa425de 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -1,6 +1,8 @@
+@@ -1,6 +1,6 @@
  module github.com/superq/chrony_exporter
  
 -go 1.22
-+go 1.23.0
-+
-+toolchain go1.24.4
++go 1.25.0
  
  require (
  	github.com/alecthomas/kingpin/v2 v2.4.0
-@@ -24,12 +26,12 @@ require (
+@@ -24,12 +24,12 @@ require (
  	github.com/prometheus/client_model v0.6.1 // indirect
  	github.com/prometheus/procfs v0.15.1 // indirect
  	github.com/xhit/go-str2duration/v2 v2.1.0 // indirect
@@ -22,17 +20,17 @@ index 334541f..1e5151e 100644
 -	golang.org/x/sync v0.8.0 // indirect
 -	golang.org/x/sys v0.25.0 // indirect
 -	golang.org/x/text v0.18.0 // indirect
-+	golang.org/x/crypto v0.36.0 // indirect
-+	golang.org/x/net v0.38.0 // indirect
++	golang.org/x/crypto v0.53.0 // indirect
++	golang.org/x/net v0.56.0 // indirect
 +	golang.org/x/oauth2 v0.27.0 // indirect
-+	golang.org/x/sync v0.12.0 // indirect
-+	golang.org/x/sys v0.31.0 // indirect
-+	golang.org/x/text v0.23.0 // indirect
++	golang.org/x/sync v0.21.0 // indirect
++	golang.org/x/sys v0.46.0 // indirect
++	golang.org/x/text v0.39.0 // indirect
  	google.golang.org/protobuf v1.34.2 // indirect
  	gopkg.in/yaml.v2 v2.4.0 // indirect
  )
 diff --git a/go.sum b/go.sum
-index 596a73d..e514e4e 100644
+index 596a73d..17cc8e3 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -54,18 +54,18 @@ github.com/stretchr/testify v1.9.0 h1:HtqpIVDClZ4nwg75+f6Lvsy/wHu+3BoSGCbBAcpTsT
@@ -51,18 +49,18 @@ index 596a73d..e514e4e 100644
 -golang.org/x/sys v0.25.0/go.mod h1:/VUhepiaJMQUp4+oa/7Zr1D23ma6VTLIYjOOTFZPUcA=
 -golang.org/x/text v0.18.0 h1:XvMDiNzPAl0jr17s6W9lcaIhGUfUORdGCNsuLmPG224=
 -golang.org/x/text v0.18.0/go.mod h1:BuEKDfySbSR4drPmRPG/7iBdf8hvFMuRexcpahXilzY=
-+golang.org/x/crypto v0.36.0 h1:AnAEvhDddvBdpY+uR+MyHmuZzzNqXSe/GvuDeob5L34=
-+golang.org/x/crypto v0.36.0/go.mod h1:Y4J0ReaxCR1IMaabaSMugxJES1EpwhBHhv2bDHklZvc=
-+golang.org/x/net v0.38.0 h1:vRMAPTMaeGqVhG5QyLJHqNDwecKTomGeqbnfZyKlBI8=
-+golang.org/x/net v0.38.0/go.mod h1:ivrbrMbzFq5J41QOQh0siUuly180yBYtLp+CKbEaFx8=
++golang.org/x/crypto v0.53.0 h1:QZ4Muo8THX6CizN2vPPd5fBGHyogrdK9fG4wLPFUsto=
++golang.org/x/crypto v0.53.0/go.mod h1:DNLU434OwVakk9PzuwV8w62mAJpRJL3vsgcfp4Qnsio=
++golang.org/x/net v0.56.0 h1:Rw8j/hFzGvJUZwNBXnAtf5sVDVt+65SK2C7IxCxZt5o=
++golang.org/x/net v0.56.0/go.mod h1:D3Ku6r+V6JROoZK144D2XfMHFcMq/0zSfLelVTCFKec=
 +golang.org/x/oauth2 v0.27.0 h1:da9Vo7/tDv5RH/7nZDz1eMGS/q1Vv1N/7FCrBhI9I3M=
 +golang.org/x/oauth2 v0.27.0/go.mod h1:onh5ek6nERTohokkhCD/y2cV4Do3fxFHFuAejCkRWT8=
-+golang.org/x/sync v0.12.0 h1:MHc5BpPuC30uJk597Ri8TV3CNZcTLu6B6z4lJy+g6Jw=
-+golang.org/x/sync v0.12.0/go.mod h1:1dzgHSNfp02xaA81J2MS99Qcpr2w7fw1gpm99rleRqA=
-+golang.org/x/sys v0.31.0 h1:ioabZlmFYtWhL+TRYpcnNlLwhyxaM9kWTDEmfnprqik=
-+golang.org/x/sys v0.31.0/go.mod h1:BJP2sWEmIv4KK5OTEluFJCKSidICx8ciO85XgH3Ak8k=
-+golang.org/x/text v0.23.0 h1:D71I7dUrlY+VX0gQShAThNGHFxZ13dGLBHQLVl1mJlY=
-+golang.org/x/text v0.23.0/go.mod h1:/BLNzu4aZCJ1+kcD0DNRotWKage4q2rGVAg4o22unh4=
++golang.org/x/sync v0.21.0 h1:HLII4xRRTtCRkxYp4HNFF0Js/Og6q2i++KXbg0gHCwM=
++golang.org/x/sync v0.21.0/go.mod h1:9xrNwdLfx4jkKbNva9FpL6vEN7evnE43NNNJQ2LF3+0=
++golang.org/x/sys v0.46.0 h1:noSf2Fq6F8DBgS+LysIkx7rIExoNHJsxOAtPp4rthXw=
++golang.org/x/sys v0.46.0/go.mod h1:4GL1E5IUh+htKOUEOaiffhrAeqysfVGipDYzABqnCmw=
++golang.org/x/text v0.39.0 h1:UbZz4pLOvn600D6Oh6GGEI6VAmndrEBLv8/6BEXzyus=
++golang.org/x/text v0.39.0/go.mod h1:3UwRclnC2g0TU9x8PZiyfOajCd1zaUNHF9cvqcQZ+ZM=
  google.golang.org/protobuf v1.34.2 h1:6xV6lTsCfpGD21XK49h7MhtcApnLqkfYgPcdHftf6hg=
  google.golang.org/protobuf v1.34.2/go.mod h1:qYOHts0dSfpeUzUFpOMr/WGzszTmLH+DiWniOlNbLDw=
  gopkg.in/check.v1 v0.0.0-20161208181325-20d25e280405/go.mod h1:Co6ibVJAznAaIkqp8huTwlJQCZ016jof/cbN4VW5Yz0=

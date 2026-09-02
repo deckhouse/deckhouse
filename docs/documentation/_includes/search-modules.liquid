@@ -17,6 +17,9 @@
   {%- endif %}
 {%- endif %}
 "keywords": {{ keywords | jsonify }},
+{%- if page.searchBoost %}
+"searchBoost": {{ page.searchBoost | jsonify }},
+{%- endif %}
 "module": {{ page['module-kebab-name'] | jsonify }},
 "moduletype": "embedded",
 "summary": "{% if page.summary %}{{ page.summary | strip }}{% else %}{{ page.description | strip }}{% endif %}",

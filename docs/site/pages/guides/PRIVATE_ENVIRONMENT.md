@@ -6,11 +6,7 @@ lang: en
 layout: sidebar-guides
 ---
 
-This guide describes how to deploy a Deckhouse Kubernetes Platform cluster in a private environment with no direct access to the DKP container image registry (`registry.deckhouse.io`) and to external deb/rpm package repositories used on nodes running [supported operating systems](../documentation/v1/reference/supported_versions.html#linux).
-
-{% alert level="warning" %}
-Note that installing DKP in a private environment is available in the following editions: SE, SE+, EE.
-{% endalert %}
+This guide describes how to deploy a Deckhouse Kubernetes Platform (DKP) cluster in a private environment with no direct access to the DKP container image registry (`registry.deckhouse.io`) and to external deb/rpm package repositories used on nodes running [supported operating systems](../documentation/v1/reference/supported_versions.html#linux).
 
 ## Private environment specifics
 
@@ -63,14 +59,83 @@ Server requirements:
 ## Preparing a private container registry
 
 {% alert level="warning" %}
-DKP supports only the Bearer token authentication scheme for container registries.
+DKP supports Basic and Bearer token authentication schemes for container registries (Basic is tried first; if it fails, Bearer is used).
+
+If a reverse proxy is placed in front of the registry, it must correctly forward the Registry API v2 header `Docker-Distribution-API-Version: registry/2.0`. Otherwise the Basic check may fail, and the subsequent Bearer attempt may fail with the error `couldn't find bearer realm parameter`.
 {% endalert %}
 
 You may use any supported private container registry. Compatibility has been tested and is guaranteed for the following: [Nexus](https://github.com/sonatype/nexus-public), [Harbor](https://github.com/goharbor/harbor), [Artifactory](https://jfrog.com/artifactory/), [Docker Registry](https://docs.docker.com/registry/), and [Quay](https://quay.io/).
 
-This guide uses [Harbor](https://goharbor.io/) as an example. It supports policy configuration and role-based access control (RBAC), vulnerability scanning, and marking trusted artifacts. Harbor is a CNCF project.
+The instructions below cover two private container registry options — [Docker Registry](https://docs.docker.com/registry/) and [Harbor](https://goharbor.io/). Choose the matching tab.
 
-### Installing Harbor
+### Installing a container registry
+
+{% tabs registry-install %}
+{% tab "Docker Registry" %}
+
+Install Docker Registry from your distribution’s repositories. For example, on a RHEL-based OS:
+
+```bash
+dnf install registry httpd-tools
+```
+
+Create a user and password with htpasswd. For example, to create user `deckhouse` with password `deckhouse`:
+
+```bash
+htpasswd -bcB /etc/registry/htpasswd deckhouse deckhouse
+```
+
+Generate a self-signed certificate for the registry:
+
+```bash
+openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -keyout /etc/registry/private.key -out /etc/registry/public.crt -days 3650 -nodes -subj "/C=US/ST=California/L=SanFrancisco/O=example/OU=IT/CN=registry.local" -addext "subjectAltName=DNS:registry.local"
+```
+
+Replace `registry.local` with the address that will be used for the image registry in your network.
+
+Update the registry configuration with the certificates you created. Edit `/etc/registry/config.yml`:
+
+```yaml
+version: 0.1
+log:
+  fields:
+    service: registry
+storage:
+  cache:
+    blobdescriptor: inmemory
+  filesystem:
+    rootdirectory: /var/lib/registry
+  delete:
+    enabled: true
+http:
+  addr: :443
+  tls:
+    certificate: /etc/registry/public.crt
+    key: /etc/registry/private.key
+  headers:
+    X-Content-Type-Options: [nosniff]
+auth:
+  htpasswd:
+    realm: basic-realm
+    path: /etc/registry/htpasswd
+health:
+  storagedriver:
+    enabled: true
+    interval: 10s
+    threshold: 3
+```
+
+Enable the service at boot and confirm it is running:
+
+```bash
+systemctl enable --now registry.service
+systemctl status registry.service
+```
+
+{% endtab %}
+{% tab "Harbor" %}
+
+Later sections of this guide use Harbor as the example. It supports policy configuration and role-based access control (RBAC), vulnerability scanning, and marking trusted artifacts. Harbor is a CNCF project.
 
 Install the latest Harbor release from the project’s [GitHub releases page](https://github.com/goharbor/harbor/releases). Download the installer archive from the desired release, selecting the asset with `harbor-offline-installer` in its name.
 
@@ -127,53 +192,19 @@ mkdir certs
 cd certs
 ```
 
-Generate certificates for external access:
+Generate a self-signed certificate for Harbor:
 
 ```bash
-openssl genrsa -out ca.key 4096
+openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 \
+  -keyout registry.local.key -out registry.local.crt \
+  -sha256 -days 3650 -nodes \
+  -subj "/C=US/ST=California/L=SanFrancisco/O=example/OU=IT/CN=registry.local" \
+  -addext "subjectAltName=DNS:registry.local"
 ```
 
-```bash
-openssl req -x509 -new -nodes -sha512 -days 3650 -subj "/C=US/ST=California/L=SanFrancisco/O=example/OU=Personal/CN=myca.local" -key ca.key -out ca.crt
-```
+Replace `registry.local` with the address that will be used for the image registry in your network.
 
-Generate certificates for the internal domain name `harbor.example` so clients can reach the Harbor VM securely inside the private network.
-
-{% alert level="warning" %}
-In the commands below, replace `<INTERNAL_IP_ADDRESS>` with the Harbor VM’s internal IP address. Cluster nodes and other services use this address to reach the container registry from inside the private environment.
-{% endalert %}
-
-```bash
-openssl genrsa -out harbor.example.key 4096
-```
-
-```bash
-openssl req -sha512 -new -subj "/C=US/ST=California/L=SanFrancisco/O=example/OU=Personal/CN=harbor.example" -key harbor.example.key -out harbor.example.csr
-```
-
-```bash
-cat > v3.ext <<-EOF
-authorityKeyIdentifier=keyid, issuer
-basicConstraints=CA:FALSE
-keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
-extendedKeyUsage = serverAuth
-subjectAltName = @alt_names
-
-[alt_names]
-IP.1=<INTERNAL_IP_ADDRESS>
-DNS.1=harbor.example
-EOF
-```
-
-```bash
-openssl x509 -req -sha512 -days 3650 -extfile v3.ext -CA ca.crt -CAkey ca.key -CAcreateserial -in harbor.example.csr -out harbor.example.crt
-```
-
-```bash
-openssl x509 -inform PEM -in harbor.example.crt -out harbor.example.cert
-```
-
-Verify that all certificates were created successfully:
+Verify that the certificates were created successfully:
 
 ```bash
 ls -la
@@ -183,38 +214,30 @@ ls -la
 
 ```bash
 $ ls -la
-total 40
+total 12
 drwxrwxr-x 2 ubuntu ubuntu 4096 Dec  5 14:58 .
 drwxrwxr-x 3 ubuntu ubuntu 4096 Dec  4 12:53 ..
--rw-rw-r-- 1 ubuntu ubuntu 2037 Dec  5 14:57 ca.crt
--rw------- 1 ubuntu ubuntu 3272 Dec  5 14:57 ca.key
--rw-rw-r-- 1 ubuntu ubuntu   41 Dec  5 14:58 ca.srl
--rw-rw-r-- 1 ubuntu ubuntu 2122 Dec  5 14:58 harbor.example.cert
--rw-rw-r-- 1 ubuntu ubuntu 2122 Dec  5 14:58 harbor.example.crt
--rw-rw-r-- 1 ubuntu ubuntu 1704 Dec  5 14:57 harbor.example.csr
--rw------- 1 ubuntu ubuntu 3268 Dec  5 14:57 harbor.example.key
--rw-rw-r-- 1 ubuntu ubuntu  247 Dec  5 14:58 v3.ext
+-rw-rw-r-- 1 ubuntu ubuntu  909 Dec  5 14:58 registry.local.crt
+-rw------- 1 ubuntu ubuntu  292 Dec  5 14:57 registry.local.key
 ```
 
 {% endofftopic %}
 
-Next, configure Docker to work with the private container registry over TLS. Create the `harbor.example` directory under `/etc/docker/certs.d/`:
+Next, configure Docker to work with the private container registry over TLS. Create the `registry.local` directory under `/etc/docker/certs.d/`:
 
 ```bash
-sudo mkdir -p /etc/docker/certs.d/harbor.example
+sudo mkdir -p /etc/docker/certs.d/registry.local
 ```
 
 > The `-p` option tells `mkdir` to create parent directories if they do not exist (in this case, the `certs.d` directory).
 
-Copy the generated certificates into it:
+Copy the certificate into it as the root CA (for a self-signed certificate this is the same file):
 
 ```bash
-cp ca.crt /etc/docker/certs.d/harbor.example/
-cp harbor.example.cert /etc/docker/certs.d/harbor.example/
-cp harbor.example.key /etc/docker/certs.d/harbor.example/
+cp registry.local.crt /etc/docker/certs.d/registry.local/ca.crt
 ```
 
-These certificates will be used when accessing the registry via the `harbor.example` domain name.
+This certificate will be used when accessing the registry via the `registry.local` domain name.
 
 Return to the `harbor` directory (installer root):
 
@@ -230,9 +253,9 @@ cp harbor.yml.tmpl harbor.yml
 
 Update the following parameters in `harbor.yml`:
 
-* `hostname`: set to `harbor.example` (the certificates were generated for this name)
-* `certificate`: specify the path to the generated certificate in the `certs` directory (for example, `/home/ubuntu/harbor/certs/harbor.example.crt`)
-* `private_key`: specify the path to the private key (for example, `/home/ubuntu/harbor/certs/harbor.example.key`)
+* `hostname`: set to `registry.local` (the certificates were generated for this name)
+* `certificate`: specify the path to the generated certificate in the `certs` directory (for example, `/home/ubuntu/harbor/certs/registry.local.crt`)
+* `private_key`: specify the path to the private key (for example, `/home/ubuntu/harbor/certs/registry.local.key`)
 * `harbor_admin_password`: set a password for accessing the web UI.
 
 Save the file.
@@ -244,7 +267,7 @@ Save the file.
 
 # The IP address or hostname to access admin UI and registry service.
 # DO NOT use localhost or 127.0.0.1, because Harbor needs to be accessed by external clients.
-hostname: harbor.example
+hostname: registry.local
 
 # http related config
 http:
@@ -256,8 +279,8 @@ https:
   # https port for harbor, default is 443
   port: 443
   # The path of cert and key files for nginx
-  certificate: /home/ubuntu/harbor/certs/harbor.example.crt
-  private_key: /home/ubuntu/harbor/certs/harbor.example.key
+  certificate: /home/ubuntu/harbor/certs/registry.local.crt
+  private_key: /home/ubuntu/harbor/certs/registry.local.key
   # enable strong ssl ciphers (default: false)
   # strong_ssl_ciphers: false
 
@@ -626,10 +649,10 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 
 {% endofftopic %}
 
-On the Harbor VM, add an entry to `/etc/hosts` that maps the `harbor.example` domain name to `localhost` so you can open Harbor by that name from the same machine:
+On the Harbor VM, add an entry to `/etc/hosts` that maps the `registry.local` domain name to `localhost` so you can open Harbor by that name from the same machine:
 
 ```bash
-127.0.0.1 localhost harbor.example
+127.0.0.1 localhost registry.local
 ```
 
 {% alert level="warning" %}
@@ -649,18 +672,18 @@ If your provider uses the same mechanism, apply the corresponding changes to the
 
 Harbor installation is now complete! 🎉
 
-### Configuring Harbor
+#### Configuring Harbor
 
 Create a project and credentials used to work with it.
 
-Open the Harbor web UI at `harbor.example`. Access to this UI from the public Internet is intentionally blocked; connect only from a host that has access to the internal network.
+Open the Harbor web UI at `registry.local`. Access to this UI from the public Internet is intentionally blocked; connect only from a host that has access to the internal network.
 
 <div style="text-align: center;">
 <img src="/images/guides/install_to_private_environment/harbor_main_page.png" alt="Harbor main page...">
 </div>
 
 {% alert level="info" %}
-To open Harbor by the `harbor.example` domain name from your workstation, add a matching entry to `/etc/hosts` pointing to the Harbor VM’s internal IP address.
+To open Harbor by the `registry.local` domain name from your workstation, add a matching entry to `/etc/hosts` pointing to the Harbor VM’s internal IP address.
 {% endalert %}
 
 Sign in with the username and password from `harbor.yml`.
@@ -710,6 +733,10 @@ Save the secret immediately. Harbor will not show it again, and it cannot be ret
 </div>
 
 Harbor configuration is now complete! 🎉
+
+{% endtab %}
+{% endtabs %}
+<br>
 
 ## Copying DKP images to a private container registry
 
@@ -859,7 +886,7 @@ Push the downloaded images to the private registry. Substitute the DKP edition a
 - `<PASSWORD>` — token issued when the robot account was created.
 
 ```bash
-d8 mirror push $(pwd)/d8-bundle 'harbor.example:443/deckhouse/<EDITION>' --registry-login='robot$<ROBOT_ACCOUNT_NAME>' --registry-password='<PASSWORD>' --tls-skip-verify
+d8 mirror push $(pwd)/d8-bundle 'registry.local:443/deckhouse/<EDITION>' --registry-login='robot$<ROBOT_ACCOUNT_NAME>' --registry-password='<PASSWORD>' --tls-skip-verify
 ```
 
 > The `--tls-skip-verify` flag tells the CLI to trust the registry certificate and skip verification.
@@ -869,14 +896,14 @@ Images are read from the local bundles and pushed to the registry. This step is 
 {% offtopic title="Example of a successful image push completion..." %}
 
 ```text
-Dec 11 18:25:32.350 INFO  ║ Pushing harbor.example:443/deckhouse/ee/modules/virtualization/release
-Dec 11 18:25:32.351 INFO  ║ [1 / 7] Pushing image harbor.example:443/deckhouse/ee/modules/virtualization/release:alpha
-Dec 11 18:25:32.617 INFO  ║ [2 / 7] Pushing image harbor.example:443/deckhouse/ee/modules/virtualization/release:beta
-Dec 11 18:25:32.760 INFO  ║ [3 / 7] Pushing image harbor.example:443/deckhouse/ee/modules/virtualization/release:early-access
-Dec 11 18:25:32.895 INFO  ║ [4 / 7] Pushing image harbor.example:443/deckhouse/ee/modules/virtualization/release:rock-solid
-Dec 11 18:25:33.081 INFO  ║ [5 / 7] Pushing image harbor.example:443/deckhouse/ee/modules/virtualization/release:stable
-Dec 11 18:25:33.142 INFO  ║ [6 / 7] Pushing image harbor.example:443/deckhouse/ee/modules/virtualization/release:v1.1.3
-Dec 11 18:25:33.213 INFO  ║ [7 / 7] Pushing image harbor.example:443/deckhouse/ee/modules/virtualization/release:v1.2.2
+Dec 11 18:25:32.350 INFO  ║ Pushing registry.local:443/deckhouse/ee/modules/virtualization/release
+Dec 11 18:25:32.351 INFO  ║ [1 / 7] Pushing image registry.local:443/deckhouse/ee/modules/virtualization/release:alpha
+Dec 11 18:25:32.617 INFO  ║ [2 / 7] Pushing image registry.local:443/deckhouse/ee/modules/virtualization/release:beta
+Dec 11 18:25:32.760 INFO  ║ [3 / 7] Pushing image registry.local:443/deckhouse/ee/modules/virtualization/release:early-access
+Dec 11 18:25:32.895 INFO  ║ [4 / 7] Pushing image registry.local:443/deckhouse/ee/modules/virtualization/release:rock-solid
+Dec 11 18:25:33.081 INFO  ║ [5 / 7] Pushing image registry.local:443/deckhouse/ee/modules/virtualization/release:stable
+Dec 11 18:25:33.142 INFO  ║ [6 / 7] Pushing image registry.local:443/deckhouse/ee/modules/virtualization/release:v1.1.3
+Dec 11 18:25:33.213 INFO  ║ [7 / 7] Pushing image registry.local:443/deckhouse/ee/modules/virtualization/release:v1.2.2
 Dec 11 18:25:33.414 INFO  ║ Pushing module tag for virtualization
 Dec 11 18:25:33.837 INFO  ╚ Push module: virtualization succeeded in 43.313801312s
 Dec 11 18:25:33.837 INFO   Modules pushed: code, commander-agent, commander, console, csi-ceph, csi-hpe, csi-huawei, csi-netapp, csi-nfs, csi-s3, csi-scsi-generic, csi-yadro-tatlin-unified, development-platform, managed-postgres, neuvector, observability-platform, observability, operator-argo, operator-ceph, operator-postgres,
@@ -895,19 +922,19 @@ The images are now available and ready to use! 🎉
 
 ## Signing in to the registry to run the installer
 
-Use the host from which you will run the installer (in this guide, the bastion host). On that host, `harbor.example` must resolve to the Harbor VM (via `/etc/hosts` or DNS).
-Configure Docker to trust the TLS registry the same way as on the Harbor host: create `/etc/docker/certs.d/harbor.example/` and place the required certificates there (copy them from the Harbor VM or generate again).
+Use the host from which you will run the installer (in this guide, the bastion host). On that host, `registry.local` must resolve to the Harbor VM (via `/etc/hosts` or DNS).
+Configure Docker to trust the TLS registry the same way as on the Harbor host: create `/etc/docker/certs.d/registry.local/` and place the required certificates there (copy them from the Harbor VM or generate again).
 
 Sign in to Harbor so Docker can pull the [dhctl](../documentation/v1/installing/) installer image:
 
 ```bash
-docker login harbor.example
+docker login registry.local
 ```
 
 {% offtopic title="Example of a successful command execution..." %}
 
 ```text
-$ docker login harbor.example
+$ docker login registry.local
 Username: deckhouse
 Password: 
 
@@ -955,9 +982,9 @@ Servers intended for future cluster nodes must meet the following requirements:
 For proper resource sizing, read [the production preparation guide](../guides/production.html) and [the hardware requirements](../guides/hardware-requirements.html) for node roles, node counts, and sizing based on workload and operations.
 {% endalert %}
 
-### Mapping `harbor.example` to the Harbor VM
+### Mapping `registry.local` to the Harbor VM
 
-On the servers where the master and worker nodes will run, make the `harbor.example` hostname resolve to the Harbor VM’s internal IP address in the private network.
+On the servers where the master and worker nodes will run, make the `registry.local` hostname resolve to the Harbor VM’s internal IP address in the private network.
 
 Connect to each server in turn and add a line to `/etc/hosts` (and, if your cloud provider manages the file, update the cloud template as well).
 
@@ -990,27 +1017,27 @@ There are two ways to connect:
 {% endofftopic %}
 
 ```console
-<INTERNAL-IP-ADDRESS> harbor.example proxy.local
+<INTERNAL-IP-ADDRESS> registry.local proxy.local
 ```
 
 > Replace `<INTERNAL-IP-ADDRESS>` with the Harbor VM’s actual internal IP address.
 
-### Creating a user for the master node
+### Configuring SSH access to the master node
 
-To install DKP, create a user on the future master node that will be used to connect to the node and perform the platform installation.
+To install DKP, add the public part of your SSH key to `.ssh/authorized_keys` for the user on the future master node that will be used to install the platform.
 
 Run the commands as `root` (substitute the public part of your SSH key):
 
 ```console
-useradd deckhouse -m -s /bin/bash -G sudo
-echo 'deckhouse ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
-mkdir /home/deckhouse/.ssh
+mkdir /home/<USER>/.ssh
 export KEY='ssh-rsa AAAAB3NzaC1yc2EAAAADA...'
-echo $KEY >> /home/deckhouse/.ssh/authorized_keys
-chown -R deckhouse:deckhouse /home/deckhouse
-chmod 700 /home/deckhouse/.ssh
-chmod 600 /home/deckhouse/.ssh/authorized_keys
+echo $KEY >> /home/<USER>/.ssh/authorized_keys
+chmod 700 /home/<USER>/.ssh
+chmod 600 /home/<USER>/.ssh/authorized_keys
+echo '<USER> ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
 ```
+
+Here `<USER>` is the username on the master node.
 
 {% offtopic title="How to obtain the public part of the key..." %}
 Run `cat ~/.ssh/id_rsa.pub` to print the public key (or use the path to your key’s `.pub` file).
@@ -1018,17 +1045,15 @@ Run `cat ~/.ssh/id_rsa.pub` to print the public key (or use the path to your key
 
 As a result of these commands:
 
-* a new `deckhouse` user is created and added to the `sudo` group;
+* the `<USER>` user is added to the `sudo` group (if the chosen OS did not already do this);
 * passwordless privilege escalation is configured;
 * the public SSH key is added so you can log in to the server as this user.
 
-Verify that you can connect as the new user:
+Verify that you can connect as the user:
 
 ```bash
-ssh -J ubuntu@<BASTION_IP> deckhouse@<NODE_IP>
+ssh -J ubuntu@<BASTION_IP> <USER>@<NODE_IP>
 ```
-
-If the login succeeds, the user has been created correctly.
 
 ### Creating a user for the worker node
 
@@ -1057,8 +1082,8 @@ chmod 700 /home/caps/.ssh
 chmod 600 /home/caps/.ssh/authorized_keys
 ```
 
-{% offtopic title="If you are using CentOS or Rocky Linux..." %}
-On RHEL-based systems, add the `caps` user to the `wheel` group:
+{% offtopic title="If you are using CentOS, Rocky Linux, ALT Linux, ROSA Server, RED OS, or MOS OS..." %}
+On RHEL-based operating systems, add the `caps` user to the `wheel` group. Run the following commands and set the public key from the previous step:
 
 ```console
 # Set the user’s public SSH key.
@@ -1071,6 +1096,15 @@ echo $KEY >> /home/caps/.ssh/authorized_keys
 chown -R caps:caps /home/caps
 chmod 700 /home/caps/.ssh
 chmod 600 /home/caps/.ssh/authorized_keys
+```
+
+{% endofftopic %}
+
+{% offtopic title="If you are using an Astra Linux family OS..." %}
+On Astra Linux systems that use the Parsec mandatory integrity control module, set the maximum integrity level for the `caps` user:
+
+```bash
+pdpl-user -i 63 caps
 ```
 
 {% endofftopic %}
@@ -1124,7 +1158,7 @@ You should see a container named `squid` in the list.
   proxy:
     httpProxy: http://proxy.local:3128
     httpsProxy: https://proxy.local:3128
-    noProxy: ["harbor.example", "proxy.local", "10.128.0.8", "10.128.0.32", "10.128.0.18"]
+    noProxy: ["registry.local", "proxy.local", "10.128.0.8", "10.128.0.32", "10.128.0.18"]
   ```
 
   Here you specify:
@@ -1221,7 +1255,7 @@ defaultCRI: "ContainerdV2"
 proxy:
   httpProxy: http://proxy.local:3128
   httpsProxy: https://proxy.local:3128
-  noProxy: ["harbor.example", "proxy.local", "10.128.0.8", "10.128.0.32", "10.128.0.18"]
+  noProxy: ["registry.local", "proxy.local", "10.128.0.8", "10.128.0.32", "10.128.0.18"]
 ---
 # deckhouse module settings.
 # https://deckhouse.io/modules/deckhouse/configuration.html
@@ -1341,11 +1375,11 @@ The installation configuration file is ready.
 Copy the prepared configuration file to the host from which you run the installation (for example, `~/deckhouse` on the bastion). Go to that directory and start the installer:
 
 ```bash
-docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" --network=host -v "$PWD/dhctl-tmp:/tmp/dhctl" harbor.example/deckhouse/<EDITION>/install:stable bash
+docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" --network=host -v "$PWD/dhctl-tmp:/tmp/dhctl" registry.local/deckhouse/<EDITION>/install:stable bash
 ```
 
 {% offtopic title="If you get the `509: certificate signed by unknown authority` error..." %}
-Even if the certificates are present in `/etc/docker/certs.d/harbor.example/`, Docker may still report that the certificate is signed by an unknown certificate authority (which is typical for self-signed certificates). In most cases, adding `ca.crt` to the system trusted certificate store and restarting Docker resolves the issue.
+Even if the certificates are present in `/etc/docker/certs.d/registry.local/`, Docker may still report that the certificate is signed by an unknown certificate authority (which is typical for self-signed certificates). In most cases, adding `ca.crt` to the system trusted certificate store and restarting Docker resolves the issue.
 {% endofftopic %}
 
 {% alert level="info" %}
@@ -1476,8 +1510,8 @@ Perform the following steps:
   ```console
   $ sudo -i d8 k get no
   NAME               STATUS   ROLES                  AGE    VERSION
-  d8cluster          Ready    control-plane,master   30m   v1.23.17
-  d8cluster-worker   Ready    worker                 10m   v1.23.17
+  d8cluster          Ready    control-plane,master   30m   v1.34.10
+  d8cluster-worker   Ready    worker                 10m   v1.34.10
   ```
 
   It may take some time for all DKP components to start after the installation completes.
@@ -1540,25 +1574,9 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 
 ### Creating a user to access the cluster web-interface
 
-Create the `user.yml` file on the master node containing the user account definition and access rights:
+Create the `user.yml` file on the master node containing the user account, group, and access rights:
 
 ```yaml
-# RBAC and authorization settings.
-# https://deckhouse.io/modules/user-authz/cr.html#clusterauthorizationrule
-apiVersion: deckhouse.io/v1
-kind: ClusterAuthorizationRule
-metadata:
-  name: admin
-spec:
-  # List of Kubernetes RBAC subjects.
-  subjects:
-    - kind: User
-      name: admin@deckhouse.io
-  # A predefined access level template.
-  accessLevel: SuperAdmin
-  # Allow the user to use kubectl port-forward.
-  portForwarding: true
----
 # Static user data.
 # https://deckhouse.io/modules/user-authn/cr.html#user
 apiVersion: deckhouse.io/v1
@@ -1573,6 +1591,34 @@ spec:
   # echo -n '3xqgv2auys' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
   # You may want to change it.
   password: 'JDJhJDEwJGtsWERBY1lxMUVLQjVJVXoxVkNrSU8xVEI1a0xZYnJNWm16NmtOeng5VlI2RHBQZDZhbjJH'
+---
+# User group.
+# https://deckhouse.io/modules/user-authn/cr.html#group
+apiVersion: deckhouse.io/v1alpha1
+kind: Group
+metadata:
+  name: admins
+spec:
+  name: admins
+  members:
+  - kind: User
+    name: admin
+---
+# RBAC and authorization settings.
+# https://deckhouse.io/modules/user-authz/cr.html#clusterauthorizationrule
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: admin
+spec:
+  # List of Kubernetes RBAC subjects.
+  subjects:
+  - kind: Group
+    name: admins
+  # A predefined access level template.
+  accessLevel: SuperAdmin
+  # Allow the user to use kubectl port-forward.
+  portForwarding: true
 ```
 
 Apply it by running the following command on the master node:
@@ -1603,7 +1649,6 @@ $PUBLIC_IP kubeconfig.test.local
 $PUBLIC_IP openvpn-admin.test.local
 $PUBLIC_IP prometheus.test.local
 $PUBLIC_IP status.test.local
-$PUBLIC_IP tools.test.local
 $PUBLIC_IP upmeter.test.local
 EOF
 "
@@ -1615,7 +1660,7 @@ To confirm the cluster is healthy, open Grafana (built from `publicDomainTemplat
 
 Everything is installed and running. You can use the web UIs to manage the cluster:
 
-* **Deckhouse Console** — cluster and core component management. URL: **console.test.local**.
+* **Deckhouse Console** — cluster and core component management. URL: **console.test.local**. You can download the `d8` CLI from this UI.
 * **Documentation** — documentation for the DKP version running in the cluster. URL: **documentation.test.local**.
 * **Monitoring** — Grafana dashboards shipped with DKP. URL: **grafana.test.local** (Prometheus UI path: **/prometheus/**). More in the [monitoring documentation](../documentation/v1/admin/configuration/monitoring/).
 * **Status page** — overall DKP and component status. URL: **status.test.local**.

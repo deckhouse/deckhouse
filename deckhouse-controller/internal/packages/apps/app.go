@@ -40,7 +40,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
@@ -53,6 +52,10 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
+
+// d8aPrefix is reserved for application objects by the d8a-prefix.deckhouse.io
+// admission policy.
+const d8aPrefix = "d8a-"
 
 // Application represents a running instance of a package.
 // It contains hooks, values storage, and configuration for execution.
@@ -279,9 +282,25 @@ func BuildName(namespace, name string) string {
 	return fmt.Sprintf("%s.%s", namespace, name)
 }
 
+// GetInstance returns the application instance name.
+func (a *Application) GetInstance() string {
+	return a.instance
+}
+
+// GetPackage returns the application package name.
+func (a *Application) GetPackage() string {
+	return a.definition.Name
+}
+
 // GetNamespace returns the application namespace.
 func (a *Application) GetNamespace() string {
 	return a.namespace
+}
+
+// objectPrefix is forced onto the name of every object an application hook
+// creates or patches; package templates spell the same prefix by hand.
+func (a *Application) objectPrefix() string {
+	return d8aPrefix + a.instance
 }
 
 // GetVersion return the package version
@@ -315,15 +334,14 @@ func (a *Application) GetHooksQueues() []string {
 	return slices.Compact(res)
 }
 
-// GetHookSnapshotsDump returns a YAML snapshot of hook controller snapshots.
-func (a *Application) GetHookSnapshotsDump() []byte {
-	d := make(map[string]interface{})
-	for _, h := range a.hooks.GetHooks() {
-		d[h.GetName()] = h.GetHookController().SnapshotsDump()
+// GetHookSnapshotsDump returns a snapshot of hook controller snapshots.
+func (a *Application) GetHookSnapshotsDump() map[string]any {
+	snapshots := make(map[string]any)
+	for _, hook := range a.hooks.GetHooks() {
+		snapshots[hook.GetName()] = hook.GetHookController().SnapshotsDump()
 	}
 
-	marshalled, _ := yaml.Marshal(d)
-	return marshalled
+	return snapshots
 }
 
 // GetValuesChecksum returns a checksum of the current values.
@@ -679,7 +697,7 @@ func (a *Application) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.Bin
 		// we have to check if there are some status patches to apply
 		if hookResult != nil && len(hookResult.ObjectPatcherOperations) > 0 {
 			for _, op := range hookResult.ObjectPatcherOperations {
-				op.SetObjectPrefix(a.instance)
+				op.SetObjectPrefix(a.objectPrefix())
 			}
 			patchErr := a.patcher.ExecuteOperations(hookResult.ObjectPatcherOperations)
 			if patchErr != nil {
@@ -692,7 +710,7 @@ func (a *Application) runHook(ctx context.Context, h hooks.Hook, bctx []bctx.Bin
 
 	if len(hookResult.ObjectPatcherOperations) > 0 {
 		for _, op := range hookResult.ObjectPatcherOperations {
-			op.SetObjectPrefix(a.instance)
+			op.SetObjectPrefix(a.objectPrefix())
 		}
 		if err = a.patcher.ExecuteOperations(hookResult.ObjectPatcherOperations); err != nil {
 			return fmt.Errorf("exec operations: %w", err)

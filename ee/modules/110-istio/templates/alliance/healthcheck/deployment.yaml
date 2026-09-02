@@ -49,6 +49,7 @@ spec:
         app: alliance-healthcheck
         sidecar.istio.io/inject: "true"
         istio.io/rev: default
+        security.deckhouse.io/security-policy-exception.container.istio-init: alliance-healthcheck-istio-init
       annotations:
         istio.deckhouse.io/full-version: "{{ $fullVersion }}"
     spec:

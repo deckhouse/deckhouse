@@ -201,10 +201,10 @@ Deckhouse Code поддерживает следующие атрибуты дл
    ![Ldap sync history table](/images/code/ldap_sync_history_ru.png)
 
 2. Подключитесь к кластеру и определите имя пода Sidekiq командой:
-   `kubectl -n d8-code -l app.kubernetes.io/component=sidekiq get pod -o NAME`
+   `d8 k -n d8-code -l app.kubernetes.io/component=sidekiq get pod -o NAME`
 
 3. Выполните сбор логов, подставив скопированный JID и имя пода (POD_NAME):
-   `kubectl -n d8-code logs POD_NAME | jq 'select(.jid=="JID")'`
+   `d8 k -n d8-code logs POD_NAME | jq 'select(.jid=="JID")'`
 
 > Со временем старые логи удаляются ротацией, и получить их будет нельзя. При необходимости запустите синхронизацию повторно и соберите актуальные логи.
 

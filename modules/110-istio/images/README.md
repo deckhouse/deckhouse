@@ -1,78 +1,75 @@
-## How it built
+## Istio image build targets
 
-### Building common-v1x21x6 images
-  - final image based on `common/src-artifact` image
-  - includes:
-    - src of istio *(loaded from fox)*
-    - patches in src of istio for fix healthcheck of operator
-    - patches in src of istio for fix CVE
+The module builds version-specific images for the supported Istio releases:
 
-### Building cni-v1x21x6 images from sources
-  - final image based on `common/distroless` image
-    - includes:
-     - binaries install-cni *(built from src)*
-     - binaries istio-cni *(built from src)*
-  - build image based on `builder/golang-alpine-1.23` image
-  - includes:
-    - src of istio *(loaded from common-ver artifact)*
-    - binaries install-cni *(built from src)*
-    - binaries istio-cni *(built from src)*
+- `common`, `cni`, `istioctl`, `kiali`, `pilot`, and `proxyv2` for 1.25.2, 1.27.9, and 1.29.6;
+- `operator` for the operator-backed Istio 1.25.2 release.
 
-### Building operator-v1x21x6 images from sources
-  - final image based on `common/distroless` image
-    - includes:
-      - binaries operator *(built from src)*
-      - manifests of istio *(loaded from common-ver artifact)*
-  - build image based on `builder/golang-alpine-1.23` image
-    - includes:
-      - src of istio *(loaded from common-ver artifact)*
-      - binaries operator *(built from src)*
-      - manifests of istio *(loaded from common-ver artifact)*
+Each target is defined in its corresponding `*-v1x<minor>x<patch>/werf.inc.yaml` directory. Images are built from the upstream Istio sources pinned by that target, with Deckhouse patches and vulnerability metadata stored alongside the build definition.
 
-### Building pilot-v1x21x6 images from sources
-  - final image based on `common/distroless` image
-    - includes:
-      - binaries pilot-discovery *(built from src)*
-      - templates for envoy bootstrap *(loaded from common-ver artifact)*
-  - build image based on `builder/golang-alpine-1.23` image
-    - includes:
-      - src of istio *(loaded from common-ver artifact)*
-      - binaries pilot-discovery *(built from src)*
-      - templates for envoy bootstrap *(loaded from common-ver artifact)*
+## Envoy bazel inputs: deps and cache
 
-### Building proxy-v1x21x6 image
-  - final image based on `common/alt-p11` image
-    - includes:
-      - package ca-certificates from repo:p11
-      - binaries iptables *(built from src)*
-      - binaries pilot-agent *(built from src)*
-      - templates for envoy bootstrap *(loaded from common-ver artifact)*
-      - binaries envoy *(built from src, see the description below)*
-  - image for build pilot-agent based on `builder/golang-alpine-1.23` image
-    - includes:
-        - src of istio/proxy *(loaded from fox)*
-        - patches in src of istio for fix CVE
-        - binaries pilot-agent *(built from src)*
+The `proxyv2` envoy build has no network access: it always runs
+`bazel build --nofetch`. Bazel gets two prepared inputs from git instead.
 
-#### Building envoy for proxy-v1x21x6
+|                     | `deps` (`external.tar.gz`)      | `cache` (bazel `--disk_cache`) |
+|---------------------|---------------------------------|--------------------------------|
+| repository          | `istio/envoy-build-deps`        | `istio/envoy-build-cache`      |
+| werf variable       | `$istioProxyDepsRev`            | `$istioProxyCacheRev`          |
+| what it is          | all external repos bazel needs  | compiled build results         |
+| needed for          | correctness                     | speed                          |
+| if missing or stale | the build fails                 | the build is slower            |
+| who makes it        | an engineer, locally (minutes)  | CI (~16 GB RAM, hours)         |
 
-  - `build-image-artifact` image based on `common/alt-p11-artifact` image
-    - based on `cni-cilium/base-cilium-dev` adapted for the current envoy build (e.g. llvm and bazel versions)
-  - `build-libcxx-artifact` image based on `build-image-artifact` image (for build libcxxabi and libcxx)
-    - This library needs for build envoy. libcxxabi and libcxx from AltLinux:P11 are not compatible with our build.
-    - includes:
-      - src of llvm *(loaded from fox)*
-      - libraries libcxxabi and libcxx *(built from src)*
-  - `build-envoy-artifact` image based on `build-image-artifact` image
-    - includes:
-      - src of istio/proxy *(loaded from fox)*
-      - libraries libcxxabi and libcxx *(built from src)*
-      - build-cache of envoy *(loaded from fox)*
-      - build-deps of envoy *(loaded from fox)*
-      - some patches:
-        - using the self-built `libcxxabi` and `libcxxx` libraries,
-        - in `WORKSPACE` we change `ENVOY_SHA` and `ENVOY_SHA256` which are links to the envoy repository version 1.29.12. Because the original tag is broken.
-        - `BAZEL_LINKOPTS=-lm:-pthread` -> `BAZEL_LINKOPTS=-lm:-lpthread` in `envoy.bazelrc` *(???)*
-        - use bazel build options `--config=release` and target `//:envoy`. We found this method in ProwCI in repository istio/proxy. ([Original build job from Istio ProwCI](https://prow.istio.io/view/gs/istio-prow/pr-logs/pull/istio_release-builder/1944/build-warning_release-builder_release-1.21/1837269285437706240))
-      - binaries envoy *(built from src)*
+Deps are always prepared. `$buildWithPreparedCache` controls the cache:
 
+- `true` (normal) — the cache is cloned from git to a `tmp_dir` mount, so it does not
+  end up in an image layer.
+- `false` — the build starts with an empty cache and keeps `/tmp/bazel-cache` in the
+  artifact image, so you can export it as a new cache revision.
+
+### Regenerating deps
+
+Do this when the list of external repos changes: a new istio version, a new
+`ENVOY_SHA`, or a patch that touches `WORKSPACE`, `go.mod` or `bazel/`. Also do it
+when CI fails with `fetching repository '@…' is disabled` — the message names the
+missing repo.
+
+```bash
+cd modules/110-istio/tools
+go run ./build-envoy-artifacts -version 1.25.2 -artifact deps -out ~/envoy-artifacts
+```
+
+The tool runs `bazel build --nobuild` in a container (analysis only, nothing is
+compiled) and writes `~/envoy-artifacts/external.tar.gz`. When it finishes it prints
+the branch name to use. Commit the tarball to that branch in
+`istio/envoy-build-deps` with git-lfs and update `$istioProxyDepsRev`.
+
+Two things to check before you commit it: the archive root must be the *contents* of
+`external/`, because the werf file extracts into that directory, and `local_jdk` must
+not be inside, because the build image has no JDK.
+
+Versions that build LLVM from source (1.27.9, 1.29.6) also need
+`-source-repo "$SOURCE_REPO"`. That is an ssh remote, so pass a passphraseless key
+with `-ssh-key ~/.ssh/id_ed25519`. Without `-ssh-key` the tool forwards
+`$SSH_AUTH_SOCK`, which is what you need for a key with a passphrase.
+
+### Regenerating the cache
+
+Do this when the toolchain changes: another clang or LLVM version, another bazel
+version, or new flags in `user.bazelrc`. Bazel hashes all of them, so an old cache
+still works but never hits.
+
+1. Set `{{- $buildWithPreparedCache := false }}` in the version's `werf.inc.yaml`.
+2. Run the build in CI. It compiles everything.
+3. Extract `/tmp/bazel-cache` from the `…-build-envoy-artifact` image.
+4. Push it to a new branch in `istio/envoy-build-cache`, update
+   `$istioProxyCacheRev`, and set `$buildWithPreparedCache` back to `true`.
+
+Branch names look like `v<istio-version>-<envoy-commit>-<toolchain>-v<n>`. The
+toolchain is part of the name because the cache depends on it. The helper prints the
+whole name for you, so you only need to build it by hand for a cache made in CI.
+
+Keep the version profiles in `modules/110-istio/tools/build-envoy-artifacts` in sync
+with `$bazelVersion`, `$llvmRev`, `$llvmCacheRev` and the apt lists in these werf
+files. Change them in the same commit.

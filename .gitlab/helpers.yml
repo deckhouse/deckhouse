@@ -1,6 +1,18 @@
 # Reusable snippets and hidden job bases for build jobs (shell executor).
 
 .scripts:
+  isolate_ssh_add: |
+    if [[ -n "${SSH_AUTH_SOCK}" && -n "${SSH_AGENT_PID}" ]]; then
+        echo "Existed ssh agent pid: ${SSH_AGENT_PID}"
+        echo "Existed ssh auth sock: ${SSH_AUTH_SOCK}"
+    else
+        eval "$(ssh-agent -s)" > /dev/null
+        trap "kill -3 ${SSH_AGENT_PID}" ERR EXIT HUP INT QUIT TERM ABRT
+        echo "Using new ssh agent pid: ${SSH_AGENT_PID}"
+        echo "Using new ssh auth sock: ${SSH_AUTH_SOCK}"
+    fi
+    echo "${ISOLATE_SSH_PRIVATE_KEY}" | tr -d '\r' | ssh-add -
+
   docker_config_isolation: |
     DOCKER_CONFIG="$(mktemp -d)"
     export DOCKER_CONFIG
@@ -55,6 +67,12 @@
     if [[ -n "${DECKHOUSE_REGISTRY_STAGE_HOST:-}" ]]; then
       echo "${DECKHOUSE_REGISTRY_STAGE_PASSWORD}" | docker login "${DECKHOUSE_REGISTRY_STAGE_HOST}" \
         --username "${DECKHOUSE_REGISTRY_STAGE_USER}" --password-stdin
+    fi
+  
+  login_write_registry: |
+    if [[ -n "${DECKHOUSE_REGISTRY_HOST:-}" ]]; then
+      echo "${DECKHOUSE_REGISTRY_PASSWORD}" | docker login "${DECKHOUSE_REGISTRY_HOST}" \
+        --username "${DECKHOUSE_REGISTRY_USER}" --password-stdin
     fi
 
   setup_ssh: |

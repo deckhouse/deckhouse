@@ -47,6 +47,9 @@ const (
 	ConditionPending ConditionType = "Pending"
 	// ConditionCustomResourcesApplied indicates that CRDs are ensured
 	ConditionCustomResourcesApplied ConditionType = "CustomResourcesApplied"
+	// ConditionWebhooksEnsured indicates that the package's conversion webhooks are
+	// applied ahead of its Helm release. Internal only: no external condition maps it.
+	ConditionWebhooksEnsured ConditionType = "WebhooksEnsured"
 
 	// ConditionReasonApplyingManifests indicates that nelm is applying manifests to the cluster
 	ConditionReasonApplyingManifests ConditionReason = "ApplyingManifests"
@@ -310,12 +313,8 @@ func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 		Reason: ConditionReasonApplyingManifests,
 	})
 
-	for i := len(report.StageReports) - 1; i >= 0; i-- {
-		r := report.StageReports[i]
-		if len(r.Operations) == 0 {
-			continue
-		}
-
+	if len(report.StageReports) > 0 {
+		r := report.StageReports[0]
 		completed := 0
 		remaining := 0
 		for _, op := range r.Operations {
@@ -327,7 +326,6 @@ func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 		}
 
 		status.Tracking = Tracking{Completed: completed, Remaining: remaining, Report: r}
-		break
 	}
 	s.mu.Unlock()
 
@@ -512,6 +510,7 @@ func (s *Service) NewStatus(name string) {
 			{Type: ConditionConfigured, Status: metav1.ConditionUnknown},
 			{Type: ConditionPending, Status: metav1.ConditionUnknown},
 			{Type: ConditionCustomResourcesApplied, Status: metav1.ConditionUnknown},
+			{Type: ConditionWebhooksEnsured, Status: metav1.ConditionUnknown},
 		},
 	}
 

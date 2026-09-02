@@ -13,6 +13,8 @@ The Kubernetes & Scheduling subsystem includes the following modules:
 
 * [`control-plane-manager`](/modules/control-plane-manager/): Main module of the subsystem, responsible for [managing cluster control plane components](control-plane-management.html).
 * [`descheduler`](/modules/descheduler/): Analyzes the cluster state and evicts pods in accordance with the [active strategies](/modules/descheduler/#strategies).
+* [`pod-reloader`](/modules/pod-reloader/): Allows you to automatically restart the workload if certain ConfigMap or Secret changes.
 * [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/): Automatically adjusts container resource requests and limits in pods based on actual consumption. The module architecture is described on the [corresponding page](vpa.html).
+* [`adaptive-resource-management`](/modules/adaptive-resource-management/): Automatically selects optimal resource requests and limits for containers using VPA (Vertical Pod Autoscaler) recommendations.
 
 This subsection also describes the architecture of the [control plane](control-plane.html) and the [kubelet agent](kubelet.html).

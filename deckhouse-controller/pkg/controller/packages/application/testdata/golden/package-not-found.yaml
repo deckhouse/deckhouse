@@ -1,0 +1,29 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Application
+metadata:
+  finalizers:
+  - application.deckhouse.io/statistic-registered
+  name: test-app
+  namespace: foobar
+  resourceVersion: "2"
+spec:
+  packageName: test
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1
+status:
+  lastAppliedConfiguration: null
+  tracking: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  name: deckhouse
+  resourceVersion: "1"
+spec:
+  registry:
+    ca: test-ca
+    dockerCfg: test-docker-cfg
+    repo: registry.example.com/test
+    scheme: https
+status: {}

@@ -28,9 +28,9 @@ entries:
           ru: Режим обслуживания
         url: /code/documentation/admin/configuration/maintenance-mode.html
       - title:
-          en: OpenSearch API
-          ru: API OpenSearch
-        url: /code/documentation/admin/configuration/opensearch-api.html
+          en: Advanced search
+          ru: Расширенный поиск
+        url: /code/documentation/admin/configuration/advanced-search.html
       - title:
           en: Service account
           ru: Сервисный аккаунт
@@ -120,13 +120,9 @@ entries:
           ru: Вебхуки
         url: /code/documentation/user/web-hooks.html
       - title:
-          en: Search
-          ru: Поиск
+          en: Advanced search
+          ru: Расширенный поиск
         url: /code/documentation/user/search.html
-      - title:
-          en: Search API
-          ru: API поиска
-        url: /code/documentation/user/search-api.html
       - title:
           en: Push rules
           ru: Правила отправки изменений

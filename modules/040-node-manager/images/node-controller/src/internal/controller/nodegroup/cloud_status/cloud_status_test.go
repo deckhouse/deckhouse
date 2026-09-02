@@ -118,7 +118,10 @@ func TestCompute_NonCloudEphemeralReturnsEmpty(t *testing.T) {
 		Spec:       v1.NodeGroupSpec{NodeType: v1.NodeTypeStatic},
 	}
 	s := &Service{Client: newClient(t)}
-	res := s.Compute(context.Background(), ng)
+	res, err := s.Compute(context.Background(), ng)
+	if err != nil {
+		t.Fatalf("Compute() error: %v", err)
+	}
 	if res.Desired != 0 || res.Min != 0 || res.Max != 0 || res.Instances != 0 ||
 		res.IsFrozen || res.LatestError != "" || len(res.Failures) != 0 {
 		t.Fatalf("expected empty result for static NG, got %#v", res)
@@ -133,7 +136,10 @@ func TestCompute_MinMaxFromZonesAndReplicas(t *testing.T) {
 		mcmMachine("m2", "worker"),
 	)}
 
-	res := s.Compute(context.Background(), ng)
+	res, err := s.Compute(context.Background(), ng)
+	if err != nil {
+		t.Fatalf("Compute() error: %v", err)
+	}
 
 	if res.Min != 2 { // minPerZone(1) * zones(2)
 		t.Errorf("Min = %d, want 2", res.Min)
@@ -155,7 +161,10 @@ func TestCompute_DesiredBumpedToMin(t *testing.T) {
 		mcmMachineDeployment("worker-md", "worker", 1),
 	)}
 
-	res := s.Compute(context.Background(), ng)
+	res, err := s.Compute(context.Background(), ng)
+	if err != nil {
+		t.Fatalf("Compute() error: %v", err)
+	}
 
 	if res.Min != 6 {
 		t.Errorf("Min = %d, want 6", res.Min)
@@ -175,7 +184,10 @@ func TestCompute_CombinesMCMAndCAPIReplicasAndMachines(t *testing.T) {
 		capiMachine("cm2", "worker"),
 	)}
 
-	res := s.Compute(context.Background(), ng)
+	res, err := s.Compute(context.Background(), ng)
+	if err != nil {
+		t.Fatalf("Compute() error: %v", err)
+	}
 
 	if res.Desired != 5 { // 2 (mcm) + 3 (capi)
 		t.Errorf("Desired = %d, want 5", res.Desired)
@@ -212,7 +224,10 @@ func TestCompute_FrozenAndFailuresSortedLatestError(t *testing.T) {
 	}, "status", "failedMachines")
 
 	s := &Service{Client: newClient(t, md)}
-	res := s.Compute(context.Background(), ng)
+	res, err := s.Compute(context.Background(), ng)
+	if err != nil {
+		t.Fatalf("Compute() error: %v", err)
+	}
 
 	if !res.IsFrozen {
 		t.Error("expected IsFrozen=true")
@@ -290,7 +305,11 @@ func TestGetZonesCount(t *testing.T) {
 				objs = append(objs, tt.secret)
 			}
 			s := &Service{Client: newClient(t, objs...)}
-			if got := s.getZonesCount(context.Background(), tt.ng); got != tt.want {
+			got, err := s.getZonesCount(context.Background(), tt.ng)
+			if err != nil {
+				t.Fatalf("getZonesCount() error: %v", err)
+			}
+			if got != tt.want {
 				t.Fatalf("getZonesCount() = %d, want %d", got, tt.want)
 			}
 		})

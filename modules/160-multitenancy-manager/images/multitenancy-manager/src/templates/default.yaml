@@ -148,7 +148,9 @@ spec:
     apiVersion: deckhouse.io/v1alpha1
     kind: AuthorizationRule
     metadata:
-      name: {{ $administrator.name | include "normalize" }}
+      # Quoted: digit-only names (e.g. "008") must stay strings, otherwise YAML decodes them as numbers
+      # and Kubernetes rejects metadata.name.
+      name: {{ $administrator.name | include "normalize" | quote }}
     spec:
       accessLevel: Admin
       subjects:

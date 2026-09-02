@@ -154,3 +154,67 @@ func TestRunCloudChecks_AllPass(t *testing.T) {
 	assert.True(t, res.Processed)
 	assert.Empty(t, res.Error)
 }
+
+// Processed=false gates the whole cloud overlay away, and every consumer keys its fallback off a
+// non-empty Error: the bashible context keeps the last-good entry only when Error is set. A silent
+// Processed=false therefore publishes a NodeGroup without instanceClass instead of keeping the
+// previous one — a checksum shift on every node. The only legitimate silent case is a NodeGroup
+// with no cloud at all.
+func TestRunCloudChecks_UnprocessedAlwaysCarriesAReason(t *testing.T) {
+	tests := []struct {
+		name string
+		in   CloudCheckInput
+	}{
+		{
+			name: "wrong kind",
+			in: CloudCheckInput{
+				NodeType: v1.NodeTypeCloudEphemeral, KindInUse: "AWSInstanceClass",
+				ClassRefKind: "YandexInstanceClass", ClassRefName: "worker",
+			},
+		},
+		{
+			name: "class not found",
+			in: CloudCheckInput{
+				NodeType: v1.NodeTypeCloudEphemeral, KindInUse: "AWSInstanceClass",
+				ClassRefKind: "AWSInstanceClass", ClassRefName: "worker",
+				KnownClassNames: []string{"other"},
+			},
+		},
+		{
+			name: "capacity unresolvable for scale from zero",
+			in: CloudCheckInput{
+				NodeType: v1.NodeTypeCloudEphemeral, KindInUse: "AWSInstanceClass",
+				ClassRefKind: "AWSInstanceClass", ClassRefName: "worker",
+				KnownClassNames: []string{"worker"},
+				MinPerZone:      0, MaxPerZone: 3,
+				CapacityErr: errors.New("unknown instance type"),
+			},
+		},
+		{
+			name: "unknown zone",
+			in: CloudCheckInput{
+				NodeType: v1.NodeTypeCloudEphemeral, KindInUse: "AWSInstanceClass",
+				ClassRefKind: "AWSInstanceClass", ClassRefName: "worker",
+				KnownClassNames: []string{"worker"},
+				MinPerZone:      1, MaxPerZone: 3,
+				SpecZones: []string{"zzz"}, DefaultZones: []string{"a"},
+			},
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			got := RunCloudChecks(tc.in)
+
+			assert.False(t, got.Processed)
+			assert.NotEmpty(t, got.Error, "Processed=false without an Error silently drops the cloud overlay")
+		})
+	}
+}
+
+// A NodeGroup with no cloud is unprocessed on purpose and has nothing to report.
+func TestRunCloudChecks_NoCloudIsSilentlyUnprocessed(t *testing.T) {
+	got := RunCloudChecks(CloudCheckInput{NodeType: v1.NodeTypeStatic})
+
+	assert.False(t, got.Processed)
+	assert.Empty(t, got.Error)
+}

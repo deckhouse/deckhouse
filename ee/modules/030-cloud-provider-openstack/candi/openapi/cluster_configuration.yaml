@@ -25,6 +25,7 @@ apiVersions:
         sshPublicKey: "<SSH_PUBLIC_KEY>"
         zones:
           - eu-3a
+          - eu-3b
         standard:
           internalNetworkDNSServers:
             - 8.8.8.8
@@ -61,8 +62,8 @@ apiVersions:
                 - sec_group_1
                 - sec_group_2
             zones:
-              - eu-1a
-              - eu-1b
+              - eu-3a
+              - eu-3b
     additionalProperties: false
     required: [apiVersion, kind, layout, provider, sshPublicKey, masterNodeGroup]
     properties:
@@ -101,7 +102,12 @@ apiVersions:
         minItems: 1
         uniqueItems: true
         description: |
-          The globally restricted set of zones that this Cloud Provider works with.
+          The globally restricted set of availability zones that this cloud provider works with.
+
+          Specify only zones of the [`provider.region`](#openstackclusterconfiguration-provider-region) region.
+          The cluster is deployed in a single OpenStack region — zones from other regions cannot be used.
+
+          To get the list of zones in the region, run: `openstack availability zone list --compute`.
         x-doc-required: false
       masterNodeGroup:
         description: |
@@ -238,7 +244,9 @@ apiVersions:
                   - manuallyManaged
       nodeGroups:
         description: |
-          An array of additional NodeGroups for creating static nodes (e.g., for dedicated front nodes or gateways).
+          An array of additional NodeGroups for creating [CloudPermanent](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html#adding-cloudpermanent-nodes-to-a-cloud-cluster) nodes (for example, dedicated front nodes or gateways).
+
+          For [CloudEphemeral](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html#adding-cloudephemeral-nodes-in-a-cloud-cluster) nodes, use a separate [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource and an [OpenStackInstanceClass](cr.html#openstackinstanceclass).
         type: array
         items:
           additionalProperties: false
@@ -354,6 +362,9 @@ apiVersions:
               uniqueItems: true
               description: |
                 A limited set of zones in which nodes can be created.
+
+                The zones must belong to the [`provider.region`](#openstackclusterconfiguration-provider-region) region.
+                If the [`zones`](#openstackclusterconfiguration-zones) parameter is set, only zones from that parameter can be used.
               x-doc-required: false
             volumeTypeMap:
               description: |
@@ -609,6 +620,8 @@ apiVersions:
             type: string
             description: |
               The OpenStack region where the cluster will be deployed.
+
+              The cluster runs in a single region. Master nodes, as well as CloudPermanent and CloudEphemeral nodes, can be created only in zones of this region.
             x-unsafe: true
         oneOf:
         - required: [authURL, domainName, tenantName, username, password, region]

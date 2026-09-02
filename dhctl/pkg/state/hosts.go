@@ -28,8 +28,12 @@ const (
 	MasterHostsCacheKey = "cluster-hosts"
 )
 
+func SaveMasterHosts(ctx context.Context, cache Cache, hosts map[string]string) error {
+	return cache.SaveStruct(ctx, MasterHostsCacheKey, hosts)
+}
+
 func SaveMasterHostsToCache(ctx context.Context, cache Cache, hosts map[string]string) {
-	if err := cache.SaveStruct(ctx, MasterHostsCacheKey, hosts); err != nil {
+	if err := SaveMasterHosts(ctx, cache, hosts); err != nil {
 		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("Cannot save ssh hosts %v", err))
 	}
 }

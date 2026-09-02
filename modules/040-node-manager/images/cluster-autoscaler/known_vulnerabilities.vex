@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-c2167a7b3cc90a41182606ceaec2db0b24311690a9a2f974d6190b35c543bd2e",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 3,
+  "version": 4,
   "statements": [
     {
       "vulnerability": {
@@ -51,20 +51,6 @@
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
       "impact_statement": "Уязвимость связана с поведением kubelet при работе с GitRepo volume, cluster-autoscaler не запускает kubelet и не инициирует монтирование gitRepo, библиотека k8s.io/kubernetes используется только для типов/утилит, уязвимый код не используется в провайдере.",
       "timestamp": "2025-10-16T07:13:22.026446Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2025-5187"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/k8s.io/kubernetes"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "cluster-autoscaler не запускает kube-apiserver и не экспонирует API, позволяющие нодам удалять сами себя, k8s.io/kubernetes используется только как библиотечная зависимость для клиентских операций, уязвимый код не исполняется.",
-      "timestamp": "2025-10-16T07:20:22.663692Z"
     },
     {
       "vulnerability": {
@@ -135,8 +121,92 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Уязвимость CVE-2026-41579 связана с настройкой container rootfs в runc (symlink /dev). Cluster-autoscaler не запускает контейнеры через runc и не выполняет container rootfs setup; runc присутствует только как транзитивная зависимость module graph (через cadvisor) и не исполняется в runtime-сценарии Deckhouse.",
       "timestamp": "2026-07-31T12:00:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GO-2026-6094"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/google/cel-go"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-6094 / GHSA-gcjh-h69q-9w9g затрагивает ParseStructTag и NativeTypes в cel-go/ext (json:\"-\" и аналоги). Cluster-autoscaler не вызывает NativeTypes/ParseStructTag; cel-go приходит транзитивно через k8s.io/apiserver CEL environment. На линии Kubernetes 1.32 нельзя поднять cel-go до исправленного v0.30.0 из-за несовместимости API TwoVarComprehensions с apiserver 0.32. На 1.33+ зависимость поднята до v0.30.0. Уязвимый код не исполняется.",
+      "timestamp": "2026-08-21T14:00:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-gcjh-h69q-9w9g"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/google/cel-go"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GHSA-gcjh-h69q-9w9g / GO-2026-6094 затрагивает ParseStructTag и NativeTypes в cel-go/ext (json:\"-\" и аналоги). Cluster-autoscaler не вызывает NativeTypes/ParseStructTag; cel-go приходит транзитивно через k8s.io/apiserver CEL environment. На линии Kubernetes 1.32 нельзя поднять cel-go до исправленного v0.30.0 из-за несовместимости API TwoVarComprehensions с apiserver 0.32. На 1.33+ зависимость поднята до v0.30.0. Уязвимый код не исполняется.",
+      "timestamp": "2026-08-21T16:00:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2024-45310"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/runc"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2024-45310 — создание пустых файлов/каталогов в хостовой ФС при подготовке container mounts в runc. Cluster-autoscaler не запускает контейнеры через runc. Ни в один собираемый здесь образ runc не линкуется: с Kubernetes 1.32 k8s.io/mount-utils больше не импортирует runc/libcontainer/userns, а на 1.33+ go mod tidy убирает требование совсем (проверяется через go version -m cluster-autoscaler). Пин v1.2.9 в патче 1.32 оставлен только для гигиены module graph. Уязвимый код не исполняется.",
+      "timestamp": "2026-08-21T16:00:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-31133"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/runc"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2025-31133 — container escape в runc через подмену bind-mount /dev/null. Cluster-autoscaler не запускает контейнеры через runc. Ни в один собираемый здесь образ runc не линкуется: с Kubernetes 1.32 k8s.io/mount-utils больше не импортирует runc/libcontainer/userns, а на 1.33+ go mod tidy убирает требование совсем (проверяется через go version -m cluster-autoscaler). Пин v1.2.9 в патче 1.32 оставлен только для гигиены module graph. Уязвимый код не исполняется.",
+      "timestamp": "2026-08-21T16:00:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-52881"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/runc"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2025-52881 — перенаправление записей в /proc на другие файлы при запуске контейнера в runc. Cluster-autoscaler не запускает контейнеры через runc. Ни в один собираемый здесь образ runc не линкуется: с Kubernetes 1.32 k8s.io/mount-utils больше не импортирует runc/libcontainer/userns, а на 1.33+ go mod tidy убирает требование совсем (проверяется через go version -m cluster-autoscaler). Пин v1.2.9 в патче 1.32 оставлен только для гигиены module graph. Уязвимый код не исполняется.",
+      "timestamp": "2026-08-21T16:00:00.000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-52565"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/opencontainers/runc"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2025-52565 — container escape в runc через race при монтировании /dev/console. Cluster-autoscaler не запускает контейнеры через runc. Ни в один собираемый здесь образ runc не линкуется: с Kubernetes 1.32 k8s.io/mount-utils больше не импортирует runc/libcontainer/userns, а на 1.33+ go mod tidy убирает требование совсем (проверяется через go version -m cluster-autoscaler). Пин v1.2.9 в патче 1.32 оставлен только для гигиены module graph. Уязвимый код не исполняется.",
+      "timestamp": "2026-08-21T16:00:00.000000Z"
     }
   ],
   "timestamp": "2026-03-04T14:40:21Z",
-  "last_updated": "2026-07-31T12:00:00Z"
+  "last_updated": "2026-08-21T17:00:00Z"
 }

@@ -17,12 +17,22 @@ limitations under the License.
 package hooks
 
 import (
+	"fmt"
+
 	. "github.com/benjamintf1/unmarshalledmatchers"
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/ptr"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
+
+type inputDexClientAllowAccess struct {
+	annotation *string
+	allowed    bool
+	warns      bool
+}
 
 var _ = Describe("User Authn hooks :: get dex client crds ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthn":{"internal": {}}}`, "")
@@ -368,4 +378,82 @@ spec:
 }]`))
 		})
 	})
+
+	DescribeTable("The dexclient.deckhouse.io/allow-access-to-kubernetes annotation",
+		func(in inputDexClientAllowAccess) {
+			var annotations string
+			if in.annotation != nil {
+				annotations = fmt.Sprintf("\n  annotations:\n    %s: %q", dexClientAllowAccessToKubernetesAnnotation, *in.annotation)
+			}
+
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dex-client-opendistro
+  namespace: test
+  labels:
+    app: dex-client
+    name: credentials
+data:
+  clientSecret: dGVzdA==
+---
+apiVersion: deckhouse.io/v1
+kind: DexClient
+metadata:
+  name: opendistro
+  namespace: test` + annotations + `
+spec:
+  redirectURIs:
+  - https://opendistro.example.com/callback
+`))
+			f.RunHook()
+
+			Expect(f).To(ExecuteSuccessfully())
+
+			client := f.ValuesGet("userAuthn.internal.dexClientCRDs.0")
+			Expect(client.Get("allowAccessToKubernetes").Bool()).To(Equal(in.allowed))
+			Expect(client.Get("allowAccessToKubernetesAnnotation").Exists()).To(BeFalse())
+
+			if in.annotation != nil {
+				Expect(client.Get("annotations").String()).To(MatchJSON(fmt.Sprintf(`{%q: %q}`, dexClientAllowAccessToKubernetesAnnotation, *in.annotation)))
+			}
+
+			logs := string(f.LoggerOutput.Contents())
+			if in.warns {
+				Expect(logs).To(ContainSubstring("Ignoring invalid allow-access-to-kubernetes annotation"))
+				Expect(logs).To(ContainSubstring(dexClientAllowAccessToKubernetesAnnotation))
+			} else {
+				Expect(logs).NotTo(ContainSubstring("Ignoring invalid allow-access-to-kubernetes annotation"))
+			}
+		},
+		Entry(`grants access to the Kubernetes API when the value is "true"`,
+			inputDexClientAllowAccess{annotation: ptr.To("true"), allowed: true},
+		),
+		Entry(`grants access to the Kubernetes API when the value is "1"`,
+			inputDexClientAllowAccess{annotation: ptr.To("1"), allowed: true},
+		),
+		Entry(`grants access to the Kubernetes API when the value is "True"`,
+			inputDexClientAllowAccess{annotation: ptr.To("True"), allowed: true},
+		),
+		Entry(`denies access to the Kubernetes API when the value is "false"`,
+			inputDexClientAllowAccess{annotation: ptr.To("false")},
+		),
+		Entry(`denies access to the Kubernetes API when the value is "0"`,
+			inputDexClientAllowAccess{annotation: ptr.To("0")},
+		),
+		Entry("denies access to the Kubernetes API and warns when the value is empty",
+			inputDexClientAllowAccess{annotation: ptr.To(""), warns: true},
+		),
+		Entry(`denies access to the Kubernetes API and warns when the value is "yes"`,
+			inputDexClientAllowAccess{annotation: ptr.To("yes"), warns: true},
+		),
+		Entry(`denies access to the Kubernetes API and warns when the value is "enabled"`,
+			inputDexClientAllowAccess{annotation: ptr.To("enabled"), warns: true},
+		),
+		Entry("denies access to the Kubernetes API without warning when the annotation is absent",
+			inputDexClientAllowAccess{},
+		),
+	)
 })

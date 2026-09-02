@@ -81,7 +81,7 @@ func (v *Validator) GetValidatorFor(kind schema.ObjectKind) validation.SchemaVal
 	gvk := kind.GroupVersionKind()
 	gvkValidator := v.validators[gvk]
 	if gvkValidator == nil {
-		v.logger.Debug("validator for gvk not found", slog.Any("gvk", gvk), slog.Any("available validators", slices.Collect(maps.Keys(v.validators))))
+		v.logger.Debug("validator for gvk not found", slog.Any("gvk", gvk), slog.Any("available_validators", slices.Collect(maps.Keys(v.validators))))
 		return nil
 	}
 

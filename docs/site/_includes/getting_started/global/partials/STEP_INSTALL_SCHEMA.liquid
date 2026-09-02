@@ -35,7 +35,7 @@ The `{{ layout.name }}` layout will be used during the installation.
 
 {% if include.presentation -%}
 
-{% if page.ee_only == true and page.se_support == true and page.platform_code != 'vsphere'%}
+{% if page.ee_only == true and page.se_support == true and page.platform_code != 'vsphere' and page.platform_code != 'bm-private' %}
 {% alert level="warning" %}
 The {{ page.title_main }} installation is not available in the Community Edition. [See information about commercial editions](https://deckhouse.io/products/kubernetes-platform/).
 {% endalert %}

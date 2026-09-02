@@ -32,7 +32,12 @@ apiVersions:
           Если поменять теги в рабочем кластере, после применения изменений необходимо пересоздать все машины.
       zones:
         description: |
-          Глобальное ограничение набора зон, с которыми работает данный облачный провайдер.
+          Глобальное ограничение набора зон доступности, с которыми работает облачный провайдер.
+
+          Указывайте только зоны региона [`provider.region`](cluster_configuration.html#openstackclusterconfiguration-provider-region).
+          Кластер разворачивается в одном регионе OpenStack — зоны других регионов использовать нельзя.
+
+          Получить список зон региона можно командой: `openstack availability zone list --compute`.
       masterNodeGroup:
         description: |
           Спецификация для описания NodeGroup master-узлов.
@@ -114,7 +119,9 @@ apiVersions:
                       Идентификатор объекта ServerGroup.
       nodeGroups:
         description: |
-          Массив дополнительных NodeGroup для создания статических узлов (например, для выделенных frontend-узлов или шлюзов).
+          Массив дополнительных NodeGroup для создания узлов типа [CloudPermanent](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html#добавление-cloudpermanent-узлов-в-облачном-кластере) (например, для выделенных frontend-узлов или шлюзов).
+
+          Для узлов типа [CloudEphemeral](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html#добавление-cloudephemeral-узлов-в-облачном-кластере) используйте отдельный ресурс [NodeGroup](/modules/node-manager/cr.html#nodegroup) и [OpenStackInstanceClass](cr.html#openstackinstanceclass).
         items:
           properties:
             name:
@@ -188,6 +195,9 @@ apiVersions:
             zones:
               description: |
                 Список зон, в которых допустимо создавать узлы.
+
+                Зоны должны относиться к региону [`provider.region`](cluster_configuration.html#openstackclusterconfiguration-provider-region).
+                Если задан параметр [`zones`](cluster_configuration.html#openstackclusterconfiguration-zones), можно указать только зоны из этого параметра.
             volumeTypeMap:
               description: |
                 Словарь типов дисков для загрузочного диска.
@@ -348,4 +358,6 @@ apiVersions:
               Пароль пользователя.
           region:
             description: |
-              Регион OpenStack, где будет развернут кластер.
+              Регион OpenStack, в котором будет развернут кластер.
+
+              Кластер работает только в одном регионе. Master-узлы, а также узлы типов CloudPermanent и CloudEphemeral можно создавать только в зонах этого региона.

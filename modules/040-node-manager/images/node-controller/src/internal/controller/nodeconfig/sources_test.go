@@ -1,0 +1,378 @@
+/*
+Copyright 2026 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package nodeconfig
+
+import (
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+)
+
+func TestPickKubeletDigest(t *testing.T) {
+	tests := []struct {
+		name     string
+		packages map[string]string
+		version  string
+		want     string
+	}{
+		{
+			name: "two-digit patch wins over one-digit (numeric, not lexicographic)",
+			packages: map[string]string{
+				"kubeletSysext1356":  "sha256:patch6",
+				"kubeletSysext13510": "sha256:patch10",
+			},
+			version: "1.35",
+			want:    "sha256:patch10", // 1.35.10 > 1.35.6
+		},
+		{
+			name:     "another minor version is not this one's kubelet",
+			packages: map[string]string{"kubeletSysext1346": "sha256:v134"},
+			version:  "1.35",
+			want:     "",
+		},
+		{
+			name:     "no matching prefix yields empty",
+			packages: map[string]string{"other": "x"},
+			version:  "1.35",
+			want:     "",
+		},
+		{
+			name:     "non-numeric suffix is ignored",
+			packages: map[string]string{"kubeletSysext135abc": "x", "kubeletSysext1355": "sha256:v5"},
+			version:  "1.35",
+			want:     "sha256:v5",
+		},
+		{
+			name:     "no version derived yields empty rather than any kubelet at all",
+			packages: map[string]string{"kubeletSysext1356": "sha256:patch6"},
+			want:     "",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := pickKubeletDigest(tt.packages, tt.version); got != tt.want {
+				t.Fatalf("pickKubeletDigest = %q, want %q", got, tt.want)
+			}
+		})
+	}
+}
+
+// The camelcase image name strips version separators, so no "newest" can be
+// told: several candidates are a build defect to report, not an ordering
+// problem to solve. The same rule lives in dhctl's soleDigest.
+func TestSoleDigest(t *testing.T) {
+	t.Run("exactly one is returned", func(t *testing.T) {
+		d, err := soleDigest(map[string]string{"containerdSysext224": "sha256:v224"}, "containerdSysext")
+		require.NoError(t, err)
+		require.Equal(t, "sha256:v224", d)
+	})
+	t.Run("none is empty, not an error", func(t *testing.T) {
+		d, err := soleDigest(map[string]string{"other": "x"}, "containerdSysext")
+		require.NoError(t, err)
+		require.Empty(t, d)
+	})
+	t.Run("a non-numeric tail is a different image", func(t *testing.T) {
+		d, err := soleDigest(map[string]string{
+			"containerdSysext224":     "sha256:v224",
+			"containerdSysextDebug":   "x",
+			"containerdSysextLegacy2": "x",
+		}, "containerdSysext")
+		require.NoError(t, err)
+		require.Equal(t, "sha256:v224", d)
+	})
+	t.Run("several candidates are refused with both names", func(t *testing.T) {
+		_, err := soleDigest(map[string]string{
+			"containerdSysext224":  "sha256:v224",
+			"containerdSysext2210": "sha256:v2210",
+		}, "containerdSysext")
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "containerdSysext224")
+		require.Contains(t, err.Error(), "containerdSysext2210")
+	})
+}
+
+// The cluster configuration decides the node's DNS domain and how many pods it
+// advertises. Reading it used to degrade silently: a failure yielded the
+// defaults, and the whole group was reconfigured onto them.
+func TestReadClusterConfiguration(t *testing.T) {
+	t.Run("no cluster configuration to read", func(t *testing.T) {
+		s := sourceReaderOver(dnsCluster(t))
+
+		_, err := s.readClusterConfiguration(t.Context())
+
+		require.ErrorContains(t, err, clusterConfigSecretName)
+	})
+
+	t.Run("a cluster configuration that cannot be parsed", func(t *testing.T) {
+		s := sourceReaderOver(dnsCluster(t, clusterConfigSecret("\tnot: [yaml")))
+
+		_, err := s.readClusterConfiguration(t.Context())
+
+		require.ErrorContains(t, err, clusterConfigSecretName)
+	})
+
+	t.Run("the domain the cluster was configured with", func(t *testing.T) {
+		s := sourceReaderOver(dnsCluster(t, clusterConfigSecret("clusterDomain: k8s.internal\n")))
+
+		config, err := s.readClusterConfiguration(t.Context())
+
+		require.NoError(t, err)
+		require.Equal(t, "k8s.internal", config.ClusterDomain)
+	})
+
+	// ClusterConfiguration writes the prefix as a string; a rendered copy of it
+	// can carry a bare number. Both have to mean the same thing.
+	t.Run("the pod subnet prefix, quoted or bare", func(t *testing.T) {
+		quoted := sourceReaderOver(dnsCluster(t, clusterConfigSecret("podSubnetNodeCIDRPrefix: \"22\"\n")))
+		config, err := quoted.readClusterConfiguration(t.Context())
+		require.NoError(t, err)
+		require.Equal(t, 500, defaultMaxPodsFor(config.PodSubnetNodeCIDRPrefix))
+
+		bare := sourceReaderOver(dnsCluster(t, clusterConfigSecret("podSubnetNodeCIDRPrefix: 23\n")))
+		config, err = bare.readClusterConfiguration(t.Context())
+		require.NoError(t, err)
+		require.Equal(t, 250, defaultMaxPodsFor(config.PodSubnetNodeCIDRPrefix))
+	})
+}
+
+// The cluster-wide half of the render inputs, end to end: a configuration that
+// names no domain gets the one ClusterConfiguration itself defaults to, and a
+// missing object stops the pass instead of handing every node a made-up value.
+func TestReadClusterState(t *testing.T) {
+	objects := []client.Object{
+		apiServerEndpointSlice("10.0.0.1"),
+		dnsService(kubeDNSServiceName, "kube-dns", "10.0.0.10"),
+		clusterCAConfigMapObject("-----BEGIN CERTIFICATE-----"),
+	}
+
+	t.Run("a configuration that names no domain keeps the default", func(t *testing.T) {
+		s := sourceReaderOver(dnsCluster(t, append(objects, clusterConfigSecret("kubernetesVersion: \"1.35\"\n"))...))
+
+		in := clusterInputs{}
+		require.NoError(t, s.readClusterState(t.Context(), &in))
+
+		require.Equal(t, defaultClusterDomain, in.ClusterDomain)
+		require.Equal(t, []string{"https://10.0.0.1:6443"}, in.APIServerEndpoints)
+		require.Equal(t, "10.0.0.10", in.ClusterDNS)
+		require.NotEmpty(t, in.KubernetesCA)
+	})
+
+	t.Run("the configured domain wins", func(t *testing.T) {
+		s := sourceReaderOver(dnsCluster(t, append(objects, clusterConfigSecret("clusterDomain: k8s.internal\n"))...))
+
+		in := clusterInputs{}
+		require.NoError(t, s.readClusterState(t.Context(), &in))
+
+		require.Equal(t, "k8s.internal", in.ClusterDomain)
+	})
+
+	t.Run("a cluster with no CA to hand out is not rendered at all", func(t *testing.T) {
+		s := sourceReaderOver(dnsCluster(t,
+			apiServerEndpointSlice("10.0.0.1"),
+			dnsService(kubeDNSServiceName, "kube-dns", "10.0.0.10"),
+			clusterConfigSecret("clusterDomain: k8s.internal\n"),
+		))
+
+		in := clusterInputs{}
+		require.ErrorContains(t, s.readClusterState(t.Context(), &in), clusterCAConfigMap)
+	})
+}
+
+// A node's pod ceiling follows its slice of the pod subnet, the way bashible's
+// does: a flat 120 next to bashible's 500 on a /22 cluster is the scheduler
+// skew this number exists to avoid.
+func TestDefaultMaxPodsFor(t *testing.T) {
+	tests := []struct {
+		name       string
+		prefix     intstr.IntOrString
+		expMaxPods int
+	}{
+		{name: "a /24 slice per node", prefix: intstr.FromString("24"), expMaxPods: 120},
+		{name: "a /23 slice per node", prefix: intstr.FromString("23"), expMaxPods: 250},
+		{name: "a /22 slice per node", prefix: intstr.FromString("22"), expMaxPods: 500},
+		{name: "a slice narrower than /24", prefix: intstr.FromString("25"), expMaxPods: 120},
+		{
+			// A bashible node advertises 1000 here. An immutable node beside it
+			// advertising 500 is the scheduler skew this ladder exists to avoid,
+			// so the whole ladder has to fit under the agent's schema.
+			name:       "a /21 slice per node, as wide as bashible goes",
+			prefix:     intstr.FromString("21"),
+			expMaxPods: 1000,
+		},
+		{name: "no prefix configured falls back to a /24", expMaxPods: 120},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.Equal(t, tt.expMaxPods, defaultMaxPodsFor(tt.prefix))
+		})
+	}
+}
+
+// With several DNS-labelled services and no kube-dns, the winner must not
+// depend on listing order (the address changed between passes). Finding none is
+// an error — an empty address would roll the group onto a DNS-less config.
+func TestReadClusterDNS(t *testing.T) {
+	t.Run("the same service every time", func(t *testing.T) {
+		s := sourceReaderOver(dnsCluster(t,
+			dnsService("coredns-b", "coredns", "10.0.0.22"),
+			dnsService("coredns-a", "coredns", "10.0.0.11"),
+		))
+
+		for range 3 {
+			dns, err := s.readClusterDNS(t.Context())
+
+			require.NoError(t, err)
+			require.Equal(t, "10.0.0.11", dns)
+		}
+	})
+
+	t.Run("kube-dns wins outright", func(t *testing.T) {
+		s := sourceReaderOver(dnsCluster(t,
+			dnsService("coredns-a", "coredns", "10.0.0.11"),
+			dnsService(kubeDNSServiceName, "kube-dns", "10.0.0.10"),
+		))
+
+		dns, err := s.readClusterDNS(t.Context())
+
+		require.NoError(t, err)
+		require.Equal(t, "10.0.0.10", dns)
+	})
+
+	t.Run("no DNS service at all is an error, not an empty address", func(t *testing.T) {
+		s := sourceReaderOver(dnsCluster(t, dnsService("other", "something-else", "10.0.0.33")))
+
+		_, err := s.readClusterDNS(t.Context())
+
+		require.ErrorContains(t, err, "no DNS service")
+	})
+
+	t.Run("a headless DNS service is no address either", func(t *testing.T) {
+		s := sourceReaderOver(dnsCluster(t, dnsService(kubeDNSServiceName, "kube-dns", corev1.ClusterIPNone)))
+
+		_, err := s.readClusterDNS(t.Context())
+
+		require.ErrorContains(t, err, "no DNS service")
+	})
+}
+
+// A docker config the node cannot be given credentials from is an error: read as
+// "this registry is anonymous", it hands every node of the group a pull that
+// fails against a private registry with nothing saying why.
+func TestRegistryAuth(t *testing.T) {
+	auth, err := registryAuth([]byte(`{"auths":{"registry.example.com":{"auth":"dXNlcjpwYXNz"}}}`), "registry.example.com")
+	require.NoError(t, err)
+	require.Equal(t, "dXNlcjpwYXNz", auth)
+
+	// An anonymous registry genuinely has no credentials.
+	auth, err = registryAuth(nil, "registry.example.com")
+	require.NoError(t, err)
+	require.Empty(t, auth)
+
+	_, err = registryAuth([]byte("{not json"), "registry.example.com")
+	require.ErrorContains(t, err, registryDockerConfigKey)
+}
+
+func sourceReaderOver(cluster client.Client) *sourceReader {
+	return &sourceReader{Reader: cluster}
+}
+
+func apiServerEndpointSlice(address string) client.Object {
+	return &discoveryv1.EndpointSlice{
+		ObjectMeta: metav1.ObjectMeta{Namespace: apiServerEndpointSliceNS, Name: apiServerEndpointSliceName},
+		Ports: []discoveryv1.EndpointPort{{
+			Name: ptr.To(apiServerPortName),
+			Port: ptr.To(int32(apiserverPort)),
+		}},
+		Endpoints: []discoveryv1.Endpoint{{Addresses: []string{address}}},
+	}
+}
+
+func clusterCAConfigMapObject(ca string) client.Object {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Namespace: kubeSystemNS, Name: clusterCAConfigMap},
+		Data:       map[string]string{clusterCAKey: ca},
+	}
+}
+
+func dnsCluster(t *testing.T, objects ...client.Object) client.Client {
+	t.Helper()
+
+	coreOnly := runtime.NewScheme()
+	require.NoError(t, clientgoscheme.AddToScheme(coreOnly))
+	return fake.NewClientBuilder().WithScheme(coreOnly).WithObjects(objects...).Build()
+}
+
+func clusterConfigSecret(config string) client.Object {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: kubeSystemNS, Name: clusterConfigSecretName},
+		Data:       map[string][]byte{clusterConfigKey: []byte(config)},
+	}
+}
+
+func dnsService(name, app, clusterIP string) client.Object {
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: kubeSystemNS,
+			Name:      name,
+			Labels:    map[string]string{dnsAppLabel: app},
+		},
+		Spec: corev1.ServiceSpec{ClusterIP: clusterIP},
+	}
+}
+
+// The agent image carries no version in its name — it is built from a pinned
+// commit of the agent repository's main — so its digest is looked up by exact
+// key rather than through soleDigest, which needs a numeric tail. A release
+// that did not build it is a build defect: silently dropping the extension
+// would leave every node's agent frozen at whatever the OS image carries.
+func TestSysextDigestsAgent(t *testing.T) {
+	packages := map[string]string{
+		"containerdSysext224":    "sha256:c",
+		"kubernetesCniSysext162": "sha256:n",
+		"kubeletSysext1356":      "sha256:k",
+		"nodeletSysext":          "sha256:a",
+	}
+
+	t.Run("the agent digest is picked up", func(t *testing.T) {
+		got, err := sysextDigests(map[string]map[string]string{registryPackagesDigestsKey: packages}, "1.35")
+		require.NoError(t, err)
+		require.Equal(t, "sha256:a", got[nodeletExtension])
+	})
+
+	t.Run("a release without the agent image is refused", func(t *testing.T) {
+		without := make(map[string]string, len(packages))
+		for name, digest := range packages {
+			if name == "nodeletSysext" {
+				continue
+			}
+			without[name] = digest
+		}
+
+		_, err := sysextDigests(map[string]map[string]string{registryPackagesDigestsKey: without}, "1.35")
+		require.ErrorContains(t, err, nodeletExtension)
+	})
+}

@@ -55,6 +55,7 @@ spec:
 status:
   packageMetadata:
     stage: stable
+  used: false
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModulePackageVersion
@@ -76,7 +77,8 @@ spec:
   packageName: test-package
   packageRepositoryName: deckhouse
   packageVersion: v1.1.0
-status: {}
+status:
+  used: false
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModulePackage

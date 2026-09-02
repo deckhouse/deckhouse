@@ -20,14 +20,22 @@ import (
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+
+	"github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/internal/testprovider"
 )
 
 func testStateBuilderConfig() StateBuilderConfig {
 	return StateBuilderConfig{
-		ModuleName:        "cloud-provider-dvp",
-		NamespaceName:     "d8-cloud-provider-dvp",
-		InstanceClassKind: "DVPInstanceClass",
+		ModuleName:    "cloud-provider-dvp",
+		NamespaceName: "d8-cloud-provider-dvp",
 	}
+}
+
+// testStateBuilder instantiates the generic protocol StateBuilder with provider stubs.
+type testStateBuilder = StateBuilder[*testprovider.InstanceClass, *testprovider.Settings, *testprovider.ProviderClusterConfig]
+
+func newTestBuilder(config StateBuilderConfig) *testStateBuilder {
+	return NewStateBuilderFactory[*testprovider.InstanceClass, *testprovider.Settings, *testprovider.ProviderClusterConfig](config).CreateBuilder()
 }
 
 func testProtocolModuleConfigCR(settings map[string]any) map[string]any {
@@ -48,7 +56,7 @@ func testProtocolModuleConfigCR(settings map[string]any) map[string]any {
 func TestStateBuilderBuild(t *testing.T) {
 	t.Parallel()
 
-	state, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{
+	state, err := newTestBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{
 		ProviderClusterConfig: map[string]any{
 			"masterNodeGroup": map[string]any{"replicas": 3},
 		},
@@ -102,11 +110,11 @@ func TestStateBuilderBuild(t *testing.T) {
 	if len(state.NodeGroups) != 1 || state.NodeGroups[0].Name != "master" {
 		t.Fatalf("Build() node groups = %#v", state.NodeGroups)
 	}
-	if len(state.InstanceClasses) != 1 || state.InstanceClasses[0].Name != "master-dvp" {
+	if len(state.InstanceClasses) != 1 || state.InstanceClasses[0].GetName() != "master-dvp" {
 		t.Fatalf("Build() instance classes = %#v", state.InstanceClasses)
 	}
-	if len(state.LegacyProviderClusterConfig) == 0 {
-		t.Fatal("Build() legacy PCC not populated")
+	if !state.HasProviderClusterConfig() {
+		t.Fatal("Build() PCC not populated")
 	}
 }
 
@@ -114,7 +122,7 @@ func TestStateBuilderBuildDhctlSettingsMap(t *testing.T) {
 	t.Parallel()
 
 	cfg := testStateBuilderConfig()
-	state, err := NewStateBuilder(cfg).Build(proto.ValidateInput{
+	state, err := newTestBuilder(cfg).Build(proto.ValidateInput{
 		CloudProviderVars: &proto.CloudProviderVars{
 			Settings: map[string]any{
 				"provider": map[string]any{
@@ -126,7 +134,7 @@ func TestStateBuilderBuildDhctlSettingsMap(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)
 	}
-	if state.ModuleConfig == nil || state.ModuleConfig.Name != cfg.ModuleName || state.ModuleConfig.Spec.Settings.Provider == nil {
+	if state.ModuleConfig == nil || state.ModuleConfig.Name != cfg.ModuleName || !state.ModuleConfig.Spec.Settings.HasProviderSection() {
 		t.Fatalf("Build() module config = %#v", state.ModuleConfig)
 	}
 	if state.MigrationStatus.MigrationPending {
@@ -139,7 +147,7 @@ func TestStateBuilderBuildWithCompleteResources(t *testing.T) {
 
 	cfg := testStateBuilderConfig()
 
-	state, err := NewStateBuilder(cfg).Build(proto.ValidateInput{
+	state, err := newTestBuilder(cfg).Build(proto.ValidateInput{
 		ProviderClusterConfig: map[string]any{
 			"masterNodeGroup": map[string]any{"replicas": 3},
 		},
@@ -164,7 +172,7 @@ func TestStateBuilderBuildWithCompleteResources(t *testing.T) {
 			InstanceClasses: map[string]map[string]any{
 				"master-fc613b4dfd67": {
 					"metadata": map[string]any{"name": "master-fc613b4dfd67"},
-					"kind":     cfg.InstanceClassKind,
+					"kind":     "TestInstanceClass",
 				},
 			},
 		},
@@ -180,7 +188,7 @@ func TestStateBuilderBuildWithCompleteResources(t *testing.T) {
 func TestStateBuilderBuildEmptyInput(t *testing.T) {
 	t.Parallel()
 
-	state, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{})
+	state, err := newTestBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{})
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)
 	}
@@ -192,7 +200,7 @@ func TestStateBuilderBuildEmptyInput(t *testing.T) {
 func TestStateBuilderBuildModuleConfigDecodeError(t *testing.T) {
 	t.Parallel()
 
-	_, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{
+	_, err := newTestBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{
 		CloudProviderVars: &proto.CloudProviderVars{
 			Settings: map[string]any{
 				"metadata": map[string]any{"name": "cloud-provider-dvp"},
@@ -208,7 +216,7 @@ func TestStateBuilderBuildModuleConfigDecodeError(t *testing.T) {
 func TestStateBuilderBuildCredentialSecretsDecodeError(t *testing.T) {
 	t.Parallel()
 
-	_, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{
+	_, err := newTestBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{
 		CloudProviderVars: &proto.CloudProviderVars{
 			Secrets: map[string]map[string]any{
 				"broken": {"metadata": "invalid"},
@@ -223,7 +231,7 @@ func TestStateBuilderBuildCredentialSecretsDecodeError(t *testing.T) {
 func TestStateBuilderBuildNodeGroupsDecodeError(t *testing.T) {
 	t.Parallel()
 
-	_, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{
+	_, err := newTestBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{
 		CloudProviderVars: &proto.CloudProviderVars{
 			NodeGroups: map[string]map[string]any{
 				"broken": {"spec": "invalid"},
@@ -238,7 +246,7 @@ func TestStateBuilderBuildNodeGroupsDecodeError(t *testing.T) {
 func TestStateBuilderBuildInstanceClassesDecodeError(t *testing.T) {
 	t.Parallel()
 
-	_, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{
+	_, err := newTestBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{
 		CloudProviderVars: &proto.CloudProviderVars{
 			InstanceClasses: map[string]map[string]any{
 				"broken": {"metadata": 123},
@@ -253,12 +261,23 @@ func TestStateBuilderBuildInstanceClassesDecodeError(t *testing.T) {
 func TestStateBuilderBuildModuleConfigMarshalError(t *testing.T) {
 	t.Parallel()
 
-	_, err := NewStateBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{
+	_, err := newTestBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{
 		CloudProviderVars: &proto.CloudProviderVars{
 			Settings: map[string]any{"broken": func() {}},
 		},
 	})
 	if err == nil || !strings.Contains(err.Error(), "marshal value") {
 		t.Fatalf("Build() error = %v", err)
+	}
+}
+
+func TestStateBuilderBuildProviderClusterConfigDecodeError(t *testing.T) {
+	t.Parallel()
+
+	_, err := newTestBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{
+		ProviderClusterConfig: map[string]any{"masterNodeGroup": "not-an-object"},
+	})
+	if err == nil {
+		t.Fatal("Build() error = nil, want ProviderClusterConfiguration decode error")
 	}
 }

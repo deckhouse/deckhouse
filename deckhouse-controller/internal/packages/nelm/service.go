@@ -15,10 +15,13 @@
 package nelm
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -27,11 +30,13 @@ import (
 	"time"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
+	klient "github.com/flant/kube-client/client"
+	"github.com/flant/kube-client/manifest"
 	"github.com/google/uuid"
+	"github.com/werf/nelm/pkg/common"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	runtimecache "sigs.k8s.io/controller-runtime/pkg/cache"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/nelm"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/health"
@@ -45,6 +50,11 @@ const (
 
 	chartFile    = "Chart.yaml" // Helm chart metadata file
 	templatesDir = "templates"  // Helm templates directory
+	chartsDir    = "charts"     // Helm subcharts directory
+
+	// conversionWebhookKind is the token a chart must mention to render a
+	// ConversionWebhook; charts that never mention it are skipped without a render.
+	conversionWebhookKind = "ConversionWebhook"
 
 	// managedByAnnotation marks a release as owned by this service.
 	managedByAnnotation      = "packages.deckhouse.io/managed-by"
@@ -83,6 +93,10 @@ const (
 
 var ErrPackageNotHelm = errors.New("package not helm")
 
+// chartFileExtensions are the chart files that can render a manifest. Packaged
+// subcharts (.tgz) are not inspected.
+var chartFileExtensions = []string{".yaml", ".yml", ".tpl"}
+
 // Package provides access to package data needed for Helm operations.
 type Package interface {
 	GetName() string
@@ -108,7 +122,7 @@ type Service struct {
 }
 
 // NewService creates a new nelm service for managing Helm releases.
-func NewService(cache runtimecache.Cache, callback drift.AbsentCallback, status *status.Service, logger *log.Logger) *Service {
+func NewService(kubeClient *klient.Client, callback drift.AbsentCallback, status *status.Service, logger *log.Logger) *Service {
 	nelmClient := nelm.New(logger,
 		nelm.WithResourcesLabels(map[string]string{
 			"heritage": "deckhouse",
@@ -123,7 +137,7 @@ func NewService(cache runtimecache.Cache, callback drift.AbsentCallback, status 
 		tmpDir:         os.TempDir(),
 		client:         nelmClient,
 		status:         status,
-		monitorManager: drift.New(cache, nelmClient, callback, logger),
+		monitorManager: drift.New(kubeClient, nelmClient, callback, logger),
 		logger:         logger.Named(nelmServiceTracer),
 	}
 }
@@ -222,6 +236,12 @@ func (s *Service) Delete(ctx context.Context, namespace, name string) error {
 	return s.client.Delete(ctx, namespace, name)
 }
 
+// UpgradeOptions holds options for upgrading a Helm release.
+type UpgradeOptions struct {
+	TrackingOptions common.TrackingOptions
+	ExtraLabels     map[string]string
+}
+
 // Upgrade installs or upgrades a Helm release for a package.
 //
 // Smart upgrade logic:
@@ -246,7 +266,7 @@ func (s *Service) Delete(ctx context.Context, namespace, name string) error {
 // policy stops guarding them against manual edits.
 //
 // Returns ErrPackageNotHelm if the package doesn't contain a valid Helm chart.
-func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) error {
+func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package, opts UpgradeOptions) error {
 	ctx, span := otel.Tracer(nelmServiceTracer).Start(ctx, "Upgrade")
 	defer span.End()
 
@@ -302,6 +322,8 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 		resourcesLabels[nelm.ReleaseLabelMaintenance] = ""
 	}
 
+	maps.Copy(resourcesLabels, opts.ExtraLabels)
+
 	s.logger.Debug("render nelm chart",
 		slog.String("path", pkg.GetPath()),
 		slog.String("name", pkg.GetName()),
@@ -344,6 +366,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) er
 	// Install or upgrade the release
 	err = s.client.Install(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
 		OnTrackingEvent: s.status.UpdateTracking,
+		TrackingOptions: opts.TrackingOptions,
 		Path:            pkg.GetPath(),
 		ValuesPaths:     []string{valuesPath},
 		RootValues:      pkg.GetRuntimeValues(),
@@ -405,17 +428,97 @@ func (s *Service) updateMonitor(state MaintenanceState, namespace, name, manifes
 	s.monitorManager.AddMonitor(namespace, name, manifests)
 }
 
+// HasConversionWebhook reports whether the package's chart can render a
+// ConversionWebhook, so callers skip the render for packages that ship none.
+// It scans the chart's templates and subcharts for the kind; a file that merely
+// mentions it counts, because a false positive costs one render while a false
+// negative would silently drop a conversion.
+func (s *Service) HasConversionWebhook(path string) (bool, error) {
+	for _, dir := range []string{templatesDir, chartsDir} {
+		found, err := containsToken(filepath.Join(path, dir), conversionWebhookKind)
+		if err != nil {
+			return false, fmt.Errorf("scan %s dir: %w", dir, err)
+		}
+
+		if found {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// containsToken reports whether any chart file under root contains the token.
+// A missing root is not an error: the chart simply has no such directory.
+func containsToken(root, token string) (bool, error) {
+	needle := []byte(token)
+	found := false
+
+	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+
+		if entry.IsDir() || !slices.Contains(chartFileExtensions, filepath.Ext(path)) {
+			return nil
+		}
+
+		data, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+
+		if bytes.Contains(data, needle) {
+			found = true
+			return fs.SkipAll
+		}
+
+		return nil
+	})
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return false, err
+	}
+
+	return found, nil
+}
+
+// GetConversionWebhooks returns the conversion webhooks for the given package.
+func (s *Service) GetConversionWebhooks(ctx context.Context, namespace string, pkg Package) ([]manifest.Manifest, error) {
+	rendered, err := s.Render(ctx, namespace, pkg)
+	if err != nil {
+		if errors.Is(err, ErrPackageNotHelm) {
+			return nil, nil
+		}
+		return nil, err
+	}
+
+	all, err := manifest.ListFromYamlDocs(rendered)
+	if err != nil {
+		return nil, fmt.Errorf("split rendered manifests: %w", err)
+	}
+
+	webhooks := make([]manifest.Manifest, 0)
+	for _, m := range all {
+		if m.Kind() == conversionWebhookKind {
+			webhooks = append(webhooks, m)
+		}
+	}
+
+	return webhooks, nil
+}
+
 // Cleanup uninstalls releases owned by this service (carrying the managed-by
 // annotation) whose name is not in keep. keep keys are "<namespace>/<release-name>".
-func (s *Service) Cleanup(ctx context.Context, keep map[string]struct{}, ignoreNamespaces ...string) {
+// One release failing to uninstall does not stop the others; every failure is returned.
+func (s *Service) Cleanup(ctx context.Context, keep map[string]struct{}, ignoreNamespaces ...string) error {
 	releases, err := s.client.ListReleases(ctx, nelm.ListOptions{
 		Selector: map[string]string{managedByAnnotation: managedByAnnotationValue},
 	})
 	if err != nil {
-		s.logger.Warn("failed to list releases", log.Err(err))
-		return
+		return fmt.Errorf("list releases: %w", err)
 	}
 
+	var errs error
 	for _, r := range releases {
 		if _, alive := keep[r.Namespace+"/"+r.Name]; alive {
 			continue
@@ -426,12 +529,11 @@ func (s *Service) Cleanup(ctx context.Context, keep map[string]struct{}, ignoreN
 		}
 
 		if err = s.client.Delete(ctx, r.Namespace, r.Name); err != nil {
-			s.logger.Warn("failed to delete orphan release",
-				slog.String("namespace", r.Namespace),
-				slog.String("release", r.Name),
-				log.Err(err))
+			errs = errors.Join(errs, fmt.Errorf("delete orphan release '%s/%s': %w", r.Namespace, r.Name, err))
 		}
 	}
+
+	return errs
 }
 
 // shouldRunHelmUpgrade determines if a Helm upgrade is needed.

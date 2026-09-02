@@ -14,6 +14,13 @@
 
 package api
 
+// GroupVersionKind identifies a Kubernetes resource.
+type GroupVersionKind struct {
+	Group   string
+	Version string
+	Kind    string
+}
+
 // TypeMeta holds API version and kind fields used by typed validation models.
 type TypeMeta struct {
 	APIVersion string `json:"apiVersion,omitempty"`

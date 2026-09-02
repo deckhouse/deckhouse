@@ -444,3 +444,14 @@ func (s *Scheduler) canSchedule(n *node) bool {
 
 	return true
 }
+
+// IsEnabled returns true if the given node is currently enabled (in the active state).
+func (s *Scheduler) IsEnabled(name string) bool {
+	for _, n := range s.nodes {
+		if n.name == name && n.state == nodeStateActive {
+			return true
+		}
+	}
+
+	return false
+}

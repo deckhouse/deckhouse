@@ -480,6 +480,10 @@ entries:
                 en: USB devices
                 ru: USB-устройства
               url: /virtualization-platform/documentation/user/resource-management/usb-devices.html
+            - title:
+                en: Virtual machine pools
+                ru: Пулы виртуальных машин
+              url: /virtualization-platform/documentation/user/resource-management/virtual-machine-pools.html
         - title:
             en: Network
             ru: Сеть

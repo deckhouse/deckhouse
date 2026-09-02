@@ -19,9 +19,13 @@ package cluster
 const (
 	componentLabelKey              = "component"
 	kubeVersionAnnotation          = "control-plane-manager.deckhouse.io/kubernetes-version"
-	clusterConfigurationYAML       = "cluster-configuration.yaml"
-	defaultKubernetesVersion       = "deckhouseDefaultKubernetesVersion"
 	ControlPlaneComponentsCount    = 3
 	automaticKubernetesVersionEnv  = "AUTOMATIC_KUBERNETES_VERSION"
 	supportedKubernetesVersionsEnv = "ALLOWED_KUBERNETES_VERSIONS"
+
+	// The declared configuration written into data.spec, rendered in templates/daemonset.yaml. It
+	// arrives as environment so the resolution happens once, in the hooks.
+	desiredKubernetesVersionEnv = "DESIRED_KUBERNETES_VERSION"
+	kubernetesUpdateModeEnv     = "KUBERNETES_UPDATE_MODE"
+	maxUsedKubernetesVersionEnv = "MAX_USED_KUBERNETES_VERSION"
 )

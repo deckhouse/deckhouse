@@ -1,0 +1,553 @@
+/*
+Copyright 2026 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package template_tests
+
+import (
+	"github.com/google/cel-go/cel"
+	"github.com/google/cel-go/ext"
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
+
+	. "github.com/deckhouse/deckhouse/testing/helm"
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
+)
+
+// verdict is what the apiserver would do with a request, reproduced from the rendered policy: a
+// request the match conditions filter out never reaches the validation, and one that reaches it is
+// admitted only when the validation expression holds.
+type verdict struct {
+	matched bool
+	allowed bool
+}
+
+var (
+	verdictAllowed = verdict{matched: true, allowed: true}
+	verdictDenied  = verdict{matched: true, allowed: false}
+	verdictSkipped = verdict{matched: false, allowed: true}
+)
+
+// evaluatePolicy runs the CEL of a rendered ValidatingAdmissionPolicy the way the apiserver does:
+// match conditions first, then the variables in declaration order, then the validation. Compiling
+// against a bare CEL environment is enough to catch the mistakes worth catching here, syntax and
+// operations that do not exist, without standing up an apiserver.
+func evaluatePolicy(policy object_store.KubeObject, object, request map[string]interface{}) verdict {
+	env, err := cel.NewEnv(
+		// The apiserver puts the string extension in the base environment of every admission
+		// policy, at version 0 up to Kubernetes 1.29 and version 2 after it
+		// (k8s.io/apiserver/pkg/cel/environment/base.go). lowerAscii and substring are in both.
+		ext.Strings(),
+		cel.Variable("object", cel.DynType),
+		cel.Variable("oldObject", cel.DynType),
+		cel.Variable("request", cel.DynType),
+		cel.Variable("variables", cel.DynType),
+	)
+	Expect(err).ShouldNot(HaveOccurred())
+
+	// No params variable, deliberately: the policies declare no paramKind, and the apiserver only
+	// puts params in the environment of one that does. An expression that reaches for it fails to
+	// compile here rather than working in this harness and taking out every aggregated apiserver in
+	// a real cluster, which is what a paramKind on a core type does.
+	activation := map[string]interface{}{
+		"object":    object,
+		"oldObject": nil,
+		"request":   request,
+		"variables": map[string]interface{}{},
+	}
+
+	eval := func(expression string) interface{} {
+		ast, issues := env.Compile(expression)
+		Expect(issues.Err()).ShouldNot(HaveOccurred(), "expression should compile: %s", expression)
+		program, err := env.Program(ast)
+		Expect(err).ShouldNot(HaveOccurred())
+		out, _, err := program.Eval(activation)
+		Expect(err).ShouldNot(HaveOccurred(), "expression should evaluate: %s", expression)
+		return out.Value()
+	}
+
+	for _, condition := range policy.Field("spec.matchConditions").Array() {
+		if eval(condition.Get("expression").String()) != true {
+			return verdictSkipped
+		}
+	}
+
+	variables := map[string]interface{}{}
+	activation["variables"] = variables
+	for _, variable := range policy.Field("spec.variables").Array() {
+		variables[variable.Get("name").String()] = eval(variable.Get("expression").String())
+	}
+
+	allow := eval(policy.Field("spec.validations.0.expression").String()) == true
+	if !allow {
+		// The apiserver falls back to the static message when this one fails, which would hide
+		// the hostname that caused the denial.
+		Expect(eval(policy.Field("spec.validations.0.messageExpression").String())).
+			To(ContainSubstring("is reserved for Deckhouse platform services"))
+	}
+	return verdict{matched: true, allowed: allow}
+}
+
+func ingressWithHosts(hosts ...string) map[string]interface{} {
+	rules := make([]interface{}, 0, len(hosts))
+	for _, host := range hosts {
+		rules = append(rules, map[string]interface{}{"host": host})
+	}
+	return map[string]interface{}{"spec": map[string]interface{}{"rules": rules}}
+}
+
+// routeWithHosts is the shape HTTPRoute, GRPCRoute and TLSRoute share.
+func routeWithHosts(hosts ...string) map[string]interface{} {
+	hostnames := make([]interface{}, 0, len(hosts))
+	for _, host := range hosts {
+		hostnames = append(hostnames, host)
+	}
+	return map[string]interface{}{"spec": map[string]interface{}{"hostnames": hostnames}}
+}
+
+// listenersWithHosts is the shape ListenerSet and Gateway share.
+func listenersWithHosts(hosts ...string) map[string]interface{} {
+	listeners := make([]interface{}, 0, len(hosts))
+	for i, host := range hosts {
+		listener := map[string]interface{}{"name": string(rune('a' + i)), "port": 443, "protocol": "HTTPS"}
+		if host != "" {
+			listener["hostname"] = host
+		}
+		listeners = append(listeners, listener)
+	}
+	return map[string]interface{}{"spec": map[string]interface{}{"listeners": listeners}}
+}
+
+func requestFrom(username string) map[string]interface{} {
+	return requestFor(username, "tenant", "workload")
+}
+
+// requestFor is the request the apiserver hands the policy. The namespace is the one in the request
+// path and the name is filled in from the object on a create
+// (k8s.io/apiserver/pkg/endpoints/handlers/create.go), which is why the shared-gateway exemption
+// compares those two rather than object.metadata, where a create carries neither reliably.
+func requestFor(username, namespace, name string) map[string]interface{} {
+	return map[string]interface{}{
+		"namespace": namespace,
+		"name":      name,
+		"userInfo": map[string]interface{}{
+			"username": username,
+			"groups":   []interface{}{"system:authenticated"},
+		},
+	}
+}
+
+// policyExpressions is every CEL expression a rendered policy carries, wherever it keeps it.
+func policyExpressions(policy object_store.KubeObject) []string {
+	expressions := []string{}
+	for _, field := range []string{"spec.matchConditions", "spec.variables"} {
+		for _, entry := range policy.Field(field).Array() {
+			expressions = append(expressions, entry.Get("expression").String())
+		}
+	}
+	for _, validation := range policy.Field("spec.validations").Array() {
+		expressions = append(expressions,
+			validation.Get("expression").String(), validation.Get("messageExpression").String())
+	}
+	for _, annotation := range policy.Field("spec.auditAnnotations").Array() {
+		expressions = append(expressions, annotation.Get("valueExpression").String())
+	}
+	return expressions
+}
+
+var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func() {
+	f := SetupHelmConfig(`{deckhouse: {internal: {currentReleaseImageName: test }}}`)
+
+	// kindUnderPolicy is a rendered policy and the object shape the kind it covers takes, so that the
+	// same table of hostnames can be run against every kind that carries one. A kind treated more
+	// leniently than the rest is all a tenant needs.
+	type kindUnderPolicy struct {
+		name   string
+		policy object_store.KubeObject
+		object func(hosts ...string) map[string]interface{}
+		// listeners tells the kinds that carry their hostname on a listener from the ones that carry
+		// it in a list of their own, which is the only place the two differ.
+		listeners bool
+	}
+
+	var (
+		ingressPolicy object_store.KubeObject
+		gatewayPolicy object_store.KubeObject
+		everyKind     []kindUnderPolicy
+
+		// The deckhouse ModuleConfig section under test and the recorded snapshot, both empty for a
+		// cluster that never set one. Contexts assign them in a BeforeEach; the render happens in
+		// JustBeforeEach, after them.
+		domainTemplate      string
+		reservedPublicHosts string
+		snapshot            string
+		sharedGateway       string
+	)
+
+	BeforeEach(func() {
+		domainTemplate = "%s.example.com"
+		// Asked for explicitly, so that these contexts test Template mode on a branch that ships
+		// either default.
+		reservedPublicHosts = `{mode: Template}`
+		snapshot = ""
+		sharedGateway = ""
+	})
+
+	JustBeforeEach(func() {
+		f.ValuesSetFromYaml("global", globalValues)
+		f.ValuesSet("global.modulesImages", GetModulesImages())
+		f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
+		// Left out rather than set to an empty string: the global schema requires a %s, so an empty
+		// value never reaches a cluster and would fail values validation here.
+		if domainTemplate != "" {
+			f.ValuesSet("global.modules.publicDomainTemplate", domainTemplate)
+		}
+		if reservedPublicHosts != "" {
+			f.ValuesSetFromYaml("deckhouse.reservedPublicHosts", reservedPublicHosts)
+		}
+		if snapshot != "" {
+			f.ValuesSetFromYaml("deckhouse.internal.reservedPublicHosts", snapshot)
+		}
+		if sharedGateway != "" {
+			f.ValuesSetFromYaml("global.modules.gatewayAPIGateway", sharedGateway)
+		}
+		f.HelmRender(WithAPIVersions(append(
+			[]string{validatingAdmissionPolicyAPI, validatingAdmissionPolicyBindingAPI},
+			gatewayAPIVersions()...)...))
+		Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+		policy := func(name string) object_store.KubeObject {
+			return f.KubernetesGlobalResource("ValidatingAdmissionPolicy", name)
+		}
+		ingressPolicy = policy(reservedHostsIngressPolicy)
+		gatewayPolicy = policy(reservedHostsGatewayPolicy)
+		everyKind = []kindUnderPolicy{
+			{name: "Ingress", policy: ingressPolicy, object: ingressWithHosts},
+			{name: "HTTPRoute", policy: policy(reservedHostsHTTPRoutePolicy), object: routeWithHosts},
+			{name: "GRPCRoute", policy: policy(reservedHostsGRPCRoutePolicy), object: routeWithHosts},
+			{name: "TLSRoute", policy: policy(reservedHostsTLSRoutePolicy), object: routeWithHosts},
+			{name: "ListenerSet", policy: policy(reservedHostsListenerSetPolicy), object: listenersWithHosts, listeners: true},
+			{name: "Gateway", policy: policy(reservedHostsGatewayPolicy), object: listenersWithHosts, listeners: true},
+		}
+	})
+
+	tenant := requestFrom("tenant@example.com")
+
+	// hostCase is one hostname and the verdict every kind must reach for it. Running the same table
+	// against all three policies is what keeps a tenant from finding one kind that is treated more
+	// leniently than the others.
+	type hostCase struct {
+		host string
+		want verdict
+		why  string
+	}
+
+	expectSameOnEveryKind := func(cases []hostCase) {
+		Expect(cases).ToNot(BeEmpty(), "a table that iterates nothing would report green")
+		Expect(everyKind).To(HaveLen(len(gatewayAPIKinds)+1), "one entry per kind that carries a hostname")
+
+		for _, kind := range everyKind {
+			// A kind with no policy would otherwise be read as a policy with no validation, which
+			// every request passes.
+			Expect(kind.policy.Exists()).To(BeTrue(), kind.name)
+
+			for _, c := range cases {
+				Expect(evaluatePolicy(kind.policy, kind.object(c.host), tenant)).
+					To(Equal(c.want), "%s hostname %q: %s", kind.name, c.host, c.why)
+			}
+		}
+	}
+
+	Context("Template mode reserves the namespace the template carves out", func() {
+		// The three verdicts the reservation is about, checked on Ingress alone so that a failure
+		// here is the verdict and not a missing policy for some other kind.
+		It("denies a single-label hostname the platform does not publish today", func() {
+			Expect(evaluatePolicy(ingressPolicy, ingressWithHosts("shop.example.com"), tenant)).
+				To(Equal(verdictDenied), "the template could render this for a service named shop, which is "+
+					"what a hand-maintained list of the names Deckhouse happens to publish can never cover")
+		})
+
+		It("denies the wildcard form of the namespace", func() {
+			Expect(evaluatePolicy(ingressPolicy, ingressWithHosts("*.example.com"), tenant)).
+				To(Equal(verdictDenied), "a tenant holding this shadows every platform hostname at once, "+
+					"which is worse than the single-host takeover the reservation is about")
+		})
+
+		It("denies a hostname written with a root dot", func() {
+			Expect(evaluatePolicy(ingressPolicy, ingressWithHosts("CONSOLE.EXAMPLE.COM."), tenant)).
+				To(Equal(verdictDenied), "the API server rejects a trailing dot on its own, but the policy "+
+					"must not be the reason it is allowed")
+		})
+
+		It("allows a two-label hostname, the shape an ecosystem application takes", func() {
+			Expect(evaluatePolicy(ingressPolicy, ingressWithHosts("app.ns.example.com"), tenant)).
+				To(Equal(verdictAllowed), "applications.publicDomainTemplate puts the instance and its "+
+					"namespace in two labels, so it can never collide with the platform's one")
+		})
+
+		It("decides by whether the template could have rendered the hostname", func() {
+			expectSameOnEveryKind([]hostCase{
+				{"console.example.com", verdictDenied, "a hostname the platform publishes today"},
+				{"shop.example.com", verdictDenied,
+					"a single label under the platform's domain, which the template could render for a " +
+						"service named shop -- this is what the literal list could never cover"},
+				{"my-console.example.com", verdictDenied, "a label may contain a dash, so the template could render it"},
+				{"a.example.com", verdictDenied, "a single-character label is a label"},
+				{"app.ns.example.com", verdictAllowed,
+					"two labels before the tail: the shape applications.publicDomainTemplate renders, " +
+						"which the platform template can never produce"},
+				{"shop.example.org", verdictAllowed, "another domain entirely"},
+				{"example.com", verdictAllowed, "the tail on its own is not in the namespace"},
+				{"shop.sub.example.com", verdictAllowed, "one label too deep"},
+			})
+		})
+
+		It("reserves the wildcard form of the namespace, which no label could match", func() {
+			expectSameOnEveryKind([]hostCase{
+				{"*.example.com", verdictDenied,
+					"in Template mode a tenant holding this shadows every platform hostname at once"},
+				{"*.sub.example.com", verdictAllowed, "a wildcard over a domain the platform does not own"},
+				{"*.example.org", verdictAllowed, "another domain entirely"},
+			})
+		})
+
+		It("compares the hostname however it is spelled", func() {
+			expectSameOnEveryKind([]hostCase{
+				{"Console.Example.COM", verdictDenied, "lowercased before comparing"},
+				{"console.example.com.", verdictDenied, "the root dot is stripped before comparing"},
+				{"CONSOLE.EXAMPLE.COM.", verdictDenied, "both at once"},
+				{"*.EXAMPLE.com", verdictDenied, "the wildcard form is lowercased too"},
+			})
+		})
+
+		It("denies a request that hides a reserved hostname among its own", func() {
+			for _, kind := range everyKind {
+				Expect(evaluatePolicy(kind.policy, kind.object("shop.example.org", "console.example.com"), tenant)).
+					To(Equal(verdictDenied), kind.name)
+			}
+		})
+
+		It("allows a request that claims no hostname at all", func() {
+			for _, kind := range everyKind {
+				Expect(evaluatePolicy(kind.policy, map[string]interface{}{"spec": map[string]interface{}{}}, tenant)).
+					To(Equal(verdictAllowed), "%s with an empty spec", kind.name)
+			}
+			// A listener that names no hostname accepts any, and is a different shape from a spec
+			// with no listeners at all.
+			for _, kind := range everyKind {
+				if !kind.listeners {
+					continue
+				}
+				Expect(evaluatePolicy(kind.policy, kind.object(""), tenant)).
+					To(Equal(verdictAllowed), "%s with a listener that names no hostname", kind.name)
+			}
+		})
+
+		It("never reaches the validation for the writers of the platform's own objects", func() {
+			for _, username := range []string{
+				"system:serviceaccount:d8-system:deckhouse",
+				"system:serviceaccount:d8-user-authn:dex",
+				"system:serviceaccount:kube-system:some-controller",
+				"dhctl",
+			} {
+				Expect(evaluatePolicy(ingressPolicy, ingressWithHosts("console.example.com"), requestFrom(username))).
+					To(Equal(verdictSkipped), "user %q", username)
+			}
+		})
+
+		// What is reserved is compiled into the policy, so a request is decided from the request
+		// alone and there is no object whose loss could turn the reservation into a denial of
+		// everything under failurePolicy: Fail. The harness declares no params variable, so an
+		// expression that went back to fetching them would fail to compile above; this says so
+		// where a reader looks for it, and says it for all six kinds at once.
+		It("decides from the request alone, with nothing fetched from the cluster", func() {
+			for _, kind := range everyKind {
+				expressions := policyExpressions(kind.policy)
+				Expect(expressions).ToNot(BeEmpty(), kind.name)
+				for _, expression := range expressions {
+					Expect(expression).ToNot(ContainSubstring("params"),
+						"%s reaches for params, which needs a paramKind back: %s", kind.name, expression)
+				}
+			}
+		})
+
+		It("exempts no object while no shared Gateway is configured", func() {
+			Expect(evaluatePolicy(gatewayPolicy, listenersWithHosts("console.example.com"),
+				requestFor("tenant@example.com", "infra", "shared"))).
+				To(Equal(verdictDenied), "an empty sharedGateway key exempts nothing, not everything")
+		})
+	})
+
+	// The Gateway the platform's own ListenerSets and HTTPRoutes attach to is the operator's object
+	// when they name one, so it is outside heritage: deckhouse, and its canonical listener hostname
+	// is the wildcard of the platform's domain -- reserved by exact match, which excludedServices
+	// cannot free and the grandfathering deliberately never records. Left un-exempted, the upgrade
+	// would leave the operator unable to create or update it.
+	Context("An operator names the Gateway the platform's own routes attach to", func() {
+		BeforeEach(func() {
+			sharedGateway = `{name: shared, namespace: infra}`
+		})
+
+		operator := requestFor("operator@example.com", "infra", "shared")
+
+		It("never reaches the validation for that object, whatever its listeners claim", func() {
+			for _, host := range []string{"*.example.com", "console.example.com", "shop.example.com"} {
+				Expect(evaluatePolicy(gatewayPolicy, listenersWithHosts(host), operator)).
+					To(Equal(verdictSkipped), "hostname %q: the exemption is on the object, not on what it claims", host)
+			}
+		})
+
+		It("covers every other Gateway, including one that only looks like it", func() {
+			for _, tc := range []struct{ namespace, name, why string }{
+				{"infra", "other", "another Gateway in the namespace the shared one lives in"},
+				{"tenant", "shared", "the same name in a namespace of a tenant's own"},
+			} {
+				Expect(evaluatePolicy(gatewayPolicy, listenersWithHosts("console.example.com"),
+					requestFor("tenant@example.com", tc.namespace, tc.name))).
+					To(Equal(verdictDenied), tc.why)
+			}
+		})
+
+		It("exempts nothing on the five kinds that are not Gateway", func() {
+			for _, kind := range everyKind {
+				if kind.name == "Gateway" {
+					continue
+				}
+				Expect(evaluatePolicy(kind.policy, kind.object("console.example.com"), operator)).
+					To(Equal(verdictDenied), "%s of the same namespace and name as the shared Gateway", kind.name)
+			}
+		})
+	})
+
+	Context("Template mode with the %s inside the first label", func() {
+		BeforeEach(func() {
+			domainTemplate = "kube-%s.company.my"
+		})
+
+		It("derives the namespace from the whole template, prefix included", func() {
+			expectSameOnEveryKind([]hostCase{
+				{"kube-console.company.my", verdictDenied, "what the template renders for console"},
+				{"kube-shop.company.my", verdictDenied, "what it would render for a service named shop"},
+				{"kube-a-b.company.my", verdictDenied, "a label with a dash in it"},
+				{"shop.company.my", verdictAllowed, "no kube- prefix, so outside the namespace"},
+				{"kube-shop.company.org", verdictAllowed, "another domain"},
+				{"kube-shop.sub.company.my", verdictAllowed, "one label too deep"},
+				{"*.company.my", verdictAllowed,
+					"the platform owns kube-* inside company.my, not company.my itself, and " +
+						"kube-*.company.my is not a hostname any API server accepts"},
+			})
+		})
+	})
+
+	Context("Template mode without a publicDomainTemplate", func() {
+		BeforeEach(func() {
+			domainTemplate = ""
+			reservedPublicHosts = `{mode: Template, additionalHosts: ["admin.example.com"]}`
+		})
+
+		It("reserves nothing but what the operator named, rather than everything", func() {
+			expectSameOnEveryKind([]hostCase{
+				{"admin.example.com", verdictDenied, "the operator asked for this one"},
+				{"console.example.com", verdictAllowed, "the platform publishes nothing, so it owns nothing"},
+				{"shop.example.com", verdictAllowed, "an empty pattern must reserve nothing, not match everything"},
+				{"*.example.com", verdictAllowed, "there is no namespace to hold a wildcard over"},
+			})
+		})
+	})
+
+	Context("An operator adjusts the reservation under Template mode", func() {
+		BeforeEach(func() {
+			reservedPublicHosts = `{mode: Template, excludedServices: ["grafana", "shop"], additionalHosts: ["admin.corp.example.org", "prometheus.example.com"]}`
+		})
+
+		It("gives back exactly the hostnames the excluded names render to", func() {
+			expectSameOnEveryKind([]hostCase{
+				{"grafana.example.com", verdictAllowed, "excludedServices names the service, the template renders the hostname"},
+				{"shop.example.com", verdictAllowed,
+					"under Template a name the platform does not publish is still reserved, so " +
+						"excluding it is how a workload gets its hostname back"},
+				{"console.example.com", verdictDenied, "the rest of the namespace is untouched"},
+				{"grafana.example.org", verdictAllowed, "the exclusion is a hostname, not a label"},
+				{"admin.corp.example.org", verdictDenied, "additionalHosts reaches outside the namespace"},
+				{"prometheus.example.com", verdictDenied,
+					"named on both sides is not a contradiction: additionalHosts always reserves"},
+			})
+		})
+
+		It("still denies a request that hides a reserved hostname behind a freed one", func() {
+			Expect(evaluatePolicy(ingressPolicy, ingressWithHosts("grafana.example.com", "console.example.com"), tenant)).
+				To(Equal(verdictDenied))
+		})
+	})
+
+	Context("The upgrade grandfathered what tenants already served", func() {
+		BeforeEach(func() {
+			snapshot = `{recorded: true, hosts: ["shop.example.com"]}`
+		})
+
+		It("allows the recorded hostnames and nothing beyond them", func() {
+			expectSameOnEveryKind([]hostCase{
+				{"shop.example.com", verdictAllowed, "recorded before the reservation started"},
+				{"store.example.com", verdictDenied, "not recorded, so still the platform's namespace"},
+				{"console.example.com", verdictDenied, "a platform hostname is reserved however it got claimed"},
+			})
+		})
+	})
+
+	Context("List mode keeps the reservation the module shipped before", func() {
+		BeforeEach(func() {
+			reservedPublicHosts = `{mode: List}`
+		})
+
+		It("reserves the names the platform publishes and nothing else", func() {
+			expectSameOnEveryKind([]hostCase{
+				{"console.example.com", verdictDenied, "on the list"},
+				{"kubeconfig.example.com", verdictDenied, "on the list"},
+				{"Console.Example.COM", verdictDenied, "lowercased before comparing"},
+				{"shop.example.com", verdictAllowed, "not a hostname the platform publishes"},
+				{"my-console.example.com", verdictAllowed, "the match is exact, not a substring"},
+				{"*.example.com", verdictAllowed, "wildcards were out of scope of the list"},
+				{"app.ns.example.com", verdictAllowed, "not a hostname the platform publishes"},
+			})
+		})
+
+		It("ignores a grandfathering snapshot, there is nothing to grandfather", func() {
+			// Recorded so that a later switch to Template mode has it, but a recorded hostname must
+			// not become an exception to a reservation that never covered it.
+			f.ValuesSetFromYaml("deckhouse.internal.reservedPublicHosts", `{recorded: true, hosts: ["console.example.com"]}`)
+			f.HelmRender(WithAPIVersions(validatingAdmissionPolicyAPI, validatingAdmissionPolicyBindingAPI))
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			policy := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", reservedHostsIngressPolicy)
+			Expect(evaluatePolicy(policy, ingressWithHosts("console.example.com"), tenant)).
+				To(Equal(verdictDenied))
+		})
+
+		Context("with an exclusion", func() {
+			BeforeEach(func() {
+				reservedPublicHosts = `{mode: List, excludedServices: ["grafana"], additionalHosts: ["admin.example.com"]}`
+			})
+
+			It("frees the excluded hostname and reserves the added one", func() {
+				expectSameOnEveryKind([]hostCase{
+					{"grafana.example.com", verdictAllowed, "dropped from the list"},
+					{"admin.example.com", verdictDenied, "added to the list"},
+					{"console.example.com", verdictDenied, "the rest of the list is untouched"},
+					{"shop.example.com", verdictAllowed, "an unpublished name was never reserved under List"},
+				})
+			})
+		})
+	})
+})

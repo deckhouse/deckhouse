@@ -71,7 +71,7 @@ func TestCheckAvailabilityPorts(t *testing.T) {
 			mockScript := &mocks.MockScript{}
 			tt.setupMock(mockNode, mockScript)
 
-			err := checkAvailabilityPorts(t.Context(), mockNode, nil)
+			err := checkAvailabilityPorts(t.Context(), mockNode, candiOptionsFor(t, "check_ports.sh.tpl"))
 
 			if tt.expectedError != "" {
 				assert.Error(t, err)

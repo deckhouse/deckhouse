@@ -25,7 +25,6 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -76,7 +75,6 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 
 		_, err = InstallDeckhouse(ctx, &client.KubernetesClient{KubeClient: kubeCl}, installConfig, InstallDeckhouseParams{
 			BeforeDeckhouseTask: func() error { return nil },
-			State:               NewBootstrapState(cache.Global()),
 			DeckhouseTimeout:    b.Options.Bootstrap.DeckhouseTimeout,
 		})
 

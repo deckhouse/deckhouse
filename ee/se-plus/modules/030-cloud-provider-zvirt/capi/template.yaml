@@ -1,0 +1,38 @@
+version: v2
+
+# InstanceClass fields whose change requires recreating the machines, carried over one to one from
+# the v1 instance-class.checksum.
+rolloutFields:
+  - template
+  - vnicProfileID
+  - numCPUs
+  - memory
+  - rootDiskSizeGb
+
+# Optional fields are read with `get`: the sandbox runs with missingkey=error, and `get` yields an
+# empty value for an absent key — the same truthy test the v1 template did with a direct path.
+template: |
+  apiVersion: infrastructure.cluster.x-k8s.io/v1
+  kind: ZvirtMachineTemplate
+  spec:
+    template:
+      spec:
+        {{- if get .instanceClass "template" }}
+        template: {{ .instanceClass.template | quote }}
+        {{- end }}
+        {{- if get .instanceClass "vnicProfileID" }}
+        vnicProfileID: {{ .instanceClass.vnicProfileID | quote }}
+        {{- end }}
+        {{- if get .instanceClass "numCPUs" }}
+        cpu:
+          sockets: 1
+          cores: {{ .instanceClass.numCPUs }}
+          threads: 1
+        {{- end }}
+        {{- if get .instanceClass "memory" }}
+        memory: {{ .instanceClass.memory }}
+        {{- end }}
+        {{- if get .instanceClass "rootDiskSizeGb" }}
+        rootDiskSizeGb: {{ .instanceClass.rootDiskSizeGb }}
+        {{- end }}
+        nicName: "nic1"

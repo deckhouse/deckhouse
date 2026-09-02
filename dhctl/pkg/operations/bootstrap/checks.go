@@ -62,12 +62,14 @@ func CheckPreventBreakAnotherBootstrappedCluster(
 			}
 		}
 
-		if uuidInCluster == "" {
+		// install-deckhouse against a cluster dhctl did not create carries no UUID
+		// of its own, and an unknown UUID can only ever mismatch.
+		if uuidInCluster == "" || config.UUID == "" {
 			return nil
 		}
 
 		if uuidInCluster != config.UUID {
-			return fmt.Errorf(`Cluster UUIDs are not equal in the cluster (%s) and in the cache (%s).
+			return fmt.Errorf(`Cluster UUIDs are not equal in the cluster (%s) and in this installation (%s).
 You are probably trying to bootstrap a cluster on a node with a previously created cluster.
 Please check the hostname.`, uuidInCluster, config.UUID)
 		}

@@ -97,6 +97,19 @@
   - namespaces
   verbs:
   {{- include "user_authz_verbs" "r" }}
+  {{- if has "multitenancy-manager" $context.Values.global.enabledModules }}
+# A Project is visible whenever any of its namespaces is, which the apiserver derives from the
+# same ACL as the namespace listing itself. Withhold the cluster-wide read exactly where that ACL
+# applies -- an RBAC allow would short-circuit the filter and hand every tenant every project --
+# and grant it here where it does not. multitenancy-manager cannot make the distinction: the mode
+# is a user-authz value, and a module only sees its own.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - projects
+  verbs:
+  {{- include "user_authz_verbs" "r" }}
+  {{- end }}
 {{- end }}
 - apiGroups:
   - apps

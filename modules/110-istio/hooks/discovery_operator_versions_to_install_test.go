@@ -223,7 +223,10 @@ internal:
     "1.27":
         revision: "v1x27"
         supportsOperator: false
-  versionsToInstall: ["1.25", "1.27"]
+    "1.29":
+        revision: "v1x29"
+        supportsOperator: false
+  versionsToInstall: ["1.25", "1.27", "1.29"]
 `
 			f.ValuesSetFromYaml("istio", []byte(values))
 			f.BindingContexts.Set(f.KubeStateSet(``))
@@ -263,6 +266,42 @@ spec:
 		It("Should not add operator-free version from CRD", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(BeEmpty())
+		})
+	})
+
+	Context("Retired 1.21 IstioOperator remains after upgrading", func() {
+		BeforeEach(func() {
+			values := `
+internal:
+  versionMap:
+    "1.25":
+        revision: "v1x25"
+        supportsOperator: true
+    "1.27":
+        revision: "v1x27"
+        supportsOperator: false
+    "1.29":
+        revision: "v1x29"
+        supportsOperator: false
+  versionsToInstall: ["1.25"]
+`
+			f.ValuesSetFromYaml("istio", []byte(values))
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: install.istio.io/v1alpha1
+kind: IstioOperator
+metadata:
+  name: v1x21
+  namespace: d8-istio
+spec:
+  revision: v1x21
+`))
+			f.RunHook()
+		})
+
+		It("ignores the retired residual revision", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("istio.internal.operatorVersionsToInstall").AsStringSlice()).To(Equal([]string{"1.25"}))
 		})
 	})
 

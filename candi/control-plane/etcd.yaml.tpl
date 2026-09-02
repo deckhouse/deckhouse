@@ -91,8 +91,9 @@ spec:
       timeoutSeconds: 15
     resources:
       requests:
-        cpu: "{{ div (mul $millicpu 35) 100 }}m"
-        memory: "{{ div (mul $memory 35) 100 }}"
+        {{- $c := (($resourcesRequests.components | default dict).etcd) | default dict }}
+        cpu: "{{ $c.milliCPU | default (div (mul $millicpu 35) 100) }}m"
+        memory: "{{ $c.memoryBytes | default (div (mul $memory 35) 100) }}"
     securityContext:
       capabilities:
         drop:
