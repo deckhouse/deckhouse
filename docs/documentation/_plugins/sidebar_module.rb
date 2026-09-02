@@ -126,6 +126,11 @@ module Jekyll
           end
       end
 
+      # The hack for the in-cluster documentation for CSE.
+      if @context.registers[:site].config['d8Revision'].downcase == 'cse'
+          not_avail_in_this_edition = false
+      end
+
       # TODO Delete this (sidebar_group_page is not used in the module sidebar)
       # sidebar_group_page = @context.registers[:page]['sidebar_group_page']
 

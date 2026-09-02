@@ -42,9 +42,12 @@
         {{- end }}
 
         <li class="module-requirements__item">
-          <code>{{ $key }}</code>: {{ $version }}
           {{- if $isOptional }}
-            <span>{{- T "requirements_modules_optional_text_first" }} <a href="/modules/{{ $key }}/">{{ $key }}</a> (<a href="/products/kubernetes-platform/documentation/v1/architecture/module-development/dependencies/#{{- T "requirements_modules_optional_text_for_link"}}">{{- T "requirements_modules_more" }} </a> {{- T "requirements_modules_optional_text_second" }}).</span>
+            {{- $moduleHref := printf "/modules/%s/" $key -}}
+            {{- $depHref := printf "/products/kubernetes-platform/documentation/v1/architecture/module-development/dependencies/#%s" (T "requirements_modules_optional_text_for_link") -}}
+            <span>{{- T "requirements_modules_optional_text_first" }} {{ partial "helpers/rewrite-link" (dict "href" $moduleHref "inner" $key) }} ({{ partial "helpers/rewrite-link" (dict "href" $depHref "inner" (printf "%s " (T "requirements_modules_more"))) }} {{- T "requirements_modules_optional_text_second" }}).</span>
+          {{- else }}
+          <code>{{ $key }}</code>: {{ $version }}
           {{- end }}
         </li>
       {{- end }}
