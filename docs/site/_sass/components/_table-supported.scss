@@ -226,3 +226,73 @@
         opacity: 0;
     }
 }
+
+.stability__table {
+    thead tr {
+        &.header-row th:not(:first-child), &.sub-header th {
+            text-align: center;
+        }
+    }
+
+    thead th {
+        @include breakpoints.max-w(xl) {
+            min-width: 100px;
+        }
+    }
+
+    tbody tr td {
+        box-sizing: border-box;
+        height: 71px;
+        width: 132px;
+        min-width: 100px;
+    }
+
+    /* The caption remains in the markup for screen readers and builds that do not use this CSS
+       (PDF, Markdown export); on the website, the icon and tooltip convey the meaning. */
+    &-label {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        margin: -1px;
+        padding: 0;
+        border: 0;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        white-space: nowrap;
+    }
+
+    &--experiments,
+    &--pilot-operation,
+    &--limited-operation,
+    &--industrial-operation,
+    &--critical-systems,
+    &--discontinuation {
+        background-repeat: no-repeat;
+        background-position: center;
+        background-size: 28px 28px;
+    }
+
+    &--experiments {
+        background-image: url(/images/experiments.svg);
+    }
+
+    &--pilot-operation {
+        background-image: url(/images/pilot-operation.svg);
+    }
+
+    &--limited-operation {
+        background-image: url(/images/limited-operation.svg);
+    }
+
+    &--industrial-operation {
+        background-image: url(/images/industrial-operation.svg);
+    }
+
+    &--critical-systems {
+        background-image: url(/images/critical-systems.svg);
+    }
+
+    &--discontinuation {
+        background-image: url(/images/discontinuation-of-use.svg);
+    }
+}
