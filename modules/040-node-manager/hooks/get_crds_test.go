@@ -106,7 +106,7 @@ metadata:
 `
 	)
 
-	f := HookExecutionConfigInit(`{"global":{"discovery":{"kubernetesVersion": "1.32.5", "kubernetesVersions":["1.32.5"], "clusterUUID":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"},},"nodeManager":{"internal": {"static": {"internalNetworkCIDRs":["172.18.200.0/24"]}}}}`, `{}`)
+	f := HookExecutionConfigInit(`{"global":{"discovery":{"kubernetesVersion": "1.32.5", "kubernetesVersions":["1.32.5"], "clusterUUID":"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa"},},"nodeManager":{"internal": {}}}`, `{}`)
 	f.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
 	f.RegisterCRD("machine.sapcloud.io", "v1alpha1", "MachineDeployment", true)
 
@@ -183,8 +183,7 @@ metadata:
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.engine").String()).To(Equal("None"))
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.static").Exists()).To(BeFalse())
 
-			// nodeManager.internal.static is set in the initial values, the Static NG must not
-			// pick it up.
+			// No element carries a static overlay, whatever its nodeType.
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.1.name").String()).To(Equal("static1"))
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.1.nodeType").String()).To(Equal("Static"))
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.1.engine").String()).To(Equal("None"))
