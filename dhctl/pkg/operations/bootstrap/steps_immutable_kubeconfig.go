@@ -21,6 +21,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"k8s.io/client-go/rest"
+
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/kube"
 	"github.com/deckhouse/lib-connection/pkg/provider"
@@ -30,35 +32,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/util/tomb"
 )
-
-// writeImmutableKubeconfig stores the collected admin kubeconfig in a file the
-// Kubernetes client can be built from, with its server URL pointed at the
-// address dhctl reaches the API on.
-func (b *ClusterBootstrapper) writeImmutableKubeconfig(ctx context.Context, dir string, content []byte) (string, error) {
-	// os.CreateTemp reserves a name nothing else holds, at mode 0600; it holds
-	// admin credentials, so it is removed again once dhctl exits.
-	file, err := os.CreateTemp(dir, "dhctl-immutable-kubeconfig-*.yaml")
-	if err != nil {
-		return "", fmt.Errorf("create a temporary kubeconfig: %w", err)
-	}
-	path := file.Name()
-	if err := file.Close(); err != nil {
-		return "", fmt.Errorf("create a temporary kubeconfig %s: %w", path, err)
-	}
-	if err := os.WriteFile(path, content, 0o600); err != nil {
-		return "", fmt.Errorf("write the temporary kubeconfig %s: %w", path, err)
-	}
-
-	// The happy path removes the file as soon as the client is built; this
-	// covers the runs that never get that far.
-	tomb.RegisterOnShutdown("Delete the temporary installer kubeconfig", func() {
-		removeImmutableKubeconfig(ctx, path)
-	})
-
-	return path, nil
-}
 
 // saveAdminKubeconfig hands the admin kubeconfig to the operator. Written by
 // default: the node runs no sshd and the handoff endpoint has already served
@@ -130,16 +104,12 @@ func clusterFileName(metaConfig *config.MetaConfig) string {
 	return cmp.Or(metaConfig.ClusterPrefix, metaConfig.UUID)
 }
 
-func removeImmutableKubeconfig(ctx context.Context, path string) {
-	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf("remove %s: %v", path, err))
-	}
-}
-
 // newKubeconfigKubeProvider builds a Kubernetes provider that talks to the API
-// server directly through the given kubeconfig, with no SSH runner behind it.
-func newKubeconfigKubeProvider(ctx context.Context, b *ClusterBootstrapper, kubeconfigPath string) (libcon.KubeProvider, error) {
-	kubeConfig := &kube.Config{KubeConfig: kubeconfigPath}
+// server directly with the given client configuration, with no SSH runner
+// behind it. In memory on purpose: it carries cluster-admin credentials, and in
+// dhctl-server the process outlives the bootstrap by hours.
+func newKubeconfigKubeProvider(ctx context.Context, b *ClusterBootstrapper, restConfig *rest.Config) (libcon.KubeProvider, error) {
+	kubeConfig := &kube.Config{RestConfig: restConfig}
 
 	// A kubeconfig-backed client needs no SSH provider, hence the nil.
 	runner, err := provider.GetRunnerInterface(ctx, kubeConfig, b.SSHProviderInitializer.GetSettings(), nil)

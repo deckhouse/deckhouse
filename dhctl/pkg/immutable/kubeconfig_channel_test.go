@@ -21,8 +21,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	"k8s.io/client-go/tools/clientcmd"
-	clientcmdapi "k8s.io/client-go/tools/clientcmd/api"
+	"k8s.io/client-go/rest"
 )
 
 const serverKubeconfig = `
@@ -81,36 +80,29 @@ func TestKubeconfigServerRefusesWhatItCannotForwardTo(t *testing.T) {
 }
 
 // Without a bastion the channel is the address itself, so this drives the whole
-// of OpenKubeconfigChannel but the tunnel: the copy it writes must keep the name
-// TLS is verified against, or a converge through a bastion cannot handshake.
-func TestTheWrittenKubeconfigKeepsTheNameItWasIssuedFor(t *testing.T) {
+// of OpenKubeconfigChannel but the tunnel: the configuration it builds must keep
+// the name TLS is verified against, or a converge through a bastion cannot
+// handshake. Built in memory: the credentials never touch the disk.
+func TestTheChannelConfigurationKeepsTheNameItWasIssuedFor(t *testing.T) {
 	const serverName = "master-0.example"
 
 	dir := t.TempDir()
 	original := filepath.Join(dir, "admin.kubeconfig")
 	require.NoError(t, os.WriteFile(original, kubeconfigFor("https://"+serverName+":6443"), 0o600))
 
-	path, stop, err := OpenKubeconfigChannel(t.Context(), nil, nil, original, "", dir)
+	restConfig, stop, err := OpenKubeconfigChannel(t.Context(), nil, nil, original, "")
 	require.NoError(t, err)
 	defer stop()
 
-	written, err := os.ReadFile(path)
-	require.NoError(t, err)
-	parsed, err := clientcmd.Load(written)
-	require.NoError(t, err)
-
-	require.Equal(t, serverName, parsed.Clusters["cluster"].TLSServerName,
-		"the copy must be verified against the name the kubeconfig named")
-	require.Equal(t, "https://"+serverName+":6443", parsed.Clusters["cluster"].Server,
+	require.Equal(t, serverName, restConfig.TLSClientConfig.ServerName,
+		"the client must be verified against the name the kubeconfig named")
+	require.Equal(t, "https://"+serverName+":6443", restConfig.Host,
 		"with no bastion the server is the address itself")
+	require.Equal(t, impersonatedUser, restConfig.Impersonate.UserName)
 
-	info, err := os.Stat(path)
+	entries, err := os.ReadDir(dir)
 	require.NoError(t, err)
-	require.Equal(t, os.FileMode(0o600), info.Mode().Perm(), "it holds cluster-admin credentials")
-
-	stop()
-	_, err = os.Stat(path)
-	require.ErrorIs(t, err, os.ErrNotExist, "the copy must not outlive the channel")
+	require.Len(t, entries, 1, "nothing but the operator's own kubeconfig may be on disk: %v", entries)
 }
 
 const proxiedKubeconfig = `
@@ -132,51 +124,49 @@ users:
 - name: user
   user:
     client-certificate: client.crt
+    client-key: client.key
 `
 
 // The local end of the forward is reached directly. A proxy the operator set for
 // the real server address is applied to every request client-go makes through
 // it — http.ProxyURL exempts no address, loopback included — so the retargeted
 // copy must not carry it.
-func TestTheWrittenKubeconfigDropsTheProxyOfTheAddressItLeft(t *testing.T) {
-	_, written := writeAndReopen(t, proxiedKubeconfig)
+func TestTheChannelConfigurationDropsTheProxyOfTheAddressItLeft(t *testing.T) {
+	_, restConfig := openWithoutBastion(t, proxiedKubeconfig)
 
-	require.Empty(t, written.Clusters["cluster"].ProxyURL,
+	require.Nil(t, restConfig.Proxy,
 		"a proxy for the real server address would swallow the loopback connection")
 }
 
-// The copy lives in the temporary directory, and client-go resolves the file
-// references of a kubeconfig against the directory it was loaded from: a
-// relative certificate-authority would stop resolving on the way over.
-func TestTheWrittenKubeconfigKeepsPointingAtTheFilesItReferences(t *testing.T) {
-	dir, written := writeAndReopen(t, proxiedKubeconfig)
+// A configuration built from bytes has no directory of its own, and client-go
+// resolves the file references of a kubeconfig against the directory it was
+// loaded from: a relative certificate-authority would stop resolving on the way.
+func TestTheChannelConfigurationKeepsPointingAtTheFilesItReferences(t *testing.T) {
+	dir, restConfig := openWithoutBastion(t, proxiedKubeconfig)
 
-	require.Equal(t, filepath.Join(dir, "ca.crt"),
-		written.Clusters["cluster"].CertificateAuthority,
-		"a relative path resolves against the copy's own directory, where nothing lives")
-	require.Equal(t, filepath.Join(dir, "client.crt"),
-		written.AuthInfos["user"].ClientCertificate,
+	require.Equal(t, filepath.Join(dir, "ca.crt"), restConfig.TLSClientConfig.CAFile,
+		"a relative path resolves against the original's directory, where the file lives")
+	require.Equal(t, filepath.Join(dir, "client.crt"), restConfig.TLSClientConfig.CertFile,
 		"the user's files travel the same way the cluster's do")
 }
 
-// writeAndReopen runs the channel over the given kubeconfig with no bastion, and
-// returns the directory the original lives in together with the copy it wrote,
-// which is what the Kubernetes client is built from.
-func writeAndReopen(t *testing.T, content string) (string, *clientcmdapi.Config) {
+// openWithoutBastion runs the channel over the given kubeconfig with no bastion,
+// and returns the directory the original lives in together with the
+// configuration the Kubernetes client is built from.
+func openWithoutBastion(t *testing.T, content string) (string, *rest.Config) {
 	t.Helper()
 
 	dir := t.TempDir()
 	original := filepath.Join(dir, "admin.kubeconfig")
 	require.NoError(t, os.WriteFile(original, []byte(content), 0o600))
+	// Building the configuration checks that every file it names can be read.
+	for _, name := range []string{"ca.crt", "client.crt", "client.key"} {
+		require.NoError(t, os.WriteFile(filepath.Join(dir, name), []byte(name), 0o600))
+	}
 
-	path, stop, err := OpenKubeconfigChannel(t.Context(), nil, nil, original, "", t.TempDir())
+	restConfig, stop, err := OpenKubeconfigChannel(t.Context(), nil, nil, original, "")
 	require.NoError(t, err)
 	defer stop()
 
-	raw, err := os.ReadFile(path)
-	require.NoError(t, err)
-	written, err := clientcmd.Load(raw)
-	require.NoError(t, err)
-
-	return dir, written
+	return dir, restConfig
 }

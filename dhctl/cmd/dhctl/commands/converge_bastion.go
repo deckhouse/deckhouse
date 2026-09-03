@@ -55,21 +55,20 @@ func kubeProviderThroughBastion(
 		return kubeProvider, noop, nil
 	}
 
-	path, stop, err := immutable.OpenKubeconfigChannel(
+	restConfig, stop, err := immutable.OpenKubeconfigChannel(
 		ctx,
 		sshProviderInitializer.GetConfig(),
 		sshProviderInitializer.GetSettings(),
 		opts.Kube.Config,
 		opts.Kube.ConfigContext,
-		opts.Global.TmpDir,
 	)
 	if err != nil {
 		return nil, noop, err
 	}
 
-	// Mirrors newKubeconfigKubeProvider of pkg/operations/bootstrap:
-	// a kubeconfig-backed client needs no SSH runner, hence the nil.
-	kubeConfig := &kube.Config{KubeConfig: path, KubeConfigContext: opts.Kube.ConfigContext}
+	// Mirrors newKubeconfigKubeProvider of pkg/operations/bootstrap: a client
+	// built from a configuration needs no SSH runner, hence the nil.
+	kubeConfig := &kube.Config{RestConfig: restConfig}
 	runner, err := provider.GetRunnerInterface(ctx, kubeConfig, sshProviderInitializer.GetSettings(), nil)
 	if err != nil {
 		stop()

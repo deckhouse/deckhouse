@@ -99,15 +99,12 @@ func TestTheChannelUsesTheCredentialsOfTheNamedContext(t *testing.T) {
 	opts.Kube.ConfigContext = "wanted"
 	opts.Global.TmpDir = dir
 
-	kubeProvider, stop, err := kubeProviderThroughBastion(
+	// The configuration is built as the channel opens, and building it reads the
+	// credentials. Both users name a certificate that does not exist, so the one
+	// the failure names is the one the client would have been built from.
+	_, _, err := kubeProviderThroughBastion(
 		t.Context(), opts, bastionOnlyInitializer(t), nil,
 	)
-	require.NoError(t, err)
-	defer stop()
-
-	// Both users name a certificate that does not exist, so the one the failure
-	// names is the one the client loaded.
-	_, err = kubeProvider.Client(t.Context())
 	require.ErrorContains(t, err, "wanted-user.crt",
 		"the client must be built from the credentials of the context the operator named")
 	require.NotContains(t, err.Error(), "other-user.crt")

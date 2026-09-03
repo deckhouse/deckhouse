@@ -858,13 +858,13 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 		return err
 	}
 
-	kubeconfigPath, err := b.writeImmutableKubeconfig(ctx, b.TmpDir, content)
+	restConfig, err := immutable.RESTConfigFromKubeconfig(content, "")
 	if err != nil {
 		return err
 	}
 	b.PhasedExecutionContext.CompleteSubPhase(ctx, phases.InstallKubernetesSubPhaseGetClusterAccess)
 
-	kubeProvider, err := newKubeconfigKubeProvider(ctx, b, kubeconfigPath)
+	kubeProvider, err := newKubeconfigKubeProvider(ctx, b, restConfig)
 	if err != nil {
 		return err
 	}
@@ -879,11 +879,6 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 	// offering them. Attempted on a rerun too: a node that was already told
 	// answers that it was.
 	b.confirmImmutableHandoff(ctx, bctx)
-
-	// Read exactly once, here — no later Client() call rebuilds from it. In
-	// dhctl-server the process outlives the bootstrap, so leaving it to the
-	// shutdown hook means admin credentials on disk for hours.
-	removeImmutableKubeconfig(ctx, kubeconfigPath)
 
 	return waitForImmutableMasterNode(ctx, kubeCl, bctx.immutable.masterNodeName)
 }

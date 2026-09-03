@@ -21,6 +21,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
@@ -137,6 +138,23 @@ func RetargetKubeconfig(_ context.Context, content []byte, server, serverName st
 	}
 
 	return out, nil
+}
+
+// RESTConfigFromKubeconfig builds the client configuration a kubeconfig
+// describes, in memory: it carries cluster-admin credentials, and a copy on disk
+// would have to be guarded, removed, and removed again after a signal.
+func RESTConfigFromKubeconfig(content []byte, contextName string) (*rest.Config, error) {
+	kubeconfig, err := clientcmd.Load(content)
+	if err != nil {
+		return nil, fmt.Errorf("parse the kubeconfig: %w", err)
+	}
+
+	restConfig, err := clientcmd.NewNonInteractiveClientConfig(*kubeconfig, contextName, &clientcmd.ConfigOverrides{}, nil).ClientConfig()
+	if err != nil {
+		return nil, fmt.Errorf("build the client configuration from the kubeconfig: %w", err)
+	}
+
+	return restConfig, nil
 }
 
 // SaveCollectedKubeconfig records where the admin kubeconfig the node served now

@@ -207,7 +207,7 @@ func TestARetargetedKubeconfigReachesTheAPIThroughTheBastion(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, serverName, host, "the forward must reach the address the kubeconfig names")
 
-	// What OpenKubeconfigChannel writes once the tunnel is up.
+	// What OpenKubeconfigChannel builds its configuration from once the tunnel is up.
 	retargeted, err := RetargetKubeconfig(t.Context(), original, "https://127.0.0.1:1", host)
 	require.NoError(t, err)
 	parsed, err := clientcmd.Load(retargeted)
