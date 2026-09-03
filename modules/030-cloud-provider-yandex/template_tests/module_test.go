@@ -823,13 +823,22 @@ labels: {}
 					webhookNames = append(webhookNames, webhook.Get("name").String())
 					Expect(webhook.Get("clientConfig.caBundle").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("webhook-ca"))))
 				}
+				// YandexInstanceClass is gated by a single webhook, on the storage version.
+				// matchPolicy: Equivalent makes the apiserver convert a v1alpha1 write to v1 and
+				// deliver it there, so a second webhook on v1alpha1 would only double every
+				// admission call - and it would hand the rules the v1alpha1 view, which has no
+				// spec.etcdDiskSizeGB.
 				Expect(webhookNames).To(ConsistOf(
 					"moduleconfigs.cloud-provider-yandex.deckhouse.io",
 					"secrets.cloud-provider-yandex.deckhouse.io",
 					"nodegroups.cloud-provider-yandex.deckhouse.io",
-					"yandexinstanceclasses.cloud-provider-yandex.deckhouse.io-v1alpha1",
 					"yandexinstanceclasses.cloud-provider-yandex.deckhouse.io-v1",
 				))
+
+				for _, webhook := range webhookConfiguration.Field("webhooks").Array() {
+					Expect(webhook.Get("matchPolicy").String()).To(Equal("Equivalent"),
+						"%s must accept writes to every served version", webhook.Get("name").String())
+				}
 			})
 		})
 
