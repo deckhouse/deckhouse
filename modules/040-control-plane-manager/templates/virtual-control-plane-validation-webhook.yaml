@@ -1,3 +1,4 @@
+{{- if .Values.controlPlaneManager.internal.hasVirtualControlPlane }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ValidationWebhook
@@ -53,3 +54,4 @@ handler:
             f'Enable them via ModuleConfig and wait until their status.phase becomes "Ready".',
             False,
         )
+{{- end }}
