@@ -265,11 +265,16 @@ func (e *Engine) combineDirEntries(entries []DirectoryEntry) DirectoryEntry {
 			combined.AllowAccessToSystemNamespaces = entry.AllowAccessToSystemNamespaces
 		}
 
-		if len(entry.NamespaceSelectors) > 0 {
-			combined.NamespaceSelectors = append(combined.NamespaceSelectors, entry.NamespaceSelectors...)
-		}
-		if len(entry.compiledSelectors) > 0 {
-			combined.compiledSelectors = append(combined.compiledSelectors, entry.compiledSelectors...)
+		// Both slices grow together so compiledSelectors stays index-aligned
+		// with NamespaceSelectors even when some entries carry no compiled
+		// form at all.
+		for i, namespaceSelector := range entry.NamespaceSelectors {
+			var compiled labels.Selector
+			if i < len(entry.compiledSelectors) {
+				compiled = entry.compiledSelectors[i]
+			}
+			combined.NamespaceSelectors = append(combined.NamespaceSelectors, namespaceSelector)
+			combined.compiledSelectors = append(combined.compiledSelectors, compiled)
 		}
 		if len(entry.LimitNamespaces) > 0 {
 			combined.LimitNamespaces = append(combined.LimitNamespaces, entry.LimitNamespaces...)
@@ -311,8 +316,27 @@ func (e *Engine) affectedDirs(userName string, groups []string) []DirectoryEntry
 	return dirEntriesAffected
 }
 
+// compileNamespaceSelector precompiles one CAR namespaceSelector for
+// renewDirectories. It returns nil when there is nothing to compile or the
+// selector is malformed, so a broken rule costs only its own precompilation
+// and never the rest of the directory.
+func compileNamespaceSelector(crdName string, namespaceSelector *NamespaceSelector) labels.Selector {
+	if namespaceSelector == nil || namespaceSelector.LabelSelector == nil {
+		return nil
+	}
+
+	selector, err := metav1.LabelSelectorAsSelector(namespaceSelector.LabelSelector)
+	if err != nil {
+		klog.Errorf("Cannot compile namespaceSelector from ClusterAuthorizationRule %q: %v", crdName, err)
+		return nil
+	}
+
+	return selector
+}
+
 // namespaceLabelsMatchSelector checks if labels of a namespace match the
-// entry's selectors. Prefer compiledSelectors (built in renewDirectories).
+// entry's selectors, walking NamespaceSelectors in order and using the
+// index-aligned compiledSelectors entry where renewDirectories produced one.
 func (e *Engine) namespaceLabelsMatchSelector(namespaceName string, entry *DirectoryEntry) (bool, error) {
 	if e.nsLister == nil || entry == nil {
 		return false, nil
@@ -328,24 +352,24 @@ func (e *Engine) namespaceLabelsMatchSelector(namespaceName string, entry *Direc
 		labelsSet = labels.Set{}
 	}
 
-	if len(entry.compiledSelectors) > 0 {
-		for _, selector := range entry.compiledSelectors {
-			if selector.Matches(labelsSet) {
-				return true, nil
-			}
+	for i, namespaceSelector := range entry.NamespaceSelectors {
+		if namespaceSelector.LabelSelector == nil {
+			continue
 		}
-		return false, nil
-	}
 
-	for _, namespaceSelector := range entry.NamespaceSelectors {
-		if namespaceSelector.LabelSelector != nil {
-			selector, err := metav1.LabelSelectorAsSelector(namespaceSelector.LabelSelector)
-			if err != nil {
-				return false, err
-			}
-			if selector.Matches(labelsSet) {
+		if i < len(entry.compiledSelectors) && entry.compiledSelectors[i] != nil {
+			if entry.compiledSelectors[i].Matches(labelsSet) {
 				return true, nil
 			}
+			continue
+		}
+
+		selector, err := metav1.LabelSelectorAsSelector(namespaceSelector.LabelSelector)
+		if err != nil {
+			return false, err
+		}
+		if selector.Matches(labelsSet) {
+			return true, nil
 		}
 	}
 	return false, nil
@@ -411,14 +435,7 @@ func (e *Engine) renewDirectories() {
 				}
 			} else {
 				dirEntry.NamespaceSelectors = append(dirEntry.NamespaceSelectors, crd.Spec.NamespaceSelector)
-				if crd.Spec.NamespaceSelector.LabelSelector != nil {
-					selector, err := metav1.LabelSelectorAsSelector(crd.Spec.NamespaceSelector.LabelSelector)
-					if err != nil {
-						klog.Errorf("Cannot compile namespaceSelector from ClusterAuthorizationRule %q: %v", crd.Name, err)
-						return
-					}
-					dirEntry.compiledSelectors = append(dirEntry.compiledSelectors, selector)
-				}
+				dirEntry.compiledSelectors = append(dirEntry.compiledSelectors, compileNamespaceSelector(crd.Name, crd.Spec.NamespaceSelector))
 			}
 
 			directory[kind][name] = dirEntry
