@@ -91,39 +91,30 @@ func configureDefaultingWebhook(ctx context.Context, input *go_hook.HookInput, d
 	)
 	switch {
 	case k8serrors.IsNotFound(err):
-		if caBundle == "" {
-			return errWebhookCertNotIssued
-		}
 		whConfigExists = false
 		whConfig = &admissionregistrationv1.MutatingWebhookConfiguration{
 			ObjectMeta: v1.ObjectMeta{Name: mutatingWebhookConfigurationName},
-			Webhooks:   []admissionregistrationv1.MutatingWebhook{newGrantDefaultingWebhook()},
 		}
 	case err != nil:
 		return fmt.Errorf("read MutatingWebhookConfiguration: %w", err)
 	}
 
-	if len(whConfig.Webhooks) == 0 {
-		if caBundle == "" {
-			return errWebhookCertNotIssued
-		}
-		whConfig.Webhooks = []admissionregistrationv1.MutatingWebhook{newGrantDefaultingWebhook()}
+	// Replace the whole list so Name/Service/SideEffects and a hand-emptied
+	// or extra webhooks[1:] cannot drift. Keep the cluster CA only when the
+	// cert is not issued yet — publishing Fail without caBundle would reject
+	// matching requests in project namespaces.
+	wh := newGrantDefaultingWebhook()
+	wh.Rules = grantableWebhookRules(input)
+	switch {
+	case caBundle != "":
+		wh.ClientConfig.CABundle = []byte(caBundle)
+	case whConfigExists && len(whConfig.Webhooks) > 0 && len(whConfig.Webhooks[0].ClientConfig.CABundle) > 0:
+		wh.ClientConfig.CABundle = whConfig.Webhooks[0].ClientConfig.CABundle
+	default:
+		return errWebhookCertNotIssued
 	}
+	whConfig.Webhooks = []admissionregistrationv1.MutatingWebhook{wh}
 
-	whConfig.Webhooks[0].Rules = grantableWebhookRules(input)
-	// Reconcile CA/selector/match-conditions/timeout/failurePolicy on existing
-	// configurations too (e.g. upgrades and TLS rotation). The serving cert is
-	// regenerated when SANs change; leaving caBundle at the create-time value
-	// makes the apiserver reject the webhook with x509 ECDSA verification failure.
-	// Skip the CA write when it is not issued yet: the rest must still reconcile,
-	// or the hook fails the queue the way #20700 was written to prevent.
-	if caBundle != "" {
-		whConfig.Webhooks[0].ClientConfig.CABundle = []byte(caBundle)
-	}
-	whConfig.Webhooks[0].NamespaceSelector = projectNamespaceSelector
-	whConfig.Webhooks[0].MatchConditions = systemWriterMatchConditions
-	whConfig.Webhooks[0].FailurePolicy = ptr.To(admissionregistrationv1.Fail)
-	whConfig.Webhooks[0].TimeoutSeconds = ptr.To(int32(10))
 	if whConfigExists {
 		_, err = admissionClient.Update(ctx, whConfig, v1.UpdateOptions{})
 	} else {
