@@ -208,8 +208,9 @@ func TestDeckhouseInstall(t *testing.T) {
 
 func TestDeckhouseNamespaceTask(t *testing.T) {
 	fakeClient := client.NewFakeKubernetesClient()
+	task := getNSTask(fakeClient)
 
-	err := getNSTask(fakeClient).CreateOrUpdate(t.Context())
+	err := task.CreateOrUpdate(t.Context())
 	require.NoError(t, err)
 
 	namespace, err := fakeClient.
