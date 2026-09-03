@@ -87,7 +87,7 @@ func (v *StaticInstanceCustomValidator) ValidateCreate(ctx context.Context, obj 
 		return nil, fmt.Errorf("failed to get StaticInstance %q: %w", staticInstance.GetName(), err)
 	}
 
-	if err := staticInstance.validateAddressIfNoSkipBootstrap(ctx, v.Reader); err != nil {
+	if err := staticInstance.validateAddressUnlessAdopting(ctx, v.Reader); err != nil {
 		return nil, field.Forbidden(field.NewPath("spec", "address"), err.Error())
 	}
 
@@ -141,18 +141,13 @@ func (*StaticInstanceCustomValidator) ValidateDelete(_ context.Context, obj runt
 	return nil, nil
 }
 
-// validateAddressIfNoSkipBootstrap ensures that if StaticInstance does NOT have
-// annotation "static.node.deckhouse.io/skip-bootstrap-phase",
-// then its spec.address must NOT match any existing Node address.
-func (r *StaticInstance) validateAddressIfNoSkipBootstrap(ctx context.Context, cli client.Reader) error {
-	if _, hasSkipBootstrap := r.Annotations["static.node.deckhouse.io/skip-bootstrap-phase"]; hasSkipBootstrap {
-		staticinstancelog.Info("skip-bootstrap annotation found, skipping address validation", "name", r.Name)
+// validateAddressUnlessAdopting ensures that unless the StaticInstance asks to adopt an
+// already existing node (SkipBootstrapPhaseAnnotation or AdoptIfNodeExistsAnnotation), its
+// spec.address does not match the address of a Node that is already part of the cluster.
+func (r *StaticInstance) validateAddressUnlessAdopting(ctx context.Context, cli client.Reader) error {
+	if r.adoptionRequested() {
+		staticinstancelog.Info("adoption requested, skipping address validation", "name", r.Name)
 		return nil
-	}
-
-	nodes := &corev1.NodeList{}
-	if err := cli.List(ctx, nodes); err != nil {
-		return fmt.Errorf("failed to list cluster nodes: %w", err)
 	}
 
 	instanceAddr := r.Spec.Address
@@ -160,13 +155,30 @@ func (r *StaticInstance) validateAddressIfNoSkipBootstrap(ctx context.Context, c
 		return errors.New("spec.address must not be empty")
 	}
 
+	nodes := &corev1.NodeList{}
+	if err := cli.List(ctx, nodes); err != nil {
+		return fmt.Errorf("failed to list cluster nodes: %w", err)
+	}
+
 	for _, node := range nodes.Items {
 		for _, addr := range node.Status.Addresses {
 			if addr.Address == instanceAddr {
-				return fmt.Errorf("Address %q already exists on node %q, if you need transfer the existing manually-bootstrapped cluster node under CAPS management, you should annotate this StaticInstance with static.node.deckhouse.io/skip-bootstrap-phase: \"\"", instanceAddr, node.Name)
+				return fmt.Errorf("Address %q already exists on node %q, if you need transfer the existing manually-bootstrapped cluster node under CAPS management, you should annotate this StaticInstance with %s: \"\"", instanceAddr, node.Name, AdoptIfNodeExistsAnnotation)
 			}
 		}
 	}
 
 	return nil
+}
+
+// adoptionRequested reports whether any of the adoption annotations is set. It only looks at
+// the annotations, never at the cluster state.
+func (r *StaticInstance) adoptionRequested() bool {
+	if _, ok := r.Annotations[SkipBootstrapPhaseAnnotation]; ok {
+		return true
+	}
+
+	_, ok := r.Annotations[AdoptIfNodeExistsAnnotation]
+
+	return ok
 }
