@@ -147,7 +147,7 @@ func (r *Reconciler) reconcileNode(ctx context.Context, node *corev1.Node) (_ ct
 		return ctrl.Result{}, nil
 	}
 
-	// The eviction's outcome decides what is written, so it is collected first.
+	// The drain's outcome decides what is written, so it is collected first.
 	if finished, drainErr := r.drains.result(node.Name); finished {
 		return ctrl.Result{}, r.finishDrain(ctx, logger, node, state.requestedBy, drainErr)
 	}
@@ -155,16 +155,16 @@ func (r *Reconciler) reconcileNode(ctx context.Context, node *corev1.Node) (_ ct
 	return ctrl.Result{}, r.startDrain(ctx, logger, node, state.requestedBy)
 }
 
-// cleanupDeletedNode stops an eviction running for an object nobody can see.
+// cleanupDeletedNode stops a drain running for an object nobody can see.
 func (r *Reconciler) cleanupDeletedNode(ctx context.Context, nodeName string) error {
 	clearDrainMetric(nodeName)
 	_, err := r.drains.cancel(ctx, nodeName)
 	return err
 }
 
-// cancelDrainIfExist stops the eviction when its request disappears, so a drain
+// cancelDrainIfExist stops the drain when its request disappears, so a drain
 // nobody asked for any more does not run to completion and record a result.
-func (r *Reconciler) cancelDrainIfExist(ctx context.Context, _ logr.Logger, node *corev1.Node) error {
+func (r *Reconciler) cancelDrainIfExist(ctx context.Context, logger logr.Logger, node *corev1.Node) error {
 	clearDrainMetric(node.Name)
 
 	cancelled, err := r.drains.cancel(ctx, node.Name)
@@ -175,12 +175,13 @@ func (r *Reconciler) cancelDrainIfExist(ctx context.Context, _ logr.Logger, node
 		return nil
 	}
 
+	logger.Info("drain canceled")
 	r.Recorder.Eventf(node, corev1.EventTypeNormal, "DrainCancelled",
 		"drain of node %q was cancelled", node.Name)
 	return nil
 }
 
-// finishDrain writes down how the eviction ended. The request is consumed
+// finishDrain writes down how the drain ended. The request is consumed
 // either way; only a source that polls for a result gets one.
 func (r *Reconciler) finishDrain(_ context.Context, logger logr.Logger, node *corev1.Node, source string, drainErr error) error {
 	logger = logger.WithValues("source", source)
@@ -193,15 +194,15 @@ func (r *Reconciler) finishDrain(_ context.Context, logger logr.Logger, node *co
 		// Recorded as drained anyway: the cause is durable, a retry gets no
 		// further, and the node's update must not wedge. The gauge stays at 1
 		// for NodeStuckInDraining.
-		logger.Info("eviction timed out, recording it as done anyway", "error", drainErr.Error())
+		logger.Info("drain timed out, recording it as done anyway", "error", drainErr.Error())
 		r.Recorder.Eventf(node, corev1.EventTypeWarning, "DrainFailed", "drain failed: %v", drainErr)
 		nodeDrainingGauge.WithLabelValues(node.Name, drainErr.Error()).Set(1)
 
 	default:
-		logger.Error(drainErr, "eviction failed")
+		logger.Error(drainErr, "drain failed")
 		r.Recorder.Eventf(node, corev1.EventTypeWarning, "DrainFailed", "drain failed: %v", drainErr)
 		nodeDrainingGauge.WithLabelValues(node.Name, drainErr.Error()).Set(1)
-		// The request stays, so the requeue starts a fresh eviction.
+		// The request stays, so the requeue starts a fresh drain.
 		return drainErr
 	}
 
@@ -212,7 +213,7 @@ func (r *Reconciler) finishDrain(_ context.Context, logger logr.Logger, node *co
 	return nil
 }
 
-// startDrain cordons the node, then starts the eviction on the pass that sees
+// startDrain cordons the node, then starts the drain on the pass that sees
 // the cordon. Not both at once: this reconcile's patch is still unsent, and
 // pods must stop arriving before anything empties the node. The cordon's own
 // event brings us back.
@@ -221,7 +222,7 @@ func (r *Reconciler) startDrain(ctx context.Context, logger logr.Logger, node *c
 		logger.Info("cordoning node", "source", source)
 		node.Spec.Unschedulable = true
 
-		// The eviction starts on the pass this reconcile's own patch brings
+		// The drain starts on the pass this reconcile's own patch brings
 		// about: writing spec.unschedulable is one of the changes the watch
 		// admits, so nothing has to be requeued to come back.
 		return nil

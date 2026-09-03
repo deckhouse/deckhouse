@@ -284,7 +284,7 @@ var _ = Describe("Draining a node on the draining annotation", func() {
 	})
 
 	// User story: as a cluster operator who changed my mind, I want removing the
-	// draining annotation to stop the eviction, instead of having to wait the
+	// draining annotation to stop the drain, instead of having to wait the
 	// drain out.
 	It("cancels an in-flight drain when the request is withdrawn", func() {
 		name := testenv.UniqueName("drain-cancel")
@@ -294,9 +294,9 @@ var _ = Describe("Draining a node on the draining annotation", func() {
 		createStuckPod("stuck-"+name, name)
 		createGroupNode(name, name, map[string]string{nodecommon.DrainingAnnotation: "bashible"})
 
-		// The pod going into termination is proof the eviction is under way — the
+		// The pod going into termination is proof the drain is under way — the
 		// cordon alone is not, since it is written a pass earlier. The finalizer
-		// then guarantees the eviction cannot finish on its own.
+		// then guarantees the drain cannot finish on its own.
 		Eventually(func() bool {
 			return podExists("stuck-" + name)
 		}, eventuallyTimeout, eventuallyPoll).Should(BeFalse())
@@ -305,7 +305,7 @@ var _ = Describe("Draining a node on the draining annotation", func() {
 		Expect(k8sClient.Patch(suiteCtx, getNodeState(name), client.RawPatch(types.MergePatchType,
 			[]byte(`{"metadata":{"annotations":{"`+nodecommon.DrainingAnnotation+`":null}}}`)))).To(Succeed())
 
-		// The event is the only visible proof the eviction was stopped: the node
+		// The event is the only visible proof the drain was stopped: the node
 		// itself is left exactly as the drain found it.
 		Eventually(func() bool {
 			return eventExists(name, "DrainCancelled")

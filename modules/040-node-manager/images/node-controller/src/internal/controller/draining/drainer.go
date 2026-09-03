@@ -35,16 +35,16 @@ import (
 	"github.com/deckhouse/node-controller/internal/task"
 )
 
-// wakeBuffer sizes the channel carrying finished evictions back into the queue.
+// wakeBuffer sizes the channel carrying finished drains back into the queue.
 const wakeBuffer = 128
 
-// errDrainDeadline marks an eviction that ran out of its timeout rather than
+// errDrainDeadline marks a drain that ran out of its timeout rather than
 // failing. A failure is retried; a deadline is not, because its cause is
 // durable — a budget that never allows eviction, a pod that never terminates.
 var errDrainDeadline = errors.New("drain deadline exceeded")
 
-// drainer runs one eviction per node in the background and hands the node back
-// to the workqueue when it is done. It is the only place that knows an eviction
+// drainer runs one drain per node in the background and hands the node back
+// to the workqueue when it is done. It is the only place that knows a drain
 // is a goroutine.
 type drainer struct {
 	tasks      *task.Manager
@@ -78,7 +78,7 @@ func (d *drainer) start(logger logr.Logger, nodeName string, timeout time.Durati
 		return err
 	}
 
-	logger.Info("eviction started")
+	logger.Info("drain started")
 	return nil
 }
 
@@ -90,7 +90,7 @@ func (d *drainer) cancel(ctx context.Context, nodeName string) (bool, error) {
 	return d.tasks.Cancel(ctx, task.TaskID(nodeName))
 }
 
-// wakeNode hands the node back to the workqueue now that its eviction is over.
+// wakeNode hands the node back to the workqueue now that its drain is over.
 // A cancelled one is skipped: whoever cancelled it waited for the goroutine and
 // moved on. Canceled specifically, not "context is done" — a deadline still has
 // a result to record.
@@ -99,7 +99,7 @@ func (d *drainer) wakeNode(ctx context.Context, nodeName string) {
 		return
 	}
 
-	// The manager's context, not the eviction's: on an expired deadline both
+	// The manager's context, not the drain's: on an expired deadline both
 	// branches would be ready and select would drop the send half the time.
 	select {
 	case d.wake <- event.GenericEvent{Object: &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: nodeName}}}:

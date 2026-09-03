@@ -58,13 +58,13 @@ const (
 	taskWait      = 10 * time.Second
 
 	// drainPasses caps how many reconciles a drain is given to get going, and
-	// wakePoll is how long each one waits for the eviction to report back.
+	// wakePoll is how long each one waits for the drain to report back.
 	drainPasses = 6
 	wakePoll    = 500 * time.Millisecond
 )
 
 // harness is a Reconciler wired to fake clients, plus the two channels the tests
-// read: the wake channel a finished eviction writes to, and the recorded events.
+// read: the wake channel a finished drain writes to, and the recorded events.
 type harness struct {
 	*Reconciler
 	events chan string
@@ -136,10 +136,10 @@ func (h *harness) node(t *testing.T) *corev1.Node {
 }
 
 // drain drives a full drain and returns the error of the pass that collects the
-// result, because that is where a failed eviction surfaces.
+// result, because that is where a failed drain surfaces.
 //
 // The flow spends a pass or two getting the node ready — a stale drained=user to
-// strip, a cordon to write — so this reconciles until the eviction reports back
+// strip, a cordon to write — so this reconciles until the drain reports back
 // instead of assuming a fixed number of passes.
 func (h *harness) drain(t *testing.T) error {
 	t.Helper()
@@ -168,7 +168,7 @@ func (h *harness) mustDrain(t *testing.T) {
 	}
 }
 
-// blockUntilCancelled registers an eviction that does nothing but wait to be
+// blockUntilCancelled registers a drain that does nothing but wait to be
 // cancelled — the in-memory state a reconcile sees while a real one is in
 // flight, without having to stall a fake clientset to get there.
 func (h *harness) blockUntilCancelled(t *testing.T) {
@@ -202,8 +202,8 @@ func assertAnnotations(t *testing.T, got *corev1.Node, want map[string]string) {
 	}
 }
 
-// TestReconcile_Drain walks a request from the annotation that asks for an
-// eviction to the annotations that record it.
+// TestReconcile_Drain walks a request from the annotation that asks for a
+// drain to the annotations that record it.
 func TestReconcile_Drain(t *testing.T) {
 	for _, tc := range []struct {
 		name          string
@@ -332,7 +332,7 @@ func TestReconcile_NoLiveRequest(t *testing.T) {
 	}
 }
 
-// TestReconcile_EvictionEndsBadly covers the two ways an eviction fails, which
+// TestReconcile_EvictionEndsBadly covers the two ways a drain fails, which
 // are handled differently: a failure is retried, a deadline is not.
 func TestReconcile_EvictionEndsBadly(t *testing.T) {
 	for _, tc := range []struct {
@@ -405,7 +405,7 @@ func TestReconcile_StaleUserResultIsClearedBeforeTheDrain(t *testing.T) {
 	}
 }
 
-// The cordon has to be durable before the eviction starts: pods must stop being
+// The cordon has to be durable before the drain starts: pods must stop being
 // scheduled onto the node before anything begins emptying it.
 func TestReconcile_CordonIsWrittenBeforeTheEvictionStarts(t *testing.T) {
 	h := newHarness(t, fake.NewSimpleClientset(),
@@ -421,7 +421,7 @@ func TestReconcile_CordonIsWrittenBeforeTheEvictionStarts(t *testing.T) {
 	}
 }
 
-// Withdrawing the request stops the eviction instead of letting it run to
+// Withdrawing the request stops the drain instead of letting it run to
 // completion and record a result nobody asked for.
 func TestReconcile_WithdrawnRequestCancelsEviction(t *testing.T) {
 	h := newHarness(t, fake.NewSimpleClientset(), node(nil, true))
@@ -439,7 +439,7 @@ func TestReconcile_WithdrawnRequestCancelsEviction(t *testing.T) {
 	h.awaitEvent(t, "DrainCancelled")
 }
 
-// A reconcile arriving while the eviction runs must not disturb it.
+// A reconcile arriving while the drain runs must not disturb it.
 func TestReconcile_RunningEvictionIsLeftAlone(t *testing.T) {
 	h := newHarness(t, fake.NewSimpleClientset(),
 		node(map[string]string{nodecommon.DrainingAnnotation: bashibleSource}, true))
@@ -453,7 +453,7 @@ func TestReconcile_RunningEvictionIsLeftAlone(t *testing.T) {
 	}
 }
 
-// A collected result frees the id, so a failed eviction is followed by a fresh
+// A collected result frees the id, so a failed drain is followed by a fresh
 // one rather than by the same result for ever.
 func TestReconcile_FailedEvictionIsRetriedWithAFreshTask(t *testing.T) {
 	cs := fake.NewSimpleClientset()
@@ -471,7 +471,7 @@ func TestReconcile_FailedEvictionIsRetriedWithAFreshTask(t *testing.T) {
 	}
 }
 
-// A deleted node's eviction is abandoned rather than left evicting pods on
+// A deleted node's drain is abandoned rather than left evicting pods on
 // behalf of an object nobody can see.
 func TestReconcile_DeletedNodeCancelsItsEviction(t *testing.T) {
 	h := newHarness(t, fake.NewSimpleClientset())
@@ -554,7 +554,7 @@ func TestSetupWatches(t *testing.T) {
 				want:   true,
 			},
 			{
-				// This is what brings the eviction's own pass about.
+				// This is what brings the drain's own pass about.
 				name:   "the cordon being written is admitted",
 				before: node(map[string]string{nodecommon.DrainingAnnotation: bashibleSource}, false),
 				after:  node(map[string]string{nodecommon.DrainingAnnotation: bashibleSource}, true),
@@ -587,7 +587,7 @@ func withReady(n *corev1.Node) *corev1.Node {
 	return n
 }
 
-// The eviction's context tells the drainer why the task ended: a cancelled one
+// The drain's context tells the drainer why the task ended: a cancelled one
 // is skipped, a deadline still has to bring the node back to be recorded.
 func TestWakeNode_SkipsOnlyCancelledEvictions(t *testing.T) {
 	for _, tc := range []struct {
