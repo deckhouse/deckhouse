@@ -112,8 +112,8 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
       ingress: {}
       loadBalancer: {}
   internal:
-    effectiveKubernetesVersion: "1.32"
-    maxUsedKubernetesVersion: "1.32"
+    effectiveKubernetesVersion: "1.33"
+    maxUsedKubernetesVersion: "1.33"
     etcdServers:
       - https://192.168.199.186:2379
     mastersNode:
@@ -142,8 +142,8 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 
 	const moduleValuesOnlyIssuer = `
 internal:
-  effectiveKubernetesVersion: "1.32"
-  maxUsedKubernetesVersion: "1.32"
+  effectiveKubernetesVersion: "1.33"
+  maxUsedKubernetesVersion: "1.33"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -157,8 +157,8 @@ apiserver:
 `
 	const moduleValuesIssuerAdditionalAudiences = `
 internal:
-  effectiveKubernetesVersion: "1.32"
-  maxUsedKubernetesVersion: "1.32"
+  effectiveKubernetesVersion: "1.33"
+  maxUsedKubernetesVersion: "1.33"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -176,8 +176,8 @@ apiserver:
 
 	const moduleValuesAdditionalIssuerOnly = `
 internal:
-  effectiveKubernetesVersion: "1.32"
-  maxUsedKubernetesVersion: "1.32"
+  effectiveKubernetesVersion: "1.33"
+  maxUsedKubernetesVersion: "1.33"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -194,8 +194,8 @@ apiserver:
 
 	const moduleValuesCombo = `
 internal:
-  effectiveKubernetesVersion: "1.32"
-  maxUsedKubernetesVersion: "1.32"
+  effectiveKubernetesVersion: "1.33"
+  maxUsedKubernetesVersion: "1.33"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -214,8 +214,8 @@ apiserver:
 
 	const moduleValuesSuperCombo = `
 internal:
-  effectiveKubernetesVersion: "1.32"
-  maxUsedKubernetesVersion: "1.32"
+  effectiveKubernetesVersion: "1.33"
+  maxUsedKubernetesVersion: "1.33"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -236,8 +236,8 @@ apiserver:
 
 	const additionalAPIIssuersSuperComboWithDublicates = `
 internal:
-  effectiveKubernetesVersion: "1.32"
-  maxUsedKubernetesVersion: "1.32"
+  effectiveKubernetesVersion: "1.33"
+  maxUsedKubernetesVersion: "1.33"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -257,8 +257,8 @@ apiserver:
 `
 	const additionalAPIIssuersSuperComboWithDublicates2 = `
 internal:
-  effectiveKubernetesVersion: "1.32"
-  maxUsedKubernetesVersion: "1.32"
+  effectiveKubernetesVersion: "1.33"
+  maxUsedKubernetesVersion: "1.33"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -278,8 +278,8 @@ apiserver:
 
 	const emptyApiserverConfig = `
 internal:
-  effectiveKubernetesVersion: "1.32"
-  maxUsedKubernetesVersion: "1.32"
+  effectiveKubernetesVersion: "1.33"
+  maxUsedKubernetesVersion: "1.33"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -292,8 +292,8 @@ apiserver:
 
 	const apiServerWithOidcFull = `
 internal:
-  effectiveKubernetesVersion: "1.32"
-  maxUsedKubernetesVersion: "1.32"
+  effectiveKubernetesVersion: "1.33"
+  maxUsedKubernetesVersion: "1.33"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -312,8 +312,8 @@ apiserver:
 `
 	const apiServerWithOidcIssuerOnly = `
 internal:
-  effectiveKubernetesVersion: "1.32"
-  maxUsedKubernetesVersion: "1.32"
+  effectiveKubernetesVersion: "1.33"
+  maxUsedKubernetesVersion: "1.33"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -329,8 +329,8 @@ apiserver:
 
 	const apiServerWithOidcEmpty = `
 internal:
-  effectiveKubernetesVersion: "1.32"
-  maxUsedKubernetesVersion: "1.32"
+  effectiveKubernetesVersion: "1.33"
+  maxUsedKubernetesVersion: "1.33"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -1084,8 +1084,8 @@ resources:
 	Context("webhook configuration in apiserver", func() {
 		const webhookTestValues = `
 internal:
-  effectiveKubernetesVersion: "1.32"
-  maxUsedKubernetesVersion: "1.32"
+  effectiveKubernetesVersion: "1.33"
+  maxUsedKubernetesVersion: "1.33"
   etcdServers:
     - https://192.168.199.186:2379
   mastersNode:
@@ -1110,8 +1110,8 @@ apiserver:
 
 		const webhookAuthzMissingCATestValues = `
 internal:
-  effectiveKubernetesVersion: "1.32"
-  maxUsedKubernetesVersion: "1.32"
+  effectiveKubernetesVersion: "1.33"
+  maxUsedKubernetesVersion: "1.33"
   etcdServers:
     - https://192.168.199.186:2379
   mastersNode:
@@ -1201,8 +1201,8 @@ apiserver:
 				Context(fmt.Sprintf("with %d nodes", nodesCount), func() {
 					const testValuesTemplate = `
 internal:
-  effectiveKubernetesVersion: "1.32"
-  maxUsedKubernetesVersion: "1.32"
+  effectiveKubernetesVersion: "1.33"
+  maxUsedKubernetesVersion: "1.33"
   etcdServers:
     - https://192.168.199.186:2379
   mastersNode:
@@ -1244,7 +1244,7 @@ apiserver:
 				})
 			}
 
-			// Test cases for different node counts with Kubernetes-1.32
+			// Test cases for different node counts with Kubernetes-1.33
 			testTerminatedPodGcThreshold(0, "1000") // default value
 			testTerminatedPodGcThreshold(50, "1000")
 			testTerminatedPodGcThreshold(99, "1000")

@@ -7,7 +7,7 @@ capabilities. That gate cannot be satisfied in the template tests, so a gated
 file is never rendered in CI — and these two are the compensating control for a
 cluster-wide RBAC grant, so a silent skip is the failure that matters most. The
 gate has nothing left to protect either: ValidatingAdmissionPolicy has been GA
-since Kubernetes 1.30, and candi/version_map.yml supports 1.32 upwards.
+since Kubernetes 1.30, and candi/version_map.yml supports 1.33 upwards.
 */}}
 {{- $policyName := "nodeconfigs-own-node-only.deckhouse.io" }}
 ---
