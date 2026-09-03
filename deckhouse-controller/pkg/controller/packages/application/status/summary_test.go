@@ -415,6 +415,13 @@ func TestSummarize_EdgeCases(t *testing.T) {
 		assert.Empty(t, tip)
 	})
 
+	t.Run("scaled before the manifests are applied is not ready yet", func(t *testing.T) {
+		// The workload is ready while the run task is still inside the apply.
+		// Version, URLs and settings are committed under ManifestsApplied.
+		state, _, _ := summaryFor(intCond(intScaled, metav1.ConditionTrue, "Scaled"))
+		assert.Equal(t, statePending, state)
+	})
+
 	t.Run("workload reconciling during reconcile", func(t *testing.T) {
 		// The health monitor reports a rollout as Scaled=False/Reconciling.
 		state, message, tip := summaryFor(installed(), intCond(intScaled, metav1.ConditionFalse, "Reconciling"))
@@ -430,6 +437,23 @@ func TestSummarize_EdgeCases(t *testing.T) {
 		assert.Equal(t, stateReady, state)
 		assert.Empty(t, message)
 		assert.Empty(t, tip)
+	})
+
+	t.Run("update with manifests applied is not ready until the workload is up", func(t *testing.T) {
+		// Regression: the update branch gated on ManifestsApplied alone, so the
+		// summary reported Ready while the health monitor was reporting a rollout
+		// on the very same object.
+		state, message, _ := summaryFor(updatingApp(intCond(intScaled, metav1.ConditionFalse, "Reconciling"))...)
+		assert.Equal(t, stateUpdating, state)
+		assert.Equal(t, "Update applied: the new version's workload is rolling out", message)
+	})
+
+	t.Run("update with manifests applied and no health report is not ready", func(t *testing.T) {
+		// What a version change used to produce: the status reset dropped Scaled
+		// and the edge-triggered monitor had nothing new to report.
+		state, message, _ := summaryFor(updatingApp(intCond(intScaled, metav1.ConditionUnknown, ""))...)
+		assert.Equal(t, stateUpdating, state)
+		assert.Equal(t, "Update applied: waiting for a workload the health monitor can confirm", message)
 	})
 
 	t.Run("manifests applying on a healthy app is ready, not degraded", func(t *testing.T) {

@@ -1,0 +1,46 @@
+linkRewriteEnable: true
+linkRewrite:
+  # Allowed hosts. For a link whose host is not listed here (and is not a subdomain
+  # of a listed host), the <a> tag is unwrapped: the tag is dropped but the link
+  # text stays in place. Relative links, mailto:/tel:/#anchor and links with the
+  # data-keep-link attribute are never touched.
+  whitelistHosts:
+    - deckhouse.ru
+    - deckhouse.io
+    - flant.com
+    - flant.ru
+  # Regex patterns for explicit link removal. Applied AFTER replace, BEFORE the
+  # whitelist check, to every link (relative or absolute). A link whose href
+  # matches ANY of these patterns gets its <a> tag unwrapped (text stays).
+  # Uses Go regexp syntax (RE2).
+  # Don't forget to put changes also in the modules/810-documentation/images/docs-builder/modules-docs/hugo.yaml for external modules docs build.
+  replace:
+    - from: '^(.*)/platform/(.*)$'
+      to: '\1/\2'
+    #- from: '^(.*deckhouse\.(ru|io)/documentation/v1)/deckhouse-configure-global.html(.*)$'
+    #  to: '/reference/api/global.html\3'
+    - from: '^.*/deckhouse-configure-global.html(.*)$'
+      to: '/ru/reference/api/global.html\1'
+    - from: '^(.*/modules/)[0-9]+-([^/]+/.*)$'
+      to: '\1\2'
+  remove:
+    - '^.*(/products/kubernetes-platform/documentation/(latest|v[0-9]+(\.[0-9]+)?)?/)?architecture/.*$'
+    - '^.*(/products/kubernetes-platform/documentation/(latest|v[0-9]+(\.[0-9]+)?)?/)?user/.*$'
+    - '^.*(/products/kubernetes-platform/documentation/(latest|v[0-9]+(\.[0-9]+)?)?/)?admin/.*$'
+    - '^.*(/products/kubernetes-platform/documentation/(latest|v[0-9]+(\.[0-9]+)?)?/)?reference/(release-channels\.html|oss_info\.html|supported_versions\.html).*$'
+    - '^\./(release-channels\.html|oss_info\.html).*$'
+    - '^.*/products/kubernetes-platform/features/.*$'
+    - '^.*/cloud-provider-gcp/.*$'
+    - '^.*/cloud-provider-yandex/.*$'
+    - '^.*/cloud-provider-aws/.*$'
+    - '^.*/cloud-provider-azure/.*$'
+    - '^.*/cloud-provider-vsphere/.*$'
+    - '^.*/cloud-provider-openstack/.*$'
+    - '^.*/modules/openvpn/.*$'
+    - '^.*/cni-flannel/.*$'
+    - '^.*/prometheus-pushgateway/.*$'
+    - '^.*/csi-s3/.*$'
+    - '^.*/csi-vsphere/.*$'
+    - '^.*/sds-replicated-volume/.*$'
+    - '^.*/state-snapshotter/.*$'
+    - '^.*/sds-elastic/.*$'

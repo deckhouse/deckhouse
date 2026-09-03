@@ -402,6 +402,27 @@ alerts:
         Cloud data discoverer cannot save data to a Kubernetes resource.
       severity: "6"
       markupFormat: markdown
+    - name: D8CloudProviderAWSIMDSv2NotConverged
+      sourceFile: modules/030-cloud-provider-aws/monitoring/prometheus-rules/imdsv2.tpl
+      moduleUrl: 030-cloud-provider-aws
+      module: cloud-provider-aws
+      edition: ce
+      description: |-
+        `imdsv2: true` is set in `AWSClusterConfiguration`, but {{ $value }} EC2 instances of the cluster
+        still accept metadata requests without a session token, which leaves them more exposed to unauthorized
+        metadata access, including through SSRF attacks.
+
+        Existing instances are not reconfigured by the setting alone:
+
+        1. Master, static and bastion instances are updated by a converge run. Start the DKP installer and run `dhctl converge`.
+        2. Ephemeral instances are re-created when their nodes are rolled, which happens on its own. Check that the nodes of every `CloudEphemeral` NodeGroup are being replaced: `d8 k get nodegroups`.
+
+        The instance state is re-read once per discovery period of the cloud data discoverer (one hour by default),
+        so the alert can lag behind the last node being replaced.
+      summary: |
+        Some EC2 instances of the cluster still allow IMDSv1.
+      severity: "6"
+      markupFormat: markdown
     - name: D8CloudProviderDVPMigrationPending
       sourceFile: modules/030-cloud-provider-dvp/monitoring/prometheus-rules/migration.yaml
       moduleUrl: 030-cloud-provider-dvp
@@ -1873,6 +1894,30 @@ alerts:
         Federation metadata endpoint failed.
       severity: "6"
       markupFormat: markdown
+    - name: D8IstioFederationRemoteClusterUUIDMismatch
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/federation.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        Public metadata from `{{$labels.endpoint}}` for IstioFederation `{{$labels.federation_name}}` reports cluster UUID `{{$labels.actual_uuid}}`, but the previously pinned UUID is `{{$labels.pinned_uuid}}`.
+
+        Deckhouse stops private metadata exchange and does not send a federation JWT until the peer identity is confirmed again.
+
+        Check whether `spec.metadataEndpoint` was pointed to another cluster or the remote endpoint was replaced.
+
+        To inspect the resource:
+
+        ```bash
+        d8 k get istiofederation {{$labels.federation_name}} -o yaml
+        curl {{$labels.endpoint}}
+        ```
+
+        If the peer change is intentional, recreate the IstioFederation resource so a new UUID can be pinned.
+      summary: |
+        IstioFederation peer cluster UUID changed.
+      severity: "4"
+      markupFormat: markdown
     - name: D8IstioGlobalControlplaneDoesntWork
       sourceFile: modules/110-istio/monitoring/prometheus-rules/controlplane.yaml
       moduleUrl: 110-istio
@@ -1936,6 +1981,30 @@ alerts:
       summary: |
         Multicluster remote API host health check failed.
       severity: "6"
+      markupFormat: markdown
+    - name: D8IstioMulticlusterRemoteClusterUUIDMismatch
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/multicluster.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        Public metadata from `{{$labels.endpoint}}` for IstioMulticluster `{{$labels.multicluster_name}}` reports cluster UUID `{{$labels.actual_uuid}}`, but the previously pinned UUID is `{{$labels.pinned_uuid}}`.
+
+        Deckhouse stops private metadata exchange and does not send a multicluster JWT until the peer identity is confirmed again.
+
+        Check whether `spec.metadataEndpoint` was pointed to another cluster or the remote endpoint was replaced.
+
+        To inspect the resource:
+
+        ```bash
+        d8 k get istiomulticluster {{$labels.multicluster_name}} -o yaml
+        curl {{$labels.endpoint}}
+        ```
+
+        If the peer change is intentional, recreate the IstioMulticluster resource so a new UUID can be pinned.
+      summary: |
+        IstioMulticluster peer cluster UUID changed.
+      severity: "4"
       markupFormat: markdown
     - name: D8IstioOperatorReconcileError
       sourceFile: modules/110-istio/monitoring/prometheus-rules/operator.yaml
@@ -4989,6 +5058,7 @@ modules-having-alerts:
     - admission-policy-engine
     - cert-manager
     - chrony
+    - cloud-provider-aws
     - cloud-provider-dvp
     - cloud-provider-huaweicloud
     - cloud-provider-yandex

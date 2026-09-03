@@ -2,6 +2,7 @@
 title: Deckhouse Kubernetes Platform documentation
 permalink: en/
 description: Deckhouse Kubernetes Platform Documentation.
+rootLLMStxtURL: /products/kubernetes-platform/documentation/v1/llms.txt
 ---
 
 {% include redirect-anchor.liquid anchors="deckhouse-configuration,modifying-cluster-configuration,viewing-current-configuration,configuring-the-module,enabling-and-disabling-the-module,accessing-documentation-for-the-current-version,managing-placement-of-deckhouse-components,module-features-that-depend-on-its-type,advanced-scheduling,module-bundles" to="admin/configuration/" %}

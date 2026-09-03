@@ -29,6 +29,7 @@ alertmanager
 Alertmanager
 alertmanagers
 Alertmanagers
+AliCloud
 AllocateSpace
 AllowedAddressPairs
 allowedBundles
@@ -269,6 +270,7 @@ ClusterVirtualImage
 cmctl
 CMD
 cmp
+CN
 CNAME
 CNCF
 CNCF’s
@@ -439,6 +441,7 @@ DN
 DNAT
 dns
 DNS
+DNs
 dnsEE
 Dnsmasq
 dnsPolicy
@@ -507,6 +510,7 @@ enableBasicAuth
 enablement
 enableMultiTenancy
 endofftopic
+Entra
 entrypoint
 enum
 env
@@ -521,6 +525,7 @@ etcdutl
 eth
 EuropeClouds
 eventsExporter
+EVS
 existingZoneToSubnetIDMap
 explorative
 expr
@@ -620,6 +625,7 @@ govc
 GPG
 GPU
 GPUs
+GracefulShutdownPostpone
 grafana
 Grafana
 GrafanaAdditionalDatasource
@@ -633,6 +639,7 @@ Graylog
 grep
 gRPC
 GRPC
+GuestInfo
 gz
 Habr
 hardcoded
@@ -792,6 +799,7 @@ jaeger
 jammy
 javascript
 JFrog
+JID
 JPA
 JQ
 js
@@ -832,6 +840,7 @@ kube
 kubeadm
 KubeadmConfigTemplateData
 kubeall
+KubeClusterExtension
 kubeconfig
 kubeconfigGeneratorMasterCA
 kubeconfigs
@@ -894,6 +903,7 @@ logLevel
 Logstash
 loki
 longtermStorageClass
+loopback
 LowNodeUtilization
 LRS
 lsblk
@@ -1073,6 +1083,7 @@ NogeGroup
 nonreplicated
 NoOps
 noProxyAddressList
+NoRunningPodsWithLabel
 NoSchedule
 NoSQL
 NotIn
@@ -1105,6 +1116,7 @@ okmeter
 Okmeter
 Okta
 Omniauth
+OmniAuth
 online
 OOM
 OPA
@@ -1182,6 +1194,7 @@ PersistentVolumeClaims
 PersistentVolumes
 php
 PID
+PKCE
 PKCS
 PKI
 plaintext
@@ -1206,6 +1219,7 @@ PodMonitor
 PodMonitors
 PodNetwork
 podSubnetCIDR
+PodsWithLabelAreRunningOnNode
 Poly
 portForwarding
 POSIX
@@ -1365,6 +1379,7 @@ RWX
 S3
 SaaS
 SaaSUninstall
+Salesforce
 SAML
 SANs
 SASL
@@ -1424,6 +1439,7 @@ shouldn
 Sidekiq
 SIGTERM
 SimpleWithInternalNetwork
+SingleLevel
 Sitemap
 SizingPolicy
 SkyWalking
@@ -1601,6 +1617,7 @@ uninstalling
 Unlabel
 UNPACKEDSIZE
 unschedulable
+Uplink
 uploadproxy
 upmeter
 UpmeterHookProbe
@@ -1614,6 +1631,7 @@ URLs
 UsePAM
 UserBasic
 username
+usernames
 UserOperation
 UTC
 UTF
@@ -1713,6 +1731,7 @@ VxLAN
 VXLAN
 VzZS
 WaitingForDisruptiveApproval
+WaitingForShutdownSignal
 WAL
 waypoint
 Waypoint
@@ -1738,6 +1757,7 @@ WhateverInstanceClass
 whitelist
 Whitelist
 whitelistSourceRanges
+WholeSubtree
 Wiki
 wildcard
 wildcards
@@ -1943,8 +1963,8 @@ ZvirtInstanceClass
 внутренного
 внутрикластерное
 внутрикластерной
-внутрикластерным
 внутрикластерный
+внутрикластерным
 воркеров
 выгрузок
 выдаватель
@@ -2041,6 +2061,7 @@ ZvirtInstanceClass
 зеркалирование
 зеркалировании
 зеркалирования
+зеркалированный
 зеркалировать
 иcпользовать
 ИБ
@@ -2197,7 +2218,6 @@ ZvirtInstanceClass
 масштабируется
 Мб
 МБ
-МиБ
 медиафайлов
 медиафайлы
 межкластерная
@@ -2215,6 +2235,7 @@ ZvirtInstanceClass
 меш
 меша
 меше
+МиБ
 мигрирована
 микросегментация
 микросервисов
@@ -2815,6 +2836,7 @@ ZvirtInstanceClass
 ч
 чаржить
 чатами
+членств
 шаблонизатор
 шаблонизаторе
 шаблонизирования
@@ -2843,3 +2865,30 @@ ZvirtInstanceClass
 юзера
 юнит
 юнита
+ConstraintTemplate
+ConstraintTemplates
+GC
+GVKs
+SDK
+SecurityPolicyException
+allocs
+args
+didn
+diff
+diffing
+diffs
+docstring
+eval
+mtime
+outlier
+pprof
+rulebench
+unmarshalling
+µs
+GOROOT
+PrepareForEval
+ReportAllocs
+TMPDIR
+benchmarkLock
+goroutines
+runN

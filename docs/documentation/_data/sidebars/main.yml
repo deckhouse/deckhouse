@@ -511,7 +511,7 @@ entries:
                       url: /admin/configuration/app-scaling/pod-eviction/scheduler.html
                     - title:
                         en: Priority classes
-                        ru: Приоритеты подов
+                        ru: Классы приоритета
                       url: /admin/configuration/app-scaling/pod-eviction/priority-classes.html
             - title:
                 en: Network
@@ -1000,6 +1000,10 @@ entries:
                 en: Vertical Pod Autoscaling
                 ru: Вертикальное масштабирование
               url: /user/configuration/app-scaling/vpa.html
+            - title:
+                en: Priority classes
+                ru: Классы приоритета
+              url: /user/configuration/app-scaling/priority-classes.html
         - title:
             en: Network
             ru: Сеть
@@ -1745,7 +1749,11 @@ entries:
             - title:
                 en: Managed-postgres module
                 ru: Модуль managed-postgres
-              url: /architecture/managed-services/managed-postgres.html              
+              url: /architecture/managed-services/managed-postgres.html   
+            - title:
+                en: Managed-valkey module
+                ru: Модуль managed-valkey
+              url: /architecture/managed-services/managed-valkey.html
         - title:
             en: Virtualization subsystem
             ru: Подсистема Virtualization
@@ -1767,9 +1775,9 @@ entries:
                 ru: Deckhouse Virtualization Container Registry (DVCR)
               url: /architecture/virtualization/dvcr.html
             - title:
-                en: Containerized Data Importer (CDI)
-                ru: Containerized Data Importer (CDI)
-              url: /architecture/virtualization/cdi.html
+                en: Importing and uploading VM images and disks
+                ru: Импорт и загрузка образов и дисков ВМ
+              url: /architecture/virtualization/import.html
             - title:
                 en: Auxiliary components
                 ru: Вспомогательные компоненты

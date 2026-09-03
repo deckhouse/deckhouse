@@ -17,12 +17,56 @@ limitations under the License.
 package v1alpha1
 
 import (
+	"maps"
+
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/openapi"
 )
 
 // This file holds the package vocabulary shared by applications and modules. A type belongs
-// here only if both ApplicationPackageVersion and ModulePackageVersion embed it; anything
-// specific to one kind stays in that kind's file.
+// here only if both flavours use it — ApplicationPackage and ModulePackage, or their version
+// counterparts; anything specific to one kind stays in that kind's file.
+
+// PackageReleaseChannels maps repository name -> release channel name -> version.
+type PackageReleaseChannels map[string]map[string]string
+
+// SetChannels replaces the channels repoName offers the package on, and reports whether that changed
+// anything. Nil channels mean the scan could not read them and leave the row untouched; an empty set
+// drops the row rather than storing an empty one.
+func (c *PackageReleaseChannels) SetChannels(repoName string, channels map[string]string) bool {
+	if channels == nil {
+		return false
+	}
+
+	if len(channels) == 0 {
+		return c.RemoveChannels(repoName)
+	}
+
+	if maps.Equal((*c)[repoName], channels) {
+		return false
+	}
+
+	if *c == nil {
+		*c = make(PackageReleaseChannels, 1)
+	}
+	(*c)[repoName] = maps.Clone(channels)
+
+	return true
+}
+
+// RemoveChannels drops the channels repoName offered, and reports whether there were any.
+func (c *PackageReleaseChannels) RemoveChannels(repoName string) bool {
+	if _, ok := (*c)[repoName]; !ok {
+		return false
+	}
+
+	delete(*c, repoName)
+
+	if len(*c) == 0 {
+		*c = nil
+	}
+
+	return true
+}
 
 // PackageSchema is an OpenAPI v3 schema wrapper that preserves all custom x-*
 // extensions (e.g. x-deckhouse-grantable-resource) as typed fields on the

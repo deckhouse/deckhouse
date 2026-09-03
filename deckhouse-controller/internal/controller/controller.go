@@ -43,6 +43,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	pkgruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -339,9 +340,25 @@ func (c *Controller) Start(ctx context.Context) error {
 		return fmt.Errorf("resolve module placements: %w", err)
 	}
 
+	// The old module stack recorded its packages in module releases, and the
+	// image ships the embedded modules; give each of them a package version
+	// object, and the user module sources their repositories, while the
+	// controllers still wait for the sync. Runs after the resolver, so a
+	// deployed duplicate it superseded no longer counts.
+	if err := pkgsync.Sync(ctx, c.ctrl.GetAPIReader(), c.ctrl.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, c.logger.Named("pkgsync")); err != nil {
+		return fmt.Errorf("sync package objects: %w", err)
+	}
+
 	modules, err := c.syncModules(ctx, placements)
 	if err != nil {
 		return fmt.Errorf("sync modules: %w", err)
+	}
+
+	// loadModules below enqueues downloads straight away, so this is the last point at which
+	// dropping stale package state cannot race a deploy — as long as this manager registers no
+	// reconciler that deploys on its own. A leak must not stop the tree loading.
+	if err := c.cleanupPackages(ctx, modules); err != nil {
+		c.logger.Warn("failed to cleanup packages", log.Err(err))
 	}
 
 	if err := c.loadModules(ctx, modules); err != nil {

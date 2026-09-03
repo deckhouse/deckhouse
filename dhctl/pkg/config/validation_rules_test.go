@@ -191,7 +191,7 @@ unsafeObject:
 			schema:      testSchemaStore(t),
 			errContains: `ChangesValidationFailed: unsafe field has been changed: .unsafeObject`,
 		},
-		"unsafe rule, ok: updateReplicas": {
+		"unsafe rule, ok: updateReplicas scales up": {
 			phase: phases.FinalizationPhase,
 			oldConfig: `
 apiVersion: deckhouse.io/v1
@@ -207,7 +207,7 @@ masterNodeGroup:
   replicas: 3`,
 			schema: testSchemaStore(t),
 		},
-		"unsafe rule, failed: updateReplicas": {
+		"unsafe rule, ok: updateReplicas scales down to one": {
 			phase: phases.FinalizationPhase,
 			oldConfig: `
 apiVersion: deckhouse.io/v1
@@ -221,8 +221,24 @@ kind: ClusterConfiguration
 clusterType: Static
 masterNodeGroup:
   replicas: 1`,
+			schema: testSchemaStore(t),
+		},
+		"unsafe rule, failed: updateReplicas scales down to zero": {
+			phase: phases.FinalizationPhase,
+			oldConfig: `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+masterNodeGroup:
+  replicas: 3`,
+			newConfig: `
+apiVersion: deckhouse.io/v1
+kind: ClusterConfiguration
+clusterType: Static
+masterNodeGroup:
+  replicas: 0`,
 			schema:      testSchemaStore(t),
-			errContains: `ChangesValidationFailed: validation rule failed: can't reduce the number of master nodegroup replicas to 1, functionality will be available in future versions`,
+			errContains: `ChangesValidationFailed: validation rule failed: the .masterNodeGroup.replicas zero value is not acceptable`,
 		},
 		"unsafe rule, ok: deleteZones": {
 			phase: phases.FinalizationPhase,

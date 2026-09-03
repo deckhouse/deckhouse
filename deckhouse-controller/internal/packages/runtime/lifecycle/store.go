@@ -38,13 +38,17 @@ func NewStore() *Store {
 }
 
 // NeedUpdate reports whether the package needs processing: true if the package
-// is new, the version changed, the settings checksum differs, the settings
-// schema version changed, or the maintenance mode changed.
+// is new or being removed, the version changed, the settings checksum differs,
+// the settings schema version changed, or the maintenance mode changed.
 // Used as a fast-path check before the more expensive Update call. It cannot see content
 // changes behind a mutable tag: those callers skip it and pass force to Update.
 func (s *Store) NeedUpdate(name, version, checksum string, settingsVersion int, maintenance string) bool {
 	pkg, ok := s.packages[name]
 	if !ok {
+		return true
+	}
+
+	if pkg.removing {
 		return true
 	}
 
@@ -74,6 +78,7 @@ func (s *Store) NeedUpdate(name, version, checksum string, settingsVersion int, 
 //  2. Version differs → cancels all in-flight tasks, returns new root context
 //  3. force is set → same as a version change, for callers that know the content behind
 //     an unchanged version is stale (a mutable tag re-pushed under the same version)
+//  4. Package is being removed → cancels teardown and starts the re-created generation
 //
 // Returns nil when only settings, settingsVersion or maintenance changed (no new
 // context needed — the new values are stored and will be picked up by the scheduler
@@ -90,20 +95,21 @@ func (s *Store) Update(name, version string, settingsVersion int, settings addon
 			settingsVersion: settingsVersion,
 			settings:        settings,
 			maintenance:     maintenance,
-			cancels:         make(map[int]context.CancelFunc),
+			cancels:         make(map[int]context.CancelCauseFunc),
 		}
 
-		ctx := s.packages[name].newContext(EventUpdate)
+		ctx := s.packages[name].newContext(EventUpdate, errVersionChanged)
 		return ctx
 	}
 
-	if force || pkg.version != version {
+	if force || pkg.removing || pkg.version != version {
 		pkg.version = version
 		pkg.settingsVersion = settingsVersion
 		pkg.settings = settings
 		pkg.maintenance = maintenance
+		pkg.removing = false
 
-		ctx := pkg.newContext(EventUpdate)
+		ctx := pkg.newContext(EventUpdate, errVersionChanged)
 		return ctx
 	}
 
@@ -159,10 +165,17 @@ func (s *Store) UpdateSettings(name string, settingsVersion int, settings addonu
 // For EventRemove: clears version and settings before renewing context, so a
 // subsequent Update sees the package as new (enabling re-create after remove).
 //
-// Returns nil if the package doesn't exist in the store.
-func (s *Store) HandleEvent(event int, name string) context.Context {
+// cause is reported by the tasks this cancels — see [Package.newContext].
+//
+// Returns nil if the package doesn't exist in the store, or if EventSchedule
+// arrives after removal has started and must not supersede teardown.
+func (s *Store) HandleEvent(event int, name string, cause error) context.Context {
 	pkg, ok := s.packages[name]
 	if !ok {
+		return nil
+	}
+
+	if event == EventSchedule && pkg.removing {
 		return nil
 	}
 
@@ -171,9 +184,10 @@ func (s *Store) HandleEvent(event int, name string) context.Context {
 		pkg.settingsVersion = 0
 		pkg.settings = make(addonutils.Values)
 		pkg.maintenance = ""
+		pkg.removing = true
 	}
 
-	return pkg.newContext(event)
+	return pkg.newContext(event, cause)
 }
 
 // GetPendingSettings returns the latest settings and their schema version stored
@@ -192,16 +206,42 @@ func (s *Store) GetPendingMaintenance(name string) string {
 	return s.packages[name].maintenance
 }
 
+// RemovalState reports how far a package's teardown has got.
+type RemovalState int
+
+const (
+	// RemovalDone means nothing is tracked under the name, so nothing is left to tear down.
+	RemovalDone RemovalState = iota
+	// RemovalPending means the package is still tracked and no teardown has been issued yet.
+	RemovalPending
+	// RemovalInFlight means a teardown is already enqueued; re-issuing EventRemove would cancel it.
+	RemovalInFlight
+)
+
+// RemovalState reports the teardown state of a package. The explicit removal marker lets callers
+// wait instead of re-issuing EventRemove, independently of whether the package version is empty.
+func (s *Store) RemovalState(name string) RemovalState {
+	pkg, ok := s.packages[name]
+	if !ok {
+		return RemovalDone
+	}
+
+	if pkg.removing {
+		return RemovalInFlight
+	}
+
+	return RemovalPending
+}
+
 // Delete removes a package entry from the store if it still exists and is in
-// the removed state (version cleared by HandleEvent(EventRemove)).
+// the removed state set by HandleEvent(EventRemove).
 // Returns true if the entry was deleted.
 //
-// Safe against re-creation races: if Update has already set a new version
-// between the remove and this cleanup, the version is non-empty and Delete
-// returns false, preserving the re-created entry.
+// Safe against re-creation races: Update clears the removal marker before
+// this cleanup, so Delete returns false and preserves the re-created entry.
 func (s *Store) Delete(name string) bool {
 	pkg, ok := s.packages[name]
-	if !ok || pkg.version != "" {
+	if !ok || !pkg.removing {
 		return false
 	}
 

@@ -40,8 +40,17 @@ const (
 	apiProxyAddress             = "127.0.0.1:6445"
 	bindInternalIPAnnotationKey = "node.deckhouse.io/nodeport-bind-internal-ip"
 
+	// nodeUninitializedTaintKey is removed by node-manager in the same patch that applies
+	// NodeGroup's nodeTemplate (including bindInternalIPAnnotationKey) to the Node object.
+	// kube-proxy tolerates this taint and can start before node-manager finishes, so its
+	// presence is used below to wait for the node template to actually be applied.
+	nodeUninitializedTaintKey = "node.deckhouse.io/uninitialized"
+
 	kubeConfigPath      = "/var/lib/kube-proxy/kubeconfig.conf"
 	kubeProxyConfigPath = "/var/lib/kube-proxy/config.conf"
+
+	nodeTemplateWaitTimeout  = 25 * time.Second
+	nodeTemplateWaitInterval = time.Second
 )
 
 func main() {
@@ -152,6 +161,12 @@ func main() {
 }
 
 func getNodePortBindInternalIP(apiAddress string) (string, error) {
+	// The result below doesn't depend on Node state for GCP, so there's no reason to wait
+	// for node-manager to apply the node template first.
+	if os.Getenv("CLOUD_PROVIDER") == "gcp" {
+		return "0.0.0.0/0", nil
+	}
+
 	inClusterConfig, err := rest.InClusterConfig()
 	if err != nil {
 		return "", err
@@ -168,16 +183,9 @@ func getNodePortBindInternalIP(apiAddress string) (string, error) {
 		return "", fmt.Errorf("failed to get pod hostname: %s", err)
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
-
-	node, err := clientSet.CoreV1().Nodes().Get(ctx, hostname, metav1.GetOptions{})
+	node, err := waitForNodeTemplate(clientSet, hostname)
 	if err != nil {
 		return "", err
-	}
-
-	if os.Getenv("CLOUD_PROVIDER") == "gcp" {
-		return "0.0.0.0/0", nil
 	}
 
 	v, ok := node.GetAnnotations()[bindInternalIPAnnotationKey]
@@ -198,6 +206,46 @@ func getNodePortBindInternalIP(apiAddress string) (string, error) {
 	}
 
 	return firstInternalAddress + "/32", nil
+}
+
+// waitForNodeTemplate waits until node-manager removes nodeUninitializedTaintKey from the
+// Node object, since that happens atomically with applying the NodeGroup's nodeTemplate
+// (including bindInternalIPAnnotationKey). kube-proxy tolerates this taint and is scheduled
+// before node-manager necessarily gets to reconcile the Node, so reading the Node object
+// without waiting can race with that reconciliation and silently bind to the wrong address.
+// The wait is bounded: if node-manager doesn't finish in time, it falls back to whatever the
+// Node object currently has, same as before this fix, so kube-proxy is never blocked forever.
+func waitForNodeTemplate(clientSet *kubernetes.Clientset, hostname string) (*corev1.Node, error) {
+	deadline := time.Now().Add(nodeTemplateWaitTimeout)
+
+	for {
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		node, err := clientSet.CoreV1().Nodes().Get(ctx, hostname, metav1.GetOptions{})
+		cancel()
+		if err != nil {
+			return nil, err
+		}
+
+		if !hasTaint(node, nodeUninitializedTaintKey) {
+			return node, nil
+		}
+
+		if time.Now().After(deadline) {
+			log.Printf("timed out waiting for node-manager to remove %q taint from Node %s, proceeding with current Node state", nodeUninitializedTaintKey, hostname)
+			return node, nil
+		}
+
+		time.Sleep(nodeTemplateWaitInterval)
+	}
+}
+
+func hasTaint(node *corev1.Node, key string) bool {
+	for _, t := range node.Spec.Taints {
+		if t.Key == key {
+			return true
+		}
+	}
+	return false
 }
 
 func getAPIProxyAddress() (string, error) {

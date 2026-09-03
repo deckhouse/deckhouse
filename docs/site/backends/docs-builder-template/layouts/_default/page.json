@@ -63,6 +63,88 @@
   {{- end -}}
   ]
 }
+{{- else if eq .Type "ai" -}}
+{{- /*
+  Manifest of the AI export, consumed by `internal/aiexport` of docs-builder:
+  it renders no content itself, it only tells the Go side which HTML files to
+  convert to Markdown and what metadata to attach to them. Unlike the search
+  index above, `configuration.html` and `cr.html` are included — for an agent
+  they are the most valuable reference pages a module has.
+*/ -}}
+{{- $modulesData := hugo.Data.modules_all -}}
+{{- $documents := slice -}}
+{{- range partial "get-stablest-modules-list.html" . -}}
+  {{- $moduleName := .name -}}
+  {{- $moduleChannel := .channel -}}
+  {{- $moduleVersion := .version -}}
+  {{- $moduleData := index $modulesData $moduleName -}}
+
+  {{- $editions := slice -}}
+  {{- $tags := slice -}}
+  {{- with $moduleData -}}
+    {{- with .editions }}{{ $editions = . }}{{ end -}}
+    {{- with .tags }}{{ $tags = . }}{{ end -}}
+  {{- end -}}
+
+  {{- $stage := "" -}}
+  {{- with index hugo.Data.modules $moduleName -}}
+    {{- with index . $moduleChannel -}}
+      {{- with index . "module" -}}
+        {{- with .stage }}{{ $stage = . }}{{ end -}}
+      {{- end -}}
+    {{- end -}}
+  {{- end -}}
+
+  {{- $moduleSection := printf "/modules/%s/%s/" $moduleName $moduleChannel -}}
+  {{- range $.Site.Pages -}}
+    {{- $url := replaceRE `^/(ru|en)/` "/" .RelPermalink -}}
+    {{- if and .File (eq .Section "modules") (ne .Kind "section") (ne .Kind "home") (hasPrefix $url $moduleSection) -}}
+      {{- /* `plainify` drops the tags but leaves the entities behind, and
+             `&rsquo;` in a description helps nobody. */ -}}
+      {{- $description := "" -}}
+      {{- with .Description -}}
+        {{- $description = . | plainify | htmlUnescape -}}
+      {{- else -}}
+        {{- with .Summary }}{{ $description = . | plainify | htmlUnescape | truncate 200 "" }}{{ end -}}
+      {{- end -}}
+
+      {{- $keywords := slice -}}
+      {{- range (split (default "" .Params.search) ",") -}}
+        {{- with trim . " " }}{{ $keywords = $keywords | append . }}{{ end -}}
+      {{- end -}}
+
+      {{- /* Every language is published under its own baseURL, so RelPermalink
+             carries no language prefix — but on disk the page always lands in
+             `public/<lang>/`, which is what the exporter reads. */ -}}
+      {{- $documents = $documents | append (dict
+          "title" .Title
+          "url" $url
+          "htmlPath" (path.Join "/" site.Language.Lang $url)
+          "module" $moduleName
+          "channel" $moduleChannel
+          "version" $moduleVersion
+          "description" (chomp $description)
+          "keywords" $keywords
+          "tags" $tags
+          "editions" $editions
+          "stage" $stage
+          "searchBoost" (default 0 .Params.searchBoost)
+        ) -}}
+    {{- end -}}
+  {{- end -}}
+{{- end -}}
+{{- dict
+    "version" 1
+    "productCode" "external-modules"
+    "generator" "hugo"
+    "lang" site.Language.Lang
+    "baseUrl" site.BaseURL
+    "title" site.Title
+    "description" (default "" site.Params.description)
+    "llmsIntro" (T "ai_llms_external_modules_intro")
+    "llmsVersionNote" (T "ai_llms_version_note")
+    "documents" $documents
+  | jsonify -}}
 {{- else -}}
 {}
 {{- end -}}

@@ -72,6 +72,8 @@ DKP supports automatic addition of physical (bare-metal) servers to the cluster 
      > **Important**. The `privateSSHKey` field must contain a private SSH key encoded in Base64 format.
      > The private key must match the corresponding public key added to the `~/.ssh/authorized_keys` file on the server.
 
+     For details on SSHCredentials sensitive data protection, see the [`node-manager` module FAQ](/modules/node-manager/faq.html#why-are-the-ssh-key-and-the-sudo-password-of-sshcredentials-shown-as-omitted).
+
 1. Create a [StaticInstance](/modules/node-manager/cr.html#staticinstance)` object for each server:
 
    ```yaml

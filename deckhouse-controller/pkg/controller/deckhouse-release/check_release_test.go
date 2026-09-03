@@ -34,6 +34,7 @@ import (
 	"github.com/iancoleman/strcase"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/types"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
@@ -590,6 +591,247 @@ disable:
 		suite.setupController("step-by-step-update-successfully.yaml", initValues, embeddedMUP)
 		err := suite.ctr.checkDeckhouseRelease(ctx)
 		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("StepByStepUpdateToSuspendedChannelRelease", func() {
+		// The channel head (v1.33.1) is suspended on the release-channel image, but
+		// the per-version images used for the step-by-step catch-up do not carry the
+		// suspend flag. The target release must still be created suspended, while the
+		// intermediate releases must not.
+		dependency.TestDC.CRClient.ListTagsMock.Return([]string{
+			"v1.31.0",
+			"v1.31.1",
+			"v1.32.0",
+			"v1.32.1",
+			"v1.32.2",
+			"v1.32.3",
+			"v1.33.0",
+			"v1.33.1",
+		}, nil)
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.33.1","suspend":true}`}}}, nil
+			},
+			DigestStub: func() (v1.Hash, error) {
+				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76879")
+			},
+		}, nil)
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "v1.31.1").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.31.1"}`}}}, nil
+			},
+		}, nil)
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "v1.32.3").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.32.3"}`}}}, nil
+			},
+		}, nil)
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "v1.33.1").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.33.1"}`}}}, nil
+			},
+		}, nil)
+
+		suite.setupController("step-by-step-update-to-suspended.yaml", initValues, embeddedMUP)
+		err := suite.ctr.checkDeckhouseRelease(ctx)
+		require.NoError(suite.T(), err)
+	})
+
+	// The cluster lags several PATCHES behind
+	// within the same minor (v1.76.9 -> v1.76.11). getNewVersions collapses a minor
+	// to its highest patch, so the intermediate v1.76.10 is never created and the
+	// cluster jumps straight to the suspended channel head. The head must still be
+	// created suspended.
+	suite.Run("StepByStepSameMinorJumpToSuspendedChannelRelease", func() {
+		dependency.TestDC.CRClient.ListTagsMock.Return([]string{
+			"v1.76.9",
+			"v1.76.10",
+			"v1.76.11",
+		}, nil)
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.76.11","suspend":true}`}}}, nil
+			},
+			DigestStub: func() (v1.Hash, error) {
+				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76879")
+			},
+		}, nil)
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "v1.76.11").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.76.11"}`}}}, nil
+			},
+		}, nil)
+
+		suite.setupController("step-by-step-same-minor-to-suspended.yaml", initValues, embeddedMUP)
+		err := suite.ctr.checkDeckhouseRelease(ctx)
+		require.NoError(suite.T(), err)
+	})
+
+	// A behind cluster reaches the suspended
+	// channel head through step-by-step; after the release is created it must be
+	// moved to the Suspended phase by the reconciler and must NOT deploy. Reconciling
+	// a suspended release patches it to Suspended and then errors on the task
+	// calculation, exactly like the existing "Suspend release" reconcile test.
+	suite.Run("StepByStepToSuspendedReleaseIsNotDeployed", func() {
+		dependency.TestDC.CRClient.ListTagsMock.Return([]string{
+			"v1.76.9",
+			"v1.76.10",
+			"v1.76.11",
+		}, nil)
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.76.11","suspend":true}`}}}, nil
+			},
+			DigestStub: func() (v1.Hash, error) {
+				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76879")
+			},
+		}, nil)
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "v1.76.11").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.76.11"}`}}}, nil
+			},
+		}, nil)
+
+		suite.setupController("step-by-step-to-suspended-not-deployed.yaml", initValues, embeddedMUP)
+		err := suite.ctr.checkDeckhouseRelease(ctx)
+		require.NoError(suite.T(), err)
+
+		created := suite.getDeckhouseRelease("v1.76.11")
+
+		// First reconcile initializes the freshly created release (empty phase -> Pending).
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, created)
+		require.NoError(suite.T(), err)
+
+		// Second reconcile processes the pending release: the suspend annotation moves
+		// it to Suspended and short-circuits the task calculation, so it never deploys.
+		pending := suite.getDeckhouseRelease("v1.76.11")
+		_, err = suite.ctr.createOrUpdateReconcile(ctx, pending)
+		require.Error(suite.T(), err)
+		require.Contains(suite.T(), err.Error(), "release phase is not pending")
+	})
+
+	// Same behind-cluster step-by-step, but the
+	// channel head is NOT suspended. Neither the head nor the intermediates may get
+	// the suspend annotation - guards against the propagation degenerating into
+	// "always suspend".
+	suite.Run("StepByStepToNotSuspendedChannelRelease", func() {
+		dependency.TestDC.CRClient.ListTagsMock.Return([]string{
+			"v1.76.9",
+			"v1.76.10",
+			"v1.76.11",
+		}, nil)
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.76.11"}`}}}, nil
+			},
+			DigestStub: func() (v1.Hash, error) {
+				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76879")
+			},
+		}, nil)
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "v1.76.11").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.76.11"}`}}}, nil
+			},
+		}, nil)
+
+		suite.setupController("step-by-step-not-suspended-control.yaml", initValues, embeddedMUP)
+		err := suite.ctr.checkDeckhouseRelease(ctx)
+		require.NoError(suite.T(), err)
+	})
+
+	// The head already sits
+	// in the cluster in the Suspended phase; the channel drops the suspend flag, so
+	// the suspend annotation must be removed (the equal-branch resume path).
+	suite.Run("StepByStepResumePreviouslySuspendedHead", func() {
+		dependency.TestDC.CRClient.ListTagsMock.Return([]string{
+			"v1.33.0",
+			"v1.33.1",
+		}, nil)
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.33.1"}`}}}, nil
+			},
+			DigestStub: func() (v1.Hash, error) {
+				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76879")
+			},
+		}, nil)
+
+		suite.setupController("step-by-step-resume-suspended-head.yaml", initValues, embeddedMUP)
+		err := suite.ctr.checkDeckhouseRelease(ctx)
+		require.NoError(suite.T(), err)
+	})
+
+	// the registry holds a higher patch (v1.33.2) than the suspended
+	// channel head (v1.33.1). getNewVersions substitutes the target, so only v1.33.1
+	// is created and suspended; v1.33.2 must not be created (the channel still points
+	// at v1.33.1).
+	suite.Run("StepByStepSuspendedHeadIsNotHighestPatchInRegistry", func() {
+		dependency.TestDC.CRClient.ListTagsMock.Return([]string{
+			"v1.33.0",
+			"v1.33.1",
+			"v1.33.2",
+		}, nil)
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.33.1","suspend":true}`}}}, nil
+			},
+			DigestStub: func() (v1.Hash, error) {
+				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76879")
+			},
+		}, nil)
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "v1.33.1").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.33.1"}`}}}, nil
+			},
+		}, nil)
+
+		suite.setupController("step-by-step-head-not-highest-patch.yaml", initValues, embeddedMUP)
+		err := suite.ctr.checkDeckhouseRelease(ctx)
+		require.NoError(suite.T(), err)
+
+		var higher v1alpha1.DeckhouseRelease
+		err = suite.Client().Get(ctx, types.NamespacedName{Name: "v1.33.2"}, &higher)
+		require.Error(suite.T(), err, "a patch higher than the channel head must not be created")
+	})
+
+	// the suspended channel head already exists in the cluster as a
+	// Pending release (created by an earlier run) while a Deployed predecessor sits
+	// behind it. There are no new versions to fetch (len(vers)==0), so the suspend
+	// flag must reach the existing release through the equal-branch patch.
+	suite.Run("StepByStepSuspendExistingPendingHead", func() {
+		dependency.TestDC.CRClient.ListTagsMock.Return([]string{
+			"v1.33.0",
+			"v1.33.1",
+		}, nil)
+		dependency.TestDC.CRClient.ImageMock.When(minimock.AnyContext, "stable").Then(&fake.FakeImage{
+			ManifestStub: ManifestStub,
+			LayersStub: func() ([]v1.Layer, error) {
+				return []v1.Layer{&fakeLayer{}, &fakeLayer{FilesContent: map[string]string{"version.json": `{"version":"v1.33.1","suspend":true}`}}}, nil
+			},
+			DigestStub: func() (v1.Hash, error) {
+				return v1.NewHash("sha256:e1752280e1115ac71ca734ed769f9a1af979aaee4013cdafb62d0f9090f76879")
+			},
+		}, nil)
+
+		suite.setupController("existing-pending-head-suspended-step-by-step.yaml", initValues, embeddedMUP)
+		err := suite.ctr.checkDeckhouseRelease(ctx)
+		require.NoError(suite.T(), err)
+
+		head := suite.getDeckhouseRelease("v1.33.1")
+		require.True(suite.T(), head.GetSuspend(), "existing pending head must receive the suspend annotation")
 	})
 
 	suite.Run("Restore absent releases from a registry", func() {

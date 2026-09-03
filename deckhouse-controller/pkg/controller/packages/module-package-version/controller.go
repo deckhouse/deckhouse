@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -33,7 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/dto"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
@@ -56,6 +56,11 @@ const (
 	// legacyPathSegment is the registry sub-path for legacy module images
 	// produced before the registry layout was unified under "version".
 	legacyPathSegment = "release"
+
+	// legacyOptionalSuffix marks a legacy module.yaml parentModules dependency as
+	// conditional (skippable if the parent module is absent). See
+	// go_lib/dependency/extenders/moduledependency for the original parser.
+	legacyOptionalSuffix = "!optional"
 )
 
 // RegisterController creates and registers the ModulePackageVersion controller.
@@ -242,6 +247,12 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpv *v1alpha1.Mod
 		controllerutil.AddFinalizer(mpv, v1alpha1.ModulePackageVersionFinalizer)
 	}
 
+	// The version lives and dies with its repository: a pre-created draft has no
+	// owner until it is promoted here.
+	if err = controllerutil.SetControllerReference(repo, mpv, r.client.Scheme()); err != nil {
+		return fmt.Errorf("set controller reference '%s': %w", mpv.Name, err)
+	}
+
 	delete(mpv.Labels, v1alpha1.ModulePackageVersionLabelDraft)
 
 	if err = r.client.Patch(ctx, mpv, client.MergeFrom(original)); err != nil {
@@ -311,8 +322,8 @@ func (r *reconciler) setMetadataLoadedConditionFalse(mpv *v1alpha1.ModulePackage
 
 // setPackageMetadata projects parsed module metadata onto the ModulePackageVersion
 // status. Dispatches to the v2 package.yaml path or the legacy module.yaml path,
-// then attaches the changelog if present. A nil meta is a no-op so callers may
-// invoke unconditionally after a best-effort parse.
+// then attaches the changelog and the settings/values schemas if present. A nil
+// meta is a no-op so callers may invoke unconditionally after a best-effort parse.
 func setPackageMetadata(mpv *v1alpha1.ModulePackageVersion, meta *moduleMetadata) {
 	if meta == nil {
 		return
@@ -320,7 +331,7 @@ func setPackageMetadata(mpv *v1alpha1.ModulePackageVersion, meta *moduleMetadata
 
 	switch {
 	case meta.packageDefinition != nil:
-		setFromPackageDefinition(mpv, meta.packageDefinition)
+		mpv.Status.PackageMetadata = meta.packageDefinition.ConvertToStatusMetadata()
 	case meta.moduleDefinition != nil:
 		setFromModuleDefinition(mpv, meta.moduleDefinition)
 	}
@@ -329,28 +340,8 @@ func setPackageMetadata(mpv *v1alpha1.ModulePackageVersion, meta *moduleMetadata
 		Features: meta.changelog.Features,
 		Fixes:    meta.changelog.Fixes,
 	}
-}
 
-// setFromPackageDefinition projects a parsed v2 package.yaml onto the MPV status.
-// Mirrors the APV controller: only fields present on dto.ModuleDefinition are
-// surfaced (stage, descriptions, disable options, licensing, requirements).
-// Remaining module-only status fields (category, version-compatibility) are
-// intentionally not populated here — extend dto.ModuleDefinition if you need to
-// surface them.
-func setFromPackageDefinition(mpv *v1alpha1.ModulePackageVersion, pd *dto.ModuleDefinition) {
-	mpv.Status.PackageMetadata = &v1alpha1.ModulePackageVersionStatusMetadata{
-		Stage: pd.Stage,
-		Description: &v1alpha1.PackageDescription{
-			Ru: pd.Descriptions.Ru,
-			En: pd.Descriptions.En,
-		},
-		Weight:         int32(pd.Weight),
-		Critical:       pd.Critical,
-		ExclusiveGroup: pd.ExclusiveGroup,
-		DisableOptions: disableOptionsToCR(pd.DisableOptions),
-		Licensing:      licensingToCR(pd.Licensing),
-		Requirements:   requirementsToCR(pd.Requirements),
-	}
+	mpv.Status.PackageSchemas = meta.schemas
 }
 
 // setFromModuleDefinition projects a legacy module.yaml onto the MPV status.
@@ -374,16 +365,40 @@ func setFromModuleDefinition(mpv *v1alpha1.ModulePackageVersion, def *moduletype
 	}
 
 	mpv.Status.PackageMetadata.Licensing = legacyAccessibilityToCR(def.Accessibility)
+	mpv.Status.PackageMetadata.DisableOptions = legacyDisableOptionsToCR(def.DisableOptions)
 
 	mpv.Status.PackageMetadata.Weight = int32(def.Weight)
 	mpv.Status.PackageMetadata.Critical = def.Critical
 	mpv.Status.PackageMetadata.ExclusiveGroup = def.ExclusiveGroup
 }
 
-// disableOptionsToCR projects parsed disable protection onto the CR shape, returning nil
-// when no disable protection is configured so the field omits cleanly.
-func disableOptionsToCR(opts dto.DisableOptions) *v1alpha1.PackageDisableOptions {
-	messages := disableMessagesToCR(opts)
+// legacyDisableOptionsToCR projects the legacy disable options onto the package
+// shape. A language without its own message falls back to the deprecated single
+// message field; empty options yield nil.
+func legacyDisableOptionsToCR(opts *v1alpha1.ModuleDisableOptions) *v1alpha1.PackageDisableOptions {
+	if opts == nil {
+		return nil
+	}
+
+	// the deprecated single message is the documented fallback for a language
+	// without its own text
+	fallback := opts.Message //nolint:staticcheck
+
+	ru := opts.Messages.Ru
+	if ru == "" {
+		ru = fallback
+	}
+
+	en := opts.Messages.En
+	if en == "" {
+		en = fallback
+	}
+
+	var messages *v1alpha1.PackageDisableMessages
+	if ru != "" || en != "" {
+		messages = &v1alpha1.PackageDisableMessages{Ru: ru, En: en}
+	}
+
 	if !opts.Confirmation && messages == nil {
 		return nil
 	}
@@ -392,55 +407,6 @@ func disableOptionsToCR(opts dto.DisableOptions) *v1alpha1.PackageDisableOptions
 		Confirmation: opts.Confirmation,
 		Messages:     messages,
 	}
-}
-
-// disableMessagesToCR projects the localized confirmation messages, returning nil when
-// neither translation is set.
-func disableMessagesToCR(opts dto.DisableOptions) *v1alpha1.PackageDisableMessages {
-	if opts.Messages.Ru == "" && opts.Messages.En == "" {
-		return nil
-	}
-
-	return &v1alpha1.PackageDisableMessages{
-		Ru: opts.Messages.Ru,
-		En: opts.Messages.En,
-	}
-}
-
-// requirementsToCR projects parsed package requirements onto the v1alpha1
-// PackageRequirements CR shape. Returns nil when no requirements are configured
-// so the status field omits cleanly via omitempty.
-func requirementsToCR(r dto.Requirements) *v1alpha1.PackageRequirements {
-	kubernetes := versionConstraintToCR(r.Kubernetes.Constraint)
-	deckhouse := versionConstraintToCR(r.Deckhouse.Constraint)
-	modulesCR := moduleRequirementsToCR(r.Modules)
-
-	if kubernetes == nil && deckhouse == nil && modulesCR == nil {
-		return nil
-	}
-
-	return &v1alpha1.PackageRequirements{
-		Kubernetes: kubernetes,
-		Deckhouse:  deckhouse,
-		Modules:    modulesCR,
-	}
-}
-
-// licensingToCR projects dto.Licensing onto the v1alpha1 PackageLicensing CR shape.
-func licensingToCR(l dto.Licensing) *v1alpha1.PackageLicensing {
-	if len(l.Editions) == 0 {
-		return nil
-	}
-
-	editions := make(map[string]v1alpha1.PackageEditionLicense, len(l.Editions))
-	for name, e := range l.Editions {
-		editions[name] = v1alpha1.PackageEditionLicense{
-			Available:        e.Available,
-			EnabledInBundles: slices.Clone(e.EnabledInBundles),
-		}
-	}
-
-	return &v1alpha1.PackageLicensing{Editions: editions}
 }
 
 // legacyAccessibilityToCR projects legacy module.yaml accessibility onto package licensing.
@@ -460,13 +426,8 @@ func legacyAccessibilityToCR(access *moduletypes.ModuleAccessibility) *v1alpha1.
 	return &v1alpha1.PackageLicensing{Editions: editions}
 }
 
-// legacyOptionalSuffix marks a legacy module.yaml parentModules dependency as
-// conditional (skippable if the parent module is absent). See
-// go_lib/dependency/extenders/moduledependency for the original parser.
-const legacyOptionalSuffix = "!optional"
-
-// legacyRequirementsToCR projects a legacy v1alpha1.ModuleRequirements (flat strings
-// plus a name → constraint map) onto the new PackageRequirements CR shape. A constraint
+// legacyRequirementsToCR projects legacy module.yaml requirements (flat strings
+// plus a name to constraint map) onto the PackageRequirements CR shape. A constraint
 // ending in "!optional" maps to a conditional dependency; the suffix is stripped from
 // the surfaced constraint string.
 func legacyRequirementsToCR(req *v1alpha1.ModuleRequirements) *v1alpha1.PackageRequirements {
@@ -480,8 +441,10 @@ func legacyRequirementsToCR(req *v1alpha1.ModuleRequirements) *v1alpha1.PackageR
 			conditional []v1alpha1.PackageModuleDependency
 		)
 
-		for name, constraint := range req.ParentModules {
-			raw, optional := strings.CutSuffix(constraint, legacyOptionalSuffix)
+		// sorted names keep the projection deterministic: map order changes
+		// between runs, and the status is compared order-sensitively
+		for _, name := range slices.Sorted(maps.Keys(req.ParentModules)) {
+			raw, optional := strings.CutSuffix(req.ParentModules[name], legacyOptionalSuffix)
 			dep := v1alpha1.PackageModuleDependency{
 				Name:       name,
 				Constraint: strings.TrimSpace(raw),
@@ -521,63 +484,4 @@ func versionConstraintToCR(raw string) *v1alpha1.VersionConstraint {
 	}
 
 	return &v1alpha1.VersionConstraint{Constraint: raw}
-}
-
-// moduleRequirementsToCR projects dto.ModulesRequirements onto the v1alpha1
-// PackageModulesRequirements CR shape, returning nil when mandatory, conditional,
-// anyOf, and noneOf are all empty.
-func moduleRequirementsToCR(mr dto.ModulesRequirements) *v1alpha1.PackageModulesRequirements {
-	if len(mr.Mandatory) == 0 && len(mr.Conditional) == 0 && len(mr.AnyOf) == 0 && len(mr.NoneOf) == 0 {
-		return nil
-	}
-
-	return &v1alpha1.PackageModulesRequirements{
-		Mandatory:   moduleDependenciesToCR(mr.Mandatory),
-		Conditional: moduleDependenciesToCR(mr.Conditional),
-		AnyOf:       moduleGroupsToCR(mr.AnyOf),
-		NoneOf:      moduleGroupsToCR(mr.NoneOf),
-	}
-}
-
-// moduleDependenciesToCR projects a slice of dto.ModuleDependency onto the
-// v1alpha1 PackageModuleDependency CR slice. Returns nil for empty input so
-// the parent CR omitempty fields render cleanly.
-func moduleDependenciesToCR(deps []dto.ModuleDependency) []v1alpha1.PackageModuleDependency {
-	if len(deps) == 0 {
-		return nil
-	}
-
-	out := make([]v1alpha1.PackageModuleDependency, 0, len(deps))
-	for _, dep := range deps {
-		out = append(out, v1alpha1.PackageModuleDependency{
-			Name:       dep.Name,
-			Constraint: dep.Constraint,
-		})
-	}
-
-	return out
-}
-
-// moduleGroupsToCR projects a slice of dto.ModuleGroup onto the v1alpha1
-// PackageModuleGroup CR slice. Used for both anyOf and noneOf — the shape is
-// identical at the CR layer; the bucket semantics live on the field they're
-// attached to. Returns nil for empty input so the parent CR omitempty field
-// renders cleanly. The legacy module.yaml path does not carry anyOf or noneOf
-// groups and never reaches this function — only the v2 package.yaml path
-// (setFromPackageDefinition) emits group metadata.
-func moduleGroupsToCR(groups []dto.ModuleGroup) []v1alpha1.PackageModuleGroup {
-	if len(groups) == 0 {
-		return nil
-	}
-
-	out := make([]v1alpha1.PackageModuleGroup, 0, len(groups))
-	for _, g := range groups {
-		out = append(out, v1alpha1.PackageModuleGroup{
-			Name:        g.Name,
-			Description: g.Description,
-			Modules:     moduleDependenciesToCR(g.Modules),
-		})
-	}
-
-	return out
 }

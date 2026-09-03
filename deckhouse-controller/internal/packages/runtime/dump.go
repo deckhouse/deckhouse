@@ -202,9 +202,10 @@ func (r *Runtime) collectQueues(name string) []string {
 			queues = append(queues, filepath.Join(name, hookQueue))
 			queues = append(queues, filepath.Join(name, hookQueue, "sync"))
 		}
-		// The CRD subtask queue is spawned once per module by the global run task,
-		// as "<name>/crd" — it is not a per-hook-queue subqueue.
+		// The CRD and webhook subtask queues are spawned once per module by the
+		// global run task — they are not per-hook-queue subqueues.
 		queues = append(queues, filepath.Join(name, "crd"))
+		queues = append(queues, filepath.Join(name, "webhooks"))
 	}
 
 	return queues

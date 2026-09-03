@@ -1,4 +1,4 @@
-{{- $version := "v2.4.3" }}
+{{- $version := "v2.6.5" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "builder/scratch" }}
@@ -7,9 +7,12 @@ import:
   add: /
   to: /
   includePaths:
-  - cosign
   - install
   - uninstall
+  before: setup
+- image: {{ .ModuleName }}/{{ .ImageName }}-artifact
+  add: /usr/bin/cosign
+  to: /cosign
   before: setup
 imageSpec:
   config:
@@ -26,12 +29,6 @@ from: {{ index $.Images "builder/distroless" }}
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
   to: /
-import:
-- image: {{ index $.Images "tools/cosign" }} 
-  add: /usr/bin/cosign
-  to: /cosign
-  before: install
-# usage after update to cosign 3
-#shell:
-#  install:
-#   - pm install cosign
+shell:
+  install:
+   - pm install cosign@{{ $version }}

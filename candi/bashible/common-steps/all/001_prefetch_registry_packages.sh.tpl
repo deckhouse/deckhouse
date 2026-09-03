@@ -87,7 +87,7 @@ if ! systemd-run \
     --collect \
     /bin/bash -c ". \"$env_file\" && exec /opt/deckhouse/bin/rpp-get fetch \
       \"d8:{{ .images.registrypackages.d8 }}\" \
-      \"yq:{{ .images.registrypackages.yq4471 }}\" \
+      \"yq:{{ .images.registrypackages.yq4536 }}\" \
       \"curl:{{ .images.registrypackages.d8Curl891 }}\" \
       \"e2fsprogs:{{ .images.registrypackages.e2fsprogs1472 }}\" \
       \"iptables:{{ .images.registrypackages.iptables189 }}\" \

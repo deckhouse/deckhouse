@@ -272,7 +272,7 @@ jobs:
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: |
             ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
@@ -362,8 +362,9 @@ jobs:
           # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
           # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
           # obtained, so signing is skipped rather than failing the build.
-          WERF_OLCEDAR_VAULT_AUTH_ROLE: "deckhouse-olcedar-signer"
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "dh-engine-signer"
           WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -670,7 +671,7 @@ jobs:
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: |
             ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
@@ -1281,7 +1282,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:952e32d6731ae0e3a7b6890dd45e4861851c950635ff0e4dba2c1d4165d03869"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:0a16e548966abb3a695dce005516604e7f307a962ae811d2a94103e70a3067cd"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'

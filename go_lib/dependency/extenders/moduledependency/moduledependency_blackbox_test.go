@@ -539,6 +539,27 @@ func TestCheckEnabling(t *testing.T) {
 	}
 }
 
+// TestCheckEnablingWithOptionalMissingDependency tests that a module can be enabled when its
+// optional dependency has no Module resource (NotFound)
+func TestCheckEnablingWithOptionalMissingDependency(t *testing.T) {
+	const moduleName = "moduleWithOptionalMissingDep"
+
+	extender := moduledependency.Instance()
+
+	// Set up version helper that returns not found error, simulating an absent Module resource
+	extender.SetModulesVersionHelper(func(name string) (string, error) {
+		return "", apierrors.NewNotFound(schema.GroupResource{Group: "modules", Resource: "module"}, name)
+	})
+	extender.SetModulesStateHelper(func() []string { return nil })
+
+	require.NoError(t, extender.AddConstraint(moduleName, map[string]string{
+		"missingOptionalDep": ">= 1.0.0 !optional",
+	}))
+	t.Cleanup(func() { extender.DeleteConstraint(moduleName) })
+
+	assert.NoError(t, extender.CheckEnabling(moduleName), "CheckEnabling should not fail on optional missing dependency")
+}
+
 // TestVersionHandlingWithPrereleaseAndMetadata tests the handling of prerelease and metadata in versions
 func TestVersionHandlingWithPrereleaseAndMetadata(t *testing.T) {
 	extender := moduledependency.Instance()

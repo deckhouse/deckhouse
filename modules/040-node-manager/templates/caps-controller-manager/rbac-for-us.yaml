@@ -79,6 +79,16 @@ rules:
     - get
     - list
     - watch
+# Allow getting unmasked sensitive data in spec (privateSSHKey, sudoPasswordEncoded).
+# Needed to connect to the host over SSH.
+- apiGroups:
+    - deckhouse.io
+  resources:
+    - sshcredentials/sensitive
+  verbs:
+    - get
+    - list
+    - watch
 - apiGroups:
     - deckhouse.io
   resources:

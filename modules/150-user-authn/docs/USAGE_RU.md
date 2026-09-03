@@ -486,6 +486,8 @@ spec:
 
 {% endraw %}
 
+Списки разрешённых групп и адресов электронной почты в DexClient проверяются при входе и при каждом обновлении refresh-токена. Изменение списков запрещает дальнейшее обновление сессий, которые больше им не соответствуют; таким пользователям нужно войти заново.
+
 После создания такого ресурса в Dex будет зарегистрирован клиент с идентификатором (**clientID**) `dex-client-myname@mynamespace`.
 
 Пароль доступа к клиенту (**clientSecret**) сохранится в секрете:
@@ -504,6 +506,42 @@ data:
 
 {% endraw %}
 
+### Предоставление приложению доступа к Kubernetes API
+
+Ресурс [DexClient](cr.html#dexclient) или [DexAuthenticator](cr.html#dexauthenticator) можно настроить для получения токенов, которые принимает API-сервер Kubernetes. Для этого установите на ресурсе одну из следующих аннотаций со значением `"true"`:
+
+* `dexclient.deckhouse.io/allow-access-to-kubernetes` — для DexClient;
+* `dexauthenticator.deckhouse.io/allow-access-to-kubernetes` — для DexAuthenticator.
+
+{% raw %}
+
+Пример настройки ресурса DexClient:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexClient
+metadata:
+  name: myname
+  namespace: mynamespace
+  annotations:
+    dexclient.deckhouse.io/allow-access-to-kubernetes: "true"
+spec:
+  redirectURIs:
+  - https://app.example.com/callback
+```
+
+{% endraw %}
+
+Аннотация регистрирует клиента в качестве доверенного (trusted peer) для привилегированного OAuth2-клиента `kubernetes`, что позволяет ему запрашивать ID-токены, предназначенные для API-сервера. В таком токене имя пользователя определяется значением claim `email`, а группы — значением claim `groups`. В результате приложение обращается к API-серверу от имени прошедшего аутентификацию пользователя и с предоставленными ему правами.
+
+{% alert level="warning" %}
+Предоставляемый таким образом доступ действует на уровне всего кластера, хотя DexClient и DexAuthenticator являются namespaced-ресурсами. По этой причине добавить аннотацию или изменить её значение на `"true"` может только субъект с правами на изменение конфигурации модуля `user-authn` — например, пользователь с ролью `d8:manage:permission:module:user-authn:edit`. Прав на создание ресурсов DexClient или DexAuthenticator в отдельном неймспейсе недостаточно.
+
+Добавление аннотации ограничено независимо от указанного значения, включая `"false"`. Это необходимо для совместимости с версиями DKP до 1.78, в которых доступ предоставляется при наличии аннотации независимо от её значения. Если доступ к API-серверу Kubernetes не требуется, не добавляйте аннотацию.
+
+Ограничение не распространяется на ресурсы, у которых аннотация уже установлена. Пользователь с правами на изменение такого ресурса может продолжать изменять его, в том числе удалить аннотацию или изменить значение так, чтобы доступ был отключён.
+{% endalert %}
+
 ## Локальная аутентификация
 
 Локальная аутентификация обеспечивает проверку и управление доступом пользователей с возможностью настройки парольной политики, поддержкой двухфакторной аутентификации (2FA) и управлением группами.  
@@ -511,7 +549,53 @@ data:
 
 ### Создание пользователя
 
-Придумайте пароль и укажите его хеш-сумму, закодированную в base64, в поле `password`. Email-адрес должен быть в нижнем регистре.
+Рекомендуемый способ создания локального пользователя — команда [`d8 iam user create`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-user-create). Она поддерживает интерактивный ввод пароля, автоматическую генерацию пароля, добавление в группы и TTL для временных пользователей.
+
+Примеры:
+
+Интерактивный ввод пароля (по умолчанию если stdin — терминал):
+
+```shell
+d8 iam user create anton --email anton@abc.com
+```
+
+Автогенерация пароля (сгенерированный пароль показывается в выводе команды один раз):
+
+```shell
+d8 iam user create anton --email anton@abc.com --generate-password
+```
+
+Пароль из stdin (для CI/CD пайплайнов):
+
+```shell
+echo "s3cret" | d8 iam user create anton --email anton@abc.com --password-stdin
+```
+
+Готовый bcrypt-хеш (например от htpasswd):
+
+```shell
+d8 iam user create anton --email anton@abc.com --password-hash '$2y$10$abcdef...'
+```
+
+Создать пользователя и добавить в группы (с автосозданием групп):
+
+```shell
+d8 iam user create anton --email anton@abc.com --generate-password --member-of admins --create-groups
+```
+
+Создать временного пользователя с TTL:
+
+```shell
+d8 iam user create anton --email anton@abc.com --generate-password --ttl 24h
+```
+
+Предпросмотр манифеста без применения:
+
+```shell
+d8 iam user create anton --email anton@abc.com --generate-password --dry-run -o yaml
+```
+
+В качестве альтернативы можно создать ресурс [User](cr.html#user) вручную. Придумайте пароль и укажите его хеш-сумму, закодированную в base64, в поле `password`. Email-адрес должен быть в нижнем регистре.
 
 Для вычисления хеш-суммы пароля воспользуйтесь командой:
 
@@ -547,11 +631,41 @@ spec:
 
 {% endraw %}
 
+[Правила авторизации](/modules/user-authz/cr.html#authorizationrule) предоставляют права пользователю на основе email из выданного токена. По этой причине нельзя создать ресурс User, у которого значение `spec.email` совпадает с субъектом типа `User` в существующем ресурсе [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) или [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule). Это предотвращает незаметное предоставление прав новому пользователю.
+
+Если совпадение необходимо, например, если правило авторизации было создано заранее, укажите другой email или установите для пользователя аннотацию `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"`.
+
+При сопоставлении email приводится к нижнему регистру, поскольку в таком виде он записывается в токен. Например, `Admin@Example.com` совпадает с субъектом `admin@example.com`.
+
+Ограничение не распространяется на уже существующих пользователей, чей email совпадает с субъектами правил авторизации. Такие пользователи продолжают работать, а при обнаружении совпадения выводится предупреждение.
+
+Учитывайте это ограничение при декларативном управлении пользователями и правилами авторизации. Если пользователь и соответствующее правило создаются одновременно, правило может быть создано раньше пользователя, в результате чего создание пользователя будет отклонено. Чтобы разрешить такое совпадение, добавьте аннотацию `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"` в манифест User.
+
+При удалении пользователя соответствующий субъект из правила авторизации не удаляется автоматически. Пока он остаётся в правиле, права продолжают предоставляться для указанного email, а система выводит предупреждение об отсутствии соответствующего пользователя. Если впоследствии будет создан пользователь с тем же email, он получит эти права. Если такое поведение не требуется, удалите соответствующий субъект из правила авторизации.
+
+### Удаление пользователя
+
+Для удаления локального пользователя используйте команду [`d8 iam user delete`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-user-delete). По умолчанию команда также удаляет пользователя из всех ресурсов [Group](cr.html#group), в которых он состоит.
+
+Примеры:
+
+Удалить пользователя (и автоматически удалить из всех групп):
+
+```shell
+d8 iam user delete anton
+```
+
+Удалить пользователя, оставив ссылки в группах:
+
+```shell
+d8 iam user delete anton --keep-memberships
+```
+
 ### Операции над локальным пользователем
 
 Операции сброса пароля, сброса 2FA и блокировки выполняются через ресурс [UserOperation](cr.html#useroperation). В поле `initiatorType` указывается, кто инициировал операцию: администратор (`admin`), система (`system`) или сам пользователь (`self`).
 
-> **Важно.** Не меняйте `User.spec.password` после создания User (`kubectl edit` / прямой patch). Поле неизменяемо и не обновляет учётные данные в Dex. Сбрасывайте пароль только через UserOperation (или `d8 iam user reset-password`).
+> **Важно.** Не меняйте `User.spec.password` после создания User (`kubectl edit` / прямой patch). Это поле нельзя изменить, и оно не обновляет учётные данные в Dex. Сбрасывайте пароль только через UserOperation (или `d8 iam user reset-password`).
 
 #### Административные операции
 
@@ -611,9 +725,180 @@ d8 iam user unlock admin
 
 При сбросе пароля новый пароль должен соответствовать парольной политике, а активные сессии пользователя завершаются — требуется повторная аутентификация.
 
+#### Ручное создание UserOperation
+
+Когда CLI `d8 iam user` недоступен (например, в CI/CD, GitOps или скриптах автоматизации), ресурс [UserOperation](cr.html#useroperation) можно создать напрямую. Используйте `apiVersion: deckhouse.io/v1` и укажите `initiatorType: admin`.
+
+Пример — сброс пароля локального пользователя (в `newPasswordHash` указывается bcrypt-хеш без кодирования в Base64; хук кодирует его автоматически):
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: reset-password-admin
+spec:
+  user: admin
+  type: ResetPassword
+  initiatorType: admin
+  resetPassword:
+    newPasswordHash: "$2y$10$..."
+```
+
+Пример — блокировка локального пользователя на 1 час:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: lock-admin-1h
+spec:
+  user: admin
+  type: Lock
+  initiatorType: admin
+  lock:
+    for: "1h"
+```
+
+Пример — бессрочная блокировка:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: lock-admin-permanent
+spec:
+  user: admin
+  type: Lock
+  initiatorType: admin
+  lock:
+    for: "permanent"
+```
+
+Пример — разблокировка:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: unlock-admin
+spec:
+  user: admin
+  type: Unlock
+  initiatorType: admin
+```
+
+Пример — сброс 2FA:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: reset-2fa-admin
+spec:
+  user: admin
+  type: Reset2FA
+  initiatorType: admin
+```
+
+#### Операции над внешними пользователями (LDAP/Crowd)
+
+Для пользователей, аутентифицируемых через внешние провайдеры (LDAP, Atlassian Crowd), вместо `spec.user` используется поле [`spec.target`](cr.html#useroperation-v1-spec-target). Для внешних пользователей поддерживаются только операции `Lock` и `Unlock`.
+
+Пример — блокировка внешнего пользователя по `connectorID` + email на 30 минут:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: UserOperation
+metadata:
+  name: lock-external-user
+spec:
+  target:
+    connectorID: my-ldap
+    email: jane.doe@example.org
+  type: Lock
+  initiatorType: admin
+  lock:
+    for: "30m"
+```
+
+#### Жизненный цикл и побочные эффекты UserOperation
+
+Использование объекта UserOperation имеет следующие особенности:
+
+- UserOperation — **одноразовый** объект: после создания хук обрабатывает его и записывает результат в `status.phase` (`Succeeded` или `Failed`).
+- Завершённые операции **автоматически удаляются** через 24 часа.
+- UserOperation — **неизменяем**: после создания спецификация не изменяется.
+- Для нового действия нужно создать новый UserOperation.
+
+{% alert level="warning" %}
+Операции `ResetPassword`, `Reset2FA` и `Lock` завершают все активные сессии пользователя (удаляют объекты Dex OfflineSessions и RefreshToken). Пользователь будет вынужден пройти повторную аутентификацию.
+{% endalert %}
+
+#### Проверка статуса операции
+
+Для проверки статуса операции выполните следующие действия:
+
+1. Получите список всех операций:
+
+   ```shell
+   d8 k get useroperations
+   ```
+
+1. Получите полный статус операции:
+
+   ```shell
+   d8 k get useroperation <имя> -o yaml
+   ```
+
+1. Получите только статус завершения:
+
+   ```shell
+   d8 k get useroperation <имя> -o jsonpath='{.status.phase}'
+   ```
+
+#### Автоматические операции системы
+
+Система автоматически создаёт UserOperation с `initiatorType: system` в следующем случае:
+
+- Автоблокировка пользователя при превышении количества неудачных попыток входа, заданного в [`passwordPolicy.lockout.maxAttempts`](configuration.html#parameters-passwordpolicy-lockout-maxattempts). Блокировка длится [`lockout.lockDuration`](configuration.html#parameters-passwordpolicy-lockout-lockduration), после чего пользователь разблокируется автоматически. Администратор может также разблокировать пользователя вручную командой `d8 iam user unlock` или создав UserOperation с типом `Unlock`.
+
 ### Добавление пользователя в группу
 
-Пользователи могут быть объединены в группы для управления правами доступа. Пример манифеста ресурса Group для группы:
+Пользователи могут быть объединены в группы для управления правами доступа. Рекомендуемый способ управления группами — команда [`d8 iam group`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-group).
+
+Примеры:
+
+Создать группу:
+
+```shell
+d8 iam group create admins
+```
+
+Добавить пользователя в группу:
+
+```shell
+d8 iam group add-member admins user anton
+```
+
+Добавить вложенную группу:
+
+```shell
+d8 iam group add-member admins group devops
+```
+
+Удалить пользователя из группы:
+
+```shell
+d8 iam group remove-member admins user anton
+```
+
+Удалить группу:
+
+```shell
+d8 iam group delete admins
+```
+
+В качестве альтернативы можно создать ресурс [Group](cr.html#group) вручную. Пример манифеста ресурса Group для группы:
 
 {% raw %}
 
@@ -632,6 +917,48 @@ spec:
 {% endraw %}
 
 Здесь `members` — список пользователей, которые входят в группу.
+
+Имя группы записывается в выданный токен без изменений. При этом оно неотличимо от имени группы, полученного от внешнего провайдера аутентификации. Поэтому нельзя создать ресурс Group, если значение `spec.name` совпадает с субъектом типа `Group` в существующем ресурсе [AuthorizationRule](/modules/user-authz/cr.html#authorizationrule) или [ClusterAuthorizationRule](/modules/user-authz/cr.html#clusterauthorizationrule). Это предотвращает незаметное предоставление прав участникам новой группы.
+
+Если совпадение необходимо, переименуйте группу или установите на ней аннотацию `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"`.
+
+В отличие от email, имя группы при сопоставлении не приводится к нижнему регистру. По этой причине имена, различающиеся только регистром букв, считаются разными.
+
+Ограничение не распространяется на уже существующие группы, имена которых совпадают с субъектами правил авторизации. Такие группы продолжают работать, а при обнаружении совпадения выводится предупреждение.
+
+Учитывайте это ограничение при декларативном управлении группами и правилами авторизации. Если группа и соответствующее правило создаются одновременно, правило может быть создано раньше группы, в результате чего создание группы будет отклонено. Чтобы разрешить такое совпадение, добавьте аннотацию `user-authz.deckhouse.io/allow-authorization-rule-collision: "true"` в манифест Group.
+
+При удалении группы соответствующий субъект из правила авторизации не удаляется автоматически. Пока он остаётся в правиле, права продолжают предоставляться группе с указанным именем. Группа, впоследствии созданная с тем же именем, получит эти права. Если такое поведение не требуется, удалите соответствующий субъект из правила авторизации.
+
+### Просмотр пользователей и групп
+
+Для просмотра пользователей, групп и их эффективных прав (группы, гранты, уровень доступа) используйте команды [`d8 iam get`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-get) и [`d8 iam list`](/products/kubernetes-platform/documentation/v1/cli/d8/reference/#d8-iam-list).
+
+Примеры:
+
+Список всех пользователей с effective access
+
+```shell
+d8 iam list users
+```
+
+Детали для конкретного пользователя (группы, гранты, уровень доступа):
+
+```shell
+d8 iam get user anton
+```
+
+Список всех групп:
+
+```shell
+d8 iam list groups
+```
+
+Детали для конкретной группы (участники, гранты):
+
+```shell
+d8 iam get group admins
+```
 
 ### Парольная политика
 

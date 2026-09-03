@@ -84,6 +84,9 @@ const moduleValues = `
       type: network-ssd
     - name: network-ssd-nonreplicated
       type: network-ssd-nonreplicated
+    - name: network-ssd-64k
+      type: network-ssd
+      blockSize: 64Ki
     providerDiscoveryData:
       apiVersion: deckhouse.io/v1
       kind: YandexCloudDiscoveryData
@@ -299,6 +302,7 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			csiHDDSC := f.KubernetesGlobalResource("StorageClass", "network-hdd")
 			csiSSDSC := f.KubernetesGlobalResource("StorageClass", "network-ssd")
 			csiSSDSCNonReplicated := f.KubernetesGlobalResource("StorageClass", "network-ssd-nonreplicated")
+			csiSSDSCCustomBlockSize := f.KubernetesGlobalResource("StorageClass", "network-ssd-64k")
 
 			ccmSA := f.KubernetesResource("ServiceAccount", moduleNamespace, "cloud-controller-manager")
 			ccmCR := f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:cloud-controller-manager")
@@ -415,6 +419,15 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			Expect(csiHDDSC.Exists()).To(BeTrue())
 			Expect(csiSSDSC.Exists()).To(BeTrue())
 			Expect(csiSSDSCNonReplicated.Exists()).To(BeTrue())
+			Expect(csiSSDSCCustomBlockSize.Exists()).To(BeTrue())
+
+			Expect(csiSSDSC.Field("parameters").String()).To(MatchYAML(`
+typeID: network-ssd
+`))
+			Expect(csiSSDSCCustomBlockSize.Field("parameters").String()).To(MatchYAML(`
+typeID: network-ssd
+blockSize: "64Ki"
+`))
 
 			Expect(csiHDDSC.Field("metadata.annotations").String()).To(MatchYAML(`
 storageclass.kubernetes.io/is-default-class: "true"

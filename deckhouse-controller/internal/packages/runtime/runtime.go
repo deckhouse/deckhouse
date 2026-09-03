@@ -16,6 +16,7 @@ package runtime
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"path/filepath"
@@ -96,6 +97,24 @@ const (
 	nelmMonitorRequestTimeout = 30 * time.Second
 	// apiShutdownTimeout bounds how long shutdown waits for in-flight API requests.
 	apiShutdownTimeout = 5 * time.Second
+)
+
+// Reschedule reasons the runtime hands to the scheduler. They travel on the
+// resulting EventSchedule and become the cancellation cause of the run that the
+// reschedule cut short, so a cancelled install can name its trigger.
+const (
+	reasonSettingsChanged   = "SettingsChanged"
+	reasonEnabledChanged    = "EnabledIntentChanged"
+	reasonConfigChanged     = "ConfigChanged"
+	reasonDriftDetected     = "DriftDetected"
+	reasonHookValuesChanged = "HookValuesChanged"
+)
+
+// Cancellation causes reported by tasks whose context the runtime replaces.
+var (
+	errRescheduled     = lifecycle.CancelCause("package rescheduled")
+	errPackageDisabled = lifecycle.CancelCause("package disabled")
+	errPackageRemoved  = lifecycle.CancelCause("package removed")
 )
 
 // Runtime orchestrates the full lifecycle of application packages: discovery,
@@ -358,7 +377,9 @@ func (r *Runtime) buildNelmService() error {
 		return fmt.Errorf("initialize nelm service client: %w", err)
 	}
 
-	r.nelmService = nelm.NewService(client, r.scheduler.Reschedule, r.status, r.logger)
+	reschedule := func(name string) { r.scheduler.Reschedule(name, reasonDriftDetected) }
+
+	r.nelmService = nelm.NewService(client, reschedule, r.status, r.logger)
 
 	return nil
 }
@@ -535,10 +556,10 @@ func (r *Runtime) Run() error {
 					// global is the scheduler's order-0 barrier: it ensures the enabled
 					// modules' CRDs and publishes global values, then completes to release
 					// the modules waiting behind it.
-					r.scheduleGlobal(event.Enabled)
+					r.scheduleGlobal(event.Enabled, event.Reason)
 					continue
 				}
-				r.schedulePackage(event.Name)
+				r.schedulePackage(event.Name, event.Reason)
 			case schedule.EventDisable:
 				r.disablePackage(event.Name, event.Reason, event.Message)
 			default:
@@ -561,13 +582,14 @@ func (r *Runtime) Run() error {
 // EventSchedule context, mirroring how schedulePackage scopes a package's tasks:
 // rescheduling global renews that context and cancels the in-flight run. onDone
 // completes the global node, unblocking the modules waiting behind it.
-func (r *Runtime) scheduleGlobal(enabled []string) {
+func (r *Runtime) scheduleGlobal(enabled []string, reason string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.logger.Debug("schedule global package")
+	r.logger.Debug("schedule global package", slog.String("reason", reason))
 
-	ctx := r.packages.HandleEvent(lifecycle.EventSchedule, r.global.GetName())
+	ctx := r.packages.HandleEvent(lifecycle.EventSchedule, r.global.GetName(),
+		fmt.Errorf("%w: %s", errRescheduled, reason))
 	if ctx == nil {
 		return
 	}
@@ -595,7 +617,7 @@ func (r *Runtime) scheduleGlobal(enabled []string) {
 	enableTask := taskenable.NewTask(r.global, r.nelmService, r.queueService, r.status, r.logger)
 	r.queueService.Enqueue(ctx, r.global.GetName(), enableTask)
 
-	runTask := taskglobalrun.NewTask(r.global, enabledModules, r.crdService, r.queueService, r.status, r.logger)
+	runTask := taskglobalrun.NewTask(r.global, enabledModules, r.crdService, r.nelmService, r.objectPatcher, r.queueService, r.status, r.logger)
 	r.queueService.Enqueue(ctx, r.global.GetName(), runTask, onDone)
 }
 
@@ -611,17 +633,18 @@ func (r *Runtime) scheduleGlobal(enabled []string) {
 //
 // Both schedulePackage and disablePackage use EventSchedule, so enqueueing here
 // implicitly cancels any in-flight disable context for the same package.
-func (r *Runtime) schedulePackage(name string) {
+func (r *Runtime) schedulePackage(name, reason string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.logger.Debug("schedule package", slog.String("name", name))
+	r.logger.Debug("schedule package", slog.String("name", name), slog.String("reason", reason))
 
 	onDone := queue.WithOnDone(func() {
 		r.scheduler.Complete(name)
 	})
 
-	ctx := r.packages.HandleEvent(lifecycle.EventSchedule, name)
+	ctx := r.packages.HandleEvent(lifecycle.EventSchedule, name,
+		fmt.Errorf("%w: %s", errRescheduled, reason))
 	if ctx == nil {
 		return
 	}
@@ -661,7 +684,8 @@ func (r *Runtime) disablePackage(name, reason, msg string) {
 
 	r.logger.Debug("disable package", slog.String("name", name))
 
-	ctx := r.packages.HandleEvent(lifecycle.EventSchedule, name)
+	ctx := r.packages.HandleEvent(lifecycle.EventSchedule, name,
+		fmt.Errorf("%w: %s", errPackageDisabled, reason))
 	if ctx == nil {
 		return
 	}
@@ -780,7 +804,113 @@ func (r *Runtime) Cleanup(ctx context.Context, preserves []PreservePackage) {
 	}
 
 	// do not cleanup modules namespace
-	r.nelmService.Cleanup(ctx, keepReleases, app.NamespaceDeckhouse)
+	if err := r.nelmService.Cleanup(ctx, keepReleases, app.NamespaceDeckhouse); err != nil {
+		r.logger.Warn("cleanup releases failed", log.Err(err))
+	}
+}
+
+// PreserveApplication identifies one installed application instance to preserve during CleanupV2.
+type PreserveApplication struct {
+	Namespace string
+	Name      string
+
+	PackageName string
+	Repository  string
+	Version     string
+}
+
+// PreserveModule identifies one installed module to preserve during CleanupV2. A module releases
+// under its own name in the Deckhouse namespace, and an embedded one owns such a release while
+// its package ships in the image, outside the deployer root.
+type PreserveModule struct {
+	Name       string
+	Repository string
+	Version    string
+
+	Embedded bool
+}
+
+// CleanupV2 removes package directories on disk — downloaded and mounted alike — and orphan nelm
+// releases in the cluster that no preserved application or module claims. Applications and modules
+// are passed apart because each deployer is scoped to its own root and a preserved package cannot
+// say which root it belongs to.
+//
+// Both lists are the whole desired state, so this runs once during bootstrap: after that state is
+// settled and before any package is deployed.
+func (r *Runtime) CleanupV2(ctx context.Context, preserveApps []PreserveApplication, preserveModules []PreserveModule) error {
+	// the image always ships modules, so an empty list is a state never read rather than one to act
+	// on — acting on it would drop every module on disk and uninstall every module release
+	if len(preserveModules) == 0 {
+		return errors.New("no module to preserve")
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	var errs error
+	if err := r.appDeployer.Cleanup(ctx, appPreservePackages(preserveApps)); err != nil {
+		errs = errors.Join(errs, fmt.Errorf("cleanup application packages: %w", err))
+	}
+
+	if err := r.moduleDeployer.Cleanup(ctx, modulePreservePackages(preserveModules)); err != nil {
+		errs = errors.Join(errs, fmt.Errorf("cleanup module packages: %w", err))
+	}
+
+	// every release is kept by name now, so the Deckhouse namespace is no longer exempt
+	if err := r.nelmService.Cleanup(ctx, releasePreserveKeys(preserveApps, preserveModules)); err != nil {
+		errs = errors.Join(errs, fmt.Errorf("cleanup releases: %w", err))
+	}
+
+	return errs
+}
+
+// appPreservePackages maps applications onto the packages the application deployer keys on.
+func appPreservePackages(preserves []PreserveApplication) []deployer.PreservePackage {
+	packages := make([]deployer.PreservePackage, 0, len(preserves))
+	for _, preserve := range preserves {
+		packages = append(packages, deployer.PreservePackage{
+			Name:       preserve.PackageName,
+			Repository: preserve.Repository,
+			Version:    preserve.Version,
+		})
+	}
+
+	return packages
+}
+
+// modulePreservePackages does the same for modules, skipping the embedded ones: their packages sit
+// outside the deployer root, so the module deployer can drop nothing of theirs.
+func modulePreservePackages(preserves []PreserveModule) []deployer.PreservePackage {
+	packages := make([]deployer.PreservePackage, 0, len(preserves))
+	for _, preserve := range preserves {
+		if preserve.Embedded {
+			continue
+		}
+
+		packages = append(packages, deployer.PreservePackage{
+			Name:       preserve.Name,
+			Repository: preserve.Repository,
+			Version:    preserve.Version,
+		})
+	}
+
+	return packages
+}
+
+// releasePreserveKeys returns the releases to keep, keyed "<namespace>/<release>". An embedded
+// module is kept here, unlike on disk: it owns a release as any other module does.
+func releasePreserveKeys(preserveApps []PreserveApplication, preserveModules []PreserveModule) map[string]struct{} {
+	keep := make(map[string]struct{}, len(preserveApps)+len(preserveModules))
+
+	for _, preserve := range preserveApps {
+		keep[preserve.Namespace+"/"+apps.BuildName(preserve.Namespace, preserve.Name)] = struct{}{}
+	}
+
+	for _, preserve := range preserveModules {
+		keep[app.NamespaceDeckhouse+"/"+preserve.Name] = struct{}{}
+	}
+
+	return keep
 }
 
 // GetStatus returns package status.
