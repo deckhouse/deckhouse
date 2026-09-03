@@ -59,14 +59,19 @@ type IndependentRBACChecker interface {
 
 // ResourceScope reports whether a resource is namespaced. known is false when
 // the snapshot has never seen the group/resource (missing CRD, broken
-// APIService, empty cache). Callers that enforce namespace limits must treat
+// APIService, empty cache). Callers that enforce namespace limits treat
 // !known like namespaced: failing open would let a CAR ClusterRoleBinding
 // report Allow for a cluster-scoped list of a namespaced resource.
+//
+// HasData separates "the snapshot exists and does not list this resource"
+// from "there is no snapshot at all". The webhook makes the same distinction,
+// and only the first case, for the core group, lets RBAC answer.
 //
 // Implemented by resolver.ResourceScopeCache. This package must not import
 // resolver (resolver already imports multitenancy).
 type ResourceScope interface {
 	Scope(group, resource string) (bool, bool)
+	HasData() bool
 }
 
 // Engine implements the multi-tenancy authorization logic from user-authz webhook
@@ -222,15 +227,24 @@ func (e *Engine) authorizeClusterScopedRequest(ctx context.Context, attrs author
 		return authorizer.DecisionNoOpinion, "", nil
 	}
 
-	namespaced, known := false, false
+	namespaced, known, populated := false, false, false
 	if e.resourceScope != nil {
 		namespaced, known = e.resourceScope.Scope(attrs.GetAPIGroup(), attrs.GetResource())
+		populated = e.resourceScope.HasData()
 	}
 
 	// Known cluster-scoped resources are not limited by namespace filters.
 	// Everything else (namespaced, or unknown) is treated as namespaced so a
 	// discovery miss cannot fail-open through a CAR ClusterRoleBinding.
 	if known && !namespaced {
+		return authorizer.DecisionNoOpinion, "", nil
+	}
+
+	// A core resource absent from a populated snapshot does not exist. The
+	// webhook lets RBAC answer that case instead of denying it, so BulkSAR
+	// must not report Deny where the webhook would not. Groups are excluded:
+	// there the webhook denies an unresolvable resource, and so do we.
+	if !known && populated && attrs.GetAPIGroup() == "" {
 		return authorizer.DecisionNoOpinion, "", nil
 	}
 
