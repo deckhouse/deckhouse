@@ -25,7 +25,7 @@ title: "Модуль user-authn: FAQ"
      # Домен вашего приложения. Запросы на него будут перенаправляться для прохождения аутентификации в Dex.
      applicationDomain: "app-name.kube.my-domain.com"
      # Отправлять ли заголовок `Authorization: Bearer` приложению. Полезно в связке с auth_request в NGINX.
-     # При значении sendAuthorizationHeader: true добавьте заголовок Authorization в аннотацию nginx.ingress.kubernetes.io/auth-response-headers Ingress приложения.
+     # При значении sendAuthorizationHeader: true добавьте заголовок Authorization в аннотацию nginx.ingress.kubernetes.io/auth-response-headers Ingress приложения или в аннотацию alb.network.deckhouse.io/auth-response-headers ресурса HTTPRoute.
      sendAuthorizationHeader: false
      # Имя секрета с SSL-сертификатом.
      applicationIngressCertificateSecretName: "ingress-tls"
@@ -43,11 +43,16 @@ title: "Модуль user-authn: FAQ"
      - 192.168.0.0/24
    ```
 
-{% raw %}
-
 1. Подключите приложение к Dex.
 
-   Для этого добавьте в Ingress-ресурс приложения следующие аннотации:
+   Для этого добавьте в ресурс, через который публикуется приложение аннотации. Набор аннотаций зависит от того, каким способом публикуется приложение. Выберите подходящий вариант:
+
+{% tabs connect-app %}
+{% tab "Через Ingress-ресурс" %}
+
+{% raw %}
+
+   Добавьте в Ingress-ресурс приложения следующие аннотации:
 
    - `nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in`
    - `nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email`
@@ -74,13 +79,39 @@ title: "Модуль user-authn: FAQ"
 
 {% endraw %}
 
-{% alert level="warning" %}
-При включении `sendAuthorizationHeader: true` в Ingress укажите все необходимые заголовки в аннотации `nginx.ingress.kubernetes.io/auth-response-headers`, поскольку заголовок `Authorization` по умолчанию не передаётся:
+{% endtab %}
+{% tab "Через ALBInstance или ClusterALBInstance" %}
+
+Если приложение публикуется через ресурс ALBInstance или ClusterALBInstance (подробнее — в документации модуля [`alb`](/modules/alb/)), добавьте в HTTPRoute-ресурс приложения следующие аннотации:
+
+- `alb.network.deckhouse.io/auth-signin: https://<домен-приложения>/dex-authenticator/sign_in` — в отличие от nginx, контроллер `alb` не поддерживает переменную `$host`, поэтому домен приложения нужно указать явно;
+- `alb.network.deckhouse.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email`;
+- `alb.network.deckhouse.io/auth-url: https://<SERVICE_NAME>.<NS>.svc.<C_DOMAIN>/dex-authenticator/auth`, где `SERVICE_NAME`, `NS` и `C_DOMAIN` определяются так же, как для Ingress-ресурса.
+
+Пример аннотаций ресурса HTTPRoute для подключения приложения к Dex:
 
 ```yaml
-nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email,Authorization
+annotations:
+  alb.network.deckhouse.io/auth-signin: https://app-name.kube.my-domain.com/dex-authenticator/sign_in
+  alb.network.deckhouse.io/auth-url: https://app-name-dex-authenticator.app-ns.svc.cluster.local/dex-authenticator/auth
+  alb.network.deckhouse.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
 ```
 
+Также укажите в ресурсе DexAuthenticator тот же ListenerSet, через который опубликован домен приложения:
+
+```yaml
+spec:
+  gatewayAPI:
+    applicationHTTPRouteListenerSetName: my-listenerset
+```
+
+{% endtab %}
+{% endtabs %}
+
+{% alert level="warning" %}
+При включении `sendAuthorizationHeader: true` в Ingress (или в HTTPRoute, если используется модуль [`alb`](/modules/alb/)) укажите все необходимые заголовки в соответствующей аннотации, поскольку заголовок `Authorization` по умолчанию не передаётся:
+
+Подробнее о том, что передаётся в заголовке `Authorization` и как указать его в аннотации, читайте в разделе [«Как передать приложению логин и группы пользователя»](#как-передать-приложению-логин-и-группы-пользователя).
 {% endalert %}
 
 {% alert level="warning" %}
@@ -102,6 +133,107 @@ Ingress приложения должен иметь настроенный TLS.
   ```yaml
   nginx.ingress.kubernetes.io/satisfy: "any"
   ```
+
+## Как передать приложению логин и группы пользователя?
+
+По умолчанию DexAuthenticator передаёт приложению только два заголовка: `X-Auth-Request-User` (значение основано на непрозрачном claim'е `sub`) и `X-Auth-Request-Email`. Заголовок с группами пользователя не передаётся. Он неограниченно растёт при большом количестве групп, поэтому в DKP отключён, и включить его нельзя.
+
+Чтобы приложение получило полную информацию о пользователе, включая группы, включите параметр [`sendAuthorizationHeader`](cr.html#dexauthenticator-v1-spec-sendauthorizationheader):
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexAuthenticator
+metadata:
+  name: app-name
+  namespace: app-ns
+spec:
+  applicationDomain: "app-name.kube.my-domain.com"
+  applicationIngressClassName: "nginx"
+  applicationIngressCertificateSecretName: "ingress-tls"
+  sendAuthorizationHeader: true
+```
+
+В этом случае приложению передаётся заголовок `Authorization: Bearer <id_token>`, где `<id_token>` — подписанный Dex JWT (подробнее о содержимом токена и его обработке в приложении — в разделе [«Содержимое токена JWT и особенности его обработки»](#содержимое-токена-jwt-и-особенности-его-обработки)).
+
+Независимо от того, каким способом публикуется приложение, этот заголовок не передается в приложение автоматически. Его нужно явно указать в списке передаваемых с помощью аннотация ресурса, через который публикуется приложение. Выберите подходящий вариант, в зависимости от того, каким способом публикуется приложение:
+
+{% tabs puplications %}
+{% tab "Через Ingress-ресурс" %}
+
+Если приложение публикуется через Ingress-ресурс (подробнее — в документации модуля [`ingress-nginx`](/modules/ingress-nginx/)), при включении [`sendAuthorizationHeader: true`]((cr.html#dexauthenticator-v1-spec-sendauthorizationheader)) необходимо:
+
+- указать заголовки, которые нужно передавать в приложение, в аннотации `nginx.ingress.kubernetes.io/auth-response-headers`;
+- а также увеличить размер буфера с помощью аннотации `nginx.ingress.kubernetes.io/proxy-buffer-size`, поскольку JWT с большим числом групп не помещается в буфер по умолчанию.
+
+Пример указания заголовков и размера буфера с помощью соответствующих аннотаций:
+
+{% raw %}
+
+```yaml
+annotations:
+  nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
+  nginx.ingress.kubernetes.io/auth-url: https://app-name-dex-authenticator.app-ns.svc.cluster.local/dex-authenticator/auth
+  nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email,Authorization
+  nginx.ingress.kubernetes.io/proxy-buffer-size: 32k
+```
+
+{% endraw %}
+
+Если заголовок `Authorization` не указан в `auth-response-headers`, приложение его не получит. Если не увеличить `proxy-buffer-size`, запросы будут завершаться ошибкой 500, а в логах контроллера Ingress появится сообщение `upstream sent too big header while reading response header from upstream`.
+
+{% endtab %}
+{% tab "Через ALBInstance или ClusterALBInstance" %}
+
+Если приложение публикуется через ресурс ALBInstance или ClusterALBInstance (подробнее — в документации модуля [`alb`](/modules/alb/)), при включении [`sendAuthorizationHeader: true`]((cr.html#dexauthenticator-v1-spec-sendauthorizationheader)) укажите заголовки, которые нужно передавать в приложение, в аннотации `alb.network.deckhouse.io/auth-response-headers` ресурса HTTPRoute:
+
+```yaml
+annotations:
+  alb.network.deckhouse.io/auth-signin: https://app-name.kube.my-domain.com/dex-authenticator/sign_in
+  alb.network.deckhouse.io/auth-url: https://app-name-dex-authenticator.app-ns.svc.cluster.local/dex-authenticator/auth
+  alb.network.deckhouse.io/auth-response-headers: Authorization
+```
+
+В аннотации `alb.network.deckhouse.io/auth-response-headers`, достаточно указать только `Authorization`, так как она уже передаваемый по умолчанию базовый набор заголовков.
+
+Также в ресурсе DexAuthenticator укажите тот же ListenerSet, через который опубликован домен приложения:
+
+```yaml
+spec:
+  gatewayAPI:
+    applicationHTTPRouteListenerSetName: my-listenerset
+```
+
+{% endtab %}
+{% endtabs %}
+
+### Содержимое токена JWT и особенности его обработки
+
+Пример полезной нагрузки JWT для статического пользователя (ресурсы [User](cr.html#user) и [Group](cr.html#group)):
+
+```json
+{
+  "iss": "https://dex.kube.my-domain.com/",
+  "sub": "Cg1qb2huLmRvZUBleGFtcGxlEgVsb2NhbA",
+  "aud": "app-name-app-ns-dex-authenticator",
+  "exp": 1757000600,
+  "iat": 1757000000,
+  "email": "john.doe@example.com",
+  "email_verified": true,
+  "name": "john-doe",
+  "preferred_username": "",
+  "groups": ["everyone", "developers"]
+}
+```
+
+При разборе токена в приложении обращайте внимание на следующее:
+
+- Для идентификации пользователя используйте поле `email`. Поле `sub` непрозрачно (не является предсказуемым и не может быть использовано как осмысленный идентификатор пользователя вне контекста конкретной системы), а `preferred_username` для статических пользователей пуст (внешние провайдеры аутентификации могут его заполнять).
+- Поле `name` содержит имя объекта (из поля `metadata.name` объекта [User](cr.html#user)), а не отображаемое имя пользователя.
+- Поле `aud` содержит идентификатор клиента аутентификатора (`<name>-<namespace>-dex-authenticator`), а не идентификатор OIDC-клиента вашего приложения. Приложение, проверяющее `aud` по собственному `client_id`, отклонит такой токен.
+- Подпись проверяйте по JWKS `https://dex.<modules.publicDomainTemplate>/keys`.
+- Время жизни токена определяется параметром [`idTokenTTL`](configuration.html#parameters-idtokenttl) (по умолчанию 10 минут). DexAuthenticator обновляет токен самостоятельно, приложение всегда получает актуальный.
+
+Если приложение поддерживает OIDC самостоятельно, вместо DexAuthenticator используйте ресурс [DexClient](cr.html#dexclient): приложение само запросит необходимый объём полномочий и получит `refresh_token` в дополнение к `id_token`.
 
 ## Как работает аутентификация с помощью DexAuthenticator
 
