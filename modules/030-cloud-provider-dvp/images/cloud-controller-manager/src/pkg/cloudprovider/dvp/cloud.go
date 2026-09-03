@@ -183,7 +183,7 @@ func (c *Cloud) onEndpointSliceEvent(
 		klog.V(4).InfoS("onEndpointSliceEvent: service not found", "namespace", es.Namespace, "service", svcName, "err", err)
 		return
 	}
-	if svc.Spec.Type != corev1.ServiceTypeLoadBalancer {
+	if !wantsDefaultLoadBalancer(svc) {
 		return
 	}
 	if svc.Spec.ExternalTrafficPolicy != corev1.ServiceExternalTrafficPolicyTypeLocal {
