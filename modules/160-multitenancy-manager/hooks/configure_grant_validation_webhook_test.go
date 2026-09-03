@@ -231,4 +231,31 @@ data:
 			Expect(vwc.Webhooks[0].Rules).ToNot(BeEmpty())
 		})
 	})
+
+	Context("existing webhook with an empty webhooks list and no CA", func() {
+		BeforeEach(func() {
+			f.ValuesSet("multitenancyManager.internal.admissionWebhookCert.ca", "")
+			f.BindingContexts.Set(f.KubeStateSet(grantableState))
+			resetTypedWebhook()
+			_, err := f.KubeClient().AdmissionregistrationV1().ValidatingWebhookConfigurations().Create(
+				context.TODO(),
+				&admissionregistrationv1.ValidatingWebhookConfiguration{
+					ObjectMeta: metav1.ObjectMeta{Name: validatingWebhookConfigurationName},
+				},
+				metav1.CreateOptions{},
+			)
+			Expect(err).ShouldNot(HaveOccurred())
+			f.RunHook()
+		})
+
+		It("fails instead of publishing a Fail webhook without a CA", func() {
+			Expect(f).ToNot(ExecuteSuccessfully())
+			Expect(f.GoHookError).To(MatchError(errWebhookCertNotIssued))
+			vwc, err := f.KubeClient().AdmissionregistrationV1().ValidatingWebhookConfigurations().Get(
+				context.TODO(), validatingWebhookConfigurationName, metav1.GetOptions{},
+			)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(vwc.Webhooks).To(BeEmpty())
+		})
+	})
 })

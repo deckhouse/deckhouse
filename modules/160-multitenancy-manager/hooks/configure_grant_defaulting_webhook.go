@@ -104,6 +104,9 @@ func configureDefaultingWebhook(ctx context.Context, input *go_hook.HookInput, d
 	}
 
 	if len(whConfig.Webhooks) == 0 {
+		if caBundle == "" {
+			return errWebhookCertNotIssued
+		}
 		whConfig.Webhooks = []admissionregistrationv1.MutatingWebhook{newGrantDefaultingWebhook()}
 	}
 

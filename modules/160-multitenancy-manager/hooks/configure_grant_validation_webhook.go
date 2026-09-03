@@ -151,6 +151,9 @@ func configureGrantValidationWebhook(ctx context.Context, input *go_hook.HookInp
 	}
 
 	if len(whConfig.Webhooks) == 0 {
+		if caBundle == "" {
+			return errWebhookCertNotIssued
+		}
 		whConfig.Webhooks = []admissionregistrationv1.ValidatingWebhook{newGrantValidatingWebhook()}
 	}
 
