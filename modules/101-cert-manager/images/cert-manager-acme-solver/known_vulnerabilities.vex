@@ -1,6 +1,6 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-cert-manager-controller-go-2026-5932",
+  "@id": "https://openvex.dev/docs/public/vex-cert-manager-acme-solver-go-2026-5932",
   "author": "Deckhouse <contact@deckhouse.io>",
   "version": 2,
   "statements": [

@@ -56,4 +56,5 @@ shell:
   - chown 64535:64535 /ratify
   - chmod 0700 /ratify
 
+---
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

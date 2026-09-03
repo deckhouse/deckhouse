@@ -1,8 +1,8 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
-  "@id": "https://openvex.dev/docs/public/vex-cert-manager-cert-manager-cainjector-go-2026-5932",
+  "@id": "https://openvex.dev/docs/public/vex-cert-manager-cainjector-go-2026-5932",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 1,
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -11,16 +11,22 @@
         "name": "GO-2026-5932"
       },
       "products": [
-        { "@id": "pkg:golang/golang.org/x/crypto" },
-        { "@id": "pkg:golang/golang.org/x/crypto@v0.53.0" },
-        { "@id": "pkg:golang/golang.org/x/crypto@v0.55.0" }
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        },
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.53.0"
+        },
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "GO-2026-5932 affects unmaintained golang.org/x/crypto/openpgp with no fixed version. The certManager cainjector binary only uses other x/crypto subpackages; openpgp is not imported or executed.",
+      "impact_statement": "GO-2026-5932 affects unmaintained golang.org/x/crypto/openpgp with no fixed version. This binary only uses other x/crypto subpackages; openpgp is not imported or executed.",
       "timestamp": "2026-09-03T10:00:00Z"
     }
   ],
-  "timestamp": "2026-09-03T10:00:00Z",
+  "timestamp": "2026-08-21T08:00:00Z",
   "last_updated": "2026-09-03T10:00:00Z"
 }

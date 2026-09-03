@@ -12,4 +12,6 @@ imageSpec:
   config:
     entrypoint: ["/bin/webhook"]
 
+
+---
 {{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
