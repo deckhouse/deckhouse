@@ -141,7 +141,6 @@ func runBulkCtx(b *testing.B, auth *RBACAuthorizer, userName string, bind bool) 
 		ctx = auth.BindSubject(ctx, u)
 	}
 	b.ReportAllocs()
-	b.ResetTimer()
 	for b.Loop() {
 		for i := 0; i < benchChecks; i++ {
 			item := benchResources[i%len(benchResources)]
