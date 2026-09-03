@@ -4,7 +4,7 @@
 {{- $ingressEnabled := eq (include "helm_lib_module_ingress_enabled" .) "true" }}
 {{- $gatewayEnabled := eq (include "helm_lib_module_gateway_enabled" .) "true" }}
 {{- if (($orchestrator).state).ingress_enabled -}}
-{{- if and (.Values.global.modules.publicDomainTemplate) (.Values.global.enabledModules | has "cert-manager") (or $ingressEnabled (and $gatewayEnabled $moduleGateway)) -}}
+{{- if and (.Values.global.modules.publicDomainTemplate) (.Values.global.enabledModules | has "cert-manager") (or $ingressEnabled $gatewayEnabled) -}}
 
 ---
 apiVersion: v1

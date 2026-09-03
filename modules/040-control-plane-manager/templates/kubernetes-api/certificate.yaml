@@ -1,7 +1,7 @@
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
 {{- $ingressEnabled := eq (include "helm_lib_module_ingress_enabled" .) "true" }}
-{{- $gatewayEnabled := and (eq (include "helm_lib_module_gateway_enabled" .) "true") $moduleGateway }}
+{{- $gatewayEnabled := eq (include "helm_lib_module_gateway_enabled" .) "true" }}
 {{- if .Values.global.enabledModules | has "cert-manager" }}
 {{- if and (include "publish_api_deploy_certificate" .) (or $ingressEnabled (and $gatewayEnabled (eq .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode "SelfSigned"))) }}
 ---

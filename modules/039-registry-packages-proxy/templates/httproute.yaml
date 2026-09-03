@@ -1,6 +1,6 @@
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
-{{- if and (eq (include "helm_lib_module_gateway_enabled" .) "true") $moduleGateway .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped (include "helm_lib_kind_exists" (list . "HTTPRoute")) (include "helm_lib_kind_exists" (list . "ListenerSet")) -}}
+{{- if and (eq (include "helm_lib_module_gateway_enabled" .) "true") .Values.global.modules.publicDomainTemplate .Values.global.clusterIsBootstrapped (include "helm_lib_kind_exists" (list . "HTTPRoute")) (include "helm_lib_kind_exists" (list . "ListenerSet")) -}}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: ListenerSet
@@ -113,7 +113,7 @@ spec:
         type: PathPrefix
         value: /
 {{- end }}
-{{- if and $moduleGateway (eq (include "helm_lib_module_https_mode" .) "CertManager") }}
+{{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
 {{- $issuerName := include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
 {{- if or (eq $issuerName "letsencrypt") (eq $issuerName "letsencrypt-staging") }}
   {{- $issuerName = printf "%s-gateway-%s" $issuerName $moduleGateway.name }}

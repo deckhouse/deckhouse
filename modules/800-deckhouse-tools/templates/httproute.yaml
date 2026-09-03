@@ -1,7 +1,7 @@
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
 {{- $satisfyAny := dig "auth" "satisfyAny" false .Values.deckhouseTools }}
-{{- if and (eq (include "helm_lib_module_gateway_enabled" .) "true") ($moduleGateway) (.Values.global.modules.publicDomainTemplate) (.Values.global.clusterIsBootstrapped) (include "helm_lib_kind_exists" (list . "HTTPRoute")) (include "helm_lib_kind_exists" (list . "ListenerSet")) }}
+{{- if and (eq (include "helm_lib_module_gateway_enabled" .) "true") (.Values.global.modules.publicDomainTemplate) (.Values.global.clusterIsBootstrapped) (include "helm_lib_kind_exists" (list . "HTTPRoute")) (include "helm_lib_kind_exists" (list . "ListenerSet")) }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: ListenerSet

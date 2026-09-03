@@ -2,7 +2,7 @@
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
 {{- $ingressEnabled := eq (include "helm_lib_module_ingress_enabled" .) "true" }}
 {{- $gatewayEnabled := eq (include "helm_lib_module_gateway_enabled" .) "true" }}
-{{- if and .Values.deckhouseTools.internal.deployDexAuthenticator (or $ingressEnabled (and $gatewayEnabled $moduleGateway)) }}
+{{- if and .Values.deckhouseTools.internal.deployDexAuthenticator (or $ingressEnabled $gatewayEnabled) }}
 ---
 apiVersion: deckhouse.io/v1
 kind: DexAuthenticator
@@ -15,7 +15,7 @@ spec:
   {{- if and $ingressEnabled (include "helm_lib_module_https_ingress_tls_enabled" .) }}
   applicationIngressCertificateSecretName: {{ include "helm_lib_module_https_secret_name" (list . "tools-ingress-tls") }}
   {{- end }}
-  {{- if and $gatewayEnabled $moduleGateway (include "helm_lib_module_https_route_tls_enabled" .) }}
+  {{- if and $gatewayEnabled (include "helm_lib_module_https_route_tls_enabled" .) }}
   gatewayAPI:
     applicationHTTPRouteListenerSetName: "deckhouse-tools"
   {{- end }}

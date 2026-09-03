@@ -1,6 +1,6 @@
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
-{{- if and (eq (include "helm_lib_module_gateway_enabled" .) "true") $moduleGateway .Values.global.modules.publicDomainTemplate (or (and (.Values.userAuthn.internal.publishAPI.enabled) (.Values.userAuthn.internal.publishAPI.addKubeconfigGeneratorEntry)) (.Values.userAuthn.kubeconfigGenerator)) (include "helm_lib_kind_exists" (list . "HTTPRoute")) }}
+{{- if and (eq (include "helm_lib_module_gateway_enabled" .) "true") .Values.global.modules.publicDomainTemplate (or (and (.Values.userAuthn.internal.publishAPI.enabled) (.Values.userAuthn.internal.publishAPI.addKubeconfigGeneratorEntry)) (.Values.userAuthn.kubeconfigGenerator)) (include "helm_lib_kind_exists" (list . "HTTPRoute")) }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute

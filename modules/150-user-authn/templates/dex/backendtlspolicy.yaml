@@ -1,6 +1,6 @@
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
-{{- if and (eq (include "helm_lib_module_gateway_enabled" .) "true") $moduleGateway (include "helm_lib_kind_exists" (list . "BackendTLSPolicy")) }}
+{{- if and (eq (include "helm_lib_module_gateway_enabled" .) "true") (include "helm_lib_kind_exists" (list . "BackendTLSPolicy")) }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: BackendTLSPolicy

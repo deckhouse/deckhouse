@@ -1,6 +1,6 @@
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
-{{- if and (eq (include "helm_lib_module_gateway_enabled" .) "true") $moduleGateway .Values.global.modules.publicDomainTemplate .Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled (include "helm_lib_kind_exists" (list . "HTTPRoute")) }}
+{{- if and (eq (include "helm_lib_module_gateway_enabled" .) "true") .Values.global.modules.publicDomainTemplate .Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled (include "helm_lib_kind_exists" (list . "HTTPRoute")) }}
 {{- $apiHost := include "helm_lib_module_public_domain" (list . "api") }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
