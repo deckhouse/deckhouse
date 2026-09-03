@@ -58,10 +58,11 @@ apiVersions:
                             Количество ядер процессора для виртуальной машины.
                         coreFraction:
                           description: |
-                            Процент гарантированной доли CPU, которая будет выделена для виртуальной машины.
+                            Гарантированная доля CPU, выделяемая виртуальной машине, в процентах.
 
-                            Значение `Auto` передаёт выбор доли Vertical VirtualMachine Autoscaler родительского кластера DVP.
-                            Требуются редакция EE модуля `virtualization` с включённым модулем `vertical-pod-autoscaler` — от этих двух условий автоскейлер включается сам — и фичагейт `HotplugCPUAndMemoryWithInPlaceResize` в ModuleConfig этого модуля.
+                            При значении `Auto` выбор доли CPU передаётся Vertical VirtualMachine Autoscaler родительского кластера DVP.
+
+                            Vertical VirtualMachine Autoscaler включается автоматически, если модуль [`virtualization`](/modules/virtualization/) используется в редакции EE и включён модуль [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/). Кроме того, в ModuleConfig модуля `virtualization` должен быть включён feature gate `HotplugCPUAndMemoryWithInPlaceResize`.
                     memory:
                       description: |
                         Определяет параметры памяти для виртуальной машины.

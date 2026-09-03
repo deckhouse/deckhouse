@@ -176,10 +176,11 @@ apiVersions:
                           default: "100%"
                           pattern: ^(Auto|(100|[1-9][0-9]?)%)$
                           description: |
-                            Guaranteed share of CPU that will be allocated to the virtual machine.
+                            Guaranteed share of CPU allocated to the virtual machine, as a percentage.
 
-                            `Auto` hands the share over to the Vertical VirtualMachine Autoscaler of the parent DVP cluster.
-                            It requires the EE edition of the `virtualization` module with the `vertical-pod-autoscaler` module enabled — the autoscaler turns itself on from those two — and the `HotplugCPUAndMemoryWithInPlaceResize` feature gate in the ModuleConfig of that module.
+                            With the `Auto` value, the choice of the CPU share is handed over to the Vertical VirtualMachine Autoscaler of the parent DVP cluster.
+
+                            The Vertical VirtualMachine Autoscaler is enabled automatically if the [`virtualization`](/modules/virtualization/) module is used in the EE edition and the [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/) module is enabled. In addition, the `HotplugCPUAndMemoryWithInPlaceResize` feature gate must be enabled in the ModuleConfig of the `virtualization` module.
                           example: "100%"
                     memory:
                       type: object
