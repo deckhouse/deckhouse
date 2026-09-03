@@ -110,6 +110,10 @@ func (s *Service) computeAndApplyConditions(name string, module *v1alpha2.Module
 	versionChanged := module.Status.CurrentVersion.Version != "" && module.Status.CurrentVersion.Version != packageStatus.Version
 	mapperStatus := s.buildMapperStatus(versionChanged, module.Status.Conditions, packageStatus.Conditions)
 
+	// The CR is the authority here: the runtime status is dropped when the last
+	// teardown task drains, and never exists at all after a restart mid-deletion.
+	mapperStatus.Deleting = !module.DeletionTimestamp.IsZero()
+
 	// Apply mapped conditions (external user-facing conditions)
 	for _, cond := range s.mapper.Map(mapperStatus) {
 		// Reason is required by metav1.Condition contract
@@ -127,7 +131,10 @@ func (s *Service) computeAndApplyConditions(name string, module *v1alpha2.Module
 		})
 	}
 
-	if packageStatus.IsConditionTrue(status.ConditionManifestsApplied) {
+	// Nothing about a live install is committed onto a resource on its way out.
+	// The runtime freezes its own status on removal, but the CR's timestamp is
+	// authoritative even for a package the runtime never tracked.
+	if !mapperStatus.IsDeleting() && packageStatus.IsConditionTrue(status.ConditionManifestsApplied) {
 		module.Status.CurrentVersion.Version = packageStatus.Version
 
 		if packageStatus.Settings != nil {
