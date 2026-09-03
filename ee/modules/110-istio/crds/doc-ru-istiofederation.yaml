@@ -25,3 +25,13 @@ spec:
                     ca:
                       description: |
                         Сертификат для проверки HTTPS URL, который используется для публикации метаданных удаленного кластера.
+            status:
+              properties:
+                conditions:
+                  description: |
+                    Готовность обмена метаданными с удалённым кластером.
+
+                    - `PublicMetadataExchangeReady` — удалённый `public.json` доступен и валиден.
+                      Если `status.metadataCache.public.clusterUUID` уже задан, UUID из ответа endpoint должен с ним совпадать; иначе condition переходит в `False` с reason `ClusterUUIDMismatch`.
+                    - `PrivateMetadataExchangeReady` — удалённые приватные метаданные доступны и валидны.
+                    - `DataplaneConnectionReady` — успешна межкластерная health-проверка dataplane к сервису `alliance-healthcheck`.
