@@ -379,6 +379,10 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package, op
 		return nil
 	}
 
+	// Tracking still holds the previous apply's report, which a deadline reached
+	// before this one reports anything would name as ours.
+	s.status.ResetTracking(pkg.GetName())
+
 	// The deadline is ours, so an apply that outlives it is cancelled with a cause
 	// naming what it waited for, the way the runtime names a reschedule.
 	ctx, stopDeadline := s.withApplyDeadline(ctx, pkg.GetName())

@@ -332,6 +332,20 @@ func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 	s.queueFor(name).Add(name)
 }
 
+// ResetTracking drops the progress report left by the previous apply. Listeners
+// are not notified: an empty report is not published to the resource.
+func (s *Service) ResetTracking(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	status, ok := s.statuses[name]
+	if !ok {
+		return
+	}
+
+	status.Tracking = Tracking{}
+}
+
 // UpdateURLs stores application endpoint URLs collected from the rendered
 // manifests and notifies listeners if they changed.
 // If the package is not tracked by the service, the update is silently ignored.
