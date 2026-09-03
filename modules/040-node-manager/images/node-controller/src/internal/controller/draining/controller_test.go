@@ -421,9 +421,9 @@ func TestReconcile_CordonIsWrittenBeforeTheEvictionStarts(t *testing.T) {
 	}
 }
 
-// Withdrawing the request stops the eviction and gives the node back, instead of
-// letting it run to completion and recording a result nobody asked for.
-func TestReconcile_WithdrawnRequestCancelsAndUncordons(t *testing.T) {
+// Withdrawing the request stops the eviction instead of letting it run to
+// completion and record a result nobody asked for.
+func TestReconcile_WithdrawnRequestCancelsEviction(t *testing.T) {
 	h := newHarness(t, fake.NewSimpleClientset(), node(nil, true))
 	nodeDrainingGauge.WithLabelValues(nodeName, "boom").Set(1)
 	t.Cleanup(func() { clearDrainMetric(nodeName) })
@@ -432,9 +432,6 @@ func TestReconcile_WithdrawnRequestCancelsAndUncordons(t *testing.T) {
 	h.reconcile(t)
 
 	updated := h.node(t)
-	if updated.Spec.Unschedulable {
-		t.Fatal("a cancelled eviction should have uncordoned the node")
-	}
 	assertAnnotations(t, updated, nil)
 	if got := metricValue(t, nodeName); got != 0 {
 		t.Fatalf("failure gauge = %v, want it cleared", got)

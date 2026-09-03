@@ -155,6 +155,19 @@ func createStuckPod(name, nodeName string) *corev1.Pod {
 	return pod
 }
 
+func eventExists(nodeName, reason string) bool {
+	var events corev1.EventList
+	if err := k8sClient.List(suiteCtx, &events); err != nil {
+		return false
+	}
+	for _, e := range events.Items {
+		if e.InvolvedObject.Name == nodeName && e.Reason == reason {
+			return true
+		}
+	}
+	return false
+}
+
 func podExists(name string) bool {
 	pod := &corev1.Pod{}
 	err := k8sClient.Get(suiteCtx, types.NamespacedName{Namespace: metav1.NamespaceDefault, Name: name}, pod)
@@ -271,9 +284,9 @@ var _ = Describe("Draining a node on the draining annotation", func() {
 	})
 
 	// User story: as a cluster operator who changed my mind, I want removing the
-	// draining annotation to stop the eviction and give me my node back, instead
-	// of having to wait the drain out and uncordon by hand.
-	It("cancels an in-flight drain and uncordons the node when the request is withdrawn", func() {
+	// draining annotation to stop the eviction, instead of having to wait the
+	// drain out.
+	It("cancels an in-flight drain when the request is withdrawn", func() {
 		name := testenv.UniqueName("drain-cancel")
 
 		// The pod comes first: a drain that starts before it exists has nothing
@@ -292,11 +305,16 @@ var _ = Describe("Draining a node on the draining annotation", func() {
 		Expect(k8sClient.Patch(suiteCtx, getNodeState(name), client.RawPatch(types.MergePatchType,
 			[]byte(`{"metadata":{"annotations":{"`+nodecommon.DrainingAnnotation+`":null}}}`)))).To(Succeed())
 
-		Eventually(func(g Gomega) {
-			node := getNodeState(name)
-			g.Expect(node.Spec.Unschedulable).To(BeFalse(), "a cancelled drain must uncordon the node")
-			g.Expect(node.Annotations).NotTo(HaveKey(nodecommon.DrainedAnnotation), "a cancelled drain must not be recorded as done")
-		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
+		// The event is the only visible proof the eviction was stopped: the node
+		// itself is left exactly as the drain found it.
+		Eventually(func() bool {
+			return eventExists(name, "DrainCancelled")
+		}, eventuallyTimeout, eventuallyPoll).Should(BeTrue())
+
+		Consistently(func(g Gomega) {
+			g.Expect(getNodeState(name).Annotations).NotTo(HaveKey(nodecommon.DrainedAnnotation),
+				"a cancelled drain must not be recorded as done")
+		}, negativeCheckDuration, eventuallyPoll).Should(Succeed())
 	})
 
 	It("does not cordon a node that has no draining annotation", func() {

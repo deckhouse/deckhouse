@@ -34,7 +34,7 @@ Node changed, or an eviction finished
   │
   ├─ No "draining" annotation →
   │    ├─ clear the metric
-  │    ├─ an eviction is running? → cancel it, wait for it to stop, uncordon
+  │    ├─ an eviction is running? → cancel it and wait for it to stop
   │    ├─ "drained=user" on a schedulable node? → remove the stale marker
   │    └─ done (a cordon with no eviction behind it belongs to updateapproval)
   │
@@ -61,12 +61,11 @@ reconcile is the only write.
 `internal/task.Manager` keys tasks by node name, so a node never runs two background
 operations at once — a second one is refused with `ErrExists`. A finished task is kept
 until its result is collected, which is what lets the reconcile decide the outcome.
-Cancelling waits for the goroutine to return before the caller undoes anything, so an
-uncordon never races an eviction still in flight.
+Cancelling waits for the goroutine to return before the caller does anything else, so
+nothing races an eviction still in flight.
 
 The registry lives in memory. A controller restart therefore forgets that an eviction
-was running: a request withdrawn while the controller is down leaves the node cordoned
-until someone runs `kubectl uncordon`.
+was running, and a request withdrawn while the controller is down goes unnoticed.
 
 ## Drain Timeout Resolution
 
@@ -90,7 +89,7 @@ own deadline.
 |--------|------|
 | `DrainSucceeded` | The eviction ended and the annotations were flipped |
 | `DrainFailed` | The eviction failed, or ran out of its timeout |
-| `DrainCancelled` | The request was withdrawn mid-eviction and the node was uncordoned |
+| `DrainCancelled` | The request was withdrawn and an eviction in flight was stopped |
 
 ## Files
 

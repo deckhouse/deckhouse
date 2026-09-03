@@ -162,14 +162,9 @@ func (r *Reconciler) cleanupDeletedNode(ctx context.Context, nodeName string) er
 	return err
 }
 
-// cancelDrainIfExist gives the node back when its request disappears.
-//
-// Only a running eviction is undone. A drain that succeeds consumes its own
-// request, so every node passes through here — uncordoning them all would
-// return half-updated nodes to service, and past that point the cordon belongs
-// to updateapproval. A restart forgets the eviction, and such a node keeps its
-// cordon until someone runs kubectl uncordon.
-func (r *Reconciler) cancelDrainIfExist(ctx context.Context, logger logr.Logger, node *corev1.Node) error {
+// cancelDrainIfExist stops the eviction when its request disappears, so a drain
+// nobody asked for any more does not run to completion and record a result.
+func (r *Reconciler) cancelDrainIfExist(ctx context.Context, _ logr.Logger, node *corev1.Node) error {
 	clearDrainMetric(node.Name)
 
 	cancelled, err := r.drains.cancel(ctx, node.Name)
@@ -180,10 +175,8 @@ func (r *Reconciler) cancelDrainIfExist(ctx context.Context, logger logr.Logger,
 		return nil
 	}
 
-	logger.Info("request withdrawn, node going back into service")
-	node.Spec.Unschedulable = false
 	r.Recorder.Eventf(node, corev1.EventTypeNormal, "DrainCancelled",
-		"drain of node %q was cancelled, node is schedulable again", node.Name)
+		"drain of node %q was cancelled", node.Name)
 	return nil
 }
 
