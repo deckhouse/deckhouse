@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-fc1d5deddaa81550dea7f4a50b3975a7c18832da2d65abd5642934472389651d",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 1,
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -274,9 +274,27 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Deckhouse Kubernetes Platform is not affected because operator-trivy components are Go binaries and do not run or expose Docker daemon code paths required to trigger this vulnerability.",
       "timestamp": "2026-06-22T14:40:00Z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://pkg.go.dev/vuln/GO-2026-5932",
+        "description": "The golang.org/x/crypto/openpgp package is unmaintained, unsafe by design, and has known security issues that will not be fixed.",
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        { "@id": "pkg:golang/golang.org/x/crypto" },
+        { "@id": "pkg:golang/golang.org/x/crypto@v0.53.0" },
+        { "@id": "pkg:golang/golang.org/x/crypto@v0.55.0" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 affects unmaintained golang.org/x/crypto/openpgp with no fixed version. The operator-trivy operator binary only uses other x/crypto subpackages; openpgp is not imported or executed.",
+      "timestamp": "2026-09-03T12:00:00Z"
     }
 
   ],
-  "timestamp": "2026-05-16T12:31:20Z"
+  "timestamp": "2026-05-16T12:31:20Z",
+  "last_updated": "2026-09-03T12:00:00Z"
 }
 
