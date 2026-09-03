@@ -1167,7 +1167,16 @@ func (b *ClusterBootstrapper) bootstrapPostInfraPreflights(ctx context.Context, 
 func (b *ClusterBootstrapper) bootstrapParseResources(ctx context.Context, bctx *bootstrapContext) error {
 	// NodeConfig documents describe machines, not objects to create. A full bootstrap
 	// took them out already; a run of this phase alone gets here with them still in.
+	// Refused, not dropped, where no immutable master exists to push them to.
 	if documents, rest := splitNodeCustomizations(bctx.metaConfig.ResourcesYAML); len(documents) > 0 {
+		immutableMaster, err := immutable.IsImmutableMaster(ctx, bctx.metaConfig)
+		if err != nil {
+			return err
+		}
+		if !immutableMaster {
+			return fmt.Errorf("the resources carry %d NodeConfig document(s), which describe immutable machines, "+
+				"and the master NodeGroup is not immutable: add systemType: Immutable to it, or drop the documents", len(documents))
+		}
 		bctx.metaConfig.ResourcesYAML = rest
 	}
 	if bctx.metaConfig.ResourcesYAML == "" {

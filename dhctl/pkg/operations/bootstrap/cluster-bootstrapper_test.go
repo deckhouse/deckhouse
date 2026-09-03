@@ -55,18 +55,47 @@ func TestNodesComeFromResources(t *testing.T) {
 // node alone and used to send the document to the API, where the CRD refused it.
 func TestParseResourcesKeepsNodeConfigDocumentsOutOfTheQueues(t *testing.T) {
 	bctx := &bootstrapContext{metaConfig: &config.MetaConfig{
-		ClusterType: config.StaticClusterType,
-		ResourcesYAML: "apiVersion: " + immutable.PayloadAPIVersion + "\nkind: " + immutable.NodeConfigKind + "\n" +
-			"metadata:\n  name: master-0\nspec:\n  nodeName: master-0\n" +
-			"---\n" +
-			"apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: kept\n  namespace: default\n",
+		ClusterType:   config.StaticClusterType,
+		ResourcesYAML: nodeConfigDocument + "---\n" + masterNodeGroup("Immutable") + "---\n" + keptConfigMap,
 	}}
 
 	require.NoError(t, (&ClusterBootstrapper{}).bootstrapParseResources(t.Context(), bctx))
 
 	queued := append(append(bctx.resourcesToCreateBefore, bctx.resourcesToCreateProvider...), bctx.resourcesToCreateAfter...)
-	require.Len(t, queued, 1)
-	require.Equal(t, "ConfigMap", queued[0].Object.GetKind(), "only the cluster object may be queued: %s", queued[0])
+	kinds := make([]string, 0, len(queued))
+	for _, resource := range queued {
+		kinds = append(kinds, resource.Object.GetKind())
+	}
+	require.ElementsMatch(t, []string{"NodeGroup", "ConfigMap"}, kinds, "only cluster objects may be queued")
+}
+
+// A document nobody can push is an operator's mistake, not something to drop
+// on the floor: without an immutable master the machines it describes are
+// never talked to, and the document used to fail on the API instead, loudly.
+func TestParseResourcesRefusesNodeConfigDocumentsWithoutAnImmutableMaster(t *testing.T) {
+	bctx := &bootstrapContext{metaConfig: &config.MetaConfig{
+		ClusterType:   config.StaticClusterType,
+		ResourcesYAML: nodeConfigDocument + "---\n" + masterNodeGroup("") + "---\n" + keptConfigMap,
+	}}
+
+	err := (&ClusterBootstrapper{}).bootstrapParseResources(t.Context(), bctx)
+	require.ErrorContains(t, err, "1 NodeConfig document")
+	require.ErrorContains(t, err, "systemType: Immutable")
+}
+
+const nodeConfigDocument = "apiVersion: " + immutable.PayloadAPIVersion + "\nkind: " + immutable.NodeConfigKind + "\n" +
+	"metadata:\n  name: master-0\nspec:\n  nodeName: master-0\n"
+
+const keptConfigMap = "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: kept\n  namespace: default\n"
+
+// masterNodeGroup is the master NodeGroup as the resources carry it; an empty
+// systemType leaves the field out, which is a classic master.
+func masterNodeGroup(systemType string) string {
+	spec := "spec:\n  nodeType: Static\n"
+	if systemType != "" {
+		spec += "  systemType: " + systemType + "\n"
+	}
+	return "apiVersion: deckhouse.io/v1\nkind: NodeGroup\nmetadata:\n  name: master\n" + spec
 }
 
 func newResource(t *testing.T, apiVersion, kind, name, namespace string, fields map[string]any) *template.Resource {
