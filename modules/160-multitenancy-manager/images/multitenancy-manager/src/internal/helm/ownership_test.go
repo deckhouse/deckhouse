@@ -18,8 +18,10 @@ package helm
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -29,6 +31,70 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
+
+func TestStampHoldoff(t *testing.T) {
+	cases := []struct {
+		name string
+		ns   *corev1.Namespace
+		want time.Duration
+	}{
+		{name: "nil", ns: nil, want: 0},
+		{name: "no creation timestamp", ns: &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}, want: 0},
+		{
+			name: "old enough",
+			ns: &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+				Name:              "foo",
+				CreationTimestamp: metav1.NewTime(time.Now().Add(-AdoptGracePeriod - time.Second)),
+			}},
+			want: 0,
+		},
+		{
+			name: "young with a release name is free to inspect",
+			ns: &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+				Name:              "foo",
+				CreationTimestamp: metav1.Now(),
+				Annotations:       map[string]string{ResourceAnnotationReleaseName: "foo"},
+			}},
+			want: 0,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, StampHoldoff(tc.ns))
+		})
+	}
+
+	t.Run("young empty namespace waits", func(t *testing.T) {
+		ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+			Name:              "foo",
+			CreationTimestamp: metav1.Now(),
+		}}
+		got := StampHoldoff(ns)
+		assert.Greater(t, got, time.Duration(0))
+		assert.LessOrEqual(t, got, AdoptGracePeriod)
+	})
+}
+
+func TestStampReleaseOwnership_YoungNamespace(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name:              "foo",
+		CreationTimestamp: metav1.Now(),
+	}}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ns).Build()
+
+	err := StampReleaseOwnership(context.Background(), c, "foo")
+	require.Error(t, err)
+	var holdoff StampHoldoffError
+	require.True(t, errors.As(err, &holdoff))
+	assert.Greater(t, holdoff.Remaining, time.Duration(0))
+
+	got := new(corev1.Namespace)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, got))
+	assert.NotEqual(t, ManagedByHelm, got.Labels[ResourceLabelManagedBy])
+	assert.Empty(t, got.Annotations[ResourceAnnotationReleaseName])
+}
 
 func TestStampReleaseOwnership(t *testing.T) {
 	scheme := runtime.NewScheme()
