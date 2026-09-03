@@ -69,7 +69,7 @@ spec:
                     state:
                       description: |
                         Высокоуровневое состояние жизненного цикла приложения.
-                        Всегда одно из: Pending, Failed, Updating, Ready, Degraded, Suspended.
+                        Всегда одно из: Pending, Failed, Updating, Ready, Degraded, Suspended, Deleting.
                     message:
                       description: |
                         Человеко-читаемое описание текущего состояния.
