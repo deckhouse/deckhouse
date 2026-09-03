@@ -16,12 +16,12 @@ limitations under the License.
 
 // Fuzz harnesses for the upstream registry parameters as they enter the module.
 //
-// Threat model coverage (registry-threat-model.md), harness 2, input side:
-// "устойчивость к некорректным значениям адреса, схемы, пути и удостоверяющего
-// центра вышестоящего хранилища, подставляемым в конфигурации служб". This is
-// where those four values arrive -- the ModuleConfig the operator writes, and
-// the deckhouse-registry secret whose contents reach the same fields through the
-// orchestrator hook.
+// Threat model coverage (registry-threat-model.md), harness 2, input side: the
+// document asks for robustness against malformed values of the upstream
+// registry's address, scheme, path and CA, as they are substituted into the
+// service configurations. This is where those four values arrive -- the
+// ModuleConfig the operator writes, and the deckhouse-registry secret whose
+// contents reach the same fields through the orchestrator hook.
 //
 // The values do not stop here. `imagesRepo` is split into a host and a path by
 // helpers.SplitAddressAndPath and both halves reach:

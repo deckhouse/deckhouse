@@ -16,10 +16,10 @@ limitations under the License.
 
 // Fuzz harness for the mirroring configuration.
 //
-// Threat model coverage (registry-threat-model.md), harness 6: "корректность
-// разбора перечня Upstreams, учётных записей и адресов реплик; поведение при
-// недоступности реплик и некорректных адресах". This is the consuming side --
-// the file the mirrorer reads at startup, written for it by
+// Threat model coverage (registry-threat-model.md), harness 6: correct parsing
+// of the Upstreams list, the accounts and the replica addresses, and behaviour
+// when a replica is unreachable or an address is malformed. This is the
+// consuming side -- the file the mirrorer reads at startup, written for it by
 // nodeservices-manager from the template in internal/staticpod. The producing
 // side has its own harness there (FuzzMirrorerConfigUpstreams); this one is
 // about what happens when the file that arrives is not the file that was meant.

@@ -16,9 +16,9 @@ limitations under the License.
 
 // Fuzz harness for the reload logic of registry-proxy-reloader.
 //
-// Threat model coverage (registry-threat-model.md), harness 9: "входной файл
-// nginx_new.conf для watcher.go (частично записанные, усечённые, синтаксически
-// некорректные варианты)". The companion targets in fuzz_test.go cover
+// Threat model coverage (registry-threat-model.md), harness 9: the input file
+// nginx_new.conf as watcher.go receives it -- partially written, truncated and
+// syntactically invalid variants. The companion targets in fuzz_test.go cover
 // file_comparison.go; this one covers the decision built on top of it, which is
 // what TM-21, TM-22 and TM-23 are about.
 //
