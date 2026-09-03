@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package module
+package config
 
 import (
 	"context"
@@ -42,7 +42,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
@@ -55,9 +54,9 @@ import (
 )
 
 const (
-	controllerName = "d8-module-controller"
+	controllerName = "d8-module-config-controller"
 
-	maxConcurrentReconciles = 1
+	maxConcurrentReconciles = 3
 
 	moduleNotFoundInterval = 3 * time.Minute
 
@@ -99,10 +98,10 @@ func RegisterController(
 
 	if err := ctrl.NewControllerManagedBy(runtimeManager).
 		Named(controllerName).
-		For(&v1alpha2.Module{}).
+		For(&v1alpha1.ModuleConfig{}).
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
-		Watches(&v1alpha2.Module{}, ctrlhandler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
-			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: obj.(*v1alpha2.Module).Name}}}
+		Watches(&v1alpha1.Module{}, ctrlhandler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
+			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: obj.(*v1alpha1.Module).Name}}}
 		}), builder.WithPredicates(predicate.Funcs{
 			CreateFunc: func(_ event.CreateEvent) bool {
 				return true
@@ -157,11 +156,11 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	// wait until init
 	r.init.Wait()
 
-	r.logger.Debug("reconciling module", slog.String("name", req.Name))
-	module := new(v1alpha2.Module)
-	if err := r.client.Get(ctx, client.ObjectKey{Name: req.Name}, module); err != nil {
+	r.logger.Debug("reconciling module config", slog.String("name", req.Name))
+	moduleConfig := new(v1alpha1.ModuleConfig)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: req.Name}, moduleConfig); err != nil {
 		if apierrors.IsNotFound(err) {
-			r.logger.Warn("module not found", slog.String("name", req.Name))
+			r.logger.Warn("module config not found", slog.String("name", req.Name))
 			return ctrl.Result{}, nil
 		}
 
@@ -170,13 +169,13 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	}
 
 	// handle delete event
-	if !module.DeletionTimestamp.IsZero() {
+	if !moduleConfig.DeletionTimestamp.IsZero() {
 		r.logger.Debug("deleting module config", slog.String("name", req.Name))
-		return r.deleteModule(ctx, module)
+		return r.deleteModuleConfig(ctx, moduleConfig)
 	}
 
 	// handle create/update events
-	return r.handleModuleConfig(ctx, module)
+	return r.handleModuleConfig(ctx, moduleConfig)
 }
 
 // preflight waits until config kube config manager is started and runs module event loop
@@ -416,38 +415,36 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	return ctrl.Result{}, nil
 }
 
-func (r *reconciler) deleteModule(ctx context.Context, module *v1alpha2.Module) (ctrl.Result, error) {
+func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig) (ctrl.Result, error) {
 	// send event to addon-operator
-	// TODO: ADD SENDING EVENT TO ADDON_OPERATOR WITH MODULE
-	// r.handler.HandleEvent(moduleConfig, config.EventDelete)
+	r.handler.HandleEvent(moduleConfig, config.EventDelete)
 
-	// TODO: add ModuleV2 metrics
 	// clear obsolete metrics
-	metricGroup := fmt.Sprintf(metrics.ObsoleteConfigMetricGroupTemplate, module.Name)
+	metricGroup := fmt.Sprintf(metrics.ObsoleteConfigMetricGroupTemplate, moduleConfig.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	// clear conflict metrics
-	metricGroup = fmt.Sprintf(metrics.ModuleConflictMetricGroupTemplate, module.Name)
+	metricGroup = fmt.Sprintf(metrics.ModuleConflictMetricGroupTemplate, moduleConfig.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
-	r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 0.0, map[string]string{metrics.LabelModule: module.GetName()})
-	r.metricStorage.GaugeSet(telemetry.WrapName(metrics.DeprecatedModuleIsEnabled), 0.0, map[string]string{metrics.LabelModule: module.GetName()})
+	r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 0.0, map[string]string{metrics.LabelModule: moduleConfig.GetName()})
+	r.metricStorage.GaugeSet(telemetry.WrapName(metrics.DeprecatedModuleIsEnabled), 0.0, map[string]string{metrics.LabelModule: moduleConfig.GetName()})
 
-	// module := new(v1alpha1.Module)
-	// if err := r.client.Get(ctx, client.ObjectKey{Name: moduleConfig.Name}, module); err != nil {
-	// 	if apierrors.IsNotFound(err) {
-	// 		r.logger.Warn("module not found", slog.String("name", moduleConfig.Name))
-	// 		if err = r.removeFinalizer(ctx, moduleConfig); err != nil {
-	// 			r.logger.Error("failed to remove finalizer", slog.String("module", moduleConfig.Name), log.Err(err))
-	// 			return ctrl.Result{}, err
-	// 		}
+	module := new(v1alpha1.Module)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleConfig.Name}, module); err != nil {
+		if apierrors.IsNotFound(err) {
+			r.logger.Warn("module not found", slog.String("name", moduleConfig.Name))
+			if err = r.removeFinalizer(ctx, moduleConfig); err != nil {
+				r.logger.Error("failed to remove finalizer", slog.String("module", moduleConfig.Name), log.Err(err))
+				return ctrl.Result{}, err
+			}
 
-	// 		return ctrl.Result{}, nil
-	// 	}
+			return ctrl.Result{}, nil
+		}
 
-	// 	r.logger.Error("failed to get module", slog.String("name", moduleConfig.Name), log.Err(err))
-	// 	return ctrl.Result{}, err
-	// }
+		r.logger.Error("failed to get module", slog.String("name", moduleConfig.Name), log.Err(err))
+		return ctrl.Result{}, err
+	}
 
 	// skip system modules
 	if module.Name == moduleDeckhouse || module.Name == moduleGlobal {
@@ -535,7 +532,7 @@ func (r *reconciler) removeFinalizer(ctx context.Context, config *v1alpha1.Modul
 	})
 }
 
-func (r *reconciler) disableModule(ctx context.Context, module *v1alpha2.Module) error {
+func (r *reconciler) disableModule(ctx context.Context, module *v1alpha1.Module) error {
 	r.logger.Debug("disable the module", slog.String("module", module.Name))
 
 	// remove module documentation immediately on disable so docs-builder drops it
@@ -543,28 +540,28 @@ func (r *reconciler) disableModule(ctx context.Context, module *v1alpha2.Module)
 		return fmt.Errorf("delete module documentation: %w", err)
 	}
 
-	return utils.UpdateStatus[*v1alpha2.Module](ctx, r.client, module, func(module *v1alpha2.Module) bool {
-		if module.IsCondition(v1alpha2.ModuleConditionEnabledByModuleConfig, corev1.ConditionFalse) {
+	return utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
+		if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionFalse) {
 			return false
 		}
 
 		switch module.Status.Phase {
-		case v1alpha2.ModulePhaseConflict,
-			v1alpha2.ModulePhaseDownloading,
-			v1alpha2.ModulePhaseDownloadingError:
+		case v1alpha1.ModulePhaseConflict,
+			v1alpha1.ModulePhaseDownloading,
+			v1alpha1.ModulePhaseDownloadingError:
 			// modules in Conflict should not be installed, and they cannot receive events, so set Available phase manually
 			// same thing if module is not installed
-			module.Status.Phase = v1alpha2.ModulePhaseAvailable
-			module.SetConditionFalse(v1alpha2.ModuleConditionEnabledByModuleManager, "", "")
-			module.SetConditionFalse(v1alpha2.ModuleConditionIsReady, v1alpha2.ModuleReasonNotInstalled, v1alpha2.ModuleMessageNotInstalled)
+			module.Status.Phase = v1alpha1.ModulePhaseAvailable
+			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, "", "")
+			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
 		default:
 			if !module.IsEnabledByBundle(r.edition.Name, r.edition.Bundle) {
-				module.SetConditionFalse(v1alpha2.ModuleConditionIsReady, v1alpha2.ModuleReasonDisabled, v1alpha2.ModuleMessageDisabled)
+				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
 			}
 		}
 
-		module.SetConditionFalse(v1alpha2.ModuleConditionEnabledByModuleConfig, "", "")
-		module.SetConditionUnknown(v1alpha2.ModuleConditionLastReleaseDeployed, "", "")
+		module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, "", "")
+		module.SetConditionUnknown(v1alpha1.ModuleConditionLastReleaseDeployed, "", "")
 
 		return true
 	})
