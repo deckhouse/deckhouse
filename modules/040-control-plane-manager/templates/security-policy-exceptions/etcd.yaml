@@ -1,0 +1,52 @@
+{{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: etcd
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "etcd")) | nindent 2 }}
+spec:
+  securityContext:
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          etcd must run as root to manage its data directory under /var/lib/etcd and
+          read PKI material under /etc/kubernetes/pki/etcd on the master node.
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          UID 0 is required for hostPath access to etcd data and certificates.
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          etcd is a static control-plane pod that advertises and listens on the node
+          IP for client and peer traffic.
+    hostPorts:
+      - port: 2381
+        protocol: TCP
+        metadata:
+          description: etcd metrics and health probe port (containerPort with hostNetwork).
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          etcd stores its database and certificates on the node filesystem.
+    hostPath:
+      allowedValues:
+        - path: /var/lib/etcd
+          readOnly: false
+          metadata:
+            description: etcd data directory on the master node.
+        - path: /etc/kubernetes/pki/etcd
+          readOnly: true
+          metadata:
+            description: etcd TLS certificates managed by control-plane-manager.
+{{- end }}
