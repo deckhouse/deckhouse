@@ -14,6 +14,8 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
+// TODO: Remove/change when cluster-configuration is removed to use only ModuleConfig control-plane-manager
+
 // Package network resolves the three cluster network parameters
 // (podSubnetCIDR, serviceSubnetCIDR, podSubnetNodeCIDRPrefix), which are being
 // migrated from the deprecated ClusterConfiguration into the network group of

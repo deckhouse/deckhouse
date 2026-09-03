@@ -17,6 +17,7 @@ limitations under the License.
 package bashiblecontext
 
 import (
+	"cmp"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -107,20 +108,13 @@ func (s *Service) readClusterConfiguration(ctx context.Context) *bashibleCluster
 		return nil
 	}
 
-	// The three network parameters are being migrated to ModuleConfig control-plane-manager;
-	// ModuleConfig wins over the deprecated ClusterConfiguration field when set. Fail-open, like the
-	// rest of this function: an unreadable ModuleConfig must not take down the whole bashible
-	// context, it just leaves these three at whatever the secret already gave them.
+	// TODO: Remove when cluster-configuration is removed and use only ModuleConfig
+	// ModuleConfig wins over these deprecated fields when set (see package network). Fail-open,
+	// like the rest of this function: ignore the error and keep the secret's values.
 	mcNetwork, _ := network.FromModuleConfig(ctx, s.reader())
-	if mcNetwork.PodSubnetNodeCIDRPrefix != "" {
-		cfg.PodSubnetNodeCIDRPrefix = mcNetwork.PodSubnetNodeCIDRPrefix
-	}
-	if mcNetwork.PodSubnetCIDR != "" {
-		cfg.PodSubnetCIDR = mcNetwork.PodSubnetCIDR
-	}
-	if mcNetwork.ServiceSubnetCIDR != "" {
-		cfg.ServiceSubnetCIDR = mcNetwork.ServiceSubnetCIDR
-	}
+	cfg.PodSubnetNodeCIDRPrefix = cmp.Or(mcNetwork.PodSubnetNodeCIDRPrefix, cfg.PodSubnetNodeCIDRPrefix)
+	cfg.PodSubnetCIDR = cmp.Or(mcNetwork.PodSubnetCIDR, cfg.PodSubnetCIDR)
+	cfg.ServiceSubnetCIDR = cmp.Or(mcNetwork.ServiceSubnetCIDR, cfg.ServiceSubnetCIDR)
 
 	return cfg
 }
