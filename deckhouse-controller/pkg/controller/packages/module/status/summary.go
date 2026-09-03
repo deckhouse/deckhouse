@@ -35,6 +35,8 @@ import (
 //     lost a requirement (Installed=False with the scheduler reason and the
 //     runtime conditions Unknown, which is what distinguishes it from a
 //     first-install Pending).
+//   - Deleting:  the runtime accepted the removal and is tearing the module
+//     down; every condition reports Deleting until the resource disappears.
 const (
 	statePending   = "Pending"
 	stateFailed    = "Failed"
@@ -42,6 +44,7 @@ const (
 	stateReady     = "Ready"
 	stateDegraded  = "Degraded"
 	stateSuspended = "Suspended"
+	stateDeleting  = "Deleting"
 )
 
 // Scheduler verdict reasons of the intentional-disable family (see the
@@ -265,6 +268,13 @@ var summarySuspendedRequirements = advice{
 	tip:     "Solve the module requirements. After it, the controller will automatically restore all conditions and resume operation.",
 }
 
+// summaryDeleting is the fixed Summary for a module the runtime is tearing down.
+var summaryDeleting = advice{
+	state:   stateDeleting,
+	message: "Module is being deleted",
+	tip:     "No action is required. The resource disappears once its release is taken down.",
+}
+
 // summaryReady is the fixed Summary for a healthy module: install or update
 // completed and every primary condition is True. State alone conveys it, so
 // there is no message or tip.
@@ -289,6 +299,12 @@ var summaryUpdating = advice{
 // install-completion check below mirrors mapInstalled's success condition so
 // the freshly-installed run reports ready rather than pending.
 func summarize(state condmap.State) (string, string, string) {
+	// Deleting outranks every other signal: the conditions still describe the last
+	// reconcile, so reading them would report a problem the user cannot act on.
+	if state.IsDeleting() {
+		return summaryDeleting.state, summaryDeleting.message, summaryDeleting.tip
+	}
+
 	// Suspended — the scheduler withdrew a running module. Shares the mapper's
 	// definition exactly, so the two can never drift apart. The wording splits
 	// on the verdict family: switched off vs lost a requirement.

@@ -46,6 +46,12 @@ func withExternalCondition(cond string, status metav1.ConditionStatus, reason st
 	}
 }
 
+func withDeleting() mappingOption {
+	return func(state *condmap.State) {
+		state.Deleting = true
+	}
+}
+
 func withSuccessfulApply() []mappingOption {
 	return []mappingOption{
 		withInternalCondition(string(intstatus.ConditionRequirementsMet), metav1.ConditionTrue, "Enabled"),

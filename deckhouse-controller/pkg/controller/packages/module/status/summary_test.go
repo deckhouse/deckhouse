@@ -16,12 +16,14 @@ package status
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/condmap"
 	intstatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 )
 
 // summaryFor builds the pre-mapping state from the given options and runs
@@ -172,6 +174,26 @@ func TestModuleSummaryScenarios(t *testing.T) {
 			message: "",
 			tip:     "",
 		},
+
+		// ── Deleting (teardown accepted by the runtime) ────────────────
+
+		{
+			// A disabled module being deleted reports the teardown, not the
+			// scheduler verdict that would otherwise win.
+			name: "deleting: disabled module is torn down",
+			opts: []mappingOption{
+				installed(),
+				withInternalCondition(intRequirementsMet, metav1.ConditionFalse, reasonDisabled),
+				withDeleting(),
+			},
+			wantConds: map[string]*expectedCondition{
+				ConditionEnabled:   {metav1.ConditionFalse, condmap.ReasonDeleting},
+				ConditionInstalled: {metav1.ConditionFalse, condmap.ReasonDeleting},
+			},
+			state:   stateDeleting,
+			message: "Module is being deleted",
+			tip:     "No action is required. The resource disappears once its release is taken down.",
+		},
 	}
 
 	for _, tc := range cases {
@@ -196,4 +218,38 @@ func TestModuleSummaryScenarios(t *testing.T) {
 			assert.Equal(t, tc.tip, tip, "summary tip")
 		})
 	}
+}
+
+// TestComputeAndApplyConditionsOnDeletion covers this package's own deletionTimestamp
+// wiring: the cases above set condmap.State.Deleting directly and never reach it.
+func TestComputeAndApplyConditionsOnDeletion(t *testing.T) {
+	deleted := metav1.NewTime(time.Unix(0, 0))
+	module := &v1alpha2.Module{
+		ObjectMeta: metav1.ObjectMeta{Name: "mod", DeletionTimestamp: &deleted},
+	}
+
+	// A Run task that finished after the teardown started still reports
+	// ManifestsApplied, which is what would otherwise commit the version.
+	svc := &Service{
+		mapper: buildMapper(),
+		getter: func(string) intstatus.Status {
+			return intstatus.Status{
+				Version: "1.2.3",
+				Conditions: []intstatus.Condition{
+					{Type: intstatus.ConditionManifestsApplied, Status: metav1.ConditionTrue},
+					{Type: intstatus.ConditionScaled, Status: metav1.ConditionTrue},
+				},
+			}
+		},
+	}
+
+	svc.computeAndApplyConditions("mod", module)
+
+	assert.Len(t, module.Status.Conditions, 7)
+	for _, cond := range module.Status.Conditions {
+		assert.Equal(t, metav1.ConditionFalse, cond.Status, "condition %s status", cond.Type)
+		assert.Equal(t, condmap.ReasonDeleting, cond.Reason, "condition %s reason", cond.Type)
+	}
+	assert.Equal(t, stateDeleting, module.Status.Summary.State)
+	assert.Empty(t, module.Status.CurrentVersion.Version)
 }

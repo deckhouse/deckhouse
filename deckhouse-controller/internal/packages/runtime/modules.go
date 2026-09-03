@@ -323,6 +323,8 @@ func (r *Runtime) RemoveModule(name string) bool {
 		return true
 	}
 
+	r.status.SetDeleting(name)
+
 	if pkg := r.modules[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, app.NamespaceDeckhouse, false, r.nelmService, r.queueService, r.logger))
 	} else {
@@ -361,6 +363,8 @@ func (r *Runtime) RemoveEmbeddedModule(name string) bool {
 	if ctx == nil {
 		return true
 	}
+
+	r.status.SetDeleting(name)
 
 	if pkg := r.modules[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, app.NamespaceDeckhouse, false, r.nelmService, r.queueService, r.logger))
