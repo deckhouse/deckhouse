@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -39,6 +40,45 @@ const ReleaseStorageNamespace = "d8-multitenancy-manager"
 // ErrForeignRelease is returned when a namespace already names a Helm release
 // that is not this project's. Adoption must not overwrite that metadata.
 var ErrForeignRelease = errors.New("namespace is owned by a different Helm release")
+
+// AdoptGracePeriod is how long a freshly created namespace is left unclaimed so
+// a Helm or Argo install can write its own release annotations in a follow-up
+// apply. RetryOnConflict already closes the lost-update race (annotate between
+// Get and Update); this window covers the sequential case we actually hit:
+// create an empty namespace, then stamp it a moment later.
+const AdoptGracePeriod = 15 * time.Second
+
+// StampHoldoffError means the namespace is still inside AdoptGracePeriod and
+// does not yet name a Helm release. Callers must requeue for Remaining and
+// must not persist ownership or set an error condition.
+type StampHoldoffError struct {
+	Remaining time.Duration
+}
+
+func (e StampHoldoffError) Error() string {
+	return "namespace is too new to claim"
+}
+
+// StampHoldoff is the remaining time before we may claim ns. Zero means it is
+// free to stamp: old enough, already names a release, or has no creation
+// timestamp (tests and decoded objects without metadata).
+func StampHoldoff(ns *corev1.Namespace) time.Duration {
+	if ns == nil || ns.Annotations[ResourceAnnotationReleaseName] != "" {
+		return 0
+	}
+	created := ns.CreationTimestamp.Time
+	if created.IsZero() {
+		return 0
+	}
+	remaining := AdoptGracePeriod - time.Since(created)
+	if remaining <= 0 {
+		return 0
+	}
+	if remaining > AdoptGracePeriod {
+		return AdoptGracePeriod
+	}
+	return remaining
+}
 
 // ForeignRelease is the Helm release already on ns when it is not this
 // project's. Helm identity is the (release-name, release-namespace) pair.
@@ -122,6 +162,9 @@ func StampReleaseOwnership(ctx context.Context, c client.Client, projectName str
 			return fmt.Errorf("get the '%s' namespace: %w", projectName, err)
 		}
 		ours := ReleaseName(projectName)
+		if delay := StampHoldoff(namespace); delay > 0 {
+			return StampHoldoffError{Remaining: delay}
+		}
 		if foreign := ForeignRelease(namespace, ours); foreign != "" {
 			return fmt.Errorf("%w %q", ErrForeignRelease, foreign)
 		}
