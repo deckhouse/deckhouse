@@ -44,7 +44,7 @@ discovery:
   d8SpecificNodeCountByRole:
     master: 3
   clusterUUID: f49dd1c3-a63a-4565-a06c-625e35587eab
-  kubernetesVersion: 1.32.8
+  kubernetesVersion: 1.33.8
 clusterConfiguration:
   apiVersion: deckhouse.io/v1
   cloud:
@@ -54,7 +54,7 @@ clusterConfiguration:
   clusterType: Cloud
   defaultCRI: Containerd
   kind: ClusterConfiguration
-  kubernetesVersion: "1.32"
+  kubernetesVersion: "1.33"
   podSubnetCIDR: 10.111.0.0/16
   podSubnetNodeCIDRPrefix: "24"
   serviceSubnetCIDR: 10.222.0.0/16
@@ -139,7 +139,7 @@ internal:
       iops: 42
       instanceType: t2.medium
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.32"
+    kubernetesVersion: "1.33"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -197,7 +197,7 @@ internal:
       diskType: superdisk #optional
       diskSizeGb: 42 #optional
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.32"
+    kubernetesVersion: "1.33"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -283,7 +283,7 @@ internal:
       diskType: superdisk #optional
       diskSizeGb: 42 #optional
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.32"
+    kubernetesVersion: "1.33"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -351,7 +351,7 @@ internal:
       - mynetwork
       - mynetwork2
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.32"
+    kubernetesVersion: "1.33"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -373,7 +373,7 @@ internal:
         aaa: bbb
         ccc: ddd
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.32"
+    kubernetesVersion: "1.33"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -434,7 +434,7 @@ internal:
         nestedHardwareVirtualization: true
         memoryReservation: 42
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.32"
+    kubernetesVersion: "1.33"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -461,7 +461,7 @@ internal:
         nestedHardwareVirtualization: false
         memoryReservation: 42
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.32"
+    kubernetesVersion: "1.33"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -530,7 +530,7 @@ internal:
       additionalLabels: # optional
         my: label
     nodeType: CloudEphemeral
-    kubernetesVersion: "1.32"
+    kubernetesVersion: "1.33"
     cri:
       type: "Containerd"
     cloudInstances:
@@ -567,7 +567,7 @@ internal:
   nodeGroups:
   - name: worker
     nodeType: Static
-    kubernetesVersion: "1.32"
+    kubernetesVersion: "1.33"
     cri:
       type: "Containerd"
 `
@@ -2073,7 +2073,7 @@ internal:
         resourceReservation:
           mode: Auto
         topologyManager: {}
-      kubernetesVersion: "1.32"
+      kubernetesVersion: "1.33"
       manualRolloutID: ""
       name: worker
       nodeType: CloudEphemeral

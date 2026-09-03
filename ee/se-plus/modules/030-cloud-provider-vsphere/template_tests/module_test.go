@@ -609,9 +609,9 @@ const tolerationsAnyNodeWithUninitialized = `
 const moduleNamespace = "d8-cloud-provider-vsphere"
 
 // vsphereModulesImages returns module images with the vsphere digests explicitly
-// populated for Kubernetes 1.32. Some earlier specs mutate the shared
+// populated for Kubernetes 1.33. Some earlier specs mutate the shared
 // library.DefaultImagesDigests map in place, so we can not rely on GetModulesImages()
-// keeping the 1.32 image keys intact.
+// keeping the 1.33 image keys intact.
 func vsphereModulesImages() map[string]interface{} {
 	images := GetModulesImages()
 	if images["digests"] == nil {
@@ -619,9 +619,9 @@ func vsphereModulesImages() map[string]interface{} {
 	}
 	digests := images["digests"].(map[string]interface{})
 	digests["cloudProviderVsphere"] = map[string]interface{}{
-		"cloudControllerManager132": "sha256:ccm132digest",
+		"cloudControllerManager133": "sha256:ccm133digest",
 		"cloudDataDiscoverer":       "sha256:cdddigest",
-		"vsphereCsiPlugin132":       "sha256:csiplugin132digest",
+		"vsphereCsiPlugin133":       "sha256:csiplugin133digest",
 		"vsphereCsiPluginLegacy":    "sha256:csipluginlegacydigest",
 		"terraformManager":          "sha256:terraformdigest",
 	}
@@ -633,7 +633,7 @@ var _ = Describe("Module :: cloud-provider-vsphere :: helm template ::", func() 
 
 	Context("Vsphere", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.33", "1.33"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesA)
 			f.HelmRender()
@@ -796,7 +796,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Hybrid vSphere", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(hybridGlobalValues, "1.32", "1.32"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(hybridGlobalValues, "1.33", "1.33"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesHybrid)
 			f.HelmRender()
@@ -865,7 +865,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Vsphere", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.33", "1.33"))
 			images := GetModulesImages()
 			if images["digests"] == nil {
 				images["digests"] = make(map[string]interface{})
@@ -940,7 +940,7 @@ labels:
 
 		Context("Unsupported Kubernetes version", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.33", "1.33"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesA)
 				f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
@@ -958,7 +958,7 @@ labels:
 
 	Context("Vsphere with default StorageClass specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.33", "1.33"))
 			images := GetModulesImages()
 			if images["digests"] == nil {
 				images["digests"] = make(map[string]interface{})
@@ -996,7 +996,7 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Vsphere with NSX-T specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.33", "1.33"))
 			images := GetModulesImages()
 			if images["digests"] == nil {
 				images["digests"] = make(map[string]interface{})
@@ -1058,7 +1058,7 @@ nodes:
 
 	Context("Vsphere: DatastoreCluster at index 0 is not rendered (defense-in-depth)", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.33", "1.33"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesDCClusterFirst)
 			f.HelmRender()
@@ -1079,7 +1079,7 @@ nodes:
 
 	Context("Vsphere with NSX-T with LoadBalancerClass specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.33", "1.33"))
 			images := GetModulesImages()
 			if images["digests"] == nil {
 				images["digests"] = make(map[string]interface{})
@@ -1147,8 +1147,8 @@ vcenter:
 
 	Context("Vsphere with provider caBundle specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.32.1")
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.33", "1.33"))
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.33.1")
 			f.ValuesSet("global.modulesImages", vsphereModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesProviderCABundle)
 			f.HelmRender()
@@ -1287,8 +1287,8 @@ vcenter:
 
 	Context("Vsphere with NSX-T caBundle specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.32.1")
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.33", "1.33"))
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.33.1")
 			f.ValuesSet("global.modulesImages", vsphereModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesNsxtCABundle)
 			f.HelmRender()
@@ -1320,8 +1320,8 @@ vcenter:
 
 	Context("Vsphere without any caBundle", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.32.1")
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.33", "1.33"))
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.33.1")
 			f.ValuesSet("global.modulesImages", vsphereModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesA)
 			f.HelmRender()
@@ -1360,8 +1360,8 @@ vcenter:
 
 	Context("Vsphere with provider caBundle and insecure: true (ignores caBundle)", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.32.1")
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.33", "1.33"))
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.33.1")
 			f.ValuesSet("global.modulesImages", vsphereModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesProviderCABundleInsecure)
 			f.HelmRender()
@@ -1426,8 +1426,8 @@ vcenter:
 
 	Context("Vsphere without provider insecure (default false)", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.32.1")
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.33", "1.33"))
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.33.1")
 			f.ValuesSet("global.modulesImages", vsphereModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesProviderWithoutInsecure)
 			f.HelmRender()
@@ -1492,8 +1492,8 @@ vcenter:
 
 	Context("Vsphere with NSX-T caBundle and insecureFlag: true (ignores caBundle)", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.32.1")
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.33", "1.33"))
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.33.1")
 			f.ValuesSet("global.modulesImages", vsphereModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesNsxtCABundleInsecure)
 			f.HelmRender()
@@ -1517,8 +1517,8 @@ vcenter:
 
 	Context("Vsphere without NSX-T insecureFlag (default false)", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
-			f.ValuesSet("global.discovery.kubernetesVersion", "1.32.1")
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.33", "1.33"))
+			f.ValuesSet("global.discovery.kubernetesVersion", "1.33.1")
 			f.ValuesSet("global.modulesImages", vsphereModulesImages())
 			f.ValuesSetFromYaml("cloudProviderVsphere", moduleValuesNsxtWithoutInsecure)
 			f.HelmRender()

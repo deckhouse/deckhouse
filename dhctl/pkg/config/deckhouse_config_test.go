@@ -30,7 +30,7 @@ kind: ClusterConfiguration
 clusterType: Static
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.32"
+kubernetesVersion: "1.33"
 clusterDomain: "cluster.local"
 ---
 apiVersion: deckhouse.io/v1
@@ -88,7 +88,7 @@ kind: ClusterConfiguration
 clusterType: Static
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.32"
+kubernetesVersion: "1.33"
 clusterDomain: "cluster.local"
 ---
 apiVersion: deckhouse.io/v1alpha1
