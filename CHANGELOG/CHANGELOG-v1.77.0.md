@@ -97,6 +97,17 @@
     bound to the subject with a RoleBinding in the same namespace, or with a ClusterRole and a ClusterRoleBinding to grant it cluster-wide.
  - Subjects holding only the user-authn view role or the legacy ClusterAdmin user-authn role can no longer list `passwords.dex.coreos.com` or `offlinesessionses.dex.coreos.com`. Use `User` objects for user inventory instead.
  - The CoreDNS and kube-dns components will be restarted after the update.
+ - The SSH key and sudo password in `SSHCredentials` (used by CAPS to reach static nodes) are now
+    returned as `<omitted>` to callers without `get` on the `sshcredentials/sensitive` subresource,
+    masked in the audit log, and encrypted in etcd when `apiserver.encryptionEnabled` is on.
+    `d8:manage:infrastructure:viewer` and `:manager` no longer see these values. CAPS still does, and
+    so does every holder of a `deckhouse.io` wildcard, since `*` matches subresources: `SuperAdmin`,
+    the `kubeadm:cluster-admins` group, and the `deckhouse` and `webhook-handler` SAs of `d8-system`.
+    
+    For masked readers the `last-applied-configuration` annotation disappears from `get -o yaml`,
+    and creating an `SSHCredentials` with `<omitted>` fails with `422 Invalid` — editing still works.
+    Treat previously exposed keys as leaked and rotate them. With `apiserver.encryptionEnabled` on,
+    rewrite existing objects to encrypt them: `d8 k get sshcredentials -o json | d8 k replace -f -`.
  - The `cni-cilium` components (cilium-agent, operator) will be restarted. A change has been made to the Network Policy that affects the behavior of the `ipBlock: 0.0.0.0/0` rule.
  - The `d8:manage:permission:subsystem:kubernetes:view_resources` role no longer grants `nodes/proxy`,
     `nodes/log`, `nodes/metrics` and `nodes/stats`. Users holding `d8:manage:kubernetes:viewer`,
@@ -163,6 +174,7 @@
     and the `kubeadm:cluster-admins` group keep the right. A subject that authored templates through
     the manager role has to be granted one of those instead.
  - `spec.oidc.scopes` items are now validated against `^\S+$` in both served versions of DexProvider. A scope containing whitespace could never work, because OAuth2 passes scopes as a space-delimited list, but it was previously admitted and silently broke authentication. Stored objects are not invalidated, however a DexProvider holding such a value is rejected on its next write until the value is corrected, which also affects a GitOps flow that reapplies the object unchanged.
+ - cilium-agent pods are restarted on all nodes.
  - kube-scheduler will be restarted on all control-plane nodes.
     
     Pod placement changes only for pods that explicitly set `schedulerName: high-node-utilization`;
@@ -390,9 +402,11 @@
     Project administrators (user-authz Admin access level) can no longer create, update or delete SecurityPolicyException resources; the permission now requires ClusterAdmin. Clusters that granted accessLevel Admin to untrusted tenants over RBAC v1 were exposed to node-level privilege escalation. RBAC v2 use/manage roles were never affected.
  - **[admission-policy-engine]** Updated Gatekeeper to 3.22.2 to fix CVEs. [#20454](https://github.com/deckhouse/deckhouse/pull/20454)
  - **[admission-policy-engine]** fix cve [#21986](https://github.com/deckhouse/deckhouse/pull/21986)
+ - **[candi]** Bump base images to v0.5.85, moving the Go builders to 1.25.13 and clearing Go stdlib CVEs in prebuilt images. [#22684](https://github.com/deckhouse/deckhouse/pull/22684)
  - **[candi]** Changed the automatic Kubernetes version from 1.33 to 1.34. [#20572](https://github.com/deckhouse/deckhouse/pull/20572)
     Automatic k8s version is changed to 1.34 from 1.33, automatic setting will result in upgrade.
  - **[candi]** Enable the DRADeviceTaints feature gate by default for Kubernetes 1.33–1.35. [#21745](https://github.com/deckhouse/deckhouse/pull/21745)
+ - **[candi]** Fix a flaky containerd-integrity check that could trigger spurious full containerd wipes and reboots. [#22624](https://github.com/deckhouse/deckhouse/pull/22624)
  - **[candi]** Fixed 01-bootstrap-prerequisites.sh. [#20367](https://github.com/deckhouse/deckhouse/pull/20367)
  - **[candi]** Fixed containerd credential escaping by rendering username and password into the auth string. [#20589](https://github.com/deckhouse/deckhouse/pull/20589)
  - **[candi]** Fixed static node cleanup to wipe data on externally mounted volumes before unmounting, preventing stale data from causing re-bootstrap failures. [#20066](https://github.com/deckhouse/deckhouse/pull/20066)
@@ -478,12 +492,15 @@
  - **[cni-cilium]** Fixed CVE-2026-41520 for the cilium-bugtool util. [#20067](https://github.com/deckhouse/deckhouse/pull/20067)
  - **[cni-cilium]** Fixed Cilium agent CPU overload on nodes with many CPUs. [#19903](https://github.com/deckhouse/deckhouse/pull/19903)
  - **[cni-cilium]** Fixed infinite reconciliation of EgressGateway objects and improved status reporting. [#19219](https://github.com/deckhouse/deckhouse/pull/19219)
+ - **[cni-cilium]** Restore cilium-agent startup on nodes with BPF JIT hardening enabled by tolerating ErrRestrictedKernel in the eBPF probe. [#22646](https://github.com/deckhouse/deckhouse/pull/22646)
+    cilium-agent pods are restarted on all nodes.
  - **[cni-cilium]** Updated Cilium from 1.17.4 to 1.17.17. [#20720](https://github.com/deckhouse/deckhouse/pull/20720)
     The `cni-cilium` components (cilium-agent, operator) will be restarted. A change has been made to the Network Policy that affects the behavior of the `ipBlock: 0.0.0.0/0` rule.
  - **[cni-flannel]** Reverted module stage from Deprecated back to General Availability to stop false deprecation alerts. [#20294](https://github.com/deckhouse/deckhouse/pull/20294)
  - **[cni-simple-bridge]** Fix simple bridge script to add ip rule for two NICs nodes. [#20428](https://github.com/deckhouse/deckhouse/pull/20428)
  - **[common]** Added checks for the `observability` module in `upmeter`. [#18111](https://github.com/deckhouse/deckhouse/pull/18111)
  - **[common]** Added support for `op_*` PromQL functions to the `operator-prometheus` parser. [#20254](https://github.com/deckhouse/deckhouse/pull/20254)
+ - **[common]** Bump golang.org/x/net, golang.org/x/text, golang.org/x/sys and google.golang.org/grpc in CSI sidecar patches to fix the vulnerabilities they carry. [#22614](https://github.com/deckhouse/deckhouse/pull/22614)
  - **[common]** Enforced permanent use of the default CA bundle in `image-availability-exporter` in the `extended-monitoring` module. [#20175](https://github.com/deckhouse/deckhouse/pull/20175)
  - **[common]** Fixed CVE-2026-29181 in CoreDNS. [#20038](https://github.com/deckhouse/deckhouse/pull/20038)
  - **[common]** Fixed CVE-2026-40898 in CoreDNS by updating the quic-go dependency. [#20736](https://github.com/deckhouse/deckhouse/pull/20736)
@@ -507,6 +524,7 @@
     The `log-shipper` Pods will be restarted.
  - **[common]** Fixed IngressNginxController HPA CPU metric calculation to use per-pod CPU and smoother averaging in `ingress-nginx`. [#20426](https://github.com/deckhouse/deckhouse/pull/20426)
     HPA for LoadBalancer-based IngressNginxController may scale more accurately under real load and react less noisily due to the metric window change from 1m to 3m.
+ - **[common]** Fixed a kubelet panic when decreasing a container memory limit in place while pod-level memory usage stats are unavailable. [#22623](https://github.com/deckhouse/deckhouse/pull/22623)
  - **[common]** Fixed a nil pointer panic in `upmeter` on shutdown when server initialization is incomplete. [#19554](https://github.com/deckhouse/deckhouse/pull/19554)
  - **[common]** Fixed activating modsecurity CRS rules when the Ingress NGINX Controller is running with IsolatedProcess validation. [#20155](https://github.com/deckhouse/deckhouse/pull/20155)
     All Ingress NGINX Controller pods will be restarted.
@@ -579,8 +597,10 @@
  - **[deckhouse]** Cleaned availableRepositories on PackageRepository deletion. [#19973](https://github.com/deckhouse/deckhouse/pull/19973)
  - **[deckhouse]** Deleted module documentation when a module is disabled. [#20434](https://github.com/deckhouse/deckhouse/pull/20434)
  - **[deckhouse]** Drive the webhook-handler hook reload's kubernetes-binding enable to completion with retry so validating webhooks are not left denying requests due to empty snapshots. [#21247](https://github.com/deckhouse/deckhouse/pull/21247)
+ - **[deckhouse]** Fix ModuleConfig admission rejecting a module with a disabled conditional dependency [#22642](https://github.com/deckhouse/deckhouse/pull/22642)
  - **[deckhouse]** Fix RBAC permissions for deckhouse user. [#22287](https://github.com/deckhouse/deckhouse/pull/22287)
  - **[deckhouse]** Fix a minor Deckhouse release being auto-applied as a patch when no Deployed release object is present. [#21984](https://github.com/deckhouse/deckhouse/pull/21984)
+ - **[deckhouse]** Fix an empty package status after a successful install [#22651](https://github.com/deckhouse/deckhouse/pull/22651)
  - **[deckhouse]** Fix exp modules auto enabling. [#19670](https://github.com/deckhouse/deckhouse/pull/19670)
  - **[deckhouse]** Fix package status deadlock via coalescing workqueue. [#20676](https://github.com/deckhouse/deckhouse/pull/20676)
  - **[deckhouse]** Fixed ModulePullOverride for bundle-enabled modules. [#20763](https://github.com/deckhouse/deckhouse/pull/20763)
@@ -713,6 +733,7 @@
  - **[node-manager]** Filled empty Instance.spec.nodeRef when the linked Machine reports a node name. [#20432](https://github.com/deckhouse/deckhouse/pull/20432)
     <what to expect for users, possibly MULTI-LINE>, required if impact_level is high ↓
  - **[node-manager]** Fix CVEs in fencing-agent and cluster-autoscaler images (CVE-2026-56852, GHSA-hrxh-6v49-42gf, CVE-2026-46600). [#22374](https://github.com/deckhouse/deckhouse/pull/22374)
+ - **[node-manager]** Fix NodeCapacity calculation. [#22719](https://github.com/deckhouse/deckhouse/pull/22719)
  - **[node-manager]** Fix create_rbac_and_certificate_for_kubernetes_api_proxy hook behavior. [#22419](https://github.com/deckhouse/deckhouse/pull/22419)
  - **[node-manager]** Fix d8-shutdown-inhibitor failing to start on nodes where another package overrides the logind inhibit delay. [#22530](https://github.com/deckhouse/deckhouse/pull/22530)
  - **[node-manager]** Fix fencing-agent crash when starting on a node in maintenance mode. [#20527](https://github.com/deckhouse/deckhouse/pull/20527)
@@ -726,6 +747,18 @@
     low
  - **[node-manager]** Fixed the convert static cluster configuration hook. [#21345](https://github.com/deckhouse/deckhouse/pull/21345)
  - **[node-manager]** Fixed the keep-policy hook failing when the CAPI conversion webhook is unavailable. [#20990](https://github.com/deckhouse/deckhouse/pull/20990)
+ - **[node-manager]** Hide the CAPS SSH key and sudo password in SSHCredentials from users without the `sshcredentials/sensitive` subresource. [#22632](https://github.com/deckhouse/deckhouse/pull/22632)
+    The SSH key and sudo password in `SSHCredentials` (used by CAPS to reach static nodes) are now
+    returned as `<omitted>` to callers without `get` on the `sshcredentials/sensitive` subresource,
+    masked in the audit log, and encrypted in etcd when `apiserver.encryptionEnabled` is on.
+    `d8:manage:infrastructure:viewer` and `:manager` no longer see these values. CAPS still does, and
+    so does every holder of a `deckhouse.io` wildcard, since `*` matches subresources: `SuperAdmin`,
+    the `kubeadm:cluster-admins` group, and the `deckhouse` and `webhook-handler` SAs of `d8-system`.
+    
+    For masked readers the `last-applied-configuration` annotation disappears from `get -o yaml`,
+    and creating an `SSHCredentials` with `<omitted>` fails with `422 Invalid` — editing still works.
+    Treat previously exposed keys as leaked and rotate them. With `apiserver.encryptionEnabled` on,
+    rewrite existing objects to encrypt them: `d8 k get sshcredentials -o json | d8 k replace -f -`.
  - **[node-manager]** Improve fencing-agent health monitor logging — warn on fallback feeding, error on watchdog starvation, add diagnostic context to all feeding log messages. [#19400](https://github.com/deckhouse/deckhouse/pull/19400)
     Operators can now detect degraded fencing states (quorum loss, API unreachability) through log levels and diagnostic fields without parsing log messages.
  - **[node-manager]** Include system labels in CAPI MachineDeployment capacity annotation for correct scale-from-zero behavior [#20174](https://github.com/deckhouse/deckhouse/pull/20174)
@@ -746,9 +779,11 @@
  - **[registry-packages-proxy]** Added a fast path for already installed packages and improved logging in rpp-get. [#20015](https://github.com/deckhouse/deckhouse/pull/20015)
  - **[registry-packages-proxy]** Grant registry-packages-proxy RBAC to read unmasked registry credentials (modulesources/sensitive, packagerepositories/sensitive), restoring authentication to private registries. [#21513](https://github.com/deckhouse/deckhouse/pull/21513)
  - **[registry-packages-proxy]** The proxy serves `deckhouse-cli` and `deckhouse-cli/plugins/<name>` images from the registry root above the cluster's edition repository. [#22391](https://github.com/deckhouse/deckhouse/pull/22391)
+ - **[registry-packages-proxy]** deckhouse-cli and plugin downloads now work in registries filled by `d8 mirror push`; the proxy probes the cluster repo first, then the edition-trimmed root, and remembers the working one. [#22661](https://github.com/deckhouse/deckhouse/pull/22661)
  - **[registrypackages]** Bump `containerd` v2 to 2.2.7 and patch `crictl` 1.36.0 Go dependencies to fix known CVEs. [#22152](https://github.com/deckhouse/deckhouse/pull/22152)
     Nodes with `ContainerdV2` will restarts the `containerd` service .
  - **[registrypackages]** Bump kubernetes-cni to 1.9.1 and update vulnerable Go dependencies to fix CVEs. [#21963](https://github.com/deckhouse/deckhouse/pull/21963)
+ - **[registrypackages]** Close CVEs in `cfssl`, `docker-registry` and `rpp-get` by bumping vulnerable Go dependencies, and build `yq` from `pm` at 4.53.6. [#22684](https://github.com/deckhouse/deckhouse/pull/22684)
  - **[registrypackages]** Updated `registrypackages/docker-registry` image Go dependencies to fix Go CVEs. [#20377](https://github.com/deckhouse/deckhouse/pull/20377)
  - **[registrypackages]** Updated the Mozilla CA snapshot used by d8-ca-updater and made the build fail on trusted expired certificates. [#20939](https://github.com/deckhouse/deckhouse/pull/20939)
  - **[service-with-healthchecks]** Bumped Go dependencies in the `service-with-healthchecks` image to fix known CVEs. [#21392](https://github.com/deckhouse/deckhouse/pull/21392)
@@ -758,6 +793,7 @@
  - **[user-authn]** Added the missing `kubeconfigPublishAPIEncodedName` field to CSE OpenAPI values. [#20864](https://github.com/deckhouse/deckhouse/pull/20864)
  - **[user-authn]** Adding the allow-access-to-kubernetes annotation to a DexClient or a DexAuthenticator now requires cluster-level authority over the user-authn module. [#22358](https://github.com/deckhouse/deckhouse/pull/22358)
     Only a subject allowed to update the user-authn ModuleConfig, or the Deckhouse service account, may add the `dexclient.deckhouse.io/allow-access-to-kubernetes` or `dexauthenticator.deckhouse.io/allow-access-to-kubernetes` annotation. Objects that already carry it keep working and stay editable by their owners as long as they are updated in place. A GitOps controller that deletes and recreates such an object instead of patching it will have the recreation denied, and the object will come back without access to the Kubernetes API unless the controller's service account is allowed to update the user-authn ModuleConfig.
+ - **[user-authn]** Administrator lock now blocks login, password grant, and refresh without passwordPolicy.lockout. [#22630](https://github.com/deckhouse/deckhouse/pull/22630)
  - **[user-authn]** Commander releases older than 1.18 can grant Kubernetes API access on DexClient again. [#22521](https://github.com/deckhouse/deckhouse/pull/22521)
  - **[user-authn]** DexClient and DexAuthenticator now honour the value of the allow-access-to-kubernetes annotation instead of merely its presence. [#21979](https://github.com/deckhouse/deckhouse/pull/21979)
     The `dexclient.deckhouse.io/allow-access-to-kubernetes` and
@@ -913,6 +949,7 @@
  - **[cloud-provider-dvp]** Bumped the capdvp-controller-manager cluster-api dependency to v1.12.3. [#20664](https://github.com/deckhouse/deckhouse/pull/20664)
  - **[cloud-provider-dvp]** Removed the legacy d8-cni-configuration hook and Helm template. [#20834](https://github.com/deckhouse/deckhouse/pull/20834)
  - **[cloud-provider-dvp]** Reverted the removal of the legacy d8-cni-configuration hook and Helm template. [#21043](https://github.com/deckhouse/deckhouse/pull/21043)
+ - **[cloud-provider-dvp]** migrated the DVP CSI driver system dependencies to the Container Factory package manager. [#22595](https://github.com/deckhouse/deckhouse/pull/22595)
  - **[cloud-provider-dynamix]** Removed the legacy d8-cni-configuration hook and Helm template. [#20834](https://github.com/deckhouse/deckhouse/pull/20834)
  - **[cloud-provider-dynamix]** Reverted the removal of the legacy d8-cni-configuration hook and Helm template. [#21043](https://github.com/deckhouse/deckhouse/pull/21043)
  - **[cloud-provider-gcp]** Removed the legacy d8-cni-configuration hook and Helm template. [#20834](https://github.com/deckhouse/deckhouse/pull/20834)

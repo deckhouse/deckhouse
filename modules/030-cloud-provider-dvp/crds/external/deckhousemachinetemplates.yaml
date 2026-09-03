@@ -162,6 +162,11 @@ spec:
                         - cores
                         - cpuFraction
                         type: object
+                      additionalVMLabels:
+                        additionalProperties:
+                          type: string
+                        description: AdditionalVMLabels holds extra labels to apply to the VirtualMachine object in the parent DVP cluster.
+                        type: object
                       liveMigrationPolicy:
                         description: |-
                           LiveMigrationPolicy specifies the live migration policy for the virtual machine.

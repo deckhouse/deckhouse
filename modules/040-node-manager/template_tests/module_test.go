@@ -2089,7 +2089,9 @@ internal:
     capiClusterName: "dvp"
     capiMachineTemplateKind: "DeckhouseMachineTemplate"
     capiMachineTemplateAPIVersion: "infrastructure.cluster.x-k8s.io/v1alpha1"
-    dvp: {}
+    dvp:
+      additionalVMLabels:
+        network-access: bastion
   nodeGroups:
     - cloudInstances:
         classReference:

@@ -531,6 +531,14 @@ func (f *DeckhouseReleaseFetcher) ensureReleases(
 	}
 
 	currentVer := actual.GetVersion()
+
+	// suspend is a channel-level flag: it lives only in the release-channel image
+	// metadata (releaseMetadata), not in the per-version images fetched for the
+	// step-by-step catch-up below. Without carrying it over, a release suspended on
+	// the channel would still be applied by any cluster that reaches it through
+	// step-by-step. Only the channel head (newSemver) is the suspended version, so
+	// propagate the flag onto that release alone.
+	channelHeadSuspended := releaseMetadata.Suspend
 	for _, ver := range vers {
 		if !isUpdatingSequence(currentVer, ver) {
 			f.logger.Warn("not sequential version",
@@ -543,7 +551,7 @@ func (f *DeckhouseReleaseFetcher) ensureReleases(
 				currentVer.Original(), ver.Original())
 		}
 
-		releaseMeta, err := f.fetchAndCreateRelease(ctx, ver, notificationShiftTime)
+		releaseMeta, err := f.fetchAndCreateRelease(ctx, ver, notificationShiftTime, channelHeadSuspended && ver.Equal(newSemver))
 		if err != nil {
 			return nil, fmt.Errorf("fetch and create release: %w", err)
 		}
@@ -554,11 +562,15 @@ func (f *DeckhouseReleaseFetcher) ensureReleases(
 	return releaseMetadata, nil
 }
 
-// fetchAndCreateRelease fetches image metadata from registry and creates a release
+// fetchAndCreateRelease fetches image metadata from registry and creates a release.
+// suspend forces the suspend flag on the created release: the per-version image does
+// not carry the channel-level suspend flag, so the caller passes it for the version
+// that is suspended on the channel (see ensureReleases).
 func (f *DeckhouseReleaseFetcher) fetchAndCreateRelease(
 	ctx context.Context,
 	version *semver.Version,
 	notificationShiftTime *metav1.Time,
+	suspend bool,
 ) (*ReleaseMetadata, error) {
 	image, err := f.registryClient.Image(ctx, version.Original())
 	if err != nil {
@@ -572,6 +584,10 @@ func (f *DeckhouseReleaseFetcher) fetchAndCreateRelease(
 
 	if releaseMeta.Version == "" {
 		return nil, fmt.Errorf("version not found. Probably image is broken or layer does not exist")
+	}
+
+	if suspend {
+		releaseMeta.Suspend = true
 	}
 
 	err = f.createRelease(ctx, releaseMeta, notificationShiftTime, "step-by-step")

@@ -33,8 +33,9 @@ import (
 )
 
 var (
-	multiclusterMetricsGroup = "multicluster_discovery"
-	multiclusterMetricName   = "d8_istio_multicluster_metadata_endpoints_fetch_error_count"
+	multiclusterMetricsGroup           = "multicluster_discovery"
+	multiclusterMetricName             = "d8_istio_multicluster_metadata_endpoints_fetch_error_count"
+	multiclusterUUIDMismatchMetricName = "d8_istio_multicluster_remote_cluster_uuid_mismatch"
 )
 
 type IstioMulticlusterDiscoveryCrdInfo struct {
@@ -55,6 +56,17 @@ func (i *IstioMulticlusterDiscoveryCrdInfo) SetMetricMetadataEndpointError(mc sd
 	}
 
 	mc.Set(multiclusterMetricName, isError, labels, metrics.WithGroup(multiclusterMetricsGroup))
+}
+
+func (i *IstioMulticlusterDiscoveryCrdInfo) SetMetricRemoteClusterUUIDMismatch(mc sdkpkg.MetricsCollector, pinnedUUID, actualUUID string) {
+	labels := map[string]string{
+		"multicluster_name": i.Name,
+		"endpoint":          i.PublicMetadataEndpoint,
+		"pinned_uuid":       pinnedUUID,
+		"actual_uuid":       actualUUID,
+	}
+
+	mc.Set(multiclusterUUIDMismatchMetricName, 1, labels, metrics.WithGroup(multiclusterMetricsGroup))
 }
 
 func (i *IstioMulticlusterDiscoveryCrdInfo) PatchMetadataCache(pc go_hook.PatchCollector, scope string, meta interface{}) error {
@@ -133,7 +145,7 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 
 		var publicMetadata eeCrd.AlliancePublicMetadata
 		var privateMetadata eeCrd.MulticlusterPrivateMetadata
-		var httpOption []http.Option
+		httpOption := []http.Option{http.WithRestrictedNetworkAccess()}
 
 		if multiclusterInfo.MetadataExporterCA != "" {
 			caCerts := [][]byte{[]byte(multiclusterInfo.MetadataExporterCA)}
@@ -180,6 +192,18 @@ func multiclusterDiscovery(_ context.Context, input *go_hook.HookInput, dc depen
 			input.Logger.Warn("bad public metadata format in endpoint for IstioMulticluster", slog.String("endpoint", multiclusterInfo.PublicMetadataEndpoint), slog.String("name", multiclusterInfo.Name))
 			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PublicMetadataEndpoint, 1)
 			publicCondition := getCondition(AllianceConditionPublicMetadataExchangeReady, prior, metav1.ConditionFalse, "InvalidPublicMetadata", "clusterUUID, authnKeyPub, and rootCA must be non-empty", t)
+			pendingPrivateCondition := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionUnknown, "AwaitingPublic", "Public metadata exchange has not succeeded yet.", t)
+			pendingAPICondition := getCondition(AllianceConditionRemoteAPIServerReady, prior, metav1.ConditionUnknown, "AwaitingPrivate", "Private metadata exchange has not succeeded yet.", t)
+			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioMulticluster", multiclusterInfo.Name, multiclusterInfo.PriorConditions, []metav1.Condition{publicCondition, pendingPrivateCondition, pendingAPICondition}, t)
+			continue
+		}
+		if multiclusterInfo.ClusterUUID != "" && publicMetadata.ClusterUUID != multiclusterInfo.ClusterUUID {
+			t := timeNow()
+			msg := fmt.Sprintf("pinned cluster UUID %q does not match public metadata UUID %q", multiclusterInfo.ClusterUUID, publicMetadata.ClusterUUID)
+			input.Logger.Warn("remote cluster UUID does not match pinned IstioMulticluster metadata", slog.String("endpoint", multiclusterInfo.PublicMetadataEndpoint), slog.String("name", multiclusterInfo.Name), slog.String("pinned_cluster_uuid", multiclusterInfo.ClusterUUID), slog.String("actual_cluster_uuid", publicMetadata.ClusterUUID))
+			multiclusterInfo.SetMetricMetadataEndpointError(input.MetricsCollector, multiclusterInfo.PublicMetadataEndpoint, 1)
+			multiclusterInfo.SetMetricRemoteClusterUUIDMismatch(input.MetricsCollector, multiclusterInfo.ClusterUUID, publicMetadata.ClusterUUID)
+			publicCondition := getCondition(AllianceConditionPublicMetadataExchangeReady, prior, metav1.ConditionFalse, "ClusterUUIDMismatch", msg, t)
 			pendingPrivateCondition := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionUnknown, "AwaitingPublic", "Public metadata exchange has not succeeded yet.", t)
 			pendingAPICondition := getCondition(AllianceConditionRemoteAPIServerReady, prior, metav1.ConditionUnknown, "AwaitingPrivate", "Private metadata exchange has not succeeded yet.", t)
 			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioMulticluster", multiclusterInfo.Name, multiclusterInfo.PriorConditions, []metav1.Condition{publicCondition, pendingPrivateCondition, pendingAPICondition}, t)

@@ -493,11 +493,15 @@ func (s *Status) IsConditionTrue(condType ConditionType) bool {
 	return false
 }
 
-// NewStatus creates a new status or resets conditions. If a health event
-// was buffered by UpdateHealth before this name was registered, it is
+// NewStatus creates a new status or resets conditions. ConditionScaled is carried
+// over instead: the health monitor owns it and reports only on transitions, so a
+// reset would leave the workload unobserved until it next changes state. If a
+// health event was buffered by UpdateHealth before this name was registered, it is
 // applied here and the buffer entry is dropped.
 func (s *Service) NewStatus(name string) {
 	s.mu.Lock()
+
+	scaled := s.observedScaledLocked(name)
 
 	s.statuses[name] = &Status{
 		Conditions: []Condition{
@@ -506,7 +510,7 @@ func (s *Service) NewStatus(name string) {
 			{Type: ConditionLoaded, Status: metav1.ConditionUnknown},
 			{Type: ConditionHooksProcessed, Status: metav1.ConditionUnknown},
 			{Type: ConditionManifestsApplied, Status: metav1.ConditionUnknown},
-			{Type: ConditionScaled, Status: metav1.ConditionUnknown},
+			scaled,
 			{Type: ConditionConfigured, Status: metav1.ConditionUnknown},
 			{Type: ConditionPending, Status: metav1.ConditionUnknown},
 			{Type: ConditionCustomResourcesApplied, Status: metav1.ConditionUnknown},
@@ -527,4 +531,28 @@ func (s *Service) NewStatus(name string) {
 	if notify {
 		s.queueFor(name).Add(name)
 	}
+}
+
+// observedScaledLocked returns the ConditionScaled to seed a fresh status with:
+// the value the health monitor last reported, or an Unknown placeholder
+// when it has not reported for this package. The caller must hold s.mu.
+func (s *Service) observedScaledLocked(name string) Condition {
+	if status, ok := s.statuses[name]; ok {
+		if cond, found := status.condition(ConditionScaled); found {
+			return cond
+		}
+	}
+
+	return Condition{Type: ConditionScaled, Status: metav1.ConditionUnknown}
+}
+
+// condition returns the condition of the given type.
+func (s *Status) condition(condType ConditionType) (Condition, bool) {
+	for _, cond := range s.Conditions {
+		if cond.Type == condType {
+			return cond, true
+		}
+	}
+
+	return Condition{}, false
 }
