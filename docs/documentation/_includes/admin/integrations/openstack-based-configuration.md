@@ -48,7 +48,7 @@ The following inbound rules will be created:
 - Allow incoming traffic over the TCP protocol on ports `30000`–`32767` for services of the `NodePort` type. Inbound UDP traffic to `NodePort` ports is not allowed by default.
 - Allow any incoming traffic from nodes in the same security group.
 
-Custom security groups created in the cloud beforehand are attached via `additionalSecurityGroups`:
+In addition to the group created by DKP, you can attach your own security groups. Prepare them in the cloud beforehand by following the [OpenStack documentation](https://docs.openstack.org/nova/latest/user/security-groups.html) and specify them in `additionalSecurityGroups`:
 
 - For master nodes, in the [`masterNodeGroup.instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) resource.
 - For static nodes, in the [`nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) resource.
@@ -168,7 +168,7 @@ The following inbound rules will be created:
 - Allow incoming traffic over the TCP protocol on ports `30000`–`32767` for services of the `NodePort` type. Inbound UDP traffic to `NodePort` ports is not allowed by default.
 - Allow any incoming traffic from nodes in the same security group.
 
-Custom security groups created in the cloud beforehand are attached via `additionalSecurityGroups`:
+In addition to the group created by DKP, you can attach your own security groups. Prepare them in the cloud beforehand by following the [OpenStack documentation](https://docs.openstack.org/nova/latest/user/security-groups.html) and specify them in `additionalSecurityGroups`:
 
 - For master nodes, in the [`masterNodeGroup.instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) resource.
 - For static nodes, in the [`nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) resource.

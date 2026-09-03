@@ -41,7 +41,7 @@
 - разрешение входящего трафика по протоколу TCP и портам `30000`–`32767` для использования сервисов типа `NodePort`. Входящий трафик по протоколу UDP на порты `NodePort` по умолчанию не разрешается;
 - разрешение любого входящего трафика от узлов, входящих в ту же группу безопасности.
 
-Собственные группы безопасности, созданные в облаке заранее, подключаются через `additionalSecurityGroups`:
+Дополнительно к созданной группе можно подключить собственные группы безопасности. Подготовьте их в облаке заранее, следуя [документации OpenStack](https://docs.openstack.org/nova/latest/user/security-groups.html), и укажите в `additionalSecurityGroups`:
 
 - для master-узлов — в параметре [`masterNodeGroup.instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration);
 - для статических узлов — в параметре [`nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration);
@@ -162,7 +162,7 @@ provider:
 - разрешение входящего трафика по протоколу TCP и портам `30000`–`32767` для использования сервисов типа `NodePort`. Входящий трафик по протоколу UDP на порты `NodePort` по умолчанию не разрешается;
 - разрешение любого входящего трафика от узлов, входящих в ту же группу безопасности.
 
-Собственные группы безопасности, созданные в облаке заранее, подключаются через `additionalSecurityGroups`:
+Дополнительно к созданной группе можно подключить собственные группы безопасности. Подготовьте их в облаке заранее, следуя [документации OpenStack](https://docs.openstack.org/nova/latest/user/security-groups.html), и укажите в `additionalSecurityGroups`:
 
 - для master-узлов — в параметре [`masterNodeGroup.instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration);
 - для статических узлов — в параметре [`nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration);
