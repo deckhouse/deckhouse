@@ -30,7 +30,7 @@ spec:
   validations:
     - expression: |-
         !has(object.spec) || !has(object.spec.location) ||
-        !object.spec.location.matches("^\\s*(metadata|\"metadata\"|'metadata')\\s*(\\.|$)")
+        !object.spec.location.matches("^\\s*(metadata|\"metadata\"|'metadata')\\s*(\\.|\\[|$)")
       message: >-
         spec.location cannot target the "metadata" field (Gatekeeper limitation) - use the
         AssignMetadata resource to add labels or annotations instead
