@@ -38,6 +38,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	sigsyaml "sigs.k8s.io/yaml"
 
+	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 )
 
@@ -82,6 +83,12 @@ type clusterInputs struct {
 	// node gets it: containerd pulls pause with no imagePullSecret, so a worker
 	// without credentials fails every sandbox it tries to create.
 	Registry *internalv1alpha1.Registry
+	// NodeExtensions are the operator's requests to merge extra system extensions
+	// onto the nodes they select, in the order their uniqueness contest ran; the
+	// contest is cluster-wide, so it is settled here, once per pass, rather than
+	// once per node. NodeExtensionConflicts says which requests lost it.
+	NodeExtensions         []*deckhousev1alpha1.NodeExtensionRequest
+	NodeExtensionConflicts map[string]nerConflict
 }
 
 // sourceReader reads cluster state straight from the API server: these
@@ -255,7 +262,18 @@ func (s *sourceReader) readReleaseImages(ctx context.Context, in *clusterInputs)
 	in.OSImage = internalv1alpha1.OSImage{Digest: osImage}
 
 	in.SandboxImage, err = sandboxImage(images, imagesRepo)
-	return err
+	if err != nil {
+		return err
+	}
+
+	ners, err := s.readNodeExtensionRequests(ctx)
+	if err != nil {
+		return err
+	}
+	in.NodeExtensions = orderedNERs(ners)
+	in.NodeExtensionConflicts = resolveNERConflicts(in.NodeExtensions)
+
+	return nil
 }
 
 // readRegistry describes the cluster's registry: the spec a node needs to reach
@@ -328,6 +346,17 @@ func digestAt(all map[string]map[string]string, group, name string) (string, err
 		return "", fmt.Errorf("no %s/%s digest in %s", group, name, imagesDigestsKey)
 	}
 	return digest, nil
+}
+
+// readNodeExtensionRequests lists the extension requests; an empty list is fine.
+// The one cached read here: the controller watches this kind, and a live read
+// could disagree with the status pass, which reports from the cached list.
+func (s *sourceReader) readNodeExtensionRequests(ctx context.Context) ([]deckhousev1alpha1.NodeExtensionRequest, error) {
+	list := &deckhousev1alpha1.NodeExtensionRequestList{}
+	if err := s.Reader.List(ctx, list); err != nil {
+		return nil, fmt.Errorf("list node extension requests: %w", err)
+	}
+	return list.Items, nil
 }
 
 // readClusterCA returns the cluster CA, base64-encoded the way the NodeConfig

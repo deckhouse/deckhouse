@@ -94,6 +94,10 @@ func SetupWithManager(mgr ctrl.Manager) error {
 	hookServer.Register("/validate-instanceclass-delete", &webhook.Admission{
 		Handler: &InstanceClassDeleteValidator{},
 	})
+	// Validating webhook refusing a reserved NodeExtensionRequest sysext name.
+	hookServer.Register("/validate-deckhouse-io-v1alpha1-nodeextensionrequest", &webhook.Admission{
+		Handler: &NodeExtensionRequestValidator{decoder: decoder},
+	})
 	hookServer.Register("/validate-internal-deckhouse-io-v1alpha1-nodeconfig", &webhook.Admission{
 		Handler: &NodeConfigValidator{decoder: decoder},
 	})
