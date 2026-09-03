@@ -145,13 +145,12 @@ The multi-tenancy engine applies the same restrictions as the `user-authz-webhoo
 
 ### Prerequisites
 
-- Go 1.23+
+- Go 1.25+ (see the `go` directive in `go.mod`)
 - Kubernetes cluster access (for in-cluster testing)
 
 ### Building
 
 ```bash
-cd src
 make build-local
 ```
 
@@ -179,6 +178,9 @@ make test
 
 ## Configuration
 
+Only `--user-authz-config` is defined by this server; the rest come from the
+generic apiserver's recommended options, so the list below is not exhaustive.
+
 | Flag | Description | Default |
 |------|-------------|---------|
 | `--secure-port` | HTTPS port | 443 |
@@ -196,21 +198,15 @@ make test
 ### AccessibleNamespace
 - **Watch NOT supported**: The `resourceVersion` is always empty (`""`). Clients must poll.
 - **Computed resource**: The list is calculated at request time, not stored. There's no etcd persistence.
-- **Best-effort discovery**: If the API discovery cannot determine whether a resource is namespaced, it assumes namespaced for safety.
+- **Best-effort discovery**: If discovery cannot say whether a resource is namespaced, it is assumed cluster-scoped. Assuming namespaced would make the resolver treat the caller as having namespaced access and list every namespace, so the unknown case is resolved the other way.
 
 ### General
-- The server caches RBAC rules and namespace information; changes may take up to 30 minutes to propagate
-- Multi-tenancy config is reloaded every second from the mounted ConfigMap
-
-## Metrics
-
-| Metric | Description |
-|--------|-------------|
-| `bulksar_requests_total` | Total number of BulkSubjectAccessReview requests |
-| `bulksar_checks_total` | Total number of individual permission checks |
-| `bulksar_request_duration_seconds` | Histogram of request durations |
+- RBAC rules and namespace information are served from watch-driven informers, so changes land within seconds. The 30-minute figure in the code is the informer resync interval — a periodic re-list that guards against a missed watch event, not the propagation delay.
+- The multi-tenancy config file is re-read every second. The file itself is a projected ConfigMap, and kubelet refreshes it on its own sync period, so a `ClusterAuthorizationRule` change takes up to about a minute to reach the running pod.
 
 ## Health Endpoints
 
-- `/readyz`: Returns 200 when informer caches are synced
+- `/readyz`: Returns 200 once the resource scope cache has been populated at least once, in addition to the generic apiserver's own readiness checks
 - `/livez`: Returns 200 when server is alive
+
+This component registers no custom Prometheus metrics. Request rates and latencies are available from the generic apiserver metrics it inherits, for example `apiserver_request_duration_seconds{resource="bulksubjectaccessreviews"}`.
