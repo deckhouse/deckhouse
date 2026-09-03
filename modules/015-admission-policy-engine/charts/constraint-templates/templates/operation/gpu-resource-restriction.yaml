@@ -10,11 +10,11 @@ metadata:
     metadata.gatekeeper.sh/title: "GPU Resource Restriction"
     metadata.gatekeeper.sh/version: 1.0.0
     description: >-
-      Deny Pods that request GPU resources unless the namespace has the specified label.
+      Denies Pods that request GPU resources unless the namespace has the specified label.
 
-      The `namespaceLabel` parameter specifies the label that must be present on the namespace
-      to allow GPU resource usage. The `gpuResourcePatterns` parameter is an array of regex
-      patterns matching GPU resource names in Pod specs (e.g., `^nvidia\.com/.*$`).
+      The `namespaceLabel` parameter defines the label key and value that must be present
+      on the namespace. The `gpuResourcePatterns` parameter lists the regular expressions
+      matched against GPU resource names in Pod specs.
 spec:
   crd:
     spec:
@@ -26,7 +26,7 @@ spec:
           properties:
             namespaceLabel:
               type: object
-              description: "The label that must be present on the namespace to allow GPU resource usage."
+              description: "Label that must be present on the namespace to allow GPU resource usage."
               properties:
                 key:
                   type: string
@@ -36,7 +36,7 @@ spec:
                   description: "Expected label value."
             gpuResourcePatterns:
               type: array
-              description: "List of regex patterns matching GPU resource names in Pod specs."
+              description: "List of regular expressions matched against GPU resource names in Pod specs."
               items:
                 type: string
   targets:
