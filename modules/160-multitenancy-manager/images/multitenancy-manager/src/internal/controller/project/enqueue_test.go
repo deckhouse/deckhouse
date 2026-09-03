@@ -26,20 +26,21 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/helm"
 	projectmanager "controller/internal/manager/project"
 )
 
 func TestEnqueueProjectForNamespace(t *testing.T) {
-	t.Run("deleted unowned ns refreshes virtual default", func(t *testing.T) {
+	t.Run("deleted unowned ns refreshes virtual default and the same-name project", func(t *testing.T) {
 		ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "t-lvlns"}}
 		reqs := namespaceProjectRequests(ns)
-		assert.Equal(t, []string{projectmanager.DefaultProjectName}, requestNames(reqs))
+		assert.ElementsMatch(t, []string{projectmanager.DefaultProjectName, "t-lvlns"}, requestNames(reqs))
 	})
 
-	t.Run("upmeter probe refreshes virtual deckhouse", func(t *testing.T) {
+	t.Run("upmeter probe refreshes virtual deckhouse and the same-name project", func(t *testing.T) {
 		ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "upmeter-probe-namespace-foo"}}
 		reqs := namespaceProjectRequests(ns)
-		assert.Equal(t, []string{projectmanager.DeckhouseProjectName}, requestNames(reqs))
+		assert.ElementsMatch(t, []string{projectmanager.DeckhouseProjectName, "upmeter-probe-namespace-foo"}, requestNames(reqs))
 	})
 
 	t.Run("owned ns wakes the real project only", func(t *testing.T) {
@@ -61,20 +62,45 @@ func TestEnqueueProjectForNamespace(t *testing.T) {
 		assert.ElementsMatch(t, []string{projectmanager.DefaultProjectName, "team"}, requestNames(reqs))
 	})
 
-	t.Run("heritage change wakes both virtual projects", func(t *testing.T) {
+	t.Run("heritage change wakes both virtual projects and the same-name project", func(t *testing.T) {
 		oldNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "probe"}}
 		newNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
 			Name:   "probe",
 			Labels: map[string]string{v1alpha3.ResourceLabelHeritage: v1alpha3.ResourceHeritageDeckhouse},
 		}}
 		reqs := namespaceProjectRequests(oldNS, newNS)
-		assert.ElementsMatch(t, []string{projectmanager.DefaultProjectName, projectmanager.DeckhouseProjectName}, requestNames(reqs))
+		assert.ElementsMatch(t, []string{projectmanager.DefaultProjectName, projectmanager.DeckhouseProjectName, "probe"}, requestNames(reqs))
+	})
+
+	t.Run("unlabeled ns wakes virtual default and the same-name error project", func(t *testing.T) {
+		ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
+		reqs := namespaceProjectRequests(ns)
+		assert.ElementsMatch(t, []string{projectmanager.DefaultProjectName, "foo"}, requestNames(reqs))
 	})
 }
 
 func TestNamespaceWatchPredicate_DeleteAlways(t *testing.T) {
 	p := namespaceWatchPredicate{}
 	assert.True(t, p.Delete(event.DeleteEvent{Object: &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "t-lvlns"}}}))
+}
+
+func TestNamespaceWatchPredicate_HelmOwnershipChange(t *testing.T) {
+	p := namespaceWatchPredicate{}
+	oldNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name: "foo",
+		Annotations: map[string]string{
+			helm.ResourceAnnotationReleaseName:      "foo",
+			helm.ResourceAnnotationReleaseNamespace: "foo",
+		},
+	}}
+	newNS := oldNS.DeepCopy()
+	delete(newNS.Annotations, helm.ResourceAnnotationReleaseName)
+	delete(newNS.Annotations, helm.ResourceAnnotationReleaseNamespace)
+	assert.True(t, p.Update(event.UpdateEvent{ObjectOld: oldNS, ObjectNew: newNS}))
+
+	same := oldNS.DeepCopy()
+	same.Annotations["note"] = "unrelated"
+	assert.False(t, p.Update(event.UpdateEvent{ObjectOld: oldNS, ObjectNew: same}))
 }
 
 func requestNames(reqs []reconcile.Request) []string {

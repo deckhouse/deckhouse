@@ -17,6 +17,8 @@ limitations under the License.
 package project
 
 import (
+	"context"
+	"fmt"
 	"strings"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -55,4 +57,30 @@ func IsDeckhouseInventory(obj metav1.Object) bool {
 		return true
 	}
 	return false
+}
+
+// realProjectNames is every non-virtual Project. Adopt creates that object
+// before Helm can label the namespace; HandleVirtual must not keep those
+// namespaces on virtual default.
+func (m *Manager) realProjectNames(ctx context.Context) (map[string]struct{}, error) {
+	list := new(v1alpha3.ProjectList)
+	if err := m.client.List(ctx, list); err != nil {
+		return nil, fmt.Errorf("list projects: %w", err)
+	}
+	out := make(map[string]struct{}, len(list.Items))
+	for i := range list.Items {
+		p := &list.Items[i]
+		if isVirtualInventory(p) {
+			continue
+		}
+		out[p.Name] = struct{}{}
+	}
+	return out, nil
+}
+
+func isVirtualInventory(p *v1alpha3.Project) bool {
+	if p.Labels[v1alpha3.ProjectLabelVirtualProject] == "true" {
+		return true
+	}
+	return p.Name == DeckhouseProjectName || p.Name == DefaultProjectName
 }
