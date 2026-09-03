@@ -5,6 +5,8 @@ properties:
     type: array
     items:
       type: string
+      pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+      maxLength: 63
     description: |
       This parameter contains a list of instances; a separate PushGateway will be created for each instance.
     x-examples:

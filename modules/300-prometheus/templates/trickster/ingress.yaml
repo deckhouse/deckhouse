@@ -16,7 +16,7 @@ metadata:
     nginx.ingress.kubernetes.io/auth-realm: "Authentication Required"
   {{- end }}
   {{- if .Values.prometheus.auth.whitelistSourceRanges }}
-    nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.prometheus.auth.whitelistSourceRanges | join "," }}
+    nginx.ingress.kubernetes.io/whitelist-source-range: {{ .Values.prometheus.auth.whitelistSourceRanges | join "," | quote }}
   {{- end }}
   {{- if .Values.prometheus.auth.satisfyAny }}
     nginx.ingress.kubernetes.io/satisfy: "any"

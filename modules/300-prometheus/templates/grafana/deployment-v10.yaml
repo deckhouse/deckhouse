@@ -149,7 +149,7 @@ spec:
         {{- if hasKey .Values.prometheus "grafana" }}
           {{- if hasKey .Values.prometheus.grafana "customPlugins" }}
         - name: GF_INSTALL_PLUGINS
-          value: "{{- range $i, $v := .Values.prometheus.grafana.customPlugins }}{{- if ne $i 0 -}},{{- end -}}{{- $v -}}{{- end }}"
+          value: {{ .Values.prometheus.grafana.customPlugins | join "," | quote }}
           {{- end }}
         {{- end }}
         - name: GF_SECURITY_CONTENT_SECURITY_POLICY
