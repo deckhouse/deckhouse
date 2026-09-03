@@ -4,15 +4,17 @@
   {{- $bootstrap_token := index . 2 -}}
 #!/bin/bash
 
-if [[ -f /var/lib/bashible/bootstrap-token ]]; then
-  echo "The node already have bootstrap-token and under bashible."
-  exit 1
-fi
-
 checkBashible=$(systemctl is-active bashible.timer)
 if [[ "$checkBashible" == "active" ]]; then
   echo "The node already exists in the cluster and under bashible."
   exit 2
+fi
+
+# 098_cleanup removes bootstrap-token as soon as bashible takes over, so a token on a
+# node whose timer is not active means an unfinished bootstrap, not a ready node.
+# Complete it: refusing leaves the node stuck until MachineHealthCheck wipes it.
+if [[ -f /var/lib/bashible/bootstrap-token ]]; then
+  echo "Bootstrap was interrupted before bashible took over, completing it."
 fi
 
 mkdir -p /var/lib/bashible
