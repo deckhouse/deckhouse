@@ -99,6 +99,24 @@ const (
 	apiShutdownTimeout = 5 * time.Second
 )
 
+// Reschedule reasons the runtime hands to the scheduler. They travel on the
+// resulting EventSchedule and become the cancellation cause of the run that the
+// reschedule cut short, so a cancelled install can name its trigger.
+const (
+	reasonSettingsChanged   = "SettingsChanged"
+	reasonEnabledChanged    = "EnabledIntentChanged"
+	reasonConfigChanged     = "ConfigChanged"
+	reasonDriftDetected     = "DriftDetected"
+	reasonHookValuesChanged = "HookValuesChanged"
+)
+
+// Cancellation causes reported by tasks whose context the runtime replaces.
+var (
+	errRescheduled     = lifecycle.CancelCause("package rescheduled")
+	errPackageDisabled = lifecycle.CancelCause("package disabled")
+	errPackageRemoved  = lifecycle.CancelCause("package removed")
+)
+
 // Runtime orchestrates the full lifecycle of application packages: discovery,
 // installation, hook execution, Helm release management, and removal.
 //
@@ -359,7 +377,9 @@ func (r *Runtime) buildNelmService() error {
 		return fmt.Errorf("initialize nelm service client: %w", err)
 	}
 
-	r.nelmService = nelm.NewService(client, r.scheduler.Reschedule, r.status, r.logger)
+	reschedule := func(name string) { r.scheduler.Reschedule(name, reasonDriftDetected) }
+
+	r.nelmService = nelm.NewService(client, reschedule, r.status, r.logger)
 
 	return nil
 }
@@ -536,10 +556,10 @@ func (r *Runtime) Run() error {
 					// global is the scheduler's order-0 barrier: it ensures the enabled
 					// modules' CRDs and publishes global values, then completes to release
 					// the modules waiting behind it.
-					r.scheduleGlobal(event.Enabled)
+					r.scheduleGlobal(event.Enabled, event.Reason)
 					continue
 				}
-				r.schedulePackage(event.Name)
+				r.schedulePackage(event.Name, event.Reason)
 			case schedule.EventDisable:
 				r.disablePackage(event.Name, event.Reason, event.Message)
 			default:
@@ -562,13 +582,14 @@ func (r *Runtime) Run() error {
 // EventSchedule context, mirroring how schedulePackage scopes a package's tasks:
 // rescheduling global renews that context and cancels the in-flight run. onDone
 // completes the global node, unblocking the modules waiting behind it.
-func (r *Runtime) scheduleGlobal(enabled []string) {
+func (r *Runtime) scheduleGlobal(enabled []string, reason string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.logger.Debug("schedule global package")
+	r.logger.Debug("schedule global package", slog.String("reason", reason))
 
-	ctx := r.packages.HandleEvent(lifecycle.EventSchedule, r.global.GetName())
+	ctx := r.packages.HandleEvent(lifecycle.EventSchedule, r.global.GetName(),
+		fmt.Errorf("%w: %s", errRescheduled, reason))
 	if ctx == nil {
 		return
 	}
@@ -612,17 +633,18 @@ func (r *Runtime) scheduleGlobal(enabled []string) {
 //
 // Both schedulePackage and disablePackage use EventSchedule, so enqueueing here
 // implicitly cancels any in-flight disable context for the same package.
-func (r *Runtime) schedulePackage(name string) {
+func (r *Runtime) schedulePackage(name, reason string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.logger.Debug("schedule package", slog.String("name", name))
+	r.logger.Debug("schedule package", slog.String("name", name), slog.String("reason", reason))
 
 	onDone := queue.WithOnDone(func() {
 		r.scheduler.Complete(name)
 	})
 
-	ctx := r.packages.HandleEvent(lifecycle.EventSchedule, name)
+	ctx := r.packages.HandleEvent(lifecycle.EventSchedule, name,
+		fmt.Errorf("%w: %s", errRescheduled, reason))
 	if ctx == nil {
 		return
 	}
@@ -662,7 +684,8 @@ func (r *Runtime) disablePackage(name, reason, msg string) {
 
 	r.logger.Debug("disable package", slog.String("name", name))
 
-	ctx := r.packages.HandleEvent(lifecycle.EventSchedule, name)
+	ctx := r.packages.HandleEvent(lifecycle.EventSchedule, name,
+		fmt.Errorf("%w: %s", errPackageDisabled, reason))
 	if ctx == nil {
 		return
 	}

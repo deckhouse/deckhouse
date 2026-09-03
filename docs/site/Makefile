@@ -1,7 +1,4 @@
-PLATFORM_NAME := $(shell uname -p)
-ifneq ($(filter arm%,$(PLATFORM_NAME)),)
-	export WERF_PLATFORM=linux/amd64
-endif
+export WERF_PLATFORM=linux/amd64
 
 .DEFAULT_GOAL := help
 

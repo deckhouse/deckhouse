@@ -1013,7 +1013,7 @@ func (s *SchedulerSuite) TestRescheduleFansOutToDirectSubscribers() {
 	s.sched.Complete("unrelated")
 	s.drainEvents()
 
-	s.sched.Reschedule("publisher")
+	s.sched.Reschedule("publisher", schedule.ReasonScheduled)
 
 	scheduled := eventNames(s.collectEvents(), schedule.EventSchedule)
 	s.Contains(scheduled, "publisher", "the rescheduled node must be re-scheduled")
