@@ -55,3 +55,5 @@ shell:
     {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o /ratify cmd/ratify/main.go`) | indent 4 }}
   - chown 64535:64535 /ratify
   - chmod 0700 /ratify
+
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
