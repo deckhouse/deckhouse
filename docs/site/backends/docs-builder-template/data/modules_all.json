@@ -770,7 +770,19 @@
   },
   "sdn": {
     "editions": [
-      "ee"
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "editionsWithRestrictions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus"
     ],
     "tags": [
       "network",
