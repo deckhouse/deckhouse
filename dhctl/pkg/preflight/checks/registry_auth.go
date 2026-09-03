@@ -175,10 +175,6 @@ func checkBasicRegistryAuth(ctx context.Context, metaConfig *config.MetaConfig, 
 	}
 	defer resp.Body.Close()
 
-	if resp.Header.Get("Docker-Distribution-API-Version") != "registry/2.0" {
-		return fmt.Errorf("%w: expected Docker-Distribution-API-Version=registry/2.0 header in response from registry.\nCheck that the container registry address is correct", ErrAuthRegistryFailed)
-	}
-
 	return checkResponseError(resp)
 }
 
