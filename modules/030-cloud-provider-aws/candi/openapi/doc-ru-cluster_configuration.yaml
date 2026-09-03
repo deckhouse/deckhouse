@@ -227,6 +227,8 @@ apiVersions:
           - `additionalSecurityGroups` в секции `nodeGroups.instanceClass`.
 
           Для настройки security group, используемых балансировщиками нагрузки, укажите их через аннотацию `service.beta.kubernetes.io/aws-load-balancer-security-groups`.
+
+          Подробнее — в разделе [«AWS: схемы размещения»](layouts.html#withoutnat).
       imdsv2:
         description: |
           Включает обязательное использование IMDSv2 и отключает IMDSv1 для EC2-инстансов кластера.

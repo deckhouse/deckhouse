@@ -14,6 +14,15 @@ description: "Schemes of placement and interaction of resources in Azure when wo
 * If the master does not have a public IP, then an additional instance with a public IP (aka bastion host) is required for installation tasks and access to the cluster. In this case, you will also need to configure peering between the cluster's VNet and bastion's VNet.
 * Peering can also be configured between the cluster VNet and other VNets.
 
+When a cluster is created, the module creates a Network Security Group (NSG) named after the cluster prefix and associates it with the node subnet.
+
+The following rules will be created:
+
+- `AllowIcmp` — allow incoming traffic over the ICMP protocol from any source
+- `AllowSsh` — allow incoming traffic over the TCP protocol on port `22` from CIDRs listed in [`sshAllowList`](cluster_configuration.html#azureclusterconfiguration-sshallowlist) (from any source if the list is not set)
+
+You cannot attach a pre-created custom NSG to nodes through module parameters. Use [`sshAllowList`](cluster_configuration.html#azureclusterconfiguration-sshallowlist) to restrict SSH access.
+
 Example of the layout configuration:
 
 ```yaml
