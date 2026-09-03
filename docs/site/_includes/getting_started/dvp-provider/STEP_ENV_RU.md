@@ -43,19 +43,17 @@
    EOF
    ```
 
-1. Включите выдачу kubeconfig через API. Откройте настройки модуля `control-plane-manager` (создайте ресурс [ModuleConfig](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) `control-plane-manager`, если его нет):
+1. Включите выдачу kubeconfig через API. Откройте настройки модуля `user-authn` (создайте ресурс [ModuleConfig](https://deckhouse.ru/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) `user-authn`, если его нет):
 
    ```shell
-   d8 k edit mc control-plane-manager
+   d8 k edit mc user-authn
    ```
 
 1. Добавьте следующую секцию в блок `settings` и сохраните изменения:
 
    ```yaml
-   apiserver:
-     publishAPI:
-       ingress:
-         enabled: true
+   publishAPI:
+     enabled: true
    ```
 
 1. Сгенерируйте kubeconfig, который будет использоваться в файле первичной конфигурации кластера на следующем шаге:

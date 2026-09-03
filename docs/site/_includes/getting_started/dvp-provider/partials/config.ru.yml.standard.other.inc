@@ -27,9 +27,9 @@ clusterDomain: "cluster.local"
 defaultCRI: "ContainerdV2"
 ---
 # [<en>] Deckhouse module settings.
-# [<en>] https://deckhouse.io/modules/002-deckhouse/configuration.html
+# [<en>] https://deckhouse.io/modules/deckhouse/configuration.html
 # [<ru>] Настройки модуля deckhouse.
-# [<ru>] https://deckhouse.ru/modules/002-deckhouse/configuration.html
+# [<ru>] https://deckhouse.ru/modules/deckhouse/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -72,9 +72,9 @@ spec:
       publicDomainTemplate: "%s.example.com"
 ---
 # [<en>] User-authn module settings.
-# [<en>] https://deckhouse.io/modules/150-user-authn/configuration.html
+# [<en>] https://deckhouse.io/modules/user-authn/configuration.html
 # [<ru>] Настройки модуля user-authn.
-# [<ru>] https://deckhouse.ru/modules/150-user-authn/configuration.html
+# [<ru>] https://deckhouse.ru/modules/user-authn/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -85,36 +85,21 @@ spec:
   settings:
     controlPlaneConfigurator:
       dexCAMode: DoNotNeed
----
-# [<en>] Control plane manager module settings.
-# [<en>] https://deckhouse.io/modules/040-control-plane-manager/configuration.html
-# [<ru>] Настройки модуля control-plane-manager.
-# [<ru>] https://deckhouse.ru/modules/040-control-plane-manager/configuration.html
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleConfig
-metadata:
-  name: control-plane-manager
-spec:
-  version: 3
-  enabled: true
-  settings:
-    apiserver:
-      # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
-      # [<ru>] https://deckhouse.ru/modules/040-control-plane-manager/configuration.html#parameters-apiserver-publishapi
-      # [<en>] Enabling access to the API server through Ingress.
-      # [<en>] https://deckhouse.io/modules/040-control-plane-manager/configuration.html#parameters-apiserver-publishapi
-      publishAPI:
-        ingress:
-          enabled: true
-          https:
-            mode: Global
-            global:
-              kubeconfigGeneratorMasterCA: ""
+    # [<ru>] Включение доступа к API-серверу Kubernetes через Ingress.
+    # [<ru>] https://deckhouse.ru/modules/user-authn/configuration.html#parameters-publishapi
+    # [<en>] Enabling access to the API server through Ingress.
+    # [<en>] https://deckhouse.io/modules/user-authn/configuration.html#parameters-publishapi
+    publishAPI:
+      enabled: true
+      https:
+        mode: Global
+        global:
+          kubeconfigGeneratorMasterCA: ""
 ---
 # [<en>] Cloud provider DVP module settings.
-# [<en>] https://deckhouse.io/modules/030-cloud-provider-dvp/configuration.html
+# [<en>] https://deckhouse.io/modules/cloud-provider-dvp/configuration.html
 # [<ru>] Настройки модуля облачного провайдера DVP.
-# [<ru>] https://deckhouse.ru/modules/030-cloud-provider-dvp/configuration.html
+# [<ru>] https://deckhouse.ru/modules/cloud-provider-dvp/configuration.html
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
@@ -161,9 +146,9 @@ stringData:
   secret: *!CHANGE_KUBERNETES_CONFIG_BASE64*
 ---
 # [<en>] Instance class for master nodes.
-# [<en>] https://deckhouse.io/modules/030-cloud-provider-dvp/cr.html
+# [<en>] https://deckhouse.io/modules/cloud-provider-dvp/cr.html
 # [<ru>] Инстанс-класс для master-узлов.
-# [<ru>] https://deckhouse.ru/modules/030-cloud-provider-dvp/cr.html
+# [<ru>] https://deckhouse.ru/modules/cloud-provider-dvp/cr.html
 apiVersion: deckhouse.io/v1alpha1
 kind: DVPInstanceClass
 metadata:
@@ -223,9 +208,9 @@ spec:
     storageClass: *!CHANGE_STORAGE_CLASS*
 ---
 # [<en>] Master node group.
-# [<en>] https://deckhouse.io/modules/040-node-manager/cr.html#nodegroup
+# [<en>] https://deckhouse.io/modules/node-manager/cr.html#nodegroup
 # [<ru>] Группа master-узлов.
-# [<ru>] https://deckhouse.ru/modules/040-node-manager/cr.html#nodegroup
+# [<ru>] https://deckhouse.ru/modules/node-manager/cr.html#nodegroup
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
@@ -248,9 +233,9 @@ spec:
       node-role.kubernetes.io/master: ""
 ---
 # [<en>] Section containing parameters of instance class for worker nodes.
-# [<en>] https://deckhouse.io/modules/030-cloud-provider-dvp/cr.html
+# [<en>] https://deckhouse.io/modules/cloud-provider-dvp/cr.html
 # [<ru>] Секция, описывающая параметры инстанс-класса для узлов c компонентами, обеспечивающими рабочую нагрузку.
-# [<ru>] https://deckhouse.ru/modules/030-cloud-provider-dvp/cr.html
+# [<ru>] https://deckhouse.ru/modules/cloud-provider-dvp/cr.html
 apiVersion: deckhouse.io/v1alpha1
 kind: DVPInstanceClass
 metadata:
@@ -306,9 +291,9 @@ spec:
       name: *!CHANGE_NAME*
 ---
 # [<en>] Section containing parameters of the worker node group.
-# [<en>] https://deckhouse.io/modules/040-node-manager/cr.html#nodegroup
+# [<en>] https://deckhouse.io/modules/node-manager/cr.html#nodegroup
 # [<ru>] Секция, описывающая параметры группы узлов c компонентами, обеспечивающими рабочую нагрузку.
-# [<ru>] https://deckhouse.ru/modules/040-node-manager/cr.html#nodegroup
+# [<ru>] https://deckhouse.ru/modules/node-manager/cr.html#nodegroup
 apiVersion: deckhouse.io/v1
 kind: NodeGroup
 metadata:
@@ -329,9 +314,9 @@ spec:
   nodeType: CloudEphemeral
 ---
 # [<en>] Section containing parameters of the Ingress NGINX Controller.
-# [<en>] https://deckhouse.io/modules/402-ingress-nginx/cr.html
+# [<en>] https://deckhouse.io/modules/ingress-nginx/cr.html
 # [<ru>] Секция, описывающая параметры Ingress NGINX Controller.
-# [<ru>] https://deckhouse.ru/modules/402-ingress-nginx/cr.html
+# [<ru>] https://deckhouse.ru/modules/ingress-nginx/cr.html
 apiVersion: deckhouse.io/v1
 kind: IngressNginxController
 metadata:
@@ -345,9 +330,9 @@ spec:
     node.deckhouse.io/group: worker
 ---
 # [<en>] RBAC and authorization settings.
-# [<en>] https://deckhouse.io/modules/140-user-authz/cr.html#clusterauthorizationrule
+# [<en>] https://deckhouse.io/modules/user-authz/cr.html#clusterauthorizationrule
 # [<ru>] Настройки RBAC и авторизации.
-# [<ru>] https://deckhouse.ru/modules/140-user-authz/cr.html#clusterauthorizationrule
+# [<ru>] https://deckhouse.ru/modules/user-authz/cr.html#clusterauthorizationrule
 apiVersion: deckhouse.io/v1
 kind: ClusterAuthorizationRule
 metadata:
@@ -360,9 +345,9 @@ spec:
   portForwarding: true
 ---
 # [<en>] Parameters of the static user.
-# [<en>] https://deckhouse.io/modules/150-user-authn/cr.html#user
+# [<en>] https://deckhouse.io/modules/user-authn/cr.html#user
 # [<ru>] Данные статического пользователя.
-# [<ru>] https://deckhouse.ru/modules/150-user-authn/cr.html#user
+# [<ru>] https://deckhouse.ru/modules/user-authn/cr.html#user
 apiVersion: deckhouse.io/v1
 kind: User
 metadata:
