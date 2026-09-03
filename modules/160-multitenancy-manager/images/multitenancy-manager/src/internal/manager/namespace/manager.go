@@ -87,6 +87,10 @@ func (m *Manager) Init(ctx context.Context, checker healthz.Checker, init *sync.
 // picked from what the namespace already carries and the parameters reproduce its current state, so
 // the first render changes nothing inside the namespace.
 func (m *Manager) Adopt(ctx context.Context, namespace *corev1.Namespace) (ctrl.Result, error) {
+	if delay := helm.StampHoldoff(namespace); delay > 0 {
+		return ctrl.Result{RequeueAfter: delay}, nil
+	}
+
 	// One write: Helm ownership (needed even when a same-name Project already exists)
 	// plus leftover retired markers. Callers already hold the namespace; do not Get it again.
 	if err := m.persistNamespace(ctx, namespace, func(ns *corev1.Namespace) bool {

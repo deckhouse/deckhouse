@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"controller/apis/deckhouse.io/v1alpha3"
@@ -68,6 +69,31 @@ func TestCompleteLeftover_SkipsInferWhenForeignHelm(t *testing.T) {
 	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, updated))
 	assert.Equal(t, "foo", updated.Annotations[helm.ResourceAnnotationReleaseName])
 	assert.Equal(t, "foo", updated.Annotations[helm.ResourceAnnotationReleaseNamespace])
+	assert.NotContains(t, updated.Labels, helm.ResourceLabelManagedBy)
+}
+
+func TestCompleteLeftover_HoldsOffYoungNamespace(t *testing.T) {
+	ns := namespace("foo", map[string]string{
+		v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace,
+	}, nil)
+	ns.CreationTimestamp = metav1.Now()
+	wrap := project("foo", map[string]string{
+		v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace,
+	}, "")
+	m, c := newManager(t, ns, wrap)
+
+	deleted, err := m.CompleteLeftover(context.Background(), wrap)
+	require.NoError(t, err)
+	assert.False(t, deleted)
+
+	got := new(v1alpha3.Project)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, got))
+	assert.Empty(t, got.Spec.ProjectTemplateName)
+	assert.Equal(t, v1alpha3.ManagedByNamespace, got.Labels[v1alpha3.ProjectLabelManagedByNamespace])
+
+	updated := new(corev1.Namespace)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, updated))
+	assert.Empty(t, updated.Annotations[helm.ResourceAnnotationReleaseName])
 	assert.NotContains(t, updated.Labels, helm.ResourceLabelManagedBy)
 }
 

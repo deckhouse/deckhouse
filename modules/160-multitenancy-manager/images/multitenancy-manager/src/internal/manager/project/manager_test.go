@@ -21,6 +21,7 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
@@ -361,6 +362,35 @@ func TestEnsureTemplateName(t *testing.T) {
 		assert.Empty(t, got.Spec.ProjectTemplateName)
 		assert.Equal(t, v1alpha3.ManagedByNamespace, got.Labels[v1alpha3.ProjectLabelManagedByNamespace])
 	})
+}
+
+func TestHandle_HoldsOffYoungUnstampedNamespace(t *testing.T) {
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name:              "foo",
+		CreationTimestamp: metav1.Now(),
+	}}
+	proj := &v1alpha3.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "foo"},
+		Spec:       v1alpha3.ProjectSpec{ProjectTemplateName: "simple"},
+	}
+	m, c := newManager(t, ns, proj)
+	fh := &fakeHelmClient{applyResult: helm.ReleaseOutcome{Applied: true}}
+	m.helmClient = fh
+
+	res, err := m.Handle(context.Background(), proj.DeepCopy())
+	require.NoError(t, err)
+	assert.Greater(t, res.RequeueAfter, time.Duration(0))
+	assert.LessOrEqual(t, res.RequeueAfter, helm.AdoptGracePeriod)
+	assert.Zero(t, fh.analyzeCalls)
+
+	updated := new(corev1.Namespace)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, updated))
+	assert.Empty(t, updated.Annotations[helm.ResourceAnnotationReleaseName])
+	assert.NotEqual(t, helm.ManagedByHelm, updated.Labels[helm.ResourceLabelManagedBy])
+
+	got := new(v1alpha3.Project)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, got))
+	assert.NotEqual(t, v1alpha3.ProjectStateError, got.Status.State)
 }
 
 func TestHandle_DeletesLeftoverWrapWhenNamespaceGone(t *testing.T) {
