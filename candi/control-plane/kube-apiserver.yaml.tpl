@@ -8,6 +8,9 @@
 {{- if semverCompare ">=1.34" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DRADeviceBindingConditions=true" -}}
   {{- $baseFeatureGates = append $baseFeatureGates "DRAConsumableCapacity=true" -}}
+{{- end }}
+{{- /* DRAExtendedResource: GA and locked to default=true since 1.37, no need to pass it explicitly */ -}}
+{{- if semverCompare ">=1.34 <1.37" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DRAExtendedResource=true" -}}
 {{- end }}
 {{- if semverCompare ">=1.33 <1.36" .clusterConfiguration.kubernetesVersion }}
@@ -15,12 +18,6 @@
 {{- end }}
 {{- if semverCompare ">=1.33" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DRAPartitionableDevices=true" -}}
-{{- end }}
-{{- if semverCompare ">=1.32 <1.33" .clusterConfiguration.kubernetesVersion }}
-  {{- $baseFeatureGates = append $baseFeatureGates "DRAResourceClaimDeviceStatus=true" -}}
-{{- end }}
-{{- if semverCompare "<=1.32" .clusterConfiguration.kubernetesVersion }}
-  {{- $baseFeatureGates = append $baseFeatureGates "InPlacePodVerticalScaling=true" -}}
 {{- end }}
 {{- $apiserverFeatureGates := $baseFeatureGates -}}
 {{- if hasKey . "allowedFeatureGates" -}}

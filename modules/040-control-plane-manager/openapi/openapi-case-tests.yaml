@@ -16,13 +16,13 @@ positive:
     - resourcesRequests:
         cpu: "1000m"
         memory: "500Mi"
-    - kubernetesVersion: "1.32"
-    - kubernetesVersion: "1.36"
+    - kubernetesVersion: "1.33"
+    - kubernetesVersion: "1.37"
     # Default is the only sentinel this setting accepts.
     - kubernetesVersion: "Default"
   values:
     - internal:
-        effectiveKubernetesVersion: "1.32"
+        effectiveKubernetesVersion: "1.33"
         etcdServers:
         - 1.2.3.4
         - 4.3.2.1
@@ -30,8 +30,8 @@ positive:
 negative:
   configValues:
     # Outside the supported window for this edition.
-    - kubernetesVersion: "1.31"
-    - kubernetesVersion: "1.37"
+    - kubernetesVersion: "1.32"
+    - kubernetesVersion: "1.38"
     # Automatic stays legal in ClusterConfiguration but never in ModuleConfig.
     - kubernetesVersion: "Automatic"
     # The sentinel is case-sensitive and must not accept free-form text.
