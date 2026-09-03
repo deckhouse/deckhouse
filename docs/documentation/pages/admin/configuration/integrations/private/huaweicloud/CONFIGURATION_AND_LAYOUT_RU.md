@@ -38,8 +38,6 @@ lang: ru
 - разрешение входящего трафика по протоколу ICMP из `0.0.0.0/0`;
 - разрешение входящего трафика по протоколу TCP и портам `30000`–`32767` для использования сервисов типа `NodePort`. Входящий трафик по протоколу UDP на порты `NodePort` по умолчанию не разрешается.
 
-В отличие от OpenStack, DKP не добавляет правило, разрешающее любой входящий трафик между узлами одной группы безопасности. Между узлами кластера по умолчанию открыты только перечисленные выше порты и протоколы.
-
 Собственные группы безопасности для CloudEphemeral-узлов задаются в ресурсе [HuaweiCloudInstanceClass](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass) параметром [`spec.securityGroups`](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass-v1-spec-securitygroups) и применяются вместе с группой, созданной DKP.
 
 Пример конфигурации:
@@ -89,8 +87,6 @@ masterNodeGroup:
 - разрешение входящего трафика по протоколу TCP и порту `22` из `0.0.0.0/0`;
 - разрешение входящего трафика по протоколу ICMP из `0.0.0.0/0`;
 - разрешение входящего трафика по протоколу TCP и портам `30000`–`32767` для использования сервисов типа `NodePort`. Входящий трафик по протоколу UDP на порты `NodePort` по умолчанию не разрешается.
-
-В отличие от OpenStack, DKP не добавляет правило, разрешающее любой входящий трафик между узлами одной группы безопасности. Между узлами кластера по умолчанию открыты только перечисленные выше порты и протоколы.
 
 Собственные группы безопасности для CloudEphemeral-узлов задаются в ресурсе [HuaweiCloudInstanceClass](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass) параметром [`spec.securityGroups`](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass-v1-spec-securitygroups) и применяются вместе с группой, созданной DKP.
 

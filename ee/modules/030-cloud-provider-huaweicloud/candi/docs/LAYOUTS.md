@@ -20,8 +20,6 @@ The following inbound rules will be created:
 - allow incoming traffic over the ICMP protocol from `0.0.0.0/0`
 - allow incoming traffic over the TCP protocol on ports `30000`–`32767` for services of the `NodePort` type. Inbound UDP traffic to `NodePort` ports is not allowed by default
 
-Unlike OpenStack, the module does not add a rule that allows all inbound traffic between nodes in the same security group. By default, only the ports and protocols listed above are open between cluster nodes.
-
 Attach custom security groups for CloudEphemeral nodes in the [HuaweiCloudInstanceClass](cr.html#huaweicloudinstanceclass) resource via [`spec.securityGroups`](cr.html#huaweicloudinstanceclass-v1-spec-securitygroups). They are applied together with the group created by the module.
 
 Example of the layout configuration:
@@ -67,8 +65,6 @@ The following inbound rules will be created:
 - allow incoming traffic over the TCP protocol on port `22` from `0.0.0.0/0`
 - allow incoming traffic over the ICMP protocol from `0.0.0.0/0`
 - allow incoming traffic over the TCP protocol on ports `30000`–`32767` for services of the `NodePort` type. Inbound UDP traffic to `NodePort` ports is not allowed by default
-
-Unlike OpenStack, the module does not add a rule that allows all inbound traffic between nodes in the same security group. By default, only the ports and protocols listed above are open between cluster nodes.
 
 Attach custom security groups for CloudEphemeral nodes in the [HuaweiCloudInstanceClass](cr.html#huaweicloudinstanceclass) resource via [`spec.securityGroups`](cr.html#huaweicloudinstanceclass-v1-spec-securitygroups). They are applied together with the group created by the module.
 
