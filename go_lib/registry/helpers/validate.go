@@ -51,6 +51,11 @@ var (
 	// deliberately narrower than RFC 3986: the module only ever derives it from
 	// `imagesRepo`, whose own schema allows letters, digits, dots, dashes and
 	// underscores.
+	//
+	// A segment of "." or ".." is excluded rather than merely resolved. The path
+	// is joined into filesystem paths under /etc/containerd/registry.d and into
+	// the `remoteurl` of the distribution configuration; a dot segment means
+	// nothing to a registry and reaches outside the directory the module owns.
 	urlPathRegexp = regexp.MustCompile(`^(/[0-9A-Za-z._-]+)*/?$`)
 
 	// noProxyTokenRegexp matches one entry of a no_proxy list: a host, a domain
@@ -341,11 +346,51 @@ func URLPath(value any) error {
 	if raw == "" {
 		return nil
 	}
+	for _, segment := range strings.Split(raw, "/") {
+		if segment == "." || segment == ".." {
+			return fmt.Errorf("must not contain the path segment %q", segment)
+		}
+	}
 	if !strings.HasPrefix(raw, "/") {
 		return errors.New("must start with /")
 	}
 	if !urlPathRegexp.MatchString(raw) {
 		return fmt.Errorf("must match %q", urlPathRegexp.String())
+	}
+	return nil
+}
+
+// RegistryAddress validates a `<host>[:<port>][/<path>]` registry address as a
+// whole, the shape `imagesRepo` carries.
+//
+// It exists so that the boundary where the value enters the module agrees with
+// the rules its sinks need, by construction rather than by two patterns kept in
+// step by hand. The host becomes a directory name under
+// /etc/containerd/registry.d and a table key in hosts.toml; the path is joined
+// into the same filesystem paths and into the `remoteurl` of the distribution
+// configuration.
+func RegistryAddress(value any) error {
+	raw, err := stringValue(value)
+	if err != nil {
+		return err
+	}
+	if raw == "" {
+		return nil
+	}
+	if err := EncodableString(raw); err != nil {
+		return err
+	}
+
+	host, path := SplitAddressAndPath(raw)
+
+	if host == "" {
+		return errors.New("has no host component")
+	}
+	if err := RegistryHost(host); err != nil {
+		return fmt.Errorf("host %q is not valid: %w", host, err)
+	}
+	if err := URLPath(path); err != nil {
+		return fmt.Errorf("path %q is not valid: %w", path, err)
 	}
 	return nil
 }
