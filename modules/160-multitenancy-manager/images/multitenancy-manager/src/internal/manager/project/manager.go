@@ -18,6 +18,7 @@ package project
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"slices"
@@ -161,6 +162,11 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 	// Defense in depth: Adopt stamps Helm ownership, but a Project that already existed
 	// (or whose Adopt raced) can still reach the first upgrade without the metadata.
 	if err := helm.StampReleaseOwnership(ctx, m.client, project.Name); err != nil {
+		if errors.Is(err, helm.ErrForeignRelease) {
+			project.ClearConditions()
+			_, err := m.failAndRequeue(ctx, project, v1alpha3.ProjectConditionHelmOwnership, err)
+			return ctrl.Result{}, err
+		}
 		return ctrl.Result{}, err
 	}
 
@@ -405,11 +411,22 @@ func (m *Manager) HandleVirtual(ctx context.Context, project *v1alpha3.Project) 
 		return ctrl.Result{}, err
 	}
 
+	claimed, err := m.realProjectNames(ctx)
+	if err != nil {
+		m.logger.Error(err, "failed to list projects", "project", project.Name)
+		return ctrl.Result{}, err
+	}
+
 	var involvedNamespaces []string
 	for i := range namespaces.Items {
-		if VirtualProjectName(&namespaces.Items[i]) == project.Name {
-			involvedNamespaces = append(involvedNamespaces, namespaces.Items[i].Name)
+		ns := &namespaces.Items[i]
+		if VirtualProjectName(ns) != project.Name {
+			continue
 		}
+		if _, taken := claimed[ns.Name]; taken {
+			continue
+		}
+		involvedNamespaces = append(involvedNamespaces, ns.Name)
 	}
 
 	if err := m.updateVirtualProject(ctx, project, involvedNamespaces); err != nil {

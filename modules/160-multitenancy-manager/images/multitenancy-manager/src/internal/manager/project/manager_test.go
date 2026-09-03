@@ -383,6 +383,42 @@ func TestHandle_DeletesLeftoverWrapWhenNamespaceGone(t *testing.T) {
 	require.True(t, apierrors.IsNotFound(err) || !got.DeletionTimestamp.IsZero())
 }
 
+func TestHandle_LeftoverWrapKeepsIdentityWhenHelmForeign(t *testing.T) {
+	leftover := &v1alpha3.Project{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   "foo",
+			Labels: map[string]string{v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace},
+		},
+	}
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name: "foo",
+		Annotations: map[string]string{
+			helm.ResourceAnnotationReleaseName:      "foo",
+			helm.ResourceAnnotationReleaseNamespace: "foo",
+		},
+	}}
+	m, c := newManager(t, leftover, ns)
+	fh := &fakeHelmClient{applyResult: helm.ReleaseOutcome{Applied: true}}
+	m.helmClient = fh
+
+	_, err := m.Handle(context.Background(), leftover)
+	require.Error(t, err)
+	assert.ErrorIs(t, err, helm.ErrForeignRelease)
+	assert.Zero(t, fh.analyzeCalls)
+
+	got := new(v1alpha3.Project)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, got))
+	assert.Empty(t, got.Spec.ProjectTemplateName)
+	assert.Equal(t, v1alpha3.ManagedByNamespace, got.Labels[v1alpha3.ProjectLabelManagedByNamespace])
+	assert.Equal(t, v1alpha3.ProjectStateError, got.Status.State)
+	assert.True(t, got.IsConditionFalse(v1alpha3.ProjectConditionHelmOwnership))
+
+	updated := new(corev1.Namespace)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, updated))
+	assert.Equal(t, "foo", updated.Annotations[helm.ResourceAnnotationReleaseName])
+	assert.Equal(t, "foo", updated.Annotations[helm.ResourceAnnotationReleaseNamespace])
+}
+
 func TestHandle_RequeuesLeftoverWrapWhenNamespaceGetFails(t *testing.T) {
 	leftover := &v1alpha3.Project{
 		ObjectMeta: metav1.ObjectMeta{

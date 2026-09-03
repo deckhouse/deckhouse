@@ -162,6 +162,11 @@ func requestsForNamespace(object client.Object) []reconcile.Request {
 	if virtual := projectmanager.VirtualProjectName(object); virtual != "" {
 		reqs = append(reqs, reconcile.Request{NamespacedName: client.ObjectKey{Name: virtual}})
 	}
+	// Adopt creates the same-name Project before Helm can label the namespace.
+	// Without this, dropping foreign meta.helm.sh/* never wakes that Error Project.
+	if name := object.GetName(); name != "" {
+		reqs = append(reqs, reconcile.Request{NamespacedName: client.ObjectKey{Name: name}})
+	}
 	return reqs
 }
 
@@ -184,7 +189,16 @@ func (namespaceWatchPredicate) Update(e event.UpdateEvent) bool {
 	newProject := e.ObjectNew.GetLabels()[v1alpha3.ResourceLabelProject]
 	oldHeritage := e.ObjectOld.GetLabels()[v1alpha3.ResourceLabelHeritage]
 	newHeritage := e.ObjectNew.GetLabels()[v1alpha3.ResourceLabelHeritage]
-	return oldProject != newProject || oldHeritage != newHeritage
+	if oldProject != newProject || oldHeritage != newHeritage {
+		return true
+	}
+	return helmOwnershipChanged(e.ObjectOld, e.ObjectNew)
+}
+
+func helmOwnershipChanged(oldObj, newObj client.Object) bool {
+	oldA, newA := oldObj.GetAnnotations(), newObj.GetAnnotations()
+	return oldA[helm.ResourceAnnotationReleaseName] != newA[helm.ResourceAnnotationReleaseName] ||
+		oldA[helm.ResourceAnnotationReleaseNamespace] != newA[helm.ResourceAnnotationReleaseNamespace]
 }
 
 var _ reconcile.Reconciler = &reconciler{}

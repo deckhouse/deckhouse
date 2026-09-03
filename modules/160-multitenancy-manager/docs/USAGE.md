@@ -19,6 +19,7 @@ The following project templates are included in the Deckhouse Kubernetes Platfor
   - `podSecurityProfile` — the [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) profile for the project namespaces: `Baseline` (default) prevents known privilege escalations, `Restricted` applies the strictest hardening practices, `Privileged` restricts nothing.
   - `extendedMonitoringEnabled` (default `true`) — alerts on controller outages and restarts, 5xx errors in ingress-nginx and low free space on the project's persistent volumes.
   - `clusterLogDestinationName` — the name of the ClusterLogDestination to ship the project logs to. Left unset, the project logs are not shipped anywhere.
+  - `requiredRequests` (default `true`) — when true, workloads in the project must specify CPU and memory requests (a Deny-mode OperationPolicy). Adoption of an existing namespace seeds this to `false` so running workloads are not blocked.
 
 - `secure` — includes all the capabilities of the `default` template, and additionally restricts the users and groups inside containers, audits their calls to the kernel and scans images for vulnerabilities.
 

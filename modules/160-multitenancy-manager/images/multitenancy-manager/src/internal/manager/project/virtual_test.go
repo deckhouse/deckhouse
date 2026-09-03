@@ -94,6 +94,28 @@ func TestHandleVirtual_DropsDeadNamespaces(t *testing.T) {
 	assert.Equal(t, "default", got.Status.Namespaces[0].Name)
 }
 
+func TestHandleVirtual_SkipsNamespaceWithSameNameProject(t *testing.T) {
+	virtual := &v1alpha3.Project{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:   DefaultProjectName,
+			Labels: map[string]string{v1alpha3.ProjectLabelVirtualProject: "true"},
+		},
+		Spec: v1alpha3.ProjectSpec{ProjectTemplateName: VirtualTemplate},
+	}
+	claimed := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
+	foo := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "foo"}}
+	plain := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default"}}
+	m, c := newManager(t, virtual, claimed, foo, plain)
+
+	_, err := m.HandleVirtual(context.Background(), virtual)
+	require.NoError(t, err)
+
+	got := new(v1alpha3.Project)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: DefaultProjectName}, got))
+	require.Len(t, got.Status.Namespaces, 1)
+	assert.Equal(t, "default", got.Status.Namespaces[0].Name)
+}
+
 func TestHandleVirtual_PutsSystemNamespacesOnDeckhouse(t *testing.T) {
 	virtual := &v1alpha3.Project{
 		ObjectMeta: metav1.ObjectMeta{Name: DeckhouseProjectName},

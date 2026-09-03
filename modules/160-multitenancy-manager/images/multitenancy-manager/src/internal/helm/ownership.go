@@ -18,6 +18,7 @@ package helm
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
@@ -29,11 +30,64 @@ import (
 // ManagedByHelm is the value Helm writes on objects it created (or was told it created).
 const ManagedByHelm = "Helm"
 
+// ReleaseStorageNamespace is where project Helm release Secrets live. The
+// client does not set install.Namespace, so Helm usually stamps
+// release-namespace as empty; this constant is still treated as ours in case
+// a later apply fills it from the action config.
+const ReleaseStorageNamespace = "d8-multitenancy-manager"
+
+// ErrForeignRelease is returned when a namespace already names a Helm release
+// that is not this project's. Adoption must not overwrite that metadata.
+var ErrForeignRelease = errors.New("namespace is owned by a different Helm release")
+
+// ForeignRelease is the Helm release already on ns when it is not this
+// project's. Helm identity is the (release-name, release-namespace) pair.
+// Empty means the namespace is free to stamp (no release, or ours).
+//
+// Ours: release-name is ReleaseName(project) (or the raw 61-char name we used
+// to stamp) and release-namespace is empty or the module storage namespace.
+// helm install foo -n foo is foreign even when the names match: its
+// release-namespace is the user namespace, not ours.
+func ForeignRelease(ns *corev1.Namespace, releaseName string) string {
+	if ns == nil {
+		return ""
+	}
+	name := ns.Annotations[ResourceAnnotationReleaseName]
+	if name == "" {
+		return ""
+	}
+	relNS := ns.Annotations[ResourceAnnotationReleaseNamespace]
+	if oursReleaseName(ns, name, releaseName) && oursReleaseNamespace(relNS) {
+		return ""
+	}
+	if relNS != "" {
+		return name + "/" + relNS
+	}
+	return name
+}
+
+func oursReleaseName(ns *corev1.Namespace, current, releaseName string) bool {
+	if current == releaseName {
+		return true
+	}
+	// A 61-character project used to be stamped with the raw name. Helm itself
+	// cannot store a 61-character release, so this cannot be a user chart.
+	return current == ns.Name && releaseName == ReleaseName(ns.Name) && current != releaseName
+}
+
+func oursReleaseNamespace(relNS string) bool {
+	return relNS == "" || relNS == ReleaseStorageNamespace
+}
+
 // ApplyReleaseOwnership writes Helm ownership metadata onto ns in memory. It
 // returns true when the object changed and must be persisted. A terminating
-// namespace is left alone: there is nothing to stamp.
+// namespace is left alone: there is nothing to stamp. A namespace that already
+// names a different release is left alone too.
 func ApplyReleaseOwnership(ns *corev1.Namespace, releaseName string) bool {
 	if ns == nil || !ns.DeletionTimestamp.IsZero() {
+		return false
+	}
+	if ForeignRelease(ns, releaseName) != "" {
 		return false
 	}
 	if ns.Labels == nil {
@@ -67,7 +121,11 @@ func StampReleaseOwnership(ctx context.Context, c client.Client, projectName str
 			}
 			return fmt.Errorf("get the '%s' namespace: %w", projectName, err)
 		}
-		if !ApplyReleaseOwnership(namespace, ReleaseName(projectName)) {
+		ours := ReleaseName(projectName)
+		if foreign := ForeignRelease(namespace, ours); foreign != "" {
+			return fmt.Errorf("%w %q", ErrForeignRelease, foreign)
+		}
+		if !ApplyReleaseOwnership(namespace, ours) {
 			return nil
 		}
 		if err := c.Update(ctx, namespace); err != nil {

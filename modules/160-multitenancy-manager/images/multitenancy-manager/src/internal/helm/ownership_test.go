@@ -94,3 +94,88 @@ func TestStampReleaseOwnership_LongProjectName(t *testing.T) {
 	assert.Equal(t, rel, got.Annotations[ResourceAnnotationReleaseName])
 	assert.Equal(t, ManagedByHelm, got.Labels[ResourceLabelManagedBy])
 }
+
+func TestApplyReleaseOwnership_ForeignReleaseUnchanged(t *testing.T) {
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name: "foo",
+		Labels: map[string]string{
+			ResourceLabelManagedBy: ManagedByHelm,
+		},
+		Annotations: map[string]string{
+			ResourceAnnotationReleaseName:      "user-chart",
+			ResourceAnnotationReleaseNamespace: "foo",
+		},
+	}}
+
+	assert.Equal(t, "user-chart/foo", ForeignRelease(ns, "foo"))
+	assert.False(t, ApplyReleaseOwnership(ns, "foo"))
+	assert.Equal(t, "user-chart", ns.Annotations[ResourceAnnotationReleaseName])
+	assert.Equal(t, "foo", ns.Annotations[ResourceAnnotationReleaseNamespace])
+}
+
+func TestStampReleaseOwnership_ForeignRelease(t *testing.T) {
+	scheme := runtime.NewScheme()
+	require.NoError(t, corev1.AddToScheme(scheme))
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name: "foo",
+		Annotations: map[string]string{
+			ResourceAnnotationReleaseName: "user-chart",
+		},
+	}}
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(ns).Build()
+
+	err := StampReleaseOwnership(context.Background(), c, "foo")
+	require.Error(t, err)
+	assert.ErrorIs(t, err, ErrForeignRelease)
+
+	got := new(corev1.Namespace)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, got))
+	assert.Equal(t, "user-chart", got.Annotations[ResourceAnnotationReleaseName])
+	assert.NotEqual(t, ManagedByHelm, got.Labels[ResourceLabelManagedBy])
+}
+
+func TestForeignRelease_SameNameInUserNamespaceIsForeign(t *testing.T) {
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name: "foo",
+		Annotations: map[string]string{
+			ResourceAnnotationReleaseName:      "foo",
+			ResourceAnnotationReleaseNamespace: "foo",
+		},
+	}}
+	assert.Equal(t, "foo/foo", ForeignRelease(ns, "foo"))
+	assert.False(t, ApplyReleaseOwnership(ns, "foo"))
+	assert.Equal(t, "foo", ns.Annotations[ResourceAnnotationReleaseNamespace])
+}
+
+func TestForeignRelease_OurStorageNamespaceIsOurs(t *testing.T) {
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name: "foo",
+		Annotations: map[string]string{
+			ResourceAnnotationReleaseName:      "foo",
+			ResourceAnnotationReleaseNamespace: ReleaseStorageNamespace,
+		},
+	}}
+	assert.Empty(t, ForeignRelease(ns, "foo"))
+}
+
+func TestForeignRelease_EmptyNamespaceStampIsOurs(t *testing.T) {
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name:        "foo",
+		Annotations: map[string]string{ResourceAnnotationReleaseName: "foo"},
+	}}
+	assert.Empty(t, ForeignRelease(ns, "foo"))
+}
+
+func TestForeignRelease_LongNameOldStampIsOurs(t *testing.T) {
+	name := "t-mtm61-" + strings.Repeat("x", 53)
+	require.Equal(t, 61, len(name))
+	rel := ReleaseName(name)
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name:        name,
+		Annotations: map[string]string{ResourceAnnotationReleaseName: name},
+	}}
+	assert.Empty(t, ForeignRelease(ns, rel))
+	assert.True(t, ApplyReleaseOwnership(ns, rel))
+	assert.Equal(t, rel, ns.Annotations[ResourceAnnotationReleaseName])
+	assert.Equal(t, "", ns.Annotations[ResourceAnnotationReleaseNamespace])
+}

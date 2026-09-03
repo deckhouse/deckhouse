@@ -71,6 +71,13 @@ func (m *Manager) CompleteLeftover(ctx context.Context, project *v1alpha3.Projec
 		return true, nil
 	}
 
+	// Do not infer a template while a foreign Helm release still owns the
+	// namespace. Handle will surface HelmOwnership; once the annotations are
+	// gone this leftover can be migrated for real.
+	if helm.ForeignRelease(namespace, helm.ReleaseName(project.Name)) != "" {
+		return false, nil
+	}
+
 	if err := m.persistNamespace(ctx, namespace, func(ns *corev1.Namespace) bool {
 		stamped := helm.ApplyReleaseOwnership(ns, helm.ReleaseName(project.Name))
 		cleared := applyClearRetiredMarkers(ns)
