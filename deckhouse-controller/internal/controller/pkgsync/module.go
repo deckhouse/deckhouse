@@ -37,17 +37,18 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-// placement is where a module's package comes from, as the sync derives it. An offered
-// placement names a module some source lists and nothing installed: it carries no version,
-// and it is in conflict while the config enables the module, several sources offer it and
-// none is picked.
+// placement is where a module's package comes from, as the sync derives it.
+//
+// An offered placement names a module some source lists and nothing installed:
+// - it carries no version, and it is in conflict while the config enables the module,
+// several sources offer it and none is picked.
 type placement struct {
-	repository string
-	version    string
-	dev        bool
-	embedded   bool
-	offered    bool
-	conflict   bool
+	repository string // -> spec.packageRepositoryName; empty while several sources offer the module and the config picks none
+	version    string // -> spec.packageVersion; empty for an offered module
+	dev        bool   // -> annotation dev: a ModulePullOverride pins the module to an image tag
+	embedded   bool   // -> annotation embedded: the running Deckhouse image ships the module
+	offered    bool   // -> status.phase Available: a source lists the module and nothing installed it
+	conflict   bool   // -> status.phase Conflict: offered by >1 source and enabled
 }
 
 // placed reports whether any source claims the module; the zero placement means none does.
@@ -63,11 +64,19 @@ func (p placement) placed() bool {
 // deleted. The conditions the old stack left without a reason get one, so the object passes
 // the v1alpha2 schema on its next status write.
 func (s *syncer) syncModules(ctx context.Context) error {
-	configs, err := s.resolveModuleConfigs(ctx)
+	// Gather module configs to do 2 things:
+	// - set module v2 spec fields
+	// - set spec.PackageRepositoryName (ModuleConfigs decide which repository to use)
+	configs, err := s.gatherAllModuleConfigs(ctx)
 	if err != nil {
-		return fmt.Errorf("resolve module configs: %w", err)
+		return fmt.Errorf("gather module configs: %w", err)
 	}
 
+	// Check which module comes from which source (embedded, pull override, release, offered).
+	// We need it to fill v1alpha2 fields:
+	// - spec.packageRepositoryName and spec.packageVersion
+	// - the embedded and dev annotations
+	// - status.phase Available or Conflict for a module nothing installed
 	placements, err := s.resolvePlacements(ctx, configs)
 	if err != nil {
 		return fmt.Errorf("resolve module placements: %w", err)
@@ -78,17 +87,34 @@ func (s *syncer) syncModules(ctx context.Context) error {
 		return fmt.Errorf("list modules: %w", err)
 	}
 
-	tracked := make(map[string]struct{}, len(existing.Items))
+	if err := s.syncExistingModules(ctx, existing.Items, placements, configs); err != nil {
+		return err
+	}
 
+	existingModuleNames := make(map[string]struct{}, len(existing.Items))
 	for idx := range existing.Items {
-		module := &existing.Items[idx]
-		tracked[module.Name] = struct{}{}
+		existingModuleNames[existing.Items[idx].Name] = struct{}{}
+	}
+
+	return s.createMissingModules(ctx, existingModuleNames, placements, configs)
+}
+
+// syncExistingModules brings every Module the cluster carries in line with its placement and
+// config: a module nothing backs is deleted, the rest get their spec and annotations, a reason
+// for every condition the old stack left without one, and the catalog phase when nothing
+// installed them.
+func (s *syncer) syncExistingModules(ctx context.Context, modules []v1alpha2.Module, placements map[string]placement, configs map[string]*v1alpha1.ModuleConfig) error {
+	for idx := range modules {
+		module := &modules[idx]
 
 		place := placements[module.Name]
 		if !place.placed() && s.disposable(module) {
 			s.logger.Info("module is not backed by a package, delete it", slog.String("name", module.Name))
 
-			// a module already gone is the outcome asked for
+			// nothing offers or runs this module any more, the object is stale:
+			// - a source stopped offering it or was deleted, and it was never installed
+			// - the Deckhouse image no longer ships it
+			// - its release and override are gone and its files are wiped from disk
 			if err := s.writer.Delete(ctx, module); err != nil && !apierrors.IsNotFound(err) {
 				return fmt.Errorf("delete module '%s': %w", module.Name, err)
 			}
@@ -96,6 +122,7 @@ func (s *syncer) syncModules(ctx context.Context) error {
 			continue
 		}
 
+		// Update the module spec and annotations to modern v1alpha2 fields
 		if err := s.patchModule(ctx, module, place, configs[module.Name]); err != nil {
 			return err
 		}
@@ -111,8 +138,18 @@ func (s *syncer) syncModules(ctx context.Context) error {
 		}
 	}
 
+	return nil
+}
+
+// createMissingModules creates a Module for every placement without an object: the old stack
+// knows the module, the cluster carries no object yet.
+// - embedded modules on the first start with the new code
+// - available modules from ModuleSource.status.availableModules
+// - a module whose object was deleted by hand while its release or override lives
+// - an embedded module a Deckhouse upgrade brought in
+func (s *syncer) createMissingModules(ctx context.Context, existing map[string]struct{}, placements map[string]placement, configs map[string]*v1alpha1.ModuleConfig) error {
 	for name, place := range placements {
-		if _, ok := tracked[name]; ok {
+		if _, ok := existing[name]; ok {
 			continue
 		}
 
@@ -131,9 +168,11 @@ func (s *syncer) syncModules(ctx context.Context) error {
 	return nil
 }
 
-// resolvePlacements derives every module's package source, in precedence order: the running
-// image, then a pull override, then the newest deployed release, then a source merely
-// offering the module.
+// resolvePlacements derives every module's package source, in precedence order:
+// - the running image
+// - a pull override
+// - then the newest deployed release
+// - then a source merely offering the module.
 func (s *syncer) resolvePlacements(ctx context.Context, configs map[string]*v1alpha1.ModuleConfig) (map[string]placement, error) {
 	embedded, err := s.embeddedPlacements()
 	if err != nil {
@@ -257,7 +296,11 @@ func (s *syncer) embeddedPlacements() (map[string]placement, error) {
 			return nil, fmt.Errorf("embedded module '%s': %w", entry.Name(), err)
 		}
 
-		placements[name] = placement{repository: repositoryNameEmbedded, version: version, embedded: true}
+		placements[name] = placement{
+			repository: repositoryNameEmbedded,
+			version:    version,
+			embedded:   true,
+		}
 	}
 
 	return placements, nil
@@ -465,8 +508,8 @@ func ModuleRepository(ctx context.Context, reader client.Reader, name string) (s
 	return "", nil
 }
 
-// resolveModuleConfigs maps every live module config onto the module it configures.
-func (s *syncer) resolveModuleConfigs(ctx context.Context) (map[string]*v1alpha1.ModuleConfig, error) {
+// gatherAllModuleConfigs maps every live module config onto the module it configures.
+func (s *syncer) gatherAllModuleConfigs(ctx context.Context) (map[string]*v1alpha1.ModuleConfig, error) {
 	list := new(v1alpha1.ModuleConfigList)
 	if err := s.reader.List(ctx, list); err != nil {
 		return nil, fmt.Errorf("list module configs: %w", err)
@@ -488,10 +531,12 @@ func (s *syncer) resolveModuleConfigs(ctx context.Context) (map[string]*v1alpha1
 	return configs, nil
 }
 
-// disposable reports whether nothing backs an unplaced module: it carries no package version,
-// it is an embedded module the image stopped shipping and no real repository has taken over,
-// or it is a downloaded module whose files are gone. A downloaded module still on disk stays:
-// a pull override deleted without a rollback leaves its files in use until the next deploy.
+// disposable reports whether nothing backs a module no source claims:
+// - it has no package version, so nothing was ever installed
+// - it is an embedded module the image no longer ships
+// - it is a downloaded module whose files are gone from disk
+// A downloaded module still on disk stays: a pull override deleted without a rollback
+// leaves its files in use until the next deploy.
 func (s *syncer) disposable(module *v1alpha2.Module) bool {
 	if module.Spec.PackageVersion == "" {
 		return true
