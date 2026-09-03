@@ -644,7 +644,8 @@ Key data and checks available when validating `CONNECT` operations:
 ## How do I restrict GPU resource usage in namespaces?
 
 The `gpuResourceRestriction` policy in [OperationPolicy](cr.html#operationpolicy)
-denies pod creation when a pod requests GPU resources and the namespace has no label allowing GPU usage.
+denies the pods that request GPU resources when the namespace has no label allowing GPU usage.
+The check runs on pod creation and update, including when an ephemeral container is added.
 Both `resources.requests` and `resources.limits` of every container, init container,
 and ephemeral container are inspected. A resource with a quantity of `0` is not treated as a GPU request.
 
