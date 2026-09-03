@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -39,15 +40,15 @@ import (
 
 // placement is where a module's package comes from, as the sync derives it.
 //
-// An offered placement names a module some source lists and nothing installed:
+// A source-only placement names a module some source lists and nothing installed:
 // - it carries no version, and it is in conflict while the config enables the module,
 // several sources offer it and none is picked.
 type placement struct {
 	repository string // -> spec.packageRepositoryName; empty while several sources offer the module and the config picks none
-	version    string // -> spec.packageVersion; empty for an offered module
+	version    string // -> spec.packageVersion; empty for a source-only module
 	dev        bool   // -> annotation dev: a ModulePullOverride pins the module to an image tag
 	embedded   bool   // -> annotation embedded: the running Deckhouse image ships the module
-	offered    bool   // -> status.phase Available: a source lists the module and nothing installed it
+	sourceOnly bool   // -> status.phase Available: a source lists the module and nothing installed it: no deployed release, no override, not embedded
 	conflict   bool   // -> status.phase Conflict: offered by >1 source and enabled
 }
 
@@ -59,7 +60,7 @@ func (p placement) placed() bool {
 // syncModules brings every Module in line with where its package comes from and with its
 // module config. A module the image ships, a pull override pins or a deployed release
 // installed gets its spec and annotations; a module a source merely offers gets the
-// repository it would come from, no version and the offered status; the config fields mirror
+// repository it would come from, no version and the source-only status; the config fields mirror
 // the ModuleConfig and are cleared when it is gone; a module nothing backs any more is
 // deleted. The conditions the old stack left without a reason get one, so the object passes
 // the v1alpha2 schema on its next status write.
@@ -72,7 +73,7 @@ func (s *syncer) syncModules(ctx context.Context) error {
 		return fmt.Errorf("gather module configs: %w", err)
 	}
 
-	// Check which module comes from which source (embedded, pull override, release, offered).
+	// Check which module comes from which source (embedded, pull override, release, source only).
 	// We need it to fill v1alpha2 fields:
 	// - spec.packageRepositoryName and spec.packageVersion
 	// - the embedded and dev annotations
@@ -127,12 +128,14 @@ func (s *syncer) syncExistingModules(ctx context.Context, modules []v1alpha2.Mod
 			return err
 		}
 
-		if err := s.normalizeModuleStatus(ctx, module); err != nil {
+		// Ensure every condition has a reason (which module v1alpha1 did not require, but v1alpha2 does)
+		if err := s.ensureModuleConditionReasons(ctx, module); err != nil {
 			return err
 		}
 
-		if place.offered {
-			if err := s.ensureCatalogStatus(ctx, module, place); err != nil {
+		// If there is a source for module - ensure that the module has correct status.phase (Available or Conflict)
+		if place.sourceOnly {
+			if err := s.ensureSourceOnlyStatus(ctx, module, place); err != nil {
 				return err
 			}
 		}
@@ -158,8 +161,8 @@ func (s *syncer) createMissingModules(ctx context.Context, existing map[string]s
 			return err
 		}
 
-		if place.offered {
-			if err := s.ensureCatalogStatus(ctx, module, place); err != nil {
+		if place.sourceOnly {
+			if err := s.ensureSourceOnlyStatus(ctx, module, place); err != nil {
 				return err
 			}
 		}
@@ -194,16 +197,15 @@ func (s *syncer) resolvePlacements(ctx context.Context, configs map[string]*v1al
 		return nil, fmt.Errorf("resolve offered placements: %w", err)
 	}
 
-	// the first source claiming a name keeps it, so a lower-precedence source never overwrites a higher one
 	placements := make(map[string]placement, len(embedded)+len(overridden)+len(released)+len(offered))
 
-	for _, source := range []map[string]placement{embedded, overridden, released, offered} {
-		for name, place := range source {
-			if _, ok := placements[name]; !ok {
-				placements[name] = place
-			}
-		}
-	}
+	// lower precedence first, so every later source overwrites the earlier one: a release, an
+	// override or the image takes the module over from a source that merely offers it, and
+	// sourceOnly survives only where nothing installed the module
+	maps.Copy(placements, offered)
+	maps.Copy(placements, released)
+	maps.Copy(placements, overridden)
+	maps.Copy(placements, embedded)
 
 	return placements, nil
 }
@@ -240,7 +242,7 @@ func (s *syncer) offeredPlacements(ctx context.Context, configs map[string]*v1al
 		configured := ConfiguredSource(conf)
 
 		placements[name] = placement{
-			offered:    true,
+			sourceOnly: true,
 			repository: CatalogRepository(configured, names),
 			conflict:   CatalogConflict(conf != nil && conf.IsEnabled(), configured, names),
 		}
@@ -249,10 +251,10 @@ func (s *syncer) offeredPlacements(ctx context.Context, configs map[string]*v1al
 	return placements, nil
 }
 
-// ensureCatalogStatus puts a module nothing installed into the offered or the conflict
+// ensureSourceOnlyStatus puts a source-only module into the available or the conflict
 // state, unless it is already on its way from the catalog to a deploy. The status of the
 // package the module ran before its uninstall goes with the version.
-func (s *syncer) ensureCatalogStatus(ctx context.Context, module *v1alpha2.Module, place placement) error {
+func (s *syncer) ensureSourceOnlyStatus(ctx context.Context, module *v1alpha2.Module, place placement) error {
 	original := module.DeepCopy()
 
 	if !module.ApplyCatalogState(place.conflict) {
@@ -621,8 +623,8 @@ func applyDesired(module *v1alpha2.Module, place placement, conf *v1alpha1.Modul
 
 	// the annotations, not the spec, route a module to the image or to a dev tag, so both are
 	// reconciled both ways
-	setAnnotation(module, v1alpha2.ModuleAnnotationEmbedded, place.embedded)
-	setAnnotation(module, v1alpha2.ModuleAnnotationDev, place.dev)
+	syncAnnotation(module, v1alpha2.ModuleAnnotationEmbedded, place.embedded)
+	syncAnnotation(module, v1alpha2.ModuleAnnotationDev, place.dev)
 
 	// the config fields belong to the ModuleConfig: a module without one carries none
 	if conf == nil {
@@ -636,11 +638,12 @@ func applyDesired(module *v1alpha2.Module, place placement, conf *v1alpha1.Modul
 	module.Spec.UpdatePolicy = conf.Spec.UpdatePolicy
 }
 
-// setAnnotation marks the key true or drops it, allocating the map on the first mark.
-func setAnnotation(module *v1alpha2.Module, key string, set bool) {
-	if !set {
+// syncAnnotation keeps the mark in step with want: a wanted mark is set to true, an unwanted
+// one is dropped. The drop is what takes a stale mark off a module the image stopped shipping
+// or whose pull override is gone.
+func syncAnnotation(module *v1alpha2.Module, key string, want bool) {
+	if !want {
 		delete(module.Annotations, key)
-
 		return
 	}
 
@@ -651,10 +654,10 @@ func setAnnotation(module *v1alpha2.Module, key string, set bool) {
 	module.Annotations[key] = "true"
 }
 
-// normalizeModuleStatus gives every condition the old stack wrote without a reason one. The
+// ensureModuleConditionReasons gives every condition the old stack wrote without a reason one. The
 // v1alpha2 schema requires a reason, and a stored condition without the key fails validation
 // as soon as any status write touches the object.
-func (s *syncer) normalizeModuleStatus(ctx context.Context, module *v1alpha2.Module) error {
+func (s *syncer) ensureModuleConditionReasons(ctx context.Context, module *v1alpha2.Module) error {
 	original := module.DeepCopy()
 
 	changed := false
@@ -681,8 +684,10 @@ func (s *syncer) normalizeModuleStatus(ctx context.Context, module *v1alpha2.Mod
 	return nil
 }
 
-// legacyConditionReason names the reason a v1alpha1 writer left implicit: the True state of a
-// condition is its own reason, a disabled state is Disabled, everything else is Unknown.
+// legacyConditionReason names the reason a v1alpha1 writer left implicit:
+// - the True state of a condition is its own reason
+// - a disabled state is Disabled reason
+// - everything else is Unknown.
 func legacyConditionReason(cond *metav1.Condition) string {
 	switch cond.Status {
 	case metav1.ConditionTrue:
