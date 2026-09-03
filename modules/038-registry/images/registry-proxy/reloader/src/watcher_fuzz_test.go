@@ -46,29 +46,35 @@ import (
 	"testing"
 )
 
-// confSeeds are the shapes nginx_new.conf arrives as: what the bashible step
-// renders, and what a partial or interrupted write leaves behind.
-var confSeeds = []string{
-	"user deckhouse;\nevents { worker_connections 16384; }\nstream {\n  upstream registry {\n    least_conn;\n    server 10.0.0.1:5001;\n  }\n  server {\n    listen 127.0.0.1:5001;\n    proxy_pass registry;\n  }\n}\n",
-	"",
-	"user deckhouse;\n",
-	"user deckhouse;\nevents { worker_connections 16384; }\nstream {\n  upstream registry {\n    least_conn;\n",
-	"stream {\n",
-	"}\n",
-	"\n\n\n",
-	"# comment only\n",
-	"user deckhouse;\x00\n",
-	"user deckhouse;\r\nevents {}\r\n",
-	strings.Repeat("server 10.0.0.1:5001;\n", 512),
-}
-
 func FuzzNginxReload(f *testing.F) {
-	for _, current := range confSeeds {
-		for _, incoming := range confSeeds {
-			f.Add(current, incoming, true)
-			f.Add(current, incoming, false)
-		}
-	}
+	// The current file on disk, the incoming one, and whether the configuration
+	// check passes. The pairs cover a first start (no current file), an
+	// unchanged file, a real change, and the partially written and truncated
+	// shapes an fsnotify event can catch mid-write -- each against both
+	// verdicts, because a rejected configuration must never be applied.
+	valid := "user deckhouse;\nevents { worker_connections 16384; }\nstream {\n  upstream registry {\n    least_conn;\n    server 10.0.0.1:5001;\n  }\n  server {\n    listen 127.0.0.1:5001;\n    proxy_pass registry;\n  }\n}\n"
+	changed := strings.Replace(valid, "10.0.0.1", "10.0.0.2", 1)
+
+	f.Add("", valid, true)
+	f.Add("", valid, false)
+	f.Add(valid, valid, true)
+	f.Add(valid, valid, false)
+	f.Add(valid, changed, true)
+	f.Add(valid, changed, false)
+	f.Add(changed, valid, true)
+	f.Add(valid, "", true)
+	f.Add(valid, "", false)
+	f.Add("", "", true)
+	f.Add(valid, "user deckhouse;\n", true)
+	f.Add(valid, "user deckhouse;\n", false)
+	f.Add(valid, "stream {\n", false)
+	f.Add(valid, "}\n", false)
+	f.Add(valid, "\n\n\n", true)
+	f.Add(valid, "# comment only\n", true)
+	f.Add(valid, "user deckhouse;\x00\n", false)
+	f.Add(valid, "user deckhouse;\r\nevents {}\r\n", true)
+	f.Add(valid, strings.Repeat("server 10.0.0.1:5001;\n", 512), true)
+	f.Add("user deckhouse;\n", valid, true)
 
 	f.Fuzz(func(t *testing.T, current, incoming string, configValid bool) {
 		if len(current) > 1<<16 || len(incoming) > 1<<16 {

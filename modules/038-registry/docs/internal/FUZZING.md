@@ -1,7 +1,9 @@
 # Fuzzing the `registry` module
 
 Native Go fuzz harnesses for the `038-registry` module, derived from the module's
-threat model (`registry-threat-model.md`, sections 5 and 6).
+threat model ([registry-threat-model.md](../../registry-threat-model.md),
+sections 5 and 6). Every harness names the threat it covers in its own doc
+comment, so a target can be read against that document without this page.
 
 The harnesses live next to the code they exercise, so they span two Go modules:
 

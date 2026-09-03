@@ -38,32 +38,30 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 )
 
-var configSeeds = []string{
-	`{"source":{"address":"registry.example.com:5000"},"destination":{"address":"127.0.0.1:5001"}}`,
-	"source:\n  address: registry.example.com:5000\n  user:\n    name: u\n    password: p\ndestination:\n  address: 127.0.0.1:5001\n",
-	`{}`,
-	``,
-	`null`,
-	`[]`,
-	`{"source":{},"destination":{}}`,
-	`{"source":{"address":""},"destination":{"address":""}}`,
-	// Addresses the client cannot construct.
-	`{"source":{"address":"https://registry.example.com"},"destination":{"address":"127.0.0.1:5001"}}`,
-	`{"source":{"address":"registry.example.com/path"},"destination":{"address":"127.0.0.1:5001"}}`,
-	`{"source":{"address":"registry.example.com:99999"},"destination":{"address":"127.0.0.1:5001"}}`,
-	`{"source":{"address":"[fd00::1]:5000"},"destination":{"address":"127.0.0.1:5001"}}`,
-	`{"source":{"address":"registry.example.com","ca":"-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"},"destination":{"address":"127.0.0.1:5001"}}`,
-	// Credentials that would split the request that carries them.
-	`{"source":{"address":"registry.example.com","user":{"name":"u\r\nX-Evil: 1","password":"p"}},"destination":{"address":"127.0.0.1:5001"}}`,
-	`{"source":{"address":"registry.example.com","user":{"name":"u","password":"p\nq"}},"destination":{"address":"127.0.0.1:5001"}}`,
-	`{"source":{"address":"registry.example.com","user":{"name":"u","password":""}},"destination":{"address":"127.0.0.1:5001"}}`,
-	"source: [1,2]\n",
-}
-
 func FuzzSyncerConfig(f *testing.F) {
-	for _, seed := range configSeeds {
-		f.Add(seed)
-	}
+	// The transfer configuration as the bootstrap writes it, then the addresses
+	// the registry client cannot construct and the credentials that cannot
+	// travel in a header.
+	f.Add(`{"source":{"address":"registry.example.com:5000"},"destination":{"address":"127.0.0.1:5001"}}`)
+	f.Add("source:\n  address: registry.example.com:5000\n  user:\n    name: u\n    password: p\ndestination:\n  address: 127.0.0.1:5001\n")
+	f.Add(`{}`)
+	f.Add(``)
+	f.Add(`null`)
+	f.Add(`[]`)
+	f.Add(`{`)
+	f.Add(`{"source":{},"destination":{}}`)
+	f.Add(`{"source":{"address":""},"destination":{"address":""}}`)
+	f.Add(`{"source":{"address":"registry.example.com"}}`)
+	f.Add(`{"source":{"address":"https://registry.example.com"},"destination":{"address":"127.0.0.1:5001"}}`)
+	f.Add(`{"source":{"address":"registry.example.com/path"},"destination":{"address":"127.0.0.1:5001"}}`)
+	f.Add(`{"source":{"address":"registry.example.com:99999"},"destination":{"address":"127.0.0.1:5001"}}`)
+	f.Add(`{"source":{"address":"[fd00::1]:5000"},"destination":{"address":"127.0.0.1:5001"}}`)
+	f.Add(`{"source":{"address":"$(id)"},"destination":{"address":"127.0.0.1:5001"}}`)
+	f.Add(`{"source":{"address":"registry.example.com","ca":"-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"},"destination":{"address":"127.0.0.1:5001"}}`)
+	f.Add(`{"source":{"address":"registry.example.com","user":{"name":"u\r\nX-Evil: 1","password":"p"}},"destination":{"address":"127.0.0.1:5001"}}`)
+	f.Add(`{"source":{"address":"registry.example.com","user":{"name":"u","password":"p\nq"}},"destination":{"address":"127.0.0.1:5001"}}`)
+	f.Add(`{"source":{"address":"registry.example.com","user":{"name":"u","password":""}},"destination":{"address":"127.0.0.1:5001"}}`)
+	f.Add("source: [1,2]\n")
 
 	f.Fuzz(func(t *testing.T, document string) {
 		// YAML parsing is superlinear in the number of nodes, and a document

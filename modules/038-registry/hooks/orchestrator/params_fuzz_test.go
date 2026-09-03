@@ -65,6 +65,7 @@ func FuzzParamsStateRoundTrip(f *testing.F) {
 	f.Add(`{`)
 	f.Add(``)
 	f.Add(`null`)
+	f.Add(`[]`)
 
 	f.Fuzz(func(t *testing.T, document string) {
 		if len(document) > 1<<16 {
@@ -147,23 +148,29 @@ func assertCARoundTrip(t *testing.T, document, before string, decoded *x509.Cert
 // FuzzParamsValidate covers the parameter set the orchestrator validates before
 // it acts on it.
 func FuzzParamsValidate(f *testing.F) {
-	modes := []string{"Direct", "Proxy", "Local", "Unmanaged", "", "unknown", "$(id)"}
-	repos := []string{
-		"registry.example.com/deckhouse/ee",
-		"",
-		"../../../etc/cron.d/x",
-		"registry.example.com; return 200",
-		"registry.example.com:99999/x",
-	}
-
-	for _, mode := range modes {
-		for _, repo := range repos {
-			f.Add(mode, repo, "HTTPS", "", "")
-		}
-	}
+	// Every mode the orchestrator can be in, then the fields it checks only in
+	// the modes that have an upstream: Local returns early, and so does
+	// Unmanaged with an empty address.
+	f.Add("Direct", "registry.example.com/deckhouse/ee", "HTTPS", "", "")
+	f.Add("Direct", "registry.example.com/deckhouse/ee", "HTTP", "user", "password")
+	f.Add("Proxy", "registry.example.com/deckhouse/ee", "HTTPS", "", "")
+	f.Add("Unmanaged", "registry.example.com/deckhouse/ee", "HTTPS", "", "")
+	f.Add("Unmanaged", "", "HTTPS", "", "")
+	f.Add("Local", "", "", "", "")
+	f.Add("Local", "$(id)", "$(id)", "", "")
+	f.Add("", "registry.example.com/x", "HTTPS", "", "")
+	f.Add("unknown", "registry.example.com/x", "HTTPS", "", "")
+	f.Add("$(id)", "registry.example.com/x", "HTTPS", "", "")
+	f.Add("direct", "registry.example.com/x", "HTTPS", "", "")
+	f.Add("Direct", "", "HTTPS", "", "")
+	f.Add("Direct", "../../../etc/cron.d/x", "HTTPS", "", "")
+	f.Add("Direct", "registry.example.com; return 200", "HTTPS", "", "")
+	f.Add("Direct", "registry.example.com:99999/x", "HTTPS", "", "")
+	f.Add("Direct", "registry.example.com/x", "", "", "")
+	f.Add("Direct", "registry.example.com/x", "ftp", "", "")
 	f.Add("Direct", "registry.example.com/x", "HTTP", "user", "")
 	f.Add("Direct", "registry.example.com/x", "HTTP", "", "password")
-	f.Add("Direct", "registry.example.com/x", "ftp", "", "")
+	f.Add("Proxy", "registry.example.com/x", "HTTPS", "u\ny", "p\x00q")
 
 	f.Fuzz(func(t *testing.T, mode, imagesRepo, scheme, username, password string) {
 		if len(imagesRepo) > 4096 || len(scheme) > 64 {

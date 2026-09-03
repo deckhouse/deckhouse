@@ -32,39 +32,36 @@ limitations under the License.
 package pki
 
 import (
+	"strings"
 	"testing"
 	"unicode/utf8"
 )
 
-// pemSeeds are malformed PEM payloads for the decoders.
-//
-// Several carry a private-key header, which a secret scanner is right to notice.
-// None carries a key: the body of every one is the literal "AAAA", which is four
-// zero bytes of base64 and decodes to nothing a parser will accept. The scanner
-// markers below say exactly that, line by line.
-var pemSeeds = [][]byte{
-	nil,
-	[]byte(""),
-	[]byte("not pem at all"),
-	[]byte("-----BEGIN CERTIFICATE-----"),
-	[]byte("-----BEGIN CERTIFICATE-----\n-----END CERTIFICATE-----"),
-	[]byte("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"),
-	[]byte("-----BEGIN CERTIFICATE-----\n!!!!\n-----END CERTIFICATE-----\n"),
-	[]byte("-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n"),         // gitleaks:allow
-	[]byte("-----BEGIN RSA PRIVATE KEY-----\nAAAA\n-----END RSA PRIVATE KEY-----\n"), // gitleaks:allow
-	[]byte("-----BEGIN EC PRIVATE KEY-----\nAAAA\n-----END EC PRIVATE KEY-----\n"),   // gitleaks:allow
-	// Two blocks: parsers differ on which one wins.
-	[]byte("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n" +
-		"-----BEGIN CERTIFICATE-----\nBBBB\n-----END CERTIFICATE-----\n"),
-	// Headers in the PEM block.
-	[]byte("-----BEGIN CERTIFICATE-----\nProc-Type: 4,ENCRYPTED\n\nAAAA\n-----END CERTIFICATE-----\n"),
-	[]byte("\x00\x01\x02\x03"),
-}
-
 func FuzzDecodeCertificate(f *testing.F) {
-	for _, seed := range pemSeeds {
-		f.Add(seed)
-	}
+	// Every way a PEM document can fail to be one: truncated, empty, the wrong
+	// block type, a body that is not base64, headers inside the block, two
+	// blocks, mismatched markers, binary, and leading noise.
+	f.Add([]byte("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"))
+	f.Add([]byte("-----BEGIN CERTIFICATE-----\n-----END CERTIFICATE-----"))
+	f.Add([]byte("-----BEGIN CERTIFICATE-----"))
+	f.Add([]byte("-----BEGIN CERTIFICATE-----\n!!!!\n-----END CERTIFICATE-----\n"))
+	f.Add([]byte("-----BEGIN CERTIFICATE-----\nProc-Type: 4,ENCRYPTED\n\nAAAA\n-----END CERTIFICATE-----\n"))
+	f.Add([]byte("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n" +
+		"-----BEGIN CERTIFICATE-----\nBBBB\n-----END CERTIFICATE-----\n"))
+	f.Add([]byte("-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n"))         // gitleaks:allow
+	f.Add([]byte("-----BEGIN RSA PRIVATE KEY-----\nAAAA\n-----END RSA PRIVATE KEY-----\n")) // gitleaks:allow
+	f.Add([]byte("-----BEGIN EC PRIVATE KEY-----\nAAAA\n-----END EC PRIVATE KEY-----\n"))   // gitleaks:allow
+	f.Add([]byte("-----BEGIN EC PRIVATE KEY-----\nAAAA\n-----END CERTIFICATE-----\n"))      // gitleaks:allow
+	f.Add([]byte("-----BEGIN X-----\nAAAA\n-----END X-----\n"))
+	f.Add([]byte("not pem at all"))
+	f.Add([]byte(""))
+	f.Add([]byte("x"))
+	f.Add([]byte("\x00\x01\x02\x03"))
+	f.Add([]byte("\n\n\n"))
+	f.Add([]byte("-----BEGIN CERTIFICATE-----\r\nAAAA\r\n-----END CERTIFICATE-----\r\n"))
+	f.Add([]byte("  -----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"))
+	f.Add([]byte("junk\n-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"))
+	f.Add([]byte(strings.Repeat("-----BEGIN CERTIFICATE-----\n", 32)))
 
 	f.Fuzz(func(t *testing.T, pemData []byte) {
 		cert, err := DecodeCertificate(pemData)
@@ -81,9 +78,29 @@ func FuzzDecodeCertificate(f *testing.F) {
 }
 
 func FuzzDecodePrivateKey(f *testing.F) {
-	for _, seed := range pemSeeds {
-		f.Add(seed)
-	}
+	// The same document shapes as the certificate decoder sees: a key parser
+	// must refuse a certificate, and neither may panic on either.
+	f.Add([]byte("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"))
+	f.Add([]byte("-----BEGIN CERTIFICATE-----\n-----END CERTIFICATE-----"))
+	f.Add([]byte("-----BEGIN CERTIFICATE-----"))
+	f.Add([]byte("-----BEGIN CERTIFICATE-----\n!!!!\n-----END CERTIFICATE-----\n"))
+	f.Add([]byte("-----BEGIN CERTIFICATE-----\nProc-Type: 4,ENCRYPTED\n\nAAAA\n-----END CERTIFICATE-----\n"))
+	f.Add([]byte("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n" +
+		"-----BEGIN CERTIFICATE-----\nBBBB\n-----END CERTIFICATE-----\n"))
+	f.Add([]byte("-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n"))         // gitleaks:allow
+	f.Add([]byte("-----BEGIN RSA PRIVATE KEY-----\nAAAA\n-----END RSA PRIVATE KEY-----\n")) // gitleaks:allow
+	f.Add([]byte("-----BEGIN EC PRIVATE KEY-----\nAAAA\n-----END EC PRIVATE KEY-----\n"))   // gitleaks:allow
+	f.Add([]byte("-----BEGIN EC PRIVATE KEY-----\nAAAA\n-----END CERTIFICATE-----\n"))      // gitleaks:allow
+	f.Add([]byte("-----BEGIN X-----\nAAAA\n-----END X-----\n"))
+	f.Add([]byte("not pem at all"))
+	f.Add([]byte(""))
+	f.Add([]byte("x"))
+	f.Add([]byte("\x00\x01\x02\x03"))
+	f.Add([]byte("\n\n\n"))
+	f.Add([]byte("-----BEGIN CERTIFICATE-----\r\nAAAA\r\n-----END CERTIFICATE-----\r\n"))
+	f.Add([]byte("  -----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"))
+	f.Add([]byte("junk\n-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"))
+	f.Add([]byte(strings.Repeat("-----BEGIN CERTIFICATE-----\n", 32)))
 
 	f.Fuzz(func(t *testing.T, pemData []byte) {
 		key, err := DecodePrivateKey(pemData)
@@ -102,12 +119,39 @@ func FuzzDecodePrivateKey(f *testing.F) {
 // FuzzDecodeCertKey drives the cert/key pairing check used for every service
 // certificate in the node configuration secret.
 func FuzzDecodeCertKey(f *testing.F) {
-	for _, certSeed := range pemSeeds {
-		f.Add(certSeed, []byte("-----BEGIN EC PRIVATE KEY-----\nAAAA\n-----END EC PRIVATE KEY-----\n")) // gitleaks:allow
-	}
-	for _, keySeed := range pemSeeds {
-		f.Add([]byte("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"), keySeed)
-	}
+	// The pair is decoded together, so each half is varied against a fixed
+	// other half: a certificate with no key, a key with no certificate, the two
+	// swapped, and both malformed at once.
+	f.Add([]byte("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"),
+		[]byte("-----BEGIN EC PRIVATE KEY-----\nAAAA\n-----END EC PRIVATE KEY-----\n")) // gitleaks:allow
+	f.Add([]byte("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"), []byte(""))
+	f.Add([]byte(""), []byte("-----BEGIN EC PRIVATE KEY-----\nAAAA\n-----END EC PRIVATE KEY-----\n")) // gitleaks:allow
+	f.Add([]byte(""), []byte(""))
+	f.Add([]byte("-----BEGIN EC PRIVATE KEY-----\nAAAA\n-----END EC PRIVATE KEY-----\n"), // gitleaks:allow
+		[]byte("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"))
+	f.Add([]byte("-----BEGIN CERTIFICATE-----"), []byte("-----BEGIN EC PRIVATE KEY-----")) // gitleaks:allow
+	f.Add([]byte("-----BEGIN CERTIFICATE-----\n!!!!\n-----END CERTIFICATE-----\n"),
+		[]byte("-----BEGIN EC PRIVATE KEY-----\n!!!!\n-----END EC PRIVATE KEY-----\n")) // gitleaks:allow
+	f.Add([]byte("not pem"), []byte("not pem"))
+	f.Add([]byte("x"), []byte("y"))
+	f.Add([]byte("\x00"), []byte("\x00"))
+	f.Add([]byte("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"), []byte("not pem"))
+	f.Add([]byte("not pem"), []byte("-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n")) // gitleaks:allow
+	f.Add([]byte("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"+
+		"-----BEGIN CERTIFICATE-----\nBBBB\n-----END CERTIFICATE-----\n"),
+		[]byte("-----BEGIN EC PRIVATE KEY-----\nAAAA\n-----END EC PRIVATE KEY-----\n")) // gitleaks:allow
+	f.Add([]byte("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"),
+		[]byte("-----BEGIN EC PRIVATE KEY-----\nAAAA\n-----END EC PRIVATE KEY-----\n"+
+			"-----BEGIN EC PRIVATE KEY-----\nBBBB\n-----END EC PRIVATE KEY-----\n")) // gitleaks:allow
+	f.Add([]byte("-----BEGIN X-----\nAAAA\n-----END X-----\n"),
+		[]byte("-----BEGIN Y-----\nAAAA\n-----END Y-----\n"))
+	f.Add([]byte("\n"), []byte("\n"))
+	f.Add([]byte("  -----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"),
+		[]byte("  -----BEGIN EC PRIVATE KEY-----\nAAAA\n-----END EC PRIVATE KEY-----\n")) // gitleaks:allow
+	f.Add([]byte(strings.Repeat("A", 4096)), []byte(strings.Repeat("B", 4096)))
+	f.Add([]byte("-----BEGIN CERTIFICATE-----\r\nAAAA\r\n-----END CERTIFICATE-----\r\n"),
+		[]byte("-----BEGIN EC PRIVATE KEY-----\r\nAAAA\r\n-----END EC PRIVATE KEY-----\r\n")) // gitleaks:allow
+	f.Add([]byte("junk"), []byte("junk"))
 
 	f.Fuzz(func(t *testing.T, certPEM, keyPEM []byte) {
 		certKey, err := DecodeCertKey(certPEM, keyPEM)
@@ -132,9 +176,30 @@ func FuzzDecodeCertKey(f *testing.F) {
 // ValidateCertWithCAChain cannot be satisfied by attacker-supplied PEM material
 // alone: a certificate must only verify against a CA that actually issued it.
 func FuzzValidateCertWithCAChain(f *testing.F) {
+	// The certificate offered as an extra chain element. What matters is that
+	// none of these makes a leaf verify against an issuer that did not sign it,
+	// so the shapes are the ones a chain could plausibly carry.
 	f.Add([]byte("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"))
+	f.Add([]byte("-----BEGIN CERTIFICATE-----\n-----END CERTIFICATE-----"))
+	f.Add([]byte("-----BEGIN CERTIFICATE-----"))
+	f.Add([]byte("-----BEGIN CERTIFICATE-----\n!!!!\n-----END CERTIFICATE-----\n"))
+	f.Add([]byte("-----BEGIN CERTIFICATE-----\nProc-Type: 4,ENCRYPTED\n\nAAAA\n-----END CERTIFICATE-----\n"))
+	f.Add([]byte("-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n" +
+		"-----BEGIN CERTIFICATE-----\nBBBB\n-----END CERTIFICATE-----\n"))
+	f.Add([]byte("-----BEGIN PRIVATE KEY-----\nAAAA\n-----END PRIVATE KEY-----\n"))       // gitleaks:allow
+	f.Add([]byte("-----BEGIN EC PRIVATE KEY-----\nAAAA\n-----END EC PRIVATE KEY-----\n")) // gitleaks:allow
+	f.Add([]byte("-----BEGIN X-----\nAAAA\n-----END X-----\n"))
+	f.Add([]byte("not pem at all"))
 	f.Add([]byte(""))
 	f.Add([]byte("x"))
+	f.Add([]byte("\x00\x01\x02\x03"))
+	f.Add([]byte("\n\n\n"))
+	f.Add([]byte("-----BEGIN CERTIFICATE-----\r\nAAAA\r\n-----END CERTIFICATE-----\r\n"))
+	f.Add([]byte("  -----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"))
+	f.Add([]byte("junk\n-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"))
+	f.Add([]byte(strings.Repeat("-----BEGIN CERTIFICATE-----\n", 32)))
+	f.Add([]byte(strings.Repeat("A", 8192)))
+	f.Add([]byte("-----BEGIN CERTIFICATE-----\nQQ==\n-----END CERTIFICATE-----\n"))
 
 	// A real CA and a certificate it issued, plus an unrelated CA.
 	trustedCA, err := GenerateCACertificate("fuzz-trusted-ca")
@@ -187,10 +252,29 @@ func FuzzValidateCertWithCAChain(f *testing.F) {
 // decide whether they already applied a configuration, so it must be defined and
 // stable for every value the module hashes.
 func FuzzComputeHash(f *testing.F) {
+	// The hash is the config version every node compares against, so what
+	// matters is that different inputs do not collide and equal ones agree.
+	// The pairs below differ in ways a careless hash would flatten.
 	f.Add("", "")
 	f.Add("a", "b")
-	f.Add("\x00", "\xff")
+	f.Add("b", "a")
+	f.Add("a", "a")
+	f.Add("ab", "")
+	f.Add("", "ab")
+	f.Add("a", "")
+	f.Add("", "a")
 	f.Add("10.0.0.1:5001", "10.0.0.2:5001")
+	f.Add("10.0.0.1:5001", "10.0.0.1:5001")
+	f.Add("registry.d8-system.svc:5001", "127.0.0.1:5001")
+	f.Add("\x00", "\xff")
+	f.Add("\x00", "\x00")
+	f.Add("\n", "\r")
+	f.Add("üser", "user")
+	f.Add("A", "a")
+	f.Add("1", "01")
+	f.Add("true", "True")
+	f.Add(strings.Repeat("a", 4096), strings.Repeat("a", 4095))
+	f.Add(strings.Repeat("a", 64), strings.Repeat("b", 64))
 
 	f.Fuzz(func(t *testing.T, first, second string) {
 		type payload struct {

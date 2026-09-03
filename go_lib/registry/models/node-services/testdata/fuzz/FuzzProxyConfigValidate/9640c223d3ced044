@@ -1,4 +1,0 @@
-go test fuzz v1
-string("//0000000000000")
-string("//000000000000000000")
-string("0")

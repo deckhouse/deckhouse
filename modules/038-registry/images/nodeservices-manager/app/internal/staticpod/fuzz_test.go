@@ -39,56 +39,12 @@ import (
 	"net"
 	"reflect"
 	"strconv"
+	"strings"
 	"testing"
 	"unicode/utf8"
 
 	"sigs.k8s.io/yaml"
 )
-
-// injectionSeeds are payloads derived from the threat model: each one targets a
-// structural element of YAML that an unescaped template substitution can reach.
-var injectionSeeds = []string{
-	"",
-	"http://proxy.example.com:8080",
-	`"`,
-	`""`,
-	`'`,
-	"\n",
-	"a\nb",
-	":",
-	": ",
-	"#",
-	"---",
-	"&anchor",
-	"*anchor",
-	"!!str",
-	"{}",
-	"[]",
-	"null",
-	"true",
-	"0700",
-	"1.0",
-	// Break out of the `value:` scalar and append a sibling mapping key.
-	"x\n      - name: INJECTED\n        value: pwned",
-	// Break out of a double-quoted scalar (mirrorer/distribution templates).
-	`x"` + "\n" + `remote: ["evil.example.com:5001"]`,
-	`evil.example.com:5001"` + ", \"also-evil:5001",
-	// Escape the containers list and add a privileged container.
-	"x\n  - name: injected\n    image: evil\n    securityContext:\n      privileged: true",
-	// Grant privileged to the distribution container itself. Each proxy value is
-	// emitted twice (HTTP_PROXY and http_proxy), so the payload ends with a block
-	// scalar that swallows its own second copy: the result is a single valid Pod
-	// document with the intended container set and privileged: true on
-	// distribution -- exactly the outcome AS-02 describes.
-	"x\n    securityContext:\n      privileged: true\n    args: |",
-	// Terminate the pod document and start a second one.
-	"x\n---\napiVersion: v1\nkind: Pod\nmetadata:\n  name: injected",
-	"\t",
-	"\x00",
-	"\r\n",
-	"  leading-space",
-	"trailing-space  ",
-}
 
 // ---------------------------------------------------------------------------
 // Decoded shapes used as the oracle.
@@ -351,15 +307,30 @@ func inertDistinct(values ...string) []string {
 // ---------------------------------------------------------------------------
 
 func FuzzStaticPodManifestProxyEnvs(f *testing.F) {
-	for _, http := range injectionSeeds {
-		f.Add(http, "https://proxy.example.com:8443", "localhost,127.0.0.1", "v1", "deadbeef")
-	}
-	for _, s := range injectionSeeds {
-		f.Add("http://proxy.example.com:8080", s, "localhost", "v1", "deadbeef")
-		f.Add("http://proxy.example.com:8080", "https://proxy:8443", s, "v1", "deadbeef")
-		f.Add("http://proxy.example.com:8080", "https://proxy:8443", "localhost", s, "deadbeef")
-		f.Add("http://proxy.example.com:8080", "https://proxy:8443", "localhost", "v1", s)
-	}
+	// The five values that reach the pod manifest, varied one at a time. The
+	// proxy settings are rendered as container environment, so a payload that
+	// opens a YAML block is what turns a value into a new field -- AS-02 is
+	// exactly that, and the seed carrying securityContext is it.
+	f.Add("http://proxy.example.com:8080", "https://proxy.example.com:8443", "localhost,127.0.0.1", "v1", "deadbeef")
+	f.Add("", "", "", "v1", "deadbeef")
+	f.Add("x\n    securityContext:\n      privileged: true\n    args: |", "https://proxy:8443", "localhost", "v1", "deadbeef")
+	f.Add("x\n  hostNetwork: true", "https://proxy:8443", "localhost", "v1", "deadbeef")
+	f.Add("\"", "https://proxy:8443", "localhost", "v1", "deadbeef")
+	f.Add("\\", "https://proxy:8443", "localhost", "v1", "deadbeef")
+	f.Add("$(id)", "https://proxy:8443", "localhost", "v1", "deadbeef")
+	f.Add("\x00", "https://proxy:8443", "localhost", "v1", "deadbeef")
+	f.Add("\xff\xfe", "https://proxy:8443", "localhost", "v1", "deadbeef")
+	f.Add("http://proxy.example.com:8080", "\n  privileged: true", "localhost", "v1", "deadbeef")
+	f.Add("http://proxy.example.com:8080", "'", "localhost", "v1", "deadbeef")
+	f.Add("http://proxy.example.com:8080", "https://proxy:8443", "a\nb", "v1", "deadbeef")
+	f.Add("http://proxy.example.com:8080", "https://proxy:8443", "*", "v1", "deadbeef")
+	f.Add("http://proxy.example.com:8080", "https://proxy:8443", "localhost", "", "deadbeef")
+	f.Add("http://proxy.example.com:8080", "https://proxy:8443", "localhost", "v1\n  x: y", "deadbeef")
+	f.Add("http://proxy.example.com:8080", "https://proxy:8443", "localhost", "\"v1\"", "deadbeef")
+	f.Add("http://proxy.example.com:8080", "https://proxy:8443", "localhost", "v1", "")
+	f.Add("http://proxy.example.com:8080", "https://proxy:8443", "localhost", "v1", "dead\nbeef")
+	f.Add("http://proxy.example.com:8080", "https://proxy:8443", "localhost", "v1", "$(id)")
+	f.Add("http://proxy.example.com:8080", "https://proxy:8443", "localhost", "v1", "\xff")
 
 	images := staticPodImagesModel{
 		Distribution: "registry.example.com/distribution:v1",
@@ -486,15 +457,30 @@ func (m staticPodImagesModel) imageFor(container string) string {
 // ---------------------------------------------------------------------------
 
 func FuzzDistributionConfigUpstream(f *testing.F) {
-	for _, s := range injectionSeeds {
-		f.Add(s, "upstream.example.com", "/system/deckhouse", "user", "pass", "10.0.0.1", "secret")
-		f.Add("https", s, "/system/deckhouse", "user", "pass", "10.0.0.1", "secret")
-		f.Add("https", "upstream.example.com", s, "user", "pass", "10.0.0.1", "secret")
-		f.Add("https", "upstream.example.com", "/system/deckhouse", s, "pass", "10.0.0.1", "secret")
-		f.Add("https", "upstream.example.com", "/system/deckhouse", "user", s, "10.0.0.1", "secret")
-		f.Add("https", "upstream.example.com", "/system/deckhouse", "user", "pass", s, "secret")
-		f.Add("https", "upstream.example.com", "/system/deckhouse", "user", "pass", "10.0.0.1", s)
-	}
+	// The seven values that reach the distribution configuration. It is YAML,
+	// so the payloads are the ones that end a scalar and start a key; the
+	// listen address is also joined with a port, which is where an IPv6
+	// literal without brackets goes wrong.
+	f.Add("https", "upstream.example.com", "/system/deckhouse", "user", "pass", "10.0.0.1", "secret")
+	f.Add("http", "upstream.example.com:5000", "", "", "", "127.0.0.1", "secret")
+	f.Add("https\nskip_verify: true", "upstream.example.com", "/x", "user", "pass", "10.0.0.1", "secret")
+	f.Add("\"", "upstream.example.com", "/x", "user", "pass", "10.0.0.1", "secret")
+	f.Add("https", "upstream.example.com\n  x: y", "/x", "user", "pass", "10.0.0.1", "secret")
+	f.Add("https", "\"", "/x", "user", "pass", "10.0.0.1", "secret")
+	f.Add("https", "$(id)", "/x", "user", "pass", "10.0.0.1", "secret")
+	f.Add("https", "upstream.example.com", "/x\n  y: z", "user", "pass", "10.0.0.1", "secret")
+	f.Add("https", "upstream.example.com", "/../../etc", "user", "pass", "10.0.0.1", "secret")
+	f.Add("https", "upstream.example.com", "/x", "u\n  y: z", "pass", "10.0.0.1", "secret")
+	f.Add("https", "upstream.example.com", "/x", "\\", "pass", "10.0.0.1", "secret")
+	f.Add("https", "upstream.example.com", "/x", "user", "p\n  y: z", "10.0.0.1", "secret")
+	f.Add("https", "upstream.example.com", "/x", "user", "'", "10.0.0.1", "secret")
+	f.Add("https", "upstream.example.com", "/x", "user", "pass", "fd00::1", "secret")
+	f.Add("https", "upstream.example.com", "/x", "user", "pass", "[fd00::1]", "secret")
+	f.Add("https", "upstream.example.com", "/x", "user", "pass", "", "secret")
+	f.Add("https", "upstream.example.com", "/x", "user", "pass", "10.0.0.1\n  y: z", "secret")
+	f.Add("https", "upstream.example.com", "/x", "user", "pass", "10.0.0.1", "")
+	f.Add("https", "upstream.example.com", "/x", "user", "pass", "10.0.0.1", "s\n  y: z")
+	f.Add("https", "upstream.example.com", "/x", "user", "pass", "10.0.0.1", "\xff")
 
 	f.Fuzz(func(t *testing.T, scheme, host, path, user, password, listenAddress, httpSecret string) {
 		model := distributionConfigModel{
@@ -587,13 +573,29 @@ func FuzzDistributionConfigUpstream(f *testing.F) {
 // ---------------------------------------------------------------------------
 
 func FuzzMirrorerConfigUpstreams(f *testing.F) {
-	for _, s := range injectionSeeds {
-		f.Add(s, "10.0.0.2", "10.0.0.1", "puller", "puller-pass", "pusher", "pusher-pass")
-		f.Add("10.0.0.2", s, "10.0.0.1", "puller", "puller-pass", "pusher", "pusher-pass")
-		f.Add("10.0.0.2", "10.0.0.3", s, "puller", "puller-pass", "pusher", "pusher-pass")
-		f.Add("10.0.0.2", "10.0.0.3", "10.0.0.1", s, "puller-pass", "pusher", "pusher-pass")
-		f.Add("10.0.0.2", "10.0.0.3", "10.0.0.1", "puller", s, "pusher", "pusher-pass")
-	}
+	// Two replica addresses, the local address and the two accounts. The
+	// addresses are joined with a port and end up in the `remote` list, so the
+	// payloads are the ones that add a list entry or break the join.
+	f.Add("10.0.0.2", "10.0.0.3", "10.0.0.1", "puller", "puller-pass", "pusher", "pusher-pass")
+	f.Add("", "", "10.0.0.1", "puller", "puller-pass", "pusher", "pusher-pass")
+	f.Add("fd00::2", "fd00::3", "fd00::1", "puller", "puller-pass", "pusher", "pusher-pass")
+	f.Add("10.0.0.2\n  - evil", "10.0.0.3", "10.0.0.1", "puller", "puller-pass", "pusher", "pusher-pass")
+	f.Add("\"", "10.0.0.3", "10.0.0.1", "puller", "puller-pass", "pusher", "pusher-pass")
+	f.Add("$(id)", "10.0.0.3", "10.0.0.1", "puller", "puller-pass", "pusher", "pusher-pass")
+	f.Add("10.0.0.2", "\\", "10.0.0.1", "puller", "puller-pass", "pusher", "pusher-pass")
+	f.Add("10.0.0.2", "10.0.0.3\n  y: z", "10.0.0.1", "puller", "puller-pass", "pusher", "pusher-pass")
+	f.Add("10.0.0.2", "10.0.0.3", "", "puller", "puller-pass", "pusher", "pusher-pass")
+	f.Add("10.0.0.2", "10.0.0.3", "10.0.0.1\n  y: z", "puller", "puller-pass", "pusher", "pusher-pass")
+	f.Add("10.0.0.2", "10.0.0.3", "[fd00::1]", "puller", "puller-pass", "pusher", "pusher-pass")
+	f.Add("10.0.0.2", "10.0.0.3", "10.0.0.1", "", "puller-pass", "pusher", "pusher-pass")
+	f.Add("10.0.0.2", "10.0.0.3", "10.0.0.1", "p\n  y: z", "puller-pass", "pusher", "pusher-pass")
+	f.Add("10.0.0.2", "10.0.0.3", "10.0.0.1", "'", "puller-pass", "pusher", "pusher-pass")
+	f.Add("10.0.0.2", "10.0.0.3", "10.0.0.1", "puller", "", "pusher", "pusher-pass")
+	f.Add("10.0.0.2", "10.0.0.3", "10.0.0.1", "puller", "\"", "pusher", "pusher-pass")
+	f.Add("10.0.0.2", "10.0.0.3", "10.0.0.1", "puller", "p\n  y: z", "pusher", "pusher-pass")
+	f.Add("10.0.0.2", "10.0.0.3", "10.0.0.1", "puller", "puller-pass", "", "pusher-pass")
+	f.Add("10.0.0.2", "10.0.0.3", "10.0.0.1", "puller", "puller-pass", "pusher", "")
+	f.Add("10.0.0.2", "10.0.0.3", "10.0.0.1", "puller", "puller-pass", "pusher", "\xff")
 
 	f.Fuzz(func(t *testing.T, upstream1, upstream2, localAddress, pullerName, pullerPass, pusherName, pusherPass string) {
 		upstreams := []string{upstream1, upstream2}
@@ -660,12 +662,30 @@ const yamlSimpleKeyLimit = 1024
 // ---------------------------------------------------------------------------
 
 func FuzzAuthConfigUsers(f *testing.F) {
-	for _, s := range injectionSeeds {
-		f.Add(s, "ro-hash", "rw", "rw-hash", "puller", "puller-hash", "pusher", "pusher-hash")
-		f.Add("ro", s, "rw", "rw-hash", "puller", "puller-hash", "pusher", "pusher-hash")
-		f.Add("ro", "ro-hash", s, "rw-hash", "puller", "puller-hash", "pusher", "pusher-hash")
-		f.Add("ro", "ro-hash", "rw", s, "puller", "puller-hash", "pusher", "pusher-hash")
-	}
+	// Four accounts and their hashes. Each name becomes a YAML mapping key in
+	// the auth configuration and an `account` constraint in its ACL, so the
+	// payloads are the ones that end a key, add an entry, or make a key too
+	// long for the format.
+	f.Add("ro", "ro-hash", "rw", "rw-hash", "puller", "puller-hash", "pusher", "pusher-hash")
+	f.Add("", "", "", "", "", "", "", "")
+	f.Add("ro\":\n    password: \"x", "ro-hash", "rw", "rw-hash", "puller", "puller-hash", "pusher", "pusher-hash")
+	f.Add("\"", "ro-hash", "rw", "rw-hash", "puller", "puller-hash", "pusher", "pusher-hash")
+	f.Add("\\", "ro-hash", "rw", "rw-hash", "puller", "puller-hash", "pusher", "pusher-hash")
+	f.Add("ro\n  x: y", "ro-hash", "rw", "rw-hash", "puller", "puller-hash", "pusher", "pusher-hash")
+	f.Add("$(id)", "ro-hash", "rw", "rw-hash", "puller", "puller-hash", "pusher", "pusher-hash")
+	f.Add("\x00", "ro-hash", "rw", "rw-hash", "puller", "puller-hash", "pusher", "pusher-hash")
+	f.Add("\xff\xfe", "ro-hash", "rw", "rw-hash", "puller", "puller-hash", "pusher", "pusher-hash")
+	f.Add("ro", "$2a$10$abcdefghijklmnopqrstuv", "rw", "rw-hash", "puller", "puller-hash", "pusher", "pusher-hash")
+	f.Add("ro", "\"", "rw", "rw-hash", "puller", "puller-hash", "pusher", "pusher-hash")
+	f.Add("ro", "h\n  x: y", "rw", "rw-hash", "puller", "puller-hash", "pusher", "pusher-hash")
+	f.Add("ro", "ro-hash", "ro", "rw-hash", "puller", "puller-hash", "pusher", "pusher-hash")
+	f.Add("ro", "ro-hash", "", "rw-hash", "puller", "puller-hash", "pusher", "pusher-hash")
+	f.Add("ro", "ro-hash", "rw\n  x: y", "rw-hash", "puller", "puller-hash", "pusher", "pusher-hash")
+	f.Add("ro", "ro-hash", "rw", "'", "puller", "puller-hash", "pusher", "pusher-hash")
+	f.Add("ro", "ro-hash", "rw", "rw-hash", "", "puller-hash", "pusher", "pusher-hash")
+	f.Add("ro", "ro-hash", "rw", "rw-hash", "puller", "puller-hash", "", "pusher-hash")
+	f.Add("ro", "ro-hash", "rw", "rw-hash", "puller", "puller-hash", "pusher", "\xff")
+	f.Add(strings.Repeat("a", 300), "ro-hash", "rw", "rw-hash", "puller", "puller-hash", "pusher", "pusher-hash")
 
 	f.Fuzz(func(t *testing.T, roName, roHash, rwName, rwHash, pullerName, pullerHash, pusherName, pusherHash string) {
 		// An account name becomes a YAML mapping key, and YAML limits a simple key

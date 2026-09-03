@@ -51,25 +51,29 @@ func isSubsequence(want, have string) bool {
 }
 
 func FuzzSplitAddressAndPath(f *testing.F) {
-	seeds := []string{
-		"",
-		"/",
-		"//",
-		"registry.example.com",
-		"registry.example.com/",
-		"registry.example.com/system/deckhouse",
-		"registry.example.com:5001/system/deckhouse/",
-		"  registry.example.com/path  ",
-		"/leading",
-		"a//b",
-		"registry.example.com///",
-		"\n",
-		"$(id)/path",
-		strings.Repeat("a/", 64),
-	}
-	for _, seed := range seeds {
-		f.Add(seed)
-	}
+	// The shapes imagesRepo arrives as, and the ones it is not supposed to:
+	// missing parts, repeated and trailing separators, surrounding whitespace,
+	// and a host carrying a metacharacter of a sink downstream.
+	f.Add("registry.example.com/system/deckhouse")
+	f.Add("registry.example.com:5001/system/deckhouse")
+	f.Add("registry.example.com:5001/system/deckhouse/")
+	f.Add("registry.example.com")
+	f.Add("registry.example.com/")
+	f.Add("registry.example.com///")
+	f.Add("")
+	f.Add("/")
+	f.Add("//")
+	f.Add("/leading")
+	f.Add("a//b")
+	f.Add("  registry.example.com/path  ")
+	f.Add("\tregistry.example.com/path\n")
+	f.Add("\n")
+	f.Add("[fd00::1]:5001/system/deckhouse")
+	f.Add("10.0.0.1:5001/x")
+	f.Add("$(id)/path")
+	f.Add("registry.example.com/$(id)")
+	f.Add("registry.example.com/../../etc")
+	f.Add(strings.Repeat("a/", 64))
 
 	f.Fuzz(func(t *testing.T, ref string) {
 		host, path := SplitAddressAndPath(ref)
@@ -116,28 +120,31 @@ func FuzzSplitAddressAndPath(f *testing.F) {
 // deckhouse-registry secret takes. It must never panic and must never invent
 // credentials for a host it does not contain.
 func FuzzCredsFromDockerCfg(f *testing.F) {
-	seeds := []struct {
-		config string
-		host   string
-	}{
-		{``, "registry.example.com"},
-		{`{}`, "registry.example.com"},
-		{`null`, "registry.example.com"},
-		{`[]`, "registry.example.com"},
-		{`{"auths":{}}`, "registry.example.com"},
-		{`{"auths":{"registry.example.com":{"username":"u","password":"p"}}}`, "registry.example.com"},
-		{`{"auths":{"registry.example.com":{"auth":"dTpw"}}}`, "registry.example.com"},
-		{`{"auths":{"registry.example.com":{"auth":"dTpw"}}}`, "other.example.com"},
-		{`{"auths":{"https://registry.example.com":{"auth":"dTpw"}}}`, "registry.example.com"},
-		{`{"auths":{"registry.example.com":{"auth":"!!!!"}}}`, "registry.example.com"},
-		{`{"auths":{"registry.example.com":{"auth":"dQ"}}}`, "registry.example.com"},
-		{`{"auths":{"registry.example.com":{"auth":"dTpwOng"}}}`, "registry.example.com"},
-		{`{"auths":{"":{"auth":"dTpw"}}}`, ""},
-		{`{"auths":{"registry.example.com":{"auth":"dTpw"}}}`, ":5001"},
-	}
-	for _, seed := range seeds {
-		f.Add([]byte(seed.config), seed.host)
-	}
+	// A docker config as the secret carries it, and every way it can fail to be
+	// one: absent, not an object, no auths, an entry for another host, an `auth`
+	// that is not base64, is base64 of something with no colon, or carries a
+	// second colon. The host is varied alongside, because the lookup normalises
+	// both sides before comparing them.
+	f.Add([]byte(`{"auths":{"registry.example.com":{"auth":"dTpw"}}}`), "registry.example.com")
+	f.Add([]byte(`{"auths":{"registry.example.com":{"username":"u","password":"p"}}}`), "registry.example.com")
+	f.Add([]byte(`{"auths":{"registry.example.com":{"username":"u"}}}`), "registry.example.com")
+	f.Add([]byte(`{"auths":{"registry.example.com":{"password":"p"}}}`), "registry.example.com")
+	f.Add([]byte(``), "registry.example.com")
+	f.Add([]byte(`{}`), "registry.example.com")
+	f.Add([]byte(`null`), "registry.example.com")
+	f.Add([]byte(`[]`), "registry.example.com")
+	f.Add([]byte(`{`), "registry.example.com")
+	f.Add([]byte(`{"auths":{}}`), "registry.example.com")
+	f.Add([]byte(`{"auths":null}`), "registry.example.com")
+	f.Add([]byte(`{"auths":{"registry.example.com":{"auth":"dTpw"}}}`), "other.example.com")
+	f.Add([]byte(`{"auths":{"https://registry.example.com":{"auth":"dTpw"}}}`), "registry.example.com")
+	f.Add([]byte(`{"auths":{"registry.example.com:5001":{"auth":"dTpw"}}}`), "registry.example.com:5001")
+	f.Add([]byte(`{"auths":{"registry.example.com":{"auth":"!!!!"}}}`), "registry.example.com")
+	f.Add([]byte(`{"auths":{"registry.example.com":{"auth":"dQ"}}}`), "registry.example.com")
+	f.Add([]byte(`{"auths":{"registry.example.com":{"auth":"dTpwOng"}}}`), "registry.example.com")
+	f.Add([]byte(`{"auths":{"":{"auth":"dTpw"}}}`), "")
+	f.Add([]byte(`{"auths":{"registry.example.com":{"auth":"dTpw"}}}`), ":5001")
+	f.Add([]byte(`{"AUTHS":{"registry.example.com":{"AUTH":"dTpw"}}}`), "registry.example.com")
 
 	f.Fuzz(func(t *testing.T, rawConfig []byte, host string) {
 		username, password, err := CredsFromDockerCfg(rawConfig, host)
@@ -169,14 +176,29 @@ func FuzzCredsFromDockerCfg(f *testing.F) {
 // the module uses when it rewrites the deckhouse-registry secret. A round-trip
 // that alters a credential silently locks the cluster out of its own registry.
 func FuzzDockerCfgRoundTrip(f *testing.F) {
+	// The pair the module generates, then the credentials and hosts that break
+	// the encoding rather than the values: a colon inside either half, bytes
+	// that are not ASCII, a line break, and a host that needs normalising.
 	f.Add("user", "password", "registry.example.com")
+	f.Add("ro-user", "ro-password", "registry.d8-system.svc:5001")
 	f.Add("", "", "registry.example.com")
 	f.Add("user", "", "registry.example.com")
 	f.Add("", "password", "registry.example.com")
 	f.Add("u:1", "p:2", "registry.example.com:5001")
+	f.Add("user", "p:a:s:s", "registry.example.com")
+	f.Add(":user", "password", "registry.example.com")
 	f.Add("üser", "pässword", "registry.example.com")
 	f.Add("user", "pass\nword", "registry.example.com")
+	f.Add("user", "pass\rword", "registry.example.com")
+	f.Add("user", "pass word", "registry.example.com")
 	f.Add("user", "password", "https://registry.example.com/path")
+	f.Add("user", "password", "http://registry.example.com")
+	f.Add("user", "password", "//registry.example.com")
+	f.Add("user", "password", "")
+	f.Add("user", "password", ":5001")
+	f.Add("user", "password", "%80")
+	f.Add("user", "password", "[fd00::1]:5001")
+	f.Add("user", "password", "registry.example.com/system/deckhouse")
 
 	f.Fuzz(func(t *testing.T, username, password, host string) {
 		// The credentials travel through json.Marshal, which replaces invalid UTF-8

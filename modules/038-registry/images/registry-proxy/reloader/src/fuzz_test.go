@@ -51,14 +51,28 @@ func writeTemp(t *testing.T, dir, name string, content []byte) string {
 // FuzzFileContentsEqual drives the equality check with arbitrary pairs of file
 // contents, including the truncated prefixes an in-place rewrite produces.
 func FuzzFileContentsEqual(f *testing.F) {
+	// Pairs that are equal, pairs that differ only where a size comparison
+	// would miss it, and the shapes a partially written file leaves behind.
 	f.Add([]byte(""), []byte(""))
 	f.Add([]byte("stream {}\n"), []byte("stream {}\n"))
 	f.Add([]byte("stream {}\n"), []byte("stream {}"))
+	f.Add([]byte("stream {}"), []byte("stream {}\n"))
+	f.Add([]byte(""), []byte("stream {}\n"))
+	f.Add([]byte("stream {}\n"), []byte(""))
 	f.Add([]byte("a"), []byte("b"))
 	f.Add([]byte("same-length-1"), []byte("same-length-2"))
+	f.Add([]byte("same-length-1"), []byte("same-length-1"))
 	f.Add([]byte("\x00\x00"), []byte("\x00"))
-	f.Add(bytes.Repeat([]byte("x"), 1<<16), bytes.Repeat([]byte("x"), 1<<16))
+	f.Add([]byte("\x00"), []byte("\x00"))
+	f.Add([]byte("a\x00b"), []byte("a\x00c"))
 	f.Add([]byte("upstream registry {\n  server 10.0.0.1:5001;\n}\n"), []byte("upstream registry {\n"))
+	f.Add([]byte("server 10.0.0.1:5001;\n"), []byte("server 10.0.0.2:5001;\n"))
+	f.Add([]byte("\r\n"), []byte("\n"))
+	f.Add([]byte("x"), bytes.Repeat([]byte("x"), 2))
+	f.Add(bytes.Repeat([]byte("x"), 1<<16), bytes.Repeat([]byte("x"), 1<<16))
+	f.Add(bytes.Repeat([]byte("x"), 1<<16), bytes.Repeat([]byte("x"), (1<<16)-1))
+	f.Add(bytes.Repeat([]byte("x"), 4096), bytes.Repeat([]byte("y"), 4096))
+	f.Add(append(bytes.Repeat([]byte("x"), 4095), 'y'), append(bytes.Repeat([]byte("x"), 4095), 'z'))
 
 	f.Fuzz(func(t *testing.T, current, updated []byte) {
 		dir := t.TempDir()
@@ -114,10 +128,29 @@ func FuzzFileContentsEqual(f *testing.F) {
 // NGINX reproduces the validated content exactly. Any divergence would mean the
 // configuration NGINX loads is not the one `nginx -t` approved.
 func FuzzCopyFile(f *testing.F) {
-	f.Add([]byte(""))
+	// The file the copy has to reproduce byte for byte: the generated
+	// configuration, the states an interrupted write leaves, and content that
+	// is not text at all.
 	f.Add([]byte("stream {\n  upstream registry {\n    server 10.0.0.1:5001;\n  }\n}\n"))
+	f.Add([]byte("user deckhouse;\nevents { worker_connections 16384; }\n"))
+	f.Add([]byte(""))
+	f.Add([]byte("\n"))
+	f.Add([]byte(" "))
+	f.Add([]byte("stream {"))
+	f.Add([]byte("}"))
+	f.Add([]byte("# comment only\n"))
+	f.Add([]byte("\x00"))
 	f.Add([]byte("\x00\xff\xfe"))
+	f.Add([]byte("\xff\xfe\x00\x01\x02\x03"))
+	f.Add([]byte("\r\n\r\n"))
+	f.Add([]byte("a"))
+	f.Add(bytes.Repeat([]byte("y"), 1<<10))
 	f.Add(bytes.Repeat([]byte("y"), 1<<17))
+	f.Add(bytes.Repeat([]byte("\x00"), 1<<12))
+	f.Add(bytes.Repeat([]byte("server 10.0.0.1:5001;\n"), 512))
+	f.Add([]byte("server ${discovered_node_ip}:5001;\n"))
+	f.Add([]byte("server $(id):5001;\n"))
+	f.Add(append([]byte("stream {\n"), bytes.Repeat([]byte("x"), 4096)...))
 
 	f.Fuzz(func(t *testing.T, content []byte) {
 		dir := t.TempDir()

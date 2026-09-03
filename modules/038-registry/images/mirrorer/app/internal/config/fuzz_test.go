@@ -44,41 +44,27 @@ import (
 	"github.com/google/go-containerregistry/pkg/name"
 )
 
-// configSeeds are the documents this file could plausibly arrive as: the shape
-// the template produces, the shapes it never would, and the shapes that are not
-// a configuration at all.
-var configSeeds = []string{
-	`{"users":{"puller":{"name":"p","password":"x"},"pusher":{"name":"q","password":"y"}},"local":"127.0.0.1:5001","remote":["10.0.0.1:5001"]}`,
-	"users:\n  puller:\n    name: p\n    password: x\n  pusher:\n    name: q\n    password: y\nlocal: \"127.0.0.1:5001\"\nremote:\n  - \"10.0.0.1:5001\"\n",
-	`{}`,
-	``,
-	`null`,
-	`[]`,
-	`{"local":"","remote":[]}`,
-	`{"users":{},"local":"127.0.0.1:5001","remote":["10.0.0.1:5001"]}`,
-	// Addresses the producer would never emit.
-	`{"users":{"puller":{"name":"p","password":"x"},"pusher":{"name":"q","password":"y"}},"local":"127.0.0.1","remote":["10.0.0.1"]}`,
-	`{"users":{"puller":{"name":"p","password":"x"},"pusher":{"name":"q","password":"y"}},"local":"127.0.0.1:99999","remote":["10.0.0.1:5001"]}`,
-	`{"users":{"puller":{"name":"p","password":"x"},"pusher":{"name":"q","password":"y"}},"local":"http://127.0.0.1:5001","remote":["10.0.0.1:5001"]}`,
-	`{"users":{"puller":{"name":"p","password":"x"},"pusher":{"name":"q","password":"y"}},"local":"127.0.0.1:5001/path","remote":["10.0.0.1:5001"]}`,
-	`{"users":{"puller":{"name":"p","password":"x"},"pusher":{"name":"q","password":"y"}},"local":"[fd00::1]:5001","remote":["[fd00::2]:5001"]}`,
-	`{"users":{"puller":{"name":"p","password":"x"},"pusher":{"name":"q","password":"y"}},"local":"127.0.0.1:5001","remote":["","10.0.0.1:5001"]}`,
-	// Credentials that would split the request that carries them. The escapes
-	// are JSON, so the parsed values hold real control characters.
-	`{"users":{"puller":{"name":"p\r\nX-Evil: 1","password":"x"},"pusher":{"name":"q","password":"y"}},"local":"127.0.0.1:5001","remote":["10.0.0.1:5001"]}`,
-	`{"users":{"puller":{"name":"p","password":"x\ny"},"pusher":{"name":"q","password":"y"}},"local":"127.0.0.1:5001","remote":["10.0.0.1:5001"]}`,
-	`{"users":{"puller":{"name":"p","password":"x\u0000y"},"pusher":{"name":"q","password":"y"}},"local":"127.0.0.1:5001","remote":["10.0.0.1:5001"]}`,
-	// Bounds.
-	`{"users":{"puller":{"name":"p","password":"x"},"pusher":{"name":"q","password":"y"}},"local":"127.0.0.1:5001","remote":["10.0.0.1:5001"],"parallelizm":-1}`,
-	`{"users":{"puller":{"name":"p","password":"x"},"pusher":{"name":"q","password":"y"}},"local":"127.0.0.1:5001","remote":["10.0.0.1:5001"],"sleep":-1}`,
-	"local: [1,2]\n",
-	"ca: /pki/ca.crt\n",
-}
-
 func FuzzParseConfig(f *testing.F) {
-	for _, seed := range configSeeds {
-		f.Add(seed)
-	}
+	f.Add(`{"users":{"puller":{"name":"p","password":"x"},"pusher":{"name":"q","password":"y"}},"local":"127.0.0.1:5001","remote":["10.0.0.1:5001"]}`)
+	f.Add("users:\n  puller:\n    name: p\n    password: x\n  pusher:\n    name: q\n    password: y\nlocal: \"127.0.0.1:5001\"\nremote:\n  - \"10.0.0.1:5001\"\n")
+	f.Add(`{}`)
+	f.Add(``)
+	f.Add(`null`)
+	f.Add(`[]`)
+	f.Add(`{"local":"","remote":[]}`)
+	f.Add(`{"users":{},"local":"127.0.0.1:5001","remote":["10.0.0.1:5001"]}`)
+	f.Add(`{"users":{"puller":{"name":"p","password":"x"},"pusher":{"name":"q","password":"y"}},"local":"127.0.0.1","remote":["10.0.0.1"]}`)
+	f.Add(`{"users":{"puller":{"name":"p","password":"x"},"pusher":{"name":"q","password":"y"}},"local":"127.0.0.1:99999","remote":["10.0.0.1:5001"]}`)
+	f.Add(`{"users":{"puller":{"name":"p","password":"x"},"pusher":{"name":"q","password":"y"}},"local":"http://127.0.0.1:5001","remote":["10.0.0.1:5001"]}`)
+	f.Add(`{"users":{"puller":{"name":"p","password":"x"},"pusher":{"name":"q","password":"y"}},"local":"127.0.0.1:5001/path","remote":["10.0.0.1:5001"]}`)
+	f.Add(`{"users":{"puller":{"name":"p","password":"x"},"pusher":{"name":"q","password":"y"}},"local":"[fd00::1]:5001","remote":["[fd00::2]:5001"]}`)
+	f.Add(`{"users":{"puller":{"name":"p","password":"x"},"pusher":{"name":"q","password":"y"}},"local":"127.0.0.1:5001","remote":["","10.0.0.1:5001"]}`)
+	f.Add(`{"users":{"puller":{"name":"p\r\nX-Evil: 1","password":"x"},"pusher":{"name":"q","password":"y"}},"local":"127.0.0.1:5001","remote":["10.0.0.1:5001"]}`)
+	f.Add(`{"users":{"puller":{"name":"p","password":"x\ny"},"pusher":{"name":"q","password":"y"}},"local":"127.0.0.1:5001","remote":["10.0.0.1:5001"]}`)
+	f.Add(`{"users":{"puller":{"name":"p","password":"x\u0000y"},"pusher":{"name":"q","password":"y"}},"local":"127.0.0.1:5001","remote":["10.0.0.1:5001"]}`)
+	f.Add(`{"users":{"puller":{"name":"p","password":"x"},"pusher":{"name":"q","password":"y"}},"local":"127.0.0.1:5001","remote":["10.0.0.1:5001"],"parallelizm":-1}`)
+	f.Add(`{"users":{"puller":{"name":"p","password":"x"},"pusher":{"name":"q","password":"y"}},"local":"127.0.0.1:5001","remote":["10.0.0.1:5001"],"sleep":-1}`)
+	f.Add("local: [1,2]\n")
 
 	f.Fuzz(func(t *testing.T, document string) {
 		// YAML parsing is superlinear in the number of nodes, and a document

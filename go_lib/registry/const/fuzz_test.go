@@ -110,12 +110,29 @@ func FuzzGenerateProxyEndpoints(f *testing.F) {
 // FuzzGenerateProxyEndpointsList covers the list behaviour: order and count are
 // what tie an endpoint back to the node it came from.
 func FuzzGenerateProxyEndpointsList(f *testing.F) {
+	// One master, three masters, and the shapes a node list is not supposed to
+	// take: empty entries, duplicates, IPv6 mixed with IPv4, and an entry that
+	// carries a separator of the sinks downstream.
+	f.Add("10.0.0.1")
 	f.Add("10.0.0.1,10.0.0.2,10.0.0.3")
+	f.Add("10.0.0.1,10.0.0.2,10.0.0.3,10.0.0.4,10.0.0.5")
 	f.Add("")
 	f.Add(",")
+	f.Add(",,")
+	f.Add("10.0.0.1,")
+	f.Add(",10.0.0.1")
 	f.Add("10.0.0.1,10.0.0.1")
+	f.Add("10.0.0.1,,10.0.0.2")
 	f.Add("fd00::1,10.0.0.1")
+	f.Add("fd00::1,fd00::2")
+	f.Add("[fd00::1],10.0.0.1")
 	f.Add("10.0.0.1,; return 200,10.0.0.2")
+	f.Add("10.0.0.1,$(id),10.0.0.2")
+	f.Add("10.0.0.1,`id`")
+	f.Add("10.0.0.1,10.0.0.2:5001")
+	f.Add("10.0.0.1, 10.0.0.2")
+	f.Add("${discovered_node_ip},10.0.0.1")
+	f.Add("999.999.999.999,10.0.0.1")
 
 	f.Fuzz(func(t *testing.T, joined string) {
 		if len(joined) > 4096 {

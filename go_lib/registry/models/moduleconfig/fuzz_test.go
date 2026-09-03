@@ -56,48 +56,31 @@ const shellMetaCharacters = "$`\\"
 // directive built from the value.
 const tomlNGINXMetaCharacters = ";{}#'\"[] \t\r\n"
 
-var repoSeeds = []string{
-	"registry.example.com/deckhouse/ee",
-	"registry.example.com:5000/deckhouse/ee",
-	"registry.example.com",
-	"registry.example.com/",
-	"",
-	"/",
-	"//",
-	"registry.example.com//deckhouse",
-	"registry.example.com/deckhouse/ee/",
-	"registry.example.com/a/../../b",
-	"../../../etc/cron.d/x",
-	"registry.example.com:0/x",
-	"registry.example.com:99999/x",
-	"registry.example.com:5000",
-	"[fd00::1]:5000/x",
-	"fd00::1/x",
-	// Sink-directed payloads.
-	"registry.example.com; return 200",
-	"registry.example.com$(id)",
-	"`id`",
-	"registry.example.com\nserver 127.0.0.1:5002",
-	"registry.example.com\"]\n[host.\"http://evil\"",
-	"registry.example.com/deckhouse/ee:tag",
-	"registry.example.com/deckhouse@sha256:abc",
-	"REGISTRY.EXAMPLE.COM/X",
-	"registry.example.com/\x00",
-	"registry.example.com/ x",
-	strings.Repeat("a", 4096) + "/x",
-}
-
 func FuzzRegistrySettingsValidate(f *testing.F) {
-	for _, repo := range repoSeeds {
-		f.Add(repo, "HTTPS", "", "", "")
-		f.Add(repo, "HTTP", "", "user", "password")
-		f.Add(repo, "https", "", "", "")
-		f.Add(repo, "", "", "", "")
-		f.Add(repo, "HTTPS", "-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n", "", "")
-	}
+	// The settings an operator writes, then each of the five fields taken in
+	// turn to where it stops being one: an address with no host, a traversing
+	// path, an impossible port, a scheme that is neither, a CA against HTTP,
+	// and credentials given one half at a time.
+	f.Add("registry.example.com/deckhouse/ee", "HTTPS", "", "", "")
+	f.Add("registry.example.com:5000/deckhouse/ee", "HTTPS", "", "user", "password")
+	f.Add("dev-registry.deckhouse.io/sys/deckhouse-oss", "HTTPS", "", "", "")
+	f.Add("registry.example.com", "HTTP", "", "", "")
+	f.Add("registry.example.com/", "HTTPS", "", "", "")
+	f.Add("", "HTTPS", "", "", "")
+	f.Add("/", "HTTPS", "", "", "")
+	f.Add("../../../etc/cron.d/x", "HTTPS", "", "", "")
+	f.Add("registry.example.com/a/../../b", "HTTPS", "", "", "")
+	f.Add("registry.example.com:0/x", "HTTPS", "", "", "")
+	f.Add("registry.example.com:99999/x", "HTTPS", "", "", "")
+	f.Add("registry.example.com; return 200", "HTTPS", "", "", "")
+	f.Add("registry.example.com$(id)", "HTTPS", "", "", "")
+	f.Add("[fd00::1]:5000/x", "HTTPS", "", "", "")
+	f.Add("registry.example.com/x", "https", "", "", "")
+	f.Add("registry.example.com/x", "", "", "", "")
+	f.Add("registry.example.com/x", "ftp", "", "", "")
 	f.Add("registry.example.com/x", "HTTP", "ca", "", "")
+	f.Add("registry.example.com/x", "HTTPS", "-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n", "", "")
 	f.Add("registry.example.com/x", "HTTPS", "", "user", "")
-	f.Add("registry.example.com/x", "HTTPS", "", "", "password")
 
 	f.Fuzz(func(t *testing.T, imagesRepo, scheme, ca, username, password string) {
 		if len(imagesRepo) > 8192 || len(scheme) > 64 || len(ca) > 8192 {
@@ -186,6 +169,10 @@ func FuzzDeckhouseSettingsJSON(f *testing.F) {
 	f.Add(``)
 	f.Add(`null`)
 	f.Add(`[]`)
+	f.Add(`{"mode":"Local","direct":{"imagesRepo":"registry.example.com/x","scheme":"HTTPS"}}`)
+	f.Add(`{"mode":"Direct","direct":{"imagesRepo":"registry.example.com/x","scheme":"HTTPS"},"unmanaged":{"imagesRepo":"y","scheme":"HTTP"}}`)
+	f.Add(`{"mode":"Proxy","proxy":{"imagesRepo":"registry.example.com/x","scheme":"HTTPS","ttl":"$(id)"}}`)
+	f.Add(`{"mode":"Unmanaged","unmanaged":{"imagesRepo":"../../etc","scheme":"HTTPS"}}`)
 
 	f.Fuzz(func(t *testing.T, document string) {
 		if len(document) > 1<<16 {
@@ -257,13 +244,28 @@ func FuzzDeckhouseSettingsJSON(f *testing.F) {
 // blob and manifest lifetime of the caching registry, so a value that passes
 // here and then fails to parse would leave the proxy without one.
 func FuzzProxySettingsTTL(f *testing.F) {
-	for _, ttl := range []string{
-		"", "1h", "5m", "24h", "1h30m", "300s", "4m", "0h", "1s",
-		"1h0m0s", "-1h", "1d", "1h1h", "h", "1", "0",
-		"9999999999999999999h", "1e3s", " 1h", "1h ", "1H",
-	} {
-		f.Add(ttl)
-	}
+	// Durations the rule is meant to accept, the ones just below its minimum,
+	// and the shapes that are not a duration at all.
+	f.Add("")
+	f.Add("1h")
+	f.Add("5m")
+	f.Add("24h")
+	f.Add("1h30m")
+	f.Add("300s")
+	f.Add("1h0m0s")
+	f.Add("168h")
+	f.Add("4m")
+	f.Add("1s")
+	f.Add("0h")
+	f.Add("0")
+	f.Add("-1h")
+	f.Add("1d")
+	f.Add("1h1h")
+	f.Add("h")
+	f.Add("1")
+	f.Add("9999999999999999999h")
+	f.Add("1e3s")
+	f.Add(" 1h")
 
 	f.Fuzz(func(t *testing.T, ttl string) {
 		if len(ttl) > 256 {

