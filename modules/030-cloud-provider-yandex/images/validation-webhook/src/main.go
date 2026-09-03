@@ -89,19 +89,15 @@ func main() {
 				},
 			)
 
+			// Only the storage version is registered. The ValidatingWebhookConfiguration uses
+			// matchPolicy: Equivalent, so the apiserver converts a v1alpha1 write to v1 and
+			// delivers it to this path - one registration covers both served versions, and every
+			// rule always sees the v1 representation (the only one carrying spec.etcdDiskSizeGB).
 			registrars := []cpwebhook.Registrar{
 				webhooks.NewCredentialSecretValidator(factory, &corev1.Secret{}),
 				webhooks.NewModuleConfigValidator(factory, newWebhookObject(moduleConfigGVK)),
 				webhooks.NewNodeGroupValidator(factory, newWebhookObject(nodeGroupGVK)),
 				webhooks.NewYandexInstanceClassValidator(factory, newWebhookObject(ycicv1.GroupVersionKind)),
-				webhooks.NewYandexInstanceClassValidator(ycval.NewAdmissionStateBuilderFactory(
-					server.Client(),
-					cpvaladmission.StateBuilderConfig{
-						ModuleName:       ycmeta.ModuleName,
-						NamespaceName:    ycmeta.Namespace,
-						InstanceClassGVK: ycicv1alpha1.GroupVersionKind,
-					},
-				), newWebhookObject(ycicv1alpha1.GroupVersionKind)),
 			}
 
 			for _, registrar := range registrars {

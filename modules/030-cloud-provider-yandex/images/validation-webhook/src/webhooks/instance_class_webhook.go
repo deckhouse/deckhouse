@@ -26,7 +26,6 @@ import (
 	cpadmission "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/admission"
 	cpwebhook "github.com/deckhouse/deckhouse/go_lib/cloud-provider/webhook"
 	ycicv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/api/instanceclass/v1"
-	ycicv1alpha1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/api/instanceclass/v1alpha1"
 	ycval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/validation"
 	ycadmission "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/validation/admission"
 )
@@ -80,7 +79,7 @@ func (v *YandexInstanceClassValidator) validate(
 	instanceClassLog.Info(
 		"validating resource",
 		"operation", operation,
-		"resource", ycicv1alpha1.GroupVersionKind.Kind,
+		"resource", obj.GetObjectKind().GroupVersionKind().Kind,
 		"name", name,
 		"namespace", namespace,
 	)
@@ -131,7 +130,7 @@ func (v *YandexInstanceClassValidator) validate(
 	instanceClassLog.Info(
 		"validation allowed",
 		"operation", operation,
-		"resource", ycicv1alpha1.GroupVersionKind.Kind,
+		"resource", obj.GetObjectKind().GroupVersionKind().Kind,
 		"name", name,
 		"namespace", namespace,
 	)
