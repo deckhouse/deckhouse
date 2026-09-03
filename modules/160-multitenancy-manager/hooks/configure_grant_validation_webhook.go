@@ -158,14 +158,16 @@ func configureGrantValidationWebhook(ctx context.Context, input *go_hook.HookInp
 	}
 
 	whConfig.Webhooks[0].Rules = grantableWebhookRules(input)
-	// Reconcile CA/selector/match-conditions/timeout on existing configurations too (e.g. upgrades
-	// and TLS rotation). Same create-only caBundle bug as the defaulting webhook.
-	// Skip the CA write when it is not issued yet: rules/matchConditions must still reconcile.
+	// Reconcile CA/selector/match-conditions/timeout/failurePolicy on existing
+	// configurations too (e.g. upgrades and TLS rotation). Same create-only
+	// caBundle bug as the defaulting webhook. Skip the CA write when it is not
+	// issued yet: the rest must still reconcile.
 	if caBundle != "" {
 		whConfig.Webhooks[0].ClientConfig.CABundle = []byte(caBundle)
 	}
 	whConfig.Webhooks[0].NamespaceSelector = projectNamespaceSelector
 	whConfig.Webhooks[0].MatchConditions = systemWriterMatchConditions
+	whConfig.Webhooks[0].FailurePolicy = ptr.To(admissionregistrationv1.Fail)
 	whConfig.Webhooks[0].TimeoutSeconds = ptr.To(int32(10))
 	if whConfigExists {
 		_, err = admissionClient.Update(ctx, whConfig, v1.UpdateOptions{})

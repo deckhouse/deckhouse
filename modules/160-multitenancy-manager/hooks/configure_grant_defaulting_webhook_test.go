@@ -118,23 +118,9 @@ data:
 	f.RegisterCRD("multitenancy.deckhouse.io", "v1alpha1", "GrantableClusterResourceDefinition", false)
 	f.RegisterCRD("multitenancy.deckhouse.io", "v1alpha1", "GrantableClusterResourceReference", false)
 
-	// KubeStateSet talks to the dynamic fake; the hook uses the typed
-	// Admissionregistration client (a separate ObjectTracker). Wipe leftover
-	// typed objects so "missing webhook" cases cannot see a previous Create.
-	resetTypedWebhook := func() {
-		_ = f.KubeClient().AdmissionregistrationV1().MutatingWebhookConfigurations().Delete(
-			context.TODO(), mutatingWebhookConfigurationName, metav1.DeleteOptions{},
-		)
-	}
-
-	BeforeEach(func() {
-		f.ValuesSet("multitenancyManager.internal.admissionWebhookCert.ca", "values-ca")
-	})
-
 	Context("existing webhook with a stale CA and a rotated Secret", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(grantableState + secretNewCA))
-			resetTypedWebhook()
 			seedStaleWebhook(f)
 			f.RunHook()
 		})
@@ -144,13 +130,14 @@ data:
 			mwc := readWebhook(f)
 			Expect(string(mwc.Webhooks[0].ClientConfig.CABundle)).To(Equal("new-ca"))
 			Expect(mwc.Webhooks[0].Rules).ToNot(BeEmpty())
+			Expect(mwc.Webhooks[0].FailurePolicy).ToNot(BeNil())
+			Expect(*mwc.Webhooks[0].FailurePolicy).To(Equal(admissionregistrationv1.Fail))
 		})
 	})
 
 	Context("existing webhook, no Secret, CA only in values", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(grantableState))
-			resetTypedWebhook()
 			seedStaleWebhook(f)
 			f.RunHook()
 		})
@@ -164,7 +151,6 @@ data:
 	Context("webhook is missing", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(grantableState + secretNewCA))
-			resetTypedWebhook()
 			f.RunHook()
 		})
 
@@ -182,7 +168,6 @@ data:
 		BeforeEach(func() {
 			f.ValuesSet("multitenancyManager.internal.admissionWebhookCert.ca", "")
 			f.BindingContexts.Set(f.KubeStateSet(grantableState))
-			resetTypedWebhook()
 			f.RunHook()
 		})
 
@@ -196,7 +181,6 @@ data:
 		BeforeEach(func() {
 			f.ValuesSet("multitenancyManager.internal.admissionWebhookCert.ca", "")
 			f.BindingContexts.Set(f.KubeStateSet(grantableState))
-			resetTypedWebhook()
 			seedStaleWebhook(f)
 			f.RunHook()
 		})
@@ -212,7 +196,6 @@ data:
 	Context("existing webhook with an empty webhooks list", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(grantableState + secretNewCA))
-			resetTypedWebhook()
 			_, err := f.KubeClient().AdmissionregistrationV1().MutatingWebhookConfigurations().Create(
 				context.TODO(),
 				&admissionregistrationv1.MutatingWebhookConfiguration{
@@ -236,7 +219,6 @@ data:
 		BeforeEach(func() {
 			f.ValuesSet("multitenancyManager.internal.admissionWebhookCert.ca", "")
 			f.BindingContexts.Set(f.KubeStateSet(grantableState))
-			resetTypedWebhook()
 			_, err := f.KubeClient().AdmissionregistrationV1().MutatingWebhookConfigurations().Create(
 				context.TODO(),
 				&admissionregistrationv1.MutatingWebhookConfiguration{

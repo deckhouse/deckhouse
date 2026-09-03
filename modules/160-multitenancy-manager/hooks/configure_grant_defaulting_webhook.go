@@ -111,16 +111,18 @@ func configureDefaultingWebhook(ctx context.Context, input *go_hook.HookInput, d
 	}
 
 	whConfig.Webhooks[0].Rules = grantableWebhookRules(input)
-	// Reconcile CA/selector/match-conditions/timeout on existing configurations too (e.g. upgrades
-	// and TLS rotation). The serving cert is regenerated when SANs change; leaving caBundle at the
-	// create-time value makes the apiserver reject the webhook with x509 ECDSA verification failure.
-	// Skip the CA write when it is not issued yet: rules/matchConditions must still reconcile, or
-	// the hook fails the queue the way #20700 was written to prevent.
+	// Reconcile CA/selector/match-conditions/timeout/failurePolicy on existing
+	// configurations too (e.g. upgrades and TLS rotation). The serving cert is
+	// regenerated when SANs change; leaving caBundle at the create-time value
+	// makes the apiserver reject the webhook with x509 ECDSA verification failure.
+	// Skip the CA write when it is not issued yet: the rest must still reconcile,
+	// or the hook fails the queue the way #20700 was written to prevent.
 	if caBundle != "" {
 		whConfig.Webhooks[0].ClientConfig.CABundle = []byte(caBundle)
 	}
 	whConfig.Webhooks[0].NamespaceSelector = projectNamespaceSelector
 	whConfig.Webhooks[0].MatchConditions = systemWriterMatchConditions
+	whConfig.Webhooks[0].FailurePolicy = ptr.To(admissionregistrationv1.Fail)
 	whConfig.Webhooks[0].TimeoutSeconds = ptr.To(int32(10))
 	if whConfigExists {
 		_, err = admissionClient.Update(ctx, whConfig, v1.UpdateOptions{})
