@@ -17,6 +17,7 @@ limitations under the License.
 package capi
 
 import (
+	"cmp"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -412,17 +413,15 @@ func (r *MachineDeploymentReconciler) readPodSubnet(ctx context.Context) (string
 		return "", fmt.Errorf("unmarshal cluster configuration: %w", err)
 	}
 
-	// ModuleConfig control-plane-manager wins over the deprecated ClusterConfiguration field when
-	// set — see cluster.go's readClusterConfiguration for why this must not diverge.
+	// TODO: Remove when cluster-configuration is removed and use only ModuleConfig
+	// ModuleConfig wins when set (see package network, and cluster.go's readClusterConfiguration
+	// for why this must not diverge from it).
 	mcNetwork, err := network.FromModuleConfig(ctx, r.Client)
 	if err != nil {
 		return "", fmt.Errorf("resolve network settings: %w", err)
 	}
-	if mcNetwork.PodSubnetCIDR != "" {
-		return mcNetwork.PodSubnetCIDR, nil
-	}
 
-	return cfg.PodSubnetCIDR, nil
+	return cmp.Or(mcNetwork.PodSubnetCIDR, cfg.PodSubnetCIDR), nil
 }
 
 // instanceClassSpot reports the provider spot flag; only aws acts on it.

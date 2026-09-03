@@ -561,10 +561,9 @@ func (w *NodeGroupValidator) loadClusterConfig(ctx context.Context) (*ClusterCon
 		}
 	}
 
-	// podSubnetNodeCIDRPrefix is being migrated to ModuleConfig control-plane-manager the same way
-	// the cluster prefix above is: ModuleConfig wins over the regex-parsed ClusterConfiguration
-	// value when set, so the IP-exhaustion warning below matches --node-cidr-mask-size on a
-	// migrated cluster instead of a stale/default prefix.
+	// TODO: Remove when cluster-configuration is removed and use only ModuleConfig
+	// ModuleConfig wins over the regex-parsed value above when set (see package network), the same
+	// way the cluster prefix does.
 	mcNetwork, err := network.FromModuleConfig(ctx, w.Client)
 	if err != nil {
 		return nil, fmt.Errorf("resolve network settings: %w", err)

@@ -380,10 +380,10 @@ func (s *sourceReader) readClusterConfiguration(ctx context.Context) (clusterCon
 		return clusterConfiguration{}, fmt.Errorf("parse %s/%s: %w", kubeSystemNS, clusterConfigSecretName, err)
 	}
 
-	// podSubnetNodeCIDRPrefix is being migrated to ModuleConfig control-plane-manager; ModuleConfig
-	// wins over the deprecated ClusterConfiguration field when set. Read fail-closed like the rest
-	// of this function: a silently unresolved override would render a wrong DefaultMaxPods for
-	// every immutable node.
+	// TODO: Remove when cluster-configuration is removed and use only ModuleConfig
+	// ModuleConfig wins when set (see package network). Read fail-closed like the rest of this
+	// function: a silently unresolved override would render a wrong DefaultMaxPods for every
+	// immutable node.
 	mcNetwork, err := network.FromModuleConfig(ctx, s.Reader)
 	if err != nil {
 		return clusterConfiguration{}, fmt.Errorf("resolve network settings: %w", err)
