@@ -1,5 +1,3 @@
-{{- /* vcp-gate */ -}}
-{{- if .Values.global.deckhouseSelfHosted }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -593,6 +591,10 @@ subjects:
   - kind: ServiceAccount
     name: deckhouse
     namespace: d8-system
+{{- /* olcedar-gate: agent RBAC, the only grant here that goes to every kubelet. A tenant runs no
+immutable node, so nobody uses it. Drop the gate with the first one; the bounding VAPs in
+validation.yaml are already unconditional. */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 ---
 # The agent on an immutable node reaches the API with the kubelet's identity
 # (user system:node:<name>, group system:nodes). The Node authorizer does not
@@ -689,4 +691,4 @@ subjects:
   name: system:nodes
   apiGroup: rbac.authorization.k8s.io
 {{- end }}
-{{- /* /vcp-gate */ -}}
+{{- /* /olcedar-gate */ -}}

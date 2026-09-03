@@ -149,3 +149,10 @@ tenant issue their join token with the stock system:bootstrappers:d8-node-manage
   name: system:nodes
   apiGroup: rbac.authorization.k8s.io
 {{- end }}
+
+{{- /* Controllers a tenant has nothing for: no cloud provider, no CAPI, no immutable nodes.
+bashible-context is the load-bearing one - bashible_context_vcp.go writes that Secret with the host
+overlay, this controller would write it without. Remove a name to enable it, put it back to roll back. */ -}}
+{{- define "node_manager_nested_disabled_controllers" -}}
+bashible-context,instance,cluster-prefix-migration,capi-api-version,capi-cluster-resources,capi-control-plane,capi-crd-migration,capi-finalizer-cleanup,capi-machine-deployment,capi-md-metrics,node-config,node-bootstrap,node-operation
+{{- end }}

@@ -1,5 +1,3 @@
-{{- /* vcp-gate */ -}}
-{{- if .Values.global.deckhouseSelfHosted }}
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
@@ -105,5 +103,3 @@ webhooks:
     - {{ .Values.global.clusterConfiguration.cloud.provider | lower }}instanceclasses
     scope: Cluster
 {{- end }}
-{{- end }}
-{{- /* /vcp-gate */ -}}
