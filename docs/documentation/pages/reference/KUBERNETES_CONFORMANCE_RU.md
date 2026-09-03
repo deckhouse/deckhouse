@@ -13,7 +13,7 @@ Deckhouse Kubernetes Platform тестируется на соответстви
 {% assign conformance_results = site.data.kubernetes_conformance.results %}
 {% if conformance_results.size > 0 %}
 {% for result in conformance_results %}
-- Kubernetes **{{ result.version }}** — <a href="{{ site.canonical_url_prefix_documentation }}{{ result.xml_path }}" download>Скачать отчёт JUnit в формате XML</a>
+- Kubernetes **{{ result.version }}** — <a href="{{ result.xml_path | true_relative_url }}" download>Скачать отчёт JUnit в формате XML</a>
 {% endfor %}
 {% else %}
 Результаты conformance-тестов пока недоступны.
