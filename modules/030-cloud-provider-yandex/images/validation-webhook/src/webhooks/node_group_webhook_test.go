@@ -18,8 +18,9 @@ import (
 	"context"
 	"testing"
 
-	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 )
 
 func TestNodeGroupValidatorWithFakeClientAllowsMasterCreateBeforeInstanceClass(t *testing.T) {

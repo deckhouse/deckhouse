@@ -84,25 +84,12 @@ webhooks:
         operations: ["CREATE", "UPDATE", "DELETE"]
         resources: ["nodegroups"]
         scope: "Cluster"
-  - name: yandexinstanceclasses.cloud-provider-yandex.deckhouse.io-v1alpha1
-    admissionReviewVersions: ["v1"]
-    sideEffects: None
-    failurePolicy: Fail
-    matchPolicy: Equivalent
-    timeoutSeconds: 30
-    clientConfig:
-      service:
-        name: validation-webhook
-        namespace: d8-cloud-provider-yandex
-        path: /validate-deckhouse-io-v1alpha1-yandexinstanceclass
-        port: 443
-      caBundle: {{ .Values.cloudProviderYandex.internal.validationWebhookCert.ca | b64enc | quote }}
-    rules:
-      - apiGroups: ["deckhouse.io"]
-        apiVersions: ["v1alpha1"]
-        operations: ["CREATE", "UPDATE", "DELETE"]
-        resources: ["yandexinstanceclasses"]
-        scope: "Cluster"
+  # One webhook, on the storage version. matchPolicy: Equivalent makes the apiserver convert a
+  # v1alpha1 write to v1 and deliver it here, so both served versions are covered by a single
+  # entry. Registering a second webhook on v1alpha1 as well would deliver every write twice -
+  # doubling admission latency for no added coverage - and the v1alpha1 view of an instance
+  # class has no spec.etcdDiskSizeGB, so which representation a rule saw would depend on which
+  # path happened to fire.
   - name: yandexinstanceclasses.cloud-provider-yandex.deckhouse.io-v1
     admissionReviewVersions: ["v1"]
     sideEffects: None
