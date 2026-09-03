@@ -108,6 +108,10 @@ entries:
           ru: Внешние проверки статуса
         url: /code/documentation/user/external-status-checks.html
       - title:
+          en: Merge trains
+          ru: Цепочки слияния
+        url: /code/documentation/user/merge-trains.html
+      - title:
           en: OmniAuth & LDAP
           ru: OmniAuth и LDAP
         url: /code/documentation/user/oauth-and-ldap.html
