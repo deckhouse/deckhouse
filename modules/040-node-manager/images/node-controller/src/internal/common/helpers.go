@@ -67,7 +67,7 @@ func DrainTimeout(ctx context.Context, r client.Reader, ngName string) time.Dura
 }
 
 // BootstrapTokenNodeGroupLabel names the NodeGroup a bootstrap-token secret was
-// issued for. order_bootstrap_token maintains one rotating secret per group.
+// issued for. The bootstrap-secrets controller keeps one rotating secret per group.
 const BootstrapTokenNodeGroupLabel = "node-manager.deckhouse.io/node-group"
 
 // BootstrapTokens returns the newest unexpired bootstrap token of every

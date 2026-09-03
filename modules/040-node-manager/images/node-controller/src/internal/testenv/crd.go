@@ -139,6 +139,12 @@ func WithInstanceCRDFile() crdOpt {
 	return WithNodeManager(InstanceCRDFile)
 }
 
+// WithNodeUserCRDFile installs the NodeUser CRD, including its status subresource — the only part
+// of it node-controller writes.
+func WithNodeUserCRDFile() crdOpt {
+	return WithNodeManager(NodeUserCRDFile)
+}
+
 func CRDPaths(opts ...crdOpt) []string {
 	s := &crdSet{
 		controller:  make(map[ControllerCRDFile]struct{}),

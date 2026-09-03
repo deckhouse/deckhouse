@@ -30,6 +30,7 @@ import (
 
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	"github.com/deckhouse/node-controller/internal/common"
+	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -64,14 +65,14 @@ func (r *APIVersionReconciler) SetupWatches(w register.Watcher) {
 }
 
 func (r *APIVersionReconciler) machineToMD(_ context.Context, obj client.Object) []reconcile.Request {
-	ng, ok := obj.GetLabels()["node-group"]
+	ng, ok := obj.GetLabels()[ngcommon.MachineDeploymentNodeGroupLabel]
 	if !ok || ng == "" {
 		return nil
 	}
 	mdList := &capiv1beta2.MachineDeploymentList{}
 	if err := r.Client.List(context.Background(), mdList,
 		client.InNamespace(common.MachineNamespace),
-		client.MatchingLabels{"node-group": ng},
+		client.MatchingLabels{ngcommon.MachineDeploymentNodeGroupLabel: ng},
 	); err != nil {
 		return nil
 	}
@@ -110,7 +111,7 @@ func (r *APIVersionReconciler) Reconcile(ctx context.Context, req ctrl.Request) 
 	machineList := &capiv1beta2.MachineList{}
 	if err := r.Client.List(ctx, machineList,
 		client.InNamespace(req.Namespace),
-		client.MatchingLabels{"node-group": md.Labels["node-group"]},
+		client.MatchingLabels{ngcommon.MachineDeploymentNodeGroupLabel: md.Labels[ngcommon.MachineDeploymentNodeGroupLabel]},
 	); err != nil {
 		return ctrl.Result{}, fmt.Errorf("list Machines: %w", err)
 	}

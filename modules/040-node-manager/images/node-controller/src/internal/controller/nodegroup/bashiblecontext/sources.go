@@ -34,7 +34,10 @@ const (
 	cloudInstanceManagerNS = "d8-cloud-instance-manager"
 	kubeSystemNS           = "kube-system"
 
-	packagesProxyTokenSecretName = "registry-packages-proxy-token"
+	// Exported because the bootstrap-secrets controller watches this Secret: it is a
+	// legacy ServiceAccount token, created empty and filled by kube-controller-manager
+	// moments later, and the render must not keep the empty reading.
+	PackagesProxyTokenSecretName = "registry-packages-proxy-token"
 
 	controlPlaneArgsSecretName = "d8-control-plane-manager-control-plane-arguments"
 
@@ -43,9 +46,10 @@ const (
 	cloudProviderSecretName = ngcommon.CloudProviderSecretName
 )
 
-// rootCAFiles are the candidate locations of the projected service-account CA, canonical path
-// first. See readKubernetesCA.
-var rootCAFiles = []string{
+// RootCAFiles are the candidate locations of the projected service-account CA, canonical path
+// first; see ReadKubernetesCA. Exported only because no test process has either path: the
+// envtest suites point it at a committed fixture. Nothing in production assigns to it.
+var RootCAFiles = []string{
 	"/var/run/secrets/kubernetes.io/serviceaccount/ca.crt",
 	"/run/secrets/kubernetes.io/serviceaccount/ca.crt",
 }
@@ -70,7 +74,7 @@ func (s *Service) reader() client.Reader {
 	return s.Client
 }
 
-func (s *Service) readCloudProvider(ctx context.Context) map[string]interface{} {
+func (s *Service) ReadCloudProvider(ctx context.Context) map[string]interface{} {
 	secret := &corev1.Secret{}
 	if err := s.Client.Get(ctx, types.NamespacedName{Namespace: kubeSystemNS, Name: cloudProviderSecretName}, secret); err != nil {
 		return nil
@@ -91,9 +95,9 @@ func decodeSecretData(data map[string][]byte) map[string]interface{} {
 	return res
 }
 
-func (s *Service) readPackagesProxyToken(ctx context.Context) string {
+func (s *Service) ReadPackagesProxyToken(ctx context.Context) string {
 	secret := &corev1.Secret{}
-	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: cloudInstanceManagerNS, Name: packagesProxyTokenSecretName}, secret); err != nil {
+	if err := s.reader().Get(ctx, types.NamespacedName{Namespace: cloudInstanceManagerNS, Name: PackagesProxyTokenSecretName}, secret); err != nil {
 		return ""
 	}
 	return string(secret.Data["token"])
@@ -158,13 +162,13 @@ func (s *Service) readAPIServerProxyCerts(ctx context.Context) apiserverProxyCer
 	}
 }
 
-// readKubernetesCA reads the projected service-account CA. The kubelet mounts it under
+// ReadKubernetesCA reads the projected service-account CA. The kubelet mounts it under
 // /var/run/..., which resolves to /run/... only in images where /var/run is a symlink — the
 // hook this was ported from ran in the deckhouse image (where it is), node-controller runs on
 // distroless. Both spellings are therefore tried, so the CA never silently ends up empty in the
 // bashible context.
-func (s *Service) readKubernetesCA() string {
-	paths := rootCAFiles
+func (s *Service) ReadKubernetesCA() string {
+	paths := RootCAFiles
 	if s.RootCAFile != "" {
 		paths = []string{s.RootCAFile}
 	}

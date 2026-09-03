@@ -20,7 +20,8 @@ metadata:
     werf.io/track-termination-mode: WaitUntilResourceReady
   {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
 rules:
-# NodeGroups - full access for status updates
+# NodeGroups - full access for status updates; create is only used to ensure the master NodeGroup
+# exists (master-node-group controller, taken over from the create_master_node_group hook)
 - apiGroups:
   - deckhouse.io
   resources:
@@ -29,6 +30,7 @@ rules:
   - get
   - list
   - watch
+  - create
   - update
   - patch
 - apiGroups:
@@ -227,16 +229,34 @@ rules:
   - get
   - patch
   - update
-# NodeUsers + StaticInstances - live LISTs from the admission webhooks
-# (uid/address uniqueness checks read via the APIReader, no watch needed)
+# StaticInstances - live LISTs from the admission webhooks
+# (address uniqueness checks read via the APIReader, no watch needed).
 - apiGroups:
   - deckhouse.io
   resources:
-  - nodeusers
   - staticinstances
   verbs:
   - get
   - list
+# NodeUsers - the same live LISTs from the admission webhook, plus the watch the
+# nodeuser-status controller needs to notice a deleted node.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeusers
+  verbs:
+  - get
+  - list
+  - watch
+# NodeUser status - clear the error entries left behind by deleted nodes
+# (nodeuser-status controller, taken over from the clear_nodeuser_errors hook).
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeusers/status
+  verbs:
+  - get
+  - patch
 # ModuleConfig - read for validation (customTolerationKeys) and prefix resolution.
 - apiGroups:
   - deckhouse.io
@@ -280,6 +300,23 @@ rules:
   - get
   - list
   - watch
+# InstanceClasses - patch status.nodeGroupConsumers (the deletion webhook reads it).
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - awsinstanceclasses
+  - azureinstanceclasses
+  - dvpinstanceclasses
+  - gcpinstanceclasses
+  - yandexinstanceclasses
+  - dynamixinstanceclasses
+  - huaweicloudinstanceclasses
+  - openstackinstanceclasses
+  - vcdinstanceclasses
+  - vsphereinstanceclasses
+  - zvirtinstanceclasses
+  verbs:
+  - patch
 # ConfigMaps - read for cluster configuration
 - apiGroups:
   - ""
@@ -295,6 +332,16 @@ rules:
   - ""
   resources:
   - services
+  verbs:
+  - get
+  - list
+  - watch
+# CSINodes - read + watch to tell whether a node's CSI driver has registered, which is what
+# lets the csi-taint controller drop node.deckhouse.io/csi-not-bootstrapped.
+- apiGroups:
+  - storage.k8s.io
+  resources:
+  - csinodes
   verbs:
   - get
   - list
@@ -480,9 +527,14 @@ subjects:
 ---
 # Namespaced write access to Secrets in d8-cloud-instance-manager: the
 # bashible-apiserver-context Secret (single-writer replacement for the helm
-# define bashible_input_data) and the per-machine bootstrap-data Secrets the
-# nodebootstrap controller writes. Scoped to the namespace (least privilege)
-# instead of widening the cluster-wide secret read to cluster-wide write.
+# define bashible_input_data), the per-machine bootstrap-data Secrets the
+# nodebootstrap controller writes, and the bootstrap and machine-class Secrets
+# taken over from helm. Scoped to the namespace (least privilege) instead of
+# widening the cluster-wide secret read to cluster-wide write.
+#
+# delete is what collects the ones a removed NodeGroup or zone leaves behind:
+# helm.sh/resource-policy: keep took that duty from helm, and without the verb
+# every sweep 403s and the Secrets pile up forever.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: Role
 metadata:
@@ -502,6 +554,7 @@ rules:
   - create
   - update
   - patch
+  - delete
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: RoleBinding
@@ -557,6 +610,48 @@ roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: Role
   name: d8:node-manager:node-controller:apiproxy-cert
+subjects:
+- kind: ServiceAccount
+  name: node-controller
+  namespace: d8-cloud-instance-manager
+---
+# Namespaced write access for the per-NodeGroup bootstrap token Secrets the
+# bootstrap-secrets controller mints and sweeps (taken over from the
+# order_bootstrap_token hook). delete is what collects the expired ones: without
+# it every sweep 403s and the tokens accumulate forever.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: d8:node-manager:node-controller:bootstrap-tokens
+  namespace: kube-system
+  annotations:
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
+    werf.io/track-termination-mode: WaitUntilResourceReady
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+rules:
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - create
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:node-manager:node-controller:bootstrap-tokens
+  namespace: kube-system
+  annotations:
+    werf.io/deploy-on: pre-install,pre-upgrade,pre-rollback
+    werf.io/track-termination-mode: WaitUntilResourceReady
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: d8:node-manager:node-controller:bootstrap-tokens
 subjects:
 - kind: ServiceAccount
   name: node-controller

@@ -19,6 +19,7 @@ package draining
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
@@ -33,6 +34,7 @@ import (
 
 	kubedrain "github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain"
 
+	deckhousev1alpha2 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha2"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/register"
 )
@@ -40,6 +42,11 @@ import (
 func init() {
 	register.RegisterController("node-draining", &corev1.Node{}, &Reconciler{})
 }
+
+// spotTerminationLabel is set by the cloud provider when the cloud announces that the spot
+// instance behind this node is about to be reclaimed
+// (modules/030-cloud-provider-aws/hooks/add_termination_metadata.go:37).
+const spotTerminationLabel = "node.deckhouse.io/termination-in-progress"
 
 type Reconciler struct {
 	register.Base
@@ -86,6 +93,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		} else {
 			drainedSource = source
 		}
+	}
+
+	// A spot node whose drain is over has no reason to live: deleting its Instance releases the
+	// VM. A drain still in flight wins, so a drained annotation left over from an earlier bashible
+	// run cannot release the VM before the workloads have been evicted for this termination.
+	if drainingSource == "" && drainedSource != "" && node.Labels[spotTerminationLabel] == "true" {
+		return ctrl.Result{}, r.deleteInstance(ctx, node.Name)
 	}
 
 	if drainingSource == "" {
@@ -159,6 +173,35 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	r.Recorder.Eventf(node, corev1.EventTypeNormal, "DrainSucceeded", "node %q drained successfully", node.Name)
 
 	return ctrl.Result{}, nil
+}
+
+// deleteInstance removes the Instance of a reclaimed spot node. The Instance is read first so the
+// steady state of an already-terminating node costs a cached read instead of a delete call on every
+// kubelet heartbeat.
+func (r *Reconciler) deleteInstance(ctx context.Context, name string) error {
+	logger := log.FromContext(ctx)
+
+	instance := &deckhousev1alpha2.Instance{}
+	if err := r.Client.Get(ctx, types.NamespacedName{Name: name}, instance); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("get Instance %s: %w", name, err)
+	}
+	if instance.DeletionTimestamp != nil {
+		logger.V(1).Info("skipping: Instance of the spot node is already being deleted", "instance", name)
+		return nil
+	}
+
+	logger.Info("spot node drained, deleting its Instance", "instance", name)
+	if err := r.Client.Delete(ctx, instance, client.PropagationPolicy(metav1.DeletePropagationBackground)); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("delete Instance %s: %w", name, err)
+	}
+
+	return nil
 }
 
 func (r *Reconciler) cordonNode(ctx context.Context, node *corev1.Node) error {

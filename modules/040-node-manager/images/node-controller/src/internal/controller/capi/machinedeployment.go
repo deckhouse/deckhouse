@@ -45,6 +45,7 @@ import (
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	"github.com/deckhouse/node-controller/internal/clusterprefix"
 	"github.com/deckhouse/node-controller/internal/common"
+	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 	"github.com/deckhouse/node-controller/internal/register"
 )
@@ -130,7 +131,7 @@ func (r *MachineDeploymentReconciler) ForPredicates() []predicate.Predicate {
 }
 
 func mdToNodeGroup(_ context.Context, obj client.Object) []reconcile.Request {
-	ng, ok := obj.GetLabels()["node-group"]
+	ng, ok := obj.GetLabels()[ngcommon.MachineDeploymentNodeGroupLabel]
 	if !ok || ng == "" {
 		return nil
 	}
@@ -190,7 +191,7 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 		// Derive the engine instead of waiting for the status controller to publish
 		// status.engine: with the derived value the MachineDeployment is rendered in the
 		// first reconcile right after the NodeGroup is created. status.engine, once set,
-		// stays the pin (ComputeEngine prefers it).
+		// stays the pin (ResolveNodeGroup prefers it).
 		registration, err := r.readCloudProviderRegistration(ctx)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -203,13 +204,20 @@ func (r *MachineDeploymentReconciler) Reconcile(ctx context.Context, req ctrl.Re
 			logger.V(1).Info("skipping: instanceClassAPIVersion is not published yet")
 			return ctrl.Result{RequeueAfter: resyncInterval}, nil
 		}
-		switch derived_status.ComputeEngine(ng, registration) {
+		// Resolved once here and handed down: the engine branch and the rendered element must
+		// agree within one pass, and the snapshot behind ResolveNodeGroup already carries it.
+		ds := &derived_status.Service{Client: r.Client}
+		resolved, validationErr, err := ds.ResolveNodeGroup(ctx, ng)
+		if err != nil {
+			return ctrl.Result{}, fmt.Errorf("resolve NodeGroup %s: %w", ng.Name, err)
+		}
+		switch resolved.Engine {
 		case engineCAPI:
-			if err := r.reconcileCloudMDsRendered(ctx, ng); err != nil {
+			if err := r.reconcileCloudMDsRendered(ctx, ng, resolved, validationErr); err != nil {
 				return ctrl.Result{}, err
 			}
 		case engineMCM:
-			if err := r.reconcileCloudMCMs(ctx, ng); err != nil {
+			if err := r.reconcileCloudMCMs(ctx, ng, resolved, validationErr); err != nil {
 				return ctrl.Result{}, err
 			}
 		default:
@@ -266,7 +274,7 @@ func (r *MachineDeploymentReconciler) cleanupMachineDeployments(ctx context.Cont
 	})
 	if err := r.Client.List(ctx, capiMDs,
 		client.InNamespace(common.MachineNamespace),
-		client.MatchingLabels{"node-group": ngName},
+		client.MatchingLabels{ngcommon.MachineDeploymentNodeGroupLabel: ngName},
 	); err != nil && client.IgnoreNotFound(err) != nil {
 		return false, fmt.Errorf("list CAPI MachineDeployments for NodeGroup %s: %w", ngName, err)
 	}
@@ -340,10 +348,10 @@ func buildStaticMD(ng *deckhousev1.NodeGroup) *unstructured.Unstructured {
 	}
 
 	commonLabels := map[string]interface{}{
-		"heritage":   "deckhouse",
-		"module":     "node-manager",
-		"node-group": ng.Name,
-		"app":        "caps-controller",
+		"heritage":                               "deckhouse",
+		"module":                                 "node-manager",
+		ngcommon.MachineDeploymentNodeGroupLabel: ng.Name,
+		"app":                                    "caps-controller",
 	}
 
 	return &unstructured.Unstructured{Object: map[string]interface{}{
