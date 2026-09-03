@@ -114,7 +114,9 @@ func (r *renderer) build(spec *v1alpha2.ProjectTemplateSpec) ([]map[string]any, 
 	}
 	docs = append(docs, plcs...)
 
-	docs = append(docs, r.operationPolicy())
+	if r.requiredRequestsEnabled() {
+		docs = append(docs, r.operationPolicy())
+	}
 
 	uids, hasUIDs, err := spec.AllowedUIDs.Resolve(r.params)
 	if err != nil {
@@ -312,6 +314,22 @@ func (r *renderer) podLoggingConfigs(spec *v1alpha2.ProjectTemplateSpec) ([]map[
 		})
 	}
 	return out, nil
+}
+
+// requiredRequestsEnabled reports whether the built-in required-requests
+// OperationPolicy should be rendered. Structured templates historically always
+// emitted it; a missing parameter keeps that behaviour. Adoption seeds
+// requiredRequests=false so a live namespace is not suddenly denied.
+func (r *renderer) requiredRequestsEnabled() bool {
+	raw, ok := r.params["requiredRequests"]
+	if !ok {
+		return true
+	}
+	enabled, ok := raw.(bool)
+	if !ok {
+		return true
+	}
+	return enabled
 }
 
 func (r *renderer) operationPolicy() map[string]any {
