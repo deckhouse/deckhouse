@@ -110,19 +110,15 @@ const jwksResolverAdditionalRootCA = `-----BEGIN CERTIFICATE-----
 MIIDXTCCAkWgAwIBAgIJAN...
 -----END CERTIFICATE-----`
 
-func getTopLevelEntries(dir string) ([]string, error) {
-	var entries []string
+func getSubdirs(dir string) ([]string, error) {
+	var subdirs []string
 	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
 
-		if path == dir {
-			return nil
-		}
-
-		entries = append(entries, info.Name())
-		if info.IsDir() {
+		if info.IsDir() && path != dir && filepath.Base(path) == info.Name() {
+			subdirs = append(subdirs, info.Name())
 			return filepath.SkipDir
 		}
 
@@ -133,7 +129,7 @@ func getTopLevelEntries(dir string) ([]string, error) {
 		return nil, err
 	}
 
-	return entries, nil
+	return subdirs, nil
 }
 
 const (
@@ -143,19 +139,19 @@ const (
 
 var _ = Describe("Module :: istio :: helm template :: main", func() {
 	BeforeSuite(func() {
-		entries, err := getTopLevelEntries(istioEETemplatesPath)
+		subDirs, err := getSubdirs(istioEETemplatesPath)
 		Expect(err).ShouldNot(HaveOccurred())
-		for _, entry := range entries {
-			err := os.Symlink(istioEETemplatesPath+entry, istioCETemplatesPath+entry)
+		for _, subDir := range subDirs {
+			err := os.Symlink(istioEETemplatesPath+subDir, istioCETemplatesPath+subDir)
 			Expect(err).ShouldNot(HaveOccurred())
 		}
 	})
 
 	AfterSuite(func() {
-		entries, err := getTopLevelEntries(istioEETemplatesPath)
+		subDirs, err := getSubdirs(istioEETemplatesPath)
 		Expect(err).ShouldNot(HaveOccurred())
-		for _, entry := range entries {
-			err := os.Remove(istioCETemplatesPath + entry)
+		for _, subDir := range subDirs {
+			err := os.Remove(istioCETemplatesPath + subDir)
 			Expect(err).ShouldNot(HaveOccurred())
 		}
 	})

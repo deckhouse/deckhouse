@@ -937,10 +937,24 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/modules/110-istio/templates/validations.yaml
-  to: /deckhouse/modules/110-istio/templates/validations.yaml
+- add: /ee/modules/110-istio/templates/validations
+  to: /deckhouse/modules/110-istio/templates/validations
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - hooks/**/*.go
+    - hooks/*.go
+    - hooks/**/testdata
+    - apis
+    - requirements
+    - hack
+    - template_tests
+    - .namespace
+    - values_matrix_test.yaml
+    - .build.yaml
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/modules/110-istio/templates/waypoint-controller
   to: /deckhouse/modules/110-istio/templates/waypoint-controller

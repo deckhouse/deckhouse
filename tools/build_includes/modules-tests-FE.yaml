@@ -791,10 +791,16 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/modules/110-istio/templates/validations.yaml
-  to: /deckhouse/modules/110-istio/templates/validations.yaml
+- add: /ee/modules/110-istio/templates/validations
+  to: /deckhouse/modules/110-istio/templates/validations
+  excludePaths:
+    - docs
+    - README.md
+    - images
+    - webhooks
+    - crds
   stageDependencies:
-    install:
+    setup:
         - '**/*'
 - add: /ee/modules/110-istio/templates/waypoint-controller
   to: /deckhouse/modules/110-istio/templates/waypoint-controller

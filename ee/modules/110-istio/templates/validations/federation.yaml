@@ -1,0 +1,70 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: istiofederations-federation-enabled.deckhouse.io
+  {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   ["deckhouse.io"]
+        apiVersions: ["v1alpha1"]
+        operations:  ["CREATE"]
+        resources:   ["istiofederations"]
+        scope:       "Cluster"
+  validations:
+    - expression: "{{ .Values.istio.federation.enabled }}"
+      reason: Forbidden
+      message: "IstioFederations can only be created when federation is enabled. Enable spec.settings.federation.enabled in the istio ModuleConfig."
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: istiofederations-federation-enabled.deckhouse.io
+  {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
+spec:
+  policyName: istiofederations-federation-enabled.deckhouse.io
+  validationActions: [Deny]
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: public-services-federation.deckhouse.io
+  {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+      - apiGroups:   [""]
+        apiVersions: ["v1"]
+        operations:  ["CREATE", "UPDATE"]
+        resources:   ["services"]
+        scope:       "Namespaced"
+  variables:
+    - name: isPublicService
+      expression: "has(object.metadata.labels) && 'federation.istio.deckhouse.io/public-service' in object.metadata.labels"
+    - name: portsWithoutName
+      expression: "has(object.spec.ports) ? object.spec.ports.filter(p, !has(p.name)) : []"
+  validations:
+    - expression: "!variables.isPublicService || object.spec.type != 'ExternalName'"
+      reason: Forbidden
+      message: "A service of ExternalName type cannot be published in federation."
+    - expression: "!variables.isPublicService || has(object.spec.ports)"
+      reason: Forbidden
+      message: "A service without the '.spec.ports' field cannot be published in federation."
+    - expression: "!variables.isPublicService || variables.portsWithoutName.size() == 0"
+      reason: Forbidden
+      messageExpression: >
+        "Port \"" + variables.portsWithoutName[0].protocol + " " + string(variables.portsWithoutName[0].port) +
+        "\" of the service has no 'name' field set and cannot be published. Please, define the port name " +
+        "according to the following list of name suffixes supported by Istio: http, http2, https, tcp, tls, grpc, grpc-web."
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: public-services-federation.deckhouse.io
+  {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
+spec:
+  policyName: public-services-federation.deckhouse.io
+  validationActions: [Deny]
