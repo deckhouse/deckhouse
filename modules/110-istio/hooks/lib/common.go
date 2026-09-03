@@ -28,6 +28,8 @@ import (
 
 const namespace = "d8-istio"
 
+const maxHTTPResponseBodySize = 1 << 20
+
 func Queue(name string) string {
 	return fmt.Sprintf("/modules/istio/%s", name)
 }
@@ -55,6 +57,15 @@ func HTTPGet(httpClient d8http.Client, url string, bearerToken string) ([]byte, 
 	if err != nil {
 		return nil, 0, err
 	}
+	if req.URL.Scheme != "https" {
+		return nil, 0, fmt.Errorf("only HTTPS URLs are allowed")
+	}
+	if req.URL.User != nil {
+		return nil, 0, fmt.Errorf("URL userinfo is not allowed")
+	}
+	if req.URL.RawQuery != "" || req.URL.Fragment != "" {
+		return nil, 0, fmt.Errorf("URL query parameters and fragments are not allowed")
+	}
 
 	if len(bearerToken) > 0 {
 		req.Header.Add("Authorization", "Bearer "+bearerToken)
@@ -66,9 +77,12 @@ func HTTPGet(httpClient d8http.Client, url string, bearerToken string) ([]byte, 
 	}
 	defer res.Body.Close()
 
-	dataBytes, err := io.ReadAll(res.Body)
+	dataBytes, err := io.ReadAll(io.LimitReader(res.Body, maxHTTPResponseBodySize+1))
 	if err != nil {
 		return nil, 0, err
+	}
+	if len(dataBytes) > maxHTTPResponseBodySize {
+		return nil, 0, fmt.Errorf("HTTP response body exceeds %d bytes", maxHTTPResponseBodySize)
 	}
 
 	return dataBytes, res.StatusCode, nil

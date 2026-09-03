@@ -33,9 +33,16 @@ var _ = Describe("Modules :: cloud-provider-dvp :: hooks :: dvp_cluster_configur
 global:
   discovery: {}
 cloudProviderDvp:
+  nodes:
+    parameters:
+      additionalVMLabels:
+        network-access: bastion
+      ingressPorts:
+      - 22
+  provider:
+    parameters:
+      networkPolicy: Isolated
   internal: {}
-  nodes: {}
-  provider: {}
 `
 	)
 
