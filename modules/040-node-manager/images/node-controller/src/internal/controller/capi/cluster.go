@@ -17,6 +17,7 @@ limitations under the License.
 package capi
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"strings"
@@ -311,20 +312,15 @@ func (r *ClusterReconciler) readClusterConfiguration(ctx context.Context) (*clus
 		return nil, fmt.Errorf("unmarshal cluster configuration: %w", err)
 	}
 
-	// The two CIDRs are being migrated to ModuleConfig control-plane-manager; ModuleConfig wins over
-	// the deprecated ClusterConfiguration field when set, so the CAPI Cluster's clusterNetwork keeps
-	// matching what the control plane actually runs with. Read via r.Client (cached), not
+	// TODO: Remove when cluster-configuration is removed and use only ModuleConfig
+	// ModuleConfig wins over these deprecated fields when set (see package network). r.Client, not
 	// r.APIReader: unlike the secret above, the cache now watches ModuleConfig cluster-wide.
 	mcNetwork, err := network.FromModuleConfig(ctx, r.Client)
 	if err != nil {
 		return nil, fmt.Errorf("resolve network settings: %w", err)
 	}
-	if mcNetwork.PodSubnetCIDR != "" {
-		cfg.PodSubnetCIDR = mcNetwork.PodSubnetCIDR
-	}
-	if mcNetwork.ServiceSubnetCIDR != "" {
-		cfg.ServiceSubnetCIDR = mcNetwork.ServiceSubnetCIDR
-	}
+	cfg.PodSubnetCIDR = cmp.Or(mcNetwork.PodSubnetCIDR, cfg.PodSubnetCIDR)
+	cfg.ServiceSubnetCIDR = cmp.Or(mcNetwork.ServiceSubnetCIDR, cfg.ServiceSubnetCIDR)
 
 	return cfg, nil
 }
