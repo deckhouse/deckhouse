@@ -44,7 +44,7 @@ git:
   - 'ee/se/modules/*/webhooks'
 # - 'ee/fe/modules/*/webhooks/'
   excludePaths:
-    - '**/*_test.py'
+    - '**/*_test*.py'
   stageDependencies:
     install:
       - '**/*'
