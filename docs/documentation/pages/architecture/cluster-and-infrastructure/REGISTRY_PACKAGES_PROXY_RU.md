@@ -7,7 +7,7 @@ description: Архитектура модуля registry-packages-proxy в Deck
 ---
 
 Модуль [`registry-packages-proxy`](/modules/registry-packages-proxy/) предоставляет сервис HTTP-прокси внутри кластера
-Deckhouse Kubernetes Platform (DKP) для доступа к пакетам из хранилищ образов контейнеров.
+Deckhouse Kubernetes Platform (DKP) для доступа к [пакетам](../../marketplace/concepts.html) из хранилищ образов контейнеров.
 Он выступает в качестве посредника между компонентами кластера и внешними или внутренними хранилищами образов
 контейнеров с функциями кеширования для оптимизации использования пропускной способности сети и повышения
 производительности при загрузке пакетов.
@@ -26,7 +26,7 @@ Deckhouse Kubernetes Platform (DKP) для доступа к пакетам из
 - следит за ресурсом Secret `deckhouse-registry` в неймспейсе `d8-system` для получения учётных данных основного хранилища образов;
 - следит за кастомными ресурсами [ModuleSource](../../../reference/api/cr.html#modulesource) и [PackageRepository](../../../reference/api/cr.html#packagerepository) для получения учётных данных хранилищ образов контейнеров;
 - использует RBAC-авторизацию для защиты доступа к прокси и эндпоинтам метрик;
-- предоставляет публичный HTTPS API (через Ingress) для исполняемых файлов и плагинов Deckhouse CLI;
+- предоставляет публичный HTTPS API (через Ingress) для исполняемых файлов и плагинов [Deckhouse CLI](/products/kubernetes-platform/documentation/v1/cli/d8/);
 - предоставляет внутрикластерный HTTPS API для иконок пакетов (без публикации через Ingress).
 
 Подробнее с работой модуля можно ознакомиться в [разделе описания модуля](/modules/registry-packages-proxy/).
@@ -65,6 +65,10 @@ Deckhouse Kubernetes Platform (DKP) для доступа к пакетам из
 
 С модулем взаимодействуют следующие внешние компоненты:
 
-1. **bashible** — скачивание образа с собранными исполняемыми файлами на узлы при бутстрапе кластера.
+1. **Bashible** — скачивание образа с собранными исполняемыми файлами на узлы при бутстрапе кластера.
 
-1. **prometheus-main** — сбор метрик контейнера registry-packages-proxy.
+1. **Prometheus-main** — сбор метрик контейнера registry-packages-proxy.
+
+1. **Console** — получение иконок пакетов.
+
+1. **Deckhouse CLI** — получение версий утилиты [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) и её плагинов.
