@@ -175,7 +175,7 @@ cloud:
   prefix: cluster
 podSubnetCIDR: 10.111.0.0/16
 serviceSubnetCIDR: 10.222.0.0/16
-kubernetesVersion: "1.32"
+kubernetesVersion: "1.33"
 clusterDomain: "cluster.local"
 {{- if .proxy }}
 proxy:
@@ -573,7 +573,7 @@ func TestKubernetesVersionResolution(t *testing.T) {
 
 	t.Run("ModuleConfig wins over ClusterConfiguration", func(t *testing.T) {
 		m := &MetaConfig{
-			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("1.32")},
+			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("1.33")},
 			ModuleConfigs: []*ModuleConfig{cpm("1.35")},
 		}
 		require.Equal(t, "1.35", m.kubernetesVersionRaw())
@@ -600,7 +600,7 @@ func TestKubernetesVersionResolution(t *testing.T) {
 		// this predicate must not quietly accept it either — a value the schema refuses must never
 		// take on meaning here.
 		m := &MetaConfig{
-			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("1.32")},
+			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("1.33")},
 			ModuleConfigs: []*ModuleConfig{cpm("Automatic")},
 		}
 		require.Equal(t, "Automatic", m.kubernetesVersionRaw())
@@ -610,7 +610,7 @@ func TestKubernetesVersionResolution(t *testing.T) {
 		// Presence of the setting decides which document owns the version: an explicit Default
 		// means bootstrap starts on the same version Deckhouse will target afterwards.
 		m := &MetaConfig{
-			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("1.32")},
+			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("1.33")},
 			ModuleConfigs: []*ModuleConfig{cpm("Default")},
 		}
 		require.Equal(t, "", m.kubernetesVersionRaw())
@@ -622,7 +622,7 @@ func TestKubernetesVersionResolution(t *testing.T) {
 
 	t.Run("ModuleConfig Default overrides a pinned ClusterConfiguration", func(t *testing.T) {
 		m := &MetaConfig{
-			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("1.32")},
+			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("1.33")},
 			ModuleConfigs: []*ModuleConfig{cpm("Default")},
 		}
 		require.Equal(t, "", m.kubernetesVersionRaw())
@@ -634,14 +634,14 @@ func TestKubernetesVersionResolution(t *testing.T) {
 
 	t.Run("unset ModuleConfig defers to pinned ClusterConfiguration", func(t *testing.T) {
 		m := &MetaConfig{
-			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("1.32")},
+			ClusterConfig: map[string]json.RawMessage{"kubernetesVersion": mustRaw("1.33")},
 			ModuleConfigs: []*ModuleConfig{cpm("")},
 		}
-		require.Equal(t, "1.32", m.kubernetesVersionRaw())
+		require.Equal(t, "1.33", m.kubernetesVersionRaw())
 
 		ccm, err := m.ClusterConfigMap()
 		require.NoError(t, err)
-		require.Equal(t, "1.32", ccm["kubernetesVersion"])
+		require.Equal(t, "1.33", ccm["kubernetesVersion"])
 	})
 
 	t.Run("unset falls back to DefaultKubernetesVersion", func(t *testing.T) {

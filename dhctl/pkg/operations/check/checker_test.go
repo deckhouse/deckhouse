@@ -39,8 +39,8 @@ import (
 func TestCheckClusterConfig(t *testing.T) {
 	tests.RequireDir(t, "/deckhouse/candi/cloud-providers", "werf bundles cloud-providers from modules/030-cloud-provider-* at CI time")
 	const (
-		k8sVersionOld    = "1.32"
-		k8sVersionNew    = "1.33"
+		k8sVersionOld    = "1.33"
+		k8sVersionNew    = "1.34"
 		staticClusterFmt = `
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration
@@ -67,7 +67,7 @@ clusterType: Cloud
 cloud:
   provider: Yandex
   prefix: "test"
-kubernetesVersion: "1.32"
+kubernetesVersion: "1.33"
 podSubnetCIDR: 10.222.0.0/16
 serviceSubnetCIDR: 10.111.0.0/16
 encryptionAlgorithm: RSA-2048
