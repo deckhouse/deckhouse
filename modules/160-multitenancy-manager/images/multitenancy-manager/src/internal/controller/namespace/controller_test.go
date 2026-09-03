@@ -21,6 +21,7 @@ import (
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
@@ -108,6 +109,21 @@ func TestIsAdoptionCandidate(t *testing.T) {
 			assert.Equal(t, tc.want, isAdoptionCandidate(tc.ns))
 		})
 	}
+}
+
+func TestReconcile_HoldsOffYoungOrphanNamespace(t *testing.T) {
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name:              "team-a",
+		CreationTimestamp: metav1.Now(),
+	}}
+
+	r := newReconciler(t, ns)
+	res, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: "team-a"}})
+	require.NoError(t, err)
+	assert.Greater(t, res.RequeueAfter, time.Duration(0))
+
+	err = r.client.Get(context.Background(), client.ObjectKey{Name: "team-a"}, new(v1alpha3.Project))
+	assert.True(t, apierrors.IsNotFound(err), "a young namespace must not be adopted yet")
 }
 
 func TestReconcile_AdoptsOrphanNamespace(t *testing.T) {

@@ -20,6 +20,7 @@ import (
 	"context"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
@@ -59,6 +60,63 @@ func project(name string, labels map[string]string, template string) *v1alpha3.P
 		ObjectMeta: metav1.ObjectMeta{Name: name, Labels: labels},
 		Spec:       v1alpha3.ProjectSpec{ProjectTemplateName: template},
 	}
+}
+
+func TestAdopt_HoldsOffYoungNamespace(t *testing.T) {
+	ns := namespace("foo", nil, nil)
+	ns.CreationTimestamp = metav1.Now()
+	m, c := newManager(t, ns)
+
+	res, err := m.Adopt(context.Background(), ns)
+	require.NoError(t, err)
+	assert.Greater(t, res.RequeueAfter, time.Duration(0))
+	assert.LessOrEqual(t, res.RequeueAfter, helm.AdoptGracePeriod)
+
+	err = c.Get(context.Background(), client.ObjectKey{Name: "foo"}, new(v1alpha3.Project))
+	assert.True(t, apierrors.IsNotFound(err))
+
+	updated := new(corev1.Namespace)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, updated))
+	assert.NotEqual(t, helm.ManagedByHelm, updated.Labels[helm.ResourceLabelManagedBy])
+	assert.Empty(t, updated.Annotations[helm.ResourceAnnotationReleaseName])
+}
+
+func TestAdopt_YoungForeignReleaseIsImmediate(t *testing.T) {
+	ns := namespace("foo", nil, map[string]string{
+		helm.ResourceAnnotationReleaseName:      "foo",
+		helm.ResourceAnnotationReleaseNamespace: "foo",
+	})
+	ns.CreationTimestamp = metav1.Now()
+	m, c := newManager(t, ns)
+
+	res, err := m.Adopt(context.Background(), ns)
+	require.NoError(t, err)
+	assert.Zero(t, res.RequeueAfter)
+
+	got := new(v1alpha3.Project)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, got))
+	assert.Equal(t, TemplateSimple, got.Spec.ProjectTemplateName)
+
+	updated := new(corev1.Namespace)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, updated))
+	assert.Equal(t, "foo", updated.Annotations[helm.ResourceAnnotationReleaseName])
+	assert.Equal(t, "foo", updated.Annotations[helm.ResourceAnnotationReleaseNamespace])
+	assert.NotEqual(t, helm.ManagedByHelm, updated.Labels[helm.ResourceLabelManagedBy])
+}
+
+func TestAdopt_OldNamespaceAdoptsImmediately(t *testing.T) {
+	ns := namespace("foo", nil, nil)
+	ns.CreationTimestamp = metav1.NewTime(time.Now().Add(-helm.AdoptGracePeriod - time.Second))
+	m, c := newManager(t, ns)
+
+	res, err := m.Adopt(context.Background(), ns)
+	require.NoError(t, err)
+	assert.Zero(t, res.RequeueAfter)
+
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, new(v1alpha3.Project)))
+	updated := new(corev1.Namespace)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, updated))
+	assert.Equal(t, helm.ManagedByHelm, updated.Labels[helm.ResourceLabelManagedBy])
 }
 
 func TestAdopt_CreatesFullProject(t *testing.T) {

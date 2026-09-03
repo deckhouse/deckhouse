@@ -73,8 +73,13 @@ func (m *Manager) CompleteLeftover(ctx context.Context, project *v1alpha3.Projec
 
 	// Do not infer a template while a foreign Helm release still owns the
 	// namespace. Handle will surface HelmOwnership; once the annotations are
-	// gone this leftover can be migrated for real.
+	// gone this leftover can be migrated for real. The same holdoff as Adopt
+	// applies: a brand-new leftover wrap must not steal Helm annotations that
+	// arrive a moment after create.
 	if helm.ForeignRelease(namespace, helm.ReleaseName(project.Name)) != "" {
+		return false, nil
+	}
+	if helm.StampHoldoff(namespace) > 0 {
 		return false, nil
 	}
 

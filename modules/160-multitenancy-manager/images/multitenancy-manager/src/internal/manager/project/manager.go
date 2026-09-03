@@ -162,6 +162,10 @@ func (m *Manager) Handle(ctx context.Context, project *v1alpha3.Project) (ctrl.R
 	// Defense in depth: Adopt stamps Helm ownership, but a Project that already existed
 	// (or whose Adopt raced) can still reach the first upgrade without the metadata.
 	if err := helm.StampReleaseOwnership(ctx, m.client, project.Name); err != nil {
+		var holdoff helm.StampHoldoffError
+		if errors.As(err, &holdoff) {
+			return ctrl.Result{RequeueAfter: holdoff.Remaining}, nil
+		}
 		if errors.Is(err, helm.ErrForeignRelease) {
 			project.ClearConditions()
 			_, err := m.failAndRequeue(ctx, project, v1alpha3.ProjectConditionHelmOwnership, err)
