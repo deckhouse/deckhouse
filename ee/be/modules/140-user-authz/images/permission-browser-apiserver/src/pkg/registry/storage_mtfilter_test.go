@@ -44,6 +44,8 @@ func (s staticResourceScope) Scope(group, resource string) (namespaced, known bo
 	return namespaced, known
 }
 
+func (s staticResourceScope) HasData() bool { return len(s) > 0 }
+
 func writeMTConfig(t *testing.T, body string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "config.json")

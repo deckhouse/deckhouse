@@ -14,13 +14,16 @@ import (
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 )
 
-// staticResourceScope is a test ResourceScope. Missing keys are unknown.
+// staticResourceScope is a test ResourceScope. Missing keys are unknown, and
+// an empty map stands for a snapshot discovery never filled.
 type staticResourceScope map[string]bool
 
 func (s staticResourceScope) Scope(group, resource string) (namespaced, known bool) {
 	namespaced, known = s[group+"/"+resource]
 	return namespaced, known
 }
+
+func (s staticResourceScope) HasData() bool { return len(s) > 0 }
 
 func coreResourceScope() staticResourceScope {
 	return staticResourceScope{
@@ -210,12 +213,52 @@ func (c *clusterIndependentChecker) AllowsIndependently(_ context.Context, attrs
 	return ok
 }
 
-func TestEngine_Authorize_UnknownResourceIsDenied(t *testing.T) {
+// authorizeGroupedResource is authorizeResource for a resource that lives in
+// an API group. The webhook resolves group and core resources differently, so
+// the unknown-resource rows must state which one they mean.
+func authorizeGroupedResource(t *testing.T, e *Engine, userName, group, resource string) authorizer.Decision {
+	t.Helper()
+	decision, _, err := e.Authorize(context.Background(), &mockAttrs{
+		userInfo:   &mockUserInfo{name: userName},
+		verb:       "list",
+		apiGroup:   group,
+		resource:   resource,
+		isResource: true,
+	})
+	require.NoError(t, err)
+	return decision
+}
+
+func TestEngine_Authorize_UnknownGroupedResourceIsDenied(t *testing.T) {
 	editor := engineWithKnownScopes(t, editorCARConfig)
 
-	got := authorizeResource(t, editor, "editor@example.io", "list", "doesnotexist", "")
+	got := authorizeGroupedResource(t, editor, "editor@example.io", "example.io", "doesnotexist")
 	assert.Equal(t, authorizer.DecisionDeny, got,
-		"a resource absent from the scope snapshot must not fail-open")
+		"a grouped resource absent from the scope snapshot must not fail-open")
+}
+
+// TestEngine_Authorize_UnknownCoreResourceMatchesWebhook locks parity with
+// the enforcement webhook, which permits an unknown core resource so RBAC can
+// answer instead of denying it. Reporting Deny here would show a restriction
+// the cluster does not apply.
+func TestEngine_Authorize_UnknownCoreResourceMatchesWebhook(t *testing.T) {
+	editor := engineWithKnownScopes(t, editorCARConfig)
+
+	got := authorizeGroupedResource(t, editor, "editor@example.io", "", "doesnotexist")
+	assert.Equal(t, authorizer.DecisionNoOpinion, got,
+		"an unknown core resource is left to RBAC, exactly as the webhook does")
+}
+
+// TestEngine_Authorize_EmptySnapshotDeniesCoreResource guards the other side
+// of that carve-out: with no snapshot at all we cannot tell a missing
+// resource from missing discovery, and the webhook denies too.
+func TestEngine_Authorize_EmptySnapshotDeniesCoreResource(t *testing.T) {
+	editor, err := NewEngine(writeConfigJSON(t, editorCARConfig), nil, nil, staticResourceScope{})
+	require.NoError(t, err)
+
+	got := authorizeGroupedResource(t, editor, "editor@example.io", "", "pods")
+	assert.Equal(t, authorizer.DecisionDeny, got,
+		"an unpopulated snapshot must not turn every core resource into a pass")
 }
 
 func TestEngine_Authorize_NilScopeIsDenied(t *testing.T) {
@@ -228,11 +271,10 @@ func TestEngine_Authorize_NilScopeIsDenied(t *testing.T) {
 }
 
 func TestEngine_Authorize_UnknownResourceIndependentRBAC(t *testing.T) {
-	editor, err := NewEngine(writeConfigJSON(t, editorCARConfig), nil, nil, staticResourceScope{})
-	require.NoError(t, err)
+	editor := engineWithKnownScopes(t, editorCARConfig)
 	editor.SetIndependentRBACChecker(&clusterIndependentChecker{allowClusterScoped: true})
 
-	got := authorizeResource(t, editor, "editor@example.io", "list", "newcrds", "")
+	got := authorizeGroupedResource(t, editor, "editor@example.io", "example.io", "newcrds")
 	assert.Equal(t, authorizer.DecisionNoOpinion, got,
 		"independent cluster-wide grant still skips the unknown-resource deny")
 }
