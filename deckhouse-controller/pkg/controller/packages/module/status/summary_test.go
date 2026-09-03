@@ -175,6 +175,36 @@ func TestModuleSummaryScenarios(t *testing.T) {
 			tip:     "",
 		},
 
+		// ── Workload gate ──────────────────────────────────────────────
+		//
+		// Modules install with nelm's final tracking disabled, so
+		// ManifestsApplied=True says the manifests reached the API server, not
+		// that the workload is up. The summary must not read it as Ready.
+
+		{
+			name: "update: manifests applied while the workload rolls out",
+			opts: running(
+				withVersionChanged(),
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionFalse, "Reconciling"),
+			),
+			wantConds: map[string]*expectedCondition{
+				ConditionScaled: {metav1.ConditionFalse, "Reconciling"},
+			},
+			state:   stateUpdating,
+			message: "Update applied: the new version's workload is rolling out",
+			tip:     "Wait for the rollout to finish. If it stalls, check pod status and events.",
+		},
+		{
+			name: "update: manifests applied with no health report",
+			opts: running(
+				withVersionChanged(),
+				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionUnknown, ""),
+			),
+			state:   stateUpdating,
+			message: "Update applied: waiting for a workload the health monitor can confirm",
+			tip:     "Either no report has arrived yet, or the chart ships no Deployment or StatefulSet, the only kinds the health monitor watches.",
+		},
+
 		// ── Deleting (teardown accepted by the runtime) ────────────────
 
 		{
