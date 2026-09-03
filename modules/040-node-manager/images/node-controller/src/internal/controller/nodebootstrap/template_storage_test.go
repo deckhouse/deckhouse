@@ -36,6 +36,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	deckhousev1alpha1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1alpha1"
 	templatesv1alpha1 "github.com/deckhouse/node-controller/api/templates.internal.deckhouse.io/v1alpha1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/testenv"
@@ -279,6 +280,9 @@ func templateCluster(t *testing.T, objects ...client.Object) client.Client {
 	scheme := k8sruntime.NewScheme()
 	require.NoError(t, clientgoscheme.AddToScheme(scheme))
 	require.NoError(t, deckhousev1.AddToScheme(scheme))
+	// The render lists NodeExtensionRequests, and the fake client answers a kind
+	// its scheme does not know with an error rather than an empty list.
+	require.NoError(t, deckhousev1alpha1.AddToScheme(scheme))
 
 	return fake.NewClientBuilder().
 		WithScheme(scheme).
