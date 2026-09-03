@@ -402,3 +402,18 @@ spec:
 - [ ] `go run $constraint_testgen verify` passes
 - [ ] `go run $constraint_testgen coverage -tests-root ./ -format table` shows 100%
 - [ ] `rendered/` artifacts are committed alongside source files
+- [ ] For a **new** constraint, or a change to a **shared lib** (`../files/libs/`):
+      benchmark it with `tools/bench_rules.py`/`tools/rulebench.sh` (they
+      reuse the `rendered/test_samples/` fixtures you just generated - no
+      extra setup) and compare against the existing cost table in
+      `../../../tools/AGENTS.md`. A new rule landing in the same range as
+      `allowed-proc-mount`/`read-only-root-filesystem` (the current most
+      expensive) is worth a second look before merging.
+
+## Related: diagnosing resource consumption
+
+This file covers writing/verifying **correctness** tests. For **performance**
+- benchmarking a rule's time/memory cost, or diagnosing why the module is
+using CPU/memory on a live cluster - see
+[`../../../tools/AGENTS.md`](../../../tools/AGENTS.md), which is the
+equivalent agent guide for that side of the module.
