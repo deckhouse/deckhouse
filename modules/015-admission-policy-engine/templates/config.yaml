@@ -13,7 +13,7 @@ spec:
       - group: ""
         version: "v1"
         kind: "Pod"
-{{/*  Namespaces are looked up via data.inventory by the D8GpuResourceRestriction constraint template */}}
+{{- /* Namespaces are looked up via data.inventory by the D8GpuResourceRestriction constraint template */}}
       - group: ""
         version: "v1"
         kind: "Namespace"

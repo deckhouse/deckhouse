@@ -181,6 +181,18 @@ admissionPolicyEngine:
 			Expect(f.KubernetesGlobalResource("D8GpuResourceRestriction", testPolicyName).Exists()).To(BeTrue())
 		})
 
+		It("Gatekeeper Config must sync the kinds the constraint templates read from data.inventory", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			config := f.KubernetesResource("Config", "d8-admission-policy-engine", "config")
+			Expect(config.Exists()).To(BeTrue())
+			Expect(config.Field("spec.sync.syncOnly").Array()).To(HaveLen(3))
+			// Namespace is required by D8GpuResourceRestriction.
+			Expect(config.Field(`spec.sync.syncOnly.#(kind=="Namespace").version`).String()).To(Equal("v1"))
+			Expect(config.Field(`spec.sync.syncOnly.#(kind=="Pod").version`).String()).To(Equal("v1"))
+			Expect(config.Field(`spec.sync.syncOnly.#(kind=="SecurityPolicyException").group`).String()).To(Equal("deckhouse.io"))
+		})
+
 		It("All operation policy constraints must have valid YAML", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 

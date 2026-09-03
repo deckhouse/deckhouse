@@ -8,3 +8,4 @@ spec:
     expectedTestBlockNames:
       - operation-policy
       - operation-policy-custom-parameters
+      - operation-policy-unanchored-pattern

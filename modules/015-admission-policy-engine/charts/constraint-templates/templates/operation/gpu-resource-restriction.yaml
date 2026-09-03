@@ -30,6 +30,7 @@ spec:
               properties:
                 key:
                   type: string
+                  minLength: 1
                   description: "Label key that must be present on the namespace."
                 value:
                   type: string
@@ -80,16 +81,26 @@ spec:
                 namespace_labels[input.parameters.namespaceLabel.key] == input.parameters.namespaceLabel.value
               }
 
+              # A quantity of zero means the container asks for no device, so it is not a GPU
+              # request. Quantities arrive as strings in a real AdmissionReview and may be
+              # numbers in rendered manifests, so both forms are normalized. A quantity that
+              # cannot be parsed is treated as a request, keeping the policy fail-closed.
+              zero_quantity(quantity) if {
+                to_number(quantity) == 0
+              }
+
               # Resource names requested by a container (both requests and limits) that match
               # any of the configured GPU patterns.
               gpu_resources(container) := names if {
                 requested := {name |
-                  some name, _ in object.get(container, ["resources", "requests"], {})
+                  some name, quantity in object.get(container, ["resources", "requests"], {})
                   regex_any(input.parameters.gpuResourcePatterns, name)
+                  not zero_quantity(quantity)
                 }
                 limited := {name |
-                  some name, _ in object.get(container, ["resources", "limits"], {})
+                  some name, quantity in object.get(container, ["resources", "limits"], {})
                   regex_any(input.parameters.gpuResourcePatterns, name)
+                  not zero_quantity(quantity)
                 }
                 names := requested | limited
               }
@@ -102,7 +113,7 @@ spec:
                 resources := gpu_resources(container)
                 count(resources) > 0
                 msg := sprintf(
-                  "container <%v> requests GPU resources <%v>, but namespace <%v> does not have label <%v: %v>",
+                  "container <%v> requests GPU resources <%v>, but namespace <%v> does not have label <%v> set to <%v>",
                   [
                     container.name,
                     concat(", ", sort(resources)),

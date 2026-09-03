@@ -646,7 +646,7 @@ Key data and checks available when validating `CONNECT` operations:
 The `gpuResourceRestriction` policy in [OperationPolicy](/modules/admission-policy-engine/cr.html#operationpolicy)
 denies Pod creation when a Pod requests GPU resources and the namespace has no label allowing GPU usage.
 Both `resources.requests` and `resources.limits` of every container, init container,
-and ephemeral container are inspected.
+and ephemeral container are inspected. A resource with the quantity of `0` is not treated as a GPU request.
 
 To set up GPU resource restriction:
 
@@ -698,8 +698,8 @@ The policy is applied to Pods. A Deployment or another controller that requests 
 is created successfully, and the denial is reported in the ReplicaSet events.
 
 The namespace label is read from the Gatekeeper cache. While a namespace is missing from that cache,
-for example right after the Gatekeeper pods restart, the policy denies the Pods
-that request GPU resources in that namespace.
+for example when the namespace and the Pod are applied together and the namespace has not been cached yet,
+the policy denies the Pods that request GPU resources in that namespace.
 
 The devices requested through [Dynamic Resource Allocation](https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/)
 in the `spec.resourceClaims` field are not extended resources, and the policy does not check them.

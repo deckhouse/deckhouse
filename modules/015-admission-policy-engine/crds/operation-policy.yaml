@@ -225,16 +225,19 @@ spec:
                         and ephemeral container are inspected.
 
                         The namespace label is read from the Gatekeeper cache. While the namespace is missing
-                        from that cache, for example right after the Gatekeeper pods restart, the policy denies
-                        the Pods that request GPU resources in that namespace.
+                        from that cache, for example when a namespace and a Pod are applied together and the
+                        namespace has not been cached yet, the policy denies the Pods that request GPU resources
+                        in that namespace.
                       properties:
                         namespaceLabel:
                           type: object
+                          default: {}
                           description: "Label that must be present on the namespace to allow GPU resource usage."
                           properties:
                             key:
                               type: string
                               default: "gpu.deckhouse.io/enabled"
+                              minLength: 1
                               description: "Label key that must be present on the namespace."
                             value:
                               type: string
