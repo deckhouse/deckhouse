@@ -18,6 +18,8 @@ package nodeservices
 
 import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
+
+	"github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 )
 
 var (
@@ -38,5 +40,10 @@ func (localModel LocalMode) Validate() error {
 		validation.Field(&localModel.UserRW, validation.Required),
 		validation.Field(&localModel.UserPuller, validation.Required),
 		validation.Field(&localModel.UserPusher, validation.Required),
+		// Upstreams are the InternalIP addresses of the other control plane nodes
+		// and decide which replicas the mirrorer pushes images to.
+		validation.Field(&localModel.Upstreams,
+			validation.Each(validation.Required, validation.By(helpers.IPAddress)),
+		),
 	)
 }

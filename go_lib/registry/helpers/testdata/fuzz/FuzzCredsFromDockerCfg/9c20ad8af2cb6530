@@ -1,0 +1,3 @@
+go test fuzz v1
+[]byte("{\"Auths\":{\"registry.example.com\":{\"pAssword\":\"0\"}}}")
+string("registry.example.com")
