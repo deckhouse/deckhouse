@@ -18,7 +18,6 @@ package hooks
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -82,6 +81,7 @@ var systemWriterMatchConditions = []admissionregistrationv1.MatchCondition{
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/160-multitenancy-manager",
 	Kubernetes: []go_hook.KubernetesConfig{
+		admissionWebhookCertWatch(),
 		{
 			Name:       "registrations",
 			ApiVersion: "multitenancy.deckhouse.io/v1alpha1",
@@ -98,6 +98,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(configureGrantValidationWebhook))
 
 func configureGrantValidationWebhook(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	caBundle, err := admissionWebhookCABundle(input)
+	if err != nil {
+		return err
+	}
+
 	kube, err := dc.GetK8sClient()
 	if err != nil {
 		return err
@@ -112,11 +117,6 @@ func configureGrantValidationWebhook(ctx context.Context, input *go_hook.HookInp
 	)
 	switch {
 	case k8serrors.IsNotFound(err):
-		caBundle := input.Values.Get("multitenancyManager.internal.admissionWebhookCert.ca").String()
-		if caBundle == "" {
-			return errors.New("webhook certificate is not issued yet")
-		}
-
 		whConfigExists = false
 		whConfig = &admissionregistrationv1.ValidatingWebhookConfiguration{
 			ObjectMeta: v1.ObjectMeta{Name: validatingWebhookConfigurationName},
@@ -130,7 +130,6 @@ func configureGrantValidationWebhook(ctx context.Context, input *go_hook.HookInp
 							Path:      ptr.To("/is-granted"),
 							Port:      ptr.To(int32(9443)),
 						},
-						CABundle: []byte(caBundle),
 					},
 					NamespaceSelector:       projectNamespaceSelector,
 					MatchConditions:         systemWriterMatchConditions,
@@ -146,9 +145,14 @@ func configureGrantValidationWebhook(ctx context.Context, input *go_hook.HookInp
 		return fmt.Errorf("read ValidatingWebhookConfiguration: %w", err)
 	}
 
+	if len(whConfig.Webhooks) == 0 {
+		return fmt.Errorf("validating webhook configuration %q has no webhooks", validatingWebhookConfigurationName)
+	}
+
 	whConfig.Webhooks[0].Rules = grantableWebhookRules(input)
-	// Reconcile selector/match-conditions/timeout on existing configurations too (e.g. upgrades), so a
-	// cluster that already has the webhook without the system-writer exclusion is healed in place.
+	// Reconcile CA/selector/match-conditions/timeout on existing configurations too (e.g. upgrades
+	// and TLS rotation). Same create-only caBundle bug as the defaulting webhook.
+	whConfig.Webhooks[0].ClientConfig.CABundle = []byte(caBundle)
 	whConfig.Webhooks[0].NamespaceSelector = projectNamespaceSelector
 	whConfig.Webhooks[0].MatchConditions = systemWriterMatchConditions
 	whConfig.Webhooks[0].TimeoutSeconds = ptr.To(int32(10))

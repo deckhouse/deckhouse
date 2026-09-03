@@ -18,7 +18,6 @@ package hooks
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -32,15 +31,12 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
 
-const (
-	mutatingWebhookConfigurationName = "cluster-objects-grants-defaulting"
-
-	certCAValuesPath = "multitenancyManager.internal.admissionWebhookCert.ca"
-)
+const mutatingWebhookConfigurationName = "cluster-objects-grants-defaulting"
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/160-multitenancy-manager",
 	Kubernetes: []go_hook.KubernetesConfig{
+		admissionWebhookCertWatch(),
 		{
 			Name:       "registrations",
 			ApiVersion: "multitenancy.deckhouse.io/v1alpha1",
@@ -57,6 +53,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, dependency.WithExternalDependencies(configureDefaultingWebhook))
 
 func configureDefaultingWebhook(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	caBundle, err := admissionWebhookCABundle(input)
+	if err != nil {
+		return err
+	}
+
 	kube, err := dc.GetK8sClient()
 	if err != nil {
 		return err
@@ -69,11 +70,6 @@ func configureDefaultingWebhook(ctx context.Context, input *go_hook.HookInput, d
 	)
 	switch {
 	case k8serrors.IsNotFound(err):
-		caBundle := input.Values.Get(certCAValuesPath).String()
-		if caBundle == "" {
-			return errors.New("webhook certificate is not issued yet")
-		}
-
 		whConfigExists = false
 		whConfig = &admissionregistrationv1.MutatingWebhookConfiguration{
 			ObjectMeta: v1.ObjectMeta{Name: mutatingWebhookConfigurationName},
@@ -87,7 +83,6 @@ func configureDefaultingWebhook(ctx context.Context, input *go_hook.HookInput, d
 							Path:      ptr.To("/defaults"),
 							Port:      ptr.To(int32(9443)),
 						},
-						CABundle: []byte(caBundle),
 					},
 					NamespaceSelector:       projectNamespaceSelector,
 					MatchConditions:         systemWriterMatchConditions,
@@ -103,9 +98,15 @@ func configureDefaultingWebhook(ctx context.Context, input *go_hook.HookInput, d
 		return fmt.Errorf("read MutatingWebhookConfiguration: %w", err)
 	}
 
+	if len(whConfig.Webhooks) == 0 {
+		return fmt.Errorf("mutating webhook configuration %q has no webhooks", mutatingWebhookConfigurationName)
+	}
+
 	whConfig.Webhooks[0].Rules = grantableWebhookRules(input)
-	// Reconcile selector/match-conditions/timeout on existing configurations too (e.g. upgrades), so a
-	// cluster that already has the webhook without the system-writer exclusion is healed in place.
+	// Reconcile CA/selector/match-conditions/timeout on existing configurations too (e.g. upgrades
+	// and TLS rotation). The serving cert is regenerated when SANs change; leaving caBundle at the
+	// create-time value makes the apiserver reject the webhook with x509 ECDSA verification failure.
+	whConfig.Webhooks[0].ClientConfig.CABundle = []byte(caBundle)
 	whConfig.Webhooks[0].NamespaceSelector = projectNamespaceSelector
 	whConfig.Webhooks[0].MatchConditions = systemWriterMatchConditions
 	whConfig.Webhooks[0].TimeoutSeconds = ptr.To(int32(10))
