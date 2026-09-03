@@ -179,9 +179,9 @@ apiVersions:
               Определяет необходимость настройки групп безопасности ([SecurityGroups](./cr.html#huaweicloudinstanceclass-v1-spec-securitygroups)) на портах внутренней сети.
 
               При включении DKP создаёт группу безопасности с именем префикса кластера (`prefix`) и следующими правилами входящего трафика по умолчанию:
-              - TCP-трафик на порт 22 из `0.0.0.0/0`;
+              - TCP-трафик на порт `22` из `0.0.0.0/0`;
               - ICMP-трафик из `0.0.0.0/0`;
-              - TCP-трафик на порты `30000`-`32767` из `0.0.0.0/0` для сервисов типа `NodePort`.
+              - TCP-трафик на порты `30000`–`32767` из `0.0.0.0/0` для сервисов типа `NodePort`.
 
               Подробнее — в разделе [«Huawei Cloud: схемы размещения»](layouts.html#standard).
           enableEIP:
@@ -199,7 +199,7 @@ apiVersions:
               Список адресов рекурсивных DNS внутренней сети узлов кластера.
           internalNetworkSecurity: &internalNetworkSecurity_ru
             description: |
-              Флаг, который определяет необходимость настройки [SecurityGroups](./cr.html#huaweicloudinstanceclass-v1-spec-securitygroups) на портах внутренней сети.
+              Определяет необходимость настройки [SecurityGroups](./cr.html#huaweicloudinstanceclass-v1-spec-securitygroups) на портах внутренней сети.
           subnet:
             description: |
               Имя подсети в сети VPC.

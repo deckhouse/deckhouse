@@ -177,17 +177,17 @@ In DKP, they can be used to:
 - Open access to applications running on static nodes.
 - Restrict or allow access to external resources based on security policies.
 
-Unless the [`disableDefaultSecurityGroup: true`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup) parameter is set, DKP creates the following default security groups when a cluster is created:
+When the [`disableDefaultSecurityGroup: false`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup) parameter is set, DKP creates the following default security groups when a cluster is created:
 
-- `<prefix>-node`, assigned to cluster nodes:
+- `<CLUSTER_PREFIX>-node`, assigned to cluster nodes:
   - Allows any outgoing traffic to `0.0.0.0/0`.
-  - Allows any incoming traffic from the `<prefix>-loadbalancer` group.
-  - Allows any incoming traffic from nodes in the same `<prefix>-node` group.
-  - Allows incoming traffic over the `ICMP` protocol from the CIDRs listed in [`publicNetworkAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist) (default `0.0.0.0/0`).
-- `<prefix>-loadbalancer`, used by load balancers:
+  - Allows any incoming traffic from the `<CLUSTER_PREFIX>-loadbalancer` group.
+  - Allows any incoming traffic from nodes in the same `<CLUSTER_PREFIX>-node` group.
+  - Allows incoming traffic over the ICMP protocol from the CIDRs listed in [`publicNetworkAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist) (default `0.0.0.0/0`).
+- `<CLUSTER_PREFIX>-loadbalancer`, used by load balancers:
   - Allows any incoming traffic from the CIDRs listed in [`publicNetworkAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist).
-  - Allows any outgoing traffic to the `<prefix>-node` group.
-- `<prefix>-ssh-accessible`, created if [`sshAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-sshallowlist) is set. It allows incoming traffic over the `TCP` protocol on port 22 from the listed CIDRs (default `0.0.0.0/0`). It is assigned to master nodes or to the bastion host in the WithNAT layout.
+  - Allows any outgoing traffic to the `<CLUSTER_PREFIX>-node` group.
+- `<CLUSTER_PREFIX>-ssh-accessible`, created if [`sshAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-sshallowlist) is set. It allows incoming traffic over the TCP protocol on port `22` from the listed CIDRs (default `0.0.0.0/0`). It is assigned to master nodes or to the bastion host in the WithNAT layout.
 
 In addition to the default groups, you can attach custom security groups created in the cloud beforehand.
 
@@ -245,7 +245,7 @@ The following scenarios are supported:
 
 - The bastion host is required in the new VPC:
   1. Run the base infrastructure bootstrap: `dhctl bootstrap-phase base-infra`.
-  1. Manually launch the bastion host in the `<prefix>-public-0` subnet.
+  1. Manually launch the bastion host in the `<CLUSTER_PREFIX>-public-0` subnet.
   1. Continue installation using the bastion host: `dhctl bootstrap --ssh-bastion...`.
 
 ### Creating a cluster in a new VPC with an existing bastion host
@@ -272,7 +272,7 @@ The following scenarios are supported:
    dhctl bootstrap-phase base-infra --config config
    ```
 
-1. Manually launch a bastion host in the `<prefix>-public-0` subnet.
+1. Manually launch a bastion host in the `<CLUSTER_PREFIX>-public-0` subnet.
 1. Continue cluster installation.
    When prompted about the Terraform cache, answer with `y`:
 

@@ -28,6 +28,9 @@ In this scheme, an internal cluster network is created with a gateway to the pub
 the nodes do not have public IP addresses.
 The floating IP is assigned to the master node.
 
+![Standard layout in OpenStack](../../../../images/cloud-provider-openstack/openstack-standard.png)
+<!--- Source: https://docs.google.com/drawings/d/1hjmDn2aJj3ru3kBR6Jd6MAW3NWJZMNkend_K43cMN0w/edit --->
+
 {% alert level="warning" %}
 If the provider does not support SecurityGroups,
 all applications running on nodes with Floating IPs assigned will be available at a public IP.
@@ -36,16 +39,13 @@ To avoid this, we recommend using the [SimpleWithInternalNetwork](#simplewithint
 with a bastion host.
 {% endalert %}
 
-![Standard layout in OpenStack](../../../../images/cloud-provider-openstack/openstack-standard.png)
-<!--- Source: https://docs.google.com/drawings/d/1hjmDn2aJj3ru3kBR6Jd6MAW3NWJZMNkend_K43cMN0w/edit --->
-
-The [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standard-internalnetworksecurity) property (default `true`) enables the creation of a security group when a cluster is created. DKP creates the group named after the cluster prefix (`prefix`) and assigns it to the nodes.
+The [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standard-internalnetworksecurity) parameter (default `true`) enables the creation of a security group (SecurityGroup) when a cluster is created. DKP creates the group named after the cluster prefix (`prefix`) and assigns it to the nodes.
 
 The following inbound rules will be created:
 
-- Allow incoming traffic over the `TCP` protocol on port 22 from the CIDRs listed in [`sshAllowList`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-sshallowlist) (default `0.0.0.0/0`).
-- Allow incoming traffic over the `ICMP` protocol from `0.0.0.0/0`.
-- Allow incoming traffic over the `TCP` protocol on ports 30000–32767 for `NodePort` usage (UDP NodePorts are not opened by default).
+- Allow incoming traffic over the TCP protocol on port `22` from the CIDRs listed in [`sshAllowList`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-sshallowlist) (default `0.0.0.0/0`).
+- Allow incoming traffic over the ICMP protocol from `0.0.0.0/0`.
+- Allow incoming traffic over the TCP protocol on ports `30000`–`32767` for services of the `NodePort` type. Inbound UDP traffic to `NodePort` ports is not allowed by default.
 - Allow any incoming traffic from nodes in the same security group.
 
 Custom security groups created in the cloud beforehand are attached via `additionalSecurityGroups`:
@@ -159,13 +159,13 @@ This layout should be used if you want all nodes in the cluster to be directly a
 ![StandardWithNoRouter layout in OpenStack](../../../../images/cloud-provider-openstack/openstack-standardwithnorouter.png)
 <!--- Source: https://docs.google.com/drawings/d/1gkuJhyGza0bXB2lcjdsQewWLEUCjqvTkkba-c5LtS_E/edit --->
 
-The [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standardwithnorouter-internalnetworksecurity) property (default `true`) enables the creation of a security group when a cluster is created. DKP creates the group named after the cluster prefix (`prefix`) and assigns it to the nodes.
+The [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standardwithnorouter-internalnetworksecurity) parameter (default `true`) enables the creation of a security group (SecurityGroup) when a cluster is created. DKP creates the group named after the cluster prefix (`prefix`) and assigns it to the nodes.
 
 The following inbound rules will be created:
 
-- Allow incoming traffic over the `TCP` protocol on port 22 from the CIDRs listed in [`sshAllowList`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-sshallowlist) (default `0.0.0.0/0`).
-- Allow incoming traffic over the `ICMP` protocol from `0.0.0.0/0`.
-- Allow incoming traffic over the `TCP` protocol on ports 30000–32767 for `NodePort` usage (UDP NodePorts are not opened by default).
+- Allow incoming traffic over the TCP protocol on port `22` from the CIDRs listed in [`sshAllowList`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-sshallowlist) (default `0.0.0.0/0`).
+- Allow incoming traffic over the ICMP protocol from `0.0.0.0/0`.
+- Allow incoming traffic over the TCP protocol on ports `30000`–`32767` for services of the `NodePort` type. Inbound UDP traffic to `NodePort` ports is not allowed by default.
 - Allow any incoming traffic from nodes in the same security group.
 
 Custom security groups created in the cloud beforehand are attached via `additionalSecurityGroups`:
@@ -257,7 +257,11 @@ An internal LoadBalancer with the virtual IP in the public network is only acces
 ![Simple layout in OpenStack](../../../../images/cloud-provider-openstack/openstack-simple.png)
 <!--- Source: https://docs.google.com/drawings/d/1l-vKRNA1NBPIci3Ya8r4dWL5KA9my7_wheFfMR38G10/edit --->
 
-In this layout, DKP does not create security groups. Prepare them in the cloud beforehand and specify them via [`additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups).
+In this layout, DKP does not create security groups. Prepare them in the cloud beforehand by following the [OpenStack documentation](https://docs.openstack.org/nova/latest/user/security-groups.html) and attach them to the nodes via `additionalSecurityGroups`:
+
+- For master nodes, in the [`masterNodeGroup.instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) resource.
+- For static nodes, in the [`nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) resource.
+- For ephemeral nodes, in the [`spec.additionalSecurityGroups`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) parameter of the [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) resource.
 
 Example layout configuration:
 
@@ -329,15 +333,14 @@ provider:
 The master node and cluster nodes are connected to the existing network.
 This layout can be useful if you need to merge a Kubernetes cluster with existing VMs.
 
-{% alert level="warning" %}
-This layout does not involve the management of SecurityGroups (it is assumed they were created beforehand).
-To configure security policies, you must explicitly specify both
-[`additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) in the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) for the masterNodeGroup and other nodeGroups,
-and [`additionalSecurityGroups`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) when creating [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) in the cluster.
-{% endalert %}
-
 ![SimpleWithInternalNetwork layout in OpenStack](../../../../images/cloud-provider-openstack/openstack-simplewithinternalnetwork.png)
 <!--- Source: https://docs.google.com/drawings/d/1H9HGOn4abpmZwIhpwwdZSSO9izvyOZakG8HpmmzZZEo/edit --->
+
+In this layout, DKP does not create security groups. Prepare them in the cloud beforehand by following the [OpenStack documentation](https://docs.openstack.org/nova/latest/user/security-groups.html) and attach them to the nodes via `additionalSecurityGroups`:
+
+- For master nodes, in the [`masterNodeGroup.instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) resource.
+- For static nodes, in the [`nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) resource.
+- For ephemeral nodes, in the [`spec.additionalSecurityGroups`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) parameter of the [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) resource.
 
 Example of the layout configuration:
 

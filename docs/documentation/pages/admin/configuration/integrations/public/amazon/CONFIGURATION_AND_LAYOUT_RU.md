@@ -235,7 +235,7 @@ IPv4 CIDR у обоих VPC должен различаться.
 
 - bastion-хост требуется поставить в свежесозданной VPC:
   1. Создайте базовую инфраструктуру кластера — `dhctl bootstrap-phase base-infra`.
-  1. Запустите вручную bastion-хост в подсети `<prefix>-public-0`.
+  1. Запустите вручную bastion-хост в подсети `<CLUSTER_PREFIX>-public-0`.
   1. Продолжите установку с указанием bastion-хоста — `dhctl bootstrap --ssh-bastion...`.
 
 ### Создание кластера в новом VPC с доступом через имеющийся bastion-хост
@@ -262,7 +262,7 @@ IPv4 CIDR у обоих VPC должен различаться.
    dhctl bootstrap-phase base-infra --config config
    ```
 
-1. Запустите вручную bastion-хост в подсети `<prefix>-public-0`.
+1. Запустите вручную bastion-хост в подсети `<CLUSTER_PREFIX>-public-0`.
 
 1. Продолжите установку кластера. На вопрос про кеш Terraform ответьте `y`:
 

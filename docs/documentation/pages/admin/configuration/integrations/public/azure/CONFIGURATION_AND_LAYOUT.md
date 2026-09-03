@@ -22,8 +22,8 @@ When a cluster is created, Deckhouse Kubernetes Platform (DKP) creates a Network
 
 The following rules will be created:
 
-- `AllowIcmp`: Allows incoming traffic over the `ICMP` protocol from any source.
-- `AllowSsh`: Allows incoming traffic over the `TCP` protocol on port 22 from the CIDRs listed in [`sshAllowList`](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration-sshallowlist). If the list is not set, traffic is allowed from any source.
+- `AllowIcmp`: Allows incoming traffic over the ICMP protocol from any source.
+- `AllowSsh`: Allows incoming traffic over the TCP protocol on port `22` from the CIDRs listed in [`sshAllowList`](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration-sshallowlist). If the list is not set, traffic is allowed from any source.
 
 You cannot attach a pre-created custom NSG to nodes through the DKP parameters. To restrict SSH access, use [`sshAllowList`](/modules/cloud-provider-azure/cluster_configuration.html#azureclusterconfiguration-sshallowlist).
 

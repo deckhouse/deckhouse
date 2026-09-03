@@ -29,13 +29,13 @@ A list of services required for Deckhouse Kubernetes Platform (DKP) to work in H
 ![Standard layout in Huawei CLoud](../../../../images/cloud-provider-huawei/huawei-standard.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10811&t=Qb5yyWumzPiTBtfL-0 --->
 
-The [`internalNetworkSecurity`](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration-standard-internalnetworksecurity) property (default `true`) enables the creation of a security group when a cluster is created. DKP creates the group named after the cluster prefix and assigns it to the nodes.
+The [`internalNetworkSecurity`](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration-standard-internalnetworksecurity) parameter (default `true`) enables the creation of a security group (SecurityGroup) when a cluster is created. DKP creates the group named after the cluster prefix and assigns it to the nodes.
 
 The following inbound rules will be created:
 
-- Allow incoming traffic over the `TCP` protocol on port 22 from `0.0.0.0/0`.
-- Allow incoming traffic over the `ICMP` protocol from `0.0.0.0/0`.
-- Allow incoming traffic over the `TCP` protocol on ports 30000–32767 for `NodePort` usage (UDP NodePorts are not opened by default).
+- Allow incoming traffic over the TCP protocol on port `22` from `0.0.0.0/0`.
+- Allow incoming traffic over the ICMP protocol from `0.0.0.0/0`.
+- Allow incoming traffic over the TCP protocol on ports `30000`–`32767` for services of the `NodePort` type. Inbound UDP traffic to `NodePort` ports is not allowed by default.
 
 Unlike OpenStack, DKP does not add a rule that allows all inbound traffic between nodes in the same security group. By default, only the ports and protocols listed above are open between cluster nodes.
 
@@ -80,13 +80,13 @@ masterNodeGroup:
 ![VpcPeering layout in Huawei Cloud](../../../../images/cloud-provider-huawei/huawei-vpc-peering-ru.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11715&t=Qb5yyWumzPiTBtfL-0 --->
 
-The [`internalNetworkSecurity`](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration-vpcpeering-internalnetworksecurity) property (default `true`) enables the creation of a security group when a cluster is created. DKP creates the group named after the cluster prefix and assigns it to the nodes.
+The [`internalNetworkSecurity`](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration-vpcpeering-internalnetworksecurity) parameter (default `true`) enables the creation of a security group (SecurityGroup) when a cluster is created. DKP creates the group named after the cluster prefix and assigns it to the nodes.
 
 The following inbound rules will be created:
 
-- Allow incoming traffic over the `TCP` protocol on port 22 from `0.0.0.0/0`.
-- Allow incoming traffic over the `ICMP` protocol from `0.0.0.0/0`.
-- Allow incoming traffic over the `TCP` protocol on ports 30000–32767 for `NodePort` usage (UDP NodePorts are not opened by default).
+- Allow incoming traffic over the TCP protocol on port `22` from `0.0.0.0/0`.
+- Allow incoming traffic over the ICMP protocol from `0.0.0.0/0`.
+- Allow incoming traffic over the TCP protocol on ports `30000`–`32767` for services of the `NodePort` type. Inbound UDP traffic to `NodePort` ports is not allowed by default.
 
 Unlike OpenStack, DKP does not add a rule that allows all inbound traffic between nodes in the same security group. By default, only the ports and protocols listed above are open between cluster nodes.
 

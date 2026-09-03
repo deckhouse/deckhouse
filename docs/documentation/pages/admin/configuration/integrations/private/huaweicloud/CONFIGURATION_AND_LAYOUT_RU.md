@@ -30,13 +30,13 @@ lang: ru
 ![Схема размещения Standard](../../../../images/cloud-provider-huawei/huawei-standard.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10811&t=Qb5yyWumzPiTBtfL-0 --->
 
-Свойство [`internalNetworkSecurity`](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration-standard-internalnetworksecurity) (по умолчанию `true`) включает создание группы безопасности при создании кластера. DKP создаёт группу с именем префикса кластера и назначает её узлам.
+Параметр [`internalNetworkSecurity`](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration-standard-internalnetworksecurity) (по умолчанию `true`) включает создание группы безопасности (SecurityGroup) при создании кластера. DKP создаёт группу с именем префикса кластера и назначает её узлам.
 
 Будут созданы следующие правила входящего трафика:
 
-- разрешение входящего трафика по протоколу `TCP` и порту 22 из `0.0.0.0/0`;
-- разрешение входящего трафика по протоколу `ICMP` из `0.0.0.0/0`;
-- разрешение входящего трафика по протоколу `TCP` и портам 30000–32767 для использования `NodePort` (UDP NodePort по умолчанию не открываются).
+- разрешение входящего трафика по протоколу TCP и порту `22` из `0.0.0.0/0`;
+- разрешение входящего трафика по протоколу ICMP из `0.0.0.0/0`;
+- разрешение входящего трафика по протоколу TCP и портам `30000`–`32767` для использования сервисов типа `NodePort`. Входящий трафик по протоколу UDP на порты `NodePort` по умолчанию не разрешается.
 
 В отличие от OpenStack, DKP не добавляет правило, разрешающее любой входящий трафик между узлами одной группы безопасности. Между узлами кластера по умолчанию открыты только перечисленные выше порты и протоколы.
 
@@ -82,13 +82,13 @@ masterNodeGroup:
 
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11715&t=Qb5yyWumzPiTBtfL-0 --->
 
-Свойство [`internalNetworkSecurity`](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration-vpcpeering-internalnetworksecurity) (по умолчанию `true`) включает создание группы безопасности при создании кластера. DKP создаёт группу с именем префикса кластера и назначает её узлам.
+Параметр [`internalNetworkSecurity`](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration-vpcpeering-internalnetworksecurity) (по умолчанию `true`) включает создание группы безопасности (SecurityGroup) при создании кластера. DKP создаёт группу с именем префикса кластера и назначает её узлам.
 
 Будут созданы следующие правила входящего трафика:
 
-- разрешение входящего трафика по протоколу `TCP` и порту 22 из `0.0.0.0/0`;
-- разрешение входящего трафика по протоколу `ICMP` из `0.0.0.0/0`;
-- разрешение входящего трафика по протоколу `TCP` и портам 30000–32767 для использования `NodePort` (UDP NodePort по умолчанию не открываются).
+- разрешение входящего трафика по протоколу TCP и порту `22` из `0.0.0.0/0`;
+- разрешение входящего трафика по протоколу ICMP из `0.0.0.0/0`;
+- разрешение входящего трафика по протоколу TCP и портам `30000`–`32767` для использования сервисов типа `NodePort`. Входящий трафик по протоколу UDP на порты `NodePort` по умолчанию не разрешается.
 
 В отличие от OpenStack, DKP не добавляет правило, разрешающее любой входящий трафик между узлами одной группы безопасности. Между узлами кластера по умолчанию открыты только перечисленные выше порты и протоколы.
 
