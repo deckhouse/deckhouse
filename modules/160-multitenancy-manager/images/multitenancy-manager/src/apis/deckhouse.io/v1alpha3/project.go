@@ -37,6 +37,7 @@ const (
 	ProjectConditionStandardFieldsApplied     = "StandardFieldsApplied"
 	ProjectConditionTemplateResourcesFiltered = "TemplateResourcesFiltered"
 	ProjectConditionTemplateRolesAllowed      = "TemplateRolesAllowed"
+	ProjectConditionHelmOwnership             = "HelmOwnership"
 
 	ProjectAnnotationRequireSync = "projects.deckhouse.io/require-sync"
 

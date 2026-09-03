@@ -64,8 +64,8 @@ var (
 	helmTemplatesPath = "helmlib"
 	// path to default project templates
 	templatesPath = "templates"
-	// helm release namespace
-	helmNamespace = "d8-multitenancy-manager"
+	// helm release namespace (same value Helm later writes on adopted objects)
+	helmNamespace = helm.ReleaseStorageNamespace
 	// controller service account (centralized in internal/rolebinding so the value cannot drift)
 	serviceAccount = rolebinding.ControllerServiceAccount
 )

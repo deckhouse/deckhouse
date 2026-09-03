@@ -97,6 +97,7 @@ func TestParametersFor(t *testing.T) {
 				"networkPolicy":             networkPolicyNotRestricted,
 				"podSecurityProfile":        podSecurityProfilePrivileged,
 				"extendedMonitoringEnabled": true,
+				"requiredRequests":          false,
 			},
 		},
 		{
@@ -107,6 +108,7 @@ func TestParametersFor(t *testing.T) {
 				"networkPolicy":             networkPolicyNotRestricted,
 				"podSecurityProfile":        podSecurityProfileRestricted,
 				"extendedMonitoringEnabled": false,
+				"requiredRequests":          false,
 			},
 		},
 		{
@@ -118,6 +120,7 @@ func TestParametersFor(t *testing.T) {
 				"podSecurityProfile":        podSecurityProfileBaseline,
 				"extendedMonitoringEnabled": false,
 				"securityScanningEnabled":   true,
+				"requiredRequests":          false,
 			},
 		},
 		{
@@ -128,6 +131,7 @@ func TestParametersFor(t *testing.T) {
 				"networkPolicy":             networkPolicyNotRestricted,
 				"podSecurityProfile":        podSecurityProfileBaseline,
 				"extendedMonitoringEnabled": true,
+				"requiredRequests":          false,
 			},
 		},
 	}

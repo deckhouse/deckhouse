@@ -92,6 +92,10 @@ func ParametersFor(namespace *corev1.Namespace, template string) map[string]any 
 	params["podSecurityProfile"] = podSecurityProfile(labels[labelPodPolicy])
 	_, monitoring := labels[labelExtendedMonitoring]
 	params["extendedMonitoringEnabled"] = monitoring
+	// default/secure always render a Deny OperationPolicy that requires CPU and
+	// memory requests. An adopted namespace did not have that policy; turning it
+	// on would stop existing workloads from rolling.
+	params["requiredRequests"] = false
 
 	if template == TemplateSecure {
 		_, scanning := labels[labelSecurityScanning]

@@ -17,11 +17,16 @@ limitations under the License.
 package namespace
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"controller/apis/deckhouse.io/v1alpha3"
+	"controller/internal/helm"
 )
 
 func TestIsLeftoverWrap(t *testing.T) {
@@ -36,4 +41,53 @@ func TestIsLeftoverWrap(t *testing.T) {
 			v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace,
 		}, "")))
 	})
+}
+
+func TestCompleteLeftover_SkipsInferWhenForeignHelm(t *testing.T) {
+	ns := namespace("foo", map[string]string{
+		v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace,
+	}, map[string]string{
+		helm.ResourceAnnotationReleaseName:      "foo",
+		helm.ResourceAnnotationReleaseNamespace: "foo",
+	})
+	wrap := project("foo", map[string]string{
+		v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace,
+	}, "")
+	m, c := newManager(t, ns, wrap)
+
+	deleted, err := m.CompleteLeftover(context.Background(), wrap)
+	require.NoError(t, err)
+	assert.False(t, deleted)
+
+	got := new(v1alpha3.Project)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, got))
+	assert.Empty(t, got.Spec.ProjectTemplateName)
+	assert.Equal(t, v1alpha3.ManagedByNamespace, got.Labels[v1alpha3.ProjectLabelManagedByNamespace])
+
+	updated := new(corev1.Namespace)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, updated))
+	assert.Equal(t, "foo", updated.Annotations[helm.ResourceAnnotationReleaseName])
+	assert.Equal(t, "foo", updated.Annotations[helm.ResourceAnnotationReleaseNamespace])
+	assert.NotContains(t, updated.Labels, helm.ResourceLabelManagedBy)
+}
+
+func TestCompleteLeftover_InfersWhenNamespaceFree(t *testing.T) {
+	ns := namespace("foo", map[string]string{
+		v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace,
+		labelPodPolicy:                          "restricted",
+	}, nil)
+	wrap := project("foo", map[string]string{
+		v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace,
+	}, "")
+	m, c := newManager(t, ns, wrap)
+
+	deleted, err := m.CompleteLeftover(context.Background(), wrap)
+	require.NoError(t, err)
+	assert.False(t, deleted)
+
+	got := new(v1alpha3.Project)
+	require.NoError(t, c.Get(context.Background(), client.ObjectKey{Name: "foo"}, got))
+	assert.Equal(t, TemplateDefault, got.Spec.ProjectTemplateName)
+	assert.NotContains(t, got.Labels, v1alpha3.ProjectLabelManagedByNamespace)
+	assert.Equal(t, false, got.Spec.Parameters["requiredRequests"])
 }

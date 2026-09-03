@@ -19,6 +19,7 @@ title: "Модуль multitenancy-manager: примеры использован
   - `podSecurityProfile` — профиль [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/) для неймспейсов проекта: `Baseline` (по умолчанию) запрещает известные способы повышения привилегий, `Restricted` применяет максимально строгие практики, `Privileged` не ограничивает ничего.
   - `extendedMonitoringEnabled` (по умолчанию `true`) — алерты о недоступности и перезапусках контроллеров, ошибках 5xx в ingress-nginx и нехватке свободного места на persistent volume'ах проекта.
   - `clusterLogDestinationName` — имя ресурса ClusterLogDestination, в который отправлять логи проекта. Если не задан, логи проекта никуда не отправляются.
+  - `requiredRequests` (по умолчанию `true`) — если `true`, у подов проекта должны быть заданы CPU и memory requests (OperationPolicy в режиме Deny). При adopt существующего неймспейса параметр выставляется в `false`, чтобы не блокировать уже работающие нагрузки.
 
 - `secure` — включает все возможности шаблона `default`, а также ограничение пользователей и групп внутри контейнеров, аудит их обращений к ядру и сканирование образов на уязвимости.
 
