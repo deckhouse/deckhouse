@@ -17,6 +17,9 @@
     - condition:
         k8s: "1.36"
       version: ccm/v35.0.5
+    - condition:
+        k8s: "1.37"
+      version: ccm/v35.0.5
 
 - name: Google Cloud Platform CSI driver
   link: https://github.com/kubernetes-sigs/gcp-compute-persistent-disk-csi-driver
@@ -36,6 +39,9 @@
       version: v1.15.4
     - condition:
         k8s: "1.36"
+      version: v1.15.4
+    - condition:
+        k8s: "1.37"
       version: v1.15.4
 
 - name: Google Cloud Platform Terraform provider
