@@ -168,17 +168,17 @@ vpcNetworkCIDR: 10.241.0.0/16
 - открыть доступ к приложениям, размещённым на статических узлах;
 - ограничить или разрешить доступ к внешним ресурсам в соответствии с требованиями безопасности.
 
-Если не задан параметр [`disableDefaultSecurityGroup: true`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup), при создании кластера DKP создаёт группы безопасности по умолчанию:
+Если задан параметр [`disableDefaultSecurityGroup: false`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup), при создании кластера DKP создаёт группы безопасности по умолчанию:
 
-- `<prefix>-node` — назначается узлам кластера:
+- `<CLUSTER_PREFIX>-node` — назначается узлам кластера:
   - разрешение любого исходящего трафика в `0.0.0.0/0`;
-  - разрешение любого входящего трафика от группы `<prefix>-loadbalancer`;
-  - разрешение любого входящего трафика от узлов той же группы `<prefix>-node`;
-  - разрешение входящего трафика по протоколу `ICMP` из CIDR, указанных в [`publicNetworkAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist) (по умолчанию `0.0.0.0/0`).
-- `<prefix>-loadbalancer` — используется балансировщиками нагрузки:
+  - разрешение любого входящего трафика от группы `<CLUSTER_PREFIX>-loadbalancer`;
+  - разрешение любого входящего трафика от узлов той же группы `<CLUSTER_PREFIX>-node`;
+  - разрешение входящего трафика по протоколу ICMP из CIDR, указанных в [`publicNetworkAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist) (по умолчанию `0.0.0.0/0`).
+- `<CLUSTER_PREFIX>-loadbalancer` — используется балансировщиками нагрузки:
   - разрешение любого входящего трафика из CIDR, указанных в [`publicNetworkAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-publicnetworkallowlist);
-  - разрешение любого исходящего трафика к группе `<prefix>-node`.
-- `<prefix>-ssh-accessible` — создаётся, если задан [`sshAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-sshallowlist), и разрешает входящий трафик по протоколу `TCP` и порту 22 из указанных CIDR (по умолчанию `0.0.0.0/0`). Назначается master-узлам или bastion-хосту в схеме WithNAT.
+  - разрешение любого исходящего трафика к группе `<CLUSTER_PREFIX>-node`.
+- `<CLUSTER_PREFIX>-ssh-accessible` — создаётся, если задан [`sshAllowList`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-sshallowlist), и разрешает входящий трафик по протоколу TCP и порту `22` из указанных CIDR (по умолчанию `0.0.0.0/0`). Назначается master-узлам или bastion-хосту в схеме WithNAT.
 
 Помимо групп по умолчанию, к узлам можно подключить собственные группы безопасности, созданные в облаке заранее.
 

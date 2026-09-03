@@ -32,13 +32,13 @@
 ![resources](../../../../images/cloud-provider-openstack/openstack-standard.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1hjmDn2aJj3ru3kBR6Jd6MAW3NWJZMNkend_K43cMN0w/edit --->
 
-Свойство [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standard-internalnetworksecurity) (по умолчанию `true`) включает создание группы безопасности при создании кластера. DKP создаёт группу с именем префикса кластера (`prefix`) и назначает её узлам.
+Параметр [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standard-internalnetworksecurity) (по умолчанию `true`) включает создание группы безопасности (SecurityGroup) при создании кластера. DKP создаёт группу с именем префикса кластера (`prefix`) и назначает её узлам.
 
 Будут созданы следующие правила входящего трафика:
 
-- разрешение входящего трафика по протоколу `TCP` и порту 22 из CIDR, указанных в [`sshAllowList`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-sshallowlist) (по умолчанию `0.0.0.0/0`);
-- разрешение входящего трафика по протоколу `ICMP` из `0.0.0.0/0`;
-- разрешение входящего трафика по протоколу `TCP` и портам 30000–32767 для использования `NodePort` (UDP NodePort по умолчанию не открываются);
+- разрешение входящего трафика по протоколу TCP и порту `22` из CIDR, указанных в [`sshAllowList`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-sshallowlist) (по умолчанию `0.0.0.0/0`);
+- разрешение входящего трафика по протоколу ICMP из `0.0.0.0/0`;
+- разрешение входящего трафика по протоколу TCP и портам `30000`–`32767` для использования сервисов типа `NodePort`. Входящий трафик по протоколу UDP на порты `NodePort` по умолчанию не разрешается);
 - разрешение любого входящего трафика от узлов, входящих в ту же группу безопасности.
 
 Собственные группы безопасности, созданные в облаке заранее, подключаются через `additionalSecurityGroups`:
