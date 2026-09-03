@@ -9,6 +9,7 @@ require (
 	github.com/clarketm/json v1.15.7
 	github.com/cloudflare/cfssl v1.6.5
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc
+	github.com/deckhouse/d8sql v0.0.0-00010101000000-000000000000
 	github.com/fatih/color v1.18.0 // indirect
 	github.com/flant/addon-operator v1.24.14
 	github.com/flant/kube-client v1.9.1
@@ -141,6 +142,7 @@ require (
 	github.com/samber/lo v1.51.0 // indirect
 	github.com/santhosh-tekuri/jsonschema/v5 v5.3.1 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2 // indirect
+	github.com/stoewer/go-strcase v1.3.0 // indirect
 	github.com/vbauerster/mpb/v8 v8.12.0 // indirect
 	github.com/x448/float16 v0.8.4 // indirect
 	github.com/yannh/kubeconform v0.6.7 // indirect
@@ -397,3 +399,5 @@ replace github.com/deckhouse/deckhouse/go_lib/controlplane => ./go_lib/controlpl
 // (see werf.inc.yaml) and are hidden from build/lint by build tags. go mod
 // tidy inspects imports under all build tags, so ignore the tree entirely.
 ignore ./ee/modules/110-istio/images
+
+replace github.com/deckhouse/d8sql => ./go_lib/d8sql

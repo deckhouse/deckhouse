@@ -48,6 +48,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/deckhouse/d8sql"
+
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
@@ -55,6 +57,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
@@ -72,6 +75,7 @@ const (
 
 	defaultCheckInterval   = 15 * time.Second
 	disabledByIgnorePolicy = `Update disabled by 'Ignore' update policy`
+	noUpdatePolicyMessage  = "Update policy not set. Create a suitable ModuleUpdatePolicy object"
 
 	// time to wait before next check that no modules are applying
 	restartCheckDuration = 15 * time.Second
@@ -85,6 +89,7 @@ func RegisterController(
 	installer Installer,
 	dc dependency.Container,
 	exts extenders.IExtendersStack,
+	edition *d8edition.Edition,
 	embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer,
 	ms metricsstorage.Storage,
 	logger *log.Logger,
@@ -93,6 +98,7 @@ func RegisterController(
 		init:                 new(sync.WaitGroup),
 		client:               runtimeManager.GetClient(),
 		log:                  logger,
+		edition:              edition,
 		moduleManager:        mm,
 		metricStorage:        ms,
 		downloadedModulesDir: app.DownloadedModulesDir(),
@@ -164,6 +170,13 @@ type reconciler struct {
 	downloadedModulesDir string
 	symlinksDir          string
 	restartCheckTicker   *time.Ticker
+
+	// release gates: the engine running the module's release/*.sql, built on
+	// first use and reused afterwards (see gates.go)
+	edition       *d8edition.Edition
+	sqlEngine     *d8sql.Engine
+	sqlEngineOnce sync.Once
+	sqlEngineErr  error
 
 	activeApplyCount    atomic.Int32
 	releaseWasProcessed atomic.Bool // at least one release was processed
@@ -1050,12 +1063,23 @@ func (r *reconciler) getUpdatePolicy(ctx context.Context, name string) (*v1alpha
 	}, nil
 }
 
+// isUpdatePolicyMessage reports whether a status message was left by the update
+// policy resolution, and is therefore this reconciler's to clear once a policy
+// resolves.
+func isUpdatePolicyMessage(message string) bool {
+	if message == "" || message == noUpdatePolicyMessage || message == disabledByIgnorePolicy {
+		return true
+	}
+
+	return strings.HasPrefix(message, "Update policy ") && strings.HasSuffix(message, " not found")
+}
+
 func (r *reconciler) updatePolicy(ctx context.Context, release *v1alpha1.ModuleRelease) (*v1alpha2.ModuleUpdatePolicy, *ctrl.Result, error) {
 	policy, err := utils.GetUpdatePolicyByModule(ctx, r.client, r.embeddedPolicy, release.GetModuleName())
 	if err != nil {
 		r.log.Error("failed to get update policy", slog.String("release", release.GetName()), log.Err(err))
 
-		if err := r.updateReleaseStatusMessage(ctx, release, "Update policy not set. Create a suitable ModuleUpdatePolicy object"); err != nil {
+		if err := r.updateReleaseStatusMessage(ctx, release, noUpdatePolicyMessage); err != nil {
 			r.log.Error("failed to update release status", slog.String("release", release.GetName()), log.Err(err))
 
 			return nil, nil, err
@@ -1064,16 +1088,23 @@ func (r *reconciler) updatePolicy(ctx context.Context, release *v1alpha1.ModuleR
 		return nil, &ctrl.Result{RequeueAfter: defaultCheckInterval}, nil
 	}
 
-	marshalledPatch, _ := json.Marshal(map[string]any{
+	patchData := map[string]any{
 		"metadata": map[string]any{
 			"labels": map[string]any{
 				v1alpha1.ModuleReleaseLabelUpdatePolicy: policy.GetName(),
 			},
 		},
-		"status": map[string]string{
-			"message": "",
-		},
-	})
+	}
+
+	// Clear only the messages this function itself sets: a policy was found, so
+	// a complaint about the policy is stale. Wiping unconditionally would also
+	// erase the reason left by a later check (release gates, deploy windows) on
+	// every reconcile, so the message would flicker on and off.
+	if isUpdatePolicyMessage(release.GetMessage()) {
+		patchData["status"] = map[string]string{"message": ""}
+	}
+
+	marshalledPatch, _ := json.Marshal(patchData)
 
 	patch := client.RawPatch(types.MergePatchType, marshalledPatch)
 	if err = r.client.Patch(ctx, release, patch); err != nil {
@@ -1437,6 +1468,14 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		}
 
 		return fmt.Errorf("the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
+	}
+
+	// The module is on disk but not installed yet: run its SQL gates
+	// (release/validations, then release/migrations) so a release rejected by a
+	// validation, or one whose migration failed, never gets installed and never
+	// becomes Deployed. Handles its own status updates.
+	if err = r.runReleaseGates(ctx, release, modulePath, logger); err != nil {
+		return fmt.Errorf("release gates: %w", err)
 	}
 
 	// While an embedded copy of the module is still shipped on the filesystem it
