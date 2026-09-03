@@ -24,9 +24,6 @@
 {{- if semverCompare ">=1.33 <1.36" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DRADeviceTaints=true" -}}
 {{- end }}
-{{- if semverCompare "<=1.32" .clusterConfiguration.kubernetesVersion }}
-  {{- $baseFeatureGates = append $baseFeatureGates "InPlacePodVerticalScaling=true" -}}
-{{- end }}
 {{- $controllerManagerFeatureGates := $baseFeatureGates -}}
 {{- if hasKey . "allowedFeatureGates" -}}
   {{- range .allowedFeatureGates.kubeControllerManager -}}
