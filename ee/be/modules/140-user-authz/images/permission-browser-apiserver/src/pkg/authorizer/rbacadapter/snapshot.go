@@ -8,6 +8,7 @@ package rbacadapter
 import (
 	"context"
 	"fmt"
+	"slices"
 	"sync"
 
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -101,10 +102,18 @@ func (r *RBACAuthorizer) Snapshot(u user.Info) *SubjectRules {
 }
 
 func (r *RBACAuthorizer) rulesFor(ctx context.Context, u user.Info) *SubjectRules {
-	if s := subjectRulesFrom(ctx); s != nil && s.userName == u.GetName() {
+	if s := subjectRulesFrom(ctx); s != nil && s.matches(u) {
 		return s
 	}
 	return r.Snapshot(u)
+}
+
+// matches reports whether the snapshot was taken for exactly this subject.
+// Groups participate: two subjects can share a name and still resolve to
+// different bindings, and answering one from the other's snapshot would
+// report an access level the subject does not have.
+func (s *SubjectRules) matches(u user.Info) bool {
+	return s.userName == u.GetName() && slices.Equal(s.userGroups, u.GetGroups())
 }
 
 func (s *SubjectRules) allows(attrs authorizer.Attributes, independent bool) (bool, string) {
