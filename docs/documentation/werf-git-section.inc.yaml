@@ -1,44 +1,31 @@
 # werf git section for documentation build
 - add: /candi/version_map.yml
   to: /srv/jekyll-data/documentation/_data/version_map.yml
-  owner: jekyll
-  group: jekyll
   stageDependencies:
     setup: ['**/*']
 - add: /modules/000-common/images/kubernetes/conformance
   to: /srv/jekyll-data/documentation/assets/conformance
-  owner: jekyll
-  group: jekyll
   stageDependencies:
     setup: ['**/*']
 - add: /editions.yaml
   to: /srv/jekyll-data/documentation/_data/editions-repo-data.yaml
-  owner: jekyll
-  group: jekyll
   stageDependencies:
     setup: ['**/*']
 - add: /candi/feature_gates_map.yml
   to: /srv/jekyll-data/documentation/_data/feature_gates_map.yml
-  owner: jekyll
-  group: jekyll
   stageDependencies:
     setup: ['**/*']
 - add: /global-hooks/openapi
   to: /src/global
-  owner: jekyll
-  group: jekyll
   stageDependencies:
     setup: ['**/*']
   includePaths:
-  - 'doc-ru-config-values.yaml'
   - 'conversions/v*.yml'
   - 'conversions/v*.yaml'
 {{- if eq $.Env "CSE"}}
   - 'doc-ru-config-values.yaml'
 - add: /ee/cse/global-hooks/openapi
   to: /src/global
-  owner: jekyll
-  group: jekyll
   stageDependencies:
     setup: ['**/*']
   includePaths:
@@ -48,28 +35,33 @@
 {{- end }}
 - add: /candi/openapi
   to: /src/global
-  owner: jekyll
-  group: jekyll
   stageDependencies:
     setup: ['**/*']
-  includePaths: ['*cluster_configuration.yaml', '*init_configuration.yaml', '*static_cluster_configuration.yaml']
+  includePaths:
+  - '*init_configuration.yaml'
+  - '*static_cluster_configuration.yaml'
+{{- if eq $.Env "CSE"}}
+  - 'doc-ru-cluster_configuration.yaml'
+- add: /ee/cse/candi/openapi
+  to: /src/global
+  stageDependencies:
+    setup: ['**/*']
+  includePaths:
+  - 'cluster_configuration.yaml'
+{{- else }}
+  - '*cluster_configuration.yaml'
+{{- end }}
 - add: /deckhouse-controller/crds
   to: /src/global/crds
-  owner: jekyll
-  group: jekyll
   stageDependencies:
     setup: ['**/*']
 - add: /candi/openapi/dhctl
   to: /src/global/crds
-  owner: jekyll
-  group: jekyll
   stageDependencies:
     setup: ['**/*']
   includePaths: ['*ssh_configuration.yaml', '*ssh_host_configuration.yaml']
 - add: /
   to: /src/modules-metadata
-  owner: jekyll
-  group: jekyll
   stageDependencies:
     setup: ['**/*']
   excludePaths:

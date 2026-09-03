@@ -152,8 +152,7 @@
     <link rel="describedby" href="{{ site.urls[page.lang] }}{{ page.rootLLMStxtURL }}" type="text/markdown">
 {%- endif %}
 
-
-
+{% unless site.d8Revision == 'CSE' %}
 <!-- Primary Meta Tags -->
 <link rel="canonical" href="{{ site.urls[page.lang] }}{{ escaped_page_meta_url }}" />
 <meta name="title" content="{{ escaped_meta_title }}">
@@ -176,3 +175,4 @@
 
 <!-- Twitter -->
 <meta name="twitter:card" content="summary_large_image">
+{% endunless %}
