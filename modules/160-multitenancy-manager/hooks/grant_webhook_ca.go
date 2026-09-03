@@ -42,10 +42,11 @@ type admissionWebhookCertSnap struct {
 	CA string `json:"ca"`
 }
 
-// admissionWebhookCertWatch re-runs grant webhook hooks when Helm rotates
-// admission-webhook-certs. Without it the CA is only refreshed when a
-// Grantable CR changes, so a cert rotation leaves the apiserver with a stale
-// caBundle (x509 ECDSA verification failure).
+// admissionWebhookCertWatch re-runs grant webhook hooks when Helm writes a new
+// admission-webhook-certs. RegisterInternalTLSHook already watches the same
+// Secret (snapshot "secret") to refresh values; these two extra watches are
+// the grant hooks' own informers so a rotation wakes them without a Grantable
+// CR change.
 func admissionWebhookCertWatch() go_hook.KubernetesConfig {
 	return go_hook.KubernetesConfig{
 		Name:       admissionWebhookCertSnapshotName,
@@ -71,8 +72,12 @@ func filterAdmissionWebhookCert(obj *unstructured.Unstructured) (go_hook.FilterR
 	return admissionWebhookCertSnap{CA: string(secret.Data["ca.crt"])}, nil
 }
 
-// admissionWebhookCABundle prefers ca.crt from the Secret the pod actually
-// serves. Values can lag one hook cycle behind a rotation.
+// admissionWebhookCABundle prefers ca.crt from the Secret the pod mounts and
+// serves. The TLS hook writes the new cert into values first (OnBeforeHelm);
+// Helm then renders the Secret. Values therefore lead, the Secret lags. We
+// still follow the Secret: that is what the webhook process presents, so
+// caBundle must match it, not the newer values. An empty result means the
+// cert is not issued yet — callers must fail only on create, not on update.
 func admissionWebhookCABundle(input *go_hook.HookInput) (string, error) {
 	snaps, err := sdkobjectpatch.UnmarshalToStruct[admissionWebhookCertSnap](input.Snapshots, admissionWebhookCertSnapshotName)
 	if err != nil {
@@ -81,10 +86,5 @@ func admissionWebhookCABundle(input *go_hook.HookInput) (string, error) {
 	if len(snaps) > 0 && snaps[0].CA != "" {
 		return snaps[0].CA, nil
 	}
-
-	ca := input.Values.Get(certCAValuesPath).String()
-	if ca == "" {
-		return "", errWebhookCertNotIssued
-	}
-	return ca, nil
+	return input.Values.Get(certCAValuesPath).String(), nil
 }

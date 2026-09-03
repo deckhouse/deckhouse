@@ -21,7 +21,10 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	"github.com/deckhouse/module-sdk/pkg/utils/ptr"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -73,47 +76,72 @@ data:
   tls.key: ZHVtbXk=
 `
 
-	const staleMutatingWebhook = `
----
-apiVersion: admissionregistration.k8s.io/v1
-kind: MutatingWebhookConfiguration
-metadata:
-  name: cluster-objects-grants-defaulting
-webhooks:
-  - name: cluster-objects-grants-defaulting.multitenancy.deckhouse.io
-    admissionReviewVersions: ["v1"]
-    sideEffects: None
-    clientConfig:
-      caBundle: b2xkLWNh
-      service:
-        name: multitenancy-manager
-        namespace: d8-multitenancy-manager
-        path: /defaults
-        port: 9443
-    rules:
-      - apiGroups: ["rbac.authorization.k8s.io"]
-        apiVersions: ["*"]
-        resources: ["rolebindings"]
-        operations: ["CREATE", "UPDATE"]
-`
+	staleWebhook := func() *admissionregistrationv1.MutatingWebhookConfiguration {
+		return &admissionregistrationv1.MutatingWebhookConfiguration{
+			ObjectMeta: metav1.ObjectMeta{Name: mutatingWebhookConfigurationName},
+			Webhooks: []admissionregistrationv1.MutatingWebhook{
+				{
+					Name:                    "cluster-objects-grants-defaulting.multitenancy.deckhouse.io",
+					AdmissionReviewVersions: []string{"v1"},
+					SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
+					ClientConfig: admissionregistrationv1.WebhookClientConfig{
+						CABundle: []byte("old-ca"),
+						Service: &admissionregistrationv1.ServiceReference{
+							Name:      "multitenancy-manager",
+							Namespace: "d8-multitenancy-manager",
+							Path:      ptr.To("/defaults"),
+							Port:      ptr.To(int32(9443)),
+						},
+					},
+				},
+			},
+		}
+	}
+
+	seedStaleWebhook := func(f *HookExecutionConfig) {
+		_, err := f.KubeClient().AdmissionregistrationV1().MutatingWebhookConfigurations().Create(
+			context.TODO(), staleWebhook(), metav1.CreateOptions{},
+		)
+		Expect(err).ShouldNot(HaveOccurred())
+	}
+
+	readWebhook := func(f *HookExecutionConfig) *admissionregistrationv1.MutatingWebhookConfiguration {
+		mwc, err := f.KubeClient().AdmissionregistrationV1().MutatingWebhookConfigurations().Get(
+			context.TODO(), mutatingWebhookConfigurationName, metav1.GetOptions{},
+		)
+		Expect(err).ShouldNot(HaveOccurred())
+		Expect(mwc.Webhooks).ToNot(BeEmpty())
+		return mwc
+	}
 
 	f := HookExecutionConfigInit(initValues, `{}`)
 	f.RegisterCRD("multitenancy.deckhouse.io", "v1alpha1", "GrantableClusterResourceDefinition", false)
 	f.RegisterCRD("multitenancy.deckhouse.io", "v1alpha1", "GrantableClusterResourceReference", false)
 
+	// KubeStateSet talks to the dynamic fake; the hook uses the typed
+	// Admissionregistration client (a separate ObjectTracker). Wipe leftover
+	// typed objects so "missing webhook" cases cannot see a previous Create.
+	resetTypedWebhook := func() {
+		_ = f.KubeClient().AdmissionregistrationV1().MutatingWebhookConfigurations().Delete(
+			context.TODO(), mutatingWebhookConfigurationName, metav1.DeleteOptions{},
+		)
+	}
+
+	BeforeEach(func() {
+		f.ValuesSet("multitenancyManager.internal.admissionWebhookCert.ca", "values-ca")
+	})
+
 	Context("existing webhook with a stale CA and a rotated Secret", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(grantableState + secretNewCA + staleMutatingWebhook))
+			f.BindingContexts.Set(f.KubeStateSet(grantableState + secretNewCA))
+			resetTypedWebhook()
+			seedStaleWebhook(f)
 			f.RunHook()
 		})
 
-		It("replaces caBundle with ca.crt from the Secret, not the create-time value", func() {
+		It("replaces caBundle with ca.crt from the Secret on the update path", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			mwc, err := f.KubeClient().AdmissionregistrationV1().MutatingWebhookConfigurations().Get(
-				context.TODO(), mutatingWebhookConfigurationName, metav1.GetOptions{},
-			)
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(mwc.Webhooks).ToNot(BeEmpty())
+			mwc := readWebhook(f)
 			Expect(string(mwc.Webhooks[0].ClientConfig.CABundle)).To(Equal("new-ca"))
 			Expect(mwc.Webhooks[0].Rules).ToNot(BeEmpty())
 		})
@@ -121,32 +149,28 @@ webhooks:
 
 	Context("existing webhook, no Secret, CA only in values", func() {
 		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(grantableState + staleMutatingWebhook))
+			f.BindingContexts.Set(f.KubeStateSet(grantableState))
+			resetTypedWebhook()
+			seedStaleWebhook(f)
 			f.RunHook()
 		})
 
-		It("writes the CA from module values", func() {
+		It("writes the CA from module values on the update path", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			mwc, err := f.KubeClient().AdmissionregistrationV1().MutatingWebhookConfigurations().Get(
-				context.TODO(), mutatingWebhookConfigurationName, metav1.GetOptions{},
-			)
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(mwc.Webhooks[0].ClientConfig.CABundle)).To(Equal("values-ca"))
+			Expect(string(readWebhook(f).Webhooks[0].ClientConfig.CABundle)).To(Equal("values-ca"))
 		})
 	})
 
 	Context("webhook is missing", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(grantableState + secretNewCA))
+			resetTypedWebhook()
 			f.RunHook()
 		})
 
 		It("creates the configuration with the current CA", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			mwc, err := f.KubeClient().AdmissionregistrationV1().MutatingWebhookConfigurations().Get(
-				context.TODO(), mutatingWebhookConfigurationName, metav1.GetOptions{},
-			)
-			Expect(err).ShouldNot(HaveOccurred())
+			mwc := readWebhook(f)
 			Expect(string(mwc.Webhooks[0].ClientConfig.CABundle)).To(Equal("new-ca"))
 			Expect(mwc.Webhooks[0].ClientConfig.Service).NotTo(BeNil())
 			Expect(mwc.Webhooks[0].ClientConfig.Service.Path).NotTo(BeNil())
@@ -154,16 +178,57 @@ webhooks:
 		})
 	})
 
-	Context("certificate is not issued yet", func() {
+	Context("certificate is not issued yet and the webhook is missing", func() {
 		BeforeEach(func() {
 			f.ValuesSet("multitenancyManager.internal.admissionWebhookCert.ca", "")
 			f.BindingContexts.Set(f.KubeStateSet(grantableState))
+			resetTypedWebhook()
 			f.RunHook()
 		})
 
 		It("fails instead of creating a webhook the apiserver cannot trust", func() {
 			Expect(f).ToNot(ExecuteSuccessfully())
 			Expect(f.GoHookError).To(MatchError(errWebhookCertNotIssued))
+		})
+	})
+
+	Context("certificate is not issued yet but the webhook already exists", func() {
+		BeforeEach(func() {
+			f.ValuesSet("multitenancyManager.internal.admissionWebhookCert.ca", "")
+			f.BindingContexts.Set(f.KubeStateSet(grantableState))
+			resetTypedWebhook()
+			seedStaleWebhook(f)
+			f.RunHook()
+		})
+
+		It("keeps the existing CA and still reconciles rules", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			mwc := readWebhook(f)
+			Expect(string(mwc.Webhooks[0].ClientConfig.CABundle)).To(Equal("old-ca"))
+			Expect(mwc.Webhooks[0].Rules).ToNot(BeEmpty())
+		})
+	})
+
+	Context("existing webhook with an empty webhooks list", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(grantableState + secretNewCA))
+			resetTypedWebhook()
+			_, err := f.KubeClient().AdmissionregistrationV1().MutatingWebhookConfigurations().Create(
+				context.TODO(),
+				&admissionregistrationv1.MutatingWebhookConfiguration{
+					ObjectMeta: metav1.ObjectMeta{Name: mutatingWebhookConfigurationName},
+				},
+				metav1.CreateOptions{},
+			)
+			Expect(err).ShouldNot(HaveOccurred())
+			f.RunHook()
+		})
+
+		It("rebuilds webhooks[0] instead of failing the queue", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			mwc := readWebhook(f)
+			Expect(string(mwc.Webhooks[0].ClientConfig.CABundle)).To(Equal("new-ca"))
+			Expect(mwc.Webhooks[0].Rules).ToNot(BeEmpty())
 		})
 	})
 })

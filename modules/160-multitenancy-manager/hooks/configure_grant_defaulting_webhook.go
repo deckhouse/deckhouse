@@ -52,6 +52,27 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(configureDefaultingWebhook))
 
+func newGrantDefaultingWebhook() admissionregistrationv1.MutatingWebhook {
+	return admissionregistrationv1.MutatingWebhook{
+		Name: fmt.Sprintf("%s.multitenancy.deckhouse.io", mutatingWebhookConfigurationName),
+		ClientConfig: admissionregistrationv1.WebhookClientConfig{
+			Service: &admissionregistrationv1.ServiceReference{
+				Name:      "multitenancy-manager",
+				Namespace: "d8-multitenancy-manager",
+				Path:      ptr.To("/defaults"),
+				Port:      ptr.To(int32(9443)),
+			},
+		},
+		NamespaceSelector:       projectNamespaceSelector,
+		MatchConditions:         systemWriterMatchConditions,
+		SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
+		AdmissionReviewVersions: []string{"v1"},
+		FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
+		TimeoutSeconds:          ptr.To(int32(10)),
+		Rules:                   []admissionregistrationv1.RuleWithOperations{},
+	}
+}
+
 func configureDefaultingWebhook(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	caBundle, err := admissionWebhookCABundle(input)
 	if err != nil {
@@ -70,43 +91,31 @@ func configureDefaultingWebhook(ctx context.Context, input *go_hook.HookInput, d
 	)
 	switch {
 	case k8serrors.IsNotFound(err):
+		if caBundle == "" {
+			return errWebhookCertNotIssued
+		}
 		whConfigExists = false
 		whConfig = &admissionregistrationv1.MutatingWebhookConfiguration{
 			ObjectMeta: v1.ObjectMeta{Name: mutatingWebhookConfigurationName},
-			Webhooks: []admissionregistrationv1.MutatingWebhook{
-				{
-					Name: fmt.Sprintf("%s.multitenancy.deckhouse.io", mutatingWebhookConfigurationName),
-					ClientConfig: admissionregistrationv1.WebhookClientConfig{
-						Service: &admissionregistrationv1.ServiceReference{
-							Name:      "multitenancy-manager",
-							Namespace: "d8-multitenancy-manager",
-							Path:      ptr.To("/defaults"),
-							Port:      ptr.To(int32(9443)),
-						},
-					},
-					NamespaceSelector:       projectNamespaceSelector,
-					MatchConditions:         systemWriterMatchConditions,
-					SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
-					AdmissionReviewVersions: []string{"v1"},
-					FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
-					TimeoutSeconds:          ptr.To(int32(10)),
-					Rules:                   []admissionregistrationv1.RuleWithOperations{},
-				},
-			},
+			Webhooks:   []admissionregistrationv1.MutatingWebhook{newGrantDefaultingWebhook()},
 		}
 	case err != nil:
 		return fmt.Errorf("read MutatingWebhookConfiguration: %w", err)
 	}
 
 	if len(whConfig.Webhooks) == 0 {
-		return fmt.Errorf("mutating webhook configuration %q has no webhooks", mutatingWebhookConfigurationName)
+		whConfig.Webhooks = []admissionregistrationv1.MutatingWebhook{newGrantDefaultingWebhook()}
 	}
 
 	whConfig.Webhooks[0].Rules = grantableWebhookRules(input)
 	// Reconcile CA/selector/match-conditions/timeout on existing configurations too (e.g. upgrades
 	// and TLS rotation). The serving cert is regenerated when SANs change; leaving caBundle at the
 	// create-time value makes the apiserver reject the webhook with x509 ECDSA verification failure.
-	whConfig.Webhooks[0].ClientConfig.CABundle = []byte(caBundle)
+	// Skip the CA write when it is not issued yet: rules/matchConditions must still reconcile, or
+	// the hook fails the queue the way #20700 was written to prevent.
+	if caBundle != "" {
+		whConfig.Webhooks[0].ClientConfig.CABundle = []byte(caBundle)
+	}
 	whConfig.Webhooks[0].NamespaceSelector = projectNamespaceSelector
 	whConfig.Webhooks[0].MatchConditions = systemWriterMatchConditions
 	whConfig.Webhooks[0].TimeoutSeconds = ptr.To(int32(10))

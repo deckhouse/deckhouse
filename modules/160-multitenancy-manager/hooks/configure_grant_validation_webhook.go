@@ -97,6 +97,27 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(configureGrantValidationWebhook))
 
+func newGrantValidatingWebhook() admissionregistrationv1.ValidatingWebhook {
+	return admissionregistrationv1.ValidatingWebhook{
+		Name: fmt.Sprintf("%s.multitenancy.deckhouse.io", validatingWebhookConfigurationName),
+		ClientConfig: admissionregistrationv1.WebhookClientConfig{
+			Service: &admissionregistrationv1.ServiceReference{
+				Name:      "multitenancy-manager",
+				Namespace: "d8-multitenancy-manager",
+				Path:      ptr.To("/is-granted"),
+				Port:      ptr.To(int32(9443)),
+			},
+		},
+		NamespaceSelector:       projectNamespaceSelector,
+		MatchConditions:         systemWriterMatchConditions,
+		SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
+		AdmissionReviewVersions: []string{"v1"},
+		FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
+		TimeoutSeconds:          ptr.To(int32(10)),
+		Rules:                   []admissionregistrationv1.RuleWithOperations{},
+	}
+}
+
 func configureGrantValidationWebhook(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	caBundle, err := admissionWebhookCABundle(input)
 	if err != nil {
@@ -117,42 +138,29 @@ func configureGrantValidationWebhook(ctx context.Context, input *go_hook.HookInp
 	)
 	switch {
 	case k8serrors.IsNotFound(err):
+		if caBundle == "" {
+			return errWebhookCertNotIssued
+		}
 		whConfigExists = false
 		whConfig = &admissionregistrationv1.ValidatingWebhookConfiguration{
 			ObjectMeta: v1.ObjectMeta{Name: validatingWebhookConfigurationName},
-			Webhooks: []admissionregistrationv1.ValidatingWebhook{
-				{
-					Name: fmt.Sprintf("%s.multitenancy.deckhouse.io", validatingWebhookConfigurationName),
-					ClientConfig: admissionregistrationv1.WebhookClientConfig{
-						Service: &admissionregistrationv1.ServiceReference{
-							Name:      "multitenancy-manager",
-							Namespace: "d8-multitenancy-manager",
-							Path:      ptr.To("/is-granted"),
-							Port:      ptr.To(int32(9443)),
-						},
-					},
-					NamespaceSelector:       projectNamespaceSelector,
-					MatchConditions:         systemWriterMatchConditions,
-					SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
-					AdmissionReviewVersions: []string{"v1"},
-					FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
-					TimeoutSeconds:          ptr.To(int32(10)),
-					Rules:                   []admissionregistrationv1.RuleWithOperations{},
-				},
-			},
+			Webhooks:   []admissionregistrationv1.ValidatingWebhook{newGrantValidatingWebhook()},
 		}
 	case err != nil:
 		return fmt.Errorf("read ValidatingWebhookConfiguration: %w", err)
 	}
 
 	if len(whConfig.Webhooks) == 0 {
-		return fmt.Errorf("validating webhook configuration %q has no webhooks", validatingWebhookConfigurationName)
+		whConfig.Webhooks = []admissionregistrationv1.ValidatingWebhook{newGrantValidatingWebhook()}
 	}
 
 	whConfig.Webhooks[0].Rules = grantableWebhookRules(input)
 	// Reconcile CA/selector/match-conditions/timeout on existing configurations too (e.g. upgrades
 	// and TLS rotation). Same create-only caBundle bug as the defaulting webhook.
-	whConfig.Webhooks[0].ClientConfig.CABundle = []byte(caBundle)
+	// Skip the CA write when it is not issued yet: rules/matchConditions must still reconcile.
+	if caBundle != "" {
+		whConfig.Webhooks[0].ClientConfig.CABundle = []byte(caBundle)
+	}
 	whConfig.Webhooks[0].NamespaceSelector = projectNamespaceSelector
 	whConfig.Webhooks[0].MatchConditions = systemWriterMatchConditions
 	whConfig.Webhooks[0].TimeoutSeconds = ptr.To(int32(10))
