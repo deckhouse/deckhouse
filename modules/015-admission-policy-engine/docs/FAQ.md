@@ -643,14 +643,14 @@ Key data and checks available when validating `CONNECT` operations:
 
 ## How do I restrict GPU resource usage in namespaces?
 
-The `gpuResourceRestriction` policy in [OperationPolicy](/modules/admission-policy-engine/cr.html#operationpolicy)
-denies Pod creation when a Pod requests GPU resources and the namespace has no label allowing GPU usage.
+The `gpuResourceRestriction` policy in [OperationPolicy](cr.html#operationpolicy)
+denies pod creation when a pod requests GPU resources and the namespace has no label allowing GPU usage.
 Both `resources.requests` and `resources.limits` of every container, init container,
-and ephemeral container are inspected. A resource with the quantity of `0` is not treated as a GPU request.
+and ephemeral container are inspected. A resource with a quantity of `0` is not treated as a GPU request.
 
 To set up GPU resource restriction:
 
-1. Create an `OperationPolicy` resource with the `gpuResourceRestriction` setting.
+1. Create an OperationPolicy with the `gpuResourceRestriction` setting.
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -690,16 +690,16 @@ To set up GPU resource restriction:
    d8 k label ns my-gpu-namespace gpu.deckhouse.io/enabled=true
    ```
 
-After that, the Pods that request GPU resources are allowed only in the namespaces
+After that, the pods that request GPU resources are allowed only in the namespaces
 with the `gpu.deckhouse.io/enabled: "true"` label.
 
 {% alert level="warning" %}
-The policy is applied to Pods. A Deployment or another controller that requests GPU resources
+The policy is applied to pods. A Deployment or another controller that requests GPU resources
 is created successfully, and the denial is reported in the ReplicaSet events.
 
 The namespace label is read from the Gatekeeper cache. While a namespace is missing from that cache,
-for example when the namespace and the Pod are applied together and the namespace has not been cached yet,
-the policy denies the Pods that request GPU resources in that namespace.
+for example when the namespace and the pod are applied together and the namespace has not been cached yet,
+the policy denies the pods that request GPU resources in that namespace.
 
 The devices requested through [Dynamic Resource Allocation](https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/)
 in the `spec.resourceClaims` field are not extended resources, and the policy does not check them.

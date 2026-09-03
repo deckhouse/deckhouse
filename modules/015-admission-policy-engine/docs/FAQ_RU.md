@@ -643,14 +643,14 @@ spec:
 
 ## Как ограничить использование GPU-ресурсов в неймспейсах?
 
-Политика `gpuResourceRestriction` в ресурсе [OperationPolicy](/modules/admission-policy-engine/cr.html#operationpolicy)
+Политика `gpuResourceRestriction` в [OperationPolicy](cr.html#operationpolicy)
 запрещает создание пода, если под запрашивает GPU-ресурсы, а на неймспейсе не установлен лейбл,
 разрешающий использование GPU. Проверяются `resources.requests` и `resources.limits` всех контейнеров,
 init-контейнеров и ephemeral-контейнеров пода. Ресурс с количеством `0` не считается запросом GPU.
 
 Чтобы настроить ограничение использования GPU-ресурсов, выполните следующие шаги:
 
-1. Создайте ресурс `OperationPolicy` с параметром `gpuResourceRestriction`.
+1. Создайте OperationPolicy с параметром `gpuResourceRestriction`.
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -698,8 +698,8 @@ init-контейнеров и ephemeral-контейнеров пода. Рес
 Политика применяется к подам. Deployment или другой контроллер, запрашивающий GPU-ресурсы, создаётся
 успешно, а отказ отображается в событиях ReplicaSet.
 
-Лейбл неймспейса читается из кэша Gatekeeper. Пока неймспейс отсутствует в этом кэше, например когда
-неймспейс и под применяются одновременно и неймспейс ещё не попал в кэш, политика запрещает поды,
+Лейбл неймспейса читается из кеша Gatekeeper. Пока неймспейс отсутствует в этом кеше, например когда
+неймспейс и под применяются одновременно и неймспейс ещё не попал в кеш, политика запрещает поды,
 запрашивающие GPU-ресурсы в этом неймспейсе.
 
 Устройства, запрошенные через механизм [Dynamic Resource Allocation](https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/)

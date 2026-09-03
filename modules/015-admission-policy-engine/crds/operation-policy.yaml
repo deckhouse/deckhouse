@@ -218,15 +218,15 @@ spec:
                     gpuResourceRestriction:
                       type: object
                       description: |
-                        Restricts GPU resource usage in Pods.
+                        Restricts GPU resource usage in pods.
 
                         Pods that request GPU resources are denied unless the namespace has the specified label.
                         Both `resources.requests` and `resources.limits` of every container, init container,
                         and ephemeral container are inspected.
 
                         The namespace label is read from the Gatekeeper cache. While the namespace is missing
-                        from that cache, for example when a namespace and a Pod are applied together and the
-                        namespace has not been cached yet, the policy denies the Pods that request GPU resources
+                        from that cache, for example when a namespace and a pod are applied together and the
+                        namespace has not been cached yet, the policy denies the pods that request GPU resources
                         in that namespace.
                       properties:
                         namespaceLabel:
@@ -246,7 +246,7 @@ spec:
                         gpuResourcePatterns:
                           type: array
                           description: |
-                            List of regular expressions matched against GPU resource names in Pod specs.
+                            List of regular expressions matched against GPU resource names in pod specs.
 
                             A resource name that matches any of these patterns is considered a GPU resource.
                             Patterns are not anchored implicitly: `nvidia.com/gpu` also matches
