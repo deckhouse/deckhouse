@@ -146,6 +146,36 @@ func TestBindSubject_IgnoresNilUser(t *testing.T) {
 	assert.Equal(t, ctx, auth.BindSubject(ctx, nil))
 }
 
+// TestSnapshot_NotReusedAcrossGroups guards the snapshot identity check. A
+// name alone does not identify a subject: bindings resolve through groups
+// too, so answering a differently-grouped subject from a bound snapshot would
+// report an access level that subject does not have.
+func TestSnapshot_NotReusedAcrossGroups(t *testing.T) {
+	auth := newTestRBACAuthorizer(t, append(snapshotWorld(),
+		&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "viewers-secret-viewer"},
+			Subjects:   []rbacv1.Subject{{Kind: rbacv1.GroupKind, Name: "viewers"}},
+			RoleRef:    rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "secret-viewer"},
+		},
+	)...)
+
+	plain := &user.DefaultInfo{Name: "carol"}
+	viewer := &user.DefaultInfo{Name: "carol", Groups: []string{"viewers"}}
+	attrs := &mockAttrs{user: plain, verb: "list", resource: "secrets", isResource: true}
+
+	viewerCtx := auth.BindSubject(context.Background(), viewer)
+	decision, _, err := auth.Authorize(viewerCtx, attrs)
+	require.NoError(t, err)
+	assert.Equal(t, authorizer.DecisionNoOpinion, decision,
+		"the ungrouped subject must not inherit the group snapshot")
+
+	attrs.user = viewer
+	decision, _, err = auth.Authorize(viewerCtx, attrs)
+	require.NoError(t, err)
+	assert.Equal(t, authorizer.DecisionAllow, decision,
+		"the subject the snapshot was taken for still resolves through it")
+}
+
 func TestSnapshot_ConsoleLikeAttrsMatchPerCall(t *testing.T) {
 	auth := newTestRBACAuthorizer(t, snapshotWorld()...)
 	alice := &user.DefaultInfo{Name: "alice"}
