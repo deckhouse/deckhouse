@@ -344,7 +344,7 @@ UndefinedBehaviorSanitizer, с сидами из конфигурации, ко�
 В `nginx` прогон со словарём нашёл неопределённое поведение в конфигурационном
 парсере — в коде, продублированном на стороне stream и на стороне http:
 
-```
+```text
 src/stream/ngx_stream_script.c:663  applying non-zero offset N to null pointer
 src/http/ngx_http_script.c:800      applying non-zero offset N to null pointer
 ```

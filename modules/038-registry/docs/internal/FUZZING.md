@@ -330,7 +330,7 @@ left to the fuzzer:
 In `nginx`, the dictionary run found undefined behaviour in the configuration
 parser, in code duplicated across both the stream and the http side:
 
-```
+```text
 src/stream/ngx_stream_script.c:663  applying non-zero offset N to null pointer
 src/http/ngx_http_script.c:800      applying non-zero offset N to null pointer
 ```
