@@ -88,3 +88,4 @@ Updated operator dependencies. Fixes CVEs:
 Fixes:
 GO-2026-5932
 CVE-2026-56854 (`golang.org/x/crypto` -> `v0.55.0`)
+CVE-2026-49835 (`github.com/sigstore/timestamp-authority` -> `/v2 v2.1.2` via replace + exclude v1.2.2)

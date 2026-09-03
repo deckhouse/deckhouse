@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 728a19c..56e8024 100644
+index 728a19c..e5b28b3 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -23,7 +23,7 @@ require (
@@ -11,7 +11,17 @@ index 728a19c..56e8024 100644
  	k8s.io/api v0.35.1
  	k8s.io/apiextensions-apiserver v0.35.1
  	k8s.io/apimachinery v0.35.1
-@@ -317,7 +317,7 @@ require (
+@@ -276,7 +276,8 @@ require (
+ 	github.com/sigstore/cosign/v2 v2.2.4 // indirect
+ 	github.com/sigstore/rekor v1.3.6 // indirect
+ 	github.com/sigstore/sigstore v1.8.3 // indirect
+-	github.com/sigstore/timestamp-authority v1.2.2 // indirect
++	github.com/sigstore/timestamp-authority v0.0.0-00010101000000-000000000000 // indirect
++	github.com/sigstore/timestamp-authority/v2 v2.1.2 // indirect
+ 	github.com/skeema/knownhosts v1.3.1 // indirect
+ 	github.com/sourcegraph/conc v0.3.0 // indirect
+ 	github.com/spdx/tools-golang v0.5.5 // indirect
+@@ -317,7 +318,7 @@ require (
  	go.opentelemetry.io/otel/trace v1.43.0 // indirect
  	go.yaml.in/yaml/v2 v2.4.3 // indirect
  	go.yaml.in/yaml/v3 v3.0.4 // indirect
@@ -20,7 +30,7 @@ index 728a19c..56e8024 100644
  	golang.org/x/sync v0.22.0 // indirect
  	google.golang.org/api v0.271.0 // indirect
  	google.golang.org/genproto v0.0.0-20260128011058-8636f8732409 // indirect
-@@ -395,14 +395,14 @@ require (
+@@ -395,14 +396,14 @@ require (
  	github.com/yashtewari/glob-intersection v0.2.0 // indirect
  	github.com/zclconf/go-cty v1.15.0 // indirect
  	go.uber.org/zap v1.27.0 // indirect
@@ -40,8 +50,21 @@ index 728a19c..56e8024 100644
  	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
  	google.golang.org/protobuf v1.36.11 // indirect
  	gopkg.in/inf.v0 v0.9.1 // indirect
+@@ -414,8 +415,12 @@ require (
+ 	sigs.k8s.io/json v0.0.0-20250730193827-2d320260d730 // indirect
+ )
+ 
++exclude github.com/sigstore/timestamp-authority v1.2.2
++
+ replace github.com/aquasecurity/trivy => ./trivy
+ 
+ replace fox.flant.com/deckhouse/3p/aquasecurity/trivy-db => ./trivy-db
+ 
+ replace github.com/aquasecurity/trivy-db => ./original-trivy-db
++
++replace github.com/sigstore/timestamp-authority => github.com/sigstore/timestamp-authority/v2 v2.1.2
 diff --git a/go.sum b/go.sum
-index 6a0de54..bf8bdf0 100644
+index 6a0de54..7e74e9d 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1188,6 +1188,8 @@ golang.org/x/crypto v0.13.0/go.mod h1:y6Z2r+Rw4iayiXXAIxJIDAJ1zMW4yaTpebo8fPOliY
@@ -107,3 +130,9 @@ index 6a0de54..bf8bdf0 100644
  golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
  golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
  golang.org/x/xerrors v0.0.0-20191204190536-9bdfabe68543/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
+@@ -1448,3 +1462,5 @@ sigs.k8s.io/yaml v1.6.0 h1:G8fkbMSAFqgEFgh4b1wmtzDnioxFCUgTZhlbj5P9QYs=
+ sigs.k8s.io/yaml v1.6.0/go.mod h1:796bPqUfzR/0jLAl6XjHl3Ck7MiyVv8dbTdyT3/pMf4=
+ software.sslmate.com/src/go-pkcs12 v0.4.0 h1:H2g08FrTvSFKUj+D309j1DPfk5APnIdAQAB8aEykJ5k=
+ software.sslmate.com/src/go-pkcs12 v0.4.0/go.mod h1:Qiz0EyvDRJjjxGyUQa2cCNZn/wMyzrRJ/qcDXOQazLI=
++github.com/sigstore/timestamp-authority/v2 v2.1.2 h1:7DDhnknLL4w8VwomyvW2W8qblOS9LDR8oihna+jc7Ls=
++github.com/sigstore/timestamp-authority/v2 v2.1.2/go.mod h1:o6rAVZceFyejClIj/uStRNIemP16bVMZtbMmhk6pr0U=
