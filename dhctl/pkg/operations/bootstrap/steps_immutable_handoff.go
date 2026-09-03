@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"os"
 	"slices"
 	"time"
@@ -171,12 +172,12 @@ func (b *ClusterBootstrapper) collectImmutableKubeconfig(ctx context.Context, bc
 // A dial to a machine that is booting hangs to gossh's 5s deadline, and that
 // error ends the tunnel's accept loop for good while its listener stays bound.
 //
-// Opening one is narrated as plain lines: off the compact terminal, in the debug
-// file, for as long as the channel lives. Not a buffer replayed after open: the
-// channel logs on, and reading while it writes is a race that also drops the rest.
+// Opening one is narrated file-only: off the compact terminal, in the debug file,
+// for as long as the channel lives. Not a buffer replayed after open: the channel
+// logs on, and reading while it writes is a race that also drops the rest.
 func retryWithFreshChannel(ctx context.Context, loop *libretry.Loop, open func(context.Context) (string, func(), error), do func(address string) error) error {
 	return loop.RunContext(ctx, func() error {
-		narrated := dhlog.NewBufferLogger(dhlog.NewLineWriter(dhlog.FromContext(ctx)))
+		narrated := slog.New(fileOnlyHandler{dhlog.FromContext(ctx).Handler()})
 		address, stop, err := open(dhlog.ToContext(ctx, narrated))
 		// open must not hand back a closer together with an error: it is dropped here.
 		if err != nil {
@@ -186,6 +187,24 @@ func retryWithFreshChannel(ctx context.Context, loop *libretry.Loop, open func(c
 
 		return do(address)
 	})
+}
+
+// fileOnlyHandler tags every record FileOnly on its way to the handler behind it:
+// kept by the debug file, kept off the compact terminal. lib-dhctl offers the tag
+// per record only, and the channel's own code cannot be asked to add it.
+type fileOnlyHandler struct{ slog.Handler }
+
+func (h fileOnlyHandler) Handle(ctx context.Context, record slog.Record) error {
+	record.AddAttrs(dhlog.FileOnly())
+	return h.Handler.Handle(ctx, record)
+}
+
+func (h fileOnlyHandler) WithAttrs(attrs []slog.Attr) slog.Handler {
+	return fileOnlyHandler{h.Handler.WithAttrs(attrs)}
+}
+
+func (h fileOnlyHandler) WithGroup(name string) slog.Handler {
+	return fileOnlyHandler{h.Handler.WithGroup(name)}
 }
 
 // waitProgressInterval is how often a wait repeats itself while nothing changes.
