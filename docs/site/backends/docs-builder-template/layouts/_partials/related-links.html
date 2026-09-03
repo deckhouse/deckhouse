@@ -27,7 +27,7 @@
         {{/*  Rendering links  */}}
         {{ if $title }}
           <li>
-            <a href="{{ $url }}" target="_blank" rel="noopener noreferrer">{{ $title }}</a>
+            {{ partial "helpers/rewrite-link" (dict "href" $url "inner" $title "attrs" " target=\"_blank\" rel=\"noopener noreferrer\"") }}
           </li>
           {{ $count = add $count 1 }}
         {{ end }}
