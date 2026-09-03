@@ -56,17 +56,22 @@ func nodeRenderInputsChanged(before, after client.Object) bool {
 // On the first master it must differ from the installer payload on exactly three
 // fields (caCert, serverTLSBootstrap, proxy token); every other field must agree.
 func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv1alpha1.NodeSpec {
+	extraExtensions, extraModules := nodeExtensions(in.NodeExtensions, in.NodeExtensionConflicts, node, ng.Name)
+
+	kernel := renderKernel()
+	kernel.Modules = extraModules
+
 	return internalv1alpha1.NodeSpec{
 		NodeName:             node.Name,
 		OSImage:              in.OSImage,
 		APIServerEndpoints:   in.APIServerEndpoints,
 		InternalNetworkCIDRs: in.InternalNetworkCIDRs,
-		Extensions:           renderExtensions(in.SysextDigests),
+		Extensions:           mergeExtensions(renderExtensions(in.SysextDigests), extraExtensions),
 		// A NodeGroup has no disk field; without a selector the boot path refuses
 		// outright ("neither device nor diskSelector set"). Any selector the
 		// operator wrote survives this one through keepBootstrapOnlyFields.
 		Storage:          internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{Size: systemDiskSelectorSize}}},
-		Kernel:           renderKernel(),
+		Kernel:           kernel,
 		Network:          renderNetwork(node),
 		Kubelet:          renderKubelet(ng, node, in),
 		ContainerRuntime: renderContainerRuntime(ng, in),
