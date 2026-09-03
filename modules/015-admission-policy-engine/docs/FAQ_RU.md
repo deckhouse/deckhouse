@@ -461,6 +461,19 @@ spec:
       readOnlyRootFilesystem: true
 ```
 
+## Почему мутация Assign или AssignMetadata отклоняется или не применяется?
+
+CRD `Assign`, `AssignMetadata`, `ModifySet` и `AssignImage` импортированы из Gatekeeper без изменений (см. [Mutation Custom Resources](gatekeeper-cr_ru.html#mutation-custom-resources)). При этом webhook мутаций Gatekeeper проверяет ограничения содержимого, которые не отражены в схеме CRD. Модуль `admission-policy-engine` проверяет часть этих ограничений встроенными ValidatingAdmissionPolicy. Благодаря этому `kubectl apply` отклоняет некорректный ресурс сразу, а не пропускает его без предупреждения или отклоняет позже — сам Gatekeeper, с непонятной ошибкой парсера.
+
+Модуль применяет следующие ограничения:
+
+- `deny-invalid-assign-location.deckhouse.io` — поле `spec.location` ресурса `Assign` не может указывать на поле `metadata` (`metadata.name`, `.namespace`, `.labels`, `.annotations`). Для добавления лейблов или аннотаций используйте `AssignMetadata`.
+- `deny-invalid-assignmetadata-location.deckhouse.io` — поле `spec.location` ресурса `AssignMetadata` должно быть строго `metadata.labels.<KEY>` или `metadata.annotations.<KEY>`. Если `<KEY>` содержит символы, отличные от букв, цифр, `_` или `-` (например, ключ с доменным префиксом вида `app.kubernetes.io/name`), возьмите его в кавычки: `metadata.annotations."app.kubernetes.io/name"`.
+- `deny-invalid-assignmetadata-value.deckhouse.io` — поле `spec.parameters.assign.value` ресурса `AssignMetadata` должно быть строкой, так как значения лейблов и аннотаций в Kubernetes — строки.
+- `deny-invalid-mutator-frommetadata-field.deckhouse.io` — поле `spec.parameters.assign.fromMetadata.field` (у ресурсов `Assign` и `AssignMetadata`) обязательно, если задан `fromMetadata`, и допускает только значения `namespace` или `name`.
+- `deny-invalid-assignmetadata-externaldata-datasource.deckhouse.io` — поле `spec.parameters.assign.externalData.dataSource` ресурса `AssignMetadata` поддерживает только значение `Username`. По умолчанию, если поле не задано, оно принимает значение `ValueAtLocation` — это значение по умолчанию тоже отклоняется, поэтому `dataSource: Username` нужно указывать явно. В отличие от `Assign`, значение `ValueAtLocation` не поддерживается, так как при мутации метаданных нет исходного значения в `location`, которое можно прочитать.
+- `deny-mutator-without-match-kinds.deckhouse.io` — поле `spec.match.kinds` обязательно, не может быть пустым в ресурсах `Assign`, `AssignMetadata`, `ModifySet` и `AssignImage`, и в каждом его элементе должны быть заданы непустые `apiGroups` и `kinds` без значения `*` в `kinds`. Это ограничение специфично для Deckhouse: правила `MutatingWebhookConfiguration` `d8-admission-policy-engine-config` формируются только на основе поля `match.kinds` всех перечисленных ресурсов, а `apiGroups`/`kinds` сопоставляются с реальными типами ресурсов Kubernetes. Если элемент не разрешается в конкретный тип ресурса, ресурс с ним никогда не запускает мутацию, хотя сам Gatekeeper по-прежнему считает такой элемент допустимым.
+
 ## Проверка подписи образов
 
 {% alert level="warning" %}
