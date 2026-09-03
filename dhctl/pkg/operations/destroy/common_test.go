@@ -75,7 +75,7 @@ clusterType: Cloud
 cloud:
   provider: Yandex
   prefix: "test"
-kubernetesVersion: "1.32"
+kubernetesVersion: "1.33"
 podSubnetCIDR: 10.222.0.0/16
 serviceSubnetCIDR: 10.111.0.0/16
 encryptionAlgorithm: RSA-2048
