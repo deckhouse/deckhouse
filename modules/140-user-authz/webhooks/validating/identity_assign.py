@@ -599,9 +599,11 @@ def can_assign(actor_role_names: Sequence[str], target_role_names: Sequence[str]
     """
     None means allow. A list is the leftover target roles the actor cannot assign.
 
-    Cover is evaluated per target and only when that target has a non-empty
-    rule set. An emptied ClusterRole (including SuperAdmin) is not covered;
-    is_disaster then runs inside role_in_range instead of being skipped.
+    Disaster names (cluster-admin, SuperAdmin, rbacv2 superadmin) require the
+    SuperAdmin range even when the live ClusterRole was rewritten to rules the
+    actor already covers. Cover is only used for non-disaster roles that still
+    have atoms. A role missing from the catalog is leftover: range is not
+    inferred from the name alone.
     """
     targets = [n for n in target_role_names if isinstance(n, str) and n]
     if not targets:
@@ -612,6 +614,11 @@ def can_assign(actor_role_names: Sequence[str], target_role_names: Sequence[str]
     leftover = []
     for name in targets:
         entry = catalog.get(name)
+        if is_disaster(name, entry):
+            if role_in_range(name, entry, rng):
+                continue
+            leftover.append(name)
+            continue
         if entry is None:
             leftover.append(name)
             continue

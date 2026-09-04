@@ -154,6 +154,48 @@ class TestDescribeAndRange(unittest.TestCase):
             ["d8:manage:security:manager"], ["cluster-admin"], cat)
         self.assertEqual(leftover, ["cluster-admin"])
 
+    def test_rewritten_superadmin_rules_are_not_covered(self):
+        shrunk = [{"apiGroups": ["rbac.authorization.k8s.io"],
+                   "resources": ["clusterroles"], "verbs": ["update"]}]
+        cat = default_catalog()
+        cat["d8:manage:security:manager"] = entry(
+            "d8:manage:security:manager",
+            rules=CAR_EDIT + USERS_EDIT + shrunk,
+            labels=SECURITY_LABELS,
+        )
+        cat["user-authz:super-admin"] = entry(
+            "user-authz:super-admin", rules=shrunk, labels=SUPER_LABELS)
+        leftover = assign.can_assign(
+            ["d8:manage:security:manager"], ["user-authz:super-admin"], cat)
+        self.assertEqual(leftover, ["user-authz:super-admin"])
+
+    def test_rewritten_cluster_admin_rules_are_not_covered(self):
+        shrunk = [{"apiGroups": ["rbac.authorization.k8s.io"],
+                   "resources": ["clusterroles"], "verbs": ["update"]}]
+        cat = default_catalog()
+        cat["d8:manage:security:manager"] = entry(
+            "d8:manage:security:manager",
+            rules=CAR_EDIT + USERS_EDIT + shrunk,
+            labels=SECURITY_LABELS,
+        )
+        cat["cluster-admin"] = entry("cluster-admin", rules=shrunk, labels=SUPER_LABELS)
+        leftover = assign.can_assign(
+            ["d8:manage:security:manager"], ["cluster-admin"], cat)
+        self.assertEqual(leftover, ["cluster-admin"])
+
+    def test_missing_catalog_role_is_not_assigned_by_range(self):
+        leftover = assign.can_assign(
+            ["d8:manage:security:manager"],
+            ["d8:manage:security:user"],
+            default_catalog())
+        self.assertEqual(leftover, ["d8:manage:security:user"])
+
+    def test_security_assigns_present_security_user_by_range(self):
+        cat = default_catalog()
+        cat["d8:manage:security:user"] = entry("d8:manage:security:user", rules=USERS_EDIT)
+        self.assertIsNone(assign.can_assign(
+            ["d8:manage:security:manager"], ["d8:manage:security:user"], cat))
+
     def test_access_level_annotation_ignored_on_custom(self):
         cat = default_catalog()
         cat["pwn"] = entry("pwn", rules=STAR_ALL, access_level="User")
