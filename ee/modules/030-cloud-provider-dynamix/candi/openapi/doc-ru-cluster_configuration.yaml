@@ -24,10 +24,19 @@ apiVersions:
         description: Публичный ключ для доступа на узлы.
       location:
         type: string
-        description: Имя места установки кластера.
+        description: |
+          Имя грида, используемое для определения resource group, в которой создается кластер.
+
+          На размещение дисков этот параметр не влияет — для этого используется `storagePolicy`.
       account:
         type: string
         description: Имя аккаунта.
+      storagePolicy:
+        type: string
+        description: |
+          Имя storage policy, используемой по умолчанию для дисков виртуальных машин.
+
+          Storage policy определяет набор доступных пар storage endpoint + pool, а также лимит IOPS; конкретное размещение внутри политики выбирает платформа. Может быть переопределено для отдельного instance class.
       masterNodeGroup:
         description: |
           Спецификация для описания NodeGroup master-узлов.
@@ -56,12 +65,9 @@ apiVersions:
               imageName:
                 description: |
                   Имя образа ОС, используемое для развертывания ВМ.
-              storageEndpoint:
+              storagePolicy:
                 description: |
-                  Имя хранилища.
-              pool:
-                description: |
-                  Имя пула хранения.
+                  Имя storage policy, которая будет использоваться для этого instance class вместо общей `storagePolicy` кластера.
               externalNetwork:
                 description: |
                   Имя внешней сети.
