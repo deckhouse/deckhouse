@@ -46,9 +46,10 @@ refuses to let the release proceed if any binding is left unprotected (the same 
 node-manager used when it moved its machine objects into node-controller).
 
 Once the controller adopts a binding it labels it as managed by the controller and drops the
-annotation, so the hook becomes a no-op: the selector below skips the adopted bindings. The selector
-does not rely on `app.kubernetes.io/managed-by: Helm`, which only one of the release engines puts on
-live objects; stamping a chart-era binding the engine does not track is harmless, missing one is not.
+annotation, so the hook becomes a no-op: the selector below skips the adopted bindings. Both release
+engines put `app.kubernetes.io/managed-by: Helm` on the objects they apply, but the selector keys on
+the controller's own label instead: that is what decides ownership here, and stamping a chart-era
+binding the engine happens not to track is harmless while missing one is not.
 
 Engine notes: nelm reads the policy from the live object and also refuses to delete an object whose
 ownership metadata no longer matches the release, so an adoption racing the release is safe too.

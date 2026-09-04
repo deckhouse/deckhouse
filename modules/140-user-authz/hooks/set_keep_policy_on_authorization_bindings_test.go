@@ -63,8 +63,9 @@ func testBinding(kind, namespace, name string, labels, annotations map[string]st
 	return obj
 }
 
-// helmLabels are the labels of a chart-rendered binding under the engine that adds the Helm
-// ownership label; chartLabels those under the engine that does not. Both must be protected.
+// helmLabels are the labels of a chart-rendered binding as the release engines leave it;
+// chartLabels those of one that lost the engine's ownership label (re-applied by hand from a
+// manifest). Both must be protected.
 func helmLabels() map[string]string {
 	return map[string]string{"heritage": "deckhouse", "module": "user-authz", "app.kubernetes.io/managed-by": "Helm"}
 }
@@ -104,7 +105,7 @@ func TestStampKeepPolicy_StampsHelmManagedRuleBindingsOnly(t *testing.T) {
 		testBinding("ClusterRoleBinding", "", "user-authz:dev:user", helmLabels(), nil),
 		testBinding("ClusterRoleBinding", "", "user-authz:dev:user:custom-cluster-role:d8:user-authz:x:user", helmLabels(), nil),
 		testBinding("ClusterRoleBinding", "", "user-authz:ops:editor", helmLabels(), map[string]string{helmResourcePolicyAnnotation: helmResourcePolicyKeep}),
-		// rendered by the engine that does not label live objects: must be protected too
+		// lost the engine's ownership label (re-applied by hand): must be protected too
 		testBinding("ClusterRoleBinding", "", "user-authz:plain:user", chartLabels(), nil),
 		// module object that is not a rule binding: must not be touched
 		testBinding("ClusterRoleBinding", "", "d8:user-authz:admin-kubeconfig", helmLabels(), nil),
