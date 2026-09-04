@@ -19,6 +19,21 @@ spec:
       served: true
       storage: false
       deprecated: true
+      additionalPrinterColumns:
+        - name: Access level
+          type: string
+          jsonPath: .spec.accessLevel
+        - name: Ready
+          type: string
+          jsonPath: .status.conditions[?(@.type=="Ready")].status
+        - name: Bindings
+          type: integer
+          jsonPath: .status.bindings
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      subresources:
+        status: {}
       schema:
         openAPIV3Schema:
           type: object
@@ -29,6 +44,45 @@ spec:
           required:
           - spec
           properties:
+            status:
+              type: object
+              description: |
+                Observed state of the rule, maintained by user-authz-controller.
+              properties:
+                conditions:
+                  type: array
+                  description: |
+                    Conditions of the rule. `Ready=True` means every binding of the rule is applied; `Ready=False`
+                    with reason `InvalidSpec` means the rule cannot be rendered and no binding was changed.
+                  items:
+                    type: object
+                    required: [type, status]
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                        enum: ["True", "False", "Unknown"]
+                      reason:
+                        type: string
+                      message:
+                        type: string
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                bindings:
+                  type: integer
+                  format: int32
+                  description: |
+                    Number of bindings rendered for the rule.
+                observedGeneration:
+                  type: integer
+                  format: int64
+                  description: |
+                    Generation of the rule the status refers to.
             spec:
               type: object
               required:
@@ -171,6 +225,21 @@ spec:
     - name: v1
       served: true
       storage: true
+      additionalPrinterColumns:
+        - name: Access level
+          type: string
+          jsonPath: .spec.accessLevel
+        - name: Ready
+          type: string
+          jsonPath: .status.conditions[?(@.type=="Ready")].status
+        - name: Bindings
+          type: integer
+          jsonPath: .status.bindings
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      subresources:
+        status: {}
       schema:
         openAPIV3Schema:
           type: object
@@ -181,6 +250,45 @@ spec:
           required:
           - spec
           properties:
+            status:
+              type: object
+              description: |
+                Observed state of the rule, maintained by user-authz-controller.
+              properties:
+                conditions:
+                  type: array
+                  description: |
+                    Conditions of the rule. `Ready=True` means every binding of the rule is applied; `Ready=False`
+                    with reason `InvalidSpec` means the rule cannot be rendered and no binding was changed.
+                  items:
+                    type: object
+                    required: [type, status]
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                        enum: ["True", "False", "Unknown"]
+                      reason:
+                        type: string
+                      message:
+                        type: string
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                bindings:
+                  type: integer
+                  format: int32
+                  description: |
+                    Number of bindings rendered for the rule.
+                observedGeneration:
+                  type: integer
+                  format: int64
+                  description: |
+                    Generation of the rule the status refers to.
             spec:
               type: object
               required:

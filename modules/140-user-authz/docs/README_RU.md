@@ -5,6 +5,8 @@ description: "Авторизация и управление доступом п
 
 Модуль отвечает за генерацию объектов ролевой модели доступа, основанной на базе стандартного механизма RBAC Kubernetes. Модуль создает набор кластерных ролей (ClusterRole), подходящий для большинства задач по управлению доступом пользователей и групп.
 
+Биндинги, которые выдают пользователям уровни доступа из ClusterAuthorizationRule и AuthorizationRule, поддерживает компонент `user-authz-controller`: он следит за правилами, синхронизирует их ClusterRoleBinding и RoleBinding и записывает результат в `status` каждого правила (`kubectl get clusterauthorizationrules` показывает колонки `READY` и `BINDINGS`). Правило с неподдерживаемым `accessLevel` получает `Ready=False` с причиной `InvalidSpec`, а не ломает модуль.
+
 {% alert level="warning" %}
 С версии Deckhouse Kubernetes Platform v1.64 в модуле реализована экспериментальная модель ролевого доступа.
 
