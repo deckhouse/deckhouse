@@ -244,12 +244,6 @@ func (s *Service) Delete(ctx context.Context, namespace, name string) error {
 	return s.client.Delete(ctx, namespace, name)
 }
 
-// UpgradeOptions holds options for upgrading a Helm release.
-type UpgradeOptions struct {
-	TrackingOptions common.TrackingOptions
-	ExtraLabels     map[string]string
-}
-
 // Upgrade installs or upgrades a Helm release for a package.
 //
 // Smart upgrade logic:
