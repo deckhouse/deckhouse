@@ -1,4 +1,4 @@
-2881
+2824
 1GB
 2GB
 5XX
@@ -30,7 +30,9 @@ alertmanager
 Alertmanager
 alertmanagers
 Alertmanagers
+AliCloud
 AllocateSpace
+allocs
 AllowedAddressPairs
 allowedBundles
 allowedTopologies
@@ -65,6 +67,7 @@ Aps
 arbitr
 aren
 argocd
+args
 ARN
 ARP
 arptables
@@ -130,6 +133,7 @@ baz
 bcrypt
 BDU
 behaviour
+benchmarkLock
 BGP
 bgpCommunities
 BinC
@@ -263,6 +267,7 @@ ClusterVirtualImage
 cmctl
 CMD
 cmp
+CN
 CNAME
 CNCF
 CNCF’s
@@ -289,6 +294,8 @@ configurator
 configVersion
 conntrack
 Conntrack
+ConstraintTemplate
+ConstraintTemplates
 Container
 containerd
 ContainerResourcePolicy
@@ -411,7 +418,11 @@ DHCP
 dhcpOptions
 dhctl
 DHE
+didn
+diff
 Diff
+diffing
+diffs
 dir
 disjoining
 diskType
@@ -424,6 +435,7 @@ DKP
 DN
 DNAT
 dns
+DNs
 DNS
 dnsEE
 Dnsmasq
@@ -434,6 +446,7 @@ Dockerfile’s
 Dockerfiles
 dockerignore
 dockersamples
+docstring
 documentation
 doesn
 DoesNotExist
@@ -490,6 +503,7 @@ emptyDir
 enablement
 enableMultiTenancy
 endofftopic
+Entra
 entrypoint
 enum
 env
@@ -503,6 +517,7 @@ etcdctl
 etcdutl
 eth
 EuropeClouds
+eval
 eventsExporter
 EVS
 existingZoneToSubnetIDMap
@@ -567,6 +582,7 @@ GateKeeper
 gatewayEE
 Gb
 Gbps
+GC
 GCE
 gcloud
 GCM
@@ -598,6 +614,8 @@ GlobalTag
 globalVersion
 Gluu
 Golang
+GOROOT
+goroutines
 GOST
 govc
 GPG
@@ -617,6 +635,7 @@ grep
 gRPC
 GRPC
 GuestInfo
+GVKs
 gz
 Habr
 hardcoded
@@ -711,11 +730,8 @@ initContainer
 InitContainer
 initContainers
 InitContainers
-<<<<<<< HEAD
 initiatorType
 inline
-=======
->>>>>>> 7c47f6c778 (Updates)
 Inline
 inode
 inodes
@@ -762,12 +778,9 @@ iSCSI
 isn
 ISP
 isSudoer
-<<<<<<< HEAD
 IssueBasic
 issuerName
 IST
-=======
->>>>>>> 7c47f6c778 (Updates)
 istio
 istio-api-proxy
 istioctl
@@ -779,6 +792,7 @@ jaeger
 jammy
 javascript
 JFrog
+JID
 JPA
 JQ
 js
@@ -973,6 +987,7 @@ MQL
 MRA
 MRs
 msg
+mtime
 mTLS
 MTLS
 MTU
@@ -1086,6 +1101,7 @@ okmeter
 Okmeter
 Okta
 Omniauth
+OmniAuth
 online
 OOM
 OPA
@@ -1125,6 +1141,7 @@ os
 OSes
 OSI
 OTLP
+outlier
 Outlier
 outlierDetection
 overprovisioned
@@ -1161,6 +1178,7 @@ PersistentVolumeClaims
 PersistentVolumes
 php
 PID
+PKCE
 PKCS
 PKI
 plaintext
@@ -1195,6 +1213,7 @@ PostgreSQL
 PostgresSnapshot
 postStart
 PowerShell
+pprof
 Praefect
 pre
 precompute
@@ -1206,6 +1225,7 @@ preffered
 preinstalled
 Preinstalled
 preload
+PrepareForEval
 Prestable
 preStop
 PrimaryIPFromEgressGatewayNodeInterface
@@ -1301,6 +1321,7 @@ ReplicatedStoragePool
 ReplicationController
 repo
 Repointing
+ReportAllocs
 repos
 reprovisioning
 repurposed
@@ -1332,14 +1353,17 @@ RSA
 rtt
 RTT
 ru
+rulebench
 rulefiles
 RuleGroup
 ruleSelector
+runN
 RWO
 RWX
 S3
 SaaS
 SaaSUninstall
+Salesforce
 SAML
 SANs
 SASL
@@ -1355,6 +1379,7 @@ scrapeIntervals
 screenshot
 scriptable
 SCSITarget
+SDK
 SDN
 sds
 Searchable
@@ -1363,6 +1388,7 @@ SecretStore
 securityGroups
 SecurityGroups
 SecurityPolicy
+SecurityPolicyException
 sed
 selectel
 Selectel
@@ -1398,6 +1424,7 @@ shouldn
 Sidekiq
 SIGTERM
 SimpleWithInternalNetwork
+SingleLevel
 Sitemap
 SizingPolicy
 SkyWalking
@@ -1543,6 +1570,7 @@ TLF
 tls
 TLS
 TLSv
+TMPDIR
 TODO
 TolerationSeconds
 toolchain
@@ -1569,6 +1597,7 @@ uninstall
 uninstalled
 uninstalling
 Unlabel
+unmarshalling
 UNPACKEDSIZE
 unschedulable
 Uplink
@@ -1584,6 +1613,7 @@ urls
 URLs
 UsePAM
 username
+usernames
 UserOperation
 UTC
 UTF
@@ -1707,6 +1737,7 @@ WhateverInstanceClass
 whitelist
 Whitelist
 whitelistSourceRanges
+WholeSubtree
 Wiki
 wildcard
 wildcards
@@ -1750,6 +1781,7 @@ zVirt
 Zvirt
 ZvirtClusterConfiguration
 ZvirtInstanceClass
+µs
 автомасштабирование
 автомасштабированием
 автомасштабировании
@@ -2414,6 +2446,7 @@ ZvirtInstanceClass
 Подсеть
 подсетью
 подсетям
+подсетями
 подсетях
 покоммитное
 помотрим
@@ -2481,6 +2514,7 @@ ZvirtInstanceClass
 Ревью
 регистри
 редиректить
+резолверы
 резолвинга
 резолвится
 реквест
@@ -2760,6 +2794,7 @@ ZvirtInstanceClass
 ч
 чаржить
 чатами
+членств
 шаблонизатор
 шаблонизаторе
 шаблонизирования
@@ -2788,30 +2823,3 @@ ZvirtInstanceClass
 юзера
 юнит
 юнита
-ConstraintTemplate
-ConstraintTemplates
-GC
-GVKs
-SDK
-SecurityPolicyException
-allocs
-args
-didn
-diff
-diffing
-diffs
-docstring
-eval
-mtime
-outlier
-pprof
-rulebench
-unmarshalling
-µs
-GOROOT
-PrepareForEval
-ReportAllocs
-TMPDIR
-benchmarkLock
-goroutines
-runN

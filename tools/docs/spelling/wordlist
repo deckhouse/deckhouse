@@ -31,6 +31,7 @@ alertmanagers
 Alertmanagers
 AliCloud
 AllocateSpace
+allocs
 AllowedAddressPairs
 allowedBundles
 allowedTopologies
@@ -65,6 +66,7 @@ Aps
 arbitr
 aren
 argocd
+args
 ARN
 ARP
 arptables
@@ -130,6 +132,7 @@ baz
 bcrypt
 BDU
 behaviour
+benchmarkLock
 BGP
 bgpCommunities
 BinC
@@ -290,6 +293,8 @@ configurator
 configVersion
 conntrack
 Conntrack
+ConstraintTemplate
+ConstraintTemplates
 Container
 containerd
 ContainerResourcePolicy
@@ -412,7 +417,11 @@ DHCP
 dhcpOptions
 dhctl
 DHE
+didn
+diff
 Diff
+diffing
+diffs
 dir
 disjoining
 diskType
@@ -425,8 +434,8 @@ DKP
 DN
 DNAT
 dns
-DNS
 DNs
+DNS
 dnsEE
 Dnsmasq
 dnsPolicy
@@ -436,6 +445,7 @@ Dockerfile’s
 Dockerfiles
 dockerignore
 dockersamples
+docstring
 documentation
 doesn
 DoesNotExist
@@ -506,6 +516,7 @@ etcdctl
 etcdutl
 eth
 EuropeClouds
+eval
 eventsExporter
 EVS
 existingZoneToSubnetIDMap
@@ -570,6 +581,7 @@ GateKeeper
 gatewayEE
 Gb
 Gbps
+GC
 GCE
 gcloud
 GCM
@@ -601,6 +613,8 @@ GlobalTag
 globalVersion
 Gluu
 Golang
+GOROOT
+goroutines
 GOST
 govc
 GPG
@@ -620,6 +634,7 @@ grep
 gRPC
 GRPC
 GuestInfo
+GVKs
 gz
 Habr
 hardcoded
@@ -971,6 +986,7 @@ MQL
 MRA
 MRs
 msg
+mtime
 mTLS
 MTLS
 MTU
@@ -1124,6 +1140,7 @@ os
 OSes
 OSI
 OTLP
+outlier
 Outlier
 outlierDetection
 overprovisioned
@@ -1195,6 +1212,7 @@ PostgreSQL
 PostgresSnapshot
 postStart
 PowerShell
+pprof
 Praefect
 pre
 precompute
@@ -1206,6 +1224,7 @@ preffered
 preinstalled
 Preinstalled
 preload
+PrepareForEval
 Prestable
 preStop
 PrimaryIPFromEgressGatewayNodeInterface
@@ -1301,6 +1320,7 @@ ReplicatedStoragePool
 ReplicationController
 repo
 Repointing
+ReportAllocs
 repos
 reprovisioning
 repurposed
@@ -1332,9 +1352,11 @@ RSA
 rtt
 RTT
 ru
+rulebench
 rulefiles
 RuleGroup
 ruleSelector
+runN
 RWO
 RWX
 S3
@@ -1356,6 +1378,7 @@ scrapeIntervals
 screenshot
 scriptable
 SCSITarget
+SDK
 SDN
 sds
 Searchable
@@ -1364,6 +1387,7 @@ SecretStore
 securityGroups
 SecurityGroups
 SecurityPolicy
+SecurityPolicyException
 sed
 selectel
 Selectel
@@ -1545,6 +1569,7 @@ TLF
 tls
 TLS
 TLSv
+TMPDIR
 TODO
 TolerationSeconds
 toolchain
@@ -1571,6 +1596,7 @@ uninstall
 uninstalled
 uninstalling
 Unlabel
+unmarshalling
 UNPACKEDSIZE
 unschedulable
 Uplink
@@ -1754,6 +1780,7 @@ zVirt
 Zvirt
 ZvirtClusterConfiguration
 ZvirtInstanceClass
+µs
 автомасштабирование
 автомасштабированием
 автомасштабировании
@@ -2795,30 +2822,3 @@ ZvirtInstanceClass
 юзера
 юнит
 юнита
-ConstraintTemplate
-ConstraintTemplates
-GC
-GVKs
-SDK
-SecurityPolicyException
-allocs
-args
-didn
-diff
-diffing
-diffs
-docstring
-eval
-mtime
-outlier
-pprof
-rulebench
-unmarshalling
-µs
-GOROOT
-PrepareForEval
-ReportAllocs
-TMPDIR
-benchmarkLock
-goroutines
-runN
