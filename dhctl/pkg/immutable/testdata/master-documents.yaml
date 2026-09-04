@@ -101,9 +101,10 @@ spec:
   manifests:
   - content: "apiVersion: v1\nkind: Pod\nmetadata:\n  annotations:\n    control-plane-manager.deckhouse.io/etcd.advertise-client-urls:
       https://$MY_IP:2379\n  labels:\n    component: etcd\n    tier: control-plane\n
-      \ name: etcd\n  namespace: kube-system\nspec:\n  containers:\n  - command:\n
-      \   - etcd\n    - --advertise-client-urls=https://$MY_IP:2379\n    - --cert-file=/etc/kubernetes/pki/etcd/server.crt\n
-      \   - --client-cert-auth=true\n    - --data-dir=/var/lib/etcd\n    - --initial-advertise-peer-urls=https://$MY_IP:2380\n
+      \   security.deckhouse.io/security-policy-exception: etcd\n  name: etcd\n  namespace:
+      kube-system\nspec:\n  containers:\n  - command:\n    - etcd\n    - --advertise-client-urls=https://$MY_IP:2379\n
+      \   - --cert-file=/etc/kubernetes/pki/etcd/server.crt\n    - --client-cert-auth=true\n
+      \   - --data-dir=/var/lib/etcd\n    - --initial-advertise-peer-urls=https://$MY_IP:2380\n
       \   - --initial-cluster=example-master-0=https://$MY_IP:2380\n    - --watch-progress-notify-interval=5s\n
       \   - --quota-backend-bytes=2147483648\n    - --metrics=extensive\n    - --key-file=/etc/kubernetes/pki/etcd/server.key\n
       \   - --listen-client-urls=https://127.0.0.1:2379,https://$MY_IP:2379\n    -
@@ -122,11 +123,12 @@ spec:
       3\n      httpGet:\n        host: 127.0.0.1\n        path: /health\n        port:
       2381\n        scheme: HTTP\n      periodSeconds: 1\n      timeoutSeconds: 15\n
       \   resources:\n      requests:\n        cpu: \"179m\"\n        memory: \"187904819\"\n
-      \   securityContext:\n      capabilities:\n        drop:\n        - ALL\n      readOnlyRootFilesystem:
-      true\n      runAsGroup: 0\n      runAsNonRoot: false\n      runAsUser: 0\n      seccompProfile:\n
-      \       type: RuntimeDefault\n    startupProbe:\n      failureThreshold: 24\n
-      \     httpGet:\n        host: 127.0.0.1\n        path: /readyz?exclude=non_learner\n
-      \       port: 2381\n        scheme: HTTP\n      initialDelaySeconds: 10\n      periodSeconds:
+      \   securityContext:\n      allowPrivilegeEscalation: false\n      capabilities:\n
+      \       drop:\n        - ALL\n      readOnlyRootFilesystem: true\n      runAsGroup:
+      0\n      runAsNonRoot: false\n      runAsUser: 0\n      seccompProfile:\n        type:
+      RuntimeDefault\n    startupProbe:\n      failureThreshold: 24\n      httpGet:\n
+      \       host: 127.0.0.1\n        path: /readyz?exclude=non_learner\n        port:
+      2381\n        scheme: HTTP\n      initialDelaySeconds: 10\n      periodSeconds:
       10\n      timeoutSeconds: 15\n    volumeMounts:\n    - mountPath: /var/lib/etcd\n
       \     name: etcd-data\n    - mountPath: /etc/kubernetes/pki/etcd\n      name:
       etcd-certs\n      readOnly: true\n  dnsPolicy: ClusterFirstWithHostNet\n  hostNetwork:
@@ -146,6 +148,7 @@ spec:
         labels:
           component: kube-apiserver
           tier: control-plane
+          security.deckhouse.io/security-policy-exception: kube-apiserver
         name: kube-apiserver
         namespace: kube-system
       spec:
@@ -219,6 +222,7 @@ spec:
               cpu: "230m"
               memory: "241591910"
           securityContext:
+            allowPrivilegeEscalation: false
             capabilities:
               drop:
               - ALL
@@ -299,6 +303,7 @@ spec:
         labels:
           component: kube-controller-manager
           tier: control-plane
+          security.deckhouse.io/security-policy-exception: kube-controller-manager
         name: kube-controller-manager
         namespace: kube-system
       spec:
@@ -355,6 +360,7 @@ spec:
               cpu: "51m"
               memory: "53687091"
           securityContext:
+            allowPrivilegeEscalation: false
             capabilities:
               drop:
               - ALL
@@ -435,6 +441,7 @@ spec:
         labels:
           component: kube-scheduler
           tier: control-plane
+          security.deckhouse.io/security-policy-exception: kube-scheduler
         name: kube-scheduler
         namespace: kube-system
       spec:
@@ -478,6 +485,7 @@ spec:
               cpu: "51m"
               memory: "53687091"
           securityContext:
+            allowPrivilegeEscalation: false
             capabilities:
               drop:
               - ALL
