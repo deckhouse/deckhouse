@@ -68,10 +68,11 @@ func filterCredentialSecrets(obj *unstructured.Unstructured) (go_hook.FilterResu
 
 	snap := credentialSecretSnapshot{
 		Name:       secret.Name,
-		AuthScheme: string(secret.Data["authScheme"]),
-		Identity:   string(secret.Data["identity"]),
-		Secret:     string(secret.Data["secret"]),
+		AuthScheme: string(secret.Data[cpapi.CredentialSecretAuthSchemeKey]),
+		Identity:   string(secret.Data[cpapi.CredentialSecretIdentityKey]),
+		Secret:     string(secret.Data[cpapi.CredentialSecretSecretKey]),
 	}
+
 	return snap, nil
 }
 

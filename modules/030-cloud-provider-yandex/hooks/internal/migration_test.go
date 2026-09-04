@@ -20,10 +20,13 @@ import (
 	"bytes"
 	"encoding/json"
 
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/module-sdk/pkg"
 
 	clouddatav1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
@@ -31,8 +34,6 @@ import (
 	ycpccv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/pcc/v1"
 	ycsettingsv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/settings/v1"
 	ycsettingsv2 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/settings/v2"
-	"github.com/deckhouse/module-sdk/pkg"
-	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 )
 
 var _ = Describe("mapPCCInstanceClassToYandexInstanceClassSpec", func() {
@@ -666,7 +667,7 @@ var _ = Describe("IsMigrationResourcesApplied", func() {
 	})
 
 	It("returns false when ModuleConfig version < 2", func() {
-		mc := ModuleConfigFilterResult{Version: 1, Enabled: true, SettingsV2: []byte(`{}`)}
+		mc := ModuleConfigFilterResult{Version: 1, Enabled: true, SettingsV2: &ycsettingsv2.ModuleConfigSettings{}}
 		input := &go_hook.HookInput{
 			Snapshots: snap(mockSnapshots{
 				"module_config": {mockSnapshot{mustMarshal(mc)}},
@@ -676,7 +677,7 @@ var _ = Describe("IsMigrationResourcesApplied", func() {
 	})
 
 	It("returns false when ModuleConfig is disabled", func() {
-		mc := ModuleConfigFilterResult{Version: 2, Enabled: false, SettingsV2: []byte(`{}`)}
+		mc := ModuleConfigFilterResult{Version: 2, Enabled: false, SettingsV2: &ycsettingsv2.ModuleConfigSettings{}}
 		input := &go_hook.HookInput{
 			Snapshots: snap(mockSnapshots{
 				"module_config": {mockSnapshot{mustMarshal(mc)}},
@@ -696,7 +697,7 @@ var _ = Describe("IsMigrationResourcesApplied", func() {
 	})
 
 	It("returns false when no credential secrets", func() {
-		mc := ModuleConfigFilterResult{Version: 2, Enabled: true, SettingsV2: []byte(`{}`)}
+		mc := ModuleConfigFilterResult{Version: 2, Enabled: true, SettingsV2: &ycsettingsv2.ModuleConfigSettings{}}
 		input := &go_hook.HookInput{
 			Snapshots: snap(mockSnapshots{
 				"module_config":      {mockSnapshot{mustMarshal(mc)}},
@@ -707,7 +708,7 @@ var _ = Describe("IsMigrationResourcesApplied", func() {
 	})
 
 	It("returns true when all resources present (no NodeGroups in PCC)", func() {
-		mc := ModuleConfigFilterResult{Version: 2, Enabled: true, SettingsV2: []byte(`{}`)}
+		mc := ModuleConfigFilterResult{Version: 2, Enabled: true, SettingsV2: &ycsettingsv2.ModuleConfigSettings{}}
 		creds := []NamedResourceFilterResult{{Name: "d8-credentials"}}
 		ngs := []NamedResourceFilterResult{{Name: "master"}}
 		ics := []NamedResourceFilterResult{{Name: cpapi.BuildInstanceClassName("master")}}
@@ -724,7 +725,7 @@ var _ = Describe("IsMigrationResourcesApplied", func() {
 	})
 
 	It("returns false when master NodeGroup missing but PCC has masterNodeGroup", func() {
-		mc := ModuleConfigFilterResult{Version: 2, Enabled: true, SettingsV2: []byte(`{}`)}
+		mc := ModuleConfigFilterResult{Version: 2, Enabled: true, SettingsV2: &ycsettingsv2.ModuleConfigSettings{}}
 		creds := []NamedResourceFilterResult{{Name: "d8-credentials"}}
 		// no "master" node group
 
@@ -742,7 +743,7 @@ var _ = Describe("IsMigrationResourcesApplied", func() {
 	})
 
 	It("returns false when a NodeGroup from PCC is missing", func() {
-		mc := ModuleConfigFilterResult{Version: 2, Enabled: true, SettingsV2: []byte(`{}`)}
+		mc := ModuleConfigFilterResult{Version: 2, Enabled: true, SettingsV2: &ycsettingsv2.ModuleConfigSettings{}}
 		creds := []NamedResourceFilterResult{{Name: "d8-credentials"}}
 		ngs := []NamedResourceFilterResult{{Name: "master"}}
 		ics := []NamedResourceFilterResult{{Name: cpapi.BuildInstanceClassName("master")}}
@@ -764,7 +765,7 @@ var _ = Describe("IsMigrationResourcesApplied", func() {
 	})
 
 	It("returns true with master and all NodeGroups present", func() {
-		mc := ModuleConfigFilterResult{Version: 2, Enabled: true, SettingsV2: []byte(`{}`)}
+		mc := ModuleConfigFilterResult{Version: 2, Enabled: true, SettingsV2: &ycsettingsv2.ModuleConfigSettings{}}
 		creds := []NamedResourceFilterResult{{Name: "d8-credentials"}}
 		ngs := []NamedResourceFilterResult{
 			{Name: "master"},
@@ -792,7 +793,7 @@ var _ = Describe("IsMigrationResourcesApplied", func() {
 	})
 
 	It("returns false when InstanceClass is missing (only NodeGroup present)", func() {
-		mc := ModuleConfigFilterResult{Version: 2, Enabled: true, SettingsV2: []byte(`{}`)}
+		mc := ModuleConfigFilterResult{Version: 2, Enabled: true, SettingsV2: &ycsettingsv2.ModuleConfigSettings{}}
 		creds := []NamedResourceFilterResult{{Name: "d8-credentials"}}
 		ngs := []NamedResourceFilterResult{{Name: "master"}}
 		// no instance classes
