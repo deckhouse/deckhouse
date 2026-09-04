@@ -20,16 +20,21 @@ limitations under the License.
 // A manage role carries the label rbac.deckhouse.io/use-role naming the use role its subjects get
 // in the namespaces of the modules it manages. Those namespaces are found through the role's
 // aggregation rule: every manage ClusterRole matched by the selectors contributes the namespace in
-// its rbac.deckhouse.io/namespace label (one level of nesting for subsystem roles aggregating
-// module roles). For each manage ClusterRoleBinding and each such namespace a RoleBinding
-// d8:use:<use-role>:binding:<binding> is kept; automated use RoleBindings that are no longer
-// expected are removed. The whole set is recomputed on every change (single request key).
+// its rbac.deckhouse.io/namespace label, and roles that aggregate further are followed to any
+// depth (subsystem roles aggregating module roles, "all" aggregating subsystems). For each manage
+// ClusterRoleBinding and each such namespace a RoleBinding d8:use:<use-role>:binding:<binding> is
+// kept; automated use RoleBindings that are no longer expected are removed. The whole set is
+// recomputed on every change (single request key); the manage ClusterRoleBindings are read through
+// a cache index so that a reconcile does not copy every ClusterRoleBinding of the cluster.
 package managebindings
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"maps"
 	"reflect"
+	"slices"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -40,6 +45,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -49,6 +55,10 @@ import (
 const (
 	// RequestName is the constant key every event is mapped to.
 	RequestName = "manage-bindings"
+
+	// ManageBindingIndexField indexes the ClusterRoleBindings that reference a manage role.
+	ManageBindingIndexField = "user-authz.deckhouse.io/manage-binding"
+	manageBindingIndexValue = "true"
 
 	LabelKind      = "rbac.deckhouse.io/kind"
 	LabelUseRole   = "rbac.deckhouse.io/use-role"
@@ -81,8 +91,24 @@ func New(c client.Client, log logr.Logger) *Reconciler {
 	return &Reconciler{client: c, log: log}
 }
 
-// Register wires the reconciler onto the manager.
-func Register(mgr manager.Manager) error {
+// ManageBindingIndexValue is the indexer of ManageBindingIndexField.
+func ManageBindingIndexValue(obj client.Object) []string {
+	crb, ok := obj.(*rbacv1.ClusterRoleBinding)
+	if !ok || !isManageBinding(crb) {
+		return nil
+	}
+	return []string{manageBindingIndexValue}
+}
+
+func isManageBinding(crb *rbacv1.ClusterRoleBinding) bool {
+	return crb.RoleRef.Kind == "ClusterRole" && strings.HasPrefix(crb.RoleRef.Name, manageRolePrefix)
+}
+
+// Register indexes the manage ClusterRoleBindings and wires the reconciler onto the manager.
+func Register(ctx context.Context, mgr manager.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &rbacv1.ClusterRoleBinding{}, ManageBindingIndexField, ManageBindingIndexValue); err != nil {
+		return fmt.Errorf("index clusterrolebindings by manage role: %w", err)
+	}
 	r := New(mgr.GetClient(), mgr.GetLogger().WithName("manage-bindings"))
 	if err := r.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setup manage-bindings controller: %w", err)
@@ -97,16 +123,16 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 		return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: RequestName}}}
 	})
 
-	manageBinding := predicate.NewPredicateFuncs(func(obj client.Object) bool {
+	manageBinding := eitherSide(func(obj client.Object) bool {
 		crb, ok := obj.(*rbacv1.ClusterRoleBinding)
-		return ok && crb.RoleRef.Kind == "ClusterRole" && strings.HasPrefix(crb.RoleRef.Name, manageRolePrefix)
+		return ok && isManageBinding(crb)
 	})
 
-	manageRole := predicate.NewPredicateFuncs(func(obj client.Object) bool {
+	manageRole := eitherSide(func(obj client.Object) bool {
 		return obj.GetLabels()[LabelKind] == KindManage
 	})
 
-	automatedUseBinding := predicate.NewPredicateFuncs(func(obj client.Object) bool {
+	automatedUseBinding := eitherSide(func(obj client.Object) bool {
 		return isAutomatedUseBinding(obj.GetLabels())
 	})
 
@@ -118,50 +144,58 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 		Complete(r)
 }
 
+// eitherSide builds a predicate from match that, on updates, passes when either object matches.
+func eitherSide(match func(client.Object) bool) predicate.Funcs {
+	return predicate.Funcs{
+		CreateFunc:  func(e event.CreateEvent) bool { return match(e.Object) },
+		DeleteFunc:  func(e event.DeleteEvent) bool { return match(e.Object) },
+		GenericFunc: func(e event.GenericEvent) bool { return match(e.Object) },
+		UpdateFunc:  func(e event.UpdateEvent) bool { return match(e.ObjectOld) || match(e.ObjectNew) },
+	}
+}
+
 // Reconcile recomputes the expected use RoleBindings from the manage ClusterRoleBindings and makes
 // the cluster match: missing ones are created, differing ones updated, unexpected automated ones
-// deleted. Creation and update come before deletion.
+// deleted. Creation and update come before deletion, and nothing is deleted while an expected
+// binding could not be written.
 func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconcile.Result, error) {
-	if err := ctx.Err(); err != nil {
-		return reconcile.Result{}, err
-	}
-
 	roles := &rbacv1.ClusterRoleList{}
 	if err := r.client.List(ctx, roles, client.MatchingLabels(ManageRoleLabels)); err != nil {
 		return reconcile.Result{}, fmt.Errorf("list manage clusterroles: %w", err)
 	}
-	manageRoles := make(map[string]*rbacv1.ClusterRole, len(roles.Items))
-	for i := range roles.Items {
-		manageRoles[roles.Items[i].Name] = &roles.Items[i]
-	}
+	resolver := NewResolver(roles.Items)
 
 	bindings := &rbacv1.ClusterRoleBindingList{}
-	if err := r.client.List(ctx, bindings); err != nil {
-		return reconcile.Result{}, fmt.Errorf("list clusterrolebindings: %w", err)
+	if err := r.client.List(ctx, bindings, client.MatchingFields{ManageBindingIndexField: manageBindingIndexValue}); err != nil {
+		return reconcile.Result{}, fmt.Errorf("list manage clusterrolebindings: %w", err)
 	}
 
 	expected := make(map[client.ObjectKey]*rbacv1.RoleBinding)
 	for i := range bindings.Items {
 		crb := &bindings.Items[i]
-		if crb.RoleRef.Kind != "ClusterRole" {
+		if !isManageBinding(crb) {
 			continue
 		}
 
-		useRole, namespaces := UseRoleAndNamespaces(manageRoles, crb.RoleRef.Name)
+		useRole, namespaces := resolver.UseRoleAndNamespaces(crb.RoleRef.Name)
 		if useRole == "" {
 			continue
 		}
 
-		for namespace := range namespaces {
+		for _, namespace := range namespaces {
 			rb := UseBinding(crb, useRole, namespace)
 			expected[client.ObjectKeyFromObject(rb)] = rb
 		}
 	}
 
-	for key, want := range expected {
-		if err := r.ensure(ctx, key, want); err != nil {
-			return reconcile.Result{}, err
+	var errs []error
+	for _, key := range slices.SortedFunc(maps.Keys(expected), compareKeys) {
+		if err := r.ensure(ctx, key, expected[key]); err != nil {
+			errs = append(errs, err)
 		}
+	}
+	if len(errs) != 0 {
+		return reconcile.Result{}, errors.Join(errs...)
 	}
 
 	automated := &rbacv1.RoleBindingList{}
@@ -177,39 +211,51 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 			continue
 		}
 		if err := r.client.Delete(ctx, rb); err != nil && !apierrors.IsNotFound(err) {
-			return reconcile.Result{}, fmt.Errorf("delete use binding %s/%s: %w", rb.Namespace, rb.Name, err)
+			errs = append(errs, fmt.Errorf("delete use binding %s/%s: %w", rb.Namespace, rb.Name, err))
+			continue
 		}
 		r.log.Info("use binding removed", "namespace", rb.Namespace, "name", rb.Name)
 	}
 
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, errors.Join(errs...)
 }
 
+func compareKeys(a, b client.ObjectKey) int {
+	if c := strings.Compare(a.Namespace, b.Namespace); c != 0 {
+		return c
+	}
+	return strings.Compare(a.Name, b.Name)
+}
+
+// ensure makes the RoleBinding at key equal to want in everything the reconciler owns: its labels
+// and annotation, roleRef and subjects. Foreign labels and annotations are preserved. roleRef is
+// immutable, so a binding with a different one is recreated.
 func (r *Reconciler) ensure(ctx context.Context, key client.ObjectKey, want *rbacv1.RoleBinding) error {
 	current := &rbacv1.RoleBinding{}
 	err := r.client.Get(ctx, key, current)
 	if apierrors.IsNotFound(err) {
-		if err := r.client.Create(ctx, want); err != nil && !apierrors.IsAlreadyExists(err) {
-			return fmt.Errorf("create use binding %s: %w", key, err)
-		}
-		r.log.Info("use binding created", "namespace", key.Namespace, "name", key.Name)
-		return nil
+		return r.create(ctx, key, want)
 	}
 	if err != nil {
 		return fmt.Errorf("get use binding %s: %w", key, err)
 	}
 
-	if reflect.DeepEqual(current.Labels, want.Labels) &&
-		reflect.DeepEqual(current.Annotations, want.Annotations) &&
-		reflect.DeepEqual(current.RoleRef, want.RoleRef) &&
+	if !reflect.DeepEqual(current.RoleRef, want.RoleRef) {
+		if err := r.client.Delete(ctx, current); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("delete use binding %s with a stale roleRef: %w", key, err)
+		}
+		r.log.Info("use binding recreated: roleRef changed", "namespace", key.Namespace, "name", key.Name, "from", current.RoleRef.Name, "to", want.RoleRef.Name)
+		return r.create(ctx, key, want)
+	}
+
+	if hasEntries(current.Labels, want.Labels) && hasEntries(current.Annotations, want.Annotations) &&
 		reflect.DeepEqual(current.Subjects, want.Subjects) {
 		return nil
 	}
 
 	updated := current.DeepCopy()
-	updated.Labels = want.Labels
-	updated.Annotations = want.Annotations
-	updated.RoleRef = want.RoleRef
+	updated.Labels = merged(current.Labels, want.Labels)
+	updated.Annotations = merged(current.Annotations, want.Annotations)
 	updated.Subjects = want.Subjects
 	if err := r.client.Update(ctx, updated); err != nil {
 		return fmt.Errorf("update use binding %s: %w", key, err)
@@ -219,10 +265,71 @@ func (r *Reconciler) ensure(ctx context.Context, key client.ObjectKey, want *rba
 	return nil
 }
 
-// UseRoleAndNamespaces resolves the use role granted by the manage role roleName and the
+func (r *Reconciler) create(ctx context.Context, key client.ObjectKey, want *rbacv1.RoleBinding) error {
+	if err := r.client.Create(ctx, want); err != nil && !apierrors.IsAlreadyExists(err) {
+		return fmt.Errorf("create use binding %s: %w", key, err)
+	}
+	r.log.Info("use binding created", "namespace", key.Namespace, "name", key.Name)
+	return nil
+}
+
+// hasEntries reports whether have contains every entry of want.
+func hasEntries(have, want map[string]string) bool {
+	for k, v := range want {
+		if got, ok := have[k]; !ok || got != v {
+			return false
+		}
+	}
+	return true
+}
+
+// merged returns have with every entry of want set.
+func merged(have, want map[string]string) map[string]string {
+	out := maps.Clone(have)
+	if out == nil {
+		out = make(map[string]string, len(want))
+	}
+	maps.Copy(out, want)
+	return out
+}
+
+// Resolver answers, for a manage role, which use role it grants and in which namespaces, following
+// the aggregation rules of the manage roles to any depth. Results are memoised per role.
+type Resolver struct {
+	roles      map[string]*rbacv1.ClusterRole
+	selectors  map[string][]labels.Selector
+	namespaces map[string][]string
+}
+
+// NewResolver indexes the manage ClusterRoles. Aggregation selectors that cannot be parsed are
+// ignored, as the API server ignores them.
+func NewResolver(roles []rbacv1.ClusterRole) *Resolver {
+	r := &Resolver{
+		roles:      make(map[string]*rbacv1.ClusterRole, len(roles)),
+		selectors:  make(map[string][]labels.Selector, len(roles)),
+		namespaces: make(map[string][]string),
+	}
+	for i := range roles {
+		role := &roles[i]
+		r.roles[role.Name] = role
+		if role.AggregationRule == nil {
+			continue
+		}
+		for j := range role.AggregationRule.ClusterRoleSelectors {
+			selector, err := metav1.LabelSelectorAsSelector(&role.AggregationRule.ClusterRoleSelectors[j])
+			if err != nil {
+				continue
+			}
+			r.selectors[role.Name] = append(r.selectors[role.Name], selector)
+		}
+	}
+	return r
+}
+
+// UseRoleAndNamespaces resolves the use role granted by the manage role roleName and the sorted
 // namespaces it applies to. The empty use role means "not a manage role we project".
-func UseRoleAndNamespaces(manageRoles map[string]*rbacv1.ClusterRole, roleName string) (string, map[string]struct{}) {
-	role, ok := manageRoles[roleName]
+func (r *Resolver) UseRoleAndNamespaces(roleName string) (string, []string) {
+	role, ok := r.roles[roleName]
 	if !ok {
 		return "", nil
 	}
@@ -231,42 +338,44 @@ func UseRoleAndNamespaces(manageRoles map[string]*rbacv1.ClusterRole, roleName s
 		return "", nil
 	}
 
-	namespaces := make(map[string]struct{})
-	for _, candidate := range manageRoles {
-		if !matchesAggregation(role.AggregationRule, candidate.Labels) {
-			continue
-		}
-
-		if candidate.AggregationRule == nil {
-			if namespace, ok := candidate.Labels[LabelNamespace]; ok {
-				namespaces[namespace] = struct{}{}
-			}
-			continue
-		}
-
-		// A subsystem role aggregating module roles: one more level down.
-		for _, nested := range manageRoles {
-			if !matchesAggregation(candidate.AggregationRule, nested.Labels) {
-				continue
-			}
-			if namespace, ok := nested.Labels[LabelNamespace]; ok {
-				namespaces[namespace] = struct{}{}
-			}
-		}
+	if namespaces, done := r.namespaces[roleName]; done {
+		return useRole, namespaces
 	}
+
+	set := make(map[string]struct{})
+	r.collect(roleName, map[string]struct{}{roleName: {}}, set)
+	namespaces := slices.Sorted(maps.Keys(set))
+	r.namespaces[roleName] = namespaces
 
 	return useRole, namespaces
 }
 
-func matchesAggregation(rule *rbacv1.AggregationRule, roleLabels map[string]string) bool {
-	if rule == nil {
-		return false
+// collect adds to set the namespaces of every role aggregated by roleName, directly or through
+// other aggregating roles. visited guards against aggregation cycles.
+func (r *Resolver) collect(roleName string, visited, set map[string]struct{}) {
+	selectors := r.selectors[roleName]
+	if len(selectors) == 0 {
+		return
 	}
-	for _, selector := range rule.ClusterRoleSelectors {
-		if selector.MatchLabels == nil {
+	for name, candidate := range r.roles {
+		if _, seen := visited[name]; seen {
 			continue
 		}
-		if labels.SelectorFromSet(selector.MatchLabels).Matches(labels.Set(roleLabels)) {
+		if !matchesAny(selectors, candidate.Labels) {
+			continue
+		}
+		visited[name] = struct{}{}
+		if namespace, ok := candidate.Labels[LabelNamespace]; ok {
+			set[namespace] = struct{}{}
+		}
+		r.collect(name, visited, set)
+	}
+}
+
+func matchesAny(selectors []labels.Selector, roleLabels map[string]string) bool {
+	set := labels.Set(roleLabels)
+	for _, selector := range selectors {
+		if selector.Matches(set) {
 			return true
 		}
 	}
@@ -280,16 +389,18 @@ func UseBinding(manage *rbacv1.ClusterRoleBinding, useRole, namespace string) *r
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        fmt.Sprintf("d8:use:%s:binding:%s", useRole, manage.Name),
 			Namespace:   namespace,
-			Labels:      map[string]string{labelHeritage: "deckhouse", labelAutomated: "true"},
+			Labels:      maps.Clone(AutomatedLabels),
 			Annotations: map[string]string{relatedWithAnnotatio: manage.Name},
 		},
 		RoleRef:  rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: useRolePrefix + useRole},
-		Subjects: manage.Subjects,
+		Subjects: slices.Clone(manage.Subjects),
 	}
 }
 
 // isAutomatedUseBinding matches the RoleBindings this reconciler owns: automated Deckhouse bindings
 // that are not dict bindings (those are ClusterRoleBindings anyway, the check is defence in depth).
+// The automated label is used by nothing else in Deckhouse, so every such RoleBinding is a
+// projection of this reconciler or of the hook it replaced.
 func isAutomatedUseBinding(objLabels map[string]string) bool {
 	return objLabels[labelHeritage] == "deckhouse" && objLabels[labelAutomated] == "true" && objLabels[labelDict] != "true"
 }

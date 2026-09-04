@@ -17,11 +17,14 @@ limitations under the License.
 package dictbindings
 
 import (
+	"maps"
+	"strings"
 	"testing"
 
 	"github.com/go-logr/logr"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -45,19 +48,38 @@ func sa(ns, name string) rbacv1.Subject {
 // legacyDict mimics a dict binding created by the hook with a generated name.
 func legacyDict(name string, subject rbacv1.Subject) *rbacv1.ClusterRoleBinding {
 	return &rbacv1.ClusterRoleBinding{
-		ObjectMeta: metav1.ObjectMeta{Name: name, Labels: copyLabels(DictLabels)},
+		ObjectMeta: metav1.ObjectMeta{Name: name, Labels: maps.Clone(DictLabels)},
 		RoleRef:    rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: DictRoleName},
 		Subjects:   []rbacv1.Subject{subject},
 	}
 }
 
-func reconcileWith(t *testing.T, objs ...client.Object) client.Client {
+// newClient prepares a fake client the way the manager does: with the dict source index.
+func newClient(t *testing.T, objs ...client.Object) client.Client {
 	t.Helper()
-	c := fake.NewClientBuilder().WithScheme(clientgoscheme.Scheme).WithObjects(objs...).Build()
+	scheme := runtime.NewScheme()
+	if err := clientgoscheme.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	return fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithIndex(&rbacv1.RoleBinding{}, SourceIndexField, SourceIndexValue).
+		WithObjects(objs...).
+		Build()
+}
+
+func reconcileOnce(t *testing.T, c client.Client) {
+	t.Helper()
 	r := New(c, logr.Discard())
 	if _, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: client.ObjectKey{Name: RequestName}}); err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
+}
+
+func reconcileWith(t *testing.T, objs ...client.Object) client.Client {
+	t.Helper()
+	c := newClient(t, objs...)
+	reconcileOnce(t, c)
 	return c
 }
 
@@ -163,7 +185,7 @@ func TestSubjectKey(t *testing.T) {
 		"user:jane":   user("Jane"),
 		"group:devs":  group("Devs"),
 		"sa:team:bot": sa("team", "bot"),
-		"user:averyveryveryveryveryveryveryveryveryveryverylongn": user("averyveryveryveryveryveryveryveryveryveryverylongnameXXXXXXXXXX"),
+		"user:averyveryveryveryveryveryveryveryveryveryverylongnamexxxxxxxxxx": user("averyveryveryveryveryveryveryveryveryveryverylongnameXXXXXXXXXX"),
 	}
 	for want, subject := range cases {
 		if got := SubjectKey(subject); got != want {
@@ -181,5 +203,68 @@ func TestBindingNameIsStableAndPrefixed(t *testing.T) {
 	}
 	if a.Annotations[SubjectAnnotat] != "user:jane" || a.Labels[labelDict] != "true" {
 		t.Errorf("metadata = %+v", a.ObjectMeta)
+	}
+}
+
+// Two subjects that only differ after the 55th character are two subjects (the hook this
+// reconciler replaces collapsed them).
+func TestReconcile_LongSubjectsStayDistinct(t *testing.T) {
+	t.Parallel()
+	prefix := strings.Repeat("a", 60)
+	c := reconcileWith(t,
+		roleBinding("team", "devs", "d8:use:role:user", nil, user(prefix+"-one"), user(prefix+"-two")),
+	)
+
+	got := dictSubjects(t, c)
+	if len(got) != 2 {
+		t.Fatalf("dict subjects = %d, want 2 distinct bindings", len(got))
+	}
+}
+
+func TestReconcile_RepairsBrokenDictBindings(t *testing.T) {
+	t.Parallel()
+	wrongRole := legacyDict("d8:dict:wrong-role", user("jane"))
+	wrongRole.RoleRef.Name = "cluster-admin"
+	noSubject := legacyDict("d8:dict:no-subject", user("jane"))
+	noSubject.Subjects = nil
+	c := reconcileWith(t,
+		roleBinding("team", "devs", "d8:use:role:user", nil, user("jane"), user("bob")),
+		wrongRole,
+		noSubject,
+		legacyDict("d8:dict:bob", user("bob")),
+		legacyDict("d8:dict:bob-duplicate", user("bob")),
+	)
+
+	got := dictSubjects(t, c)
+	if len(got) != 2 {
+		t.Fatalf("dict subjects = %v, want jane and bob", got)
+	}
+	for _, name := range []string{"d8:dict:wrong-role", "d8:dict:no-subject", "d8:dict:bob-duplicate"} {
+		if err := c.Get(t.Context(), client.ObjectKey{Name: name}, &rbacv1.ClusterRoleBinding{}); err == nil {
+			t.Errorf("%s must be removed", name)
+		}
+	}
+	if err := c.Get(t.Context(), client.ObjectKey{Name: "d8:dict:bob"}, &rbacv1.ClusterRoleBinding{}); err != nil {
+		t.Errorf("the first binding of a duplicated subject must be kept: %v", err)
+	}
+	list := &rbacv1.ClusterRoleBindingList{}
+	if err := c.List(t.Context(), list); err != nil {
+		t.Fatal(err)
+	}
+	if len(list.Items) != 2 {
+		t.Errorf("bindings = %d, want exactly one per subject", len(list.Items))
+	}
+}
+
+func TestSourceIndexValue(t *testing.T) {
+	t.Parallel()
+	if got := SourceIndexValue(roleBinding("team", "devs", "d8:use:role:user", nil, user("jane"))); len(got) != 1 {
+		t.Errorf("user binding to a use role must be indexed, got %v", got)
+	}
+	if got := SourceIndexValue(roleBinding("team", "x", "view", nil, user("jane"))); got != nil {
+		t.Errorf("unrelated binding must not be indexed, got %v", got)
+	}
+	if got := SourceIndexValue(&rbacv1.ClusterRoleBinding{}); got != nil {
+		t.Errorf("a ClusterRoleBinding must not be indexed, got %v", got)
 	}
 }

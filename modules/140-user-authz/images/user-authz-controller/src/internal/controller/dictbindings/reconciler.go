@@ -20,15 +20,19 @@ limitations under the License.
 // not created by Deckhouse) and from the RoleBindings the module itself creates for the current
 // model's namespaced rules (roleRef user-authz:user|privileged-user|editor|admin). Each distinct
 // subject gets one ClusterRoleBinding d8:dict:*; bindings whose subject no longer holds any use
-// role are removed. The whole set is recomputed on every change, so the reconciler is keyed by a
-// single constant request.
+// role, duplicates, and bindings that lost their roleRef or subject are removed. The whole set is
+// recomputed on every change, so the reconciler is keyed by a single constant request; the
+// contributing RoleBindings are read through a cache index, so a reconcile copies only them and
+// not every RoleBinding of the cluster.
 package dictbindings
 
 import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
+	"maps"
 	"slices"
 	"strings"
 
@@ -39,6 +43,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -49,6 +54,10 @@ const (
 	// RequestName is the constant key every event is mapped to.
 	RequestName = "dict-bindings"
 
+	// SourceIndexField indexes the RoleBindings whose subjects must hold d8:use:dict.
+	SourceIndexField = "user-authz.deckhouse.io/dict-source"
+	sourceIndexValue = "true"
+
 	DictRoleName   = "d8:use:dict"
 	NamePrefix     = "d8:dict:"
 	SubjectAnnotat = "rbac.deckhouse.io/subject"
@@ -58,9 +67,6 @@ const (
 	labelDict      = "rbac.deckhouse.io/dict"
 
 	useRolePrefix = "d8:use:role:"
-
-	// subjectKeyMaxLen bounds the subject key, as the hook this reconciler replaces did.
-	subjectKeyMaxLen = 55
 )
 
 // DictLabels mark the ClusterRoleBindings this reconciler owns.
@@ -89,8 +95,20 @@ func New(c client.Client, log logr.Logger) *Reconciler {
 	return &Reconciler{client: c, log: log}
 }
 
-// Register wires the reconciler onto the manager.
-func Register(mgr manager.Manager) error {
+// SourceIndexValue is the indexer of SourceIndexField.
+func SourceIndexValue(obj client.Object) []string {
+	rb, ok := obj.(*rbacv1.RoleBinding)
+	if !ok || !contributesSubjects(rb) {
+		return nil
+	}
+	return []string{sourceIndexValue}
+}
+
+// Register indexes the contributing RoleBindings and wires the reconciler onto the manager.
+func Register(ctx context.Context, mgr manager.Manager) error {
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &rbacv1.RoleBinding{}, SourceIndexField, SourceIndexValue); err != nil {
+		return fmt.Errorf("index rolebindings by dict source: %w", err)
+	}
 	r := New(mgr.GetClient(), mgr.GetLogger().WithName("dict-bindings"))
 	if err := r.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setup dict-bindings controller: %w", err)
@@ -99,18 +117,20 @@ func Register(mgr manager.Manager) error {
 }
 
 // SetupWithManager watches the RoleBindings that contribute subjects and the dict
-// ClusterRoleBindings themselves; every event maps to the single request.
+// ClusterRoleBindings themselves; every event maps to the single request. Updates are relevant
+// when either the old or the new object is of interest, so a binding that stops contributing
+// (roleRef cannot change, but labels can) is still processed.
 func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	single := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, _ client.Object) []reconcile.Request {
 		return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: RequestName}}}
 	})
 
-	contributes := predicate.NewPredicateFuncs(func(obj client.Object) bool {
+	contributes := eitherSide(func(obj client.Object) bool {
 		rb, ok := obj.(*rbacv1.RoleBinding)
 		return ok && contributesSubjects(rb)
 	})
 
-	isDict := predicate.NewPredicateFuncs(func(obj client.Object) bool {
+	isDict := eitherSide(func(obj client.Object) bool {
 		return hasLabels(obj.GetLabels(), DictLabels)
 	})
 
@@ -121,15 +141,22 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 		Complete(r)
 }
 
-// Reconcile recomputes the set of subjects and makes the dict ClusterRoleBindings match it.
-func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconcile.Result, error) {
-	if err := ctx.Err(); err != nil {
-		return reconcile.Result{}, err
+// eitherSide builds a predicate from match that, on updates, passes when either object matches.
+func eitherSide(match func(client.Object) bool) predicate.Funcs {
+	return predicate.Funcs{
+		CreateFunc:  func(e event.CreateEvent) bool { return match(e.Object) },
+		DeleteFunc:  func(e event.DeleteEvent) bool { return match(e.Object) },
+		GenericFunc: func(e event.GenericEvent) bool { return match(e.Object) },
+		UpdateFunc:  func(e event.UpdateEvent) bool { return match(e.ObjectOld) || match(e.ObjectNew) },
 	}
+}
 
+// Reconcile recomputes the set of subjects and makes the dict ClusterRoleBindings match it. Every
+// object is attempted even when another one failed; the errors are reported together.
+func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconcile.Result, error) {
 	roleBindings := &rbacv1.RoleBindingList{}
-	if err := r.client.List(ctx, roleBindings); err != nil {
-		return reconcile.Result{}, fmt.Errorf("list rolebindings: %w", err)
+	if err := r.client.List(ctx, roleBindings, client.MatchingFields{SourceIndexField: sourceIndexValue}); err != nil {
+		return reconcile.Result{}, fmt.Errorf("list contributing rolebindings: %w", err)
 	}
 
 	subjects := make(map[string]rbacv1.Subject)
@@ -151,37 +178,59 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 		return reconcile.Result{}, fmt.Errorf("list dict clusterrolebindings: %w", err)
 	}
 
+	var errs []error
+	granted := make(map[string]struct{}, len(existing.Items))
 	for i := range existing.Items {
 		crb := &existing.Items[i]
-		if len(crb.Subjects) == 0 {
-			continue
+
+		reason := ""
+		switch {
+		case len(crb.Subjects) == 0:
+			reason = "no subject"
+		case crb.RoleRef.Kind != "ClusterRole" || crb.RoleRef.Name != DictRoleName:
+			// roleRef is immutable; a wrong one is replaced by deleting the object, the subject is
+			// granted again below.
+			reason = "wrong roleRef " + crb.RoleRef.Name
+		}
+		if reason == "" {
+			key := SubjectKey(crb.Subjects[0])
+			switch {
+			case len(crb.Subjects) != 1:
+				reason = "more than one subject"
+			default:
+				if _, wanted := subjects[key]; !wanted {
+					reason = "subject holds no use role"
+				} else if _, dup := granted[key]; dup {
+					reason = "duplicate of another dict binding"
+				}
+			}
+			if reason == "" {
+				granted[key] = struct{}{}
+				delete(subjects, key)
+				continue
+			}
 		}
 
-		key := SubjectKey(crb.Subjects[0])
-		if _, wanted := subjects[key]; !wanted {
-			if err := r.client.Delete(ctx, crb); err != nil && !apierrors.IsNotFound(err) {
-				return reconcile.Result{}, fmt.Errorf("delete dict binding %s: %w", crb.Name, err)
-			}
-			r.log.Info("dict binding removed", "name", crb.Name, "subject", key)
+		if err := r.client.Delete(ctx, crb); err != nil && !apierrors.IsNotFound(err) {
+			errs = append(errs, fmt.Errorf("delete dict binding %s: %w", crb.Name, err))
 			continue
 		}
-		// Already granted; a subject may be bound by more than one object (legacy random names),
-		// deleting only the first is enough to keep one per subject over time.
-		delete(subjects, key)
+		r.log.Info("dict binding removed", "name", crb.Name, "reason", reason)
 	}
 
-	for key, subject := range subjects {
-		crb := Binding(key, subject)
+	for _, key := range slices.Sorted(maps.Keys(subjects)) {
+		crb := Binding(key, subjects[key])
 		if err := r.client.Create(ctx, crb); err != nil {
 			if apierrors.IsAlreadyExists(err) {
 				continue
 			}
-			return reconcile.Result{}, fmt.Errorf("create dict binding for %s: %w", key, err)
+			errs = append(errs, fmt.Errorf("create dict binding for %s: %w", key, err))
+			continue
 		}
 		r.log.Info("dict binding created", "name", crb.Name, "subject", key)
 	}
 
-	return reconcile.Result{}, nil
+	return reconcile.Result{}, errors.Join(errs...)
 }
 
 // contributesSubjects reports whether the RoleBinding's subjects must hold d8:use:dict: either a
@@ -201,9 +250,10 @@ func contributesSubjects(rb *rbacv1.RoleBinding) bool {
 	return deckhouse && slices.Contains(reservedRoleRefs, rb.RoleRef.Name)
 }
 
-// SubjectKey is the identity of a subject as the hook this reconciler replaces computed it:
-// kind[:namespace]:name, ServiceAccount shortened to sa, lower-cased and cut at 55 characters.
-// Existing dict bindings are matched by this key of their first subject, so it must not change.
+// SubjectKey is the identity of a subject: kind[:namespace]:name, ServiceAccount shortened to sa,
+// lower-cased. Existing dict bindings are matched by the key of their first subject, so the
+// key must stay a pure function of the subject. Unlike the hook this reconciler replaces, the key
+// is not truncated: two subjects sharing a long prefix are two subjects.
 func SubjectKey(subject rbacv1.Subject) string {
 	kind := subject.Kind
 	if kind == rbacv1.ServiceAccountKind {
@@ -213,9 +263,6 @@ func SubjectKey(subject rbacv1.Subject) string {
 	key := kind + ":" + subject.Name
 	if subject.Namespace != "" {
 		key = kind + ":" + subject.Namespace + ":" + subject.Name
-	}
-	if len(key) > subjectKeyMaxLen {
-		key = key[:subjectKeyMaxLen]
 	}
 
 	return strings.ToLower(key)
@@ -231,7 +278,7 @@ func Binding(key string, subject rbacv1.Subject) *rbacv1.ClusterRoleBinding {
 		TypeMeta: metav1.TypeMeta{APIVersion: rbacv1.SchemeGroupVersion.String(), Kind: "ClusterRoleBinding"},
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        NamePrefix + hex.EncodeToString(sum[:])[:16],
-			Labels:      copyLabels(DictLabels),
+			Labels:      maps.Clone(DictLabels),
 			Annotations: map[string]string{SubjectAnnotat: key},
 		},
 		RoleRef:  rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: DictRoleName},
@@ -246,12 +293,4 @@ func hasLabels(have, want map[string]string) bool {
 		}
 	}
 	return true
-}
-
-func copyLabels(in map[string]string) map[string]string {
-	out := make(map[string]string, len(in))
-	for k, v := range in {
-		out[k] = v
-	}
-	return out
 }
