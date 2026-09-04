@@ -64,6 +64,7 @@ func newClient(t *testing.T, objs ...client.Object) client.Client {
 	return fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithIndex(&rbacv1.RoleBinding{}, SourceIndexField, SourceIndexValue).
+		WithIndex(&rbacv1.ClusterRoleBinding{}, OwnedIndexField, OwnedIndexValue).
 		WithObjects(objs...).
 		Build()
 }
@@ -201,7 +202,7 @@ func TestBindingNameIsStableAndPrefixed(t *testing.T) {
 	if a.Name != b.Name || len(a.Name) <= len(NamePrefix) || a.Name[:len(NamePrefix)] != NamePrefix {
 		t.Fatalf("names = %q / %q", a.Name, b.Name)
 	}
-	if a.Annotations[SubjectAnnotat] != "user:jane" || a.Labels[labelDict] != "true" {
+	if a.Annotations[SubjectAnnotation] != "user:jane" || a.Labels[labelDict] != "true" {
 		t.Errorf("metadata = %+v", a.ObjectMeta)
 	}
 }
@@ -266,5 +267,16 @@ func TestSourceIndexValue(t *testing.T) {
 	}
 	if got := SourceIndexValue(&rbacv1.ClusterRoleBinding{}); got != nil {
 		t.Errorf("a ClusterRoleBinding must not be indexed, got %v", got)
+	}
+}
+
+func TestOwnedIndexValue(t *testing.T) {
+	t.Parallel()
+	if got := OwnedIndexValue(legacyDict("d8:dict:x", user("jane"))); len(got) != 1 {
+		t.Errorf("a dict binding must be indexed, got %v", got)
+	}
+	plain := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "user-authz:dev:user", Labels: map[string]string{"heritage": "deckhouse"}}}
+	if got := OwnedIndexValue(plain); got != nil {
+		t.Errorf("a binding without the dict labels must not be indexed, got %v", got)
 	}
 }

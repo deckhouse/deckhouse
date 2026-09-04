@@ -61,6 +61,10 @@ const (
 
 	// RoleRefIndexField indexes the ClusterRoleBindings by the ClusterRole they reference.
 	RoleRefIndexField = "user-authz.deckhouse.io/role-ref"
+	// AutomatedIndexField indexes the use RoleBindings this reconciler owns: a plain label selector on
+	// the cache would scan every RoleBinding of the cluster on every reconcile.
+	AutomatedIndexField = "user-authz.deckhouse.io/automated-use-binding"
+	automatedIndexValue = "true"
 
 	LabelKind      = "rbac.deckhouse.io/kind"
 	LabelUseRole   = "rbac.deckhouse.io/use-role"
@@ -71,8 +75,8 @@ const (
 
 	KindManage = "manage"
 
-	useRolePrefix        = "d8:use:role:"
-	relatedWithAnnotatio = "rbac.deckhouse.io/related-with"
+	useRolePrefix         = "d8:use:role:"
+	relatedWithAnnotation = "rbac.deckhouse.io/related-with"
 )
 
 // ManageRoleLabels select the manage ClusterRoles.
@@ -116,10 +120,22 @@ func IsManageBinding(reader client.Reader, obj client.Object) bool {
 	return role.Labels[LabelKind] == KindManage
 }
 
-// Register indexes the ClusterRoleBindings by roleRef and wires the reconciler onto the manager.
+// AutomatedIndexValue is the indexer of AutomatedIndexField.
+func AutomatedIndexValue(obj client.Object) []string {
+	if _, ok := obj.(*rbacv1.RoleBinding); !ok || !isAutomatedUseBinding(obj.GetLabels()) {
+		return nil
+	}
+	return []string{automatedIndexValue}
+}
+
+// Register indexes the ClusterRoleBindings by roleRef and the automated use RoleBindings, and wires
+// the reconciler onto the manager.
 func Register(ctx context.Context, mgr manager.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &rbacv1.ClusterRoleBinding{}, RoleRefIndexField, RoleRefIndexValue); err != nil {
 		return fmt.Errorf("index clusterrolebindings by roleRef: %w", err)
+	}
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &rbacv1.RoleBinding{}, AutomatedIndexField, AutomatedIndexValue); err != nil {
+		return fmt.Errorf("index automated rolebindings: %w", err)
 	}
 	r := New(mgr.GetClient(), mgr.GetLogger().WithName("manage-bindings"))
 	if err := r.SetupWithManager(mgr); err != nil {
@@ -207,7 +223,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 	}
 
 	automated := &rbacv1.RoleBindingList{}
-	if err := r.client.List(ctx, automated, client.MatchingLabels(AutomatedLabels)); err != nil {
+	if err := r.client.List(ctx, automated, client.MatchingFields{AutomatedIndexField: automatedIndexValue}); err != nil {
 		return reconcile.Result{}, fmt.Errorf("list automated rolebindings: %w", err)
 	}
 	for i := range automated.Items {
@@ -398,7 +414,7 @@ func UseBinding(manage *rbacv1.ClusterRoleBinding, useRole, namespace string) *r
 			Name:        fmt.Sprintf("d8:use:%s:binding:%s", useRole, manage.Name),
 			Namespace:   namespace,
 			Labels:      maps.Clone(AutomatedLabels),
-			Annotations: map[string]string{relatedWithAnnotatio: manage.Name},
+			Annotations: map[string]string{relatedWithAnnotation: manage.Name},
 		},
 		RoleRef:  rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: useRolePrefix + useRole},
 		Subjects: slices.Clone(manage.Subjects),
