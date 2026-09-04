@@ -2180,12 +2180,12 @@ MY_VAR: "myvalue"
 			})
 		})
 
-		Context("public-services-federation.deckhouse.io", func() {
+		Context("public-service-valid.deckhouse.io", func() {
 			It("gates the ExternalName/ports/port-name CEL validations on label presence via objectSelector", func() {
 				f.HelmRender()
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-				policy := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", "public-services-federation.deckhouse.io")
+				policy := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", "public-service-valid.deckhouse.io")
 				Expect(policy.Exists()).To(BeTrue())
 				Expect(policy.Field("spec.matchConstraints.resourceRules.0.resources.0").String()).To(Equal("services"))
 				Expect(policy.Field("spec.matchConstraints.objectSelector.matchExpressions.0.key").String()).To(
@@ -2197,10 +2197,14 @@ MY_VAR: "myvalue"
 					`has(object.spec.ports)`))
 				Expect(policy.Field("spec.validations.2.expression").String()).To(Equal(
 					`variables.portsWithoutName.size() == 0`))
+				Expect(policy.Field("spec.validations.0.message").String()).To(Equal(
+					"A service labeled 'federation.istio.deckhouse.io/public-service' must not be of ExternalName type."))
+				Expect(policy.Field("spec.validations.1.message").String()).To(Equal(
+					"A service labeled 'federation.istio.deckhouse.io/public-service' must define the '.spec.ports' field."))
 
-				binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", "public-services-federation.deckhouse.io")
+				binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", "public-service-valid.deckhouse.io")
 				Expect(binding.Exists()).To(BeTrue())
-				Expect(binding.Field("spec.policyName").String()).To(Equal("public-services-federation.deckhouse.io"))
+				Expect(binding.Field("spec.policyName").String()).To(Equal("public-service-valid.deckhouse.io"))
 			})
 		})
 
