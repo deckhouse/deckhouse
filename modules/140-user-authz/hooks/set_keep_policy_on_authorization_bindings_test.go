@@ -79,6 +79,8 @@ func newKeepPolicyFakeClient(objs ...runtime.Object) *dynamicfake.FakeDynamicCli
 	gvrToListKind := map[schema.GroupVersionResource]string{
 		{Group: "rbac.authorization.k8s.io", Version: "v1", Resource: "clusterrolebindings"}: "ClusterRoleBindingList",
 		{Group: "rbac.authorization.k8s.io", Version: "v1", Resource: "rolebindings"}:        "RoleBindingList",
+		{Group: "deckhouse.io", Version: "v1", Resource: "clusterauthorizationrules"}:        "ClusterAuthorizationRuleList",
+		{Group: "deckhouse.io", Version: "v1alpha1", Resource: "authorizationrules"}:         "AuthorizationRuleList",
 	}
 	return dynamicfake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrToListKind, objs...)
 }
