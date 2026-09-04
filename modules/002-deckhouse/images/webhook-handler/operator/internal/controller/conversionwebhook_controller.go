@@ -47,6 +47,16 @@ const (
 	filePermissions      = 0755
 )
 
+// ConversionNonePatch clears the conversion webhook config that a shell-operator
+// registration installed, touching spec.conversion and nothing else.
+//
+// Writing the whole CRD back instead — Get into apiextensionsv1.CustomResourceDefinition,
+// mutate, Update — silently drops every openAPIV3Schema key those vendored types do not
+// declare (a Deckhouse apiserver serves x-kubernetes-sensitive-data) and stores the
+// truncated schema. "add" replaces the subtree rather than merging into it, so webhook is
+// removed along with the strategy, which the apiserver requires when strategy is None.
+var ConversionNonePatch = []byte(`[{"op":"add","path":"/spec/conversion","value":{"strategy":"None"}}]`)
+
 // ConversionWebhookReconciler reconciles a ConversionWebhook object
 type ConversionWebhookReconciler struct {
 	reloadFn       func(ctx context.Context) error
@@ -263,12 +273,9 @@ func (r *ConversionWebhookReconciler) cleanupCRDConversion(ctx context.Context, 
 	}
 
 	r.logger.Info("resetting CRD conversion strategy to None", slog.String("crd_name", crdName))
-	crd.Spec.Conversion = &apiextensionsv1.CustomResourceConversion{
-		Strategy: apiextensionsv1.NoneConverter,
-	}
 
-	if err := r.client.Update(ctx, crd); err != nil {
-		return fmt.Errorf("update CRD %s: %w", crdName, err)
+	if err := r.client.Patch(ctx, crd, client.RawPatch(types.JSONPatchType, ConversionNonePatch)); err != nil {
+		return fmt.Errorf("patch CRD %s conversion: %w", crdName, err)
 	}
 
 	return nil
