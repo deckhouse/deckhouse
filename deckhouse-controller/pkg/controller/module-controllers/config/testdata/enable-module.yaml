@@ -18,3 +18,11 @@ status:
   modules:
     - name: test-module
       version: v1.0.0
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
+metadata:
+  name: test-module
+status:
+  availableRepositories:
+    - test-source
