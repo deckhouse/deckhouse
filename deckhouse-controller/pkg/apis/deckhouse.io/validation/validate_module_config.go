@@ -335,14 +335,14 @@ func (v *moduleConfigValidator) validateModuleEnabling(ctx context.Context, cfg 
 	return nil, nil
 }
 
-// isModuleAvailableInAnySource reports whether any module source lists the module.
+// isModuleAvailableInAnySource reports whether any module source offers the module.
 func (v *moduleConfigValidator) isModuleAvailableInAnySource(ctx context.Context, name string) (bool, error) {
-	moduleSources := new(v1alpha1.ModuleSourceList)
-	if err := v.client.List(ctx, moduleSources); err != nil {
-		return false, fmt.Errorf("list module sources: %w", err)
+	moduleSourceNames, err := utils.AvailableModuleSources(ctx, v.client, name)
+	if err != nil {
+		return false, err
 	}
 
-	return len(moduleSources.Offering(name)) > 0, nil
+	return len(moduleSourceNames) > 0, nil
 }
 
 // checkDependenciesFromMetadata enforces the "parent module must be enabled" part of the
@@ -556,12 +556,10 @@ func (v *moduleConfigValidator) resolveModuleSource(ctx context.Context, cfg *v1
 		return nil, nil, nil
 	}
 
-	moduleSources := new(v1alpha1.ModuleSourceList)
-	if err := v.client.List(ctx, moduleSources); err != nil {
-		return nil, nil, fmt.Errorf("list module sources: %w", err)
+	moduleSourceNames, err := utils.AvailableModuleSources(ctx, v.client, cfg.Name)
+	if err != nil {
+		return nil, nil, err
 	}
-
-	moduleSourceNames := moduleSources.Offering(cfg.Name)
 
 	installed := true
 	if err := v.client.Get(ctx, client.ObjectKey{Name: cfg.Name}, new(v1alpha2.Module)); err != nil {

@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
@@ -172,14 +173,20 @@ func newModuleCRWithRequirements(name string, availableSources []string, stage s
 	})
 }
 
-// newModuleObjects assembles the module sources, the module and its package version.
-func newModuleObjects(name string, availableSources []string, embedded bool, metadata *v1alpha1.ModulePackageVersionStatusMetadata) []client.Object {
-	objects := make([]client.Object, 0, len(availableSources)+2)
+// newModuleObjects assembles the module package naming the repositories of the module sources
+// offering the module, the module and its package version.
+func newModuleObjects(name string, availableModuleSources []string, embedded bool, metadata *v1alpha1.ModulePackageVersionStatusMetadata) []client.Object {
+	objects := make([]client.Object, 0, 3)
 
-	for _, source := range availableSources {
-		objects = append(objects, &v1alpha1.ModuleSource{
-			ObjectMeta: metav1.ObjectMeta{Name: source},
-			Status:     v1alpha1.ModuleSourceStatus{AvailableModules: []v1alpha1.AvailableModule{{Name: name}}},
+	if len(availableModuleSources) > 0 {
+		availableRepositories := make([]string, 0, len(availableModuleSources))
+		for _, moduleSourceName := range availableModuleSources {
+			availableRepositories = append(availableRepositories, pkgsync.RepositoryNameForSource(moduleSourceName))
+		}
+
+		objects = append(objects, &v1alpha1.ModulePackage{
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+			Status:     v1alpha1.ModulePackageStatus{AvailableRepositories: availableRepositories},
 		})
 	}
 
