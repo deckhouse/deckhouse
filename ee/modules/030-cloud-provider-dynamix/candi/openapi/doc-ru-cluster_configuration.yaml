@@ -32,7 +32,6 @@ apiVersions:
         type: string
         description: Имя аккаунта.
       storagePolicy:
-        type: string
         description: |
           Имя storage policy, используемой по умолчанию для дисков виртуальных машин.
 
