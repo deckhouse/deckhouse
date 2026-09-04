@@ -40,5 +40,5 @@ func validate(_ context.Context, input proto.ValidateInput) error {
 		return fmt.Errorf("internal error: build validation state: %w", err)
 	}
 
-	return ycpreflight.ValidatePreflight(state, input.Operation).ErrorOrNil()
+	return ycpreflight.ValidatePreflight(state, input.Operation, input.ClusterPrefix).ErrorOrNil()
 }

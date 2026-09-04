@@ -16,6 +16,7 @@ package preflight
 
 import (
 	"fmt"
+	"regexp"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
@@ -29,19 +30,30 @@ import (
 
 // Validation violation codes for legacy ProviderClusterConfiguration checks.
 const (
+	CodeInvalidClusterPrefix						   = "cluster_prefix_invalid"
 	CodePCCInvalidServiceAccountSecret                 = "pcc_invalid_service_account_secret"
 	CodePCCMasterReplicasGreaterExternalIPAddresses    = "pcc_master_node_group_replicas_greater_length_of_extrenal_ip_addresses"
 	CodePCCNodeGroupReplicasGreaterExternalIPAddresses = "pcc_node_group_replicas_greater_length_of_extrenal_ip_addresses"
 	CodePCCNATInstanceSubnetRequired                   = "pcc_internal_subnet_cidr_or_internal_subnet_id_empty"
 )
 
+var (
+	// prefixRegex guards the cluster prefix, which becomes the name prefix of every cloud resource
+	// the layouts create. Yandex Cloud rejects names that do not match it, so an invalid prefix has
+	// to fail here, before any infrastructure is touched, rather than mid-apply on the first resource.
+	prefixRegex = regexp.MustCompile("^([a-z]([-a-z0-9]{0,61}[a-z0-9])?)$")
+)
+
 // ValidatePreflight checks resources required before cluster bootstrap or converge.
-func ValidatePreflight(state *ycval.State, operation string) cpvalapi.Result {
+func ValidatePreflight(state *ycval.State, operation string, clusterPrefix string) cpvalapi.Result {
 	if state == nil {
 		return cpvalapi.ResultForNilState()
 	}
 
 	result := cpvalapi.Result{}
+
+	// Common checks
+	validateClusterPrefix(clusterPrefix)
 
 	// Validate legacy ProviderClusterConfiguration.
 	if state.HasProviderClusterConfig() {
@@ -70,6 +82,21 @@ func ValidatePreflight(state *ycval.State, operation string) cpvalapi.Result {
 		ycval.ValidateWithNATInstanceLayout(state),
 		ycval.ValidateProvisionedStorageClasses(state),
 	)
+
+	return result
+}
+
+func validateClusterPrefix(prefix string) cpvalapi.Result {
+	result := cpvalapi.Result{}
+
+	if !prefixRegex.MatchString(prefix) {
+		result.AddError(
+			"",
+			CodeInvalidClusterPrefix,
+			"prefix",
+			fmt.Sprintf("invalid prefix %s, prefix must match the pattern: %s", prefix, prefixRegex.String()),
+		)
+	}
 
 	return result
 }
