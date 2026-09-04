@@ -348,23 +348,29 @@ func TestStopTakesDownTheProcessGroup(t *testing.T) {
 		t.Fatalf("StartValidatorProcess() = %v", err)
 	}
 
-	// The counter has to see a running validator, or its use below proves nothing.
-	if running := countValidatorProcesses(t); running != 1 {
-		t.Errorf("%d validators running while one is started, want 1", running)
+	validator := process.cmd.Process.Pid
+	child := readChildPid(t, pidFile)
+
+	// Signal 0 only probes. Both have to be alive here, or what Stop does below
+	// proves nothing.
+	if err := syscall.Kill(validator, 0); err != nil {
+		t.Fatalf("Kill(%d, 0) = %v, want a running validator", validator, err)
+	}
+
+	if err := syscall.Kill(child, 0); err != nil {
+		t.Fatalf("Kill(%d, 0) = %v, want a running child", child, err)
 	}
 
 	if err := process.Stop(); err != nil {
 		t.Errorf("Stop() = %v, want nil", err)
 	}
 
-	if leaked := countValidatorProcesses(t); leaked != 0 {
-		t.Errorf("%d validators left running after Stop(), want 0", leaked)
+	if err := syscall.Kill(validator, 0); err == nil {
+		t.Errorf("validator %d still alive after Stop()", validator)
 	}
 
-	child := readChildPid(t, pidFile)
-
-	// Signal 0 only probes. The child is reparented when the validator dies, so it is
-	// reaped by init rather than by us: give that a moment.
+	// The child is reparented when the validator dies, so it is reaped by init rather
+	// than by us: give that a moment.
 	for range 200 {
 		if err := syscall.Kill(child, 0); err != nil {
 			return
@@ -390,25 +396,6 @@ func readChildPid(t *testing.T, path string) int {
 	}
 
 	return pid
-}
-
-// countValidatorProcesses counts the validators still running: children of this test
-// process whose name is the test binary. The mode a fake validator runs in is an
-// environment variable, so matching on it would search command lines it never reaches.
-// -x matches the process name exactly, which keeps pgrep from finding itself.
-func countValidatorProcesses(t *testing.T) int {
-	t.Helper()
-
-	out, err := exec.Command(
-		"pgrep",
-		"-P", strconv.Itoa(os.Getpid()),
-		"-x", filepath.Base(os.Args[0]),
-	).Output()
-	if err != nil {
-		return 0
-	}
-
-	return len(strings.Fields(string(out)))
 }
 
 // Stop is called from withStop on a half-started process and again by the caller,
