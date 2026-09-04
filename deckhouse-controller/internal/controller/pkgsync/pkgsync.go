@@ -29,7 +29,7 @@
 //	  ├─ embedded-<module>-<deckhouse version>, complete: the metadata and
 //	  │  the settings/values schemas are filled from the module files on
 //	  │  disk, no repository ever serves it
-//	  ├─ ModulePackage <module>, empty: the catalog entry no scan would
+//	  ├─ ModulePackage <module>, empty: the package object no scan would
 //	  │  create, since no repository offers an embedded package
 //	  └─ Module <module>: repository "embedded", the reduced Deckhouse
 //	     version, the embedded annotation
@@ -46,8 +46,8 @@
 //	  └─ Module <module>: the image tag as the version, the dev annotation,
 //	     the repository resolved from the resources naming one
 //
-//	ModuleSource status (every source, the platform-owned ones too)
-//	  └─ Module <module> for every module a source lists and nothing
+//	ModulePackage (the repository scan lists the repositories offering it)
+//	  └─ Module <module> for every module some repository offers and nothing
 //	     installed: the repository of the source the config picks or of the
 //	     only offering source, no version, the phase Available
 //
@@ -55,6 +55,17 @@
 //	  └─ Module <module>: settings, settings version, maintenance, enabled
 //	     and update policy mirrored onto the module the other sources placed;
 //	     a module without a config carries none
+//
+// The repositories offering a module are read from its ModulePackage: a
+// repository offers a module once the repository scan found an installable
+// version of it. The module source and module config controllers and the
+// module config webhook read the same list (utils.OfferingRepositories), so
+// the offered modules, the conflict and the release gate agree. The source a module
+// config picks is compared as the repository behind it (ConfiguredRepository).
+// Two limits follow. A repository the scan has not reached yet offers nothing, and
+// a module source created after the start has no repository until the next
+// start. The scan drops a repository from a package only when the repository
+// goes, not when the module leaves the registry.
 //
 // A module claims one source: the image beats a pull override, which beats a
 // deployed release, which beats a source merely offering the module. A module
@@ -206,24 +217,35 @@ func ConfiguredSource(config *v1alpha1.ModuleConfig) string {
 	return config.Spec.Source
 }
 
-// CatalogRepository names the repository of a module nothing installed yet: the one
-// of the source the config picks, else of the only source offering the module. Empty
-// while several sources offer it and the config picks none.
-func CatalogRepository(configuredSource string, offering []string) string {
-	if configuredSource != "" {
-		return RepositoryNameForSource(configuredSource)
+// ConfiguredRepository names the repository the operator selected in the module config
+// through .spec.source, or an empty string without a config or a selection. "Embedded"
+// is the sentinel for the built-in copy, not a source, so it counts as no selection.
+func ConfiguredRepository(config *v1alpha1.ModuleConfig) string {
+	if config == nil || config.Spec.Source == v1alpha1.ModuleSourceEmbedded {
+		return ""
 	}
 
-	if len(offering) == 1 {
-		return RepositoryNameForSource(offering[0])
+	return RepositoryNameForSource(config.Spec.Source)
+}
+
+// PickRepository picks the repository a module nothing installed yet would come from: the
+// one the config selects, else the only one offering the module. Empty while several
+// repositories offer it and the config selects none.
+func PickRepository(configuredRepository string, availableRepositories []string) string {
+	if configuredRepository != "" {
+		return configuredRepository
+	}
+
+	if len(availableRepositories) == 1 {
+		return availableRepositories[0]
 	}
 
 	return ""
 }
 
-// CatalogConflict reports whether a module nothing installed yet is enabled, offered by
-// several sources and the config picks none of them. No source installs such a module
-// until the operator picks one.
-func CatalogConflict(enabled bool, configuredSource string, offering []string) bool {
-	return enabled && configuredSource == "" && len(offering) > 1
+// HasRepositoryConflict reports whether a module nothing installed yet is enabled, offered
+// by several repositories and the config selects none of them. Nothing installs such a
+// module until the operator selects one.
+func HasRepositoryConflict(enabled bool, configuredRepository string, availableRepositories []string) bool {
+	return enabled && configuredRepository == "" && len(availableRepositories) > 1
 }

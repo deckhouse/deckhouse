@@ -19,7 +19,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -53,13 +52,12 @@ func testModule(name, repository, version string, annotations map[string]string)
 	}
 }
 
-func testSourceOffering(name string, modules ...string) *v1alpha1.ModuleSource {
-	source := testModuleSource(name, "registry.example.io/"+name)
-	for _, module := range modules {
-		source.Status.AvailableModules = append(source.Status.AvailableModules, v1alpha1.AvailableModule{Name: module})
+// testPackageOffering builds the ModulePackage of a module the given repositories offer.
+func testPackageOffering(module string, repositories ...string) *v1alpha1.ModulePackage {
+	return &v1alpha1.ModulePackage{
+		ObjectMeta: metav1.ObjectMeta{Name: module},
+		Status:     v1alpha1.ModulePackageStatus{AvailableRepositories: repositories},
 	}
-
-	return source
 }
 
 func TestSyncModulesPlacement(t *testing.T) {
@@ -81,9 +79,9 @@ func TestSyncModulesPlacement(t *testing.T) {
 		testRelease("upmeter", "deckhouse", "1.2.0", v1alpha1.ModuleReleasePhaseDeployed),
 		testRelease("upmeter", "deckhouse", "1.3.0", v1alpha1.ModuleReleasePhaseDeployed),
 		testRelease("upmeter", "deckhouse", "1.4.0", v1alpha1.ModuleReleasePhasePending),
-		// a module offered by a single source and pinned to a tag
+		// a module offered by a single repository and pinned to a tag
 		testOverride("solo", "dev"),
-		testSourceOffering("external", "solo"),
+		testPackageOffering("solo", "external"),
 		// an override whose repository no resource names is skipped
 		testOverride("orphan", "dev"),
 	)
@@ -224,18 +222,18 @@ func TestSyncModulesOfferedCatalog(t *testing.T) {
 	writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
 
 	s, cl := newTestSyncer(t, "v1.80.0", dir,
-		// the platform source offers the embedded module too: the image wins
-		testSourceOffering("deckhouse", "echo", "single", "shared", "chosen", "contested", "gone", "fetching"),
-		testSourceOffering("mirror", "shared", "chosen", "contested"),
+		// the platform repository offers the embedded module too: the image wins
+		testPackageOffering("echo", "deckhouse-modules"),
+		testPackageOffering("single", "deckhouse-modules"),
+		testPackageOffering("shared", "deckhouse-modules", "mirror"),
+		testPackageOffering("chosen", "deckhouse-modules", "mirror"),
+		testPackageOffering("contested", "deckhouse-modules", "mirror"),
+		testPackageOffering("gone", "deckhouse-modules"),
+		testPackageOffering("fetching", "deckhouse-modules"),
 		// the config enables a module two sources offer and picks none: a conflict
 		testConfig("contested", v1alpha1.ModuleConfigSpec{Enabled: ptr.To(true)}),
-		// a source being deleted offers nothing
-		func() *v1alpha1.ModuleSource {
-			source := testSourceOffering("leaving", "leftover")
-			source.Finalizers = []string{"keep"}
-			source.DeletionTimestamp = &metav1.Time{Time: time.Now()}
-			return source
-		}(),
+		// a package no repository lists, like the catalog entry of an embedded module, offers nothing
+		testPackageOffering("leftover"),
 		// the config picks one of the two sources
 		testConfig("chosen", v1alpha1.ModuleConfigSpec{Source: "mirror"}),
 		// a downloaded module whose files are gone: still offered, so it becomes an offered module again
@@ -354,8 +352,8 @@ func TestModuleRepository(t *testing.T) {
 		testConfig("configured", v1alpha1.ModuleConfigSpec{Source: "deckhouse"}),
 		testRelease("released", "external", "1.0.0", v1alpha1.ModuleReleasePhaseDeployed),
 		testRelease("pending", "deckhouse", "1.0.0", v1alpha1.ModuleReleasePhasePending),
-		testSourceOffering("only", "single", "ambiguous"),
-		testSourceOffering("other", "ambiguous"),
+		testPackageOffering("single", "only"),
+		testPackageOffering("ambiguous", "only", "other"),
 	)
 
 	cases := []struct {

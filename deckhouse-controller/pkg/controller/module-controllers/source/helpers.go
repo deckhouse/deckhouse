@@ -278,7 +278,7 @@ func (r *reconciler) placeCatalogModule(ctx context.Context, module *v1alpha2.Mo
 	configured := pkgsync.ConfiguredSource(config)
 
 	patch := client.MergeFrom(module.DeepCopy())
-	module.Spec.PackageRepositoryName = pkgsync.CatalogRepository(configured, offering)
+	module.Spec.PackageRepositoryName = pkgsync.PickRepository(configured, offering)
 	module.Spec.ReleaseChannel = channel
 
 	data, err := patch.Data(module)
@@ -292,7 +292,7 @@ func (r *reconciler) placeCatalogModule(ctx context.Context, module *v1alpha2.Mo
 		}
 	}
 
-	conflict := pkgsync.CatalogConflict(config != nil && config.IsEnabled(), configured, offering)
+	conflict := pkgsync.HasRepositoryConflict(config != nil && config.IsEnabled(), configured, offering)
 
 	err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {
 		module.ApplyCatalogState(conflict)

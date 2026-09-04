@@ -189,8 +189,9 @@ func TestSyncIsIdempotent(t *testing.T) {
 	writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\nstage: General Availability\n")
 
 	s, cl := newTestSyncer(t, "v1.80.0", dir,
-		// the source offers a module nothing installed
-		testSourceOffering("external", "offered"),
+		// the source gets a repository, and that repository offers a module nothing installed
+		testModuleSource("external", "registry.example.io/external"),
+		testPackageOffering("offered", "external"),
 		testRelease("parca", "deckhouse", "1.4.3", v1alpha1.ModuleReleasePhaseDeployed),
 		testRelease("console", "deckhouse", "1.60.1", v1alpha1.ModuleReleasePhasePending),
 	)
