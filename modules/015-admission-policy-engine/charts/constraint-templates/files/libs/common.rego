@@ -5,66 +5,64 @@
 # =============================================================================
 package lib.common
 
-# Supported kinds for pod-spec extraction.
+# Location of the pod template within each pod-creating controller.
 #
-# This list is deliberately wider than the kinds the module's own generated
+# This map is the single source of truth for controller shapes: every pod
+# spec, metadata and label lookup below resolves through it, so a new
+# workload kind is added in one place. A lookup miss (Pod, or an unrecognised
+# kind) is what drives the `else` fallbacks below, which is why Pod is
+# intentionally absent — a Pod carries its pod spec directly.
+#
+# The map is deliberately wider than the kinds the module's own generated
 # constraints match: the `workload_kinds` Helm helper excludes ReplicaSet,
 # because a ReplicaSet is created by a Deployment and its denial surfaces in
 # the Deployment status instead. The library still resolves ReplicaSet so that
 # a hand-written Constraint matching it behaves correctly.
-workload_kind(kind) if {
-  kind == "Pod"
+#
+# A map, rather than one function head per kind: benchmarked with
+# tests/tools/rulebench.sh, per-kind heads cost ~25 allocations/eval more on
+# controller reviews, because each definition is dispatched separately. The
+# map is materialized once per evaluation instead.
+pod_template_paths := {
+  "Deployment": ["spec", "template"],
+  "StatefulSet": ["spec", "template"],
+  "DaemonSet": ["spec", "template"],
+  "ReplicaSet": ["spec", "template"],
+  "ReplicationController": ["spec", "template"],
+  "Job": ["spec", "template"],
+  "CronJob": ["spec", "jobTemplate", "spec", "template"],
 }
 
-workload_kind(kind) if {
-  kind == "Deployment"
-}
+# Current review object.
+review_object := object.get(input.review, "object", {})
 
-workload_kind(kind) if {
-  kind == "StatefulSet"
-}
-
-workload_kind(kind) if {
-  kind == "DaemonSet"
-}
-
-workload_kind(kind) if {
-  kind == "ReplicaSet"
-}
-
-workload_kind(kind) if {
-  kind == "ReplicationController"
-}
-
-workload_kind(kind) if {
-  kind == "Job"
-}
-
-workload_kind(kind) if {
-  kind == "CronJob"
-}
+# Pod template of a controller. Undefined for a Pod and for an unrecognised
+# kind, so callers fall through to their `else` clause.
+pod_template_of(obj) := object.get(obj, pod_template_paths[object.get(obj, "kind", "")], {})
 
 # Normalize PodSpec location across pod-creating workloads.
 # - Pod: spec
 # - Deployment/StatefulSet/DaemonSet/ReplicaSet/ReplicationController/Job: spec.template.spec
 # - CronJob: spec.jobTemplate.spec.template.spec
-pod_spec := pod_spec_of(object.get(input.review, "object", {}))
+# A Pod is by far the most common review object, and it carries its pod spec
+# directly, so it is resolved with a plain reference and never pays for
+# template resolution. Controllers fall through to pod_spec_of.
+pod_spec := input.review.object.spec if {
+  input.review.object.kind == "Pod"
+} else := out if {
+  out := pod_spec_of(review_object)
+}
 
 # Pod spec for a given object: parameterized counterpart of pod_spec, for
 # library functions that receive obj as a parameter.
+#
+# For an unknown/absent kind, the fallback reads object.spec instead of {}.
+# This prevents fail-open: if pod_spec were {}, input_containers would be
+# empty and every container-level check would silently pass. For security
+# modules, an unrecognised input should not mean "allowed".
 pod_spec_of(obj) := out if {
-  kind := object.get(obj, "kind", "")
-  workload_kind(kind)
-  out := pod_spec_for_kind(obj, kind)
-}
-
-# For unknown/absent kind, fall back to object.spec instead of {}.
-# This prevents fail-open: if pod_spec is {}, input_containers is empty
-# and every container-level check silently passes.
-# For security modules, an unrecognised input should not mean "allowed".
-pod_spec_of(obj) := out if {
-  kind := object.get(obj, "kind", "")
-  not workload_kind(kind)
+  out := object.get(pod_template_of(obj), "spec", {})
+} else := out if {
   out := object.get(obj, "spec", {})
 }
 
@@ -76,32 +74,10 @@ normalized_pod_object(obj) := {
   "spec": pod_spec_of(obj),
 }
 
-pod_spec_for_kind(obj, "Pod") := out if {
-  out := object.get(obj, "spec", {})
-}
-
-pod_spec_for_kind(obj, "CronJob") := out if {
-  out := object.get(obj, ["spec", "jobTemplate", "spec", "template", "spec"], {})
-}
-
-pod_spec_for_kind(obj, kind) := out if {
-  kind != "Pod"
-  kind != "CronJob"
-  out := object.get(obj, ["spec", "template", "spec"], {})
-}
-
-# Backwards-compatible container iterator (uses input.review)
-input_containers contains c if {
-  c := pod_spec.containers[_]
-}
-
-input_containers contains c if {
-  c := pod_spec.initContainers[_]
-}
-
-input_containers contains c if {
-  c := pod_spec.ephemeralContainers[_]
-}
+# Backwards-compatible container iterator (uses input.review).
+# An array rather than a set: building a set requires hashing every container
+# object, and every call site only iterates.
+input_containers := input_containers_from(pod_spec)
 
 # Parameterized container iterator (expects a pod spec)
 input_containers_from(spec) := containers if {
@@ -165,101 +141,42 @@ get_exception_label_from_labels(container, labels) := label if {
 # creates are still denied.
 # =============================================================================
 
-# Pod template metadata labels for the current review object.
-# Derived from pod_template_metadata_for_kind so the Pod/CronJob/controller
-# dispatch lives in exactly one place.
-pod_template_metadata_labels_for_kind(obj, kind) := labels if {
-  labels := object.get(pod_template_metadata_for_kind(obj, kind), "labels", {})
-}
-
 # Effective labels for SPE resolution from input.review.object.
-# Thin wrapper over effective_labels: same Pod/controller/unknown-kind
-# dispatch, sourced from input.review.
-object_labels := effective_labels(object.get(input.review, "object", {}))
+# Pod fast path, as in pod_spec: a Pod's own labels are the SPE labels.
+object_labels := object.get(input.review.object.metadata, "labels", {}) if {
+  input.review.object.kind == "Pod"
+} else := labels if {
+  labels := effective_labels(review_object)
+}
 
 # Effective namespace for SPE resolution from input.review.object.
-object_namespace := ns if {
-  obj := object.get(input.review, "object", {})
-  ns := object.get(obj, ["metadata", "namespace"], "")
-}
+object_namespace := object.get(review_object, ["metadata", "namespace"], "")
 
 # Effective labels for SPE resolution from a given object.
 # Used by library functions that receive obj as a parameter.
-# For Pods: uses the pod's own metadata.labels.
 # For controllers: uses ONLY the pod template's metadata.labels.
+# For Pods, and as a fallback for unknown kinds, uses the object's own
+# metadata.labels, so SPE labels are not silently dropped. Mirrors the
+# pod_spec fallback to object.spec.
 effective_labels(obj) := labels if {
-  kind := object.get(obj, "kind", "")
-  kind == "Pod"
+  labels := object.get(pod_template_of(obj), ["metadata", "labels"], {})
+} else := labels if {
   labels := object.get(obj, ["metadata", "labels"], {})
-}
-
-effective_labels(obj) := labels if {
-  kind := object.get(obj, "kind", "")
-  kind != "Pod"
-  workload_kind(kind)
-  labels := pod_template_metadata_labels_for_kind(obj, kind)
-}
-
-# Fallback for unknown kinds: use the object's own metadata.labels, so SPE
-# labels are not silently dropped for unrecognised objects. Mirrors the
-# pod_spec fallback to object.spec for unknown kinds.
-effective_labels(obj) := labels if {
-  kind := object.get(obj, "kind", "")
-  kind != "Pod"
-  not workload_kind(kind)
-  labels := object.get(obj, ["metadata", "labels"], {})
-}
-
-# Pod template metadata, the single dispatch point for both pod-template
-# metadata and pod-template labels.
-# For Pod: empty (no pod template)
-# For CronJob: spec.jobTemplate.spec.template.metadata
-# For other controllers: spec.template.metadata
-pod_template_metadata_for_kind(obj, "Pod") := {} if {
-  true
-}
-
-pod_template_metadata_for_kind(obj, "CronJob") := meta if {
-  meta := object.get(obj, ["spec", "jobTemplate", "spec", "template", "metadata"], {})
-}
-
-pod_template_metadata_for_kind(obj, kind) := meta if {
-  kind != "Pod"
-  kind != "CronJob"
-  meta := object.get(obj, ["spec", "template", "metadata"], {})
 }
 
 # Effective metadata for annotation resolution from input.review.object.
-# For Pods: uses the pod's own metadata.
 # For controllers (Deployment, etc.): uses ONLY the pod template's metadata
 # (spec.template.metadata), NOT the controller's top-level metadata.
 # This prevents false positives where a misplaced annotation (e.g.
 # container.apparmor.security.beta.kubernetes.io/<name>) on the controller's
 # top-level metadata causes a denial even though the pods would never carry it.
-effective_metadata := meta if {
-  obj := object.get(input.review, "object", {})
-  kind := object.get(obj, "kind", "")
-  kind == "Pod"
-  meta := object.get(obj, "metadata", {})
-}
-
-effective_metadata := meta if {
-  obj := object.get(input.review, "object", {})
-  kind := object.get(obj, "kind", "")
-  kind != "Pod"
-  workload_kind(kind)
-  meta := pod_template_metadata_for_kind(obj, kind)
-}
-
-# Fallback for unknown kinds: use the object's own metadata, so annotations on
-# an unrecognised object are not silently dropped. This mirrors the pod_spec
-# and object_labels fallbacks for unknown kinds.
-effective_metadata := meta if {
-  obj := object.get(input.review, "object", {})
-  kind := object.get(obj, "kind", "")
-  kind != "Pod"
-  not workload_kind(kind)
-  meta := object.get(obj, "metadata", {})
+# For Pods, and as a fallback for unknown kinds, uses the object's own metadata.
+effective_metadata := input.review.object.metadata if {
+  input.review.object.kind == "Pod"
+} else := meta if {
+  meta := object.get(pod_template_of(review_object), "metadata", {})
+} else := meta if {
+  meta := object.get(review_object, "metadata", {})
 }
 
 # =============================================================================
@@ -278,8 +195,5 @@ effective_metadata := meta if {
 # violations for absent fields, avoiding false positives on controllers.
 # =============================================================================
 is_controller if {
-  obj := object.get(input.review, "object", {})
-  kind := object.get(obj, "kind", "")
-  kind != "Pod"
-  workload_kind(kind)
+  pod_template_paths[object.get(review_object, "kind", "")]
 }
