@@ -18,6 +18,7 @@ package template_tests
 
 import (
 	"encoding/base64"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -110,49 +111,55 @@ const jwksResolverAdditionalRootCA = `-----BEGIN CERTIFICATE-----
 MIIDXTCCAkWgAwIBAgIJAN...
 -----END CERTIFICATE-----`
 
-func getSubdirs(dir string) ([]string, error) {
-	var subdirs []string
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if info.IsDir() && path != dir && filepath.Base(path) == info.Name() {
-			subdirs = append(subdirs, info.Name())
-			return filepath.SkipDir
-		}
-
-		return nil
-	})
-
+func symlinkEEIntoCE(eeDir, ceDir string) ([]string, error) {
+	entries, err := os.ReadDir(eeDir)
 	if err != nil {
 		return nil, err
 	}
 
-	return subdirs, nil
+	var created []string
+	for _, entry := range entries {
+		eePath := filepath.Join(eeDir, entry.Name())
+		cePath := filepath.Join(ceDir, entry.Name())
+
+		if _, err := os.Lstat(cePath); err == nil {
+			if !entry.IsDir() {
+				return nil, fmt.Errorf("cannot merge %s into CE: %s already exists and is not a directory", eePath, cePath)
+			}
+			nested, err := symlinkEEIntoCE(eePath, cePath)
+			if err != nil {
+				return nil, err
+			}
+			created = append(created, nested...)
+			continue
+		}
+
+		if err := os.Symlink(eePath, cePath); err != nil {
+			return nil, err
+		}
+		created = append(created, cePath)
+	}
+
+	return created, nil
 }
 
 const (
-	istioEETemplatesPath = "/deckhouse/ee/modules/110-istio/templates/"
-	istioCETemplatesPath = "/deckhouse/modules/110-istio/templates/"
+	istioEETemplatesPath = "/deckhouse/ee/modules/110-istio/templates"
+	istioCETemplatesPath = "/deckhouse/modules/110-istio/templates"
 )
+
+var istioEECESymlinks []string
 
 var _ = Describe("Module :: istio :: helm template :: main", func() {
 	BeforeSuite(func() {
-		subDirs, err := getSubdirs(istioEETemplatesPath)
+		created, err := symlinkEEIntoCE(istioEETemplatesPath, istioCETemplatesPath)
 		Expect(err).ShouldNot(HaveOccurred())
-		for _, subDir := range subDirs {
-			err := os.Symlink(istioEETemplatesPath+subDir, istioCETemplatesPath+subDir)
-			Expect(err).ShouldNot(HaveOccurred())
-		}
+		istioEECESymlinks = created
 	})
 
 	AfterSuite(func() {
-		subDirs, err := getSubdirs(istioEETemplatesPath)
-		Expect(err).ShouldNot(HaveOccurred())
-		for _, subDir := range subDirs {
-			err := os.Remove(istioCETemplatesPath + subDir)
-			Expect(err).ShouldNot(HaveOccurred())
+		for _, path := range istioEECESymlinks {
+			Expect(os.Remove(path)).To(Succeed())
 		}
 	})
 
@@ -2196,21 +2203,21 @@ MY_VAR: "myvalue"
 			})
 		})
 
-		Context("d8-istio-serviceentry-ports", func() {
+		Context("serviceentry-ports-should-exist.deckhouse.io", func() {
 			It("warns on a ServiceEntry with no ports", func() {
 				f.HelmRender()
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-				policy := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", "d8-istio-serviceentry-ports")
+				policy := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", "serviceentry-ports-should-exist.deckhouse.io")
 				Expect(policy.Exists()).To(BeTrue())
 				Expect(policy.Field("spec.failurePolicy").String()).To(Equal("Ignore"))
 				Expect(policy.Field("spec.validations.0.expression").String()).To(Equal("has(object.spec.ports)"))
 				Expect(policy.Field("spec.matchConstraints.resourceRules.0.apiGroups.0").String()).To(Equal("networking.istio.io"))
 				Expect(policy.Field("spec.matchConstraints.resourceRules.0.resources.0").String()).To(Equal("serviceentries"))
 
-				binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", "d8-istio-serviceentry-ports-binding")
+				binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", "serviceentry-ports-should-exist.deckhouse.io")
 				Expect(binding.Exists()).To(BeTrue())
-				Expect(binding.Field("spec.policyName").String()).To(Equal("d8-istio-serviceentry-ports"))
+				Expect(binding.Field("spec.policyName").String()).To(Equal("serviceentry-ports-should-exist.deckhouse.io"))
 				Expect(binding.Field("spec.validationActions.0").String()).To(Equal("Warn"))
 			})
 		})
