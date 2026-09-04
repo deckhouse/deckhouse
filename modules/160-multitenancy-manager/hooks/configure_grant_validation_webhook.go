@@ -18,7 +18,6 @@ package hooks
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -82,6 +81,7 @@ var systemWriterMatchConditions = []admissionregistrationv1.MatchCondition{
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: "/modules/160-multitenancy-manager",
 	Kubernetes: []go_hook.KubernetesConfig{
+		admissionWebhookCertWatch(),
 		{
 			Name:       "registrations",
 			ApiVersion: "multitenancy.deckhouse.io/v1alpha1",
@@ -97,7 +97,33 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	},
 }, dependency.WithExternalDependencies(configureGrantValidationWebhook))
 
+func newGrantValidatingWebhook() admissionregistrationv1.ValidatingWebhook {
+	return admissionregistrationv1.ValidatingWebhook{
+		Name: fmt.Sprintf("%s.multitenancy.deckhouse.io", validatingWebhookConfigurationName),
+		ClientConfig: admissionregistrationv1.WebhookClientConfig{
+			Service: &admissionregistrationv1.ServiceReference{
+				Name:      "multitenancy-manager",
+				Namespace: "d8-multitenancy-manager",
+				Path:      ptr.To("/is-granted"),
+				Port:      ptr.To(int32(9443)),
+			},
+		},
+		NamespaceSelector:       projectNamespaceSelector,
+		MatchConditions:         systemWriterMatchConditions,
+		SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
+		AdmissionReviewVersions: []string{"v1"},
+		FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
+		TimeoutSeconds:          ptr.To(int32(10)),
+		Rules:                   []admissionregistrationv1.RuleWithOperations{},
+	}
+}
+
 func configureGrantValidationWebhook(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
+	caBundle, err := admissionWebhookCABundle(input)
+	if err != nil {
+		return err
+	}
+
 	kube, err := dc.GetK8sClient()
 	if err != nil {
 		return err
@@ -112,46 +138,30 @@ func configureGrantValidationWebhook(ctx context.Context, input *go_hook.HookInp
 	)
 	switch {
 	case k8serrors.IsNotFound(err):
-		caBundle := input.Values.Get("multitenancyManager.internal.admissionWebhookCert.ca").String()
-		if caBundle == "" {
-			return errors.New("webhook certificate is not issued yet")
-		}
-
 		whConfigExists = false
 		whConfig = &admissionregistrationv1.ValidatingWebhookConfiguration{
 			ObjectMeta: v1.ObjectMeta{Name: validatingWebhookConfigurationName},
-			Webhooks: []admissionregistrationv1.ValidatingWebhook{
-				{
-					Name: fmt.Sprintf("%s.multitenancy.deckhouse.io", validatingWebhookConfigurationName),
-					ClientConfig: admissionregistrationv1.WebhookClientConfig{
-						Service: &admissionregistrationv1.ServiceReference{
-							Name:      "multitenancy-manager",
-							Namespace: "d8-multitenancy-manager",
-							Path:      ptr.To("/is-granted"),
-							Port:      ptr.To(int32(9443)),
-						},
-						CABundle: []byte(caBundle),
-					},
-					NamespaceSelector:       projectNamespaceSelector,
-					MatchConditions:         systemWriterMatchConditions,
-					SideEffects:             ptr.To(admissionregistrationv1.SideEffectClassNone),
-					AdmissionReviewVersions: []string{"v1"},
-					FailurePolicy:           ptr.To(admissionregistrationv1.Fail),
-					TimeoutSeconds:          ptr.To(int32(10)),
-					Rules:                   []admissionregistrationv1.RuleWithOperations{},
-				},
-			},
 		}
 	case err != nil:
 		return fmt.Errorf("read ValidatingWebhookConfiguration: %w", err)
 	}
 
-	whConfig.Webhooks[0].Rules = grantableWebhookRules(input)
-	// Reconcile selector/match-conditions/timeout on existing configurations too (e.g. upgrades), so a
-	// cluster that already has the webhook without the system-writer exclusion is healed in place.
-	whConfig.Webhooks[0].NamespaceSelector = projectNamespaceSelector
-	whConfig.Webhooks[0].MatchConditions = systemWriterMatchConditions
-	whConfig.Webhooks[0].TimeoutSeconds = ptr.To(int32(10))
+	// Replace the whole list so Name/Service/SideEffects and a hand-emptied
+	// or extra webhooks[1:] cannot drift. Keep the cluster CA only when the
+	// cert is not issued yet — publishing Fail without caBundle would reject
+	// matching requests in project namespaces.
+	wh := newGrantValidatingWebhook()
+	wh.Rules = grantableWebhookRules(input)
+	switch {
+	case caBundle != "":
+		wh.ClientConfig.CABundle = []byte(caBundle)
+	case whConfigExists && len(whConfig.Webhooks) > 0 && len(whConfig.Webhooks[0].ClientConfig.CABundle) > 0:
+		wh.ClientConfig.CABundle = whConfig.Webhooks[0].ClientConfig.CABundle
+	default:
+		return errWebhookCertNotIssued
+	}
+	whConfig.Webhooks = []admissionregistrationv1.ValidatingWebhook{wh}
+
 	if whConfigExists {
 		_, err = admissionClient.Update(ctx, whConfig, v1.UpdateOptions{})
 	} else {
