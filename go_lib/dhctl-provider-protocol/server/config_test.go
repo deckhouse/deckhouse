@@ -15,13 +15,19 @@
 package server_test
 
 import (
+	"context"
 	"flag"
+	"io"
 	"log/slog"
 	"strings"
 	"testing"
+	"time"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
+	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/client"
 	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/server"
 )
 
@@ -146,4 +152,58 @@ func TestConfigMerge(t *testing.T) {
 			}
 		})
 	}
+}
+
+// The protocol mandates 8 MiB in each direction, and a caller passing an option of its
+// own must not silently drop back to gRPC's own 4 MiB default.
+func TestMergeKeepsTheProtocolMessageSize(t *testing.T) {
+	const payload = 5 << 20
+
+	running, err := server.Start(
+		server.Config{
+			Logger:      slog.New(slog.NewTextHandler(io.Discard, nil)),
+			GRPCOptions: []grpc.ServerOption{grpc.ConnectionTimeout(time.Minute)},
+		},
+		server.NewValidateService(validatorFunc(echoesBack)),
+	)
+	if err != nil {
+		t.Fatalf("Start() = %v", err)
+	}
+
+	t.Cleanup(func() {
+		if err := running.Stop(); err != nil {
+			t.Errorf("Stop() = %v, want nil", err)
+		}
+	})
+
+	conn, err := grpc.NewClient(running.Addr().String(), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		t.Fatalf("NewClient() = %v", err)
+	}
+
+	t.Cleanup(func() { _ = conn.Close() })
+
+	validator := client.NewValidateClient(conn, client.Config{
+		GRPCOptions: []grpc.CallOption{grpc.WaitForReady(true)},
+	})
+
+	input := bootstrapInput()
+	input.ClusterPrefix = strings.Repeat("x", payload)
+
+	resp, err := validator.Validate(context.Background(), input)
+	if err != nil {
+		t.Fatalf("Validate() = %v, want a %d byte payload to pass in both directions", err, payload)
+	}
+
+	if got := len(resp.GetErrors()[0].GetMessage()); got != payload {
+		t.Errorf("response message = %d bytes, want %d", got, payload)
+	}
+}
+
+// echoesBack sends the payload it was given back as a violation, so one call exercises
+// the size limit in both directions.
+func echoesBack(_ context.Context, input validatev1.Input) (*validatev1.ValidateResponse, error) {
+	return &validatev1.ValidateResponse{
+		Errors: []*validatev1.ViolationResponse{{Message: input.ClusterPrefix}},
+	}, nil
 }
