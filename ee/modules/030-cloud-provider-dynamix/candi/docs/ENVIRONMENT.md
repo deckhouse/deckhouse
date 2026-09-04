@@ -5,6 +5,26 @@ description: "Configuring Basis Dynamix for Deckhouse cloud provider operation."
 
 <!-- AUTHOR! Don't forget to update getting started if necessary -->
 
+### Account permissions
+
+The module operates entirely within the user API of Basis Dynamix (`/restmachine/cloudapi/*`). An account with administrative (`/restmachine/cloudbroker/*`) permissions is **not** required and should not be used: it widens the visibility scope beyond the cluster owner's account and breaks tenant isolation.
+
+The account specified in `DynamixClusterConfiguration.provider` must be allowed to use the following user API groups:
+
+| Group | Used by | Purpose |
+| --- | --- | --- |
+| `account`, `locations`, `rg` | all components | resolving the account, the location and the resource group by name |
+| `extnet`, `vins` | terraform, CAPD | external and internal networks |
+| `image` | terraform, CAPD | OS images for the nodes |
+| `sep` | terraform, CSI, cloud-data-discoverer | listing the storage endpoints and pools available to the account |
+| `disks` | terraform, CSI | disks of the master nodes and persistent volumes |
+| `compute`, `kvmx86` | terraform, CCM, CAPD, CSI | virtual machines and disk attachment |
+| `lb` | CCM | load balancers for `LoadBalancer` services |
+
+{% alert level="warning" %}
+The module requires a version of Basis Dynamix that provides the `/restmachine/cloudapi/sep/listAvailableSepAndPools` endpoint. Storage endpoints and pools are discovered through it; on earlier platform versions the storage classes will not be created and the master node will fail to get its etcd disk.
+{% endalert %}
+
 ### Prepare an operating system image
 
 Operating system vendors typically provide special cloud builds of their operating systems for use in virtualization environments. These builds typically contain virtual hardware drivers, cloud-init, virtualization guest agents, and are distributed as IMG or QCOW2 disk images. We recommend that you use these cloud images as the OS on the nodes in your clusters.
