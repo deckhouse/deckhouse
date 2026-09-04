@@ -30,6 +30,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/k8s"
@@ -118,7 +119,7 @@ func setModuleConfigEnabled(ctx context.Context, kubeClient k8s.Client, name str
 			return err
 		}
 
-		moduleSourceNames, err := listingModuleSources(ctx, kubeClient, name)
+		moduleSourceNames, err := availableModuleSources(ctx, kubeClient, name)
 		if err != nil {
 			return err
 		}
@@ -193,17 +194,22 @@ func isModuleInstalled(ctx context.Context, kubeClient k8s.Client, name string) 
 	return version != "", nil
 }
 
-// listingModuleSources names the module sources whose last scan lists the module.
-func listingModuleSources(ctx context.Context, kubeClient k8s.Client, name string) ([]string, error) {
-	list, err := kubeClient.Dynamic().Resource(v1alpha1.ModuleSourceGVR).List(ctx, metav1.ListOptions{})
+// availableModuleSources names the module sources able to install the module: the ones behind
+// the repositories its ModulePackage lists. A module without a package is offered by nobody.
+func availableModuleSources(ctx context.Context, kubeClient k8s.Client, name string) ([]string, error) {
+	obj, err := kubeClient.Dynamic().Resource(v1alpha1.ModulePackageGVR).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
-		return nil, fmt.Errorf("list module sources: %w", err)
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("get module package: %w", err)
 	}
 
-	moduleSources := new(v1alpha1.ModuleSourceList)
-	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(list.UnstructuredContent(), moduleSources); err != nil {
-		return nil, fmt.Errorf("convert module sources: %w", err)
+	modulePackage := new(v1alpha1.ModulePackage)
+	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(obj.UnstructuredContent(), modulePackage); err != nil {
+		return nil, fmt.Errorf("convert module package: %w", err)
 	}
 
-	return moduleSources.Offering(name), nil
+	return pkgsync.ModuleSourceNamesForRepositories(modulePackage.Status.AvailableRepositories), nil
 }
