@@ -27,6 +27,19 @@ When an ArgoCD object is created, the `admin` user with the `admin` role is crea
 d8 k -n argocd get secret argocd-cluster -o jsonpath='{.data.admin\.password}' | base64 -d
 ```
 
+{% alert level="warning" %}
+We recommend to change the automatically generated `admin` user password by using Argo CD CLI command:
+
+```bash
+argocd login <ARGOCD_DOMAIN>:443 --username admin --password <ADMIN_PASSWORD>
+argocd account update-password \
+  --account admin \
+  --current-password <ADMIN_PASSWORD> \
+  --new-password <NEW_PASSWORD>
+```
+
+{% endalert %}
+
 ### Creating additional local users
 
 When creating a local user, you can define whether the user has access to the Argo CD web interface (the `login` attribute) and/or to the Argo CD API (the `apiKey` attribute).
