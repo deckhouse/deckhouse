@@ -550,4 +550,18 @@ var _ = Describe("Module :: deckhouse :: reserved public hosts :: CEL ::", func(
 			})
 		})
 	})
+
+	Context("A publicDomainTemplate whose %s is only a prefix of the first label", func() {
+		BeforeEach(func() {
+			domainTemplate = "%s-cluster.example.com"
+			reservedPublicHosts = `{mode: Template}`
+		})
+
+		It("reserves the platform names and not a tenant name that shares the suffix", func() {
+			expectSameOnEveryKind([]hostCase{
+				{"grafana-cluster.example.com", verdictDenied, "on the list, rendered through the template"},
+				{"shop-cluster.example.com", verdictAllowed, "a valid substitution, but Template does not apply to this shape"},
+			})
+		})
+	})
 })

@@ -88,7 +88,16 @@
   {{- $parts = splitList "%s" $domainTemplate }}
 {{- end }}
 {{- $templateSplits := eq (len $parts) 2 }}
-{{- $mode := ternary "Template" "List" (and (ne ($settings.mode | default "Template") "List") $templateSplits) }}
+{{- /*
+  Template reserves every hostname the template can render. That is the right reservation when %s is
+  the whole first label ("%s.example.com"): an application one label deeper is out of scope. When %s
+  is only a prefix of the first label ("%s-cluster.example.com") the same regex is any valid label
+  plus that suffix, which is also how tenant Ingresses on that cluster are named. Fall back to List,
+  the same decision hooks/lib/publicdomain.EffectiveMode makes, rather than reserve those too.
+  "kube-%s.example.com" keeps Template: the literal is a prefix, so only kube-* is reserved.
+*/}}
+{{- $percentSSharesFirstLabelWithASuffix := and $templateSplits (eq (index $parts 0) "") (ne (index $parts 1) "") (not (hasPrefix "." (index $parts 1))) }}
+{{- $mode := ternary "Template" "List" (and (ne ($settings.mode | default "List") "List") $templateSplits (not $percentSSharesFirstLabelWithASuffix)) }}
 
 {{- if and (or $domainTemplate $additionalHosts) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicy")) (include "helm_lib_kind_exists" (list . "ValidatingAdmissionPolicyBinding")) }}
 {{- $configMapName := "d8-reserved-public-hosts" }}
@@ -251,7 +260,8 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "deckhouse")) | nindent 2 }}
 data:
   # Which of the two reservations is in force. It is the effective mode: a publicDomainTemplate that
-  # cannot be split into a prefix and a suffix reads List here whatever the ModuleConfig asked for.
+  # cannot be split into a prefix and a suffix, or whose %s is only a prefix of the first label
+  # ("%s-cluster.example.com"), reads List here whatever the ModuleConfig asked for.
   mode: {{ $mode | quote }}
   # The namespace the template carves out, as a regex, compiled into the policies as reservedPattern.
   # Empty under List, and empty means "reserve nothing by pattern" rather than "match everything",
