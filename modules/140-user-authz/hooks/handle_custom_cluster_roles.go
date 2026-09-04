@@ -107,11 +107,17 @@ func applyAggregatedCustomRoleFilter(obj *unstructured.Unstructured) (go_hook.Fi
 	if !ok {
 		return nil, nil
 	}
-	rules, _, err := unstructured.NestedSlice(obj.Object, "rules")
-	if err != nil {
-		return nil, fmt.Errorf("read rules of %s: %w", obj.GetName(), err)
+	// An aggregated role the controller-manager has not filled yet carries `rules: null`, which
+	// NestedSlice reports as a type error; that is simply zero rules.
+	rules, found, err := unstructured.NestedFieldNoCopy(obj.Object, "rules")
+	if err != nil || !found || rules == nil {
+		return aggregatedCustomRole{Level: level, Rules: 0}, nil
 	}
-	return aggregatedCustomRole{Level: level, Rules: len(rules)}, nil
+	list, ok := rules.([]any)
+	if !ok {
+		return nil, fmt.Errorf("read rules of %s: unexpected type %T", obj.GetName(), rules)
+	}
+	return aggregatedCustomRole{Level: level, Rules: len(list)}, nil
 }
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
