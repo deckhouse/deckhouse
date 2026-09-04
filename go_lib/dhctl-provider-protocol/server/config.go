@@ -121,7 +121,7 @@ func ConfigGetterFromFlags(fs FlagSet) ConfigGetter {
 	fs.StringVar(&config.Address, AddressFlag, DefaultAddress,
 		"address to serve on: host:port, or a socket path when --network=unix")
 
-	return func() Config { return config }
+	return func() Config { return NewConfig().Merge(config) }
 }
 
 func ServeArgs(network, address string) []string {
