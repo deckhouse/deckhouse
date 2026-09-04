@@ -26,8 +26,10 @@ import (
 	"k8s.io/utils/ptr"
 
 	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	"github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal"
-	ycpccv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/pcc/v1"
+	ycicv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/instanceclass/v1"
+	ycsettingsv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/settings/v1"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -96,47 +98,94 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			ExecuteHookOnSynchronization: ptr.To(false),
 			FilterFunc:                   internal.FilterCandiDiscoverySecret,
 		},
+		// Bindings 4-6: the new-model resources, needed to answer the same question
+		// yandex_cluster_configuration.go asks - is the migration already complete? Without them
+		// this hook cannot tell State B from State C and would re-create the artifacts that the
+		// OnBeforeHelm hook has just deleted. Read-only snapshots for the same reason as binding 2.
+		{
+			Name:       "credential_secrets",
+			ApiVersion: "v1",
+			Kind:       "Secret",
+			NamespaceSelector: &types.NamespaceSelector{
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{internal.Namespace},
+				},
+			},
+			NameSelector: &types.NameSelector{
+				MatchNames: []string{
+					cpapi.CredentialSecretName,
+					internal.ExporterCredentialSecretName,
+				},
+			},
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   internal.FilterCredentialSecret,
+		},
+		{
+			Name:                         "node_groups",
+			ApiVersion:                   "deckhouse.io/v1",
+			Kind:                         "NodeGroup",
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   internal.FilterNodeGroup,
+		},
+		{
+			Name:                         "yandex_instance_classes",
+			ApiVersion:                   ycicv1.GroupVersionKind.GroupVersion().String(),
+			Kind:                         ycicv1.YandexInstanceClassKind,
+			ExecuteHookOnEvents:          ptr.To(false),
+			ExecuteHookOnSynchronization: ptr.To(false),
+			FilterFunc:                   internal.FilterNamedResource,
+		},
 	},
 }, handleMigrationResources)
 
 func handleMigrationResources(_ context.Context, input *go_hook.HookInput) error {
-	pccResult, pccFound, err := decodePCCSnapshot(input)
+	pccResult, ok, err := unmarshalToOneStruct[internal.PCCSecretFilterResult](input.Snapshots, "provider_cluster_configuration")
 	if err != nil {
-		return err
+		return fmt.Errorf("unmarshal provider_cluster_configuration snapshots: %w", err)
 	}
+	if !ok || pccResult.ProviderClusterConfig == nil {
+		return nil
+	}
+	pcc := *pccResult.ProviderClusterConfig
 
-	if !pccFound {
-		// State A: no PCC - nothing to create; deletion is handled by yandex_cluster_configuration.go.
+	// State C: the new-model resources are all in place, so the migration is over even though the
+	// legacy PCC Secret is still around. yandex_cluster_configuration.go (OnBeforeHelm) deletes the
+	// artifacts in this state; re-creating them here would delete and re-create the
+	// d8-module-is-migrating ConfigMap on every module cycle. That churn is not cosmetic:
+	// migration_pending_metric.go watches that ConfigMap, so the metric and its alert would flap,
+	// and cpapi.ShouldSkipNewModelValidation keys off MigrationPending - the admission webhook
+	// would accept or reject the same NodeGroup write depending on which side of the flap it lands
+	// on. Both hooks must therefore agree on when the migration is complete.
+	if internal.IsMigrationResourcesApplied(input, pcc) {
 		return nil
 	}
 
 	// State B: PCC present, migration in progress - create artifacts in namespace (which now exists after Helm).
-	// State C (migration complete) is detected and handled by yandex_cluster_configuration.go (OnBeforeHelm),
-	// which fires on NodeGroup/YandexInstanceClass/ModuleConfig/Secret events and calls deleteMigrationArtifacts.
-	// Running createProviderClusterConfigurationResources in State C is safe: CreateOrUpdate is idempotent
-	// and yandex_cluster_configuration.go will delete the secret on the next (or concurrent) cycle.
-	var pcc ycpccv1.YandexProviderClusterConfiguration
-	if err := convertStructsUsingJSON(pccResult.ProviderClusterConfig, &pcc); err != nil {
-		return fmt.Errorf("unmarshal PCC: %w", err)
-	}
-
 	if err := validateProviderClusterConfig(pcc); err != nil {
 		return fmt.Errorf("validate provider cluster config: %w", err)
 	}
 
-	mcSettings, err := decodeModuleConfigSettingsV1(input)
+	mcResult, ok, err := unmarshalToOneStruct[internal.ModuleConfigFilterResult](input.Snapshots, "module_config")
+	if err != nil {
+		return fmt.Errorf("unmarshal module_config snapshots: %w", err)
+	}
+	var mcSettingsV1 ycsettingsv1.ModuleConfigSettings
+	if ok && mcResult.SettingsV1 != nil {
+		mcSettingsV1 = *mcResult.SettingsV1
+	}
+
+	// The candi Secret first, then the legacy PCC payload, with the type markers and the region
+	// default stamped on. Shared with yandex_cluster_configuration.go so the projection written
+	// into the migration Secret matches the values that hook renders from.
+	discoveryData, err := internal.ResolveDiscoveryData(input, &pccResult)
 	if err != nil {
 		return err
 	}
 
-	// Discovery data comes from the candi Secret first, then the legacy PCC discovery payload.
-	discoveryData, candiPresent := resolveCandiDiscoveryData(input)
-	if err := applyPCCDiscoveryFallback(&discoveryData, pccResult, candiPresent); err != nil {
-		return err
-	}
-
 	isHybrid := isHybridCluster(input, "master_node_group")
-	if err := internal.CreateMigrationResourcesSecret(input, pcc, mcSettings, discoveryData, isHybrid); err != nil {
+	if err := internal.CreateMigrationResourcesSecret(input, pcc, mcSettingsV1, discoveryData, isHybrid); err != nil {
 		return fmt.Errorf("create migration resources: %w", err)
 	}
 

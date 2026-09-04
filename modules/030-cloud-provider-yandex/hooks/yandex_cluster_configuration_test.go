@@ -95,12 +95,11 @@ nodeNetworkCIDR: 84.201.160.148/31
 sshPublicKey: ssh-rsa AAAAAbbbb
 `
 
-		// wrong pcc (unused; kept for reference)
-		_ = `
-apiVersion: deckhouse.io/v1
-kind: YandexClusterConfiguration
-layout: WithNATInstance
-`
+		// A malformed PCC cannot be exercised from here: FilterPCCSecret validates the payload
+		// against candi/openapi/cluster_configuration.yaml, so an invalid document fails the
+		// kubernetes binding itself ("couldn't enable kubernetes bindings: ... apply filter")
+		// and the hook never runs. The filter's error paths are unit-tested instead, in
+		// hooks/internal/filters_test.go.
 
 		stateB = fmt.Sprintf(`
 apiVersion: v1
@@ -122,6 +121,34 @@ spec:
   version: 1
   enabled: true
   settings: {}
+`
+
+		// A ModuleConfig already converted to v2. FilterModuleConfig fills SettingsV2 for it and
+		// leaves SettingsV1 empty, which is what makes the v1 projection unsafe here.
+		moduleConfigV2 = `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-yandex
+spec:
+  version: 2
+  enabled: true
+  settings:
+    provider:
+      parameters:
+        cloudID: test
+        folderID: test
+    nodes:
+      parameters:
+        layout: WithNATInstance
+        nodeNetworkCIDR: 84.201.160.148/31
+        sshPublicKey: ssh-rsa AAAAAbbbb
+    storage:
+      parameters:
+        excludedStorageClasses: ["network-hdd"]
+    ccm:
+      parameters:
+        additionalExternalNetworkIDs: ["operator-net"]
 `
 
 		// The candi Secret exists but cloud-provider-discovery-data.json is empty: indistinguishable
@@ -214,35 +241,92 @@ ru-central1-c: test
 		})
 	})
 
-	// ---- Context c: Invalid discovery data — no valid PCC, hook succeeds ----
-	c := HookExecutionConfigInit(initValuesString, `{}`)
-	c.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
-	c.RegisterCRD("deckhouse.io", "v1", "YandexInstanceClass", false)
-	c.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
-	Context("Discovery data is wrong", func() {
+	// ---- Only the exporter credential Secret exists: the cluster is NOT migrated ----
+	//
+	// The credential_secrets binding matches the exporter Secret too, and it carries the same
+	// credentials type. Counting snapshots would declare this cluster migrated and drop the
+	// artifacts, while the terraform projection - which matches by name - would still read the
+	// PCC. See the note in candi/terraform-modules/migration/locals.tf.
+	exporterOnlyCluster := HookExecutionConfigInit(initValuesString, `{}`)
+	exporterOnlyCluster.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+	exporterOnlyCluster.RegisterCRD("deckhouse.io", "v1", "YandexInstanceClass", false)
+	exporterOnlyCluster.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+	Context("No PCC and only the exporter credential Secret — migration artifacts kept", func() {
 		BeforeEach(func() {
-			c.BindingContexts.Set(c.KubeStateSet(``))
-			c.RunHook()
+			exporterOnlyCluster.BindingContexts.Set(exporterOnlyCluster.KubeStateSet(exporterOnlyCredentialState))
+			exporterOnlyCluster.RunHook()
 		})
 
-		It("Hook should succeed (no valid PCC)", func() {
-			Expect(c).To(ExecuteSuccessfully())
+		It("Hook should succeed and keep the migration artifacts", func() {
+			Expect(exporterOnlyCluster).To(ExecuteSuccessfully())
+
+			Expect(exporterOnlyCluster.KubernetesResource("ConfigMap", "d8-cloud-provider-yandex", "d8-module-is-migrating").Exists()).To(BeTrue())
 		})
 	})
 
-	// ---- Context d: Invalid cluster config — no valid PCC, hook succeeds ----
-	d := HookExecutionConfigInit(initValuesString, `{}`)
-	d.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
-	d.RegisterCRD("deckhouse.io", "v1", "YandexInstanceClass", false)
-	d.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
-	Context("Cluster config is wrong", func() {
+	// ---- PCC still present while the ModuleConfig is already v2 ----
+	//
+	// The hook projects the PCC only while the ModuleConfig is v1. Once it has been converted to
+	// v2 the config values are the source of truth and no PCC-derived value may overwrite them:
+	// FilterModuleConfig leaves SettingsV1 empty for a v2 ModuleConfig, so projecting anyway
+	// would replace every section with a zero value - excludedStorageClasses would stop being
+	// honoured (storage_classes.go would recreate the excluded StorageClasses) and the CCM would
+	// lose additionalExternalNetworkIDs.
+	stateBWithV2 := HookExecutionConfigInit(`
+global:
+  discovery: {}
+cloudProviderYandex:
+  internal: {}
+  provider:
+    parameters:
+      cloudID: from-module-config
+      folderID: from-module-config
+  nodes:
+    parameters:
+      layout: Standard
+      nodeNetworkCIDR: 10.10.0.0/16
+      sshPublicKey: ssh-rsa from-module-config
+  storage:
+    parameters:
+      excludedStorageClasses: ["network-hdd"]
+  ccm:
+    parameters:
+      additionalExternalNetworkIDs: ["operator-net"]
+`, `{}`)
+	stateBWithV2.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+	stateBWithV2.RegisterCRD("deckhouse.io", "v1", "YandexInstanceClass", false)
+	stateBWithV2.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+	Context("PCC present but the ModuleConfig is already v2 — config values win", func() {
 		BeforeEach(func() {
-			d.BindingContexts.Set(d.KubeStateSet(``))
-			d.RunHook()
+			stateBWithV2.BindingContexts.Set(stateBWithV2.KubeStateSet(stateB + "\n---\n" + moduleConfigV2))
+			stateBWithV2.RunHook()
 		})
 
-		It("Hook should succeed (no valid PCC)", func() {
-			Expect(d).To(ExecuteSuccessfully())
+		It("leaves every settings section untouched, including the ones the PCC also carries", func() {
+			Expect(stateBWithV2).To(ExecuteSuccessfully())
+
+			Expect(stateBWithV2.ValuesGet("cloudProviderYandex.storage.parameters.excludedStorageClasses").AsStringSlice()).
+				To(Equal([]string{"network-hdd"}))
+			Expect(stateBWithV2.ValuesGet("cloudProviderYandex.ccm.parameters.additionalExternalNetworkIDs").AsStringSlice()).
+				To(Equal([]string{"operator-net"}))
+
+			// The PCC carries cloudID/folderID "test" and layout WithNATInstance; under a v2
+			// ModuleConfig none of it may reach the values.
+			Expect(stateBWithV2.ValuesGet("cloudProviderYandex.provider.parameters.cloudID").String()).To(Equal("from-module-config"))
+			Expect(stateBWithV2.ValuesGet("cloudProviderYandex.provider.parameters.folderID").String()).To(Equal("from-module-config"))
+			Expect(stateBWithV2.ValuesGet("cloudProviderYandex.nodes.parameters.layout").String()).To(Equal("Standard"))
+			Expect(stateBWithV2.ValuesGet("cloudProviderYandex.nodes.parameters.nodeNetworkCIDR").String()).To(Equal("10.10.0.0/16"))
+		})
+
+		It("still writes the discovery data, so the workloads keep rendering", func() {
+			Expect(stateBWithV2).To(ExecuteSuccessfully())
+
+			// The PCC payload is the only discovery source here, and it must go through
+			// MergeDiscoveryData: the type markers and the region have to be present.
+			discoveryData := stateBWithV2.ValuesGet("cloudProviderYandex.internal.providerDiscoveryData")
+			Expect(discoveryData.Get("apiVersion").String()).To(Equal("deckhouse.io/v1"))
+			Expect(discoveryData.Get("kind").String()).To(Equal("YandexCloudDiscoveryData"))
+			Expect(discoveryData.Get("routeTableID").String()).To(Equal("test"))
 		})
 	})
 
@@ -254,9 +338,9 @@ ru-central1-c: test
 	migratedCluster.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 	migratedCluster.RegisterCRD("deckhouse.io", "v1", "YandexInstanceClass", false)
 	migratedCluster.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
-	Context("No PCC and credentials exist — migration artifacts deleted", func() {
+	Context("No PCC, credentials and a v2 ModuleConfig — migration artifacts deleted", func() {
 		BeforeEach(func() {
-			migratedCluster.BindingContexts.Set(migratedCluster.KubeStateSet(credentialSecretState))
+			migratedCluster.BindingContexts.Set(migratedCluster.KubeStateSet(credentialSecretState + "\n---\n" + moduleConfigV2))
 			migratedCluster.RunHook()
 		})
 
@@ -265,6 +349,28 @@ ru-central1-c: test
 
 			Expect(migratedCluster.KubernetesResource("Secret", "d8-cloud-provider-yandex", "d8-migration-resources").Exists()).To(BeFalse())
 			Expect(migratedCluster.KubernetesResource("ConfigMap", "d8-cloud-provider-yandex", "d8-module-is-migrating").Exists()).To(BeFalse())
+		})
+	})
+
+	// The credential Secret alone is not enough: it is only one of the four new-model resources.
+	// A cluster whose ModuleConfig is still v1 has lost the PCC but has nowhere to read its
+	// configuration from yet, and dropping d8-module-is-migrating there would let
+	// ShouldSkipNewModelValidation stop suppressing new-model validation while the configuration
+	// is still in the old shape.
+	credentialsOnlyCluster := HookExecutionConfigInit(initValuesString, `{}`)
+	credentialsOnlyCluster.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+	credentialsOnlyCluster.RegisterCRD("deckhouse.io", "v1", "YandexInstanceClass", false)
+	credentialsOnlyCluster.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
+	Context("No PCC and credentials but the ModuleConfig is still v1 — artifacts kept", func() {
+		BeforeEach(func() {
+			credentialsOnlyCluster.BindingContexts.Set(credentialsOnlyCluster.KubeStateSet(credentialSecretState + "\n---\n" + moduleConfigV1))
+			credentialsOnlyCluster.RunHook()
+		})
+
+		It("Hook should succeed and keep the migration artifacts", func() {
+			Expect(credentialsOnlyCluster).To(ExecuteSuccessfully())
+
+			Expect(credentialsOnlyCluster.KubernetesResource("ConfigMap", "d8-cloud-provider-yandex", "d8-module-is-migrating").Exists()).To(BeTrue())
 		})
 	})
 
@@ -697,6 +803,34 @@ data: {}
 `
 
 const migrationArtifactsState = `
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-module-is-migrating
+  namespace: d8-cloud-provider-yandex
+data: {}
+`
+
+// The NAT-instance exporter Secret carries the same credentials type as the managed one, so it
+// lands in the same snapshot. On its own it does not make a cluster migrated.
+const exporterOnlyCredentialState = `
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-credentials-exporter
+  namespace: d8-cloud-provider-yandex
+type: cloud-provider.deckhouse.io/credentials
+stringData:
+  authScheme: apiToken
+  secret: exporter-key-abc
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-migration-resources
+  namespace: d8-cloud-provider-yandex
+data: {}
+---
 apiVersion: v1
 kind: ConfigMap
 metadata:

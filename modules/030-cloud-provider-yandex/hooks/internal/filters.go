@@ -29,23 +29,31 @@ import (
 	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructureprovider"
+	clouddatav1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	ycpccv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/pcc/v1"
+	ycsettingsv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/settings/v1"
+	ycsettingsv2 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/settings/v2"
 )
 
 type PCCSecretFilterResult struct {
-	ProviderClusterConfig     map[string]json.RawMessage `json:"providerClusterConfig,omitempty"`
-	ProviderDiscoveryDataJSON json.RawMessage            `json:"providerDiscoveryDataJSON,omitempty"`
+	ProviderClusterConfig *ycpccv1.YandexProviderClusterConfiguration `json:"providerClusterConfig,omitempty"`
+	ProviderDiscoveryData *clouddatav1.YandexCloudDiscoveryData       `json:"providerDiscoveryData,omitempty"`
 }
 
 type CandiDiscoveryDataFilterResult struct {
-	DiscoveryDataJSON json.RawMessage `json:"discoveryDataJSON,omitempty"`
+	// A pointer, like the PCC one above, so that "the Secret carries no payload" stays
+	// distinguishable from "the payload decoded to all-zero fields". The Secret exists long
+	// before the infrastructure run fills it in, and an empty payload must not silence the
+	// fallback to the legacy PCC discovery data - see ResolveDiscoveryData.
+	ProviderDiscoveryData *clouddatav1.YandexCloudDiscoveryData `json:"providerDiscoveryData,omitempty"`
 }
 
 type ModuleConfigFilterResult struct {
-	Version    int64           `json:"version"`
-	Enabled    bool            `json:"enabled"`
-	SettingsV1 json.RawMessage `json:"settingsV1,omitempty"`
-	SettingsV2 json.RawMessage `json:"settingsV2,omitempty"`
+	Version    int64                              `json:"version"`
+	Enabled    bool                               `json:"enabled"`
+	SettingsV1 *ycsettingsv1.ModuleConfigSettings `json:"settingsV1,omitempty"`
+	SettingsV2 *ycsettingsv2.ModuleConfigSettings `json:"settingsV2,omitempty"`
 }
 
 type NamedResourceFilterResult struct {
@@ -74,7 +82,13 @@ func FilterPCCSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 		if _, err := config.ValidateDiscoveryData(&discoveryDataJSON, nil, nil); err != nil {
 			return nil, fmt.Errorf("validate cloud-provider-discovery-data.json: %v", err)
 		}
-		result.ProviderDiscoveryDataJSON = json.RawMessage(discoveryDataJSON)
+
+		var discoveryData clouddatav1.YandexCloudDiscoveryData
+		if err := json.Unmarshal(discoveryDataJSON, &discoveryData); err != nil {
+			return nil, fmt.Errorf("unmarshal cloud-provider-discovery-data.json: %v", err)
+		}
+
+		result.ProviderDiscoveryData = &discoveryData
 	}
 
 	if clusterConfigYAML, ok := secret.Data[PCCClusterConfigFilename]; ok && len(clusterConfigYAML) > 0 {
@@ -87,7 +101,13 @@ func FilterPCCSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 		if err != nil {
 			return nil, fmt.Errorf("validate cloud-provider-cluster-configuration.yaml: %v", err)
 		}
-		result.ProviderClusterConfig = m.ProviderClusterConfig
+
+		var providerClusterConfig ycpccv1.YandexProviderClusterConfiguration
+		if err := convertStructsUsingJSON(m.ProviderClusterConfig, &providerClusterConfig); err != nil {
+			return nil, fmt.Errorf("unmarshal cloud-provider-cluster-configuration.yaml: %v", err)
+		}
+
+		result.ProviderClusterConfig = &providerClusterConfig
 	}
 
 	return result, nil
@@ -106,15 +126,25 @@ func FilterModuleConfig(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 
 	if mc.Spec.Settings != nil {
 		settings := mc.Spec.Settings.GetMap()
+
 		settingsJSON, err := json.Marshal(settings)
 		if err != nil {
 			return nil, fmt.Errorf("marshal ModuleConfig settings: %w", err)
 		}
+
 		switch mc.Spec.Version {
 		case 1:
-			result.SettingsV1 = json.RawMessage(settingsJSON)
+			var mcSettings ycsettingsv1.ModuleConfigSettings
+			if err := json.Unmarshal(settingsJSON, &mcSettings); err != nil {
+				return nil, fmt.Errorf("unmarshal module config settings v1: %v", err)
+			}
+			result.SettingsV1 = &mcSettings
 		case 2:
-			result.SettingsV2 = json.RawMessage(settingsJSON)
+			var mcSettings ycsettingsv2.ModuleConfigSettings
+			if err := json.Unmarshal(settingsJSON, &mcSettings); err != nil {
+				return nil, fmt.Errorf("unmarshal module config settings v2: %v", err)
+			}
+			result.SettingsV2 = &mcSettings
 		}
 	}
 
@@ -166,7 +196,21 @@ func FilterCandiDiscoverySecret(obj *unstructured.Unstructured) (go_hook.FilterR
 		return nil, fmt.Errorf("validate candi cloud-provider-discovery-data.json: %v", err)
 	}
 
+	var discoveryData clouddatav1.YandexCloudDiscoveryData
+	if err := json.Unmarshal(discoveryDataJSON, &discoveryData); err != nil {
+		return nil, fmt.Errorf("unmarshal cloud-provider-discovery-data.json: %v", err)
+	}
+
 	return CandiDiscoveryDataFilterResult{
-		DiscoveryDataJSON: json.RawMessage(discoveryDataJSON),
+		ProviderDiscoveryData: &discoveryData,
 	}, nil
+}
+
+func convertStructsUsingJSON(in any, out any) error {
+	b, err := json.Marshal(in)
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(b, out)
 }
