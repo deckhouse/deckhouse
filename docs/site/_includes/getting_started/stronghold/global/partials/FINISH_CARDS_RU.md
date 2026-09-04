@@ -33,7 +33,7 @@
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-☸ <span class="cards-item__title-text">Dashboard</span>
+☸ <span class="cards-item__title-text">Kubernetes Dashboard</span>
 </h3>
 <div class="cards-item__text">
 <p>Получите доступ к Kubernetes Dashboard</p>
