@@ -137,6 +137,20 @@ var _ = Describe("User Authz hooks :: handle custom cluster roles ::", func() {
 			// ccr0..ccr5 get the label, ccr-wrong-label is corrected, ccr-stale-label loses it.
 			Expect(f.PatchCollector.Operations()).To(HaveLen(8))
 		})
+
+		It("Counts the custom roles per access level", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			counts := map[string]float64{}
+			for _, m := range f.MetricsCollector.CollectedMetrics() {
+				if m.Name == customClusterRolesMetric && m.Value != nil {
+					counts[m.Labels["level"]] = *m.Value
+				}
+			}
+			// ccr0 and ccr-wrong-label are User; one role per other level; the stale label counts nothing.
+			Expect(counts).To(Equal(map[string]float64{
+				"User": 2, "PrivilegedUser": 1, "Editor": 1, "Admin": 1, "ClusterEditor": 1, "ClusterAdmin": 1,
+			}))
+		})
 	})
 
 	Context("Cluster where every label already matches", func() {
@@ -174,6 +188,73 @@ metadata:
 			Expect(f.PatchCollector.Operations()).To(BeEmpty())
 			Expect(f.KubernetesGlobalResource("ClusterRole", "ccr-super-admin").Field(accessLevelLabelPath).Exists()).To(BeFalse())
 			Expect(f.KubernetesGlobalResource("ClusterRole", "ccr-unknown-level").Field(accessLevelLabelPath).Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Aggregated roles that did or did not collect their custom roles", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ccr-user
+  annotations:
+    user-authz.deckhouse.io/access-level: User
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ccr-editor
+  annotations:
+    user-authz.deckhouse.io/access-level: Editor
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["delete"]
+---
+# the User aggregate has collected its role
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: user-authz:user:custom
+aggregationRule:
+  clusterRoleSelectors:
+  - matchLabels: {user-authz.deckhouse.io/access-level: User}
+rules:
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get"]
+---
+# the Editor aggregate exists but is empty although User and Editor roles exist
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: user-authz:editor:custom
+aggregationRule:
+  clusterRoleSelectors:
+  - matchLabels: {user-authz.deckhouse.io/access-level: Editor}
+`))
+			f.RunHook()
+		})
+
+		It("Flags the levels whose aggregated role is empty or absent while they have roles to aggregate", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			missing := map[string]float64{}
+			for _, m := range f.MetricsCollector.CollectedMetrics() {
+				if m.Name == customAggregationMissingMetric && m.Value != nil {
+					missing[m.Labels["level"]] = *m.Value
+				}
+			}
+			// User: aggregated and filled. PrivilegedUser: aggregate absent but a User role must be in it.
+			// Editor: aggregate present but empty. Admin and above: aggregates absent, roles expected.
+			Expect(missing).To(Equal(map[string]float64{
+				"User": 0, "PrivilegedUser": 1, "Editor": 1, "Admin": 1, "ClusterEditor": 1, "ClusterAdmin": 1,
+			}))
 		})
 	})
 })

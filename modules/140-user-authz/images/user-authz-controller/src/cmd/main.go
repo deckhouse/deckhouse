@@ -37,13 +37,15 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/healthz"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
-	metrics "sigs.k8s.io/controller-runtime/pkg/metrics/server"
+	ctrlmetrics "sigs.k8s.io/controller-runtime/pkg/metrics"
+	metricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
 	v1 "user-authz-controller/api/v1"
 	"user-authz-controller/api/v1alpha1"
 	"user-authz-controller/internal/controller/bindings"
 	"user-authz-controller/internal/controller/dictbindings"
 	"user-authz-controller/internal/controller/managebindings"
+	"user-authz-controller/internal/metrics"
 )
 
 const (
@@ -114,6 +116,10 @@ func setupRuntimeManager(ctx context.Context, logger logr.Logger) (ctrl.Manager,
 		return nil, err
 	}
 
+	if err = metrics.Default.Register(ctrlmetrics.Registry); err != nil {
+		return nil, fmt.Errorf("register metrics: %w", err)
+	}
+
 	if err = bindings.Register(ctx, runtimeManager, bindings.Options{
 		MaxConcurrentReconciles: envInt(logger, maxConcurrentReconcilesEnv, bindings.DefaultMaxConcurrentReconciles),
 	}); err != nil {
@@ -154,7 +160,7 @@ func newManagerOptions(scheme *runtime.Scheme) manager.Options {
 		Scheme:                        scheme,
 		GracefulShutdownTimeout:       &timeout,
 		HealthProbeBindAddress:        ":9090",
-		Metrics: metrics.Options{
+		Metrics: metricsserver.Options{
 			BindAddress: ":9091",
 		},
 		Cache: cache.Options{

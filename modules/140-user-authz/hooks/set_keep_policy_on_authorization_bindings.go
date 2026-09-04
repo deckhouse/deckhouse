@@ -68,6 +68,11 @@ const (
 	helmManagedBindingsSelector = "heritage=deckhouse,module=user-authz,app.kubernetes.io/managed-by=Helm"
 
 	keepPolicyWorkers = 16
+
+	// keepStampedMetric counts the bindings the hook has protected since the deckhouse-controller
+	// started; keepDurationMetric is how long the last run took, listing included.
+	keepStampedMetric  = "d8_user_authz_bindings_keep_stamped_total"
+	keepDurationMetric = "d8_user_authz_keep_stamp_duration_seconds"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -84,6 +89,9 @@ func setKeepPolicyOnAuthorizationBindings(ctx context.Context, input *go_hook.Ho
 	started := time.Now()
 
 	stamped, err := stampKeepPolicy(ctx, dynClient, keepPolicyWorkers)
+	if stamped > 0 {
+		input.MetricsCollector.Add(keepStampedMetric, float64(stamped), nil)
+	}
 	if err != nil {
 		return fmt.Errorf("stamp keep policy on authorization bindings: %w", err)
 	}
@@ -91,6 +99,8 @@ func setKeepPolicyOnAuthorizationBindings(ctx context.Context, input *go_hook.Ho
 	if err := verifyKeepPolicy(ctx, dynClient); err != nil {
 		return fmt.Errorf("verify keep policy on authorization bindings: %w", err)
 	}
+
+	input.MetricsCollector.Set(keepDurationMetric, time.Since(started).Seconds(), nil)
 
 	if stamped > 0 {
 		input.Logger.Info("stamped keep policy on authorization bindings rendered by the chart",
