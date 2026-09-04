@@ -39,7 +39,7 @@ func (r *WaypointController) ensureWaypointGateway(ctx context.Context, instance
 		for k, v := range instanceLabels(instance) {
 			gateway.Labels[k] = v
 		}
-		for k, v := range istioLabels(instance, r.istioRevision, r.istioNetworkName) {
+		for k, v := range istioGatewayLabels(instance, r.istioRevision) {
 			gateway.Labels[k] = v
 		}
 		gateway.Labels["gateway.networking.k8s.io/gateway-name"] = resourceBaseName(instance.Name)
