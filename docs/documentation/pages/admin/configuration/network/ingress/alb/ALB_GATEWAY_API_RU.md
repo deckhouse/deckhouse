@@ -74,7 +74,7 @@ ListenerSet — расширение Gateway API. Объект ListenerSet оп�
 | :--- | :--- | :--- |
 | Назначение | Развёртывание общекластерного Gateway | Развёртывание Gateway в неймспейсе |
 | Сценарии использования | - Общая точка входа (общекластерный шлюз).<br> - Системный шлюз для публикации веб-интерфейсов служебных компонентов DKP и других модулей (может требоваться [«Действия перед включением и настройкой ALB в кластере»](#действия-перед-включением-и-настройкой-alb-в-кластере)).<br> - Платформенный шлюз | Отдельный шлюз для приложения или команды в выделенном неймспейсе |
-| Поддерживаемые типы инлета | [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer), [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) | [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer) |
+| Поддерживаемые типы инлета | [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer), [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) | [`LoadBalancer`](/modules/alb/cr.html#albinstance-v1alpha1-spec-inlet-loadbalancer), [`ClusterIP`](/modules/alb/cr.html#albinstance-v1alpha1-spec-inlet-clusterip) |
 | Реализация прокси | Envoy Proxy | Envoy Proxy |
 | Тип развёртывания | DaemonSet | Deployment |
 | Локализация объектов ListenerSet и маршрутов | В любом пользовательском неймспейсе | В том же неймспейсе, что и объект ALBInstance (обязательно) |
@@ -84,7 +84,7 @@ ListenerSet — расширение Gateway API. Объект ListenerSet оп�
 
 - Каждый объект Gateway обслуживается как минимум одним экземпляром Envoy Proxy.
 - Трафик в него приходит через сервис с типом `LoadBalancer` или напрямую с использованием параметров [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport).
-- На один объект Gateway могут ссылаться несколько объектов ClusterALBInstance или ALBInstance через поле `gatewayName`. В этом случае они используют общий Gateway. Конфигурация инфраструктуры для приёма и обработки трафика при этом может различаться. Поле `gatewayName` можно рассматривать как аналог `ingressClass` для объектов [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller). Итоговая конфигурация берётся из инстанса с наиболее ранним `creationTimestamp` (то есть созданного раньше остальных). Для остальных инстансов в статусе появляется признак конфликта портов с указанием имени «управляющего» инстанса.
+- На один объект Gateway могут ссылаться несколько объектов ClusterALBInstance или ALBInstance через поле `gatewayName`. В этом случае они используют общий Gateway. Конфигурация инфраструктуры для приёма и обработки трафика при этом может различаться. Поле `gatewayName` можно рассматривать как аналог `ingressClass` для объектов [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller). Итоговая конфигурация берётся из инстанса с наиболее ранним `creationTimestamp` (то есть созданного раньше остальных). У остальных инстансов в статусе устанавливается `conflictPorts: true`, а в `conflictPortsOwner` указывается имя «управляющего» инстанса.
 
 ### Валидация конфигурации
 
@@ -96,6 +96,7 @@ ListenerSet — расширение Gateway API. Объект ListenerSet оп�
 
 - [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer) — приём трафика через сервис с типом `LoadBalancer` (облачные провайдеры или bare metal с MetalLB). Доступен и для ClusterALBInstance, и для ALBInstance.
 - [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) — приём трафика на портах узлов без внешнего балансировщика. Доступен только для ClusterALBInstance.
+- [`ClusterIP`](/modules/alb/cr.html#albinstance-v1alpha1-spec-inlet-clusterip) — приём трафика через сервис с типом `ClusterIP`, без внешней точки входа (например, для внутреннего трафика). Доступен только для ALBInstance.
 
 Таблица соответствия типов инлета при миграции с `ingress-nginx` — в разделе [«Настройка инлета»](migration.html#inlet-configuration). Подробные примеры — в разделе [«Примеры для разных окружений»](#infrastructure-examples).
 
@@ -137,6 +138,7 @@ spec:
   gatewayName: public-gw
   inlet:
     type: LoadBalancer
+    loadBalancer: {}
 ```
 
 {% endtab %}
@@ -218,64 +220,7 @@ spec:
 
 Объекты HTTPRoute, GRPCRoute и TLSRoute привязываются к ListenerSet. TCPRoute и UDPRoute для TCP/UDP-портов из [`additionalPorts`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-additionalports) привязываются напрямую к слушателю объекта Gateway.
 
-{% tabs Примеры HTTPRoute %}
-{% tab "HTTP" %}
-
-Пример создания маршрута для HTTP-трафика:
-
-```yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: app-http-route
-  namespace: prod
-spec:
-  parentRefs:
-    - name: app-listeners # Имя ListenerSet.
-      namespace: prod
-      kind: ListenerSet
-      group: gateway.networking.k8s.io
-      sectionName: app-http
-      port: 80
-  hostnames:
-    - app.example.com
-  rules:
-    - backendRefs:
-        - name: app-svc # Имя сервиса, обслуживающего приложение.
-          port: 8080
-```
-
-{% endtab %}
-{% tab "HTTPS" %}
-
-Пример создания маршрута для HTTPS-трафика:
-
-```yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: app-https-route
-  namespace: prod
-spec:
-  parentRefs:
-    - name: app-listeners # Имя ListenerSet.
-      namespace: prod
-      kind: ListenerSet
-      group: gateway.networking.k8s.io
-      sectionName: app-https
-      port: 443
-  hostnames:
-    - app.example.com
-  rules:
-    - backendRefs:
-        - name: app-svc # Имя сервиса, обслуживающего приложение.
-          port: 8080
-```
-
-{% endtab %}
-{% endtabs %}
-
-Дополнительные сценарии публикации — в разделе [«Публикация приложения с ListenerSet и HTTPRoute»](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html#publishing-with-listenerset-and-httproute).
+Пример создания HTTPRoute для HTTP и HTTPS-трафика и другие сценарии публикации — в разделе [«Публикация приложения с ListenerSet и HTTPRoute»](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html#publishing-with-listenerset-and-httproute).
 
 ## Публикация служебных доменов {#публикация-служебных-доменов}
 
@@ -297,6 +242,7 @@ spec:
   defaultDeckhouseGateway: true
   inlet:
     type: LoadBalancer
+    loadBalancer: {}
 ```
 
 После применения изменений проверьте статус ClusterALBInstance:
@@ -499,7 +445,7 @@ spec:
         protocol: TCP
 ```
 
-Контроллер добавит в управляемый объект Gateway слушатель TCP/UDP-трафика с именем секции ([`sectionName`](https://gateway-api.sigs.k8s.io/reference/spec/)), например `tcp-port-9000`. Чтобы привязать к нему TCPRoute, укажите в маршруте имя Gateway и соответствующее значение `sectionName`:
+Контроллер добавит в управляемый объект Gateway слушатель TCP/UDP-трафика с именем секции ([`sectionName`](https://gateway-api.sigs.k8s.io/references/spec/)), например `tcp-port-9000`. Чтобы привязать к нему TCPRoute, укажите в маршруте имя Gateway и соответствующее значение `sectionName`:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -520,7 +466,7 @@ spec:
 ```
 
 {% alert level="info" %}
-Если объект TCPRoute или UDPRoute создаётся в неймспейсе, отличном от неймспейса целевого Gateway, дополнительно создайте в неймспейсе Gateway объект [ReferenceGrant](https://gateway-api.sigs.k8s.io/api-types/referencegrant/), разрешающий ссылки из неймспейса маршрута.
+Если объект TCPRoute или UDPRoute создаётся в неймспейсе, отличном от неймспейса целевого Gateway, дополнительно создайте в неймспейсе Gateway объект [ReferenceGrant](https://gateway-api.sigs.k8s.io/reference/api-types/referencegrant/), разрешающий ссылки из неймспейса маршрута.
 {% endalert %}
 
 Примеры UDPRoute и шаги публикации приложений — в разделе [«Работа с объектами GRPCRoute, TLSRoute, TCPRoute и UDPRoute»](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html#grpcroute-tlsroute-tcproute-and-udproute-objects).
@@ -677,6 +623,7 @@ spec:
   enableHTTP3: true
   inlet:
     type: LoadBalancer
+    loadBalancer: {}
 ```
 
 {% alert level="warning" %}
@@ -732,7 +679,7 @@ d8 k -n prod create secret generic geoip-license \
 Для объектов ALBInstance секрет должен располагаться строго в том же неймспейсе, что и объект ALBInstance.
 {% endalert %}
 
-После создания секрета необходимо указать его в объекте ClusterALBInstance или ALBInstance, например:
+После создания секрета укажите его в параметре [`spec.geoIP.licenseKeySecretRef`](/modules/alb/cr.html#albinstance-v1alpha1-spec-geoip-licensekeysecretref) объекта ClusterALBInstance или ALBInstance, например:
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -753,7 +700,7 @@ spec:
 
 ### Скачивание баз GeoIP с локального зеркала {#local}
 
-Для подключения GeoIP и скачивания баз с локального зеркала необходимо указать адрес зеркала в формате URL, например:
+Для подключения GeoIP и скачивания баз с локального зеркала укажите адрес зеркала в параметре [`spec.geoIP.maxmindMirror.url`](/modules/alb/cr.html#albinstance-v1alpha1-spec-geoip-maxmindmirror-url), например:
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -792,7 +739,7 @@ spec:
 
 В результате настройки GeoIP в неймспейсе, где работают прокси ClusterALBInstance или ALBInstance, будет запущен сервер кеширования и обновления баз GeoIP. Поды Envoy Proxy затем поочерёдно перезапускаются, чтобы скачивать базы с локального сервера GeoIP.
 
-Для добавления полей GeoIP в заголовки HTTP-запросов необходимо указать имена HTTP-заголовков, которые будут содержать соответствующую информацию, например:
+Для добавления полей GeoIP в заголовки HTTP-запросов укажите имена HTTP-заголовков в параметре [`spec.geoIP.headers`](/modules/alb/cr.html#albinstance-v1alpha1-spec-geoip-headers), например:
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -821,27 +768,22 @@ spec:
 
 Модуль `alb` поддерживает экспорт трассировок OpenTelemetry из Envoy-прокси.
 
-Для включения экспорта задайте в `spec.openTelemetry.tracing` адрес OpenTelemetry Collector:
+Для включения экспорта укажите адрес OpenTelemetry Collector в параметре [`spec.openTelemetry.tracing.url`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-url) — в формате `http://`, `https://` или `grpc://`, с указанием хоста, порта и, при необходимости, пути (например, для OTLP/HTTP).
 
-- `service.name` и `service.namespace` — имя и неймспейс сервиса коллектора;
-- `port` — порт;
-- `protocol` — протокол (`HTTP` или `gRPC`);
-- `path` — путь для OTLP/HTTP.
+Долю запросов, которые Envoy Proxy случайно выбирает для трассировки, задаёт параметр [`randomSamplingPercentage`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-randomsamplingpercentage) (по умолчанию — 25%).
 
-Альтернативно можно указать единый параметр [`url`](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-url).
+При необходимости настройте подключение с использованием [TLS](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls).
 
-При необходимости настройте подключение с использованием [TLS](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-tls).
-
-При использовании TLS рекомендуется явно задать параметр [`sni`](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-tls-sni), если OpenTelemetry Collector находится за прокси или балансировщиком, который выбирает upstream на основе Server Name Indication.
+При использовании TLS рекомендуется явно задать параметр [`sni`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls-sni), если OpenTelemetry Collector находится за прокси или балансировщиком, который выбирает upstream на основе Server Name Indication.
 
 ### Настройка TLS для OpenTelemetry
 
-Чтобы передавать данные трассировки OpenTelemetry по TLS, создайте секрет с CA-сертификатом и укажите его в параметре [`spec.openTelemetry.tracing.tls.caSecretName`](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-tls-casecretname).
+Чтобы передавать данные трассировки OpenTelemetry по TLS, создайте секрет с CA-сертификатом и укажите его в параметре [`spec.openTelemetry.tracing.tls.caSecretName`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls-casecretname).
 
 - Для ClusterALBInstance или шлюза DKP по умолчанию разместите секрет в неймспейсе `d8-alb`.
 - Для ALBInstance разместите секрет в том же неймспейсе, что и объект ALBInstance.
 
-CA-сертификат должен быть сохранён в ключе `cacert`.
+CA-сертификат должен быть сохранён в ключе `cacert`. Дополнительные Subject Alternative Names для проверки сертификата коллектора задаются параметром [`subjectAltNames`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls-subjectaltnames), а параметр [`insecureSkipVerify`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls-insecureskipverify) отключает проверку сертификата коллектора.
 
 ```yaml
 apiVersion: v1
@@ -862,14 +804,12 @@ metadata:
   name: proxy-gw
 spec:
   gatewayName: proxy-gw
+  inlet:
+    type: LoadBalancer
+    loadBalancer: {}
   openTelemetry:
     tracing:
-      service:
-        name: otel-collector
-        namespace: monitoring
-      port: 4318
-      protocol: HTTP
-      path: /v1/traces
+      url: https://otel-collector.monitoring.svc.cluster.local:4318/v1/traces
       tls:
         sni: otel-collector.monitoring.svc.cluster.local
         caSecretName: otel-tracing-ca

@@ -19,7 +19,7 @@ The [`istio`](/modules/istio/) module is used for this purpose.
 
 Use this option when you need traffic management in a service mesh (for example, canary routing or mTLS). Configuration details are in the ["istio module documentation"](/modules/istio/).
 
-Creating an IngressIstioController and preparing infrastructure is a cluster administrator task. Application publishing with Gateway and VirtualService resources, including [canary deployment](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#canary-deployment-with-virtualservice), is described in ["Publishing applications using Istio Ingress Gateway resource"](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#publishing-applications-using-istio-ingress-gateway-resource).
+Creating an [IngressIstioController](/modules/istio/cr.html) and preparing infrastructure is a cluster administrator task. Application publishing with Gateway and VirtualService resources, including [canary deployment](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#canary-deployment-with-virtualservice), is described in ["Publishing applications using Istio Ingress Gateway resource"](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#publishing-applications-using-istio-ingress-gateway-resource).
 
 ## Ingress to publish applications
 

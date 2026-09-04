@@ -28,7 +28,7 @@ Applications can be published through a cluster-wide gateway (a ClusterALBInstan
 
 Creating the managed Gateway (ClusterALBInstance or ALBInstance, inlets, enabling the module) is an administrator task. Infrastructure setup is described in ["Enabling the module and creating a Gateway"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#creating-a-gateway-object).
 
-This scenario assumes that the ClusterALBInstance or ALBInstance object has already been created and has reached the `Ready` state. Ask the administrator for the name and namespace of the managed Gateway, or read the Gateway name from the instance `status.gateway` field:
+This scenario assumes that the ClusterALBInstance or ALBInstance object has already been created and has reached the `Ready` state. Ask the administrator for the name and namespace of the managed Gateway, or read the Gateway name from the instance's [`status.gateway`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-status) field:
 
 ```shell
 d8 k get clusteralbinstance <CLUSTER_ALB_INSTANCE_NAME> \
@@ -39,9 +39,9 @@ d8 k -n <NAMESPACE> get albinstance <ALB_INSTANCE_NAME> \
 
 For ClusterALBInstance, the managed Gateway usually lives in the `d8-alb` namespace. For ALBInstance, it lives in the same namespace as the ALBInstance object. Status field descriptions are in [`status`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-status).
 
-The namespace administrator creates a ListenerSet attached to that Gateway (`spec.parentRef`). Application developers create HTTPRoute objects that attach to the ListenerSet.
+The namespace administrator creates a ListenerSet attached to that Gateway ([`spec.parentRef`](https://gateway-api.sigs.k8s.io/guides/user-guides/listener-set/)). Application developers create HTTPRoute objects that attach to the ListenerSet.
 
-Do not attach application routes to the default `d8-http` / `d8-https` Gateway listeners — they are for service tasks. Use a ListenerSet.
+The `d8-http` and `d8-https` listeners serve system tasks such as gateway availability checks or cert-manager HTTP-01 challenges. Do not attach application routes to them — use a ListenerSet instead.
 
 ### Publishing an application with ListenerSet and HTTPRoute {#publishing-with-listenerset-and-httproute}
 
@@ -115,7 +115,6 @@ spec:
           port: 8080
 ```
 
-
 ### Checking publication {#checking-publication}
 
 After you apply the ListenerSet and HTTPRoute, check the object status:
@@ -133,7 +132,7 @@ Confirm the following:
 - The HTTPRoute `parentRefs` point to the intended ListenerSet and the `Accepted` conditions are true.
 - The entry-point address and DNS for the hostname match what the administrator provided (for the `LoadBalancer` inlet, the address usually comes from a Service in the `d8-alb` namespace).
 
-Check application reachability from a client. Substitute the entry-point address and hostname:
+Check application reachability from a client. Substitute the entry-point address and hostname (a successful response is `200` or another status code expected from the application):
 
 ```shell
 curl -vk \
@@ -141,9 +140,13 @@ curl -vk \
   https://app.example.com/
 ```
 
-If the route is not accepted, check the Gateway name from the instance `status`, the ListenerSet namespace, the port and `sectionName` in `parentRefs`, and hostname/port conflicts with other ListenerSet objects.
+If the route is not accepted, check the Gateway name from the instance `status`, the ListenerSet namespace, and the port and `sectionName` in `parentRefs`. Hostname and port conflicts with other ListenerSet objects show up as a condition on the conflicting listener's status, visible in the `describe listenerset` output from the previous step.
 
 ### Working with GRPCRoute, TLSRoute, TCPRoute, and UDPRoute objects {#grpcroute-tlsroute-tcproute-and-udproute-objects}
+
+Besides HTTPRoute, you can use GRPCRoute (gRPC traffic), TLSRoute (TLS passthrough), and TCPRoute/UDPRoute (arbitrary TCP and UDP traffic) to publish applications.
+
+#### GRPCRoute for gRPC traffic
 
 The GRPCRoute object is intended for gRPC traffic. For it, create the ListenerSet object with an HTTPS listener, then add the GRPCRoute object:
 
@@ -189,9 +192,11 @@ spec:
           port: 9090
 ```
 
+#### TLS passthrough with TLSRoute
+
 For TLS passthrough, when traffic must be decrypted on the application side, either a TLS listener or an HTTPS listener can be used.
 
-Additional ports are set in `spec.inlet.additionalPorts` on the object that owns the gateway:
+Additional ports are set in [`spec.inlet.additionalPorts`](/modules/alb/cr.html#albinstance-v1alpha1-spec-inlet-additionalports) on the object that owns the gateway:
 
 - For a cluster-wide Gateway — on ClusterALBInstance (configured by the cluster administrator).
 - For a namespaced gateway — on ALBInstance (configured by the namespace administrator, or by you if you can edit the object).
@@ -306,6 +311,8 @@ spec:
 {% endtab %}
 {% endtabs %}
 
+#### TLS termination at the gateway with TCPRoute
+
 If TLS must be terminated on the gateway and then forwarded to the backend as a TCP stream (for example, when the application accepts decrypted TCP rather than HTTPS), create a ListenerSet object with a TLS listener in `Terminate` mode, then attach a TCPRoute object:
 
 ```yaml
@@ -347,6 +354,8 @@ spec:
         - name: tcp-svc # Reference to the internal load balancer of the application.
           port: 8080
 ```
+
+#### Additional TCP and UDP ports
 
 For TCP and UDP ports from [`additionalPorts`](/modules/alb/cr.html#albinstance-v1alpha1-spec-inlet-additionalports), attach the route directly to the managed Gateway listener instead of creating a separate ListenerSet. Otherwise the controller rejects the configuration because of overlapping handlers.
 
@@ -444,14 +453,14 @@ spec:
 If an application needs to move to another managed Gateway object, change the route attachment in stages:
 
 1. Obtain a new managed Gateway from the cluster administrator (a new ClusterALBInstance or ALBInstance), so that the controller creates a new Gateway object. Creating managed Gateways is described in ["Enabling the module and creating a Gateway"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#creating-a-gateway-object).
-1. Create a ListenerSet object with the same hostnames, ports, and TLS settings. The new Gateway object must be specified in `spec.parentRef`.
+1. Create a ListenerSet object with the same hostnames, ports, and TLS settings. The new Gateway object must be specified in [`spec.parentRef`](https://gateway-api.sigs.k8s.io/guides/user-guides/listener-set/).
 1. Add one more `parentRefs` entry to the existing HTTPRoute object, pointing to the new ListenerSet object.
 1. Verify traffic through the new gateway path.
 1. After verification, remove the reference to the obsolete ListenerSet object from `parentRefs` of the HTTPRoute object.
 
 ### Linking routes in one namespace to a ListenerSet in another
 
-If an HTTPRoute object is created in one namespace and must be attached to a ListenerSet in another namespace, add a ReferenceGrant in the namespace of the target ListenerSet.
+By default, the Gateway API does not allow routes to reference objects in other namespaces — this must be allowed explicitly. If an HTTPRoute object is created in one namespace and must be attached to a ListenerSet in another namespace, add a ReferenceGrant in the namespace of the target ListenerSet.
 
 The example below shows a shared ListenerSet in namespace `shared-gw`, an application HTTPRoute in namespace `prod`, and a ReferenceGrant that allows this attachment:
 
@@ -580,12 +589,7 @@ spec:
         name: app-backend-ca
 ```
 
-### GeoIP and OpenTelemetry
-
-GeoIP and OpenTelemetry are configured on ClusterALBInstance or ALBInstance and are administrator tasks. See:
-
-- ["Using GeoIP and GeoLite2"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#geoip);
-- ["Configuring OpenTelemetry tracing"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#tracing).
+GeoIP and OpenTelemetry tracing are configured by the administrator on ClusterALBInstance or ALBInstance, following ["Using GeoIP and GeoLite2"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#geoip) and ["Configuring OpenTelemetry tracing"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#tracing).
 
 ### Supported HTTPRoute annotations {#supported-httproute-annotations}
 
@@ -597,7 +601,7 @@ Because the current Gateway API specification does not yet cover all features re
 | `alb.network.deckhouse.io/whitelist-source-range` | Expects a comma-separated list of subnets in CIDR format: an IP filter at route level; overrides the global whitelist (for example, `10.1.1.10/32, 10.2.2.2/32`) |
 | `alb.network.deckhouse.io/response-headers-to-add` | JSON object with additional response headers (for example, `{"Strict-Transport-Security": "max-age=31536000; includeSubDomains"}`) |
 | `alb.network.deckhouse.io/session-affinity` | JSON for session affinity with cookie mode (`mode`, `path`, `cookieName`, `ttl`, etc.); not every field is required (for example, `{"mode": "cookie", "path": "/path", "cookieName": "mycookie", "ttl": 0}`) |
-| `alb.network.deckhouse.io/hash-key` | For example, `source-ip`: consistent hashing for Service backends of the HTTPRoute object |
+| `alb.network.deckhouse.io/hash-key` | Consistent hashing for Service backends of the HTTPRoute object (for example, `source-ip`) |
 | `alb.network.deckhouse.io/service-upstream` | `"true"`: traffic to the upstream goes through the corresponding Service object instead of directly to pods |
 | `alb.network.deckhouse.io/basic-auth-secret` | `namespace/secret` with htpasswd data for HTTP basic auth on this route |
 | `alb.network.deckhouse.io/satisfy` | `all` or `any`: defines whether both checks must be satisfied (whitelist and basic-auth) or only one of them (default `all`) |

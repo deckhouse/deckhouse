@@ -15,7 +15,6 @@ relatedLinks:
     url: /modules/alb/
 ---
 
-
 В руководстве описана миграция с модуля `ingress-nginx` на модуль `alb`. В рамках этой миграции публикация приложений переходит с Ingress API на Gateway API.
 
 Руководство охватывает различия моделей, подготовку инфраструктуры модуля `alb` с ClusterALBInstance или ALBInstance и управляемым Gateway, перевод приложений на Gateway API, миграцию системных интерфейсов Deckhouse Kubernetes Platform (DKP), переключение трафика на модуль `alb` и откат при необходимости.
@@ -34,7 +33,7 @@ relatedLinks:
 
 - Активное сопровождение upstream-проекта Ingress NGINX, используемого в DKP, прекращено. Новые функции, исправления и интеграции в нём не ожидаются. Для новых сценариев публикации приложений используйте Gateway API.
 - В отличие от Ingress API, Gateway API описывает маршруты отдельными ресурсами по протоколам, явно настраивает точки приёма трафика, контролирует подключение маршрутов и доступ между неймспейсами. Сложные конфигурации можно задавать ресурсами API, а не только аннотациями конкретного контроллера.
-- Gateway API разделяет ответственность между ролями. Администраторы кластера и сети управляют инфраструктурой обработки трафика и объектами Gateway через [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance_v1) или [ALBInstance](/modules/alb/cr.html#albinstance-v1alpha1-spec). Администраторы неймспейса настраивают приём трафика через ListenerSet (hostname, TLS, порты). Разработчики приложения задают маршрутизацию с помощью HTTPRoute и других ресурсов маршрутов. Такое разделение позволяет делегировать настройки, проверять конфигурацию и выполнять поэтапную миграцию.
+- Gateway API разделяет ответственность между ролями. Администраторы кластера и сети управляют инфраструктурой обработки трафика и объектами Gateway через [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance) или [ALBInstance](/modules/alb/cr.html#albinstance-v1alpha1-spec). Администраторы неймспейса настраивают приём трафика через ListenerSet (hostname, TLS, порты). Разработчики приложения задают маршрутизацию с помощью HTTPRoute и других ресурсов маршрутов. Такое разделение позволяет делегировать настройки, проверять конфигурацию и выполнять поэтапную миграцию.
 
 ## Сравнение моделей {#model-comparison}
 
@@ -100,9 +99,9 @@ relatedLinks:
 
 При выборе типа экземпляра учитывайте следующее:
 
-- Используйте [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance_v1) для общего или платформенного объекта Gateway, публикации системных интерфейсов DKP, а также если требуется инлет `HostPort`.
+- Используйте [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance) для общего или платформенного объекта Gateway, публикации системных интерфейсов DKP, а также если требуется инлет `HostPort`.
 - Для публикации системных интерфейсов DKP выполните инструкции из раздела [«Публикация служебных доменов»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#публикация-служебных-доменов).
-- Используйте [ALBInstance](/modules/alb/cr.html#albinstance-v1alpha1-spec) для объекта Gateway, выделенного приложению или команде и управляемого в пределах соответствующего неймспейса. Для ALBInstance поддерживается только инлет `LoadBalancer`.
+- Используйте [ALBInstance](/modules/alb/cr.html#albinstance-v1alpha1-spec) для объекта Gateway, выделенного приложению или команде и управляемого в пределах соответствующего неймспейса. ALBInstance поддерживает инлеты `LoadBalancer` и `ClusterIP`. Для миграции с `ingress-nginx` актуален инлет `LoadBalancer`.
 - Подробное сравнение приведено в разделе [«ClusterALBInstance и ALBInstance»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#clusteralbinstance-and-albinstance).
 
 ### Настройка инлета {#inlet-configuration}
@@ -110,8 +109,8 @@ relatedLinks:
 В IngressNginxController тип инлета одновременно определяет способ приёма трафика и дополнительные функции, например Proxy Protocol и сквозную передачу TLS-трафика. В модуле `alb` эти параметры настраиваются раздельно:
 
 - ClusterALBInstance поддерживает инлеты `LoadBalancer` и `HostPort`.
-- ALBInstance поддерживает инлет `LoadBalancer`.
-- Proxy Protocol включается параметром `spec.useProxyProtocol`. Его можно включать и отключать в существующем экземпляре без перезапуска подов Envoy Proxy или пересоздания экземпляра.
+- ALBInstance поддерживает инлеты `LoadBalancer` и `ClusterIP`.
+- Proxy Protocol включается параметром [`spec.useProxyProtocol`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-useproxyprotocol). Его можно включать и отключать в существующем экземпляре без перезапуска подов Envoy Proxy или пересоздания экземпляра.
 - Сквозная передача TLS-трафика настраивается с помощью TLS-слушателя и объекта TLSRoute, а не отдельного типа инлета.
 
 При выборе инлета для модуля `alb` используйте следующее соответствие:
@@ -119,16 +118,15 @@ relatedLinks:
 | Инлет IngressNginxController | Конфигурация модуля alb | Особенности миграции |
 | --- | --- | --- |
 | `LoadBalancer` | ClusterALBInstance или ALBInstance с `spec.inlet.type: LoadBalancer` | Контроллер создаёт объект Service с типом `LoadBalancer` |
-| `LoadBalancerWithProxyProtocol` | Инлет `LoadBalancer` с `spec.useProxyProtocol: true` | Настройте внешний балансировщик для передачи Proxy Protocol. Proxy Protocol и HTTP/3 нельзя включить одновременно |
+| `LoadBalancerWithProxyProtocol` | Инлет `LoadBalancer` с `spec.useProxyProtocol: true` | Настройте внешний балансировщик для передачи Proxy Protocol. Proxy Protocol и HTTP/3 нельзя включить одновременно: контроллер модуля `alb` отклонит такую конфигурацию как конфликтующую |
 | `LoadBalancerWithSSLPassthrough` | Инлет `LoadBalancer` с TLS-слушателем и объектом TLSRoute | Сквозная передача TLS-трафика относится к конфигурации маршрутизации Gateway API и не является отдельным вариантом инлета |
 | `HostPort` | ClusterALBInstance с `spec.inlet.type: HostPort` | Инлет `HostPort` не поддерживается для ALBInstance |
 | `HostPortWithProxyProtocol` | ClusterALBInstance с инлетом `HostPort` и `spec.useProxyProtocol: true` | Proxy Protocol и HTTP/3 нельзя включить одновременно |
 | `HostPortWithSSLPassthrough` | ClusterALBInstance с инлетом `HostPort`, TLS-слушателем и объектом TLSRoute | Сквозная передача TLS-трафика настраивается независимо от инлета |
-| `HostNetwork` | Прямой аналог отсутствует | Используйте ClusterALBInstance с инлетом `HostPort` на отдельной группе узлов или с другим набором портов хоста. Совместное использование одинаковых портов хоста на одних узлах с `ingress-nginx` недопустимо |
 | `HostWithFailover` | Прямой аналог отсутствует | Используйте ClusterALBInstance с инлетом `LoadBalancer` и балансировщиком MetalLB. Выполните настройку по [«Пример для bare metal с балансировщиком MetalLB»](/modules/alb/examples.html#bare-metal-metallb) и проверьте отказоустойчивость балансировщика до переключения пользовательского трафика |
 
 {% alert level="warning" %}
-Во время миграции модуль `ingress-nginx` с инлетом `HostNetwork` или `HostPort` и модуль `alb` с инлетом `HostPort` не могут использовать одинаковые порты хоста на одних и тех же узлах. Выберите разные группы узлов или другой набор портов хоста для одного из контроллеров.
+Во время миграции модуль `ingress-nginx` с инлетом `HostPort` или `HostWithFailover` и модуль `alb` с инлетом `HostPort` не могут использовать одинаковые порты хоста на одних и тех же узлах. Выберите разные группы узлов или другой набор портов хоста для одного из контроллеров.
 {% endalert %}
 
 Связанные параметры инлета переносятся следующим образом:
@@ -146,14 +144,14 @@ relatedLinks:
 При переносе параметров учитывайте следующее:
 
 - Перенесите только аннотации объекта Service, поддерживаемые целевой реализацией балансировщика.
-- Задайте параметр `spec.inlet.loadBalancer.loadBalancerClass` при создании объекта — после создания его изменить нельзя.
+- Задайте параметр [`spec.inlet.loadBalancer.loadBalancerClass`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer-loadbalancerclass) при создании объекта — после создания его изменить нельзя.
 - Оставьте порты HTTP `80` и HTTPS `443` по умолчанию либо задайте для порта значение `0` в модуле `alb`, чтобы отключить соответствующий слушатель по умолчанию.
 - Настройте параметры HostPort только для ClusterALBInstance. Укажите хотя бы один порт.
-- Перенесите необходимые ограничения доступа по исходным CIDR-диапазонам в `spec.acceptRequestsFrom`.
+- Перенесите необходимые ограничения доступа по исходным CIDR-диапазонам в [`spec.acceptRequestsFrom`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-acceptrequestsfrom).
 - Явно укажите CIDR доверенных прокси-серверов. Не разрешайте обработку заголовков с адресом клиента от произвольных источников.
 - Проверьте работу `loadBalancerSourceRanges` с целевой реализацией балансировщика. Значение передаётся в объект Service типа `LoadBalancer`. Облачный провайдер может не поддерживать или игнорировать этот параметр.
 
-Тип инлета ClusterALBInstance нельзя изменить после создания, а ALBInstance поддерживает только `LoadBalancer`. Чтобы сменить инлет, создайте новый экземпляр с тем же `gatewayName`, проверьте трафик, переключите на него нагрузку и удалите старый экземпляр.
+Тип инлета нельзя изменить после создания ни для ClusterALBInstance, ни для ALBInstance. Чтобы сменить инлет, создайте новый экземпляр с тем же `gatewayName`, проверьте трафик, переключите на него нагрузку и удалите старый экземпляр.
 
 ### TLS и сертификаты
 
@@ -296,7 +294,7 @@ relatedLinks:
 
 - протестируйте модуль `alb` без смены DNS через `migrationGateway`, когда нужна проверка без изменения DNS (`ingress-nginx` версии `1.1.0` и новее);
 - включите `http01CertificateSolverBridging`, если сертификаты пути Gateway API выпускаются через HTTP-01, пока публичный DNS ещё указывает на Ingress;
-- выберите способ переключения по текущей схеме входа — в подразделах ниже: автоматический балансировщик, ручной балансировщик или HostNetwork/HostPort;
+- выберите способ переключения по текущей схеме входа — в подразделах ниже: автоматический балансировщик, ручной балансировщик или HostPort/HostWithFailover;
 - перед окончательным переключением пользовательского трафика выполните [проверку переключения](#validating-the-cutover).
 
 ### Тестирование модуля alb через Ingress-контроллер
@@ -319,6 +317,18 @@ relatedLinks:
 d8 k get service --all-namespaces \
   --selector alb.deckhouse.io/configuration-service
 ```
+
+Пример вывода для ClusterALBInstance с именем `main` — Service с типом `ClusterIP` в неймспейсе `d8-alb`:
+
+<!-- markdownlint-disable MD031 -->
+```console
+NAMESPACE   NAME   TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)         AGE
+d8-alb      main   ClusterIP   10.222.1.10    <none>        80/TCP,443/TCP  10d
+```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
+
+Для ALBInstance объект Service находится в неймспейсе ALBInstance, а его имя — `d8-alb-<ALB_INSTANCE_NAME>`.
 
 Настройте исходный IngressNginxController. Сначала укажите в `sourceCIDRs` небольшое количество адресов тестовых клиентов:
 
@@ -353,7 +363,13 @@ spec:
 
 Параметр действует на все ресурсы Ingress, обслуживаемые контроллером. Перед расширением `sourceCIDRs` проверьте каждое имя хоста, доступное с этих адресов, и убедитесь, что аутентификация, перенаправления, обработка заголовков, GeoIP, соединения WebSocket и другие необходимые политики реализованы в конфигурации модуля `alb`.
 
-Параметр `migrationGateway` не поддерживается с инлетами `HostPortWithSSLPassthrough`, `LoadBalancerWithSSLPassthrough`, `HostWithFailover` и с параметром `enableIstioSidecar`. Целевой Service должен принимать обычный HTTP- и HTTPS-трафик без Proxy Protocol — `migrationGateway` его не передаёт.
+Параметр `migrationGateway` работает, перенаправляя на целевой Service уже принятый и, при необходимости, заново зашифрованный HTTP или HTTPS-запрос, поэтому он не поддерживается там, где nginx не выполняет эту обработку:
+
+- с инлетами `HostPortWithSSLPassthrough` и `LoadBalancerWithSSLPassthrough` — при сквозной передаче TLS nginx не расшифровывает трафик и не может определить, какой запрос нужно перенаправить;
+- с инлетом `HostWithFailover` — этот инлет всегда использует Proxy Protocol, а `migrationGateway` не поддерживает передачу Proxy Protocol на целевой Service;
+- с параметром `enableIstioSidecar` — трафик обрабатывается сайдкаром Istio, а не напрямую nginx.
+
+Целевой Service должен принимать обычный HTTP- и HTTPS-трафик без Proxy Protocol — `migrationGateway` его не передаёт.
 
 Если в целевой конфигурации модуля `alb` нужен Proxy Protocol, на время теста через `migrationGateway` отключите его (`spec.useProxyProtocol: false`). Перед переключением пользовательского трафика снова включите его и проверьте через балансировщик, который передаёт Proxy Protocol.
 
@@ -399,7 +415,7 @@ d8 k patch ingressnginxcontroller <CONTROLLER_NAME> --type json \
 
 ### Выбор способа переключения
 
-Выберите способ переключения в зависимости от того, как сейчас принимается внешний трафик: через автоматически создаваемый балансировщик, через балансировщик под ручным управлением или напрямую через HostNetwork/HostPort.
+Выберите способ переключения в зависимости от того, как сейчас принимается внешний трафик: через автоматически создаваемый балансировщик, через балансировщик под ручным управлением или напрямую через HostPort/HostWithFailover.
 
 {% tabs Способ переключения %}
 {% tab "DNS / автоматически создаваемый LB" %}
@@ -441,11 +457,11 @@ d8 k patch ingressnginxcontroller <CONTROLLER_NAME> --type json \
 - Если оба контроллера работают на одних узлах, используйте разные порты хоста либо выберите непересекающиеся группы узлов.
 
 {% endtab %}
-{% tab "HostNetwork или HostPort" %}
+{% tab "HostPort или HostWithFailover" %}
 
-#### Прямой доступ через HostNetwork или HostPort
+#### Прямой доступ через HostPort или HostWithFailover
 
-Чтобы переключить трафик при прямом доступе через HostNetwork или HostPort, выполните следующие действия:
+Чтобы переключить трафик при прямом доступе через HostPort или HostWithFailover, выполните следующие действия:
 
 1. Разверните модуль `alb` на отдельной группе узлов или используйте непересекающиеся порты хоста.
 1. Для постепенного переключения добавляйте адреса узлов модуля `alb` в DNS-запись и удаляйте адреса узлов Ingress-контроллера после проверки каждого узла.
@@ -466,8 +482,8 @@ DNS не позволяет выбрать контроллеры, исполь�
 
 Перед переключением пользовательского трафика:
 
-- Убедитесь, что ресурсы из шага 3 применены, а в статусе целевого ALBInstance или ClusterALBInstance установлены `ready` и `synced`. Проверьте поля конфликтов.
-- Проверьте условия в статусах Gateway, ListenerSet и маршрутов, включая принятие ресурсов, разрешение ссылок и готовность слушателей.
+- Убедитесь, что ресурсы из шага 3 применены, а в статусе целевого ALBInstance или ClusterALBInstance установлены `ready: true` и `synced: true`. Проверьте, что поля `conflictPorts`, `conflictBackendTLS` и `conflictFrontendTLS` имеют значение `false`; если какое-то из них `true`, соответствующее поле `<CONFLICT>Owner` укажет имя «управляющего» инстанса.
+- Проверьте условия `Accepted` и `Programmed` в статусе Gateway и ListenerSet, а также `Accepted` в статусе маршрутов (`d8 k -n <NAMESPACE> get gateway,listenerset,httproute <NAME> -o yaml` — раздел `status.conditions`). Значение `True` означает, что ресурс принят контроллером и его конфигурация применена.
 - Для каждого имени хоста и протокола проверьте обработку трафика, подключившись напрямую к адресу точки входа Gateway API или с помощью `migrationGateway`: TLS-сертификаты, перенаправления, аутентификацию, долгоживущие соединения и политики приложений.
 - Проверьте сохранение IP-адреса клиента, обработку Proxy Protocol или заголовков с адресом клиента, ограничения доступа по источнику и проверки состояния балансировщика.
 - Если для HTTP-01 ещё нужно перенаправление проверок, оставьте `http01CertificateSolverBridging` включённым до переключения DNS или балансировщика.

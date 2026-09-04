@@ -231,7 +231,7 @@ spec:
 
 ### Example for bare metal
 
-IngressNginxController with the [`HostWithFailover`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-hostwithfailover) inlet on frontend nodes:
+IngressNginxController with the [`HostWithFailover`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-inlet) inlet on frontend nodes:
 
 ```yaml
 apiVersion: deckhouse.io/v1
