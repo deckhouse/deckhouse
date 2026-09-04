@@ -1,0 +1,8 @@
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModulePullOverride
+metadata:
+  name: test-module
+spec:
+  imageTag: main
+  scanInterval: 15s

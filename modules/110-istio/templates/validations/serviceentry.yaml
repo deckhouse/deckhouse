@@ -1,0 +1,32 @@
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: serviceentry-ports-should-exist.deckhouse.io
+  {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
+spec:
+  validations:
+    - expression: "has(object.spec.ports)"
+      message: "A ServiceEntry should define at least one port to ensure proper traffic routing. Without ports, Istio cannot determine which service the traffic belongs to, so it just proxy-passes it. The cluster uses the ISTIO_META_DNS_AUTO_ALLOCATE feature, which generates fake IPs for ServiceEntries, so proxy-passed traffic ends up being sent to a fake IP. This may cause failures in service discovery and communication."
+  matchConstraints:
+    resourceRules:
+      - apiGroups: [ "networking.istio.io" ]
+        apiVersions: [ "v1beta1", "v1" ]
+        resources: [ "serviceentries" ]
+        operations: ["CREATE", "UPDATE"]
+  failurePolicy: Ignore
+---
+kind: ValidatingAdmissionPolicyBinding
+apiVersion: admissionregistration.k8s.io/v1
+metadata:
+  name: serviceentry-ports-should-exist.deckhouse.io
+  {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
+spec:
+  policyName: serviceentry-ports-should-exist.deckhouse.io
+  matchResources:
+    resourceRules:
+      - apiGroups: ["networking.istio.io"]
+        apiVersions: ["v1beta1", "v1"]
+        resources: ["serviceentries"]
+        operations: ["CREATE", "UPDATE"]
+  validationActions: ["Warn"]

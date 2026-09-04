@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -303,8 +304,8 @@ func (r *ServiceWithHealthchecksReconciler) RunTasksScheduler(ctx context.Contex
 			for swhName := range r.healthchecksResultsByServiceWithHealthchecks {
 				for i := range r.healthchecksResultsByServiceWithHealthchecks[swhName] {
 					healthcheckTarget := r.healthchecksResultsByServiceWithHealthchecks[swhName][i]
-					if !healthcheckTarget.podReady {
-						// skip pods which are not ready
+					if !healthcheckTarget.podReady && !healthcheckTarget.podTerminating {
+						// skip pods which are neither ready nor shutting down gracefully
 						continue
 					}
 					value, ok := r.servicesWithHealthchecks.Load(swhName)
@@ -517,39 +518,89 @@ func (r *ServiceWithHealthchecksReconciler) buildEndpoints(svc networkv1alpha1.S
 	defer r.mu.RUnlock()
 
 	for _, probeResult := range r.healthchecksResultsByServiceWithHealthchecks[types.NamespacedName{Name: svc.GetName(), Namespace: svc.GetNamespace()}] {
-		if svc.Spec.PublishNotReadyAddresses || *areAllProbesSucceed(probeResult.probeResultDetails) {
-			isReady := probeResult.podReady && *areAllProbesSucceed(probeResult.probeResultDetails)
-			endpoint := discoveryv1.Endpoint{
-				Addresses: []string{probeResult.targetHost},
-				NodeName:  &r.nodeName,
-				TargetRef: &corev1.ObjectReference{
-					Kind:      "Pod",
-					Name:      probeResult.podName,
-					Namespace: svc.GetNamespace(), UID: probeResult.podUID,
-				},
-				Conditions: discoveryv1.EndpointConditions{
-					Ready: &isReady,
-				},
-			}
-			endpoints = append(endpoints, endpoint)
+		probesSucceed := *areAllProbesSucceed(probeResult.probeResultDetails)
+
+		// a terminating pod stays published until it disappears, so that consumers may fall
+		// back to it while no ready endpoint is left
+		if !svc.Spec.PublishNotReadyAddresses && !probesSucceed && !probeResult.podTerminating {
+			continue
 		}
+
+		// a terminating pod is never ready, but may still serve traffic while shutting down
+		serving := probeResult.podReady && probesSucceed
+		if probeResult.podTerminating {
+			serving = probesSucceed
+		}
+		ready := serving && !probeResult.podTerminating
+		terminating := probeResult.podTerminating
+
+		endpoint := discoveryv1.Endpoint{
+			Addresses: []string{probeResult.targetHost},
+			NodeName:  &r.nodeName,
+			TargetRef: &corev1.ObjectReference{
+				Kind:      "Pod",
+				Name:      probeResult.podName,
+				Namespace: svc.GetNamespace(), UID: probeResult.podUID,
+			},
+			Conditions: discoveryv1.EndpointConditions{
+				Ready:       &ready,
+				Serving:     &serving,
+				Terminating: &terminating,
+			},
+		}
+		endpoints = append(endpoints, endpoint)
 	}
 	return endpoints
 }
 
-func getPodsReadinessMap(podList corev1.PodList) map[types.NamespacedName]bool {
-	podsReadinessMap := make(map[types.NamespacedName]bool)
-	for _, pod := range podList.Items {
-		podIsReady := true
-		for _, containerStatus := range pod.Status.ContainerStatuses {
-			if !containerStatus.Ready {
-				podIsReady = false
-				break
-			}
-		}
-		podsReadinessMap[types.NamespacedName{Name: pod.GetName(), Namespace: pod.GetNamespace()}] = podIsReady
+// podShouldBeTracked reports whether the pod may be published as an endpoint. Pods in a
+// terminal phase keep their podIP, which in DVP clusters may already be served by another
+// pod on another node. Pods being deleted are still published, as terminating endpoints.
+func podShouldBeTracked(pod *corev1.Pod) bool {
+	if pod.Status.PodIP == "" {
+		return false
 	}
-	return podsReadinessMap
+	return pod.Status.Phase != corev1.PodFailed && pod.Status.Phase != corev1.PodSucceeded
+}
+
+func isPodTerminating(pod *corev1.Pod) bool {
+	return pod.DeletionTimestamp != nil
+}
+
+// isPodReady relies on the PodReady condition instead of container statuses: the latter is
+// empty for pods that failed before their containers started, so they would look ready.
+func isPodReady(pod *corev1.Pod) bool {
+	if pod.Status.Phase != corev1.PodRunning {
+		return false
+	}
+	for _, condition := range pod.Status.Conditions {
+		if condition.Type == corev1.PodReady {
+			return condition.Status == corev1.ConditionTrue
+		}
+	}
+	return false
+}
+
+type podState struct {
+	ready       bool
+	terminating bool
+}
+
+// getPodsStateMap returns the state of the pods eligible for publishing. The pods left out
+// are absent from the map, so syncResultsMapWithPodList drops them from the targets.
+func getPodsStateMap(podList corev1.PodList) map[types.NamespacedName]podState {
+	podsStateMap := make(map[types.NamespacedName]podState)
+	for i := range podList.Items {
+		pod := &podList.Items[i]
+		if !podShouldBeTracked(pod) {
+			continue
+		}
+		podsStateMap[types.NamespacedName{Name: pod.GetName(), Namespace: pod.GetNamespace()}] = podState{
+			ready:       isPodReady(pod),
+			terminating: isPodTerminating(pod),
+		}
+	}
+	return podsStateMap
 }
 
 func (r *ServiceWithHealthchecksReconciler) deleteServiceWithHealthchecks(swhName types.NamespacedName) {
@@ -616,12 +667,12 @@ func (r *ServiceWithHealthchecksReconciler) getPostgreSQLCredentials(sqlHandler 
 
 func (r *ServiceWithHealthchecksReconciler) syncResultsMapWithPodList(hc networkv1alpha1.ServiceWithHealthchecks, podList corev1.PodList) {
 	serviceWithHCKey := types.NamespacedName{Namespace: hc.Namespace, Name: hc.Name}
-	podsReadinessMap := getPodsReadinessMap(podList)
+	podsStateMap := getPodsStateMap(podList)
 	r.mu.Lock()
 	// clean unused pod IPs from result slice
 	n := 0
 	for _, target := range r.healthchecksResultsByServiceWithHealthchecks[serviceWithHCKey] {
-		if _, exists := podsReadinessMap[types.NamespacedName{Namespace: hc.Namespace, Name: target.podName}]; exists {
+		if _, exists := podsStateMap[types.NamespacedName{Namespace: hc.Namespace, Name: target.podName}]; exists {
 			r.healthchecksResultsByServiceWithHealthchecks[serviceWithHCKey][n] = target
 			n++
 		}
@@ -634,11 +685,12 @@ func (r *ServiceWithHealthchecksReconciler) syncResultsMapWithPodList(hc network
 
 	// add new pods IPs to targets slice
 	for _, pod := range podList.Items {
-		if pod.Status.PodIP == "" {
-			// pod has no IP address (for example, it's in pending state), skipping
-			r.logger.Debug("pod has no IP address, skipping", "pod_name", pod.GetName(), "swh_name", hc.Name, "namespace", hc.Namespace)
+		if !podShouldBeTracked(&pod) {
+			// pod has no IP address or has already reached a terminal phase
+			r.logger.Debug("pod is not eligible for publishing, skipping", "pod_name", pod.GetName(), "pod_phase", pod.Status.Phase, "swh_name", hc.Name, "namespace", hc.Namespace)
 			continue
 		}
+		state := podsStateMap[types.NamespacedName{Name: pod.GetName(), Namespace: pod.GetNamespace()}]
 		targetNotFound := true
 		var oldIndex int
 		for i, target := range r.healthchecksResultsByServiceWithHealthchecks[serviceWithHCKey] {
@@ -659,14 +711,24 @@ func (r *ServiceWithHealthchecksReconciler) syncResultsMapWithPodList(hc network
 				podName:            pod.GetName(),
 				podNamespace:       pod.GetNamespace(),
 				podUID:             pod.GetUID(),
-				podReady:           podsReadinessMap[types.NamespacedName{Name: pod.GetName(), Namespace: pod.GetNamespace()}],
+				podReady:           state.ready,
+				podTerminating:     state.terminating,
 			})
 		} else {
 			// or update existing one
-			r.healthchecksResultsByServiceWithHealthchecks[serviceWithHCKey][oldIndex].podUID = pod.GetUID()
-			r.healthchecksResultsByServiceWithHealthchecks[serviceWithHCKey][oldIndex].podReady = podsReadinessMap[types.NamespacedName{Name: pod.GetName(), Namespace: pod.GetNamespace()}]
-			r.healthchecksResultsByServiceWithHealthchecks[serviceWithHCKey][oldIndex].targetHost = pod.Status.PodIP
-			r.healthchecksResultsByServiceWithHealthchecks[serviceWithHCKey][oldIndex].creationTime = pod.CreationTimestamp.Time
+			target := &r.healthchecksResultsByServiceWithHealthchecks[serviceWithHCKey][oldIndex]
+
+			// probes run for ready and terminating pods only, and their results belong to a
+			// particular pod instance and IP, so stale ones must not keep the endpoint published
+			if (!state.ready && !state.terminating) || target.podUID != pod.GetUID() || target.targetHost != pod.Status.PodIP {
+				target.probeResultDetails = []ProbeResultDetail{}
+			}
+
+			target.podUID = pod.GetUID()
+			target.podReady = state.ready
+			target.podTerminating = state.terminating
+			target.targetHost = pod.Status.PodIP
+			target.creationTime = pod.CreationTimestamp.Time
 			r.logger.Debug("update target pod for service", "pod_name", pod.GetName(), "swh_name", hc.Name, "namespace", hc.Namespace)
 		}
 	}
@@ -721,21 +783,62 @@ func MakeSliceCopy[T any](originalSlice []T) []T {
 	return newSlice
 }
 
+// endpointKey identifies an endpoint for sorting, falling back to the addresses because
+// TargetRef may be absent in slices written by another actor.
+func endpointKey(endpoint discoveryv1.Endpoint) string {
+	if endpoint.TargetRef != nil {
+		return string(endpoint.TargetRef.UID)
+	}
+	return strings.Join(endpoint.Addresses, ",")
+}
+
+// The three helpers below follow the EndpointSlice API defaults for unset conditions.
+func endpointIsReady(endpoint discoveryv1.Endpoint) bool {
+	return endpoint.Conditions.Ready == nil || *endpoint.Conditions.Ready
+}
+
+func endpointIsServing(endpoint discoveryv1.Endpoint) bool {
+	if endpoint.Conditions.Serving == nil {
+		return endpointIsReady(endpoint)
+	}
+	return *endpoint.Conditions.Serving
+}
+
+func endpointIsTerminating(endpoint discoveryv1.Endpoint) bool {
+	return endpoint.Conditions.Terminating != nil && *endpoint.Conditions.Terminating
+}
+
 func endpointsAreEqual(old, new []discoveryv1.Endpoint) bool {
-	sort.Slice(old, func(i, j int) bool {
-		return old[i].TargetRef.UID < old[j].TargetRef.UID
-	})
-	sort.Slice(new, func(i, j int) bool {
-		return new[i].TargetRef.UID < new[j].TargetRef.UID
-	})
 	if len(old) != len(new) {
 		return false
 	}
-	for i := range old {
-		if old[i].TargetRef.UID != new[i].TargetRef.UID {
+
+	// sort copies to keep the caller's slices intact
+	oldSorted := MakeSliceCopy(old)
+	newSorted := MakeSliceCopy(new)
+	sort.Slice(oldSorted, func(i, j int) bool {
+		return endpointKey(oldSorted[i]) < endpointKey(oldSorted[j])
+	})
+	sort.Slice(newSorted, func(i, j int) bool {
+		return endpointKey(newSorted[i]) < endpointKey(newSorted[j])
+	})
+
+	for i := range oldSorted {
+		if endpointKey(oldSorted[i]) != endpointKey(newSorted[i]) {
 			return false
 		}
-		if strings.Join(old[i].Addresses, "") != strings.Join(new[i].Addresses, "") {
+		if !slices.Equal(oldSorted[i].Addresses, newSorted[i].Addresses) {
+			return false
+		}
+		// without comparing the conditions an endpoint which became not ready would stay
+		// published as ready until the set of endpoints itself changes
+		if endpointIsReady(oldSorted[i]) != endpointIsReady(newSorted[i]) {
+			return false
+		}
+		if endpointIsServing(oldSorted[i]) != endpointIsServing(newSorted[i]) {
+			return false
+		}
+		if endpointIsTerminating(oldSorted[i]) != endpointIsTerminating(newSorted[i]) {
 			return false
 		}
 	}

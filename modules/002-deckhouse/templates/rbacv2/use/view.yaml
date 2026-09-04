@@ -13,6 +13,8 @@ rules:
   - deckhouse.io
   resources:
   - applications
+  - applicationpackages
+  - applicationpackageversions
   verbs:
   - get
   - list

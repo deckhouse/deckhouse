@@ -76,6 +76,32 @@ exclude:
 highlighter: rouge
 feedback_disable: true
 
+# Link rewriting in generated HTML (see _plugins/link_rewrite.rb).
+# When enabled, an <a href="..."> whose host is not in whitelistHosts (and is
+# not a subdomain of a listed host) is unwrapped — the tag is dropped, the link
+# text stays. Per-link opt-out: <a data-keep-link="true">.
+# By default, link rewriting is disabled. But it is enabled for the CSE edition in the documentation module.
+linkRewriteEnable: false
+linkRewrite:
+  # Allowed hosts. Applied only to absolute http(s) URLs: for a link whose host
+  # is not listed here (and is not a subdomain of a listed host), the <a> tag is
+  # unwrapped — the tag is dropped, the link text stays. Non-http(s) URLs
+  # (relative paths, mailto:, tel:, #anchor) and links with the data-keep-link
+  # attribute skip the whitelist check.
+  whitelistHosts: []
+  # Regex substitutions applied to every link (both relative and absolute) BEFORE
+  # the whitelist check. First matching rule wins. A rule may rewrite an absolute
+  # URL into a relative one — the result then skips the whitelist check.
+  replace:
+  #  - from: '^https?://old\.example\.com/(.*)$'
+  #    to:   'https://new.example.com/\1'
+  # Regex patterns for explicit link removal. Applied AFTER replace, BEFORE the
+  # whitelist check, to every link (relative or absolute). A link whose href
+  # matches ANY of these patterns gets its <a> tag unwrapped (text stays).
+  remove: []
+  #  - '^https?://internal\.example\.com/.*$'
+  #  - '/products/[^/]+/documentation/architecture/.*'
+
 plugins:
   - jekyll-regex-replace
   - jekyll_include_plugin
@@ -133,11 +159,16 @@ defaults:
     values:
       ai_export: false
   - scope:
+      path: "pages/installing"
+    values:
+      editionsNotAvailable: [cse]
+  - scope:
       path: "pages/admin"
     values:
       sidebar: main
       sitemap_include: true
       showPrevNextButton: true
+      editionsNotAvailable: [cse]
       searchBoost: 2
   - scope:
       path: "pages/architecture"
@@ -145,6 +176,7 @@ defaults:
       sidebar: main
       sitemap_include: true
       showPrevNextButton: true
+      editionsNotAvailable: [cse]
       searchBoost: 2
   - scope:
       path: "pages/user"
@@ -152,6 +184,7 @@ defaults:
       sidebar: main
       sitemap_include: true
       showPrevNextButton: true
+      editionsNotAvailable: [cse]
       searchBoost: 1.5
   - scope:
       path: "pages/reference"

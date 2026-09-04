@@ -158,3 +158,42 @@ func TestPodTemplateLabels_StaticKeys(t *testing.T) {
 		}
 	}
 }
+
+func TestIstioGatewayLabels_OmitsNetworkLabel(t *testing.T) {
+	inst := newInstance("main", "ns")
+
+	got := istioGatewayLabels(inst, "v1x29x6")
+
+	if v, ok := got[TopologyNetworkLabelKey]; ok {
+		t.Errorf("istioGatewayLabels must not set %q (got %q): istiod registers any Gateway "+
+			"carrying it as a cross-network gateway at the waypoint's in-cluster address, and "+
+			"peer clusters import those entries", TopologyNetworkLabelKey, v)
+	}
+
+	wantKeys := map[string]string{
+		"gateway.istio.io/managed": "istio.io-mesh-controller",
+		"istio.io/rev":             "v1x29x6",
+		"istio.io/waypoint-for":    "all",
+	}
+
+	for k, want := range wantKeys {
+		if got[k] != want {
+			t.Errorf("istioGatewayLabels[%q] = %q, want %q", k, got[k], want)
+		}
+	}
+
+	if len(got) != len(wantKeys) {
+		t.Errorf("istioGatewayLabels len = %d, want %d", len(got), len(wantKeys))
+	}
+}
+
+func TestPodTemplateLabels_KeepsNetworkLabel(t *testing.T) {
+	inst := newInstance("main", "ns")
+
+	got := podTemplateLabels(inst, "v1x29x6", "test-network")
+
+	if got[TopologyNetworkLabelKey] != "test-network" {
+		t.Errorf("podTemplateLabels[%q] = %q, want %q: the pod template is where "+
+			"ISTIO_META_NETWORK comes from", TopologyNetworkLabelKey, got[TopologyNetworkLabelKey], "test-network")
+	}
+}

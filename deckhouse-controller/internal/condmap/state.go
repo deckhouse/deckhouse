@@ -23,6 +23,7 @@ import (
 // External holds user-facing conditions from the previous run; rules read it
 // to implement sticky and guard behavior (e.g. Installed stays True once set).
 type State struct {
+	Deleting bool                        // true when the package is being removed
 	Updating bool                        // true when a version change is in progress
 	Internal map[string]metav1.Condition // task-set conditions, keyed by condition type
 	External map[string]metav1.Condition // previously computed user-facing conditions, read-only during mapping
@@ -72,6 +73,11 @@ func (s *State) HasInt(cond string) bool {
 // IsUpdating reports whether this mapping run observes a version change.
 func (s *State) IsUpdating() bool {
 	return s.Updating
+}
+
+// IsDeleting reports whether this mapping run observes a package being removed.
+func (s *State) IsDeleting() bool {
+	return s.Deleting
 }
 
 // GetIntReason returns the Reason and Message of an internal condition.

@@ -289,6 +289,11 @@ properties:
         properties:
           type:
             type: string
+            description: |
+              Cloud provider ID as published by the cloud-provider-* module in the `d8-node-manager-cloud-provider` secret: `aws`, `openstack`, `vcd`, etc.
+
+              The pattern is an injection guard, not a list of known providers: it keeps the characters that stay inert inside a YAML plain scalar and drops the ones that do not — whitespace and line breaks, and the indicators `:`, `#`, `,`, `[`, `]`, `{`, `}`, `&`, `*`, `!`, `|`, `>`, `%`, `@`, `` ` `` and quotes. The first character must be alphanumeric, so the value cannot be read as a document marker (`---`, `...`) or a sequence entry either. A value read out of the secret therefore cannot close the scalar it is rendered into, start a comment or a flow collection, or open a `{{` action in the files templates render through `tpl`. Any new or out-of-tree provider ID fits it as it is.
+            pattern: '^[A-Za-z0-9][A-Za-z0-9._-]*$'
           region:
             type: string
           zones:

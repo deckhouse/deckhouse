@@ -1,7 +1,7 @@
 <section class="cards-blocks">
 <div class="cards-blocks__content">
 <h2 class="cards-blocks__title text_h2">
-Главное
+Начало работы с кластером
 </h2>
 <div class="cards-blocks__cards">
 
@@ -44,7 +44,7 @@
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-👌 <span class="cards-item__title-text">Status page</span>
+👌 <span class="cards-item__title-text">Страница состояния</span>
 </h3>
 <div class="cards-item__text">
 <p>Узнайте общий статус Deckhouse и его компонентов.<br />
@@ -61,9 +61,9 @@
 🏭 <span class="cards-item__title-text">Подготовка к production</span>
 </h3>
 <div class="cards-item__text" markdown="1">
-Подготовьте ваш кластер к приему трафика.
+Подготовьте кластер к приёму трафика.
 
-Воспользуйтесь нашим [чек-листом](/products/kubernetes-platform/guides/production.html), чтобы убедиться, что вы ничего не забыли.
+Воспользуйтесь [чек-листом](/products/kubernetes-platform/guides/production.html), чтобы ничего не упустить.
 </div>
 </div>
 {%- endif %}
@@ -131,7 +131,7 @@ Service'у.
 </h3>
 <div class="cards-item__text" markdown="1">
 {% if page.platform_type == 'cloud' %}
-При создании кластера были созданы две группы узлов. Чтобы увидеть их в кластере, выполните команду `kubectl get
+При создании кластера были созданы две группы узлов. Чтобы увидеть их в кластере, выполните команду `d8 k get
 nodegroups`. Подробнее об этом в [документации](/modules/node-manager/) по модулю управления узлами.
 
 Чтобы отмасштабировать существующие группы, вам достаточно изменить параметры `minPerZone` и `maxPerZone`. При этом,
@@ -152,9 +152,9 @@ nodegroups`. Подробнее об этом в [документации](/mod
 {% endif %}
 
 <div markdown="1">
-## Что дальше?
+## Следующие шаги
 
 Подробная информация о системе в целом и по каждому компоненту Deckhouse Kubernetes Platform расположена в [документации](/products/kubernetes-platform/documentation/v1/).
 
-По всем возникающим вопросам вы всегда можете связаться с нашим [онлайн-сообществом](/community/about.html#online-community).
+По всем возникающим вопросам вы можете связаться с [онлайн-сообществом](/community/about.html#online-community).
 </div>

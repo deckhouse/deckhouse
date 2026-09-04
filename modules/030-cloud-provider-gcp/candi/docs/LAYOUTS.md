@@ -17,6 +17,17 @@ Two layouts are supported. Below is more information about each of them.
 ![resources](images/gcp-standard.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10164&t=IvETjbByf1MSQzcm-0 --->
 
+When a cluster is created, the module creates the following firewall rules in the cluster VPC:
+
+- `<CLUSTER_PREFIX>-ssh-and-ping` — allow incoming traffic over the ICMP and TCP (port `22`) protocols to nodes with the `<CLUSTER_PREFIX>` network tag from CIDRs listed in [`sshAllowList`](cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (default `0.0.0.0/0`)
+- `<CLUSTER_PREFIX>-intercommunication` — allow any traffic between nodes with the `<CLUSTER_PREFIX>` network tag, and from the pod subnet ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr))
+
+Apply custom firewall rules to nodes via additional network tags ([`additionalNetworkTags`](cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags)):
+
+- for master nodes — in the [`masterNodeGroup.instanceClass.additionalNetworkTags`](cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags) parameter of the [GCPClusterConfiguration](cluster_configuration.html#gcpclusterconfiguration) resource
+- for static nodes — in the [`nodeGroups[].instanceClass.additionalNetworkTags`](cluster_configuration.html#gcpclusterconfiguration-nodegroups-instanceclass-additionalnetworktags) parameter of the [GCPClusterConfiguration](cluster_configuration.html#gcpclusterconfiguration) resource
+- for ephemeral nodes — in the [`spec.additionalNetworkTags`](cr.html#gcpinstanceclass-v1-spec-additionalnetworktags) parameter of the [GCPInstanceClass](cr.html#gcpinstanceclass) resource
+
 Example of the layout configuration:
 
 ```yaml
@@ -85,6 +96,17 @@ provider:
 
 ![resources](images/gcp-withoutnat.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10296&t=IvETjbByf1MSQzcm-0 --->
+
+When a cluster is created, the module creates the following firewall rules in the cluster VPC:
+
+- `<CLUSTER_PREFIX>-ssh-and-ping` — allow incoming traffic over the ICMP and TCP (port `22`) protocols to nodes with the `<CLUSTER_PREFIX>` network tag from CIDRs listed in [`sshAllowList`](cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (default `0.0.0.0/0`)
+- `<CLUSTER_PREFIX>-intercommunication` — allow any traffic between nodes with the `<CLUSTER_PREFIX>` network tag, and from the pod subnet ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr))
+
+Apply custom firewall rules to nodes via additional network tags ([`additionalNetworkTags`](cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags)):
+
+- for master nodes — in the [`masterNodeGroup.instanceClass.additionalNetworkTags`](cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags) parameter of the [GCPClusterConfiguration](cluster_configuration.html#gcpclusterconfiguration) resource
+- for static nodes — in the [`nodeGroups[].instanceClass.additionalNetworkTags`](cluster_configuration.html#gcpclusterconfiguration-nodegroups-instanceclass-additionalnetworktags) parameter of the [GCPClusterConfiguration](cluster_configuration.html#gcpclusterconfiguration) resource
+- for ephemeral nodes — in the [`spec.additionalNetworkTags`](cr.html#gcpinstanceclass-v1-spec-additionalnetworktags) parameter of the [GCPInstanceClass](cr.html#gcpinstanceclass) resource
 
 Example of the layout configuration:
 
