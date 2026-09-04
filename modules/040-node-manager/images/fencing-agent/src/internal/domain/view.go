@@ -21,12 +21,6 @@ import (
 	"strings"
 )
 
-// View is one moment of the local picture: the NodeGroup Kubernetes expects,
-// against the members gossip currently sees alive.
-//
-// Alive is the intersection of the two. A member gossip still carries but the
-// NodeGroup no longer lists must not count towards quorum, and a Node that never
-// joined gossip must not count as alive.
 type View struct {
 	expected map[string]Peer
 	alive    []string
