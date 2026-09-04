@@ -791,17 +791,6 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/modules/110-istio/templates/validations-ee
-  to: /deckhouse/modules/110-istio/templates/validations-ee
-  excludePaths:
-    - docs
-    - README.md
-    - images
-    - webhooks
-    - crds
-  stageDependencies:
-    setup:
-        - '**/*'
 - add: /ee/modules/110-istio/templates/waypoint-controller
   to: /deckhouse/modules/110-istio/templates/waypoint-controller
   excludePaths:
@@ -823,6 +812,21 @@
     - crds
   stageDependencies:
     setup:
+        - '**/*'
+- add: /ee/modules/110-istio/templates/validations/federation.yaml
+  to: /deckhouse/modules/110-istio/templates/validations/federation.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/110-istio/templates/validations/multicluster.yaml
+  to: /deckhouse/modules/110-istio/templates/validations/multicluster.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/110-istio/templates/validations/waypointinstances.yaml
+  to: /deckhouse/modules/110-istio/templates/validations/waypointinstances.yaml
+  stageDependencies:
+    install:
         - '**/*'
 - add: /ee/modules/110-istio/hooks/ee
   to: /deckhouse/modules/110-istio/hooks/ee
