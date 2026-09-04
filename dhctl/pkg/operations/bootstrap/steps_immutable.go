@@ -63,6 +63,18 @@ type immutableBootstrap struct {
 	// maintenancePort is where the machines take their configuration; zero means
 	// immutable.MaintenancePort, and only a test points it anywhere else.
 	maintenancePort int
+	// statusTokens are the bearers the documents dhctl handed out carry, by node
+	// name: a machine reports its progress to whoever configured it and nobody
+	// else. Empty for a node a rerun found already configured.
+	statusTokens map[string]string
+}
+
+// maintenancePort is where the machines take their configuration.
+func maintenancePort(bctx *bootstrapContext) int {
+	if bctx.immutable.maintenancePort != 0 {
+		return bctx.immutable.maintenancePort
+	}
+	return immutable.MaintenancePort
 }
 
 // stopImmutableTunnel closes the bastion tunnel the path opened, if it opened one.
@@ -387,10 +399,7 @@ func (b *ClusterBootstrapper) checkMachinesAreAvailable(ctx context.Context, bct
 		return nil
 	}
 
-	port := immutable.MaintenancePort
-	if bctx.immutable.maintenancePort != 0 {
-		port = bctx.immutable.maintenancePort
-	}
+	port := maintenancePort(bctx)
 
 	// The first master first, not whichever name sorts first: building a document
 	// mints the run's one handoff certificate, and it is issued to the node the
@@ -407,16 +416,11 @@ func (b *ClusterBootstrapper) checkMachinesAreAvailable(ctx context.Context, bct
 
 // checkMachineIsAvailable reaches one machine and reads it against its document.
 func (b *ClusterBootstrapper) checkMachineIsAvailable(ctx context.Context, bctx *bootstrapContext, name, address string, port int) error {
-	_, nodeConfig, err := b.buildImmutableMasterPayload(ctx, bctx, name)
-	if err != nil {
-		return fmt.Errorf("build the document of %s to check it against the machine: %w", name, err)
-	}
-
 	loop := libretry.NewSilentLoop(fmt.Sprintf("Reaching %s", name), checkMachinesAvailable.attempts, checkMachinesAvailable.interval)
 
 	var inventory *immutable.Inventory
 	var alreadyANode bool
-	err = retryWithFreshChannel(ctx, loop,
+	err := retryWithFreshChannel(ctx, loop,
 		func(ctx context.Context) (string, func(), error) {
 			return b.openImmutableChannelTo(ctx, address, port, "machine check")
 		},
@@ -469,6 +473,14 @@ func (b *ClusterBootstrapper) checkMachineIsAvailable(ctx context.Context, bctx 
 		return nil
 	}
 
+	// Built after the inventory, not before: the document names the interface the
+	// cluster reaches the node on, and that interface is chosen from what the
+	// machine reports about itself.
+	_, nodeConfig, err := b.buildImmutableMasterPayload(ctx, bctx, name, inventory)
+	if err != nil {
+		return fmt.Errorf("build the document of %s to check it against the machine: %w", name, err)
+	}
+
 	// An image too old to serve one leaves nothing to check against. Said here,
 	// once, rather than warned about in the middle of the install.
 	if inventory == nil {
@@ -486,7 +498,7 @@ func (b *ClusterBootstrapper) checkMachineIsAvailable(ctx context.Context, bctx 
 // buildImmutableMasterPayload renders the cloud-init the first master boots
 // with, and "" on every other path. A progress line of its own: it decides what
 // the machine will be, and it runs before the machine exists.
-func (b *ClusterBootstrapper) buildImmutableMasterPayload(ctx context.Context, bctx *bootstrapContext, nodeName string) (string, []byte, error) {
+func (b *ClusterBootstrapper) buildImmutableMasterPayload(ctx context.Context, bctx *bootstrapContext, nodeName string, inventory *immutable.Inventory) (string, []byte, error) {
 	if bctx.immutable == nil {
 		return "", nil, nil
 	}
@@ -505,7 +517,8 @@ func (b *ClusterBootstrapper) buildImmutableMasterPayload(ctx context.Context, b
 			CandiDir:      b.Options.Global.CandiDir,
 			GlobalOptions: &b.Options.Global,
 			Customization: immutableCustomization(bctx, nodeName),
-			NodeIP:        immutableNodeAddress(bctx, nodeName),
+			Inventory:     inventory,
+			PushAddress:   bctx.immutable.hosts[nodeName],
 		})
 		return err
 	})
@@ -522,18 +535,6 @@ func immutableCustomization(bctx *bootstrapContext, nodeName string) *immutable.
 		return nil
 	}
 	return &described
-}
-
-// immutableNodeAddress is where the machine answers once it has installed
-// itself: the address dhctl configures it at, unless its document moves it to a
-// static one. Empty in a cloud, where the machine does not exist yet and only it
-// can tell which of its networks the cluster is on.
-func immutableNodeAddress(bctx *bootstrapContext, nodeName string) string {
-	address := bctx.immutable.hosts[nodeName]
-	if address == "" {
-		return ""
-	}
-	return immutableCustomization(bctx, nodeName).AddressAfterInstall(address)
 }
 
 // bootstrapImmutableFirstMaster hands the machine the cluster starts on its
@@ -558,15 +559,6 @@ func (b *ClusterBootstrapper) bootstrapImmutableFirstMaster(ctx context.Context,
 func (b *ClusterBootstrapper) handFirstMasterItsPayload(ctx context.Context, bctx *bootstrapContext, nodeName, address string) error {
 	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("First master: %s at %s (no SSH access)", nodeName, address))
 
-	// The machine is configured at one address and, when its document gives it a
-	// static one, answers at another from the moment it has installed itself.
-	installedAddress := immutableCustomization(bctx, nodeName).AddressAfterInstall(address)
-	if installedAddress != address {
-		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
-			"%s takes the static address %s its document assigns it; everything after the push goes there, not to %s",
-			nodeName, installedAddress, address))
-	}
-
 	// Every phase replays on a rerun and the push is not idempotent: a machine
 	// that already has its configuration answers the next one as an installed
 	// node, which is terminal. Only this record tells that from a wrong address.
@@ -575,28 +567,102 @@ func (b *ClusterBootstrapper) handFirstMasterItsPayload(ctx context.Context, bct
 		return err
 	}
 	if pushed {
+		// The machine holds a configuration now, so it serves no inventory and the
+		// interface cannot be chosen a second time: where it answers is read back
+		// from what the attempt that configured it recorded.
+		installed, err := loadNodeAddress(ctx, bctx.stateCache, nodeName, address)
+		if err != nil {
+			return err
+		}
 		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
-			"An earlier attempt already handed %s its configuration; continuing with the node at %s", nodeName, installedAddress,
+			"An earlier attempt already handed %s its configuration; continuing with the node at %s", nodeName, installed,
 		))
-		bctx.immutable.masterIP = installedAddress
+		bctx.immutable.masterIP = installed
 		return nil
 	}
 
-	payload, nodeConfig, err := b.buildImmutableMasterPayload(ctx, bctx, nodeName)
+	document, err := b.pushRecordedPayload(ctx, bctx, nodeName, address, b.masterDocumentBuilder(bctx, nodeName, address))
 	if err != nil {
 		return err
 	}
-	document, err := base64.StdEncoding.DecodeString(payload)
-	if err != nil {
-		return fmt.Errorf("decode the payload of %s: %w", nodeName, err)
+
+	// The machine is configured at one address and, when the cluster reaches it on
+	// another interface, answers elsewhere from the moment it has installed itself.
+	if document.address != address {
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
+			"%s answers at %s once it has installed itself; everything after the push goes there, not to %s",
+			nodeName, document.address, address))
 	}
 
-	if err := b.pushRecordedPayload(ctx, bctx, nodeName, address, document, nodeConfig); err != nil {
-		return err
-	}
-
-	bctx.immutable.masterIP = installedAddress
+	bctx.immutable.masterIP = document.address
 	return nil
+}
+
+// immutableDocument is what one machine was handed, and what dhctl keeps about
+// it afterwards: where the node answers once it is installed, and the bearer its
+// progress is read with.
+type immutableDocument struct {
+	payload     []byte
+	nodeConfig  []byte
+	address     string
+	statusToken string
+	// builtAgainstInventory records that the machine reported its hardware while
+	// this was rendered. Without it the cluster interface was chosen blind and
+	// nothing was checked, so a later attempt has to render again.
+	builtAgainstInventory bool
+}
+
+// buildDocument renders a machine's payload against what the machine reports
+// about itself. A function rather than bytes, because only the attempt that
+// reaches the machine has an inventory to choose the cluster interface from.
+type buildDocument func(ctx context.Context, inventory *immutable.Inventory) (immutableDocument, error)
+
+// masterDocumentBuilder renders what the machine the cluster starts on boots with.
+func (b *ClusterBootstrapper) masterDocumentBuilder(bctx *bootstrapContext, nodeName, address string) buildDocument {
+	return func(ctx context.Context, inventory *immutable.Inventory) (immutableDocument, error) {
+		payload, nodeConfig, err := b.buildImmutableMasterPayload(ctx, bctx, nodeName, inventory)
+		if err != nil {
+			return immutableDocument{}, err
+		}
+		return newImmutableDocument(bctx, nodeName, address, inventory, payload, nodeConfig)
+	}
+}
+
+// joinDocumentBuilder renders what a machine joining the running cluster boots with.
+func (b *ClusterBootstrapper) joinDocumentBuilder(bctx *bootstrapContext, kubeCl *client.KubernetesClient, nodeName, address string) buildDocument {
+	return func(ctx context.Context, inventory *immutable.Inventory) (immutableDocument, error) {
+		payload, nodeConfig, err := immutable.BuildJoinPayloadFromCluster(ctx, kubeCl, bctx.metaConfig, nodeName,
+			immutableCustomization(bctx, nodeName), inventory, address, global.MasterNodeGroupName)
+		if err != nil {
+			return immutableDocument{}, err
+		}
+		return newImmutableDocument(bctx, nodeName, address, inventory, payload, nodeConfig)
+	}
+}
+
+// newImmutableDocument decodes a rendered payload and works out what dhctl has
+// to remember about the machine it goes to.
+func newImmutableDocument(bctx *bootstrapContext, nodeName, address string, inventory *immutable.Inventory, payload string, nodeConfig []byte) (immutableDocument, error) {
+	decoded, err := base64.StdEncoding.DecodeString(payload)
+	if err != nil {
+		return immutableDocument{}, fmt.Errorf("decode the payload of %s: %w", nodeName, err)
+	}
+
+	// The same choice the document was built from, over the same inventory: the
+	// address dhctl dials next cannot be another interface than the one the
+	// document marks.
+	installed, err := immutable.NodeAddressAfterInstall(
+		bctx.metaConfig, immutableCustomization(bctx, nodeName), inventory, address)
+	if err != nil {
+		return immutableDocument{}, err
+	}
+
+	return immutableDocument{
+		payload:     decoded,
+		nodeConfig:  nodeConfig,
+		address:     installed,
+		statusToken: immutable.StatusTokenOf(nodeConfig),
+	}, nil
 }
 
 // bootstrapImmutableAdditionalMasters gives the rest of the control plane its
@@ -606,6 +672,13 @@ func (b *ClusterBootstrapper) handFirstMasterItsPayload(ctx context.Context, bct
 func (b *ClusterBootstrapper) bootstrapImmutableAdditionalMasters(ctx context.Context, bctx *bootstrapContext, kubeCl *client.KubernetesClient) error {
 	for _, nodeName := range remainingMasterNames(bctx) {
 		if err := b.handImmutableJoinPayload(ctx, bctx, kubeCl, nodeName); err != nil {
+			return err
+		}
+
+		// The Node appears when kubelet starts, and until it does the machine is the
+		// only thing that knows why it has not: a node that could not decide which
+		// of its interfaces the cluster reaches it on never registers at all.
+		if err := waitForImmutableMasterNode(ctx, kubeCl, nodeName, b.immutableNodeStatusProbe(bctx, nodeName)); err != nil {
 			return err
 		}
 
@@ -637,17 +710,8 @@ func (b *ClusterBootstrapper) handImmutableJoinPayload(ctx context.Context, bctx
 		return nil
 	}
 
-	payload, nodeConfig, err := immutable.BuildJoinPayloadFromCluster(ctx, kubeCl, bctx.metaConfig, nodeName,
-		immutableCustomization(bctx, nodeName), immutableNodeAddress(bctx, nodeName), global.MasterNodeGroupName)
-	if err != nil {
-		return err
-	}
-	document, err := base64.StdEncoding.DecodeString(payload)
-	if err != nil {
-		return fmt.Errorf("decode the payload of %s: %w", nodeName, err)
-	}
-
-	return b.pushRecordedPayload(ctx, bctx, nodeName, address, document, nodeConfig)
+	_, err = b.pushRecordedPayload(ctx, bctx, nodeName, address, b.joinDocumentBuilder(bctx, kubeCl, nodeName, address))
+	return err
 }
 
 // pushRecordedPayload records the machine dhctl is about to hand a document to, and then hands it
@@ -655,12 +719,12 @@ func (b *ClusterBootstrapper) handImmutableJoinPayload(ctx context.Context, bctx
 // accepts the document (constants.go): a reply lost on the way back would otherwise read as a
 // machine that was never pushed to, and the rerun's second document is refused by the installed
 // agent for good.
-func (b *ClusterBootstrapper) pushRecordedPayload(ctx context.Context, bctx *bootstrapContext, nodeName, address string, document, nodeConfig []byte) error {
+func (b *ClusterBootstrapper) pushRecordedPayload(ctx context.Context, bctx *bootstrapContext, nodeName, address string, build buildDocument) (immutableDocument, error) {
 	if err := savePushedPayload(ctx, bctx.stateCache, nodeName, address); err != nil {
-		return err
+		return immutableDocument{}, err
 	}
 
-	handedOver, err := b.pushImmutablePayload(ctx, bctx, nodeName, address, document, nodeConfig)
+	document, handedOver, err := b.pushImmutablePayload(ctx, bctx, nodeName, address, build)
 
 	// The record answers one question — may this machine be holding a document of ours — and only
 	// the push knows. A run where no attempt ever handed one over took nothing from dhctl: the
@@ -668,11 +732,67 @@ func (b *ClusterBootstrapper) pushRecordedPayload(ctx context.Context, bctx *boo
 	// on a master nobody configured. Where one did, the record stays whatever the last attempt
 	// answered: an accepted push is followed by a 401 from the agent that comes up behind it, and
 	// retracting on that is what sent the rerun back to push a third time and dead-end.
-	if err != nil && !handedOver {
-		bctx.stateCache.Delete(ctx, pushedPayloadCacheKey(nodeName))
+	if err != nil {
+		if !handedOver {
+			bctx.stateCache.Delete(ctx, pushedPayloadCacheKey(nodeName))
+		}
+		return document, err
 	}
 
-	return err
+	rememberStatusToken(bctx, nodeName, document.statusToken)
+
+	return document, saveNodeAddress(ctx, bctx.stateCache, nodeName, document.address)
+}
+
+// rememberStatusToken keeps the bearer of the document this run handed out, so
+// the wait that follows can ask the machine what it is doing.
+func rememberStatusToken(bctx *bootstrapContext, nodeName, token string) {
+	if token == "" {
+		return
+	}
+	if bctx.immutable.statusTokens == nil {
+		bctx.immutable.statusTokens = make(map[string]string, 1)
+	}
+	bctx.immutable.statusTokens[nodeName] = token
+}
+
+// nodeAddressCacheKey names the record of where a machine answers once it is
+// installed. Kept because it cannot be recomputed: the choice reads the machine's
+// inventory, and a machine holding a configuration serves none. Named like the
+// other keys of this path (pkg/immutable/constants.go).
+func nodeAddressCacheKey(nodeName string) string {
+	return "immutable-control-plane-node-address-" + nodeName
+}
+
+func saveNodeAddress(ctx context.Context, stateCache state.Cache, nodeName, address string) error {
+	if err := stateCache.Save(ctx, nodeAddressCacheKey(nodeName), []byte(address)); err != nil {
+		return fmt.Errorf("record where %s answers once it is installed: %w", nodeName, err)
+	}
+	return nil
+}
+
+// loadNodeAddress reads that record back, falling back to the address the
+// machine was configured at: a run from before the record existed left none, and
+// the machine most often answers where it was pushed to.
+func loadNodeAddress(ctx context.Context, stateCache state.Cache, nodeName, pushAddress string) (string, error) {
+	key := nodeAddressCacheKey(nodeName)
+
+	inCache, err := stateCache.InCache(ctx, key)
+	if err != nil {
+		return "", fmt.Errorf("look up %s in the state cache: %w", key, err)
+	}
+	if !inCache {
+		return pushAddress, nil
+	}
+
+	recorded, err := stateCache.Load(ctx, key)
+	if err != nil {
+		return "", fmt.Errorf("load %s from the state cache: %w", key, err)
+	}
+	if len(recorded) == 0 {
+		return pushAddress, nil
+	}
+	return string(recorded), nil
 }
 
 // pushedPayloadCacheKey names the record of the machine that already took this
@@ -718,12 +838,10 @@ func payloadAlreadyPushed(ctx context.Context, stateCache state.Cache, nodeName,
 // pushImmutablePayload waits for the machine to open its maintenance port and
 // hands it document, the cloud-init. The wait is generous: the machine may still
 // be POSTing. nodeConfig is the document inside it, checked against the hardware.
-func (b *ClusterBootstrapper) pushImmutablePayload(ctx context.Context, bctx *bootstrapContext, nodeName, address string, document, nodeConfig []byte) (bool, error) {
-	port := immutable.MaintenancePort
-	if bctx.immutable.maintenancePort != 0 {
-		port = bctx.immutable.maintenancePort
-	}
+func (b *ClusterBootstrapper) pushImmutablePayload(ctx context.Context, bctx *bootstrapContext, nodeName, address string, build buildDocument) (immutableDocument, bool, error) {
+	port := maintenancePort(bctx)
 
+	var document immutableDocument
 	var handedOver bool
 	err := dhlog.RunProcess(ctx, dhlog.FromContext(ctx), fmt.Sprintf("Hand %s its configuration", nodeName), func(ctx context.Context) error {
 		// A channel per attempt: this wait starts while the machine is still
@@ -736,13 +854,19 @@ func (b *ClusterBootstrapper) pushImmutablePayload(ctx context.Context, bctx *bo
 			BreakIf(pushGaveUp)
 
 		err := retryWithFreshChannel(ctx, loop, openChannel, func(endpoint string) error {
-			// The check is inside the loop, because the loop is the wait: a machine
-			// still powering on answers nothing to check against, and the attempt
-			// that reaches it is the last moment before it takes the document.
-			if err := checkMachineAgainstDocument(ctx, endpoint, nodeConfig); err != nil {
-				return err
+			// The document is built inside the loop, because the loop is the wait: a
+			// machine still powering on reports no hardware to choose its cluster
+			// interface from, and the attempt that reaches it is the last moment
+			// before it takes the document. Rendered again while the machine reports
+			// none, so an image that answers late is still checked against its own.
+			if !document.builtAgainstInventory {
+				built, err := buildAgainstMachine(ctx, endpoint, build)
+				if err != nil {
+					return err
+				}
+				document = built
 			}
-			taken, err := pushDocument(ctx, endpoint, document)
+			taken, err := pushDocument(ctx, endpoint, document.payload)
 			handedOver = handedOver || taken
 			return err
 		})
@@ -759,7 +883,53 @@ func (b *ClusterBootstrapper) pushImmutablePayload(ctx context.Context, bctx *bo
 		return err
 	})
 
-	return handedOver, err
+	return document, handedOver, err
+}
+
+// buildAgainstMachine reads what the machine says about its own hardware and
+// renders its document against it, refusing one the machine cannot satisfy.
+func buildAgainstMachine(ctx context.Context, endpoint string, build buildDocument) (immutableDocument, error) {
+	inventory, err := machineInventory(ctx, endpoint)
+	if err != nil {
+		return immutableDocument{}, err
+	}
+
+	built, err := build(ctx, inventory)
+	if err != nil {
+		// The machine grows no second NIC while the loop retries, and a document
+		// that cannot be built for it will not build on the next attempt either.
+		return immutableDocument{}, fmt.Errorf("%w: %w", errDocumentUnfitForMachine, err)
+	}
+
+	if inventory == nil {
+		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
+			"the machine at %s serves no inventory (an older image); the document is not checked against it", endpoint))
+		return built, nil
+	}
+	if err := immutable.CheckDocumentAgainstInventory(ctx, built.nodeConfig, inventory); err != nil {
+		return immutableDocument{}, fmt.Errorf("%w: %w", errDocumentUnfitForMachine, err)
+	}
+
+	built.builtAgainstInventory = true
+	return built, nil
+}
+
+// machineInventory reads what a machine says about its own hardware, and nil
+// where it cannot say: an older image serves none, and an answer that does not
+// parse is a check nobody can run. A machine that does not answer at all is the
+// wait itself, and comes back as an error for the loop to retry.
+func machineInventory(ctx context.Context, endpoint string) (*immutable.Inventory, error) {
+	inventory, err := immutable.FetchInventory(ctx, endpoint)
+	if err == nil {
+		return inventory, nil
+	}
+	if !errors.Is(err, immutable.ErrInventoryUnusable) {
+		return nil, err
+	}
+
+	dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
+		"%v; the document is built and checked without it", err))
+	return nil, nil
 }
 
 // pushDocument hands the machine its document and reports whether the machine may now be holding
@@ -781,33 +951,6 @@ func pushDocument(ctx context.Context, endpoint string, document []byte) (bool, 
 		return true, nil
 	}
 	return sent.Load() && !answered.Load(), err
-}
-
-// checkMachineAgainstDocument refuses a NodeConfig the machine cannot satisfy,
-// while nothing is installed yet. A machine that cannot be asked — an older image,
-// a port not open — is a check nobody can run, not a bootstrap to fail.
-func checkMachineAgainstDocument(ctx context.Context, address string, nodeConfig []byte) error {
-	inventory, err := immutable.FetchInventory(ctx, address)
-	if err != nil {
-		// Only when the machine answered. A connection that goes nowhere is a
-		// machine still powering on, which is the normal case here, and this
-		// attempt's own push failure reports it a line later.
-		if errors.Is(err, immutable.ErrInventoryUnusable) {
-			dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
-				"%v; the document is not checked against the machine", err))
-		}
-		return nil
-	}
-	if inventory == nil {
-		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
-			"the machine at %s serves no inventory (an older image); the document is not checked against it", address))
-		return nil
-	}
-
-	if err := immutable.CheckDocumentAgainstInventory(ctx, nodeConfig, inventory); err != nil {
-		return fmt.Errorf("%w: %w", errDocumentUnfitForMachine, err)
-	}
-	return nil
 }
 
 // errDocumentUnfitForMachine marks the refusal so the wait ends on it: the
@@ -880,7 +1023,7 @@ func (b *ClusterBootstrapper) connectToImmutableMaster(ctx context.Context, bctx
 	// answers that it was.
 	b.confirmImmutableHandoff(ctx, bctx)
 
-	return waitForImmutableMasterNode(ctx, kubeCl, bctx.immutable.masterNodeName)
+	return waitForImmutableMasterNode(ctx, kubeCl, bctx.immutable.masterNodeName, nil)
 }
 
 // waitForImmutableMasterControlPlane waits until control-plane-manager reports
@@ -924,13 +1067,69 @@ func (b *ClusterBootstrapper) reuseCollectedKubeconfig(ctx context.Context, bctx
 // waitForImmutableMasterNode waits until kubelet has registered the node. The
 // node also creates the bootstrap RBAC, the control-plane label and taint and
 // the d8-pki Secret on its own; dhctl creates none of them.
-func waitForImmutableMasterNode(ctx context.Context, kubeCl kubernetes.Interface, nodeName string) error {
+func waitForImmutableMasterNode(ctx context.Context, kubeCl kubernetes.Interface, nodeName string, probe func(context.Context) error) error {
 	return libretry.NewLoop(fmt.Sprintf("Waiting for the master node %s to register", nodeName), waitNodeRegistered.attempts, waitNodeRegistered.interval).
+		BreakIf(func(err error) bool { return errors.Is(err, errNodeReportedFailure) }).
 		RunContext(ctx, func() error {
 			_, err := kubeCl.CoreV1().Nodes().Get(ctx, nodeName, metav1.GetOptions{})
-			if err != nil {
-				return fmt.Errorf("get node %s: %w", nodeName, err)
+			if err == nil {
+				return nil
 			}
-			return nil
+			// The machine answers long before kubelet does, and it is the only thing
+			// that knows a failure no waiting fixes.
+			if probe != nil {
+				if reported := probe(ctx); reported != nil {
+					return reported
+				}
+			}
+			return fmt.Errorf("get node %s: %w", nodeName, err)
 		})
+}
+
+// errNodeReportedFailure marks what the machine itself said: the wait ends on
+// it rather than sitting out its budget on a node that will never register.
+var errNodeReportedFailure = errors.New("the machine reports it will not join")
+
+// immutableNodeStatusProbe asks a machine what it is doing with the document it
+// took, and answers with the reason no waiting will fix. nil where dhctl holds
+// no status token for the node: a rerun that skipped the push never built its
+// document, and the machine answers nobody else.
+func (b *ClusterBootstrapper) immutableNodeStatusProbe(bctx *bootstrapContext, nodeName string) func(context.Context) error {
+	token := bctx.immutable.statusTokens[nodeName]
+	address := bctx.immutable.hosts[nodeName]
+	if token == "" || address == "" {
+		return nil
+	}
+	port := maintenancePort(bctx)
+
+	return func(ctx context.Context) error {
+		endpoint, stop, err := b.openImmutableChannelTo(ctx, address, port, "node status")
+		if err != nil {
+			// A channel that cannot be opened is not the node's answer: the wait goes
+			// on, and the Node read it wraps reports why it is still waiting.
+			return nil
+		}
+		defer stop()
+
+		status, err := immutable.FetchNodeStatus(ctx, endpoint, token)
+		if err != nil {
+			return nil
+		}
+		return nodeStatusFailure(nodeName, status)
+	}
+}
+
+// nodeStatusFailure is the reason the node will never register, and nil while it
+// is still working.
+func nodeStatusFailure(nodeName string, status *immutable.NodeStatus) error {
+	if status.Phase == immutable.PhaseFailed {
+		return fmt.Errorf("%w: %s reports %s", errNodeReportedFailure, nodeName, immutable.DescribeNodeStatus(status))
+	}
+
+	resolved := status.Condition(immutable.ConditionAddressResolved)
+	if resolved == nil || resolved.Status != immutable.ConditionFalse {
+		return nil
+	}
+	return fmt.Errorf("%w: %s could not decide which of its interfaces the cluster reaches it on (%s): %s",
+		errNodeReportedFailure, nodeName, resolved.Reason, resolved.Message)
 }

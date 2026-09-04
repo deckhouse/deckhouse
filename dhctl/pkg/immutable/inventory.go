@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/netip"
 	"path"
 	"slices"
 	"strconv"
@@ -96,7 +95,7 @@ const inventoryResponseLimit = 1 << 20
 // whose image predates the endpoint answers 404, and that is nil, nil: an old
 // image is a check nobody can run, not a bootstrap to fail.
 func FetchInventory(ctx context.Context, address string) (*Inventory, error) {
-	response, err := do(ctx, http.MethodGet, "http://"+address+inventoryPath, nil)
+	response, err := do(ctx, http.MethodGet, "http://"+address+inventoryPath, "", nil)
 	if err != nil {
 		return nil, fmt.Errorf("read the inventory of %s: %w", address, err)
 	}
@@ -147,7 +146,6 @@ func CheckDocumentAgainstInventory(ctx context.Context, nodeConfigDocument []byt
 	for i, iface := range spec.Network.Interfaces {
 		problems = append(problems, checkInterface(ctx, i, iface, inventory))
 	}
-	problems = append(problems, checkNodeIP(spec))
 
 	return errors.Join(problems...)
 }
@@ -357,6 +355,13 @@ func checkInterface(ctx context.Context, index int, iface networkInterface, inve
 	if slices.ContainsFunc(inventory.Interfaces, func(i InventoryInterface) bool { return i.Name == iface.Name }) {
 		return nil
 	}
+	// The cluster interface is the one the node registers under and the one its
+	// certificates are issued for. A name the machine does not have leaves it
+	// with no address the cluster reaches it on, DHCP or not.
+	if iface.Cluster {
+		return fmt.Errorf("spec.network.interfaces[%d].name %q is marked as the cluster interface and names no interface of this machine, which has: %s",
+			index, iface.Name, describeInterfaces(inventory.Interfaces))
+	}
 	if iface.DHCP || len(iface.Addresses) == 0 {
 		dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
 			"spec.network.interfaces[%d].name %q names no interface of this machine, which has: %s; it carries no static address, so the node configures DHCP on what it finds",
@@ -366,67 +371,6 @@ func checkInterface(ctx context.Context, index int, iface networkInterface, inve
 	return fmt.Errorf("spec.network.interfaces[%d].name %q names no interface of this machine, which has: %s. "+
 		"The addresses it carries would reach nothing: name an interface the machine has",
 		index, iface.Name, describeInterfaces(inventory.Interfaces))
-}
-
-// checkNodeIP answers whether kubelet is told to register with an address the
-// document itself gives the machine. A machine left on DHCP is not checked: the
-// lease it will get is not this document's to promise.
-func checkNodeIP(spec nodeSpec) error {
-	if spec.Kubelet.NodeIP == "" {
-		return nil
-	}
-	// Before the comparison below and not inside it: the shape is the document's
-	// own business, and a machine on DHCP declares nothing to compare against.
-	nodeIP, err := parseNodeIP(spec.Kubelet.NodeIP)
-	if err != nil {
-		return err
-	}
-
-	var declared []string
-	for _, iface := range spec.Network.Interfaces {
-		if iface.DHCP {
-			continue
-		}
-		declared = append(declared, iface.Addresses...)
-	}
-	if len(declared) == 0 {
-		return nil
-	}
-	if slices.ContainsFunc(declared, func(addr string) bool { return addressIs(addr, nodeIP) }) {
-		return nil
-	}
-
-	return fmt.Errorf("spec.kubelet.nodeIP %s is none of the addresses this document gives the machine (%s): "+
-		"kubelet would register the node under an address no interface holds",
-		spec.Kubelet.NodeIP, strings.Join(declared, ", "))
-}
-
-// parseNodeIP reads what kubelet is handed as --node-ip. An interface address
-// has to carry a prefix, so a CIDR is what an operator has under their cursor
-// while filling this in — and kubelet takes a bare address, or never registers.
-// The NodeConfig CRD carries the same rule as an isIP validation, and never
-// sees this document, which travels to the machine as a file.
-func parseNodeIP(nodeIP string) (netip.Addr, error) {
-	if address, err := netip.ParseAddr(nodeIP); err == nil {
-		return address, nil
-	}
-	if prefix, err := netip.ParsePrefix(nodeIP); err == nil {
-		return netip.Addr{}, fmt.Errorf(
-			"spec.kubelet.nodeIP %s carries a prefix length, which kubelet does not take: write it as %s",
-			nodeIP, prefix.Addr())
-	}
-	return netip.Addr{}, fmt.Errorf(
-		"spec.kubelet.nodeIP %s is not an IP address: kubelet registers the node under it and would refuse to start", nodeIP)
-}
-
-// addressIs reports whether a declared address, written as a CIDR or as a bare
-// address, is the given one.
-func addressIs(declared string, want netip.Addr) bool {
-	if prefix, err := netip.ParsePrefix(declared); err == nil {
-		return prefix.Addr() == want
-	}
-	got, err := netip.ParseAddr(declared)
-	return err == nil && got == want
 }
 
 // matchDisks lists the disks the selector describes. Mirrors matchDisk and

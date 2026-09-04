@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/yaml"
 
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
@@ -38,8 +39,6 @@ func TestCustomizationReplacesNetworkKeepingHostname(t *testing.T) {
       dhcp: false
       addresses: ["10.0.0.11/24"]
       gateway: 10.0.0.1
-  kubelet:
-    nodeIP: 10.0.0.11
 `)
 	parsed, err := ParseCustomizations(t.Context(), []string{document})
 	require.NoError(t, err)
@@ -56,7 +55,6 @@ func TestCustomizationReplacesNetworkKeepingHostname(t *testing.T) {
 	require.Equal(t, []networkInterface{{
 		Name: "eno1", DHCP: false, Addresses: []string{"10.0.0.11/24"}, Gateway: "10.0.0.1",
 	}}, spec.Network.Interfaces)
-	require.Equal(t, "10.0.0.11", spec.Kubelet.NodeIP)
 }
 
 func TestCustomizationRefusesNodeGroupSettings(t *testing.T) {
@@ -66,8 +64,9 @@ func TestCustomizationRefusesNodeGroupSettings(t *testing.T) {
 `)
 	_, err := ParseCustomizations(t.Context(), []string{document})
 
-	require.ErrorContains(t, err, "maxPods")
-	require.ErrorContains(t, err, "network, storage and kubelet.nodeIP")
+	require.ErrorContains(t, err, "kubelet",
+		"the whole kubelet section is a NodeGroup setting now that nodeIP is gone from it")
+	require.ErrorContains(t, err, "network and storage")
 }
 
 // The refusal must not name the NodeGroup as the single reason: spec.network.ntp
@@ -321,8 +320,11 @@ func TestCustomizationMountsOnlyKeepTheRenderedSelector(t *testing.T) {
 // installs the cluster; TestCustomizationReachesTheJoinPayload is the other one.
 func TestCustomizationReachesTheMasterPayload(t *testing.T) {
 	document := nodeConfigFor("example-master-0", `
-  kubelet:
-    nodeIP: 10.0.0.11
+  network:
+    interfaces:
+    - name: eno1
+      dhcp: false
+      addresses: ["10.0.0.11/24"]
   storage:
     device: /dev/nvme0n1
 `)
@@ -342,7 +344,7 @@ func TestCustomizationReachesTheMasterPayload(t *testing.T) {
 
 	decoded, err := base64.StdEncoding.DecodeString(payload)
 	require.NoError(t, err)
-	require.Contains(t, string(decoded), "nodeIP: 10.0.0.11")
+	require.Contains(t, string(decoded), "10.0.0.11/24")
 	require.Contains(t, string(decoded), "device: /dev/nvme0n1")
 }
 
@@ -350,8 +352,11 @@ func TestCustomizationReachesTheMasterPayload(t *testing.T) {
 // called from both builders, and only a rendered payload proves it.
 func TestCustomizationReachesTheJoinPayload(t *testing.T) {
 	document := nodeConfigFor("master-1", `
-  kubelet:
-    nodeIP: 10.0.0.12
+  network:
+    interfaces:
+    - name: eno1
+      dhcp: false
+      addresses: ["10.0.0.12/24"]
 `)
 	parsed, err := ParseCustomizations(t.Context(), []string{document})
 	require.NoError(t, err)
@@ -368,41 +373,32 @@ func TestCustomizationReachesTheJoinPayload(t *testing.T) {
 
 	decoded, err := base64.StdEncoding.DecodeString(payload)
 	require.NoError(t, err)
-	require.Contains(t, string(decoded), "nodeIP: 10.0.0.12")
+	require.Contains(t, string(decoded), "10.0.0.12/24")
 }
 
-// The address dhctl configures a machine at is the address the cluster reaches
-// it on, and the one its PKI is issued for. Left out of the payload, the node
-// registers with whatever interface carries its default route — on a machine
-// with two networks that is a coin toss, and the etcd of the masters that lose
-// it never joins.
-func TestThePushAddressBecomesTheNodeIP(t *testing.T) {
+// The machine dhctl configures at one address is the machine the cluster has to
+// reach afterwards. Nothing in a bare inventory-less build names an interface,
+// so the push address stands and the node resolves the rest itself.
+func TestThePushAddressStandsWhenNothingNamesAnInterface(t *testing.T) {
 	globalOptions := options.NewGlobalOptions()
-	master, _, err := BuildMasterPayload(t.Context(), MasterPayloadInput{
+	master, nodeConfig, err := BuildMasterPayload(t.Context(), MasterPayloadInput{
 		NodeName:      "example-master-0",
 		MetaConfig:    testMetaConfig(t),
 		StateCache:    cache.NewTestCache(),
 		CandiDir:      testCandiDir(t),
 		GlobalOptions: &globalOptions,
-		NodeIP:        "10.0.0.11",
+		PushAddress:   "10.0.0.11",
 	})
 	require.NoError(t, err)
-	decoded, err := base64.StdEncoding.DecodeString(master)
-	require.NoError(t, err)
-	require.Contains(t, string(decoded), "nodeIP: 10.0.0.11")
+	require.NotContains(t, string(nodeConfig), "cluster: true",
+		"nothing about this machine is known, so no interface may be marked")
 
-	join, _, err := BuildJoinPayload(t.Context(), JoinPayloadInput{
-		NodeName:           "master-1",
-		MetaConfig:         testMetaConfig(t),
-		CACert:             "dGVzdC1jYQ==",
-		BootstrapToken:     immutabletest.BootstrapToken,
-		APIServerEndpoints: []string{"https://10.0.0.11:6443"},
-		NodeIP:             "10.0.0.12",
-	})
+	address, err := NodeAddressAfterInstall(testMetaConfig(t), nil, nil, "10.0.0.11")
 	require.NoError(t, err)
-	decoded, err = base64.StdEncoding.DecodeString(join)
-	require.NoError(t, err)
-	require.Contains(t, string(decoded), "nodeIP: 10.0.0.12")
+	require.Equal(t, "10.0.0.11", address)
+
+	require.NotContains(t, decodePayload(t, master), "nodeIP",
+		"kubelet no longer takes an address from the document; the interface carries the mark instead")
 }
 
 // A mount replaces the rendered one whole, so one naming no disk used to delete
@@ -428,12 +424,19 @@ func TestCustomizationMountsMustNameADisk(t *testing.T) {
 	require.ErrorContains(t, err, "names no disk for the workload mount")
 }
 
-// The operator's document is the one place that knows a machine answers
-// somewhere other than where it was configured.
-func TestTheDocumentsNodeIPBeatsThePushAddress(t *testing.T) {
+// The operator's mark is the one thing dhctl may not overrule: on a machine with
+// two networks it is the only statement of which one the cluster is on.
+func TestTheMarkedInterfaceBeatsEveryOtherRung(t *testing.T) {
 	parsed, err := ParseCustomizations(t.Context(), []string{nodeConfigFor("master-1", `
-  kubelet:
-    nodeIP: 10.0.0.12
+  network:
+    interfaces:
+    - name: eno1
+      dhcp: false
+      addresses: ["192.168.0.59/24"]
+    - name: eno2
+      dhcp: false
+      addresses: ["10.0.0.12/24"]
+      cluster: true
 `)})
 	require.NoError(t, err)
 
@@ -444,14 +447,18 @@ func TestTheDocumentsNodeIPBeatsThePushAddress(t *testing.T) {
 		BootstrapToken:     immutabletest.BootstrapToken,
 		APIServerEndpoints: []string{"https://10.0.0.11:6443"},
 		Customization:      &parsed[0],
-		NodeIP:             "192.168.0.59",
+		Inventory:          &Inventory{Interfaces: twoNICs},
+		PushAddress:        "192.168.0.59",
 	})
 	require.NoError(t, err)
 
-	decoded, err := base64.StdEncoding.DecodeString(payload)
+	marked := markedInterfaceOf(t, decodePayload(t, payload))
+	require.Equal(t, "eno2", marked.Name)
+
+	address, err := NodeAddressAfterInstall(testMetaConfig(t), &parsed[0], &Inventory{Interfaces: twoNICs}, "192.168.0.59")
 	require.NoError(t, err)
-	require.Contains(t, string(decoded), "nodeIP: 10.0.0.12")
-	require.NotContains(t, string(decoded), "192.168.0.59")
+	require.Equal(t, "10.0.0.12", address,
+		"the node answers on the interface the operator marked, not where it was pushed at")
 }
 
 func TestCustomizationRefusesAnotherKind(t *testing.T) {
@@ -497,59 +504,29 @@ func TestCustomizationWarnsAboutAddressesOnADHCPInterface(t *testing.T) {
 	require.Contains(t, log.String(), "dhcp", "why it is ignored")
 }
 
-// A machine whose document gives it a static address answers there once it has
-// installed itself, not at the address it was pushed at. An interface left on
-// DHCP takes no address from the document, however the field is filled in.
-func TestAddressAfterInstall(t *testing.T) {
-	parse := func(spec string) *Customization {
-		t.Helper()
-		parsed, err := ParseCustomizations(t.Context(), []string{nodeConfigFor("master-0", spec)})
-		require.NoError(t, err)
-		require.Len(t, parsed, 1)
-		return &parsed[0]
+// twoNICs is the machine the whole ladder exists for: the network dhctl pushes
+// over, and the one the cluster lives on.
+var twoNICs = []InventoryInterface{
+	{Name: "eno1", Addresses: []string{"192.168.0.59/24"}},
+	{Name: "eno2", Addresses: []string{"10.0.0.12/24"}},
+}
+
+// markedInterfaceOf reads the interface the document marks as the cluster one,
+// the way the node does.
+func markedInterfaceOf(t *testing.T, document string) networkInterface {
+	t.Helper()
+
+	var parsed nodeConfig
+	require.NoError(t, yaml.Unmarshal([]byte(nodeDocuments(t, document)[NodeConfigKind]), &parsed))
+
+	var marked []networkInterface
+	for _, iface := range parsed.Spec.Network.Interfaces {
+		if iface.Cluster {
+			marked = append(marked, iface)
+		}
 	}
-
-	static := parse(`
-  network:
-    interfaces:
-    - name: eth0
-      dhcp: false
-      addresses: ["192.168.0.101/24"]
-      gateway: 192.168.0.1
-`)
-	require.Equal(t, "192.168.0.101", static.AddressAfterInstall("192.168.0.43"),
-		"a machine told to take a static address answers there")
-
-	require.Equal(t, "192.168.0.43", (*Customization)(nil).AddressAfterInstall("192.168.0.43"),
-		"without a customization the push address stands")
-
-	require.Equal(t, "192.168.0.43", parse("\n  network:\n").AddressAfterInstall("192.168.0.43"),
-		"a document that says nothing about the network leaves the machine where it was pushed")
-
-	dhcp := parse(`
-  network:
-    interfaces:
-    - name: eth0
-      dhcp: true
-      addresses: ["192.168.0.101/24"]
-`)
-	require.Equal(t, "192.168.0.43", dhcp.AddressAfterInstall("192.168.0.43"),
-		"an interface on DHCP takes no address from the document")
-
-	// A master with two NICs: kubelet registers the node under nodeIP, which the
-	// machine check has already confirmed is one of the machine's own addresses.
-	multiNIC := parse(`
-  kubelet:
-    nodeIP: 10.10.0.7
-  network:
-    interfaces:
-    - name: eno1
-      addresses: ["192.168.0.101/24"]
-    - name: eno2
-      addresses: ["10.10.0.7/24"]
-`)
-	require.Equal(t, "10.10.0.7", multiNIC.AddressAfterInstall("192.168.0.43"),
-		"the apiserver answers where kubelet registered, not on whichever NIC comes first")
+	require.Len(t, marked, 1, "exactly one interface carries the cluster mark")
+	return marked[0]
 }
 
 // nodeConfigFor prepends the header every customization carries, so a case is

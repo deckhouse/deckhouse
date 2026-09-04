@@ -64,7 +64,7 @@ func TestAClassicCloudMasterIsSeededWithNothing(t *testing.T) {
 	b := &ClusterBootstrapper{}
 	bctx := &bootstrapContext{}
 
-	cloudConfig, nodeConfig, err := b.buildImmutableMasterPayload(t.Context(), bctx, "master-0")
+	cloudConfig, nodeConfig, err := b.buildImmutableMasterPayload(t.Context(), bctx, "master-0", nil)
 	require.NoError(t, err)
 	require.Empty(t, cloudConfig)
 	require.Empty(t, nodeConfig)

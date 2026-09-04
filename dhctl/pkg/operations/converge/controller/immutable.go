@@ -107,9 +107,10 @@ func immutableNodePayload(ctx *context.Context, nodeGroupName, nodeName string) 
 		return "", fmt.Errorf("read the registry the payload of %s pulls from: %w", nodeName, err)
 	}
 
-	// No customization and no node IP: in a cloud the machine does not exist yet, and
-	// the operator describes it through the provider configuration, not per machine.
-	payload, _, err := immutable.BuildJoinPayloadFromCluster(ctx.Ctx(), kubeCl, metaConfig, nodeName, nil, "", nodeGroupName)
+	// No customization, no inventory and no push address: in a cloud the machine does
+	// not exist yet, so nothing here can name the interface the cluster reaches it on.
+	// The node resolves it itself, against the internalNetworkCIDRs in its document.
+	payload, _, err := immutable.BuildJoinPayloadFromCluster(ctx.Ctx(), kubeCl, metaConfig, nodeName, nil, nil, "", nodeGroupName)
 	if err != nil {
 		return "", fmt.Errorf("build the join payload of %s: %w", nodeName, err)
 	}

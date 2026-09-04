@@ -72,7 +72,8 @@ func BuildJoinPayloadFromCluster(
 	metaConfig *config.MetaConfig,
 	nodeName string,
 	customization *Customization,
-	nodeIP string,
+	inventory *Inventory,
+	pushAddress string,
 	nodeGroupName string,
 ) (string, []byte, error) {
 	var (
@@ -109,7 +110,8 @@ func BuildJoinPayloadFromCluster(
 		BootstrapToken:     token,
 		APIServerEndpoints: endpoints,
 		Customization:      customization,
-		NodeIP:             nodeIP,
+		Inventory:          inventory,
+		PushAddress:        pushAddress,
 		NodeGroupName:      nodeGroupName,
 	})
 }

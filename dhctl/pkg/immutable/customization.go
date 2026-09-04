@@ -20,6 +20,7 @@ import (
 	"fmt"
 	"net"
 	"slices"
+	"strings"
 
 	"sigs.k8s.io/yaml"
 
@@ -36,41 +37,13 @@ type Customization struct {
 
 	network *network
 	storage *storage
-	nodeIP  string
 }
 
-// AddressAfterInstall is where the machine answers once it has installed
-// itself: the push address, unless its document moves it to a static one.
-// Everything after the push — the handoff channel and the apiserver — goes there.
-func (c *Customization) AddressAfterInstall(pushAddress string) string {
-	if c == nil {
-		return pushAddress
-	}
-	// The document's own nodeIP wins: the machine check has confirmed it is one of
-	// the addresses this document gives it, and on a machine with several NICs it
-	// is not necessarily the first one.
-	if c.nodeIP != "" {
-		return c.nodeIP
-	}
-	if c.network == nil {
-		return pushAddress
-	}
-
-	for _, iface := range c.network.Interfaces {
-		if iface.DHCP || len(iface.Addresses) == 0 {
-			continue
-		}
-		host, _, err := net.ParseCIDR(iface.Addresses[0])
-		if err != nil {
-			// ParseCustomizations refuses an address without a prefix length, so this
-			// is unreachable from a document — and the push address is where the
-			// machine answers now, which beats killing the installer mid-run.
-			return pushAddress
-		}
-		return host.String()
-	}
-
-	return pushAddress
+// DescribesInterfaces reports whether the operator listed the machine's
+// interfaces. Where they did, the list replaces the rendered one whole and the
+// cluster interface is marked inside it rather than synthesised.
+func (c *Customization) DescribesInterfaces() bool {
+	return len(describedInterfaces(c)) > 0
 }
 
 // customizationDocument is the shape the operator writes. Deliberately not the
@@ -83,9 +56,6 @@ type customizationDocument struct {
 	Spec       struct {
 		Network *network `json:"network,omitempty"`
 		Storage *storage `json:"storage,omitempty"`
-		Kubelet struct {
-			NodeIP string `json:"nodeIP,omitempty"`
-		} `json:"kubelet,omitempty"`
 	} `json:"spec"`
 }
 
@@ -99,7 +69,7 @@ func ParseCustomizations(ctx context.Context, documents []string) ([]Customizati
 		var parsed customizationDocument
 		if err := yaml.UnmarshalStrict([]byte(document), &parsed); err != nil {
 			return nil, fmt.Errorf(
-				"read node customization %d: %w. A machine is described by network, storage and kubelet.nodeIP only; dhctl puts no other field of this document in the payload",
+				"read node customization %d: %w. A machine is described by network and storage only; dhctl puts no other field of this document in the payload",
 				i+1, err)
 		}
 		if parsed.APIVersion != PayloadAPIVersion || parsed.Kind != NodeConfigKind {
@@ -131,12 +101,14 @@ func ParseCustomizations(ctx context.Context, documents []string) ([]Customizati
 		if err := checkAddresses(ctx, parsed.Spec.Network, parsed.Metadata.Name); err != nil {
 			return nil, err
 		}
+		if err := checkClusterMark(parsed.Spec.Network, parsed.Metadata.Name); err != nil {
+			return nil, err
+		}
 
 		customizations = append(customizations, Customization{
 			NodeName: parsed.Metadata.Name,
 			network:  parsed.Spec.Network,
 			storage:  parsed.Spec.Storage,
-			nodeIP:   parsed.Spec.Kubelet.NodeIP,
 		})
 	}
 
@@ -235,19 +207,28 @@ func applyCustomization(spec *nodeSpec, c Customization) {
 		}
 		spec.Storage.Mounts = mergeMounts(spec.Storage.Mounts, c.storage.Mounts)
 	}
-	if c.nodeIP != "" {
-		spec.Kubelet.NodeIP = c.nodeIP
-	}
 }
 
-// defaultNodeIP names the address kubelet registers the node under when nobody
-// else did. Left unset, the node picks the interface carrying the default route,
-// which on a machine with several networks is not necessarily the one the
-// cluster reaches it on — and the cluster PKI is issued for this address.
-func defaultNodeIP(spec *nodeSpec, address string) {
-	if spec.Kubelet.NodeIP == "" {
-		spec.Kubelet.NodeIP = address
+// checkClusterMark refuses a document that marks more than one interface as the
+// cluster one: the node registers under a single address, and a document naming
+// two says nothing about which.
+func checkClusterMark(n *network, nodeName string) error {
+	if n == nil {
+		return nil
 	}
+
+	var marked []string
+	for _, iface := range n.Interfaces {
+		if iface.Cluster {
+			marked = append(marked, iface.Name)
+		}
+	}
+	if len(marked) <= 1 {
+		return nil
+	}
+
+	return fmt.Errorf("node %s marks %s as cluster interfaces, and a node has one address the cluster reaches it on: "+
+		"leave cluster: true on a single interface", nodeName, strings.Join(marked, " and "))
 }
 
 // mergeMounts overlays the operator's mounts onto the rendered ones by name —
