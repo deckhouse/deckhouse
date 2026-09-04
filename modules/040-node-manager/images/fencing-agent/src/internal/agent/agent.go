@@ -37,8 +37,10 @@ import (
 	"fencing-agent/internal/controllers/health"
 	"fencing-agent/internal/domain"
 	"fencing-agent/internal/usecase/failedstate"
+	"fencing-agent/internal/usecase/fallback"
 	"fencing-agent/internal/usecase/join"
 	"fencing-agent/internal/usecase/membership"
+	"fencing-agent/internal/usecase/rejoin"
 	"fencing-agent/internal/usecase/watchdog"
 )
 
@@ -93,12 +95,28 @@ func (a *Agent) failedStateParams() failedstate.Params {
 func (a *Agent) joinParams() join.Params {
 	return join.Params{
 		NodeName:         a.identity.Name,
+		NodeUID:          a.identity.UID,
 		NodeIP:           a.identity.IP,
 		NodeGroup:        a.cfg.NodeGroup,
 		MemberlistPort:   a.cfg.MemberlistPort,
 		APITimeout:       a.sla.Fallback.KubernetesAPITimeout.Duration,
 		RetryInterval:    a.sla.Rejoin.Interval.Duration,
 		MaxRetryInterval: a.sla.Rejoin.MaxInterval.Duration,
+	}
+}
+
+func (a *Agent) fallbackParams() fallback.Params {
+	return fallback.Params{
+		Node:       a.identity,
+		Heartbeat:  a.sla.Fallback.Heartbeat.Duration,
+		APITimeout: a.sla.Fallback.KubernetesAPITimeout.Duration,
+	}
+}
+
+func (a *Agent) rejoinParams() rejoin.Params {
+	return rejoin.Params{
+		Interval:    a.sla.Rejoin.Interval.Duration,
+		MaxInterval: a.sla.Rejoin.MaxInterval.Duration,
 	}
 }
 
@@ -153,6 +171,22 @@ func (a *Agent) Run(ctx context.Context) error {
 		return fmt.Errorf("create own node watcher: %w", err)
 	}
 
+	states := fencingstate.NewStates(
+		a.deps.FencingClient,
+		a.deps.FencingCache,
+		a.cfg.NodeGroup,
+		v1alpha1.ProfileName(a.cfg.ProfileRefName),
+		a.sla.Fallback.KubernetesAPITimeout.Duration,
+	)
+
+	monitor := fallback.New(a.fallbackParams(), fallback.Deps{
+		Alive:    cluster,
+		Expected: members,
+		States:   states,
+		Events:   recorder,
+		Now:      time.Now,
+	}, a.logger)
+
 	watchdogManager := watchdog.New(a.watchdogParams(), watchdog.Deps{
 		Open: func() (watchdog.Device, error) {
 			return watchdogdevice.Open(a.cfg.WatchdogDevice, a.logger)
@@ -162,25 +196,34 @@ func (a *Agent) Run(ctx context.Context) error {
 		},
 		State:      selfState,
 		Events:     recorder,
-		ShouldFeed: feedGate,
+		ShouldFeed: monitor.ShouldFeed,
 	}, a.logger)
 
 	defer watchdogManager.Close()
 
 	joiner := join.New(members, cluster, a.joinParams(), a.logger)
 
+	rejoiner := rejoin.New(a.rejoinParams(), rejoin.Deps{
+		Attempt: joiner.Attempt,
+		HasQuorum: func() bool {
+			expected, _, _ := members.Snapshot()
+
+			return domain.NewView(expected, cluster.Members()).HasQuorum()
+		},
+		APIReachable: func() bool {
+			s := monitor.Snapshot()
+
+			return !s.Observed || s.APIReachable
+		},
+		Changed: cluster.Changed(),
+	}, a.logger)
+
 	writer := failedstate.New(a.failedStateParams(), failedstate.Deps{
 		Alive:    cluster,
 		Expected: members,
-		States: fencingstate.NewStates(
-			a.deps.FencingClient,
-			a.deps.FencingCache,
-			a.cfg.NodeGroup,
-			v1alpha1.ProfileName(a.cfg.ProfileRefName),
-			a.sla.Fallback.KubernetesAPITimeout.Duration,
-		),
-		Events: recorder,
-		Now:    time.Now,
+		States:   states,
+		Events:   recorder,
+		Now:      time.Now,
 	}, a.logger)
 
 	g, gctx := errgroup.WithContext(ctx)
@@ -212,6 +255,8 @@ func (a *Agent) Run(ctx context.Context) error {
 		return a.deps.FencingCache.Start(gctx)
 	})
 
+	synced := make(chan struct{})
+
 	g.Go(func() error {
 		select {
 		case <-gctx.Done():
@@ -229,9 +274,41 @@ func (a *Agent) Run(ctx context.Context) error {
 			return nil
 		}
 
+		close(synced)
+
 		a.logger.Info("starting the fencing state writer")
 
 		return writer.Run(gctx)
+	})
+
+	g.Go(func() error {
+		select {
+		case <-gctx.Done():
+			return nil
+		case <-synced:
+		}
+
+		a.logger.Info("starting the fallback monitor",
+			"heartbeat", a.sla.Fallback.Heartbeat.Duration.String(),
+			"api_timeout", a.sla.Fallback.KubernetesAPITimeout.Duration.String(),
+		)
+
+		return monitor.Run(gctx)
+	})
+
+	g.Go(func() error {
+		select {
+		case <-gctx.Done():
+			return nil
+		case <-synced:
+		}
+
+		a.logger.Info("starting the rejoin loop",
+			"interval", a.sla.Rejoin.Interval.Duration.String(),
+			"max_interval", a.sla.Rejoin.MaxInterval.Duration.String(),
+		)
+
+		return rejoiner.Run(gctx)
 	})
 
 	g.Go(func() error {
@@ -276,8 +353,4 @@ func (a *Agent) Run(ctx context.Context) error {
 	a.logger.Info("fencing-agent stopped")
 
 	return nil
-}
-
-func feedGate() (bool, string) {
-	return true, "quorum gate is not implemented yet"
 }

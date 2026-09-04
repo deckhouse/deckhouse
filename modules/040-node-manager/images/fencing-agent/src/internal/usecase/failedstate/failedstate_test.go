@@ -441,21 +441,28 @@ func TestRecoveredPeerRecordIsRemoved(t *testing.T) {
 	}
 }
 
-func TestFallbackOnlyRecordIsNotTouched(t *testing.T) {
-	// An object holding only a fallback section was written by the affected node
-	// while it was isolated; removing it belongs to that node.
+func TestFallbackRecordOfAnAlivePeerIsRemoved(t *testing.T) {
 	store := newStore(v1alpha1.FencingFailedNodeState{
 		ObjectMeta: metav1.ObjectMeta{Name: "worker-3", UID: "cr-worker-3"},
 		Status: v1alpha1.FencingFailedNodeStateStatus{
-			Fallback: &v1alpha1.FencingFailedNodeStateFallback{Active: true, HeartbeatIntervalSeconds: 1},
+			Fallback: &v1alpha1.FencingFailedNodeStateFallback{
+				Active:            true,
+				APIReachable:      true,
+				HeartbeatInterval: metav1.Duration{Duration: time.Second},
+			},
 		},
 	})
 	h := newHarness(t, writerFor("worker-3"), store)
 
 	h.settle(t.Context())
 
-	if len(store.calls) != 0 {
-		t.Errorf("calls = %v, want none for an object the affected node owns", store.calls)
+	want := []string{"delete:worker-3:cr-worker-3"}
+	if !slices.Equal(store.calls, want) {
+		t.Errorf("calls = %v, want %v", store.calls, want)
+	}
+
+	if !slices.Contains(h.events.normal, reasonStateCleared) {
+		t.Errorf("events = %v, want a %s event", h.events.normal, reasonStateCleared)
 	}
 }
 

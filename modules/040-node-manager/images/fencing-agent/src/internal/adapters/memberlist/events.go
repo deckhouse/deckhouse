@@ -17,6 +17,7 @@ limitations under the License.
 package memberlist
 
 import (
+	"sync"
 	"sync/atomic"
 
 	hcml "github.com/hashicorp/memberlist"
@@ -38,16 +39,27 @@ type nodeEvent struct {
 type eventDelegate struct {
 	logger  *log.Logger
 	events  chan nodeEvent
-	changed chan struct{}
 	dropped atomic.Int64
+
+	mu          sync.Mutex
+	subscribers []chan struct{}
 }
 
 func newEventDelegate(logger *log.Logger) *eventDelegate {
 	return &eventDelegate{
-		logger:  logger,
-		events:  make(chan nodeEvent, eventBuffer),
-		changed: make(chan struct{}, 1),
+		logger: logger,
+		events: make(chan nodeEvent, eventBuffer),
 	}
+}
+
+func (d *eventDelegate) subscribe() <-chan struct{} {
+	ch := make(chan struct{}, 1)
+
+	d.mu.Lock()
+	d.subscribers = append(d.subscribers, ch)
+	d.mu.Unlock()
+
+	return ch
 }
 
 func (d *eventDelegate) NotifyJoin(node *hcml.Node) {
@@ -71,9 +83,14 @@ func (d *eventDelegate) enqueue(kind string, node *hcml.Node) {
 }
 
 func (d *eventDelegate) wake() {
-	select {
-	case d.changed <- struct{}{}:
-	default:
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	for _, ch := range d.subscribers {
+		select {
+		case ch <- struct{}{}:
+		default:
+		}
 	}
 }
 

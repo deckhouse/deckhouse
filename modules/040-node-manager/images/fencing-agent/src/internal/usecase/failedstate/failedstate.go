@@ -150,7 +150,7 @@ func New(params Params, deps Deps, logger *log.Logger) *Writer {
 		incidents: make(map[string]*incident),
 		waiting:   make(map[waitKey]time.Time),
 		deleted:   make(map[string]types.UID),
-		startedAt: deps.Now(),
+		startedAt: deps.Now().Truncate(time.Second),
 	}
 }
 
@@ -159,6 +159,8 @@ func (w *Writer) Run(ctx context.Context) error {
 	ticker := time.NewTicker(tick)
 	defer ticker.Stop()
 
+	changed := w.deps.Alive.Changed()
+
 	for {
 		w.reconcile(ctx)
 
@@ -166,7 +168,7 @@ func (w *Writer) Run(ctx context.Context) error {
 		case <-ctx.Done():
 			return nil
 		case <-ticker.C:
-		case <-w.deps.Alive.Changed():
+		case <-changed:
 		}
 	}
 }
@@ -335,10 +337,6 @@ func (w *Writer) report(
 }
 
 func (w *Writer) clear(ctx context.Context, view domain.View, state *v1alpha1.FencingFailedNodeState) {
-	if state.Status.Fallback != nil {
-		return
-	}
-
 	if uid, done := w.deleted[state.Name]; done && uid == state.UID {
 		return
 	}

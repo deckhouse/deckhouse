@@ -183,31 +183,9 @@ func TestMembersReportsNodeNames(t *testing.T) {
 	}
 }
 
-func TestWakeCollapsesABurst(t *testing.T) {
-	// The reader re-reads the whole membership, so a burst owes it one wake-up,
-	// not one per member, and a full buffer must never block the caller:
-	// memberlist runs these under its own node lock.
-	delegate := newEventDelegate(log.NewNop())
-
-	for range 5 {
-		delegate.wake()
-	}
-
-	select {
-	case <-delegate.changed:
-	default:
-		t.Fatal("no wake-up was queued")
-	}
-
-	select {
-	case <-delegate.changed:
-		t.Error("the burst queued more than one wake-up")
-	default:
-	}
-}
-
 func TestChangedFiresOnMembershipEvents(t *testing.T) {
 	delegate := newEventDelegate(log.NewNop())
+	changed := delegate.subscribe()
 
 	stop := make(chan struct{})
 	defer close(stop)
@@ -218,9 +196,41 @@ func TestChangedFiresOnMembershipEvents(t *testing.T) {
 		notify(&hcml.Node{Name: "worker-1"})
 
 		select {
-		case <-delegate.changed:
+		case <-changed:
 		case <-time.After(2 * time.Second):
 			t.Fatal("no wake-up after a membership change")
 		}
+	}
+}
+
+func TestEveryChangedSubscriberIsWoken(t *testing.T) {
+	events := newEventDelegate(log.NewNop())
+
+	first, second := events.subscribe(), events.subscribe()
+
+	events.wake()
+
+	for name, ch := range map[string]<-chan struct{}{"first": first, "second": second} {
+		select {
+		case <-ch:
+		default:
+			t.Errorf("%s subscriber was not woken", name)
+		}
+	}
+}
+
+func TestWakeUpsCoalesceInsteadOfBlocking(t *testing.T) {
+	events := newEventDelegate(log.NewNop())
+	ch := events.subscribe()
+
+	events.wake()
+	events.wake()
+
+	<-ch
+
+	select {
+	case <-ch:
+		t.Error("two wakes must coalesce into one")
+	default:
 	}
 }

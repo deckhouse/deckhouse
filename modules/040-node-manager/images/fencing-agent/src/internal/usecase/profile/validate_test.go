@@ -140,6 +140,11 @@ func TestValidateRejectsInvalidValues(t *testing.T) {
 			wantSub: "probeTimeout",
 		},
 		{
+			name:    "sub-millisecond heartbeat",
+			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Fallback.Heartbeat = dur(500 * time.Microsecond) },
+			wantSub: "fallback.heartbeat",
+		},
+		{
 			name:    "heartbeat not below ttl",
 			mutate:  func(p *v1alpha1.FencingSLAProfile) { p.Spec.Fallback.Heartbeat = dur(4 * time.Second) },
 			wantSub: "heartbeat",
