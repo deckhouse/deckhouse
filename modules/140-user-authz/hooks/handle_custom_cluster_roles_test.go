@@ -238,6 +238,16 @@ metadata:
 aggregationRule:
   clusterRoleSelectors:
   - matchLabels: {user-authz.deckhouse.io/access-level: Editor}
+---
+# the Admin aggregate as the API server stores a freshly rendered one: rules is null, not absent
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: user-authz:admin:custom
+aggregationRule:
+  clusterRoleSelectors:
+  - matchLabels: {user-authz.deckhouse.io/access-level: Admin}
+rules: null
 `))
 			f.RunHook()
 		})
