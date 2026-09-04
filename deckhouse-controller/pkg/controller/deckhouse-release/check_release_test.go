@@ -803,7 +803,7 @@ disable:
 		require.NoError(suite.T(), err)
 
 		var higher v1alpha1.DeckhouseRelease
-		err = suite.Client().Get(ctx, types.NamespacedName{Name: "v1.33.2"}, &higher)
+		err = suite.kubeClient.Get(ctx, types.NamespacedName{Name: "v1.33.2"}, &higher)
 		require.Error(suite.T(), err, "a patch higher than the channel head must not be created")
 	})
 
