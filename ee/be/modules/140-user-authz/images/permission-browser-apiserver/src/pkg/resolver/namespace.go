@@ -411,31 +411,16 @@ func (r *NamespaceResolver) subjectMatchesWithNamespaceDefault(subjects []rbacv1
 
 // singleSubjectMatches checks if a single subject matches the user.
 func (r *NamespaceResolver) singleSubjectMatches(subject rbacv1.Subject, userName string, userGroups []string, namespace string) bool {
-	switch subject.Kind {
-	case rbacv1.UserKind:
-		return subject.Name == userName
-	case rbacv1.GroupKind:
-		// For namespace discovery, ignore grants made to the "all (un)authenticated" pseudo-groups:
-		// a single namespaced grant to e.g. system:authenticated would otherwise make every namespace
-		// appear in every user's AccessibleNamespace list. Real authorization still honors them.
+	// For namespace discovery, ignore grants made to the "all (un)authenticated" pseudo-groups:
+	// a single namespaced grant to e.g. system:authenticated would otherwise make every namespace
+	// appear in every user's AccessibleNamespace list. Real authorization still honors them.
+	if subject.Kind == rbacv1.GroupKind {
 		if _, broad := broadDiscoveryGroups[subject.Name]; broad {
 			return false
 		}
-		for _, group := range userGroups {
-			if subject.Name == group {
-				return true
-			}
-		}
-	case rbacv1.ServiceAccountKind:
-		// ServiceAccount user format: system:serviceaccount:<namespace>:<name>
-		saNamespace := subject.Namespace
-		if saNamespace == "" {
-			saNamespace = namespace
-		}
-		expectedName := fmt.Sprintf("system:serviceaccount:%s:%s", saNamespace, subject.Name)
-		return expectedName == userName
 	}
-	return false
+
+	return rbacadapter.SubjectMatches(subject, userName, userGroups, namespace)
 }
 
 // filterByMultitenancy filters the candidate namespaces using multi-tenancy rules.

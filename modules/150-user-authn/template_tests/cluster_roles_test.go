@@ -52,8 +52,8 @@ var _ = Describe("Module :: user-authn :: helm template :: cluster roles", func(
 			Expect(hec.RenderError).ToNot(HaveOccurred())
 
 			for _, name := range []string{
-				"d8:manage:permission:module:user-authn:view",
-				"d8:manage:permission:module:user-authn:edit",
+				"d8:system-capability:user-authn:view",
+				"d8:system-capability:user-authn:edit",
 				"d8:user-authz:user-authn:cluster-admin",
 			} {
 				clusterRole := hec.KubernetesGlobalResource("ClusterRole", name)

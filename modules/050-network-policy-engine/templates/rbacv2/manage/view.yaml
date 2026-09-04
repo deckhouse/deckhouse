@@ -6,10 +6,16 @@ metadata:
     heritage: deckhouse
     module: network-policy-engine
     rbac.deckhouse.io/aggregate-to-networking-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.network-policy-engine.view"
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-system
-  name: d8:manage:permission:module:network-policy-engine:view
+  name: d8:system-capability:network-policy-engine:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module network-policy-engine: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль network-policy-engine: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the network-policy-engine module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля network-policy-engine."
 rules:
 - apiGroups:
   - deckhouse.io

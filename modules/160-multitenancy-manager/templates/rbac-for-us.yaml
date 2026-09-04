@@ -10,6 +10,8 @@ rules:
   resources:
   - projects
   - projecttemplates
+  - projectrolebindings
+  - clusterprojectrolebindings
   verbs:
   - get
   - list
