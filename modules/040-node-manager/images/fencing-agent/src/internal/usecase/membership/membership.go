@@ -114,7 +114,6 @@ func (m *Membership) bump() {
 	m.sorted = nil
 }
 
-
 func (m *Membership) Expected() ([]domain.Peer, uint64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()

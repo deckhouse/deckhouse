@@ -71,7 +71,6 @@ type AliveLister interface {
 	Changed() <-chan struct{}
 }
 
-
 type ExpectedSource interface {
 	Expected() ([]domain.Peer, uint64)
 }
