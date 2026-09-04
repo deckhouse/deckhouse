@@ -1,103 +1,117 @@
 ---
-title: "The multitenancy-manager module: frequently asked questions"
+title: "The multitenancy-manager module: FAQ"
 ---
 
-## Grants on cluster resources
+## Managing access to cluster-wide resources
 
-### My PVC was rejected with "resource not available to project" — what do I do?
+### What should I do if a PersistentVolumeClaim is rejected with an "is not available to project" error?
 
-The `StorageClass` you referenced in `spec.storageClassName` is not in your project's allow-list. Check
-what your project may use:
+The StorageClass specified in `spec.storageClassName` is unavailable to the project. The webhook rejects such a request with a message similar to the following:
 
-```shell
-d8 k get available storageclasses -n <project-name> -o yaml
+```text
+[multitenancy] PersistentVolumeClaim "<OBJECT_NAME>" references "<RESOURCE_NAME>" which is not available to project "<PROJECT_NAME>". Ask the cluster administrator to grant it.
 ```
 
-If the name you need is missing, ask the cluster administrator to add it to the `ClusterResourceGrantPolicy`
-that matches your project (or to use a name that is listed). The same applies to other granted resources
-(`ClusterIssuer`, `ClusterRole`, `LoadBalancerClass`) — check the corresponding `AvailableClusterResource`.
+To view the available StorageClasses, run the following command:
 
-### How do I find out which grant policies affect my project?
+```shell
+d8 k get available storageclasses -n <PROJECT_NAME> -o yaml
+```
 
-`ClusterResourceGrantPolicy` is a cluster-scoped resource; a policy affects your project when its
-`projectSelector` matches your project's namespace labels. List all policies and inspect their selectors:
+If the required StorageClass is not in the list, use an available one or ask the cluster administrator to add it to the [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy).
+
+You can check the availability of other cluster-wide resources, such as ClusterIssuer, ClusterRole, and LoadBalancerClass, in the same way using the corresponding [AvailableClusterResource](cr.html#availableclusterresource).
+
+### How can I view access policies applied to a project?
+
+A [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy) applies to a project if its `spec.projectSelector` matches the labels of the project namespaces.
+
+To view all policies and their selectors, run the following command:
 
 ```shell
 d8 k get clusterresourcegrantpolicies -o yaml
 ```
 
-The controller also renders an `AvailableClusterResource` catalog in your namespace for each registered
-definition — that is the effective, per-project view of what is allowed.
+You can view the resulting list of cluster-wide resources available to a specific project using [AvailableClusterResource](cr.html#availableclusterresource):
 
-### I changed a grant policy, but existing objects still use the old value — is this a bug?
-
-No. This is **grandfathering**: on UPDATE, values already present in an object are preserved, so narrowing
-a policy does not break pre-existing objects. Only CREATE and field changes on UPDATE are validated
-against the current grants. If you want an existing object to use a new value, update the field explicitly.
-
-The `ClusterResourceGrantPolicyViolation` alert fires when existing objects violate the current grants —
-it is informational; the objects keep working.
-
-### The `ClusterResourceGrantPolicyViolation` alert fired — what does it mean?
-
-It means one or more existing objects in a project reference a cluster resource value that the current
-grants no longer allow. The objects are **not broken** (grandfathering), but the administrator is alerted
-to the drift. Resolve it by either widening the policy to cover the existing values, or by updating the
-objects to use an allowed value. See the Grafana dashboard *Security → Cluster Resource Grant Violations*
-and the `d8_cluster_objects_grant_violated` metric.
-
-### How do I allow all StorageClasses except specific ones?
-
-Use the `denied` list (or `deniedSelector`) while leaving the resource otherwise open:
-
-```yaml
-resources:
-  - resourceName: storageclasses
-    denied:
-      - expensive-nvme
-      - archived-hdd
+```shell
+d8 k get available -n <PROJECT_NAME>
 ```
 
-`denied` overrides `allowed`/`allowedSelector`: a name matching both is denied.
+### What happens to existing objects after access is restricted?
 
-### There are no grant policies — does that mean nothing works?
+Existing objects continue to use their previously configured values. When an object is updated, only new values are checked, so changing an access policy does not disrupt existing objects.
 
-No — the opposite. Without a `ClusterResourceGrantPolicy`, **all** resources are available (the permissive
-default). Grant policies are the *only* way to narrow access; the system never restricts anything on its
-own.
+If an existing object needs to use a different cluster-wide resource, explicitly change the corresponding field to a value available to the project.
 
-### I created a grant policy but nothing changed — how do I debug it?
+If an existing object uses a cluster-wide resource that is no longer available to the project, the [`ClusterResourceGrantPolicyViolation`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#multitenancy-manager-clusterresourcegrantpolicyviolation) alert is triggered.
 
-Check, in order:
+### What does the ClusterResourceGrantPolicyViolation alert mean?
 
-1. **Selector match** — does the policy's `projectSelector` match your project's namespace labels?
-   (`d8 k get ns <project> --show-labels`).
-2. **AvailableClusterResource** — does the catalog in the project namespace reflect the policy?
-   (`d8 k get available <resource> -n <project> -o yaml`).
-3. **Definition exists** — does the `GrantableClusterResourceDefinition` for `resourceName` exist, and is
-   its `GrantableClusterResourceReference` bound? (`...status.conditions[Bound]` = `Resolved`).
-4. **Path registered** — is the field you expect validated/defaulted covered by a reference's `fieldPaths`?
+The alert indicates that one or more existing objects in a project use a cluster-wide resource that is no longer available to the project under the current policies.
 
-### How do grants interact with `ClusterAuthorizationRule` / `AuthorizationRule`?
+Such objects continue to operate. To resolve the discrepancy, grant the project access to the cluster-wide resource in use or modify the object to use an available resource.
 
-They are independent mechanisms. RBAC (via `ClusterAuthorizationRule`, `AuthorizationRule`, `RoleBinding`)
-decides **who can create** an object. Grants decide **which cluster resource values** that object may
-reference. A user needs both: the RBAC right to create a PVC *and* a grant allowing the `StorageClass`.
+Detailed information about violations is available on the Grafana dashboard under "Security" → "Cluster Resource Grant Violations". The `d8_cluster_objects_grant_violated` metric is used for monitoring.
 
-### What happens if I disable the `multitenancy-manager` module?
+### How can I allow all StorageClasses except specific ones?
 
-The grant CRDs and webhooks are removed, so there is **no validation or defaulting** of cluster resource
-references — everything is allowed. Existing objects are unaffected. The `x-deckhouse-grantable-resource`
-extension in DKP application settings degrades silently (no validation). The `d8:use:dict` role in
-`user-authz` is independent and continues to work.
+To deny specific StorageClasses while keeping the others available, use [`denied`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-denied) or [`deniedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-deniedselector). Deny rules take precedence over allow rules.
 
-### Enabling grants on an existing cluster — what happens?
+For a configuration example, refer to ["Denying individual resources"](usage.html#denying-individual-resources).
 
-Grandfathering protects existing objects: their already-set values are preserved on UPDATE. Only new
-objects, and field changes on UPDATE, are validated against the new grants. There is no "backfill" — you
-do not need to migrate existing objects before creating policies.
+### What happens if there is no ClusterResourceGrantPolicy?
 
-### I narrowed a grant — what happens to objects created under the wider policy?
+If no ClusterResourceGrantPolicy is configured for a resource, its availability is determined by its registration. The resource is available to all projects if [`defaultAvailability: All`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultavailability) (the default value) is set in GrantableClusterResourceDefinition and the resource does not match the [`excluded`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-excluded) filters.
 
-They keep working (grandfathering). New objects and field changes on UPDATE are validated against the
-narrowed grants. If you delete the policy, the resource becomes fully open again.
+For example, the `clusterroles` definition provided by DKP excludes all ClusterRoles without the `rbac.deckhouse.io/delegatable` label. Therefore, such roles are unavailable in RoleBinding even when no policies are configured.
+
+To restrict access, create a [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy) and specify the projects and the cluster-wide resources available to them.
+
+### I created a ClusterResourceGrantPolicy, but nothing changed — why?
+
+Check the following:
+
+1. **Project selector match**. Make sure the policy's [`spec.projectSelector`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-projectselector) matches the labels of the project namespace:
+
+   ```shell
+   d8 k get ns <PROJECT_NAME> --show-labels
+   ```
+
+1. **Resources available to the project**. Check whether AvailableClusterResource reflects the expected policy settings:
+
+   ```shell
+   d8 k get available <RESOURCE_NAME> -n <PROJECT_NAME> -o yaml
+   ```
+
+1. **Cluster-wide resource registration**. Make sure a corresponding [GrantableClusterResourceDefinition](cr.html#grantableclusterresourcedefinition) exists for the `resourceName` value.
+
+1. **Reference registration**. If a specific field is expected to be checked, make sure it is registered using [GrantableClusterResourceReference](cr.html#grantableclusterresourcereference) and that the reference is successfully associated with the corresponding GrantableClusterResourceDefinition.
+
+For information about registration status, refer to ["Checking resource registration status"](usage.html#checking-resource-registration-status).
+
+### How does cluster-wide resource access management interact with RBAC?
+
+These mechanisms operate independently. RBAC determines *who can perform* operations on an object, while cluster-wide resource access management determines *which cluster-wide resources* that object can use.
+
+For example, to create a PersistentVolumeClaim, a user must have the appropriate RBAC permissions, and the StorageClass specified in `.spec.storageClassName` must be available to the project.
+
+### What happens if the multitenancy-manager module is disabled?
+
+After the module is disabled, cluster-wide resource availability checks and automatic default value assignment are no longer performed. Existing objects remain unchanged.
+
+Fields that use the `x-deckhouse-grantable-resource` extension in DKP application settings are no longer checked either.
+
+The `d8:use:dict` role in the `user-authz` module continues to work.
+
+### What happens when access management is enabled on an existing cluster?
+
+Existing objects continue to use their previously configured values. Access checks apply to new objects and, when existing objects are updated, only to new values.
+
+Therefore, existing objects do not need to be modified before access policies are created.
+
+### What happens to objects created before access was restricted?
+
+Such objects continue to use their previously configured values. New objects and new values in the fields of existing objects are checked against the current access policies.
+
+If an existing object uses a cluster-wide resource that is no longer available to the project, the [`ClusterResourceGrantPolicyViolation`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#multitenancy-manager-clusterresourcegrantpolicyviolation) alert is triggered.

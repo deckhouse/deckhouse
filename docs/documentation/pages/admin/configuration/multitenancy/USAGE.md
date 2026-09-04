@@ -293,31 +293,21 @@ To implement validation for resources with a different label (for example, `heri
        heritage: my-custom-label
    ```
 
-## Granting cluster-scoped resources to projects
+## Managing access to cluster-wide resources
 
-The `multitenancy-manager` lets cluster administrators control, per project, which cluster-scoped
-resources (e.g. `StorageClass`, `ClusterIssuer`, `ClusterRole`, `LoadBalancerClass`) may be
-referenced from within project namespaces, and which value is used by default.
+The `multitenancy-manager` module allows cluster administrators to define, for each project, which cluster-wide resources (such as StorageClass, ClusterIssuer, ClusterRole, and LoadBalancerClass) can be used from project namespaces and which values are used by default.
 
-This is a separate mechanism from RBAC: RBAC decides *who can create* an object, grants decide *which
-cluster resource values that object may reference*.
+This mechanism works independently of RBAC. RBAC determines *who can create and modify* objects, while the cluster-wide resource access mechanism determines *which resources* those objects can use.
 
-Four custom resources are involved:
+The mechanism uses four custom resources:
 
-- `GrantableClusterResourceDefinition` (`gcrd`, cluster-scoped) — registers a cluster resource as
-  grant-controlled (shipped by the platform and by modules).
-- `GrantableClusterResourceReference` (`gcrr`, cluster-scoped) — declares which field of which CRD is
-  validated/defaulted (shipped by modules).
-- `ClusterResourceGrantPolicy` (`crgp`, cluster-scoped) — the administrator's allow/deny lists and
-  defaults per project (the only manual step for access control).
-- `AvailableClusterResource` (`available`, namespaced, read-only) — the controller-rendered catalog a
-  project reads to discover what it may use.
+- [GrantableClusterResourceDefinition](/modules/multitenancy-manager/cr.html#grantableclusterresourcedefinition) registers a type of cluster-wide resource whose access can be managed. These resources are provided by DKP or module developers.
+- [GrantableClusterResourceReference](/modules/multitenancy-manager/cr.html#grantableclusterresourcereference) defines where a registered cluster-wide resource is used, for example, which resource field contains a reference to it. These resources are provided by modules.
+- [ClusterResourceGrantPolicy](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy) defines access rules. Using labels, a cluster administrator selects the projects to which the policy applies and defines the allowed and denied resources, as well as the resource used by default.
+- [AvailableClusterResource](/modules/multitenancy-manager/cr.html#availableclusterresource) is a read-only list of cluster-wide resources available to the project, created by the controller.
 
-Until an administrator creates a `ClusterResourceGrantPolicy`, all resources are available (permissive
-default). Validation applies only to project namespaces; existing objects are grandfathered on
-UPDATE.
+Until the administrator creates a ClusterResourceGrantPolicy, resource availability is determined by their registration: resources are available to all projects if `defaultAvailability: All` (the default value) is set in GrantableClusterResourceDefinition and the resource does not match the `excluded` filters.
 
-For the full guide — administrator scenarios (restricting StorageClasses, ClusterIssuers,
-ClusterRoles, LoadBalancerClasses), tenant resource discovery, the module developer guide, validation
-and defaulting rules, and monitoring — see the
-[multitenancy-manager module usage guide](/products/kubernetes-platform/documentation/v1/modules/160-multitenancy-manager/usage.html#managing-access-to-cluster-scoped-resources-grants).
+Access checks are performed only for objects in project namespaces. If an access policy changes, cluster-wide resources already used by existing objects remain available to those objects.
+
+For a detailed description of the access management mechanism, refer to the [`multitenancy-manager`](/modules/multitenancy-manager/#managing-access-to-cluster-wide-resources) module documentation.

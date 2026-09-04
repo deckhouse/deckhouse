@@ -307,88 +307,25 @@ To implement validation for resources with a different label (for example, `heri
        heritage: my-custom-label
    ```
 
-## Managing access to cluster-scoped resources (grants)
+## Managing access to cluster-wide resources
 
-Projects routinely reference cluster-scoped resources — a `PersistentVolumeClaim` names a `StorageClass`,
-a `Certificate` names a `ClusterIssuer`, a `RoleBinding` references a `ClusterRole`. The
-`multitenancy-manager` lets cluster administrators control, per project, **which** cluster resources may
-be used from within project namespaces, and which value is used by default.
+The module allows you to manage project access to cluster-wide resources such as StorageClass, ClusterIssuer, ClusterRole, and others.
 
-This is a separate mechanism from RBAC: RBAC decides *who can create* an object, grants decide *which
-cluster resource values that object may reference*. A user needs both — the RBAC right to create a PVC
-*and* a grant that allows the chosen `StorageClass`.
+For a description of the mechanism, the resources it uses, and the cluster-wide resources registered by the platform, refer to the [module description](./#managing-access-to-cluster-wide-resources).
 
-### How it works
-
-The mechanism is a five-step pipeline:
-
-1. **Definitions** ([`GrantableClusterResourceDefinition`](cr.html#grantableclusterresourcedefinition),
-   short name `gcrd`) register which cluster resources are governed. Deckhouse ships a set of
-   registrations by default; module developers can add their own.
-2. **References** ([`GrantableClusterResourceReference`](cr.html#grantableclusterresourcereference),
-   short name `gcrr`) declare *where* a granted resource is referenced — which field of which CRD is
-   validated and/or defaulted. Deckhouse ships references for the built-in paths; module developers can
-   register paths for their own CRDs.
-3. The **administrator** creates a
-   [`ClusterResourceGrantPolicy`](cr.html#clusterresourcegrantpolicy) (short name `crgp`) — this is the
-   only manual step for controlling access. A policy selects projects by label and, per resource, lists
-   the allowed/denied names and the per-project default.
-4. The **controller** renders an
-   [`AvailableClusterResource`](cr.html#availableclusterresource) (short name `available`) catalog in
-   each matched project's namespace — a read-only list of what the project may use.
-5. **Webhooks** validate references on CREATE/UPDATE and substitute defaults on CREATE.
-
-```mermaid
-flowchart LR
-    A["Module developer / Platform<br/>ships GCRD + GCRR"] --> C
-    B["Cluster admin<br/>creates CRGP"] --> C["Controller"]
-    C --> D["AvailableClusterResource<br/>in each project namespace"]
-    E["User creates object<br/>e.g. PVC"] --> F["Mutating webhook<br/>/defaults"]
-    F --> G["Validating webhook<br/>/is-granted"]
-    D -. available names .-> G
-    G --> H["Object created<br/>or rejected"]
-```
-
-Until an administrator creates a `ClusterResourceGrantPolicy`, **all** resources are available (the
-permissive default). Resource **quota** is not part of this system — it is delegated to the standard
-Kubernetes `ResourceQuota`. Validation applies only to project namespaces.
-
-### CRD ownership at a glance
-
-| CRD | Short name | Scope | Created by | Manual creation | Purpose |
-| --- | --- | --- | --- | --- | --- |
-| `GrantableClusterResourceDefinition` | `gcrd` | Cluster | Module developer / Platform | Allowed for custom resources | Registers a cluster resource as grant-controlled |
-| `GrantableClusterResourceReference` | `gcrr` | Cluster | Module developer | Allowed for custom CRD fields | Declares where a granted resource is referenced (validation/defaulting path) |
-| `ClusterResourceGrantPolicy` | `crgp` | Cluster | Cluster administrator | **Required** — only manual | Allow/deny lists and defaults per project |
-| `AvailableClusterResource` | `available` | Namespace | Controller (automatic) | **Forbidden** — protected by webhook | Read-only catalog of available resources for a project |
-
-### Resources registered by the platform
-
-These registrations are shipped by default (from the module's Helm chart), so the feature works out of the
-box. `defaultAvailability: All` everywhere, so nothing is restricted until an admin narrows it with a
-policy.
-
-| Definition name | Granted resource | Registered paths | Defaulting mode |
-| --- | --- | --- | --- |
-| `storageclasses` | `StorageClass` (storage.k8s.io) | PVC `.spec.storageClassName` | Coerce |
-| `loadbalancerclasses` | value-backed (no k8s object) | Service `.spec.loadBalancerClass` (guarded by `type: LoadBalancer`) | FillEmpty |
-| `clusterissuers` | `ClusterIssuer` (cert-manager.io) | Certificate `.spec.issuerRef.name` (guarded by `kind: ClusterIssuer`); Ingress annotation `cert-manager.io/cluster-issuer` | FillEmpty / None |
-| `clusterroles` | `ClusterRole` (rbac.authorization.k8s.io) | RoleBinding `.roleRef.name` (guarded by `kind: ClusterRole`) | None |
-
-The `clusterroles` registration excludes every `ClusterRole` that lacks the
-`rbac.deckhouse.io/delegatable` label — so by default only the namespace-level access roles
-(`d8:use:role:*` and the legacy `user-authz:*` roles) are available in `RoleBinding`s.
+The following sections provide common scenarios for configuring and using the mechanism.
 
 ### For cluster administrators
 
-#### Scenario 1 — Restrict StorageClasses for a project
+The following examples show how to configure project access to cluster-wide resources using ClusterResourceGrantPolicy.
 
-Allow only `fast-ssd` and `standard` in production projects, and default empty PVCs to `fast-ssd`:
+#### Restricting StorageClass for a project
+
+To allow projects to use only the `fast-ssd` and `standard` StorageClasses and use `fast-ssd` by default, create the following [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy):
 
 {% raw %}
 
 ```yaml
----
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterResourceGrantPolicy
 metadata:
@@ -407,28 +344,23 @@ spec:
 
 {% endraw %}
 
-A PVC created without `spec.storageClassName` is patched to `fast-ssd`. A PVC naming a `StorageClass`
-that is not in the list is rejected. Because the path uses the **Coerce** defaulting mode, a PVC whose
-`storageClassName` was pre-filled by the built-in Kubernetes admission (the cluster-wide default) with a
-value not available to the project is *rewritten* to the project default instead of being rejected.
+When a PersistentVolumeClaim is created without a value in `spec.storageClassName`, `fast-ssd` is automatically assigned to this field. If a StorageClass that is not in the allowed list is specified, the PersistentVolumeClaim is rejected.
 
-Check what the project actually sees:
+StorageClass uses the [`Coerce`](cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-defaulting) default assignment mode. If the built-in Kubernetes admission controller has already assigned a default class to `spec.storageClassName` that is unavailable to the project, the value is replaced with `fast-ssd` instead of rejecting the PersistentVolumeClaim.
+
+To check which StorageClasses are available to the project, run the following command:
 
 ```shell
-d8 k get available storageclasses -n <project-name> -o yaml
+d8 k get available storageclasses -n <PROJECT_NAME> -o yaml
 ```
 
-#### Scenario 2 — Restrict ClusterIssuers for a project
+#### Restricting ClusterIssuer for a project
 
-The `clusterissuers` registration has two paths: `Certificate.spec.issuerRef.name` (guarded by
-`issuerRef.kind == ClusterIssuer`, **FillEmpty** defaulting) and the Ingress annotation
-`cert-manager.io/cluster-issuer` (**None** defaulting — it is a feature toggle, so it is validated but
-never filled in automatically).
+To allow projects to use only the `letsencrypt-prod` and `vault-issuer` ClusterIssuers and use `letsencrypt-prod` by default, create the following [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy):
 
 {% raw %}
 
 ```yaml
----
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterResourceGrantPolicy
 metadata:
@@ -447,21 +379,28 @@ spec:
 
 {% endraw %}
 
-A `Certificate` whose `issuerRef.kind` is `ClusterIssuer` and whose `issuerRef.name` is empty is
-filled with `letsencrypt-prod` on creation. A `Certificate` naming a disallowed issuer is rejected. The
-Ingress annotation is validated against the same allow-list but is never defaulted.
+The policy applies to a ClusterIssuer specified in either of the following ways:
 
-> The `clusterissuers` registration is only shipped when the `cert-manager` module is enabled.
+- In the `.spec.issuerRef.name` field of a Certificate if `.spec.issuerRef.kind` is set to ClusterIssuer.
+- In the `cert-manager.io/cluster-issuer` annotation of an Ingress.
 
-#### Scenario 3 — Restrict ClusterRoles in RoleBindings
+When a Certificate with a ClusterIssuer is created without a value in `.spec.issuerRef.name`, `letsencrypt-prod` is automatically assigned to this field. If a ClusterIssuer that is not in the allowed list is specified, the Certificate is rejected.
 
-By default only delegatable ClusterRoles are available in `RoleBinding`s (everything lacking the
-`rbac.deckhouse.io/delegatable` label is excluded). To grant a project access to additional ClusterRoles:
+No default value is assigned to the `cert-manager.io/cluster-issuer` annotation. If the annotation is specified, its value is checked against the same list of allowed ClusterIssuers.
+
+{% alert level="info" %}
+Access management for ClusterIssuer is available only when the [`cert-manager`](/modules/cert-manager/) module is enabled.
+{% endalert %}
+
+#### Granting access to additional ClusterRoles
+
+By default, only ClusterRoles with the `rbac.deckhouse.io/delegatable` label can be used in RoleBinding.
+
+To allow projects belonging to the `payments` team to use additional ClusterRoles, create the following [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy):
 
 {% raw %}
 
 ```yaml
----
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterResourceGrantPolicy
 metadata:
@@ -481,20 +420,22 @@ spec:
 
 {% endraw %}
 
-The `allowed`/`allowedSelector` entries are *unioned with* the default-excluded set, so the delegatable
-roles remain available. The path uses **None** defaulting — auto-filling a ClusterRole into a RoleBinding
-makes no sense, so only validation is performed.
+The policy additionally allows the following ClusterRoles:
 
-#### Scenario 4 — Restrict LoadBalancerClasses
+- The ClusterRole named `my-custom-role`
+- ClusterRoles matching the `shared: "true"` selector
 
-`loadbalancerclasses` is a **value-backed** resource — there is no k8s object, the "names" are simply
-the values of `Service.spec.loadBalancerClass`. The path is guarded by `spec.type == LoadBalancer` and
-uses **FillEmpty** defaulting.
+ClusterRoles with the `rbac.deckhouse.io/delegatable` label remain available.
+
+When a RoleBinding is created or modified, the ClusterRole specified in it is checked for availability to the project. No ClusterRole value is assigned automatically.
+
+#### Restricting LoadBalancerClass for a Service
+
+To allow projects to use only the `internal-lb` and `edge-lb` LoadBalancerClass values and use `internal-lb` by default, create the following [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy):
 
 {% raw %}
 
 ```yaml
----
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterResourceGrantPolicy
 metadata:
@@ -513,18 +454,21 @@ spec:
 
 {% endraw %}
 
-A `LoadBalancer` Service created without `spec.loadBalancerClass` is filled with `internal-lb`. A
-Service naming a disallowed class is rejected.
+Unlike StorageClass, ClusterIssuer, and ClusterRole, LoadBalancerClass is not a separate Kubernetes resource. The policy defines the allowed values of the `.spec.loadBalancerClass` field for Services of the `LoadBalancer` type.
 
-#### Scenario 5 — Fully open a resource for specific projects
+When a Service of the `LoadBalancer` type is created without a value in `.spec.loadBalancerClass`, `internal-lb` is automatically assigned to this field. If a value that is not in the allowed list is specified, the Service is rejected.
 
-Use `availabilityDefault: All` to open a resource completely for matched projects (overrides the
-registration's `defaultAvailability`), without an allow-list:
+The policy does not apply to Services of other types.
+
+#### Granting access to all resources of a specific type
+
+To allow specific projects to use all resources of a selected type without listing them explicitly, set [`availabilityDefault: All`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-availabilitydefault).
+
+The following policy allows all projects with the `environment: sandbox` label to use any StorageClass:
 
 {% raw %}
 
 ```yaml
----
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterResourceGrantPolicy
 metadata:
@@ -540,18 +484,17 @@ spec:
 
 {% endraw %}
 
-This is rarely needed — an allow-list already implies a `None` baseline and is the usual way to
-restrict. `availabilityDefault` is for flipping the baseline *without* a list.
+Usually, explicitly specifying allowed resources using [`allowed`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-allowed) or [`allowedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-allowedselector) is sufficient for access management. Use `availabilityDefault: All` when the selected projects need access to all resources of the specified type.
 
-#### Scenario 6 — Deny specific resources, allow the rest
+#### Denying individual resources
 
-Use the `denied` list (or `deniedSelector`) to exclude specific names while keeping everything else
-available:
+To prevent projects from using individual resources while keeping the others available, use [`denied`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-denied) or [`deniedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-deniedselector).
+
+The following policy prevents projects with the `environment: dev` label from using the `expensive-nvme` and `archived-hdd` StorageClasses:
 
 {% raw %}
 
 ```yaml
----
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterResourceGrantPolicy
 metadata:
@@ -569,17 +512,17 @@ spec:
 
 {% endraw %}
 
-`denied` overrides `allowed`/`allowedSelector`: a name matching both is denied.
+Deny rules take precedence over allow rules. If a resource matches both `denied` or `deniedSelector` and `allowed` or `allowedSelector`, it is considered unavailable.
 
-#### Scenario 7 — Use label selectors for dynamic lists
+#### Managing access using label selectors
 
-`allowedSelector` and `deniedSelector` grant or exclude objects by label, which avoids listing every
-name:
+To manage access to resources without listing their names, use [`allowedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-allowedselector) and [`deniedSelector`](cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-deniedselector). Selectors allow or deny resources based on their labels.
+
+The following policy allows projects with the `tier: shared` label to use StorageClasses with the `shared: "true"` label, except for StorageClasses with the `deprecated: "true"` label:
 
 {% raw %}
 
 ```yaml
----
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: ClusterResourceGrantPolicy
 metadata:
@@ -600,155 +543,63 @@ spec:
 
 {% endraw %}
 
-### How validation and defaulting work
+### For project users
 
-**Availability resolution order.** For a given object name, the controller decides availability in
-this order (first match wins):
+Project users can view the cluster-wide resources available to them and check the values used by default.
 
-1. `excluded` filters on the `GrantableClusterResourceDefinition` — a hard deny, regardless of any
-   policy;
-2. `denied` / `deniedSelector` on the matching policy entry;
-3. `allowed` / `allowedSelector` on the matching policy entry;
-4. the policy entry's `availabilityDefault`;
-5. the definition's `defaultAvailability`.
+#### Viewing available cluster-wide resources
 
-**Defaulting modes** (set per path in the `GrantableClusterResourceReference`):
+An [AvailableClusterResource](cr.html#availableclusterresource) is automatically created in each project namespace for every registered resource. These resources show which cluster-wide resources are available to the project and which resource is used by default.
 
-- `None` — validate only, never substitute a value (e.g. feature-toggle annotations, RoleBinding
-  roleRef).
-- `FillEmpty` — fill the per-project default into an *empty* field on CREATE (e.g. Certificate
-  issuerRef, Service loadBalancerClass).
-- `Coerce` — rewrite an *unavailable or empty* value to the per-project default on CREATE (e.g. PVC
-  storageClassName, where the built-in admission may have pre-filled the cluster default).
-
-**Default value resolution.** The per-project default comes from the policy entry's `default` if set,
-otherwise from the definition's `defaultFrom` (an annotation marking the cluster-wide default object),
-otherwise empty.
-
-**Grandfathering.** On UPDATE, values already present in the object are not rejected — existing objects
-keep working after a policy is narrowed. Only CREATE and field changes on UPDATE are validated against
-the current grants.
-
-**System requests.** Requests from system service accounts (e.g. the platform's own controllers) bypass
-grant validation, so platform components are not blocked.
-
-### For project users (tenants)
-
-#### Discovering available cluster resources
-
-Each project namespace gets an `AvailableClusterResource` object per registered definition. Read them
-to find out which cluster resources your project may use and which is the default:
+To view all cluster-wide resources available to a project, run the following command:
 
 ```shell
-# List all available cluster resources in your project:
-d8 k get available -n <project-name>
-
-# Full details for one resource (names + which is the default):
-d8 k get available storageclasses -n <project-name> -o yaml
+d8 k get available -n <PROJECT_NAME>
 ```
 
 Example output:
 
 ```text
-NAME                KIND         DEFAULT      AVAILABLE   AGE
-storageclasses      StorageClass fast-ssd     2           5m
-clusterissuers      ClusterIssuer letsencrypt 2           5m
+NAME                KIND          DEFAULT      AVAILABLE   AGE
+storageclasses      StorageClass  fast-ssd     2           5m
+clusterissuers      ClusterIssuer letsencrypt  2           5m
 ```
 
-#### Understanding rejections
+To view detailed information about resources of a specific type, such as StorageClass, run the following command:
 
-If a create/update is rejected with a message like `resource <name> is not available to project
-<project>`, the value you referenced is not in your project's allow-list. Check the `AvailableClusterResource`
-catalog — if the name is missing, ask the cluster administrator to add it (or use a name that is listed).
+```shell
+d8 k get available storageclasses -n <PROJECT_NAME> -o yaml
+```
 
-#### Understanding auto-defaulting
+#### Rejection due to an unavailable cluster-wide resource
 
-For paths with `FillEmpty` or `Coerce` defaulting, leaving the field empty (or, for Coerce, naming an
-unavailable value) results in the per-project default being substituted automatically on CREATE. You do
-not need to specify the value yourself — but you can always set it explicitly to any name listed in the
-`AvailableClusterResource` catalog.
+If the specified cluster-wide resource is unavailable to the project when an object is created or modified, the operation is rejected with the following message:
+
+```text
+resource <RESOURCE_NAME> is not available to project <PROJECT_NAME>
+```
+
+In this case, check the available resources using AvailableClusterResource. Use a resource from the list of available resources or ask the cluster administrator to grant access to the required resource.
+
+#### Assigning default values automatically
+
+For some cluster-wide resources, the administrator can configure a default value. If the corresponding value is not specified when an object is created, it is assigned automatically.
+
+For example, if `fast-ssd` is configured as the default StorageClass, the `fast-ssd` value can be automatically assigned to `.spec.storageClassName` when a PersistentVolumeClaim is created without this field.
+
+You can specify a value explicitly by selecting any resource available to the project from the corresponding AvailableClusterResource.
 
 ### For module developers
 
-#### Registering a validation path for an existing granted resource
+#### Configuring validation of a cluster-wide resource reference
 
-If your module's CRD has a field that references a cluster resource already registered as grantable
-(e.g. a `StorageClass`), ship a `GrantableClusterResourceReference` in your Helm chart so that field is
-validated and (optionally) defaulted for projects.
+If a module resource contains a field that references a cluster-wide resource already registered using [GrantableClusterResourceDefinition](cr.html#grantableclusterresourcedefinition), create a [GrantableClusterResourceReference](cr.html#grantableclusterresourcereference). It defines which resources and fields use the cluster-wide resource and allows you to configure availability checks and automatic default value assignment.
 
-Template for a reference:
+For example, to configure validation of the StorageClass specified in the `.spec.storageClassName` field of a PostgresDatabase resource, add the following resource to the module's Helm chart:
 
 {% raw %}
 
 ```yaml
----
-apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: GrantableClusterResourceReference
-metadata:
-  name: mycrd-storageclasses
-  labels:
-    heritage: deckhouse
-    module: my-module
-spec:
-  grantableClusterResourceName: storageclasses   # An existing GrantableClusterResourceDefinition
-  rule:
-    apiGroups:   ["my.example.com"]
-    apiVersions: ["v1"]
-    resources:    ["postgresdatabases"]
-  fieldPaths:
-    - path: $.spec.storageClassName
-      defaulting: Coerce
-```
-
-{% endraw %}
-
-Key fields:
-
-- `grantableClusterResourceName` — the `metadata.name` of the `GrantableClusterResourceDefinition` this
-  path validates against.
-- `rule` — which usage objects this reference applies to (API groups/versions/resources, as plural
-  names).
-- `fieldPaths` — the version-scoped locations of the granted name. At least one entry is required.
-  Each entry has a `path` (JSONPath to the granted name), an optional `defaulting` mode, an optional
-  `match` guard, and optional `apiGroups`/`apiVersions` to scope the entry to specific versions.
-
-Choose the `defaulting` mode per path:
-
-- `None` — validate only. Use for annotations that toggle a feature (their absence is meaningful) or
-  for fields that should never be auto-filled (e.g. a RoleBinding's `roleRef.name`).
-- `FillEmpty` — fill the per-project default on CREATE when the field is empty. Use for fields the
-  resource needs but the user often omits (e.g. a Certificate's `issuerRef.name`).
-- `Coerce` — rewrite an unavailable *or* empty value to the per-project default on CREATE. Use for
-  fields that a built-in admission may pre-fill with a value not available to the project (e.g. a PVC's
-  `storageClassName`).
-
-Use a `match` guard to apply the path only when a predicate holds — e.g. only validate
-`issuerRef.name` when `issuerRef.kind == ClusterIssuer`, or only validate `loadBalancerClass` when
-`spec.type == LoadBalancer`:
-
-{% raw %}
-
-```yaml
-  fieldPaths:
-    - path: $.spec.loadBalancerClass
-      match:
-        fieldPath: $.spec.type
-        equals: LoadBalancer
-      defaulting: FillEmpty
-```
-
-{% endraw %}
-
-For CRDs with multiple API versions, provide version-scoped entries and an unscoped fallback — the
-entry whose `apiGroups`/`apiVersions` match the request's GVK wins; an entry with empty scope is the
-fallback.
-
-Example: a `PostgresDatabase` CRD referencing a `StorageClass`:
-
-{% raw %}
-
-```yaml
----
 apiVersion: multitenancy.deckhouse.io/v1alpha1
 kind: GrantableClusterResourceReference
 metadata:
@@ -759,9 +610,9 @@ metadata:
 spec:
   grantableClusterResourceName: storageclasses
   rule:
-    apiGroups:   ["postgres.example.com"]
+    apiGroups: ["postgres.example.com"]
     apiVersions: ["*"]
-    resources:    ["postgresdatabases"]
+    resources: ["postgresdatabases"]
   fieldPaths:
     - path: $.spec.storageClassName
       defaulting: Coerce
@@ -769,71 +620,59 @@ spec:
 
 {% endraw %}
 
-#### Registering a brand-new granted resource
+In this example, `storageclasses` is the name of an existing GrantableClusterResourceDefinition, while `Coerce` allows the default StorageClass available to the project to be assigned when a PostgresDatabase is created if the value is missing or unavailable to the project.
 
-To make a new cluster resource grant-controllable, ship a `GrantableClusterResourceDefinition` in your
-chart, then one or more `GrantableClusterResourceReference` objects for the paths that reference it:
+For descriptions of GrantableClusterResourceReference parameters, default assignment modes, `match` conditions, and configuration for resources with multiple API versions, refer to the [resource description](cr.html#grantableclusterresourcereference).
 
-{% raw %}
+#### Registering a new cluster-wide resource
 
-```yaml
----
-apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: GrantableClusterResourceDefinition
-metadata:
-  name: myclusterresources
-  labels:
-    heritage: deckhouse
-    module: my-module
-spec:
-  grantedResource:
-    apiGroup: my.example.com
-    kind: MyClusterResource
-  enforcement: Managed          # Managed = our webhooks enforce; External = your own webhook
-  defaultAvailability: All      # All = available unless a policy narrows it; None = locked by default
-  # defaultFrom:                # Optional: annotation marking the cluster-wide default object
-  #   annotationKey: my.example.com/is-default
-  excluded:                     # Optional: objects never available to tenants (hard deny)
-    - matchExpressions:
-        - key: my.example.com/internal
-          operator: Exists
-```
+To add access management for a new cluster-wide resource:
 
-{% endraw %}
+1. Create a [GrantableClusterResourceDefinition](cr.html#grantableclusterresourcedefinition) to register the cluster-wide resource with the access management mechanism.
+1. Create one or more [GrantableClusterResourceReference](cr.html#grantableclusterresourcereference) resources to define the fields that reference it.
 
-Choose `enforcement`:
+   For example, to register the MyClusterResource resource, add the following resource to the module's Helm chart:
 
-- `Managed` — the platform's webhooks enforce the grants (the usual choice).
-- `External` — your module's own webhook enforces; the registration is informational only.
+   {% raw %}
 
-Choose `defaultAvailability`:
+   ```yaml
+   apiVersion: multitenancy.deckhouse.io/v1alpha1
+   kind: GrantableClusterResourceDefinition
+   metadata:
+     name: myclusterresources
+     labels:
+       heritage: deckhouse
+       module: my-module
+   spec:
+     grantedResource:
+       apiGroup: my.example.com
+       kind: MyClusterResource
+     enforcement: Managed
+     defaultAvailability: All
+     excluded:
+       - matchExpressions:
+           - key: my.example.com/internal
+             operator: Exists
+   ```
 
-- `All` — the resource is available unless a policy narrows it (permissive; the platform default).
-- `None` — the resource is locked unless a policy explicitly opens it (restrictive).
+   {% endraw %}
 
-Then register the paths with `GrantableClusterResourceReference` objects as shown above.
+   In this example, the registered resources are available to projects by default. Resources with the `my.example.com/internal` label are excluded from the available resources.
 
-#### Using `x-deckhouse-grantable-resource` in DKP application settings
+   For descriptions of GrantableClusterResourceDefinition parameters and available access management modes, refer to the [resource description](cr.html#grantableclusterresourcedefinition).
 
-For DKP application settings (not raw CRDs), use the `x-deckhouse-grantable-resource` OpenAPI extension
-on a string field. The `deckhouse-controller` then automatically validates the field against the
-matching grants and substitutes the per-project default — no manual reference registration is needed.
+1. After registering the cluster-wide resource, configure references to it using GrantableClusterResourceReference as described in ["Configuring validation of a cluster-wide resource reference"](#configuring-validation-of-a-cluster-wide-resource-reference).
 
-See the [application development guide](/products/kubernetes-platform/documentation/v1/architecture/marketplace/application-development.html) for the schema and examples.
+#### Using x-deckhouse-grantable-resource in DKP application settings
 
-#### Observability for developers
+To manage access to cluster-wide resources in DKP application settings, use the `x-deckhouse-grantable-resource` OpenAPI extension. In this case, deckhouse-controller automatically checks the availability of the specified resource and assigns the default value when necessary. You do not need to create GrantableClusterResourceReference manually.
 
-- `GrantableClusterResourceDefinition.status.references` — a reverse index of the
-  `GrantableClusterResourceReference` objects bound to the definition (their names and matched
-  resources).
-- `GrantableClusterResourceReference.status.bound` — `true` when the referenced definition exists.
-- `GrantableClusterResourceReference.status.conditions[Bound]` — `Resolved` when bound, or
-  `UnknownResource` when the referenced definition does not exist (a typo or a missing registration).
+For a description of the extension and usage examples, refer to ["Application development"](/products/kubernetes-platform/documentation/v1/architecture/marketplace/application-development.html#defaulting-from-cluster-resource-grants-x-deckhouse-grantable-resource).
 
-### Monitoring and alerts
+#### Checking resource registration status
 
-- **Alert** `ClusterResourceGrantPolicyViolation`: fires when existing objects in a project violate the
-  current grants (e.g. after a policy is narrowed). It is informational — the objects are not broken
-  (grandfathering), but the administrator is alerted to the drift.
-- **Grafana dashboard**: *Security → Cluster Resource Grant Violations*.
-- **Metric**: `d8_cluster_objects_grant_violated`.
+You can check the status of GrantableClusterResourceDefinition and its associated GrantableClusterResourceReference resources in the `status` field:
+
+- [`GrantableClusterResourceDefinition.status.references`](cr.html#grantableclusterresourcedefinition-v1alpha1-status-references): Contains a list of associated GrantableClusterResourceReference resources and information about the resources to which they apply.
+- [`GrantableClusterResourceReference.status.bound`](cr.html#grantableclusterresourcereference-v1alpha1-status-bound): Indicates whether the corresponding GrantableClusterResourceDefinition was found.
+- `GrantableClusterResourceReference.status.conditions[Bound]`: Contains the binding status: `Resolved` if the definition was found, or `UnknownResource` if it is missing. The `UnknownResource` status can indicate an incorrect GrantableClusterResourceDefinition name or a missing registration.

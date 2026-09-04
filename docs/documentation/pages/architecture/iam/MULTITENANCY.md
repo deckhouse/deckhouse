@@ -51,26 +51,24 @@ To manage project isolation scale, you can use the following Kubernetes features
 
 You can combine these tools to configure a project according to your application's requirements.
 
-### Managing access to cluster-scoped resources
+## Managing access to cluster-wide resources
 
-Projects routinely reference cluster-scoped resources — a `PersistentVolumeClaim` names a
-`StorageClass`, a `Certificate` names a `ClusterIssuer`, a `RoleBinding` references a `ClusterRole`.
-The module also controls, per project, **which** cluster resources may be referenced from within
-project namespaces, and which value is used by default. This is a separate mechanism from RBAC: RBAC
-decides *who can create* an object, grants decide *which cluster resource values that object may
-reference*.
+Objects in project namespaces can reference cluster-wide resources. For example, a PersistentVolumeClaim can use a StorageClass, a Certificate can use a ClusterIssuer, and a RoleBinding can use a ClusterRole. The module allows cluster administrators to define which cluster-wide resources can be used from project namespaces and which values are used by default.
 
-The mechanism uses four custom resources:
+This mechanism works independently of RBAC. RBAC determines *who can create and modify* objects, while the cluster-wide resource access mechanism determines *which resources* those objects can use.
 
-- [`GrantableClusterResourceDefinition`](/modules/multitenancy-manager/cr.html#grantableclusterresourcedefinition) (`gcrd`, cluster-scoped) — registers a cluster resource as grant-controlled (shipped by the platform and by modules).
-- [`GrantableClusterResourceReference`](/modules/multitenancy-manager/cr.html#grantableclusterresourcereference) (`gcrr`, cluster-scoped) — declares which field of which CRD is validated/defaulted (shipped by modules).
-- [`ClusterResourceGrantPolicy`](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy) (`crgp`, cluster-scoped) — the administrator's allow/deny lists and defaults per project (the only manual step for access control).
-- [`AvailableClusterResource`](/modules/multitenancy-manager/cr.html#availableclusterresource) (`available`, namespaced, read-only) — the controller-rendered catalog a project reads to discover what it may use.
+The following resources are used to manage access to cluster-wide resources:
 
-Until an administrator creates a `ClusterResourceGrantPolicy`, all resources are available (permissive
-default). Validation applies only to project namespaces; existing objects are grandfathered on UPDATE.
+* [GrantableClusterResourceDefinition](/modules/multitenancy-manager/cr.html#grantableclusterresourcedefinition) registers a type of cluster-wide resource whose access can be managed. These resources are provided by DKP or module developers.
+* [GrantableClusterResourceReference](/modules/multitenancy-manager/cr.html#grantableclusterresourcereference) defines where a registered cluster-wide resource is used, for example, which resource field contains a reference to it. These resources are provided by modules.
+* [ClusterResourceGrantPolicy](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy) defines access rules. Using labels, a cluster administrator selects the projects to which the policy applies and defines the allowed and denied resources, as well as the resource used by default.
+* Based on the policy, the controller creates an [AvailableClusterResource](/modules/multitenancy-manager/cr.html#availableclusterresource) in the namespace of each matching project. This resource contains the list of cluster-wide resources available to the project and is read-only.
 
-For the full guide, see the [module usage guide](/modules/multitenancy-manager/usage.html#managing-access-to-cluster-scoped-resources-grants).
+Until the administrator creates a ClusterResourceGrantPolicy, resource availability is determined by their registration: resources are available to all projects if `defaultAvailability: All` (the default value) is set in GrantableClusterResourceDefinition and the resource does not match the `excluded` filters.
+
+Access checks are performed only for objects in project namespaces. If an access policy changes, cluster-wide resources already used by existing objects remain available to those objects.
+
+For a detailed description of the access management mechanism, refer to the [`multitenancy-manager`](/modules/multitenancy-manager/#managing-access-to-cluster-wide-resources) module documentation.
 
 ## Module architecture
 
@@ -95,12 +93,12 @@ The module consists of the following components:
   - Validating the Project and ProjectTemplate custom resources.
   - Validating Namespace if [`.spec.settings.allowNamespacesWithoutProjects=false`](/modules/multitenancy-manager/configuration.html#parameters-allownamespaceswithoutprojects) is set in the `multitenancy-manager` module parameters.
   - Creating the resources specified in the ProjectTemplate custom resource based on the parameters set in Project.
-  - Managing the grants mechanism for cluster-scoped resources — the
+  - Managing the grants mechanism for cluster-wide resources — the
     [`GrantableClusterResourceDefinition`](/modules/multitenancy-manager/cr.html#grantableclusterresourcedefinition),
     [`GrantableClusterResourceReference`](/modules/multitenancy-manager/cr.html#grantableclusterresourcereference),
     [`ClusterResourceGrantPolicy`](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy), and
     [`AvailableClusterResource`](/modules/multitenancy-manager/cr.html#availableclusterresource) custom resources. It
-    renders the per-project `AvailableClusterResource` catalogs and runs the validating/mutating admission webhooks
+    renders the per-project AvailableClusterResource catalogs and runs the validating and mutating admission webhooks
     (`/is-granted`, `/defaults`, `/protect`) that enforce which cluster resources a project may reference and
     substitute per-project defaults on CREATE.
 

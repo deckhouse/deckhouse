@@ -39,23 +39,17 @@ spec:
     schema:
       openAPIV3Schema:
         description: |-
-          GrantableClusterResourceDefinition registers a cluster-scoped resource as grant-controllable
-          (the multitenancy-manager grants mechanism).
+          Registers a type of cluster-wide resource for managing project access to it.
 
-          Created by: module developers / the platform (shipped from the module Helm chart).
-          Manual creation: allowed, for custom cluster resources.
-          Purpose: defines which cluster resource is governed (object-backed, with a real k8s object, or
-          value-backed, without one); the enforcement mode (Managed = platform webhooks, External = the
-          module's own webhook); the baseline availability (defaultAvailability: All = available unless a
-          policy narrows it, None = locked by default); hard-excluded objects (excluded — a hard deny
-          regardless of any policy); and how the cluster-wide default is discovered (defaultFrom — an
-          annotation marking the default object).
+          GrantableClusterResourceDefinition defines a cluster-wide resource for which access can be configured using ClusterResourceGrantPolicy, as well as the baseline rules for its availability and use of a default value.
 
-          The paths where the resource is referenced (field validation/defaulting) are declared by
-          separate GrantableClusterResourceReference objects — the definition is decoupled from the
-          owner of the references.
+          The resource can register both Kubernetes objects, such as StorageClass or ClusterRole, and values that are not represented by separate Kubernetes objects.
 
-          See the "Managing access to cluster-scoped resources" section in the module usage guide.
+          Places where the cluster-wide resource is used in other Kubernetes resources are registered separately using GrantableClusterResourceReference.
+
+          GrantableClusterResourceDefinition is created by DKP or a module developer. Custom definitions can be created to manage access to additional types of cluster-wide resources.
+
+          For more information, refer to ["Usage examples"](usage.html#managing-access-to-cluster-wide-resources).
         properties:
           apiVersion:
             description: |-
@@ -78,66 +72,75 @@ spec:
             type: object
             x-doc-skip: true
           spec:
-            description: spec defines the desired state of GrantableClusterResourceDefinition.
+            description: GrantableClusterResourceDefinition parameters.
             properties:
               defaultAvailability:
                 default: All
-                description: 'DefaultAvailability is the baseline when no grant allows
-                  an object: All or None.'
+                description: |-
+                  Baseline availability of cluster-wide resources to projects.
+
+                  Allowed values:
+
+                  - `All`: Resources are available by default.
+                  - `None`: Resources are unavailable by default.
+
+                  The value applies if availability is not determined by ClusterResourceGrantPolicy.
                 enum:
                 - All
                 - None
                 type: string
               defaultFrom:
-                description: DefaultFrom marks the cluster-wide default object by
-                  annotation (fallback default).
+                description: |-
+                  Settings for determining the cluster-wide resource used by default.
+
+                  The resource is identified by the presence of the specified annotation and is used as the default value if one is not specified using ClusterResourceGrantPolicy.
                 properties:
                   annotationKey:
-                    description: AnnotationKey is the annotation on a granted object
-                      that marks it as the cluster-wide default.
+                    description: Key of the annotation that marks the cluster-wide resource used by default.
                     type: string
                 type: object
               enforcement:
                 default: Managed
-                description: Enforcement is Managed (our webhooks) or External (the
-                  module's own webhook enforces).
+                description: |-
+                  Method for checking cluster-wide resource availability.
+
+                  Allowed values:
+
+                  - `Managed`: The check is performed by `multitenancy-manager` webhooks.
+                  - `External`: The check is performed by an external mechanism, such as a module webhook.
                 enum:
                 - Managed
                 - External
                 type: string
               excluded:
                 description: |-
-                  Excluded lists filters of objects never available to tenants, regardless of any grant (hard
-                  deny). An object is excluded if it matches ANY of the filters (the filters are unioned), which
-                  lets a registration express "available by default to set A OR set B" by excluding everything
-                  outside both sets.
+                  Filters for excluded cluster-wide resources that are always unavailable to projects regardless of ClusterResourceGrantPolicy settings.
+
+                  A resource is considered excluded if it matches at least one of the specified filters.
                 items:
-                  description: ResourceFilter matches granted objects by explicit
-                    names and/or labels.
+                  description: Filter for cluster-wide resources by name and labels.
                   properties:
                     matchExpressions:
-                      description: MatchExpressions is a list of label selector requirements
-                        matched against the granted object labels.
+                      description: |-
+                        List of label selector expressions for cluster-wide resources.
+
+                        All expressions must match.
                       items:
                         description: |-
-                          A label selector requirement is a selector that contains values, a key, and an operator that
-                          relates the key and values.
+                          Label selector expression.
                         properties:
                           key:
-                            description: key is the label key that the selector applies
-                              to.
+                            description: Label key to which the expression applies.
                             type: string
                           operator:
                             description: |-
-                              operator represents a key's relationship to a set of values.
-                              Valid operators are In, NotIn, Exists and DoesNotExist.
+                              Operator that defines the relationship between the key and the set of values.
                             type: string
                           values:
                             description: |-
-                              values is an array of string values. If the operator is In or NotIn,
-                              the values array must be non-empty. If the operator is Exists or DoesNotExist,
-                              the values array must be empty. This array is replaced during a strategic
-                              merge patch.
+                              List of label values.
+
+                              For the `In` and `NotIn` operators, the list must contain at least one value. For the `Exists` and `DoesNotExist` operators, the list must be empty.
                             items:
                               type: string
                             type: array
@@ -150,78 +153,75 @@ spec:
                     matchLabels:
                       additionalProperties:
                         type: string
-                      description: MatchLabels is a map of {key,value} pairs matched
-                        against the granted object labels.
+                      description: |-
+                        Set of labels for cluster-wide resources.
+
+                        All specified labels must match.
                       type: object
                     names:
-                      description: Names is an explicit list of object names.
+                      description: List of cluster-wide resource names.
                       items:
                         type: string
                       type: array
                   type: object
                 type: array
               grantedResource:
-                description: GrantedResource is the cluster-scoped resource being
-                  governed (absent ⇒ value-backed).
+                description: |-
+                  Kubernetes cluster-wide resource for which access is configured.
+
+                  If the parameter is not specified, access management applies to values that are not represented by separate Kubernetes objects.
                 properties:
                   apiGroup:
-                    description: APIGroup is the API group of the granted resource
-                      (e.g. storage.k8s.io; "" for the core group).
+                    description: |-
+                      API group of the cluster-wide resource.
+
+                      For the core API group, specify an empty string (`""`).
                     type: string
                   kind:
-                    description: Kind is the kind of the granted resource (e.g. StorageClass).
+                    description: Kind of the cluster-wide resource (for example, StorageClass).
                     type: string
                 type: object
             type: object
           status:
-            description: status defines the observed state of GrantableClusterResourceDefinition.
+            description: GrantableClusterResourceDefinition status.
             properties:
               conditions:
-                description: Conditions represent the current state of the resource.
+                description: Current state of the GrantableClusterResourceDefinition.
                 items:
-                  description: Condition contains details for one aspect of the current
-                    state of this API Resource.
+                  description: Information about one aspect of the current resource state.
                   properties:
                     lastTransitionTime:
                       description: |-
-                        lastTransitionTime is the last time the condition transitioned from one status to another.
-                        This should be when the underlying condition changed.  If that is not known, then using the time when the API field changed is acceptable.
+                        Time when the condition last changed.
                       format: date-time
                       type: string
                     message:
                       description: |-
-                        message is a human readable message indicating details about the transition.
-                        This may be an empty string.
+                        Message with additional information about the condition state.
                       maxLength: 32768
                       type: string
                     observedGeneration:
                       description: |-
-                        observedGeneration represents the .metadata.generation that the condition was set based upon.
-                        For instance, if .metadata.generation is currently 12, but the .status.conditions[x].observedGeneration is 9, the condition is out of date
-                        with respect to the current state of the instance.
+                        Resource generation on which the condition state is based.
                       format: int64
                       minimum: 0
                       type: integer
                     reason:
                       description: |-
-                        reason contains a programmatic identifier indicating the reason for the condition's last transition.
-                        Producers of specific condition types may define expected values and meanings for this field,
-                        and whether the values are considered a guaranteed API.
-                        The value should be a CamelCase string.
-                        This field may not be empty.
+                        Reason for the last change in the condition state.
                       maxLength: 1024
                       minLength: 1
                       pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
                       type: string
                     status:
-                      description: status of the condition, one of True, False, Unknown.
+                      description: Condition state.
                       enum:
                       - "True"
                       - "False"
                       - Unknown
                       type: string
                     type:
-                      description: type of condition in CamelCase or in foo.example.com/CamelCase.
+                      description: Condition type.
                       maxLength: 316
                       pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
                       type: string
@@ -237,28 +237,23 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               observedGeneration:
-                description: ObservedGeneration is the most recent generation observed
-                  by the controller.
+                description: Latest resource generation processed by the controller.
                 format: int64
                 type: integer
               referenceCount:
-                description: ReferenceCount is the number of bound references (len(References)).
+                description: Number of GrantableClusterResourceReference resources associated with this definition.
                 type: integer
               references:
                 description: |-
-                  References is the reverse index of GrantableClusterResourceReference objects bound to this
-                  definition (i.e. the validation/defaulting paths registered against it).
+                  List of GrantableClusterResourceReference resources associated with this definition.
                 items:
-                  description: ResourceReferenceBinding is one GrantableClusterResourceReference
-                    bound to this definition.
+                  description: Information about a GrantableClusterResourceReference associated with this definition.
                   properties:
                     name:
-                      description: Name is the GrantableClusterResourceReference object
-                        name.
+                      description: Name of the GrantableClusterResourceReference.
                       type: string
                     resources:
-                      description: Resources are the usage-object plural resources
-                        the reference matches (from its rule).
+                      description: Types of Kubernetes resources that contain registered references to the cluster-wide resource.
                       items:
                         type: string
                       type: array

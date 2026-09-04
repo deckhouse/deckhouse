@@ -20,9 +20,9 @@ Using projects helps address these limitations and offers the following benefits
   supporting a secure multitenant environment.
   * **Resource consumption**: Administrators can easily set resource quotas and limits for each project
   to prevent resource overconsumption.
-  * **Resource access control**: Administrators can control which cluster-scoped resources
-  (e.g. `StorageClass`, `ClusterIssuer`, `ClusterRole`, `LoadBalancerClass`) each project may reference,
-  and set per-project defaults. See the [grants section in the usage guide](usage.html#granting-cluster-scoped-resources-to-projects).
+  * **Resource access management**: Administrators can control which cluster-wide resources
+  (such as StorageClass, ClusterIssuer, ClusterRole, and LoadBalancerClass) each project may use,
+  and set per-project default values. For details, refer to [grants section in the usage guide](multitenancy/project-management.html#managing-access-to-cluster-wide-resources).
 
 * For platform users:
   * **Immediate start**: Developers can request projects created per templates from administrators
