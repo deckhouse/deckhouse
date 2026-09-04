@@ -31,11 +31,12 @@ alertmanagers
 Alertmanagers
 AliCloud
 AllocateSpace
+allocs
 AllowedAddressPairs
 allowedBundles
 allowedTopologies
 allowedUnsafeSysctls
-allowedUserGroups
+allowlist
 allowVolumeExpansion
 amd
 AMD
@@ -65,6 +66,7 @@ Aps
 arbitr
 aren
 argocd
+args
 ARN
 ARP
 arptables
@@ -87,7 +89,6 @@ AuthorizationRule
 authURL
 Authy
 authz
-autocomplete
 autoConvergerPeriod
 autodiscovery
 autogenerate
@@ -103,8 +104,6 @@ autoscalers
 autoscaling
 autounattend
 autoverification
-AvailableClusterResource
-AVD
 Avi
 aws
 AWS
@@ -129,11 +128,11 @@ Bashible
 BashibleTemplateData
 basicAuditPolicyEnabled
 BasicAuth
-BasicProjectDetails
 baz
 bcrypt
 BDU
 behaviour
+benchmarkLock
 BGP
 bgpCommunities
 BinC
@@ -210,7 +209,6 @@ CI
 CIDR
 CIDRs
 CiliumClusterwideNetworkPolicies
-CiliumClusterwideNetworkPolicy
 CiliumEgressGatewayPolicy
 CIOps
 Cirros
@@ -261,8 +259,6 @@ ClusterLoggingConfig
 ClusterName
 ClusterObservabilityAlert
 ClusterPodLoggingConfig
-ClusterResourceGrant
-ClusterResourceGrantPolicy
 ClusterRole
 ClusterRoleBinding
 clusterType
@@ -282,10 +278,8 @@ codec
 CODEOWNERS
 Colocating
 Colour
-CommitDetail
 comparations
 compatibilityFlag
-complexityLevel
 conf
 config
 configMap
@@ -299,6 +293,9 @@ configurator
 configVersion
 conntrack
 Conntrack
+ConsistencyAndAvailability
+ConstraintTemplate
+ConstraintTemplates
 Container
 containerd
 ContainerResourcePolicy
@@ -392,10 +389,10 @@ Datastores
 Datastream
 datastreams
 Datastreams
+DBeaver
 DCGM
 DDTHH
 de
-debian
 Debian
 deckhouse
 Deckhouse
@@ -404,12 +401,7 @@ DeckhouseReleases
 defaultClusterStorageClass
 DefaultContainerResourcePolicy
 defaultCRI
-defragment
 Defragment
-defragmentation
-Defragmentation
-defragmenting
-Defragmenting
 descheduled
 descheduler
 Descheduler
@@ -427,7 +419,11 @@ DHCP
 dhcpOptions
 dhctl
 DHE
+didn
+diff
 Diff
+diffing
+diffs
 dir
 disjoining
 diskType
@@ -440,8 +436,8 @@ DKP
 DN
 DNAT
 dns
-DNS
 DNs
+DNS
 dnsEE
 Dnsmasq
 dnsPolicy
@@ -451,6 +447,7 @@ Dockerfile’s
 Dockerfiles
 dockerignore
 dockersamples
+docstring
 documentation
 doesn
 DoesNotExist
@@ -465,7 +462,6 @@ dropdown
 DRS
 dryrun
 Dryrun
-ds
 DSA
 DSL
 DSR
@@ -503,13 +499,12 @@ ElasticIP
 elasticsearch
 Elasticsearch
 ELB
-emailAddress
 EmailConfig
 emptyDir
-enableBasicAuth
 enablement
 enableMultiTenancy
 endofftopic
+EndpointSlice
 Entra
 entrypoint
 enum
@@ -524,6 +519,7 @@ etcdctl
 etcdutl
 eth
 EuropeClouds
+eval
 eventsExporter
 EVS
 existingZoneToSubnetIDMap
@@ -588,6 +584,7 @@ GateKeeper
 gatewayEE
 Gb
 Gbps
+GC
 GCE
 gcloud
 GCM
@@ -596,7 +593,6 @@ GCP
 GCPClusterConfiguration
 GCPInstanceClass
 GCPInstanceClasses
-gdm
 GeeseFS
 GELF
 Gemfile
@@ -620,6 +616,8 @@ GlobalTag
 globalVersion
 Gluu
 Golang
+GOROOT
+goroutines
 GOST
 govc
 GPG
@@ -633,13 +631,13 @@ GrafanaAlertsChannel
 GrafanaCloud
 GrafanaDashboardDefinition
 Grafanas
-GrantableClusterResourceDefinition
 GraphQL
 Graylog
 grep
 gRPC
 GRPC
 GuestInfo
+GVKs
 gz
 Habr
 hardcoded
@@ -677,9 +675,7 @@ hsts
 HSTS
 html
 HTML
-htpasswd
 http
-httpd
 httpPort
 httpProxy
 https
@@ -696,7 +692,6 @@ hypervisor
 hypervisors
 Hypervisors
 IaC
-iam
 IAM
 ICMP
 idempotence
@@ -816,12 +811,10 @@ KaaS
 Kanban
 Kaspersky
 kb
-KCV
 keepalived
 Keepalived
 keepalivedEE
 KeepalivedInstance
-kerberos
 Kerberos
 KESL
 Keycloak
@@ -833,7 +826,6 @@ Kiali
 KiB
 KLLRCODA
 Klog
-krb
 kruise
 Kruise
 kube
@@ -875,7 +867,6 @@ LetsEncrypt
 LFS
 libc
 lifecycle
-lightdm
 linkTitle
 linstor
 Linstor
@@ -897,7 +888,6 @@ localpath
 LocalPathProvisioner
 localpref
 Lockbox
-lockDuration
 loghouse
 logLevel
 Logstash
@@ -940,7 +930,6 @@ masterNodeGroup
 matchExpressions
 matchLabels
 Mattermost
-maxAttempts
 maxConcurrent
 maxConcurrentDownloads
 maxPerZone
@@ -959,7 +948,6 @@ memberlist
 memcached
 menuTitle
 MergeRequestApprovals
-MergeRequestBasic
 metadata
 metallb
 MetalLB
@@ -969,14 +957,12 @@ MiB
 MicroK
 MicroK8s
 microservices
-microversion
 milli
 millicore
 minikube
 minimalNotificationTime
 MinIO
 MinIO’s
-minLength
 minPerZone
 minReplicas
 misconfigured
@@ -1003,6 +989,7 @@ MQL
 MRA
 MRs
 msg
+mtime
 mTLS
 MTLS
 MTU
@@ -1099,7 +1086,6 @@ NTP
 NtpFwMark
 NUMA
 Nvidia
-NVMe
 oauth
 OAuth
 objectmeta
@@ -1129,7 +1115,6 @@ OpenID
 OpenKruise
 OpenLDAP
 openrc
-OpenSearch
 OpenShift
 openssh
 OpenSSL
@@ -1158,11 +1143,13 @@ os
 OSes
 OSI
 OTLP
+outlier
 Outlier
 outlierDetection
 overprovisioned
 overprovisioning
 overprovisioningRate
+overridable
 overriden
 overutilized
 OVF
@@ -1178,7 +1165,6 @@ paravirtualization
 passphrase
 Passthrough
 passwordHash
-passwordHistoryLimit
 passwordless
 pathPrefix
 PCI
@@ -1187,7 +1173,6 @@ PDB
 PDF
 PeerAuthentication
 PEM
-performant
 permalink
 PersistentVolume
 PersistentVolumeClaim
@@ -1218,16 +1203,19 @@ PodLogginConfig
 PodLoggingConfig
 PodMonitor
 PodMonitors
-PodNetwork
 podSubnetCIDR
 PodsWithLabelAreRunningOnNode
 Poly
 portForwarding
 POSIX
+Postgres
+PostgresClass
 postgresql
 PostgreSQL
+PostgresSnapshot
 postStart
 PowerShell
+pprof
 Praefect
 pre
 precompute
@@ -1239,6 +1227,7 @@ preffered
 preinstalled
 Preinstalled
 preload
+PrepareForEval
 Prestable
 preStop
 PrimaryIPFromEgressGatewayNodeInterface
@@ -1247,7 +1236,6 @@ prioritization
 PriorityClass
 priorityClassName
 PriorityLevelConfiguration
-programmatically
 ProjectTemplate
 ProjectType
 projectTypeName
@@ -1255,7 +1243,6 @@ prometheus
 PrometheusRemoteWrite
 PrometheusRule
 PrometheusRules
-promptType
 PromQL
 promtail
 Promtail
@@ -1311,7 +1298,6 @@ Redis
 Redoc
 redos
 RefreshToken
-refreshTokens
 regex
 Regex
 regexes
@@ -1323,7 +1309,6 @@ registryDockerCfg
 registryImagesRepo
 registrysecret
 Rego
-reindex
 releaseChannel
 RemoveDuplicates
 RemovePodsHavingTooManyRestarts
@@ -1331,7 +1316,6 @@ RemovePodsViolatingInterPodAntiAffinity
 RemovePodsViolatingNodeAffinity
 RemovePodsViolatingNodeTaints
 RemovePodsViolatingTopologySpreadConstraint
-repeatedChars
 ReplicaSet
 ReplicaSets
 ReplicatedStorageClass
@@ -1339,12 +1323,12 @@ ReplicatedStoragePool
 ReplicationController
 repo
 Repointing
+ReportAllocs
 repos
 reprovisioning
 repurposed
 RequestAuthentication
 RequirementCheck
-ResetPassword
 resizer
 resourceAttributes
 ResourceList
@@ -1363,7 +1347,6 @@ roleRef
 RollingUpdate
 rollout
 rollouts
-rootCAData
 RootConf
 rootDir
 rootDiskSize
@@ -1372,9 +1355,11 @@ RSA
 rtt
 RTT
 ru
+rulebench
 rulefiles
 RuleGroup
 ruleSelector
+runN
 RWO
 RWX
 S3
@@ -1396,7 +1381,7 @@ scrapeIntervals
 screenshot
 scriptable
 SCSITarget
-sddm
+SDK
 SDN
 sds
 Searchable
@@ -1405,6 +1390,7 @@ SecretStore
 securityGroups
 SecurityGroups
 SecurityPolicy
+SecurityPolicyException
 sed
 selectel
 Selectel
@@ -1449,13 +1435,11 @@ smokeMini
 snaphost
 Snapshotter
 SNAT
-softdog
 SomeRegion
 SonarQube
 Sonatype
 sourceRanges
 SPE
-specialCharacters
 spellchecker
 Spellchecking
 SPIFFE
@@ -1588,6 +1572,7 @@ TLF
 tls
 TLS
 TLSv
+TMPDIR
 TODO
 TolerationSeconds
 toolchain
@@ -1598,11 +1583,9 @@ trdl
 trivy
 Trivy
 TrustDomain
-ttl
 tuf
 tunnelMode
 txt
-ubuntu
 Ubuntu
 UDP
 UEFI
@@ -1616,6 +1599,7 @@ uninstall
 uninstalled
 uninstalling
 Unlabel
+unmarshalling
 UNPACKEDSIZE
 unschedulable
 Uplink
@@ -1630,13 +1614,11 @@ URIs
 urls
 URLs
 UsePAM
-UserBasic
 username
 usernames
 UserOperation
 UTC
 UTF
-utils
 UUID
 UUIDs
 uwsgi
@@ -1702,7 +1684,6 @@ VNet
 VNets
 VNIC
 VNicProfileId
-VolumeAttachment
 VolumeGroup
 volumeMounts
 VolumeSnapshot
@@ -1771,12 +1752,11 @@ WithoutNAT
 WORKDIR
 workflow
 workflows
-WorkItem
+workMem
 worktree
 worseness
 WSL
 www
-Xorg
 xz
 Yadro
 YadroStorageClass
@@ -1804,8 +1784,7 @@ zVirt
 Zvirt
 ZvirtClusterConfiguration
 ZvirtInstanceClass
-автодополнение
-автодополнения
+µs
 автомасштабирование
 автомасштабированием
 автомасштабировании
@@ -1817,7 +1796,6 @@ ZvirtInstanceClass
 авторизовывать
 авторизовываться
 авторизующий
-авторизующим
 автоскейлерам
 автоскейлинг
 автосогласования
@@ -1882,7 +1860,6 @@ ZvirtInstanceClass
 бакету
 балансировщик
 балансировщика
-балансировщиками
 балансировщиках
 балансировщике
 балансировщики
@@ -1908,7 +1885,6 @@ ZvirtInstanceClass
 блокирующе
 блокчейном
 буквенно
-Булевый
 бутстрап
 бутстрапа
 бутстрапится
@@ -1933,6 +1909,8 @@ ZvirtInstanceClass
 валидирует
 валидируется
 валидируются
+валидная
+валидной
 валидными
 вебхук
 вебхука
@@ -1976,7 +1954,6 @@ ZvirtInstanceClass
 высокодоступный
 высокодоступных
 высокоуровневой
-высокоуровневые
 высокоуровневыми
 высокоуровневых
 г
@@ -2035,7 +2012,6 @@ ZvirtInstanceClass
 деструктивна
 детализированно
 дефолтный
-дискозависимые
 донастройка
 доустановить
 дэшборд
@@ -2088,7 +2064,6 @@ ZvirtInstanceClass
 инстансам
 инстансами
 инстансах
-инстансе
 инстансов
 инстансом
 инстансу
@@ -2158,12 +2133,10 @@ ZvirtInstanceClass
 контеинеризации
 контеинеризация
 контейнер
-контейнера
 контейнеризации
 контейнеризация
 контейнеризированных
 контейнеризованного
-контексты
 контролллер
 контролллера
 конфиг
@@ -2224,7 +2197,6 @@ ZvirtInstanceClass
 межкластерная
 межкластерного
 межкластерных
-межузлового
 межузловой
 мейнтейнер
 Меньшеe
@@ -2309,11 +2281,10 @@ ZvirtInstanceClass
 неконфиденциальных
 ненагруженные
 ненагруженных
-необходимо
+️Необходимо
 неограничивающая
 неограничивающего
 неподдерживаемые
-неподдерживаемым
 неподдерживаемых
 неподнимающийся
 неподписанным
@@ -2343,7 +2314,6 @@ ZvirtInstanceClass
 одностраничных
 однострочник
 одноузлового
-одноузловом
 ООМ
 опциональные
 Опциональные
@@ -2361,7 +2331,6 @@ ZvirtInstanceClass
 отрисовки
 офлайн
 п
-пагинация
 Пайплайн
 пайплайна
 пайплайнами
@@ -2407,7 +2376,6 @@ ZvirtInstanceClass
 перегенерируйте
 Перегенерируйте
 передеплоятся
-перезагрузится
 Перезаказ
 перезапускает
 перезапускается
@@ -2450,7 +2418,6 @@ ZvirtInstanceClass
 пересоздает
 пересоздаёт
 пересоздается
-пересоздаётся
 пересоздайте
 пересоздастся
 переупорядочивание
@@ -2467,7 +2434,6 @@ ZvirtInstanceClass
 плейсхолдер
 плейсхолдеров
 побайтово
-подгрузкой
 поддомен
 поддоменам
 поддоменами
@@ -2573,9 +2539,11 @@ ZvirtInstanceClass
 рендеринга
 рендеринге
 рендерится
+репликационным
 реплицированного
 реплицированные
 реплицированных
+реплицироваться
 реплицируемого
 реплицируемое
 реплицируемые
@@ -2599,7 +2567,6 @@ ZvirtInstanceClass
 рестартнуть
 рестартов
 ресурcы
-ресурсоёмкая
 ретраев
 ротирован
 ротировать
@@ -2642,7 +2609,6 @@ ZvirtInstanceClass
 сгенерированы
 сгенерировать
 сгенерируем
-сгенерирует
 сгенерируйте
 Сгенерируйте
 сегментировать
@@ -2691,8 +2657,6 @@ ZvirtInstanceClass
 сокеты
 соотвествущая
 соответствующий
-сопоставление
-сопоставления
 Сохраняеем
 спанов
 спаны
@@ -2718,9 +2682,7 @@ ZvirtInstanceClass
 таймаутом
 таймауту
 таймауты
-тайминги
 таргетов
-таргеты
 тегирование
 тегирования
 тегируются
@@ -2764,6 +2726,7 @@ ZvirtInstanceClass
 уязвимостям
 уязвимостями
 файл
+файрвол
 файрвола
 фейловер
 фикстур
@@ -2867,30 +2830,3 @@ ZvirtInstanceClass
 юзера
 юнит
 юнита
-ConstraintTemplate
-ConstraintTemplates
-GC
-GVKs
-SDK
-SecurityPolicyException
-allocs
-args
-didn
-diff
-diffing
-diffs
-docstring
-eval
-mtime
-outlier
-pprof
-rulebench
-unmarshalling
-µs
-GOROOT
-PrepareForEval
-ReportAllocs
-TMPDIR
-benchmarkLock
-goroutines
-runN

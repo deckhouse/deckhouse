@@ -898,6 +898,18 @@ entries:
                     ru: Управление проектами
                   url: /admin/multitenancy/project-management.html
             - title:
+                en: Managed-services
+                ru: Managed-сервисы
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/configuration/managed-services/
+                - title:
+                    en: Managed PostgreSQL
+                    ru: Managed PostgreSQL
+                  url: /admin/configuration/managed-services/postgres/
+            - title:
                 en: Backup and restore
                 ru: Резервное копирование и восстановление
               url: /admin/configuration/backup/backup-and-restore.html
@@ -1147,6 +1159,22 @@ entries:
             en: Multitenancy
             ru: Мультитенантность
           url: /user/multitenancy/
+        - title:
+            en: Managed-services
+            ru: Managed-сервисы
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /user/managed-services/
+            - title:
+                en: Managed PostgreSQL
+                ru: Managed PostgreSQL
+              url: /user/managed-services/postgres/
+            - title:
+                en: FAQ
+                ru: Частые вопросы
+              url: /user/managed-services/faq/
         - title:
             en: Monitoring
             ru: Мониторинг
