@@ -1,8 +1,8 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-c101d60466373766c9e9092c135c8edd0235f3a45929555fb8f0722d45debe6f",
-  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 1,
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -171,6 +171,20 @@
       "justification": "vulnerable_code_not_present",
       "impact_statement": "В CVE-2025-5187 описана уязвимость в NodeRestriction admission controller, позволяющая через патч объекта с OwnerReference удалить объект Node. Поскольку код admission controller-а не используется, уязвимость нельзя эксплуатировать",
       "timestamp": "2025-10-13T07:02:03.46625Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2025-13281"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/k8s.io/kubernetes"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Затрагивает только сборку для Kubernetes 1.32 (csi-vsphere v3.6.4), где k8s.io/kubernetes остаётся на версии v1.34.0. Исправленная версия v1.34.2 не подтягивается: vsphere-csi-driver v3.6.x фиксирует staging-модули k8s.io/* на 0.34.0 через replace, и go mod tidy возвращает v1.34.0 обратно. Пакет используется только для импорта типов, уязвимый код не входит в исполняемый путь syncer. В сборках для Kubernetes 1.33-1.36 (csi-vsphere v3.7.3) уязвимость отсутствует.",
+      "timestamp": "2026-09-04T14:12:53.000000Z"
     }
   ],
   "timestamp": "2025-10-13T07:16:35Z"
