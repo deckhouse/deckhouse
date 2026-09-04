@@ -87,6 +87,12 @@ properties:
             name:
               type: string
               minLength: 1
+            legacyCustomRoleBindings:
+              type: boolean
+              description: |
+                Keep rendering one binding per custom ClusterRole for this rule. Set by the hook
+                until the aggregated binding (user-authz:<level>:custom) of the rule exists in the
+                cluster, so the per-role bindings are never removed before their replacement.
             spec:
               type: object
               required:
@@ -201,6 +207,12 @@ properties:
               minLength: 1
               maxLength: 63
               pattern: '[a-z0-9]([-a-z0-9]*[a-z0-9])?'
+            legacyCustomRoleBindings:
+              type: boolean
+              description: |
+                Keep rendering one binding per custom ClusterRole for this rule. Set by the hook
+                until the aggregated binding (user-authz:<level>:custom) of the rule exists in the
+                namespace of the rule, so the per-role bindings are never removed before their replacement.
             spec:
               type: object
               required:

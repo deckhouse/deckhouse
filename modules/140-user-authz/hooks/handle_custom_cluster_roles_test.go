@@ -72,8 +72,26 @@ metadata:
   name: ccr5
   annotations:
     user-authz.deckhouse.io/access-level: ClusterAdmin
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ccr-stale-label
+  labels:
+    user-authz.deckhouse.io/access-level: Editor
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ccr-wrong-label
+  labels:
+    user-authz.deckhouse.io/access-level: Admin
+  annotations:
+    user-authz.deckhouse.io/access-level: User
 `
 )
+
+const accessLevelLabelPath = `metadata.labels.user-authz\.deckhouse\.io/access-level`
 
 var _ = Describe("User Authz hooks :: handle custom cluster roles ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthz":{"internal":{}}}`, `{}`)
@@ -106,12 +124,41 @@ var _ = Describe("User Authz hooks :: handle custom cluster roles ::", func() {
 
 		It("Custom Roles and ClusterRoles must be stored in values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.user").AsStringSlice()).Should(ConsistOf("ccr0"))
-			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.privilegedUser").AsStringSlice()).Should(ConsistOf("ccr0", "ccr1"))
-			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.editor").AsStringSlice()).Should(ConsistOf("ccr0", "ccr1", "ccr2"))
-			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.admin").AsStringSlice()).Should(ConsistOf("ccr0", "ccr1", "ccr2", "ccr3"))
-			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.clusterEditor").AsStringSlice()).Should(ConsistOf("ccr0", "ccr1", "ccr2", "ccr3", "ccr4"))
-			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.clusterAdmin").AsStringSlice()).Should(ConsistOf("ccr0", "ccr1", "ccr2", "ccr3", "ccr4", "ccr5"))
+			// ccr-wrong-label is annotated User: the annotation, not the (wrong) label, decides.
+			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.user").AsStringSlice()).Should(ConsistOf("ccr0", "ccr-wrong-label"))
+			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.privilegedUser").AsStringSlice()).Should(ConsistOf("ccr0", "ccr1", "ccr-wrong-label"))
+			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.editor").AsStringSlice()).Should(ConsistOf("ccr0", "ccr1", "ccr2", "ccr-wrong-label"))
+			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.admin").AsStringSlice()).Should(ConsistOf("ccr0", "ccr1", "ccr2", "ccr3", "ccr-wrong-label"))
+			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.clusterEditor").AsStringSlice()).Should(ConsistOf("ccr0", "ccr1", "ccr2", "ccr3", "ccr4", "ccr-wrong-label"))
+			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.clusterAdmin").AsStringSlice()).Should(ConsistOf("ccr0", "ccr1", "ccr2", "ccr3", "ccr4", "ccr5", "ccr-wrong-label"))
+		})
+
+		It("Roles with a stale or missing label are excluded from values", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			for _, level := range []string{"user", "privilegedUser", "editor", "admin", "clusterEditor", "clusterAdmin"} {
+				Expect(f.ValuesGet("userAuthz.internal.customClusterRoles." + level).AsStringSlice()).ShouldNot(ContainElement("ccr-stale-label"))
+				Expect(f.ValuesGet("userAuthz.internal.customClusterRoles." + level).AsStringSlice()).ShouldNot(ContainElement("ccr-without-annotation0"))
+			}
+			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.user").AsStringSlice()).Should(ContainElement("ccr-wrong-label"))
+		})
+
+		It("Access-level label mirrors the annotation on every custom ClusterRole", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			for name, level := range map[string]string{
+				"ccr0": "User", "ccr1": "PrivilegedUser", "ccr2": "Editor",
+				"ccr3": "Admin", "ccr4": "ClusterEditor", "ccr5": "ClusterAdmin",
+				"ccr-wrong-label": "User",
+			} {
+				role := f.KubernetesGlobalResource("ClusterRole", name)
+				Expect(role.Exists()).To(BeTrue(), name)
+				Expect(role.Field(accessLevelLabelPath).String()).To(Equal(level), name)
+			}
+		})
+
+		It("Stale label is removed and roles without the annotation stay untouched", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.KubernetesGlobalResource("ClusterRole", "ccr-stale-label").Field(accessLevelLabelPath).Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("ClusterRole", "ccr-without-annotation0").Field("metadata.labels").Exists()).To(BeFalse())
 		})
 	})
 })

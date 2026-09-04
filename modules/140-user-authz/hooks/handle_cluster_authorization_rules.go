@@ -19,12 +19,14 @@ package hooks
 import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/modules/140-user-authz/hooks/internal"
 )
 
 const (
-	clusterAuthRuleSnapshot = "cluster_authorization_rules"
+	clusterAuthRuleSnapshot           = "cluster_authorization_rules"
+	clusterAuthRuleAggregatedBindings = "cluster_authorization_rules_aggregated_bindings"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -36,5 +38,14 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "ClusterAuthorizationRule",
 			FilterFunc: internal.ApplyAuthorizationRuleFilter,
 		},
+		{
+			Name:       clusterAuthRuleAggregatedBindings,
+			ApiVersion: "rbac.authorization.k8s.io/v1",
+			Kind:       "ClusterRoleBinding",
+			LabelSelector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{internal.AggregatedBindingKindLabel: internal.AggregatedBindingKindValue},
+			},
+			FilterFunc: internal.ApplyAggregatedBindingFilter,
+		},
 	},
-}, internal.AuthorizationRulesHandler("userAuthz.internal.clusterAuthRuleCrds", clusterAuthRuleSnapshot))
+}, internal.AuthorizationRulesHandler("userAuthz.internal.clusterAuthRuleCrds", clusterAuthRuleSnapshot, clusterAuthRuleAggregatedBindings))

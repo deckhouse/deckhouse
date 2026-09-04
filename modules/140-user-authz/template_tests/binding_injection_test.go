@@ -105,8 +105,8 @@ var _ = Describe("Module :: user-authz :: helm template :: rule value injection"
 			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", injectedClusterRoleBindingName).Exists()).
 				To(BeFalse(), "the value must not become a manifest of its own")
 
-			Expect(renderedBindings(rendered)).To(HaveLen(2),
-				"%s must render exactly the additional-role and the accessLevel binding", bindingsTemplate)
+			Expect(renderedBindings(rendered)).To(HaveLen(3),
+				"%s must render exactly the additional-role, the accessLevel and the aggregated custom binding", bindingsTemplate)
 		})
 
 		It("Should keep the value a single scalar of the roleRef", func() {
@@ -146,7 +146,7 @@ var _ = Describe("Module :: user-authz :: helm template :: rule value injection"
 			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", injectedClusterRoleBindingName).Exists()).
 				To(BeFalse(), "toYaml must keep the value a scalar")
 
-			Expect(renderedBindings(rendered)).To(HaveLen(2))
+			Expect(renderedBindings(rendered)).To(HaveLen(3))
 		})
 
 		It("Should keep the value a single scalar of every subject", func() {

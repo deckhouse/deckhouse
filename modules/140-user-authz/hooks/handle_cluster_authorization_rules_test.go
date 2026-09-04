@@ -46,6 +46,63 @@ spec:
   - kind: Group
     name: Everyone
 `
+
+	// The aggregated custom binding of car0 exists (rendered by the chart); car1 still has none.
+	// The unlabeled binding proves that only bindings carrying the binding-kind label count.
+	stateAggregatedBindings = `
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: user-authz:car0:cluster-editor:custom
+  labels:
+    user-authz.deckhouse.io/binding-kind: aggregated-custom
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: user-authz:cluster-editor:custom
+subjects:
+- kind: Group
+  name: NotEveryone
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: user-authz:car1:cluster-admin:custom
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: user-authz:cluster-admin:custom
+subjects:
+- kind: Group
+  name: Everyone
+`
+
+	stateClusterAuthRulesWithoutLevel = `
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: car-roles-only
+spec:
+  additionalRoles:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: view
+  subjects:
+  - kind: Group
+    name: Viewers
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: car-super
+spec:
+  accessLevel: SuperAdmin
+  subjects:
+  - kind: Group
+    name: Root
+`
 )
 
 var _ = Describe("User Authz hooks :: handle cluster authorization rules ::", func() {
@@ -72,7 +129,37 @@ var _ = Describe("User Authz hooks :: handle cluster authorization rules ::", fu
 
 		It("CARs must be stored in values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("userAuthz.internal.clusterAuthRuleCrds").String()).To(MatchJSON(`[{"name":"car0","spec":{"accessLevel":"ClusterEditor", "allowScale": false, "portForwarding": false, "subjects":[{"kind":"Group", "name":"NotEveryone"}]}},{"name":"car1","spec":{"accessLevel":"ClusterAdmin", "allowScale": false, "portForwarding": false, "subjects":[{"kind":"Group", "name":"Everyone"}]}}]`))
+			Expect(f.ValuesGet("userAuthz.internal.clusterAuthRuleCrds").String()).To(MatchJSON(`[{"name":"car0","legacyCustomRoleBindings":true,"spec":{"accessLevel":"ClusterEditor", "allowScale": false, "portForwarding": false, "subjects":[{"kind":"Group", "name":"NotEveryone"}]}},{"name":"car1","legacyCustomRoleBindings":true,"spec":{"accessLevel":"ClusterAdmin", "allowScale": false, "portForwarding": false, "subjects":[{"kind":"Group", "name":"Everyone"}]}}]`))
+		})
+	})
+
+	Context("Cluster with two CARs and the aggregated binding of one of them", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateClusterAuthRules + stateAggregatedBindings))
+			f.RunHook()
+		})
+
+		It("Only the CAR without an aggregated binding keeps the legacy per-role bindings", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("userAuthz.internal.clusterAuthRuleCrds.0.name").String()).To(Equal("car0"))
+			Expect(f.ValuesGet("userAuthz.internal.clusterAuthRuleCrds.0.legacyCustomRoleBindings").Bool()).To(BeFalse())
+			Expect(f.ValuesGet("userAuthz.internal.clusterAuthRuleCrds.1.name").String()).To(Equal("car1"))
+			Expect(f.ValuesGet("userAuthz.internal.clusterAuthRuleCrds.1.legacyCustomRoleBindings").Bool()).To(BeTrue())
+		})
+	})
+
+	Context("Cluster with CARs that never get custom-role bindings", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateClusterAuthRulesWithoutLevel))
+			f.RunHook()
+		})
+
+		It("Rules without accessLevel and SuperAdmin rules do not ask for legacy bindings", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("userAuthz.internal.clusterAuthRuleCrds.0.name").String()).To(Equal("car-roles-only"))
+			Expect(f.ValuesGet("userAuthz.internal.clusterAuthRuleCrds.0.legacyCustomRoleBindings").Bool()).To(BeFalse())
+			Expect(f.ValuesGet("userAuthz.internal.clusterAuthRuleCrds.1.name").String()).To(Equal("car-super"))
+			Expect(f.ValuesGet("userAuthz.internal.clusterAuthRuleCrds.1.legacyCustomRoleBindings").Bool()).To(BeFalse())
 		})
 	})
 })

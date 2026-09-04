@@ -34,6 +34,11 @@ import (
 const (
 	customClusterRoleSnapshots = "custom_cluster_roles"
 
+	// accessLevelKey is both the annotation that marks a custom ClusterRole and the label
+	// that the aggregated ClusterRoles (user-authz:<level>:custom) select it by. The
+	// annotation is the public contract; the label is maintained by this hook.
+	accessLevelKey = "user-authz.deckhouse.io/access-level"
+
 	accessLevelUser           = "User"
 	accessLevelPrivilegedUser = "PrivilegedUser"
 	accessLevelEditor         = "Editor"
@@ -44,21 +49,29 @@ const (
 
 type customClusterRole struct {
 	Name string
+	// Role is the access level from the annotation; empty when the annotation is absent or
+	// invalid (such a role is in the snapshot only to have a stale label removed).
 	Role string
+	// Label is the current value of the access-level label on the object.
+	Label string
 }
 
 func applyCustomRoleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	ccr := &customClusterRole{
-		Name: obj.GetName(),
+		Name:  obj.GetName(),
+		Label: obj.GetLabels()[accessLevelKey],
 	}
 
-	role := obj.GetAnnotations()["user-authz.deckhouse.io/access-level"]
+	role := obj.GetAnnotations()[accessLevelKey]
 	switch role {
 	case accessLevelUser, accessLevelPrivilegedUser, accessLevelEditor, accessLevelAdmin, accessLevelClusterEditor, accessLevelClusterAdmin:
 		ccr.Role = role
 	default:
-		return nil, nil
+		if ccr.Label == "" {
+			return nil, nil
+		}
 	}
+
 	return ccr, nil
 }
 
@@ -75,13 +88,42 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, customClusterRolesHandler)
 
 func customClusterRolesHandler(_ context.Context, input *go_hook.HookInput) error {
-	customClusterRoles, err := snapshotsToInternalValuesCustomClusterRoles(input.Snapshots.Get(customClusterRoleSnapshots))
+	roles, err := snapshotsToCustomClusterRoles(input.Snapshots.Get(customClusterRoleSnapshots))
 	if err != nil {
 		return fmt.Errorf("failed to convert custom cluster roles snapshots: %w", err)
 	}
 
-	input.Values.Set("userAuthz.internal.customClusterRoles", customClusterRoles)
+	syncAccessLevelLabels(input, roles)
+
+	input.Values.Set("userAuthz.internal.customClusterRoles", customClusterRolesToInternalValues(roles))
+
 	return nil
+}
+
+// syncAccessLevelLabels makes the access-level label of every custom ClusterRole equal to its
+// annotation, and removes the label from roles that lost the annotation. The label is what the
+// aggregated ClusterRoles select by, so a wrong label would grant or revoke rights.
+func syncAccessLevelLabels(input *go_hook.HookInput, roles []customClusterRole) {
+	for _, role := range roles {
+		if role.Label == role.Role {
+			continue
+		}
+
+		var label interface{}
+		if role.Role != "" {
+			label = role.Role
+		}
+
+		patch := map[string]interface{}{
+			"metadata": map[string]interface{}{
+				"labels": map[string]interface{}{
+					accessLevelKey: label,
+				},
+			},
+		}
+
+		input.PatchCollector.PatchWithMerge(patch, "rbac.authorization.k8s.io/v1", "ClusterRole", "", role.Name)
+	}
 }
 
 type internalValuesCustomClusterRoles struct {
@@ -93,7 +135,21 @@ type internalValuesCustomClusterRoles struct {
 	ClusterAdmin   []string `json:"clusterAdmin"`
 }
 
-func snapshotsToInternalValuesCustomClusterRoles(snapshots []pkg.Snapshot) (internalValuesCustomClusterRoles, error) {
+func snapshotsToCustomClusterRoles(snapshots []pkg.Snapshot) ([]customClusterRole, error) {
+	roles := make([]customClusterRole, 0, len(snapshots))
+
+	for role, err := range sdkobjectpatch.SnapshotIter[customClusterRole](snapshots) {
+		if err != nil {
+			return nil, fmt.Errorf("failed to iterate over '%s' snapshot: %w", customClusterRoleSnapshots, err)
+		}
+
+		roles = append(roles, role)
+	}
+
+	return roles, nil
+}
+
+func customClusterRolesToInternalValues(roles []customClusterRole) internalValuesCustomClusterRoles {
 	var (
 		userRoleNames           = set.New()
 		privilegedUserRoleNames = set.New()
@@ -103,11 +159,7 @@ func snapshotsToInternalValuesCustomClusterRoles(snapshots []pkg.Snapshot) (inte
 		clusterAdminRoleNames   = set.New()
 	)
 
-	for customRole, err := range sdkobjectpatch.SnapshotIter[customClusterRole](snapshots) {
-		if err != nil {
-			return internalValuesCustomClusterRoles{}, fmt.Errorf("failed to iterate over '%s' snapshot: %w", customClusterRoleSnapshots, err)
-		}
-
+	for _, customRole := range roles {
 		switch customRole.Role {
 		case accessLevelUser:
 			userRoleNames.Add(customRole.Name)
@@ -122,14 +174,14 @@ func snapshotsToInternalValuesCustomClusterRoles(snapshots []pkg.Snapshot) (inte
 			adminRoleNames.Add(customRole.Name)
 			fallthrough
 		case accessLevelClusterEditor:
-
 			clusterEditorRoleNames.Add(customRole.Name)
 			fallthrough
 		case accessLevelClusterAdmin:
 			clusterAdminRoleNames.Add(customRole.Name)
 		}
 	}
-	values := internalValuesCustomClusterRoles{
+
+	return internalValuesCustomClusterRoles{
 		User:           userRoleNames.Slice(),
 		PrivilegedUser: privilegedUserRoleNames.Slice(),
 		Editor:         editorRoleNames.Slice(),
@@ -137,6 +189,4 @@ func snapshotsToInternalValuesCustomClusterRoles(snapshots []pkg.Snapshot) (inte
 		ClusterEditor:  clusterEditorRoleNames.Slice(),
 		ClusterAdmin:   clusterAdminRoleNames.Slice(),
 	}
-
-	return values, nil
 }
