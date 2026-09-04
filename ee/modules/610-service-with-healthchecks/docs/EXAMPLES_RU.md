@@ -234,3 +234,32 @@ spec:
         authSecretName: cred-secret
         query: "SELECT NOT pg_is_in_recovery()"
 ```
+
+## Передача аннотаций и лейблов в дочерний Service
+
+Аннотации и лейблы ServiceWithHealthchecks копируются в Service, который создает модуль. Это необходимо контроллерам, читающим параметры балансировщика только из Service, например MetalLB:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: ServiceWithHealthchecks
+metadata:
+  name: postgres-read
+  annotations:
+    network.deckhouse.io/load-balancer-ips: 192.168.217.217
+    network.deckhouse.io/load-balancer-shared-ip-key: key-to-share
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 5432
+    protocol: TCP
+    targetPort: 5432
+  selector:
+    app: postgres
+  healthcheck:
+    probes:
+    - mode: TCP
+      tcp:
+        targetPort: 5432
+```
+
+Список скопированных при последней синхронизации ключей хранится в аннотациях `network.deckhouse.io/propagated-annotations` и `network.deckhouse.io/propagated-labels` дочернего Service. Благодаря этим спискам ключ, удаленный из ServiceWithHealthchecks, удаляется и из Service, а аннотации и лейблы, проставленные другими контроллерами (например, `metallb.universe.tf/ip-allocated-from-pool`), остаются нетронутыми.
