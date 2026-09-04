@@ -24,6 +24,7 @@ import (
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -79,13 +80,32 @@ func automatedUseBinding(name, namespace string) *rbacv1.RoleBinding {
 	}
 }
 
-func reconcileWith(t *testing.T, objs ...client.Object) client.Client {
+// newClient prepares a fake client the way the manager does: with the manage binding index.
+func newClient(t *testing.T, objs ...client.Object) client.Client {
 	t.Helper()
-	c := fake.NewClientBuilder().WithScheme(clientgoscheme.Scheme).WithObjects(objs...).Build()
+	scheme := runtime.NewScheme()
+	if err := clientgoscheme.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	return fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithIndex(&rbacv1.ClusterRoleBinding{}, ManageBindingIndexField, ManageBindingIndexValue).
+		WithObjects(objs...).
+		Build()
+}
+
+func reconcileOnce(t *testing.T, c client.Client) {
+	t.Helper()
 	r := New(c, logr.Discard())
 	if _, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: client.ObjectKey{Name: RequestName}}); err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
+}
+
+func reconcileWith(t *testing.T, objs ...client.Object) client.Client {
+	t.Helper()
+	c := newClient(t, objs...)
+	reconcileOnce(t, c)
 	return c
 }
 
@@ -213,5 +233,105 @@ func TestReconcile_ManageRoleWithoutUseRoleIsIgnored(t *testing.T) {
 	}
 	if len(list.Items) != 0 {
 		t.Fatalf("no use binding expected, got %v", list.Items)
+	}
+}
+
+// Aggregation selectors with matchExpressions are honoured like the API server does.
+func TestReconcile_MatchExpressionsSelectorIsHonoured(t *testing.T) {
+	t.Parallel()
+	role := manageRole("d8:manage:others:manager", "subsystem", "others")
+	role.AggregationRule = &rbacv1.AggregationRule{ClusterRoleSelectors: []metav1.LabelSelector{{
+		MatchExpressions: []metav1.LabelSelectorRequirement{
+			{Key: LabelKind, Operator: metav1.LabelSelectorOpIn, Values: []string{KindManage}},
+			{Key: "rbac.deckhouse.io/aggregate-to-others-as", Operator: metav1.LabelSelectorOpExists},
+		},
+	}}}
+	c := reconcileWith(t,
+		manageModuleRole("d8:manage:permission:module:test:edit", "others", "test-ns"),
+		manageModuleRole("d8:manage:permission:module:foreign:edit", "foreign", "foreign-ns"),
+		role,
+		manageBinding("test", "d8:manage:others:manager"),
+	)
+
+	mustExist(t, c, "test-ns", "d8:use:admin:binding:test")
+	mustNotExist(t, c, "foreign-ns", "d8:use:admin:binding:test")
+}
+
+// Aggregation is followed to any depth: all -> middle -> subsystem -> module, with a cycle thrown in.
+func TestReconcile_DeepAggregationIsFollowed(t *testing.T) {
+	t.Parallel()
+	all := manageRole("d8:manage:all:manager", "all", "all")
+	subsystem := manageRole("d8:manage:others:manager", "subsystem", "others")
+	// a role in the middle that aggregates the subsystem and is itself aggregated by "all"
+	middle := &rbacv1.ClusterRole{
+		ObjectMeta: metav1.ObjectMeta{Name: "d8:manage:middle", Labels: map[string]string{
+			LabelKind: KindManage, "rbac.deckhouse.io/aggregate-to-all-as": "manager",
+		}},
+		AggregationRule: &rbacv1.AggregationRule{ClusterRoleSelectors: []metav1.LabelSelector{{
+			MatchLabels: map[string]string{LabelKind: KindManage, "rbac.deckhouse.io/level": "subsystem"},
+		}}},
+	}
+	// the subsystem role points back at the middle role: a cycle that must terminate
+	subsystem.AggregationRule.ClusterRoleSelectors = append(subsystem.AggregationRule.ClusterRoleSelectors,
+		metav1.LabelSelector{MatchLabels: map[string]string{"rbac.deckhouse.io/aggregate-to-all-as": "manager"}})
+	delete(subsystem.Labels, "rbac.deckhouse.io/aggregate-to-all-as")
+
+	c := reconcileWith(t,
+		manageModuleRole("d8:manage:permission:module:test:edit", "others", "test-ns"),
+		all, middle, subsystem,
+		manageBinding("root", "d8:manage:all:manager"),
+	)
+
+	mustExist(t, c, "test-ns", "d8:use:admin:binding:root")
+}
+
+func TestReconcile_PreservesForeignMetadataWithoutChurn(t *testing.T) {
+	t.Parallel()
+	existing := automatedUseBinding("d8:use:admin:binding:test", "test-ns")
+	existing.Annotations = map[string]string{"example.com/note": "keep me", relatedWithAnnotatio: "test"}
+	existing.Labels["example.com/team"] = "blue"
+	c := newClient(t,
+		manageModuleRole("d8:manage:permission:module:test:edit", "others", "test-ns"),
+		manageRole("d8:manage:others:manager", "subsystem", "others"),
+		manageBinding("test", "d8:manage:others:manager"),
+		existing,
+	)
+	before := mustExist(t, c, "test-ns", "d8:use:admin:binding:test")
+
+	reconcileOnce(t, c)
+
+	after := mustExist(t, c, "test-ns", "d8:use:admin:binding:test")
+	if after.ResourceVersion != before.ResourceVersion {
+		t.Errorf("a binding that is already correct must not be rewritten")
+	}
+	if after.Annotations["example.com/note"] != "keep me" || after.Labels["example.com/team"] != "blue" {
+		t.Errorf("foreign metadata lost: %+v", after.ObjectMeta)
+	}
+}
+
+func TestReconcile_RecreatesBindingWithStaleRoleRef(t *testing.T) {
+	t.Parallel()
+	stale := automatedUseBinding("d8:use:admin:binding:test", "test-ns")
+	stale.RoleRef.Name = "d8:use:role:user"
+	c := reconcileWith(t,
+		manageModuleRole("d8:manage:permission:module:test:edit", "others", "test-ns"),
+		manageRole("d8:manage:others:manager", "subsystem", "others"),
+		manageBinding("test", "d8:manage:others:manager"),
+		stale,
+	)
+
+	rb := mustExist(t, c, "test-ns", "d8:use:admin:binding:test")
+	if rb.RoleRef.Name != "d8:use:role:admin" {
+		t.Errorf("roleRef = %v, want the use role of the manage role", rb.RoleRef)
+	}
+}
+
+func TestManageBindingIndexValue(t *testing.T) {
+	t.Parallel()
+	if got := ManageBindingIndexValue(manageBinding("x", "d8:manage:others:manager")); len(got) != 1 {
+		t.Errorf("manage binding must be indexed, got %v", got)
+	}
+	if got := ManageBindingIndexValue(manageBinding("x", "cluster-admin")); got != nil {
+		t.Errorf("unrelated binding must not be indexed, got %v", got)
 	}
 }
