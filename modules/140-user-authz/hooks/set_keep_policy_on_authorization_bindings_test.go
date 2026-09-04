@@ -25,6 +25,7 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -62,8 +63,19 @@ func testBinding(kind, namespace, name string, labels, annotations map[string]st
 	return obj
 }
 
+// helmLabels are the labels of a chart-rendered binding under the engine that adds the Helm
+// ownership label; chartLabels those under the engine that does not. Both must be protected.
 func helmLabels() map[string]string {
 	return map[string]string{"heritage": "deckhouse", "module": "user-authz", "app.kubernetes.io/managed-by": "Helm"}
+}
+
+func chartLabels() map[string]string {
+	return map[string]string{"heritage": "deckhouse", "module": "user-authz"}
+}
+
+// adoptedLabels are the labels of a binding the controller already owns.
+func adoptedLabels() map[string]string {
+	return map[string]string{"heritage": "deckhouse", "module": "user-authz", "user-authz.deckhouse.io/managed-by": "user-authz-controller"}
 }
 
 func newKeepPolicyFakeClient(objs ...runtime.Object) *dynamicfake.FakeDynamicClient {
@@ -92,10 +104,12 @@ func TestStampKeepPolicy_StampsHelmManagedRuleBindingsOnly(t *testing.T) {
 		testBinding("ClusterRoleBinding", "", "user-authz:dev:user", helmLabels(), nil),
 		testBinding("ClusterRoleBinding", "", "user-authz:dev:user:custom-cluster-role:d8:user-authz:x:user", helmLabels(), nil),
 		testBinding("ClusterRoleBinding", "", "user-authz:ops:editor", helmLabels(), map[string]string{helmResourcePolicyAnnotation: helmResourcePolicyKeep}),
+		// rendered by the engine that does not label live objects: must be protected too
+		testBinding("ClusterRoleBinding", "", "user-authz:plain:user", chartLabels(), nil),
 		// module object that is not a rule binding: must not be touched
 		testBinding("ClusterRoleBinding", "", "d8:user-authz:admin-kubeconfig", helmLabels(), nil),
-		// already adopted by the controller: no Helm label, must not be touched
-		testBinding("ClusterRoleBinding", "", "user-authz:adopted:user", map[string]string{"heritage": "deckhouse", "module": "user-authz"}, nil),
+		// already adopted by the controller: must not be touched
+		testBinding("ClusterRoleBinding", "", "user-authz:adopted:user", adoptedLabels(), nil),
 		// foreign binding without module labels
 		testBinding("ClusterRoleBinding", "", "user-authz:foreign:user", nil, nil),
 		testBinding("RoleBinding", "team", "user-authz:ns-rule:editor", helmLabels(), nil),
@@ -105,11 +119,11 @@ func TestStampKeepPolicy_StampsHelmManagedRuleBindingsOnly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("stampKeepPolicy: %v", err)
 	}
-	if stamped != 3 {
-		t.Fatalf("stamped = %d, want 3 (two CRBs without keep + one RB)", stamped)
+	if stamped != 4 {
+		t.Fatalf("stamped = %d, want 4 (three CRBs without keep + one RB)", stamped)
 	}
 
-	for _, name := range []string{"user-authz:dev:user", "user-authz:dev:user:custom-cluster-role:d8:user-authz:x:user", "user-authz:ops:editor"} {
+	for _, name := range []string{"user-authz:dev:user", "user-authz:dev:user:custom-cluster-role:d8:user-authz:x:user", "user-authz:ops:editor", "user-authz:plain:user"} {
 		if got := keepAnnotationOf(t, c, crbGVR, "", name); got != helmResourcePolicyKeep {
 			t.Errorf("%s: keep = %q", name, got)
 		}
@@ -290,3 +304,26 @@ var _ = Describe("User Authz hooks :: keep policy on authorization bindings ::",
 		})
 	})
 })
+
+// A binding deleted between the list and the patch (its rule was removed meanwhile) must not fail
+// the hook: there is nothing left to protect.
+func TestStampKeepPolicy_ToleratesNotFound(t *testing.T) {
+	c := newKeepPolicyFakeClient(
+		testBinding("ClusterRoleBinding", "", "user-authz:gone:user", helmLabels(), nil),
+		testBinding("ClusterRoleBinding", "", "user-authz:dev:user", helmLabels(), nil),
+	)
+	c.PrependReactor("patch", "clusterrolebindings", func(action clienttesting.Action) (bool, runtime.Object, error) {
+		if action.(clienttesting.PatchAction).GetName() == "user-authz:gone:user" {
+			return true, nil, apierrors.NewNotFound(schema.GroupResource{Group: "rbac.authorization.k8s.io", Resource: "clusterrolebindings"}, "user-authz:gone:user")
+		}
+		return false, nil, nil
+	})
+
+	stamped, err := stampKeepPolicy(context.Background(), c, 2)
+	if err != nil {
+		t.Fatalf("stampKeepPolicy: %v", err)
+	}
+	if stamped != 2 {
+		t.Fatalf("stamped = %d, want 2 (the vanished object counts as done)", stamped)
+	}
+}

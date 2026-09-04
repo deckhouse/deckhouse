@@ -47,7 +47,7 @@ shell:
     - |
       {{- $buildContext := deepCopy $ -}}
       {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
-      {{- $_ := set $buildContext "BuildCommand" `go build -ldflags '-s -w' -o user-authz-controller ./cmd/main.go` -}}
+      {{- $_ := set $buildContext "BuildCommand" `go build -ldflags '-s -w' -o user-authz-controller ./cmd` -}}
       {{- include "image-build.build" $buildContext | indent 6 }}
     - chown 64535:64535 user-authz-controller
     - chmod 0700 user-authz-controller

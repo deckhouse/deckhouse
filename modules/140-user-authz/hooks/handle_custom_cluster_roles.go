@@ -108,14 +108,14 @@ func syncAccessLevelLabels(input *go_hook.HookInput, roles []customClusterRole) 
 			continue
 		}
 
-		var label interface{}
+		var label any
 		if role.Role != "" {
 			label = role.Role
 		}
 
-		patch := map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"labels": map[string]interface{}{
+		patch := map[string]any{
+			"metadata": map[string]any{
+				"labels": map[string]any{
 					accessLevelKey: label,
 				},
 			},

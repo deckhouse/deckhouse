@@ -17,8 +17,9 @@ limitations under the License.
 // Package desired computes the (Cluster)RoleBindings a ClusterAuthorizationRule or an
 // AuthorizationRule must have. It is a pure function of the rule: no cluster access, no state.
 //
-// Object names, roleRefs and labels are exactly those the Helm chart of the module used to
-// render, so existing bindings are taken over in place during the migration.
+// The names and roleRefs of the bindings the Helm chart of the module used to render are kept, so
+// existing bindings are taken over in place during the migration; the aggregated custom-role binding
+// user-authz:<rule>:<level>:custom and the controller's own labels are new.
 package desired
 
 import (
@@ -160,7 +161,7 @@ func Bindings(r Rule) ([]Binding, error) {
 		return nil, fmt.Errorf("%w: empty rule name", ErrInvalidSpec)
 	}
 
-	var out []Binding
+	out := make([]Binding, 0, len(r.AdditionalRoles)+4)
 
 	add := func(postfix, roleRef string, extra map[string]string) {
 		labels := map[string]string{
@@ -175,7 +176,7 @@ func Bindings(r Rule) ([]Binding, error) {
 			Name:      NamePrefix + r.Name + ":" + postfix,
 			Namespace: r.Namespace,
 			RoleRef:   roleRef,
-			Subjects:  slices.Clone(r.Subjects),
+			Subjects:  defaultedSubjects(r.Subjects),
 			Labels:    labels,
 		})
 	}
@@ -217,6 +218,23 @@ func Bindings(r Rule) ([]Binding, error) {
 	}
 
 	return out, nil
+}
+
+// defaultedSubjects copies the subjects with the apiGroup the API server defaults on a binding
+// (rbac.authorization.k8s.io for users and groups, none for service accounts). The rule schema has
+// no apiGroup field, so without this every live binding would differ from the desired one and be
+// rewritten on every reconcile.
+func defaultedSubjects(in []rbacv1.Subject) []rbacv1.Subject {
+	out := slices.Clone(in)
+	for i := range out {
+		switch out[i].Kind {
+		case rbacv1.UserKind, rbacv1.GroupKind:
+			out[i].APIGroup = rbacv1.GroupName
+		case rbacv1.ServiceAccountKind:
+			out[i].APIGroup = ""
+		}
+	}
+	return out
 }
 
 func validateAdditionalRole(role v1.AdditionalRole) error {

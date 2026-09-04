@@ -51,10 +51,10 @@ type RuleStatus struct {
 	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
 }
 
-// +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
-// +kubebuilder:resource:scope=Cluster
-
+// The DeepCopy methods of this package are written by hand (no controller-gen in this module):
+// every field of the spec and status is a string, a bool or a slice of such structs, so a copy of
+// the slice is a deep copy. A field with a pointer, map or nested slice needs a real deep copy.
+//
 // ClusterAuthorizationRule grants a cluster-wide access level to users and groups.
 type ClusterAuthorizationRule struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -63,8 +63,6 @@ type ClusterAuthorizationRule struct {
 	Spec   ClusterAuthorizationRuleSpec `json:"spec,omitempty"`
 	Status RuleStatus                   `json:"status,omitempty"`
 }
-
-// +kubebuilder:object:root=true
 
 // ClusterAuthorizationRuleList contains a list of ClusterAuthorizationRule.
 type ClusterAuthorizationRuleList struct {

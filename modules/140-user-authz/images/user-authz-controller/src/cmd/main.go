@@ -52,6 +52,10 @@ const (
 	maxConcurrentReconcilesEnv = "MAX_CONCURRENT_RECONCILES"
 	kubeQPSEnv                 = "KUBE_CLIENT_QPS"
 	kubeBurstEnv               = "KUBE_CLIENT_BURST"
+	// logLevelEnv selects the zap level (debug, info, warn, error); the default is info, so the
+	// per-binding messages of the initial adoption of tens of thousands of bindings stay silent.
+	logLevelEnv     = "LOG_LEVEL"
+	defaultLogLevel = "info"
 
 	// The controller adopts every binding of the module on its first start: tens of thousands of
 	// objects at the client-go default of 5 QPS would take hours. The limits below let eight
@@ -61,7 +65,7 @@ const (
 )
 
 func main() {
-	ctrl.SetLogger(zap.New(zap.Level(zapcore.Level(-4)), zap.StacktraceLevel(zapcore.PanicLevel)))
+	ctrl.SetLogger(zap.New(zap.Level(logLevel(os.Getenv(logLevelEnv))), zap.StacktraceLevel(zapcore.PanicLevel)))
 	logger := ctrl.Log.WithName(controllerName)
 
 	ctx := ctrl.SetupSignalHandler()
@@ -119,7 +123,9 @@ func setupRuntimeManager(ctx context.Context, logger logr.Logger) (ctrl.Manager,
 }
 
 func newManagerOptions(scheme *runtime.Scheme) manager.Options {
-	timeout := 10 * time.Second
+	// Within the pod's terminationGracePeriodSeconds (60): a worker in the middle of the initial
+	// adoption must be allowed to finish its reconcile, or every rollout ends with an error exit.
+	timeout := 50 * time.Second
 
 	// Only the module's own bindings are cached: on large clusters unrelated (Cluster)RoleBindings
 	// would otherwise dominate the informer memory. managedFields are stripped from every cached
@@ -134,12 +140,13 @@ func newManagerOptions(scheme *runtime.Scheme) manager.Options {
 	// Leader election is always on: even a single-replica Deployment has two pods during a rolling
 	// update, and two writers of the same bindings would fight over them.
 	opts := manager.Options{
-		LeaderElection:          true,
-		LeaderElectionID:        controllerName,
-		LeaderElectionNamespace: leaderElectionNamespace,
-		Scheme:                  scheme,
-		GracefulShutdownTimeout: &timeout,
-		HealthProbeBindAddress:  ":9090",
+		LeaderElection:                true,
+		LeaderElectionID:              controllerName,
+		LeaderElectionNamespace:       leaderElectionNamespace,
+		LeaderElectionReleaseOnCancel: true,
+		Scheme:                        scheme,
+		GracefulShutdownTimeout:       &timeout,
+		HealthProbeBindAddress:        ":9090",
 		Metrics: metrics.Options{
 			BindAddress: ":9091",
 		},
@@ -153,6 +160,18 @@ func newManagerOptions(scheme *runtime.Scheme) manager.Options {
 	}
 
 	return opts
+}
+
+// logLevel parses a zap level name, falling back to info.
+func logLevel(name string) zapcore.Level {
+	if name == "" {
+		name = defaultLogLevel
+	}
+	var level zapcore.Level
+	if err := level.UnmarshalText([]byte(name)); err != nil {
+		return zapcore.InfoLevel
+	}
+	return level
 }
 
 // envInt reads a positive integer from the environment, falling back to def (and saying so) when

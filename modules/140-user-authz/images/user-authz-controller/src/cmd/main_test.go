@@ -20,8 +20,18 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
+	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
 )
+
+func TestLogLevel(t *testing.T) {
+	cases := map[string]zapcore.Level{"": zapcore.InfoLevel, "debug": zapcore.DebugLevel, "warn": zapcore.WarnLevel, "ERROR": zapcore.ErrorLevel, "loud": zapcore.InfoLevel}
+	for in, want := range cases {
+		if got := logLevel(in); got != want {
+			t.Errorf("logLevel(%q) = %v, want %v", in, got, want)
+		}
+	}
+}
 
 func TestEnvInt(t *testing.T) {
 	cases := map[string]struct {
@@ -51,7 +61,7 @@ func TestEnvInt(t *testing.T) {
 
 func TestManagerOptionsAlwaysElectALeader(t *testing.T) {
 	opts := newManagerOptions(runtime.NewScheme())
-	if !opts.LeaderElection || opts.LeaderElectionID != controllerName || opts.LeaderElectionNamespace != leaderElectionNamespace {
+	if !opts.LeaderElection || !opts.LeaderElectionReleaseOnCancel || opts.LeaderElectionID != controllerName || opts.LeaderElectionNamespace != leaderElectionNamespace {
 		t.Fatalf("leader election must be on in the module namespace, got %+v", opts)
 	}
 	if opts.Cache.DefaultTransform == nil {
