@@ -237,7 +237,7 @@ spec:
 
 ## Passing annotations and labels to the child Service
 
-The annotations and labels of a ServiceWithHealthchecks resource are copied to the Service created by the module. This is required for controllers that read the parameters of a load balancer from the Service only, for example MetalLB:
+The annotations and labels of a ServiceWithHealthchecks are copied to the Service created by the module. This is required for controllers that read the parameters of a load balancer from the Service only, for example MetalLB:
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
