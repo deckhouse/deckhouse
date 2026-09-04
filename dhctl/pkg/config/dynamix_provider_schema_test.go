@@ -18,15 +18,27 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
 // dynamixConfigYAML builds a minimal, otherwise-valid DynamixClusterConfiguration
-// document with the given extra fields spliced into the root and into
-// masterNodeGroup.instanceClass, so tests can focus on the storagePolicy contract.
-func dynamixConfigYAML(rootExtra, instanceClassExtra string) string {
+// document. rootField, when non-empty, is spliced in as an extra root-level
+// "key: value" line; instanceClassFields are spliced in as extra
+// masterNodeGroup.instanceClass "key: value" lines (indentation handled here,
+// callers pass plain unindented lines). Lets tests focus on the storagePolicy
+// contract without hand-aligning YAML.
+func dynamixConfigYAML(rootField string, instanceClassFields ...string) string {
+	root := ""
+	if rootField != "" {
+		root = rootField + "\n"
+	}
+	var instanceClass strings.Builder
+	for _, field := range instanceClassFields {
+		fmt.Fprintf(&instanceClass, "    %s\n", field)
+	}
 	return fmt.Sprintf(`apiVersion: deckhouse.io/v1
 kind: DynamixClusterConfiguration
 layout: Standard
@@ -45,7 +57,7 @@ masterNodeGroup:
     memory: 16384
     imageName: "image"
     externalNetwork: "extnet"
-%s`, rootExtra, instanceClassExtra)
+%s`, root, instanceClass.String())
 }
 
 // TestDynamixClusterConfigurationStoragePolicy locks the storagePolicy contract
@@ -66,33 +78,29 @@ func TestDynamixClusterConfigurationStoragePolicy(t *testing.T) {
 	require.NoError(t, store.LoadProviderDir("dynamix", "sha256:test", dir))
 
 	t.Run("accepts a config with storagePolicy", func(t *testing.T) {
-		doc := []byte(dynamixConfigYAML("storagePolicy: storage_policy01\n", ""))
+		doc := []byte(dynamixConfigYAML("storagePolicy: storage_policy01"))
 		_, err := store.Validate(&doc)
 		require.NoError(t, err)
 	})
 
 	t.Run("accepts storagePolicy overridden per instanceClass", func(t *testing.T) {
-		doc := []byte(dynamixConfigYAML(
-			"storagePolicy: storage_policy01\n",
-			"    storagePolicy: storage_policy02\n",
-		))
+		doc := []byte(dynamixConfigYAML("storagePolicy: storage_policy01", "storagePolicy: storage_policy02"))
 		_, err := store.Validate(&doc)
 		require.NoError(t, err)
 	})
 
 	t.Run("rejects a config without storagePolicy", func(t *testing.T) {
-		doc := []byte(dynamixConfigYAML("", ""))
+		doc := []byte(dynamixConfigYAML(""))
 		_, err := store.Validate(&doc)
 		require.Error(t, err)
 		require.ErrorContains(t, err, "storagePolicy")
 	})
 
 	t.Run("rejects storageEndpoint and pool", func(t *testing.T) {
-		doc := []byte(dynamixConfigYAML(
-			"storagePolicy: storage_policy01\n",
-			"    storageEndpoint: SharedTatlin_G1_SEP\n    pool: pool_a\n",
-		))
+		doc := []byte(dynamixConfigYAML("storagePolicy: storage_policy01", "storageEndpoint: SharedTatlin_G1_SEP", "pool: pool_a"))
 		_, err := store.Validate(&doc)
 		require.Error(t, err)
+		require.ErrorContains(t, err, "storageEndpoint is a forbidden property")
+		require.ErrorContains(t, err, "pool is a forbidden property")
 	})
 }

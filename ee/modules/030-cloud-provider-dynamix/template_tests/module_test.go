@@ -67,6 +67,7 @@ internal:
     sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCu..."
     location: dynamix
     account: acc_user
+    storagePolicy: storage_policy01
     nodeNetworkCIDR: "10.241.32.0/24"
     nameservers:
       - "10.0.0.10"
@@ -84,8 +85,6 @@ internal:
         rootDiskSizeGb: 50
         etcdDiskSizeGb: 15
         imageName: "dynamix-image-1.0"
-        storageEndpoint: "SharedTatlin_G1_SEP"
-        pool: "pool_a"
         externalNetwork: "extnet_vlan_1700"
     nodeGroups:
       - name: worker

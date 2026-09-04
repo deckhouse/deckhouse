@@ -29,6 +29,7 @@ properties:
           sshPublicKey: "ssh-rsa AAAA"
           location: dynamix
           account: acc_user
+          storagePolicy: storage_policy01
           nodeNetworkCIDR: "10.241.32.0/24"
           nameservers: ["10.0.0.10"]
           provider:
@@ -44,8 +45,6 @@ properties:
               memory: 16384
               rootDiskSizeGb: 50
               imageName: "<image name>"
-              storageEndpoint: "<storage endpoint>"
-              pool: "<pool>"
               externalNetwork: "<external network>"
           nodeGroups:
           - name: worker
@@ -56,7 +55,7 @@ properties:
               rootDiskSizeGb: 50
               imageName: "<image name>"
               externalNetwork: "<external network>"
-        required: [ apiVersion, kind, sshPublicKey, location, account, masterNodeGroup, layout, provider ]
+        required: [ apiVersion, kind, sshPublicKey, location, account, storagePolicy, masterNodeGroup, layout, provider ]
         properties:
           apiVersion:
             type: string
@@ -69,10 +68,20 @@ properties:
             description: a public key for accessing nodes.
           location:
             type: string
-            description: The name of the location to install the cluster.
+            description: |
+              The name of the grid used to resolve the resource group the cluster is created in.
+
+              This parameter has no effect on disk placement; use `storagePolicy` for that.
           account:
             type: string
             description: Account name.
+          storagePolicy:
+            type: string
+            description: |
+              The name of the storage policy to use for VM disks by default.
+
+              A storage policy defines a set of available storage endpoints and pools, as well as an IOPS limit; the platform chooses the exact placement within the policy. Can be overridden per instance class.
+            example: storage_policy01
           masterNodeGroup:
             type: object
             additionalProperties: false
@@ -92,7 +101,7 @@ properties:
               instanceClass:
                 type: object
                 additionalProperties: false
-                required: [ numCPUs, memory, imageName, storageEndpoint, pool, externalNetwork ]
+                required: [ numCPUs, memory, imageName, externalNetwork ]
                 description: |
                   Partial contents of the fields of the [DynamixInstanceClass](cr.html#dynamixinstanceclass).
                 properties: &instanceClassProperties
@@ -125,16 +134,11 @@ properties:
                     description: |
                       OS image name to use for VM deployment.
                     example: 1
-                  storageEndpoint:
+                  storagePolicy:
                     type: string
                     description: |
-                      Storage name.
-                    example: SharedTatlin_G1_SEP
-                  pool:
-                    type: string
-                    description: |
-                      Storage pool name.
-                    example: pool_a
+                      The name of the storage policy to use for this instance class instead of the cluster-wide `storagePolicy`.
+                    example: storage_policy01
                   externalNetwork:
                     type: string
                     description: |
