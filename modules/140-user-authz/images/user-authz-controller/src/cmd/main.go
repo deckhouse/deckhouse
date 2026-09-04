@@ -42,7 +42,8 @@ import (
 	v1 "user-authz-controller/api/v1"
 	"user-authz-controller/api/v1alpha1"
 	"user-authz-controller/internal/controller/bindings"
-	"user-authz-controller/internal/desired"
+	"user-authz-controller/internal/controller/dictbindings"
+	"user-authz-controller/internal/controller/managebindings"
 )
 
 const (
@@ -119,6 +120,14 @@ func setupRuntimeManager(ctx context.Context, logger logr.Logger) (ctrl.Manager,
 		return nil, fmt.Errorf("register bindings controllers: %w", err)
 	}
 
+	if err = dictbindings.Register(ctx, runtimeManager); err != nil {
+		return nil, fmt.Errorf("register dict-bindings controller: %w", err)
+	}
+
+	if err = managebindings.Register(ctx, runtimeManager); err != nil {
+		return nil, fmt.Errorf("register manage-bindings controller: %w", err)
+	}
+
 	return runtimeManager, nil
 }
 
@@ -127,14 +136,12 @@ func newManagerOptions(scheme *runtime.Scheme) manager.Options {
 	// adoption must be allowed to finish its reconcile, or every rollout ends with an error exit.
 	timeout := 50 * time.Second
 
-	// Only the module's own bindings are cached: on large clusters unrelated (Cluster)RoleBindings
-	// would otherwise dominate the informer memory. managedFields are stripped from every cached
-	// object for the same reason.
-	moduleBindings := cache.ByObject{
-		Label: labels.SelectorFromSet(labels.Set{
-			desired.LabelHeritage: desired.HeritageValue,
-			desired.LabelModule:   desired.ModuleName,
-		}),
+	// Every (Cluster)RoleBinding is cached: the dict and manage reconcilers derive their state from
+	// user-created bindings too. managedFields are stripped to keep the informers small, and the
+	// reconcilers read through field indexes so that a reconcile never copies the whole cache.
+	// ClusterRoles are cached only for the manage roles the manage-bindings reconciler resolves.
+	manageRoles := cache.ByObject{
+		Label: labels.SelectorFromSet(labels.Set(managebindings.ManageRoleLabels)),
 	}
 
 	// Leader election is always on: even a single-replica Deployment has two pods during a rolling
@@ -153,8 +160,7 @@ func newManagerOptions(scheme *runtime.Scheme) manager.Options {
 		Cache: cache.Options{
 			DefaultTransform: cache.TransformStripManagedFields(),
 			ByObject: map[client.Object]cache.ByObject{
-				&rbacv1.ClusterRoleBinding{}: moduleBindings,
-				&rbacv1.RoleBinding{}:        moduleBindings,
+				&rbacv1.ClusterRole{}: manageRoles,
 			},
 		},
 	}
