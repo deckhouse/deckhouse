@@ -24,9 +24,11 @@ package desired
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	rbacv1 "k8s.io/api/rbac/v1"
+	"k8s.io/apimachinery/pkg/api/validation/path"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
@@ -58,6 +60,10 @@ const (
 	AccessLevelClusterEditor  = "ClusterEditor"
 	AccessLevelClusterAdmin   = "ClusterAdmin"
 	AccessLevelSuperAdmin     = "SuperAdmin"
+
+	// clusterRoleKind is the only kind additionalRoles may reference: a binding of a rule always
+	// points at a ClusterRole (the chart ignored the kind field and did the same).
+	clusterRoleKind = "ClusterRole"
 )
 
 // ErrInvalidSpec is returned when the rule cannot be rendered into bindings.
@@ -145,7 +151,15 @@ type Binding struct {
 
 // Bindings renders the bindings of the rule in the order the chart used to render them:
 // additionalRoles, access level, aggregated custom roles of the level, port-forward, scale.
+//
+// additionalRoles are validated the way the API server validates binding names (a role name that
+// cannot be a path segment would make every write of the rule fail forever) and deduplicated by
+// name, because two entries with the same name render the same binding.
 func Bindings(r Rule) ([]Binding, error) {
+	if r.Name == "" {
+		return nil, fmt.Errorf("%w: empty rule name", ErrInvalidSpec)
+	}
+
 	var out []Binding
 
 	add := func(postfix, roleRef string, extra map[string]string) {
@@ -161,12 +175,20 @@ func Bindings(r Rule) ([]Binding, error) {
 			Name:      NamePrefix + r.Name + ":" + postfix,
 			Namespace: r.Namespace,
 			RoleRef:   roleRef,
-			Subjects:  r.Subjects,
+			Subjects:  slices.Clone(r.Subjects),
 			Labels:    labels,
 		})
 	}
 
+	seen := make(map[string]struct{}, len(r.AdditionalRoles))
 	for _, role := range r.AdditionalRoles {
+		if err := validateAdditionalRole(role); err != nil {
+			return nil, err
+		}
+		if _, dup := seen[role.Name]; dup {
+			continue
+		}
+		seen[role.Name] = struct{}{}
 		add("additional-role:"+role.Name, role.Name, nil)
 	}
 
@@ -197,13 +219,29 @@ func Bindings(r Rule) ([]Binding, error) {
 	return out, nil
 }
 
+func validateAdditionalRole(role v1.AdditionalRole) error {
+	if role.Kind != "" && role.Kind != clusterRoleKind {
+		return fmt.Errorf("%w: additionalRoles[%q] has kind %q, only ClusterRole is supported", ErrInvalidSpec, role.Name, role.Kind)
+	}
+	if role.APIGroup != "" && role.APIGroup != rbacv1.GroupName {
+		return fmt.Errorf("%w: additionalRoles[%q] has apiGroup %q, only %s is supported", ErrInvalidSpec, role.Name, role.APIGroup, rbacv1.GroupName)
+	}
+	if role.Name == "" {
+		return fmt.Errorf("%w: additionalRoles entry without a name", ErrInvalidSpec)
+	}
+	if msgs := path.ValidatePathSegmentName(role.Name, false); len(msgs) != 0 {
+		return fmt.Errorf("%w: additionalRoles[%q]: %s", ErrInvalidSpec, role.Name, strings.Join(msgs, "; "))
+	}
+	return nil
+}
+
 // RulePrefix is the name prefix shared by all bindings of the rule.
 func RulePrefix(ruleName string) string {
 	return NamePrefix + ruleName + ":"
 }
 
 // RuleNameOf extracts the rule name from a binding name of the form user-authz:<rule>:<postfix>.
-// Rule names are DNS-1123 labels, so the second segment is unambiguous.
+// Rule names are DNS-1123 subdomains, so the second segment is unambiguous.
 func RuleNameOf(bindingName string) (string, bool) {
 	rest, ok := strings.CutPrefix(bindingName, NamePrefix)
 	if !ok {
@@ -260,5 +298,5 @@ func RoleBinding(b Binding, owner metav1.OwnerReference) *rbacv1.RoleBinding {
 }
 
 func roleRef(name string) rbacv1.RoleRef {
-	return rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: name}
+	return rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: clusterRoleKind, Name: name}
 }

@@ -160,6 +160,62 @@ func TestBindingsInvalidSpec(t *testing.T) {
 	}
 }
 
+func TestBindingsAdditionalRolesAreValidatedAndDeduplicated(t *testing.T) {
+	t.Parallel()
+
+	rule := Rule{Name: "x", Subjects: subjects, AdditionalRoles: []v1.AdditionalRole{
+		{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "view"},
+		{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "view"},
+		{Kind: "ClusterRole", Name: "edit"},
+	}}
+	got, err := Bindings(rule)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []nameAndRole{
+		{"user-authz:x:additional-role:view", "view"},
+		{"user-authz:x:additional-role:edit", "edit"},
+	}
+	if got := shapes(got); len(got) != len(want) || got[0] != want[0] || got[1] != want[1] {
+		t.Errorf("bindings = %v, want %v", got, want)
+	}
+
+	hostile := []struct {
+		name string
+		role v1.AdditionalRole
+	}{
+		{"Role instead of ClusterRole", v1.AdditionalRole{APIGroup: "rbac.authorization.k8s.io", Kind: "Role", Name: "edit"}},
+		{"foreign apiGroup", v1.AdditionalRole{APIGroup: "example.com", Kind: "ClusterRole", Name: "edit"}},
+		{"empty name", v1.AdditionalRole{Kind: "ClusterRole"}},
+		{"slash in name", v1.AdditionalRole{Kind: "ClusterRole", Name: "a/b"}},
+		{"percent in name", v1.AdditionalRole{Kind: "ClusterRole", Name: "a%2Fb"}},
+		{"dot-dot name", v1.AdditionalRole{Kind: "ClusterRole", Name: ".."}},
+	}
+	for _, tc := range hostile {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			_, err := Bindings(Rule{Name: "x", Subjects: subjects, AdditionalRoles: []v1.AdditionalRole{tc.role}})
+			if !errors.Is(err, ErrInvalidSpec) {
+				t.Fatalf("err = %v, want ErrInvalidSpec", err)
+			}
+		})
+	}
+}
+
+func TestBindingsDoNotShareTheSubjectsSlice(t *testing.T) {
+	t.Parallel()
+
+	rule := Rule{Name: "x", AccessLevel: AccessLevelUser, Subjects: []rbacv1.Subject{{Kind: "User", Name: "a"}}}
+	got, err := Bindings(rule)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got[0].Subjects[0].Name = "mutated"
+	if rule.Subjects[0].Name != "a" || got[1].Subjects[0].Name != "a" {
+		t.Error("bindings must own a copy of the subjects")
+	}
+}
+
 func TestRuleNameOf(t *testing.T) {
 	t.Parallel()
 

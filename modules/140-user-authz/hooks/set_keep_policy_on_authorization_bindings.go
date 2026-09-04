@@ -19,10 +19,12 @@ package hooks
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -52,7 +54,7 @@ becomes a no-op: the selector below only matches bindings still labeled as manag
 
 The hook uses its own client with a raised rate limit: the shared hook client is capped at the
 client-go default of 5 QPS, which for tens of thousands of bindings would block the module
-converge for an hour.
+converge for an hour. Lists are paged so that the hook never holds every binding in memory at once.
 */
 
 const (
@@ -66,9 +68,10 @@ const (
 	// ruleBindingPrefix is the common prefix of every rule binding, user-authz:<rule>:<postfix>.
 	ruleBindingPrefix = "user-authz:"
 
-	keepPolicyQPS     = 100
-	keepPolicyBurst   = 200
-	keepPolicyWorkers = 16
+	keepPolicyQPS      = 100
+	keepPolicyBurst    = 200
+	keepPolicyWorkers  = 16
+	keepPolicyPageSize = 500
 )
 
 var keepPolicyBindingResources = []schema.GroupVersionResource{
@@ -119,6 +122,41 @@ func setKeepPolicyOnAuthorizationBindings(ctx context.Context, input *go_hook.Ho
 	return nil
 }
 
+// bindingRef identifies one binding to patch.
+type bindingRef struct {
+	gvr       schema.GroupVersionResource
+	namespace string
+	name      string
+}
+
+// forEachUnprotectedBinding pages through the Helm-managed bindings and calls fn for every rule
+// binding that lacks the keep annotation. fn returning an error stops the iteration.
+func forEachUnprotectedBinding(ctx context.Context, dynClient dynamic.Interface, fn func(bindingRef) error) error {
+	for _, gvr := range keepPolicyBindingResources {
+		opts := metav1.ListOptions{LabelSelector: helmManagedBindingsSelector, Limit: keepPolicyPageSize}
+		for {
+			list, err := dynClient.Resource(gvr).Namespace(metav1.NamespaceAll).List(ctx, opts)
+			if err != nil {
+				return fmt.Errorf("list %s: %w", gvr.Resource, err)
+			}
+			for i := range list.Items {
+				item := &list.Items[i]
+				if !isRuleBindingWithoutKeep(item) {
+					continue
+				}
+				if err := fn(bindingRef{gvr: gvr, namespace: item.GetNamespace(), name: item.GetName()}); err != nil {
+					return err
+				}
+			}
+			if list.GetContinue() == "" {
+				break
+			}
+			opts.Continue = list.GetContinue()
+		}
+	}
+	return nil
+}
+
 // stampKeepPolicy adds helm.sh/resource-policy: keep to every Helm-managed rule binding that does not
 // have it yet and returns how many objects were patched.
 func stampKeepPolicy(ctx context.Context, dynClient dynamic.Interface, workers int) (int, error) {
@@ -133,96 +171,75 @@ func stampKeepPolicy(ctx context.Context, dynClient dynamic.Interface, workers i
 		return 0, fmt.Errorf("marshal patch: %w", err)
 	}
 
-	type target struct {
-		gvr       schema.GroupVersionResource
-		namespace string
-		name      string
-	}
-
-	var targets []target
-	for _, gvr := range keepPolicyBindingResources {
-		list, err := dynClient.Resource(gvr).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{LabelSelector: helmManagedBindingsSelector})
-		if err != nil {
-			return 0, fmt.Errorf("list %s: %w", gvr.Resource, err)
-		}
-		for _, item := range list.Items {
-			if !isRuleBindingWithoutKeep(&item) {
-				continue
-			}
-			targets = append(targets, target{gvr: gvr, namespace: item.GetNamespace(), name: item.GetName()})
-		}
-	}
-
-	if len(targets) == 0 {
-		return 0, nil
-	}
-
 	if workers <= 0 {
 		workers = 1
 	}
 
-	var (
-		wg       sync.WaitGroup
-		mu       sync.Mutex
-		firstErr error
-		queue    = make(chan target)
-	)
-
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	for i := 0; i < workers; i++ {
+	var (
+		wg      sync.WaitGroup
+		stamped atomic.Int64
+		mu      sync.Mutex
+		errs    []error
+		queue   = make(chan bindingRef, workers)
+	)
+
+	fail := func(err error) {
+		mu.Lock()
+		defer mu.Unlock()
+		errs = append(errs, err)
+		cancel()
+	}
+
+	for range workers {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for t := range queue {
-				_, err := dynClient.Resource(t.gvr).Namespace(t.namespace).Patch(ctx, t.name, types.MergePatchType, patch, metav1.PatchOptions{})
+			for ref := range queue {
+				_, err := dynClient.Resource(ref.gvr).Namespace(ref.namespace).Patch(ctx, ref.name, types.MergePatchType, patch, metav1.PatchOptions{})
 				if err != nil {
-					mu.Lock()
-					if firstErr == nil {
-						firstErr = fmt.Errorf("patch %s %s/%s: %w", t.gvr.Resource, t.namespace, t.name, err)
-						cancel()
-					}
-					mu.Unlock()
+					fail(fmt.Errorf("patch %s %s/%s: %w", ref.gvr.Resource, ref.namespace, ref.name, err))
+					continue
 				}
+				stamped.Add(1)
 			}
 		}()
 	}
 
-feed:
-	for _, t := range targets {
+	// The producer lists page by page and hands every target to the workers; a failed patch cancels
+	// the context, which stops both the listing and the remaining patches.
+	listErr := forEachUnprotectedBinding(ctx, dynClient, func(ref bindingRef) error {
 		select {
-		case queue <- t:
+		case queue <- ref:
+			return nil
 		case <-ctx.Done():
-			break feed
+			return ctx.Err()
 		}
-	}
+	})
 	close(queue)
 	wg.Wait()
 
-	if firstErr != nil {
-		return 0, firstErr
+	mu.Lock()
+	defer mu.Unlock()
+	if len(errs) != 0 {
+		// The first patch error is the cause; the listing error after it is just the cancellation.
+		return int(stamped.Load()), errors.Join(errs...)
+	}
+	if listErr != nil {
+		return int(stamped.Load()), listErr
 	}
 
-	return len(targets), nil
+	return int(stamped.Load()), nil
 }
 
 // verifyKeepPolicy re-lists the Helm-managed rule bindings and fails if any still lacks the keep
 // annotation: letting the release run would prune it.
 func verifyKeepPolicy(ctx context.Context, dynClient dynamic.Interface) error {
-	for _, gvr := range keepPolicyBindingResources {
-		list, err := dynClient.Resource(gvr).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{LabelSelector: helmManagedBindingsSelector})
-		if err != nil {
-			return fmt.Errorf("list %s: %w", gvr.Resource, err)
-		}
-		for _, item := range list.Items {
-			if isRuleBindingWithoutKeep(&item) {
-				return fmt.Errorf("keep policy is not set on %s %s/%s: refusing to proceed to avoid prune", gvr.Resource, item.GetNamespace(), item.GetName())
-			}
-		}
-	}
-
-	return nil
+	return forEachUnprotectedBinding(ctx, dynClient, func(ref bindingRef) error {
+		return fmt.Errorf("keep policy is not set on %s %s/%s: refusing to proceed to avoid prune", ref.gvr.Resource, ref.namespace, ref.name)
+	})
 }
 
 func isRuleBindingWithoutKeep(obj *unstructured.Unstructured) bool {

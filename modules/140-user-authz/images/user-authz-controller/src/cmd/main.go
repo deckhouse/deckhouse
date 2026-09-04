@@ -18,6 +18,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"os"
@@ -53,10 +54,11 @@ const (
 	kubeQPSEnv                 = "KUBE_CLIENT_QPS"
 	kubeBurstEnv               = "KUBE_CLIENT_BURST"
 
-	// The controller adopts every binding of the module on its first start; tens of thousands of
-	// objects at the client-go default of 5 QPS would take hours, so the limits are explicit.
-	defaultKubeQPS   = 50
-	defaultKubeBurst = 100
+	// The controller adopts every binding of the module on its first start: tens of thousands of
+	// objects at the client-go default of 5 QPS would take hours. The limits below let eight
+	// workers write at full speed; at 100 QPS the adoption of 20 000 bindings takes a few minutes.
+	defaultKubeQPS   = 100
+	defaultKubeBurst = 200
 )
 
 func main() {
@@ -65,7 +67,7 @@ func main() {
 
 	ctx := ctrl.SetupSignalHandler()
 
-	runtimeManager, err := setupRuntimeManager()
+	runtimeManager, err := setupRuntimeManager(ctx, logger)
 	if err != nil {
 		exitOnError(logger, err, "unable to set up runtime manager")
 	}
@@ -80,7 +82,7 @@ func exitOnError(logger logr.Logger, err error, msg string) {
 	os.Exit(1)
 }
 
-func setupRuntimeManager() (ctrl.Manager, error) {
+func setupRuntimeManager(ctx context.Context, logger logr.Logger) (ctrl.Manager, error) {
 	scheme := runtime.NewScheme()
 	if err := clientgoscheme.AddToScheme(scheme); err != nil {
 		return nil, fmt.Errorf("add client-go scheme: %w", err)
@@ -96,8 +98,8 @@ func setupRuntimeManager() (ctrl.Manager, error) {
 	if err != nil {
 		return nil, fmt.Errorf("get kubeconfig: %w", err)
 	}
-	cfg.QPS = float32(envInt(kubeQPSEnv, defaultKubeQPS))
-	cfg.Burst = envInt(kubeBurstEnv, defaultKubeBurst)
+	cfg.QPS = float32(envInt(logger, kubeQPSEnv, defaultKubeQPS))
+	cfg.Burst = envInt(logger, kubeBurstEnv, defaultKubeBurst)
 
 	runtimeManager, err := ctrl.NewManager(cfg, newManagerOptions(scheme))
 	if err != nil {
@@ -108,8 +110,8 @@ func setupRuntimeManager() (ctrl.Manager, error) {
 		return nil, err
 	}
 
-	if err = bindings.Register(runtimeManager, bindings.Options{
-		MaxConcurrentReconciles: envInt(maxConcurrentReconcilesEnv, bindings.DefaultMaxConcurrentReconciles),
+	if err = bindings.Register(ctx, runtimeManager, bindings.Options{
+		MaxConcurrentReconciles: envInt(logger, maxConcurrentReconcilesEnv, bindings.DefaultMaxConcurrentReconciles),
 	}); err != nil {
 		return nil, fmt.Errorf("register bindings controllers: %w", err)
 	}
@@ -121,7 +123,8 @@ func newManagerOptions(scheme *runtime.Scheme) manager.Options {
 	timeout := 10 * time.Second
 
 	// Only the module's own bindings are cached: on large clusters unrelated (Cluster)RoleBindings
-	// would otherwise dominate the informer memory.
+	// would otherwise dominate the informer memory. managedFields are stripped from every cached
+	// object for the same reason.
 	moduleBindings := cache.ByObject{
 		Label: labels.SelectorFromSet(labels.Set{
 			desired.LabelHeritage: desired.HeritageValue,
@@ -138,6 +141,7 @@ func newManagerOptions(scheme *runtime.Scheme) manager.Options {
 			BindAddress: ":9091",
 		},
 		Cache: cache.Options{
+			DefaultTransform: cache.TransformStripManagedFields(),
 			ByObject: map[client.Object]cache.ByObject{
 				&rbacv1.ClusterRoleBinding{}: moduleBindings,
 				&rbacv1.RoleBinding{}:        moduleBindings,
@@ -154,13 +158,16 @@ func newManagerOptions(scheme *runtime.Scheme) manager.Options {
 	return opts
 }
 
-func envInt(name string, def int) int {
+// envInt reads a positive integer from the environment, falling back to def (and saying so) when
+// the variable is unset or not a positive integer.
+func envInt(logger logr.Logger, name string, def int) int {
 	raw := os.Getenv(name)
 	if raw == "" {
 		return def
 	}
 	value, err := strconv.Atoi(raw)
 	if err != nil || value <= 0 {
+		logger.Info("ignoring invalid environment value, using default", "name", name, "value", raw, "default", def)
 		return def
 	}
 	return value
@@ -178,13 +185,15 @@ func addHealthChecks(mgr manager.Manager) error {
 	return nil
 }
 
+var errCacheNotSynced = errors.New("informer cache is not synced")
+
 func cacheSyncCheck(c cache.Cache) healthz.Checker {
 	return func(req *http.Request) error {
 		ctx, cancel := context.WithTimeout(req.Context(), cacheSyncCheckTimeout)
 		defer cancel()
 
 		if !c.WaitForCacheSync(ctx) {
-			return fmt.Errorf("informer cache is not synced")
+			return errCacheNotSynced
 		}
 		return nil
 	}

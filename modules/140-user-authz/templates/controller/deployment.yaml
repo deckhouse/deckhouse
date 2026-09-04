@@ -24,8 +24,8 @@ spec:
       minAllowed:
         {{- include "user_authz_controller_resources" . | nindent 8 }}
       maxAllowed:
-        cpu: 500m
-        memory: 512Mi
+        cpu: 1000m
+        memory: 1Gi
 {{- end }}
 ---
 apiVersion: apps/v1
@@ -67,6 +67,15 @@ spec:
 {{- else }}
           value: "false"
 {{- end }}
+        # Reconcile workers and the API client rate limit. The defaults are sized for the initial
+        # adoption of tens of thousands of bindings; they are exposed here so that they can be
+        # tuned without rebuilding the image.
+        - name: MAX_CONCURRENT_RECONCILES
+          value: "8"
+        - name: KUBE_CLIENT_QPS
+          value: "100"
+        - name: KUBE_CLIENT_BURST
+          value: "200"
         ports:
         - containerPort: 9090
           name: healthz

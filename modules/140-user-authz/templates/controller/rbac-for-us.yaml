@@ -31,6 +31,15 @@ rules:
   - get
   - update
   - patch
+# ownerReferences with blockOwnerDeletion=true on the bindings require the finalizers permission
+# on the owner (OwnerReferencesPermissionEnforcement admission plugin).
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - clusterauthorizationrules/finalizers
+  - authorizationrules/finalizers
+  verbs:
+  - update
 - apiGroups:
   - rbac.authorization.k8s.io
   resources:
@@ -55,8 +64,10 @@ rules:
   - list
   - watch
   - bind
+# The controller-runtime event recorder writes events.k8s.io/v1 Events.
 - apiGroups:
   - ""
+  - events.k8s.io
   resources:
   - events
   verbs:
