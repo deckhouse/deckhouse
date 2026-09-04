@@ -65,11 +65,12 @@ var newModuleBindingsClient = func(dc dependency.Container) (dynamic.Interface, 
 	return dynamic.NewForConfig(config)
 }
 
-// bindingRef identifies one binding.
+// bindingRef identifies one object of the walk (a binding, or a rule when statuses are rewritten).
 type bindingRef struct {
-	gvr       schema.GroupVersionResource
-	namespace string
-	name      string
+	gvr        schema.GroupVersionResource
+	namespace  string
+	name       string
+	generation int64
 }
 
 func isRuleBinding(obj *unstructured.Unstructured) bool {
@@ -104,10 +105,44 @@ func forEachRuleBinding(ctx context.Context, dynClient dynamic.Interface, select
 	return nil
 }
 
+// forEachResourceParallel runs do on every object of gvr (all namespaces, paged) with the given
+// number of workers and returns how many calls succeeded.
+func forEachResourceParallel(ctx context.Context, dynClient dynamic.Interface, gvr schema.GroupVersionResource, workers int, do func(ctx context.Context, namespace, name string, generation int64) error) (int, error) {
+	return runParallel(ctx, workers, func(ctx context.Context, emit func(bindingRef) error) error {
+		opts := metav1.ListOptions{Limit: moduleBindingsPageSize}
+		for {
+			list, err := dynClient.Resource(gvr).Namespace(metav1.NamespaceAll).List(ctx, opts)
+			if err != nil {
+				return fmt.Errorf("list %s: %w", gvr.Resource, err)
+			}
+			for i := range list.Items {
+				item := &list.Items[i]
+				if err := emit(bindingRef{gvr: gvr, namespace: item.GetNamespace(), name: item.GetName(), generation: item.GetGeneration()}); err != nil {
+					return err
+				}
+			}
+			if list.GetContinue() == "" {
+				return nil
+			}
+			opts.Continue = list.GetContinue()
+		}
+	}, func(ctx context.Context, ref bindingRef) error {
+		return do(ctx, ref.namespace, ref.name, ref.generation)
+	})
+}
+
 // forEachRuleBindingParallel runs do on every binding matching selector and filter with the given
 // number of workers and returns how many calls succeeded. The first failure cancels the rest;
 // every failure is reported.
 func forEachRuleBindingParallel(ctx context.Context, dynClient dynamic.Interface, selector string, filter func(*unstructured.Unstructured) bool, workers int, do func(context.Context, bindingRef) error) (int, error) {
+	return runParallel(ctx, workers, func(ctx context.Context, emit func(bindingRef) error) error {
+		return forEachRuleBinding(ctx, dynClient, selector, filter, emit)
+	}, do)
+}
+
+// runParallel feeds the refs produced by produce to workers running do and returns how many calls
+// succeeded. The first failure cancels the rest; every failure is reported.
+func runParallel(ctx context.Context, workers int, produce func(ctx context.Context, emit func(bindingRef) error) error, do func(context.Context, bindingRef) error) (int, error) {
 	if workers <= 0 {
 		workers = 1
 	}
@@ -151,7 +186,7 @@ func forEachRuleBindingParallel(ctx context.Context, dynClient dynamic.Interface
 
 	// The producer lists page by page and hands every target to the workers; a failure cancels the
 	// context, which stops both the listing and the remaining work.
-	listErr := forEachRuleBinding(ctx, dynClient, selector, filter, func(ref bindingRef) error {
+	listErr := produce(ctx, func(ref bindingRef) error {
 		select {
 		case queue <- ref:
 			return nil

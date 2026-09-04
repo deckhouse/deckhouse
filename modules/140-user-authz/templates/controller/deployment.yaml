@@ -1,6 +1,8 @@
 {{- /* The informer cache holds every binding of the module (tens of thousands on large clusters). */}}
+{{- /* Also the VPA floor: a request far below the recommendation gets the pod evicted a minute
+     after start, right in the middle of the initial adoption. */}}
 {{- define "user_authz_controller_resources" }}
-cpu: 50m
+cpu: 100m
 memory: 128Mi
 {{- end }}
 
