@@ -43,7 +43,7 @@
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-👌 <span class="cards-item__title-text">Status page</span>
+👌 <span class="cards-item__title-text">Страница состояния</span>
 </h3>
 <div class="cards-item__text">
 <p>Узнайте общий статус Deckhouse и его компонентов.<br />

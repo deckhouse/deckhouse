@@ -129,7 +129,7 @@ Other features
 ⚖ <span class="cards-item__title-text">Managing nodes</span>
 </h3>
 <div class="cards-item__text" markdown="1">
-Run the following command to list nodegroups created in the cluster during the deployment process: `kubectl get nodegroups`. For more information, see the node-manager's [documentation](/modules/node-manager/).
+Run the following command to list nodegroups created in the cluster during the deployment process: `d8 k get nodegroups`. For more information, see the node-manager's [documentation](/modules/node-manager/).
 
 You only need to make changes to `minPerZone` and `maxPerZone` parameters to scale the existing groups. If these two parameters are not equal, Deckhouse will automatically launch an autoscaler.
 
@@ -145,9 +145,9 @@ You need to create a new
 {% endif %}
 
 <div markdown="1">
-## What's next?
+## Next steps
 
 Detailed information about the system and the Deckhouse Kubernetes Platform components is available in the [documentation](/products/kubernetes-platform/documentation/v1/).
 
-Please, reach us via our [online community](/community/about.html#online-community) if you have any questions.
+Contact our [online community](/community/about.html#online-community) if you have any questions.
 </div>
