@@ -128,8 +128,14 @@ has changed since, or if the numbers don't match what you observe.
    (SecurityPolicyException) resolution builds and holds intermediate
    objects even when no exception applies. Memory spread across rules
    (~8x) is much narrower than time spread (~100x) - most rules share a
-   common per-eval allocation floor from OPA itself (~12,000 B/op, ~230
-   allocs/op) before any rule-specific logic runs.
+   common per-eval allocation floor (~14,000 B/op, ~270 allocs/op) before
+   any rule-specific logic runs: OPA's own floor plus the pod-spec/label
+   resolution every converted policy now goes through (`lib.common`).
+   Controller-level checks raised that floor from ~12,000 B/op, ~230
+   allocs/op; the *ranking* above did not change, and the two figures
+   `README.md` quotes for the most expensive templates moved by well under
+   1% (`allowed-proc-mount` disallowed 1 934 -> 1 942, `allow-privileged`
+   disallowed 1 432 -> 1 439, same Pod fixtures).
 
 5. **`--audit-interval` is currently `60`** in
    `../templates/audit-deployment.yaml` (upstream Gatekeeper's own default is
@@ -140,13 +146,21 @@ has changed since, or if the numbers don't match what you observe.
    as of this writing. Check the manifest yourself before assuming it's
    done, and update this note once it lands.
 
-6. **`automount-service-account-token`'s test fixtures don't build** in
-   `rulebench`/`bench_rules.py` - `data.lib.exclude_update.is_update` isn't
-   resolvable from the rendered test artifacts. This is a gap in the test
-   fixture generation, not in the production ConstraintTemplate. If you fix
-   it, remove this note.
-
 ## Tooling notes worth knowing before you re-derive them
+
+- **Check which fixture a number was measured on before comparing it to
+  anything.** Both tools pick their "allowed"/"disallowed" samples by
+  filename convention from `rendered/test_samples/**`, walking the
+  subdirectories in sorted order - so `external-data/` and `other/` are
+  reached before `pods/`. Several constraints therefore benchmark against a
+  document that is not a workload at all (`vulnerable-images` and
+  `verify-image-signature` pick an `ExternalDataInventory`; `allowed-users`
+  picked a `Namespace`), which exercises the unknown-kind fail-safe path
+  rather than a pod review. Numbers from different fixture families are not
+  comparable: the same change measured -20% on the Pod fixtures of those two
+  policies and +10% on their inventory fixtures. To compare against a
+  historical figure, isolate the same family (temporarily move the other
+  subdirectories aside, or read the fixture name the tool prints).
 
 - `rulebench` has its own `go.mod` (depends on OPA's Go SDK without
   touching the repo's root `go.mod`) - `go run` on a relative path to it
