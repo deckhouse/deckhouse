@@ -3,6 +3,13 @@
 
 data "decort_account_list" "accounts" {
    name = local.account
+
+   lifecycle {
+     postcondition {
+       condition     = length(self.items) == 1
+       error_message = "Expected exactly one Dynamix account matching name \"${local.account}\", found ${length(self.items)}. Set providerClusterConfiguration.account to an unambiguous account name."
+     }
+   }
 }
 
 data "decort_locations_list" "locations" {
