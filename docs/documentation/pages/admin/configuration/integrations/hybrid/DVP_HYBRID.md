@@ -116,8 +116,6 @@ When the `cloud-provider-dvp` module is enabled, the corresponding StorageClass 
 
    The manifest uses the environment variables set in the previous steps: `DVP_KUBECONFIG_B64`, `DVP_NAMESPACE`, and `DVP_ZONE`. Replace `<SSH_PUBLIC_KEY>` with the public SSH key for access to the created nodes.
 
-   The order of the objects in the file matters. The `d8-cloud-provider-dvp` namespace is created by the module, so until the module is enabled there is nowhere to put the Secret. Create the namespace in advance so that the credentials Secret reaches the cluster before ModuleConfig enables the module. Otherwise the module rolls out with empty credentials, and its components cannot connect to the DVP API until the Secret appears. The module picks up the created namespace and adds its own labels to it.
-
 1. Apply the manifest:
 
    ```shell
