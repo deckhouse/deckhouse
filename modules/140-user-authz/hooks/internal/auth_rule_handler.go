@@ -28,6 +28,9 @@ import (
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 )
 
+// authorizationRule is the view of a ClusterAuthorizationRule/AuthorizationRule published into
+// values. The chart no longer renders bindings from it (user-authz-controller does); the values
+// feed the authorization webhook configuration.
 type authorizationRule struct {
 	Name      string                 `json:"name"`
 	Spec      map[string]interface{} `json:"spec"`
@@ -58,18 +61,23 @@ func AuthorizationRulesHandler(valuesPath, snapshotKey string) func(_ context.Co
 		if err != nil {
 			return fmt.Errorf("failed to convert '%s' snapshot to authorization rules: %w", snapshotKey, err)
 		}
+
 		input.Values.Set(valuesPath, authorizationRules)
+
 		return nil
 	}
 }
 
 func snapshotsToAuthorizationRulesSlice(snapshots []pkg.Snapshot) ([]authorizationRule, error) {
 	ars := make([]authorizationRule, 0, len(snapshots))
+
 	for ar, err := range sdkobjectpatch.SnapshotIter[authorizationRule](snapshots) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to iterate over snapshot: %w", err)
 		}
+
 		ars = append(ars, ar)
 	}
+
 	return ars, nil
 }
