@@ -64,6 +64,40 @@ Because `Jane Doe` matches two rules, some calculations will be made:
 If there is a rule without the `namespaceSelector` option and `limitNamespaces` deprecated option, it means that all namespaces are allowed excluding system namespaces, which will affect the resulting limit namespaces calculation.
 {% endalert %}
 
+## How do I check that the controller keeps the bindings in sync?
+
+The `user-authz-controller` component reconciles the ClusterRoleBindings and RoleBindings of every ClusterAuthorizationRule and AuthorizationRule, the `d8:use:dict` grants of the experimental role model, and the projections of manage-role bindings into namespaced use RoleBindings. Three sources tell whether it is healthy.
+
+**Object status.** Every rule carries a `Ready` condition and the number of its bindings:
+
+```bash
+d8 k get clusterauthorizationrules
+d8 k get authorizationrules -A
+d8 k get clusterauthorizationrule <name> -o jsonpath='{.status.conditions}'
+```
+
+`Ready=True` with the reason `BindingsApplied` means the bindings match the rule. `Ready=False` names the problem: `InvalidSpec` (the rule cannot be rendered into bindings; the message says why) or `ApplyError` (the API server rejected a write; the message names the binding and the error). Events with the same reasons are recorded on the rule.
+
+**Metrics.** The controller exposes them on the `metrics` port of its Pod and the `PodMonitor` `user-authz-controller` collects them (the `operator-prometheus` module must be enabled). The `kind` label is `ClusterAuthorizationRule`, `AuthorizationRule`, `dict` or `manage`.
+
+| Metric | Description |
+|---|---|
+| `d8_user_authz_authorization_rules{kind}` | Objects of the kind known to the controller. |
+| `d8_user_authz_bindings_desired{kind}` | Bindings the objects of the kind must have. |
+| `d8_user_authz_bindings_actual{kind}` | Bindings of the kind that exist. |
+| `d8_user_authz_bindings_drift{kind,reason}` | Bindings not in the desired state at the last reconcile; `reason` is `missing`, `extra` or `changed`. Stays above zero only while the controller fails to converge. |
+| `d8_user_authz_bindings_apply_total{kind,op,result}` | Write operations issued by the controller (`op`: `create`, `update`, `delete`; `result`: `success`, `error`). |
+| `d8_user_authz_authorization_rules_invalid{kind,reason}` | Rules whose `Ready` condition is `False`, by kind and reason. |
+| `d8_user_authz_authorization_rule_invalid{kind,name,rule_namespace,reason}` | `1` for every such rule (at most 50 rules are named; the aggregate above is always complete). |
+| `d8_user_authz_custom_cluster_roles{level}` | Custom ClusterRoles (annotated with `user-authz.deckhouse.io/access-level`) per access level. |
+| `d8_user_authz_custom_aggregation_missing{level}` | `1` when the aggregated ClusterRole `user-authz:<level>:custom` has no rules although custom roles it must aggregate exist. |
+| `d8_user_authz_bindings_keep_stamped_total`, `d8_user_authz_keep_stamp_duration_seconds` | Work of the migration hook that protects chart-rendered bindings from being pruned by the release: objects stamped and the duration of its last run. |
+| `controller_runtime_reconcile_total`, `controller_runtime_reconcile_errors_total`, `controller_runtime_reconcile_time_seconds` | Standard controller-runtime metrics per reconciler (`controller` label: `clusterauthorizationrule-bindings`, `authorizationrule-bindings`, `dict-bindings`, `manage-bindings`). |
+
+**Alerts** (in the `d8_user_authz` Prometheus rules): `D8UserAuthzControllerUnavailable` and `D8UserAuthzControllerTargetDown` when the controller has unavailable replicas or is not scraped for 5 minutes, `D8UserAuthzControllerReconcileErrorsHigh` on a sustained reconcile error rate, `D8UserAuthzBindingsDrift` when bindings of some kind stay out of the desired state for 15 minutes, `D8UserAuthzAuthorizationRulesInvalid` and `D8UserAuthzAuthorizationRuleInvalid` counting and naming the rules whose bindings cannot be applied for 10 minutes, and `D8UserAuthzCustomRolesNotAggregated` when the aggregated ClusterRole of an access level stays empty although custom roles for it exist.
+
+When a rule stays `Ready=False` with `ApplyError` because a binding's `roleRef` was changed by hand, delete that binding: `roleRef` is immutable and the controller recreates the binding with the right one.
+
 ## How do I extend a role or create a new one?
 
 [The experimental role model](./#experimental-role-based-model) is based on the aggregation principle; it compiles smaller roles into larger ones,

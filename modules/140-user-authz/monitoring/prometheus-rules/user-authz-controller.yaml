@@ -1,0 +1,210 @@
+- name: d8.user-authz.controller.availability
+  rules:
+  - alert: D8UserAuthzControllerUnavailable
+    expr: |
+      (
+        kube_deployment_spec_replicas{
+          namespace="d8-user-authz",
+          deployment="user-authz-controller"
+        }
+        -
+        kube_deployment_status_replicas_available{
+          namespace="d8-user-authz",
+          deployment="user-authz-controller"
+        }
+      ) > 0
+    for: 5m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: user-authz
+      d8_component: user-authz-controller
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_user_authz_controller_unavailable: "D8UserAuthzControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_controller_unavailable: "D8UserAuthzControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: user-authz-controller has unavailable replicas.
+      description: |-
+        Deckhouse has detected unavailable replicas in the `user-authz-controller` deployment in the `d8-user-authz` namespace.
+
+        While this alert is active, changes to ClusterAuthorizationRule and AuthorizationRule objects are not applied to their ClusterRoleBindings and RoleBindings, and `d8:use:dict` grants and manage-role projections are not updated. Existing bindings keep working.
+
+        Check deployment and pod states:
+
+        ```bash
+        d8 k -n d8-user-authz get deploy user-authz-controller
+        d8 k -n d8-user-authz get pods -l app=user-authz-controller
+        d8 k -n d8-user-authz logs deploy/user-authz-controller --all-pods=true
+        ```
+
+  - alert: D8UserAuthzControllerTargetDown
+    expr: |
+      (
+        sum(up{job="user-authz-controller", namespace="d8-user-authz"}) == 0
+        or
+        absent(up{job="user-authz-controller", namespace="d8-user-authz"})
+      )
+    for: 5m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: user-authz
+      d8_component: user-authz-controller
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_user_authz_controller_unavailable: "D8UserAuthzControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_controller_unavailable: "D8UserAuthzControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Prometheus is unable to scrape user-authz-controller.
+      description: |-
+        Prometheus cannot scrape metrics from `user-authz-controller` in the `d8-user-authz` namespace.
+
+        The controller is down, not Ready (its informer cache has not synced), or the PodMonitor is missing. Access rules are not reconciled while it is down.
+
+        Check:
+
+        ```bash
+        d8 k -n d8-user-authz get pods -l app=user-authz-controller
+        d8 k -n d8-user-authz describe pods -l app=user-authz-controller
+        d8 k -n d8-monitoring get podmonitor user-authz-controller
+        ```
+
+- name: d8.user-authz.controller.reconcile
+  rules:
+  - alert: D8UserAuthzControllerReconcileErrorsHigh
+    expr: |
+      sum by (controller) (
+        rate(controller_runtime_reconcile_errors_total{
+          namespace="d8-user-authz",
+          job="user-authz-controller"
+        }[5m])
+      ) > 0.1
+    for: 10m
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: user-authz
+      d8_component: user-authz-controller
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      plk_create_group_if_not_exists__d8_user_authz_controller_unavailable: "D8UserAuthzControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_controller_unavailable: "D8UserAuthzControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: user-authz-controller reconcile errors are high for {{ $labels.controller }}.
+      description: |-
+        Controller `{{ $labels.controller }}` of `user-authz-controller` has a reconcile error rate above 0.1 errors per second for more than 10 minutes.
+
+        Check logs:
+
+        ```bash
+        d8 k -n d8-user-authz logs deploy/user-authz-controller --all-pods=true
+        ```
+
+  - alert: D8UserAuthzBindingsDrift
+    expr: |
+      sum by (kind) (
+        d8_user_authz_bindings_drift{namespace="d8-user-authz", job="user-authz-controller"}
+      ) > 0
+    for: 15m
+    labels:
+      severity_level: "7"
+      tier: cluster
+      d8_module: user-authz
+      d8_component: user-authz-controller
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      plk_create_group_if_not_exists__d8_user_authz_controller_unavailable: "D8UserAuthzControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_controller_unavailable: "D8UserAuthzControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: user-authz-controller cannot converge the bindings of {{ $labels.kind }}.
+      description: |-
+        For more than 15 minutes some bindings of `{{ $labels.kind }}` objects differ from the state `user-authz-controller` wants (missing, superfluous, or with different subjects, roleRef, labels or owner). The controller reports drift only while its writes fail, so users may be missing access or keep access they should have lost.
+
+        Find the objects and the reason:
+
+        ```bash
+        d8 k get clusterauthorizationrules -o custom-columns=NAME:.metadata.name,READY:'.status.conditions[?(@.type=="Ready")].status',REASON:'.status.conditions[?(@.type=="Ready")].reason',MESSAGE:'.status.conditions[?(@.type=="Ready")].message'
+        d8 k get authorizationrules -A -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,READY:'.status.conditions[?(@.type=="Ready")].status',MESSAGE:'.status.conditions[?(@.type=="Ready")].message'
+        d8 k -n d8-user-authz logs deploy/user-authz-controller --all-pods=true
+        ```
+
+  - alert: D8UserAuthzAuthorizationRuleInvalid
+    expr: |
+      max by (kind, rule_namespace, name, reason) (
+        d8_user_authz_authorization_rule_invalid{job="user-authz-controller"}
+      ) == 1
+    for: 10m
+    labels:
+      severity_level: "7"
+      tier: cluster
+      d8_module: user-authz
+      d8_component: user-authz-controller
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      plk_create_group_if_not_exists__d8_user_authz_authorization_rule_invalid: "D8UserAuthzAuthorizationRuleInvalid,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_authorization_rule_invalid: "D8UserAuthzAuthorizationRuleInvalid,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The bindings of {{ $labels.kind }} {{ if $labels.rule_namespace }}{{ $labels.rule_namespace }}/{{ end }}{{ $labels.name }} cannot be applied ({{ $labels.reason }}).
+      description: |-
+        `user-authz-controller` cannot apply the bindings of {{ $labels.kind }} `{{ if $labels.rule_namespace }}{{ $labels.rule_namespace }}/{{ end }}{{ $labels.name }}`; the `Ready` condition of the object is `False` with the reason `{{ $labels.reason }}`.
+
+        - `InvalidSpec`: the rule cannot be rendered into bindings (unsupported `accessLevel`, an `accessLevel` not allowed for a namespaced rule, an `additionalRoles` entry that is not a ClusterRole or has an invalid name). Fix the object.
+        - `ApplyError`: the API server rejected a write. The message of the condition names the binding and the error; a binding whose `roleRef` was changed by hand has to be deleted so that the controller recreates it.
+
+        ```bash
+        d8 k {{ if $labels.rule_namespace }}-n {{ $labels.rule_namespace }} {{ end }}get {{ $labels.kind }} {{ $labels.name }} -o jsonpath='{.status.conditions}'
+        ```
+
+  - alert: D8UserAuthzAuthorizationRulesInvalid
+    expr: |
+      sum by (kind, reason) (
+        d8_user_authz_authorization_rules_invalid{job="user-authz-controller"}
+      ) > 0
+    for: 10m
+    labels:
+      severity_level: "7"
+      tier: cluster
+      d8_module: user-authz
+      d8_component: user-authz-controller
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      plk_create_group_if_not_exists__d8_user_authz_authorization_rule_invalid: "D8UserAuthzAuthorizationRuleInvalid,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_authorization_rule_invalid: "D8UserAuthzAuthorizationRuleInvalid,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: "{{ $value }} {{ $labels.kind }} objects cannot be applied ({{ $labels.reason }})."
+      description: |-
+        `user-authz-controller` reports {{ $value }} {{ $labels.kind }} objects whose bindings cannot be applied, reason `{{ $labels.reason }}`. Up to 50 of them are named by the `D8UserAuthzAuthorizationRuleInvalid` alerts; a large number with the reason `ApplyError` points at a cluster-wide cause (an admission webhook, API server errors) rather than at the objects.
+
+        ```bash
+        d8 k get {{ $labels.kind }} -A -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,READY:'.status.conditions[?(@.type=="Ready")].status',REASON:'.status.conditions[?(@.type=="Ready")].reason' | grep -v True
+        d8 k -n d8-user-authz logs deploy/user-authz-controller --all-pods=true
+        ```
+
+- name: d8.user-authz.custom-roles
+  rules:
+  - alert: D8UserAuthzCustomRolesNotAggregated
+    expr: |
+      max by (level) (d8_user_authz_custom_aggregation_missing) == 1
+    for: 10m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: user-authz
+      d8_component: user-authz-controller
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: markdown
+      plk_create_group_if_not_exists__d8_user_authz_custom_roles_not_aggregated: "D8UserAuthzCustomRolesNotAggregated,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_custom_roles_not_aggregated: "D8UserAuthzCustomRolesNotAggregated,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The aggregated ClusterRole of the {{ $labels.level }} access level has no rules although custom roles for it exist.
+      description: |-
+        Custom ClusterRoles annotated with `user-authz.deckhouse.io/access-level` are granted to users through the aggregated ClusterRole `user-authz:<level>:custom`, which `kube-controller-manager` fills from the roles labelled with the level. For more than 10 minutes the aggregated role of the `{{ $labels.level }}` level has no rules while custom roles it must aggregate exist, so users of that level (and every level above it) have none of the custom permissions.
+
+        Check that the aggregated role exists and that the `clusterrole-aggregation` controller of `kube-controller-manager` is running:
+
+        ```bash
+        d8 k get clusterrole -l user-authz.deckhouse.io/access-level
+        d8 k get clusterrole -o name | grep 'user-authz:.*:custom' | xargs -n1 d8 k get -o yaml
+        d8 k -n kube-system logs -l component=kube-controller-manager --tail=200 | grep -i aggregat
+        ```
