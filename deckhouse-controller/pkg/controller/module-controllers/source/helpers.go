@@ -133,8 +133,8 @@ func (r *reconciler) releaseEnsureAllowed(
 	config *v1alpha1.ModuleConfig,
 	metadata *v1alpha1.ModulePackageVersionStatusMetadata,
 	meta *downloader.ModuleDownloadResult,
-	offering []string,
-	embeddedTargetSource string) bool {
+	moduleSourceNames []string,
+	embeddedTargetModuleSource string) bool {
 	// skip experimental modules when deckhouse does not allow them: the channel definition
 	// tells the stage of the offered version, the package metadata the one of the installed
 	experimental := (meta.ModuleDefinition != nil && meta.ModuleDefinition.IsExperimental()) ||
@@ -150,15 +150,15 @@ func (r *reconciler) releaseEnsureAllowed(
 	// An embedded module keeps its embedded copy while it is shipped, so the active-source
 	// check below would always skip it. Instead pre-stage the release from the source
 	// resolved for migration so the module is already on the filesystem when the embedded
-	// copy is dropped on upgrade. embeddedTargetSource is the resolved source (operator's
+	// copy is dropped on upgrade. embeddedTargetModuleSource is the resolved source (operator's
 	// ModuleConfig .spec.source, or the only available source); it is empty when the
 	// source is undecided (several sources, none chosen) - a conflict handled in
 	// processModules.
 	if module != nil && module.IsEmbedded() {
-		if embeddedTargetSource == "" || embeddedTargetSource != source.Name {
+		if embeddedTargetModuleSource == "" || embeddedTargetModuleSource != source.Name {
 			return false
 		}
-	} else if active := activeSource(module, config); active != "" && active != source.Name {
+	} else if active := activeModuleSource(module, config); active != "" && active != source.Name {
 		// check the active source
 		r.logger.Debug("source not active, skip module",
 			slog.String("source_name", source.Name),
@@ -178,7 +178,7 @@ func (r *reconciler) releaseEnsureAllowed(
 			return false
 		}
 
-		if len(offering) > 1 && source.Name != defaultModuleSourceName {
+		if len(moduleSourceNames) > 1 && source.Name != defaultModuleSourceName {
 			return false
 		}
 
@@ -192,18 +192,18 @@ func (r *reconciler) releaseEnsureAllowed(
 
 	// an enabled config that picks no source among several: the config controller reports
 	// the conflict, and no source installs the module until the operator picks one
-	if activeSource(module, config) == "" && len(offering) > 1 {
+	if activeModuleSource(module, config) == "" && len(moduleSourceNames) > 1 {
 		return false
 	}
 
 	return true
 }
 
-// activeSource names the source the module comes from: the one the config picks, otherwise
+// activeModuleSource names the source the module comes from: the one the config picks, otherwise
 // the one the installed module was placed from. Empty when neither decides.
-func activeSource(module *v1alpha2.Module, config *v1alpha1.ModuleConfig) string {
-	if chosen := pkgsync.ConfiguredSource(config); chosen != "" {
-		return chosen
+func activeModuleSource(module *v1alpha2.Module, config *v1alpha1.ModuleConfig) string {
+	if configured := pkgsync.ConfiguredModuleSource(config); configured != "" {
+		return configured
 	}
 
 	if module == nil || module.IsEmbedded() {
@@ -227,11 +227,11 @@ func (r *reconciler) getModule(ctx context.Context, name string) (*v1alpha2.Modu
 	return module, nil
 }
 
-// ensureCatalogModule keeps the object of a module nothing installed: created when missing,
+// ensureAvailableModule keeps the object of a module nothing installed: created when missing,
 // its repository is the one of the source the config picks or of the only offering source,
-// its channel the one of its policy, its status the offered or the conflict state. The
+// its channel the one of its policy, its status the available or the conflict state. The
 // returned object is the one the rest of the scan reads.
-func (r *reconciler) ensureCatalogModule(ctx context.Context, name, channel string, config *v1alpha1.ModuleConfig, offering []string) (*v1alpha2.Module, error) {
+func (r *reconciler) ensureAvailableModule(ctx context.Context, name, channel string, config *v1alpha1.ModuleConfig, moduleSourceNames []string) (*v1alpha2.Module, error) {
 	module := new(v1alpha2.Module)
 	err := r.client.Get(ctx, client.ObjectKey{Name: name}, module)
 	if apierrors.IsNotFound(err) {
@@ -264,21 +264,21 @@ func (r *reconciler) ensureCatalogModule(ctx context.Context, name, channel stri
 		return module, nil
 	}
 
-	if err := r.placeCatalogModule(ctx, module, channel, config, offering); err != nil {
+	if err := r.placeAvailableModule(ctx, module, channel, config, moduleSourceNames); err != nil {
 		return nil, err
 	}
 
 	return module, nil
 }
 
-// placeCatalogModule writes where a module nothing installed would come from and its state:
+// placeAvailableModule writes where a module nothing installed would come from and its state:
 // the repository of the source the config picks or of the only offering source, the channel,
-// and the offered or the conflict state.
-func (r *reconciler) placeCatalogModule(ctx context.Context, module *v1alpha2.Module, channel string, config *v1alpha1.ModuleConfig, offering []string) error {
-	configured := pkgsync.ConfiguredSource(config)
+// and the available or the conflict state.
+func (r *reconciler) placeAvailableModule(ctx context.Context, module *v1alpha2.Module, channel string, config *v1alpha1.ModuleConfig, moduleSourceNames []string) error {
+	configured := pkgsync.ConfiguredModuleSource(config)
 
 	patch := client.MergeFrom(module.DeepCopy())
-	module.Spec.PackageRepositoryName = pkgsync.PickRepository(configured, offering)
+	module.Spec.PackageRepositoryName = pkgsync.PickRepository(configured, moduleSourceNames)
 	module.Spec.ReleaseChannel = channel
 
 	data, err := patch.Data(module)
@@ -292,10 +292,10 @@ func (r *reconciler) placeCatalogModule(ctx context.Context, module *v1alpha2.Mo
 		}
 	}
 
-	conflict := pkgsync.HasRepositoryConflict(config != nil && config.IsEnabled(), configured, offering)
+	conflict := pkgsync.HasRepositoryConflict(config != nil && config.IsEnabled(), configured, moduleSourceNames)
 
 	err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {
-		module.ApplyCatalogState(conflict)
+		module.ApplyNotInstalledState(conflict)
 
 		return nil
 	})
@@ -306,10 +306,10 @@ func (r *reconciler) placeCatalogModule(ctx context.Context, module *v1alpha2.Mo
 	return nil
 }
 
-// cleanCatalogModule takes the source away from a module it stopped offering. The object of a
+// cleanAvailableModule takes the source away from a module it stopped offering. The object of a
 // module nothing installed and no other source offers goes; one another source still offers is
-// placed on what remains. An installed module is not the catalog's to touch.
-func (r *reconciler) cleanCatalogModule(ctx context.Context, source *v1alpha1.ModuleSource, name string) error {
+// placed on what remains. An installed module is not touched.
+func (r *reconciler) cleanAvailableModule(ctx context.Context, source *v1alpha1.ModuleSource, name string) error {
 	module, err := r.getModule(ctx, name)
 	if err != nil {
 		return err
@@ -319,17 +319,17 @@ func (r *reconciler) cleanCatalogModule(ctx context.Context, source *v1alpha1.Mo
 		return nil
 	}
 
-	sources := new(v1alpha1.ModuleSourceList)
-	if err := r.client.List(ctx, sources); err != nil {
+	moduleSources := new(v1alpha1.ModuleSourceList)
+	if err := r.client.List(ctx, moduleSources); err != nil {
 		return fmt.Errorf("list module sources: %w", err)
 	}
 
 	// the status of this source lists the module until this scan is written
-	offering := slices.DeleteFunc(sources.Offering(name), func(offered string) bool {
-		return offered == source.Name
+	moduleSourceNames := slices.DeleteFunc(moduleSources.Offering(name), func(moduleSourceName string) bool {
+		return moduleSourceName == source.Name
 	})
 
-	if len(offering) == 0 {
+	if len(moduleSourceNames) == 0 {
 		r.logger.Info("no source offers the module any more, delete it", slog.String("module_name", name), slog.String("source_name", source.Name))
 
 		if err := r.client.Delete(ctx, module); err != nil && !apierrors.IsNotFound(err) {
@@ -344,7 +344,7 @@ func (r *reconciler) cleanCatalogModule(ctx context.Context, source *v1alpha1.Mo
 		return err
 	}
 
-	return r.placeCatalogModule(ctx, module, module.Spec.ReleaseChannel, config, offering)
+	return r.placeAvailableModule(ctx, module, module.Spec.ReleaseChannel, config, moduleSourceNames)
 }
 
 // moduleConfig returns the module config, nil when the operator wrote none.
@@ -361,21 +361,21 @@ func (r *reconciler) moduleConfig(ctx context.Context, name string) (*v1alpha1.M
 	return config, nil
 }
 
-// offeringSources names the sources whose last scan lists the module, and the source being
+// listingModuleSources names the sources whose last scan lists the module, and the source being
 // scanned, which has just pulled it and lists it only once this scan is written.
-func (r *reconciler) offeringSources(ctx context.Context, source *v1alpha1.ModuleSource, name string) ([]string, error) {
-	sources := new(v1alpha1.ModuleSourceList)
-	if err := r.client.List(ctx, sources); err != nil {
+func (r *reconciler) listingModuleSources(ctx context.Context, source *v1alpha1.ModuleSource, name string) ([]string, error) {
+	moduleSources := new(v1alpha1.ModuleSourceList)
+	if err := r.client.List(ctx, moduleSources); err != nil {
 		return nil, fmt.Errorf("list module sources: %w", err)
 	}
 
-	offering := sources.Offering(name)
-	if !slices.Contains(offering, source.Name) {
-		offering = append(offering, source.Name)
-		sort.Strings(offering)
+	moduleSourceNames := moduleSources.Offering(name)
+	if !slices.Contains(moduleSourceNames, source.Name) {
+		moduleSourceNames = append(moduleSourceNames, source.Name)
+		sort.Strings(moduleSourceNames)
 	}
 
-	return offering, nil
+	return moduleSourceNames, nil
 }
 
 // ensureReleaseChannel records the channel the module follows.
@@ -536,7 +536,7 @@ func fromToBridges(lower, higher *semver.Version, constraint v1alpha1.UpdateCons
 // source), it is the canonical choice rather than an ambiguous conflict.
 const defaultModuleSourceName = "deckhouse"
 
-// resolveEmbeddedTargetSource decides which source an embedded module should be
+// resolveEmbeddedTargetModuleSource decides which source an embedded module should be
 // pre-staged from while its embedded copy is still shipped, and whether the choice
 // is a genuine conflict.
 //
@@ -549,18 +549,18 @@ const defaultModuleSourceName = "deckhouse"
 //
 // It is a conflict only when the chosen source no longer offers the module, or when
 // several real, non-default sources offer it and none is selected.
-func resolveEmbeddedTargetSource(chosenSource string, availableSources []string) (string, bool) {
-	if chosenSource != "" {
-		if slices.Contains(availableSources, chosenSource) {
-			return chosenSource, false
+func resolveEmbeddedTargetModuleSource(configuredModuleSource string, moduleSourceNames []string) (string, bool) {
+	if configuredModuleSource != "" {
+		if slices.Contains(moduleSourceNames, configuredModuleSource) {
+			return configuredModuleSource, false
 		}
 		// the configured .spec.source does not (or no longer does) offer the module
 		return "", true
 	}
 
 	// "Embedded" is a sentinel for the built-in copy, not a selectable source.
-	candidates := make([]string, 0, len(availableSources))
-	for _, source := range availableSources {
+	candidates := make([]string, 0, len(moduleSourceNames))
+	for _, source := range moduleSourceNames {
 		if source != v1alpha1.ModuleSourceEmbedded {
 			candidates = append(candidates, source)
 		}

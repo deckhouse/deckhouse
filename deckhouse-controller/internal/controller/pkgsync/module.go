@@ -41,14 +41,14 @@ import (
 //
 // A source-only placement names a module some source lists and nothing installed:
 // - it carries no version, and it is in conflict while the config enables the module,
-// several sources offer it and none is picked.
+// several repositories offer it and none is picked.
 type placement struct {
-	repository string // -> spec.packageRepositoryName; empty while several sources offer the module and the config picks none
+	repository string // -> spec.packageRepositoryName; empty while several repositories offer the module and the config picks none
 	version    string // -> spec.packageVersion; empty for a source-only module
 	dev        bool   // -> annotation dev: a ModulePullOverride pins the module to an image tag
 	embedded   bool   // -> annotation embedded: the running Deckhouse image ships the module
-	sourceOnly bool   // -> status.phase Available: a source lists the module and nothing installed it: no deployed release, no override, not embedded
-	conflict   bool   // -> status.phase Conflict: offered by >1 source and enabled
+	available  bool   // -> status.phase Available: the module is available in a repository and nothing installed it: no deployed release, no override, not embedded
+	conflict   bool   // -> status.phase Conflict: available in more than one repository and enabled
 }
 
 // placed reports whether any source claims the module; the zero placement means none does.
@@ -101,7 +101,7 @@ func (s *syncer) syncModules(ctx context.Context) error {
 
 // syncExistingModules brings every Module the cluster carries in line with its placement and
 // config: a module nothing backs is deleted, the rest get their spec and annotations, a reason
-// for every condition the old stack left without one, and the catalog phase when nothing
+// for every condition the old stack left without one, and the not-installed phase when nothing
 // installed them.
 func (s *syncer) syncExistingModules(ctx context.Context, modules []v1alpha2.Module, placements map[string]placement, configs map[string]*v1alpha1.ModuleConfig) error {
 	for idx := range modules {
@@ -112,7 +112,7 @@ func (s *syncer) syncExistingModules(ctx context.Context, modules []v1alpha2.Mod
 			s.logger.Info("module is not backed by a package, delete it", slog.String("name", module.Name))
 
 			// nothing offers or runs this module any more, the object is stale:
-			// - a source stopped offering it or was deleted, and it was never installed
+			// - no repository offers it any more, and it was never installed
 			// - the Deckhouse image no longer ships it
 			// - its release and override are gone and its files are wiped from disk
 			if err := s.writer.Delete(ctx, module); err != nil && !apierrors.IsNotFound(err) {
@@ -133,8 +133,8 @@ func (s *syncer) syncExistingModules(ctx context.Context, modules []v1alpha2.Mod
 		}
 
 		// If there is a source for module - ensure that the module has correct status.phase (Available or Conflict)
-		if place.sourceOnly {
-			if err := s.ensureSourceOnlyStatus(ctx, module, place); err != nil {
+		if place.available {
+			if err := s.ensureAvailableStatus(ctx, module, place); err != nil {
 				return err
 			}
 		}
@@ -160,8 +160,8 @@ func (s *syncer) createMissingModules(ctx context.Context, existing map[string]s
 			return err
 		}
 
-		if place.sourceOnly {
-			if err := s.ensureSourceOnlyStatus(ctx, module, place); err != nil {
+		if place.available {
+			if err := s.ensureAvailableStatus(ctx, module, place); err != nil {
 				return err
 			}
 		}
@@ -174,7 +174,7 @@ func (s *syncer) createMissingModules(ctx context.Context, existing map[string]s
 // - the running image
 // - a pull override
 // - then the newest deployed release
-// - then a source merely offering the module.
+// - then a repository merely offering the module.
 func (s *syncer) resolvePlacements(ctx context.Context, configs map[string]*v1alpha1.ModuleConfig) (map[string]placement, error) {
 	embedded, err := s.embeddedPlacements()
 	if err != nil {
@@ -191,17 +191,17 @@ func (s *syncer) resolvePlacements(ctx context.Context, configs map[string]*v1al
 		return nil, fmt.Errorf("resolve release placements: %w", err)
 	}
 
-	offered, err := s.offeredPlacements(ctx, configs)
+	available, err := s.availablePlacements(ctx, configs)
 	if err != nil {
-		return nil, fmt.Errorf("resolve offered placements: %w", err)
+		return nil, fmt.Errorf("resolve available placements: %w", err)
 	}
 
-	placements := make(map[string]placement, len(embedded)+len(overridden)+len(released)+len(offered))
+	placements := make(map[string]placement, len(embedded)+len(overridden)+len(released)+len(available))
 
 	// lower precedence first, so every later source overwrites the earlier one: a release, an
 	// override or the image takes the module over from a source that merely offers it, and
-	// sourceOnly survives only where nothing installed the module
-	maps.Copy(placements, offered)
+	// available survives only where nothing installed the module
+	maps.Copy(placements, available)
 	maps.Copy(placements, released)
 	maps.Copy(placements, overridden)
 	maps.Copy(placements, embedded)
@@ -209,11 +209,11 @@ func (s *syncer) resolvePlacements(ctx context.Context, configs map[string]*v1al
 	return placements, nil
 }
 
-// offeredPlacements returns a placement for every module some repository offers, read from
-// the ModulePackage objects. A package no repository lists, like the catalog entry of an
+// availablePlacements returns a placement for every module some repository offers, read from
+// the ModulePackage objects. A package no repository lists, like the package of an
 // embedded module, places nothing. The repository is the one of the source the module config
-// picks, else of the only offering source, else empty.
-func (s *syncer) offeredPlacements(ctx context.Context, configs map[string]*v1alpha1.ModuleConfig) (map[string]placement, error) {
+// picks, else the only offering repository, else empty.
+func (s *syncer) availablePlacements(ctx context.Context, configs map[string]*v1alpha1.ModuleConfig) (map[string]placement, error) {
 	modulePackages := new(v1alpha1.ModulePackageList)
 	if err := s.reader.List(ctx, modulePackages); err != nil {
 		return nil, fmt.Errorf("list module packages: %w", err)
@@ -234,7 +234,7 @@ func (s *syncer) offeredPlacements(ctx context.Context, configs map[string]*v1al
 		configured := ConfiguredRepository(conf)
 
 		placements[name] = placement{
-			sourceOnly: true,
+			available:  true,
 			repository: PickRepository(configured, repositories),
 			conflict:   HasRepositoryConflict(conf != nil && conf.IsEnabled(), configured, repositories),
 		}
@@ -243,13 +243,13 @@ func (s *syncer) offeredPlacements(ctx context.Context, configs map[string]*v1al
 	return placements, nil
 }
 
-// ensureSourceOnlyStatus puts a source-only module into the available or the conflict
-// state, unless it is already on its way from the catalog to a deploy. The status of the
+// ensureAvailableStatus puts an available module into the available or the conflict
+// state, unless it is already on its way to a deploy. The status of the
 // package the module ran before its uninstall goes with the version.
-func (s *syncer) ensureSourceOnlyStatus(ctx context.Context, module *v1alpha2.Module, place placement) error {
+func (s *syncer) ensureAvailableStatus(ctx context.Context, module *v1alpha2.Module, place placement) error {
 	original := module.DeepCopy()
 
-	if !module.ApplyCatalogState(place.conflict) {
+	if !module.ApplyNotInstalledState(place.conflict) {
 		return nil
 	}
 
@@ -260,7 +260,7 @@ func (s *syncer) ensureSourceOnlyStatus(ctx context.Context, module *v1alpha2.Mo
 		return fmt.Errorf("patch module '%s' status: %w", module.Name, err)
 	}
 
-	s.logger.Debug("module is offered and not installed", slog.String("name", module.Name), slog.String("phase", module.Status.Phase))
+	s.logger.Debug("module is available and not installed", slog.String("name", module.Name), slog.String("phase", module.Status.Phase))
 
 	return nil
 }
@@ -448,7 +448,7 @@ func (s *syncer) supersedeRelease(ctx context.Context, release *v1alpha1.ModuleR
 // ModuleRepository resolves the repository a module pinned to a dev tag pulls from. A pull
 // override carries no source, so the answer is looked up in order: the repository the Module
 // already names, the module config's source, the source of the newest deployed release, then
-// of the newest pending one, and the only module source offering the module. Empty means no
+// of the newest pending one, and the only repository offering the module. Empty means no
 // resource names one.
 func ModuleRepository(ctx context.Context, reader client.Reader, name string) (string, error) {
 	module := new(v1alpha2.Module)

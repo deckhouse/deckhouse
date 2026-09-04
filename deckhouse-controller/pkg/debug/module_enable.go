@@ -113,22 +113,22 @@ func setModuleConfigEnabled(ctx context.Context, kubeClient k8s.Client, name str
 
 	if enabled {
 		// a module not installed yet must be offered by a source
-		installed, err := moduleInstalled(ctx, kubeClient, name)
+		installed, err := isModuleInstalled(ctx, kubeClient, name)
 		if err != nil {
 			return err
 		}
 
-		sources, err := offeringSources(ctx, kubeClient, name)
+		moduleSourceNames, err := listingModuleSources(ctx, kubeClient, name)
 		if err != nil {
 			return err
 		}
 
-		if !installed && len(sources) == 0 {
+		if !installed && len(moduleSourceNames) == 0 {
 			return errors.New("module not found")
 		}
 
-		if !installed && len(sources) > 1 {
-			fmt.Printf("Warning: module '%s' is enabled but didn’t run because multiple sources were found (%s), please specify a source in ModuleConfig resource\n", name, strings.Join(sources, ", "))
+		if !installed && len(moduleSourceNames) > 1 {
+			fmt.Printf("Warning: module '%s' is enabled but didn’t run because multiple sources were found (%s), please specify a source in ModuleConfig resource\n", name, strings.Join(moduleSourceNames, ", "))
 		}
 	}
 
@@ -173,9 +173,9 @@ func setModuleConfigEnabled(ctx context.Context, kubeClient k8s.Client, name str
 	return nil
 }
 
-// moduleInstalled reports whether a package backs the module. A module a source offers and
+// isModuleInstalled reports whether a package backs the module. A module a source offers and
 // nothing installed has an object without a package version.
-func moduleInstalled(ctx context.Context, kubeClient k8s.Client, name string) (bool, error) {
+func isModuleInstalled(ctx context.Context, kubeClient k8s.Client, name string) (bool, error) {
 	module, err := kubeClient.Dynamic().Resource(v1alpha2.ModuleGVR).Get(ctx, name, metav1.GetOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
@@ -193,17 +193,17 @@ func moduleInstalled(ctx context.Context, kubeClient k8s.Client, name string) (b
 	return version != "", nil
 }
 
-// offeringSources names the module sources whose last scan lists the module.
-func offeringSources(ctx context.Context, kubeClient k8s.Client, name string) ([]string, error) {
+// listingModuleSources names the module sources whose last scan lists the module.
+func listingModuleSources(ctx context.Context, kubeClient k8s.Client, name string) ([]string, error) {
 	list, err := kubeClient.Dynamic().Resource(v1alpha1.ModuleSourceGVR).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		return nil, fmt.Errorf("list module sources: %w", err)
 	}
 
-	sources := new(v1alpha1.ModuleSourceList)
-	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(list.UnstructuredContent(), sources); err != nil {
+	moduleSources := new(v1alpha1.ModuleSourceList)
+	if err := runtime.DefaultUnstructuredConverter.FromUnstructured(list.UnstructuredContent(), moduleSources); err != nil {
 		return nil, fmt.Errorf("convert module sources: %w", err)
 	}
 
-	return sources.Offering(name), nil
+	return moduleSources.Offering(name), nil
 }

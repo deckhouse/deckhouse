@@ -191,7 +191,7 @@ func TestSyncIsIdempotent(t *testing.T) {
 	s, cl := newTestSyncer(t, "v1.80.0", dir,
 		// the source gets a repository, and that repository offers a module nothing installed
 		testModuleSource("external", "registry.example.io/external"),
-		testPackageOffering("offered", "external"),
+		testModulePackage("available", "external"),
 		testRelease("parca", "deckhouse", "1.4.3", v1alpha1.ModuleReleasePhaseDeployed),
 		testRelease("console", "deckhouse", "1.60.1", v1alpha1.ModuleReleasePhasePending),
 	)

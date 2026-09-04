@@ -306,12 +306,12 @@ func (v *moduleConfigValidator) validateModuleEnabling(ctx context.Context, cfg 
 
 		// a module never installed has no object, but some source must offer it
 		if rejectMissingModuleCR {
-			offered, err := v.moduleOffered(ctx, cfg.Name)
+			available, err := v.isModuleAvailableInAnySource(ctx, cfg.Name)
 			if err != nil {
 				return nil, err
 			}
 
-			if !offered {
+			if !available {
 				return rejectResult(fmt.Sprintf("the '%s' module not found", cfg.Name))
 			}
 		}
@@ -335,14 +335,14 @@ func (v *moduleConfigValidator) validateModuleEnabling(ctx context.Context, cfg 
 	return nil, nil
 }
 
-// moduleOffered reports whether any module source lists the module.
-func (v *moduleConfigValidator) moduleOffered(ctx context.Context, name string) (bool, error) {
-	sources := new(v1alpha1.ModuleSourceList)
-	if err := v.client.List(ctx, sources); err != nil {
+// isModuleAvailableInAnySource reports whether any module source lists the module.
+func (v *moduleConfigValidator) isModuleAvailableInAnySource(ctx context.Context, name string) (bool, error) {
+	moduleSources := new(v1alpha1.ModuleSourceList)
+	if err := v.client.List(ctx, moduleSources); err != nil {
 		return false, fmt.Errorf("list module sources: %w", err)
 	}
 
-	return len(sources.Offering(name)) > 0, nil
+	return len(moduleSources.Offering(name)) > 0, nil
 }
 
 // checkDependenciesFromMetadata enforces the "parent module must be enabled" part of the
@@ -556,12 +556,12 @@ func (v *moduleConfigValidator) resolveModuleSource(ctx context.Context, cfg *v1
 		return nil, nil, nil
 	}
 
-	sources := new(v1alpha1.ModuleSourceList)
-	if err := v.client.List(ctx, sources); err != nil {
+	moduleSources := new(v1alpha1.ModuleSourceList)
+	if err := v.client.List(ctx, moduleSources); err != nil {
 		return nil, nil, fmt.Errorf("list module sources: %w", err)
 	}
 
-	offering := sources.Offering(cfg.Name)
+	moduleSourceNames := moduleSources.Offering(cfg.Name)
 
 	installed := true
 	if err := v.client.Get(ctx, client.ObjectKey{Name: cfg.Name}, new(v1alpha2.Module)); err != nil {
@@ -572,19 +572,19 @@ func (v *moduleConfigValidator) resolveModuleSource(ctx context.Context, cfg *v1
 		installed = false
 	}
 
-	if !installed && len(offering) == 0 {
+	if !installed && len(moduleSourceNames) == 0 {
 		result, _ := allowResult([]string{fmt.Sprintf("the '%s' module not found", cfg.Name)})
 		return result, nil, nil
 	}
 
-	if cfg.Spec.Source != "" && !slices.Contains(offering, cfg.Spec.Source) {
-		result, _ := rejectResult(fmt.Sprintf("the '%s' module source is an unavailable source for the '%s' module, available sources: %v", cfg.Spec.Source, cfg.Name, offering))
+	if cfg.Spec.Source != "" && !slices.Contains(moduleSourceNames, cfg.Spec.Source) {
+		result, _ := rejectResult(fmt.Sprintf("the '%s' module source is an unavailable source for the '%s' module, available sources: %v", cfg.Spec.Source, cfg.Name, moduleSourceNames))
 		return result, nil, nil
 	}
 
 	var warnings []string
-	if isEnabled(cfg, v.isModuleEnabledByBundle(cfg.Name)) && cfg.Spec.Source == "" && len(offering) > 1 {
-		warnings = append(warnings, fmt.Sprintf("module '%s' is enabled but didn’t run because multiple sources were found (%s), please specify a source in ModuleConfig resource ", cfg.GetName(), strings.Join(offering, ", ")))
+	if isEnabled(cfg, v.isModuleEnabledByBundle(cfg.Name)) && cfg.Spec.Source == "" && len(moduleSourceNames) > 1 {
+		warnings = append(warnings, fmt.Sprintf("module '%s' is enabled but didn’t run because multiple sources were found (%s), please specify a source in ModuleConfig resource ", cfg.GetName(), strings.Join(moduleSourceNames, ", ")))
 	}
 
 	return nil, warnings, nil

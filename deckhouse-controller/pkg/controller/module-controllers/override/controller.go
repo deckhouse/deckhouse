@@ -204,8 +204,8 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		return ctrl.Result{}, err
 	}
 
-	sourceName := pkgsync.SourceNameForRepository(repository)
-	if sourceName == "" {
+	moduleSourceName := pkgsync.SourceNameForRepository(repository)
+	if moduleSourceName == "" {
 		r.log.Debug("module does not have an active source, skip it", slog.String("name", mpo.Name))
 		if mpo.Status.Message != v1alpha1.ModulePullOverrideMessageNoSource {
 			mpo.Status.Message = v1alpha1.ModulePullOverrideMessageNoSource
@@ -242,9 +242,9 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 	}
 
 	source := new(v1alpha1.ModuleSource)
-	if err = r.client.Get(ctx, client.ObjectKey{Name: sourceName}, source); err != nil {
+	if err = r.client.Get(ctx, client.ObjectKey{Name: moduleSourceName}, source); err != nil {
 		if !apierrors.IsNotFound(err) {
-			r.log.Error("failed to get the module source for the module pull override", slog.String("module_source", sourceName), slog.String("target", mpo.Name), log.Err(err))
+			r.log.Error("failed to get the module source for the module pull override", slog.String("module_source", moduleSourceName), slog.String("target", mpo.Name), log.Err(err))
 			return ctrl.Result{}, fmt.Errorf("get: %w", err)
 		}
 
@@ -321,7 +321,7 @@ func (r *reconciler) handleModuleOverride(ctx context.Context, mpo *v1alpha2.Mod
 		Controller: ptr.To(true),
 	}
 
-	if err = utils.EnsureModuleDocumentation(ctx, r.client, mpo.Name, sourceName, mpo.Status.ImageDigest, mpo.Spec.ImageTag, modulePath, ownerRef); err != nil {
+	if err = utils.EnsureModuleDocumentation(ctx, r.client, mpo.Name, moduleSourceName, mpo.Status.ImageDigest, mpo.Spec.ImageTag, modulePath, ownerRef); err != nil {
 		r.log.Error("failed to ensure module documentation for the module pull override", slog.String("name", mpo.Name), log.Err(err))
 		return ctrl.Result{}, fmt.Errorf("ensure module documentation: %w", err)
 	}
@@ -371,7 +371,7 @@ func (r *reconciler) ensureDevModule(ctx context.Context, mpo *v1alpha2.ModulePu
 			return fmt.Errorf("create the module: %w", err)
 		}
 
-		// the source controller placed the offered module meanwhile: move that object
+		// the source controller placed the available module meanwhile: move that object
 		if err != nil {
 			module = new(v1alpha2.Module)
 			err = r.client.Get(ctx, client.ObjectKey{Name: mpo.Name}, module)

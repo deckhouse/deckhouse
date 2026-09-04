@@ -1528,7 +1528,7 @@ func (r *reconciler) placeModule(ctx context.Context, release *v1alpha1.ModuleRe
 			return fmt.Errorf("create the module: %w", err)
 		}
 
-		// the source controller placed the offered module meanwhile: move that object
+		// the source controller placed the available module meanwhile: move that object
 		err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, module)
 	}
 

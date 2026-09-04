@@ -120,8 +120,8 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 		}
 
 		// the package sync resolved the repository the override pulls from, which names the source
-		sourceName := pkgsync.SourceNameForRepository(module.Spec.PackageRepositoryName)
-		if sourceName == "" {
+		moduleSourceName := pkgsync.SourceNameForRepository(module.Spec.PackageRepositoryName)
+		if moduleSourceName == "" {
 			l.logger.Info("module does not have an active source, skip restoring module pull override process", slog.String("name", mpo.Name))
 			continue
 		}
@@ -150,8 +150,8 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 
 		// get relevant module source
 		source := new(v1alpha1.ModuleSource)
-		if err := l.client.Get(ctx, client.ObjectKey{Name: sourceName}, source); err != nil {
-			return fmt.Errorf("get the module source '%s' for the module '%s': %w", sourceName, mpo.Name, err)
+		if err := l.client.Get(ctx, client.ObjectKey{Name: moduleSourceName}, source); err != nil {
+			return fmt.Errorf("get the module source '%s' for the module '%s': %w", moduleSourceName, mpo.Name, err)
 		}
 
 		if err := l.installer.Restore(ctx, source, moduleName, mpo.Spec.ImageTag); err != nil {

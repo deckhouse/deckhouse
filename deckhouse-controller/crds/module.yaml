@@ -256,7 +256,7 @@ spec:
         properties:
           spec:
             description: |-
-              Spec defines the behavior of a Module. A module a source offers and nothing
+              Spec defines the behavior of a Module. A module a repository offers and nothing
               installed carries no package version, so the spec is optional.
             properties:
               enabled:
@@ -288,7 +288,7 @@ spec:
               packageVersion:
                 description: |-
                   Version of the module package to install.
-                  Empty while a module source offers the module and nothing installed it.
+                  Empty while a repository offers the module and nothing installed it.
                 type: string
                 x-doc-examples:
                 - v1.0.0

@@ -582,8 +582,8 @@ spec:
 	assert.Len(suite.T(), source.Status.AvailableModules, 0)
 }
 
-// A module some source offers and nothing installed has an object of its own: the catalog.
-func (suite *ControllerTestSuite) TestCatalogModules() {
+// A module some source offers and nothing installed has an object of its own.
+func (suite *ControllerTestSuite) TestAvailableModules() {
 	const firstSource = `
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
@@ -616,7 +616,7 @@ spec:
     scheme: HTTPS
 status:
   modules:
-  - name: catalog
+  - name: available
 `
 
 	scan := func(modules ...string) {
@@ -628,9 +628,9 @@ status:
 
 	suite.Run("a single source offers the module", func() {
 		suite.setupTestControllerRaw(firstSource)
-		scan("catalog")
+		scan("available")
 
-		module := suite.module("catalog")
+		module := suite.module("available")
 		assert.Equal(suite.T(), "test-source-1", module.Spec.PackageRepositoryName)
 		assert.Empty(suite.T(), module.Spec.PackageVersion)
 		assert.Equal(suite.T(), "Stable", module.Spec.ReleaseChannel, "the channel of the embedded policy")
@@ -646,13 +646,13 @@ status:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: catalog
+  name: available
 spec:
   enabled: true
 `)
-		scan("catalog")
+		scan("available")
 
-		module := suite.module("catalog")
+		module := suite.module("available")
 		assert.Empty(suite.T(), module.Spec.PackageRepositoryName, "no source is picked")
 		assert.Equal(suite.T(), v1alpha1.ModulePhaseConflict, module.Status.Phase)
 		assert.Equal(suite.T(), v1alpha1.ModuleReasonConflict, conditionReason(module, v1alpha1.ModuleConditionIsReady))
@@ -665,14 +665,14 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: catalog
+  name: available
 spec:
   enabled: true
   source: test-source-2
 `)
-		scan("catalog")
+		scan("available")
 
-		module := suite.module("catalog")
+		module := suite.module("available")
 		assert.Equal(suite.T(), "test-source-2", module.Spec.PackageRepositoryName)
 		assert.Equal(suite.T(), v1alpha1.ModulePhaseAvailable, module.Status.Phase)
 		assert.Empty(suite.T(), suite.releases().Items, "the other source installs the module")
@@ -684,13 +684,13 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: catalog
+  name: available
 spec:
   enabled: true
 `)
-		scan("catalog")
+		scan("available")
 
-		module := suite.module("catalog")
+		module := suite.module("available")
 		assert.Equal(suite.T(), "test-source-1", module.Spec.PackageRepositoryName)
 		assert.Empty(suite.T(), module.Spec.PackageVersion, "the deploy fills the version")
 		assert.Equal(suite.T(), v1alpha1.ModulePhaseDownloading, module.Status.Phase)
@@ -703,7 +703,7 @@ spec:
 apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
-  name: catalog
+  name: available
 spec:
   packageRepositoryName: test-source-2
   packageVersion: v1.0.0
@@ -712,24 +712,24 @@ spec:
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
 metadata:
-  name: catalog
+  name: available
 spec:
   enabled: true
 `)
-		scan("catalog")
+		scan("available")
 
-		module := suite.module("catalog")
+		module := suite.module("available")
 		assert.Equal(suite.T(), "test-source-2", module.Spec.PackageRepositoryName)
 		assert.Equal(suite.T(), "v1.0.0", module.Spec.PackageVersion)
 		assert.Equal(suite.T(), "Alpha", module.Spec.ReleaseChannel)
-		assert.Empty(suite.T(), module.Status.Phase, "the catalog state belongs to a module nothing installed")
+		assert.Empty(suite.T(), module.Status.Phase, "the not-installed state belongs to a module nothing installed")
 		assert.Empty(suite.T(), suite.releases().Items, "the module comes from the other source")
 	})
 }
 
 // A source that stops offering a module, or goes away, takes itself away from the module's
 // object; the object of a module nothing installed and no other source offers goes.
-func (suite *ControllerTestSuite) TestCatalogCleanup() {
+func (suite *ControllerTestSuite) TestAvailableCleanup() {
 	const sources = `
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
@@ -805,7 +805,7 @@ spec:
 		assert.Equal(suite.T(), v1alpha1.ModulePhaseAvailable, shared.Status.Phase)
 
 		installed := suite.module("installed")
-		assert.Equal(suite.T(), "test-source-1", installed.Spec.PackageRepositoryName, "an installed module is not the catalog's to touch")
+		assert.Equal(suite.T(), "test-source-1", installed.Spec.PackageRepositoryName, "an installed module is not touched")
 		assert.Equal(suite.T(), "v1.0.0", installed.Spec.PackageVersion)
 	}
 

@@ -26,7 +26,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
-// ensureModulePackageExists makes sure the catalog names the embedded module:
+// ensureModulePackageExists makes sure a ModulePackage names the embedded module:
 // an empty ModulePackage is created once and never touched again. The repository
 // scan enriches the same object with owners and available repositories once a
 // repository offers the package; the embedded entry itself has no owner, so it
