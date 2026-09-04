@@ -15,13 +15,18 @@
 package utils_test
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/go_lib/project"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -325,4 +330,35 @@ func TestGenerateRegistryOptions(t *testing.T) {
 		assert.Len(t, options, 5)
 		// Insecure schema should be true
 	})
+}
+
+func TestOfferingRepositories(t *testing.T) {
+	ctx := context.Background()
+
+	sc, err := project.Scheme()
+	require.NoError(t, err)
+
+	cl := fake.NewClientBuilder().
+		WithScheme(sc).
+		WithObjects(
+			&v1alpha1.ModulePackage{
+				ObjectMeta: metav1.ObjectMeta{Name: "shared"},
+				Status:     v1alpha1.ModulePackageStatus{AvailableRepositories: []string{"mirror", "deckhouse-modules"}},
+			},
+			// the catalog entry of an embedded module lists no repository
+			&v1alpha1.ModulePackage{ObjectMeta: metav1.ObjectMeta{Name: "embedded-only"}},
+		).
+		Build()
+
+	shared, err := utils.OfferingRepositories(ctx, cl, "shared")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"deckhouse-modules", "mirror"}, shared, "sorted, as the package lists them")
+
+	embedded, err := utils.OfferingRepositories(ctx, cl, "embedded-only")
+	require.NoError(t, err)
+	assert.Empty(t, embedded)
+
+	unknown, err := utils.OfferingRepositories(ctx, cl, "unknown")
+	require.NoError(t, err)
+	assert.Nil(t, unknown, "a module without a package is offered by nobody")
 }

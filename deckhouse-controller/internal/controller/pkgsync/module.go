@@ -23,7 +23,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -210,41 +209,34 @@ func (s *syncer) resolvePlacements(ctx context.Context, configs map[string]*v1al
 	return placements, nil
 }
 
-// offeredPlacements returns a placement for every module some ModuleSource lists. The
-// platform-owned sources count too: their exclusion is about creating package repositories,
-// not about the catalog. A source being deleted offers nothing. The repository is the one
-// of the source the module config picks, else of the only offering source, else empty.
+// offeredPlacements returns a placement for every module some repository offers, read from
+// the ModulePackage objects. A package no repository lists, like the catalog entry of an
+// embedded module, places nothing. The repository is the one of the source the module config
+// picks, else of the only offering source, else empty.
 func (s *syncer) offeredPlacements(ctx context.Context, configs map[string]*v1alpha1.ModuleConfig) (map[string]placement, error) {
-	sources := new(v1alpha1.ModuleSourceList)
-	if err := s.reader.List(ctx, sources); err != nil {
-		return nil, fmt.Errorf("list module sources: %w", err)
+	modulePackages := new(v1alpha1.ModulePackageList)
+	if err := s.reader.List(ctx, modulePackages); err != nil {
+		return nil, fmt.Errorf("list module packages: %w", err)
 	}
 
-	offering := make(map[string][]string)
+	placements := make(map[string]placement, len(modulePackages.Items))
 
-	for idx := range sources.Items {
-		source := &sources.Items[idx]
-		if !source.DeletionTimestamp.IsZero() {
+	for idx := range modulePackages.Items {
+		modulePackage := &modulePackages.Items[idx]
+
+		repositories := modulePackage.Status.AvailableRepositories
+		if len(repositories) == 0 {
 			continue
 		}
 
-		for _, module := range source.Status.AvailableModules {
-			offering[module.Name] = append(offering[module.Name], source.Name)
-		}
-	}
-
-	placements := make(map[string]placement, len(offering))
-
-	for name, names := range offering {
-		sort.Strings(names)
-
+		name := modulePackage.Name
 		conf := configs[name]
-		configured := ConfiguredSource(conf)
+		configured := ConfiguredRepository(conf)
 
 		placements[name] = placement{
 			sourceOnly: true,
-			repository: CatalogRepository(configured, names),
-			conflict:   CatalogConflict(conf != nil && conf.IsEnabled(), configured, names),
+			repository: PickRepository(configured, repositories),
+			conflict:   HasRepositoryConflict(conf != nil && conf.IsEnabled(), configured, repositories),
 		}
 	}
 
@@ -498,13 +490,17 @@ func ModuleRepository(ctx context.Context, reader client.Reader, name string) (s
 		}
 	}
 
-	sources := new(v1alpha1.ModuleSourceList)
-	if err := reader.List(ctx, sources); err != nil {
-		return "", fmt.Errorf("list module sources: %w", err)
+	modulePackage := new(v1alpha1.ModulePackage)
+	if err := reader.Get(ctx, client.ObjectKey{Name: name}, modulePackage); err != nil {
+		if apierrors.IsNotFound(err) {
+			return "", nil
+		}
+
+		return "", fmt.Errorf("get module package: %w", err)
 	}
 
-	if offering := sources.Offering(name); len(offering) == 1 {
-		return RepositoryNameForSource(offering[0]), nil
+	if repositories := modulePackage.Status.AvailableRepositories; len(repositories) == 1 {
+		return repositories[0], nil
 	}
 
 	return "", nil
@@ -638,9 +634,7 @@ func applyDesired(module *v1alpha2.Module, place placement, conf *v1alpha1.Modul
 	module.Spec.UpdatePolicy = conf.Spec.UpdatePolicy
 }
 
-// syncAnnotation keeps the mark in step with want: a wanted mark is set to true, an unwanted
-// one is dropped. The drop is what takes a stale mark off a module the image stopped shipping
-// or whose pull override is gone.
+// syncAnnotation mark annotation if want is True, and delete it otherwise (removing stale marks)
 func syncAnnotation(module *v1alpha2.Module, key string, want bool) {
 	if !want {
 		delete(module.Annotations, key)
@@ -684,7 +678,7 @@ func (s *syncer) ensureModuleConditionReasons(ctx context.Context, module *v1alp
 	return nil
 }
 
-// legacyConditionReason names the reason a v1alpha1 writer left implicit:
+// legacyConditionReason names the reason a v1alpha1 writer left implicit (empty):
 // - the True state of a condition is its own reason
 // - a disabled state is Disabled reason
 // - everything else is Unknown.
