@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-7a10b0bdeb2b89916f7a9c884d6520f2d3a846b7ba727a24a5a64654e7ae2c4a",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 1,
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -59,6 +59,20 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Пакет golang.org/x/crypto/openpgp небезопасен по дизайну и не рекомендуется к использованию. Образ openstack cloud-controller-manager не использует и не вызывает функциональность OpenPGP — данный код недостижим в артефакте, поэтому уязвимость не эксплуатируется.",
       "timestamp": "2026-07-24T09:07:46.013689Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-gcjh-h69q-9w9g"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/google/cel-go"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Затрагивает только сборку для Kubernetes 1.32, где cel-go остаётся на версии v0.22.0: исправленная версия v0.29.0 несовместима по API с k8s.io/apiserver v0.32.x (ext.TwoVarComprehensions), поэтому обновление в этой минорной линии невозможно. Образ openstack cloud-controller-manager не запускает CEL-вычислитель и не принимает CEL-выражения от пользователя — уязвимый код недостижим в данном бинарном файле. В сборках для Kubernetes 1.33-1.36 зависимость уже обновлена до v0.29.0.",
+      "timestamp": "2026-09-03T13:40:00.000000Z"
     }
   ],
   "timestamp": "2026-07-24T09:07:46Z"
