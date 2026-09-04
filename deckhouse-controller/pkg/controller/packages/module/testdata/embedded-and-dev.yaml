@@ -1,0 +1,37 @@
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: test-module
+  annotations:
+    modules.deckhouse.io/embedded: "true"
+    modules.deckhouse.io/dev: "true"
+spec:
+  packageRepositoryName: embedded
+  packageVersion: v1.0.1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
+metadata:
+  name: test-module
+  uid: package-uid
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
+metadata:
+  name: embedded-test-module-v1.0.1
+  uid: embedded-version-uid
+spec:
+  packageName: test-module
+  packageRepositoryName: embedded
+  packageVersion: v1.0.1
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  name: embedded
+spec:
+  registry:
+    scheme: https
+    repo: registry.example.com/test
+    dockerCfg: test-docker-cfg
+    ca: test-ca

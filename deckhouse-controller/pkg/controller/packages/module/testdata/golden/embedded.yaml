@@ -1,0 +1,81 @@
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  annotations:
+    modules.deckhouse.io/embedded: "true"
+  finalizers:
+  - module.deckhouse.io/statistic-registered
+  name: test-module
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: false
+    kind: ModulePackageVersion
+    name: embedded-test-module-v1.0.1
+    uid: embedded-version-uid
+  - apiVersion: deckhouse.io/v1alpha1
+    blockOwnerDeletion: true
+    controller: false
+    kind: ModulePackage
+    name: test-module
+    uid: package-uid
+  resourceVersion: "3"
+spec:
+  enabled: true
+  maintenance: NoResourceReconciliation
+  packageRepositoryName: embedded
+  packageVersion: v1.0.1
+  settings:
+    replicas: 2
+  settingsVersion: 1
+status:
+  lastAppliedConfiguration: null
+  tracking: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
+metadata:
+  name: test-module
+  resourceVersion: "1"
+  uid: package-uid
+status: {}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
+metadata:
+  name: deckhouse-test-module-v0.9.0
+  resourceVersion: "3"
+  uid: downloaded-version-uid
+spec:
+  packageName: test-module
+  packageRepositoryName: deckhouse
+  packageVersion: v0.9.0
+status:
+  used: false
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
+metadata:
+  name: embedded-test-module-v1.0.1
+  resourceVersion: "2"
+  uid: embedded-version-uid
+spec:
+  packageName: test-module
+  packageRepositoryName: embedded
+  packageVersion: v1.0.1
+status:
+  used: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  name: embedded
+  resourceVersion: "1"
+spec:
+  registry:
+    ca: test-ca
+    dockerCfg: test-docker-cfg
+    repo: registry.example.com/test
+    scheme: https
+status: {}

@@ -1,0 +1,13 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
+metadata:
+  name: embedded-test-module-v1.0.1
+  resourceVersion: "3"
+  uid: embedded-version-uid
+spec:
+  packageName: test-module
+  packageRepositoryName: embedded
+  packageVersion: v1.0.1
+status:
+  used: false
