@@ -43,6 +43,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	modulesettings "github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/modules/module"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	pkgruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
@@ -163,6 +164,11 @@ func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, lo
 	err = module.RegisterController(synced, runtime, manager, logger)
 	if err != nil {
 		return nil, fmt.Errorf("register module controller: %w", err)
+	}
+
+	err = modulesettings.RegisterController(synced, runtime, manager, logger)
+	if err != nil {
+		return nil, fmt.Errorf("register module settings controller: %w", err)
 	}
 
 	err = application.RegisterController(runtime, manager, nil, logger)
