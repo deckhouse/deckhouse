@@ -48,6 +48,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
@@ -106,20 +107,31 @@ func RegisterController(
 	if err := ctrl.NewControllerManagedBy(runtimeManager).
 		Named(controllerName).
 		For(&v1alpha1.ModuleSource{}).
-		// A module config enables a module, picks its source or its policy: the module sources
-		// offering the module rescan. A config created before the module is offered is caught by
-		// the regular rescan.
-		Watches(&v1alpha1.ModuleConfig{}, handler.EnqueueRequestsFromMapFunc(r.moduleSourcesOfConfig), builder.WithPredicates(predicate.Funcs{
+		Watches(&v1alpha2.Module{}, handler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
+			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: obj.(*v1alpha2.Module).Spec.PackageRepositoryName}}}
+		}), builder.WithPredicates(predicate.Funcs{
 			CreateFunc: func(_ event.CreateEvent) bool {
-				return true
+				return false
 			},
 			UpdateFunc: func(updateEvent event.UpdateEvent) bool {
-				oldConfig := updateEvent.ObjectOld.(*v1alpha1.ModuleConfig)
-				newConfig := updateEvent.ObjectNew.(*v1alpha1.ModuleConfig)
-
-				return oldConfig.Spec.Source != newConfig.Spec.Source ||
-					oldConfig.Spec.UpdatePolicy != newConfig.Spec.UpdatePolicy ||
-					oldConfig.IsEnabled() != newConfig.IsEnabled()
+				oldMod := updateEvent.ObjectOld.(*v1alpha2.Module)
+				newMod := updateEvent.ObjectNew.(*v1alpha2.Module)
+				// handle change source
+				if oldMod.Spec.PackageRepositoryName != newMod.Spec.PackageRepositoryName {
+					return true
+				}
+				// handle change policy
+				if oldMod.Spec.UpdatePolicy != newMod.Spec.UpdatePolicy {
+					return true
+				}
+				// handle enable
+				// not found or !true -> true
+				if !oldMod.HasCondition(v1alpha1.ModuleConditionEnabledByModuleConfig) ||
+					!oldMod.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, metav1.ConditionTrue) &&
+						newMod.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, metav1.ConditionTrue) {
+					return true
+				}
+				return false
 			},
 			DeleteFunc: func(_ event.DeleteEvent) bool {
 				return false
