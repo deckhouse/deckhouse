@@ -1154,7 +1154,7 @@ spec:
 
                         - `Watchdog` — использует модуль ядра watchdog для автоматической перезагрузки узлов, потерявших связь с кластером. Также в этом режиме fencing-agent отслеживает доступность узлов в кластере.
 
-                        При включении `fencing` скрипт NodeGroupConfiguration загружает модуль ядра `softdog` с параметром `soft_margin`, равным значению `spec.fencing.watchdog.timeout` (по умолчанию 60 секунд), и параметром `soft_panic=1`.
+                        При включении `fencing` скрипт NodeGroupConfiguration загружает модуль ядра `softdog` с параметром `soft_panic=1`. Таймаут watchdog задает сам fencing-agent при вооружении устройства, беря его из профиля FencingSLAProfile, указанного в `spec.fencing.profile`.
 
                         Как работает fencing-agent:
 
@@ -1174,6 +1174,17 @@ spec:
                         - для статических узлов (`Static`, `CloudStatic`) контроллер только вытесняет нагрузку, оставляя объект Node в кластере.
 
                         Подробнее о том, как механизм fencing обрабатывает разные типы узлов, можно почитать [в разделе «FAQ»](faq.html#как-механизм-fencing-обрабатывает-разные-типы-узлов).
+                    profile:
+                      type: string
+                      enum:
+                        - "Critical"
+                        - "Medium"
+                        - "Moderate"
+                        - "Slow"
+                      default: Medium
+                      x-doc-default: Medium
+                      description: |
+                        Имя встроенного профиля FencingSLAProfile, задающего тайминги реакции fencing (обнаружение отказа, fallback, rejoin и watchdog) для fencing-агентов группы узлов.
                     watchdog:
                       type: object
                       properties:
@@ -1183,6 +1194,8 @@ spec:
                           default: 60s
                           description: |
                             Длительность таймаута watchdog. Указывается в секундах, минутах или часах.
+
+                            Устарело и больше не действует: таймаут берется из профиля FencingSLAProfile, указанного в `spec.fencing.profile`, и применяется fencing-агентом к устройству.
                           x-doc-default: 60s
                       required:
                         - timeout

@@ -302,6 +302,7 @@ spec:
         node-group: worker
   fencing:
     mode: Watchdog
+    profile: Critical
 `
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(staticNodeGroupWithFencing))
@@ -311,6 +312,7 @@ spec:
 		It("Fencing values must be passed through", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.fencing.mode").Value()).To(Equal("Watchdog"))
+			Expect(f.ValuesGet("nodeManager.internal.nodeGroups.0.fencing.profile").Value()).To(Equal("Critical"))
 		})
 	})
 
