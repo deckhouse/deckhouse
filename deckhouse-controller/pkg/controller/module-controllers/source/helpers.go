@@ -134,7 +134,8 @@ func (r *reconciler) releaseEnsureAllowed(
 	metadata *v1alpha1.ModulePackageVersionStatusMetadata,
 	meta *downloader.ModuleDownloadResult,
 	availableModuleSources []string,
-	embeddedTargetModuleSource string) bool {
+	embeddedTargetModuleSource string,
+) bool {
 	// skip experimental modules when deckhouse does not allow them: the channel definition
 	// tells the stage of the offered version, the package metadata the one of the installed
 	experimental := (meta.ModuleDefinition != nil && meta.ModuleDefinition.IsExperimental()) ||
@@ -332,34 +333,6 @@ func (r *reconciler) placeAvailableModule(ctx context.Context, module *v1alpha2.
 	}
 
 	return nil
-}
-
-// cleanAvailableModule re-places the object of a module the source stopped listing by the
-// module sources that still offer it. The object of a module nothing installed and no module
-// source offers goes. An installed module is not touched.
-func (r *reconciler) cleanAvailableModule(ctx context.Context, name string) error {
-	module, err := r.getModule(ctx, name)
-	if err != nil {
-		return err
-	}
-
-	if module == nil || module.IsInstalled() {
-		return nil
-	}
-
-	availableModuleSources, err := utils.AvailableModuleSources(ctx, r.client, name)
-	if err != nil {
-		return err
-	}
-
-	config, err := r.moduleConfig(ctx, name)
-	if err != nil {
-		return err
-	}
-
-	_, err = r.ensureAvailableModule(ctx, name, module.Spec.ReleaseChannel, config, availableModuleSources)
-
-	return err
 }
 
 // moduleConfig returns the module config, nil when the operator wrote none.
