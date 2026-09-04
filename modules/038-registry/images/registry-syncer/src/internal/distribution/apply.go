@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -54,6 +55,11 @@ type Applier struct {
 
 	// Restarter is invoked only when something changed.
 	Restarter Restarter
+
+	// Log is where the one outcome this cannot act on is reported: a configuration written
+	// while no registry process is running. Optional, because nothing here depends on being
+	// heard.
+	Log *slog.Logger
 
 	// Options are the pod-side parts of the rendering.
 	Options Options
@@ -110,7 +116,17 @@ func (a *Applier) apply(spec *registryv1alpha1.RegistryStorageSpec, options Opti
 	}
 
 	if a.Restarter != nil {
-		if err := a.Restarter.Restart(); err != nil {
+		switch err := a.Restarter.Restart(); {
+		case errors.Is(err, ErrNoProcess):
+			// There was no process to signal, so there is no stale configuration being served
+			// either: whatever starts next reads the file that was just written. Reported and
+			// carried on, because the alternative — failing here — stopped the fill and the
+			// replica's report over a registry container that was merely restarting.
+			if a.Log != nil {
+				a.Log.Info("the registry configuration was written; no registry process is running, "+
+					"so it will be read when one starts", "error", err.Error())
+			}
+		case err != nil:
 			// The configuration on disk is already the new one, so a failed restart
 			// is recoverable: the next pass retries, and a crash of the registry
 			// container picks it up anyway.

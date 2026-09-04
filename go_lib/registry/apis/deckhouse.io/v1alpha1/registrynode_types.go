@@ -23,10 +23,17 @@ import (
 // RegistryNodeSpec is the complete layout for one node, compiled by the
 // controller. Named after the node, with an ownerRef on it.
 //
-// The object is deliberately flat and self-contained: credentials, CA bundles
-// and routes are inlined, with no references to other objects. The agent keeps a
-// full copy on disk and works from it while the API server is unreachable, and
-// at that point there is nothing left to dereference.
+// The object is flat and, except for one deliberate reference, self-contained: certificate
+// authority bundles and routes are inlined, and the agent keeps a full copy on disk so it keeps
+// serving images while the API server is unreachable — at which point there is nothing left to
+// dereference.
+//
+// The exception is credentials. They are named rather than held: `auth.secretRef` points at the one
+// Secret this module resolves them into, and the agent reads it by name. That is what keeps the
+// object readable by the whole `system:nodes` group without handing every node in the cluster every
+// registry credential — the model before it inlined them here, and a node could list its
+// neighbours' objects. The agent caches the resolved values with the layout, so an unreachable API
+// still costs it nothing.
 //
 // It carries no per-node secrets. Everything here is global configuration,
 // identical on every node, which is what makes it safe for the whole

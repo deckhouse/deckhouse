@@ -131,6 +131,62 @@ steps:
 # </template: tests_before_build_template>
 {!{- end -}!}
 
+{!{ define "tests_registry_images_template" }!}
+# <template: tests_registry_images_template>
+{!{- $ctx := index . 0 }!}
+runs-on: [self-hosted, regular]
+steps:
+{!{ tmpl.Exec "started_at_output"       $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "checkout_full_step"      $ctx | strings.Indent 2 }!}
+{!{- $secrets := slice -}!}
+{!{- $secrets = append ( slice "projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host" "DECKHOUSE_DEV_REGISTRY_HOST" "DECKHOUSE_DEV_REGISTRY_HOST" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "login" "DECKHOUSE_DEV_REGISTRY_USER" ) $secrets -}!}
+{!{- $secrets = append ( slice "projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken" "password" "DECKHOUSE_DEV_REGISTRY_PASSWORD" ) $secrets -}!}
+{!{ tmpl.Exec "import_secrets" $secrets | strings.Indent 2 }!}
+{!{ tmpl.Exec "login_dev_registry_step" $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "login_rw_registry_step"  $ctx | strings.Indent 2 }!}
+  - name: Run registry image tests
+    env:
+      TESTS_IMAGE_NAME: {!{ printf "%s@%s" (datasource "alt_base_images").REGISTRY_PATH (index (datasource "alt_base_images") "builder/golang-1.26") | quote }!}
+    run: |
+      # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+      echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+      echo "⚓️ 📥 [$(date -u)] Pull base golang image..."
+      docker pull ${TESTS_IMAGE_NAME}
+      # Dedicated on-runner caches, created up front so the bind mounts are owned by the runner user
+      # (Docker would otherwise create a missing host path as root, making it unwritable in-container).
+      # Not the shared ~/go-pkg-cache: root jobs populate that with root-owned entries.
+      mkdir -p ~/go-build-cache-registry ~/go-mod-cache-registry
+      for entry in "go-build|$HOME/go-build-cache-registry" "go-mod|$HOME/go-mod-cache-registry"; do
+        name="${entry%%|*}"; path="${entry#*|}";
+        if [ -e "$path" ] && [ -n "$(ls -A "$path" 2>/dev/null)" ]; then
+          echo "::notice::cache HIT  ${name}";
+        else
+          echo "::warning::cache MISS ${name} — will download/recompile";
+        fi;
+      done
+      echo "⚓️ 🏎 [$(date -u)] Run registry image tests..."
+      # Every binary of the registry module lives under its own go.mod, so `make tests-modules`
+      # (TESTS_PATH = ./modules/...) never reaches them: the pattern stops at a nested module
+      # boundary. This job is the only thing that runs them.
+      #
+      # docker-distribution is deliberately not in the list. Its suite is upstream's, and three of
+      # its cases do not pass unattended on any machine: the inmemory driver suite runs past Go's
+      # 10-minute limit, TestGracefulShutdown binds a fixed port, and one client test expects an
+      # error string the code no longer produces. What this module changed there is covered by the
+      # tests of the code that renders its configuration.
+      #
+      # GOFLAGS=-buildvcs=false: the tests need no git stamp, so go does not shell out to git.
+      CONTAINER_ID=$(docker run -d -w /deckhouse --tmpfs /tmp:mode=1777,exec -v ${{github.workspace}}:/deckhouse -e HOME=/tmp -e "TERM=xterm-256color" -e GOFLAGS=-buildvcs=false -e GOCACHE=/go-build-cache -v ~/go-mod-cache-registry:/go/pkg -v ~/go-build-cache-registry:/go-build-cache ${TESTS_IMAGE_NAME} sleep infinity)
+      for module in registry-agent registry-controller registry-syncer ; do
+        echo "::group::${module}"
+        docker exec -u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse/modules/038-registry/images/${module}/src ${CONTAINER_ID} go test -race -timeout 15m ./... || exit 1
+        echo "::endgroup::"
+      done
+      docker rm -f ${CONTAINER_ID}
+# </template: tests_registry_images_template>
+{!{ end }!}
+
 {!{ define "tests_node_controller_envtest_template" }!}
 # <template: tests_node_controller_envtest_template>
 {!{- $ctx := index . 0 }!}

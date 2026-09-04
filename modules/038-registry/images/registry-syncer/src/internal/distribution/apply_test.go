@@ -18,6 +18,7 @@ package distribution
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -379,4 +380,33 @@ func readOnly(t *testing.T, applier *Applier) bool {
 	}
 	require.NoError(t, yaml.Unmarshal(raw, &config))
 	return config.Storage.Maintenance.ReadOnly.Enabled
+}
+
+// TestApplyToleratesAMissingRegistryProcess is the pass that failed because a container was
+// restarting.
+//
+// Writing the configuration and signalling the process are two different things, and only the
+// second can fail without the first having happened. When there is no process at all there is also
+// no stale configuration being served: whatever starts next reads the file just written. Treated as
+// an ordinary error — which it was, while the comment beside it said it was not worth failing the
+// pass over — it failed the whole pass, and with it the fill, the replication and the replica's
+// report, on a replica whose only problem was that its registry container was coming back up.
+func TestApplyToleratesAMissingRegistryProcess(t *testing.T) {
+	restarter := &countingRestarter{err: fmt.Errorf("%w: no process named \"registry\" in /proc", ErrNoProcess)}
+	applier := newApplier(t, restarter)
+
+	changed, err := applier.Apply(upstreamSpec("registry.deckhouse.io", ""))
+
+	require.NoError(t, err, "the configuration is on disk; there was simply nothing to signal")
+	assert.True(t, changed)
+	assert.Equal(t, 1, restarter.restarts)
+
+	// And a signal that genuinely failed still is a failure: something is serving the old
+	// configuration and this pass did not change that.
+	refusing := &countingRestarter{err: errors.New("operation not permitted")}
+	other := newApplier(t, refusing)
+
+	_, err = other.Apply(upstreamSpec("registry.deckhouse.io", ""))
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "restarting the registry")
 }

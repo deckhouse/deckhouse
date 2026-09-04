@@ -147,7 +147,6 @@ func main() {
 		probeAddr               string
 		disabledControllers     string
 		maxConcurrentReconciles int
-		leaderElect             bool
 	)
 
 	flag.StringVar(&metricsAddr, "metrics-bind-address", "127.0.0.1:4281",
@@ -160,7 +159,6 @@ func main() {
 			"can be switched off without rolling back the image.")
 	flag.IntVar(&maxConcurrentReconciles, "max-concurrent-reconciles", 5,
 		"Maximum number of concurrent reconciles per controller.")
-	flag.BoolVar(&leaderElect, "leader-elect", false, "Enable leader election for the controller manager.")
 
 	logs.AddGoFlags(flag.CommandLine)
 	flag.Parse()

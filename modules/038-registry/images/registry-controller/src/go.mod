@@ -7,9 +7,9 @@ require (
 	github.com/deckhouse/deckhouse/go_lib/registry/apis v0.0.0-00010101000000-000000000000
 	github.com/prometheus/client_golang v1.22.0
 	github.com/stretchr/testify v1.11.1
-	k8s.io/api v0.34.3
+	k8s.io/api v0.34.8
 	k8s.io/apimachinery v0.34.8
-	k8s.io/client-go v0.34.3
+	k8s.io/client-go v0.34.8
 	k8s.io/component-base v0.34.3
 	k8s.io/klog/v2 v2.130.1
 	k8s.io/utils v0.0.0-20250604170112-4c0f3b243397

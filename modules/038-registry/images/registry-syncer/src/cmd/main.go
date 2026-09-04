@@ -267,6 +267,7 @@ func serve(ctx context.Context, log *slog.Logger, opts options) error {
 			ConfigPath:     opts.configPath,
 			UpstreamCAPath: opts.upstreamCAPath,
 			Restarter:      &distribution.SignalRestarter{ProcessName: opts.processName},
+			Log:            log,
 			Options: distribution.Options{
 				ListenAddress: opts.listenAddress,
 				HTTPSecret:    os.Getenv("REGISTRY_HTTP_SECRET"),

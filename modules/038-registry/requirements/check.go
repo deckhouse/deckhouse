@@ -59,8 +59,12 @@ func check(required string, getter requirements.ValueGetter) (bool, error) {
 		return true, nil
 	}
 
+	// The advice names the only lever there is. There is no `implementation` setting to pick — the
+	// module's own configuration says so in as many words — and the handover happens on its own once
+	// the previous implementation has let go of the pull path.
 	return false, fmt.Errorf(
 		"this release requires the %q registry implementation, and the cluster is running %q; "+
-			"set 'implementation: %s' in the registry ModuleConfig and wait for the switch to complete",
-		required, current, required)
+			"bring `registry.mode` in the deckhouse ModuleConfig to Unmanaged and wait for that "+
+			"transition to finish, after which the handover completes on its own",
+		required, current)
 }

@@ -439,6 +439,10 @@ var _ = Describe("Module :: registry :: helm template :: v2 controller", func() 
 
 			container := deployment.Field("spec.template.spec.containers.0")
 			Expect(container.Get("name").String()).To(Equal("registry-controller"))
+			// No --leader-elect: election is not optional and the binary has no switch for it.
+			// The manifest used to pass `false` on a non-HA cluster, which the binary ignored —
+			// a control that described the opposite of what ran.
+			Expect(container.Get("args").String()).ShouldNot(ContainSubstring("leader-elect"))
 			Expect(container.Get("securityContext.readOnlyRootFilesystem").Bool()).To(BeTrue())
 			// POD_NAMESPACE scopes the leader election lease; without it the manager
 			// would try to elect in the wrong namespace.

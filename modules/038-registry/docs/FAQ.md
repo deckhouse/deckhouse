@@ -26,6 +26,15 @@ that the previous implementation has let go of the pull path. Both configure the
 every node, which registry the container runtime asks and with which credentials, so running
 both would not merge those answers but race them.
 
+Step 1 belongs BEFORE the upgrade to the release that carries the current implementation. That
+release renders none of the previous implementation's objects, so a cluster that arrives in
+`Direct`, `Proxy` or `Local` has already lost them, and step 1 is no longer available to it: the
+mode switching it asks for is performed by the very code that is gone. Such a cluster is recovered
+by returning to the previous release, completing step 1 there, and upgrading again. An air-gapped
+`Local` cluster cannot complete step 1 as written, because it has no upstream to be `Unmanaged`
+against; it has a procedure of its own — see
+[how do I migrate an air-gapped Local cluster](#how-do-i-migrate-an-air-gapped-local-cluster).
+
 1. Bring the registry configuration in the `deckhouse` ModuleConfig to `Unmanaged`. If that
    cluster is in `Direct`, `Proxy` or `Local`, follow
    [the mode switching examples](examples.html#examples-for-the-previous-implementation).
@@ -44,6 +53,61 @@ both would not merge those answers but race them.
    with the registry to pull from. A ready-made configuration for your cluster is published in
    the `registry-suggested-config` secret — see
    [enabling the module](examples.html#enabling-the-module).
+
+## How do I migrate an air-gapped `Local` cluster?
+
+`Local` is the mode whose registry *is* the cluster, and the procedure above does not apply to it as
+written: it goes through `Unmanaged`, where every node pulls straight from an upstream, and this
+cluster has none — the previous implementation does not even write node configuration in `Unmanaged`
+without one. The way through is to give the cluster an upstream for the duration, inside the same
+cluster but outside Deckhouse's own namespaces, and to take it away again once the new
+implementation holds the images itself. This has been walked end to end on a test cluster.
+
+What it costs: a second copy of the image set while the migration runs. The temporary registry
+holds as much as the `Local` store does, so plan for twice that on disk until the last step removes
+it. Nothing else is spent — the images already on the control-plane nodes are adopted rather than
+downloaded again, see step 6.
+
+Steps 1 to 4 happen on the release that still carries the previous implementation.
+
+1. Run an OCI registry in a namespace of your own. Any implementation will do; it has to serve TLS
+   with a certificate the cluster can verify, and be reachable from every node. It is "external"
+   only in the sense that matters here: Deckhouse does not manage it, so nothing that happens to
+   the module's own objects takes it down.
+
+1. Load the image set into it: `d8 mirror pull` on a machine that has access to the Deckhouse
+   registry, then `d8 mirror push` into the temporary one. This is the copy the disk budget above
+   is about.
+
+1. Point the previous implementation at it and go to `Unmanaged`: `registry.mode: Unmanaged` in the
+   `deckhouse` ModuleConfig together with the address, the certificate authority and the
+   credentials of the temporary registry. The nodes now pull from it. The `Local` store stops being
+   the pull path, but its blobs stay where they are, under `/opt/deckhouse/registry` on the
+   control-plane nodes.
+
+1. Verify that pulls really come from the temporary registry before going further — this is the
+   step the whole migration rests on, and the checks are the same as for any `Unmanaged` cluster:
+
+   ```bash
+   d8 k -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
+   ```
+
+1. Upgrade to the release with the current implementation. The handover happens on the module's
+   next reconciliation, and the cluster keeps pulling from the temporary registry throughout.
+
+1. Turn the module on: `mode: Managed` with `storage.cache: true` and the temporary registry as the
+   upstream. The in-cluster storage comes up on the same host path the `Local` store used, so what
+   is already on those disks is adopted: the fill verifies it and fetches only what is missing.
+
+1. Wait for the storage to report that it holds the whole set — `phase: Ready` with
+   `safeToDropUpstream: true` — and then remove the upstream from the `registry` ModuleConfig. The
+   cluster is air-gapped again, now on the current implementation:
+
+   ```bash
+   d8 k get registrystorage registry -o jsonpath='{.status.phase} {.status.safeToDropUpstream}{"\n"}'
+   ```
+
+1. Delete the temporary registry and reclaim its disk.
 
 ## What do the registry alerts mean?
 

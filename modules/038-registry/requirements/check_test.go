@@ -51,7 +51,12 @@ func TestCheck(t *testing.T) {
 		ok, err := check("V2", getter{})
 		require.Error(t, err)
 		assert.False(t, ok)
-		assert.Contains(t, err.Error(), "implementation: V2")
+		// The advice has to name something an operator can actually do. There is no
+		// `implementation` setting to select — the module's configuration says so outright — so
+		// the message points at the one lever there is: the previous implementation's mode.
+		assert.Contains(t, err.Error(), "Unmanaged")
+		assert.NotContains(t, err.Error(), "implementation: V2",
+			"nothing accepts that setting, and telling an operator to set it sends them looking")
 	})
 
 	// Passing rather than blocking. A cluster with no recorded value is one whose

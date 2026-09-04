@@ -82,7 +82,10 @@ func TestWhichChecksBlockAndWhichOnlyWarn(t *testing.T) {
 		}(),
 		check:    CheckNotLocal,
 		blocking: true,
-		detail:   "fallback runbook",
+		// The detail has to send the operator to the procedure that exists. It named a
+		// "fallback runbook" that was nowhere in the repository, which reads as a promise of a
+		// path rather than as the different path it actually is.
+		detail: "temporary upstream",
 	}, {
 		// The stop that only exists in this build: none of the previous implementation's objects
 		// render here, so a cluster arriving in Proxy has had the pull path they served deleted
@@ -278,4 +281,3 @@ func TestTheNodesThatWouldStopConvergingBlockTheMigration(t *testing.T) {
 	// reading rather than a permanent warning.
 	assert.True(t, found(t, ready().report(), CheckNodeContainerdConfig).Passed)
 }
-

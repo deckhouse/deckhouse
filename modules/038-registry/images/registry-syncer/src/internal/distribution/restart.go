@@ -17,6 +17,7 @@ limitations under the License.
 package distribution
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -38,6 +39,15 @@ import (
 // The cost is a brief gap on this replica. That is why the storage runs as several
 // replicas, and why a configuration change is applied to each independently rather
 // than to all at once.
+// ErrNoProcess reports that there was no registry process to signal.
+//
+// Its own error because the caller treats it differently from every other failure here: the
+// configuration has been written, and a process that is not running cannot be holding a stale one.
+// Failing the pass on it — which is what happened while this was an ordinary error — stopped the
+// fill, the replication and the report of a replica whose only problem was that its registry
+// container was restarting.
+var ErrNoProcess = errors.New("no registry process")
+
 type SignalRestarter struct {
 	// ProcessName is the executable to look for, matched on the base name of the
 	// command line.
@@ -76,10 +86,11 @@ func (s *SignalRestarter) Restart() error {
 		return err
 	}
 	if len(pids) == 0 {
-		// Not an error worth failing the pass over: the registry may be starting, or
-		// may have just crashed, and either way it will read the new configuration
-		// when it comes up.
-		return fmt.Errorf("no process named %q found in %s", s.ProcessName, procDir)
+		// Nothing to signal, which is not the same as failing to signal — and the difference has
+		// to reach the caller, because this used to be one error and it failed the whole pass. The
+		// registry may be starting or may have just crashed; either way the configuration is
+		// already on disk and the process reads it when it comes up. See ErrNoProcess.
+		return fmt.Errorf("%w: no process named %q in %s", ErrNoProcess, s.ProcessName, procDir)
 	}
 
 	send := s.signal

@@ -26,7 +26,8 @@ limitations under the License.
 //     in Direct or Proxy has already lost them. Mid-transition counts too — its nodes are being
 //     reconfigured right now.
 //   - Local. The plan rests on the pull path being reachable from outside the cluster, and a
-//     cluster whose registry IS the cluster has no such path: it needs the fallback runbook.
+//     cluster whose registry IS the cluster has no such path: it migrates through a temporary
+//     upstream of its own instead, which is a different procedure — see checkNotLocal.
 //   - an upstream that answers. Bringing the cluster to Unmanaged points every node straight at
 //     the upstream, so an unreachable one turns the documented degradation into an outage.
 //   - containerd v1 registry configuration written by the operator.
@@ -393,13 +394,24 @@ func (p preflight) checkMode() preflightCheck {
 
 // checkNotLocal is the hard stop the ADR spells out.
 //
-// In Local the cluster's registry is the cluster. Bringing it to Unmanaged points every node at
-// an upstream it does not have, so the documented procedure cannot apply and the fallback runbook
-// does — adoption of the existing store, by hand, on single clusters.
+// In Local the cluster's registry is the cluster. Bringing it to Unmanaged points every node at an
+// upstream it does not have — the previous implementation does not even write node configuration in
+// Unmanaged without one — so the ordinary procedure cannot be applied to it as written.
+//
+// It does have a procedure, walked end to end on a test cluster and written down in the module's
+// FAQ: an OCI registry stood up in a namespace of the operator's own, loaded with the image set and
+// declared as the upstream for the length of the migration, then removed once the in-cluster
+// storage holds the set itself. The blobs already on the control-plane nodes are adopted rather than
+// downloaded again, because the new storage serves from the same host path the Local store used;
+// what the operator pays is a second copy of the set on disk while the temporary registry exists.
+//
+// Blocking all the same. Not because the cluster is stuck, but because the steps are different ones
+// and starting the ordinary procedure here takes the pull path down.
 func (p preflight) checkNotLocal() preflightCheck {
 	if p.Legacy.Mode == string(registry_const.ModeLocal) {
 		return preflightCheck{Name: CheckNotLocal, Blocking: true,
-			Detail: "the cluster is in Local: use the fallback runbook, not this procedure"}
+			Detail: "the cluster is in Local: it migrates through a temporary upstream of its own, " +
+				"see the module FAQ, not this procedure"}
 	}
 	return preflightCheck{Name: CheckNotLocal, Passed: true, Detail: "not in Local"}
 }

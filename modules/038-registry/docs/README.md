@@ -122,8 +122,26 @@ internet-facing write surface it never asked for.
 ## The previous implementation
 
 Everything below describes the implementation this module is migrating away from. It is kept
-because clusters are still running it, and because migrating off it is a deliberate step
-rather than something an upgrade does silently.
+because clusters are still running it, and it is the operator who has to move a cluster off it —
+before the upgrade, not after.
+
+{% alert level="danger" %}
+Bring the cluster to `Unmanaged` BEFORE upgrading to this release.
+
+This release renders none of the previous implementation's objects. A cluster that arrives here
+still in `Direct`, `Proxy` or `Local` loses them on the first reconciliation — the in-cluster
+proxy, the `registry` Service and the per-node configuration they served — while its nodes still
+point at them. Images already on a node keep working; anything that has to be pulled will not, and
+there is no way to complete the migration from that state: the way back is the previous release,
+where the cluster can be brought to `Unmanaged` by the documented procedure and then upgraded
+again.
+
+An air-gapped `Local` cluster does not fit this procedure — it goes through `Unmanaged`, where every
+node pulls straight from an upstream, and such a cluster has none. It has a procedure of its own,
+which also begins before the upgrade: see
+[how do I migrate an air-gapped Local cluster](faq.html#how-do-i-migrate-an-air-gapped-local-cluster).
+{% endalert %}
+
 
 It is configured through the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry)
 rather than through this module's own settings, and works as a state machine with four modes:
@@ -140,11 +158,16 @@ rather than through this module's own settings, and works as a state machine wit
   deprecated non-configurable form set at
   [installation](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo).
 
-A cluster running any of them keeps running it until it is brought to `Unmanaged`, at which
-point the handover to the current implementation happens on its own — see
+Of the four, only `Unmanaged` survives an upgrade to this release: it is the one mode whose
+objects served nothing to begin with, so removing them takes nothing away. From `Unmanaged` the
+handover to the current implementation happens on its own — see
 [how to complete the migration](faq.html#how-do-i-complete-the-migration). The two never both
 manage a cluster: which one is active decides what is created at all, so there is no state in
 which both configure the same node.
+
+The other three are a one-way door. Bringing the cluster to `Unmanaged` is only possible on a
+release that still renders the previous implementation, which means before the upgrade; the
+`D8RegistryMigrationPreflightBlocked` alert reports the same check from inside the cluster.
 
 ### Mode switching restrictions
 

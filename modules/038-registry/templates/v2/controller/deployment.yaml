@@ -94,7 +94,14 @@ spec:
         {{- include "helm_lib_module_container_security_context_read_only_root_filesystem" $ | nindent 8 }}
         args:
         # Leader election only where there is more than one replica to elect from.
-        - --leader-elect={{ include "helm_lib_is_ha_to_value" (list $ true false) }}
+        {{- /*
+          No --leader-elect. Election is not optional here and the binary does not offer a switch
+          for it: with it off, every reconciler runs on every replica, and the storage update
+          controller then replaced two cache replicas at once on a three-master cluster — the guard
+          that makes replacement safe is per-process. This used to pass `false` on a
+          non-highly-available cluster, which the binary ignored, so the manifest described a
+          control that did not exist.
+        */}}
         - --logging-format=json
         env:
         - name: POD_NAMESPACE
