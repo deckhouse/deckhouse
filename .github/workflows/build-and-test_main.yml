@@ -938,7 +938,6 @@ jobs:
       - name: Build fuzz images
         id: build
         env:
-          WERF_ENV: CE
           # *-fuzz images are intermediate (final: false); ci-env may force FINAL_IMAGES_ONLY=true
           WERF_FINAL_IMAGES_ONLY: "false"
           WERF_EXPERIMENTAL_IMPORT_BY_SOURCE_IMAGE_TAG: 1
