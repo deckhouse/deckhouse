@@ -92,6 +92,13 @@ var helmAnnotations = []string{
 	"helm.sh/resource-policy",
 }
 
+// helmManagedByLabel with helmManagedByValue is the Helm ownership label the chart put on every
+// binding; it is the only label the controller removes, every other foreign label is preserved.
+const (
+	helmManagedByLabel = "app.kubernetes.io/managed-by"
+	helmManagedByValue = "Helm"
+)
+
 // Options tunes a Reconciler.
 type Options struct {
 	MaxConcurrentReconciles int
@@ -317,9 +324,10 @@ func (r *Reconciler) existingBindings(ctx context.Context, ruleName, namespace s
 // together. Creation first: an old binding is only removed once its replacement is in place, so
 // nothing is deleted at all while a wanted binding could not be written.
 //
-// A binding the API server rejects as invalid (an immutable roleRef that changed, a name it does
-// not accept) is a terminal error: retrying cannot fix it, the rule status reports it and the
-// controller waits for the next change of the rule.
+// A binding the API server rejects as invalid (a name it does not accept) is a terminal error:
+// retrying cannot fix it, the rule status reports it and the controller waits for the next change
+// of the rule. A differing roleRef is not such a case: the name of a binding fixes its roleRef, so
+// an object with another one was planted or edited by hand and is replaced (see update).
 func (r *Reconciler) apply(ctx context.Context, rule desired.Rule, wanted []desired.Binding, existing []client.Object) error {
 	owner := desired.OwnerReference(rule)
 
@@ -404,8 +412,18 @@ func (r *Reconciler) create(ctx context.Context, want client.Object) error {
 	return r.update(ctx, live, want)
 }
 
-// update rewrites current to want when anything the controller owns differs.
+// update rewrites current to want when anything the controller owns differs. roleRef is
+// immutable, so a binding with a different one is deleted and created again; refusing to touch it
+// would let anyone who can create a labelled binding under a controller name block the reconcile
+// of the rule, and with it the removal of bindings the rule no longer grants.
 func (r *Reconciler) update(ctx context.Context, current, want client.Object) error {
+	if !sameRoleRef(current, want) {
+		r.log.Info("binding has a foreign roleRef, recreating", "name", want.GetName(), "namespace", want.GetNamespace())
+		if err := r.delete(ctx, current, "binding with a foreign roleRef removed"); err != nil {
+			return err
+		}
+		return r.create(ctx, want)
+	}
 	if !needsUpdate(current, want) {
 		return nil
 	}
@@ -452,10 +470,25 @@ func classify(err error) error {
 	return err
 }
 
+// sameRoleRef reports whether current and want reference the same role.
+func sameRoleRef(current, want client.Object) bool {
+	switch c := current.(type) {
+	case *rbacv1.ClusterRoleBinding:
+		w, ok := want.(*rbacv1.ClusterRoleBinding)
+		return ok && reflect.DeepEqual(c.RoleRef, w.RoleRef)
+	case *rbacv1.RoleBinding:
+		w, ok := want.(*rbacv1.RoleBinding)
+		return ok && reflect.DeepEqual(c.RoleRef, w.RoleRef)
+	default:
+		return false
+	}
+}
+
 // needsUpdate reports whether current differs from want in anything the controller owns: roleRef,
-// subjects, labels, owner references, or leftover Helm annotations.
+// subjects, the controller's labels, owner references, or leftover Helm labels and annotations.
+// Foreign labels and annotations are not the controller's business.
 func needsUpdate(current, want client.Object) bool {
-	if !reflect.DeepEqual(current.GetLabels(), want.GetLabels()) {
+	if !hasEntries(current.GetLabels(), want.GetLabels()) || hasHelmLabel(current) {
 		return true
 	}
 	if hasHelmAnnotations(current) {
@@ -487,17 +520,43 @@ func hasHelmAnnotations(obj client.Object) bool {
 	return false
 }
 
-// merge returns current with everything the controller owns replaced by want: labels, owner
-// references, roleRef and subjects. Of the annotations only the Helm ones are removed.
-//
-// roleRef is immutable on bindings; a differing roleRef is surfaced as an Invalid error by the
-// API server and reported in the rule status rather than worked around by recreation.
+func hasHelmLabel(obj client.Object) bool {
+	return obj.GetLabels()[helmManagedByLabel] == helmManagedByValue
+}
+
+// hasEntries reports whether have contains every entry of want.
+func hasEntries(have, want map[string]string) bool {
+	for k, v := range want {
+		if got, ok := have[k]; !ok || got != v {
+			return false
+		}
+	}
+	return true
+}
+
+// merged returns have with every entry of want set.
+func merged(have, want map[string]string) map[string]string {
+	out := maps.Clone(have)
+	if out == nil {
+		out = make(map[string]string, len(want))
+	}
+	maps.Copy(out, want)
+	return out
+}
+
+// merge returns current with everything the controller owns replaced by want: its labels, owner
+// references, roleRef and subjects. Of the labels and annotations only the Helm ones are removed;
+// foreign ones stay.
 func merge(current, want client.Object) (client.Object, error) {
 	updated, ok := current.DeepCopyObject().(client.Object)
 	if !ok {
 		return nil, fmt.Errorf("merge %s: unexpected object type %T", current.GetName(), current)
 	}
-	updated.SetLabels(want.GetLabels())
+	labels := merged(current.GetLabels(), want.GetLabels())
+	if labels[helmManagedByLabel] == helmManagedByValue {
+		delete(labels, helmManagedByLabel)
+	}
+	updated.SetLabels(labels)
 	updated.SetOwnerReferences(want.GetOwnerReferences())
 	updated.SetAnnotations(withoutHelmAnnotations(current.GetAnnotations()))
 

@@ -49,7 +49,6 @@ const (
 	controllerName          = "user-authz-controller"
 	leaderElectionNamespace = "d8-user-authz"
 
-	haModeEnv                  = "HA_MODE"
 	maxConcurrentReconcilesEnv = "MAX_CONCURRENT_RECONCILES"
 	kubeQPSEnv                 = "KUBE_CLIENT_QPS"
 	kubeBurstEnv               = "KUBE_CLIENT_BURST"
@@ -132,8 +131,12 @@ func newManagerOptions(scheme *runtime.Scheme) manager.Options {
 		}),
 	}
 
+	// Leader election is always on: even a single-replica Deployment has two pods during a rolling
+	// update, and two writers of the same bindings would fight over them.
 	opts := manager.Options{
-		LeaderElection:          false,
+		LeaderElection:          true,
+		LeaderElectionID:        controllerName,
+		LeaderElectionNamespace: leaderElectionNamespace,
 		Scheme:                  scheme,
 		GracefulShutdownTimeout: &timeout,
 		HealthProbeBindAddress:  ":9090",
@@ -147,12 +150,6 @@ func newManagerOptions(scheme *runtime.Scheme) manager.Options {
 				&rbacv1.RoleBinding{}:        moduleBindings,
 			},
 		},
-	}
-
-	if os.Getenv(haModeEnv) == "true" {
-		opts.LeaderElection = true
-		opts.LeaderElectionID = controllerName
-		opts.LeaderElectionNamespace = leaderElectionNamespace
 	}
 
 	return opts

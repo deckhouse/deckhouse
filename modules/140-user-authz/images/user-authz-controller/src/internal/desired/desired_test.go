@@ -18,6 +18,7 @@ package desired
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -126,7 +127,7 @@ func TestBindings(t *testing.T) {
 					t.Errorf("%s: labels = %v", b.Name, b.Labels)
 				}
 				isAggregated := b.Labels[LabelBindingKind] == BindingKindAggregate
-				if isAggregated != (len(b.Name) > 7 && b.Name[len(b.Name)-7:] == ":custom") {
+				if isAggregated != strings.HasSuffix(b.Name, ":custom") {
 					t.Errorf("%s: binding-kind label = %q", b.Name, b.Labels[LabelBindingKind])
 				}
 				if len(b.Subjects) != len(tc.rule.Subjects) {
@@ -190,6 +191,8 @@ func TestBindingsAdditionalRolesAreValidatedAndDeduplicated(t *testing.T) {
 		{"slash in name", v1.AdditionalRole{Kind: "ClusterRole", Name: "a/b"}},
 		{"percent in name", v1.AdditionalRole{Kind: "ClusterRole", Name: "a%2Fb"}},
 		{"dot-dot name", v1.AdditionalRole{Kind: "ClusterRole", Name: ".."}},
+		// the payload of the YAML-injection regression test of the chart this package replaces
+		{"yaml injection payload", v1.AdditionalRole{Kind: "ClusterRole", Name: "cluster-write-all\n---\napiVersion: rbac.authorization.k8s.io/v1\nkind: ClusterRoleBinding\nmetadata:\n  name: injected"}},
 	}
 	for _, tc := range hostile {
 		t.Run(tc.name, func(t *testing.T) {

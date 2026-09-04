@@ -61,12 +61,6 @@ spec:
         image: {{ include "helm_lib_module_image" (list . "userAuthzController") }}
         imagePullPolicy: 'IfNotPresent'
         env:
-        - name: HA_MODE
-{{- if (include "helm_lib_ha_enabled" .) }}
-          value: "true"
-{{- else }}
-          value: "false"
-{{- end }}
         # Reconcile workers and the API client rate limit. The defaults are sized for the initial
         # adoption of tens of thousands of bindings; they are exposed here so that they can be
         # tuned without rebuilding the image.

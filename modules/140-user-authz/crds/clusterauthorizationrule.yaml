@@ -53,7 +53,7 @@ spec:
                   type: array
                   description: |
                     Conditions of the rule. `Ready=True` means every binding of the rule is applied; `Ready=False`
-                    with reason `InvalidSpec` means the rule cannot be rendered and no binding was changed.
+                    with reason `InvalidSpec` means the rule cannot be rendered and no binding was changed, with reason `ApplyError` that the API server rejected a write (the message names the binding and the error).
                   items:
                     type: object
                     required: [type, status]
@@ -259,7 +259,7 @@ spec:
                   type: array
                   description: |
                     Conditions of the rule. `Ready=True` means every binding of the rule is applied; `Ready=False`
-                    with reason `InvalidSpec` means the rule cannot be rendered and no binding was changed.
+                    with reason `InvalidSpec` means the rule cannot be rendered and no binding was changed, with reason `ApplyError` that the API server rejected a write (the message names the binding and the error).
                   items:
                     type: object
                     required: [type, status]

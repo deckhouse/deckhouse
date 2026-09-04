@@ -23,12 +23,18 @@ import (
 	"strings"
 	"testing"
 
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/dynamic"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	clienttesting "k8s.io/client-go/testing"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
+	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
 func testBinding(kind, namespace, name string, labels, annotations map[string]string) *unstructured.Unstructured {
@@ -79,8 +85,8 @@ func keepAnnotationOf(t *testing.T, c *dynamicfake.FakeDynamicClient, gvr schema
 }
 
 func TestStampKeepPolicy_StampsHelmManagedRuleBindingsOnly(t *testing.T) {
-	crbGVR := keepPolicyBindingResources[0]
-	rbGVR := keepPolicyBindingResources[1]
+	crbGVR := ruleBindingResources[0]
+	rbGVR := ruleBindingResources[1]
 
 	c := newKeepPolicyFakeClient(
 		testBinding("ClusterRoleBinding", "", "user-authz:dev:user", helmLabels(), nil),
@@ -170,7 +176,7 @@ func TestVerifyKeepPolicy_RefusesWhenABindingIsUnprotected(t *testing.T) {
 
 func TestStampKeepPolicy_ManyBindingsWithWorkers(t *testing.T) {
 	objs := make([]runtime.Object, 0, 500)
-	for i := 0; i < 500; i++ {
+	for i := range 500 {
 		objs = append(objs, testBinding("ClusterRoleBinding", "", fmt.Sprintf("user-authz:rule-%03d:user", i), helmLabels(), nil))
 	}
 	c := newKeepPolicyFakeClient(objs...)
@@ -186,3 +192,101 @@ func TestStampKeepPolicy_ManyBindingsWithWorkers(t *testing.T) {
 		t.Fatalf("verify: %v", err)
 	}
 }
+
+// The lists are paged: a continue token on the first page must lead to a second request, and the
+// objects of both pages must be stamped.
+func TestStampKeepPolicy_FollowsContinueTokens(t *testing.T) {
+	crbGVR := ruleBindingResources[0]
+	objs := []runtime.Object{
+		testBinding("ClusterRoleBinding", "", "user-authz:a:user", helmLabels(), nil),
+		testBinding("ClusterRoleBinding", "", "user-authz:b:user", helmLabels(), nil),
+		testBinding("ClusterRoleBinding", "", "user-authz:c:user", helmLabels(), nil),
+	}
+	c := newKeepPolicyFakeClient(objs...)
+
+	page := func(items []runtime.Object, next string) *unstructured.UnstructuredList {
+		list := &unstructured.UnstructuredList{Object: map[string]interface{}{
+			"apiVersion": "rbac.authorization.k8s.io/v1",
+			"kind":       "ClusterRoleBindingList",
+			"metadata":   map[string]interface{}{"continue": next},
+		}}
+		for _, item := range items {
+			list.Items = append(list.Items, *item.(*unstructured.Unstructured))
+		}
+		return list
+	}
+	lists := 0
+	c.PrependReactor("list", "clusterrolebindings", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+		lists++
+		if lists == 1 {
+			return true, page(objs[:1], "page-2"), nil
+		}
+		return true, page(objs[1:], ""), nil
+	})
+
+	stamped, err := stampKeepPolicy(context.Background(), c, 2)
+	if err != nil {
+		t.Fatalf("stampKeepPolicy: %v", err)
+	}
+	if stamped != 3 {
+		t.Fatalf("stamped = %d, want all 3 objects of both pages", stamped)
+	}
+	if lists != 2 {
+		t.Fatalf("list calls = %d, want 2 (one per page)", lists)
+	}
+	for _, name := range []string{"user-authz:a:user", "user-authz:b:user", "user-authz:c:user"} {
+		if got := keepAnnotationOf(t, c, crbGVR, "", name); got != helmResourcePolicyKeep {
+			t.Errorf("%s: keep = %q", name, got)
+		}
+	}
+}
+
+var _ = Describe("User Authz hooks :: keep policy on authorization bindings ::", func() {
+	f := HookExecutionConfigInit(`{"userAuthz":{"internal":{}}}`, `{}`)
+
+	var fakeClient *dynamicfake.FakeDynamicClient
+
+	Context("Helm-managed bindings without the keep policy", func() {
+		BeforeEach(func() {
+			fakeClient = newKeepPolicyFakeClient(
+				testBinding("ClusterRoleBinding", "", "user-authz:dev:user", helmLabels(), nil),
+				testBinding("RoleBinding", "team", "user-authz:ns-rule:editor", helmLabels(), nil),
+			)
+			newModuleBindingsClient = func(dependency.Container) (dynamic.Interface, error) { return fakeClient, nil }
+
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Stamps the policy before the release and lets it proceed", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			crb, err := fakeClient.Resource(ruleBindingResources[0]).Get(context.Background(), "user-authz:dev:user", metav1.GetOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(crb.GetAnnotations()[helmResourcePolicyAnnotation]).To(Equal(helmResourcePolicyKeep))
+			rb, err := fakeClient.Resource(ruleBindingResources[1]).Namespace("team").Get(context.Background(), "user-authz:ns-rule:editor", metav1.GetOptions{})
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(rb.GetAnnotations()[helmResourcePolicyAnnotation]).To(Equal(helmResourcePolicyKeep))
+		})
+	})
+
+	Context("A binding that cannot be stamped", func() {
+		BeforeEach(func() {
+			fakeClient = newKeepPolicyFakeClient(
+				testBinding("ClusterRoleBinding", "", "user-authz:dev:user", helmLabels(), nil),
+			)
+			fakeClient.PrependReactor("patch", "clusterrolebindings", func(_ clienttesting.Action) (bool, runtime.Object, error) {
+				return true, nil, errors.New("forbidden")
+			})
+			newModuleBindingsClient = func(dependency.Container) (dynamic.Interface, error) { return fakeClient, nil }
+
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("Fails the hook so that the release does not run", func() {
+			Expect(f).ToNot(ExecuteSuccessfully())
+			Expect(f.GoHookError.Error()).To(ContainSubstring("forbidden"))
+		})
+	})
+})
