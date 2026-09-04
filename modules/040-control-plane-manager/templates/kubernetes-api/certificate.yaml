@@ -1,5 +1,3 @@
-{{- $moduleGateway := dict }}
-{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
 {{- $ingressEnabled := eq (include "helm_lib_module_ingress_enabled" .) "true" }}
 {{- $gatewayEnabled := eq (include "helm_lib_module_gateway_enabled" .) "true" }}
 {{- if .Values.global.enabledModules | has "cert-manager" }}
@@ -22,20 +20,13 @@ spec:
     name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
     kind: ClusterIssuer
   {{- else if eq .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode "SelfSigned" }}
-    {{- if .Values.global.enabledModules | has "cert-manager" }}
     name: kubernetes-api
     kind: Issuer
-    {{- else }}
-    {{ fail "cert-manager module must be enabled for publishAPI https SelfSigned mode" }}
-    {{- end }}
   {{- end }}
 {{- end }}
 {{- end }}
 {{- if and $gatewayEnabled .Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled (eq .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode "Global") (eq (include "helm_lib_module_https_mode" .) "CertManager") }}
-{{- $issuerName := include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
-{{- if or (eq $issuerName "letsencrypt") (eq $issuerName "letsencrypt-staging") }}
-  {{- $issuerName = printf "%s-gateway-%s" $issuerName $moduleGateway.name }}
-{{- end }}
+{{- $issuerName := include "helm_lib_module_https_cert_manager_cluster_issuer_name_for_gateway_api" . }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
