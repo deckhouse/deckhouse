@@ -1241,8 +1241,10 @@ jobs:
           fi
           echo "Corpus replay path prefix: anomaloys-materials/${FUZZ_S3_REPOSITORY}/${FUZZ_S3_BRANCH_SLUG}/"
           # PR/dev: build locally, do not push fuzz images; no build-report upload
+          DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+          export WERF_SECONDARY_REPO_1="${DEV_REGISTRY_PATH}"
           unset WERF_REPO
-          echo "dev fuzz build: local only (no registry push, no build-report upload)"
+          echo "dev fuzz build: local only, cache from ${WERF_SECONDARY_REPO_1} (no registry push, no build-report upload)"
 
           FUZZ_IMAGES="$(werf config list --env "${WERF_ENV}" | grep -- '-fuzz$' || true)"
           if [[ -z "${FUZZ_IMAGES}" ]]; then

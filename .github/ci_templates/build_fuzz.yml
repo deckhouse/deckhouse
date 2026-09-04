@@ -13,6 +13,7 @@
 
      buildType "dev":
        - local build only (no registry push)
+       - reuse build cache from dev-registry via secondary repo
        - no build-report upload to S3
        - FUZZ_S3_BRANCH_SLUG=main
      buildType "main":
@@ -107,8 +108,10 @@ steps:
 
 {!{- if $isDev }!}
       # PR/dev: build locally, do not push fuzz images; no build-report upload
+      DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+      export WERF_SECONDARY_REPO_1="${DEV_REGISTRY_PATH}"
       unset WERF_REPO
-      echo "dev fuzz build: local only (no registry push, no build-report upload)"
+      echo "dev fuzz build: local only, cache from ${WERF_SECONDARY_REPO_1} (no registry push, no build-report upload)"
 {!{- else }!}
       DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
       export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
