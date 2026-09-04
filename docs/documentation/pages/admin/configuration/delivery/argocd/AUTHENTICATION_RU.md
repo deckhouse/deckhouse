@@ -27,6 +27,19 @@ Argo CD поддерживает локальную аутентификацию
 d8 k -n argocd get secret argocd-cluster -o jsonpath='{.data.admin\.password}' | base64 -d
 ```
 
+{% alert level="warning" %}
+Мы рекомендуем изменить пароль пользователя `admin` сгенерированный автоматически с помощью CLI-утилиты Argo CD:
+
+```bash
+argocd login <ARGOCD_DOMAIN>:443 --username admin --password <ADMIN_PASSWORD>
+argocd account update-password \
+  --account admin \
+  --current-password <ADMIN_PASSWORD> \
+  --new-password <NEW_PASSWORD>
+```
+
+{% endalert %}
+
 ### Создание дополнительных локальных пользователей
 
 При создании локального пользователя можно определить, будут ли у него права на доступ к веб-интерфейсу Argo CD (атрибут `login`) и/или к API Argo CD (атрибут `apiKey`).

@@ -95,6 +95,10 @@ You can create an application in Argo CD in several ways:
 - interactively — through the Argo CD web interface;
 - with the `argocd` CLI utility.
 
+{% alert level="info" %}
+You can download the `argocd` CLI utility binary from the "Documentation" section of the Argo CD web interface. To get help for the CLI utility, run `argocd --help`.
+{% endalert %}
+
 ### Creating an application with an Application object
 
 An [Application](/modules/operator-argo/cr.html#application) object is used to describe an application. It specifies:
