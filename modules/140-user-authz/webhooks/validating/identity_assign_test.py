@@ -303,6 +303,196 @@ class TestIdentityCollection(unittest.TestCase):
              "groups": ["system:serviceaccounts:kube-system"]}))
         self.assertFalse(assign.is_exempt({"username": "eve@corp", "groups": []}))
 
+    def test_membership_from_group_snapshot(self):
+        snaps = {
+            assign.USER_SNAP: [{"filterResult": {
+                "name": "admin", "email": "admin@deckhouse.io", "groups": [],
+            }}],
+            assign.GROUP_SNAP: [{"filterResult": {
+                "name": "superadmins", "members": ["admin"],
+            }}],
+            assign.CAR_SNAP: [],
+            assign.AR_SNAP: [],
+            assign.CRB_SNAP: [],
+        }
+        self.assertEqual(assign.membership_groups(snaps, email="admin@deckhouse.io"),
+                         ["superadmins"])
+
+    def test_membership_walks_nested_groups(self):
+        snaps = {
+            assign.USER_SNAP: [{"filterResult": {
+                "name": "admin", "email": "admin@deckhouse.io", "groups": [],
+            }}],
+            assign.GROUP_SNAP: [
+                {"filterResult": {
+                    "name": "inner",
+                    "members": [{"kind": "User", "name": "admin"}],
+                }},
+                {"filterResult": {
+                    "name": "superadmins",
+                    "members": [{"kind": "Group", "name": "inner"}],
+                }},
+            ],
+            assign.CAR_SNAP: [],
+            assign.AR_SNAP: [],
+            assign.CRB_SNAP: [],
+        }
+        self.assertEqual(assign.membership_groups(snaps, email="admin@deckhouse.io"),
+                         ["inner", "superadmins"])
+
+    def test_membership_nested_group_cycle_stops(self):
+        snaps = {
+            assign.GROUP_SNAP: [
+                {"filterResult": {
+                    "name": "a",
+                    "members": [{"kind": "Group", "name": "b"},
+                                {"kind": "User", "name": "admin"}],
+                }},
+                {"filterResult": {
+                    "name": "b",
+                    "members": [{"kind": "Group", "name": "a"}],
+                }},
+            ],
+        }
+        self.assertEqual(assign.groups_containing_user(snaps, "admin"), ["a", "b"])
+
+    def test_occupied_roles_ignore_system_subjects(self):
+        snaps = {
+            assign.CAR_SNAP: [{"filterResult": {
+                "name": "human",
+                "accessLevel": "SuperAdmin",
+                "additionalRoles": [],
+                "userSubjects": [],
+                "groupSubjects": ["superadmins"],
+                "saSubjects": [],
+            }}],
+            assign.AR_SNAP: [],
+            assign.CRB_SNAP: [{"filterResult": {
+                "name": "k8s",
+                "role": "cluster-admin",
+                "userSubjects": [],
+                "groupSubjects": ["system:masters"],
+                "saSubjects": [],
+            }}],
+        }
+        self.assertEqual(assign.occupied_grant_roles(snaps), ["user-authz:super-admin"])
+
+    def test_oidc_is_not_claims_closed(self):
+        self.assertFalse(assign.dex_claims_closed({"type": "OIDC", "oidc": {"allowedGroups": ["devs"]}}))
+
+    def test_saml_filter_groups_is_closed(self):
+        self.assertTrue(assign.dex_claims_closed({
+            "type": "SAML", "saml": {"filterGroups": True, "allowedGroups": ["devs"]},
+        }))
+        self.assertFalse(assign.dex_claims_closed({
+            "type": "SAML", "saml": {"allowedGroups": ["devs"]},
+        }))
+
+    def test_open_oidc_targets_occupied_roles(self):
+        snaps = {
+            assign.CAR_SNAP: [{"filterResult": {
+                "name": "g",
+                "accessLevel": "SuperAdmin",
+                "additionalRoles": [],
+                "userSubjects": [],
+                "groupSubjects": ["superadmins"],
+                "saSubjects": [],
+            }}],
+            assign.AR_SNAP: [],
+            assign.CRB_SNAP: [],
+        }
+        self.assertEqual(
+            assign.dex_target_roles({"type": "OIDC"}, snaps),
+            ["user-authz:super-admin"])
+
+    def test_closed_saml_ignores_unlisted_group_grants(self):
+        snaps = {
+            assign.CAR_SNAP: [{"filterResult": {
+                "name": "g",
+                "accessLevel": "SuperAdmin",
+                "additionalRoles": [],
+                "userSubjects": [],
+                "groupSubjects": ["superadmins"],
+                "saSubjects": [],
+            }}],
+            assign.AR_SNAP: [],
+            assign.CRB_SNAP: [],
+        }
+        spec = {"type": "SAML", "saml": {"filterGroups": True, "allowedGroups": ["devs"]}}
+        self.assertEqual(assign.dex_target_roles(spec, snaps), [])
+
+    def test_closed_saml_includes_user_subject_grants(self):
+        snaps = {
+            assign.CAR_SNAP: [{"filterResult": {
+                "name": "g",
+                "accessLevel": "SuperAdmin",
+                "additionalRoles": [],
+                "userSubjects": ["root@corp"],
+                "groupSubjects": ["superadmins"],
+                "saSubjects": [],
+            }}],
+            assign.AR_SNAP: [],
+            assign.CRB_SNAP: [],
+        }
+        spec = {"type": "SAML", "saml": {"filterGroups": True, "allowedGroups": ["devs"]}}
+        self.assertEqual(assign.dex_target_roles(spec, snaps), ["user-authz:super-admin"])
+
+    def test_dex_trust_anchor_ignores_secret_and_display_name(self):
+        old = {"type": "OIDC", "displayName": "corp",
+               "oidc": {"issuer": "https://idp", "clientID": "a", "clientSecret": "old"}}
+        new = {"type": "OIDC", "displayName": "corp-2",
+               "oidc": {"issuer": "https://idp", "clientID": "a", "clientSecret": "new"}}
+        self.assertEqual(assign.dex_trust_anchor(old), assign.dex_trust_anchor(new))
+
+    def test_dex_trust_anchor_changes_with_issuer(self):
+        old = {"type": "OIDC", "oidc": {"issuer": "https://idp"}}
+        new = {"type": "OIDC", "oidc": {"issuer": "https://evil"}}
+        self.assertNotEqual(assign.dex_trust_anchor(old), assign.dex_trust_anchor(new))
+
+    def test_dex_trust_anchor_changes_with_signature_validation(self):
+        old = {"type": "SAML", "saml": {"ssoURL": "https://idp/sso",
+                                        "insecureSkipSignatureValidation": False}}
+        new = {"type": "SAML", "saml": {"ssoURL": "https://idp/sso",
+                                        "insecureSkipSignatureValidation": True}}
+        self.assertNotEqual(assign.dex_trust_anchor(old), assign.dex_trust_anchor(new))
+
+    def test_dex_trust_anchor_changes_with_claim_mapping(self):
+        old = {"type": "OIDC", "oidc": {"issuer": "https://idp",
+                                        "claimMapping": {"email": "email"}}}
+        new = {"type": "OIDC", "oidc": {"issuer": "https://idp",
+                                        "claimMapping": {"email": "nickname"}}}
+        self.assertNotEqual(assign.dex_trust_anchor(old), assign.dex_trust_anchor(new))
+
+    def test_dex_trust_anchor_changes_with_email_attr(self):
+        old = {"type": "SAML", "saml": {"ssoURL": "https://idp/sso", "emailAttr": "mail"}}
+        new = {"type": "SAML", "saml": {"ssoURL": "https://idp/sso", "emailAttr": "nickname"}}
+        self.assertNotEqual(assign.dex_trust_anchor(old), assign.dex_trust_anchor(new))
+
+    def test_dex_trust_anchor_changes_with_unlisted_field(self):
+        old = {"type": "LDAP", "ldap": {"host": "ldap:389", "bindPW": "x",
+                                        "userSearch": {"baseDN": "ou=people"}}}
+        new = {"type": "LDAP", "ldap": {"host": "ldap:389", "bindPW": "y",
+                                        "userSearch": {"baseDN": "ou=all"}}}
+        self.assertNotEqual(assign.dex_trust_anchor(old), assign.dex_trust_anchor(new))
+
+    def test_dex_trust_anchor_ignores_bind_password(self):
+        old = {"type": "LDAP", "ldap": {"host": "ldap:389", "bindPW": "x"}}
+        new = {"type": "LDAP", "ldap": {"host": "ldap:389", "bindPW": "y"}}
+        self.assertEqual(assign.dex_trust_anchor(old), assign.dex_trust_anchor(new))
+
+    def test_user_record_name_does_not_fallback_to_email(self):
+        snaps = {
+            assign.USER_SNAP: [
+                {"filterResult": {"name": "other", "email": "eve@corp", "groups": ["superadmins"]}},
+                {"filterResult": {"name": "eve", "email": "eve-real@corp", "groups": []}},
+            ],
+        }
+        rec = assign.user_record(snaps, name="eve", email="eve@corp")
+        self.assertEqual(rec["name"], "eve")
+        self.assertEqual(rec["email"], "eve-real@corp")
+        self.assertIsNone(assign.user_record(snaps, name="missing", email="eve@corp"))
+        self.assertEqual(assign.user_record(snaps, email="eve@corp")["name"], "other")
+
 
 if __name__ == "__main__":
     unittest.main()

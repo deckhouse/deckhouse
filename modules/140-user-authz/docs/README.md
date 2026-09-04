@@ -79,7 +79,7 @@ A manage role does not, by itself, let you grant access to other people.
 
 Creating a User or Group that is not already a grant subject is ordinary object creation.
 
-Creating a User for an email that already carries a grant, or writing a ClusterAuthorizationRule, is granting roles. The request is admitted only if the requester already has covering permissions or is explicitly allowed to assign those roles.
+Creating a User for an email that already carries a grant, writing or deleting a ClusterAuthorizationRule, resetting that identity through UserOperation, or connecting a DexProvider that can assert that email or group, is granting roles. The request is admitted only if the requester already has covering permissions or is explicitly allowed to assign those roles.
 
 The ClusterAuthorizationRule `spec.accessLevel` field is a [current-model](#current-role-based-model) level: `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`. A `security` subsystem manager can assign any of those except `SuperAdmin`. That manager also cannot assign the Kubernetes `cluster-admin` ClusterRole. Experimental-model security roles stop at `d8:subsystem:security:admin`.
 
