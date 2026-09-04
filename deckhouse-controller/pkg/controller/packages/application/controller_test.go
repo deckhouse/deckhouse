@@ -45,6 +45,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	packagestatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
 	"github.com/deckhouse/deckhouse/go_lib/project"
@@ -192,7 +193,14 @@ func (suite *ControllerTestSuite) TestReconcile() {
 			Namespace:  appNamespace,
 			Definition: apps.Definition{Name: packageName, Version: "v1.0.1"},
 			Settings:   map[string]any{"host": "app.example.com"},
-		}, suite.manager.updated[0].app)
+			Repository: registry.Remote{
+				Name:         "deckhouse",
+				Repository:   "registry.example.com/test",
+				DockerConfig: "test-docker-cfg",
+				CA:           "test-ca",
+				Scheme:       "https",
+			},
+		}, suite.manager.updated[0])
 	})
 
 	suite.Run("maintenance mode reaches the runtime", func() {
@@ -202,7 +210,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 
 		require.Len(suite.T(), suite.manager.updated, 1)
-		assert.Equal(suite.T(), "NoResourceReconciliation", suite.manager.updated[0].app.Maintenance)
+		assert.Equal(suite.T(), "NoResourceReconciliation", suite.manager.updated[0].Maintenance)
 	})
 
 	suite.Run("missing package requeues and claims the finalizer", func() {
@@ -676,7 +684,7 @@ func (m modulesInited) AreModulesInited() bool { return bool(m) }
 // RegisterController requires it to satisfy the package's manager interface, which is the
 // compile-time check that this stub still matches the real runtime.
 type packageManagerStub struct {
-	updated     []updatedApp
+	updated     []packageruntime.App
 	removed     []types.NamespacedName
 	cleanups    [][]packageruntime.PreservePackage
 	removalDone bool
@@ -698,12 +706,8 @@ func newPackageManagerStub(t *testing.T) *packageManagerStub {
 	}
 }
 
-type updatedApp struct {
-	app packageruntime.App
-}
-
 func (s *packageManagerStub) UpdateApp(app packageruntime.App) {
-	s.updated = append(s.updated, updatedApp{app: app})
+	s.updated = append(s.updated, app)
 }
 
 func (s *packageManagerStub) RemoveApp(namespace, name string) bool {
