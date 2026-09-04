@@ -246,8 +246,3 @@ The relevant dashboards are grouped under the "Security" folder:
 - Runtime audit engine logs. Includes logs of Linux kernel and cluster API server security audit events.
 
   ![Runtime audit engine logs](../../images/grafana/runtime-audit-engine-logs.png)
-
-- Trivy Image Vulnerability Overview. A dashboard with summary and detailed information on vulnerability scans
-  of container images in namespaces annotated with `security-scanning.deckhouse.io/enabled`.
-
-  ![Trivy Image Vulnerability Overview](../../images/grafana/trivy-image-vulnerability-overview.png)
