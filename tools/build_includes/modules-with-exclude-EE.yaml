@@ -1308,8 +1308,8 @@
   stageDependencies:
     setup:
         - '**/*'
-- add: /ee/modules/110-istio/templates/validations
-  to: /deckhouse/modules/110-istio/templates/validations
+- add: /ee/modules/110-istio/templates/validations-ee
+  to: /deckhouse/modules/110-istio/templates/validations-ee
   excludePaths:
     - docs
     - README.md
