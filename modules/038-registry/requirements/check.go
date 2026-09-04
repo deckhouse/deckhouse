@@ -32,7 +32,15 @@ import (
 )
 
 const (
-	// ImplementationKey is what the module records and a release requires.
+	// ImplementationKey is what the module records and a release may require.
+	//
+	// May, not does: no release declares it yet, and it cannot be this one. A requirement is
+	// evaluated by the version already INSTALLED, so the check has to ship one release ahead of
+	// the key that uses it — a cluster on an older version has never registered this check and
+	// lets any value through. This release registers it and records a value on every cluster;
+	// the release that wants to refuse installing on a cluster still running the previous
+	// implementation adds `"registryImplementation": "V2"` to release.yaml, where the same
+	// reasoning is written down beside the place it goes.
 	ImplementationKey = "registryImplementation"
 )
 

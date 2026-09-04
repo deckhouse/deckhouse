@@ -107,9 +107,12 @@ func collectUnknownFields(doc interface{}, schema *apiextensionsv1.JSONSchemaPro
 			return
 		}
 		for key, child := range value {
-			// The apiserver owns metadata; a CRD schema describes it as an
-			// opaque object, and its contents are not this contract's.
-			if path == "" && key == "metadata" {
+			// The apiserver owns all three of these, and a CRD schema declares none of them:
+			// `metadata` it describes as an opaque object, `apiVersion` and `kind` it does not
+			// mention at all — they identify the resource rather than belong to its spec. Reporting
+			// them as drift made this guard fail on a payload that was correct, which is the one
+			// way a guard costs more than it gives.
+			if path == "" && (key == "metadata" || key == "apiVersion" || key == "kind") {
 				continue
 			}
 			childPath := strings.TrimPrefix(fmt.Sprintf("%s.%s", path, key), ".")
