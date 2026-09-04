@@ -18,25 +18,30 @@ package namespace
 
 import (
 	"context"
+	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	"controller/apis/deckhouse.io/v1alpha3"
 	namespacemanager "controller/internal/manager/namespace"
 )
 
-func newReconciler(t *testing.T, allowOrphanNamespaces bool, objs ...client.Object) *reconciler {
+func newReconciler(t *testing.T, objs ...client.Object) *reconciler {
 	t.Helper()
 	scheme := runtime.NewScheme()
 	for _, add := range []func(*runtime.Scheme) error{corev1.AddToScheme, v1alpha3.AddToScheme} {
@@ -44,15 +49,14 @@ func newReconciler(t *testing.T, allowOrphanNamespaces bool, objs ...client.Obje
 	}
 	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objs...).Build()
 	return &reconciler{
-		init:                  new(sync.WaitGroup), // counter 0: Wait() returns immediately
-		logger:                logr.Discard(),
-		client:                c,
-		manager:               namespacemanager.New(c, logr.Discard()),
-		allowOrphanNamespaces: allowOrphanNamespaces,
+		init:    new(sync.WaitGroup), // counter 0: Wait() returns immediately
+		logger:  logr.Discard(),
+		client:  c,
+		manager: namespacemanager.New(c, logr.Discard()),
 	}
 }
 
-func TestIsAutoWrapCandidate(t *testing.T) {
+func TestIsAdoptionCandidate(t *testing.T) {
 	cases := []struct {
 		name string
 		ns   *corev1.Namespace
@@ -69,7 +73,7 @@ func TestIsAutoWrapCandidate(t *testing.T) {
 		},
 		{
 			// A namespace already owned by a project (its main namespace or an additional namespace
-			// created by a ProjectNamespace) must never be auto-wrapped into a separate project.
+			// created by a ProjectNamespace) must never become a separate project.
 			name: "project-owned namespace is skipped",
 			ns:   &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "owned", Labels: map[string]string{v1alpha3.ResourceLabelProject: "owned", v1alpha3.ResourceLabelHeritage: v1alpha3.ResourceHeritageMultitenancy}}},
 			want: false,
@@ -79,65 +83,172 @@ func TestIsAutoWrapCandidate(t *testing.T) {
 			ns:   &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "team-a-backend", Labels: map[string]string{v1alpha3.ResourceLabelProject: "team-a", v1alpha3.ResourceLabelHeritage: v1alpha3.ResourceHeritageMultitenancy}}},
 			want: false,
 		},
+		{
+			name: "upmeter heritage",
+			ns:   &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "obsv", Labels: map[string]string{v1alpha3.ResourceLabelHeritage: v1alpha3.ResourceHeritageUpmeter}}},
+			want: false,
+		},
+		{
+			name: "upmeter name prefix",
+			ns:   &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "upmeter-probe-namespace-foo"}},
+			want: false,
+		},
+		{
+			name: "name longer than the project limit",
+			ns:   &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: strings.Repeat("a", v1alpha3.ProjectNameMaxLength+1)}},
+			want: false,
+		},
+		{
+			name: "name at the project limit is still a candidate",
+			ns:   &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: strings.Repeat("a", v1alpha3.ProjectNameMaxLength)}},
+			want: true,
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, isAutoWrapCandidate(tc.ns))
+			assert.Equal(t, tc.want, isAdoptionCandidate(tc.ns))
 		})
 	}
 }
 
-func TestReconcile_SyncsLabelsForAlreadyWrappedNamespace(t *testing.T) {
-	// An already auto-wrapped namespace carries the project-ownership label (stamped by the project
-	// reconciler) and the managed-project finalizer. A later user-label change must still propagate
-	// into the managed project's spec.parameters.namespace.labels - this is the regression that made
-	// the sync create-only.
+func TestReconcile_HoldsOffYoungOrphanNamespace(t *testing.T) {
 	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
-		Name: "team-a",
-		Labels: map[string]string{
-			"env":                          "prod", // user label added after the wrap
-			v1alpha3.ResourceLabelProject:  "team-a",
-			v1alpha3.ResourceLabelHeritage: v1alpha3.ResourceHeritageMultitenancy,
-		},
-		Finalizers: []string{v1alpha3.NamespaceFinalizerManagedProject},
+		Name:              "team-a",
+		CreationTimestamp: metav1.Now(),
 	}}
-	project := &v1alpha3.Project{ObjectMeta: metav1.ObjectMeta{
-		Name:   "team-a",
-		Labels: map[string]string{v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace},
-	}}
-	require.False(t, isAutoWrapCandidate(ns), "an owned namespace is no longer an auto-wrap candidate")
 
-	r := newReconciler(t, true, ns, project)
+	r := newReconciler(t, ns)
+	res, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: "team-a"}})
+	require.NoError(t, err)
+	assert.Greater(t, res.RequeueAfter, time.Duration(0))
+
+	err = r.client.Get(context.Background(), client.ObjectKey{Name: "team-a"}, new(v1alpha3.Project))
+	assert.True(t, apierrors.IsNotFound(err), "a young namespace must not be adopted yet")
+}
+
+func TestReconcile_AdoptsOrphanNamespace(t *testing.T) {
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name:   "team-a",
+		Labels: map[string]string{"env": "prod"},
+	}}
+
+	r := newReconciler(t, ns)
 	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: "team-a"}})
 	require.NoError(t, err)
 
-	updated := new(v1alpha3.Project)
-	require.NoError(t, r.client.Get(context.Background(), client.ObjectKey{Name: "team-a"}, updated))
-	require.NotNil(t, updated.Spec.Parameters["namespace"], "namespace parameters must be synced on update")
-	nsParams := updated.Spec.Parameters["namespace"].(map[string]any)
+	created := new(v1alpha3.Project)
+	require.NoError(t, r.client.Get(context.Background(), client.ObjectKey{Name: "team-a"}, created))
+	assert.Equal(t, namespacemanager.TemplateSimple, created.Spec.ProjectTemplateName)
+	nsParams := created.Spec.Parameters["namespace"].(map[string]any)
 	assert.Equal(t, map[string]any{"env": "prod"}, nsParams["labels"])
 }
 
-func TestPredicateShouldHandle(t *testing.T) {
-	adopt := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "adopt-me", Annotations: map[string]string{v1alpha3.NamespaceAnnotationAdopt: ""}}}
-	managed := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "d8-managed", Finalizers: []string{v1alpha3.NamespaceFinalizerManagedProject}}}
+func TestReconcile_SkipsNamespaceOwnedByProject(t *testing.T) {
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name: "team-a",
+		Labels: map[string]string{
+			v1alpha3.ResourceLabelProject:  "team-a",
+			v1alpha3.ResourceLabelHeritage: v1alpha3.ResourceHeritageMultitenancy,
+		},
+	}}
+
+	r := newReconciler(t, ns)
+	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: "team-a"}})
+	require.NoError(t, err)
+
+	err = r.client.Get(context.Background(), client.ObjectKey{Name: "team-a"}, new(v1alpha3.Project))
+	assert.True(t, apierrors.IsNotFound(err), "an owned namespace must not get a project of its own")
+}
+
+func TestReconcile_ClearsRetiredMarkersOnTerminatingNamespace(t *testing.T) {
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name: "team-a",
+		Labels: map[string]string{
+			v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace,
+		},
+		Finalizers: []string{v1alpha3.NamespaceFinalizerManagedProject, "example.com/keep"},
+	}}
+	r := newReconciler(t, ns)
+	require.NoError(t, r.client.Delete(context.Background(), ns))
+
+	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: "team-a"}})
+	require.NoError(t, err)
+
+	updated := new(corev1.Namespace)
+	require.NoError(t, r.client.Get(context.Background(), client.ObjectKey{Name: "team-a"}, updated))
+	assert.NotContains(t, updated.Labels, v1alpha3.ProjectLabelManagedByNamespace)
+	assert.False(t, controllerutil.ContainsFinalizer(updated, v1alpha3.NamespaceFinalizerManagedProject))
+	assert.True(t, controllerutil.ContainsFinalizer(updated, "example.com/keep"))
+
+	err = r.client.Get(context.Background(), client.ObjectKey{Name: "team-a"}, new(v1alpha3.Project))
+	assert.True(t, apierrors.IsNotFound(err), "a terminating namespace must not be adopted")
+}
+
+func TestReconcile_ClearsRetiredMarkersWhenAlreadyOwned(t *testing.T) {
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name: "team-a",
+		Labels: map[string]string{
+			v1alpha3.ResourceLabelProject:           "team-a",
+			v1alpha3.ProjectLabelManagedByNamespace: v1alpha3.ManagedByNamespace,
+		},
+		Finalizers: []string{v1alpha3.NamespaceFinalizerManagedProject},
+	}}
+	existing := &v1alpha3.Project{
+		ObjectMeta: metav1.ObjectMeta{Name: "team-a"},
+		Spec:       v1alpha3.ProjectSpec{ProjectTemplateName: namespacemanager.TemplateSimple},
+	}
+	r := newReconciler(t, ns, existing)
+
+	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: "team-a"}})
+	require.NoError(t, err)
+
+	updated := new(corev1.Namespace)
+	require.NoError(t, r.client.Get(context.Background(), client.ObjectKey{Name: "team-a"}, updated))
+	assert.NotContains(t, updated.Labels, v1alpha3.ProjectLabelManagedByNamespace)
+	assert.False(t, controllerutil.ContainsFinalizer(updated, v1alpha3.NamespaceFinalizerManagedProject))
+}
+
+func TestReconcile_SkipsTerminatingNamespace(t *testing.T) {
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name:       "team-a",
+		Finalizers: []string{"example.com/keep"},
+	}}
+	r := newReconciler(t, ns)
+	require.NoError(t, r.client.Delete(context.Background(), ns))
+
+	_, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: "team-a"}})
+	require.NoError(t, err)
+
+	err = r.client.Get(context.Background(), client.ObjectKey{Name: "team-a"}, new(v1alpha3.Project))
+	assert.True(t, apierrors.IsNotFound(err), "a namespace on its way out must not be adopted")
+}
+
+func TestPredicate(t *testing.T) {
 	orphan := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "team-a"}}
 	system := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kube-system"}}
+	owned := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "owned", Labels: map[string]string{v1alpha3.ResourceLabelProject: "owned"}}}
 
-	t.Run("orphan allowed when flag enabled", func(t *testing.T) {
-		p := customPredicate[*corev1.Namespace]{logger: logr.Discard(), allowOrphanNamespaces: true}
-		assert.True(t, p.shouldHandle(orphan))
-		assert.False(t, p.shouldHandle(system))
+	p := customPredicate[*corev1.Namespace]{logger: logr.Discard()}
+
+	t.Run("orphan namespace is handled", func(t *testing.T) {
+		assert.True(t, p.Create(event.TypedCreateEvent[*corev1.Namespace]{Object: orphan}))
 	})
 
-	t.Run("orphan ignored when flag disabled, adopt still handled", func(t *testing.T) {
-		p := customPredicate[*corev1.Namespace]{logger: logr.Discard(), allowOrphanNamespaces: false}
-		assert.False(t, p.shouldHandle(orphan))
-		assert.True(t, p.shouldHandle(adopt))
+	t.Run("system namespace is ignored", func(t *testing.T) {
+		assert.False(t, p.Create(event.TypedCreateEvent[*corev1.Namespace]{Object: system}))
 	})
 
-	t.Run("finalizer-marked namespace always handled", func(t *testing.T) {
-		p := customPredicate[*corev1.Namespace]{logger: logr.Discard(), allowOrphanNamespaces: false}
-		assert.True(t, p.shouldHandle(managed))
+	t.Run("project-owned namespace is ignored", func(t *testing.T) {
+		assert.False(t, p.Update(event.TypedUpdateEvent[*corev1.Namespace]{ObjectOld: owned, ObjectNew: owned}))
+	})
+
+	t.Run("leftover markers still enqueue a project-owned namespace", func(t *testing.T) {
+		leftover := owned.DeepCopy()
+		leftover.Finalizers = []string{v1alpha3.NamespaceFinalizerManagedProject}
+		assert.True(t, p.Update(event.TypedUpdateEvent[*corev1.Namespace]{ObjectOld: leftover, ObjectNew: leftover}))
+	})
+
+	t.Run("delete events are never handled", func(t *testing.T) {
+		assert.False(t, p.Delete(event.TypedDeleteEvent[*corev1.Namespace]{Object: orphan}))
 	})
 }

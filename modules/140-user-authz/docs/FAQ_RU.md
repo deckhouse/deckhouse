@@ -431,6 +431,7 @@ rules:
 
 - имя должно начинаться с `d8:custom:` (например, `d8:custom:namespace:developer`);
 - роль должна иметь лейбл `rbac.deckhouse.io/kind: custom-role`;
+- namespace- или проектная роль, которую будут выдавать через RoleBinding, должна также нести `rbac.deckhouse.io/delegatable: "true"`. Каждый пользовательский неймспейс — это проект, и RoleBinding в нём принимают только роли с этим лейблом. На системные и подсистемные роли лейбл ставить нельзя — вебхук такую роль отклонит;
 - роль **не может содержать собственных правил** (`rules`) — только агрегировать capabilities через `aggregationRule`. Права описываются в отдельных capabilities — так состав роли всегда прозрачен;
 - нельзя в одной роли агрегировать capabilities пользовательских областей (`namespace`, `project`) вместе с административными (`system`, подсистемы) — такая роль будет отклонена.
 
@@ -444,6 +445,7 @@ metadata:
   labels:
     rbac.deckhouse.io/kind: custom-role
     rbac.deckhouse.io/scope: namespace
+    rbac.deckhouse.io/delegatable: "true"   # Нужен, чтобы роль можно было указать в RoleBinding внутри проекта.
   annotations:
     custom.meta.deckhouse.io/title: "Разработчик"
     custom.meta.deckhouse.io/description: "Просмотр ресурсов и подключение к подам, без управления квотами и RBAC"
@@ -481,7 +483,7 @@ d8 k get clusterroles -l rbac.deckhouse.io/kind=capability \
   -o custom-columns='NAME:.metadata.name,CAPABILITY:.metadata.labels.rbac\.deckhouse\.io/capability'
 ```
 
-Созданная роль назначается так же, как и встроенная: через RoleBinding в неймспейсе или через [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) на весь проект (для проектных ролей используйте `rbac.deckhouse.io/scope: project` и агрегируйте `aggregate-to-project-as`). Назначить её через ClusterRoleBinding нельзя — как и встроенные роли этих областей.
+Созданная роль назначается так же, как и встроенная: через RoleBinding в неймспейсе или через [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) на весь проект (для проектных ролей используйте `rbac.deckhouse.io/scope: project` и агрегируйте `aggregate-to-project-as`). Для RoleBinding в неймспейсе проекта на роли обязателен лейбл `delegatable`; ProjectRoleBinding его не требует (у него свой список допустимых префиксов). Назначить роль через ClusterRoleBinding нельзя — как и встроенные роли этих областей.
 
 > Собрать такую роль можно и без YAML — мастером выдачи доступа в веб-интерфейсе Deckhouse Console: он показывает доступные capabilities, собирает из них роль и сразу создаёт нужную привязку.
 
@@ -525,7 +527,7 @@ d8 k get clusterroles -o json | jq -r '.items[] | select((.metadata.name | start
 
 Для миграции выполните следующие действия:
 
-1. Создайте новую версию кастомной роли с префиксом `d8:custom:`, лейблом `rbac.deckhouse.io/kind: custom-role` и новыми селекторами агрегации. Руководствуйтесь примерами «до и после» ниже.
+1. Создайте новую версию кастомной роли с префиксом `d8:custom:`, лейблом `rbac.deckhouse.io/kind: custom-role` и новыми селекторами агрегации. Если это namespace- или проектная роль, которую будете выдавать через RoleBinding, добавьте `rbac.deckhouse.io/delegatable: "true"`. Руководствуйтесь примерами «до и после» ниже.
 1. Пересоздайте кастомные capabilities с лейблом `rbac.deckhouse.io/kind: custom-capability` и префиксом имени `d8:custom:`.
 1. Пересоздайте объекты RoleBinding и ClusterRoleBinding, указывающие на старую роль, указав новые имена ролей в поле `roleRef`. Это поле является неизменяемым, поэтому существующие привязки необходимо удалить и создать заново.
 1. После проверки корректности новых привязок удалите старые роли и capabilities.

@@ -431,6 +431,7 @@ The rules for custom roles:
 
 - the name must start with `d8:custom:` (for example, `d8:custom:namespace:developer`);
 - the role must carry the `rbac.deckhouse.io/kind: custom-role` label;
+- a namespace or project role that will be used in a RoleBinding must also carry `rbac.deckhouse.io/delegatable: "true"`. Every user namespace is a project, and a RoleBinding there is accepted only for roles with this label. Do not put it on system or subsystem roles — the admission webhook rejects that;
 - the role **cannot contain its own rules** (`rules`) — it may only aggregate capabilities via `aggregationRule`. Permissions are described in separate capabilities, so the contents of the role stay transparent;
 - a single role cannot aggregate capabilities of the user-facing scopes (`namespace`, `project`) together with the administrative ones (`system`, subsystems) — such a role is rejected.
 
@@ -444,6 +445,7 @@ metadata:
   labels:
     rbac.deckhouse.io/kind: custom-role
     rbac.deckhouse.io/scope: namespace
+    rbac.deckhouse.io/delegatable: "true"   # Required for a RoleBinding inside a project namespace.
   annotations:
     custom.meta.deckhouse.io/title: "Developer"
     custom.meta.deckhouse.io/description: "View resources and connect to pods, without managing quotas and RBAC"
@@ -481,7 +483,7 @@ d8 k get clusterroles -l rbac.deckhouse.io/kind=capability \
   -o custom-columns='NAME:.metadata.name,CAPABILITY:.metadata.labels.rbac\.deckhouse\.io/capability'
 ```
 
-The created role is assigned exactly like a built-in one: via a RoleBinding in a namespace or via a [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) across a whole project (for project roles, use `rbac.deckhouse.io/scope: project` and aggregate `aggregate-to-project-as`). It cannot be assigned via a ClusterRoleBinding — just like the built-in roles of these scopes.
+The created role is assigned exactly like a built-in one: via a RoleBinding in a namespace or via a [ProjectRoleBinding](/modules/multitenancy-manager/cr.html#projectrolebinding) across a whole project (for project roles, use `rbac.deckhouse.io/scope: project` and aggregate `aggregate-to-project-as`). A RoleBinding in a project namespace requires the `delegatable` label on the role; a ProjectRoleBinding does not (it has its own prefix allow-list). The role cannot be assigned via a ClusterRoleBinding — just like the built-in roles of these scopes.
 
 > You can also assemble such a role without YAML — with the access grant wizard in the Deckhouse Console web interface: it shows the available capabilities, builds a role out of them, and immediately creates the required binding.
 
@@ -525,7 +527,7 @@ d8 k get clusterroles -o json | jq -r '.items[] | select((.metadata.name | start
 
 To migrate, do the following:
 
-1. Create a new version of a custom role — with the `d8:custom:` prefix, the `rbac.deckhouse.io/kind: custom-role` label, and the new aggregation selectors. See the before and after examples below.
+1. Create a new version of a custom role — with the `d8:custom:` prefix, the `rbac.deckhouse.io/kind: custom-role` label, and the new aggregation selectors. For a namespace or project role that you will bind with a RoleBinding, add `rbac.deckhouse.io/delegatable: "true"`. See the before and after examples below.
 1. Recreate your capabilities with the `rbac.deckhouse.io/kind: custom-capability` label and the `d8:custom:` name prefix.
 1. Recreate the RoleBinding and ClusterRoleBinding objects pointing at the old role with the new name in the `roleRef` field. This field is immutable, so a binding has to be deleted and created anew.
 1. After you ensure the new bindings are correct, delete the old roles and capabilities.
