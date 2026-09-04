@@ -7,6 +7,7 @@ metadata:
     release.deckhouse.io/change-cause: check release (step-by-step)
     release.deckhouse.io/isUpdating: "false"
     release.deckhouse.io/notified: "false"
+  creationTimestamp: null
   name: v1.76.11
   resourceVersion: "4"
 spec:
@@ -22,11 +23,13 @@ apiVersion: deckhouse.io/v1alpha1
 approved: false
 kind: DeckhouseRelease
 metadata:
+  creationTimestamp: null
   name: v1.76.9
   resourceVersion: "999"
 spec:
   version: v1.76.9
 status:
   approved: false
+  message: ""
   phase: Deployed
   transitionTime: null
