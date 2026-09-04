@@ -2181,21 +2181,22 @@ MY_VAR: "myvalue"
 		})
 
 		Context("public-services-federation.deckhouse.io", func() {
-			It("gates the ExternalName/ports/port-name CEL validations on label presence", func() {
+			It("gates the ExternalName/ports/port-name CEL validations on label presence via objectSelector", func() {
 				f.HelmRender()
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
 				policy := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", "public-services-federation.deckhouse.io")
 				Expect(policy.Exists()).To(BeTrue())
 				Expect(policy.Field("spec.matchConstraints.resourceRules.0.resources.0").String()).To(Equal("services"))
-				Expect(policy.Field("spec.variables.0.expression").String()).To(Equal(
-					`has(object.metadata.labels) && 'federation.istio.deckhouse.io/public-service' in object.metadata.labels`))
+				Expect(policy.Field("spec.matchConstraints.objectSelector.matchExpressions.0.key").String()).To(
+					Equal("federation.istio.deckhouse.io/public-service"))
+				Expect(policy.Field("spec.matchConstraints.objectSelector.matchExpressions.0.operator").String()).To(Equal("Exists"))
 				Expect(policy.Field("spec.validations.0.expression").String()).To(Equal(
-					`!variables.isPublicService || object.spec.type != 'ExternalName'`))
+					`object.spec.type != 'ExternalName'`))
 				Expect(policy.Field("spec.validations.1.expression").String()).To(Equal(
-					`!variables.isPublicService || has(object.spec.ports)`))
+					`has(object.spec.ports)`))
 				Expect(policy.Field("spec.validations.2.expression").String()).To(Equal(
-					`!variables.isPublicService || variables.portsWithoutName.size() == 0`))
+					`variables.portsWithoutName.size() == 0`))
 
 				binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", "public-services-federation.deckhouse.io")
 				Expect(binding.Exists()).To(BeTrue())

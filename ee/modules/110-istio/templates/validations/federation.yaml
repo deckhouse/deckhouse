@@ -41,19 +41,21 @@ spec:
         operations:  ["CREATE", "UPDATE"]
         resources:   ["services"]
         scope:       "Namespaced"
+    objectSelector:
+      matchExpressions:
+        - key: federation.istio.deckhouse.io/public-service
+          operator: Exists
   variables:
-    - name: isPublicService
-      expression: "has(object.metadata.labels) && 'federation.istio.deckhouse.io/public-service' in object.metadata.labels"
     - name: portsWithoutName
       expression: "has(object.spec.ports) ? object.spec.ports.filter(p, !has(p.name)) : []"
   validations:
-    - expression: "!variables.isPublicService || object.spec.type != 'ExternalName'"
+    - expression: "object.spec.type != 'ExternalName'"
       reason: Forbidden
       message: "A service of ExternalName type cannot be published in federation."
-    - expression: "!variables.isPublicService || has(object.spec.ports)"
+    - expression: "has(object.spec.ports)"
       reason: Forbidden
       message: "A service without the '.spec.ports' field cannot be published in federation."
-    - expression: "!variables.isPublicService || variables.portsWithoutName.size() == 0"
+    - expression: "variables.portsWithoutName.size() == 0"
       reason: Forbidden
       messageExpression: >
         "Port \"" + variables.portsWithoutName[0].protocol + " " + string(variables.portsWithoutName[0].port) +
