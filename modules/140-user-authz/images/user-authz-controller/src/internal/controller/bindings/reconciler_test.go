@@ -94,8 +94,10 @@ func newScheme(t *testing.T) *runtime.Scheme {
 }
 
 // newBuilder prepares a fake client the way the manager does: status subresources on the rules and
-// the rule index on both binding kinds.
-func newBuilder(t *testing.T, w *writes, objs ...client.Object) *fake.ClientBuilder {
+// the rule index on both binding kinds. Every write is recorded in w; a test may pass its own
+// interceptor funcs, which run after the recording (WithInterceptorFuncs replaces, so the recorder
+// is composed here rather than chained by the caller).
+func newBuilder(t *testing.T, w *writes, extra interceptor.Funcs, objs ...client.Object) *fake.ClientBuilder {
 	t.Helper()
 	return fake.NewClientBuilder().
 		WithScheme(newScheme(t)).
@@ -103,29 +105,46 @@ func newBuilder(t *testing.T, w *writes, objs ...client.Object) *fake.ClientBuil
 		WithIndex(&rbacv1.ClusterRoleBinding{}, RuleIndexField, RuleIndexValue).
 		WithIndex(&rbacv1.RoleBinding{}, RuleIndexField, RuleIndexValue).
 		WithObjects(objs...).
-		WithInterceptorFuncs(interceptor.Funcs{
-			Create: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
-				w.add("create", obj.GetName())
-				return c.Create(ctx, obj, opts...)
-			},
-			Update: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
-				w.add("update", obj.GetName())
-				return c.Update(ctx, obj, opts...)
-			},
-			Delete: func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
-				w.add("delete", obj.GetName())
-				return c.Delete(ctx, obj, opts...)
-			},
-			SubResourcePatch: func(ctx context.Context, c client.Client, sub string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
-				w.add("status", obj.GetName())
-				return c.SubResource(sub).Patch(ctx, obj, patch, opts...)
-			},
-		})
+		WithInterceptorFuncs(recording(w, extra))
+}
+
+// recording wraps extra so that every write is recorded before extra (or the fake client) handles it.
+func recording(w *writes, extra interceptor.Funcs) interceptor.Funcs {
+	funcs := extra
+	funcs.Create = func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+		w.add("create", obj.GetName())
+		if extra.Create != nil {
+			return extra.Create(ctx, c, obj, opts...)
+		}
+		return c.Create(ctx, obj, opts...)
+	}
+	funcs.Update = func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+		w.add("update", obj.GetName())
+		if extra.Update != nil {
+			return extra.Update(ctx, c, obj, opts...)
+		}
+		return c.Update(ctx, obj, opts...)
+	}
+	funcs.Delete = func(ctx context.Context, c client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+		w.add("delete", obj.GetName())
+		if extra.Delete != nil {
+			return extra.Delete(ctx, c, obj, opts...)
+		}
+		return c.Delete(ctx, obj, opts...)
+	}
+	funcs.SubResourcePatch = func(ctx context.Context, c client.Client, sub string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
+		w.add("status", obj.GetName())
+		if extra.SubResourcePatch != nil {
+			return extra.SubResourcePatch(ctx, c, sub, obj, patch, opts...)
+		}
+		return c.SubResource(sub).Patch(ctx, obj, patch, opts...)
+	}
+	return funcs
 }
 
 func newClient(t *testing.T, w *writes, objs ...client.Object) client.Client {
 	t.Helper()
-	return newBuilder(t, w, objs...).Build()
+	return newBuilder(t, w, interceptor.Funcs{}, objs...).Build()
 }
 
 func car(name, level string, opts ...func(*v1.ClusterAuthorizationRule)) *v1.ClusterAuthorizationRule {
@@ -430,15 +449,56 @@ func TestReconcile_CacheMissOnLiveRuleRequeuesInsteadOfDeleting(t *testing.T) {
 	live := newClient(t, &writes{}, rule)                                            // rule visible to the API reader
 
 	r := NewCluster(cached, live, events.NewFakeRecorder(10), logr.Discard())
-	res, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: "dev"}})
-	if err != nil {
-		t.Fatalf("Reconcile: %v", err)
-	}
-	if res.RequeueAfter == 0 {
-		t.Error("a live rule missing from the cache must be requeued")
+	_, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: "dev"}})
+	if err == nil || errors.Is(err, reconcile.TerminalError(nil)) {
+		t.Fatalf("err = %v: a live rule missing from the cache must be retried with backoff", err)
 	}
 	if w.count("delete") != 0 {
 		t.Errorf("bindings of a live rule were deleted: %v", w.snapshot())
+	}
+}
+
+// The API server defaults apiGroup on subjects; a binding that already matches the rule must not be
+// rewritten on every reconcile because of it.
+func TestReconcile_APIDefaultedSubjectsCauseNoWrites(t *testing.T) {
+	t.Parallel()
+	w := &writes{}
+	rule := car("dev", desired.AccessLevelUser)
+	converged := make([]client.Object, 0, 2)
+	for _, b := range mustBindings(t, desired.FromClusterAuthorizationRule(rule)) {
+		crb := desired.ClusterRoleBinding(b, desired.OwnerReference(desired.FromClusterAuthorizationRule(rule)))
+		for i := range crb.Subjects { // what the API server stores for a User subject
+			crb.Subjects[i].APIGroup = rbacv1.GroupName
+		}
+		converged = append(converged, crb)
+	}
+	c := newClient(t, w, append(converged, rule)...)
+
+	reconcileCluster(t, c, "dev")
+
+	if n := w.count("create") + w.count("update") + w.count("delete"); n != 0 {
+		t.Fatalf("a converged rule caused writes: %v", w.snapshot())
+	}
+}
+
+// A binding whose module labels were stripped (a mutating policy, a hand edit) still carries the
+// controller's ownerReference: it is ours and is repaired, not refused.
+func TestReconcile_BindingWithoutLabelsButOwnedByTheRuleIsRepaired(t *testing.T) {
+	t.Parallel()
+	w := &writes{}
+	rule := car("dev", desired.AccessLevelUser)
+	stripped := desired.ClusterRoleBinding(mustBindings(t, desired.FromClusterAuthorizationRule(rule))[0], desired.OwnerReference(desired.FromClusterAuthorizationRule(rule)))
+	stripped.Labels = map[string]string{"example.com/team": "blue"}
+	c := newClient(t, w, rule, stripped)
+
+	reconcileCluster(t, c, "dev")
+
+	got := crbNames(t, c)["user-authz:dev:user"]
+	if got.Labels[desired.LabelModule] != desired.ModuleName || got.Labels[desired.LabelManagedBy] != desired.ManagedByValue || got.Labels["example.com/team"] != "blue" {
+		t.Errorf("labels = %v, want the module labels restored and the foreign one kept", got.Labels)
+	}
+	if w.count("create") != 1 || w.count("update") != 1 { // :custom created, the stripped one repaired
+		t.Errorf("writes = %v", w.snapshot())
 	}
 }
 
@@ -564,24 +624,34 @@ func TestReconcile_AlreadyExistsIsAdopted(t *testing.T) {
 	t.Parallel()
 	w := &writes{}
 	live := newClient(t, &writes{}, helmBinding("user-authz:dev:user", "user-authz:user"))
-	cached := newBuilder(t, w, car("dev", desired.AccessLevelUser)).
-		WithInterceptorFuncs(interceptor.Funcs{
-			Create: func(_ context.Context, _ client.WithWatch, obj client.Object, _ ...client.CreateOption) error {
-				w.add("create", obj.GetName())
-				if obj.GetName() == "user-authz:dev:user" {
-					return apierrors.NewAlreadyExists(schema.GroupResource{Group: rbacv1.GroupName, Resource: "clusterrolebindings"}, obj.GetName())
-				}
-				return nil
-			},
-			Update: func(ctx context.Context, _ client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
-				w.add("update", obj.GetName())
-				return live.Update(ctx, obj, opts...)
-			},
-		}).Build()
+	cached := newBuilder(t, w, interceptor.Funcs{
+		Create: func(_ context.Context, _ client.WithWatch, obj client.Object, _ ...client.CreateOption) error {
+			if obj.GetName() == "user-authz:dev:user" {
+				return apierrors.NewAlreadyExists(schema.GroupResource{Group: rbacv1.GroupName, Resource: "clusterrolebindings"}, obj.GetName())
+			}
+			return nil
+		},
+		Update: func(ctx context.Context, _ client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
+			return live.Update(ctx, obj, opts...)
+		},
+	}, car("dev", desired.AccessLevelUser)).Build()
 
-	r := NewCluster(cached, live, events.NewFakeRecorder(10), logr.Discard())
+	// The API read after the conflict must go into an empty object: the real client decodes into
+	// whatever it is given, and a copy of the desired object would keep labels the live one lacks.
+	var readInto []client.Object
+	reader := interceptor.NewClient(live.(client.WithWatch), interceptor.Funcs{
+		Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			readInto = append(readInto, obj.DeepCopyObject().(client.Object))
+			return c.Get(ctx, key, obj, opts...)
+		},
+	})
+
+	r := NewCluster(cached, reader, events.NewFakeRecorder(10), logr.Discard())
 	if _, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: "dev"}}); err != nil {
 		t.Fatalf("Reconcile: %v", err)
+	}
+	if len(readInto) != 1 || len(readInto[0].GetLabels()) != 0 || len(readInto[0].GetOwnerReferences()) != 0 {
+		t.Fatalf("the conflict read must use an empty object, got %+v", readInto)
 	}
 
 	adopted := crbNames(t, live)["user-authz:dev:user"]
@@ -603,15 +673,14 @@ func TestReconcile_AlreadyExistsForeignObjectIsTerminal(t *testing.T) {
 		Subjects:   testSubjects,
 	}
 	live := newClient(t, &writes{}, foreign)
-	cached := newBuilder(t, w, car("dev", desired.AccessLevelUser)).
-		WithInterceptorFuncs(interceptor.Funcs{
-			Create: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
-				if obj.GetName() == "user-authz:dev:user" {
-					return apierrors.NewAlreadyExists(schema.GroupResource{Group: rbacv1.GroupName, Resource: "clusterrolebindings"}, obj.GetName())
-				}
-				return cl.Create(ctx, obj, opts...)
-			},
-		}).Build()
+	cached := newBuilder(t, w, interceptor.Funcs{
+		Create: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+			if obj.GetName() == "user-authz:dev:user" {
+				return apierrors.NewAlreadyExists(schema.GroupResource{Group: rbacv1.GroupName, Resource: "clusterrolebindings"}, obj.GetName())
+			}
+			return cl.Create(ctx, obj, opts...)
+		},
+	}, car("dev", desired.AccessLevelUser)).Build()
 
 	r := NewCluster(cached, live, events.NewFakeRecorder(10), logr.Discard())
 	_, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: "dev"}})
@@ -662,21 +731,18 @@ func TestReconcile_InvalidCreateIsTerminalAndReportedWithoutDeleting(t *testing.
 	t.Parallel()
 	w := &writes{}
 	legacy := helmBinding("user-authz:dev:editor:custom-cluster-role:d8:user-authz:istio:editor", "d8:user-authz:istio:editor")
-	c := newBuilder(t, w, car("dev", desired.AccessLevelEditor), legacy).
-		WithInterceptorFuncs(interceptor.Funcs{
-			Create: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
-				w.add("create", obj.GetName())
-				if obj.GetName() == "user-authz:dev:editor:custom" {
-					return apierrors.NewInvalid(rbacv1.SchemeGroupVersion.WithKind("ClusterRoleBinding").GroupKind(), obj.GetName(),
-						field.ErrorList{field.Invalid(field.NewPath("metadata", "name"), obj.GetName(), "rejected by an admission webhook")})
-				}
-				return cl.Create(ctx, obj, opts...)
-			},
-			Delete: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
-				w.add("delete", obj.GetName())
-				return cl.Delete(ctx, obj, opts...)
-			},
-		}).Build()
+	c := newBuilder(t, w, interceptor.Funcs{
+		Create: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+			if obj.GetName() == "user-authz:dev:editor:custom" {
+				return apierrors.NewInvalid(rbacv1.SchemeGroupVersion.WithKind("ClusterRoleBinding").GroupKind(), obj.GetName(),
+					field.ErrorList{field.Invalid(field.NewPath("metadata", "name"), obj.GetName(), "rejected by an admission webhook")})
+			}
+			return cl.Create(ctx, obj, opts...)
+		},
+		Delete: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+			return cl.Delete(ctx, obj, opts...)
+		},
+	}, car("dev", desired.AccessLevelEditor), legacy).Build()
 
 	_, err := clusterReconciler(c).Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: "dev"}})
 	if !errors.Is(err, reconcile.TerminalError(nil)) {
@@ -706,12 +772,11 @@ func TestReconcile_InvalidCreateIsTerminalAndReportedWithoutDeleting(t *testing.
 func TestReconcile_ConflictIsRetryable(t *testing.T) {
 	t.Parallel()
 	w := &writes{}
-	c := newBuilder(t, w, car("dev", desired.AccessLevelUser), helmBinding("user-authz:dev:user", "user-authz:user")).
-		WithInterceptorFuncs(interceptor.Funcs{
-			Update: func(_ context.Context, _ client.WithWatch, obj client.Object, _ ...client.UpdateOption) error {
-				return apierrors.NewConflict(schema.GroupResource{Group: rbacv1.GroupName, Resource: "clusterrolebindings"}, obj.GetName(), errors.New("the object has been modified"))
-			},
-		}).Build()
+	c := newBuilder(t, w, interceptor.Funcs{
+		Update: func(_ context.Context, _ client.WithWatch, obj client.Object, _ ...client.UpdateOption) error {
+			return apierrors.NewConflict(schema.GroupResource{Group: rbacv1.GroupName, Resource: "clusterrolebindings"}, obj.GetName(), errors.New("the object has been modified"))
+		},
+	}, car("dev", desired.AccessLevelUser), helmBinding("user-authz:dev:user", "user-authz:user")).Build()
 
 	_, err := clusterReconciler(c).Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: "dev"}})
 	if err == nil || errors.Is(err, reconcile.TerminalError(nil)) {
@@ -731,17 +796,16 @@ func TestReconcile_DeleteCarriesUIDPrecondition(t *testing.T) {
 	legacy := helmBinding("user-authz:dev:user:custom-cluster-role:d8:user-authz:istio:user", "d8:user-authz:istio:user")
 	legacy.UID = "uid-legacy"
 	var seen []types.UID
-	c := newBuilder(t, w, car("dev", desired.AccessLevelUser), legacy).
-		WithInterceptorFuncs(interceptor.Funcs{
-			Delete: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
-				o := &client.DeleteOptions{}
-				o.ApplyOptions(opts)
-				if o.Preconditions != nil && o.Preconditions.UID != nil {
-					seen = append(seen, *o.Preconditions.UID)
-				}
-				return cl.Delete(ctx, obj, opts...)
-			},
-		}).Build()
+	c := newBuilder(t, w, interceptor.Funcs{
+		Delete: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+			o := &client.DeleteOptions{}
+			o.ApplyOptions(opts)
+			if o.Preconditions != nil && o.Preconditions.UID != nil {
+				seen = append(seen, *o.Preconditions.UID)
+			}
+			return cl.Delete(ctx, obj, opts...)
+		},
+	}, car("dev", desired.AccessLevelUser), legacy).Build()
 
 	reconcileCluster(t, c, "dev")
 
@@ -754,18 +818,17 @@ func TestReconcile_DeleteCarriesUIDPrecondition(t *testing.T) {
 func TestReconcile_TransientErrorWinsOverTerminal(t *testing.T) {
 	t.Parallel()
 	w := &writes{}
-	c := newBuilder(t, w, car("dev", desired.AccessLevelEditor)).
-		WithInterceptorFuncs(interceptor.Funcs{
-			Create: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
-				switch obj.GetName() {
-				case "user-authz:dev:editor":
-					return apierrors.NewInvalid(rbacv1.SchemeGroupVersion.WithKind("ClusterRoleBinding").GroupKind(), obj.GetName(), nil)
-				case "user-authz:dev:editor:custom":
-					return apierrors.NewServiceUnavailable("etcd leader changed")
-				}
-				return cl.Create(ctx, obj, opts...)
-			},
-		}).Build()
+	c := newBuilder(t, w, interceptor.Funcs{
+		Create: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
+			switch obj.GetName() {
+			case "user-authz:dev:editor":
+				return apierrors.NewInvalid(rbacv1.SchemeGroupVersion.WithKind("ClusterRoleBinding").GroupKind(), obj.GetName(), nil)
+			case "user-authz:dev:editor:custom":
+				return apierrors.NewServiceUnavailable("etcd leader changed")
+			}
+			return cl.Create(ctx, obj, opts...)
+		},
+	}, car("dev", desired.AccessLevelEditor)).Build()
 
 	_, err := clusterReconciler(c).Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: "dev"}})
 	if err == nil {
@@ -783,6 +846,17 @@ func TestRuleIndexValue(t *testing.T) {
 	t.Parallel()
 	if got := RuleIndexValue(helmBinding("user-authz:dev:editor", "x")); len(got) != 1 || got[0] != "dev" {
 		t.Errorf("index of a module binding = %v", got)
+	}
+	rule := desired.FromClusterAuthorizationRule(car("dev", desired.AccessLevelUser))
+	owned := desired.ClusterRoleBinding(mustBindings(t, rule)[0], desired.OwnerReference(rule))
+	owned.Labels = nil
+	if got := RuleIndexValue(owned); len(got) != 1 || got[0] != "dev" {
+		t.Errorf("index of a binding owned by the rule but without labels = %v", got)
+	}
+	misnamed := owned.DeepCopy()
+	misnamed.Name = "user-authz:other:user"
+	if got := RuleIndexValue(misnamed); got != nil {
+		t.Errorf("a binding owned by a rule but not named after it must not be indexed, got %v", got)
 	}
 	foreign := &rbacv1.ClusterRoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "user-authz:dev:editor"}}
 	if got := RuleIndexValue(foreign); got != nil {

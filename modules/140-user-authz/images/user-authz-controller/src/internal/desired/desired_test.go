@@ -266,3 +266,29 @@ func TestObjectsCarryOwnerAndRoleRef(t *testing.T) {
 		t.Errorf("clusterrolebinding = %+v", crb)
 	}
 }
+
+// The API server defaults apiGroup on binding subjects; the desired state must carry the same
+// values, otherwise a live binding never equals the desired one.
+func TestBindingsCarryAPIDefaultedSubjects(t *testing.T) {
+	t.Parallel()
+
+	rule := Rule{Name: "x", AccessLevel: AccessLevelUser, Subjects: []rbacv1.Subject{
+		{Kind: rbacv1.UserKind, Name: "jane"},
+		{Kind: rbacv1.GroupKind, Name: "devs"},
+		{Kind: rbacv1.ServiceAccountKind, Name: "bot", Namespace: "team", APIGroup: "rbac.authorization.k8s.io"},
+	}}
+	got, err := Bindings(rule)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []rbacv1.Subject{
+		{Kind: rbacv1.UserKind, APIGroup: rbacv1.GroupName, Name: "jane"},
+		{Kind: rbacv1.GroupKind, APIGroup: rbacv1.GroupName, Name: "devs"},
+		{Kind: rbacv1.ServiceAccountKind, Name: "bot", Namespace: "team"},
+	}
+	for i, s := range got[0].Subjects {
+		if s != want[i] {
+			t.Errorf("subject %d = %+v, want %+v", i, s, want[i])
+		}
+	}
+}

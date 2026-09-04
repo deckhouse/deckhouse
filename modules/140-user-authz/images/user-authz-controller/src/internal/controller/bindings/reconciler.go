@@ -32,7 +32,8 @@ import (
 	"fmt"
 	"maps"
 	"reflect"
-	"time"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -72,10 +73,6 @@ const (
 
 	// RuleIndexField is the cache index of (Cluster)RoleBindings by the rule they belong to.
 	RuleIndexField = "user-authz.deckhouse.io/rule"
-
-	// cacheLagRequeue is how soon a reconcile is retried when the rule exists on the API server
-	// but not in the informer cache yet.
-	cacheLagRequeue = time.Second
 
 	// maxStatusMessage bounds the Ready condition message: a joined error of many bindings could
 	// otherwise grow to the status size limit.
@@ -136,13 +133,39 @@ func IsModuleBinding(obj client.Object) bool {
 	return ok
 }
 
-// RuleIndexValue is the indexer of RuleIndexField: the rule name of a module binding, nothing for
+// RuleOf returns the rule a binding belongs to. A binding is ours when it carries the module labels
+// and a rule binding name (the chart-era objects and the controller's own), or when it carries a
+// controller ownerReference to a rule and is named after it: the ownerReference was written by this
+// controller and outlives a label somebody stripped, so such a binding is repaired, not refused.
+func RuleOf(obj client.Object) (string, bool) {
+	if IsModuleBinding(obj) {
+		return desired.RuleNameOf(obj.GetName())
+	}
+	for _, ref := range obj.GetOwnerReferences() {
+		if ref.Controller == nil || !*ref.Controller || !isRuleOwner(ref) {
+			continue
+		}
+		if strings.HasPrefix(obj.GetName(), desired.RulePrefix(ref.Name)) {
+			return ref.Name, true
+		}
+	}
+	return "", false
+}
+
+func isRuleOwner(ref metav1.OwnerReference) bool {
+	if !strings.HasPrefix(ref.APIVersion, "deckhouse.io/") {
+		return false
+	}
+	return ref.Kind == "ClusterAuthorizationRule" || ref.Kind == "AuthorizationRule"
+}
+
+// RuleIndexValue is the indexer of RuleIndexField: the rule name of a binding of ours, nothing for
 // any other object.
 func RuleIndexValue(obj client.Object) []string {
-	if !IsModuleBinding(obj) {
+	name, ok := RuleOf(obj)
+	if !ok {
 		return nil
 	}
-	name, _ := desired.RuleNameOf(obj.GetName())
 	return []string{name}
 }
 
@@ -179,17 +202,21 @@ func Register(ctx context.Context, mgr manager.Manager, opts Options) error {
 func (r *Reconciler) SetupWithManager(mgr manager.Manager, opts Options) error {
 	// An update is relevant when either side is ours: a binding that just lost or gained the
 	// module labels has to be reconciled too.
+	isOurs := func(obj client.Object) bool {
+		_, ok := RuleOf(obj)
+		return ok
+	}
 	ours := predicate.Funcs{
-		CreateFunc:  func(e event.CreateEvent) bool { return IsModuleBinding(e.Object) },
-		DeleteFunc:  func(e event.DeleteEvent) bool { return IsModuleBinding(e.Object) },
-		GenericFunc: func(e event.GenericEvent) bool { return IsModuleBinding(e.Object) },
+		CreateFunc:  func(e event.CreateEvent) bool { return isOurs(e.Object) },
+		DeleteFunc:  func(e event.DeleteEvent) bool { return isOurs(e.Object) },
+		GenericFunc: func(e event.GenericEvent) bool { return isOurs(e.Object) },
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			return IsModuleBinding(e.ObjectOld) || IsModuleBinding(e.ObjectNew)
+			return isOurs(e.ObjectOld) || isOurs(e.ObjectNew)
 		},
 	}
 
 	mapBinding := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
-		name, ok := desired.RuleNameOf(obj.GetName())
+		name, ok := RuleOf(obj)
 		if !ok {
 			return nil
 		}
@@ -230,8 +257,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		if _, _, live, err := r.getRule(ctx, r.reader, req.NamespacedName); err != nil {
 			return reconcile.Result{}, err
 		} else if live {
-			r.log.V(1).Info("rule not in cache yet, retrying", "rule", req.NamespacedName)
-			return reconcile.Result{RequeueAfter: cacheLagRequeue}, nil
+			// An error, not a fixed requeue: the workqueue backs off exponentially, so a rule the
+			// informer keeps missing (a dropped watch event) does not turn into a 1 Hz uncached read.
+			return reconcile.Result{}, fmt.Errorf("rule %s exists but is not in the cache yet", req.NamespacedName)
 		}
 
 		existing, err := r.existingBindings(ctx, req.Name, req.Namespace)
@@ -387,6 +415,23 @@ func (r *Reconciler) materialise(b desired.Binding, owner metav1.OwnerReference)
 	return desired.ClusterRoleBinding(b, owner)
 }
 
+// ruleOwner is the rule name of a desired binding (its owner reference is the rule).
+func ruleOwner(want client.Object) string {
+	if refs := want.GetOwnerReferences(); len(refs) == 1 {
+		return refs[0].Name
+	}
+	name, _ := desired.RuleNameOf(want.GetName())
+	return name
+}
+
+// empty returns a zero binding of the reconciler's kind to decode an API response into.
+func (r *Reconciler) empty() client.Object {
+	if r.namespaced {
+		return &rbacv1.RoleBinding{}
+	}
+	return &rbacv1.ClusterRoleBinding{}
+}
+
 // create writes a new binding. AlreadyExists means the cache lags behind an object that is really
 // there: it is read from the API server and adopted like any other existing binding.
 func (r *Reconciler) create(ctx context.Context, want client.Object) error {
@@ -399,15 +444,14 @@ func (r *Reconciler) create(ctx context.Context, want client.Object) error {
 		return classify(fmt.Errorf("create %s: %w", want.GetName(), err))
 	}
 
-	live, ok := want.DeepCopyObject().(client.Object)
-	if !ok {
-		return fmt.Errorf("create %s: unexpected object type %T", want.GetName(), want)
-	}
+	// The read goes into an empty object: decoding into a copy of want would keep every field the
+	// live object lacks (labels, ownerReferences), and a foreign object would pass as ours.
+	live := r.empty()
 	if err := r.reader.Get(ctx, client.ObjectKeyFromObject(want), live); err != nil {
 		return fmt.Errorf("read existing %s after create conflict: %w", want.GetName(), err)
 	}
-	if !IsModuleBinding(live) {
-		return reconcile.TerminalError(fmt.Errorf("%s exists but does not carry the module labels: refusing to take over a foreign object", want.GetName()))
+	if owner, ok := RuleOf(live); !ok || owner != ruleOwner(want) {
+		return reconcile.TerminalError(fmt.Errorf("%s exists but is neither labelled as a module binding nor owned by the rule: refusing to take over a foreign object", want.GetName()))
 	}
 	return r.update(ctx, live, want)
 }
@@ -639,9 +683,17 @@ func (r *Reconciler) setStatus(ctx context.Context, obj client.Object, rule desi
 	return nil
 }
 
+// truncate cuts s to at most n bytes on a rune boundary, marking the cut with an ellipsis.
 func truncate(s string, n int) string {
 	if len(s) <= n {
 		return s
 	}
-	return s[:n-3] + "..."
+	if n < 4 {
+		return s[:n]
+	}
+	cut := n - 3
+	for cut > 0 && !utf8.RuneStart(s[cut]) {
+		cut--
+	}
+	return s[:cut] + "..."
 }

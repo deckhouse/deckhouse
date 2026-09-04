@@ -33,9 +33,10 @@ type AuthorizationRuleSpec struct {
 	Subjects       []rbacv1.Subject `json:"subjects"`
 }
 
-// +kubebuilder:object:root=true
-// +kubebuilder:subresource:status
-
+// The DeepCopy methods of this package are written by hand (no controller-gen in this module):
+// every field of the spec and status is a string, a bool or a slice of such structs, so a copy of
+// the slice is a deep copy. A field with a pointer, map or nested slice needs a real deep copy.
+//
 // AuthorizationRule grants an access level to users and groups within its namespace.
 type AuthorizationRule struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -44,8 +45,6 @@ type AuthorizationRule struct {
 	Spec   AuthorizationRuleSpec `json:"spec,omitempty"`
 	Status v1.RuleStatus         `json:"status,omitempty"`
 }
-
-// +kubebuilder:object:root=true
 
 // AuthorizationRuleList contains a list of AuthorizationRule.
 type AuthorizationRuleList struct {

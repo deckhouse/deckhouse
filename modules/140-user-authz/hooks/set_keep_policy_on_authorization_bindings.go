@@ -25,6 +25,7 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -44,8 +45,10 @@ it on every Helm-managed binding of the module right before the release runs, th
 refuses to let the release proceed if any binding is left unprotected (the same pattern
 node-manager used when it moved its machine objects into node-controller).
 
-Once the controller adopts a binding it drops the Helm labels and the annotation, so the hook
-becomes a no-op: the selector below only matches bindings still labeled as managed by Helm.
+Once the controller adopts a binding it labels it as managed by the controller and drops the
+annotation, so the hook becomes a no-op: the selector below skips the adopted bindings. The selector
+does not rely on `app.kubernetes.io/managed-by: Helm`, which only one of the release engines puts on
+live objects; stamping a chart-era binding the engine does not track is harmless, missing one is not.
 
 Engine notes: nelm reads the policy from the live object and also refuses to delete an object whose
 ownership metadata no longer matches the release, so an adoption racing the release is safe too.
@@ -61,9 +64,9 @@ const (
 	helmResourcePolicyAnnotation = "helm.sh/resource-policy"
 	helmResourcePolicyKeep       = "keep"
 
-	// helmManagedBindingsSelector matches the bindings the chart rendered and the controller has not
-	// adopted yet.
-	helmManagedBindingsSelector = "heritage=deckhouse,module=user-authz,app.kubernetes.io/managed-by=Helm"
+	// unadoptedBindingsSelector matches the bindings the chart rendered and the controller has not
+	// adopted yet, whichever release engine rendered them.
+	unadoptedBindingsSelector = "heritage=deckhouse,module=user-authz,!user-authz.deckhouse.io/managed-by"
 
 	keepPolicyWorkers = 16
 )
@@ -101,9 +104,9 @@ func setKeepPolicyOnAuthorizationBindings(ctx context.Context, input *go_hook.Ho
 // stampKeepPolicy adds helm.sh/resource-policy: keep to every Helm-managed rule binding that does not
 // have it yet and returns how many objects were patched.
 func stampKeepPolicy(ctx context.Context, dynClient dynamic.Interface, workers int) (int, error) {
-	patch, err := json.Marshal(map[string]interface{}{
-		"metadata": map[string]interface{}{
-			"annotations": map[string]interface{}{
+	patch, err := json.Marshal(map[string]any{
+		"metadata": map[string]any{
+			"annotations": map[string]any{
 				helmResourcePolicyAnnotation: helmResourcePolicyKeep,
 			},
 		},
@@ -112,10 +115,11 @@ func stampKeepPolicy(ctx context.Context, dynClient dynamic.Interface, workers i
 		return 0, fmt.Errorf("marshal patch: %w", err)
 	}
 
-	return forEachRuleBindingParallel(ctx, dynClient, helmManagedBindingsSelector, isRuleBindingWithoutKeep, workers,
+	return forEachRuleBindingParallel(ctx, dynClient, unadoptedBindingsSelector, isRuleBindingWithoutKeep, workers,
 		func(ctx context.Context, ref bindingRef) error {
 			_, err := dynClient.Resource(ref.gvr).Namespace(ref.namespace).Patch(ctx, ref.name, types.MergePatchType, patch, metav1.PatchOptions{})
-			if err != nil {
+			if err != nil && !apierrors.IsNotFound(err) {
+				// a binding deleted since the list (its rule is gone) needs no protection
 				return fmt.Errorf("patch %s %s/%s: %w", ref.gvr.Resource, ref.namespace, ref.name, err)
 			}
 			return nil
@@ -125,7 +129,7 @@ func stampKeepPolicy(ctx context.Context, dynClient dynamic.Interface, workers i
 // verifyKeepPolicy re-lists the Helm-managed rule bindings and fails if any still lacks the keep
 // annotation: letting the release run would prune it.
 func verifyKeepPolicy(ctx context.Context, dynClient dynamic.Interface) error {
-	return forEachRuleBinding(ctx, dynClient, helmManagedBindingsSelector, isRuleBindingWithoutKeep, func(ref bindingRef) error {
+	return forEachRuleBinding(ctx, dynClient, unadoptedBindingsSelector, isRuleBindingWithoutKeep, func(ref bindingRef) error {
 		return fmt.Errorf("keep policy is not set on %s %s/%s: refusing to proceed to avoid prune", ref.gvr.Resource, ref.namespace, ref.name)
 	})
 }

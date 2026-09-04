@@ -1,6 +1,7 @@
+{{- /* The informer cache holds every binding of the module (tens of thousands on large clusters). */}}
 {{- define "user_authz_controller_resources" }}
-cpu: 20m
-memory: 50Mi
+cpu: 50m
+memory: 128Mi
 {{- end }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
