@@ -38,7 +38,7 @@ const (
 // "machine-class.yaml" or "machine-template.yaml") from the cloud-provider template
 // Secret d8-cloud-provider-<type>-<engine>, served watch-fresh from the kube-system
 // Secret informer.
-func (r *MachineDeploymentReconciler) readProviderTemplate(ctx context.Context, cloudType, engine, key string) ([]byte, error) {
+func (r *BaseWithReader) readProviderTemplate(ctx context.Context, cloudType, engine, key string) ([]byte, error) {
 	data, found, err := r.readProviderTemplateIfPresent(ctx, cloudType, engine, key)
 	if err != nil {
 		return nil, err
@@ -53,7 +53,7 @@ func (r *MachineDeploymentReconciler) readProviderTemplate(ctx context.Context, 
 // readProviderTemplateIfPresent is readProviderTemplate for a file whose absence is a legitimate
 // answer: the v2 contract file is how a provider announces it has migrated, so "not there" selects
 // the legacy engine rather than failing the reconcile.
-func (r *MachineDeploymentReconciler) readProviderTemplateIfPresent(ctx context.Context, cloudType, engine, key string) ([]byte, bool, error) {
+func (r *BaseWithReader) readProviderTemplateIfPresent(ctx context.Context, cloudType, engine, key string) ([]byte, bool, error) {
 	if cloudType == "" {
 		return nil, false, fmt.Errorf("cloud type not set")
 	}
