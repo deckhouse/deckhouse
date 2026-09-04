@@ -107,7 +107,7 @@ Provider selection is in `meta_config_validator_provider.go` (`selectValidator`)
 - `""` → no validation;
 - `yandex`, `vcd` → their in-tree validators (`NewMetaConfigValidator`);
 - otherwise → if `<download-root>/<provider>/validator` exists, the **external binary validator**
-  (`external.NewBinaryValidator`); if the provider's schema is in candi, a default prefix check;
+  (`external.Validate`); if the provider's schema is in candi, a default prefix check;
   otherwise an error.
 
 The external validator runs the bundle's `validator` binary as a subprocess and calls it over
@@ -115,11 +115,11 @@ gRPC. Contract in full:
 **[`go_lib/dhctl-provider-protocol/README.md`](../../../go_lib/dhctl-provider-protocol/README.md)**
 (types in `go_lib/dhctl-provider-protocol/api/validate/v1`). Summary:
 
-- **Invocation:** `<download-root>/<provider>/validator serve --network=tcp --address=127.0.0.1:<port>`.
-  dhctl reserves a free loopback port per call, spawns the binary, waits for the address to
-  accept a connection, calls it once and stops it with `SIGTERM`.
-- **Transport:** gRPC, no TLS; stdout/stderr carry diagnostics only. dhctl logs both line by line
-  as they arrive, at DEBUG, so they land in the debug log file rather than the terminal.
+- **Invocation:** `<download-root>/<provider>/validator serve --network=tcp --address=127.0.0.1:0`.
+  The kernel picks the port, the validator announces the endpoint it bound, dhctl reads that
+  line out of the process output, calls it once and stops it with `SIGTERM`.
+- **Transport:** gRPC, no TLS. dhctl logs both streams line by line as they arrive, at DEBUG,
+  so they land in the debug log file rather than the terminal.
 - **Input** (`validatev1.Input`, JSON inside `input_json`): `providerName`, `operation`
   (`bootstrap`/`converge`/`destroy`), `clusterPrefix`, `layout`, `providerClusterConfiguration`,
   and `vars` (`CloudProviderVars`: module `settings`, `nodeGroups`, `instanceClasses`, credential

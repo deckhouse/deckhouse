@@ -30,30 +30,23 @@ and requires the execute bit.
 
 ## Invocation
 
-dhctl invokes the binary with the address it has chosen:
+dhctl invokes the binary with the endpoint it asks for:
 
 ```
 validator serve --address=<address> [--network=<network>]
 ```
 
-`--address` is `host:port`; dhctl binds a loopback address per run, so there is no
-default. `--network` defaults to `tcp`, which the `server` package also accepts, and
-then `--address` is a socket path instead.
+`--address` is `host:port`, or a socket path when `--network=unix`. dhctl asks for
+`127.0.0.1:0`, so the kernel picks the port and the validator is the one that knows it.
 
-The validator listens on that address and serves until it is stopped. Notes that
-matter in practice:
-
-- **Readiness.** The validator does not announce readiness and serves no health
-  service. The caller waits for the address to accept a connection, or calls with
-  `grpc.WaitForReady(true)` and a context deadline — `WaitForReady` waits
-  indefinitely on its own. Either way the caller must also watch the process: one
-  that exits early (an old binary that does not know `serve`) has to fail the
-  operation rather than wait out the deadline.
+- **Announcement.** Once bound, the validator must write the endpoint it got, in the
+  form `server.ListeningLine` produces, to stdout or stderr. That line is how the
+  caller learns where to dial; a validator built on this module's `server` package
+  emits it from `Start`. The caller reads it out of the process output, so it must not
+  be suppressed by a log level.
 - **Shutdown.** dhctl sends `SIGTERM` and the validator stops gracefully. A binary
   built with this module's `server` package installs no signal handler of its own; it
   waits for the signal itself and calls `Stop`.
-- **stdout/stderr** belong to the validator. They carry diagnostics only — no part of
-  the protocol travels through them.
 
 ## Transport
 
@@ -64,9 +57,8 @@ Message limit: **8 MiB** in each direction, the default on both sides. gRPC's ow
 4 MiB is too small — the payload carries every NodeGroup, InstanceClass and credential
 Secret of a cluster.
 
-`GRPCOptions` in a `Config` replace that default set rather than adding to it, so a
-caller that passes options of its own starts from `NewConfig()` and appends to its
-options; otherwise the limits go back to gRPC's.
+`GRPCOptions` in a `Config` are appended to that default set, so options a caller
+passes cannot drop the limits.
 
 ## Service: validate
 
@@ -156,7 +148,7 @@ A failure of the validator itself is never a violation — it is a gRPC status:
 | `OK` | The validator ran. The response says whether the configuration is valid |
 | `InvalidArgument` | The request did not decode |
 | `Unimplemented` | The server registered no service for this action |
-| `Internal` | The validator returned an error or panicked. A panic carries its stack in the message |
+| `Internal` | The validator returned an error or panicked |
 | `Unavailable` | The server is gone: stopped, or it never came up |
 
 A plain error from a validator becomes `Internal` — the caller cannot tell a broken
@@ -231,9 +223,9 @@ func main() {
 
 The response and the `error` mean different things, and the split is the whole point
 of the contract: the response carries what is wrong with the configuration — the check
-working correctly — while an `error` means the check could not be made. Panics are
-recovered and reported as `Internal` with the stack, so a bug surfaces instead of
-looking like a process that died mid-call.
+working correctly — while an `error` means the check could not be made. Panics are recovered
+and reported as `Internal`, so a bug surfaces instead of looking like a process that
+died mid-call; the stack stays in the validator's log.
 
 ## Calling a validator in Go
 

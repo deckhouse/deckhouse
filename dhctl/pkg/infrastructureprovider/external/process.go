@@ -142,18 +142,24 @@ func startListeningValidator(ctx context.Context, binaryPath string) (*validator
 		}
 	}
 
+	// Whichever way the wait ends, a process that is gone is reported as gone: an
+	// endpoint from a validator that has already died is worth nothing.
 	waitEndpoint := func(ctx context.Context) error {
 		deadline, cancel := context.WithTimeout(ctx, announceTimeout)
 		defer cancel()
 
 		select {
 		case announced := <-announcedCh:
+			if cause := context.Cause(ctx); cause != nil {
+				return cause
+			}
+
 			ep = announced
 			return nil
 
 		case <-deadline.Done():
 			if cause := context.Cause(ctx); cause != nil {
-				return fmt.Errorf("%w, never announced an endpoint", cause)
+				return cause
 			}
 			return fmt.Errorf("announced no endpoint within %s", announceTimeout)
 		}
@@ -204,7 +210,13 @@ func validatorCmd(ctx context.Context, binaryPath string, ep endpoint, stdout, s
 	)
 
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM) }
+	cmd.Cancel = func() error {
+		err := syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM)
+		if errors.Is(err, syscall.ESRCH) {
+			return os.ErrProcessDone
+		}
+		return err
+	}
 	cmd.WaitDelay = shutdownTimeout
 	cmd.Stdout = stdout
 	cmd.Stderr = stderr

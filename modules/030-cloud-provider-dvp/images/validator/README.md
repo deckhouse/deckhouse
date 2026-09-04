@@ -14,11 +14,10 @@ validator serve --address=<address> [--network=<network>]
 The command tree is cobra: `validator` alone prints help, `validator serve --help`
 lists the flags.
 
-`--address` is `host:port`: dhctl binds a loopback address per run and passes it in,
-so there is no default. `--network` defaults to `tcp`, which the protocol's `server`
-package also accepts, and then `--address` is a socket path instead. The binary serves
-until `SIGTERM`, then stops gracefully. Diagnostics go to stderr; no part of the protocol travels through
-stdout.
+`--address` is `host:port`, or a socket path when `--network=unix`. dhctl asks for
+`127.0.0.1:0`, so the kernel picks the port and the binary logs the endpoint it bound —
+that line is how dhctl finds it. The binary serves until `SIGTERM`, then stops
+gracefully.
 
 ### validate
 

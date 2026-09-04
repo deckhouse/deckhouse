@@ -15,6 +15,8 @@
 package server_test
 
 import (
+	"bytes"
+	"log/slog"
 	"net"
 	"os"
 	"path/filepath"
@@ -26,6 +28,34 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/server"
 )
+
+// The caller finds the endpoint by reading this line out of the process output, so a
+// validator that logs warnings and above must announce it all the same.
+func TestStartAnnouncesTheEndpointBelowTheLogLevel(t *testing.T) {
+	var logged bytes.Buffer
+
+	quiet := slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelError}))
+
+	running, err := server.Start(server.Config{Logger: quiet})
+	if err != nil {
+		t.Fatalf("Start() = %v", err)
+	}
+
+	t.Cleanup(func() {
+		if err := running.Stop(); err != nil {
+			t.Errorf("Stop() = %v, want nil", err)
+		}
+	})
+
+	network, address, ok := server.ParseListeningLine(logged.String())
+	if !ok {
+		t.Fatalf("logged %q, want an announcement", logged.String())
+	}
+
+	if want := running.Addr().String(); address != want || network != running.Addr().Network() {
+		t.Errorf("announced %s://%s, want %s://%s", network, address, running.Addr().Network(), want)
+	}
+}
 
 func TestStart(t *testing.T) {
 	tests := []struct {

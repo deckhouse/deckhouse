@@ -37,9 +37,7 @@ func main() {
 
 func newRootCmd() *cobra.Command {
 	logLevel := slog.Level(
-		dkplog.LogLevelFromStr(
-			os.Getenv("LOG_LEVEL"),
-		),
+		dkplog.LevelInfo,
 	)
 
 	loghandler := dkplog.NewLogger(
