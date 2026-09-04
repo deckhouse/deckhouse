@@ -234,6 +234,8 @@ read:
     - configmaps
     - connection.gatekeeper.sh/connections
     - constraints.gatekeeper.sh/*
+    - deckhouse.io/applicationpackages
+    - deckhouse.io/applicationpackageversions
     - deckhouse.io/applications
     - deckhouse.io/awsinstanceclasses
     - deckhouse.io/azureinstanceclasses
@@ -422,9 +424,6 @@ delete,deletecollection:
     - apps/replicasets
     - cert-manager.io/certificaterequests
     - extensions/replicasets
-read:
-    - deckhouse.io/applicationpackages
-    - deckhouse.io/applicationpackageversions
 read-write:
     - deckhouse.io/authorizationrules
 write:
@@ -447,8 +446,6 @@ delete,deletecollection:
 patch,update:
     - nodes
 read:
-    - deckhouse.io/applicationpackages
-    - deckhouse.io/applicationpackageversions
     - deckhouse.io/containerdintegritypolicies
     - deckhouse.io/ingressistiocontrollers
     - deckhouse.io/istiofederations
