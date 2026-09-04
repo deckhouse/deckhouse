@@ -82,6 +82,14 @@ func TestValidateService(t *testing.T) {
 			wantCalled:  true,
 		},
 		{
+			name:        "reports an empty answer as internal",
+			validator:   returnsNothing,
+			input:       bootstrapInput(),
+			wantCode:    codes.Internal,
+			wantMessage: "validator returned no response",
+			wantCalled:  true,
+		},
+		{
 			name:     "reports an unregistered action as unimplemented",
 			input:    bootstrapInput(),
 			wantCode: codes.Unimplemented,
@@ -227,6 +235,10 @@ func violations(context.Context, validatev1.Input) (*validatev1.ValidateResponse
 			Message: "replicas is 0",
 		}},
 	}, nil
+}
+
+func returnsNothing(context.Context, validatev1.Input) (*validatev1.ValidateResponse, error) {
+	return nil, nil
 }
 
 func panics(context.Context, validatev1.Input) (*validatev1.ValidateResponse, error) {

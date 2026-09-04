@@ -16,6 +16,7 @@ package server
 
 import (
 	"context"
+	"errors"
 
 	"google.golang.org/grpc"
 
@@ -53,8 +54,15 @@ func (s *validateService) Validate(ctx context.Context, req *validatev1.Validate
 	}
 
 	resp, err := s.validator.Validate(ctx, input)
+
 	if err != nil && !errs.IsStatusErr(err) {
 		err = errs.StatusInternal(err)
+	}
+
+	if err == nil && resp == nil {
+		err = errs.StatusInternal(
+			errors.New("validator returned no response"),
+		)
 	}
 
 	return resp, err
