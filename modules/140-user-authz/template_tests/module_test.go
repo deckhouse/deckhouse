@@ -119,11 +119,18 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 	moduleDir := filepath.Join(filepath.Dir(thisFile), "..")
 	repoRoot := filepath.Join(moduleDir, "..", "..")
 
+	// relink replaces whatever is at link (a symlink left by an interrupted run) with a symlink to
+	// target, so the suite does not fail on its own leftovers.
+	relink := func(target, link string) {
+		if err := os.Remove(link); err != nil && !os.IsNotExist(err) {
+			Expect(err).ShouldNot(HaveOccurred())
+		}
+		Expect(os.Symlink(target, link)).ShouldNot(HaveOccurred())
+	}
+
 	BeforeSuite(func() {
-		err := os.Symlink(filepath.Join(repoRoot, "ee/be/modules/140-user-authz/templates/webhook"), filepath.Join(moduleDir, "templates/webhook"))
-		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink(filepath.Join(repoRoot, "ee/be/modules/140-user-authz/templates/permission-browser-apiserver"), filepath.Join(moduleDir, "templates/permission-browser-apiserver"))
-		Expect(err).ShouldNot(HaveOccurred())
+		relink(filepath.Join(repoRoot, "ee/be/modules/140-user-authz/templates/webhook"), filepath.Join(moduleDir, "templates/webhook"))
+		relink(filepath.Join(repoRoot, "ee/be/modules/140-user-authz/templates/permission-browser-apiserver"), filepath.Join(moduleDir, "templates/permission-browser-apiserver"))
 	})
 
 	AfterSuite(func() {
