@@ -44,18 +44,23 @@ To enable Dex authentication for your application, follow these steps:
      - 192.168.0.0/24
    ```
 
-{% raw %}
-
 1. Connect your application to Dex.
 
-   For this, add the following annotations to the application's Ingress resource:
+   To do this, add annotations to the resource through which the app is published. The set of annotations depends on how the application is published. Choose the relevant option:
 
-   - `nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in`
-   - `nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email`
-   - `nginx.ingress.kubernetes.io/auth-url: https://<SERVICE_NAME>.<NS>.svc.{{ C_DOMAIN }}/dex-authenticator/auth`, where:
-      - `SERVICE_NAME`: Name of the authenticator's Service. Usually, it is `<NAME>-dex-authenticator` (`<NAME>` is the `metadata.name` of the [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator)).
-      - `NS`: Value of the `metadata.namespace` parameter of the [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator).
-      - `C_DOMAIN`: Cluster domain (the [clusterDomain](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter of the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) resource).
+{% tabs connect-app %}
+{% tab "Through an Ingress resource" %}
+
+{% raw %}
+
+Add the following annotations to the application's Ingress resource:
+
+- `nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in`
+- `nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email`
+- `nginx.ingress.kubernetes.io/auth-url: https://<SERVICE_NAME>.<NS>.svc.{{ C_DOMAIN }}/dex-authenticator/auth`, where:
+  - `SERVICE_NAME`: Name of the authenticator's Service. Usually, it is `<NAME>-dex-authenticator` (`<NAME>` is the `metadata.name` of the [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator)).
+  - `NS`: Value of the `metadata.namespace` parameter of the [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator).
+  - `C_DOMAIN`: Cluster domain (the [clusterDomain](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter of the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) resource).
 
    > **Note:** If the DexAuthenticator `<NAME>` is too long, the Service name may be truncated. To find the correct service name, use the following command (specify the namespace name and DexAuthenticator name):
    >
@@ -75,13 +80,39 @@ To enable Dex authentication for your application, follow these steps:
 
 {% endraw %}
 
-{% alert level="warning" %}
-When setting `sendAuthorizationHeader: true`, list all necessary headers in the `nginx.ingress.kubernetes.io/auth-response-headers` annotation of the Ingress, since the `Authorization` header is not transmitted by default:
+{% endtab %}
+{% tab "Through ALBInstance or ClusterALBInstance" %}
+
+If the application is published through an ALBInstance or ClusterALBInstance resource (for details, see the [`alb`](/modules/alb/) module documentation), add the following annotations to the application's HTTPRoute resource:
+
+- `alb.network.deckhouse.io/auth-signin: https://<application-domain>/dex-authenticator/sign_in` — unlike nginx, the `alb` controller does not support the `$host` variable, so the application's domain must be specified explicitly.
+- `alb.network.deckhouse.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email`.
+- `alb.network.deckhouse.io/auth-url: https://<SERVICE_NAME>.<NS>.svc.<C_DOMAIN>/dex-authenticator/auth`, where `SERVICE_NAME`, `NS`, and `C_DOMAIN` are determined the same way as for an Ingress resource.
+
+Example of annotations for an application's HTTPRoute resource for connecting to Dex:
 
 ```yaml
-nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email,Authorization
+annotations:
+  alb.network.deckhouse.io/auth-signin: https://app-name.kube.my-domain.com/dex-authenticator/sign_in
+  alb.network.deckhouse.io/auth-url: https://app-name-dex-authenticator.app-ns.svc.cluster.local/dex-authenticator/auth
+  alb.network.deckhouse.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
 ```
 
+Also, in the DexAuthenticator resource, specify the same ListenerSet used to publish the application's domain:
+
+```yaml
+spec:
+  gatewayAPI:
+    applicationHTTPRouteListenerSetName: my-listenerset
+```
+
+{% endtab %}
+{% endtabs %}
+
+{% alert level="warning" %}
+When setting `sendAuthorizationHeader: true`, list all necessary headers in the Ingress (or in the HTTPRoute, if the [`alb`](/modules/alb/) module is used) in the corresponding annotation, since the `Authorization` header is not transmitted by default:
+
+For details on what is passed in the `Authorization` header and how to specify it in the annotation, see [How to pass the user's login and groups to an application](#how-to-pass-the-users-login-and-groups-to-an-application).
 {% endalert %}
 
 {% alert level="warning" %}
@@ -89,6 +120,121 @@ The application Ingress must have TLS configured. DexAuthenticator does not supp
 {% endalert %}
 
 ### Setting up CIDR-based restrictions
+
+DexAuthenticator does not have a built-in system for managing authentication based on user IP address. Instead, you can use Ingress resource annotations:
+
+* To restrict access by IP and keep Dex authentication, add the annotation with a comma-separated list of allowed CIDRs:
+
+  ```yaml
+  nginx.ingress.kubernetes.io/whitelist-source-range: 192.168.0.0/32,1.1.1.1
+  ```
+
+* To allow access without Dex authentication for users from specified networks while requiring authentication for others, add the annotation:
+
+  ```yaml
+  nginx.ingress.kubernetes.io/satisfy: "any"
+  ```
+
+## How to pass the user's login and groups to an application?
+
+By default DexAuthenticator passes only two headers to the application: `X-Auth-Request-User` (based on the opaque `sub` claim) and `X-Auth-Request-Email`. The user's groups are not passed as a header. It grows unboundedly with the number of groups, so it is disabled in DKP, and it cannot be enabled.
+
+To give the application full information about the user, including groups, enable [`sendAuthorizationHeader`](cr.html#dexauthenticator-v1-spec-sendauthorizationheader):
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexAuthenticator
+metadata:
+  name: app-name
+  namespace: app-ns
+spec:
+  applicationDomain: "app-name.kube.my-domain.com"
+  applicationIngressClassName: "nginx"
+  applicationIngressCertificateSecretName: "ingress-tls"
+  sendAuthorizationHeader: true
+```
+
+In this case, the application receives the `Authorization: Bearer <id_token>` header, where `<id_token>` is a JWT signed by Dex (for details on the token contents and how to process it in your application, see [JWT token contents and processing considerations](#jwt-token-contents-and-processing-considerations)).
+
+Regardless of how the application is published, this header is not passed to the application automatically. It must be explicitly listed in the annotation of the resource through which the application is published. Choose the relevant option depending on how the application is published:
+
+{% tabs puplications %}
+{% tab "Through an Ingress resource" %}
+
+If the application is published through an Ingress resource (for details, see the [`ingress-nginx`](/modules/ingress-nginx/) module documentation), when setting `sendAuthorizationHeader: true`, you need to:
+
+- Specify the headers to pass to the application in the `nginx.ingress.kubernetes.io/auth-response-headers` annotation.
+- Also increase the buffer size using the `nginx.ingress.kubernetes.io/proxy-buffer-size` annotation, since a JWT with many groups does not fit into the default buffer.
+
+Example of specifying the headers and buffer size using the corresponding annotations:
+
+{% raw %}
+
+```yaml
+annotations:
+  nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
+  nginx.ingress.kubernetes.io/auth-url: https://app-name-dex-authenticator.app-ns.svc.cluster.local/dex-authenticator/auth
+  nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email,Authorization
+  nginx.ingress.kubernetes.io/proxy-buffer-size: 32k
+```
+
+{% endraw %}
+
+If the `Authorization` header is not listed in `auth-response-headers`, the application won't receive it. If `proxy-buffer-size` is not increased, requests will fail with a 500 error, and the Ingress controller log will show `upstream sent too big header while reading response header from upstream`.
+
+{% endtab %}
+{% tab "Through ALBInstance or ClusterALBInstance" %}
+
+If the application is published through an ALBInstance or ClusterALBInstance resource (for details, see the [`alb`](/modules/alb/) module documentation), when setting `sendAuthorizationHeader: true`, specify the headers to pass to the application in the `alb.network.deckhouse.io/auth-response-headers` annotation of the HTTPRoute resource:
+
+```yaml
+annotations:
+  alb.network.deckhouse.io/auth-signin: https://app-name.kube.my-domain.com/dex-authenticator/sign_in
+  alb.network.deckhouse.io/auth-url: https://app-name-dex-authenticator.app-ns.svc.cluster.local/dex-authenticator/auth
+  alb.network.deckhouse.io/auth-response-headers: Authorization
+```
+
+For the `alb.network.deckhouse.io/auth-response-headers` annotation, it is enough to specify only `Authorization`, since it already passes the base set of headers by default.
+
+Also, in the DexAuthenticator resource, specify the same ListenerSet used to publish the application's domain:
+
+```yaml
+spec:
+  gatewayAPI:
+    applicationHTTPRouteListenerSetName: my-listenerset
+```
+
+{% endtab %}
+{% endtabs %}
+
+### JWT token contents and processing considerations
+
+Example of the JWT payload for a static user (the [User](cr.html#user) and [Group](cr.html#group) resources):
+
+```json
+{
+  "iss": "https://dex.kube.my-domain.com/",
+  "sub": "Cg1qb2huLmRvZUBleGFtcGxlEgVsb2NhbA",
+  "aud": "app-name-app-ns-dex-authenticator",
+  "exp": 1757000600,
+  "iat": 1757000000,
+  "email": "john.doe@example.com",
+  "email_verified": true,
+  "name": "john-doe",
+  "preferred_username": "",
+  "groups": ["everyone", "developers"]
+}
+```
+
+When parsing the token in your application, keep in mind the following:
+
+- Use the `email` field to identify the user. The `sub` field is opaque (it is not predictable and cannot be used as a meaningful user identifier outside the context of a specific system), and `preferred_username` is empty for static users (external authentication providers may populate it).
+- The `name` field contains the object's name (from the `metadata.name` field of the [User](cr.html#user) object), not the user's display name.
+- The `aud` field contains the authenticator client identifier (`<name>-<namespace>-dex-authenticator`), not your application's own OIDC client identifier. An application that validates `aud` against its own `client_id` will reject such a token.
+- Verify the signature using the JWKS endpoint `https://dex.<modules.publicDomainTemplate>/keys`.
+- The token's lifetime is defined by the [`idTokenTTL`](configuration.html#parameters-idtokenttl) parameter (10 minutes by default). DexAuthenticator refreshes the token on its own, so the application always gets a current one.
+
+If the application supports OIDC on its own, use the [DexClient](cr.html#dexclient) resource instead of DexAuthenticator: the application will request the required scope itself and get a `refresh_token` in addition to the `id_token`.
 
 DexAuthenticator does not have a built-in system for managing authentication based on user IP address. Instead, you can use Ingress resource annotations:
 
