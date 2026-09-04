@@ -33,6 +33,12 @@ import (
 // against the actual OpenAPI spec instead of a synthetic one. The schema comes
 // from RequireProviderCandiDir, i.e. from the provider module when the candi
 // bundle is not baked into the image.
+// The stub validator answers "{}" to everything, so anything that finds it passes every
+// preflight check. Some callers have to place it under options.DefaultTmpDir(), the very
+// directory a real dhctl run reads, because the code under test resolves the download dir
+// itself. Leaving it behind would make the next real bootstrap or converge on this machine
+// silently skip provider validation, so every artefact this helper creates is removed again
+// through t.Cleanup, innermost first, and pre-existing paths are left untouched.
 func StubDeliveredProviderBundle(t *testing.T, downloadDir, provider string) {
 	t.Helper()
 	provider = strings.ToLower(provider)
@@ -41,15 +47,44 @@ func StubDeliveredProviderBundle(t *testing.T, downloadDir, provider string) {
 
 	providerDir := providerdir.ProviderDir(downloadDir, provider)
 	openapiDir := filepath.Join(providerDir, "openapi")
+
+	// Remember which directories already existed: only the ones this helper creates may be
+	// removed afterwards, and only once they are empty again.
+	createdDirs := make([]string, 0, 2)
+	for _, dir := range []string{providerDir, openapiDir} {
+		if _, err := os.Lstat(dir); os.IsNotExist(err) {
+			createdDirs = append(createdDirs, dir)
+		}
+	}
+
 	require.NoError(t, os.MkdirAll(openapiDir, 0o755))
+
+	schemaPath := filepath.Join(openapiDir, "cluster_configuration.yaml")
+	validatorPath := providerdir.ValidatorPath(downloadDir, provider)
+
+	t.Cleanup(func() {
+		// Files first, then the directories this helper created, deepest last-created first.
+		// os.Remove on a directory only succeeds while it is empty, so a directory another
+		// test still populates survives.
+		for _, path := range []string{validatorPath, schemaPath} {
+			if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+				t.Errorf("cleanup stub provider bundle: remove %s: %v", path, err)
+			}
+		}
+		for i := len(createdDirs) - 1; i >= 0; i-- {
+			if err := os.Remove(createdDirs[i]); err != nil && !os.IsNotExist(err) {
+				t.Logf("cleanup stub provider bundle: keep %s: %v", createdDirs[i], err)
+			}
+		}
+	})
 
 	schema, err := os.ReadFile(filepath.Join(candiDir, "openapi", "cluster_configuration.yaml"))
 	require.NoError(t, err)
-	require.NoError(t, os.WriteFile(filepath.Join(openapiDir, "cluster_configuration.yaml"), schema, 0o644))
+	require.NoError(t, os.WriteFile(schemaPath, schema, 0o644))
 
 	// A conformant validator reads the request off stdin and always answers
 	// with a JSON object ("{}" on success, see go_lib/dhctl-provider-protocol);
 	// empty stdout is treated as a broken binary and fails closed.
 	validatorScript := "#!/bin/sh\ncat >/dev/null\nprintf '{}\\n'\n"
-	require.NoError(t, os.WriteFile(providerdir.ValidatorPath(downloadDir, provider), []byte(validatorScript), 0o755))
+	require.NoError(t, os.WriteFile(validatorPath, []byte(validatorScript), 0o755))
 }
