@@ -75,10 +75,25 @@ When the `cloud-provider-dvp` module is enabled, the corresponding StorageClass 
    The zone value in ModuleConfig and NodeGroup must match. Currently, only the `default` value is available in DVP.
    {% endalert %}
 
-1. Create a file with the `cloud-provider-dvp` module configuration and a credentials Secret. For example, `cloud-provider-dvp-mc.yaml`:
+1. Create a file with the `cloud-provider-dvp` module namespace, a credentials Secret, and the module configuration. For example, `cloud-provider-dvp-mc.yaml`:
 
    ```shell
    cat > cloud-provider-dvp-mc.yaml <<EOF
+   apiVersion: v1
+   kind: Namespace
+   metadata:
+     name: d8-cloud-provider-dvp
+   ---
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: d8-credentials
+     namespace: d8-cloud-provider-dvp
+   type: cloud-provider.deckhouse.io/credentials
+   stringData:
+     authScheme: kubeconfig
+     secret: ${DVP_KUBECONFIG_B64}
+   ---
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
    metadata:
@@ -96,20 +111,12 @@ When the `cloud-provider-dvp` module is enabled, the corresponding StorageClass 
        provider:
          parameters:
            namespace: ${DVP_NAMESPACE}
-   ---
-   apiVersion: v1
-   kind: Secret
-   metadata:
-     name: d8-credentials
-     namespace: d8-cloud-provider-dvp
-   type: cloud-provider.deckhouse.io/credentials
-   stringData:
-     authScheme: kubeconfig
-     secret: ${DVP_KUBECONFIG_B64}
    EOF
    ```
 
    The manifest uses the environment variables set in the previous steps: `DVP_KUBECONFIG_B64`, `DVP_NAMESPACE`, and `DVP_ZONE`. Replace `<SSH_PUBLIC_KEY>` with the public SSH key for access to the created nodes.
+
+   The order of the objects in the file matters. The `d8-cloud-provider-dvp` namespace is created by the module, so until the module is enabled there is nowhere to put the Secret. Create the namespace in advance so that the credentials Secret reaches the cluster before ModuleConfig enables the module. Otherwise the module rolls out with empty credentials, and its components cannot connect to the DVP API until the Secret appears. The module picks up the created namespace and adds its own labels to it.
 
 1. Apply the manifest:
 

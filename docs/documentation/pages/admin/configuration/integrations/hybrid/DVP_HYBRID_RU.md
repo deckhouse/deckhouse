@@ -75,10 +75,25 @@ description: Подготовка к гибридной интеграции с 
    Значение зоны в ModuleConfig и NodeGroup должно совпадать. Пока в DVP доступно только значение `default`.
    {% endalert %}
 
-1. Создайте файл, например `cloud-provider-dvp-mc.yaml`, с конфигурацией модуля `cloud-provider-dvp` и секрет с учётными данными:
+1. Создайте файл, например `cloud-provider-dvp-mc.yaml`, с неймспейсом модуля `cloud-provider-dvp`, секретом с учётными данными и конфигурацией модуля:
 
    ```shell
    cat > cloud-provider-dvp-mc.yaml <<EOF
+   apiVersion: v1
+   kind: Namespace
+   metadata:
+     name: d8-cloud-provider-dvp
+   ---
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: d8-credentials
+     namespace: d8-cloud-provider-dvp
+   type: cloud-provider.deckhouse.io/credentials
+   stringData:
+     authScheme: kubeconfig
+     secret: ${DVP_KUBECONFIG_B64}
+   ---
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
    metadata:
@@ -96,20 +111,12 @@ description: Подготовка к гибридной интеграции с 
        provider:
          parameters:
            namespace: ${DVP_NAMESPACE}
-   ---
-   apiVersion: v1
-   kind: Secret
-   metadata:
-     name: d8-credentials
-     namespace: d8-cloud-provider-dvp
-   type: cloud-provider.deckhouse.io/credentials
-   stringData:
-     authScheme: kubeconfig
-     secret: ${DVP_KUBECONFIG_B64}
    EOF
    ```
 
    В манифесте используются значения переменных окружения, заданных на предыдущих шагах: `DVP_KUBECONFIG_B64`, `DVP_NAMESPACE` и `DVP_ZONE`. Замените `<SSH_PUBLIC_KEY>` на публичный SSH-ключ для доступа к создаваемым узлам.
+
+   Порядок объектов в файле важен. Неймспейс `d8-cloud-provider-dvp` создаёт модуль, поэтому до его включения секрет некуда положить. Создайте неймспейс заранее, чтобы секрет с учётными данными оказался в кластере раньше, чем ModuleConfig включит модуль. Иначе модуль развернётся с пустыми учётными данными и его компоненты не смогут подключиться к API DVP, пока секрет не появится. Модуль подхватит созданный неймспейс и добавит к нему собственные лейблы.
 
 1. Примените манифест:
 

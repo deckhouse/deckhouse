@@ -65,6 +65,10 @@ The following node types that can be worked with within a node group (resource [
 - `CloudStatic` — a static node (created manually) hosted in the cloud integrated with one of the cloud providers. This node has the CSI running, and it is managed by the cloud-controller-manager. The `Node` object automatically gets the information about the cloud zone and region. Also, if a node gets deleted from the cloud, its corresponding Node object will be deleted in a cluster.
 - `Static` — a static node hosted on a bare metal or virtual machine. In the case of a cloud environment, the `cloud-controller-manager` does not manage the node even if one of the cloud providers is enabled. [Learn more about working with static nodes...](#working-with-static-nodes)
 
+{% alert level="info" %}
+For Deckhouse Virtualization Platform (DVP), the DVPClusterConfiguration resource is not used. The configuration of `CloudPermanent` nodes is composed of [NodeGroup](cr.html#nodegroup), [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass), and the [`cloud-provider-dvp`](/modules/cloud-provider-dvp/configuration.html) ModuleConfig.
+{% endalert %}
+
 ## Node grouping and group management
 
 Grouping and managing nodes as a related group mean that all nodes in the group will have the same metadata derived from the [`NodeGroup`](cr.html#nodegroup) custom resource.

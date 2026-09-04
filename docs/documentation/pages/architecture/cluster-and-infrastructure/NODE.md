@@ -18,6 +18,10 @@ In Deckhouse Kubernetes Platform (DKP), nodes are divided into the following typ
     - CSI driver can be used to attach cloud volumes.
 - **Static**: Static node hosted on a bare-metal server or a virtual machine. In the case of a cloud environment, the `cloud-controller-manager` component does not manage such a node — even if one of the cloud providers is enabled. To learn more about working with static nodes, refer to the [`node-manager` documentation](/modules/node-manager/#working-with-static-nodes).
 
+{% alert level="info" %}
+For Deckhouse Virtualization Platform (DVP), the DVPClusterConfiguration resource is not used. The configuration of CloudPermanent nodes is composed of [NodeGroup](/modules/node-manager/cr.html#nodegroup), [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass), and the [`cloud-provider-dvp`](/modules/cloud-provider-dvp/configuration.html) ModuleConfig.
+{% endalert %}
+
 Nodes are added to the cluster by creating a NodeGroup object, which describes the type, parameters, and configuration of the node group. For CloudEphemeral groups, DKP interprets this object and automatically creates the corresponding nodes, registering them in the Kubernetes cluster. For other types (e.g., CloudPermanent or Static), node creation and registration must be done manually or via external tools.
 
 Hybrid groups are also supported, where a single NodeGroup can include both Static nodes deployed in the cloud and static (bare-metal or virtual machine) nodes. For example, the main load may be handled by bare-metal servers, while cloud instances are used as scalable additions during peak loads.
