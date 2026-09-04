@@ -513,23 +513,21 @@ def dex_claims_closed(spec: Any) -> bool:
 
 DEX_PROVIDER_BLOCKS = ("oidc", "saml", "ldap", "crowd", "gitlab", "github", "bitbucketCloud")
 
-# Who signs, or which app at that IdP is trusted. clientSecret and bindPW
-# stay off this list so rotating a credential at the same issuer is not a
-# new connection.
-DEX_TRUST_FIELDS = (
-    "issuer",
-    "ssoURL",
-    "ssoIssuer",
-    "entityIssuer",
-    "clientID",
-    "rootCAData",
-    "ca",
-    "caData",
-    "host",
-    "baseURL",
-    "insecureSkipVerify",
-    "insecureNoSSL",
-)
+# Rotating a credential against an unchanged connector is not a new
+# connection. Every other connector field decides who dex trusts, whether the
+# assertion is verified at all, or which claim becomes the Kubernetes
+# username, so it is checked as a fresh connection. Listing the exceptions
+# instead of the anchor keeps fields added to the CRD later fail-closed.
+DEX_CREDENTIAL_FIELDS = frozenset({"clientSecret", "bindPW"})
+
+
+def _deep_plain(value: Any) -> Any:
+    value = as_plain(value)
+    if isinstance(value, dict):
+        return tuple((str(key), _deep_plain(value[key])) for key in sorted(value))
+    if isinstance(value, list):
+        return tuple(_deep_plain(item) for item in value)
+    return value
 
 
 def dex_trust_anchor(spec: Any) -> Tuple[Any, ...]:
@@ -539,7 +537,11 @@ def dex_trust_anchor(spec: Any) -> Tuple[Any, ...]:
         block = _dict(spec.get(key))
         if not block:
             continue
-        fields = tuple((field, block.get(field)) for field in DEX_TRUST_FIELDS)
+        fields = tuple(
+            (name, _deep_plain(block[name]))
+            for name in sorted(block)
+            if name not in DEX_CREDENTIAL_FIELDS
+        )
         blocks.append((key, fields))
     return (spec.get("type"), tuple(blocks))
 
