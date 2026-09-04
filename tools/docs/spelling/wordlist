@@ -293,6 +293,7 @@ configurator
 configVersion
 conntrack
 Conntrack
+ConsistencyAndAvailability
 ConstraintTemplate
 ConstraintTemplates
 Container
@@ -388,6 +389,7 @@ Datastores
 Datastream
 datastreams
 Datastreams
+DBeaver
 DCGM
 DDTHH
 de
@@ -502,6 +504,7 @@ emptyDir
 enablement
 enableMultiTenancy
 endofftopic
+EndpointSlice
 Entra
 entrypoint
 enum
@@ -1749,6 +1752,7 @@ WithoutNAT
 WORKDIR
 workflow
 workflows
+workMem
 worktree
 worseness
 WSL
@@ -1905,6 +1909,8 @@ ZvirtInstanceClass
 валидирует
 валидируется
 валидируются
+валидная
+валидной
 валидными
 вебхук
 вебхука
@@ -2533,6 +2539,7 @@ ZvirtInstanceClass
 рендеринга
 рендеринге
 рендерится
+репликационным
 реплицированного
 реплицированные
 реплицированных
@@ -2719,6 +2726,7 @@ ZvirtInstanceClass
 уязвимостям
 уязвимостями
 файл
+файрвол
 файрвола
 фейловер
 фикстур
