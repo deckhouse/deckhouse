@@ -482,8 +482,11 @@ DNS не позволяет выбрать контроллеры, исполь�
 
 Перед переключением пользовательского трафика:
 
-- Убедитесь, что ресурсы из шага 3 применены, а в статусе целевого ALBInstance или ClusterALBInstance установлены `ready: true` и `synced: true`. Проверьте, что поля `conflictPorts`, `conflictBackendTLS` и `conflictFrontendTLS` имеют значение `false`; если какое-то из них `true`, соответствующее поле `<CONFLICT>Owner` укажет имя «управляющего» инстанса.
-- Проверьте условия `Accepted` и `Programmed` в статусе Gateway и ListenerSet, а также `Accepted` в статусе маршрутов (`d8 k -n <NAMESPACE> get gateway,listenerset,httproute <NAME> -o yaml` — раздел `status.conditions`). Значение `True` означает, что ресурс принят контроллером и его конфигурация применена.
+- Убедитесь, что ресурсы из шага 3 применены.
+- В статусе целевого ALBInstance или ClusterALBInstance проверьте, что установлены `ready: true` и `synced: true`.
+- Проверьте, что поля `conflictPorts`, `conflictBackendTLS` и `conflictFrontendTLS` имеют значение `false`; если какое-то из них `true`, соответствующее поле `<CONFLICT>Owner` укажет имя «управляющего» инстанса.
+- Проверьте условия `Accepted` и `Programmed` в статусе Gateway и ListenerSet, а также `Accepted` в статусе маршрутов (`d8 k -n <NAMESPACE> get gateway,listenerset,httproute <NAME> -o yaml` — раздел `status.conditions`).
+- Значение `True` в этих условиях означает, что ресурс принят контроллером и его конфигурация применена.
 - Для каждого имени хоста и протокола проверьте обработку трафика, подключившись напрямую к адресу точки входа Gateway API или с помощью `migrationGateway`: TLS-сертификаты, перенаправления, аутентификацию, долгоживущие соединения и политики приложений.
 - Проверьте сохранение IP-адреса клиента, обработку Proxy Protocol или заголовков с адресом клиента, ограничения доступа по источнику и проверки состояния балансировщика.
 - Если для HTTP-01 ещё нужно перенаправление проверок, оставьте `http01CertificateSolverBridging` включённым до переключения DNS или балансировщика.

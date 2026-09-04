@@ -480,8 +480,11 @@ Traffic processing can differ between the Ingress NGINX Controller and the `alb`
 
 Before shifting production traffic:
 
-- Confirm that the step 3 resources are applied and that the target ALBInstance or ClusterALBInstance reports `ready: true` and `synced: true`. Verify that `conflictPorts`, `conflictBackendTLS`, and `conflictFrontendTLS` are all `false`; if any is `true`, the matching `<CONFLICT>Owner` field names the controlling instance.
-- Check the `Accepted` and `Programmed` conditions on the Gateway and ListenerSet status, and `Accepted` on the route status (`d8 k -n <NAMESPACE> get gateway,listenerset,httproute <NAME> -o yaml` — the `status.conditions` section). `True` means the controller accepted the resource and applied its configuration.
+- Confirm that the step 3 resources are applied.
+- On the target ALBInstance or ClusterALBInstance status, check that `ready: true` and `synced: true`.
+- Verify that `conflictPorts`, `conflictBackendTLS`, and `conflictFrontendTLS` are all `false`; if any is `true`, the matching `<CONFLICT>Owner` field names the controlling instance.
+- Check the `Accepted` and `Programmed` conditions on the Gateway and ListenerSet status, and `Accepted` on the route status (`d8 k -n <NAMESPACE> get gateway,listenerset,httproute <NAME> -o yaml` — the `status.conditions` section).
+- `True` in these conditions means the controller accepted the resource and applied its configuration.
 - Test every hostname and protocol through the Gateway API entry-point address or with `migrationGateway`, including TLS certificates, redirects, authentication, long-lived connections, and application-specific policies.
 - Verify preservation of the client address, Proxy Protocol or forwarded-header processing, source restrictions, and load balancer health checks.
 - If HTTP-01 bridging is still required, keep `http01CertificateSolverBridging` enabled until DNS or the load balancer is switched.
