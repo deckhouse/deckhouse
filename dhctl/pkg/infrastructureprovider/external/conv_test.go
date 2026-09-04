@@ -24,9 +24,8 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
 
-// The vars dhctl collected must reach the validator as they are. Re-encoding them on
-// the way would flatten the typed maps the validator reads field by field, so the
-// pointer itself has to survive toWireInput.
+// Re-encoding the vars would flatten the typed maps the validator reads field by
+// field, so the pointer itself has to survive toWireInput.
 func TestToWireInputVarsTravelStructurally(t *testing.T) {
 	vars := &config.CloudProviderVars{
 		Settings: map[string]any{"zone": "a"},
@@ -55,8 +54,8 @@ func TestToWireInputVarsTravelStructurally(t *testing.T) {
 	}
 }
 
-// The provider cluster configuration arrives as raw JSON and has to be decoded, not
-// forwarded as a string: the validator addresses it as an object.
+// The provider cluster configuration arrives as raw JSON and has to reach the
+// validator as an object, not as a string.
 func TestToWireInputProviderClusterConfigJSONConverted(t *testing.T) {
 	wire, err := toWireInput(config.ProviderInput{
 		ProviderName: "dvp",
@@ -74,7 +73,7 @@ func TestToWireInputProviderClusterConfigJSONConverted(t *testing.T) {
 	}
 }
 
-// Malformed JSON must stop the call rather than reach the validator as a hole in the
+// Malformed JSON must stop the call, not reach the validator as a hole in the
 // configuration it is supposed to check.
 func TestToWireInputRejectsMalformedJSON(t *testing.T) {
 	_, err := toWireInput(config.ProviderInput{

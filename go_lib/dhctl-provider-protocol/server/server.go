@@ -70,6 +70,8 @@ func Start(config Config, services ...Service) (*Server, error) {
 		serveDone: make(chan error, 1),
 	}
 
+	logger.Info(ListeningLine(listener.Addr().Network(), listener.Addr().String()))
+
 	go func() {
 		s.serveDone <- grpcServer.Serve(listener)
 	}()

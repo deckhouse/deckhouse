@@ -15,6 +15,7 @@
 package server_test
 
 import (
+	"bytes"
 	"context"
 	"flag"
 	"io"
@@ -206,4 +207,92 @@ func echoesBack(_ context.Context, input validatev1.Input) (*validatev1.Validate
 	return &validatev1.ValidateResponse{
 		Errors: []*validatev1.ViolationResponse{{Message: input.ClusterPrefix}},
 	}, nil
+}
+
+func TestListeningLineRoundTrip(t *testing.T) {
+	tests := []struct {
+		name    string
+		line    string
+		network string
+		address string
+		wantOK  bool
+	}{
+		{
+			name:    "reads back what a validator announced",
+			line:    server.ListeningLine("tcp", "127.0.0.1:8080"),
+			network: "tcp",
+			address: "127.0.0.1:8080",
+			wantOK:  true,
+		},
+		{
+			name:    "a socket path is an address like any other",
+			line:    server.ListeningLine("unix", "/tmp/v.sock"),
+			network: "unix",
+			address: "/tmp/v.sock",
+			wantOK:  true,
+		},
+		{
+			// Encoders escape what they please: the markers have to survive that, so
+			// this is the line a JSON logger actually emits, not one built by hand.
+			name:    "a JSON logger wraps the announcement, and it still reads",
+			line:    jsonLogLine(t, server.ListeningLine("tcp", "127.0.0.1:62155")),
+			network: "tcp",
+			address: "127.0.0.1:62155",
+			wantOK:  true,
+		},
+		{
+			name:    "so does a text logger",
+			line:    `time=2026-09-04T22:39:57.000+03:00 level=INFO msg="` + server.ListeningLine("unix", "/tmp/v.sock") + `" logger=validator`,
+			network: "unix",
+			address: "/tmp/v.sock",
+			wantOK:  true,
+		},
+		{
+			name: "anything else the validator prints is not an announcement",
+			line: `{"level":"info","msg":"Serve validator"}`,
+		},
+		{
+			name: "the prefix alone announces nothing",
+			line: server.ListeningPrefix,
+		},
+		{
+			// A log line the writer cut short leaves an endpoint nobody can trust.
+			name: "an unclosed endpoint announces nothing",
+			line: server.ListeningPrefix + "[[tcp://127.0.0.1:62155",
+		},
+		{
+			// The address is what the markers hold, whatever follows them.
+			name:    "the markers end the endpoint, not the log format",
+			line:    server.ListeningLine("tcp", "127.0.0.1:62155") + ` addr=127.0.0.1:1 msg="listening on [[tcp://decoy]]"`,
+			network: "tcp",
+			address: "127.0.0.1:62155",
+			wantOK:  true,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			network, address, ok := server.ParseListeningLine(test.line)
+
+			if ok != test.wantOK {
+				t.Fatalf("ParseListeningLine(%q) ok = %v, want %v", test.line, ok, test.wantOK)
+			}
+
+			if network != test.network || address != test.address {
+				t.Errorf("ParseListeningLine(%q) = %q %q, want %q %q",
+					test.line, network, address, test.network, test.address)
+			}
+		})
+	}
+}
+
+// jsonLogLine renders msg the way a validator logging in JSON would.
+func jsonLogLine(t *testing.T, message string) string {
+	t.Helper()
+
+	var rendered bytes.Buffer
+
+	slog.New(slog.NewJSONHandler(&rendered, nil)).Info(message)
+
+	return rendered.String()
 }

@@ -17,6 +17,7 @@ package server
 import (
 	"fmt"
 	"log/slog"
+	"regexp"
 	"slices"
 
 	"google.golang.org/grpc"
@@ -35,7 +36,22 @@ const (
 	ServeCommand = "serve"
 	NetworkFlag  = "network"
 	AddressFlag  = "address"
+
+	// ListeningPrefix is the prefix for a log message that a validator writes once
+	// it has bound its endpoint. The caller reads it from the process output to
+	// learn where to dial, so the format below is part of the protocol.
+	//
+	// There is a single contract expressed in two forms: what the validator writes
+	// and how the caller reads it back. Keep them in sync.
+	// The [[ ]] markers distinguish the endpoint from the surrounding log text.
+	// The prefix contains no regexp metacharacters, so both lines are visually
+	// consistent and easy to read.
+	ListeningPrefix  = "dhctl-provider-protocol: listening on "
+	listeningFormat  = ListeningPrefix + "[[%s://%s]]"
+	listeningPattern = ListeningPrefix + `\[\[([a-z]+)://([^]]+)]]`
 )
+
+var listeningRegexp = regexp.MustCompile(listeningPattern)
 
 type Config struct {
 	Network     string
@@ -114,4 +130,24 @@ func ServeArgs(network, address string) []string {
 		"--" + NetworkFlag + "=" + network,
 		"--" + AddressFlag + "=" + address,
 	}
+}
+
+// ListeningLine is what a validator announces: the network and the address it bound,
+// which is not what the caller asked for when it asked for port 0.
+func ListeningLine(network, address string) string {
+	return fmt.Sprintf(listeningFormat, network, address)
+}
+
+// ParseListeningLine reads back what ListeningLine wrote. The announcement goes
+// through the validator's own logger, so by the time the caller sees it the line may
+// be wrapped in JSON, logfmt or a timestamp: the prefix is looked for anywhere in the
+// line and the endpoint ends where the log format resumes.
+//
+//nolint:nonamedreturns // named return values serve as documentation for the caller
+func ParseListeningLine(line string) (network, address string, ok bool) {
+	match := listeningRegexp.FindStringSubmatch(line)
+	if match == nil {
+		return "", "", false
+	}
+	return match[1], match[2], true
 }

@@ -33,9 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
-const (
-	defaultTimeout = 30 * time.Second
-)
+const validateTimeout = 30 * time.Second
 
 func Validate(ctx context.Context, binaryPath string, input config.ProviderInput) error {
 	ctx, span := telemetry.StartSpan(ctx, "external.validate")
@@ -51,7 +49,7 @@ func Validate(ctx context.Context, binaryPath string, input config.ProviderInput
 		return fmt.Errorf("build validate request: %w", err)
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, defaultTimeout)
+	ctx, cancel := context.WithTimeout(ctx, validateTimeout)
 	defer cancel()
 
 	resp, err := validate(ctx, binaryPath, wireInput)
@@ -69,26 +67,12 @@ func Validate(ctx context.Context, binaryPath string, input config.ProviderInput
 	return nil
 }
 
-// validate spawns one validator, asks it, and tears it back down. Each step
-// registers its own cleanup, so bailing out at any of them releases exactly what has
-// been taken so far.
-// nolint:gocritic // named return is used for cleanup in deferred functions
+// validate spawns one validator, asks it, and tears it back down.
 func validate(ctx context.Context, binaryPath string, input validatev1.Input) (_ *validatev1.ValidateResponse, retErr error) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	ep, err := NewTCPEndpoint()
-	if err != nil {
-		return nil, fmt.Errorf("create tcp endpoint: %w", err)
-	}
-
-	defer func() {
-		if err := ep.Free(); err != nil {
-			retErr = errors.Join(retErr, fmt.Errorf("free endpoint: %w", err))
-		}
-	}()
-
-	process, err := StartValidatorProcess(ctx, binaryPath, ep)
+	process, ep, err := startListeningValidator(ctx, binaryPath)
 	if err != nil {
 		return nil, fmt.Errorf("start validator process %q: %w", binaryPath, err)
 	}
@@ -111,7 +95,7 @@ func validate(ctx context.Context, binaryPath string, input validatev1.Input) (_
 	return resp, nil
 }
 
-func requestValidate(ctx context.Context, ep Endpoint, input validatev1.Input) (*validatev1.ValidateResponse, error) {
+func requestValidate(ctx context.Context, ep endpoint, input validatev1.Input) (*validatev1.ValidateResponse, error) {
 	conn, err := grpc.NewClient(
 		ep.DialTarget(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),

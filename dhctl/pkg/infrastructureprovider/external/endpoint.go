@@ -14,150 +14,36 @@
 
 package external
 
-import (
-	"fmt"
-	"net"
-	"os"
-	"path/filepath"
-	"time"
-)
+import "fmt"
 
 const (
 	networkTCP  = "tcp"
 	networkUnix = "unix"
-
-	loopbackHost = "127.0.0.1"
-
-	socketDirPrefix = "validator"
-	socketFileName  = "validator.sock"
-	socketDirMode   = 0o700
 )
 
-// Endpoint is an address a validator is told to listen on and the host then dials.
-type Endpoint interface {
-	// Network is the network the validator listens on: tcp, unix.
-	Network() string
-	// Address is what the validator binds.
-	Address() string
-	// DialTarget is the same endpoint in gRPC's notation.
-	DialTarget() string
-	// Accepting reports whether something already listens on the endpoint.
-	Accepting(timeout time.Duration) bool
-	// Free releases whatever the endpoint reserved.
-	Free() error
-	// String is a human-readable form for logs and errors.
-	String() string
+type endpoint struct {
+	Network string
+	Address string
 }
 
-// tcpEndpoint is a loopback port.
-type tcpEndpoint struct {
-	address string
+func (e endpoint) DialTarget() string {
+	if e.Network == networkUnix {
+		return networkUnix + "://" + e.Address
+	}
+	return e.Address
 }
 
-func NewTCPEndpoint() (Endpoint, error) {
-	listener, err := net.Listen(networkTCP, net.JoinHostPort(loopbackHost, "0"))
-	if err != nil {
-		return nil, fmt.Errorf("failed to bind TCP port: %w", err)
+func (e endpoint) Validate() error {
+	if e.Network == "" {
+		return fmt.Errorf("network is required")
 	}
 
-	address := listener.Addr().String()
-	if err := listener.Close(); err != nil {
-		return nil, fmt.Errorf("failed to close listener: %w", err)
+	if e.Address == "" {
+		return fmt.Errorf("address is required")
 	}
-
-	return tcpEndpoint{address: address}, nil
-}
-
-func (e tcpEndpoint) Network() string {
-	return networkTCP
-}
-
-func (e tcpEndpoint) Address() string {
-	return e.address
-}
-
-func (e tcpEndpoint) DialTarget() string {
-	return e.address
-}
-
-func (e tcpEndpoint) Accepting(timeout time.Duration) bool {
-	conn, err := net.DialTimeout(networkTCP, e.address, timeout)
-	if err != nil {
-		return false
-	}
-
-	_ = conn.Close()
-
-	return true
-}
-
-func (e tcpEndpoint) Free() error {
 	return nil
 }
 
-func (e tcpEndpoint) String() string {
-	return fmt.Sprintf("%s://%s", networkTCP, e.address)
-}
-
-// unixEndpoint is a socket in a temporary directory it owns.
-type unixEndpoint struct {
-	socketDir string
-	address   string
-}
-
-func NewUnixEndpoint(tmpDir string) (Endpoint, error) {
-	if tmpDir != "" {
-		if err := os.MkdirAll(tmpDir, socketDirMode); err != nil {
-			return nil, fmt.Errorf("failed to create temp dir %s: %w", tmpDir, err)
-		}
-	}
-
-	dir, err := os.MkdirTemp(tmpDir, socketDirPrefix)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create temp dir: %w", err)
-	}
-
-	return &unixEndpoint{
-		socketDir: dir,
-		address:   filepath.Join(dir, socketFileName),
-	}, nil
-}
-
-func (e *unixEndpoint) Network() string {
-	return networkUnix
-}
-
-func (e *unixEndpoint) Address() string {
-	return e.address
-}
-
-func (e *unixEndpoint) DialTarget() string {
-	return networkUnix + "://" + e.address
-}
-
-func (e *unixEndpoint) Accepting(timeout time.Duration) bool {
-	conn, err := net.DialTimeout(networkUnix, e.address, timeout)
-	if err != nil {
-		return false
-	}
-
-	_ = conn.Close()
-
-	return true
-}
-
-func (e *unixEndpoint) Free() error {
-	if e.socketDir == "" {
-		return nil
-	}
-
-	if err := os.RemoveAll(e.socketDir); err != nil {
-		return fmt.Errorf("failed to remove socket directory %s: %w", e.socketDir, err)
-	}
-
-	return nil
-}
-
-func (e *unixEndpoint) String() string {
-	return fmt.Sprintf("%s://%s", networkUnix, e.address)
+func (e endpoint) String() string {
+	return fmt.Sprintf("%s://%s", e.Network, e.Address)
 }
