@@ -37,18 +37,16 @@ const (
 	NetworkFlag  = "network"
 	AddressFlag  = "address"
 
-	// ListeningPrefix is the prefix for a log message that a validator writes once
-	// it has bound its endpoint. The caller reads it from the process output to
-	// learn where to dial, so the format below is part of the protocol.
+	// ListeningPrefix heads the line a validator writes to stdout once it has bound
+	// its endpoint. The caller reads it from the process output to learn where to
+	// dial, so the format below is part of the protocol.
 	//
 	// There is a single contract expressed in two forms: what the validator writes
-	// and how the caller reads it back. Keep them in sync.
-	// The [[ ]] markers distinguish the endpoint from the surrounding log text.
-	// The prefix contains no regexp metacharacters, so both lines are visually
-	// consistent and easy to read.
+	// and how the caller reads it back. Keep them in sync. The address runs to the
+	// end of the line, so an IPv6 address needs no quoting of its own.
 	ListeningPrefix  = "dhctl-provider-protocol: listening on "
-	listeningFormat  = ListeningPrefix + "[[%s://%s]]"
-	listeningPattern = ListeningPrefix + `\[\[([a-z]+)://(.+?)]]`
+	listeningFormat  = ListeningPrefix + "network: %s address: %s"
+	listeningPattern = `(?m)` + ListeningPrefix + `network: (\S+) address: (.+)$`
 )
 
 var listeningRegexp = regexp.MustCompile(listeningPattern)

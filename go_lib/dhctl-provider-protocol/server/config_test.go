@@ -15,7 +15,6 @@
 package server_test
 
 import (
-	"bytes"
 	"context"
 	"flag"
 	"io"
@@ -241,22 +240,6 @@ func TestListeningLineRoundTrip(t *testing.T) {
 			wantOK:  true,
 		},
 		{
-			// Encoders escape what they please: the markers have to survive that, so
-			// this is the line a JSON logger actually emits, not one built by hand.
-			name:    "a JSON logger wraps the announcement, and it still reads",
-			line:    jsonLogLine(t, server.ListeningLine("tcp", "127.0.0.1:62155")),
-			network: "tcp",
-			address: "127.0.0.1:62155",
-			wantOK:  true,
-		},
-		{
-			name:    "so does a text logger",
-			line:    `time=2026-09-04T22:39:57.000+03:00 level=INFO msg="` + server.ListeningLine("unix", "/tmp/v.sock") + `" logger=validator`,
-			network: "unix",
-			address: "/tmp/v.sock",
-			wantOK:  true,
-		},
-		{
 			name: "anything else the validator prints is not an announcement",
 			line: `{"level":"info","msg":"Serve validator"}`,
 		},
@@ -265,17 +248,8 @@ func TestListeningLineRoundTrip(t *testing.T) {
 			line: server.ListeningPrefix,
 		},
 		{
-			// A log line the writer cut short leaves an endpoint nobody can trust.
-			name: "an unclosed endpoint announces nothing",
-			line: server.ListeningPrefix + "[[tcp://127.0.0.1:62155",
-		},
-		{
-			// The address is what the markers hold, whatever follows them.
-			name:    "the markers end the endpoint, not the log format",
-			line:    server.ListeningLine("tcp", "127.0.0.1:62155") + ` addr=127.0.0.1:1 msg="listening on [[tcp://decoy]]"`,
-			network: "tcp",
-			address: "127.0.0.1:62155",
-			wantOK:  true,
+			name: "half a line announces nothing",
+			line: server.ListeningPrefix + "network: tcp",
 		},
 	}
 
@@ -293,15 +267,4 @@ func TestListeningLineRoundTrip(t *testing.T) {
 			}
 		})
 	}
-}
-
-// jsonLogLine renders msg the way a validator logging in JSON would.
-func jsonLogLine(t *testing.T, message string) string {
-	t.Helper()
-
-	var rendered bytes.Buffer
-
-	slog.New(slog.NewJSONHandler(&rendered, nil)).Info(message)
-
-	return rendered.String()
 }

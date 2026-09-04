@@ -41,7 +41,7 @@ func newRootCmd() *cobra.Command {
 	)
 
 	loghandler := dkplog.NewLogger(
-		dkplog.WithHandlerType(dkplog.JSONHandlerType),
+		dkplog.WithHandlerType(dkplog.TextHandlerType),
 		dkplog.WithLevel(logLevel),
 	).Named("validator").Handler()
 

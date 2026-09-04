@@ -15,7 +15,7 @@
 package server_test
 
 import (
-	"bytes"
+	"io"
 	"log/slog"
 	"net"
 	"os"
@@ -29,16 +29,31 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/server"
 )
 
-// The caller finds the endpoint by reading this line out of the process output, so a
-// validator that logs warnings and above must announce it all the same.
-func TestStartAnnouncesTheEndpointBelowTheLogLevel(t *testing.T) {
-	var logged bytes.Buffer
-
-	quiet := slog.New(slog.NewTextHandler(&logged, &slog.HandlerOptions{Level: slog.LevelError}))
-
-	running, err := server.Start(server.Config{Logger: quiet})
+// The caller finds the endpoint by reading it out of the process output, so the line
+// goes to stdout rather than through the validator's logger, where a log level could
+// hide it.
+func TestStartAnnouncesTheEndpointOnStdout(t *testing.T) {
+	read, write, err := os.Pipe()
 	if err != nil {
-		t.Fatalf("Start() = %v", err)
+		t.Fatalf("Pipe() = %v", err)
+	}
+
+	stdout := os.Stdout
+	os.Stdout = write
+
+	// A logger that drops everything: the announcement must not depend on it.
+	running, startErr := server.Start(server.Config{
+		Logger: slog.New(slog.NewTextHandler(io.Discard, &slog.HandlerOptions{Level: slog.LevelError})),
+	})
+
+	os.Stdout = stdout
+
+	if err := write.Close(); err != nil {
+		t.Fatalf("Close() = %v", err)
+	}
+
+	if startErr != nil {
+		t.Fatalf("Start() = %v", startErr)
 	}
 
 	t.Cleanup(func() {
@@ -47,13 +62,19 @@ func TestStartAnnouncesTheEndpointBelowTheLogLevel(t *testing.T) {
 		}
 	})
 
-	network, address, ok := server.ParseListeningLine(logged.String())
-	if !ok {
-		t.Fatalf("logged %q, want an announcement", logged.String())
+	printed, err := io.ReadAll(read)
+	if err != nil {
+		t.Fatalf("ReadAll() = %v", err)
 	}
 
-	if want := running.Addr().String(); address != want || network != running.Addr().Network() {
-		t.Errorf("announced %s://%s, want %s://%s", network, address, running.Addr().Network(), want)
+	network, address, ok := server.ParseListeningLine(string(printed))
+	if !ok {
+		t.Fatalf("printed %q, want an announcement", printed)
+	}
+
+	if network != running.Addr().Network() || address != running.Addr().String() {
+		t.Errorf("announced %s %s, want %s %s",
+			network, address, running.Addr().Network(), running.Addr().String())
 	}
 }
 

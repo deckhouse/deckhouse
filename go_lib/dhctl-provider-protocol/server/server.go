@@ -20,10 +20,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
-	"os"
 	"runtime/debug"
 	"sync"
-	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -72,7 +70,9 @@ func Start(config Config, services ...Service) (*Server, error) {
 		serveDone: make(chan error, 1),
 	}
 
-	announceListening(logger, listener.Addr())
+	// Straight to stdout, not through the logger: the caller parses this line to find
+	// the endpoint at all, and a log level must not be able to hide it.
+	fmt.Println(ListeningLine(listener.Addr().Network(), listener.Addr().String()))
 
 	go func() {
 		s.serveDone <- grpcServer.Serve(listener)
@@ -109,17 +109,6 @@ func (s *Server) Stop() error {
 		}
 	})
 	return s.stopErr
-}
-
-// announceListening tells the caller where to dial. It goes to the handler directly,
-// skipping the logger's level check: the caller reads this line out of the process
-// output to find the endpoint at all, so a validator configured to log warnings and
-// above would otherwise be unreachable.
-func announceListening(logger *slog.Logger, addr net.Addr) {
-	record := slog.NewRecord(time.Now(), slog.LevelInfo, ListeningLine(addr.Network(), addr.String()), 0)
-	if err := logger.Handler().Handle(context.Background(), record); err != nil {
-		fmt.Fprintln(os.Stderr, ListeningLine(addr.Network(), addr.String()))
-	}
 }
 
 func recoverPanic(logger *slog.Logger) func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {

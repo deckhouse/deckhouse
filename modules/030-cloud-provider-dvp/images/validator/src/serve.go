@@ -39,17 +39,11 @@ func newServeCmd(logger *slog.Logger) *cobra.Command {
 				configGetter().Merge(server.Config{Logger: logger}),
 				server.NewValidateService(Validator{}),
 			)
-
 			if err != nil {
 				return fmt.Errorf("start validator: %w", err)
 			}
 
-			addr := validator.Addr()
-			if addr != nil {
-				logger.Info("Serve validator", "address", addr.String())
-			} else {
-				logger.Info("Serve validator")
-			}
+			logger.Info("Serve validator")
 
 			<-ctx.Done()
 			reason := ctx.Err()
