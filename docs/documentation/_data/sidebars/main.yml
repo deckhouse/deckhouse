@@ -574,6 +574,10 @@ entries:
                             ru: ALB средствами Kubernetes Gateway API
                           url: /admin/configuration/network/ingress/alb/alb-gateway-api.html
                         - title:
+                            en: Migrating from ingress-nginx to alb
+                            ru: Миграция с ingress-nginx на alb
+                          url: /admin/configuration/network/ingress/alb/migration.html
+                        - title:
                             en: ALB with Istio
                             ru: ALB средствами Istio
                           url: /admin/configuration/network/ingress/alb/istio.html
@@ -1023,7 +1027,23 @@ entries:
                 - title:
                     en: ALB
                     ru: ALB
-                  url: /user/network/ingress/alb.html
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /user/network/ingress/alb.html
+                    - title:
+                        en: Kubernetes Gateway API
+                        ru: Kubernetes Gateway API
+                      url: /user/network/ingress/alb/gateway-api.html
+                    - title:
+                        en: Ingress NGINX Controller
+                        ru: Ingress NGINX Controller
+                      url: /user/network/ingress/alb/nginx.html
+                    - title:
+                        en: Istio
+                        ru: Istio
+                      url: /user/network/ingress/alb/istio.html
             - title:
                 en: SDN
                 ru: SDN

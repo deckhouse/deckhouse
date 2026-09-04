@@ -3,6 +3,22 @@ title: "ALB средствами Ingress NGINX Controller"
 permalink: ru/admin/configuration/network/ingress/alb/nginx.html
 description: "Настройка балансировщика нагрузки приложения с помощью контроллера Ingress NGINX в Deckhouse Kubernetes Platform. Настройка высокой доступности, терминация SSL и конфигурация маршрутизации трафика."
 lang: ru
+extractedLinksMax: 4
+relatedLinks:
+  - title: "Миграция с ingress-nginx на alb"
+    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/migration.html
+  - title: "ALB средствами Kubernetes Gateway API"
+    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html
+  - title: "Использование Application Load Balancer (ALB)"
+    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html
+  - title: "Документация модуля ingress-nginx"
+    url: /modules/ingress-nginx/
+  - title: "Custom Resources модуля ingress-nginx"
+    url: /modules/ingress-nginx/cr.html
+  - title: "Примеры модуля ingress-nginx"
+    url: /modules/ingress-nginx/examples.html
+  - title: "Документация модуля metallb"
+    url: /modules/metallb/
 ---
 
 Для реализации ALB средствами [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx) используется модуль [`ingress-nginx`](/modules/ingress-nginx/).
@@ -10,15 +26,15 @@ lang: ru
 {% alert level="info" %}
 В 2025 году Ingress NGINX был [переведён](https://kubernetes.io/blog/2025/11/11/ingress-nginx-retirement/) в режим сопровождения без планов активного развития новых возможностей. Дальнейшее развитие средств балансировки входящего трафика в Kubernetes ориентировано на [Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/).
 
-На поддержку модуля в составе Deckhouse Kubernetes Platform это не распространяется: модуль сопровождается командой Deckhouse, включая обновления безопасности. Подробнее см. раздел [«Поддержка и безопасность модуля»](#поддержка-и-безопасность-модуля).
-{% endalert %}
+На поддержку модуля в составе Deckhouse Kubernetes Platform (DKP) это не распространяется: модуль сопровождается командой DKP, включая обновления безопасности. Подробности — в разделе [«Поддержка и безопасность модуля»](#поддержка-и-безопасность-модуля).
 
-<!-- Перенесено с небольшими изменениями из https://deckhouse.ru/modules/ingress-nginx/ + надо дополнить примерами? -->
+Пошаговый переход на Gateway API — в разделе [«Миграция с ingress-nginx на alb»](migration.html).
+{% endalert %}
 
 Модуль `ingress-nginx` устанавливает Ingress NGINX Controller и управляет им с помощью кастомных ресурсов.
 Если узлов для размещения Ingress-контроллера больше одного, он устанавливается в отказоустойчивом режиме, с учётом особенностей инфраструктуры как облачных, так и bare-metal сред, а также различных типов Kubernetes-кластеров.
 
-Поддерживается одновременный запуск нескольких экземпляров Ingress-контроллеров с независимой конфигурацией: одного **основного** и произвольного количества **дополнительных**.
+Поддерживается одновременный запуск нескольких экземпляров Ingress-контроллеров с независимой конфигурацией: одного основного и произвольного количества дополнительных.
 Это, например, позволяет разделять внешние и внутренние (intranet) Ingress-ресурсы приложений.
 
 ## Варианты терминации трафика
@@ -46,15 +62,15 @@ lang: ru
 
 ## Мониторинг и статистика
 
-В этой реализации `ingress-nginx` добавлена система сбора статистики в Prometheus с множеством метрик:
+В этой реализации `ingress-nginx` добавлена система сбора статистики в Prometheus со следующим набором метрик:
 
-* по длительности времени всего ответа и апстрима отдельно;
-* кодам ответа;
-* количеству повторов запросов (retry);
-* размерам запроса и ответа;
-* методам запросов;
-* типам `content-type`;
-* географии распределения запросов и т. д.
+* длительность всего ответа и ответа бэкенда отдельно;
+* коды ответа;
+* количество повторов запросов (retry);
+* размеры запроса и ответа;
+* методы запросов;
+* типы `content-type`;
+* география распределения запросов и т. д.
 
 Данные представлены в нескольких разрезах:
 
@@ -63,7 +79,7 @@ lang: ru
 * `ingress`-ресурсы;
 * `location` (в nginx).
 
-Все графики сгруппированы в дашборды Grafana. Реализована возможность drill-down: например, при просмотре статистики по `namespace` можно перейти по ссылке на соответствующий дашборд и получить детализированные данные по `vhosts` в этом `namespace` — и далее по иерархии.
+Все графики сгруппированы в дашборды Grafana. С любого графика можно перейти к более детальному представлению: например, при просмотре статистики по `namespace` — на дашборд по `vhosts` в этом `namespace` и далее по иерархии.
 
 ## Статистика
 
@@ -101,11 +117,12 @@ lang: ru
   * `*_responses_total` — количество ответов (дополнительный лейбл — `status_class`, а не просто `status`);
   * `*_upstream_bytes_received_sum` — суммарный объём данных, полученных от бэкендов.
 
-## Примеры настройки балансировки
-
-<!-- перенесено из https://deckhouse.ru/modules/ingress-nginx/examples.html -->
+## Примеры настройки балансировки {#load-balancing-configuration-examples}
 
 Для настройки балансировки используйте кастомный ресурс [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller).
+
+{% tabs Примеры для окружений %}
+{% tab "AWS (NLB)" %}
 
 ### Пример для AWS (Network Load Balancer)
 
@@ -116,6 +133,8 @@ lang: ru
 Если в зоне не остается экземпляров с Ingress-контроллером, тогда IP автоматически убирается из DNS.
 
 В том случае, если в зоне всего один экземпляр с Ingress-контроллером, при перезапуске пода IP-адрес балансировщика этой зоны временно исключается из DNS.
+
+IngressNginxController с инлетом [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer) и аннотациями AWS NLB:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -130,7 +149,12 @@ spec:
       service.beta.kubernetes.io/aws-load-balancer-type: "nlb"
 ```
 
-### Пример для GCP / Yandex Cloud / Azure
+{% endtab %}
+{% tab "GCP, Yandex Cloud и Azure" %}
+
+### Пример для GCP, Yandex Cloud и Azure
+
+IngressNginxController с инлетом [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer):
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -146,7 +170,12 @@ spec:
 В GCP на узлах необходимо указать аннотацию, которая разрешает принимать подключения на внешние адреса для сервисов с типом NodePort.
 {% endalert %}
 
+{% endtab %}
+{% tab "OpenStack" %}
+
 ### Пример для OpenStack
+
+IngressNginxController с инлетом [`LoadBalancerWithProxyProtocol`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancerwithproxyprotocol) и аннотациями Proxy Protocol для OpenStack:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -162,9 +191,12 @@ spec:
       loadbalancer.openstack.org/timeout-member-connect: "2000"
 ```
 
+{% endtab %}
+{% tab "VK Cloud" %}
+
 ### Пример создания внутреннего балансировщика для VK Cloud
 
-Этот пример подходит, когда нужно создать балансировщик только внутри сети облака (без внешнего адреса).
+Подходит, когда нужно создать балансировщик только внутри сети облака (без внешнего адреса).
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -181,7 +213,12 @@ spec:
     node.deckhouse.io/group: worker
 ```
 
+{% endtab %}
+{% tab "Bare metal (HostWithFailover)" %}
+
 ### Пример для bare metal
+
+IngressNginxController с инлетом [`HostWithFailover`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-inlet) на frontend-узлах:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -194,14 +231,17 @@ spec:
   nodeSelector:
     node-role.deckhouse.io/frontend: ""
   tolerations:
-  - effect: NoExecute
-    key: dedicated.deckhouse.io
-    value: frontend
+    - effect: NoExecute
+      key: dedicated.deckhouse.io
+      value: frontend
 ```
+
+{% endtab %}
+{% tab "Bare metal с внешним LB" %}
 
 ### Пример для bare metal при использовании внешнего балансировщика
 
-Пример подходит при использовании Cloudflare, Qrator, Nginx+, Citrix ADC, Kemp и других внешних балансировщиков.
+Подходит при использовании Cloudflare, Qrator, Nginx+, Citrix ADC, Kemp и других внешних балансировщиков.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -217,11 +257,16 @@ spec:
     behindL7Proxy: true
 ```
 
+{% endtab %}
+{% tab "MetalLB BGP" %}
+
 ### Пример для bare metal (MetalLB в режиме BGP LoadBalancer)
 
 {% alert level="info" %}
 Доступно только в DKP Enterprise Edition.
 {% endalert %}
+
+IngressNginxController с инлетом [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer) для использования с MetalLB в режиме BGP:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -234,31 +279,41 @@ spec:
   nodeSelector:
     node-role.deckhouse.io/frontend: ""
   tolerations:
-  - effect: NoExecute
-    key: dedicated.deckhouse.io
-    value: frontend
-```
-
-В случае использования MetalLB его speaker-поды должны быть запущены на тех же узлах, что и поды Ingress–контроллера.
-
-Чтобы Ingress-контроллер получал реальные IP-адреса клиентов, его сервис должен быть создан с параметром `externalTrafficPolicy: Local`, исключающим межузловой SNAT. Для соблюдения этого условия MetalLB speaker анонсирует этот Service только с тех узлов, где запущены целевые поды.
-
-Таким образом, для данного примера конфигурация модуля [`metallb`](/modules/metallb/configuration.html) должна быть такой:
-
-```yaml
-metallb:
- speaker:
-   nodeSelector:
-     node-role.deckhouse.io/frontend: ""
-   tolerations:
     - effect: NoExecute
       key: dedicated.deckhouse.io
       value: frontend
 ```
 
+В случае использования MetalLB его speaker-поды (компонент MetalLB, анонсирующий IP-адреса) должны быть запущены на тех же узлах, что и поды Ingress-контроллера.
+
+Чтобы Ingress-контроллер получал реальные IP-адреса клиентов, его сервис должен быть создан с параметром `externalTrafficPolicy: Local`, исключающим межузловой SNAT. MetalLB speaker анонсирует этот Service только с узлов, где запущены целевые поды.
+
+Таким образом, для данного примера конфигурация модуля [`metallb`](/modules/metallb/configuration.html) через ModuleConfig должна быть такой:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: metallb
+spec:
+  enabled: true
+  version: 2
+  settings:
+    speaker:
+      nodeSelector:
+        node-role.deckhouse.io/frontend: ""
+      tolerations:
+        - effect: NoExecute
+          key: dedicated.deckhouse.io
+          value: frontend
+```
+
+{% endtab %}
+{% tab "MetalLB L2" %}
+
 ### Пример для bare metal (балансировщик MetalLB в режиме L2 LoadBalancer)
 
-{% alert level="info" %}Доступно только в Enterprise Edition.{% endalert %}
+{% alert level="info" %}Доступно только в DKP Enterprise Edition.{% endalert %}
 
 1. Включите [модуль `metallb`](/modules/metallb/):
 
@@ -274,7 +329,11 @@ metallb:
 
 1. Создайте [ресурс MetalLoadBalancerClass](/modules/metallb/cr.html#metalloadbalancerclass):
 
-   > Metallb-балансировщики должны размещаться на тех же узлах, что и ingress-контроллеры. В [типовых сценариях развертывания](/products/kubernetes-platform/guides/hardware-requirements.html#сценарии-развёртывания) для этого используются frontend-узлы (для развертывания ingress-контроллеров и Metallb-балансировщиков на frontend-узлах используйте в их манифестах аннотацию `node-role.deckhouse.io/frontend: ""`).
+   {% alert level="info" %}
+   MetalLB-балансировщики должны размещаться на тех же узлах, что и Ingress-контроллеры. В [типовых сценариях развёртывания](/products/kubernetes-platform/guides/hardware-requirements.html#сценарии-развёртывания) для этой цели используются frontend-узлы.
+
+  Чтобы разместить Ingress-контроллеры и MetalLB-балансировщики на frontend-узлах, укажите в `nodeSelector` лейбл `node-role.deckhouse.io/frontend: ""`.
+   {% endalert %}
 
    ```yaml
    apiVersion: network.deckhouse.io/v1alpha1
@@ -308,15 +367,21 @@ metallb:
      nodeSelector:
        node-role.deckhouse.io/frontend: ""
      tolerations:
-     - effect: NoExecute
-       key: dedicated.deckhouse.io
-       value: frontend
-       operator: Equal
+       - effect: NoExecute
+         key: dedicated.deckhouse.io
+         value: frontend
+         operator: Equal
    ```
 
-   > При создании ingress-контроллера также можно указать определенные IP-адреса из пула, которые будут ему присвоены. Для указания адресов, которые должны быть присвоены сервису, используйте аннотацию `network.deckhouse.io/load-balancer-ips`. Если желаемых адресов больше одного, то также должна присутствовать аннотация `network.deckhouse.io/l2-load-balancer-external-ips-count`, в которой необходимо указать количество выделяемых адресов из пула (оно не должно быть меньше количества адресов, перечисленных в `network.deckhouse.io/load-balancer-ips`). [Пример использования аннотаций](/modules/metallb/examples.html#создание-сервиса-c-присвоением-ему-определенных-ip-адресов-из-пула) для присвоения сервису определенных адресов из пула.
+   {% alert level="info" %}
+   При создании Ingress-контроллера можно явно указать IP-адреса из пула, которые должны быть назначены его сервису. Для этого используйте аннотацию `network.deckhouse.io/load-balancer-ips`.
 
-Платформа создаст сервис с типом LoadBalancer, которому будет присвоено заданное количество адресов:
+  Если требуется назначить несколько IP-адресов, дополнительно укажите аннотацию `network.deckhouse.io/l2-load-balancer-external-ips-count` с количеством выделяемых из пула адресов. Указанное значение не должно быть меньше количества IP-адресов, перечисленных в `network.deckhouse.io/load-balancer-ips`.
+
+  Пример настройки приведён в разделе [«Создание сервиса c присвоением ему определенных IP-адресов из пула»](/modules/metallb/examples.html#создание-сервиса-c-присвоением-ему-определенных-ip-адресов-из-пула).
+   {% endalert %}
+
+DKP создаст сервис с типом LoadBalancer, которому будет присвоено заданное количество адресов:
 
 ```shell
 d8 k -n d8-ingress-nginx get svc
@@ -332,14 +397,20 @@ main-load-balancer     LoadBalancer   10.222.130.11   192.168.2.100,192.168.2.10
 {: .nowrap-default }
 <!-- markdownlint-enable MD031 -->
 
+{% endtab %}
+{% endtabs %}
+
 ### Пример разделения доступа между публичной и административной зонами
 
 Во многих приложениях один и тот же бэкенд обслуживает как публичную часть, так и административный интерфейс. Например:
 
 - `https://example.com` — публичная зона;
-- `https://admin.example.com` — административная зона, к которой доступ должен быть ограничен (`ACL`, `mTLS`, `IP whitelist` и т.д.).
+- `https://admin.example.com` — административная зона, к которой доступ должен быть ограничен (`ACL`, `mTLS`, `IP whitelist` и так далее).
 
 При таком сценарии рекомендуем выносить административный трафик в отдельный Ingress-контроллер (при необходимости с отдельным Ingress-классом) и ограничивать доступ к нему с помощью [параметра `spec.acceptRequestsFrom`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom).
+
+{% tabs Варианты разделения зон %}
+{% tab "Один Ingress-контроллер" %}
 
 #### Особенности использования одного Ingress-контроллера
 
@@ -387,11 +458,14 @@ spec:
                   number: 80
 ```
 
-При [включенной обработке и передаче заголовков `X-Forwarded-*`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-hostport-behindl7proxy) бэкенд может опираться на заголовок `x-forwarded-host` при принятии решений об авторизации. И для приведенного выше примера возможна ситуация, когда через Ingress-ресурс для обслуживания публичного трафика можно подключиться к административной зоне, используя `x-forwarded-host`. Поэтому при использовании этой опции вы должны быть уверены, что запросы к Ingress-контроллеру направляются только от доверенных источников.
+При [включенной обработке и передаче заголовков `X-Forwarded-*`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-hostport-behindl7proxy) бэкенд может опираться на заголовок `x-forwarded-host` при принятии решений об авторизации. В примере выше через публичный Ingress можно подключиться к административной зоне с помощью `x-forwarded-host`. Поэтому запросы к Ingress-контроллеру должны приходить только от доверенных источников.
+
+{% endtab %}
+{% tab "Раздельные Ingress-контроллеры" %}
 
 #### Использование раздельных Ingress-контроллеров
 
-Чтобы избежать ситуации, описанной выше (когда при [включенной обработке и передаче заголовков `X-Forwarded-*`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-hostport-behindl7proxy) можно, например, через Ingress-ресурс для обслуживания публичного трафика подключиться к административной зоне, используя `x-forwarded-host`), рекомендуем:
+Чтобы избежать этой ситуации, рекомендуем:
 
 - настроить правила доступа на уровне Ingress-ресурсов,
 - использовать разные Ingress-контроллеры,
@@ -425,7 +499,7 @@ kind: Ingress
 metadata:
   name: public-ingress
 spec:
-  ingressClassName: public-nginx # Ingress-ресурс для публичного трафика связан связан с отдельным Ingress-контроллером.
+  ingressClassName: public-nginx # Ingress-ресурс для публичного трафика связан с отдельным Ingress-контроллером.
   rules:
     - host: example.com
       http:
@@ -460,10 +534,10 @@ spec:
 
 В этом примере:
 
-- Ingress-контроллер доступен на портах узлов через инлет `HostPort`;
-- [параметр `acceptRequestsFrom`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) разрешает подключение к контроллеру только из перечисленных подсетей;
-- даже если внешний балансировщик или клиент может передавать свои значения заголовков `X-Forwarded-*`, решение о допуске соединения до контроллера принимается по реальному адресу подключения, а не по заголовкам.
-- административные Ingress-ресурсы (в данном примере `admin-ingress`) обслуживаются этим контроллером согласно настроенному Ingress-классу.
+- Ingress-контроллер доступен на портах узлов через инлет `HostPort`.
+- Параметр [`acceptRequestsFrom`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) разрешает подключение к контроллеру только из перечисленных подсетей.
+- Даже если внешний балансировщик или клиент может передавать свои значения заголовков `X-Forwarded-*`, решение о допуске соединения до контроллера принимается по реальному адресу подключения, а не по заголовкам.
+- Административные Ingress-ресурсы (в данном примере `admin-ingress`) обслуживаются этим контроллером согласно настроенному Ingress-классу.
 
 Пример Ingress-контроллера, который обслуживает Ingress-ресурсы для публичного трафика:
 
@@ -481,6 +555,11 @@ spec:
     behindL7Proxy: true
 ```
 
+{% endtab %}
+{% endtabs %}
+
 ## Поддержка и безопасность модуля
 
-Модуль `ingress-nginx` входит в сопровождение Deckhouse Kubernetes Platform на весь срок поддержки платформы, вне зависимости от режима развития upstream-проекта. Команда Deckhouse отслеживает CVE в контроллере и зависимостях — NGINX, Lua-модули, базовые образы — и поставляет исправления в релизах платформы. Для соответствия ожиданиям PCI DSS по вендорской поддержке и срокам устранения уязвимостей ответственным вендором модуля является компания «Флант». Сертификация DKP в ФСТЭК России фиксирует, в том числе, процессы управления уязвимостями и выпуск обновлений безопасности.
+Модуль `ingress-nginx` входит в сопровождение DKP на весь срок поддержки платформы, вне зависимости от режима развития upstream-проекта. Команда DKP отслеживает CVE в контроллере и зависимостях — NGINX, Lua-модули, базовые образы — и поставляет исправления в релизах платформы.
+
+Для соответствия ожиданиям PCI DSS по вендорской поддержке и срокам устранения уязвимостей ответственным вендором модуля является компания «Флант». Сертификация DKP в ФСТЭК России фиксирует, в том числе, процессы управления уязвимостями и выпуск обновлений безопасности.

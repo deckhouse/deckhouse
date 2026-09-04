@@ -178,7 +178,7 @@ spec:
      base64 project-209317-556c656b81c4.json
      ```
 
-2. Сохраняеем полученную **base64**-строку в параметр модуля `cloudDNSServiceAccount`.
+2. Сохраняем полученную **base64**-строку в параметр модуля `cloudDNSServiceAccount`.
 
    После этого Deckhouse автоматически создаст ClusterIssuer и Secret для cloudDNS в namespace `d8-cert-manager`.
 
