@@ -63,7 +63,7 @@ import (
 func TestBuildImmutableMasterPayloadIsBase64CloudInit(t *testing.T) {
 	b, bctx := immutableTestBootstrapper(t)
 
-	payload, nodeConfigDocument, err := b.buildImmutableMasterPayload(t.Context(), bctx, "example-master-0")
+	payload, nodeConfigDocument, err := b.buildImmutableMasterPayload(t.Context(), bctx, "example-master-0", nil)
 	require.NoError(t, err)
 
 	document, err := base64.StdEncoding.DecodeString(payload)
@@ -146,13 +146,16 @@ kind: NodeConfig
 metadata:
   name: example-master-0
 spec:
-  kubelet:
-    nodeIP: 10.99.0.11
+  network:
+    interfaces:
+    - name: eno1
+      dhcp: false
+      addresses: ["10.99.0.11/24"]
 `})
 	require.NoError(t, err)
 	bctx.immutable.customizations = map[string]immutable.Customization{"example-master-0": customizations[0]}
 
-	payload, _, err := b.buildImmutableMasterPayload(t.Context(), bctx, "example-master-0")
+	payload, _, err := b.buildImmutableMasterPayload(t.Context(), bctx, "example-master-0", nil)
 	require.NoError(t, err)
 
 	document, err := base64.StdEncoding.DecodeString(payload)
@@ -181,7 +184,7 @@ func TestPushImmutablePayloadStopsOnAnInstalledNode(t *testing.T) {
 	defer cancel()
 
 	started := time.Now()
-	_, err := b.pushImmutablePayload(ctx, bctx, "master-0", host, []byte("#cloud-config\n"), nil)
+	_, _, err := b.pushImmutablePayload(ctx, bctx, "master-0", host, staticDocument)
 
 	require.ErrorIs(t, err, immutable.ErrMaintenanceTokenRequired)
 	require.Less(t, time.Since(started), waitMaintenancePort.interval,
@@ -206,7 +209,7 @@ func TestARefusedPushLeavesNoRecord(t *testing.T) {
 	ctx, cancel := context.WithTimeout(t.Context(), 2*waitMaintenancePort.interval)
 	defer cancel()
 
-	err := b.pushRecordedPayload(ctx, bctx, "master-0", host, []byte("#cloud-config\n"), nil)
+	_, err := b.pushRecordedPayload(ctx, bctx, "master-0", host, staticDocument)
 	require.ErrorIs(t, err, immutable.ErrMaintenanceTokenRequired)
 
 	pushed, err := payloadAlreadyPushed(t.Context(), bctx.stateCache, "master-0", host)
@@ -234,11 +237,24 @@ func TestAPushThatNeverReachedTheMachineLeavesNoRecord(t *testing.T) {
 	bctx.immutable.maintenancePort = closed.Port
 	host := closed.IP.String()
 
-	require.Error(t, b.pushRecordedPayload(t.Context(), bctx, "master-0", host, []byte("#cloud-config\n"), nil))
+	_, err = b.pushRecordedPayload(t.Context(), bctx, "master-0", host, staticDocument)
+	require.Error(t, err)
 
 	pushed, err := payloadAlreadyPushed(t.Context(), bctx.stateCache, "master-0", host)
 	require.NoError(t, err)
 	require.False(t, pushed, "a machine dhctl never reached must not be recorded as configured")
+}
+
+// ambiguousDocument renders the payload whose system selector matches both disks
+// of a two-disk machine.
+func ambiguousDocument(context.Context, *immutable.Inventory) (immutableDocument, error) {
+	return immutableDocument{payload: []byte("#cloud-config\n"), nodeConfig: []byte(ambiguousDiskDocument)}, nil
+}
+
+// staticDocument stands in for a rendered payload where the test is about what
+// the push does across attempts rather than about what is in the document.
+func staticDocument(context.Context, *immutable.Inventory) (immutableDocument, error) {
+	return immutableDocument{payload: []byte("#cloud-config\n"), address: "10.0.0.1"}, nil
 }
 
 // shortMaintenanceWait gives the push loop a handful of quick attempts: these tests are about
@@ -268,23 +284,31 @@ const oneDiskMachineWithoutEth0 = `{"disks":[{"name":"sda","size":68719476736}],
 const ambiguousDiskDocument = "apiVersion: internal.deckhouse.io/v1alpha1\nkind: NodeConfig\nspec:\n  storage:\n    diskSelector:\n      size: \"=30Gi\"\n"
 
 // An image too old to answer is a check nobody can run, not a bootstrap to fail:
-// refusing to install against one is worse than installing without the check.
-func TestCheckMachineAgainstDocument(t *testing.T) {
-	document := []byte(ambiguousDiskDocument)
+// refusing to install against one is worse than installing without the check. A
+// machine that answers nothing at all is the wait itself, and comes back as an
+// error the loop retries on.
+func TestBuildAgainstMachine(t *testing.T) {
+	build := func(context.Context, *immutable.Inventory) (immutableDocument, error) {
+		return immutableDocument{payload: []byte("#cloud-config\n"), nodeConfig: []byte(ambiguousDiskDocument)}, nil
+	}
 
 	machine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		_, _ = io.WriteString(w, twoDisksOfOneSize)
 	}))
 	t.Cleanup(machine.Close)
 
-	err := checkMachineAgainstDocument(t.Context(), strings.TrimPrefix(machine.URL, "http://"), document)
+	document, err := buildAgainstMachine(t.Context(), strings.TrimPrefix(machine.URL, "http://"), build)
 	require.ErrorContains(t, err, "matches 2 disks",
 		"a selector matching both disks must be refused before the push")
+	require.ErrorIs(t, err, errDocumentUnfitForMachine, "no waiting grows the machine a third disk")
+	require.Nil(t, document.payload)
 
 	old := httptest.NewServer(http.HandlerFunc(http.NotFound))
 	t.Cleanup(old.Close)
-	require.NoError(t, checkMachineAgainstDocument(t.Context(), strings.TrimPrefix(old.URL, "http://"), document),
-		"an image without the endpoint must not fail the bootstrap")
+	document, err = buildAgainstMachine(t.Context(), strings.TrimPrefix(old.URL, "http://"), build)
+	require.NoError(t, err, "an image without the endpoint must not fail the bootstrap")
+	require.False(t, document.builtAgainstInventory,
+		"nothing was checked, so a later attempt has to build again")
 
 	// The other ways an inventory can be unreadable, none of which the operator
 	// can do anything about while the machine is still uninstalled.
@@ -292,28 +316,31 @@ func TestCheckMachineAgainstDocument(t *testing.T) {
 		_, _ = io.WriteString(w, "{not json")
 	}))
 	t.Cleanup(broken.Close)
-	require.NoError(t, checkMachineAgainstDocument(t.Context(), strings.TrimPrefix(broken.URL, "http://"), document),
-		"an inventory that cannot be parsed must not fail the bootstrap")
+	_, err = buildAgainstMachine(t.Context(), strings.TrimPrefix(broken.URL, "http://"), build)
+	require.NoError(t, err, "an inventory that cannot be parsed must not fail the bootstrap")
 
-	require.NoError(t, checkMachineAgainstDocument(t.Context(), "127.0.0.1:1", document),
-		"a machine that answers nothing at all must not fail the bootstrap")
+	_, err = buildAgainstMachine(t.Context(), "127.0.0.1:1", build)
+	require.Error(t, err, "a machine that answers nothing at all is still booting: the loop retries")
+	require.False(t, pushGaveUp(err), "and the wait must not end on it")
 }
 
-// A machine still powering on is the normal case inside the push loop, and that
-// attempt's own push failure already reports the dead port. A machine that answered
-// unusably is worth one line: the same attempt then pushes and the loop ends.
-func TestCheckMachineAgainstDocumentWarnsOnlyWhenTheMachineAnswered(t *testing.T) {
-	document := []byte(ambiguousDiskDocument)
+// A machine still powering on is the normal case inside the push loop, and its
+// silence is the wait itself. A machine that answered unusably is worth one
+// line: the same attempt then pushes and the loop ends.
+func TestBuildAgainstMachineWarnsOnlyWhenTheMachineAnswered(t *testing.T) {
+	build := func(context.Context, *immutable.Inventory) (immutableDocument, error) {
+		return immutableDocument{payload: []byte("#cloud-config\n"), nodeConfig: []byte(ambiguousDiskDocument)}, nil
+	}
 
 	logged := func(address string) string {
 		var log bytes.Buffer
 		ctx := dhlog.ToContext(t.Context(), slog.New(slog.NewTextHandler(&log, nil)))
-		require.NoError(t, checkMachineAgainstDocument(ctx, address, document))
+		_, _ = buildAgainstMachine(ctx, address, build)
 		return log.String()
 	}
 
 	require.Empty(t, logged("127.0.0.1:1"),
-		"a machine that answers nothing is still booting, and the push failure of this very attempt says so")
+		"a machine that answers nothing is still booting, and the loop reports the wait")
 
 	old := httptest.NewServer(http.HandlerFunc(http.NotFound))
 	t.Cleanup(old.Close)
@@ -324,8 +351,8 @@ func TestCheckMachineAgainstDocumentWarnsOnlyWhenTheMachineAnswered(t *testing.T
 		_, _ = io.WriteString(w, "{not json")
 	}))
 	t.Cleanup(broken.Close)
-	require.Equal(t, 1, strings.Count(logged(strings.TrimPrefix(broken.URL, "http://")), "level=WARN"),
-		"an answer that cannot be parsed is worth one line too")
+	require.Equal(t, 2, strings.Count(logged(strings.TrimPrefix(broken.URL, "http://")), "level=WARN"),
+		"an answer that cannot be parsed is one line, and the document built without it another")
 }
 
 // The refusal has to reach the operator instead of the machine: a document that
@@ -348,7 +375,7 @@ func TestEveryPushPathRefusesADocumentTheMachineCannotSatisfy(t *testing.T) {
 				bctx := &bootstrapContext{immutable: &immutableBootstrap{maintenancePort: machine.port}}
 				// The two documents differ on purpose: the machine takes the cloud-init,
 				// the check reads the NodeConfig inside it.
-				_, err := b.pushImmutablePayload(ctx, bctx, "master-0", machine.host, []byte("#cloud-config\n"), []byte(ambiguousDiskDocument))
+				_, _, err := b.pushImmutablePayload(ctx, bctx, "master-0", machine.host, ambiguousDocument)
 				return err
 			},
 		},
@@ -435,7 +462,7 @@ func TestPushImmutablePayloadChecksTheMachineThatAnswersLate(t *testing.T) {
 	b := &ClusterBootstrapper{Params: &Params{Options: options.New()}}
 	bctx := &bootstrapContext{immutable: &immutableBootstrap{maintenancePort: port}}
 
-	_, err := b.pushImmutablePayload(t.Context(), bctx, "master-0", host, []byte("#cloud-config\n"), []byte(ambiguousDiskDocument))
+	_, _, err := b.pushImmutablePayload(t.Context(), bctx, "master-0", host, ambiguousDocument)
 
 	require.ErrorContains(t, err, "matches 2 disks", "the machine that answers late must be checked too")
 	require.Equal(t, int64(1), pushes.Load(),
@@ -594,8 +621,11 @@ kind: NodeConfig
 metadata:
   name: master-1
 spec:
-  kubelet:
-    nodeIP: 10.99.0.12
+  network:
+    interfaces:
+    - name: eno1
+      dhcp: false
+      addresses: ["10.99.0.12/24"]
 `})
 	require.NoError(t, err)
 	bctx.immutable.customizations = map[string]immutable.Customization{"master-1": customizations[0]}
@@ -650,7 +680,7 @@ spec:
 		"a registered Node is not a control-plane member: the wait must not end on it")
 	require.Equal(t, []string{"master-1", "master-2"}, pushes,
 		"the first master has its configuration already, and etcd takes the rest one at a time")
-	require.Contains(t, documents[0], "10.99.0.12", "the operator's document must reach a joining master")
+	require.Contains(t, documents[0], "10.99.0.12/24", "the operator's document must reach a joining master")
 
 	require.Error(t, b.bootstrapImmutableAdditionalMasters(t.Context(), bctx, kubeCl))
 	require.Equal(t, []string{"master-1", "master-2"}, pushes,
@@ -660,6 +690,94 @@ spec:
 	createReadyControlPlaneNode(t, kubeCl, "master-2")
 	require.NoError(t, b.bootstrapImmutableAdditionalMasters(t.Context(), bctx, kubeCl))
 	require.Equal(t, []string{"master-1", "master-2"}, pushes)
+}
+
+// A machine that could not decide which of its interfaces the cluster reaches it
+// on never registers, and only the machine knows that. Without asking it, the
+// wait spends its whole budget before saying anything at all.
+func TestTheMasterWaitEndsOnWhatTheMachineReports(t *testing.T) {
+	immutabletest.NoRetryCollapse(t)
+
+	kubeCl := client.NewFakeKubernetesClient()
+
+	tests := []struct {
+		name   string
+		status *immutable.NodeStatus
+		want   string
+	}{
+		{
+			name:   "the node reports it failed",
+			status: &immutable.NodeStatus{Phase: immutable.PhaseFailed, Message: "no disk matched the selector"},
+			want:   "no disk matched the selector",
+		},
+		{
+			name: "the node could not resolve its own address",
+			status: &immutable.NodeStatus{Phase: "Preparing", Conditions: []immutable.NodeCondition{{
+				Type: immutable.ConditionAddressResolved, Status: immutable.ConditionFalse,
+				Reason: "NoMatch", Message: "eno1 (192.168.0.59) is in none of the cluster networks",
+			}}},
+			want: "is in none of the cluster networks",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			started := time.Now()
+			err := waitForImmutableMasterNode(t.Context(), kubeCl, "master-1", func(context.Context) error {
+				return nodeStatusFailure("master-1", tt.status)
+			})
+
+			require.ErrorIs(t, err, errNodeReportedFailure)
+			require.ErrorContains(t, err, "master-1")
+			require.ErrorContains(t, err, tt.want)
+			require.Less(t, time.Since(started), waitNodeRegistered.interval,
+				"nothing the wait does changes what the machine reported: it must end there")
+		})
+	}
+}
+
+// A machine that is still working is not a machine that failed: the wait goes
+// on, and what it reports is that the Node is not there yet.
+func TestTheMasterWaitGoesOnWhileTheMachineIsStillWorking(t *testing.T) {
+	kubeCl := client.NewFakeKubernetesClient()
+
+	err := waitForImmutableMasterNode(t.Context(), kubeCl, "master-1", func(context.Context) error {
+		return nodeStatusFailure("master-1", &immutable.NodeStatus{
+			Phase: "Preparing",
+			Conditions: []immutable.NodeCondition{
+				{Type: immutable.ConditionAddressResolved, Status: "True"},
+			},
+		})
+	})
+
+	require.NotErrorIs(t, err, errNodeReportedFailure)
+	require.ErrorContains(t, err, "get node master-1")
+}
+
+// The probe reads the machine's own answer with the bearer of the document dhctl
+// handed it, and a node dhctl never configured is one it cannot ask at all.
+func TestImmutableNodeStatusProbe(t *testing.T) {
+	machine := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Authorization") != "Bearer a-status-token" {
+			w.WriteHeader(http.StatusUnauthorized)
+			return
+		}
+		_, _ = io.WriteString(w, `{"phase":"Failed","message":"the etcd disk is missing"}`)
+	}))
+	t.Cleanup(machine.Close)
+
+	host, port := splitTestServerAddress(t, machine)
+	b, bctx := immutableTestBootstrapper(t)
+	bctx.immutable.hosts = map[string]string{"master-1": host}
+	bctx.immutable.maintenancePort = port
+
+	require.Nil(t, b.immutableNodeStatusProbe(bctx, "master-1"),
+		"a rerun that skipped the push holds no token, and the machine answers nobody else")
+
+	bctx.immutable.statusTokens = map[string]string{"master-1": "a-status-token"}
+	probe := b.immutableNodeStatusProbe(bctx, "master-1")
+	require.NotNil(t, probe)
+	require.ErrorContains(t, probe(t.Context()), "the etcd disk is missing")
 }
 
 // controlPlaneNodeGVR is what control-plane-manager reports a master's own etcd

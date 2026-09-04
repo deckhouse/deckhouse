@@ -1052,7 +1052,7 @@ func (b *ClusterBootstrapper) bootstrapFirstMaster(ctx context.Context, bctx *bo
 	// way it carries every other node's. The maintenance port is the static cluster's
 	// transport, where no provider exists to hand a document to bare metal; reaching for
 	// it here would buy an address, a push and a record of it for nothing.
-	masterCloudConfig, _, err := b.buildImmutableMasterPayload(ctx, bctx, masterNodeName)
+	masterCloudConfig, _, err := b.buildImmutableMasterPayload(ctx, bctx, masterNodeName, nil)
 	if err != nil {
 		return err
 	}
@@ -1430,7 +1430,7 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 	// the provider: in a cloud it has no customization and no address yet. Whether a group
 	// boots this way is its own systemType, never the master's: see payloadBuilderFor.
 	buildNodePayload := func(ctx context.Context, kubeCl *client.KubernetesClient, nodeGroupName, nodeName string) (string, error) {
-		payload, _, err := immutable.BuildJoinPayloadFromCluster(ctx, kubeCl, bctx.metaConfig, nodeName, nil, "", nodeGroupName)
+		payload, _, err := immutable.BuildJoinPayloadFromCluster(ctx, kubeCl, bctx.metaConfig, nodeName, nil, nil, "", nodeGroupName)
 		return payload, err
 	}
 
@@ -1439,7 +1439,7 @@ func (b *ClusterBootstrapper) bootstrapAdditionalNodes(ctx context.Context, bctx
 	var buildPayload masterPayloadBuilder
 	if bctx.immutable != nil {
 		buildPayload = func(ctx context.Context, kubeCl *client.KubernetesClient, metaConfig *config.MetaConfig, nodeName string) (string, error) {
-			payload, _, err := immutable.BuildJoinPayloadFromCluster(ctx, kubeCl, metaConfig, nodeName, nil, "", global.MasterNodeGroupName)
+			payload, _, err := immutable.BuildJoinPayloadFromCluster(ctx, kubeCl, metaConfig, nodeName, nil, nil, "", global.MasterNodeGroupName)
 			return payload, err
 		}
 	}

@@ -45,7 +45,7 @@ var ErrMaintenanceTokenRequired = errors.New(
 // do runs one request against a machine's maintenance server and hands the
 // answer back for the caller to classify: each endpoint reads its statuses
 // differently. The caller closes the body.
-func do(ctx context.Context, method, url string, body []byte) (*http.Response, error) {
+func do(ctx context.Context, method, url, token string, body []byte) (*http.Response, error) {
 	var reader io.Reader
 	if body != nil {
 		reader = bytes.NewReader(body)
@@ -58,6 +58,9 @@ func do(ctx context.Context, method, url string, body []byte) (*http.Response, e
 	// Only the document is ever sent as a body, and the node reads it as YAML.
 	if body != nil {
 		request.Header.Set("Content-Type", "application/yaml")
+	}
+	if token != "" {
+		request.Header.Set("Authorization", "Bearer "+token)
 	}
 
 	// A transport of its own, never the process-wide default: that one proxies
@@ -84,7 +87,7 @@ func errorQuote(response *http.Response) string {
 // from. The endpoint is unauthenticated by design — the machine holds no secret
 // at this point — so the caller answers for the network the address lives on.
 func PushNodeConfig(ctx context.Context, address string, document []byte) error {
-	response, err := do(ctx, http.MethodPut, "http://"+address+nodeConfigPushPath, document)
+	response, err := do(ctx, http.MethodPut, "http://"+address+nodeConfigPushPath, "", document)
 	if err != nil {
 		return fmt.Errorf("push the node configuration to %s: %w", address, err)
 	}
@@ -114,7 +117,7 @@ func PushNodeConfig(ctx context.Context, address string, document []byte) error 
 // not answer it at all is not an agent as far as this is concerned — an older
 // image serves no such path, and the caller checks it the long way.
 func AgentHoldsPort(ctx context.Context, address string) (bool, error) {
-	response, err := do(ctx, http.MethodGet, "http://"+address+whoamiPath, nil)
+	response, err := do(ctx, http.MethodGet, "http://"+address+whoamiPath, "", nil)
 	if err != nil {
 		return false, fmt.Errorf("ask %s which server holds its maintenance port: %w", address, err)
 	}

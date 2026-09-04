@@ -22,6 +22,8 @@ import (
 
 	"sigs.k8s.io/yaml"
 
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
@@ -46,9 +48,12 @@ type MasterPayloadInput struct {
 	// Customization is what the operator said about this machine, nil when the
 	// bootstrap was given no document for it.
 	Customization *Customization
-	// NodeIP is the address dhctl reaches this machine at, and empty in a cloud,
-	// where it does not exist yet.
-	NodeIP string
+	// PushAddress is the address dhctl hands this machine its configuration at,
+	// and empty in a cloud, where the machine does not exist yet.
+	PushAddress string
+	// Inventory is what the machine reports about its own hardware, nil where it
+	// cannot be asked: a cloud machine that does not exist, or an older image.
+	Inventory *Inventory
 }
 
 // BuildMasterPayload renders the documents the first master boots with: the node
@@ -65,7 +70,14 @@ func BuildMasterPayload(ctx context.Context, in MasterPayloadInput) (string, []b
 	if in.Customization != nil {
 		applyCustomization(&nodeConfig.Spec, *in.Customization)
 	}
-	defaultNodeIP(&nodeConfig.Spec, in.NodeIP)
+	if _, err := applyClusterInterface(ctx, &nodeConfig.Spec, in.NodeName, ClusterInterfaceInput{
+		Inventory:            in.Inventory,
+		Customization:        in.Customization,
+		InternalNetworkCIDRs: nodeConfig.Spec.InternalNetworkCIDRs,
+		PushAddress:          in.PushAddress,
+	}); err != nil {
+		return "", nil, err
+	}
 
 	controlPlaneConfig, err := buildControlPlaneConfig(ctx, in)
 	if err != nil {
@@ -96,9 +108,12 @@ type JoinPayloadInput struct {
 	// Customization is what the operator said about this machine, nil when the
 	// bootstrap was given no document for it.
 	Customization *Customization
-	// NodeIP is the address dhctl reaches this machine at, and empty in a cloud,
-	// where it does not exist yet.
-	NodeIP string
+	// PushAddress is the address dhctl hands this machine its configuration at,
+	// and empty in a cloud, where the machine does not exist yet.
+	PushAddress string
+	// Inventory is what the machine reports about its own hardware, nil where it
+	// cannot be asked: a cloud machine that does not exist, or an older image.
+	Inventory *Inventory
 	// NodeGroupName is the group this node joins. Empty means the master group.
 	NodeGroupName string
 }
@@ -132,7 +147,14 @@ func BuildJoinPayload(ctx context.Context, in JoinPayloadInput) (string, []byte,
 	if in.Customization != nil {
 		applyCustomization(&nodeConfig.Spec, *in.Customization)
 	}
-	defaultNodeIP(&nodeConfig.Spec, in.NodeIP)
+	if _, err := applyClusterInterface(ctx, &nodeConfig.Spec, in.NodeName, ClusterInterfaceInput{
+		Inventory:            in.Inventory,
+		Customization:        in.Customization,
+		InternalNetworkCIDRs: nodeConfig.Spec.InternalNetworkCIDRs,
+		PushAddress:          in.PushAddress,
+	}); err != nil {
+		return "", nil, err
+	}
 
 	document, nodeConfigYAML, err := buildPayload(in.MetaConfig, nodeConfig, nil)
 	if err != nil {
@@ -140,6 +162,27 @@ func BuildJoinPayload(ctx context.Context, in JoinPayloadInput) (string, []byte,
 	}
 
 	return base64.StdEncoding.EncodeToString([]byte(document)), nodeConfigYAML, nil
+}
+
+// applyClusterInterface marks the interface the cluster reaches this node on and
+// answers with the address the node holds once it has installed itself — where
+// the handoff channel and the apiserver are from then on.
+func applyClusterInterface(ctx context.Context, spec *nodeSpec, nodeName string, in ClusterInterfaceInput) (string, error) {
+	chosen, err := SelectClusterInterface(in)
+	if err != nil {
+		return "", fmt.Errorf("choose the cluster interface of %s: %w", nodeName, err)
+	}
+
+	markClusterInterface(spec, chosen, in.Customization.DescribesInterfaces())
+
+	if chosen.ByPushAddress {
+		dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf(
+			"Nothing names the interface the cluster reaches %s on, so %s was chosen: it is the interface holding %s, "+
+				"the address dhctl hands the machine its configuration at",
+			nodeName, chosen.Name, chosen.Address))
+	}
+
+	return chosen.Address, nil
 }
 
 // buildPayload renders the payload in the shape the path it travels accepts. In

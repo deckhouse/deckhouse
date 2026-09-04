@@ -16,6 +16,8 @@ package immutable
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"strconv"
@@ -55,7 +57,20 @@ const (
 	// defaultPodSubnetNodeCIDRPrefix is what bashible falls back to when the
 	// cluster configuration names no prefix.
 	defaultPodSubnetNodeCIDRPrefix = 24
+
+	// statusTokenBytes is the size of the bearer the node's maintenance server
+	// asks for on /status. Minted per document: it buys progress, nothing else.
+	statusTokenBytes = 32
 )
+
+// newStatusToken mints the bearer dhctl reads a node's bootstrap progress with.
+func newStatusToken() (string, error) {
+	token := make([]byte, statusTokenBytes)
+	if _, err := rand.Read(token); err != nil {
+		return "", fmt.Errorf("generate the node status token: %w", err)
+	}
+	return hex.EncodeToString(token), nil
+}
 
 type nodeConfigInput struct {
 	// NodeName is the name the node registers under.
@@ -125,6 +140,16 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 		return nil, err
 	}
 
+	internalNetworkCIDRs, err := clusterInternalNetworkCIDRs(in.MetaConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	token, err := newStatusToken()
+	if err != nil {
+		return nil, err
+	}
+
 	spec := nodeSpec{
 		NodeName: in.NodeName,
 		OSImage:  osImageRef,
@@ -158,8 +183,13 @@ func buildNodeConfig(ctx context.Context, in nodeConfigInput) (*nodeConfig, erro
 		// while the payload is being built, so the endpoint stays a
 		// placeholder; the node expands it from its own address on load.
 		APIServerEndpoints: []string{fmt.Sprintf("https://%s:%d", nodeAddressPlaceholder, APIServerPort)},
-		UpdatePolicy:       updatePolicy{Mode: "Automatic"},
-		Registry:           registry,
+		// The node resolves its own cluster address against these where no
+		// interface carries the cluster mark — which is every cloud machine, since
+		// none of them exists while its document is built.
+		InternalNetworkCIDRs: internalNetworkCIDRs,
+		UpdatePolicy:         updatePolicy{Mode: "Automatic"},
+		Registry:             registry,
+		StatusToken:          token,
 	}
 
 	applyJoinToSpec(&spec, in.Join)

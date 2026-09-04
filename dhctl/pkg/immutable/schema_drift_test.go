@@ -65,8 +65,10 @@ func TestCustomizableFieldsExistInNodeConfigCRD(t *testing.T) {
 		Network: network{
 			DNS:    &dns{Servers: []string{"10.0.0.1"}, Search: []string{"example.com"}},
 			Routes: []route{{Name: "r", Networks: []string{"10.1.0.0/16"}, Gateway: "10.0.0.1"}},
+			Interfaces: []networkInterface{
+				{Name: "eno1", Addresses: []string{"10.0.0.1/24"}, Gateway: "10.0.0.1", Cluster: true},
+			},
 		},
-		Kubelet: kubelet{NodeIP: "10.0.0.1"},
 	}
 
 	raw, err := json.Marshal(spec)

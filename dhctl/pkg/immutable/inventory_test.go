@@ -371,7 +371,7 @@ func TestCheckDocumentAcceptsWhatTheMachineWillMatch(t *testing.T) {
 `),
 		},
 		{
-			name:      "a static address kubelet is told to register with",
+			name:      "the cluster interface is one the machine reports",
 			inventory: twoDisks,
 			document: nodeConfigWithSpec(`
   network:
@@ -379,8 +379,7 @@ func TestCheckDocumentAcceptsWhatTheMachineWillMatch(t *testing.T) {
     - name: eth0
       dhcp: false
       addresses: ["192.168.0.101/24"]
-  kubelet:
-    nodeIP: 192.168.0.101
+      cluster: true
 `),
 		},
 	}
@@ -445,60 +444,19 @@ func TestCheckDocumentRefusesWhatTheMachineCannotSatisfy(t *testing.T) {
 			want: "unknown unit",
 		},
 		{
-			name:      "kubelet registers with an address no interface is given",
+			// The cluster interface is the one the node registers under and the one
+			// its certificates are issued for. A name the machine does not have
+			// leaves it with no address the cluster reaches it on, DHCP or not.
+			name:      "the cluster interface names no interface of this machine",
 			inventory: threeBlank,
 			document: nodeConfigWithSpec(`
   network:
     interfaces:
-    - name: eth0
-      dhcp: false
-      addresses: ["192.168.0.101/24"]
-  kubelet:
-    nodeIP: 192.168.0.5
-`),
-			want: "192.168.0.5",
-		},
-		{
-			// An interface address has to carry a prefix, so an operator writing one has a CIDR
-			// under their cursor when they fill in nodeIP. kubelet takes --node-ip as a bare
-			// address and never registers with a prefix on it.
-			name:      "kubelet is given the interface CIDR instead of the address",
-			inventory: threeBlank,
-			document: nodeConfigWithSpec(`
-  network:
-    interfaces:
-    - name: eth0
-      dhcp: false
-      addresses: ["192.168.0.101/24"]
-  kubelet:
-    nodeIP: 192.168.0.101/24
-`),
-			want: "write it as 192.168.0.101",
-		},
-		{
-			// The shape of nodeIP is the document's own business: a machine left on DHCP declares
-			// no address to compare it against, and the check that does the comparing gives up
-			// before it ever looks at what was written.
-			name:      "a CIDR next to interfaces that declare no address",
-			inventory: threeBlank,
-			document: nodeConfigWithSpec(`
-  network:
-    interfaces:
-    - name: eth0
+    - name: eno1
       dhcp: true
-  kubelet:
-    nodeIP: 192.168.0.101/24
+      cluster: true
 `),
-			want: "write it as 192.168.0.101",
-		},
-		{
-			name:      "kubelet is given something that is not an address at all",
-			inventory: threeBlank,
-			document: nodeConfigWithSpec(`
-  kubelet:
-    nodeIP: master-0.example.com
-`),
-			want: "is not an IP address",
+			want: "marked as the cluster interface",
 		},
 	}
 	for _, c := range cases {
@@ -557,8 +515,7 @@ func TestCheckDocumentAgainstNoInventoryIsNoCheckAtAll(t *testing.T) {
     interfaces:
     - name: eth0
       dhcp: true
-  kubelet:
-    nodeIP: 192.168.0.5
+      cluster: true
 `)
 
 	if err := CheckDocumentAgainstInventory(t.Context(), []byte(document), nil); err != nil {

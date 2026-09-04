@@ -58,6 +58,7 @@ spec:
     auth: dXNlcjpwYXNzd29yZA==
     path: /sys/deckhouse-oss
     scheme: HTTPS
+  statusToken: <status token>
   storage:
     diskSelector:
       size: '>=20Gi'

@@ -71,6 +71,10 @@ const (
 	// whoamiPath tells which of the two servers holds the port. Unauthenticated
 	// on both, and it answers a role, never which machine this is.
 	whoamiPath = "/whoami"
+
+	// nodeStatusPath is where a machine reports what it is doing with the
+	// document it took. Authorised by spec.statusToken of that document.
+	nodeStatusPath = "/status"
 )
 
 // APIServerPort is where a control-plane node's own kube-apiserver listens.

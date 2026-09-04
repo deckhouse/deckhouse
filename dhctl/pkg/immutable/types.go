@@ -56,8 +56,15 @@ type nodeSpec struct {
 	Kubelet            kubelet          `json:"kubelet,omitempty"`
 	ContainerRuntime   containerRuntime `json:"containerRuntime,omitempty"`
 	APIServerEndpoints []string         `json:"apiServerEndpoints,omitempty"`
-	UpdatePolicy       updatePolicy     `json:"updatePolicy,omitempty"`
-	Registry           *registrySpec    `json:"registry,omitempty"`
+	// InternalNetworkCIDRs are the networks the cluster reaches its nodes on.
+	// The node resolves its own cluster address against them when no interface
+	// carries the cluster mark.
+	InternalNetworkCIDRs []string      `json:"internalNetworkCIDRs,omitempty"`
+	UpdatePolicy         updatePolicy  `json:"updatePolicy,omitempty"`
+	Registry             *registrySpec `json:"registry,omitempty"`
+	// StatusToken is the bearer the node's maintenance server asks for on
+	// /status. Minted per document: it authorises reading progress, nothing else.
+	StatusToken string `json:"statusToken,omitempty"`
 }
 
 // storage is what the node is told about its disks. Neither disk is named by
@@ -173,6 +180,10 @@ type networkInterface struct {
 	DHCP      bool     `json:"dhcp"`
 	Addresses []string `json:"addresses,omitempty"`
 	Gateway   string   `json:"gateway,omitempty"`
+	// Cluster marks the interface the cluster reaches this node on: kubelet
+	// registers under its address and the node's PKI is issued for it. At most
+	// one interface carries it.
+	Cluster bool `json:"cluster,omitempty"`
 }
 
 type kubelet struct {
@@ -195,10 +206,6 @@ type kubelet struct {
 	// join payload: the node refuses to bootstrap a new cluster with one.
 	CACert         string `json:"caCert,omitempty"`
 	BootstrapToken string `json:"bootstrapToken,omitempty"`
-	// NodeIP is the address kubelet registers with. On a machine with several
-	// NICs the automatic choice is a guess, and a wrong one is a node nobody
-	// can reach.
-	NodeIP string `json:"nodeIP,omitempty"`
 }
 
 // resourceReservation controls how much of the node is kept for the system.

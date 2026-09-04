@@ -34,6 +34,10 @@ import (
 
 var updateGolden = flag.Bool("update-golden", false, "rewrite the golden payload files")
 
+// redactedStatusToken stands for the bearer dhctl mints for every document; a
+// fresh one on each run is exactly what a golden cannot hold.
+const redactedStatusToken = "<status token>"
+
 // TestBuildCloudConfigGolden pins the exact bytes the master VM boots with: the
 // on-node agent parses strictly, so a silent field rename refuses to bootstrap.
 // Only the freshly-minted handoff strings are replaced with placeholders.
@@ -46,6 +50,7 @@ func TestBuildDocumentStreamGolden(t *testing.T) {
 		MetaConfig: metaConfig,
 	})
 	require.NoError(t, err)
+	nodeConfig.Spec.StatusToken = redactedStatusToken
 
 	controlPlaneConfig, err := buildControlPlaneConfig(context.Background(), MasterPayloadInput{
 		NodeName:      "example-master-0",
@@ -156,6 +161,11 @@ func TestCloudPayloadSurvivesTheProviderBlock(t *testing.T) {
 		nodeConfigDocument := requireNodeAccepts(t, documents, NodeConfigKind, &nodeConfig{})
 		var carried map[string]any
 		require.NoError(t, yaml.Unmarshal([]byte(nodeConfigDocument), &carried))
+		// Minted per document, so it is the one field the golden cannot pin.
+		spec, ok := carried["spec"].(map[string]any)
+		require.True(t, ok)
+		require.NotEmpty(t, spec["statusToken"], "every document carries the bearer its node reports progress with")
+		spec["statusToken"] = redactedStatusToken
 		require.Equal(t, goldenNodeConfigDocument(t), carried,
 			"the machine has to receive the very documents the golden pins")
 
