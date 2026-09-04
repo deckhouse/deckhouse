@@ -78,8 +78,7 @@ Start the validator:
 ```
 
 Call it with `grpcurl` from `src` (that is where the relative `-import-path` points).
-The payload is a JSON-encoded `Input` wrapped in `input_json`, so it needs base64 —
-reflection is not served, hence `-proto`:
+The payload is a JSON-encoded `Input` wrapped in `input_json`, so it needs base64:
 
 ```bash
 INPUT=$(cat << 'EOF' | base64
