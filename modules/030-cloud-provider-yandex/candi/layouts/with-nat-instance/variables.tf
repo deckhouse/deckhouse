@@ -105,5 +105,9 @@ locals {
   # selection itself is shared with the provider configuration in
   # terraform-modules/providers.tf, which is symlinked into this root module, so
   # both read the same resolved credentials.
-  exporter_api_key = lookup(local.credentials, "d8-credentials-exporter", "")
+  #
+  # nonsensitive() is required here and only here: this key is published in the
+  # cloud_discovery_data output, exactly as it was before the migration, and Terraform
+  # refuses to place a sensitive value in a non-sensitive output.
+  exporter_api_key = nonsensitive(lookup(local.credentials, "d8-credentials-exporter", ""))
 }
