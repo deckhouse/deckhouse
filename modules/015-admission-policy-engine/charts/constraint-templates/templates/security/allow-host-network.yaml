@@ -55,8 +55,6 @@ spec:
               - |
                 {{- include "constraint-templates.lib.common.container-review" . | nindent 16 }}
               - |
-                {{- include "constraint-templates.lib.check_bool" . | nindent 16 }}
-              - |
                 {{- include "constraint-templates.lib.range" . | nindent 16 }}
               - |
                 {{- include "constraint-templates.lib.check_range" . | nindent 16 }}
@@ -67,7 +65,6 @@ spec:
             rego: |
               package d8.security_policies
 
-              import data.lib.check_bool.check_pod_bool
               import data.lib.check_range.check_ports_with_protocol_in_ranges
               import data.lib.message.violation_message
               import data.lib.common.input_containers

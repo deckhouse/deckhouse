@@ -395,3 +395,36 @@ test_pod_spec_unknown_kind_fallback_containers if {
   }
   result.containers[0].name == "custom-c"
 }
+
+# effective_metadata must fall back to the object's own metadata for unknown
+# kinds, so annotations are not silently dropped. Symmetric with the
+# object_labels and pod_spec fallbacks.
+test_effective_metadata_unknown_kind_fallback if {
+  result := common.effective_metadata with input as {
+    "review": {
+      "object": {
+        "kind": "SomeCustomResource",
+        "metadata": {
+          "annotations": {"container.apparmor.security.beta.kubernetes.io/c": "unconfined"},
+          "namespace": "default"
+        }
+      }
+    }
+  }
+  result.annotations["container.apparmor.security.beta.kubernetes.io/c"] == "unconfined"
+}
+
+# effective_metadata for a controller reads the pod template's metadata, not
+# the controller's own metadata.
+test_effective_metadata_controller_pod_template if {
+  result := common.effective_metadata with input as {
+    "review": {
+      "object": {
+        "kind": "Deployment",
+        "metadata": {"annotations": {"a": "top-level"}, "namespace": "default"},
+        "spec": {"template": {"metadata": {"annotations": {"a": "pod-template"}}}}
+      }
+    }
+  }
+  result.annotations.a == "pod-template"
+}
