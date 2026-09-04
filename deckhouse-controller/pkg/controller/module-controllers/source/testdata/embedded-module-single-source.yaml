@@ -38,3 +38,11 @@ metadata:
   name: ingressnginx
 spec:
   enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
+metadata:
+  name: ingressnginx
+status:
+  availableRepositories:
+    - test-source-1

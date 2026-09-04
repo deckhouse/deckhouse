@@ -332,7 +332,7 @@ func TestGenerateRegistryOptions(t *testing.T) {
 	})
 }
 
-func TestAvailableRepositories(t *testing.T) {
+func TestAvailableModuleSources(t *testing.T) {
 	ctx := context.Background()
 
 	sc, err := project.Scheme()
@@ -350,15 +350,29 @@ func TestAvailableRepositories(t *testing.T) {
 		).
 		Build()
 
-	shared, err := utils.AvailableRepositories(ctx, cl, "shared")
+	shared, err := utils.AvailableModuleSources(ctx, cl, "shared")
 	require.NoError(t, err)
-	assert.Equal(t, []string{"deckhouse-modules", "mirror"}, shared, "sorted, as the package lists them")
+	assert.Equal(t, []string{"deckhouse", "mirror"}, shared, "the module sources behind the repositories, sorted")
 
-	embedded, err := utils.AvailableRepositories(ctx, cl, "embedded-only")
+	embedded, err := utils.AvailableModuleSources(ctx, cl, "embedded-only")
 	require.NoError(t, err)
 	assert.Empty(t, embedded)
 
-	unknown, err := utils.AvailableRepositories(ctx, cl, "unknown")
+	unknown, err := utils.AvailableModuleSources(ctx, cl, "unknown")
 	require.NoError(t, err)
 	assert.Nil(t, unknown, "a module without a package is offered by nobody")
+}
+
+func TestPickModuleSource(t *testing.T) {
+	assert.Empty(t, utils.PickModuleSource("", nil), "nobody offers")
+	assert.Equal(t, "mirror", utils.PickModuleSource("", []string{"mirror"}), "the only offering module source")
+	assert.Empty(t, utils.PickModuleSource("", []string{"deckhouse", "mirror"}), "several module sources and no choice")
+	assert.Equal(t, "mirror", utils.PickModuleSource("mirror", []string{"deckhouse", "mirror"}), "the configured module source wins")
+}
+
+func TestHasModuleSourceConflict(t *testing.T) {
+	assert.False(t, utils.HasModuleSourceConflict(false, "", []string{"deckhouse", "mirror"}), "a disabled module is never in conflict")
+	assert.False(t, utils.HasModuleSourceConflict(true, "mirror", []string{"deckhouse", "mirror"}), "a chosen module source settles the conflict")
+	assert.False(t, utils.HasModuleSourceConflict(true, "", []string{"mirror"}), "a single module source is no conflict")
+	assert.True(t, utils.HasModuleSourceConflict(true, "", []string{"deckhouse", "mirror"}))
 }
