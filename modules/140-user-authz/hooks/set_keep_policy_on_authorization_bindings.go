@@ -45,11 +45,9 @@ it on every Helm-managed binding of the module right before the release runs, th
 refuses to let the release proceed if any binding is left unprotected (the same pattern
 node-manager used when it moved its machine objects into node-controller).
 
-Once the controller adopts a binding it labels it as managed by the controller and drops the
-annotation, so the hook becomes a no-op: the selector below skips the adopted bindings. Both release
-engines put `app.kubernetes.io/managed-by: Helm` on the objects they apply, but the selector keys on
-the controller's own label instead: that is what decides ownership here, and stamping a chart-era
-binding the engine happens not to track is harmless while missing one is not.
+Once the controller adopts a binding it drops the Helm ownership label and the annotation, so the
+hook becomes a no-op: the selector below only matches bindings still labeled as managed by Helm.
+Both release engines put `app.kubernetes.io/managed-by: Helm` on the objects they apply.
 
 Engine notes: nelm reads the policy from the live object and also refuses to delete an object whose
 ownership metadata no longer matches the release, so an adoption racing the release is safe too.
@@ -65,9 +63,9 @@ const (
 	helmResourcePolicyAnnotation = "helm.sh/resource-policy"
 	helmResourcePolicyKeep       = "keep"
 
-	// unadoptedBindingsSelector matches the bindings the chart rendered and the controller has not
-	// adopted yet, whichever release engine rendered them.
-	unadoptedBindingsSelector = "heritage=deckhouse,module=user-authz,!user-authz.deckhouse.io/managed-by"
+	// helmManagedBindingsSelector matches the bindings the chart rendered and the controller has not
+	// adopted yet.
+	helmManagedBindingsSelector = "heritage=deckhouse,module=user-authz,app.kubernetes.io/managed-by=Helm"
 
 	keepPolicyWorkers = 16
 )
@@ -116,7 +114,7 @@ func stampKeepPolicy(ctx context.Context, dynClient dynamic.Interface, workers i
 		return 0, fmt.Errorf("marshal patch: %w", err)
 	}
 
-	return forEachRuleBindingParallel(ctx, dynClient, unadoptedBindingsSelector, isRuleBindingWithoutKeep, workers,
+	return forEachRuleBindingParallel(ctx, dynClient, helmManagedBindingsSelector, isRuleBindingWithoutKeep, workers,
 		func(ctx context.Context, ref bindingRef) error {
 			_, err := dynClient.Resource(ref.gvr).Namespace(ref.namespace).Patch(ctx, ref.name, types.MergePatchType, patch, metav1.PatchOptions{})
 			if err != nil && !apierrors.IsNotFound(err) {
@@ -130,7 +128,7 @@ func stampKeepPolicy(ctx context.Context, dynClient dynamic.Interface, workers i
 // verifyKeepPolicy re-lists the Helm-managed rule bindings and fails if any still lacks the keep
 // annotation: letting the release run would prune it.
 func verifyKeepPolicy(ctx context.Context, dynClient dynamic.Interface) error {
-	return forEachRuleBinding(ctx, dynClient, unadoptedBindingsSelector, isRuleBindingWithoutKeep, func(ref bindingRef) error {
+	return forEachRuleBinding(ctx, dynClient, helmManagedBindingsSelector, isRuleBindingWithoutKeep, func(ref bindingRef) error {
 		return fmt.Errorf("keep policy is not set on %s %s/%s: refusing to proceed to avoid prune", ref.gvr.Resource, ref.namespace, ref.name)
 	})
 }

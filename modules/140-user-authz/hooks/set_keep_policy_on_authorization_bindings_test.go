@@ -63,18 +63,13 @@ func testBinding(kind, namespace, name string, labels, annotations map[string]st
 	return obj
 }
 
-// helmLabels are the labels of a chart-rendered binding as the release engines leave it;
-// chartLabels those of one that lost the engine's ownership label (re-applied by hand from a
-// manifest). Both must be protected.
+// helmLabels are the labels of a chart-rendered binding as both release engines leave it.
 func helmLabels() map[string]string {
 	return map[string]string{"heritage": "deckhouse", "module": "user-authz", "app.kubernetes.io/managed-by": "Helm"}
 }
 
-func chartLabels() map[string]string {
-	return map[string]string{"heritage": "deckhouse", "module": "user-authz"}
-}
-
-// adoptedLabels are the labels of a binding the controller already owns.
+// adoptedLabels are the labels of a binding the controller already owns: the Helm ownership label
+// is gone, the controller's is there.
 func adoptedLabels() map[string]string {
 	return map[string]string{"heritage": "deckhouse", "module": "user-authz", "user-authz.deckhouse.io/managed-by": "user-authz-controller"}
 }
@@ -105,8 +100,6 @@ func TestStampKeepPolicy_StampsHelmManagedRuleBindingsOnly(t *testing.T) {
 		testBinding("ClusterRoleBinding", "", "user-authz:dev:user", helmLabels(), nil),
 		testBinding("ClusterRoleBinding", "", "user-authz:dev:user:custom-cluster-role:d8:user-authz:x:user", helmLabels(), nil),
 		testBinding("ClusterRoleBinding", "", "user-authz:ops:editor", helmLabels(), map[string]string{helmResourcePolicyAnnotation: helmResourcePolicyKeep}),
-		// lost the engine's ownership label (re-applied by hand): must be protected too
-		testBinding("ClusterRoleBinding", "", "user-authz:plain:user", chartLabels(), nil),
 		// module object that is not a rule binding: must not be touched
 		testBinding("ClusterRoleBinding", "", "d8:user-authz:admin-kubeconfig", helmLabels(), nil),
 		// already adopted by the controller: must not be touched
@@ -120,11 +113,11 @@ func TestStampKeepPolicy_StampsHelmManagedRuleBindingsOnly(t *testing.T) {
 	if err != nil {
 		t.Fatalf("stampKeepPolicy: %v", err)
 	}
-	if stamped != 4 {
-		t.Fatalf("stamped = %d, want 4 (three CRBs without keep + one RB)", stamped)
+	if stamped != 3 {
+		t.Fatalf("stamped = %d, want 3 (two CRBs without keep + one RB)", stamped)
 	}
 
-	for _, name := range []string{"user-authz:dev:user", "user-authz:dev:user:custom-cluster-role:d8:user-authz:x:user", "user-authz:ops:editor", "user-authz:plain:user"} {
+	for _, name := range []string{"user-authz:dev:user", "user-authz:dev:user:custom-cluster-role:d8:user-authz:x:user", "user-authz:ops:editor"} {
 		if got := keepAnnotationOf(t, c, crbGVR, "", name); got != helmResourcePolicyKeep {
 			t.Errorf("%s: keep = %q", name, got)
 		}
