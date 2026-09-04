@@ -1,17 +1,17 @@
 version: "3"
 
-vars:
-  CONFIG: ../../chainsaw-config.yaml
+# Shared task bodies for every scenario Taskfile.yml. Included with `flatten: true`
+# and vars NAME/CONFIG so `task run` etc. work unprefixed from each scenario directory.
 
 tasks:
   run:
-    desc: Run basic-audit-policy e2e test with JUNIT report
+    desc: Run {{.NAME}} e2e test with JUNIT report
     cmds:
       - mkdir -p ./reports
       - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-STEP --report-path ./reports/
 
   run:verbose:
-    desc: Run basic-audit-policy e2e test with verbose output
+    desc: Run {{.NAME}} e2e test with verbose output
     cmds:
       - mkdir -p ./reports
       - chainsaw test --test-dir . --config {{.CONFIG}} --parallel 1 --report-format JUNIT-STEP --report-path ./reports/ --verbose

@@ -30,8 +30,6 @@ spec:
               set -eu
               . ./scripts/functions.sh
               restore_moduleconfig "$CPM_E2E_BACKUP_FILE"
-              sleep 30
-              wait_for_api
             check:
               ($error == null): true
 

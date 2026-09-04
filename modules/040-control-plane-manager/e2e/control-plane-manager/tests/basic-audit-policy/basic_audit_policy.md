@@ -30,7 +30,7 @@ A [Kyverno Chainsaw](https://kyverno.github.io/chainsaw/) e2e test that validate
 | ---- | ------- |
 | `chainsaw-test.yaml` | Chainsaw test definition |
 | `manifests/moduleconfig-target.yaml` | Target `ModuleConfig` (`basicAuditPolicyEnabled: false`) |
-| `scripts/kubectl-retry.sh` | Shared `kubectl_retry` helper (retries transient API errors for up to ~1 minute) |
+| `scripts/functions.sh` | Symlink to `../../../functions.sh` (shared kubectl/CPO helpers) |
 
 ## API availability
 
@@ -117,8 +117,9 @@ If the test process was killed before cleanup, restore manually from the backup 
 BACKUP_FILE="${TMPDIR:-/tmp}/cpm-e2e-moduleconfig-backup.json"
 kubectl patch moduleconfig control-plane-manager --type=json \
   -p "$(jq -c '[{op: "replace", path: "/spec", value: .spec}]' "$BACKUP_FILE")"
+```
+
 Or source the helper: `. ./scripts/functions.sh && restore_moduleconfig "$BACKUP_FILE"`
-P_FILE"`
 
 ## Safety
 

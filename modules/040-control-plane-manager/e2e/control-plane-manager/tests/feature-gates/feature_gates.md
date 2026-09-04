@@ -38,7 +38,7 @@ A [Kyverno Chainsaw](https://kyverno.github.io/chainsaw/) e2e test that validate
 At runtime `prepare_feature_gates_test`:
 
 1. Reads Kubernetes minor version from the API server (`kubectl version`, e.g. `1.34`)
-2. Loads `../../../../../candi/feature_gates_map.yml` (override with `CPM_E2E_FEATURE_GATES_MAP`)
+2. Loads `../../../../../../candi/feature_gates_map.yml` (override with `CPM_E2E_FEATURE_GATES_MAP`)
 3. Unions gates from `apiserver`, `kubeControllerManager`, `kubeScheduler`, and `kubelet`, excluding `forbidden` and `deprecated`
 4. Writes `${CPM_E2E_FG_STATE_DIR}/moduleconfig-target.yaml`
 
