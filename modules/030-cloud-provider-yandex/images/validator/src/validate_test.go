@@ -24,6 +24,10 @@ import (
 	ycmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/pkg/meta"
 )
 
+// testClusterPrefix is a prefix accepted by prefixRegex. dhctl always sends one, so every
+// input that is expected to reach the rules has to carry a valid prefix.
+const testClusterPrefix = "test"
+
 // testProviderClusterConfig returns a legacy YandexClusterConfiguration with the given layout.
 // Note the legacy spelling etcdDiskSizeGb, which differs from etcdDiskSizeGB in the CRD.
 func testProviderClusterConfig(layout string, masterNodeGroup map[string]any) map[string]any {
@@ -221,7 +225,8 @@ func TestValidateMatchesDhctlBootstrapFailures(t *testing.T) {
 			t.Parallel()
 
 			err := validate(context.Background(), proto.ValidateInput{
-				Operation: proto.OperationBootstrap,
+				Operation:     proto.OperationBootstrap,
+				ClusterPrefix: testClusterPrefix,
 				CloudProviderVars: &proto.CloudProviderVars{
 					Settings:        testModuleSettings(),
 					Secrets:         tt.secrets,
@@ -244,7 +249,8 @@ func TestValidateBootstrapRequiresCredentialSecretOnce(t *testing.T) {
 	t.Parallel()
 
 	err := validate(context.Background(), proto.ValidateInput{
-		Operation: proto.OperationBootstrap,
+		Operation:     proto.OperationBootstrap,
+		ClusterPrefix: testClusterPrefix,
 		CloudProviderVars: &proto.CloudProviderVars{
 			Settings: testModuleSettings(),
 			NodeGroups: map[string]map[string]any{
@@ -267,7 +273,8 @@ func TestValidateConvergeRunsPreflight(t *testing.T) {
 	t.Parallel()
 
 	err := validate(context.Background(), proto.ValidateInput{
-		Operation: proto.OperationConverge,
+		Operation:     proto.OperationConverge,
+		ClusterPrefix: testClusterPrefix,
 		CloudProviderVars: &proto.CloudProviderVars{
 			Settings: map[string]any{
 				"provider": map[string]any{"parameters": map[string]any{"namespace": "default"}},
@@ -297,5 +304,76 @@ func TestValidateDestroySkipsValidation(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("validate() error = %v, want nil for destroy", err)
+	}
+}
+
+// TestValidateClusterPrefix pins the prefix rule the in-tree dhctl validator used to enforce:
+// the prefix becomes the name prefix of every cloud resource, so an invalid one has to fail
+// before any infrastructure is created rather than mid-apply on the first resource.
+func TestValidateClusterPrefix(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		prefix  string
+		wantErr bool
+	}{
+		{name: "lowercase", prefix: "cloud", wantErr: false},
+		{name: "with digits and dashes", prefix: "my-cluster-1", wantErr: false},
+		{name: "single letter", prefix: "a", wantErr: false},
+		{name: "empty", prefix: "", wantErr: true},
+		{name: "uppercase", prefix: "MyCluster", wantErr: true},
+		{name: "underscore", prefix: "k8s_dev", wantErr: true},
+		{name: "leading digit", prefix: "1abc", wantErr: true},
+		{name: "trailing dash", prefix: "abc-", wantErr: true},
+		{name: "leading dash", prefix: "-abc", wantErr: true},
+		{name: "too long", prefix: strings.Repeat("a", 64), wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := validate(context.Background(), proto.ValidateInput{
+				Operation:     proto.OperationBootstrap,
+				ClusterPrefix: tt.prefix,
+				ProviderName:  "yandex",
+				CloudProviderVars: &proto.CloudProviderVars{
+					Settings: testModuleSettings(),
+					Secrets: map[string]map[string]any{
+						cpapi.CredentialSecretName: testCredentialSecretObject(),
+					},
+					NodeGroups: map[string]map[string]any{
+						"master": testNodeGroup("master", map[string]any{
+							"kind": "YandexInstanceClass",
+							"name": "master-yandex",
+						}),
+					},
+					InstanceClasses: map[string]map[string]any{
+						"master-yandex": testInstanceClass("master-yandex", map[string]any{
+							"cores":          4,
+							"memory":         8192,
+							"imageID":        "test",
+							"etcdDiskSizeGB": 10,
+						}),
+					},
+				},
+			})
+
+			if !tt.wantErr {
+				if err != nil && strings.Contains(err.Error(), "invalid prefix") {
+					t.Fatalf("validate() rejected valid prefix %q: %v", tt.prefix, err)
+				}
+
+				return
+			}
+
+			if err == nil {
+				t.Fatalf("validate() error = nil, want invalid prefix error for %q", tt.prefix)
+			}
+			if !strings.Contains(err.Error(), "invalid prefix") {
+				t.Fatalf("validate() error = %q, want invalid prefix error for %q", err, tt.prefix)
+			}
+		})
 	}
 }
