@@ -305,7 +305,7 @@ func (r *reconciler) reportConflict(ctx context.Context, moduleConfig *v1alpha1.
 	metricGroup := fmt.Sprintf(metrics.ModuleConflictMetricGroupTemplate, moduleConfig.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
-	conflict := pkgsync.HasRepositoryConflict(moduleConfig.IsEnabled(), pkgsync.ConfiguredModuleSource(moduleConfig), moduleSourceNames)
+	conflict := utils.HasModuleSourceConflict(moduleConfig.IsEnabled(), pkgsync.ConfiguredModuleSource(moduleConfig), moduleSourceNames)
 
 	message := ""
 	if conflict {

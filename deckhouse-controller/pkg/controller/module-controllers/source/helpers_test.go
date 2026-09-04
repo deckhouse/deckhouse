@@ -29,85 +29,65 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-func TestResolveEmbeddedTargetSource(t *testing.T) {
-	const embedded = v1alpha1.ModuleSourceEmbedded
-
+func TestResolveEmbeddedTargetModuleSource(t *testing.T) {
 	tests := []struct {
 		name                   string
 		configuredModuleSource string
-		moduleSourceNames      []string
+		availableModuleSources []string
 		wantTarget             string
 		wantConflict           bool
 	}{
 		{
-			name:                   "explicitly chosen source that is offered wins",
+			name:                   "an explicitly chosen module source that offers the module wins",
 			configuredModuleSource: "deckhouse-upstream-ee",
-			moduleSourceNames:      []string{"deckhouse", "deckhouse-upstream-ee"},
+			availableModuleSources: []string{"deckhouse", "deckhouse-upstream-ee"},
 			wantTarget:             "deckhouse-upstream-ee",
 			wantConflict:           false,
 		},
 		{
-			name:                   "chosen source that is no longer offered is a conflict",
+			name:                   "a chosen module source that no longer offers the module is a conflict",
 			configuredModuleSource: "gone",
-			moduleSourceNames:      []string{"deckhouse", "deckhouse-upstream-ee"},
+			availableModuleSources: []string{"deckhouse", "deckhouse-upstream-ee"},
 			wantTarget:             "",
 			wantConflict:           true,
 		},
 		{
-			name:              "single real source is used",
-			moduleSourceNames: []string{"deckhouse-upstream-ee"},
-			wantTarget:        "deckhouse-upstream-ee",
-			wantConflict:      false,
+			name:                   "a single module source is used",
+			availableModuleSources: []string{"deckhouse-upstream-ee"},
+			wantTarget:             "deckhouse-upstream-ee",
+			wantConflict:           false,
 		},
 		{
 			// the case that produced the false-positive ModuleAtConflict alert
-			name:              "deckhouse plus a mirror resolves to deckhouse, not a conflict",
-			moduleSourceNames: []string{"deckhouse", "deckhouse-upstream-ee"},
-			wantTarget:        "deckhouse",
-			wantConflict:      false,
+			name:                   "deckhouse plus a mirror resolves to deckhouse, not a conflict",
+			availableModuleSources: []string{"deckhouse", "deckhouse-upstream-ee"},
+			wantTarget:             "deckhouse",
+			wantConflict:           false,
 		},
 		{
-			name:              "source order does not matter, deckhouse still wins",
-			moduleSourceNames: []string{"deckhouse-upstream-ee", "deckhouse"},
-			wantTarget:        "deckhouse",
-			wantConflict:      false,
+			name:                   "module source order does not matter, deckhouse still wins",
+			availableModuleSources: []string{"deckhouse-upstream-ee", "deckhouse"},
+			wantTarget:             "deckhouse",
+			wantConflict:           false,
 		},
 		{
-			name:              "Embedded sentinel plus one real source is not a conflict",
-			moduleSourceNames: []string{embedded, "deckhouse-upstream-ee"},
-			wantTarget:        "deckhouse-upstream-ee",
-			wantConflict:      false,
+			name:                   "several non-default module sources with no selection is a genuine conflict",
+			availableModuleSources: []string{"vendor-a", "vendor-b"},
+			wantTarget:             "",
+			wantConflict:           true,
 		},
 		{
-			name:              "Embedded plus deckhouse plus a mirror resolves to deckhouse",
-			moduleSourceNames: []string{embedded, "deckhouse", "deckhouse-upstream-ee"},
-			wantTarget:        "deckhouse",
-			wantConflict:      false,
-		},
-		{
-			name:              "only the Embedded sentinel is available - nothing to pre-stage, not a conflict",
-			moduleSourceNames: []string{embedded},
-			wantTarget:        "",
-			wantConflict:      false,
-		},
-		{
-			name:              "several non-default real sources with no selection is a genuine conflict",
-			moduleSourceNames: []string{"vendor-a", "vendor-b"},
-			wantTarget:        "",
-			wantConflict:      true,
-		},
-		{
-			name:              "no sources at all is not a conflict",
-			moduleSourceNames: nil,
-			wantTarget:        "",
-			wantConflict:      false,
+			name:                   "no module source at all - nothing to pre-stage, not a conflict",
+			availableModuleSources: nil,
+			wantTarget:             "",
+			wantConflict:           false,
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			target, conflict := resolveEmbeddedTargetModuleSource(tt.configuredModuleSource, tt.moduleSourceNames)
-			assert.Equal(t, tt.wantTarget, target, "target source")
+			target, conflict := resolveEmbeddedTargetModuleSource(tt.configuredModuleSource, tt.availableModuleSources)
+			assert.Equal(t, tt.wantTarget, target, "target module source")
 			assert.Equal(t, tt.wantConflict, conflict, "conflict")
 		})
 	}

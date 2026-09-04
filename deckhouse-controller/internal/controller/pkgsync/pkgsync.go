@@ -58,11 +58,11 @@
 //
 // The repositories offering a module are read from its ModulePackage: a
 // repository offers a module once the repository scan found an installable
-// version of it. The module source and module config controllers and the
-// module config webhook read the same list (utils.AvailableRepositories), so
-// the available modules, the conflict and the release gate agree. The source a module
-// config picks is compared as the repository behind it (ConfiguredRepository).
-// Two limits follow. A repository the scan has not reached yet offers nothing, and
+// version of it. The sync places modules by those repositories; the module
+// source and module config controllers and the module config webhook reason
+// about the module sources behind them (utils.AvailableModuleSources), so the
+// available modules, the conflict and the release gate agree. Two limits
+// follow. A repository the scan has not reached yet offers nothing, and
 // a module source created after the start has no repository until the next
 // start. The scan drops a repository from a package only when the repository
 // goes, not when the module leaves the registry.
@@ -97,29 +97,8 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
-)
-
-// Names of the repositories the module packages come from during the migration
-// off the module sources.
-const (
-	// moduleSourceNameDeckhouse is the built-in module source shipped with the platform.
-	moduleSourceNameDeckhouse = "deckhouse"
-
-	// moduleSourceNameFlant is the module source present on the clusters
-	// managed by Flant.
-	moduleSourceNameFlant = "flant"
-
-	// repositoryNameDeckhouseModules serves the modules of the "deckhouse"
-	// ModuleSource. The plain "deckhouse" name belongs to the application-packages
-	// repository, while the module source points at <registry>/modules.
-	repositoryNameDeckhouseModules = "deckhouse-modules"
-
-	// repositoryNameEmbedded stands for the Deckhouse image itself and
-	// resolves to no PackageRepository object.
-	repositoryNameEmbedded = "embedded"
 )
 
 // syncer creates the missing package versions once at start, while the
@@ -179,53 +158,6 @@ func (s *syncer) sync(ctx context.Context) error {
 	}
 
 	return s.syncModules(ctx)
-}
-
-// RepositoryNameForSource maps a ModuleSource name to the name of the
-// PackageRepository serving the same registry path.
-func RepositoryNameForSource(sourceName string) string {
-	if sourceName == moduleSourceNameDeckhouse {
-		return repositoryNameDeckhouseModules
-	}
-
-	return sourceName
-}
-
-// SourceNameForRepository maps a PackageRepository name back to the ModuleSource
-// serving the same registry path. The embedded repository stands for the image
-// and names no source.
-func SourceNameForRepository(repositoryName string) string {
-	switch repositoryName {
-	case repositoryNameDeckhouseModules:
-		return moduleSourceNameDeckhouse
-	case repositoryNameEmbedded:
-		return ""
-	}
-
-	return repositoryName
-}
-
-// ConfiguredModuleSource returns the source the operator selected in the module config
-// (.spec.source), or an empty string without a config or a selection. "Embedded" is
-// the sentinel for the built-in copy, not a real ModuleSource, so it counts as no
-// selection.
-func ConfiguredModuleSource(config *v1alpha1.ModuleConfig) string {
-	if config == nil || config.Spec.Source == v1alpha1.ModuleSourceEmbedded {
-		return ""
-	}
-
-	return config.Spec.Source
-}
-
-// ConfiguredRepository names the repository the operator selected in the module config
-// through .spec.source, or an empty string without a config or a selection. "Embedded"
-// is the sentinel for the built-in copy, not a source, so it counts as no selection.
-func ConfiguredRepository(config *v1alpha1.ModuleConfig) string {
-	if config == nil || config.Spec.Source == v1alpha1.ModuleSourceEmbedded {
-		return ""
-	}
-
-	return RepositoryNameForSource(config.Spec.Source)
 }
 
 // PickRepository picks the repository a module nothing installed yet would come from: the

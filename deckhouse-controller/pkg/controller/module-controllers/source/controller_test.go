@@ -582,7 +582,7 @@ spec:
 	assert.Len(suite.T(), source.Status.AvailableModules, 0)
 }
 
-// A module some source offers and nothing installed has an object of its own.
+// A module some repository offers and nothing installed has an object of its own.
 func (suite *ControllerTestSuite) TestAvailableModules() {
 	const firstSource = `
 apiVersion: deckhouse.io/v1alpha1
@@ -599,7 +599,6 @@ spec:
     scheme: HTTPS
 `
 
-	// the second source lists the module already, the first one pulls it in the scan under test
 	const secondSource = `
 ---
 apiVersion: deckhouse.io/v1alpha1
@@ -614,9 +613,29 @@ spec:
     dockerCfg: YXNiCg==
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
+`
+	// the repository scan found the module in the repository of the first source
+	const packageInFirst = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
+metadata:
+  name: available
 status:
-  modules:
-  - name: available
+  availableRepositories:
+    - test-source-1
+`
+	// the repository scan found the module in the repositories of both sources
+	const packageInBoth = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
+metadata:
+  name: available
+status:
+  availableRepositories:
+    - test-source-1
+    - test-source-2
 `
 
 	scan := func(modules ...string) {
@@ -626,8 +645,17 @@ status:
 		require.NoError(suite.T(), err)
 	}
 
-	suite.Run("a single source offers the module", func() {
+	suite.Run("no repository offers the module yet", func() {
 		suite.setupTestControllerRaw(firstSource)
+		scan("available")
+
+		err := suite.Client().Get(context.TODO(), types.NamespacedName{Name: "available"}, new(v1alpha2.Module))
+		assert.True(suite.T(), apierrors.IsNotFound(err), "a module the repository scan has not reached has no object")
+		assert.Empty(suite.T(), suite.releases().Items, "a module nothing enabled fetches no release")
+	})
+
+	suite.Run("a single repository offers the module", func() {
+		suite.setupTestControllerRaw(firstSource + packageInFirst)
 		scan("available")
 
 		module := suite.module("available")
@@ -640,8 +668,8 @@ status:
 		assert.Empty(suite.T(), suite.releases().Items, "a module nothing enabled fetches no release")
 	})
 
-	suite.Run("several sources offer the module and the config picks none", func() {
-		suite.setupTestControllerRaw(firstSource + secondSource + `
+	suite.Run("several repositories offer the module and the config picks none", func() {
+		suite.setupTestControllerRaw(firstSource + secondSource + packageInBoth + `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -653,14 +681,14 @@ spec:
 		scan("available")
 
 		module := suite.module("available")
-		assert.Empty(suite.T(), module.Spec.PackageRepositoryName, "no source is picked")
+		assert.Empty(suite.T(), module.Spec.PackageRepositoryName, "no repository is picked")
 		assert.Equal(suite.T(), v1alpha1.ModulePhaseConflict, module.Status.Phase)
 		assert.Equal(suite.T(), v1alpha1.ModuleReasonConflict, conditionReason(module, v1alpha1.ModuleConditionIsReady))
-		assert.Empty(suite.T(), suite.releases().Items, "no source installs a module in conflict")
+		assert.Empty(suite.T(), suite.releases().Items, "nothing installs a module in conflict")
 	})
 
-	suite.Run("several sources offer the module and the config picks one", func() {
-		suite.setupTestControllerRaw(firstSource + secondSource + `
+	suite.Run("several repositories offer the module and the config picks one", func() {
+		suite.setupTestControllerRaw(firstSource + secondSource + packageInBoth + `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -679,7 +707,7 @@ spec:
 	})
 
 	suite.Run("an enabled module fetches its first release", func() {
-		suite.setupTestControllerRaw(firstSource + `
+		suite.setupTestControllerRaw(firstSource + packageInFirst + `
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig
@@ -697,8 +725,8 @@ spec:
 		assert.NotEmpty(suite.T(), suite.releases().Items)
 	})
 
-	suite.Run("an installed module keeps its placement when another source offers it", func() {
-		suite.setupTestControllerRaw(firstSource + `
+	suite.Run("an installed module keeps its placement when another repository offers it", func() {
+		suite.setupTestControllerRaw(firstSource + packageInFirst + `
 ---
 apiVersion: deckhouse.io/v1alpha2
 kind: Module
@@ -727,8 +755,9 @@ spec:
 	})
 }
 
-// A source that stops offering a module, or goes away, takes itself away from the module's
-// object; the object of a module nothing installed and no other source offers goes.
+// A source that stops listing a module, or goes away, re-places the module's object by the
+// repositories that still offer it; the object of a module nothing installed and no repository
+// offers goes.
 func (suite *ControllerTestSuite) TestAvailableCleanup() {
 	const sources = `
 apiVersion: deckhouse.io/v1alpha1
@@ -794,14 +823,27 @@ spec:
   packageRepositoryName: test-source-1
   packageVersion: v1.0.0
   releaseChannel: Stable
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
+metadata:
+  name: gone
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
+metadata:
+  name: shared
+status:
+  availableRepositories:
+    - test-source-2
 `
 
 	assertCleaned := func() {
 		err := suite.Client().Get(context.TODO(), types.NamespacedName{Name: "gone"}, new(v1alpha2.Module))
-		assert.True(suite.T(), apierrors.IsNotFound(err), "no source offers the module any more")
+		assert.True(suite.T(), apierrors.IsNotFound(err), "no repository offers the module any more")
 
 		shared := suite.module("shared")
-		assert.Equal(suite.T(), "test-source-2", shared.Spec.PackageRepositoryName, "the remaining source places the module")
+		assert.Equal(suite.T(), "test-source-2", shared.Spec.PackageRepositoryName, "the remaining repository places the module")
 		assert.Equal(suite.T(), v1alpha1.ModulePhaseAvailable, shared.Status.Phase)
 
 		installed := suite.module("installed")

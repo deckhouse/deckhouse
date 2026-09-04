@@ -150,38 +150,6 @@ func listRepositoryNames(t *testing.T, cl client.Client) []string {
 	return names
 }
 
-func TestRepositoryNameForSource(t *testing.T) {
-	cases := []struct {
-		source string
-		want   string
-	}{
-		{source: "deckhouse", want: "deckhouse-modules"},
-		{source: "example", want: "example"},
-		{source: "deckhouse-prod", want: "deckhouse-prod"},
-		{source: "", want: ""},
-	}
-
-	for _, c := range cases {
-		assert.Equal(t, c.want, RepositoryNameForSource(c.source), c.source)
-	}
-}
-
-func TestSourceNameForRepository(t *testing.T) {
-	cases := []struct {
-		repository string
-		want       string
-	}{
-		{repository: "deckhouse-modules", want: "deckhouse"},
-		{repository: "embedded", want: ""},
-		{repository: "example", want: "example"},
-		{repository: "", want: ""},
-	}
-
-	for _, c := range cases {
-		assert.Equal(t, c.want, SourceNameForRepository(c.repository), c.repository)
-	}
-}
-
 func TestSyncIsIdempotent(t *testing.T) {
 	ctx := context.Background()
 
@@ -246,4 +214,31 @@ func getModule(t *testing.T, cl client.Client, name string) *v1alpha2.Module {
 	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: name}, module))
 
 	return module
+}
+
+func TestPickRepository(t *testing.T) {
+	tests := []struct {
+		name         string
+		configured   string
+		repositories []string
+		want         string
+	}{
+		{name: "nobody offers", want: ""},
+		{name: "single repository", repositories: []string{"mirror"}, want: "mirror"},
+		{name: "several repositories and no choice", repositories: []string{"deckhouse-modules", "mirror"}, want: ""},
+		{name: "configured repository wins", configured: "mirror", repositories: []string{"deckhouse-modules", "mirror"}, want: "mirror"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, PickRepository(tt.configured, tt.repositories))
+		})
+	}
+}
+
+func TestHasRepositoryConflict(t *testing.T) {
+	assert.False(t, HasRepositoryConflict(false, "", []string{"deckhouse-modules", "mirror"}), "a disabled module is never in conflict")
+	assert.False(t, HasRepositoryConflict(true, "mirror", []string{"deckhouse-modules", "mirror"}), "a chosen repository settles the conflict")
+	assert.False(t, HasRepositoryConflict(true, "", []string{"mirror"}), "a single repository is no conflict")
+	assert.True(t, HasRepositoryConflict(true, "", []string{"deckhouse-modules", "mirror"}))
 }
