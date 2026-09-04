@@ -468,8 +468,20 @@ func TestParseConfigFromFiles(t *testing.T) {
 func TestParseConfigFromCluster(t *testing.T) {
 	yandexCandiDir := tests.RequireProviderCandiDir(t, "yandex")
 
+	// An empty GlobalOptions makes withDownloadDir fall back to options.DefaultTmpDir(), the
+	// directory a real dhctl run downloads provider bundles into. The stubbed download below
+	// would then leave a fake bundle there for the next real run to pick up, so pin the
+	// download dir to a per-test directory the framework removes afterwards.
+	downloadDir := t.TempDir()
+	globalOptions := func() *options.GlobalOptions {
+		return &options.GlobalOptions{
+			DownloadDir:      downloadDir,
+			DownloadCacheDir: filepath.Join(downloadDir, "cache"),
+		}
+	}
+
 	doParseFromClusterNoError := func(t *testing.T, tst *testParseConfigFromCluster) *MetaConfig {
-		metaConfig, err := parseConfigFromCluster(t.Context(), tst.kubeCl, tst.validatorProvider, &options.GlobalOptions{}, "")
+		metaConfig, err := parseConfigFromCluster(t.Context(), tst.kubeCl, tst.validatorProvider, globalOptions(), "")
 
 		require.NoError(t, err)
 		require.NotNil(t, metaConfig)
@@ -484,7 +496,7 @@ func TestParseConfigFromCluster(t *testing.T) {
 	}
 
 	doParseFromClusterWithError := func(t *testing.T, tst *testParseConfigFromCluster) {
-		metaConfig, err := parseConfigFromCluster(t.Context(), tst.kubeCl, tst.validatorProvider, &options.GlobalOptions{}, "")
+		metaConfig, err := parseConfigFromCluster(t.Context(), tst.kubeCl, tst.validatorProvider, globalOptions(), "")
 
 		require.Error(t, err)
 		require.Nil(t, metaConfig)
