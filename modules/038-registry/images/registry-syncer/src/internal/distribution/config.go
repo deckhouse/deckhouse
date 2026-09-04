@@ -26,7 +26,6 @@ package distribution
 
 import (
 	"fmt"
-	"strings"
 
 	"sigs.k8s.io/yaml"
 
@@ -79,6 +78,21 @@ const (
 	// LocalPathAlias is the repository prefix this registry serves under, and the
 	// prefix every image reference in the cluster uses.
 	LocalPathAlias = constant.Path
+
+	// WrapperConfigFile is this module's own half of the registry's configuration: the upstream a
+	// cache miss goes to and the path it serves under, the write endpoint, the token service.
+	//
+	// A second file rather than more keys in the first, because the first is the upstream project's
+	// configuration and is rendered in the shape upstream documents. Both are written by the same
+	// pass, so they cannot describe two different moments.
+	WrapperConfigFile = ConfigDir + "/deckhouse.yaml"
+
+	// AuthTokenPath is where a client asks this registry for a token, and where the registry
+	// forwards that request to the token service on the loopback.
+	//
+	// The same string the registry image mounts the forwarder on. Two spellings of one path would
+	// answer a challenge with an address that serves nothing.
+	AuthTokenPath = "/auth/token"
 )
 
 // Options are the parts of the rendering that come from the pod rather than from
@@ -188,7 +202,12 @@ func Render(spec *registryv1alpha1.RegistryStorageSpec, opts Options) ([]byte, e
 				"service":        "Deckhouse registry",
 				"issuer":         opts.TokenIssuer,
 				"rootcertbundle": PKIDir + "/token.crt",
-				"autoredirect":   true,
+				// The challenge names this registry's own address, and the request that follows it
+				// is forwarded by the registry to the token service on the loopback. Upstream's own
+				// options, both of them: the previous implementation carried a patch that hardcoded
+				// this path.
+				"autoredirect":     true,
+				"autoredirectpath": AuthTokenPath,
 				// The registry fetches the token itself, on the client's behalf, over
 				// the loopback address.
 				//
@@ -207,115 +226,22 @@ func Render(spec *registryv1alpha1.RegistryStorageSpec, opts Options) ([]byte, e
 		},
 	}
 
-	// The pass-through half. Absent means the cache is authoritative: it serves
-	// only what it already holds, which is exactly what an air-gapped cluster
-	// needs, and is also why completeness has to be decided before the upstream is
-	// removed.
+	// No proxy section, and no write endpoint either. Both used to be rendered here, and both are
+	// now decided by the registry image itself: the upstream a miss goes to, and the path it serves
+	// the image set under, are in this module's own configuration file beside this one — see
+	// RenderWrapper. What the registry reads from THIS file is upstream's own vocabulary, in the
+	// shape upstream documents, so a version bump changes nothing on this side.
 	//
-	// And absent as soon as the cluster asks to become air-gapped, even while the
-	// upstream is still held. A registry configured as a pull-through cache is
-	// read-only by construction: docker distribution answers every write with
-	// `UNSUPPORTED`. Since the publication endpoint appears at the moment air-gap is
-	// requested, and the upstream is held until the cache is complete, keeping the
-	// proxy on would close a circle with no way out of it — `d8 mirror push` is the
-	// only way to fill the cache, the push is refused because the registry proxies,
-	// and the proxy stays because the cache is not full. Measured on a cluster: the
-	// push failed on `POST /v2/.../blobs/uploads/` with exactly that error.
-	//
-	// Nothing is lost by dropping it here. What a pass-through cache gives a node is
-	// a miss served from the upstream; the node keeps that anyway, because its own
-	// layout carries the upstream as a fallback backend until the transition
-	// completes. And filling does not need it either: the syncer fills by writing.
-	// Rendered whenever there is an upstream to proxy, including inside the air-gap transition window:
-	// the cache is what keeps the cluster working while the bundle arrives, and the push that brings
-	// the bundle lands on the write endpoint, which never proxies.
-	if proxy := renderProxy(spec.Upstream); proxy != nil {
-		config["proxy"] = proxy
-	}
-
-	// Whatever the mode, this store is never wiped because the mode changed.
-	//
-	// The registry deletes everything under /docker when it starts in a mode other than the one that
-	// last wrote the directory, deciding which mode that was by whether the proxy scheduler's state
-	// file is present. Sound for a registry that owns its directory, and wrong here twice over: two
-	// processes share this store — one proxying for reads, one accepting the writes that fill it — and
-	// the expiry scheduler is patched out at build time, so the state file comes and goes for reasons
-	// that have nothing to do with the data.
-	//
-	// Measured on `ly-mmc`: 3236 files and twelve gigabytes deleted two seconds after the write
-	// instance started, twice in one afternoon, and once at the exact moment the upstream was dropped
-	// for an air-gap — which left a three-master cluster with no images and nothing to pull them from.
-	// The blobs a proxy wrote are the same blobs a local registry serves; what must not survive a mode
-	// change is the scheduler's own state, and that is deleted either way.
-	setSkipModeCleanup(config)
-
-	// The write endpoint, on its own port of this same registry.
-	//
-	// Always, not only where something is published: the syncer fills the store through it as well.
-	// Filling through the serving address fills nothing and fails silently — before uploading a layer
-	// the client asks whether the destination already holds it, and a cache answers yes by fetching it
-	// from the upstream, so the upload is skipped and the store is left with manifests naming blobs it
-	// does not have (measured: 400 layers "written", the store unchanged at 333 MB).
-	//
-	// The client certificate authority is the ingress's: this is the half an ingress fronts, and
-	// without it every write would appear to come from the ingress controller rather than from the
-	// operator who sent it.
-	config["writeendpoint"] = map[string]any{
-		"addr":         fmt.Sprintf("%s:%d", opts.ListenAddress, WriteEndpointPort),
-		"clientcertca": IngressClientCAFile,
-	}
+	// Nothing was lost with the `skipmodecleanup` flag that used to be set here either: it turned off
+	// a deletion the previous registry performed when it started in a mode other than the one that
+	// last wrote the store — a feature of the fork, measured deleting twelve gigabytes twice in one
+	// afternoon. Upstream has no such deletion, so there is nothing left to turn off.
 
 	rendered, err := yaml.Marshal(config)
 	if err != nil {
 		return nil, fmt.Errorf("marshalling the configuration: %w", err)
 	}
 	return rendered, nil
-}
-
-// setSkipModeCleanup tells the registry to keep the store across a mode change.
-//
-// Written into the `proxy` section because that is where the registry reads it from, and it is read
-// even where no proxying is configured — which is the case that mattered: the write instance never
-// proxies, and it was the one deleting the store. An absent section is created holding nothing else,
-// so the instance stays non-proxying exactly as before.
-func setSkipModeCleanup(config map[string]any) {
-	proxy, ok := config["proxy"].(map[string]any)
-	if !ok {
-		proxy = map[string]any{}
-		config["proxy"] = proxy
-	}
-	proxy["skipmodecleanup"] = true
-}
-
-func renderProxy(upstream *registryv1alpha1.Upstream) map[string]any {
-	if upstream == nil {
-		return nil
-	}
-
-	scheme := upstream.Scheme
-	if scheme == "" {
-		scheme = registryv1alpha1.SchemeHTTPS
-	}
-
-	proxy := map[string]any{
-		"remoteurl": fmt.Sprintf("%s://%s", scheme.Lower(), upstream.Host),
-		// The upstream serves Deckhouse under its own prefix, while the cluster
-		// refers to images under a fixed one. Rewriting here is what lets the
-		// upstream address change without every image reference changing with it.
-		"remotepathonly": strings.TrimRight(upstream.Path, "/"),
-		"localpathalias": LocalPathAlias,
-	}
-
-	if !upstream.Auth.IsEmpty() {
-		username, password := basicCredentials(upstream.Auth)
-		proxy["username"] = username
-		proxy["password"] = password
-	}
-	if upstream.CA != "" {
-		proxy["ca"] = UpstreamCAFile
-	}
-
-	return proxy
 }
 
 // basicCredentials reduces the credentials to the pair the registry

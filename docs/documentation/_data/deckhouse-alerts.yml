@@ -3242,11 +3242,26 @@ alerts:
       edition: ce
       description: |-
         This cluster still pulls images the way the previous implementation of the
-        `registry` module arranged it. Nothing is broken and nothing is degraded — the
-        migration has simply not completed, and until it does the current
-        implementation manages nothing.
+        `registry` module arranged it, and the handover to the current one has not
+        happened.
 
         Reason: `{{ $labels.reason }}`
+
+        Read the reason first, because it separates two very different situations:
+
+        - The reason says the previous implementation has **not recorded a mode yet**,
+          or that it is **transitioning**. Nothing is wrong: the handover is waiting for
+          a state to settle and will happen on its own.
+
+        - The reason names a mode **other than `Unmanaged`** — `Direct`, `Proxy` or
+          `Local`. Then this cluster's pull path is already degraded, and this alert is
+          how it shows: this release renders none of the previous implementation's
+          objects, so the in-cluster proxy, the `registry` Service and the per-node
+          secrets it served are gone, while the nodes still point at them. Images
+          already on a node keep working; anything that has to be pulled will not.
+          Do not wait for this to resolve itself — it will not. Go to
+          `D8RegistryMigrationPreflightBlocked`, which says what to do per case, and
+          for `Local` note that the documented procedure does not apply at all.
 
         The handover waits because both implementations configure the same thing on
         every node: which registry the container runtime asks, and with which
@@ -3285,9 +3300,10 @@ alerts:
         A precondition of the `registry` module's migration is not met, and the migration
         must not be started until it is: `{{ $labels.check }}` — {{ $labels.detail }}.
 
-        Nothing is broken right now. This cluster keeps pulling images exactly as it does
-        today; the alert is about the procedure that moves it to the current implementation
-        of the module.
+        Whether anything is broken right now depends on which check it is, and the list
+        below says so per case: `upstream_reachable` and `node_containerd_registry_config`
+        are work to do before starting, while `mode` and `not_local` mean the cluster is
+        already past the point where the documented procedure could be started cleanly.
 
         What each blocking check means:
 
@@ -3299,10 +3315,26 @@ alerts:
           failing, so the way back is the image: return the previous release, bring the
           cluster to `Unmanaged` by the documented procedure, then upgrade again.
 
-        - `not_local` — the cluster's registry *is* the cluster (`Local`). The documented
+        - `not_local` — the cluster's registry *is* the cluster (`Local`). The ordinary
           procedure brings the cluster through `Unmanaged`, where every node pulls straight
-          from an upstream, and this cluster has no upstream to pull from. It needs the
-          fallback runbook, which adopts the existing store instead.
+          from an upstream, and this cluster has no upstream to pull from: the previous
+          implementation does not even write node configuration in `Unmanaged` without one.
+          This cluster has a procedure of its own instead — an OCI registry stood up in a
+          namespace of your own, loaded with the image set and declared as the upstream for
+          the length of the migration, then removed once the in-cluster storage holds the
+          set itself. The blobs already on the control-plane nodes are adopted rather than
+          downloaded again; what it costs is a second copy of the set on disk while the
+          temporary registry exists. See "How do I migrate an air-gapped Local cluster?" in
+          the module's FAQ, and do not start the ordinary procedure here.
+
+        - `node_containerd_registry_config` — one or more nodes carry a containerd
+          `conf.d` file that sets registry fields of its own. Under the current
+          implementation that file is not merged: the node's registry configuration comes
+          from `/etc/containerd/registry.d`, and the bashible step refuses to merge a
+          file that would contradict it — by failing, which stops that node's whole
+          convergence, including kubelet configuration and version upgrades. The detail
+          names the nodes. Move those settings into `/etc/containerd/registry.d` before
+          the handover.
 
         - `upstream_reachable` — the registry this cluster pulls from does not answer. The
           procedure points every node straight at it, so starting now turns a documented

@@ -1,26 +1,26 @@
-{{- $version := "v2.8.3-deckhouse.5"}}
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
 fromImage: common/src-artifact
 final: false
-# The source lives in this repository now, under `src/`, rather than being cloned from a fork and patched
-# at build time.
+# The registry itself is `github.com/distribution/distribution/v3`, resolved through GOPROXY like every
+# other dependency of this repository. What is built here is the wrapper around it — under `wrapper/`,
+# about a thousand lines — and that is the whole of what this module adds to the upstream registry.
 #
-# What that clone cost: two changes carried as build steps rather than as code — `patches/*.patch`, whose
-# context had to match the fork byte for byte (including a Cyrillic letter in a typo upstream, which this
-# repository's own validation then refused), and `no-proxy-expiry.sh`, which rewrote two methods with awk
-# and left their bodies unreachable behind an early return. Both are ordinary source edits here, readable
-# and reviewable, and the fork is no longer a dependency of the build.
-#
-# `vendor/` is not carried: this module's other images build from `go.mod` with GOPROXY, and one style is
-# better than two.
+# It used to be the upstream project copied into this repository: 205 files, based on a release upstream
+# stopped maintaining after v3.0.0, carrying nine patches and every security bump they implied. Four of
+# those patches turned out to be upstream options by now (`proxy.ttl: 0` for a cache that never expires,
+# `autoredirect` with `autoredirectpath` for the token challenge, `http.tls.clientauth` for client
+# certificates), one described a deletion upstream does not perform, and the rest are the wrapper: the
+# mapping of repository paths done in front of the cache, the token request forwarded to the service on
+# the loopback, the trust decision about a forwarded client address, and the listener that accepts a
+# push.
 git:
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /src/scripts
     stageDependencies:
       install:
         - '**/*'
-  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/src
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/wrapper
     to: /src/distribution
     stageDependencies:
       install:
@@ -49,11 +49,10 @@ shell:
     - export GOARCH=amd64
     - export CGO_ENABLED=0
     - cd /src/distribution
-    # `make binaries` builds the one command the image runs. The version is passed in because the tree
-    # is a directory in this repository, not a checkout of the upstream one, so `git describe` finds
-    # nothing here.
-    - make binaries VERSION={{ $version }}
-    - mv ./bin/registry /registry
+    # Named `registry`, because the image's entrypoint and the syncer both call it that: `registry
+    # serve <config>` and `registry garbage-collect <config>` are the two commands, unchanged from
+    # when this was the upstream binary itself.
+    - go build -ldflags="-s -w" -o /registry .
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
 fromImage: common/distroless

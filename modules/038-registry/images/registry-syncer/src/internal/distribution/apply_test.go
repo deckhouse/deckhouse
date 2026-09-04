@@ -83,19 +83,33 @@ func TestApplyWritesOneConfigurationForBothHalves(t *testing.T) {
 	var config map[string]any
 	require.NoError(t, yaml.Unmarshal(raw, &config))
 
-	// Parsed rather than grepped: "proxy" also appears under `auth.token.proxy`, which is how the
-	// registry reaches the token service beside it. A substring check passes on that and says nothing
-	// about pull-through — it failed this test into a false negative once.
-	assert.Contains(t, config, "proxy",
+	// The registry's own file says nothing about either half's upstream any more: that, and the
+	// write endpoint, are the registry image's own configuration — written by the same pass, into
+	// the file beside this one.
+	assert.NotContains(t, config, "proxy")
+	assert.NotContains(t, config, "writeendpoint")
+
+	raw, err = os.ReadFile(applier.WrapperPath())
+	require.NoError(t, err, "the second file has to be written in the same pass, or the two disagree")
+	var wrapper map[string]any
+	require.NoError(t, yaml.Unmarshal(raw, &wrapper))
+
+	assert.Contains(t, wrapper, "upstream",
 		"the serving listener caches misses from the upstream")
 
-	write, ok := config["writeendpoint"].(map[string]any)
+	write, ok := wrapper["writeEndpoint"].(map[string]any)
 	require.True(t, ok, "there is nowhere for a push to land")
-	assert.NotEmpty(t, write["addr"])
+	assert.NotEmpty(t, write["address"])
 
 	http, _ := config["http"].(map[string]any)
-	assert.NotEqual(t, http["addr"], write["addr"],
+	assert.NotEqual(t, http["addr"], write["address"],
 		"two listeners in one process cannot share an address")
+
+	// One store for both, which is what makes a fill through the write endpoint the thing the
+	// cluster pulls.
+	storage, _ := config["storage"].(map[string]any)
+	filesystem, _ := storage["filesystem"].(map[string]any)
+	assert.Equal(t, DataDir, filesystem["rootdirectory"])
 }
 
 // The read-only window a garbage collection opens covers the write endpoint too, because they are one
@@ -116,9 +130,10 @@ func TestApplyReadOnlyCoversTheWriteEndpoint(t *testing.T) {
 	storage, _ := config["storage"].(map[string]any)
 	maintenance, _ := storage["maintenance"].(map[string]any)
 	readonly, _ := maintenance["readonly"].(map[string]any)
-	assert.Equal(t, true, readonly["enabled"])
-	require.Contains(t, config, "writeendpoint",
-		"the write listener reads this same file, which is what makes the window cover it")
+	assert.Equal(t, true, readonly["enabled"],
+		"the write listener derives its configuration from this same file, which is what makes "+
+			"the window cover it: the registry image copies it and changes only the address and "+
+			"the proxying")
 }
 
 func TestApplyWritesAndRestarts(t *testing.T) {
@@ -130,9 +145,9 @@ func TestApplyWritesAndRestarts(t *testing.T) {
 	assert.True(t, changed)
 	assert.Equal(t, 1, restarter.restarts)
 
-	config, err := os.ReadFile(applier.ConfigPath)
+	wrapper, err := os.ReadFile(applier.WrapperPath())
 	require.NoError(t, err)
-	assert.Contains(t, string(config), "registry.deckhouse.io")
+	assert.Contains(t, string(wrapper), "registry.deckhouse.io")
 
 	// The configuration names the certificate authority file, so the two have to be
 	// written together or the registry starts pointing at a path that is not there.
@@ -174,9 +189,11 @@ func TestApplyRestartsOnACredentialChange(t *testing.T) {
 	assert.True(t, changed)
 	assert.Equal(t, 2, restarter.restarts)
 
-	config, err := os.ReadFile(applier.ConfigPath)
+	wrapper, err := os.ReadFile(applier.WrapperPath())
 	require.NoError(t, err)
-	assert.Contains(t, string(config), "the-renewed-license-key")
+	assert.Contains(t, string(wrapper), "the-renewed-license-key",
+		"the credentials for the upstream live in the registry image's own file now, and a change "+
+			"to them still has to reach the process")
 }
 
 func TestApplyRestartsOnACertificateAuthorityChange(t *testing.T) {
@@ -264,9 +281,9 @@ func TestApplyReportsAFailedRestart(t *testing.T) {
 	// crash of the registry container, picks it up.
 	assert.True(t, changed)
 
-	config, err := os.ReadFile(applier.ConfigPath)
+	wrapper, err := os.ReadFile(applier.WrapperPath())
 	require.NoError(t, err)
-	assert.Contains(t, string(config), "registry.deckhouse.io")
+	assert.Contains(t, string(wrapper), "registry.deckhouse.io")
 }
 
 func TestApplyWithoutARestarter(t *testing.T) {
@@ -357,10 +374,15 @@ func TestApplyReadOnlyKeepsServingReads(t *testing.T) {
 	var config map[string]any
 	require.NoError(t, yaml.Unmarshal(raw, &config))
 
-	// Still listening, and still a pull-through cache: what changed is only that writes
-	// are refused.
+	// Still listening, and still a pull-through cache: what changed is only that writes are
+	// refused. The cache is in the other file, so both are read.
 	assert.Contains(t, config, "http")
-	assert.Contains(t, config, "proxy")
+
+	raw, err = os.ReadFile(applier.WrapperPath())
+	require.NoError(t, err)
+	var wrapper map[string]any
+	require.NoError(t, yaml.Unmarshal(raw, &wrapper))
+	assert.Contains(t, wrapper, "upstream")
 }
 
 func readOnly(t *testing.T, applier *Applier) bool {

@@ -65,6 +65,18 @@ type Applier struct {
 	Options Options
 }
 
+// WrapperPath is where the registry image's own configuration is written.
+//
+// Beside the registry's own file, in the same directory, because the two are written together and
+// the registry reads both at startup. Derived rather than configured: one setting for a pair of
+// files that must not be separated is one fewer thing to get wrong.
+func (a *Applier) WrapperPath() string {
+	if a.ConfigPath == "" {
+		return WrapperConfigFile
+	}
+	return filepath.Join(filepath.Dir(a.ConfigPath), filepath.Base(WrapperConfigFile))
+}
+
 // Apply renders the configuration, writes it if it differs, and restarts the
 // registry in that case. It reports whether anything changed.
 //
@@ -104,6 +116,20 @@ func (a *Applier) apply(spec *registryv1alpha1.RegistryStorageSpec, options Opti
 		return false, fmt.Errorf("writing the configuration: %w", err)
 	}
 
+	// The registry image's own half, written in the same pass as the registry's. Two files, one
+	// moment: the first is upstream's configuration in upstream's vocabulary, the second is the
+	// mapping of repository paths, the token service and the write endpoint — the four things this
+	// module used to carry as patches against the registry's source.
+	wrapper, err := RenderWrapper(spec, options)
+	if err != nil {
+		return false, err
+	}
+
+	wrapperChanged, err := writeIfChanged(a.WrapperPath(), wrapper, 0o600)
+	if err != nil {
+		return false, fmt.Errorf("writing the registry image configuration: %w", err)
+	}
+
 	// One file for both halves of the registry. The write endpoint is a second listener of the same
 	// process, derived from this same configuration, so authentication, the storage path, the token
 	// service and the read-only flag a garbage collection sets cannot drift between them — there is
@@ -111,7 +137,7 @@ func (a *Applier) apply(spec *registryv1alpha1.RegistryStorageSpec, options Opti
 	// flag had to be written into both by hand: a collection computes the reachable set and then
 	// deletes the rest, so an instance that went on accepting writes would lose exactly the blobs the
 	// read-only window exists to protect.
-	if !configChanged && !caChanged {
+	if !configChanged && !wrapperChanged && !caChanged {
 		return false, nil
 	}
 

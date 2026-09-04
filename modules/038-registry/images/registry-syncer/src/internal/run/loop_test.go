@@ -264,7 +264,10 @@ func TestOnceFillsAndReportsFull(t *testing.T) {
 	// The configuration is applied on every pass, regardless of role or of what the
 	// fill did.
 	assert.Equal(t, 1, restarter.restarts)
-	config, err := os.ReadFile(loop.Applier.ConfigPath)
+	// The upstream is in the registry image's own half of the configuration, written by the same
+	// pass: the registry's own file is upstream's vocabulary and says nothing about where a miss
+	// goes.
+	config, err := os.ReadFile(loop.Applier.WrapperPath())
 	require.NoError(t, err)
 	assert.Contains(t, string(config), upstream)
 }
@@ -555,7 +558,7 @@ func TestOnceAppliesACredentialChange(t *testing.T) {
 	require.NoError(t, loop.once(ctx))
 
 	assert.Equal(t, 2, restarter.restarts)
-	config, err := os.ReadFile(loop.Applier.ConfigPath)
+	config, err := os.ReadFile(loop.Applier.WrapperPath())
 	require.NoError(t, err)
 	assert.Contains(t, string(config), "the-renewed-key")
 }

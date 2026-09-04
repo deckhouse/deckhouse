@@ -170,15 +170,14 @@ steps:
       # (TESTS_PATH = ./modules/...) never reaches them: the pattern stops at a nested module
       # boundary. This job is the only thing that runs them.
       #
-      # docker-distribution is deliberately not in the list. Its suite is upstream's, and three of
-      # its cases do not pass unattended on any machine: the inmemory driver suite runs past Go's
-      # 10-minute limit, TestGracefulShutdown binds a fixed port, and one client test expects an
-      # error string the code no longer produces. What this module changed there is covered by the
-      # tests of the code that renders its configuration.
+      # docker-distribution/wrapper is this module's own code around the upstream registry, which
+      # comes in as a dependency: what is tested here is the mapping of repository paths, the token
+      # proxy, the trust decision about a forwarded client address, the derivation of the write
+      # endpoint's configuration and the sweep. Upstream's own suite is upstream's to run.
       #
       # GOFLAGS=-buildvcs=false: the tests need no git stamp, so go does not shell out to git.
       CONTAINER_ID=$(docker run -d -w /deckhouse --tmpfs /tmp:mode=1777,exec -v ${{github.workspace}}:/deckhouse -e HOME=/tmp -e "TERM=xterm-256color" -e GOFLAGS=-buildvcs=false -e GOCACHE=/go-build-cache -v ~/go-mod-cache-registry:/go/pkg -v ~/go-build-cache-registry:/go-build-cache ${TESTS_IMAGE_NAME} sleep infinity)
-      for module in registry-agent registry-controller registry-syncer ; do
+      for module in registry-agent registry-controller registry-syncer docker-distribution/wrapper ; do
         echo "::group::${module}"
         docker exec -u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse/modules/038-registry/images/${module}/src ${CONTAINER_ID} go test -race -timeout 15m ./... || exit 1
         echo "::endgroup::"

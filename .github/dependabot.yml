@@ -700,7 +700,7 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
-  directory: "/modules/038-registry/images/docker-distribution/src"
+  directory: "/modules/038-registry/images/docker-distribution/wrapper"
   labels:
   - "type/dependencies"
   - "status/ok-to-test"

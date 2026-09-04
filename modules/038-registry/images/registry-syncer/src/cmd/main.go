@@ -276,7 +276,14 @@ func serve(ctx context.Context, log *slog.Logger, opts options) error {
 				// other value could be right, and one supplied from outside could
 				// only ever be wrong — as it was: a literal 127.0.0.1 would be the
 				// client's own loopback, not the storage's.
-				AuthRealm:   fmt.Sprintf("https://%s:5051/auth", opts.listenAddress),
+				// This registry's own token path, not the token service's address. The service
+				// listens on the loopback and no client can reach it; the registry forwards the
+				// request instead. The challenge a client actually receives names the address that
+				// client used — the registry builds it per request — so this value is only the
+				// fallback, and a fallback pointing at an unreachable address is a lie waiting to
+				// be believed.
+				AuthRealm: fmt.Sprintf("https://%s:%d%s",
+					opts.listenAddress, constant.Port, distribution.AuthTokenPath),
 				TokenIssuer: os.Getenv("REGISTRY_TOKEN_ISSUER"),
 			},
 		},
