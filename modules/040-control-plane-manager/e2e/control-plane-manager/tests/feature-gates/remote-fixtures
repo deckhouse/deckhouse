@@ -1,0 +1,6 @@
+# Repo files to stage into this test dir for remote (SSH) runs.
+# Format: <path-relative-to-deckhouse-root> [dest-relative-to-this-test]
+# Default dest: fixtures/<basename>
+#
+# Copy this file into another test and add entries as needed.
+candi/feature_gates_map.yml

@@ -1,0 +1,10 @@
+version: "3"
+
+includes:
+  common:
+    taskfile: ../Taskfile.common.yml
+    dir: .
+    flatten: true
+    vars:
+      CONFIG: ../../chainsaw-config.yaml
+      NAME: feature-gates
