@@ -43,6 +43,9 @@ spec:
       sourceLabels:
       - __meta_kubernetes_namespace
       targetLabel: namespace
+    - action: replace
+      replacement: dkp
+      targetLabel: d8_source
     scheme: http
   selector:
     matchExpressions:

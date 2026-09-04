@@ -45,6 +45,8 @@ spec:
     - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
       regex: "true"
       action: keep
+    - targetLabel: d8_source
+      replacement: dkp
   {{- if eq $profile "main" }}
   - scheme: https
     port: https-metrics
@@ -64,6 +66,8 @@ spec:
     - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
       regex: "true"
       action: keep
+    - targetLabel: d8_source
+      replacement: dkp
   - scheme: https
     port: https-metrics
     path: /controller-manager/metrics
@@ -83,6 +87,8 @@ spec:
     - sourceLabels: [__meta_kubernetes_endpointslice_endpoint_conditions_ready]
       regex: "true"
       action: keep
+    - targetLabel: d8_source
+      replacement: dkp
   {{- end }}
 {{- end }}
 {{- end }}

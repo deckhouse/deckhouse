@@ -22,6 +22,8 @@ spec:
       replacement: cluster
     - targetLabel: job
       replacement: "cilium-operator"
+    - targetLabel: d8_source
+      replacement: dkp
   selector:
     matchLabels:
       app: operator

@@ -23,6 +23,8 @@ spec:
           replacement: cluster
         - targetLabel: job
           replacement: "istio-cni"
+        - targetLabel: d8_source
+          replacement: dkp
   selector:
     matchLabels:
       app: istio-cni-node
