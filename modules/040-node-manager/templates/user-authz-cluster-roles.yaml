@@ -43,6 +43,7 @@ rules:
   resources:
   - instances
   - nodegroups
+  - nodetopologies
   - nodegroupconfigurations
   - nodeusers
   - sshcredentials
@@ -165,6 +166,7 @@ rules:
   resources:
   - instances
   - nodegroups
+  - nodetopologies
   verbs:
   - get
   - list

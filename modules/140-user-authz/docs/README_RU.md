@@ -249,6 +249,7 @@ read:
     - deckhouse.io/keepalivedinstances
     - deckhouse.io/localpathprovisioners
     - deckhouse.io/nodegroups
+    - deckhouse.io/nodetopologies
     - deckhouse.io/openstackinstanceclasses
     - deckhouse.io/operationpolicies
     - deckhouse.io/projecttemplates
@@ -567,6 +568,7 @@ write:
     - deckhouse.io/istiofederations
     - deckhouse.io/istiomulticlusters
     - deckhouse.io/localpathprovisioners
+    - deckhouse.io/nodetopologies
     - deckhouse.io/openstackinstanceclasses
     - deckhouse.io/operationpolicies
     - deckhouse.io/projects
