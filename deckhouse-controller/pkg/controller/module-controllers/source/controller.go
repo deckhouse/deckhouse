@@ -284,13 +284,6 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 		pulledModules = pulledModules[:maxModulesLimit]
 	}
 
-	// a module the source stopped listing is re-placed by the module sources that still offer it:
-	// the object of a module nothing installed and no module source offers goes
-	pulled := make(map[string]struct{}, len(pulledModules))
-	for _, name := range pulledModules {
-		pulled[name] = struct{}{}
-	}
-
 	if err = r.processModules(ctx, source, opts, pulledModules); err != nil {
 		r.logger.Error("failed to process modules for the module source", slog.String("source_name", source.Name), log.Err(err))
 
