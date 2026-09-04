@@ -1,0 +1,10 @@
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: test-module
+spec:
+  settingsVersion: 3
+  maintenance: NoResourceReconciliation
+  enabled: true
+  settings:
+    foo: bar

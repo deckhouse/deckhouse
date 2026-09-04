@@ -30,6 +30,10 @@ const (
 
 	ModuleFinalizerStatisticRegistered = "module.deckhouse.io/statistic-registered"
 
+	// ModuleFinalizerModuleRegistered is owned by the moduleV2 controller
+	// and lets it handle the delete event before the Module is garbage-collected.
+	ModuleFinalizerModuleRegistered = "module.deckhouse.io/module-registered"
+
 	ModuleAnnotationRegistrySpecChanged = "packages.deckhouse.io/registry-spec-changed"
 
 	// ModuleAnnotationDev marks a module restored from a development pull override.

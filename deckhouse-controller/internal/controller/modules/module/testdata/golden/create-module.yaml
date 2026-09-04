@@ -1,0 +1,18 @@
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  finalizers:
+  - module.deckhouse.io/module-registered
+  name: test-module
+  resourceVersion: "1000"
+spec:
+  enabled: true
+  maintenance: NoResourceReconciliation
+  packageVersion: ""
+  settings:
+    foo: bar
+  settingsVersion: 3
+status:
+  lastAppliedConfiguration: null
+  tracking: null

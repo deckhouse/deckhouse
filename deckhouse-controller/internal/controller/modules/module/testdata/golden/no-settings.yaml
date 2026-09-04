@@ -1,0 +1,14 @@
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  finalizers:
+  - module.deckhouse.io/module-registered
+  name: no-settings
+  resourceVersion: "1000"
+spec:
+  packageVersion: ""
+  settingsVersion: 1
+status:
+  lastAppliedConfiguration: null
+  tracking: null
