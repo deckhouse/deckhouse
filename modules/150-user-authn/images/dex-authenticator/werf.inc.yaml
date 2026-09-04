@@ -101,3 +101,5 @@ shell:
       {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags '-s -w' -o url-exec-prober main.go`) | indent 6 }}
     - chown 64535:64535 url-exec-prober
     - chmod 0700 url-exec-prober
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

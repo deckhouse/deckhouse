@@ -66,3 +66,7 @@ shell:
   - cp _bin/server/controller-linux-amd64 _bin/server/acmesolver-linux-amd64 _bin/server/webhook-linux-amd64 _bin/server/cainjector-linux-amd64 /
   - chown 64535:64535 /controller-linux-amd64 /acmesolver-linux-amd64 /webhook-linux-amd64 /cainjector-linux-amd64
   - chmod 700 /controller-linux-amd64 /acmesolver-linux-amd64 /webhook-linux-amd64 /cainjector-linux-amd64
+
+
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

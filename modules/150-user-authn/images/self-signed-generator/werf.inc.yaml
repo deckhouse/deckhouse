@@ -40,3 +40,5 @@ shell:
       {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-w -s" -o self-signed-generator main.go`) | indent 6 }}
     - chown 64535:64535 self-signed-generator
     - chmod 0700 self-signed-generator
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

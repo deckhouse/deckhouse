@@ -82,3 +82,14 @@ Updated operator dependencies. Fixes CVEs:
 - CVE-2026-2303 (`go.mongodb.org/mongo-driver` -> `v1.17.7`)
 
 (previously split across 013/014/015/016/017/018; consolidated into one patch)
+
+### 999-FixCVE.patch
+
+Fixes:
+- GO-2026-5932 / CVE-2026-56854 (`golang.org/x/crypto` -> `v0.55.0`, `golang.org/x/net` -> `v0.57.0`)
+- CVE-2026-49835 (`github.com/sigstore/timestamp-authority` -> `/v2 v2.1.2` via replace + exclude v1.2.2)
+- CVE-2026-2303 (`go.mongodb.org/mongo-driver` -> `v1.17.7` via replace)
+
+Also pins `github.com/docker/docker` to `v27.1.1+incompatible` (same as the trivy image)
+so `go mod tidy` after the timestamp-authority replace stays buildable, and regenerates a
+complete `go.sum` (partial sum updates break CI with missing go.sum entry errors).

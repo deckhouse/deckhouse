@@ -9,3 +9,7 @@ import:
 imageSpec:
   config:
     entrypoint: ["/bin/cainjector"]
+
+
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-fc1d5deddaa81550dea7f4a50b3975a7c18832da2d65abd5642934472389651d",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 1,
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -140,24 +140,6 @@
 
     {
       "vulnerability": {
-        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2025-66564",
-        "description": "Excessive memory allocation during request parsing",
-        "name": "CVE-2025-66564",
-        "aliases": [ "GHSA-4qg8-fj49-pxjh" ]
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/github.com/sigstore/timestamp-authority@v1.2.2"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Prior to 2.0.3, Function api.ParseJSONRequest currently splits (via a call to strings.Split) an optionally-provided OID (which is untrusted data) on periods. Similarly, function api.getContentType splits the Content-Type header (which is also untrusted data) on an application string. As a result, in the face of a malicious request with either an excessively long OID in the payload containing many period characters or a malformed Content-Type header, a call to api.ParseJSONRequest or api.getContentType incurs allocations of O(n) bytes (where n stands for the length of the function's argument). Deckhouse Kubernetes Platform is not affected by this since it does not implement or rely on timestamp verification using this package.",
-      "timestamp": "2026-04-01T14:34:03Z"
-    },
-
-    {
-      "vulnerability": {
         "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-22703",
         "description": "Verification accepts any valid Rekor entry under certain conditions",
         "name": "CVE-2026-22703",
@@ -279,7 +261,26 @@
       "impact_statement": "Moby is an open source container framework. In Docker Engine prior to version 29.5.1, a race condition during docker cp mount setup allows a malicious container to create empty files or directories at arbitrary absolute paths on the host filesystem when an operator initiates docker cp or calls PUT/HEAD /containers/{id}/archive API endpoints. Deckhouse Kubernetes Platform is not affected because admissionPolicyEngine trivyProvider is a Go binary and does not run, embed, or expose Docker daemon archive/copy code paths required to trigger this vulnerability.",
       "timestamp": "2026-06-24T12:00:00Z"
     }
+,
+
+    {
+      "vulnerability": {
+        "@id": "https://pkg.go.dev/vuln/GO-2026-5932",
+        "description": "The golang.org/x/crypto/openpgp package is unmaintained, unsafe by design, and has known security issues that will not be fixed.",
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        { "@id": "pkg:golang/golang.org/x/crypto" },
+        { "@id": "pkg:golang/golang.org/x/crypto@v0.53.0" },
+        { "@id": "pkg:golang/golang.org/x/crypto@v0.55.0" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 affects unmaintained golang.org/x/crypto/openpgp with no fixed version. admissionPolicyEngine trivyProvider only uses other x/crypto subpackages; openpgp is not imported or executed.",
+      "timestamp": "2026-09-03T10:00:00Z"
+    }
 
   ],
-  "timestamp": "2026-05-16T12:31:20Z"
+  "timestamp": "2026-05-16T12:31:20Z",
+  "last_updated": "2026-09-03T10:00:00Z"
 }

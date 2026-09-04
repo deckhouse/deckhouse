@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-fc1d5deddaa81550dea7f4a50b3975a7c18832da2d65abd5642934472389651d",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 1,
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -256,9 +256,78 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Deckhouse Kubernetes Platform is not affected because operator-trivy components are Go binaries and do not run or expose Docker daemon code paths required to trigger this vulnerability.",
       "timestamp": "2026-06-22T14:40:00Z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://pkg.go.dev/vuln/GO-2026-5932",
+        "description": "The golang.org/x/crypto/openpgp package is unmaintained, unsafe by design, and has known security issues that will not be fixed.",
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        { "@id": "pkg:golang/golang.org/x/crypto" },
+        { "@id": "pkg:golang/golang.org/x/crypto@v0.50.0" },
+        { "@id": "pkg:golang/golang.org/x/crypto@v0.55.0" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 affects unmaintained golang.org/x/crypto/openpgp with no fixed version. The operator-trivy trivy binary only uses other x/crypto subpackages; openpgp is not imported or executed.",
+      "timestamp": "2026-09-03T12:00:00Z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-46600",
+        "description": "Panic when parsing malformed SVCB/HTTPS DNS resource records in golang.org/x/net/dns/dnsmessage.",
+        "name": "CVE-2026-46600"
+      },
+      "products": [
+        { "@id": "pkg:golang/golang.org/x/net" },
+        { "@id": "pkg:golang/golang.org/x/net@v0.53.0" },
+        { "@id": "pkg:golang/golang.org/x/net@v0.57.0" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2026-46600 is in golang.org/x/net/dns/dnsmessage SVCB/HTTPS RR parsing. The operator-trivy trivy binary does not parse untrusted DNS messages via dnsmessage; name resolution uses the standard Go/OS resolver. The vulnerable code path is not reachable.",
+      "timestamp": "2026-09-03T12:00:00Z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-39824",
+        "description": "NewNTUnicodeString in golang.org/x/sys/windows does not check for string length overflow.",
+        "name": "CVE-2026-39824"
+      },
+      "products": [
+        { "@id": "pkg:golang/golang.org/x/sys" },
+        { "@id": "pkg:golang/golang.org/x/sys@v0.43.0" },
+        { "@id": "pkg:golang/golang.org/x/sys@v0.47.0" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_present",
+      "impact_statement": "CVE-2026-39824 affects golang.org/x/sys/windows (NewNTUnicodeString). The operator-trivy trivy binary is built with GOOS=linux; windows-tagged sources are excluded by build constraints and are not present in the Linux artifact.",
+      "timestamp": "2026-09-03T12:00:00Z"
+    },
+
+    {
+      "vulnerability": {
+        "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-56852",
+        "description": "DoS via infinite loop in golang.org/x/text unicode/norm when processing invalid UTF-8.",
+        "name": "CVE-2026-56852"
+      },
+      "products": [
+        { "@id": "pkg:golang/golang.org/x/text" },
+        { "@id": "pkg:golang/golang.org/x/text@v0.36.0" },
+        { "@id": "pkg:golang/golang.org/x/text@v0.41.0" }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "CVE-2026-56852 is in golang.org/x/text/unicode/norm. In the operator-trivy trivy binary, norm is only reached indirectly (for example via IDNA host normalization) on trusted registry/API hostnames, not on adversary-controlled arbitrary UTF-8 payloads. The vulnerable path is not adversary-controlled.",
+      "timestamp": "2026-09-03T12:00:00Z"
     }
 
   ],
-  "timestamp": "2026-05-16T12:31:20Z"
+  "timestamp": "2026-05-16T12:31:20Z",
+  "last_updated": "2026-09-03T12:00:00Z"
 }
 
