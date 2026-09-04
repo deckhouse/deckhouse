@@ -113,7 +113,7 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		storage, manager := buildHandler(t)
 		dependencyExtender := moduledependency.NewIExtenderMock(t)
 		moduleCR := newModuleCR(moduleName, []string{"alpha"}, "")
-		all := append([]client.Object{moduleCR}, objs...)
+		all := append(moduleCR, objs...)
 		return newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator, all...)
 	}
 
@@ -305,9 +305,10 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		dependencyExtender := moduledependency.NewIExtenderMock(t)
 		moduleCR := newModuleCR(moduleName, []string{"alpha"}, "")
 		handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator,
-			moduleCR,
-			newClusterKubernetesConfigMap([]string{"1.34", "1.35", "1.36"}),
-			newClusterConfigurationSecret("1.32"),
+			append(moduleCR,
+				newClusterKubernetesConfigMap([]string{"1.34", "1.35", "1.36"}),
+				newClusterConfigurationSecret("1.32"),
+			)...,
 		)
 
 		oldCfg := newControlPlaneManagerConfigDisabled("1.35")
@@ -326,9 +327,10 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		dependencyExtender := moduledependency.NewIExtenderMock(t)
 		moduleCR := newModuleCR(moduleName, []string{"alpha"}, "")
 		handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator,
-			moduleCR,
-			newClusterKubernetesConfigMap([]string{"1.34", "1.35", "1.36"}),
-			newClusterConfigurationSecret("1.32"),
+			append(moduleCR,
+				newClusterKubernetesConfigMap([]string{"1.34", "1.35", "1.36"}),
+				newClusterConfigurationSecret("1.32"),
+			)...,
 		)
 
 		oldCfg := newControlPlaneManagerConfig("1.35")
@@ -350,9 +352,10 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		dependencyExtender := moduledependency.NewIExtenderMock(t)
 		moduleCR := newModuleCR(moduleName, []string{"alpha"}, "")
 		handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator,
-			moduleCR,
-			newClusterKubernetesConfigMap([]string{"1.34", "1.35", "1.36"}),
-			newClusterConfigurationSecret("1.32"),
+			append(moduleCR,
+				newClusterKubernetesConfigMap([]string{"1.34", "1.35", "1.36"}),
+				newClusterConfigurationSecret("1.32"),
+			)...,
 		)
 
 		oldCfg := newControlPlaneManagerConfigDisabled("1.35")
@@ -398,9 +401,9 @@ func TestModuleConfigValidationHandler_ControlPlaneManagerKubernetesVersion(t *t
 		dependencyExtender := moduledependency.NewIExtenderMock(t)
 		dependencyExtender.CheckEnablingMock.Expect(moduleName).Return(nil)
 		handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator,
-			newModuleCR(moduleName, []string{"alpha"}, ""),
-			newClusterKubernetesConfigMap(defaultAvailable),
-			newClusterConfigurationSecretWithMaxUsed("1.36", "1.36"))
+			append(newModuleCR(moduleName, []string{"alpha"}, ""),
+				newClusterKubernetesConfigMap(defaultAvailable),
+				newClusterConfigurationSecretWithMaxUsed("1.36", "1.36"))...)
 
 		newCfg := newControlPlaneManagerConfig("1.32")
 		review := newModuleConfigAdmissionReview("CREATE", newCfg, nil)

@@ -92,13 +92,14 @@ func newTestLoader(t *testing.T, inst Installer, objects ...client.Object) *Load
 	cl := fake.NewClientBuilder().
 		WithScheme(newTestScheme(t)).
 		WithObjects(objects...).
-		WithStatusSubresource(&v1alpha1.Module{}, &v1alpha1.ModuleRelease{}, &v1alpha1.ModuleSource{}, &v1alpha2.ModulePullOverride{}).
+		WithStatusSubresource(&v1alpha2.Module{}, &v1alpha1.ModuleRelease{}, &v1alpha1.ModuleSource{}, &v1alpha2.ModulePullOverride{}).
 		Build()
 
 	tmp := t.TempDir()
 
 	return &Loader{
 		client:               cl,
+		reader:               cl,
 		logger:               log.NewNop(),
 		installer:            inst,
 		registries:           make(map[string]*addonmodules.Registry),
@@ -123,15 +124,24 @@ func testModuleSource(name, repo string) *v1alpha1.ModuleSource {
 	}
 }
 
-func testModule(name, source string, availableSources ...string) *v1alpha1.Module {
-	return &v1alpha1.Module{
+// testModule builds a module the package sync placed: the repository the source maps to and
+// a version. The embedded sentinel becomes the embedded annotation.
+func testModule(name, source string) *v1alpha2.Module {
+	module := &v1alpha2.Module{
 		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Properties: v1alpha1.ModuleProperties{
-			Source:           source,
-			AvailableSources: availableSources,
-			Weight:           900,
-		},
+		Spec:       v1alpha2.ModuleSpec{PackageVersion: "v1.0.0"},
 	}
+
+	if source == v1alpha1.ModuleSourceEmbedded {
+		module.Annotations = map[string]string{v1alpha2.ModuleAnnotationEmbedded: "true"}
+		module.Spec.PackageRepositoryName = "embedded"
+
+		return module
+	}
+
+	module.Spec.PackageRepositoryName = source
+
+	return module
 }
 
 func testDeployedRelease(module, sourceName, version string) *v1alpha1.ModuleRelease {
@@ -151,10 +161,12 @@ func testDeployedRelease(module, sourceName, version string) *v1alpha1.ModuleRel
 
 // enabled marks the module as enabled by ModuleConfig, which restoreModulesByOverrides
 // requires before it will restore an overridden module.
-func enabled(module *v1alpha1.Module) *v1alpha1.Module {
-	module.Status.Conditions = append(module.Status.Conditions, v1alpha1.ModuleCondition{
-		Type:   v1alpha1.ModuleConditionEnabledByModuleConfig,
-		Status: corev1.ConditionTrue,
+func enabled(module *v1alpha2.Module) *v1alpha2.Module {
+	module.Status.Conditions = append(module.Status.Conditions, metav1.Condition{
+		Type:               v1alpha1.ModuleConditionEnabledByModuleConfig,
+		Status:             metav1.ConditionTrue,
+		Reason:             v1alpha1.ModuleReasonEnabled,
+		LastTransitionTime: metav1.Now(),
 	})
 	return module
 }
@@ -170,9 +182,9 @@ func testReadyMPO(name, imageTag, deployedOn string) *v1alpha2.ModulePullOverrid
 	}
 }
 
-func getModule(t *testing.T, l *Loader, name string) *v1alpha1.Module {
+func getModule(t *testing.T, l *Loader, name string) *v1alpha2.Module {
 	t.Helper()
-	module := new(v1alpha1.Module)
+	module := new(v1alpha2.Module)
 	require.NoError(t, l.client.Get(context.Background(), client.ObjectKey{Name: name}, module))
 	return module
 }
@@ -191,7 +203,7 @@ func TestRestoreModulesByReleases(t *testing.T) {
 		calls := new(installerCalls)
 		l := newTestLoader(t, newRecordingInstaller(calls, nil),
 			testModuleSource("example", testRepo),
-			testModule("echo", "losev-test", "losev-test"),
+			testModule("echo", "losev-test"),
 			testDeployedRelease("echo", "example", "1.0.0"),
 		)
 
@@ -203,8 +215,6 @@ func TestRestoreModulesByReleases(t *testing.T) {
 		reg, ok := l.registries["echo"]
 		require.True(t, ok, "registry override must be set for an activated module")
 		assert.Equal(t, testRepo, reg.Base)
-
-		assert.Equal(t, "v1.0.0", getModule(t, l, "echo").Properties.Version)
 	})
 
 	// Regression: a module whose embedded copy is still shipped must be staged
@@ -215,7 +225,7 @@ func TestRestoreModulesByReleases(t *testing.T) {
 		calls := new(installerCalls)
 		l := newTestLoader(t, newRecordingInstaller(calls, map[string]bool{"echo": true}),
 			testModuleSource("example", testRepo),
-			testModule("echo", "losev-test", "losev-test"),
+			testModule("echo", v1alpha1.ModuleSourceEmbedded),
 			testDeployedRelease("echo", "example", "1.0.0"),
 		)
 
@@ -226,44 +236,19 @@ func TestRestoreModulesByReleases(t *testing.T) {
 
 		_, ok := l.registries["echo"]
 		assert.False(t, ok, "embedded module must keep its embedded registry (no source override)")
-
-		// version is still tracked even while the module stays embedded
-		assert.Equal(t, "v1.0.0", getModule(t, l, "echo").Properties.Version)
-	})
-
-	t.Run("migrated module switches active source once the embedded copy is gone", func(t *testing.T) {
-		calls := new(installerCalls)
-		l := newTestLoader(t, newRecordingInstaller(calls, nil),
-			testModuleSource("example", testRepo),
-			testModule("echo", v1alpha1.ModuleSourceEmbedded, "example"),
-			testDeployedRelease("echo", "example", "1.0.0"),
-		)
-
-		require.NoError(t, l.restoreModulesByReleases(context.Background()))
-
-		assert.Equal(t, []installerCall{{"echo", "v1.0.0"}}, calls.restore)
-		reg, ok := l.registries["echo"]
-		require.True(t, ok)
-		assert.Equal(t, testRepo, reg.Base)
-
-		// the embedded sentinel must be flipped to the real source
-		assert.Equal(t, "example", getModule(t, l, "echo").Properties.Source)
 	})
 
 	t.Run("multiple deployed releases: newest wins, older are superseded", func(t *testing.T) {
 		calls := new(installerCalls)
 		l := newTestLoader(t, newRecordingInstaller(calls, nil),
 			testModuleSource("example", testRepo),
-			testModule("echo", "losev-test", "losev-test"),
+			testModule("echo", "losev-test"),
 			testDeployedRelease("echo", "example", "1.0.0"),
 			testDeployedRelease("echo", "example", "1.0.2"),
 			testDeployedRelease("echo", "example", "1.0.1"),
 		)
 
 		require.NoError(t, l.restoreModulesByReleases(context.Background()))
-
-		// the module ends up pinned to the highest version
-		assert.Equal(t, "v1.0.2", getModule(t, l, "echo").Properties.Version)
 
 		assert.Equal(t, v1alpha1.ModuleReleasePhaseSuperseded, getRelease(t, l, "echo-v1.0.0").Status.Phase)
 		assert.Equal(t, v1alpha1.ModuleReleasePhaseSuperseded, getRelease(t, l, "echo-v1.0.1").Status.Phase)
@@ -277,7 +262,7 @@ func TestRestoreModulesByReleases(t *testing.T) {
 		calls := new(installerCalls)
 		l := newTestLoader(t, newRecordingInstaller(calls, nil),
 			testModuleSource("example", testRepo),
-			testModule("echo", "losev-test", "losev-test"),
+			testModule("echo", "losev-test"),
 			testDeployedRelease("echo", "example", "1.0.0"),
 			testReadyMPO("echo", "v1.0.0", testNodeName),
 		)
@@ -300,7 +285,7 @@ func TestRestoreModulesByOverrides(t *testing.T) {
 		calls := new(installerCalls)
 		l := newTestLoader(t, newRecordingInstaller(calls, nil),
 			testModuleSource("example", testRepo),
-			enabled(testModule("echo", "example", "example")),
+			enabled(testModule("echo", "example")),
 			testReadyMPO("echo", "v1.0.0", testNodeName),
 		)
 
@@ -320,7 +305,7 @@ func TestRestoreModulesByOverrides(t *testing.T) {
 		calls := new(installerCalls)
 		l := newTestLoader(t, newRecordingInstaller(calls, nil),
 			testModuleSource("example", testRepo),
-			testModule("echo", v1alpha1.ModuleSourceEmbedded, "example"),
+			testModule("echo", v1alpha1.ModuleSourceEmbedded),
 			testReadyMPO("echo", "v1.0.0", testNodeName),
 		)
 
@@ -335,7 +320,7 @@ func TestRestoreModulesByOverrides(t *testing.T) {
 		calls := new(installerCalls)
 		l := newTestLoader(t, newRecordingInstaller(calls, nil),
 			testModuleSource("example", testRepo),
-			enabled(testModule("echo", "example", "example")),
+			enabled(testModule("echo", "example")),
 			testReadyMPO("echo", "v1.0.0", "some-old-master"),
 		)
 
@@ -354,7 +339,7 @@ func TestRestoreModulesByOverrides(t *testing.T) {
 		calls := new(installerCalls)
 		l := newTestLoader(t, newRecordingInstaller(calls, nil),
 			testModuleSource("example", testRepo),
-			testModule("echo", "example", "example"),
+			testModule("echo", "example"),
 			mpo,
 		)
 
@@ -367,12 +352,13 @@ func TestRestoreModulesByOverrides(t *testing.T) {
 // --- deleteStaleModuleReleases ---------------------------------------------
 
 func TestDeleteStaleModuleReleases(t *testing.T) {
-	staleModule := func(name, source string) *v1alpha1.Module {
-		module := testModule(name, source, source)
-		module.Status.Conditions = []v1alpha1.ModuleCondition{
+	staleModule := func(name, source string) *v1alpha2.Module {
+		module := testModule(name, source)
+		module.Status.Conditions = []metav1.Condition{
 			{
 				Type:               v1alpha1.ModuleConditionEnabledByModuleConfig,
-				Status:             corev1.ConditionFalse,
+				Status:             metav1.ConditionFalse,
+				Reason:             v1alpha1.ModuleReasonDisabled,
 				LastTransitionTime: metav1.NewTime(time.Now().Add(-100 * time.Hour)),
 			},
 		}
@@ -390,10 +376,8 @@ func TestDeleteStaleModuleReleases(t *testing.T) {
 		err := l.client.Get(context.Background(), client.ObjectKey{Name: "echo-v1.0.0"}, new(v1alpha1.ModuleRelease))
 		assert.True(t, apierrors.IsNotFound(err), "stale module release must be deleted")
 
-		module := getModule(t, l, "echo")
-		assert.Equal(t, v1alpha1.ModulePhaseAvailable, module.Status.Phase)
-		assert.Empty(t, module.Properties.Source, "module properties must be cleared")
-		assert.Equal(t, []string{"example"}, module.Properties.AvailableSources, "available sources must be preserved")
+		// the module object outlives its releases until the sync at the next start drops it
+		assert.Equal(t, "v1.0.0", getModule(t, l, "echo").Spec.PackageVersion)
 	})
 
 	t.Run("embedded module is never pruned", func(t *testing.T) {
@@ -424,57 +408,55 @@ func newEnsureLoader(t *testing.T, objects ...client.Object) *Loader {
 	return l
 }
 
-// TestEnsureModuleEmbeddedSource verifies that ensureModule keeps the invariant
-// "a physically embedded module always reports Source == Embedded". This is the
-// reconciliation point that heals a stale external source (e.g. deckhouse) left
-// on an embedded module by a pre-hardening erroneous flip after a registry
-// migration - a value that otherwise stuck until the Module was deleted by hand.
-func TestEnsureModuleEmbeddedSource(t *testing.T) {
+func TestEnsureModule(t *testing.T) {
 	embeddedDef := func() *moduletypes.Definition {
 		return &moduletypes.Definition{
 			Name:   "ingress-nginx",
 			Weight: 380,
+			Tags:   []string{"network"},
+			Descriptions: &moduletypes.ModuleDescriptions{
+				En: "Ingress controller",
+			},
 			// parsed from the embedded modules dir - i.e. shipped on the filesystem
 			Path: "/deckhouse/modules/380-ingress-nginx",
 		}
 	}
 
-	t.Run("stale external source on an embedded module is reset to Embedded", func(t *testing.T) {
-		l := newEnsureLoader(t, testModule("ingress-nginx", "deckhouse"))
+	t.Run("definition labels, descriptions and the embedded release channel are written", func(t *testing.T) {
+		module := testModule("ingress-nginx", v1alpha1.ModuleSourceEmbedded)
+		module.Labels = map[string]string{
+			"module.deckhouse.io/stale": "",
+			"heritage":                  "deckhouse",
+		}
+		l := newEnsureLoader(t, module)
 
 		require.NoError(t, l.ensureModule(context.Background(), embeddedDef(), true))
 
-		module := getModule(t, l, "ingress-nginx")
-		assert.Equal(t, v1alpha1.ModuleSourceEmbedded, module.Properties.Source,
-			"embedded module must be pinned back to the Embedded source")
+		module = getModule(t, l, "ingress-nginx")
+		assert.Equal(t, map[string]string{
+			"module.deckhouse.io/network": "",
+			"heritage":                    "deckhouse",
+		}, module.Labels, "the definition owns its label prefix, other labels stay")
+		assert.Equal(t, "Ingress controller", module.Annotations[v1alpha1.ModuleAnnotationDescriptionEn])
+		assert.Equal(t, "true", module.Annotations[v1alpha2.ModuleAnnotationEmbedded], "the sync's annotation stays")
+		assert.Equal(t, "Stable", module.Spec.ReleaseChannel)
+		assert.Equal(t, "v1.0.0", module.Spec.PackageVersion, "the placement is not touched")
 	})
 
-	t.Run("empty source on an embedded module is set to Embedded", func(t *testing.T) {
-		l := newEnsureLoader(t, testModule("ingress-nginx", ""))
-
-		require.NoError(t, l.ensureModule(context.Background(), embeddedDef(), true))
-
-		module := getModule(t, l, "ingress-nginx")
-		assert.Equal(t, v1alpha1.ModuleSourceEmbedded, module.Properties.Source)
-	})
-
-	t.Run("embedded source is left untouched", func(t *testing.T) {
-		l := newEnsureLoader(t, testModule("ingress-nginx", v1alpha1.ModuleSourceEmbedded))
-
-		require.NoError(t, l.ensureModule(context.Background(), embeddedDef(), true))
-
-		module := getModule(t, l, "ingress-nginx")
-		assert.Equal(t, v1alpha1.ModuleSourceEmbedded, module.Properties.Source)
-	})
-
-	t.Run("downloaded (non-embedded) module keeps its external source", func(t *testing.T) {
-		l := newEnsureLoader(t, testModule("echo", "example"))
+	t.Run("downloaded module keeps its release channel", func(t *testing.T) {
+		module := testModule("echo", "example")
+		module.Spec.ReleaseChannel = "Alpha"
+		l := newEnsureLoader(t, module)
 		def := &moduletypes.Definition{Name: "echo", Weight: 900, Path: l.downloadedModulesDir + "/modules/echo"}
 
 		require.NoError(t, l.ensureModule(context.Background(), def, false))
 
-		module := getModule(t, l, "echo")
-		assert.Equal(t, "example", module.Properties.Source,
-			"a downloaded module must not be forced to the Embedded source")
+		assert.Equal(t, "Alpha", getModule(t, l, "echo").Spec.ReleaseChannel)
+	})
+
+	t.Run("missing module is skipped", func(t *testing.T) {
+		l := newEnsureLoader(t)
+
+		require.NoError(t, l.ensureModule(context.Background(), embeddedDef(), true))
 	})
 }

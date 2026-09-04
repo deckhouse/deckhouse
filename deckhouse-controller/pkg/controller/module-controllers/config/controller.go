@@ -18,6 +18,8 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -25,8 +27,8 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -40,8 +42,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
@@ -100,15 +104,65 @@ func RegisterController(
 		Named(controllerName).
 		For(&v1alpha1.ModuleConfig{}).
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
-		Watches(&v1alpha1.Module{}, ctrlhandler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
-			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: obj.(*v1alpha1.Module).Name}}}
+		// a module that gets its object, or its first package, picks up the config that waited
+		// for it; a module without a config has nothing to reconcile
+		Watches(&v1alpha2.Module{}, ctrlhandler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+			if err := r.client.Get(ctx, client.ObjectKey{Name: obj.GetName()}, new(v1alpha1.ModuleConfig)); err != nil {
+				return nil
+			}
+
+			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: obj.GetName()}}}
 		}), builder.WithPredicates(predicate.Funcs{
 			CreateFunc: func(_ event.CreateEvent) bool {
 				return true
 			},
-			UpdateFunc: func(_ event.UpdateEvent) bool { return false },
+			UpdateFunc: func(updateEvent event.UpdateEvent) bool {
+				oldModule, ok := updateEvent.ObjectOld.(*v1alpha2.Module)
+				if !ok {
+					return false
+				}
+
+				newModule, ok := updateEvent.ObjectNew.(*v1alpha2.Module)
+				if !ok {
+					return false
+				}
+
+				return !oldModule.IsInstalled() && newModule.IsInstalled()
+			},
 			DeleteFunc: func(_ event.DeleteEvent) bool {
 				return false
+			},
+			GenericFunc: func(_ event.GenericEvent) bool {
+				return false
+			},
+		})).
+		// the repository scan changes who offers a module: the config of a module nothing
+		// installed re-reports the conflict
+		Watches(&v1alpha1.ModulePackage{}, ctrlhandler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+			if err := r.client.Get(ctx, client.ObjectKey{Name: obj.GetName()}, new(v1alpha1.ModuleConfig)); err != nil {
+				return nil
+			}
+
+			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: obj.GetName()}}}
+		}), builder.WithPredicates(predicate.Funcs{
+			CreateFunc: func(_ event.CreateEvent) bool {
+				return true
+			},
+			UpdateFunc: func(updateEvent event.UpdateEvent) bool {
+				oldPackage, ok := updateEvent.ObjectOld.(*v1alpha1.ModulePackage)
+				if !ok {
+					return false
+				}
+
+				newPackage, ok := updateEvent.ObjectNew.(*v1alpha1.ModulePackage)
+				if !ok {
+					return false
+				}
+
+				return !slices.Equal(oldPackage.Status.AvailableRepositories, newPackage.Status.AvailableRepositories)
+			},
+			DeleteFunc: func(_ event.DeleteEvent) bool {
+				return true
 			},
 			GenericFunc: func(_ event.GenericEvent) bool {
 				return false
@@ -225,22 +279,14 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 	}
 
-	module := new(v1alpha1.Module)
+	if moduleConfig.Name == moduleGlobal {
+		return ctrl.Result{}, nil
+	}
+
+	module := new(v1alpha2.Module)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleConfig.Name}, module); err != nil {
 		if apierrors.IsNotFound(err) {
-			if moduleConfig.Name != moduleGlobal {
-				r.logger.Warn("module not found", slog.String("name", moduleConfig.Name))
-				err = utils.UpdateStatus[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
-					moduleConfig.Status.Message = v1alpha1.ModuleConfigMessageUnknownModule
-					return true
-				})
-				if err != nil {
-					r.logger.Error("failed to update module config", slog.String("name", moduleConfig.Name), log.Err(err))
-					return ctrl.Result{}, err
-				}
-			}
-
-			return ctrl.Result{RequeueAfter: moduleNotFoundInterval}, nil
+			return r.handleNotInstalledModule(ctx, moduleConfig)
 		}
 
 		return ctrl.Result{}, err
@@ -249,21 +295,132 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 	return r.processModule(ctx, moduleConfig, module)
 }
 
-func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig, module *v1alpha1.Module) (ctrl.Result, error) {
-	defer r.logger.Debug("module config reconciled", slog.String("name", moduleConfig.Name))
+// handleNotInstalledModule settles a config whose module has no object: a module some module
+// source offers is waiting for its first deploy, and the Module create event brings the config
+// back, while a name no module source offers is reported and checked again later.
+func (r *reconciler) handleNotInstalledModule(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig) (ctrl.Result, error) {
+	moduleSourceNames, err := utils.AvailableModuleSources(ctx, r.client, moduleConfig.Name)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
 
-	// clear conflict metrics
-	metricGroup := fmt.Sprintf(metrics.ModuleConflictMetricGroupTemplate, module.Name)
+	if len(moduleSourceNames) == 0 {
+		r.logger.Warn("module not found", slog.String("name", moduleConfig.Name))
+		err = utils.UpdateStatus[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
+			moduleConfig.Status.Message = v1alpha1.ModuleConfigMessageUnknownModule
+			return true
+		})
+		if err != nil {
+			r.logger.Error("failed to update module config", slog.String("name", moduleConfig.Name), log.Err(err))
+			return ctrl.Result{}, err
+		}
+
+		return ctrl.Result{RequeueAfter: moduleNotFoundInterval}, nil
+	}
+
+	if err := r.addFinalizer(ctx, moduleConfig); err != nil {
+		r.logger.Error("failed to add finalizer", slog.String("module", moduleConfig.Name), log.Err(err))
+		return ctrl.Result{}, err
+	}
+
+	if _, err := r.reportConflict(ctx, moduleConfig, moduleSourceNames); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	return ctrl.Result{}, nil
+}
+
+// reportConflict tells the config about the sources of a module nothing installed: the
+// message and the alert while the config enables the module, several sources offer it and
+// none is picked, since no source installs such a module; a stale conflict message is
+// cleared and the alert withdrawn otherwise. Reports whether the module is in conflict.
+func (r *reconciler) reportConflict(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig, moduleSourceNames []string) (bool, error) {
+	metricGroup := fmt.Sprintf(metrics.ModuleConflictMetricGroupTemplate, moduleConfig.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
+
+	conflict := utils.HasModuleSourceConflict(moduleConfig.IsEnabled(), pkgsync.ConfiguredModuleSource(moduleConfig), moduleSourceNames)
+
+	message := ""
+	if conflict {
+		r.logger.Debug("module has several available sources", slog.String("name", moduleConfig.Name))
+		message = fmt.Sprintf("%s: %s", v1alpha1.ModuleMessageConflict, strings.Join(moduleSourceNames, ", "))
+	}
+
+	err := utils.UpdateStatus[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
+		// other writers own the other messages
+		if moduleConfig.Status.Message == message || (message == "" && !strings.HasPrefix(moduleConfig.Status.Message, v1alpha1.ModuleMessageConflict)) {
+			return false
+		}
+
+		moduleConfig.Status.Message = message
+
+		return true
+	})
+	if err != nil {
+		r.logger.Error("failed to update module config", slog.String("name", moduleConfig.Name), log.Err(err))
+		return false, err
+	}
+
+	if conflict {
+		// fire alert at Conflict
+		r.metricStorage.Grouped().GaugeSet(metricGroup, metrics.D8ModuleAtConflict, 1.0, map[string]string{
+			"module": moduleConfig.Name,
+		})
+	}
+
+	return conflict, nil
+}
+
+func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig, module *v1alpha2.Module) (ctrl.Result, error) {
+	defer r.logger.Debug("module config reconciled", slog.String("name", moduleConfig.Name))
 
 	if err := r.addFinalizer(ctx, moduleConfig); err != nil {
 		r.logger.Error("failed to add finalizer", slog.String("module", module.Name), log.Err(err))
 		return ctrl.Result{}, err
 	}
 
+	if module.IsInstalled() {
+		// an installed module comes from one source: no conflict
+		metricGroup := fmt.Sprintf(metrics.ModuleConflictMetricGroupTemplate, module.Name)
+		r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
+	} else {
+		// a module nothing installed is in conflict while the config enables it, several
+		// module sources offer it and none is picked: the config and the module both tell
+		moduleSourceNames, err := utils.AvailableModuleSources(ctx, r.client, moduleConfig.Name)
+		if err != nil {
+			r.logger.Error("failed to get the module sources offering the module", slog.String("module", module.Name), log.Err(err))
+			return ctrl.Result{}, err
+		}
+
+		conflict, err := r.reportConflict(ctx, moduleConfig, moduleSourceNames)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+
+		err = utils.UpdateStatus[*v1alpha2.Module](ctx, r.client, module, func(module *v1alpha2.Module) bool {
+			return module.ApplyNotInstalledState(conflict)
+		})
+		if err != nil {
+			r.logger.Error("failed to update the module status", slog.String("module", module.Name), log.Err(err))
+			return ctrl.Result{}, err
+		}
+	}
+
+	// the config fields of the module spec belong to the module config
+	if err := r.mirrorModuleConfig(ctx, module, moduleConfig); err != nil {
+		r.logger.Error("failed to mirror the module config", slog.String("module", module.Name), log.Err(err))
+		return ctrl.Result{}, err
+	}
+
+	metadata, err := utils.ModuleMetadata(ctx, r.client, module)
+	if err != nil {
+		r.logger.Error("failed to get the module metadata", slog.String("module", module.Name), log.Err(err))
+		return ctrl.Result{}, err
+	}
+
 	if !moduleConfig.IsEnabled() {
 		// delete all pending releases for EnabledByModuleConfig disabled modules
-		if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
+		if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, metav1.ConditionTrue) {
 			releases := new(v1alpha1.ModuleReleaseList)
 			selector := client.MatchingLabels{v1alpha1.ModuleReleaseLabelModule: module.Name}
 			if err := r.client.List(ctx, releases, selector); err != nil {
@@ -289,7 +446,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 			}
 		}
 
-		if err := r.disableModule(ctx, module); err != nil {
+		if err := r.disableModule(ctx, module, metadata); err != nil {
 			r.logger.Error("failed to disable the module", slog.String("module", module.Name), log.Err(err))
 			return ctrl.Result{}, err
 		}
@@ -307,10 +464,10 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 		}
 
 		// Reset deprecated and experimental metrics when module is disabled
-		if module.IsDeprecated() {
+		if isDeprecated(metadata) {
 			r.metricStorage.GaugeSet(telemetry.WrapName(metrics.DeprecatedModuleIsEnabled), 0.0, map[string]string{metrics.LabelModule: moduleConfig.GetName()})
 		}
-		if module.IsExperimental() {
+		if isExperimental(metadata) {
 			r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 0.0, map[string]string{metrics.LabelModule: moduleConfig.GetName()})
 		}
 
@@ -319,100 +476,90 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 		return ctrl.Result{}, nil
 	}
 
-	if moduleConfig.IsEnabled() {
-		if err := r.enableModule(ctx, module); err != nil {
-			r.logger.Error("failed to enable the module", slog.String("module", module.Name), log.Err(err))
-			return ctrl.Result{}, err
-		}
-
-		// restore documentation for the re-enabled module from its deployed release
-		if err := r.ensureModuleDocumentation(ctx, module); err != nil {
-			r.logger.Error("failed to ensure module documentation", slog.String("module", module.Name), log.Err(err))
-			return ctrl.Result{}, err
-		}
+	if err := r.enableModule(ctx, module); err != nil {
+		r.logger.Error("failed to enable the module", slog.String("module", module.Name), log.Err(err))
+		return ctrl.Result{}, err
 	}
 
-	if module.IsExperimental() {
+	// restore documentation for the re-enabled module from its deployed release
+	if err := r.ensureModuleDocumentation(ctx, module); err != nil {
+		r.logger.Error("failed to ensure module documentation", slog.String("module", module.Name), log.Err(err))
+		return ctrl.Result{}, err
+	}
+
+	if isExperimental(metadata) {
 		r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 1.0, map[string]string{metrics.LabelModule: moduleConfig.GetName()})
 	}
 
-	if module.IsDeprecated() {
+	if isDeprecated(metadata) {
 		r.metricStorage.GaugeSet(telemetry.WrapName(metrics.DeprecatedModuleIsEnabled), 1.0, map[string]string{metrics.LabelModule: moduleConfig.GetName()})
 	}
 
-	if err := r.addFinalizer(ctx, moduleConfig); err != nil {
-		r.logger.Error("failed to add finalizer", slog.String("module", module.Name), log.Err(err))
-		return ctrl.Result{}, err
-	}
-
-	// skip system modules
-	if module.Name == moduleDeckhouse || module.Name == moduleGlobal {
-		r.logger.Debug("skip the system module", slog.String("name", module.Name))
-		return ctrl.Result{}, nil
-	}
-
-	// skip embedded modules
-	if module.IsEmbedded() {
-		r.logger.Debug("skip embedded module", slog.String("name", module.Name))
-		return ctrl.Result{}, nil
-	}
-
-	updatePolicy := module.Properties.UpdatePolicy
-	// change update policy by module config
-	if updatePolicy != moduleConfig.Spec.UpdatePolicy {
-		updatePolicy = moduleConfig.Spec.UpdatePolicy
-	}
-
-	// change source by module config
-	if moduleConfig.Spec.Source != "" && module.Properties.Source != moduleConfig.Spec.Source {
-		if err := r.changeModuleSource(ctx, module, moduleConfig.Spec.Source, updatePolicy); err != nil {
-			r.logger.Debug("failed to change source for the module", slog.String("name", module.Name), log.Err(err))
-			return ctrl.Result{}, err
-		}
-	}
-
-	if module.Properties.Source == "" {
-		// change source by available source
-		if len(module.Properties.AvailableSources) == 1 {
-			if err := r.changeModuleSource(ctx, module, module.Properties.AvailableSources[0], updatePolicy); err != nil {
-				r.logger.Debug("failed to change source for module", slog.String("name", module.Name), log.Err(err))
-				return ctrl.Result{}, err
-			}
-		}
-
-		// set conflict if there are several available sources
-		if len(module.Properties.AvailableSources) > 1 {
-			err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-				module.Status.Phase = v1alpha1.ModulePhaseConflict
-				module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, "", "")
-				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonConflict, v1alpha1.ModuleMessageConflict)
-				return true
-			})
-			if err != nil {
-				r.logger.Error("failed to set conflict to module", slog.String("name", module.Name), log.Err(err))
-				return ctrl.Result{}, err
-			}
-			// fire alert at Conflict
-			r.metricStorage.Grouped().GaugeSet(metricGroup, metrics.D8ModuleAtConflict, 1.0, map[string]string{
-				"module": module.Name,
-			})
-		}
-	}
-
-	// update only the update policy if nothing else has changed
-	err := utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-		if module.Properties.UpdatePolicy != updatePolicy {
-			module.Properties.UpdatePolicy = updatePolicy
-			return true
-		}
-		return false
-	})
-	if err != nil {
-		r.logger.Error("failed to update module`s update policy", slog.String("name", module.Name), log.Err(err))
-		return ctrl.Result{}, err
-	}
-
 	return ctrl.Result{}, nil
+}
+
+// mirrorModuleConfig writes the config fields of the module spec: settings, their version,
+// the maintenance mode, the enabled intent and the update policy. Where the package comes
+// from is not the config's to decide, so the repository and the version stay.
+func (r *reconciler) mirrorModuleConfig(ctx context.Context, module *v1alpha2.Module, moduleConfig *v1alpha1.ModuleConfig) error {
+	patch := client.MergeFrom(module.DeepCopy())
+
+	module.Spec.Settings = moduleConfig.Spec.Settings
+	module.Spec.SettingsVersion = moduleConfig.Spec.Version
+	module.Spec.Maintenance = moduleConfig.Spec.Maintenance
+	module.Spec.Enabled = moduleConfig.Spec.Enabled
+	module.Spec.UpdatePolicy = moduleConfig.Spec.UpdatePolicy
+
+	return r.patchModule(ctx, module, patch)
+}
+
+// clearModuleConfig drops the config fields of the module spec once the config is gone.
+func (r *reconciler) clearModuleConfig(ctx context.Context, module *v1alpha2.Module) error {
+	patch := client.MergeFrom(module.DeepCopy())
+
+	module.Spec.Settings = nil
+	module.Spec.SettingsVersion = 0
+	module.Spec.Maintenance = ""
+	module.Spec.Enabled = nil
+	module.Spec.UpdatePolicy = ""
+
+	return r.patchModule(ctx, module, patch)
+}
+
+// patchModule writes the module when the patch carries a change.
+func (r *reconciler) patchModule(ctx context.Context, module *v1alpha2.Module, patch client.Patch) error {
+	data, err := patch.Data(module)
+	if err != nil {
+		return fmt.Errorf("build patch: %w", err)
+	}
+
+	if string(data) == "{}" {
+		return nil
+	}
+
+	if err := r.client.Patch(ctx, module, client.RawPatch(patch.Type(), data)); err != nil {
+		return fmt.Errorf("patch the '%s' module: %w", module.Name, err)
+	}
+
+	return nil
+}
+
+// isExperimental reports whether the module metadata marks the module experimental; unknown
+// metadata does not.
+func isExperimental(metadata *v1alpha1.ModulePackageVersionStatusMetadata) bool {
+	return metadata != nil && metadata.Stage == v1alpha1.ExperimentalModuleStage
+}
+
+// isDeprecated reports whether the module metadata marks the module deprecated; unknown
+// metadata does not.
+func isDeprecated(metadata *v1alpha1.ModulePackageVersionStatusMetadata) bool {
+	return metadata != nil && metadata.Stage == v1alpha1.DeprecatedModuleStage
+}
+
+// enabledByBundle reports whether the edition enables the module by default; unknown
+// metadata does not.
+func (r *reconciler) enabledByBundle(metadata *v1alpha1.ModulePackageVersionStatusMetadata) bool {
+	return metadata != nil && metadata.Licensing.IsEnabledInBundle(r.edition.Name, r.edition.Bundle)
 }
 
 func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig) (ctrl.Result, error) {
@@ -430,7 +577,7 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 0.0, map[string]string{metrics.LabelModule: moduleConfig.GetName()})
 	r.metricStorage.GaugeSet(telemetry.WrapName(metrics.DeprecatedModuleIsEnabled), 0.0, map[string]string{metrics.LabelModule: moduleConfig.GetName()})
 
-	module := new(v1alpha1.Module)
+	module := new(v1alpha2.Module)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleConfig.Name}, module); err != nil {
 		if apierrors.IsNotFound(err) {
 			r.logger.Warn("module not found", slog.String("name", moduleConfig.Name))
@@ -452,27 +599,25 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 		return ctrl.Result{}, nil
 	}
 
+	metadata, err := utils.ModuleMetadata(ctx, r.client, module)
+	if err != nil {
+		r.logger.Error("failed to get the module metadata", slog.String("module", module.Name), log.Err(err))
+		return ctrl.Result{}, err
+	}
+
 	// disable module
-	if err := r.disableModule(ctx, module); err != nil {
+	if err := r.disableModule(ctx, module, metadata); err != nil {
 		r.logger.Error("failed to disable the module", slog.String("module", module.Name), log.Err(err))
 		return ctrl.Result{}, err
 	}
 
-	// clear downloaded module
-	if !module.IsEmbedded() && !module.IsEnabledByBundle(r.edition.Name, r.edition.Bundle) {
-		err := utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-			module.Properties.UpdatePolicy = ""
-			module.Properties.Source = ""
-			return true
-		})
-		if err != nil {
-			r.logger.Error("failed to update the module", slog.String("module", module.Name), log.Err(err))
-			return ctrl.Result{}, err
-		}
+	if err := r.clearModuleConfig(ctx, module); err != nil {
+		r.logger.Error("failed to clear the module config", slog.String("module", module.Name), log.Err(err))
+		return ctrl.Result{}, err
 	}
 
-	err := utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-		module.SetConditionUnknown(v1alpha1.ModuleConditionEnabledByModuleConfig, "", "")
+	err = utils.UpdateStatus[*v1alpha2.Module](ctx, r.client, module, func(module *v1alpha2.Module) bool {
+		module.SetConditionUnknown(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonUnknown, "")
 
 		return true
 	})
@@ -487,20 +632,6 @@ func (r *reconciler) deleteModuleConfig(ctx context.Context, moduleConfig *v1alp
 	}
 
 	return ctrl.Result{}, nil
-}
-
-func (r *reconciler) changeModuleSource(ctx context.Context, module *v1alpha1.Module, source, updatePolicy string) error {
-	r.logger.Debug("set new source to the module", slog.String("module_source", source), slog.String("module", module.Name))
-	err := utils.Update[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-		module.Properties.Source = source
-		module.Properties.UpdatePolicy = updatePolicy
-		return true
-	})
-	if err != nil {
-		return fmt.Errorf("update the '%s' module: %w", module.Name, err)
-	}
-
-	return nil
 }
 
 // addFinalizer adds finalizer to the module config to handle the delete event
@@ -532,7 +663,7 @@ func (r *reconciler) removeFinalizer(ctx context.Context, config *v1alpha1.Modul
 	})
 }
 
-func (r *reconciler) disableModule(ctx context.Context, module *v1alpha1.Module) error {
+func (r *reconciler) disableModule(ctx context.Context, module *v1alpha2.Module, metadata *v1alpha1.ModulePackageVersionStatusMetadata) error {
 	r.logger.Debug("disable the module", slog.String("module", module.Name))
 
 	// remove module documentation immediately on disable so docs-builder drops it
@@ -540,46 +671,45 @@ func (r *reconciler) disableModule(ctx context.Context, module *v1alpha1.Module)
 		return fmt.Errorf("delete module documentation: %w", err)
 	}
 
-	return utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-		if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionFalse) {
+	return utils.UpdateStatus[*v1alpha2.Module](ctx, r.client, module, func(module *v1alpha2.Module) bool {
+		if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, metav1.ConditionFalse) {
 			return false
 		}
 
-		switch module.Status.Phase {
-		case v1alpha1.ModulePhaseConflict,
-			v1alpha1.ModulePhaseDownloading,
-			v1alpha1.ModulePhaseDownloadingError:
-			// modules in Conflict should not be installed, and they cannot receive events, so set Available phase manually
-			// same thing if module is not installed
-			module.Status.Phase = v1alpha1.ModulePhaseAvailable
-			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, "", "")
-			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
+		switch {
+		case !module.IsInstalled(),
+			module.Status.Phase == v1alpha1.ModulePhaseConflict,
+			module.Status.Phase == v1alpha1.ModulePhaseDownloading,
+			module.Status.Phase == v1alpha1.ModulePhaseDownloadingError:
+			// a module nothing installed goes back to the available state: one in conflict or
+			// fetching its first release receives no event that would move it
+			module.SetNotInstalledStatus()
 		default:
-			if !module.IsEnabledByBundle(r.edition.Name, r.edition.Bundle) {
+			if !r.enabledByBundle(metadata) {
 				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
 			}
 		}
 
-		module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, "", "")
-		module.SetConditionUnknown(v1alpha1.ModuleConditionLastReleaseDeployed, "", "")
+		module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonDisabled, "")
+		module.SetConditionUnknown(v1alpha1.ModuleConditionLastReleaseDeployed, v1alpha1.ModuleReasonUnknown, "")
 
 		return true
 	})
 }
 
-func (r *reconciler) enableModule(ctx context.Context, module *v1alpha1.Module) error {
+func (r *reconciler) enableModule(ctx context.Context, module *v1alpha2.Module) error {
 	r.logger.Debug("enable the module", slog.String("module", module.Name))
-	return utils.UpdateStatus[*v1alpha1.Module](ctx, r.client, module, func(module *v1alpha1.Module) bool {
-		if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
+	return utils.UpdateStatus[*v1alpha2.Module](ctx, r.client, module, func(module *v1alpha2.Module) bool {
+		if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, metav1.ConditionTrue) {
 			return false
 		}
-		module.SetConditionTrue(v1alpha1.ModuleConditionEnabledByModuleConfig)
+		module.SetConditionTrue(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonEnabled)
 
 		return true
 	})
 }
 
-func (r *reconciler) ensureModuleDocumentation(ctx context.Context, module *v1alpha1.Module) error {
+func (r *reconciler) ensureModuleDocumentation(ctx context.Context, module *v1alpha2.Module) error {
 	releases := new(v1alpha1.ModuleReleaseList)
 	if err := r.client.List(ctx, releases, client.MatchingLabels{
 		v1alpha1.ModuleReleaseLabelModule: module.Name,

@@ -291,52 +291,78 @@ func (v *moduleConfigValidator) validateModuleEnabling(ctx context.Context, cfg 
 		return rejectResult(err.Error())
 	}
 
-	// The Module CR is fetched once and feeds both the experimental gate and the
-	// dependency fallback below. The global module has no Module CR.
+	// The module object exists only once the module is installed, and its package metadata
+	// feeds both the experimental gate and the dependency check below. The global module
+	// has no object.
 	if cfg.Name == globalModuleName {
 		return nil, nil
 	}
 
-	module := new(v1alpha1.Module)
+	module := new(v1alpha2.Module)
 	if err := v.client.Get(ctx, client.ObjectKey{Name: cfg.Name}, module); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return nil, fmt.Errorf("get the '%s' module: %w", cfg.Name, err)
 		}
 
+		// a module never installed has no object, but some source must offer it
 		if rejectMissingModuleCR {
-			return rejectResult(fmt.Sprintf("the '%s' module not found", cfg.Name))
+			available, err := v.isModuleAvailableInAnySource(ctx, cfg.Name)
+			if err != nil {
+				return nil, err
+			}
+
+			if !available {
+				return rejectResult(fmt.Sprintf("the '%s' module not found", cfg.Name))
+			}
 		}
 
 		return nil, nil
 	}
 
-	if module.IsExperimental() && !allowExperimental {
+	metadata, err := utils.ModuleMetadata(ctx, v.client, module)
+	if err != nil {
+		return nil, fmt.Errorf("get the '%s' module metadata: %w", cfg.Name, err)
+	}
+
+	if metadata != nil && metadata.Stage == v1alpha1.ExperimentalModuleStage && !allowExperimental {
 		return rejectResult(experimentalRejectMessage(cfg.Name))
 	}
 
-	if res, err := v.checkDependenciesFromModuleCR(module); res != nil || err != nil {
+	if res, err := v.checkDependenciesFromMetadata(module.Name, metadata); res != nil || err != nil {
 		return res, err
 	}
 
 	return nil, nil
 }
 
-// checkDependenciesFromModuleCR enforces the "parent module must be enabled" part of the
-// requirements declared on the Module CR, which the dependency extender cannot check for a
-// module whose module.yaml has not been loaded from disk yet. Conditional parents and version
+// isModuleAvailableInAnySource reports whether any module source offers the module.
+func (v *moduleConfigValidator) isModuleAvailableInAnySource(ctx context.Context, name string) (bool, error) {
+	moduleSourceNames, err := utils.AvailableModuleSources(ctx, v.client, name)
+	if err != nil {
+		return false, err
+	}
+
+	return len(moduleSourceNames) > 0, nil
+}
+
+// checkDependenciesFromMetadata enforces the "parent module must be enabled" part of the
+// requirements the installed package declares, which the dependency extender cannot check
+// for a module whose files it has not loaded from disk yet. Conditional parents and version
 // constraints are left to the extender.
-func (v *moduleConfigValidator) checkDependenciesFromModuleCR(module *v1alpha1.Module) (*kwhvalidating.ValidatorResult, error) {
-	if module.Properties.Requirements == nil || len(module.Properties.Requirements.ParentModules) == 0 {
+func (v *moduleConfigValidator) checkDependenciesFromMetadata(name string, metadata *v1alpha1.ModulePackageVersionStatusMetadata) (*kwhvalidating.ValidatorResult, error) {
+	if metadata == nil || metadata.Requirements == nil || metadata.Requirements.Modules == nil {
 		return nil, nil
 	}
 
-	missing := make([]string, 0, len(module.Properties.Requirements.ParentModules))
-	for parent, constraint := range module.Properties.Requirements.ParentModules {
-		if parent == module.Name || strings.HasSuffix(constraint, "!optional") {
+	mandatory := metadata.Requirements.Modules.Mandatory
+
+	missing := make([]string, 0, len(mandatory))
+	for _, parent := range mandatory {
+		if parent.Name == name {
 			continue
 		}
-		if !v.moduleManager.IsModuleEnabled(parent) {
-			missing = append(missing, parent)
+		if !v.moduleManager.IsModuleEnabled(parent.Name) {
+			missing = append(missing, parent.Name)
 		}
 	}
 
@@ -346,7 +372,7 @@ func (v *moduleConfigValidator) checkDependenciesFromModuleCR(module *v1alpha1.M
 
 	slices.Sort(missing)
 
-	return rejectResult(fmt.Sprintf("the '%s' module depends on disabled module(s): %s", module.Name, strings.Join(missing, ", ")))
+	return rejectResult(fmt.Sprintf("the '%s' module depends on disabled module(s): %s", name, strings.Join(missing, ", ")))
 }
 
 // checkExperimentalFromStorage applies the experimental gate using the downloaded
@@ -521,32 +547,42 @@ func (v *moduleConfigValidator) configSchema(moduleName string) *spec.Schema {
 	return ss.Schemas[validation.ConfigValuesSchema]
 }
 
-// resolveModuleSource fetches the Module CR and validates the configured source.
-// The returned result, when non-nil, is final (a missing module is allowed with
-// a warning, an unavailable source is rejected). Otherwise it returns any
-// warnings to accumulate. The global module has no Module CR and is skipped.
+// resolveModuleSource validates the configured source against the sources offering the
+// module. The returned result, when non-nil, is final (a module nobody offers and nobody
+// installed is allowed with a warning, an unavailable source is rejected). Otherwise it
+// returns any warnings to accumulate. The global module is skipped.
 func (v *moduleConfigValidator) resolveModuleSource(ctx context.Context, cfg *v1alpha1.ModuleConfig) (*kwhvalidating.ValidatorResult, []string, error) {
 	if cfg.Name == globalModuleName {
 		return nil, nil, nil
 	}
 
-	module := new(v1alpha1.Module)
-	if err := v.client.Get(ctx, client.ObjectKey{Name: cfg.Name}, module); err != nil {
-		if apierrors.IsNotFound(err) {
-			result, _ := allowResult([]string{fmt.Sprintf("the '%s' module not found", cfg.Name)})
-			return result, nil, nil
-		}
-		return nil, nil, fmt.Errorf("get the '%s' module: %w", cfg.Name, err)
+	moduleSourceNames, err := utils.AvailableModuleSources(ctx, v.client, cfg.Name)
+	if err != nil {
+		return nil, nil, err
 	}
 
-	if cfg.Spec.Source != "" && !slices.Contains(module.Properties.AvailableSources, cfg.Spec.Source) {
-		result, _ := rejectResult(fmt.Sprintf("the '%s' module source is an unavailable source for the '%s' module, available sources: %v", cfg.Spec.Source, cfg.Name, module.Properties.AvailableSources))
+	installed := true
+	if err := v.client.Get(ctx, client.ObjectKey{Name: cfg.Name}, new(v1alpha2.Module)); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return nil, nil, fmt.Errorf("get the '%s' module: %w", cfg.Name, err)
+		}
+
+		installed = false
+	}
+
+	if !installed && len(moduleSourceNames) == 0 {
+		result, _ := allowResult([]string{fmt.Sprintf("the '%s' module not found", cfg.Name)})
+		return result, nil, nil
+	}
+
+	if cfg.Spec.Source != "" && !slices.Contains(moduleSourceNames, cfg.Spec.Source) {
+		result, _ := rejectResult(fmt.Sprintf("the '%s' module source is an unavailable source for the '%s' module, available sources: %v", cfg.Spec.Source, cfg.Name, moduleSourceNames))
 		return result, nil, nil
 	}
 
 	var warnings []string
-	if isEnabled(cfg, v.isModuleEnabledByBundle(cfg.Name)) && cfg.Spec.Source == "" && len(module.Properties.AvailableSources) > 1 {
-		warnings = append(warnings, fmt.Sprintf("module '%s' is enabled but didn’t run because multiple sources were found (%s), please specify a source in ModuleConfig resource ", cfg.GetName(), strings.Join(module.Properties.AvailableSources, ", ")))
+	if isEnabled(cfg, v.isModuleEnabledByBundle(cfg.Name)) && cfg.Spec.Source == "" && len(moduleSourceNames) > 1 {
+		warnings = append(warnings, fmt.Sprintf("module '%s' is enabled but didn’t run because multiple sources were found (%s), please specify a source in ModuleConfig resource ", cfg.GetName(), strings.Join(moduleSourceNames, ", ")))
 	}
 
 	return nil, warnings, nil

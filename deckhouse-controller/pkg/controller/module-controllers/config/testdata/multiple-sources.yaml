@@ -7,16 +7,44 @@ spec:
   enabled: true
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: Module
+kind: ModuleSource
+metadata:
+  name: source-one
+spec:
+  registry:
+    repo: registry.example.com/one
+status:
+  modules:
+    - name: test-module
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: source-two
+spec:
+  registry:
+    repo: registry.example.com/two
+status:
+  modules:
+    - name: test-module
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  name: source-three
+spec:
+  registry:
+    repo: registry.example.com/three
+status:
+  modules:
+    - name: test-module
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
 metadata:
   name: test-module
-properties:
-  availableSources:
+status:
+  availableRepositories:
     - source-one
     - source-two
     - source-three
-status:
-  phase: Available
-  conditions:
-    - type: EnabledByModuleConfig
-      status: "True" 

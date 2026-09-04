@@ -1,0 +1,48 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  finalizers:
+  - modules.deckhouse.io/module-registered
+  name: test-module
+  resourceVersion: "1001"
+spec:
+  enabled: true
+  settings:
+    replicas: 2
+  updatePolicy: Auto
+status:
+  version: "1"
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: test-module
+  resourceVersion: "1001"
+spec:
+  enabled: true
+  packageRepositoryName: test-source
+  releaseChannel: Stable
+  settings:
+    replicas: 2
+  updatePolicy: Auto
+status:
+  conditions:
+  - lastTransitionTime: null
+    message: ""
+    reason: Disabled
+    status: "False"
+    type: EnabledByModuleManager
+  - lastTransitionTime: null
+    message: not installed
+    reason: NotInstalled
+    status: "False"
+    type: IsReady
+  - lastTransitionTime: null
+    message: ""
+    reason: Enabled
+    status: "True"
+    type: EnabledByModuleConfig
+  lastAppliedConfiguration: null
+  phase: Available
+  tracking: null

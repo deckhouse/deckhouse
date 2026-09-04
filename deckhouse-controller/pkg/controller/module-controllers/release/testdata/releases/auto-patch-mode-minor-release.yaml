@@ -53,9 +53,12 @@ status:
   approved: true
   phase: Pending
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: parca
+spec:
+  packageRepositoryName: test
+  packageVersion: v1.26.2
 status:
   phase: Ready

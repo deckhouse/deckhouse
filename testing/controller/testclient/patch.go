@@ -44,6 +44,17 @@ func patch(input runtime.Object, patchType types.PatchType, patch []byte, scheme
 		applyPatchToCurrentObject(currentObject runtime.Object) (runtime.Object, error)
 	}
 
+	// a typed object read back from the tracker carries no TypeMeta; the scheme names its kind
+	if input.GetObjectKind().GroupVersionKind().Empty() {
+		gvks, _, err := scheme.ObjectKinds(input)
+		if err != nil {
+			return nil, fmt.Errorf("resolve object kind: %w", err)
+		}
+
+		input = input.DeepCopyObject()
+		input.GetObjectKind().SetGroupVersionKind(gvks[0])
+	}
+
 	typeConverter := managedfields.NewDeducedTypeConverter()
 	fieldManager, err := managedfields.NewDefaultCRDFieldManager(
 		typeConverter,

@@ -118,16 +118,22 @@ status:
   pullDuration: 0s
   transitionTime: null
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: demo
-  resourceVersion: "1002"
-properties: {}
+  resourceVersion: "1003"
+spec:
+  packageRepositoryName: test-source
+  packageVersion: v1.71.0
+  releaseChannel: Stable
 status:
   conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: ""
+    reason: Deployed
     status: "True"
     type: LastReleaseDeployed
+  lastAppliedConfiguration: null
   phase: Ready
+  tracking: null

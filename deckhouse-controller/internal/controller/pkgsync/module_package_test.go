@@ -83,6 +83,6 @@ func TestSyncModulePackages(t *testing.T) {
 
 		packages := new(v1alpha1.ModulePackageList)
 		require.NoError(t, cl.List(ctx, packages))
-		assert.Empty(t, packages.Items, "the repository scan builds the catalog of sourced packages")
+		assert.Empty(t, packages.Items, "the repository scan creates the packages of sourced modules")
 	})
 }

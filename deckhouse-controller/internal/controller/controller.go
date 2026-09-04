@@ -45,7 +45,9 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
+	pkgmodules "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	pkgruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/docbuilder"
@@ -332,36 +334,29 @@ func (c *Controller) Start(ctx context.Context) error {
 		return fmt.Errorf("wait for cache sync")
 	}
 
-	// The bootstrap derives where every module's package comes from before it writes anything, so
-	// the precedence between the image, an override and a release is decided in memory rather than
-	// by the order of the writes.
-	placements, err := c.resolvePlacements(ctx)
-	if err != nil {
-		return fmt.Errorf("resolve module placements: %w", err)
-	}
-
 	// The old module stack recorded its packages in module releases, and the
 	// image ships the embedded modules; give each of them a package version
-	// object, and the user module sources their repositories, while the
-	// controllers still wait for the sync. Runs after the resolver, so a
-	// deployed duplicate it superseded no longer counts.
-	if err := pkgsync.Sync(ctx, c.ctrl.GetAPIReader(), c.ctrl.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, c.logger.Named("pkgsync")); err != nil {
+	// object, the user module sources their repositories and every module its
+	// v1alpha2 object, while the controllers still wait for the sync.
+	if err := pkgsync.Sync(ctx, c.ctrl.GetAPIReader(), c.ctrl.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, app.DownloadedModulesDir(), c.logger.Named("pkgsync")); err != nil {
 		return fmt.Errorf("sync package objects: %w", err)
 	}
 
-	modules, err := c.syncModules(ctx, placements)
-	if err != nil {
-		return fmt.Errorf("sync modules: %w", err)
+	// The manager's cached client serves the sync's writes only once its watch events land, so
+	// the tree handed to the runtime is read from the API server.
+	modules := new(v1alpha2.ModuleList)
+	if err := c.ctrl.GetAPIReader().List(ctx, modules); err != nil {
+		return fmt.Errorf("list modules: %w", err)
 	}
 
 	// loadModules below enqueues downloads straight away, so this is the last point at which
-	// dropping stale package state cannot race a deploy — as long as this manager registers no
+	// dropping stale package state cannot race a deploy, as long as this manager registers no
 	// reconciler that deploys on its own. A leak must not stop the tree loading.
-	if err := c.cleanupPackages(ctx, modules); err != nil {
+	if err := c.cleanupPackages(ctx, modules.Items); err != nil {
 		c.logger.Warn("failed to cleanup packages", log.Err(err))
 	}
 
-	if err := c.loadModules(ctx, modules); err != nil {
+	if err := c.loadModules(ctx, modules.Items); err != nil {
 		return fmt.Errorf("load modules: %w", err)
 	}
 
@@ -420,4 +415,115 @@ func (c *Controller) syncSettings(config addonutils.Values) {
 	}
 
 	c.embeddedPolicy.Set(settings)
+}
+
+// loadModules hands every placed module to the package runtime, which starts its pipeline.
+func (c *Controller) loadModules(ctx context.Context, modules []v1alpha2.Module) error {
+	// one repository backs many modules, so each is resolved once
+	remotes := make(map[string]registry.Remote)
+
+	for i := range modules {
+		module := &modules[i]
+
+		if !module.DeletionTimestamp.IsZero() {
+			c.logger.Debug("module is deleted, skip loading", slog.String("module", module.Name))
+			continue
+		}
+
+		// a module a source offers and nothing installed has no package to run
+		if !module.IsInstalled() {
+			c.logger.Debug("module is not installed, skip loading", slog.String("module", module.Name))
+			continue
+		}
+
+		// an embedded module is on disk already and its repository resolves to nothing
+		if module.IsEmbedded() {
+			c.manager.UpdateEmbeddedModule(runtimeModule(module))
+
+			continue
+		}
+
+		if module.Spec.PackageRepositoryName == "" {
+			c.logger.Debug("module has no repository, skip loading", slog.String("module", module.Name))
+			continue
+		}
+
+		remote, ok := remotes[module.Spec.PackageRepositoryName]
+		if !ok {
+			repo := new(v1alpha1.PackageRepository)
+			if err := c.ctrl.GetClient().Get(ctx, client.ObjectKey{Name: module.Spec.PackageRepositoryName}, repo); err != nil {
+				return fmt.Errorf("get package repository '%s' of the module '%s': %w",
+					module.Spec.PackageRepositoryName, module.Name, err)
+			}
+
+			remote = registry.BuildRemote(repo)
+			remotes[module.Spec.PackageRepositoryName] = remote
+		}
+
+		pkg := runtimeModule(module)
+		pkg.Definition = pkgmodules.Definition{Name: module.Name, Version: module.Spec.PackageVersion}
+
+		c.manager.UpdateModule(remote, pkg, false)
+	}
+
+	return nil
+}
+
+// cleanupPackages hands the runtime every package the cluster still claims, so it drops the rest.
+// A terminating instance is left out, as in loadModules: the runtime forgets its teardown across a
+// restart and never loads a terminating object, so the remover answers "nothing left to tear down"
+// and this pass is the last owner of its release.
+func (c *Controller) cleanupPackages(ctx context.Context, modules []v1alpha2.Module) error {
+	// this list decides what is deleted, so a lagging watch would read as an application gone
+	applications := new(v1alpha1.ApplicationList)
+	if err := c.ctrl.GetAPIReader().List(ctx, applications); err != nil {
+		return fmt.Errorf("list applications: %w", err)
+	}
+
+	preserveApps := make([]pkgruntime.PreserveApplication, 0, len(applications.Items))
+	for i := range applications.Items {
+		application := &applications.Items[i]
+
+		if !application.DeletionTimestamp.IsZero() {
+			continue
+		}
+
+		preserveApps = append(preserveApps, pkgruntime.PreserveApplication{
+			Namespace:   application.Namespace,
+			Name:        application.Name,
+			PackageName: application.Spec.PackageName,
+			Repository:  application.Spec.PackageRepositoryName,
+			Version:     application.Spec.PackageVersion,
+		})
+	}
+
+	preserveModules := make([]pkgruntime.PreserveModule, 0, len(modules))
+	for i := range modules {
+		module := &modules[i]
+
+		// a terminating module and one nothing installed claim no package
+		if !module.DeletionTimestamp.IsZero() || !module.IsInstalled() {
+			continue
+		}
+
+		preserveModules = append(preserveModules, pkgruntime.PreserveModule{
+			Name:       module.Name,
+			Repository: module.Spec.PackageRepositoryName,
+			Version:    module.Spec.PackageVersion,
+			Embedded:   module.IsEmbedded(),
+		})
+	}
+
+	return c.manager.CleanupV2(ctx, preserveApps, preserveModules)
+}
+
+// runtimeModule is what the runtime needs of a module: its identity, settings and enabled intent.
+func runtimeModule(module *v1alpha2.Module) pkgruntime.Module {
+	return pkgruntime.Module{
+		Name:            module.Name,
+		Settings:        module.Spec.Settings.GetMap(),
+		SettingsVersion: module.Spec.SettingsVersion,
+		Maintenance:     module.Spec.Maintenance,
+		Enabled:         module.Spec.Enabled,
+	}
 }

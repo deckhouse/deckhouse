@@ -11,18 +11,26 @@ spec:
 status:
   version: "1"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
+  annotations:
+    modules.deckhouse.io/embedded: "true"
   labels:
     heritage: deckhouse
   name: test-module
-  resourceVersion: "999"
-properties: {}
+  resourceVersion: "1000"
+spec:
+  enabled: true
+  packageRepositoryName: embedded
+  packageVersion: v1.80.0
 status:
   conditions:
-  - lastProbeTime: null
-    lastTransitionTime: null
+  - lastTransitionTime: null
+    message: ""
+    reason: Enabled
     status: "True"
     type: EnabledByModuleConfig
+  lastAppliedConfiguration: null
   phase: Ready
+  tracking: null

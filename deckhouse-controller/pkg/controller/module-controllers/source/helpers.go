@@ -18,7 +18,6 @@ import (
 	"context"
 	"crypto/md5"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -26,67 +25,17 @@ import (
 	"time"
 
 	"github.com/Masterminds/semver/v3"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 )
-
-var (
-	ErrRequireResync = errors.New("require resync")
-)
-
-func (r *reconciler) cleanSourceInModule(ctx context.Context, sourceName, moduleName string) error {
-	if err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
-		return retry.RetryOnConflict(retry.DefaultRetry, func() error {
-			module := new(v1alpha1.Module)
-			if err := r.client.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
-				if apierrors.IsNotFound(err) {
-					return nil
-				}
-				return fmt.Errorf("get the '%s' module: %w", moduleName, err)
-			}
-
-			// delete modules without sources, it seems impossible, but just in case
-			if len(module.Properties.AvailableSources) == 0 {
-				// don`t delete enabled module
-				if !module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionTrue) {
-					return r.client.Delete(ctx, module)
-				}
-				return nil
-			}
-
-			// delete modules with this source as the last source
-			if len(module.Properties.AvailableSources) == 1 && module.Properties.AvailableSources[0] == sourceName {
-				// don`t delete enabled module
-				if !module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionTrue) {
-					return r.client.Delete(ctx, module)
-				}
-				module.Properties.AvailableSources = []string{}
-			}
-
-			if len(module.Properties.AvailableSources) > 1 {
-				for idx, source := range module.Properties.AvailableSources {
-					if source == sourceName {
-						module.Properties.AvailableSources = append(module.Properties.AvailableSources[:idx], module.Properties.AvailableSources[idx+1:]...)
-						break
-					}
-				}
-			}
-
-			return r.client.Update(ctx, module)
-		})
-	}); err != nil {
-		return fmt.Errorf("on error: %w", err)
-	}
-	return nil
-}
 
 // syncRegistrySettings checks if modules source registry settings were updated
 // (comparing moduleSourceAnnotationRegistryChecksum annotation and the current registry spec)
@@ -143,7 +92,7 @@ func (r *reconciler) syncRegistrySettings(ctx context.Context, source *v1alpha1.
 	return nil
 }
 
-func (r *reconciler) releaseExists(ctx context.Context, sourceName, moduleName, checksum string) (bool, error) {
+func (r *reconciler) releaseExists(ctx context.Context, moduleSourceName, moduleName, checksum string) (bool, error) {
 	// image digest has 64 symbols, while label can have maximum 63 symbols, so make md5 sum here
 	checksum = fmt.Sprintf("%x", md5.Sum([]byte(checksum)))
 
@@ -156,7 +105,7 @@ func (r *reconciler) releaseExists(ctx context.Context, sourceName, moduleName, 
 			"no module release with checksum for the module of source",
 			slog.String("checksum", checksum),
 			slog.String("name", moduleName),
-			slog.String("source_name", sourceName),
+			slog.String("source_name", moduleSourceName),
 		)
 		return false, nil
 	}
@@ -165,53 +114,61 @@ func (r *reconciler) releaseExists(ctx context.Context, sourceName, moduleName, 
 		"module release with checksum exists for the module of source",
 		slog.String("checksum", checksum),
 		slog.String("name", moduleName),
-		slog.String("source_name", sourceName),
+		slog.String("source_name", moduleSourceName),
 	)
 	return true, nil
 }
 
 // releaseEnsureAllowed reports whether a release for the module may be ensured from
-// the given source at all. It is a pure policy predicate over already-fetched data
-// (no cluster I/O): it does not decide whether there is actually something to fetch -
-// that concrete diff (checksum change, missing target release, incomplete update
-// chain) is evaluated by the caller. It returns false to skip the module entirely for
-// experimental / not-active-source / disabled reasons.
+// the given source at all. It is a policy predicate over already-fetched data: it does
+// not decide whether there is actually something to fetch, that concrete diff
+// (checksum change, missing target release, incomplete update chain) is evaluated by
+// the caller. It returns false to skip the module entirely for experimental,
+// not-active-source, disabled or ambiguous-source reasons. The module is nil until it
+// is installed; the config is nil until the operator writes one.
 func (r *reconciler) releaseEnsureAllowed(
 	source *v1alpha1.ModuleSource,
-	module *v1alpha1.Module,
+	name string,
+	module *v1alpha2.Module,
+	config *v1alpha1.ModuleConfig,
+	metadata *v1alpha1.ModulePackageVersionStatusMetadata,
 	meta *downloader.ModuleDownloadResult,
-	embeddedTargetSource string) bool {
-	// skip experimental modules when deckhouse does not allow them
-	if module.IsExperimental() && !r.deckhouseSettings.ExperimentalModuleAllowed(module.Name) {
+	availableModuleSources []string,
+	embeddedTargetModuleSource string) bool {
+	// skip experimental modules when deckhouse does not allow them: the channel definition
+	// tells the stage of the offered version, the package metadata the one of the installed
+	experimental := (meta.ModuleDefinition != nil && meta.ModuleDefinition.IsExperimental()) ||
+		(metadata != nil && metadata.Stage == v1alpha1.ExperimentalModuleStage)
+	if experimental && !r.deckhouseSettings.ExperimentalModuleAllowed(name) {
 		r.logger.Debug("experimental module not allowed, skip release ensure",
 			slog.String("source_name", source.Name),
-			slog.String("name", module.Name))
+			slog.String("name", name))
 
 		return false
 	}
 
-	// An embedded module keeps Source == "Embedded" while its embedded copy is
-	// shipped, so the active-source check below would always skip it. Instead
-	// pre-stage the release from the source resolved for migration so the module is
-	// already on the filesystem when the embedded copy is dropped on upgrade.
-	// embeddedTargetSource is the resolved source (operator's ModuleConfig
-	// .spec.source, or the only available source); it is empty when the source is
-	// undecided (several sources, none chosen) - a conflict handled in processModules.
-	if module.IsEmbedded() {
-		if embeddedTargetSource == "" || embeddedTargetSource != source.Name {
+	// An embedded module keeps its embedded copy while it is shipped, so the active-source
+	// check below would always skip it. Instead pre-stage the release from the module source
+	// resolved for migration so the module is already on the filesystem when the embedded
+	// copy is dropped on upgrade. embeddedTargetModuleSource is the resolved module source
+	// (the operator's ModuleConfig .spec.source, or the only one offering the
+	// module); it is empty when it is undecided (several offer, none chosen) - a conflict
+	// handled in processModules.
+	if module != nil && module.IsEmbedded() {
+		if embeddedTargetModuleSource == "" || embeddedTargetModuleSource != source.Name {
 			return false
 		}
-	} else if module.Properties.Source != "" && module.Properties.Source != source.Name {
-		// check the active source
+	} else if active := activeModuleSource(module, config); active != "" && active != source.Name {
+		// the module comes from another module source
 		r.logger.Debug("source not active, skip module",
 			slog.String("source_name", source.Name),
-			slog.String("name", module.Name))
+			slog.String("name", name))
 
 		return false
 	}
 
-	//  not found or unknown
-	if !module.HasCondition(v1alpha1.ModuleConditionEnabledByModuleConfig) || module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionUnknown) {
+	// no config, or a config that leaves the decision to the bundle
+	if config == nil || config.Spec.Enabled == nil {
 		enabledByBundle := false
 		if meta.ModuleDefinition != nil {
 			enabledByBundle = meta.ModuleDefinition.Accessibility.IsEnabled(r.edition.Name, r.edition.Bundle)
@@ -221,15 +178,218 @@ func (r *reconciler) releaseEnsureAllowed(
 			return false
 		}
 
-		if len(module.Properties.AvailableSources) > 1 && source.Name != "deckhouse" {
+		// several module sources offer a module the bundle enables: the platform one installs it
+		if len(availableModuleSources) > 1 && source.Name != defaultModuleSourceName {
 			return false
 		}
-	} else if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionFalse) {
-		// disabled by module config
+
+		return true
+	}
+
+	// disabled by module config
+	if !config.IsEnabled() {
+		return false
+	}
+
+	// an enabled config that picks no module source among several: the config controller
+	// reports the conflict, and nothing installs the module until the operator picks one
+	if activeModuleSource(module, config) == "" && len(availableModuleSources) > 1 {
 		return false
 	}
 
 	return true
+}
+
+// activeModuleSource names the module source the module comes from: the one the config picks,
+// otherwise the one behind the repository the installed module was placed from. Empty when
+// neither decides.
+func activeModuleSource(module *v1alpha2.Module, config *v1alpha1.ModuleConfig) string {
+	if configured := pkgsync.ConfiguredModuleSource(config); configured != "" {
+		return configured
+	}
+
+	if module == nil || module.IsEmbedded() {
+		return ""
+	}
+
+	return pkgsync.SourceNameForRepository(module.Spec.PackageRepositoryName)
+}
+
+// getModule returns the module object, nil when the module has no object yet.
+func (r *reconciler) getModule(ctx context.Context, name string) (*v1alpha2.Module, error) {
+	module := new(v1alpha2.Module)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: name}, module); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("get the '%s' module: %w", name, err)
+	}
+
+	return module, nil
+}
+
+// ensureAvailableModule keeps the object of a module nothing installed while some module source
+// offers it: created when missing, its repository is the one of the module source the config
+// picks or of the only one offering the module, its channel the one of its policy, its status
+// the available or the conflict state. A module no module source offers has no object: an
+// existing one goes, and nil is returned. The returned object is the one the rest of the scan
+// reads.
+func (r *reconciler) ensureAvailableModule(ctx context.Context, name, channel string, config *v1alpha1.ModuleConfig, availableModuleSources []string) (*v1alpha2.Module, error) {
+	module := new(v1alpha2.Module)
+	err := r.client.Get(ctx, client.ObjectKey{Name: name}, module)
+
+	if len(availableModuleSources) == 0 {
+		if err == nil && !module.IsInstalled() {
+			r.logger.Info("no module source offers the module, delete its object", slog.String("module_name", name))
+
+			if err := r.client.Delete(ctx, module); err != nil && !apierrors.IsNotFound(err) {
+				return nil, fmt.Errorf("delete the '%s' module: %w", name, err)
+			}
+
+			return nil, nil
+		}
+
+		if err != nil && !apierrors.IsNotFound(err) {
+			return nil, fmt.Errorf("get the '%s' module: %w", name, err)
+		}
+
+		if err != nil {
+			return nil, nil
+		}
+
+		// a deploy that raced this scan owns the object from now on
+		return module, nil
+	}
+
+	if apierrors.IsNotFound(err) {
+		module = &v1alpha2.Module{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: v1alpha2.ModuleGVK.GroupVersion().String(),
+				Kind:       v1alpha2.ModuleKind,
+			},
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+		}
+
+		err = r.client.Create(ctx, module)
+		if err != nil && !apierrors.IsAlreadyExists(err) {
+			return nil, fmt.Errorf("create the '%s' module: %w", name, err)
+		}
+
+		// another source scanning the module created the object meanwhile: converge that one
+		if err != nil {
+			module = new(v1alpha2.Module)
+			err = r.client.Get(ctx, client.ObjectKey{Name: name}, module)
+		}
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("get the '%s' module: %w", name, err)
+	}
+
+	// a deploy that raced this scan owns the object from now on
+	if module.IsInstalled() {
+		return module, nil
+	}
+
+	if err := r.placeAvailableModule(ctx, module, channel, config, availableModuleSources); err != nil {
+		return nil, err
+	}
+
+	return module, nil
+}
+
+// placeAvailableModule writes where a module nothing installed would come from and its state:
+// the repository of the module source the config picks or of the only one offering the module,
+// the channel, and the available or the conflict state.
+func (r *reconciler) placeAvailableModule(ctx context.Context, module *v1alpha2.Module, channel string, config *v1alpha1.ModuleConfig, availableModuleSources []string) error {
+	configuredModuleSource := pkgsync.ConfiguredModuleSource(config)
+
+	patch := client.MergeFrom(module.DeepCopy())
+	module.Spec.PackageRepositoryName = pkgsync.RepositoryNameForSource(utils.PickModuleSource(configuredModuleSource, availableModuleSources))
+	module.Spec.ReleaseChannel = channel
+
+	data, err := patch.Data(module)
+	if err != nil {
+		return fmt.Errorf("build patch for the '%s' module: %w", module.Name, err)
+	}
+
+	if string(data) != "{}" {
+		if err := r.client.Patch(ctx, module, client.RawPatch(patch.Type(), data)); err != nil {
+			return fmt.Errorf("patch the '%s' module: %w", module.Name, err)
+		}
+	}
+
+	conflict := utils.HasModuleSourceConflict(config != nil && config.IsEnabled(), configuredModuleSource, availableModuleSources)
+
+	err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {
+		module.ApplyNotInstalledState(conflict)
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("update the '%s' module status: %w", module.Name, err)
+	}
+
+	return nil
+}
+
+// cleanAvailableModule re-places the object of a module the source stopped listing by the
+// module sources that still offer it. The object of a module nothing installed and no module
+// source offers goes. An installed module is not touched.
+func (r *reconciler) cleanAvailableModule(ctx context.Context, name string) error {
+	module, err := r.getModule(ctx, name)
+	if err != nil {
+		return err
+	}
+
+	if module == nil || module.IsInstalled() {
+		return nil
+	}
+
+	availableModuleSources, err := utils.AvailableModuleSources(ctx, r.client, name)
+	if err != nil {
+		return err
+	}
+
+	config, err := r.moduleConfig(ctx, name)
+	if err != nil {
+		return err
+	}
+
+	_, err = r.ensureAvailableModule(ctx, name, module.Spec.ReleaseChannel, config, availableModuleSources)
+
+	return err
+}
+
+// moduleConfig returns the module config, nil when the operator wrote none.
+func (r *reconciler) moduleConfig(ctx context.Context, name string) (*v1alpha1.ModuleConfig, error) {
+	config := new(v1alpha1.ModuleConfig)
+	if err := r.client.Get(ctx, client.ObjectKey{Name: name}, config); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("get the '%s' module config: %w", name, err)
+	}
+
+	return config, nil
+}
+
+// ensureReleaseChannel records the channel the module follows.
+func (r *reconciler) ensureReleaseChannel(ctx context.Context, module *v1alpha2.Module, channel string) error {
+	if module.Spec.ReleaseChannel == channel {
+		return nil
+	}
+
+	patch := client.MergeFrom(module.DeepCopy())
+	module.Spec.ReleaseChannel = channel
+
+	if err := r.client.Patch(ctx, module, patch); err != nil {
+		return fmt.Errorf("patch the '%s' module: %w", module.Name, err)
+	}
+
+	return nil
 }
 
 // releaseChainToTargetComplete reports whether the ModuleReleases already present in
@@ -369,141 +529,42 @@ func fromToBridges(lower, higher *semver.Version, constraint v1alpha1.UpdateCons
 	return lower.Compare(from) >= 0 && lower.Compare(to) < 0
 }
 
-// getConfiguredModuleSource returns the source explicitly selected by the operator
-// in the module's ModuleConfig (.spec.source), or an empty string if there is no
-// config or no source is set. It is used to resolve which source to pre-stage an
-// embedded module from while its embedded copy is still shipped (the module-config
-// controller skips embedded modules, so .spec.source is not reflected in
-// Module.Properties.Source).
-func (r *reconciler) getConfiguredModuleSource(ctx context.Context, moduleName string) (string, error) {
-	moduleConfig := new(v1alpha1.ModuleConfig)
-	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleName}, moduleConfig); err != nil {
-		if apierrors.IsNotFound(err) {
-			return "", nil
-		}
-		return "", fmt.Errorf("get the '%s' module config: %w", moduleName, err)
-	}
-
-	// "Embedded" is the sentinel for the built-in copy, not a real ModuleSource, so
-	// it can never be a valid externally selected source - treat it as not chosen.
-	if moduleConfig.Spec.Source == v1alpha1.ModuleSourceEmbedded {
-		return "", nil
-	}
-
-	return moduleConfig.Spec.Source, nil
-}
-
-// defaultModuleSourceName is the name of the built-in OSS ModuleSource that ships
-// with Deckhouse. When a module is offered by it alongside mirrors (e.g. the EE
-// source), it is the canonical choice rather than an ambiguous conflict.
+// defaultModuleSourceName is the name of the built-in ModuleSource that ships with Deckhouse.
+// When it offers a module alongside mirrors (e.g. the EE source), it is the canonical choice
+// rather than an ambiguous conflict.
 const defaultModuleSourceName = "deckhouse"
 
-// resolveEmbeddedTargetSource decides which source an embedded module should be
-// pre-staged from while its embedded copy is still shipped, and whether the choice
-// is a genuine conflict.
+// resolveEmbeddedTargetModuleSource decides which module source an embedded module should be
+// pre-staged from while its embedded copy is still shipped, and whether the choice is a
+// genuine conflict. The candidates are the module sources offering the module.
 //
-// Being offered by several sources is not automatically a conflict:
-//   - an explicitly chosen source wins (if it still offers the module);
-//   - the "Embedded" sentinel is not a real source, so "Embedded" + one real source
-//     is not a conflict - the real source is used;
-//   - the built-in "deckhouse" source is the canonical default and wins over mirrors
+// Several candidates are not automatically a conflict:
+//   - an explicitly chosen module source wins, if it still offers the module;
+//   - the built-in "deckhouse" module source is the canonical default and wins over mirrors
 //     such as "deckhouse-upstream-ee".
 //
-// It is a conflict only when the chosen source no longer offers the module, or when
-// several real, non-default sources offer it and none is selected.
-func resolveEmbeddedTargetSource(chosenSource string, availableSources []string) (string, bool) {
-	if chosenSource != "" {
-		if slices.Contains(availableSources, chosenSource) {
-			return chosenSource, false
+// It is a conflict only when the chosen module source no longer offers the module, or when
+// several non-default module sources offer it and none is selected.
+func resolveEmbeddedTargetModuleSource(configuredModuleSource string, availableModuleSources []string) (string, bool) {
+	if configuredModuleSource != "" {
+		if slices.Contains(availableModuleSources, configuredModuleSource) {
+			return configuredModuleSource, false
 		}
 		// the configured .spec.source does not (or no longer does) offer the module
 		return "", true
 	}
 
-	// "Embedded" is a sentinel for the built-in copy, not a selectable source.
-	candidates := make([]string, 0, len(availableSources))
-	for _, source := range availableSources {
-		if source != v1alpha1.ModuleSourceEmbedded {
-			candidates = append(candidates, source)
-		}
-	}
-
 	switch {
-	case len(candidates) == 0:
+	case len(availableModuleSources) == 0:
 		// nothing but the embedded copy is available - nothing to pre-stage, not a conflict
 		return "", false
-	case len(candidates) == 1:
-		return candidates[0], false
-	case slices.Contains(candidates, defaultModuleSourceName):
+	case len(availableModuleSources) == 1:
+		return availableModuleSources[0], false
+	case slices.Contains(availableModuleSources, defaultModuleSourceName):
 		return defaultModuleSourceName, false
 	default:
 		return "", true
 	}
-}
-
-func (r *reconciler) ensureModule(ctx context.Context, sourceName, moduleName, releaseChannel string) (*v1alpha1.Module, error) {
-	var requireResync bool
-
-	module := new(v1alpha1.Module)
-	if err := r.client.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
-		if !apierrors.IsNotFound(err) {
-			return nil, fmt.Errorf("get the '%s' module: %w", moduleName, err)
-		}
-
-		requireResync = true
-
-		module = &v1alpha1.Module{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       v1alpha1.ModuleGVK.Kind,
-				APIVersion: v1alpha1.ModuleGVK.GroupVersion().String(),
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: moduleName,
-			},
-			Properties: v1alpha1.ModuleProperties{
-				AvailableSources: []string{sourceName},
-			},
-		}
-		r.logger.Debug("module not found, create it", slog.String("name", moduleName))
-
-		if err = r.client.Create(ctx, module); err != nil {
-			return nil, fmt.Errorf("create the '%s' module: %w", moduleName, err)
-		}
-	}
-
-	err := ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {
-		// init just created downloaded modules
-		if module.Status.Phase == "" {
-			module.Status.Phase = v1alpha1.ModulePhaseAvailable
-			module.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, "", "")
-			module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
-		}
-
-		return nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("update the '%s' module status: %w", moduleName, err)
-	}
-
-	err = ctrlutils.UpdateWithRetry(ctx, r.client, module, func() error {
-		if !slices.Contains(module.Properties.AvailableSources, sourceName) {
-			module.Properties.AvailableSources = append(module.Properties.AvailableSources, sourceName)
-			requireResync = true
-		}
-
-		module.Properties.ReleaseChannel = releaseChannel
-
-		return nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("update the '%s' module: %w", moduleName, err)
-	}
-
-	if requireResync {
-		return nil, ErrRequireResync
-	}
-
-	return module, nil
 }
 
 func (r *reconciler) updateModuleSourceStatusMessage(ctx context.Context, source *v1alpha1.ModuleSource, message string) error {

@@ -1,4 +1,3 @@
----
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
 metadata:
@@ -12,9 +11,9 @@ spec:
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
 status:
-  message: ""
+  message: ''
   modules:
-    - name: parca
+  - name: parca
 ---
 apiVersion: deckhouse.io/v1alpha2
 kind: ModuleUpdatePolicy
@@ -26,19 +25,12 @@ spec:
     mode: Manual
 ---
 apiVersion: deckhouse.io/v1alpha1
-kind: Module
+kind: ModuleConfig
 metadata:
   name: parca
-properties:
-  version: 1.4.1
+spec:
+  enabled: true
   source: test-source-1
-  availableSources:
-    - test-source-1
-status:
-  phase: Available
-  conditions:
-    - type: EnabledByModuleConfig
-      status: "True"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease

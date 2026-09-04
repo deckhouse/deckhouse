@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"slices"
 	"sort"
 	"sync"
 	"time"
@@ -27,7 +28,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/trace"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
@@ -45,12 +45,12 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/downloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
@@ -106,31 +106,20 @@ func RegisterController(
 	if err := ctrl.NewControllerManagedBy(runtimeManager).
 		Named(controllerName).
 		For(&v1alpha1.ModuleSource{}).
-		Watches(&v1alpha1.Module{}, handler.EnqueueRequestsFromMapFunc(func(_ context.Context, obj client.Object) []reconcile.Request {
-			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: obj.(*v1alpha1.Module).Properties.Source}}}
-		}), builder.WithPredicates(predicate.Funcs{
+		// A module config enables a module, picks its source or its policy: the module sources
+		// offering the module rescan. A config created before the module is offered is caught by
+		// the regular rescan.
+		Watches(&v1alpha1.ModuleConfig{}, handler.EnqueueRequestsFromMapFunc(r.moduleSourcesOfConfig), builder.WithPredicates(predicate.Funcs{
 			CreateFunc: func(_ event.CreateEvent) bool {
-				return false
+				return true
 			},
 			UpdateFunc: func(updateEvent event.UpdateEvent) bool {
-				oldMod := updateEvent.ObjectOld.(*v1alpha1.Module)
-				newMod := updateEvent.ObjectNew.(*v1alpha1.Module)
-				// handle change source
-				if oldMod.Properties.Source != newMod.Properties.Source {
-					return true
-				}
-				// handle change policy
-				if oldMod.Properties.UpdatePolicy != newMod.Properties.UpdatePolicy {
-					return true
-				}
-				// handle enable
-				// not found or !true -> true
-				if !oldMod.HasCondition(v1alpha1.ModuleConditionEnabledByModuleConfig) ||
-					!oldMod.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) &&
-						newMod.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
-					return true
-				}
-				return false
+				oldConfig := updateEvent.ObjectOld.(*v1alpha1.ModuleConfig)
+				newConfig := updateEvent.ObjectNew.(*v1alpha1.ModuleConfig)
+
+				return oldConfig.Spec.Source != newConfig.Spec.Source ||
+					oldConfig.Spec.UpdatePolicy != newConfig.Spec.UpdatePolicy ||
+					oldConfig.IsEnabled() != newConfig.IsEnabled()
 			},
 			DeleteFunc: func(_ event.DeleteEvent) bool {
 				return false
@@ -283,17 +272,22 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 		pulledModules = pulledModules[:maxModulesLimit]
 	}
 
-	// remove the source from available sources in deleted modules
-	namesSet := make(map[string]bool)
-	for _, pulledModuleName := range pulledModules {
-		namesSet[pulledModuleName] = true
+	// a module the source stopped listing is re-placed by the module sources that still offer it:
+	// the object of a module nothing installed and no module source offers goes
+	pulled := make(map[string]struct{}, len(pulledModules))
+	for _, name := range pulledModules {
+		pulled[name] = struct{}{}
 	}
-	for _, availableModule := range source.Status.AvailableModules {
-		if !namesSet[availableModule.Name] {
-			if err = r.cleanSourceInModule(ctx, source.Name, availableModule.Name); err != nil {
-				r.logger.Error("failed to clean the module from the module source", slog.String("name", availableModule.Name), log.Err(err))
-				return ctrl.Result{}, err
-			}
+
+	for _, available := range source.Status.AvailableModules {
+		if _, ok := pulled[available.Name]; ok {
+			continue
+		}
+
+		if err := r.cleanAvailableModule(ctx, available.Name); err != nil {
+			r.logger.Error("failed to clean the module the source stopped listing", slog.String("source_name", source.Name), slog.String("module_name", available.Name), log.Err(err))
+
+			return ctrl.Result{}, err
 		}
 	}
 
@@ -362,19 +356,11 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		availableModule.Policy = policy.Name
 
-		logger = logger.With(slog.String("release_channel", policy.Spec.ReleaseChannel))
+		logger = logger.With(slog.String("release_channel", policy.Spec.ReleaseChannel), slog.String("source_name", source.Name))
 
-		// create or update module
-		module, err := r.ensureModule(ctx, source.Name, moduleName, policy.Spec.ReleaseChannel)
+		module, err := r.getModule(ctx, moduleName)
 		if err != nil {
-			// skip modules that require resync
-			if errors.Is(err, ErrRequireResync) {
-				availableModule.Version = "unknown"
-				availableModules = append(availableModules, availableModule)
-				continue
-			}
-
-			logger.Warn("failed to ensure module, skipping", slog.String("name", moduleName), log.Err(err))
+			logger.Warn("failed to get module, skipping", slog.String("name", moduleName), log.Err(err))
 			availableModule.Error = err.Error()
 			availableModule.Version = "unknown"
 			errorsExist = true
@@ -382,7 +368,54 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			continue
 		}
 
-		logger = logger.With(slog.String("source_name", source.Name))
+		config, err := r.moduleConfig(ctx, moduleName)
+		if err != nil {
+			logger.Warn("failed to get module config, skipping", slog.String("name", moduleName), log.Err(err))
+			availableModule.Error = err.Error()
+			availableModule.Version = "unknown"
+			errorsExist = true
+			availableModules = append(availableModules, availableModule)
+			continue
+		}
+
+		// the module sources able to install the module, this one included once its modules
+		// are scanned
+		availableModuleSources, err := utils.AvailableModuleSources(ctx, r.client, moduleName)
+		if err != nil {
+			logger.Error("failed to get the module sources offering the module, skipping", slog.String("name", moduleName), log.Err(err))
+			availableModule.Error = err.Error()
+			availableModule.Version = "unknown"
+			errorsExist = true
+			availableModules = append(availableModules, availableModule)
+			continue
+		}
+
+		// a module nothing installed has an object while some module source offers it: the
+		// repository it would come from, the channel of its policy and the available or the
+		// conflict state
+		if module == nil || !module.IsInstalled() {
+			module, err = r.ensureAvailableModule(ctx, moduleName, policy.Spec.ReleaseChannel, config, availableModuleSources)
+			if err != nil {
+				logger.Warn("failed to ensure the module, skipping", slog.String("name", moduleName), log.Err(err))
+				availableModule.Error = err.Error()
+				availableModule.Version = "unknown"
+				errorsExist = true
+				availableModules = append(availableModules, availableModule)
+				continue
+			}
+		}
+
+		// a module installed from this source follows the channel of its policy
+		if module != nil && module.IsInstalled() && !module.IsEmbedded() && activeModuleSource(module, config) == source.Name {
+			if err := r.ensureReleaseChannel(ctx, module, policy.Spec.ReleaseChannel); err != nil {
+				logger.Warn("failed to set the module release channel, skipping", slog.String("name", moduleName), log.Err(err))
+				availableModule.Error = err.Error()
+				availableModule.Version = "unknown"
+				errorsExist = true
+				availableModules = append(availableModules, availableModule)
+				continue
+			}
+		}
 
 		exists, err := utils.ModulePullOverrideExists(ctx, r.client, moduleName)
 		if err != nil {
@@ -408,7 +441,8 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 
 		meta, err := md.DownloadMetadataFromReleaseChannel(ctx, moduleName, policy.Spec.ReleaseChannel)
 		if err != nil {
-			if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) && module.Properties.Source == source.Name {
+			// only the source the enabled module comes from reports the failure
+			if config != nil && config.IsEnabled() && activeModuleSource(module, config) == source.Name {
 				r.logger.Warn("failed to download module", slog.String("name", moduleName), log.Err(err))
 				availableModule.Error = err.Error()
 				errorsExist = true
@@ -428,19 +462,6 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			continue
 		}
 
-		// update module with its metadata after meta is fetched
-		// but only if module is available to not overwrite the properties that are already set locally
-		if module.Status.Phase == v1alpha1.ModulePhaseAvailable {
-			if err := r.updateModulePropertiesFromDefinition(ctx, module, meta.ModuleDefinition, meta.ModuleVersion); err != nil {
-				logger.Error("failed to update module properties from definition", slog.String("name", moduleName), log.Err(err))
-				availableModule.Error = err.Error()
-				availableModule.Version = "unknown"
-				errorsExist = true
-				availableModules = append(availableModules, availableModule)
-				continue
-			}
-		}
-
 		// check if release exists
 		exists, err = r.releaseExists(ctx, source.Name, moduleName, availableModule.Checksum)
 		if err != nil {
@@ -452,48 +473,37 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			continue
 		}
 
-		// Resolve which source an embedded module should be pre-staged from while its
-		// embedded copy is still shipped. The module keeps Source == "Embedded", so the
-		// choice is driven by the operator's ModuleConfig .spec.source, the only real
-		// source, or the canonical "deckhouse" source - see resolveEmbeddedTargetSource.
-		// Being offered by several sources is not automatically a conflict: "deckhouse"
-		// + a mirror like "deckhouse-upstream-ee", or "Embedded" + one real source, both
-		// resolve cleanly. A real conflict only arises from a stale .spec.source or from
-		// several non-default sources with no selection.
-		var embeddedTargetSource string
-		if module.IsEmbedded() {
-			chosenSource, err := r.getConfiguredModuleSource(ctx, moduleName)
-			if err != nil {
-				logger.Error("failed to get module config, skipping", slog.String("name", moduleName), log.Err(err))
-				availableModule.Error = err.Error()
-				availableModule.Version = "unknown"
-				errorsExist = true
-				availableModules = append(availableModules, availableModule)
-				continue
-			}
+		// Resolve which module source an embedded module should be pre-staged from while its
+		// embedded copy is still shipped. The module stays embedded, so the choice is driven
+		// by the operator's ModuleConfig .spec.source, the only module source offering the
+		// module, or the canonical "deckhouse" module source - see
+		// resolveEmbeddedTargetModuleSource. Several offering module sources are not
+		// automatically a conflict: "deckhouse" plus a mirror like "deckhouse-upstream-ee"
+		// resolves cleanly. A real conflict only arises from a stale .spec.source or from
+		// several non-default module sources with no selection.
+		var embeddedTargetModuleSource string
+		if module != nil && module.IsEmbedded() {
+			configuredModuleSource := pkgsync.ConfiguredModuleSource(config)
 
 			var conflict bool
-			embeddedTargetSource, conflict = resolveEmbeddedTargetSource(chosenSource, module.Properties.AvailableSources)
+			embeddedTargetModuleSource, conflict = resolveEmbeddedTargetModuleSource(configuredModuleSource, availableModuleSources)
 			if conflict {
 				// Skip pre-staging with a diagnostic warning; do NOT raise a user-facing
-				// ModuleAtConflict alert. This branch is embedded-only (see the
-				// module.IsEmbedded() guard), and the embedded copy keeps serving the
-				// module regardless of which source a future release would come from, so
-				// this is a deferred pre-staging decision, not a runtime conflict. The
-				// module-config controller likewise skips embedded modules when setting the
-				// conflict metric; firing d8_module_at_conflict here would both contradict
-				// that and - because this runs once per source - register the same
-				// module-labelled series under several metric groups, making the whole self
-				// /metrics page fail to collect (up=0 -> D8DeckhouseSelfTargetDown).
-				if chosenSource != "" {
-					logger.Warn("embedded module's configured source does not offer the module, cannot pre-stage a release until the ModuleConfig .spec.source is fixed",
+				// ModuleAtConflict alert. This branch is embedded-only, and the embedded
+				// copy keeps serving the module regardless of which module source a future
+				// release would come from, so this is a deferred pre-staging decision, not
+				// a runtime conflict. Firing d8_module_at_conflict here would register the
+				// same module-labelled series under several metric groups, making the
+				// whole self /metrics page fail to collect (up=0 -> D8DeckhouseSelfTargetDown).
+				if configuredModuleSource != "" {
+					logger.Warn("the embedded module's configured module source does not offer the module, cannot pre-stage a release until the ModuleConfig .spec.source is fixed",
 						slog.String("name", moduleName),
-						slog.String("configured_source", chosenSource),
-						slog.Any("available_sources", module.Properties.AvailableSources))
+						slog.String("configured_module_source", configuredModuleSource),
+						slog.Any("available_module_sources", availableModuleSources))
 				} else {
-					logger.Warn("embedded module is offered by several non-default sources and none is selected via ModuleConfig, cannot pre-stage a release until the conflict is resolved",
+					logger.Warn("embedded module is offered by several non-default module sources and none is selected via ModuleConfig, cannot pre-stage a release until the conflict is resolved",
 						slog.String("name", moduleName),
-						slog.Any("available_sources", module.Properties.AvailableSources))
+						slog.Any("available_module_sources", availableModuleSources))
 				}
 
 				availableModule.Checksum = meta.Checksum
@@ -503,7 +513,17 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 			}
 		}
 
-		if !r.releaseEnsureAllowed(source, module, meta, embeddedTargetSource) {
+		metadata, err := utils.ModuleMetadata(ctx, r.client, module)
+		if err != nil {
+			logger.Error("failed to get the module metadata, skipping", slog.String("name", moduleName), log.Err(err))
+			availableModule.Error = err.Error()
+			availableModule.Version = "unknown"
+			errorsExist = true
+			availableModules = append(availableModules, availableModule)
+			continue
+		}
+
+		if !r.releaseEnsureAllowed(source, moduleName, module, config, metadata, meta, availableModuleSources, embeddedTargetModuleSource) {
 			availableModule.Checksum = meta.Checksum
 			availableModule.Version = meta.ModuleVersion
 			availableModules = append(availableModules, availableModule)
@@ -537,41 +557,24 @@ func (r *reconciler) processModules(ctx context.Context, source *v1alpha1.Module
 		if ensure {
 			logger.Debug("ensure release")
 
-			err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {
-				if module.Status.Phase == v1alpha1.ModulePhaseAvailable || module.Status.Phase == v1alpha1.ModulePhaseConflict {
-					module.Status.Phase = v1alpha1.ModulePhaseDownloading
-					module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDownloading, v1alpha1.ModuleMessageDownloading)
+			// the first release of an available module moves it to the deploy
+			if module != nil {
+				err = ctrlutils.UpdateStatusWithRetry(ctx, r.client, module, func() error {
+					if module.Status.Phase == v1alpha1.ModulePhaseAvailable || module.Status.Phase == v1alpha1.ModulePhaseConflict {
+						module.Status.Phase = v1alpha1.ModulePhaseDownloading
+						module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonDownloading, v1alpha1.ModuleMessageDownloading)
+					}
+
+					return nil
+				})
+				if err != nil {
+					logger.Error("failed to update module status before fetch, skipping", slog.String("name", moduleName), log.Err(err))
+					availableModule.Error = err.Error()
+					availableModule.Version = "unknown"
+					errorsExist = true
+					availableModules = append(availableModules, availableModule)
+					continue
 				}
-
-				return nil
-			})
-			if err != nil {
-				logger.Error("failed to update module status before fetch, skipping", slog.String("name", moduleName), log.Err(err))
-				availableModule.Error = err.Error()
-				availableModule.Version = "unknown"
-				errorsExist = true
-				availableModules = append(availableModules, availableModule)
-				continue
-			}
-
-			err = ctrlutils.UpdateWithRetry(ctx, r.client, module, func() error {
-				// Keep an embedded module pinned to its embedded copy while it is
-				// still shipped: the release is only pre-staged on the filesystem,
-				// not activated. The active source is switched to the external one
-				// only after the embedded copy is dropped on Deckhouse upgrade.
-				if !module.IsEmbedded() {
-					module.Properties.Source = source.Name
-				}
-
-				return nil
-			})
-			if err != nil {
-				logger.Error("failed to update module before fetch, skipping", slog.String("name", moduleName), log.Err(err))
-				availableModule.Error = err.Error()
-				availableModule.Version = "unknown"
-				errorsExist = true
-				availableModules = append(availableModules, availableModule)
-				continue
 			}
 
 			err = r.fetchModuleReleases(ctx, md, moduleName, meta, source, policy.Name, policy.Spec.ReleaseChannel, metricModuleGroup, opts)
@@ -667,14 +670,27 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 		}
 	}
 
+	// the modules the source installed die with their releases: the release controller
+	// uninstalls them, and the package sync drops their objects at the next start. The modules
+	// the source merely listed are re-placed here by the module sources that still offer them:
+	// the object of a module no module source offers goes. A forced deletion does not wait for a
+	// failing cleanup.
 	if controllerutil.ContainsFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists) {
-		if source.GetAnnotations()[v1alpha1.ModuleSourceAnnotationForceDelete] != "true" {
-			for _, module := range source.Status.AvailableModules {
-				if err := r.cleanSourceInModule(ctx, source.Name, module.Name); err != nil {
-					r.logger.Error("failed to clean source in module during deletion of module source", slog.String("name", module.Name), slog.String("source_name", source.Name), log.Err(err))
-					return ctrl.Result{}, err
-				}
+		forced := source.GetAnnotations()[v1alpha1.ModuleSourceAnnotationForceDelete] == "true"
+
+		for _, available := range source.Status.AvailableModules {
+			err := r.cleanAvailableModule(ctx, available.Name)
+			if err == nil {
+				continue
 			}
+
+			if !forced {
+				r.logger.Error("failed to clean the module of the deleted source", slog.String("source_name", source.Name), slog.String("module_name", available.Name), log.Err(err))
+
+				return ctrl.Result{}, fmt.Errorf("clean the '%s' module: %w", available.Name, err)
+			}
+
+			r.logger.Warn("failed to clean the module of the force deleted source", slog.String("source_name", source.Name), slog.String("module_name", available.Name), log.Err(err))
 		}
 
 		controllerutil.RemoveFinalizer(source, v1alpha1.ModuleSourceFinalizerModuleExists)
@@ -687,30 +703,26 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 	return ctrl.Result{}, nil
 }
 
-// updateModulePropertiesFromDefinition updates module properties from the downloaded module definition.
-// Only syncs properties that come from module.yaml definition.
-func (r *reconciler) updateModulePropertiesFromDefinition(
-	ctx context.Context,
-	module *v1alpha1.Module,
-	def *moduletypes.Definition,
-	moduleVersion string,
-) error {
-	if def == nil {
+// moduleSourcesOfConfig maps a module config onto the module sources its module may come from:
+// the one the config names and the ones offering the module.
+func (r *reconciler) moduleSourcesOfConfig(ctx context.Context, obj client.Object) []reconcile.Request {
+	config := obj.(*v1alpha1.ModuleConfig)
+
+	moduleSourceNames, err := utils.AvailableModuleSources(ctx, r.client, config.Name)
+	if err != nil {
+		r.logger.Warn("failed to get the module sources offering the module", slog.String("module", config.Name), log.Err(err))
+
 		return nil
 	}
 
-	return ctrlutils.UpdateWithRetry(ctx, r.client, module, func() error {
-		props := &module.Properties
-		props.Stage = def.Stage
-		props.Weight = def.Weight
-		props.Critical = def.Critical
-		props.Namespace = def.Namespace
-		props.Subsystems = def.Subsystems
-		props.ExclusiveGroup = def.ExclusiveGroup
-		props.Requirements = def.Requirements
-		props.DisableOptions = def.DisableOptions
-		props.Accessibility = def.Accessibility.ToV1Alpha1()
-		props.Version = moduleVersion
-		return nil
-	})
+	if configured := pkgsync.ConfiguredModuleSource(config); configured != "" && !slices.Contains(moduleSourceNames, configured) {
+		moduleSourceNames = append(moduleSourceNames, configured)
+	}
+
+	requests := make([]reconcile.Request, 0, len(moduleSourceNames))
+	for _, moduleSourceName := range moduleSourceNames {
+		requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKey{Name: moduleSourceName}})
+	}
+
+	return requests
 }

@@ -42,15 +42,21 @@ status:
   pullDuration: 0s
   transitionTime: "2019-10-17T15:33:00Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: echo
-  resourceVersion: "1000"
-properties: {}
+  resourceVersion: "1001"
+spec:
+  packageRepositoryName: test
+  packageVersion: v0.4.69
+  releaseChannel: Stable
 status:
   conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: ""
+    reason: Deployed
     status: "True"
     type: LastReleaseDeployed
+  lastAppliedConfiguration: null
+  tracking: null

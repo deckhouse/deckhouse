@@ -15,13 +15,18 @@
 package utils_test
 
 import (
+	"context"
 	"encoding/json"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/go_lib/project"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
@@ -325,4 +330,49 @@ func TestGenerateRegistryOptions(t *testing.T) {
 		assert.Len(t, options, 5)
 		// Insecure schema should be true
 	})
+}
+
+func TestAvailableModuleSources(t *testing.T) {
+	ctx := context.Background()
+
+	sc, err := project.Scheme()
+	require.NoError(t, err)
+
+	cl := fake.NewClientBuilder().
+		WithScheme(sc).
+		WithObjects(
+			&v1alpha1.ModulePackage{
+				ObjectMeta: metav1.ObjectMeta{Name: "shared"},
+				Status:     v1alpha1.ModulePackageStatus{AvailableRepositories: []string{"mirror", "deckhouse-modules"}},
+			},
+			// the package of an embedded module lists no repository
+			&v1alpha1.ModulePackage{ObjectMeta: metav1.ObjectMeta{Name: "embedded-only"}},
+		).
+		Build()
+
+	shared, err := utils.AvailableModuleSources(ctx, cl, "shared")
+	require.NoError(t, err)
+	assert.Equal(t, []string{"deckhouse", "mirror"}, shared, "the module sources behind the repositories, sorted")
+
+	embedded, err := utils.AvailableModuleSources(ctx, cl, "embedded-only")
+	require.NoError(t, err)
+	assert.Empty(t, embedded)
+
+	unknown, err := utils.AvailableModuleSources(ctx, cl, "unknown")
+	require.NoError(t, err)
+	assert.Nil(t, unknown, "a module without a package is offered by nobody")
+}
+
+func TestPickModuleSource(t *testing.T) {
+	assert.Empty(t, utils.PickModuleSource("", nil), "nobody offers")
+	assert.Equal(t, "mirror", utils.PickModuleSource("", []string{"mirror"}), "the only offering module source")
+	assert.Empty(t, utils.PickModuleSource("", []string{"deckhouse", "mirror"}), "several module sources and no choice")
+	assert.Equal(t, "mirror", utils.PickModuleSource("mirror", []string{"deckhouse", "mirror"}), "the configured module source wins")
+}
+
+func TestHasModuleSourceConflict(t *testing.T) {
+	assert.False(t, utils.HasModuleSourceConflict(false, "", []string{"deckhouse", "mirror"}), "a disabled module is never in conflict")
+	assert.False(t, utils.HasModuleSourceConflict(true, "mirror", []string{"deckhouse", "mirror"}), "a chosen module source settles the conflict")
+	assert.False(t, utils.HasModuleSourceConflict(true, "", []string{"mirror"}), "a single module source is no conflict")
+	assert.True(t, utils.HasModuleSourceConflict(true, "", []string{"deckhouse", "mirror"}))
 }

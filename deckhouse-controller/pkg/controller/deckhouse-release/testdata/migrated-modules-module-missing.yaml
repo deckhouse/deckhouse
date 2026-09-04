@@ -38,14 +38,20 @@ status:
     - name: test-module-1
   modulesCount: 1
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: test-module-1
+spec:
+  packageRepositoryName: deckhouse-modules
+  packageVersion: v1.0.0
 status:
   conditions:
-    - type: EnabledByModuleManager
-      status: "True"
+  - type: EnabledByModuleManager
+    status: 'True'
+    reason: Enabled
+    message: ''
+    lastTransitionTime: '2019-10-17T15:33:00Z'
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleConfig

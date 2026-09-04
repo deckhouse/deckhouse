@@ -11,28 +11,32 @@ spec:
 status:
   version: "1"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: test-module
-  resourceVersion: "1000"
-properties:
-  source: test-source
-  updatePolicy: Auto
+  resourceVersion: "1001"
+spec:
+  enabled: false
+  packageRepositoryName: test-source
+  packageVersion: v1.0.0
 status:
   conditions:
-  - lastProbeTime: null
-    lastTransitionTime: null
+  - lastTransitionTime: null
+    message: ""
+    reason: Disabled
     status: "False"
     type: EnabledByModuleConfig
-  - lastProbeTime: null
-    lastTransitionTime: null
+  - lastTransitionTime: null
     message: disabled
     reason: Disabled
     status: "False"
     type: IsReady
-  - lastProbeTime: null
-    lastTransitionTime: null
+  - lastTransitionTime: null
+    message: ""
+    reason: Unknown
     status: Unknown
     type: LastReleaseDeployed
+  lastAppliedConfiguration: null
   phase: Ready
+  tracking: null

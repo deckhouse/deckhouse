@@ -200,7 +200,7 @@ func NewDeckhouseController(
 					},
 				},
 				// for deckhouse.io apis
-				&v1alpha1.Module{}:              {},
+				&v1alpha2.Module{}:              {},
 				&v1alpha1.ModuleConfig{}:        {},
 				&v1alpha1.ModuleDocumentation{}: {},
 				&v1alpha1.ModuleRelease{}:       {},
@@ -208,6 +208,9 @@ func NewDeckhouseController(
 				&v1alpha2.ModuleUpdatePolicy{}:  {},
 				&v1alpha2.ModulePullOverride{}:  {},
 				&v1alpha1.DeckhouseRelease{}:    {},
+				// for the module controllers and the ModulePackageVersion controller
+				&v1alpha1.ModulePackage{}:        {},
+				&v1alpha1.ModulePackageVersion{}: {},
 			},
 		},
 	}
@@ -219,13 +222,6 @@ func NewDeckhouseController(
 		opts.Cache.ByObject[&v1alpha1.ApplicationPackageVersion{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.ApplicationPackage{}] = cache.ByObject{}
 		opts.Cache.ByObject[&v1alpha1.Application{}] = cache.ByObject{}
-	}
-
-	// Module package controllers (feature flag)
-	if app.ModulePackagesEnabled() {
-		opts.Cache.ByObject[&v1alpha1.ModulePackage{}] = cache.ByObject{}
-		opts.Cache.ByObject[&v1alpha1.ModulePackageVersion{}] = cache.ByObject{}
-		opts.Cache.ByObject[&v1alpha2.Module{}] = cache.ByObject{}
 	}
 
 	admission, serveWebhooks := app.TakeOverAdmissionServer()
@@ -267,19 +263,7 @@ func NewDeckhouseController(
 
 	// instantiate ModuleDependency extender
 	moduledependency.Instance().SetModulesVersionHelper(func(moduleName string) (string, error) {
-		module := new(v1alpha1.Module)
-		if err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
-			return runtimeManager.GetClient().Get(ctx, client.ObjectKey{Name: moduleName}, module)
-		}); err != nil {
-			return "", fmt.Errorf("on error: %w", err)
-		}
-
-		// set some version for the modules overridden by mpos
-		if module.IsCondition(v1alpha1.ModuleConditionIsOverridden, corev1.ConditionTrue) {
-			return defaultModuleVersion, nil
-		}
-
-		return module.GetVersion(), nil
+		return moduleVersion(ctx, runtimeManager.GetClient(), moduleName)
 	})
 
 	bootstrappedHelper := func() (bool, error) {
@@ -336,7 +320,7 @@ func NewDeckhouseController(
 	// do not start operator until controllers preflight checks done
 	preflightCountDown := new(sync.WaitGroup)
 
-	loader := moduleloader.New(runtimeManager.GetClient(), version, operator.ModuleManager.ModulesDir, operator.ModuleManager.GlobalHooksDir, dc, exts, embeddedPolicy, conversionsStore, logger.Named("module-loader"))
+	loader := moduleloader.New(runtimeManager.GetClient(), runtimeManager.GetAPIReader(), version, operator.ModuleManager.ModulesDir, operator.ModuleManager.GlobalHooksDir, dc, exts, embeddedPolicy, conversionsStore, logger.Named("module-loader"))
 	operator.ModuleManager.SetModuleLoader(loader)
 
 	err = deckhouserelease.NewDeckhouseReleaseController(ctx, runtimeManager, dc, exts, operator.ModuleManager, settingsContainer, operator.MetricStorage, preflightCountDown, version, logger.Named("deckhouse-release-controller"))
@@ -359,7 +343,7 @@ func NewDeckhouseController(
 		return nil, fmt.Errorf("register module release controller: %w", err)
 	}
 
-	err = moduleoverride.RegisterController(runtimeManager, operator.ModuleManager, loader, edition, dc, logger.Named("module-pull-override-controller"))
+	err = moduleoverride.RegisterController(runtimeManager, operator.ModuleManager, loader, dc, logger.Named("module-pull-override-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register module pull override controller: %w", err)
 	}
@@ -372,6 +356,14 @@ func NewDeckhouseController(
 	err = objectkeeper.RegisterController(runtimeManager, dc, logger.Named("objectkeeper-controller"))
 	if err != nil {
 		return nil, fmt.Errorf("register objectkeeper controller: %w", err)
+	}
+
+	// The old module stack creates draft versions too: the release controller and the
+	// startup sync stub them for every release, and the repository scan for every version
+	// in the registry. The drafts get their metadata here, whatever the feature gates say.
+	err = modulepackageversion.RegisterController(preflightCountDown, runtimeManager, dc, logger)
+	if err != nil {
+		return nil, fmt.Errorf("register module package version controller: %w", err)
 	}
 
 	// package should not run before converge done
@@ -414,14 +406,9 @@ func NewDeckhouseController(
 		}
 	}
 
-	// Module package controllers (feature flag)
+	// Module v2 controller (feature flag)
 	if app.ModulePackagesEnabled() {
-		logger.Info("Module package controllers are enabled")
-
-		err = modulepackageversion.RegisterController(preflightCountDown, runtimeManager, dc, logger)
-		if err != nil {
-			return nil, fmt.Errorf("register module package version controller: %w", err)
-		}
+		logger.Info("Module v2 controller is enabled")
 
 		err = module.RegisterController(preflightCountDown, runtimeManager, pkgRuntime, logger)
 		if err != nil {
@@ -465,6 +452,29 @@ func NewDeckhouseController(
 	}, nil
 }
 
+// moduleVersion reports the version of the module package for the module dependency
+// extender. A module a source offers and nothing installed is reported as not found, the
+// way a module without an object is: no version satisfies a dependency on it.
+func moduleVersion(ctx context.Context, cli client.Client, moduleName string) (string, error) {
+	module := new(v1alpha2.Module)
+	if err := retry.OnError(retry.DefaultRetry, apierrors.IsServiceUnavailable, func() error {
+		return cli.Get(ctx, client.ObjectKey{Name: moduleName}, module)
+	}); err != nil {
+		return "", fmt.Errorf("on error: %w", err)
+	}
+
+	if !module.IsInstalled() {
+		return "", apierrors.NewNotFound(v1alpha2.ModuleGVR.GroupResource(), moduleName)
+	}
+
+	// a dev module follows a tag, so it reports a version no constraint rejects
+	if module.IsDev() {
+		return defaultModuleVersion, nil
+	}
+
+	return module.GetVersion(), nil
+}
+
 func setModulesEnvironment(operator *addonoperator.AddonOperator) {
 	operator.ModuleManager.AddObjectsToChrootEnvironment(getChrootObjectDescriptors()...)
 }
@@ -474,7 +484,7 @@ func (c *DeckhouseController) Start(ctx context.Context) error {
 	// give the old module stack its package system objects before any
 	// controller runs; the sync reads through the API reader, so it does not
 	// need the manager cache
-	if err := pkgsync.Sync(ctx, c.runtimeManager.GetAPIReader(), c.runtimeManager.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, c.log.Named("pkgsync")); err != nil {
+	if err := pkgsync.Sync(ctx, c.runtimeManager.GetAPIReader(), c.runtimeManager.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, app.DownloadedModulesDir(), c.log.Named("pkgsync")); err != nil {
 		return fmt.Errorf("sync package objects: %w", err)
 	}
 

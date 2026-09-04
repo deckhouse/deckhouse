@@ -41,7 +41,7 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:                         "console_module",
-			ApiVersion:                   "deckhouse.io/v1alpha1",
+			ApiVersion:                   "deckhouse.io/v1alpha2",
 			Kind:                         "Module",
 			NameSelector:                 &types.NameSelector{MatchNames: []string{consoleModuleName}},
 			ExecuteHookOnEvents:          ptr.To(true),
@@ -56,7 +56,7 @@ type consoleModuleInfo struct {
 }
 
 func applyConsoleModuleFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	version, _, err := unstructured.NestedString(obj.Object, "properties", "version")
+	version, _, err := unstructured.NestedString(obj.Object, "spec", "packageVersion")
 	if err != nil {
 		return nil, err
 	}

@@ -1,4 +1,3 @@
----
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
 metadata:
@@ -12,13 +11,10 @@ spec:
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
 status:
-  message: ""
+  message: ''
   modules:
-    # checksum equals the checksum the mock registry reports for the channel image
-    # ("sha256:"), so the plain checksum guard is satisfied - the update chain must be
-    # re-derived only because it has a gap
-    - name: console
-      checksum: "sha256:"
+  - name: console
+    checksum: 'sha256:'
 ---
 apiVersion: deckhouse.io/v1alpha2
 kind: ModuleUpdatePolicy
@@ -28,22 +24,6 @@ spec:
   releaseChannel: Alpha
   update:
     mode: Manual
----
-apiVersion: deckhouse.io/v1alpha1
-kind: Module
-metadata:
-  name: console
-properties:
-  version: 1.52.0
-  source: test-source-1
-  updatePolicy: test-alpha
-  availableSources:
-    - test-source-1
-status:
-  phase: Available
-  conditions:
-    - type: EnabledByModuleConfig
-      status: "True"
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleRelease
@@ -87,3 +67,12 @@ status:
   pullDuration: 0s
   size: 0
   transitionTime: "2026-07-01T00:00:00Z"
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: console
+spec:
+  updatePolicy: test-alpha
+  enabled: true
+  source: test-source-1

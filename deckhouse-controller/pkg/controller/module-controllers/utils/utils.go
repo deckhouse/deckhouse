@@ -34,6 +34,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
@@ -199,23 +200,23 @@ func UpdateStatus[Object client.Object](ctx context.Context, cli client.Client, 
 	return nil
 }
 
-// GetUpdatePolicyByModule returns policy for the module, if no policy, embeddedPolicy is returned
+// GetUpdatePolicyByModule returns the policy the module config names for the module.
+// Without a config, a config naming no policy or a policy that does not exist, the
+// embedded policy is returned.
 func GetUpdatePolicyByModule(ctx context.Context, cli client.Client, embeddedPolicy *helpers.ModuleUpdatePolicySpecContainer, moduleName string) (*v1alpha2.ModuleUpdatePolicy, error) {
-	module := new(v1alpha1.Module)
-	if err := cli.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
+	config := new(v1alpha1.ModuleConfig)
+	if err := cli.Get(ctx, client.ObjectKey{Name: moduleName}, config); err != nil {
 		if !apierrors.IsNotFound(err) {
-			return nil, fmt.Errorf("get the '%s' module: %w", moduleName, err)
+			return nil, fmt.Errorf("get the '%s' module config: %w", moduleName, err)
 		}
-	} else {
-		if module.Properties.UpdatePolicy != "" {
-			policy := new(v1alpha2.ModuleUpdatePolicy)
-			if err = cli.Get(ctx, client.ObjectKey{Name: module.Properties.UpdatePolicy}, policy); err != nil {
-				if !apierrors.IsNotFound(err) {
-					return nil, fmt.Errorf("get the '%s' update policy: %w", moduleName, err)
-				}
-			} else {
-				return policy, nil
+	} else if config.Spec.UpdatePolicy != "" {
+		policy := new(v1alpha2.ModuleUpdatePolicy)
+		if err = cli.Get(ctx, client.ObjectKey{Name: config.Spec.UpdatePolicy}, policy); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return nil, fmt.Errorf("get the '%s' update policy: %w", config.Spec.UpdatePolicy, err)
 			}
+		} else {
+			return policy, nil
 		}
 	}
 
@@ -229,6 +230,71 @@ func GetUpdatePolicyByModule(ctx context.Context, cli client.Client, embeddedPol
 		},
 		Spec: *embeddedPolicy.Get(),
 	}, nil
+}
+
+// ModuleMetadata returns the package metadata of the version the module runs, read
+// from its ModulePackageVersion. Nil means unknown: a module not installed has no
+// object, a dev module follows a tag no version describes, a module without a package
+// triple has nothing to look up, and a draft version has not published its metadata yet.
+func ModuleMetadata(ctx context.Context, cli client.Client, module *v1alpha2.Module) (*v1alpha1.ModulePackageVersionStatusMetadata, error) {
+	if module == nil || module.IsDev() || module.Spec.PackageRepositoryName == "" || module.Spec.PackageVersion == "" {
+		return nil, nil
+	}
+
+	name := v1alpha1.MakeModulePackageVersionName(module.Spec.PackageRepositoryName, module.Name, module.Spec.PackageVersion)
+
+	mpv := new(v1alpha1.ModulePackageVersion)
+	if err := cli.Get(ctx, client.ObjectKey{Name: name}, mpv); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("get the '%s' module package version: %w", name, err)
+	}
+
+	if mpv.IsDraft() {
+		return nil, nil
+	}
+
+	return mpv.Status.PackageMetadata, nil
+}
+
+// AvailableModuleSources names the module sources able to install the module: the ones behind
+// the repositories the repository scan found installable versions of the module in, sorted. A
+// module the scan has not reached is offered by nobody.
+func AvailableModuleSources(ctx context.Context, cli client.Client, name string) ([]string, error) {
+	modulePackage := new(v1alpha1.ModulePackage)
+	if err := cli.Get(ctx, client.ObjectKey{Name: name}, modulePackage); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil, nil
+		}
+
+		return nil, fmt.Errorf("get the '%s' module package: %w", name, err)
+	}
+
+	return pkgsync.ModuleSourceNamesForRepositories(modulePackage.Status.AvailableRepositories), nil
+}
+
+// PickModuleSource picks the module source a module nothing installed yet would come from: the
+// one the config selects, else the only one offering the module. Empty while several module
+// sources offer it and the config selects none.
+func PickModuleSource(configuredModuleSource string, availableModuleSources []string) string {
+	if configuredModuleSource != "" {
+		return configuredModuleSource
+	}
+
+	if len(availableModuleSources) == 1 {
+		return availableModuleSources[0]
+	}
+
+	return ""
+}
+
+// HasModuleSourceConflict reports whether a module nothing installed yet is enabled, offered by
+// several module sources and the config selects none of them. Nothing installs such a module
+// until the operator selects one.
+func HasModuleSourceConflict(enabled bool, configuredModuleSource string, availableModuleSources []string) bool {
+	return enabled && configuredModuleSource == "" && len(availableModuleSources) > 1
 }
 
 // ModulePullOverrideExists checks if module pull override for the module exists

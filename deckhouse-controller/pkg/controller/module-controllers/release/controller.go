@@ -35,7 +35,6 @@ import (
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -49,6 +48,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
@@ -92,6 +92,7 @@ func RegisterController(
 	r := &reconciler{
 		init:                 new(sync.WaitGroup),
 		client:               runtimeManager.GetClient(),
+		reader:               runtimeManager.GetAPIReader(),
 		log:                  logger,
 		moduleManager:        mm,
 		metricStorage:        ms,
@@ -150,8 +151,11 @@ type Installer interface {
 }
 
 type reconciler struct {
-	init                *sync.WaitGroup
-	client              client.Client
+	init   *sync.WaitGroup
+	client client.Client
+	// reader bypasses the manager cache: the package versions the deploy completes are cached
+	// only when the module packages feature is on, and the controller runs everywhere.
+	reader              client.Reader
 	log                 *log.Logger
 	dependencyContainer dependency.Container
 	exts                extenders.IExtendersStack
@@ -636,7 +640,7 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 	}
 
 	// do not (re)create documentation for a disabled module
-	module := new(v1alpha1.Module)
+	module := new(v1alpha2.Module)
 	if err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, module); err != nil {
 		r.log.Error("failed to get module", slog.String("module", release.GetModuleName()), log.Err(err))
 
@@ -647,7 +651,7 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 	// (by module config, by bundle or by an enabled script) - EnabledByModuleManager
 	// reflects the effective enabled state, unlike EnabledByModuleConfig which is only
 	// set for modules enabled explicitly via a ModuleConfig
-	if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionTrue) {
+	if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, metav1.ConditionTrue) {
 		if r.installer.IsEmbeddedPresent(release.GetModuleName()) {
 			// The embedded copy serves the module, so the release is only staged and the
 			// /modules/<name> mount a ModuleDocumentation points at is never created, while
@@ -1439,6 +1443,17 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		return fmt.Errorf("the '%s:v%s' module validation: %w", release.GetModuleName(), release.GetVersion().String(), err)
 	}
 
+	// the package version of the release gets its metadata from the files just downloaded,
+	// before the restart that follows the deploy, so the readers never see it as a draft
+	versionSpec := v1alpha1.ModulePackageVersionSpec{
+		PackageName:           moduleName,
+		PackageRepositoryName: pkgsync.RepositoryNameForSource(source.Name),
+		PackageVersion:        moduleVersion,
+	}
+	if err = pkgsync.EnsureModulePackageVersion(ctx, r.reader, r.client, r.dependencyContainer, versionSpec, modulePath, logger); err != nil {
+		return fmt.Errorf("ensure the module package version: %w", err)
+	}
+
 	// While an embedded copy of the module is still shipped on the filesystem it
 	// wins the module search path, so the downloaded module must only be staged
 	// (no symlink/mount), not activated. Pre-staging guarantees the module is
@@ -1465,24 +1480,80 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		return fmt.Errorf("install the module '%s': %w", moduleName, err)
 	}
 
-	// The module was activated (Install, not Stage), so its embedded copy is no
-	// longer shipped. Flip the active source off the "Embedded" sentinel so the
-	// controller-side view (module.IsEmbedded()) stays consistent with the on-disk
-	// reality and the module is handed over to the regular source-owned flow. This
-	// mirrors the transition done by the moduleloader restore.
-	module := &v1alpha1.Module{ObjectMeta: metav1.ObjectMeta{Name: moduleName}}
-	if err = ctrlutils.UpdateWithRetry(ctx, r.client, module, func() error {
-		if module.Properties.Source == v1alpha1.ModuleSourceEmbedded {
-			module.Properties.Source = source.Name
-		}
-		return nil
-	}); err != nil {
-		return fmt.Errorf("switch the active source for the module '%s': %w", moduleName, err)
+	// The module was activated (Install, not Stage), so its embedded copy is no longer
+	// shipped: the release is where the module comes from now.
+	if err = r.placeModule(ctx, release, source); err != nil {
+		return fmt.Errorf("place the module '%s': %w", moduleName, err)
 	}
 
 	// disable target module hooks so as not to invoke them before restart
 	if r.moduleManager.GetModule(release.GetModuleName()) != nil {
 		r.moduleManager.DisableModuleHooks(release.GetModuleName())
+	}
+
+	return nil
+}
+
+// placeModule moves the module onto the deployed release: its repository, its version and
+// the release channel the module follows, without the embedded mark. A module deployed for
+// the first time gets its object here, and the config controller mirrors its config into it.
+func (r *reconciler) placeModule(ctx context.Context, release *v1alpha1.ModuleRelease, source *v1alpha1.ModuleSource) error {
+	policy, err := utils.GetUpdatePolicyByModule(ctx, r.client, r.embeddedPolicy, release.GetModuleName())
+	if err != nil {
+		return fmt.Errorf("get the update policy: %w", err)
+	}
+
+	module := new(v1alpha2.Module)
+	err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, module)
+	if apierrors.IsNotFound(err) {
+		created := &v1alpha2.Module{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: v1alpha2.ModuleGVK.GroupVersion().String(),
+				Kind:       v1alpha2.ModuleKind,
+			},
+			ObjectMeta: metav1.ObjectMeta{Name: release.GetModuleName()},
+			Spec: v1alpha2.ModuleSpec{
+				PackageRepositoryName: pkgsync.RepositoryNameForSource(source.Name),
+				PackageVersion:        release.GetModuleVersion(),
+				ReleaseChannel:        policy.Spec.ReleaseChannel,
+			},
+		}
+
+		err = r.client.Create(ctx, created)
+		if err == nil {
+			return nil
+		}
+
+		if !apierrors.IsAlreadyExists(err) {
+			return fmt.Errorf("create the module: %w", err)
+		}
+
+		// the source controller placed the available module meanwhile: move that object
+		err = r.client.Get(ctx, client.ObjectKey{Name: release.GetModuleName()}, module)
+	}
+
+	if err != nil {
+		return fmt.Errorf("get the module: %w", err)
+	}
+
+	patch := client.MergeFrom(module.DeepCopy())
+
+	module.Spec.PackageRepositoryName = pkgsync.RepositoryNameForSource(source.Name)
+	module.Spec.PackageVersion = release.GetModuleVersion()
+	module.Spec.ReleaseChannel = policy.Spec.ReleaseChannel
+	delete(module.Annotations, v1alpha2.ModuleAnnotationEmbedded)
+
+	data, err := patch.Data(module)
+	if err != nil {
+		return fmt.Errorf("build patch: %w", err)
+	}
+
+	if string(data) == "{}" {
+		return nil
+	}
+
+	if err := r.client.Patch(ctx, module, client.RawPatch(patch.Type(), data)); err != nil {
+		return fmt.Errorf("patch the module: %w", err)
 	}
 
 	return nil
@@ -1789,11 +1860,19 @@ func (r *reconciler) updateReleaseStatus(ctx context.Context, mr *v1alpha1.Modul
 	return nil
 }
 
+// updateModuleLastReleaseDeployedStatus reports the release on the module. A module deployed
+// for the first time has no object before the deploy, so there is nothing to report on yet.
 func (r *reconciler) updateModuleLastReleaseDeployedStatus(ctx context.Context, mr *v1alpha1.ModuleRelease, msg, reason string, conditionState bool) error {
 	logger := r.log.With(slog.String("module", mr.GetModuleName()))
 
-	module := new(v1alpha1.Module)
+	module := new(v1alpha2.Module)
 	if err := r.client.Get(ctx, client.ObjectKey{Name: mr.GetModuleName()}, module); err != nil {
+		if apierrors.IsNotFound(err) {
+			logger.Debug("module is not installed yet, skip refreshing its status")
+
+			return nil
+		}
+
 		return fmt.Errorf("get module: %w", err)
 	}
 
@@ -1808,9 +1887,9 @@ func (r *reconciler) updateModuleLastReleaseDeployedStatus(ctx context.Context, 
 		}
 
 		if conditionState {
-			module.SetConditionTrue(v1alpha1.ModuleConditionLastReleaseDeployed, v1alpha1.WithTimer(r.dependencyContainer.GetClock().Now))
+			module.SetConditionTrue(v1alpha1.ModuleConditionLastReleaseDeployed, v1alpha1.ModuleReasonDeployed, v1alpha2.WithTimer(r.dependencyContainer.GetClock().Now))
 		} else {
-			module.SetConditionFalse(v1alpha1.ModuleConditionLastReleaseDeployed, reason, condMessage, v1alpha1.WithTimer(r.dependencyContainer.GetClock().Now))
+			module.SetConditionFalse(v1alpha1.ModuleConditionLastReleaseDeployed, reason, condMessage, v1alpha2.WithTimer(r.dependencyContainer.GetClock().Now))
 		}
 
 		return nil
@@ -1956,7 +2035,7 @@ func newModuleReleaseWithName(name string) *v1alpha1.ModuleRelease {
 }
 
 func (r *reconciler) isModuleReady(ctx context.Context, moduleName string) bool {
-	module := new(v1alpha1.Module)
+	module := new(v1alpha2.Module)
 	err := r.client.Get(ctx, types.NamespacedName{Name: moduleName}, module)
 	if err != nil {
 		r.log.Warn("cannot find module", slog.String("module_name", moduleName), log.Err(err))

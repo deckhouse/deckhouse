@@ -378,3 +378,70 @@ func TestSyncVersionsFromReleases(t *testing.T) {
 		assert.False(t, after.IsDraft(), "a complete version must not become a draft")
 	})
 }
+
+func TestEnsureModulePackageVersion(t *testing.T) {
+	ctx := context.Background()
+
+	dir := filepath.Join(t.TempDir(), "console")
+	writeModuleYAML(t, dir, "name: console\nstage: Preview\nweight: 910\n")
+	writeOpenAPI(t, dir, "type: object\nproperties:\n  replicas:\n    type: integer\n", "type: object\n")
+
+	spec := v1alpha1.ModulePackageVersionSpec{
+		PackageName:           "console",
+		PackageRepositoryName: "deckhouse-modules",
+		PackageVersion:        "v1.60.1",
+	}
+
+	t.Run("missing version is created and filled", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir())
+
+		require.NoError(t, s.ensureDraftFilled(ctx, spec, dir))
+
+		mpv := getVersion(t, cl, "deckhouse-modules-console-v1.60.1")
+		assert.False(t, mpv.IsDraft())
+		assert.True(t, mpv.IsLegacy())
+		assert.Equal(t, "Preview", mpv.Status.PackageMetadata.Stage)
+		assert.Equal(t, int32(910), mpv.Status.PackageMetadata.Weight)
+		assert.NotNil(t, mpv.Status.PackageSchemas)
+	})
+
+	t.Run("draft stub is filled", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir())
+		_, err := s.createStub(ctx, "deckhouse-modules-console-v1.60.1", spec)
+		require.NoError(t, err)
+
+		require.NoError(t, s.ensureDraftFilled(ctx, spec, dir))
+
+		mpv := getVersion(t, cl, "deckhouse-modules-console-v1.60.1")
+		assert.False(t, mpv.IsDraft())
+		assert.Equal(t, "Preview", mpv.Status.PackageMetadata.Stage)
+	})
+
+	t.Run("complete version is final", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir())
+		_, err := s.createStub(ctx, "deckhouse-modules-console-v1.60.1", spec)
+		require.NoError(t, err)
+
+		mpv := getVersion(t, cl, "deckhouse-modules-console-v1.60.1")
+		scanned := &v1alpha1.ModulePackageVersionStatusMetadata{Stage: "General Availability", Weight: 900}
+		require.NoError(t, s.fillMetadata(ctx, mpv, scanned, nil))
+		require.NoError(t, s.removeDraft(ctx, mpv))
+		rv := getVersion(t, cl, "deckhouse-modules-console-v1.60.1").ResourceVersion
+
+		require.NoError(t, s.ensureDraftFilled(ctx, spec, dir))
+
+		mpv = getVersion(t, cl, "deckhouse-modules-console-v1.60.1")
+		assert.Equal(t, rv, mpv.ResourceVersion)
+		assert.Equal(t, "General Availability", mpv.Status.PackageMetadata.Stage)
+	})
+
+	t.Run("unreadable module dir leaves the draft", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir())
+		_, err := s.createStub(ctx, "deckhouse-modules-console-v1.60.1", spec)
+		require.NoError(t, err)
+
+		require.NoError(t, s.ensureDraftFilled(ctx, spec, filepath.Join(t.TempDir(), "missing")))
+
+		assert.True(t, getVersion(t, cl, "deckhouse-modules-console-v1.60.1").IsDraft())
+	})
+}

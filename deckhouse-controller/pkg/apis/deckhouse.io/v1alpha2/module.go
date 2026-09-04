@@ -17,6 +17,9 @@ limitations under the License.
 package v1alpha2
 
 import (
+	"time"
+
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -62,13 +65,16 @@ var _ runtime.Object = (*Module)(nil)
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
+// +kubebuilder:storageversion
 // +kubebuilder:printcolumn:name=Version,type=string,JSONPath=.spec.packageVersion
 // +kubebuilder:printcolumn:name=Repository,type=string,JSONPath=.spec.packageRepositoryName,priority=1
-// +kubebuilder:printcolumn:name=State,type=string,JSONPath=.status.summary.state
-// +kubebuilder:printcolumn:name=Installed,type=string,JSONPath=.status.conditions[?(@.type=='Installed')].status,priority=1
-// +kubebuilder:printcolumn:name=Ready,type=string,JSONPath=.status.conditions[?(@.type=='Ready')].status,priority=1
-// +kubebuilder:printcolumn:name="Message",type="string",JSONPath=".status.summary.message"
-// +kubebuilder:printcolumn:name=Age,type=date,JSONPath=.metadata.creationTimestamp
+// +kubebuilder:printcolumn:name="Phase",type="string",JSONPath=".status.phase",description="Module phase."
+// +kubebuilder:printcolumn:name="Enabled",type="string",JSONPath=".status.conditions[?(@.type=='EnabledByModuleManager')].status",description="Module`s enabled status."
+// +kubebuilder:printcolumn:name="Disabled Message",type="string",JSONPath=".status.conditions[?(@.type=='EnabledByModuleManager')].message",priority=1,description="Module`s enabled information."
+// +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='IsReady')].status",description="Module`s ready status."
+// +kubebuilder:metadata:labels="heritage=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/name=deckhouse"
+// +kubebuilder:metadata:labels="app.kubernetes.io/part-of=deckhouse"
 // +crd-enricher:crd:preserveUnknownFields=false
 
 // Module represents a module instance managed via the package system.
@@ -79,8 +85,10 @@ type Module struct {
 	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	// Spec defines the behavior of a Module.
-	Spec ModuleSpec `json:"spec"`
+	// Spec defines the behavior of a Module. A module a repository offers and nothing
+	// installed carries no package version, so the spec is optional.
+	// +optional
+	Spec ModuleSpec `json:"spec,omitempty"`
 
 	// Status of a Module.
 	Status ModuleStatus `json:"status,omitempty"`
@@ -93,13 +101,21 @@ type ModuleSpec struct {
 	// +crd-enricher:deckhouse:documentation:examples=deckhouse
 	PackageRepositoryName string `json:"packageRepositoryName,omitempty"`
 
-	// Version of the module package to install
-	// +crd-enricher:deckhouse:documentation:examples=v1.0.0.
-	PackageVersion string `json:"packageVersion"`
+	// Version of the module package to install.
+	// Empty while a repository offers the module and nothing installed it.
+	// +crd-enricher:deckhouse:documentation:examples=v1.0.0
+	// +optional
+	PackageVersion string `json:"packageVersion,omitempty"`
 
 	// Release channel for the module package.
+	// +crd-enricher:deckhouse:documentation:examples=alpha
 	// +optional
 	ReleaseChannel string `json:"releaseChannel,omitempty"`
+
+	// Update policy for the module package.
+	// +crd-enricher:deckhouse:documentation:examples=test-alpha
+	// +optional
+	UpdatePolicy string `json:"updatePolicy,omitempty"`
 
 	// Enables or disables the module. Unset leaves the decision to the platform.
 	// +optional
@@ -131,6 +147,15 @@ type ModuleSpec struct {
 }
 
 type ModuleStatus struct {
+	// Module phase.
+	// +kubebuilder:validation:Enum=Unavailable;Available;Downloading;DownloadingError;Reconciling;Installing;HooksDisabled;WaitSyncTasks;Downloaded;Conflict;Ready;Error
+	// +crd-enricher:deckhouse:documentation:examples=[Unavailable, Available, Downloading, DownloadingError, Reconciling, Installing, HooksDisabled, WaitSyncTasks, Downloaded, Conflict, Ready, Error]
+	Phase string `json:"phase,omitempty"`
+
+	// Hooks status report.
+	// +optional
+	HooksState string `json:"hooksState,omitempty"`
+
 	// Summary aggregates the high-level user-facing state, message and
 	// resolution hint for the module. The controller always populates it
 	// on reconcile — every module maps to exactly one lifecycle state — so
@@ -213,4 +238,135 @@ func (m *Module) IsDev() bool {
 // IsEmbedded returns true if the module is embedded in the Deckhouse image.
 func (m *Module) IsEmbedded() bool {
 	return m.Annotations[ModuleAnnotationEmbedded] == "true"
+}
+
+// GetVersion returns the version of the module package.
+func (m *Module) GetVersion() string {
+	return m.Spec.PackageVersion
+}
+
+// IsInstalled reports whether a package backs the module. A module a repository offers and
+// nothing installed carries no package version.
+func (m *Module) IsInstalled() bool {
+	return m.Spec.PackageVersion != ""
+}
+
+// IsNotInstalledPhase reports whether the phase is one a module nothing installed passes
+// through: available, in conflict between repositories, or fetching its first release.
+func (m *Module) IsNotInstalledPhase() bool {
+	switch m.Status.Phase {
+	case v1alpha1.ModulePhaseAvailable,
+		v1alpha1.ModulePhaseConflict,
+		v1alpha1.ModulePhaseDownloading,
+		v1alpha1.ModulePhaseDownloadingError:
+		return true
+	}
+
+	return false
+}
+
+// SetNotInstalledStatus marks the module as available in a repository and not installed.
+func (m *Module) SetNotInstalledStatus() {
+	m.Status.Phase = v1alpha1.ModulePhaseAvailable
+	m.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, v1alpha1.ModuleReasonDisabled, "")
+	m.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
+}
+
+// SetConflictStatus marks a module nothing installed as offered by several repositories with
+// none of them picked.
+func (m *Module) SetConflictStatus() {
+	m.Status.Phase = v1alpha1.ModulePhaseConflict
+	m.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, v1alpha1.ModuleReasonDisabled, "")
+	m.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonConflict, v1alpha1.ModuleMessageConflict)
+}
+
+// ApplyNotInstalledState puts a module nothing installed into the conflict state while several
+// repositories offer it and none is picked, and into the available state otherwise. A module already
+// fetching its first release keeps its way to the deploy. Reports whether the status changed.
+func (m *Module) ApplyNotInstalledState(conflict bool) bool {
+	switch {
+	case conflict:
+		if m.Status.Phase == v1alpha1.ModulePhaseConflict {
+			return false
+		}
+
+		m.SetConflictStatus()
+	case m.Status.Phase == v1alpha1.ModulePhaseConflict, !m.IsNotInstalledPhase():
+		m.SetNotInstalledStatus()
+	default:
+		return false
+	}
+
+	return true
+}
+
+// IsCondition reports whether the named condition is present with the given status.
+func (m *Module) IsCondition(condType string, status metav1.ConditionStatus) bool {
+	cond := meta.FindStatusCondition(m.Status.Conditions, condType)
+
+	return cond != nil && cond.Status == status
+}
+
+// HasCondition reports whether the named condition is present.
+func (m *Module) HasCondition(condType string) bool {
+	return meta.FindStatusCondition(m.Status.Conditions, condType) != nil
+}
+
+// DisabledByModuleConfigMoreThan reports whether the module config has kept the module
+// disabled for at least the timeout.
+func (m *Module) DisabledByModuleConfigMoreThan(timeout time.Duration) bool {
+	cond := meta.FindStatusCondition(m.Status.Conditions, v1alpha1.ModuleConditionEnabledByModuleConfig)
+	if cond == nil || cond.Status != metav1.ConditionFalse {
+		return false
+	}
+
+	return time.Since(cond.LastTransitionTime.Time) >= timeout
+}
+
+// +kubebuilder:object:generate=false
+type ConditionOption func(opts *ConditionSettings)
+
+// WithTimer overrides the clock the condition transition time is taken from.
+func WithTimer(fn func() time.Time) ConditionOption {
+	return func(opts *ConditionSettings) {
+		opts.Timer = fn
+	}
+}
+
+// +kubebuilder:object:generate=false
+type ConditionSettings struct {
+	Timer func() time.Time
+}
+
+// SetConditionTrue sets the condition to True. The reason must not be empty: the schema
+// requires one on every condition.
+func (m *Module) SetConditionTrue(condType, reason string, opts ...ConditionOption) {
+	m.setCondition(condType, metav1.ConditionTrue, reason, "", opts)
+}
+
+// SetConditionFalse sets the condition to False with the reason and message.
+func (m *Module) SetConditionFalse(condType, reason, message string, opts ...ConditionOption) {
+	m.setCondition(condType, metav1.ConditionFalse, reason, message, opts)
+}
+
+// SetConditionUnknown sets the condition to Unknown with the reason and message.
+func (m *Module) SetConditionUnknown(condType, reason, message string, opts ...ConditionOption) {
+	m.setCondition(condType, metav1.ConditionUnknown, reason, message, opts)
+}
+
+// setCondition converges the condition. The transition time moves only when the status
+// changes, so a repeated write of the same state leaves the object untouched.
+func (m *Module) setCondition(condType string, status metav1.ConditionStatus, reason, message string, opts []ConditionOption) {
+	settings := &ConditionSettings{Timer: time.Now}
+	for _, opt := range opts {
+		opt(settings)
+	}
+
+	meta.SetStatusCondition(&m.Status.Conditions, metav1.Condition{
+		Type:               condType,
+		Status:             status,
+		Reason:             reason,
+		Message:            message,
+		LastTransitionTime: metav1.Time{Time: settings.Timer()},
+	})
 }

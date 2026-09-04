@@ -123,19 +123,22 @@ status:
   pullDuration: 0s
   transitionTime: "2019-10-17T15:33:00Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: demo
   resourceVersion: "1005"
-properties: {}
+spec:
+  packageRepositoryName: test-source
+  packageVersion: v1.67.5
 status:
   conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
     message: 'ModuleRelease could not be applied, release postponed: see details in
       the module release v1.75.3'
     reason: ReleaseDeployTimeCheck
     status: "False"
     type: LastReleaseDeployed
+  lastAppliedConfiguration: null
   phase: Ready
+  tracking: null
