@@ -63,7 +63,25 @@ func (r *reconciler) reconcileFinalizer(ctx context.Context, vcp *controlplanev1
 }
 
 func (r *reconciler) finalize(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) (reconcile.Result, error) {
+	if err := r.deletePackagesReferenceGrant(ctx, vcp); err != nil {
+		return reconcile.Result{}, err
+	}
+
 	return r.deletePostgresArtifacts(ctx, vcp)
+}
+
+func (r *reconciler) deletePackagesReferenceGrant(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) error {
+	obj := packagesReferenceGrant(vcp)
+
+	err := r.client.Delete(ctx, obj)
+	if apierrors.IsNotFound(err) || meta.IsNoMatchError(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("delete packages ReferenceGrant: %w", err)
+	}
+
+	return nil
 }
 
 func (r *reconciler) deletePostgresArtifacts(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) (reconcile.Result, error) {
