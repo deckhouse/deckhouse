@@ -49,45 +49,11 @@ type Endpoint interface {
 	String() string
 }
 
-// tcpEndpoint is the whole of a TCP tcpEndpoint and the shared part of every other one.
+// tcpEndpoint is a loopback port.
 type tcpEndpoint struct {
-	network string
 	address string
 }
 
-func (e tcpEndpoint) Network() string {
-	return e.network
-}
-
-func (e tcpEndpoint) Address() string {
-	return e.address
-}
-
-func (e tcpEndpoint) DialTarget() string {
-	return e.address
-}
-
-func (e tcpEndpoint) Free() error {
-	return nil
-}
-
-func (e tcpEndpoint) String() string {
-	return fmt.Sprintf("%s://%s", e.network, e.address)
-}
-
-func (e tcpEndpoint) Accepting(timeout time.Duration) bool {
-	conn, err := net.DialTimeout(e.network, e.address, timeout)
-	if err != nil {
-		return false
-	}
-
-	_ = conn.Close()
-
-	return true
-}
-
-// NewTCPEndpoint reserves a loopback port. Loopback only: the protocol carries
-// provider credentials and has no TLS.
 func NewTCPEndpoint() (Endpoint, error) {
 	listener, err := net.Listen(networkTCP, net.JoinHostPort(loopbackHost, "0"))
 	if err != nil {
@@ -99,17 +65,46 @@ func NewTCPEndpoint() (Endpoint, error) {
 		return nil, fmt.Errorf("failed to close listener: %w", err)
 	}
 
-	return tcpEndpoint{network: networkTCP, address: address}, nil
+	return tcpEndpoint{address: address}, nil
+}
+
+func (e tcpEndpoint) Network() string {
+	return networkTCP
+}
+
+func (e tcpEndpoint) Address() string {
+	return e.address
+}
+
+func (e tcpEndpoint) DialTarget() string {
+	return e.address
+}
+
+func (e tcpEndpoint) Accepting(timeout time.Duration) bool {
+	conn, err := net.DialTimeout(networkTCP, e.address, timeout)
+	if err != nil {
+		return false
+	}
+
+	_ = conn.Close()
+
+	return true
+}
+
+func (e tcpEndpoint) Free() error {
+	return nil
+}
+
+func (e tcpEndpoint) String() string {
+	return fmt.Sprintf("%s://%s", networkTCP, e.address)
 }
 
 // unixEndpoint is a socket in a temporary directory it owns.
 type unixEndpoint struct {
-	tcpEndpoint
-
 	socketDir string
+	address   string
 }
 
-// NewUnixEndpoint creates a Unix socket endpoint in a directory of its own under tmpDir.
 func NewUnixEndpoint(tmpDir string) (Endpoint, error) {
 	if tmpDir != "" {
 		if err := os.MkdirAll(tmpDir, socketDirMode); err != nil {
@@ -123,16 +118,32 @@ func NewUnixEndpoint(tmpDir string) (Endpoint, error) {
 	}
 
 	return &unixEndpoint{
-		tcpEndpoint: tcpEndpoint{
-			network: networkUnix,
-			address: filepath.Join(dir, socketFileName),
-		},
 		socketDir: dir,
+		address:   filepath.Join(dir, socketFileName),
 	}, nil
 }
 
+func (e *unixEndpoint) Network() string {
+	return networkUnix
+}
+
+func (e *unixEndpoint) Address() string {
+	return e.address
+}
+
 func (e *unixEndpoint) DialTarget() string {
-	return "unix://" + e.address
+	return networkUnix + "://" + e.address
+}
+
+func (e *unixEndpoint) Accepting(timeout time.Duration) bool {
+	conn, err := net.DialTimeout(networkUnix, e.address, timeout)
+	if err != nil {
+		return false
+	}
+
+	_ = conn.Close()
+
+	return true
 }
 
 func (e *unixEndpoint) Free() error {
@@ -145,4 +156,8 @@ func (e *unixEndpoint) Free() error {
 	}
 
 	return nil
+}
+
+func (e *unixEndpoint) String() string {
+	return fmt.Sprintf("%s://%s", networkUnix, e.address)
 }
