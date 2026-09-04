@@ -149,7 +149,7 @@ func versionFromDir(moduleDir string) (*v1alpha1.ModulePackageVersionStatusMetad
 // the repository scan described it, and the disk must not overwrite that. The
 // callers run where the files are certainly on disk, the module loader after a
 // restore and the release controller at deploy, so the metadata reaches the
-// readers without the package feature and its promoter.
+// readers at once, without waiting for the version controller to pull the image.
 func EnsureModulePackageVersion(ctx context.Context, reader client.Reader, writer client.Client, dc dependency.Container, spec v1alpha1.ModulePackageVersionSpec, moduleDir string, logger *log.Logger) error {
 	return newSyncer(reader, writer, dc, "", "", "", logger).ensureDraftFilled(ctx, spec, moduleDir)
 }
