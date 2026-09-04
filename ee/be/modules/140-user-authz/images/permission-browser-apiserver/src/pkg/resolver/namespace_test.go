@@ -745,6 +745,218 @@ func TestResolveAccessibleNamespaces_CARLimitOnly_Unchanged(t *testing.T) {
 		"CAR-only user must see exactly the CAR's limited namespaces")
 }
 
+// TestResolveAccessibleNamespaces_SuperAdminVsEditor locks the AccessibleNamespaces
+// split that BulkSAR must stay consistent with: SuperAdmin (matchAny, system
+// access) sees every namespace the CAR CRB can reach, including kube-system;
+// Editor (limitNamespaces) sees only the CAR ns and never a system ns.
+func TestResolveAccessibleNamespaces_SuperAdminVsEditor(t *testing.T) {
+	deckhouseLabels := map[string]string{"heritage": "deckhouse", "module": "user-authz"}
+	wildcard := []rbacv1.PolicyRule{{
+		APIGroups: []string{"*"}, Resources: []string{"*"}, Verbs: []string{"*"},
+	}}
+	objs := []runtime.Object{
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-in"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-out"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kube-system"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "d8-system"}},
+		&rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{Name: "user-authz:super-admin"},
+			Rules:      wildcard,
+		},
+		&rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{Name: "user-authz:editor"},
+			Rules:      wildcard,
+		},
+		&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "user-authz:super:super-admin", Labels: deckhouseLabels},
+			Subjects:   []rbacv1.Subject{{Kind: rbacv1.UserKind, Name: "super@example.io"}},
+			RoleRef:    rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "user-authz:super-admin"},
+		},
+		&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "user-authz:editor:editor", Labels: deckhouseLabels},
+			Subjects:   []rbacv1.Subject{{Kind: rbacv1.UserKind, Name: "editor@example.io"}},
+			RoleRef:    rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "user-authz:editor"},
+		},
+	}
+
+	superEngine := newMTEngineFromConfig(t, `{
+		"crds": [{
+			"name": "super",
+			"spec": {
+				"accessLevel": "SuperAdmin",
+				"allowAccessToSystemNamespaces": true,
+				"namespaceSelector": {"matchAny": true},
+				"subjects": [{"kind": "User", "name": "super@example.io"}]
+			}
+		}]
+	}`)
+	editorEngine := newMTEngineFromConfig(t, `{
+		"crds": [{
+			"name": "editor",
+			"spec": {
+				"accessLevel": "Editor",
+				"limitNamespaces": ["ns-in"],
+				"subjects": [{"kind": "User", "name": "editor@example.io"}]
+			}
+		}]
+	}`)
+
+	superNS, err := setupResolver(t, objs, superEngine).ResolveAccessibleNamespaces(
+		&user.DefaultInfo{Name: "super@example.io", Groups: []string{"system:authenticated"}},
+	)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"ns-in", "ns-out", "kube-system", "d8-system"}, superNS,
+		"SuperAdmin matchAny must list every namespace the CAR CRB can reach")
+
+	editorNS, err := setupResolver(t, objs, editorEngine).ResolveAccessibleNamespaces(
+		&user.DefaultInfo{Name: "editor@example.io", Groups: []string{"system:authenticated"}},
+	)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"ns-in"}, editorNS,
+		"Editor limitNamespaces must not leak ns-out or system namespaces")
+
+	editorResolver := setupResolver(t, objs, editorEngine)
+	editorUser := &user.DefaultInfo{Name: "editor@example.io", Groups: []string{"system:authenticated"}}
+	in, err := editorResolver.IsNamespaceAccessible(editorUser, "ns-in")
+	require.NoError(t, err)
+	assert.True(t, in)
+	out, err := editorResolver.IsNamespaceAccessible(editorUser, "ns-out")
+	require.NoError(t, err)
+	assert.False(t, out)
+	sys, err := editorResolver.IsNamespaceAccessible(editorUser, "kube-system")
+	require.NoError(t, err)
+	assert.False(t, sys)
+}
+
+// TestResolveAccessibleNamespaces_LimitNamespacesEqualsLabelSelector locks
+// that the two CAR filter forms produce the same AccessibleNamespaces set.
+func TestResolveAccessibleNamespaces_LimitNamespacesEqualsLabelSelector(t *testing.T) {
+	deckhouseLabels := map[string]string{"heritage": "deckhouse", "module": "user-authz"}
+	wildcard := []rbacv1.PolicyRule{{
+		APIGroups: []string{"*"}, Resources: []string{"*"}, Verbs: []string{"*"},
+	}}
+	objs := []runtime.Object{
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{
+			Name:   "ns-in",
+			Labels: map[string]string{"pba-perf": "true"},
+		}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-out"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kube-system"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "d8-system"}},
+		&rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{Name: "user-authz:editor"},
+			Rules:      wildcard,
+		},
+		&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "user-authz:editor:editor", Labels: deckhouseLabels},
+			Subjects:   []rbacv1.Subject{{Kind: rbacv1.UserKind, Name: "editor@example.io"}},
+			RoleRef:    rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "user-authz:editor"},
+		},
+	}
+
+	limitEngine := newMTEngineWithNamespaces(t, `{
+		"crds": [{
+			"name": "editor",
+			"spec": {
+				"accessLevel": "Editor",
+				"limitNamespaces": ["ns-in"],
+				"subjects": [{"kind": "User", "name": "editor@example.io"}]
+			}
+		}]
+	}`, objs)
+	selectorEngine := newMTEngineWithNamespaces(t, `{
+		"crds": [{
+			"name": "editor-sel",
+			"spec": {
+				"accessLevel": "Editor",
+				"namespaceSelector": {"labelSelector": {"matchLabels": {"pba-perf": "true"}}},
+				"subjects": [{"kind": "User", "name": "editor@example.io"}]
+			}
+		}]
+	}`, objs)
+
+	u := &user.DefaultInfo{Name: "editor@example.io", Groups: []string{"system:authenticated"}}
+	fromLimit, err := setupResolver(t, objs, limitEngine).ResolveAccessibleNamespaces(u)
+	require.NoError(t, err)
+	fromSelector, err := setupResolver(t, objs, selectorEngine).ResolveAccessibleNamespaces(u)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"ns-in"}, fromLimit)
+	assert.ElementsMatch(t, fromLimit, fromSelector)
+}
+
+func TestResolveAccessibleNamespaces_TwoCARsUnion(t *testing.T) {
+	deckhouseLabels := map[string]string{"heritage": "deckhouse", "module": "user-authz"}
+	wildcard := []rbacv1.PolicyRule{{
+		APIGroups: []string{"*"}, Resources: []string{"*"}, Verbs: []string{"*"},
+	}}
+	objs := []runtime.Object{
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-a"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-b"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-out"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default"}},
+		&rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{Name: "user-authz:editor"},
+			Rules:      wildcard,
+		},
+		&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "user-authz:a:editor", Labels: deckhouseLabels},
+			Subjects:   []rbacv1.Subject{{Kind: rbacv1.UserKind, Name: "dual@example.io"}},
+			RoleRef:    rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "user-authz:editor"},
+		},
+		&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "user-authz:b:editor", Labels: deckhouseLabels},
+			Subjects:   []rbacv1.Subject{{Kind: rbacv1.UserKind, Name: "dual@example.io"}},
+			RoleRef:    rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "user-authz:editor"},
+		},
+	}
+	engine := newMTEngineFromConfig(t, `{
+		"crds": [
+			{"name": "a", "spec": {"limitNamespaces": ["ns-a"], "subjects": [{"kind": "User", "name": "dual@example.io"}]}},
+			{"name": "b", "spec": {"limitNamespaces": ["ns-b"], "subjects": [{"kind": "User", "name": "dual@example.io"}]}}
+		]
+	}`)
+	got, err := setupResolver(t, objs, engine).ResolveAccessibleNamespaces(
+		&user.DefaultInfo{Name: "dual@example.io", Groups: []string{"system:authenticated"}},
+	)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"ns-a", "ns-b"}, got)
+}
+
+func TestResolveAccessibleNamespaces_DefaultIsSystem(t *testing.T) {
+	deckhouseLabels := map[string]string{"heritage": "deckhouse", "module": "user-authz"}
+	wildcard := []rbacv1.PolicyRule{{
+		APIGroups: []string{"*"}, Resources: []string{"*"}, Verbs: []string{"*"},
+	}}
+	objs := []runtime.Object{
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "ns-in"}},
+		&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default"}},
+		&rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{Name: "user-authz:editor"},
+			Rules:      wildcard,
+		},
+		&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "user-authz:editor:editor", Labels: deckhouseLabels},
+			Subjects:   []rbacv1.Subject{{Kind: rbacv1.UserKind, Name: "editor@example.io"}},
+			RoleRef:    rbacv1.RoleRef{APIGroup: "rbac.authorization.k8s.io", Kind: "ClusterRole", Name: "user-authz:editor"},
+		},
+	}
+	engine := newMTEngineFromConfig(t, `{
+		"crds": [{
+			"name": "editor",
+			"spec": {
+				"limitNamespaces": ["ns-in", "default"],
+				"subjects": [{"kind": "User", "name": "editor@example.io"}]
+			}
+		}]
+	}`)
+	got, err := setupResolver(t, objs, engine).ResolveAccessibleNamespaces(
+		&user.DefaultInfo{Name: "editor@example.io"},
+	)
+	require.NoError(t, err)
+	assert.ElementsMatch(t, []string{"ns-in"}, got,
+		"default is a system namespace and stays hidden without allowAccessToSystemNamespaces")
+}
+
 // Helper functions
 
 // newMTEngineFromConfig writes a user-authz config.json with the supplied raw body
@@ -757,6 +969,31 @@ func newMTEngineFromConfig(t *testing.T, body string) *multitenancy.Engine {
 	path := filepath.Join(dir, "config.json")
 	require.NoError(t, os.WriteFile(path, []byte(body), 0o600))
 	engine, err := multitenancy.NewEngine(path, nil, nil, nil)
+	require.NoError(t, err)
+	return engine
+}
+
+// newMTEngineWithNamespaces is newMTEngineFromConfig plus a namespace lister
+// so namespaceSelector.matchLabels can resolve. The lister is backed by a
+// separate fake client populated from objs; setupResolver builds its own.
+func newMTEngineWithNamespaces(t *testing.T, body string, objs []runtime.Object) *multitenancy.Engine {
+	t.Helper()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.json")
+	require.NoError(t, os.WriteFile(path, []byte(body), 0o600))
+
+	client := fake.NewSimpleClientset(objs...)
+	factory := informers.NewSharedInformerFactory(client, 0)
+	nsInformer := factory.Core().V1().Namespaces()
+	lister := nsInformer.Lister() // register before Start
+	stop := make(chan struct{})
+	t.Cleanup(func() { close(stop) })
+	factory.Start(stop)
+	for typ, ok := range factory.WaitForCacheSync(stop) {
+		require.True(t, ok, "informer %v failed to sync", typ)
+	}
+
+	engine, err := multitenancy.NewEngine(path, lister, func() bool { return true }, nil)
 	require.NoError(t, err)
 	return engine
 }

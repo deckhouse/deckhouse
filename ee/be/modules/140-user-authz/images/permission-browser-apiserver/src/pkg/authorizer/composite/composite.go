@@ -8,9 +8,14 @@ package composite
 import (
 	"context"
 
+	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/klog/v2"
 )
+
+type subjectBinder interface {
+	BindSubject(context.Context, user.Info) context.Context
+}
 
 // CompositeAuthorizer combines multi-tenancy and RBAC authorization
 // Order of operations:
@@ -27,6 +32,18 @@ func NewCompositeAuthorizer(mt, rbac authorizer.Authorizer) *CompositeAuthorizer
 		multitenancy: mt,
 		rbac:         rbac,
 	}
+}
+
+// BindSubject forwards a per-request RBAC snapshot to whichever inner
+// authorizer implements it (RBAC, and MT if it ever needs one).
+func (c *CompositeAuthorizer) BindSubject(ctx context.Context, u user.Info) context.Context {
+	if b, ok := c.rbac.(subjectBinder); ok {
+		ctx = b.BindSubject(ctx, u)
+	}
+	if b, ok := c.multitenancy.(subjectBinder); ok {
+		ctx = b.BindSubject(ctx, u)
+	}
+	return ctx
 }
 
 // Authorize implements authorizer.Authorizer

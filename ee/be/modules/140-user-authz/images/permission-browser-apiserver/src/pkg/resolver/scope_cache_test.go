@@ -90,6 +90,31 @@ func TestIsNamespaced_UnknownResource(t *testing.T) {
 		"unknown core resource should be assumed cluster-scoped")
 }
 
+// TestScope_KnownVsUnknown pins the three-way answer used by multi-tenancy:
+// known namespaced, known cluster-scoped, and !known. IsNamespaced must keep
+// coercing !known to cluster-scoped so AccessibleNamespaces does not inflate.
+func TestScope_KnownVsUnknown(t *testing.T) {
+	cache := &ResourceScopeCache{
+		scopeMap: map[string]bool{
+			"/pods":  true,
+			"/nodes": false,
+		},
+	}
+
+	namespaced, known := cache.Scope("", "pods")
+	assert.True(t, namespaced)
+	assert.True(t, known)
+
+	namespaced, known = cache.Scope("", "nodes")
+	assert.False(t, namespaced)
+	assert.True(t, known)
+
+	namespaced, known = cache.Scope("custom.example.com", "unknownresource")
+	assert.False(t, namespaced)
+	assert.False(t, known)
+	assert.False(t, cache.IsNamespaced("custom.example.com", "unknownresource"))
+}
+
 // TestRefresh_UpdatesCache tests that refresh updates the cache with new data
 func TestRefresh_UpdatesCache(t *testing.T) {
 	client := newMockDiscovery(testAPIResources(), nil)
