@@ -28,7 +28,7 @@ on:
       test_config:
         description: 'JSON string of parameters which was tested'
         required: false
-        default: '{"cri":"Containerd","ver":"1.32","edition":"FE"}'
+        default: '{"cri":"Containerd","ver":"1.35","edition":"FE"}'
       # needs for run correct installer image for abort
       installer_image_path:
         description: 'Installer image without host'
@@ -88,14 +88,12 @@ jobs:
       pull-requests: write
     outputs:
 
-      run_containerd_1_32: ${{ steps.check.outputs.run_containerd_1_32 }}
       run_containerd_1_33: ${{ steps.check.outputs.run_containerd_1_33 }}
       run_containerd_1_34: ${{ steps.check.outputs.run_containerd_1_34 }}
       run_containerd_1_35: ${{ steps.check.outputs.run_containerd_1_35 }}
       run_containerd_1_36: ${{ steps.check.outputs.run_containerd_1_36 }}
       run_containerd_1_37: ${{ steps.check.outputs.run_containerd_1_37 }}
       run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
-      run_containerdv2_1_32: ${{ steps.check.outputs.run_containerdv2_1_32 }}
       run_containerdv2_1_33: ${{ steps.check.outputs.run_containerdv2_1_33 }}
       run_containerdv2_1_34: ${{ steps.check.outputs.run_containerdv2_1_34 }}
       run_containerdv2_1_35: ${{ steps.check.outputs.run_containerdv2_1_35 }}
@@ -120,7 +118,7 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const provider = 'static';
-            const kubernetesDefaultVersion = '1.34';
+            const kubernetesDefaultVersion = '1.35';
 
             const ci = require('./.github/scripts/js/ci');
             return await ci.checkE2ELabels({github, context, core, provider, kubernetesDefaultVersion});
@@ -4849,12 +4847,12 @@ jobs:
 
   last_comment:
     name: Update comment on finish
-    needs: ["started_at","run_containerd_1_32","run_containerd_1_33","run_containerd_1_34","run_containerd_1_35","run_containerd_1_36","run_containerd_1_37","run_containerd_automatic","run_containerdv2_1_32","run_containerdv2_1_33","run_containerdv2_1_34","run_containerdv2_1_35","run_containerdv2_1_36","run_containerdv2_1_37","run_containerdv2_automatic"]
+    needs: ["started_at","run_containerd_1_33","run_containerd_1_34","run_containerd_1_35","run_containerd_1_36","run_containerd_1_37","run_containerd_automatic","run_containerdv2_1_33","run_containerdv2_1_34","run_containerdv2_1_35","run_containerdv2_1_36","run_containerdv2_1_37","run_containerdv2_automatic"]
     if: ${{ always() }}
     runs-on: "regular"
     env:
       JOB_NAMES: |
-        {"run_containerd_1_32":"destroy cluster: Static, Containerd, Kubernetes 1.32","run_containerd_1_33":"destroy cluster: Static, Containerd, Kubernetes 1.33","run_containerd_1_34":"destroy cluster: Static, Containerd, Kubernetes 1.34","run_containerd_1_35":"destroy cluster: Static, Containerd, Kubernetes 1.35","run_containerd_1_36":"destroy cluster: Static, Containerd, Kubernetes 1.36","run_containerd_1_37":"destroy cluster: Static, Containerd, Kubernetes 1.37","run_containerd_automatic":"destroy cluster: Static, Containerd, Kubernetes Automatic","run_containerdv2_1_32":"destroy cluster: Static, ContainerdV2, Kubernetes 1.32","run_containerdv2_1_33":"destroy cluster: Static, ContainerdV2, Kubernetes 1.33","run_containerdv2_1_34":"destroy cluster: Static, ContainerdV2, Kubernetes 1.34","run_containerdv2_1_35":"destroy cluster: Static, ContainerdV2, Kubernetes 1.35","run_containerdv2_1_36":"destroy cluster: Static, ContainerdV2, Kubernetes 1.36","run_containerdv2_1_37":"destroy cluster: Static, ContainerdV2, Kubernetes 1.37","run_containerdv2_automatic":"destroy cluster: Static, ContainerdV2, Kubernetes Automatic"}
+        {"run_containerd_1_33":"destroy cluster: Static, Containerd, Kubernetes 1.33","run_containerd_1_34":"destroy cluster: Static, Containerd, Kubernetes 1.34","run_containerd_1_35":"destroy cluster: Static, Containerd, Kubernetes 1.35","run_containerd_1_36":"destroy cluster: Static, Containerd, Kubernetes 1.36","run_containerd_1_37":"destroy cluster: Static, Containerd, Kubernetes 1.37","run_containerd_automatic":"destroy cluster: Static, Containerd, Kubernetes Automatic","run_containerdv2_1_33":"destroy cluster: Static, ContainerdV2, Kubernetes 1.33","run_containerdv2_1_34":"destroy cluster: Static, ContainerdV2, Kubernetes 1.34","run_containerdv2_1_35":"destroy cluster: Static, ContainerdV2, Kubernetes 1.35","run_containerdv2_1_36":"destroy cluster: Static, ContainerdV2, Kubernetes 1.36","run_containerdv2_1_37":"destroy cluster: Static, ContainerdV2, Kubernetes 1.37","run_containerdv2_automatic":"destroy cluster: Static, ContainerdV2, Kubernetes Automatic"}
     steps:
 
       # <template: checkout_step>
