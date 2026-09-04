@@ -5,3 +5,14 @@ negative:
   configValues:
   - {}
   - instances: [false, true]
+  - instances: ["Uppercase"]
+  - instances: ["under_score"]
+  - instances:
+    - |-
+      valid
+      ---
+      apiVersion: v1
+      kind: ConfigMap
+      metadata:
+        name: pwned
+        namespace: kube-prometheus-pushgateway

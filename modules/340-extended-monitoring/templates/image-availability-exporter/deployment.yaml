@@ -68,13 +68,13 @@ spec:
         # The exporter checks for string equality.
         # https://github.com/deckhouse/k8s-image-availability-exporter/blob/b1589b40c18290b9d105f0ac39ddc3fc554884d9/pkg/registry_checker/checker.go#L212
         # Among known inexisting images, there is the one from Upmeter probe where we don't want a container to start.
-        - --check-interval={{ .Values.extendedMonitoring.imageAvailability.imageCheckInterval }}
-        - --default-registry={{ .Values.extendedMonitoring.imageAvailability.defaultRegistry }}
+        - {{ printf "--check-interval=%s" .Values.extendedMonitoring.imageAvailability.imageCheckInterval | quote }}
+        - {{ printf "--default-registry=%s" .Values.extendedMonitoring.imageAvailability.defaultRegistry | quote }}
         {{- $ignoredImages := list ".*upmeter-nonexistent.*" }}
         {{- if .Values.extendedMonitoring.imageAvailability.ignoredImages }}
           {{- $ignoredImages = concat $ignoredImages .Values.extendedMonitoring.imageAvailability.ignoredImages }}
         {{- end }}
-        - '--ignored-images={{ $ignoredImages | join "~" }}'
+        - {{ printf "--ignored-images=%s" ($ignoredImages | join "~") | quote }}
         - --namespace-label=extended-monitoring.deckhouse.io/enabled
         {{- with .Values.extendedMonitoring.imageAvailability.registry.tlsConfig.insecureSkipVerify }}
         - --skip-registry-cert-verification
@@ -93,7 +93,7 @@ spec:
         {{- end }}
         {{- if .Values.extendedMonitoring.imageAvailability.mirrors }}
         {{- range $mirror := .Values.extendedMonitoring.imageAvailability.mirrors }}
-        - '--image-mirror={{ printf "%s=%s" $mirror.original $mirror.mirror }}'
+        - {{ printf "--image-mirror=%s=%s" $mirror.original $mirror.mirror | quote }}
         {{- end }}
         {{- end }}
         env:

@@ -244,7 +244,7 @@ spec:
 {{- if .Values.prometheus.internal.remoteWrite }}
   remoteWrite:
   {{- range .Values.prometheus.internal.remoteWrite }}
-  - url: {{ .spec.url }}
+  - url: {{ .spec.url | quote }}
     {{- if .spec.basicAuth }}
     basicAuth:
       username:
@@ -254,7 +254,7 @@ spec:
         name: d8-prometheus-remote-write-{{ .name }}
         key: password
     {{- else if .spec.bearerToken }}
-    bearerToken: {{ .spec.bearerToken }}
+    bearerToken: {{ .spec.bearerToken | quote }}
     {{- end }}
     {{- if or .spec.customAuthToken .spec.headers }}
     headers:
@@ -271,9 +271,9 @@ spec:
       {{- end }}
       {{- with $externalLabels }}
       {{- range $key, $value := . }}
-      - sourceLabels: [{{ $key }}]
+      - sourceLabels: [{{ $key | quote }}]
         regex: "^$"
-        targetLabel: {{ $key }}
+        targetLabel: {{ $key | quote }}
         replacement: {{ $value | quote }}
       {{- end }}
       {{- end }}
