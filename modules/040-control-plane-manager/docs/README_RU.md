@@ -110,7 +110,7 @@ spec:
 
 Обновление **patch-версии** компонентов control plane (то есть в рамках минорной версии, например с `1.31.13` на `1.31.14`) происходит автоматически вместе с обновлением версии DKP. Управлять обновлением patch-версий нельзя.
 
-Обновлением **минорной-версии** компонентов control plane (например, с `1.32.*` на `1.33.*`) можно управлять с помощью параметра [kubernetesVersion](configuration.html#parameters-kubernetesversion) ModuleConfig `control-plane-manager`, в котором можно выбрать режим следования за версией по умолчанию для текущего релиза DKP (значение `Default`) или указать желаемую минорную версию control plane. Версию control plane, которая используется по умолчанию (при `kubernetesVersion: Default`), а также список поддерживаемых версий Kubernetes можно найти в разделе [«Поддерживаемые версии Kubernetes и ОС»](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
+Обновлением **минорной-версии** компонентов control plane (например, с `1.33.*` на `1.34.*`) можно управлять с помощью параметра [kubernetesVersion](configuration.html#parameters-kubernetesversion) ModuleConfig `control-plane-manager`, в котором можно выбрать режим следования за версией по умолчанию для текущего релиза DKP (значение `Default`) или указать желаемую минорную версию control plane. Версию control plane, которая используется по умолчанию (при `kubernetesVersion: Default`), а также список поддерживаемых версий Kubernetes можно найти в разделе [«Поддерживаемые версии Kubernetes и ОС»](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
 
 Версия Kubernetes в кластере определяется в следующем порядке: параметр `kubernetesVersion` в ModuleConfig `control-plane-manager`, затем устаревшее поле [`ClusterConfiguration.kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion), затем версия по умолчанию текущего релиза DKP. Значение из ModuleConfig имеет приоритет всегда, когда оно задано, включая `Default`; пока оно не задано, версию определяет устаревшее поле. Алерт `D8ObsoleteKubernetesVersionFieldInClusterConfiguration` появляется в кластере при самом факте присутствия поля — в том числе когда версию уже определяет параметр в ModuleConfig, — и пропадает только после удаления этого поля из `ClusterConfiguration`.
 
@@ -135,7 +135,7 @@ spec:
 - Общие замечания:
   - Обновление в разных NodeGroup выполняется параллельно. Внутри каждой NogeGroup узлы обновляются последовательно, по одному.
 - При upgrade:
-  - Обновление происходит **последовательными этапами**, по одной минорной версии: 1.32 -> 1.33, 1.33 -> 1.34, 1.35 -> 1.36.
+  - Обновление происходит **последовательными этапами**, по одной минорной версии: 1.33 -> 1.34, 1.34 -> 1.35, 1.35 -> 1.36, 1.36 -> 1.37.
   - На каждом этапе сначала обновляется версия control plane, затем происходит обновление kubelet на узлах кластера.  
 - При downgrade (не поддерживается для редакций CSE):
   - Успешное понижение версии гарантируется только на одну версию вниз от максимальной минорной версии control plane, когда-либо использовавшейся в кластере.
