@@ -268,6 +268,18 @@
 - apiGroups:
   - ""
   resources:
+  - pods/resize
+  verbs:
+  - patch
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts/token
+  verbs:
+  - create
+- apiGroups:
+  - ""
+  resources:
   - secrets
   verbs:
   {{- include "user_authz_verbs" "w" }}
@@ -359,6 +371,12 @@
   - namespaces
   verbs:
   {{- include "user_authz_verbs" "rw" }}
+- apiGroups:
+  - ""
+  resources:
+  - namespaces/finalize
+  verbs:
+  - update
 - apiGroups:
   - ""
   resources:

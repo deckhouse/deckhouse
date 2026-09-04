@@ -262,6 +262,10 @@ read:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `Editor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`):
 
 ```text
+create:
+    - serviceaccounts/token
+patch:
+    - pods/resize
 read-write:
     - apps/deployments
     - apps/statefulsets
@@ -311,6 +315,15 @@ write:
 ```text
 read-write:
     - deckhouse.io/clusterauthorizationrules
+    - nodes/configz
+    - nodes/healthz
+    - nodes/log
+    - nodes/metrics
+    - nodes/pods
+    - nodes/proxy
+    - nodes/stats
+update:
+    - namespaces/finalize
 write:
     - limitranges
     - namespaces

@@ -35,7 +35,7 @@ func Test(t *testing.T) {
 const (
 	customClusterRolesFlat = `---
 admin:
-  - cert-manager:user-authz:user
+- cert-manager:user-authz:user
 editor:
 - cert-manager:user-authz:editor
 `
@@ -76,29 +76,29 @@ editor:
 	// "crds", ARs in "ars".
 	testCLusterRoleCRDsWithCRDsKey = `---
 crds:
-  - name: testenev
-    spec:
-      accessLevel: Admin
-      allowScale: true
-      limitNamespaces:
-      - default
-      - .*
-      subjects:
-      - kind: User
-        name: Efrem Testenev
-      additionalRoles:
-      - apiGroup: rbac.authorization.k8s.io
-        kind: ClusterRole
-        name: cluster-write-all
+- name: testenev
+  spec:
+    accessLevel: Admin
+    allowScale: true
+    limitNamespaces:
+    - default
+    - .*
+    subjects:
+    - kind: User
+      name: Efrem Testenev
+    additionalRoles:
+    - apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: cluster-write-all
 ars:
-  - name: testenev-namespaced
-    namespace: testenv
-    spec:
-      accessLevel: Editor
-      allowScale: true
-      subjects:
-      - kind: User
-        name: Namespace Testenev
+- name: testenev-namespaced
+  namespace: testenv
+  spec:
+    accessLevel: Editor
+    allowScale: true
+    subjects:
+    - kind: User
+      name: Namespace Testenev
 `
 
 	testRoleCRDs = `---
@@ -108,8 +108,8 @@ ars:
     accessLevel: Editor
     allowScale: true
     subjects:
-      - kind: User
-        name: Namespace Testenev
+    - kind: User
+      name: Namespace Testenev
 `
 )
 
@@ -659,6 +659,24 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 				Expect(cr.Exists()).To(BeTrue())
 				Expect(cr.Field("rules").String()).NotTo(ContainSubstring(`"projects"`))
 			})
+		})
+	})
+
+	Context("namespaces/finalize access", func() {
+		BeforeEach(func() {
+			f.HelmRender()
+		})
+
+		It("user-authz:cluster-admin should have namespaces/finalize access", func() {
+			cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:cluster-admin")
+			Expect(cr.Exists()).To(BeTrue())
+			Expect(cr.Field("rules").String()).To(ContainSubstring("namespaces/finalize"))
+		})
+
+		It("user-authz:cluster-editor should not have namespaces/finalize access", func() {
+			cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:cluster-editor")
+			Expect(cr.Exists()).To(BeTrue())
+			Expect(cr.Field("rules").String()).NotTo(ContainSubstring("namespaces/finalize"))
 		})
 	})
 
