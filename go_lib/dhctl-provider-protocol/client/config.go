@@ -15,6 +15,8 @@
 package client
 
 import (
+	"slices"
+
 	"google.golang.org/grpc"
 )
 
@@ -44,7 +46,7 @@ func (c Config) Validate() error {
 
 func (c Config) Merge(other Config) Config {
 	if len(other.GRPCOptions) > 0 {
-		c.GRPCOptions = other.GRPCOptions
+		c.GRPCOptions = slices.Concat(c.GRPCOptions, other.GRPCOptions)
 	}
 	return c
 }

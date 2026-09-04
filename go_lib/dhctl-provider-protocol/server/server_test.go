@@ -109,13 +109,11 @@ func TestConfigMerge(t *testing.T) {
 			want:  server.Config{Network: "tcp", Address: "127.0.0.1:0"},
 		},
 		{
-			// A caller passing options takes over the whole set — the message-size
-			// limits included, which is why NewConfig() is the base to start from.
-			name:     "lets the caller replace the protocol's options",
+			name:     "adds the caller's options to the protocol's",
 			base:     server.NewConfig(),
 			other:    server.Config{Address: "127.0.0.1:0", GRPCOptions: []grpc.ServerOption{grpc.ConnectionTimeout(0)}},
 			want:     server.Config{Network: server.DefaultNetwork, Address: "127.0.0.1:0"},
-			wantOpts: 1,
+			wantOpts: 3,
 		},
 	}
 

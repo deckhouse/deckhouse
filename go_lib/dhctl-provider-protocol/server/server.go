@@ -21,6 +21,7 @@ import (
 	"log/slog"
 	"net"
 	"runtime/debug"
+	"slices"
 	"sync"
 
 	"google.golang.org/grpc"
@@ -95,7 +96,7 @@ func (c Config) Merge(other Config) Config {
 	}
 
 	if len(other.GRPCOptions) > 0 {
-		c.GRPCOptions = other.GRPCOptions
+		c.GRPCOptions = slices.Concat(c.GRPCOptions, other.GRPCOptions)
 	}
 	return c
 }
