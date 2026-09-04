@@ -794,6 +794,62 @@ class TestIdentityAssignHook(unittest.TestCase):
             "DexProvider", "UPDATE", spec, old_spec=old, username=CLUSTER_ADMIN))
         self.assertFalse(out.validations.data[0]["allowed"])
 
+    def test_clusteradmin_cannot_skip_saml_signature_validation(self):
+        spec = {"type": "SAML", "displayName": "corp",
+                "saml": {"filterGroups": True, "allowedGroups": ["devs"],
+                         "ssoURL": "https://idp/sso",
+                         "insecureSkipSignatureValidation": True}}
+        old = {"type": "SAML", "displayName": "corp",
+               "saml": {"filterGroups": True, "allowedGroups": ["devs"],
+                        "ssoURL": "https://idp/sso",
+                        "insecureSkipSignatureValidation": False}}
+        out = self.run_hook(ctx(
+            "DexProvider", "UPDATE", spec, old_spec=old, username=CLUSTER_ADMIN))
+        self.assertFalse(out.validations.data[0]["allowed"])
+        self.assertIn("user-authz:super-admin", out.validations.data[0]["message"])
+
+    def test_clusteradmin_cannot_remap_oidc_email_claim(self):
+        spec = {"type": "OIDC", "displayName": "corp",
+                "oidc": {"issuer": "https://idp", "claimMappingOverride": True,
+                         "claimMapping": {"email": "nickname"}}}
+        old = {"type": "OIDC", "displayName": "corp",
+               "oidc": {"issuer": "https://idp", "claimMappingOverride": True,
+                        "claimMapping": {"email": "email"}}}
+        out = self.run_hook(ctx(
+            "DexProvider", "UPDATE", spec, old_spec=old, username=CLUSTER_ADMIN))
+        self.assertFalse(out.validations.data[0]["allowed"])
+
+    def test_clusteradmin_cannot_skip_oidc_email_verification(self):
+        spec = {"type": "OIDC", "displayName": "corp",
+                "oidc": {"issuer": "https://idp", "insecureSkipEmailVerified": True}}
+        old = {"type": "OIDC", "displayName": "corp",
+               "oidc": {"issuer": "https://idp", "insecureSkipEmailVerified": False}}
+        out = self.run_hook(ctx(
+            "DexProvider", "UPDATE", spec, old_spec=old, username=CLUSTER_ADMIN))
+        self.assertFalse(out.validations.data[0]["allowed"])
+
+    def test_clusteradmin_can_rotate_ldap_bind_password(self):
+        spec = {"type": "LDAP", "displayName": "corp",
+                "ldap": {"host": "ldap:389", "bindDN": "cn=svc", "bindPW": "new"}}
+        old = {"type": "LDAP", "displayName": "corp",
+               "ldap": {"host": "ldap:389", "bindDN": "cn=svc", "bindPW": "old"}}
+        out = self.run_hook(ctx(
+            "DexProvider", "UPDATE", spec, old_spec=old, username=CLUSTER_ADMIN))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_superadmin_can_skip_saml_signature_validation(self):
+        spec = {"type": "SAML", "displayName": "corp",
+                "saml": {"filterGroups": True, "allowedGroups": ["devs"],
+                         "ssoURL": "https://idp/sso",
+                         "insecureSkipSignatureValidation": True}}
+        old = {"type": "SAML", "displayName": "corp",
+               "saml": {"filterGroups": True, "allowedGroups": ["devs"],
+                        "ssoURL": "https://idp/sso",
+                        "insecureSkipSignatureValidation": False}}
+        out = self.run_hook(ctx(
+            "DexProvider", "UPDATE", spec, old_spec=old, username=SUPERADMIN))
+        tests.assert_validation_allowed(self, out, None)
+
     def test_superadmin_can_repoint_open_oidc_issuer(self):
         spec = {"type": "OIDC", "displayName": "corp",
                 "oidc": {"issuer": "https://evil"}}

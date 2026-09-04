@@ -449,6 +449,37 @@ class TestIdentityCollection(unittest.TestCase):
         new = {"type": "OIDC", "oidc": {"issuer": "https://evil"}}
         self.assertNotEqual(assign.dex_trust_anchor(old), assign.dex_trust_anchor(new))
 
+    def test_dex_trust_anchor_changes_with_signature_validation(self):
+        old = {"type": "SAML", "saml": {"ssoURL": "https://idp/sso",
+                                        "insecureSkipSignatureValidation": False}}
+        new = {"type": "SAML", "saml": {"ssoURL": "https://idp/sso",
+                                        "insecureSkipSignatureValidation": True}}
+        self.assertNotEqual(assign.dex_trust_anchor(old), assign.dex_trust_anchor(new))
+
+    def test_dex_trust_anchor_changes_with_claim_mapping(self):
+        old = {"type": "OIDC", "oidc": {"issuer": "https://idp",
+                                        "claimMapping": {"email": "email"}}}
+        new = {"type": "OIDC", "oidc": {"issuer": "https://idp",
+                                        "claimMapping": {"email": "nickname"}}}
+        self.assertNotEqual(assign.dex_trust_anchor(old), assign.dex_trust_anchor(new))
+
+    def test_dex_trust_anchor_changes_with_email_attr(self):
+        old = {"type": "SAML", "saml": {"ssoURL": "https://idp/sso", "emailAttr": "mail"}}
+        new = {"type": "SAML", "saml": {"ssoURL": "https://idp/sso", "emailAttr": "nickname"}}
+        self.assertNotEqual(assign.dex_trust_anchor(old), assign.dex_trust_anchor(new))
+
+    def test_dex_trust_anchor_changes_with_unlisted_field(self):
+        old = {"type": "LDAP", "ldap": {"host": "ldap:389", "bindPW": "x",
+                                        "userSearch": {"baseDN": "ou=people"}}}
+        new = {"type": "LDAP", "ldap": {"host": "ldap:389", "bindPW": "y",
+                                        "userSearch": {"baseDN": "ou=all"}}}
+        self.assertNotEqual(assign.dex_trust_anchor(old), assign.dex_trust_anchor(new))
+
+    def test_dex_trust_anchor_ignores_bind_password(self):
+        old = {"type": "LDAP", "ldap": {"host": "ldap:389", "bindPW": "x"}}
+        new = {"type": "LDAP", "ldap": {"host": "ldap:389", "bindPW": "y"}}
+        self.assertEqual(assign.dex_trust_anchor(old), assign.dex_trust_anchor(new))
+
     def test_user_record_name_does_not_fallback_to_email(self):
         snaps = {
             assign.USER_SNAP: [
