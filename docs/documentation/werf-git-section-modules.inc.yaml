@@ -152,11 +152,6 @@
   includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
   stageDependencies:
     setup: ['**/*']
-- add: /modules/030-cloud-provider-yandex/candi/docs
-  to: /src/modules/030-cloud-provider-yandex/docs
-  includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
-  stageDependencies:
-    setup: ['**/*']
 - add: /ee/modules/030-cloud-provider-openstack/candi/docs
   to: /src/ee/modules/030-cloud-provider-openstack/docs
   includePaths: ['LAYOUTS*.md','ENVIRONMENT*.md','CLUSTER_CONFIGURATION*.md']
@@ -205,11 +200,6 @@
 - add: /modules/030-cloud-provider-gcp/candi/openapi
   to: /src/modules/030-cloud-provider-gcp/openapi
   includePaths: ['*cluster_configuration.yaml']
-  stageDependencies:
-    setup: ['**/*']
-- add: /modules/030-cloud-provider-yandex/candi/openapi
-  to: /src/modules/030-cloud-provider-yandex/crds
-  includePaths: ['*instance_class.yaml']
   stageDependencies:
     setup: ['**/*']
 - add: /modules/030-cloud-provider-yandex/candi/openapi

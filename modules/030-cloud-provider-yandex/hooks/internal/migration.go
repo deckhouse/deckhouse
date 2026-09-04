@@ -1,0 +1,636 @@
+/*
+Copyright 2026 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package internal
+
+import (
+	"bytes"
+	"encoding/json"
+	"errors"
+	"fmt"
+
+	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
+	"github.com/flant/addon-operator/sdk"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/yaml"
+
+	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	clouddatav1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
+	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	yciccv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/instanceclass/v1"
+	ycpccv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/pcc/v1"
+	ycsettingsv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/settings/v1"
+	ycsettingsv2 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/settings/v2"
+)
+
+func IsMigrationResourcesApplied(input *go_hook.HookInput, pcc ycpccv1.YandexProviderClusterConfiguration) bool {
+	return HasCredentialSecret(input) &&
+		HasMigratedModuleConfig(input) &&
+		HasMigratedNodeGroupsAndInstances(input, pcc)
+}
+
+// HasCredentialSecret reports whether the managed credential Secret exists in the cluster.
+//
+// The credential_secrets binding matches both cpapi.CredentialSecretName and the NAT-instance
+// exporter Secret, and both carry the same cloud-provider credentials type. Counting snapshots
+// would therefore treat a cluster that has only the exporter Secret as migrated, while the
+// terraform projection - which matches by name, see the note in
+// candi/terraform-modules/migration/locals.tf - would still consider it unmigrated. Match by
+// name here so both projections agree.
+func HasCredentialSecret(input *go_hook.HookInput) bool {
+	secrets, err := sdkobjectpatch.UnmarshalToStruct[NamedResourceFilterResult](input.Snapshots, "credential_secrets")
+	if err != nil {
+		return false
+	}
+
+	for _, secret := range secrets {
+		if secret.Name == cpapi.CredentialSecretName {
+			return true
+		}
+	}
+
+	return false
+}
+
+func HasMigratedModuleConfig(input *go_hook.HookInput) bool {
+	mcResults, err := sdkobjectpatch.UnmarshalToStruct[ModuleConfigFilterResult](input.Snapshots, "module_config")
+	if err != nil {
+		return false
+	}
+
+	if len(mcResults) == 0 {
+		return false
+	}
+
+	if mcResults[0].Version < 2 || !mcResults[0].Enabled || mcResults[0].SettingsV2 == nil {
+		return false
+	}
+
+	return true
+}
+
+func HasMigratedNodeGroupsAndInstances(input *go_hook.HookInput, pcc ycpccv1.YandexProviderClusterConfiguration) bool {
+	existingNodeGroups, err := sdkobjectpatch.UnmarshalToStruct[NodeGroupFilterResult](input.Snapshots, "node_groups")
+	if err != nil {
+		return false
+	}
+	nodeGroupSet := make(map[string]bool, len(existingNodeGroups))
+	for _, ng := range existingNodeGroups {
+		nodeGroupSet[ng.Name] = true
+	}
+
+	existingICs, err := sdkobjectpatch.UnmarshalToStruct[NamedResourceFilterResult](input.Snapshots, "yandex_instance_classes")
+	if err != nil {
+		return false
+	}
+	icSet := make(map[string]bool, len(existingICs))
+	for _, ic := range existingICs {
+		icSet[ic.Name] = true
+	}
+
+	// hybrid clusters have no masterNodeGroup
+	isHybrid := IsHybridCluster(existingNodeGroups)
+	if pcc.MasterNodeGroup.Replicas > 0 && !isHybrid && (!nodeGroupSet["master"] || !icSet[cpapi.BuildInstanceClassName("master")]) {
+		return false
+	}
+
+	for _, nodeGroup := range pcc.NodeGroups {
+		if nodeGroup.Name == "" {
+			continue
+		}
+
+		if !nodeGroupSet[nodeGroup.Name] || !icSet[cpapi.BuildInstanceClassName(nodeGroup.Name)] {
+			return false
+		}
+	}
+
+	return true
+}
+
+func CreateMigrationResourcesSecret(
+	input *go_hook.HookInput,
+	pcc ycpccv1.YandexProviderClusterConfiguration,
+	mc ycsettingsv1.ModuleConfigSettings,
+	discoveryData clouddatav1.YandexCloudDiscoveryData,
+	isHybrid bool,
+) error {
+	resources, err := buildMigrationResources(pcc, mc, isHybrid, discoveryData)
+	if err != nil {
+		return fmt.Errorf("build migration resources: %w", err)
+	}
+
+	var buf bytes.Buffer
+	for i, resource := range resources {
+		if i > 0 {
+			buf.WriteString("---\n")
+		}
+		data, err := yaml.Marshal(resource)
+		if err != nil {
+			return fmt.Errorf("marshal resource: %w", err)
+		}
+		buf.Write(data)
+	}
+
+	secret := &corev1.Secret{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "Secret",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      YandexMigrationResourcesName,
+			Namespace: Namespace,
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			YandexMigrationResourcesFilename: buf.Bytes(),
+		},
+	}
+	input.PatchCollector.CreateOrUpdate(secret)
+
+	return nil
+}
+
+func CreateMigrationConfigMap(input *go_hook.HookInput) {
+	cm := &corev1.ConfigMap{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "v1",
+			Kind:       "ConfigMap",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      YandexMigrationConfigMapName,
+			Namespace: Namespace,
+			Labels: map[string]string{
+				"heritage": "deckhouse",
+				"module":   ModuleName,
+			},
+		},
+	}
+	input.PatchCollector.CreateOrUpdate(cm)
+}
+
+func DeleteMigrationArtifacts(input *go_hook.HookInput) {
+	input.PatchCollector.Delete("v1", "Secret", Namespace, YandexMigrationResourcesName)
+	input.PatchCollector.Delete("v1", "ConfigMap", Namespace, YandexMigrationConfigMapName)
+}
+
+func buildMigrationResources(pcc ycpccv1.YandexProviderClusterConfiguration, mc ycsettingsv1.ModuleConfigSettings, isHybrid bool, discoveryData clouddatav1.YandexCloudDiscoveryData) ([]any, error) {
+	resources := make([]any, 0)
+
+	// build credential secrets
+	for _, s := range BuildCredentialsSecrets(pcc) {
+		resources = append(resources, s)
+	}
+
+	// build ModuleConfig v2
+	mcSettingsV2 := BuildModuleConfigSettingsV2(pcc, mc, isHybrid, discoveryData)
+	mcSettingsV2JSON, err := json.Marshal(mcSettingsV2)
+	if err != nil {
+		return []any{}, fmt.Errorf("marshal settings: %w", err)
+	}
+
+	var mcSettingsV2MappedFields deckhousev1alpha1.MappedFields
+	if err := json.Unmarshal(mcSettingsV2JSON, &mcSettingsV2MappedFields); err != nil {
+		return []any{}, fmt.Errorf("unmarshal settings: %w", err)
+	}
+
+	resources = append(resources, deckhousev1alpha1.ModuleConfig{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: deckhousev1alpha1.SchemeGroupVersion.String(),
+			Kind:       "ModuleConfig",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: ModuleName,
+		},
+		Spec: deckhousev1alpha1.ModuleConfigSpec{
+			Enabled:  ptr.To(true),
+			Version:  2,
+			Settings: ptr.To(mcSettingsV2MappedFields),
+		},
+	})
+
+	// build NodeGroups and YandexInstanceClasses
+	if pcc.MasterNodeGroup.Replicas > 0 && !isHybrid {
+		nodeTemplate := map[string]any{
+			"labels": map[string]any{
+				"node-role.kubernetes.io/control-plane": "",
+				"node-role.kubernetes.io/master":        "",
+			},
+		}
+
+		nodeGroup, instanceClass, err := BuildNodeGroupAndInstanceClassResources(
+			"master",
+			pcc.MasterNodeGroup.Replicas,
+			pcc.MasterNodeGroup.Zones,
+			pcc.MasterNodeGroup.InstanceClass.YandexInstanceClass,
+			nodeTemplate,
+			pcc.Zones,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		instanceClass.Spec.EtcdDiskSizeGB = ptr.To(defaultEtcdDiskSizeGB)
+		if pcc.MasterNodeGroup.InstanceClass.EtcdDiskSizeGB != nil {
+			instanceClass.Spec.EtcdDiskSizeGB = pcc.MasterNodeGroup.InstanceClass.EtcdDiskSizeGB
+		}
+
+		resources = append(resources, nodeGroup, instanceClass)
+	}
+
+	for _, ng := range pcc.NodeGroups {
+		if ng.Name == "" {
+			return nil, errors.New("nodeGroups[].name cannot be empty")
+		}
+
+		nodeGroup, instanceClass, err := BuildNodeGroupAndInstanceClassResources(
+			ng.Name,
+			ng.Replicas,
+			ng.Zones,
+			ng.InstanceClass.YandexInstanceClass,
+			ng.NodeTemplate,
+			pcc.Zones,
+		)
+		if err != nil {
+			return nil, err
+		}
+
+		resources = append(resources, nodeGroup, instanceClass)
+	}
+
+	return resources, nil
+}
+
+// BuildCredentialsSecrets returns the managed d8-credentials Secret manifest,
+// shared by the PCC and hybrid v1 migration paths.
+func BuildCredentialsSecrets(pcc ycpccv1.YandexProviderClusterConfiguration) []corev1.Secret {
+	secrets := make([]corev1.Secret, 0, 2)
+
+	if len(pcc.Provider.ServiceAccountJSON) > 0 {
+		secrets = append(secrets, corev1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "Secret",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      cpapi.CredentialSecretName,
+				Namespace: Namespace,
+			},
+			Type: cpapi.CredentialsSecretType,
+			StringData: map[string]string{
+				cpapi.CredentialSecretAuthSchemeKey: string(cpapi.AuthSchemeServiceAccount),
+				cpapi.CredentialSecretSecretKey:     pcc.Provider.ServiceAccountJSON,
+			},
+		})
+	}
+
+	if pcc.WithNATInstance != nil && pcc.WithNATInstance.ExporterAPIKey != nil && len(*pcc.WithNATInstance.ExporterAPIKey) > 0 {
+		secrets = append(secrets, corev1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "Secret",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      ExporterCredentialSecretName,
+				Namespace: Namespace,
+			},
+			Type: cpapi.CredentialsSecretType,
+			StringData: map[string]string{
+				cpapi.CredentialSecretAuthSchemeKey: string(cpapi.AuthSchemeAPIToken),
+				cpapi.CredentialSecretSecretKey:     *pcc.WithNATInstance.ExporterAPIKey,
+			},
+		})
+	}
+
+	return secrets
+}
+
+func BuildModuleConfigSettingsV2(pcc ycpccv1.YandexProviderClusterConfiguration, mc ycsettingsv1.ModuleConfigSettings, isHybrid bool, discoveryData clouddatav1.YandexCloudDiscoveryData) ycsettingsv2.ModuleConfigSettings {
+	var withNATParams ycsettingsv2.NATInstanceParameters
+	if pcc.WithNATInstance != nil {
+		var withNATResources ycsettingsv2.NATInstanceResources
+		if pcc.WithNATInstance.NATInstanceResources != nil {
+			withNATResources = ycsettingsv2.NATInstanceResources{
+				Cores:    ptr.Deref(pcc.WithNATInstance.NATInstanceResources.Cores, 0),
+				Memory:   ptr.Deref(pcc.WithNATInstance.NATInstanceResources.Memory, 0),
+				Platform: ptr.Deref(pcc.WithNATInstance.NATInstanceResources.Platform, ""),
+			}
+		}
+
+		withNATParams = ycsettingsv2.NATInstanceParameters{
+			ExternalSubnetID:           ptr.Deref(pcc.WithNATInstance.ExternalSubnetID, ""),
+			InternalSubnetID:           ptr.Deref(pcc.WithNATInstance.InternalSubnetID, ""),
+			InternalSubnetCIDR:         ptr.Deref(pcc.WithNATInstance.InternalSubnetCIDR, ""),
+			NATInstanceExternalAddress: ptr.Deref(pcc.WithNATInstance.NATInstanceExternalAddress, ""),
+			NATInstanceInternalAddress: ptr.Deref(pcc.WithNATInstance.NATInstanceInternalAddress, ""),
+			NATInstanceResources:       withNATResources,
+		}
+	}
+
+	var dhcpOptions ycsettingsv2.DHCPOptions
+	if pcc.DHCPOptions != nil {
+		dhcpOptions = ycsettingsv2.DHCPOptions{
+			DomainName:        ptr.Deref(pcc.DHCPOptions.DomainName, ""),
+			DomainNameServers: pcc.DHCPOptions.DomainNameServers,
+		}
+	}
+
+	// externalIPAddresses and externalSubnetIDs are per-node-group lists in the
+	// PCC instanceClass. YandexInstanceClass has no externalIPAddresses
+	// counterpart, so both move into nodes.parameters keyed by node group name.
+	externalIPAddresses := map[string][]string{}
+	externalSubnetIDs := map[string][]string{}
+
+	collectExternalAddressing := func(name string, ic ycpccv1.YandexInstanceClass) {
+		if len(ic.ExternalIPAddresses) > 0 {
+			externalIPAddresses[name] = ic.ExternalIPAddresses
+		}
+		if len(ic.ExternalSubnetIDs) > 0 {
+			externalSubnetIDs[name] = ic.ExternalSubnetIDs
+		}
+	}
+
+	if pcc.MasterNodeGroup.Replicas > 0 {
+		collectExternalAddressing("master", pcc.MasterNodeGroup.InstanceClass.YandexInstanceClass)
+	}
+	for _, ng := range pcc.NodeGroups {
+		if ng.Name == "" {
+			continue
+		}
+		collectExternalAddressing(ng.Name, ng.InstanceClass.YandexInstanceClass)
+	}
+
+	provisionedSCs := make([]ycsettingsv2.ProvisionedStorageClass, 0, len(mc.StorageClass.Provision))
+	for _, sc := range mc.StorageClass.Provision {
+		provisionedSCs = append(provisionedSCs, ycsettingsv2.ProvisionedStorageClass{
+			Name:      sc.Name,
+			Type:      sc.Type,
+			BlockSize: sc.BlockSize,
+		})
+	}
+
+	// A hybrid cluster (Static master + cloud workers) never runs the DKP infrastructure, so the
+	// route table and the additional internal networks it uses are recorded in the discovery data
+	// rather than produced by terraform. They have to be carried into the v2 settings explicitly,
+	// otherwise the CCM and the vpc-components lose them once the legacy PCC is gone.
+	var existingRouteTableID string
+	var additionalInternalNetworkIDs []string
+	if isHybrid {
+		existingRouteTableID = discoveryData.RouteTableID
+		additionalInternalNetworkIDs = excludeNetworkID(discoveryData.InternalNetworkIDs, ptr.Deref(pcc.ExistingNetworkID, ""))
+	}
+
+	settings := ycsettingsv2.ModuleConfigSettings{
+		Provider: ycsettingsv2.Provider{
+			Parameters: ycsettingsv2.ProviderParameters{
+				CloudID:  pcc.Provider.CloudID,
+				FolderID: pcc.Provider.FolderID,
+			},
+		},
+		Nodes: ycsettingsv2.Nodes{
+			Disabled: false,
+			Parameters: ycsettingsv2.NodesParameters{
+				SSHPublicKey:              pcc.SSHPublicKey,
+				Layout:                    pcc.Layout,
+				NodeNetworkCIDR:           pcc.NodeNetworkCIDR,
+				WithNATInstance:           withNATParams,
+				ExistingNetworkID:         ptr.Deref(pcc.ExistingNetworkID, ""),
+				ExistingRouteTableID:      existingRouteTableID,
+				ExistingZoneToSubnetIDMap: pcc.ExistingZoneToSubnetIDMap,
+				DHCPOptions:               dhcpOptions,
+				ExternalIPAddresses:       externalIPAddresses,
+				ExternalSubnetIDs:         externalSubnetIDs,
+				Labels:                    pcc.Labels,
+				Zones:                     pcc.Zones,
+			},
+		},
+		// storage and ccm are projected from ModuleConfig v1 here, but not by the terraform
+		// projection: it never sees the v1 ModuleConfig, and nothing in candi/ reads these two
+		// sections — only nodes.parameters drives the infrastructure. Both sides therefore agree
+		// on everything terraform consumes, see candi/terraform-modules/migration/locals.tf.
+		Storage: ycsettingsv2.Storage{
+			Disabled: false,
+			Parameters: ycsettingsv2.StorageParameters{
+				ExcludedStorageClasses:    mc.StorageClass.Exclude,
+				ProvisionedStorageClasses: provisionedSCs,
+			},
+		},
+		CCM: ycsettingsv2.CCM{
+			Disabled: false,
+			Parameters: ycsettingsv2.CCMParameters{
+				AdditionalExternalNetworkIDs: mc.AdditionalExternalNetworkIDs,
+				AdditionalInternalNetworkIDs: additionalInternalNetworkIDs,
+			},
+		},
+	}
+
+	return settings
+}
+
+// IsHybridCluster reports whether the cluster is hybrid: its master NodeGroup is Static, i.e.
+// provisioned outside of DKP. Such a cluster never runs the DKP infrastructure, so the migration
+// must not project a CloudPermanent master NodeGroup and must carry the discovery-data network
+// facts into the v2 ModuleConfig.
+func IsHybridCluster(nodeGroups []NodeGroupFilterResult) bool {
+	for _, ng := range nodeGroups {
+		if ng.Name == "master" && ng.NodeType == string(cpapi.NodeTypeStatic) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// excludeNetworkID returns ids without excluded. It is used to drop the PCC's
+// existingNetworkID from the discovery-data internal network list, because that network is already
+// carried separately in nodes.parameters.existingNetworkID.
+func excludeNetworkID(networkIDs []string, excludedNetworkID string) []string {
+	if excludedNetworkID == "" {
+		return networkIDs
+	}
+
+	result := make([]string, 0, len(networkIDs))
+	for _, networkID := range networkIDs {
+		if networkID != excludedNetworkID {
+			result = append(result, networkID)
+		}
+	}
+
+	return result
+}
+
+// BuildNodeGroupAndInstanceClassResources creates a YandexInstanceClass and NodeGroup
+// resource pair from typed PCC fields. The instanceClass parameter is the embedded
+// ycpccv1.YandexInstanceClass, shared by both YandexMasterInstanceClass and
+// YandexNodeGroupInstanceClass.
+func BuildNodeGroupAndInstanceClassResources(
+	name string,
+	replicas int,
+	zones []string,
+	instanceClass ycpccv1.YandexInstanceClass,
+	nodeTemplate map[string]any,
+	clusterZones []string,
+) (map[string]any, yciccv1.YandexInstanceClass, error) {
+	// Build InstanceClass
+	instanceClassName := cpapi.BuildInstanceClassName(name)
+	icSpec := mapPCCInstanceClassToYandexInstanceClassSpec(instanceClass)
+	instanceClassResource := yciccv1.YandexInstanceClass{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: yciccv1.GroupVersionKind.GroupVersion().String(),
+			Kind:       yciccv1.YandexInstanceClassKind,
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name: instanceClassName,
+		},
+		Spec: icSpec,
+	}
+
+	// Build NodeGroup
+	cloudInstances := map[string]any{
+		"minPerZone": int64(replicas),
+		"maxPerZone": int64(replicas),
+		"classReference": map[string]any{
+			"kind": yciccv1.YandexInstanceClassKind,
+			"name": instanceClassName,
+		},
+	}
+
+	resolvedZones := resolveZones(zones, clusterZones)
+	if resolvedZones != nil {
+		cloudInstances["zones"] = resolvedZones
+	}
+
+	nodeGroupSpec := map[string]any{
+		"nodeType":       "CloudPermanent",
+		"cloudInstances": cloudInstances,
+	}
+
+	if nodeTemplate != nil {
+		nodeGroupSpec["nodeTemplate"] = nodeTemplate
+	}
+
+	nodeGroupResource := map[string]any{
+		"apiVersion": "deckhouse.io/v1",
+		"kind":       "NodeGroup",
+		"metadata": map[string]any{
+			"name": name,
+		},
+		"spec": nodeGroupSpec,
+	}
+
+	return nodeGroupResource, instanceClassResource, nil
+}
+
+// DecodeCredentialSecret decodes a Secret and reports whether the module manages it.
+//
+// Both credential filters — the name-only one below and the value-carrying one in
+// hooks/credentials.go — need the same decode and type guard, and a Secret of another type must
+// produce an empty snapshot rather than an error.
+func DecodeCredentialSecret(obj *unstructured.Unstructured) (*corev1.Secret, bool, error) {
+	secret := &corev1.Secret{}
+	if err := sdk.FromUnstructured(obj, secret); err != nil {
+		return nil, false, err
+	}
+
+	if secret.Type != cpapi.CredentialsSecretType {
+		return nil, false, nil
+	}
+
+	return secret, true, nil
+}
+
+// mapPCCInstanceClassToYandexInstanceClassSpec converts the PCC-level
+// YandexInstanceClass (used in both master and regular node groups) to the
+// YandexInstanceClass CRD spec.
+func mapPCCInstanceClassToYandexInstanceClassSpec(ic ycpccv1.YandexInstanceClass) yciccv1.YandexInstanceClassSpec {
+	spec := yciccv1.YandexInstanceClassSpec{
+		Cores:      ic.Cores,
+		Memory:     ic.Memory,
+		ImageID:    ic.ImageID,
+		PlatformID: defaultPlatformID,
+		DiskType:   defaultDiskType,
+		DiskSizeGB: defaultDiskSizeGB,
+	}
+
+	if ic.CoreFraction != nil {
+		spec.CoreFraction = *ic.CoreFraction
+	}
+	if ic.Platform != nil {
+		spec.PlatformID = *ic.Platform
+	}
+	if ic.DiskSizeGB != nil {
+		spec.DiskSizeGB = *ic.DiskSizeGB
+	}
+	if ic.DiskType != nil {
+		spec.DiskType = *ic.DiskType
+	}
+	if ic.NetworkType != nil {
+		spec.NetworkType = *ic.NetworkType
+	}
+	if ic.AdditionalLabels != nil {
+		spec.AdditionalLabels = ic.AdditionalLabels
+	}
+	if ic.ExternalSubnetID != nil {
+		spec.MainSubnet = *ic.ExternalSubnetID
+	}
+	if len(ic.ExternalSubnetIDs) > 0 {
+		spec.AdditionalSubnets = ic.ExternalSubnetIDs
+	}
+
+	return spec
+}
+
+// resolveZones returns the node-group zones, falling back to clusterZones.
+// Returns nil (not empty slice) so that a nil Zones engages node-manager's
+// defaultZones fallback.
+// resolveZones picks the zones for a projected NodeGroup: the node group ones win, the
+// cluster-wide ones are the fallback, and nil omits the key so node-manager uses every zone.
+//
+// A node group that declares zones is never given the cluster-wide ones instead, not even when
+// every entry it declares is blank: pre-migration terraform did the same —
+// candi/terraform-modules/master-node/main.tf takes the intersection with the node group zones
+// whenever they are set (non-null), and only an unset list lets the cluster-wide zones through.
+// Falling back on a blank list would silently narrow such a node group to the cluster zones and
+// recreate its nodes.
+//
+// The blank entries themselves are dropped, so an all-blank list yields nil and the key is
+// omitted - which matches the terraform side, where compact() turns it into [] and then null.
+func resolveZones(nodeGroupZones, clusterZones []string) []any {
+	if len(nodeGroupZones) > 0 {
+		return nonEmptyZones(nodeGroupZones)
+	}
+
+	return nonEmptyZones(clusterZones)
+}
+
+func nonEmptyZones(zones []string) []any {
+	result := make([]any, 0, len(zones))
+	for _, zone := range zones {
+		if zone != "" {
+			result = append(result, zone)
+		}
+	}
+
+	if len(result) == 0 {
+		return nil
+	}
+
+	return result
+}

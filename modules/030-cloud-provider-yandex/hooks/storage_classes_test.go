@@ -37,10 +37,11 @@ global:
   discovery: {}
 cloudProviderYandex:
   internal: {}
-  storageClass:
-    exclude:
-    - .*-hdd
-    - bar
+  storage:
+    parameters:
+      excludedStorageClasses:
+      - .*-hdd
+      - bar
 `
 
 		initValuesStringProvision = `
@@ -48,16 +49,17 @@ global:
   discovery: {}
 cloudProviderYandex:
   internal: {}
-  storageClass:
-    provision:
-    - name: network-ssd-64k
-      type: network-ssd
-      blockSize: 64Ki
-    - name: network-ssd-io-m3
-      type: network-ssd-io-m3
-      blockSize: 128Ki
-    exclude:
-    - .*-hdd
+  storage:
+    parameters:
+      provisionedStorageClasses:
+      - name: network-ssd-64k
+        type: network-ssd
+        blockSize: 64Ki
+      - name: network-ssd-io-m3
+        type: network-ssd-io-m3
+        blockSize: 128Ki
+      excludedStorageClasses:
+      - .*-hdd
 `
 
 		initValuesStringProvisionOverride = `
@@ -65,11 +67,27 @@ global:
   discovery: {}
 cloudProviderYandex:
   internal: {}
-  storageClass:
-    provision:
-    - name: network-ssd
-      type: network-ssd
-      blockSize: 64Ki
+  storage:
+    parameters:
+      provisionedStorageClasses:
+      - name: network-ssd
+        type: network-ssd
+        blockSize: 64Ki
+`
+
+		initValuesStringProvisionExcluded = `
+global:
+  discovery: {}
+cloudProviderYandex:
+  internal: {}
+  storage:
+    parameters:
+      provisionedStorageClasses:
+      - name: network-ssd-64k
+        type: network-ssd
+        blockSize: 64Ki
+      excludedStorageClasses:
+      - network-ssd.*
 `
 
 		modifiedStorageClass = `
@@ -226,6 +244,28 @@ parameters:
   {
 	"name": "network-ssd-nonreplicated",
 	"type": "network-ssd-nonreplicated"
+  }
+]
+`))
+		})
+	})
+
+	e := HookExecutionConfigInit(initValuesStringProvisionExcluded, `{}`)
+
+	Context("Cluster where excludedStorageClasses matches a provisioned storageClass", func() {
+		BeforeEach(func() {
+			e.BindingContexts.Set(e.GenerateBeforeHelmContext())
+			e.RunHook()
+		})
+
+		// exclude is applied after provision, so it filters the provisioned classes too.
+		It("Should exclude the provisioned storageClass as well as the default ones", func() {
+			Expect(e).To(ExecuteSuccessfully())
+			Expect(e.ValuesGet("cloudProviderYandex.internal.storageClasses").String()).To(MatchJSON(`
+[
+  {
+	"name": "network-hdd",
+	"type": "network-hdd"
   }
 ]
 `))

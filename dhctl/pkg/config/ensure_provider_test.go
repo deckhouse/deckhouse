@@ -113,12 +113,12 @@ func TestEnsureProviderBundleInTreeNoop(t *testing.T) {
 	stubProviderDigest(t, "sha256:unused", &digestCalls)
 
 	globalOptions := ensureTestGlobalOptions(t)
-	schemaPath := filepath.Join(globalOptions.CandiDir, "cloud-providers", "yandex", "openapi")
+	schemaPath := filepath.Join(globalOptions.CandiDir, "cloud-providers", "vcd", "openapi")
 	require.NoError(t, os.MkdirAll(schemaPath, 0o755))
 	require.NoError(t, os.WriteFile(filepath.Join(schemaPath, "cluster_configuration.yaml"), []byte("kind: X\napiVersions: []\n"), 0o644))
 
-	require.NoError(t, EnsureProviderBundle(context.Background(), "", []string{ensureClusterConfigDoc("Yandex")}, globalOptions))
-	require.NoError(t, EnsureProviderBundle(context.Background(), "Yandex", nil, globalOptions), "explicit provider must hit the same no-op")
+	require.NoError(t, EnsureProviderBundle(context.Background(), "", []string{ensureClusterConfigDoc("VCD")}, globalOptions))
+	require.NoError(t, EnsureProviderBundle(context.Background(), "VCD", nil, globalOptions), "explicit provider must hit the same no-op")
 	require.Zero(t, digestCalls.Load(), "in-tree provider with bundled candi must not resolve digest")
 }
 

@@ -12,6 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# The provider marks secret_key as sensitive, so this output has to be sensitive too:
+# without the annotation any root module that exports it — the WithNATInstance layout
+# publishes it in cloud_discovery_data — fails to plan with "Output refers to sensitive
+# values". one() instead of [0] because a conditional evaluates both arms, and the
+# resource has no instances unless apiKey is "Auto".
 output "apiKey" {
-  value = var.apiKey == "Auto" ? yandex_iam_service_account_api_key.monitoring_sa[0].secret_key : var.apiKey
+  sensitive = true
+  value     = var.apiKey == "Auto" ? one(yandex_iam_service_account_api_key.monitoring_sa[*].secret_key) : var.apiKey
 }

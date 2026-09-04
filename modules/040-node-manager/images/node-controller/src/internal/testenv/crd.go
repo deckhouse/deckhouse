@@ -69,7 +69,7 @@ func NodeManagerCRDPaths(crds ...NodeManagerCRDFile) []string {
 }
 
 // ModuleCRDPaths resolves CRD files under the repo's modules directory (e.g.
-// "030-cloud-provider-yandex/candi/openapi/instance_class.yaml") for suites that
+// "030-cloud-provider-yandex/crds/instance_class.yaml") for suites that
 // exercise another module's CRD against the real apiserver.
 func ModuleCRDPaths(paths ...string) []string {
 	return resolveUpPaths("modules", paths)

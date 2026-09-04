@@ -34,6 +34,25 @@ git:
       - go.mod
       - go.sum
       - "**/*.go"
+- add: /go_lib/cloud-provider
+  to: /src/go_lib/cloud-provider
+  excludePaths:
+  - "**/*.md"
+  - "**/*.yaml"
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    - "**/*.go"
+- add: /go_lib/dhctl-provider-protocol
+  to: /src/go_lib/dhctl-provider-protocol
+  excludePaths:
+  - "**/*.md"
+  stageDependencies:
+    install:
+    - go.mod
+    - go.sum
+    - "**/*.go"
 - add: /pkg/log
   to: /src/pkg/log
   excludePaths:
@@ -47,7 +66,12 @@ git:
 shell:
   install:
   - cd /src
+  - sed -i -e 's# /deckhouse/go_lib/cloud-provider# /src/go_lib/cloud-provider#g' go.mod
+  - sed -i -e 's# /deckhouse/go_lib/dhctl-provider-protocol# /src/go_lib/dhctl-provider-protocol#g' go.mod
   - sed -i -e 's# /deckhouse/go_lib/cloud-data# /src/go_lib/cloud-data#g' go.mod
+  - sed -i -e 's# /deckhouse/pkg/log# /src/pkg/log#g' go.mod
+  - cd /src/go_lib/cloud-provider
+  - sed -i -e 's# /deckhouse/go_lib/dhctl-provider-protocol# /src/go_lib/dhctl-provider-protocol#g' go.mod
   - sed -i -e 's# /deckhouse/pkg/log# /src/pkg/log#g' go.mod
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact

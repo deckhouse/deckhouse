@@ -80,12 +80,6 @@ var (
 			// v1alpha1 : SOFTWARE_ACCELERATED - migrated in v1
 			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.networkType",
 		},
-		// disk types: network-ssd, network-hdd
-		"modules/030-cloud-provider-yandex/candi/openapi/instance_class.yaml": {
-			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.diskType",
-			// v1alpha1 : SOFTWARE_ACCELERATED - migrated in v1
-			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.networkType",
-		},
 		"candi/openapi/cluster_configuration.yaml": {
 			// vSphere
 			"apiVersions[0].openAPISpec.properties.cloud.properties.provider",
@@ -239,8 +233,14 @@ var (
 			"properties.internal.properties.providerClusterConfiguration.properties.edgeGateway.properties.NSX-V.properties.externalNetworkType",
 		},
 		"modules/030-cloud-provider-yandex/openapi/config-values.yaml": {
-			// ignore Yandex Cloud disk types
-			"properties.storageClass.properties.provision.items.properties.type",
+			// ignore internal values
+			"properties.nodes.properties.parameters.properties.zones.items",
+			"properties.storage.properties.parameters.properties.provisionedStorageClasses.items.properties.type",
+		},
+		"modules/030-cloud-provider-yandex/crds/instance_class.yaml": {
+			// ignore internal values
+			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.diskType",
+			"spec.versions[1].schema.openAPIV3Schema.properties.spec.properties.diskType",
 		},
 		"modules/030-cloud-provider-yandex/openapi/values.yaml": {
 			// ignore internal values

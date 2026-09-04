@@ -17,6 +17,8 @@ package tests
 import (
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -24,6 +26,10 @@ const (
 	// EnvCandiDir overrides the candi schemas directory used by tests that
 	// would otherwise look at /deckhouse/candi (CI-prepared).
 	EnvCandiDir = "DHCTL_TEST_CANDI_DIR"
+
+	// EnvModulesDir overrides /deckhouse/modules for tests that read a
+	// provider's candi tree straight from its module.
+	EnvModulesDir = "DHCTL_TEST_MODULES_DIR"
 
 	// EnvDhctlTestsDir overrides /dhctl-tests for cloud provider tests.
 	EnvDhctlTestsDir = "DHCTL_TEST_DHCTL_TESTS_DIR"
@@ -38,6 +44,10 @@ const (
 	// defaultCandiDir is the path where werf builds the cloud-providers
 	// schemas in the CI test image.
 	defaultCandiDir = "/deckhouse/candi"
+
+	// defaultModulesDir is where werf puts the module trees (including each
+	// provider's own candi) in the CI test image.
+	defaultModulesDir = "/deckhouse/modules"
 
 	// defaultDhctlTestsDir is the path CI populates with opentofu/terraform
 	// binaries and provider plugins.
@@ -70,6 +80,53 @@ func RequireCandiDir(t *testing.T) string {
 		return defaultCandiDir
 	}
 	t.Skipf("candi schemas not found: %s missing and %s not set; skip", defaultCandiDir, EnvCandiDir)
+	return ""
+}
+
+// ProviderModuleCandiDir returns the candi tree that lives inside a cloud
+// provider module. External providers (dvp, yandex) are excluded from
+// tools/build_includes/candi-cloud-providers-*.yaml — their candi bundle is
+// delivered at runtime instead of being baked into the image — so the module
+// tree is the only place their schemas and layouts can be read from in tests.
+func ProviderModuleCandiDir(provider string) string {
+	dir := os.Getenv(EnvModulesDir)
+	if dir == "" {
+		dir = defaultModulesDir
+	}
+	return filepath.Join(dir, "030-cloud-provider-"+strings.ToLower(provider), "candi")
+}
+
+// RequireProviderCandiDir resolves a single provider's candi tree, preferring
+// the build-assembled candi/cloud-providers/<provider> and falling back to the
+// provider module. Skips the test when neither is present. Returns the resolved
+// path so the test can read schemas or layouts from it.
+//
+// A candidate counts only when it carries openapi/cluster_configuration.yaml:
+// for an external provider the build bakes a partial tree into the image (just
+// bashible, see externalCloudProviders in tools/build.go), so the directory
+// existing is not enough. Prefer this over RequireDir on candi/cloud-providers
+// for the same reason — that directory exists in the CI test image even when the
+// provider a test needs is not in it.
+func RequireProviderCandiDir(t *testing.T, provider string) string {
+	t.Helper()
+	provider = strings.ToLower(provider)
+
+	candiDir := os.Getenv(EnvCandiDir)
+	if candiDir == "" {
+		candiDir = defaultCandiDir
+	}
+
+	candidates := []string{
+		filepath.Join(candiDir, "cloud-providers", provider),
+		ProviderModuleCandiDir(provider),
+	}
+	for _, dir := range candidates {
+		if isFile(filepath.Join(dir, "openapi", "cluster_configuration.yaml")) {
+			return dir
+		}
+	}
+
+	t.Skipf("candi tree for provider %q not found in any of %v; skip", provider, candidates)
 	return ""
 }
 
@@ -121,4 +178,9 @@ func RequireProviderEnv(t *testing.T) {
 func isDir(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && info.IsDir()
+}
+
+func isFile(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.Mode().IsRegular()
 }

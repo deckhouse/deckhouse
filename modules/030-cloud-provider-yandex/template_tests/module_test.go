@@ -26,6 +26,7 @@ package template_tests
 
 import (
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"testing"
 
@@ -33,6 +34,7 @@ import (
 	. "github.com/onsi/gomega"
 
 	. "github.com/deckhouse/deckhouse/testing/helm"
+	"github.com/deckhouse/deckhouse/testing/library/object_store"
 )
 
 func Test(t *testing.T) {
@@ -50,7 +52,7 @@ const bashibleLabelKey = "cloud-provider\\.deckhouse\\.io/bashible"
 // TODO: remove fake crd modules
 const globalValues = `
   clusterIsBootstrapped: true
-  enabledModules: ["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd", "cloud-provider-yandex", "operator-prometheus", "operator-prometheus-crd"]
+  enabledModules: ["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd", "cloud-provider-yandex", "operator-prometheus", "operator-prometheus-crd", "prometheus", "prometheus-crd"]
   clusterConfiguration:
     apiVersion: deckhouse.io/v1
     cloud:
@@ -75,8 +77,42 @@ const globalValues = `
     clusterUUID: 3b5058e1-e93a-4dfa-be32-395ef4b3da45
 `
 
+// The ModuleConfig v2 settings schema is extended into the module values schema,
+// so provider and nodes are required here even though hooks fill them at runtime.
 const moduleValues = `
+  provider:
+    parameters:
+      cloudID: test
+      folderID: myfoldid
+  nodes:
+    parameters:
+      layout: WithNATInstance
+      nodeNetworkCIDR: 10.100.0.1/24
+      sshPublicKey: mysshkey
+      labels:
+        test: test
+  ccm:
+    parameters:
+      additionalExternalNetworkIDs:
+      - enp-external-1
+      - enp-external-2
+  storage:
+    parameters: {}
   internal:
+    credentialSecrets:
+      d8-credentials:
+        authScheme: ServiceAccount
+        secret: '{"my": "json"}'
+    instanceClassDefaults:
+      imageID: test
+    validationWebhookCert:
+      crt: webhook-crt
+      key: webhook-key
+      ca: webhook-ca
+    capyControllerManagerWebhookCert:
+      crt: capy-crt
+      key: capy-key
+      ca: capy-ca
     storageClasses:
     - name: network-hdd
       type: network-hdd
@@ -96,32 +132,12 @@ const moduleValues = `
         zoneb: bbb
       defaultLbTargetGroupNetworkId: deftarggroupnetid
       internalNetworkIDs: ["id1", "id2"]
-      shouldAssignPublicIPAddress: true
+      # false, because nodes.parameters.layout above is WithNATInstance: candi only sets this
+      # for the without-nat layout, and templates/_helpers.tpl derives it from the layout.
+      shouldAssignPublicIPAddress: false
       routeTableID: testest
       region: myreg
       natInstanceName: ""
-    providerClusterConfiguration:
-      apiVersion: deckhouse.io/v1
-      existingNetworkID: enpma5uvcfbkuac1i1jb
-      kind: YandexClusterConfiguration
-      layout: WithNATInstance
-      masterNodeGroup:
-        replicas: 1
-        instanceClass:
-          cores: 2
-          imageID: test
-          memory: 4096
-      provider:
-        cloudID: test
-        folderID: myfoldid
-        serviceAccountJSON: '{"my": "json"}'
-      withNATInstance:
-        internalSubnetID: test
-        natInstanceExternalAddress: 84.201.160.148
-      nodeNetworkCIDR: 10.100.0.1/24
-      sshPublicKey: mysshkey
-      labels:
-        test: test
 `
 
 const tolerationsAnyNodeWithUninitialized = `
@@ -158,6 +174,71 @@ const tolerationsAnyNodeWithUninitialized = `
 
 const moduleNamespace = "d8-cloud-provider-yandex"
 
+// envValue pulls one environment variable out of the first container of a workload.
+func envValue(resource object_store.KubeObject, name string) (string, bool) {
+	for _, env := range resource.Field("spec.template.spec.containers.0.env").Array() {
+		if env.Get("name").String() == name {
+			return env.Get("value").String(), true
+		}
+	}
+	return "", false
+}
+
+// envSecretRef pulls one secretKeyRef-backed environment variable out of the first container
+// of a workload, returning the referenced Secret name and key.
+func envSecretRef(resource object_store.KubeObject, name string) (secretName string, secretKey string, found bool) {
+	for _, env := range resource.Field("spec.template.spec.containers.0.env").Array() {
+		if env.Get("name").String() == name {
+			ref := env.Get("valueFrom.secretKeyRef")
+			return ref.Get("name").String(), ref.Get("key").String(), true
+		}
+	}
+	return "", "", false
+}
+
+// modulesImagesWithout copies the shared image digests and drops one image of this module,
+// so the "image is not built in this edition" branch can be exercised. GetModulesImages
+// hands out the package-level library.DefaultImagesDigests map, which must not be mutated:
+// every other spec in the suite reads it too.
+func modulesImagesWithout(imageName string) map[string]interface{} {
+	images := GetModulesImages()
+
+	digests := map[string]interface{}{}
+	for module, moduleImages := range images["digests"].(map[string]interface{}) {
+		if module != "cloudProviderYandex" {
+			digests[module] = moduleImages
+			continue
+		}
+
+		kept := map[string]interface{}{}
+		for name, digest := range moduleImages.(map[string]interface{}) {
+			if name == imageName {
+				continue
+			}
+			kept[name] = digest
+		}
+		digests[module] = kept
+	}
+
+	images["digests"] = digests
+
+	return images
+}
+
+// registrationYandexValues decodes the provider-specific blob of a registration Secret.
+func registrationYandexValues(resource object_store.KubeObject) string {
+	decoded, err := base64.StdEncoding.DecodeString(resource.Field("data.yandex").String())
+	Expect(err).ShouldNot(HaveOccurred())
+	return string(decoded)
+}
+
+// registrationField decodes one base64-encoded JSON field of a registration Secret.
+func registrationField(resource object_store.KubeObject, field string, out interface{}) {
+	decoded, err := base64.StdEncoding.DecodeString(resource.Field("data." + field).String())
+	Expect(err).ShouldNot(HaveOccurred())
+	Expect(json.Unmarshal(decoded, out)).To(Succeed())
+}
+
 var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
@@ -178,12 +259,15 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 				Expect(secret.Field("data.api-key").String()).To(Equal("YXBpLWtleQ=="))
 				Expect(secret.Field("data.folder-id").String()).To(Equal("bXlmb2xkaWQ="))
 			}
+
+			pdb := h.KubernetesResource("PodDisruptionBudget", moduleNamespace, "cloud-metrics-exporter")
+			Expect(pdb.Exists()).To(Equal(exists))
 		}
 
 		assertDeployNatInstanceMonitoring := func(h *Config, exists bool) {
 			prometheusRuleExists := h.KubernetesResource("PrometheusRule", moduleNamespace, "cloud-provider-yandex-nat-instance").Exists()
 			grafanaDashboardExists := h.KubernetesResource("GrafanaDashboardDefinition", "", "d8-cloud-provider-yandex-kubernetes-cluster-nat-instance").Exists()
-			monitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "yandex-nat-instance-metrics")
+			monitor := h.KubernetesResource("PodMonitor", "d8-monitoring", "yandex-nat-instance-metrics")
 
 			Expect(monitor.Exists()).To(Equal(exists))
 			Expect(prometheusRuleExists).To(BeTrue())
@@ -273,6 +357,44 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 
 					assertDeployNatInstanceMonitoring(f, true)
 				})
+
+				It("Should keep the exporter VPA while vertical-pod-autoscaler is enabled", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					Expect(f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "cloud-metrics-exporter").Exists()).To(BeTrue())
+				})
+			})
+
+			Context("with NAT-instance and vertical-pod-autoscaler disabled", func() {
+				BeforeEach(func() {
+					f.ValuesSet("cloudProviderYandex.internal.providerDiscoveryData.natInstanceName", "cluster-nat-instance")
+					f.ValuesSetFromYaml("global.enabledModules", `["cloud-provider-yandex", "operator-prometheus", "operator-prometheus-crd"]`)
+					f.HelmRender()
+				})
+
+				It("Should drop the VPA and inline the resource requests instead", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					Expect(f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "cloud-metrics-exporter").Exists()).To(BeFalse())
+
+					deployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-metrics-exporter")
+					Expect(deployment.Field("spec.template.spec.containers.0.resources.requests.cpu").String()).To(Equal("10m"))
+					Expect(deployment.Field("spec.template.spec.containers.0.resources.requests.memory").String()).To(Equal("25Mi"))
+				})
+			})
+
+			Context("with NAT-instance and operator-prometheus disabled", func() {
+				BeforeEach(func() {
+					f.ValuesSet("cloudProviderYandex.internal.providerDiscoveryData.natInstanceName", "cluster-nat-instance")
+					f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd", "cloud-provider-yandex"]`)
+					f.HelmRender()
+				})
+
+				It("Should not create the PodMonitor", func() {
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "yandex-nat-instance-metrics").Exists()).To(BeFalse())
+				})
 			})
 		})
 	})
@@ -361,7 +483,7 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
             "zonea": "aaa",
             "zoneb": "bbb"
           },
-          "shouldAssignPublicIPAddress": true,
+          "shouldAssignPublicIPAddress": false,
           "labels": {"test": "test"},
 		  "nodeNetworkCIDR": "10.100.0.1/24",
 		  "instanceClassDefaults": {
@@ -369,13 +491,8 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 		  }
         }`
 
-			providerRegistrationData, err := base64.StdEncoding.DecodeString(providerRegistrationSecret.Field("data.yandex").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(providerRegistrationData)).To(MatchJSON(expectedProviderRegistrationJSON))
-
-			providerSpecificRegistrationData, err := base64.StdEncoding.DecodeString(providerSpecificRegistrationSecret.Field("data.yandex").String())
-			Expect(err).ShouldNot(HaveOccurred())
-			Expect(string(providerSpecificRegistrationData)).To(MatchJSON(expectedProviderRegistrationJSON))
+			Expect(registrationYandexValues(providerRegistrationSecret)).To(MatchJSON(expectedProviderRegistrationJSON))
+			Expect(registrationYandexValues(providerSpecificRegistrationSecret)).To(MatchJSON(expectedProviderRegistrationJSON))
 
 			providerSpecificMCMSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-mcm", providerID))
 			Expect(providerSpecificMCMSecret.Exists()).To(BeTrue())
@@ -385,6 +502,10 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			Expect(providerSpecificMCMSecretData).To(Not(BeEmpty()))
 			Expect(len(providerSpecificMCMSecretData) >= 1).To(BeTrue())
 			Expect(len(providerSpecificMCMSecretData["config-for-machine-controller-manager.yaml"].String()) > 0).To(BeTrue())
+
+			providerSpecificCAPISecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-capi", providerID))
+			Expect(providerSpecificCAPISecret.Exists()).To(BeTrue())
+			Expect(providerSpecificCAPISecret.Field(fmt.Sprintf("metadata.labels.%s", ephemeralNodesTemplatesLabelKey)).String()).To(Equal("capi"))
 
 			providerSpecificBashibleStepsSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-bashible-steps", providerID))
 			Expect(providerSpecificBashibleStepsSecret.Exists()).To(BeTrue())
@@ -429,6 +550,13 @@ typeID: network-ssd
 blockSize: "64Ki"
 `))
 
+			// The credentials of every workload come from the credential Secret, not from
+			// the retired providerClusterConfiguration.
+			Expect(csiCredentials.Field("data.serviceAccountJSON").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte(`{"my": "json"}`))))
+			Expect(ccmSecret.Field("data.service-acount-json").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte(`{"my": "json"}`))))
+			Expect(f.KubernetesResource("Secret", moduleNamespace, "yandex-credentials-capy").Field("data.key").String()).
+				To(Equal(base64.StdEncoding.EncodeToString([]byte(`{"my": "json"}`))))
+
 			Expect(csiHDDSC.Field("metadata.annotations").String()).To(MatchYAML(`
 storageclass.kubernetes.io/is-default-class: "true"
 `))
@@ -440,17 +568,567 @@ storageclass.kubernetes.io/is-default-class: "true"
 			Expect(ccmDeploy.Exists()).To(BeTrue())
 			Expect(ccmSecret.Exists()).To(BeTrue())
 
+			// The folder ID and the external network IDs come from ModuleConfig v2 settings,
+			// not from the v1 root paths.
+			folderID, found := envValue(ccmDeploy, "YANDEX_CLOUD_FOLDER_ID")
+			Expect(found).To(BeTrue())
+			Expect(folderID).To(Equal("myfoldid"))
+
+			externalNetworkIDs, found := envValue(ccmDeploy, "YANDEX_CLOUD_EXTERNAL_NETWORK_IDS")
+			Expect(found).To(BeTrue())
+			Expect(externalNetworkIDs).To(Equal("enp-external-1,enp-external-2"))
+
 			Expect(cddDeployment.Exists()).To(BeTrue())
 			Expect(cddDeployment.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(cddDeployment.Field("spec.template.spec.tolerations").String()).To(MatchYAML(tolerationsAnyNodeWithUninitialized))
+
+			cddFolderID, found := envValue(cddDeployment, "YC_FOLDER_ID")
+			Expect(found).To(BeTrue())
+			Expect(cddFolderID).To(Equal("myfoldid"))
+		})
+	})
+
+	Context("Registration Secret", func() {
+		Context("with an empty sshPublicKey", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("cloudProviderYandex.nodes.parameters", "\nlayout: WithNATInstance\nnodeNetworkCIDR: 10.100.0.1/24\nsshPublicKey: \"\"\nlabels:\n  test: test\n")
+				f.HelmRender()
+			})
+
+			It("omits both the top-level key and the provider-specific one", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				secret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
+				Expect(secret.Field("data.sshPublicKey").Exists()).To(BeFalse())
+				Expect(registrationYandexValues(secret)).ShouldNot(ContainSubstring("sshKey"))
+			})
+		})
+
+		Context("without a credential Secret", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("cloudProviderYandex.internal.credentialSecrets", `{}`)
+				f.HelmRender()
+			})
+
+			It("omits serviceAccountJSON and renders empty credentials for the workloads", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				secret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
+				Expect(registrationYandexValues(secret)).ShouldNot(ContainSubstring("serviceAccountJSON"))
+
+				Expect(f.KubernetesResource("Secret", moduleNamespace, "cloud-controller-manager").Field("data.service-acount-json").String()).To(Equal(""))
+				Expect(f.KubernetesResource("Secret", moduleNamespace, "csi-credentials").Field("data.serviceAccountJSON").String()).To(Equal(""))
+			})
+		})
+
+		Context("without node labels", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("cloudProviderYandex.nodes.parameters", `
+layout: WithNATInstance
+nodeNetworkCIDR: 10.100.0.1/24
+sshPublicKey: mysshkey
+labels: {}
+`)
+				f.HelmRender()
+			})
+
+			It("falls back to an empty label map", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				secret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
+				Expect(registrationYandexValues(secret)).To(ContainSubstring(`"labels":{}`))
+			})
+		})
+
+		Context("without an instance class default image", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("cloudProviderYandex.internal.instanceClassDefaults", `{}`)
+				f.HelmRender()
+			})
+
+			It("still emits the key so node-manager can dereference it", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				secret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
+				Expect(registrationYandexValues(secret)).To(ContainSubstring(`"instanceClassDefaults":{"imageID":""}`))
+			})
+		})
+	})
+
+	Context("CNI Secret", func() {
+		Context("without cniSecretData", func() {
+			BeforeEach(func() {
+				f.HelmRender()
+			})
+
+			It("defaults to cilium in VXLAN mode", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+				Expect(secret.Exists()).To(BeTrue())
+
+				cni, err := base64.StdEncoding.DecodeString(secret.Field("data.cni").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(cni)).To(Equal("cilium"))
+
+				cilium, err := base64.StdEncoding.DecodeString(secret.Field("data.cilium").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(cilium)).To(MatchJSON(`{"mode": "VXLAN", "masqueradeMode": "BPF"}`))
+			})
+		})
+
+		Context("with cniSecretData", func() {
+			BeforeEach(func() {
+				// "cni: simple-bridge"
+				f.ValuesSet("cloudProviderYandex.internal.cniSecretData", base64.StdEncoding.EncodeToString([]byte("cni: c2ltcGxlLWJyaWRnZQ==")))
+				f.HelmRender()
+			})
+
+			It("uses the stored data verbatim", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				secret := f.KubernetesResource("Secret", "kube-system", "d8-cni-configuration")
+				cni, err := base64.StdEncoding.DecodeString(secret.Field("data.cni").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(string(cni)).To(Equal("simple-bridge"))
+				Expect(secret.Field("data.cilium").Exists()).To(BeFalse())
+			})
+		})
+	})
+
+	Context("Disabled sections", func() {
+		Context("nodes.disabled", func() {
+			BeforeEach(func() {
+				f.ValuesSet("cloudProviderYandex.nodes.disabled", true)
+				f.HelmRender()
+			})
+
+			It("drops the CCM and the CAPI controller but keeps storage", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("ServiceAccount", moduleNamespace, "cloud-controller-manager").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("Deployment", moduleNamespace, "capy-controller-manager").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("Secret", moduleNamespace, "yandex-credentials-capy").Exists()).To(BeFalse())
+
+				// cloud-data-discoverer reads this Secret, so it survives a disabled CCM.
+				Expect(f.KubernetesResource("Secret", moduleNamespace, "cloud-controller-manager").Exists()).To(BeTrue())
+
+				Expect(f.KubernetesResource("Deployment", moduleNamespace, "csi-controller").Exists()).To(BeTrue())
+				Expect(f.KubernetesGlobalResource("StorageClass", "network-hdd").Exists()).To(BeTrue())
+			})
+		})
+
+		Context("ccm.disabled", func() {
+			BeforeEach(func() {
+				f.ValuesSet("cloudProviderYandex.ccm.disabled", true)
+				f.HelmRender()
+			})
+
+			It("drops the CCM Deployment but keeps the CAPI controller and storage", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("ServiceAccount", moduleNamespace, "cloud-controller-manager").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("Deployment", moduleNamespace, "capy-controller-manager").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("Deployment", moduleNamespace, "csi-controller").Exists()).To(BeTrue())
+			})
+		})
+
+		Context("storage.disabled", func() {
+			BeforeEach(func() {
+				f.ValuesSet("cloudProviderYandex.storage.disabled", true)
+				f.HelmRender()
+			})
+
+			It("drops the CSI stack but keeps the CCM", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesGlobalResource("CSIDriver", "yandex.csi.flant.com").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("Deployment", moduleNamespace, "csi-controller").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("DaemonSet", moduleNamespace, "csi-node").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("Secret", moduleNamespace, "csi-credentials").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("ServiceAccount", moduleNamespace, "csi").Exists()).To(BeFalse())
+				Expect(f.KubernetesGlobalResource("StorageClass", "network-hdd").Exists()).To(BeFalse())
+
+				Expect(f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager").Exists()).To(BeTrue())
+			})
+		})
+
+		Context("nodes.disabled and storage.disabled together", func() {
+			BeforeEach(func() {
+				f.ValuesSet("cloudProviderYandex.nodes.disabled", true)
+				f.ValuesSet("cloudProviderYandex.storage.disabled", true)
+				f.HelmRender()
+			})
+
+			It("still renders the namespace, the registration Secrets and the webhook", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesGlobalResource("Namespace", moduleNamespace).Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("Deployment", moduleNamespace, "validation-webhook").Exists()).To(BeTrue())
+			})
+		})
+	})
+
+	Context("Storage classes", func() {
+		Context("with an empty storage class list", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("cloudProviderYandex.internal.storageClasses", `[]`)
+				f.HelmRender()
+			})
+
+			It("renders no StorageClass at all", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesGlobalResource("StorageClass", "network-hdd").Exists()).To(BeFalse())
+				Expect(f.KubernetesGlobalResource("StorageClass", "network-ssd").Exists()).To(BeFalse())
+			})
+		})
+	})
+
+	Context("Validation webhook", func() {
+		Context("in a bootstrapped cluster", func() {
+			BeforeEach(func() {
+				f.HelmRender()
+			})
+
+			It("renders the whole serving stack off the generated certificate", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				deployment := f.KubernetesResource("Deployment", moduleNamespace, "validation-webhook")
+				Expect(deployment.Exists()).To(BeTrue())
+				Expect(deployment.Field("spec.template.spec.hostNetwork").Exists()).To(BeFalse())
+				Expect(deployment.Field(`spec.template.metadata.labels.security\.deckhouse\.io/security-policy-exception`).Exists()).To(BeFalse())
+
+				Expect(f.KubernetesResource("Service", moduleNamespace, "validation-webhook").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("ServiceAccount", moduleNamespace, "validation-webhook").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("PodDisruptionBudget", moduleNamespace, "validation-webhook").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "validation-webhook").Exists()).To(BeTrue())
+				Expect(f.KubernetesGlobalResource("ClusterRole", "d8:cloud-provider-yandex:validation-webhook").Exists()).To(BeTrue())
+				Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:cloud-provider-yandex:validation-webhook").Exists()).To(BeTrue())
+
+				tlsSecret := f.KubernetesResource("Secret", moduleNamespace, "validation-webhook-tls")
+				Expect(tlsSecret.Exists()).To(BeTrue())
+				Expect(tlsSecret.Field("data.tls\\.crt").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("webhook-crt"))))
+				Expect(tlsSecret.Field("data.tls\\.key").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("webhook-key"))))
+				Expect(tlsSecret.Field("data.ca\\.crt").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("webhook-ca"))))
+
+				webhookConfiguration := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-cloud-provider-yandex-validation-webhook")
+				Expect(webhookConfiguration.Exists()).To(BeTrue())
+
+				webhookNames := []string{}
+				for _, webhook := range webhookConfiguration.Field("webhooks").Array() {
+					webhookNames = append(webhookNames, webhook.Get("name").String())
+					Expect(webhook.Get("clientConfig.caBundle").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("webhook-ca"))))
+				}
+				// YandexInstanceClass is gated by a single webhook, on the storage version.
+				// matchPolicy: Equivalent makes the apiserver convert a v1alpha1 write to v1 and
+				// deliver it there, so a second webhook on v1alpha1 would only double every
+				// admission call - and it would hand the rules the v1alpha1 view, which has no
+				// spec.etcdDiskSizeGB.
+				Expect(webhookNames).To(ConsistOf(
+					"moduleconfigs.cloud-provider-yandex.deckhouse.io",
+					"secrets.cloud-provider-yandex.deckhouse.io",
+					"nodegroups.cloud-provider-yandex.deckhouse.io",
+					"yandexinstanceclasses.cloud-provider-yandex.deckhouse.io-v1",
+				))
+
+				for _, webhook := range webhookConfiguration.Field("webhooks").Array() {
+					Expect(webhook.Get("matchPolicy").String()).To(Equal("Equivalent"),
+						"%s must accept writes to every served version", webhook.Get("name").String())
+				}
+			})
+		})
+
+		Context("in a cluster that is not bootstrapped yet", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.clusterIsBootstrapped", false)
+				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd", "cloud-provider-yandex", "admission-policy-engine-crd"]`)
+				f.HelmRender()
+			})
+
+			It("runs on the host network and carries the security policy exception", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				deployment := f.KubernetesResource("Deployment", moduleNamespace, "validation-webhook")
+				Expect(deployment.Field("spec.template.spec.hostNetwork").Bool()).To(BeTrue())
+				Expect(deployment.Field(`spec.template.metadata.labels.security\.deckhouse\.io/security-policy-exception`).String()).To(Equal("validation-webhook"))
+
+				exception := f.KubernetesResource("SecurityPolicyException", moduleNamespace, "validation-webhook")
+				Expect(exception.Exists()).To(BeTrue())
+				Expect(exception.Field("spec.network.hostNetwork.allowedValue").Bool()).To(BeTrue())
+			})
+		})
+
+		Context("without admission-policy-engine-crd", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.clusterIsBootstrapped", false)
+				f.HelmRender()
+			})
+
+			It("skips the security policy exception", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("SecurityPolicyException", moduleNamespace, "validation-webhook").Exists()).To(BeFalse())
+			})
+		})
+
+		Context("without vertical-pod-autoscaler-crd", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["cloud-provider-yandex"]`)
+				f.HelmRender()
+			})
+
+			It("drops the VPA and inlines the resource requests instead", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("VerticalPodAutoscaler", moduleNamespace, "validation-webhook").Exists()).To(BeFalse())
+
+				deployment := f.KubernetesResource("Deployment", moduleNamespace, "validation-webhook")
+				Expect(deployment.Field("spec.template.spec.containers.0.resources.requests.cpu").String()).To(Equal("25m"))
+				Expect(deployment.Field("spec.template.spec.containers.0.resources.requests.memory").String()).To(Equal("64Mi"))
+			})
+		})
+	})
+
+	Context("Namespace", func() {
+		Context("with admission-policy-engine-crd enabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd", "cloud-provider-yandex", "admission-policy-engine-crd"]`)
+				f.HelmRender()
+			})
+
+			It("asks for the security policy check", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				namespace := f.KubernetesGlobalResource("Namespace", moduleNamespace)
+				Expect(namespace.Field(`metadata.labels.security\.deckhouse\.io/enable-security-policy-check`).String()).To(Equal("true"))
+			})
+		})
+
+		Context("with admission-policy-engine-crd disabled", func() {
+			BeforeEach(func() {
+				f.HelmRender()
+			})
+
+			It("omits the security policy check label", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				namespace := f.KubernetesGlobalResource("Namespace", moduleNamespace)
+				Expect(namespace.Field(`metadata.labels.security\.deckhouse\.io/enable-security-policy-check`).Exists()).To(BeFalse())
+			})
+		})
+	})
+
+	Context("CAPI controller", func() {
+		Context("in a bootstrapped cluster", func() {
+			BeforeEach(func() {
+				f.HelmRender()
+			})
+
+			It("relies on the in-cluster apiserver endpoint", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				deployment := f.KubernetesResource("Deployment", moduleNamespace, "capy-controller-manager")
+				Expect(deployment.Exists()).To(BeTrue())
+
+				_, found := envValue(deployment, "KUBERNETES_SERVICE_HOST")
+				Expect(found).To(BeFalse())
+			})
+		})
+
+		Context("in a cluster that is not bootstrapped yet", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.clusterIsBootstrapped", false)
+				f.HelmRender()
+			})
+
+			It("points the controller at the host apiserver", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				deployment := f.KubernetesResource("Deployment", moduleNamespace, "capy-controller-manager")
+				port, found := envValue(deployment, "KUBERNETES_SERVICE_PORT")
+				Expect(found).To(BeTrue())
+				Expect(port).To(Equal("6443"))
+			})
+		})
+	})
+
+	Context("Credential Secret lookup", func() {
+		Context("when the Secret carries no secret field", func() {
+			BeforeEach(func() {
+				// authScheme alone is a valid Secret shape: an identity-only scheme stores
+				// no secret, and the workloads must still render.
+				f.ValuesSetFromYaml("cloudProviderYandex.internal.credentialSecrets", `
+d8-credentials:
+  authScheme: ServiceAccount
+  secret: ""
+  identity: my-identity
+`)
+				f.HelmRender()
+			})
+
+			It("renders an empty credential instead of failing", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("Secret", moduleNamespace, "cloud-controller-manager").Field("data.service-acount-json").String()).To(Equal(""))
+				Expect(f.KubernetesResource("Secret", moduleNamespace, "csi-credentials").Field("data.serviceAccountJSON").String()).To(Equal(""))
+				Expect(f.KubernetesResource("Secret", moduleNamespace, "yandex-credentials-capy").Field("data.key").String()).To(Equal(""))
+			})
+		})
+
+		Context("when a differently named Secret is present", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("cloudProviderYandex.internal.credentialSecrets", `
+d8-credentials-exporter:
+  authScheme: APIToken
+  secret: exporter-key
+`)
+				f.HelmRender()
+			})
+
+			It("does not pick it up for the provider credentials", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("Secret", moduleNamespace, "cloud-controller-manager").Field("data.service-acount-json").String()).To(Equal(""))
+			})
+		})
+	})
+
+	Context("CSI controller image availability", func() {
+		Context("when the CSI plugin image is missing from the release", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.modulesImages", modulesImagesWithout("yandexCsiPlugin"))
+				f.HelmRender()
+			})
+
+			It("renders neither the controller nor the node DaemonSet", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("Deployment", moduleNamespace, "csi-controller").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("DaemonSet", moduleNamespace, "csi-node").Exists()).To(BeFalse())
+
+				// The CSIDriver and the StorageClasses do not depend on the image.
+				Expect(f.KubernetesGlobalResource("CSIDriver", "yandex.csi.flant.com").Exists()).To(BeTrue())
+				Expect(f.KubernetesGlobalResource("StorageClass", "network-hdd").Exists()).To(BeTrue())
+			})
+		})
+	})
+
+	Context("Exporter RBAC", func() {
+		Context("with a monitoring api-key", func() {
+			BeforeEach(func() {
+				f.ValuesSet("cloudProviderYandex.internal.providerDiscoveryData.monitoringAPIKey", "api-key")
+				f.HelmRender()
+			})
+
+			It("renders the exporter ServiceAccount and its rbac-proxy bindings", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("ServiceAccount", moduleNamespace, "cloud-metrics-exporter").Exists()).To(BeTrue())
+			})
+		})
+
+		Context("without a monitoring api-key", func() {
+			BeforeEach(func() {
+				f.ValuesSet("cloudProviderYandex.internal.providerDiscoveryData.monitoringAPIKey", "")
+				f.HelmRender()
+			})
+
+			It("renders no exporter RBAC at all", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("ServiceAccount", moduleNamespace, "cloud-metrics-exporter").Exists()).To(BeFalse())
+			})
+		})
+	})
+
+	Context("CAPI controller webhook certificate", func() {
+		Context("with a generated certificate", func() {
+			BeforeEach(func() {
+				f.HelmRender()
+			})
+
+			It("renders the TLS Secret from the values", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				secret := f.KubernetesResource("Secret", moduleNamespace, "capy-controller-manager-webhook-tls")
+				Expect(secret.Exists()).To(BeTrue())
+				Expect(secret.Field("data.tls\\.crt").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("capy-crt"))))
+			})
+		})
+
+		Context("before the certificate hook has run", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("cloudProviderYandex.internal", `
+credentialSecrets:
+  d8-credentials:
+    authScheme: ServiceAccount
+    secret: '{"my": "json"}'
+instanceClassDefaults:
+  imageID: test
+validationWebhookCert:
+  crt: webhook-crt
+  key: webhook-key
+  ca: webhook-ca
+storageClasses: []
+providerDiscoveryData:
+  apiVersion: deckhouse.io/v1
+  kind: YandexCloudDiscoveryData
+  zones: ["zonea"]
+  zoneToSubnetIdMap:
+    zonea: aaa
+  defaultLbTargetGroupNetworkId: deftarggroupnetid
+  internalNetworkIDs: ["id1"]
+  shouldAssignPublicIPAddress: true
+  routeTableID: testest
+  region: myreg
+  natInstanceName: ""
+`)
+				f.HelmRender()
+			})
+
+			It("skips the TLS Secret instead of failing the render", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("Secret", moduleNamespace, "capy-controller-manager-webhook-tls").Exists()).To(BeFalse())
+			})
+		})
+	})
+
+	Context("CAPI controller security policy", func() {
+		Context("with admission-policy-engine-crd enabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["vertical-pod-autoscaler", "vertical-pod-autoscaler-crd", "cloud-provider-yandex", "admission-policy-engine-crd"]`)
+				f.HelmRender()
+			})
+
+			It("labels the pod for the security policy exception", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				deployment := f.KubernetesResource("Deployment", moduleNamespace, "capy-controller-manager")
+				Expect(deployment.Field(`spec.template.metadata.labels.security\.deckhouse\.io/security-policy-exception`).String()).To(Equal("capy-controller-manager"))
+			})
+		})
+
+		Context("with admission-policy-engine-crd disabled", func() {
+			BeforeEach(func() {
+				f.HelmRender()
+			})
+
+			It("omits the label", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				deployment := f.KubernetesResource("Deployment", moduleNamespace, "capy-controller-manager")
+				Expect(deployment.Field(`spec.template.metadata.labels.security\.deckhouse\.io/security-policy-exception`).Exists()).To(BeFalse())
+			})
 		})
 	})
 
 	Context("Yandex with discovered default StorageClass (without `global.defaultClusterStorageClass`)", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", globalValues)
-			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("cloudProviderYandex", moduleValues)
 			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `network-ssd`)
 			f.HelmRender()
 		})
@@ -475,9 +1153,6 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Yandex with discovered default StorageClass AND `global.defaultClusterStorageClass` specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", globalValues)
-			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("cloudProviderYandex", moduleValues)
 			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `network-ssd`)
 			f.ValuesSetFromYaml("global.defaultClusterStorageClass", `network-ssd`)
 			f.HelmRender()
@@ -503,9 +1178,6 @@ storageclass.kubernetes.io/is-default-class: "true"
 
 	Context("Yandex bootstraped cluster (no default StorageClass yet)", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", globalValues)
-			f.ValuesSet("global.modulesImages", GetModulesImages())
-			f.ValuesSetFromYaml("cloudProviderYandex", moduleValues)
 			f.HelmRender()
 		})
 
@@ -525,6 +1197,291 @@ storageclass.kubernetes.io/is-default-class: "true"
 `))
 			Expect(csiSSDSC.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
 			Expect(csiSSDSCNonReplicated.Field(`metadata.annotations.storageclass\.kubernetes\.io/is-default-class`).Exists()).To(BeFalse())
+		})
+	})
+
+	// The discoverer answers DisksMeta and nothing else - it no longer derives network facts, so
+	// it is not handed the ModuleConfig settings any more.
+	Context("cloud-data-discoverer", func() {
+		BeforeEach(func() {
+			f.ValuesSet("cloudProviderYandex.nodes.parameters.existingNetworkID", "enp-network")
+			f.HelmRender()
+		})
+
+		It("carries only the credentials and the cluster identity", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			deployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-data-discoverer")
+			Expect(deployment.Exists()).To(BeTrue())
+
+			folderID, found := envValue(deployment, "YC_FOLDER_ID")
+			Expect(found).To(BeTrue())
+			Expect(folderID).To(Equal("myfoldid"))
+
+			_, _, found = envSecretRef(deployment, "YC_SA_KEY_JSON")
+			Expect(found).To(BeTrue())
+
+			_, _, found = envSecretRef(deployment, "MODULE_CONFIG")
+			Expect(found).To(BeFalse())
+		})
+
+		It("does not render a settings Secret for the discoverer", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesResource("Secret", moduleNamespace, "cloud-data-discoverer").Exists()).To(BeFalse())
+		})
+	})
+
+	// The helpers in templates/_helpers.tpl repeat rules that candi/ implements in HCL. These
+	// specs pin the two sides together: a stated ModuleConfig value wins, discovery data is the
+	// fallback for whatever the infrastructure run created itself, and `zones` narrows down to
+	// the zones the subnets actually cover.
+	Context("Network facts shared by the CCM and the registration Secret", func() {
+		ccmEnv := func(name string) string {
+			deployment := f.KubernetesResource("Deployment", moduleNamespace, "cloud-controller-manager")
+			value, found := envValue(deployment, name)
+			Expect(found).To(BeTrue(), "env %s must be rendered", name)
+			return value
+		}
+
+		registrationSecret := func() object_store.KubeObject {
+			secret := f.KubernetesResource("Secret", "kube-system", "d8-node-manager-cloud-provider")
+			Expect(secret.Exists()).To(BeTrue())
+			return secret
+		}
+
+		Context("with nothing stated in ModuleConfig", func() {
+			BeforeEach(func() {
+				f.HelmRender()
+			})
+
+			It("falls back to discovery data everywhere", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(ccmEnv("YANDEX_CLOUD_DEFAULT_LB_TARGET_GROUP_NETWORK_ID")).To(Equal("deftarggroupnetid"))
+				Expect(ccmEnv("YANDEX_CLOUD_INTERNAL_NETWORK_IDS")).To(Equal("id1,id2"))
+				Expect(ccmEnv("YANDEX_CLOUD_ROUTE_TABLE_ID")).To(Equal("testest"))
+
+				var zones []string
+				registrationField(registrationSecret(), "zones", &zones)
+				Expect(zones).To(Equal([]string{"zonea", "zoneb"}))
+
+				var yandexValues map[string]interface{}
+				registrationField(registrationSecret(), "yandex", &yandexValues)
+				Expect(yandexValues["zoneToSubnetIdMap"]).To(Equal(map[string]interface{}{
+					"zonea": "aaa",
+					"zoneb": "bbb",
+				}))
+			})
+		})
+
+		Context("with existing network facts stated in ModuleConfig", func() {
+			BeforeEach(func() {
+				f.ValuesSet("cloudProviderYandex.nodes.parameters.existingNetworkID", "enp-network")
+				f.ValuesSet("cloudProviderYandex.nodes.parameters.existingRouteTableID", "enp-route-table")
+				f.ValuesSetFromYaml("cloudProviderYandex.nodes.parameters.existingZoneToSubnetIDMap", `
+ru-central1-b: subnet-b
+ru-central1-a: subnet-a
+`)
+				f.HelmRender()
+			})
+
+			It("prefers the stated values over discovery data", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(ccmEnv("YANDEX_CLOUD_DEFAULT_LB_TARGET_GROUP_NETWORK_ID")).To(Equal("enp-network"))
+				Expect(ccmEnv("YANDEX_CLOUD_INTERNAL_NETWORK_IDS")).To(Equal("enp-network"))
+				Expect(ccmEnv("YANDEX_CLOUD_ROUTE_TABLE_ID")).To(Equal("enp-route-table"))
+
+				var yandexValues map[string]interface{}
+				registrationField(registrationSecret(), "yandex", &yandexValues)
+				Expect(yandexValues["zoneToSubnetIdMap"]).To(Equal(map[string]interface{}{
+					"ru-central1-a": "subnet-a",
+					"ru-central1-b": "subnet-b",
+				}))
+			})
+
+			It("derives zones from the stated subnets, sorted", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				var zones []string
+				registrationField(registrationSecret(), "zones", &zones)
+				Expect(zones).To(Equal([]string{"ru-central1-a", "ru-central1-b"}))
+			})
+		})
+
+		Context("with additional internal networks in ccm.parameters", func() {
+			It("appends them to the discovery-data networks, deduplicating", func() {
+				f.ValuesSetFromYaml("cloudProviderYandex.ccm.parameters.additionalInternalNetworkIDs", `["id2", "id3"]`)
+				f.HelmRender()
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(ccmEnv("YANDEX_CLOUD_INTERNAL_NETWORK_IDS")).To(Equal("id1,id2,id3"))
+			})
+
+			It("appends them to a stated existingNetworkID, deduplicating", func() {
+				f.ValuesSet("cloudProviderYandex.nodes.parameters.existingNetworkID", "enp-network")
+				f.ValuesSetFromYaml("cloudProviderYandex.ccm.parameters.additionalInternalNetworkIDs", `["enp-network", "enp-extra"]`)
+				f.HelmRender()
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(ccmEnv("YANDEX_CLOUD_INTERNAL_NETWORK_IDS")).To(Equal("enp-network,enp-extra"))
+			})
+		})
+
+		Context("with a globally restricted set of zones", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("cloudProviderYandex.internal.providerDiscoveryData.zoneToSubnetIdMap", `
+ru-central1-a: subnet-a
+ru-central1-b: subnet-b
+ru-central1-d: subnet-d
+`)
+				f.ValuesSetFromYaml("cloudProviderYandex.nodes.parameters.zones", `["ru-central1-d", "ru-central1-a"]`)
+				f.HelmRender()
+			})
+
+			It("intersects the restriction with the zones the subnets cover, sorted", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				var zones []string
+				registrationField(registrationSecret(), "zones", &zones)
+				Expect(zones).To(Equal([]string{"ru-central1-a", "ru-central1-d"}))
+			})
+		})
+
+		Context("with a zone restriction naming a zone that has no subnet", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("cloudProviderYandex.internal.providerDiscoveryData.zoneToSubnetIdMap", `
+ru-central1-a: subnet-a
+`)
+				f.ValuesSetFromYaml("cloudProviderYandex.nodes.parameters.zones", `["ru-central1-a", "ru-central1-e"]`)
+				f.HelmRender()
+			})
+
+			It("keeps only the covered zones", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				var zones []string
+				registrationField(registrationSecret(), "zones", &zones)
+				Expect(zones).To(Equal([]string{"ru-central1-a"}))
+			})
+		})
+
+		Context("with the WithoutNAT layout", func() {
+			BeforeEach(func() {
+				f.ValuesSet("cloudProviderYandex.nodes.parameters.layout", "WithoutNAT")
+				f.HelmRender()
+			})
+
+			It("assigns public IP addresses regardless of the recorded discovery data", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				var yandexValues map[string]interface{}
+				registrationField(registrationSecret(), "yandex", &yandexValues)
+				Expect(yandexValues["shouldAssignPublicIPAddress"]).To(BeTrue())
+			})
+		})
+
+		// A cluster whose infrastructure DKP does not create has no discovery data at all:
+		// hooks/yandex_cluster_configuration.go writes the struct with nothing but the type
+		// markers and the region, because every other field of YandexCloudDiscoveryData is
+		// `omitempty`. That payload has to render off nodes.parameters.existing* alone —
+		// before the schema was relaxed it could not even reach the templates, since
+		// routeTableID/defaultLbTargetGroupNetworkId carried minLength: 1 and the nil slices
+		// and map serialized to null.
+		Context("with no discovery data at all, as in a cluster DKP did not build", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("cloudProviderYandex.internal.providerDiscoveryData", `
+apiVersion: deckhouse.io/v1
+kind: YandexCloudDiscoveryData
+region: ru-central1
+`)
+				f.ValuesSet("cloudProviderYandex.nodes.parameters.existingNetworkID", "enp-network")
+				f.ValuesSet("cloudProviderYandex.nodes.parameters.existingRouteTableID", "enp-route-table")
+				f.ValuesSetFromYaml("cloudProviderYandex.nodes.parameters.existingZoneToSubnetIDMap", `
+ru-central1-a: subnet-a
+`)
+				f.HelmRender()
+			})
+
+			It("renders the CCM off the stated network facts", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(ccmEnv("YANDEX_CLOUD_DEFAULT_LB_TARGET_GROUP_NETWORK_ID")).To(Equal("enp-network"))
+				Expect(ccmEnv("YANDEX_CLOUD_INTERNAL_NETWORK_IDS")).To(Equal("enp-network"))
+				Expect(ccmEnv("YANDEX_CLOUD_ROUTE_TABLE_ID")).To(Equal("enp-route-table"))
+			})
+
+			It("derives the registration Secret from the stated subnets", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				var zones []string
+				registrationField(registrationSecret(), "zones", &zones)
+				Expect(zones).To(Equal([]string{"ru-central1-a"}))
+
+				var yandexValues map[string]interface{}
+				registrationField(registrationSecret(), "yandex", &yandexValues)
+				Expect(yandexValues["zoneToSubnetIdMap"]).To(Equal(map[string]interface{}{
+					"ru-central1-a": "subnet-a",
+				}))
+				// The layout decides this one, and Standard means no public addresses; the
+				// absent discovery-data key must not make the helper fail.
+				Expect(yandexValues["shouldAssignPublicIPAddress"]).To(BeFalse())
+			})
+
+			It("deploys no cloud-metrics-exporter", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("Deployment", moduleNamespace, "cloud-metrics-exporter").Exists()).To(BeFalse())
+			})
+		})
+
+		Context("with no route table in either source", func() {
+			BeforeEach(func() {
+				// The absent case: the key is missing from the payload entirely, which is what
+				// `omitempty` produces for a cluster with no infrastructure run.
+				f.ValuesSetFromYaml("cloudProviderYandex.internal.providerDiscoveryData", `
+apiVersion: deckhouse.io/v1
+kind: YandexCloudDiscoveryData
+region: myreg
+zones: ["zonea"]
+zoneToSubnetIdMap:
+  zonea: aaa
+defaultLbTargetGroupNetworkId: deftarggroupnetid
+internalNetworkIDs: ["id1"]
+shouldAssignPublicIPAddress: false
+`)
+				f.HelmRender()
+			})
+
+			It("fails the render instead of starting the CCM without a route table", func() {
+				Expect(f.RenderError).Should(HaveOccurred())
+			})
+		})
+
+		Context("with a blank route table in either source", func() {
+			BeforeEach(func() {
+				// routeTableID no longer carries minLength: 1, so a writer may now blank it
+				// instead of omitting it. The CCM must still refuse to start: `required` in
+				// cloud-controller-manager/deployment.yaml treats "" the same as absent.
+				f.ValuesSetFromYaml("cloudProviderYandex.internal.providerDiscoveryData", `
+apiVersion: deckhouse.io/v1
+kind: YandexCloudDiscoveryData
+region: myreg
+routeTableID: ""
+zones: ["zonea"]
+zoneToSubnetIdMap:
+  zonea: aaa
+defaultLbTargetGroupNetworkId: deftarggroupnetid
+internalNetworkIDs: ["id1"]
+shouldAssignPublicIPAddress: false
+`)
+				f.HelmRender()
+			})
+
+			It("fails the render instead of starting the CCM without a route table", func() {
+				Expect(f.RenderError).Should(HaveOccurred())
+			})
 		})
 	})
 
