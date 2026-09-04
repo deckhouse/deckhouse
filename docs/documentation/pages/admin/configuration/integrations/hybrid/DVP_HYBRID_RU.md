@@ -75,25 +75,10 @@ description: Подготовка к гибридной интеграции с 
    Значение зоны в ModuleConfig и NodeGroup должно совпадать. Пока в DVP доступно только значение `default`.
    {% endalert %}
 
-1. Создайте файл, например `cloud-provider-dvp-mc.yaml`, с неймспейсом модуля `cloud-provider-dvp`, секретом с учётными данными и конфигурацией модуля:
+1. Создайте файл, например `cloud-provider-dvp-mc.yaml`, с конфигурацией модуля `cloud-provider-dvp`:
 
    ```shell
    cat > cloud-provider-dvp-mc.yaml <<EOF
-   apiVersion: v1
-   kind: Namespace
-   metadata:
-     name: d8-cloud-provider-dvp
-   ---
-   apiVersion: v1
-   kind: Secret
-   metadata:
-     name: d8-credentials
-     namespace: d8-cloud-provider-dvp
-   type: cloud-provider.deckhouse.io/credentials
-   stringData:
-     authScheme: kubeconfig
-     secret: ${DVP_KUBECONFIG_B64}
-   ---
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
    metadata:
@@ -114,13 +99,39 @@ description: Подготовка к гибридной интеграции с 
    EOF
    ```
 
-   В манифесте используются значения переменных окружения, заданных на предыдущих шагах: `DVP_KUBECONFIG_B64`, `DVP_NAMESPACE` и `DVP_ZONE`. Замените `<SSH_PUBLIC_KEY>` на публичный SSH-ключ для доступа к создаваемым узлам.
+   В манифесте используются значения переменных окружения, заданных на предыдущих шагах: `DVP_NAMESPACE` и `DVP_ZONE`. Замените `<SSH_PUBLIC_KEY>` на публичный SSH-ключ для доступа к создаваемым узлам.
 
 1. Примените манифест:
 
    ```shell
    d8 k apply -f cloud-provider-dvp-mc.yaml
    ```
+
+1. Дождитесь появления неймспейса `d8-cloud-provider-dvp`:
+
+   ```shell
+   d8 k get ns d8-cloud-provider-dvp
+   ```
+
+   Неймспейс создаёт модуль `cloud-provider-dvp`, поэтому секрет с учётными данными применяется отдельным шагом, а не вместе с ModuleConfig. Пока секрета нет, компоненты модуля не могут обратиться к API DVP.
+
+1. Создайте секрет с учётными данными:
+
+   ```shell
+   d8 k apply -f - <<EOF
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: d8-credentials
+     namespace: d8-cloud-provider-dvp
+   type: cloud-provider.deckhouse.io/credentials
+   stringData:
+     authScheme: kubeconfig
+     secret: ${DVP_KUBECONFIG_B64}
+   EOF
+   ```
+
+   В секрете используется значение переменной окружения `DVP_KUBECONFIG_B64`, заданной на первом шаге.
 
 1. Дождитесь включения модуля `cloud-provider-dvp`:
 

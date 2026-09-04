@@ -75,25 +75,10 @@ When the `cloud-provider-dvp` module is enabled, the corresponding StorageClass 
    The zone value in ModuleConfig and NodeGroup must match. Currently, only the `default` value is available in DVP.
    {% endalert %}
 
-1. Create a file with the `cloud-provider-dvp` module namespace, a credentials Secret, and the module configuration. For example, `cloud-provider-dvp-mc.yaml`:
+1. Create a file with the `cloud-provider-dvp` module configuration. For example, `cloud-provider-dvp-mc.yaml`:
 
    ```shell
    cat > cloud-provider-dvp-mc.yaml <<EOF
-   apiVersion: v1
-   kind: Namespace
-   metadata:
-     name: d8-cloud-provider-dvp
-   ---
-   apiVersion: v1
-   kind: Secret
-   metadata:
-     name: d8-credentials
-     namespace: d8-cloud-provider-dvp
-   type: cloud-provider.deckhouse.io/credentials
-   stringData:
-     authScheme: kubeconfig
-     secret: ${DVP_KUBECONFIG_B64}
-   ---
    apiVersion: deckhouse.io/v1alpha1
    kind: ModuleConfig
    metadata:
@@ -114,13 +99,39 @@ When the `cloud-provider-dvp` module is enabled, the corresponding StorageClass 
    EOF
    ```
 
-   The manifest uses the environment variables set in the previous steps: `DVP_KUBECONFIG_B64`, `DVP_NAMESPACE`, and `DVP_ZONE`. Replace `<SSH_PUBLIC_KEY>` with the public SSH key for access to the created nodes.
+   The manifest uses the environment variables set in the previous steps: `DVP_NAMESPACE` and `DVP_ZONE`. Replace `<SSH_PUBLIC_KEY>` with the public SSH key for access to the created nodes.
 
 1. Apply the manifest:
 
    ```shell
    d8 k apply -f cloud-provider-dvp-mc.yaml
    ```
+
+1. Wait until the `d8-cloud-provider-dvp` namespace appears:
+
+   ```shell
+   d8 k get ns d8-cloud-provider-dvp
+   ```
+
+   The namespace is created by the `cloud-provider-dvp` module, so the credentials Secret is applied as a separate step rather than together with the ModuleConfig. Until the Secret exists, the module components cannot reach the DVP API.
+
+1. Create the credentials Secret:
+
+   ```shell
+   d8 k apply -f - <<EOF
+   apiVersion: v1
+   kind: Secret
+   metadata:
+     name: d8-credentials
+     namespace: d8-cloud-provider-dvp
+   type: cloud-provider.deckhouse.io/credentials
+   stringData:
+     authScheme: kubeconfig
+     secret: ${DVP_KUBECONFIG_B64}
+   EOF
+   ```
+
+   The Secret uses the `DVP_KUBECONFIG_B64` environment variable set in the first step.
 
 1. Wait until the `cloud-provider-dvp` module is enabled:
 
