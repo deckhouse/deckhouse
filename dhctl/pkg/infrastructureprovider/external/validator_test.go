@@ -40,6 +40,7 @@ const modeEnv = "D8_TEST_VALIDATOR_MODE"
 const (
 	modeValid      = "valid"
 	modeViolations = "violations"
+	modeWarnings   = "warnings" // reports something, but nothing that blocks
 	modeBlank      = "blank"    // rejects, but fills none of the violation fields
 	modeLegacy     = "legacy"   // a binary that knows no serve subcommand
 	modeSlowStart  = "slow"     // listens, but only after a while
@@ -149,6 +150,16 @@ func (mode fakeValidator) Validate(context.Context, validatev1.Input) (*validate
 		}, nil
 	}
 
+	if mode == modeWarnings {
+		return &validatev1.ValidateResponse{
+			Warnings: []*validatev1.ViolationResponse{{
+				Path:    "DVPClusterConfiguration/layout",
+				Code:    "layout_deprecated",
+				Message: "layout is deprecated",
+			}},
+		}, nil
+	}
+
 	if mode == modeViolations {
 		return &validatev1.ValidateResponse{
 			Errors: []*validatev1.ViolationResponse{{
@@ -195,6 +206,13 @@ func TestValidate(t *testing.T) {
 			mode:    modeViolations,
 			input:   convergeInput(),
 			wantErr: "Secret/d8-credentials: credential Secret is required",
+		},
+		{
+			// Warnings are for the operator to read, not a reason to stop: only an
+			// error blocks the operation.
+			name:  "a warning alone does not block the operation",
+			mode:  modeWarnings,
+			input: convergeInput(),
 		},
 		{
 			// Fail closed: a rejection whose fields are all empty renders as no text,

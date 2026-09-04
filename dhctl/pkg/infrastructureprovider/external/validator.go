@@ -59,11 +59,11 @@ func Validate(ctx context.Context, binaryPath string, input config.ProviderInput
 		return fmt.Errorf("run provider %q validator: %w", input.ProviderName, err)
 	}
 
-	if warningsStr := violationsToWarnString(resp.GetWarnings()); len(warningsStr) > 0 {
+	if warningsStr := violationsToStrings(resp.GetWarnings()); len(warningsStr) > 0 {
 		reportWarnings(ctx, input.ProviderName, warningsStr)
 	}
 
-	if errorsStr := violationsToErrString(resp.GetErrors()); len(errorsStr) > 0 {
+	if errorsStr := violationsToStrings(resp.GetErrors()); len(errorsStr) > 0 {
 		return fmt.Errorf("provider %q validation failed: %s", input.ProviderName, strings.Join(errorsStr, "\n"))
 	}
 	return nil

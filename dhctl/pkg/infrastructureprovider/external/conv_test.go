@@ -87,3 +87,34 @@ func TestToWireInputRejectsMalformedJSON(t *testing.T) {
 		t.Fatal("toWireInput() = nil, want an error")
 	}
 }
+
+func TestViolationsToStrings(t *testing.T) {
+	tests := []struct {
+		name       string
+		violations []*validatev1.ViolationResponse
+		want       []string
+	}{
+		{
+			name: "no violations render as no lines",
+			want: []string{},
+		},
+		{
+			name:       "a violation with a path is prefixed with it",
+			violations: []*validatev1.ViolationResponse{{Path: "NodeGroup/worker", Message: "replicas is 0"}},
+			want:       []string{"NodeGroup/worker: replicas is 0"},
+		},
+		{
+			name:       "a violation without a path is the message alone",
+			violations: []*validatev1.ViolationResponse{{Message: "credential Secret is required"}},
+			want:       []string{"credential Secret is required"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := violationsToStrings(test.violations); !reflect.DeepEqual(got, test.want) {
+				t.Errorf("violationsToStrings() = %q, want %q", got, test.want)
+			}
+		})
+	}
+}
