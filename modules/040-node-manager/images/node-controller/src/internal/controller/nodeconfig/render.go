@@ -57,10 +57,11 @@ func nodeRenderInputsChanged(before, after client.Object) bool {
 // fields (caCert, serverTLSBootstrap, proxy token); every other field must agree.
 func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv1alpha1.NodeSpec {
 	return internalv1alpha1.NodeSpec{
-		NodeName:           node.Name,
-		OSImage:            in.OSImage,
-		APIServerEndpoints: in.APIServerEndpoints,
-		Extensions:         renderExtensions(in.SysextDigests),
+		NodeName:             node.Name,
+		OSImage:              in.OSImage,
+		APIServerEndpoints:   in.APIServerEndpoints,
+		InternalNetworkCIDRs: in.InternalNetworkCIDRs,
+		Extensions:           renderExtensions(in.SysextDigests),
 		// A NodeGroup has no disk field; without a selector the boot path refuses
 		// outright ("neither device nor diskSelector set"). Any selector the
 		// operator wrote survives this one through keepBootstrapOnlyFields.
@@ -79,12 +80,13 @@ func renderSpec(ng *v1.NodeGroup, node *corev1.Node, in clusterInputs) internalv
 }
 
 // keepBootstrapOnlyFields carries over the machine-specific parts of the spec —
-// kubelet.nodeIP (while still reported), registration taints, explicit network,
-// explicit storage. The rest is rendered: a copied value is never corrected.
-func keepBootstrapOnlyFields(desired, existing *internalv1alpha1.NodeSpec, reportedNodeIPs []string) {
-	if nodeIPStillHolds(existing.Kubelet.NodeIP, reportedNodeIPs) {
-		desired.Kubelet.NodeIP = existing.Kubelet.NodeIP
-	}
+// the status token, registration taints, explicit network, explicit storage.
+// The rest is rendered: a copied value is never corrected.
+func keepBootstrapOnlyFields(desired, existing *internalv1alpha1.NodeSpec) {
+	// The machine mints this token and nothing in the cluster can tell it a new
+	// one, so a render that dropped it would lock the operator out of the
+	// node's status port for good.
+	desired.StatusToken = existing.StatusToken
 
 	// Taints take effect while the node registers and are rendered for a machine
 	// that has not joined; dropping them afterwards patches every node once,
@@ -108,19 +110,6 @@ func keepBootstrapOnlyFields(desired, existing *internalv1alpha1.NodeSpec, repor
 	if storageIsExplicit(&existing.Storage, &desired.Storage) {
 		desired.Storage = existing.Storage
 	}
-}
-
-// nodeIPStillHolds reports whether a bootstrapped address is still one the node
-// reports: carrying it over unconditionally pinned re-IPed nodes forever. No
-// reported addresses means no answer, and the node keeps what it was given.
-func nodeIPStillHolds(nodeIP string, reported []string) bool {
-	if nodeIP == "" {
-		return false
-	}
-	if len(reported) == 0 {
-		return true
-	}
-	return slices.Contains(reported, nodeIP)
 }
 
 // storageIsExplicit reports whether storage carries something this controller

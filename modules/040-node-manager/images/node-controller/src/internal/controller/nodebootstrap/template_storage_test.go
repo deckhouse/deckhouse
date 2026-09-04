@@ -242,6 +242,34 @@ func bootstrapTokenSecret(ngName string) client.Object {
 	}
 }
 
+// A machine installed by hand has no config to keep a status token from, so the
+// template mints one per read; and it has to be told which networks the cluster
+// runs on, or a multi-homed machine registers on whichever NIC it likes.
+func TestNodeConfigTemplateCarriesAStatusTokenAndTheClusterNetworks(t *testing.T) {
+	storage := NewTemplateStorage(templateCluster(t,
+		immutableStaticNodeGroup(testTemplateNodeGroup),
+		bootstrapTokenSecret(testTemplateNodeGroup),
+	))
+
+	first := templateOf(t, storage)
+	require.Equal(t, []string{"192.168.199.0/24"}, first.Spec.InternalNetworkCIDRs)
+	require.Len(t, first.Spec.StatusToken, 2*statusTokenBytes, "32 random bytes, hex-encoded")
+
+	// Two machines handed the same token could each read the other's status.
+	second := templateOf(t, storage)
+	require.NotEqual(t, first.Spec.StatusToken, second.Spec.StatusToken)
+}
+
+func templateOf(t *testing.T, storage *TemplateStorage) *templatesv1alpha1.NodeConfigTemplate {
+	t.Helper()
+
+	object, err := storage.Get(t.Context(), testTemplateNodeGroup, &metav1.GetOptions{})
+	require.NoError(t, err)
+	template, ok := object.(*templatesv1alpha1.NodeConfigTemplate)
+	require.True(t, ok, "storage returned %T", object)
+	return template
+}
+
 // templateCluster builds a cluster a NodeConfig can be rendered from: the same
 // inputs testenv.EnsureClusterInputs creates for the envtest suite, as plain
 // objects.
@@ -296,6 +324,15 @@ func clusterInputs() []client.Object {
 			Data: map[string][]byte{
 				"cluster-configuration.yaml": []byte("apiVersion: deckhouse.io/v1\nkind: ClusterConfiguration\nclusterDomain: cluster.local\n" +
 					"podSubnetNodeCIDRPrefix: \"23\"\nkubernetesVersion: \"" + testenv.TestKubernetesVersion + ".6\"\n"),
+			},
+		},
+		// The networks a static cluster addresses its nodes in; the template
+		// carries them like every other cluster-decided field.
+		&corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Namespace: nodecommon.KubeSystemNamespace, Name: "d8-static-cluster-configuration"},
+			Data: map[string][]byte{
+				"static-cluster-configuration.yaml": []byte("apiVersion: deckhouse.io/v1\nkind: StaticClusterConfiguration\n" +
+					"internalNetworkCIDRs:\n- 192.168.199.0/24\n"),
 			},
 		},
 		&discoveryv1.EndpointSlice{

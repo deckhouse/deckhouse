@@ -75,25 +75,22 @@ func TestKeepBootstrapOnlyFields(t *testing.T) {
 		},
 		Kubelet: internalv1alpha1.Kubelet{
 			ServerTLSBootstrap:  ptr.To(false),
-			NodeIP:              "10.0.0.10",
 			ResourceReservation: &internalv1alpha1.ResourceReservation{Mode: "Auto"},
 		},
+		// The machine minted it and nothing in the cluster can reissue it.
+		StatusToken: "e3b0c44298fc1c14",
 	}
 
 	tests := []struct {
-		name        string
-		existing    internalv1alpha1.NodeSpec
-		reportedIPs []string
-		expStorage  internalv1alpha1.Storage
-		expNetwork  internalv1alpha1.Network
-		expNodeIP   string
+		name       string
+		existing   internalv1alpha1.NodeSpec
+		expStorage internalv1alpha1.Storage
+		expNetwork internalv1alpha1.Network
 	}{
 		{
-			name:        "bootstrapped master keeps only what the cluster cannot render",
-			existing:    bootstrapped,
-			reportedIPs: []string{"10.0.0.10"},
-			expStorage:  bootstrapped.Storage,
-			expNodeIP:   "10.0.0.10",
+			name:       "bootstrapped master keeps only what the cluster cannot render",
+			existing:   bootstrapped,
+			expStorage: bootstrapped.Storage,
 		},
 		{
 			name:       "worker with nothing to keep is left as rendered",
@@ -201,10 +198,10 @@ func TestKeepBootstrapOnlyFields(t *testing.T) {
 				Kubelet: internalv1alpha1.Kubelet{MaxPods: 120},
 			}
 
-			keepBootstrapOnlyFields(&desired, &tc.existing, tc.reportedIPs)
+			keepBootstrapOnlyFields(&desired, &tc.existing)
 
 			require.Equal(t, tc.expStorage, desired.Storage)
-			require.Equal(t, tc.expNodeIP, desired.Kubelet.NodeIP)
+			require.Equal(t, tc.existing.StatusToken, desired.StatusToken)
 			if tc.expNetwork.Hostname != "" {
 				require.Equal(t, tc.expNetwork, desired.Network)
 			}
@@ -242,50 +239,8 @@ func TestRenderKernelPublishesEveryKeyANodeMustKeep(t *testing.T) {
 		Kernel: internalv1alpha1.Kernel{Sysctl: map[string]internalv1alpha1.SysctlValue{"kernel.panic": "0"}},
 	}
 	desired := internalv1alpha1.NodeSpec{Kernel: renderKernel()}
-	keepBootstrapOnlyFields(&desired, &stale, nil)
+	keepBootstrapOnlyFields(&desired, &stale)
 	require.Equal(t, internalv1alpha1.SysctlValue("10"), desired.Kernel.Sysctl["kernel.panic"])
-}
-
-// Nothing but this carry-over ever writes kubelet.nodeIP, so a re-IPed node
-// (DHCP lease, migration, rebuilt VM) used to stay pinned forever to an
-// address the cluster no longer routes to it.
-func TestKeepBootstrapOnlyFieldsReleasesAStaleNodeIP(t *testing.T) {
-	tests := []struct {
-		name        string
-		reportedIPs []string
-		expNodeIP   string
-	}{
-		{
-			name:        "the node still reports the address it was given",
-			reportedIPs: []string{"10.0.0.10"},
-			expNodeIP:   "10.0.0.10",
-		},
-		{
-			name:        "the node reports a different address now",
-			reportedIPs: []string{"10.0.0.77"},
-			expNodeIP:   "",
-		},
-		{
-			name:        "the node reports several, one of them the pinned one",
-			reportedIPs: []string{"10.0.0.77", "10.0.0.10"},
-			expNodeIP:   "10.0.0.10",
-		},
-		{
-			name:      "the node reports no address at all, so nothing contradicts it",
-			expNodeIP: "10.0.0.10",
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			existing := internalv1alpha1.NodeSpec{Kubelet: internalv1alpha1.Kubelet{NodeIP: "10.0.0.10"}}
-			desired := internalv1alpha1.NodeSpec{}
-
-			keepBootstrapOnlyFields(&desired, &existing, tc.reportedIPs)
-
-			require.Equal(t, tc.expNodeIP, desired.Kubelet.NodeIP)
-		})
-	}
 }
 
 // kubelet exits when --node-labels carries a label it may not accept, so a node
@@ -364,8 +319,8 @@ func TestNodeRenderInputsChanged(t *testing.T) {
 		},
 		{
 			name: "the node reports a new address",
-			// Read from the API server when it is needed, and stripped from the
-			// cached object, so it cannot be seen here either way.
+			// The node picks its own address from spec.internalNetworkCIDRs, so
+			// nothing here reads one; the cache strips them anyway.
 			after: node(func(n *corev1.Node) {
 				n.Status.Addresses = []corev1.NodeAddress{{Type: corev1.NodeInternalIP, Address: "10.0.0.77"}}
 			}),
@@ -646,7 +601,7 @@ func TestKeepBootstrapOnlyFieldsKeepsRegistrationTaints(t *testing.T) {
 
 	registered := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0", CreationTimestamp: metav1.Now()}}
 	dayTwo := renderSpec(ng, registered, clusterInputs{})
-	keepBootstrapOnlyFields(&dayTwo, &bootstrap, nil)
+	keepBootstrapOnlyFields(&dayTwo, &bootstrap)
 
 	require.Equal(t, bootstrap, dayTwo, "the node it was written for reads as up to date")
 }
@@ -945,7 +900,7 @@ func TestKeepBootstrapOnlyFieldsKeepsAMachineNamedNetwork(t *testing.T) {
 			desired := internalv1alpha1.NodeSpec{Network: rendered}
 			existing := internalv1alpha1.NodeSpec{Network: tc.existing}
 
-			keepBootstrapOnlyFields(&desired, &existing, nil)
+			keepBootstrapOnlyFields(&desired, &existing)
 
 			require.Equal(t, tc.exp, desired.Network)
 		})
@@ -964,7 +919,7 @@ func TestKeepBootstrapOnlyFieldsKeepsAResolverOnlyNetwork(t *testing.T) {
 		Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}},
 	}}
 
-	keepBootstrapOnlyFields(&desired, &existing, nil)
+	keepBootstrapOnlyFields(&desired, &existing)
 
 	require.Equal(t, []string{"10.0.0.10"}, desired.Network.DNS.Servers,
 		"the resolvers the machine was given were dropped")
@@ -1009,7 +964,7 @@ func TestKeepBootstrapOnlyFieldsKeepsAnOperatorWrittenDiskSelector(t *testing.T)
 			desired := internalv1alpha1.NodeSpec{Storage: *rendered.DeepCopy()}
 			existing := internalv1alpha1.NodeSpec{Storage: tc.existing}
 
-			keepBootstrapOnlyFields(&desired, &existing, nil)
+			keepBootstrapOnlyFields(&desired, &existing)
 
 			require.Equal(t, tc.exp, desired.Storage)
 		})

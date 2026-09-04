@@ -67,6 +67,7 @@ const (
 	testRegistryAddress         = testenv.TestRegistryAddress
 	testRegistryPath            = testenv.TestRegistryPath
 	testRegistryAuth            = testenv.TestRegistryAuth
+	testStatusToken             = "test-status-token"
 	testCNIDigest               = testenv.TestCNIDigest
 	testKubeletDigest           = testenv.TestKubeletDigest
 	testNodeletDigest           = testenv.TestNodeletDigest
@@ -778,61 +779,89 @@ var _ = Describe("NodeConfig controller", func() {
 		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
 	})
 
-	// User story: As a cluster operator, I want a re-IPed node registered under
-	// its actual address, not pinned forever. The judgment must read the API
-	// server: the manager's cache strips Node.status.addresses.
-	It("releases a pinned node address once the node reports another", func(ctx context.Context) {
-		ngName := testenv.UniqueName("master-reip")
+	// User story: As a cluster operator, I want a multi-homed node to register on
+	// the network my cluster runs on, so that I never have to name an address
+	// machine by machine.
+	It("hands every node the internal networks the cluster was configured with", func(ctx context.Context) {
+		ngName := testenv.UniqueName("workers-imm")
 		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName)
-		nodeName := testenv.UniqueName("master")
+		nodeName := testenv.UniqueName("node")
+		createNode(ctx, nodeName, ngName)
 
-		// A control-plane node publishes its own bootstrap config, so the
-		// controller renders over that object rather than creating one.
-		node := &corev1.Node{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: nodeName,
-				Labels: map[string]string{
-					nodecommon.NodeGroupLabel: ngName,
-					controlPlaneRoleLabel:     "",
-				},
-			},
-		}
-		Expect(k8sClient.Create(ctx, node)).To(Succeed())
-		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, node) })
-		reportNodeAddress(ctx, nodeName, "10.0.0.10")
+		// A cloud cluster has no static configuration and a static one no
+		// provider configuration, so a pass has to render with neither secret.
+		Eventually(func(g Gomega) {
+			nc := getNodeConfig(ctx, g, nodeName)
 
-		bootstrapped := &internalv1alpha1.NodeConfig{
+			g.Expect(nc.Spec.APIServerEndpoints).NotTo(BeEmpty(), "the node never got a config at all")
+			g.Expect(nc.Spec.InternalNetworkCIDRs).To(BeEmpty())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+
+		By("the cluster being configured with its internal networks")
+		writeStaticClusterConfiguration(ctx, "192.168.42.0/24", "172.16.16.0/24")
+		// Nothing watches that secret, so the change lands on the next pass some
+		// other event brings along.
+		touchNodeGroup(ctx, ngName)
+
+		Eventually(func(g Gomega) {
+			g.Expect(getNodeConfig(ctx, g, nodeName).Spec.InternalNetworkCIDRs).
+				To(Equal([]string{"192.168.42.0/24", "172.16.16.0/24"}))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// User story: As a cluster operator, I want to name the interface the cluster
+	// runs on when the subnets cannot tell, and to be refused the moment I name
+	// two — a node joins the cluster on one address, never on two.
+	It("takes one cluster interface and refuses two", func(ctx context.Context) {
+		nodeName := testenv.UniqueName("multihomed")
+		nc := &internalv1alpha1.NodeConfig{
 			ObjectMeta: metav1.ObjectMeta{Name: nodeName},
 			Spec: internalv1alpha1.NodeSpec{
 				NodeName: nodeName,
 				OSImage:  internalv1alpha1.OSImage{Digest: testOSImageDigest},
-				Kubelet:  internalv1alpha1.Kubelet{NodeIP: "10.0.0.10"},
+				Network: internalv1alpha1.Network{Interfaces: []internalv1alpha1.NetworkInterface{
+					{Name: "eth0", Addresses: []string{"192.0.2.10/24"}, Cluster: true},
+					{Name: "eth1", Addresses: []string{"198.51.100.10/24"}, Cluster: true},
+				}},
 			},
 		}
-		Expect(k8sClient.Create(ctx, bootstrapped)).To(Succeed())
-		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, bootstrapped) })
+		err := k8sClient.Create(ctx, nc)
+		Expect(err).To(HaveOccurred())
+		Expect(err.Error()).To(ContainSubstring("at most one interface"))
 
-		// While the node still reports that address, the installer's choice
-		// stands: nothing in the cluster can reproduce it.
+		nc.Spec.Network.Interfaces[1].Cluster = false
+		Expect(k8sClient.Create(ctx, nc)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, nc) })
+	})
+
+	// User story: As a cluster operator, I want the token my machine minted for
+	// its status port to survive being reconfigured, so that the one channel
+	// left when a node loses the API does not close behind me.
+	It("keeps the status token a machine published", func(ctx context.Context) {
+		ngName := testenv.UniqueName("static-imm")
+		testenv.CreateImmutableNodeGroup(ctx, k8sClient, ngName, func(ng *deckhousev1.NodeGroup) {
+			ng.Spec.NodeType = deckhousev1.NodeTypeStatic
+			ng.Spec.CloudInstances = nil
+		})
+		nodeName := testenv.UniqueName("static")
+		createNode(ctx, nodeName, ngName)
+
+		published := &internalv1alpha1.NodeConfig{
+			ObjectMeta: metav1.ObjectMeta{Name: nodeName},
+			Spec: internalv1alpha1.NodeSpec{
+				NodeName:    nodeName,
+				OSImage:     internalv1alpha1.OSImage{Digest: testOSImageDigest},
+				StatusToken: testStatusToken,
+			},
+		}
+		Expect(k8sClient.Create(ctx, published)).To(Succeed())
+		DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, published) })
+
 		Eventually(func(g Gomega) {
-			g.Expect(getNodeConfig(ctx, g, nodeName).Spec.APIServerEndpoints).NotTo(BeEmpty())
-		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
-		Consistently(func(g Gomega) {
-			g.Expect(getNodeConfig(ctx, g, nodeName).Spec.Kubelet.NodeIP).To(Equal("10.0.0.10"))
-		}, testenv.NegativeCheckDuration, testenv.EventuallyPoll).Should(Succeed())
+			nc := getNodeConfig(ctx, g, nodeName)
 
-		By("the node coming back on a different address")
-		reportNodeAddress(ctx, nodeName, "10.0.0.77")
-
-		// An address change is not visible as an event (the cache strips
-		// Node.status.addresses); it is read on the next all-nodes pass — in a
-		// live cluster, the node's own agent republishing its status.
-		reportApplied(ctx, nodeName)
-
-		// Released, so kubelet picks the address the node actually has instead
-		// of being handed one it lost.
-		Eventually(func(g Gomega) {
-			g.Expect(getNodeConfig(ctx, g, nodeName).Spec.Kubelet.NodeIP).To(BeEmpty())
+			g.Expect(nc.Spec.Kubelet.CACert).NotTo(BeEmpty(), "the controller never rendered over the published config")
+			g.Expect(nc.Spec.StatusToken).To(Equal(testStatusToken))
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
@@ -1459,19 +1488,22 @@ func digestOf(nc *internalv1alpha1.NodeConfig, name string) string {
 	return ""
 }
 
-// reportNodeAddress is kubelet publishing the address the node is reachable at.
-func reportNodeAddress(ctx context.Context, nodeName, address string) {
+// writeStaticClusterConfiguration publishes the secret a static cluster keeps
+// its network layout in. Removed after the spec: it is cluster-wide, and a
+// leftover would follow every render that runs after this one.
+func writeStaticClusterConfiguration(ctx context.Context, cidrs ...string) {
 	GinkgoHelper()
 
-	Eventually(func(g Gomega) {
-		node := &corev1.Node{}
-		g.Expect(k8sClient.Get(ctx, types.NamespacedName{Name: nodeName}, node)).To(Succeed())
-		node.Status.Addresses = []corev1.NodeAddress{
-			{Type: corev1.NodeHostName, Address: nodeName},
-			{Type: corev1.NodeInternalIP, Address: address},
-		}
-		g.Expect(k8sClient.Status().Update(ctx, node)).To(Succeed())
-	}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	config := "apiVersion: deckhouse.io/v1\nkind: StaticClusterConfiguration\ninternalNetworkCIDRs:\n"
+	for _, cidr := range cidrs {
+		config += "- " + cidr + "\n"
+	}
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: kubeSystemNS, Name: staticConfigSecretName},
+		Data:       map[string][]byte{staticConfigKey: []byte(config)},
+	}
+	Expect(k8sClient.Create(ctx, secret)).To(Succeed())
+	DeferCleanup(func(ctx context.Context) { _ = k8sClient.Delete(ctx, secret) })
 }
 
 // rolloutSlotFor asks the gate whether a node may be handed a new spec, reading

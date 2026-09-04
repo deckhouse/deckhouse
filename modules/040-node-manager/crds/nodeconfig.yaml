@@ -96,6 +96,18 @@ spec:
                 x-kubernetes-list-map-keys:
                 - name
                 x-kubernetes-list-type: map
+              internalNetworkCIDRs:
+                description: |-
+                  InternalNetworkCIDRs are the subnets the cluster's own traffic runs on.
+                  The node picks the interface holding an address inside one of them and
+                  registers with that address; a node with one NIC needs none of this.
+                  The pattern is StaticClusterConfiguration's own
+                  (candi/openapi/static_cluster_configuration.yaml): IPv4 only.
+                items:
+                  pattern: ^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$
+                  type: string
+                maxItems: 64
+                type: array
               kernel:
                 description: Kernel holds sysctl settings and kernel modules to load.
                 properties:
@@ -197,15 +209,6 @@ spec:
                     maximum: 1000
                     minimum: 1
                     type: integer
-                  nodeIP:
-                    description: |-
-                      NodeIP is the address kubelet registers the node with (--node-ip). Left
-                      empty kubelet picks an address itself, which on a multi-homed node is not
-                      always the one the cluster routes to.
-                    type: string
-                    x-kubernetes-validations:
-                    - message: nodeIP must be a valid IP address
-                      rule: self == '' || isIP(self)
                   nodeLabels:
                     additionalProperties:
                       description: |-
@@ -295,6 +298,11 @@ spec:
                           items:
                             type: string
                           type: array
+                        cluster:
+                          description: |-
+                            Cluster names this NIC the one the cluster's traffic runs on, for a
+                            machine whose addressing spec.internalNetworkCIDRs cannot tell apart.
+                          type: boolean
                         dhcp:
                           description: DHCP enables DHCPv4 on the interface.
                           type: boolean
@@ -308,6 +316,11 @@ spec:
                       - name
                       type: object
                     type: array
+                    x-kubernetes-validations:
+                    - message: at most one interface may be marked as the cluster
+                        interface
+                      rule: self.filter(i, has(i.cluster) && i.cluster).size() <=
+                        1
                   ntp:
                     description: NTP time-sync configuration.
                     properties:
@@ -410,6 +423,15 @@ spec:
                   authenticate against the registry packages proxy. Deliberately not marked
                   sensitive: nodelet must read it, and the token is identical on every node.
                 pattern: ^(([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?)?$
+                type: string
+              statusToken:
+                description: |-
+                  StatusToken is the bearer presented to the node's :50000 status port.
+                  Whoever writes the document mints it (dhctl, or the NodeConfigTemplate
+                  render for a hand-installed machine); the cluster carries it over
+                  untouched, having no way to tell the node a new one. Deliberately not
+                  marked sensitive: the apiserver would answer "<omitted>" and the
+                  carry-over would write that back, destroying the token.
                 type: string
               storage:
                 description: |-
@@ -736,6 +758,20 @@ spec:
                   subresource, which nodes are not granted.
                 type: string
                 x-kubernetes-sensitive-data: true
+              network:
+                description: |-
+                  Network is what the node resolved for itself: the interface it took its
+                  cluster address from, and that address. Written by the node alone.
+                properties:
+                  address:
+                    description: Address is the address kubelet registered the node
+                      with.
+                    type: string
+                  clusterInterface:
+                    description: ClusterInterface is the NIC the address was taken
+                      from.
+                    type: string
+                type: object
               observedGeneration:
                 description: |-
                   ObservedGeneration is the latest spec generation the node has processed:

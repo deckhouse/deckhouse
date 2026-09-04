@@ -29,6 +29,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	sigsyaml "sigs.k8s.io/yaml"
 )
 
 func TestPickKubeletDigest(t *testing.T) {
@@ -294,6 +295,203 @@ func TestRegistryAuth(t *testing.T) {
 
 	_, err = registryAuth([]byte("{not json"), "registry.example.com")
 	require.ErrorContains(t, err, registryDockerConfigKey)
+}
+
+// A cluster carries the static configuration or the provider one, never both,
+// so neither absence may stop a pass: a cloud cluster would go unrendered for
+// lacking a secret only a static cluster has.
+func TestReadInternalNetworkCIDRs(t *testing.T) {
+	t.Run("a cluster that named no networks at all", func(t *testing.T) {
+		s := sourceReaderOver(dnsCluster(t))
+
+		cidrs, err := s.readInternalNetworkCIDRs(t.Context())
+
+		require.NoError(t, err)
+		require.Empty(t, cidrs)
+	})
+
+	t.Run("the networks a static cluster was configured with", func(t *testing.T) {
+		s := sourceReaderOver(dnsCluster(t, staticConfigSecret(
+			"kind: StaticClusterConfiguration\ninternalNetworkCIDRs:\n- 192.168.42.0/24\n- 172.16.16.0/24\n")))
+
+		cidrs, err := s.readInternalNetworkCIDRs(t.Context())
+
+		require.NoError(t, err)
+		require.Equal(t, []string{"192.168.42.0/24", "172.16.16.0/24"}, cidrs)
+	})
+
+	t.Run("a static configuration that names none", func(t *testing.T) {
+		s := sourceReaderOver(dnsCluster(t, staticConfigSecret("kind: StaticClusterConfiguration\n")))
+
+		cidrs, err := s.readInternalNetworkCIDRs(t.Context())
+
+		require.NoError(t, err)
+		require.Empty(t, cidrs)
+	})
+
+	// Not an empty answer: an unreadable configuration rendered as "no networks"
+	// would walk that change through every node of the fleet.
+	t.Run("a static configuration that cannot be parsed", func(t *testing.T) {
+		s := sourceReaderOver(dnsCluster(t, staticConfigSecret("\tnot: [yaml")))
+
+		_, err := s.readInternalNetworkCIDRs(t.Context())
+
+		require.ErrorContains(t, err, staticConfigSecretName)
+	})
+
+	t.Run("the subnet a cloud cluster addresses its nodes in", func(t *testing.T) {
+		s := sourceReaderOver(dnsCluster(t, providerConfigSecret(
+			"kind: YandexClusterConfiguration\nnodeNetworkCIDR: 10.241.32.0/20\n")))
+
+		cidrs, err := s.readInternalNetworkCIDRs(t.Context())
+
+		require.NoError(t, err)
+		require.Equal(t, []string{"10.241.32.0/20"}, cidrs)
+	})
+
+	// A hybrid cluster has both. The static list comes first, since it is the
+	// one an operator wrote by hand.
+	t.Run("both configurations", func(t *testing.T) {
+		s := sourceReaderOver(dnsCluster(t,
+			staticConfigSecret("internalNetworkCIDRs:\n- 192.168.42.0/24\n"),
+			providerConfigSecret("kind: AzureClusterConfiguration\nsubnetCIDR: 10.50.0.0/16\n"),
+		))
+
+		cidrs, err := s.readInternalNetworkCIDRs(t.Context())
+
+		require.NoError(t, err)
+		require.Equal(t, []string{"192.168.42.0/24", "10.50.0.0/16"}, cidrs)
+	})
+}
+
+// The provider table copies ten schemas
+// (modules/030-cloud-provider-*/candi/openapi/cluster_configuration.yaml, and
+// the ee ones); a wrong path is a node told nothing and left to guess.
+func TestProviderInternalNetworkCIDR(t *testing.T) {
+	tests := []struct {
+		name   string
+		config string
+		want   string
+	}{
+		{
+			name:   "OpenStack Standard",
+			config: "kind: OpenStackClusterConfiguration\nlayout: Standard\nstandard:\n  internalNetworkCIDR: 192.168.199.0/24\n",
+			want:   "192.168.199.0/24",
+		},
+		{
+			name:   "OpenStack StandardWithNoRouter",
+			config: "kind: OpenStackClusterConfiguration\nlayout: StandardWithNoRouter\nstandardWithNoRouter:\n  internalNetworkCIDR: 192.168.198.0/24\n",
+			want:   "192.168.198.0/24",
+		},
+		{
+			// The layout names an existing subnet instead, so the cluster has no
+			// CIDR to hand out and the node picks its address itself.
+			name:   "OpenStack SimpleWithInternalNetwork, which names a subnet and no CIDR",
+			config: "kind: OpenStackClusterConfiguration\nlayout: SimpleWithInternalNetwork\nsimpleWithInternalNetwork:\n  internalSubnetName: kube\n",
+		},
+		{
+			name:   "HuaweiCloud Standard",
+			config: "kind: HuaweiCloudClusterConfiguration\nlayout: Standard\nstandard:\n  internalNetworkCIDR: 192.168.199.0/24\n",
+			want:   "192.168.199.0/24",
+		},
+		{
+			name:   "HuaweiCloud VpcPeering",
+			config: "kind: HuaweiCloudClusterConfiguration\nlayout: VpcPeering\nvpcPeering:\n  internalNetworkCIDR: 192.168.198.0/24\n",
+			want:   "192.168.198.0/24",
+		},
+		{
+			name:   "vSphere",
+			config: "kind: VsphereClusterConfiguration\ninternalNetworkCIDR: 192.168.199.0/24\n",
+			want:   "192.168.199.0/24",
+		},
+		{
+			name:   "VCD",
+			config: "kind: VCDClusterConfiguration\nlayout: WithNAT\ninternalNetworkCIDR: 192.168.199.0/24\n",
+			want:   "192.168.199.0/24",
+		},
+		{
+			name:   "Yandex",
+			config: "kind: YandexClusterConfiguration\nnodeNetworkCIDR: 10.241.32.0/20\n",
+			want:   "10.241.32.0/20",
+		},
+		{
+			name:   "Dynamix StandardWithInternalNetwork",
+			config: "kind: DynamixClusterConfiguration\nlayout: StandardWithInternalNetwork\nnodeNetworkCIDR: 10.241.32.0/20\n",
+			want:   "10.241.32.0/20",
+		},
+		{
+			name:   "AWS",
+			config: "kind: AWSClusterConfiguration\nnodeNetworkCIDR: 10.241.32.0/20\n",
+			want:   "10.241.32.0/20",
+		},
+		{
+			// Optional in every AWS layout: left out, the nodes take the whole
+			// VPC range, which nothing here can work out.
+			name:   "AWS without the optional subnet",
+			config: "kind: AWSClusterConfiguration\nvpcNetworkCIDR: 10.241.0.0/16\n",
+		},
+		{
+			name:   "Azure",
+			config: "kind: AzureClusterConfiguration\nsubnetCIDR: 10.50.0.0/16\n",
+			want:   "10.50.0.0/16",
+		},
+		{
+			name:   "GCP",
+			config: "kind: GCPClusterConfiguration\nsubnetworkCIDR: 10.0.0.0/24\n",
+			want:   "10.0.0.0/24",
+		},
+		{
+			// Neither schema has such a field: the node is addressed by the
+			// virtualization layer, and there is nothing to publish.
+			name:   "DVP",
+			config: "kind: DVPClusterConfiguration\nlayout: Standard\n",
+		},
+		{
+			name:   "zVirt",
+			config: "kind: ZvirtClusterConfiguration\nlayout: Standard\n",
+		},
+		{
+			name:   "a provider this table does not know",
+			config: "kind: SomeFutureClusterConfiguration\nnodeNetworkCIDR: 10.0.0.0/24\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var config map[string]any
+			require.NoError(t, sigsyaml.Unmarshal([]byte(tt.config), &config))
+
+			cidr, err := providerInternalNetworkCIDR(config)
+
+			require.NoError(t, err)
+			require.Equal(t, tt.want, cidr)
+		})
+	}
+
+	// A configuration whose field is not a string is a broken document, and
+	// rendering stops rather than quietly telling the fleet nothing.
+	t.Run("a subnet that is not a string", func(t *testing.T) {
+		var config map[string]any
+		require.NoError(t, sigsyaml.Unmarshal([]byte("kind: YandexClusterConfiguration\nnodeNetworkCIDR: 10\n"), &config))
+
+		_, err := providerInternalNetworkCIDR(config)
+
+		require.ErrorContains(t, err, "nodeNetworkCIDR")
+	})
+}
+
+func staticConfigSecret(config string) client.Object {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: kubeSystemNS, Name: staticConfigSecretName},
+		Data:       map[string][]byte{staticConfigKey: []byte(config)},
+	}
+}
+
+func providerConfigSecret(config string) client.Object {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: kubeSystemNS, Name: providerConfigSecretName},
+		Data:       map[string][]byte{providerConfigKey: []byte(config)},
+	}
 }
 
 func sourceReaderOver(cluster client.Client) *sourceReader {

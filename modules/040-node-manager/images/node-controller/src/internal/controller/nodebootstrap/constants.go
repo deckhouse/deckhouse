@@ -38,6 +38,10 @@ const (
 
 	nodeConfigPath = "/config/nodeconfig.yaml"
 
+	// statusTokenBytes is the entropy behind spec.statusToken, hex-encoded into
+	// the field.
+	statusTokenBytes = 32
+
 	dataSecretSuffix = "-bootstrap-data"
 
 	// secretValueKey is the key the infrastructure provider (capdvp) reads the
