@@ -57,10 +57,14 @@ const (
 	// SourceIndexField indexes the RoleBindings whose subjects must hold d8:use:dict.
 	SourceIndexField = "user-authz.deckhouse.io/dict-source"
 	sourceIndexValue = "true"
+	// OwnedIndexField indexes the dict ClusterRoleBindings this reconciler owns: a plain label
+	// selector on the cache would scan every ClusterRoleBinding of the cluster on every reconcile.
+	OwnedIndexField = "user-authz.deckhouse.io/dict-binding"
+	ownedIndexValue = "true"
 
-	DictRoleName   = "d8:use:dict"
-	NamePrefix     = "d8:dict:"
-	SubjectAnnotat = "rbac.deckhouse.io/subject"
+	DictRoleName      = "d8:use:dict"
+	NamePrefix        = "d8:dict:"
+	SubjectAnnotation = "rbac.deckhouse.io/subject"
 
 	labelHeritage  = "heritage"
 	labelAutomated = "rbac.deckhouse.io/automated"
@@ -104,10 +108,22 @@ func SourceIndexValue(obj client.Object) []string {
 	return []string{sourceIndexValue}
 }
 
-// Register indexes the contributing RoleBindings and wires the reconciler onto the manager.
+// OwnedIndexValue is the indexer of OwnedIndexField.
+func OwnedIndexValue(obj client.Object) []string {
+	if _, ok := obj.(*rbacv1.ClusterRoleBinding); !ok || !hasLabels(obj.GetLabels(), DictLabels) {
+		return nil
+	}
+	return []string{ownedIndexValue}
+}
+
+// Register indexes the contributing RoleBindings and the dict ClusterRoleBindings and wires the
+// reconciler onto the manager.
 func Register(ctx context.Context, mgr manager.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &rbacv1.RoleBinding{}, SourceIndexField, SourceIndexValue); err != nil {
 		return fmt.Errorf("index rolebindings by dict source: %w", err)
+	}
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &rbacv1.ClusterRoleBinding{}, OwnedIndexField, OwnedIndexValue); err != nil {
+		return fmt.Errorf("index dict clusterrolebindings: %w", err)
 	}
 	r := New(mgr.GetClient(), mgr.GetLogger().WithName("dict-bindings"))
 	if err := r.SetupWithManager(mgr); err != nil {
@@ -174,7 +190,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 	}
 
 	existing := &rbacv1.ClusterRoleBindingList{}
-	if err := r.client.List(ctx, existing, client.MatchingLabels(DictLabels)); err != nil {
+	if err := r.client.List(ctx, existing, client.MatchingFields{OwnedIndexField: ownedIndexValue}); err != nil {
 		return reconcile.Result{}, fmt.Errorf("list dict clusterrolebindings: %w", err)
 	}
 
@@ -193,21 +209,24 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 			reason = "wrong roleRef " + crb.RoleRef.Name
 		}
 		if reason == "" {
-			key := SubjectKey(crb.Subjects[0])
-			switch {
-			case len(crb.Subjects) != 1:
+			if len(crb.Subjects) != 1 {
 				reason = "more than one subject"
-			default:
-				if _, wanted := subjects[key]; !wanted {
-					reason = "subject holds no use role"
-				} else if _, dup := granted[key]; dup {
+			} else {
+				// The first binding of a subject is kept and the subject leaves the wanted set, so a
+				// duplicate must be recognised through granted before the wanted set is consulted.
+				key := SubjectKey(crb.Subjects[0])
+				switch _, dup := granted[key]; {
+				case dup:
 					reason = "duplicate of another dict binding"
+				default:
+					if _, wanted := subjects[key]; !wanted {
+						reason = "subject holds no use role"
+					} else {
+						granted[key] = struct{}{}
+						delete(subjects, key)
+						continue
+					}
 				}
-			}
-			if reason == "" {
-				granted[key] = struct{}{}
-				delete(subjects, key)
-				continue
 			}
 		}
 
@@ -253,7 +272,10 @@ func contributesSubjects(rb *rbacv1.RoleBinding) bool {
 // SubjectKey is the identity of a subject: kind[:namespace]:name, ServiceAccount shortened to sa,
 // lower-cased. Existing dict bindings are matched by the key of their first subject, so the
 // key must stay a pure function of the subject. Unlike the hook this reconciler replaces, the key
-// is not truncated: two subjects sharing a long prefix are two subjects.
+// is not truncated: two subjects sharing a long prefix are two subjects. The lower-casing is kept
+// from the hook (the bindings it created are matched by the same key); subjects that differ only in
+// case share one grant, which is accepted, RBAC subject names being case-sensitive but such pairs
+// not occurring in practice.
 func SubjectKey(subject rbacv1.Subject) string {
 	kind := subject.Kind
 	if kind == rbacv1.ServiceAccountKind {
@@ -279,7 +301,7 @@ func Binding(key string, subject rbacv1.Subject) *rbacv1.ClusterRoleBinding {
 		ObjectMeta: metav1.ObjectMeta{
 			Name:        NamePrefix + hex.EncodeToString(sum[:])[:16],
 			Labels:      maps.Clone(DictLabels),
-			Annotations: map[string]string{SubjectAnnotat: key},
+			Annotations: map[string]string{SubjectAnnotation: key},
 		},
 		RoleRef:  rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: DictRoleName},
 		Subjects: []rbacv1.Subject{subject},

@@ -90,6 +90,7 @@ func newClient(t *testing.T, objs ...client.Object) client.Client {
 	return fake.NewClientBuilder().
 		WithScheme(scheme).
 		WithIndex(&rbacv1.ClusterRoleBinding{}, RoleRefIndexField, RoleRefIndexValue).
+		WithIndex(&rbacv1.RoleBinding{}, AutomatedIndexField, AutomatedIndexValue).
 		WithObjects(objs...).
 		Build()
 }
@@ -139,7 +140,7 @@ func TestReconcile_SubsystemBindingFansOutToModuleNamespaces(t *testing.T) {
 	)
 
 	rb := mustExist(t, c, "test-ns", "d8:use:admin:binding:test")
-	if rb.RoleRef.Name != "d8:use:role:admin" || rb.Annotations[relatedWithAnnotatio] != "test" || rb.Labels[labelAutomated] != "true" {
+	if rb.RoleRef.Name != "d8:use:role:admin" || rb.Annotations[relatedWithAnnotation] != "test" || rb.Labels[labelAutomated] != "true" {
 		t.Errorf("use binding = %+v", rb)
 	}
 	if len(rb.Subjects) != 1 || rb.Subjects[0].Name != "test" {
@@ -212,7 +213,7 @@ func TestReconcile_RepairsDriftedUseBinding(t *testing.T) {
 	if len(rb.Subjects) != 1 || rb.Subjects[0].Name != "test" {
 		t.Errorf("subjects = %v, want the manage binding's subjects", rb.Subjects)
 	}
-	if rb.Annotations[relatedWithAnnotatio] != "test" {
+	if rb.Annotations[relatedWithAnnotation] != "test" {
 		t.Errorf("annotations = %v", rb.Annotations)
 	}
 }
@@ -288,7 +289,7 @@ func TestReconcile_DeepAggregationIsFollowed(t *testing.T) {
 func TestReconcile_PreservesForeignMetadataWithoutChurn(t *testing.T) {
 	t.Parallel()
 	existing := automatedUseBinding("d8:use:admin:binding:test", "test-ns")
-	existing.Annotations = map[string]string{"example.com/note": "keep me", relatedWithAnnotatio: "test"}
+	existing.Annotations = map[string]string{"example.com/note": "keep me", relatedWithAnnotation: "test"}
 	existing.Labels["example.com/team"] = "blue"
 	c := newClient(t,
 		manageModuleRole("d8:manage:permission:module:test:edit", "others", "test-ns"),
@@ -372,5 +373,16 @@ func TestIsManageBinding(t *testing.T) {
 	}
 	if IsManageBinding(c, &rbacv1.RoleBinding{}) {
 		t.Error("a RoleBinding is never a manage binding")
+	}
+}
+
+func TestAutomatedIndexValue(t *testing.T) {
+	t.Parallel()
+	if got := AutomatedIndexValue(automatedUseBinding("d8:use:admin:binding:x", "ns")); len(got) != 1 {
+		t.Errorf("an automated use binding must be indexed, got %v", got)
+	}
+	rule := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "user-authz:rule:editor", Namespace: "ns", Labels: map[string]string{labelHeritage: "deckhouse", "module": "user-authz"}}}
+	if got := AutomatedIndexValue(rule); got != nil {
+		t.Errorf("a rule binding must not be indexed, got %v", got)
 	}
 }
