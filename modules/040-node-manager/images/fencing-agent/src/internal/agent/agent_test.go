@@ -119,16 +119,36 @@ func TestWatchdogParamsTakeTimingsFromTheProfileWatchdogSection(t *testing.T) {
 	}
 }
 
-// No quorum view and no fallback path yet, so the gate must stay open: a closed
-// gate would stop the feed and reset a Node for nothing.
-func TestFeedGateStaysOpenUntilTheQuorumViewExists(t *testing.T) {
-	feed, reason := feedGate()
+func TestFallbackParamsTakeTimingsFromTheFallbackSection(t *testing.T) {
+	params := testAgent().fallbackParams()
 
-	if !feed {
-		t.Error("the feed gate must be open while the quorum view does not exist")
+	if params.Heartbeat != 1*time.Second {
+		t.Errorf("Heartbeat is %s, want fallback.heartbeat (1s)", params.Heartbeat)
 	}
 
-	if reason == "" {
-		t.Error("the gate must explain itself in the log")
+	if params.APITimeout != 2*time.Second {
+		t.Errorf("APITimeout is %s, want fallback.kubernetesAPITimeout (2s)", params.APITimeout)
+	}
+
+	if params.Node.Name != "worker-1" || params.Node.UID != "uid-1" || params.Node.IP != "10.0.0.1" {
+		t.Errorf("identity is not wired: %+v", params.Node)
+	}
+}
+
+func TestRejoinParamsTakeTimingsFromTheRejoinSection(t *testing.T) {
+	params := testAgent().rejoinParams()
+
+	if params.Interval != 5*time.Second {
+		t.Errorf("Interval is %s, want rejoin.interval (5s)", params.Interval)
+	}
+
+	if params.MaxInterval != 30*time.Second {
+		t.Errorf("MaxInterval is %s, want rejoin.maxInterval (30s)", params.MaxInterval)
+	}
+}
+
+func TestJoinParamsCarryTheNodeUID(t *testing.T) {
+	if params := testAgent().joinParams(); params.NodeUID != "uid-1" {
+		t.Errorf("NodeUID is %q, want the identity uid", params.NodeUID)
 	}
 }

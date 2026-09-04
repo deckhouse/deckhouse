@@ -17,6 +17,7 @@ limitations under the License.
 package memberlist
 
 import (
+	"sync"
 	"sync/atomic"
 
 	hcml "github.com/hashicorp/memberlist"
@@ -39,6 +40,9 @@ type eventDelegate struct {
 	logger  *log.Logger
 	events  chan nodeEvent
 	dropped atomic.Int64
+
+	mu          sync.Mutex
+	subscribers []chan struct{}
 }
 
 func newEventDelegate(logger *log.Logger) *eventDelegate {
@@ -46,6 +50,16 @@ func newEventDelegate(logger *log.Logger) *eventDelegate {
 		logger: logger,
 		events: make(chan nodeEvent, eventBuffer),
 	}
+}
+
+func (d *eventDelegate) subscribe() <-chan struct{} {
+	ch := make(chan struct{}, 1)
+
+	d.mu.Lock()
+	d.subscribers = append(d.subscribers, ch)
+	d.mu.Unlock()
+
+	return ch
 }
 
 func (d *eventDelegate) NotifyJoin(node *hcml.Node) {
@@ -68,6 +82,18 @@ func (d *eventDelegate) enqueue(kind string, node *hcml.Node) {
 	}
 }
 
+func (d *eventDelegate) wake() {
+	d.mu.Lock()
+	defer d.mu.Unlock()
+
+	for _, ch := range d.subscribers {
+		select {
+		case ch <- struct{}{}:
+		default:
+		}
+	}
+}
+
 func (d *eventDelegate) run(stop <-chan struct{}) {
 	for {
 		select {
@@ -83,6 +109,8 @@ func (d *eventDelegate) run(stop <-chan struct{}) {
 			if dropped := d.dropped.Swap(0); dropped > 0 {
 				d.logger.Warn("membership events were dropped, the log is incomplete", "count", dropped)
 			}
+
+			d.wake()
 		}
 	}
 }

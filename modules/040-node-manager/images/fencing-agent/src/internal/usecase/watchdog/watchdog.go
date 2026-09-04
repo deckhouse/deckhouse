@@ -101,12 +101,9 @@ type Deps struct {
 	Open func() (Device, error)
 	// Nowayout reports the kernel setting that makes Magic Close a no-op. It must
 	// not open the device.
-	Nowayout func() (bool, error)
-	State    StateSource
-	Events   EventRecorder
-	// ShouldFeed is the quorum and fallback gate of the ADR. It is always true for
-	// now: no local quorum view and no fallback path yet, so the watchdog only
-	// fences a Node whose agent died, hung or lost the device.
+	Nowayout   func() (bool, error)
+	State      StateSource
+	Events     EventRecorder
 	ShouldFeed func() (bool, string)
 }
 
@@ -384,8 +381,7 @@ func (m *Manager) keepFeedingThrough(state, detail string, changed bool) error {
 }
 
 // starve stops the keepalive without disarming, so the Node resets when the
-// timeout expires. This is the ADR's quorum-loss path, unreachable while
-// ShouldFeed is always true. The caller holds mu.
+// timeout expires. The caller holds mu.
 func (m *Manager) starve(reason string) {
 	m.ready.Store(false)
 

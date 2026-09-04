@@ -23,4 +23,5 @@ const NodeGroupLabel = "node.deckhouse.io/group"
 type Peer struct {
 	Name string
 	IP   string
+	UID  string
 }

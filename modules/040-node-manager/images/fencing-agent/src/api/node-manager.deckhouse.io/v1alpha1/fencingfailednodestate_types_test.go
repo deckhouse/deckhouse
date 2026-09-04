@@ -52,8 +52,8 @@ func TestStatusSectionsAreIsolated(t *testing.T) {
 			name: "fallback writer does not serialize failed",
 			status: FencingFailedNodeStateStatus{
 				Fallback: &FencingFailedNodeStateFallback{
-					Active:                   true,
-					HeartbeatIntervalSeconds: 1,
+					Active:            true,
+					HeartbeatInterval: metav1.Duration{Duration: time.Second},
 				},
 			},
 			present: `"fallback"`,
@@ -94,6 +94,44 @@ func TestZeroValuedFieldsSurvive(t *testing.T) {
 		if !strings.Contains(string(raw), want) {
 			t.Errorf("expected %s in %s", want, raw)
 		}
+	}
+}
+
+func TestFallbackHeartbeatKeepsMicrosecondsOnTheWire(t *testing.T) {
+	at := metav1.NewMicroTime(time.Date(2026, time.June, 2, 15, 0, 2, 250000000, time.UTC))
+
+	raw, err := json.Marshal(FencingFailedNodeStateFallback{
+		Active:            true,
+		LastHeartbeatAt:   &at,
+		APIReachable:      true,
+		HeartbeatInterval: metav1.Duration{Duration: 250 * time.Millisecond},
+	})
+	if err != nil {
+		t.Fatalf("marshal fallback: %v", err)
+	}
+
+	for _, want := range []string{
+		`"lastHeartbeatAt":"2026-06-02T15:00:02.250000Z"`,
+		`"heartbeatInterval":"250ms"`,
+		`"apiReachable":true`,
+	} {
+		if !strings.Contains(string(raw), want) {
+			t.Errorf("expected %s in %s", want, raw)
+		}
+	}
+
+	var decoded FencingFailedNodeStateFallback
+	if err := json.Unmarshal(raw, &decoded); err != nil {
+		t.Fatalf("unmarshal fallback: %v", err)
+	}
+
+	if !decoded.LastHeartbeatAt.Equal(&at) {
+		t.Errorf("lastHeartbeatAt decoded as %v, want %v", decoded.LastHeartbeatAt, at)
+	}
+
+	wholeSeconds := []byte(`{"active":true,"apiReachable":true,"heartbeatInterval":"1s","lastHeartbeatAt":"2026-06-02T15:00:02Z"}`)
+	if err := json.Unmarshal(wholeSeconds, &decoded); err == nil {
+		t.Error("a lastHeartbeatAt without fractional digits was decoded, want an error")
 	}
 }
 
@@ -144,7 +182,7 @@ func TestDeepCopyIsIndependent(t *testing.T) {
 		},
 		Status: FencingFailedNodeStateStatus{
 			Failed:   &FencingFailedNodeStateFailed{DetectedBy: "worker-1", AliveCount: 3},
-			Fallback: &FencingFailedNodeStateFallback{Active: true, HeartbeatIntervalSeconds: 1},
+			Fallback: &FencingFailedNodeStateFallback{Active: true, HeartbeatInterval: metav1.Duration{Duration: time.Second}},
 			Conditions: []metav1.Condition{
 				{Type: "Ready", Status: metav1.ConditionTrue, Reason: "Ready"},
 			},

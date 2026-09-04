@@ -21,6 +21,8 @@ import (
 	"testing"
 	"time"
 
+	hcml "github.com/hashicorp/memberlist"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -151,5 +153,84 @@ func TestSplitLevel(t *testing.T) {
 				t.Errorf("got (%q, %q), want (%q, %q)", level, msg, tt.wantLevel, tt.wantMsg)
 			}
 		})
+	}
+}
+
+func TestMembersReportsNodeNames(t *testing.T) {
+	// The alive set is built from these strings and compared against Node names
+	// from Kubernetes: an address here would make every peer look failed.
+	cluster, err := New(Config{
+		NodeName:      "worker-1",
+		NodeGroup:     "worker",
+		AdvertiseAddr: "127.0.0.1",
+		Port:          0,
+		Tuning:        testTuning(),
+	}, log.NewNop())
+	if err != nil {
+		t.Fatalf("create cluster: %v", err)
+	}
+
+	t.Cleanup(func() {
+		if err := cluster.Shutdown(); err != nil {
+			t.Errorf("shutdown: %v", err)
+		}
+	})
+
+	members := cluster.Members()
+
+	if len(members) != 1 || members[0] != "worker-1" {
+		t.Errorf("Members() = %v, want [worker-1]", members)
+	}
+}
+
+func TestChangedFiresOnMembershipEvents(t *testing.T) {
+	delegate := newEventDelegate(log.NewNop())
+	changed := delegate.subscribe()
+
+	stop := make(chan struct{})
+	defer close(stop)
+
+	go delegate.run(stop)
+
+	for _, notify := range []func(*hcml.Node){delegate.NotifyJoin, delegate.NotifyLeave} {
+		notify(&hcml.Node{Name: "worker-1"})
+
+		select {
+		case <-changed:
+		case <-time.After(2 * time.Second):
+			t.Fatal("no wake-up after a membership change")
+		}
+	}
+}
+
+func TestEveryChangedSubscriberIsWoken(t *testing.T) {
+	events := newEventDelegate(log.NewNop())
+
+	first, second := events.subscribe(), events.subscribe()
+
+	events.wake()
+
+	for name, ch := range map[string]<-chan struct{}{"first": first, "second": second} {
+		select {
+		case <-ch:
+		default:
+			t.Errorf("%s subscriber was not woken", name)
+		}
+	}
+}
+
+func TestWakeUpsCoalesceInsteadOfBlocking(t *testing.T) {
+	events := newEventDelegate(log.NewNop())
+	ch := events.subscribe()
+
+	events.wake()
+	events.wake()
+
+	<-ch
+
+	select {
+	case <-ch:
+		t.Error("two wakes must coalesce into one")
+	default:
 	}
 }

@@ -95,15 +95,14 @@ type FencingFailedNodeStateFailed struct {
 	QuorumSize int32 `json:"quorumSize"`
 }
 
-// FencingFailedNodeStateFallback is written only by the affected Node itself.
 type FencingFailedNodeStateFallback struct {
 	Active bool `json:"active"`
 	// +optional
-	LastHeartbeatAt *metav1.Time `json:"lastHeartbeatAt,omitempty"`
+	LastHeartbeatAt *metav1.MicroTime `json:"lastHeartbeatAt,omitempty"`
 	// +optional
-	QuorumLostAt *metav1.Time `json:"quorumLostAt,omitempty"`
-	// +kubebuilder:validation:Minimum=1
-	HeartbeatIntervalSeconds int32 `json:"heartbeatIntervalSeconds"`
+	QuorumLostAt      *metav1.Time    `json:"quorumLostAt,omitempty"`
+	APIReachable      bool            `json:"apiReachable"`
+	HeartbeatInterval metav1.Duration `json:"heartbeatInterval"`
 }
 
 // FencingFailedNodeStateStatus holds the incident state.
