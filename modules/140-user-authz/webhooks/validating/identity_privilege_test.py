@@ -741,13 +741,66 @@ class TestIdentityAssignHook(unittest.TestCase):
             username=CLUSTER_ADMIN))
         self.assertFalse(out.validations.data[0]["allowed"])
 
-    def test_clusteradmin_can_rotate_closed_saml_without_new_targets(self):
-        spec = {"type": "SAML", "displayName": "corp",
-                "saml": {"filterGroups": True, "allowedGroups": ["devs"], "ca": "new"}}
+    def test_clusteradmin_can_rename_closed_saml_without_new_targets(self):
+        spec = {"type": "SAML", "displayName": "corp-2",
+                "saml": {"filterGroups": True, "allowedGroups": ["devs"],
+                         "ssoURL": "https://idp/sso"}}
         old = {"type": "SAML", "displayName": "corp",
-               "saml": {"filterGroups": True, "allowedGroups": ["devs"], "ca": "old"}}
+               "saml": {"filterGroups": True, "allowedGroups": ["devs"],
+                        "ssoURL": "https://idp/sso"}}
         out = self.run_hook(ctx(
             "DexProvider", "UPDATE", spec, old_spec=old, username=CLUSTER_ADMIN))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_clusteradmin_can_rotate_open_oidc_secret(self):
+        spec = {"type": "OIDC", "displayName": "corp",
+                "oidc": {"issuer": "https://idp", "clientID": "a", "clientSecret": "new"}}
+        old = {"type": "OIDC", "displayName": "corp",
+               "oidc": {"issuer": "https://idp", "clientID": "a", "clientSecret": "old"}}
+        out = self.run_hook(ctx(
+            "DexProvider", "UPDATE", spec, old_spec=old, username=CLUSTER_ADMIN))
+        tests.assert_validation_allowed(self, out, None)
+
+    def test_clusteradmin_cannot_repoint_open_oidc_issuer(self):
+        spec = {"type": "OIDC", "displayName": "corp",
+                "oidc": {"issuer": "https://evil", "clientID": "a", "clientSecret": "x"}}
+        old = {"type": "OIDC", "displayName": "corp",
+               "oidc": {"issuer": "https://idp", "clientID": "a", "clientSecret": "x"}}
+        out = self.run_hook(ctx(
+            "DexProvider", "UPDATE", spec, old_spec=old, username=CLUSTER_ADMIN))
+        self.assertFalse(out.validations.data[0]["allowed"])
+        self.assertIn("user-authz:super-admin", out.validations.data[0]["message"])
+
+    def test_clusteradmin_cannot_repoint_closed_saml_sso(self):
+        spec = {"type": "SAML", "displayName": "corp",
+                "saml": {"filterGroups": True, "allowedGroups": ["devs"],
+                         "ssoURL": "https://evil/sso"}}
+        old = {"type": "SAML", "displayName": "corp",
+               "saml": {"filterGroups": True, "allowedGroups": ["devs"],
+                        "ssoURL": "https://idp/sso"}}
+        out = self.run_hook(ctx(
+            "DexProvider", "UPDATE", spec, old_spec=old, username=CLUSTER_ADMIN))
+        self.assertFalse(out.validations.data[0]["allowed"])
+        self.assertIn("user-authz:super-admin", out.validations.data[0]["message"])
+
+    def test_clusteradmin_cannot_replace_closed_saml_ca(self):
+        spec = {"type": "SAML", "displayName": "corp",
+                "saml": {"filterGroups": True, "allowedGroups": ["devs"],
+                         "ssoURL": "https://idp/sso", "rootCAData": "new"}}
+        old = {"type": "SAML", "displayName": "corp",
+               "saml": {"filterGroups": True, "allowedGroups": ["devs"],
+                        "ssoURL": "https://idp/sso", "rootCAData": "old"}}
+        out = self.run_hook(ctx(
+            "DexProvider", "UPDATE", spec, old_spec=old, username=CLUSTER_ADMIN))
+        self.assertFalse(out.validations.data[0]["allowed"])
+
+    def test_superadmin_can_repoint_open_oidc_issuer(self):
+        spec = {"type": "OIDC", "displayName": "corp",
+                "oidc": {"issuer": "https://evil"}}
+        old = {"type": "OIDC", "displayName": "corp",
+               "oidc": {"issuer": "https://idp"}}
+        out = self.run_hook(ctx(
+            "DexProvider", "UPDATE", spec, old_spec=old, username=SUPERADMIN))
         tests.assert_validation_allowed(self, out, None)
 
     def test_clusteradmin_cannot_open_closed_saml(self):

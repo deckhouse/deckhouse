@@ -299,10 +299,15 @@ def validate_useroperation(req, snapshots, actor: List[str], catalog: dict) -> O
 
 
 def validate_dexprovider(req, snapshots, actor: List[str], catalog: dict) -> Optional[str]:
-    new_targets = assign.dex_target_roles(_spec(req.object), snapshots)
+    new_spec = _spec(req.object)
+    new_targets = assign.dex_target_roles(new_spec, snapshots)
     if req.operation == "UPDATE":
-        old_targets = set(assign.dex_target_roles(_spec(req.oldObject), snapshots))
-        targets = [name for name in new_targets if name not in old_targets]
+        old_spec = _spec(req.oldObject)
+        if assign.dex_trust_anchor(new_spec) != assign.dex_trust_anchor(old_spec):
+            targets = new_targets
+        else:
+            old_targets = set(assign.dex_target_roles(old_spec, snapshots))
+            targets = [name for name in new_targets if name not in old_targets]
     else:
         targets = new_targets
     leftover = assign.can_assign(actor, targets, catalog)

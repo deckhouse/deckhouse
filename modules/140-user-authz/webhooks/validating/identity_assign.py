@@ -511,6 +511,39 @@ def dex_claims_closed(spec: Any) -> bool:
     return False
 
 
+DEX_PROVIDER_BLOCKS = ("oidc", "saml", "ldap", "crowd", "gitlab", "github", "bitbucketCloud")
+
+# Who signs, or which app at that IdP is trusted. clientSecret and bindPW
+# stay off this list so rotating a credential at the same issuer is not a
+# new connection.
+DEX_TRUST_FIELDS = (
+    "issuer",
+    "ssoURL",
+    "ssoIssuer",
+    "entityIssuer",
+    "clientID",
+    "rootCAData",
+    "ca",
+    "caData",
+    "host",
+    "baseURL",
+    "insecureSkipVerify",
+    "insecureNoSSL",
+)
+
+
+def dex_trust_anchor(spec: Any) -> Tuple[Any, ...]:
+    spec = _dict(spec)
+    blocks = []
+    for key in DEX_PROVIDER_BLOCKS:
+        block = _dict(spec.get(key))
+        if not block:
+            continue
+        fields = tuple((field, block.get(field)) for field in DEX_TRUST_FIELDS)
+        blocks.append((key, fields))
+    return (spec.get("type"), tuple(blocks))
+
+
 def dex_target_roles(spec: Any, snapshots: Any) -> List[str]:
     emails, groups = dex_explicit_identities(spec)
     if not dex_claims_closed(spec):

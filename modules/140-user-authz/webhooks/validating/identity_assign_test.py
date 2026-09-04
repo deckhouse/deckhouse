@@ -437,6 +437,18 @@ class TestIdentityCollection(unittest.TestCase):
         spec = {"type": "SAML", "saml": {"filterGroups": True, "allowedGroups": ["devs"]}}
         self.assertEqual(assign.dex_target_roles(spec, snaps), ["user-authz:super-admin"])
 
+    def test_dex_trust_anchor_ignores_secret_and_display_name(self):
+        old = {"type": "OIDC", "displayName": "corp",
+               "oidc": {"issuer": "https://idp", "clientID": "a", "clientSecret": "old"}}
+        new = {"type": "OIDC", "displayName": "corp-2",
+               "oidc": {"issuer": "https://idp", "clientID": "a", "clientSecret": "new"}}
+        self.assertEqual(assign.dex_trust_anchor(old), assign.dex_trust_anchor(new))
+
+    def test_dex_trust_anchor_changes_with_issuer(self):
+        old = {"type": "OIDC", "oidc": {"issuer": "https://idp"}}
+        new = {"type": "OIDC", "oidc": {"issuer": "https://evil"}}
+        self.assertNotEqual(assign.dex_trust_anchor(old), assign.dex_trust_anchor(new))
+
     def test_user_record_name_does_not_fallback_to_email(self):
         snaps = {
             assign.USER_SNAP: [
