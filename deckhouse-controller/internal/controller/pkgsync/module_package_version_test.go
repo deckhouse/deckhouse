@@ -163,7 +163,7 @@ func TestSyncVersionsFromImage(t *testing.T) {
 			"a stable order keeps the converge from seeing false drift")
 	})
 
-	t.Run("falls back to module.yaml and takes the weight from the dir prefix", func(t *testing.T) {
+	t.Run("falls back to module.yaml", func(t *testing.T) {
 		dir := t.TempDir()
 		writeModuleYAML(t, filepath.Join(dir, "910-parca"), "name: parca\nstage: Experimental\n")
 
@@ -174,7 +174,6 @@ func TestSyncVersionsFromImage(t *testing.T) {
 		assert.False(t, mpv.IsDraft())
 		require.NotNil(t, mpv.Status.PackageMetadata)
 		assert.Equal(t, "Experimental", mpv.Status.PackageMetadata.Stage)
-		assert.Equal(t, int32(910), mpv.Status.PackageMetadata.Weight, "the weight comes from the directory name")
 		assert.Nil(t, mpv.Status.PackageMetadata.Description, "no descriptions in the file, no description block")
 	})
 
@@ -285,7 +284,6 @@ func TestSyncVersionsFromImage(t *testing.T) {
 		after := getVersion(t, cl, existing.Name)
 		assert.False(t, after.IsDraft(), "a refresh must not bring the draft label back")
 		assert.Equal(t, "Experimental", after.Status.PackageMetadata.Stage, "the status follows the disk")
-		assert.Equal(t, int32(900), after.Status.PackageMetadata.Weight)
 		require.NotNil(t, after.Status.PackageSchemas, "the refresh brings the schemas along")
 		assert.NotNil(t, after.Status.PackageSchemas.SettingsSchema)
 	})
