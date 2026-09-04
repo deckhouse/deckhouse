@@ -870,7 +870,7 @@ spec:
       enabled: true
 ```
 
-Wait until the `Istio` / `IstioOperator` resource in `d8-istio` reconciles and workloads have picked up the new config (restart application pods if dashboards stay empty after traffic was sent).
+Wait until the `Istio` resource in `d8-istio` reconciles and workloads have picked up the new config (restart application pods if dashboards stay empty after traffic was sent).
 
 ### Verifying metrics and logs
 
@@ -956,7 +956,7 @@ spec:
           address: "jaeger-collector.observability.svc.cluster.local:9411"
 ```
 
-Roll out the Istio/`IstioOperator` manifests in `d8-istio`; confirm workloads pick up telemetry before blaming dashboards.
+Roll out the `Istio` manifests in `d8-istio`; confirm workloads pick up telemetry before blaming dashboards.
 
 #### Kiali
 
@@ -964,7 +964,7 @@ To see traces inside Kiali UI, configure [`tracing.kiali`](configuration.html#pa
 
 #### Example — mesh-wide OTLP via ModuleConfig
 
-Deploy a Collector reachable from the mesh, then enable Telemetry API mode and point [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry) at it. The module adds extension provider `deckhouse-tracing` and `spec.tracing` on `d8-main`—do not patch the generated `Istio` / `IstioOperator` `meshConfig` for mesh-wide OTLP.
+Deploy a Collector reachable from the mesh, then enable Telemetry API mode and point [`tracing.collector.opentelemetry`](configuration.html#parameters-tracing-collector-opentelemetry) at it. The module adds extension provider `deckhouse-tracing` and `spec.tracing` on `d8-main`—do not patch the generated `Istio` `meshConfig` for mesh-wide OTLP.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1

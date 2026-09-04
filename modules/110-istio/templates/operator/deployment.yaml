@@ -11,7 +11,6 @@ memory: 100Mi
 {{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
   {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
   {{- if get $versionInfo "supportsOperator" }}
-  {{- $fullVersion := get $versionInfo "fullVersion" }}
   {{ $imageSuffix := get $versionInfo "imageSuffix" }}
   {{- $revision := get $versionInfo "revision" }}
   {{- if $.Values.global.enabledModules | has "vertical-pod-autoscaler" }}
@@ -87,12 +86,10 @@ spec:
         - server
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         imagePullPolicy: IfNotPresent
-        {{- if (hasPrefix "1.25" $fullVersion) }}
         volumeMounts:
         - mountPath: /etc/sail-operator
           name: operator-config
           readOnly: true
-        {{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -101,13 +98,8 @@ spec:
   {{- end }}
 
         ports:
-        {{- if (hasPrefix "1.25" $fullVersion) }}
         - containerPort: 8443
           name: https-metrics
-        {{- else}}
-        - containerPort: 8383
-          name: http-metrics
-        {{- end }}
           protocol: TCP
         env:
           - name: WATCH_NAMESPACE
@@ -124,7 +116,6 @@ spec:
             value: 300s
           - name: REVISION
             value: {{ $revision }}
-      {{- if (hasPrefix "1.25" $fullVersion) }}
       volumes:
         - downwardAPI:
             defaultMode: 420
@@ -133,6 +124,5 @@ spec:
                 fieldPath: metadata.annotations
               path: config.properties
           name: operator-config
-      {{- end }}
   {{- end }}
 {{- end }}
