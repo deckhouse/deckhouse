@@ -36,6 +36,15 @@ type instanceClassDefaultsFilterResult struct {
 	ImageID string `json:"imageID"`
 }
 
+// masterInstanceClassFilterResult carries the class name alongside the image so the hook can pick
+// deterministically between the legacy "master" class and the migrated one. It is deliberately a
+// separate type from instanceClassDefaultsFilterResult, which is written into values and must not
+// grow fields the values schema does not describe.
+type masterInstanceClassFilterResult struct {
+	Name    string `json:"name"`
+	ImageID string `json:"imageID"`
+}
+
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 20},
 	Kubernetes: []go_hook.KubernetesConfig{
@@ -81,10 +90,10 @@ func filterMasterInstanceClass(obj *unstructured.Unstructured) (go_hook.FilterRe
 		return nil, fmt.Errorf("read spec.imageID of %s: %w", obj.GetName(), err)
 	}
 	if !found {
-		return instanceClassDefaultsFilterResult{}, nil
+		return masterInstanceClassFilterResult{Name: obj.GetName()}, nil
 	}
 
-	return instanceClassDefaultsFilterResult{ImageID: imageID}, nil
+	return masterInstanceClassFilterResult{Name: obj.GetName(), ImageID: imageID}, nil
 }
 
 func filterPCCSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -120,7 +129,7 @@ func filterPCCSecret(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 }
 
 func handleInstanceClassDefaults(_ context.Context, input *go_hook.HookInput) error {
-	masterICResult, err := getInstanceClassDefaultFilterResult(input, "master_instance_class")
+	masterICResult, err := getMasterInstanceClassImage(input)
 	if err != nil {
 		return err
 	}
@@ -135,6 +144,36 @@ func handleInstanceClassDefaults(_ context.Context, input *go_hook.HookInput) er
 	input.Values.Set("cloudProviderYandex.internal.instanceClassDefaults", finalResult)
 
 	return nil
+}
+
+// getMasterInstanceClassImage returns the fallback image taken from the master YandexInstanceClass.
+//
+// Mid-migration both the legacy "master" class and the migrated one can exist, with different
+// images. Snapshot order is not guaranteed, so taking the first non-empty image would let
+// instanceClassDefaults.imageID - the fallback for every other InstanceClass - flip between hook
+// runs. Prefer the migrated class, which is the one the new model keeps up to date.
+func getMasterInstanceClassImage(input *go_hook.HookInput) (instanceClassDefaultsFilterResult, error) {
+	migratedName := cpapi.BuildInstanceClassName("master")
+
+	var legacyImageID string
+	for _, snap := range input.Snapshots.Get("master_instance_class") {
+		var result masterInstanceClassFilterResult
+		if err := snap.UnmarshalTo(&result); err != nil {
+			return instanceClassDefaultsFilterResult{}, fmt.Errorf("unmarshal master_instance_class snapshot: %w", err)
+		}
+		if result.ImageID == "" {
+			continue
+		}
+
+		if result.Name == migratedName {
+			return instanceClassDefaultsFilterResult{ImageID: result.ImageID}, nil
+		}
+		if legacyImageID == "" {
+			legacyImageID = result.ImageID
+		}
+	}
+
+	return instanceClassDefaultsFilterResult{ImageID: legacyImageID}, nil
 }
 
 func getInstanceClassDefaultFilterResult(input *go_hook.HookInput, key string) (instanceClassDefaultsFilterResult, error) {

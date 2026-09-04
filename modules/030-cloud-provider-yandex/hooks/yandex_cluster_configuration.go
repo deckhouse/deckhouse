@@ -26,10 +26,10 @@ import (
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 
+	"github.com/deckhouse/module-sdk/pkg"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	clouddatav1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	"github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal"
 	ycicv1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-yandex/hooks/internal/api/instanceclass/v1"
@@ -113,31 +113,29 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 }, handleYandexClusterConfiguration)
 
 func handleYandexClusterConfiguration(_ context.Context, input *go_hook.HookInput) error {
-	// Source priority, high to low:
-	//  1. the candi Secret - the infrastructure run's recorded output;
-	//  2. the legacy PCC discovery payload - also the infrastructure run's recorded output.
-	// Both describe an infrastructure run, so a cluster whose infrastructure DKP does not create
-	// has neither. That is why openapi/values.yaml requires almost nothing here: the workloads
-	// read the network facts through templates/_helpers.tpl, which falls back to the operator's
-	// own nodes.parameters.existing* whenever this payload does not carry them.
-	discoveryData, candiPresent := resolveCandiDiscoveryData(input)
+	pccResult, pccPresent, err := unmarshalToOneStruct[internal.PCCSecretFilterResult](input.Snapshots, "provider_cluster_configuration")
+	if err != nil {
+		return fmt.Errorf("unmarshal provider_cluster_configuration snapshots: %w", err)
+	}
 
-	// Yandex has no discover.go hook: this hook is the only writer of providerDiscoveryData, so the
-	// merge has no second source to preserve. It stays because it also stamps the type markers and
-	// the region default onto every payload written below.
-	discoveryData = internal.MergeDiscoveryData(discoveryData, clouddatav1.YandexCloudDiscoveryData{})
-
-	pccResult, pccFound, err := decodePCCSnapshot(input)
+	// The candi Secret first, then the legacy PCC payload, with the type markers and the region
+	// default stamped on. Shared with create_migration_resources.go so both hooks resolve the
+	// same data - see internal.ResolveDiscoveryData.
+	var pccForDiscovery *internal.PCCSecretFilterResult
+	if pccPresent {
+		pccForDiscovery = &pccResult
+	}
+	discoveryData, err := internal.ResolveDiscoveryData(input, pccForDiscovery)
 	if err != nil {
 		return err
 	}
 
-	if !pccFound {
+	if !pccPresent || pccResult.ProviderClusterConfig == nil {
 		// The legacy PCC is gone. Once credentials live in the cluster, the new model is the only
 		// source of truth and the migration artifacts have to go: while d8-module-is-migrating
 		// exists, ShouldSkipNewModelValidation keeps new-model validation switched off.
 		// Without credentials the cluster is not migrated yet, so the artifacts stay.
-		if hasCredentialSecrets(input) {
+		if hasCredentialSecrets(input) && internal.HasMigratedModuleConfig(input) {
 			internal.DeleteMigrationArtifacts(input)
 		}
 
@@ -145,14 +143,7 @@ func handleYandexClusterConfiguration(_ context.Context, input *go_hook.HookInpu
 		return nil
 	}
 
-	if err := applyPCCDiscoveryFallback(&discoveryData, pccResult, candiPresent); err != nil {
-		return err
-	}
-
-	var pcc ycpccv1.YandexProviderClusterConfiguration
-	if err := convertStructsUsingJSON(pccResult.ProviderClusterConfig, &pcc); err != nil {
-		return fmt.Errorf("unmarshal PCC: %w", err)
-	}
+	pcc := *pccResult.ProviderClusterConfig
 
 	if internal.IsMigrationResourcesApplied(input, pcc) {
 		// migration done: use MC v2 values
@@ -162,14 +153,25 @@ func handleYandexClusterConfiguration(_ context.Context, input *go_hook.HookInpu
 	}
 
 	// State B: migration in progress - populate values from PCC so templates render
-	mcSettings, err := decodeModuleConfigSettingsV1(input)
-	if err != nil {
-		return err
+	if err := validateProviderClusterConfig(pcc); err != nil {
+		return fmt.Errorf("validate provider cluster config: %w", err)
 	}
 
+	mcResult, ok, err := unmarshalToOneStruct[internal.ModuleConfigFilterResult](input.Snapshots, "module_config")
+	if err != nil {
+		return fmt.Errorf("unmarshal module_config snapshots: %w", err)
+	}
+	if ok && mcResult.SettingsV2 != nil {
+		input.Values.Set(discoveryDataValuesPath, discoveryData)
+		return nil
+	}
+	var mcSettingsV1 ycsettingsv1.ModuleConfigSettings
+	if ok && mcResult.SettingsV1 != nil {
+		mcSettingsV1 = *mcResult.SettingsV1
+	}
 	mcSettingsV2 := internal.BuildModuleConfigSettingsV2(
 		pcc,
-		mcSettings,
+		mcSettingsV1,
 		isHybridCluster(input, "node_groups"),
 		discoveryData,
 	)
@@ -178,101 +180,7 @@ func handleYandexClusterConfiguration(_ context.Context, input *go_hook.HookInpu
 		return fmt.Errorf("map PCC and MC v1 to root values: %w", err)
 	}
 
-	if err := validateProviderClusterConfig(pcc); err != nil {
-		return fmt.Errorf("validate provider cluster config: %w", err)
-	}
-
 	input.Values.Set(discoveryDataValuesPath, discoveryData)
-	return nil
-}
-
-func decodePCCSnapshot(input *go_hook.HookInput) (internal.PCCSecretFilterResult, bool, error) {
-	snaps := input.Snapshots.Get("provider_cluster_configuration")
-	if len(snaps) == 0 {
-		return internal.PCCSecretFilterResult{}, false, nil
-	}
-
-	var result internal.PCCSecretFilterResult
-	if err := snaps[0].UnmarshalTo(&result); err != nil {
-		return internal.PCCSecretFilterResult{}, false, fmt.Errorf("unmarshal PCC snapshot: %w", err)
-	}
-
-	return result, true, nil
-}
-
-// decodeModuleConfigSettingsV1 reads the v1 settings of the module's ModuleConfig.
-//
-// The v1 settings payload is what matters here: an operator may keep version 1 settings
-// while the module is disabled, and they still have to be projected.
-func decodeModuleConfigSettingsV1(input *go_hook.HookInput) (ycsettingsv1.ModuleConfigSettings, error) {
-	var settings ycsettingsv1.ModuleConfigSettings
-
-	snaps := input.Snapshots.Get("module_config")
-	if len(snaps) == 0 {
-		return settings, nil
-	}
-
-	var result internal.ModuleConfigFilterResult
-	if err := snaps[0].UnmarshalTo(&result); err != nil {
-		return settings, fmt.Errorf("unmarshal ModuleConfig snapshot: %w", err)
-	}
-
-	if len(result.SettingsV1) == 0 {
-		return settings, nil
-	}
-
-	if err := json.Unmarshal(result.SettingsV1, &settings); err != nil {
-		return settings, fmt.Errorf("parse ModuleConfig v1: %w", err)
-	}
-
-	return settings, nil
-}
-
-// resolveCandiDiscoveryData reads discovery data from the candi Secret written by the
-// infrastructure run. The boolean reports whether the Secret carries a usable payload; an
-// unparsable payload still reports true so that the PCC/projection fallback is deliberately
-// suppressed rather than silently masked by another source.
-func resolveCandiDiscoveryData(input *go_hook.HookInput) (clouddatav1.YandexCloudDiscoveryData, bool) {
-	candiSnaps := input.Snapshots.Get("candi_discovery_data")
-	if len(candiSnaps) == 0 {
-		return clouddatav1.YandexCloudDiscoveryData{}, false
-	}
-
-	var candiResult internal.CandiDiscoveryDataFilterResult
-	if err := candiSnaps[0].UnmarshalTo(&candiResult); err != nil {
-		input.Logger.Warn("failed to unmarshal candi discovery snapshot; PCC fallback suppressed", "error", err)
-		return clouddatav1.YandexCloudDiscoveryData{}, true
-	}
-
-	if len(candiResult.DiscoveryDataJSON) == 0 {
-		return clouddatav1.YandexCloudDiscoveryData{}, false
-	}
-
-	var discoveryData clouddatav1.YandexCloudDiscoveryData
-	if err := json.Unmarshal(candiResult.DiscoveryDataJSON, &discoveryData); err != nil {
-		input.Logger.Warn("failed to parse candi discovery data JSON; PCC fallback suppressed", "error", err)
-		return clouddatav1.YandexCloudDiscoveryData{}, true
-	}
-
-	return discoveryData, true
-}
-
-// applyPCCDiscoveryFallback overlays the legacy PCC discovery payload when the candi Secret carries
-// nothing. Both record the same infrastructure run, so the candi one wins and the PCC one only
-// stands in for it.
-func applyPCCDiscoveryFallback(
-	discoveryData *clouddatav1.YandexCloudDiscoveryData,
-	pccResult internal.PCCSecretFilterResult,
-	candiPresent bool,
-) error {
-	if candiPresent || len(pccResult.ProviderDiscoveryDataJSON) == 0 {
-		return nil
-	}
-
-	if err := json.Unmarshal(pccResult.ProviderDiscoveryDataJSON, discoveryData); err != nil {
-		return fmt.Errorf("unmarshal discovery data from PCC: %w", err)
-	}
-
 	return nil
 }
 
@@ -344,15 +252,19 @@ func setCredentialSecretsValuesIfAbsent(input *go_hook.HookInput, pcc ycpccv1.Ya
 	return nil
 }
 
-// hasCredentialSecrets checks whether credential secrets are available —
-// either already populated by credentials.go (Order 19) or present as Kubernetes
-// Secrets in the snapshot. Yandex does not store credentials inside ModuleConfig.
+// hasCredentialSecrets checks whether the managed credential Secret is available —
+// either already populated by credentials.go (Order 19) or present as a Kubernetes
+// Secret in the snapshot. Yandex does not store credentials inside ModuleConfig.
+//
+// Both checks match by name on purpose: the snapshot also carries the NAT-instance exporter
+// Secret, which shares the credentials type, and a cluster holding only that one is not migrated.
 func hasCredentialSecrets(input *go_hook.HookInput) bool {
-	if _, exists := input.Values.GetOk("cloudProviderYandex.internal.credentialSecrets.d8-credentials"); exists {
+	valuesPath := fmt.Sprintf("cloudProviderYandex.internal.credentialSecrets.%s", cpapi.CredentialSecretName)
+	if _, exists := input.Values.GetOk(valuesPath); exists {
 		return true
 	}
 
-	return len(input.Snapshots.Get("credential_secrets")) > 0
+	return internal.HasCredentialSecret(input)
 }
 
 // validateProviderClusterConfig ensures the PCC has the required Yandex provider fields.
@@ -370,11 +282,15 @@ func validateProviderClusterConfig(p ycpccv1.YandexProviderClusterConfiguration)
 	return nil
 }
 
-func convertStructsUsingJSON(in any, out any) error {
-	b, err := json.Marshal(in)
+func unmarshalToOneStruct[T any](s pkg.Snapshots, key string) (T, bool, error) {
+	datas, err := sdkobjectpatch.UnmarshalToStruct[T](s, key)
 	if err != nil {
-		return err
+		return *new(T), false, err
 	}
 
-	return json.Unmarshal(b, out)
+	if len(datas) == 0 {
+		return *new(T), false, nil
+	}
+
+	return datas[0], true, nil
 }

@@ -23,13 +23,14 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
-
-	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
-	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
+
+	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	clouddatav1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
+	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 )
 
 const (
@@ -114,7 +115,7 @@ var _ = Describe("FilterPCCSecret", func() {
 		pccResult, ok := result.(*PCCSecretFilterResult)
 		Expect(ok).To(BeTrue())
 		Expect(pccResult.ProviderClusterConfig).NotTo(BeNil())
-		Expect(pccResult.ProviderDiscoveryDataJSON).NotTo(BeNil())
+		Expect(pccResult.ProviderDiscoveryData).NotTo(BeNil())
 	})
 
 	It("valid PCC secret with only cluster-config", func() {
@@ -125,7 +126,7 @@ var _ = Describe("FilterPCCSecret", func() {
 		pccResult, ok := result.(*PCCSecretFilterResult)
 		Expect(ok).To(BeTrue())
 		Expect(pccResult.ProviderClusterConfig).NotTo(BeNil())
-		Expect(pccResult.ProviderDiscoveryDataJSON).To(BeNil())
+		Expect(pccResult.ProviderDiscoveryData).To(BeNil())
 	})
 
 	It("valid PCC secret with only discovery-data", func() {
@@ -136,7 +137,7 @@ var _ = Describe("FilterPCCSecret", func() {
 		pccResult, ok := result.(*PCCSecretFilterResult)
 		Expect(ok).To(BeTrue())
 		Expect(pccResult.ProviderClusterConfig).To(BeNil())
-		Expect(pccResult.ProviderDiscoveryDataJSON).NotTo(BeNil())
+		Expect(pccResult.ProviderDiscoveryData).NotTo(BeNil())
 	})
 })
 
@@ -170,19 +171,34 @@ var _ = Describe("FilterModuleConfig", func() {
 	}
 
 	It("MC v1 with settings returns SettingsV1", func() {
-		obj := newMCUnstructured(1, ptr.To(true), map[string]interface{}{"foo": "bar"})
+		obj := newMCUnstructured(1, ptr.To(true), map[string]interface{}{
+			"additionalExternalNetworkIDs": []interface{}{"net-1"},
+			"storageClass": map[string]interface{}{
+				"exclude": []interface{}{"network-hdd"},
+			},
+		})
 		result, err := FilterModuleConfig(obj)
 		Expect(err).NotTo(HaveOccurred())
 		mcResult := result.(ModuleConfigFilterResult)
 		Expect(mcResult.Version).To(Equal(int64(1)))
 		Expect(mcResult.Enabled).To(BeTrue())
-		Expect(mcResult.SettingsV1).NotTo(BeNil())
 		Expect(mcResult.SettingsV2).To(BeNil())
-		Expect(string(mcResult.SettingsV1)).To(ContainSubstring(`"foo":"bar"`))
+		Expect(mcResult.SettingsV1).NotTo(BeNil())
+		// The payload is decoded into the typed v1 settings, so assert the fields the projection
+		// actually reads rather than the raw JSON.
+		Expect(mcResult.SettingsV1.AdditionalExternalNetworkIDs).To(Equal([]string{"net-1"}))
+		Expect(mcResult.SettingsV1.StorageClass.Exclude).To(Equal([]string{"network-hdd"}))
 	})
 
 	It("MC v2 with settings returns SettingsV2", func() {
-		obj := newMCUnstructured(2, ptr.To(true), map[string]interface{}{"baz": float64(42)})
+		obj := newMCUnstructured(2, ptr.To(true), map[string]interface{}{
+			"provider": map[string]interface{}{
+				"parameters": map[string]interface{}{
+					"cloudID":  "cloud-1",
+					"folderID": "folder-1",
+				},
+			},
+		})
 		result, err := FilterModuleConfig(obj)
 		Expect(err).NotTo(HaveOccurred())
 		mcResult := result.(ModuleConfigFilterResult)
@@ -190,7 +206,8 @@ var _ = Describe("FilterModuleConfig", func() {
 		Expect(mcResult.Enabled).To(BeTrue())
 		Expect(mcResult.SettingsV1).To(BeNil())
 		Expect(mcResult.SettingsV2).NotTo(BeNil())
-		Expect(string(mcResult.SettingsV2)).To(ContainSubstring(`"baz":42`))
+		Expect(mcResult.SettingsV2.Provider.Parameters.CloudID).To(Equal("cloud-1"))
+		Expect(mcResult.SettingsV2.Provider.Parameters.FolderID).To(Equal("folder-1"))
 	})
 
 	It("MC with no settings returns empty settings", func() {
@@ -290,7 +307,10 @@ var _ = Describe("FilterCandiDiscoverySecret", func() {
 		}))
 		Expect(err).NotTo(HaveOccurred())
 		discResult := result.(CandiDiscoveryDataFilterResult)
-		Expect(discResult.DiscoveryDataJSON).To(BeNil())
+		// nil, not a zero-value struct: the Secret exists long before the infrastructure run
+		// fills it in, and ResolveDiscoveryData has to tell "no payload here" from a real
+		// payload so that an empty candi Secret does not shadow the legacy PCC discovery data.
+		Expect(discResult.ProviderDiscoveryData).To(BeNil())
 	})
 
 	It("valid secret with discovery data", func() {
@@ -299,8 +319,8 @@ var _ = Describe("FilterCandiDiscoverySecret", func() {
 		}))
 		Expect(err).NotTo(HaveOccurred())
 		discResult := result.(CandiDiscoveryDataFilterResult)
-		Expect(discResult.DiscoveryDataJSON).NotTo(BeNil())
-		Expect(json.Valid(discResult.DiscoveryDataJSON)).To(BeTrue())
+		Expect(discResult.ProviderDiscoveryData).NotTo(Equal(clouddatav1.YandexCloudDiscoveryData{}))
+		Expect(discResult.ProviderDiscoveryData.APIVersion).To(Equal("deckhouse.io/v1"))
 	})
 
 	// candi/openapi/cloud_discovery_data.yaml is a second schema over the same payload, and
@@ -318,7 +338,7 @@ var _ = Describe("FilterCandiDiscoverySecret", func() {
 		}))
 		Expect(err).NotTo(HaveOccurred())
 		discResult := result.(CandiDiscoveryDataFilterResult)
-		Expect(discResult.DiscoveryDataJSON).NotTo(BeNil())
+		Expect(discResult.ProviderDiscoveryData.Region).To(Equal("ru-central1"))
 	})
 
 	It("discovery data with empty collections is accepted", func() {
@@ -336,7 +356,7 @@ var _ = Describe("FilterCandiDiscoverySecret", func() {
 		}))
 		Expect(err).NotTo(HaveOccurred())
 		discResult := result.(CandiDiscoveryDataFilterResult)
-		Expect(discResult.DiscoveryDataJSON).NotTo(BeNil())
+		Expect(discResult.ProviderDiscoveryData.Region).To(Equal("ru-central1"))
 	})
 
 	It("discovery data without a region is rejected", func() {

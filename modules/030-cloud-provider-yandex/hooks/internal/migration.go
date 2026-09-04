@@ -42,36 +42,52 @@ import (
 )
 
 func IsMigrationResourcesApplied(input *go_hook.HookInput, pcc ycpccv1.YandexProviderClusterConfiguration) bool {
-	// Check ModuleConfig
-	mcSnaps := input.Snapshots.Get("module_config")
-	if len(mcSnaps) == 0 {
-		return false
-	}
-	var mc ModuleConfigFilterResult
-	if err := mcSnaps[0].UnmarshalTo(&mc); err != nil {
-		return false
-	}
-	if mc.Version < 2 || !mc.Enabled || len(mc.SettingsV2) == 0 {
-		return false
-	}
+	return HasCredentialSecret(input) &&
+		HasMigratedModuleConfig(input) &&
+		HasMigratedNodeGroupsAndInstances(input, pcc)
+}
 
-	// Check Credential Secrets
-	existingCreds, err := sdkobjectpatch.UnmarshalToStruct[NamedResourceFilterResult](input.Snapshots, "credential_secrets")
+// HasCredentialSecret reports whether the managed credential Secret exists in the cluster.
+//
+// The credential_secrets binding matches both cpapi.CredentialSecretName and the NAT-instance
+// exporter Secret, and both carry the same cloud-provider credentials type. Counting snapshots
+// would therefore treat a cluster that has only the exporter Secret as migrated, while the
+// terraform projection - which matches by name, see the note in
+// candi/terraform-modules/migration/locals.tf - would still consider it unmigrated. Match by
+// name here so both projections agree.
+func HasCredentialSecret(input *go_hook.HookInput) bool {
+	secrets, err := sdkobjectpatch.UnmarshalToStruct[NamedResourceFilterResult](input.Snapshots, "credential_secrets")
 	if err != nil {
 		return false
 	}
-	credFound := false
-	for _, cred := range existingCreds {
-		if cred.Name == cpapi.CredentialSecretName {
-			credFound = true
-			break
+
+	for _, secret := range secrets {
+		if secret.Name == cpapi.CredentialSecretName {
+			return true
 		}
 	}
-	if !credFound {
+
+	return false
+}
+
+func HasMigratedModuleConfig(input *go_hook.HookInput) bool {
+	mcResults, err := sdkobjectpatch.UnmarshalToStruct[ModuleConfigFilterResult](input.Snapshots, "module_config")
+	if err != nil {
 		return false
 	}
 
-	// Check NodeGroups and InstanceClasses
+	if len(mcResults) == 0 {
+		return false
+	}
+
+	if mcResults[0].Version < 2 || !mcResults[0].Enabled || mcResults[0].SettingsV2 == nil {
+		return false
+	}
+
+	return true
+}
+
+func HasMigratedNodeGroupsAndInstances(input *go_hook.HookInput, pcc ycpccv1.YandexProviderClusterConfiguration) bool {
 	existingNodeGroups, err := sdkobjectpatch.UnmarshalToStruct[NodeGroupFilterResult](input.Snapshots, "node_groups")
 	if err != nil {
 		return false
@@ -306,33 +322,33 @@ func BuildCredentialsSecrets(pcc ycpccv1.YandexProviderClusterConfiguration) []c
 	return secrets
 }
 
-func BuildModuleConfigSettingsV2(cfg ycpccv1.YandexProviderClusterConfiguration, mc ycsettingsv1.ModuleConfigSettings, isHybrid bool, discoveryData clouddatav1.YandexCloudDiscoveryData) ycsettingsv2.ModuleConfigSettings {
+func BuildModuleConfigSettingsV2(pcc ycpccv1.YandexProviderClusterConfiguration, mc ycsettingsv1.ModuleConfigSettings, isHybrid bool, discoveryData clouddatav1.YandexCloudDiscoveryData) ycsettingsv2.ModuleConfigSettings {
 	var withNATParams ycsettingsv2.NATInstanceParameters
-	if cfg.WithNATInstance != nil {
+	if pcc.WithNATInstance != nil {
 		var withNATResources ycsettingsv2.NATInstanceResources
-		if cfg.WithNATInstance.NATInstanceResources != nil {
+		if pcc.WithNATInstance.NATInstanceResources != nil {
 			withNATResources = ycsettingsv2.NATInstanceResources{
-				Cores:    ptr.Deref(cfg.WithNATInstance.NATInstanceResources.Cores, 0),
-				Memory:   ptr.Deref(cfg.WithNATInstance.NATInstanceResources.Memory, 0),
-				Platform: ptr.Deref(cfg.WithNATInstance.NATInstanceResources.Platform, ""),
+				Cores:    ptr.Deref(pcc.WithNATInstance.NATInstanceResources.Cores, 0),
+				Memory:   ptr.Deref(pcc.WithNATInstance.NATInstanceResources.Memory, 0),
+				Platform: ptr.Deref(pcc.WithNATInstance.NATInstanceResources.Platform, ""),
 			}
 		}
 
 		withNATParams = ycsettingsv2.NATInstanceParameters{
-			ExternalSubnetID:           ptr.Deref(cfg.WithNATInstance.ExternalSubnetID, ""),
-			InternalSubnetID:           ptr.Deref(cfg.WithNATInstance.InternalSubnetID, ""),
-			InternalSubnetCIDR:         ptr.Deref(cfg.WithNATInstance.InternalSubnetCIDR, ""),
-			NATInstanceExternalAddress: ptr.Deref(cfg.WithNATInstance.NATInstanceExternalAddress, ""),
-			NATInstanceInternalAddress: ptr.Deref(cfg.WithNATInstance.NATInstanceInternalAddress, ""),
+			ExternalSubnetID:           ptr.Deref(pcc.WithNATInstance.ExternalSubnetID, ""),
+			InternalSubnetID:           ptr.Deref(pcc.WithNATInstance.InternalSubnetID, ""),
+			InternalSubnetCIDR:         ptr.Deref(pcc.WithNATInstance.InternalSubnetCIDR, ""),
+			NATInstanceExternalAddress: ptr.Deref(pcc.WithNATInstance.NATInstanceExternalAddress, ""),
+			NATInstanceInternalAddress: ptr.Deref(pcc.WithNATInstance.NATInstanceInternalAddress, ""),
 			NATInstanceResources:       withNATResources,
 		}
 	}
 
 	var dhcpOptions ycsettingsv2.DHCPOptions
-	if cfg.DHCPOptions != nil {
+	if pcc.DHCPOptions != nil {
 		dhcpOptions = ycsettingsv2.DHCPOptions{
-			DomainName:        ptr.Deref(cfg.DHCPOptions.DomainName, ""),
-			DomainNameServers: cfg.DHCPOptions.DomainNameServers,
+			DomainName:        ptr.Deref(pcc.DHCPOptions.DomainName, ""),
+			DomainNameServers: pcc.DHCPOptions.DomainNameServers,
 		}
 	}
 
@@ -351,10 +367,10 @@ func BuildModuleConfigSettingsV2(cfg ycpccv1.YandexProviderClusterConfiguration,
 		}
 	}
 
-	if cfg.MasterNodeGroup.Replicas > 0 {
-		collectExternalAddressing("master", cfg.MasterNodeGroup.InstanceClass.YandexInstanceClass)
+	if pcc.MasterNodeGroup.Replicas > 0 {
+		collectExternalAddressing("master", pcc.MasterNodeGroup.InstanceClass.YandexInstanceClass)
 	}
-	for _, ng := range cfg.NodeGroups {
+	for _, ng := range pcc.NodeGroups {
 		if ng.Name == "" {
 			continue
 		}
@@ -378,31 +394,31 @@ func BuildModuleConfigSettingsV2(cfg ycpccv1.YandexProviderClusterConfiguration,
 	var additionalInternalNetworkIDs []string
 	if isHybrid {
 		existingRouteTableID = discoveryData.RouteTableID
-		additionalInternalNetworkIDs = excludeNetworkID(discoveryData.InternalNetworkIDs, ptr.Deref(cfg.ExistingNetworkID, ""))
+		additionalInternalNetworkIDs = excludeNetworkID(discoveryData.InternalNetworkIDs, ptr.Deref(pcc.ExistingNetworkID, ""))
 	}
 
 	settings := ycsettingsv2.ModuleConfigSettings{
 		Provider: ycsettingsv2.Provider{
 			Parameters: ycsettingsv2.ProviderParameters{
-				CloudID:  cfg.Provider.CloudID,
-				FolderID: cfg.Provider.FolderID,
+				CloudID:  pcc.Provider.CloudID,
+				FolderID: pcc.Provider.FolderID,
 			},
 		},
 		Nodes: ycsettingsv2.Nodes{
 			Disabled: false,
 			Parameters: ycsettingsv2.NodesParameters{
-				SSHPublicKey:              cfg.SSHPublicKey,
-				Layout:                    cfg.Layout,
-				NodeNetworkCIDR:           cfg.NodeNetworkCIDR,
+				SSHPublicKey:              pcc.SSHPublicKey,
+				Layout:                    pcc.Layout,
+				NodeNetworkCIDR:           pcc.NodeNetworkCIDR,
 				WithNATInstance:           withNATParams,
-				ExistingNetworkID:         ptr.Deref(cfg.ExistingNetworkID, ""),
+				ExistingNetworkID:         ptr.Deref(pcc.ExistingNetworkID, ""),
 				ExistingRouteTableID:      existingRouteTableID,
-				ExistingZoneToSubnetIDMap: cfg.ExistingZoneToSubnetIDMap,
+				ExistingZoneToSubnetIDMap: pcc.ExistingZoneToSubnetIDMap,
 				DHCPOptions:               dhcpOptions,
 				ExternalIPAddresses:       externalIPAddresses,
 				ExternalSubnetIDs:         externalSubnetIDs,
-				Labels:                    cfg.Labels,
-				Zones:                     cfg.Zones,
+				Labels:                    pcc.Labels,
+				Zones:                     pcc.Zones,
 			},
 		},
 		// storage and ccm are projected from ModuleConfig v1 here, but not by the terraform
@@ -587,11 +603,15 @@ func mapPCCInstanceClassToYandexInstanceClassSpec(ic ycpccv1.YandexInstanceClass
 // resolveZones picks the zones for a projected NodeGroup: the node group ones win, the
 // cluster-wide ones are the fallback, and nil omits the key so node-manager uses every zone.
 //
-// A node group that declares zones keeps them even when every entry is blank: pre-migration
-// terraform did the same — candi/terraform-modules/master-node/main.tf takes the intersection
-// with the node group zones whenever they are set (non-null), and only an unset list lets the
-// cluster-wide zones through. Falling back on a blank list would silently narrow such a node
-// group to the cluster zones and recreate its nodes.
+// A node group that declares zones is never given the cluster-wide ones instead, not even when
+// every entry it declares is blank: pre-migration terraform did the same —
+// candi/terraform-modules/master-node/main.tf takes the intersection with the node group zones
+// whenever they are set (non-null), and only an unset list lets the cluster-wide zones through.
+// Falling back on a blank list would silently narrow such a node group to the cluster zones and
+// recreate its nodes.
+//
+// The blank entries themselves are dropped, so an all-blank list yields nil and the key is
+// omitted - which matches the terraform side, where compact() turns it into [] and then null.
 func resolveZones(nodeGroupZones, clusterZones []string) []any {
 	if len(nodeGroupZones) > 0 {
 		return nonEmptyZones(nodeGroupZones)
