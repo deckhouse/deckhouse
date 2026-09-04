@@ -33,8 +33,13 @@ type YandexCloudDiscoveryData struct {
 	MonitoringAPIKey              string            `json:"monitoringAPIKey,omitempty" yaml:"monitoringAPIKey,omitempty"`
 }
 
-// SetDefaults stamps the fields that never vary: the type markers, and the region, which every
-// layout's cloud_discovery_data output hardcodes to the same value.
+// SetDefaults stamps the type markers, which identify the payload and never vary, and fills in
+// the region when the payload does not carry one - every layout's cloud_discovery_data output
+// hardcodes the same value, so an absent region means "the usual one".
+//
+// The region is defaulted rather than overwritten: a payload that does carry a region states a
+// fact about the infrastructure that was actually created, and silently rewriting it would hide
+// a real mismatch instead of surfacing it.
 //
 // The receiver has to be a pointer - with a value receiver the assignments land on a copy and the
 // call silently does nothing, which is how it behaved until 2026-08-27. Its sibling
@@ -42,5 +47,8 @@ type YandexCloudDiscoveryData struct {
 func (d *YandexCloudDiscoveryData) SetDefaults() {
 	d.APIVersion = APIVersion
 	d.Kind = YandexCloudDiscoveryDataKind
-	d.Region = YandexCloudDiscoveryDataDefaultRegion
+
+	if d.Region == "" {
+		d.Region = YandexCloudDiscoveryDataDefaultRegion
+	}
 }
