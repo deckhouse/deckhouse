@@ -1,0 +1,16 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8GpuResourceRestriction
+metadata:
+  name: test-unanchored-pattern
+spec:
+  enforcementAction: "deny"
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+  parameters:
+    namespaceLabel:
+      key: "gpu.deckhouse.io/enabled"
+      value: "true"
+    gpuResourcePatterns:
+      - 'nvidia\.com/gpu'

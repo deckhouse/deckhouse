@@ -106,6 +106,13 @@ admissionPolicyEngine:
                 operator: Exists
               - key: node-role.kubernetes.io/control-plane
                 operator: Exists
+            gpuResourceRestriction:
+              namespaceLabel:
+                key: gpu.deckhouse.io/enabled
+                value: "true"
+              gpuResourcePatterns:
+                - ^nvidia\.com/.*$
+                - ^amd\.com/gpu$
           match:
             namespaceSelector:
               matchNames:
@@ -171,6 +178,19 @@ admissionPolicyEngine:
 			Expect(f.KubernetesGlobalResource("D8ContainerDuplicates", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8ReplicaLimits", testPolicyName).Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("D8DisallowedTolerations", testPolicyName).Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("D8GpuResourceRestriction", testPolicyName).Exists()).To(BeTrue())
+		})
+
+		It("Gatekeeper Config must sync the kinds the constraint templates read from data.inventory", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			config := f.KubernetesResource("Config", "d8-admission-policy-engine", "config")
+			Expect(config.Exists()).To(BeTrue())
+			Expect(config.Field("spec.sync.syncOnly").Array()).To(HaveLen(3))
+			// Namespace is required by D8GpuResourceRestriction.
+			Expect(config.Field(`spec.sync.syncOnly.#(kind=="Namespace").version`).String()).To(Equal("v1"))
+			Expect(config.Field(`spec.sync.syncOnly.#(kind=="Pod").version`).String()).To(Equal("v1"))
+			Expect(config.Field(`spec.sync.syncOnly.#(kind=="SecurityPolicyException").group`).String()).To(Equal("deckhouse.io"))
 		})
 
 		It("All operation policy constraints must have valid YAML", func() {
@@ -206,19 +226,20 @@ admissionPolicyEngine:
 			expectedAction := "warn"
 
 			expectedParameters := map[string]interface{}{
-				"D8AllowedRepos":          mustParseYaml("repos:\n  - foo"),
-				"D8RequiredResources":     mustParseYaml("limits:\n  - memory\nrequests:\n  - cpu\n  - memory"),
-				"D8DisallowedTags":        mustParseYaml("tags:\n  - latest"),
-				"D8RequiredLabels":        mustParseYaml("labels:\n  - key: foo\n  - key: bar\n    allowedRegex: \"^[a-zA-Z]+.agilebank.demo$\""),
-				"D8RequiredAnnotations":   mustParseYaml("annotations:\n  - key: foo\n  - key: bar\n    allowedRegex: \"^[a-zA-Z]+.myapp.demo$\""),
-				"D8RequiredProbes":        mustParseYaml("probes:\n  - livenessProbe\n  - readinessProbe"),
-				"D8RevisionHistoryLimit":  mustParseYaml("limit: 3"),
-				"D8ImagePullPolicy":       mustParseYaml("policy: \"Always\""),
-				"D8PriorityClass":         mustParseYaml("priorityClassNames:\n  - foo\n  - bar"),
-				"D8IngressClass":          mustParseYaml("ingressClassNames:\n  - ing1\n  - ing2"),
-				"D8StorageClass":          mustParseYaml("storageClassNames:\n  - st1\n  - st2"),
-				"D8ReplicaLimits":         mustParseYaml("ranges:\n  - minReplicas: 1\n    maxReplicas: 10"),
-				"D8DisallowedTolerations": mustParseYaml("tolerations:\n  - key: node-role.kubernetes.io/master\n    operator: Exists\n  - key: node-role.kubernetes.io/control-plane\n    operator: Exists"),
+				"D8AllowedRepos":           mustParseYaml("repos:\n  - foo"),
+				"D8RequiredResources":      mustParseYaml("limits:\n  - memory\nrequests:\n  - cpu\n  - memory"),
+				"D8DisallowedTags":         mustParseYaml("tags:\n  - latest"),
+				"D8RequiredLabels":         mustParseYaml("labels:\n  - key: foo\n  - key: bar\n    allowedRegex: \"^[a-zA-Z]+.agilebank.demo$\""),
+				"D8RequiredAnnotations":    mustParseYaml("annotations:\n  - key: foo\n  - key: bar\n    allowedRegex: \"^[a-zA-Z]+.myapp.demo$\""),
+				"D8RequiredProbes":         mustParseYaml("probes:\n  - livenessProbe\n  - readinessProbe"),
+				"D8RevisionHistoryLimit":   mustParseYaml("limit: 3"),
+				"D8ImagePullPolicy":        mustParseYaml("policy: \"Always\""),
+				"D8PriorityClass":          mustParseYaml("priorityClassNames:\n  - foo\n  - bar"),
+				"D8IngressClass":           mustParseYaml("ingressClassNames:\n  - ing1\n  - ing2"),
+				"D8StorageClass":           mustParseYaml("storageClassNames:\n  - st1\n  - st2"),
+				"D8ReplicaLimits":          mustParseYaml("ranges:\n  - minReplicas: 1\n    maxReplicas: 10"),
+				"D8DisallowedTolerations":  mustParseYaml("tolerations:\n  - key: node-role.kubernetes.io/master\n    operator: Exists\n  - key: node-role.kubernetes.io/control-plane\n    operator: Exists"),
+				"D8GpuResourceRestriction": mustParseYaml("namespaceLabel:\n  key: \"gpu.deckhouse.io/enabled\"\n  value: \"true\"\ngpuResourcePatterns:\n  - ^nvidia\\.com/.*$\n  - ^amd\\.com/gpu$"),
 			}
 
 			constraintsWithoutParameters := []string{

@@ -640,3 +640,69 @@ spec:
 - Используйте `input.review.operation == "CONNECT"` для проверки операций `CONNECT`.
 - Информация о пользователе доступна в `input.review.userInfo.username` и `input.review.userInfo.groups`.
 - Неймспейс доступен в `input.review.namespace`.
+
+## Как ограничить использование GPU-ресурсов в неймспейсах?
+
+Политика `gpuResourceRestriction` в [OperationPolicy](cr.html#operationpolicy)
+запрещает поды, запрашивающие GPU-ресурсы, если на неймспейсе не установлен лейбл, разрешающий
+использование GPU. Проверка выполняется при создании и изменении пода, в том числе при добавлении
+ephemeral-контейнера. Проверяются `resources.requests` и `resources.limits` всех контейнеров,
+init-контейнеров и ephemeral-контейнеров пода. Ресурс с количеством `0` не считается запросом GPU.
+
+Чтобы настроить ограничение использования GPU-ресурсов, выполните следующие шаги:
+
+1. Создайте OperationPolicy с параметром `gpuResourceRestriction`.
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: OperationPolicy
+   metadata:
+     name: gpu-restriction
+   spec:
+     enforcementAction: Deny
+     match:
+       namespaceSelector:
+         labelSelector:
+           matchLabels:
+             operation-policy.deckhouse.io/enabled: "true"
+     policies:
+       gpuResourceRestriction:
+         namespaceLabel:
+           key: "gpu.deckhouse.io/enabled"
+           value: "true"
+         gpuResourcePatterns:
+           - '^nvidia\.com/.*$'
+           - '^amd\.com/gpu$'
+   ```
+
+   Параметр `namespaceLabel` задаёт ключ и значение лейбла, который должен быть установлен на неймспейсе.
+   Параметр `gpuResourcePatterns` содержит список регулярных выражений, с которыми сопоставляются имена
+   GPU-ресурсов. Шаблоны не привязываются к границам строки автоматически, поэтому используйте `^` и `$`,
+   чтобы сопоставлять имя ресурса целиком.
+
+1. Добавьте лейбл политики на неймспейсы, в которых политика должна действовать.
+
+   ```shell
+   d8 k label ns my-namespace operation-policy.deckhouse.io/enabled=true
+   ```
+
+1. Добавьте GPU-лейбл на неймспейсы, в которых использование GPU разрешено.
+
+   ```shell
+   d8 k label ns my-gpu-namespace gpu.deckhouse.io/enabled=true
+   ```
+
+После этого поды, запрашивающие GPU-ресурсы, будут разрешены только в неймспейсах с лейблом
+`gpu.deckhouse.io/enabled: "true"`.
+
+{% alert level="warning" %}
+Политика применяется к подам. Deployment или другой контроллер, запрашивающий GPU-ресурсы, создаётся
+успешно, а отказ отображается в событиях ReplicaSet.
+
+Лейбл неймспейса читается из кеша Gatekeeper. Пока неймспейс отсутствует в этом кеше, например когда
+неймспейс и под применяются одновременно и неймспейс ещё не попал в кеш, политика запрещает поды,
+запрашивающие GPU-ресурсы в этом неймспейсе.
+
+Устройства, запрошенные через механизм [Dynamic Resource Allocation](https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/)
+в поле `spec.resourceClaims`, не являются extended-ресурсами, и политика их не проверяет.
+{% endalert %}
