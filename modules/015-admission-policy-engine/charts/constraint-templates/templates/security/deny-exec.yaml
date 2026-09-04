@@ -8,7 +8,7 @@ metadata:
     security.deckhouse.io: security-policy
   annotations:
     metadata.gatekeeper.sh/title: "Deny Exec"
-    metadata.gatekeeper.sh/version: 1.0.0
+    metadata.gatekeeper.sh/version: 1.1.0
     description: >-
       Defines an allow-list of commands that could be executed via the pod/exec action.
       Interactive exec is not permitted.
@@ -37,31 +37,24 @@ spec:
         - engine: Rego
           source:
             version: "v1"
+            libs:
+              - |
+                {{- include "constraint-templates.lib.common.container-review" . | nindent 16 }}
             rego: |
               package d8.security_policies
 
-              all_containers contains c if {
-                c := object.get(input.review.object.spec, "containers", [])[_]
-              }
-
-              all_containers contains c if {
-                c := object.get(input.review.object.spec, "initContainers", [])[_]
-              }
-
-              all_containers contains c if {
-                c := object.get(input.review.object.spec, "ephemeralContainers", [])[_]
-              }
+              import data.lib.common.input_containers
 
               violation contains {"msg": msg} if {
                 not input.review.operation == "DELETE"
-                c := all_containers[_]
+                c := input_containers[_]
                 object.get(c, "stdin", false) == true
                 msg := "Interactive exec is not permitted."
               }
 
               violation contains {"msg": msg} if {
                 not input.review.operation == "DELETE"
-                c := all_containers[_]
+                c := input_containers[_]
                 some command in object.get(c, "command", [])
                 not command in object.get(input.parameters, "allowedCommands", [])
                 msg := sprintf("Only %v commands are allowed.", [object.get(input.parameters, "allowedCommands", [])])

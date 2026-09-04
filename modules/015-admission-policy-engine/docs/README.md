@@ -42,19 +42,20 @@ The following objects are validated:
 | (core)    | pods/exec, pods/attach             | CONNECT        |
 
 {% alert level="warning" %}
-Controller-level checks run against the **original pod template** (`spec.template`), not the manifest after all mutations. Whereas pod-level validation happens after all mutating actions (for example, LimitRange adds default `resources`, or a mutating webhook adds `securityContext`);
+Controller-level checks run against the **original pod template** (`spec.template`), not against the manifest that results from all mutations.
+Pod-level validation, in contrast, happens after all mutating actions — for example, after LimitRange adds default `resources`, or a mutating webhook adds `securityContext`.
 Keep this in mind when using security policies.
 {% endalert %}
 
-
-
 ### labelSelector semantics for controllers
 
-When building policies that are applied based on object labels (`match.labelSelector`), keep in mind that selection is performed against the `metadata.labels` of the reviewed object. For Pods these are the pod's labels. For controllers (Deployment, StatefulSet, etc.) these are the controller's **top-level** `metadata.labels`, not the pod template's `metadata.labels` (`spec.template.metadata.labels`).
-Users creating label-based policies should be aware that:
+When building policies that are applied based on object labels (`match.labelSelector`), keep in mind that selection is performed against the `metadata.labels` of the reviewed object.
+For Pods these are the pod's labels.
+For controllers (Deployment, StatefulSet, and others) these are the controller's **top-level** `metadata.labels`, not the pod template's `metadata.labels` (`spec.template.metadata.labels`).
 
-- If the policy's labelSelector matches the pods created by a controller, it does not automatically trigger a controller-level check if the controller itself is not matched by the labelSelector.
-- An exclusion selector (`NotIn`/`DoesNotExist`) used to exclude pods from a policy may not work at the controller level if the controller itself is not matched by the labelSelector.
+As a result, a selector that matches the pods a controller creates does not by itself trigger a controller-level check,
+and an exclusion selector (`NotIn`/`DoesNotExist`) that excludes those pods may not take effect at the controller level.
+In both cases the controller itself must be matched by the `labelSelector`.
 
 ### SecurityPolicyException label resolution for controllers
 
