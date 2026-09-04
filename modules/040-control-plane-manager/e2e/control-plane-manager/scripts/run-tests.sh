@@ -11,7 +11,6 @@ ALL_TESTS=(
   basic-audit-policy
   basic-audit-policy-maintenance
   feature-gates
-  basic-audit-policy-simple
 )
 
 if [ -n "${TEST:-}" ]; then

@@ -170,7 +170,6 @@ control-plane-manager/
     │   │   └── functions.sh   # symlink to ../../../functions.sh
     │   └── Taskfile.yml
     ├── basic-audit-policy-maintenance/
-    ├── basic-audit-policy-simple/
     └── feature-gates/
         ├── chainsaw-test.yaml
         ├── manifests/         # example only; runtime manifest is generated
@@ -180,7 +179,7 @@ control-plane-manager/
         └── Taskfile.yml
 ```
 
-Per-scenario details: `tests/<name>/<name>.md`.
+Per-scenario details: `tests/basic-audit-policy/basic_audit_policy.md`, `tests/basic-audit-policy-maintenance/basic_audit_policy_maintenance.md`, `tests/feature-gates/feature_gates.md`.
 
 ## Shared Helpers
 
@@ -202,7 +201,6 @@ The `feature-gates` scenario adds `scripts/feature-gates.sh` for reading `candi/
 | `make test TEST=basic-audit-policy` / `task basic-audit-policy:run` | `tests/basic-audit-policy/` | Sets `basicAuditPolicyEnabled: false`, verifies a new kube-apiserver `ControlPlaneOperation` completes and audit policy is removed from manifests |
 | `make test TEST=basic-audit-policy-maintenance` / `task basic-audit-policy-maintenance:run` | `tests/basic-audit-policy-maintenance/` | Applies the same setting with `maintenance: NoResourceReconciliation`, verifies no reconciliation until maintenance is cleared, then verifies normal reconciliation |
 | `make test TEST=feature-gates` / `task feature-gates:run` | `tests/feature-gates/` | Enables all supported feature gates for the cluster Kubernetes version, verifies CPOs on apiserver/controller-manager/scheduler complete and gates appear in manifests |
-| `make test TEST=basic-audit-policy-simple` / `task basic-audit-policy-simple:run` | `tests/basic-audit-policy-simple/` | Simplified basic-audit-policy variant |
 
 ## Timeouts
 

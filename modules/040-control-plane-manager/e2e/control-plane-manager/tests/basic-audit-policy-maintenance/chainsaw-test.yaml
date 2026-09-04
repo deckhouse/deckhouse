@@ -34,9 +34,29 @@ spec:
             check:
               ($error == null): true
 
-    - name: apply-moduleconfig-maintenance
+    - name: enable-maintenance
       try:
-        - description: Apply ModuleConfig with maintenance NoResourceReconciliation and basicAuditPolicyEnabled false
+        - description: Enable maintenance NoResourceReconciliation alone (no settings change yet)
+          script:
+            timeout: 3m
+            content: |
+              set -eu
+              . ./scripts/functions.sh
+              apply_or_patch_moduleconfig "manifests/moduleconfig-maintenance-only.yaml"
+              # Entering maintenance forces exactly one Helm-release upgrade to stamp the
+              # maintenance marker on the release resources (deckhouse-controller nelm
+              # behavior), independent of any settings change. Let that settle before
+              # re-snapshotting, so it isn't mistaken for a reconciliation triggered by
+              # the settings change we're about to apply under maintenance.
+              sleep 30
+              wait_for_api
+              snapshot_component_cpos kube-apiserver "$CPM_E2E_EXISTING_CPOS_FILE"
+            check:
+              ($error == null): true
+
+    - name: apply-settings-under-maintenance
+      try:
+        - description: Apply basicAuditPolicyEnabled false while already under maintenance
           script:
             timeout: 3m
             content: |
@@ -54,7 +74,7 @@ spec:
             content: |
               set -eu
               . ./scripts/functions.sh
-              assert_no_new_component_cpo kube-apiserver "$CPM_E2E_EXISTING_CPOS_FILE" 20
+              assert_no_new_component_cpo kube-apiserver "$CPM_E2E_EXISTING_CPOS_FILE" 60
             check:
               ($error == null): true
         - description: Assert kube-apiserver audit-policy flag state is unchanged during maintenance
