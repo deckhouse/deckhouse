@@ -16,11 +16,14 @@ package external
 
 import (
 	"context"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"syscall"
 	"testing"
@@ -34,29 +37,73 @@ import (
 
 // The test binary doubles as a provider validator: Validate spawns whatever
 // binaryPath points at, so pointing it at os.Args[0] exercises the real spawn, the
-// real endpoint and the real gRPC call without building a fixture binary.
-const modeEnv = "D8_TEST_VALIDATOR_MODE"
+// real endpoint and the real gRPC call without building a fixture binary. What the
+// spawned copy should be is carried in fakeConfigEnv, because the command line
+// belongs to the protocol and a test must not add to it.
+const fakeConfigEnv = "D8_TEST_VALIDATOR_CONFIG"
+
+// fakeConfig is everything a test tells the validator it spawns: which of the fakes to
+// be, and whatever that fake needs.
+type fakeConfig struct {
+	Mode Mode `json:"mode"`
+	// ChildPidFile is where the fakes that spawn a helper write its pid, so a test
+	// can ask whether the helper outlived the validator.
+	ChildPidFile string `json:"childPidFile,omitempty"`
+}
+
+// Mode is which validator the test binary impersonates.
+type Mode string
 
 const (
-	modeValid      = "valid"
-	modeViolations = "violations"
-	modeWarnings   = "warnings" // reports something, but nothing that blocks
-	modeBlank      = "blank"    // rejects, but fills none of the violation fields
-	modeLegacy     = "legacy"   // a binary that knows no serve subcommand
-	modeSlowStart  = "slow"     // listens, but only after a while
-	modeOrphan     = "orphan"   // exits, leaving a child holding its output pipes
-	modeStubborn   = "stubborn" // listens, then ignores SIGTERM
+	modeValid      Mode = "valid"
+	modeViolations Mode = "violations"
+	modeWarnings   Mode = "warnings" // reports something, but nothing that blocks
+	modeBlank      Mode = "blank"    // rejects, but fills none of the violation fields
+	modeLegacy     Mode = "legacy"   // a binary that knows no serve subcommand
+	modeSlowStart  Mode = "slow"     // listens, but only after a while
+	modeOrphan     Mode = "orphan"   // exits, leaving a child holding its output pipes
+	modeChild      Mode = "child"    // serves, and spawns a child of its own
+	modeStubborn   Mode = "stubborn" // listens, then ignores SIGTERM
 )
 
+// setFakeConfig points the validator the test spawns at one of the fakes above.
+func setFakeConfig(t *testing.T, fake fakeConfig) {
+	t.Helper()
+
+	raw, err := json.Marshal(fake)
+	if err != nil {
+		t.Fatalf("Marshal(%+v) = %v", fake, err)
+	}
+
+	t.Setenv(fakeConfigEnv, string(raw))
+}
+
+// fakeConfigFromEnv reports what this copy of the test binary was spawned to be, and
+// whether it was spawned as a validator at all.
+func fakeConfigFromEnv() (fakeConfig, bool) {
+	raw := os.Getenv(fakeConfigEnv)
+	if raw == "" {
+		return fakeConfig{}, false
+	}
+
+	var ret fakeConfig
+	if err := json.Unmarshal([]byte(raw), &ret); err != nil {
+		fmt.Fprintf(os.Stderr, "%s: %v\n", fakeConfigEnv, err)
+		os.Exit(1)
+	}
+
+	return ret, true
+}
+
 func TestMain(m *testing.M) {
-	mode := os.Getenv(modeEnv)
-	if mode == "" {
+	fake, spawned := fakeConfigFromEnv()
+	if !spawned {
 		os.Exit(m.Run())
 	}
 
 	// A bundle whose binary predates the gRPC protocol: it never gets as far as
 	// reading the arguments.
-	if mode == modeLegacy {
+	if fake.Mode == modeLegacy {
 		fmt.Fprintf(os.Stderr, "unknown subcommand: %s\n", server.ServeCommand)
 
 		os.Exit(1)
@@ -69,7 +116,7 @@ func TestMain(m *testing.M) {
 		os.Exit(1)
 	}
 
-	os.Exit(runFakeValidator(mode, config))
+	os.Exit(runFakeValidator(fake, config))
 }
 
 // parseFakeValidatorArgs reads the command line the way a real validator reads it, so
@@ -93,10 +140,10 @@ func parseFakeValidatorArgs(args []string) (server.Config, error) {
 	return configGetter(), nil
 }
 
-func runFakeValidator(mode string, config server.Config) int {
+func runFakeValidator(fake fakeConfig, config server.Config) int {
 	// A validator that leaves a child behind: the child inherits stdout and stderr,
 	// so the pipes stay open after the validator itself is gone.
-	if mode == modeOrphan {
+	if fake.Mode == modeOrphan {
 		child := exec.Command("sleep", "60")
 		child.Stdout = os.Stdout
 		child.Stderr = os.Stderr
@@ -108,11 +155,23 @@ func runFakeValidator(mode string, config server.Config) int {
 		return 0
 	}
 
-	if mode == modeSlowStart {
+	if fake.Mode == modeChild {
+		child := exec.Command("sleep", "60")
+		if err := child.Start(); err != nil {
+			return 1
+		}
+
+		pid := []byte(strconv.Itoa(child.Process.Pid))
+		if err := os.WriteFile(fake.ChildPidFile, pid, 0o600); err != nil {
+			return 1
+		}
+	}
+
+	if fake.Mode == modeSlowStart {
 		time.Sleep(300 * time.Millisecond)
 	}
 
-	validator, err := server.Start(config, server.NewValidateService(fakeValidator(mode)))
+	validator, err := server.Start(config, server.NewValidateService(newFakeValidator(fake.Mode)))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 
@@ -121,7 +180,7 @@ func runFakeValidator(mode string, config server.Config) int {
 
 	// A validator that will not go down on SIGTERM: it listens and answers, but only
 	// an actual kill ends it.
-	if mode == modeStubborn {
+	if fake.Mode == modeStubborn {
 		signal.Ignore(syscall.SIGINT, syscall.SIGTERM)
 		time.Sleep(5 * time.Minute)
 
@@ -141,27 +200,29 @@ func runFakeValidator(mode string, config server.Config) int {
 	return 0
 }
 
-type fakeValidator string
+// fakeValidator answers every call with the one response its mode stands for.
+type fakeValidator struct {
+	response *validatev1.ValidateResponse
+}
 
-func (mode fakeValidator) Validate(context.Context, validatev1.Input) (*validatev1.ValidateResponse, error) {
-	if mode == modeBlank {
-		return &validatev1.ValidateResponse{
+func newFakeValidator(mode Mode) fakeValidator {
+	switch mode {
+	case modeBlank:
+		return fakeValidator{response: &validatev1.ValidateResponse{
 			Errors: []*validatev1.ViolationResponse{{}},
-		}, nil
-	}
+		}}
 
-	if mode == modeWarnings {
-		return &validatev1.ValidateResponse{
+	case modeWarnings:
+		return fakeValidator{response: &validatev1.ValidateResponse{
 			Warnings: []*validatev1.ViolationResponse{{
 				Path:    "DVPClusterConfiguration/layout",
 				Code:    "layout_deprecated",
 				Message: "layout is deprecated",
 			}},
-		}, nil
-	}
+		}}
 
-	if mode == modeViolations {
-		return &validatev1.ValidateResponse{
+	case modeViolations:
+		return fakeValidator{response: &validatev1.ValidateResponse{
 			Errors: []*validatev1.ViolationResponse{{
 				Path:    "Secret/d8-credentials",
 				Code:    "credential_secret_required",
@@ -172,10 +233,15 @@ func (mode fakeValidator) Validate(context.Context, validatev1.Input) (*validate
 				Code:    "replicas_zero",
 				Message: "replicas is 0",
 			}},
-		}, nil
-	}
+		}}
 
-	return &validatev1.ValidateResponse{}, nil
+	default:
+		return fakeValidator{response: &validatev1.ValidateResponse{}}
+	}
+}
+
+func (v fakeValidator) Validate(context.Context, validatev1.Input) (*validatev1.ValidateResponse, error) {
+	return v.response, nil
 }
 
 func convergeInput() config.ProviderInput {
@@ -185,7 +251,7 @@ func convergeInput() config.ProviderInput {
 func TestValidate(t *testing.T) {
 	tests := []struct {
 		name    string
-		mode    string
+		mode    Mode
 		input   config.ProviderInput
 		wantErr string
 	}{
@@ -224,19 +290,20 @@ func TestValidate(t *testing.T) {
 			wantErr: `provider "dvp" validation failed`,
 		},
 		{
-			// Fail closed: a bundle whose binary predates the gRPC protocol blocks
-			// the operation instead of counting as validated. Such a binary exits on
-			// the unknown subcommand, so what dhctl sees is an endpoint nobody bound.
+			// Fail closed: a bundle whose binary predates the gRPC protocol blocks the
+			// operation instead of counting as validated. Such a binary exits on the
+			// unknown subcommand, and the caller learns it exited rather than waiting
+			// out the readiness timeout.
 			name:    "fails closed on a binary without the serve subcommand",
 			mode:    modeLegacy,
 			input:   convergeInput(),
-			wantErr: "did not listen on",
+			wantErr: "validator exited: exit status 1",
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			t.Setenv(modeEnv, test.mode)
+			setFakeConfig(t, fakeConfig{Mode: test.mode})
 
 			err := Validate(context.Background(), os.Args[0], test.input)
 
@@ -259,10 +326,12 @@ func TestValidate(t *testing.T) {
 	}
 }
 
-// A validation must not leave the validator running: dhctl calls it several times per
-// run, and every spawn that outlives its call is a process nobody reaps.
-func TestValidateStopsTheProcess(t *testing.T) {
-	t.Setenv(modeEnv, modeValid)
+// A validator that spawns helpers of its own must take them down with it: they run in
+// its process group, and nothing reaps what the group leaves behind.
+func TestStopTakesDownTheProcessGroup(t *testing.T) {
+	pidFile := filepath.Join(t.TempDir(), "child.pid")
+
+	setFakeConfig(t, fakeConfig{Mode: modeChild, ChildPidFile: pidFile})
 
 	ep, err := NewTCPEndpoint()
 	if err != nil {
@@ -271,31 +340,81 @@ func TestValidateStopsTheProcess(t *testing.T) {
 
 	defer func() { _ = ep.Free() }()
 
-	if err := Validate(context.Background(), os.Args[0], convergeInput()); err != nil {
-		t.Fatalf("Validate() = %v", err)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	process, err := StartValidatorProcess(ctx, os.Args[0], ep)
+	if err != nil {
+		t.Fatalf("StartValidatorProcess() = %v", err)
 	}
 
-	// Whatever endpoint the validation used, nothing must answer on it afterwards;
-	// a leaked process would still hold its port.
-	if leaked := countValidatorProcesses(t); leaked != 0 {
-		t.Errorf("%d validator processes left running, want 0", leaked)
+	// The counter has to see a running validator, or its use below proves nothing.
+	if running := countValidatorProcesses(t); running != 1 {
+		t.Errorf("%d validators running while one is started, want 1", running)
 	}
+
+	if err := process.Stop(); err != nil {
+		t.Errorf("Stop() = %v, want nil", err)
+	}
+
+	if leaked := countValidatorProcesses(t); leaked != 0 {
+		t.Errorf("%d validators left running after Stop(), want 0", leaked)
+	}
+
+	child := readChildPid(t, pidFile)
+
+	// Signal 0 only probes. The child is reparented when the validator dies, so it is
+	// reaped by init rather than by us: give that a moment.
+	for range 200 {
+		if err := syscall.Kill(child, 0); err != nil {
+			return
+		}
+
+		time.Sleep(10 * time.Millisecond)
+	}
+
+	t.Errorf("child %d of the validator still alive after Stop()", child)
 }
 
+func readChildPid(t *testing.T, path string) int {
+	t.Helper()
+
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("ReadFile(%s) = %v, want the pid the validator wrote", path, err)
+	}
+
+	pid, err := strconv.Atoi(strings.TrimSpace(string(raw)))
+	if err != nil {
+		t.Fatalf("Atoi(%q) = %v", raw, err)
+	}
+
+	return pid
+}
+
+// countValidatorProcesses counts the validators still running: children of this test
+// process whose name is the test binary. The mode a fake validator runs in is an
+// environment variable, so matching on it would search command lines it never reaches.
+// -x matches the process name exactly, which keeps pgrep from finding itself.
 func countValidatorProcesses(t *testing.T) int {
 	t.Helper()
 
-	out, err := exec.Command("pgrep", "-f", modeEnv).Output()
+	out, err := exec.Command(
+		"pgrep",
+		"-P", strconv.Itoa(os.Getpid()),
+		"-x", filepath.Base(os.Args[0]),
+	).Output()
 	if err != nil {
 		return 0
 	}
+
 	return len(strings.Fields(string(out)))
 }
 
 // Stop is called from withStop on a half-started process and again by the caller,
 // so it has to survive both.
 func TestValidatorProcessStopIsIdempotent(t *testing.T) {
-	t.Setenv(modeEnv, modeValid)
+	setFakeConfig(t, fakeConfig{Mode: modeValid})
 
 	ep, err := NewTCPEndpoint()
 	if err != nil {
@@ -325,7 +444,7 @@ func TestValidatorProcessStopIsIdempotent(t *testing.T) {
 // gone when Stop returns: cmd.WaitDelay is what escalates to a kill, and it only
 // applies because Stop goes through cmd.Wait.
 func TestStopKillsAValidatorThatIgnoresSIGTERM(t *testing.T) {
-	t.Setenv(modeEnv, modeStubborn)
+	setFakeConfig(t, fakeConfig{Mode: modeStubborn})
 
 	ep, err := NewTCPEndpoint()
 	if err != nil {
@@ -368,7 +487,7 @@ func TestStopKillsAValidatorThatIgnoresSIGTERM(t *testing.T) {
 // The protocol accepts a unix socket too; dhctl uses TCP, but the endpoint must work
 // so a caller can switch to it.
 func TestUnixEndpointServesValidator(t *testing.T) {
-	t.Setenv(modeEnv, modeValid)
+	setFakeConfig(t, fakeConfig{Mode: modeValid})
 
 	// Not t.TempDir(): it names the directory after the test, and on darwin that
 	// alone puts the socket over sun_path. dhctl's own tmp dir is short.
@@ -408,7 +527,7 @@ func TestUnixEndpointServesValidator(t *testing.T) {
 // A validator that leaves a child holding its output pipes must not hang Stop: EOF
 // never comes, so the wait has to be bounded.
 func TestStopReturnsWhenOutputPipesStayOpen(t *testing.T) {
-	t.Setenv(modeEnv, modeOrphan)
+	setFakeConfig(t, fakeConfig{Mode: modeOrphan})
 
 	ep, err := NewTCPEndpoint()
 	if err != nil {

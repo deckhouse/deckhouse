@@ -15,13 +15,14 @@
 package external
 
 import (
-	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"os/exec"
+	"strings"
 	"sync"
 	"syscall"
 	"time"
@@ -47,12 +48,18 @@ const (
 )
 
 // ValidatorProcess manages a running validator process. Its whole lifetime hangs on
-// one context: cancelling it signals the process.
+// one context: cancelling it signals the process, and the process going down cancels
+// it back, so whatever waits on the validator is released either way.
 type ValidatorProcess struct {
-	cmd *exec.Cmd
-	wg  sync.WaitGroup
+	cmd    *exec.Cmd
+	cancel context.CancelCauseFunc
 
-	cancel   context.CancelFunc
+	stdout *output
+	stderr *output
+
+	waitWG  sync.WaitGroup
+	waitErr error
+
 	stopOnce sync.Once
 	stopErr  error
 }
@@ -61,11 +68,21 @@ type ValidatorProcess struct {
 // once it accepts connections, so a caller gets a process it can talk to right away.
 // The caller is responsible for managing the endpoint lifecycle.
 func StartValidatorProcess(ctx context.Context, binaryPath string, endpoint Endpoint) (*ValidatorProcess, error) {
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cancel := context.WithCancelCause(ctx)
 	logger := dhlog.FromContext(ctx)
+
+	stdout := newOutput(func(line string) {
+		logger.DebugContext(ctx, fmt.Sprintf("validator: %s", line))
+	})
+	stderr := newOutput(func(line string) {
+		logger.DebugContext(ctx, fmt.Sprintf("validator: %s", line))
+	})
 
 	ret := &ValidatorProcess{
 		cancel: cancel,
+		stdout: stdout,
+		stderr: stderr,
+		cmd:    validatorCmd(ctx, binaryPath, endpoint, stdout, stderr),
 	}
 
 	withStop := func(err error) error {
@@ -75,82 +92,48 @@ func StartValidatorProcess(ctx context.Context, binaryPath string, endpoint Endp
 		return err
 	}
 
-	cmd := exec.CommandContext(
-		ctx,
-		binaryPath,
-		server.ServeArgs(endpoint.Network(), endpoint.Address())...,
-	)
+	logger.DebugContext(ctx, fmt.Sprintf("start validator: %s", ret.cmd.String()))
 
-	cmd.Cancel = func() error { return cmd.Process.Signal(syscall.SIGTERM) }
-	cmd.WaitDelay = shutdownTimeout
-	ret.cmd = cmd
-
-	stdoutReader, err := cmd.StdoutPipe()
-	if err != nil {
-		return nil, withStop(fmt.Errorf("stdout pipe: %w", err))
-	}
-
-	stderrReader, err := cmd.StderrPipe()
-	if err != nil {
-		return nil, withStop(fmt.Errorf("stderr pipe: %w", err))
-	}
-
-	logger.DebugContext(ctx, fmt.Sprintf("start validator: %s", cmd.String()))
-	if err := cmd.Start(); err != nil {
+	if err := ret.cmd.Start(); err != nil {
 		return nil, withStop(err)
 	}
 
-	ret.wg = sync.WaitGroup{}
-	logWriter := func(line string) {
-		logger.DebugContext(ctx, fmt.Sprintf("validator output: %s", line))
-	}
-	ret.wg.Go(func() {
-		outputHandler(stdoutReader, logWriter)
-	})
-	ret.wg.Go(func() {
-		outputHandler(stderrReader, logWriter)
+	ret.waitWG.Go(func() {
+		ret.waitErr = ret.cmd.Wait()
+		_ = syscall.Kill(-ret.cmd.Process.Pid, syscall.SIGKILL)
+		ret.cancel(fmt.Errorf("validator exited: %w", ret.waitErr))
 	})
 
 	if err := ret.waitReady(ctx, endpoint); err != nil {
 		return nil, withStop(err)
 	}
-
-	if err := ctx.Err(); err != nil {
-		return nil, withStop(err)
-	}
-
 	return ret, nil
 }
 
 // Stop gracefully stops the validator process. It is safe to call multiple times and
 // reports the same result every time.
 //
-// The order matters: cmd.Wait is what closes the output pipes and what escalates
-// SIGTERM to a kill after WaitDelay, so neither a validator that ignores the signal
-// nor a child holding its pipes can keep Stop waiting.
+// The wait is bounded by cmd.WaitDelay: cancelling starts its timer, and when it
+// expires os/exec kills the child and closes its pipes, so neither a validator that
+// ignores SIGTERM nor a child holding the pipes can keep Stop waiting.
 func (v *ValidatorProcess) Stop() error {
 	v.stopOnce.Do(func() {
-		if v.cancel != nil {
-			v.cancel()
-			v.cancel = nil
-		}
+		v.cancel(nil)
+		v.waitWG.Wait()
 
-		if v.cmd != nil && v.cmd.Process != nil {
-			if err := v.cmd.Wait(); !isOrdinaryStop(err) {
-				v.stopErr = fmt.Errorf("stop validator process: %w", err)
-			}
-		}
+		v.stdout.Flush()
+		v.stderr.Flush()
 
-		v.wg.Wait()
-		v.cmd = nil
+		if !isOrdinaryStop(v.waitErr) {
+			v.stopErr = fmt.Errorf("stop validator process: %w", v.waitErr)
+		}
 	})
-
 	return v.stopErr
 }
 
 // waitReady blocks until the endpoint accepts a connection: the protocol has no
-// readiness service. ctx is the process's own, so this returns the moment the process
-// is gone — there is nothing left to wait for — and readyTimeout bounds the rest.
+// readiness service. The context is cancelled once the process is gone, so a
+// validator that dies is reported as dead instead of costing the whole readyTimeout.
 func (v *ValidatorProcess) waitReady(ctx context.Context, endpoint Endpoint) error {
 	deadline, cancel := context.WithTimeout(ctx, readyTimeout)
 	defer cancel()
@@ -165,13 +148,35 @@ func (v *ValidatorProcess) waitReady(ctx context.Context, endpoint Endpoint) err
 
 		select {
 		case <-deadline.Done():
-			if ctx.Err() != nil {
-				return errors.New("exited before listening")
+			// The deadline is derived from the process context, so it covers both
+			// ways of giving up. Only the cause tells them apart, and it is nil
+			// while the process itself is still alive.
+			if cause := context.Cause(ctx); cause != nil {
+				return fmt.Errorf("%w, never listened on %s", cause, endpoint)
 			}
+
 			return fmt.Errorf("did not listen on %s within %s", endpoint, readyTimeout)
 		case <-ticker.C:
 		}
 	}
+}
+
+// validatorCmd is how dhctl runs a validator: in a process group of its own, so one
+// that spawns helpers takes them down with it, and against writers rather than pipes,
+// so os/exec owns the copying and cmd.Wait waits for it.
+func validatorCmd(ctx context.Context, binaryPath string, endpoint Endpoint, stdout, stderr io.Writer) *exec.Cmd {
+	cmd := exec.CommandContext(
+		ctx,
+		binaryPath,
+		server.ServeArgs(endpoint.Network(), endpoint.Address())...,
+	)
+
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM) }
+	cmd.WaitDelay = shutdownTimeout
+	cmd.Stdout = stdout
+	cmd.Stderr = stderr
+	return cmd
 }
 
 // isOrdinaryStop reports whether err is one of the ways a validator we asked to stop
@@ -191,20 +196,49 @@ func isOrdinaryStop(err error) bool {
 		errors.Is(err, os.ErrProcessDone)
 }
 
-func outputHandler(reader io.Reader, writer func(line string)) {
-	scanner := bufio.NewScanner(reader)
-	scanner.Buffer(make([]byte, maxLineSize), maxLineSize)
+// output is what a validator writes: every complete line reaches the log the moment it
+// arrives. os/exec's copying goroutine may outlive Wait when WaitDelay expires, so the
+// state is locked.
+type output struct {
+	log func(line string)
 
-	for scanner.Scan() {
-		writer(scanner.Text())
+	mu      sync.Mutex
+	pending []byte
+}
+
+func newOutput(log func(line string)) *output {
+	return &output{log: log}
+}
+
+func (o *output) Write(p []byte) (int, error) {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+
+	o.pending = append(o.pending, p...)
+	for {
+		end := bytes.IndexByte(o.pending, '\n')
+		if end < 0 {
+			// A process that never writes a newline must not grow the buffer forever.
+			if len(o.pending) >= maxLineSize {
+				o.log(string(o.pending))
+				o.pending = o.pending[:0]
+			}
+
+			return len(p), nil
+		}
+
+		o.log(strings.TrimSuffix(string(o.pending[:end+1]), "\n"))
+		o.pending = o.pending[end+1:]
 	}
+}
 
-	// os.ErrClosed is the normal end of a read: Stop's cmd.Wait closes the pipes
-	// out from under these goroutines on purpose.
-	err := scanner.Err()
-	if err != nil &&
-		!errors.Is(err, io.EOF) &&
-		!errors.Is(err, os.ErrClosed) {
-		writer(fmt.Sprintf("scanner error: %v", err))
+// Flush logs a last line the process left unterminated.
+func (o *output) Flush() {
+	o.mu.Lock()
+	defer o.mu.Unlock()
+
+	if len(o.pending) > 0 {
+		o.log(string(o.pending))
+		o.pending = o.pending[:0]
 	}
 }

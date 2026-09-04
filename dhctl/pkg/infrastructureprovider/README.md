@@ -118,7 +118,8 @@ gRPC. Contract in full:
 - **Invocation:** `<download-root>/<provider>/validator serve --network=tcp --address=127.0.0.1:<port>`.
   dhctl reserves a free loopback port per call, spawns the binary, waits for the address to
   accept a connection, calls it once and stops it with `SIGTERM`.
-- **Transport:** gRPC, no TLS; stdout/stderr carry diagnostics only (stderr is logged at WARN).
+- **Transport:** gRPC, no TLS; stdout/stderr carry diagnostics only. dhctl logs both line by line
+  as they arrive, at DEBUG, so they land in the debug log file rather than the terminal.
 - **Input** (`validatev1.Input`, JSON inside `input_json`): `providerName`, `operation`
   (`bootstrap`/`converge`/`destroy`), `clusterPrefix`, `layout`, `providerClusterConfiguration`,
   and `vars` (`CloudProviderVars`: module `settings`, `nodeGroups`, `instanceClasses`, credential
