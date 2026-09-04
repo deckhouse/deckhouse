@@ -26,21 +26,35 @@ spec:
                 type: string
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.operation_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            libs:
+              - |
+                {{- include "constraint-templates.lib.common.container-review" . | nindent 16 }}
+            rego: |
+              package d8.operation_policies
 
-        violation[{"msg": msg}] {
-          not input.review.operation == "DELETE"
-          container := input.review.object.spec.containers[_]
-          probe := input.parameters.probes[_]
-          probe_is_missing(container, probe)
-          msg := get_violation_message(container, input.review, probe)
-        }
+              import data.lib.common.pod_spec
 
-        probe_is_missing(ctr, probe) = true {
-          not ctr[probe]
-        }
+              # Probes (livenessProbe, readinessProbe, startupProbe) are only valid
+              # on regular containers. Kubernetes rejects probes on initContainers
+              # (unless restartPolicy: Always sidecar) and on ephemeralContainers.
+              # Therefore we iterate only pod_spec.containers, not input_containers
+              # (which includes initContainers and ephemeralContainers).
+              violation contains {"msg": msg} if {
+                not input.review.operation == "DELETE"
+                container := pod_spec.containers[_]
+                probe := input.parameters.probes[_]
+                probe_is_missing(container, probe)
+                msg := get_violation_message(container, input.review, probe)
+              }
 
-        get_violation_message(container, review, probe) = msg {
-          msg := sprintf("Container <%v> in your <%v> <%v> has no <%v>", [container.name, review.kind.kind, review.object.metadata.name, probe])
-        }
+              probe_is_missing(ctr, probe) if {
+                not ctr[probe]
+              }
+
+              get_violation_message(container, review, probe) := msg if {
+                msg := sprintf("Container <%v> in your <%v> <%v> has no <%v>", [container.name, review.kind.kind, review.object.metadata.name, probe])
+              }

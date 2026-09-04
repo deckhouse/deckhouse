@@ -121,6 +121,7 @@ test_container_bool_spe_denies if {
 # Pod-level SPE denies value with context
 test_pod_bool_spe_denies_with_context if {
   pod := {
+    "kind": "Pod",
     "metadata": {"labels": {"security.deckhouse.io/security-policy-exception": "spe"}, "namespace": "default"},
     "spec": {"hostPID": true}
   }
@@ -146,6 +147,7 @@ test_pod_bool_spe_denies_with_context if {
 # Pod-level boolean with SPE
 test_pod_bool_spe_allows if {
   pod := {
+    "kind": "Pod",
     "metadata": {"labels": {"security.deckhouse.io/security-policy-exception": "spe"}, "namespace": "default"},
     "spec": {"hostPID": true}
   }
@@ -157,6 +159,51 @@ test_pod_bool_spe_allows if {
     false,
     ["spec", "network", "hostPID", "allowedValue"]
   ) with data.inventory as inventory_pod_allow_true
+  result.allowed == true
+  result.detail == {}
+}
+
+# Pod-level boolean on a controller: the field is read from the pod template
+# (spec.template.spec.hostPID), not from the controller's own spec.
+test_pod_bool_controller_reads_pod_template if {
+  deployment := {
+    "kind": "Deployment",
+    "metadata": {"labels": {}, "namespace": "default"},
+    "spec": {"template": {
+      "metadata": {"labels": {}},
+      "spec": {"hostPID": true}
+    }}
+  }
+  result := check_bool.check_pod_bool(
+    deployment,
+    ["spec", "hostPID"],
+    "hostPID",
+    false,
+    false,
+    ["spec", "network", "hostPID", "allowedValue"]
+  ) with data.inventory as inventory_pod_allow_false
+  result.allowed == false
+  result.detail.msg == "hostPID has value true, expected false."
+}
+
+# Pod-level boolean on a controller whose pod template complies.
+test_pod_bool_controller_compliant_pod_template if {
+  deployment := {
+    "kind": "Deployment",
+    "metadata": {"labels": {}, "namespace": "default"},
+    "spec": {"template": {
+      "metadata": {"labels": {}},
+      "spec": {"hostPID": false}
+    }}
+  }
+  result := check_bool.check_pod_bool(
+    deployment,
+    ["spec", "hostPID"],
+    "hostPID",
+    false,
+    false,
+    ["spec", "network", "hostPID", "allowedValue"]
+  ) with data.inventory as inventory_pod_allow_false
   result.allowed == true
   result.detail == {}
 }

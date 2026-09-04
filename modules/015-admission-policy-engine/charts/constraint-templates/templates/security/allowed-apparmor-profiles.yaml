@@ -8,6 +8,7 @@ metadata:
     security.deckhouse.io: security-policy
   annotations:
     metadata.gatekeeper.sh/title: "App Armor"
+    metadata.gatekeeper.sh/version: 1.0.0
     description: >-
       Configures an allow-list of AppArmor profiles for use by containers.
       This corresponds to specific annotations applied to a PodSecurityPolicy.
@@ -68,6 +69,10 @@ spec:
               import data.lib.exception.resolve_spe_for_container
               import data.lib.expand_synonyms.expand
               import data.lib.expand_synonyms.normalize
+              import data.lib.common.pod_spec
+              import data.lib.common.object_labels
+              import data.lib.common.object_namespace
+              import data.lib.common.effective_metadata
               import data.lib.resolve_value.resolve_from_sources
 
               apparmor_translation := {
@@ -84,10 +89,14 @@ spec:
                   {"type": "annotation", "key": sprintf("container.apparmor.security.beta.kubernetes.io/%v", [container.name])},
                   {"type": "pod_field", "path": ["spec", "securityContext", "appArmorProfile", "type"]}
                 ]
-                raw_profile := resolve_from_sources(input.review.object, container, sources)
+                normalized_obj := {
+                  "metadata": effective_metadata,
+                  "spec": pod_spec,
+                }
+                raw_profile := resolve_from_sources(normalized_obj, container, sources)
                 profile := normalize(raw_profile, apparmor_translation)
-                labels := object.get(input.review.object.metadata, "labels", {})
-                exception := resolve_spe_for_container(container, labels, input.review.object.metadata.namespace)
+                labels := object_labels
+                exception := resolve_spe_for_container(container, labels, object_namespace)
                 spe_allowed := allowed_values_or_empty(exception, ["spec", "securityContext", "appArmorProfile", "allowedValues"])
                 allowed := expand(input.parameters.allowedProfiles, apparmor_translation)
                 spe_allowed_expanded := expand(spe_allowed, apparmor_translation)

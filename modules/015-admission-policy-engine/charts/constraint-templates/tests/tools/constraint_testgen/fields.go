@@ -31,6 +31,8 @@ type testFieldsDoc struct {
 		ObjectKind       string          `yaml:"objectKind"`
 		ObjectFields     []testFieldSpec `yaml:"objectFields"`
 		SpeFields        []testFieldSpec `yaml:"speFields"`
+		ObjectKinds      []string        `yaml:"objectKinds"`
+		Operations       []string        `yaml:"operations"`
 		ApplicableTracks struct {
 			Functional   *bool `yaml:"functional"`
 			SpePod       *bool `yaml:"spePod"`
@@ -131,6 +133,24 @@ func normalizeTestFields(doc *testFieldsDoc) {
 	for i, field := range doc.Spec.ObjectFields {
 		if len(field.RequiredScenarios) == 0 {
 			doc.Spec.ObjectFields[i].RequiredScenarios = defaultRequiredScenarios(field.Level, false)
+		}
+		// T2: When defaultBehavior is "Undefined" (the rule used to be a no-op on
+		// absent field), auto-require the "absent" scenario if not already present.
+		// This catches the C2/C3 class of regression where object.get(..., "")
+		// turns an absent field into a concrete "" value that triggers a violation.
+		if field.DefaultBehavior == "Undefined" {
+			hasAbsent := false
+			for _, s := range doc.Spec.ObjectFields[i].RequiredScenarios {
+				if s == "absent" {
+					hasAbsent = true
+					break
+				}
+			}
+			if !hasAbsent {
+				doc.Spec.ObjectFields[i].RequiredScenarios = append(
+					doc.Spec.ObjectFields[i].RequiredScenarios, "absent",
+				)
+			}
 		}
 	}
 	for i, field := range doc.Spec.SpeFields {

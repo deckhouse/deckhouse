@@ -24,7 +24,66 @@ In addition to policies that prohibit using parameters different from the set re
 Depending on how pods are created, there are differences in how the API generates messages regarding validation failures (violations of established policies):
 
 - If a pod is created directly, the validation error is returned in the API response indicating a validation failure (policy violation).
-- If pods are created via Deployment, the required number of ReplicaSets is created, which in turn attempt to create the pods. In this case, the validation error is not returned in the API response but is displayed in the namespace events or the corresponding ReplicaSet events.
+- If pods are created via a Deployment and the pods potentially violate a policy, the creation of such Deployment will be rejected.
+- If pods are created via a Deployment that already existed before the policy was enabled, the required number of ReplicaSets is created, which in turn attempt to create the pods. In this case, the validation error is not returned in the API response but is displayed in the namespace events or the corresponding ReplicaSet events.
+
+## Controller-level validation
+
+Policies validate pod-creating controllers at CREATE and UPDATE time. This provides early feedback when a workload is created or updated, before any Pod is launched, and also surfaces creation denials when deploying via CI (CI rarely creates Pods directly, and Pod creation errors from controllers are often not displayed).
+
+The following objects are validated:
+
+| API group | Resource kind                      | Operations     |
+| --------- | ---------------------------------- | -------------- |
+| (core)    | Pod                                | CREATE, UPDATE |
+| apps      | Deployment, StatefulSet, DaemonSet | CREATE, UPDATE |
+| (core)    | ReplicationController              | CREATE, UPDATE |
+| batch     | Job, CronJob                       | CREATE, UPDATE |
+| (core)    | pods/exec, pods/attach             | CONNECT        |
+
+{% alert level="warning" %}
+Controller-level checks run against the **original pod template** (`spec.template`), not against the manifest that results from all mutations.
+Pod-level validation, in contrast, happens after all mutating actions — for example, after LimitRange adds default `resources`, or a mutating webhook adds `securityContext`.
+Keep this in mind when using security policies.
+{% endalert %}
+
+### labelSelector semantics for controllers
+
+When building policies that are applied based on object labels (`match.labelSelector`), keep in mind that selection is performed against the `metadata.labels` of the reviewed object.
+For Pods these are the pod's labels.
+For controllers (Deployment, StatefulSet, and others) these are the controller's **top-level** `metadata.labels`, not the pod template's `metadata.labels` (`spec.template.metadata.labels`).
+
+As a result, a selector that matches the pods a controller creates does not by itself trigger a controller-level check,
+and an exclusion selector (`NotIn`/`DoesNotExist`) that excludes those pods may not take effect at the controller level.
+In both cases the controller itself must be matched by the `labelSelector`.
+
+### SecurityPolicyException label resolution for controllers
+
+For controller kinds, SecurityPolicyException (SPE) labels and annotations are taken from the **pod template's metadata** (`spec.template.metadata`), not from the controller's top-level metadata. This ensures SPEs apply to the pods the controller creates, not to the controller object itself.
+
+### Disabling controller-level validation
+
+Controller-level validation can be disabled using the [`controllerValidation`](configuration.html#parameters-podsecuritystandards-controllervalidation) parameter in the module settings.
+
+When `controllerValidation: false`, constraints are applied only to Pods. In this case:
+
+- controllers (Deployment, StatefulSet, DaemonSet, Job, CronJob, ReplicationController) are not checked on creation or update;
+- SecurityPolicyException labels on `spec.template.metadata.labels` of controllers are not resolved, since constraints are not applied to controllers;
+- Pods are still validated at launch time, as they are when `true` is set.
+
+### Lenient mode for fields injected by Kubernetes
+
+When controller-level validation is enabled, some constraints use a **lenient mode** for fields that Kubernetes admission controllers (LimitRange, PodSecurity, ServiceAccount admission) may inject at Pod creation time. This prevents false positives where a controller's pod template lacks a field that would be added automatically before the Pod is created.
+
+The following constraints skip violations for absent fields when reviewing controllers (but still enforce violations when fields are **explicitly set** to disallowed values):
+
+| Constraint | Skipped fields (when absent on controllers) | Kubernetes component |
+|---|---|---|
+| `D8RequiredResources` | `container.resources` (when completely absent) | LimitRange |
+| `D8AllowedUsers` | `runAsUser`, `runAsGroup`, `fsGroup`, `supplementalGroups` (with `MustRunAs` / `MustRunAsNonRoot`) | PodSecurity admission |
+| `D8AllowedSeccompProfiles` | `seccompProfile.type` (when not set in any source) | PodSecurity admission |
+
+For example, a Deployment without `resources` in its pod template will **not** be denied by `D8RequiredResources`, because a LimitRange in the namespace may inject default `requests` and `limits`. However, if `resources` is partially set (e.g., only `limits.memory` but not `limits.cpu`), the violation is still enforced.
 
 ## Pod validation when policies are modified or new ones are added
 

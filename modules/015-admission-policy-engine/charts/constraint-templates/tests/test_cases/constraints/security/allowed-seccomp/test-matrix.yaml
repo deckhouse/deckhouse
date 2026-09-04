@@ -19,6 +19,18 @@ spec:
           containers:
           - image: nginx
             name: nginx
+    admissionDeployment:
+      document:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          namespace: testns
+        spec:
+          template:
+            spec:
+              containers:
+              - image: nginx
+                name: nginx
     securityPolicyException:
       document:
         apiVersion: deckhouse.io/v1alpha1
@@ -872,3 +884,141 @@ spec:
               securityContext:
                 seccompProfile:
                   type: Unconfined
+  - name: pss-controller-deployment
+    gatorBlock: pss-controller-deployment
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/pss_baseline.yaml
+    cases:
+    - name: controller-allowed-allowed-seccomp
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.containers[].securityContext.seccompProfile.type
+        scenario: positive
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-allowed-allowed-seccomp
+          spec:
+            template:
+              spec:
+                containers:
+                - image: nginx
+                  name: nginx
+                  securityContext:
+                    seccompProfile:
+                      type: RuntimeDefault
+      exception: ''
+      exceptionRef: ''
+    - name: controller-disallowed-no-exception
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.securityContext.seccompProfile.type
+        scenario: negative
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-disallowed-no-exception
+          spec:
+            template:
+              spec:
+                securityContext:
+                  seccompProfile:
+                    type: Unconfined
+                containers:
+                - image: nginx
+                  name: nginx
+      exception: ''
+      exceptionRef: ''
+    - name: controller-allowed-by-spe-on-pod-template
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.securityContext.seccompProfile.type
+        scenario: speMatch
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-seccomp-spe
+          spec:
+            securityContext:
+              seccompProfile:
+                allowedValues:
+                - Unconfined
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-allowed-by-spe-on-pod-template
+          spec:
+            template:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-seccomp-spe
+              spec:
+                securityContext:
+                  seccompProfile:
+                    type: Unconfined
+                containers:
+                - image: nginx
+                  name: nginx
+      exception: ''
+      exceptionRef: ''
+    - name: controller-allowed-by-spe-on-top-level-metadata
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.securityContext.seccompProfile.type
+        scenario: speMatch
+      inventory:
+      - base: securityPolicyException
+        merge:
+          metadata:
+            name: allow-seccomp-spe-top
+          spec:
+            securityContext:
+              seccompProfile:
+                allowedValues:
+                - Unconfined
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-allowed-by-spe-on-top-level-metadata
+          spec:
+            template:
+              metadata:
+                labels:
+                  security.deckhouse.io/security-policy-exception: allow-seccomp-spe-top
+              spec:
+                securityContext:
+                  seccompProfile:
+                    type: Unconfined
+                containers:
+                - image: nginx
+                  name: nginx
+      exception: ''
+      exceptionRef: ''
+    - name: controller-allowed-absent-seccomp
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.containers[].securityContext.seccompProfile
+        scenario: absent
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-absent-seccomp
+          spec:
+            template:
+              spec:
+                containers:
+                - image: nginx
+                  name: nginx
+      exception: ''
+      exceptionRef: ''

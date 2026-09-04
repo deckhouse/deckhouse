@@ -25,112 +25,106 @@ spec:
                 When true, policy reads mocked provider response from inventory ExternalDataInventory.
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |-
-        package d8.vulnerableimages
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            libs:
+              - |
+                {{- include "constraint-templates.lib.common.container-review" . | nindent 16 }}
+            rego: |-
+              package d8.vulnerableimages
 
-        # Get data from external provider in production, or mocked data in test mode.
-        remote_data := response {
-          images := [img | img = retrieve_images[_]]
-          response := get_data(images)
-        }
+              import data.lib.common.input_containers
 
-        get_data(images) = response {
-          is_test_mode
-          response := external_data_from_inventory("trivy-provider", images)
-        }
+              # Get data from external provider in production, or mocked data in test mode.
+              remote_data := response if {
+                images := [img | img = retrieve_images[_]]
+                response := get_data(images)
+              }
 
-        get_data(images) = response {
-          not is_test_mode
-          response := external_data({"provider": "trivy-provider", "keys": images})
-        }
+              get_data(images) := response if {
+                is_test_mode
+                response := external_data_from_inventory("trivy-provider", images)
+              }
 
-        external_data_from_inventory(provider, keys) = response {
-          namespace := object.get(input.review.object.metadata, "namespace", "default")
-          ns_inventory := object.get(object.get(data.inventory, "namespace", {}), namespace, {})
-          api_inventory := object.get(ns_inventory, "deckhouse.io/v1alpha1", {})
-          kinds_inventory := object.get(api_inventory, "ExternalDataInventory", {})
-          external_inventory := object.get(kinds_inventory, "default", {})
-          providers := object.get(object.get(external_inventory, "spec", {}), "providers", {})
-          provider_data := object.get(providers, provider, {})
+              get_data(images) := response if {
+                not is_test_mode
+                response := external_data({"provider": "trivy-provider", "keys": images})
+              }
 
-          responses_map := object.get(provider_data, "responses", {})
-          responses := [[k, object.get(responses_map, k, {})] |
-            k := keys[_]
-          ]
+              external_data_from_inventory(provider, keys) := response if {
+                namespace := object.get(input.review.object.metadata, "namespace", "default")
+                ns_inventory := object.get(object.get(data.inventory, "namespace", {}), namespace, {})
+                api_inventory := object.get(ns_inventory, "deckhouse.io/v1alpha1", {})
+                kinds_inventory := object.get(api_inventory, "ExternalDataInventory", {})
+                external_inventory := object.get(kinds_inventory, "default", {})
+                providers := object.get(object.get(external_inventory, "spec", {}), "providers", {})
+                provider_data := object.get(providers, provider, {})
 
-          response := {
-            "errors": object.get(provider_data, "errors", []),
-            "system_error": object.get(provider_data, "system_error", ""),
-            "responses": responses,
-          }
-        }
+                responses_map := object.get(provider_data, "responses", {})
+                responses := [[k, object.get(responses_map, k, {})] |
+                  k := keys[_]
+                ]
 
-        is_test_mode {
-          object.get(input.parameters, "isTest", false)
-        }
+                response := {
+                  "errors": object.get(provider_data, "errors", []),
+                  "system_error": object.get(provider_data, "system_error", ""),
+                  "responses": responses,
+                }
+              }
 
-        violation[{"msg": msg}] {
-          response := remote_data
+              is_test_mode if {
+                object.get(input.parameters, "isTest", false)
+              }
 
-          response_deny_request(response, input.review.operation)
-          msg := build_deny_message(response)
-        }
+              violation contains {"msg": msg} if {
+                response := remote_data
+                response_deny_request(response, input.review.operation)
+                msg := build_deny_message(response)
+              }
 
-        build_deny_message(response) = msg {
-          count(response.errors) > 0
-          msg := sprintf("image contains vulnerabilities: %v", [response.errors])
-        }
+              build_deny_message(response) := msg if {
+                count(response.errors) > 0
+                msg := sprintf("image contains vulnerabilities: %v", [response.errors])
+              }
 
-        build_deny_message(response) = msg {
-          count(response.errors) == 0
-          ids := [id |
-            pair := response.responses[_]
-            details := pair[1]
-            vuln := object.get(details, "vulnerabilities", [])[_]
-            id := object.get(vuln, "id", "")
-            id != ""
-          ]
-          count(ids) > 0
-          msg := sprintf("image contains vulnerabilities: vulnerabilities: %v", [ids])
-        }
+              build_deny_message(response) := msg if {
+                count(response.errors) == 0
+                ids := [id |
+                  pair := response.responses[_]
+                  details := pair[1]
+                  vuln := object.get(details, "vulnerabilities", [])[_]
+                  id := object.get(vuln, "id", "")
+                  id != ""
+                ]
+                count(ids) > 0
+                msg := sprintf("image contains vulnerabilities: vulnerabilities: %v", [ids])
+              }
 
-        build_deny_message(response) = msg {
-          count(response.errors) == 0
-          count(response.system_error) > 0
-          msg := sprintf("request denied by external data provider: %v", [response.system_error])
-        }
+              build_deny_message(response) := msg if {
+                count(response.errors) == 0
+                count(response.system_error) > 0
+                msg := sprintf("request denied by external data provider: %v", [response.system_error])
+              }
 
-        build_deny_message(response) = "request denied by external data provider" {
-          count(response.errors) == 0
-          count(response.system_error) == 0
-        }
+              build_deny_message(response) := "request denied by external data provider" if {
+                count(response.errors) == 0
+                count(response.system_error) == 0
+              }
 
-        retrieve_images[imgs] {
-          count(input.review.object.spec.containers[_].image) > 0
-          imgs := input.review.object.spec.containers[_].image
-        }
+              retrieve_images contains img if {
+                c := input_containers[_]
+                img := object.get(c, "image", "")
+                img != ""
+              }
 
-        retrieve_images[imgs] {
-          count(input.review.object.spec.initContainers[_].image) > 0
-          imgs := input.review.object.spec.initContainers[_].image
-        }
+              response_deny_request(response, operation) if {
+                not operation == "DELETE"
+                count(response.errors) > 0
+              }
 
-        retrieve_images[imgs] {
-          count(input.review.object.spec.template.spec.containers) > 0
-          imgs := input.review.object.spec.template.spec.containers[_].image
-        }
-
-        retrieve_images[imgs] {
-          count(input.review.object.spec.template.spec.initContainers) > 0
-          imgs := input.review.object.spec.template.spec.initContainers[_].image
-        }
-
-        response_deny_request(response, operation) {
-          not operation == "DELETE"
-          count(response.errors) > 0
-        }
-
-        response_deny_request(response, operation) {
-          not operation == "DELETE"
-          count(response.system_error) > 0
-        }
+              response_deny_request(response, operation) if {
+                not operation == "DELETE"
+                count(response.system_error) > 0
+              }

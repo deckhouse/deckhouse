@@ -108,10 +108,6 @@ func restoreTemplateLibRegoTests(moved [][2]string) error {
 }
 
 var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
-	BeforeEach(func() {
-		Skip("legacy helm-render specs are isolated after constraint test runner migration")
-	})
-
 	f := SetupHelmConfig(`{"admissionPolicyEngine": {"podSecurityStandards": {}, "internal": {"ratify": {"imageReferences": [{"reference": "ghcr.io/*", "publicKeys": ["someKey2"]}], "webhook": {"key": "YjY0ZW5jX3N0cmluZwo=", "crt": "YjY0ZW5jX3N0cmluZwo=" , "ca": "YjY0ZW5jX3N0cmluZwo="}}, "podSecurityStandards": {"enforcementActions": ["deny"]}, "operationPolicies": [
 	{
 		"metadata": {

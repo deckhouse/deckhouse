@@ -56,6 +56,17 @@ properties:
                       type: integer
                     max:
                       type: integer
+      controllerValidation:
+        type: boolean
+        default: true
+        description: |
+          Controls whether security policy constraints are applied to controllers
+          (Deployment, StatefulSet, DaemonSet, Job, CronJob, ReplicationController)
+          in addition to Pods.
+
+          Set to `true` (default) to validate both Pods and controllers,
+          or to `false` to validate only Pods and leave controllers unchecked.
+
   denyVulnerableImages:
     type: object
     default: {}

@@ -40,24 +40,28 @@ spec:
                       the regular expression.
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.operation_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            rego: |
+              package d8.operation_policies
 
-        violation[{"msg": msg, "details": {"missing_annotations": missing}}] {
-            not input.review.operation == "DELETE"
-            provided := {annotation | input.review.object.metadata.annotations[annotation]}
-            required := {annotation | annotation := input.parameters.annotations[_].key}
-            missing := required - provided
-            count(missing) > 0
-            msg := sprintf("you must provide annotations: %v", [missing])
-        }
+              violation contains {"msg": msg, "details": {"missing_annotations": missing}} if {
+                  not input.review.operation == "DELETE"
+                  provided := {annotation | input.review.object.metadata.annotations[annotation]}
+                  required := {annotation | annotation := input.parameters.annotations[_].key}
+                  missing := required - provided
+                  count(missing) > 0
+                  msg := sprintf("you must provide annotations: %v", [missing])
+              }
 
-        violation[{"msg": msg}] {
-          not input.review.operation == "DELETE"
-          value := input.review.object.metadata.annotations[key]
-          expected := input.parameters.annotations[_]
-          expected.key == key
-          expected.allowedRegex != ""
-          not re_match(expected.allowedRegex, value)
-          msg := sprintf("Annotation <%v: %v> does not satisfy allowed regex: %v", [key, value, expected.allowedRegex])
-        }
+              violation contains {"msg": msg} if {
+                not input.review.operation == "DELETE"
+                value := input.review.object.metadata.annotations[key]
+                expected := input.parameters.annotations[_]
+                expected.key == key
+                expected.allowedRegex != ""
+                not regex.match(expected.allowedRegex, value)
+                msg := sprintf("Annotation <%v: %v> does not satisfy allowed regex: %v", [key, value, expected.allowedRegex])
+              }

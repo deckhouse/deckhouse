@@ -61,32 +61,37 @@ spec:
                 {{- include "constraint-templates.lib.check_object_match" . | nindent 16 }}
               - |
                 {{- include "constraint-templates.lib.exception.spe" . | nindent 16 }}
+              - |
+                {{- include "constraint-templates.lib.message" . | nindent 16 }}
             rego: |
               package d8.security_policies
 
               import data.lib.check_object_match.check_partial_match_in_list
               import data.lib.common.has_field
+              import data.lib.common.input_containers
+              import data.lib.common.pod_spec
+              import data.lib.common.object_labels
+              import data.lib.common.object_namespace
               import data.lib.exception.allowed_values_or_empty
               import data.lib.exception.resolve_spe_for_container
               import data.lib.exception.resolve_spe_from_labels
+              import data.lib.message.violation_message
 
               # Disallow top-level custom SELinux options
               violation contains {"msg": msg, "details": {}} if {
                 not input.review.operation == "DELETE"
-                has_field(input.review.object.spec.securityContext, "seLinuxOptions")
-                labels := object.get(input.review.object.metadata, "labels", {})
-                spe := resolve_spe_from_labels(labels, input.review.object.metadata.namespace)
+                has_field(pod_spec.securityContext, "seLinuxOptions")
+                labels := object_labels
+                spe := resolve_spe_from_labels(labels, object_namespace)
                 spe_allowed := allowed_values_or_empty(spe, ["spec", "securityContext", "seLinuxOptions", "allowedValues"])
                 result := check_partial_match_in_list(
-                  input.review.object.spec.securityContext.seLinuxOptions,
+                  pod_spec.securityContext.seLinuxOptions,
                   input.parameters.allowedSELinuxOptions,
                   ["level", "role", "type", "user"],
                   spe_allowed
                 )
                 not result.allowed
-                actual_value := sprintf("Actual SELinux options: %v", [input.review.object.spec.securityContext.seLinuxOptions])
-                allowed_by_policy := sprintf("Allowed options: %v", [input.parameters.allowedSELinuxOptions])
-                msg := sprintf("SELinux options are not allowed, pod: %v. | %v | %v", [input.review.object.metadata.name, actual_value, allowed_by_policy])
+                msg := violation_message("SELinux options are not allowed", sprintf("pod: %v", [input.review.object.metadata.name]), result.detail)
               }
 
               # Disallow container-level custom SELinux options
@@ -94,8 +99,8 @@ spec:
                 not input.review.operation == "DELETE"
                 c := input_security_context[_]
                 has_field(c.securityContext, "seLinuxOptions")
-                labels := object.get(input.review.object.metadata, "labels", {})
-                spe := resolve_spe_for_container(c, labels, input.review.object.metadata.namespace)
+                labels := object_labels
+                spe := resolve_spe_for_container(c, labels, object_namespace)
                 spe_allowed := allowed_values_or_empty(spe, ["spec", "securityContext", "seLinuxOptions", "allowedValues"])
                 result := check_partial_match_in_list(
                   c.securityContext.seLinuxOptions,
@@ -104,23 +109,11 @@ spec:
                   spe_allowed
                 )
                 not result.allowed
-                actual_value := sprintf("Actual SELinux options: %v", [c.securityContext.seLinuxOptions])
-                allowed_by_policy := sprintf("Allowed options: %v", [input.parameters.allowedSELinuxOptions])
-                msg := sprintf("SELinux options are not allowed, pod: %v, container %v. | %v | %v", [input.review.object.metadata.name, c.name, actual_value, allowed_by_policy])
+                msg := violation_message("SELinux options are not allowed", sprintf("pod: %v, container: %v", [input.review.object.metadata.name, c.name]), result.detail)
               }
 
               input_security_context contains c if {
-                c := input.review.object.spec.containers[_]
-                has_field(c.securityContext, "seLinuxOptions")
-              }
-
-              input_security_context contains c if {
-                c := input.review.object.spec.initContainers[_]
-                has_field(c.securityContext, "seLinuxOptions")
-              }
-
-              input_security_context contains c if {
-                c := input.review.object.spec.ephemeralContainers[_]
+                c := input_containers[_]
                 has_field(c.securityContext, "seLinuxOptions")
               }
 

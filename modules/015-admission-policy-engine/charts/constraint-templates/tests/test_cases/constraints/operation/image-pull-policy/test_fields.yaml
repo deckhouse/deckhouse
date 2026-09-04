@@ -4,11 +4,17 @@ metadata:
   name: image-pull-policy
 spec:
   objectKind: Pod
+  objectKinds:
+    - Pod
+    - Deployment
+  operations:
+    - CREATE
+    - UPDATE
   objectFields:
     - path: spec.containers[].imagePullPolicy
       level: container
       description: Container imagePullPolicy must match required policy value.
-      requiredScenarios: [positive, negative]
+      requiredScenarios: [positive, negative, absent]
   applicableTracks:
     functional: true
     spePod: false
