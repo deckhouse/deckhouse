@@ -15,7 +15,7 @@ relatedLinks:
 
 ## Публикация приложений средствами Istio
 
-Публикация средствами Istio настраивается в два слоя. Администратор кластера разворачивает IngressIstioController (и связанную инфраструктуру) в разделе [«Istio Ingress Gateway»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/istio.html#istio-ingress-gateway). Разработчики приложения создают ресурсы Gateway и VirtualService, как показано ниже.
+Публикация средствами Istio настраивается в два слоя. Администратор кластера разворачивает [IngressIstioController](/modules/istio/cr.html) (и связанную инфраструктуру) в разделе [«Istio Ingress Gateway»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/istio.html#istio-ingress-gateway). Разработчики приложения создают ресурсы Gateway и VirtualService, как показано ниже.
 
 При публикации приложения средствами Istio можно выбрать один из вариантов:
 
@@ -43,8 +43,8 @@ metadata:
     # Включает проксирование трафика через nginx на ClusterIP вместо собственных IP подов.
     nginx.ingress.kubernetes.io/service-upstream: "true"
     # В Istio вся маршрутизация осуществляется на основе `Host:` заголовка запросов.
-    # Это позволяет избежать необходимости указывать Istio о существовании внешнего домена `productpage.example.com`,
-    # используется внутренний домен, известный Istio.
+    # Это позволяет не заводить в Istio внешний домен `productpage.example.com` —
+    # вместо него используется внутренний домен, уже известный Istio.
     nginx.ingress.kubernetes.io/upstream-vhost: productpage.bookinfo.svc
 spec:
   ingressClassName: nginx # Имя IngressClass контроллера с Istio-сайдкаром.
@@ -78,7 +78,7 @@ spec:
 
 ### Публикация приложений с использованием ресурса Istio Ingress Gateway {#публикация-приложений-с-использованием-ресурса-istio-ingress-gateway}
 
-Для публикации приложения средствами Istio Ingress Gateway администратор DKP должен создать ресурс IngressIstioController.
+Для публикации приложения средствами Istio Ingress Gateway администратор DKP должен создать ресурс [IngressIstioController](/modules/istio/cr.html).
 
 Для публикации приложения с использованием ресурса Istio Ingress Gateway создайте ресурс Gateway. В поле `spec.selector` укажите лейбл, ссылающийся на ingressGatewayClass, и имя секрета, полученные от администратора кластера:
 
@@ -179,4 +179,11 @@ spec:
 
 Поды версий должны иметь лейблы `version: v1` и `version: v2`, совпадающие с subsets в DestinationRule. Перед изменением весов проверьте, что обе версии обслуживаются сервисом `app-svc`.
 
-После применения манифестов отправьте серию запросов на `app.example.com` и убедитесь, что ответы соответствуют заданным весам (примерно 9 к 1). При необходимости скорректируйте веса и повторите проверку.
+После применения манифестов отправьте серию запросов на `app.example.com` и убедитесь, что ответы соответствуют заданным весам (примерно 9 к 1). Версию, которая ответила, определяйте по признаку, который отличает `stable` и `canary` в самом приложении (например, значению в теле ответа или отдельному HTTP-заголовку), например:
+
+```shell
+for i in $(seq 1 20); do curl -s https://app.example.com/ | grep version; done \
+  | sort | uniq -c
+```
+
+При необходимости скорректируйте веса и повторите проверку.

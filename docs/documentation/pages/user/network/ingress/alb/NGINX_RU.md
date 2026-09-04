@@ -97,7 +97,7 @@ d8 k -n <NAMESPACE> describe ingress <INGRESS_NAME>
 
 Убедитесь, что в статусе Ingress есть адрес и что DNS для `host` указывает на точку входа контроллера, которую сообщил администратор.
 
-Проверка с рабочей станции (подставьте адрес точки входа):
+Проверьте доступность приложения, подставив адрес точки входа (успешный ответ — код `200` или другой ожидаемый код приложения):
 
 ```shell
 curl -vk \
@@ -105,7 +105,7 @@ curl -vk \
   https://app.example.com/
 ```
 
-## Балансировка gRPC
+### Балансировка gRPC
 
 Раздел относится к публикации gRPC через Ingress NGINX Controller (`ingress-nginx`). Для Gateway API используйте [GRPCRoute](gateway-api.html#grpcroute-tlsroute-tcproute-and-udproute-objects).
 

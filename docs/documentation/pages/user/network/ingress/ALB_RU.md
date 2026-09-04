@@ -49,7 +49,7 @@ ALB средствами Ingress NGINX Controller построена на баз
 
 ALB средствами [Kubernetes Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/) реализуется [модулем `alb`](/modules/alb/). Шлюзы работают на Envoy Proxy. Приём и маршрутизация описываются стандартными объектами API (Gateway, ListenerSet, HTTPRoute и при необходимости GRPCRoute, TLSRoute, TCPRoute, UDPRoute, BackendTLSPolicy). Контроллер разворачивает инфраструктуру входа и проверяет конфигурацию, чтобы не допускать конфликтующих обработчиков.
 
-Модель Gateway API разделяет ответственность между администратором кластера (ClusterALBInstance), администратором неймспейса (ALBInstance и ListenerSet — hostname, TLS, порты) и разработчиками приложения (HTTPRoute и другие ресурсы маршрутизации).
+Модель Gateway API разделяет ответственность между администратором кластера ([ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance)), администратором неймспейса ([ALBInstance](/modules/alb/cr.html#albinstance) и ListenerSet — hostname, TLS, порты) и разработчиками приложения (HTTPRoute и другие ресурсы маршрутизации).
 
 Используйте этот вариант для:
 
@@ -75,27 +75,27 @@ ALB на основе модуля [`istio`](/modules/istio/) поддержив
 
 Перед публикацией приложения проверьте, какие механизмы ALB включены и настроены:
 
-1. Убедитесь, что нужный модуль включён:
+1. Убедитесь, что нужный модуль включён — в колонке `STATE` должно быть значение `Enabled`:
 
    ```shell
    d8 k get moduleconfig ingress-nginx alb istio
    ```
 
-1. Для Ingress NGINX — посмотрите ресурсы IngressNginxController и имя IngressClass:
+1. Для Ingress NGINX — посмотрите ресурсы [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) и имя IngressClass:
 
    ```shell
    d8 k get ingressnginxcontrollers
    d8 k get ingressclass
    ```
 
-1. Для Gateway API — убедитесь, что есть готовый ClusterALBInstance или ALBInstance, затем найдите управляемый Gateway и ListenerSet:
+1. Для Gateway API — убедитесь, что есть готовый [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance) или [ALBInstance](/modules/alb/cr.html#albinstance) в состоянии `Ready`, затем найдите управляемый Gateway и ListenerSet:
 
    ```shell
    d8 k get clusteralbinstances,albinstances --all-namespaces
    d8 k get gateway,listenerset --all-namespaces
    ```
 
-1. Для Istio — проверьте IngressIstioController и класс ingress gateway, который сообщит администратор кластера:
+1. Для Istio — проверьте [IngressIstioController](/modules/istio/cr.html) и класс ingress gateway, который сообщит администратор кластера:
 
    ```shell
    d8 k get ingressistiocontrollers

@@ -73,7 +73,7 @@ The characteristics of these resources and the differences between them are desc
 | :--- | :--- | :--- |
 | Purpose | Deploy a cluster-wide Gateway object | Deploy a local Gateway object |
 | Typical use case | - Common entry point (cluster-wide gateway).<br> - System gateway for publishing web interfaces of DKP service components and other modules (may require ["Steps before enabling"](#steps-to-take-before-enabling-and-configuring-alb-in-a-cluster)).<br> - Platform gateway | Dedicated gateway for an application or team in a dedicated namespace |
-| Supported inlet types | [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer), [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) | [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer) |
+| Supported inlet types | [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer), [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) | [`LoadBalancer`](/modules/alb/cr.html#albinstance-v1alpha1-spec-inlet-loadbalancer), [`ClusterIP`](/modules/alb/cr.html#albinstance-v1alpha1-spec-inlet-clusterip) |
 | Proxy implementation | Envoy Proxy | Envoy Proxy |
 | Deployment type | DaemonSet | Deployment |
 | Placement of ListenerSet objects and routes | In any user namespace | In the same namespace as the ALBInstance object (required) |
@@ -83,7 +83,7 @@ Creating a ClusterALBInstance object or an ALBInstance object results in creatio
 
 - Each Gateway object is served by at least one Envoy Proxy instance.
 - Traffic reaches it through a Service of type `LoadBalancer` or directly by using [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) parameters.
-- Several ClusterALBInstance or ALBInstance objects may point to the same Gateway object through the `gatewayName` field. In that case, they describe one shared gateway. The request handling infrastructure may still differ depending on settings. You can think of `gatewayName` as an analog of `ingressClass` for [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) objects. The resulting configuration comes from the instance with the earliest `creationTimestamp` (that is, the one created first); the others report a port conflict in status, specifying the name of the controlling instance.
+- Several ClusterALBInstance or ALBInstance objects may point to the same Gateway object through the `gatewayName` field. In that case, they describe one shared gateway. The request handling infrastructure may still differ depending on settings. You can think of `gatewayName` as an analog of `ingressClass` for [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) objects. The resulting configuration comes from the instance with the earliest `creationTimestamp` (that is, the one created first). The others get `conflictPorts: true` in status, with `conflictPortsOwner` naming the controlling instance.
 
 ### Validating configuration
 
@@ -95,6 +95,7 @@ An inlet defines how external traffic reaches the Envoy Proxy that serves the Ga
 
 - [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer) — traffic is accepted through a Service of type `LoadBalancer` (cloud providers or bare metal with MetalLB). Available for both ClusterALBInstance and ALBInstance.
 - [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) — traffic is accepted on node ports without an external load balancer. Available for ClusterALBInstance only.
+- [`ClusterIP`](/modules/alb/cr.html#albinstance-v1alpha1-spec-inlet-clusterip) — traffic is accepted through a Service of type `ClusterIP`, without an external entry point (for example, for internal traffic). Available for ALBInstance only.
 
 The inlet mapping table for migration from `ingress-nginx` is in ["Inlet configuration"](migration.html#inlet-configuration). More examples are in ["Examples for different environments"](#infrastructure-examples).
 
@@ -136,6 +137,7 @@ spec:
   gatewayName: public-gw
   inlet:
     type: LoadBalancer
+    loadBalancer: {}
 ```
 
 {% endtab %}
@@ -214,64 +216,7 @@ The following route types are used to route incoming requests:
 - TCPRoute: For routing TCP traffic. For TCP ports from [`additionalPorts`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-additionalports), attach TCPRoute directly to the Gateway listener, not to a ListenerSet.
 - UDPRoute: For routing UDP traffic. For UDP ports from [`additionalPorts`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-additionalports), attach UDPRoute directly to the Gateway listener, not to a ListenerSet.
 
-{% tabs HTTPRoute examples %}
-{% tab "HTTP" %}
-
-Example of creating a route for HTTP traffic:
-
-```yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: app-http-route
-  namespace: prod
-spec:
-  parentRefs:
-    - name: app-listeners # ListenerSet name.
-      namespace: prod
-      kind: ListenerSet
-      group: gateway.networking.k8s.io
-      sectionName: app-http
-      port: 80
-  hostnames:
-    - app.example.com
-  rules:
-    - backendRefs:
-        - name: app-svc # Reference to the internal load balancer of the application.
-          port: 8080
-```
-
-{% endtab %}
-{% tab "HTTPS" %}
-
-Example of creating a route for HTTPS traffic:
-
-```yaml
-apiVersion: gateway.networking.k8s.io/v1
-kind: HTTPRoute
-metadata:
-  name: app-https-route
-  namespace: prod
-spec:
-  parentRefs:
-    - name: app-listeners # ListenerSet name.
-      namespace: prod
-      kind: ListenerSet
-      group: gateway.networking.k8s.io
-      sectionName: app-https
-      port: 443 # HTTPS traffic always uses 443 regardless of ClusterALBInstance settings.
-  hostnames:
-    - app.example.com
-  rules:
-    - backendRefs:
-        - name: app-svc # Reference to the internal load balancer of the application.
-          port: 8080
-```
-
-{% endtab %}
-{% endtabs %}
-
-More publishing scenarios are in ["Publishing an application with ListenerSet and HTTPRoute"](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html#publishing-with-listenerset-and-httproute).
+An example of creating an HTTPRoute for HTTP and HTTPS traffic, and other publishing scenarios, are in ["Publishing an application with ListenerSet and HTTPRoute"](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html#publishing-with-listenerset-and-httproute).
 
 ## Publishing service domains {#publishing-service-domains}
 
@@ -293,6 +238,7 @@ spec:
   defaultDeckhouseGateway: true
   inlet:
     type: LoadBalancer
+    loadBalancer: {}
 ```
 
 After applying the changes, check the ClusterALBInstance status:
@@ -494,7 +440,7 @@ spec:
         protocol: TCP
 ```
 
-The controller adds a corresponding TCP/UDP traffic handler to the managed Gateway object with a section name ([`sectionName`](https://gateway-api.sigs.k8s.io/reference/spec/)) like `tcp-port-9000`. To attach a TCPRoute to it, specify the Gateway name and the matching `sectionName` in the route:
+The controller adds a corresponding TCP/UDP traffic handler to the managed Gateway object with a section name ([`sectionName`](https://gateway-api.sigs.k8s.io/references/spec/)) like `tcp-port-9000`. To attach a TCPRoute to it, specify the Gateway name and the matching `sectionName` in the route:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -515,7 +461,7 @@ spec:
 ```
 
 {% alert level="info" %}
-If a TCPRoute or UDPRoute object is created in a namespace different from the Gateway object namespace, create a [ReferenceGrant](https://gateway-api.sigs.k8s.io/api-types/referencegrant/) object in the Gateway's namespace that allows references from the route's namespace.
+If a TCPRoute or UDPRoute object is created in a namespace different from the Gateway object namespace, create a [ReferenceGrant](https://gateway-api.sigs.k8s.io/reference/api-types/referencegrant/) object in the Gateway's namespace that allows references from the route's namespace.
 {% endalert %}
 
 UDPRoute examples and application publishing steps are in ["Working with GRPCRoute, TLSRoute, TCPRoute, and UDPRoute objects"](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html#grpcroute-tlsroute-tcproute-and-udproute-objects).
@@ -672,6 +618,7 @@ spec:
   enableHTTP3: true
   inlet:
     type: LoadBalancer
+    loadBalancer: {}
 ```
 
 {% alert level="warning" %}
@@ -727,7 +674,7 @@ When configuring GeoIP for ClusterALBInstance, the secret can be placed in any n
 For ALBInstance objects, the secret must reside in the same namespace as the ALBInstance object.
 {% endalert %}
 
-After creating the secret, reference it in a ClusterALBInstance or ALBInstance object, for example:
+After creating the secret, reference it in the [`spec.geoIP.licenseKeySecretRef`](/modules/alb/cr.html#albinstance-v1alpha1-spec-geoip-licensekeysecretref) parameter of a ClusterALBInstance or ALBInstance object, for example:
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -748,7 +695,7 @@ spec:
 
 ### Downloading GeoIP Databases from a Local Mirror {#local}
 
-To use GeoIP and download databases from a local mirror, specify the mirror URL, for example:
+To use GeoIP and download databases from a local mirror, specify the mirror URL in [`spec.geoIP.maxmindMirror.url`](/modules/alb/cr.html#albinstance-v1alpha1-spec-geoip-maxmindmirror-url), for example:
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -787,7 +734,7 @@ spec:
 
 Once GeoIP is configured in the namespace where ClusterALBInstance or ALBInstance proxies reside, a caching and update server for GeoIP databases is started. Envoy Proxy pods are then restarted sequentially so they can fetch GeoIP databases from the local GeoIP server.
 
-To add GeoIP fields to HTTP request headers, specify the names of the HTTP headers that will contain the corresponding information, for example:
+To add GeoIP fields to HTTP request headers, specify the names of the HTTP headers in [`spec.geoIP.headers`](/modules/alb/cr.html#albinstance-v1alpha1-spec-geoip-headers), for example:
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -816,26 +763,21 @@ PVC settings for GeoIP components are controlled by the [`storageClass`](/module
 
 The `alb` module supports exporting OpenTelemetry traces from Envoy proxies.
 
-To enable export, set the OpenTelemetry Collector endpoint in `spec.openTelemetry.tracing`:
+To enable export, set the OpenTelemetry Collector endpoint in [`spec.openTelemetry.tracing.url`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-url) — using the `http://`, `https://`, or `grpc://` scheme, with the host, port, and, if needed, a path (for example, for OTLP/HTTP).
 
-- `service.name` and `service.namespace` — Name and namespace of the collector Service.
-- `port` — Port.
-- `protocol` — Protocol (`HTTP` or `gRPC`).
-- `path` — Path for OTLP/HTTP.
+The [`randomSamplingPercentage`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-randomsamplingpercentage) parameter sets the share of requests that Envoy Proxy randomly selects for tracing (25% by default).
 
-Alternatively, you can specify a single [`url`](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-url).
+When using TLS, explicitly set the [`sni`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls-sni) parameter if the OpenTelemetry Collector is behind a proxy or load balancer that selects upstreams based on Server Name Indication.
 
-When using TLS, explicitly set the [`sni`](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-tls-sni) parameter if the OpenTelemetry Collector is behind a proxy or load balancer that selects upstreams based on Server Name Indication.
-
-Configure TLS in [`spec.openTelemetry.tracing.tls`](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-tls).
+Configure TLS in [`spec.openTelemetry.tracing.tls`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls).
 
 ### Configuring OpenTelemetry tracing TLS
 
-If OpenTelemetry tracing must send data over TLS, create a Kubernetes Secret with the CA certificate and reference it from [`spec.openTelemetry.tracing.tls.caSecretName`](/modules/alb/cr.html#albinstance-v1alpha1-spec-opentelemetry-tracing-tls-casecretname).
+If OpenTelemetry tracing must send data over TLS, create a Kubernetes Secret with the CA certificate and reference it from [`spec.openTelemetry.tracing.tls.caSecretName`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls-casecretname).
 
 For ClusterALBInstance and the default DKP gateway, place the Secret in the `d8-alb` namespace.
 For ALBInstance, place the Secret in the same namespace as the ALBInstance object.
-The Secret must contain the `cacert` key.
+The Secret must contain the `cacert` key. Additional Subject Alternative Names for verifying the collector's certificate are set with [`subjectAltNames`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls-subjectaltnames), and [`insecureSkipVerify`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls-insecureskipverify) disables verification of the collector's certificate.
 
 ```yaml
 apiVersion: v1
@@ -856,14 +798,12 @@ metadata:
   name: proxy-gw
 spec:
   gatewayName: proxy-gw
+  inlet:
+    type: LoadBalancer
+    loadBalancer: {}
   openTelemetry:
     tracing:
-      service:
-        name: otel-collector
-        namespace: monitoring
-      port: 4318
-      protocol: HTTP
-      path: /v1/traces
+      url: https://otel-collector.monitoring.svc.cluster.local:4318/v1/traces
       tls:
         sni: otel-collector.monitoring.svc.cluster.local
         caSecretName: otel-tracing-ca

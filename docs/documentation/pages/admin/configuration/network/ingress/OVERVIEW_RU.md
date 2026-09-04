@@ -91,7 +91,7 @@ Kubernetes Gateway API и API Gateway выполняют разные функц
 | UDP | Нет | Есть (UDPRoute) |
 | TLS passthrough | Есть | Есть (TLSRoute) |
 | Proxy Protocol | Есть | Есть |
-| Способы приёма трафика | Инлеты [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer), [`HostNetwork`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-inlet) и [`HostPort`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-hostport) | Инлеты [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer) и [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) |
+| Способы приёма трафика | Инлеты [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer), [`HostPort`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-hostport) и [`HostWithFailover`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-inlet) | Инлеты [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer) и [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) |
 | Автоматический выпуск TLS-сертификатов (`cert-manager`) | Есть | Есть |
 | Настройка политик HTTPS (версии TLS, шифры, HSTS) | Есть | По умолчанию TLSv1.2/1.3; HSTS — через аннотацию заголовков ответа |
 | WAF | ModSecurity на уровне контроллера или Ingress-ресурса | ModSecurity/Coraza на уровне маршрута, набор правил OWASP CRS |

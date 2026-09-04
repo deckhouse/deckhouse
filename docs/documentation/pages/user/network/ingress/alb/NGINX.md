@@ -96,7 +96,7 @@ d8 k -n <NAMESPACE> describe ingress <INGRESS_NAME>
 
 Confirm that the Ingress status includes an address and that DNS for `host` points to the controller entry point provided by the administrator.
 
-Smoke test from a workstation (replace with the entry point address):
+Check application reachability, substituting the entry-point address (a successful response is `200` or another status code expected from the application):
 
 ```shell
 curl -vk \
@@ -104,7 +104,7 @@ curl -vk \
   https://app.example.com/
 ```
 
-## gRPC load balancing
+### gRPC load balancing
 
 This section applies to gRPC publishing through the Ingress NGINX Controller (`ingress-nginx`). For Gateway API, use [GRPCRoute](gateway-api.html#grpcroute-tlsroute-tcproute-and-udproute-objects).
 

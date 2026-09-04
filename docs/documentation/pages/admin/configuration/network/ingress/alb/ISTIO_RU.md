@@ -19,7 +19,7 @@ ALB средствами Istio реализуется через [Istio Ingress 
 
 Используйте этот вариант, если требуется управление трафиком в service mesh, например, canary-маршрутизация или mTLS. Настройка и возможности описаны в [«Документация модуля istio»](/modules/istio/).
 
-Создание IngressIstioController и подготовка инфраструктуры — задача администратора кластера. Публикация приложения ресурсами Gateway и VirtualService, в том числе [canary-развёртывание](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#canary-развёртывание-через-virtualservice), описана в разделе [«Публикация приложений средствами Istio»](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#публикация-приложений-с-использованием-ресурса-istio-ingress-gateway).
+Создание [IngressIstioController](/modules/istio/cr.html) и подготовка инфраструктуры — задача администратора кластера. Публикация приложения ресурсами Gateway и VirtualService, в том числе [canary-развёртывание](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#canary-развёртывание-через-virtualservice), описана в разделе [«Публикация приложений средствами Istio»](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#публикация-приложений-с-использованием-ресурса-istio-ingress-gateway).
 
 ## Ingress для публикации приложений
 
@@ -27,7 +27,7 @@ ALB средствами Istio реализуется через [Istio Ingress 
 
 Для публикации приложения средствами Istio Ingress Gateway выполните следующие действия:
 
-1. Создайте ресурс IngressIstioController.
+1. Создайте ресурс [IngressIstioController](/modules/istio/cr.html).
 
    В примере ниже создаётся контроллер с инлетом `HostPort` на frontend-узлах:
 

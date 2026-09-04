@@ -29,7 +29,7 @@ relatedLinks:
 
 Создание управляемого Gateway (ClusterALBInstance или ALBInstance, инлеты, включение модуля) — задача администратора. Настройка инфраструктуры описана в разделе [«Включение модуля и создание Gateway»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#создание-управляемого-объекта-gateway).
 
-Этот сценарий предполагает, что объект ClusterALBInstance или ALBInstance уже создан и перешёл в состояние `Ready`. Запросите у администратора имя и неймспейс управляемого Gateway или получите имя Gateway из `status.gateway` инстанса:
+Этот сценарий предполагает, что объект ClusterALBInstance или ALBInstance уже создан и перешёл в состояние `Ready`. Запросите у администратора имя и неймспейс управляемого Gateway или получите имя Gateway из поля [`status.gateway`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-status) инстанса:
 
 ```shell
 d8 k get clusteralbinstance <CLUSTER_ALB_INSTANCE_NAME> \
@@ -40,9 +40,9 @@ d8 k -n <NAMESPACE> get albinstance <ALB_INSTANCE_NAME> \
 
 Для ClusterALBInstance управляемый Gateway обычно находится в неймспейсе `d8-alb`. Для ALBInstance — в том же неймспейсе, что и объект ALBInstance. Описание полей статуса — в [`status`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-status).
 
-Администратор неймспейса создаёт ListenerSet, привязанный к этому Gateway (`spec.parentRef`). Разработчики приложения создают объекты HTTPRoute, привязанные к ListenerSet.
+Администратор неймспейса создаёт ListenerSet, привязанный к этому Gateway ([`spec.parentRef`](https://gateway-api.sigs.k8s.io/guides/user-guides/listener-set/)). Разработчики приложения создают объекты HTTPRoute, привязанные к ListenerSet.
 
-Не привязывайте маршруты приложений к служебным слушателям Gateway `d8-http` / `d8-https`. Для публикации приложений используйте ListenerSet.
+Слушатели `d8-http` и `d8-https` предназначены для служебных задач — например, для проверки доступности шлюза или запросов HTTP-01 от `cert-manager`. Не привязывайте к ним маршруты приложений — для публикации приложений используйте ListenerSet.
 
 ### Публикация приложения с ListenerSet и HTTPRoute {#publishing-with-listenerset-and-httproute}
 
@@ -116,7 +116,6 @@ spec:
           port: 8080
 ```
 
-
 ### Проверка публикации {#checking-publication}
 
 После применения ListenerSet и HTTPRoute проверьте статус объектов:
@@ -134,7 +133,7 @@ d8 k -n <NAMESPACE> describe httproute <HTTPROUTE_NAME>
 - У HTTPRoute в `parentRefs` указан нужный ListenerSet и условия `Accepted` выполнены.
 - Адрес точки входа и DNS для hostname согласованы с администратором (для инлета `LoadBalancer` адрес обычно берётся из Service в неймспейсе `d8-alb`).
 
-Проверьте доступность приложения с клиента, подставив адрес точки входа и hostname:
+Проверьте доступность приложения с клиента, подставив адрес точки входа и hostname (успешный ответ — код `200` или другой ожидаемый код приложения):
 
 ```shell
 curl -vk \
@@ -142,9 +141,13 @@ curl -vk \
   https://app.example.com/
 ```
 
-Если маршрут не принимается, проверьте имя Gateway из `status` инстанса, неймспейс ListenerSet, порт и `sectionName` в `parentRefs`, а также конфликты hostname/порта с другими ListenerSet.
+Если маршрут не принимается, проверьте имя Gateway из `status` инстанса, неймспейс ListenerSet, порт и `sectionName` в `parentRefs`. Конфликты hostname и порта с другими объектами ListenerSet видны в выводе команды `describe listenerset` из предыдущего шага — в статусе конфликтующего слушателя появляется условие с описанием причины.
 
 ### Работа с объектами GRPCRoute, TLSRoute, TCPRoute и UDPRoute {#grpcroute-tlsroute-tcproute-and-udproute-objects}
+
+Помимо HTTPRoute, для публикации приложений можно использовать GRPCRoute (gRPC-трафик), TLSRoute (сквозная передача TLS) и TCPRoute/UDPRoute (произвольный TCP и UDP-трафик).
+
+#### GRPCRoute для gRPC-трафика
 
 Объект GRPCRoute предназначен для маршрутизации gRPC-трафика. Для него создаётся объект ListenerSet со слушателем HTTPS, а затем добавляется объект GRPCRoute:
 
@@ -190,9 +193,11 @@ spec:
           port: 9090
 ```
 
+#### TLS passthrough с TLSRoute
+
 Для TLS passthrough, когда расшифровка трафика должна выполняться на стороне приложения, можно использовать либо слушателя TLS, либо слушателя HTTPS.
 
-Дополнительные порты задаются в `spec.inlet.additionalPorts` объекта, который владеет шлюзом:
+Дополнительные порты задаются в [`spec.inlet.additionalPorts`](/modules/alb/cr.html#albinstance-v1alpha1-spec-inlet-additionalports) объекта, который владеет шлюзом:
 
 - для общекластерного Gateway — в ClusterALBInstance (это делает администратор кластера);
 - для шлюза в неймспейсе — в ALBInstance (администратор неймспейса или вы, если есть права на объект).
@@ -307,6 +312,8 @@ spec:
 {% endtab %}
 {% endtabs %}
 
+#### TLS-терминация на шлюзе с TCPRoute
+
 Если TLS нужно терминировать на шлюзе, а затем передать трафик дальше как TCP-поток к бэкенду (например, когда приложение принимает уже расшифрованный TCP, а не HTTPS), создайте объект ListenerSet со слушателем TLS и режимом `Terminate`, после чего подключите объект TCPRoute:
 
 ```yaml
@@ -325,7 +332,7 @@ spec:
       protocol: TLS
       hostname: term.example.com
       tls:
-        mode: Terminate     # Режим TLS - терминация.
+        mode: Terminate     # Режим TLS — терминация.
         certificateRefs:
           - name: term-tls  # Наименование секрета содержащего необходимый TLS-сертификат.
             namespace: prod
@@ -348,6 +355,8 @@ spec:
         - name: tls-svc # Наименование сервиса приложения.
           port: 8080
 ```
+
+#### Дополнительные TCP- и UDP-порты
 
 Для портов TCP и UDP из [`additionalPorts`](/modules/alb/cr.html#albinstance-v1alpha1-spec-inlet-additionalports) маршрут привязывается напрямую к слушателю управляемого Gateway, без отдельного ListenerSet. Иначе контроллер отклонит конфигурацию из-за пересечения обработчиков.
 
@@ -445,14 +454,14 @@ spec:
 Если приложение нужно опубликовать через другой объект Gateway, выполните следующие шаги:
 
 1. Получите у администратора кластера новый управляемый Gateway (новый ClusterALBInstance или ALBInstance), чтобы контроллер создал новый объект Gateway. Создание управляемых Gateway описано в разделе [«Включение модуля и создание Gateway»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#создание-управляемого-объекта-gateway).
-1. Создайте объект ListenerSet с теми же именами хостов, портами и TLS-настройками. В `spec.parentRef` укажите новый объект Gateway.
+1. Создайте объект ListenerSet с теми же именами хостов, портами и TLS-настройками. В [`spec.parentRef`](https://gateway-api.sigs.k8s.io/guides/user-guides/listener-set/) укажите новый объект Gateway.
 1. В существующий объект HTTPRoute, в `parentRefs` добавьте ещё один объект, который указывает на новый объект ListenerSet.
 1. Проверьте доступность приложения через новый шлюз.
 1. После проверки удалите из `parentRefs` объекта HTTPRoute ссылку на неактуальные ListenerSet.
 
 ### Привязка маршрута в одном неймспейсе к объекту ListenerSet в другом неймспейсе
 
-Если объект HTTPRoute должен подключаться к ListenerSet из другого неймспейса, в неймспейсе целевого ListenerSet добавьте ReferenceGrant.
+Gateway API по умолчанию запрещает маршрутам ссылаться на объекты в чужих неймспейсах — это нужно разрешить явно. Если объект HTTPRoute должен подключаться к ListenerSet из другого неймспейса, в неймспейсе целевого ListenerSet добавьте ReferenceGrant.
 
 В примере ниже — общий ListenerSet в `shared-gw`, прикладной HTTPRoute в `prod` и ReferenceGrant в `shared-gw`, разрешающий такую привязку:
 
@@ -581,12 +590,7 @@ spec:
         name: app-backend-ca
 ```
 
-### GeoIP и OpenTelemetry
-
-Настройка GeoIP и OpenTelemetry выполняется на ClusterALBInstance или ALBInstance и относится к задачам администратора. Инструкции:
-
-- [«Использование GeoIP и GeoLite2»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#geoip);
-- [«Настройка трассировки OpenTelemetry»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#tracing).
+GeoIP и трассировку OpenTelemetry настраивает администратор на ClusterALBInstance или ALBInstance, по инструкциям [«Использование GeoIP и GeoLite2»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#geoip) и [«Настройка трассировки OpenTelemetry»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#tracing).
 
 ### Поддерживаемые аннотации HTTPRoute {#поддерживаемые-аннотации-httproute}
 
@@ -598,20 +602,20 @@ spec:
 | `alb.network.deckhouse.io/whitelist-source-range` | Ожидает список подсетей в формате CIDR через запятую: фильтр по IP на уровне маршрута; переопределяет глобальный whitelist (например, `10.1.1.10/32, 10.2.2.2/32`) |
 | `alb.network.deckhouse.io/response-headers-to-add` | JSON-объект дополнительных заголовков ответа (например, `{"Strict-Transport-Security": "max-age=31536000; includeSubDomains"}`) |
 | `alb.network.deckhouse.io/session-affinity` | JSON для закрепления сессии (session affinity) с режимом cookie (`mode`, `path`, `cookieName`, `ttl` и др.); не все поля обязательны (например, `{"mode": "cookie", "path": "/path", "cookieName": "mycookie", "ttl": 0}`) |
-| `alb.network.deckhouse.io/hash-key` | Например, `source-ip`: консистентный хеш для бэкендов Service у объекта HTTPRoute |
+| `alb.network.deckhouse.io/hash-key` | Консистентный хеш для бэкендов Service у объекта HTTPRoute (например, `source-ip`) |
 | `alb.network.deckhouse.io/service-upstream` | `"true"`: трафик к upstream идёт через соответствующий сервис, а не напрямую к подам |
 | `alb.network.deckhouse.io/basic-auth-secret` | `namespace/secret` с данными htpasswd для HTTP Basic Auth на этом маршруте |
-| `alb.network.deckhouse.io/satisfy` | `all` или `any`: определяет необходимость удовлетворения обеих проверок (whitelist и basic-auth) или какой-либо одной (по умолчанию `all`) |
+| `alb.network.deckhouse.io/satisfy` | `all` или `any`: определяет, нужно ли пройти обе проверки (whitelist и basic-auth) или достаточно одной (по умолчанию `all`) |
 | `alb.network.deckhouse.io/auth-url` | Определяет URL внешнего сервиса аутентификации |
 | `alb.network.deckhouse.io/auth-signin` | Определяет URL редиректа для авторизации в случае получения `401` от внешней аутентификации |
 | `alb.network.deckhouse.io/auth-response-headers` | Список через запятую: дополнительные заголовки из ответа auth для передачи в upstream (поверх стандартного allowlist) |
 | `alb.network.deckhouse.io/mod-security` | JSON-конфигурация для WAF ModSecurity/Coraza на уровне маршрута |
-| `alb.network.deckhouse.io/rewrite-target` | Позволяет переопределять пути для правил с типом `RegularExpression` используя regex capture groups (например, `/my-path/\1`) |
-| `alb.network.deckhouse.io/buffer-max-request-bytes` | Определяет размер буфера, который допускается использовать в случае буферизации запросов; значение указывается в байтах (целое число). По умолчанию Envoy Proxy не буферизует запросы |
+| `alb.network.deckhouse.io/rewrite-target` | Позволяет переопределять URL-путь для правил с типом `RegularExpression` с использованием совпавших частей регулярного выражения (например, `/my-path/\1`) |
+| `alb.network.deckhouse.io/buffer-max-request-bytes` | Максимальный размер буфера для буферизации запроса, в байтах (целое число). По умолчанию Envoy Proxy не буферизует запросы |
 | `alb.network.deckhouse.io/limit-rps` | Лимит RPS на маршрут |
 | `alb.network.deckhouse.io/backend-tls-settings` | Например, `{"mode": "SIMPLE", "insecureSkipVerify": true, "clientCertificate": "", "privateKey": "", "caCertificates": "", "sni": "example.com", "secret": "<NAMESPACE>/<SECRET_NAME>"}`; позволяет явно указать параметры TLS подключения к upstream. `<NAMESPACE>` — неймспейс секрета; `<SECRET_NAME>` — имя секрета |
-| `alb.network.deckhouse.io/idle-timeout` | Устанавливает per-route Envoy `idle_timeout`, в секундах. Схоже с `ingress-nginx` `proxy-read-timeout`/`proxy-send-timeout`; это таймаут неактивности, а не таймаут общей длительности запроса |
-| `alb.network.deckhouse.io/proxy-buffer-size` | Задаёт максимальный размер заголовков ответа при настройке на upstream-кластере; при превышении этого значения Envoy возвращает `503`. Аналогично `nginx.ingress.kubernetes.io/proxy-buffer-size` |
+| `alb.network.deckhouse.io/idle-timeout` | Устанавливает per-route Envoy `idle_timeout`, в секундах. Аналогично таймаутам `proxy-read-timeout`/`proxy-send-timeout` в `ingress-nginx`: это таймаут неактивности, а не таймаут общей длительности запроса |
+| `alb.network.deckhouse.io/proxy-buffer-size` | Задаёт максимальный размер заголовков ответа в настройках upstream-кластера; при превышении этого значения Envoy возвращает `503`. Аналогично `nginx.ingress.kubernetes.io/proxy-buffer-size` |
 
 ### Публикация приложения при включённом Istio-сайдкаре {#publishing-with-istio-sidecar}
 

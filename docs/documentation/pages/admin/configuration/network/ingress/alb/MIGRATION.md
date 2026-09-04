@@ -14,7 +14,6 @@ relatedLinks:
     url: /modules/alb/
 ---
 
-
 This guide describes migration from the `ingress-nginx` module to the `alb` module. Within this migration, application publishing transitions from the Ingress API to the Gateway API.
 
 The guide covers model differences, preparing `alb` module infrastructure with ClusterALBInstance or ALBInstance and a managed Gateway, migrating applications to the Gateway API, migrating Deckhouse Kubernetes Platform (DKP) system interfaces, switching traffic to the `alb` module, and rolling back if needed.
@@ -33,7 +32,7 @@ Main reasons to move from the Ingress API to the Gateway API:
 
 - Active maintenance of the upstream Ingress NGINX project used by DKP has ended. Further upstream development of features, fixes, and integrations is no longer expected. For new application publishing scenarios, use the Gateway API.
 - Unlike the Ingress API, the Gateway API describes routes with protocol-specific resources, configures traffic entry points explicitly, controls route attachment, and manages cross-namespace access through dedicated resources. Complex traffic configurations can be defined with API resources instead of relying mainly on controller-specific annotations.
-- The Gateway API separates responsibilities by role. Cluster and network administrators manage traffic infrastructure and Gateway objects through [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance_v1) or [ALBInstance](/modules/alb/cr.html#albinstance-v1alpha1-spec). Namespace administrators configure traffic reception through ListenerSet objects (hostname, TLS, ports). Application developers define routing with HTTPRoute and other route resources. This separation supports delegated configuration, validation, and gradual migration.
+- The Gateway API separates responsibilities by role. Cluster and network administrators manage traffic infrastructure and Gateway objects through [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance) or [ALBInstance](/modules/alb/cr.html#albinstance-v1alpha1-spec). Namespace administrators configure traffic reception through ListenerSet objects (hostname, TLS, ports). Application developers define routing with HTTPRoute and other route resources. This separation supports delegated configuration, validation, and gradual migration.
 
 ## Model comparison {#model-comparison}
 
@@ -99,9 +98,9 @@ On this step, choose the `alb` module instance type (ClusterALBInstance or ALBIn
 
 When choosing the instance type, keep the following in mind:
 
-- Use [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance_v1) for a shared or platform-level Gateway, for publishing DKP system interfaces, or when the `HostPort` inlet is required.
+- Use [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance) for a shared or platform-level Gateway, for publishing DKP system interfaces, or when the `HostPort` inlet is required.
 - To publish DKP system interfaces, follow [Publishing service domains](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#publishing-service-domains).
-- Use [ALBInstance](/modules/alb/cr.html#albinstance-v1alpha1-spec) for a Gateway dedicated to an application or team and managed within its namespace. ALBInstance supports the `LoadBalancer` inlet only.
+- Use [ALBInstance](/modules/alb/cr.html#albinstance-v1alpha1-spec) for a Gateway dedicated to an application or team and managed within its namespace. ALBInstance supports the `LoadBalancer` and `ClusterIP` inlets; for migration from `ingress-nginx`, `LoadBalancer` is the relevant one.
 - A detailed comparison is in [ClusterALBInstance and ALBInstance](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#clusteralbinstance-and-albinstance).
 
 ### Inlet configuration {#inlet-configuration}
@@ -109,8 +108,8 @@ When choosing the instance type, keep the following in mind:
 In IngressNginxController, the inlet type combines the method of accepting traffic with optional behaviors such as Proxy Protocol and SSL passthrough. The `alb` module configures these concerns separately:
 
 - ClusterALBInstance supports the `LoadBalancer` and `HostPort` inlet types.
-- ALBInstance supports the `LoadBalancer` inlet type.
-- Proxy Protocol is enabled by the `spec.useProxyProtocol` parameter. It can be enabled or disabled on an existing instance without restarting the Envoy Proxy Pod objects or recreating the instance.
+- ALBInstance supports the `LoadBalancer` and `ClusterIP` inlet types.
+- Proxy Protocol is enabled by the [`spec.useProxyProtocol`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-useproxyprotocol) parameter. It can be enabled or disabled on an existing instance without restarting the Envoy Proxy Pod objects or recreating the instance.
 - TLS passthrough is configured with a TLS listener and a TLSRoute, rather than with a dedicated inlet type.
 
 Use the following mapping when selecting an inlet for the `alb` module:
@@ -118,16 +117,15 @@ Use the following mapping when selecting an inlet for the `alb` module:
 | IngressNginxController inlet | alb module configuration | Migration notes |
 | --- | --- | --- |
 | `LoadBalancer` | ClusterALBInstance or ALBInstance with `spec.inlet.type: LoadBalancer` | The controller provisions a Service of type `LoadBalancer` |
-| `LoadBalancerWithProxyProtocol` | `LoadBalancer` inlet with `spec.useProxyProtocol: true` | Configure the external load balancer to send Proxy Protocol. Proxy Protocol and HTTP/3 cannot be enabled simultaneously |
+| `LoadBalancerWithProxyProtocol` | `LoadBalancer` inlet with `spec.useProxyProtocol: true` | Configure the external load balancer to send Proxy Protocol. Proxy Protocol and HTTP/3 cannot be enabled simultaneously: the `alb` module controller rejects such a configuration as conflicting |
 | `LoadBalancerWithSSLPassthrough` | `LoadBalancer` inlet with a TLS listener and TLSRoute | TLS passthrough is part of the Gateway API routing configuration and is not an inlet variant |
 | `HostPort` | ClusterALBInstance with `spec.inlet.type: HostPort` | `HostPort` is not supported by ALBInstance |
 | `HostPortWithProxyProtocol` | ClusterALBInstance with the `HostPort` inlet and `spec.useProxyProtocol: true` | Proxy Protocol and HTTP/3 cannot be enabled simultaneously |
 | `HostPortWithSSLPassthrough` | ClusterALBInstance with the `HostPort` inlet, a TLS listener, and TLSRoute | TLS passthrough is configured independently of the inlet |
-| `HostNetwork` | No direct equivalent | Use a ClusterALBInstance with the `HostPort` inlet on a separate node set or with a different set of host ports. Sharing the same host ports on the same nodes with `ingress-nginx` is not allowed |
 | `HostWithFailover` | No direct equivalent | Use a ClusterALBInstance with the `LoadBalancer` inlet backed by MetalLB. Follow ["Example for bare metal with the MetalLB load balancer"](/modules/alb/examples.html#bare-metal-metallb) and validate load-balancer failover before switching traffic |
 
 {% alert level="warning" %}
-During migration, the `ingress-nginx` module with a `HostNetwork` or `HostPort` inlet and the `alb` module with a `HostPort` inlet cannot use the same host ports on the same nodes. Select separate node sets or a different set of host ports for one of the controllers.
+During migration, the `ingress-nginx` module with a `HostPort` or `HostWithFailover` inlet and the `alb` module with a `HostPort` inlet cannot use the same host ports on the same nodes. Select separate node sets or a different set of host ports for one of the controllers.
 {% endalert %}
 
 Map related inlet parameters as follows:
@@ -145,14 +143,14 @@ Map related inlet parameters as follows:
 When migrating these parameters, consider the following:
 
 - Copy only service annotations supported by the target load balancer implementation.
-- Set `spec.inlet.loadBalancer.loadBalancerClass` at creation — the parameter is immutable afterward.
+- Set [`spec.inlet.loadBalancer.loadBalancerClass`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer-loadbalancerclass) at creation — the parameter is immutable afterward.
 - Keep the default HTTP and HTTPS ports as `80` and `443`, or set a port to `0` in the `alb` module to disable the corresponding default listener.
 - Configure HostPort parameters for ClusterALBInstance only. Specify at least one port.
-- Preserve the required source CIDR restrictions in `spec.acceptRequestsFrom`.
+- Preserve the required source CIDR restrictions in [`spec.acceptRequestsFrom`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-acceptrequestsfrom).
 - Configure trusted proxy CIDRs explicitly. Do not trust client-IP headers from arbitrary sources.
 - Verify `loadBalancerSourceRanges` behavior with the target load balancer implementation. The value is passed to the `LoadBalancer` Service. Cloud providers may not support or may ignore this parameter.
 
-The inlet type of ClusterALBInstance is immutable, and ALBInstance supports only `LoadBalancer`. To change the inlet, create a new instance with the same `gatewayName`, validate traffic, switch to it, and delete the old instance.
+The inlet type is immutable for both ClusterALBInstance and ALBInstance. To change the inlet, create a new instance with the same `gatewayName`, validate traffic, switch to it, and delete the old instance.
 
 ### TLS and certificates
 
@@ -294,7 +292,7 @@ On this step:
 
 - Test the `alb` module without changing DNS with `migrationGateway` when you need validation without a DNS change (`ingress-nginx` version `1.1.0` and later).
 - Enable `http01CertificateSolverBridging` when Gateway API path certificates use HTTP-01 while public DNS still points to Ingress.
-- Choose the switching method for your current entry point in the subsections below: automatically provisioned load balancer, manually managed load balancer, or HostNetwork/HostPort.
+- Choose the switching method for your current entry point in the subsections below: automatically provisioned load balancer, manually managed load balancer, or HostPort/HostWithFailover.
 - Before the final production cutover, complete ["Validating the cutover"](#validating-the-cutover).
 
 ### Testing the alb module via the Ingress NGINX Controller
@@ -317,6 +315,18 @@ Locate the `alb` module configuration Service:
 d8 k get service --all-namespaces \
   --selector alb.deckhouse.io/configuration-service
 ```
+
+Example output for a ClusterALBInstance named `main` — a `ClusterIP` Service in the `d8-alb` namespace:
+
+<!-- markdownlint-disable MD031 -->
+```console
+NAMESPACE   NAME   TYPE        CLUSTER-IP     EXTERNAL-IP   PORT(S)         AGE
+d8-alb      main   ClusterIP   10.222.1.10    <none>        80/TCP,443/TCP  10d
+```
+{: .nowrap-default }
+<!-- markdownlint-enable MD031 -->
+
+For an ALBInstance, the Service is in the ALBInstance's namespace, named `d8-alb-<ALB_INSTANCE_NAME>`.
 
 Configure the source IngressNginxController, using narrow tester CIDRs initially:
 
@@ -351,7 +361,13 @@ For matching clients, `migrationGateway` forwards requests to the target Service
 
 The setting applies to every Ingress served by the controller. Before expanding `sourceCIDRs`, verify every hostname reachable from those addresses and confirm that authentication, redirects, headers, GeoIP behavior, WebSocket connections, and other required policies exist on the `alb` module path.
 
-The `migrationGateway` parameter is not supported with `HostPortWithSSLPassthrough`, `LoadBalancerWithSSLPassthrough`, `HostWithFailover`, or `enableIstioSidecar`. The target Service must accept ordinary HTTP and HTTPS without Proxy Protocol — `migrationGateway` does not send it.
+The `migrationGateway` parameter works by forwarding an already-accepted, and if needed re-encrypted, HTTP or HTTPS request to the target Service, so it is not supported where nginx does not perform this processing:
+
+- with the `HostPortWithSSLPassthrough` and `LoadBalancerWithSSLPassthrough` inlets — with TLS passthrough, nginx does not decrypt traffic and cannot determine which request to forward;
+- with the `HostWithFailover` inlet — this inlet always uses Proxy Protocol, and `migrationGateway` does not support sending Proxy Protocol to the target Service;
+- with `enableIstioSidecar` — traffic is handled by the Istio sidecar rather than directly by nginx.
+
+The target Service must accept ordinary HTTP and HTTPS without Proxy Protocol — `migrationGateway` does not send it.
 
 If the `alb` module path needs Proxy Protocol in production, disable it for `migrationGateway` testing (`spec.useProxyProtocol: false`). Re-enable it before shifting production traffic and validate the entry point through the load balancer that sends Proxy Protocol.
 
@@ -397,7 +413,7 @@ When Issuer or ClusterIssuer resources with HTTP-01 solvers are used, do the fol
 
 ### Choosing the switching method
 
-Choose the switching method based on how external traffic is accepted today: through an automatically provisioned load balancer, a manually managed load balancer, or direct HostNetwork/HostPort access.
+Choose the switching method based on how external traffic is accepted today: through an automatically provisioned load balancer, a manually managed load balancer, or direct HostPort/HostWithFailover access.
 
 {% tabs Switching method %}
 {% tab "DNS / provisioned LB" %}
@@ -439,11 +455,11 @@ When configuring backends, keep the following in mind:
 - If both controllers run on the same nodes, use different host ports. Alternatively, select disjoint node sets.
 
 {% endtab %}
-{% tab "HostNetwork or HostPort" %}
+{% tab "HostPort or HostWithFailover" %}
 
-#### Direct HostNetwork or HostPort access
+#### Direct HostPort or HostWithFailover access
 
-To switch traffic with direct HostNetwork or HostPort access, do the following:
+To switch traffic with direct HostPort or HostWithFailover access, do the following:
 
 1. Deploy the `alb` module on a separate node set or use non-conflicting host ports.
 1. For a node-by-node switch, add `alb` module node addresses to the DNS pool and remove Ingress NGINX Controller node addresses after each node passes validation.
@@ -464,8 +480,8 @@ Traffic processing can differ between the Ingress NGINX Controller and the `alb`
 
 Before shifting production traffic:
 
-- Confirm that the step 3 resources are applied and that the target ALBInstance or ClusterALBInstance reports `ready` and `synced`. Inspect its conflict fields.
-- Verify the Gateway, ListenerSet, and route status conditions, including accepted references and programmed listeners.
+- Confirm that the step 3 resources are applied and that the target ALBInstance or ClusterALBInstance reports `ready: true` and `synced: true`. Verify that `conflictPorts`, `conflictBackendTLS`, and `conflictFrontendTLS` are all `false`; if any is `true`, the matching `<CONFLICT>Owner` field names the controlling instance.
+- Check the `Accepted` and `Programmed` conditions on the Gateway and ListenerSet status, and `Accepted` on the route status (`d8 k -n <NAMESPACE> get gateway,listenerset,httproute <NAME> -o yaml` — the `status.conditions` section). `True` means the controller accepted the resource and applied its configuration.
 - Test every hostname and protocol through the Gateway API entry-point address or with `migrationGateway`, including TLS certificates, redirects, authentication, long-lived connections, and application-specific policies.
 - Verify preservation of the client address, Proxy Protocol or forwarded-header processing, source restrictions, and load balancer health checks.
 - If HTTP-01 bridging is still required, keep `http01CertificateSolverBridging` enabled until DNS or the load balancer is switched.

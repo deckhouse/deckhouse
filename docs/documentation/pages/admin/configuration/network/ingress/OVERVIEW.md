@@ -92,7 +92,7 @@ Service domains (web interfaces of DKP components and modules via `publicDomainT
 | UDP | No | Yes (UDPRoute) |
 | TLS passthrough | Yes | Yes (TLSRoute) |
 | Proxy Protocol | Yes | Yes |
-| Traffic ingress methods | [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer), [`HostNetwork`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-inlet), and [`HostPort`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-hostport) inlets | [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer) and [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) inlets |
+| Traffic ingress methods | [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer), [`HostPort`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-hostport), and [`HostWithFailover`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-inlet) inlets | [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer) and [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) inlets |
 | Automatic TLS certificate issuance (cert-manager) | Yes | Yes |
 | HTTPS policy tuning (TLS versions, ciphers, HSTS) | Yes | TLSv1.2/1.3 by default; HSTS via a response-header annotation |
 | WAF | ModSecurity at the controller or Ingress level | ModSecurity/Coraza at the route level, OWASP CRS preset |

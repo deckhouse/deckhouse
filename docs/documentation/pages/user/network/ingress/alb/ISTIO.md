@@ -14,7 +14,7 @@ relatedLinks:
 
 ## Publishing applications using Istio
 
-Application publishing with Istio is configured in two layers. The cluster administrator deploys the IngressIstioController (and related infrastructure) as described in ["Istio Ingress Gateway"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/istio.html#istio-ingress-gateway). Application developers create Gateway and VirtualService resources as shown below.
+Application publishing with Istio is configured in two layers. The cluster administrator deploys the [IngressIstioController](/modules/istio/cr.html) (and related infrastructure) as described in ["Istio Ingress Gateway"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/istio.html#istio-ingress-gateway). Application developers create Gateway and VirtualService resources as shown below.
 
 When deploying an application using Istio, you can choose one of the following options:
 
@@ -82,7 +82,7 @@ spec:
 
 ### Publishing applications using Istio Ingress Gateway resource {#publishing-applications-using-istio-ingress-gateway-resource}
 
-To publish an application using the Istio Ingress Gateway, the DKP administrator must create an IngressIstioController resource.
+To publish an application using the Istio Ingress Gateway, the DKP administrator must create an [IngressIstioController](/modules/istio/cr.html) resource.
 
 To publish an application using the Istio Ingress Gateway resource, create a Gateway. In `spec.selector`, specify the label that references the ingressGatewayClass and the secret name provided by the cluster administrator:
 
@@ -183,4 +183,11 @@ spec:
 
 Pods of each version must have the `version: v1` and `version: v2` labels that match the DestinationRule subsets. Before changing weights, confirm that both versions are selected by the `app-svc` Service.
 
-After you apply the manifests, send a series of requests to `app.example.com` and confirm that responses roughly match the configured weights (about 9 to 1). Adjust the weights if needed and recheck.
+After you apply the manifests, send a series of requests to `app.example.com` and confirm that responses roughly match the configured weights (about 9 to 1). Identify which version responded by whatever the application itself uses to distinguish `stable` from `canary` (for example, a value in the response body or a dedicated HTTP header), for example:
+
+```shell
+for i in $(seq 1 20); do curl -s https://app.example.com/ | grep version; done \
+  | sort | uniq -c
+```
+
+Adjust the weights if needed and recheck.
