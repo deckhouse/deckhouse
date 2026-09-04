@@ -44,9 +44,10 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "web_resources" . | nindent 12 }}
-  {{- end }}
+          limits:
+            cpu: 200m
+            memory: 100Mi
         volumeMounts:
           - name: config
             mountPath: /app/config
@@ -79,6 +80,12 @@ spec:
             value: "1"
           - name: HUGO_NUMWORKERMULTIPLIER
             value: "2"
+          - name: HUGO_D8_EDITION
+            value: {{ $.Values.global.deckhouseEdition | quote }}
+          {{- if eq .Values.global.deckhouseEdition "CSE" }}
+          - name: HUGO_PARAMS_LINKREWRITEENABLE
+            value: "true"
+          {{- end }}
           - name: POD_IP
             valueFrom:
               fieldRef:
@@ -102,6 +109,9 @@ spec:
           - containerPort: 9090
             name: http-metrics
             protocol: TCP
+          - containerPort: 6060
+            name: pprof
+            protocol: TCP
         livenessProbe:
           httpGet:
             path: /healthz
@@ -113,9 +123,10 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "builder_resources" . | nindent 12 }}
-  {{- end }}
+          limits:
+            cpu: 200m
+            memory: 2Gi
         volumeMounts:
           - mountPath: /tmp
             name: tmp

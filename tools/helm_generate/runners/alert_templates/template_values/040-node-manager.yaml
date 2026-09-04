@@ -1,4 +1,9 @@
 global:
+  clusterConfiguration:
+    clusterType: Cloud
+    cloud:
+      provider: AWS
+      prefix: test
   modules:
     publicDomainTemplate: ""
     https:

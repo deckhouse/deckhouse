@@ -54,6 +54,7 @@
     {{- end }}
 
     {{- $_ := set $ctx "CandiVersionMap" $.CandiVersionMap }}
+    {{- $_ := set $ctx "k8sVersions" $Root.k8sVersions }}
     {{- $_ := set $ctx "ModulePath" $ImageData._0 }}
     {{- $_ := set $ctx "ModulePriority" $ImageData._1 }}
     {{- $_ := set $ctx "ModuleName" $moduleName }}

@@ -39,8 +39,8 @@ metadata:
   namespace: test
 spec:
   hard:
-    limits.memory: 15Gi
-    requests.cpu: 1
+    limits.memory: "15Gi"
+    requests.cpu: "1"
 
 ---
 apiVersion: networking.k8s.io/v1

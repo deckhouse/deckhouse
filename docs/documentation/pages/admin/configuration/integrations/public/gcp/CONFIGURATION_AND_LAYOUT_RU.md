@@ -22,6 +22,17 @@ DKP поддерживает две схемы размещения ресурс
 ![resources](../../../../images/cloud-provider-gcp/gcp-standard.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10164&t=Qb5yyWumzPiTBtfL-0 --->
 
+При создании кластера DKP создаёт в VPC кластера следующие правила файрвола:
+
+- `<CLUSTER_PREFIX>-ssh-and-ping` — разрешение входящего трафика по протоколам ICMP и TCP (порт `22`) к узлам с network tag `<CLUSTER_PREFIX>` из CIDR, указанных в [`sshAllowList`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (по умолчанию `0.0.0.0/0`);
+- `<CLUSTER_PREFIX>-intercommunication` — разрешение любого трафика между узлами с network tag `<CLUSTER_PREFIX>`, а также из подсети подов ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)).
+
+Собственные правила файрвола применяются к узлам через дополнительные network tags ([`additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags)):
+
+- для master-узлов — в параметре [`masterNodeGroup.instanceClass.additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags) ресурса [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration);
+- для статических узлов — в параметре [`nodeGroups[].instanceClass.additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-nodegroups-instanceclass-additionalnetworktags) ресурса [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration);
+- для эфемерных узлов — в параметре [`spec.additionalNetworkTags`](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass-v1-spec-additionalnetworktags) ресурса [GCPInstanceClass](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass).
+
 Пример конфигурации схемы размещения:
 
 ```yaml
@@ -92,6 +103,17 @@ provider:
 
 ![resources](../../../../images/cloud-provider-gcp/gcp-withoutnat.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10296&t=Qb5yyWumzPiTBtfL-0 --->
+
+При создании кластера DKP создаёт в VPC кластера следующие правила файрвола:
+
+- `<CLUSTER_PREFIX>-ssh-and-ping` — разрешение входящего трафика по протоколам ICMP и TCP (порт `22`) к узлам с network tag `<CLUSTER_PREFIX>` из CIDR, указанных в [`sshAllowList`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (по умолчанию `0.0.0.0/0`);
+- `<CLUSTER_PREFIX>-intercommunication` — разрешение любого трафика между узлами с network tag `<CLUSTER_PREFIX>`, а также из подсети подов ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)).
+
+Собственные правила файрвола применяются к узлам через дополнительные network tags ([`additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags)):
+
+- для master-узлов — в параметре [`masterNodeGroup.instanceClass.additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags) ресурса [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration);
+- для статических узлов — в параметре [`nodeGroups[].instanceClass.additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-nodegroups-instanceclass-additionalnetworktags) ресурса [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration);
+- для эфемерных узлов — в параметре [`spec.additionalNetworkTags`](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass-v1-spec-additionalnetworktags) ресурса [GCPInstanceClass](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass).
 
 Пример конфигурации схемы размещения:
 
@@ -247,34 +269,17 @@ spec:
     autoDelete: true
 ```
 
-### Настройка политик безопасности на узлах
-
-На виртуальных машинах кластера в GCP может возникнуть необходимость ограничить или расширить входящий и исходящий трафик по различным причинам. Некоторые из них могут включать:
-
-- Разрешение подключения к узлам кластера с виртуальных машин из другой подсети.
-- Разрешение подключения к портам статического узла для работы приложения.
-- Ограничение доступа к внешним ресурсам или другим виртуальным машинам в облаке по требованию службы безопасности.
-
-Для всего этого необходимо применять дополнительные [network tags](https://cloud.google.com/vpc/docs/add-remove-network-tags).
-
-### Установка дополнительных network tags на статических и master-узлах
-
-Данный параметр можно задать либо при создании кластера или в уже существующем кластере. В обоих случаях дополнительные network tags указываются в GCPClusterConfiguration:
-
-- для master-узлов — в секции `masterNodeGroup` в [поле `additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags);
-- для статических узлов — в секции `nodeGroups` в конфигурации, описывающей соответствующую nodeGroup, в [поле `additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-nodegroups-instanceclass-additionalnetworktags).
-
-Поле `additionalNetworkTags` содержит массив строк с именами network tags.
-
-### Установка дополнительных network tags на эфемерных узлах
-
-Необходимо указать параметр `additionalNetworkTags` для всех ресурсов [GCPInstanceClass](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) в кластере, которым нужны дополнительные network tags.
-
 ### Добавление CloudStatic узлов в кластер
 
 К виртуальным машинам, которые вы хотите добавить к кластеру в качестве узлов, добавьте `Network Tag`, аналогичный префиксу кластера.
 
-Префикс кластера можно узнать, воспользовавшись следующей командой:
+Префикс кластера можно узнать с помощью команды:
+
+```shell
+d8 k get mc global -o jsonpath='{.spec.settings.prefix}{"\n"}'
+```
+
+Если значение пустое, возьмите его из устаревшего параметра [`cloud.prefix`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-cloud-prefix) ресурса ClusterConfiguration (префикс перенесён в ModuleConfig `global`):
 
 ```shell
 d8 k -n kube-system get secret d8-cluster-configuration -o json | jq -r '.data."cluster-configuration.yaml"' \

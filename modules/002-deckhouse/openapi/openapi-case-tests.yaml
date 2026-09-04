@@ -64,6 +64,14 @@ positive:
         imagesRepo: registry.deckhouse.io/test
         username: "u"
         password: "p"
+
+  - reservedPublicHosts: {}
+  - reservedPublicHosts:
+      mode: Template
+      additionalHosts: ["admin.example.com", "billing.corp.example.com"]
+      excludedServices: ["grafana"]
+  - reservedPublicHosts:
+      mode: List
   values:
   - internal:
       currentReleaseImageName: registry.deckhouse.io/deckhouse/ce/dev@sha256:e9e41b1abc067bd59f1cdf2d7c44cb80911b733d3d711209abd291c9458e51c4
@@ -127,6 +135,32 @@ negative:
       mode: Direct
       unmanaged:
         imagesRepo: registry.deckhouse.io/test
+
+  # additionalHosts admits one spelling of a hostname, the lowercase one the policies compare
+  # against. The template lowercases the value anyway, so this is normalisation at the API boundary
+  # and not a correctness guard: what it buys is that the ModuleConfig an operator reads and the
+  # hosts key of the d8-reserved-public-hosts ConfigMap say the same thing.
+  #
+  # Nothing else is bounded on purpose. A single label with no dot is a hostname an Ingress may
+  # claim, so reserving one is meaningful; a label over 63 characters or a name over 253 is one no
+  # API server accepts on the claiming side, so an entry like that reserves nothing that can exist
+  # and costs nothing to admit -- while a maxLength here would reject a ModuleConfig that harms
+  # nobody, at upgrade time.
+  - reservedPublicHosts:
+      additionalHosts: ["Admin.Example.Com"]
+  - reservedPublicHosts:
+      additionalHosts: ["*.example.com"]
+  - reservedPublicHosts:
+      additionalHosts: ["https://admin.example.com"]
+  # excludedServices names a service, not the hostname it is published under.
+  - reservedPublicHosts:
+      excludedServices: ["grafana.example.com"]
+  # There are two reservations and no third one. A mode nobody implements would silently read as
+  # whichever branch the template falls through to.
+  - reservedPublicHosts:
+      mode: Audit
+  - reservedPublicHosts:
+      mode: template
 
   values:
   - internal:

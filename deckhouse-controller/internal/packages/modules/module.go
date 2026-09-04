@@ -37,7 +37,6 @@ import (
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
-	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/module-sdk/pkg/settingscheck"
 
@@ -232,6 +231,11 @@ func (m *Module) GetName() string {
 	return m.name
 }
 
+// GetPackage returns the module package name.
+func (m *Module) GetPackage() string {
+	return m.definition.Name
+}
+
 // GetVersion return the package version
 func (m *Module) GetVersion() *semver.Version {
 	return m.version
@@ -280,18 +284,14 @@ func (m *Module) GetHooksQueues() []string {
 	return slices.Compact(res)
 }
 
-// GetHookSnapshotsDump returns a YAML snapshot of hook controller snapshots.
-// If include is provided, only hooks matching those names are included.
-func (m *Module) GetHookSnapshotsDump(include ...string) []byte {
-	d := make(map[string]any)
-	for _, h := range m.hooks.GetHooks() {
-		if len(include) == 0 || slices.Contains(include, h.GetName()) {
-			d[h.GetName()] = h.GetHookController().SnapshotsDump()
-		}
+// GetHookSnapshotsDump returns a snapshot of hook controller snapshots.
+func (m *Module) GetHookSnapshotsDump() map[string]any {
+	snapshots := make(map[string]any)
+	for _, hook := range m.hooks.GetHooks() {
+		snapshots[hook.GetName()] = hook.GetHookController().SnapshotsDump()
 	}
 
-	marshalled, _ := yaml.Marshal(d)
-	return marshalled
+	return snapshots
 }
 
 // GetValuesChecksum returns a checksum of the current values.
@@ -389,6 +389,11 @@ func (m *Module) GetMaintenance() nelm.MaintenanceState {
 // GetConstraints returns scheduler checks, their determine if an module should be enabled/disabled
 func (m *Module) GetConstraints() schedule.Constraints {
 	return m.definition.Constraints()
+}
+
+// GetExclusiveGroup returns the module's exclusive group, if any.
+func (m *Module) GetExclusiveGroup() string {
+	return m.definition.ExclusiveGroup
 }
 
 // HooksInitialized reports whether this instance has already built its hook

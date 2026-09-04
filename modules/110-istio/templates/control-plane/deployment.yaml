@@ -58,7 +58,7 @@ spec:
         prometheus.io/port: "15014"
         prometheus.io/scrape: "true"
         sidecar.istio.io/inject: "false"
-        istio-mtls-ca-bundle-checksum: {{ $.Values.istio.internal.ca | toYaml | sha256sum }}
+        istio-mtls-ca-bundle-checksum: {{ include "istioCABundleChecksum" $ }}
     spec:
       serviceAccountName: istiod-{{ $revision }}
       {{- include "helm_lib_priority_class" (tuple $ "system-cluster-critical") | nindent 6 }}
@@ -142,10 +142,6 @@ spec:
           value: "true"
         - name: ENABLE_ENHANCED_RESOURCE_SCOPING
           value: "true"
-        - name: PILOT_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER
-          value: "false"
-        - name: PILOT_ENABLE_GATEWAY_API_GATEWAYCLASS_CONTROLLER
-          value: "false"
         {{- if $.Values.istio.dataPlane.enableHTTP10 }}
         - name: PILOT_HTTP10
           value: "1"
@@ -172,13 +168,7 @@ spec:
         {{- end }}
         resources:
         {{- include "helm_lib_resources_management_pod_resources" (list $.Values.istio.controlPlane.resourcesManagement) | nindent 10 }}
-        securityContext:
-          allowPrivilegeEscalation: false
-          readOnlyRootFilesystem: true
-          runAsNonRoot: true
-          capabilities:
-            drop:
-            - ALL
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         volumeMounts:
         - name: istio-token
           mountPath: /var/run/secrets/tokens

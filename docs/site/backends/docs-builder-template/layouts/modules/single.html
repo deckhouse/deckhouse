@@ -5,6 +5,7 @@
 {{- $channelsInfo := hugo.Data.channels.info }}
 {{- $lang := site.Language.Lang }}
 {{- $sidebarRootMenu := slice }}
+{{- $buildEdition := or (getenv "HUGO_D8_EDITION") "EE" }}
 {{- $pages := (where $.Site.RegularPages ".Section" "modules").ByWeight }}
 {{- $ctx := $ }}
 
@@ -85,7 +86,7 @@
 
       <div class="post-content">
 
-        {{- if and $currentModuleName (or (eq .File.ContentBaseName "README") (eq .File.ContentBaseName "CONFIGURATION")) }}
+        {{- if and $currentModuleName (ne $buildEdition "CSE" ) (or (eq .File.ContentBaseName "README") (eq .File.ContentBaseName "CONFIGURATION")) }}
          {{- partial "module-editions" (dict "moduleName" $currentModuleName "lang" .Language.Lang ) }}
         {{- end }}
 
@@ -126,6 +127,8 @@
       </div>
 
       {{ partial "related-links" . }}
+
+      {{- partial "module-page-navigation" . }}
 
     </div>
     {{- if ne site.Params.mode "module" }}

@@ -43,6 +43,15 @@
     "external": "true",
     "path": "/modules/ai-models/"
   },
+  "ansible": {
+    "editions": [
+      "ce",
+      "se-plus",
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/ansible/"
+  },
   "cloud-provider-vsphere": {
     "editionFullyAvailable": [
       "se-plus",
@@ -209,6 +218,15 @@
     "external": "true",
     "path": "/modules/managed-postgres/"
   },
+  "managed-starrocks": {
+    "editions": [
+      "ee",
+      "se",
+      "se-plus"
+    ],
+    "external": "true",
+    "path": "/modules/managed-starrocks/"
+  },
   "managed-memcached": {
     "editions": [
       "ee",
@@ -246,6 +264,19 @@
     ],
     "external": "true",
     "path": "/modules/monitoring-custom/"
+  },
+  "monitoring-kubernetes": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "external": "true",
+    "path": "/modules/monitoring-kubernetes/"
   },
   "monitoring-ping": {
     "editions": [
@@ -412,14 +443,6 @@
     ],
     "external": "true",
     "path": "/modules/dashboard/"
-  },
-  "delivery-kit": {
-    "editions": [
-      "cse-lite",
-      "cse-pro"
-    ],
-    "external": "true",
-    "path": ""
   },
   "log-shipper": {
     "editions": [
@@ -623,7 +646,19 @@
   },
   "sdn": {
     "editions": [
-      "ee"
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "editionsWithRestrictions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus"
     ],
     "external": "true",
     "path": "/modules/sdn/"
@@ -667,6 +702,13 @@
     ],
     "external": "true",
     "path": "/modules/sds-node-configurator/"
+  },
+  "sds-object": {
+    "editions": [
+      "ee"
+    ],
+    "external": "true",
+    "path": "/modules/sds-object/"
   },
   "sds-replicated-volume": {
     "editions": [

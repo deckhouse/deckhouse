@@ -23,6 +23,10 @@
 {{- if hasKey .nodeGroup.instanceClass "additionalTags" -}}
   {{ $_ := set $options "additionalTags" .nodeGroup.instanceClass.additionalTags -}}
 {{- end -}}
+{{- $cloudProvider := .Values.nodeManager.internal.cloudProvider -}}
+{{- if and (hasKey $cloudProvider "aws") (index $cloudProvider.aws "imdsv2") -}}
+  {{ $_ := set $options "imdsv2" true -}}
+{{- end -}}
 {{- if (index .nodeGroup "manualRolloutID") -}}
   {{ $_ := set $options "manualRolloutID" (index .nodeGroup "manualRolloutID") -}}
 {{- end -}}

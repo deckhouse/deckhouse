@@ -1,0 +1,353 @@
+/*
+Copyright 2026 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+// Package nodeconfig renders a NodeConfig object for every node of an olcedar
+// NodeGroup: the on-node agent reconciles the node towards it. This controller
+// writes that desired state from the NodeGroup plus live cluster state.
+package nodeconfig
+
+import (
+	"context"
+	"fmt"
+	"slices"
+
+	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
+	apiequality "k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
+	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
+	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
+	nodecommon "github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
+	"github.com/deckhouse/node-controller/internal/register"
+)
+
+func init() {
+	register.RegisterController(controllerName, &corev1.Node{}, &Reconciler{})
+}
+
+type Reconciler struct {
+	register.Base
+
+	sources *sourceReader
+	// derived answers which Kubernetes version this group runs — the same
+	// answer bashible gets, so both kinds of node follow one cluster decision.
+	derived *derived_status.Service
+}
+
+// MaxConcurrentReconciles is one, and this controller is only correct at one:
+// the rollout gate is a read-then-write over the whole group with nothing to
+// serialize on, so two workers would both see "none updating" and both write.
+func (r *Reconciler) MaxConcurrentReconciles() int {
+	return 1
+}
+
+// Setup wires an uncached reader: the secrets and config maps a NodeConfig is
+// rendered from live outside the manager's cache scope.
+func (r *Reconciler) Setup(_ context.Context, mgr ctrl.Manager) error {
+	r.sources = &sourceReader{Reader: mgr.GetAPIReader()}
+	r.derived = &derived_status.Service{Client: r.Client}
+	return nil
+}
+
+// ForPredicates drops Node updates that cannot change the render: it reads only
+// name, uid, all labels and creationTimestamp, so kubelet
+// heartbeats are filtered. Applies to the Node watch only; creates/deletes pass.
+func (r *Reconciler) ForPredicates() []predicate.Predicate {
+	return []predicate.Predicate{predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return nodeRenderInputsChanged(e.ObjectOld, e.ObjectNew)
+		},
+	}}
+}
+
+func (r *Reconciler) SetupWatches(w register.Watcher) {
+	// A NodeGroup change affects every node of every group, so it is funnelled
+	// into one pass instead of a request per node.
+	allMapper := handler.EnqueueRequestsFromMapFunc(func(_ context.Context, _ client.Object) []reconcile.Request {
+		return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: allRequestName}}}
+	})
+	w.Watches(&v1.NodeGroup{}, allMapper)
+	// A node reporting its applied spec frees its rollout slot. The predicate is
+	// mandatory: the agent republishes status constantly and this mapper enqueues
+	// the ALL-nodes key, so unfiltered heartbeats would re-render the whole fleet.
+	w.Watches(&internalv1alpha1.NodeConfig{}, allMapper, builder.WithPredicates(predicate.Funcs{
+		UpdateFunc: func(e event.UpdateEvent) bool {
+			return nodeConfigRolloutInputsChanged(e.ObjectOld, e.ObjectNew)
+		},
+	}))
+	// The system extension digests of the release. Without this watch a new
+	// release re-renders nothing until some unrelated input moves: nothing else
+	// enqueues a pass, and no resync period is set.
+	w.Watches(&corev1.ConfigMap{}, allMapper, builder.WithPredicates(predicate.NewPredicateFuncs(
+		func(obj client.Object) bool {
+			return obj.GetNamespace() == cloudInstanceManagerNS && obj.GetName() == imagesDigestsConfigMapName
+		},
+	)))
+}
+
+func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	logger := log.FromContext(ctx)
+
+	if req.Name == allRequestName {
+		return r.reconcileAllNodes(ctx, logger)
+	}
+	return r.reconcileNode(ctx, req.Name, logger, newPass())
+}
+
+// reconcileAllNodes re-renders every node of every immutable group. One failure
+// does not stop the others; failures are counted, not logged one by one, and
+// the first error is returned so the pass is retried with backoff.
+func (r *Reconciler) reconcileAllNodes(ctx context.Context, logger logr.Logger) (ctrl.Result, error) {
+	nodes := &corev1.NodeList{}
+	if err := r.Client.List(ctx, nodes); err != nil {
+		return ctrl.Result{}, fmt.Errorf("list nodes: %w", err)
+	}
+
+	// Unhealthy nodes first, the way bashible hands its approvals out: with one
+	// slot free, repairing what is broken beats touching what works.
+	slices.SortStableFunc(nodes.Items, func(a, b corev1.Node) int {
+		switch {
+		case nodeIsReady(&a) == nodeIsReady(&b):
+			return 0
+		case nodeIsReady(&a):
+			return 1
+		default:
+			return -1
+		}
+	})
+
+	var firstErr error
+	failed := 0
+	p := newPass()
+	for i := range nodes.Items {
+		// The listing already carries the Node, so it is rendered from that
+		// rather than fetched again once per node.
+		if _, err := r.reconcileNodeObject(ctx, &nodes.Items[i], logger, p); err != nil {
+			logger.V(1).Info("cannot render the NodeConfig of a node", "node", nodes.Items[i].Name, "error", err.Error())
+			failed++
+			if firstErr == nil {
+				firstErr = err
+			}
+		}
+	}
+	if firstErr != nil {
+		firstErr = fmt.Errorf("render the NodeConfig of %d of %d nodes: %w", failed, len(nodes.Items), firstErr)
+	}
+
+	return ctrl.Result{}, firstErr
+}
+
+// nodeIsReady reports the kubelet's own verdict, which is what "broken" means
+// here — not whether the configuration converged.
+func nodeIsReady(node *corev1.Node) bool {
+	for i := range node.Status.Conditions {
+		c := &node.Status.Conditions[i]
+		if c.Type == corev1.NodeReady {
+			return c.Status == corev1.ConditionTrue
+		}
+	}
+	return false
+}
+
+// reconcileNode brings one node's NodeConfig in line with its NodeGroup. A node
+// that is gone, ungrouped, or in a bashible-managed group has no NodeConfig of
+// ours; any leftover object is removed.
+func (r *Reconciler) reconcileNode(ctx context.Context, nodeName string, logger logr.Logger, p *pass) (ctrl.Result, error) {
+	node := &corev1.Node{}
+	if err := r.Client.Get(ctx, types.NamespacedName{Name: nodeName}, node); err != nil {
+		if apierrors.IsNotFound(err) {
+			// The NodeConfig is owned by the Node, so the API server collects
+			// it; nothing to do here.
+			return ctrl.Result{}, nil
+		}
+		return ctrl.Result{}, fmt.Errorf("get node %s: %w", nodeName, err)
+	}
+
+	return r.reconcileNodeObject(ctx, node, logger, p)
+}
+
+// reconcileNodeObject is reconcileNode for a Node the caller already holds.
+func (r *Reconciler) reconcileNodeObject(ctx context.Context, node *corev1.Node, logger logr.Logger, p *pass) (ctrl.Result, error) {
+	nodeName := node.Name
+
+	ngName := node.Labels[nodecommon.NodeGroupLabel]
+	if ngName == "" {
+		return ctrl.Result{}, r.deleteOrphaned(ctx, nodeName, logger)
+	}
+
+	ng, err := r.nodeGroup(ctx, ngName, p)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if ng == nil {
+		return ctrl.Result{}, r.deleteOrphaned(ctx, nodeName, logger)
+	}
+
+	if ng.Spec.SystemType != v1.SystemTypeImmutable {
+		return ctrl.Result{}, r.deleteOrphaned(ctx, nodeName, logger)
+	}
+
+	inputs, err := r.clusterInputs(ctx, ng, p)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
+	desired := newNodeConfig(ng, node, inputs)
+	// The disruption answer must be about the object as it now stands: a cache
+	// re-read here returned the pre-patch revision, minting an operation for a
+	// generation the node had already left behind.
+	current, err := r.apply(ctx, ng, node, desired, logger, p)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if current == nil {
+		return ctrl.Result{}, nil
+	}
+	return ctrl.Result{}, r.reconcileDisruption(ctx, ng, node, current, logger)
+}
+
+// apply creates or patches the object and returns it as it now stands — nil
+// when the node has none or another writer got there first. The status belongs
+// to the node-local agent and is never touched here.
+func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, node *corev1.Node, desired *internalv1alpha1.NodeConfig, logger logr.Logger, p *pass) (*internalv1alpha1.NodeConfig, error) {
+	existing := &internalv1alpha1.NodeConfig{}
+	err := r.Client.Get(ctx, types.NamespacedName{Name: desired.Name}, existing)
+	if apierrors.IsNotFound(err) {
+		return r.create(ctx, ng, node, desired, logger, p)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("get NodeConfig %s: %w", desired.Name, err)
+	}
+
+	reported, err := r.reportedNodeIPs(ctx, node.Name, existing.Spec.Kubelet.NodeIP)
+	if err != nil {
+		return nil, err
+	}
+	keepBootstrapOnlyFields(&desired.Spec, &existing.Spec, reported)
+
+	if upToDate(existing, desired) {
+		logger.V(1).Info("NodeConfig unchanged", "node", desired.Name)
+		return existing, nil
+	}
+
+	// A node that just joined is configured immediately; only changes to a node
+	// that already has its config wait for a rollout slot.
+	budget, err := r.rolloutBudget(ctx, ng, p)
+	if err != nil {
+		return nil, err
+	}
+	if !budget.hasSlot(desired.Name) {
+		logger.Info("holding the NodeConfig back until the group has a free rollout slot",
+			"node", desired.Name, "nodeGroup", ng.Name,
+			"waitingFor", budget.holders(), "concurrency", budget.concurrency)
+		return existing, nil
+	}
+
+	return r.patch(ctx, ng, existing, desired, logger, budget)
+}
+
+// create gives a node its first NodeConfig. Only a CloudEphemeral payload is
+// rendered by this controller: for any other node the object carries
+// bootstrap-only fields nothing here can reproduce, so its own is waited for.
+func (r *Reconciler) create(ctx context.Context, ng *v1.NodeGroup, node *corev1.Node, desired *internalv1alpha1.NodeConfig, logger logr.Logger, p *pass) (*internalv1alpha1.NodeConfig, error) {
+	if isControlPlaneNode(node) || ng.Spec.NodeType != v1.NodeTypeCloudEphemeral {
+		logger.V(1).Info("waiting for the payload-provisioned node to publish its own NodeConfig", "node", desired.Name)
+		return nil, nil
+	}
+	if err := r.Client.Create(ctx, desired); err != nil {
+		if apierrors.IsAlreadyExists(err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("create NodeConfig %s: %w", desired.Name, err)
+	}
+	logger.Info("NodeConfig created", "node", desired.Name)
+	// A node given its first config is updating. A budget this pass has already
+	// read predates the object and has to be told; one read later lists it
+	// itself, still at generation 1 with nothing applied.
+	if budget, ok := p.rollouts[ng.Name]; ok {
+		budget.spend(desired.Name)
+	}
+	r.recordClampedSettings(ng)
+	return desired, nil
+}
+
+// patch writes the rendered spec onto the object the slot was granted against.
+// The write is conditional on that revision: two passes rendering one node at
+// once would otherwise both write, the second over a slot the first had spent.
+func (r *Reconciler) patch(ctx context.Context, ng *v1.NodeGroup, existing, desired *internalv1alpha1.NodeConfig, logger logr.Logger, budget *rolloutBudget) (*internalv1alpha1.NodeConfig, error) {
+	patch := client.MergeFromWithOptions(existing.DeepCopy(), client.MergeFromWithOptimisticLock{})
+	existing.Spec = desired.Spec
+	existing.Labels = desired.Labels
+	existing.OwnerReferences = desired.OwnerReferences
+	if err := r.Client.Patch(ctx, existing, patch); err != nil {
+		// Someone wrote the object between the read and this patch. The node is
+		// left to the next pass — the winning write is a NodeConfig change and
+		// the watch enqueues one — rather than failing the walk over a race.
+		if apierrors.IsConflict(err) {
+			logger.V(1).Info("NodeConfig changed while it was being rendered; leaving it to the next pass", "node", desired.Name)
+			return nil, nil
+		}
+		return nil, fmt.Errorf("patch NodeConfig %s: %w", desired.Name, err)
+	}
+	logger.Info("NodeConfig updated", "node", desired.Name)
+	budget.spend(desired.Name)
+	r.recordClampedSettings(ng)
+	return existing, nil
+}
+
+// upToDate reports whether the object already carries everything the patch
+// writes. Ownership is compared because the patch writes it: left out, a stale
+// or missing ownerReference is never corrected and the object outlives its node.
+func upToDate(existing, desired *internalv1alpha1.NodeConfig) bool {
+	if !apiequality.Semantic.DeepEqual(existing.Spec, desired.Spec) {
+		return false
+	}
+	if !apiequality.Semantic.DeepEqual(existing.Labels, desired.Labels) {
+		return false
+	}
+	return apiequality.Semantic.DeepEqual(existing.OwnerReferences, desired.OwnerReferences)
+}
+
+// deleteOrphaned removes a NodeConfig this controller no longer owns, for
+// instance after a node left an immutable group.
+func (r *Reconciler) deleteOrphaned(ctx context.Context, name string, logger logr.Logger) error {
+	existing := &internalv1alpha1.NodeConfig{}
+	if err := r.Client.Get(ctx, types.NamespacedName{Name: name}, existing); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("get NodeConfig %s: %w", name, err)
+	}
+	if existing.Labels[managedByLabel] != managedByValue {
+		return nil
+	}
+	if err := r.Client.Delete(ctx, existing); err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("delete NodeConfig %s: %w", name, err)
+	}
+	logger.Info("NodeConfig removed", "node", name)
+	return nil
+}

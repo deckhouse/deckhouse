@@ -509,7 +509,7 @@ jobs:
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: |
             ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
@@ -597,6 +597,12 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
+          # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
+          # obtained, so signing is skipped rather than failing the build.
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "dh-engine-signer"
+          WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -755,6 +761,7 @@ jobs:
         env:
           DEV_REGISTRY: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           set -euo pipefail
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -921,7 +928,7 @@ jobs:
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: |
             ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
@@ -1248,7 +1255,7 @@ jobs:
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: |
             ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
@@ -1336,6 +1343,12 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
+          # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
+          # obtained, so signing is skipped rather than failing the build.
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "dh-engine-signer"
+          WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -1643,7 +1656,7 @@ jobs:
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: |
             ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
@@ -1731,6 +1744,12 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
+          # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
+          # obtained, so signing is skipped rather than failing the build.
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "dh-engine-signer"
+          WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -2038,7 +2057,7 @@ jobs:
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: |
             ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
@@ -2126,6 +2145,12 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
+          # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
+          # obtained, so signing is skipped rather than failing the build.
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "dh-engine-signer"
+          WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -2433,7 +2458,7 @@ jobs:
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: |
             ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
@@ -2521,6 +2546,12 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
+          # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
+          # obtained, so signing is skipped rather than failing the build.
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "dh-engine-signer"
+          WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -2828,7 +2859,7 @@ jobs:
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: |
             ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
@@ -2916,6 +2947,12 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
+          # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
+          # obtained, so signing is skipped rather than failing the build.
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "dh-engine-signer"
+          WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -3223,7 +3260,7 @@ jobs:
 
       # <template: add_ssh_keys>
       - name: Start ssh-agent
-        uses: webfactory/ssh-agent@v0.9.0
+        uses: webfactory/ssh-agent@v0.10.0
         with:
           ssh-private-key: |
             ${{ steps.secrets.outputs.SOURCE_REPO_SSH_KEY }}
@@ -3311,6 +3348,12 @@ jobs:
           WERF_ANNOTATE_LAYERS_WITH_DM_VERITY_ROOT_HASH: "1"
           WERF_VAULT_AUTH_PATH: "github"
           WERF_ACTIONS_AUDIENCE: "github-access-aud"
+          # Signing of the Olcedar sysext roothashes: which Vault role, and where it is
+          # allowed. The list mirrors that role's bound_claims; elsewhere no token can be
+          # obtained, so signing is skipped rather than failing the build.
+          WERF_OLCEDAR_VAULT_AUTH_ROLE: "dh-engine-signer"
+          WERF_OLCEDAR_SYSEXT_SIGN_ENABLED: ${{ contains(fromJSON('["deckhouse/deckhouse", "deckhouse/deckhouse-test-1", "deckhouse/deckhouse-test-2"]'), github.repository) }}
+          REGCTL_CONFIG: "${{ runner.temp }}/regctl-${{ job.check_run_id }}.json"
         run: |
           # Extract REPO_SUFFIX from repository name: trim prefix 'deckhouse/deckhouse-'.
           REPO_SUFFIX=${GITHUB_REPOSITORY#deckhouse/deckhouse-}
@@ -3900,7 +3943,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:266bb6f1223a85a03e9a91c4debd7cc3be46ee2a845bde9c6feae7a310b984e7"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:92db515d7e8405bfb5af6f8a4aa68e02a218ec0d35ad22c75576064522d11fd4"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
@@ -3909,7 +3952,7 @@ jobs:
           echo "⚓️ 🏎 [$(date -u)] Run tests..."
           CONTAINER_ID=$(docker run -d -w /deckhouse -v ${{github.workspace}}:/deckhouse --tmpfs /tmp:mode=1777,exec -e HOME=/tmp -e "TERM=xterm-256color" -v ~/go-pkg-cache:/go/pkg ${TESTS_IMAGE_NAME} sleep infinity)
           docker exec -u 0:0 ${CONTAINER_ID} pm install git
-          docker exec -u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse ${CONTAINER_ID} sh -c "git config --global --add safe.directory /deckhouse && make tests-controller tests-modules"
+          docker exec -u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse ${CONTAINER_ID} sh -c "git config --global --add safe.directory /deckhouse && make tests-controller tests-modules test-crd-enricher"
           docker rm -f ${CONTAINER_ID}
     # </template: tests_before_build_template>
 
@@ -4015,7 +4058,7 @@ jobs:
       # </template: login_rw_registry_step>
       - name: Run node-controller tests
         env:
-          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:266bb6f1223a85a03e9a91c4debd7cc3be46ee2a845bde9c6feae7a310b984e7"
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:92db515d7e8405bfb5af6f8a4aa68e02a218ec0d35ad22c75576064522d11fd4"
         run: |
           # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
           echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'

@@ -21,7 +21,11 @@ document.addEventListener('DOMContentLoaded', () => {
   const urlEdition = 'edition';
   const urlStage = 'stage';
   const urlTag = 'tag';
+  const urlCertification = 'certification';
   const urlParamAll = '__all__';
+
+  // The value of the tag indicating the inclusion of the module in the evaluation object (certification).
+  const certifiedTag = 'certified';
 
   const description = {
     ru: {
@@ -62,6 +66,67 @@ document.addEventListener('DOMContentLoaded', () => {
     'generalAvailability': 'General Availability',
     'deprecated': 'Deprecated'
   };
+
+  const certificationTitles = {
+    ru: {
+      'certified': 'Сертифицирован',
+      'notCertified': 'Не сертифицирован'
+    },
+    en: {
+      'certified': 'Included in the evaluation scope',
+      'notCertified': 'Not included in the evaluation scope'
+    }
+  };
+
+  function getCertificationTitle(value) {
+    const localizedTitles = certificationTitles[lang] || certificationTitles.en;
+    return localizedTitles[value] || value;
+  }
+
+  // Localized tag titles. The key is the tag value in lowercase.
+  // If there is no translation, auto-formatting is used via capitalizeWords.
+  const tagTitles = {
+    ru: {},
+    en: {}
+  };
+
+  function getTagTitle(tag) {
+    const normalized = (tag || '').trim();
+    const localizedTitles = tagTitles[lang] || {};
+    return localizedTitles[normalized.toLowerCase()] || capitalizeWords(normalized);
+  }
+
+  // Localized tooltip texts for tags. The key is the tag value in lowercase.
+  // If there is no text, the tooltip is not displayed.
+  const tagTooltips = {
+    ru: {
+      'ssdlc': 'Разработка модуля ведется в соответствии с процессами по разработке безопасного программного обеспечения согласно ГОСТ РФ.'
+    },
+    en: {
+      'ssdlc': 'Module development is carried out in accordance with the processes for developing secure software.'
+    }
+  };
+
+  function getTagTooltip(tag) {
+    const normalized = (tag || '').trim();
+    const localizedTooltips = tagTooltips[lang] || {};
+    return localizedTooltips[normalized.toLowerCase()] || '';
+  }
+
+  // Localized tooltip texts for certification filter items. The key is the checkbox value.
+  // If there is no text, the tooltip is not displayed.
+  const certificationTooltips = {
+    ru: {
+      'certified': 'Модуль входит в объект оценки и прошёл сертификацию на соответствие требованиям ФСТЭК.',
+      'notCertified': 'Модуль не входит в объект оценки и не проходил сертификацию на соответствие требованиям ФСТЭК, но должен устанавливаться из доверенного источника.'
+    },
+    en: {}
+  };
+
+  function getCertificationTooltip(value) {
+    const localizedTooltips = certificationTooltips[lang] || {};
+    return localizedTooltips[value] || '';
+  }
 
   function isSectionSelectAllCheckbox(checkbox) {
     return checkbox?.dataset?.selectAll === 'true';
@@ -124,11 +189,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const availableTags = new Set();
     const availableStages = new Set();
     const availableEditions = new Set();
+    const availableCertifications = new Set();
 
     Array.from(articles).forEach(article => {
-      article.querySelectorAll('.button-tile__tags .sidebar__badge--container .sidebar__badge_v2').forEach(tag => {
-        availableTags.add(tag.textContent);
-      });
+      const articleTags = Array.from(
+        article.querySelectorAll('.button-tile__tags .sidebar__badge--container .sidebar__badge_v2')
+      ).map(tag => tag.textContent);
+
+      articleTags.forEach(tag => availableTags.add(tag));
+
+      availableCertifications.add(articleTags.includes(certifiedTag) ? 'certified' : 'notCertified');
 
       article.querySelectorAll('[class*="button-tile__stage-"]').forEach(el => {
         el.classList.forEach(cls => {
@@ -170,6 +240,8 @@ document.addEventListener('DOMContentLoaded', () => {
         isAvailable = availableEditions.has((checkbox.value || '').trim().toLowerCase());
       } else if (container?.classList.contains('filter__container--stages')) {
         isAvailable = availableStages.has(checkbox.value);
+      } else if (container?.classList.contains('filter__container--certification')) {
+        isAvailable = availableCertifications.has(checkbox.value);
       }
 
       if (!isAvailable) {
@@ -213,6 +285,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const tags = new Set();
     articles.forEach(article => {
       article.querySelectorAll('.button-tile__tags .sidebar__badge--container .sidebar__badge_v2').forEach(tag => {
+        // The certified tag is processed in a separate "certification" filter group.
+        if (tag.textContent === certifiedTag) return;
         tags.add(tag.textContent);
       });
     });
@@ -229,11 +303,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const label = document.createElement('label');
     label.htmlFor = tag;
-    label.textContent = capitalizeWords(tag);
-
+    label.textContent = getTagTitle(tag);
 
     filterCheckboxesTags.appendChild(input);
     filterCheckboxesTags.appendChild(label);
+
+    const tooltip = getTagTooltip(tag);
+    if (tooltip) {
+      initTooltip(label, getTagTitle(tag), tooltip);
+    }
   }
 
   function createFilters() {
@@ -276,6 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     appendSectionParams('.filter__container--editions', urlEdition);
+    appendSectionParams('.filter__container--certification', urlCertification);
     appendSectionParams('.filter__container--stages', urlStage);
     appendSectionParams('.filter__container--tags', urlTag);
 
@@ -296,7 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function applyFiltersFromUrl() {
     const params = new URLSearchParams(window.location.search);
-    if (!params.has(urlSearch) && !params.has(urlEdition) && !params.has(urlStage) && !params.has(urlTag)) {
+    if (!params.has(urlSearch) && !params.has(urlEdition) && !params.has(urlCertification) && !params.has(urlStage) && !params.has(urlTag)) {
       return;
     }
 
@@ -313,6 +392,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const wantedEditions = parseSectionValues(urlEdition, value => value.trim().toLowerCase());
+    const wantedCertifications = parseSectionValues(urlCertification, value => value.trim());
     const wantedStages = parseSectionValues(urlStage, value => value.trim());
     const wantedTags = parseSectionValues(urlTag, value => value.trim());
 
@@ -336,6 +416,7 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     applySectionParams('.filter__container--editions', wantedEditions, value => value.trim().toLowerCase());
+    applySectionParams('.filter__container--certification', wantedCertifications, value => value.trim());
     applySectionParams('.filter__container--stages', wantedStages, value => value.trim());
     applySectionParams('.filter__container--tags', wantedTags, value => value.trim());
 
@@ -393,6 +474,7 @@ document.addEventListener('DOMContentLoaded', () => {
       groupedFilters.forEach((entry, filterName) => {
         const filterContainer = entry.checkboxes[0]?.closest('.filter__container');
         const isEditionsFilter = filterContainer?.classList.contains('filter__container--editions');
+        const isCertificationFilter = filterContainer?.classList.contains('filter__container--certification');
         const isStagesFilter = filterContainer?.classList.contains('filter__container--stages');
         const isTagsFilter = filterContainer?.classList.contains('filter__container--tags');
         const totalSectionCheckboxes = filterContainer ? getFilterContainerCheckboxes(filterContainer).length : 0;
@@ -405,10 +487,12 @@ document.addEventListener('DOMContentLoaded', () => {
           valuesText = `${selectedCount} ${texts.values}`;
         } else if (isEditionsFilter) {
           valuesText = Array.from(entry.values).map(code => editionTitles[code] || code).join(', ');
+        } else if (isCertificationFilter) {
+          valuesText = Array.from(entry.values).map(value => getCertificationTitle(value)).join(', ');
         } else if (isStagesFilter) {
           valuesText = Array.from(entry.values).map(code => stageTitles[code] || code).join(', ');
         } else if (isTagsFilter) {
-          valuesText = Array.from(entry.values).map(value => capitalizeWords(value)).join(', ');
+          valuesText = Array.from(entry.values).map(value => getTagTitle(value)).join(', ');
         }
 
         const checkboxText = `${filterName}: ${valuesText}`;
@@ -448,6 +532,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const checkboxesEditionlChecked = document.querySelectorAll('.filter__container--editions input[type="checkbox"]:checked:not([data-select-all="true"])');
     const selectedEditions = Array.from(checkboxesEditionlChecked).map(checkbox => checkbox.value);
 
+    const checkboxesCertificationChecked = document.querySelectorAll('.filter__container--certification input[type="checkbox"]:checked:not([data-select-all="true"])');
+    const selectedCertifications = Array.from(checkboxesCertificationChecked).map(checkbox => checkbox.value);
+
     const checkboxesStagesChecked = document.querySelectorAll('.filter__container--stages input[type="checkbox"]:checked:not([data-select-all="true"])');
     const selectedStages = Array.from(checkboxesStagesChecked).map(checkbox => checkbox.value);
 
@@ -473,6 +560,16 @@ document.addEventListener('DOMContentLoaded', () => {
           return articleEditions.includes(normalizedSelected);
         });
         if(!matchesEditions) {
+          return false;
+        }
+      }
+
+      if(selectedCertifications.length > 0) {
+        const isCertified = Array.from(
+          article.querySelectorAll('.button-tile__tags .sidebar__badge--container .sidebar__badge_v2')
+        ).some(tag => tag.textContent === certifiedTag);
+        const articleCertification = isCertified ? 'certified' : 'notCertified';
+        if(!selectedCertifications.includes(articleCertification)) {
           return false;
         }
       }
@@ -551,16 +648,19 @@ document.addEventListener('DOMContentLoaded', () => {
   if (openMobile) {
     const filter = document.querySelector('.filter__block');
     const hamburgerCollapse = document.querySelector('.hamburger--collapse');
+    const body = document.body;
 
     function closeFilterMobilePanel() {
       if (filter) filter.classList.remove('show');
       if (hamburgerCollapse) hamburgerCollapse.classList.remove('show');
+      if (body) body.classList.remove('filter-opened');
     }
 
     openMobile.addEventListener('click', () => {
       if (!filter) return;
       filter.classList.add('show');
       if (hamburgerCollapse) hamburgerCollapse.classList.add('show');
+      if (body) body.classList.add('filter-opened');
     });
 
     if (applyButtonBlock) {
@@ -594,12 +694,14 @@ document.addEventListener('DOMContentLoaded', () => {
     return container;
   }
 
-  function initTooltip(selector, titleText, descriptionText) {
-    const elements = document.querySelectorAll(selector);
+  function initTooltip(target, titleText, descriptionText) {
+    const elements = typeof target === 'string'
+      ? document.querySelectorAll(target)
+      : [].concat(target);
     if (elements.length === 0) return;
 
     elements.forEach(element => {
-      tippy(element, {
+      const tooltip = tippy(element, {
         allowHTML: true,
         content: () => createTooltipContent(titleText, descriptionText),
         arrow: true,
@@ -609,10 +711,33 @@ document.addEventListener('DOMContentLoaded', () => {
         offset: [0, 10],
         duration: [300],
       });
+
+      element.addEventListener('click', () => {
+        setTimeout(() => {
+          tooltip.hide();
+        }, 5000);
+      });
     })
   }
+
+  document.querySelectorAll('.button-tile__stage img').forEach(img => {
+    img.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+    });
+  });
 
   initTooltip('.filter__container label[for="experimental"] > img, .button-tile__stage-experimental > img', 'Experimental', texts.experimental);
   initTooltip('.filter__container label[for="preview"] > img, .button-tile__stage-preview > img', 'Preview', texts.preview);
   initTooltip('.filter__container label[for="deprecated"] > img, .button-tile__stage-deprecated > img', 'Deprecated', texts.deprecated);
+
+  document.querySelectorAll('.filter__container--certification input[type="checkbox"]').forEach(checkbox => {
+    if (isSectionSelectAllCheckbox(checkbox)) return;
+    const tooltip = getCertificationTooltip(checkbox.value);
+    if (!tooltip) return;
+    const label = document.querySelector(`.filter__container--certification label[for="${checkbox.id}"]`);
+    if (label) {
+      initTooltip(label, getCertificationTitle(checkbox.value), tooltip);
+    }
+  });
 })

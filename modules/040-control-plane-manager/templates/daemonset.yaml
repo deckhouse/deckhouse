@@ -47,10 +47,9 @@ memory: 10Mi
 {{- $_ := set $tpl_context "scheduler" dict }}
 {{- $_ := set $tpl_context "settings" dict }}
 {{- with .Values.controlPlaneManager.internal.resourcesRequests }}
-  {{- $_ := set $tpl_context.settings "resourcesRequests" (dict
-    "milliCPU" .milliCpuControlPlane
-    "memoryBytes" .memoryControlPlane
-  ) }}
+  {{- with .components }}
+    {{- $_ := set $tpl_context.settings "resourcesRequests" (dict "components" .) }}
+  {{- end }}
 {{- end }}
 
 {{- $allowedKubernetesVersions := list }}
@@ -259,6 +258,7 @@ spec:
       labels:
         app: {{ $dsMode }}
         component: control-plane-manager
+        security.deckhouse.io/security-policy-exception: d8-control-plane-manager
     spec:
       {{- if eq $profile "main" }}
       {{- include "helm_lib_node_selector" (tuple $ "master") | nindent 6 }}
@@ -281,7 +281,7 @@ spec:
       serviceAccountName: d8-control-plane-manager
       containers:
       - name: control-plane-manager
-        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all_and_add" (list $ (list "SYS_CHROOT")) | nindent 8 }}
+        {{- include "helm_lib_module_container_security_context_read_only_root_filesystem_capabilities_drop_all" dict | nindent 8 }}
         image: {{ include "helm_lib_module_image" (list $ "controlPlaneManager" ) }}
         volumeMounts:
         - mountPath: /var/lib/etcd
@@ -298,8 +298,6 @@ spec:
         - mountPath: /root/.kube/
           name: root-kube
         {{- end }}
-        - mountPath: /var/lib/kubelet/pki
-          name: var-lib-kubelet-pki
         - mountPath: /tmp
           name: tmp
         env:
@@ -336,12 +334,16 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: metadata.name
-        - name: KUBERNETES_VERSION
-          value: {{ $.Values.global.clusterConfiguration.kubernetesVersion | quote }}
         - name: ALLOWED_KUBERNETES_VERSIONS
           value: {{ $allowedKubernetesVersions | sortAlpha | join  "," | quote }}
         - name: AUTOMATIC_KUBERNETES_VERSION
           value: {{ $automaticVersion | quote }}
+        - name: DESIRED_KUBERNETES_VERSION
+          value: {{ $.Values.global.discovery.targetKubernetesVersion | quote }}
+        - name: KUBERNETES_UPDATE_MODE
+          value: {{ if $.Values.global.discovery.kubernetesVersionIsDefault }}"Automatic"{{ else }}"Manual"{{ end }}
+        - name: MAX_USED_KUBERNETES_VERSION
+          value: {{ $.Values.controlPlaneManager.internal.maxUsedKubernetesVersion | quote }}
         - name: NODE_NAME
           valueFrom:
             fieldRef:
@@ -413,10 +415,6 @@ spec:
       - name: etcd
         hostPath:
           path: /var/lib/etcd
-          type: DirectoryOrCreate
-      - name: var-lib-kubelet-pki
-        hostPath:
-          path: /var/lib/kubelet/pki/
           type: DirectoryOrCreate
       - name: tmp
         emptyDir: {}

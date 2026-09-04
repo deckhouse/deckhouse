@@ -1,5 +1,6 @@
 ---
 title: "Вход в систему"
+description: Как войти в веб-интерфейс Deckhouse Code
 permalink: ru/code/documentation/user/login.html 
 lang: ru
 ---

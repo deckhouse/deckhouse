@@ -16,6 +16,7 @@
 
 import base64
 import logging
+import re
 import yaml
 from typing import Optional, List
 from deckhouse import hook
@@ -23,14 +24,27 @@ from dotmap import DotMap
 
 from feature_gates_generated import exists_in_component, is_forbidden, is_deprecated
 
-CLUSTER_CONFIG_SNAPSHOT_NAME = "d8-cluster-configuration"
+from k8s_version_common import (
+    AUTOMATIC_VERSION,
+    CLUSTER_CONFIG_SNAPSHOT_NAME,
+    CLUSTER_KUBERNETES_SNAPSHOT_NAME,
+    DEFAULT_VERSION,
+    VERSION_RE,
+    get_cluster_configuration_secret_data,
+    get_deckhouse_default_version_from_configmap,
+    get_deckhouse_default_version_from_secret,
+    get_k8s_version_from_cluster_config,
+    is_cluster_configuration_pinned,
+    is_module_config_track_default,
+    usable_declared_version,
+)
 
 config = f"""
 configVersion: v1
 kubernetesValidating:
 - name: cpm-moduleconfig-feature-gates.deckhouse.io
   group: main
-  includeSnapshotsFrom: ["{CLUSTER_CONFIG_SNAPSHOT_NAME}"]
+  includeSnapshotsFrom: ["{CLUSTER_CONFIG_SNAPSHOT_NAME}", "{CLUSTER_KUBERNETES_SNAPSHOT_NAME}"]
   matchConditions:
   - name: "only-control-plane-manager-module"
     expression: 'request.name == "control-plane-manager"'
@@ -55,6 +69,25 @@ kubernetes:
   executeHookOnEvent: []
   executeHookOnSynchronization: true
   keepFullObjectsInMemory: true
+
+# spec.automaticVersion of this ConfigMap is what "Default" resolves to for the running Deckhouse
+# build. It replaces deckhouseDefaultKubernetesVersion in the Secret above, which was only ever
+# raised and therefore kept answering with a default that no longer exists after a Deckhouse
+# downgrade. The Secret key stays as a fallback for the window before update-observer first writes
+# this object. Kept in step with the same snapshot in k8s_version_feature_gates.py.
+- name: {CLUSTER_KUBERNETES_SNAPSHOT_NAME}
+  apiVersion: v1
+  kind: ConfigMap
+  namespace:
+    nameSelector:
+      matchNames:
+      - kube-system
+  nameSelector:
+    matchNames:
+    - d8-cluster-kubernetes
+  executeHookOnEvent: []
+  executeHookOnSynchronization: true
+  keepFullObjectsInMemory: true
 """
 
 
@@ -67,60 +100,41 @@ def main(ctx: hook.Context):
         ctx.output.validations.error(str(e))
 
 
-def get_deckhouse_default_version_from_secret(secret_data) -> Optional[str]:
-    encoded_version = secret_data.get('deckhouseDefaultKubernetesVersion')
-    if not encoded_version:
-        return None
-    
-    try:
-        decoded_version = base64.b64decode(encoded_version).decode('utf-8').strip()
-        if decoded_version:
-            return decoded_version
-    except Exception as e:
-        logging.error(f"Failed to decode deckhouse default Kubernetes version from base64: {e}")
-    
-    return None
-
-
-def get_k8s_version_from_cluster_config(secret_data) -> Optional[str]:
-    encoded_config = secret_data.get('cluster-configuration.yaml')
-    if not encoded_config:
-        return None
-    
-    try:
-        decoded_config = base64.b64decode(encoded_config).decode('utf-8')
-        config_dict = yaml.safe_load(decoded_config)
-        if config_dict and isinstance(config_dict, dict):
-            kubernetes_version = config_dict.get('kubernetesVersion')
-            if kubernetes_version and isinstance(kubernetes_version, str):
-                return kubernetes_version
-    except Exception as e:
-        logging.error(f"Failed to decode Kubernetes version from cluster configuration: {e}")
-    
-    return None
-
-
 def get_k8s_version(ctx: DotMap) -> Optional[str]:
-    snapshot = ctx.snapshots.get(CLUSTER_CONFIG_SNAPSHOT_NAME, [])
-    if not snapshot or len(snapshot) == 0:
+    # Mirrors global-hooks/discovery/target_kubernetes_version.go resolveTargetKubernetesVersion:
+    # a present ModuleConfig setting decides on its own, Default/Automatic included (it then means the
+    # Deckhouse default, and ClusterConfiguration is not consulted at all).
+    settings = ctx.review.request.object.get('spec', {}).get('settings', {})
+    mc_version = settings.get('kubernetesVersion')
+    if mc_version and not is_module_config_track_default(mc_version):
+        mc_pin = usable_declared_version(mc_version, "ModuleConfig control-plane-manager")
+        if mc_pin:
+            return mc_pin
+
+    secret_data = get_cluster_configuration_secret_data(ctx)
+
+    # The Deckhouse default now comes from spec.automaticVersion of the cluster ConfigMap, with
+    # the Secret key kept only until update-observer has written that object at least once.
+    def deckhouse_default() -> Optional[str]:
+        version = get_deckhouse_default_version_from_configmap(ctx)
+        if version:
+            return version
+        if secret_data:
+            return get_deckhouse_default_version_from_secret(secret_data)
         return None
-    
-    secret = snapshot[0]
-    if not secret or not hasattr(secret, 'object'):
-        return None
-    
-    data = secret.object.data
-    if not data:
-        return None
-    
-    k8s_version = get_k8s_version_from_cluster_config(data)
-    if not k8s_version:
-        return None
-    
-    if k8s_version.lower() == "automatic":
-        k8s_version = get_deckhouse_default_version_from_secret(data)
-    
-    return k8s_version
+
+    if is_module_config_track_default(mc_version):
+        version = deckhouse_default()
+        return version
+
+    if secret_data:
+        k8s_version = get_k8s_version_from_cluster_config(secret_data)
+        if is_cluster_configuration_pinned(k8s_version):
+            cc_pin = usable_declared_version(k8s_version, "ClusterConfiguration")
+            if cc_pin:
+                return cc_pin
+
+    return deckhouse_default()
 
 
 def validate(ctx: DotMap) -> List[str]:
@@ -164,4 +178,3 @@ def validate(ctx: DotMap) -> List[str]:
 
 if __name__ == "__main__":
     hook.run(main, config=config)
-

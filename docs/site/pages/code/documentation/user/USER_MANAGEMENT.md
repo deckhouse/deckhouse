@@ -1,5 +1,6 @@
 ---
 title: "User, access and change management"
+description: How to manage users, access rights, and change auditing
 permalink: en/code/documentation/user/user-management.html
 ---
 

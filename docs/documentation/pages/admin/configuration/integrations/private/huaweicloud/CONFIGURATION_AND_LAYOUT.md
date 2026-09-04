@@ -7,7 +7,7 @@ This section describes the cluster layouts in Huawei Cloud infrastructure and th
 
 ## List of required Huawei Cloud services
 
-A list of services required for Deckhouse Kubernetes Platform to work in Huawei Cloud:
+A list of services required for Deckhouse Kubernetes Platform (DKP) to work in Huawei Cloud:
 
 | Service                         | API version |
 |:--------------------------------|:-----------:|
@@ -28,6 +28,16 @@ A list of services required for Deckhouse Kubernetes Platform to work in Huawei 
 
 ![Standard layout in Huawei CLoud](../../../../images/cloud-provider-huawei/huawei-standard.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10811&t=Qb5yyWumzPiTBtfL-0 --->
+
+The [`internalNetworkSecurity`](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration-standard-internalnetworksecurity) parameter (default `true`) enables the creation of a security group (SecurityGroup) when a cluster is created. DKP creates the group named after the cluster prefix and assigns it to the nodes.
+
+The following inbound rules will be created:
+
+- Allow incoming traffic over the TCP protocol on port `22` from `0.0.0.0/0`.
+- Allow incoming traffic over the ICMP protocol from `0.0.0.0/0`.
+- Allow incoming traffic over the TCP protocol on ports `30000`–`32767` for services of the `NodePort` type. Inbound UDP traffic to `NodePort` ports is not allowed by default.
+
+Attach custom security groups for CloudEphemeral nodes in the [HuaweiCloudInstanceClass](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass) resource via [`spec.securityGroups`](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass-v1-spec-securitygroups). They are applied together with the group created by DKP.
 
 Example configuration:
 
@@ -67,6 +77,16 @@ masterNodeGroup:
 
 ![VpcPeering layout in Huawei Cloud](../../../../images/cloud-provider-huawei/huawei-vpc-peering-ru.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11715&t=Qb5yyWumzPiTBtfL-0 --->
+
+The [`internalNetworkSecurity`](/modules/cloud-provider-huaweicloud/cluster_configuration.html#huaweicloudclusterconfiguration-vpcpeering-internalnetworksecurity) parameter (default `true`) enables the creation of a security group (SecurityGroup) when a cluster is created. DKP creates the group named after the cluster prefix and assigns it to the nodes.
+
+The following inbound rules will be created:
+
+- Allow incoming traffic over the TCP protocol on port `22` from `0.0.0.0/0`.
+- Allow incoming traffic over the ICMP protocol from `0.0.0.0/0`.
+- Allow incoming traffic over the TCP protocol on ports `30000`–`32767` for services of the `NodePort` type. Inbound UDP traffic to `NodePort` ports is not allowed by default.
+
+Attach custom security groups for CloudEphemeral nodes in the [HuaweiCloudInstanceClass](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass) resource via [`spec.securityGroups`](/modules/cloud-provider-huaweicloud/cr.html#huaweicloudinstanceclass-v1-spec-securitygroups). They are applied together with the group created by DKP.
 
 Example configuration:
 

@@ -25,7 +25,6 @@ import (
 
 	"go.yaml.in/yaml/v2"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"control-plane-manager/internal/controllers/update-observer/cluster"
@@ -41,17 +40,23 @@ type ConfigMapData struct {
 type Spec struct {
 	DesiredVersion string `yaml:"desiredVersion"`
 	UpdateMode     string `yaml:"updateMode"`
+	// What "Default" resolves to for the running build.
+	AutomaticVersion string `yaml:"automaticVersion,omitempty"`
 }
 
 type Status struct {
-	CurrentVersion    string             `yaml:"currentVersion"`
-	SupportedVersions []string           `yaml:"supportedVersions"`
-	AvailableVersions []string           `yaml:"availableVersions"`
-	AutomaticVersion  string             `yaml:"automaticVersion"`
-	Phase             string             `yaml:"phase"`
-	Progress          string             `yaml:"progress,omitempty"`
-	ControlPlane      []ControlPlaneNode `yaml:"controlPlane"`
-	Nodes             Nodes              `yaml:"nodes"`
+	CurrentVersion    string   `yaml:"currentVersion"`
+	SupportedVersions []string `yaml:"supportedVersions"`
+	AvailableVersions []string `yaml:"availableVersions"`
+	// The highest minor this cluster has ever converged onto: monotonic, and derived from the
+	// throttled effective version, never from DesiredVersion — an operator may declare a version
+	// several minors ahead and the floor must not follow. "Converged onto", not "ran": effective
+	// leads the apiservers by one minor during a rollout.
+	MaxUsedVersion string             `yaml:"maxUsedKubernetesVersion,omitempty"`
+	Phase          string             `yaml:"phase"`
+	Progress       string             `yaml:"progress,omitempty"`
+	ControlPlane   []ControlPlaneNode `yaml:"controlPlane"`
+	Nodes          Nodes              `yaml:"nodes"`
 }
 
 type ControlPlaneNode struct {
@@ -66,37 +71,36 @@ type Nodes struct {
 	UpToDateCount int `yaml:"upToDateCount"`
 }
 
+// The object always exists: dhctl creates it at bootstrap, and every release since update-observer
+// landed has kept it. NotFound is therefore a real error and requeues, rather than a bootstrap path
+// worth synthesizing an object for.
 func (r *reconciler) getConfigMap(ctx context.Context) (*corev1.ConfigMap, error) {
 	cm := &corev1.ConfigMap{}
-	err := r.client.Get(ctx, client.ObjectKey{
+	if err := r.client.Get(ctx, client.ObjectKey{
 		Name:      common.ConfigMapName,
 		Namespace: common.KubeSystemNamespace,
-	}, cm)
-
-	if client.IgnoreNotFound(err) != nil {
+	}, cm); err != nil {
 		return nil, err
 	}
 
-	if err != nil {
-		cm = &corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        common.ConfigMapName,
-				Namespace:   common.KubeSystemNamespace,
-				Annotations: map[string]string{},
-				Labels: map[string]string{
-					common.HeritageLabelKey: common.DeckhouseLabel,
-				},
-			},
-		}
-	}
-
 	return cm, nil
+}
+
+// heritage is load-bearing: the label-objects ValidatingAdmissionPolicy keys off it, and that is what
+// stops anyone but the platform's own service accounts from deleting this object. Re-asserted on
+// every pass, so an object that lost the label does not stay unprotected.
+func identifyingLabels() map[string]string {
+	return map[string]string{
+		common.HeritageLabelKey: common.DeckhouseLabel,
+		common.NameLabelKey:     common.ConfigMapName,
+	}
 }
 
 func fillConfigMap(configMap *corev1.ConfigMap, clusterState *cluster.State, reconcileTrigger ReconcileTrigger) (*corev1.ConfigMap, error) {
 	configMapData := renderConfigMapData(clusterState)
 	configMap.Data = map[string]string{}
 
+	// Rendered, not preserved: that is what lets a hand edit be corrected.
 	if configMapData.Spec != nil {
 		specBytes, err := yaml.Marshal(configMapData.Spec)
 		if err != nil {
@@ -113,8 +117,18 @@ func fillConfigMap(configMap *corev1.ConfigMap, clusterState *cluster.State, rec
 		configMap.Data["status"] = string(statusBytes)
 	}
 
+	// Both can be nil on an object this controller did not create.
 	annotations := configMap.GetAnnotations()
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
 	labels := configMap.GetLabels()
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	for key, value := range identifyingLabels() {
+		labels[key] = value
+	}
 	now := time.Now().UTC().Format(time.RFC3339)
 
 	annotations[common.LastReconciliationTime] = now
@@ -175,14 +189,15 @@ func renderConfigMapData(clusterState *cluster.State) ConfigMapData {
 
 	return ConfigMapData{
 		Spec: &Spec{
-			DesiredVersion: clusterState.Spec.DesiredVersion,
-			UpdateMode:     string(clusterState.Spec.UpdateMode),
+			DesiredVersion:   clusterState.Spec.DesiredVersion,
+			UpdateMode:       string(clusterState.Spec.UpdateMode),
+			AutomaticVersion: clusterState.AutomaticVersion,
 		},
 		Status: &Status{
 			CurrentVersion:    clusterState.CurrentVersion,
 			SupportedVersions: clusterState.SupportedVersions,
 			AvailableVersions: clusterState.AvailableVersions,
-			AutomaticVersion:  clusterState.AutomaticVersion,
+			MaxUsedVersion:    clusterState.Spec.MaxUsedVersion,
 			Phase:             string(clusterState.Status.Phase),
 			Progress:          renderProgress(clusterState.Progress),
 			ControlPlane:      renderControlPlanes(clusterState.ControlPlaneState.MasterNodes),
@@ -195,14 +210,8 @@ func renderConfigMapData(clusterState *cluster.State) ConfigMapData {
 }
 
 func (r *reconciler) touchConfigMap(ctx context.Context, configMap *corev1.ConfigMap) error {
-	if configMap.ResourceVersion == "" {
-		if err := r.client.Create(ctx, configMap); err != nil {
-			return fmt.Errorf("failed to create configMap: %w", err)
-		}
-	} else {
-		if err := r.client.Update(ctx, configMap); err != nil {
-			return fmt.Errorf("failed to update configMap: %w", err)
-		}
+	if err := r.client.Update(ctx, configMap); err != nil {
+		return fmt.Errorf("failed to update configMap: %w", err)
 	}
 
 	return nil

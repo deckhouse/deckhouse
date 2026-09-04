@@ -72,11 +72,11 @@ spec:
           type: date
           jsonPath: .status.updatedAt
           format: date-time
-          description: 'When the module was last updated.'
+          description: "When the module was last updated."
         - name: msg
           type: string
           jsonPath: .status.message
-          description: 'Detailed description.'
+          description: "Detailed description."
     - name: v1alpha2
       served: true
       storage: true
@@ -126,6 +126,10 @@ spec:
       subresources:
         status: {}
       additionalPrinterColumns:
+        - name: Tag
+          type: string
+          jsonPath: .spec.imageTag
+          description: "The tag of the module image."
         - name: Updated
           type: date
           jsonPath: .status.updatedAt
@@ -135,7 +139,3 @@ spec:
           type: string
           jsonPath: .status.message
           description: Detailed description.
-        - name: Rollback
-          type: string
-          jsonPath: .spec.rollback
-          description: Indicates whether the module release should be rollback after deleting mpo.

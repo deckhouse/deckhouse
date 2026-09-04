@@ -11,7 +11,6 @@ memory: 100Mi
 {{- range $version := .Values.istio.internal.operatorVersionsToInstall }}
   {{- $versionInfo := get $.Values.istio.internal.versionMap $version }}
   {{- if get $versionInfo "supportsOperator" }}
-  {{- $fullVersion := get $versionInfo "fullVersion" }}
   {{ $imageSuffix := get $versionInfo "imageSuffix" }}
   {{- $revision := get $versionInfo "revision" }}
   {{- if $.Values.global.enabledModules | has "vertical-pod-autoscaler" }}
@@ -74,7 +73,7 @@ spec:
       {{- include "helm_lib_node_selector" (tuple $ "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple $ "system") | nindent 6 }}
       {{- include "helm_lib_priority_class" (tuple $ "cluster-low") | nindent 6 }}
-      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" $ | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_deckhouse" $ | nindent 6 }}
       automountServiceAccountToken: true
       serviceAccountName: operator-{{ $revision }}
       imagePullSecrets:
@@ -85,23 +84,12 @@ spec:
         command:
         - operator
         - server
-        securityContext:
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
-          privileged: false
-          readOnlyRootFilesystem: true
-          runAsGroup: 1337
-          runAsUser: 1337
-          runAsNonRoot: true
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         imagePullPolicy: IfNotPresent
-        {{- if (hasPrefix "1.25" $fullVersion) }}
         volumeMounts:
         - mountPath: /etc/sail-operator
           name: operator-config
           readOnly: true
-        {{- end }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
@@ -110,13 +98,8 @@ spec:
   {{- end }}
 
         ports:
-        {{- if (hasPrefix "1.25" $fullVersion) }}
         - containerPort: 8443
           name: https-metrics
-        {{- else}}
-        - containerPort: 8383
-          name: http-metrics
-        {{- end }}
           protocol: TCP
         env:
           - name: WATCH_NAMESPACE
@@ -133,7 +116,6 @@ spec:
             value: 300s
           - name: REVISION
             value: {{ $revision }}
-      {{- if (hasPrefix "1.25" $fullVersion) }}
       volumes:
         - downwardAPI:
             defaultMode: 420
@@ -142,6 +124,5 @@ spec:
                 fieldPath: metadata.annotations
               path: config.properties
           name: operator-config
-      {{- end }}
   {{- end }}
 {{- end }}

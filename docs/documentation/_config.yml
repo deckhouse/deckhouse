@@ -18,6 +18,22 @@ site_description:
 github_repo_path: /deckhouse/deckhouse
 d8Revision: EE
 
+# AI-friendly exports: llms.txt, corpus.json and per-page Markdown (_plugins/ai_export.rb).
+# The embedded modules build overrides some of these in werf-modules-static.inc.yaml.
+ai_export:
+  # Nothing is generated unless `enabled` is true.
+  enabled: true
+  # `root` adds the "Optional" section to llms.txt with links to the llms.txt and
+  # corpus.json of the embedded and external modules. Set it in the build whose
+  # llms.txt is the entry point of the site.
+  root: true
+  llmsFileName: llms.txt
+  corpusFileName: corpus.json
+  title: Deckhouse Kubernetes Platform
+  # summaryI18nKey names an i18n.common entry (_data/i18n.yml) used as the llms.txt
+  # summary; it falls back to site_description if unset or empty.
+  summaryI18nKey: aiLlmsSummary
+
 metrics:
   google: G-4X28CEP7W2
   yandex:
@@ -59,6 +75,32 @@ exclude:
 
 highlighter: rouge
 feedback_disable: true
+
+# Link rewriting in generated HTML (see _plugins/link_rewrite.rb).
+# When enabled, an <a href="..."> whose host is not in whitelistHosts (and is
+# not a subdomain of a listed host) is unwrapped — the tag is dropped, the link
+# text stays. Per-link opt-out: <a data-keep-link="true">.
+# By default, link rewriting is disabled. But it is enabled for the CSE edition in the documentation module.
+linkRewriteEnable: false
+linkRewrite:
+  # Allowed hosts. Applied only to absolute http(s) URLs: for a link whose host
+  # is not listed here (and is not a subdomain of a listed host), the <a> tag is
+  # unwrapped — the tag is dropped, the link text stays. Non-http(s) URLs
+  # (relative paths, mailto:, tel:, #anchor) and links with the data-keep-link
+  # attribute skip the whitelist check.
+  whitelistHosts: []
+  # Regex substitutions applied to every link (both relative and absolute) BEFORE
+  # the whitelist check. First matching rule wins. A rule may rewrite an absolute
+  # URL into a relative one — the result then skips the whitelist check.
+  replace:
+  #  - from: '^https?://old\.example\.com/(.*)$'
+  #    to:   'https://new.example.com/\1'
+  # Regex patterns for explicit link removal. Applied AFTER replace, BEFORE the
+  # whitelist check, to every link (relative or absolute). A link whose href
+  # matches ANY of these patterns gets its <a> tag unwrapped (text stays).
+  remove: []
+  #  - '^https?://internal\.example\.com/.*$'
+  #  - '/products/[^/]+/documentation/architecture/.*'
 
 plugins:
   - jekyll-regex-replace
@@ -109,28 +151,47 @@ defaults:
       # if the page has defined relative_links
       extractedLinksMax: 2
   - scope:
+      path: "pages/internal"
+    values:
+      ai_export: false
+  - scope:
+      path: "pages/drafts"
+    values:
+      ai_export: false
+  - scope:
+      path: "pages/installing"
+    values:
+      editionsNotAvailable: [cse]
+  - scope:
       path: "pages/admin"
     values:
       sidebar: main
       sitemap_include: true
       showPrevNextButton: true
+      editionsNotAvailable: [cse]
+      searchBoost: 2
   - scope:
       path: "pages/architecture"
     values:
       sidebar: main
       sitemap_include: true
       showPrevNextButton: true
+      editionsNotAvailable: [cse]
+      searchBoost: 2
   - scope:
       path: "pages/user"
     values:
       sidebar: main
       sitemap_include: true
       showPrevNextButton: true
+      editionsNotAvailable: [cse]
+      searchBoost: 1.5
   - scope:
       path: "pages/reference"
       sitemap_include: true
     values:
       sidebar: main
+      searchBoost: 1.5
   - scope:
       path: "modules_ru"
       type: "pages"
@@ -144,6 +205,7 @@ defaults:
       section: admin
       searchable: true
       sitemap_include: true
+      searchBoost: 2
   - scope:
       path: "_faq/user"
       type: faq
@@ -151,4 +213,5 @@ defaults:
       section: user
       searchable: true
       sitemap_include: true
+      searchBoost: 2
 timezone: Europe/Moscow

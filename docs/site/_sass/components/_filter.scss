@@ -89,8 +89,8 @@
             min-width: 100%;
             padding: 20px 20px 50px;
             overflow: auto;
+            overscroll-behavior: contain;
             background: #fff;
-            overflow: auto;
             position: fixed;
             transform: translateX(-100%);
             z-index: 100;
@@ -475,4 +475,8 @@
             }
         }
     }
+}
+
+body.filter-opened {
+    overflow: hidden;
 }

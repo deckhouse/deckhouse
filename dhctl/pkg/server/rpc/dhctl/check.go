@@ -256,7 +256,7 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 	var kubeProvider libcon.KubeProvider
 	err = dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "Preparing SSH client", func(ctx context.Context) error {
 		var cleanup func() error
-		_, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, s.params.IsDebug, s.params.TmpDir)
+		_, kubeProvider, cleanup, err = helper.CreateProviders(ctx, p.request.ConnectionConfig, s.params.IsDebug, s.params.TmpDir, helper.WithKubeConfig(p.request.Kubeconfig))
 		cleanuper.Add(cleanup)
 		if err != nil {
 			return fmt.Errorf("creating provider: %w", err)
@@ -280,10 +280,11 @@ func (s *Service) check(ctx context.Context, p *checkParams) *pb.CheckResult {
 		}
 	}()
 
-	resultData, marshalErr := json.Marshal(result)
+	trimmedResult, trimErr := trimCheckResult(result)
+	resultData, marshalErr := json.Marshal(trimmedResult)
 	state, stateErr := extractLastState(ctx)
 
-	err = errors.Join(checkErr, marshalErr, stateErr)
+	err = errors.Join(checkErr, trimErr, marshalErr, stateErr)
 
 	if result != nil {
 		// todo: move onCheckResult call to check.Check() func (as in converge)
@@ -305,4 +306,20 @@ func (s *Service) checkServerTransitions() []fsm.Transition {
 			Destination: "running",
 		},
 	}
+}
+
+func trimCheckResult(result *check.CheckResult) (*check.CheckResult, error) {
+	if result == nil {
+		return nil, nil
+	}
+
+	trimmedStatistics, err := result.StatusDetails.Statistics.Trim()
+	if err != nil {
+		return nil, fmt.Errorf("trimming check result: %w", err)
+	}
+
+	trimmedResult := *result
+	trimmedResult.StatusDetails.Statistics = trimmedStatistics
+
+	return &trimmedResult, nil
 }

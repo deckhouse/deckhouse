@@ -1,0 +1,119 @@
+cloud-provider-vcd:
+  fixes:
+    - summary: >-
+        Fixes an intermittent "network still in use" error during cluster deletion with the WithNAT placement
+        strategy.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22328
+deckhouse:
+  fixes:
+    - summary: Fix values validation failing on the injected registry
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22171
+deckhouse-controller:
+  fixes:
+    - summary: >-
+        The module-documentation build request timeout to docs-builder is configurable via DOCUMENTATION_BUILD_TIMEOUT
+        (default 120s) instead of a fixed 10s that canceled healthy full-site builds.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22258
+docs:
+  features:
+    - summary: Add gpu module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22148
+    - summary: Added cilium-hubble module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22160
+    - summary: Added adaptive-resource-management module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22161
+    - summary: Added operator-trivy module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22162
+    - summary: Added managed-postgres and managed-memcached modules architecture sections.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21446
+    - summary: Add pod-reloader module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21939
+    - summary: Add secrets-store-integration module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22256
+  fixes:
+    - summary: Fix issues in managed-postgres and managed-memcached modules architecture sections.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22172
+    - summary: >-
+        Clarify which integrity control mechanisms are available in which DKP editions and correct the
+        DKP module integrity description.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22126
+    - summary: Link GPU driver install examples to gpu module FAQ
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22187
+    - summary: >-
+        Updated the Deckhouse Kubernetes Platform GUI installer links on the installation page from the
+        `#gui-install` anchor to the `/gs/installer/` path.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22243
+    - summary: >-
+        Corrected the documentation that incorrectly stated DKP supports only Bearer token authentication
+        for container registries.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22271
+    - summary: >-
+        Module documentation no longer gets stuck in Error under load; docs-builder builds are cancelable
+        and no longer pile up redundant full-site rebuilds behind requests whose clients already timed
+        out.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22258
+istio:
+  fixes:
+    - summary: Restore Istiod pod anti-affinity for Istio 1.25 installations managed by the Sail Operator.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22168
+multitenancy-manager:
+  fixes:
+    - summary: A project parameter can no longer inject objects into the rendered project manifests.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22286
+      impact: >-
+        Values taken from `Project.spec.parameters` are now quoted where they are substituted into the
+
+        shipped project templates, and a parameter that changes the structure of the rendered manifests
+
+        rather than only their values is refused for any template, including custom ones. An administrator
+
+        name may no longer contain control characters, and `clusterLogDestinationName` must be a Kubernetes
+
+        object name or empty. Both are checked from the reconcile loop as well as at admission, so a
+
+        project already carrying such a value goes into an error state on its next reconcile rather than
+
+        at its next edit; the same holds for a custom template that turns a parameter into several objects
+
+        or into YAML, which is refused when the project is created, edited, or reconciled with a change
+        to
+
+        apply. The module's admission policy now also matches CREATE, so objects labelled
+
+        `heritage: multitenancy-manager` can only be created by the module itself.
+    - summary: The module manager role no longer grants authoring of project templates.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22330
+      impact: >-
+        `d8:manage:permission:module:multitenancy-manager:edit` no longer grants write access to
+
+        `projecttemplates`. A `ProjectTemplate` renders into a release applied by a ServiceAccount bound
+
+        to `cluster-admin`, and its `spec.resourcesTemplate` is arbitrary, so authoring one is equivalent
+
+        to holding `cluster-admin` and is not a module-level permission.
+
+
+        Reading templates stays in `d8:manage:permission:module:multitenancy-manager:view`, and creating
+        a
+
+        `Project` on an existing template stays in the edit role. The legacy `ClusterAdmin` access level
+
+        and the `kubeadm:cluster-admins` group keep the right. A subject that authored templates through
+
+        the manager role has to be granted one of those instead.
+network-gateway:
+  fixes:
+    - summary: Fixed user and group in ConfigMap
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22297
+      impact: network-gateway pod's will be restarted
+node-manager:
+  fixes:
+    - summary: Pin MachineDeployment minReadySeconds to 1 so the MachineSet apply converges.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22327
+    - summary: MachineDeployment `spec.replicas` is no longer dropped on upgrade, so cloud nodes are not
+        recreated.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22299
+      impact: >-
+        Fixes recreation of all CloudEphemeral nodes on upgrade to 1.76.9. The MachineDeployment
+
+        replica count was dropped and the MachineDeployment was scaled to zero.

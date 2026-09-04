@@ -22,6 +22,7 @@
     ],
     "tags": [
       "network",
+      "certified",
       "ssdlc"
     ]
   },
@@ -31,6 +32,18 @@
     ],
     "tags": [
       "ml/ai",
+      "ssdlc"
+    ]
+  },
+  "ansible": {
+    "editions": [
+      "ce",
+      "se-plus",
+      "ee"
+    ],
+    "tags": [
+      "helper",
+      "virtualization",
       "ssdlc"
     ]
   },
@@ -81,6 +94,7 @@
       "managing",
       "application",
       "web ui",
+      "certified",
       "ssdlc"
     ]
   },
@@ -96,6 +110,7 @@
     ],
     "tags": [
       "helper",
+      "certified",
       "ssdlc"
     ]
   },
@@ -113,6 +128,7 @@
       "managing",
       "observability",
       "web ui",
+      "certified",
       "ssdlc"
     ]
   },
@@ -127,6 +143,7 @@
     ],
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
@@ -165,6 +182,7 @@
     },
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
@@ -184,6 +202,7 @@
     },
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
@@ -198,6 +217,7 @@
     ],
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
@@ -218,6 +238,7 @@
     ],
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
@@ -229,16 +250,7 @@
     ],
     "tags": [
       "storage",
-      "ssdlc"
-    ]
-  },
-  "delivery-kit": {
-    "editions": [
-      "cse-lite",
-      "cse-pro"
-    ],
-    "tags": [
-      "delivery",
+      "certified",
       "ssdlc"
     ]
   },
@@ -278,6 +290,7 @@
     ],
     "tags": [
       "observability",
+      "certified",
       "ssdlc"
     ]
   },
@@ -293,6 +306,7 @@
     ],
     "tags": [
       "network",
+      "certified",
       "ssdlc"
     ]
   },
@@ -312,6 +326,7 @@
     },
     "tags": [
       "ml/ai",
+      "certified",
       "ssdlc"
     ]
   },
@@ -330,6 +345,7 @@
     "tags": [
       "observability",
       "logging",
+      "certified",
       "ssdlc"
     ]
   },
@@ -400,6 +416,17 @@
       "ssdlc"
     ]
   },
+  "managed-starrocks": {
+    "editions": [
+      "ee",
+      "se",
+      "se-plus"
+    ],
+    "tags": [
+      "managed services",
+      "ssdlc"
+    ]
+  },
   "managed-trino": {
     "editions": [
       "ee"
@@ -432,6 +459,37 @@
     ],
     "tags": [
       "observability",
+      "certified",
+      "ssdlc"
+    ]
+  },
+  "monitoring-applications": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "tags": [
+      "observability",
+      "ssdlc"
+    ]
+  },
+  "monitoring-kubernetes": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "tags": [
+      "observability",
       "ssdlc"
     ]
   },
@@ -447,6 +505,23 @@
     ],
     "tags": [
       "observability",
+      "certified",
+      "ssdlc"
+    ]
+  },
+  "monitoring-kubernetes": {
+    "editions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "tags": [
+      "observability",
+      "certified",
       "ssdlc"
     ]
   },
@@ -463,6 +538,7 @@
     "tags": [
       "observability",
       "logging",
+      "certified",
       "ssdlc"
     ]
   },
@@ -481,7 +557,8 @@
       }
     },
     "tags": [
-      "security"
+      "security",
+      "certified"
     ]
   },
   "observability": {
@@ -495,6 +572,7 @@
     ],
     "tags": [
       "observability",
+      "certified",
       "ssdlc"
     ]
   },
@@ -534,6 +612,7 @@
     },
     "tags": [
       "delivery",
+      "certified",
       "ssdlc"
     ]
   },
@@ -563,6 +642,7 @@
     "path": "/modules/operator-prometheus/",
     "tags": [
       "observability",
+      "certified",
       "ssdlc"
     ]
   },
@@ -583,6 +663,7 @@
     ],
     "tags": [
       "registry",
+      "certified",
       "ssdlc"
     ]
   },
@@ -600,7 +681,8 @@
     "path": "/modules/prompp/",
     "tags": [
       "observability",
-      "helper"
+      "helper",
+      "certified"
     ]
   },
   "pod-reloader": {
@@ -613,6 +695,7 @@
     ],
     "tags": [
       "core",
+      "certified",
       "ssdlc"
     ]
   },
@@ -630,6 +713,7 @@
     "path": "/modules/prometheus/",
     "tags": [
       "observability",
+      "certified",
       "ssdlc"
     ]
   },
@@ -645,6 +729,7 @@
     ],
     "tags": [
       "observability",
+      "certified",
       "ssdlc"
     ]
   },
@@ -669,6 +754,7 @@
     ],
     "tags": [
       "security",
+      "certified",
       "ssdlc"
     ]
   },
@@ -678,15 +764,29 @@
     ],
     "tags": [
       "security",
+      "certified",
       "ssdlc"
     ]
   },
   "sdn": {
     "editions": [
-      "ee"
+      "ce",
+      "be",
+      "se",
+      "se-plus",
+      "ee",
+      "cse-lite",
+      "cse-pro"
+    ],
+    "editionsWithRestrictions": [
+      "ce",
+      "be",
+      "se",
+      "se-plus"
     ],
     "tags": [
       "network",
+      "certified",
       "ssdlc"
     ]
   },
@@ -719,6 +819,7 @@
     },
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
@@ -730,6 +831,16 @@
       "ee",
       "cse-lite",
       "cse-pro"
+    ],
+    "tags": [
+      "storage",
+      "certified",
+      "ssdlc"
+    ]
+  },
+  "sds-object": {
+    "editions": [
+      "ee"
     ],
     "tags": [
       "storage",
@@ -770,6 +881,7 @@
     ],
     "tags": [
       "security",
+      "certified",
       "ssdlc"
     ]
   },
@@ -785,6 +897,7 @@
     ],
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
@@ -794,6 +907,7 @@
     ],
     "tags": [
       "network",
+      "certified",
       "ssdlc"
     ]
   },
@@ -816,6 +930,7 @@
     ],
     "tags": [
       "storage",
+      "certified",
       "ssdlc"
     ]
   },
@@ -868,6 +983,7 @@
     "path": "/modules/upmeter/",
     "tags": [
       "observability",
+      "certified",
       "ssdlc"
     ]
   },
@@ -883,6 +999,7 @@
     ],
     "tags": [
       "virtualization",
+      "certified",
       "ssdlc"
     ]
   }

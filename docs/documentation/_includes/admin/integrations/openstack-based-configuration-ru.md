@@ -1,6 +1,6 @@
 ## Список необходимых сервисов OpenStack
 
-Для работы Deckhouse Kubernetes Platform должны быть доступны следующие сервисы {{ site.data.admin.cloud-types.types[page.cloud_type].name }}:
+Для работы Deckhouse Kubernetes Platform (DKP) должны быть доступны следующие сервисы {{ site.data.admin.cloud-types.types[page.cloud_type].name }}:
 
 | Сервис                     |                         Версия API                         |
 | :------------------------- | :--------------------------------------------------------: |
@@ -10,7 +10,7 @@
 | Block Storage (Cinder)     | [v3](https://docs.openstack.org/api-ref/block-storage/v3/) |
 | Load Balancing (Octavia) * |   [v2](https://docs.openstack.org/api-ref/load-balancer/)  |
 
-* Требуется, если в кластере необходимо заказывать балансировщики нагрузки.
+\* Требуется, если в кластере необходимо заказывать балансировщики нагрузки.
 
 {% if page.cloud_type == 'vk-private' or page.cloud_type == 'vk' %}
 Адреса и порты API можно узнать [в официальной документации](https://cloud.vk.com/docs/tools-for-using-services/api/rest-api/endpoints).
@@ -24,13 +24,28 @@
 
 Создается внутренняя сеть кластера со шлюзом в публичную сеть, узлы не имеют публичных IP-адресов. Для master-узла заказывается плавающий IP-адрес.
 
+![resources](../../../../images/cloud-provider-openstack/openstack-standard.png)
+<!--- Исходник: https://docs.google.com/drawings/d/1hjmDn2aJj3ru3kBR6Jd6MAW3NWJZMNkend_K43cMN0w/edit --->
+
 {% alert level="warning" %}
 Если провайдер не поддерживает SecurityGroups, все приложения, запущенные на узлах с Floating IP, будут доступны по белому IP-адресу.
 Например, `kube-apiserver` на master-узлах будет доступен на порту `6443`. Чтобы избежать этого, рекомендуется использовать схему размещения [SimpleWithInternalNetwork](#simplewithinternalnetwork), либо [Standard](#standard) с bastion-узлом.
 {% endalert %}
 
-![resources](../../../../images/cloud-provider-openstack/openstack-standard.png)
-<!--- Исходник: https://docs.google.com/drawings/d/1hjmDn2aJj3ru3kBR6Jd6MAW3NWJZMNkend_K43cMN0w/edit --->
+Параметр [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standard-internalnetworksecurity) (по умолчанию `true`) включает создание группы безопасности (SecurityGroup) при создании кластера. DKP создаёт группу с именем префикса кластера (`prefix`) и назначает её узлам.
+
+Будут созданы следующие правила входящего трафика:
+
+- разрешение входящего трафика по протоколу TCP и порту `22` из CIDR, указанных в [`sshAllowList`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-sshallowlist) (по умолчанию `0.0.0.0/0`);
+- разрешение входящего трафика по протоколу ICMP из `0.0.0.0/0`;
+- разрешение входящего трафика по протоколу TCP и портам `30000`–`32767` для использования сервисов типа `NodePort`. Входящий трафик по протоколу UDP на порты `NodePort` по умолчанию не разрешается;
+- разрешение любого входящего трафика от узлов, входящих в ту же группу безопасности.
+
+Дополнительно к созданной группе можно подключить собственные группы безопасности. Подготовьте их в облаке заранее, следуя [документации OpenStack](https://docs.openstack.org/nova/latest/user/security-groups.html), и укажите в `additionalSecurityGroups`:
+
+- для master-узлов — в параметре [`masterNodeGroup.instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration);
+- для статических узлов — в параметре [`nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration);
+- для эфемерных узлов — в параметре [`spec.additionalSecurityGroups`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) ресурса [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
 
 Пример конфигурации схемы размещения:
 
@@ -138,6 +153,21 @@ provider:
 ![resources](../../../../images/cloud-provider-openstack/openstack-standardwithnorouter.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1gkuJhyGza0bXB2lcjdsQewWLEUCjqvTkkba-c5LtS_E/edit --->
 
+Параметр [`internalNetworkSecurity`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-standardwithnorouter-internalnetworksecurity) (по умолчанию `true`) включает создание группы безопасности (SecurityGroup) при создании кластера. DKP создаёт группу с именем префикса кластера (`prefix`) и назначает её узлам.
+
+Будут созданы следующие правила входящего трафика:
+
+- разрешение входящего трафика по протоколу TCP и порту `22` из CIDR, указанных в [`sshAllowList`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-sshallowlist) (по умолчанию `0.0.0.0/0`);
+- разрешение входящего трафика по протоколу ICMP из `0.0.0.0/0`;
+- разрешение входящего трафика по протоколу TCP и портам `30000`–`32767` для использования сервисов типа `NodePort`. Входящий трафик по протоколу UDP на порты `NodePort` по умолчанию не разрешается;
+- разрешение любого входящего трафика от узлов, входящих в ту же группу безопасности.
+
+Дополнительно к созданной группе можно подключить собственные группы безопасности. Подготовьте их в облаке заранее, следуя [документации OpenStack](https://docs.openstack.org/nova/latest/user/security-groups.html), и укажите в `additionalSecurityGroups`:
+
+- для master-узлов — в параметре [`masterNodeGroup.instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration);
+- для статических узлов — в параметре [`nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration);
+- для эфемерных узлов — в параметре [`spec.additionalSecurityGroups`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) ресурса [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
+
 Пример конфигурации схемы размещения:
 
 ```yaml
@@ -223,6 +253,12 @@ virtual IP создается в публичной сети, он все рав
 ![resources](../../../../images/cloud-provider-openstack/openstack-simple.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1l-vKRNA1NBPIci3Ya8r4dWL5KA9my7_wheFfMR38G10/edit --->
 
+В этой схеме размещения DKP не создаёт группы безопасности. Подготовьте их в облаке заранее, следуя [документации OpenStack](https://docs.openstack.org/nova/latest/user/security-groups.html), и подключите к узлам через `additionalSecurityGroups`:
+
+- для master-узлов — в параметре [`masterNodeGroup.instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration);
+- для статических узлов — в параметре [`nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration);
+- для эфемерных узлов — в параметре [`spec.additionalSecurityGroups`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) ресурса [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
+
 Пример конфигурации схемы размещения:
 
 ```yaml
@@ -295,13 +331,14 @@ provider:
 Master-узел и узлы кластера подключаются к существующей сети. Данная схема размещения может понадобиться, если необходимо
 объединить кластер Kubernetes с уже имеющимися виртуальными машинами.
 
-{% alert level="warning" %}
-В данной схеме размещения не происходит управление SecurityGroups, а подразумевается, что они были ранее созданы.
-Для настройки политик безопасности необходимо явно указывать `additionalSecurityGroups` в [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration) для masterNodeGroup и других nodeGroups, а также `additionalSecurityGroups` при создании [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) в кластере.
-{% endalert %}
-
 ![resources](../../../../images/cloud-provider-openstack/openstack-simplewithinternalnetwork.png)
 <!--- Исходник: https://docs.google.com/drawings/d/1H9HGOn4abpmZwIhpwwdZSSO9izvyOZakG8HpmmzZZEo/edit --->
+
+В этой схеме размещения DKP не создаёт группы безопасности. Подготовьте их в облаке заранее, следуя [документации OpenStack](https://docs.openstack.org/nova/latest/user/security-groups.html), и подключите к узлам через `additionalSecurityGroups`:
+
+- для master-узлов — в параметре [`masterNodeGroup.instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration);
+- для статических узлов — в параметре [`nodeGroups[].instanceClass.additionalSecurityGroups`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration);
+- для эфемерных узлов — в параметре [`spec.additionalSecurityGroups`](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) ресурса [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
 
 Пример конфигурации схемы размещения:
 
@@ -391,6 +428,12 @@ d8 system edit provider-cluster-configuration
 Количество и параметры процесса заказа машин в облаке настраиваются в кастомном ресурсе [NodeGroup](/modules/node-manager/cr.html#nodegroup), в котором также указывается название используемого для этой группы узлов инстанс-класса (параметр `cloudInstances.classReference`).
 Инстанс-класс для облачного провайдера {{ site.data.admin.cloud-types.types[page.cloud_type].name }} — это custom resource [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass), в котором указываются конкретные параметры самих машин.
 
+{% alert level="info" %}
+Кластер в OpenStack разворачивается в одном регионе ([`provider.region`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-provider-region)).
+Зоны других регионов использовать нельзя.
+Подробнее о настройке зон для узлов типов CloudPermanent и CloudEphemeral — [в разделе «Как создать NodeGroup в зонах доступности?»](/modules/cloud-provider-openstack/faq.html#как-создать-nodegroup-в-зонах-доступности).
+{% endalert %}
+
 {% alert level="warning" %}
 При изменении настроек модуля **пересоздания существующих объектов Machines в кластере НЕ происходит** (новые объекты Machine будут создаваться с новыми параметрами). Пересоздание происходит только при изменении параметров [NodeGroup](/modules/node-manager/cr.html#nodegroup) и [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass).
 {% endalert %}
@@ -455,11 +498,37 @@ spec:
 
 Без ограничения по `node-selector` cloud-controller-manager может использовать в качестве таргетов балансировщика все подходящие узлы кластера. В результате добавление или удаление узлов, не связанных с обслуживаемой балансировщиком нагрузкой, может приводить к обновлению состава пула балансировщика. В крупных или часто изменяющихся кластерах такие обновления могут происходить регулярно, а в некоторых конфигурациях сопровождаться кратковременными нарушениями существующих соединений.
 
-С помощью `loadbalancer.openstack.org/node-selector` рекомендуется выбирать только те узлы, которые должны использоваться в качестве таргетов данного LoadBalancer.
+В поле `annotations` соответствующей конфигурации инлета ресурса [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) можно указать следующие аннотации:
 
-#### Пример IngressNginxController
+* `loadbalancer.openstack.org/node-selector` — выбирает узлы, которые будут использоваться как таргеты LoadBalancer.
+* `loadbalancer.openstack.deckhouse.io/load-balancer-id` — указывает OpenStack CCM использовать заранее созданный Octavia-балансировщик.
+* `loadbalancer.openstack.deckhouse.io/load-balancer-address` — указывает OpenStack CCM привязать заранее выделенный floating IP к создаваемому им балансировщику.
 
-В примере поды Ingress-контроллера размещаются на frontend-узлах, а аннотация `loadbalancer.openstack.org/node-selector` ограничивает пул балансировщика этими же узлами:
+DKP автоматически добавит указанные аннотации в сгенерированный объект Service типа LoadBalancer.
+
+Если используется аннотация `loadbalancer.openstack.deckhouse.io/load-balancer-id`, балансировщик должен соответствовать следующим требованиям:
+
+* находиться в подсети кластера;
+* иметь состояние `ACTIVE`.
+
+Если используется `loadbalancer.openstack.deckhouse.io/load-balancer-id` для подключения заранее созданного балансировщика с произвольным именем, привяжите floating IP к его VIP-порту до создания кластера. В этом случае не указывайте аннотацию `loadbalancer.openstack.deckhouse.io/load-balancer-address`.
+
+Если используется только `loadbalancer.openstack.deckhouse.io/load-balancer-address`, floating IP должен соответствовать следующим требованиям:
+
+* не быть привязанным к порту;
+* находиться в floating-сети, настроенной для OpenStack CCM.
+
+Если указанный floating IP недоступен, OpenStack CCM не сможет назначить внешний IP-адрес объекту Service.
+
+Не добавляйте аннотации `loadbalancer.openstack.deckhouse.io/load-balancer-id` и `loadbalancer.openstack.deckhouse.io/load-balancer-address` к прикладным ресурсам Ingress. Указывайте их только в конфигурации IngressNginxController: DKP добавит их в созданный объект Service, который обрабатывает `openstack-cloud-controller-manager`.
+
+#### IngressNginxController с заранее созданным балансировщиком
+
+В примере ниже:
+
+* поды Ingress-контроллера размещаются на frontend-узлах;
+* `loadbalancer.openstack.org/node-selector` ограничивает пул балансировщика этими же узлами;
+* `loadbalancer.openstack.deckhouse.io/load-balancer-id` указывает заранее созданный Octavia-балансировщик, к VIP-порту которого уже привязан floating IP.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -471,6 +540,7 @@ spec:
   inlet: LoadBalancerWithProxyProtocol
   loadBalancerWithProxyProtocol:
     annotations:
+      loadbalancer.openstack.deckhouse.io/load-balancer-id: "df7c6f73-8c68-4a11-a3e2-6268a655ce9b"
       loadbalancer.openstack.org/node-selector: "node-role.deckhouse.io/frontend="
       loadbalancer.openstack.org/proxy-protocol: "true"
       loadbalancer.openstack.org/timeout-member-connect: "2000"
@@ -483,32 +553,32 @@ spec:
     value: frontend
 ```
 
-### Настройка и политики безопасности на узлах кластера
+#### IngressNginxController с заранее выделенным floating IP
 
-Вариантов, зачем может понадобиться ограничить или, наоборот, расширить входящий или исходящий трафик на виртуальных
-машинах кластера, может быть множество. Например:
+В этом примере OpenStack CCM создает балансировщик и привязывает к нему указанный свободный floating IP:
 
-* Разрешить подключение к узлам кластера с виртуальных машин из другой подсети.
-* Разрешить подключение к портам статического узла для работы приложения.
-* Ограничить доступ к внешним ресурсам или другим ВМ в облаке по требованию службы безопасности.
-
-Для всего этого следует применять дополнительные группы безопасности (security groups). Можно использовать только группы безопасности, предварительно
-созданные в облаке.
-
-#### Установка дополнительных групп безопасности (security groups) на статических и master-узлах
-
-Данный параметр можно задать либо при создании кластера, либо в уже существующем кластере. В обоих случаях дополнительные
-группы безопасности указываются в [OpenStackClusterConfiguration](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration):
-
-* для master-узлов — в секции `masterNodeGroup` в поле `additionalSecurityGroups`;
-* для статических узлов — в секции `nodeGroups` в конфигурации, описывающей желаемую nodeGroup, а также в поле `additionalSecurityGroups`.
-
-Поле `additionalSecurityGroups` представляет собой массив строк с именами групп безопасности.
-
-#### Установка дополнительных групп безопасности (security groups) на ephemeral-узлах
-
-Необходимо прописать параметр `additionalSecurityGroups` для всех [OpenStackInstanceClass](/modules/cloud-provider-openstack/cr.html#openstackinstanceclass) в кластере, которым нужны дополнительные
-групп безопасности.
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: main
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancerWithProxyProtocol
+  loadBalancerWithProxyProtocol:
+    annotations:
+      loadbalancer.openstack.deckhouse.io/load-balancer-address: "203.0.113.10"
+      loadbalancer.openstack.org/node-selector: "node-role.deckhouse.io/frontend="
+      loadbalancer.openstack.org/proxy-protocol: "true"
+      loadbalancer.openstack.org/timeout-member-connect: "2000"
+  nodeSelector:
+    node-role.deckhouse.io/frontend: ""
+  tolerations:
+  - effect: NoExecute
+    key: dedicated.deckhouse.io
+    operator: Equal
+    value: frontend
+```
 
 ### Как загрузить образ в {{ site.data.admin.cloud-types.types[page.cloud_type].name }}
 

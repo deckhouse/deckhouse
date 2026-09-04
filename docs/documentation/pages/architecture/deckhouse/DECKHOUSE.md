@@ -27,7 +27,7 @@ The module manages the following custom resources in the `deckhouse.io` API grou
 - Platform management:
   - [DeckhouseRelease](../../reference/api/cr.html#deckhouserelease): An object that defines the DKP release (version) and platform update policy.
 
-- Package management ([Marketplace](../marketplace)):
+- Package management ([Marketplace](../marketplace/)):
   - [Application](../../reference/api/cr.html#application): Description and desired state of an application package (a group of components or an application).
   - [ApplicationPackage](../../reference/api/cr.html#applicationpackage): Package metadata, sources, and settings.
   - [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion): Description of a specific package version and its parameters.

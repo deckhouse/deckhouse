@@ -173,19 +173,30 @@ func CreateImageHash(ctx context.Context, imagePath string) (string, error) {
 	defer file.Close()
 
 	if err = file.Truncate(hashSize); err != nil {
-		return "", fmt.Errorf("truncate hash image: %w", err)
+		return "", removeHashImage(hashPath, fmt.Errorf("truncate hash image: %w", err))
 	}
 
+	// veritysetup fills the hash tree in place, so every failure below leaves a
+	// truncated file behind, which breaks verification on the next start
 	hash, err := veritySetupFormat(ctx, imagePath, hashPath)
 	if err != nil {
-		return "", err
+		return "", removeHashImage(hashPath, err)
 	}
 
 	if len(hash) == 0 {
-		return "", ErrEmptyHash
+		return "", removeHashImage(hashPath, ErrEmptyHash)
 	}
 
 	return hash, nil
+}
+
+// removeHashImage drops a partially written hash tree and keeps the original cause
+func removeHashImage(hashPath string, cause error) error {
+	if err := os.Remove(hashPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return errors.Join(cause, fmt.Errorf("remove partial hash image '%s': %w", hashPath, err))
+	}
+
+	return cause
 }
 
 // VerifyImage performs verification of the erofs image against its hash tree using veritysetup.
@@ -235,10 +246,23 @@ func veritySetupFormat(ctx context.Context, imagePath, hashPath string) (string,
 		hashPath,
 	}
 
+	started := time.Now()
+
 	// veritysetup format --data-block-size=4096 --hash-block-size=4096 --salt=<salt> <imagePath> <hashPath>
 	cmd := exec.CommandContext(ctx, verityCommand, args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
+		// CommandContext kills the child with SIGKILL once the context is done, which is
+		// reported as 'signal: killed' - the same as an OOM kill, hence the explicit check
+		elapsed := time.Since(started).Truncate(time.Millisecond)
+
+		switch {
+		case errors.Is(ctx.Err(), context.DeadlineExceeded):
+			return "", fmt.Errorf("veritysetup format timed out after %s: %w (output: %s)", elapsed, ctx.Err(), string(output))
+		case errors.Is(ctx.Err(), context.Canceled):
+			return "", fmt.Errorf("veritysetup format canceled after %s: %w (output: %s)", elapsed, ctx.Err(), string(output))
+		}
+
 		return "", fmt.Errorf("veritysetup format: %w (output: %s)", err, string(output))
 	}
 

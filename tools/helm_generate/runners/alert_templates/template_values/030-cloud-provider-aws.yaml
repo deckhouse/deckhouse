@@ -1,0 +1,4 @@
+# imdsv2 is enabled here so that the alert guarded by it makes it into the alerts reference.
+cloudProviderAws:
+  internal:
+    imdsv2: true

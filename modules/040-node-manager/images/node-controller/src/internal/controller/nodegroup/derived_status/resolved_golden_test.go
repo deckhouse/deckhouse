@@ -22,7 +22,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"k8s.io/apimachinery/pkg/runtime"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
@@ -53,10 +52,10 @@ func TestResolvedNodeGroup_Golden_CloudPermanent(t *testing.T) {
 	nodeGroupValues := resolvedMap(ResolveInput{
 		Name:     "cp1",
 		NodeType: v1.NodeTypeCloudPermanent,
-		RawSpec: map[string]interface{}{
+		Spec: specFrom(map[string]interface{}{
 			"nodeType": "CloudPermanent",
 			"kubelet":  kubeletDefaults(),
-		},
+		}),
 	}, Result{
 		Engine:            "None",
 		KubernetesVersion: "1.32",
@@ -89,7 +88,7 @@ func TestResolvedNodeGroup_Golden_CloudEphemeralProcessed(t *testing.T) {
 	nodeGroupValues := resolvedMap(ResolveInput{
 		Name:     "proper1",
 		NodeType: v1.NodeTypeCloudEphemeral,
-		RawSpec: map[string]interface{}{
+		Spec: specFrom(map[string]interface{}{
 			"nodeType": "CloudEphemeral",
 			"cloudInstances": map[string]interface{}{
 				"classReference": map[string]interface{}{
@@ -98,14 +97,14 @@ func TestResolvedNodeGroup_Golden_CloudEphemeralProcessed(t *testing.T) {
 				},
 			},
 			"kubelet": kubeletDefaults(),
-		},
+		}),
 		CloudProcessed: true,
 	}, Result{
 		Engine:            "None",
 		KubernetesVersion: "1.32",
 		CRIType:           "Containerd",
 		Zones:             []string{"a", "b", "c"},
-		InstanceClass:     &runtime.RawExtension{Raw: []byte("null")},
+		InstanceClass:     nil,
 		SerializedLabels:  "node-role.kubernetes.io/proper1=,node.deckhouse.io/group=proper1,node.deckhouse.io/type=CloudEphemeral",
 		SerializedTaints:  "",
 		UpdateEpoch:       "222",
@@ -115,6 +114,8 @@ func TestResolvedNodeGroup_Golden_CloudEphemeralProcessed(t *testing.T) {
 		"nodeType": "CloudEphemeral",
 		"cloudInstances": {
 			"classReference": { "kind": "D8TestInstanceClass", "name": "proper1" },
+			"minPerZone": 0,
+			"maxPerZone": 0,
 			"zones": ["a", "b", "c"]
 		},
 		"instanceClass": null,
@@ -139,7 +140,7 @@ func TestResolvedNodeGroup_Golden_EmptyZones(t *testing.T) {
 	nodeGroupValues := resolvedMap(ResolveInput{
 		Name:     "proper1",
 		NodeType: v1.NodeTypeCloudEphemeral,
-		RawSpec: map[string]interface{}{
+		Spec: specFrom(map[string]interface{}{
 			"nodeType": "CloudEphemeral",
 			"cloudInstances": map[string]interface{}{
 				"classReference": map[string]interface{}{
@@ -147,14 +148,14 @@ func TestResolvedNodeGroup_Golden_EmptyZones(t *testing.T) {
 					"name": "proper1",
 				},
 			},
-		},
+		}),
 		CloudProcessed: true,
 	}, Result{
 		Engine:            "None",
 		KubernetesVersion: "1.32",
 		CRIType:           "Containerd",
 		Zones:             []string{},
-		InstanceClass:     &runtime.RawExtension{Raw: []byte("null")},
+		InstanceClass:     nil,
 		SerializedLabels:  "node-role.kubernetes.io/proper1=,node.deckhouse.io/group=proper1,node.deckhouse.io/type=CloudEphemeral",
 		UpdateEpoch:       "222",
 	})
@@ -172,10 +173,10 @@ func TestResolvedNodeGroup_Golden_Static(t *testing.T) {
 	nodeGroupValues := resolvedMap(ResolveInput{
 		Name:     "static1",
 		NodeType: v1.NodeTypeStatic,
-		RawSpec: map[string]interface{}{
+		Spec: specFrom(map[string]interface{}{
 			"nodeType": "Static",
 			"kubelet":  kubeletDefaults(),
-		},
+		}),
 		Static: map[string]interface{}{
 			"internalNetworkCIDRs": []interface{}{"172.18.200.0/24"},
 		},

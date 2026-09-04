@@ -30,7 +30,8 @@
 bb-log-debug "shutdown inhibitor package={{ $inhibitorPackage }} present={{ $imagePresent }}"
 
 inhibitor_service_name="d8-shutdown-inhibitor.service"
-extra_logind_conf="/etc/systemd/logind.conf.d/99-node-d8-shutdown-inhibitor.conf"
+# Glob matches the current zz- drop-in and the legacy 99-node- one left by older releases.
+extra_logind_conf_glob="/etc/systemd/logind.conf.d/*d8-shutdown-inhibitor.conf"
 
 
 bb-event-on 'inhibitor-unit-changed' '_inhibitor-unit-changed'
@@ -56,7 +57,8 @@ _restart_inhibitor_if_needed() {
 
 bb-event-on 'd8-shutdown-inhibitor-cleanup' '_shutdown-inhibitor-cleanup'
 function _shutdown-inhibitor-cleanup() {
-  rm -rf "${extra_logind_conf}"
+  # Unquoted on purpose: the glob must expand.
+  rm -f ${extra_logind_conf_glob}
   # Send SIGHUP to logind to reload its configuration.
   systemctl -s SIGHUP kill systemd-logind
 }

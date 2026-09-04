@@ -69,7 +69,7 @@ spec:
                     state:
                       description: |
                         Высокоуровневое состояние жизненного цикла приложения.
-                        Всегда одно из: Pending, Failed, Updating, Ready, Degraded, Suspended.
+                        Всегда одно из: Pending, Failed, Updating, Ready, Degraded, Suspended, Deleting.
                     message:
                       description: |
                         Человеко-читаемое описание текущего состояния.
@@ -116,7 +116,7 @@ spec:
                 urls:
                   description: |
                     URL эндпоинтов приложения, собранные из Ingress-ресурсов
-                    чарта приложения с аннотацией `packages.deckhouse.io/is-application-endpoint`.
+                    чарта приложения с аннотацией `packages.deckhouse.io/application-endpoint-description`.
                   items:
                     description: |
                       Один эндпоинт приложения, построенный на основе Ingress-ресурса чарта приложения.
@@ -124,7 +124,7 @@ spec:
                       description:
                         description: |
                           Описание эндпоинта, взятое из значения аннотации
-                          `packages.deckhouse.io/is-application-endpoint`.
+                          `packages.deckhouse.io/application-endpoint-description`.
 
                           Пустое, если значение аннотации равно `"true"`.
                       url:

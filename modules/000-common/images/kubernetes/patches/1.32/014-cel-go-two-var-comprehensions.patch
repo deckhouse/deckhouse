@@ -1,0 +1,13 @@
+diff --git a/staging/src/k8s.io/apiserver/pkg/cel/environment/base.go b/staging/src/k8s.io/apiserver/pkg/cel/environment/base.go
+index b210377a..3f4197b4 100644
+--- a/staging/src/k8s.io/apiserver/pkg/cel/environment/base.go
++++ b/staging/src/k8s.io/apiserver/pkg/cel/environment/base.go
+@@ -173,7 +173,7 @@ var baseOptsWithoutStrictCost = []VersionedOptions{
+ 	{
+ 		IntroducedVersion: version.MajorMinor(1, 32),
+ 		EnvOptions: []cel.EnvOption{
+-			UnversionedLib(ext.TwoVarComprehensions),
++			ext.TwoVarComprehensions(),
+ 		},
+ 	},
+ }

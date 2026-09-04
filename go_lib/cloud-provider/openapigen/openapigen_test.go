@@ -34,6 +34,7 @@ import (
 	"openapigen/internal/test/module"
 	multiv1 "openapigen/internal/test/multiversioncrd/v1"
 	multiv1alpha1 "openapigen/internal/test/multiversioncrd/v1alpha1"
+	rejectedv1alpha1 "openapigen/internal/test/rejectedmarker/v1alpha1"
 	rucrdv1alpha1 "openapigen/internal/test/rucrd/v1alpha1"
 	"openapigen/internal/test/usermodel"
 )
@@ -258,6 +259,16 @@ var _ = Describe("OpenAPIGen", func() {
 			Expect(err.Error()).To(ContainSubstring("version not found"))
 		})
 
+		It("fails loudly on a marker controller-tools rejects in a transitively parsed package", func() {
+			// The offending marker sits in internal/test/rejectedmarker/nested, which the root
+			// only reaches through its spec field. Dropping it silently would strip a constraint
+			// from a shipped CRD, so generation must fail instead.
+			_, err := GenerateCRD([]VersionSpec{{Root: &rejectedv1alpha1.RejectedMarkerResource{}}})
+			Expect(err).To(HaveOccurred())
+			Expect(err.Error()).To(ContainSubstring("constraints would be lost silently"))
+			Expect(err.Error()).To(ContainSubstring("nested.go"))
+		})
+
 	})
 
 	Describe("GenerateCRDDescriptionRu", func() {
@@ -313,8 +324,11 @@ var _ = Describe("OpenAPIGen", func() {
 			Expect(specProps["port"].(map[string]any)["description"]).To(ContainSubstring("Целевой порт"))
 			Expect(specProps["protocol"].(map[string]any)["description"]).To(ContainSubstring("Протокол"))
 
-			// Fields without ru markers must be absent entirely from properties.
-			Expect(specProps).NotTo(HaveKey("weight"))
+			// Fields without ru markers stay in the overlay, only without a description:
+			// the overlay mirrors the schema structure so doc-ru files stay diffable
+			// against their English counterparts.
+			Expect(specProps).To(HaveKey("weight"))
+			Expect(specProps["weight"].(map[string]any)).NotTo(HaveKey("description"))
 
 			// No kubebuilder validation constraints in ru overlay.
 			Expect(specProps["host"]).NotTo(HaveKey("pattern"))

@@ -35,6 +35,53 @@ To configure pull mirroring of a repository, follow these steps:
      - "Password": Your password or access token.
    - If using SSH mirroring, specify the username (typically `git`). After saving the configuration, Deckhouse Code will generate an SSH key to be used for access.
 
+## Branch filter
+
+The "Branch filter" block in the mirroring settings defines which branches are pulled from the source repository:
+
+- "Mirror all branches": All branches of the source repository are mirrored.
+- "Mirror only protected branches": Only the branches protected in this project are mirrored. The option is unavailable until the project has at least one protected branch (protected branches of the parent group are taken into account as well). For more information, see [Protected branches](/products/code/documentation/user/protected-branches.html).
+- "Mirror matching branches": Only the branches whose names match the specified regular expression ([RE2 syntax](https://github.com/google/re2/wiki/Syntax)) are mirrored. The expression is matched against the whole branch name. While you are typing the expression, the form shows how many branches of this repository match it.
+
+### How the branch filter affects tag synchronization
+
+{% alert level="warning" %}
+The branch filter applies to tags as well. If "Mirror only protected branches" or "Mirror matching branches" is selected, a tag of the source repository is synchronized only if its commit is present in one of the branches of this repository. All other tags are skipped.
+{% endalert %}
+
+Consider the following specifics:
+
+- With "Mirror all branches", all tags of the source repository are synchronized.
+- A tag skipped because of the filter is not lost: it is re-checked during every synchronization, and as soon as its commit reaches one of the mirrored branches, the tag is created in the mirror.
+- The check is performed against all branches of the mirror repository, including branches created directly in Deckhouse Code, and not only against the branches that match the filter.
+- Tags that have already been synchronized remain in the repository even if the branch filter is changed later so that it no longer covers them.
+
+## Importing a repository by URL as a pull mirror
+
+You can set up pull mirroring while importing a repository by URL, so that the project is created and immediately configured as a pull mirror of the source repository. This way, you do not need to configure mirroring separately after the import.
+
+{% alert level="info" %}
+Repository mirroring must be enabled for the instance by an administrator. In the "Admin area", go to "Settings" → "Repository" → "Repository mirroring" (the `mirror_available` setting). If mirroring is not enabled for the instance, the "Mirror repository" checkbox is shown but disabled (grayed out) and cannot be selected.
+{% endalert %}
+
+To import a repository by URL as a pull mirror, follow these steps:
+
+1. Create a new project:
+
+   - Go to "New project" → "Import project" → "Repository by URL".
+   - Specify the URL of the source repository.
+   - If the source repository requires authentication, provide the credentials used to access it.
+
+1. Select the "Mirror repository" checkbox.
+
+1. Create the project.
+
+During the initial import, the repository is created and populated from the source. After that, the project is kept in sync with the source repository automatically, on the pull mirroring schedule (for more information, see the ["Scheduling and error handling"](#scheduling-and-error-handling) section below).
+
+To restrict mirroring to protected branches or to branches matching a pattern, configure the branch filter after the import on the project's "Settings" → "Repository" → "Mirroring repositories" page (for more information, see the ["Branch filter"](#branch-filter) section above).
+
+You can also turn an existing project into a pull mirror by running an import by URL into it; this requires the Maintainer role. In either case, mirroring runs on behalf of the user who configured it.
+
 ## Scheduling and error handling
 
 - Pull mirroring tasks are scheduled once per hour (`Projects::PullMirrorScheduleWorker`).  

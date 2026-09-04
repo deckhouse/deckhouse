@@ -11,8 +11,6 @@ spec:
     kind: Application
     listKind: ApplicationList
     plural: applications
-    shortNames:
-    - app
     singular: application
   scope: Namespaced
   versions:
@@ -214,7 +212,7 @@ spec:
                   state:
                     description: |-
                       State is the high-level lifecycle state observed for the application.
-                      Always one of: Pending, Failed, Updating, Ready, Degraded, Suspended.
+                      Always one of: Pending, Failed, Updating, Ready, Degraded, Suspended, Deleting.
                     type: string
                     x-doc-examples:
                     - Pending
@@ -223,6 +221,7 @@ spec:
                     - Ready
                     - Degraded
                     - Suspended
+                    - Deleting
                   tip:
                     description: |-
                       Tip is a human-readable instruction on how to resolve the current
@@ -236,7 +235,7 @@ spec:
               urls:
                 description: |-
                   URLs of application endpoints, collected from Ingress resources of the
-                  application chart annotated with `packages.deckhouse.io/is-application-endpoint`.
+                  application chart annotated with `packages.deckhouse.io/application-endpoint-description`.
                 items:
                   description: |-
                     ApplicationStatusURL is a single application endpoint built from an Ingress
@@ -245,7 +244,7 @@ spec:
                     description:
                       description: |-
                         Description of the endpoint, taken from the value of the
-                        `packages.deckhouse.io/is-application-endpoint` annotation.
+                        `packages.deckhouse.io/application-endpoint-description` annotation.
 
                         Empty when the annotation value is "true".
                       type: string

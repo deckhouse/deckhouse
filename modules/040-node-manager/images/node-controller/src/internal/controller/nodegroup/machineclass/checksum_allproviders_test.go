@@ -24,24 +24,22 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// allChecksumTemplates lists every provider checksum template in the repository. The checksum
-// names the MCM MachineClass and the CAPI machine template, and both are immutable — a checksum
-// that moves renames them and rolls every node in the group. Providers without a helm-era golden
-// (see TestRenderChecksum_HelmEraGoldens) are covered here structurally instead.
+// allChecksumTemplates lists every checksum template still shipped in the repository: the MCM
+// ones. The checksum names the MCM MachineClass, which is immutable — a checksum that moves
+// renames it and rolls every node in the group. Providers without a helm-era golden (see
+// TestRenderChecksum_HelmEraGoldens) are covered here structurally instead.
+//
+// The CAPI providers are no longer here: they ship the v2 contract (capi/template.yaml), where
+// "what rolls machines" is a declared field list compared by value rather than a hash over bytes.
+// Their guarantee moved to internal/machinetemplate's parity harness, which still renders the v1
+// files (kept as a snapshot in its testdata) and requires the v2 answer to match them.
 var allChecksumTemplates = map[string]string{
-	"aws-mcm":          "../../../../../../../../030-cloud-provider-aws/cloud-instance-manager/machine-class.checksum",
-	"azure-mcm":        "../../../../../../../../030-cloud-provider-azure/cloud-instance-manager/machine-class.checksum",
-	"gcp-mcm":          "../../../../../../../../030-cloud-provider-gcp/cloud-instance-manager/machine-class.checksum",
-	"yandex-mcm":       "../../../../../../../../030-cloud-provider-yandex/cloud-instance-manager/machine-class.checksum",
-	"yandex-capi":      "../../../../../../../../030-cloud-provider-yandex/capi/instance-class.checksum",
-	"dvp-capi":         "../../../../../../../../030-cloud-provider-dvp/capi/instance-class.checksum",
-	"openstack-mcm":    "../../../../../../../../../ee/modules/030-cloud-provider-openstack/cloud-instance-manager/machine-class.checksum",
-	"openstack-capi":   "../../../../../../../../../ee/modules/030-cloud-provider-openstack/capi/instance-class.checksum",
-	"vcd-capi":         "../../../../../../../../../ee/modules/030-cloud-provider-vcd/capi/instance-class.checksum",
-	"dynamix-capi":     "../../../../../../../../../ee/modules/030-cloud-provider-dynamix/capi/instance-class.checksum",
-	"huaweicloud-capi": "../../../../../../../../../ee/modules/030-cloud-provider-huaweicloud/capi/instance-class.checksum",
-	"vsphere-mcm":      "../../../../../../../../../ee/se-plus/modules/030-cloud-provider-vsphere/cloud-instance-manager/machine-class.checksum",
-	"zvirt-capi":       "../../../../../../../../../ee/se-plus/modules/030-cloud-provider-zvirt/capi/instance-class.checksum",
+	"aws-mcm":       "../../../../../../../../030-cloud-provider-aws/cloud-instance-manager/machine-class.checksum",
+	"azure-mcm":     "../../../../../../../../030-cloud-provider-azure/cloud-instance-manager/machine-class.checksum",
+	"gcp-mcm":       "../../../../../../../../030-cloud-provider-gcp/cloud-instance-manager/machine-class.checksum",
+	"yandex-mcm":    "../../../../../../../../030-cloud-provider-yandex/cloud-instance-manager/machine-class.checksum",
+	"openstack-mcm": "../../../../../../../../../ee/modules/030-cloud-provider-openstack/cloud-instance-manager/machine-class.checksum",
+	"vsphere-mcm":   "../../../../../../../../../ee/se-plus/modules/030-cloud-provider-vsphere/cloud-instance-manager/machine-class.checksum",
 }
 
 // everyProviderField is the union of the instanceClass fields the templates above read. Numbers
@@ -80,14 +78,17 @@ func everyProviderField() map[string]interface{} {
 }
 
 func minimalCloudProvider() map[string]interface{} {
-	// Only vcd reads .Values…cloudProvider; the others ignore the argument.
-	return map[string]interface{}{"vcd": map[string]interface{}{"server": "https://localhost"}}
+	// VCD and AWS read .Values…cloudProvider; the others ignore the argument.
+	return map[string]interface{}{
+		"aws": map[string]interface{}{"imdsv2": false},
+		"vcd": map[string]interface{}{"server": "https://localhost"},
+	}
 }
 
 // TestRenderChecksum_AllProviderTemplates is the structural guard for every provider, including
 // the ones with no helm-era golden: each template must render, must be deterministic, and must
-// depend on nothing outside instanceClass and manualRolloutID. A NodeGroup rename or a version
-// bump leaking into the checksum would roll every node in the group.
+// depend on nothing outside instanceClass, manualRolloutID, and explicitly supported provider
+// settings. A NodeGroup rename or a version bump leaking into the checksum would roll every node.
 func TestRenderChecksum_AllProviderTemplates(t *testing.T) {
 	for name, path := range allChecksumTemplates {
 		t.Run(name, func(t *testing.T) {
@@ -113,17 +114,13 @@ func TestRenderChecksum_AllProviderTemplates(t *testing.T) {
 			withNoise, err := RenderChecksum(tmpl, noisy, minimalCloudProvider())
 			require.NoError(t, err)
 			assert.Equal(t, first, withNoise,
-				"only instanceClass and manualRolloutID may affect the checksum — anything else rolls nodes on unrelated edits")
+				"unrelated NodeGroup fields must not affect the checksum")
 
 			changed := everyProviderField()
 			changed["manualRolloutID"] = "ignored-here"
 			rolled, err := RenderChecksum(tmpl, buildChecksumElement(changed, "rollout-2"), minimalCloudProvider())
 			require.NoError(t, err)
-			if name == "aws-mcm" || name == "azure-mcm" || name == "gcp-mcm" ||
-				name == "yandex-mcm" || name == "yandex-capi" || name == "vsphere-mcm" ||
-				name == "openstack-mcm" || name == "openstack-capi" {
-				assert.NotEqual(t, first, rolled, "manualRolloutID must still force a rollout")
-			}
+			assert.NotEqual(t, first, rolled, "manualRolloutID must still force a rollout")
 		})
 	}
 }
@@ -135,7 +132,7 @@ func TestRenderChecksum_AllProviderTemplates(t *testing.T) {
 // float64. The failure is loud rather than silent, which is what keeps a decode change from
 // quietly producing a different checksum and rolling every node.
 func TestChecksumNumbersMustBeFloat64(t *testing.T) {
-	tmpl, err := os.ReadFile(allChecksumTemplates["yandex-capi"])
+	tmpl, err := os.ReadFile(allChecksumTemplates["yandex-mcm"])
 	require.NoError(t, err)
 
 	instanceClass := func(disk interface{}) map[string]interface{} {

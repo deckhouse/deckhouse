@@ -69,7 +69,7 @@ metadata:
 spec:
   type: ClusterIP
   externalIPs:
-  - {{ .Values.openvpn.externalIP }}
+  - {{ .Values.openvpn.externalIP | quote }}
   ports:
     - name: ovpn-tcp
       port: {{ .Values.openvpn.externalPort | default 5416 }}
@@ -89,7 +89,7 @@ metadata:
 spec:
   type: ClusterIP
   externalIPs:
-  - {{ .Values.openvpn.externalIP }}
+  - {{ .Values.openvpn.externalIP | quote }}
   ports:
     - name: ovpn-udp
       port: {{ .Values.openvpn.externalPort | default 5416 }}

@@ -3,13 +3,20 @@ title: "Cloud provider — Yandex Cloud"
 description: "Cloud resource management in Deckhouse Kubernetes Platform using Yandex Cloud."
 ---
 
-The `cloud-provider-yandex` module is responsible for interacting with the [Yandex Cloud](https://cloud.yandex.com/en/) cloud resources. It allows the node manager module to use Yandex Cloud resources for provisioning nodes for the defined [node group](/modules/node-manager/cr.html#nodegroup) (a group of nodes that are acted upon as if they were a single entity).
+The `cloud-provider-yandex` module integrates Deckhouse Kubernetes Platform with [Yandex Cloud](https://cloud.yandex.com/). It allows the [`node-manager`](/modules/node-manager/) module to use Yandex Cloud resources when provisioning nodes for a [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
 Features of the `cloud-provider-yandex` module:
 
-- Managing Yandex Cloud resources using the `cloud-controller-manager` (CCM) module:
-  - Creating network routes for the `PodNetwork` network on the Yandex Cloud side.
-  - Updating Yandex Cloud Instances and Kubernetes Nodes metadata. Deleting nodes from Kubernetes that are no longer in Yandex Cloud.
-- Provisioning disks in Yandex Cloud using the `CSI storage` component.
-- Registration in the [node-manager](/modules/node-manager/) module, so that [YandexInstanceClasses](cr.html#yandexinstanceclass) can be used when creating the [NodeGroup](/modules/node-manager/cr.html#nodegroup).
-- Automatic CNI enablement for new clusters. Starting with DKP 1.76, [`cni-cilium`](/modules/cni-cilium/) is used by default in `VXLAN` mode with source IP address translation performed using [BPF](/products/kubernetes-platform/documentation/v1/admin/configuration/network/other/bpflb.html).
+- Managing Yandex Cloud resources via `cloud-controller-manager`:
+  - creates network routes for the `PodNetwork` network on the Yandex Cloud side;
+  - creates Network Load Balancers and target groups for Services of the LoadBalancer type;
+  - updates instance and Kubernetes node metadata and removes from Kubernetes nodes that no longer exist in Yandex Cloud.
+- Provisioning disks via the Yandex CSI driver (`yandex.csi.flant.com`) and creating StorageClasses for Yandex Cloud disk types so that PersistentVolumes can be requested from the cluster.
+- Provisioning base infrastructure and CloudPermanent nodes using the [Terraform/OpenTofu provider](/products/kubernetes-platform/documentation/v1/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-yandex.html#module-interactions) `terraform-provider-yandex`.
+- Provisioning CloudEphemeral nodes via Machine Controller Manager (MCM) or Cluster API (CAPI). Virtual machine parameters are set in the [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) resource.
+- Registering with [`node-manager`](/modules/node-manager/) so that [YandexInstanceClass](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass) can be used when describing a [NodeGroup](/modules/node-manager/cr.html#nodegroup).
+- Enabling CNI for new clusters automatically. Starting with DKP 1.76, [`cni-cilium`](/modules/cni-cilium/) is used by default.
+
+{% alert level="warning" %}
+The module is migrating CloudEphemeral node management from Machine Controller Manager (MCM) to Cluster API (CAPI). Existing [NodeGroups](/modules/node-manager/cr.html#nodegroup) continue to use MCM, while new ones are created with CAPI by default. For migrating existing groups, see [How to migrate node groups to Cluster API (CAPI)](/products/kubernetes-platform/documentation/v1/faq.html#how-to-migrate-node-groups-to-cluster-api-capi).
+{% endalert %}

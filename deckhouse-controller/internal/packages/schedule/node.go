@@ -125,6 +125,11 @@ type node struct {
 
 	rescheduleOnEnable bool // If true, this node flipping to enabled triggers a full-graph reschedule in compute() (every node reverts to idle), not just the global node.
 
+	// scheduleReason names what put the node back to idle. It is consumed and
+	// cleared by the next EventSchedule, where it becomes the cancellation cause
+	// of the run that reverting the node interrupted.
+	scheduleReason string
+
 	rules []rule.Rule // Ordered rule chain evaluated on each scheduling pass.
 }
 
@@ -160,15 +165,15 @@ func (s *Scheduler) addNode(pkg Package) {
 	}
 
 	if constraints.Kubernetes != nil && s.kubeVersionGetter != nil {
-		n.rules = append(n.rules, version.NewRule(s.kubeVersionGetter, constraints.Kubernetes, reasonRequirementsKubernetes))
+		n.rules = append(n.rules, version.NewRule(s.kubeVersionGetter, constraints.Kubernetes, subjectKubernetes, reasonRequirementsKubernetes))
 	}
 
 	if constraints.Deckhouse != nil && s.deckhouseVersionGetter != nil {
-		n.rules = append(n.rules, version.NewRule(s.deckhouseVersionGetter, constraints.Deckhouse, reasonRequirementsDeckhouse))
+		n.rules = append(n.rules, version.NewRule(s.deckhouseVersionGetter, constraints.Deckhouse, subjectDeckhouse, reasonRequirementsDeckhouse))
 	}
 
 	if constraints.Order == FunctionalOrder && s.bootstrapCondition != nil {
-		n.rules = append(n.rules, condition.NewRule(s.bootstrapCondition, reasonRequirementsBootstrap))
+		n.rules = append(n.rules, condition.NewRule(s.bootstrapCondition, reasonRequirementsBootstrap, messageRequirementsBootstrap))
 	}
 
 	if len(constraints.Dependencies) > 0 && s.dependencyGetter != nil {

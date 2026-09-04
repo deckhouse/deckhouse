@@ -19,11 +19,13 @@ package http
 //go:generate minimock -i Client -o http_mock.go
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
 	"net"
 	"net/http"
+	"net/netip"
 	"os"
 	"time"
 
@@ -48,6 +50,12 @@ func NewClient(options ...Option) Client {
 	dialer := &net.Dialer{
 		Timeout: opts.timeout,
 	}
+	dialContext := dialer.DialContext
+	proxy := http.ProxyFromEnvironment
+	if opts.restrictedNetworkAccess {
+		dialContext = restrictedDialContext(dialer)
+		proxy = nil
+	}
 
 	tlsConf := &tls.Config{
 		InsecureSkipVerify: opts.insecure,
@@ -71,13 +79,12 @@ func NewClient(options ...Option) Client {
 	}
 
 	tr := &http.Transport{
-		Proxy:                 http.ProxyFromEnvironment,
+		Proxy:                 proxy,
 		TLSClientConfig:       tlsConf,
 		IdleConnTimeout:       5 * time.Minute,
 		TLSHandshakeTimeout:   5 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
-		DialContext:           dialer.DialContext,
-		Dial:                  dialer.Dial,
+		DialContext:           dialContext,
 	}
 
 	otr := otelhttp.NewTransport(
@@ -91,17 +98,25 @@ func NewClient(options ...Option) Client {
 		}),
 	)
 
-	return &http.Client{
+	client := &http.Client{
 		Timeout:   opts.timeout,
 		Transport: otr,
 	}
+	if opts.restrictedNetworkAccess {
+		client.CheckRedirect = func(_ *http.Request, _ []*http.Request) error {
+			return fmt.Errorf("redirects are disabled for restricted HTTP clients")
+		}
+	}
+
+	return client
 }
 
 type httpOptions struct {
-	timeout         time.Duration
-	insecure        bool
-	additionalTLSCA [][]byte
-	tlsServerName   string
+	timeout                 time.Duration
+	insecure                bool
+	additionalTLSCA         [][]byte
+	tlsServerName           string
+	restrictedNetworkAccess bool
 }
 
 type Option func(options *httpOptions)
@@ -130,6 +145,58 @@ func WithTLSServerName(name string) Option {
 	return func(options *httpOptions) {
 		options.tlsServerName = name
 	}
+}
+
+// WithRestrictedNetworkAccess prevents requests to loopback, link-local, unspecified and multicast
+// addresses and disables redirects. RFC1918, unique-local IPv6 and CGNAT destinations stay allowed
+// so federation/multicluster can use private networks. HTTP proxies are disabled so the destination
+// is validated and dialed directly.
+func WithRestrictedNetworkAccess() Option {
+	return func(options *httpOptions) {
+		options.restrictedNetworkAccess = true
+	}
+}
+
+func restrictedDialContext(dialer *net.Dialer) func(context.Context, string, string) (net.Conn, error) {
+	return func(ctx context.Context, network, address string) (net.Conn, error) {
+		host, port, err := net.SplitHostPort(address)
+		if err != nil {
+			return nil, fmt.Errorf("parse destination address %q: %w", address, err)
+		}
+
+		ips, err := net.DefaultResolver.LookupNetIP(ctx, "ip", host)
+		if err != nil {
+			return nil, fmt.Errorf("resolve destination host %q: %w", host, err)
+		}
+		if len(ips) == 0 {
+			return nil, fmt.Errorf("destination host %q has no IP addresses", host)
+		}
+
+		for _, ip := range ips {
+			if isRestrictedIP(ip) {
+				return nil, fmt.Errorf("destination host %q resolves to a restricted IP address %s", host, ip)
+			}
+		}
+
+		var dialErr error
+		for _, ip := range ips {
+			conn, err := dialer.DialContext(ctx, network, net.JoinHostPort(ip.String(), port))
+			if err == nil {
+				return conn, nil
+			}
+			dialErr = err
+		}
+
+		return nil, fmt.Errorf("dial destination host %q: %w", host, dialErr)
+	}
+}
+
+func isRestrictedIP(ip netip.Addr) bool {
+	ip = ip.Unmap()
+	return ip.IsLoopback() ||
+		ip.IsLinkLocalUnicast() ||
+		ip.IsUnspecified() ||
+		ip.IsMulticast()
 }
 
 func SetBearerToken(req *http.Request, token string) {

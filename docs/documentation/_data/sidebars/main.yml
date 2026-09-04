@@ -511,7 +511,7 @@ entries:
                       url: /admin/configuration/app-scaling/pod-eviction/scheduler.html
                     - title:
                         en: Priority classes
-                        ru: Приоритеты подов
+                        ru: Классы приоритета
                       url: /admin/configuration/app-scaling/pod-eviction/priority-classes.html
             - title:
                 en: Network
@@ -1000,6 +1000,10 @@ entries:
                 en: Vertical Pod Autoscaling
                 ru: Вертикальное масштабирование
               url: /user/configuration/app-scaling/vpa.html
+            - title:
+                en: Priority classes
+                ru: Классы приоритета
+              url: /user/configuration/app-scaling/priority-classes.html
         - title:
             en: Network
             ru: Сеть
@@ -1346,6 +1350,10 @@ entries:
                 en: Registry module
                 ru: Модуль registry
               url: /architecture/deckhouse/registry.html
+            - title:
+                en: DKP cluster management
+                ru: Управление кластерами DKP
+              url: /architecture/deckhouse/commander.html
         - title:
             en: Delivery subsystem
             ru: Подсистема Delivery
@@ -1382,6 +1390,18 @@ entries:
                 en: Vertical Pod Autoscaling
                 ru: Вертикальное масштабирование
               url: /architecture/kubernetes-and-scheduling/vpa.html
+            - title:
+                en: Adaptive-resource-management module
+                ru: Модуль adaptive-resource-management
+              url: /architecture/kubernetes-and-scheduling/adaptive-resource-management.html
+            - title:
+                en: Descheduler module
+                ru: Модуль descheduler
+              url: /architecture/kubernetes-and-scheduling/descheduler.html
+            - title:
+                en: Pod-reloader module
+                ru: Модуль pod-reloader
+              url: /architecture/kubernetes-and-scheduling/pod-reloader.html              
         - title:
             en: Cluster & Infrastructure subsystem
             ru: Подсистема Cluster & Infrastructure
@@ -1483,6 +1503,10 @@ entries:
                     ru: Модуль chrony
                   url: /architecture/cluster-and-infrastructure/infrastructure/chrony.html
                 - title:
+                    en: Gpu module
+                    ru: Модуль gpu
+                  url: /architecture/cluster-and-infrastructure/infrastructure/gpu.html
+                - title:
                     en: Terraform-manager module
                     ru: Модуль terraform-manager
                   url: /architecture/cluster-and-infrastructure/infrastructure/terraform-manager.html
@@ -1535,9 +1559,17 @@ entries:
                 ru: Модуль cert-manager
               url: /architecture/security/cert-manager.html
             - title:
+                en: Operator-trivy module
+                ru: Модуль operator-trivy
+              url: /architecture/security/operator-trivy.html
+            - title:
                 en: Runtime-audit-engine module
                 ru: Модуль runtime-audit-engine
               url: /architecture/security/runtime-audit-engine.html
+            - title:
+                en: Secrets-store-integration module
+                ru: Модуль secrets-store-integration
+              url: /architecture/security/secrets-store-integration.html
         - title:
             en: Network subsystem
             ru: Подсистема Network
@@ -1546,6 +1578,14 @@ entries:
                 en: Overview
                 ru: Обзор
               url: /architecture/network/
+            - title:
+                en: Cni-cilium module
+                ru: Модуль cni-cilium
+              url: /architecture/network/cni-cilium.html
+            - title:
+                en: Cilium-hubble module
+                ru: Модуль cilium-hubble
+              url: /architecture/network/cilium-hubble.html              
             - title:
                 en: Ingress-nginx module
                 ru: Модуль ingress-nginx
@@ -1695,6 +1735,26 @@ entries:
                 ru: Модули логирования
               url: /architecture/observability/logging.html
         - title:
+            en: Managed Services subsystem
+            ru: Подсистема Managed Services
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /architecture/managed-services/
+            - title:
+                en: Managed-memcached module
+                ru: Модуль managed-memcached
+              url: /architecture/managed-services/managed-memcached.html
+            - title:
+                en: Managed-postgres module
+                ru: Модуль managed-postgres
+              url: /architecture/managed-services/managed-postgres.html   
+            - title:
+                en: Managed-valkey module
+                ru: Модуль managed-valkey
+              url: /architecture/managed-services/managed-valkey.html
+        - title:
             en: Virtualization subsystem
             ru: Подсистема Virtualization
           folders:
@@ -1715,9 +1775,9 @@ entries:
                 ru: Deckhouse Virtualization Container Registry (DVCR)
               url: /architecture/virtualization/dvcr.html
             - title:
-                en: Containerized Data Importer (CDI)
-                ru: Containerized Data Importer (CDI)
-              url: /architecture/virtualization/cdi.html
+                en: Importing and uploading VM images and disks
+                ru: Импорт и загрузка образов и дисков ВМ
+              url: /architecture/virtualization/import.html
             - title:
                 en: Auxiliary components
                 ru: Вспомогательные компоненты
@@ -1746,6 +1806,10 @@ entries:
             en: Supported K8s & OS versions
             ru: Поддерживаемые версии K8s и ОС
           url: /reference/supported_versions.html
+        - title:
+            en: Kubernetes conformance test results
+            ru: Результаты Kubernetes conformance-тестов
+          url: /reference/kubernetes-conformance.html
         - title:
             en: Revision comparison
             ru: Сравнение редакций

@@ -113,6 +113,7 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
       loadBalancer: {}
   internal:
     effectiveKubernetesVersion: "1.32"
+    maxUsedKubernetesVersion: "1.32"
     etcdServers:
       - https://192.168.199.186:2379
     mastersNode:
@@ -122,8 +123,19 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
     authn: {}
     selfSignedCA: {}
     resourcesRequests:
-      milliCpuControlPlane: 1024
-      memoryControlPlane: 536870912
+      components:
+        kubeApiserver:
+          milliCPU: 460
+          memoryBytes: "241591910"
+        etcd:
+          milliCPU: 358
+          memoryBytes: "187904819"
+        kubeControllerManager:
+          milliCPU: 102
+          memoryBytes: "53687091"
+        kubeScheduler:
+          milliCPU: 102
+          memoryBytes: "53687091"
 `
 
 	const defaultAudience = "https://kubernetes.default.svc.cluster.local"
@@ -131,6 +143,7 @@ var _ = Describe("Module :: control-plane-manager :: helm template :: arguments 
 	const moduleValuesOnlyIssuer = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -145,6 +158,7 @@ apiserver:
 	const moduleValuesIssuerAdditionalAudiences = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -163,6 +177,7 @@ apiserver:
 	const moduleValuesAdditionalIssuerOnly = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -180,6 +195,7 @@ apiserver:
 	const moduleValuesCombo = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -199,6 +215,7 @@ apiserver:
 	const moduleValuesSuperCombo = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -220,6 +237,7 @@ apiserver:
 	const additionalAPIIssuersSuperComboWithDublicates = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -240,6 +258,7 @@ apiserver:
 	const additionalAPIIssuersSuperComboWithDublicates2 = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -260,6 +279,7 @@ apiserver:
 	const emptyApiserverConfig = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -273,6 +293,7 @@ apiserver:
 	const apiServerWithOidcFull = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -292,6 +313,7 @@ apiserver:
 	const apiServerWithOidcIssuerOnly = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -308,6 +330,7 @@ apiserver:
 	const apiServerWithOidcEmpty = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   authn: {}
@@ -1062,6 +1085,7 @@ resources:
 		const webhookTestValues = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   mastersNode:
@@ -1087,6 +1111,7 @@ apiserver:
 		const webhookAuthzMissingCATestValues = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   mastersNode:
@@ -1177,6 +1202,7 @@ apiserver:
 					const testValuesTemplate = `
 internal:
   effectiveKubernetesVersion: "1.32"
+  maxUsedKubernetesVersion: "1.32"
   etcdServers:
     - https://192.168.199.186:2379
   mastersNode:
@@ -1290,6 +1316,79 @@ apiserver:
 		})
 	})
 
+	// Nothing else in this suite renders the DaemonSet env block, so a template mistake here reaches a
+	// cluster unnoticed.
+	Context("update-observer environment", func() {
+		envValue := func(name string) (string, bool) {
+			ds := f.KubernetesResource("DaemonSet", "kube-system", "d8-control-plane-manager")
+			Expect(ds.Exists()).To(BeTrue())
+
+			for _, container := range ds.Field("spec.template.spec.containers").Array() {
+				if container.Get("name").String() != "control-plane-manager" {
+					continue
+				}
+				for _, env := range container.Get("env").Array() {
+					if env.Get("name").String() == name {
+						return env.Get("value").String(), true
+					}
+				}
+			}
+			return "", false
+		}
+
+		assertEnv := func(name, want string) {
+			value, found := envValue(name)
+			Expect(found).To(BeTrue(), "%s must be present in the DaemonSet", name)
+			Expect(value).To(Equal(want))
+		}
+
+		Context("when the cluster tracks the Deckhouse default", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.discovery.targetKubernetesVersion", "1.35")
+				f.ValuesSet("global.discovery.kubernetesVersionIsDefault", true)
+				f.ValuesSet("controlPlaneManager.internal.maxUsedKubernetesVersion", "1.36")
+				f.HelmRender()
+			})
+
+			It("passes the declared version, Automatic mode and the historical maximum", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				assertEnv("DESIRED_KUBERNETES_VERSION", "1.35")
+				assertEnv("KUBERNETES_UPDATE_MODE", "Automatic")
+				assertEnv("MAX_USED_KUBERNETES_VERSION", "1.36")
+			})
+		})
+
+		Context("when the version is pinned", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.discovery.targetKubernetesVersion", "1.34")
+				f.ValuesSet("global.discovery.kubernetesVersionIsDefault", false)
+				f.ValuesSet("controlPlaneManager.internal.maxUsedKubernetesVersion", "1.34")
+				f.HelmRender()
+			})
+
+			It("passes Manual mode", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				assertEnv("DESIRED_KUBERNETES_VERSION", "1.34")
+				assertEnv("KUBERNETES_UPDATE_MODE", "Manual")
+			})
+		})
+
+		// A values set predating the key yields an untyped nil, which `ternary` rejects and the whole
+		// chart goes down with it.
+		Context("when kubernetesVersionIsDefault is absent from values", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.discovery.targetKubernetesVersion", "1.34")
+				f.ValuesSet("controlPlaneManager.internal.maxUsedKubernetesVersion", "1.34")
+				f.HelmRender()
+			})
+
+			It("still renders, falling back to Manual", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				assertEnv("KUBERNETES_UPDATE_MODE", "Manual")
+			})
+		})
+	})
+
 	Context("rootKubeconfigSymlink (control-plane-manager module values)", func() {
 		Context("when user-authz is enabled and controlPlaneManager.rootKubeconfigSymlink is false", func() {
 			BeforeEach(func() {
@@ -1368,24 +1467,21 @@ apiserver:
 		})
 	})
 
-	// The decision (target ClusterRole + whether to render supplement) is made by the
-	// reconcile_kubeadm_cluster_admins_binding hook and published into Helm values. The template
-	// reads .Values.controlPlaneManager.internal.{kubeadmClusterAdminsTargetRoleName,kubeadmClusterAdminsSupplementEnabled}
-	// verbatim, so these tests drive the template directly via those internal values.
+	// The main kubeadm:cluster-admins binding is owned entirely by the reconcile_kubeadm_cluster_admins_binding
+	// hook and is NOT rendered by this template (it left the template in v1.77). The template only renders the
+	// additive supplement, gated by .Values.controlPlaneManager.internal.kubeadmClusterAdminsSupplementEnabled.
 	Context("kubeadm ClusterRoleBinding for admin.conf", func() {
-		Context("hook decision: target=cluster-admin, supplement=false (user-authz off)", func() {
+		Context("hook decision: supplement=false (user-authz off)", func() {
 			BeforeEach(func() {
-				// schema defaults: target=cluster-admin, supplementEnabled=false; render with no overrides.
+				// schema defaults: supplementEnabled=false; render with no overrides.
 				f.HelmRender()
 			})
 
-			It("should bind kubeadm:cluster-admins to cluster-admin and not render the supplement", func() {
+			It("should render neither the hook-owned main binding nor the supplement", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				// The main binding is hook-owned; the template must never render it.
 				crb := f.KubernetesResource("ClusterRoleBinding", "", "kubeadm:cluster-admins")
-				Expect(crb.Exists()).To(BeTrue())
-				Expect(crb.Field("roleRef.name").String()).To(Equal("cluster-admin"))
-				// keep policy must always be present so a future hook-only migration cannot let Helm prune it.
-				Expect(crb.Field(`metadata.annotations.helm\.sh/resource-policy`).String()).To(Equal("keep"))
+				Expect(crb.Exists()).To(BeFalse())
 
 				sup := f.KubernetesResource("ClusterRoleBinding", "", "d8:control-plane-manager:kubeadm-cluster-admins-supplement")
 				Expect(sup.Exists()).To(BeFalse())
@@ -1394,40 +1490,17 @@ apiserver:
 			})
 		})
 
-		Context("hook decision: target=cluster-admin, supplement=true (user-authz on, but at least one of bootstrap/CR-presence gates is false)", func() {
+		Context("hook decision: supplement=true (user-authz on)", func() {
 			BeforeEach(func() {
-				f.ValuesSet("controlPlaneManager.internal.kubeadmClusterAdminsTargetRoleName", "cluster-admin")
 				f.ValuesSet("controlPlaneManager.internal.kubeadmClusterAdminsSupplementEnabled", true)
 				f.HelmRender()
 			})
 
-			It("should keep cluster-admin on main binding but render the supplement (purely additive on the same group)", func() {
+			It("should render the supplement (purely additive on the same group) but never the hook-owned main binding", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				// The main binding is hook-owned; the template must not render it regardless of the hook's target decision.
 				main := f.KubernetesResource("ClusterRoleBinding", "", "kubeadm:cluster-admins")
-				Expect(main.Exists()).To(BeTrue())
-				Expect(main.Field("roleRef.name").String()).To(Equal("cluster-admin"))
-
-				sup := f.KubernetesResource("ClusterRoleBinding", "", "d8:control-plane-manager:kubeadm-cluster-admins-supplement")
-				Expect(sup.Exists()).To(BeTrue())
-				Expect(sup.Field("roleRef.name").String()).To(Equal("d8:control-plane-manager:admin-kubeconfig-supplement"))
-
-				supCR := f.KubernetesResource("ClusterRole", "", "d8:control-plane-manager:admin-kubeconfig-supplement")
-				Expect(supCR.Exists()).To(BeTrue())
-			})
-		})
-
-		Context("hook decision: target=user-authz:cluster-admin, supplement=true (all three gates satisfied)", func() {
-			BeforeEach(func() {
-				f.ValuesSet("controlPlaneManager.internal.kubeadmClusterAdminsTargetRoleName", "user-authz:cluster-admin")
-				f.ValuesSet("controlPlaneManager.internal.kubeadmClusterAdminsSupplementEnabled", true)
-				f.HelmRender()
-			})
-
-			It("should bind kubeadm:cluster-admins to user-authz:cluster-admin and add the supplement binding", func() {
-				Expect(f.RenderError).ShouldNot(HaveOccurred())
-				main := f.KubernetesResource("ClusterRoleBinding", "", "kubeadm:cluster-admins")
-				Expect(main.Exists()).To(BeTrue())
-				Expect(main.Field("roleRef.name").String()).To(Equal("user-authz:cluster-admin"))
+				Expect(main.Exists()).To(BeFalse())
 
 				sup := f.KubernetesResource("ClusterRoleBinding", "", "d8:control-plane-manager:kubeadm-cluster-admins-supplement")
 				Expect(sup.Exists()).To(BeTrue())
@@ -1438,6 +1511,94 @@ apiserver:
 				Expect(supCR.Field("rules").String()).To(ContainSubstring("control-plane.deckhouse.io"))
 				Expect(supCR.Field("rules").String()).To(ContainSubstring("controlplanenodes"))
 				Expect(supCR.Field("rules").String()).To(ContainSubstring("controlplaneoperations"))
+			})
+		})
+	})
+
+	Context("SecurityPolicyException resources", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.discovery.apiVersions", `["deckhouse.io/v1alpha1/SecurityPolicyException"]`)
+		})
+
+		Context("Always rendered exceptions", func() {
+			BeforeEach(func() {
+				f.HelmRender()
+			})
+
+			It("should render SecurityPolicyExceptions for control-plane components", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "etcd").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "kube-apiserver").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "kube-controller-manager").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "kube-scheduler").Exists()).To(BeTrue())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "d8-control-plane-manager").Exists()).To(BeTrue())
+			})
+
+			It("should not render control-plane-proxy or etcd-backup exceptions without their prerequisites", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "control-plane-proxy").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "d8-etcd-backup").Exists()).To(BeFalse())
+			})
+		})
+
+		Context("With audit log path customized", func() {
+			BeforeEach(func() {
+				f.ValuesSet("controlPlaneManager.internal.auditPolicy", base64.StdEncoding.EncodeToString([]byte("rules: []")))
+				f.ValuesSetFromYaml("controlPlaneManager.apiserver.auditLog", `{output: File, path: /custom/audit/path}`)
+				f.HelmRender()
+			})
+
+			It("should render the customized path as a kube-apiserver hostPath exception", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "kube-apiserver").Field("spec.volumes.hostPath.allowedValues").String()).
+					To(ContainSubstring("/custom/audit/path"))
+			})
+		})
+
+		Context("With prometheus enabled", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.enabledModules", `["prometheus"]`)
+				f.HelmRender()
+			})
+
+			It("should render SecurityPolicyException for control-plane-proxy", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "control-plane-proxy").Exists()).To(BeTrue())
+			})
+		})
+
+		Context("With cluster bootstrapped", func() {
+			BeforeEach(func() {
+				f.ValuesSet("global.clusterIsBootstrapped", true)
+				f.HelmRender()
+			})
+
+			It("should render SecurityPolicyException for etcd-backup", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "d8-etcd-backup").Exists()).To(BeTrue())
+			})
+		})
+
+		Context("Without SecurityPolicyException API", func() {
+			BeforeEach(func() {
+				f.ValuesSetFromYaml("global.discovery.apiVersions", `[]`)
+				f.ValuesSetFromYaml("global.enabledModules", `["prometheus"]`)
+				f.ValuesSet("global.clusterIsBootstrapped", true)
+				f.HelmRender()
+			})
+
+			It("should not render any SecurityPolicyException", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "etcd").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "kube-apiserver").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "kube-controller-manager").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "kube-scheduler").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "d8-control-plane-manager").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "control-plane-proxy").Exists()).To(BeFalse())
+				Expect(f.KubernetesResource("SecurityPolicyException", "kube-system", "d8-etcd-backup").Exists()).To(BeFalse())
 			})
 		})
 	})

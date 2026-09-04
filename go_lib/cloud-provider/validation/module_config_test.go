@@ -18,28 +18,30 @@ import (
 	"testing"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
+	testprovider "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/internal/testprovider"
 	"k8s.io/utils/ptr"
 )
 
-func moduleConfigState(moduleConfig *cpapi.ModuleConfig, legacy map[string]any) *State {
-	return &State{
-		ModuleName:                  "cloud-provider-dvp",
-		ModuleConfig:                moduleConfig,
-		LegacyProviderClusterConfig: legacy,
+func moduleConfigState(moduleConfig *cpapi.ModuleConfig[*testprovider.Settings], pcc *testprovider.ProviderClusterConfig) *testState {
+	return &testState{
+		ModuleName:            "cloud-provider-dvp",
+		ModuleConfig:          moduleConfig,
+		ProviderClusterConfig: pcc,
 	}
 }
 
 func TestValidateModuleConfigAllowsDisabledSubsystems(t *testing.T) {
 	t.Parallel()
 
-	state := moduleConfigState(&cpapi.ModuleConfig{
+	state := moduleConfigState(&cpapi.ModuleConfig[*testprovider.Settings]{
 		ObjectMeta: cpapi.ObjectMeta{Name: "cloud-provider-dvp"},
-		Spec: cpapi.ModuleConfigSpec{
+		Spec: cpapi.ModuleConfigSpec[*testprovider.Settings]{
 			Enabled: ptr.To(true),
 			Version: 2,
-			Settings: cpapi.ModuleConfigSpecSettings{
-				Storage: &cpapi.ModuleConfigSpecSubsystemSettings{Disabled: ptr.To(true)},
-				Nodes:   &cpapi.ModuleConfigSpecSubsystemSettings{Disabled: ptr.To(true)},
+			Settings: &testprovider.Settings{
+				Provider: testprovider.Section{Parameters: map[string]string{"namespace": "d8-cloud-provider-test"}},
+				Storage:  testprovider.Section{Disabled: true},
+				Nodes:    testprovider.Section{Disabled: true},
 			},
 		},
 	}, nil)
@@ -52,15 +54,11 @@ func TestValidateModuleConfigAllowsDisabledSubsystems(t *testing.T) {
 func TestValidateModuleConfigIgnoresSensitiveSettings(t *testing.T) {
 	t.Parallel()
 
-	moduleConfig := &cpapi.ModuleConfig{
+	moduleConfig := &cpapi.ModuleConfig[*testprovider.Settings]{
 		ObjectMeta: cpapi.ObjectMeta{Name: "cloud-provider-dvp"},
-		Spec: cpapi.ModuleConfigSpec{
-			Settings: cpapi.ModuleConfigSpecSettings{
-				Provider: &cpapi.ModuleConfigSpecProviderSettings{
-					Parameters: map[string]any{
-						"token": "must-not-fail",
-					},
-				},
+		Spec: cpapi.ModuleConfigSpec[*testprovider.Settings]{
+			Settings: &testprovider.Settings{
+				Provider: testprovider.Section{Parameters: map[string]string{"token": "must-not-fail"}},
 			},
 		},
 	}
@@ -73,7 +71,7 @@ func TestValidateModuleConfigIgnoresSensitiveSettings(t *testing.T) {
 func TestValidateModuleConfigRequiredWithoutLegacyPCC(t *testing.T) {
 	t.Parallel()
 
-	result := ValidateModuleConfig(&State{ModuleName: "cloud-provider-dvp"})
+	result := ValidateModuleConfig(&testState{ModuleName: "cloud-provider-dvp"})
 	if !hasViolationCode(result, "module_config_required") {
 		t.Fatalf("ValidateModuleConfig() = %q", result.Error())
 	}
@@ -82,7 +80,7 @@ func TestValidateModuleConfigRequiredWithoutLegacyPCC(t *testing.T) {
 func TestValidateModuleConfigAllowsLegacyPCCWithoutModuleConfig(t *testing.T) {
 	t.Parallel()
 
-	state := moduleConfigState(nil, map[string]any{"masterNodeGroup": map[string]any{}})
+	state := moduleConfigState(nil, &testprovider.ProviderClusterConfig{MasterNodeGroup: &testprovider.MasterNodeGroup{}})
 	if result := ValidateModuleConfig(state); result.HasErrors() {
 		t.Fatalf("ValidateModuleConfig() = %q, want no errors", result.Error())
 	}
@@ -92,7 +90,7 @@ func TestValidateModuleConfigRejectsWrongName(t *testing.T) {
 	t.Parallel()
 
 	result := ValidateModuleConfig(moduleConfigState(
-		&cpapi.ModuleConfig{ObjectMeta: cpapi.ObjectMeta{Name: "wrong-name"}},
+		&cpapi.ModuleConfig[*testprovider.Settings]{ObjectMeta: cpapi.ObjectMeta{Name: "wrong-name"}},
 		nil,
 	))
 	if !hasViolationCode(result, "invalid_module_config_name") {

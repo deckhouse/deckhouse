@@ -15,7 +15,7 @@ The `node-manager` module is responsible for managing nodes and has the followin
 1. Installing, updating, and configuring the node software (containerd, kubelet, etc.), connecting the node to the cluster:
     * Installing operating system (see the list of [supported OS](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html#linux)) regardless of the infrastructure used (any cloud/any hardware).
     * The operating system's basic setup (disabling auto-update, installing the necessary packages, configuring logging parameters, etc.).
-    * Configuring nginx (and the system for automatically updating the list of upstreams) to balance node (kubelet) requests over API servers.
+    * Configuring kubernetes-api-proxy (and the system for automatically updating the list of upstreams) to balance node (kubelet) requests over API servers.
     * Installing and configuring CRI containerd and Kubernetes, adding the node to the cluster.
     * Managing node updates and their downtime (disruptions):
         * Automatic determination of a valid minor Kubernetes version for a node group based on its settings (the kubernetesVersion parameter specified for a group), the default version for the whole cluster, and the current control-plane version (no nodes can be updated ahead of the control-plane update).
@@ -110,7 +110,7 @@ Deckhouse automatically deploys cluster nodes by performing the following **idem
   - Installing the needed packages from the distribution's repository.
   - Configuring kernel parameters, logging, log rotation, and other system parameters.
 - Installing the appropriate versions of containerd and kubelet; adding the node to the Kubernetes cluster.
-- Configuring Nginx and updating the list of upstream resources for balancing node requests to the Kubernetes API.
+- Configuring kubernetes-api-proxy and updating the list of upstream resources for balancing node requests to the Kubernetes API.
 
 ### Keeping nodes up-to-date
 

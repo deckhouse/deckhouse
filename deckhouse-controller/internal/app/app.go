@@ -19,6 +19,13 @@ import (
 	shapp "github.com/flant/shell-operator/pkg/app"
 )
 
+var Version string
+
+// SetDeckhouseVersion sets the version string reported by deckhouse-controller.
+func SetDeckhouseVersion(v string) {
+	Version = v
+}
+
 // SetAddonOperatorVersion sets the version string reported by addon-operator.
 func SetAddonOperatorVersion(v string) {
 	adapp.Version = v
@@ -43,4 +50,27 @@ func SetKubeClientFieldManager(name string) {
 // SetDebugUnixSocket overrides the unix socket path for the debug endpoint.
 func SetDebugUnixSocket(path string) {
 	adapp.DebugUnixSocket = path
+}
+
+// Admission carries the settings the validating webhook server starts with.
+type Admission struct {
+	ListenPort string
+	CertsDir   string
+}
+
+// TakeOverAdmissionServer hands the admission settings to the caller and keeps
+// addon-operator's own admission server down, since both would bind the same
+// port. Reports false when there is nothing to serve: the dhctl bootstrap
+// incarnation mounts no certificates.
+func TakeOverAdmissionServer() (Admission, bool) {
+	if !adapp.AdmissionServerEnabled {
+		return Admission{}, false
+	}
+
+	adapp.AdmissionServerEnabled = false
+
+	return Admission{
+		ListenPort: adapp.AdmissionServerListenPort,
+		CertsDir:   adapp.AdmissionServerCertsDir,
+	}, true
 }

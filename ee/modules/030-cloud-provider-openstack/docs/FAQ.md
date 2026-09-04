@@ -12,11 +12,37 @@ It is recommended to limit the list of nodes added to the load balancer pool usi
 
 Without a `node-selector` restriction, cloud-controller-manager may use all suitable cluster nodes as load balancer targets. As a result, adding or removing nodes that are not related to the workload served by the load balancer may trigger an update of the load balancer pool membership. In large or frequently changing clusters, such updates may occur regularly and, in some configurations, may cause brief disruptions to existing connections.
 
-It is recommended to use `loadbalancer.openstack.org/node-selector` to select only the nodes that should be used as targets for the corresponding LoadBalancer.
+The `annotations` field of the corresponding inlet configuration in the [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) resource supports the following annotations:
 
-### IngressNginxController example
+- `loadbalancer.openstack.org/node-selector`: Selects the nodes that will be used as LoadBalancer targets.
+- `loadbalancer.openstack.deckhouse.io/load-balancer-id`: Instructs OpenStack CCM to use a pre-created Octavia load balancer.
+- `loadbalancer.openstack.deckhouse.io/load-balancer-address`: Instructs OpenStack CCM to associate a pre-allocated floating IP with the load balancer it creates.
 
-In this example, the Ingress controller pods are scheduled on frontend nodes, while the `loadbalancer.openstack.org/node-selector` annotation limits the load balancer pool to the same nodes:
+DKP automatically adds the specified annotations to the generated Service object of type LoadBalancer.
+
+When using the `loadbalancer.openstack.deckhouse.io/load-balancer-id` annotation, the load balancer must meet the following requirements:
+
+- reside in the cluster subnet
+- be in the `ACTIVE` state
+
+If `loadbalancer.openstack.deckhouse.io/load-balancer-id` is used to reference a pre-created load balancer with a custom name, associate the floating IP with its VIP port before creating the cluster. In this case, do not specify the `loadbalancer.openstack.deckhouse.io/load-balancer-address` annotation.
+
+When using only `loadbalancer.openstack.deckhouse.io/load-balancer-address`, the floating IP must meet the following requirements:
+
+- not be associated with any port
+- reside in the floating network configured for OpenStack CCM
+
+If the specified floating IP is unavailable, OpenStack CCM will not be able to assign an external IP address to the Service object.
+
+Do not add the `loadbalancer.openstack.deckhouse.io/load-balancer-id` or `loadbalancer.openstack.deckhouse.io/load-balancer-address` annotations to application Ingress resources. Specify them only in the IngressNginxController configuration. DKP will add them to the generated Service object, which is processed by `openstack-cloud-controller-manager`.
+
+### IngressNginxController with a pre-created load balancer
+
+In the example below:
+
+- Ingress controller pods are scheduled on frontend nodes.
+- `loadbalancer.openstack.org/node-selector` limits the load balancer target pool to those frontend nodes.
+- `loadbalancer.openstack.deckhouse.io/load-balancer-id` references a pre-created Octavia load balancer whose VIP port already has a floating IP associated with it.
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -28,6 +54,7 @@ spec:
   inlet: LoadBalancerWithProxyProtocol
   loadBalancerWithProxyProtocol:
     annotations:
+      loadbalancer.openstack.deckhouse.io/load-balancer-id: "df7c6f73-8c68-4a11-a3e2-6268a655ce9b"
       loadbalancer.openstack.org/node-selector: "node-role.deckhouse.io/frontend="
       loadbalancer.openstack.org/proxy-protocol: "true"
       loadbalancer.openstack.org/timeout-member-connect: "2000"
@@ -40,28 +67,76 @@ spec:
     value: frontend
 ```
 
-## How do I set up security policies on cluster nodes?
+### IngressNginxController with a pre-allocated floating IP
 
-There may be many reasons why you may need to restrict or expand incoming/outgoing traffic on cluster VMs in OpenStack:
+In the example below, OpenStack CCM creates a load balancer and associates the specified unassigned floating IP with it:
 
-- Allow VMs on a different subnet to connect to cluster nodes.
-- Allow connecting to the ports of the static node so that the application can work.
-- Restrict access to external resources or other VMs in the cloud for security reasons.
+```yaml
+apiVersion: deckhouse.io/v1
+kind: IngressNginxController
+metadata:
+  name: main
+spec:
+  ingressClass: nginx
+  inlet: LoadBalancerWithProxyProtocol
+  loadBalancerWithProxyProtocol:
+    annotations:
+      loadbalancer.openstack.deckhouse.io/load-balancer-address: "203.0.113.10"
+      loadbalancer.openstack.org/node-selector: "node-role.deckhouse.io/frontend="
+      loadbalancer.openstack.org/proxy-protocol: "true"
+      loadbalancer.openstack.org/timeout-member-connect: "2000"
+  nodeSelector:
+    node-role.deckhouse.io/frontend: ""
+  tolerations:
+  - effect: NoExecute
+    key: dedicated.deckhouse.io
+    operator: Equal
+    value: frontend
+```
 
-For all this, additional security groups should be used. You can only use security groups that are created in the cloud tentatively.
+## How do I create NodeGroups in availability zones?
 
-### Enabling additional security groups on static and master nodes
+An OpenStack cluster is deployed in a single region, which is set by the [`provider.region`](cluster_configuration.html#openstackclusterconfiguration-provider-region) parameter of the [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration) resource. Nodes can be created only in availability zones of this region. Using zones from other regions is not supported.
 
-This parameter can be set either in an existing cluster or when creating one. In both cases, additional security groups are declared in the `OpenStackClusterConfiguration`:
+To get the list of availability zones in the region, run:
 
-- for master nodes, in the `additionalSecurityGroups` of the `masterNodeGroup` section;
-- for static nodes, in the `additionalSecurityGroups` field of the `nodeGroups` subsection that corresponds to the target nodeGroup.
+```shell
+openstack --os-region-name <REGION> availability zone list --compute
+```
 
-The `additionalSecurityGroups` field contains an array of strings with security group names.
+CloudPermanent node groups are defined in the [`nodeGroups`](cluster_configuration.html#openstackclusterconfiguration-nodegroups) section of the OpenStackClusterConfiguration resource. To limit availability zones, use the [`nodeGroups[].zones`](/modules/cloud-provider-openstack/cluster_configuration.html#openstackclusterconfiguration-nodegroups-zones) parameter.
 
-### Enabling additional security groups on ephemeral nodes
+CloudEphemeral nodes are created with a separate [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource with `nodeType: CloudEphemeral`. Availability zones for them are set in the [`spec.cloudInstances.zones`](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-zones) parameter. If the [`zones`](cluster_configuration.html#openstackclusterconfiguration-zones) parameter is specified in OpenStackClusterConfiguration, the required zones must also be added to it.
 
-You have to set the `additionalSecurityGroups` parameter for all OpenStackInstanceClasses in the cluster that require additional security groups. See the [parameters of the cloud-provider-openstack](/cloud-provider-openstack/configuration.html) module.
+{% alert level="info" %}
+If the admission webhook returns the `unknown zone` error when creating a NodeGroup, make sure that the specified zone belongs to the `provider.region` region and, when using the `zones` parameter, is included in the OpenStackClusterConfiguration zones list.
+{% endalert %}
+
+Nodes from another region can be added to the cluster only manually as Static nodes. The `cloud-provider-openstack` module does not create such nodes.
+
+{% alert level="warning" %}
+After changing OpenStackClusterConfiguration, run the `dhctl converge` command. For details, see [Adding and managing cloud nodes](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html#adding-cloudpermanent-nodes-to-a-cloud-cluster).
+{% endalert %}
+
+Example NodeGroup for CloudEphemeral nodes:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: workers
+spec:
+  nodeType: CloudEphemeral
+  cloudInstances:
+    classReference:
+      kind: OpenStackInstanceClass
+      name: workers
+    minPerZone: 1
+    maxPerZone: 1
+    zones:
+    - eu-3a
+    - eu-3b
+```
 
 ## How do I create a hybrid cluster?
 

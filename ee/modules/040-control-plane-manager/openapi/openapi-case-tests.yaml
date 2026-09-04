@@ -1,6 +1,16 @@
-# Test stub. The directory does not contain config-values.yaml, but the tests require a check for all openapi directories.
 positive:
   configValues:
   - {}
+  # Default is the only sentinel this setting accepts, in every edition.
+  - kubernetesVersion: "Default"
   values:
   - { internal: {} }
+negative:
+  configValues:
+  # Automatic stays legal in ClusterConfiguration but never in ModuleConfig.
+  - kubernetesVersion: "Automatic"
+  # The sentinel is case-sensitive and must not accept free-form text.
+  - kubernetesVersion: "default"
+  # Concrete pins are deliberately not listed here: the pin set differs per edition, so those
+  # cases live in each edition's own config-values.yaml sibling. See
+  # testing/openapi_validation/openapi_validation_test.go for the cross-edition enum guard.

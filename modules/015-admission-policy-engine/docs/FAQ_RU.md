@@ -270,6 +270,10 @@ spec:
 1. Создайте ресурс SecurityPolicy, соответствующий уровню [baseline](https://kubernetes.io/docs/concepts/security/pod-security-standards/#baseline) или [restricted](https://kubernetes.io/docs/concepts/security/pod-security-standards/#restricted). В секции `policies` укажите только необходимые вам настройки.
 1. Добавьте в неймспейс дополнительный лейбл, который будет соответствовать селектору `namespaceSelector` в SecurityPolicy. В примерах ниже это `security-policy.deckhouse.io/baseline-enabled: "true"` либо `security-policy.deckhouse.io/restricted-enabled: "true"`.
 
+{% alert level="info" %}
+Поле `allowedHostPaths` определяет список разрешённых префиксов путей для монтирования `hostPath`. Если указан пустой список (`[]`), использование `hostPath` запрещено для всех путей. Если поле отсутствует, ограничения не применяются.
+{% endalert %}
+
 SecurityPolicy, соответствующая baseline:
 
 ```yaml

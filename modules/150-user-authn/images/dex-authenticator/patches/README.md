@@ -40,3 +40,44 @@ Oauth2-proxy returns 200 (instead of 202) when the request is authenticated and 
 ### 007-add-json-logging.patch
 
 Add json logging.
+
+### 998-fix-cve.patch
+
+Additional dependency bumps on top of `005-fix-cves.patch`.
+
+Fix CVEs:
+- CVE-2026-25680
+- CVE-2026-25681
+- CVE-2026-27136
+- CVE-2026-33814
+- CVE-2026-39821
+- CVE-2026-39824
+- CVE-2026-42502
+- CVE-2026-42506
+- CVE-2026-46600
+- CVE-2026-56852
+
+GHSA:
+- GHSA-hrxh-6v49-42gf
+
+### 999-fuzz-handlers.patch
+
+Go native fuzz tests for oauth2-proxy user-input surfaces. Applied last.
+
+Targets:
+
+- HTTP mux via `ServeHTTP`: `/`, `/robots.txt`, `/oauth2/sign_in`,
+  `/oauth2/sign_out`, `/oauth2/start`, `/oauth2/callback`, `/oauth2/auth`,
+  `/oauth2/userinfo`, cookies, `Authorization`, `X-Forwarded-*`
+- `ManualSignIn`, `LoadCookiedSession`, `redeemCode`
+- Deckhouse cookie-refresh JSON ticket parser (`decodeTicket`,
+  `decodeTicketFromRequest`)
+- JWT bearer/basic session loader
+
+`*_test.go` is not compiled into the image. Run from a patched source tree:
+
+```
+go test -run=^$ -fuzz=FuzzServeHTTP -fuzztime=12h .
+go test -run=^$ -fuzz=FuzzDecodeTicket$ -fuzztime=12h ./pkg/sessions/persistence
+go test -run=^$ -fuzz=FuzzJwtSessionLoader$ -fuzztime=12h ./pkg/middleware
+```

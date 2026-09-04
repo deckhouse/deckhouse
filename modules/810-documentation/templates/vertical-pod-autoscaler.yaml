@@ -5,7 +5,7 @@ memory: 50Mi
 
 {{- define "builder_resources" }}
 cpu: 100m
-memory: 50Mi
+memory: 128Mi
 {{- end }}
 
 {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}

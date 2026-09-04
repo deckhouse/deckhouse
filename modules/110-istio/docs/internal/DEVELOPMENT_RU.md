@@ -8,7 +8,7 @@ searchable: false
 Каждый релиз Istio содержит:
 
 * Исполняемый файл `istioctl` с встроенными helm-чартами (для Deckhouse не используется при деплое, полезен для утилит).
-* Image с оператором и CR `IstioOperator` / `Istio` — **только для версий ниже 1.27.9** (`supportsOperator: true`).
+* Image с sail-оператором и CR `Istio` (`sailoperator.io/v1`) — **только для версий ниже 1.27.9** (`supportsOperator: true`), то есть сейчас только для Istio 1.25. Legacy-CR `IstioOperator` (`install.istio.io/v1alpha1`) больше не создаётся: он остался только для очистки объектов, унаследованных от снятой с поддержки версии 1.21.
 * Набор образов с компонентами Istio (istiod, proxyv2, cni, …).
 * helm-чарты upstream.
 
@@ -18,9 +18,7 @@ searchable: false
 
 1. Images в `images/` — по аналогии с предыдущим minor.
 2. Версия в `oss.yaml`.
-3. CRD в `_crds/istio/<major.minor>/`:
-   * **С оператором:** `crd-all.gen.yaml`, `crd-operator.yaml`, для 1.25+ — Sail CRD.
-   * **Без оператора:** только `crd-all.gen.yaml`.
+3. Общий набор CRD в `crds/vendor/`. Конфигурационные CRD берутся из Istio 1.29.6, а operator/Sail CRD сохраняются для совместимости с Istio 1.25. Для обновления из корня репозитория используйте `go run ./modules/110-istio/crds/update`; параметры описаны в [`crds/vendor/README.md`](../../crds/vendor/README.md).
 4. **Без оператора:** `_rules_v-<major>-<minor>.tpl` + ветка в `_istiod_clusterroles.tpl`.
 5. Grafana — [`istio-grafana-dashboards.sh`](istio-grafana-dashboards.sh).
 6. **Без оператора:** каталог `files/<revision>/` — см. ниже.

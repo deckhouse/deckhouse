@@ -9,12 +9,27 @@ description: "Описание схем размещения и взаимоде
 
 Создается внутренняя сеть кластера со шлюзом в публичную сеть, узлы не имеют публичных IP-адресов. Для master-узла заказывается плавающий IP-адрес.
 
+![resources](images/openstack-standard.png)
+<!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11038&t=IvETjbByf1MSQzcm-0 --->
+
 > **Внимание.**
 > Если провайдер не поддерживает SecurityGroups, все приложения, запущенные на узлах с Floating IP, будут доступны по белому IP-адресу.
 > Например, `kube-apiserver` на master-узлах будет доступен на порту 6443. Чтобы избежать этого, рекомендуется использовать схему размещения [SimpleWithInternalNetwork](#simplewithinternalnetwork), либо [Standard](#standard) с bastion-узлом.
 
-![resources](images/openstack-standard.png)
-<!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11038&t=IvETjbByf1MSQzcm-0 --->
+Параметр [`internalNetworkSecurity`](cluster_configuration.html#openstackclusterconfiguration-standard-internalnetworksecurity) (по умолчанию `true`) включает создание группы безопасности (SecurityGroup) при создании кластера. Модуль создаёт группу с именем префикса кластера (`prefix`) и назначает её узлам.
+
+Будут созданы следующие правила входящего трафика:
+
+- разрешение входящего трафика по протоколу TCP и порту `22` из CIDR, указанных в [`sshAllowList`](cluster_configuration.html#openstackclusterconfiguration-sshallowlist) (по умолчанию `0.0.0.0/0`);
+- разрешение входящего трафика по протоколу ICMP из `0.0.0.0/0`;
+- разрешение входящего трафика по протоколу TCP и портам `30000`–`32767` для использования сервисов типа `NodePort`. Входящий трафик по протоколу UDP на порты `NodePort` по умолчанию не разрешается;
+- разрешение любого входящего трафика от узлов, входящих в ту же группу безопасности.
+
+Дополнительно к созданной группе можно подключить собственные группы безопасности. Подготовьте их в облаке заранее, следуя [документации OpenStack](https://docs.openstack.org/nova/latest/user/security-groups.html), и укажите в `additionalSecurityGroups`:
+
+- для master-узлов — в параметре [`masterNodeGroup.instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration);
+- для статических узлов — в параметре [`nodeGroups[].instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration);
+- для эфемерных узлов — в параметре [`spec.additionalSecurityGroups`](cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) ресурса [OpenStackInstanceClass](cr.html#openstackinstanceclass).
 
 Пример конфигурации схемы размещения:
 
@@ -75,7 +90,7 @@ nodeGroups:
     # качестве шлюза по умолчанию.
     configDrive: false
     # Обязательный параметр, шлюз этой сети будет использован как шлюз по умолчанию.
-    # Совпадает с cloud.prefix в ресурсе ClusterConfiguration.
+    # Совпадает с параметром prefix в ModuleConfig global.
     mainNetwork: kube
     additionalNetworks:                         # Необязательный параметр.
     - office
@@ -120,6 +135,21 @@ Virtual IP создается в публичной сети, он все рав
 
 ![resources](images/openstack-standardwithnorouter.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11560&t=IvETjbByf1MSQzcm-0 --->
+
+Параметр [`internalNetworkSecurity`](cluster_configuration.html#openstackclusterconfiguration-standardwithnorouter-internalnetworksecurity) (по умолчанию `true`) включает создание группы безопасности (SecurityGroup) при создании кластера. Модуль создаёт группу с именем префикса кластера (`prefix`) и назначает её узлам.
+
+Будут созданы следующие правила входящего трафика:
+
+- разрешение входящего трафика по протоколу TCP и порту `22` из CIDR, указанных в [`sshAllowList`](cluster_configuration.html#openstackclusterconfiguration-sshallowlist) (по умолчанию `0.0.0.0/0`);
+- разрешение входящего трафика по протоколу ICMP из `0.0.0.0/0`;
+- разрешение входящего трафика по протоколу TCP и портам `30000`–`32767` для использования сервисов типа `NodePort`. Входящий трафик по протоколу UDP на порты `NodePort` по умолчанию не разрешается;
+- разрешение любого входящего трафика от узлов, входящих в ту же группу безопасности.
+
+Дополнительно к созданной группе можно подключить собственные группы безопасности. Подготовьте их в облаке заранее, следуя [документации OpenStack](https://docs.openstack.org/nova/latest/user/security-groups.html), и укажите в `additionalSecurityGroups`:
+
+- для master-узлов — в параметре [`masterNodeGroup.instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration);
+- для статических узлов — в параметре [`nodeGroups[].instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration);
+- для эфемерных узлов — в параметре [`spec.additionalSecurityGroups`](cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) ресурса [OpenStackInstanceClass](cr.html#openstackinstanceclass).
 
 Пример конфигурации схемы размещения:
 
@@ -166,7 +196,7 @@ nodeGroups:
     # качестве шлюза по умолчанию.
     configDrive: false
     # Обязательный параметр, шлюз этой сети будет использован как шлюз по умолчанию.
-    # Совпадает с cloud.prefix в ресурсе ClusterConfiguration.
+    # Совпадает с параметром prefix в ModuleConfig global.
     mainNetwork: kube
     additionalNetworks:                           # Необязательный параметр.
     - office
@@ -204,6 +234,12 @@ virtual IP создается в публичной сети, он все рав
 
 ![resources](images/openstack-simple.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11502&t=IvETjbByf1MSQzcm-0 --->
+
+В этой схеме размещения модуль не создаёт группы безопасности. Подготовьте их в облаке заранее, следуя [документации OpenStack](https://docs.openstack.org/nova/latest/user/security-groups.html), и подключите к узлам через `additionalSecurityGroups`:
+
+- для master-узлов — в параметре [`masterNodeGroup.instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration);
+- для статических узлов — в параметре [`nodeGroups[].instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration);
+- для эфемерных узлов — в параметре [`spec.additionalSecurityGroups`](cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) ресурса [OpenStackInstanceClass](cr.html#openstackinstanceclass).
 
 Пример конфигурации схемы размещения:
 
@@ -277,12 +313,14 @@ provider:
 Master-узел и узлы кластера подключаются к существующей сети. Данная схема размещения может понадобиться, если необходимо
 объединить кластер Kubernetes с уже имеющимися виртуальными машинами.
 
-> **Внимание.**
-> В данной схеме размещения не происходит управление `SecurityGroups`, а подразумевается, что они были ранее созданы.
-> Для настройки политик безопасности необходимо явно указывать `additionalSecurityGroups` в `OpenStackClusterConfiguration` для masterNodeGroup и других nodeGroups, а также `additionalSecurityGroups` при создании `OpenStackInstanceClass` в кластере.
-
 ![resources](images/openstack-simplewithinternalnetwork.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10917&t=IvETjbByf1MSQzcm-0 --->
+
+В этой схеме размещения модуль не создаёт группы безопасности. Подготовьте их в облаке заранее, следуя [документации OpenStack](https://docs.openstack.org/nova/latest/user/security-groups.html), и подключите к узлам через `additionalSecurityGroups`:
+
+- для master-узлов — в параметре [`masterNodeGroup.instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration);
+- для статических узлов — в параметре [`nodeGroups[].instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) ресурса [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration);
+- для эфемерных узлов — в параметре [`spec.additionalSecurityGroups`](cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) ресурса [OpenStackInstanceClass](cr.html#openstackinstanceclass).
 
 Пример конфигурации схемы размещения:
 

@@ -29,14 +29,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/webhook/admission"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	cpvaladmission "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/admission"
 	cpwebhook "github.com/deckhouse/deckhouse/go_lib/cloud-provider/webhook"
 	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/meta"
+	dvpval "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation"
 	dvpadmission "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/validation/admission"
 )
 
 type CredentialSecretValidator struct {
-	builder *cpvaladmission.StateBuilder
+	factory *dvpval.AdmissionStateBuilderFactory
 	object  runtime.Object
 }
 
@@ -47,9 +47,9 @@ var (
 	credentialSecretLog = logf.Log.WithName("credential-secret")
 )
 
-func NewCredentialSecretValidator(builder *cpvaladmission.StateBuilder, object runtime.Object) *CredentialSecretValidator {
+func NewCredentialSecretValidator(factory *dvpval.AdmissionStateBuilderFactory, object runtime.Object) *CredentialSecretValidator {
 	return &CredentialSecretValidator{
-		builder: builder,
+		factory: factory,
 		object:  object,
 	}
 }
@@ -109,7 +109,12 @@ func (v *CredentialSecretValidator) validate(
 		return nil, internalBuildError(err)
 	}
 
-	state, err := v.builder.BuildForCredentialSecret(ctx, operation, cpvaladmission.SecretToCredentialSecret(secret))
+	builder := v.factory.CreateBuilder()
+	if operation != admissionv1.Delete {
+		builder = builder.SetCredentialSecret(ctx, secret)
+	}
+
+	state, err := builder.Build(ctx)
 	if err != nil {
 		credentialSecretLog.Error(err, "failed to build validation state", "name", name, "namespace", namespace)
 		return nil, internalBuildError(err)
@@ -146,7 +151,7 @@ func (v *CredentialSecretValidator) validate(
 
 func isManagedCredentialSecretObject(obj runtime.Object) bool {
 	if secret, ok := obj.(*corev1.Secret); ok {
-		return cpvaladmission.IsManagedCredentialSecret(secret)
+		return secret.Type == cpapi.CredentialsSecretType
 	}
 
 	if unstructuredObj, ok := obj.(*unstructured.Unstructured); ok {

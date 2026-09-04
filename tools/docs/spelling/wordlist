@@ -29,6 +29,7 @@ alertmanager
 Alertmanager
 alertmanagers
 Alertmanagers
+AliCloud
 AllocateSpace
 AllowedAddressPairs
 allowedBundles
@@ -95,6 +96,7 @@ autoK
 autoK8sVersion
 autoload
 Autoloading
+AutoPatch
 AutoplaceTarget
 autoscaler
 autoscalers
@@ -162,6 +164,7 @@ Burstable
 BusyBox
 BypassFwMark
 CAA
+cacerts
 caef
 CAInjector
 camelCase
@@ -267,6 +270,7 @@ ClusterVirtualImage
 cmctl
 CMD
 cmp
+CN
 CNAME
 CNCF
 CNCF’s
@@ -437,6 +441,7 @@ DN
 DNAT
 dns
 DNS
+DNs
 dnsEE
 Dnsmasq
 dnsPolicy
@@ -469,6 +474,7 @@ dst
 DVCR
 dvp
 DVP
+DVPClusterConfiguration
 Dynamix
 DynamiX
 dynDNS
@@ -504,6 +510,7 @@ enableBasicAuth
 enablement
 enableMultiTenancy
 endofftopic
+Entra
 entrypoint
 enum
 env
@@ -518,6 +525,7 @@ etcdutl
 eth
 EuropeClouds
 eventsExporter
+EVS
 existingZoneToSubnetIDMap
 explorative
 expr
@@ -551,6 +559,8 @@ FileManagement
 filesystem
 FileSystem
 filesystems
+finalizer
+finalizers
 flant
 flavorname
 flavorName
@@ -615,6 +625,7 @@ govc
 GPG
 GPU
 GPUs
+GracefulShutdownPostpone
 grafana
 Grafana
 GrafanaAdditionalDatasource
@@ -628,6 +639,7 @@ Graylog
 grep
 gRPC
 GRPC
+GuestInfo
 gz
 Habr
 hardcoded
@@ -637,6 +649,7 @@ hasn
 hdd
 healthcheck
 healthchecks
+healthz
 HEC
 helmignore
 helthcheck
@@ -725,6 +738,7 @@ InitContainer
 initContainers
 InitContainers
 initiatorType
+inline
 Inline
 inode
 inodes
@@ -773,8 +787,10 @@ ISP
 isSudoer
 IssueBasic
 issuerName
+IST
 istio
 istio-api-proxy
+istioctl
 istiod
 IstioFederation
 IstioMulticluster
@@ -783,6 +799,7 @@ jaeger
 jammy
 javascript
 JFrog
+JID
 JPA
 JQ
 js
@@ -823,6 +840,7 @@ kube
 kubeadm
 KubeadmConfigTemplateData
 kubeall
+KubeClusterExtension
 kubeconfig
 kubeconfigGeneratorMasterCA
 kubeconfigs
@@ -885,9 +903,11 @@ logLevel
 Logstash
 loki
 longtermStorageClass
+loopback
 LowNodeUtilization
 LRS
 lsblk
+lt
 LTS
 Lua
 LUN
@@ -1063,6 +1083,7 @@ NogeGroup
 nonreplicated
 NoOps
 noProxyAddressList
+NoRunningPodsWithLabel
 NoSchedule
 NoSQL
 NotIn
@@ -1072,6 +1093,7 @@ NotReady
 NotRegex
 nowrap
 npm
+NSG
 NSX
 NTP
 NtpFwMark
@@ -1095,6 +1117,7 @@ okmeter
 Okmeter
 Okta
 Omniauth
+OmniAuth
 online
 OOM
 OPA
@@ -1116,6 +1139,7 @@ OpenStackClusterConfiguration
 OpenStackEE
 OpenStackInstanceClass
 OpenStackInstanceClasses
+OpenTelemetry
 opentofu
 Opentofu
 OpenTofu
@@ -1133,6 +1157,7 @@ ORM
 os
 OSes
 OSI
+OTLP
 Outlier
 outlierDetection
 overprovisioned
@@ -1170,6 +1195,7 @@ PersistentVolumeClaims
 PersistentVolumes
 php
 PID
+PKCE
 PKCS
 PKI
 plaintext
@@ -1194,6 +1220,7 @@ PodMonitor
 PodMonitors
 PodNetwork
 podSubnetCIDR
+PodsWithLabelAreRunningOnNode
 Poly
 portForwarding
 POSIX
@@ -1311,6 +1338,7 @@ ReplicatedStorageClass
 ReplicatedStoragePool
 ReplicationController
 repo
+Repointing
 repos
 reprovisioning
 repurposed
@@ -1352,6 +1380,7 @@ RWX
 S3
 SaaS
 SaaSUninstall
+Salesforce
 SAML
 SANs
 SASL
@@ -1411,8 +1440,10 @@ shouldn
 Sidekiq
 SIGTERM
 SimpleWithInternalNetwork
+SingleLevel
 Sitemap
 SizingPolicy
+SkyWalking
 SLA
 smokeMini
 snaphost
@@ -1587,6 +1618,7 @@ uninstalling
 Unlabel
 UNPACKEDSIZE
 unschedulable
+Uplink
 uploadproxy
 upmeter
 UpmeterHookProbe
@@ -1600,6 +1632,7 @@ URLs
 UsePAM
 UserBasic
 username
+usernames
 UserOperation
 UTC
 UTF
@@ -1699,7 +1732,12 @@ VxLAN
 VXLAN
 VzZS
 WaitingForDisruptiveApproval
+WaitingForShutdownSignal
 WAL
+waypoint
+Waypoint
+WaypointInstance
+waypoints
 WebAuthn
 webgraphviz
 webhook
@@ -1720,6 +1758,7 @@ WhateverInstanceClass
 whitelist
 Whitelist
 whitelistSourceRanges
+WholeSubtree
 Wiki
 wildcard
 wildcards
@@ -1784,6 +1823,7 @@ ZvirtInstanceClass
 автосогласования
 агрегатор
 агрегатора
+агрегаторам
 агрегаторе
 агрегаторов
 агрегаторы
@@ -1803,6 +1843,7 @@ ZvirtInstanceClass
 Алертинг
 алертинга
 алертов
+алертом
 алерту
 алерты
 Алерты
@@ -1858,6 +1899,7 @@ ZvirtInstanceClass
 БД
 бекенды
 беспроблемный
+бесшовно
 биллинга
 биндинг
 биндинга
@@ -1922,6 +1964,7 @@ ZvirtInstanceClass
 внутренного
 внутрикластерное
 внутрикластерной
+внутрикластерный
 внутрикластерным
 воркеров
 выгрузок
@@ -2016,6 +2059,11 @@ ZvirtInstanceClass
 засчет
 захеширован
 захешированном
+зеркалирование
+зеркалировании
+зеркалирования
+зеркалированный
+зеркалировать
 иcпользовать
 ИБ
 иммутабельный
@@ -2185,6 +2233,10 @@ ZvirtInstanceClass
 мержит
 Метадата
 метаинформацию
+меш
+меша
+меше
+МиБ
 мигрирована
 микросегментация
 микросервисов
@@ -2215,6 +2267,7 @@ ZvirtInstanceClass
 мультимастерном
 мультимастерный
 мультимастерными
+мультиплатформенного
 мультиплатформенной
 мультитенантности
 мультитенантность
@@ -2351,6 +2404,7 @@ ZvirtInstanceClass
 перегенерации
 перегенерация
 перегенерировать
+перегенерируйте
 Перегенерируйте
 передеплоятся
 перезагрузится
@@ -2374,9 +2428,11 @@ ZvirtInstanceClass
 перенаправление
 перенаправления
 перенаправлениям
+перенаправлениями
 перенастраиваются
 переоткрытии
 переподключиться
+перепубликует
 переразвернуть
 Переразвертывание
 переразвёртывание
@@ -2446,6 +2502,7 @@ ZvirtInstanceClass
 Пререквизиты
 прилинкованным
 применились
+применилось
 применится
 применятся
 примонтировав
@@ -2560,10 +2617,12 @@ ZvirtInstanceClass
 сайдкар
 Сайдкар
 сайдкара
+сайдкарами
 сайдкаров
 сайдкаром
 сайдкары
 самоподписанном
+самоподписанному
 самоподписанные
 самоподписанный
 самоподписанных
@@ -2635,6 +2694,8 @@ ZvirtInstanceClass
 сопоставление
 сопоставления
 Сохраняеем
+спанов
+спаны
 спецзаголовки
 спринты
 стейта
@@ -2644,6 +2705,7 @@ ZvirtInstanceClass
 Столярова
 Стрибог
 субресурс
+субресурса
 сущностей
 сущностям
 сущностями
@@ -2658,6 +2720,7 @@ ZvirtInstanceClass
 таймауты
 тайминги
 таргетов
+таргеты
 тегирование
 тегирования
 тегируются
@@ -2687,6 +2750,7 @@ ZvirtInstanceClass
 тредами
 трейсов
 трейсы
+тренд
 трендов
 тренды
 триал
@@ -2700,12 +2764,23 @@ ZvirtInstanceClass
 уязвимостям
 уязвимостями
 файл
+файрвола
 фейловер
 фикстур
 фикстура
 фикстурой
 фикстуру
 фикстуры
+финалайзер
+финалайзера
+финалайзерам
+финалайзерами
+финалайзерах
+финалайзере
+финалайзеров
+финалайзером
+финалайзеру
+финалайзеры
 фич
 фичах
 фичи
@@ -2763,6 +2838,7 @@ ZvirtInstanceClass
 ч
 чаржить
 чатами
+членств
 шаблонизатор
 шаблонизаторе
 шаблонизирования
@@ -2791,3 +2867,30 @@ ZvirtInstanceClass
 юзера
 юнит
 юнита
+ConstraintTemplate
+ConstraintTemplates
+GC
+GVKs
+SDK
+SecurityPolicyException
+allocs
+args
+didn
+diff
+diffing
+diffs
+docstring
+eval
+mtime
+outlier
+pprof
+rulebench
+unmarshalling
+µs
+GOROOT
+PrepareForEval
+ReportAllocs
+TMPDIR
+benchmarkLock
+goroutines
+runN

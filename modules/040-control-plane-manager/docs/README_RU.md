@@ -23,7 +23,7 @@ description: Deckhouse управляет компонентами control plane
 
 Управляет SSL-сертификатами компонентов `control-plane`:
 
-- Серверными сертификатами для `kube-apiserver` и `etcd`. Они хранятся в Secret'е `d8-pki` пространства имен `kube-system`:
+- Серверными сертификатами для `kube-apiserver` и `etcd`. Они хранятся в Secret'е `d8-pki` неймспейса `kube-system`:
   - корневой CA kubernetes (`ca.crt` и `ca.key`);
   - корневой CA etcd (`etcd/ca.crt` и `etcd/ca.key`);
   - RSA-сертификат и ключ для подписи Service Account'ов (`sa.pub` и `sa.key`);
@@ -100,6 +100,8 @@ spec:
 
 Указанные значения используются как общий бюджет запросов для компонентов control plane на каждом master-узле. Deckhouse Kubernetes Platform (DKP) распределяет этот бюджет между статическими подами control plane при формировании их манифестов.
 
+Если запросы CPU или памяти не заданы явно, модуль раз в сутки автоматически рассчитывает запросы соответствующего ресурса для компонентов control plane на основе среднего потребления за предыдущие 7 дней. Явное указание значения для CPU или памяти отключает автоматический расчёт запросов этого ресурса для всех компонентов control plane. В этом случае заданный объём распределяется между компонентами в фиксированных пропорциях.
+
 {% alert level="info" %}
 Эти настройки не применяются, если control plane кластера управляется облачным провайдером, например в GKE, AKS или EKS.
 {% endalert %}
@@ -108,11 +110,27 @@ spec:
 
 Обновление **patch-версии** компонентов control plane (то есть в рамках минорной версии, например с `1.31.13` на `1.31.14`) происходит автоматически вместе с обновлением версии DKP. Управлять обновлением patch-версий нельзя.
 
-Обновлением **минорной-версии** компонентов control plane (например, с `1.32.*` на `1.33.*`) можно управлять с помощью параметра [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion), в котором можно выбрать автоматический режим обновления (значение `Automatic`) или указать желаемую минорную версию control plane. Версию control plane, которая используется по умолчанию (при `kubernetesVersion: Automatic`), а также список поддерживаемых версий Kubernetes можно найти в [документации](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
+Обновлением **минорной-версии** компонентов control plane (например, с `1.32.*` на `1.33.*`) можно управлять с помощью параметра [kubernetesVersion](configuration.html#parameters-kubernetesversion) ModuleConfig `control-plane-manager`, в котором можно выбрать режим следования за версией по умолчанию для текущего релиза DKP (значение `Default`) или указать желаемую минорную версию control plane. Версию control plane, которая используется по умолчанию (при `kubernetesVersion: Default`), а также список поддерживаемых версий Kubernetes можно найти в разделе [«Поддерживаемые версии Kubernetes и ОС»](/products/kubernetes-platform/documentation/v1/reference/supported_versions.html).
+
+Версия Kubernetes в кластере определяется в следующем порядке: параметр `kubernetesVersion` в ModuleConfig `control-plane-manager`, затем устаревшее поле [`ClusterConfiguration.kubernetesVersion`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion), затем версия по умолчанию текущего релиза DKP. Значение из ModuleConfig имеет приоритет всегда, когда оно задано, включая `Default`; пока оно не задано, версию определяет устаревшее поле. Алерт `D8ObsoleteKubernetesVersionFieldInClusterConfiguration` появляется в кластере при самом факте присутствия поля — в том числе когда версию уже определяет параметр в ModuleConfig, — и пропадает только после удаления этого поля из `ClusterConfiguration`.
+
+Пример закрепления версии Kubernetes:
+
+```yaml
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: control-plane-manager
+spec:
+  version: 3
+  enabled: true
+  settings:
+    kubernetesVersion: "1.33"
+```
 
 Обновление control plane выполняется безопасно и для single-master-, и для multi-master-кластеров. Во время обновления может быть кратковременная недоступность API-сервера. На работу приложений в кластере обновление не влияет и может выполняться без выделения окна для регламентных работ.
 
-Если указанная для обновления версия (с параметром [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion)) не соответствует текущей версии control plane в кластере, запускается умная стратегия изменения версий компонентов:
+Если указанная для обновления версия (с параметром [kubernetesVersion](configuration.html#parameters-kubernetesversion)) не соответствует текущей версии control plane в кластере, запускается умная стратегия изменения версий компонентов:
 
 - Общие замечания:
   - Обновление в разных NodeGroup выполняется параллельно. Внутри каждой NogeGroup узлы обновляются последовательно, по одному.
@@ -157,7 +175,7 @@ spec:
 
 - связаны с операциями создания, удаления и изменения ресурсов;
 - совершаются от имен сервисных аккаунтов из системных Namespace `kube-system`, `d8-*`;
-- совершаются с ресурсами в системных пространствах имен `kube-system`, `d8-*`.
+- совершаются с ресурсами в системных неймспейсах `kube-system`, `d8-*`.
 
 Для выключения базовых политик установите флаг [basicAuditPolicyEnabled](configuration.html#parameters-apiserver-basicauditpolicyenabled) в `false`.
 
@@ -176,6 +194,59 @@ spec:
 - `kube-controller-manager`;
 - `kube-scheduler`;
 - `kube-etcd`.
+
+## Admission-плагины, включаемые по умолчанию
+
+При установке Deckhouse Kubernetes Platform помимо стандартных admission-плагинов, включаемых Kubernetes, модуль включает несколько дополнительных. Подробнее об admission-плагинах — в [документации Kubernetes](https://kubernetes.io/docs/reference/access-authn-authz/admission-controllers/#validatingadmissionwebhook).
+
+### Стандартные admission-плагины, включаемые Kubernetes
+
+Kubernetes включает следующие стандартные admission-плагины:
+
+| Admission‑плагин | Тип | Краткое описание |
+| :--- | :--- | :--- |
+| **NamespaceLifecycle** | Валидирующий | Не позволяет создавать новые объекты в неймспейсах, которые находятся в процессе удаления (termination), а также в несуществующих неймспейсах. Также он предотвращает удаление системных неймспейсов: `default`, `kube-system` и `kube-public`. |
+| **LimitRanger** | Мутирующий и Валидирующий | Наблюдает за входящими запросами и проверяет, не нарушают ли они ограничения, заданные в объекте LimitRange в неймспейсе. Используется для принудительного применения лимитов ресурсов на уровне контейнеров и подов. |
+| **ServiceAccount** | Мутирующий и Валидирующий | Автоматизирует работу с ServiceAccount. Если у пода не указан `ServiceAccount`, он автоматически назначает аккаунт `default` из того же неймспейса. Также проверяет, что указанный ServiceAccount существует. |
+| **TaintNodesByCondition** | Мутирующий | Стандартный плагин безопасности, который автоматически добавляет taints на вновь созданные узлы в зависимости от их состояния (например, `NotReady` или `Unreachable`). Это позволяет избежать ситуаций, когда поды будут планироваться на новые узлы до того, как их метки будут обновлены, чтобы точно отражать их заявленное состояние. |
+| **PodSecurity** | Валидирующий | Проверяет новые поды перед их запуском и определяет, следует ли их допустить, на основе запрошенного контекста безопасности и ограничений, установленных Pod Security Standards в том неймспейсе, в котором будет находиться данный под. |
+| **Priority** | Мутирующий и Валидирующий | Использует поле `priorityClassName` и заполняет целочисленное значение приоритета. Если класс приоритета не найден, под отклоняется. |
+| **DefaultTolerationSeconds** | Мутирующий | Устанавливает для подов значения toleration по умолчанию для taints `notready:NoExecute` и `unreachable:NoExecute`, если под не имеет своих tolerations. Значение по умолчанию — **5 минут**. |
+| **DefaultStorageClass** | Мутирующий | Наблюдает за созданием объектов PersistentVolumeClaim. Если в запросе не указан конкретный StorageClass, автоматически добавляет StorageClass, помеченный как `default`. Благодаря этому пользователи, не запрашивающие какой-либо StorageClass, получат StorageClass по умолчанию. |
+| **StorageObjectInUseProtection** | Мутирующий | Защищает объекты хранения (например, PersistentVolume), которые используются подами, от случайного удаления. Добавляет финализаторы `kubernetes.io/pvc-protection` или `kubernetes.io/pv-protection`, предотвращающие удаление ресурса, пока он используется. |
+| **PersistentVolumeClaimResize** | Валидирующий | Выполняет дополнительные проверки для входящих запросов на изменение размера PersistentVolumeClaim. По умолчанию запрещает изменение размера всех заявок (claims), за исключением тех случаев, когда в StorageClass заявки явно разрешено изменение размера путем установки параметра `allowVolumeExpansion` в значение `true`. |
+| **RuntimeClass** | Мутирующий и Валидирующий | Учитывает `RuntimeClass` при создании подов. Устанавливает поле `pod.Spec.Overhead` (накладные расходы) в соответствии с выбранным классом выполнения и проверяет корректность запросов. |
+| **CertificateApproval** | Валидирующий | Наблюдает за запросами на утверждение (approve) CertificateSigningRequest и выполняет дополнительные проверки авторизации, чтобы убедиться, что у пользователя есть права на утверждение запросов сертификатов. |
+| **CertificateSigning** | Валидирующий | Наблюдает за обновлениями поля `status.certificate` в CertificateSigningRequest и проверяет, что у пользователя есть права на подписание (sign) запроса на сертификат, с использованием значения `spec.signerName`, указанного в ресурсе CertificateSigningRequest. |
+| **ClusterTrustBundleAttest** | Валидирующий | Анализирует и подтверждает доверие к кластеру Kubernetes. Это может включать проверку сертификатов, настроек безопасности и других параметров, связанных с целостностью кластера. |
+| **CertificateSubjectRestriction** | Валидирующий | Наблюдает за созданием CertificateSigningRequest с `spec.signerName` = `kubernetes.io/kube-apiserver-client`. Отклоняет запросы, в которых указана группа `system:masters`. |
+| **DefaultIngressClass** | Мутирующий | Наблюдает за созданием объектов Ingress. Если в запросе не указан класс Ingress, автоматически добавляет класс Ingress, помеченный как default. |
+| **PodTopologyLabels** | Мутирующий | Добавляет подам, привязанным к узлу, метки топологии (например, зону доступности), соответствующие меткам этого узла. |
+| **MutatingAdmissionPolicy** | Валидирующий и Мутирующий | Механизм в рамках системы контроля доступа (admission control), который позволяет модифицировать объекты при их создании или обновлении в процессе приёма запроса. |
+| **MutatingAdmissionWebhook** | Мутирующий | Вызывает все мутирующие вебхуки (mutating webhooks), которые соответствуют запросу. Вебхуки могут изменять объект и вызываются последовательно. |
+| **ValidatingAdmissionPolicy** | Валидирующий | Позволяет встраивать декларативную валидацию непосредственно в API, без использования внешних HTTP-вызовов. Он проверяет CEL для входящих запросов, соответствующих критериям. Включается, когда одновременно активированы функция `validatingadmissionpolicy` и группа/версия `admissionregistration.k8s.io/v1alpha1`. Если происходит сбой в работе любой из политик `ValidatingAdmissionPolicy`, запрос отклоняется. |
+| **ValidatingAdmissionWebhook** | Валидирующий | Вызывает для проверки объекта все валидирующие вебхуки (validating webhooks), которые соответствуют запросу. |
+| **ResourceQuota** | Валидирующий | Наблюдает за входящими запросами и проверяет, не нарушают ли они ограничения, заданные в объекте ResourceQuota в неймспейсе. Используется для ограничения суммарного потребления ресурсов (CPU, память, количество объектов) в неймспейсе. |
+
+### Дополнительные admission-плагины, включаемые модулем
+
+В дополнение к [включаемым Kubernetes](#стандартные-admission-плагины-включаемые-kubernetes) модуль включает следующие admission-плагины (без возможности отключения):
+
+| Admission‑плагин | Тип | Краткое описание |
+| :--- | :--- | :--- |
+| **EventRateLimit** | Валидирующий | Позволяет решить проблему перегрузки API-сервера запросами на сохранение новых событий. Позволяет настроить лимиты на уровне неймспейса, пользователя или глобально. |
+| **ExtendedResourceToleration** | Мутирующий | Автоматически добавляет toleration к подам, запрашивающим расширенные ресурсы (например, GPU, FPGA). Это позволяет выделить для таких подов специальные узлы, которые заранее помечены taint с именем ресурса, без ручного добавления tolerations на поды. |
+| **NodeRestriction** | Валидирующий | Ограничивает набор объектов Node и Pod, которые может изменять kubelet. Повышает безопасность кластера. |
+| **PodNodeSelector** | Мутирующий и Валидирующий | Определяет и ограничивает, какие селекторы узлов могут использоваться в пределах неймспейса, на основе считывания аннотации неймспейса и глобальной конфигурации. |
+| **PodTolerationRestriction** | Мутирующий и Валидирующий | Проверяет toleration пода на конфликты с toleration, заданными на уровне неймспейса. Если конфликтов нет, объединяет toleration пода и неймспейса. Также проверяет под на соответствие «белому списку» tolerations. |
+
+{% alert level="info" %}
+
+Помимо указанных выше admission-плагинов (включаемых Kubernetes и модулем) можно включить и некоторые дополнительные. Для этого используйте параметр [`apiserver.admissionPlugins`](configuration.html#parameters-apiserver-admissionplugins).
+
+Плагины `PodNodeSelector` и `PodTolerationRestriction` остаются в списке допустимых значений этого параметра только для обратной совместимости: они включены всегда, поэтому их указание ни на что не влияет и не приводит к ошибке.
+
+{% endalert %}
 
 ## Feature Gates
 
@@ -202,7 +273,7 @@ spec:
 Если feature gate не поддерживается или имеет статус `deprecated`, в системе мониторинга будет сгенерирован алерт [D8ProblematicFeatureGateInUse](/products/kubernetes-platform/documentation/v1/reference/alerts.html#control-plane-manager-d8problematicfeaturegateinuse), информирующий о том, что feature gate не будет применен.
 
 {% alert level="warning" %}
-Обновление версии Kubernetes (управляется параметром [kubernetesVersion](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-kubernetesversion)) не произойдёт, если в списке включенных feature gates, заданных для новой версии Kubernetes, есть feature gates в статусе `deprecated`.
+Обновление версии Kubernetes (управляется параметром [kubernetesVersion](configuration.html#parameters-kubernetesversion)) не произойдёт, если в списке включенных feature gates, заданных для новой версии Kubernetes, есть feature gates в статусе `deprecated`.
 {% endalert %}
 
 Описание feature gates доступно в [документации Kubernetes](https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/){:target="_blank"}.

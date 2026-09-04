@@ -55,7 +55,7 @@ func newInterceptedController(t *testing.T, funcs interceptor.Funcs, objects ...
 		Build()
 
 	controller := &InstanceController{Base: register.Base{Client: k8sClient}}
-	require.NoError(t, controller.Setup(nil))
+	require.NoError(t, controller.Setup(t.Context(), nil))
 
 	return controller, k8sClient
 }

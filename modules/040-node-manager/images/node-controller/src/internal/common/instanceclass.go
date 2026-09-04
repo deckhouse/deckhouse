@@ -19,13 +19,12 @@ package common
 import (
 	"context"
 	"fmt"
-	"strings"
+	"sort"
 
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
-	"k8s.io/client-go/discovery"
-	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -33,43 +32,48 @@ import (
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 )
 
-const instanceClassKindSuffix = "InstanceClass"
-
-// ServedInstanceClassKinds discovers the InstanceClass kinds the cluster actually serves, so the
-// controllers can watch them. The kind is provider-specific (AWSInstanceClass, DVPInstanceClass,
-// …) and therefore cannot be compiled in; discovery is done once at controller setup.
+// RegisteredInstanceClassGVKs returns the GVK every cloud provider registered its InstanceClass
+// under: for each registration Secret, the instanceClassKind it names at the
+// instanceClassAPIVersion it declares. Registrations are found by label rather than by the fixed
+// legacy name, so a cluster with several providers yields every provider's kind at that
+// provider's own version.
 //
-// Without these watches an InstanceClass edit reaches the nodes only on the next resync — up to
-// ten minutes during which the rendered MachineClass, the machine template and the bashible
-// context all describe the previous instance type. The helm implementation reacted immediately.
-//
-// Watching costs no extra informer: the derived-status service already reads these objects
-// through the cached unstructured client, so the informer exists either way.
-func ServedInstanceClassKinds(cfg *rest.Config) ([]schema.GroupVersionKind, error) {
-	dc, err := discovery.NewDiscoveryClientForConfig(cfg)
-	if err != nil {
-		return nil, fmt.Errorf("build discovery client: %w", err)
+// A registration without the version contributes nothing — guessing a version is what this whole
+// mechanism exists to prevent (see InstanceClassAPIVersionKey). The CRD may lag the Secret:
+// callers hand the GVK to a watch that waits for it (source.Kind retries an unserved kind
+// itself), they must not assume it is served.
+func RegisteredInstanceClassGVKs(ctx context.Context, r client.Reader) ([]schema.GroupVersionKind, error) {
+	secrets := &corev1.SecretList{}
+	if err := r.List(ctx, secrets, client.InNamespace(CloudProviderSecretNamespace),
+		client.HasLabels{CloudProviderRegistrationLabel}); err != nil {
+		return nil, fmt.Errorf("list cloud provider registration secrets: %w", err)
 	}
 
-	// Partial discovery is normal (an aggregated API can be momentarily unavailable) and must
-	// not cost us the watches for the groups that did answer.
-	lists, err := dc.ServerPreferredResources()
-	if err != nil && len(lists) == 0 {
-		return nil, fmt.Errorf("list served resources: %w", err)
-	}
-
+	seen := map[schema.GroupVersionKind]bool{}
 	var gvks []schema.GroupVersionKind
-	for _, list := range lists {
-		gv, parseErr := schema.ParseGroupVersion(list.GroupVersion)
-		if parseErr != nil || gv.Group != v1.GroupVersion.Group {
+	for i := range secrets.Items {
+		kind := string(secrets.Items[i].Data[InstanceClassKindKey])
+		version := string(secrets.Items[i].Data[InstanceClassAPIVersionKey])
+		if kind == "" || version == "" {
 			continue
 		}
-		for _, res := range list.APIResources {
-			if strings.HasSuffix(res.Kind, instanceClassKindSuffix) && res.Kind != instanceClassKindSuffix {
-				gvks = append(gvks, gv.WithKind(res.Kind))
-			}
+
+		gvk := schema.GroupVersionKind{Group: v1.GroupVersion.Group, Version: version, Kind: kind}
+		// Providers publish the same registration twice, under the legacy fixed name and under
+		// the per-provider one.
+		if seen[gvk] {
+			continue
 		}
+		seen[gvk] = true
+		gvks = append(gvks, gvk)
 	}
+
+	sort.Slice(gvks, func(i, j int) bool {
+		if gvks[i].Version != gvks[j].Version {
+			return gvks[i].Version < gvks[j].Version
+		}
+		return gvks[i].Kind < gvks[j].Kind
+	})
 	return gvks, nil
 }
 

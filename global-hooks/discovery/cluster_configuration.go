@@ -26,6 +26,7 @@ import (
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"sigs.k8s.io/yaml"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
@@ -33,8 +34,19 @@ import (
 	"github.com/deckhouse/deckhouse/modules/040-control-plane-manager/hooks"
 )
 
+// maxUsedK8sVersionSecretKey is Deckhouse's own bookkeeping in the d8-cluster-configuration Secret,
+// not a ClusterConfiguration field. It lives next to its only reader, the FilterFunc below; the
+// value it carries is consumed by the soft guard in target_kubernetes_version.go.
+const maxUsedK8sVersionSecretKey = "maxUsedControlPlaneKubernetesVersion"
+
 type ClusterConfigurationYaml struct {
 	Content []byte
+	// MaxUsed is maxUsedControlPlaneKubernetesVersion from the same Secret (baseline for soft-guard).
+	MaxUsed string
+	// KubernetesVersion is the raw ClusterConfiguration.kubernetesVersion, read with a plain
+	// unmarshal so target_kubernetes_version.go does not need config.ParseConfigFromData: schema
+	// validation of the whole document is this hook's job, not the version hook's.
+	KubernetesVersion string
 }
 
 func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -52,6 +64,18 @@ func applyClusterConfigurationYamlFilter(obj *unstructured.Unstructured) (go_hoo
 	}
 
 	cc.Content = ccYaml
+	if v, ok := secret.Data[maxUsedK8sVersionSecretKey]; ok {
+		cc.MaxUsed = string(v)
+	}
+
+	// Best-effort: a malformed document is this hook's problem to report, and the version hook
+	// must stay independent of it. Same shape helm.go and both Python webhooks read.
+	var ccDoc struct {
+		KubernetesVersion string `json:"kubernetesVersion"`
+	}
+	if err := yaml.Unmarshal(ccYaml, &ccDoc); err == nil {
+		cc.KubernetesVersion = ccDoc.KubernetesVersion
+	}
 
 	return cc, nil
 }
@@ -94,14 +118,20 @@ func clusterConfiguration(ctx context.Context, input *go_hook.HookInput) error {
 			return fmt.Errorf("parse config from data: %w", err)
 		}
 
-		kubernetesVersionFromMetaConfig, err := rawMessageToString(metaConfig.ClusterConfig["kubernetesVersion"])
-		if err != nil {
-			return err
-		}
+		if raw, ok := metaConfig.ClusterConfig["kubernetesVersion"]; ok && len(raw) > 0 && string(raw) != "null" {
+			kubernetesVersionFromMetaConfig, err := rawMessageToString(raw)
+			if err != nil {
+				return err
+			}
 
-		if kubernetesVersionFromMetaConfig == "Automatic" {
-			b, _ := json.Marshal(hooks.DefaultKubernetesVersion)
-			metaConfig.ClusterConfig["kubernetesVersion"] = b
+			// Keep substituting Automatic → Default into global.clusterConfiguration for backward
+			// compatibility during the ClusterConfiguration.kubernetesVersion deprecation window.
+			// Declared target lives in global.discovery.targetKubernetesVersion instead.
+			if kubernetesVersionFromMetaConfig == automaticKubernetesVersion {
+				// ClusterConfig values are json.RawMessage, so the version has to go back in encoded.
+				defaultKubernetesVersionJSON, _ := json.Marshal(hooks.DefaultKubernetesVersion)
+				metaConfig.ClusterConfig["kubernetesVersion"] = defaultKubernetesVersionJSON
+			}
 		}
 
 		input.Values.Set("global.clusterConfiguration", metaConfig.ClusterConfig)

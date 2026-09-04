@@ -12,6 +12,80 @@ yandex.cpi.flant.com/listener-subnet-id: SubnetID
 
 Аннотация указывает, какой subnet будет слушать LoadBalancer.
 
+## Использование отдельной целевой группы для NodeGroup
+
+По умолчанию Yandex Cloud Controller Manager добавляет все подходящие узлы кластера в целевую группу по умолчанию. Чтобы назначить узлам отдельную целевую группу, используйте аннотацию `yandex.cpi.flant.com/target-group-name-prefix`. Описание аннотации приведено в разделе [«Аннотации объекта Service»](/modules/cloud-provider-yandex/examples.html#аннотации-объекта-service).
+
+1. В NodeGroup, узлы которой должны входить в отдельную целевую группу, задайте аннотацию `yandex.cpi.flant.com/target-group-name-prefix` в параметре [`spec.nodeTemplate.annotations`](/modules/node-manager/cr.html#nodegroup-v1-spec-nodetemplate-annotations). Например:
+
+   ```yaml
+   spec:
+     nodeTemplate:
+       annotations:
+         yandex.cpi.flant.com/target-group-name-prefix: frontend-
+   ```
+
+   Аннотация распространяется на объекты Node. Yandex Cloud Controller Manager добавляет в целевую группу все подходящие узлы с таким значением аннотации независимо от их NodeGroup.
+
+1. В объекте [Service](/modules/cloud-provider-yandex/examples.html#аннотации-объекта-service) типа LoadBalancer задайте ту же аннотацию с тем же значением. Например:
+
+   ```yaml
+   metadata:
+     annotations:
+       yandex.cpi.flant.com/target-group-name-prefix: frontend-
+   ```
+
+   Аннотация на Service определяет целевую группу, которую использует LoadBalancer, но не выбирает узлы.
+
+1. Убедитесь, что значения `yandex.cpi.flant.com/target-group-name-prefix` в NodeGroup и Service совпадают. В примере выше в обоих ресурсах используется значение `frontend-`.
+
+1. Целевая группа будет создана с именем, сформированным по шаблону:
+
+   ```shell
+   <ANNOTATION_VALUE><YANDEX_CLOUD_CLUSTER_NAME><NETWORK_ID>
+   ```
+
+   Например, если значение аннотации — `frontend-`, имя кластера — `my-cluster-`, а идентификатор сети — `enp123456789`, имя целевой группы будет следующим:
+
+   ```shell
+   frontend-my-cluster-enp123456789
+   ```
+
+Пример конфигурации:
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: frontend
+spec:
+  nodeType: CloudEphemeral
+  nodeTemplate:
+    annotations:
+      yandex.cpi.flant.com/target-group-name-prefix: frontend-
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nginx-frontend
+  annotations:
+    yandex.cpi.flant.com/target-group-name-prefix: frontend-
+spec:
+  type: LoadBalancer
+```
+
+{% alert level="warning" %}
+Yandex Cloud не позволяет одному целевому ресурсу (target), определяемому парой `(SubnetID, IP)`, одновременно находиться в нескольких целевых группах.
+
+При изменении целевой группы Yandex Cloud Controller Manager сначала удаляет ресурс из текущей группы, а затем добавляет в новую. Во время перемещения возможен кратковременный перерыв в обработке трафика.
+{% endalert %}
+
+Узлы, для которых задан отдельный префикс целевой группы, исключаются из целевой группы по умолчанию. Поэтому балансировщики, использующие её, перестают направлять трафик на такие узлы.
+
+Такое автоматическое перемещение выполняется только между целевыми группами, которыми управляет Yandex Cloud Controller Manager. Если ресурс уже находится в другой целевой группе, не управляемой Yandex Cloud Controller Manager, удалите ресурс из неё перед использованием аннотации.
+
+После изменения или удаления префикса прежняя целевая группа может остаться пустой. Если она больше не используется балансировщиками, удалите её вручную.
+
 ## Резервирование публичного IP-адреса
 
 Для использования в `externalIPAddresses` и `natInstanceExternalAddress` (также может быть использован для bastion-хоста) выполните следующую команду:
@@ -44,6 +118,16 @@ reserved: true
 При использовании опции `dhcpOptions` все DNS-запросы начнут идти через указанные DNS-серверы. Эти DNS-серверы **должны** разрешать внешние DNS-имена, а также при необходимости разрешать DNS-имена внутренних ресурсов.
 
 **Не используйте** эту опцию, если указанные рекурсивные DNS-серверы не могут разрешать тот же список зон, что сможет разрешать рекурсивный DNS-сервер в подсети Yandex Cloud.
+
+## Изменение `networkType` не пересоздаёт CloudEphemeral-узлы
+
+В кластерах, использующих Machine Controller Manager (MCM), изменение параметра [`networkType`](cr.html#yandexinstanceclass-v1-spec-networktype) в ресурсе YandexInstanceClass не приводит к автоматическому пересозданию существующих CloudEphemeral-узлов. Хотя MachineClass обновляется, тип сетевого ускорения у уже созданных виртуальных машин в Yandex Cloud не изменяется.
+
+DKP намеренно не учитывает параметр `networkType` при определении необходимости пересоздания CloudEphemeral-узлов в MCM. Если бы он учитывался, обновление DKP привело бы к пересозданию CloudEphemeral-узлов во всех кластерах, где `networkType` уже указан, даже если его значение не изменялось.
+
+В Cluster API параметр `networkType` учитывается при определении необходимости пересоздания узлов, поэтому его изменение запускает их обновление автоматически. Новые CloudEphemeral NodeGroup в Yandex по умолчанию используют CAPI.
+
+Если вы изменили `networkType` в кластере на MCM и хотите, чтобы новое значение применилось к уже существующим CloudEphemeral-узлам, пересоздайте их вручную — инструкция в [документации](/modules/node-manager/faq.html#как-пересоздать-эфемерные-машины-в-облаке-с-новой-конфигурацией).
 
 ## Назначение произвольного StorageClass используемого по умолчанию
 

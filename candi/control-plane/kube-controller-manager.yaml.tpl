@@ -27,9 +27,6 @@
 {{- if semverCompare "<=1.32" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "InPlacePodVerticalScaling=true" -}}
 {{- end }}
-{{- if semverCompare "<=1.31" .clusterConfiguration.kubernetesVersion }}
-  {{- $baseFeatureGates = append $baseFeatureGates "AnonymousAuthConfigurableEndpoints=true" -}}
-{{- end }}
 {{- $controllerManagerFeatureGates := $baseFeatureGates -}}
 {{- if hasKey . "allowedFeatureGates" -}}
   {{- range .allowedFeatureGates.kubeControllerManager -}}
@@ -45,6 +42,7 @@ metadata:
   labels:
     component: kube-controller-manager
     tier: control-plane
+    security.deckhouse.io/security-policy-exception: kube-controller-manager
   name: kube-controller-manager
   namespace: kube-system
 spec:
@@ -111,9 +109,11 @@ spec:
         scheme: HTTPS
     resources:
       requests:
-        cpu: "{{ div (mul $millicpu 20) 100 }}m"
-        memory: "{{ div (mul $memory 20) 100 }}"
+        {{- $c := (($resourcesRequests.components | default dict).kubeControllerManager) | default dict }}
+        cpu: "{{ $c.milliCPU | default (div (mul $millicpu 10) 100) }}m"
+        memory: "{{ $c.memoryBytes | default (div (mul $memory 10) 100) }}"
     securityContext:
+      allowPrivilegeEscalation: false
       capabilities:
         drop:
         - ALL

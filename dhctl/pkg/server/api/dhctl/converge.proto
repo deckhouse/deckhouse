@@ -45,6 +45,9 @@ message ConvergeStart {
   string state = 4;
   string approve_destruction_change_id = 5;
   ConvergeStartOptions options = 6;
+  // kubeconfig points the kube provider straight at the API server. connection_config is still
+  // required: this operation reaches the nodes over ssh.
+  string kubeconfig = 7;
 }
 
 message ConvergePhaseEnd {

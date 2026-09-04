@@ -1,5 +1,6 @@
 ---
 title: "Работа с кодовой базой и Code Review"
+description: Как проверять изменения в merge request перед объединением в основную ветку
 permalink: ru/code/documentation/user/code-review.html
 lang: ru
 ---

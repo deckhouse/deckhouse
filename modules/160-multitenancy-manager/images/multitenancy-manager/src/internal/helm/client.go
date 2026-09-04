@@ -153,6 +153,15 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 		if errors.Is(err, driver.ErrReleaseNotFound) {
 			isFirstInstall = true
 			c.logger.Info("the release not found, install it", "release", project.Name, "namespace", project.Name)
+
+			// Repeated here rather than left to admission: the release is applied with
+			// cluster-admin, and a project can reach this point without a passing admission check --
+			// the webhook may be bypassed, and an object admitted before this check existed is
+			// reconciled just the same.
+			if err = c.ensureParametersStayValues(project, template); err != nil {
+				return err
+			}
+
 			post := newPostRenderer(project, versions, c.logger, isFirstInstall)
 			install := action.NewInstall(c.conf)
 			install.ReleaseName = project.Name
@@ -177,6 +186,14 @@ func (c *Client) Upgrade(ctx context.Context, project *v1alpha2.Project, templat
 			c.logger.Info("the release is up to date", "release", project.Name, "namespace", project.Name)
 			return nil
 		}
+	}
+
+	// Below the up-to-date return above, and not at the top of this method: an unchanged release
+	// applies nothing, so re-checking it could only refuse a project that already reconciled --
+	// which a module upgrade would then do to every project whose template turns a parameter into
+	// structure on purpose.
+	if err = c.ensureParametersStayValues(project, template); err != nil {
+		return err
 	}
 
 	if releases[0].Info.Status.IsPending() {
@@ -361,6 +378,28 @@ func (c *Client) Delete(_ context.Context, releaseName string) error {
 
 // ValidateRender tests project render
 func (c *Client) ValidateRender(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
+	manifests, err := c.renderTemplate(project, template)
+	if err != nil {
+		return err
+	}
+
+	// Before post-rendering: injected manifests tend to fail there too, and "post render: yaml: line
+	// 6: ..." says nothing about the parameter that caused it. Reuses the render above rather than
+	// asking for its own.
+	if err = c.ensureRenderedParametersStayValues(project, template, manifests); err != nil {
+		return err
+	}
+
+	renderer := newPostRenderer(project, nil, c.logger, false)
+	if _, err = renderer.Run(bytes.NewBufferString(manifests)); err != nil {
+		return fmt.Errorf("post render: %w", err)
+	}
+
+	return renderer.warning
+}
+
+// renderTemplate renders the project template without touching the cluster.
+func (c *Client) renderTemplate(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) (string, error) {
 	ch := buildChart(c.templates, project.Name)
 
 	values, err := chartutil.ToRenderValues(ch, buildValues(project, template), chartutil.ReleaseOptions{
@@ -368,23 +407,18 @@ func (c *Client) ValidateRender(project *v1alpha2.Project, template *v1alpha1.Pr
 		Namespace: project.Name,
 	}, nil)
 	if err != nil {
-		return fmt.Errorf("render values: %w", err)
+		return "", fmt.Errorf("render values: %w", err)
 	}
 
 	rendered, err := engine.Render(ch, values)
 	if err != nil {
-		return fmt.Errorf("render chart: %w", err)
+		return "", fmt.Errorf("render chart: %w", err)
 	}
 
-	buf := bytes.NewBuffer(nil)
+	buf := new(strings.Builder)
 	for _, file := range rendered {
 		buf.WriteString(file)
 	}
 
-	renderer := newPostRenderer(project, nil, c.logger, false)
-	if _, err = renderer.Run(buf); err != nil {
-		return fmt.Errorf("post render: %w", err)
-	}
-
-	return renderer.warning
+	return buf.String(), nil
 }

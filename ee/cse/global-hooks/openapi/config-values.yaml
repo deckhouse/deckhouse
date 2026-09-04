@@ -1,0 +1,356 @@
+# WARNING!
+# if you change this file please evaluate to change files
+# /global-hooks/openapi/config-values.yaml
+# /ee/cse/global-hooks/openapi/config-values.yaml
+x-config-version: 2
+type: object
+default: {}
+additionalProperties: false
+properties:
+  storageClass:
+    type: string
+    default: null
+    deprecated: true
+    x-doc-deprecated: true
+    description: |
+      > **Deprecated**. Use [settings.modules.storageClass](#parameters-modules-storageclass) instead.
+
+      The StorageClass to use with all Deckhouse Kubernetes Platform components (Prometheus, Grafana, OpenVPN, etc.).
+
+        * If the value is not specified, the [default StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass) set in the cluster is used.
+        * Use this parameter only in exceptional circumstances.
+        * This parameter is applied during module activation.
+  defaultClusterStorageClass:
+    type: string
+    default: null
+    description: |-
+      The name of the StorageClass that DKP will define as the default StorageClass used in the cluster.
+
+      DKP prohibits manually adding or modifying the default annotation (`storageclass.kubernetes.io/is-default-class='true'`) for StorageClass. Use the parameter to define or change the StorageClass that is used as the default in the cluster.
+
+      If the parameter is omitted, the default StorageClass is either:
+
+       * A StorageClass in the cluster that has the default annotation (`storageclass.kubernetes.io/is-default-class='true'`);
+       * The first (alphabetically) StorageClass created by the cloud provider module (if any cloud provider module is used).
+
+      Use this parameter to change the default StorageClass in the cluster, as manually adding the default annotation to a StorageClass is not allowed.
+  highAvailability:
+    type: boolean
+    description: |
+      A global switch to enable the *high availability* mode for modules that support it.
+
+      If not defined, the value is determined automatically as `true` for clusters with more than one master node. Otherwise, it is determined as`false`.
+    x-examples: [ true, false ]
+  prefix:
+    type: string
+    pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?$'
+    maxLength: 45
+    description: |
+      A prefix of the objects to be created in the cloud.
+
+      Is used, for example, to distinguish objects created for different clusters, to configure routing, etc.
+
+      This is the new home for the prefix that was previously set in `ClusterConfiguration.cloud.prefix`. If not set, the value from `ClusterConfiguration.cloud.prefix` is used.
+
+      The prefix is used to name cloud objects such as disks (e.g. `<prefix>-kubernetes-data-0`). Cloud object names are limited to 63 characters, so the prefix is capped at 45 characters to leave room for the generated suffix. Depending on the provider and the number of master nodes, the effective limit may be lower; this is additionally enforced by a bootstrap preflight check.
+
+      > **Warning.** This value names existing cloud infrastructure (security groups, route tables, resource groups, instances, etc.). It must match the prefix the cluster was bootstrapped with — setting a different value will break cloud integration. It is not intended to be changed in a running cluster.
+    x-examples:
+      - "kube"
+  modules:
+    description: |
+      Common parameters of Deckhouse modules.
+    additionalProperties: false
+    default: {}
+    type: object
+    properties:
+      gatewayAPIGateway:
+        type: object
+        properties:
+          name:
+            type: string
+            description: |
+              Name of the Gateway object.
+          namespace:
+            type: string
+            description: |
+              Namespace of the Gateway object.
+        required:
+          - name
+          - namespace
+        description: |
+          Reference to the Gateway object (from the Gateway API) used by modules of the Deckhouse ecosystem when creating Gateway API resources.
+
+          If not specified, modules use the Gateway automatically discovered in the cluster (if any).
+      ingressClass:
+        type: string
+        default: nginx
+        description: |
+          Default [IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class) name used by the Deckhouse ecosystem modules when creating Ingress resources.
+
+          Some modules support their own `ingressClass` parameter, which lets you use a different IngressClass instead of the default one.
+        x-examples: [ "nginx" ]
+        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+      publicDomainTemplate:
+        type: string
+        pattern: '^(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+        description: |
+          A DNS name template with the `%s` key used as a dynamic part of the string.
+
+          Deckhouse modules use this template when creating Ingress resources.
+
+          For example, given the template `%s.kube.company.my`, the `prometheus` module will create an Ingress resource at the address `grafana.kube.company.my` to provide access to Grafana.
+
+          **Pay attention to the following:**
+          - If this parameter is not specified, Ingress resources will not be created.
+          - The domain specified in the template must not match or be a subdomain of the domain specified in the [`clusterDomain`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter. It is not recommended to change the `clusterDomain` value unless absolutely necessary.
+          - For the template to function correctly, you must first configure DNS services both in the networks where the cluster nodes will be located and in the networks from which clients will access the platform’s service web interfaces.
+          - If the template matches the domain of the node network, use only A records to assign addresses of the nodes’ Frontend interfaces to the platform’s service web interfaces.
+          For example, if the nodes are registered under the `company.my` zone and the template is `%s.company.my`.
+        x-doc-examples: [ "%s.kube.company.my", "kube-%s.company.my" ]
+        x-examples: [ "%s.kube.company.my" ]
+      placement:
+        description: |
+          Parameters regulating the layout of Deckhouse module components.
+        type: object
+        additionalProperties: false
+        default: {}
+        properties:
+          customTolerationKeys:
+            description: |
+              A list of custom toleration keys; use them to allow the deployment of some critical add-ons (such as cni and csi) on dedicated nodes.
+            x-doc-example: |
+              ```yaml
+              customTolerationKeys:
+              - dedicated.example.com
+              - node-dedicated.example.com/master
+              ```
+            type: array
+            items:
+              type: string
+            x-examples:
+            - [ "dedicated.example.com" ]
+      https:
+        description: |
+          HTTPS access implementation method used by the Deckhouse ecosystem modules.
+        type: object
+        additionalProperties: false
+        default: {}
+        x-examples:
+        - certManager:
+            clusterIssuerName: selfsigned
+          mode: CertManager
+        - mode: Disabled
+        - mode: OnlyInURI
+        - mode: CustomCertificate
+          customCertificate:
+            secretName: plainstring
+        properties:
+          mode:
+            type: string
+            description: |
+              HTTPS usage mode:
+
+              * `CertManager`: Modules use HTTPS and obtain certificates automatically using the ClusterIssuer defined in the [`certManager.clusterIssuerName`](#parameters-modules-https-certmanager-clusterissuername) parameter.
+              * `CustomCertificate`: Modules use HTTPS with the certificate from the `d8-system` namespace.
+              * `Disabled`: Modules use HTTP only (some modules, such as [`user-authn`](/modules/user-authn/), may not work).
+              * `OnlyInURI`: Modules use HTTP in the expectation that there is an external upstream HTTPS load balancer, which terminates HTTPS. This load balancer should be capable of redirecting requests from HTTP to HTTPS.
+            default: CertManager
+            enum:
+            - Disabled
+            - CertManager
+            - CustomCertificate
+            - OnlyInURI
+          certManager:
+            type: object
+            additionalProperties: false
+            default: {}
+            properties:
+              clusterIssuerName:
+                type: string
+                default: 'selfsigned'
+                x-doc-default: 'selfsigned'
+                description: |
+                  ClusterIssuer name used by modules to obtain TLS certificates.
+
+                  The [`cert-manager`](/modules/cert-manager/) module offers the following ClusterIssuer options:
+
+                  - `letsencrypt`
+                  - `letsencrypt-staging`
+                  - `selfsigned`
+                  - `clouddns`
+                  - `cloudflare`
+                  - `digitalocean`
+                  - `route53`
+
+                  You can use your own ClusterIssuer if necessary.
+          customCertificate:
+            type: object
+            additionalProperties: false
+            properties:
+              secretName:
+                type: string
+                description: |
+                  Name of the Secret in the `d8-system` namespace containing a TLS certificate for modules.
+
+                  This Secret must be in the [`kubernetes.io/tls`](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+                default: "false"
+      resourcesRequests:
+        description: |
+          The amount of resources (CPU and memory) allocated to some components.
+
+          More info in the [Kubernetes documentation](https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/#resource-units-in-kubernetes).
+        type: object
+        default: {}
+        additionalProperties: false
+        properties:
+          controlPlane:
+            type: object
+            default: {}
+            additionalProperties: false
+            deprecated: true
+            x-doc-deprecated: true
+            description: |
+              > **Deprecated**. Use `control-plane-manager` moduleconfig parameter `.spec.settings.resourcesRequests` instead.
+
+              Amount of resources (CPU and memory) allocated to control-plane components on each master node.
+
+              These settings do not apply if the cluster control plane is managed by a cloud provider (for example, Google Kubernetes Engine or Azure Kubernetes Service).
+            x-examples:
+              - cpu: 1000m
+                memory: 500M
+            properties:
+              cpu:
+                deprecated: true
+                x-doc-deprecated: true
+                description: |
+                  > **Deprecated**. Use `controlPlaneManager.spec.settings.resourcesRequests.cpu` instead.
+
+                  The combined CPU requests for control-plane components on each master node.
+                oneOf:
+                  - type: string
+                    pattern: "^[0-9]+m?$"
+                  - type: number
+              memory:
+                deprecated: true
+                x-doc-deprecated: true
+                description: |
+                  > **Deprecated**. Use `controlPlaneManager.spec.settings.resourcesRequests.memory` instead.
+
+                  The combined memory requests for control-plane components on each master node.
+                type: string
+                pattern: '^[0-9]+(\.[0-9]+)?(E|P|T|G|M|K|Ei|Pi|Ti|Gi|Mi|Ki)?$'
+      storageClass:
+        type: string
+        default: null
+        description: |
+          The StorageClass to use with all Deckhouse Kubernetes Platform components (Prometheus, Grafana, OpenVPN, etc.).
+
+            * If the value is not specified, the [default StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass) set in the cluster is used.
+            * Use this parameter only in exceptional circumstances.
+            * This parameter is applied during module activation.
+  applications:
+    description: |
+      Common parameters of the Deckhouse ecosystem applications.
+    additionalProperties: false
+    default: {}
+    type: object
+    properties:
+      ingressClass:
+        type: string
+        default: nginx
+        description: |
+          Default [IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class) name used by the Deckhouse ecosystem applications when creating Ingress resources.
+
+          Some applications support their own `ingressClass` parameter, which lets you use a different IngressClass instead of the default one.
+        x-examples: [ "nginx" ]
+        pattern: '^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+      publicDomainTemplate:
+        type: string
+        pattern: '^(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)\.(%s([-a-z0-9]*[a-z0-9])?|[a-z0-9]([-a-z0-9]*)?%s([-a-z0-9]*)?[a-z0-9]|[a-z0-9]([-a-z0-9]*)?%s)(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$'
+        description: |
+          DNS name template with two `%s` keys used as the dynamic parts of the string.
+
+          Whenever a DNS is generated:
+
+          - First key is replaced with the application instance name.
+          - Second key is replaced with the application's namespace.
+
+          The Deckhouse ecosystem applications use this template when creating Ingress resources.
+
+          For example, given the template `%s.%s.kube.company.my`, the application instance named `grafana` running in the `monitoring` namespace will get an Ingress resource at the address `grafana.monitoring.kube.company.my`.
+
+          **Usage notes:**
+
+          - If this parameter is not specified, Ingress resources will not be created.
+          - The domain specified in the template must not match or be a subdomain of the domain specified in the [`clusterDomain`](cr.html#clusterconfiguration-clusterdomain) parameter. Changing the `clusterDomain` value is not recommended unless necessary.
+          - Before using the template, configure DNS services both in the networks where the cluster nodes will be located and in the networks from which clients will access the service web interfaces.
+          - If the template domain matches the domain of the node network, use only A records to assign addresses of the frontend nodes to the platform service web interfaces.
+          For example, if the nodes are registered under the `company.my` zone, the template must be `%s.%s.company.my`.
+        x-doc-examples: [ "%s.%s.company.my", "%s.%s.kube.company.my" ]
+        x-examples: [ "%s.%s.kube.company.my" ]
+      https:
+        description: |
+          HTTPS access implementation method used by the Deckhouse ecosystem applications.
+        type: object
+        additionalProperties: false
+        default: {}
+        x-examples:
+        - certManager:
+            clusterIssuerName: letsencrypt
+          mode: CertManager
+        - mode: Disabled
+        - mode: OnlyInURI
+        - mode: CustomCertificate
+          customCertificate:
+            secretName: plainstring
+        properties:
+          mode:
+            type: string
+            description: |
+              HTTPS usage mode:
+
+              * `CertManager`: Applications use HTTPS and obtain certificates automatically using the ClusterIssuer defined in the [`certManager.clusterIssuerName`](#parameters-applications-https-certmanager-clusterissuername) parameter.
+              * `CustomCertificate`: Applications use HTTPS with the certificate from the `d8-system` namespace.
+              * `Disabled`: Applications use HTTP only.
+              * `OnlyInURI`: Applications use HTTP in the expectation that there is an external upstream HTTPS load balancer, which terminates HTTPS. This load balancer should be capable of redirecting requests from HTTP to HTTPS.
+            default: CertManager
+            enum:
+            - Disabled
+            - CertManager
+            - CustomCertificate
+            - OnlyInURI
+          certManager:
+            type: object
+            additionalProperties: false
+            default: {}
+            properties:
+              clusterIssuerName:
+                type: string
+                default: 'letsencrypt'
+                x-doc-default: 'letsencrypt'
+                description: |
+                  ClusterIssuer name used by applications to obtain TLS certificates.
+
+                  The [`cert-manager`](/modules/cert-manager/) module offers the following ClusterIssuer options:
+
+                  - `letsencrypt`
+                  - `letsencrypt-staging`
+                  - `selfsigned`
+                  - `clouddns`
+                  - `cloudflare`
+                  - `digitalocean`
+                  - `route53`
+
+                  You can use your own ClusterIssuer if necessary.
+          customCertificate:
+            type: object
+            additionalProperties: false
+            properties:
+              secretName:
+                type: string
+                description: |
+                  Name of the Secret in the `d8-system` namespace containing a TLS certificate for applications.
+
+                  This Secret must be in the [`kubernetes.io/tls`](https://kubernetes.github.io/ingress-nginx/user-guide/tls/#tls-secrets) format.
+                default: "false"

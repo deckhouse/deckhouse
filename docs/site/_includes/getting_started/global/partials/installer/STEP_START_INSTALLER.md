@@ -97,10 +97,13 @@ trdl add $REPO $URL $ROOT_VERSION $ROOT_SHA512
 </div>
 <div id="tab-mac-content-file" class="tabs__container tabs__container--descr" markdown="1">
 {%- include getting_started/global/partials/installer/installer_rosetta_alert_ru.html %}
-  <p>Download the installer:
-<a href="/downloads/installer/latest/darwin-arm64/d8install" class="download-btn">darwin-arm64</a>
-<a href="/downloads/installer/latest/darwin-amd64/d8install" class="download-btn">darwin-amd64</a>
-  </p>
+<div class="download__container">
+<p>Download the installer:</p>
+<div class="download__container--btns">
+<a href="/downloads/installer/latest/darwin-arm64/d8install" class="download__container--btn">darwin-arm64</a>
+<a href="/downloads/installer/latest/darwin-amd64/d8install" class="download__container--btn">darwin-amd64</a>
+</div>
+</div>
   <p>Run it with the commands below:</p>
 {% capture command %}
 ```bash
