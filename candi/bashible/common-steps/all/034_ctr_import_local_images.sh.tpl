@@ -18,6 +18,7 @@
   {{- $sandbox_image := "deckhouse.local/images:pause" -}}
   {{- $kubernetes_api_proxy_image := "deckhouse.local/images:kubernetes-api-proxy" }}
   {{- $registry_proxy_image := "deckhouse.local/images:registry-proxy" }}
+  {{- $registry_agent_image := "deckhouse.local/images:registry-agent" }}
 
 ctr_import_image() {
   local image_name="$1"
@@ -46,6 +47,11 @@ post-install-import() {
     ctr_import_image {{ $registry_proxy_image }} "/opt/deckhouse/images/registry-proxy.tar"
     return 0
   fi
+
+  if [[ "${PACKAGE}" == "registry-agent" ]]; then
+    ctr_import_image {{ $registry_agent_image }} "/opt/deckhouse/images/registry-agent.tar"
+    return 0
+  fi
 }
 
 bb-event-on 'bb-package-installed' 'post-install-import'
@@ -63,17 +69,31 @@ __sec() {
 bb-rpp-wait-fetched "pause" "{{ $.images.registrypackages.pause }}" || true
 bb-rpp-wait-fetched "kubernetes-api-proxy" "{{ $.images.registrypackages.kubernetesApiProxy }}" || true
 bb-rpp-wait-fetched "registry-proxy" "{{ $.images.registrypackages.registryProxy }}" || true
+{{- if $.registry.agent }}
+bb-rpp-wait-fetched "registry-agent" "{{ $.images.registrypackages.registryAgent }}" || true
+{{- end }}
 __sec wait_prefetch
 
 bb-package-install "pause:{{ $.images.registrypackages.pause }}"
 bb-package-install "kubernetes-api-proxy:{{ $.images.registrypackages.kubernetesApiProxy }}"
 bb-package-install "registry-proxy:{{ $.images.registrypackages.registryProxy }}"
+{{- if $.registry.agent }}
+# The node agent is what the container runtime asks about every registry, so it cannot be
+# pulled from a registry. It is imported here from a local archive, which is the whole
+# reason it ships as a registry package: the `bb-package-installed` event below runs the
+# import as part of the install, so a node that has just switched to the agent gets the
+# image in the same bashible pass that writes its static pod.
+bb-package-install "registry-agent:{{ $.images.registrypackages.registryAgent }}"
+{{- end }}
 __sec pkg_install
 
 if bb-flag? need-local-images-import; then
   post-install-import pause
   post-install-import kubernetes-api-proxy
   post-install-import registry-proxy
+{{- if $.registry.agent }}
+  post-install-import registry-agent
+{{- end }}
   bb-flag-unset need-local-images-import
   __sec ctr_import
 fi

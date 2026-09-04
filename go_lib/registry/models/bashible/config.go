@@ -29,7 +29,43 @@ var (
 	_ validation.Validatable = ConfigMirrorHost{}
 )
 
+// ConfigAgent says that the node agent of the controller-based implementation owns the
+// registry configuration of the container runtime.
+//
+// Its presence is what silences the bashible step that writes per-registry drop-in
+// directories: two writers in one directory is the confusion the new implementation
+// exists to remove, and the handover has to be a property of the configuration rather
+// than of the order the steps happen to run in.
+type ConfigAgent struct {
+	// Endpoint is where the agent serves the runtime, as "host:port".
+	Endpoint string `json:"endpoint" yaml:"endpoint"`
+
+	// DropInFile is the file the agent writes for the container runtime.
+	//
+	// Carried in the context so that a step which has to wait for the agent waits on the
+	// same path the agent writes, rather than on a copy of it spelled out in a template.
+	DropInFile string `json:"dropInFile,omitempty" yaml:"dropInFile,omitempty"`
+
+	// Layout is a marshalled RegistryNodeSpec: the routing the agent should use before
+	// it has ever reached the API server.
+	//
+	// Needed because the agent is on the path of every pull on the node, including the
+	// pulls that bring up the control plane. A node bootstrapping into a new cluster
+	// therefore has to be able to route before there is an API server to ask, and this
+	// is the only channel that reaches a node that early.
+	//
+	// Carried as marshalled JSON rather than a typed field so that it survives every
+	// serializer this configuration passes through on its way to the node — it is
+	// written to a secret as YAML and read back — and so that a node never has to
+	// interpret a schema its own binary does not define.
+	Layout string `json:"layout,omitempty" yaml:"layout,omitempty"`
+}
+
 type Config struct {
+	// Agent, when set, means the node agent owns the runtime's registry
+	// configuration and the bashible step must not write it.
+	Agent *ConfigAgent `json:"agent,omitempty" yaml:"agent,omitempty"`
+
 	Mode           string                 `json:"mode" yaml:"mode"`
 	Version        string                 `json:"version" yaml:"version"`
 	ImagesBase     string                 `json:"imagesBase" yaml:"imagesBase"`
@@ -107,6 +143,7 @@ func (m ConfigMirrorHost) UniqueKey() string {
 
 func (c Config) ToContext() Context {
 	ret := Context{
+		Agent:          c.Agent.toContext(),
 		Mode:           c.Mode,
 		Version:        c.Version,
 		ImagesBase:     c.ImagesBase,
@@ -142,4 +179,11 @@ func (c Config) ToContext() Context {
 	}
 
 	return ret
+}
+
+func (a *ConfigAgent) toContext() *ContextAgent {
+	if a == nil {
+		return nil
+	}
+	return &ContextAgent{Endpoint: a.Endpoint, DropInFile: a.DropInFile, Layout: a.Layout}
 }

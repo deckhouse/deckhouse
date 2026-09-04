@@ -69,6 +69,7 @@ jobs:
       changes_docs: ${{ steps.changes.outputs.docs }}
       changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
       changes_node_controller: ${{ steps.changes.outputs.node_controller }}
+      changes_registry_images: ${{ steps.changes.outputs.registry_images }}
 
       build_CE: ${{ steps.pr_props.outputs.build_CE }}
       build_EE: ${{ steps.pr_props.outputs.build_EE }}
@@ -275,6 +276,12 @@ jobs:
               - '!./**/*.md'
             node_controller:
               - './modules/040-node-manager/images/node-controller/**'
+            # The registry module's binaries live under their own go.mod, which `make tests-modules`
+            # does not reach: `./modules/...` stops at a nested module boundary. Without this filter
+            # and the job it gates, their tests are written and never run.
+            registry_images:
+              - './modules/038-registry/images/**'
+              - './go_lib/registry/**'
 
       # Stop workflow if external PR contains dangerous changes.
       - name: Fail workflow on dangerous changes
@@ -4089,6 +4096,147 @@ jobs:
           docker exec -u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse ${CONTAINER_ID} sh -c "cd modules/040-node-manager/images/node-controller/src && make test LOCALBIN=/envtest-assets GOTESTFMT_CI=github"
           docker rm -f ${CONTAINER_ID}
     # </template: tests_node_controller_envtest_template>
+
+  tests_registry_images:
+    if: ${{ needs.pull_request_info.outputs.changes_registry_images == 'true' }}
+    name: Tests registry images
+    needs:
+      - git_info
+      - pull_request_info
+
+    # <template: tests_registry_images_template>
+    runs-on: [self-hosted, regular]
+    steps:
+
+      # <template: started_at_output>
+      - name: Job started timestamp
+        id: started_at
+        run: |
+          unixTimestamp=$(date +%s)
+          echo "started_at=${unixTimestamp}" >> $GITHUB_OUTPUT
+      # </template: started_at_output>
+
+      # <template: checkout_full_step>
+      - name: Checkout sources
+        uses: actions/checkout@v3.5.2
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.pull_request_info.outputs.ref }}
+      # </template: checkout_full_step>
+      # <template: import_secrets>
+      - name: Split repository name
+        id: split
+        env:
+          REPO: ${{ github.repository }}
+        run: |
+          if [ $REPO == "deckhouse/deckhouse" ]; then
+            echo "name=deckhouse" >> $GITHUB_OUTPUT
+          else
+            echo "name=deckhouse-test" >> $GITHUB_OUTPUT
+          fi
+      - name: Import secrets
+        id: secrets
+        uses: hashicorp/vault-action@v2
+        with:
+          url: https://seguro.flant.com
+          path: github
+          role: "${{ steps.split.outputs.name }}"
+          method: jwt
+          jwtGithubAudience: github-access-aud
+          secrets: |
+            projects/data/6db2f1ee-9b6f-4f4f-8381-2fb43060478a/github/registry_host DECKHOUSE_DEV_REGISTRY_HOST | DECKHOUSE_DEV_REGISTRY_HOST ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken login | DECKHOUSE_DEV_REGISTRY_USER ;
+            projects/data/101ceaca-97cd-462f-aed5-070d9b9de175/dev-registry/writetoken password | DECKHOUSE_DEV_REGISTRY_PASSWORD ;
+
+      # </template: import_secrets>
+
+      # <template: login_dev_registry_step>
+      - name: Check dev registry credentials
+        id: check_dev_registry
+        env:
+          HOST: ${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to dev registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_dev_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_HOST }}
+          username: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_USER }}
+          password: ${{ steps.secrets.outputs.DECKHOUSE_DEV_REGISTRY_PASSWORD }}
+          logout: false
+      # </template: login_dev_registry_step>
+
+      # <template: login_rw_registry_step>
+      - name: Check rw registry credentials
+        id: check_rw_registry
+        env:
+          HOST: ${{secrets.DECKHOUSE_REGISTRY_HOST}}
+        run: |
+          if [[ -n $HOST ]]; then
+            echo "has_credentials=true" >> $GITHUB_OUTPUT
+            echo "web_registry_path=${{secrets.DECKHOUSE_REGISTRY_HOST }}/deckhouse/site" >> $GITHUB_OUTPUT
+          fi
+      - name: Login to rw registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials == 'true' }}
+        with:
+          registry: ${{ secrets.DECKHOUSE_REGISTRY_HOST }}
+          username: ${{ secrets.DECKHOUSE_REGISTRY_USER }}
+          password: ${{ secrets.DECKHOUSE_REGISTRY_PASSWORD }}
+          logout: false
+      - name: Login to Github Container Registry
+        uses: docker/login-action@v2.1.0
+        if: ${{ steps.check_rw_registry.outputs.has_credentials != 'true' }}
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+          logout: false
+      # </template: login_rw_registry_step>
+      - name: Run registry image tests
+        env:
+          TESTS_IMAGE_NAME: "registry.deckhouse.io/container-factory@sha256:0a16e548966abb3a695dce005516604e7f307a962ae811d2a94103e70a3067cd"
+        run: |
+          # Print image name in uppercase to prevent hiding non-secret registry host stored in secret.
+          echo "Tests image name: '${TESTS_IMAGE_NAME}'" | tr '[:lower:]' '[:upper:]'
+          echo "⚓️ 📥 [$(date -u)] Pull base golang image..."
+          docker pull ${TESTS_IMAGE_NAME}
+          # Dedicated on-runner caches, created up front so the bind mounts are owned by the runner user
+          # (Docker would otherwise create a missing host path as root, making it unwritable in-container).
+          # Not the shared ~/go-pkg-cache: root jobs populate that with root-owned entries.
+          mkdir -p ~/go-build-cache-registry ~/go-mod-cache-registry
+          for entry in "go-build|$HOME/go-build-cache-registry" "go-mod|$HOME/go-mod-cache-registry"; do
+            name="${entry%%|*}"; path="${entry#*|}";
+            if [ -e "$path" ] && [ -n "$(ls -A "$path" 2>/dev/null)" ]; then
+              echo "::notice::cache HIT  ${name}";
+            else
+              echo "::warning::cache MISS ${name} — will download/recompile";
+            fi;
+          done
+          echo "⚓️ 🏎 [$(date -u)] Run registry image tests..."
+          # Every binary of the registry module lives under its own go.mod, so `make tests-modules`
+          # (TESTS_PATH = ./modules/...) never reaches them: the pattern stops at a nested module
+          # boundary. This job is the only thing that runs them.
+          #
+          # docker-distribution/wrapper is this module's own code around the upstream registry, which
+          # comes in as a dependency: what is tested here is the mapping of repository paths, the token
+          # proxy, the trust decision about a forwarded client address, the derivation of the write
+          # endpoint's configuration and the sweep. Upstream's own suite is upstream's to run.
+          #
+          # GOFLAGS=-buildvcs=false: the tests need no git stamp, so go does not shell out to git.
+          CONTAINER_ID=$(docker run -d -w /deckhouse --tmpfs /tmp:mode=1777,exec -v ${{github.workspace}}:/deckhouse -e HOME=/tmp -e "TERM=xterm-256color" -e GOFLAGS=-buildvcs=false -e GOCACHE=/go-build-cache -v ~/go-mod-cache-registry:/go/pkg -v ~/go-build-cache-registry:/go-build-cache ${TESTS_IMAGE_NAME} sleep infinity)
+          for module in registry-agent registry-controller registry-syncer docker-distribution/wrapper ; do
+            echo "::group::${module}"
+            docker exec -u $(id -u):$(id -g) -e HOME=/tmp -w /deckhouse/modules/038-registry/images/${module}/src ${CONTAINER_ID} go test -race -timeout 15m ./... || exit 1
+            echo "::endgroup::"
+          done
+          docker rm -f ${CONTAINER_ID}
+    # </template: tests_registry_images_template>
+
 
   tests_python_webhooks:
     if: ${{ needs.pull_request_info.outputs.changes_not_markdown == 'true' }}

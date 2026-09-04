@@ -25,6 +25,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/bootstrap/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/system/helper"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 )
 
@@ -73,10 +74,22 @@ func (b *ClusterBootstrapper) InstallDeckhouse(ctx context.Context) error {
 			return err
 		}
 
-		_, err = InstallDeckhouse(ctx, &client.KubernetesClient{KubeClient: kubeCl}, installConfig, InstallDeckhouseParams{
-			BeforeDeckhouseTask: func() error { return nil },
-			DeckhouseTimeout:    b.Options.Bootstrap.DeckhouseTimeout,
-		})
+		// The node interface for the same reason as in the full bootstrap: this phase performs the
+		// handover of the store on the first master, which runs commands there.
+		nodeInterface, err := helper.GetNodeInterface(ctx, b.SSHProviderInitializer, b.SSHProviderInitializer.GetSettings())
+		if err != nil {
+			return fmt.Errorf("Could not get NodeInterface: %w", err)
+		}
+
+		_, err = InstallDeckhouse(
+			ctx,
+			(&client.KubernetesClient{KubeClient: kubeCl}).WithNodeInterface(nodeInterface),
+			installConfig,
+			InstallDeckhouseParams{
+				BeforeDeckhouseTask: func() error { return nil },
+				DeckhouseTimeout:    b.Options.Bootstrap.DeckhouseTimeout,
+			},
+		)
 
 		return err
 	}

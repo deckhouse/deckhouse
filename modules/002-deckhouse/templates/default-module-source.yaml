@@ -10,5 +10,18 @@ spec:
     ca: | {{ $.Values.global.modulesImages.registry.CA | nindent 6 }}
     {{- end }}
     dockerCfg: {{ $.Values.global.modulesImages.registry.dockercfg }}
+    {{- /*
+      The same address image references are built from, and for the same reason: this
+      repository is not only fetched, it is also what the images of every module under it are
+      rendered from. Naming the node agent's loopback address here put that address into pod
+      specs, and a pod image reference must not be node-local — those pods kept running only
+      on content their nodes already held, while the agent answered 502 to every fresh pull,
+      a request naming the agent as its own registry being a loop.
+
+      The Deckhouse controller, which is the one party that has to dial this, translates it
+      to the loopback address itself. The certificate authority above is left as the cluster
+      knows it: the agent's is generated on each node and never leaves it, so no cluster
+      object can carry it, and the controller reads it from the node instead.
+    */}}
     repo: {{ printf "%s/modules" $.Values.global.modulesImages.registry.base }}
     scheme: {{ $.Values.global.modulesImages.registry.scheme | upper }}

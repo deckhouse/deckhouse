@@ -1,5 +1,11 @@
+{{- /*
+  The legacy publication endpoint. Stands down as a whole when the controller-based
+  implementation owns the cluster — not only because `Service/registry-push` collides with
+  its counterpart there, but because two publication endpoints for one cluster, with two
+  certificates, is not a state anyone asked for. See _ownership.tpl.
+*/ -}}
 {{- $orchestrator := .Values.registry.internal.orchestrator -}}
-{{- if (($orchestrator).state).ingress_enabled -}}
+{{- if and ((($orchestrator).state).ingress_enabled) (eq (include "registry_legacy_owns_the_cluster" .) "true") -}}
 {{- if and (.Values.global.modules.publicDomainTemplate) (.Values.global.enabledModules | has "cert-manager") -}}
 
 ---

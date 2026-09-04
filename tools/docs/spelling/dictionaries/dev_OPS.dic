@@ -1,4 +1,4 @@
-2882
+2888
 1GB
 2GB
 5XX
@@ -1313,9 +1313,14 @@ regexp
 RegExp
 RegionOne
 regionTagCategory
+RegistryConfig
 registryDockerCfg
 registryImagesRepo
+RegistryNode
+RegistryNodes
 registrysecret
+RegistryStorage
+RegistryUpstream
 Rego
 reindex
 releaseChannel
@@ -1603,6 +1608,7 @@ uid
 UID
 UIs
 un
+unconfigured
 uncordoned
 uninstall
 uninstalled

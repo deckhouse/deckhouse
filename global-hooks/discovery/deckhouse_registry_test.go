@@ -23,6 +23,7 @@ User-stories:
 package hooks
 
 import (
+	"encoding/base64"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
@@ -91,9 +92,40 @@ data:
   address: cmVnaXN0cnkudGVzdC5jb20= # registry.test.com
   path: L2RlY2tob3VzZQ==            # /deckhouse
 `
+
+		statePublishedImageAddress = `
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: registry-image-address
+  namespace: d8-system
+data:
+  base: registry.d8-system.svc:5001/system/deckhouse
+`
 	)
 
+	const stateRegistryConfigResource = `
+apiVersion: deckhouse.io/v1alpha1
+kind: RegistryConfig
+metadata:
+  name: registry
+spec:
+  mode: Managed
+  primary:
+    upstream:
+      scheme: HTTPS
+      host: dev-registry.deckhouse.io
+      path: /sys/deckhouse-oss
+      auth:
+        username: license-token
+        password: current-key
+`
+
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
+	// Registered because the resource is a CRD of another module: without this the harness cannot hold
+	// such an object at all, and the hook reads it through the same fake cluster.
+	f.RegisterCRD("deckhouse.io", "v1alpha1", "RegistryConfig", false)
 
 	Context("Cluster is empty", func() {
 		BeforeEach(func() {
@@ -137,6 +169,91 @@ data:
 			Expect(f.ValuesGet("global.modulesImages.registry.scheme").String()).To(Equal("https"))
 			Expect(f.ValuesGet("global.modulesImages.registry.address").String()).To(Equal("registry.test.com"))
 			Expect(f.ValuesGet("global.modulesImages.registry.path").String()).To(Equal("/deckhouse"))
+		})
+	})
+
+	// The registry module can move where image references point, and only that.
+	//
+	// Everything else here describes the registry the cluster was installed with, and has
+	// to keep describing it: those values are read by the Deckhouse controller's own HTTP
+	// client — the release check and the default module source — which has no node agent
+	// in its path and cannot reach an in-cluster address. Image references are resolved by
+	// the container runtime, which does.
+	Context("The registry module has published an image address", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateDeckhouseRegistrySecret + statePublishedImageAddress))
+			f.RunHook()
+		})
+
+		It("renders image references from it, and leaves the rest on the upstream registry", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.modulesImages.registry.base").String()).
+				To(Equal("registry.d8-system.svc:5001/system/deckhouse"))
+
+			Expect(f.ValuesGet("global.modulesImages.registry.address").String()).To(Equal("registry.test.com"))
+			Expect(f.ValuesGet("global.modulesImages.registry.path").String()).To(Equal("/deckhouse"))
+			Expect(f.ValuesGet("global.modulesImages.registry.scheme").String()).To(Equal("http"))
+			Expect(f.ValuesGet("global.modulesImages.registry.CA").String()).To(Equal("CACACA"))
+			Expect(f.ValuesGet("global.modulesImages.registry.dockercfg").String()).To(Equal("eHl6Cg=="))
+		})
+	})
+
+	// Absent is the normal case, and the one every cluster upgrading into this must land
+	// in: the module not managing the pull path, the module still on its previous
+	// implementation, and node agents that have not applied their layout yet all leave it
+	// unpublished, and nothing about how the cluster pulls changes.
+	Context("Nothing has been published", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateDeckhouseRegistrySecret))
+			f.RunHook()
+		})
+
+		It("renders image references from the registry the cluster was installed with", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.modulesImages.registry.base").String()).To(Equal("registry.test.com/deckhouse"))
+		})
+	})
+
+	// The resource wins over the secret, and this is the whole point of reading it.
+	//
+	// The secret is written at bootstrap and afterwards only out of these very values, so on a cluster
+	// whose registry has moved it names where the registry used to be. Measured on a migrated cluster:
+	// the upstream had been moved to `dev-registry.deckhouse.io/sys/deckhouse-oss` while the contour
+	// still named the mirror the cluster came from, with that mirror's robot account.
+	Context("The registry module has a resolved configuration and the secret is stale", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateDeckhouseRegistrySecret + stateRegistryConfigResource))
+			f.RunHook()
+		})
+
+		It("takes the registry from the resource, not from the secret", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.modulesImages.registry.address").String()).To(Equal("dev-registry.deckhouse.io"))
+			Expect(f.ValuesGet("global.modulesImages.registry.path").String()).To(Equal("/sys/deckhouse-oss"))
+			Expect(f.ValuesGet("global.modulesImages.registry.scheme").String()).To(Equal("https"))
+			Expect(f.ValuesGet("global.modulesImages.registry.base").String()).To(Equal("dev-registry.deckhouse.io/sys/deckhouse-oss"))
+
+			// And the credentials travel with it, keyed on the host that will be asked for.
+			raw, err := base64.StdEncoding.DecodeString(f.ValuesGet("global.modulesImages.registry.dockercfg").String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(raw)).To(ContainSubstring("dev-registry.deckhouse.io"))
+		})
+	})
+
+	// And without the secret at all, which is the case that used to deadlock a cluster: this hook runs
+	// at Operator-Startup, so refusing to run stopped the main queue before ConvergeModules — the very
+	// thing that would have removed the condition. Measured: nine tasks behind it and no way out but
+	// recreating the secret by hand.
+	Context("Only the resolved configuration exists", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateRegistryConfigResource))
+			f.RunHook()
+		})
+
+		It("runs, and the values describe the registry the resource names", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("global.modulesImages.registry.address").String()).To(Equal("dev-registry.deckhouse.io"))
+			Expect(f.ValuesGet("global.modulesImages.registry.base").String()).To(Equal("dev-registry.deckhouse.io/sys/deckhouse-oss"))
 		})
 	})
 

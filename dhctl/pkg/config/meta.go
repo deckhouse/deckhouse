@@ -489,16 +489,38 @@ func (m *MetaConfig) prepareRegistry() error {
 		}
 	}
 
-	// Default CRI
-	if rawCRI, exists := m.ClusterConfig["defaultCRI"]; exists {
-		if err := json.Unmarshal(rawCRI, &defaultCRI); err != nil {
-			return fmt.Errorf("get defaultCRI from cluster config: %w", err)
+	// Registry mc. An installation whose images come from a bundle is recognised from the registry
+	// module's own configuration — a cache to hold them and no upstream to fetch them from — and
+	// resolves to Local, exactly as RegistryConfigProvider does over the raw documents.
+	//
+	// It has to be decided here too, and not only there, because this is the result the cluster is
+	// built from: it becomes m.Registry, which the bashible context reads, which decides whether the
+	// steps that stand up the registry on the node run at all. Deciding it only where the installer
+	// downloads its own images leaves those steps switched off — the store then stays empty and
+	// Deckhouse never pulls, which is what happened the first time.
+	var bundleFacts registry.BundleBootstrapInputs
+	if mc := m.FindModuleConfig("registry"); mc != nil {
+		rawJSON, err := json.Marshal(mc)
+		if err != nil {
+			return err
 		}
+		bundleFacts, err = registry.BundleFactsFromModuleConfig(rawJSON)
+		if err != nil {
+			return err
+		}
+	}
+	deckhouseSettings, providerOpts := bundleFacts.Resolve(deckhouseSettings)
+
+	// Default CRI. The node-manager ModuleConfig setting takes precedence over the
+	// deprecated ClusterConfiguration.defaultCRI field (see effectiveDefaultCRI).
+	if cri := m.effectiveDefaultCRI(); cri != "" {
+		defaultCRI = registry_const.CRIType(cri)
 	}
 
 	registry, err := registry.NewConfigProvider(
 		initConfig,
 		deckhouseSettings,
+		providerOpts...,
 	).Config(
 		defaultCRI,
 		m.IsStatic(),
@@ -1291,4 +1313,37 @@ func GetIndexFromNodeName(name string) (int, error) {
 		return 0, err
 	}
 	return index, nil
+}
+
+// effectiveDefaultCRI resolves the container runtime that should be used for the
+// bootstrapped node. The node-manager ModuleConfig setting (spec.settings.defaultCRI)
+// is the new home for this option and takes precedence over the deprecated
+// ClusterConfiguration.defaultCRI field when it is set to a non-default value.
+//
+// When neither source specifies a value it falls back to the built-in default
+// (Containerd), but only if a ClusterConfiguration is present. This mirrors the
+// former ClusterConfiguration schema default, which applied only within a
+// ClusterConfiguration document: with no ClusterConfiguration there is no cluster
+// to bootstrap, and the registry config relies on an empty CRI to stay disabled.
+func (m *MetaConfig) effectiveDefaultCRI() string {
+	if mc := m.FindModuleConfig("node-manager"); mc != nil {
+		if raw, ok := mc.Spec.Settings["defaultCRI"]; ok {
+			if cri, ok := raw.(string); ok && cri != "" && cri != string(registry_const.CRIContainerdV1) {
+				return cri
+			}
+		}
+	}
+
+	if raw, ok := m.ClusterConfig["defaultCRI"]; ok {
+		var cri string
+		if err := json.Unmarshal(raw, &cri); err == nil && cri != "" {
+			return cri
+		}
+	}
+
+	if len(m.ClusterConfig) > 0 {
+		return string(registry_const.CRIContainerdV1)
+	}
+
+	return ""
 }

@@ -1,0 +1,101 @@
+{{- /*
+  The singleton RegistryConfig, which is the module's own configuration expressed as the
+  resource the controller reconciles.
+
+  Rendered from values rather than written by a hook so that there is one writer of the
+  spec and it is Helm — a hook that also wrote it would fight the release on every
+  reconcile. The one thing the template cannot do is expand `auth.license` into a
+  credential pair, so a hook resolves that first and this reads the result.
+
+  Adopted rather than created if it already exists: `d8 mirror push` and an operator
+  editing the resource by hand both have to keep working, and the fields they touch are
+  in the status, not here.
+*/}}
+{{- with ((.Values.registry.internal).v2) }}
+{{- if eq (include "registry_v2_manages" $) "true" }}
+{{- with .registryConfig }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: RegistryConfig
+metadata:
+  name: registry
+  {{- include "helm_lib_module_labels" (list $ (dict "app" "registry")) | nindent 2 }}
+spec:
+  mode: {{ .mode | quote }}
+  {{- with .primary }}
+  primary:
+    {{- with .upstream }}
+    upstream:
+      scheme: {{ .scheme | default "HTTPS" | quote }}
+      host: {{ .host | quote }}
+      {{- with .path }}
+      path: {{ . | quote }}
+      {{- end }}
+      {{- with .ca }}
+      ca: {{ . | quote }}
+      {{- end }}
+      {{- with .auth }}
+      auth:
+        {{- with .username }}
+        username: {{ . | quote }}
+        {{- end }}
+        {{- with .password }}
+        password: {{ . | quote }}
+        {{- end }}
+        {{- with .auth }}
+        auth: {{ . | quote }}
+        {{- end }}
+      {{- end }}
+      {{- with .mirrors }}
+      mirrors:
+        {{- range . }}
+        - scheme: {{ .scheme | default "HTTPS" | quote }}
+          host: {{ .host | quote }}
+          {{- with .path }}
+          path: {{ . | quote }}
+          {{- end }}
+          {{- with .ca }}
+          ca: {{ . | quote }}
+          {{- end }}
+          {{- with .auth }}
+          auth:
+            {{- with .username }}
+            username: {{ . | quote }}
+            {{- end }}
+            {{- with .password }}
+            password: {{ . | quote }}
+            {{- end }}
+            {{- with .auth }}
+            auth: {{ . | quote }}
+            {{- end }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- with .storage }}
+  storage:
+    cache: {{ .cache | default false }}
+    {{- with .size }}
+    size: {{ . | quote }}
+    {{- end }}
+    {{- with .garbageCollection }}
+    garbageCollection:
+      enabled: {{ .enabled | default false }}
+      {{- with .schedule }}
+      schedule: {{ . | quote }}
+      {{- end }}
+    {{- end }}
+    {{- with .source }}
+    source:
+      {{- with .bundleRef }}
+      bundleRef: {{ . | quote }}
+      {{- end }}
+      {{- if hasKey . "expectedDigests" }}
+      expectedDigests: {{ .expectedDigests }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

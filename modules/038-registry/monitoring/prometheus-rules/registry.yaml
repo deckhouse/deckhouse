@@ -1,0 +1,333 @@
+- name: d8.registry.data-plane
+  rules:
+  # Rules about what the module is managing are guarded by `d8_registry_managed`, because a
+  # cluster where it manages nothing has no cache to be incomplete and no nodes to be
+  # unconverged — an alert firing on that would be firing at a module doing exactly what it
+  # was told.
+  #
+  # Three are deliberately not guarded. `D8RegistryStaleCacheData` is about precisely the
+  # unmanaged case, so guarding it would silence the only state it describes. The other two
+  # read gauges the controller sets only while it is running, so the guard would add nothing.
+  #
+  # Everything aggregates away the `pod` label. The exporter runs on every controller
+  # replica rather than only the one holding the lease, so that the picture of the cluster
+  # does not depend on the health of the pod most likely to be in trouble; duplicate series
+  # are the price, and this is where it is paid.
+
+  - alert: D8RegistryConfigInvalid
+    expr: |
+      max(d8_registry_managed) > 0
+      and max(d8_registry_config_valid) == 0
+    for: 5m
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: registry
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_registry_config: "D8RegistryConfigInvalid,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_config: "D8RegistryConfigInvalid,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The registry configuration was rejected.
+      description: |-
+        The `registry` module cannot use its configuration, so the cluster keeps whatever
+        arrangement it already had. Nothing has broken yet; nothing new will take effect
+        either.
+
+        What was wrong is in the resource:
+
+        ```
+        kubectl get registryconfig registry -o jsonpath='{.status.conditions}' | jq
+        ```
+
+  - alert: D8RegistryNodeNotConverged
+    expr: |
+      max(d8_registry_managed) > 0
+      and count(max by (node) (d8_registry_node_reconciled) == 0) > 0
+    for: 20m
+    labels:
+      severity_level: "5"
+      tier: cluster
+      d8_module: registry
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_registry_nodes: "D8RegistryNodeNotConverged,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_nodes: "D8RegistryNodeNotConverged,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Some nodes have not applied their registry configuration.
+      description: |-
+        The agent on one or more nodes has not applied the layout it was given. Those nodes
+        keep pulling images the way they were configured before, so this is not an outage —
+        but a change made to the registry configuration has not reached them, and the next
+        one will not either.
+
+        Which nodes, and what their agents say:
+
+        ```
+        kubectl get registrynodes -o custom-columns=\
+        NODE:.metadata.name,GEN:.metadata.generation,APPLIED:.status.observedGeneration,OK:.status.reconciled
+        kubectl -n kube-system logs -l component=registry-agent --tail=50
+        ```
+
+        Twenty minutes, because the agent re-reads its layout on a timer and a node that is
+        merely slow or briefly unreachable resolves this on its own.
+
+  - alert: D8RegistryNodeRunningFromDisk
+    expr: |
+      max(d8_registry_managed) > 0
+      and count(max by (node) (d8_registry_node_layout_from_disk) > 0) > 0
+    for: 1h
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: registry
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_registry_nodes: "D8RegistryNodeRunningFromDisk,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_nodes: "D8RegistryNodeRunningFromDisk,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Some nodes are routing pulls from their on-disk copy of the configuration.
+      description: |-
+        The agent on one or more nodes cannot reach the API server and is routing pulls from
+        the copy it keeps on disk. That is the copy working as designed — those nodes pull
+        images normally, which is exactly why this is worth saying out loud: from every
+        other angle it looks like success, and their configuration can drift arbitrarily far
+        behind the cluster's.
+
+        An hour, because a node that briefly loses the API server is not news; a node that
+        has not seen it since is.
+
+        ```
+        kubectl get registrynodes -o json | jq -r '
+          .items[] | select(.status.conditions[]? | select(.type=="Reconciled" and .reason=="AppliedFromCache"))
+          | .metadata.name'
+        ```
+
+  - alert: D8RegistryStorageIncomplete
+    expr: |
+      max(d8_registry_managed) > 0
+      and max(d8_registry_storage_replicas) > 0
+      and count(max by (node) (d8_registry_storage_replica_full) == 0) > 0
+    for: 2h
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: registry
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_registry_storage: "D8RegistryStorageIncomplete,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_storage: "D8RegistryStorageIncomplete,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Some registry cache replicas do not hold the whole image set.
+      description: |-
+        One or more replicas of the in-cluster cache are still filling, or have stopped
+        short. While an upstream is configured this costs nothing at pull time — a node
+        falls back to it — but it does mean the cluster could not survive losing that
+        upstream, and it is what holds an air-gap transition back.
+
+        Two hours, because filling a cache over a slow link legitimately takes that long.
+
+        ```
+        kubectl get registrystorage registry -o jsonpath='{.status.replicas}' | jq
+        ```
+
+  - alert: D8RegistryAirGapTransitionHeld
+    expr: max(d8_registry_air_gap_transition_held) > 0
+    for: 6h
+    labels:
+      severity_level: "5"
+      tier: cluster
+      d8_module: registry
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_registry_storage: "D8RegistryAirGapTransitionHeld,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_storage: "D8RegistryAirGapTransitionHeld,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The registry upstream cannot be removed yet.
+      description: |-
+        The configuration has no upstream, so the cluster is meant to be air-gapped, and the
+        module is still holding the previous upstream because the cache is not complete
+        enough to stand alone.
+
+        This is the safe outcome and the cluster is pulling images normally. It is also the
+        one transition in this module that could cut every node off from images, which is
+        why it waits rather than proceeds — and why a wait this long is worth looking at:
+        nothing about it resolves on its own if the cache has stopped filling.
+
+        ```
+        kubectl get registrystorage registry -o jsonpath='{.status}' | jq '{phase,fill,safeToDropUpstream,leader}'
+        kubectl get registryconfig registry -o jsonpath='{.status.effectiveUpstream}' | jq
+        ```
+
+  # `and on()` and not a bare `and`: the left side keeps its labels so the description can
+  # name which of the three failures it is, and vector matching against a label-less
+  # aggregate would otherwise find nothing to match and the rule would never fire.
+  - alert: D8RegistryUpstreamProbeFailing
+    expr: |
+      max by (outcome) (increase(d8_registry_upstream_probes_total{outcome!="accepted"}[30m])) > 0
+      and on() max(d8_registry_managed) > 0
+    for: 15m
+    labels:
+      severity_level: "4"
+      tier: cluster
+      d8_module: registry
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_registry_upstream: "D8RegistryUpstreamProbeFailing,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_upstream: "D8RegistryUpstreamProbeFailing,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The configured registry upstream does not pass its preflight check.
+      description: |-
+        A change to the primary upstream was refused, and the cluster is still using the
+        last one that worked. Nothing is degraded — that is what holding the previous
+        upstream is for — but the change has not taken effect and will not until the check
+        passes.
+
+        The `outcome` label says which of three things is wrong, and they are not the same
+        problem:
+
+        - `unreachable` — the registry did not answer at all: network, firewall, or the
+          registry itself.
+        - `auth` — it answered and rejected the credentials. Usually an expired or wrong
+          license key.
+        - `sentinel` — it answered and accepted the credentials, but does not hold the
+          Deckhouse images. Usually the wrong repository path.
+
+        Current outcome: `{{ $labels.outcome }}`
+
+        ```
+        kubectl get registryconfig registry -o jsonpath='{.status.conditions}' | jq
+        ```
+
+  - alert: D8RegistryUpstreamRejected
+    expr: max by (reason) (d8_registry_upstreams_rejected) > 0
+    for: 15m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: registry
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_registry_upstream: "D8RegistryUpstreamRejected,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_upstream: "D8RegistryUpstreamRejected,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: An additional registry was refused.
+      description: |-
+        A `RegistryUpstream` resource was not accepted, so pulls for the registry it names
+        are not intercepted on any node. Whatever asked for it — a module, or an operator —
+        is not getting it.
+
+        Reason: `{{ $labels.reason }}`
+
+        ```
+        kubectl get registryupstreams -o custom-columns=\
+        NAME:.metadata.name,MATCH:.spec.match,ACCEPTED:.status.conditions[0].status,REASON:.status.conditions[0].reason
+        ```
+
+  - alert: D8RegistryStaleCacheData
+    expr: max by (node) (d8_registry_storage_stale_data_bytes) > 0
+    for: 24h
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: registry
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_registry_stale_data: "D8RegistryStaleCacheData,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_stale_data: "D8RegistryStaleCacheData,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: A node still holds registry cache data that nothing uses.
+      description: |-
+        Node `{{ $labels.node }}` holds data of the in-cluster registry cache while no cache
+        is configured. Nothing reads it, and nothing will unless the cache is turned back
+        on.
+
+        It is kept on purpose. Turning the cache back on refills from what is already there
+        rather than from scratch, and over a slow link that difference is hours — so the
+        module does not delete it, because that would make the decision irreversible in the
+        one direction that hurts. What it will not do is keep it quietly, which is what this
+        alert is.
+
+        Nothing is wrong and nothing needs doing urgently. To reclaim the space:
+
+        ```
+        ssh {{ $labels.node }} 'du -sh /opt/deckhouse/registry && sudo rm -rf /opt/deckhouse/registry'
+        ```
+
+        Twenty-four hours, so that turning the cache off and on again in one working session
+        never raises it.
+
+  # The collection is the only thing that ever removes anything from the store. A cluster where
+  # it has stopped is on a path that ends with a full disk and a registry that cannot be
+  # written to — which, in air-gap, is a cluster that cannot be updated.
+  # The third line is the one that makes this honest, and it is here because without it this
+  # alert fired on every healthy new cluster. `last_collection` is a registered gauge, so it is
+  # exposed as 0 from the first scrape and stays 0 until a collection finishes — and
+  # `time() - 0` is the whole Unix epoch, which is past any threshold. So a cluster that had
+  # simply never collected yet was indistinguishable from one that stopped collecting a week ago,
+  # and with an hour's patience the alert arrived an hour after boot.
+  #
+  # Asking how long the replica has been ABLE to collect fixes both readings at once: a store
+  # that has never been reclaimed and has had a week in which to do it is worth a word, and one
+  # that is younger than that is not.
+  - alert: D8RegistryStorageNotReclaimed
+    expr: |
+      max(d8_registry_managed) > 0
+      and max(d8_registry_storage_replicas) > 0
+      and time() - max(d8_registry_storage_started_timestamp_seconds) > 604800
+      and (
+        time() - max(d8_registry_storage_last_collection_timestamp_seconds) > 604800
+        or absent(d8_registry_storage_last_collection_timestamp_seconds)
+      )
+    for: 1h
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: registry
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_registry_storage: "D8RegistryStorageNotReclaimed,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_storage: "D8RegistryStorageNotReclaimed,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The registry cache has not reclaimed its disk for a week.
+      description: |-
+        No replica of the in-cluster cache has finished a garbage collection in the last week.
+        Nothing is broken yet: the cache serves images normally, and it will keep doing so until
+        the disk fills.
+
+        It is worth attention because the collection is the only thing that ever removes
+        anything. Every release adds a slice of the repository, so a store nobody reclaims grows
+        in one direction — and a full store cannot be written to, which in an air-gapped cluster
+        means it cannot be updated.
+
+        Where to look:
+
+        ```
+        kubectl get registrystorage registry -o jsonpath='{.status.replicas}' | jq \
+          'map({node, collectedAt, collectionError})'
+        kubectl get registrystorage registry -o jsonpath='{.spec.garbageCollection}' | jq
+        ```
+
+        The likely reasons, in the order they are worth checking:
+
+        - the collection is turned off in the `registry` ModuleConfig under
+          `storage.garbageCollection.enabled`;
+        - the schedule has not come round yet, or names an hour that never arrives — a
+          collection only runs on the schedule, and an unreadable expression is refused rather
+          than guessed at;
+        - no release is deployed, which is the one input that justifies deleting anything: every
+          deletion is "older than what the cluster runs", and without that there is nothing to
+          compare against;
+        - `collectionError` on a replica, which says what its own last attempt hit.
+
+        One reading tells the first two apart from the rest. Each replica logs the time of its next
+        collection, so its absence means none was ever scheduled — a different problem from one
+        that is scheduled and failing:
+
+        ```
+        kubectl -n d8-system logs registry-storage-0 -c syncer | grep -i "garbage collection"
+        ```
+
+        Collecting puts one replica read-only while it runs. That is not an outage — it keeps
+        serving every image it holds — but it does mean the schedule belongs at a quiet hour,
+        which is where it defaults to.

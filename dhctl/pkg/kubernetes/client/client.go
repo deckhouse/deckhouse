@@ -50,6 +50,17 @@ type KubernetesClient struct {
 	KubeClient
 	NodeInterface libcon.Interface
 	KubeProxy     libcon.KubeProxy
+
+	// SSHClient is the connection the API is reached over, kept so that a caller can open a second
+	// channel on it.
+	//
+	// There is one thing that needs this and it is not a convenience: a cluster that manages its own
+	// registry records an address only it can resolve (registry.d8-system.svc), and the way to reach
+	// that registry from outside is a local forward to the master, where the store answers on the host
+	// network. The connection to do that with is already open — it is this one — but a NodeInterface
+	// does not expose it, and rebuilding one from settings that the caller does not have was the
+	// alternative.
+	SSHClient libcon.SSHClient
 }
 
 type KubernetesInitParams struct {
@@ -75,6 +86,13 @@ func NewFakeKubernetesClientWithListGVR(gvr map[schema.GroupVersionResource]stri
 func (k *KubernetesClient) WithNodeInterface(client libcon.Interface) *KubernetesClient {
 	if client != nil && !reflect.ValueOf(client).IsNil() {
 		k.NodeInterface = client
+	}
+	return k
+}
+
+func (k *KubernetesClient) WithSSHClient(client libcon.SSHClient) *KubernetesClient {
+	if client != nil && !reflect.ValueOf(client).IsNil() {
+		k.SSHClient = client
 	}
 	return k
 }

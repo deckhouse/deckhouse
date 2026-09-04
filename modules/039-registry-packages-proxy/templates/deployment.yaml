@@ -109,6 +109,24 @@ spec:
         volumeMounts:
           - name: cache
             mountPath: /cache
+          {{- /*
+            The node agent's authority, so that packages can be fetched THROUGH the agent.
+
+            Once the registry module manages the pull path, the way anything on a node reaches the
+            registry is the agent on the loopback: it holds the credentials for whatever is behind it
+            and asks the client for none. It serves HTTPS, and the authority signing what it serves is
+            generated on the node and never leaves it — every node has a different one, so no cluster
+            object can carry it and it has to come from the host.
+
+            The same path inside the pod as on the host, so one constant describes both sides; the
+            same arrangement the Deckhouse controller uses, for the same reason.
+
+            `DirectoryOrCreate` on a cluster where the module manages nothing leaves an empty
+            directory, which is exactly right: nothing to trust, nothing fetched through an agent.
+          */}}
+          - name: registry-agent-pki
+            mountPath: /etc/kubernetes/registry-agent/pki
+            readOnly: true
       - name: kube-rbac-proxy
         {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
         image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
@@ -208,3 +226,7 @@ spec:
         - name: cache
           emptyDir:
             sizeLimit: 1G
+        - name: registry-agent-pki
+          hostPath:
+            path: /etc/kubernetes/registry-agent/pki
+            type: DirectoryOrCreate

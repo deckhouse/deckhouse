@@ -6,7 +6,7 @@
           issuerRef.name = "https.certManager.clusterIssuerName"
 */ -}}
 {{- $orchestrator := .Values.registry.internal.orchestrator -}}
-{{- if (($orchestrator).state).ingress_enabled -}}
+{{- if and ((($orchestrator).state).ingress_enabled) (eq (include "registry_legacy_owns_the_cluster" .) "true") -}}
 {{- if and (.Values.global.modules.publicDomainTemplate) (.Values.global.enabledModules | has "cert-manager") -}}
 {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" -}}
 

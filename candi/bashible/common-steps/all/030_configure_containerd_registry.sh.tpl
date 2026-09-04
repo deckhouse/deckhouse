@@ -12,7 +12,20 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-{{- if or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") }}
+{{- /*
+  Skipped entirely when the node agent owns this directory.
+  
+  The agent points the runtime at itself once, through the `_default` fallback, and
+  routes every registry from there. Writing per-registry directories alongside it would
+  not merely be redundant: an explicit host directory takes precedence over `_default`,
+  so anything written here would route pulls around the agent and around the in-cluster
+  cache with it.
+  
+  Which writer owns the directory is therefore decided by the configuration, not by the
+  order the steps run in. The agent removes what this step left behind, using the same
+  state file it writes below.
+*/}}
+{{- if and ( or ( eq .cri "Containerd") ( eq .cri "ContainerdV2") ) ( not .registry.agent ) }}
 {{- $exist_registry_host_list := list }}
 
 # PR: https://github.com/deckhouse/deckhouse/pull/11939

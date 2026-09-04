@@ -8,8 +8,13 @@ cpu: 50m
 memory: 50Mi
 {{- end }}
 
+{{- /*
+  The legacy in-cluster pull-through proxy. This is the object whose appearance on a cluster
+  the current implementation owns was measured: Pending, on a fresh cluster, beside a store
+  that was already serving. See _ownership.tpl.
+*/ -}}
 {{- $orchestrator := .Values.registry.internal.orchestrator }}
-{{- if $orchestrator }}
+{{- if and $orchestrator (eq (include "registry_legacy_owns_the_cluster" .) "true") }}
 {{- $hash := $orchestrator.hash }}
 {{- $state := (($orchestrator.state).in_cluster_proxy).config }}
 {{- if $state }}

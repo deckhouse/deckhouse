@@ -63,6 +63,14 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /modules/038-registry/requirements
+  to: /deckhouse/modules/038-registry/requirements
+  excludePaths:
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /modules/039-registry-packages-proxy/hooks
   to: /deckhouse/modules/039-registry-packages-proxy/hooks
   excludePaths:
