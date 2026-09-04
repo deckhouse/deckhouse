@@ -48,7 +48,7 @@ const (
 	// consistent and easy to read.
 	ListeningPrefix  = "dhctl-provider-protocol: listening on "
 	listeningFormat  = ListeningPrefix + "[[%s://%s]]"
-	listeningPattern = ListeningPrefix + `\[\[([a-z]+)://([^]]+)]]`
+	listeningPattern = ListeningPrefix + `\[\[([a-z]+)://(.+?)]]`
 )
 
 var listeningRegexp = regexp.MustCompile(listeningPattern)

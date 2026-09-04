@@ -225,6 +225,15 @@ func TestListeningLineRoundTrip(t *testing.T) {
 			wantOK:  true,
 		},
 		{
+			// An IPv6 address carries brackets, and the closing marker is what ends
+			// the endpoint — not the first bracket in it.
+			name:    "an IPv6 address keeps its brackets",
+			line:    server.ListeningLine("tcp", "[::1]:43111"),
+			network: "tcp",
+			address: "[::1]:43111",
+			wantOK:  true,
+		},
+		{
 			name:    "a socket path is an address like any other",
 			line:    server.ListeningLine("unix", "/tmp/v.sock"),
 			network: "unix",

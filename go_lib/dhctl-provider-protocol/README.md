@@ -241,7 +241,7 @@ defer conn.Close()
 config := client.NewConfig()
 config.GRPCOptions = append(config.GRPCOptions, grpc.WaitForReady(true))
 
-resp, err := client.NewClient(conn, config).Validate(ctx, input)
+resp, err := client.NewValidateClient(conn, config).Validate(ctx, input)
 if err != nil {
 	return err // the validator failed
 }

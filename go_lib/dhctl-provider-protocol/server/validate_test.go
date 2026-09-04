@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"errors"
+	"io"
 	"log/slog"
 	"reflect"
 	"strings"
@@ -33,6 +34,10 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/client"
 	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/server"
 )
+
+var errCheckFailed = errors.New("dependency would not answer")
+
+const panicValue = "validator bug: kubeconfigDataBase64 c2VjcmV0"
 
 func TestValidateService(t *testing.T) {
 	tests := []struct {
@@ -61,8 +66,9 @@ func TestValidateService(t *testing.T) {
 			wantCalled: true,
 		},
 		{
-			// A panic is a bug, not a violation: the caller gets the method and the
-			// panic value, the stack goes to the log.
+			// A panic is a bug, not a violation: the caller gets the method, while
+			// the value and its stack stay in the log — a panic may quote the
+			// request, and the request carries credentials.
 			name:        "reports a panic as internal",
 			validator:   panics,
 			input:       bootstrapInput(),
@@ -176,6 +182,33 @@ func TestValidateService(t *testing.T) {
 	}
 }
 
+// A panic value may quote the request, and the request carries credentials, so only
+// the method reaches the caller.
+func TestValidatePanicStatusCarriesNoPanicValue(t *testing.T) {
+	running, err := server.Start(
+		server.Config{Logger: slog.New(slog.NewTextHandler(io.Discard, nil))},
+		server.NewValidateService(validatorFunc(panics)),
+	)
+	if err != nil {
+		t.Fatalf("Start() = %v", err)
+	}
+
+	t.Cleanup(func() {
+		if err := running.Stop(); err != nil {
+			t.Errorf("Stop() = %v, want nil", err)
+		}
+	})
+
+	_, err = connect(t, running.Addr().String()).Validate(context.Background(), bootstrapInput())
+	if err == nil {
+		t.Fatal("Validate() = nil, want a panic reported as internal")
+	}
+
+	if strings.Contains(err.Error(), panicValue) {
+		t.Errorf("Validate() = %q, want a message without the panic value", err)
+	}
+}
+
 func TestValidatePanicStatusCarriesNoStack(t *testing.T) {
 	var logged bytes.Buffer
 
@@ -215,8 +248,6 @@ func (fn validatorFunc) Validate(ctx context.Context, input validatev1.Input) (*
 	return fn(ctx, input)
 }
 
-var errCheckFailed = errors.New("dependency would not answer")
-
 func validConfiguration(context.Context, validatev1.Input) (*validatev1.ValidateResponse, error) {
 	return &validatev1.ValidateResponse{}, nil
 }
@@ -242,7 +273,7 @@ func returnsNothing(context.Context, validatev1.Input) (*validatev1.ValidateResp
 }
 
 func panics(context.Context, validatev1.Input) (*validatev1.ValidateResponse, error) {
-	panic("validator bug")
+	panic(panicValue)
 }
 
 func fails(context.Context, validatev1.Input) (*validatev1.ValidateResponse, error) {

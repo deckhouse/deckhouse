@@ -132,7 +132,7 @@ func recoverPanic(logger *slog.Logger) func(ctx context.Context, req any, info *
 					slog.Any("panic", recovered),
 					slog.String("stack", string(debug.Stack())),
 				)
-				err = status.Errorf(codes.Internal, "panic in %s: %v", info.FullMethod, recovered)
+				err = status.Errorf(codes.Internal, "panic in %s", info.FullMethod)
 			}
 		}()
 		return handler(ctx, req)
