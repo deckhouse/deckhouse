@@ -1,4 +1,4 @@
-{{- $shellOperatorVersion := "fix/patch-conversion-webhook"}}
+{{- $shellOperatorVersion := "v1.20.3"}}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}
 final: false
