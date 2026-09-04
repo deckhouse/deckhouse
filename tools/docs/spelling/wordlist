@@ -714,11 +714,8 @@ initContainer
 InitContainer
 initContainers
 InitContainers
-<<<<<<< HEAD
 initiatorType
 inline
-=======
->>>>>>> 7c47f6c778 (Updates)
 Inline
 inode
 inodes
