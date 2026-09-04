@@ -536,8 +536,6 @@ properties:
           - `ENABLE_ENHANCED_RESOURCE_SCOPING`
           - `PILOT_HTTP10`
           - `PILOT_ENABLE_AMBIENT`
-          - `PILOT_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER`
-          - `PILOT_ENABLE_GATEWAY_API_GATEWAYCLASS_CONTROLLER`
         x-examples:
         - GODEBUG: "gctrace=1"
         not:
@@ -546,8 +544,6 @@ properties:
           - required: ["ENABLE_ENHANCED_RESOURCE_SCOPING"]
           - required: ["PILOT_HTTP10"]
           - required: ["PILOT_ENABLE_AMBIENT"]
-          - required: ["PILOT_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER"]
-          - required: ["PILOT_ENABLE_GATEWAY_API_GATEWAYCLASS_CONTROLLER"]
       replicasManagement:
         description: |
           Replication management settings and scaling of istiod.
