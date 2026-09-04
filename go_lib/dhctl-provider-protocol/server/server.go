@@ -18,6 +18,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net"
 	"runtime/debug"
 	"sync"
@@ -48,6 +49,7 @@ type Service interface {
 type Config struct {
 	Network     string
 	Address     string
+	Logger      *slog.Logger
 	GRPCOptions []grpc.ServerOption
 }
 
@@ -55,6 +57,7 @@ func NewConfig() Config {
 	return Config{
 		Network: DefaultNetwork,
 		Address: DefaultAddress,
+		Logger:  slog.Default(),
 		GRPCOptions: []grpc.ServerOption{
 			grpc.MaxRecvMsgSize(MaxMessageSize),
 			grpc.MaxSendMsgSize(MaxMessageSize),
@@ -71,6 +74,10 @@ func (c Config) Validate() error {
 		return fmt.Errorf("address is required")
 	}
 
+	if c.Logger == nil {
+		return fmt.Errorf("logger is required")
+	}
+
 	return nil
 }
 
@@ -81,6 +88,10 @@ func (c Config) Merge(other Config) Config {
 
 	if other.Address != "" {
 		c.Address = other.Address
+	}
+
+	if other.Logger != nil {
+		c.Logger = other.Logger
 	}
 
 	if len(other.GRPCOptions) > 0 {
@@ -96,8 +107,12 @@ func Start(config Config, services ...Service) (*Server, error) {
 		return nil, fmt.Errorf("config validation: %w", err)
 	}
 
+	logger := config.Logger
+
 	options := append(
-		[]grpc.ServerOption{grpc.ChainUnaryInterceptor(recoverPanic)},
+		[]grpc.ServerOption{
+			grpc.ChainUnaryInterceptor(recoverPanic(logger)),
+		},
 		config.GRPCOptions...,
 	)
 	grpcServer := grpc.NewServer(options...)
@@ -155,12 +170,19 @@ func (s *Server) Stop() error {
 	return s.stopErr
 }
 
-//nolint:nonamedreturns // the deferred recover has to replace the returned error
-func recoverPanic(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
-	defer func() {
-		if recovered := recover(); recovered != nil {
-			err = status.Errorf(codes.Internal, "panic in %s: %v\n%s", info.FullMethod, recovered, debug.Stack())
-		}
-	}()
-	return handler(ctx, req)
+func recoverPanic(logger *slog.Logger) func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (any, error) {
+	//nolint:nonamedreturns // the deferred recover has to replace the returned error
+	return func(ctx context.Context, req any, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (resp any, err error) {
+		defer func() {
+			if recovered := recover(); recovered != nil {
+				logger.ErrorContext(ctx, "panic in gRPC handler",
+					slog.String("method", info.FullMethod),
+					slog.Any("panic", recovered),
+					slog.String("stack", string(debug.Stack())),
+				)
+				err = status.Errorf(codes.Internal, "panic in %s: %v", info.FullMethod, recovered)
+			}
+		}()
+		return handler(ctx, req)
+	}
 }

@@ -15,8 +15,10 @@
 package server_test
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"log/slog"
 	"reflect"
 	"strings"
 	"testing"
@@ -59,8 +61,8 @@ func TestValidateService(t *testing.T) {
 			wantCalled: true,
 		},
 		{
-			// A panic is a bug, not a violation: without the stack the caller would
-			// see a connection that died mid-call and could not say why.
+			// A panic is a bug, not a violation: the caller gets the method and the
+			// panic value, the stack goes to the log.
 			name:        "reports a panic as internal",
 			validator:   panics,
 			input:       bootstrapInput(),
@@ -163,6 +165,37 @@ func TestValidateService(t *testing.T) {
 				t.Errorf("warnings = %q, want %q", warnings, test.wantWarnings)
 			}
 		})
+	}
+}
+
+func TestValidatePanicStatusCarriesNoStack(t *testing.T) {
+	var logged bytes.Buffer
+
+	running, err := server.Start(
+		server.Config{Logger: slog.New(slog.NewTextHandler(&logged, nil))},
+		server.NewValidateService(validatorFunc(panics)),
+	)
+	if err != nil {
+		t.Fatalf("Start() = %v", err)
+	}
+
+	t.Cleanup(func() {
+		if err := running.Stop(); err != nil {
+			t.Errorf("Stop() = %v, want nil", err)
+		}
+	})
+
+	_, err = connect(t, running.Addr().String()).Validate(context.Background(), bootstrapInput())
+	if err == nil {
+		t.Fatal("Validate() = nil, want a panic reported as internal")
+	}
+
+	if strings.Contains(err.Error(), "goroutine ") {
+		t.Errorf("Validate() = %q, want a message without the stack", err)
+	}
+
+	if got := logged.String(); !strings.Contains(got, "goroutine ") {
+		t.Errorf("configured logger got %q, want the panic stack", got)
 	}
 }
 

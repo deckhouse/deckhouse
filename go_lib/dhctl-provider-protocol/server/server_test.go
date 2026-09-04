@@ -15,6 +15,7 @@
 package server_test
 
 import (
+	"log/slog"
 	"net"
 	"os"
 	"path/filepath"
@@ -33,14 +34,39 @@ func TestConfigValidate(t *testing.T) {
 		config  server.Config
 		wantErr string
 	}{
-		{name: "accepts a network and an address", config: server.Config{Network: "unix", Address: "/tmp/v.sock"}},
-		{name: "rejects a missing network", config: server.Config{Address: "/tmp/v.sock"}, wantErr: "network is required"},
+		{
+			name: "accepts a network, an address and a logger",
+			config: server.Config{
+				Network: "unix",
+				Address: "/tmp/v.sock",
+				Logger:  slog.Default(),
+			},
+		},
+		{
+			name: "rejects a missing network",
+			config: server.Config{
+				Address: "/tmp/v.sock",
+				Logger:  slog.Default(),
+			},
+			wantErr: "network is required",
+		},
 		{
 			// The caller allocates a fresh short path per run; a default would put
 			// the socket at a world-writable well-known path.
-			name:    "rejects a missing address",
-			config:  server.Config{Network: "unix"},
+			name: "rejects a missing address",
+			config: server.Config{
+				Network: "unix",
+				Logger:  slog.Default(),
+			},
 			wantErr: "address is required",
+		},
+		{
+			name: "rejects a missing logger",
+			config: server.Config{
+				Network: "unix",
+				Address: "/tmp/v.sock",
+			},
+			wantErr: "logger is required",
 		},
 	}
 

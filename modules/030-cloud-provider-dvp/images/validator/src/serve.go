@@ -44,7 +44,11 @@ with SIGTERM. Without --address it serves on loopback on a port the kernel picks
 			ctx := cmd.Context()
 
 			validator, err := server.Start(
-				server.Config{Network: cfg.network, Address: cfg.address},
+				server.Config{
+					Network: cfg.network,
+					Address: cfg.address,
+					Logger:  logger,
+				},
 				server.NewValidateService(Validator{}),
 			)
 
