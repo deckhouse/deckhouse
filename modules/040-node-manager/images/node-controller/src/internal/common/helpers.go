@@ -66,50 +66,6 @@ func DrainTimeout(ctx context.Context, r client.Reader, ngName string) time.Dura
 	return time.Duration(*ng.Spec.NodeDrainTimeoutSecond) * time.Second
 }
 
-// BootstrapTokenNodeGroupLabel names the NodeGroup a bootstrap-token secret was
-// issued for. order_bootstrap_token maintains one rotating secret per group.
-const BootstrapTokenNodeGroupLabel = "node-manager.deckhouse.io/node-group"
-
-// BootstrapTokens returns the newest unexpired bootstrap token of every
-// NodeGroup that has one, keyed by group. Kept in step with
-// groupBootstrapToken in dhctl's pkg/operations/bootstrap/steps_immutable_join.go.
-func BootstrapTokens(ctx context.Context, r client.Reader) (map[string]string, error) {
-	secrets := &corev1.SecretList{}
-	if err := r.List(ctx, secrets,
-		client.InNamespace(KubeSystemNamespace),
-		client.HasLabels{BootstrapTokenNodeGroupLabel},
-	); err != nil {
-		return nil, fmt.Errorf("list bootstrap tokens: %w", err)
-	}
-
-	tokens := make(map[string]string, len(secrets.Items))
-	newest := make(map[string]time.Time, len(secrets.Items))
-	for i := range secrets.Items {
-		sec := &secrets.Items[i]
-		ng := sec.Labels[BootstrapTokenNodeGroupLabel]
-		if sec.Type != corev1.SecretTypeBootstrapToken || ng == "" {
-			continue
-		}
-		if raw, ok := sec.Data["expiration"]; ok {
-			expire, err := time.Parse(time.RFC3339, string(raw))
-			if err != nil || time.Until(expire) < 0 {
-				continue
-			}
-		}
-		id, hasID := sec.Data["token-id"]
-		secretPart, hasSecret := sec.Data["token-secret"]
-		if !hasID || !hasSecret {
-			continue
-		}
-		if _, seen := tokens[ng]; seen && !sec.CreationTimestamp.After(newest[ng]) {
-			continue
-		}
-		tokens[ng] = string(id) + "." + string(secretPart)
-		newest[ng] = sec.CreationTimestamp.Time
-	}
-	return tokens, nil
-}
-
 func GetNodesForNodeGroup(ctx context.Context, r client.Reader, ngName string) ([]corev1.Node, error) {
 	nodeList := &corev1.NodeList{}
 	if err := r.List(ctx, nodeList, client.MatchingLabels{NodeGroupLabel: ngName}); err != nil {

@@ -2,6 +2,8 @@
 cpu: 25m
 memory: 150Mi
 {{- end }}
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 
 {{- if (.Capabilities.APIVersions.Has "autoscaling.k8s.io/v1/VerticalPodAutoscaler") }}
 ---
@@ -128,3 +130,5 @@ data:
     {{- .Files.Get "candi/version_map.yml" | nindent 4 }}
   images_digests.json: |-
     {{- .Files.Get "images_digests.json" | nindent 4 }}
+{{- end }}
+{{- /* /vcp-gate */ -}}

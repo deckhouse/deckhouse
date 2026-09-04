@@ -1,3 +1,5 @@
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 {{- if and .Values.nodeManager.internal.capiControllerManagerEnabled (hasKey .Values.nodeManager.internal "cloudProvider") }}
   {{- $prefix := .Values.nodeManager.internal.cloudProvider.capiClusterName }}
   {{- if and $prefix .Values.nodeManager.internal.cloudProvider.capiClusterKind }}
@@ -18,3 +20,5 @@ metadata:
   {{- include "helm_lib_module_labels" (list . (dict "app" "capi-controller-manager")) | nindent 2 }}
   {{- end }}
 {{- end }}
+{{- end }}
+{{- /* /vcp-gate */ -}}

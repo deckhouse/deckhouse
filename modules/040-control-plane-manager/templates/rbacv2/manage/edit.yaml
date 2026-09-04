@@ -37,6 +37,7 @@ rules:
   resources:
   - controlplanenodes
   - controlplaneoperations
+  - virtualcontrolplanes
   verbs:
   - create
   - update
@@ -48,6 +49,7 @@ rules:
   resources:
   - controlplanenodes/status
   - controlplaneoperations/status
+  - virtualcontrolplanes/status
   verbs:
   - update
   - patch

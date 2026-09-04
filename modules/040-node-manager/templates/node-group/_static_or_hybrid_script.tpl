@@ -32,6 +32,21 @@ EOF
 chmod 0600 /var/lib/bashible/bootstrap-token
 
 touch /var/lib/bashible/first_run
+{{- if not $context.Values.global.deckhouseSelfHosted }}
+{{-   $albVIP := $context.Values.nodeManager.internal.albVIP }}
+{{-   $hosts := list }}
+{{-   range $context.Values.nodeManager.internal.clusterMasterEndpoints }}
+{{-     if ne .address $albVIP }}
+{{-       $hosts = append $hosts .address }}
+{{-     end }}
+{{-   end }}
+{{-   $hosts = $hosts | uniq }}
+{{-   if $hosts }}
+
+# VCP: map the control-plane SNI hostnames to the ALB VIP; the external node has no DNS for them.
+grep -q "{{ $albVIP }}" /etc/hosts || echo "{{ $albVIP }} {{ join " " $hosts }}" >> /etc/hosts
+{{-   end }}
+{{- end }}
 
 /var/lib/bashible/bootstrap.sh
 {{ end }}

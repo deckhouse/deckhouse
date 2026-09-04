@@ -6,6 +6,7 @@ require (
 	github.com/BurntSushi/toml v1.6.0
 	github.com/Masterminds/semver/v3 v3.4.0
 	github.com/Masterminds/sprig/v3 v3.3.0
+	github.com/deckhouse/deckhouse/go_lib/bashiblecontext v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain v0.0.0-00010101000000-000000000000
 	github.com/go-logr/logr v1.4.3
 	github.com/onsi/ginkgo/v2 v2.27.2
@@ -25,6 +26,8 @@ require (
 	sigs.k8s.io/controller-runtime v0.22.5
 	sigs.k8s.io/yaml v1.6.0
 )
+
+replace github.com/deckhouse/deckhouse/go_lib/bashiblecontext => ../../../../../go_lib/bashiblecontext
 
 replace github.com/deckhouse/deckhouse/go_lib/dependency/k8s/drain => ../../../../../go_lib/dependency/k8s/drain
 
