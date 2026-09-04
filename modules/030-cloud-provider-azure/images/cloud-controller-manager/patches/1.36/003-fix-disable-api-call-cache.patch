@@ -64,10 +64,10 @@ diff --git a/pkg/provider/config/azure.go b/pkg/provider/config/azure.go
 index d2a4258..b7c7ab7 100644
 --- a/pkg/provider/config/azure.go
 +++ b/pkg/provider/config/azure.go
-@@ -172,6 +172,9 @@ type Config struct {
- 	ClusterServiceSharedLoadBalancerHealthProbePort int32 `json:"clusterServiceSharedLoadBalancerHealthProbePort,omitempty" yaml:"clusterServiceSharedLoadBalancerHealthProbePort,omitempty"`
- 	// ClusterServiceSharedLoadBalancerHealthProbePath defines the target path of the shared health probe. Default to `/healthz`.
- 	ClusterServiceSharedLoadBalancerHealthProbePath string `json:"clusterServiceSharedLoadBalancerHealthProbePath,omitempty" yaml:"clusterServiceSharedLoadBalancerHealthProbePath,omitempty"`
+@@ -183,6 +183,9 @@ type Config struct {
+
+ 	// ServiceGatewayEnabled indicates whether the service gateway is enabled for the cluster.
+ 	ServiceGatewayEnabled bool `json:"serviceGatewayEnabled,omitempty" yaml:"serviceGatewayEnabled,omitempty"`
 +
 +	// DisableAPICallCache disables caching of IMDS metadata responses when set to true.
 +	DisableAPICallCache bool `json:"disableAPICallCache,omitempty" yaml:"disableAPICallCache,omitempty"`
