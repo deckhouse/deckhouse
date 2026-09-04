@@ -13,7 +13,7 @@ The experimental role-based access model is incompatible with the current one.
 
 The module implements a role-based access model based on the standard RBAC Kubernetes mechanism. It creates a set of cluster roles (ClusterRole) suitable for most user and group access management tasks.
 
-The bindings that grant users the access levels of ClusterAuthorizationRule and AuthorizationRule are reconciled by the `user-authz-controller` component: it watches the rules and keeps their ClusterRoleBindings and RoleBindings in sync, and reports the result in the `status` of each rule (`kubectl get clusterauthorizationrules` shows the `READY` and `BINDINGS` columns). A rule with an unsupported `accessLevel` gets `Ready=False` with the `InvalidSpec` reason instead of breaking the module.
+The bindings that grant users the access levels of ClusterAuthorizationRule and AuthorizationRule are reconciled by the `user-authz-controller` component: it watches the rules and keeps their ClusterRoleBindings and RoleBindings in sync, and reports the result in the `status` of each rule (`kubectl get clusterauthorizationrules` shows the `READY` and `BINDINGS` columns). A rule with an unsupported `accessLevel` gets `Ready=False` with the `InvalidSpec` reason instead of breaking the module. The controller exports metrics on the number of rules, desired and actual bindings and their drift, and the module ships alerts for an unavailable controller, a persistent drift and rules whose bindings cannot be applied (see [FAQ](faq.html#how-do-i-check-that-the-controller-keeps-the-bindings-in-sync)).
 
 <div style="height: 0;" id="the-new-role-based-model"></div>
 

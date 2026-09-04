@@ -64,6 +64,40 @@ spec:
 Если есть правило без опции `namespaceSelector` и без опции `limitNamespaces` (устаревшая), это значит, что доступ разрешён во все пространства имён, кроме системных, что повлияет на результат вычисления доступных пространств имён для пользователя.
 {% endalert %}
 
+## Как проверить, что контроллер поддерживает биндинги в актуальном состоянии?
+
+Компонент `user-authz-controller` синхронизирует ClusterRoleBinding и RoleBinding каждого ClusterAuthorizationRule и AuthorizationRule, выдачу `d8:use:dict` в экспериментальной ролевой модели и проекции биндингов manage-ролей в use-RoleBinding'и пространств имён. О его состоянии говорят три источника.
+
+**Статус объекта.** У каждого правила есть условие `Ready` и число его биндингов:
+
+```bash
+d8 k get clusterauthorizationrules
+d8 k get authorizationrules -A
+d8 k get clusterauthorizationrule <name> -o jsonpath='{.status.conditions}'
+```
+
+`Ready=True` с причиной `BindingsApplied` означает, что биндинги соответствуют правилу. `Ready=False` называет проблему: `InvalidSpec` (правило нельзя превратить в биндинги, в сообщении сказано почему) или `ApplyError` (API-сервер отклонил запись; в сообщении указаны биндинг и ошибка). На правиле записываются события с теми же причинами.
+
+**Метрики.** Контроллер отдаёт их на порту `metrics` своего пода, собирает их `PodMonitor` `user-authz-controller` (нужен включённый модуль `operator-prometheus`). Лейбл `kind` принимает значения `ClusterAuthorizationRule`, `AuthorizationRule`, `dict` и `manage`.
+
+| Метрика | Описание |
+|---|---|
+| `d8_user_authz_authorization_rules{kind}` | Известные контроллеру объекты данного вида. |
+| `d8_user_authz_bindings_desired{kind}` | Биндинги, которые должны быть у объектов данного вида. |
+| `d8_user_authz_bindings_actual{kind}` | Существующие биндинги данного вида. |
+| `d8_user_authz_bindings_drift{kind,reason}` | Биндинги, не приведённые к желаемому состоянию на последнем reconcile; `reason` — `missing`, `extra` или `changed`. Больше нуля только пока контроллеру не удаётся сойтись. |
+| `d8_user_authz_bindings_apply_total{kind,op,result}` | Операции записи контроллера (`op`: `create`, `update`, `delete`; `result`: `success`, `error`). |
+| `d8_user_authz_authorization_rules_invalid{kind,reason}` | Правила с условием `Ready=False` по виду и причине. |
+| `d8_user_authz_authorization_rule_invalid{kind,name,rule_namespace,reason}` | `1` для каждого такого правила (по имени экспортируется не более 50 правил; агрегат выше всегда полный). |
+| `d8_user_authz_custom_cluster_roles{level}` | Кастомные ClusterRole (с аннотацией `user-authz.deckhouse.io/access-level`) по уровням доступа. |
+| `d8_user_authz_custom_aggregation_missing{level}` | `1`, если у агрегированной ClusterRole `user-authz:<level>:custom` нет правил, хотя кастомные роли для неё существуют. |
+| `d8_user_authz_bindings_keep_stamped_total`, `d8_user_authz_keep_stamp_duration_seconds` | Работа миграционного хука, защищающего отрендеренные чартом биндинги от удаления релизом: сколько объектов помечено и длительность последнего прогона. |
+| `controller_runtime_reconcile_total`, `controller_runtime_reconcile_errors_total`, `controller_runtime_reconcile_time_seconds` | Стандартные метрики controller-runtime по реконсилерам (лейбл `controller`: `clusterauthorizationrule-bindings`, `authorizationrule-bindings`, `dict-bindings`, `manage-bindings`). |
+
+**Алерты** (в правилах Prometheus `d8_user_authz`): `D8UserAuthzControllerUnavailable` и `D8UserAuthzControllerTargetDown` — у контроллера недоступные реплики или он не скрейпится 5 минут, `D8UserAuthzControllerReconcileErrorsHigh` — устойчивый поток ошибок reconcile, `D8UserAuthzBindingsDrift` — биндинги какого-то вида 15 минут не приводятся к желаемому состоянию, `D8UserAuthzAuthorizationRulesInvalid` и `D8UserAuthzAuthorizationRuleInvalid` — число и имена правил, биндинги которых не применяются 10 минут, `D8UserAuthzCustomRolesNotAggregated` — агрегированная ClusterRole уровня доступа остаётся пустой, хотя кастомные роли для неё есть.
+
+Если правило остаётся в `Ready=False` с `ApplyError` из-за того, что у биндинга вручную изменили `roleRef`, удалите этот биндинг: `roleRef` неизменяем, контроллер пересоздаст биндинг с правильным.
+
 ## Как расширить роли или создать новую?
 
 [Экспериментальная ролевая модель](./#экспериментальная-ролевая-модель) построена на принципе агрегации, она собирает более мелкие роли в более обширные,

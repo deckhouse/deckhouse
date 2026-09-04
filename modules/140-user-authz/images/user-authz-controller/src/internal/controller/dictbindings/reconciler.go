@@ -48,6 +48,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"user-authz-controller/internal/metrics"
 )
 
 const (
@@ -90,13 +92,14 @@ var reservedRoleRefs = []string{
 
 // Reconciler keeps one d8:dict:* ClusterRoleBinding per subject holding a use role.
 type Reconciler struct {
-	client client.Client
-	log    logr.Logger
+	client  client.Client
+	metrics *metrics.Collector
+	log     logr.Logger
 }
 
 // New constructs a Reconciler.
-func New(c client.Client, log logr.Logger) *Reconciler {
-	return &Reconciler{client: c, log: log}
+func New(c client.Client, m *metrics.Collector, log logr.Logger) *Reconciler {
+	return &Reconciler{client: c, metrics: m, log: log}
 }
 
 // SourceIndexValue is the indexer of SourceIndexField.
@@ -125,7 +128,7 @@ func Register(ctx context.Context, mgr manager.Manager) error {
 	if err := mgr.GetFieldIndexer().IndexField(ctx, &rbacv1.ClusterRoleBinding{}, OwnedIndexField, OwnedIndexValue); err != nil {
 		return fmt.Errorf("index dict clusterrolebindings: %w", err)
 	}
-	r := New(mgr.GetClient(), mgr.GetLogger().WithName("dict-bindings"))
+	r := New(mgr.GetClient(), metrics.Default, mgr.GetLogger().WithName("dict-bindings"))
 	if err := r.SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setup dict-bindings controller: %w", err)
 	}
@@ -194,7 +197,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 		return reconcile.Result{}, fmt.Errorf("list dict clusterrolebindings: %w", err)
 	}
 
-	var errs []error
+	var (
+		errs  []error
+		drift metrics.Drift
+	)
+	desired := len(subjects)
 	granted := make(map[string]struct{}, len(existing.Items))
 	for i := range existing.Items {
 		crb := &existing.Items[i]
@@ -230,7 +237,13 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 			}
 		}
 
-		if err := r.client.Delete(ctx, crb); err != nil && !apierrors.IsNotFound(err) {
+		err := r.client.Delete(ctx, crb)
+		if apierrors.IsNotFound(err) {
+			err = nil
+		}
+		r.metrics.RecordApply(metrics.KindDict, metrics.OpDelete, err)
+		if err != nil {
+			drift.Extra++
 			errs = append(errs, fmt.Errorf("delete dict binding %s: %w", crb.Name, err))
 			continue
 		}
@@ -239,16 +252,22 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 
 	for _, key := range slices.Sorted(maps.Keys(subjects)) {
 		crb := Binding(key, subjects[key])
-		if err := r.client.Create(ctx, crb); err != nil {
-			if apierrors.IsAlreadyExists(err) {
-				continue
-			}
+		err := r.client.Create(ctx, crb)
+		if apierrors.IsAlreadyExists(err) {
+			err = nil
+		}
+		r.metrics.RecordApply(metrics.KindDict, metrics.OpCreate, err)
+		if err != nil {
+			drift.Missing++
 			errs = append(errs, fmt.Errorf("create dict binding for %s: %w", key, err))
 			continue
 		}
 		r.log.Info("dict binding created", "name", crb.Name, "subject", key)
 	}
 
+	// drift is what is still wrong after the writes: grants that could not be created and bindings
+	// that could not be removed.
+	r.metrics.Observe(metrics.KindDict, RequestName, metrics.Observation{Desired: desired, Actual: desired - drift.Missing, Drift: drift})
 	return reconcile.Result{}, errors.Join(errs...)
 }
 
