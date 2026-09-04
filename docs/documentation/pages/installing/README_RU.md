@@ -90,9 +90,7 @@ relatedLinks:
 
 1. `<PROVIDER>ClusterConfiguration` — параметры интеграции с облачным провайдером. Является **обязательным** при интеграции DKP с [поддерживаемой облачной инфраструктурой](../admin/integrations/public/overview.html).
 
-   {% alert level="info" %}
-   При интеграции с Deckhouse Virtualization Platform (DVP) ресурс DVPClusterConfiguration не используется. Его заменяют ModuleConfig [`cloud-provider-dvp`](/modules/cloud-provider-dvp/configuration.html) и связанные с ним ресурсы, описанные в разделе [«Схемы размещения и настройка DVP»](../admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html).
-   {% endalert %}
+   > При интеграции с Deckhouse Virtualization Platform (DVP) ресурс DVPClusterConfiguration не используется. Его заменяют ModuleConfig [`cloud-provider-dvp`](/modules/cloud-provider-dvp/configuration.html) и связанные с ним ресурсы, описанные в разделе [«Схемы размещения и настройка DVP»](../admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html).
 
    Примеры ресурсов, настраивающих интеграцию DKP с облачным провайдером:
 

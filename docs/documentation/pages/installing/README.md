@@ -78,9 +78,7 @@ Required and optional objects/resources that may be needed in the installation c
 
 1. `<PROVIDER>ClusterConfiguration`: Parameters for integration with a cloud provider. **Required** when integrating DKP with a [supported cloud infrastructure](../admin/integrations/public/overview.html).
 
-   {% alert level="info" %}
-   When integrating with Deckhouse Virtualization Platform (DVP), the DVPClusterConfiguration resource is not used. It is replaced by the [`cloud-provider-dvp`](/modules/cloud-provider-dvp/configuration.html) ModuleConfig and related resources described in [Layouts and configuration in DVP](../admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html).
-   {% endalert %}
+   > When integrating with Deckhouse Virtualization Platform (DVP), the DVPClusterConfiguration resource is not used. It is replaced by the [`cloud-provider-dvp`](/modules/cloud-provider-dvp/configuration.html) ModuleConfig and related resources described in [Layouts and configuration in DVP](../admin/integrations/virtualization/dvp/configuration-and-layout-scheme.html).
 
    Examples of resources configuring integration with a cloud provider:
 
