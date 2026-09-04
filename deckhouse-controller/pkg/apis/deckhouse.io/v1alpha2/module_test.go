@@ -32,18 +32,18 @@ func TestModuleIsInstalled(t *testing.T) {
 	assert.True(t, (&Module{Spec: ModuleSpec{PackageVersion: "v1.0.0"}}).IsInstalled())
 }
 
-func TestModuleHasCatalogPhase(t *testing.T) {
+func TestModuleIsNotInstalledPhase(t *testing.T) {
 	for _, phase := range []string{
 		v1alpha1.ModulePhaseAvailable,
 		v1alpha1.ModulePhaseConflict,
 		v1alpha1.ModulePhaseDownloading,
 		v1alpha1.ModulePhaseDownloadingError,
 	} {
-		assert.True(t, (&Module{Status: ModuleStatus{Phase: phase}}).HasCatalogPhase(), phase)
+		assert.True(t, (&Module{Status: ModuleStatus{Phase: phase}}).IsNotInstalledPhase(), phase)
 	}
 
 	for _, phase := range []string{"", v1alpha1.ModulePhaseReady, v1alpha1.ModulePhaseError, v1alpha1.ModulePhaseInstalling} {
-		assert.False(t, (&Module{Status: ModuleStatus{Phase: phase}}).HasCatalogPhase(), phase)
+		assert.False(t, (&Module{Status: ModuleStatus{Phase: phase}}).IsNotInstalledPhase(), phase)
 	}
 }
 
@@ -70,28 +70,28 @@ func TestModuleSetConflictStatus(t *testing.T) {
 	assertCondition(t, module, v1alpha1.ModuleConditionIsReady, metav1.ConditionFalse, v1alpha1.ModuleReasonConflict, v1alpha1.ModuleMessageConflict)
 }
 
-func TestModuleApplyCatalogState(t *testing.T) {
+func TestModuleApplyNotInstalledState(t *testing.T) {
 	module := &Module{}
 
-	assert.True(t, module.ApplyCatalogState(false), "a fresh object gets the offered state")
+	assert.True(t, module.ApplyNotInstalledState(false), "a fresh object gets the available state")
 	assert.Equal(t, v1alpha1.ModulePhaseAvailable, module.Status.Phase)
-	assert.False(t, module.ApplyCatalogState(false), "the offered state is settled")
+	assert.False(t, module.ApplyNotInstalledState(false), "the available state is settled")
 
-	assert.True(t, module.ApplyCatalogState(true))
+	assert.True(t, module.ApplyNotInstalledState(true))
 	assert.Equal(t, v1alpha1.ModulePhaseConflict, module.Status.Phase)
 	assertCondition(t, module, v1alpha1.ModuleConditionIsReady, metav1.ConditionFalse, v1alpha1.ModuleReasonConflict, v1alpha1.ModuleMessageConflict)
-	assert.False(t, module.ApplyCatalogState(true), "the conflict state is settled")
+	assert.False(t, module.ApplyNotInstalledState(true), "the conflict state is settled")
 
-	assert.True(t, module.ApplyCatalogState(false), "a settled conflict goes back to offered")
+	assert.True(t, module.ApplyNotInstalledState(false), "a settled conflict goes back to available")
 	assert.Equal(t, v1alpha1.ModulePhaseAvailable, module.Status.Phase)
 	assertCondition(t, module, v1alpha1.ModuleConditionIsReady, metav1.ConditionFalse, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
 
 	module.Status.Phase = v1alpha1.ModulePhaseDownloading
-	assert.False(t, module.ApplyCatalogState(false), "a module fetching its first release keeps its way")
+	assert.False(t, module.ApplyNotInstalledState(false), "a module fetching its first release keeps its way")
 	assert.Equal(t, v1alpha1.ModulePhaseDownloading, module.Status.Phase)
 
 	module.Status.Phase = v1alpha1.ModulePhaseReady
-	assert.True(t, module.ApplyCatalogState(false), "the state of an uninstalled package goes")
+	assert.True(t, module.ApplyNotInstalledState(false), "the state of an uninstalled package goes")
 	assert.Equal(t, v1alpha1.ModulePhaseAvailable, module.Status.Phase)
 }
 

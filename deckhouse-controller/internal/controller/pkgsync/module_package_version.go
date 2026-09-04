@@ -93,7 +93,7 @@ func (s *syncer) ensureEmbeddedVersion(ctx context.Context, dirName, version str
 	}
 
 	// no repository offers an embedded package, so no scan ever creates its
-	// catalog entry; the sync does
+	// package object; the sync does
 	if err := s.ensureModulePackageExists(ctx, def.Name); err != nil {
 		return err
 	}

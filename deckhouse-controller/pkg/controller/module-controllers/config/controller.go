@@ -266,12 +266,12 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 // offers is waiting for its first deploy, and the Module create event brings the config back,
 // while a name no source knows is reported and checked again later.
 func (r *reconciler) handleNotInstalledModule(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig) (ctrl.Result, error) {
-	offering, err := r.offeringSources(ctx, moduleConfig.Name)
+	moduleSourceNames, err := r.listingModuleSources(ctx, moduleConfig.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
 
-	if len(offering) == 0 {
+	if len(moduleSourceNames) == 0 {
 		r.logger.Warn("module not found", slog.String("name", moduleConfig.Name))
 		err = utils.UpdateStatus[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
 			moduleConfig.Status.Message = v1alpha1.ModuleConfigMessageUnknownModule
@@ -290,7 +290,7 @@ func (r *reconciler) handleNotInstalledModule(ctx context.Context, moduleConfig 
 		return ctrl.Result{}, err
 	}
 
-	if _, err := r.reportConflict(ctx, moduleConfig, offering); err != nil {
+	if _, err := r.reportConflict(ctx, moduleConfig, moduleSourceNames); err != nil {
 		return ctrl.Result{}, err
 	}
 
@@ -301,16 +301,16 @@ func (r *reconciler) handleNotInstalledModule(ctx context.Context, moduleConfig 
 // message and the alert while the config enables the module, several sources offer it and
 // none is picked, since no source installs such a module; a stale conflict message is
 // cleared and the alert withdrawn otherwise. Reports whether the module is in conflict.
-func (r *reconciler) reportConflict(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig, offering []string) (bool, error) {
+func (r *reconciler) reportConflict(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig, moduleSourceNames []string) (bool, error) {
 	metricGroup := fmt.Sprintf(metrics.ModuleConflictMetricGroupTemplate, moduleConfig.Name)
 	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
-	conflict := pkgsync.HasRepositoryConflict(moduleConfig.IsEnabled(), pkgsync.ConfiguredSource(moduleConfig), offering)
+	conflict := pkgsync.HasRepositoryConflict(moduleConfig.IsEnabled(), pkgsync.ConfiguredModuleSource(moduleConfig), moduleSourceNames)
 
 	message := ""
 	if conflict {
 		r.logger.Debug("module has several available sources", slog.String("name", moduleConfig.Name))
-		message = fmt.Sprintf("%s: %s", v1alpha1.ModuleMessageConflict, strings.Join(offering, ", "))
+		message = fmt.Sprintf("%s: %s", v1alpha1.ModuleMessageConflict, strings.Join(moduleSourceNames, ", "))
 	}
 
 	err := utils.UpdateStatus[*v1alpha1.ModuleConfig](ctx, r.client, moduleConfig, func(moduleConfig *v1alpha1.ModuleConfig) bool {
@@ -338,14 +338,14 @@ func (r *reconciler) reportConflict(ctx context.Context, moduleConfig *v1alpha1.
 	return conflict, nil
 }
 
-// offeringSources returns the module sources that list the module.
-func (r *reconciler) offeringSources(ctx context.Context, moduleName string) ([]string, error) {
-	sources := new(v1alpha1.ModuleSourceList)
-	if err := r.client.List(ctx, sources); err != nil {
+// listingModuleSources returns the module sources that list the module.
+func (r *reconciler) listingModuleSources(ctx context.Context, moduleName string) ([]string, error) {
+	moduleSources := new(v1alpha1.ModuleSourceList)
+	if err := r.client.List(ctx, moduleSources); err != nil {
 		return nil, fmt.Errorf("list module sources: %w", err)
 	}
 
-	return sources.Offering(moduleName), nil
+	return moduleSources.Offering(moduleName), nil
 }
 
 func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig, module *v1alpha2.Module) (ctrl.Result, error) {
@@ -363,19 +363,19 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 	} else {
 		// a module nothing installed is in conflict while the config enables it, several
 		// sources offer it and none is picked: the config and the module both tell
-		offering, err := r.offeringSources(ctx, moduleConfig.Name)
+		moduleSourceNames, err := r.listingModuleSources(ctx, moduleConfig.Name)
 		if err != nil {
 			r.logger.Error("failed to list module sources", slog.String("module", module.Name), log.Err(err))
 			return ctrl.Result{}, err
 		}
 
-		conflict, err := r.reportConflict(ctx, moduleConfig, offering)
+		conflict, err := r.reportConflict(ctx, moduleConfig, moduleSourceNames)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 
 		err = utils.UpdateStatus[*v1alpha2.Module](ctx, r.client, module, func(module *v1alpha2.Module) bool {
-			return module.ApplyCatalogState(conflict)
+			return module.ApplyNotInstalledState(conflict)
 		})
 		if err != nil {
 			r.logger.Error("failed to update the module status", slog.String("module", module.Name), log.Err(err))
@@ -658,7 +658,7 @@ func (r *reconciler) disableModule(ctx context.Context, module *v1alpha2.Module,
 			module.Status.Phase == v1alpha1.ModulePhaseConflict,
 			module.Status.Phase == v1alpha1.ModulePhaseDownloading,
 			module.Status.Phase == v1alpha1.ModulePhaseDownloadingError:
-			// a module nothing installed goes back to the offered state: one in conflict or
+			// a module nothing installed goes back to the available state: one in conflict or
 			// fetching its first release receives no event that would move it
 			module.SetNotInstalledStatus()
 		default:

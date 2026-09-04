@@ -52,8 +52,8 @@ func testModule(name, repository, version string, annotations map[string]string)
 	}
 }
 
-// testPackageOffering builds the ModulePackage of a module the given repositories offer.
-func testPackageOffering(module string, repositories ...string) *v1alpha1.ModulePackage {
+// testModulePackage builds the ModulePackage of a module the given repositories offer.
+func testModulePackage(module string, repositories ...string) *v1alpha1.ModulePackage {
 	return &v1alpha1.ModulePackage{
 		ObjectMeta: metav1.ObjectMeta{Name: module},
 		Status:     v1alpha1.ModulePackageStatus{AvailableRepositories: repositories},
@@ -81,7 +81,7 @@ func TestSyncModulesPlacement(t *testing.T) {
 		testRelease("upmeter", "deckhouse", "1.4.0", v1alpha1.ModuleReleasePhasePending),
 		// a module offered by a single repository and pinned to a tag
 		testOverride("solo", "dev"),
-		testPackageOffering("solo", "external"),
+		testModulePackage("solo", "external"),
 		// an override whose repository no resource names is skipped
 		testOverride("orphan", "dev"),
 	)
@@ -184,7 +184,7 @@ func TestSyncModulesDisposesUnbackedModules(t *testing.T) {
 	writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
 
 	s, cl := newTestSyncer(t, "v1.80.0", dir,
-		// no version and no source offers it
+		// no version and no repository offers it
 		testModule("orphan", "", "", nil),
 		// an embedded module the image stopped shipping
 		testModule("dropped", "embedded", "v1.79.0", map[string]string{v1alpha2.ModuleAnnotationEmbedded: "true"}),
@@ -215,7 +215,7 @@ func TestSyncModulesDisposesUnbackedModules(t *testing.T) {
 	}
 }
 
-func TestSyncModulesOfferedCatalog(t *testing.T) {
+func TestSyncModulesAvailable(t *testing.T) {
 	ctx := context.Background()
 
 	dir := t.TempDir()
@@ -223,20 +223,20 @@ func TestSyncModulesOfferedCatalog(t *testing.T) {
 
 	s, cl := newTestSyncer(t, "v1.80.0", dir,
 		// the platform repository offers the embedded module too: the image wins
-		testPackageOffering("echo", "deckhouse-modules"),
-		testPackageOffering("single", "deckhouse-modules"),
-		testPackageOffering("shared", "deckhouse-modules", "mirror"),
-		testPackageOffering("chosen", "deckhouse-modules", "mirror"),
-		testPackageOffering("contested", "deckhouse-modules", "mirror"),
-		testPackageOffering("gone", "deckhouse-modules"),
-		testPackageOffering("fetching", "deckhouse-modules"),
-		// the config enables a module two sources offer and picks none: a conflict
+		testModulePackage("echo", "deckhouse-modules"),
+		testModulePackage("single", "deckhouse-modules"),
+		testModulePackage("shared", "deckhouse-modules", "mirror"),
+		testModulePackage("chosen", "deckhouse-modules", "mirror"),
+		testModulePackage("contested", "deckhouse-modules", "mirror"),
+		testModulePackage("gone", "deckhouse-modules"),
+		testModulePackage("fetching", "deckhouse-modules"),
+		// the config enables a module two repositories offer and picks none: a conflict
 		testConfig("contested", v1alpha1.ModuleConfigSpec{Enabled: ptr.To(true)}),
-		// a package no repository lists, like the catalog entry of an embedded module, offers nothing
-		testPackageOffering("leftover"),
+		// a package no repository lists, like the package of an embedded module, offers nothing
+		testModulePackage("leftover"),
 		// the config picks one of the two sources
 		testConfig("chosen", v1alpha1.ModuleConfigSpec{Source: "mirror"}),
-		// a downloaded module whose files are gone: still offered, so it becomes an offered module again
+		// a downloaded module whose files are gone: still available in a repository, so it becomes an available module again
 		func() *v1alpha2.Module {
 			module := testModule("gone", "deckhouse-modules", "v0.2.0", map[string]string{v1alpha2.ModuleAnnotationDev: "true"})
 			module.Status.Phase = v1alpha1.ModulePhaseReady
@@ -247,7 +247,7 @@ func TestSyncModulesOfferedCatalog(t *testing.T) {
 			}
 			return module
 		}(),
-		// an offered module fetching its first release keeps its way to the deploy
+		// an available module fetching its first release keeps its way to the deploy
 		func() *v1alpha2.Module {
 			module := testModule("fetching", "deckhouse-modules", "", nil)
 			module.Status.Phase = v1alpha1.ModulePhaseDownloading
@@ -346,14 +346,14 @@ func TestModuleRepository(t *testing.T) {
 	_, cl := newTestSyncer(t, "v1.80.0", t.TempDir(),
 		testModule("placed", "deckhouse-modules", "v1.0.0", nil),
 		// a module nothing installed names the repository of its only offering source
-		testModule("catalog", "only", "", nil),
+		testModule("available", "only", "", nil),
 		testModule("embedded", "embedded", "v1.80.0", map[string]string{v1alpha2.ModuleAnnotationEmbedded: "true"}),
 		testConfig("embedded", v1alpha1.ModuleConfigSpec{Source: "external"}),
 		testConfig("configured", v1alpha1.ModuleConfigSpec{Source: "deckhouse"}),
 		testRelease("released", "external", "1.0.0", v1alpha1.ModuleReleasePhaseDeployed),
 		testRelease("pending", "deckhouse", "1.0.0", v1alpha1.ModuleReleasePhasePending),
-		testPackageOffering("single", "only"),
-		testPackageOffering("ambiguous", "only", "other"),
+		testModulePackage("single", "only"),
+		testModulePackage("ambiguous", "only", "other"),
 	)
 
 	cases := []struct {
@@ -361,7 +361,7 @@ func TestModuleRepository(t *testing.T) {
 		want   string
 	}{
 		{module: "placed", want: "deckhouse-modules"},
-		{module: "catalog", want: "only"},
+		{module: "available", want: "only"},
 		{module: "embedded", want: "external"},
 		{module: "configured", want: "deckhouse-modules"},
 		{module: "released", want: "external"},

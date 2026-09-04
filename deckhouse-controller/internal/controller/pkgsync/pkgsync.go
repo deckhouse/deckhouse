@@ -49,7 +49,7 @@
 //	ModulePackage (the repository scan lists the repositories offering it)
 //	  └─ Module <module> for every module some repository offers and nothing
 //	     installed: the repository of the source the config picks or of the
-//	     only offering source, no version, the phase Available
+//	     only offering repository, no version, the phase Available
 //
 //	ModuleConfig
 //	  └─ Module <module>: settings, settings version, maintenance, enabled
@@ -59,8 +59,8 @@
 // The repositories offering a module are read from its ModulePackage: a
 // repository offers a module once the repository scan found an installable
 // version of it. The module source and module config controllers and the
-// module config webhook read the same list (utils.OfferingRepositories), so
-// the offered modules, the conflict and the release gate agree. The source a module
+// module config webhook read the same list (utils.AvailableRepositories), so
+// the available modules, the conflict and the release gate agree. The source a module
 // config picks is compared as the repository behind it (ConfiguredRepository).
 // Two limits follow. A repository the scan has not reached yet offers nothing, and
 // a module source created after the start has no repository until the next
@@ -68,11 +68,11 @@
 // goes, not when the module leaves the registry.
 //
 // A module claims one source: the image beats a pull override, which beats a
-// deployed release, which beats a source merely offering the module. A module
+// deployed release, which beats a repository merely offering the module. A module
 // none of them backs is deleted: an embedded module the image stopped
-// shipping, a downloaded module whose files are gone and no source offers. A
-// downloaded module whose files are gone but a source still offers becomes an
-// offered module again. A downloaded module still on disk stays, since a pull
+// shipping, a downloaded module whose files are gone and no repository offers. A
+// downloaded module whose files are gone but a repository still offers becomes an
+// available module again. A downloaded module still on disk stays, since a pull
 // override deleted without a rollback leaves its files in use until the next
 // deploy. A condition written without a reason gets one, since the v1alpha2
 // schema requires it.
@@ -205,11 +205,11 @@ func SourceNameForRepository(repositoryName string) string {
 	return repositoryName
 }
 
-// ConfiguredSource returns the source the operator selected in the module config
+// ConfiguredModuleSource returns the source the operator selected in the module config
 // (.spec.source), or an empty string without a config or a selection. "Embedded" is
 // the sentinel for the built-in copy, not a real ModuleSource, so it counts as no
 // selection.
-func ConfiguredSource(config *v1alpha1.ModuleConfig) string {
+func ConfiguredModuleSource(config *v1alpha1.ModuleConfig) string {
 	if config == nil || config.Spec.Source == v1alpha1.ModuleSourceEmbedded {
 		return ""
 	}

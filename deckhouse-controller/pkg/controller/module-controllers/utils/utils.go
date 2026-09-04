@@ -259,10 +259,10 @@ func ModuleMetadata(ctx context.Context, cli client.Client, module *v1alpha2.Mod
 	return mpv.Status.PackageMetadata, nil
 }
 
-// OfferingRepositories names the package repositories the module can be installed from,
+// AvailableRepositories names the package repositories the module can be installed from,
 // as its ModulePackage lists them, sorted. A module without a package is offered by
 // nobody.
-func OfferingRepositories(ctx context.Context, cli client.Client, name string) ([]string, error) {
+func AvailableRepositories(ctx context.Context, cli client.Client, name string) ([]string, error) {
 	modulePackage := new(v1alpha1.ModulePackage)
 	if err := cli.Get(ctx, client.ObjectKey{Name: name}, modulePackage); err != nil {
 		if apierrors.IsNotFound(err) {

@@ -24,11 +24,11 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
-func TestConfiguredSource(t *testing.T) {
-	assert.Empty(t, ConfiguredSource(nil))
-	assert.Empty(t, ConfiguredSource(&v1alpha1.ModuleConfig{}))
-	assert.Empty(t, ConfiguredSource(&v1alpha1.ModuleConfig{Spec: v1alpha1.ModuleConfigSpec{Source: v1alpha1.ModuleSourceEmbedded}}))
-	assert.Equal(t, "mirror", ConfiguredSource(&v1alpha1.ModuleConfig{Spec: v1alpha1.ModuleConfigSpec{Source: "mirror"}}))
+func TestConfiguredModuleSource(t *testing.T) {
+	assert.Empty(t, ConfiguredModuleSource(nil))
+	assert.Empty(t, ConfiguredModuleSource(&v1alpha1.ModuleConfig{}))
+	assert.Empty(t, ConfiguredModuleSource(&v1alpha1.ModuleConfig{Spec: v1alpha1.ModuleConfigSpec{Source: v1alpha1.ModuleSourceEmbedded}}))
+	assert.Equal(t, "mirror", ConfiguredModuleSource(&v1alpha1.ModuleConfig{Spec: v1alpha1.ModuleConfigSpec{Source: "mirror"}}))
 }
 
 func TestConfiguredRepository(t *testing.T) {
