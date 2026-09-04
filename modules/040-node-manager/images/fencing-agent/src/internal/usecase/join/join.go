@@ -37,6 +37,8 @@ import (
 // state with each, so a few reachable ones are enough; gossip does the rest.
 const maxSeeds = 3
 
+var ErrNotMember = errors.New("this node is not a member of its NodeGroup any more")
+
 type NodeLister interface {
 	ListNodeGroup(ctx context.Context, nodeGroup string) ([]domain.Peer, error)
 }
@@ -48,6 +50,7 @@ type Cluster interface {
 
 type Params struct {
 	NodeName string
+	NodeUID  string
 	// NodeIP also drops a stale Node object holding the local IP under another
 	// name, and blocks a hairpin self-join.
 	NodeIP           string
@@ -86,7 +89,7 @@ func (j *Joiner) Bootstrap(ctx context.Context) {
 	backoff := j.params.RetryInterval
 
 	for attempt := 1; ; attempt++ {
-		err := j.attempt(ctx)
+		err := j.Attempt(ctx)
 		if err == nil {
 			j.joined.Store(true)
 
@@ -113,7 +116,7 @@ func (j *Joiner) Bootstrap(ctx context.Context) {
 	}
 }
 
-func (j *Joiner) attempt(ctx context.Context) error {
+func (j *Joiner) Attempt(ctx context.Context) error {
 	seeds, peers, err := j.seedList(ctx)
 	if err != nil {
 		return err
@@ -143,7 +146,7 @@ func (j *Joiner) attempt(ctx context.Context) error {
 		)
 	}
 
-	j.logger.Info("memberlist bootstrap join completed",
+	j.logger.Info("memberlist join completed",
 		"seeds", len(seeds),
 		"joined", joined,
 		"members", j.cluster.NumMembers(),
@@ -199,9 +202,17 @@ func (j *Joiner) seedList(ctx context.Context) ([]string, int, error) {
 
 	peers := 0
 	seeds := make([]string, 0, len(nodes))
+	self := false
 
 	for _, peer := range nodes {
 		if peer.Name == j.params.NodeName {
+			if peer.UID != j.params.NodeUID {
+				return nil, 0, fmt.Errorf("%w: node %q has uid %q, this agent started with %q",
+					ErrNotMember, peer.Name, peer.UID, j.params.NodeUID)
+			}
+
+			self = true
+
 			continue
 		}
 
@@ -221,6 +232,10 @@ func (j *Joiner) seedList(ctx context.Context) ([]string, int, error) {
 		}
 
 		seeds = append(seeds, net.JoinHostPort(peer.IP, port))
+	}
+
+	if !self {
+		return nil, 0, fmt.Errorf("%w: node %q is not labeled into NodeGroup %q", ErrNotMember, j.params.NodeName, j.params.NodeGroup)
 	}
 
 	if len(seeds) > maxSeeds {

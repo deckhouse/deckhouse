@@ -77,6 +77,19 @@ func failedSection() v1alpha1.FencingFailedNodeStateFailed {
 	}
 }
 
+func fallbackSection() v1alpha1.FencingFailedNodeStateFallback {
+	at := metav1.NewMicroTime(time.Date(2026, 6, 2, 15, 0, 2, 250000000, time.UTC))
+	lost := metav1.NewTime(time.Date(2026, 6, 2, 15, 0, 0, 0, time.UTC))
+
+	return v1alpha1.FencingFailedNodeStateFallback{
+		Active:            true,
+		LastHeartbeatAt:   &at,
+		QuorumLostAt:      &lost,
+		APIReachable:      true,
+		HeartbeatInterval: metav1.Duration{Duration: 250 * time.Millisecond},
+	}
+}
+
 func TestCreateFillsIdentityAndSpec(t *testing.T) {
 	states, c := newStates(t, interceptor.Funcs{})
 
@@ -277,6 +290,77 @@ func TestMarkFailedReReadsTheObjectBeforeRetrying(t *testing.T) {
 	}
 }
 
+func TestHeartbeatWritesOnlyTheFallbackSection(t *testing.T) {
+	existing := &v1alpha1.FencingFailedNodeState{
+		ObjectMeta: metav1.ObjectMeta{Name: testPeerName},
+		Status: v1alpha1.FencingFailedNodeStateStatus{
+			Phase:  v1alpha1.PhaseSuspected,
+			Failed: ptr(failedSection()),
+		},
+	}
+	states, c := newStates(t, interceptor.Funcs{}, existing)
+
+	if err := states.Heartbeat(t.Context(), testPeerName, fallbackSection()); err != nil {
+		t.Fatalf("heartbeat: %v", err)
+	}
+
+	state := stored(t, c, testPeerName)
+
+	got, want := state.Status.Fallback, fallbackSection()
+	if got == nil {
+		t.Fatalf("fallback section not written: %+v", state.Status)
+	}
+
+	if got.Active != want.Active || got.APIReachable != want.APIReachable || got.HeartbeatInterval.Duration != want.HeartbeatInterval.Duration {
+		t.Errorf("fallback = %+v, want active %v, apiReachable %v, heartbeatInterval %s", got, want.Active, want.APIReachable, want.HeartbeatInterval.Duration)
+	}
+
+	if got.LastHeartbeatAt == nil || !got.LastHeartbeatAt.Time.Equal(want.LastHeartbeatAt.Time) {
+		t.Errorf("lastHeartbeatAt = %v, want %v", got.LastHeartbeatAt, want.LastHeartbeatAt)
+	}
+
+	if got.QuorumLostAt == nil || !got.QuorumLostAt.Time.Equal(want.QuorumLostAt.Time) {
+		t.Errorf("quorumLostAt = %v, want %v", got.QuorumLostAt, want.QuorumLostAt)
+	}
+
+	if state.Status.Failed == nil || state.Status.Phase != v1alpha1.PhaseSuspected {
+		t.Errorf("heartbeat touched fields of other writers: failed=%+v phase=%q", state.Status.Failed, state.Status.Phase)
+	}
+}
+
+func TestHeartbeatUsesAMergePatchOnStatus(t *testing.T) {
+	var (
+		subresource string
+		patchType   types.PatchType
+	)
+
+	states, _ := newStates(t, interceptor.Funcs{
+		SubResourcePatch: func(ctx context.Context, c client.Client, name string, obj client.Object, patch client.Patch, opts ...client.SubResourcePatchOption) error {
+			subresource, patchType = name, patch.Type()
+
+			return c.SubResource(name).Patch(ctx, obj, patch, opts...)
+		},
+	}, &v1alpha1.FencingFailedNodeState{ObjectMeta: metav1.ObjectMeta{Name: testPeerName}})
+
+	if err := states.Heartbeat(t.Context(), testPeerName, fallbackSection()); err != nil {
+		t.Fatalf("heartbeat: %v", err)
+	}
+
+	if subresource != "status" || patchType != types.MergePatchType {
+		t.Errorf("heartbeat went through %q with %q, want a merge patch of /status", subresource, patchType)
+	}
+}
+
+func TestHeartbeatReportsAMissingObject(t *testing.T) {
+	states, _ := newStates(t, interceptor.Funcs{})
+
+	err := states.Heartbeat(t.Context(), testPeerName, fallbackSection())
+
+	if !apierrors.IsNotFound(err) {
+		t.Fatalf("heartbeat of a missing object returned %v, want NotFound so the caller creates it", err)
+	}
+}
+
 func TestDeleteSendsTheUIDPrecondition(t *testing.T) {
 	// The fake client does not enforce a UID precondition, so this checks that
 	// the request carries it: without it a slow delete could take the object of
@@ -341,3 +425,5 @@ func TestListIsScopedToTheNodeGroup(t *testing.T) {
 		t.Errorf("list returned %d objects %v, want only the ones of this NodeGroup", len(list), list)
 	}
 }
+
+func ptr[T any](v T) *T { return &v }

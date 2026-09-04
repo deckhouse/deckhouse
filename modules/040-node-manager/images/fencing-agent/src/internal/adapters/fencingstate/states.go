@@ -18,6 +18,7 @@ package fencingstate
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -36,10 +37,7 @@ const (
 	nodeKind       = "Node"
 )
 
-// States is the agent's half of the FencingFailedNodeState contract: it creates
-// the object, records the failed section and removes the object once the peer is
-// back. The phase and the conditions belong to fencing-controller, and the
-// fallback section to the affected node itself, so nothing here ever writes them.
+// States is the agent's half of the FencingFailedNodeState contract.
 type States struct {
 	api       client.Client
 	reader    client.Reader
@@ -176,6 +174,26 @@ func (s *States) MarkFailed(ctx context.Context, name string, failed v1alpha1.Fe
 	}
 
 	return recorded, nil
+}
+
+func (s *States) Heartbeat(ctx context.Context, name string, fallback v1alpha1.FencingFailedNodeStateFallback) error {
+	patch, err := json.Marshal(map[string]any{
+		"status": map[string]any{"fallback": fallback},
+	})
+	if err != nil {
+		return fmt.Errorf("encode fallback heartbeat of %q: %w", name, err)
+	}
+
+	state := &v1alpha1.FencingFailedNodeState{ObjectMeta: metav1.ObjectMeta{Name: name}}
+
+	ctx, cancel := s.bounded(ctx)
+	defer cancel()
+
+	if err := s.api.Status().Patch(ctx, state, client.RawPatch(types.MergePatchType, patch)); err != nil {
+		return fmt.Errorf("write fallback heartbeat of %q: %w", name, err)
+	}
+
+	return nil
 }
 
 // Delete removes the object of a peer that came back. The UID precondition keeps

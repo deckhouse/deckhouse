@@ -70,6 +70,7 @@ func newJoiner(t *testing.T, lister NodeLister, cluster Cluster) *Joiner {
 
 	return New(lister, cluster, Params{
 		NodeName:         "worker-1",
+		NodeUID:          "uid-1",
 		NodeIP:           "10.0.0.1",
 		NodeGroup:        "worker",
 		MemberlistPort:   8500,
@@ -81,7 +82,7 @@ func newJoiner(t *testing.T, lister NodeLister, cluster Cluster) *Joiner {
 
 func TestSeedListExcludesLocalNodeAndNodesWithoutIP(t *testing.T) {
 	lister := &fakeLister{peers: []domain.Peer{
-		{Name: "worker-1", IP: "10.0.0.1"},
+		{Name: "worker-1", IP: "10.0.0.1", UID: "uid-1"},
 		{Name: "worker-2", IP: "10.0.0.2"},
 		{Name: "worker-3", IP: ""},
 		{Name: "worker-4", IP: "10.0.0.4"},
@@ -102,7 +103,7 @@ func TestSeedListExcludesLocalNodeAndNodesWithoutIP(t *testing.T) {
 
 func TestSeedListExcludesStaleNodeWithLocalIP(t *testing.T) {
 	lister := &fakeLister{peers: []domain.Peer{
-		{Name: "worker-1", IP: "10.0.0.1"},
+		{Name: "worker-1", IP: "10.0.0.1", UID: "uid-1"},
 		// Leftover Node object of this very machine under its previous name.
 		{Name: "worker-1-old", IP: "10.0.0.1"},
 		{Name: "worker-2", IP: "10.0.0.2"},
@@ -119,7 +120,7 @@ func TestSeedListExcludesStaleNodeWithLocalIP(t *testing.T) {
 
 func TestStaleCloneOnlyGroupStartsAlone(t *testing.T) {
 	lister := &fakeLister{peers: []domain.Peer{
-		{Name: "worker-1", IP: "10.0.0.1"},
+		{Name: "worker-1", IP: "10.0.0.1", UID: "uid-1"},
 		{Name: "worker-1-old", IP: "10.0.0.1"},
 	}}
 	cluster := &fakeCluster{}
@@ -143,7 +144,7 @@ func TestPeersWithoutAddressesAreNotAlone(t *testing.T) {
 	// Real peers, but the cloud controller has not filled in their addresses yet:
 	// the agent must keep retrying, not declare itself alone.
 	lister := &fakeLister{peers: []domain.Peer{
-		{Name: "worker-1", IP: "10.0.0.1"},
+		{Name: "worker-1", IP: "10.0.0.1", UID: "uid-1"},
 		{Name: "worker-2", IP: ""},
 		{Name: "worker-3", IP: ""},
 	}}
@@ -173,6 +174,8 @@ func TestPeersWithoutAddressesAreNotAlone(t *testing.T) {
 
 func TestSeedListIsCappedAndSampled(t *testing.T) {
 	peers := make([]domain.Peer, 0, 3*maxSeeds)
+	peers = append(peers, domain.Peer{Name: "worker-1", IP: "10.0.0.1", UID: "uid-1"})
+
 	for i := range cap(peers) {
 		peers = append(peers, domain.Peer{
 			Name: "worker-" + strconv.Itoa(i+100),
@@ -202,8 +205,43 @@ func TestSeedListIsCappedAndSampled(t *testing.T) {
 	}
 }
 
+func TestSeedListRefusesWhenTheNodeLeftTheGroup(t *testing.T) {
+	lister := &fakeLister{peers: []domain.Peer{
+		{Name: "worker-2", IP: "10.0.0.2", UID: "uid-2"},
+	}}
+	cluster := &fakeCluster{}
+
+	err := newJoiner(t, lister, cluster).Attempt(t.Context())
+
+	if !errors.Is(err, ErrNotMember) {
+		t.Fatalf("attempt returned %v, want ErrNotMember for a node missing from its group", err)
+	}
+
+	if len(cluster.seeds) != 0 {
+		t.Errorf("join must not be attempted by a node that left the group, got %v", cluster.seeds)
+	}
+}
+
+func TestSeedListRefusesARecreatedNode(t *testing.T) {
+	lister := &fakeLister{peers: []domain.Peer{
+		{Name: "worker-1", IP: "10.0.0.1", UID: "uid-1-recreated"},
+		{Name: "worker-2", IP: "10.0.0.2", UID: "uid-2"},
+	}}
+	cluster := &fakeCluster{}
+
+	err := newJoiner(t, lister, cluster).Attempt(t.Context())
+
+	if !errors.Is(err, ErrNotMember) {
+		t.Fatalf("attempt returned %v, want ErrNotMember for a uid mismatch", err)
+	}
+
+	if len(cluster.seeds) != 0 {
+		t.Errorf("join must not be attempted with a stale identity, got %v", cluster.seeds)
+	}
+}
+
 func TestEmptySeedListStartsAlone(t *testing.T) {
-	lister := &fakeLister{peers: []domain.Peer{{Name: "worker-1", IP: "10.0.0.1"}}}
+	lister := &fakeLister{peers: []domain.Peer{{Name: "worker-1", IP: "10.0.0.1", UID: "uid-1"}}}
 	cluster := &fakeCluster{}
 
 	joiner := newJoiner(t, lister, cluster)
@@ -220,7 +258,7 @@ func TestEmptySeedListStartsAlone(t *testing.T) {
 
 func TestBootstrapRetriesUntilJoinSucceeds(t *testing.T) {
 	lister := &fakeLister{peers: []domain.Peer{
-		{Name: "worker-1", IP: "10.0.0.1"},
+		{Name: "worker-1", IP: "10.0.0.1", UID: "uid-1"},
 		{Name: "worker-2", IP: "10.0.0.2"},
 	}}
 	cluster := &fakeCluster{failures: 2}

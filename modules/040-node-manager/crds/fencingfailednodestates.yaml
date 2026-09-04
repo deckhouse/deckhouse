@@ -171,33 +171,42 @@ spec:
                 fallback:
                   type: object
                   description: |
-                    Liveness evidence written by the affected node itself while it has lost quorum but can still reach the Kubernetes API.
+                    Liveness evidence written by the affected node itself while it has lost quorum but can still reach the Kubernetes API. The node rewrites the whole section on every heartbeat and deletes the object once it regains quorum.
 
-                    A fresh `lastHeartbeatAt` always outweighs the `failed` section: while the heartbeat is newer than the fallback TTL of the profile, evacuation is not allowed.
+                    A fresh `lastHeartbeatAt` always outweighs the `failed` section: while the heartbeat is newer than the fallback TTL of the profile, evacuation is not allowed. The fencing controller judges freshness by its own clock, from the moment it last saw the value change, so a clock skew between the node and the controller does not shorten or extend the TTL.
                   required:
                     - active
-                    - heartbeatIntervalSeconds
+                    - apiReachable
+                    - heartbeatInterval
                   properties:
                     active:
                       type: boolean
                       description: |
-                        Whether the node is currently in fallback mode.
+                        Whether the node is in fallback mode. Always `true` while the section is present: the node deletes the object when it leaves fallback mode instead of writing `false`.
                     lastHeartbeatAt:
                       type: string
                       format: date-time
+                      pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}\.[0-9]{6}(Z|[+-][0-9]{2}:[0-9]{2})$'
                       description: |
-                        Time of the last heartbeat written by the node.
+                        Time of the last heartbeat written by the node, with microsecond precision.
+
+                        Exactly six fractional digits are required: the value is decoded as metav1.MicroTime, which accepts no other precision; a value written without them would make the whole object unreadable to the controller and the agents.
                     quorumLostAt:
                       type: string
                       format: date-time
                       description: |
-                        Time the node lost quorum.
-                    heartbeatIntervalSeconds:
-                      type: integer
-                      format: int32
-                      minimum: 1
+                        Time the node lost quorum. Fixed for the whole fallback episode.
+                    apiReachable:
+                      type: boolean
                       description: |
-                        Interval at which the node writes heartbeats.
+                        Whether the node could reach the Kubernetes API when it wrote the heartbeat. Always `true` while the section is present: a node that cannot reach the API cannot write it. The absence of fresh heartbeats is the unreachable signal.
+                    heartbeatInterval:
+                      type: string
+                      pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
+                      description: |
+                        Interval at which the node writes heartbeats, copied from `fallback.heartbeat` of the profile.
+
+                        The value is the Go duration string of the profile (units ms, s, m, h; never sub-millisecond).
                 conditions:
                   type: array
                   description: |
