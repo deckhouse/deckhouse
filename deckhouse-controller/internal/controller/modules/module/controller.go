@@ -107,12 +107,10 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return r.deleteModule(ctx, module)
 	}
 
-	// ensure the finalizer is in place so a later delete can be intercepted
-	if err := r.addFinalizer(ctx, module); err != nil {
-		r.logger.Error("failed to add finalizer", slog.String("name", req.Name), log.Err(err))
-		return res, fmt.Errorf("add finalizer: %w", err)
-	}
+	return r.handleModule(ctx, module)
+}
 
+func (r *reconciler) handleModule(ctx context.Context, module *v1alpha2.Module) (ctrl.Result, error) {
 	// apply the module settings-and-enabled change to the package runtime
 	r.manager.UpdateModulesSettings(
 		module.Name,
@@ -120,6 +118,18 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		module.Spec.Settings.GetMap(),
 		module.Spec.Maintenance,
 		module.Spec.Enabled)
+
+	return r.processModule(ctx, module)
+}
+
+func (r *reconciler) processModule(ctx context.Context, module *v1alpha2.Module) (ctrl.Result, error) {
+	res := ctrl.Result{}
+
+	// ensure the finalizer is in place so a later delete can be intercepted
+	if err := r.addFinalizer(ctx, module); err != nil {
+		r.logger.Error("failed to add finalizer", slog.String("name", module.Name), log.Err(err))
+		return res, err
+	}
 
 	return res, nil
 }
