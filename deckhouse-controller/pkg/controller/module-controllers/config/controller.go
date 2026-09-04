@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -130,6 +131,38 @@ func RegisterController(
 			},
 			DeleteFunc: func(_ event.DeleteEvent) bool {
 				return false
+			},
+			GenericFunc: func(_ event.GenericEvent) bool {
+				return false
+			},
+		})).
+		// the repository scan changes who offers a module: the config of a module nothing
+		// installed re-reports the conflict
+		Watches(&v1alpha1.ModulePackage{}, ctrlhandler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+			if err := r.client.Get(ctx, client.ObjectKey{Name: obj.GetName()}, new(v1alpha1.ModuleConfig)); err != nil {
+				return nil
+			}
+
+			return []reconcile.Request{{NamespacedName: client.ObjectKey{Name: obj.GetName()}}}
+		}), builder.WithPredicates(predicate.Funcs{
+			CreateFunc: func(_ event.CreateEvent) bool {
+				return true
+			},
+			UpdateFunc: func(updateEvent event.UpdateEvent) bool {
+				oldPackage, ok := updateEvent.ObjectOld.(*v1alpha1.ModulePackage)
+				if !ok {
+					return false
+				}
+
+				newPackage, ok := updateEvent.ObjectNew.(*v1alpha1.ModulePackage)
+				if !ok {
+					return false
+				}
+
+				return !slices.Equal(oldPackage.Status.AvailableRepositories, newPackage.Status.AvailableRepositories)
+			},
+			DeleteFunc: func(_ event.DeleteEvent) bool {
+				return true
 			},
 			GenericFunc: func(_ event.GenericEvent) bool {
 				return false
@@ -262,11 +295,11 @@ func (r *reconciler) handleModuleConfig(ctx context.Context, moduleConfig *v1alp
 	return r.processModule(ctx, moduleConfig, module)
 }
 
-// handleNotInstalledModule settles a config whose module has no object: a module some source
-// offers is waiting for its first deploy, and the Module create event brings the config back,
-// while a name no source knows is reported and checked again later.
+// handleNotInstalledModule settles a config whose module has no object: a module some module
+// source offers is waiting for its first deploy, and the Module create event brings the config
+// back, while a name no module source offers is reported and checked again later.
 func (r *reconciler) handleNotInstalledModule(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig) (ctrl.Result, error) {
-	moduleSourceNames, err := r.listingModuleSources(ctx, moduleConfig.Name)
+	moduleSourceNames, err := utils.AvailableModuleSources(ctx, r.client, moduleConfig.Name)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -338,16 +371,6 @@ func (r *reconciler) reportConflict(ctx context.Context, moduleConfig *v1alpha1.
 	return conflict, nil
 }
 
-// listingModuleSources returns the module sources that list the module.
-func (r *reconciler) listingModuleSources(ctx context.Context, moduleName string) ([]string, error) {
-	moduleSources := new(v1alpha1.ModuleSourceList)
-	if err := r.client.List(ctx, moduleSources); err != nil {
-		return nil, fmt.Errorf("list module sources: %w", err)
-	}
-
-	return moduleSources.Offering(moduleName), nil
-}
-
 func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.ModuleConfig, module *v1alpha2.Module) (ctrl.Result, error) {
 	defer r.logger.Debug("module config reconciled", slog.String("name", moduleConfig.Name))
 
@@ -362,10 +385,10 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 		r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 	} else {
 		// a module nothing installed is in conflict while the config enables it, several
-		// sources offer it and none is picked: the config and the module both tell
-		moduleSourceNames, err := r.listingModuleSources(ctx, moduleConfig.Name)
+		// module sources offer it and none is picked: the config and the module both tell
+		moduleSourceNames, err := utils.AvailableModuleSources(ctx, r.client, moduleConfig.Name)
 		if err != nil {
-			r.logger.Error("failed to list module sources", slog.String("module", module.Name), log.Err(err))
+			r.logger.Error("failed to get the module sources offering the module", slog.String("module", module.Name), log.Err(err))
 			return ctrl.Result{}, err
 		}
 

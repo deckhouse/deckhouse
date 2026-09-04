@@ -57,3 +57,13 @@ spec:
 status:
   modules:
     - name: test-module
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
+metadata:
+  name: test-module
+status:
+  availableRepositories:
+    - source-one
+    - source-two
+    - source-three
