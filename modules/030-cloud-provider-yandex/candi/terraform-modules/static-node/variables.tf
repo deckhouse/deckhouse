@@ -112,14 +112,19 @@ locals {
   node_group_zones               = try(local._node_group.spec.cloudInstances.zones, null)
   existing_zone_to_subnet_id_map = try(tomap(local._node_params.existingZoneToSubnetIDMap), {})
 
-  # The fallbacks mirror the YandexInstanceClass v1 CRD defaults, not the
-  # pre-migration terraform ones. An instance class read back from the cluster
-  # always carries the CRD defaults, while the copy dhctl parses out of the
-  # bootstrap resources YAML does not go through the apiserver and therefore
-  # arrives without them. Falling back to anything else makes bootstrap and the
-  # first converge disagree and replaces the node.
-  # On the PCC path the migration module fills platformID and diskType with the
-  # pre-migration terraform values explicitly, so these fallbacks never apply there.
+  # The fallbacks mirror the values the YandexInstanceClass v1 CRD documents for these fields
+  # (x-doc-default), which is deliberately not the same as the pre-migration terraform ones.
+  #
+  # Note the CRD carries no real `default:` for platformID, diskType or diskSizeGB - only
+  # x-doc-default - so the apiserver does not fill them in either. These fallbacks are therefore
+  # the single source of the defaults, on both paths: an instance class read back from the
+  # cluster and the copy dhctl parses out of the bootstrap resources YAML arrive with the field
+  # absent alike. Keeping the two paths on the same value is what stops bootstrap and the first
+  # converge from disagreeing and replacing the node.
+  #
+  # On the PCC path the migration module fills platformID and diskType with the pre-migration
+  # terraform values (standard-v2 / network-ssd) explicitly, so these fallbacks never apply
+  # there - see candi/terraform-modules/migration/locals.tf.
   platform      = try(local.instance_class.platformID, "standard-v3")
   cores         = try(local.instance_class.cores, 0)
   core_fraction = try(local.instance_class.coreFraction, null)

@@ -16,7 +16,10 @@ output "settings" {
   description = "Resolved ModuleConfig object for cloud-provider-yandex."
   value       = jsondecode(local.use_pcc ? jsonencode(local._pcc_module_config) : jsonencode(var.settings))
 
-  # See validation.tf for why the configuration checks live here.
+  # The configuration checks live on the outputs rather than in a validation block of their own:
+  # they depend on locals that resolve the source of truth (use_pcc, _mc_version), and a
+  # variable validation{} cannot read locals. Attaching them here also means the error surfaces
+  # exactly when a consumer reads the resolved configuration.
   precondition {
     condition     = !local._configured || local.has_pcc || local._mc_version >= 2
     error_message = <<-EOT
