@@ -23,6 +23,9 @@ spec:
                 imageName:
                   description: |
                     Имя образа ОС, используемое для развертывания ВМ.
+                storagePolicy:
+                  description: |
+                    Имя storage policy, которая будет использоваться для этого instance class вместо общей `storagePolicy` кластера.
                 externalNetwork:
                   description: |
                     Имя внешней сети.

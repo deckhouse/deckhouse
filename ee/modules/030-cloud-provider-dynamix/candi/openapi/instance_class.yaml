@@ -52,6 +52,11 @@ spec:
                     Name of the OS image to base this VM on.
                   x-doc-examples: ['alt-p10-cloud-x86_64.img']
                   type: string
+                storagePolicy:
+                  description: |
+                    The name of the storage policy to use for this instance class instead of the cluster-wide `storagePolicy`.
+                  x-doc-examples: ['storage_policy01']
+                  type: string
                 externalNetwork:
                   type: string
                   description: |
