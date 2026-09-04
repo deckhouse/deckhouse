@@ -1,0 +1,25 @@
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: test-module
+  annotations:
+    modules.deckhouse.io/dev: "true"
+    modules.deckhouse.io/hash: sha256:stale
+    packages.deckhouse.io/registry-spec-changed: "true"
+spec:
+  packageRepositoryName: deckhouse
+  packageVersion: main
+  settingsVersion: 1
+  settings:
+    replicas: 2
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  name: deckhouse
+spec:
+  registry:
+    scheme: https
+    repo: registry.example.com/test
+    dockerCfg: test-docker-cfg
+    ca: test-ca

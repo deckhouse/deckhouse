@@ -1,0 +1,16 @@
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: test-module
+  finalizers:
+    - module.deckhouse.io/statistic-registered
+  ownerReferences:
+    - apiVersion: deckhouse.io/v1alpha1
+      kind: ModulePackageVersion
+      name: deckhouse-test-module-v1.0.1
+      uid: version-uid
+      controller: false
+      blockOwnerDeletion: true
+spec:
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1

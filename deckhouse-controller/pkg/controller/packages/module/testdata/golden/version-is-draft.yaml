@@ -1,0 +1,50 @@
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  finalizers:
+  - module.deckhouse.io/statistic-registered
+  name: test-module
+  resourceVersion: "2"
+spec:
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1
+status:
+  lastAppliedConfiguration: null
+  tracking: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
+metadata:
+  name: test-module
+  resourceVersion: "1"
+  uid: package-uid
+status: {}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
+metadata:
+  labels:
+    packages.deckhouse.io/draft: "true"
+  name: deckhouse-test-module-v1.0.1
+  resourceVersion: "1"
+  uid: version-uid
+spec:
+  packageName: test-module
+  packageRepositoryName: deckhouse
+  packageVersion: v1.0.1
+status:
+  used: false
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: PackageRepository
+metadata:
+  name: deckhouse
+  resourceVersion: "1"
+spec:
+  registry:
+    ca: test-ca
+    dockerCfg: test-docker-cfg
+    repo: registry.example.com/test
+    scheme: https
+status: {}
