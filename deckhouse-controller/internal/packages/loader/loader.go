@@ -215,6 +215,7 @@ func LoadEmbeddedConf(ctx context.Context, moduleDir string, logger *log.Logger)
 	return &modules.Config{
 		Path:       moduleDir,
 		Definition: moduleDef,
+		Embedded:   true,
 
 		Digests: digests,
 

@@ -22,7 +22,6 @@ import (
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -60,24 +59,16 @@ const (
 
 // RegisterController registers the Application controller with the manager.
 func RegisterController(
+	synced *sync.WaitGroup,
 	runtime ctrlmanager.Manager,
 	manager packageManager,
-	moduleManager moduleManager,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
-		init:          new(sync.WaitGroup),
-		client:        runtime.GetClient(),
-		manager:       manager,
-		moduleManager: moduleManager,
-		logger:        logger.Named(controllerName),
-	}
-
-	r.init.Add(1)
-
-	// add preflight to set the cluster UUID
-	if err := runtime.Add(ctrlmanager.RunnableFunc(r.preflight)); err != nil {
-		return fmt.Errorf("add preflight: %w", err)
+		init:    synced,
+		client:  runtime.GetClient(),
+		manager: manager,
+		logger:  logger.Named(controllerName),
 	}
 
 	r.status = status.NewService(r.client, r.manager.GetStatus, r.logger)
@@ -93,17 +84,11 @@ func RegisterController(
 
 // reconciler reconciles Application objects.
 type reconciler struct {
-	init          *sync.WaitGroup
-	client        client.Client
-	manager       packageManager
-	status        *status.Service
-	moduleManager moduleManager
-	logger        *log.Logger
-}
-
-// moduleManager reports whether addon-operator has finished initialising modules.
-type moduleManager interface {
-	AreModulesInited() bool
+	init    *sync.WaitGroup
+	client  client.Client
+	manager packageManager
+	status  *status.Service
+	logger  *log.Logger
 }
 
 // packageManager registers and unregisters applications in the package runtime.
@@ -113,51 +98,6 @@ type packageManager interface {
 	RemoveApp(namespace, name string) bool
 	GetStatus(name string) packagestatus.Status
 	GetAppStatusQueue() workqueue.TypedRateLimitingInterface[string]
-	Cleanup(ctx context.Context, preserve []packageruntime.PreservePackage)
-}
-
-// preflight waits for the module manager and drops runtime state no Application claims.
-func (r *reconciler) preflight(ctx context.Context) error {
-	defer r.init.Done()
-
-	// wait until module manager init
-	r.logger.Debug("wait until module manager is inited")
-	if err := wait.PollUntilContextCancel(ctx, 2*time.Second, true, func(_ context.Context) (bool, error) {
-		return r.moduleManager.AreModulesInited(), nil
-	}); err != nil {
-		return fmt.Errorf("init module manager: %w", err)
-	}
-
-	appsList := new(v1alpha1.ApplicationList)
-	if err := r.client.List(ctx, appsList); err != nil {
-		return fmt.Errorf("list applications: %w", err)
-	}
-
-	preserve := make([]packageruntime.PreservePackage, 0, len(appsList.Items))
-	for _, app := range appsList.Items {
-		// An application already being deleted is not preserved. The runtime forgets its teardown
-		// across a restart, so handleDelete would find nothing left to tear down and release the
-		// finalizer; this cleanup is the last owner of the release, and skipping it here is what
-		// makes that answer true.
-		if !app.DeletionTimestamp.IsZero() {
-			continue
-		}
-
-		preserve = append(preserve, packageruntime.PreservePackage{
-			PackageName: app.Spec.PackageName,
-			Repository:  app.Spec.PackageRepositoryName,
-			Version:     app.Spec.PackageVersion,
-
-			ReleaseName:      apps.BuildName(app.Namespace, app.Name),
-			ReleaseNamespace: app.Namespace,
-		})
-	}
-
-	r.manager.Cleanup(ctx, preserve)
-
-	r.logger.Debug("controller is ready")
-
-	return nil
 }
 
 // Reconcile dispatches the application to the delete or the create/update handler.

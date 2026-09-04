@@ -19,6 +19,7 @@ package application_test
 import (
 	"context"
 	"errors"
+	"sync"
 	"testing"
 	"time"
 
@@ -98,45 +99,28 @@ func (suite *ControllerTestSuite) setupController(filename string) {
 }
 
 // harness is the controller as RegisterController leaves it behind in the manager: the
-// reconcile entry point and the preflight runnable. Tests drive the package through these
-// two and through nothing else.
+// reconcile entry point. Tests drive the package through it and through nothing else.
 type harness struct {
 	reconcile.Reconciler
-
-	preflight ctrlmanager.Runnable
 }
 
-// reconcilerFor registers the controller and opens the preflight gate that Reconcile waits
-// on, which is the state a running controller reconciles in.
+// reconcilerFor runs the package's only exported entry point against a manager stub and
+// picks up the reconciler it registered. The gate WaitGroup is left at zero, which is the
+// state a running controller reconciles in.
 func reconcilerFor(t *testing.T, cl client.Client, manager *packageManagerStub) *harness {
 	t.Helper()
 
-	h := registerController(t, cl, manager, modulesInited(true))
-	require.NoError(t, h.preflight.Start(context.Background()))
-
-	return h
-}
-
-// registerController runs the package's only exported entry point against a manager stub
-// and picks up the runnables it registered.
-func registerController(t *testing.T, cl client.Client, manager *packageManagerStub, modules modulesInited) *harness {
-	t.Helper()
-
 	mgr := &managerStub{scheme: testScheme(t), client: cl}
-	require.NoError(t, application.RegisterController(mgr, manager, modules, log.NewNop()))
+	require.NoError(t, application.RegisterController(new(sync.WaitGroup), mgr, manager, log.NewNop()))
 
 	h := new(harness)
 	for _, runnable := range mgr.runnables {
 		if reconciler, ok := runnable.(reconcile.Reconciler); ok {
 			h.Reconciler = reconciler
-			continue
 		}
-
-		h.preflight = runnable
 	}
 
 	require.NotNil(t, h.Reconciler, "the controller must be registered in the manager")
-	require.NotNil(t, h.preflight, "the preflight must be registered in the manager")
 
 	return h
 }
@@ -559,51 +543,6 @@ func TestDeleteDistinguishesAMissingVersionFromAnUnreadableOne(t *testing.T) {
 	assert.Equal(t, []types.NamespacedName{{Namespace: appNamespace, Name: appName}}, manager.removed)
 }
 
-func TestPreflightPreservesEveryApplication(t *testing.T) {
-	cl := fake.NewClientBuilder().
-		WithScheme(testScheme(t)).
-		WithObjects(
-			newApplication(appName, appNamespace, packageName, "v1.0.1"),
-			newApplication("other-app", "baz", "other-test", "v2.0.0"),
-		).
-		Build()
-
-	manager := newPackageManagerStub(t)
-	ctr := registerController(t, cl, manager, modulesInited(true))
-	require.NoError(t, ctr.preflight.Start(context.Background()))
-
-	require.Len(t, manager.cleanups, 1)
-	assert.ElementsMatch(t, []packageruntime.PreservePackage{
-		{
-			PackageName:      packageName,
-			Repository:       "deckhouse",
-			Version:          "v1.0.1",
-			ReleaseName:      appNamespace + "." + appName,
-			ReleaseNamespace: appNamespace,
-		},
-		{
-			PackageName:      "other-test",
-			Repository:       "deckhouse",
-			Version:          "v2.0.0",
-			ReleaseName:      "baz.other-app",
-			ReleaseNamespace: "baz",
-		},
-	}, manager.cleanups[0])
-}
-
-func TestPreflightWaitsForModuleManager(t *testing.T) {
-	cl := fake.NewClientBuilder().WithScheme(testScheme(t)).Build()
-
-	manager := newPackageManagerStub(t)
-	ctr := registerController(t, cl, manager, modulesInited(false))
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
-	defer cancel()
-
-	require.ErrorIs(t, ctr.preflight.Start(ctx), context.DeadlineExceeded)
-	assert.Empty(t, manager.cleanups,
-		"runtime state must not be dropped while the module manager is still initialising")
-}
-
 // seedFakeClient builds a client from a fixture and wraps it with funcs, for the paths that
 // only show up when a write or a read fails. Seeding itself goes through Create, which the
 // interceptors used here leave alone.
@@ -672,18 +611,12 @@ func ownerRefName(app *v1alpha1.Application, kind string) string {
 	return ""
 }
 
-// modulesInited is a moduleManager whose readiness is fixed at construction.
-type modulesInited bool
-
-func (m modulesInited) AreModulesInited() bool { return bool(m) }
-
 // packageManagerStub records the calls the reconciler makes into the package runtime.
 // RegisterController requires it to satisfy the package's manager interface, which is the
 // compile-time check that this stub still matches the real runtime.
 type packageManagerStub struct {
 	updated     []updatedApp
 	removed     []types.NamespacedName
-	cleanups    [][]packageruntime.PreservePackage
 	removalDone bool
 
 	queue workqueue.TypedRateLimitingInterface[string]
@@ -724,8 +657,4 @@ func (s *packageManagerStub) GetStatus(string) packagestatus.Status {
 
 func (s *packageManagerStub) GetAppStatusQueue() workqueue.TypedRateLimitingInterface[string] {
 	return s.queue
-}
-
-func (s *packageManagerStub) Cleanup(_ context.Context, preserve []packageruntime.PreservePackage) {
-	s.cleanups = append(s.cleanups, preserve)
 }

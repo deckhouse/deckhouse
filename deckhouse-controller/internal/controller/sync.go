@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	pkgmodules "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	pkgruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
@@ -152,7 +153,8 @@ func (c *Controller) embeddedPlacements(ctx context.Context) (map[string]placeme
 	return placements, nil
 }
 
-// overridePlacements pins every module a ready pull override names to the tag it carries.
+// overridePlacements pins every module a ready pull override names to the tag it carries. The
+// module source it reads is mapped to the repository serving the same registry path.
 func (c *Controller) overridePlacements(ctx context.Context) (map[string]placement, error) {
 	cli := c.ctrl.GetClient()
 
@@ -180,14 +182,19 @@ func (c *Controller) overridePlacements(ctx context.Context) (map[string]placeme
 			continue
 		}
 
-		placements[mpo.Name] = placement{repository: module.Properties.Source, version: mpo.Spec.ImageTag, dev: true}
+		placements[mpo.Name] = placement{
+			repository: pkgsync.RepositoryNameForSource(module.Properties.Source),
+			version:    mpo.Spec.ImageTag,
+			dev:        true,
+		}
 	}
 
 	return placements, nil
 }
 
 // releasePlacements returns the newest deployed release per module, superseding the duplicates it
-// passes — two releases both marked deployed is what a restart mid version bump leaves behind.
+// passes — two releases both marked deployed is what a restart mid version bump leaves behind. The
+// module source a release names is mapped to the repository serving the same registry path.
 func (c *Controller) releasePlacements(ctx context.Context) (map[string]placement, error) {
 	selector := client.MatchingLabels{v1alpha1.ModuleReleaseLabelStatus: v1alpha1.ModuleReleaseLabelDeployed}
 
@@ -220,7 +227,10 @@ func (c *Controller) releasePlacements(ctx context.Context) (map[string]placemen
 			continue
 		}
 
-		placements[name] = placement{repository: release.GetModuleSource(), version: release.GetModuleVersion()}
+		placements[name] = placement{
+			repository: pkgsync.RepositoryNameForSource(release.GetModuleSource()),
+			version:    release.GetModuleVersion(),
+		}
 	}
 
 	return placements, nil
