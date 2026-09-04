@@ -20,6 +20,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"hash/fnv"
 	"slices"
 	"strings"
 	"testing"
@@ -48,8 +49,14 @@ func (s *stubAlive) Changed() <-chan struct{} { return nil }
 
 type stubExpected struct{ peers []domain.Peer }
 
-func (s *stubExpected) Snapshot() ([]domain.Peer, int, int) {
-	return s.peers, len(s.peers), domain.QuorumSize(len(s.peers))
+func (s *stubExpected) Expected() ([]domain.Peer, uint64) {
+	sum := fnv.New64a()
+
+	for _, peer := range s.peers {
+		_, _ = sum.Write([]byte(peer.Name + "\x00" + peer.UID + "\x00"))
+	}
+
+	return s.peers, sum.Sum64()
 }
 
 type stubEvents struct {

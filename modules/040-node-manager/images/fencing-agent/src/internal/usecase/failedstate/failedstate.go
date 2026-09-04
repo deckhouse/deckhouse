@@ -71,10 +71,9 @@ type AliveLister interface {
 	Changed() <-chan struct{}
 }
 
-// ExpectedSnapshotter reports the peers the NodeGroup should have, from the Node
-// informer cache.
-type ExpectedSnapshotter interface {
-	Snapshot() ([]domain.Peer, int, int)
+
+type ExpectedSource interface {
+	Expected() ([]domain.Peer, uint64)
 }
 
 // StateStore is the Kubernetes side of the incident record. Create and MarkFailed
@@ -101,7 +100,7 @@ type Params struct {
 
 type Deps struct {
 	Alive    AliveLister
-	Expected ExpectedSnapshotter
+	Expected ExpectedSource
 	States   StateStore
 	Events   EventRecorder
 	Now      func() time.Time
@@ -136,6 +135,18 @@ type Writer struct {
 	// from one a peer wrote about the node as it runs now.
 	startedAt      time.Time
 	warnedOwnState bool
+
+	// What a pass derives from its two inputs is kept until one of them moves.
+	// On a large NodeGroup the maps and sorts behind the view are the whole cost
+	// of an idle pass, for inputs that change maybe hourly; and the rank of a
+	// peer, a walk over the alive set, is the same for as long as that set is.
+	derived     bool
+	expectedGen uint64
+	members     map[string]struct{}
+	view        domain.View
+	failed      []domain.Peer
+	ranks       map[string]int
+	rebuilds    int
 }
 
 func New(params Params, deps Deps, logger *log.Logger) *Writer {
@@ -196,11 +207,14 @@ func (w *Writer) clearOwnState(ctx context.Context, states []v1alpha1.FencingFai
 }
 
 func (w *Writer) reconcile(ctx context.Context) {
-	expected, _, _ := w.deps.Expected.Snapshot()
-	view := domain.NewView(expected, w.deps.Alive.Members())
+	expected, gen := w.deps.Expected.Expected()
+	members := w.deps.Alive.Members()
 
-	w.seen.Observe(view.Alive())
-	w.seen.Retain(expected)
+	if !w.derived || gen != w.expectedGen || !w.sameMembers(members) {
+		w.rebuild(expected, gen, members)
+	}
+
+	view := w.view
 
 	states, err := w.deps.States.List(ctx)
 	if err != nil {
@@ -226,13 +240,29 @@ func (w *Writer) reconcile(ctx context.Context) {
 		existing[states[i].Name] = &states[i]
 	}
 
-	failed := view.Failed(&w.seen)
+	failed := w.failed
 	w.forgetRecovered(failed)
 
 	for _, peer := range failed {
 		inc := w.incident(peer.Name)
 
-		if !w.myTurn(domain.WriterRank(view.Alive(), peer.Name, w.params.NodeName), inc.detectedAt) {
+		// Already on record, by this agent or by whoever held the role before
+		// it: nobody needs a rank for this peer any more. The rank costs a pass
+		// over the alive set, so during a mass failure it is what would make
+		// every pass quadratic; skipping it here confines that cost to the
+		// first pass, when the records do not exist yet.
+		if state := existing[peer.Name]; state != nil && state.Status.Failed != nil {
+			inc.recorded()
+
+			continue
+		}
+
+		// Backing off after failed writes: nothing to decide until then.
+		if w.deps.Now().Before(inc.retryAfter) {
+			continue
+		}
+
+		if !w.myTurn(w.rank(peer.Name), inc.detectedAt) {
 			continue
 		}
 
@@ -244,6 +274,53 @@ func (w *Writer) reconcile(ctx context.Context) {
 	}
 
 	w.forgetBeyond(states)
+}
+
+// rebuild derives everything a pass reads from its inputs.
+func (w *Writer) rebuild(expected []domain.Peer, gen uint64, members []string) {
+	w.view = domain.NewView(expected, members)
+	w.seen.Observe(w.view.Alive())
+	w.seen.Retain(expected)
+	w.failed = w.view.Failed(&w.seen)
+	w.ranks = make(map[string]int)
+
+	w.members = make(map[string]struct{}, len(members))
+	for _, member := range members {
+		w.members[member] = struct{}{}
+	}
+
+	w.expectedGen = gen
+	w.derived = true
+	w.rebuilds++
+}
+
+// sameMembers reports whether gossip still sees the very set it did last time.
+// memberlist reshuffles its list between reads, so this compares as a set.
+func (w *Writer) sameMembers(members []string) bool {
+	if len(members) != len(w.members) {
+		return false
+	}
+
+	for _, member := range members {
+		if _, ok := w.members[member]; !ok {
+			return false
+		}
+	}
+
+	return true
+}
+
+// rank memoizes domain.WriterRank for the current alive set; rebuild drops the
+// memo together with the set it was computed against.
+func (w *Writer) rank(name string) int {
+	if rank, ok := w.ranks[name]; ok {
+		return rank
+	}
+
+	rank := domain.WriterRank(w.view.Alive(), name, w.params.NodeName)
+	w.ranks[name] = rank
+
+	return rank
 }
 
 func (w *Writer) myTurn(rank int, since time.Time) bool {
@@ -269,16 +346,6 @@ func (w *Writer) report(
 	existing *v1alpha1.FencingFailedNodeState,
 	inc *incident,
 ) {
-	if existing != nil && existing.Status.Failed != nil {
-		inc.recorded()
-
-		return
-	}
-
-	if w.deps.Now().Before(inc.retryAfter) {
-		return
-	}
-
 	if peer.UID == "" {
 		if !inc.warnedNoUID {
 			inc.warnedNoUID = true
@@ -361,7 +428,7 @@ func (w *Writer) clear(ctx context.Context, view domain.View, state *v1alpha1.Fe
 		return
 	}
 
-	if !w.myTurn(domain.WriterRank(view.Alive(), state.Name, w.params.NodeName), w.waitingSince(waitKey{waitClear, state.Name})) {
+	if !w.myTurn(w.rank(state.Name), w.waitingSince(waitKey{waitClear, state.Name})) {
 		return
 	}
 
