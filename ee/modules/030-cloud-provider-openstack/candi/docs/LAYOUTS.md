@@ -9,11 +9,26 @@ Four layouts are supported. Below is more information about each of them.
 
 In this scheme, an internal cluster network is created with a gateway to the public network; the nodes do not have public IP addresses. Note that the floating IP is assigned to the master node.
 
+![resources](images/openstack-standard.png)
+<!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11038&t=IvETjbByf1MSQzcm-0 --->
+
 > **Caution!**
 > If the provider does not support SecurityGroups, all applications running on nodes with Floating IPs assigned will be available at a public IP. For example, `kube-apiserver` on master nodes will be available on port 6443. To avoid this, we recommend using the [SimpleWithInternalNetwork](#simplewithinternalnetwork) placement strategy or [Standard](#standard) strategy with bastion host.
 
-![resources](images/openstack-standard.png)
-<!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11038&t=IvETjbByf1MSQzcm-0 --->
+The [`internalNetworkSecurity`](cluster_configuration.html#openstackclusterconfiguration-standard-internalnetworksecurity) parameter (default `true`) enables the creation of a security group (SecurityGroup) when a cluster is created. The module creates the group named after the cluster prefix (`prefix`) and assigns it to the nodes.
+
+The following inbound rules will be created:
+
+- allow incoming traffic over the TCP protocol on port `22` from CIDRs listed in [`sshAllowList`](cluster_configuration.html#openstackclusterconfiguration-sshallowlist) (default `0.0.0.0/0`)
+- allow incoming traffic over the ICMP protocol from `0.0.0.0/0`
+- allow incoming traffic over the TCP protocol on ports `30000`–`32767` for services of the `NodePort` type. Inbound UDP traffic to `NodePort` ports is not allowed by default
+- allow any incoming traffic from nodes in the same security group
+
+In addition to the group created by the module, you can attach your own security groups. Prepare them in the cloud beforehand by following the [OpenStack documentation](https://docs.openstack.org/nova/latest/user/security-groups.html) and specify them in `additionalSecurityGroups`:
+
+- for master nodes — in the [`masterNodeGroup.instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration) resource
+- for static nodes — in the [`nodeGroups[].instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration) resource
+- for ephemeral nodes — in the [`spec.additionalSecurityGroups`](cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) parameter of the [OpenStackInstanceClass](cr.html#openstackinstanceclass) resource
 
 Example of the layout configuration:
 
@@ -114,6 +129,21 @@ An internal cluster network is created that does not have access to the public n
 ![resources](images/openstack-standardwithnorouter.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11560&t=IvETjbByf1MSQzcm-0 --->
 
+The [`internalNetworkSecurity`](cluster_configuration.html#openstackclusterconfiguration-standardwithnorouter-internalnetworksecurity) parameter (default `true`) enables the creation of a security group (SecurityGroup) when a cluster is created. The module creates the group named after the cluster prefix (`prefix`) and assigns it to the nodes.
+
+The following inbound rules will be created:
+
+- allow incoming traffic over the TCP protocol on port `22` from CIDRs listed in [`sshAllowList`](cluster_configuration.html#openstackclusterconfiguration-sshallowlist) (default `0.0.0.0/0`)
+- allow incoming traffic over the ICMP protocol from `0.0.0.0/0`
+- allow incoming traffic over the TCP protocol on ports `30000`–`32767` for services of the `NodePort` type. Inbound UDP traffic to `NodePort` ports is not allowed by default
+- allow any incoming traffic from nodes in the same security group
+
+In addition to the group created by the module, you can attach your own security groups. Prepare them in the cloud beforehand by following the [OpenStack documentation](https://docs.openstack.org/nova/latest/user/security-groups.html) and specify them in `additionalSecurityGroups`:
+
+- for master nodes — in the [`masterNodeGroup.instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration) resource
+- for static nodes — in the [`nodeGroups[].instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration) resource
+- for ephemeral nodes — in the [`spec.additionalSecurityGroups`](cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) parameter of the [OpenStackInstanceClass](cr.html#openstackinstanceclass) resource
+
 Example of the layout configuration:
 
 ```yaml
@@ -193,6 +223,12 @@ The master node and cluster nodes are connected to the existing network. This pl
 ![resources](images/openstack-simple.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11502&t=IvETjbByf1MSQzcm-0 --->
 
+In this layout, the module does not create security groups. Prepare them in the cloud beforehand by following the [OpenStack documentation](https://docs.openstack.org/nova/latest/user/security-groups.html) and attach them to the nodes via `additionalSecurityGroups`:
+
+- For master nodes, in the [`masterNodeGroup.instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration) resource.
+- For static nodes, in the [`nodeGroups[].instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration) resource.
+- For ephemeral nodes, in the [`spec.additionalSecurityGroups`](cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) parameter of the [OpenStackInstanceClass](cr.html#openstackinstanceclass) resource.
+
 Example of the layout configuration:
 
 ```yaml
@@ -262,12 +298,14 @@ provider:
 
 The master node and cluster nodes are connected to the existing network. This placement strategy might come in handy if you need to merge a Kubernetes cluster with existing VMs.
 
-> **Caution!**
-> This placement strategy does not involve the management of `SecurityGroups` (it is assumed they were created beforehand).
-> To configure security policies, you must explicitly specify both `additionalSecurityGroups` in the `OpenStackClusterConfiguration` for the masterNodeGroup and other nodeGroups, and `additionalSecurityGroups` when creating `OpenStackInstanceClass` in the cluster.
-
 ![resources](images/openstack-simplewithinternalnetwork.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10917&t=IvETjbByf1MSQzcm-0 --->
+
+In this layout, the module does not create security groups. Prepare them in the cloud beforehand by following the [OpenStack documentation](https://docs.openstack.org/nova/latest/user/security-groups.html) and attach them to the nodes via `additionalSecurityGroups`:
+
+- For master nodes, in the [`masterNodeGroup.instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-masternodegroup-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration) resource.
+- For static nodes, in the [`nodeGroups[].instanceClass.additionalSecurityGroups`](cluster_configuration.html#openstackclusterconfiguration-nodegroups-instanceclass-additionalsecuritygroups) parameter of the [OpenStackClusterConfiguration](cluster_configuration.html#openstackclusterconfiguration) resource.
+- For ephemeral nodes, in the [`spec.additionalSecurityGroups`](cr.html#openstackinstanceclass-v1-spec-additionalsecuritygroups) parameter of the [OpenStackInstanceClass](cr.html#openstackinstanceclass) resource.
 
 Example of the layout configuration:
 

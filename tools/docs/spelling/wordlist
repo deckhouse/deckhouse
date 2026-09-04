@@ -1093,6 +1093,7 @@ NotReady
 NotRegex
 nowrap
 npm
+NSG
 NSX
 NTP
 NtpFwMark
@@ -2763,6 +2764,7 @@ ZvirtInstanceClass
 уязвимостям
 уязвимостями
 файл
+файрвола
 фейловер
 фикстур
 фикстура
