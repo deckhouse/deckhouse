@@ -14,3 +14,11 @@ Bump go.mod dependencies to fix known CVEs:
 - github.com/cloudflare/circl v1.6.3 (CVE-2025-8556, CVE-2026-1229)
 - google.golang.org/grpc v1.79.3 (CVE-2026-33186)
 - Also bumps AWS SDK v2, smithy-go, google/go-cmp, opentelemetry, protobuf, and other dependencies to their latest compatible versions.
+
+### 001-go-mod.patch
+
+Applied on top of `000-go-mod.patch`. Bumps go.mod dependencies to fix newly reported CVEs:
+- golang.org/x/crypto v0.54.0 -> v0.56.0 (CVE-2026-56854 CRITICAL, CVE-2026-56855, CVE-2026-78662)
+- golang.org/x/mod v0.37.0 -> v0.40.0 (CVE-2026-56864, CVE-2026-56865)
+- google.golang.org/grpc v1.79.3 -> v1.83.1 (CVE-2026-84304, GHSA-hrxh-6v49-42gf)
+- Pulled up transitively by the above: golang.org/x/net v0.57.0 -> v0.58.0, golang.org/x/text v0.40.0 -> v0.41.0.
