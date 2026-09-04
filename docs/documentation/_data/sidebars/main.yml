@@ -1507,6 +1507,10 @@ entries:
                     ru: Модуль gpu
                   url: /architecture/cluster-and-infrastructure/infrastructure/gpu.html
                 - title:
+                    en: Registry-packages-proxy module
+                    ru: Модуль registry-packages-proxy
+                  url: /architecture/cluster-and-infrastructure/infrastructure/registry-packages-proxy.html
+                - title:
                     en: Terraform-manager module
                     ru: Модуль terraform-manager
                   url: /architecture/cluster-and-infrastructure/infrastructure/terraform-manager.html
