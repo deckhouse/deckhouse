@@ -369,7 +369,10 @@ func (r *Reconciler) patchConfigStatus(
 	ctx context.Context, cfg *registryv1alpha1.RegistryConfig,
 	heldUpstream *registryv1alpha1.Upstream, heldAuthDigest string, probeFailure error,
 ) error {
-	patch := client.MergeFrom(cfg.DeepCopy())
+	// Locked for the same reason as the storage summary below, plus one of its own: the conditions
+	// of this object are written by two reconcilers, and a merge patch of a list replaces the whole
+	// list — so an unlocked write from either would drop whatever the other had just recorded.
+	patch := client.MergeFromWithOptions(cfg.DeepCopy(), client.MergeFromWithOptimisticLock{})
 
 	condition := metav1.Condition{
 		Type:               registryv1alpha1.ConditionUpstreamValid,
@@ -422,7 +425,7 @@ func (r *Reconciler) patchUpstreamVerdicts(
 			return err
 		}
 
-		patch := client.MergeFrom(upstream.DeepCopy())
+		patch := client.MergeFromWithOptions(upstream.DeepCopy(), client.MergeFromWithOptimisticLock{})
 
 		condition := metav1.Condition{
 			Type:               registryv1alpha1.ConditionAccepted,
@@ -680,13 +683,19 @@ func (r *Reconciler) applyAuthSecret(
 		},
 	}
 
-	if len(credentials) == 0 {
-		if err := r.Client.Delete(ctx, secret); err != nil && !apierrors.IsNotFound(err) {
-			return err
-		}
-		return nil
-	}
-
+	// Emptied rather than deleted, and that is about what this module is allowed to do.
+	//
+	// The Role grants get, update and patch on this Secret by name, and delete is granted nowhere —
+	// a rule restricted by resourceNames cannot authorize create either, which is why create is
+	// granted separately and unnamed. Authorization is decided before the object is looked up, so a
+	// delete comes back 403 whether or not the Secret is there, and an IsNotFound check never sees
+	// it. This call stands ahead of applying the storage and the node layouts, so that error aborted
+	// the whole reconcile — on a cluster with an anonymous upstream and no cache there are no
+	// credentials to resolve at all, which is how the community edition is configured, and not one
+	// RegistryNode was ever created.
+	//
+	// An empty Secret says the same thing to every reader: the layouts name keys in it, and a key
+	// that is not there is a credential nothing references — which is exactly what deleting it meant.
 	data := make(map[string][]byte, len(credentials))
 	for key := range credentials {
 		auth := credentials[key]
@@ -744,7 +753,16 @@ func (r *Reconciler) applyStorage(ctx context.Context, spec *registryv1alpha1.Re
 func (r *Reconciler) patchStorageStatus(
 	ctx context.Context, storage *registryv1alpha1.RegistryStorage,
 ) error {
-	patch := client.MergeFrom(storage.DeepCopy())
+	// Under an optimistic lock, because this write is a CONCLUSION drawn from what the replicas
+	// reported, and the replicas report into this same object while the controller reads it from a
+	// cache. Without the lock the conclusion could be written from a report the cluster had already
+	// replaced: measured as `safeToDropUpstream: true` beside a leader's own entry saying it did not
+	// hold the set — the one permission in this module that must never rest on a stale fact, since
+	// what it authorizes is cutting the cluster off from its upstream.
+	//
+	// A refused write is returned as the conflict it is. The reconciliation is requeued, reads what
+	// the cluster actually holds, and agrees with it.
+	patch := client.MergeFromWithOptions(storage.DeepCopy(), client.MergeFromWithOptimisticLock{})
 
 	aggregate := layout.Aggregate(&storage.Spec, storage.Status.Replicas, r.storageLeaseHolder(ctx))
 	aggregate.ObservedGeneration = storage.Generation

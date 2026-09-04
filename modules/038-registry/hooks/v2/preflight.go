@@ -32,6 +32,11 @@ limitations under the License.
 //   - containerd v1 registry configuration written by the operator.
 //     The transition rewrites those files and the ADR says they are carried over by hand, so a
 //     cluster holding them must not be migrated silently.
+//   - the same configuration where it is already ON the nodes, in a containerd `conf.d` file. That
+//     one is not merely overwritten: under this implementation the bashible step refuses to merge it
+//     and fails, which ends the node's whole convergence — kubelet configuration, version upgrades,
+//     everything after that step. Refusing here turns a node that stops converging hours later into
+//     a list of node names before anything is moved.
 //
 // What is deliberately NOT asked is whether the new components' images are already on the nodes.
 // The ADR floated pre-staging them, and the previous implementation even had a DaemonSet that kept
@@ -83,8 +88,9 @@ const (
 	PreflightMetric      = "d8_registry_migration_preflight"
 	preflightMetricGroup = "d8_registry_migration_preflight"
 
-	nodeConfigurationSnapName = "preflight-node-configurations"
-	preflightSwitchSnapName   = "preflight-v2-switch"
+	nodeConfigurationSnapName      = "preflight-node-configurations"
+	preflightForeignConfigSnapName = "preflight-nodes-with-foreign-registry-config"
+	preflightSwitchSnapName        = "preflight-v2-switch"
 	// Its own subscription to the same secret the switch gate reads: snapshots belong to the
 	// hook that asked for them, so sharing the gate's name would read as empty here.
 	preflightLegacyStateSnapName = "preflight-legacy-state"
@@ -96,6 +102,10 @@ const (
 	CheckNotLocal          = "not_local"
 	CheckUpstreamReachable = "upstream_reachable"
 	CheckNodeConfiguration = "node_registry_configuration"
+
+	// CheckNodeContainerdConfig is the file already on the nodes, as against the
+	// NodeGroupConfiguration that would write one.
+	CheckNodeContainerdConfig = "node_containerd_registry_config"
 )
 
 // preflightCheck is one answer, phrased as what is missing.
@@ -171,6 +181,19 @@ var _ = sdk.RegisterFunc(
 					}},
 				},
 				FilterFunc: filterNodeConfiguration,
+			},
+			{
+				// The nodes that already hold such a file, by the label bashible step 091
+				// puts on them. The same signal the foreign-config metric watches, asked
+				// here a phase earlier: after the handover it names nodes that have stopped
+				// converging, and before it, nodes an operator can still fix.
+				Name:       preflightForeignConfigSnapName,
+				ApiVersion: "v1",
+				Kind:       "Node",
+				LabelSelector: &v1.LabelSelector{
+					MatchLabels: map[string]string{ForeignConfigLabel: ForeignConfigLabelValue},
+				},
+				FilterFunc: filterForeignConfigNode,
 			},
 		},
 	},
@@ -273,6 +296,10 @@ type preflight struct {
 
 	// NodeConfigurationsUnreadable is why they could not be read, when they could not.
 	NodeConfigurationsUnreadable error
+
+	// NodesWithForeignConfig are the nodes already holding a containerd conf.d file that
+	// carries registry fields.
+	NodesWithForeignConfig []string
 }
 
 func (p preflight) report() []preflightCheck {
@@ -289,7 +316,36 @@ func (p preflight) report() []preflightCheck {
 		p.checkNotLocal(),
 		p.checkUpstream(),
 		p.checkNodeConfigurations(),
+		p.checkNodeContainerdConfig(),
 	}
+}
+
+// checkNodeContainerdConfig answers which nodes would stop converging if the migration went ahead.
+//
+// A containerd `conf.d` file carrying registry fields is merged normally while the previous
+// implementation runs. Under this one the runtime's registry configuration comes from `registry.d`,
+// and the bashible step refuses to merge such a file — by failing, which ends that node's whole
+// convergence: no kubelet configuration, no version upgrade, nothing after that step, on a node that
+// was fine until a migration it had nothing to do with.
+//
+// Blocking, and asked from the label bashible already puts on every node, because the alternative is
+// how this was found: the operator learns hours later, from a node that stopped converging, in a
+// moment unconnected to anything they did. The metric on the same label stays for a file written
+// after the handover; what a metric cannot do is come before it.
+func (p preflight) checkNodeContainerdConfig() preflightCheck {
+	if len(p.NodesWithForeignConfig) == 0 {
+		return preflightCheck{Name: CheckNodeContainerdConfig, Passed: true,
+			Detail: "no node holds a containerd registry configuration of its own"}
+	}
+
+	names := append([]string(nil), p.NodesWithForeignConfig...)
+	sort.Strings(names)
+
+	return preflightCheck{Name: CheckNodeContainerdConfig, Blocking: true,
+		Detail: fmt.Sprintf(
+			"move the registry settings out of /etc/containerd/conf.d into /etc/containerd/registry.d "+
+				"first, or these nodes stop converging after the handover: %s",
+			strings.Join(names, ", "))}
 }
 
 // checkMode answers whether the cluster arrived here in the one state this build serves.
@@ -432,6 +488,12 @@ func readPreflight(ctx context.Context, input *go_hook.HookInput) preflight {
 		subject.NodeConfigurationsUnreadable = err
 	} else {
 		subject.NodeConfigurations = configurations
+	}
+
+	// An unreadable list is left empty deliberately, unlike the one above: this check reports node
+	// names, and the failure to list nodes is already visible everywhere else in the module.
+	if nodes, err := helpers.SnapshotToList[string](input, preflightForeignConfigSnapName); err == nil {
+		subject.NodesWithForeignConfig = nodes
 	}
 
 	return subject

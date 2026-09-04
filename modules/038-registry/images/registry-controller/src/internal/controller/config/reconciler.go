@@ -95,7 +95,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 func (r *Reconciler) patchStatus(
 	ctx context.Context, cfg *registryv1alpha1.RegistryConfig, condition metav1.Condition,
 ) error {
-	patch := client.MergeFrom(cfg.DeepCopy())
+	// Locked: the conditions of this object are written from here and from the layout reconciler,
+	// and a merge patch of a list replaces the whole list — so an unlocked write from either drops
+	// whatever the other has just recorded. Refused, this reconciliation is requeued and rewrites
+	// its condition beside the one it would have dropped.
+	patch := client.MergeFromWithOptions(cfg.DeepCopy(), client.MergeFromWithOptimisticLock{})
 
 	generationChanged := cfg.Status.ObservedGeneration != cfg.Generation
 	conditionChanged := apimeta.SetStatusCondition(&cfg.Status.Conditions, condition)

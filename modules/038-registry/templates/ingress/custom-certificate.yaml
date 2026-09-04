@@ -16,7 +16,12 @@
   creates it. Gating it with the rest of the previous implementation left that ingress pointing at a
   secret that does not exist, which a test caught before any cluster did.
 
-  What still gates it is `ingress_enabled`, which is about whether an endpoint is published at all.
+  What gates it is whether an endpoint is published at all, and BOTH implementations have one: the
+  previous one under `ingress_enabled`, the current one on every managed cluster with a cache. Only
+  the first was asked for a while, and the current implementation's publication endpoint then named
+  a secret nothing created — an ingress in that state is not refused, it is served with the ingress
+  controller's own self-signed certificate, and the client that has to trust it is `d8 mirror push`
+  reaching the write endpoint of an air-gapped registry from outside.
 */ -}}
 {{- $orchestrator := .Values.registry.internal.orchestrator -}}
 {{- /*
@@ -26,7 +31,8 @@
   and must not try: taking it out from behind the legacy gate without this failed the render of two
   unrelated specs.
 */ -}}
-{{- if and ((($orchestrator).state).ingress_enabled) ((.Values.registry.internal).customCertificateData) -}}
+{{- $published := or ((($orchestrator).state).ingress_enabled) (eq (include "registry_v2_caches" .) "true") -}}
+{{- if and $published ((.Values.registry.internal).customCertificateData) -}}
 {{- if .Values.global.enabledModules | has "cert-manager" -}}
 
 {{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-system" "registry-ingress-tls") -}}

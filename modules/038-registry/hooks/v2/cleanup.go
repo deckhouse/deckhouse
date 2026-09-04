@@ -51,6 +51,10 @@ import (
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	"github.com/deckhouse/deckhouse/modules/038-registry/hooks/helpers"
 )
 
 const (
@@ -69,6 +73,8 @@ const (
 	// sentence: a release that failed midway, or an object somebody annotated to survive, leaves
 	// them behind, and a deletion of something already absent costs nothing.
 	LegacyPKISecretName = "registry-pki"
+
+	cleanupSwitchSnapName = "handover-recorded"
 )
 
 var _ = sdk.RegisterFunc(
@@ -77,16 +83,58 @@ var _ = sdk.RegisterFunc(
 		// here is conditional on that answer.
 		OnBeforeHelm: &go_hook.OrderedConfig{Order: 7},
 		Queue:        "/modules/registry/v2",
+		Kubernetes: []go_hook.KubernetesConfig{
+			{
+				// The handover as the CLUSTER records it, which is not the same thing as the
+				// decision taken by the gate on this pass — see deletionJustified.
+				Name:       cleanupSwitchSnapName,
+				ApiVersion: "v1",
+				Kind:       "Secret",
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{SwitchSecretName},
+				},
+				NamespaceSelector: &types.NamespaceSelector{
+					NameSelector: &types.NameSelector{MatchNames: []string{"d8-system"}},
+				},
+				FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+					// Only its existence matters.
+					return obj.GetName(), nil
+				},
+			},
+		},
 	},
 	handleCleanup,
 )
 
+// deletionJustified answers whether what the previous implementation left may be removed.
+//
+// Two conditions, and the second is the one that was missing. `active` is the decision this pass
+// took: the previous implementation has let go of the pull path, so these objects have no reader.
+// `recorded` is that handover being a fact about the cluster rather than an intention — the marker
+// secret exists, which means a release of this implementation has succeeded at least once.
+//
+// Both, because the deletions are irreversible and run at OnBeforeHelm, before this pass has applied
+// anything at all — the marker included. Keyed on the decision alone, the state of the previous
+// implementation went out first and the release that was supposed to replace it could still fail:
+// this module has failed a render for want of cert-manager, and it controls neither quota nor
+// admission nor the apiserver. What went in that window included the gate's own input, the legacy
+// state secret it reads to decide.
+//
+// The cost of waiting is one reconciliation. On a cluster that never ran the previous implementation
+// the marker appears on the first successful release, so the installer's leftovers are removed on the
+// next pass instead of that one.
+func deletionJustified(active, recorded bool) bool {
+	return active && recorded
+}
+
 func handleCleanup(_ context.Context, input *go_hook.HookInput) error {
-	if !IsActive(input) {
-		// The previous implementation still owns the cluster, and every object below is either
-		// its working state or something it will read. This is the one condition that matters:
-		// there is no way back from the handover, so once it has happened these are dead for
-		// good — but before it, they are alive.
+	_, err := helpers.SnapshotToSingle[string](input, cleanupSwitchSnapName)
+	recorded := err == nil
+
+	if !deletionJustified(IsActive(input), recorded) {
+		// Either the previous implementation still owns the cluster — every object below is then
+		// its working state or something it will read — or the handover has not been recorded yet
+		// and this pass may still fail with them already gone.
 		return nil
 	}
 

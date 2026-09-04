@@ -29,9 +29,12 @@ limitations under the License.
 // fifteen seconds, failing in a retry loop from then on.
 //
 // So an operator who writes that file sees nothing happen, and hours later, in a moment unconnected to
-// anything they did, a node stops converging. An immediate refusal would be kinder. Since the refusal
-// cannot be made immediate from here — it belongs to a bashible step that only runs when it runs — the
-// next best thing is to say so out loud the moment the node reports carrying such a file.
+// anything they did, a node stops converging. An immediate refusal would be kinder, and where the file
+// predates the migration there is now one: the preflight reads the same label and blocks the handover
+// while any node holds such a file, so a cluster is not moved onto an implementation that will stop
+// those nodes. What that cannot cover is a file written afterwards, which is what this hook is for —
+// the refusal itself belongs to a bashible step that only runs when it runs, so the next best thing is
+// to say so out loud the moment the node reports carrying one.
 //
 // The signal is already there: step 091 labels every node with
 // `node.deckhouse.io/containerd-config-registry`, `custom` when a conf.d file carries registry fields and

@@ -17,9 +17,12 @@ limitations under the License.
 package main
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+
+	"github.com/deckhouse/registry-syncer/internal/distribution"
 )
 
 // TestResolveLocalAddress pins where a replica looks for its own registry.
@@ -72,4 +75,20 @@ func TestResolveLocalAddress(t *testing.T) {
 			assert.Equal(t, tt.want, resolveLocalAddress(tt.localAddress, tt.listenAddress))
 		})
 	}
+}
+
+// TestWriteEndpointAddressIsNotTheServingListener keeps the two apart.
+//
+// Everything that modifies the store — a fill and a collection alike — goes to the listener that
+// does not proxy. Pointed at the serving one, a fill uploads nothing because the cache answers
+// "already have it" from the upstream, and a collection deletes nothing because the proxy store
+// answers 405. Both report success over a store that never changed.
+func TestWriteEndpointAddressIsNotTheServingListener(t *testing.T) {
+	const node = "10.0.0.5"
+
+	write := writeEndpointAddress(node)
+
+	assert.Equal(t, fmt.Sprintf("%s:%d", node, distribution.WriteEndpointPort), write)
+	assert.NotEqual(t, resolveLocalAddress(loopbackRegistry, node), write,
+		"the address that writes must not be the address that serves")
 }

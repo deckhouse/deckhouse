@@ -21,11 +21,13 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"os/exec"
 	"strings"
 
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 
 	"github.com/deckhouse/registry-syncer/internal/fill"
 )
@@ -94,6 +96,10 @@ type Report struct {
 	// number when a disk is still full after a run.
 	Kept map[string]int
 
+	// deletionsUnsupported is set when a registry answered a deletion by refusing the method, which
+	// says nothing about the reference and everything about the address the run was pointed at.
+	deletionsUnsupported bool
+
 	// Failed are the references that could not be removed, which is not a failure of the
 	// run: the disk is simply less reclaimed than it could have been.
 	Failed []string
@@ -117,6 +123,30 @@ type Report struct {
 // A failure to delete one manifest does not stop the run. The blobs of the ones that were
 // deleted are still reclaimable, and a store that is partly collected is the ordinary
 // outcome on a registry that is also serving.
+// deletionUnsupported tells a reference that would not go from a registry that will not delete.
+//
+// The distinction is the whole point: a 404 is one manifest the registry does not have and the run
+// carries on, while a 405 is the method itself being refused — the answer a pull-through cache gives
+// every single time, for every reference, forever.
+func deletionUnsupported(err error) bool {
+	var status *transport.Error
+	if !errors.As(err, &status) {
+		return false
+	}
+
+	if status.StatusCode == http.StatusMethodNotAllowed || status.StatusCode == http.StatusNotImplemented {
+		return true
+	}
+
+	for _, diagnostic := range status.Errors {
+		if diagnostic.Code == transport.UnsupportedErrorCode {
+			return true
+		}
+	}
+
+	return false
+}
+
 func (c *Collector) Run(ctx context.Context) (Report, error) {
 	report := Report{Kept: map[string]int{}}
 
@@ -154,10 +184,26 @@ func (c *Collector) Run(ctx context.Context) (Report, error) {
 	}
 	report.Considered = len(tags)
 
+	scope := strings.Trim(c.Registry.Scope, "/")
+
 	var doomed, survivors []name.Tag
 	for _, tag := range tags {
 		decision := Decision{Reason: ReasonUnorderable}
-		if !unorderable {
+		switch {
+		case unorderable:
+		case strings.Trim(tag.RepositoryStr(), "/") != scope:
+			// Judged by nobody, because the only rule here is "older than the release the cluster
+			// runs" and that rule owns exactly one version space: the platform's own releases, which
+			// carry their tags on the scope root. Everything beneath it is versioned by somebody
+			// else — a module package by the module, a node package by the software it carries — so
+			// comparing those numbers against the platform's compares nothing at all.
+			//
+			// Measured: with the platform at v1.76.6, a module package at v0.6.10 and a node package
+			// at v1.7.28 were both read as superseded and deleted. The manifest pass then asked for
+			// the same tags, got 404, and every run after that failed on it — and in an air-gapped
+			// cluster a module package cannot be fetched again short of another `d8 mirror push`.
+			decision = Decision{Reason: ReasonForeignVersionSpace}
+		default:
 			decision = Judge(tag.TagStr(), keep, c.Releases.Deployed)
 		}
 		if !decision.Delete {
@@ -185,6 +231,7 @@ func (c *Collector) Run(ctx context.Context) (Report, error) {
 			// skip the sweep: what did get deleted is still reclaimable.
 			c.Log.Warn("cannot delete a reference", "reference", tag.String(), "error", err.Error())
 			report.Failed = append(report.Failed, tag.String())
+			report.deletionsUnsupported = report.deletionsUnsupported || deletionUnsupported(err)
 			continue
 		}
 		report.Deleted = append(report.Deleted, tag.String())
@@ -208,6 +255,22 @@ func (c *Collector) Run(ctx context.Context) (Report, error) {
 	// cluster might switch to needs. Everything else is a release the cluster has moved past.
 	if err := c.reclaimManifests(ctx, &report, survivors); err != nil {
 		return report, err
+	}
+
+	// A refusal of the method itself is not one reference that would not go: it is the whole
+	// collection addressed at a registry that does not accept deletions, and every later reference
+	// will be refused the same way.
+	//
+	// The listener this pod serves on is a pull-through cache, and the proxy store in front of it
+	// implements no deletion at all — every DELETE comes back 405 Unsupported. Addressed there, a
+	// collection reads the store from its files, judges correctly, is turned away throughout, and
+	// records the refusals as warnings: a run that looks like it ran, on a disk that never stops
+	// growing. Writes go to the non-proxying listener for the same reason fills do.
+	if report.deletionsUnsupported {
+		return report, fmt.Errorf(
+			"this registry does not accept deletions at all (%d refused, first: %s): a collection "+
+				"has to be addressed at the listener that does not proxy",
+			len(report.Failed), report.Failed[0])
 	}
 
 	if c.DryRun {
@@ -299,6 +362,7 @@ func (c *Collector) reclaimManifests(ctx context.Context, report *Report, surviv
 			c.Log.Warn("cannot delete a manifest",
 				"reference", reference.String(), "error", err.Error())
 			report.Failed = append(report.Failed, reference.String())
+			report.deletionsUnsupported = report.deletionsUnsupported || deletionUnsupported(err)
 			continue
 		}
 		report.Deleted = append(report.Deleted, reference.String())

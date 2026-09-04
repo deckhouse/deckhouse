@@ -218,12 +218,28 @@ func (r *Registry) probeAPIVersion(
 func (r *Registry) authorize(
 	ctx context.Context, client *http.Client, endpoint *registryv1alpha1.Endpoint, ch *challenge,
 ) (string, error) {
-	if endpoint.Auth.IsEmpty() {
+	if endpoint.Auth.IsEmpty() && ch.scheme == schemeBasic {
+		// Basic offers nothing to try: the credentials ARE the exchange, so with none configured
+		// there is nothing to send and nothing the registry could answer with.
 		return "", &Failure{
 			Kind:    FailureAuth,
 			Message: fmt.Sprintf("%s requires authentication but no credentials are configured", endpoint.Host),
 		}
 	}
+
+	// Bearer with no credentials is not a misconfiguration: it is how the community edition pulls.
+	//
+	// A token service issues a token to whoever asks, and what it grants depends on the scope
+	// rather than on who asked. Measured against the real registry on 4 September 2026 without any
+	// credentials at all: `registry.deckhouse.io/v2/` answers 401 with a Bearer challenge, the auth
+	// service issues a token for `repository:deckhouse/ce:pull`, and `deckhouse/ce:stable` comes
+	// back 200 with that token. Refusing here made the probe report the way a CE cluster pulls as an
+	// authentication failure — `UpstreamValid=False` on a cluster whose upstream works, with no
+	// last-known-good to fall back to on a first configuration.
+	//
+	// So the request goes out unauthenticated, and the answer decides: a token service that refuses
+	// an anonymous caller answers 401 or 403, and that is handled below exactly as a rejected
+	// credential is.
 
 	if ch.scheme == schemeBasic {
 		// Basic auth is verified by the sentinel request itself; there is no
@@ -244,7 +260,9 @@ func (r *Registry) authorize(
 	if err != nil {
 		return "", &Failure{Kind: FailureAuth, Message: "cannot build the token request", Err: err}
 	}
-	setBasicAuth(request, endpoint.Auth)
+	if !endpoint.Auth.IsEmpty() {
+		setBasicAuth(request, endpoint.Auth)
+	}
 
 	response, err := client.Do(request)
 	if err != nil {

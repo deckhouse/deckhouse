@@ -89,6 +89,18 @@ const loopbackRegistry = "127.0.0.1:5001"
 // activity would mean a store that is never reclaimed again.
 const pushIdleWindow = 2 * time.Minute
 
+// writeEndpointAddress is the listener of this replica's registry that does NOT proxy, and the only
+// address anything that modifies the store may be pointed at.
+//
+// The serving listener is a pull-through cache. Filling through it fills nothing — it answers "I
+// already hold that blob" by fetching the blob from the upstream, so the layer is never uploaded —
+// and collecting through it collects nothing, because the proxy store implements no deletion and
+// answers every DELETE with 405. Both failures are quiet: a fill that reports what it wrote and a
+// collection that reports what it kept, over a store that does not change.
+func writeEndpointAddress(listenAddress string) string {
+	return fmt.Sprintf("%s:%d", listenAddress, distribution.WriteEndpointPort)
+}
+
 func resolveLocalAddress(localAddress, listenAddress string) string {
 	if localAddress != loopbackRegistry || listenAddress == "" {
 		return localAddress
@@ -275,7 +287,7 @@ func serve(ctx context.Context, log *slog.Logger, opts options) error {
 		// pull-through cache, and filling through a cache fills nothing — it answers "already have
 		// that blob" by fetching it from the upstream, so the layers are never uploaded. See
 		// Loop.writeRegistry.
-		WriteAddress: fmt.Sprintf("%s:%d", opts.listenAddress, distribution.WriteEndpointPort),
+		WriteAddress: writeEndpointAddress(opts.listenAddress),
 		// The store the replica serves, counted from disk when completeness has to be read
 		// rather than derived from what a fill wrote.
 		DataDir:         distribution.DataDir,
@@ -481,7 +493,11 @@ func startCollector(
 			collector := &gc.Collector{
 				Log: log,
 				Registry: gc.Registry{
-					Address:  opts.localAddress,
+					// The non-proxying listener, the same one a fill writes to: deleting through
+					// the serving one deletes nothing. Its proxy store implements no deletion, so
+					// every DELETE is answered 405 and the run is refused reference by reference
+					// while reporting only warnings — see writeEndpointAddress.
+					Address:  writeEndpointAddress(opts.listenAddress),
 					Insecure: false,
 					Scope:    strings.Trim(constant.Path, "/"),
 					Options:  loop.LocalOptions(),

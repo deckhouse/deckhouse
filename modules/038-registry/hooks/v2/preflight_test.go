@@ -55,7 +55,7 @@ func ready() preflight {
 func TestAReadyClusterPassesEveryCheck(t *testing.T) {
 	checks := ready().report()
 
-	require.Len(t, checks, 4, "every check has to be reported, including the ones that pass")
+	require.Len(t, checks, 5, "every check has to be reported, including the ones that pass")
 	for _, check := range checks {
 		assert.Truef(t, check.Passed, "%s failed: %s", check.Name, check.Detail)
 	}
@@ -250,3 +250,32 @@ func TestNodeConfigurationsAreRecognisedByWhatTheyWrite(t *testing.T) {
 		})
 	}
 }
+
+// TestTheNodesThatWouldStopConvergingBlockTheMigration is the failure this check exists to move
+// earlier in time.
+//
+// A conf.d file carrying registry fields is merged normally while the previous implementation runs.
+// Under this one the runtime's registry configuration comes from `registry.d`, so the bashible step
+// refuses to merge that file — and refuses by failing, which stops the node's whole convergence:
+// no kubelet configuration, no version upgrades, nothing after that step, on a node that was fine
+// until an unrelated migration happened.
+//
+// Asked here, before the handover, it is a list of node names an operator can act on. The metric
+// on the same label stays for the file written afterwards; what it cannot do is come before.
+func TestTheNodesThatWouldStopConvergingBlockTheMigration(t *testing.T) {
+	subject := ready()
+	subject.NodesWithForeignConfig = []string{"worker-2", "worker-1"}
+
+	check := found(t, subject.report(), CheckNodeContainerdConfig)
+
+	assert.False(t, check.Passed)
+	assert.True(t, check.Blocking,
+		"the migration must not start while a node would stop converging because of it")
+	assert.Contains(t, check.Detail, "worker-1")
+	assert.Contains(t, check.Detail, "worker-2")
+
+	// And it passes on a cluster where no node carries one, which is what makes the check worth
+	// reading rather than a permanent warning.
+	assert.True(t, found(t, ready().report(), CheckNodeContainerdConfig).Passed)
+}
+

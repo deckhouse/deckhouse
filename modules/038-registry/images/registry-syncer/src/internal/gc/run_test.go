@@ -22,6 +22,7 @@ import (
 	"io"
 	"log"
 	"log/slog"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
@@ -282,4 +283,88 @@ func TestBinarySweepWithoutABinary(t *testing.T) {
 	err := sweeper.Sweep(context.Background())
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "no registry binary")
+}
+
+// TestRunKeepsTagsOutsideThePlatformVersionSpace is the pass judging things it cannot judge.
+//
+// The rule of the tag pass is "older than the release the cluster runs", and it is meaningful for
+// exactly one set of tags: the platform's own releases, which live on the scope root. Everything
+// beneath it is versioned by somebody else — a module package by the module, a node package by the
+// software it carries — and comparing those numbers with the platform's is comparing nothing.
+//
+// Measured before this guard existed: with the platform at v1.76.6, a module package at v0.6.10 and
+// a node package at v1.7.28 were both read as superseded and deleted. The manifest pass then went
+// for the same tags, got 404, and every later run failed on it. In an air-gapped cluster a module
+// package cannot be fetched again — the next `d8 mirror push` is the only way back.
+func TestRunKeepsTagsOutsideThePlatformVersionSpace(t *testing.T) {
+	target := startRegistry(t)
+
+	push(t, target, "system/deckhouse:v1.76.6")
+	push(t, target, "system/deckhouse:v1.75.0")
+	// Numerically older than the platform, and entirely unrelated to it.
+	push(t, target, "system/deckhouse/modules/sds-node-configurator:v0.6.10")
+	push(t, target, "system/deckhouse/packages/containerd/version:v1.7.28")
+
+	collector := newCollector(t, target, Releases{Deployed: "v1.76.6", Previous: "v1.75.0"}, &countingSweeper{})
+
+	report, err := collector.Run(context.Background())
+	require.NoError(t, err)
+
+	assert.True(t, exists(t, target, "system/deckhouse/modules/sds-node-configurator:v0.6.10"),
+		"a module package is versioned by the module, and the platform's version says nothing about it")
+	assert.True(t, exists(t, target, "system/deckhouse/packages/containerd/version:v1.7.28"),
+		"a node package is versioned by the software it carries")
+	assert.Empty(t, report.Deleted, "the two platform releases are both kept, and nothing else may be judged")
+}
+
+// startRefusingRegistry is the registry answering a deletion the way the serving listener does.
+//
+// The serving listener is a pull-through cache, and the proxy store in front of it implements no
+// deletion at all: every DELETE comes back 405 Unsupported. Addressed there, a collection reads the
+// store, decides correctly, is refused on every single reference, and reports the refusals as
+// warnings — a run that looks like it ran.
+func startRefusingRegistry(t *testing.T) store {
+	t.Helper()
+
+	real := registry.New(registry.Logger(log.New(io.Discard, "", 0)))
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method == http.MethodDelete {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		real.ServeHTTP(w, r)
+	}))
+	t.Cleanup(server.Close)
+
+	parsed, err := url.Parse(server.URL)
+	require.NoError(t, err)
+
+	return store{
+		Registry: Registry{Address: parsed.Host, Insecure: true, Scope: "system/deckhouse"},
+		dataDir:  t.TempDir(),
+	}
+}
+
+// TestRunFailsWhenEveryDeletionIsRefused is the run that did nothing and said so quietly.
+//
+// One refusal is a warning: a reference that would not go is not a reason to abandon the rest. But a
+// run in which everything was refused and nothing was deleted is not a partial success, it is a run
+// against a registry that does not accept deletions — the wrong address — and it has to be reported
+// as a failure. Silently, this is a store that grows forever while the collection reports "kept" and
+// the disk fills.
+func TestRunFailsWhenEveryDeletionIsRefused(t *testing.T) {
+	target := startRefusingRegistry(t)
+
+	push(t, target, "system/deckhouse:v1.76.6")
+	push(t, target, "system/deckhouse:v1.60.0")
+
+	sweeper := &countingSweeper{}
+	collector := newCollector(t, target, Releases{Deployed: "v1.76.6"}, sweeper)
+
+	report, err := collector.Run(context.Background())
+
+	require.Error(t, err, "a run refused on every reference is a failed run, not a quiet one")
+	assert.Empty(t, report.Deleted)
+	assert.NotEmpty(t, report.Failed)
+	assert.Zero(t, sweeper.runs, "there is nothing to sweep when nothing was deleted")
 }

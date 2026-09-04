@@ -62,6 +62,13 @@ type Loop struct {
 	// Usable narrows backend names to those not known to be failing.
 	Usable func([]string) []string
 
+	// RefreshTrust re-reads the certificate authorities Deckhouse stages on the node.
+	//
+	// On the loop rather than at startup because that directory is a mount of the node's:
+	// a module source added to a running cluster writes its authority there, and nothing
+	// restarts a static pod for it. Optional, like the other hooks into the proxy.
+	RefreshTrust func()
+
 	// Connect obtains a client for the API server, and is retried until it succeeds.
 	//
 	// Optional, and separate from the client itself, because a node can start without
@@ -160,6 +167,12 @@ func (l *Loop) connect() {
 
 func (l *Loop) once(ctx context.Context) error {
 	l.connect()
+
+	if l.RefreshTrust != nil {
+		// Before anything is forwarded on the strength of it, and outside the layout: what
+		// the cluster trusts changes independently of what it routes.
+		l.RefreshTrust()
+	}
 
 	snapshot, err := l.Source.Get(ctx)
 	if err != nil {

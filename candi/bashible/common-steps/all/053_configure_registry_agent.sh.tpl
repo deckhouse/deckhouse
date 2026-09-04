@@ -43,6 +43,12 @@ pki_path="${agent_path}/pki"
 bootstrap_layout="${agent_path}/bootstrap-layout.json"
 cache_path="/var/lib/deckhouse/registry-agent"
 
+# The certificate authorities this cluster accepts, staged one file per registry by step 003 for
+# whichever implementation is in charge. The agent needs them for the reason the runtime used to:
+# every registry now reaches the runtime through the agent's single drop-in, so a ModuleSource with
+# its own authority has nobody but the agent left to verify it.
+trust_path="/opt/deckhouse/share/ca-certificates"
+
 drop_in_root="$(dirname "$(dirname "{{ .registry.agent.dropInFile }}")")"
 
 mkdir -p "${pki_path}" "${cache_path}" /etc/kubernetes/manifests "${drop_in_root}"
@@ -319,6 +325,7 @@ spec:
     - --pki-dir=${pki_path}
     - --bootstrap-layout=${bootstrap_layout}
     - --layout-cache=${cache_path}/layout.json
+    - --trust-dir=${trust_path}
     env:
     - name: NODE_NAME
       valueFrom:
@@ -347,6 +354,11 @@ spec:
       readOnly: true
     - mountPath: ${cache_path}
       name: layout-cache
+    # Read-only: these are the node's, staged by a bashible step, and the agent only ever
+    # reads them.
+    - mountPath: ${trust_path}
+      name: trusted-authorities
+      readOnly: true
 ${kubeconfig_mount}
   volumes:
   - hostPath:
@@ -365,6 +377,12 @@ ${kubeconfig_mount}
       path: ${cache_path}
       type: DirectoryOrCreate
     name: layout-cache
+  # DirectoryOrCreate: on a cluster whose module sources all use public authorities the
+  # directory holds nothing, and the agent must start anyway.
+  - hostPath:
+      path: ${trust_path}
+      type: DirectoryOrCreate
+    name: trusted-authorities
 ${kubeconfig_volume}
 EOF
 

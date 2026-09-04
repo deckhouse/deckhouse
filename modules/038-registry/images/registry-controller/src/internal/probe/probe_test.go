@@ -217,13 +217,36 @@ func TestProbeRejectsWrongBasicCredentials(t *testing.T) {
 	assert.Equal(t, FailureAuth, failure.Kind)
 }
 
+// A registry that answers /v2/ with a bearer challenge and issues a token to anyone who asks:
+// no credentials anywhere in the exchange, and the sentinel served with the token that came
+// back. This is how a CE cluster pulls, and it was rejected as an authentication failure.
+//
+// Measured against the real registry on 4 September 2026, without any credentials:
+// `registry.deckhouse.io/v2/` answers 401 with `Bearer realm="https://registry.deckhouse.io/auth"`,
+// the auth service issues a token for `repository:deckhouse/ce:pull`, and `deckhouse/ce:stable`
+// comes back 200 with it. The existing anonymous test could not see this: its stub answers 200 on
+// /v2/, so no challenge is ever issued and `authorize` is never reached.
+func TestProbeAcceptsAnAnonymousBearerRegistry(t *testing.T) {
+	stub := (&registryStub{auth: "bearer", tags: []string{"stable", "early-access"}}).start(t)
+
+	require.NoError(t, probeIt(t, stub.endpoint("/deckhouse/ce")))
+
+	// And it went through the exchange rather than around it: the token was asked for, scoped to
+	// the sentinel repository under the configured path.
+	require.NotEmpty(t, stub.requestedScopes)
+	assert.Contains(t, stub.requestedScopes[0], "deckhouse/ce")
+}
+
+// The other half of the same change: a registry that refuses anonymous callers must still fail,
+// and fail as an authentication failure. What changes is only who says no — the registry now,
+// rather than the probe declining to ask.
 func TestProbeRejectsMissingCredentials(t *testing.T) {
 	stub := (&registryStub{auth: "bearer", username: "u", password: "p", tags: []string{"stable"}}).start(t)
 
 	failure, ok := AsFailure(probeIt(t, stub.endpoint("/deckhouse/ee")))
 	require.True(t, ok)
 	assert.Equal(t, FailureAuth, failure.Kind)
-	assert.Contains(t, failure.Message, "no credentials are configured")
+	assert.Contains(t, failure.Message, "rejected the credentials")
 }
 
 // TestProbeRejectsAReachableButWrongRegistry is the other half of the point: a

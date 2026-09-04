@@ -322,11 +322,18 @@ The node agent reads its own RegistryNode with the kubelet's kubeconfig, so the
 permission is granted to the `system:nodes` group. bashible already grants this
 group its own resources the same way.
 
-This is safe only because RegistryNode carries no per-node secrets: every object
-holds the same global configuration, so a node reading another node's object
-learns nothing it does not already have. Status patches cannot be narrowed —
-RBAC has no way to scope list/watch by field selector — which is why nothing in
-RegistryNode.status is load-bearing for the pull path.
+Reading another node's object is safe on its own terms: RegistryNode carries no
+per-node secrets, every object holds the same global configuration, and the
+credentials are named rather than held.
+
+Writing is a different matter, and the sentence that used to stand here — that
+nothing in RegistryNode.status is load-bearing for the pull path — was not true.
+The hook that decides whether image references may name the in-cluster registry
+publishes the address once every node reports the layout applied, and never takes
+it back; a node able to write its neighbours' status could therefore move the
+whole cluster onto an address those nodes cannot resolve, permanently. RBAC
+cannot narrow a cluster-scoped resource to "the caller's own object", so the
+narrowing is done in admission instead: see validation.yaml beside this file.
 */ -}}
 kind: ClusterRole
 apiVersion: rbac.authorization.k8s.io/v1

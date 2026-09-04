@@ -109,6 +109,10 @@ const (
 	ReasonSuperseded      = "belongs to a release the cluster has moved past"
 	ReasonUnorderable     = "cannot be compared with the deployed release, so it is not known to be old"
 
+	// ReasonForeignVersionSpace is a tag that belongs to something the platform's version says
+	// nothing about: a module package, a node package, anything under the scope rather than on it.
+	ReasonForeignVersionSpace = "versioned by something other than the platform, so it is not judged here"
+
 	// ReasonDeclared and ReasonUndeclared are the manifest-level verdicts, which is where the
 	// store's actual weight is: the platform addresses its own images by digest, so almost
 	// everything a fill writes carries no tag and no tag-based rule can see it.

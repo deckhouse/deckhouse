@@ -469,6 +469,70 @@ var _ = Describe("Module :: registry :: helm template :: v2 controller", func() 
 				Field("rules").String()).To(ContainSubstring("leases"))
 			Expect(controllerRole.Field("rules").String()).ShouldNot(ContainSubstring("leases"))
 		})
+
+		// The grant above is cluster-wide because RegistryNode is cluster-scoped and RBAC cannot
+		// narrow a verb to "this node's own object". Every kubelet in the cluster therefore holds
+		// update on every RegistryNode's status — and that status is what decides, cluster-wide,
+		// whether image references may name the in-cluster registry: the hook publishes the address
+		// once every node reports the layout applied, and never takes it back.
+		//
+		// So one node could report on behalf of all the others and move the whole cluster onto an
+		// address the other nodes have not been configured for, permanently. This policy is the
+		// compensating control, the same one node-manager uses for NodeConfig, and it is what makes
+		// a node's report a statement about itself.
+		It("lets a node write its own RegistryNode and no other", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			policy := f.KubernetesGlobalResource("ValidatingAdmissionPolicy",
+				"registrynodes-own-node-only.deckhouse.io")
+			Expect(policy.Exists()).To(BeTrue())
+
+			// Covering the subresources too: status is the write surface that matters, and a verb
+			// added to the agent's role later must not open a door the policy never looked at.
+			rules := policy.Field("spec.matchConstraints.resourceRules").String()
+			Expect(rules).To(ContainSubstring("registrynodes"))
+			Expect(rules).To(ContainSubstring("registrynodes/*"))
+			Expect(rules).To(ContainSubstring("CREATE"))
+			Expect(rules).To(ContainSubstring("UPDATE"))
+			Expect(rules).To(ContainSubstring("DELETE"))
+
+			// Only kubelets are constrained: the controller and Deckhouse write every node's
+			// object by design and are not in that group.
+			Expect(policy.Field("spec.matchConditions").String()).To(ContainSubstring("system:nodes"))
+			// A compensating control that fails open compensates for nothing.
+			Expect(policy.Field("spec.failurePolicy").String()).To(Equal("Fail"))
+
+			// The object is named after its node, so the caller's identity is what it is checked
+			// against — on DELETE off the request, since there is no object to read.
+			Expect(policy.Field("spec.validations").String()).
+				To(ContainSubstring("request.userInfo.username == variables.owner"))
+			owner := policy.Field("spec.variables").String()
+			Expect(owner).To(ContainSubstring("system:node:"))
+			Expect(owner).To(ContainSubstring("object.metadata.name"))
+			Expect(owner).To(ContainSubstring("request.name"))
+
+			binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding",
+				"registrynodes-own-node-only.deckhouse.io")
+			Expect(binding.Exists()).To(BeTrue())
+			Expect(binding.Field("spec.policyName").String()).
+				To(Equal("registrynodes-own-node-only.deckhouse.io"))
+			// Audit alone would leave the grant unnarrowed.
+			Expect(binding.Field("spec.validationActions").String()).To(ContainSubstring("Deny"))
+		})
+	})
+
+	// The policy exists for exactly as long as the grant it narrows, and the grant is rendered
+	// under the implementation discriminator: a policy left behind would refuse writes nothing
+	// makes, and a policy missing while the grant stands is the hole itself.
+	Context("discriminator off", func() {
+		BeforeEach(func() { renderWith(v2Disabled) })
+
+		It("renders neither the grant nor the policy that narrows it", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:registry:agent").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicy",
+				"registrynodes-own-node-only.deckhouse.io").Exists()).To(BeFalse())
+		})
 	})
 })
 
@@ -718,10 +782,45 @@ var _ = Describe("Module :: registry :: helm template :: v2 storage PKI", func()
 	It("persists the whole state so a restart does not reissue the authority", func() {
 		Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-		secret := f.KubernetesResource("Secret", "d8-system", "registry-storage-pki")
+		secret := f.KubernetesResource("Secret", "d8-system", "registry-storage-pki-state")
 		state, err := base64.StdEncoding.DecodeString(secret.Field(`data.state\.yaml`).String())
 		Expect(err).ShouldNot(HaveOccurred())
 		Expect(string(state)).To(ContainSubstring("CA-KEY"))
+	})
+
+	// The whole state is every private key the cluster's registry has, and it used to sit in the
+	// secret the storage pod mounts — so `/pki/state.yaml` handed all three containers the
+	// certificate authority, the token signing key, the publication password and the ingress
+	// client key. Every protection the two secrets above are split for was still in force and
+	// none of it held: the signing key was withheld from `/pki/token.key` and readable at
+	// `/pki/state.yaml` in the same directory, and with the authority's key any of those
+	// containers can issue a certificate every node agent in the cluster trusts.
+	It("keeps the state out of what the storage mounts", func() {
+		Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+		mounted := f.KubernetesResource("Secret", "d8-system", "registry-storage-pki")
+		Expect(mounted.Exists()).To(BeTrue())
+		Expect(mounted.Field("data").Map()).ShouldNot(HaveKey("state.yaml"))
+
+		for key, value := range mounted.Field("data").Map() {
+			decoded, err := base64.StdEncoding.DecodeString(value.String())
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(string(decoded)).ShouldNot(ContainSubstring("CA-KEY"),
+				"%s carries the authority's private key, which nothing in the pod may hold", key)
+			Expect(string(decoded)).ShouldNot(ContainSubstring("TOKEN-KEY"),
+				"%s carries the signing key the auth service is given alone", key)
+		}
+	})
+
+	It("mounts the state nowhere", func() {
+		Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+		set := f.KubernetesResource("StatefulSet", "d8-system", "registry-storage")
+		Expect(set.Exists()).To(BeTrue())
+		// A secret that is only ever read through the API, by the hook that wrote it: giving it a
+		// mount is how it got into the containers in the first place.
+		Expect(set.Field("spec.template.spec.volumes").String()).
+			ShouldNot(ContainSubstring("registry-storage-pki-state"))
 	})
 })
 
@@ -1420,6 +1519,15 @@ var _ = Describe("Module :: registry :: helm template :: the controller can reac
 		Expect(named).To(HaveKey(constant.AuthSecretName))
 		Expect(named[constant.AuthSecretName]).To(ContainElements("get", "update", "patch"),
 			"the controller is the only writer of the credentials its layouts reference")
+
+		// The other half of that contract, pinned from this side: the controller must never reach
+		// for a delete on this Secret. A rule restricted by resourceNames cannot carry delete for
+		// an object the API refuses to look up first, so the answer is 403 rather than 404 — and
+		// this call stands ahead of the storage and the node layouts in the reconcile. A cluster
+		// with an anonymous upstream and no cache has no credentials to resolve, and emptying the
+		// Secret is what says so; deleting it left such a cluster with no layout at all.
+		Expect(named[constant.AuthSecretName]).NotTo(ContainElement("delete"),
+			"an empty set of credentials is written as an empty Secret, never deleted")
 
 		Expect(unnamed).To(ConsistOf("create"),
 			"create is the one verb that cannot be restricted by name; nothing else belongs "+

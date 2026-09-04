@@ -21,6 +21,20 @@ limitations under the License.
 // without a coordinator. The controller derives the cluster-wide summary from
 // these entries; no replica claims anything about the others, because no replica
 // can know.
+//
+// "Touches no other" is a property of the merge below, and it took a lock to make it a property of
+// the WRITE as well. The entries are one list, a merge patch of a list replaces the whole list, so
+// each replica sends every other replica's entry as it last read them — and a read taken a moment
+// before somebody else's write is indistinguishable from a fresh one. Two replicas reporting at the
+// same time then did not merge: the later write put back the earlier reader's picture, and what the
+// others published in between was gone. Measured in a test: a leader's `full: true` with 400 verified
+// digests reverted to `full: false` with none by a follower's ordinary progress report — which is
+// the fact the air-gap transition is gated on, in the direction that leaves it waiting forever, and
+// in the other direction cuts a cluster off from an upstream it still needs.
+//
+// So every write here is one read-modify-write under an optimistic lock: the patch carries the
+// resourceVersion it was built from, the API server refuses it if anything changed, and the whole
+// sequence is redone against the new state. See publish.
 package report
 
 import (
@@ -31,6 +45,7 @@ import (
 	"k8s.io/apimachinery/pkg/api/equality"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	registryv1alpha1 "github.com/deckhouse/deckhouse/go_lib/registry/apis/deckhouse.io/v1alpha1"
@@ -92,6 +107,43 @@ type Publisher struct {
 	Name string
 }
 
+// publish is one read-modify-write of the status, retried while the object keeps changing under it.
+//
+// The mutation reports whether it changed anything, and a mutation that changed nothing writes
+// nothing: every replica writes this object and the controller watches it, so a needless write
+// multiplies into a reconciliation of the whole layout.
+//
+// A missing storage object is not an error, on any of these paths: the controller may not have
+// created it yet, or the cache may have just been turned off, and a syncer crash-looping over that
+// would be noise rather than information.
+func (p *Publisher) publish(
+	ctx context.Context, mutate func(*registryv1alpha1.RegistryStorage) bool,
+) error {
+	name := p.Name
+	if name == "" {
+		name = registryv1alpha1.SingletonName
+	}
+
+	return retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		storage := &registryv1alpha1.RegistryStorage{}
+		if err := p.Client.Get(ctx, types.NamespacedName{Name: name}, storage); err != nil {
+			return client.IgnoreNotFound(err)
+		}
+
+		// The lock is the point: this patch carries the list of every replica as this read saw
+		// it, so it must be refused if that is no longer what the object holds. Refused, the
+		// sequence starts again from a fresh read — which is why the mutation is a function
+		// rather than something done once outside the loop.
+		patch := client.MergeFromWithOptions(storage.DeepCopy(), client.MergeFromWithOptimisticLock{})
+
+		if !mutate(storage) {
+			return nil
+		}
+
+		return p.Client.Status().Patch(ctx, storage, patch)
+	})
+}
+
 // Publish merges the replica's state into the status, leaving every other entry
 // alone.
 //
@@ -103,18 +155,14 @@ func (p *Publisher) Publish(ctx context.Context, state State) error {
 		return fmt.Errorf("a replica report needs the node it came from")
 	}
 
-	name := p.Name
-	if name == "" {
-		name = registryv1alpha1.SingletonName
-	}
+	return p.publish(ctx, func(storage *registryv1alpha1.RegistryStorage) bool {
+		return p.mergeReport(storage, state)
+	})
+}
 
-	storage := &registryv1alpha1.RegistryStorage{}
-	if err := p.Client.Get(ctx, types.NamespacedName{Name: name}, storage); err != nil {
-		return client.IgnoreNotFound(err)
-	}
-
-	patch := client.MergeFrom(storage.DeepCopy())
-
+// mergeReport is what one report changes about the status, as a function of the state it is
+// merged into: the read it is applied to may be the second or third attempt.
+func (p *Publisher) mergeReport(storage *registryv1alpha1.RegistryStorage, state State) bool {
 	// A safety interlock, not co-ownership of the field.
 	//
 	// `safeToDropUpstream` is the controller's: it derives it from the leader's report and the
@@ -134,14 +182,7 @@ func (p *Publisher) Publish(ctx context.Context, state State) error {
 		withdrawn = true
 	}
 
-	if !Merge(&storage.Status.Replicas, state) && !withdrawn {
-		// Nothing changed. Every replica writes to this object and the controller
-		// watches it, so a needless write multiplies into a reconciliation of the
-		// whole layout.
-		return nil
-	}
-
-	return p.Client.Status().Patch(ctx, storage, patch)
+	return Merge(&storage.Status.Replicas, state) || withdrawn
 }
 
 // Announce records that this replica has STARTED filling, before any of it is done.
@@ -169,43 +210,31 @@ func (p *Publisher) Announce(ctx context.Context, state State) error {
 		return fmt.Errorf("a replica announcement needs the node it came from")
 	}
 
-	name := p.Name
-	if name == "" {
-		name = registryv1alpha1.SingletonName
-	}
-
-	storage := &registryv1alpha1.RegistryStorage{}
-	if err := p.Client.Get(ctx, types.NamespacedName{Name: name}, storage); err != nil {
-		return client.IgnoreNotFound(err)
-	}
-
-	for i := range storage.Status.Replicas {
-		if storage.Status.Replicas[i].Node == state.Node {
-			// Already speaking for itself. Nothing to announce and nothing to overwrite.
-			return nil
-		}
-	}
-
 	state.Full = false
 
-	patch := client.MergeFrom(storage.DeepCopy())
+	return p.publish(ctx, func(storage *registryv1alpha1.RegistryStorage) bool {
+		for i := range storage.Status.Replicas {
+			if storage.Status.Replicas[i].Node == state.Node {
+				// Already speaking for itself. Nothing to announce and nothing to overwrite.
+				// Asked on every attempt, not once before them: a retry means somebody else
+				// wrote, and that somebody may have been this replica's own report.
+				return false
+			}
+		}
 
-	// The same interlock Publish carries, for the same reason: a leader saying it is not full must
-	// take back a permission derived from an earlier report, never leave it standing on a fact that
-	// has stopped being one.
-	withdrawn := false
-	if state.Role == registryv1alpha1.ReplicaRoleLeader &&
-		(storage.Status.SafeToDropUpstream || storage.Status.AllReplicasFull) {
-		storage.Status.SafeToDropUpstream = false
-		storage.Status.AllReplicasFull = false
-		withdrawn = true
-	}
+		// The same interlock Publish carries, for the same reason: a leader saying it is not
+		// full must take back a permission derived from an earlier report, never leave it
+		// standing on a fact that has stopped being one.
+		withdrawn := false
+		if state.Role == registryv1alpha1.ReplicaRoleLeader &&
+			(storage.Status.SafeToDropUpstream || storage.Status.AllReplicasFull) {
+			storage.Status.SafeToDropUpstream = false
+			storage.Status.AllReplicasFull = false
+			withdrawn = true
+		}
 
-	if !Merge(&storage.Status.Replicas, state) && !withdrawn {
-		return nil
-	}
-
-	return p.Client.Status().Patch(ctx, storage, patch)
+		return Merge(&storage.Status.Replicas, state) || withdrawn
+	})
 }
 
 // PublishCollection records the outcome of a garbage collection.
@@ -214,23 +243,9 @@ func (p *Publisher) PublishCollection(ctx context.Context, state State) error {
 		return fmt.Errorf("a collection report needs the node it came from")
 	}
 
-	name := p.Name
-	if name == "" {
-		name = registryv1alpha1.SingletonName
-	}
-
-	storage := &registryv1alpha1.RegistryStorage{}
-	if err := p.Client.Get(ctx, types.NamespacedName{Name: name}, storage); err != nil {
-		return client.IgnoreNotFound(err)
-	}
-
-	patch := client.MergeFrom(storage.DeepCopy())
-
-	if !MergeCollection(&storage.Status.Replicas, state) {
-		return nil
-	}
-
-	return p.Client.Status().Patch(ctx, storage, patch)
+	return p.publish(ctx, func(storage *registryv1alpha1.RegistryStorage) bool {
+		return MergeCollection(&storage.Status.Replicas, state)
+	})
 }
 
 // Merge replaces this replica's entry in place, or appends it, and reports whether

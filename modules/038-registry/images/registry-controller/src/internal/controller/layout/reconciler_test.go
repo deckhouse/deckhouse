@@ -18,6 +18,7 @@ package layout
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -29,6 +30,7 @@ import (
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -861,3 +863,109 @@ func TestUnchangedUpstreamComparesCredentialsThroughTheDigest(t *testing.T) {
 	assert.NotContains(t, current.AuthDigest(), "key")
 	assert.NotEqual(t, current.AuthDigest(), rotated.AuthDigest())
 }
+
+// forbidsSecretDeletes answers a Secret delete the way the API server does under the Role this
+// module ships: 403, not 404.
+//
+// The Role grants get, update and patch on the resolved-auth Secret by name, and nothing grants
+// delete. Authorization happens before the object is looked up, so the answer is Forbidden whether
+// or not the Secret is there — which is why an IsNotFound check does not save the caller.
+type forbidsSecretDeletes struct {
+	client.Client
+}
+
+func (c forbidsSecretDeletes) Delete(
+	ctx context.Context, obj client.Object, opts ...client.DeleteOption,
+) error {
+	if _, isSecret := obj.(*corev1.Secret); isSecret {
+		return apierrors.NewForbidden(
+			schema.GroupResource{Resource: "secrets"}, obj.GetName(),
+			errors.New(`User "system:serviceaccount:d8-system:registry-controller" cannot delete `+
+				`resource "secrets" in API group "" in the namespace "d8-system"`))
+	}
+	return c.Client.Delete(ctx, obj, opts...)
+}
+
+// A cluster with nothing to authenticate to: an anonymous upstream and no cache, which is how a
+// community-edition cluster is configured. There are no credentials to resolve, and the layout must
+// still be written.
+//
+// The Secret was DELETED in that case, and the delete is refused by the module's own RBAC. The call
+// stands ahead of applying the storage and the node layouts, so its error aborted every reconcile
+// before a single RegistryNode existed — permanently, since each retry took the same path.
+func TestReconcileWritesTheLayoutWhenThereAreNoCredentials(t *testing.T) {
+	cfg := registryConfig(registryv1alpha1.RegistryConfigSpec{
+		Mode:    registryv1alpha1.ModeManaged,
+		Primary: registryv1alpha1.PrimarySource{Upstream: upstream("registry.deckhouse.io")},
+		Storage: registryv1alpha1.StorageConfig{Cache: false},
+	})
+
+	r, c := newReconciler(t, cfg, node("master-0"), node("worker-1"))
+	r.InjectClient(forbidsSecretDeletes{Client: c})
+
+	runReconcile(t, r)
+
+	nodes := listNodes(t, c)
+	require.Len(t, nodes, 2, "the layout must exist on a cluster that has no credentials to resolve")
+	for name, layoutObj := range nodes {
+		require.NotEmptyf(t, layoutObj.Spec.Backends, "node %s has no backend to pull from", name)
+	}
+}
+
+// TestTheControllerDoesNotConcludeFromASupersededReport is the third writer of one status.
+//
+// `status.replicas` is written by every syncer — its own entry each — and read back by the
+// controller, which recomputes the summary and writes the WHOLE status, replica entries included.
+// A merge patch of a list replaces the list, and the controller's read comes from a cache, so a
+// report that landed after that read is silently reverted: the leader says it holds the set, the
+// controller writes back the older picture where it did not, and the air-gap transition waits on a
+// store that has been complete for minutes. The same race in the other direction restores a stale
+// `full: true` under a `safeToDropUpstream` derived from it, which is how a cluster loses an
+// upstream it still needs.
+//
+// With the patch under an optimistic lock, the stale write is refused instead of applied. The
+// reconciler surfaces the conflict, which is what a requeue is for, and the next pass reads the
+// report and agrees with it.
+func TestTheControllerDoesNotConcludeFromASupersededReport(t *testing.T) {
+	cfg := registryConfig(registryv1alpha1.RegistryConfigSpec{
+		Mode:    registryv1alpha1.ModeManaged,
+		Primary: registryv1alpha1.PrimarySource{Upstream: upstream("registry.deckhouse.io")},
+		Storage: registryv1alpha1.StorageConfig{Cache: true, Size: "50Gi", Source: source()},
+	})
+
+	ctx := context.Background()
+	r, c := newReconciler(t, cfg, accessSecret(), node("master-0"), storageLease("master-0"))
+	runReconcile(t, r)
+
+	// What the controller's cache holds: the leader's completion report, not yet summarised.
+	stale := getStorage(t, c)
+	stale.Status.Replicas = []registryv1alpha1.StorageReplicaStatus{{
+		Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Full: true, VerifiedDigests: 459,
+	}}
+
+	// What the cluster holds by now: the leader read its store again, found it incomplete, and
+	// said so — the interlock in the syncer's report, which exists because this very conclusion
+	// was once found standing on a fact that had stopped being one.
+	live := getStorage(t, c)
+	live.Status.Replicas = []registryv1alpha1.StorageReplicaStatus{{
+		Node: "master-0", Role: registryv1alpha1.ReplicaRoleLeader, Full: false, VerifiedDigests: 120,
+	}}
+	require.NoError(t, c.Status().Update(ctx, live))
+
+	// And now the controller summarises, from the read it already had. The summary is asked for
+	// directly: a whole reconciliation from a stale cache stops earlier, on the spec, and would
+	// prove nothing about the write under test.
+	err := r.patchStorageStatus(ctx, stale)
+
+	storage := getStorage(t, c)
+	assert.False(t, storage.Status.SafeToDropUpstream,
+		"the permission to go air-gapped may not be granted from a report the cluster has replaced")
+	require.Len(t, storage.Status.Replicas, 1)
+	assert.False(t, storage.Status.Replicas[0].Full,
+		"and the report itself must not be reverted to the older picture")
+	assert.EqualValues(t, 120, storage.Status.Replicas[0].VerifiedDigests)
+
+	require.Error(t, err, "the refused write is reported, which is what a requeue is for")
+	assert.True(t, apierrors.IsConflict(err), "and reported as the conflict it is: %v", err)
+}
+

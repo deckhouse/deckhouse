@@ -116,6 +116,7 @@ func main() {
 		pkiDir        string
 		cachePath     string
 		storePath     string
+		trustDir      string
 		bootstrap     string
 		interval      time.Duration
 		forwardLimit  time.Duration
@@ -139,6 +140,9 @@ func main() {
 		"Where to keep the copy of the layout used when the API server is unreachable.")
 	flag.StringVar(&storePath, "store-path", constant.StorePath,
 		"Where the in-cluster cache keeps its blobs on this node, measured while no cache is configured.")
+	flag.StringVar(&trustDir, "trust-dir", proxy.DefaultTrustDir,
+		"Where Deckhouse stages the certificate authorities this cluster accepts, one file per registry. "+
+			"Every registry reaches the runtime through the agent, so these are the agent's to verify.")
 	flag.StringVar(&bootstrap, "bootstrap-layout", layout.DefaultBootstrapPath,
 		"Where the layout the node was installed with was written. Used only until the API server answers once.")
 	flag.DurationVar(&interval, "interval", 30*time.Second, "How often the layout is re-read.")
@@ -169,6 +173,7 @@ func main() {
 		pkiDir:        pkiDir,
 		cachePath:     cachePath,
 		storePath:     storePath,
+		trustDir:      trustDir,
 		bootstrap:     bootstrap,
 		interval:      interval,
 		forwardLimit:  forwardLimit,
@@ -188,6 +193,7 @@ type options struct {
 	pkiDir        string
 	cachePath     string
 	storePath     string
+	trustDir      string
 	bootstrap     string
 	interval      time.Duration
 	forwardLimit  time.Duration
@@ -263,9 +269,15 @@ func run(ctx context.Context, log *slog.Logger, opts options) error {
 		Self:           opts.advertise,
 		ForwardTimeout: opts.forwardLimit,
 		Metrics:        collected,
+		TrustDir:       opts.trustDir,
 	}
 	loop.Serving = server.Serving
 	loop.Usable = server.Usable
+	// Read now, and again on every pass of the loop: the directory is a mount of the
+	// node's, and a module source added to a running cluster puts its authority there
+	// with nothing restarting this static pod.
+	server.RefreshTrust()
+	loop.RefreshTrust = server.RefreshTrust
 
 	// The loop runs first so that the runtime is not pointed at a proxy with no routing
 	// rules yet.

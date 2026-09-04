@@ -65,10 +65,19 @@ type Server struct {
 	// tried is not a fallback.
 	ForwardTimeout time.Duration
 
+	// TrustDir is where Deckhouse stages the certificate authorities this cluster
+	// accepts, one file per registry — see DefaultTrustDir. Empty leaves the agent with
+	// its image's own bundle, which knows nothing the cluster was told.
+	TrustDir string
+
+	// trust is the staged authorities as last read, refreshed by RefreshTrust.
+	trust atomic.Pointer[trustBundle]
+
 	// clients are HTTP clients per certificate authority. Cached because building one
 	// parses a certificate bundle, and that would otherwise happen on every layer of
-	// every image.
-	clients sync.Map
+	// every image. Replaced as a whole when the staged authorities change, so a cached
+	// client can never outlive the trust it was built from.
+	clients atomic.Pointer[clientCache]
 
 	auth authenticator
 
@@ -399,20 +408,70 @@ func restorePath(header, requested, sent string) string {
 	return strings.ReplaceAll(header, sent, requested)
 }
 
-// client returns an HTTP client trusting the given certificate authority.
+// clientCache holds the built clients. Its own type so the whole set can be swapped when
+// the trust it was built from changes.
+type clientCache struct {
+	byAuthority sync.Map
+}
+
+// CloseIdle releases the pooled connections of every client in the cache, which is what
+// makes replacing the cache free rather than a leak of open sockets.
+func (c *clientCache) CloseIdle() {
+	c.byAuthority.Range(func(_, value any) bool {
+		value.(*http.Client).CloseIdleConnections()
+		return true
+	})
+}
+
+// client returns an HTTP client trusting the given certificate authority, together with
+// the authorities Deckhouse staged on this node.
+//
+// The staged ones are added to every client, including the one for a target that named no
+// authority of its own: that target is a registry the agent forwards to untouched, and
+// under the agent it is the only party left that can verify it — every registry reaches
+// the runtime through one drop-in, so the per-registry configuration the runtime used to
+// hold is gone. Without them a ModuleSource with its own authority cannot be pulled from
+// at all, while its certificate sits on the node's filesystem.
 func (s *Server) client(certificateAuthority string) (*http.Client, error) {
-	if cached, ok := s.clients.Load(certificateAuthority); ok {
+	staged := s.trust.Load()
+
+	key := certificateAuthority
+	if staged != nil {
+		key = staged.digest + "\x00" + certificateAuthority
+	}
+
+	cache := s.clients.Load()
+	if cache == nil {
+		cache = new(clientCache)
+		if !s.clients.CompareAndSwap(nil, cache) {
+			cache = s.clients.Load()
+		}
+	}
+
+	if cached, ok := cache.byAuthority.Load(key); ok {
 		return cached.(*http.Client), nil
 	}
 
 	transport := http.DefaultTransport.(*http.Transport).Clone()
-	if certificateAuthority != "" {
+	if certificateAuthority != "" || (staged != nil && len(staged.pem) > 0) {
 		pool, err := x509.SystemCertPool()
 		if err != nil || pool == nil {
 			pool = x509.NewCertPool()
 		}
-		if !pool.AppendCertsFromPEM([]byte(certificateAuthority)) {
-			return nil, errors.New("the configured certificate authority is not valid PEM")
+		if staged != nil && len(staged.pem) > 0 {
+			// Not an error when none of it parses: the directory is the node's, and one
+			// unreadable file there must not take down the pull path. What a target
+			// declared for itself, below, is a configuration this cluster wrote and is
+			// held to a stricter standard.
+			if !pool.AppendCertsFromPEM(staged.pem) {
+				s.Log.Warn("none of the certificate authorities staged on the node could be parsed",
+					"directory", s.TrustDir)
+			}
+		}
+		if certificateAuthority != "" {
+			if !pool.AppendCertsFromPEM([]byte(certificateAuthority)) {
+				return nil, errors.New("the configured certificate authority is not valid PEM")
+			}
 		}
 		transport.TLSClientConfig = &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}
 	}
@@ -425,7 +484,7 @@ func (s *Server) client(certificateAuthority string) (*http.Client, error) {
 		// library already prevents.
 	}
 
-	actual, _ := s.clients.LoadOrStore(certificateAuthority, client)
+	actual, _ := cache.byAuthority.LoadOrStore(key, client)
 	return actual.(*http.Client), nil
 }
 

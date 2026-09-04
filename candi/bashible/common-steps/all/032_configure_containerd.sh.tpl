@@ -454,6 +454,18 @@ additional_configs() {
   fi
 }
 
+# Refuses to merge an operator's file that carries registry fields, and refuses by failing.
+#
+# Deliberately a hard stop rather than a warning: under this registry implementation the runtime's
+# registry configuration comes from `registry.d`, and merging these fields into config.toml would
+# either be silently ignored (containerd v1 with `config_path` set) or rejected by containerd
+# itself (v2, where those fields are gone) — and a containerd that will not start is worse for the
+# node than a step that will not finish.
+#
+# What used to be wrong here was the timing, not the refusal: the operator learned hours later,
+# from a node that had stopped converging. A file that predates a migration is now caught by the
+# module's preflight, which blocks the handover and names the nodes; one written afterwards raises
+# `d8_registry_node_foreign_registry_config` the moment the node reports it.
 check_additional_configs() {
   local full_conf_path="$1"
   local ctrd_version="$2"

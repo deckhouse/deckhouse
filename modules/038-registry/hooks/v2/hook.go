@@ -47,6 +47,16 @@ const (
 	// pull in flight — on a module restart, which happens routinely.
 	PKISecretName = "registry-storage-pki"
 
+	// PKIStateSecretName is where that state actually lives, and it is a secret nothing mounts.
+	//
+	// Separate from the one above because the storage pod mounts that one, and the state is the
+	// whole generated material: the certificate authority's private key, the token signing key the
+	// registry is deliberately not given, the publication password and the ingress client key. As a
+	// key of the mounted secret it was readable at `/pki/state.yaml` by all three containers, which
+	// undid every split the render is built on — the authority's key alone issues a certificate
+	// every node agent in the cluster trusts.
+	PKIStateSecretName = "registry-storage-pki-state"
+
 	// ServiceName is the in-cluster name every image reference is built from.
 	ServiceName = "registry.d8-system.svc"
 
@@ -69,7 +79,9 @@ var _ = sdk.RegisterFunc(
 				ApiVersion: "v1",
 				Kind:       "Secret",
 				NameSelector: &types.NameSelector{
-					MatchNames: []string{PKISecretName},
+					// Both, because the state moved and a cluster running the previous render
+					// still has it only in the mounted secret — see preferredPKIState.
+					MatchNames: []string{PKIStateSecretName, PKISecretName},
 				},
 				NamespaceSelector: &types.NamespaceSelector{
 					NameSelector: &types.NameSelector{MatchNames: []string{"d8-system"}},
@@ -108,6 +120,13 @@ var _ = sdk.RegisterFunc(
 	handle,
 )
 
+// pkiStateSnapshot is one secret that may still carry the persisted state, named so the reader can
+// tell which of the two it came from.
+type pkiStateSnapshot struct {
+	Secret string `json:"secret"`
+	State  []byte `json:"state,omitempty"`
+}
+
 func filterPKISecret(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
 	var secret v1core.Secret
 	if err := sdk.FromUnstructured(obj, &secret); err != nil {
@@ -118,7 +137,30 @@ func filterPKISecret(obj *unstructured.Unstructured) (go_hook.FilterResult, erro
 	if len(state) == 0 {
 		return nil, nil
 	}
-	return state, nil
+	return pkiStateSnapshot{Secret: obj.GetName(), State: state}, nil
+}
+
+// preferredPKIState picks which persisted state to restore from.
+//
+// The state secret first, and the mounted secret only if that is the only place it is left. The
+// fallback exists for one transition: a cluster running the previous render has the state nowhere
+// else, and the new secret cannot appear before the hook has put the state into the values it is
+// rendered from. Reading only the new name there means generating a fresh authority — every node
+// agent in the cluster then trusts a certificate the storage no longer presents, and no pull
+// succeeds until every layout has been rewritten and applied. It can be dropped once no cluster
+// still runs a render that wrote the state into the mounted secret.
+func preferredPKIState(found []pkiStateSnapshot) []byte {
+	var legacy []byte
+	for _, candidate := range found {
+		if len(candidate.State) == 0 {
+			continue
+		}
+		if candidate.Secret == PKIStateSecretName {
+			return candidate.State
+		}
+		legacy = candidate.State
+	}
+	return legacy
 }
 
 func filterNodeAddress(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -268,10 +310,12 @@ func withdrawNodeConfiguration(input *go_hook.HookInput) {
 }
 
 func restoreState(input *go_hook.HookInput) (*pki.State, error) {
-	raw, err := helpers.SnapshotToSingle[[]byte](input, pkiSnapName)
+	found, err := helpers.SnapshotToList[pkiStateSnapshot](input, pkiSnapName)
 	if err != nil {
 		return nil, err
 	}
+
+	raw := preferredPKIState(found)
 	if len(raw) == 0 {
 		return nil, nil
 	}

@@ -487,3 +487,59 @@ func TestTheLegacyCleanupOnlyTouchesWhatIsDead(t *testing.T) {
 		require.NotContains(t, body, "rmdir")
 	})
 }
+
+// TestTheLegacyRegistryFilesAreAllRemoved is about the directory the cleanup left behind.
+//
+// The previous implementation's registry ran as one static pod mounting four directories under
+// `/etc/kubernetes/registry`, and its cleanup step named two of them. What stayed was `pki` — the
+// authority's certificate together with the auth, distribution and token PRIVATE KEYS, copied there
+// by the bootstrap step and readable to root on the node for as long as the node lives — and
+// `mirrorer`, its configuration. The parent `rmdir` then always failed, which is the visible symptom
+// of the same thing.
+//
+// The four are the pod's own mounts, so there is no ordering question between them: by the time this
+// step runs the agent owns the node's registry and that pod is gone.
+func TestTheLegacyRegistryFilesAreAllRemoved(t *testing.T) {
+	const step = "all/054_cleanup_legacy_registry.sh.tpl"
+
+	body := render(t, step, agentRegistry())
+
+	for _, directory := range []string{"pki", "auth", "distribution", "mirrorer"} {
+		require.Contains(t, body, "rm -rf /etc/kubernetes/registry/"+directory,
+			"the previous implementation's static pod mounted this directory and nothing removes it")
+	}
+
+	// The data is deliberately not among them: the current implementation's storage keeps its blobs
+	// at the same host path, so this is the one thing under the previous implementation's paths that
+	// is still in use.
+	require.NotContains(t, body, "rm -rf /opt/deckhouse/registry/local_data")
+
+	// Siblings, not subdirectories: a wildcard or a loop over the parent would take the agent's own
+	// files with it.
+	require.NotContains(t, body, "rm -rf /etc/kubernetes/registry-agent")
+	require.NotContains(t, body, "rm -rf /etc/kubernetes/registry-proxy")
+
+	require.Empty(t, effective(render(t, step, legacyRegistry())),
+		"while the previous implementation owns the node, these files are its working state")
+}
+
+// TestTheAgentIsGivenWhatTheClusterTrusts is the ModuleSource that could not be pulled from.
+//
+// Under the agent every registry reaches the runtime through one `_default` drop-in, so the
+// per-registry configuration the runtime used to hold — including the certificate authority of a
+// ModuleSource that has its own — is gone, and the agent is the only party left that can verify such
+// a registry. Step 003 stages those authorities on every node whichever implementation is in charge;
+// what was missing was giving them to the agent, which verified against its container image's bundle
+// and refused the handshake.
+func TestTheAgentIsGivenWhatTheClusterTrusts(t *testing.T) {
+	body := render(t, "all/053_configure_registry_agent.sh.tpl", agentRegistry())
+
+	require.Contains(t, body, "trust_path=\"/opt/deckhouse/share/ca-certificates\"",
+		"the same directory step 003 stages the authorities in")
+	require.Contains(t, body, "- --trust-dir=${trust_path}")
+	require.Contains(t, body, "name: trusted-authorities")
+	// Read-only and DirectoryOrCreate: the node owns these files, and a cluster whose module
+	// sources all use public authorities has none of them.
+	require.Contains(t, body, "type: DirectoryOrCreate\n    name: trusted-authorities")
+}
+
