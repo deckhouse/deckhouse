@@ -13,7 +13,7 @@
   {{- /* Pinned by release tag: werf keys a shell-cloned source on the rendered
          instructions alone, so a moving branch would be built once and cached
          forever. Bump this line to pick up agent changes. */ -}}
-  {{- $nodeletVersion := "v0.1.7" }}
+  {{- $nodeletVersion := "v0.1.8" }}
 ---
 image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
 final: false
