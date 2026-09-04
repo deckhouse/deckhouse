@@ -17,12 +17,57 @@ limitations under the License.
 package main
 
 import (
+	"context"
+	"errors"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
+
+func TestRetrySetup(t *testing.T) {
+	t.Parallel()
+
+	t.Run("succeeds after transient failures", func(t *testing.T) {
+		t.Parallel()
+		calls := 0
+		_, err := retrySetup(t.Context(), logr.Discard(), time.Minute, time.Millisecond, func() (manager.Manager, error) {
+			calls++
+			if calls < 3 {
+				return nil, errors.New("api server unreachable")
+			}
+			return nil, nil
+		})
+		if err != nil || calls != 3 {
+			t.Fatalf("err = %v, calls = %d, want success on the third call", err, calls)
+		}
+	})
+
+	t.Run("gives up after the window", func(t *testing.T) {
+		t.Parallel()
+		_, err := retrySetup(t.Context(), logr.Discard(), 10*time.Millisecond, time.Millisecond, func() (manager.Manager, error) {
+			return nil, errors.New("still down")
+		})
+		if err == nil || err.Error() != "still down" {
+			t.Fatalf("err = %v, want the last setup error", err)
+		}
+	})
+
+	t.Run("stops on context cancellation", func(t *testing.T) {
+		t.Parallel()
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		_, err := retrySetup(ctx, logr.Discard(), time.Minute, time.Minute, func() (manager.Manager, error) {
+			return nil, errors.New("down")
+		})
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("err = %v, want context.Canceled", err)
+		}
+	})
+}
 
 func TestLogLevel(t *testing.T) {
 	cases := map[string]zapcore.Level{"": zapcore.InfoLevel, "debug": zapcore.DebugLevel, "warn": zapcore.WarnLevel, "ERROR": zapcore.ErrorLevel, "loud": zapcore.InfoLevel}
