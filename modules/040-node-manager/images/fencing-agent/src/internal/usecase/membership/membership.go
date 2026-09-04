@@ -41,6 +41,9 @@ type Membership struct {
 	mu     sync.Mutex
 	peers  map[string]domain.Peer
 	synced bool
+
+	generation uint64
+	sorted     []domain.Peer
 }
 
 func New(logger *log.Logger) *Membership {
@@ -55,11 +58,17 @@ func New(logger *log.Logger) *Membership {
 func (m *Membership) Upsert(peer domain.Peer) {
 	m.mu.Lock()
 	previous, existed := m.peers[peer.Name]
+	changed := !existed || previous != peer
 	m.peers[peer.Name] = peer
+
+	if changed {
+		m.bump()
+	}
+
 	expected, quorum, announce := len(m.peers), domain.QuorumSize(len(m.peers)), m.synced
 	m.mu.Unlock()
 
-	if announce && (!existed || previous != peer) {
+	if announce && changed {
 		m.logger.Info("expected membership changed",
 			"member", peer.Name,
 			"expected", expected,
@@ -72,6 +81,11 @@ func (m *Membership) Delete(name string) {
 	m.mu.Lock()
 	_, existed := m.peers[name]
 	delete(m.peers, name)
+
+	if existed {
+		m.bump()
+	}
+
 	expected, quorum, announce := len(m.peers), domain.QuorumSize(len(m.peers)), m.synced
 	m.mu.Unlock()
 
@@ -95,20 +109,31 @@ func (m *Membership) MarkSynced() {
 	m.logger.Info("expected membership synced", "expected", expected, "quorum", quorum)
 }
 
-// Snapshot returns the expected peers sorted by name, their count and the quorum
-// size.
-func (m *Membership) Snapshot() ([]domain.Peer, int, int) {
+func (m *Membership) bump() {
+	m.generation++
+	m.sorted = nil
+}
+
+func (m *Membership) Expected() ([]domain.Peer, uint64) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	peers := make([]domain.Peer, 0, len(m.peers))
-	for _, peer := range m.peers {
-		peers = append(peers, peer)
+	if m.sorted == nil {
+		m.sorted = make([]domain.Peer, 0, len(m.peers))
+		for _, peer := range m.peers {
+			m.sorted = append(m.sorted, peer)
+		}
+
+		slices.SortFunc(m.sorted, func(a, b domain.Peer) int { return strings.Compare(a.Name, b.Name) })
 	}
 
-	slices.SortFunc(peers, func(a, b domain.Peer) int { return strings.Compare(a.Name, b.Name) })
+	return m.sorted, m.generation
+}
 
-	return peers, len(peers), domain.QuorumSize(len(peers))
+func (m *Membership) Snapshot() ([]domain.Peer, int, int) {
+	peers, _ := m.Expected()
+
+	return slices.Clone(peers), len(peers), domain.QuorumSize(len(peers))
 }
 
 // ListNodeGroup serves the join usecase from the informer cache instead of a

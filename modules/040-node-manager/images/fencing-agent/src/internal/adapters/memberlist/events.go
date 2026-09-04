@@ -38,13 +38,15 @@ type nodeEvent struct {
 type eventDelegate struct {
 	logger  *log.Logger
 	events  chan nodeEvent
+	changed chan struct{}
 	dropped atomic.Int64
 }
 
 func newEventDelegate(logger *log.Logger) *eventDelegate {
 	return &eventDelegate{
-		logger: logger,
-		events: make(chan nodeEvent, eventBuffer),
+		logger:  logger,
+		events:  make(chan nodeEvent, eventBuffer),
+		changed: make(chan struct{}, 1),
 	}
 }
 
@@ -68,6 +70,13 @@ func (d *eventDelegate) enqueue(kind string, node *hcml.Node) {
 	}
 }
 
+func (d *eventDelegate) wake() {
+	select {
+	case d.changed <- struct{}{}:
+	default:
+	}
+}
+
 func (d *eventDelegate) run(stop <-chan struct{}) {
 	for {
 		select {
@@ -83,6 +92,8 @@ func (d *eventDelegate) run(stop <-chan struct{}) {
 			if dropped := d.dropped.Swap(0); dropped > 0 {
 				d.logger.Warn("membership events were dropped, the log is incomplete", "count", dropped)
 			}
+
+			d.wake()
 		}
 	}
 }

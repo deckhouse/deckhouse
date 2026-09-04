@@ -28,14 +28,13 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
+	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 	"fencing-agent/internal/adapters/fencingstate"
 	"fencing-agent/internal/adapters/kubeclient"
 	"fencing-agent/internal/agent"
 	"fencing-agent/internal/config"
 	"fencing-agent/internal/domain"
 	"fencing-agent/internal/usecase/profile"
-
-	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 )
 
 // The health server starts only after both steps finish, so 30s + 15s must stay
@@ -102,6 +101,11 @@ func run(logger *log.Logger) error {
 	sla, err := profile.Load(profileCtx, fencingstate.NewProfiles(deps.FencingClient), v1alpha1.ProfileName(cfg.ProfileRefName), logger)
 	if err != nil {
 		return fmt.Errorf("load SLA profile: %w", err)
+	}
+
+	deps.FencingCache, err = fencingstate.NewCache(restCfg, cfg.NodeGroup)
+	if err != nil {
+		return fmt.Errorf("create FencingFailedNodeState cache: %w", err)
 	}
 
 	return agent.New(cfg, deps, identity, sla, logger).Run(ctx)

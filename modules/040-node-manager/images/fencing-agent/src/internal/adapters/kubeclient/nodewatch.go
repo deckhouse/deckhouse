@@ -60,6 +60,7 @@ func NewNodeWatcher(client kubernetes.Interface, nodeGroup string, store PeerSto
 		informers.WithTweakListOptions(func(options *metav1.ListOptions) {
 			options.LabelSelector = selector
 		}),
+		informers.WithTransform(trimNode),
 	)
 
 	watcher := &NodeWatcher{
@@ -80,6 +81,23 @@ func NewNodeWatcher(client kubernetes.Interface, nodeGroup string, store PeerSto
 	return watcher, nil
 }
 
+func trimNode(obj any) (any, error) {
+	node, ok := obj.(*corev1.Node)
+	if !ok {
+		// Tombstones and anything else pass through untouched.
+		return obj, nil
+	}
+
+	return &corev1.Node{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:            node.Name,
+			UID:             node.UID,
+			ResourceVersion: node.ResourceVersion,
+		},
+		Status: corev1.NodeStatus{Addresses: node.Status.Addresses},
+	}, nil
+}
+
 func (w *NodeWatcher) upsert(obj any) {
 	node, ok := obj.(*corev1.Node)
 	if !ok {
@@ -88,7 +106,7 @@ func (w *NodeWatcher) upsert(obj any) {
 		return
 	}
 
-	w.store.Upsert(domain.Peer{Name: node.Name, IP: internalIP(node)})
+	w.store.Upsert(domain.Peer{Name: node.Name, IP: internalIP(node), UID: string(node.UID)})
 }
 
 func (w *NodeWatcher) delete(obj any) {

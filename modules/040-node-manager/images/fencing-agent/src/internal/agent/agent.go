@@ -20,23 +20,26 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"golang.org/x/sync/errgroup"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
+	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 	"fencing-agent/internal/adapters/events"
+	"fencing-agent/internal/adapters/fencingstate"
 	"fencing-agent/internal/adapters/kubeclient"
 	"fencing-agent/internal/adapters/memberlist"
 	watchdogdevice "fencing-agent/internal/adapters/watchdog"
 	"fencing-agent/internal/config"
 	"fencing-agent/internal/controllers/health"
 	"fencing-agent/internal/domain"
+	"fencing-agent/internal/usecase/failedstate"
 	"fencing-agent/internal/usecase/join"
 	"fencing-agent/internal/usecase/membership"
 	"fencing-agent/internal/usecase/watchdog"
-
-	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 )
 
 type Agent struct {
@@ -74,6 +77,19 @@ func (a *Agent) watchdogParams() watchdog.Params {
 	}
 }
 
+func (a *Agent) failedStateParams() failedstate.Params {
+	return failedstate.Params{
+		NodeName: a.identity.Name,
+		// The rejoin timings pace both loops against the same thing: a component
+		// that is not answering yet.
+		RetryInterval:    a.sla.Rejoin.Interval.Duration,
+		MaxRetryInterval: a.sla.Rejoin.MaxInterval.Duration,
+		// The profile's slowest rejoin step doubles as the handover step: a group
+		// that tolerates a slow reaction tolerates a slow handover.
+		TakeoverDelay: a.sla.Rejoin.MaxInterval.Duration,
+	}
+}
+
 func (a *Agent) joinParams() join.Params {
 	return join.Params{
 		NodeName:         a.identity.Name,
@@ -87,8 +103,8 @@ func (a *Agent) joinParams() join.Params {
 }
 
 func (a *Agent) Run(ctx context.Context) error {
-	if a.deps.K8sClient == nil || a.deps.FencingClient == nil {
-		return errors.New("agent dependencies are not wired: K8sClient and FencingClient are required")
+	if a.deps.K8sClient == nil || a.deps.FencingClient == nil || a.deps.FencingCache == nil {
+		return errors.New("agent dependencies are not wired: K8sClient, FencingClient and FencingCache are required")
 	}
 
 	a.logger.Info("fencing-agent starting",
@@ -153,7 +169,26 @@ func (a *Agent) Run(ctx context.Context) error {
 
 	joiner := join.New(members, cluster, a.joinParams(), a.logger)
 
+	writer := failedstate.New(a.failedStateParams(), failedstate.Deps{
+		Alive:    cluster,
+		Expected: members,
+		States: fencingstate.NewStates(
+			a.deps.FencingClient,
+			a.deps.FencingCache,
+			a.cfg.NodeGroup,
+			v1alpha1.ProfileName(a.cfg.ProfileRefName),
+			a.sla.Fallback.KubernetesAPITimeout.Duration,
+		),
+		Events: recorder,
+		Now:    time.Now,
+	}, a.logger)
+
 	g, gctx := errgroup.WithContext(ctx)
+
+	// joined gates everything that may write to Kubernetes on behalf of the
+	// NodeGroup: before the join this agent sees no peers and would read that as
+	// a cluster-wide failure.
+	joined := make(chan struct{})
 
 	g.Go(func() error {
 		ready := func() bool { return joiner.Joined() && watchdogManager.Ready() }
@@ -171,6 +206,32 @@ func (a *Agent) Run(ctx context.Context) error {
 		selfWatcher.Run(gctx)
 
 		return nil
+	})
+
+	g.Go(func() error {
+		return a.deps.FencingCache.Start(gctx)
+	})
+
+	g.Go(func() error {
+		select {
+		case <-gctx.Done():
+			return nil
+		case <-joined:
+		}
+
+		if _, err := a.deps.FencingCache.GetInformer(gctx, &v1alpha1.FencingFailedNodeState{}, cache.BlockUntilSynced(false)); err != nil {
+			return fmt.Errorf("register the fencing state informer: %w", err)
+		}
+
+		if !a.deps.FencingCache.WaitForCacheSync(gctx) {
+			a.logger.Info("fencing state cache sync aborted by shutdown")
+
+			return nil
+		}
+
+		a.logger.Info("starting the fencing state writer")
+
+		return writer.Run(gctx)
 	})
 
 	g.Go(func() error {
@@ -198,6 +259,8 @@ func (a *Agent) Run(ctx context.Context) error {
 		if gctx.Err() != nil {
 			return nil
 		}
+
+		close(joined)
 
 		// Arming happens only here: an armed device promises this agent can see its
 		// NodeGroup.
