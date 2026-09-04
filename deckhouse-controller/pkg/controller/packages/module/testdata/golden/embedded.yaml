@@ -22,6 +22,8 @@ metadata:
     uid: package-uid
   resourceVersion: "3"
 spec:
+  enabled: true
+  maintenance: NoResourceReconciliation
   packageRepositoryName: embedded
   packageVersion: v1.0.1
   settings:

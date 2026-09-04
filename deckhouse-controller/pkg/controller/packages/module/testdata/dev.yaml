@@ -10,6 +10,8 @@ spec:
   packageRepositoryName: deckhouse
   packageVersion: main
   settingsVersion: 1
+  maintenance: NoResourceReconciliation
+  enabled: true
   settings:
     replicas: 2
 ---

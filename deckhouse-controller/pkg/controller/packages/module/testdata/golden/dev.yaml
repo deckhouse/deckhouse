@@ -10,6 +10,8 @@ metadata:
   name: test-module
   resourceVersion: "3"
 spec:
+  enabled: true
+  maintenance: NoResourceReconciliation
   packageRepositoryName: deckhouse
   packageVersion: main
   settings:

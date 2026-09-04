@@ -316,14 +316,17 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err)
 		assert.True(suite.T(), result.IsZero())
 
+		// The released path would resolve this fixture too, so reaching the runtime as an
+		// embedded module — with no Definition, which is what the image already ships — is
+		// what tells the two apart.
 		assert.Empty(suite.T(), suite.manager.updated,
 			"the image ships an embedded module, so nothing is pulled for it")
-		// The reserved "embedded" repository resolves to no object, and the fixture has
-		// none: a repository read here would fail the reconcile.
 		assert.Equal(suite.T(), []packageruntime.Module{{
 			Name:            moduleName,
 			Settings:        addonutils.Values{"replicas": float64(2)},
 			SettingsVersion: 1,
+			Maintenance:     "NoResourceReconciliation",
+			Enabled:         ptr.To(true),
 		}}, suite.manager.embedded)
 
 		// A module the image started shipping after it had already been released still
@@ -362,7 +365,12 @@ func (suite *ControllerTestSuite) TestReconcile() {
 			Definition:      modules.Definition{Name: moduleName, Version: "main"},
 			Settings:        addonutils.Values{"replicas": float64(2)},
 			SettingsVersion: 1,
+			Maintenance:     "NoResourceReconciliation",
+			Enabled:         ptr.To(true),
 		}, suite.manager.updated[0].module)
+		assert.Equal(suite.T(), []digestCall{{repo: testRemote, name: moduleName, tag: "main"}},
+			suite.manager.digestCalls,
+			"the tag is what decides which image the digest is resolved from")
 
 		annotations := suite.getModule(moduleName).Annotations
 		assert.Equal(suite.T(), devDigest, annotations[v1alpha2.ModuleAnnotationHash],
@@ -395,7 +403,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		assert.Empty(suite.T(), ownerRefName(mod, v1alpha1.ModulePackageKind))
 	})
 
-	suite.Run("dev module without a repository requeues", func() {
+	suite.Run("dev module with no repository name requeues", func() {
 		suite.setupController("dev-without-repository.yaml")
 
 		result, err := suite.ctr.Reconcile(ctx, request(moduleName))
@@ -764,8 +772,8 @@ func TestDevModuleIsNotHandedOverOnAnUnresolvedDigest(t *testing.T) {
 }
 
 // seedFakeClient builds a client from a fixture and wraps it with funcs, for the paths that
-// only show up when a write or a read fails. Seeding itself goes through Create, which the
-// interceptors used here leave alone.
+// only show up when a write or a read fails. Seeding uses Create plus a status Update for a
+// version that starts out used, so funcs passed here must leave those two alone.
 func seedFakeClient(t *testing.T, fixture string, funcs interceptor.Funcs) client.Client {
 	t.Helper()
 
@@ -874,7 +882,7 @@ type packageManagerStub struct {
 	updated     []updatedModule
 	embedded    []packageruntime.Module
 	removed     []removedModule
-	digestCalls []string
+	digestCalls []digestCall
 
 	digestErr   error
 	removalDone bool
@@ -907,6 +915,12 @@ type removedModule struct {
 	embedded bool
 }
 
+type digestCall struct {
+	repo registry.Remote
+	name string
+	tag  string
+}
+
 func (s *packageManagerStub) UpdateModule(repo registry.Remote, mod packageruntime.Module, force bool) {
 	s.updated = append(s.updated, updatedModule{repo: repo, module: mod, forced: force})
 }
@@ -917,8 +931,8 @@ func (s *packageManagerStub) UpdateEmbeddedModule(mod packageruntime.Module) {
 
 func (s *packageManagerStub) UpdateModulesSettings(string, int, addonutils.Values, string, *bool) {}
 
-func (s *packageManagerStub) GetModuleDigest(_ context.Context, _ registry.Remote, name, _ string) (string, error) {
-	s.digestCalls = append(s.digestCalls, name)
+func (s *packageManagerStub) GetModuleDigest(_ context.Context, repo registry.Remote, name, tag string) (string, error) {
+	s.digestCalls = append(s.digestCalls, digestCall{repo: repo, name: name, tag: tag})
 
 	if s.digestErr != nil {
 		return "", s.digestErr
