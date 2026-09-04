@@ -62,28 +62,7 @@ rules:
   verbs:
   - create
   - patch
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: d8:user-authz:controller
-  {{- include "helm_lib_module_labels" (list . (dict "app" "user-authz-controller")) | nindent 2 }}
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: d8:user-authz:controller
-subjects:
-- kind: ServiceAccount
-  name: controller
-  namespace: d8-{{ .Chart.Name }}
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: Role
-metadata:
-  name: user-authz:controller:leader-election
-  namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "user-authz-controller")) | nindent 2 }}
-rules:
+# Leader election lease in the module namespace.
 - apiGroups:
   - coordination.k8s.io
   resources:
@@ -98,15 +77,14 @@ rules:
   - delete
 ---
 apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
+kind: ClusterRoleBinding
 metadata:
-  name: user-authz:controller:leader-election
-  namespace: d8-{{ .Chart.Name }}
+  name: d8:user-authz:controller
   {{- include "helm_lib_module_labels" (list . (dict "app" "user-authz-controller")) | nindent 2 }}
 roleRef:
   apiGroup: rbac.authorization.k8s.io
-  kind: Role
-  name: user-authz:controller:leader-election
+  kind: ClusterRole
+  name: d8:user-authz:controller
 subjects:
 - kind: ServiceAccount
   name: controller

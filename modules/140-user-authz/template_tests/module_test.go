@@ -220,7 +220,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(role.Field("rules").String()).To(ContainSubstring("clusterauthorizationrules/status"))
 			Expect(role.Field("rules").String()).To(ContainSubstring(`"bind"`))
 			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:controller").Field("subjects.0.name").String()).To(Equal("controller"))
-			Expect(f.KubernetesResource("Role", "d8-user-authz", "user-authz:controller:leader-election").Exists()).To(BeTrue())
+			Expect(role.Field("rules").String()).To(ContainSubstring("leases"))
 		})
 
 		It("Should deploy authorization webhook and supporting objects", func() {
