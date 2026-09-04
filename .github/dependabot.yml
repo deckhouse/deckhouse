@@ -826,6 +826,15 @@ updates:
   open-pull-requests-limit: 0
 
 - package-ecosystem: "gomod"
+  directory: "/modules/140-user-authz/images/user-authz-controller/src"
+  labels:
+  - "type/dependencies"
+  - "status/ok-to-test"
+  schedule:
+    interval: "daily"
+  open-pull-requests-limit: 0
+
+- package-ecosystem: "gomod"
   directory: "/modules/150-user-authn/images/basic-auth-proxy/app"
   labels:
   - "type/dependencies"
