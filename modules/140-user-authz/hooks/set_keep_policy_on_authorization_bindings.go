@@ -19,19 +19,14 @@ package hooks
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
-	"strings"
-	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 
@@ -44,13 +39,18 @@ The bindings of ClusterAuthorizationRules and AuthorizationRules used to be rend
 chart and are now owned by user-authz-controller. On the release that drops them from the chart the
 release engine would prune every binding it rendered before — and the controller, deployed by that
 same release, cannot be running yet to recreate them. Both engines honour the
-`helm.sh/resource-policy: keep` annotation on the live object, so this hook stamps it on every
-Helm-managed binding of the module right before the release runs, then verifies and refuses to let
-the release proceed if any binding is left unprotected (the same pattern node-manager used when it
-moved its machine objects into node-controller).
+`helm.sh/resource-policy: keep` annotation on the live object during an upgrade, so this hook stamps
+it on every Helm-managed binding of the module right before the release runs, then verifies and
+refuses to let the release proceed if any binding is left unprotected (the same pattern
+node-manager used when it moved its machine objects into node-controller).
 
 Once the controller adopts a binding it drops the Helm labels and the annotation, so the hook
 becomes a no-op: the selector below only matches bindings still labeled as managed by Helm.
+
+Engine notes: nelm reads the policy from the live object and also refuses to delete an object whose
+ownership metadata no longer matches the release, so an adoption racing the release is safe too.
+helm3 reads the live annotation on upgrade (the path taken here) but the stored manifest on
+uninstall and rollback; neither of those is a supported operation for a Deckhouse module release.
 
 The hook uses its own client with a raised rate limit: the shared hook client is capped at the
 client-go default of 5 QPS, which for tens of thousands of bindings would block the module
@@ -65,40 +65,16 @@ const (
 	// adopted yet.
 	helmManagedBindingsSelector = "heritage=deckhouse,module=user-authz,app.kubernetes.io/managed-by=Helm"
 
-	// ruleBindingPrefix is the common prefix of every rule binding, user-authz:<rule>:<postfix>.
-	ruleBindingPrefix = "user-authz:"
-
-	keepPolicyQPS      = 100
-	keepPolicyBurst    = 200
-	keepPolicyWorkers  = 16
-	keepPolicyPageSize = 500
+	keepPolicyWorkers = 16
 )
-
-var keepPolicyBindingResources = []schema.GroupVersionResource{
-	{Group: "rbac.authorization.k8s.io", Version: "v1", Resource: "clusterrolebindings"},
-	{Group: "rbac.authorization.k8s.io", Version: "v1", Resource: "rolebindings"},
-}
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue:        internal.Queue("keep-policy-authorization-bindings"),
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 1},
 }, dependency.WithExternalDependencies(setKeepPolicyOnAuthorizationBindings))
 
-// newKeepPolicyClient builds a dynamic client with the raised rate limit; overridable in tests.
-var newKeepPolicyClient = func(dc dependency.Container) (dynamic.Interface, error) {
-	config, err := dc.GetClientConfig()
-	if err != nil {
-		return nil, fmt.Errorf("get client config: %w", err)
-	}
-
-	config.QPS = keepPolicyQPS
-	config.Burst = keepPolicyBurst
-
-	return dynamic.NewForConfig(config)
-}
-
 func setKeepPolicyOnAuthorizationBindings(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
-	dynClient, err := newKeepPolicyClient(dc)
+	dynClient, err := newModuleBindingsClient(dc)
 	if err != nil {
 		return fmt.Errorf("build client: %w", err)
 	}
@@ -122,41 +98,6 @@ func setKeepPolicyOnAuthorizationBindings(ctx context.Context, input *go_hook.Ho
 	return nil
 }
 
-// bindingRef identifies one binding to patch.
-type bindingRef struct {
-	gvr       schema.GroupVersionResource
-	namespace string
-	name      string
-}
-
-// forEachUnprotectedBinding pages through the Helm-managed bindings and calls fn for every rule
-// binding that lacks the keep annotation. fn returning an error stops the iteration.
-func forEachUnprotectedBinding(ctx context.Context, dynClient dynamic.Interface, fn func(bindingRef) error) error {
-	for _, gvr := range keepPolicyBindingResources {
-		opts := metav1.ListOptions{LabelSelector: helmManagedBindingsSelector, Limit: keepPolicyPageSize}
-		for {
-			list, err := dynClient.Resource(gvr).Namespace(metav1.NamespaceAll).List(ctx, opts)
-			if err != nil {
-				return fmt.Errorf("list %s: %w", gvr.Resource, err)
-			}
-			for i := range list.Items {
-				item := &list.Items[i]
-				if !isRuleBindingWithoutKeep(item) {
-					continue
-				}
-				if err := fn(bindingRef{gvr: gvr, namespace: item.GetNamespace(), name: item.GetName()}); err != nil {
-					return err
-				}
-			}
-			if list.GetContinue() == "" {
-				break
-			}
-			opts.Continue = list.GetContinue()
-		}
-	}
-	return nil
-}
-
 // stampKeepPolicy adds helm.sh/resource-policy: keep to every Helm-managed rule binding that does not
 // have it yet and returns how many objects were patched.
 func stampKeepPolicy(ctx context.Context, dynClient dynamic.Interface, workers int) (int, error) {
@@ -171,79 +112,26 @@ func stampKeepPolicy(ctx context.Context, dynClient dynamic.Interface, workers i
 		return 0, fmt.Errorf("marshal patch: %w", err)
 	}
 
-	if workers <= 0 {
-		workers = 1
-	}
-
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	var (
-		wg      sync.WaitGroup
-		stamped atomic.Int64
-		mu      sync.Mutex
-		errs    []error
-		queue   = make(chan bindingRef, workers)
-	)
-
-	fail := func(err error) {
-		mu.Lock()
-		defer mu.Unlock()
-		errs = append(errs, err)
-		cancel()
-	}
-
-	for range workers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for ref := range queue {
-				_, err := dynClient.Resource(ref.gvr).Namespace(ref.namespace).Patch(ctx, ref.name, types.MergePatchType, patch, metav1.PatchOptions{})
-				if err != nil {
-					fail(fmt.Errorf("patch %s %s/%s: %w", ref.gvr.Resource, ref.namespace, ref.name, err))
-					continue
-				}
-				stamped.Add(1)
+	return forEachRuleBindingParallel(ctx, dynClient, helmManagedBindingsSelector, isRuleBindingWithoutKeep, workers,
+		func(ctx context.Context, ref bindingRef) error {
+			_, err := dynClient.Resource(ref.gvr).Namespace(ref.namespace).Patch(ctx, ref.name, types.MergePatchType, patch, metav1.PatchOptions{})
+			if err != nil {
+				return fmt.Errorf("patch %s %s/%s: %w", ref.gvr.Resource, ref.namespace, ref.name, err)
 			}
-		}()
-	}
-
-	// The producer lists page by page and hands every target to the workers; a failed patch cancels
-	// the context, which stops both the listing and the remaining patches.
-	listErr := forEachUnprotectedBinding(ctx, dynClient, func(ref bindingRef) error {
-		select {
-		case queue <- ref:
 			return nil
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	})
-	close(queue)
-	wg.Wait()
-
-	mu.Lock()
-	defer mu.Unlock()
-	if len(errs) != 0 {
-		// The first patch error is the cause; the listing error after it is just the cancellation.
-		return int(stamped.Load()), errors.Join(errs...)
-	}
-	if listErr != nil {
-		return int(stamped.Load()), listErr
-	}
-
-	return int(stamped.Load()), nil
+		})
 }
 
 // verifyKeepPolicy re-lists the Helm-managed rule bindings and fails if any still lacks the keep
 // annotation: letting the release run would prune it.
 func verifyKeepPolicy(ctx context.Context, dynClient dynamic.Interface) error {
-	return forEachUnprotectedBinding(ctx, dynClient, func(ref bindingRef) error {
+	return forEachRuleBinding(ctx, dynClient, helmManagedBindingsSelector, isRuleBindingWithoutKeep, func(ref bindingRef) error {
 		return fmt.Errorf("keep policy is not set on %s %s/%s: refusing to proceed to avoid prune", ref.gvr.Resource, ref.namespace, ref.name)
 	})
 }
 
 func isRuleBindingWithoutKeep(obj *unstructured.Unstructured) bool {
-	if !strings.HasPrefix(obj.GetName(), ruleBindingPrefix) {
+	if !isRuleBinding(obj) {
 		return false
 	}
 

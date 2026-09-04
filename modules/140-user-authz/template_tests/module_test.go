@@ -220,7 +220,13 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(deployment.Field("spec.template.spec.containers.0.name").String()).To(Equal("user-authz-controller"))
 			Expect(f.KubernetesResource("ServiceAccount", "d8-user-authz", "controller").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("PodDisruptionBudget", "d8-user-authz", "user-authz-controller").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "user-authz-controller").Exists()).To(BeTrue())
+			// The alert rules select job="user-authz-controller": the PodMonitor takes the job name from
+			// the app label of the pods, so both must stay in place.
+			podMonitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "user-authz-controller")
+			Expect(podMonitor.Exists()).To(BeTrue())
+			Expect(podMonitor.Field("spec.jobLabel").String()).To(Equal("app"))
+			Expect(deployment.Field("spec.template.metadata.labels.app").String()).To(Equal("user-authz-controller"))
+			Expect(deployment.Field("spec.template.spec.containers.0.env").String()).ToNot(ContainSubstring("HA_MODE"))
 
 			role := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:controller")
 			Expect(role.Exists()).To(BeTrue())

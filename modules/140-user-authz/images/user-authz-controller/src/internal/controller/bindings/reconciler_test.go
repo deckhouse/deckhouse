@@ -297,17 +297,24 @@ func TestReconcile_AdoptsHelmBindingsInPlace(t *testing.T) {
 	}
 }
 
-func TestReconcile_PreservesForeignAnnotations(t *testing.T) {
+func TestReconcile_PreservesForeignAnnotationsAndLabels(t *testing.T) {
 	t.Parallel()
 	w := &writes{}
 	b := helmBinding("user-authz:dev:user", "user-authz:user")
 	b.Annotations["example.com/added-by-admission"] = "yes"
+	b.Labels["example.com/team"] = "blue"
 	c := newClient(t, w, car("dev", desired.AccessLevelUser), b)
 
 	reconcileCluster(t, c, "dev")
 	got := crbNames(t, c)["user-authz:dev:user"]
 	if got.Annotations["example.com/added-by-admission"] != "yes" {
 		t.Errorf("foreign annotation must survive adoption, got %v", got.Annotations)
+	}
+	if got.Labels["example.com/team"] != "blue" {
+		t.Errorf("foreign label must survive adoption, got %v", got.Labels)
+	}
+	if _, helm := got.Labels[helmManagedByLabel]; helm {
+		t.Error("the Helm ownership label must be removed")
 	}
 	for _, key := range helmAnnotations {
 		if _, present := got.Annotations[key]; present {
@@ -616,27 +623,54 @@ func TestReconcile_AlreadyExistsForeignObjectIsTerminal(t *testing.T) {
 	}
 }
 
-// An update the API server rejects as invalid (the immutable roleRef differs) is terminal: the
-// status says so, nothing is deleted, and the other bindings of the rule are still applied.
-func TestReconcile_InvalidUpdateIsTerminalAndReportedWithoutDeleting(t *testing.T) {
+// A binding under a controller name whose roleRef differs was planted or edited by hand (the name
+// fixes the roleRef). It is replaced, and the reconcile of the rule goes on: refusing to touch it
+// would let a namespace admin block the removal of bindings the rule no longer grants.
+func TestReconcile_ForeignRoleRefIsRecreatedAndDoesNotBlockDeletions(t *testing.T) {
 	t.Parallel()
 	w := &writes{}
-	wrongRole := helmBinding("user-authz:dev:editor", "user-authz:admin") // roleRef must be user-authz:editor
+	planted := helmBinding("user-authz:dev:editor", "user-authz:admin") // must be user-authz:editor
+	planted.UID = "uid-planted"
 	legacy := helmBinding("user-authz:dev:editor:custom-cluster-role:d8:user-authz:istio:editor", "d8:user-authz:istio:editor")
-	c := newBuilder(t, w, car("dev", desired.AccessLevelEditor), wrongRole, legacy).
+	c := newClient(t, w, car("dev", desired.AccessLevelEditor), planted, legacy)
+
+	reconcileCluster(t, c, "dev")
+
+	crbs := crbNames(t, c)
+	got, ok := crbs["user-authz:dev:editor"]
+	if !ok || got.RoleRef.Name != "user-authz:editor" {
+		t.Fatalf("binding = %+v, want it recreated with the rule's roleRef", got)
+	}
+	if got.Labels[desired.LabelManagedBy] != desired.ManagedByValue || len(got.OwnerReferences) != 1 {
+		t.Errorf("recreated binding metadata = %+v", got.ObjectMeta)
+	}
+	if _, ok := crbs[legacy.Name]; ok {
+		t.Error("the legacy binding must still be removed")
+	}
+	if w.count("delete") != 2 || w.count("create") != 2 { // planted + legacy deleted; editor + :custom created
+		t.Errorf("writes = %v", w.snapshot())
+	}
+	cond, _ := readyCondition(t, c, "dev")
+	if cond == nil || cond.Status != metav1.ConditionTrue {
+		t.Errorf("Ready condition = %+v", cond)
+	}
+}
+
+// A create the API server rejects as invalid is terminal: the status says so, nothing is deleted,
+// and the other bindings of the rule are still applied.
+func TestReconcile_InvalidCreateIsTerminalAndReportedWithoutDeleting(t *testing.T) {
+	t.Parallel()
+	w := &writes{}
+	legacy := helmBinding("user-authz:dev:editor:custom-cluster-role:d8:user-authz:istio:editor", "d8:user-authz:istio:editor")
+	c := newBuilder(t, w, car("dev", desired.AccessLevelEditor), legacy).
 		WithInterceptorFuncs(interceptor.Funcs{
 			Create: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.CreateOption) error {
 				w.add("create", obj.GetName())
-				return cl.Create(ctx, obj, opts...)
-			},
-			Update: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.UpdateOption) error {
-				w.add("update", obj.GetName())
-				crb, ok := obj.(*rbacv1.ClusterRoleBinding)
-				if ok && crb.Name == "user-authz:dev:editor" {
-					return apierrors.NewInvalid(rbacv1.SchemeGroupVersion.WithKind("ClusterRoleBinding").GroupKind(), crb.Name,
-						field.ErrorList{field.Invalid(field.NewPath("roleRef"), crb.RoleRef, "cannot change roleRef")})
+				if obj.GetName() == "user-authz:dev:editor:custom" {
+					return apierrors.NewInvalid(rbacv1.SchemeGroupVersion.WithKind("ClusterRoleBinding").GroupKind(), obj.GetName(),
+						field.ErrorList{field.Invalid(field.NewPath("metadata", "name"), obj.GetName(), "rejected by an admission webhook")})
 				}
-				return cl.Update(ctx, obj, opts...)
+				return cl.Create(ctx, obj, opts...)
 			},
 			Delete: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
 				w.add("delete", obj.GetName())
@@ -650,14 +684,14 @@ func TestReconcile_InvalidUpdateIsTerminalAndReportedWithoutDeleting(t *testing.
 	}
 
 	cond, status := readyCondition(t, c, "dev")
-	if cond == nil || cond.Status != metav1.ConditionFalse || cond.Reason != ReasonApplyError || !strings.Contains(cond.Message, "roleRef") {
+	if cond == nil || cond.Status != metav1.ConditionFalse || cond.Reason != ReasonApplyError || !strings.Contains(cond.Message, "admission webhook") {
 		t.Fatalf("Ready condition = %+v", cond)
 	}
 	if status.ObservedGeneration != 3 {
 		t.Errorf("observedGeneration = %d", status.ObservedGeneration)
 	}
 	crbs := crbNames(t, c)
-	if _, ok := crbs["user-authz:dev:editor:custom"]; !ok {
+	if _, ok := crbs["user-authz:dev:editor"]; !ok {
 		t.Error("the other bindings must still be applied after one failed")
 	}
 	if _, ok := crbs[legacy.Name]; !ok {
@@ -665,6 +699,54 @@ func TestReconcile_InvalidUpdateIsTerminalAndReportedWithoutDeleting(t *testing.
 	}
 	if w.count("delete") != 0 {
 		t.Errorf("writes = %v", w.snapshot())
+	}
+}
+
+// A write conflict (stale resourceVersion) is retried, not terminal.
+func TestReconcile_ConflictIsRetryable(t *testing.T) {
+	t.Parallel()
+	w := &writes{}
+	c := newBuilder(t, w, car("dev", desired.AccessLevelUser), helmBinding("user-authz:dev:user", "user-authz:user")).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Update: func(_ context.Context, _ client.WithWatch, obj client.Object, _ ...client.UpdateOption) error {
+				return apierrors.NewConflict(schema.GroupResource{Group: rbacv1.GroupName, Resource: "clusterrolebindings"}, obj.GetName(), errors.New("the object has been modified"))
+			},
+		}).Build()
+
+	_, err := clusterReconciler(c).Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: "dev"}})
+	if err == nil || errors.Is(err, reconcile.TerminalError(nil)) {
+		t.Fatalf("err = %v, want a retryable error", err)
+	}
+	cond, _ := readyCondition(t, c, "dev")
+	if cond == nil || cond.Reason != ReasonApplyError {
+		t.Errorf("Ready condition = %+v", cond)
+	}
+}
+
+// Deletes carry the UID of the object the reconciler saw, so a binding recreated under the same
+// name by someone else in the meantime is not the one removed.
+func TestReconcile_DeleteCarriesUIDPrecondition(t *testing.T) {
+	t.Parallel()
+	w := &writes{}
+	legacy := helmBinding("user-authz:dev:user:custom-cluster-role:d8:user-authz:istio:user", "d8:user-authz:istio:user")
+	legacy.UID = "uid-legacy"
+	var seen []types.UID
+	c := newBuilder(t, w, car("dev", desired.AccessLevelUser), legacy).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Delete: func(ctx context.Context, cl client.WithWatch, obj client.Object, opts ...client.DeleteOption) error {
+				o := &client.DeleteOptions{}
+				o.ApplyOptions(opts)
+				if o.Preconditions != nil && o.Preconditions.UID != nil {
+					seen = append(seen, *o.Preconditions.UID)
+				}
+				return cl.Delete(ctx, obj, opts...)
+			},
+		}).Build()
+
+	reconcileCluster(t, c, "dev")
+
+	if len(seen) != 1 || seen[0] != "uid-legacy" {
+		t.Fatalf("delete preconditions = %v, want the UID of the legacy binding", seen)
 	}
 }
 
