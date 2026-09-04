@@ -21,6 +21,8 @@ spec:
     - name: v1alpha1
       served: true
       storage: true
+      deprecated: true
+      deprecationWarning: ModuleConfig is deprecated. Use Module instead.
       schema:
         openAPIV3Schema:
           type: object
