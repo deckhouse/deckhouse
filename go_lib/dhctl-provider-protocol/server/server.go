@@ -21,7 +21,6 @@ import (
 	"log/slog"
 	"net"
 	"runtime/debug"
-	"slices"
 	"sync"
 
 	"google.golang.org/grpc"
@@ -30,75 +29,12 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-const (
-	// MaxMessageSize is the limit the protocol mandates in each direction.
-	// gRPC's own 4 MiB default is too small for a payload carrying every
-	// NodeGroup, InstanceClass and credential Secret of a cluster.
-	MaxMessageSize = 8 * 1024 * 1024
-	DefaultNetwork = "tcp"
-	DefaultAddress = "127.0.0.1:0"
-)
-
 // Service registers itself on a gRPC server. Each wire version of an action
 // provides one — see validate/v1.NewService — and a caller may pass a service of
 // its own (health, reflection, its own protobuf API): the transport registers
 // whatever it is given and knows nothing about the actions themselves.
 type Service interface {
 	Register(registrar grpc.ServiceRegistrar)
-}
-
-type Config struct {
-	Network     string
-	Address     string
-	Logger      *slog.Logger
-	GRPCOptions []grpc.ServerOption
-}
-
-func NewConfig() Config {
-	return Config{
-		Network: DefaultNetwork,
-		Address: DefaultAddress,
-		Logger:  slog.Default(),
-		GRPCOptions: []grpc.ServerOption{
-			grpc.MaxRecvMsgSize(MaxMessageSize),
-			grpc.MaxSendMsgSize(MaxMessageSize),
-		},
-	}
-}
-
-func (c Config) Validate() error {
-	if c.Network == "" {
-		return fmt.Errorf("network is required")
-	}
-
-	if c.Address == "" {
-		return fmt.Errorf("address is required")
-	}
-
-	if c.Logger == nil {
-		return fmt.Errorf("logger is required")
-	}
-
-	return nil
-}
-
-func (c Config) Merge(other Config) Config {
-	if other.Network != "" {
-		c.Network = other.Network
-	}
-
-	if other.Address != "" {
-		c.Address = other.Address
-	}
-
-	if other.Logger != nil {
-		c.Logger = other.Logger
-	}
-
-	if len(other.GRPCOptions) > 0 {
-		c.GRPCOptions = slices.Concat(c.GRPCOptions, other.GRPCOptions)
-	}
-	return c
 }
 
 // Start starts a gRPC server and returns a Server instance.

@@ -16,6 +16,7 @@ package external
 
 import (
 	"context"
+	"flag"
 	"fmt"
 	"os"
 	"os/exec"
@@ -51,27 +52,47 @@ func TestMain(m *testing.M) {
 	if mode == "" {
 		os.Exit(m.Run())
 	}
-	os.Exit(runFakeValidator(mode))
+
+	// A bundle whose binary predates the gRPC protocol: it never gets as far as
+	// reading the arguments.
+	if mode == modeLegacy {
+		fmt.Fprintf(os.Stderr, "unknown subcommand: %s\n", server.ServeCommand)
+
+		os.Exit(1)
+	}
+
+	config, err := parseFakeValidatorArgs(os.Args[1:])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+
+		os.Exit(1)
+	}
+
+	os.Exit(runFakeValidator(mode, config))
 }
 
-func runFakeValidator(mode string) int {
-	if mode == modeLegacy {
-		fmt.Fprintln(os.Stderr, "unknown subcommand: serve")
-
-		return 1
+// parseFakeValidatorArgs reads the command line the way a real validator reads it, so
+// a change to either side of the argv contract shows up here instead of in production.
+func parseFakeValidatorArgs(args []string) (server.Config, error) {
+	if len(args) == 0 {
+		return server.Config{}, fmt.Errorf("no subcommand, want %s", server.ServeCommand)
 	}
 
-	network, address := "", ""
-
-	for _, arg := range os.Args[1:] {
-		switch {
-		case strings.HasPrefix(arg, networkFlag):
-			network = strings.TrimPrefix(arg, networkFlag)
-		case strings.HasPrefix(arg, addressFlag):
-			address = strings.TrimPrefix(arg, addressFlag)
-		}
+	if args[0] != server.ServeCommand {
+		return server.Config{}, fmt.Errorf("unknown subcommand: %s", args[0])
 	}
 
+	flags := flag.NewFlagSet(server.ServeCommand, flag.ContinueOnError)
+	configGetter := server.ConfigGetterFromFlags(flags)
+
+	if err := flags.Parse(args[1:]); err != nil {
+		return server.Config{}, err
+	}
+
+	return configGetter(), nil
+}
+
+func runFakeValidator(mode string, config server.Config) int {
 	// A validator that leaves a child behind: the child inherits stdout and stderr,
 	// so the pipes stay open after the validator itself is gone.
 	if mode == modeOrphan {
@@ -90,10 +111,7 @@ func runFakeValidator(mode string) int {
 		time.Sleep(300 * time.Millisecond)
 	}
 
-	validator, err := server.Start(
-		server.Config{Network: network, Address: address},
-		server.NewValidateService(fakeValidator(mode)),
-	)
+	validator, err := server.Start(config, server.NewValidateService(fakeValidator(mode)))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 

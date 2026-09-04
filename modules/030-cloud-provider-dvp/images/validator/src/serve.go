@@ -24,31 +24,19 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/server"
 )
 
-type serveConfig struct {
-	network string
-	address string
-}
-
 func newServeCmd(logger *slog.Logger) *cobra.Command {
-	cfg := serveConfig{}
+	var configGetter server.ConfigGetter
 
 	cmd := &cobra.Command{
-		Use:   "serve",
+		Use:   server.ServeCommand,
 		Short: "Serve the validate action over gRPC",
-		Long: `Serve implements the validate action of the dhctl provider validator protocol.
-
-dhctl starts this command with the address it has chosen, calls it once and stops it
-with SIGTERM. Without --address it serves on loopback on a port the kernel picks.`,
-		Args: cobra.NoArgs,
+		Long:  "Serve implements the validate action of the dhctl provider validator protocol.",
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			ctx := cmd.Context()
 
 			validator, err := server.Start(
-				server.Config{
-					Network: cfg.network,
-					Address: cfg.address,
-					Logger:  logger,
-				},
+				configGetter().Merge(server.Config{Logger: logger}),
 				server.NewValidateService(Validator{}),
 			)
 
@@ -79,10 +67,6 @@ with SIGTERM. Without --address it serves on loopback on a port the kernel picks
 		},
 	}
 
-	cmd.Flags().StringVar(&cfg.address, "address", server.DefaultAddress,
-		"address to serve on: host:port, or a socket path when --network=unix")
-	cmd.Flags().StringVar(&cfg.network, "network", server.DefaultNetwork,
-		"network to serve on: unix or tcp")
-
+	configGetter = server.ConfigGetterFromFlags(cmd.Flags())
 	return cmd
 }

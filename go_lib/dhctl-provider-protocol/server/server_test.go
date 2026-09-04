@@ -15,7 +15,6 @@
 package server_test
 
 import (
-	"log/slog"
 	"net"
 	"os"
 	"path/filepath"
@@ -27,110 +26,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/server"
 )
-
-func TestConfigValidate(t *testing.T) {
-	tests := []struct {
-		name    string
-		config  server.Config
-		wantErr string
-	}{
-		{
-			name: "accepts a network, an address and a logger",
-			config: server.Config{
-				Network: "unix",
-				Address: "/tmp/v.sock",
-				Logger:  slog.Default(),
-			},
-		},
-		{
-			name: "rejects a missing network",
-			config: server.Config{
-				Address: "/tmp/v.sock",
-				Logger:  slog.Default(),
-			},
-			wantErr: "network is required",
-		},
-		{
-			// The caller allocates a fresh short path per run; a default would put
-			// the socket at a world-writable well-known path.
-			name: "rejects a missing address",
-			config: server.Config{
-				Network: "unix",
-				Logger:  slog.Default(),
-			},
-			wantErr: "address is required",
-		},
-		{
-			name: "rejects a missing logger",
-			config: server.Config{
-				Network: "unix",
-				Address: "/tmp/v.sock",
-			},
-			wantErr: "logger is required",
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			err := test.config.Validate()
-
-			if test.wantErr == "" {
-				if err != nil {
-					t.Fatalf("Validate() = %v, want nil", err)
-				}
-
-				return
-			}
-
-			if err == nil || !strings.Contains(err.Error(), test.wantErr) {
-				t.Fatalf("Validate() = %v, want it to mention %q", err, test.wantErr)
-			}
-		})
-	}
-}
-
-func TestConfigMerge(t *testing.T) {
-	tests := []struct {
-		name     string
-		base     server.Config
-		other    server.Config
-		want     server.Config
-		wantOpts int
-	}{
-		{
-			name: "keeps the base when the other is empty",
-			base: server.Config{Network: "unix", Address: "/tmp/base.sock"},
-			want: server.Config{Network: "unix", Address: "/tmp/base.sock"},
-		},
-		{
-			name:  "takes what the other sets",
-			base:  server.Config{Network: "unix", Address: "/tmp/base.sock"},
-			other: server.Config{Network: "tcp", Address: "127.0.0.1:0"},
-			want:  server.Config{Network: "tcp", Address: "127.0.0.1:0"},
-		},
-		{
-			name:     "adds the caller's options to the protocol's",
-			base:     server.NewConfig(),
-			other:    server.Config{Address: "127.0.0.1:0", GRPCOptions: []grpc.ServerOption{grpc.ConnectionTimeout(0)}},
-			want:     server.Config{Network: server.DefaultNetwork, Address: "127.0.0.1:0"},
-			wantOpts: 3,
-		},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			got := test.base.Merge(test.other)
-
-			if got.Network != test.want.Network || got.Address != test.want.Address {
-				t.Errorf("Merge() = %+v, want %+v", got, test.want)
-			}
-
-			if test.wantOpts != 0 && len(got.GRPCOptions) != test.wantOpts {
-				t.Errorf("GRPCOptions = %d, want %d", len(got.GRPCOptions), test.wantOpts)
-			}
-		})
-	}
-}
 
 func TestStart(t *testing.T) {
 	tests := []struct {

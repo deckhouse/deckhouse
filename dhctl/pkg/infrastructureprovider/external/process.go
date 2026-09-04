@@ -26,6 +26,7 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/server"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 )
 
@@ -43,10 +44,6 @@ const (
 
 	// maxLineSize bounds a single line of the validator's output.
 	maxLineSize = 4 * 1024 * 1024
-
-	serveSubcommand = "serve"
-	networkFlag     = "--network="
-	addressFlag     = "--address="
 )
 
 // ValidatorProcess manages a running validator process. Its whole lifetime hangs on
@@ -81,9 +78,7 @@ func StartValidatorProcess(ctx context.Context, binaryPath string, endpoint Endp
 	cmd := exec.CommandContext(
 		ctx,
 		binaryPath,
-		serveSubcommand,
-		networkFlag+endpoint.Network(),
-		addressFlag+endpoint.Address(),
+		server.ServeArgs(endpoint.Network(), endpoint.Address())...,
 	)
 
 	cmd.Cancel = func() error { return cmd.Process.Signal(syscall.SIGTERM) }
