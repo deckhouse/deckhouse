@@ -116,7 +116,11 @@ spec:
                     properties:
                       coreFraction:
                         description: |
-                          Процент гарантированной доли CPU, которая будет выделена виртуальной машине.
+                          Гарантированная доля CPU, выделяемая виртуальной машине, в процентах.
+
+                          При значении `Auto` выбор доли CPU передаётся Vertical VirtualMachine Autoscaler родительского кластера DVP.
+
+                          Vertical VirtualMachine Autoscaler включается автоматически, если модуль [`virtualization`](/modules/virtualization/) используется в редакции EE и включён модуль [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/). Кроме того, в ModuleConfig модуля `virtualization` должен быть включён feature gate `HotplugCPUAndMemoryWithInPlaceResize`.
                         type: string
                       cores:
                         description: |
