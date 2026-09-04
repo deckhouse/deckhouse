@@ -24,8 +24,11 @@ limitations under the License.
 // depth (subsystem roles aggregating module roles, "all" aggregating subsystems). For each manage
 // ClusterRoleBinding and each such namespace a RoleBinding d8:use:<use-role>:binding:<binding> is
 // kept; automated use RoleBindings that are no longer expected are removed. The whole set is
-// recomputed on every change (single request key); the manage ClusterRoleBindings are read through
-// a cache index so that a reconcile does not copy every ClusterRoleBinding of the cluster.
+// recomputed on every change (single request key); the ClusterRoleBindings are read through a cache
+// index by roleRef, one lookup per manage role, so that a reconcile does not copy every
+// ClusterRoleBinding of the cluster. A manage role is any ClusterRole labelled
+// rbac.deckhouse.io/kind=manage, whatever its name (the hook this reconciler replaces matched by
+// label too; user-created manage roles of the legacy scheme are named custom:*).
 package managebindings
 
 import (
@@ -56,9 +59,8 @@ const (
 	// RequestName is the constant key every event is mapped to.
 	RequestName = "manage-bindings"
 
-	// ManageBindingIndexField indexes the ClusterRoleBindings that reference a manage role.
-	ManageBindingIndexField = "user-authz.deckhouse.io/manage-binding"
-	manageBindingIndexValue = "true"
+	// RoleRefIndexField indexes the ClusterRoleBindings by the ClusterRole they reference.
+	RoleRefIndexField = "user-authz.deckhouse.io/role-ref"
 
 	LabelKind      = "rbac.deckhouse.io/kind"
 	LabelUseRole   = "rbac.deckhouse.io/use-role"
@@ -69,7 +71,6 @@ const (
 
 	KindManage = "manage"
 
-	manageRolePrefix     = "d8:manage:"
 	useRolePrefix        = "d8:use:role:"
 	relatedWithAnnotatio = "rbac.deckhouse.io/related-with"
 )
@@ -91,23 +92,34 @@ func New(c client.Client, log logr.Logger) *Reconciler {
 	return &Reconciler{client: c, log: log}
 }
 
-// ManageBindingIndexValue is the indexer of ManageBindingIndexField.
-func ManageBindingIndexValue(obj client.Object) []string {
+// RoleRefIndexValue is the indexer of RoleRefIndexField: the name of the referenced ClusterRole.
+func RoleRefIndexValue(obj client.Object) []string {
 	crb, ok := obj.(*rbacv1.ClusterRoleBinding)
-	if !ok || !isManageBinding(crb) {
+	if !ok || crb.RoleRef.Kind != "ClusterRole" {
 		return nil
 	}
-	return []string{manageBindingIndexValue}
+	return []string{crb.RoleRef.Name}
 }
 
-func isManageBinding(crb *rbacv1.ClusterRoleBinding) bool {
-	return crb.RoleRef.Kind == "ClusterRole" && strings.HasPrefix(crb.RoleRef.Name, manageRolePrefix)
+// IsManageBinding reports whether obj is a ClusterRoleBinding to a manage role, looked up through
+// reader (the manager's cache, which holds the manage ClusterRoles only, so a miss means "not a
+// manage role").
+func IsManageBinding(reader client.Reader, obj client.Object) bool {
+	crb, ok := obj.(*rbacv1.ClusterRoleBinding)
+	if !ok || crb.RoleRef.Kind != "ClusterRole" {
+		return false
+	}
+	role := &rbacv1.ClusterRole{}
+	if err := reader.Get(context.Background(), client.ObjectKey{Name: crb.RoleRef.Name}, role); err != nil {
+		return false
+	}
+	return role.Labels[LabelKind] == KindManage
 }
 
-// Register indexes the manage ClusterRoleBindings and wires the reconciler onto the manager.
+// Register indexes the ClusterRoleBindings by roleRef and wires the reconciler onto the manager.
 func Register(ctx context.Context, mgr manager.Manager) error {
-	if err := mgr.GetFieldIndexer().IndexField(ctx, &rbacv1.ClusterRoleBinding{}, ManageBindingIndexField, ManageBindingIndexValue); err != nil {
-		return fmt.Errorf("index clusterrolebindings by manage role: %w", err)
+	if err := mgr.GetFieldIndexer().IndexField(ctx, &rbacv1.ClusterRoleBinding{}, RoleRefIndexField, RoleRefIndexValue); err != nil {
+		return fmt.Errorf("index clusterrolebindings by roleRef: %w", err)
 	}
 	r := New(mgr.GetClient(), mgr.GetLogger().WithName("manage-bindings"))
 	if err := r.SetupWithManager(mgr); err != nil {
@@ -124,8 +136,7 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	})
 
 	manageBinding := eitherSide(func(obj client.Object) bool {
-		crb, ok := obj.(*rbacv1.ClusterRoleBinding)
-		return ok && isManageBinding(crb)
+		return IsManageBinding(r.client, obj)
 	})
 
 	manageRole := eitherSide(func(obj client.Object) bool {
@@ -165,26 +176,23 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 	}
 	resolver := NewResolver(roles.Items)
 
-	bindings := &rbacv1.ClusterRoleBindingList{}
-	if err := r.client.List(ctx, bindings, client.MatchingFields{ManageBindingIndexField: manageBindingIndexValue}); err != nil {
-		return reconcile.Result{}, fmt.Errorf("list manage clusterrolebindings: %w", err)
-	}
-
 	expected := make(map[client.ObjectKey]*rbacv1.RoleBinding)
-	for i := range bindings.Items {
-		crb := &bindings.Items[i]
-		if !isManageBinding(crb) {
+	for i := range roles.Items {
+		useRole, namespaces := resolver.UseRoleAndNamespaces(roles.Items[i].Name)
+		if useRole == "" || len(namespaces) == 0 {
 			continue
 		}
 
-		useRole, namespaces := resolver.UseRoleAndNamespaces(crb.RoleRef.Name)
-		if useRole == "" {
-			continue
+		bindings := &rbacv1.ClusterRoleBindingList{}
+		if err := r.client.List(ctx, bindings, client.MatchingFields{RoleRefIndexField: roles.Items[i].Name}); err != nil {
+			return reconcile.Result{}, fmt.Errorf("list clusterrolebindings of %s: %w", roles.Items[i].Name, err)
 		}
-
-		for _, namespace := range namespaces {
-			rb := UseBinding(crb, useRole, namespace)
-			expected[client.ObjectKeyFromObject(rb)] = rb
+		for j := range bindings.Items {
+			crb := &bindings.Items[j]
+			for _, namespace := range namespaces {
+				rb := UseBinding(crb, useRole, namespace)
+				expected[client.ObjectKeyFromObject(rb)] = rb
+			}
 		}
 	}
 

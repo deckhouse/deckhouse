@@ -89,7 +89,7 @@ func newClient(t *testing.T, objs ...client.Object) client.Client {
 	}
 	return fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithIndex(&rbacv1.ClusterRoleBinding{}, ManageBindingIndexField, ManageBindingIndexValue).
+		WithIndex(&rbacv1.ClusterRoleBinding{}, RoleRefIndexField, RoleRefIndexValue).
 		WithObjects(objs...).
 		Build()
 }
@@ -326,12 +326,51 @@ func TestReconcile_RecreatesBindingWithStaleRoleRef(t *testing.T) {
 	}
 }
 
-func TestManageBindingIndexValue(t *testing.T) {
+func TestRoleRefIndexValue(t *testing.T) {
 	t.Parallel()
-	if got := ManageBindingIndexValue(manageBinding("x", "d8:manage:others:manager")); len(got) != 1 {
-		t.Errorf("manage binding must be indexed, got %v", got)
+	if got := RoleRefIndexValue(manageBinding("x", "d8:manage:others:manager")); len(got) != 1 || got[0] != "d8:manage:others:manager" {
+		t.Errorf("binding must be indexed by its roleRef, got %v", got)
 	}
-	if got := ManageBindingIndexValue(manageBinding("x", "cluster-admin")); got != nil {
-		t.Errorf("unrelated binding must not be indexed, got %v", got)
+	roleBinding := manageBinding("x", "d8:manage:others:manager")
+	roleBinding.RoleRef.Kind = "Role"
+	if got := RoleRefIndexValue(roleBinding); got != nil {
+		t.Errorf("a binding to a Role must not be indexed, got %v", got)
+	}
+}
+
+// Manage roles are recognised by their label, not by their name: user-created manage roles of the
+// legacy scheme are named custom:*, and the hook this reconciler replaces projected them too.
+func TestReconcile_CustomNamedManageRoleIsProjected(t *testing.T) {
+	t.Parallel()
+	role := manageRole("custom:manage:others:manager", "subsystem", "others")
+	c := reconcileWith(t,
+		manageModuleRole("d8:manage:permission:module:test:edit", "others", "test-ns"),
+		role,
+		manageBinding("custom-binding", "custom:manage:others:manager"),
+		// a binding to a ClusterRole that is not a manage role must produce nothing
+		manageBinding("unrelated", "cluster-admin"),
+	)
+
+	mustExist(t, c, "test-ns", "d8:use:admin:binding:custom-binding")
+	list := &rbacv1.RoleBindingList{}
+	if err := c.List(t.Context(), list); err != nil {
+		t.Fatal(err)
+	}
+	if len(list.Items) != 1 {
+		t.Fatalf("use bindings = %d, want only the projection of the custom-named manage role", len(list.Items))
+	}
+}
+
+func TestIsManageBinding(t *testing.T) {
+	t.Parallel()
+	c := newClient(t, manageRole("custom:manage:others:manager", "subsystem", "others"))
+	if !IsManageBinding(c, manageBinding("x", "custom:manage:others:manager")) {
+		t.Error("a binding to a labelled manage role must match whatever the role is named")
+	}
+	if IsManageBinding(c, manageBinding("x", "d8:manage:missing")) {
+		t.Error("a binding to a ClusterRole that is not in the manage-role cache must not match")
+	}
+	if IsManageBinding(c, &rbacv1.RoleBinding{}) {
+		t.Error("a RoleBinding is never a manage binding")
 	}
 }
