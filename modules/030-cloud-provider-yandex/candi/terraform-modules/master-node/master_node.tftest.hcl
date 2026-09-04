@@ -29,6 +29,20 @@
 # Yandex Cloud provider is mocked, so nothing is created and no credentials are
 # needed; the provider still has to be installable for its schema.
 #
+# No module under candi/ declares required_providers: dhctl generates and injects a versions.tf
+# at runtime. A bare `tofu init` here therefore resolves the *implied* address hashicorp/yandex
+# (latest 0.114.0), which is the wrong namespace and far behind the pinned
+# yandex-cloud/yandex 0.174.0 - its plugin fails to answer, and the runs are validated against
+# the wrong schema. Drop in the same versions.tf dhctl injects before running the suite:
+#
+#   terraform {
+#     required_providers {
+#       yandex = { source = "yandex-cloud/yandex", version = "0.174.0" }
+#     }
+#   }
+#
+# Keep it out of the committed tree so the runtime injection is not perturbed.
+#
 # Every output of this module is a compute instance attribute and therefore
 # unknown during a mocked plan, so a run that produces a plan at all is the
 # assertion. That is exactly the regression these tests guard: the module used to
@@ -106,6 +120,47 @@ run "state_a_standard" {
   assert {
     condition     = output.kubernetes_data_device_path == "/dev/disk/by-id/virtio-kubernetes-data"
     error_message = "expected a stable device path for the kubernetes-data disk"
+  }
+
+  # The PCC above omits platform, diskType and diskSizeGB, so the migration projection has to
+  # supply the *pre-migration terraform* values. Getting these wrong replaces the master boot
+  # disk and the etcd disk of every cluster that never set them, so assert the configured
+  # attributes rather than only that a plan is produced: a typo in the read path
+  # (e.g. platformId for platformID) would otherwise fall through try() to the v1 fallbacks
+  # standard-v3 / network-hdd and go unnoticed.
+  assert {
+    condition     = yandex_compute_instance.master.platform_id == "standard-v2"
+    error_message = "expected the PCC projection to pin the pre-migration platform standard-v2"
+  }
+
+  assert {
+    condition     = yandex_compute_disk.kubernetes_data.type == "network-ssd"
+    error_message = "expected the PCC projection to pin the pre-migration disk type network-ssd"
+  }
+
+  # etcdDiskSizeGb: 20 in the PCC, spelled with a lowercase b, must reach the CRD-spelled
+  # etcdDiskSizeGB and size the etcd disk.
+  assert {
+    condition     = yandex_compute_disk.kubernetes_data.size == 20
+    error_message = "expected etcdDiskSizeGb: 20 from the PCC to size the kubernetes-data disk"
+  }
+
+  # nodeIndex defaults to 0, so the node lands in the first cluster zone. The disk zone is
+  # ForceNew: a change in zone ordering recreates the etcd disk.
+  assert {
+    condition     = yandex_compute_disk.kubernetes_data.zone == "ru-central1-a"
+    error_message = "expected node 0 to take the first cluster zone, ru-central1-a"
+  }
+
+  # diskSizeGB is omitted above, so the projection's default of 50 has to reach the boot disk.
+  assert {
+    condition     = yandex_compute_instance.master.boot_disk[0].initialize_params[0].size == 50
+    error_message = "expected an omitted diskSizeGB to become the pre-migration default of 50"
+  }
+
+  assert {
+    condition     = yandex_compute_instance.master.boot_disk[0].initialize_params[0].type == "network-ssd"
+    error_message = "expected the boot disk to use the pre-migration disk type network-ssd"
   }
 }
 
@@ -407,18 +462,20 @@ run "state_b_with_external_ip_addresses_from_module_config" {
     error_message = "expected a stable device path for the kubernetes-data disk"
   }
 
-  # The instance class above omits platformID and diskType, exactly like the copy
-  # dhctl parses out of the bootstrap resources YAML before the apiserver applies
-  # the CRD defaults. The fallbacks must be the CRD defaults, otherwise the first
-  # converge after bootstrap replaces the master node and its etcd disk.
+  # The instance class above omits platformID and diskType. The CRD carries no real `default:`
+  # for them - only x-doc-default - so neither an instance class read back from the cluster nor
+  # the copy dhctl parses out of the bootstrap resources YAML arrives with them filled in. These
+  # fallbacks are the single source of the values, and they must match what the CRD documents
+  # for v1, otherwise bootstrap and the first converge disagree and replace the master node and
+  # its etcd disk.
   assert {
     condition     = yandex_compute_instance.master.platform_id == "standard-v3"
-    error_message = "expected an omitted platformID to fall back to the CRD default standard-v3"
+    error_message = "expected an omitted platformID to fall back to the documented v1 value standard-v3"
   }
 
   assert {
     condition     = yandex_compute_disk.kubernetes_data.type == "network-hdd"
-    error_message = "expected an omitted diskType to fall back to the CRD default network-hdd"
+    error_message = "expected an omitted diskType to fall back to the documented v1 value network-hdd"
   }
 }
 

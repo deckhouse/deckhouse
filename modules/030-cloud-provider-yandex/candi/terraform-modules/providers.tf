@@ -29,11 +29,13 @@ locals {
   # configuration the rest of the layout plans against.
   _resolved_provider_parameters = try(module.migration.settings.spec.settings.provider.parameters, {})
 
-  # The selection itself lives in the migration module, which resolves the source of truth;
-  # nonsensitive() is needed to look values up by key here and to keep the WithNATInstance
-  # layout able to publish the monitoring API key in cloud_discovery_data, exactly as it did
-  # before the migration.
-  credentials = nonsensitive(module.migration.credentials)
+  # The selection itself lives in the migration module, which resolves the source of truth.
+  # The map stays sensitive here: lookup() works on a sensitive map, and provider arguments
+  # accept sensitive values, so nothing on this path needs the marker removed. Keeping it means
+  # the service account key cannot reach an output or a plan-visible expression by accident.
+  # The one place that genuinely has to publish a credential - the WithNATInstance monitoring
+  # API key in cloud_discovery_data - unwraps it explicitly at the point of use.
+  credentials = module.migration.credentials
 }
 
 provider "yandex" {
