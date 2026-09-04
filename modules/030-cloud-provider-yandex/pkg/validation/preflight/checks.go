@@ -30,7 +30,7 @@ import (
 
 // Validation violation codes for legacy ProviderClusterConfiguration checks.
 const (
-	CodeInvalidClusterPrefix						   = "cluster_prefix_invalid"
+	CodeInvalidClusterPrefix                           = "cluster_prefix_invalid"
 	CodePCCInvalidServiceAccountSecret                 = "pcc_invalid_service_account_secret"
 	CodePCCMasterReplicasGreaterExternalIPAddresses    = "pcc_master_node_group_replicas_greater_length_of_extrenal_ip_addresses"
 	CodePCCNodeGroupReplicasGreaterExternalIPAddresses = "pcc_node_group_replicas_greater_length_of_extrenal_ip_addresses"
@@ -52,8 +52,9 @@ func ValidatePreflight(state *ycval.State, operation string, clusterPrefix strin
 
 	result := cpvalapi.Result{}
 
-	// Common checks
-	validateClusterPrefix(clusterPrefix)
+	// Common checks: they apply to every cluster, migrated or not, so they run before the
+	// migration gate below rather than inside one of the two model-specific branches.
+	result.Merge(validateClusterPrefix(clusterPrefix))
 
 	// Validate legacy ProviderClusterConfiguration.
 	if state.HasProviderClusterConfig() {
@@ -91,10 +92,10 @@ func validateClusterPrefix(prefix string) cpvalapi.Result {
 
 	if !prefixRegex.MatchString(prefix) {
 		result.AddError(
-			"",
+			"ClusterConfiguration.cloud.prefix",
 			CodeInvalidClusterPrefix,
-			"prefix",
-			fmt.Sprintf("invalid prefix %s, prefix must match the pattern: %s", prefix, prefixRegex.String()),
+			prefix,
+			fmt.Sprintf("invalid prefix %q, prefix must match the pattern: %s", prefix, prefixRegex.String()),
 		)
 	}
 
