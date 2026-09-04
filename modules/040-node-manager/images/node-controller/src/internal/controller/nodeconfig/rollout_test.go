@@ -222,24 +222,6 @@ func TestGroupConcurrencyNeverFreezesAGroup(t *testing.T) {
 	}
 }
 
-// A node pinned to an address it no longer reports is one apply() is about to
-// rewrite. It is genuinely mid-update, and reading the pending rewrite as
-// "stuck on an older spec" would free a slot to a second node of the group.
-func TestBudgetKeepsANodeWhoseAddressChanged(t *testing.T) {
-	desired := internalv1alpha1.NodeSpec{NodeName: "n1", OSImage: internalv1alpha1.OSImage{Digest: testOSImageDigest}}
-	pinned := desired
-	pinned.Kubelet.NodeIP = "10.0.0.10"
-
-	updating := membersOfUpdating(
-		[]internalv1alpha1.NodeConfig{notApplied("n1", pinned)},
-		map[string]internalv1alpha1.NodeSpec{"n1": desired},
-	)
-
-	if _, ok := updating["n1"]; !ok {
-		t.Fatal("a node whose address the render is about to release must hold its slot")
-	}
-}
-
 // The held node's log line names who it is waiting for, so the order has to be
 // the group's and not the map's — an operator comparing two lines must not see
 // the same group reshuffled.
@@ -318,11 +300,11 @@ func TestBudgetIgnoresOrphans(t *testing.T) {
 }
 
 // The bootstrap-only fields the render cannot reproduce must not read as drift:
-// a node keeping the address it booted with is not stuck on an older spec.
+// a node keeping the status token it minted is not stuck on an older spec.
 func TestBudgetIgnoresBootstrapOnlyFields(t *testing.T) {
 	desired := internalv1alpha1.NodeSpec{NodeName: "n1", OSImage: internalv1alpha1.OSImage{Digest: testOSImageDigest}}
 	bootstrapped := desired
-	bootstrapped.Kubelet.NodeIP = "10.0.0.5"
+	bootstrapped.StatusToken = "1f8b0800000000000003"
 
 	updating := membersOfUpdating(
 		[]internalv1alpha1.NodeConfig{notApplied("n1", bootstrapped)},
@@ -330,7 +312,7 @@ func TestBudgetIgnoresBootstrapOnlyFields(t *testing.T) {
 	)
 
 	if _, ok := updating["n1"]; !ok {
-		t.Fatal("a node carrying the current spec plus its bootstrapped address must hold its slot")
+		t.Fatal("a node carrying the current spec plus its own status token must hold its slot")
 	}
 }
 

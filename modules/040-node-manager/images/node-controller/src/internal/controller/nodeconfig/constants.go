@@ -69,6 +69,14 @@ const (
 	clusterConfigSecretName = "d8-cluster-configuration"
 	clusterConfigKey        = "cluster-configuration.yaml"
 
+	// staticConfigSecretName and providerConfigSecretName carry the network the
+	// cluster addresses its nodes in. A cluster has one of the two, never both,
+	// so neither read may fail the pass when its secret is absent.
+	staticConfigSecretName   = "d8-static-cluster-configuration"
+	staticConfigKey          = "static-cluster-configuration.yaml"
+	providerConfigSecretName = "d8-provider-cluster-configuration"
+	providerConfigKey        = "cloud-provider-cluster-configuration.yaml"
+
 	// defaultClusterDomain is what ClusterConfiguration defaults clusterDomain to.
 	defaultClusterDomain = "cluster.local"
 

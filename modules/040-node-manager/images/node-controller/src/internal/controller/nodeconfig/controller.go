@@ -256,11 +256,7 @@ func (r *Reconciler) apply(ctx context.Context, ng *v1.NodeGroup, node *corev1.N
 		return nil, fmt.Errorf("get NodeConfig %s: %w", desired.Name, err)
 	}
 
-	reported, err := r.reportedNodeIPs(ctx, node.Name, existing.Spec.Kubelet.NodeIP)
-	if err != nil {
-		return nil, err
-	}
-	keepBootstrapOnlyFields(&desired.Spec, &existing.Spec, reported)
+	keepBootstrapOnlyFields(&desired.Spec, &existing.Spec)
 
 	if upToDate(existing, desired) {
 		logger.V(1).Info("NodeConfig unchanged", "node", desired.Name)

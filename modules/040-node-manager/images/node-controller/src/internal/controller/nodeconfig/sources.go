@@ -31,6 +31,8 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,6 +47,10 @@ import (
 type clusterInputs struct {
 	// APIServerEndpoints are the addresses the node-local proxy balances over.
 	APIServerEndpoints []string
+	// InternalNetworkCIDRs are the subnets the cluster's own traffic runs on.
+	// A multi-homed node picks the interface addressed inside one of them; a
+	// cluster that never said has none, and every node picks for itself.
+	InternalNetworkCIDRs []string
 	// KubernetesVersion is the cluster's minor version, e.g. "1.34". kubelet's
 	// feature gates depend on it (bashible turns DRA gates on by version), so a
 	// node not told the version cannot follow.
@@ -124,7 +130,97 @@ func (s *sourceReader) readClusterState(ctx context.Context, in *clusterInputs) 
 	in.ClusterDNS = dns
 
 	in.KubernetesCA, err = s.readClusterCA(ctx)
+	if err != nil {
+		return err
+	}
+
+	in.InternalNetworkCIDRs, err = s.readInternalNetworkCIDRs(ctx)
 	return err
+}
+
+// readInternalNetworkCIDRs returns the subnets the cluster's own traffic runs
+// on: the static configuration's list first, then the provider's single subnet.
+// A cluster carries one of the two secrets, so a missing one is an empty answer.
+func (s *sourceReader) readInternalNetworkCIDRs(ctx context.Context) ([]string, error) {
+	static, err := s.readConfigurationSecret(ctx, staticConfigSecretName, staticConfigKey)
+	if err != nil {
+		return nil, err
+	}
+	cidrs, _, err := unstructured.NestedStringSlice(static, "internalNetworkCIDRs")
+	if err != nil {
+		return nil, fmt.Errorf("read the internal networks of %s/%s: %w", kubeSystemNS, staticConfigSecretName, err)
+	}
+
+	provider, err := s.readConfigurationSecret(ctx, providerConfigSecretName, providerConfigKey)
+	if err != nil {
+		return nil, err
+	}
+	cidr, err := providerInternalNetworkCIDR(provider)
+	if err != nil {
+		return nil, err
+	}
+	if cidr == "" {
+		return cidrs, nil
+	}
+	return append(cidrs, cidr), nil
+}
+
+// readConfigurationSecret returns one of the cluster's configuration documents
+// as a plain map. An absent secret is the other kind of cluster and yields
+// nothing; a document that cannot be parsed stops the pass, as every read here does.
+func (s *sourceReader) readConfigurationSecret(ctx context.Context, name, key string) (map[string]any, error) {
+	secret := &corev1.Secret{}
+	err := s.Reader.Get(ctx, types.NamespacedName{Namespace: kubeSystemNS, Name: name}, secret)
+	if apierrors.IsNotFound(err) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("read %s/%s: %w", kubeSystemNS, name, err)
+	}
+	raw, ok := secret.Data[key]
+	if !ok {
+		return nil, nil
+	}
+	var config map[string]any
+	if err := sigsyaml.Unmarshal(raw, &config); err != nil {
+		return nil, fmt.Errorf("parse %s of %s/%s: %w", key, kubeSystemNS, name, err)
+	}
+	return config, nil
+}
+
+// providerNetworkCIDRPaths maps a provider ClusterConfiguration kind to where it
+// keeps the subnet its nodes are addressed in, first match wins. Mirrors their
+// candi/openapi/cluster_configuration.yaml schemas and dhctl/pkg/immutable/network_cidrs.go.
+var providerNetworkCIDRPaths = map[string][][]string{
+	"AWSClusterConfiguration":         {{"nodeNetworkCIDR"}},
+	"AzureClusterConfiguration":       {{"subnetCIDR"}},
+	"DynamixClusterConfiguration":     {{"nodeNetworkCIDR"}},
+	"GCPClusterConfiguration":         {{"subnetworkCIDR"}},
+	"HuaweiCloudClusterConfiguration": {{"standard", "internalNetworkCIDR"}, {"vpcPeering", "internalNetworkCIDR"}},
+	"OpenStackClusterConfiguration":   {{"standard", "internalNetworkCIDR"}, {"standardWithNoRouter", "internalNetworkCIDR"}},
+	"VCDClusterConfiguration":         {{"internalNetworkCIDR"}},
+	"VsphereClusterConfiguration":     {{"internalNetworkCIDR"}},
+	"YandexClusterConfiguration":      {{"nodeNetworkCIDR"}},
+}
+
+// providerInternalNetworkCIDR picks the node subnet out of a provider cluster
+// configuration, read unstructured: typing ten providers here would be ten
+// schemas to keep in step for one string each.
+func providerInternalNetworkCIDR(config map[string]any) (string, error) {
+	kind, _, err := unstructured.NestedString(config, "kind")
+	if err != nil {
+		return "", fmt.Errorf("read the kind of %s/%s: %w", kubeSystemNS, providerConfigSecretName, err)
+	}
+	for _, path := range providerNetworkCIDRPaths[kind] {
+		cidr, found, err := unstructured.NestedString(config, path...)
+		if err != nil {
+			return "", fmt.Errorf("read %s.%s of %s: %w", kind, strings.Join(path, "."), providerConfigSecretName, err)
+		}
+		if found && cidr != "" {
+			return cidr, nil
+		}
+	}
+	return "", nil
 }
 
 // readReleaseImages fills in what the release ships and how a node reaches it.
@@ -160,26 +256,6 @@ func (s *sourceReader) readReleaseImages(ctx context.Context, in *clusterInputs)
 
 	in.SandboxImage, err = sandboxImage(images, imagesRepo)
 	return err
-}
-
-// reportedNodeIPs returns the node's reported internal addresses, read from the
-// API server (the manager's cache strips Node.status.addresses). Nothing is
-// read unless the config pins an address — only the bootstrapped first master.
-func (r *Reconciler) reportedNodeIPs(ctx context.Context, nodeName, pinned string) ([]string, error) {
-	if pinned == "" {
-		return nil, nil
-	}
-	node := &corev1.Node{}
-	if err := r.sources.Reader.Get(ctx, types.NamespacedName{Name: nodeName}, node); err != nil {
-		return nil, fmt.Errorf("read the addresses of node %s: %w", nodeName, err)
-	}
-	var addresses []string
-	for _, address := range node.Status.Addresses {
-		if address.Type == corev1.NodeInternalIP {
-			addresses = append(addresses, address.Address)
-		}
-	}
-	return addresses, nil
 }
 
 // readRegistry describes the cluster's registry: the spec a node needs to reach

@@ -18,6 +18,8 @@ package nodebootstrap
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -178,6 +180,15 @@ func (s *TemplateStorage) render(ctx context.Context, ng *v1.NodeGroup, bootstra
 	}
 	spec.Kubelet.BootstrapToken = bootstrapToken
 
+	// A machine with no config yet has no token to keep, so every read mints
+	// one: the operator pushes it with the config and asks the node for its
+	// status with it afterwards.
+	token, err := statusToken()
+	if err != nil {
+		return nil, err
+	}
+	spec.StatusToken = token
+
 	spec.Network = internalv1alpha1.Network{}
 	spec.Storage = internalv1alpha1.Storage{}
 
@@ -188,6 +199,16 @@ func (s *TemplateStorage) render(ctx context.Context, ng *v1.NodeGroup, bootstra
 		ObjectMeta: metav1.ObjectMeta{Name: ng.Name},
 		Spec:       spec,
 	}, nil
+}
+
+// statusToken mints the bearer a machine will answer its :50000 status port
+// with.
+func statusToken() (string, error) {
+	token := make([]byte, statusTokenBytes)
+	if _, err := rand.Read(token); err != nil {
+		return "", fmt.Errorf("generate a status token: %w", err)
+	}
+	return hex.EncodeToString(token), nil
 }
 
 // machineOwnedConfig reports whether this group's nodes bring their own
