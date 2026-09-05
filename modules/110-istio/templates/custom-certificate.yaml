@@ -1,8 +1,6 @@
-{{ if or (eq (include "helm_lib_module_ingress_enabled" .) "true") (eq (include "helm_lib_module_gateway_enabled" .) "true") }}
-{{ include "helm_lib_module_https_copy_custom_certificate" (list . "d8-istio" "istio-ingress-tls") }}
-{{ end }}
-{{ if .Values.istio.multicluster.enabled }}
-{{ if or (eq (include "helm_lib_module_ingress_enabled" .) "true") (eq (include "helm_lib_module_gateway_enabled" .) "true") }}
-{{ include "helm_lib_module_https_copy_custom_certificate" (list . "d8-istio" "api-proxy-ingress-tls") }}
-{{ end }}
-{{ end }}
+{{- if or (eq (include "helm_lib_module_ingress_enabled" .) "true") (eq (include "helm_lib_module_gateway_enabled" .) "true") }}
+{{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-istio" "istio-ingress-tls") }}
+{{- if .Values.istio.multicluster.enabled }}
+{{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-istio" "api-proxy-ingress-tls") }}
+{{- end }}
+{{- end }}
