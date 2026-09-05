@@ -18,6 +18,8 @@ package template_tests
 
 import (
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -33,13 +35,6 @@ func Test(t *testing.T) {
 }
 
 const (
-	customClusterRolesFlat = `---
-admin:
-  - cert-manager:user-authz:user
-editor:
-- cert-manager:user-authz:editor
-`
-
 	testCLusterRoleCRDsWithLimitNamespaces = `---
 - name: testenev
   spec:
@@ -118,17 +113,23 @@ var testCRDsWithCRDsKeyJSON, _ = ConvertYAMLToJSON([]byte(testCLusterRoleCRDsWit
 var _ = Describe("Module :: user-authz :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
+	// The BE-edition templates live under ee/be; link them into the module so the render covers
+	// them. Paths are derived from this file, so the suite runs both in CI (/deckhouse) and locally.
+	_, thisFile, _, _ := runtime.Caller(0)
+	moduleDir := filepath.Join(filepath.Dir(thisFile), "..")
+	repoRoot := filepath.Join(moduleDir, "..", "..")
+
 	BeforeSuite(func() {
-		err := os.Symlink("/deckhouse/ee/be/modules/140-user-authz/templates/webhook", "/deckhouse/modules/140-user-authz/templates/webhook")
+		err := os.Symlink(filepath.Join(repoRoot, "ee/be/modules/140-user-authz/templates/webhook"), filepath.Join(moduleDir, "templates/webhook"))
 		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink("/deckhouse/ee/be/modules/140-user-authz/templates/permission-browser-apiserver", "/deckhouse/modules/140-user-authz/templates/permission-browser-apiserver")
+		err = os.Symlink(filepath.Join(repoRoot, "ee/be/modules/140-user-authz/templates/permission-browser-apiserver"), filepath.Join(moduleDir, "templates/permission-browser-apiserver"))
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
 	AfterSuite(func() {
-		err := os.Remove("/deckhouse/modules/140-user-authz/templates/webhook")
+		err := os.Remove(filepath.Join(moduleDir, "templates/webhook"))
 		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Remove("/deckhouse/modules/140-user-authz/templates/permission-browser-apiserver")
+		err = os.Remove(filepath.Join(moduleDir, "templates/permission-browser-apiserver"))
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
@@ -145,7 +146,6 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		// - webhook/secret.yaml requires webhookCertificate when enableMultiTenancy=true
 		f.ValuesSetFromYaml("userAuthz.internal.clusterAuthRuleCrds", `[]`)
 		f.ValuesSetFromYaml("userAuthz.internal.authRuleCrds", `[]`)
-		f.ValuesSetFromYaml("userAuthz.internal.customClusterRoles", `{}`)
 
 		f.ValuesSet("global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA", "test")
 		f.ValuesSet("userAuthz.internal.webhookCertificate.ca", "test")
@@ -164,7 +164,6 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd"]`)
 			f.ValuesSetFromYaml("userAuthz.internal.clusterAuthRuleCrds", testCLusterRoleCRDsWithLimitNamespaces)
 			f.ValuesSetFromYaml("userAuthz.internal.authRuleCrds", testRoleCRDs)
-			f.ValuesSetFromYaml("userAuthz.internal.customClusterRoles", customClusterRolesFlat)
 
 			f.ValuesSet("userAuthz.enableMultiTenancy", true)
 			f.ValuesSet("userAuthz.controlPlaneConfigurator.enabled", true)
@@ -211,22 +210,41 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(rb.Field("subjects.0.name").String()).To(Equal("Namespace Testenev"))
 		})
 
-		It("Should create additional ClusterRoleBinding for each ClusterRole with the \"user-authz.deckhouse.io/access-level\" annotation", func() {
-			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:admin:custom-cluster-role:cert-manager:user-authz:user")
-			Expect(crb.Exists()).To(BeTrue())
+		It("Should create aggregated custom ClusterRoles with cascading selectors and no rules of their own", func() {
+			levels := []string{"User", "PrivilegedUser", "Editor", "Admin", "ClusterEditor", "ClusterAdmin"}
+			names := []string{"user", "privileged-user", "editor", "admin", "cluster-editor", "cluster-admin"}
+			for i, name := range names {
+				role := f.KubernetesGlobalResource("ClusterRole", "user-authz:"+name+":custom")
+				Expect(role.Exists()).To(BeTrue(), name)
+				Expect(role.Field("rules").Exists()).To(BeFalse(), "%s: rules are owned by the aggregation controller", name)
+				selectors := role.Field("aggregationRule.clusterRoleSelectors").Array()
+				Expect(selectors).To(HaveLen(i+1), name)
+				for j, selector := range selectors {
+					Expect(selector.Get("matchLabels.user-authz\\.deckhouse\\.io/access-level").String()).To(Equal(levels[j]), name)
+				}
+			}
+		})
 
-			Expect(crb.Field("roleRef.name").String()).To(Equal("cert-manager:user-authz:user"))
-			Expect(crb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
+		It("Should create one aggregated custom ClusterRoleBinding per CAR", func() {
+			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:admin:custom")
+			Expect(crb.Exists()).To(BeTrue())
+			Expect(crb.Field("roleRef.name").String()).To(Equal("user-authz:admin:custom"))
+			Expect(crb.Field("metadata.labels.user-authz\\.deckhouse\\.io/binding-kind").String()).To(Equal("aggregated-custom"))
 			Expect(crb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
 		})
 
-		It("Should create additional RoleBinding for each ClusterRole with the \"user-authz.deckhouse.io/access-level\" annotation", func() {
-			rb := f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:editor:custom-cluster-role:cert-manager:user-authz:editor")
+		It("Should create one aggregated custom RoleBinding per AR", func() {
+			rb := f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:editor:custom")
 			Expect(rb.Exists()).To(BeTrue())
-
-			Expect(rb.Field("roleRef.name").String()).To(Equal("cert-manager:user-authz:editor"))
 			Expect(rb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
-			Expect(rb.Field("subjects.0.name").String()).To(Equal("Namespace Testenev"))
+			Expect(rb.Field("roleRef.name").String()).To(Equal("user-authz:editor:custom"))
+			Expect(rb.Field("metadata.labels.user-authz\\.deckhouse\\.io/binding-kind").String()).To(Equal("aggregated-custom"))
+		})
+
+		It("Should not render the former per-custom-role bindings", func() {
+			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:admin").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:admin:custom-cluster-role:cert-manager:user-authz:user").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:editor:custom-cluster-role:cert-manager:user-authz:editor").Exists()).To(BeFalse())
 		})
 
 		Context("portForwarding option is set in a CAR", func() {

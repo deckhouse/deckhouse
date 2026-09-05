@@ -15,6 +15,30 @@ linters-settings:
   rbac:
     exclude-rules:
       placement:
+        - kind: ClusterRole
+          name: user-authz:user:custom
+        - kind: ClusterRole
+          name: user-authz:privileged-user:custom
+        - kind: ClusterRole
+          name: user-authz:editor:custom
+        - kind: ClusterRole
+          name: user-authz:admin:custom
+        - kind: ClusterRole
+          name: user-authz:cluster-editor:custom
+        - kind: ClusterRole
+          name: user-authz:cluster-admin:custom
+        - kind: ClusterRoleBinding
+          name: user-authz:editor-crd:editor:custom
+        - kind: ClusterRoleBinding
+          name: user-authz:user-crd:user:custom
+        - kind: ClusterRoleBinding
+          name: user-authz:admin-crd:cluster-editor:custom
+        - kind: RoleBinding
+          name: user-authz:editor-crd:editor:custom
+        - kind: RoleBinding
+          name: user-authz:user-crd:user:custom
+        - kind: RoleBinding
+          name: user-authz:admin-crd:admin:custom
         - kind: RoleBinding
           name: user-authz:admin-crd:admin:custom-cluster-role:d8:user-authz:cert-manager:admin
         - kind: RoleBinding

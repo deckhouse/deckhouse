@@ -823,6 +823,8 @@ The `allowed: false` message means that the webhook doesn't block access. In cas
 
 If you want to grant more privileges to a specific [high-level role](./#current-role-based-model), you only need to create a ClusterRole with the `user-authz.deckhouse.io/access-level: <AccessLevel>` annotation.
 
+Such ClusterRoles are not bound to users one by one. The module keeps an aggregated ClusterRole `user-authz:<access-level>:custom` per access level (for example, `user-authz:editor:custom`), which collects the rules of every annotated ClusterRole of that level and of the levels below it, and every `ClusterAuthorizationRule`/`AuthorizationRule` with an `accessLevel` gets a single binding to that aggregated role. The module sets the `user-authz.deckhouse.io/access-level` label on annotated ClusterRoles automatically; the aggregation is done by the Kubernetes aggregation controller, so new rules take effect without a module redeploy. In audit logs, access granted this way is attributed to the aggregated role rather than to the individual annotated ClusterRole.
+
 An example:
 
 ```yaml
