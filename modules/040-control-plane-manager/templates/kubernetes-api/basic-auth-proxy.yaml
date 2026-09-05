@@ -77,9 +77,6 @@ metadata:
   {{- if .Values.controlPlaneManager.apiserver.publishAPI.ingress.whitelistSourceRanges }}
     alb.network.deckhouse.io/whitelist-source-range: {{ .Values.controlPlaneManager.apiserver.publishAPI.ingress.whitelistSourceRanges | join "," }}
   {{- end }}
-  {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
-    alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
-  {{- end }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
 spec:
   hostnames:
@@ -105,5 +102,13 @@ spec:
       - name: Authorization
         type: RegularExpression
         value: ^(.*)Basic(.*)$
+    {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
+    filters:
+    - type: ResponseHeaderModifier
+      responseHeaderModifier:
+        add:
+        - name: Strict-Transport-Security
+          value: max-age=31536000; includeSubDomains
+    {{- end }}
 {{- end }}
 {{- end }}
