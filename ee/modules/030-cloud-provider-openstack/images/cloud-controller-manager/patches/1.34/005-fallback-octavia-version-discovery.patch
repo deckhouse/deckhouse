@@ -1,0 +1,91 @@
+diff --git a/pkg/client/service.go b/pkg/client/service.go
+index e5c47d7..f3bccd0 100644
+--- a/pkg/client/service.go
++++ b/pkg/client/service.go
+@@ -18,9 +18,12 @@ package client
+ 
+ import (
+ 	"fmt"
++	"strings"
+ 
+ 	"github.com/gophercloud/gophercloud/v2"
+ 	"github.com/gophercloud/gophercloud/v2/openstack"
++	tokens2 "github.com/gophercloud/gophercloud/v2/openstack/identity/v2/tokens"
++	tokens3 "github.com/gophercloud/gophercloud/v2/openstack/identity/v3/tokens"
+ )
+ 
+ // NewNetworkV2 creates a ServiceClient that may be used with the neutron v2 API
+@@ -56,11 +59,73 @@ func NewLoadBalancerV2(provider *gophercloud.ProviderClient, eo *gophercloud.End
+ 	var err error
+ 	lb, err = openstack.NewLoadBalancerV2(provider, *eo)
+ 	if err != nil {
++		if strings.Contains(err.Error(), "invalid format") {
++			lb, fallbackErr := newLoadBalancerV2FromCatalog(provider, *eo)
++			if fallbackErr == nil {
++				return lb, nil
++			}
++			return nil, fmt.Errorf("failed to find load-balancer v2 %s endpoint for region %s: %v (fallback from service catalog failed: %v)", eo.Availability, eo.Region, err, fallbackErr)
++		}
+ 		return nil, fmt.Errorf("failed to find load-balancer v2 %s endpoint for region %s: %v", eo.Availability, eo.Region, err)
+ 	}
+ 	return lb, nil
+ }
+ 
++func newLoadBalancerV2FromCatalog(provider *gophercloud.ProviderClient, eo gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error) {
++	eo.ApplyDefaults("load-balancer")
++	if eo.Version != 0 && eo.Version != 2 {
++		return nil, fmt.Errorf("conflict between requested service major version and manually set version")
++	}
++	eo.Version = 2
++
++	authResult := provider.GetAuthResult()
++	if authResult == nil {
++		return nil, fmt.Errorf("no auth result available")
++	}
++
++	var endpoint string
++	var err error
++	switch result := authResult.(type) {
++	case tokens2.CreateResult:
++		catalog, catalogErr := result.ExtractServiceCatalog()
++		if catalogErr != nil {
++			return nil, catalogErr
++		}
++		endpoint, err = openstack.V2EndpointURL(catalog, eo)
++	case tokens3.CreateResult:
++		catalog, catalogErr := result.ExtractServiceCatalog()
++		if catalogErr != nil {
++			return nil, catalogErr
++		}
++		endpoint, err = openstack.V3EndpointURL(catalog, eo)
++	case tokens3.GetResult:
++		catalog, catalogErr := result.ExtractServiceCatalog()
++		if catalogErr != nil {
++			return nil, catalogErr
++		}
++		endpoint, err = openstack.V3EndpointURL(catalog, eo)
++	default:
++		return nil, fmt.Errorf("unsupported auth result type %T", authResult)
++	}
++	if err != nil {
++		return nil, err
++	}
++
++	// The OpenStack Octavia API paths used by gophercloud are rooted at /v2.0/.
++	// VK Cloud may publish patch-level discovery versions like v2.14.1, which
++	// gophercloud v2.8.0 cannot parse, so this fallback intentionally skips
++	// version discovery and uses the catalog endpoint directly.
++	endpoint = gophercloud.NormalizeURL(endpoint)
++	resourceBase := strings.Replace(endpoint, "v2.0/", "", -1) + "v2.0/"
++
++	return &gophercloud.ServiceClient{
++		ProviderClient: provider,
++		Endpoint:       endpoint,
++		ResourceBase:   resourceBase,
++		Type:           "load-balancer",
++	}, nil
++}
++
+ // NewKeyManagerV1 creates a ServiceClient that can be used with KeyManager v1 API
+ func NewKeyManagerV1(provider *gophercloud.ProviderClient, eo *gophercloud.EndpointOpts) (*gophercloud.ServiceClient, error) {
+ 	secret, err := openstack.NewKeyManagerV1(provider, *eo)
