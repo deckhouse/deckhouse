@@ -20,20 +20,6 @@
 {{- end }}
 
 
-{{- define "publish_api_deploy_certificate" }}
-  {{- if .Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled }}
-    {{- if eq .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode "Global" -}}
-      {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" }}
-      "not empty string"
-      {{- end }}
-    {{- else if eq .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode "SelfSigned" }}
-      {{- if .Values.global.enabledModules | has "cert-manager" }}
-      "not empty string"
-      {{- end }}
-    {{- end }}
-  {{- end }}
-{{- end }}
-
 {{/*
   Returns "true" when the control-plane-manager DaemonSet must set NODE_ADMIN_KUBECONFIG=false so the
   controller removes the /root/.kube/config -> admin.conf symlink.

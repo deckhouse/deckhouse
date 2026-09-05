@@ -1,7 +1,23 @@
 {{- $ingressEnabled := eq (include "helm_lib_module_ingress_enabled" .) "true" }}
 {{- $gatewayEnabled := eq (include "helm_lib_module_gateway_enabled" .) "true" }}
+{{- $publishAPIEnabled := .Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled }}
+{{- $mode := "" }}
+{{- if $publishAPIEnabled }}
+  {{- $mode = .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode }}
+{{- end }}
 {{- if .Values.global.enabledModules | has "cert-manager" }}
-{{- if and (include "publish_api_deploy_certificate" .) $ingressEnabled }}
+{{- /*
+  A SelfSigned certificate, like a CustomCertificate, has no per-mechanism issuance or validation
+  (it's a local Issuer, not an ACME ClusterIssuer), so it's shared between Ingress and Gateway API
+  and must be deployed whenever either one is enabled — not just Ingress.
+*/ -}}
+{{- $deployPrimaryCertificate := false }}
+{{- if and $publishAPIEnabled $ingressEnabled (eq $mode "Global") (eq (include "helm_lib_module_https_mode" .) "CertManager") }}
+  {{- $deployPrimaryCertificate = true }}
+{{- else if and $publishAPIEnabled (or $ingressEnabled $gatewayEnabled) (eq $mode "SelfSigned") }}
+  {{- $deployPrimaryCertificate = true }}
+{{- end }}
+{{- if $deployPrimaryCertificate }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -16,16 +32,16 @@ spec:
   dnsNames:
   - {{ include "helm_lib_module_public_domain" (list . "api") }}
   issuerRef:
-  {{- if eq .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode "Global" }}
+  {{- if eq $mode "Global" }}
     name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
     kind: ClusterIssuer
-  {{- else if eq .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode "SelfSigned" }}
+  {{- else if eq $mode "SelfSigned" }}
     name: kubernetes-api
     kind: Issuer
   {{- end }}
 {{- end }}
 {{- end }}
-{{- if and $gatewayEnabled .Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled (eq .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode "Global") (eq (include "helm_lib_module_https_mode" .) "CertManager") }}
+{{- if and $gatewayEnabled $publishAPIEnabled (eq $mode "Global") (eq (include "helm_lib_module_https_mode" .) "CertManager") }}
 {{- $issuerName := include "helm_lib_module_https_cert_manager_cluster_issuer_name_for_gateway_api" . }}
 ---
 apiVersion: cert-manager.io/v1
