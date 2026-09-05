@@ -1,1 +1,3 @@
-{{- include "helm_lib_module_https_copy_custom_certificate_for_gateway_api" (list . "d8-openvpn" "ingress-tls") -}}
+{{- if or (eq (include "helm_lib_module_ingress_enabled" .) "true") (eq (include "helm_lib_module_gateway_enabled" .) "true") }}
+{{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-openvpn" "ingress-tls") -}}
+{{- end }}

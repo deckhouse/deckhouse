@@ -21,7 +21,7 @@ spec:
       certificateRefs:
       - group: ""
         kind: Secret
-        name: {{ include "helm_lib_module_https_secret_name_for_gateway_api" (list . "istio-ingress-tls" "istio-httproute-tls") }}
+        name: {{ include "helm_lib_module_https_secret_name_or_shared" (list . "istio-ingress-tls" "istio-httproute-tls") }}
         namespace: d8-{{ $.Chart.Name }}
       mode: Terminate
   - allowedRoutes:
@@ -53,7 +53,7 @@ spec:
       certificateRefs:
       - group: ""
         kind: Secret
-        name: {{ include "helm_lib_module_https_secret_name_for_gateway_api" (list . "istio-ingress-tls" "istio-httproute-tls") }}
+        name: {{ include "helm_lib_module_https_secret_name_or_shared" (list . "istio-ingress-tls" "istio-httproute-tls") }}
         namespace: d8-{{ $.Chart.Name }}
       mode: Terminate
   - allowedRoutes:
@@ -67,7 +67,7 @@ spec:
       certificateRefs:
       - group: ""
         kind: Secret
-        name: {{ include "helm_lib_module_https_secret_name_for_gateway_api" (list . "api-proxy-ingress-tls" "api-proxy-httproute-tls") }}
+        name: {{ include "helm_lib_module_https_secret_name_or_shared" (list . "api-proxy-ingress-tls" "api-proxy-httproute-tls") }}
         namespace: d8-{{ $.Chart.Name }}
       mode: Terminate
   - allowedRoutes:
