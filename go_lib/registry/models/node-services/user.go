@@ -18,6 +18,8 @@ package nodeservices
 
 import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
+
+	"github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 )
 
 var (
@@ -33,8 +35,10 @@ type User struct {
 
 func (user User) Validate() error {
 	return validation.ValidateStruct(&user,
-		validation.Field(&user.Name, validation.Required),
-		validation.Field(&user.Password, validation.Required),
-		validation.Field(&user.PasswordHash, validation.Required),
+		// The name becomes a mapping key and an ACL matcher in the docker_auth
+		// configuration, so it is bounded and constrained to a registry account name.
+		validation.Field(&user.Name, validation.Required, validation.By(helpers.RegistryAccountName)),
+		validation.Field(&user.Password, validation.Required, validation.By(helpers.EncodableString)),
+		validation.Field(&user.PasswordHash, validation.Required, validation.By(helpers.EncodableString)),
 	)
 }

@@ -17,10 +17,13 @@ limitations under the License.
 package bashible
 
 import (
+	"errors"
 	"fmt"
 	"slices"
 
 	validation "github.com/go-ozzo/ozzo-validation/v4"
+
+	"github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 )
 
 var (
@@ -61,16 +64,39 @@ type ConfigRewrite struct {
 }
 
 func (c Config) Validate() error {
-	return validation.ValidateStruct(&c,
+	if err := validation.ValidateStruct(&c,
 		validation.Field(&c.Mode, validation.Required),
 		validation.Field(&c.Version, validation.Required),
 		validation.Field(&c.ImagesBase, validation.Required),
-		validation.Field(&c.ProxyEndpoints, validation.Each(validation.Required)),
+		// Proxy endpoints are rendered into `server <value>;` in the NGINX
+		// configuration of the node load balancer, which has no quoting of its
+		// own, and into an unquoted heredoc that runs as root. Only the
+		// `<ip>:<port>` form the module generates is accepted, plus the
+		// bootstrap placeholder the bashible step resolves.
+		validation.Field(&c.ProxyEndpoints,
+			validation.Each(validation.Required, validation.By(helpers.ProxyEndpoint)),
+		),
 		// Hosts key must not be empty
 		validation.Field(&c.Hosts, validation.Required),
 		// Validate each host
 		validation.Field(&c.Hosts, validation.Each(validation.Required)),
-	)
+	); err != nil {
+		return err
+	}
+
+	// Each key becomes a directory name under /etc/containerd/registry.d and is
+	// interpolated into the shell commands that create it, so it is constrained
+	// to a registry host. ozzo validates map values, not keys.
+	for host := range c.Hosts {
+		if host == "" {
+			return errors.New("hosts key validation failed: must not be empty")
+		}
+		if err := helpers.RegistryHost(host); err != nil {
+			return fmt.Errorf("hosts key %q validation failed: %w", host, err)
+		}
+	}
+
+	return nil
 }
 
 func (h ConfigHosts) Validate() error {
@@ -96,8 +122,14 @@ func (h ConfigHosts) Validate() error {
 
 func (m ConfigMirrorHost) Validate() error {
 	return validation.ValidateStruct(&m,
-		validation.Field(&m.Host, validation.Required),
-		validation.Field(&m.Scheme, validation.Required),
+		// The host becomes a table key in hosts.toml and part of the CA file
+		// name beside it, both written through an unquoted heredoc, so the
+		// bootstrap placeholder is admitted and nothing else that carries a
+		// shell metacharacter.
+		validation.Field(&m.Host, validation.Required, validation.By(helpers.MirrorHost)),
+		// The scheme selects skip_verify and ca handling in the generated
+		// hosts.toml, so only the two the bashible step branches on are accepted.
+		validation.Field(&m.Scheme, validation.Required, validation.By(helpers.URLScheme)),
 	)
 }
 

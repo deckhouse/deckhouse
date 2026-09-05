@@ -18,6 +18,8 @@ package nodeservices
 
 import (
 	validation "github.com/go-ozzo/ozzo-validation/v4"
+
+	"github.com/deckhouse/deckhouse/go_lib/registry/helpers"
 )
 
 var (
@@ -46,11 +48,15 @@ type UpstreamRegistry struct {
 	TTL      *string `json:"ttl,omitempty"`
 }
 
+// Validate constrains the upstream registry to an address the distribution
+// configuration can carry: `<scheme>://<host>` is concatenated into its
+// `remoteurl`, so the scheme decides TLS handling and the host decides where
+// cached images come from.
 func (upstream UpstreamRegistry) Validate() error {
 	return validation.ValidateStruct(&upstream,
-		validation.Field(&upstream.Scheme, validation.Required),
-		validation.Field(&upstream.Host, validation.Required),
-		validation.Field(&upstream.Path, validation.Required),
+		validation.Field(&upstream.Scheme, validation.Required, validation.By(helpers.URLScheme)),
+		validation.Field(&upstream.Host, validation.Required, validation.By(helpers.RegistryHost)),
+		validation.Field(&upstream.Path, validation.Required, validation.By(helpers.URLPath)),
 		validation.Field(&upstream.User, validation.When(upstream.Password != "", validation.Required)),
 		validation.Field(&upstream.Password, validation.When(upstream.User != "", validation.Required)),
 	)

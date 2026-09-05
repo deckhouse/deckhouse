@@ -20,10 +20,25 @@ import (
 	"strings"
 )
 
+// SplitAddressAndPath splits a registry reference into its host and its
+// repository path.
+//
+// Both parts are trimmed of surrounding whitespace. Trimming only the reference
+// as a whole is not enough: the host is used as a directory name under
+// /etc/containerd/registry.d and as a key in the generated hosts.toml, so
+// `example.com /path` must not yield the host `example.com `. Whether the host
+// is trimmed would otherwise depend on a path following it.
 func SplitAddressAndPath(ref string) (string, string) {
-	parts := strings.SplitN(strings.TrimSpace(strings.TrimRight(ref, "/")), "/", 2)
-	if len(parts) == 1 {
-		return parts[0], ""
+	host, path, found := strings.Cut(strings.TrimSpace(strings.TrimRight(ref, "/")), "/")
+
+	host = strings.TrimSpace(host)
+	if !found {
+		return host, ""
 	}
-	return parts[0], "/" + parts[1]
+
+	if path = strings.TrimSpace(path); path == "" {
+		return host, ""
+	}
+
+	return host, "/" + path
 }

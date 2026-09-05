@@ -19,6 +19,14 @@ mkdir -p /etc/kubernetes/registry-proxy
 # Need for bootstrap Local and Proxy registry modes
 discovered_node_ip="$(bb-d8-node-ip)"
 
+# The heredoc below is deliberately unquoted: in Local and Proxy mode dhctl puts
+# ${discovered_node_ip} in the proxy endpoints, and the shell resolving it here
+# is the only thing that turns it into this node's address. Quoting the delimiter
+# would leave the placeholder in nginx.conf verbatim and the balancer would not
+# start. Because the body is expanded, every value interpolated into it is
+# subject to parameter and command substitution as root -- what keeps that safe
+# is helpers.ProxyEndpoint in go_lib/registry/helpers/validate.go, which admits
+# an <ip>:<port> pair and that one placeholder and nothing else.
 bb-sync-file /etc/kubernetes/registry-proxy/nginx_new.conf - << EOF
 user deckhouse;
 

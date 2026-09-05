@@ -265,6 +265,26 @@ func (b *ConfigBuilder) build() (*Config, error) {
 		return nil, fmt.Errorf("failed to compute config version: %w", err)
 	}
 	ret.Version = version
+
+	// Validate before publishing, not only on the way in.
+	//
+	// Two of the inputs here come from objects the module does not own: the
+	// master node addresses are read from Node.status.addresses, and the
+	// Unmanaged parameters from the deckhouse-registry secret. They reach
+	// `server <value>;` in the node balancer's NGINX configuration and the
+	// directory names under /etc/containerd/registry.d, and the rules for those
+	// sinks live in bashible.Config.Validate.
+	//
+	// Without this check the rules were applied only by the consumer, in
+	// bashible-apiserver, which refuses the secret it cannot validate -- so a
+	// single malformed node address stopped registry configuration updates for
+	// the whole cluster, with the reason visible only on the other side. Failing
+	// here names the offending value instead, and stops relying on a validation
+	// call in another module to be the only one.
+	if err := bashible.Config(ret).Validate(); err != nil {
+		return nil, fmt.Errorf("built configuration is invalid: %w", err)
+	}
+
 	return &ret, nil
 }
 

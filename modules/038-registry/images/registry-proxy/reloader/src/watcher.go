@@ -31,9 +31,27 @@ import (
 	"golang.org/x/sys/unix"
 )
 
-const (
+// The paths and the two side effects are variables rather than constants so
+// that the reload logic can be driven in a test.
+//
+// Without a seam here the input file cannot be fuzzed at all -- the paths are
+// absolute container paths, and sendReloadSignal walks the process table of
+// whatever machine the test runs on and signals the first process whose command
+// line mentions nginx. A test that reached it would signal an unrelated process
+// on a developer's machine.
+var (
 	nginxConf    = "/etc/nginx/config/nginx.conf"
 	nginxNewConf = "/etc/nginx/config/nginx_new.conf"
+
+	// testConfig runs the configuration check that gates applying a new file.
+	testConfig = func(path string) ([]byte, error) {
+		// Force nginx to log config test errors to stderr.
+		return exec.Command("nginx", "-t", "-c", path,
+			"-e", "/dev/stderr", "-g", "error_log stderr;").CombinedOutput()
+	}
+
+	// signalReload tells the running nginx to re-read its configuration.
+	signalReload = sendReloadSignal
 )
 
 func nginxReload() error {
@@ -56,8 +74,7 @@ func nginxReload() error {
 
 	log.Printf("%s differs from %s, validating and reloading nginx...", nginxNewConf, nginxConf)
 
-	// Force nginx to log config test errors to stderr.
-	output, err := exec.Command("nginx", "-t", "-c", nginxNewConf, "-e", "/dev/stderr", "-g", "error_log stderr;").CombinedOutput()
+	output, err := testConfig(nginxNewConf)
 	if err != nil {
 		return fmt.Errorf("nginx configuration test failed: %s", string(output))
 	}
@@ -68,7 +85,7 @@ func nginxReload() error {
 		return fmt.Errorf("failed to copy nginx_new.conf to nginx.conf: %s", err)
 	}
 
-	err = sendReloadSignal()
+	err = signalReload()
 	if err != nil {
 		return fmt.Errorf("failed to send SIGHUP to nginx process: %s", err)
 	}
@@ -89,7 +106,7 @@ func sendReloadSignal() error {
 			return err
 		}
 
-		if strings.Contains(cmdline, "nginx") {
+		if isNginxMasterCmdline(cmdline) {
 			err := p.SendSignal(unix.SIGHUP)
 			if err != nil {
 				return err
@@ -98,6 +115,47 @@ func sendReloadSignal() error {
 		}
 	}
 	return nil
+}
+
+// isNginxMasterCmdline reports whether a command line belongs to the nginx
+// master process, which is the only process SIGHUP means "reload" to.
+//
+// The test is narrow on purpose. A substring match on "nginx" also matches a
+// worker, for which SIGHUP means "shut down gracefully"; the `nginx -t` child
+// this reloader spawns itself; and any unrelated process that merely mentions
+// the word, such as a tail of an nginx log. sendReloadSignal stops at the first
+// match, so one of those matching first means the master is never signalled and
+// the new configuration is never applied -- with the copy already done, so the
+// files agree and the next event skips the reload as well.
+//
+// nginx rewrites its process title, so the master reads as
+// "nginx: master process <path> ..." and a worker as "nginx: worker process".
+// The bare executable form is accepted too, for the window before the title is
+// rewritten: the container entrypoint is
+// ["/opt/nginx-static/sbin/nginx", "-g", "daemon off;"].
+func isNginxMasterCmdline(cmdline string) bool {
+	if strings.HasPrefix(cmdline, "nginx: master process") {
+		return true
+	}
+
+	// Before the title is rewritten the command line is the executable and its
+	// arguments. Accept that only when the executable itself is nginx, not when
+	// nginx appears somewhere in the arguments.
+	fields := strings.Fields(cmdline)
+	if len(fields) == 0 {
+		return false
+	}
+	if filepath.Base(fields[0]) != "nginx" {
+		return false
+	}
+	// `nginx -t` and `nginx -s ...` are one-shot invocations, not the master.
+	for _, arg := range fields[1:] {
+		switch arg {
+		case "-t", "-T", "-s", "-v", "-V", "-h", "-?":
+			return false
+		}
+	}
+	return true
 }
 
 func copyFile(src, dst string) error {

@@ -192,7 +192,7 @@ func TestConfigToContext(t *testing.T) {
 				Mode:           "unmanaged",
 				Version:        "unknown",
 				ImagesBase:     "registry.d8-system.svc/deckhouse/system",
-				ProxyEndpoints: []string{"192.168.1.1"},
+				ProxyEndpoints: []string{"192.168.1.1:5001"},
 				Hosts: map[string]ConfigHosts{
 					"registry.d8-system.svc": {
 						Mirrors: []ConfigMirrorHost{
@@ -219,7 +219,7 @@ func TestConfigToContext(t *testing.T) {
 				Mode:                 "unmanaged",
 				Version:              "unknown",
 				ImagesBase:           "registry.d8-system.svc/deckhouse/system",
-				ProxyEndpoints:       []string{"192.168.1.1"},
+				ProxyEndpoints:       []string{"192.168.1.1:5001"},
 				Hosts: map[string]ContextHosts{
 					"registry.d8-system.svc": {
 						Mirrors: []ContextMirrorHost{
