@@ -1,0 +1,10 @@
+name: cloud-provider-metal3
+critical: true
+weight: 30
+subsystems:
+  - infrastructure
+namespace: d8-cloud-provider-metal3
+stage: Experimental
+descriptions:
+  en: Manages interaction with Metal3 resources. Allows to use BareMetalHost resources for provisioning nodes.
+  ru: Управляет взаимодействием с ресурсами Metal3. Позволяет использовать BareMetalHost для создания узлов.

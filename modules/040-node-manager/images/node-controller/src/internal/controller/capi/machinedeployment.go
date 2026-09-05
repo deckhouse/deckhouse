@@ -116,6 +116,11 @@ func (r *MachineDeploymentReconciler) SetupWatches(w register.Watcher) {
 			return common.InstanceClassToNodeGroups(ctx, r.Client, obj)
 		}),
 		predicate.GenerationChangedPredicate{}))
+	w.WatchesRawSource(common.LazyMetal3ImageSource(r.Cache,
+		handler.EnqueueRequestsFromMapFunc(func(ctx context.Context, obj client.Object) []reconcile.Request {
+			return common.Metal3ImageToNodeGroups(ctx, r.Client, obj)
+		}),
+		predicate.GenerationChangedPredicate{}))
 }
 
 // ForPredicates filters NodeGroup events: the rendered MachineDeployments depend only on

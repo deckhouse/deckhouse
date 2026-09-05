@@ -1,0 +1,109 @@
+{{- $ironic := dig "nodes" "parameters" "ironic" dict .Values.cloudProviderMetal3 -}}
+{{- if $ironic }}
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: metal3-instance-manager
+  namespace: d8-cloud-provider-metal3
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: metal3-instance-manager
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+rules:
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - metal3instances
+  verbs:
+  - get
+  - list
+  - watch
+  - patch
+  - update
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - metal3instances/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - metal3instances/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - metal3.io
+  resources:
+  - baremetalhosts
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - watch
+  - create
+  - update
+  - patch
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: metal3-instance-manager
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: metal3-instance-manager
+subjects:
+- kind: ServiceAccount
+  name: metal3-instance-manager
+  namespace: d8-cloud-provider-metal3
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metal3-instance-manager
+  namespace: d8-cloud-provider-metal3
+  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metal3-instance-manager
+  template:
+    metadata:
+      labels:
+        app: metal3-instance-manager
+    spec:
+      serviceAccountName: metal3-instance-manager
+      containers:
+      - name: manager
+        image: {{ include "helm_lib_module_image" (list . "metal3InstanceManager") }}
+        args:
+        - --target-namespace=d8-cloud-instance-manager
+        resources:
+          requests:
+            cpu: 10m
+            memory: 32Mi
+          limits:
+            cpu: 100m
+            memory: 128Mi
+{{- end }}

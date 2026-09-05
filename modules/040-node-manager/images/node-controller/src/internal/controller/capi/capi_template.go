@@ -17,16 +17,18 @@ limitations under the License.
 package capi
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/util/yaml"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/log"
-	sigsyaml "sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/machineclass"
@@ -66,15 +68,39 @@ func (r *MachineDeploymentReconciler) applyCAPIMachineTemplate(
 	if err != nil {
 		return fmt.Errorf("render CAPI MachineTemplate %s: %w", templateName, err)
 	}
-	obj := map[string]interface{}{}
-	if err := sigsyaml.Unmarshal(rendered, &obj); err != nil {
+
+	objects, err := decodeRenderedTemplateObjects(rendered)
+	if err != nil {
 		return fmt.Errorf("parse rendered CAPI MachineTemplate %s: %w", templateName, err)
 	}
-	mt := &unstructured.Unstructured{Object: obj}
-	if err := r.Client.Patch(ctx, mt, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
-		return fmt.Errorf("apply CAPI MachineTemplate %s: %w", templateName, err)
+	for _, obj := range objects {
+		if err := r.Client.Patch(ctx, obj, client.Apply, client.FieldOwner("node-controller"), client.ForceOwnership); err != nil {
+			return fmt.Errorf("apply CAPI template object %s/%s %s: %w", obj.GetAPIVersion(), obj.GetKind(), obj.GetName(), err)
+		}
 	}
 	return nil
+}
+
+func decodeRenderedTemplateObjects(rendered []byte) ([]*unstructured.Unstructured, error) {
+	decoder := yaml.NewYAMLOrJSONDecoder(bytes.NewReader(rendered), 4096)
+	objects := make([]*unstructured.Unstructured, 0, 1)
+	for {
+		obj := map[string]interface{}{}
+		if err := decoder.Decode(&obj); err != nil {
+			if err == io.EOF {
+				break
+			}
+			return nil, err
+		}
+		if len(obj) == 0 {
+			continue
+		}
+		objects = append(objects, &unstructured.Unstructured{Object: obj})
+	}
+	if len(objects) == 0 {
+		return nil, fmt.Errorf("rendered template is empty")
+	}
+	return objects, nil
 }
 
 // pruneStaleCAPI deletes CAPI MachineDeployments and infrastructure MachineTemplates that

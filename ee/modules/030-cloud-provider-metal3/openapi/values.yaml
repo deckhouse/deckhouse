@@ -1,0 +1,232 @@
+type: object
+properties:
+  nodes:
+    type: object
+    additionalProperties: false
+    required:
+    - parameters
+    properties:
+      parameters:
+        type: object
+        additionalProperties: false
+        required:
+        - ironic
+        properties:
+          ironic:
+            type: object
+            additionalProperties: false
+            oneOf:
+            - required:
+              - externalInstance
+              not:
+                anyOf:
+                - required:
+                  - provisioningNetwork
+                - required:
+                  - dhcp
+                - required:
+                  - ramdiskImageRef
+            - required:
+              - provisioningNetwork
+              - dhcp
+              not:
+                required:
+                - externalInstance
+            properties:
+              externalInstance:
+                type: object
+                additionalProperties: false
+                required:
+                - endpoint
+                properties:
+                  endpoint:
+                    type: string
+                    pattern: '^https?://.+/v1/?$'
+                  credentialsRef:
+                    type: object
+                    additionalProperties: false
+                    required:
+                    - kind
+                    - name
+                    - namespace
+                    properties:
+                      kind:
+                        type: string
+                        enum:
+                        - Secret
+                      name:
+                        type: string
+                      namespace:
+                        type: string
+                        pattern: '^d8-cloud-provider-metal3$'
+                  tls:
+                    type: object
+                    additionalProperties: false
+                    properties:
+                      caCertRef:
+                        type: object
+                        additionalProperties: false
+                        required:
+                        - kind
+                        - name
+                        - namespace
+                        - key
+                        properties:
+                          kind:
+                            type: string
+                            enum:
+                            - Secret
+                          name:
+                            type: string
+                          namespace:
+                            type: string
+                            pattern: '^d8-cloud-provider-metal3$'
+                          key:
+                            type: string
+                      clientCertRef:
+                        type: object
+                        additionalProperties: false
+                        required:
+                        - kind
+                        - name
+                        - namespace
+                        - certKey
+                        - privateKey
+                        properties:
+                          kind:
+                            type: string
+                            enum:
+                            - Secret
+                          name:
+                            type: string
+                          namespace:
+                            type: string
+                            pattern: '^d8-cloud-provider-metal3$'
+                          certKey:
+                            type: string
+                          privateKey:
+                            type: string
+                      insecure:
+                        type: boolean
+                        default: false
+              provisioningNetwork:
+                type: object
+                additionalProperties: false
+                required:
+                - interface
+                - ipAddress
+                properties:
+                  interface:
+                    type: string
+                  ipAddress:
+                    type: string
+                    format: ipv4
+                  ipAddressManager:
+                    type: string
+                    default: keepalived
+                    pattern: '^keepalived$'
+              dhcp:
+                type: object
+                additionalProperties: false
+                oneOf:
+                - required:
+                  - internal
+                - required:
+                  - external
+                properties:
+                  internal:
+                    type: object
+                    additionalProperties: false
+                    not:
+                      required:
+                      - dnsAddress
+                      - serveDNS
+                      properties:
+                        serveDNS:
+                          enum:
+                          - true
+                    required:
+                    - networkCIDR
+                    - rangeBegin
+                    - rangeEnd
+                    properties:
+                      networkCIDR:
+                        type: string
+                        format: cidr
+                      rangeBegin:
+                        type: string
+                        format: ipv4
+                      rangeEnd:
+                        type: string
+                        format: ipv4
+                      dnsAddress:
+                        type: string
+                        format: ipv4
+                      gatewayAddress:
+                        type: string
+                        format: ipv4
+                      serveDNS:
+                        type: boolean
+                        default: false
+                  external:
+                    type: object
+                    additionalProperties: false
+                    required:
+                    - pxeBootServer
+                    properties:
+                      pxeBootServer:
+                        type: string
+                        format: ipv4
+                      pxeBootFile:
+                        type: object
+                        additionalProperties: false
+                        properties:
+                          bios:
+                            type: string
+                          uefi:
+                            type: string
+              ramdiskImageRef:
+                type: object
+                additionalProperties: false
+                required:
+                - kind
+                - name
+                properties:
+                  kind:
+                    type: string
+                    enum:
+                    - Metal3RamdiskImage
+                  name:
+                    type: string
+  internal:
+    type: object
+    default: {}
+    additionalProperties: false
+    properties:
+      ramdiskImage:
+        type: object
+        additionalProperties: false
+        properties:
+          direct:
+            type: object
+            additionalProperties: false
+            required:
+            - architecture
+            - kernelURL
+            - initramfsURL
+            properties:
+              architecture:
+                type: string
+                pattern: '^(x86_64|aarch64)$'
+              kernelURL:
+                type: string
+              initramfsURL:
+                type: string
+      providerDiscoveryData:
+        type: object
+        default: {}
+        properties:
+          zones:
+            type: array
+            items:
+              type: string

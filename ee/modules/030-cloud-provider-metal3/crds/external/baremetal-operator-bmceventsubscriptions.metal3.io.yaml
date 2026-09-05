@@ -1,0 +1,98 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.5
+  name: bmceventsubscriptions.metal3.io
+spec:
+  group: metal3.io
+  names:
+    kind: BMCEventSubscription
+    listKind: BMCEventSubscriptionList
+    plural: bmceventsubscriptions
+    shortNames:
+    - bes
+    - bmcevent
+    singular: bmceventsubscription
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: The most recent error message
+      jsonPath: .status.error
+      name: Error
+      type: string
+    - description: Time duration since creation of BMCEventSubscription
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: BMCEventSubscription is the Schema for the fast eventing API
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object.
+
+              Servers should convert recognized schemas to the latest internal value,
+              and
+
+              may reject unrecognized values.
+
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents.
+
+              Servers may infer this from the endpoint the client submits requests
+              to.
+
+              Cannot be updated.
+
+              In CamelCase.
+
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            properties:
+              context:
+                description: Arbitrary user-provided context for the event
+                type: string
+              destination:
+                description: A webhook URL to send events to
+                type: string
+              hostName:
+                description: A reference to a BareMetalHost
+                type: string
+              httpHeadersRef:
+                description: 'A secret containing HTTP headers which should be passed
+                  along to the Destination
+
+                  when making a request'
+                properties:
+                  name:
+                    description: name is unique within a namespace to reference a
+                      secret resource.
+                    type: string
+                  namespace:
+                    description: namespace defines the space within which the secret
+                      name must be unique.
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
+            type: object
+          status:
+            properties:
+              error:
+                type: string
+              subscriptionID:
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

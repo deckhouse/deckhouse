@@ -1,0 +1,90 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.16.5
+  name: dataimages.metal3.io
+spec:
+  group: metal3.io
+  names:
+    kind: DataImage
+    listKind: DataImageList
+    plural: dataimages
+    singular: dataimage
+  scope: Namespaced
+  versions:
+  - name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: DataImage is the Schema for the dataimages API.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object.
+
+              Servers should convert recognized schemas to the latest internal value,
+              and
+
+              may reject unrecognized values.
+
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents.
+
+              Servers may infer this from the endpoint the client submits requests
+              to.
+
+              Cannot be updated.
+
+              In CamelCase.
+
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: DataImageSpec defines the desired state of DataImage.
+            properties:
+              url:
+                description: 'Url is the address of the dataImage that we want to
+                  attach
+
+                  to a BareMetalHost'
+                type: string
+            required:
+            - url
+            type: object
+          status:
+            description: DataImageStatus defines the observed state of DataImage.
+            properties:
+              attachedImage:
+                description: Currently attached DataImage
+                properties:
+                  url:
+                    type: string
+                required:
+                - url
+                type: object
+              error:
+                description: Error count and message when attaching/detaching
+                properties:
+                  count:
+                    type: integer
+                  message:
+                    type: string
+                required:
+                - count
+                - message
+                type: object
+              lastReconciled:
+                description: Time of last reconciliation
+                format: date-time
+                type: string
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
