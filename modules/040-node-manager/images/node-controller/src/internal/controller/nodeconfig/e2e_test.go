@@ -1298,9 +1298,9 @@ func heartbeat(ctx context.Context, nodeName string) {
 func setContainerdDigest(ctx context.Context, digest string) {
 	GinkgoHelper()
 
-	original := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q},"nodeManager":{"olcedar":%q},"common":{"pause":%q}}`,
+	original := fmt.Sprintf(`{"registrypackages":{"containerdSysext2":%q,"kubernetesCniSysext162":%q,"kubeletSysext135":%q,"nodeletSysext":%q},"nodeManager":{"olcedar":%q},"common":{"pause":%q}}`,
 		testContainerdDigest, testCNIDigest, testKubeletDigest, testNodeletDigest, testOSImageDigest, testPauseDigest)
-	updated := fmt.Sprintf(`{"registrypackages":{"containerdSysext224":%q,"kubernetesCniSysext162":%q,"kubeletSysext1356":%q,"nodeletSysext":%q},"nodeManager":{"olcedar":%q},"common":{"pause":%q}}`,
+	updated := fmt.Sprintf(`{"registrypackages":{"containerdSysext2":%q,"kubernetesCniSysext162":%q,"kubeletSysext135":%q,"nodeletSysext":%q},"nodeManager":{"olcedar":%q},"common":{"pause":%q}}`,
 		digest, testCNIDigest, testKubeletDigest, testNodeletDigest, testOSImageDigest, testPauseDigest)
 
 	writeDigests := func(ctx context.Context, data string) {
