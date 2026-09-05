@@ -1,0 +1,47 @@
+ci:
+  fixes:
+    - summary: Add REGCTL_CONFIG
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22707
+    - summary: Fix regctl in 1.76 build.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22809
+deckhouse:
+  fixes:
+    - summary: validate the hardlink target when extracting module and package images
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22644
+deckhouse-controller:
+  fixes:
+    - summary: >-
+        Honor a channel-level release suspend for clusters that reach the suspended version through a
+        step-by-step update.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22746
+      impact: >-
+        A Deckhouse release suspended on its release channel is no longer applied by clusters that are
+        behind and reach it through a step-by-step update. The suspend flag lives only in the release-channel
+        image; previously it was dropped when the target release was built from its per-version image,
+        so lagging clusters updated to a suspended release anyway.
+    - summary: Fix tests for check_release_tests
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22808
+descheduler:
+  features:
+    - summary: Always run the descheduler with the upstream `EvictionsInBackground` feature gate enabled.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22803
+      impact: >-
+        The `descheduler` Deployment in `d8-descheduler` restarts once on upgrade to pick up the new argument.
+        Descheduling behavior is unchanged for workloads that do not implement their own eviction policy.
+docs:
+  features:
+    - summary: Add managed-valkey module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22726
+    - summary: Add monitoring-kubernetes module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22841
+  fixes:
+    - summary: >-
+        Documented the identity collision rules for local Group and User objects and the allow-access-to-kubernetes
+        annotation, and corrected the described scope of a security subsystem manage role.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22636
+    - summary: add static cluster OS change for master nodes and Stronghold backup alerts
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22638
+node-manager:
+  fixes:
+    - summary: Fix NodeCapacity calculation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22677
