@@ -174,16 +174,21 @@ So leaving a level out removes its findings from the report as well, not merely 
 
 By default the scan runs the rule set carried inside the scanner image, at `/rules/lgpl`. The image carries more than one set, and "Rule set path in the image" chooses between them:
 
-| Path in the image | Rules | Languages |
-|-------------------|-------|-----------|
-| `/rules/lgpl` (default) | 152 | `generic`, `java`, `javascript`, `typescript`, `kotlin`, `swift` |
-| `/rules/lgpl-cc` | 97 | `generic`, `java`, `javascript`, `typescript`, `php`, `python`, `ruby`, `yaml` |
-| `/rules` | 338 | `c`, `c++`, `c#`, `go`, `java`, `javascript`, `typescript`, `python`, `scala` |
+| Path in the image | Rules | Rules per language |
+|-------------------|-------|--------------------|
+| `/rules/lgpl` (default) | 152 | `javascript` 83, `kotlin` 58, `swift` 5, `java` 4, `typescript` 4, `generic` 2 |
+| `/rules/lgpl-cc` | 97 | `ruby` 40, `java` 39, `php` 9, `python` 6, `javascript` 1, `typescript` 1, `generic` 1, `yaml` 1 |
+| `/rules/gitlab` | 5 | `java` 2, `generic` 1, `javascript` 1, `kotlin` 1 |
+| `/rules` | 592 | the three sets above, plus the rule files stored beside them: `scala` 86, `c` 62, `cpp` 62, `python` 79, `go` 27, `csharp` 22 and more |
+
+A rule may name several languages, so the per-language figures add up to more than the rule count. The `/rules` row is the whole directory: pointing the scan at it loads every set below it and the files beside them, which is why it is far larger than the three sets combined.
 
 These figures were measured in `registry.gitlab.com/security-products/semgrep:6.25.0` and describe that image; a newer image may carry a different set. Each directory in the image carries its own license file, and which set to run is your choice to make.
 
 {% alert level="warning" %}
-The sets are not nested: `/rules/lgpl-cc` adds python, ruby and php but loses kotlin and swift, and `/rules` covers neither kotlin, nor swift, nor php, nor ruby. The default set therefore does not cover Python, Go, Ruby, C#, PHP or C/C++. A repository written in one of those, scanned at the default path, finishes successfully with no findings — which is the scan honestly saying that no rule applied to it, not a broken scan. It also means that repository has no SAST coverage at all: choose `/rules/lgpl-cc` or `/rules` for it explicitly rather than relying on the default.
+**The default set covers six languages, and Python, Go, Ruby, PHP, C, C++, C# and Scala are not among them.** A repository written in one of those, scanned at the default path, finishes successfully with no findings — which is the scan honestly saying that no rule applied to it, not a broken scan. It also means that repository has no SAST coverage at all, and a green pipeline must not be read as one that was checked.
+
+Do not rely on the default path for such a repository. Point "Rule set path in the image" at a set that covers its language, add rules of your own through the "Rule set" field, or have an administrator name an image carrying a suitable set on the Semgrep integration. Whoever brings a set of their own owns what is in it and the terms it comes under.
 {% endalert %}
 
 Rules of your own are the other half of the answer. They are added through the "Rule set" field and, with "Add to the shipped set" left on, run alongside whichever set the image provides.
