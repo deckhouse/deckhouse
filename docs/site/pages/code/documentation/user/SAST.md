@@ -124,7 +124,7 @@ This block sets what the scan looks at, and what it leaves out.
 | "Filter file path" | Path to the filter file inside the project the filters are read from. Default: `.semgrepignore`. |
 | "Skip these paths" | One path or pattern per line: third-party code, fixtures, generated files. |
 | "Look only at these paths" | One path or pattern per line. Everything else is left out of the scan entirely. |
-| "Honour the repository's .gitignore" | Off by default. |
+| "Honor the repository's .gitignore" | Off by default. |
 
 "No filters" does not mean nothing is skipped: the job always adds its own built-in exclusions — `node_modules/`, `vendor/`, `dist/`, `build/`, `.venv/` and `.git/` — to whatever the policy set, so a filter file of your own never silently drags dependency trees back into the scan.
 
@@ -140,7 +140,7 @@ Filters have the same four-way choice of source as rules:
 By default the job sets aside any `.semgrepignore` it finds in the scanned repository — including nested ones in subdirectories — before the scan starts. Picking "A file in the scanned project" is what turns that off, and it is worth being deliberate about:
 
 {% alert level="warning" %}
-"A file in the scanned project" and "Honour the repository's .gitignore" both hand the scanned project the say over what the mandated scan examines. A commit in that project can then narrow the scan that checks it, and the narrowing is invisible in the policy. Both are legitimate delegations — a security team may well decide each project knows its own third-party directories best — but they are delegations, and the policy is where that decision is recorded. Neither is on by default.
+"A file in the scanned project" and "Honor the repository's .gitignore" both hand the scanned project the say over what the mandated scan examines. A commit in that project can then narrow the scan that checks it, and the narrowing is invisible in the policy. Both are legitimate delegations — a security team may well decide each project knows its own third-party directories best — but they are delegations, and the policy is where that decision is recorded. Neither is on by default.
 {% endalert %}
 
 Two more things about the two lists:
@@ -199,7 +199,7 @@ The sources are listed from weakest to strongest — each one, when set, overrid
 1. The Semgrep integration on the group that owns the policy, or on a group above it (see below).
 1. The version named in the policy itself, in the "Scanner version" field.
 
-There is exactly one exception: when the integration names a full image reference rather than a registry — with a tag or a digest — that reference is used as it is, and the version from the policy no longer has anything to replace.
+There is exactly one exception: when the integration names a full image reference rather than a registry — with a tag or a digest — that reference is used as it is, and the version from the policy no longer has anything to replace. The policy editor says which of these three applies as you edit, naming the image or the registry it resolved; where the integration names a full image, it also disables the "Scanner version" field rather than letting you set a value nothing reads.
 
 The scanned project's own integration record is ignored. The image decides what "the scan ran" even means, and the side being checked does not answer that question.
 
