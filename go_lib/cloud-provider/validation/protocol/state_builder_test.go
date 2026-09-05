@@ -19,7 +19,7 @@ import (
 	"testing"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 
 	"github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation/internal/testprovider"
 )
@@ -56,11 +56,11 @@ func testProtocolModuleConfigCR(settings map[string]any) map[string]any {
 func TestStateBuilderBuild(t *testing.T) {
 	t.Parallel()
 
-	state, err := newTestBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{
+	state, err := newTestBuilder(testStateBuilderConfig()).Build(validatev1.Input{
 		ProviderClusterConfig: map[string]any{
 			"masterNodeGroup": map[string]any{"replicas": 3},
 		},
-		CloudProviderVars: &proto.CloudProviderVars{
+		CloudProviderVars: &validatev1.CloudProviderVars{
 			Settings: testProtocolModuleConfigCR(map[string]any{
 				"provider": map[string]any{
 					"parameters": map[string]any{
@@ -122,8 +122,8 @@ func TestStateBuilderBuildDhctlSettingsMap(t *testing.T) {
 	t.Parallel()
 
 	cfg := testStateBuilderConfig()
-	state, err := newTestBuilder(cfg).Build(proto.ValidateInput{
-		CloudProviderVars: &proto.CloudProviderVars{
+	state, err := newTestBuilder(cfg).Build(validatev1.Input{
+		CloudProviderVars: &validatev1.CloudProviderVars{
 			Settings: map[string]any{
 				"provider": map[string]any{
 					"parameters": map[string]any{"namespace": cfg.NamespaceName},
@@ -147,11 +147,11 @@ func TestStateBuilderBuildWithCompleteResources(t *testing.T) {
 
 	cfg := testStateBuilderConfig()
 
-	state, err := newTestBuilder(cfg).Build(proto.ValidateInput{
+	state, err := newTestBuilder(cfg).Build(validatev1.Input{
 		ProviderClusterConfig: map[string]any{
 			"masterNodeGroup": map[string]any{"replicas": 3},
 		},
-		CloudProviderVars: &proto.CloudProviderVars{
+		CloudProviderVars: &validatev1.CloudProviderVars{
 			Settings: testProtocolModuleConfigCR(map[string]any{
 				"provider": map[string]any{
 					"parameters": map[string]any{"namespace": cfg.NamespaceName},
@@ -188,7 +188,7 @@ func TestStateBuilderBuildWithCompleteResources(t *testing.T) {
 func TestStateBuilderBuildEmptyInput(t *testing.T) {
 	t.Parallel()
 
-	state, err := newTestBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{})
+	state, err := newTestBuilder(testStateBuilderConfig()).Build(validatev1.Input{})
 	if err != nil {
 		t.Fatalf("Build() error = %v", err)
 	}
@@ -200,8 +200,8 @@ func TestStateBuilderBuildEmptyInput(t *testing.T) {
 func TestStateBuilderBuildModuleConfigDecodeError(t *testing.T) {
 	t.Parallel()
 
-	_, err := newTestBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{
-		CloudProviderVars: &proto.CloudProviderVars{
+	_, err := newTestBuilder(testStateBuilderConfig()).Build(validatev1.Input{
+		CloudProviderVars: &validatev1.CloudProviderVars{
 			Settings: map[string]any{
 				"metadata": map[string]any{"name": "cloud-provider-dvp"},
 				"spec":     "invalid",
@@ -216,8 +216,8 @@ func TestStateBuilderBuildModuleConfigDecodeError(t *testing.T) {
 func TestStateBuilderBuildCredentialSecretsDecodeError(t *testing.T) {
 	t.Parallel()
 
-	_, err := newTestBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{
-		CloudProviderVars: &proto.CloudProviderVars{
+	_, err := newTestBuilder(testStateBuilderConfig()).Build(validatev1.Input{
+		CloudProviderVars: &validatev1.CloudProviderVars{
 			Secrets: map[string]map[string]any{
 				"broken": {"metadata": "invalid"},
 			},
@@ -231,8 +231,8 @@ func TestStateBuilderBuildCredentialSecretsDecodeError(t *testing.T) {
 func TestStateBuilderBuildNodeGroupsDecodeError(t *testing.T) {
 	t.Parallel()
 
-	_, err := newTestBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{
-		CloudProviderVars: &proto.CloudProviderVars{
+	_, err := newTestBuilder(testStateBuilderConfig()).Build(validatev1.Input{
+		CloudProviderVars: &validatev1.CloudProviderVars{
 			NodeGroups: map[string]map[string]any{
 				"broken": {"spec": "invalid"},
 			},
@@ -246,8 +246,8 @@ func TestStateBuilderBuildNodeGroupsDecodeError(t *testing.T) {
 func TestStateBuilderBuildInstanceClassesDecodeError(t *testing.T) {
 	t.Parallel()
 
-	_, err := newTestBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{
-		CloudProviderVars: &proto.CloudProviderVars{
+	_, err := newTestBuilder(testStateBuilderConfig()).Build(validatev1.Input{
+		CloudProviderVars: &validatev1.CloudProviderVars{
 			InstanceClasses: map[string]map[string]any{
 				"broken": {"metadata": 123},
 			},
@@ -261,8 +261,8 @@ func TestStateBuilderBuildInstanceClassesDecodeError(t *testing.T) {
 func TestStateBuilderBuildModuleConfigMarshalError(t *testing.T) {
 	t.Parallel()
 
-	_, err := newTestBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{
-		CloudProviderVars: &proto.CloudProviderVars{
+	_, err := newTestBuilder(testStateBuilderConfig()).Build(validatev1.Input{
+		CloudProviderVars: &validatev1.CloudProviderVars{
 			Settings: map[string]any{"broken": func() {}},
 		},
 	})
@@ -274,7 +274,7 @@ func TestStateBuilderBuildModuleConfigMarshalError(t *testing.T) {
 func TestStateBuilderBuildProviderClusterConfigDecodeError(t *testing.T) {
 	t.Parallel()
 
-	_, err := newTestBuilder(testStateBuilderConfig()).Build(proto.ValidateInput{
+	_, err := newTestBuilder(testStateBuilderConfig()).Build(validatev1.Input{
 		ProviderClusterConfig: map[string]any{"masterNodeGroup": "not-an-object"},
 	})
 	if err == nil {

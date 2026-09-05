@@ -21,7 +21,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"sigs.k8s.io/yaml"
 
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 	libdhctlyaml "github.com/deckhouse/lib-dhctl/pkg/yaml"
 	yamlvalidation "github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
 )
@@ -53,8 +53,8 @@ func IsCloudPermanentNodeGroup(obj map[string]interface{}) bool {
 
 // ParseResourcesYAML extracts CloudPermanent NodeGroups, instance classes and
 // credential Secrets from a multi-document YAML string.
-func ParseResourcesYAML(resourcesYAML string) (*proto.CloudProviderVars, error) {
-	cv := &proto.CloudProviderVars{}
+func ParseResourcesYAML(resourcesYAML string) (*validatev1.CloudProviderVars, error) {
+	cv := &validatev1.CloudProviderVars{}
 	if strings.TrimSpace(resourcesYAML) == "" {
 		return cv, nil
 	}
@@ -100,7 +100,7 @@ func ParseResourcesYAML(resourcesYAML string) (*proto.CloudProviderVars, error) 
 
 		case index.Kind == "Secret":
 			secretType, _, _ := unstructured.NestedString(obj, "type")
-			if secretType == proto.CredentialsSecretType {
+			if secretType == validatev1.CredentialsSecretType {
 				name, _, _ := unstructured.NestedString(obj, "metadata", "name")
 				if name != "" {
 					if cv.Secrets == nil {

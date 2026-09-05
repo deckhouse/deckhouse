@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 	dvpicv1alpha1 "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/api/instanceclass/v1alpha1"
 	dvpmeta "github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/pkg/meta"
 )
@@ -190,9 +190,9 @@ func TestValidateMatchesDhctlBootstrapFailures(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := validate(context.Background(), proto.ValidateInput{
-				Operation: proto.OperationBootstrap,
-				CloudProviderVars: &proto.CloudProviderVars{
+			result, err := validate(context.Background(), validatev1.Input{
+				Operation: validatev1.OperationBootstrap,
+				CloudProviderVars: &validatev1.CloudProviderVars{
 					Settings:        testModuleSettings(),
 					Secrets:         tt.secrets,
 					NodeGroups:      tt.nodeGroups,
@@ -200,6 +200,11 @@ func TestValidateMatchesDhctlBootstrapFailures(t *testing.T) {
 				},
 				ProviderClusterConfig: tt.providerClusterConfig,
 			})
+			if err != nil {
+				t.Fatalf("validate() = %v, want a result", err)
+			}
+
+			err = result.ErrorOrNil()
 			if err == nil {
 				t.Fatalf("validate() error = nil, want %q", tt.want)
 			}
@@ -213,9 +218,9 @@ func TestValidateMatchesDhctlBootstrapFailures(t *testing.T) {
 func TestValidateBootstrapRequiresCredentialSecretOnce(t *testing.T) {
 	t.Parallel()
 
-	err := validate(context.Background(), proto.ValidateInput{
-		Operation: proto.OperationBootstrap,
-		CloudProviderVars: &proto.CloudProviderVars{
+	result, err := validate(context.Background(), validatev1.Input{
+		Operation: validatev1.OperationBootstrap,
+		CloudProviderVars: &validatev1.CloudProviderVars{
 			Settings: testModuleSettings(),
 			NodeGroups: map[string]map[string]any{
 				"master": {
@@ -225,6 +230,11 @@ func TestValidateBootstrapRequiresCredentialSecretOnce(t *testing.T) {
 			},
 		},
 	})
+	if err != nil {
+		t.Fatalf("validate() = %v, want a result", err)
+	}
+
+	err = result.ErrorOrNil()
 	if err == nil {
 		t.Fatal("validate() error = nil, want missing credential secret")
 	}
@@ -236,9 +246,9 @@ func TestValidateBootstrapRequiresCredentialSecretOnce(t *testing.T) {
 func TestValidateConvergeRunsPreflight(t *testing.T) {
 	t.Parallel()
 
-	err := validate(context.Background(), proto.ValidateInput{
-		Operation: proto.OperationConverge,
-		CloudProviderVars: &proto.CloudProviderVars{
+	result, err := validate(context.Background(), validatev1.Input{
+		Operation: validatev1.OperationConverge,
+		CloudProviderVars: &validatev1.CloudProviderVars{
 			Settings: map[string]any{
 				"provider": map[string]any{"parameters": map[string]any{"namespace": "default"}},
 				"storage":  map[string]any{"disabled": true},
@@ -249,7 +259,11 @@ func TestValidateConvergeRunsPreflight(t *testing.T) {
 			},
 		},
 	})
-	if err == nil || !strings.Contains(err.Error(), `NodeGroup "master" is required`) {
+	if err != nil {
+		t.Fatalf("validate() = %v, want a result", err)
+	}
+
+	if err := result.ErrorOrNil(); err == nil || !strings.Contains(err.Error(), `NodeGroup "master" is required`) {
 		t.Fatalf("validate() error = %v, want master NodeGroup preflight error", err)
 	}
 }
@@ -257,15 +271,19 @@ func TestValidateConvergeRunsPreflight(t *testing.T) {
 func TestValidateDestroySkipsValidation(t *testing.T) {
 	t.Parallel()
 
-	err := validate(context.Background(), proto.ValidateInput{
-		Operation: proto.OperationDestroy,
-		CloudProviderVars: &proto.CloudProviderVars{
+	result, err := validate(context.Background(), validatev1.Input{
+		Operation: validatev1.OperationDestroy,
+		CloudProviderVars: &validatev1.CloudProviderVars{
 			Settings: map[string]any{
 				"provider": map[string]any{"parameters": map[string]any{"namespace": "default"}},
 			},
 		},
 	})
 	if err != nil {
+		t.Fatalf("validate() = %v, want a result", err)
+	}
+
+	if err := result.ErrorOrNil(); err != nil {
 		t.Fatalf("validate() error = %v, want nil for destroy", err)
 	}
 }
@@ -273,10 +291,15 @@ func TestValidateDestroySkipsValidation(t *testing.T) {
 func TestValidateRejectsInvalidPCCKubeconfigDuringMigration(t *testing.T) {
 	t.Parallel()
 
-	err := validate(context.Background(), proto.ValidateInput{
-		Operation:             proto.OperationBootstrap,
+	result, err := validate(context.Background(), validatev1.Input{
+		Operation:             validatev1.OperationBootstrap,
 		ProviderClusterConfig: testProviderClusterConfig("%%%-not-base64"),
 	})
+	if err != nil {
+		t.Fatalf("validate() = %v, want a result", err)
+	}
+
+	err = result.ErrorOrNil()
 	if err == nil {
 		t.Fatal("validate() error = nil, want invalid PCC kubeconfig")
 	}

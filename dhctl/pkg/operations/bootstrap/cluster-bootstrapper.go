@@ -30,7 +30,7 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 	"github.com/deckhouse/lib-connection/pkg/ssh/session"
@@ -1667,7 +1667,7 @@ func isCloudProviderCredentialSecret(resource *template.Resource) bool {
 		return false
 	}
 	secretType, _, _ := unstructured.NestedString(resource.Object.Object, "type")
-	return secretType == proto.CredentialsSecretType
+	return secretType == validatev1.CredentialsSecretType
 }
 
 // prependMissingNamespaces inserts a minimal Namespace stub for every distinct
