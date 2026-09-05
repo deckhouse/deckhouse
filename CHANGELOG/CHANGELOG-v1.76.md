@@ -401,6 +401,8 @@
  - **[deckhouse-controller]** Fixed showing warnings while errors during kubectl edit. [#21288](https://github.com/deckhouse/deckhouse/pull/21288)
  - **[deckhouse-controller]** Fixed validation for switching ClusterConfiguration kubernetesVersion from an explicit version to Automatic. [#20331](https://github.com/deckhouse/deckhouse/pull/20331)
  - **[deckhouse-controller]** Force embedded modules back to the "Embedded" source on startup, healing a stale external source that previously stuck until the Module resource was deleted manually. [#21473](https://github.com/deckhouse/deckhouse/pull/21473)
+ - **[deckhouse-controller]** Honor a channel-level release suspend for clusters that reach the suspended version through a step-by-step update. [#22746](https://github.com/deckhouse/deckhouse/pull/22746)
+    A Deckhouse release suspended on its release channel is no longer applied by clusters that are behind and reach it through a step-by-step update. The suspend flag lives only in the release-channel image; previously it was dropped when the target release was built from its per-version image, so lagging clusters updated to a suspended release anyway.
  - **[deckhouse-controller]** Module releases rendered with nelm no longer raise false absent-resource alerts. [#21831](https://github.com/deckhouse/deckhouse/pull/21831)
  - **[deckhouse-controller]** ModuleDocumentation will not be created for embedded modules. [#21652](https://github.com/deckhouse/deckhouse/pull/21652)
  - **[deckhouse-controller]** add werf dependency to webhook [#20970](https://github.com/deckhouse/deckhouse/pull/20970)
@@ -576,6 +578,7 @@
  - **[node-manager]** Added cleanup for oversized MCM MachineSet revision history annotation [#19655](https://github.com/deckhouse/deckhouse/pull/19655)
  - **[node-manager]** Creating or re-applying an already-existing StaticInstance no longer fails address validation. [#21114](https://github.com/deckhouse/deckhouse/pull/21114)
  - **[node-manager]** Fencing controller no longer deletes Node objects for Notify-mode and Static/CloudStatic nodes. [#18218](https://github.com/deckhouse/deckhouse/pull/18218)
+ - **[node-manager]** Fix NodeCapacity calculation. [#22677](https://github.com/deckhouse/deckhouse/pull/22677)
  - **[node-manager]** Fix capacity parsing logic for DVPInstanceClass and add test case for DVPSpecWorker [#17935](https://github.com/deckhouse/deckhouse/pull/17935)
     Capacity values (CPU/memory) for DVPInstanceClass are now correctly extracted according to spec shape. Nested `virtualMachine` fields are used and memory quantities like `Gi` are properly parsed.
  - **[node-manager]** Fix cluster-autoscaler deadlock when machine creation fails with a non-ResourceExhausted error, preventing scale-up to alternative node groups. [#18154](https://github.com/deckhouse/deckhouse/pull/18154)
