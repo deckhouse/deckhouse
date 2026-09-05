@@ -1,8 +1,1 @@
-{{- if eq (include "helm_lib_module_ingress_enabled" .) "true" }}
-{{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-cni-cilium" "ingress-tls") -}}
-{{- end }}
-{{- $moduleGateway := dict }}
-{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
-{{- if eq (include "helm_lib_module_gateway_enabled" .) "true" }}
-{{- include "helm_lib_module_https_copy_custom_certificate" (list . "d8-cni-cilium" "httproute-tls") -}}
-{{- end }}
+{{- include "helm_lib_module_https_copy_custom_certificate_for_gateway_api" (list . "d8-cni-cilium" "ingress-tls") -}}

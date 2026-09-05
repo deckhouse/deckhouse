@@ -101,4 +101,24 @@ var _ = Describe("Module :: ciliumHubble :: helm template ::", func() {
 			Expect(f.KubernetesResource("Certificate", "d8-cni-cilium", "hubble-httproute").Exists()).To(BeFalse())
 		})
 	})
+
+	Context("CustomCertificate mode with Gateway API enabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modules.https.mode", "CustomCertificate")
+			f.ValuesSetFromYaml("ciliumHubble", `{internal: {deployDexAuthenticator: true, auth: {password: test}, ui: {ca: CACA, key: ZXC, cert: CERT}, relay: {serverCerts: {ca: CACA, key: ZXC, cert: CERT}, clientCerts: {ca: CACA, key: ZXC, cert: CERT}}, customCertificateData: {tls.crt: CRTCRTCRT, tls.key: KEYKEYKEY}}, auth: {}}`)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSet("global.clusterIsBootstrapped", true)
+			f.ValuesSet("global.modules.gatewayAPI.gateway.name", "shared-gateway")
+			f.ValuesSet("global.modules.gatewayAPI.gateway.namespace", "d8-alb")
+			f.HelmRender()
+		})
+
+		// CustomCertificate has no per-mechanism validation, so Gateway API reuses the Ingress secret.
+		It("reuses the ingress secret instead of creating a redundant copy", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("Secret", "d8-cni-cilium", "ingress-tls-customcertificate").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Secret", "d8-cni-cilium", "httproute-tls-customcertificate").Exists()).To(BeFalse())
+		})
+	})
 })

@@ -214,3 +214,27 @@ data:
     {{- end -}}
   {{- end -}}
 {{- end -}}
+
+{{- /* Usage: {{ include "helm_lib_module_https_secret_name_for_gateway_api" (list . "ingress_secret_name_prefix" "gateway_secret_name_prefix") }} */ -}}
+{{- /* returns the Gateway API secret name for CertManager mode (own ClusterIssuer, own secret), */ -}}
+{{- /* or the Ingress secret name otherwise, since CustomCertificate has nothing to validate per mechanism */ -}}
+{{- define "helm_lib_module_https_secret_name_for_gateway_api" -}}
+  {{- $context := index . 0 -}} {{- /* Template context with .Values, .Chart, etc */ -}}
+  {{- $ingress_secret_name_prefix := index . 1 -}} {{- /* Ingress secret name prefix */ -}}
+  {{- $gateway_secret_name_prefix := index . 2 -}} {{- /* Gateway API secret name prefix */ -}}
+  {{- if eq (include "helm_lib_module_https_mode" $context) "CertManager" -}}
+    {{- include "helm_lib_module_https_secret_name" (list $context $gateway_secret_name_prefix) -}}
+  {{- else -}}
+    {{- include "helm_lib_module_https_secret_name" (list $context $ingress_secret_name_prefix) -}}
+  {{- end -}}
+{{- end -}}
+
+{{- /* Usage: {{ include "helm_lib_module_https_copy_custom_certificate_for_gateway_api" (list . "namespace" "secret_name_prefix") }} */ -}}
+{{- /* Copies the custom certificate (see helm_lib_module_https_copy_custom_certificate), shared by */ -}}
+{{- /* Ingress and Gateway API, when either mechanism is enabled */ -}}
+{{- define "helm_lib_module_https_copy_custom_certificate_for_gateway_api" -}}
+  {{- $context := index . 0 -}} {{- /* Template context with .Values, .Chart, etc */ -}}
+  {{- if or (eq (include "helm_lib_module_ingress_enabled" $context) "true") (eq (include "helm_lib_module_gateway_enabled" $context) "true") -}}
+    {{- include "helm_lib_module_https_copy_custom_certificate" . -}}
+  {{- end -}}
+{{- end -}}
