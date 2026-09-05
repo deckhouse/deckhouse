@@ -1,6 +1,6 @@
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
-{{- if and $moduleGateway .Values.global.modules.publicDomainTemplate (include "helm_lib_kind_exists" (list . "ListenerSet")) }}
+{{- if and (eq (include "helm_lib_module_gateway_enabled" .) "true") .Values.global.modules.publicDomainTemplate (include "helm_lib_kind_exists" (list . "ListenerSet")) }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: ListenerSet
@@ -22,7 +22,7 @@ spec:
       certificateRefs:
       - group: ""
         kind: Secret
-        name: {{ include "helm_lib_module_https_secret_name" (list . "httproute-tls") }}
+        name: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls" "httproute-tls") }}
         namespace: d8-{{ .Chart.Name }}
       mode: Terminate
   - allowedRoutes:
@@ -53,7 +53,7 @@ spec:
       certificateRefs:
       - group: ""
         kind: Secret
-        name: {{ include "helm_lib_module_https_secret_name" (list . "kubeconfig-httproute-tls") }}
+        name: {{ include "helm_lib_module_https_secret_name" (list . "kubeconfig-ingress-tls" "kubeconfig-httproute-tls") }}
         namespace: d8-{{ .Chart.Name }}
       mode: Terminate
   - allowedRoutes:

@@ -68,6 +68,7 @@
 | [helm_lib_module_ephemeral_storage_only_logs](#helm_lib_module_ephemeral_storage_only_logs) |
 | **Module Gateway** |
 | [helm_lib_module_gateway](#helm_lib_module_gateway) |
+| [helm_lib_module_gateway_enabled](#helm_lib_module_gateway_enabled) |
 | **Module Generate Common Name** |
 | [helm_lib_module_generate_common_name](#helm_lib_module_generate_common_name) |
 | **Module Https** |
@@ -86,10 +87,10 @@
 | [helm_lib_module_common_image_no_fail](#helm_lib_module_common_image_no_fail) |
 | [helm_lib_module_image_digest](#helm_lib_module_image_digest) |
 | [helm_lib_module_image_digest_no_fail](#helm_lib_module_image_digest_no_fail) |
-| **Module Ingress Class** |
+| **Module Ingress** |
 | [helm_lib_module_ingress_class](#helm_lib_module_ingress_class) |
-| **Module Ingress Snippets** |
 | [helm_lib_module_ingress_configuration_snippet](#helm_lib_module_ingress_configuration_snippet) |
+| [helm_lib_module_ingress_enabled](#helm_lib_module_ingress_enabled) |
 | **Module Init Container** |
 | [helm_lib_module_init_container_chown_nobody_volume](#helm_lib_module_init_container_chown_nobody_volume) |
 | [helm_lib_module_init_container_chown_deckhouse_volume](#helm_lib_module_init_container_chown_deckhouse_volume) |
@@ -874,6 +875,16 @@ list:
 -  Template context with .Values, .Chart, etc 
 -  An empty dict to update with current default gateway name and namespace 
 
+
+### helm_lib_module_gateway_enabled
+
+ returns whether Gateway API is enabled from module settings or if not exists from global config 
+
+#### Usage
+
+`{{- if eq (include "helm_lib_module_gateway_enabled" .) "true" }} `
+
+
 ## Module Generate Common Name
 
 ### helm_lib_module_generate_common_name
@@ -1092,7 +1103,7 @@ list:
 -  Template context with .Values, .Chart, etc 
 -  Container name 
 
-## Module Ingress Class
+## Module Ingress
 
 ### helm_lib_module_ingress_class
 
@@ -1102,11 +1113,7 @@ list:
 
 `{{ include "helm_lib_module_ingress_class" . }} `
 
-#### Arguments
 
--  Template context with .Values, .Chart, etc 
-
-## Module Ingress Snippets
 
 ### helm_lib_module_ingress_configuration_snippet
 
@@ -1119,6 +1126,16 @@ list:
 #### Arguments
 
 -  Template context with .Values, .Chart, etc 
+
+
+### helm_lib_module_ingress_enabled
+
+ returns whether Ingress is enabled from module settings or if not exists from global config 
+
+#### Usage
+
+`{{- if eq (include "helm_lib_module_ingress_enabled" .) "true" }} `
+
 
 ## Module Init Container
 

@@ -10,7 +10,7 @@
 {{- if and (.Values.global.modules.publicDomainTemplate) (.Values.global.enabledModules | has "cert-manager") -}}
 {{- if eq (include "helm_lib_module_https_mode" .) "CertManager" -}}
 
-
+{{- if eq (include "helm_lib_module_ingress_enabled" .) "true" }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Certificate
@@ -27,9 +27,10 @@ spec:
   issuerRef:
     name: {{ include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
     kind: ClusterIssuer
+{{- end }}
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
-{{- if and $moduleGateway (eq (include "helm_lib_module_https_mode" .) "CertManager") }}
+{{- if and (eq (include "helm_lib_module_gateway_enabled" .) "true") (eq (include "helm_lib_module_https_mode" .) "CertManager") }}
 {{- $issuerName := include "helm_lib_module_https_cert_manager_cluster_issuer_name" . }}
 {{- if or (eq $issuerName "letsencrypt") (eq $issuerName "letsencrypt-staging") }}
   {{- $issuerName = printf "%s-gateway-%s" $issuerName $moduleGateway.name }}

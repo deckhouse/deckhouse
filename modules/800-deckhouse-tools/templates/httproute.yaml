@@ -1,7 +1,7 @@
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
 {{- $satisfyAny := dig "auth" "satisfyAny" false .Values.deckhouseTools }}
-{{- if and ($moduleGateway) (.Values.global.modules.publicDomainTemplate) (.Values.global.clusterIsBootstrapped) (include "helm_lib_kind_exists" (list . "HTTPRoute")) (include "helm_lib_kind_exists" (list . "ListenerSet")) }}
+{{- if and (eq (include "helm_lib_module_gateway_enabled" .) "true") (.Values.global.modules.publicDomainTemplate) (.Values.global.clusterIsBootstrapped) (include "helm_lib_kind_exists" (list . "HTTPRoute")) (include "helm_lib_kind_exists" (list . "ListenerSet")) }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: ListenerSet
@@ -23,7 +23,7 @@ spec:
       certificateRefs:
       - group: ""
         kind: Secret
-        name: {{ include "helm_lib_module_https_secret_name" (list . "tools-httproute-tls") }}
+        name: {{ include "helm_lib_module_https_secret_name" (list . "tools-ingress-tls" "tools-httproute-tls") }}
         namespace: d8-system
       mode: Terminate
   - allowedRoutes:
@@ -66,9 +66,6 @@ metadata:
   {{- else }}
     alb.network.deckhouse.io/basic-auth-secret: d8-system/tools-basic-auth
   {{- end }}
-  {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
-    alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
-  {{- end }}
 spec:
   hostnames:
   - {{ include "helm_lib_module_public_domain" (list . "tools") }}
@@ -89,6 +86,14 @@ spec:
     - path:
         type: PathPrefix
         value: /
+    {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
+    filters:
+    - type: ResponseHeaderModifier
+      responseHeaderModifier:
+        add:
+        - name: Strict-Transport-Security
+          value: max-age=31536000; includeSubDomains
+    {{- end }}
 {{- if (include "helm_lib_module_https_route_tls_enabled" .) }}
 ---
 apiVersion: gateway.networking.k8s.io/v1

@@ -2240,4 +2240,60 @@ MY_VAR: "myvalue"
 			})
 		})
 	})
+
+	Context("CustomCertificate mode with Gateway API enabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSet("global.modules.https.mode", "CustomCertificate")
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.customCertificateData", `
+tls.crt: CRTCRTCRT
+tls.key: KEYKEYKEY
+`)
+			f.ValuesSet("global.discovery.gatewayAPIDefaultGateway.name", "shared-gateway")
+			f.ValuesSet("global.discovery.gatewayAPIDefaultGateway.namespace", "d8-alb")
+			f.HelmRender()
+		})
+
+		// CustomCertificate has no per-mechanism validation, so Gateway API reuses the Ingress secret.
+		It("reuses the ingress secret instead of creating a redundant copy", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("Secret", "d8-istio", "istio-ingress-tls-customcertificate").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Secret", "d8-istio", "istio-httproute-tls-customcertificate").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("CustomCertificate mode with Gateway API and multicluster enabled", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSet("global.modules.https.mode", "CustomCertificate")
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+			f.ValuesSetFromYaml("istio.internal.customCertificateData", `
+tls.crt: CRTCRTCRT
+tls.key: KEYKEYKEY
+`)
+			f.ValuesSet("istio.multicluster.enabled", true)
+			f.ValuesSet("global.discovery.gatewayAPIDefaultGateway.name", "shared-gateway")
+			f.ValuesSet("global.discovery.gatewayAPIDefaultGateway.namespace", "d8-alb")
+			f.HelmRender(WithAPIVersions("gateway.networking.k8s.io/v1/HTTPRoute", "gateway.networking.k8s.io/v1/ListenerSet"))
+		})
+
+		// The multicluster api-proxy path follows the same dedup rule as the main kiali path.
+		It("reuses the ingress secret for api-proxy instead of creating a redundant copy", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("Secret", "d8-istio", "api-proxy-ingress-tls-customcertificate").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Secret", "d8-istio", "api-proxy-httproute-tls-customcertificate").Exists()).To(BeFalse())
+		})
+
+		// istio-metadata shares the main listener's cert, not api-proxy's — regression guard.
+		It("points the istio-metadata listener at the reused ingress secret", func() {
+			listenerSet := f.KubernetesResource("ListenerSet", "d8-istio", "istio")
+			Expect(listenerSet.Exists()).To(BeTrue())
+			metadataListener := listenerSet.Field(`spec.listeners.#(name=="istio-metadata")`)
+			Expect(metadataListener.Exists()).To(BeTrue())
+			Expect(metadataListener.Get("tls.certificateRefs.0.name").String()).To(Equal("istio-ingress-tls-customcertificate"))
+		})
+	})
 })

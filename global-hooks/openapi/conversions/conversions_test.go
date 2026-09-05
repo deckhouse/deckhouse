@@ -74,3 +74,72 @@ func TestStorageClassConversions(t *testing.T) {
 		})
 	}
 }
+
+func TestModulesNetworkingConversions(t *testing.T) {
+	conversions := "."
+	cases := []struct {
+		name     string
+		settings string
+		expected string
+	}{
+		{
+			name: "should move legacy ingress and Gateway API settings",
+			settings: `
+  modules:
+    ingressClass: custom-ingress
+    gatewayAPIGateway:
+      name: legacy-gateway
+      namespace: legacy-namespace
+    ingress:
+      enabled: false
+    gatewayAPI:
+      enabled: true
+`,
+			expected: `
+  modules:
+    ingress:
+      enabled: false
+      ingressClass: custom-ingress
+    gatewayAPI:
+      enabled: true
+      gateway:
+        name: legacy-gateway
+        namespace: legacy-namespace
+`,
+		},
+		{
+			name: "should not override new ingress and Gateway API settings",
+			settings: `
+  modules:
+    ingressClass: legacy-ingress
+    gatewayAPIGateway:
+      name: legacy-gateway
+      namespace: legacy-namespace
+    ingress:
+      ingressClass: new-ingress
+    gatewayAPI:
+      gateway:
+        name: new-gateway
+        namespace: new-namespace
+`,
+			expected: `
+  modules:
+    ingress:
+      ingressClass: new-ingress
+    gatewayAPI:
+      gateway:
+        name: new-gateway
+        namespace: new-namespace
+`,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			err := conversion.TestConvert(c.settings, c.expected, conversions, 2, 3)
+			if err != nil {
+				t.Error(err)
+			}
+		})
+	}
+}

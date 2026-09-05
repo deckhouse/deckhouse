@@ -1,4 +1,9 @@
-{{- if and (.Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled) (eq .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode "SelfSigned") (.Values.global.enabledModules | has "cert-manager") }}
+{{- $moduleGateway := dict }}
+{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
+{{- $ingressEnabled := eq (include "helm_lib_module_ingress_enabled" .) "true" }}
+{{- $gatewayEnabled := eq (include "helm_lib_module_gateway_enabled" .) "true" }}
+{{- $publicationEnabled := or $ingressEnabled $gatewayEnabled }}
+{{- if and $publicationEnabled (.Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled) (eq .Values.controlPlaneManager.apiserver.publishAPI.ingress.https.mode "SelfSigned") (.Values.global.enabledModules | has "cert-manager") }}
 ---
 apiVersion: cert-manager.io/v1
 kind: Issuer
@@ -10,7 +15,7 @@ spec:
   ca:
     secretName: kubernetes-api-ca-key-pair
 {{- end }}
-{{- if and (.Values.controlPlaneManager.internal.selfSignedCA.cert) (.Values.controlPlaneManager.internal.selfSignedCA.key) }}
+{{- if and $publicationEnabled (.Values.controlPlaneManager.internal.selfSignedCA.cert) (.Values.controlPlaneManager.internal.selfSignedCA.key) }}
 ---
 apiVersion: v1
 kind: Secret

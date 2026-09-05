@@ -1,4 +1,9 @@
 {{- if and .Values.controlPlaneManager.internal.authn.enableBasicAuth .Values.controlPlaneManager.apiserver.publishAPI.ingress.enabled }}
+{{- $ingressEnabled := eq (include "helm_lib_module_ingress_enabled" .) "true" }}
+{{- $moduleGateway := dict }}
+{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
+{{- $gatewayEnabled := eq (include "helm_lib_module_gateway_enabled" .) "true" }}
+{{- if $ingressEnabled }}
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
@@ -41,6 +46,8 @@ spec:
     - {{ include "helm_lib_module_public_domain" (list . "api") }}
     secretName: {{ include "publish_api_certificate_name" . }}
   {{- end }}
+{{- end }}
+{{- if or $ingressEnabled $gatewayEnabled }}
 ---
 apiVersion: v1
 kind: Service
@@ -56,9 +63,8 @@ spec:
     port: 7332
     protocol: TCP
     targetPort: 7332
-{{- $moduleGateway := dict }}
-{{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
-{{- if and $moduleGateway .Values.global.modules.publicDomainTemplate (include "helm_lib_kind_exists" (list . "HTTPRoute")) }}
+{{- end }}
+{{- if and $gatewayEnabled .Values.global.modules.publicDomainTemplate (include "helm_lib_kind_exists" (list . "HTTPRoute")) }}
 {{- $apiHost := include "helm_lib_module_public_domain" (list . "api") }}
 ---
 apiVersion: gateway.networking.k8s.io/v1
@@ -70,9 +76,6 @@ metadata:
     alb.network.deckhouse.io/request-body-buffer-limit: "10485760"
   {{- if .Values.controlPlaneManager.apiserver.publishAPI.ingress.whitelistSourceRanges }}
     alb.network.deckhouse.io/whitelist-source-range: {{ .Values.controlPlaneManager.apiserver.publishAPI.ingress.whitelistSourceRanges | join "," }}
-  {{- end }}
-  {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
-    alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
   {{- end }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "basic-auth-proxy")) | nindent 2 }}
 spec:
@@ -99,5 +102,13 @@ spec:
       - name: Authorization
         type: RegularExpression
         value: ^(.*)Basic(.*)$
+    {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
+    filters:
+    - type: ResponseHeaderModifier
+      responseHeaderModifier:
+        add:
+        - name: Strict-Transport-Security
+          value: max-age=31536000; includeSubDomains
+    {{- end }}
 {{- end }}
 {{- end }}
