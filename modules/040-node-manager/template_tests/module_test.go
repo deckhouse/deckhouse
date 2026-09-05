@@ -823,7 +823,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterAdmin.Exists()).To(BeTrue())
-			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
+			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
 
 			Expect(mcmDeploy.Exists()).To(BeTrue())
 			Expect(mcmServiceAccount.Exists()).To(BeTrue())
@@ -937,7 +937,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterAdmin.Exists()).To(BeTrue())
-			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
+			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
 
 			Expect(mcmDeploy.Exists()).To(BeTrue())
 			Expect(mcmServiceAccount.Exists()).To(BeTrue())
@@ -1033,7 +1033,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterAdmin.Exists()).To(BeTrue())
-			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
+			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
 
 			Expect(mcmDeploy.Exists()).To(BeTrue())
 			Expect(mcmServiceAccount.Exists()).To(BeTrue())
@@ -1252,7 +1252,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterAdmin.Exists()).To(BeTrue())
-			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
+			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
 
 			Expect(mcmDeploy.Exists()).To(BeTrue())
 			Expect(mcmServiceAccount.Exists()).To(BeTrue())
@@ -1355,7 +1355,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterAdmin.Exists()).To(BeTrue())
-			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
+			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
 
 			Expect(mcmDeploy.Exists()).To(BeTrue())
 			Expect(mcmServiceAccount.Exists()).To(BeTrue())
@@ -1429,6 +1429,20 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 				Expect(binding.Field("spec.validationActions").String()).To(ContainSubstring("Deny"))
 			}
 		})
+
+		// The NodeConfig webhook freezes the fields only the machine knows, but
+		// node-controller renders those same fields onto every node it manages.
+		// Judging its writes denies them for good: the node is never configured.
+		It("leaves node-controller out of the NodeConfig webhook", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			config := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "node-controller-validating-webhook-configuration")
+			Expect(config.Exists()).To(BeTrue())
+
+			expression := config.Field(`webhooks.#(name=="nodeconfig.validation.node-controller.deckhouse.io").matchConditions.0.expression`).String()
+			Expect(expression).To(ContainSubstring("system:serviceaccount:d8-cloud-instance-manager:node-controller"),
+				"the NodeConfig webhook must not judge the controller that renders those fields")
+		})
 	})
 
 	Context("Static", func() {
@@ -1487,7 +1501,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterAdmin.Exists()).To(BeTrue())
-			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
+			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
 
 			Expect(mcmDeploy.Exists()).To(BeFalse())
 			Expect(mcmServiceAccount.Exists()).To(BeFalse())
@@ -1586,7 +1600,7 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(userAuthzClusterRoleUser.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterEditor.Exists()).To(BeTrue())
 			Expect(userAuthzClusterRoleClusterAdmin.Exists()).To(BeTrue())
-			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
+			Expect(userAuthzClusterRoleClusterAdmin.Field("rules.#.apiGroups").String()).To(Equal(`[["deckhouse.io"],["deckhouse.io"],["nfd.k8s-sigs.io"]]`))
 
 			Expect(mcmDeploy.Exists()).To(BeFalse())
 			Expect(mcmServiceAccount.Exists()).To(BeFalse())

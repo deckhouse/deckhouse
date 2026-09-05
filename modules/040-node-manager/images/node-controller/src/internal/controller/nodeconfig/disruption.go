@@ -19,12 +19,14 @@ package nodeconfig
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/utils/ptr"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
@@ -37,27 +39,27 @@ import (
 // reconcileDisruption answers a node that cannot apply its config without a
 // restart, by creating a NodeOperation — the same resource an operator uses.
 // The operation names the config revision, so it authorises one change only.
-func (r *Reconciler) reconcileDisruption(ctx context.Context, ng *v1.NodeGroup, node *corev1.Node, nc *internalv1alpha1.NodeConfig, logger logr.Logger) error {
+func (r *Reconciler) reconcileDisruption(ctx context.Context, ng *v1.NodeGroup, node *corev1.Node, nc *internalv1alpha1.NodeConfig, logger logr.Logger) (ctrl.Result, error) {
 	if !disruptionRequested(nc) {
-		return nil
+		return ctrl.Result{}, nil
 	}
 
-	existing, err := r.findApproval(ctx, nc)
+	approvals, err := r.approvalsFor(ctx, nc)
 	if err != nil {
-		return err
+		return ctrl.Result{}, err
 	}
-	if existing != nil {
+	if approvals.current != nil {
 		// An in-flight operation needs nothing. A completed one means the node is
 		// asking again for a revision already carried out — it will be refused
 		// forever, so surface it instead of silently holding the rollout slot.
-		if existing.Status.Phase == v1alpha1.NodeOperationPhaseCompleted {
+		if approvals.current.Status.Phase == v1alpha1.NodeOperationPhaseCompleted {
 			logger.V(1).Info("node is asking again for a disruption already carried out",
-				"node", node.Name, "nodeGroup", ng.Name, "configGeneration", nc.Generation, "operation", existing.Name)
+				"node", node.Name, "nodeGroup", ng.Name, "configGeneration", nc.Generation, "operation", approvals.current.Name)
 			r.Recorder.Event(ng, corev1.EventTypeWarning, "DisruptionAlreadyDone",
 				fmt.Sprintf("Node %s is still asking to be interrupted for config generation %d, which NodeOperation %s already completed",
-					node.Name, nc.Generation, existing.Name))
+					node.Name, nc.Generation, approvals.current.Name))
 		}
-		return nil
+		return ctrl.Result{}, nil
 	}
 
 	if v1.DisruptionApprovalMode(ua.GetApprovalMode(ng)) == v1.DisruptionApprovalModeManual {
@@ -66,23 +68,57 @@ func (r *Reconciler) reconcileDisruption(ctx context.Context, ng *v1.NodeGroup, 
 		r.Recorder.Event(ng, corev1.EventTypeNormal, "DisruptionRequired",
 			fmt.Sprintf("Node %s is waiting for a NodeOperation of type ApproveDisruption for config generation %d",
 				node.Name, nc.Generation))
-		return nil
+		return ctrl.Result{}, nil
 	}
 
-	return r.createApproval(ctx, ng, node, nc, logger)
+	if approvals.failures >= maxDisruptionAttempts {
+		r.recordApprovalExhausted(ng, nc, approvals.failures, logger)
+		return ctrl.Result{}, nil
+	}
+	// Nothing else wakes this controller when the wait runs out: the node's
+	// status is unchanged, and the failed operation is not watched here.
+	if wait := approvals.retryIn(); wait > 0 {
+		logger.V(1).Info("waiting before asking again to interrupt the node",
+			"node", node.Name, "nodeGroup", ng.Name, "configGeneration", nc.Generation,
+			"failedAttempts", approvals.failures, "retryIn", wait)
+		return ctrl.Result{RequeueAfter: wait}, nil
+	}
+
+	return ctrl.Result{}, r.createApproval(ctx, ng, node, nc, logger)
 }
 
-// findApproval looks for the operation that already covers this revision. The
-// read goes straight to the API server: a cached list that missed the previous
-// approval would mint a second one for the same revision.
-func (r *Reconciler) findApproval(ctx context.Context, nc *internalv1alpha1.NodeConfig) (*v1alpha1.NodeOperation, error) {
+// approvalState is what the API server knows about one revision's approvals:
+// the operation that still stands, and the failures that came before it.
+type approvalState struct {
+	current      *v1alpha1.NodeOperation
+	failures     int
+	lastFailedAt time.Time
+}
+
+// retryIn is what is left of the backoff after the newest failed attempt. Each
+// attempt waits longer than the one before: a disruption that failed once fails
+// the same way at once, and every try drains the node again for nothing.
+func (s approvalState) retryIn() time.Duration {
+	if s.failures == 0 {
+		return 0
+	}
+	backoff := min(disruptionRetryBackoff<<(s.failures-1), disruptionRetryBackoffMax)
+	return backoff - time.Since(s.lastFailedAt)
+}
+
+// approvalsFor reads the operations that cover this revision. The read goes
+// straight to the API server: a cached list that missed the previous approval
+// would mint a second one for the same revision.
+func (r *Reconciler) approvalsFor(ctx context.Context, nc *internalv1alpha1.NodeConfig) (approvalState, error) {
 	ops := &v1alpha1.NodeOperationList{}
 	if err := r.sources.Reader.List(ctx, ops, client.MatchingLabels{
 		v1alpha1.NodeOperationNodeLabel: nc.Name,
 		nodeConfigUIDLabel:              string(nc.UID),
 	}); err != nil {
-		return nil, fmt.Errorf("list NodeOperations of %s: %w", nc.Name, err)
+		return approvalState{}, fmt.Errorf("list NodeOperations of %s: %w", nc.Name, err)
 	}
+
+	var state approvalState
 	for i := range ops.Items {
 		op := &ops.Items[i]
 		if op.Spec.Type != v1alpha1.NodeOperationTypeApproveDisruption || op.Spec.NodeName != nc.Name {
@@ -91,15 +127,46 @@ func (r *Reconciler) findApproval(ctx context.Context, nc *internalv1alpha1.Node
 		if op.Spec.ConfigGeneration == nil || *op.Spec.ConfigGeneration != nc.Generation {
 			continue
 		}
-		// A failed operation allows a fresh attempt. A completed one is returned:
-		// it stops a second approval, and a second drain, while the node is still
-		// applying the config and has not cleared DisruptionRequired.
+		// A failed operation is an attempt spent, not one in flight. A completed
+		// one is kept: it stops a second approval, and a second drain, while the
+		// node is still applying the config and has not cleared DisruptionRequired.
 		if op.Status.Phase == v1alpha1.NodeOperationPhaseFailed {
+			state.failures++
+			state.lastFailedAt = later(state.lastFailedAt, failedAt(op))
 			continue
 		}
-		return op, nil
+		state.current = op
 	}
-	return nil, nil
+	return state, nil
+}
+
+// failedAt is when an operation ended. The stamp is written a moment after the
+// phase, so a failure the operation controller has not stamped yet counts from
+// when it was created rather than from nothing.
+func failedAt(op *v1alpha1.NodeOperation) time.Time {
+	if op.Status.FinishedAt != nil {
+		return op.Status.FinishedAt.Time
+	}
+	return op.CreationTimestamp.Time
+}
+
+func later(a, b time.Time) time.Time {
+	if a.After(b) {
+		return a
+	}
+	return b
+}
+
+// recordApprovalExhausted says the cluster has given up interrupting this node
+// for this revision. Reported on both objects: the operator watching the group
+// and the one looking at the node's configuration are not the same person.
+func (r *Reconciler) recordApprovalExhausted(ng *v1.NodeGroup, nc *internalv1alpha1.NodeConfig, failures int, logger logr.Logger) {
+	logger.Info("stopped asking to interrupt the node",
+		"node", nc.Name, "nodeGroup", ng.Name, "configGeneration", nc.Generation, "failedAttempts", failures)
+	message := fmt.Sprintf("Gave up interrupting node %s for config generation %d after %d failed NodeOperations; nothing more is created until the configuration changes",
+		nc.Name, nc.Generation, failures)
+	r.Recorder.Event(ng, corev1.EventTypeWarning, disruptionApprovalExhaustedEvent, message)
+	r.Recorder.Event(nc, corev1.EventTypeWarning, disruptionApprovalExhaustedEvent, message)
 }
 
 func (r *Reconciler) createApproval(ctx context.Context, ng *v1.NodeGroup, node *corev1.Node, nc *internalv1alpha1.NodeConfig, logger logr.Logger) error {

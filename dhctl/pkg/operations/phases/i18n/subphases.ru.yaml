@@ -11,6 +11,8 @@ RegistryPackagesProxy: "Настройка проксирования репоз
 NodePreparation: "Подготовка master-узла к инициализации"
 ModulesPreparation: "Подготовка модулей"
 ExecuteBashibleBundle: "Выполнение пакета инициализации узла"
+WaitForMasterInstall: "Ожидание установки Kubernetes на master-узле"
+GetClusterAccess: "Получение доступа к кластеру"
 AdditionalMasters: "Master-узлы кластера"
 StaticNodes: "Статические узлы кластера"
 CheckInfra: "Состояние облачных ресурсов"

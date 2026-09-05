@@ -28,6 +28,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state/cache"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/system/providerinitializer"
@@ -49,13 +50,21 @@ import (
 // kubeconfig one, whose length is pre-existing behaviour shared with dhctl converge: with
 // --kube-cachestore-namespace and no --kube-cachestore-name the identity is used raw as a
 // Kubernetes Secret name and copied into a label value.
-func primaryCacheIdentity(m *config.MetaConfig, hosts []sshconfig.Host, kube options.KubeOptions) string {
+func primaryCacheIdentity(m *config.MetaConfig, hosts []sshconfig.Host, masterHosts []string, kube options.KubeOptions) string {
 	if m.ClusterPrefix != "" && m.ProviderName != "" {
 		return m.CachePath()
 	}
 
 	if names := canonHosts(hosts); len(names) > 0 {
 		return "ssh-" + stringsutil.Sha256EncodeWithFirstLettersOfHash(strings.Join(names, ","), 32)
+	}
+
+	// An immutable cluster refuses --ssh-host and names its machines with --master-host instead,
+	// so without this arm nothing above or below it reads anything and every such cluster shares
+	// one directory. The machine names are the identity: a run that renames one is a different
+	// cluster, and a rerun that corrects a mistyped address is the same one.
+	if names := canonMasterHosts(masterHosts); len(names) > 0 {
+		return "master-" + stringsutil.Sha256EncodeWithFirstLettersOfHash(strings.Join(names, ","), 32)
 	}
 
 	if kube.Config != "" {
@@ -69,6 +78,26 @@ func primaryCacheIdentity(m *config.MetaConfig, hosts []sshconfig.Host, kube opt
 	// A static bootstrap of the host it runs on carries no address of its own. Refusing it here
 	// would break a bootstrap the interactive branch of bootstrapPreparation supports.
 	return m.CachePath()
+}
+
+// canonMasterHosts is canonHosts for the machine names of the raw "name=address" pairs of
+// --master-host, sorted and de-duplicated the same way and for the same reason.
+//
+// Names only, and split by the one normaliser of the flag: an address is where the typo lands, and
+// a rerun that corrects one has to come back to the directory holding what was already pushed and
+// the certificate the running master booted with.
+func canonMasterHosts(raw []string) []string {
+	names := make([]string, 0, len(raw))
+
+	for _, pair := range raw {
+		if name, _ := immutable.ParseHost(pair); name != "" {
+			names = append(names, name)
+		}
+	}
+
+	slices.Sort(names)
+
+	return slices.Compact(names)
 }
 
 func canonHosts(hosts []sshconfig.Host) []string {
@@ -97,12 +126,13 @@ func cacheIdentity(
 	ctx context.Context,
 	m *config.MetaConfig,
 	hosts []sshconfig.Host,
+	masterHosts []string,
 	kube options.KubeOptions,
 	cacheDir string,
 ) string {
 	legacy := m.CachePath()
 
-	identity := primaryCacheIdentity(m, hosts, kube)
+	identity := primaryCacheIdentity(m, hosts, masterHosts, kube)
 	if identity == legacy {
 		return legacy
 	}

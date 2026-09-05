@@ -1,0 +1,255 @@
+// Copyright 2026 Flant JSC
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+package immutable
+
+import (
+	"cmp"
+	"context"
+	"fmt"
+	"net"
+	"slices"
+	"strings"
+
+	"sigs.k8s.io/yaml"
+
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
+)
+
+// Customization is the machine-specific part of a node's configuration: what
+// the cluster cannot know. The set matches what node-controller keeps once the
+// node registers (keepBootstrapOnlyFields, internal/controller/nodeconfig/render.go).
+type Customization struct {
+	// NodeName is the node this document is about, matched against the hosts
+	// named on the command line.
+	NodeName string
+
+	network *network
+	storage *storage
+}
+
+// DescribesInterfaces reports whether the operator listed the machine's
+// interfaces. Where they did, the list replaces the rendered one whole and the
+// cluster interface is marked inside it rather than synthesised.
+func (c *Customization) DescribesInterfaces() bool {
+	return len(describedInterfaces(c)) > 0
+}
+
+// customizationDocument is the shape the operator writes. Deliberately not the
+// full NodeConfig: a field outside this set is either a typo or a NodeGroup
+// setting in the wrong place, and both are worth refusing.
+type customizationDocument struct {
+	APIVersion string     `json:"apiVersion"`
+	Kind       string     `json:"kind"`
+	Metadata   objectMeta `json:"metadata"`
+	Spec       struct {
+		Network *network `json:"network,omitempty"`
+		Storage *storage `json:"storage,omitempty"`
+	} `json:"spec"`
+}
+
+// ParseCustomizations reads the NodeConfig documents the operator put next to
+// ClusterConfiguration. Strict on purpose: a silently dropped field is a
+// machine that boots with a configuration nobody asked for.
+func ParseCustomizations(ctx context.Context, documents []string) ([]Customization, error) {
+	customizations := make([]Customization, 0, len(documents))
+
+	for i, document := range documents {
+		var parsed customizationDocument
+		if err := yaml.UnmarshalStrict([]byte(document), &parsed); err != nil {
+			return nil, fmt.Errorf(
+				"read node customization %d: %w. A machine is described by network and storage only; dhctl puts no other field of this document in the payload",
+				i+1, err)
+		}
+		if parsed.APIVersion != PayloadAPIVersion || parsed.Kind != NodeConfigKind {
+			return nil, fmt.Errorf("node customization %d is %s/%s, expected %s/%s",
+				i+1, parsed.APIVersion, parsed.Kind, PayloadAPIVersion, NodeConfigKind)
+		}
+		if parsed.Metadata.Name == "" {
+			return nil, fmt.Errorf("node customization %d names no node in metadata.name", i+1)
+		}
+		if parsed.Spec.Network != nil && parsed.Spec.Network.Hostname != "" {
+			return nil, fmt.Errorf(
+				"node customization %d sets network.hostname; the hostname is the node name, which the cluster decides", i+1)
+		}
+		var selector *diskSelector
+		var mounts []mount
+		if parsed.Spec.Storage != nil {
+			selector = parsed.Spec.Storage.DiskSelector
+			mounts = parsed.Spec.Storage.Mounts
+		}
+		// An empty selector matches every disk, config drives included, where the
+		// render had one narrowed by size.
+		if selector != nil && *selector == (diskSelector{}) {
+			return nil, fmt.Errorf(
+				"node customization %d has an empty storage.diskSelector; name at least one attribute of the disk or leave the block out", i+1)
+		}
+		if err := checkMounts(mounts, i+1); err != nil {
+			return nil, err
+		}
+		if err := checkAddresses(ctx, parsed.Spec.Network, parsed.Metadata.Name); err != nil {
+			return nil, err
+		}
+		if err := checkClusterMark(parsed.Spec.Network, parsed.Metadata.Name); err != nil {
+			return nil, err
+		}
+
+		customizations = append(customizations, Customization{
+			NodeName: parsed.Metadata.Name,
+			network:  parsed.Spec.Network,
+			storage:  parsed.Spec.Storage,
+		})
+	}
+
+	return customizations, nil
+}
+
+// checkMounts refuses what a mount may not say: bindTo and mode over a rendered
+// mount, which would move etcd off the hostPath its static pod carries, and a
+// mount naming no disk, which the NodeConfig schema rejects.
+func checkMounts(mounts []mount, number int) error {
+	rendered := etcdMounts()
+
+	for _, m := range mounts {
+		if slices.ContainsFunc(rendered, func(r mount) bool { return r.Name == m.Name }) {
+			if m.BindTo != "" || m.Mode != "" {
+				return fmt.Errorf(
+					"node customization %d sets bindTo or mode on the %s mount, which the installer renders itself: leave both out and name the disk with partitionSelector or device",
+					number, m.Name)
+			}
+		}
+		if m.Device == "" && m.PartitionSelector == nil {
+			return fmt.Errorf(
+				"node customization %d names no disk for the %s mount: the mount replaces the rendered one whole, so give it a partitionSelector or a device",
+				number, m.Name)
+		}
+	}
+
+	return nil
+}
+
+// checkAddresses draws the line the node's renderer draws: refuse what the
+// machine cannot honour, warn about what it will ignore. Address= is emitted in
+// the static branch only (renderNetwork, images/init/src/0.1/generate.go).
+func checkAddresses(ctx context.Context, n *network, nodeName string) error {
+	if n == nil {
+		return nil
+	}
+
+	for _, iface := range n.Interfaces {
+		// A DHCP interface never has its addresses read, so they are a mistake we
+		// survive: most likely an operator who meant dhcp: false.
+		if iface.DHCP {
+			if len(iface.Addresses) > 0 {
+				dhlog.FromContext(ctx).WarnContext(ctx, fmt.Sprintf(
+					"Node %s gives interface %s the addresses %v while leaving it on dhcp: true; the machine takes its address over DHCP and ignores them. Write dhcp: false to have them configured",
+					nodeName, iface.Name, iface.Addresses))
+			}
+			continue
+		}
+		// The interfaces replace the rendered ones wholesale, and the machine emits
+		// neither Address= nor DHCP= for this one: the NIC comes up unconfigured and
+		// the node never registers. The CRD defaults dhcp to false, so this is easy.
+		if len(iface.Addresses) == 0 {
+			return fmt.Errorf(
+				"node %s leaves interface %s on dhcp: false and gives it no address, so the machine configures it with neither and never joins: "+
+					"give the interface an address, or write dhcp: true",
+				nodeName, iface.Name)
+		}
+		// A missing prefix means a single host to networkd, which leaves the
+		// machine off its own subnet with no way to say so.
+		for _, address := range iface.Addresses {
+			if _, _, err := net.ParseCIDR(address); err != nil {
+				return fmt.Errorf(
+					"node %s gives interface %s the address %q, which carries no prefix length: write it as 192.168.0.101/24, the form the machine configures the interface with",
+					nodeName, iface.Name, address)
+			}
+		}
+	}
+
+	return nil
+}
+
+// applyCustomization overlays what the operator said about this machine onto
+// the rendered spec, field by field: a document names the one thing the cluster
+// got wrong, and what it leaves out must keep what the render put there.
+func applyCustomization(spec *nodeSpec, c Customization) {
+	if c.network != nil {
+		// The hostname is never taken from the document: it has to match the node
+		// name however the machine was given its addresses.
+		if len(c.network.Interfaces) > 0 {
+			spec.Network.Interfaces = c.network.Interfaces
+		}
+		if c.network.DNS != nil {
+			spec.Network.DNS = c.network.DNS
+		}
+		if len(c.network.Routes) > 0 {
+			spec.Network.Routes = c.network.Routes
+		}
+	}
+	if c.storage != nil {
+		// Selector and device move together: the CRD gives diskSelector priority
+		// over device, so a document naming only device has to clear the selector.
+		if c.storage.DiskSelector != nil || c.storage.Device != "" {
+			spec.Storage.DiskSelector = c.storage.DiskSelector
+			spec.Storage.Device = c.storage.Device
+		}
+		spec.Storage.Mounts = mergeMounts(spec.Storage.Mounts, c.storage.Mounts)
+	}
+}
+
+// checkClusterMark refuses a document that marks more than one interface as the
+// cluster one: the node registers under a single address, and a document naming
+// two says nothing about which.
+func checkClusterMark(n *network, nodeName string) error {
+	if n == nil {
+		return nil
+	}
+
+	var marked []string
+	for _, iface := range n.Interfaces {
+		if iface.Cluster {
+			marked = append(marked, iface.Name)
+		}
+	}
+	if len(marked) <= 1 {
+		return nil
+	}
+
+	return fmt.Errorf("node %s marks %s as cluster interfaces, and a node has one address the cluster reaches it on: "+
+		"leave cluster: true on a single interface", nodeName, strings.Join(marked, " and "))
+}
+
+// mergeMounts overlays the operator's mounts onto the rendered ones by name —
+// the CRD's own list key. Replacing the slice would drop the etcd disk from a
+// control-plane node the moment an operator adds a mount of their own.
+func mergeMounts(rendered, custom []mount) []mount {
+	merged := slices.Clone(rendered)
+
+	for _, m := range custom {
+		i := slices.IndexFunc(merged, func(r mount) bool { return r.Name == m.Name })
+		if i < 0 {
+			merged = append(merged, m)
+			continue
+		}
+		// The parse refuses both on a mount of a rendered name, so here they can
+		// only fall back: etcd stays on the /var/lib/etcd hostPath its static pod
+		// carries. Device and PartitionSelector still move wholesale.
+		m.BindTo = cmp.Or(m.BindTo, merged[i].BindTo)
+		m.Mode = cmp.Or(m.Mode, merged[i].Mode)
+		merged[i] = m
+	}
+
+	return merged
+}

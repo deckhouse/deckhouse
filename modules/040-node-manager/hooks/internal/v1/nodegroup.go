@@ -82,7 +82,7 @@ type NodeGroupSpec struct {
 	NodeType NodeType `json:"nodeType,omitempty"`
 
 	// SystemType selects how the node is managed: Mutable (bashible) or
-	// Immutable (olcedar, reconciled from a NodeConfig). Empty means Mutable.
+	// Immutable (Deckhouse Engine, reconciled from a NodeConfig). Empty means Mutable.
 	SystemType SystemType `json:"systemType,omitempty"`
 
 	// Maximum drain time of CloudEphemeral machines in seconds

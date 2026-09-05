@@ -370,7 +370,7 @@ rules:
   - kubernetes.io/kube-apiserver-client
   verbs:
   - approve
-# NodeConfigs - the per-node desired state of olcedar nodes. The node-config
+# NodeConfigs - the per-node desired state of Deckhouse Engine nodes. The node-config
 # controller renders one object per node of an immutable NodeGroup; the on-node
 # agent watches it and owns its status, which is why status is not listed here.
 # NodeOperations - the record of every interruption of a node: node-manager
@@ -396,6 +396,27 @@ rules:
   - get
   - patch
   - update
+# NodeExtensionRequests - the operator's requests to merge extra system
+# extensions onto matching nodes. node-controller reads them to render the
+# per-node extension set, enforces sysext name/digest uniqueness in an admission
+# webhook, and reports the matched groups and any conflict back through their
+# status. The request itself belongs to the operator, so it is read-only here.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeextensionrequests
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeextensionrequests/status
+  verbs:
+  - get
+  - update
+  - patch
 - apiGroups:
   - internal.deckhouse.io
   resources:
@@ -686,3 +707,36 @@ subjects:
 - kind: Group
   name: system:nodes
   apiGroup: rbac.authorization.k8s.io
+---
+# The aggregated API server delegates authentication and authorization of its
+# callers to the kube-apiserver: TokenReview and SubjectAccessReview.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:node-manager:node-controller:auth-delegator
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:auth-delegator
+subjects:
+- kind: ServiceAccount
+  name: node-controller
+  namespace: d8-cloud-instance-manager
+---
+# ConfigMap/extension-apiserver-authentication holds the CA bundles the
+# aggregated API server verifies the front proxy and its clients with.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: d8:node-manager:node-controller:auth-reader
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: extension-apiserver-authentication-reader
+subjects:
+- kind: ServiceAccount
+  name: node-controller
+  namespace: d8-cloud-instance-manager

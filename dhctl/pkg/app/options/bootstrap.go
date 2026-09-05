@@ -34,6 +34,10 @@ type BootstrapOptions struct {
 	// immutable nodes it is the only way in — those nodes run no SSH server.
 	KubeconfigOut string
 
+	// MasterHostsRaw are the "<node-name>=<address>" pairs of a static cluster
+	// of immutable nodes: those machines run no sshd and no cloud reports them.
+	MasterHostsRaw []string
+
 	ForceAbortFromCache             bool
 	DontUsePublicControlPlaneImages bool
 

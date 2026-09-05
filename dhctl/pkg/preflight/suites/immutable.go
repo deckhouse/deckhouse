@@ -15,6 +15,8 @@
 package suites
 
 import (
+	"context"
+
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
@@ -26,6 +28,9 @@ type ImmutableDeps struct {
 	BootstrapOpts *options.BootstrapOptions
 	GlobalOpts    *options.GlobalOptions
 	CommanderMode bool
+	// MachinesAvailability reaches the machines named with --master-host. Supplied by
+	// the bootstrapper, which owns the tunnel to them; nil where there are none.
+	MachinesAvailability func(context.Context) error
 }
 
 // NewImmutableSuite gathers the checks that only apply when the master
@@ -38,6 +43,19 @@ func NewImmutableSuite(deps ImmutableDeps) preflight.Suite {
 		checks.ImmutableRegistryMode(deps.MetaConfig),
 		checks.ImmutableSignatureMode(deps.MetaConfig, deps.GlobalOpts),
 		checks.ImmutablePostBootstrapScript(deps.BootstrapOpts),
-		checks.ImmutableKubeconfigOut(deps.BootstrapOpts, deps.GlobalOpts, deps.CommanderMode),
+		checks.ImmutableKubeconfigOut(deps.BootstrapOpts, deps.CommanderMode),
+		checks.ImmutableKubeconfigKept(deps.BootstrapOpts, deps.GlobalOpts),
+		checks.ImmutableMachinesAvailability(deps.MachinesAvailability),
+	)
+}
+
+// NewImmutableStaticSuite is what a static cluster of immutable machines can be checked for. It
+// takes the two checks of NewStaticSuite that read the configuration and nothing else: every
+// other one is built over an SSH provider this path has none of, or over the node interface
+// helper.GetNodeInterface hands back without one — the installer container itself.
+func NewImmutableStaticSuite(metaConfig *config.MetaConfig) preflight.Suite {
+	return preflight.NewSuite(
+		checks.CidrIntersectionStatic(metaConfig),
+		checks.StaticInstancesIPDuplication(metaConfig),
 	)
 }

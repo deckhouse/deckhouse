@@ -29,7 +29,7 @@ import (
 // setting the node cannot interpret: "Automatic" is an installer default, and
 // the node would render it straight into the feature gates of every component.
 func TestClusterParamsResolvesAutomaticKubernetesVersion(t *testing.T) {
-	metaConfig := immutabletest.MetaConfig(t)
+	metaConfig := testMetaConfig(t)
 	metaConfig.ClusterConfig["kubernetesVersion"] = json.RawMessage(`"Automatic"`)
 
 	params, err := clusterParams(metaConfig)
@@ -41,7 +41,7 @@ func TestClusterParamsResolvesAutomaticKubernetesVersion(t *testing.T) {
 // them renders as an empty flag when it is missing, and the component then dies
 // on its own command line with nothing pointing back at the configuration.
 func TestClusterParams(t *testing.T) {
-	metaConfig := immutabletest.MetaConfig(t)
+	metaConfig := testMetaConfig(t)
 
 	params, err := clusterParams(metaConfig)
 	require.NoError(t, err)
@@ -58,7 +58,7 @@ func TestClusterParams(t *testing.T) {
 
 	for _, key := range []string{"clusterDomain", "serviceSubnetCIDR", "podSubnetCIDR", "podSubnetNodeCIDRPrefix"} {
 		t.Run("missing "+key, func(t *testing.T) {
-			metaConfig := immutabletest.MetaConfig(t)
+			metaConfig := testMetaConfig(t)
 			delete(metaConfig.ClusterConfig, key)
 
 			_, err := clusterParams(metaConfig)
@@ -70,7 +70,7 @@ func TestClusterParams(t *testing.T) {
 // TestResolveControlPlaneImages pins what the templates are handed: bare
 // digests, with the registry address and path prepended at render time.
 func TestResolveControlPlaneImages(t *testing.T) {
-	metaConfig := immutabletest.MetaConfig(t)
+	metaConfig := testMetaConfig(t)
 
 	images, err := ResolveControlPlaneImages(t.Context(), metaConfig)
 	require.NoError(t, err)
@@ -86,7 +86,7 @@ func TestResolveControlPlaneImages(t *testing.T) {
 // guards: an installer that does not ship a control plane for the requested
 // minor hands the node an empty image and the static pod never starts.
 func TestResolveControlPlaneImagesMissingVersion(t *testing.T) {
-	metaConfig := immutabletest.MetaConfig(t)
+	metaConfig := testMetaConfig(t)
 	metaConfig.ClusterConfig["kubernetesVersion"] = json.RawMessage(`"1.30"`)
 
 	_, err := ResolveControlPlaneImages(t.Context(), metaConfig)
@@ -124,7 +124,7 @@ func TestCertSANs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			metaConfig := immutabletest.MetaConfig(t)
+			metaConfig := testMetaConfig(t)
 			if tt.settings != nil {
 				metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, &config.ModuleConfig{
 					ObjectMeta: metav1.ObjectMeta{Name: "control-plane-manager"},

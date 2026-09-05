@@ -21,8 +21,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
@@ -36,9 +38,9 @@ var ErrKubeconfigOutRequired = errors.New(
 		"Bootstrap it from the dhctl CLI instead, with --kubeconfig-out naming where to keep the kubeconfig",
 )
 
-// CheckKubeconfigOutSurvivesCleanup rejects a --kubeconfig-out the tmp cleaner
-// would sweep at exit (under tmpDir, without a protected suffix): on an
-// immutable master that file is the only way in.
+// CheckKubeconfigOutSurvivesCleanup rejects a --kubeconfig-out path the tmp
+// cleaner would sweep at exit (anything under tmpDir not ending in a protected
+// suffix) — on an immutable master that file is the only way in. Pure.
 func CheckKubeconfigOutSurvivesCleanup(_ context.Context, kubeconfigOut, tmpDir string) error {
 	if kubeconfigOut == "" || tmpDir == "" {
 		return nil
@@ -83,7 +85,8 @@ func resolvePath(path string) string {
 
 // RetargetKubeconfig points the collected admin kubeconfig at the address dhctl
 // reaches the API server on (e.g. a bastion's local forward) and at the name its
-// certificate is issued for. The operator's own copy keeps the node's address.
+// certificate is issued for, and makes it act as global.ImpersonateUser. The
+// retargeted copy is internal; the operator's copy keeps the node's address. Pure.
 func RetargetKubeconfig(_ context.Context, content []byte, server, serverName string) ([]byte, error) {
 	if server == "" {
 		return nil, errors.New("retarget the admin kubeconfig: server URL is empty")
@@ -99,6 +102,9 @@ func RetargetKubeconfig(_ context.Context, content []byte, server, serverName st
 	if len(kubeconfig.Clusters) == 0 {
 		return nil, errors.New("the collected admin kubeconfig names no cluster")
 	}
+	if len(kubeconfig.AuthInfos) == 0 {
+		return nil, errors.New("the collected admin kubeconfig names no user")
+	}
 
 	for _, cluster := range kubeconfig.Clusters {
 		cluster.Server = server
@@ -108,12 +114,39 @@ func RetargetKubeconfig(_ context.Context, content []byte, server, serverName st
 		cluster.TLSServerName = serverName
 	}
 
+	// The certificate the node signed names kubernetes-admin, and Deckhouse's
+	// admission policies exempt the username "dhctl" and nothing else: without
+	// this every write of a heritage: deckhouse object is denied for good.
+	for _, authInfo := range kubeconfig.AuthInfos {
+		authInfo.Impersonate = global.ImpersonateUser
+		// The group comes along because impersonation replaces the identity whole:
+		// a user named dhctl with no groups is nobody's cluster-admin.
+		authInfo.ImpersonateGroups = []string{global.ImpersonateGroup}
+	}
+
 	out, err := clientcmd.Write(*kubeconfig)
 	if err != nil {
 		return nil, fmt.Errorf("serialize the collected admin kubeconfig: %w", err)
 	}
 
 	return out, nil
+}
+
+// RESTConfigFromKubeconfig builds the client configuration a kubeconfig
+// describes, in memory: it carries cluster-admin credentials, and a copy on disk
+// would have to be guarded, removed, and removed again after a signal.
+func RESTConfigFromKubeconfig(content []byte, contextName string) (*rest.Config, error) {
+	kubeconfig, err := clientcmd.Load(content)
+	if err != nil {
+		return nil, fmt.Errorf("parse the kubeconfig: %w", err)
+	}
+
+	restConfig, err := clientcmd.NewNonInteractiveClientConfig(*kubeconfig, contextName, &clientcmd.ConfigOverrides{}, nil).ClientConfig()
+	if err != nil {
+		return nil, fmt.Errorf("build the client configuration from the kubeconfig: %w", err)
+	}
+
+	return restConfig, nil
 }
 
 // SaveCollectedKubeconfig records where the admin kubeconfig the node served now

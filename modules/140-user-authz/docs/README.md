@@ -245,6 +245,7 @@ read:
     - deckhouse.io/keepalivedinstances
     - deckhouse.io/localpathprovisioners
     - deckhouse.io/nodegroups
+    - deckhouse.io/nodeoperations
     - deckhouse.io/openstackinstanceclasses
     - deckhouse.io/operationpolicies
     - deckhouse.io/projecttemplates
@@ -433,10 +434,14 @@ write:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterEditor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`):
 
 ```text
+create,delete:
+    - deckhouse.io/nodeoperations
 delete,deletecollection:
     - acme.cert-manager.io/challenges
     - acme.cert-manager.io/orders
     - cert-manager.io/certificaterequests
+get,list:
+    - templates.internal.deckhouse.io/nodeconfigtemplates
 patch,update:
     - nodes
 read:

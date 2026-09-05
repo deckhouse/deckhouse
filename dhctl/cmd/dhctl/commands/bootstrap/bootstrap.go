@@ -45,6 +45,7 @@ func DefineBootstrapCommand(cmd *kingpin.CmdClause, opts *options.Options) *king
 	app.DefineDontUsePublicImagesFlags(cmd, &opts.Bootstrap)
 	app.DefinePostBootstrapScriptFlags(cmd, &opts.Bootstrap)
 	app.DefineKubeconfigOutFlags(cmd, &opts.Bootstrap)
+	app.DefineImmutableHostsFlags(cmd, &opts.Bootstrap)
 	app.DefinePreflight(cmd, &opts.Preflight)
 	app.DefineSkipPhases(cmd, &opts.Bootstrap)
 	app.DefineImgBundleFlags(cmd, &opts.Registry)

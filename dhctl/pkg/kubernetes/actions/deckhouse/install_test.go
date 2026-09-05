@@ -23,10 +23,14 @@ import (
 	apiv1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	fakecorev1 "k8s.io/client-go/kubernetes/typed/core/v1/fake"
+	k8stesting "k8s.io/client-go/testing"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	registry_mocks "github.com/deckhouse/deckhouse/dhctl/pkg/config/registrymocks"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/manifests"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
 
@@ -552,6 +556,117 @@ func TestDeckhouseInstallCreatesClusterUUIDConfigMap(t *testing.T) {
 	require.NoError(t, err, "d8-cluster-uuid ConfigMap must be created when UUID is set")
 	require.Equal(t, clusterUUID, cm.Data["cluster-uuid"])
 	require.Equal(t, "deckhouse", cm.Labels["heritage"], "the deckhouse global hook creates this ConfigMap labelled, dhctl must not create a different object")
+}
+
+func denyNamespaceRequests(t *testing.T, kubeCl *client.KubernetesClient, verb string, denial error) {
+	t.Helper()
+
+	fakeCoreV1, ok := kubeCl.CoreV1().(*fakecorev1.FakeCoreV1)
+	require.True(t, ok, "the fake client must expose its reactor chain")
+	fakeCoreV1.PrependReactor(verb, "namespaces", func(k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, denial
+	})
+}
+
+func namespaceActions(t *testing.T, kubeCl *client.KubernetesClient, verb string) []k8stesting.Action {
+	t.Helper()
+
+	fakeCoreV1, ok := kubeCl.CoreV1().(*fakecorev1.FakeCoreV1)
+	require.True(t, ok, "the fake client must expose its recorded actions")
+
+	matched := make([]k8stesting.Action, 0)
+	for _, action := range fakeCoreV1.Actions() {
+		if action.Matches(verb, "namespaces") {
+			matched = append(matched, action)
+		}
+	}
+	return matched
+}
+
+// A rerun of the installer against a cluster where Deckhouse already runs: the namespace
+// is there and the admission policy answers Forbidden instead of AlreadyExists.
+func TestNamespaceTaskKeepsExistingNamespace(t *testing.T) {
+	ctx := t.Context()
+	kubeCl := client.NewFakeKubernetesClient()
+
+	existing := &apiv1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name:   "d8-system",
+		Labels: map[string]string{"heritage": "deckhouse", "kubernetes.io/metadata.name": "d8-system"},
+	}}
+	_, err := kubeCl.CoreV1().Namespaces().Create(ctx, existing, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	denyNamespaceRequests(t, kubeCl, "create", errors.NewForbidden(
+		apiv1.Resource("namespaces"), "d8-system",
+		fmt.Errorf("ValidatingAdmissionPolicy 'system-ns.deckhouse.io' with binding "+
+			"'system-ns.deckhouse.io' denied request: Creation of system namespaces is forbidden")))
+
+	task := getNSTask(kubeCl)
+	require.NoError(t, task.CreateOrUpdate(ctx))
+
+	ns, err := kubeCl.CoreV1().Namespaces().Get(ctx, "d8-system", metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, existing.Labels, ns.Labels, "a rerun must leave the namespace it found alone")
+	require.Empty(t, namespaceActions(t, kubeCl, "update"),
+		"an update is exactly what admission can deny, so it must not be attempted")
+}
+
+// dhctl acts as the username the policy exempts, so the same rerun now gets a plain
+// AlreadyExists — and the fall-through it would open leads to an unconditional Update
+// that replaces d8-system with the two-label manifest below, PSS labels and all.
+func TestNamespaceTaskKeepsExistingNamespaceWhenAdmissionAllowsTheCreate(t *testing.T) {
+	ctx := t.Context()
+	kubeCl := client.NewFakeKubernetesClient()
+
+	existing := &apiv1.Namespace{ObjectMeta: metav1.ObjectMeta{
+		Name: "d8-system",
+		Labels: map[string]string{
+			"heritage":                           "deckhouse",
+			"kubernetes.io/metadata.name":        "d8-system",
+			"security.deckhouse.io/pod-policy":   "privileged",
+			"pod-security.kubernetes.io/enforce": "privileged",
+		},
+	}}
+	_, err := kubeCl.CoreV1().Namespaces().Create(ctx, existing, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	task := getNSTask(kubeCl)
+	require.NoError(t, task.CreateOrUpdate(ctx))
+
+	ns, err := kubeCl.CoreV1().Namespaces().Get(ctx, "d8-system", metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, existing.Labels, ns.Labels, "a rerun must leave the namespace it found alone")
+	require.Empty(t, namespaceActions(t, kubeCl, "update"),
+		"the update would strip every label the chart put there")
+}
+
+func TestNamespaceTaskCreatesMissingNamespace(t *testing.T) {
+	ctx := t.Context()
+	kubeCl := client.NewFakeKubernetesClient()
+
+	task := getNSTask(kubeCl)
+	require.NoError(t, task.CreateOrUpdate(ctx))
+
+	ns, err := kubeCl.CoreV1().Namespaces().Get(ctx, "d8-system", metav1.GetOptions{})
+	require.NoError(t, err)
+	require.Equal(t, manifests.DeckhouseNamespace("d8-system").Labels, ns.Labels)
+	require.Len(t, namespaceActions(t, kubeCl, "create"), 1, "a fresh cluster gets exactly one create")
+}
+
+func TestNamespaceTaskReportsMissingCreatePermission(t *testing.T) {
+	ctx := t.Context()
+	kubeCl := client.NewFakeKubernetesClient()
+
+	denyNamespaceRequests(t, kubeCl, "get", errors.NewForbidden(
+		apiv1.Resource("namespaces"), "d8-system",
+		fmt.Errorf(`User "operator" cannot get resource "namespaces" at the cluster scope`)))
+	denyNamespaceRequests(t, kubeCl, "create", errors.NewForbidden(
+		apiv1.Resource("namespaces"), "d8-system",
+		fmt.Errorf(`User "operator" cannot create resource "namespaces" at the cluster scope`)))
+
+	task := getNSTask(kubeCl)
+	err := task.CreateOrUpdate(ctx)
+	require.ErrorContains(t, err, `cannot create resource "namespaces"`)
 }
 
 // update-observer starts long after node-controller first reads spec.desiredVersion, hence the seed.

@@ -115,6 +115,30 @@ func (c *ManagerReadinessChecker) IsReady(ctx context.Context, nodeName string) 
 	return isControlPlaneNodeReady(conditions), nil
 }
 
+// A joining master has the whole install ahead of it — extensions, reboot, kubelet —
+// and only at the end of it does control-plane-manager add its etcd member.
+const (
+	joiningControlPlaneAttempts = 360
+	joiningControlPlaneInterval = 5 * time.Second
+)
+
+// WaitReady blocks until control-plane-manager reports nodeName ready, etcd member
+// included: the Node appears when kubelet starts, long before that.
+func (c *ManagerReadinessChecker) WaitReady(ctx context.Context, nodeName string) error {
+	return retry.NewLoop(fmt.Sprintf("Waiting for the control plane of %s", nodeName),
+		joiningControlPlaneAttempts, joiningControlPlaneInterval).
+		RunContext(ctx, func() error {
+			ready, err := c.IsReady(ctx, nodeName)
+			if err != nil {
+				return fmt.Errorf("check the control plane of %s: %w", nodeName, err)
+			}
+			if !ready {
+				return fmt.Errorf("the control plane of %s is not ready yet", nodeName)
+			}
+			return nil
+		})
+}
+
 func (c *ManagerReadinessChecker) Name() string {
 	return "Control plane readiness"
 }

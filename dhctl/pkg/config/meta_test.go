@@ -19,14 +19,18 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"text/template"
 
 	"github.com/Masterminds/sprig/v3"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+
+	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
@@ -811,6 +815,53 @@ func TestPrepareDerivesNodeGroupsFromResources(t *testing.T) {
 	require.Equal(t, map[string]interface{}{"labels": map[string]interface{}{"node-role": "worker"}}, m.TerraNodeGroupSpecs[1].NodeTemplate)
 }
 
+// mcFlowResourcesBootstrappedNodeGroup is the "front" CloudPermanent group as an
+// mc-flow cluster carries it after bootstrap: the operator's manifest sets no
+// nodeTemplate, and NodeGroupManifest wrote an empty one into the cluster. check
+// reads this very object back as the config side of the comparison.
+const mcFlowResourcesBootstrappedNodeGroup = `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: front
+spec:
+  nodeType: CloudPermanent
+  systemType: Immutable
+  cloudInstances:
+    minPerZone: 1
+    maxPerZone: 1
+    classReference:
+      kind: DVPInstanceClass
+      name: front-dh-engine
+  nodeTemplate: {}
+`
+
+// nodeTemplateFromCluster mirrors the cluster side of the node-template
+// comparison: dhctl/pkg/kubernetes/actions/entity/node.go, GetNodeGroupTemplates.
+func nodeTemplateFromCluster(spec map[string]any) map[string]any {
+	template, _ := spec["nodeTemplate"].(map[string]any)
+	if len(template) == 0 {
+		return nil
+	}
+	return template
+}
+
+func TestPrepareNilsEmptyNodeTemplate(t *testing.T) {
+	m, err := cloudMetaConfig(mcFlowResourcesBootstrappedNodeGroup).Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+
+	require.Len(t, m.TerraNodeGroupSpecs, 1)
+
+	// The comparison operations/check.CheckState makes: an empty node template on
+	// either side must not be reported as a change.
+	fromCluster := nodeTemplateFromCluster(map[string]any{"nodeTemplate": map[string]any{}})
+	require.True(t,
+		reflect.DeepEqual(fromCluster, m.TerraNodeGroupSpecs[0].NodeTemplate),
+		"node template reported as changed: cluster %#v, config %#v",
+		fromCluster, m.TerraNodeGroupSpecs[0].NodeTemplate)
+	require.Nil(t, m.TerraNodeGroupSpecs[0].NodeTemplate)
+}
+
 func TestPrepareKeepsProviderClusterConfigNodeGroups(t *testing.T) {
 	m := cloudMetaConfig(mcFlowResources)
 	m.ProviderClusterConfig = map[string]json.RawMessage{
@@ -1029,4 +1080,123 @@ func TestPrepareGuardErrorNamesTheRemedy(t *testing.T) {
 	_, err := m.Prepare(t.Context(), DummyValidatorProvider())
 	require.ErrorContains(t, err, "spec.cloudInstances.classReference")
 	require.ErrorContains(t, err, "spec.cloudInstances.minPerZone")
+}
+
+// The systemType of a NodeGroup decides how its machines are configured, so it
+// has to survive the trip from the NodeGroup resource into the group spec the
+// bootstrap works from. Without it every group looks classic and an immutable
+// one is handed a bashible cloud config it cannot run.
+func TestTerraNodeGroupCarriesItsSystemType(t *testing.T) {
+	m := &MetaConfig{
+		CloudProviderVars: &CloudProviderVars{
+			NodeGroups: map[string]map[string]interface{}{
+				"front": {
+					"spec": map[string]interface{}{
+						"systemType":     "Immutable",
+						"cloudInstances": map[string]interface{}{"minPerZone": int64(1)},
+					},
+				},
+				"worker": {
+					"spec": map[string]interface{}{
+						"cloudInstances": map[string]interface{}{"minPerZone": int64(2)},
+					},
+				},
+			},
+		},
+	}
+
+	require.NoError(t, applyNodeGroupReplicasFromCloudProviderVars(m))
+
+	byName := map[string]TerraNodeGroupSpec{}
+	for _, ng := range m.TerraNodeGroupSpecs {
+		byName[ng.Name] = ng
+	}
+
+	require.Equal(t, "Immutable", byName["front"].SystemType)
+	require.Empty(t, byName["worker"].SystemType, "a group that names no systemType keeps none")
+}
+
+func TestFindTerraNodeGroup(t *testing.T) {
+	legacy := json.RawMessage(`[{"name":"system","replicas":1},{"name":"worker","replicas":2}]`)
+
+	tests := []struct {
+		name    string
+		specs   []TerraNodeGroupSpec
+		pcc     map[string]json.RawMessage
+		group   string
+		want    []byte
+		wantErr string
+	}{
+		{
+			name:  "mc-flow: specs derived from the cluster node groups, no nodeGroups in the provider cluster configuration",
+			specs: []TerraNodeGroupSpec{{Name: "system"}, {Name: "worker"}},
+			pcc:   map[string]json.RawMessage{"layout": json.RawMessage(`"Standard"`)},
+			group: "worker",
+		},
+		{
+			name:  "legacy: the raw entry of the group at its index",
+			specs: []TerraNodeGroupSpec{{Name: "system"}, {Name: "worker"}},
+			pcc:   map[string]json.RawMessage{"nodeGroups": legacy},
+			group: "worker",
+			want:  []byte(`{"name":"worker","replicas":2}`),
+		},
+		{
+			name:  "legacy: an unknown group is not in the specs",
+			specs: []TerraNodeGroupSpec{{Name: "system"}, {Name: "worker"}},
+			pcc:   map[string]json.RawMessage{"nodeGroups": legacy},
+			group: "absent",
+		},
+		{
+			name:  "an explicitly empty nodeGroups list does not address the derived specs",
+			specs: []TerraNodeGroupSpec{{Name: "system"}, {Name: "worker"}},
+			pcc:   map[string]json.RawMessage{"nodeGroups": json.RawMessage(`[]`)},
+			group: "worker",
+		},
+		{
+			name:    "a malformed nodeGroups list stops the caller",
+			specs:   []TerraNodeGroupSpec{{Name: "worker"}},
+			pcc:     map[string]json.RawMessage{"nodeGroups": json.RawMessage(`{"worker":{}}`)},
+			group:   "worker",
+			wantErr: "unmarshal node groups from provider cluster configuration",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			m := &MetaConfig{TerraNodeGroupSpecs: tt.specs, ProviderClusterConfig: tt.pcc}
+
+			settings, err := m.FindTerraNodeGroup(t.Context(), tt.group)
+
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				require.Nil(t, settings)
+				return
+			}
+			require.NoError(t, err)
+			if tt.want == nil {
+				require.Nil(t, settings)
+				return
+			}
+			require.JSONEq(t, string(tt.want), string(settings))
+		})
+	}
+}
+
+// An mc-flow cluster carries no nodeGroups in its provider cluster configuration
+// at all, so every node of every converge unmarshalled nil and logged a bare
+// "unexpected end of JSON input" at ERROR. An absent key is not a failure.
+func TestFindTerraNodeGroupOnMcFlowLogsNothing(t *testing.T) {
+	m, err := cloudMetaConfig(mcFlowResources).Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+	require.NotEmpty(t, m.TerraNodeGroupSpecs, "the specs come from the cluster node groups")
+	require.NotContains(t, m.ProviderClusterConfig, "nodeGroups")
+
+	var captured bytes.Buffer
+	ctx := dhlog.ToContext(t.Context(), slog.New(slog.NewTextHandler(&captured, nil)))
+
+	settings, err := m.FindTerraNodeGroup(ctx, "worker")
+
+	require.NoError(t, err)
+	require.Nil(t, settings)
+	require.Empty(t, captured.String(), "nothing to report: %s", captured.String())
 }

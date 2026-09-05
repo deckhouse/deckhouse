@@ -52,7 +52,7 @@ const (
 
 // MetaConfig is a cloud cluster whose master NodeGroup asks for an immutable
 // system. The golden payload is rendered from it, so a change here rewrites
-// testdata/master-cloud-init.yaml.
+// testdata/master-documents.yaml.
 func MetaConfig(t *testing.T) *config.MetaConfig {
 	t.Helper()
 
@@ -99,7 +99,7 @@ func MetaConfig(t *testing.T) *config.MetaConfig {
 				"nodeletSysext":          NodeletDigest,
 			},
 			"nodeManager": {
-				"olcedar": OSImageDigest,
+				"engine": OSImageDigest,
 			},
 			"common": {
 				"pause": PauseDigest,

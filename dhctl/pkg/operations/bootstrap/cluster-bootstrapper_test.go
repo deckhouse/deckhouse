@@ -27,6 +27,7 @@ import (
 	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/phases"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
@@ -46,6 +47,55 @@ func TestNodesComeFromResources(t *testing.T) {
 
 	static := &config.MetaConfig{ClusterType: config.StaticClusterType}
 	require.False(t, nodesComeFromResources(static), "a static cluster builds no cloud nodes")
+}
+
+// A NodeConfig document in the resources describes a machine the installer
+// talks to, never an object to create. The full bootstrap takes it out before
+// anything reads the resources; `bootstrap-phase create-resources` runs this
+// node alone and used to send the document to the API, where the CRD refused it.
+func TestParseResourcesKeepsNodeConfigDocumentsOutOfTheQueues(t *testing.T) {
+	bctx := &bootstrapContext{metaConfig: &config.MetaConfig{
+		ClusterType:   config.StaticClusterType,
+		ResourcesYAML: nodeConfigDocument + "---\n" + masterNodeGroup("Immutable") + "---\n" + keptConfigMap,
+	}}
+
+	require.NoError(t, (&ClusterBootstrapper{}).bootstrapParseResources(t.Context(), bctx))
+
+	queued := append(append(bctx.resourcesToCreateBefore, bctx.resourcesToCreateProvider...), bctx.resourcesToCreateAfter...)
+	kinds := make([]string, 0, len(queued))
+	for _, resource := range queued {
+		kinds = append(kinds, resource.Object.GetKind())
+	}
+	require.ElementsMatch(t, []string{"NodeGroup", "ConfigMap"}, kinds, "only cluster objects may be queued")
+}
+
+// A document nobody can push is an operator's mistake, not something to drop
+// on the floor: without an immutable master the machines it describes are
+// never talked to, and the document used to fail on the API instead, loudly.
+func TestParseResourcesRefusesNodeConfigDocumentsWithoutAnImmutableMaster(t *testing.T) {
+	bctx := &bootstrapContext{metaConfig: &config.MetaConfig{
+		ClusterType:   config.StaticClusterType,
+		ResourcesYAML: nodeConfigDocument + "---\n" + masterNodeGroup("") + "---\n" + keptConfigMap,
+	}}
+
+	err := (&ClusterBootstrapper{}).bootstrapParseResources(t.Context(), bctx)
+	require.ErrorContains(t, err, "1 NodeConfig document")
+	require.ErrorContains(t, err, "systemType: Immutable")
+}
+
+const nodeConfigDocument = "apiVersion: " + immutable.PayloadAPIVersion + "\nkind: " + immutable.NodeConfigKind + "\n" +
+	"metadata:\n  name: master-0\nspec:\n  nodeName: master-0\n"
+
+const keptConfigMap = "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: kept\n  namespace: default\n"
+
+// masterNodeGroup is the master NodeGroup as the resources carry it; an empty
+// systemType leaves the field out, which is a classic master.
+func masterNodeGroup(systemType string) string {
+	spec := "spec:\n  nodeType: Static\n"
+	if systemType != "" {
+		spec += "  systemType: " + systemType + "\n"
+	}
+	return "apiVersion: deckhouse.io/v1\nkind: NodeGroup\nmetadata:\n  name: master\n" + spec
 }
 
 func newResource(t *testing.T, apiVersion, kind, name, namespace string, fields map[string]any) *template.Resource {

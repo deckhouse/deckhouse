@@ -272,6 +272,19 @@ func (c *Creator) createSingleResource(ctx context.Context, resource *template.R
 				_, err := c.kubeCl.Dynamic().Resource(*gvr).
 					Namespace(namespace).
 					Create(ctx, docCopy, metav1.CreateOptions{})
+				if err == nil || apierrors.IsAlreadyExists(err) {
+					return err
+				}
+
+				// Admission answers before the API server can report a conflict - the
+				// system-ns.deckhouse.io policy denies CREATE of a d8-* namespace to
+				// everyone but Deckhouse - so a refusal is no proof the object is missing.
+				if _, getErr := c.kubeCl.Dynamic().Resource(*gvr).
+					Namespace(namespace).
+					Get(ctx, docCopy.GetName(), metav1.GetOptions{}); getErr == nil {
+					return apierrors.NewAlreadyExists(gvr.GroupResource(), docCopy.GetName())
+				}
+
 				return err
 			},
 			UpdateFunc: func(ctx context.Context, manifest any) error {

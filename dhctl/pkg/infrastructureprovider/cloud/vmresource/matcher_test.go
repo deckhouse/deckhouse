@@ -122,6 +122,34 @@ func TestMatch(t *testing.T) {
 			want: false,
 		},
 		{
+			name: "pure delete carries the kind in Before only",
+			rule: &Rule{
+				Type:        "kubernetes_manifest",
+				FieldEquals: &FieldEquals{Path: "manifest.kind", Value: "VirtualMachine"},
+			},
+			rc: plan.ResourceChange{
+				Type: "kubernetes_manifest",
+				Change: plan.ChangeOp{Before: map[string]any{
+					"manifest": map[string]any{"kind": "VirtualMachine"},
+				}},
+			},
+			want: true,
+		},
+		{
+			name: "pure delete of another kind stays unmatched",
+			rule: &Rule{
+				Type:        "kubernetes_manifest",
+				FieldEquals: &FieldEquals{Path: "manifest.kind", Value: "VirtualMachine"},
+			},
+			rc: plan.ResourceChange{
+				Type: "kubernetes_manifest",
+				Change: plan.ChangeOp{Before: map[string]any{
+					"manifest": map[string]any{"kind": "Service"},
+				}},
+			},
+			want: false,
+		},
+		{
 			name: "nil rule returns false",
 			rule: nil,
 			rc:   plan.ResourceChange{Type: "yandex_compute_instance"},

@@ -16,27 +16,6 @@ package bootstrap
 
 import "time"
 
-// What a joining node reads out of the running cluster. Each of these names an
-// object node-controller also addresses; see the mirrors named below.
-const (
-	// The kubernetes Service's EndpointSlice, the cluster's own record of where
-	// its apiservers answer.
-	// Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/constants.go.
-	apiServerEndpointSliceNS   = "default"
-	apiServerEndpointSliceName = "kubernetes"
-	apiServerPortName          = "https"
-
-	// clusterCAConfigMap carries the cluster CA every ServiceAccount is given, and
-	// the source node-controller renders day-2 configs from, so a node sees one CA.
-	// Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/constants.go.
-	clusterCAConfigMap = "kube-root-ca.crt"
-	clusterCAKey       = "ca.crt"
-
-	// bootstrapTokenNGLabel labels a bootstrap-token secret with its NodeGroup.
-	// Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodebootstrap/constants.go.
-	bootstrapTokenNGLabel = "node-manager.deckhouse.io/node-group"
-)
-
 // waitBudget is how long dhctl keeps asking: attempts spaced by interval.
 type waitBudget struct {
 	attempts int
@@ -59,8 +38,18 @@ var (
 	// next step, so a couple of minutes is generous.
 	waitNodeRegistered = waitBudget{attempts: 120, interval: time.Second}
 
-	// A Deckhouse hook publishes what a joining node needs after the NodeGroup
-	// arrives, so the first read of a young cluster finds nothing. The budget is
-	// the classic path's wait for the group's cloud config (entity.GetCloudConfig).
-	waitJoinInputs = waitBudget{attempts: 225, interval: time.Second}
+	// The machine may be powering on when the bootstrap starts, and the Deckhouse
+	// Engine init opens the port about thirty seconds into the boot. Ten minutes.
+	waitMaintenancePort = waitBudget{attempts: 120, interval: 5 * time.Second}
+
+	// The preflight asks a different question than the wait above: not "has this
+	// machine finished booting" but "did the operator name machines that exist".
+	// Three tries, and the whole thing is over in about ten seconds: an address
+	// nobody answers for is a typo, and a typo must not be waited out.
+	checkMachinesAvailable = waitBudget{attempts: 3, interval: 2 * time.Second}
 )
+
+// checkMachineTimeout bounds one try of the preflight above. Without it a try
+// runs to the HTTP client's own 30s: an address that swallows packets — which is
+// what a typo in a private network looks like — then costs minutes, not seconds.
+const checkMachineTimeout = 3 * time.Second

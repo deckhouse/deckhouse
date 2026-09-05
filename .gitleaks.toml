@@ -7,9 +7,9 @@ regexes = [
   'kubernetesCni191'
 ]
 
-# base64 of "user:password": the placeholder registry credential both
-# fixtures are built from, one of them in the {"auths":{...,"auth":...}} shape a
-# docker config uses, which is what a scanner is right to notice.
+# base64 of "user:password": the placeholder registry credential these fixtures
+# are built from, most of them in the {"auths":{...,"auth":...}} shape a docker
+# config uses, which is what a scanner is right to notice.
 #
 # Listed file by file rather than allowlisted globally: a global entry also waves
 # through a real credential that happens to be "user:password" anywhere in the
@@ -22,6 +22,9 @@ regexes = [
   'dXNlcjpwYXNzd29yZA=='
 ]
 paths = [
+  # The golden was renamed mid-branch; the scan reads the whole history, so both
+  # names stay listed.
   '''dhctl/pkg/immutable/testdata/master-cloud-init\.yaml$''',
+  '''dhctl/pkg/immutable/testdata/master-documents\.yaml$''',
   '''modules/040-node-manager/images/node-controller/src/internal/testenv/clusterinputs\.go$'''
 ]

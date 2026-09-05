@@ -85,6 +85,10 @@ type ClusterConfig struct {
 	// then the type is unknown rather than static. Fill it from MetaConfig.HasClusterConfiguration
 	// at every call site - left at its zero value it silently drops the nodes gated on it.
 	HasClusterConfiguration bool
+	// ImmutableMaster says the master NodeGroup asks for systemType: Immutable. Such a machine
+	// is handed its configuration over the network instead of being created, so the node that
+	// creates master-0 runs for it too — on a static cluster, where nothing else would.
+	ImmutableMaster bool
 }
 
 // Define common operations phases for such operations as bootstrap, converge and destroy.
@@ -196,6 +200,17 @@ const (
 	InstallKubernetesSubPhaseExecuteBashibleBundle OperationSubPhase = "ExecuteBashibleBundle"
 )
 
+// install kubernetes sub phases of an immutable master. It gets a control plane the
+// same way no other node does — handed a document over the network, and then left to
+// install itself — so the steps above describe none of its work: there is no bundle,
+// no SSH to run one over, and no node to prepare before kubelet starts.
+// The machines are handed their configuration in FirstMaster, so what is left for
+// this phase is the wait for that install and the admin access it hands back.
+const (
+	InstallKubernetesSubPhaseWaitForMasterInstall OperationSubPhase = "WaitForMasterInstall"
+	InstallKubernetesSubPhaseGetClusterAccess     OperationSubPhase = "GetClusterAccess"
+)
+
 // InstallAdditionalMastersAndStaticNodes sub phases
 const (
 	InstallAdditionalMastersAndStaticNodesSubPhaseAdditionalMasters OperationSubPhase = "AdditionalMasters"
@@ -226,7 +241,7 @@ func bootstrapNodes() []node {
 				{Name: BaseInfraSubPhaseBaseInfra},
 			},
 		},
-		{Name: FirstMasterPhase, includeIf: ifCloud},
+		{Name: FirstMasterPhase, includeIf: ifCloudOrImmutableMaster},
 		// Preflight on the master dhctl just created, before kubeadm runs on it.
 		{Name: PostInfraPreflightsPhase, includeIf: ifHasClusterConfiguration},
 		// Split out of the node above so that gating it keeps the resource queues InstallDeckhouse
@@ -234,16 +249,19 @@ func bootstrapNodes() []node {
 		{Name: ParseResourcesPhase},
 		// InstallKubernetes is the only consumer of the wait, and ungated it would open SSH to
 		// whatever master host the shared state cache happens to hold - another cluster's.
-		{Name: WaitForSSHOnMasterPhase, includeIf: ifHasClusterConfiguration},
+		// An immutable master runs no sshd at all, so there the wait is not late, it is false.
+		{Name: WaitForSSHOnMasterPhase, includeIf: ifBashibleMaster},
 		{
 			Name:      InstallKubernetesPhase,
 			includeIf: ifHasClusterConfiguration,
 			Children: []node{
-				{Name: InstallKubernetesSubPhaseBundlePreparation},
-				{Name: InstallKubernetesSubPhaseRegistryPackagesProxy},
-				{Name: InstallKubernetesSubPhaseNodePreparation},
-				{Name: InstallKubernetesSubPhaseModulesPreparation},
-				{Name: InstallKubernetesSubPhaseExecuteBashibleBundle},
+				{Name: InstallKubernetesSubPhaseBundlePreparation, includeIf: ifBashibleMaster},
+				{Name: InstallKubernetesSubPhaseRegistryPackagesProxy, includeIf: ifBashibleMaster},
+				{Name: InstallKubernetesSubPhaseNodePreparation, includeIf: ifBashibleMaster},
+				{Name: InstallKubernetesSubPhaseModulesPreparation, includeIf: ifBashibleMaster},
+				{Name: InstallKubernetesSubPhaseExecuteBashibleBundle, includeIf: ifBashibleMaster},
+				{Name: InstallKubernetesSubPhaseWaitForMasterInstall, includeIf: ifImmutableMaster},
+				{Name: InstallKubernetesSubPhaseGetClusterAccess, includeIf: ifImmutableMaster},
 			},
 		},
 		{
@@ -256,16 +274,19 @@ func bootstrapNodes() []node {
 				{Name: InstallDeckhouseSubPhaseWait, includeIf: ifHasClusterConfiguration},
 			},
 		},
+		// Declared for an immutable master too: the masters past the first are handed their
+		// configuration here on a static cluster as well as in a cloud, and this is the node whose
+		// name says so. Nothing builds nodes from an instance class there, hence the gated child.
 		{
 			Name:      InstallAdditionalMastersAndStaticNodes,
-			includeIf: ifCloud,
+			includeIf: ifCloudOrImmutableMaster,
 			Children: []node{
 				{Name: InstallAdditionalMastersAndStaticNodesSubPhaseAdditionalMasters},
-				{Name: InstallAdditionalMastersAndStaticNodeSubPhaseStaticNodes},
+				{Name: InstallAdditionalMastersAndStaticNodeSubPhaseStaticNodes, includeIf: ifCloud},
 			},
 		},
 		// Gated because the checker reports "0 of 0 ready" as success; top-level rather than a child
-		// of the cloud-only node above for the reason in its const doc.
+		// of the node above for the reason in its const doc.
 		{Name: WaitForControlPlaneManagerReadinessPhase, includeIf: ifHasClusterConfiguration},
 		{Name: CreateResourcesPhase},
 		{Name: ExecPostBootstrapPhase},
@@ -525,6 +546,26 @@ func project(nodes []node) []PhaseWithSubPhases {
 // CheckInfra in convergeNodes.
 func ifCloud(opts phasesOpts) bool {
 	return opts.clusterConfig.ClusterType == "Cloud"
+}
+
+// ifCloudOrImmutableMaster includes the node that produces master-0: a cloud creates the machine,
+// and an immutable master is handed its payload on a machine that already exists — including on a
+// static cluster, which has no infrastructure step at all.
+func ifCloudOrImmutableMaster(opts phasesOpts) bool {
+	return ifCloud(opts) || opts.clusterConfig.ImmutableMaster
+}
+
+// ifImmutableMaster includes the node on a bootstrap whose master NodeGroup asks for
+// systemType: Immutable, and ifBashibleMaster on every other one that builds a control
+// plane. The pair is exhaustive over clusters dhctl installs Kubernetes on, and both
+// test HasClusterConfiguration for the same reason InstallKubernetes does: a cluster
+// dhctl did not create has neither kind of master.
+func ifImmutableMaster(opts phasesOpts) bool {
+	return opts.clusterConfig.HasClusterConfiguration && opts.clusterConfig.ImmutableMaster
+}
+
+func ifBashibleMaster(opts phasesOpts) bool {
+	return opts.clusterConfig.HasClusterConfiguration && !opts.clusterConfig.ImmutableMaster
 }
 
 func ifStatic(opts phasesOpts) bool {
