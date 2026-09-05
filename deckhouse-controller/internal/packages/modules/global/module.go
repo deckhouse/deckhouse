@@ -223,17 +223,14 @@ func (m *Module) GetValues() addonutils.Values {
 }
 
 // ValidateSettings converts settings to the latest schema version (if a converter
-// is available and settingsVersion > 0), then validates against OpenAPI schema.
+// is available), then validates against OpenAPI schema.
 func (m *Module) ValidateSettings(_ context.Context, settingsVersion int, settings addonutils.Values) (settingscheck.Result, error) {
-	// Convert to latest schema version before validation
-	if m.converter != nil && settingsVersion > 0 {
-		var err error
-		_, settings, err = m.converter.ConvertToLatest(settingsVersion, settings)
-		if err != nil {
-			return settingscheck.Result{}, fmt.Errorf("convert settings: %w", err)
-		}
+	settings, err := m.convertSettings(settingsVersion, settings)
+	if err != nil {
+		return settingscheck.Result{}, err
 	}
-	if err := m.values.ValidateSettings(settings); err != nil {
+
+	if err = m.values.ValidateSettings(settings); err != nil {
 		return settingscheck.Result{}, err
 	}
 
@@ -253,15 +250,41 @@ func (m *Module) ValidateSettings(_ context.Context, settingsVersion int, settin
 // ApplySettings converts settings to the latest schema version (if a converter
 // is available), then applies them to the values storage.
 func (m *Module) ApplySettings(settingsVersion int, settings addonutils.Values) error {
-	// Convert to latest schema version before applying
-	if m.converter != nil && settingsVersion > 0 {
-		var err error
-		_, settings, err = m.converter.ConvertToLatest(settingsVersion, settings)
-		if err != nil {
-			return fmt.Errorf("convert settings: %w", err)
-		}
+	settings, err := m.convertSettings(settingsVersion, settings)
+	if err != nil {
+		return err
 	}
+
 	return m.values.ApplySettings(settings)
+}
+
+// convertSettings converts settings to the latest schema version, as it does for a
+// module: global carries conversions of its own (x-config-version 2), so a
+// ModuleConfig that omits spec.version must go through the chain all the same.
+// A zero settingsVersion is therefore read as version 1 - the chain is what
+// materializes fields the latest schema requires, so skipping it leaves an
+// unversioned config permanently invalid.
+func (m *Module) convertSettings(settingsVersion int, settings addonutils.Values) (addonutils.Values, error) {
+	if m.converter == nil {
+		return settings, nil
+	}
+
+	if settingsVersion == 0 {
+		settingsVersion = 1
+	}
+
+	// the converter skips a nil document, and an absent spec.settings is exactly
+	// the case the chain has to fill in
+	if settings == nil {
+		settings = addonutils.Values{}
+	}
+
+	_, converted, err := m.converter.ConvertToLatest(settingsVersion, settings)
+	if err != nil {
+		return nil, fmt.Errorf("convert settings: %w", err)
+	}
+
+	return converted, nil
 }
 
 // GetSettings returns the effective settings: user config merged with

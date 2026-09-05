@@ -345,7 +345,7 @@ func (c *Controller) Start(ctx context.Context) error {
 	// object, and the user module sources their repositories, while the
 	// controllers still wait for the sync. Runs after the resolver, so a
 	// deployed duplicate it superseded no longer counts.
-	if err := pkgsync.Sync(ctx, c.ctrl.GetAPIReader(), c.ctrl.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, c.logger.Named("pkgsync")); err != nil {
+	if err := pkgsync.Sync(ctx, c.ctrl.GetAPIReader(), c.ctrl.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, app.GlobalHooksDir, c.logger.Named("pkgsync")); err != nil {
 		return fmt.Errorf("sync package objects: %w", err)
 	}
 

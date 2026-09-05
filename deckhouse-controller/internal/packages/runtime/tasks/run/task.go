@@ -23,7 +23,6 @@ import (
 	addontypes "github.com/flant/addon-operator/pkg/hook/types"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	shtypes "github.com/flant/shell-operator/pkg/hook/types"
-	nelmcommon "github.com/werf/nelm/pkg/common"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -36,15 +35,11 @@ import (
 
 const (
 	taskTracer = "package-run"
-
-	packageLabel  = "packages.deckhouse.io/package"
-	instanceLabel = "packages.deckhouse.io/instance"
 )
 
 // packageI abstracts package operations needed for the run cycle.
 type packageI interface {
 	GetName() string
-	GetPackage() string
 	// GetValuesChecksum returns hash of current values to detect changes by hooks.
 	GetValuesChecksum() string
 	GetPath() string
@@ -56,11 +51,6 @@ type packageI interface {
 	RunHooksByBinding(ctx context.Context, binding shtypes.BindingType) error
 }
 
-// application interface abstracts application operations needed for the run cycle.
-type application interface {
-	GetInstance() string
-}
-
 // nelmI abstracts Helm operations and release monitoring.
 type nelmI interface {
 	HasMonitor(name string) bool
@@ -69,7 +59,7 @@ type nelmI interface {
 	// ResumeMonitor restarts monitoring after run cycle completes.
 	ResumeMonitor(name string)
 	// Upgrade installs or upgrades the Helm release.
-	Upgrade(ctx context.Context, namespace string, pkg nelm.Package, opts nelm.UpgradeOptions) error
+	Upgrade(ctx context.Context, namespace string, pkg nelm.Package) error
 }
 
 // task executes the main package lifecycle: hooks and Helm release management.
@@ -145,25 +135,8 @@ func (t *task) runPackage(ctx context.Context) error {
 		return err
 	}
 
-	opts := nelm.UpgradeOptions{
-		ExtraLabels: map[string]string{
-			packageLabel: t.pkg.GetPackage(),
-		},
-		TrackingOptions: nelmcommon.TrackingOptions{
-			NoPodLogs: true,
-		},
-	}
-
-	if app, ok := t.pkg.(application); ok {
-		opts.ExtraLabels[instanceLabel] = app.GetInstance()
-	} else {
-		// options needed for modules
-		opts.TrackingOptions.NoFinalTracking = true
-		opts.TrackingOptions.LegacyHelmCompatibleTracking = true
-	}
-
 	t.logger.Debug("run nelm upgrade")
-	if err := t.nelm.Upgrade(ctx, t.namespace, t.pkg, opts); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
+	if err := t.nelm.Upgrade(ctx, t.namespace, t.pkg); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
 		span.SetStatus(codes.Error, err.Error())
 		t.status.HandleError(t.pkg.GetName(), status.ConditionManifestsApplied, status.NewError("ManifestsApplyFailed", err))
 		return err
@@ -180,7 +153,7 @@ func (t *task) runPackage(ctx context.Context) error {
 	}
 
 	if oldChecksum != t.pkg.GetValuesChecksum() {
-		if err := t.nelm.Upgrade(ctx, t.namespace, t.pkg, opts); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
+		if err := t.nelm.Upgrade(ctx, t.namespace, t.pkg); err != nil && !errors.Is(err, nelm.ErrPackageNotHelm) {
 			span.SetStatus(codes.Error, err.Error())
 			t.status.HandleError(t.pkg.GetName(), status.ConditionManifestsApplied, status.NewError("ManifestsApplyFailed", err))
 			return err

@@ -108,7 +108,7 @@ type moduleManager interface {
 
 // packageManager registers and unregisters applications in the package runtime.
 type packageManager interface {
-	UpdateApp(repo registry.Remote, inst packageruntime.App)
+	UpdateApp(inst packageruntime.App)
 	// RemoveApp tears the application down and reports whether the teardown has finished.
 	RemoveApp(namespace, name string) bool
 	GetStatus(name string) packagestatus.Status
@@ -261,7 +261,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		return err
 	}
 
-	r.manager.UpdateApp(registry.BuildRemote(repo), packageruntime.App{
+	r.manager.UpdateApp(packageruntime.App{
 		Name:      app.Name,
 		Namespace: app.Namespace,
 		Definition: apps.Definition{
@@ -270,6 +270,7 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, app *v1alpha1.App
 		},
 		Settings:    app.Spec.Settings.GetMap(),
 		Maintenance: app.Spec.Maintenance,
+		Repository:  registry.BuildRemote(repo),
 	})
 
 	// Both references are non-controller and block owner deletion, so neither the package

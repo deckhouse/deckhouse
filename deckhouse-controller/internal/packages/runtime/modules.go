@@ -19,6 +19,8 @@ import (
 	"errors"
 	"log/slog"
 	"slices"
+	"sync"
+	"time"
 
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"go.opentelemetry.io/otel"
@@ -40,6 +42,9 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/registry"
 )
 
+// loadModulesTimeout bounds the bootstrap barrier, which waits on a queue that retries forever.
+const loadModulesTimeout = 10 * time.Minute
+
 // Module represents a module instance as received from the module controller.
 // Unlike App, modules always run in the d8-system namespace.
 type Module struct {
@@ -49,6 +54,7 @@ type Module struct {
 	SettingsVersion int // schema version from ModuleConfig.Spec.Version
 	Maintenance     string
 	Enabled         *bool
+	Repository      registry.Remote
 }
 
 // UpdateModulesSettings applies a settings-and-enabled change to an
@@ -90,6 +96,124 @@ func (r *Runtime) UpdateModulesSettings(name string, settingsVersion int, settin
 	}
 }
 
+// UpdateGlobalSettings applies a settings change to the global module, whose settings a
+// Module carries like every other package's.
+//
+// Global is the one package the runtime builds itself: loadGlobal read its files out of the
+// global hooks dir at startup, so nothing is ever deployed or loaded for it, it has no version
+// to change and no enabled intent of its own — the scheduler holds it enabled at order 0. That
+// leaves the settings, which are stashed where scheduleGlobal picks them up on its next pass,
+// and a Reschedule so Configure re-runs with them.
+func (r *Runtime) UpdateGlobalSettings(settingsVersion int, settings addonutils.Values) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	name := r.global.GetName()
+
+	r.logger.Debug("update global settings", slog.String("name", name))
+
+	if len(settings) == 0 {
+		settings = make(addonutils.Values)
+	}
+
+	if !r.packages.UpdateSettings(name, settingsVersion, settings, "") {
+		return
+	}
+
+	r.scheduler.Reschedule(name)
+}
+
+// LoadModules runs the bootstrap's whole module tree through the pipeline UpdateModule and
+// UpdateEmbeddedModule run one module at a time, and blocks until every package has deployed and
+// loaded. It is the barrier the caller needs before ResumeScheduler: a scheduler resumed over a
+// half-loaded tree resolves its rule chain against nodes that are not there yet.
+//
+// Each module is registered and enqueued with a shared WaitGroup riding its tasks, so the wait
+// covers Deploy as well as Load — an undeployed module is one the Load behind it cannot finish.
+// Embedded modules take the embedded path (no Deploy, ReadyOnFilesystem true from the start, the
+// edition's version as their package version), so the reconcile that follows this finds exactly
+// the state UpdateEmbeddedModule would have stored and does not re-run the pipeline over it.
+//
+// The wait is bounded and never holds r.mu. It cannot hold the lock because Load calls
+// registerModule, which takes r.mu itself, so waiting under it deadlocks the queue against the
+// caller. It is bounded because the queue retries a failing task forever: one module whose image
+// will not pull would otherwise keep the scheduler paused for the whole process, so the barrier
+// gives up after loadModulesTimeout and leaves the rest to converge in the background.
+func (r *Runtime) LoadModules(ctx context.Context, mods []Module) {
+	wg := new(sync.WaitGroup)
+
+	r.enqueueModules(wg, mods)
+
+	loaded := make(chan struct{})
+
+	go func() {
+		wg.Wait()
+		close(loaded)
+	}()
+
+	ctx, cancel := context.WithTimeout(ctx, loadModulesTimeout)
+	defer cancel()
+
+	select {
+	case <-loaded:
+		r.logger.Debug("all modules loaded", slog.Int("count", len(mods)))
+
+	case <-ctx.Done():
+		r.logger.Warn("modules are still loading, continue without them", slog.Int("count", len(mods)))
+	}
+}
+
+// enqueueModules registers every module and puts its pipeline on the queue with wg riding each
+// task. Split out of LoadModules so r.mu is released before the barrier waits on wg.
+func (r *Runtime) enqueueModules(wg *sync.WaitGroup, mods []Module) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	for _, module := range mods {
+		name := module.Name
+
+		r.logger.Debug("load module", slog.String("name", name))
+
+		if len(module.Settings) == 0 {
+			module.Settings = make(addonutils.Values)
+		}
+
+		// An embedded module is the one the image ships, so it has no repository to pull from and
+		// no package version of its own — the running edition's stands in for it, as in
+		// UpdateEmbeddedModule, so the version this stores is the one the reconcile compares against.
+		embedded := module.Repository.Name == ""
+
+		version := module.Definition.Version
+		if embedded {
+			version = app.EmbeddedPackageVersion(r.edition.Version)
+		}
+
+		r.global.SetConfigEnabled(name, module.Enabled)
+
+		ctx := r.packages.Update(name, version, module.SettingsVersion, module.Settings, module.Maintenance, false)
+		if ctx == nil {
+			r.scheduler.Reschedule(name)
+			continue
+		}
+
+		r.status.NewStatus(name)
+
+		if embedded {
+			// The image carries the module, so nothing has to place it on disk.
+			r.status.SetConditionTrue(name, status.ConditionReadyOnFilesystem)
+
+			r.queueService.Enqueue(ctx, name, taskload.NewEmbeddedTask(name, r.loadEmbeddedModule, r.status, r.logger), queue.WithWait(wg))
+
+			continue
+		}
+
+		// Deploy goes first: the queue holds its head until it succeeds, so a Load enqueued ahead
+		// of it would spin on files nothing has placed yet and never let the Deploy behind it run.
+		r.queueService.Enqueue(ctx, name, taskdeploy.NewModuleTask(name, version, module.Repository, false, r.moduleDeployer, r.status, r.logger), queue.WithWait(wg))
+		r.queueService.Enqueue(ctx, name, taskload.NewModuleTask(name, module.Repository, r.loadModule, r.status, r.logger), queue.WithWait(wg))
+	}
+}
+
 // UpdateModule handles module creation, version changes, and enabled intent from the module controller.
 //
 // Flow mirrors UpdateApp: version changes enqueue the full pipeline
@@ -101,7 +225,7 @@ func (r *Runtime) UpdateModulesSettings(name string, settingsVersion int, settin
 // Deploy task discard the cached copy of the version. It is for callers that resolved the
 // image digest and found it changed under a tag the runtime still sees as unchanged, and
 // is transitional: it goes away once module tags are immutable.
-func (r *Runtime) UpdateModule(repo registry.Remote, module Module, force bool) {
+func (r *Runtime) UpdateModule(module Module, force bool) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -133,8 +257,8 @@ func (r *Runtime) UpdateModule(repo registry.Remote, module Module, force bool) 
 	r.status.NewStatus(name)
 
 	tasks := []queue.Task{
-		taskdeploy.NewModuleTask(name, version, repo, force, r.moduleDeployer, r.status, r.logger),
-		taskload.NewModuleTask(name, repo, r.loadModule, r.status, r.logger),
+		taskdeploy.NewModuleTask(name, version, module.Repository, force, r.moduleDeployer, r.status, r.logger),
+		taskload.NewModuleTask(name, module.Repository, r.loadModule, r.status, r.logger),
 	}
 
 	// If there's an existing module, disable it first
