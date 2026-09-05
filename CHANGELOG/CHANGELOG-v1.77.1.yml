@@ -1,0 +1,86 @@
+candi:
+  fixes:
+    - summary: Fix hanging sysctl tuner on nodes with many loop and dm devices
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22756
+deckhouse:
+  fixes:
+    - summary: Exclude all Python test files from webhook image.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22780
+deckhouse-controller:
+  fixes:
+    - summary: >-
+        Honor a channel-level release suspend for clusters that reach the suspended version through a
+        step-by-step update.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22745
+      impact: >-
+        A Deckhouse release suspended on its release channel is no longer applied by clusters that are
+        behind and reach it through a step-by-step update. The suspend flag lives only in the release-channel
+        image; previously it was dropped when the target release was built from its per-version image,
+        so lagging clusters updated to a suspended release anyway.
+descheduler:
+  features:
+    - summary: Always run the descheduler with the upstream `EvictionsInBackground` feature gate enabled.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22801
+      impact: >-
+        The `descheduler` Deployment in `d8-descheduler` restarts once on upgrade to pick up the new argument.
+        Descheduling behavior is unchanged for workloads that do not implement their own eviction policy.
+docs:
+  features:
+    - summary: Add managed-valkey module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22725
+    - summary: Refactor build pipeline and add CSE edition support.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/21375
+    - summary: Update virtualization module architecture section according to release v1.10.0
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22765
+    - summary: Add monitoring-kubernetes module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22840
+  fixes:
+    - summary: Fix broken JUnit XML report links on the Kubernetes conformance page.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22781
+istio:
+  fixes:
+    - summary: Waypoints are no longer advertised as cross-network east-west gateways.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22810
+    - summary: Enable Istio Gateway API deployment and gatewayclass controllers for istiod 1.27 and 1.29.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22811
+multitenancy-manager:
+  fixes:
+    - summary: Refresh grant webhook CA bundles after the admission certificate is rotated.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22822
+registry-packages-proxy:
+  fixes:
+    - summary: >-
+        Bump golang.org/x/{crypto,net,sys,text} to clear 24 CVEs, including CVE-2026-56854 (CRITICAL)
+        and CVE-2026-25681, CVE-2026-39821, CVE-2026-46600 (HIGH).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22754
+registrypackages:
+  fixes:
+    - summary: Fix dm-verity devices that could never be closed for containerd 2.2.7 (CSE only).
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22807
+service-with-healthchecks:
+  fixes:
+    - summary: Annotations and labels of a ServiceWithHealthchecks are now copied to the Service created
+        for it.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22835
+      impact: >-
+        After the update, the controller adds the annotations and labels of every ServiceWithHealthchecks
+        to the Service created for it.
+
+        If a ServiceWithHealthchecks of the `LoadBalancer` type carries annotations that configure the
+        load balancer
+
+        (`network.deckhouse.io/load-balancer-ips`, `network.deckhouse.io/load-balancer-shared-ip-key`
+        and similar),
+
+        the load balancer controller applies them and may assign a different address to the service, which
+        causes a short interruption of the connections.
+    - summary: >-
+        Stopped publishing terminated pods in EndpointSlices and started publishing pods being deleted
+        as terminating endpoints.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22836
+      impact: >-
+        Endpoints for pods in a terminal phase (Failed/Succeeded) are no longer published. In DVP clusters
+        this prevents traffic from being routed to a VirtualMachine IP that has been reused by another
+        pod. Pods being deleted are now published with the serving and terminating conditions, which enables
+        the graceful shutdown flow for consumers. Pod readiness is derived from the PodReady condition,
+        and stale probe results are reset when a pod becomes not ready, is recreated, or changes its IP.
