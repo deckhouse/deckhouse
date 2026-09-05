@@ -13,6 +13,10 @@ DKP logging capabilities:
 - Process logs, including metadata enrichment and message filtering.
 - Deliver to various storage and analysis systems, including Loki, Elasticsearch, Splunk, and others.
 - Short-term log storage in the cluster with search and visualization capabilities through Grafana.
+- View current logs without deploying a storage system, using [lightweight logs](lightweight.html).
 
-The following sections describe how to configure log collection and delivery,
-as well as organize their short-term storage within the cluster.
+The following sections describe how to:
+
+- Configure log collection and delivery.
+- Organize their short-term storage within the cluster.
+- Use lightweight logs to view the current state of pods without extra resource costs.
