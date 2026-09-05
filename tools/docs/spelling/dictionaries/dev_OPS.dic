@@ -1,4 +1,4 @@
-2882
+2908
 1GB
 2GB
 5XX
@@ -30,6 +30,7 @@ alertmanager
 Alertmanager
 alertmanagers
 Alertmanagers
+AliCloud
 AllocateSpace
 AllowedAddressPairs
 allowedBundles
@@ -270,6 +271,7 @@ ClusterVirtualImage
 cmctl
 CMD
 cmp
+CN
 CNAME
 CNCF
 CNCF’s
@@ -279,6 +281,7 @@ CNIPlugin
 CoC
 codec
 CODEOWNERS
+CodeScoring
 Colocating
 Colour
 CommitDetail
@@ -403,6 +406,7 @@ DeckhouseReleases
 defaultClusterStorageClass
 DefaultContainerResourcePolicy
 defaultCRI
+DefectDojo
 defragment
 Defragment
 defragmentation
@@ -440,6 +444,7 @@ DN
 DNAT
 dns
 DNS
+DNs
 dnsEE
 Dnsmasq
 dnsPolicy
@@ -508,6 +513,7 @@ enableBasicAuth
 enablement
 enableMultiTenancy
 endofftopic
+Entra
 entrypoint
 enum
 env
@@ -654,6 +660,7 @@ HH
 HighAvailability
 HighLoad
 HighNodeUtilization
+Honour
 HorizontalPodAutoscaler
 HorizontalPodAutoscaling
 hostIP
@@ -796,6 +803,7 @@ jaeger
 jammy
 javascript
 JFrog
+JID
 JPA
 JQ
 js
@@ -803,6 +811,7 @@ JSC
 json
 jsonData
 jsonPath
+JUnit
 JWK
 JWKS
 JWT
@@ -829,6 +838,7 @@ Kiali
 KiB
 KLLRCODA
 Klog
+kotlin
 krb
 kruise
 Kruise
@@ -1113,6 +1123,7 @@ okmeter
 Okmeter
 Okta
 Omniauth
+OmniAuth
 online
 OOM
 OPA
@@ -1190,6 +1201,7 @@ PersistentVolumeClaims
 PersistentVolumes
 php
 PID
+PKCE
 PKCS
 PKI
 plaintext
@@ -1374,9 +1386,11 @@ RWX
 S3
 SaaS
 SaaSUninstall
+Salesforce
 SAML
 SANs
 SASL
+SAST
 SBOM
 schedulable
 SchedulingDisabled
@@ -1403,6 +1417,8 @@ selectel
 Selectel
 selfsigned
 SELinux
+Semgrep
+semgrep
 semver
 SEMVER
 Sep
@@ -1433,6 +1449,7 @@ shouldn
 Sidekiq
 SIGTERM
 SimpleWithInternalNetwork
+SingleLevel
 Sitemap
 SizingPolicy
 SkyWalking
@@ -1624,6 +1641,7 @@ URLs
 UsePAM
 UserBasic
 username
+usernames
 UserOperation
 UTC
 UTF
@@ -1749,6 +1767,7 @@ WhateverInstanceClass
 whitelist
 Whitelist
 whitelistSourceRanges
+WholeSubtree
 Wiki
 wildcard
 wildcards
@@ -2353,9 +2372,12 @@ ZvirtInstanceClass
 п
 пагинация
 Пайплайн
+пайплайн
 пайплайна
 пайплайнами
+пайплайне
 пайплайнов
+пайплайном
 пайплайны
 паравиртуализации
 парсер
@@ -2753,6 +2775,7 @@ ZvirtInstanceClass
 уязвимостей
 уязвимостям
 уязвимостями
+уязвимостях
 файл
 файрвола
 фейловер
@@ -2828,6 +2851,7 @@ ZvirtInstanceClass
 ч
 чаржить
 чатами
+членств
 шаблонизатор
 шаблонизаторе
 шаблонизирования

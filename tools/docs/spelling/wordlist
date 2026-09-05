@@ -280,6 +280,7 @@ CNIPlugin
 CoC
 codec
 CODEOWNERS
+CodeScoring
 Colocating
 Colour
 CommitDetail
@@ -404,6 +405,7 @@ DeckhouseReleases
 defaultClusterStorageClass
 DefaultContainerResourcePolicy
 defaultCRI
+DefectDojo
 defragment
 Defragment
 defragmentation
@@ -657,6 +659,7 @@ HH
 HighAvailability
 HighLoad
 HighNodeUtilization
+Honour
 HorizontalPodAutoscaler
 HorizontalPodAutoscaling
 hostIP
@@ -807,6 +810,7 @@ JSC
 json
 jsonData
 jsonPath
+JUnit
 JWK
 JWKS
 JWT
@@ -833,6 +837,7 @@ Kiali
 KiB
 KLLRCODA
 Klog
+kotlin
 krb
 kruise
 Kruise
@@ -1384,6 +1389,7 @@ Salesforce
 SAML
 SANs
 SASL
+SAST
 SBOM
 schedulable
 SchedulingDisabled
@@ -1410,6 +1416,8 @@ selectel
 Selectel
 selfsigned
 SELinux
+Semgrep
+semgrep
 semver
 SEMVER
 Sep
@@ -2363,9 +2371,12 @@ ZvirtInstanceClass
 п
 пагинация
 Пайплайн
+пайплайн
 пайплайна
 пайплайнами
+пайплайне
 пайплайнов
+пайплайном
 пайплайны
 паравиртуализации
 парсер
@@ -2763,6 +2774,7 @@ ZvirtInstanceClass
 уязвимостей
 уязвимостям
 уязвимостями
+уязвимостях
 файл
 файрвола
 фейловер
