@@ -62,7 +62,7 @@ Then link the policy project to the target project or group in "Settings" → "S
 
 The scan options can also be edited in the policy editor, which renders the form described below.
 
-<!-- TODO(screenshot): the sast action in the policy editor, four blocks collapsed. Navigation theme Neutral, syntax highlighting Light. -->
+![The sast action in the policy editor](/images/code/semgrep_policy_form_en.png)
 
 ## What the policy sets
 
@@ -72,7 +72,7 @@ The form for the `sast` action is split into four blocks. Every option is the po
 
 This block sets which rules the scan runs.
 
-<!-- TODO(screenshot): the "Rules" block with the rule set select open. Navigation theme Neutral, syntax highlighting Light. -->
+![The Rules and Blocking blocks of the sast action](/images/code/semgrep_policy_rules_en.png)
 
 | Field | What it sets |
 |-------|--------------|
@@ -200,6 +200,8 @@ The sources are listed from weakest to strongest — each one, when set, overrid
 1. The version named in the policy itself, in the "Scanner version" field.
 
 There is exactly one exception: when the integration names a full image reference rather than a registry — with a tag or a digest — that reference is used as it is, and the version from the policy no longer has anything to replace. The policy editor says which of these three applies as you edit, naming the image or the registry it resolved; where the integration names a full image, it also disables the "Scanner version" field rather than letting you set a value nothing reads.
+
+![The policy editor naming an image an integration set](/images/code/semgrep_policy_image_from_integration_en.png)
 
 The scanned project's own integration record is ignored. The image decides what "the scan ran" even means, and the side being checked does not answer that question.
 
