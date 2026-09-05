@@ -1,4 +1,4 @@
-2749
+2755
 1GB
 2GB
 5XX
@@ -96,6 +96,7 @@ autoK
 autoK8sVersion
 autoload
 Autoloading
+AutoPatch
 AutoplaceTarget
 autoscaler
 autoscalers
@@ -607,6 +608,7 @@ govc
 GPG
 GPU
 GPUs
+GracefulShutdownPostpone
 grafana
 Grafana
 GrafanaAdditionalDatasource
@@ -1050,6 +1052,7 @@ NogeGroup
 nonreplicated
 NoOps
 noProxyAddressList
+NoRunningPodsWithLabel
 NoSchedule
 NoSQL
 NotIn
@@ -1177,6 +1180,7 @@ PodLoggingConfig
 PodMonitor
 PodMonitors
 podSubnetCIDR
+PodsWithLabelAreRunningOnNode
 Poly
 portForwarding
 POSIX
@@ -1671,6 +1675,7 @@ VxLAN
 VXLAN
 VzZS
 WaitingForDisruptiveApproval
+WaitingForShutdownSignal
 WAL
 WebAuthn
 webgraphviz
