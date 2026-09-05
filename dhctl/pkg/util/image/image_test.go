@@ -15,14 +15,20 @@
 package image
 
 import (
+	"context"
+	"net"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
+	"github.com/google/go-containerregistry/pkg/v1/remote"
 	"github.com/stretchr/testify/require"
 )
 
@@ -805,3 +811,95 @@ func TestPullImage(t *testing.T) {
 		}
 	})
 }
+
+// ggcr forgives HTTP for localhost and RFC1918, so the host must look public.
+const testSchemeHost = "nexus.example.com"
+
+// A plain-HTTP registry behind an ingress that answers 443 with a foreign cert.
+func TestDownloadAndUnpackImage_Scheme(t *testing.T) {
+	for _, tt := range []struct {
+		name        string
+		scheme      string
+		ca          string
+		wantPlain   bool
+		wantErrLike string
+	}{
+		{name: "http without CA", scheme: "HTTP", wantPlain: true},
+		{name: "http with CA", scheme: "HTTP", ca: testSchemeCA, wantPlain: true},
+		{name: "https refuses the untrusted front", scheme: "HTTPS", wantErrLike: "certificate"},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			plainHits, tlsHits := newTLSFrontedRegistry(t)
+			destDir := t.TempDir()
+
+			// the stub has no blobs; what matters is which leg was used
+			err := DownloadAndUnpackImage(t.Context(), testSchemeHost+"/deckhouse/ee:v1",
+				destDir, filepath.Join(destDir, "cache"),
+				RegistryConfig{scheme: tt.scheme, registry: testSchemeHost, ca: tt.ca}, false)
+
+			if tt.wantErrLike != "" {
+				require.ErrorContains(t, err, tt.wantErrLike)
+			}
+			require.Zero(t, tlsHits.Load(), "the untrusted TLS front must never serve the download")
+			require.Equal(t, tt.wantPlain, plainHits.Load() > 0, "served over plain HTTP")
+		})
+	}
+}
+
+// Serves testSchemeHost from a plain-HTTP server and an untrusted TLS front, and
+// points both transports ggcr may pick (remote.DefaultTransport without a CA,
+// http.DefaultTransport with one) at them. Do not add t.Parallel() to this package.
+func newTLSFrontedRegistry(t *testing.T) (plainHits, tlsHits *atomic.Int64) {
+	t.Helper()
+
+	plainHits, tlsHits = &atomic.Int64{}, &atomic.Int64{}
+	plain := httptest.NewServer(registryStub(plainHits))
+	tlsServer := httptest.NewTLSServer(registryStub(tlsHits))
+	t.Cleanup(plain.Close)
+	t.Cleanup(tlsServer.Close)
+
+	port := func(rawURL string) string {
+		_, p, err := net.SplitHostPort(strings.TrimPrefix(strings.TrimPrefix(rawURL, "https://"), "http://"))
+		require.NoError(t, err)
+		return p
+	}
+	plainPort, tlsPort := port(plain.URL), port(tlsServer.URL)
+
+	routing := &http.Transport{
+		DialContext: func(ctx context.Context, _, addr string) (net.Conn, error) {
+			target := plainPort
+			if _, p, _ := net.SplitHostPort(addr); p == "443" {
+				target = tlsPort
+			}
+			var d net.Dialer
+			return d.DialContext(ctx, "tcp", net.JoinHostPort("127.0.0.1", target))
+		},
+	}
+
+	originalRemote, originalDefault := remote.DefaultTransport, http.DefaultTransport
+	remote.DefaultTransport, http.DefaultTransport = routing, routing
+	t.Cleanup(func() {
+		remote.DefaultTransport, http.DefaultTransport = originalRemote, originalDefault
+	})
+
+	return plainHits, tlsHits
+}
+
+func registryStub(hits *atomic.Int64) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		hits.Add(1)
+		w.WriteHeader(http.StatusOK)
+	})
+}
+
+const testSchemeCA = `-----BEGIN CERTIFICATE-----
+MIIBVDCB+6ADAgECAgEBMAoGCCqGSM49BAMCMBIxEDAOBgNVBAMTB3Rlc3QtY2Ew
+HhcNMjYwMTAxMDAwMDAwWhcNMzYwMTAxMDAwMDAwWjASMRAwDgYDVQQDEwd0ZXN0
+LWNhMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEKKaMMINPRKyWO9Tu0BQGPMBk
+1lKs0EK0Mfo703X/ECvQnosTBbtytNeBSRWv5hxcBpBBPh2bW/PUDgxbIgRvlqNC
+MEAwDgYDVR0PAQH/BAQDAgIEMA8GA1UdEwEB/wQFMAMBAf8wHQYDVR0OBBYEFPra
+qZ7RKqtMutQAOq7uGZuVAnYOMAoGCCqGSM49BAMCA0gAMEUCIQCVrx1CY1SQTljc
+6JRqfqWzLJ1mBg5W6AVtEOBqqwtdYwIgQ9GeRIkVThfe4Y2oaDPVhGY+N+JihtTq
+/N35+Z0JuPg=
+-----END CERTIFICATE-----
+`
