@@ -17,10 +17,10 @@ package external
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -43,43 +43,140 @@ import (
 // the command line belongs to the protocol and a test must not add to it.
 const fakeConfigEnv = "D8_TEST_VALIDATOR_CONFIG"
 
-const (
-	modeValid      mode = "valid"
-	modeViolations mode = "violations"
-	modeWarnings   mode = "warnings" // reports something, but nothing that blocks
-	modeBlank      mode = "blank"    // rejects, but fills none of the violation fields
-	modeLegacy     mode = "legacy"   // a binary that knows no serve subcommand
-	modeSlowStart  mode = "slow"     // listens, but only after a while
-	modeOrphan     mode = "orphan"   // exits, leaving a child holding its output pipes
-	modeChild      mode = "child"    // serves, and spawns a child of its own
-	modeSay        mode = "say"      // prints what it was told and exits
-	modeStubborn   mode = "stubborn" // listens, then ignores SIGTERM
-)
-
-var errWaitFailed = errors.New("nothing worth waiting for")
-
-// fakeConfig is everything a test tells the validator it spawns.
+// fakeConfig is everything a test tells the validator it spawns. It travels as JSON
+// in fakeConfigEnv, so the spawned copy is configured the same way the test wrote it.
 type fakeConfig struct {
-	Mode mode `json:"mode"`
-	// ChildPidFile is where a fake that spawns a helper writes its pid, so a test can
-	// ask whether the helper outlived the validator.
-	ChildPidFile string `json:"childPidFile,omitempty"`
+	// Response is what the served validator answers with.
+	Response *validatev1.ValidateResponse `json:"response,omitempty"`
 	// SocketPath makes the fake serve on a unix socket instead of the endpoint it was
 	// given, the way a provider may choose to.
 	SocketPath string `json:"socketPath,omitempty"`
 	// PidFile is where the fake writes its own pid, so a test can ask whether the
 	// validator itself outlived a failed start.
 	PidFile string `json:"pidFile,omitempty"`
+	// ChildPidFile is where a fake that spawns a helper writes its pid, so a test can
+	// ask whether the helper outlived the validator.
+	ChildPidFile string `json:"childPidFile,omitempty"`
+	// AnnounceAddress is announced as the endpoint instead of anything the fake bound,
+	// so a test can point the caller at a socket the fake does not serve.
+	AnnounceAddress string `json:"announceAddress,omitempty"`
 	// SayOnStdout and SayOnStderr are printed before serving: a validator logs where
 	// it pleases, and both streams have to reach the caller.
 	SayOnStdout string `json:"sayOnStdout,omitempty"`
 	SayOnStderr string `json:"sayOnStderr,omitempty"`
+	// ListenAfter delays the bind, ExitAfter delays the exit of a fake that only
+	// announces.
+	ListenAfter time.Duration `json:"listenAfter,omitempty"`
+	ExitAfter   time.Duration `json:"exitAfter,omitempty"`
+	ExitCode    int           `json:"exitCode,omitempty"`
+	// UnknownSubcommand impersonates a binary that predates the protocol.
+	UnknownSubcommand bool `json:"unknownSubcommand,omitempty"`
+	NoServe           bool `json:"noServe,omitempty"`
+	HoldPipes         bool `json:"holdPipes,omitempty"`
+	IgnoreSignals     bool `json:"ignoreSignals,omitempty"`
 }
 
-// mode is which validator the test binary impersonates.
-type mode string
+type fakeOption func(*fakeConfig)
 
-// fakeValidator answers every call with the one response its mode stands for.
+func withConfig(fake fakeConfig) fakeOption {
+	return func(c *fakeConfig) { *c = fake }
+}
+
+func withViolations() fakeOption {
+	return func(c *fakeConfig) {
+		c.Response = &validatev1.ValidateResponse{
+			Errors: []*validatev1.ViolationResponse{{
+				Path:    "Secret/d8-credentials",
+				Code:    "credential_secret_required",
+				Message: "credential Secret is required",
+			}},
+			Warnings: []*validatev1.ViolationResponse{{
+				Path:    "NodeGroup/worker",
+				Code:    "replicas_zero",
+				Message: "replicas is 0",
+			}},
+		}
+	}
+}
+
+func withWarnings() fakeOption {
+	return func(c *fakeConfig) {
+		c.Response = &validatev1.ValidateResponse{
+			Warnings: []*validatev1.ViolationResponse{{
+				Path:    "DVPClusterConfiguration/layout",
+				Code:    "layout_deprecated",
+				Message: "layout is deprecated",
+			}},
+		}
+	}
+}
+
+// withBlankViolation rejects, but fills none of the violation fields.
+func withBlankViolation() fakeOption {
+	return func(c *fakeConfig) {
+		c.Response = &validatev1.ValidateResponse{
+			Errors: []*validatev1.ViolationResponse{{}},
+		}
+	}
+}
+
+func withUnknownSubcommand() fakeOption {
+	return func(c *fakeConfig) { c.UnknownSubcommand = true }
+}
+
+func withListenAfter(delay time.Duration) fakeOption {
+	return func(c *fakeConfig) { c.ListenAfter = delay }
+}
+
+func withoutServing() fakeOption {
+	return func(c *fakeConfig) { c.NoServe = true }
+}
+
+func withPidFile(path string) fakeOption {
+	return func(c *fakeConfig) { c.PidFile = path }
+}
+
+func withChildPidFile(path string) fakeOption {
+	return func(c *fakeConfig) { c.ChildPidFile = path }
+}
+
+// withPipesHeldOpen leaves a child holding the output pipes after the fake is gone.
+func withPipesHeldOpen() fakeOption {
+	return func(c *fakeConfig) {
+		c.HoldPipes = true
+		c.NoServe = true
+	}
+}
+
+func withIgnoredSignals() fakeOption {
+	return func(c *fakeConfig) { c.IgnoreSignals = true }
+}
+
+func withSocket(path string) fakeOption {
+	return func(c *fakeConfig) { c.SocketPath = path }
+}
+
+func withStdout(line string) fakeOption {
+	return func(c *fakeConfig) { c.SayOnStdout = line }
+}
+
+func withStderr(line string) fakeOption {
+	return func(c *fakeConfig) { c.SayOnStderr = line }
+}
+
+// withAnnouncedAddress announces an endpoint the fake never binds.
+func withAnnouncedAddress(address string) fakeOption {
+	return func(c *fakeConfig) { c.AnnounceAddress = address }
+}
+
+func withExitAfter(delay time.Duration, code int) fakeOption {
+	return func(c *fakeConfig) {
+		c.ExitAfter = delay
+		c.ExitCode = code
+	}
+}
+
+// fakeValidator answers every call with the one response it was given.
 type fakeValidator struct {
 	response *validatev1.ValidateResponse
 }
@@ -90,21 +187,7 @@ func TestMain(m *testing.M) {
 		os.Exit(m.Run())
 	}
 
-	// A binary that predates the protocol never gets as far as reading the arguments.
-	if fake.Mode == modeLegacy {
-		fmt.Fprintf(os.Stderr, "unknown subcommand: %s\n", server.ServeCommand)
-
-		os.Exit(1)
-	}
-
-	config, err := parseFakeValidatorArgs(os.Args[1:])
-	if err != nil {
-		fmt.Fprintln(os.Stderr, err)
-
-		os.Exit(1)
-	}
-
-	os.Exit(runFakeValidator(fake, config))
+	os.Exit(runFakeValidator(os.Args[1:], withConfig(fake)))
 }
 
 // A binary that cannot be started is an error, not a process handle.
@@ -176,11 +259,7 @@ func TestValidatorProcessReportsBothStreams(t *testing.T) {
 		fromStderr = "a line on stderr"
 	)
 
-	setFakeConfig(t, fakeConfig{
-		Mode:        modeSay,
-		SayOnStdout: fromStdout,
-		SayOnStderr: fromStderr,
-	})
+	setFakeConfig(t, withoutServing(), withStdout(fromStdout), withStderr(fromStderr))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -234,7 +313,7 @@ func TestListeningValidatorStartStopsTheValidatorThatNeverAnnounces(t *testing.T
 	pidFile := filepath.Join(t.TempDir(), "validator.pid")
 
 	// The fake writes its pid and exits without ever announcing an endpoint.
-	setFakeConfig(t, fakeConfig{Mode: modeSay, PidFile: pidFile})
+	setFakeConfig(t, withoutServing(), withPidFile(pidFile))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -269,7 +348,7 @@ func TestNewListeningValidatorRefusesBadOptions(t *testing.T) {
 // A validator logs before it binds, so the announcement is not the line the caller
 // happens to read first.
 func TestListeningValidatorCatchesAnEndpointAnnouncedLate(t *testing.T) {
-	setFakeConfig(t, fakeConfig{Mode: modeValid, SayOnStdout: "starting up"})
+	setFakeConfig(t, withStdout("starting up"))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -357,7 +436,7 @@ func TestValidatorOptionsValidate(t *testing.T) {
 func TestStopTakesDownTheProcessGroup(t *testing.T) {
 	pidFile := filepath.Join(t.TempDir(), "child.pid")
 
-	setFakeConfig(t, fakeConfig{Mode: modeChild, ChildPidFile: pidFile})
+	setFakeConfig(t, withChildPidFile(pidFile))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -405,7 +484,7 @@ func TestStopTakesDownTheProcessGroup(t *testing.T) {
 
 // SIGTERM is a request, not a guarantee: cmd.WaitDelay is what escalates to a kill.
 func TestStopKillsAValidatorThatIgnoresSIGTERM(t *testing.T) {
-	setFakeConfig(t, fakeConfig{Mode: modeStubborn})
+	setFakeConfig(t, withIgnoredSignals())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -444,7 +523,7 @@ func TestStopKillsAValidatorThatIgnoresSIGTERM(t *testing.T) {
 // A validator that leaves a child holding its output pipes must not hang Stop: EOF
 // never comes, so the wait has to be bounded.
 func TestStopReturnsWhenOutputPipesStayOpen(t *testing.T) {
-	setFakeConfig(t, fakeConfig{Mode: modeOrphan})
+	setFakeConfig(t, withPipesHeldOpen())
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -476,7 +555,7 @@ func TestStopReturnsWhenOutputPipesStayOpen(t *testing.T) {
 // Stop runs on a half-started process and again from the caller, so it has to survive
 // both.
 func TestValidatorProcessStopIsIdempotent(t *testing.T) {
-	setFakeConfig(t, fakeConfig{Mode: modeValid})
+	setFakeConfig(t)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -514,7 +593,7 @@ func TestValidatorOnAUnixSocket(t *testing.T) {
 
 	socket := filepath.Join(tmpDir, "v.sock")
 
-	setFakeConfig(t, fakeConfig{Mode: modeValid, SocketPath: socket})
+	setFakeConfig(t, withSocket(socket))
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -546,8 +625,28 @@ func TestValidatorOnAUnixSocket(t *testing.T) {
 }
 
 // setFakeConfig points the validator the test spawns at one of the fakes above.
-func setFakeConfig(t *testing.T, fake fakeConfig) {
+// unservedAddress is a listening socket nobody accepts on: whoever connects waits for
+// a server that never speaks.
+func unservedAddress(t *testing.T) string {
 	t.Helper()
+
+	listener, err := net.Listen(networkTCP, loopbackAddress)
+	if err != nil {
+		t.Fatalf("Listen() = %v", err)
+	}
+
+	t.Cleanup(func() { _ = listener.Close() })
+
+	return listener.Addr().String()
+}
+
+func setFakeConfig(t *testing.T, opts ...fakeOption) {
+	t.Helper()
+
+	var fake fakeConfig
+	for _, opt := range opts {
+		opt(&fake)
+	}
 
 	raw, err := json.Marshal(fake)
 	if err != nil {
@@ -595,22 +694,28 @@ func parseFakeValidatorArgs(args []string) (server.Config, error) {
 	return configGetter(), nil
 }
 
-func runFakeValidator(fake fakeConfig, config server.Config) int {
-	// The child inherits stdout and stderr, so they stay open after the validator is
-	// gone.
-	if fake.Mode == modeOrphan {
-		child := exec.Command("sleep", "60")
-		child.Stdout = os.Stdout
-		child.Stderr = os.Stderr
-
-		if err := child.Start(); err != nil {
-			return 1
-		}
-
-		return 0
+// runFakeValidator is the whole life of the spawned copy: it builds its config from
+// the options it was given and does what that config asks for.
+func runFakeValidator(args []string, opts ...fakeOption) int {
+	var fake fakeConfig
+	for _, opt := range opts {
+		opt(&fake)
 	}
 
-	if fake.Mode == modeChild {
+	if fake.UnknownSubcommand {
+		fmt.Fprintf(os.Stderr, "unknown subcommand: %s\n", server.ServeCommand)
+
+		return 1
+	}
+
+	config, err := parseFakeValidatorArgs(args)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+
+		return 1
+	}
+
+	if fake.ChildPidFile != "" {
 		child := exec.Command("sleep", "60")
 		if err := child.Start(); err != nil {
 			return 1
@@ -618,6 +723,17 @@ func runFakeValidator(fake fakeConfig, config server.Config) int {
 
 		pid := []byte(strconv.Itoa(child.Process.Pid))
 		if err := os.WriteFile(fake.ChildPidFile, pid, 0o600); err != nil {
+			return 1
+		}
+	}
+
+	// The child inherits stdout and stderr, so they stay open after the fake is gone.
+	if fake.HoldPipes {
+		child := exec.Command("sleep", "60")
+		child.Stdout = os.Stdout
+		child.Stderr = os.Stderr
+
+		if err := child.Start(); err != nil {
 			return 1
 		}
 	}
@@ -637,20 +753,38 @@ func runFakeValidator(fake fakeConfig, config server.Config) int {
 		fmt.Fprintln(os.Stderr, fake.SayOnStderr)
 	}
 
-	if fake.Mode == modeSay {
+	if fake.AnnounceAddress != "" {
+		return announceAndDie(fake)
+	}
+
+	if fake.NoServe {
 		return 0
 	}
 
+	return serveValidator(fake, config)
+}
+
+// announceAndDie is the validator that goes down: it never binds anything, points the
+// caller at a socket of the test's own and exits while the call is still in flight.
+func announceAndDie(fake fakeConfig) int {
+	fmt.Println(server.ListeningLine(networkTCP, fake.AnnounceAddress))
+	time.Sleep(fake.ExitAfter)
+	fmt.Fprintln(os.Stderr, "validator failed after announcing")
+
+	return fake.ExitCode
+}
+
+// serveValidator is the validator that stays up, built the way a provider builds one:
+// the protocol library serves the answers until it is asked to stop.
+func serveValidator(fake fakeConfig, config server.Config) int {
 	if fake.SocketPath != "" {
-		config.Network = "unix"
+		config.Network = networkUnix
 		config.Address = fake.SocketPath
 	}
 
-	if fake.Mode == modeSlowStart {
-		time.Sleep(300 * time.Millisecond)
-	}
+	time.Sleep(fake.ListenAfter)
 
-	validator, err := server.Start(config, server.NewValidateService(newFakeValidator(fake.Mode)))
+	validator, err := server.Start(config, server.NewValidateService(fakeValidator{response: fake.Response}))
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 
@@ -658,7 +792,7 @@ func runFakeValidator(fake fakeConfig, config server.Config) int {
 	}
 
 	// Listens and answers, but only an actual kill ends it.
-	if fake.Mode == modeStubborn {
+	if fake.IgnoreSignals {
 		signal.Ignore(syscall.SIGINT, syscall.SIGTERM)
 		time.Sleep(5 * time.Minute)
 
@@ -678,57 +812,12 @@ func runFakeValidator(fake fakeConfig, config server.Config) int {
 	return 0
 }
 
-func newFakeValidator(m mode) fakeValidator {
-	switch m {
-	case modeBlank:
-		return fakeValidator{response: &validatev1.ValidateResponse{
-			Errors: []*validatev1.ViolationResponse{{}},
-		}}
-
-	case modeWarnings:
-		return fakeValidator{response: &validatev1.ValidateResponse{
-			Warnings: []*validatev1.ViolationResponse{{
-				Path:    "DVPClusterConfiguration/layout",
-				Code:    "layout_deprecated",
-				Message: "layout is deprecated",
-			}},
-		}}
-
-	case modeViolations:
-		return fakeValidator{response: &validatev1.ValidateResponse{
-			Errors: []*validatev1.ViolationResponse{{
-				Path:    "Secret/d8-credentials",
-				Code:    "credential_secret_required",
-				Message: "credential Secret is required",
-			}},
-			Warnings: []*validatev1.ViolationResponse{{
-				Path:    "NodeGroup/worker",
-				Code:    "replicas_zero",
-				Message: "replicas is 0",
-			}},
-		}}
-
-	default:
-		return fakeValidator{response: &validatev1.ValidateResponse{}}
-	}
-}
-
 func (v fakeValidator) Validate(context.Context, validatev1.Input) (*validatev1.ValidateResponse, error) {
-	return v.response, nil
-}
-
-func waitForFile(t *testing.T, path string) {
-	t.Helper()
-
-	for range 200 {
-		if _, err := os.Stat(path); err == nil {
-			return
-		}
-
-		time.Sleep(10 * time.Millisecond)
+	if v.response == nil {
+		return &validatev1.ValidateResponse{}, nil
 	}
 
-	t.Fatalf("Stat(%s): the validator never wrote it", path)
+	return v.response, nil
 }
 
 func readPid(t *testing.T, path string) int {

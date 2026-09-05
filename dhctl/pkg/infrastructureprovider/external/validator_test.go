@@ -19,6 +19,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 
 	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 
@@ -28,59 +29,72 @@ import (
 func TestValidate(t *testing.T) {
 	tests := []struct {
 		name    string
-		mode    mode
+		opts    []fakeOption
 		input   config.ProviderInput
-		wantErr string
+		wantErr []string
 	}{
 		{
 			name:  "passes a valid configuration",
-			mode:  modeValid,
 			input: convergeInput(),
 		},
 		{
 			// The caller waits for the announcement rather than dialling early.
 			name:  "waits for a validator that takes a while to listen",
-			mode:  modeSlowStart,
+			opts:  []fakeOption{withListenAfter(300 * time.Millisecond)},
 			input: convergeInput(),
 		},
 		{
 			name:    "reports violations as the error text",
-			mode:    modeViolations,
+			opts:    []fakeOption{withViolations()},
 			input:   convergeInput(),
-			wantErr: "Secret/d8-credentials: credential Secret is required",
+			wantErr: []string{"Secret/d8-credentials: credential Secret is required"},
 		},
 		{
 			// Warnings are for the operator to read; only errors block.
 			name:  "a warning alone does not block the operation",
-			mode:  modeWarnings,
+			opts:  []fakeOption{withWarnings()},
 			input: convergeInput(),
 		},
 		{
 			// Fail closed: the violation being there at all is what blocks, not the
 			// text it renders to.
 			name:    "fails closed on a violation with no detail",
-			mode:    modeBlank,
+			opts:    []fakeOption{withBlankViolation()},
 			input:   convergeInput(),
-			wantErr: `provider "dvp" validation failed`,
+			wantErr: []string{`provider "dvp" validation failed`},
 		},
 		{
 			// Fail closed: a binary that predates the protocol exits on the unknown
 			// subcommand, and the caller learns that rather than waiting out the
 			// announcement timeout.
 			name:    "fails closed on a binary without the serve subcommand",
-			mode:    modeLegacy,
+			opts:    []fakeOption{withUnknownSubcommand()},
 			input:   convergeInput(),
-			wantErr: "validator exited: exit status 1",
+			wantErr: []string{"validator exited: exit status 1"},
+		},
+		{
+			// Fail closed: the endpoint arrived, but the validator was gone before it
+			// could answer, and the error says how it went.
+			name: "fails closed on a validator that dies after announcing",
+			opts: []fakeOption{
+				withAnnouncedAddress(unservedAddress(t)),
+				withExitAfter(500*time.Millisecond, 3),
+			},
+			input: convergeInput(),
+			wantErr: []string{
+				"call validator on",
+				"validator exited: exit status 3",
+			},
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			setFakeConfig(t, fakeConfig{Mode: test.mode})
+			setFakeConfig(t, test.opts...)
 
 			err := Validate(context.Background(), os.Args[0], test.input)
 
-			if test.wantErr == "" {
+			if len(test.wantErr) == 0 {
 				if err != nil {
 					t.Fatalf("Validate() = %v, want nil", err)
 				}
@@ -92,8 +106,10 @@ func TestValidate(t *testing.T) {
 				t.Fatalf("Validate() = nil, want an error mentioning %q", test.wantErr)
 			}
 
-			if !strings.Contains(err.Error(), test.wantErr) {
-				t.Errorf("Validate() = %q, want it to mention %q", err, test.wantErr)
+			for _, want := range test.wantErr {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("Validate() = %q, want it to mention %q", err, want)
+				}
 			}
 		})
 	}
