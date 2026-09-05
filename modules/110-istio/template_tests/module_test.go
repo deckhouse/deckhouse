@@ -2238,6 +2238,9 @@ MY_VAR: "myvalue"
 				Expect(binding.Field("spec.policyName").String()).To(Equal("serviceentry-ports-should-exist.deckhouse.io"))
 				Expect(binding.Field("spec.validationActions.0").String()).To(Equal("Warn"))
 			})
+		})
+	})
+
 	Context("CustomCertificate mode with Gateway API enabled", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global", globalValues)
