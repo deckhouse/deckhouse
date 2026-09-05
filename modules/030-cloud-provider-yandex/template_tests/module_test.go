@@ -405,6 +405,8 @@ var _ = Describe("Module :: cloud-provider-yandex :: helm template ::", func() {
 			// user story #2
 			Expect(csiDriver.Exists()).To(BeTrue())
 			Expect(csiControllerSS.Exists()).To(BeTrue())
+			Expect(csiControllerSS.Field("spec.template.spec.containers.0.args").String()).ToNot(ContainSubstring("--enable-capacity"))
+			Expect(csiControllerSS.Field("spec.template.spec.containers.0.args").String()).ToNot(ContainSubstring("--capacity-ownerref-level=2"))
 			Expect(csiControllerSS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(csiNodeDS.Exists()).To(BeTrue())
 			Expect(csiNodeDS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
