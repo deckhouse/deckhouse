@@ -24,10 +24,3 @@ extractedLinksMax: 0
 * [`monitoring-kubernetes`](/modules/monitoring-kubernetes/) — обеспечивает прозрачный и своевременный контроль состояния всех узлов кластера и ключевых инфраструктурных компонентов;
 * [`monitoring-kubernetes-control-plane`](/modules/monitoring-kubernetes-control-plane/) — организует безопасный сбор метрик и предоставляет базовый набор правил мониторинга компонентов control plane кластера;
 * [`upmeter`](/modules/upmeter/) — проверяет доступность платформы и состояние компонентов кластера в реальном времени и выводит информацию на соответствующие дашборды.
-
-В подразделе на данный момент описаны:
-
-* [архитектура мониторинга в DKP](monitoring.html);
-* [модуль `prometheus`](prometheus.html);
-* [модуль `observability`](observability.html);
-* [модули логирования](logging.html).
