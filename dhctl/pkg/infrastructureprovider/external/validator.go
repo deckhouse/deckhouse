@@ -33,7 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
-const validateTimeout = 10 * time.Second
+const requestTimeout = 10 * time.Second
 
 func Validate(ctx context.Context, binaryPath string, input config.ProviderInput) error {
 	ctx, span := telemetry.StartSpan(ctx, "external.validate")
@@ -48,9 +48,6 @@ func Validate(ctx context.Context, binaryPath string, input config.ProviderInput
 	if err != nil {
 		return fmt.Errorf("build validate request: %w", err)
 	}
-
-	ctx, cancel := context.WithTimeout(ctx, validateTimeout)
-	defer cancel()
 
 	resp, err := validate(ctx, binaryPath, wireInput)
 	if err != nil {
@@ -90,8 +87,15 @@ func validate(ctx context.Context, binaryPath string, input validatev1.Input) (_
 		}
 	}()
 
-	resp, err := requestValidate(ctx, validator.Endpoint(), input)
+	reqCtx, reqCancel := context.WithTimeout(ctx, requestTimeout)
+	defer reqCancel()
+
+	resp, err := requestValidate(reqCtx, validator.Endpoint(), input)
 	if err != nil {
+		if cause := context.Cause(ctx); cause != nil {
+			err = errors.Join(err, cause)
+		}
+
 		return nil, fmt.Errorf("call validator on %s: %w", validator.Endpoint(), err)
 	}
 

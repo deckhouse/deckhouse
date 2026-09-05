@@ -114,8 +114,14 @@ func (v *validatorProcess) Start(ctx context.Context) (context.Context, error) {
 	v.waitWG.Go(func() {
 		v.waitErr = v.cmd.Wait()
 		_ = syscall.Kill(-v.cmd.Process.Pid, syscall.SIGKILL)
-		v.cancel(fmt.Errorf("validator exited: %w", v.waitErr))
-		v.debug(fmt.Sprintf("validator exited: %v", v.waitErr))
+
+		cause := errors.New("validator exited")
+		if v.waitErr != nil {
+			cause = fmt.Errorf("validator exited: %w", v.waitErr)
+		}
+
+		v.cancel(cause)
+		v.debug(cause.Error())
 	})
 
 	return ctx, nil
