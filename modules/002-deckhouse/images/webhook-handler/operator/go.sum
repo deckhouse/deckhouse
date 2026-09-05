@@ -55,8 +55,8 @@ github.com/flant/go-openapi-validate v0.19.12-flant.0 h1:xk6kvc9fHKMgUdB6J7kbpbL
 github.com/flant/go-openapi-validate v0.19.12-flant.0/go.mod h1:Rzou8hA/CBw8donlS6WNEUQupNvUZ0waH08tGe6kAQ4=
 github.com/flant/kube-client v1.9.1 h1:B5Sa++5arl3N/KBdL1KNMlUBtzQXKz1o2FIiFb4X+VA=
 github.com/flant/kube-client v1.9.1/go.mod h1:jAQ01+f5Q8UJJ4RYZlk5xqoA+OOalpr/QJ3e3Q/saqw=
-github.com/flant/shell-operator v1.20.3 h1:yna0aKNw07KmNaSLrknVF/loE2ruZu/ubW4aQsvQ3Dc=
-github.com/flant/shell-operator v1.20.3/go.mod h1:J720QPLkm/RDzMje8JePGkPUnHOI+4XNOA5/qiJtNfQ=
+github.com/flant/shell-operator v1.20.4-0.20260904115725-f8186f7809e4 h1:5iTHqwyMChjJEVtuY9wfGG/iW6SM60TfcM8Qd415i80=
+github.com/flant/shell-operator v1.20.4-0.20260904115725-f8186f7809e4/go.mod h1:J720QPLkm/RDzMje8JePGkPUnHOI+4XNOA5/qiJtNfQ=
 github.com/fsnotify/fsnotify v1.9.0 h1:2Ml+OJNzbYCTzsxtv8vKSFD9PbJjmhYF14k/jKC7S9k=
 github.com/fsnotify/fsnotify v1.9.0/go.mod h1:8jBTzvmWwFyi3Pb8djgCCO5IBqzKJ/Jwo8TRcHyHii0=
 github.com/fxamacker/cbor/v2 v2.9.2 h1:X4Ksno9+x3cz0TZv69ec1hxP/+tymuR8PXQJyDwfh78=
