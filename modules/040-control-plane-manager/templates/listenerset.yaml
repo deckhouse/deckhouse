@@ -23,7 +23,7 @@ spec:
       certificateRefs:
       - group: ""
         kind: Secret
-        name: {{ include "publish_api_http_route_certificate_name" . }}
+        name: {{ include "publish_api_certificate_name" (list . "kubernetes-httproute-tls") }}
         namespace: kube-system
       mode: Terminate
   - allowedRoutes:
