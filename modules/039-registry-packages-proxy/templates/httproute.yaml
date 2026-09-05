@@ -22,7 +22,7 @@ spec:
       certificateRefs:
       - group: ""
         kind: Secret
-        name: {{ include "helm_lib_module_https_secret_name_or_shared" (list . "ingress-tls" "registry-packages-proxy-httproute-tls") }}
+        name: {{ include "helm_lib_module_https_secret_name" (list . "ingress-tls" "registry-packages-proxy-httproute-tls") }}
         namespace: d8-cloud-instance-manager
       mode: Terminate
   - allowedRoutes:

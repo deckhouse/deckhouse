@@ -198,34 +198,27 @@ data:
   {{- end -}}
 {{- end -}}
 
-{{- /* Usage: {{ include "helm_lib_module_https_secret_name (list . "secret_name_prefix") }} */ -}}
-{{- /* returns custom certificate name */ -}}
+{{- /* Usage: {{ include "helm_lib_module_https_secret_name" (list . "secret_name_prefix") }} */ -}}
+{{- /* or:    {{ include "helm_lib_module_https_secret_name" (list . "secret_name_prefix" "own_secret_name_prefix_for_gateway_api") }} */ -}}
+{{- /* returns secret_name_prefix's secret name for the current mode. With a third argument, CertManager */ -}}
+{{- /* mode uses it instead (Gateway API's own certificate, since it's validated through a separate */ -}}
+{{- /* ClusterIssuer); every other mode still uses secret_name_prefix, since CustomCertificate is the same */ -}}
+{{- /* static data regardless of mechanism and isn't duplicated */ -}}
 {{- define "helm_lib_module_https_secret_name" -}}
   {{- $context := index . 0 -}} {{- /* Template context with .Values, .Chart, etc */ -}}
   {{- $secret_name_prefix := index . 1 -}} {{- /* Secret name prefix */ -}}
   {{- $mode := include "helm_lib_module_https_mode" $context -}}
   {{- if eq $mode "CertManager" -}}
-    {{- $secret_name_prefix -}}
+    {{- if eq (len .) 3 -}}
+      {{- index . 2 -}}
+    {{- else -}}
+      {{- $secret_name_prefix -}}
+    {{- end -}}
   {{- else -}}
     {{- if eq $mode "CustomCertificate" -}}
       {{- printf "%s-customcertificate" $secret_name_prefix -}}
     {{- else -}}
       {{- fail "https.mode must be CustomCertificate or CertManager" -}}
     {{- end -}}
-  {{- end -}}
-{{- end -}}
-
-{{- /* Usage: {{ include "helm_lib_module_https_secret_name_or_shared" (list . "shared_secret_name_prefix" "own_secret_name_prefix") }} */ -}}
-{{- /* returns own_secret_name_prefix's secret name in CertManager mode (this mechanism is issued its */ -}}
-{{- /* own certificate), or shared_secret_name_prefix's secret name otherwise (CustomCertificate is the */ -}}
-{{- /* same static data regardless of mechanism, so it isn't duplicated) */ -}}
-{{- define "helm_lib_module_https_secret_name_or_shared" -}}
-  {{- $context := index . 0 -}} {{- /* Template context with .Values, .Chart, etc */ -}}
-  {{- $shared_secret_name_prefix := index . 1 -}} {{- /* Prefix used when the mode has no per-mechanism issuance */ -}}
-  {{- $own_secret_name_prefix := index . 2 -}} {{- /* Prefix used when this mechanism has its own certificate */ -}}
-  {{- if eq (include "helm_lib_module_https_mode" $context) "CertManager" -}}
-    {{- include "helm_lib_module_https_secret_name" (list $context $own_secret_name_prefix) -}}
-  {{- else -}}
-    {{- include "helm_lib_module_https_secret_name" (list $context $shared_secret_name_prefix) -}}
   {{- end -}}
 {{- end -}}
