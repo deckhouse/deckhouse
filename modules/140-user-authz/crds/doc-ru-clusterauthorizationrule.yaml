@@ -8,6 +8,20 @@ spec:
 
             > Ресурс `ClusterAuthorizationRule` используется [в текущей ролевой модели](./#текущая-ролевая-модель) и не используется в экспериментальной ролевой модели.
           properties:
+            status:
+              description: |
+                Наблюдаемое состояние правила, поддерживается user-authz-controller.
+              properties:
+                conditions:
+                  description: |
+                    Условия правила. `Ready=True` — все биндинги правила применены; `Ready=False` с причиной
+                    `InvalidSpec` — правило нельзя отрендерить, биндинги не менялись.
+                bindings:
+                  description: |
+                    Число биндингов, созданных для правила.
+                observedGeneration:
+                  description: |
+                    Поколение правила, к которому относится статус.
             spec:
               properties:
                 accessLevel:
@@ -85,6 +99,20 @@ spec:
 
             Настройки определяют, какой уровень доступа назначен пользователю и/или группе.
           properties:
+            status:
+              description: |
+                Наблюдаемое состояние правила, поддерживается user-authz-controller.
+              properties:
+                conditions:
+                  description: |
+                    Условия правила. `Ready=True` — все биндинги правила применены; `Ready=False` с причиной
+                    `InvalidSpec` — правило нельзя отрендерить, биндинги не менялись.
+                bindings:
+                  description: |
+                    Число биндингов, созданных для правила.
+                observedGeneration:
+                  description: |
+                    Поколение правила, к которому относится статус.
             spec:
               properties:
                 accessLevel:

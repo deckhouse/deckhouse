@@ -46,6 +46,32 @@ spec:
   - kind: Group
     name: Everyone
 `
+
+	stateClusterAuthRulesWithoutLevel = `
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: car-roles-only
+spec:
+  additionalRoles:
+  - apiGroup: rbac.authorization.k8s.io
+    kind: ClusterRole
+    name: view
+  subjects:
+  - kind: Group
+    name: Viewers
+---
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: car-super
+spec:
+  accessLevel: SuperAdmin
+  subjects:
+  - kind: Group
+    name: Root
+`
 )
 
 var _ = Describe("User Authz hooks :: handle cluster authorization rules ::", func() {
@@ -73,6 +99,20 @@ var _ = Describe("User Authz hooks :: handle cluster authorization rules ::", fu
 		It("CARs must be stored in values", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet("userAuthz.internal.clusterAuthRuleCrds").String()).To(MatchJSON(`[{"name":"car0","spec":{"accessLevel":"ClusterEditor", "allowScale": false, "portForwarding": false, "subjects":[{"kind":"Group", "name":"NotEveryone"}]}},{"name":"car1","spec":{"accessLevel":"ClusterAdmin", "allowScale": false, "portForwarding": false, "subjects":[{"kind":"Group", "name":"Everyone"}]}}]`))
+		})
+	})
+
+	Context("Cluster with CARs without accessLevel and with SuperAdmin", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(stateClusterAuthRulesWithoutLevel))
+			f.RunHook()
+		})
+
+		It("Rules without accessLevel are published as they are", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("userAuthz.internal.clusterAuthRuleCrds.0.name").String()).To(Equal("car-roles-only"))
+			Expect(f.ValuesGet("userAuthz.internal.clusterAuthRuleCrds.0.spec.additionalRoles.0.name").String()).To(Equal("view"))
+			Expect(f.ValuesGet("userAuthz.internal.clusterAuthRuleCrds.1.spec.accessLevel").String()).To(Equal("SuperAdmin"))
 		})
 	})
 })

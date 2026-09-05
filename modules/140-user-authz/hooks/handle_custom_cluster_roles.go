@@ -36,8 +36,8 @@ const (
 	// accessLevelKey is both the annotation that marks a custom ClusterRole and the label
 	// that the aggregated ClusterRoles (user-authz:<level>:custom) select it by. The
 	// annotation is the public contract; the label is maintained by this hook. Nothing else
-	// is derived from custom roles anymore: the aggregation happens in Kubernetes, so a new
-	// or changed custom role does not need a module release.
+	// is derived from custom roles anymore: the aggregation happens in Kubernetes and the
+	// bindings are reconciled by user-authz-controller.
 	accessLevelKey = "user-authz.deckhouse.io/access-level"
 
 	accessLevelUser           = "User"
