@@ -23,7 +23,7 @@ The `sast` scan adds two jobs to the pipeline, both in the `fe-security-scanner`
 | Job | What it does |
 |-----|--------------|
 | `semgrep_sast_scan` | Runs the scanner over the repository and publishes its raw JSON output as an artifact. |
-| `semgrep_sast_junit` | Reads that JSON, builds a JUnit test report and a security report from it, and decides the outcome: the job succeeds when no finding reaches the blocking threshold, and fails otherwise. |
+| `semgrep_sast_junit` | Reads that JSON, builds a JUnit test report and a security report from it, and decides the outcome: the job succeeds when no finding reaches the blocking threshold, and fails otherwise. It runs on a Ruby image rather than the scanner's. |
 
 Both jobs upload their artifacts with `when: always`, so the reports are on disk before the second job may fail — a blocked pipeline never costs you the findings that blocked it.
 
@@ -41,7 +41,7 @@ Before the scan can run, make sure that:
 
 - An instance administrator has enabled the `fe_security_scan_policies` feature flag.
 - A security policy project is linked to the project or to a group above it.
-- A GitLab Runner with a `docker` executor is available, and it can pull the scanner image (see "Where the scanner image comes from" below).
+- A GitLab Runner with a `docker` executor is available, and it can pull both images the scan uses: the scanner image (see "Where the scanner image comes from" below) and the Ruby image the second job runs on, `ruby:3.3.10-slim` by default, which an installation can redirect with the instance variable `FE_SCANS_REPORT_CONVERTER_IMAGE`.
 
 ## Turning the scan on
 
@@ -233,10 +233,17 @@ The version shipped with a release is reviewed when Deckhouse Code is updated, s
 
 ### Installations with no route to the internet
 
-The default image is pulled from `registry.gitlab.com`. An installation with no route to the internet has to mirror the image into its own registry first, exactly as GitLab's own offline documentation prescribes for its analyzer images, and then name that registry in the "Registry" field of the integration. Deckhouse Code names the image; it does not ship it.
+The scan uses two images, and an installation with no route to the internet has to provide both:
+
+| Image | Default | How to redirect it |
+|-------|---------|--------------------|
+| Scanner | `registry.gitlab.com/security-products/semgrep:6.25.0` | The "Registry" or "Prepared image" field of the Semgrep integration |
+| Report converter | `ruby:3.3.10-slim`, from Docker Hub | The instance variable `FE_SCANS_REPORT_CONVERTER_IMAGE` |
+
+Mirror them into your own registry first, exactly as GitLab's own offline documentation prescribes for its analyzer images, and then point the corresponding setting at that registry. Deckhouse Code names both images; it ships neither.
 
 {% alert level="info" %}
-The GitLab dependency proxy does not help here. It is a pull-through cache for images stored on Docker Hub, and the scanner image is published on `registry.gitlab.com`, so the proxy has nothing to offer it. For an installation that wants to stop pulling the image from outside on every run, with or without a route to the internet, the answer is the same one: mirror it into your own registry and point the "Registry" field at it.
+The GitLab dependency proxy does not cover the scanner image. It is a pull-through cache for images stored on Docker Hub, and the scanner image is published on `registry.gitlab.com`, so the proxy has nothing to offer it — the Ruby converter image is the only one of the two it can cache. For an installation that wants to stop pulling the scanner image from outside on every run, with or without a route to the internet, the answer is the same one: mirror it into your own registry and point the "Registry" field at it.
 {% endalert %}
 
 ## Semgrep's paid features
