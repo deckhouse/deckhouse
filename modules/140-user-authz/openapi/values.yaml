@@ -18,40 +18,6 @@ properties:
         description: |
           The currently installed Console module version, used to determine if
           legacy compatibility mode should be enabled.
-      customClusterRoles:
-        type: object
-        properties:
-          user:
-            type: array
-            items:
-              type: string
-            default: []
-          privilegedUser:
-            type: array
-            items:
-              type: string
-            default: []
-          editor:
-            type: array
-            items:
-              type: string
-            default: []
-          admin:
-            type: array
-            items:
-              type: string
-            default: []
-          clusterEditor:
-            type: array
-            items:
-              type: string
-            default: []
-          clusterAdmin:
-            type: array
-            items:
-              type: string
-            default: []
-        default: {}
       webhookCertificate:
         type: object
         properties:
@@ -242,67 +208,6 @@ properties:
         ca: castring
         key: keystring
         crt: certificatestring
-      customClusterRoles:
-        admin:
-          - d8:user-authz:cert-manager:admin
-          - d8:user-authz:cert-manager:editor
-          - d8:user-authz:cert-manager:user
-          - d8:user-authz:cloud-provider-openstack:user
-          - d8:user-authz:ingress-nginx:editor
-          - d8:user-authz:node-manager:user
-          - d8:user-authz:prometheus-metrics-adapter:editor
-          - d8:user-authz:prometheus-metrics-adapter:user
-          - d8:user-authz:prometheus:editor
-        clusterAdmin:
-          - d8:user-authz:cert-manager:admin
-          - d8:user-authz:cert-manager:cluster-editor
-          - d8:user-authz:cert-manager:editor
-          - d8:user-authz:cert-manager:user
-          - d8:user-authz:cloud-provider-openstack:cluster-admin
-          - d8:user-authz:cloud-provider-openstack:user
-          - d8:user-authz:ingress-nginx:cluster-editor
-          - d8:user-authz:ingress-nginx:editor
-          - d8:user-authz:node-manager:cluster-admin
-          - d8:user-authz:node-manager:cluster-editor
-          - d8:user-authz:node-manager:user
-          - d8:user-authz:prometheus-metrics-adapter:cluster-editor
-          - d8:user-authz:prometheus-metrics-adapter:editor
-          - d8:user-authz:prometheus-metrics-adapter:user
-          - d8:user-authz:prometheus:cluster-editor
-          - d8:user-authz:prometheus:editor
-        clusterEditor:
-          - d8:user-authz:cert-manager:cluster-editor
-          - d8:user-authz:cert-manager:editor
-          - d8:user-authz:cert-manager:user
-          - d8:user-authz:cloud-provider-openstack:user
-          - d8:user-authz:ingress-nginx:cluster-editor
-          - d8:user-authz:ingress-nginx:editor
-          - d8:user-authz:node-manager:cluster-editor
-          - d8:user-authz:node-manager:user
-          - d8:user-authz:prometheus-metrics-adapter:cluster-editor
-          - d8:user-authz:prometheus-metrics-adapter:editor
-          - d8:user-authz:prometheus-metrics-adapter:user
-          - d8:user-authz:prometheus:cluster-editor
-          - d8:user-authz:prometheus:editor
-        editor:
-          - d8:user-authz:cert-manager:editor
-          - d8:user-authz:cert-manager:user
-          - d8:user-authz:cloud-provider-openstack:user
-          - d8:user-authz:ingress-nginx:editor
-          - d8:user-authz:node-manager:user
-          - d8:user-authz:prometheus-metrics-adapter:editor
-          - d8:user-authz:prometheus-metrics-adapter:user
-          - d8:user-authz:prometheus:editor
-        privilegedUser:
-          - d8:user-authz:cert-manager:user
-          - d8:user-authz:cloud-provider-openstack:user
-          - d8:user-authz:node-manager:user
-          - d8:user-authz:prometheus-metrics-adapter:user
-        user:
-          - d8:user-authz:cert-manager:user
-          - d8:user-authz:cloud-provider-openstack:user
-          - d8:user-authz:node-manager:user
-          - d8:user-authz:prometheus-metrics-adapter:user
       clusterAuthRuleCrds:
       - name: editor-crd
         spec:

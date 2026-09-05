@@ -27,7 +27,6 @@ import (
 	"github.com/deckhouse/module-sdk/pkg"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
-	"github.com/deckhouse/deckhouse/go_lib/set"
 	"github.com/deckhouse/deckhouse/modules/140-user-authz/hooks/internal"
 )
 
@@ -36,7 +35,9 @@ const (
 
 	// accessLevelKey is both the annotation that marks a custom ClusterRole and the label
 	// that the aggregated ClusterRoles (user-authz:<level>:custom) select it by. The
-	// annotation is the public contract; the label is maintained by this hook.
+	// annotation is the public contract; the label is maintained by this hook. Nothing else
+	// is derived from custom roles anymore: the aggregation happens in Kubernetes, so a new
+	// or changed custom role does not need a module release.
 	accessLevelKey = "user-authz.deckhouse.io/access-level"
 
 	accessLevelUser           = "User"
@@ -95,8 +96,6 @@ func customClusterRolesHandler(_ context.Context, input *go_hook.HookInput) erro
 
 	syncAccessLevelLabels(input, roles)
 
-	input.Values.Set("userAuthz.internal.customClusterRoles", customClusterRolesToInternalValues(roles))
-
 	return nil
 }
 
@@ -109,14 +108,14 @@ func syncAccessLevelLabels(input *go_hook.HookInput, roles []customClusterRole) 
 			continue
 		}
 
-		var label interface{}
+		var label any
 		if role.Role != "" {
 			label = role.Role
 		}
 
-		patch := map[string]interface{}{
-			"metadata": map[string]interface{}{
-				"labels": map[string]interface{}{
+		patch := map[string]any{
+			"metadata": map[string]any{
+				"labels": map[string]any{
 					accessLevelKey: label,
 				},
 			},
@@ -124,15 +123,6 @@ func syncAccessLevelLabels(input *go_hook.HookInput, roles []customClusterRole) 
 
 		input.PatchCollector.PatchWithMerge(patch, "rbac.authorization.k8s.io/v1", "ClusterRole", "", role.Name)
 	}
-}
-
-type internalValuesCustomClusterRoles struct {
-	User           []string `json:"user"`
-	PrivilegedUser []string `json:"privilegedUser"`
-	Editor         []string `json:"editor"`
-	Admin          []string `json:"admin"`
-	ClusterEditor  []string `json:"clusterEditor"`
-	ClusterAdmin   []string `json:"clusterAdmin"`
 }
 
 func snapshotsToCustomClusterRoles(snapshots []pkg.Snapshot) ([]customClusterRole, error) {
@@ -147,46 +137,4 @@ func snapshotsToCustomClusterRoles(snapshots []pkg.Snapshot) ([]customClusterRol
 	}
 
 	return roles, nil
-}
-
-func customClusterRolesToInternalValues(roles []customClusterRole) internalValuesCustomClusterRoles {
-	var (
-		userRoleNames           = set.New()
-		privilegedUserRoleNames = set.New()
-		editorRoleNames         = set.New()
-		adminRoleNames          = set.New()
-		clusterEditorRoleNames  = set.New()
-		clusterAdminRoleNames   = set.New()
-	)
-
-	for _, customRole := range roles {
-		switch customRole.Role {
-		case accessLevelUser:
-			userRoleNames.Add(customRole.Name)
-			fallthrough
-		case accessLevelPrivilegedUser:
-			privilegedUserRoleNames.Add(customRole.Name)
-			fallthrough
-		case accessLevelEditor:
-			editorRoleNames.Add(customRole.Name)
-			fallthrough
-		case accessLevelAdmin:
-			adminRoleNames.Add(customRole.Name)
-			fallthrough
-		case accessLevelClusterEditor:
-			clusterEditorRoleNames.Add(customRole.Name)
-			fallthrough
-		case accessLevelClusterAdmin:
-			clusterAdminRoleNames.Add(customRole.Name)
-		}
-	}
-
-	return internalValuesCustomClusterRoles{
-		User:           userRoleNames.Slice(),
-		PrivilegedUser: privilegedUserRoleNames.Slice(),
-		Editor:         editorRoleNames.Slice(),
-		Admin:          adminRoleNames.Slice(),
-		ClusterEditor:  clusterEditorRoleNames.Slice(),
-		ClusterAdmin:   clusterAdminRoleNames.Slice(),
-	}
 }

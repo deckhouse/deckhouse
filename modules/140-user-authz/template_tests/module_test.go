@@ -35,13 +35,6 @@ func Test(t *testing.T) {
 }
 
 const (
-	customClusterRolesFlat = `---
-admin:
-  - cert-manager:user-authz:user
-editor:
-- cert-manager:user-authz:editor
-`
-
 	testCLusterRoleCRDsWithLimitNamespaces = `---
 - name: testenev
   spec:
@@ -153,7 +146,6 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		// - webhook/secret.yaml requires webhookCertificate when enableMultiTenancy=true
 		f.ValuesSetFromYaml("userAuthz.internal.clusterAuthRuleCrds", `[]`)
 		f.ValuesSetFromYaml("userAuthz.internal.authRuleCrds", `[]`)
-		f.ValuesSetFromYaml("userAuthz.internal.customClusterRoles", `{}`)
 
 		f.ValuesSet("global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA", "test")
 		f.ValuesSet("userAuthz.internal.webhookCertificate.ca", "test")
@@ -172,7 +164,6 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd"]`)
 			f.ValuesSetFromYaml("userAuthz.internal.clusterAuthRuleCrds", testCLusterRoleCRDsWithLimitNamespaces)
 			f.ValuesSetFromYaml("userAuthz.internal.authRuleCrds", testRoleCRDs)
-			f.ValuesSetFromYaml("userAuthz.internal.customClusterRoles", customClusterRolesFlat)
 
 			f.ValuesSet("userAuthz.enableMultiTenancy", true)
 			f.ValuesSet("userAuthz.controlPlaneConfigurator.enabled", true)

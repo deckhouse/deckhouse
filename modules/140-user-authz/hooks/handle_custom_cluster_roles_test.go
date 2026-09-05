@@ -101,18 +101,9 @@ var _ = Describe("User Authz hooks :: handle custom cluster roles ::", func() {
 			f.RunHook()
 		})
 
-		It("userAuthz.internal.customClusterRoles must be dicts of empty arrays", func() {
-			ccrExpectation := `
-			{
-			  "user":[],
-			  "privilegedUser":[],
-			  "editor":[],
-			  "admin":[],
-			  "clusterEditor":[],
-			  "clusterAdmin":[]
-			}`
+		It("Runs without values and without patches", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles").String()).To(MatchJSON(ccrExpectation))
+			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles").Exists()).To(BeFalse())
 		})
 	})
 
@@ -120,26 +111,6 @@ var _ = Describe("User Authz hooks :: handle custom cluster roles ::", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(stateCustomClusterRoles))
 			f.RunHook()
-		})
-
-		It("Custom Roles and ClusterRoles must be stored in values", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			// ccr-wrong-label is annotated User: the annotation, not the (wrong) label, decides.
-			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.user").AsStringSlice()).Should(ConsistOf("ccr0", "ccr-wrong-label"))
-			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.privilegedUser").AsStringSlice()).Should(ConsistOf("ccr0", "ccr1", "ccr-wrong-label"))
-			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.editor").AsStringSlice()).Should(ConsistOf("ccr0", "ccr1", "ccr2", "ccr-wrong-label"))
-			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.admin").AsStringSlice()).Should(ConsistOf("ccr0", "ccr1", "ccr2", "ccr3", "ccr-wrong-label"))
-			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.clusterEditor").AsStringSlice()).Should(ConsistOf("ccr0", "ccr1", "ccr2", "ccr3", "ccr4", "ccr-wrong-label"))
-			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.clusterAdmin").AsStringSlice()).Should(ConsistOf("ccr0", "ccr1", "ccr2", "ccr3", "ccr4", "ccr5", "ccr-wrong-label"))
-		})
-
-		It("Roles with a stale or missing label are excluded from values", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			for _, level := range []string{"user", "privilegedUser", "editor", "admin", "clusterEditor", "clusterAdmin"} {
-				Expect(f.ValuesGet("userAuthz.internal.customClusterRoles." + level).AsStringSlice()).ShouldNot(ContainElement("ccr-stale-label"))
-				Expect(f.ValuesGet("userAuthz.internal.customClusterRoles." + level).AsStringSlice()).ShouldNot(ContainElement("ccr-without-annotation0"))
-			}
-			Expect(f.ValuesGet("userAuthz.internal.customClusterRoles.user").AsStringSlice()).Should(ContainElement("ccr-wrong-label"))
 		})
 
 		It("Access-level label mirrors the annotation on every custom ClusterRole", func() {
@@ -159,6 +130,50 @@ var _ = Describe("User Authz hooks :: handle custom cluster roles ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.KubernetesGlobalResource("ClusterRole", "ccr-stale-label").Field(accessLevelLabelPath).Exists()).To(BeFalse())
 			Expect(f.KubernetesGlobalResource("ClusterRole", "ccr-without-annotation0").Field("metadata.labels").Exists()).To(BeFalse())
+		})
+
+		It("Patches exactly the roles whose label differs from the annotation", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			// ccr0..ccr5 get the label, ccr-wrong-label is corrected, ccr-stale-label loses it.
+			Expect(f.PatchCollector.Operations()).To(HaveLen(8))
+		})
+	})
+
+	Context("Cluster where every label already matches", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(`
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ccr-labeled
+  labels:
+    user-authz.deckhouse.io/access-level: Editor
+  annotations:
+    user-authz.deckhouse.io/access-level: Editor
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ccr-super-admin
+  annotations:
+    user-authz.deckhouse.io/access-level: SuperAdmin
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: ccr-unknown-level
+  annotations:
+    user-authz.deckhouse.io/access-level: Wrong
+`))
+			f.RunHook()
+		})
+
+		It("Issues no patch: a matching label is left alone and unknown levels get no label", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.PatchCollector.Operations()).To(BeEmpty())
+			Expect(f.KubernetesGlobalResource("ClusterRole", "ccr-super-admin").Field(accessLevelLabelPath).Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("ClusterRole", "ccr-unknown-level").Field(accessLevelLabelPath).Exists()).To(BeFalse())
 		})
 	})
 })

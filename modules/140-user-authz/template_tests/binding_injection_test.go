@@ -80,7 +80,6 @@ var _ = Describe("Module :: user-authz :: helm template :: rule value injection"
 		f.ValuesSet("userAuthz.enableMultiTenancy", false)
 		f.ValuesSet("userAuthz.controlPlaneConfigurator.enabled", true)
 		f.ValuesSetFromYaml("userAuthz.internal.authRuleCrds", `[]`)
-		f.ValuesSetFromYaml("userAuthz.internal.customClusterRoles", `{}`)
 		f.ValuesSet("userAuthz.internal.webhookCertificate.ca", "test")
 		f.ValuesSet("userAuthz.internal.webhookCertificate.crt", "test")
 		f.ValuesSet("userAuthz.internal.webhookCertificate.key", "test")
