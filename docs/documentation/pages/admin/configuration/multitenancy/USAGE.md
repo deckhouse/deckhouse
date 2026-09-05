@@ -293,81 +293,21 @@ To implement validation for resources with a different label (for example, `heri
        heritage: my-custom-label
    ```
 
-## Granting cluster-scoped resources to projects
+## Managing access to cluster-wide resources
 
-The `multitenancy-manager` lets cluster administrators control which cluster-scoped resources (for example StorageClass) may be referenced from within project namespaces.
+The `multitenancy-manager` module allows cluster administrators to define, for each project, which cluster-wide resources (such as StorageClass, ClusterIssuer, ClusterRole, and LoadBalancerClass) can be used from project namespaces and which values are used by default.
 
-To do this, custom resources are used:
+This mechanism works independently of RBAC. RBAC determines *who can create and modify* objects, while the cluster-wide resource access mechanism determines *which resources* those objects can use.
 
-- GrantableClusterResourceDefinition (cluster-scoped) — registers a cluster resource that can be
-  granted to projects: which resource it is (`grantedResource`), where references to it are validated (`usageReferences`),
-  the baseline availability (`defaultAvailability`), and how the per-project default is discovered
-  (`defaultFrom`). Each reference opts into defaulting individually with `default: true` — set it only
-  for a field whose value the resource always needs (such as a `PersistentVolumeClaim`'s
-  `storageClassName`). Leave it off for a reference whose absence is meaningful, such as an annotation
-  that merely toggles a feature; that reference is still validated and counted, just never filled in.
-- ClusterResourceGrantPolicy (cluster-scoped) — selects projects (by namespace labels via
-  `projectSelector`) and, per resource (`resourceName`), the granted names (`allowed`,
-  `allowedSelector`) and the per-project `default`. An allow-list restricts the resource to it.
-- AvailableClusterResource (namespaced, read-only, short name `available`) — the controller-rendered
-  catalog of what a project may use; tenants read it to discover the available names.
-- ClusterResourceGrant (namespaced) — the per-project object-quota pool (limits on object count and
-  on measured quantities such as requested storage); its status reports current usage.
+The mechanism uses four custom resources:
 
-{% raw %}
+- [GrantableClusterResourceDefinition](/modules/multitenancy-manager/cr.html#grantableclusterresourcedefinition) registers a type of cluster-wide resource whose access can be managed. These resources are provided by DKP or module developers.
+- [GrantableClusterResourceReference](/modules/multitenancy-manager/cr.html#grantableclusterresourcereference) defines where a registered cluster-wide resource is used, for example, which resource field contains a reference to it. These resources are provided by modules.
+- [ClusterResourceGrantPolicy](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy) defines access rules. Using labels, a cluster administrator selects the projects to which the policy applies and defines the allowed and denied resources, as well as the resource used by default.
+- [AvailableClusterResource](/modules/multitenancy-manager/cr.html#availableclusterresource) is a read-only list of cluster-wide resources available to the project, created by the controller.
 
-```yaml
-apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: GrantableClusterResourceDefinition
-metadata:
-  name: storageclasses
-spec:
-  grantedResource:
-    apiGroup: storage.k8s.io
-    kind: StorageClass
-  enforcement: Managed
-  defaultAvailability: All
-  defaultFrom:
-    annotationKey: storageclass.kubernetes.io/is-default-class
-  usageReferences:
-    - rule:
-        apiGroups:
-          - ""
-        apiVersions:
-          - v1
-        resources:
-          - persistentvolumeclaims
-      fieldPath: $.spec.storageClassName
-      default: true
----
-apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterResourceGrantPolicy
-metadata:
-  name: production-storage
-spec:
-  projectSelector:
-    matchLabels:
-      environment: production
-  resources:
-    - resourceName: storageclasses
-      default: fast-ssd          # Overrides the annotation-based default.
-      allowed:
-        - fast-ssd
-        - standard
-      allowedSelector:           # Plus any StorageClass with label shared=true.
-        matchLabels:
-          shared: "true"
-```
+Until the administrator creates a ClusterResourceGrantPolicy, resource availability is determined by their registration: resources are available to all projects if `defaultAvailability: All` (the default value) is set in GrantableClusterResourceDefinition and the resource does not match the `excluded` filters.
 
-{% endraw %}
+Access checks are performed only for objects in project namespaces. If an access policy changes, cluster-wide resources already used by existing objects remain available to those objects.
 
-Enforcement notes:
-
-- The validating webhook denies creating/updating objects in matched projects whose
-  referenced value is not granted. On update, values already present in the object are
-  grandfathered in, so pre-existing objects are not broken.
-- The defaulting webhook fills in the granted default on creation only, and only into references
-  marked `default: true`. References left without it (such as feature-toggling annotations) are never
-  filled in.
-- A grant that matches no project, or a project with no matching grant, imposes no
-  restriction.
+For a detailed description of the access management mechanism, refer to the [`multitenancy-manager`](/modules/multitenancy-manager/#managing-access-to-cluster-wide-resources) module documentation.

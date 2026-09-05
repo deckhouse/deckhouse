@@ -79,3 +79,118 @@ description: Мультитенантность и проекты в Kubernetes.
 * Ресурсы контроля сетевой связности (`NetworkPolicy`) — управляют входящим и исходящим сетевым трафиком в `Namespace`. Таким образом, можно настроить разрешенные подключения между подами, улучшить безопасность и управляемость сетевого взаимодействия в рамках проекта.
 
 Эти инструменты можно комбинировать, чтобы настроить проект в соответствии с требованиями вашего приложения.
+
+## Управление доступом к cluster-wide-ресурсам
+
+Объекты в неймспейсах проектов могут ссылаться на cluster-wide-ресурсы. Например, PersistentVolumeClaim может использовать StorageClass,
+Certificate — ClusterIssuer, RoleBinding — ClusterRole. Модуль позволяет администраторам
+кластера определять, какие cluster-wide-ресурсы можно использовать из неймспейсов
+проектов, и какое значение используется по умолчанию.
+
+Механизм работает независимо от RBAC. RBAC определяет, *кто может создавать и изменять* объекты, а механизм управления доступом к cluster-wide-ресурсам — *какие ресурсы* могут использовать эти объекты.
+
+### Принцип работы управления доступом
+
+Для управления доступом к cluster-wide-ресурсам используются следующие ресурсы:
+
+* [GrantableClusterResourceDefinition](./cr.html#grantableclusterresourcedefinition) регистрирует тип cluster-wide-ресурсов, доступом к которому можно управлять. Такие ресурсы поставляются DKP или разработчиками модулей.
+* [GrantableClusterResourceReference](./cr.html#grantableclusterresourcereference) определяет, где используется зарегистрированный cluster-wide-ресурс. Например, какое поле ресурса содержит ссылку на него. Такие ресурсы поставляются модулями.
+* [ClusterResourceGrantPolicy](./cr.html#clusterresourcegrantpolicy) задаёт правила доступа. Администратор кластера с помощью лейблов выбирает проекты, на которые распространяется политика, определяет разрешённые и запрещённые ресурсы, а также ресурс, используемый по умолчанию.
+* На основе политики контроллер создаёт [AvailableClusterResource](./cr.html#availableclusterresource) в неймспейсе каждого подходящего проекта. Этот ресурс содержит список cluster-wide-ресурсов, доступных проекту, и предназначен только для чтения.
+* При создании или изменении объекта вебхуки проверяют, разрешено ли ему использовать указанный cluster-wide-ресурс. При создании объекта также может автоматически подставляться ресурс, заданный для проекта по умолчанию.
+
+<script src="/assets/js/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true });</script>
+
+<pre class="mermaid">
+flowchart LR
+    A["Разработчик модуля или DKP<br/>поставляет<br/>GrantableClusterResourceDefinition<br/>и GrantableClusterResourceReference"] --> C
+    B["Администратор кластера<br/>создаёт<br/>ClusterResourceGrantPolicy"] --> C["Контроллер"]
+    C --> D["Создаёт<br/>AvailableClusterResource<br/>в неймспейсе каждого проекта"]
+    E["Пользователь создаёт объект<br/>(например,<br/>PersistentVolumeClaim)"] --> F["Mutating-вебхук<br/>/defaults"]
+    F --> G["Validating-вебхук<br/>/is-granted"]
+    D -. Доступные имена .-> G
+    G --> H["Объект создан<br/>или отклонён"]
+</pre>
+
+Пока администратор не создал ClusterResourceGrantPolicy, доступность ресурсов определяется их регистрацией: ресурсы доступны всем проектам, если в GrantableClusterResourceDefinition задано `defaultAvailability: All` (значение по умолчанию) и ресурс не попадает под фильтры `excluded`.
+
+Квотирование ресурсов не является частью данного механизма — оно делегировано стандартному
+ресурсу Kubernetes ResourceQuota.
+
+Проверка доступа выполняется только для объектов в неймспейсах проектов. Если политика доступа изменяется, уже используемые существующими объектами cluster-wide-ресурсы остаются доступными для этих объектов.
+
+### Порядок проверки доступа и подстановки значений по умолчанию
+
+Механизм определяет доступность cluster-wide-ресурсов и значения по умолчанию на основе зарегистрированных ресурсов и применяемых к проекту политик.
+
+#### Определение доступности cluster-wide-ресурса
+
+Если на cluster-wide-ресурс распространяется несколько правил, его доступность определяется в следующем порядке:
+
+1. Значение [`excluded`](./cr.html#grantableclusterresourcedefinition-v1alpha1-spec-excluded) в GrantableClusterResourceDefinition — ресурс недоступен независимо от настроек политик.
+1. Значение [`denied`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-denied) и [`deniedSelector`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-deniedselector) в соответствующей записи ClusterResourceGrantPolicy.
+1. Значение [`allowed`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-allowed) и [`allowedSelector`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-allowedselector) в соответствующей записи ClusterResourceGrantPolicy.
+1. Значение [`availabilityDefault`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-availabilitydefault) в соответствующей записи ClusterResourceGrantPolicy.
+1. Значение [`defaultAvailability`](./cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultavailability) в GrantableClusterResourceDefinition.
+
+Применяется первое подходящее правило.
+
+#### Подстановка значений по умолчанию
+
+Поведение при создании объекта зависит от режима, заданного [в GrantableClusterResourceReference](./cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-defaulting):
+
+* `None` — значение проверяется на доступность, но не подставляется автоматически;
+* `FillEmpty` — если значение не указано, подставляется значение по умолчанию для проекта;
+* `Coerce` — если значение не указано или указанный cluster-wide-ресурс недоступен проекту, подставляется значение по умолчанию для проекта.
+
+Значение по умолчанию для проекта определяется в следующем порядке:
+
+1. Значение [`default`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-default) из соответствующей записи ClusterResourceGrantPolicy.
+1. Значение, определённое с помощью [`defaultFrom`](./cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultfrom) в GrantableClusterResourceDefinition.
+1. Если значение не найдено, оно не подставляется.
+
+#### Проверка существующих объектов
+
+При изменении политики доступа значения, уже используемые существующими объектами, сохраняются. При обновлении объекта проверяются только новые значения: если значение в поле не изменилось, оно остаётся допустимым даже после ограничения доступа.
+
+Это позволяет существующим объектам продолжать работу после ограничения доступа к cluster-wide-ресурсам.
+
+#### Системные запросы
+
+На запросы от системных сервисных аккаунтов (например, от собственных контроллеров DKP) проверка доступа к cluster-wide-ресурсам не распространяется. Это позволяет системным компонентам платформы использовать необходимые им ресурсы независимо от политик проектов.
+
+### Мониторинг нарушений политик доступа
+
+Если существующий объект использует cluster-wide-ресурс, который стал недоступен проекту после изменения политики, объект продолжает работать, но такое расхождение отслеживается средствами мониторинга.
+
+При обнаружении таких объектов срабатывает [алерт `ClusterResourceGrantPolicyViolation`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#multitenancy-manager-clusterresourcegrantpolicyviolation). Информацию о нарушениях можно просмотреть на дашборде Grafana в разделе «Security» → «Cluster Resource Grant Violations».
+
+Для мониторинга используется метрика `d8_cluster_objects_grant_violated`.
+
+### Ресурсы, регистрируемые DKP
+
+DKP регистрирует следующие cluster-wide-ресурсы:
+
+| Имя определения | Cluster-wide-ресурс | Где используется | Режим подстановки значения по умолчанию |
+| --- | --- | --- | --- |
+| `storageclasses` | StorageClass (storage.k8s.io) | PersistentVolumeClaim `.spec.storageClassName` | `Coerce` |
+| `loadbalancerclasses` | Значение `loadbalancerclass` | Service `.spec.loadBalancerClass` (для сервисов типа `LoadBalancer`) | `FillEmpty` |
+| `clusterissuers` | ClusterIssuer (cert-manager.io) | Certificate `.spec.issuerRef.name`; Ingress: аннотация `cert-manager.io/cluster-issuer` | `FillEmpty` или `None` |
+| `clusterroles` | ClusterRole (rbac.authorization.k8s.io) | RoleBinding `.roleRef.name` | `None` |
+
+Регистрация `clusterroles` исключает все объекты ClusterRole без лейбла `rbac.deckhouse.io/delegatable`. По умолчанию в RoleBinding доступны только роли уровня неймспейса (`d8:use:role:*` и устаревшие роли
+`user-authz:*`).
+
+Определение `clusterissuers` регистрируется только при включённом модуле `cert-manager`.
+
+### Ресурсы механизма управления доступом
+
+| Ресурс | Область | Кто создаёт | Ручное создание | Назначение |
+| --- | --- | --- | --- | --- |
+| [GrantableClusterResourceDefinition](./cr.html#grantableclusterresourcedefinition) | Кластер | Разработчик модуля или DKP | Разрешено для кастомных ресурсов | Регистрирует тип cluster-wide-ресурса, доступом к которому можно управлять |
+| [GrantableClusterResourceReference](./cr.html#grantableclusterresourcereference) | Кластер | Разработчик модуля | Разрешено для полей кастомных ресурсов | Определяет, где используется зарегистрированный cluster-wide-ресурс |
+| [ClusterResourceGrantPolicy](./cr.html#clusterresourcegrantpolicy) | Кластер | Администратор кластера | Обязательно | Определяет доступные и запрещённые ресурсы, а также ресурс, используемый проектом по умолчанию |
+| [AvailableClusterResource](./cr.html#availableclusterresource) | Неймспейс | Контроллер (автоматически) | Запрещено (защищено вебхуком) | Read-only каталог доступных ресурсов для проекта |
+
+Подробные сценарии настройки доступа, просмотр доступных ресурсов в проектах, правила проверки и подстановки значений по умолчанию, а также рекомендации для разработчиков модулей приведены [в разделе «Примеры использования»](usage.html#управление-доступом-к-cluster-wide-ресурсам).

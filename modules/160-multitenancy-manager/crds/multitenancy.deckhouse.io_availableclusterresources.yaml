@@ -36,8 +36,16 @@ spec:
     schema:
       openAPIV3Schema:
         description: |-
-          AvailableClusterResource is the per-project, controller-owned catalog (discovery only) for one
-          GrantableClusterResourceDefinition. metadata.name equals the grantable resource name.
+          Contains information about cluster-wide resources available to the project and the value used by default. 
+
+          The resource is automatically created and updated by the `multitenancy-manager` controller in the project namespace for each registered GrantableClusterResourceDefinition.
+          The AvailableClusterResource name matches the name of the corresponding GrantableClusterResourceDefinition. 
+
+          Information about available cluster-wide resources and the default value is stored in the `status` field.
+
+          For more information about viewing available cluster-wide resources, refer to [Usage examples](usage.html#for-project-users).
+
+          > **Warning.** The resource is read-only. Manual creation of AvailableClusterResource is prohibited.
         properties:
           apiVersion:
             description: |-
@@ -46,6 +54,7 @@ spec:
               may reject unrecognized values.
               More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
             type: string
+            x-doc-skip: true
           kind:
             description: |-
               Kind is a string value representing the REST resource this object represents.
@@ -53,25 +62,24 @@ spec:
               Cannot be updated.
               In CamelCase.
               More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            x-doc-skip: true
             type: string
           metadata:
             type: object
+            x-doc-skip: true
           status:
-            description: status defines the observed catalog for this project.
+            description: Cluster-wide resource availability status for the project.
             properties:
               available:
-                description: Available lists the granted names available in this project,
-                  with the default flagged.
+                description: List of cluster-wide resources available to the project, indicating the resource used by default.
                 items:
-                  description: AvailableObject is one granted name available in a
-                    project, optionally the project default.
+                  description: Information about a cluster-wide resource available to the project.
                   properties:
                     default:
-                      description: Default is true for the per-project default name.
+                      description: Indicates that the cluster-wide resource is used by default in the project.
                       type: boolean
                     name:
-                      description: Name is the granted object name available in the
-                        project.
+                      description: Name of the cluster-wide resource available to the project.
                       type: string
                   required:
                   - name
@@ -82,22 +90,21 @@ spec:
                 x-kubernetes-list-type: map
               availableCount:
                 description: |-
-                  AvailableCount is the number of available names. It is the column value, because the full list
-                  can be long (e.g. dozens of cluster roles) and would break the table; get the names from
-                  Available (status.available[*].name).
+                  Number of cluster-wide resources available to the project.
+
+                  Used when displaying the resource list. Names of available cluster-wide resources are listed in [`status.available`](#availableclusterresource-v1alpha1-status-available).
                 type: integer
               default:
                 description: |-
-                  Default is the per-project default name used when the referencing field is left empty (or
-                  carries a value not available to the project). Empty when the project has no usable default.
+                  Name of the cluster-wide resource used by default in the project.
+
+                  The value can be automatically assigned to the corresponding field of a resource being created if the field is empty or the specified value is unavailable to the project. The field remains empty if no default value is configured or the default value is unavailable to the project.
                 type: string
               grantedResourceKind:
-                description: GrantedResourceKind is the kind of the granted resource
-                  (informational).
+                description: Kind of the cluster-wide resource.
                 type: string
               observedGeneration:
-                description: ObservedGeneration is the controller generation that
-                  produced this status.
+                description: Resource generation based on which the controller generated the current `status`.
                 format: int64
                 type: integer
             type: object

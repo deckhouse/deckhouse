@@ -1,0 +1,132 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Регистрирует тип cluster-wide-ресурсов для управления доступом к нему из проектов.
+
+            GrantableClusterResourceDefinition определяет cluster-wide-ресурс, для которого можно настраивать доступ с помощью ClusterResourceGrantPolicy, а также базовые правила его доступности и использования значения по умолчанию.
+
+            Ресурс может регистрировать как объекты Kubernetes, например StorageClass или ClusterRole, так и значения, которые не представлены отдельными объектами Kubernetes.
+
+            Места использования cluster-wide-ресурса в других ресурсах Kubernetes регистрируются отдельно с помощью GrantableClusterResourceReference.
+
+            GrantableClusterResourceDefinition создаётся DKP или разработчиком модуля. Для управления доступом к дополнительным типам cluster-wide-ресурсов можно создавать собственные определения.
+
+            Подробнее — [в разделе «Примеры использования»](usage.html#управление-доступом-к-cluster-wide-ресурсам).
+          properties:
+            spec:
+              description: Параметры GrantableClusterResourceDefinition.
+              properties:
+                defaultAvailability:
+                  description: |-
+                    Базовая доступность cluster-wide-ресурсов для проектов.
+
+                    Допустимые значения:
+
+                    - `All` — ресурсы доступны по умолчанию;
+                    - `None` — ресурсы недоступны по умолчанию.
+
+                    Значение применяется, если доступность не определена с помощью ClusterResourceGrantPolicy.
+                defaultFrom:
+                  description: |-
+                    Настройки определения cluster-wide-ресурса, используемого по умолчанию.
+
+                    Ресурс определяется по наличию заданной аннотации и используется как значение по умолчанию, если оно не задано с помощью ClusterResourceGrantPolicy.
+                  properties:
+                    annotationKey:
+                      description: Ключ аннотации, которой отмечается cluster-wide-ресурс, используемый по умолчанию.
+                enforcement:
+                  description: |-
+                    Способ проверки доступности cluster-wide-ресурса.
+
+                    Допустимые значения:
+
+                    - `Managed` — проверка выполняется вебхуками `multitenancy-manager`;
+                    - `External` — проверка выполняется внешним механизмом, например вебхуком модуля.
+                excluded:
+                  description: |-
+                    Фильтры исключённых cluster-wide-ресурсов, которые всегда недоступны проектам независимо от настроек ClusterResourceGrantPolicy.
+
+                    Ресурс считается исключённым, если соответствует хотя бы одному из указанных фильтров.
+                  items:
+                    description: Фильтр cluster-wide-ресурсов по именам и лейблам.
+                    properties:
+                      matchExpressions:
+                        description: |-
+                          Список выражений селектора лейблов cluster-wide-ресурсов.
+
+                          Все выражения должны выполняться одновременно.
+                        items:
+                          description: |-
+                            Выражение селектора лейблов.
+                          properties:
+                            key:
+                              description: Ключ лейбла, к которому применяется выражение.
+                            operator:
+                              description: |-
+                                Оператор, определяющий отношение ключа к набору значений.
+                            values:
+                              description: |-
+                                Список значений лейбла.
+
+                                Для операторов `In` и `NotIn` список должен содержать хотя бы одно значение. Для операторов `Exists` и `DoesNotExist` список должен быть пустым.
+                      matchLabels:
+                        description: |-
+                          Набор лейблов cluster-wide-ресурсов.
+
+                          Все указанные лейблы должны совпадать.
+                      names:
+                        description: Список имён cluster-wide-ресурсов.
+                grantedResource:
+                  description: |-
+                    Cluster-wide-ресурс Kubernetes, для которого настраивается доступ.
+
+                    Если параметр не задан, управление доступом применяется к значениям, которые не представлены отдельными объектами Kubernetes.
+                  properties:
+                    apiGroup:
+                      description: |-
+                        API-группа cluster-wide-ресурса.
+
+                        Для основной API-группы укажите пустую строку (`""`).
+                    kind:
+                      description: Тип (kind) cluster-wide-ресурса (например, StorageClass).
+            status:
+              description: Состояние GrantableClusterResourceDefinition.
+              properties:
+                conditions:
+                  description: Текущее состояние GrantableClusterResourceDefinition.
+                  items:
+                    description: Информация об одном из аспектов текущего состояния ресурса.
+                    properties:
+                      lastTransitionTime:
+                        description: |-
+                          Время последнего изменения состояния условия.
+                      message:
+                        description: |-
+                          Сообщение с дополнительной информацией о состоянии условия.
+                      observedGeneration:
+                        description: |-
+                          Поколение ресурса, на основе которого сформировано состояние условия.
+                      reason:
+                        description: |-
+                          Причина последнего изменения состояния условия.
+                      status:
+                        description: Состояние условия.
+                      type:
+                        description: Тип условия.
+                observedGeneration:
+                  description: Последнее поколение ресурса, обработанное контроллером.
+                referenceCount:
+                  description: Количество ресурсов GrantableClusterResourceReference, связанных с этим определением.
+                references:
+                  description: |-
+                    Список ресурсов GrantableClusterResourceReference, связанных с этим определением.
+                  items:
+                    description: Информация о ресурсе GrantableClusterResourceReference, связанном с этим определением.
+                    properties:
+                      name:
+                        description: Имя ресурса GrantableClusterResourceReference.
+                      resources:
+                        description: Типы ресурсов Kubernetes, содержащих зарегистрированные ссылки на cluster-wide-ресурс.

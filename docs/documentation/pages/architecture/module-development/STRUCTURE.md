@@ -117,6 +117,10 @@ This directory contains [*CustomResourceDefinitions*](https://kubernetes.io/docs
 
 Nested directories in the `/crds` folder are ignored.
 
+{% alert level="info" %}
+If your module's resources have fields that reference cluster-wide resources (such as a StorageClass, ClusterIssuer, or ClusterRole), consider registering such fields using a GrantableClusterResourceReference. In this case, the specified cluster-wide resources will be validated per-project and can use the default value assignment. For details, refer to the [`multitenancy-manager`](/modules/multitenancy-manager/usage.html#for-module-developers) documentation.
+{% endalert %}
+
 To render CRDs from the `/crds` directory in the site documentation or documentation module in the cluster, follow these steps:
 * Create a translation file with a structure identical to the original resource file:
   - in it, keep only the `description` parameters containing the translation text;

@@ -70,3 +70,112 @@ The project is based on the `Namespace` resource mechanism. Namespaces group pod
 
 These tools can be combined to configure the project according to the requirements of your application.
 
+## Managing access to cluster-wide resources
+
+Objects in project namespaces can reference cluster-wide resources. For example, a PersistentVolumeClaim can use a StorageClass, a Certificate can use a ClusterIssuer, and a RoleBinding can use a ClusterRole. The module allows cluster administrators to define which cluster-wide resources can be used from project namespaces and which values are used by default.
+
+This mechanism works independently of RBAC. RBAC determines *who can create and modify* objects, while the cluster-wide resource access mechanism determines *which resources* those objects can use.
+
+### How access management works
+
+The following resources are used to manage access to cluster-wide resources:
+
+* [GrantableClusterResourceDefinition](./cr.html#grantableclusterresourcedefinition) registers a type of cluster-wide resource whose access can be managed. These resources are provided by DKP or module developers.
+* [GrantableClusterResourceReference](./cr.html#grantableclusterresourcereference) defines where a registered cluster-wide resource is used, for example, which resource field contains a reference to it. These resources are provided by modules.
+* [ClusterResourceGrantPolicy](./cr.html#clusterresourcegrantpolicy) defines access rules. Using labels, a cluster administrator selects the projects to which the policy applies and defines the allowed and denied resources, as well as the resource used by default.
+* Based on the policy, the controller creates an [AvailableClusterResource](./cr.html#availableclusterresource) in the namespace of each matching project. This resource contains the list of cluster-wide resources available to the project and is read-only.
+* When an object is created or modified, webhooks check whether it is allowed to use the specified cluster-wide resource. When an object is created, the resource configured as the project default can also be inserted automatically.
+
+<script src="/assets/js/mermaid.min.js"></script>
+<script>mermaid.initialize({ startOnLoad: true });</script>
+
+<pre class="mermaid">
+flowchart LR
+    A["Module developer or DKP<br/>provides GrantableClusterResourceDefinition<br/>and GrantableClusterResourceReference"] --> C
+    B["Cluster administrator<br/>creates<br/>ClusterResourceGrantPolicy"] --> C["Controller"]
+    C --> D["Creates AvailableClusterResource<br/>in each project namespace"]
+    E["User creates an object<br/>(for example,<br/>PersistentVolumeClaim)"] --> F["Mutating webhook<br/>/defaults"]
+    F --> G["Validating webhook<br/>/is-granted"]
+    D -. Available names .-> G
+    G --> H["Object created<br/>or rejected"]
+</pre>
+
+Until the administrator creates a ClusterResourceGrantPolicy, resource availability is determined by their registration: resources are available to all projects if `defaultAvailability: All` (the default value) is set in GrantableClusterResourceDefinition and the resource does not match the `excluded` filters.
+
+Resource quotas are not part of this mechanism. They are managed using the standard Kubernetes ResourceQuota resource.
+
+Access checks are performed only for objects in project namespaces. If an access policy changes, cluster-wide resources already used by existing objects remain available to those objects.
+
+### Access checks and default value assignment
+
+The mechanism determines cluster-wide resource availability and default values based on registered resources and policies that apply to the project.
+
+#### Determining cluster-wide resource availability
+
+If multiple rules apply to a cluster-wide resource, its availability is determined in the following order:
+
+1. The [`excluded`](./cr.html#grantableclusterresourcedefinition-v1alpha1-spec-excluded) value in GrantableClusterResourceDefinition: the resource is unavailable regardless of policy settings.
+2. The [`denied`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-denied) and [`deniedSelector`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-deniedselector) values in the corresponding ClusterResourceGrantPolicy entry.
+3. The [`allowed`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-allowed) and [`allowedSelector`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-allowedselector) values in the corresponding ClusterResourceGrantPolicy entry.
+4. The [`availabilityDefault`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-availabilitydefault) value in the corresponding ClusterResourceGrantPolicy entry.
+5. The [`defaultAvailability`](./cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultavailability) value in GrantableClusterResourceDefinition.
+
+The first matching rule applies.
+
+#### Assigning default values
+
+The behavior when an object is created depends on the mode configured in [GrantableClusterResourceReference](./cr.html#grantableclusterresourcereference-v1alpha1-spec-fieldpaths-defaulting):
+
+* `None`: The value is checked for availability but is not assigned automatically.
+* `FillEmpty`: If no value is specified, the project default is assigned.
+* `Coerce`: If no value is specified or the specified cluster-wide resource is unavailable to the project, the project default is assigned.
+
+The project default is determined in the following order:
+
+1. The [`default`](./cr.html#clusterresourcegrantpolicy-v1alpha1-spec-resources-default) value from the corresponding ClusterResourceGrantPolicy entry.
+2. The value determined using [`defaultFrom`](./cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultfrom) in GrantableClusterResourceDefinition.
+3. If no value is found, no default is assigned.
+
+#### Checking existing objects
+
+When an access policy changes, values already used by existing objects are preserved. When an object is updated, only new values are checked. If the value of a field has not changed, it remains valid even after access to the resource has been restricted.
+
+This allows existing objects to continue operating after access to cluster-wide resources is restricted.
+
+#### System requests
+
+Requests from system service accounts, such as DKP's own controllers, are not subject to cluster-wide resource access checks. This allows platform system components to use the resources they require regardless of project policies.
+
+### Monitoring access policy violations
+
+If an existing object uses a cluster-wide resource that becomes unavailable to the project after a policy change, the object continues to operate, but the discrepancy is detected by the monitoring system.
+
+When such objects are detected, the [`ClusterResourceGrantPolicyViolation`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#multitenancy-manager-clusterresourcegrantpolicyviolation) alert is triggered. Information about violations is available on the Grafana dashboard under "Security" → "Cluster Resource Grant Violations".
+
+The `d8_cluster_objects_grant_violated` metric is used for monitoring.
+
+### Resources registered by DKP
+
+DKP registers the following cluster-wide resources:
+
+| Definition name | Cluster-wide resource | Where it is used | Default assignment mode |
+| --- | --- | --- | --- |
+| `storageclasses` | StorageClass (storage.k8s.io) | PersistentVolumeClaim `.spec.storageClassName` | `Coerce` |
+| `loadbalancerclasses` | `loadbalancerclass` value | Service `.spec.loadBalancerClass` (for services of the `LoadBalancer` type) | `FillEmpty` |
+| `clusterissuers` | ClusterIssuer (cert-manager.io) | Certificate `.spec.issuerRef.name`; Ingress: `cert-manager.io/cluster-issuer` annotation | `FillEmpty` or `None` |
+| `clusterroles` | ClusterRole (rbac.authorization.k8s.io) | RoleBinding `.roleRef.name` | `None` |
+
+The `clusterroles` registration excludes all ClusterRole objects without the `rbac.deckhouse.io/delegatable` label. By default, only namespace-level roles (`d8:use:role:*` and the deprecated `user-authz:*` roles) are available in RoleBinding.
+
+The `clusterissuers` definition is registered only when the `cert-manager` module is enabled.
+
+### Access management resources
+
+| Resource | Scope | Created by | Manual creation | Purpose |
+| --- | --- | --- | --- | --- |
+| [GrantableClusterResourceDefinition](./cr.html#grantableclusterresourcedefinition) | Cluster | Module developer or DKP | Allowed for custom resources | Registers a type of cluster-wide resource whose access can be managed |
+| [GrantableClusterResourceReference](./cr.html#grantableclusterresourcereference) | Cluster | Module developer | Allowed for fields of custom resources | Defines where a registered cluster-wide resource is used |
+| [ClusterResourceGrantPolicy](./cr.html#clusterresourcegrantpolicy) | Cluster | Cluster administrator | Required | Defines allowed and denied resources, as well as the resource used by the project by default |
+| [AvailableClusterResource](./cr.html#availableclusterresource) | Namespace | Controller (automatically) | Prohibited (protected by a webhook) | Read-only catalog of resources available to the project |
+
+For detailed access configuration scenarios, viewing resources available to projects, access checks and default assignment rules, and recommendations for module developers, refer to ["Usage examples"](usage.html#managing-access-to-cluster-wide-resources).
