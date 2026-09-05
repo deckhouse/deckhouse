@@ -66,20 +66,11 @@ subjects:
         Custom ClusterRoles (annotated with user-authz.deckhouse.io/access-level) are granted through
         the aggregated role user-authz:<level>:custom: one binding per rule, however many custom roles
         exist. SuperAdmin already holds every permission and gets no custom-role bindings.
+        The former per-custom-role bindings (user-authz:<rule>:<level>:custom-cluster-role:<role>)
+        are not rendered any more and are removed by the release engine.
       */}}
       {{- if ne $crd.spec.accessLevel "SuperAdmin" }}
 {{- include "rbac.binding" ( list $ $data.kind $crd (printf "%s:custom" $level) (printf "user-authz:%s:custom" $level) (dict "user-authz.deckhouse.io/binding-kind" "aggregated-custom") ) }}
-      {{- end }}
-      {{- /*
-        Transitional: the per-custom-role bindings stay until the hook confirms that the aggregated
-        binding of this rule exists in the cluster (legacyCustomRoleBindings=false). Nothing is thus
-        removed before its replacement is in place, whatever order the release engine deletes and
-        creates objects in. An absent flag means "keep".
-      */}}
-      {{- if (dig "legacyCustomRoleBindings" true $crd) }}
-        {{- range $customClusterRole := (pluck ($crd.spec.accessLevel | untitle) $.Values.userAuthz.internal.customClusterRoles | first) }}
-{{- include "rbac.binding" ( list $ $data.kind $crd (printf "%s:custom-cluster-role:%s" $level $customClusterRole) $customClusterRole ) }}
-        {{- end }}
       {{- end }}
     {{- end }}
 

@@ -250,39 +250,10 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(rb.Field("metadata.labels.user-authz\\.deckhouse\\.io/binding-kind").String()).To(Equal("aggregated-custom"))
 		})
 
-		Context("Legacy per-custom-role bindings are switched off for the rules", func() {
-			BeforeEach(func() {
-				f.ValuesSet("userAuthz.internal.clusterAuthRuleCrds.0.legacyCustomRoleBindings", false)
-				f.ValuesSet("userAuthz.internal.authRuleCrds.0.legacyCustomRoleBindings", false)
-				f.HelmRender()
-			})
-
-			It("Should keep the aggregated bindings and drop the per-role ones", func() {
-				Expect(f.RenderError).ShouldNot(HaveOccurred())
-				Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:admin:custom").Exists()).To(BeTrue())
-				Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:admin").Exists()).To(BeTrue())
-				Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:admin:custom-cluster-role:cert-manager:user-authz:user").Exists()).To(BeFalse())
-				Expect(f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:editor:custom").Exists()).To(BeTrue())
-				Expect(f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:editor:custom-cluster-role:cert-manager:user-authz:editor").Exists()).To(BeFalse())
-			})
-		})
-
-		It("Should create additional ClusterRoleBinding for each ClusterRole with the \"user-authz.deckhouse.io/access-level\" annotation", func() {
-			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:admin:custom-cluster-role:cert-manager:user-authz:user")
-			Expect(crb.Exists()).To(BeTrue())
-
-			Expect(crb.Field("roleRef.name").String()).To(Equal("cert-manager:user-authz:user"))
-			Expect(crb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
-			Expect(crb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
-		})
-
-		It("Should create additional RoleBinding for each ClusterRole with the \"user-authz.deckhouse.io/access-level\" annotation", func() {
-			rb := f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:editor:custom-cluster-role:cert-manager:user-authz:editor")
-			Expect(rb.Exists()).To(BeTrue())
-
-			Expect(rb.Field("roleRef.name").String()).To(Equal("cert-manager:user-authz:editor"))
-			Expect(rb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
-			Expect(rb.Field("subjects.0.name").String()).To(Equal("Namespace Testenev"))
+		It("Should not render the former per-custom-role bindings", func() {
+			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:admin").Exists()).To(BeTrue())
+			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:admin:custom-cluster-role:cert-manager:user-authz:user").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:editor:custom-cluster-role:cert-manager:user-authz:editor").Exists()).To(BeFalse())
 		})
 
 		Context("portForwarding option is set in a CAR", func() {

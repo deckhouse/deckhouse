@@ -1,5 +1,5 @@
 /*
-Copyright 2021 Flant JSC
+Copyright 2023 Flant JSC
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -19,14 +19,12 @@ package hooks
 import (
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/modules/140-user-authz/hooks/internal"
 )
 
 const (
-	authRuleSnapshot           = "authorization_rules"
-	authRuleAggregatedBindings = "authorization_rules_aggregated_bindings"
+	authRuleSnapshot = "authorization_rules"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -38,14 +36,5 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			Kind:       "AuthorizationRule",
 			FilterFunc: internal.ApplyAuthorizationRuleFilter,
 		},
-		{
-			Name:       authRuleAggregatedBindings,
-			ApiVersion: "rbac.authorization.k8s.io/v1",
-			Kind:       "RoleBinding",
-			LabelSelector: &metav1.LabelSelector{
-				MatchLabels: map[string]string{internal.AggregatedBindingKindLabel: internal.AggregatedBindingKindValue},
-			},
-			FilterFunc: internal.ApplyAggregatedBindingFilter,
-		},
 	},
-}, internal.AuthorizationRulesHandler("userAuthz.internal.authRuleCrds", authRuleSnapshot, authRuleAggregatedBindings))
+}, internal.AuthorizationRulesHandler("userAuthz.internal.authRuleCrds", authRuleSnapshot))

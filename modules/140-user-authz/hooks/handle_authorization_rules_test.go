@@ -48,41 +48,6 @@ spec:
   - kind: Group
     name: Everyone
 `
-
-	// The aggregated custom binding of ar0 in its namespace; the same name in another
-	// namespace must not count for ar0.
-	stateAggregatedRoleBindings = `
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: user-authz:ar0:user:custom
-  namespace: test
-  labels:
-    user-authz.deckhouse.io/binding-kind: aggregated-custom
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: user-authz:user:custom
-subjects:
-- kind: Group
-  name: NotEveryone
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: RoleBinding
-metadata:
-  name: user-authz:ar1:admin:custom
-  namespace: other
-  labels:
-    user-authz.deckhouse.io/binding-kind: aggregated-custom
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: user-authz:admin:custom
-subjects:
-- kind: Group
-  name: Everyone
-`
 )
 
 var _ = Describe("User Authz hooks :: handle authorization rules ::", func() {
@@ -109,22 +74,7 @@ var _ = Describe("User Authz hooks :: handle authorization rules ::", func() {
 
 		It("ARs must be stored in values", func() {
 			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("userAuthz.internal.authRuleCrds").String()).To(MatchJSON(`[{"name":"ar0","namespace":"test","legacyCustomRoleBindings":true,"spec":{"accessLevel":"User", "allowScale": false, "portForwarding": false, "subjects":[{"kind":"Group", "name":"NotEveryone"}]}},{"name":"ar1","namespace":"test","legacyCustomRoleBindings":true,"spec":{"accessLevel":"Admin", "allowScale": false, "portForwarding": false, "subjects":[{"kind":"Group", "name":"Everyone"}]}}]`))
-		})
-	})
-
-	Context("Cluster with two ARs and aggregated bindings", func() {
-		BeforeEach(func() {
-			f.BindingContexts.Set(f.KubeStateSet(stateAuthRules + stateAggregatedRoleBindings))
-			f.RunHook()
-		})
-
-		It("Only the AR whose aggregated binding exists in its own namespace drops the legacy bindings", func() {
-			Expect(f).To(ExecuteSuccessfully())
-			Expect(f.ValuesGet("userAuthz.internal.authRuleCrds.0.name").String()).To(Equal("ar0"))
-			Expect(f.ValuesGet("userAuthz.internal.authRuleCrds.0.legacyCustomRoleBindings").Bool()).To(BeFalse())
-			Expect(f.ValuesGet("userAuthz.internal.authRuleCrds.1.name").String()).To(Equal("ar1"))
-			Expect(f.ValuesGet("userAuthz.internal.authRuleCrds.1.legacyCustomRoleBindings").Bool()).To(BeTrue())
+			Expect(f.ValuesGet("userAuthz.internal.authRuleCrds").String()).To(MatchJSON(`[{"name":"ar0","namespace":"test","spec":{"accessLevel":"User", "allowScale": false, "portForwarding": false, "subjects":[{"kind":"Group", "name":"NotEveryone"}]}},{"name":"ar1","namespace":"test","spec":{"accessLevel":"Admin", "allowScale": false, "portForwarding": false, "subjects":[{"kind":"Group", "name":"Everyone"}]}}]`))
 		})
 	})
 })
