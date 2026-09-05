@@ -127,3 +127,7 @@ entries:
           en: Push rules
           ru: Правила отправки изменений
         url: /code/documentation/user/push-rules.html
+      - title:
+          en: SAST scanning
+          ru: SAST-сканирование
+        url: /code/documentation/user/sast.html
