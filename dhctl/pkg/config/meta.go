@@ -128,11 +128,12 @@ func (m *MetaConfig) Prepare(ctx context.Context, validatorProvider MetaConfigVa
 			return nil, fmt.Errorf("unable to parse cluster type from cluster configuration: %v", err)
 		}
 
-		var serviceSubnet string
-		if err := json.Unmarshal(m.ClusterConfig["serviceSubnetCIDR"], &serviceSubnet); err != nil {
-			return nil, fmt.Errorf("unable to unmarshal service subnet CIDR from cluster configuration: %v", err)
-		}
-		m.ClusterDNSAddress = getDNSAddress(ctx, serviceSubnet)
+		// Resolved, not read straight from ClusterConfiguration: the field is deprecated and may live
+		// in ModuleConfig instead. Absent from both documents is not an error here — getDNSAddress
+		// already degrades to "" on an unparsable CIDR, and rejecting it is RequireNetwork's job,
+		// which only bootstrap calls. Failing here would break the in-cluster hook, which reaches
+		// Prepare with only the Secret contents and no ModuleConfig documents.
+		m.ClusterDNSAddress = getDNSAddress(ctx, m.Network().ServiceSubnetCIDR)
 
 		if err := json.Unmarshal(m.ClusterConfig["clusterDomain"], &m.ClusterDomain); err != nil {
 			return nil, fmt.Errorf("unable to unmarshal cluster domain from cluster configuration: %w", err)
@@ -763,7 +764,28 @@ func (m *MetaConfig) ClusterConfigMap() (map[string]interface{}, error) {
 	// control-plane templates and bashible see one resolved value even when the field is
 	// absent from CC.
 	out["kubernetesVersion"] = resolveKubernetesVersion(m.kubernetesVersionRaw())
+	// Same reason for the network parameters: control-plane templates read
+	// clusterConfiguration.podSubnetNodeCIDRPrefix for --node-cidr-mask-size and the two CIDRs for
+	// --cluster-cidr / --service-cluster-ip-range, and the fields may live in ModuleConfig now.
+	// Mirrors the substitution the in-cluster global hook does into global.clusterConfiguration.
+	m.setNetworkInto(out)
 	return out, nil
+}
+
+// setNetworkInto substitutes the resolved network parameters into a rendered ClusterConfiguration
+// map, so templates keep reading clusterConfiguration.* unedited. Absent values are left out rather
+// than written as "": a template rendering a missing key is a visible failure, while an empty string
+// silently becomes an invalid apiserver flag.
+func (m *MetaConfig) setNetworkInto(out map[string]interface{}) {
+	network := m.Network()
+
+	if network.PodSubnetCIDR != "" {
+		out["podSubnetCIDR"] = network.PodSubnetCIDR
+	}
+	if network.ServiceSubnetCIDR != "" {
+		out["serviceSubnetCIDR"] = network.ServiceSubnetCIDR
+	}
+	out["podSubnetNodeCIDRPrefix"] = network.PodSubnetNodeCIDRPrefix
 }
 
 func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP string) (map[string]interface{}, error) {
@@ -779,6 +801,7 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP
 	}
 
 	data["kubernetesVersion"] = resolveKubernetesVersion(m.kubernetesVersionRaw())
+	m.setNetworkInto(data)
 
 	clusterBootstrap := map[string]any{
 		"clusterDomain":     data["clusterDomain"],
@@ -1083,25 +1106,17 @@ func (m *MetaConfig) EnrichProxyData() (map[string]any, error) {
 		return nil, fmt.Errorf("cannot unmarshal proxy cfg: %v", err)
 	}
 
-	var (
-		clusterDomain     string
-		podSubnetCIDR     string
-		serviceSubnetCIDR string
-	)
+	var clusterDomain string
 	err = json.Unmarshal(m.ClusterConfig["clusterDomain"], &clusterDomain)
 	if err != nil {
 		return nil, err
 	}
-	err = json.Unmarshal(m.ClusterConfig["podSubnetCIDR"], &podSubnetCIDR)
-	if err != nil {
-		return nil, err
-	}
-	err = json.Unmarshal(m.ClusterConfig["serviceSubnetCIDR"], &serviceSubnetCIDR)
-	if err != nil {
-		return nil, err
-	}
 
-	p.NoProxy = append(p.NoProxy, "127.0.0.1", "169.254.169.254", clusterDomain, podSubnetCIDR, serviceSubnetCIDR)
+	// Resolved: the two subnets are excluded from proxying, so reading the deprecated fields directly
+	// would leave in-cluster traffic going through the proxy on a migrated cluster.
+	network := m.Network()
+
+	p.NoProxy = append(p.NoProxy, "127.0.0.1", "169.254.169.254", clusterDomain, network.PodSubnetCIDR, network.ServiceSubnetCIDR)
 
 	ret := make(map[string]any)
 	if p.HTTPProxy != "" {

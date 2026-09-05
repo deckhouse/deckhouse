@@ -17,6 +17,7 @@ limitations under the License.
 package capi
 
 import (
+	"cmp"
 	"context"
 	"fmt"
 	"strings"
@@ -35,6 +36,7 @@ import (
 	sigsyaml "sigs.k8s.io/yaml"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/network"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -309,6 +311,16 @@ func (r *ClusterReconciler) readClusterConfiguration(ctx context.Context) (*clus
 	if err := sigsyaml.Unmarshal(raw, cfg); err != nil {
 		return nil, fmt.Errorf("unmarshal cluster configuration: %w", err)
 	}
+
+	// TODO: Remove when cluster-configuration is removed and use only ModuleConfig
+	// ModuleConfig wins over these deprecated fields when set (see package network). r.Client, not
+	// r.APIReader: unlike the secret above, the cache now watches ModuleConfig cluster-wide.
+	mcNetwork, err := network.FromModuleConfig(ctx, r.Client)
+	if err != nil {
+		return nil, fmt.Errorf("resolve network settings: %w", err)
+	}
+	cfg.PodSubnetCIDR = cmp.Or(mcNetwork.PodSubnetCIDR, cfg.PodSubnetCIDR)
+	cfg.ServiceSubnetCIDR = cmp.Or(mcNetwork.ServiceSubnetCIDR, cfg.ServiceSubnetCIDR)
 
 	return cfg, nil
 }

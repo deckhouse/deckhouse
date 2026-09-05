@@ -23,12 +23,15 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+
+	"github.com/deckhouse/node-controller/internal/network"
 )
 
 func TestPickKubeletDigest(t *testing.T) {
@@ -155,6 +158,32 @@ func TestReadClusterConfiguration(t *testing.T) {
 		config, err = bare.readClusterConfiguration(t.Context())
 		require.NoError(t, err)
 		require.Equal(t, 250, defaultMaxPodsFor(config.PodSubnetNodeCIDRPrefix))
+	})
+
+	// podSubnetNodeCIDRPrefix is being migrated to ModuleConfig control-plane-manager: it must win
+	// over the deprecated ClusterConfiguration field, or an immutable node's DefaultMaxPods would
+	// skew away from the rest of the fleet once the cluster migrates.
+	t.Run("ModuleConfig overrides the ClusterConfiguration prefix", func(t *testing.T) {
+		scheme := runtime.NewScheme()
+		require.NoError(t, clientgoscheme.AddToScheme(scheme))
+		gvk := network.ModuleConfigGVK()
+		scheme.AddKnownTypeWithName(gvk, &unstructured.Unstructured{})
+		scheme.AddKnownTypeWithName(gvk.GroupVersion().WithKind("ModuleConfigList"), &unstructured.UnstructuredList{})
+
+		mc := &unstructured.Unstructured{}
+		mc.SetGroupVersionKind(gvk)
+		mc.SetName(network.ModuleConfigName)
+		require.NoError(t, unstructured.SetNestedMap(mc.Object,
+			map[string]interface{}{"podSubnetNodeCIDRPrefix": "21"}, "spec", "settings", "network"))
+
+		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+			clusterConfigSecret("podSubnetNodeCIDRPrefix: \"23\"\n"), mc,
+		).Build()
+		s := sourceReaderOver(cl)
+
+		config, err := s.readClusterConfiguration(t.Context())
+		require.NoError(t, err)
+		require.Equal(t, 1000, defaultMaxPodsFor(config.PodSubnetNodeCIDRPrefix))
 	})
 }
 

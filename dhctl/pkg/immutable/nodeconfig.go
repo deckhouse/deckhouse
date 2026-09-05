@@ -230,6 +230,11 @@ var podsPerNodeCIDRPrefix = map[int]int{24: 120, 23: 250, 22: 500, 21: 1000}
 // maxPods takes the ladder step of the cluster's per-node prefix. A prefix
 // outside the ladder takes the nearest step, as the template's ge/le branches
 // do; the top step is also the maximum the nodeConfig schema accepts.
+//
+// clusterConfig comes from ClusterConfigMap, so the prefix here is the resolved
+// one (ModuleConfig spec.settings.network, else the deprecated field, else 24) —
+// the same value that reaches --node-cidr-mask-size. The two must not diverge:
+// the scheduler treats this number as capacity.
 func maxPods(clusterConfig map[string]any) int {
 	prefix := defaultPodSubnetNodeCIDRPrefix
 	if raw, ok := clusterConfig["podSubnetNodeCIDRPrefix"].(string); ok {

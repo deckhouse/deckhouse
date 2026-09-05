@@ -17,6 +17,7 @@ limitations under the License.
 package capi
 
 import (
+	"cmp"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -36,6 +37,7 @@ import (
 	"github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/machineclass"
+	"github.com/deckhouse/node-controller/internal/network"
 )
 
 func (r *MachineDeploymentReconciler) reconcileCloudMCMs(ctx context.Context, ng *deckhousev1.NodeGroup) error {
@@ -410,7 +412,16 @@ func (r *MachineDeploymentReconciler) readPodSubnet(ctx context.Context) (string
 	if err := sigsyaml.Unmarshal(raw, &cfg); err != nil {
 		return "", fmt.Errorf("unmarshal cluster configuration: %w", err)
 	}
-	return cfg.PodSubnetCIDR, nil
+
+	// TODO: Remove when cluster-configuration is removed and use only ModuleConfig
+	// ModuleConfig wins when set (see package network, and cluster.go's readClusterConfiguration
+	// for why this must not diverge from it).
+	mcNetwork, err := network.FromModuleConfig(ctx, r.Client)
+	if err != nil {
+		return "", fmt.Errorf("resolve network settings: %w", err)
+	}
+
+	return cmp.Or(mcNetwork.PodSubnetCIDR, cfg.PodSubnetCIDR), nil
 }
 
 // instanceClassSpot reports the provider spot flag; only aws acts on it.
