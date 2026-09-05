@@ -189,7 +189,21 @@ func (m *MetaConfig) Prepare(ctx context.Context, validatorProvider MetaConfigVa
 		return nil, err
 	}
 
+	nilEmptyNodeTemplates(m.TerraNodeGroupSpecs)
+
 	return validateProviderConfig(ctx, validatorProvider, m)
+}
+
+// nilEmptyNodeTemplates spells "no node template" as nil, the way the cluster
+// side of the comparison does (entity.GetNodeGroupTemplates). dhctl writes
+// spec.nodeTemplate: {} for a group whose config sets none, and check reads
+// that object back as the config side on an mc-flow cluster.
+func nilEmptyNodeTemplates(specs []TerraNodeGroupSpec) {
+	for i := range specs {
+		if len(specs[i].NodeTemplate) == 0 {
+			specs[i].NodeTemplate = nil
+		}
+	}
 }
 
 // extractProviderClusterFields populates the typed Layout, MasterNodeGroupSpec

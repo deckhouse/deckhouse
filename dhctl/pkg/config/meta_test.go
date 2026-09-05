@@ -22,6 +22,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"text/template"
 
@@ -812,6 +813,53 @@ func TestPrepareDerivesNodeGroupsFromResources(t *testing.T) {
 	require.Equal(t, "worker", m.TerraNodeGroupSpecs[1].Name)
 	require.Equal(t, 2, m.TerraNodeGroupSpecs[1].Replicas)
 	require.Equal(t, map[string]interface{}{"labels": map[string]interface{}{"node-role": "worker"}}, m.TerraNodeGroupSpecs[1].NodeTemplate)
+}
+
+// mcFlowResourcesBootstrappedNodeGroup is the "front" CloudPermanent group as an
+// mc-flow cluster carries it after bootstrap: the operator's manifest sets no
+// nodeTemplate, and NodeGroupManifest wrote an empty one into the cluster. check
+// reads this very object back as the config side of the comparison.
+const mcFlowResourcesBootstrappedNodeGroup = `
+apiVersion: deckhouse.io/v1
+kind: NodeGroup
+metadata:
+  name: front
+spec:
+  nodeType: CloudPermanent
+  systemType: Immutable
+  cloudInstances:
+    minPerZone: 1
+    maxPerZone: 1
+    classReference:
+      kind: DVPInstanceClass
+      name: front-dh-engine
+  nodeTemplate: {}
+`
+
+// nodeTemplateFromCluster mirrors the cluster side of the node-template
+// comparison: dhctl/pkg/kubernetes/actions/entity/node.go, GetNodeGroupTemplates.
+func nodeTemplateFromCluster(spec map[string]any) map[string]any {
+	template, _ := spec["nodeTemplate"].(map[string]any)
+	if len(template) == 0 {
+		return nil
+	}
+	return template
+}
+
+func TestPrepareNilsEmptyNodeTemplate(t *testing.T) {
+	m, err := cloudMetaConfig(mcFlowResourcesBootstrappedNodeGroup).Prepare(t.Context(), DummyValidatorProvider())
+	require.NoError(t, err)
+
+	require.Len(t, m.TerraNodeGroupSpecs, 1)
+
+	// The comparison operations/check.CheckState makes: an empty node template on
+	// either side must not be reported as a change.
+	fromCluster := nodeTemplateFromCluster(map[string]any{"nodeTemplate": map[string]any{}})
+	require.True(t,
+		reflect.DeepEqual(fromCluster, m.TerraNodeGroupSpecs[0].NodeTemplate),
+		"node template reported as changed: cluster %#v, config %#v",
+		fromCluster, m.TerraNodeGroupSpecs[0].NodeTemplate)
+	require.Nil(t, m.TerraNodeGroupSpecs[0].NodeTemplate)
 }
 
 func TestPrepareKeepsProviderClusterConfigNodeGroups(t *testing.T) {
