@@ -24,6 +24,7 @@ import (
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/state"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/cache"
 )
@@ -82,19 +83,10 @@ func resolvePath(path string) string {
 	return filepath.Join(dir, filepath.Base(absolute))
 }
 
-// impersonatedUser and impersonatedGroup are the identity every dhctl request
-// carries. The same one the kubectl proxy on a master is started with
-// (lib-connection pkg/ssh/base/kubeproxy: --as=dhctl --as-group=system:masters),
-// and "dhctl" is the username Deckhouse's admission policies exempt.
-const (
-	impersonatedUser  = "dhctl"
-	impersonatedGroup = "system:masters"
-)
-
 // RetargetKubeconfig points the collected admin kubeconfig at the address dhctl
 // reaches the API server on (e.g. a bastion's local forward) and at the name its
-// certificate is issued for, and makes it act as impersonatedUser. The retargeted
-// copy is internal; the operator's copy keeps the node's address. Pure.
+// certificate is issued for, and makes it act as global.ImpersonateUser. The
+// retargeted copy is internal; the operator's copy keeps the node's address. Pure.
 func RetargetKubeconfig(_ context.Context, content []byte, server, serverName string) ([]byte, error) {
 	if server == "" {
 		return nil, errors.New("retarget the admin kubeconfig: server URL is empty")
@@ -126,10 +118,10 @@ func RetargetKubeconfig(_ context.Context, content []byte, server, serverName st
 	// admission policies exempt the username "dhctl" and nothing else: without
 	// this every write of a heritage: deckhouse object is denied for good.
 	for _, authInfo := range kubeconfig.AuthInfos {
-		authInfo.Impersonate = impersonatedUser
+		authInfo.Impersonate = global.ImpersonateUser
 		// The group comes along because impersonation replaces the identity whole:
 		// a user named dhctl with no groups is nobody's cluster-admin.
-		authInfo.ImpersonateGroups = []string{impersonatedGroup}
+		authInfo.ImpersonateGroups = []string{global.ImpersonateGroup}
 	}
 
 	out, err := clientcmd.Write(*kubeconfig)

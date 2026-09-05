@@ -22,6 +22,8 @@ import (
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/rest"
+
+	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 )
 
 const serverKubeconfig = `
@@ -98,7 +100,7 @@ func TestTheChannelConfigurationKeepsTheNameItWasIssuedFor(t *testing.T) {
 		"the client must be verified against the name the kubeconfig named")
 	require.Equal(t, "https://"+serverName+":6443", restConfig.Host,
 		"with no bastion the server is the address itself")
-	require.Equal(t, impersonatedUser, restConfig.Impersonate.UserName)
+	require.Equal(t, global.ImpersonateUser, restConfig.Impersonate.UserName)
 
 	entries, err := os.ReadDir(dir)
 	require.NoError(t, err)
