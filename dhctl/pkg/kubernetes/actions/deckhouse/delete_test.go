@@ -20,8 +20,11 @@ import (
 	"github.com/stretchr/testify/require"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	fakediscovery "k8s.io/client-go/discovery/fake"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/apis/capi"
 	sapcloud "github.com/deckhouse/deckhouse/dhctl/pkg/apis/sapcloudio/v1alpha1"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
@@ -170,4 +173,64 @@ func TestDeletePods(t *testing.T) {
 		require.Equal(t, "withDifferentPv", pods.Items[0].Name)
 		require.Equal(t, "withoutPv", pods.Items[1].Name)
 	})
+}
+
+func TestPatchCAPIMachineDrainTimeouts(t *testing.T) {
+	ctx := t.Context()
+	fakeClient := client.NewFakeKubernetesClientWithListGVR(map[schema.GroupVersionResource]string{
+		capi.V1beta2.MachineGVR: "MachineList",
+	})
+
+	discovery := fakeClient.Discovery().(*fakediscovery.FakeDiscovery)
+	discovery.Resources = append(discovery.Resources, capi.APIResourcesList())
+
+	worker := newCAPIMachine("worker-machine", "worker", int64(600))
+	master := newCAPIMachine("master-machine", "master", int64(600))
+
+	_, err := fakeClient.Dynamic().Resource(capi.V1beta2.MachineGVR).Namespace(worker.GetNamespace()).Create(ctx, worker, metav1.CreateOptions{})
+	require.NoError(t, err)
+	_, err = fakeClient.Dynamic().Resource(capi.V1beta2.MachineGVR).Namespace(master.GetNamespace()).Create(ctx, master, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	resources, err := fakeClient.Dynamic().Resource(capi.V1beta2.MachineGVR).Namespace(metav1.NamespaceAll).List(ctx, metav1.ListOptions{})
+	require.NoError(t, err)
+
+	machines := nonMasterCAPIMachines(ctx, resources.Items)
+	require.Len(t, machines, 1)
+
+	err = patchCAPIMachineDrainTimeouts(ctx, fakeClient, capi.V1beta2, machines)
+	require.NoError(t, err)
+
+	worker, err = fakeClient.Dynamic().Resource(capi.V1beta2.MachineGVR).Namespace(worker.GetNamespace()).Get(ctx, worker.GetName(), metav1.GetOptions{})
+	require.NoError(t, err)
+	got, found, err := unstructured.NestedInt64(worker.Object, "spec", "deletion", "nodeDrainTimeoutSeconds")
+	require.NoError(t, err)
+	require.True(t, found)
+	require.Equal(t, int64(10), got)
+
+	master, err = fakeClient.Dynamic().Resource(capi.V1beta2.MachineGVR).Namespace(master.GetNamespace()).Get(ctx, master.GetName(), metav1.GetOptions{})
+	require.NoError(t, err)
+	got, found, err = unstructured.NestedInt64(master.Object, "spec", "deletion", "nodeDrainTimeoutSeconds")
+	require.NoError(t, err)
+	require.True(t, found)
+	require.Equal(t, int64(600), got)
+}
+
+func newCAPIMachine(name, nodeGroup string, drainTimeout int64) *unstructured.Unstructured {
+	return &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": capi.V1beta2.GV.String(),
+		"kind":       "Machine",
+		"metadata": map[string]interface{}{
+			"name":      name,
+			"namespace": "d8-cloud-instance-manager",
+			"labels": map[string]interface{}{
+				"node-group": nodeGroup,
+			},
+		},
+		"spec": map[string]interface{}{
+			"deletion": map[string]interface{}{
+				"nodeDrainTimeoutSeconds": drainTimeout,
+			},
+		},
+	}}
 }
