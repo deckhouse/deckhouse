@@ -52,7 +52,7 @@ require (
 
 require (
 	github.com/caarlos0/env/v11 v11.4.1
-	github.com/deckhouse/deckhouse/dhctl v0.0.0-00010101000000-000000000000
+	github.com/deckhouse/deckhouse/dhctl v0.0.0-20260905154100-2c4a64631322
 	github.com/deckhouse/deckhouse/egress-gateway-agent v0.0.0-00010101000000-000000000000
 	github.com/deckhouse/deckhouse/go_lib/cloud-data v0.0.0
 	github.com/deckhouse/deckhouse/go_lib/cloud-provider v0.0.0
