@@ -108,26 +108,27 @@ func TestMain(m *testing.M) {
 }
 
 // A binary that cannot be started is an error, not a process handle.
-func TestStartValidatorProcessRejectsAMissingBinary(t *testing.T) {
+func TestValidatorProcessStartRejectsAMissingBinary(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	process, err := startValidatorProcess(ctx, validatorOptions{
+	process, err := newValidatorProcess(ctx, validatorOptions{
 		binaryPath: filepath.Join(t.TempDir(), "not-a-validator"),
 		endpoint:   endpoint{Network: networkTCP, Address: loopbackAddress},
 	})
-	if err == nil {
-		_ = process.Stop()
-		t.Fatal("startValidatorProcess() = nil, want an error")
+	if err != nil {
+		t.Fatalf("newValidatorProcess() = %v", err)
 	}
 
-	if process != nil {
-		t.Errorf("startValidatorProcess() = %v, want no process alongside the error", process)
+	defer func() { _ = process.Stop() }()
+
+	if _, err := process.Start(ctx); err == nil {
+		t.Fatal("Start() = nil, want an error")
 	}
 }
 
 // Options that could not start anything are refused before a process is spawned.
-func TestStartValidatorProcessRefusesBadOptions(t *testing.T) {
+func TestNewValidatorProcessRefusesBadOptions(t *testing.T) {
 	tests := []struct {
 		name    string
 		opt     validatorOptions
@@ -154,16 +155,13 @@ func TestStartValidatorProcessRefusesBadOptions(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-
-			process, err := startValidatorProcess(ctx, test.opt)
+			process, err := newValidatorProcess(context.Background(), test.opt)
 			if process != nil {
 				_ = process.Stop()
 			}
 
 			if err == nil || !strings.Contains(err.Error(), test.wantErr) {
-				t.Fatalf("startValidatorProcess() = %v, want it to mention %q", err, test.wantErr)
+				t.Fatalf("newValidatorProcess() = %v, want it to mention %q", err, test.wantErr)
 			}
 		})
 	}
@@ -172,7 +170,7 @@ func TestStartValidatorProcessRefusesBadOptions(t *testing.T) {
 // A validator logs where it pleases, so both of its streams have to reach the caller.
 // The fake prints and exits, and Stop is what guarantees everything it wrote was
 // copied before the lines are read back.
-func TestStartValidatorProcessReportsBothStreams(t *testing.T) {
+func TestValidatorProcessReportsBothStreams(t *testing.T) {
 	const (
 		fromStdout = "a line on stdout"
 		fromStderr = "a line on stderr"
@@ -192,26 +190,31 @@ func TestStartValidatorProcessReportsBothStreams(t *testing.T) {
 		lines []string
 	)
 
-	process, err := startValidatorProcess(ctx, validatorOptions{
-		binaryPath: os.Args[0],
-		endpoint:   endpoint{Network: networkTCP, Address: loopbackAddress},
-		onLine: func(line string) {
-			mu.Lock()
-			defer mu.Unlock()
+	collect := func(line string) {
+		mu.Lock()
+		defer mu.Unlock()
 
-			lines = append(lines, line)
-		},
-		// The process context is cancelled when the validator exits, which for this
-		// fake is right after it has printed.
-		wait: func(ctx context.Context) error {
-			<-ctx.Done()
+		lines = append(lines, line)
+	}
 
-			return nil
-		},
+	process, err := newValidatorProcess(ctx, validatorOptions{
+		binaryPath:    os.Args[0],
+		endpoint:      endpoint{Network: networkTCP, Address: loopbackAddress},
+		stdoutHandler: collect,
+		stderrHandler: collect,
 	})
 	if err != nil {
-		t.Fatalf("startValidatorProcess() = %v", err)
+		t.Fatalf("newValidatorProcess() = %v", err)
 	}
+
+	processCtx, err := process.Start(ctx)
+	if err != nil {
+		t.Fatalf("Start() = %v", err)
+	}
+
+	// The context ends when the validator exits, which for this fake is right after
+	// it has printed.
+	<-processCtx.Done()
 
 	if err := process.Stop(); err != nil {
 		t.Errorf("Stop() = %v, want nil", err)
@@ -225,34 +228,66 @@ func TestStartValidatorProcessReportsBothStreams(t *testing.T) {
 	}
 }
 
-// A start that gives up must not leave the validator running: the caller has no handle
+// A start that gives up must not leave the validator running: the caller gets no handle
 // to stop it with.
-func TestStartValidatorProcessStopsTheValidatorWhenWaitFails(t *testing.T) {
+func TestListeningValidatorStartStopsTheValidatorThatNeverAnnounces(t *testing.T) {
 	pidFile := filepath.Join(t.TempDir(), "validator.pid")
 
-	setFakeConfig(t, fakeConfig{Mode: modeValid, PidFile: pidFile})
+	// The fake writes its pid and exits without ever announcing an endpoint.
+	setFakeConfig(t, fakeConfig{Mode: modeSay, PidFile: pidFile})
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	process, err := startValidatorProcess(ctx, validatorOptions{
-		binaryPath: os.Args[0],
-		endpoint:   endpoint{Network: networkTCP, Address: loopbackAddress},
-		wait: func(ctx context.Context) error {
-			waitForFile(t, pidFile)
-
-			return errWaitFailed
-		},
-	})
-	if !errors.Is(err, errWaitFailed) {
-		t.Fatalf("startValidatorProcess() = %v, want %v", err, errWaitFailed)
+	validator, err := newListeningValidator(ctx, os.Args[0])
+	if err != nil {
+		t.Fatalf("newListeningValidator() = %v", err)
 	}
 
-	if process != nil {
-		t.Errorf("startValidatorProcess() = %v, want no process alongside the error", process)
+	if _, err := validator.Start(ctx); err == nil {
+		_ = validator.Stop()
+		t.Fatal("Start() = nil, want the validator to announce nothing")
 	}
 
 	requireGone(t, readPid(t, pidFile))
+}
+
+// Bad options are refused before anything is spawned, and then there is no validator
+// to hand back.
+func TestNewListeningValidatorRefusesBadOptions(t *testing.T) {
+	validator, err := newListeningValidator(context.Background(), "")
+	if err == nil {
+		_ = validator.Stop()
+		t.Fatal("newListeningValidator() = nil, want an error")
+	}
+
+	if validator != nil {
+		t.Errorf("newListeningValidator() = %v, want no validator", validator)
+	}
+}
+
+// A validator logs before it binds, so the announcement is not the line the caller
+// happens to read first.
+func TestListeningValidatorCatchesAnEndpointAnnouncedLate(t *testing.T) {
+	setFakeConfig(t, fakeConfig{Mode: modeValid, SayOnStdout: "starting up"})
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	validator, err := newListeningValidator(ctx, os.Args[0])
+	if err != nil {
+		t.Fatalf("newListeningValidator() = %v", err)
+	}
+
+	if _, err := validator.Start(ctx); err != nil {
+		t.Fatalf("Start() = %v", err)
+	}
+
+	defer func() { _ = validator.Stop() }()
+
+	if ep := validator.Endpoint(); ep.Network != networkTCP || ep.Address == "" {
+		t.Errorf("endpoint = %s, want a tcp address", ep)
+	}
 }
 
 // The endpoint a caller puts in the options is what the validator is told to listen on.
@@ -327,9 +362,13 @@ func TestStopTakesDownTheProcessGroup(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	process, _, err := startListeningValidator(ctx, os.Args[0])
+	process, err := newListeningValidator(ctx, os.Args[0])
 	if err != nil {
-		t.Fatalf("startListeningValidator() = %v", err)
+		t.Fatalf("newListeningValidator() = %v", err)
+	}
+
+	if _, err := process.Start(ctx); err != nil {
+		t.Fatalf("Start() = %v", err)
 	}
 
 	validator := process.cmd.Process.Pid
@@ -371,9 +410,13 @@ func TestStopKillsAValidatorThatIgnoresSIGTERM(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	process, _, err := startListeningValidator(ctx, os.Args[0])
+	process, err := newListeningValidator(ctx, os.Args[0])
 	if err != nil {
-		t.Fatalf("startListeningValidator() = %v", err)
+		t.Fatalf("newListeningValidator() = %v", err)
+	}
+
+	if _, err := process.Start(ctx); err != nil {
+		t.Fatalf("Start() = %v", err)
 	}
 
 	pid := process.cmd.Process.Pid
@@ -413,8 +456,12 @@ func TestStopReturnsWhenOutputPipesStayOpen(t *testing.T) {
 	go func() {
 		defer close(done)
 
-		process, _, err := startListeningValidator(ctx, os.Args[0])
-		if err == nil {
+		process, err := newListeningValidator(ctx, os.Args[0])
+		if err != nil {
+			return
+		}
+
+		if _, err := process.Start(ctx); err == nil {
 			_ = process.Stop()
 		}
 	}()
@@ -434,9 +481,13 @@ func TestValidatorProcessStopIsIdempotent(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	process, _, err := startListeningValidator(ctx, os.Args[0])
+	process, err := newListeningValidator(ctx, os.Args[0])
 	if err != nil {
-		t.Fatalf("startListeningValidator() = %v", err)
+		t.Fatalf("newListeningValidator() = %v", err)
+	}
+
+	if _, err := process.Start(ctx); err != nil {
+		t.Fatalf("Start() = %v", err)
 	}
 
 	if err := process.Stop(); err != nil {
@@ -468,16 +519,21 @@ func TestValidatorOnAUnixSocket(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	process, ep, err := startListeningValidator(ctx, os.Args[0])
+	process, err := newListeningValidator(ctx, os.Args[0])
 	if err != nil {
-		t.Fatalf("startListeningValidator() = %v", err)
+		t.Fatalf("newListeningValidator() = %v", err)
 	}
 
-	if ep.Network != "unix" || ep.Address != socket {
+	ctx, err = process.Start(ctx)
+	if err != nil {
+		t.Fatalf("Start() = %v", err)
+	}
+
+	if ep := process.Endpoint(); ep.Network != networkUnix || ep.Address != socket {
 		t.Fatalf("endpoint = %s, want unix://%s", ep, socket)
 	}
 
-	if _, err := requestValidate(ctx, ep, validatev1.Input{
+	if _, err := requestValidate(ctx, process.Endpoint(), validatev1.Input{
 		ProviderName: "dvp",
 		Operation:    validatev1.OperationConverge,
 	}); err != nil {

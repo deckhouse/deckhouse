@@ -22,48 +22,61 @@ import (
 
 const maxLineSize = 4 * 1024 * 1024
 
-// outputHandler logs every complete line the moment it arrives. os/exec's copying
-// goroutine may outlive Wait when WaitDelay expires, so the state is locked.
-type outputHandler struct {
-	logLine func(line string)
+type lineHandler func(line string)
+
+// lineWriter hands every complete line to its handler the moment it arrives. os/exec's
+// copying goroutine may outlive Wait when WaitDelay expires, so the state is locked.
+type lineWriter struct {
+	handler lineHandler
 
 	mu      sync.Mutex
 	pending []byte
 }
 
-func newOutputHandler(logLine func(line string)) *outputHandler {
-	return &outputHandler{logLine: logLine}
+func newLineWriter(handler lineHandler) *lineWriter {
+	return &lineWriter{handler: handler}
 }
 
-func (o *outputHandler) Write(p []byte) (int, error) {
-	o.mu.Lock()
-	defer o.mu.Unlock()
+func (w *lineWriter) Write(p []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
 
-	o.pending = append(o.pending, p...)
+	w.pending = append(w.pending, p...)
 	for {
-		end := bytes.IndexByte(o.pending, '\n')
+		end := bytes.IndexByte(w.pending, '\n')
 		if end < 0 {
 			// A process that never writes a newline must not grow the buffer forever.
-			if len(o.pending) >= maxLineSize {
-				o.logLine(string(o.pending))
-				o.pending = o.pending[:0]
+			if len(w.pending) >= maxLineSize {
+				w.handler(string(w.pending))
+				w.pending = w.pending[:0]
 			}
 
 			return len(p), nil
 		}
 
-		o.logLine(strings.TrimSuffix(string(o.pending[:end+1]), "\n"))
-		o.pending = o.pending[end+1:]
+		w.handler(strings.TrimSuffix(string(w.pending[:end+1]), "\n"))
+		w.pending = w.pending[end+1:]
 	}
 }
 
 // Flush logs a last line the process left unterminated.
-func (o *outputHandler) Flush() {
-	o.mu.Lock()
-	defer o.mu.Unlock()
+func (w *lineWriter) Flush() {
+	w.mu.Lock()
+	defer w.mu.Unlock()
 
-	if len(o.pending) > 0 {
-		o.logLine(string(o.pending))
-		o.pending = o.pending[:0]
+	if len(w.pending) > 0 {
+		w.handler(string(w.pending))
+		w.pending = w.pending[:0]
+	}
+}
+
+func mergeLineHandlers(handlers ...lineHandler) lineHandler {
+	return func(line string) {
+		for _, handler := range handlers {
+			if handler == nil {
+				continue
+			}
+			handler(line)
+		}
 	}
 }

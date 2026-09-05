@@ -33,7 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/telemetry"
 )
 
-const validateTimeout = 30 * time.Second
+const validateTimeout = 10 * time.Second
 
 func Validate(ctx context.Context, binaryPath string, input config.ProviderInput) error {
 	ctx, span := telemetry.StartSpan(ctx, "external.validate")
@@ -72,24 +72,27 @@ func validate(ctx context.Context, binaryPath string, input validatev1.Input) (_
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	process, ep, err := startListeningValidator(ctx, binaryPath)
+	validator, err := newListeningValidator(ctx, binaryPath)
+	if err != nil {
+		return nil, fmt.Errorf("new validator process %q: %w", binaryPath, err)
+	}
+
+	// The returned context is the validator's own life: a request made with it fails
+	// the moment the process dies, instead of waiting out the call deadline.
+	ctx, err = validator.Start(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("start validator process %q: %w", binaryPath, err)
 	}
 
 	defer func() {
-		if err := process.Stop(); err != nil {
+		if err := validator.Stop(); err != nil {
 			retErr = errors.Join(retErr, fmt.Errorf("stop validator process %q: %w", binaryPath, err))
 		}
 	}()
 
-	resp, err := requestValidate(ctx, ep, input)
+	resp, err := requestValidate(ctx, validator.Endpoint(), input)
 	if err != nil {
-		return nil, fmt.Errorf("call validator on %s: %w", ep, err)
-	}
-
-	if err := ctx.Err(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("call validator on %s: %w", validator.Endpoint(), err)
 	}
 
 	return resp, nil

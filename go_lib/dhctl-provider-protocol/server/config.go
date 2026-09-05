@@ -132,10 +132,7 @@ func ListeningLine(network, address string) string {
 	return fmt.Sprintf(listeningFormat, network, address)
 }
 
-// ParseListeningLine reads back what ListeningLine wrote. The announcement goes
-// through the validator's own logger, so by the time the caller sees it the line may
-// be wrapped in JSON, logfmt or a timestamp: the prefix is looked for anywhere in the
-// line and the endpoint ends where the log format resumes.
+// ParseListeningLine reads back what ListeningLine wrote.
 //
 //nolint:nonamedreturns // named return values serve as documentation for the caller
 func ParseListeningLine(line string) (network, address string, ok bool) {

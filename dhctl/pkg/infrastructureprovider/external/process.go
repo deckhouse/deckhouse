@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"os/exec"
 	"sync"
@@ -38,10 +39,10 @@ const (
 )
 
 type validatorOptions struct {
-	binaryPath string
-	endpoint   endpoint
-	onLine     func(line string)
-	wait       func(ctx context.Context) error
+	binaryPath    string
+	endpoint      endpoint
+	stdoutHandler lineHandler
+	stderrHandler lineHandler
 }
 
 func (o validatorOptions) validate() error {
@@ -59,11 +60,15 @@ func (o validatorOptions) validate() error {
 // context: cancelling it signals the process, and the process going down cancels it
 // back, so whatever waits on the validator is released either way.
 type validatorProcess struct {
+	opt    validatorOptions
+	logger *slog.Logger
+
+	ctx    context.Context
 	cancel context.CancelCauseFunc
 	cmd    *exec.Cmd
 
-	stdout *outputHandler
-	stderr *outputHandler
+	stdout *lineWriter
+	stderr *lineWriter
 
 	waitWG  sync.WaitGroup
 	waitErr error
@@ -72,120 +77,61 @@ type validatorProcess struct {
 	stopErr  error
 }
 
-// startValidatorProcess starts a validator, hands every line it writes to
-// opt.onLine before logging it, and returns once opt.wait is satisfied.
-func startValidatorProcess(ctx context.Context, opt validatorOptions) (*validatorProcess, error) {
+func newValidatorProcess(ctx context.Context, opt validatorOptions) (*validatorProcess, error) {
 	if err := opt.validate(); err != nil {
 		return nil, fmt.Errorf("validator options: %w", err)
 	}
 
-	ctx, cancel := context.WithCancelCause(ctx)
-	logger := dhlog.FromContext(ctx)
-
-	handleLine := func(line string) {
-		if opt.onLine != nil {
-			opt.onLine(line)
-		}
-		logger.DebugContext(ctx, fmt.Sprintf("validator: %s", line))
-	}
-
-	stdout := newOutputHandler(handleLine)
-	stderr := newOutputHandler(handleLine)
-	ret := &validatorProcess{
-		cancel: cancel,
-		stdout: stdout,
-		stderr: stderr,
-		cmd:    validatorCmd(ctx, opt.binaryPath, opt.endpoint, stdout, stderr),
-	}
-
-	withStop := func(err error) error {
-		if stopErr := ret.Stop(); stopErr != nil {
-			return errors.Join(err, stopErr)
-		}
-		return err
-	}
-
-	logger.DebugContext(ctx, fmt.Sprintf("start validator: %s", ret.cmd.String()))
-
-	if err := ret.cmd.Start(); err != nil {
-		return nil, withStop(err)
-	}
-
-	ret.waitWG.Go(func() {
-		ret.waitErr = ret.cmd.Wait()
-		_ = syscall.Kill(-ret.cmd.Process.Pid, syscall.SIGKILL)
-		ret.cancel(fmt.Errorf("validator exited: %w", ret.waitErr))
-	})
-
-	if opt.wait != nil {
-		if err := opt.wait(ctx); err != nil {
-			return nil, withStop(err)
-		}
-	}
-	return ret, nil
+	return &validatorProcess{
+		opt:    opt,
+		logger: dhlog.FromContext(ctx),
+	}, nil
 }
 
-// startListeningValidator starts a validator and waits for it to say where it listens,
-// so a caller gets a process it can talk to right away.
-func startListeningValidator(ctx context.Context, binaryPath string) (*validatorProcess, endpoint, error) {
-	announcedCh := make(chan endpoint, 1)
-	var ep endpoint
+// Start spawns the validator and returns the context of its life: it is cancelled when
+// the process goes down, so a request made with it fails the moment the validator dies
+// instead of waiting out its own deadline.
+func (v *validatorProcess) Start(ctx context.Context) (context.Context, error) {
+	ctx, cancel := context.WithCancelCause(ctx)
 
-	catchEndpoint := func(line string) {
-		network, address, ok := server.ParseListeningLine(line)
-		if !ok {
-			return
+	v.ctx = ctx
+	v.cancel = cancel
+
+	v.stdout = newLineWriter(mergeLineHandlers(v.debug, v.opt.stdoutHandler))
+	v.stderr = newLineWriter(mergeLineHandlers(v.debug, v.opt.stderrHandler))
+
+	v.cmd = validatorCmd(ctx, v.opt.binaryPath, v.opt.endpoint, v.stdout, v.stderr)
+
+	v.debug(fmt.Sprintf("start: %s", v.cmd.String()))
+	if err := v.cmd.Start(); err != nil {
+		if stopErr := v.Stop(); stopErr != nil {
+			return nil, errors.Join(err, stopErr)
 		}
-		select {
-		case announcedCh <- endpoint{Network: network, Address: address}:
-		default:
-		}
+
+		return nil, err
 	}
 
-	// Whichever way the wait ends, a process that is gone is reported as gone: an
-	// endpoint from a validator that has already died is worth nothing.
-	waitEndpoint := func(ctx context.Context) error {
-		deadline, cancel := context.WithTimeout(ctx, announceTimeout)
-		defer cancel()
-
-		select {
-		case announced := <-announcedCh:
-			if cause := context.Cause(ctx); cause != nil {
-				return cause
-			}
-
-			ep = announced
-			return nil
-
-		case <-deadline.Done():
-			if cause := context.Cause(ctx); cause != nil {
-				return cause
-			}
-			return fmt.Errorf("announced no endpoint within %s", announceTimeout)
-		}
-	}
-
-	process, err := startValidatorProcess(ctx, validatorOptions{
-		binaryPath: binaryPath,
-		endpoint: endpoint{
-			Address: loopbackAddress,
-			Network: networkTCP,
-		},
-		onLine: catchEndpoint,
-		wait:   waitEndpoint,
+	v.waitWG.Go(func() {
+		v.waitErr = v.cmd.Wait()
+		_ = syscall.Kill(-v.cmd.Process.Pid, syscall.SIGKILL)
+		v.cancel(fmt.Errorf("validator exited: %w", v.waitErr))
+		v.debug(fmt.Sprintf("validator exited: %v", v.waitErr))
 	})
 
-	if err != nil {
-		return nil, endpoint{}, err
-	}
-	return process, ep, nil
+	return ctx, nil
 }
 
 // Stop is safe to call multiple times and reports the same result every time. The wait
 // is bounded by cmd.WaitDelay: cancelling starts its timer, and when it expires
 // os/exec kills the child and closes its pipes.
 func (v *validatorProcess) Stop() error {
+	if v.cancel == nil {
+		return nil
+	}
+
 	v.stopOnce.Do(func() {
+		v.debug("stop validator")
+
 		v.cancel(nil)
 		v.waitWG.Wait()
 
@@ -199,9 +145,101 @@ func (v *validatorProcess) Stop() error {
 	return v.stopErr
 }
 
-// validatorCmd runs a validator in a process group of its own, so one that spawns
-// helpers takes them down with it, and against writers rather than pipes, so os/exec
-// owns the copying and cmd.Wait waits for it.
+func (v *validatorProcess) debug(line string) {
+	v.logger.Debug(fmt.Sprintf("validator: %s", line))
+}
+
+// listeningValidator is a validator plus the endpoint it announced: the caller asks for
+// port 0, so where it listens is known only once it says so.
+type listeningValidator struct {
+	*validatorProcess
+
+	announcedCh chan endpoint
+	endpoint    endpoint
+}
+
+func newListeningValidator(ctx context.Context, binaryPath string) (*listeningValidator, error) {
+	ret := &listeningValidator{
+		announcedCh: make(chan endpoint, 1),
+	}
+
+	process, err := newValidatorProcess(ctx, validatorOptions{
+		binaryPath: binaryPath,
+		endpoint: endpoint{
+			Network: networkTCP,
+			Address: loopbackAddress,
+		},
+		stdoutHandler: func(line string) {
+			ret.catchEndpoint(line)
+		},
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	ret.validatorProcess = process
+	return ret, nil
+}
+
+// Start spawns the validator and waits for it to say where it listens, so the caller
+// gets a process it can talk to right away.
+func (v *listeningValidator) Start(ctx context.Context) (context.Context, error) {
+	ctx, err := v.validatorProcess.Start(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := v.waitEndpoint(ctx); err != nil {
+		if stopErr := v.Stop(); stopErr != nil {
+			return nil, errors.Join(err, stopErr)
+		}
+
+		return nil, err
+	}
+
+	return ctx, nil
+}
+
+func (v *listeningValidator) Endpoint() endpoint {
+	return v.endpoint
+}
+
+func (v *listeningValidator) catchEndpoint(line string) {
+	network, address, ok := server.ParseListeningLine(line)
+	if !ok {
+		return
+	}
+
+	select {
+	case v.announcedCh <- endpoint{Network: network, Address: address}:
+	default:
+	}
+}
+
+// waitEndpoint blocks until the validator announces where it listens. Whichever way the
+// wait ends, a process that is gone is reported as gone: an endpoint from a validator
+// that has already died is worth nothing.
+func (v *listeningValidator) waitEndpoint(ctx context.Context) error {
+	deadline, cancel := context.WithTimeout(ctx, announceTimeout)
+	defer cancel()
+
+	select {
+	case announced := <-v.announcedCh:
+		if cause := context.Cause(ctx); cause != nil {
+			return cause
+		}
+
+		v.endpoint = announced
+		return nil
+
+	case <-deadline.Done():
+		if cause := context.Cause(ctx); cause != nil {
+			return cause
+		}
+		return fmt.Errorf("announced no endpoint within %s", announceTimeout)
+	}
+}
+
 func validatorCmd(ctx context.Context, binaryPath string, ep endpoint, stdout, stderr io.Writer) *exec.Cmd {
 	cmd := exec.CommandContext(
 		ctx,

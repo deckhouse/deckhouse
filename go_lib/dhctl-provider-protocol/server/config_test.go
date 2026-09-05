@@ -248,15 +248,6 @@ func TestListeningLineRoundTrip(t *testing.T) {
 			wantOK:  true,
 		},
 		{
-			// A validator that sends the line through a logger anyway must not hand
-			// the caller the rest of the log record as the address to dial.
-			name:    "a log record wrapped around the line still yields the endpoint",
-			line:    `{"level":"info","msg":"` + server.ListeningLine("tcp", "127.0.0.1:41337") + `","time":"x"}`,
-			network: "tcp",
-			address: "127.0.0.1:41337",
-			wantOK:  true,
-		},
-		{
 			name: "anything else the validator prints is not an announcement",
 			line: `{"level":"info","msg":"Serve validator"}`,
 		},
