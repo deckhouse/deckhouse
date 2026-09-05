@@ -14,10 +14,7 @@ validator serve --address=<address> [--network=<network>]
 The command tree is cobra: `validator` alone prints help, `validator serve --help`
 lists the flags.
 
-`--address` is `host:port`, or a socket path when `--network=unix`. dhctl asks for
-`127.0.0.1:0`, so the kernel picks the port and the binary logs the endpoint it bound —
-that line is how dhctl finds it. The binary serves until `SIGTERM`, then stops
-gracefully.
+`--address` is `host:port`, or a socket path when `--network=unix`.
 
 ### validate
 
@@ -76,8 +73,7 @@ Start the validator:
 /tmp/dvp-validator serve --network=tcp --address=127.0.0.1:18443
 ```
 
-Call it with `grpcurl` from `src` (that is where the relative `-import-path` points).
-The payload is a JSON-encoded `Input` wrapped in `input_json`, so it needs base64:
+Call it with `grpcurl`. The payload is a JSON-encoded `Input` wrapped in `input_json`, so it needs base64:
 
 ```bash
 INPUT=$(cat << 'EOF' | base64

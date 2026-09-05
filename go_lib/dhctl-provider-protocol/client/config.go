@@ -40,10 +40,6 @@ func NewConfig() Config {
 	}
 }
 
-func (c Config) Validate() error {
-	return nil
-}
-
 func (c Config) Merge(other Config) Config {
 	if len(other.GRPCOptions) > 0 {
 		c.GRPCOptions = slices.Concat(c.GRPCOptions, other.GRPCOptions)

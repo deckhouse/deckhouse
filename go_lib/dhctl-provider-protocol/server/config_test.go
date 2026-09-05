@@ -224,8 +224,8 @@ func TestListeningLineRoundTrip(t *testing.T) {
 			wantOK:  true,
 		},
 		{
-			// An IPv6 address carries brackets, and the closing marker is what ends
-			// the endpoint — not the first bracket in it.
+			// An IPv6 address carries brackets, and nothing about them ends the
+			// endpoint: the address runs to the first space or quote.
 			name:    "an IPv6 address keeps its brackets",
 			line:    server.ListeningLine("tcp", "[::1]:43111"),
 			network: "tcp",
@@ -233,10 +233,27 @@ func TestListeningLineRoundTrip(t *testing.T) {
 			wantOK:  true,
 		},
 		{
+			// A socket path may carry spaces; only a quote or the line ends it.
+			name:    "a socket path keeps its spaces",
+			line:    server.ListeningLine("unix", "/tmp/dir with space/v.sock"),
+			network: "unix",
+			address: "/tmp/dir with space/v.sock",
+			wantOK:  true,
+		},
+		{
 			name:    "a socket path is an address like any other",
 			line:    server.ListeningLine("unix", "/tmp/v.sock"),
 			network: "unix",
 			address: "/tmp/v.sock",
+			wantOK:  true,
+		},
+		{
+			// A validator that sends the line through a logger anyway must not hand
+			// the caller the rest of the log record as the address to dial.
+			name:    "a log record wrapped around the line still yields the endpoint",
+			line:    `{"level":"info","msg":"` + server.ListeningLine("tcp", "127.0.0.1:41337") + `","time":"x"}`,
+			network: "tcp",
+			address: "127.0.0.1:41337",
 			wantOK:  true,
 		},
 		{

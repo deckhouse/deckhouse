@@ -39,21 +39,6 @@ validator serve --address=<address> [--network=<network>]
 `--address` is `host:port`, or a socket path when `--network=unix`. dhctl asks for
 `127.0.0.1:0`, so the kernel picks the port and the validator is the one that knows it.
 
-- **Announcement.** Once bound, the validator must print the endpoint it got to
-  stdout, on a line of its own:
-
-  ```
-  dhctl-provider-protocol: listening on network: tcp address: 127.0.0.1:41337
-  ```
-
-  `server.ListeningLine` writes it and `server.ParseListeningLine` reads it back; a
-  validator built on this module's `server` package prints it from `Start`. It goes to
-  stdout rather than through a logger, because this line is how the caller learns
-  where to dial and a log level must not be able to hide it.
-- **Shutdown.** dhctl sends `SIGTERM` and the validator stops gracefully. A binary
-  built with this module's `server` package installs no signal handler of its own; it
-  waits for the signal itself and calls `Stop`.
-
 ## Transport
 
 gRPC over the address dhctl passes in, no TLS: the validator is a subprocess of the
