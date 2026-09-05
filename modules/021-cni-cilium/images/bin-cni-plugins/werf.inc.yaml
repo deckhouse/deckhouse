@@ -1,14 +1,18 @@
-{{- $cniVersion := include "get_oss_version_by_id" (list "cni-plugins" $ )  -}}
+{{/*
+Description: CNI plugins from containernetworking/plugins, installed onto the node by the agent
+Target: agent
+Sources:
+- cilium/cilium: images/runtime/Dockerfile (go-builder stage)
+- cilium/cilium: images/runtime/build-cni.sh
+Notes:
+- Only loopback is built, the other plugins from the repository are not needed
+- The /cni/loopback path in the agent image must not be changed
+*/}}
 ---
-# #####################################################################
-# Build cni binaries
-# Based on https://github.com/cilium/cilium/blob/v1.17.4/images/runtime/Dockerfile (gops-cni-builder stage)
-# and https://github.com/cilium/cilium/blob/v1.17.4/images/runtime/download-cni.sh
-# and https://github.com/cilium/cilium/blob/v1.17.4/images/runtime/cni-version.sh
-# #####################################################################
+{{- $cniVersion := include "get_oss_version_by_id" (list "cni-plugins" $) }}
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}-src
+from: {{ index $.Images "builder/src" }}
 final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
@@ -21,16 +25,16 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ $cniVersion }} $(cat /run/secrets/SOURCE_REPO)/containernetworking/plugins.git /src/plugins
-  - cd /src/plugins
-  - ls /patches/*.patch >/dev/null 2>&1 && git apply --verbose --allow-empty /patches/*.patch
-  - rm -rf /src/plugins/.git
+  - git clone --depth 1 --branch v{{ $cniVersion }} $(cat /run/secrets/SOURCE_REPO)/containernetworking/plugins.git /src
+  - cd /src
+  - git apply --verbose --allow-empty /patches/*.patch
+  - rm -rf /src/vendor /src/.git
 ---
-image: {{ .ModuleName }}/cni-plugins-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src
   add: /src
   to: /src
   before: install
@@ -40,22 +44,17 @@ secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
 shell:
-  beforeInstall:
-  - pm install bash git binutils tar
   install:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - cd /src/plugins
-  - go mod download -x
-  - go mod vendor && go mod verify
-  - export FLAGS='-extldflags -static -X github.com/containernetworking/plugins/pkg/utils/buildversion.BuildVersion={{ $cniVersion }}'
+  - cd /src
+  # Fetch outside the traced build command, go.sum makes it verifiable and
+  # go mod verify guards the module cache, which the werf mount shares between builds
+  - go mod download && go mod verify
+  - export FLAGS='-s -w -X github.com/containernetworking/plugins/pkg/utils/buildversion.BuildVersion=v{{ $cniVersion }}'
   - |
     {{- $buildContext := deepCopy $ -}}
     {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
-    {{- $_ := set $buildContext "BuildCommand" `./build_linux.sh -ldflags "${FLAGS}"` -}}
+    {{- $_ := set $buildContext "BuildCommand" `go build -mod=readonly -ldflags "${FLAGS}" -o /out/cni/loopback ./plugins/main/loopback` -}}
     {{- include "image-build.build" $buildContext | indent 4 }}
-  - mkdir -p /out/linux/amd64/bin
-  - cp -f /src/plugins/bin/* /out/linux/amd64/bin
-  - strip /out/linux/amd64/bin/*
-  - rm -rf /src/plugins/vendor
----
+  - go version -m /out/cni/loopback | grep -q "GOARCH=amd64"

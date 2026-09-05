@@ -43,7 +43,18 @@ import:
     add: /cni-migration-init-checker
     to: /cni-migration-init-checker
     before: setup
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-coreutils-artifact
+    add: /coreutils/usr/bin/true
+    to: /bin/true
+    before: setup
 imageSpec:
   config:
     workingDir: /
     entrypoint: ["/cni-migration-init-checker"]
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-coreutils-artifact
+from: {{ index $.Images "builder/distroless" }}
+final: false
+shell:
+  beforeInstall:
+  - pm install coreutils -d /coreutils
