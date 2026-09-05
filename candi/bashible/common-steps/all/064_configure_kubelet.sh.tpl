@@ -322,16 +322,9 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */}}
 featureGates:
   RotateKubeletServerCertificate: true
-{{- if semverCompare "<=1.32" .kubernetesVersion }}
-  InPlacePodVerticalScaling: true
-{{- end }}
 {{- if semverCompare ">=1.32 <1.34" .kubernetesVersion }}
 {{- /* DynamicResourceAllocation: GA default=true since 1.34, explicitly enable for 1.32-1.33 */}}
   DynamicResourceAllocation: true
-{{- end }}
-{{- if semverCompare ">=1.32 <1.33" .kubernetesVersion }}
-{{- /* DRAResourceClaimDeviceStatus: Alpha in 1.32, Beta in 1.33 (for BindsToNode) */}}
-  DRAResourceClaimDeviceStatus: true
 {{- end }}
 {{- if semverCompare ">=1.33" .kubernetesVersion }}
 {{- /* DRAPartitionableDevices: Alpha in 1.33 (for NodeSelector per device) */}}
@@ -339,9 +332,12 @@ featureGates:
   KubeletEnsureSecretPulledImages: true
 {{- end }}
 {{- if semverCompare ">=1.34" .kubernetesVersion }}
-{{- /* DRADeviceBindingConditions, DRAConsumableCapacity: Alpha in 1.34 (multi-allocations: BindsToNode, AllowMultipleAllocations). DRAExtendedResource: Alpha in 1.34. */}}
+{{- /* DRADeviceBindingConditions, DRAConsumableCapacity: Alpha in 1.34 (multi-allocations: BindsToNode, AllowMultipleAllocations). */}}
   DRADeviceBindingConditions: true
   DRAConsumableCapacity: true
+{{- end }}
+{{- if semverCompare ">=1.34 <1.37" .kubernetesVersion }}
+{{- /* DRAExtendedResource: Alpha in 1.34, GA and locked to default=true since 1.37. */}}
   DRAExtendedResource: true
 {{- end }}
 {{- range .allowedKubeletFeatureGates }}
