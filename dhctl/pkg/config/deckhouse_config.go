@@ -53,6 +53,9 @@ type DeckhouseInstaller struct {
 	ProviderName             string
 	ModuleConfigs            []*ModuleConfig
 
+	// An external provider's ModuleConfig is kept out of ModuleConfigs above, so it travels here.
+	ProviderModuleConfig *ModuleConfig
+
 	// The resolved version, never the "Default" sentinel. TrackDefault becomes updateMode in the
 	// ConfigMap.
 	KubernetesVersion             string
@@ -80,19 +83,10 @@ type DeckhouseInstaller struct {
 }
 
 // HasProviderModuleConfig reports whether the installer carries a
-// cloud-provider-<name> ModuleConfig (the mc-flow provider format). Mirrors
-// MetaConfig.HasProviderModuleConfig.
+// cloud-provider-<name> ModuleConfig. It gates the provider namespace and the discovery-data
+// Secret, so it has to answer the same question as MetaConfig.HasProviderModuleConfig.
 func (c *DeckhouseInstaller) HasProviderModuleConfig() bool {
-	if c == nil || c.ProviderName == "" {
-		return false
-	}
-	target := CloudProviderModuleName(c.ProviderName)
-	for _, mc := range c.ModuleConfigs {
-		if mc.Name == target {
-			return true
-		}
-	}
-	return false
+	return c != nil && c.ProviderModuleConfig != nil
 }
 
 func (c *DeckhouseInstaller) GetImageTag(ctx context.Context, forceVersionTag bool) (string, error) {
@@ -259,6 +253,7 @@ func PrepareDeckhouseInstallConfig(ctx context.Context, metaConfig *MetaConfig, 
 		ClusterConfig:         clusterConfig,
 		ProviderName:          metaConfig.ProviderName,
 		ModuleConfigs:         metaConfig.ModuleConfigs,
+		ProviderModuleConfig:  metaConfig.findProviderModuleConfig(),
 		ModuleConfigCRDPath:   moduleConfigCRDPath,
 		InstallerVersion:      metaConfig.InstallerVersion,
 		VersionFilePath:       metaConfig.VersionFilePath,
