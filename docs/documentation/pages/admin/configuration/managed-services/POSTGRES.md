@@ -4,21 +4,29 @@ permalink: en/admin/configuration/managed-services/postgres/
 description: "Administering managed PostgreSQL in Deckhouse Kubernetes Platform."
 ---
 
-Managed PostgreSQL is implemented by the [`managed-postgres`](/modules/managed-postgres/) module. This page describes the settings that a cluster administrator can configure through [PostgresClass](/modules/managed-postgres/cr.html#postgresclass-v1alpha1): resource limits, topology, parameter validation, default values, and node binding.
+The Managed PostgreSQL service helps you deploy and maintain PostgreSQL instances in DKP. [Supported PostgreSQL version](/modules/managed-postgres/user_guide.html#supported-postgresql-versions) — 17.6.
 
-For enabling the module, installation requirements, and a parameter reference, see [the `managed-postgres` module documentation](/modules/managed-postgres/). User operations with PostgreSQL are described in [Managed PostgreSQL](../../../user/managed-services/postgres.html).
+This page describes the settings a cluster administrator can configure: managing resource limits and topology, configuring parameter validation, setting default values, and binding to cluster nodes.
 
-After the module is enabled, it creates the `default` PostgresClass with baseline settings so users can immediately create Postgres resources. For production environments, it's recommended to prepare separate classes with explicit settings and limits (for example, `production-v1`, `staging-v1`) and give users their names.
+## Enabling the service
+
+To enable the Managed PostgreSQL service in DKP, complete the following steps:
+
+1. Make sure the [requirements for the `managed-postgres` module](/modules/managed-postgres/configuration.html#requirements) are met.
+1. [Enable the `managed-postgres` module](/modules/managed-postgres/configuration.html#enable) in the DKP web interface or another way.
+1. Create a [PostgresClass](/modules/managed-postgres/cr.html#postgresclass-v1alpha1) with the settings that users will need when creating Postgres objects. You can also use the `default` PostgresClass that the module creates when enabled. The `default` PostgresClass contains baseline settings so users can start creating databases right after Managed PostgreSQL is enabled in DKP. For production environments, it's recommended to create separate PostgresClass resources with explicit settings and limits.
+
+Once the module is enabled, users can create PostgreSQL databases on their own. User operations with the service are described in [Usage → Managed services → Managed PostgreSQL](../../../user/managed-services/postgres.html).
 
 ## Dependencies for specific features
 
 Some module features require additional configuration of Deckhouse Kubernetes Platform components or cluster infrastructure:
 
-| Feature | Requirement | Section |
-|---------|-----------|--------------|
-| Backup (PostgresSnapshot) | The `snapshot-controller` module enabled and a StorageClass with snapshot support | [snapshot-controller](/modules/snapshot-controller/) |
-| TLS via `cert-manager` | The `cert-manager` module enabled and a configured ClusterIssuer or Issuer | [cert-manager](/modules/cert-manager/) |
-| Placement on dedicated nodes | Node labels (for example, `node.deckhouse.io/group=pg`) and taints if needed | [Node management](../../../admin/configuration/platform-scaling/node/node-management.html) |
+| Feature                                                  | Requirement                                                                                                                                                                                 |
+|-----------------------------------------------------------|------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Backup (managed by [PostgresSnapshot](/modules/managed-postgres/cr.html#postgressnapshot)) | The [snapshot-controller](/modules/snapshot-controller/) module enabled and a StorageClass with snapshot support                                                                    |
+| TLS via `cert-manager`                                   | The [cert-manager](/modules/cert-manager/) module enabled and a configured ClusterIssuer or Issuer                                                                                          |
+| Placement on dedicated nodes                             | Node labels (for example, `node.deckhouse.io/group=pg`) and taints if needed. For more information, see [the documentation](../../../admin/configuration/platform-scaling/node/node-management.html) |
 
 ## Example of creating a PostgresClass
 
@@ -136,7 +144,7 @@ Check the created PostgresClass:
 d8 k describe postgresclass production-v1
 ```
 
-Example output:
+{% offtopic title="Example output..." %}
 
 ```console
 Name:         production-v1
@@ -215,23 +223,29 @@ Spec:
 Events:       <none>
 ```
 
-If the PostgresClass is displayed with the expected settings, the configuration is complete. Users can create [Postgres resources](/modules/managed-postgres/cr.html#postgres-v1alpha1) that reference this class through the `spec.postgresClassName` parameter.
+{% endofftopic %}
 
-## Manage PostgresClass changes
+Users can use the created PostgresClass by specifying it in the [postgresClassName](/modules/managed-postgres/stable/cr.html#postgres-v1alpha1-spec-postgresclassname) parameter of Postgres.
 
-After a PostgresClass is created, its spec (`spec`) can't be changed by applying an updated manifest. To change settings and limits, create a new PostgresClass with a different name and use it for new Postgres resources.
+{% alert level="warning" %}
+Once a PostgresClass is created, its parameters can't be changed. Create a new PostgresClass with a different name to use different settings.
+{% endalert %}
 
-### Change and delete a PostgresClass
+## Change and delete a PostgresClass
 
-Notify users about the new class and suggest using it for new Postgres resources.
-
-Before deleting an old class, check whether it's used by any existing Postgres resources. Run:
+Before deleting an old class, check whether it's used by any existing Postgres objects. Run:
 
 ```shell
 d8 k get postgres --all-namespaces -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,CLASS:.spec.postgresClassName | grep production-v1
 ```
 
-If Postgres resources using this PostgresClass are found, deleting the class isn't recommended. If the PostgresClass is no longer used or needs to be deleted, run:
+If Postgres objects using this PostgresClass are found, keep the following in mind:
+- Databases created based on the deleted PostgresClass keep running. Their settings stay the same, since they were fixed at creation time.
+- Users won't be able to create a new Postgres object that references the deleted class.
+
+If the PostgresClass is no longer used, you can delete it.
+
+Example of deleting the `production-v1` PostgresClass via the CLI:
 
 ```shell
 d8 k delete postgresclass production-v1
@@ -243,27 +257,15 @@ Example output:
 postgresclass.managed-services.deckhouse.io "production-v1" deleted
 ```
 
-### What happens when a class is deleted
-
-After a PostgresClass is deleted, the following applies:
-
-- Postgres resources created based on the deleted PostgresClass keep running. Their settings stay the same, since they were fixed at creation time.
-- Users can't create a new Postgres resource that references the deleted class. An attempt to create a Postgres resource with `postgresClassName: production-v1` fails.
-
-### Recommendations
-
-When working with PostgresClass, keep the following in mind:
-
-- Track active classes and monitor their usage.
-- When changing settings and limits, create a new class instead of overwriting an existing one.
+{% alert level="info" %}
+If you need to change PostgresClass settings, it's recommended to create a new one with a different name rather than recreating a PostgresClass with the same name.
+{% endalert %}
 
 ## Limit CPU and memory resources
 
-The [`spec.sizingPolicies`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-sizingpolicies) policies define the allowed CPU and memory combinations for PostgreSQL instances. The administrator sets several core ranges, each with a minimum and maximum amount of memory and a step.
+Policies, in the [`spec.sizingPolicies`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-sizingpolicies) parameter section, are used to define the allowed CPU and memory combinations for PostgreSQL instances. The administrator can set several core ranges, each with a minimum and maximum amount of memory and a step. These policies are useful when several independent teams work in the same cluster and create Postgres objects without coordinating with the administrator. Policies prevent Postgres objects with unrealistic resource requests and ensure predictable node utilization.
 
-This is useful when several independent teams work in the same cluster and create Postgres resources without coordinating with the administrator. Policies prevent Postgres resources with unrealistic resource requests and ensure predictable node utilization.
-
-The policy is selected by the number of CPU cores. The [`coreFractions`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-sizingpolicies-corefractions) parameter defines what percentage of the CPU limits (`limits`) becomes the guaranteed request (`requests`). For example, if the administrator specifies `coreFractions: [50, 100]`, a user creating a Postgres resource can choose `coreFraction: 50` or `coreFraction: 100`.
+The policy is selected by the number of CPU cores. The [`coreFractions`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-sizingpolicies-corefractions) parameter defines what percentage of the CPU limits (`limits`) becomes the guaranteed request (`requests`). For example, if the administrator specifies `coreFractions: [50, 100]`, a user creating a Postgres object can choose `coreFraction: 50` or `coreFraction: 100`.
 
 With `coreFraction: 50`:
 
@@ -277,7 +279,7 @@ With `coreFraction: 100`:
 - `limits` and `requests` are equal (4 cores).
 - The pod gets a guaranteed resource allocation, but loses the ability to reuse unused cores from other pods.
 
-Below is an abbreviated fragment of `spec.sizingPolicies`. The complete example is provided in [Example of creating a PostgresClass](#example-of-creating-a-postgresclass).
+Below is a fragment of a PostgresClass manifest showing the allowed CPU and memory combinations. The complete example is provided in [Example of creating a PostgresClass](#example-of-creating-a-postgresclass).
 
 ```yaml
 spec:
@@ -298,7 +300,7 @@ In this fragment, the available memory values for 1–2 cores are 512Mi, 1Gi, 1.
 
 The `step` parameter defines the increment for the memory amount. A user can only specify a memory value that's a multiple of `step`. For example, if `step: 512Mi`, the allowed values are 512Mi, 1Gi, 1.5Gi, 2Gi, and so on. A value of 700Mi is rejected because it isn't a multiple of 512Mi.
 
-The choice of memory depends on the number of cores. If a user requests 5 cores, the Postgres resource isn't created, since this configuration isn't provided by the administrator.
+The choice of memory depends on the number of cores. If a user requests 5 cores, the Postgres object isn't created, since this configuration isn't provided by the administrator.
 
 {% alert level="warning" %}
 Within a single PostgresClass, the `cores.min`–`cores.max` ranges of different policies must not overlap.
@@ -306,21 +308,21 @@ Within a single PostgresClass, the `cores.min`–`cores.max` ranges of different
 
 For example, in the `production-v1` PostgresClass, the first policy can't cover 1–4 cores while the second covers 2–6 cores, since cores 2–4 would belong to both policies. Ranges can overlap across different PostgresClass resources, for example `production-v1` and `production-v2`.
 
-The user sees the available options and picks a suitable one when creating a Postgres resource.
+The user can see the available options and pick a suitable one when creating a Postgres object.
 
 ## Manage fault tolerance across availability zones
 
-The [`spec.topology`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology) field defines how PostgreSQL instances are distributed across availability zones. Three modes are available:
+The administrator can manage the fault tolerance of users' PostgreSQL instances by setting their availability zone distribution topology in the [`spec.topology`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology) parameter section. This can be useful in production environments with data-center-level fault tolerance requirements.
+
+Three topologies are available:
 
 - `Ignored`: standard scheduling with no zone binding;
-- `Zonal`: all instances are placed in one zone (minimal latency between replicas);
-- `TransZonal`: instances are distributed across different zones (one primary instance, one synchronous replica, one asynchronous replica).
+- `Zonal`: all instances are placed in one zone (minimal latency between replicas). Suits low-latency environments where losing a zone is acceptable;
+- `TransZonal`: instances are distributed across different zones (one primary instance, one synchronous replica, one asynchronous replica). Protects against the loss of an entire zone but requires more resources.
 
-This is useful in production environments with data-center-level fault tolerance requirements. `TransZonal` mode protects against the loss of an entire zone but requires more resources. `Zonal` mode suits low-latency environments where losing a zone is acceptable.
+The administrator can specify the allowed topology options ([`allowedTopologies`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology-allowedtopologies)), the default topology ([`defaultTopology`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology-defaulttopology)), and the list of available zones ([`allowedZones`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology-allowedzones)).
 
-The administrator specifies the allowed options ([`allowedTopologies`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology-allowedtopologies)), the default topology ([`defaultTopology`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology-defaulttopology)), and the list of available zones ([`allowedZones`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology-allowedzones)).
-
-Below is an abbreviated fragment of `spec.topology`. The complete example is provided in [Example of creating a PostgresClass](#example-of-creating-a-postgresclass).
+Below is a fragment of a PostgresClass manifest showing the topology parameters. The complete example is provided in [Example of creating a PostgresClass](#example-of-creating-a-postgresclass).
 
 ```yaml
 spec:
@@ -336,13 +338,13 @@ spec:
 
 In this fragment, `Zonal` and `TransZonal` modes are allowed, with `TransZonal` applied by default. The `allowedZones` field lists placeholder zones — replace them with the actual zone names from your cloud provider or data center.
 
-Users can choose the fault tolerance level when creating a Postgres resource. If not specified explicitly, the default value applies.
+Users can choose the fault tolerance level when creating a Postgres object. If not specified explicitly, the default value applies (as set in the `defaultTopology` parameter).
 
 ## Automatically validate PostgreSQL settings
 
-The [`spec.validations`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-validations) field lets you define rules in Common Expression Language (CEL) that reject suboptimal combinations of PostgreSQL parameters. The rules are checked on the API server before the resource is created.
+To reject undesirable combinations of PostgreSQL parameters chosen by users, the administrator can define validation rules in Common Expression Language (CEL) in the [`spec.validations`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-validations) parameter section of PostgresClass. These rules are checked on the API server before Postgres objects are created.
 
-This is useful for guarding against common configuration mistakes that can lead to performance issues. For example, too large a `shared_buffers` value can leave PostgreSQL with too little memory for other operations, and a large number of connections can significantly increase overall memory consumption.
+These rules are useful for guarding against common configuration mistakes that can lead to performance issues. For example, too large a `shared_buffers` value can leave PostgreSQL with too little memory for other operations, and a large number of connections can significantly increase overall memory consumption.
 
 The following variables are available in the rules:
 
@@ -353,7 +355,7 @@ The following variables are available in the rules:
 - `instance.memory.size`;
 - `instance.cpu.cores`.
 
-Below is an abbreviated fragment of `spec.validations`. The complete set of rules is provided in [Example of creating a PostgresClass](#example-of-creating-a-postgresclass).
+Below is a fragment of a PostgresClass manifest showing validation rules. The complete set of rules is provided in [Example of creating a PostgresClass](#example-of-creating-a-postgresclass).
 
 ```yaml
 spec:
@@ -368,16 +370,16 @@ The user gets a validation error when trying to apply invalid parameters, which 
 
 ## Set default values and allow overrides
 
-The [`spec.configuration`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-configuration) and [`spec.overridableConfiguration`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-overridableconfiguration) fields let the administrator set default PostgreSQL parameters and define which of them users can change.
+To set default PostgreSQL parameters and define which of them users can change, the administrator can use the [`spec.configuration`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-configuration) and [`spec.overridableConfiguration`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-overridableconfiguration) parameters.
 
-If the administrator doesn't specify values in `configuration`, the module controller applies:
+If no values are specified in `configuration`, the module controller applies the following:
 
 - `maxConnections`: `100`;
 - `sharedBuffers`: 25% of `memory.size`;
 - `workMem`: `(memory.size - sharedBuffers) * 4 / maxConnections`;
 - `walKeepSize`: `512Mi`.
 
-Below is an abbreviated fragment of `spec.configuration` and `spec.overridableConfiguration`. The complete example is provided in [Example of creating a PostgresClass](#example-of-creating-a-postgresclass).
+Below is a fragment of a PostgresClass manifest showing the default service settings. The complete example is provided in [Example of creating a PostgresClass](#example-of-creating-a-postgresclass).
 
 ```yaml
 spec:
@@ -398,7 +400,7 @@ In this example:
 
 ### Automatic workMem calculation
 
-The `workMem` parameter limits the amount of memory used for sort and hash operations within a single query.
+To limit the amount of memory used for sort and hash operations within a single query, use the [workMem](/modules/managed-postgres/stable/cr.html#postgres-v1alpha1-spec-configuration-workmem) parameter.
 
 In PostgreSQL, this limit applies to each operation in each active session. A complex query can run several such operations at once. With a large number of connections, total memory consumption can far exceed the configured value and lead to memory exhaustion. A value that's too small, on the other hand, forces PostgreSQL to use temporary files on disk and reduces performance.
 
@@ -410,7 +412,7 @@ The module calculates `workMem` using the following formula:
 workMem = (instance.memory.size - configuration.sharedBuffers) * 4 / configuration.maxConnections
 ```
 
-For example, for a Postgres resource with the following parameters:
+For example, for Postgres with the following parameters:
 
 - `instance.memory.size: 4Gi`
 - `configuration.sharedBuffers: 1Gi`
@@ -431,11 +433,11 @@ The controller calculates `workMem` using the formula above, based on the instan
 
 ## Bind to dedicated nodes
 
-The standard mechanisms — [`spec.nodeSelector`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-nodeselector), [`spec.tolerations`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-tolerations), and [`spec.nodeAffinity`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-nodeaffinity) — let you specify which nodes PostgreSQL pods can be placed on.
+The standard Kubernetes mechanisms — [`spec.nodeSelector`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-nodeselector), [`spec.tolerations`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-tolerations), and [`spec.nodeAffinity`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-nodeaffinity) — let you specify which nodes PostgreSQL pods can be placed on.
 
 Placement on dedicated nodes helps isolate PostgreSQL instances from user applications and makes disk and network resource usage more predictable.
 
-Below is an abbreviated fragment of `spec.nodeAffinity`, `spec.nodeSelector`, and `spec.tolerations`. The complete example is provided in [Example of creating a PostgresClass](#example-of-creating-a-postgresclass).
+Below is a fragment of a PostgresClass manifest showing `spec.nodeAffinity`, `spec.nodeSelector`, and `spec.tolerations`. The complete example is provided in [Example of creating a PostgresClass](#example-of-creating-a-postgresclass).
 
 ```yaml
 spec:
@@ -464,4 +466,4 @@ In this example:
 
 Users don't need to worry about node selection. Pods are automatically placed on the prepared infrastructure according to the PostgresClass settings.
 
-If no node matches the placement rules, users' Postgres resources stay in the `Pending` state — for diagnostics, see [PostgreSQL instances remain in the Pending state](../../../user/managed-services/faq.html#postgresql-instances-remain-in-the-pending-state) in the FAQ.
+If no node matches the placement rules, users' Postgres objects stay in the `Pending` state — for diagnostics, see [PostgreSQL instances remain in the Pending state](../../../user/managed-services/faq.html#postgresql-instances-remain-in-the-pending-state) in the FAQ.

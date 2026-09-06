@@ -8,7 +8,9 @@ relatedLinks:
     url: "faq.html"
 ---
 
-Модуль `managed-postgres` позволяет создавать и настраивать PostgreSQL с помощью ресурса Postgres. Пользователь задаёт требуемую конфигурацию, а модуль создаёт и поддерживает экземпляры PostgreSQL с учётом PostgresClass, который определяет доступные параметры и ограничения. PostgresClass создаёт и настраивает администратор кластера.
+Пользователь может создавать и настраивать PostgreSQL, если в кластере DKP администратором включена такая возможность.
+
+Пользователь задаёт требуемую конфигурацию с помощью объекта Postgres, указывающего на конкретный класс сервиса (PostgresClass), который определяет доступные параметры и ограничения. PostgresClass создаёт и настраивает администратор кластера.
 
 В руководстве используются два примера:
 
@@ -92,20 +94,22 @@ replicated (default)   csi.dvp.deckhouse.io   Delete          WaitForFirstConsum
 {:.nowrap-default }
 <!-- markdownlint-enable MD031 -->
 
-Параметр [`spec.instance.persistentVolumeClaim.storageClassName`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-instance-persistentvolumeclaim-storageclassname) задаётся только при создании Postgres и не может быть изменён позднее.
+{% alert level="warning" %}
+Параметр [`spec.instance.persistentVolumeClaim.storageClassName`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-instance-persistentvolumeclaim-storageclassname) задаётся только при создании Postgres. Изменить его после создания нельзя.
+{% endalert %}
 
 ## Основной пример: создание Postgres
 
 Создайте неймспейс:
 
 ```shell
-d8 k create namespace postgres
+d8 k create namespace my-postgres
 ```
 
-Для создания ресурса Postgres необходимо выполнить следующие шаги:
+Для создания объекта Postgres необходимо выполнить следующие шаги:
 
 - [Выбрать PostgresClass](#выбор-postgresclass);
-- [Настроить ресурсы Postgres](#настройка-ресурсов-postgres);
+- [Настроить ресурсы](#настройка-ресурсов);
 - [Выбрать режим работы](#выбор-режима-работы);
 - [Настроить топологию и режим репликации](#настройка-топологии-и-режима-репликации);
 - [Создать логическую базу данных и пользователя](#создание-логической-базы-данных-и-пользователя);
@@ -113,14 +117,14 @@ d8 k create namespace postgres
 - [Настроить TLS](#настройка-tls);
 - [Настроить наблюдаемость](#настройка-наблюдаемости).
 
-Ниже представлен типовой пример манифеста ресурса Postgres `app-postgres`, который можно применить сразу, а затем настроить под свои задачи, последовательно проходя каждый из этих шагов.
+Ниже представлен типовой пример манифеста Postgres `app-postgres`, который можно применить сразу, а затем настроить под свои задачи, последовательно проходя каждый из этих шагов.
 
 ```yaml
 apiVersion: managed-services.deckhouse.io/v1alpha1
 kind: Postgres
 metadata:
   name: app-postgres
-  namespace: postgres
+  namespace: my-postgres
 spec:
   postgresClassName: default
 
@@ -165,10 +169,10 @@ d8 k apply -f postgres.yaml
 Проверьте состояние созданного Postgres:
 
 ```shell
-d8 k get postgres app-postgres -n postgres -o wide
+d8 k get postgres app-postgres -n my-postgres -o wide
 ```
 
-После завершения развёртывания основные условия должны перейти в `True` — что означает каждое условие, см. в разделе [«Проверка состояния»](#проверка-состояния).
+После завершения развёртывания основные условия (`status.conditions`) должны перейти в `True` — что означает каждое условие, см. в разделе [«Проверка состояния»](#проверка-состояния).
 
 Пример вывода:
 
@@ -213,13 +217,11 @@ d8 k get postgresclass <CLASS_NAME> -o yaml
 
 ### Ограничения размещения
 
-PostgresClass также может определять правила размещения экземпляров PostgreSQL с помощью `nodeSelector`, `nodeAffinity` и `tolerations`. Эти правила применяются автоматически при выборе класса и не указываются в ресурсе Postgres.
+PostgresClass также может определять правила размещения экземпляров PostgreSQL с помощью `nodeSelector`, `nodeAffinity` и `tolerations`. Эти правила применяются автоматически при выборе класса и не указываются в объекте Postgres.
 
-## Настройка ресурсов Postgres
+## Настройка ресурсов
 
-Для каждого экземпляра PostgreSQL можно задать количество CPU, долю гарантированного CPU и объём памяти.
-
-Параметр [`spec.instance`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-instance) определяет ресурсы каждого экземпляра PostgreSQL.
+Для настройки ресурсов каждого экземпляра PostgreSQL — количества CPU, доли гарантированного CPU и объёма памяти — используется параметр [`spec.instance`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-instance).
 
 В примере за ресурсы и хранилище отвечает этот фрагмент:
 
@@ -340,7 +342,7 @@ spec:
 d8 k apply -f postgres.yaml
 ```
 
-API отклонит ресурс. Пример вывода:
+API отклонит запрос. Пример вывода:
 
 ```console
 spec.instance.memory.size: Invalid value: 734003200: memory setting does not fit Step 536870912 of the selected PostgresClass
@@ -393,7 +395,7 @@ d8ms-pg-app-postgres-1   Running   worker-1
 Проверьте Service, созданные для подключения к PostgreSQL:
 
 ```shell
-d8 k get svc -n postgres | grep app-postgres
+d8 k get svc -n my-postgres | grep app-postgres
 ```
 
 Пример вывода:
@@ -410,7 +412,7 @@ d8ms-pg-app-postgres-rw   ClusterIP   10.223.120.250   <none>   5432/TCP
 Проверьте, на какие экземпляры направлены Service, через эндпоинты:
 
 ```shell
-d8 k get endpoints -n postgres | grep app-postgres
+d8 k get endpoints -n my-postgres | grep app-postgres
 ```
 
 Пример вывода:
@@ -421,15 +423,13 @@ d8ms-pg-app-postgres-ro   <none>             42h
 d8ms-pg-app-postgres-rw   10.112.2.31:5432   42h
 ```
 
-Service `-r` и `-rw` направляют подключения на единственный экземпляр PostgreSQL. Service `-ro` также создаётся, но не имеет эндпоинта, поскольку в режиме `Standalone` отсутствуют реплики.
+Сервисы с суффиксами `-r` и `-rw` направляют подключения на единственный экземпляр PostgreSQL. Сервис с суффиксом `-ro` также создаётся, но не имеет эндпоинта, поскольку в режиме `Standalone` отсутствуют реплики.
 
 ## Настройка топологии и режима репликации
 
-В режиме `Cluster` топология определяет размещение экземпляров PostgreSQL по узлам и зонам доступности. Она позволяет управлять тем, где будут размещены экземпляры, чтобы учитывать требования к отказоустойчивости PostgreSQL.
+В режиме `Cluster` пользователь может управлять отказоустойчивостью экземпляров PostgreSQL, задавая их размещение по узлам и зонам доступности в параметре [`spec.cluster.topology`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-cluster-topology).
 
 ### Настройка топологии
-
-Параметр [`spec.cluster.topology`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-cluster-topology) определяет размещение экземпляров PostgreSQL по узлам и зонам доступности.
 
 Поддерживаются следующие значения:
 
@@ -452,7 +452,7 @@ spec:
 Проверьте размещение экземпляров командой:
 
 ```shell
-d8 k get pods -n postgres \
+d8 k get pods -n my-postgres \
   -l managed-services.deckhouse.io/managed-service-name=app-postgres \
   -o wide
 ```
@@ -519,14 +519,14 @@ d8ms-pg-app-postgres-2     Running   worker-2
 
 ```shell
 PRIMARY="$(d8 k get clusters.cnpg.internal.managed.deckhouse.io d8ms-pg-app-postgres \
-  -n postgres \
+  -n my-postgres \
   -o jsonpath='{.status.targetPrimary}')"
 ```
 
 Затем выполните запрос:
 
 ```shell
-d8 k exec -n postgres "$PRIMARY" -- \
+d8 k exec -n my-postgres "$PRIMARY" -- \
   psql -U postgres -d postgres -c \
   "SELECT application_name, state, sync_state FROM pg_stat_replication;"
 ```
@@ -558,7 +558,7 @@ spec:
 После создания Postgres запускаются два экземпляра PostgreSQL:
 
 ```shell
-d8 k get pods -n postgres \
+d8 k get pods -n my-postgres \
   -l managed-services.deckhouse.io/managed-service-name=app-postgres \
   -o wide
 ```
@@ -583,7 +583,7 @@ d8ms-pg-app-postgres-2   1/1     Running
 Распределение Service между основным экземпляром и репликой можно проверить через EndpointSlice:
 
 ```shell
-d8 k get endpointslice -n postgres | grep app-postgres
+d8 k get endpointslice -n my-postgres | grep app-postgres
 ```
 
 Пример вывода:
@@ -611,7 +611,7 @@ spec:
 После создания Postgres запускаются два экземпляра PostgreSQL:
 
 ```shell
-d8 k get pods -n postgres \
+d8 k get pods -n my-postgres \
   -l managed-services.deckhouse.io/managed-service-name=app-postgres \
   -o wide
 ```
@@ -637,14 +637,14 @@ d8ms-pg-app-postgres-2     Running   worker-2
 
 ```shell
 PRIMARY="$(d8 k get clusters.cnpg.internal.managed.deckhouse.io d8ms-pg-app-postgres \
-  -n postgres \
+  -n my-postgres \
   -o jsonpath='{.status.targetPrimary}')"
 ```
 
 Создайте на основном экземпляре контрольную таблицу и добавьте запись:
 
 ```shell
-d8 k exec -n postgres "$PRIMARY" -- \
+d8 k exec -n my-postgres "$PRIMARY" -- \
   psql -U postgres -d postgres -c "
     CREATE TABLE consistency_check (
       id integer PRIMARY KEY,
@@ -657,7 +657,7 @@ d8 k exec -n postgres "$PRIMARY" -- \
 Определите реплику:
 
 ```shell
-REPLICA="$(d8 k get pods -n postgres \
+REPLICA="$(d8 k get pods -n my-postgres \
   -l managed-services.deckhouse.io/managed-service-name=app-postgres \
   -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | \
   grep -v "^${PRIMARY}$" | head -n1)"
@@ -666,7 +666,7 @@ REPLICA="$(d8 k get pods -n postgres \
 Проверьте наличие записи непосредственно на реплике:
 
 ```shell
-d8 k exec -n postgres "$REPLICA" -- \
+d8 k exec -n my-postgres "$REPLICA" -- \
   psql -U postgres -d postgres -c \
   "SELECT pg_is_in_recovery(), * FROM consistency_check;"
 ```
@@ -699,7 +699,7 @@ spec:
 После создания Postgres запускаются три экземпляра PostgreSQL:
 
 ```shell
-d8 k get pods -n postgres \
+d8 k get pods -n my-postgres \
   -l managed-services.deckhouse.io/managed-service-name=app-postgres \
   -o wide
 ```
@@ -741,7 +741,7 @@ spec:
 d8 k apply -f postgres.yaml
 ```
 
-Во время обновления `ScaledToLastValidConfiguration` может временно перейти в `False`. После завершения обновления условия ресурса должны вернуться в `True`.
+Во время обновления `ScaledToLastValidConfiguration` может временно перейти в `False`. После завершения обновления условия объекта (`status.conditions`) должны вернуться в `True`.
 
 Проверьте новый режим, как описано [в разделе «Проверка режима репликации»](#проверка-режима-репликации). После перехода на `Consistency` реплика должна работать в синхронном режиме:
 
@@ -758,7 +758,7 @@ d8ms-pg-app-postgres-2 | streaming | async
 При переходе на `ConsistencyAndAvailability` число экземпляров увеличивается с двух до трёх. Проверьте запущенные экземпляры:
 
 ```shell
-d8 k get pods -n postgres \
+d8 k get pods -n my-postgres \
   -l managed-services.deckhouse.io/managed-service-name=app-postgres \
   -o wide
 ```
@@ -793,7 +793,7 @@ spec:
 После применения манифеста дождитесь синхронизации пользователей и баз данных. Состояния `USERSSYNCED` и `DATABASESSYNCED` должны иметь значение `True`:
 
 ```shell
-d8 k get postgres app-postgres -n postgres -o wide
+d8 k get postgres app-postgres -n my-postgres -o wide
 ```
 
 ### Пользователь PostgreSQL
@@ -803,7 +803,7 @@ d8 k get postgres app-postgres -n postgres -o wide
 Проверьте созданный Secret:
 
 ```shell
-d8 k get secret app-postgres-rw -n postgres
+d8 k get secret app-postgres-rw -n my-postgres
 ```
 
 Пример вывода:
@@ -825,10 +825,10 @@ username
 Получите параметры подключения следующим образом:
 
 ```shell
-echo "host: $(d8 k get secret app-postgres-rw -n postgres -o jsonpath='{.data.host}' | base64 --decode)"
-echo "username: $(d8 k get secret app-postgres-rw -n postgres -o jsonpath='{.data.username}' | base64 --decode)"
-echo "password: $(d8 k get secret app-postgres-rw -n postgres -o jsonpath='{.data.password}' | base64 --decode)"
-echo "app-dsn: $(d8 k get secret app-postgres-rw -n postgres -o jsonpath='{.data.app-dsn}' | base64 --decode)"
+echo "host: $(d8 k get secret app-postgres-rw -n my-postgres -o jsonpath='{.data.host}' | base64 --decode)"
+echo "username: $(d8 k get secret app-postgres-rw -n my-postgres -o jsonpath='{.data.username}' | base64 --decode)"
+echo "password: $(d8 k get secret app-postgres-rw -n my-postgres -o jsonpath='{.data.password}' | base64 --decode)"
+echo "app-dsn: $(d8 k get secret app-postgres-rw -n my-postgres -o jsonpath='{.data.app-dsn}' | base64 --decode)"
 ```
 
 Пример вывода:
@@ -868,17 +868,17 @@ d8 k apply -f postgres.yaml
 После завершения синхронизации условие `USERSSYNCED` должно вернуться в `True`:
 
 ```shell
-d8 k get postgres app-postgres -n postgres -o wide
+d8 k get postgres app-postgres -n my-postgres -o wide
 ```
 
 Проверьте отсутствие роли непосредственно в PostgreSQL:
 
 ```shell
 PRIMARY="$(d8 k get clusters.cnpg.internal.managed.deckhouse.io d8ms-pg-app-postgres \
-  -n postgres \
+  -n my-postgres \
   -o jsonpath='{.status.targetPrimary}')"
 
-d8 k exec -n postgres "$PRIMARY" -- \
+d8 k exec -n my-postgres "$PRIMARY" -- \
   psql -U postgres -d postgres -Atc \
   "SELECT rolname FROM pg_roles WHERE rolname = 'app-rw';"
 ```
@@ -894,7 +894,7 @@ Defaulted container "postgres" out of: postgres, bootstrap-controller (init)
 Логическая база данных `app`, оставшаяся в [`spec.databases`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-databases), при удалении пользователя не удаляется. Проверьте её наличие командой:
 
 ```shell
-d8 k exec -n postgres "$PRIMARY" -- \
+d8 k exec -n my-postgres "$PRIMARY" -- \
   psql -U postgres -d postgres -Atc \
   "SELECT datname FROM pg_database WHERE datname = 'app';"
 ```
@@ -966,11 +966,11 @@ d8ms-pg-app-postgres-rw   ClusterIP   5432/TCP
 
 ```shell
 d8 k run postgres-client \
-  -n postgres \
+  -n my-postgres \
   --rm -it \
   --restart=Never \
   --image=postgres:17 \
-  --env="PGPASSWORD=$(d8 k get secret app-postgres-rw -n postgres -o jsonpath='{.data.password}' | base64 --decode)" \
+  --env="PGPASSWORD=$(d8 k get secret app-postgres-rw -n my-postgres -o jsonpath='{.data.password}' | base64 --decode)" \
   -- \
   psql \
     -h d8ms-pg-app-postgres-rw \
@@ -1011,7 +1011,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: app-postgres-external
-  namespace: postgres
+  namespace: my-postgres
 spec:
   type: NodePort
   selector:
@@ -1034,7 +1034,7 @@ d8 k apply -f app-postgres-external.yaml
 Проверьте созданный Service:
 
 ```shell
-d8 k get svc app-postgres-external -n postgres -o wide
+d8 k get svc app-postgres-external -n my-postgres -o wide
 ```
 
 Пример вывода:
@@ -1068,7 +1068,7 @@ primary PostgreSQL :5432
 Перед проверкой внешнего подключения можно убедиться, что созданный `NodePort` направляет трафик на основной экземпляр PostgreSQL. Для этого получите пароль пользователя:
 
 ```shell
-PGPASSWORD="$(d8 k get secret app-postgres-rw -n postgres \
+PGPASSWORD="$(d8 k get secret app-postgres-rw -n my-postgres \
   -o jsonpath='{.data.password}' | base64 --decode)"
 ```
 
@@ -1076,7 +1076,7 @@ PGPASSWORD="$(d8 k get secret app-postgres-rw -n postgres \
 
 ```shell
 d8 k run nodeport-test \
-  -n postgres \
+  -n my-postgres \
   --rm -i \
   --restart=Never \
   --image=postgres:17 \
@@ -1108,7 +1108,7 @@ d8 k run nodeport-test \
 Получите пароль пользователя:
 
 ```shell
-d8 k get secret app-postgres-rw -n postgres \
+d8 k get secret app-postgres-rw -n my-postgres \
   -o jsonpath='{.data.password}' | base64 --decode; echo
 ```
 
@@ -1158,7 +1158,7 @@ SELECT
 
 ```shell
 d8 k get secret d8ms-pg-app-postgres-server-cert \
-  -n postgres \
+  -n my-postgres \
   -o jsonpath='{.data.tls\.crt}' | \
   base64 --decode > /tmp/app-postgres-server.crt
 ```
@@ -1260,7 +1260,7 @@ The hostname <EXTERNAL_IP> could not be verified by hostnameverifier PgjdbcHostn
 - параметр должен быть разрешён для переопределения;
 - значение параметра должно соответствовать установленным правилам проверки.
 
-Если параметр запрещён для изменения или его значение не соответствует ограничениям, API отклонит применение ресурса Postgres.
+Если параметр запрещён для изменения или его значение не соответствует ограничениям, API отклонит запрос.
 
 ### Изменение разрешённого параметра
 
@@ -1284,10 +1284,10 @@ d8 k apply -f postgres.yaml
 
 ```shell
 PRIMARY="$(d8 k get clusters.cnpg.internal.managed.deckhouse.io d8ms-pg-app-postgres \
-  -n postgres \
+  -n my-postgres \
   -o jsonpath='{.status.targetPrimary}')"
 
-d8 k exec -n postgres "$PRIMARY" -- \
+d8 k exec -n my-postgres "$PRIMARY" -- \
   psql -U postgres -d postgres -c \
   "SHOW max_connections;"
 ```
@@ -1371,7 +1371,7 @@ Rule: configuration.maxConnections >= 100
 
 ## Настройка TLS
 
-Параметр [`spec.tls`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-tls) определяет способ управления TLS-сертификатами PostgreSQL. Поддерживаются режимы `CertManager`, `CustomCertificate` и `K8s`.
+Для управления TLS-сертификатами PostgreSQL используется параметр [`spec.tls`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-tls). Поддерживаются режимы `CertManager`, `CustomCertificate` и `K8s`.
 
 Для использования сертификатов, выпускаемых cert-manager, укажите режим `CertManager`:
 
@@ -1406,16 +1406,16 @@ spec:
     mode: K8s
 ```
 
-После перехода ресурса в готовое состояние модуль создаёт Secret с CA, серверным и репликационным сертификатами.
+После перехода объекта в готовое состояние модуль создаёт Secret с CA, сертификаты сервера и репликации.
 
 Проверьте использование TLS на стороне PostgreSQL через представление `pg_stat_ssl`. Определите основной экземпляр так же, как [в разделе «Проверка режима репликации»](#проверка-режима-репликации), и выполните запрос:
 
 ```shell
 PRIMARY="$(d8 k get clusters.cnpg.internal.managed.deckhouse.io d8ms-pg-app-postgres \
-  -n postgres \
+  -n my-postgres \
   -o jsonpath='{.status.targetPrimary}')"
 
-d8 k exec -n postgres "$PRIMARY" -- \
+d8 k exec -n my-postgres "$PRIMARY" -- \
   psql -U postgres -d postgres -c "
     SELECT
       a.pid,
@@ -1435,7 +1435,7 @@ d8 k exec -n postgres "$PRIMARY" -- \
 
 Настройка клиентского подключения с проверкой сертификата сервера описана [в разделе «Подключение с проверкой TLS»](#подключение-с-проверкой-tls).
 
-## Настройка наблюдаемости
+## Мониторинг и алерты
 
 Для Postgres можно включить мониторинг с алертами, полностью отключить мониторинг или оставить мониторинг без алертов. Режим наблюдаемости задаётся параметром [`spec.observability`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-observability).
 
@@ -1463,7 +1463,7 @@ spec:
 Проверьте применённый режим по лейблам Pod:
 
 ```shell
-d8 k get pod -n postgres \
+d8 k get pod -n my-postgres \
   -l managed-services.deckhouse.io/managed-service-name=app-postgres \
   -o json | \
   jq '.items[].metadata.labels | with_entries(select(.key | test("observability|prometheus")))'
@@ -1485,7 +1485,7 @@ EnabledWithoutAlerts   → no-alerts
 
 ## Резервное копирование и восстановление
 
-Для создания снимков используется ресурс PostgresSnapshot. StorageClass, в котором размещён Postgres, должен использовать CSI-драйвер с поддержкой snapshots, а в кластере должен быть доступен соответствующий VolumeSnapshotClass.
+Для создания снимков используется объект PostgresSnapshot. StorageClass, в котором размещён Postgres, должен использовать CSI-драйвер с поддержкой snapshots, а в кластере должен быть доступен соответствующий VolumeSnapshotClass.
 
 В [основном примере](#основной-пример-создание-postgres) используется StorageClass `replicated`, для которого провайдер в рассматриваемой конфигурации не поддерживает создание снимков. Поэтому для демонстрации используется отдельный StorageClass `snapshot-local` на `sds-local-volume` с LVM Thin.
 
@@ -1514,7 +1514,7 @@ apiVersion: managed-services.deckhouse.io/v1alpha1
 kind: Postgres
 metadata:
   name: snapshot-pg
-  namespace: postgres
+  namespace: my-postgres
 spec:
   postgresClassName: default
   instance:
@@ -1540,11 +1540,11 @@ spec:
 Создайте контрольную таблицу и запишите первую строку:
 
 ```shell
-PGPASSWORD="$(d8 k get secret snapshot-pg-rw -n postgres \
+PGPASSWORD="$(d8 k get secret snapshot-pg-rw -n my-postgres \
   -o jsonpath='{.data.password}' | base64 --decode)"
 
 d8 k run snapshot-client \
-  -n postgres \
+  -n my-postgres \
   --rm -i \
   --restart=Never \
   --image=postgres:17 \
@@ -1573,14 +1573,14 @@ d8 k run snapshot-client \
 (1 row)
 ```
 
-Создайте ресурс PostgresSnapshot:
+Создайте объект PostgresSnapshot:
 
 ```yaml
 apiVersion: managed-services.deckhouse.io/v1alpha1
 kind: PostgresSnapshot
 metadata:
   name: snapshot-pg-backup
-  namespace: postgres
+  namespace: my-postgres
 spec:
   postgresName: snapshot-pg
 ```
@@ -1594,7 +1594,7 @@ d8 k apply -f snapshot-pg-backup.yaml
 Проверьте состояние снимка:
 
 ```shell
-d8 k get postgressnapshot snapshot-pg-backup -n postgres \
+d8 k get postgressnapshot snapshot-pg-backup -n my-postgres \
   -o jsonpath='{.status.phase}{"\n"}'
 ```
 
@@ -1607,7 +1607,7 @@ completed
 Проверьте созданный VolumeSnapshot:
 
 ```shell
-d8 k get volumesnapshot -n postgres
+d8 k get volumesnapshot -n my-postgres
 ```
 
 Пример вывода:
@@ -1625,11 +1625,11 @@ d8ms-pg-snapshot-pg-backup   true         d8ms-pg-snapshot-pg-1   2Gi           
 После завершения создания снимка добавьте в исходную базу вторую контрольную строку:
 
 ```shell
-PGPASSWORD="$(d8 k get secret snapshot-pg-rw -n postgres \
+PGPASSWORD="$(d8 k get secret snapshot-pg-rw -n my-postgres \
   -o jsonpath='{.data.password}' | base64 --decode)"
 
 d8 k run snapshot-client \
-  -n postgres \
+  -n my-postgres \
   --rm -i \
   --restart=Never \
   --image=postgres:17 \
@@ -1657,14 +1657,14 @@ d8 k run snapshot-client \
 
 ### Восстановление из PostgresSnapshot
 
-Для восстановления создайте новый ресурс Postgres и укажите созданный PostgresSnapshot в [`spec.dataSource.objectRef`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-datasource-objectref). Исходный Postgres удалять не требуется:
+Для восстановления создайте новый объект Postgres и укажите созданный PostgresSnapshot в [`spec.dataSource.objectRef`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-datasource-objectref). Исходный Postgres удалять не требуется:
 
 ```yaml
 apiVersion: managed-services.deckhouse.io/v1alpha1
 kind: Postgres
 metadata:
   name: snapshot-pg-restored
-  namespace: postgres
+  namespace: my-postgres
 spec:
   dataSource:
     objectRef:
@@ -1691,17 +1691,17 @@ d8 k apply -f snapshot-pg-restored.yaml
 Дождитесь готовности восстановленного Postgres:
 
 ```shell
-d8 k get postgres snapshot-pg-restored -n postgres -o wide -w
+d8 k get postgres snapshot-pg-restored -n my-postgres -o wide -w
 ```
 
 После запуска восстановленного PostgreSQL проверьте контрольную таблицу:
 
 ```shell
-PGPASSWORD="$(d8 k get secret snapshot-pg-rw -n postgres \
+PGPASSWORD="$(d8 k get secret snapshot-pg-rw -n my-postgres \
   -o jsonpath='{.data.password}' | base64 --decode)"
 
 d8 k run snapshot-restore-check \
-  -n postgres \
+  -n my-postgres \
   --rm -i \
   --restart=Never \
   --image=postgres:17 \
@@ -1727,15 +1727,15 @@ d8 k run snapshot-restore-check \
 
 ## Проверка состояния
 
-Текущее состояние Postgres отражается в `status.conditions` этого ресурса.
+Текущее состояние Postgres отражается в `status.conditions` объекта.
 
 Для краткой проверки используйте:
 
 ```shell
-d8 k get postgres app-postgres -n postgres -o wide
+d8 k get postgres app-postgres -n my-postgres -o wide
 ```
 
-Основные условия:
+Основные условия (`status.conditions`):
 
 | Условие | Что показывает |
 | :-- | :-- |
@@ -1751,13 +1751,13 @@ d8 k get postgres app-postgres -n postgres -o wide
 Для наблюдения за изменением состояния:
 
 ```shell
-d8 k get postgres app-postgres -n postgres -o wide -w
+d8 k get postgres app-postgres -n my-postgres -o wide -w
 ```
 
 Для просмотра подробностей:
 
 ```shell
-d8 k get postgres app-postgres -n postgres -o yaml
+d8 k get postgres app-postgres -n my-postgres -o yaml
 ```
 
 Если Postgres не переходит в готовое состояние, диагностика — [в разделе «Частые вопросы»](faq.html).

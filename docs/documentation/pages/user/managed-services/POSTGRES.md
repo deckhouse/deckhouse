@@ -7,7 +7,9 @@ relatedLinks:
     url: "faq.html"
 ---
 
-The `managed-postgres` module lets you create and configure PostgreSQL using the Postgres resource. The user sets the required configuration, and the module creates and maintains PostgreSQL instances according to the PostgresClass, which defines the available parameters and limits. The PostgresClass is created and configured by the cluster administrator.
+Users can create and configure PostgreSQL if this capability has been enabled in the DKP cluster by the administrator.
+
+The user sets the required configuration using a Postgres object that points to a specific service class (PostgresClass), which defines the available parameters and limits. The PostgresClass is created and configured by the cluster administrator.
 
 This guide uses two examples:
 
@@ -91,20 +93,22 @@ replicated (default)   csi.dvp.deckhouse.io   Delete          WaitForFirstConsum
 {:.nowrap-default }
 <!-- markdownlint-enable MD031 -->
 
-The [`spec.instance.persistentVolumeClaim.storageClassName`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-instance-persistentvolumeclaim-storageclassname) parameter is set only when Postgres is created and can't be changed later.
+{% alert level="warning" %}
+The [`spec.instance.persistentVolumeClaim.storageClassName`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-instance-persistentvolumeclaim-storageclassname) parameter is set only when Postgres is created. It can't be changed afterwards.
+{% endalert %}
 
 ## Main example of creating Postgres
 
 Create a namespace:
 
 ```shell
-d8 k create namespace postgres
+d8 k create namespace my-postgres
 ```
 
-To create a Postgres resource, complete the following steps:
+To create a Postgres object, complete the following steps:
 
 - [Select PostgresClass](#select-postgresclass);
-- [Configure Postgres resources](#configure-postgres-resources);
+- [Configure resources](#configure-resources);
 - [Select deployment mode](#select-deployment-mode);
 - [Configure topology and replication mode](#configure-topology-and-replication-mode);
 - [Create logical database and user](#create-logical-database-and-user);
@@ -112,14 +116,14 @@ To create a Postgres resource, complete the following steps:
 - [Configure TLS](#configure-tls);
 - [Configure observability](#configure-observability).
 
-The following example shows an `app-postgres` Postgres resource manifest. You can apply it as is and then customize it using the steps below.
+The following example shows an `app-postgres` Postgres manifest. You can apply it as is and then customize it using the steps below.
 
 ```yaml
 apiVersion: managed-services.deckhouse.io/v1alpha1
 kind: Postgres
 metadata:
   name: app-postgres
-  namespace: postgres
+  namespace: my-postgres
 spec:
   postgresClassName: default
 
@@ -164,10 +168,10 @@ d8 k apply -f postgres.yaml
 Check the status of the created Postgres:
 
 ```shell
-d8 k get postgres app-postgres -n postgres -o wide
+d8 k get postgres app-postgres -n my-postgres -o wide
 ```
 
-Once the rollout is complete, the main conditions should change to `True`. For details about each condition, see [Check status](#check-status).
+Once the rollout is complete, the main conditions (`status.conditions`) should change to `True`. For details about each condition, see [Check status](#check-status).
 
 Example output:
 
@@ -212,13 +216,11 @@ The PostgresClass settings and limits are described in [Limit CPU and memory res
 
 ### Placement restrictions
 
-A PostgresClass can also define PostgreSQL instance placement rules using `nodeSelector`, `nodeAffinity`, and `tolerations`. These rules apply automatically once the class is selected and aren't specified in the Postgres resource.
+A PostgresClass can also define PostgreSQL instance placement rules using `nodeSelector`, `nodeAffinity`, and `tolerations`. These rules apply automatically once the class is selected and aren't specified in the Postgres object.
 
-## Configure Postgres resources
+## Configure resources
 
-For each PostgreSQL instance, you can set the number of CPUs, the guaranteed CPU share, and the amount of memory.
-
-The [`spec.instance`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-instance) parameter defines the resources of each PostgreSQL instance.
+The [`spec.instance`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-instance) parameter is used to configure the resources of each PostgreSQL instance — the number of CPUs, the guaranteed CPU share, and the amount of memory.
 
 In the example, this fragment is responsible for resources and storage:
 
@@ -248,7 +250,7 @@ For more information, see [Limit CPU and memory resources](/admin/configuration/
 You can change Postgres resources by reapplying the manifest, provided the new values are allowed by the selected PostgresClass. First, check the current resource values:
 
 ```shell
-d8 k get pods -n postgres \
+d8 k get pods -n my-postgres \
   -l managed-services.deckhouse.io/managed-service-name=app-postgres \
   -o custom-columns='NAME:.metadata.name,CPU_REQUEST:.spec.containers[0].resources.requests.cpu,MEMORY_REQUEST:.spec.containers[0].resources.requests.memory'
 ```
@@ -339,7 +341,7 @@ Apply the manifest:
 d8 k apply -f postgres.yaml
 ```
 
-The API rejects the resource. Example output:
+The API rejects the request. Example output:
 
 ```console
 spec.instance.memory.size: Invalid value: 734003200: memory setting does not fit Step 536870912 of the selected PostgresClass
@@ -377,7 +379,7 @@ spec:
 After Postgres is created, a single PostgreSQL instance starts. Check the created PostgreSQL instances:
 
 ```shell
-d8 k get pods -n postgres \
+d8 k get pods -n my-postgres \
   -l managed-services.deckhouse.io/managed-service-name=app-postgres \
   -o wide
 ```
@@ -392,7 +394,7 @@ d8ms-pg-app-postgres-1   Running   worker-1
 Check the Services created for connecting to PostgreSQL:
 
 ```shell
-d8 k get svc -n postgres | grep app-postgres
+d8 k get svc -n my-postgres | grep app-postgres
 ```
 
 Example output:
@@ -409,7 +411,7 @@ d8ms-pg-app-postgres-rw   ClusterIP   10.223.120.250   <none>   5432/TCP
 Check which instances the Services point to, via endpoints:
 
 ```shell
-d8 k get endpoints -n postgres | grep app-postgres
+d8 k get endpoints -n my-postgres | grep app-postgres
 ```
 
 Example output:
@@ -420,15 +422,13 @@ d8ms-pg-app-postgres-ro   <none>             42h
 d8ms-pg-app-postgres-rw   10.112.2.31:5432   42h
 ```
 
-The `-r` and `-rw` Services route connections to the only instance. The `-ro` Service is also created but has no endpoint, since `Standalone` mode has no replicas.
+The Services with the `-r` and `-rw` suffixes route connections to the only instance. The Service with the `-ro` suffix is also created but has no endpoint, since `Standalone` mode has no replicas.
 
 ## Configure topology and replication mode
 
-In `Cluster` mode, topology determines how PostgreSQL instances are placed across nodes and availability zones. It lets you control where instances are placed to meet PostgreSQL fault tolerance requirements.
+In `Cluster` mode, you can manage the fault tolerance of PostgreSQL instances by setting their placement across nodes and availability zones in the [`spec.cluster.topology`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-cluster-topology) parameter.
 
 ### Configure topology
-
-The [`spec.cluster.topology`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-cluster-topology) parameter determines how PostgreSQL instances are placed across nodes and availability zones.
 
 The following values are supported:
 
@@ -451,7 +451,7 @@ spec:
 Check instance placement:
 
 ```shell
-d8 k get pods -n postgres \
+d8 k get pods -n my-postgres \
   -l managed-services.deckhouse.io/managed-service-name=app-postgres \
   -o wide
 ```
@@ -518,14 +518,14 @@ First, identify the current primary instance:
 
 ```shell
 PRIMARY="$(d8 k get clusters.cnpg.internal.managed.deckhouse.io d8ms-pg-app-postgres \
-  -n postgres \
+  -n my-postgres \
   -o jsonpath='{.status.targetPrimary}')"
 ```
 
 Then run the query:
 
 ```shell
-d8 k exec -n postgres "$PRIMARY" -- \
+d8 k exec -n my-postgres "$PRIMARY" -- \
   psql -U postgres -d postgres -c \
   "SELECT application_name, state, sync_state FROM pg_stat_replication;"
 ```
@@ -557,7 +557,7 @@ spec:
 After Postgres is created, two PostgreSQL instances start:
 
 ```shell
-d8 k get pods -n postgres \
+d8 k get pods -n my-postgres \
   -l managed-services.deckhouse.io/managed-service-name=app-postgres \
   -o wide
 ```
@@ -582,7 +582,7 @@ Check the replication mode as described in [Check replication mode](#check-repli
 You can check how Service traffic is distributed between the primary instance and the replica through EndpointSlice:
 
 ```shell
-d8 k get endpointslice -n postgres | grep app-postgres
+d8 k get endpointslice -n my-postgres | grep app-postgres
 ```
 
 Example output:
@@ -610,7 +610,7 @@ spec:
 After Postgres is created, two PostgreSQL instances start:
 
 ```shell
-d8 k get pods -n postgres \
+d8 k get pods -n my-postgres \
   -l managed-services.deckhouse.io/managed-service-name=app-postgres \
   -o wide
 ```
@@ -636,14 +636,14 @@ You can additionally verify synchronous replication by checking the actual data 
 
 ```shell
 PRIMARY="$(d8 k get clusters.cnpg.internal.managed.deckhouse.io d8ms-pg-app-postgres \
-  -n postgres \
+  -n my-postgres \
   -o jsonpath='{.status.targetPrimary}')"
 ```
 
 Create a check table on the primary instance and insert a row:
 
 ```shell
-d8 k exec -n postgres "$PRIMARY" -- \
+d8 k exec -n my-postgres "$PRIMARY" -- \
   psql -U postgres -d postgres -c "
     CREATE TABLE consistency_check (
       id integer PRIMARY KEY,
@@ -656,7 +656,7 @@ d8 k exec -n postgres "$PRIMARY" -- \
 Identify the replica:
 
 ```shell
-REPLICA="$(d8 k get pods -n postgres \
+REPLICA="$(d8 k get pods -n my-postgres \
   -l managed-services.deckhouse.io/managed-service-name=app-postgres \
   -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' | \
   grep -v "^${PRIMARY}$" | head -n1)"
@@ -665,7 +665,7 @@ REPLICA="$(d8 k get pods -n postgres \
 Check that the row exists directly on the replica:
 
 ```shell
-d8 k exec -n postgres "$REPLICA" -- \
+d8 k exec -n my-postgres "$REPLICA" -- \
   psql -U postgres -d postgres -c \
   "SELECT pg_is_in_recovery(), * FROM consistency_check;"
 ```
@@ -698,7 +698,7 @@ spec:
 After Postgres is created, three PostgreSQL instances start:
 
 ```shell
-d8 k get pods -n postgres \
+d8 k get pods -n my-postgres \
   -l managed-services.deckhouse.io/managed-service-name=app-postgres \
   -o wide
 ```
@@ -740,7 +740,7 @@ Apply the changes:
 d8 k apply -f postgres.yaml
 ```
 
-During the update, `ScaledToLastValidConfiguration` may temporarily switch to `False`. After the update completes, the resource conditions should return to `True`.
+During the update, `ScaledToLastValidConfiguration` may temporarily switch to `False`. After the update completes, the object's conditions (`status.conditions`) should return to `True`.
 
 Check the new mode as described in [Check replication mode](#check-replication-mode). After switching to `Consistency`, the replica should work in synchronous mode:
 
@@ -757,7 +757,7 @@ d8ms-pg-app-postgres-2 | streaming | async
 When switching to `ConsistencyAndAvailability`, the number of instances increases from two to three. Check the running instances:
 
 ```shell
-d8 k get pods -n postgres \
+d8 k get pods -n my-postgres \
   -l managed-services.deckhouse.io/managed-service-name=app-postgres \
   -o wide
 ```
@@ -792,7 +792,7 @@ spec:
 After applying the manifest, wait for the users and databases to synchronize. The `USERSSYNCED` and `DATABASESSYNCED` conditions should be `True`:
 
 ```shell
-d8 k get postgres app-postgres -n postgres -o wide
+d8 k get postgres app-postgres -n my-postgres -o wide
 ```
 
 ### PostgreSQL user
@@ -802,7 +802,7 @@ User credentials are stored in the Secret specified in [`storeCredsToSecret`](/m
 Check the created Secret:
 
 ```shell
-d8 k get secret app-postgres-rw -n postgres
+d8 k get secret app-postgres-rw -n my-postgres
 ```
 
 Example output:
@@ -824,10 +824,10 @@ username
 Get the connection parameters as follows:
 
 ```shell
-echo "host: $(d8 k get secret app-postgres-rw -n postgres -o jsonpath='{.data.host}' | base64 --decode)"
-echo "username: $(d8 k get secret app-postgres-rw -n postgres -o jsonpath='{.data.username}' | base64 --decode)"
-echo "password: $(d8 k get secret app-postgres-rw -n postgres -o jsonpath='{.data.password}' | base64 --decode)"
-echo "app-dsn: $(d8 k get secret app-postgres-rw -n postgres -o jsonpath='{.data.app-dsn}' | base64 --decode)"
+echo "host: $(d8 k get secret app-postgres-rw -n my-postgres -o jsonpath='{.data.host}' | base64 --decode)"
+echo "username: $(d8 k get secret app-postgres-rw -n my-postgres -o jsonpath='{.data.username}' | base64 --decode)"
+echo "password: $(d8 k get secret app-postgres-rw -n my-postgres -o jsonpath='{.data.password}' | base64 --decode)"
+echo "app-dsn: $(d8 k get secret app-postgres-rw -n my-postgres -o jsonpath='{.data.app-dsn}' | base64 --decode)"
 ```
 
 Example output:
@@ -867,17 +867,17 @@ d8 k apply -f postgres.yaml
 After synchronization completes, the `USERSSYNCED` condition should return to `True`:
 
 ```shell
-d8 k get postgres app-postgres -n postgres -o wide
+d8 k get postgres app-postgres -n my-postgres -o wide
 ```
 
 Check that the role is gone directly in PostgreSQL:
 
 ```shell
 PRIMARY="$(d8 k get clusters.cnpg.internal.managed.deckhouse.io d8ms-pg-app-postgres \
-  -n postgres \
+  -n my-postgres \
   -o jsonpath='{.status.targetPrimary}')"
 
-d8 k exec -n postgres "$PRIMARY" -- \
+d8 k exec -n my-postgres "$PRIMARY" -- \
   psql -U postgres -d postgres -Atc \
   "SELECT rolname FROM pg_roles WHERE rolname = 'app-rw';"
 ```
@@ -893,7 +893,7 @@ Defaulted container "postgres" out of: postgres, bootstrap-controller (init)
 The `app` logical database, which remains in [`spec.databases`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-databases), isn't deleted when the user is removed. Check that it still exists:
 
 ```shell
-d8 k exec -n postgres "$PRIMARY" -- \
+d8 k exec -n my-postgres "$PRIMARY" -- \
   psql -U postgres -d postgres -Atc \
   "SELECT datname FROM pg_database WHERE datname = 'app';"
 ```
@@ -965,11 +965,11 @@ To test the connection, you don't need to install `psql` on a control plane node
 
 ```shell
 d8 k run postgres-client \
-  -n postgres \
+  -n my-postgres \
   --rm -it \
   --restart=Never \
   --image=postgres:17 \
-  --env="PGPASSWORD=$(d8 k get secret app-postgres-rw -n postgres -o jsonpath='{.data.password}' | base64 --decode)" \
+  --env="PGPASSWORD=$(d8 k get secret app-postgres-rw -n my-postgres -o jsonpath='{.data.password}' | base64 --decode)" \
   -- \
   psql \
     -h d8ms-pg-app-postgres-rw \
@@ -1010,7 +1010,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: app-postgres-external
-  namespace: postgres
+  namespace: my-postgres
 spec:
   type: NodePort
   selector:
@@ -1033,7 +1033,7 @@ d8 k apply -f app-postgres-external.yaml
 Check the created Service:
 
 ```shell
-d8 k get svc app-postgres-external -n postgres -o wide
+d8 k get svc app-postgres-external -n my-postgres -o wide
 ```
 
 Example output:
@@ -1067,7 +1067,7 @@ When publishing PostgreSQL to an external network, make sure access to the datab
 Before testing the external connection, you can confirm that the created `NodePort` routes traffic to the primary PostgreSQL instance. To do this, get the user's password:
 
 ```shell
-PGPASSWORD="$(d8 k get secret app-postgres-rw -n postgres \
+PGPASSWORD="$(d8 k get secret app-postgres-rw -n my-postgres \
   -o jsonpath='{.data.password}' | base64 --decode)"
 ```
 
@@ -1075,7 +1075,7 @@ Start a temporary client Pod and connect via the node IP and `NodePort`:
 
 ```shell
 d8 k run nodeport-test \
-  -n postgres \
+  -n my-postgres \
   --rm -i \
   --restart=Never \
   --image=postgres:17 \
@@ -1107,7 +1107,7 @@ You can connect directly by IP address, for example, to verify external access t
 Get the user's password:
 
 ```shell
-d8 k get secret app-postgres-rw -n postgres \
+d8 k get secret app-postgres-rw -n my-postgres \
   -o jsonpath='{.data.password}' | base64 --decode; echo
 ```
 
@@ -1157,7 +1157,7 @@ Save the automatically created server certificate to a file to determine the DNS
 
 ```shell
 d8 k get secret d8ms-pg-app-postgres-server-cert \
-  -n postgres \
+  -n my-postgres \
   -o jsonpath='{.data.tls\.crt}' | \
   base64 --decode > /tmp/app-postgres-server.crt
 ```
@@ -1259,7 +1259,7 @@ Whether a parameter can be changed is determined by the PostgresClass settings:
 - the parameter must be allowed to be overridden;
 - the parameter value must comply with the configured validation rules.
 
-If a parameter cannot be overridden or its value is outside the allowed limits, the API rejects the Postgres resource when it is applied.
+If a parameter cannot be overridden or its value is outside the allowed limits, the API rejects the request.
 
 ### Change an allowed parameter
 
@@ -1283,10 +1283,10 @@ After the update completes, check the applied value directly in PostgreSQL:
 
 ```shell
 PRIMARY="$(d8 k get clusters.cnpg.internal.managed.deckhouse.io d8ms-pg-app-postgres \
-  -n postgres \
+  -n my-postgres \
   -o jsonpath='{.status.targetPrimary}')"
 
-d8 k exec -n postgres "$PRIMARY" -- \
+d8 k exec -n my-postgres "$PRIMARY" -- \
   psql -U postgres -d postgres -c \
   "SHOW max_connections;"
 ```
@@ -1370,7 +1370,7 @@ The existing Postgres continues running with the last successfully applied confi
 
 ## Configure TLS
 
-The [`spec.tls`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-tls) parameter defines how PostgreSQL TLS certificates are managed. The `CertManager`, `CustomCertificate`, and `K8s` modes are supported.
+The [`spec.tls`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-tls) parameter is used to manage PostgreSQL TLS certificates. The `CertManager`, `CustomCertificate`, and `K8s` modes are supported.
 
 To use certificates issued by cert-manager, specify `CertManager` mode:
 
@@ -1405,16 +1405,16 @@ spec:
     mode: K8s
 ```
 
-Once the resource reaches the ready state, the module creates a Secret with the CA, server, and replication certificates.
+Once the object reaches the ready state, the module creates a Secret with the CA, server, and replication certificates.
 
 Check TLS usage on the PostgreSQL side through the `pg_stat_ssl` view. Identify the primary instance the same way as in [Check replication mode](#check-replication-mode), and run the query:
 
 ```shell
 PRIMARY="$(d8 k get clusters.cnpg.internal.managed.deckhouse.io d8ms-pg-app-postgres \
-  -n postgres \
+  -n my-postgres \
   -o jsonpath='{.status.targetPrimary}')"
 
-d8 k exec -n postgres "$PRIMARY" -- \
+d8 k exec -n my-postgres "$PRIMARY" -- \
   psql -U postgres -d postgres -c "
     SELECT
       a.pid,
@@ -1434,7 +1434,7 @@ For a TLS connection, the `ssl` field is `t`, and `version` and `cipher` show th
 
 Configuring a client connection with server certificate verification is described in [Connect with TLS verification](#connect-with-tls-verification).
 
-## Configure observability
+## Monitoring and alerts
 
 For Postgres, you can enable monitoring with alerts, fully disable monitoring, or keep monitoring without alerts. The observability mode is set by the [`spec.observability`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-observability) parameter.
 
@@ -1462,7 +1462,7 @@ spec:
 Check the applied mode by the Pod labels:
 
 ```shell
-d8 k get pod -n postgres \
+d8 k get pod -n my-postgres \
   -l managed-services.deckhouse.io/managed-service-name=app-postgres \
   -o json | \
   jq '.items[].metadata.labels | with_entries(select(.key | test("observability|prometheus")))'
@@ -1484,7 +1484,7 @@ With monitoring enabled, the output also contains the label:
 
 ## Backup and restore
 
-The PostgresSnapshot resource is used to create snapshots. The StorageClass where Postgres is placed must use a CSI driver with snapshot support, and a corresponding VolumeSnapshotClass must be available in the cluster.
+The PostgresSnapshot object is used to create snapshots. The StorageClass where Postgres is placed must use a CSI driver with snapshot support, and a corresponding VolumeSnapshotClass must be available in the cluster.
 
 The [main example](#main-example-of-creating-postgres) uses the `replicated` StorageClass, for which the provider in this configuration doesn't support creating snapshots. So for this demonstration, a separate `snapshot-local` StorageClass on `sds-local-volume` with LVM Thin is used.
 
@@ -1513,7 +1513,7 @@ apiVersion: managed-services.deckhouse.io/v1alpha1
 kind: Postgres
 metadata:
   name: snapshot-pg
-  namespace: postgres
+  namespace: my-postgres
 spec:
   postgresClassName: default
   instance:
@@ -1539,11 +1539,11 @@ To clearly verify data recovery at the moment the snapshot was created, use a ch
 Create the check table and insert the first row:
 
 ```shell
-PGPASSWORD="$(d8 k get secret snapshot-pg-rw -n postgres \
+PGPASSWORD="$(d8 k get secret snapshot-pg-rw -n my-postgres \
   -o jsonpath='{.data.password}' | base64 --decode)"
 
 d8 k run snapshot-client \
-  -n postgres \
+  -n my-postgres \
   --rm -i \
   --restart=Never \
   --image=postgres:17 \
@@ -1572,14 +1572,14 @@ Example output:
 (1 row)
 ```
 
-Create the PostgresSnapshot resource:
+Create the PostgresSnapshot object:
 
 ```yaml
 apiVersion: managed-services.deckhouse.io/v1alpha1
 kind: PostgresSnapshot
 metadata:
   name: snapshot-pg-backup
-  namespace: postgres
+  namespace: my-postgres
 spec:
   postgresName: snapshot-pg
 ```
@@ -1593,7 +1593,7 @@ d8 k apply -f snapshot-pg-backup.yaml
 Check the snapshot status:
 
 ```shell
-d8 k get postgressnapshot snapshot-pg-backup -n postgres \
+d8 k get postgressnapshot snapshot-pg-backup -n my-postgres \
   -o jsonpath='{.status.phase}{"\n"}'
 ```
 
@@ -1606,7 +1606,7 @@ completed
 Check the created VolumeSnapshot:
 
 ```shell
-d8 k get volumesnapshot -n postgres
+d8 k get volumesnapshot -n my-postgres
 ```
 
 Example output:
@@ -1624,11 +1624,11 @@ d8ms-pg-snapshot-pg-backup   true         d8ms-pg-snapshot-pg-1   2Gi           
 After the snapshot is created, add a second check row to the original database:
 
 ```shell
-PGPASSWORD="$(d8 k get secret snapshot-pg-rw -n postgres \
+PGPASSWORD="$(d8 k get secret snapshot-pg-rw -n my-postgres \
   -o jsonpath='{.data.password}' | base64 --decode)"
 
 d8 k run snapshot-client \
-  -n postgres \
+  -n my-postgres \
   --rm -i \
   --restart=Never \
   --image=postgres:17 \
@@ -1656,14 +1656,14 @@ Example output:
 
 ### Restore from a PostgresSnapshot
 
-To restore, create a new Postgres resource and specify the created PostgresSnapshot in [`spec.dataSource.objectRef`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-datasource-objectref). You don't need to delete the original Postgres:
+To restore, create a new Postgres object and specify the created PostgresSnapshot in [`spec.dataSource.objectRef`](/modules/managed-postgres/cr.html#postgres-v1alpha1-spec-datasource-objectref). You don't need to delete the original Postgres:
 
 ```yaml
 apiVersion: managed-services.deckhouse.io/v1alpha1
 kind: Postgres
 metadata:
   name: snapshot-pg-restored
-  namespace: postgres
+  namespace: my-postgres
 spec:
   dataSource:
     objectRef:
@@ -1690,17 +1690,17 @@ d8 k apply -f snapshot-pg-restored.yaml
 Wait for the restored Postgres to become ready:
 
 ```shell
-d8 k get postgres snapshot-pg-restored -n postgres -o wide -w
+d8 k get postgres snapshot-pg-restored -n my-postgres -o wide -w
 ```
 
 After the restored PostgreSQL starts, check the check table:
 
 ```shell
-PGPASSWORD="$(d8 k get secret snapshot-pg-rw -n postgres \
+PGPASSWORD="$(d8 k get secret snapshot-pg-rw -n my-postgres \
   -o jsonpath='{.data.password}' | base64 --decode)"
 
 d8 k run snapshot-restore-check \
-  -n postgres \
+  -n my-postgres \
   --rm -i \
   --restart=Never \
   --image=postgres:17 \
@@ -1726,15 +1726,15 @@ The presence of only `BEFORE_SNAPSHOT` confirms that the database state was rest
 
 ## Check status
 
-The current state of Postgres is reflected in `status.conditions` of this resource.
+The current state of Postgres is reflected in `status.conditions` of this object.
 
 For a quick check, use:
 
 ```shell
-d8 k get postgres app-postgres -n postgres -o wide
+d8 k get postgres app-postgres -n my-postgres -o wide
 ```
 
-Main conditions:
+Main conditions (`status.conditions`):
 
 | Condition | What it shows |
 | :-- | :-- |
@@ -1750,13 +1750,13 @@ While resources or PostgreSQL parameters are being changed, some conditions may 
 To watch the status change:
 
 ```shell
-d8 k get postgres app-postgres -n postgres -o wide -w
+d8 k get postgres app-postgres -n my-postgres -o wide -w
 ```
 
 To see the details:
 
 ```shell
-d8 k get postgres app-postgres -n postgres -o yaml
+d8 k get postgres app-postgres -n my-postgres -o yaml
 ```
 
 If Postgres doesn't reach the ready state, see the [Frequently Asked Questions](faq.html) section for diagnostics.
