@@ -17,8 +17,8 @@ lang: ru
 1. [Включите модуль `managed-postgres`](/modules/managed-postgres/configuration.html#enable) в web-интерфейсе DKP или другими способами.
 1. Создайте [PostgresClass](/modules/managed-postgres/cr.html#postgresclass-v1alpha1) с необходимыми настройками, которые будут использоваться пользователями при создании объектов Postgres. Также можно использовать PostgresClass `default`, создаваемый модулем при включении. PostgresClass `default` содержит базовые настройки, чтобы пользователи могли сразу после включения Managed PostgreSQL в DKP создавать базы данных. Для production-окружений рекомендуется создавать отдельные PostgresClass с явными настройками и ограничениями.
 
-После включения модуля пользователи смогут сами создавать базы данных PostgreSQL. Пользовательские операции с сервисом описаны [в разделе «Использование» → 
-«Managed-сервисы» → «Managed PostgreSQL»](../../../user/managed-services/postgres.html). 
+После включения модуля пользователи смогут сами создавать базы данных PostgreSQL. Пользовательские операции с сервисом описаны [в разделе «Использование» →
+«Managed-сервисы» → «Managed PostgreSQL»](../../../user/managed-services/postgres.html).
 
 ## Зависимости для отдельных функций
 
@@ -321,7 +321,7 @@ spec:
 - `Ignored` — стандартное планирование без привязки к зонам;
 - `Zonal` — все экземпляры размещаются в одной зоне (минимальная задержка между репликами). Подходит для сред с низкой задержкой, где потеря зоны допустима;
 - `TransZonal` — экземпляры распределяются по разным зонам (один основной экземпляр, одна синхронная реплика, одна асинхронная реплика). Защищает от падения целой зоны, но требует больше ресурсов.
- 
+
 Администратор может указать разрешённые варианты топологий ([`allowedTopologies`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology-allowedtopologies)), топологию по умолчанию ([`defaultTopology`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology-defaulttopology)) и список доступных зон ([`allowedZones`](/modules/managed-postgres/cr.html#postgresclass-v1alpha1-spec-topology-allowedzones)).
 
 Ниже приведён фрагмент манифеста PostgresClass, с указанием параметров топологии. Полный вариант приведён [в разделе «Пример создания PostgresClass»](#пример-создания-postgresclass).
