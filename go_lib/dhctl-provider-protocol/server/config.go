@@ -15,9 +15,9 @@
 package server
 
 import (
+	"encoding/json"
 	"fmt"
 	"log/slog"
-	"regexp"
 	"slices"
 
 	"google.golang.org/grpc"
@@ -37,15 +37,11 @@ const (
 	NetworkFlag  = "network"
 	AddressFlag  = "address"
 
-	// ListeningPrefix heads the line a validator writes to stdout once it has bound
-	// its endpoint. The caller reads it from the process output to learn where to
-	// dial, so the format below is part of the protocol.
-	ListeningPrefix  = "dhctl-provider-protocol: listening on "
-	listeningFormat  = ListeningPrefix + "network: %s, address: %s"
-	listeningPattern = `(?m)` + ListeningPrefix + `network: ([^,]+), address: (.+)$`
+	// infoMessage marks a line a validator writes to stdout for the caller rather than
+	// for a log: the caller picks those records out of the process output, so the
+	// message and the fields around it are part of the protocol.
+	infoMessage = "dhctl-provider-protocol info"
 )
-
-var listeningRegexp = regexp.MustCompile(listeningPattern)
 
 type Config struct {
 	Network     string
@@ -126,19 +122,30 @@ func ServeArgs(network, address string) []string {
 	}
 }
 
-// ListeningLine is what a validator announces: the network and the address it bound,
-// which is not what the caller asked for when it asked for port 0.
-func ListeningLine(network, address string) string {
-	return fmt.Sprintf(listeningFormat, network, address)
+type InfoRecord struct {
+	Message string `json:"msg"`
+	Network string `json:"network"`
+	Address string `json:"address"`
 }
 
-// ParseListeningLine reads back what ListeningLine wrote.
-//
-//nolint:nonamedreturns // named return values serve as documentation for the caller
-func ParseListeningLine(line string) (network, address string, ok bool) {
-	match := listeningRegexp.FindStringSubmatch(line)
-	if match == nil {
-		return "", "", false
+func (i InfoRecord) isEmpty() bool {
+	return i.Message == "" || i.Network == "" || i.Address == ""
+}
+
+func InfoLine(announced InfoRecord) string {
+	announced.Message = infoMessage
+	payload, _ := json.Marshal(announced)
+	return string(payload)
+}
+
+func ParseInfoLine(line string) (InfoRecord, bool) {
+	var info InfoRecord
+	if err := json.Unmarshal([]byte(line), &info); err != nil {
+		return InfoRecord{}, false
 	}
-	return match[1], match[2], true
+
+	if info.isEmpty() || info.Message != infoMessage {
+		return InfoRecord{}, false
+	}
+	return info, true
 }

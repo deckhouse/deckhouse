@@ -208,7 +208,7 @@ func echoesBack(_ context.Context, input validatev1.Input) (*validatev1.Validate
 	}, nil
 }
 
-func TestListeningLineRoundTrip(t *testing.T) {
+func TestInfoLineRoundTrip(t *testing.T) {
 	tests := []struct {
 		name    string
 		line    string
@@ -218,31 +218,28 @@ func TestListeningLineRoundTrip(t *testing.T) {
 	}{
 		{
 			name:    "reads back what a validator announced",
-			line:    server.ListeningLine("tcp", "127.0.0.1:8080"),
+			line:    announced("tcp", "127.0.0.1:8080"),
 			network: "tcp",
 			address: "127.0.0.1:8080",
 			wantOK:  true,
 		},
 		{
-			// An IPv6 address carries brackets, and nothing about them ends the
-			// endpoint: the address runs to the first space or quote.
 			name:    "an IPv6 address keeps its brackets",
-			line:    server.ListeningLine("tcp", "[::1]:43111"),
+			line:    announced("tcp", "[::1]:43111"),
 			network: "tcp",
 			address: "[::1]:43111",
 			wantOK:  true,
 		},
 		{
-			// A socket path may carry spaces; only a quote or the line ends it.
 			name:    "a socket path keeps its spaces",
-			line:    server.ListeningLine("unix", "/tmp/dir with space/v.sock"),
+			line:    announced("unix", "/tmp/dir with space/v.sock"),
 			network: "unix",
 			address: "/tmp/dir with space/v.sock",
 			wantOK:  true,
 		},
 		{
 			name:    "a socket path is an address like any other",
-			line:    server.ListeningLine("unix", "/tmp/v.sock"),
+			line:    announced("unix", "/tmp/v.sock"),
 			network: "unix",
 			address: "/tmp/v.sock",
 			wantOK:  true,
@@ -252,27 +249,33 @@ func TestListeningLineRoundTrip(t *testing.T) {
 			line: `{"level":"info","msg":"Serve validator"}`,
 		},
 		{
-			name: "the prefix alone announces nothing",
-			line: server.ListeningPrefix,
+			// A validator that logs in JSON prints records of its own, and none of
+			// them is an announcement.
+			name: "a record without the announcement message announces nothing",
+			line: `{"msg":"serving","network":"tcp","address":"127.0.0.1:8080"}`,
 		},
 		{
-			name: "half a line announces nothing",
-			line: server.ListeningPrefix + "network: tcp",
+			name: "half an endpoint announces nothing",
+			line: strings.Replace(announced("tcp", "127.0.0.1:8080"), `"address":"127.0.0.1:8080"`, `"address":""`, 1),
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			network, address, ok := server.ParseListeningLine(test.line)
+			got, ok := server.ParseInfoLine(test.line)
 
 			if ok != test.wantOK {
-				t.Fatalf("ParseListeningLine(%q) ok = %v, want %v", test.line, ok, test.wantOK)
+				t.Fatalf("ParseInfoLine(%q) ok = %v, want %v", test.line, ok, test.wantOK)
 			}
 
-			if network != test.network || address != test.address {
-				t.Errorf("ParseListeningLine(%q) = %q %q, want %q %q",
-					test.line, network, address, test.network, test.address)
+			if got.Network != test.network || got.Address != test.address {
+				t.Errorf("ParseInfoLine(%q) = %q %q, want %q %q",
+					test.line, got.Network, got.Address, test.network, test.address)
 			}
 		})
 	}
+}
+
+func announced(network, address string) string {
+	return server.InfoLine(server.InfoRecord{Network: network, Address: address})
 }

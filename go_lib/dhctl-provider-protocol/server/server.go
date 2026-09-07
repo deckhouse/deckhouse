@@ -72,7 +72,10 @@ func Start(config Config, services ...Service) (*Server, error) {
 
 	// Straight to stdout, not through the logger: the caller parses this line to find
 	// the endpoint at all, and a log level must not be able to hide it.
-	fmt.Println(ListeningLine(listener.Addr().Network(), listener.Addr().String()))
+	fmt.Println(InfoLine(InfoRecord{
+		Network: listener.Addr().Network(),
+		Address: listener.Addr().String(),
+	}))
 
 	go func() {
 		s.serveDone <- grpcServer.Serve(listener)

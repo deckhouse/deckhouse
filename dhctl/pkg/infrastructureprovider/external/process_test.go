@@ -767,7 +767,10 @@ func runFakeValidator(args []string, opts ...fakeOption) int {
 // announceAndDie is the validator that goes down: it never binds anything, points the
 // caller at a socket of the test's own and exits while the call is still in flight.
 func announceAndDie(fake fakeConfig) int {
-	fmt.Println(server.ListeningLine(networkTCP, fake.AnnounceAddress))
+	fmt.Println(server.InfoLine(server.InfoRecord{
+		Network: networkTCP,
+		Address: fake.AnnounceAddress,
+	}))
 	time.Sleep(fake.ExitAfter)
 	fmt.Fprintln(os.Stderr, "validator failed after announcing")
 

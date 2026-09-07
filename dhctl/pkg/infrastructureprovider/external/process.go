@@ -211,13 +211,13 @@ func (v *listeningValidator) Endpoint() endpoint {
 }
 
 func (v *listeningValidator) catchEndpoint(line string) {
-	network, address, ok := server.ParseListeningLine(line)
+	info, ok := server.ParseInfoLine(line)
 	if !ok {
 		return
 	}
 
 	select {
-	case v.announcedCh <- endpoint{Network: network, Address: address}:
+	case v.announcedCh <- endpoint{Network: info.Network, Address: info.Address}:
 	default:
 	}
 }

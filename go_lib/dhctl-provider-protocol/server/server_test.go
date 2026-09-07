@@ -67,14 +67,14 @@ func TestStartAnnouncesTheEndpointOnStdout(t *testing.T) {
 		t.Fatalf("ReadAll() = %v", err)
 	}
 
-	network, address, ok := server.ParseListeningLine(string(printed))
+	info, ok := server.ParseInfoLine(string(printed))
 	if !ok {
 		t.Fatalf("printed %q, want an announcement", printed)
 	}
 
-	if network != running.Addr().Network() || address != running.Addr().String() {
+	if info.Network != running.Addr().Network() || info.Address != running.Addr().String() {
 		t.Errorf("announced %s %s, want %s %s",
-			network, address, running.Addr().Network(), running.Addr().String())
+			info.Network, info.Address, running.Addr().Network(), running.Addr().String())
 	}
 }
 
