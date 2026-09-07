@@ -33,11 +33,6 @@ checksum/config: {{ include (print $.Template.BasePath "/cloud-controller-manage
     secretKeyRef:
       name: dynamix-credentials
       key: account
-- name: DYNAMIX_LOCATION
-  valueFrom:
-    secretKeyRef:
-      name: dynamix-credentials
-      key: location
 {{- end -}}
 
 {{- $cddConfig := dict -}}
