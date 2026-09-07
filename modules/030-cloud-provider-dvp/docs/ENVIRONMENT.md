@@ -98,7 +98,7 @@ users:
 EOF
 ```
 
-Encode the generated kubeconfig file using Base64 encoding (it appears in the initial configuration file as follows):
+Encode the generated kubeconfig using Base64 (put it in the `d8-credentials` Secret in the `stringData.secret` field of the initial configuration file):
 
 ```bash
 base64 kubeconfig | tr -d '\n'

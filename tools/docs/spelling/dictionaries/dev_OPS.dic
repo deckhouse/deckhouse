@@ -1,4 +1,4 @@
-2838
+2839
 1GB
 2GB
 5XX
@@ -210,6 +210,7 @@ DSS
 DVCR
 DVP
 DVPClusterConfiguration
+DVPInstanceClass
 DaemonSet
 DaemonSets
 Daemonset
