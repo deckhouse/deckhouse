@@ -178,6 +178,16 @@ func (m *Module) IsEnabled() bool {
 	return false
 }
 
+func (m *Module) IsCondition(condName string, status metav1.ConditionStatus) bool {
+	for _, cond := range m.Status.Conditions {
+		if cond.Type == condName {
+			return cond.Status == status
+		}
+	}
+
+	return false
+}
+
 // +kubebuilder:object:generate=false
 type ConditionOption func(opts *ConditionSettings)
 

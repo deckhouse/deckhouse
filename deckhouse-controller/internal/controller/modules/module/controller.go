@@ -26,20 +26,28 @@ import (
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
+	"k8s.io/utils/ptr"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/confighandler"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module/status"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
+	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -97,6 +105,9 @@ func RegisterController(
 		Named(controllerName).
 		For(&v1alpha2.Module{}).
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
+		WithOptions(controller.Options{
+			NeedLeaderElection: ptr.To(false),
+		}).
 		Complete(r); err != nil {
 		return fmt.Errorf("complete: %w", err)
 	}
@@ -112,11 +123,10 @@ type reconciler struct {
 	handler          *confighandler.Handler
 	moduleManager    moduleManager
 	packageManager   packageManager
-	// manager          settingsManager
-	metricStorage   metricsstorage.Storage
-	configValidator *configtools.Validator
-	exts            extenders.IExtendersStack
-	logger          *log.Logger
+	metricStorage    metricsstorage.Storage
+	configValidator  *configtools.Validator
+	exts             extenders.IExtendersStack
+	logger           *log.Logger
 }
 
 type moduleManager interface {
@@ -219,12 +229,37 @@ func (r *reconciler) processModule(ctx context.Context, module *v1alpha2.Module)
 }
 
 func (r *reconciler) deleteModule(ctx context.Context, module *v1alpha2.Module) (ctrl.Result, error) {
+	// send event to addon-operator
+	r.handler.HandleEvent(module, config.EventDelete)
+
+	// clear obsolete metrics
+	metricGroup := fmt.Sprintf(metrics.ObsoleteConfigMetricGroupTemplate, module.Name)
+	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
+
+	// clear conflict metrics
+	metricGroup = fmt.Sprintf(metrics.ModuleConflictMetricGroupTemplate, module.Name)
+	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
+
+	r.metricStorage.GaugeSet(telemetry.WrapName(metrics.ExperimentalModuleIsEnabled), 0.0, map[string]string{metrics.LabelModule: module.GetName()})
+	r.metricStorage.GaugeSet(telemetry.WrapName(metrics.DeprecatedModuleIsEnabled), 0.0, map[string]string{metrics.LabelModule: module.GetName()})
+
 	res := ctrl.Result{}
+
+	enabledByBundle, err := r.IsModuleEnabledByBundle(ctx, module)
+	if err != nil {
+		return res, err
+	}
 
 	// skip system modules
 	if module.Name == moduleDeckhouse || module.Name == moduleGlobal {
 		r.logger.Debug("skip system module", slog.String("name", module.Name))
 		return res, nil
+	}
+
+	// disable module
+	if err := r.disableModule(ctx, module, enabledByBundle); err != nil {
+		r.logger.Error("failed to disable the module", slog.String("module", module.Name), log.Err(err))
+		return ctrl.Result{}, err
 	}
 
 	// no-op cleanup: this controller owns only the module settings, there is
@@ -235,6 +270,40 @@ func (r *reconciler) deleteModule(ctx context.Context, module *v1alpha2.Module) 
 	}
 
 	return res, nil
+}
+
+func (r *reconciler) disableModule(ctx context.Context, module *v1alpha2.Module, enabledByBundle bool) error {
+	r.logger.Debug("disable the module", slog.String("module", module.Name))
+
+	// remove module documentation immediately on disable so docs-builder drops it
+	if err := utils.DeleteModuleDocumentation(ctx, r.client, module.Name); err != nil {
+		return fmt.Errorf("delete module documentation: %w", err)
+	}
+
+	return utils.UpdateStatus[*v1alpha2.Module](ctx, r.client, module, func(module *v1alpha2.Module) bool {
+		if module.IsCondition(status.ConditionEnabled, metav1.ConditionFalse) {
+			return false
+		}
+
+		switch module.Status.Summary.State {
+		case status.StateFailed,
+			status.StatePending:
+			// modules in Conflict should not be installed, and they cannot receive events, so set Available phase manually
+			// same thing if module is not installed
+			module.Status.Summary.State = status.StateSuspended
+			module.SetConditionFalse(status.ConditionEnabled, "", "")
+			module.SetConditionFalse(status.ConditionReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
+		default:
+			if !enabledByBundle {
+				module.SetConditionFalse(status.ConditionReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
+			}
+		}
+
+		module.SetConditionFalse(status.ConditionEnabled, "", "")
+		module.SetConditionUnknown(status.ConditionConfigurationApplied, "", "")
+
+		return true
+	})
 }
 
 // addFinalizer puts the controller's finalizer on the Module so a later delete can be handled.
@@ -259,4 +328,32 @@ func (r *reconciler) removeFinalizer(ctx context.Context, module *v1alpha2.Modul
 
 		return false
 	})
+}
+
+// TODO: check real bundle, not mock
+func (r *reconciler) IsModuleEnabledByBundle(ctx context.Context, module *v1alpha2.Module) (bool, error) {
+	var mpv *v1alpha1.ModulePackageVersion
+	mpvName := v1alpha1.MakeModulePackageVersionName(
+		module.Spec.PackageRepositoryName,
+		module.Name,
+		module.Spec.PackageVersion,
+	)
+
+	if err := r.client.Get(ctx, types.NamespacedName{Name: mpvName}, mpv); err != nil {
+		return false, err
+	}
+
+	for bundle, license := range mpv.Status.PackageMetadata.Licensing.Editions {
+		if bundle != "_default" && bundle != "dev" {
+			continue
+		}
+
+		for _, bundle := range license.EnabledInBundles {
+			if bundle == "Default" {
+				return true, nil
+			}
+		}
+	}
+
+	return false, nil
 }
