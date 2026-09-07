@@ -37,8 +37,19 @@
 # would take the whole hook down in a cluster where user-authz is disabled. Here the dependency is
 # the other way round and is harmless: the validating rules below name resources owned by
 # user-authn, and if that module is disabled its CRDs are absent, the rules simply never match.
+#
+# The check is about a requester who may create a User or a Group but does not own the rules that
+# would pick it up. The identities that install and operate the platform are not that requester:
+# the installer applies the initial ClusterAuthorizationRule and the User it names from one manifest,
+# in whatever order the objects land, and on a retried bootstrap the rule already exists when the
+# User is created again, so the check would refuse the installer for granting privileges to itself.
+# Those identities are excluded twice: in matchConditions, so the API server does not call the hook
+# for them at all (and keeps them working while the hook is unavailable, which matters under
+# failurePolicy: Fail), and again inside the hook, because matchConditions are a pre-filter and not
+# the authority. The list is the platform's own break-glass set, the same one the heritage
+# ValidatingAdmissionPolicies exclude (modules/002-deckhouse/templates/validation.yaml).
 
-from typing import Callable, NamedTuple, Optional
+from typing import Any, Callable, NamedTuple, Optional
 
 from deckhouse import hook
 from dotmap import DotMap
@@ -46,11 +57,65 @@ from dotmap import DotMap
 CLUSTER_RULES_SNAPSHOT_NAME = "d8-user-authz-collision-cluster-authorization-rules"
 NAMESPACED_RULES_SNAPSHOT_NAME = "d8-user-authz-collision-authorization-rules"
 
+EXEMPT_USERS = frozenset({
+    "system:apiserver",
+    "system:sudouser",
+    "system:kube-controller-manager",
+    "system:kube-scheduler",
+    "system:volume-scheduler",
+    "dhctl",
+    "observability",
+    "system:serviceaccount:d8-system:deckhouse",
+    # Commander's cluster-manager applies the initial User and rule the same way the installer
+    # does. The service account only, not the d8-commander group: backend, sidekiq and the rest of
+    # that namespace stay subject to the check (same skip as user-authn's allow-access-to-kubernetes
+    # policy, modules/150-user-authn/templates/validation.yaml).
+    "system:serviceaccount:d8-commander:cluster-manager",
+})
+
+EXEMPT_GROUPS = frozenset({
+    "system:masters",
+    "system:serviceaccounts:kube-system",
+    "system:serviceaccounts:d8-system",
+})
+
+# One condition per identity, in the form the admission documentation guarantees: a CEL expression
+# that fails to compile invalidates the whole ValidatingWebhookConfiguration. Kept in step with
+# EXEMPT_USERS / EXEMPT_GROUPS above by the config contract test.
+MATCH_CONDITIONS = """
+  - expression: ("system:apiserver" != request.userInfo.username)
+    name: exclude-kube-apiserver
+  - expression: ("system:sudouser" != request.userInfo.username)
+    name: exclude-sudouser
+  - expression: ("system:kube-controller-manager" != request.userInfo.username)
+    name: exclude-kube-controller-manager
+  - expression: ("system:kube-scheduler" != request.userInfo.username)
+    name: exclude-kube-scheduler
+  - expression: ("system:volume-scheduler" != request.userInfo.username)
+    name: exclude-volume-scheduler
+  - expression: ("dhctl" != request.userInfo.username)
+    name: exclude-dhctl
+  - expression: ("observability" != request.userInfo.username)
+    name: exclude-observability
+  - expression: ("system:serviceaccount:d8-system:deckhouse" != request.userInfo.username)
+    name: exclude-deckhouse
+  - expression: ("system:serviceaccount:d8-commander:cluster-manager" != request.userInfo.username)
+    name: exclude-commander-cluster-manager
+  - expression: '!("system:masters" in request.userInfo.groups)'
+    name: exclude-system-masters
+  - expression: '!("system:serviceaccounts:kube-system" in request.userInfo.groups)'
+    name: exclude-kube-system-serviceaccounts
+  - expression: '!("system:serviceaccounts:d8-system" in request.userInfo.groups)'
+    name: exclude-d8-system-serviceaccounts
+""".strip("\n")
+
 CONFIG = f"""
 configVersion: v1
 kubernetesValidating:
 - name: d8-user-authz-group-authorization-rule-collision.deckhouse.io
   includeSnapshotsFrom: ["{CLUSTER_RULES_SNAPSHOT_NAME}", "{NAMESPACED_RULES_SNAPSHOT_NAME}"]
+  matchConditions:
+{MATCH_CONDITIONS}
   rules:
   - apiGroups:   ["deckhouse.io"]
     apiVersions: ["*"]
@@ -59,6 +124,8 @@ kubernetesValidating:
     scope:       "Cluster"
 - name: d8-user-authz-user-authorization-rule-collision.deckhouse.io
   includeSnapshotsFrom: ["{CLUSTER_RULES_SNAPSHOT_NAME}", "{NAMESPACED_RULES_SNAPSHOT_NAME}"]
+  matchConditions:
+{MATCH_CONDITIONS}
   rules:
   - apiGroups:   ["deckhouse.io"]
     apiVersions: ["*"]
@@ -148,8 +215,20 @@ def main(ctx: hook.Context):
         ctx.output.validations.error(str(e))
 
 
+def is_exempt(user_info: Any) -> bool:
+    """Whether the requester is one of the platform identities the check does not apply to."""
+    info = user_info.toDict() if hasattr(user_info, "toDict") else (user_info or {})
+    if info.get("username") in EXEMPT_USERS:
+        return True
+    groups = info.get("groups") or []
+    return any(isinstance(g, str) and g in EXEMPT_GROUPS for g in groups)
+
+
 def validate(ctx: DotMap) -> tuple[Optional[str], list[str]]:
     req = ctx.review.request
+    if is_exempt(req.userInfo):
+        return None, []
+
     identity = IDENTITY_KINDS.get(req.kind.kind.lower())
     if identity is None:
         return None, []
