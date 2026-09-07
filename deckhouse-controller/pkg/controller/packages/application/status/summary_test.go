@@ -16,12 +16,14 @@ package status
 
 import (
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/condmap"
 	intstatus "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/status"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
 // summaryFor builds the pre-mapping state from the given options and runs
@@ -369,6 +371,39 @@ func TestLifecycleScenarios(t *testing.T) {
 			message: "Application is suspended: requirements unmet",
 			tip:     "Solve the application requirements. After it, the controller will automatically restore all conditions and resume operation.",
 		},
+
+		// ── Deleting (teardown accepted by the runtime) ────────────────
+
+		{
+			name: "deleting: running application is torn down",
+			opts: running(withDeleting()),
+			wantConds: map[string]*expectedCondition{
+				ConditionInstalled:            {metav1.ConditionFalse, condmap.ReasonDeleting},
+				ConditionUpdateInstalled:      {metav1.ConditionFalse, condmap.ReasonDeleting},
+				ConditionReady:                {metav1.ConditionFalse, condmap.ReasonDeleting},
+				ConditionScaled:               {metav1.ConditionFalse, condmap.ReasonDeleting},
+				ConditionManaged:              {metav1.ConditionFalse, condmap.ReasonDeleting},
+				ConditionConfigurationApplied: {metav1.ConditionFalse, condmap.ReasonDeleting},
+			},
+			state:   stateDeleting,
+			message: "Application is being deleted",
+			tip:     "No action is required. The resource disappears once its release and files are taken down.",
+		},
+		{
+			// The internal conditions are gone once the last teardown task drains
+			// (the runtime drops the status), so an event arriving after that maps
+			// an empty state. Without the deleting branch it reads as an update in
+			// progress.
+			name: "deleting: internal conditions already dropped",
+			opts: []mappingOption{installed(), withVersionChanged(), withDeleting()},
+			wantConds: map[string]*expectedCondition{
+				ConditionInstalled: {metav1.ConditionFalse, condmap.ReasonDeleting},
+				ConditionReady:     {metav1.ConditionFalse, condmap.ReasonDeleting},
+			},
+			state:   stateDeleting,
+			message: "Application is being deleted",
+			tip:     "No action is required. The resource disappears once its release and files are taken down.",
+		},
 	}
 
 	for _, tc := range cases {
@@ -521,4 +556,39 @@ func TestSummarize_SuspendedVsPending(t *testing.T) {
 		assert.Equal(t, statePending, state)
 		assert.NotEqual(t, "Application is suspended: requirements unmet", message)
 	})
+}
+
+// TestComputeAndApplyConditionsOnDeletion covers this package's own deletionTimestamp
+// wiring: the cases above set condmap.State.Deleting directly and never reach it.
+func TestComputeAndApplyConditionsOnDeletion(t *testing.T) {
+	deleted := metav1.NewTime(time.Unix(0, 0))
+	app := &v1alpha1.Application{
+		ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "app", DeletionTimestamp: &deleted},
+	}
+
+	// A Run task that finished after the teardown started still reports
+	// ManifestsApplied, which is what would otherwise commit the version.
+	svc := &Service{
+		mapper: buildMapper(),
+		getter: func(string) intstatus.Status {
+			return intstatus.Status{
+				Version: "1.2.3",
+				Conditions: []intstatus.Condition{
+					{Type: intstatus.ConditionManifestsApplied, Status: metav1.ConditionTrue},
+					{Type: intstatus.ConditionScaled, Status: metav1.ConditionTrue},
+				},
+			}
+		},
+	}
+
+	svc.computeAndApplyConditions("ns.app", app)
+
+	assert.Len(t, app.Status.Conditions, 6)
+	for _, cond := range app.Status.Conditions {
+		assert.Equal(t, metav1.ConditionFalse, cond.Status, "condition %s status", cond.Type)
+		assert.Equal(t, condmap.ReasonDeleting, cond.Reason, "condition %s reason", cond.Type)
+	}
+	assert.Equal(t, stateDeleting, app.Status.Summary.State)
+	assert.Empty(t, app.Status.CurrentVersion.Version)
+	assert.Empty(t, app.Status.URLs)
 }

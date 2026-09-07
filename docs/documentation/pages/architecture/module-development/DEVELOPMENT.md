@@ -46,7 +46,7 @@ Requirements for the resource parameters:
 * The container image tag (`spec.imageTag`) can be anything, e.g., `pr333`, `my-branch`.
 
 The `spec.scanInterval` time interval (optional) defines the interval for scanning images in the registry. The default interval is 15 seconds.
-To force scan you can change the interval or set the `renew=""` annotation on ModulePullOverride.
+To force scan you can change the interval or set the `modules.deckhouse.io/renew=true` annotation on ModulePullOverride. The annotation forces the module to be re-pulled and redeployed even when the image digest has not changed, and is removed once the redeploy succeeds.
 
 The `spec.rollback` indicates whether the deployed module release should be rollback after deleting the ModulePullOverride.
 
@@ -133,7 +133,7 @@ Requirements for the module:
 To update the module without waiting for the next update cycle to begin, you can execute the following command:
 
 ```sh
-d8 k annotate mpo <name> renew=""
+d8 k annotate mpo <name> modules.deckhouse.io/renew=true --overwrite
 ```
 
 ## Module availability and enabling by default

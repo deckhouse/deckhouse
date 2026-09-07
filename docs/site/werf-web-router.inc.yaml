@@ -1,6 +1,10 @@
 image: web-router-artifact
-from: {{ index $.Images "builder/golang-alpine" }}
+from: {{ index $.Images "builder/distroless" }}
+mount:
+{{ include "mount points for golang builds" . }}
 shell:
+  beforeInstall:
+  - pm install golang
   install:
   - cd /go/src/app
   - go mod download
@@ -20,24 +24,20 @@ image: web-router
 imageSpec:
   config:
     workingDir: "/app"
-from: {{ index $.Images "builder/alpine" }}
+from: {{ index $.Images "base/scratch" }}
 import:
-  - from: {{ index $.Images "tools/curl" }}
-    add: /usr/bin/curl-static
-    to: /usr/bin/curl
-    before: setup
-  - from: {{ index $.Images "tools/jq" }}
-    add: /usr/bin/jq
-    to: /usr/bin/jq
-    before: setup
   - image: web-router-artifact
     add: /go/src/app/server
     to: /app/server
     before: setup
+    owner: "64535"
+    group: "64535"
   - image: web-frontend-artifact
     add: /app/_site
     to: /app/root
     before: setup
+    owner: "64535"
+    group: "64535"
     includePaths:
     - en/includes/
     - ru/includes/

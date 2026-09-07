@@ -7,16 +7,24 @@
   </head>
   <body>
     <div class="content">
-     {{- "<!--#include virtual=\"/includes/header.html\" -->"  | safeHTML }}
-
-     {{- "<!--#include virtual=\"/includes/banner.html\" -->"  | safeHTML }}
+     {{- if eq site.Params.mode "module" -}}
+       {{- printf "<!--#include virtual=\"/%s/includes/header.html\" -->" $lang | safeHTML }}
+       {{- printf "<!--#include virtual=\"/%s/includes/banner.html\" -->" $lang | safeHTML }}
+     {{- else -}}
+       {{- "<!--#include virtual=\"/includes/header.html\" -->"  | safeHTML }}
+       {{- "<!--#include virtual=\"/includes/banner.html\" -->"  | safeHTML }}
+     {{- end }}
      <div class="container">
        {{- block "main" . }}
        {{- end }}
      </div>
 
      </div>
-     {{- "<!--#include virtual=\"/includes/footer.html\" -->"  | safeHTML }}
+     {{- if eq site.Params.mode "module" -}}
+       {{- printf "<!--#include virtual=\"/%s/includes/footer.html\" -->" $lang | safeHTML }}
+     {{- else -}}
+       {{- "<!--#include virtual=\"/includes/footer.html\" -->"  | safeHTML }}
+     {{- end }}
 
   <script type="text/javascript">
     $(document).ready(function () {
@@ -75,17 +83,5 @@
   <script src="/assets/js/mermaid.min.js"></script>
   <script>mermaid.initialize({ startOnLoad: true });</script>
 {{ end }}
-<script type="text/javascript">
-  // Fix second level topnav menu for GS and guides sections.
-  let subUrls = ['/modules/'];
-  subUrls.forEach(function (element) {
-    if (window.location.pathname.toLowerCase().includes(element)) {
-      $('.header.header__product-menu ul.nav li').each(function () {
-        if ($(this).find('a').attr('href').toLowerCase().includes(element)) $(this).addClass('active');
-        else $(this).removeClass('active');
-      });
-    }
-  });
-</script>
 </body>
 </html>

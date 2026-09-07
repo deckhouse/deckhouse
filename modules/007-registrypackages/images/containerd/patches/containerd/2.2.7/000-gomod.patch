@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index 8b0c19c..a8309d5 100644
+index 8b0c19c59..a8309d52f 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,6 +1,6 @@
@@ -178,7 +178,7 @@ index 8b0c19c..a8309d5 100644
  	sigs.k8s.io/randfill v1.0.0 // indirect
  	sigs.k8s.io/structured-merge-diff/v6 v6.3.0 // indirect
 diff --git a/go.sum b/go.sum
-index 5b24fca..212dada 100644
+index 5b24fca81..212dadafb 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -14,16 +14,22 @@ github.com/StackExchange/wmi v0.0.0-20190523213315-cbe66965904d h1:G0m3OIz70MZUW

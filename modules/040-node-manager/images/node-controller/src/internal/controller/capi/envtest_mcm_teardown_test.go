@@ -19,12 +19,15 @@ package capi
 import (
 	. "github.com/onsi/ginkgo/v2"
 	. "github.com/onsi/gomega"
+	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/node-controller/internal/common"
+	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
@@ -87,6 +90,26 @@ var _ = Describe("MCM MachineDeployment and MachineClass teardown", func() {
 			err := k8sClient.Get(suiteCtx, client.ObjectKeyFromObject(md), got)
 			return errors.IsNotFound(err)
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(BeTrue())
+	}
+
+	// createSecret stands in for applyMachineClassSecret: the same name as the
+	// MachineClass, and the labels that Secret is written with.
+	createSecret := func(name string, labels map[string]string) *corev1.Secret {
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: common.MachineNamespace, Labels: labels},
+			Data:       map[string][]byte{"userData": []byte("#cloud-config")},
+		}
+		Expect(k8sClient.Create(suiteCtx, secret)).To(Succeed())
+		DeferCleanup(func() {
+			Expect(client.IgnoreNotFound(k8sClient.Delete(suiteCtx, secret))).To(Succeed())
+		})
+		return secret
+	}
+
+	getSecret := func(name string) error {
+		return k8sClient.Get(suiteCtx, types.NamespacedName{
+			Name: name, Namespace: common.MachineNamespace,
+		}, &corev1.Secret{})
 	}
 
 	getObject := func(kind, name string) error {
@@ -158,5 +181,49 @@ var _ = Describe("MCM MachineDeployment and MachineClass teardown", func() {
 
 		Expect(getObject(machineClassKind, keptName)).To(Succeed(), "the desired class must be untouched")
 		Expect(getObject("MachineDeployment", keptName)).To(Succeed(), "the desired MachineDeployment must be untouched")
+	})
+
+	// The Secret holds the cloud credentials machine-controller-manager reads through
+	// MachineClass.spec.secretRef, so it may only go when the class does. Helm used to
+	// prune it; after the keep annotation nothing does.
+	It("deletes the machine-class secret of a removed zone with its MachineClass", func() {
+		ngName := testenv.UniqueName("mcm-secret-prune")
+		keptName := ngName + "-zone-a"
+		staleName := ngName + "-zone-b"
+		ownedByNG := map[string]string{ngcommon.MachineDeploymentNodeGroupLabel: ngName}
+		writtenHere := map[string]string{
+			"heritage": "deckhouse", "module": "node-manager",
+			ngcommon.MachineDeploymentNodeGroupLabel: ngName,
+		}
+
+		createMachineClass(keptName, ownedByNG)
+		createMachineClass(staleName, ownedByNG)
+		createMachineDeployment(keptName, ngName, keptName)
+		staleMD := createMachineDeployment(staleName, ngName, staleName)
+
+		createSecret(keptName, writtenHere)
+		createSecret(staleName, writtenHere)
+		byHand := createSecret(ngName+"-by-hand", ownedByNG)
+
+		r := newReconciler()
+		desiredMDs := map[string]struct{}{keptName: {}}
+		desiredClasses := map[string]struct{}{keptName: {}}
+
+		_, err := r.pruneStaleMCMs(suiteCtx, k8sClient, ngName, machineClassKind, desiredMDs, desiredClasses)
+		Expect(err).NotTo(HaveOccurred())
+		Expect(getSecret(staleName)).To(Succeed(),
+			"the credentials must outlive the MachineDeployment that is still deleting its Machines")
+
+		finishTermination(staleMD)
+
+		_, err = r.pruneStaleMCMs(suiteCtx, k8sClient, ngName, machineClassKind, desiredMDs, desiredClasses)
+		Expect(err).NotTo(HaveOccurred())
+		Eventually(func() bool {
+			return errors.IsNotFound(getSecret(staleName))
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(BeTrue())
+
+		Expect(getSecret(keptName)).To(Succeed(), "the secret of a zone that is still wanted must be untouched")
+		Expect(getSecret(byHand.Name)).To(Succeed(),
+			"a secret without the module labels was not written here and is not ours to delete")
 	})
 })

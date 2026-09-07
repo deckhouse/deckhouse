@@ -12,6 +12,6 @@ Key features:
 - Integration with the [`node-manager`](/modules/node-manager/) module to support DVPInstanceClass when defining a [NodeGroup](/modules/node-manager/cr.html#nodegroup)
 
 {% alert level="info" %}
-The module is automatically enabled for all cloud clusters deployed in DVP.
-The module has no configurable settings.
+The DVP integration is enabled automatically for all cloud clusters deployed in DVP.
+No additional configuration is required.
 {% endalert %}

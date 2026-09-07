@@ -96,6 +96,10 @@ spec:
         - "--descheduling-interval"
         {{- $intervalMap := dict "Frequent" "5m" "Moderate" "15m" "Rare" "30m" }}
         - {{ index $intervalMap (.Values.descheduler.deschedulingInterval | default "Moderate") | quote }}
+        {{- /* Upstream feature gates the module enables unconditionally. */}}
+        {{- $featureGates := list "EvictionsInBackground=true" }}
+        - "--feature-gates"
+        - {{ $featureGates | join "," | quote }}
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" $ | nindent 12 }}

@@ -210,6 +210,8 @@ func (r *Runtime) RemoveApp(namespace, instance string) bool {
 		return true
 	}
 
+	r.status.SetDeleting(name)
+
 	if pkg := r.apps[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, pkg.GetNamespace(), false, r.nelmService, r.queueService, r.logger))
 	} else {
