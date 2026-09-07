@@ -840,7 +840,6 @@ func (m *MetaConfig) ConfigForBashibleBundleTemplate(ctx context.Context, nodeIP
 	}
 
 	data["kubernetesVersion"] = resolveKubernetesVersion(m.kubernetesVersionRaw())
-	m.setNetworkInto(data)
 
 	clusterBootstrap := map[string]any{
 		"clusterDomain":     data["clusterDomain"],
