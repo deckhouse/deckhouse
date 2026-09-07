@@ -468,6 +468,249 @@ def target_group_roles(snapshots: Any, group_name: str) -> List[str]:
     return collect_roles_for_identity(snapshots, "group", group_name, lowercase_user=False)
 
 
+# --- DexProvider: the identity space a provider can assert ---------------------
+#
+# Connecting a provider is not a role assignment by itself: dex asserts an
+# email and a set of groups, and the grants behind those strings are whatever
+# the cluster already holds. What a provider can assert is bounded on two axes.
+# The email axis is bounded only by `spec.allowedIdentities` (emails, domains);
+# the group axis by the same block and by the connector's own group filters,
+# where dex demonstrably narrows the claim to a list (see research R3.1). An
+# axis without a limiter is open: every grant on a human subject of that kind
+# is reachable. Group nesting from Group objects is not applied: the platform
+# expands it for local Users only, an external token carries exactly the
+# groups the IdP asserted (research R8).
+
+DEX_ALLOWED_IDENTITIES = "allowedIdentities"
+
+# Fields whose change neither moves the identity source nor widens the space.
+DEX_BENIGN_TOP_FIELDS = frozenset({"displayName", "enabled"})
+DEX_CREDENTIAL_FIELDS = frozenset({"clientSecret", "bindPW"})
+
+DEX_CONNECTOR_BLOCKS = ("oidc", "saml", "ldap", "crowd", "gitlab", "github", "bitbucketCloud")
+
+# Connector fields that only narrow the group claim. Stripped before comparing
+# the rest of the spec, then compared as sets through dex_group_filter.
+DEX_GROUP_LIMITER_FIELDS = {
+    "oidc": ("allowedGroups",),
+    "gitlab": ("groups",),
+    "crowd": ("groups",),
+    "bitbucketCloud": ("teams", "includeTeamGroups"),
+    "saml": ("allowedGroups", "filterGroups"),
+}
+
+
+def _clean_strings(values: Any, *, lower: bool) -> List[str]:
+    out = []
+    for value in _list(values):
+        if not isinstance(value, str):
+            continue
+        value = value.strip()
+        if not value:
+            continue
+        out.append(value.lower() if lower else value)
+    return out
+
+
+def _dex_assertable(subject: str) -> bool:
+    # kube-apiserver refuses OIDC usernames and groups carrying the system:
+    # prefix, so no provider can assert those subjects.
+    return isinstance(subject, str) and bool(subject) and not subject.startswith("system:")
+
+
+def dex_email_filter(spec: Any) -> Optional[Tuple[frozenset, frozenset]]:
+    """(emails, domains), lowercase, or None when the email axis is open."""
+    block = _dict(_dict(spec).get(DEX_ALLOWED_IDENTITIES))
+    emails = frozenset(_clean_strings(block.get("emails"), lower=True))
+    domains = frozenset(_clean_strings(block.get("emailDomains"), lower=True))
+    if not emails and not domains:
+        return None
+    return emails, domains
+
+
+def _connector_group_filter(spec: dict) -> Optional[frozenset]:
+    kind = spec.get("type")
+    if kind == "OIDC":
+        groups = _clean_strings(_dict(spec.get("oidc")).get("allowedGroups"), lower=False)
+        return frozenset(groups) if groups else None
+    if kind == "Gitlab":
+        groups = _clean_strings(_dict(spec.get("gitlab")).get("groups"), lower=False)
+        return frozenset(groups) if groups else None
+    if kind == "Crowd":
+        groups = _clean_strings(_dict(spec.get("crowd")).get("groups"), lower=False)
+        return frozenset(groups) if groups else None
+    if kind == "BitbucketCloud":
+        block = _dict(spec.get("bitbucketCloud"))
+        if block.get("includeTeamGroups"):
+            # team/group entries under the allowed teams are not enumerable
+            return None
+        teams = _clean_strings(block.get("teams"), lower=False)
+        return frozenset(teams) if teams else None
+    if kind == "Github":
+        orgs = [_dict(o) for o in _list(_dict(spec.get("github")).get("orgs"))]
+        if not orgs:
+            return None
+        found: Set[str] = set()
+        for org in orgs:
+            name = org.get("name")
+            teams = _clean_strings(org.get("teams"), lower=False)
+            if not isinstance(name, str) or not name or not teams:
+                # an org without teams admits every team of that org
+                return None
+            found.update(f"{name}:{team}" for team in teams)
+        return frozenset(found)
+    if kind == "SAML":
+        block = _dict(spec.get("saml"))
+        if not block.get("filterGroups"):
+            return None
+        groups = _clean_strings(block.get("allowedGroups"), lower=False)
+        return frozenset(groups) if groups else None
+    return None
+
+
+def dex_group_filter(spec: Any) -> Optional[frozenset]:
+    """Group names dex narrows the claim to, or None when the group axis is open."""
+    spec = _dict(spec)
+    universal = _clean_strings(_dict(spec.get(DEX_ALLOWED_IDENTITIES)).get("groups"), lower=False)
+    connector = _connector_group_filter(spec)
+    if universal and connector is not None:
+        return frozenset(universal) & connector
+    if universal:
+        return frozenset(universal)
+    return connector
+
+
+def _grant_roles(snapshots: Any, key: str, wanted) -> List[str]:
+    """Roles on subjects of one kind (userSubjects / groupSubjects) accepted by `wanted`."""
+    found: List[str] = []
+    seen: Set[str] = set()
+
+    def add(roles: Iterable[str]) -> None:
+        for role in roles:
+            if role and role not in seen:
+                seen.add(role)
+                found.append(role)
+
+    for snap_name, namespaced in ((CAR_SNAP, False), (AR_SNAP, True)):
+        for fr in iter_filter_results(snapshots, snap_name):
+            if any(wanted(s) for s in _subjects(fr, key)):
+                add(_fr_role_names(fr, namespaced=namespaced))
+    for fr in iter_filter_results(snapshots, CRB_SNAP):
+        if any(wanted(s) for s in _subjects(fr, key)):
+            role = fr.get("role")
+            if isinstance(role, str):
+                add([role])
+    return found
+
+
+def dex_target_roles(spec: Any, snapshots: Any) -> List[str]:
+    """Roles already granted to identities the provider can assert."""
+    email_filter = dex_email_filter(spec)
+    group_filter = dex_group_filter(spec)
+
+    if email_filter is None:
+        users_wanted = _dex_assertable
+    else:
+        emails, domains = email_filter
+
+        def users_wanted(subject: str) -> bool:
+            if not _dex_assertable(subject):
+                return False
+            lowered = subject.lower()
+            if lowered in emails:
+                return True
+            _, _, domain = lowered.rpartition("@")
+            return bool(domain) and domain in domains
+
+    if group_filter is None:
+        groups_wanted = _dex_assertable
+    else:
+        def groups_wanted(subject: str) -> bool:
+            return _dex_assertable(subject) and subject in group_filter
+
+    found: List[str] = []
+    seen: Set[str] = set()
+    for role in _grant_roles(snapshots, "userSubjects", users_wanted) + \
+            _grant_roles(snapshots, "groupSubjects", groups_wanted):
+        if role not in seen:
+            seen.add(role)
+            found.append(role)
+    return found
+
+
+def _dex_normalize(value: Any) -> Any:
+    """Order-free, noise-free view of a spec fragment for equality checks."""
+    value = as_plain(value)
+    if isinstance(value, dict):
+        items = []
+        for key in sorted(value):
+            norm = _dex_normalize(value[key])
+            if norm is None or norm == () or norm == "":
+                continue
+            items.append((str(key), norm))
+        return tuple(items)
+    if isinstance(value, list):
+        return tuple(sorted((_dex_normalize(v) for v in value), key=repr))
+    return value
+
+
+def _dex_strip(spec: dict, *, limiters: bool) -> dict:
+    """Spec without credentials, display fields and (optionally) group limiters."""
+    out = {}
+    for key, value in spec.items():
+        if key in DEX_BENIGN_TOP_FIELDS:
+            continue
+        if key == DEX_ALLOWED_IDENTITIES and limiters:
+            continue
+        if key in DEX_CONNECTOR_BLOCKS and isinstance(as_plain(value), dict):
+            block = {}
+            for field, inner in _dict(value).items():
+                if field in DEX_CREDENTIAL_FIELDS:
+                    continue
+                if limiters and field in DEX_GROUP_LIMITER_FIELDS.get(key, ()):
+                    continue
+                if limiters and key == "github" and field == "orgs":
+                    inner = [{k: v for k, v in _dict(org).items() if k != "teams"}
+                             for org in _list(inner)]
+                block[field] = inner
+            out[key] = block
+            continue
+        out[key] = value
+    return out
+
+
+def _subset(new: Optional[frozenset], old: Optional[frozenset]) -> bool:
+    if old is None:
+        return True
+    if new is None:
+        return False
+    return new <= old
+
+
+def dex_benign_update(old_spec: Any, new_spec: Any) -> bool:
+    """Whether an UPDATE can be admitted without recomputing targets.
+
+    Benign: credential rotation, display name, enabled, a no-op re-apply, or a
+    change that only narrows the identity space. Anything else may move the
+    identity source or widen the space and is checked as a fresh connection.
+    """
+    old = _dict(old_spec)
+    new = _dict(new_spec)
+    if _dex_normalize(_dex_strip(old, limiters=False)) == _dex_normalize(_dex_strip(new, limiters=False)):
+        return True
+    if _dex_normalize(_dex_strip(old, limiters=True)) != _dex_normalize(_dex_strip(new, limiters=True)):
+        return False
+    old_email = dex_email_filter(old)
+    new_email = dex_email_filter(new)
+    if old_email is None:
+        email_ok = True
+    elif new_email is None:
+        email_ok = False
+    else:
+        email_ok = new_email[0] <= old_email[0] and new_email[1] <= old_email[1]
+    return email_ok and _subset(dex_group_filter(new), dex_group_filter(old))
+
+
 def car_target_roles(spec: Any) -> List[str]:
     spec = _dict(spec)
     names = []
@@ -799,6 +1042,16 @@ def deny_uo_message(target: str, leftover: Sequence[str], rng: AssignRange) -> s
     return (
         f'useroperations.deckhouse.io target "{target}" already carries roles [{roles}]; '
         f"the requester's can-assign range is {range_summary(rng)} and does not cover them"
+    )
+
+
+def deny_dex_message(name: str, leftover: Sequence[str], rng: AssignRange) -> str:
+    roles = ", ".join(leftover)
+    return (
+        f'dexproviders.deckhouse.io "{name}": the provider can assert identities that '
+        f"already carry roles [{roles}]; the requester's can-assign range is "
+        f"{range_summary(rng)} and does not cover them. Narrow spec.allowedIdentities "
+        f"(emails, emailDomains, groups) or ask a SuperAdmin"
     )
 
 
