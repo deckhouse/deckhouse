@@ -61,19 +61,19 @@ func (l *Loader) deleteStaleModuleReleases(ctx context.Context) error {
 	}
 
 	for _, module := range modules.Items {
-		if !module.DisabledByModuleConfigMoreThan(deleteReleasesAfter) || module.IsEmbedded() {
-			continue
-		}
+		// handle too long disabled modules
+		if module.DisabledByModuleConfigMoreThan(deleteReleasesAfter) && !module.IsEmbedded() {
+			// delete module releases of a stale module
+			l.logger.Debug("the module disabled too long, delete module releases", slog.String("name", module.Name))
+			moduleReleases := new(v1alpha1.ModuleReleaseList)
+			if err := l.client.List(ctx, moduleReleases, &client.MatchingLabels{"module": module.Name}); err != nil {
+				return fmt.Errorf("list module releases for the '%s' module: %w", module.Name, err)
+			}
 
-		l.logger.Debug("the module disabled too long, delete module releases", slog.String("name", module.Name))
-		moduleReleases := new(v1alpha1.ModuleReleaseList)
-		if err := l.client.List(ctx, moduleReleases, &client.MatchingLabels{"module": module.Name}); err != nil {
-			return fmt.Errorf("list module releases for the '%s' module: %w", module.Name, err)
-		}
-
-		for _, release := range moduleReleases.Items {
-			if err := l.client.Delete(ctx, &release); err != nil {
-				return fmt.Errorf("delete the '%s' module release for the '%s' module: %w", release.Name, module.Name, err)
+			for _, release := range moduleReleases.Items {
+				if err := l.client.Delete(ctx, &release); err != nil {
+					return fmt.Errorf("delete the '%s' module release for the '%s' module: %w", release.Name, module.Name, err)
+				}
 			}
 		}
 	}
