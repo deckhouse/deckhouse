@@ -186,6 +186,26 @@ def is_platform_range_role(name: str) -> bool:
     return name.startswith("d8:") and not name.startswith("d8:custom:")
 
 
+def is_platform_owned(entry: Optional["CatalogEntry"]) -> bool:
+    """Whether the platform installed this ClusterRole.
+
+    A platform role name carries meaning to this webhook -- the level in
+    `d8:manage:<subsystem>:admin`, the access-level annotation, the can-assign
+    labels. Anyone able to create a ClusterRole can pick such a name, and with
+    no rules in it the apiserver's escalation check has nothing to object to
+    when it is created or bound, so the name alone cannot be trusted. Every
+    platform role is helm-labelled `heritage: deckhouse`, and
+    `system-roles.deckhouse.io` refuses that label on both CREATE and UPDATE to
+    everything but the platform itself, so it is a marker a requester cannot
+    put on a role of their own.
+    """
+    if entry is None:
+        return False
+    if entry.name in DISASTER_NAMES:
+        return True
+    return entry.labels.get("heritage") == "deckhouse"
+
+
 def basic_role_for_level(level: Optional[str], *, cap: Optional[str] = None) -> Optional[str]:
     if not isinstance(level, str) or level not in BASIC_LEVEL_ROLE:
         return None
@@ -324,12 +344,6 @@ def actor_roles(user_info: Any, snapshots: Any) -> List[str]:
     return found
 
 
-def is_human_identity(name: str) -> bool:
-    if not isinstance(name, str) or not name:
-        return False
-    return not name.startswith("system:")
-
-
 def user_record(snapshots: Any, *, name: str = "", email: str = "") -> Optional[dict]:
     name = name if isinstance(name, str) else ""
     email = email.lower() if isinstance(email, str) and email else ""
@@ -433,143 +447,6 @@ def membership_groups(snapshots: Any, *, user_name: str = "", email: str = "",
     return found
 
 
-def occupied_grant_roles(snapshots: Any, *, users_only: bool = False) -> List[str]:
-    """Roles already hanging on a human User or Group subject."""
-    found: List[str] = []
-    seen: Set[str] = set()
-
-    def add(roles: Iterable[str]) -> None:
-        for role in roles:
-            if role and role not in seen:
-                seen.add(role)
-                found.append(role)
-
-    def human_subjects(fr: dict) -> bool:
-        users = [s for s in _subjects(fr, "userSubjects") if is_human_identity(s)]
-        if users_only:
-            return bool(users)
-        groups = [s for s in _subjects(fr, "groupSubjects") if is_human_identity(s)]
-        return bool(users or groups)
-
-    for snap_name, namespaced in ((CAR_SNAP, False), (AR_SNAP, True)):
-        for fr in iter_filter_results(snapshots, snap_name):
-            if human_subjects(fr):
-                add(_fr_role_names(fr, namespaced=namespaced))
-    for fr in iter_filter_results(snapshots, CRB_SNAP):
-        if human_subjects(fr):
-            role = fr.get("role")
-            if isinstance(role, str):
-                add([role])
-    return found
-
-
-def dex_explicit_identities(spec: Any) -> Tuple[List[str], List[str]]:
-    spec = _dict(spec)
-    emails: List[str] = []
-    groups: List[str] = []
-    seen_e: Set[str] = set()
-    seen_g: Set[str] = set()
-
-    def add_email(value: str) -> None:
-        if isinstance(value, str) and value and value not in seen_e:
-            seen_e.add(value)
-            emails.append(value)
-
-    def add_group(value: str) -> None:
-        if isinstance(value, str) and value and value not in seen_g:
-            seen_g.add(value)
-            groups.append(value)
-
-    for key in ("oidc", "saml", "ldap", "crowd", "gitlab", "github", "bitbucketCloud"):
-        block = _dict(spec.get(key))
-        for item in _list(block.get("allowedEmails")):
-            add_email(item)
-        for item in _list(block.get("allowedGroups")):
-            add_group(item)
-    github = _dict(spec.get("github"))
-    for org in _list(github.get("orgs")):
-        org = _dict(org)
-        org_name = org.get("name")
-        teams = [t for t in _list(org.get("teams")) if isinstance(t, str) and t]
-        if isinstance(org_name, str) and org_name and teams:
-            for team in teams:
-                add_group(f"{org_name}:{team}")
-    return emails, groups
-
-
-def dex_claims_closed(spec: Any) -> bool:
-    spec = _dict(spec)
-    kind = spec.get("type")
-    if kind == "SAML":
-        saml = _dict(spec.get("saml"))
-        return bool(saml.get("filterGroups") and _list(saml.get("allowedGroups")))
-    if kind == "Github":
-        orgs = [_dict(o) for o in _list(_dict(spec.get("github")).get("orgs"))]
-        if not orgs:
-            return False
-        return all(bool(_list(o.get("teams"))) for o in orgs)
-    return False
-
-
-DEX_PROVIDER_BLOCKS = ("oidc", "saml", "ldap", "crowd", "gitlab", "github", "bitbucketCloud")
-
-# Rotating a credential against an unchanged connector is not a new
-# connection. Every other connector field decides who dex trusts, whether the
-# assertion is verified at all, or which claim becomes the Kubernetes
-# username, so it is checked as a fresh connection. Listing the exceptions
-# instead of the anchor keeps fields added to the CRD later fail-closed.
-DEX_CREDENTIAL_FIELDS = frozenset({"clientSecret", "bindPW"})
-
-
-def _deep_plain(value: Any) -> Any:
-    value = as_plain(value)
-    if isinstance(value, dict):
-        return tuple((str(key), _deep_plain(value[key])) for key in sorted(value))
-    if isinstance(value, list):
-        return tuple(_deep_plain(item) for item in value)
-    return value
-
-
-def dex_trust_anchor(spec: Any) -> Tuple[Any, ...]:
-    spec = _dict(spec)
-    blocks = []
-    for key in DEX_PROVIDER_BLOCKS:
-        block = _dict(spec.get(key))
-        if not block:
-            continue
-        fields = tuple(
-            (name, _deep_plain(block[name]))
-            for name in sorted(block)
-            if name not in DEX_CREDENTIAL_FIELDS
-        )
-        blocks.append((key, fields))
-    return (spec.get("type"), tuple(blocks))
-
-
-def dex_target_roles(spec: Any, snapshots: Any) -> List[str]:
-    emails, groups = dex_explicit_identities(spec)
-    if not dex_claims_closed(spec):
-        return occupied_grant_roles(snapshots)
-    found: List[str] = []
-    seen: Set[str] = set()
-
-    def add(roles: Iterable[str]) -> None:
-        for role in roles:
-            if role and role not in seen:
-                seen.add(role)
-                found.append(role)
-
-    # Closed claims bound groups only. The username is the email claim, which
-    # stays unbounded, so every User-subject grant remains a target.
-    add(occupied_grant_roles(snapshots, users_only=True))
-    for email in emails:
-        extra = membership_groups(snapshots, email=email)
-        add(target_user_roles(snapshots, email, extra))
-    for group in groups:
-        add(target_group_roles(snapshots, group))
-    return found
-
-
 def target_user_roles(snapshots: Any, email: str, groups: Optional[Iterable[str]] = None) -> List[str]:
     found: List[str] = []
     seen: Set[str] = set()
@@ -669,7 +546,7 @@ def is_disaster(name: str, entry: Optional[CatalogEntry]) -> bool:
 
 
 def _range_from_entry(entry: CatalogEntry) -> Optional[AssignRange]:
-    if not is_platform_range_role(entry.name):
+    if not is_platform_range_role(entry.name) or not is_platform_owned(entry):
         return None
     labels = entry.labels
     basic_max = labels.get("can-assign-basic-max") or labels.get(LABEL_BASIC_MAX) or None
@@ -925,24 +802,42 @@ def deny_uo_message(target: str, leftover: Sequence[str], rng: AssignRange) -> s
     )
 
 
-def deny_dex_message(name: str, leftover: Sequence[str], rng: AssignRange) -> str:
-    roles = ", ".join(leftover)
-    return (
-        f'dexproviders.deckhouse.io "{name}" can assert identities that already carry '
-        f"roles [{roles}]; the requester's can-assign range is {range_summary(rng)} "
-        f"and does not cover them"
-    )
+def _labels_of(obj: Any) -> dict:
+    return _dict(_dict(_dict(obj).get("metadata")).get("labels"))
 
 
 def can_assign_labels_changed(old_obj: Any, new_obj: Any) -> bool:
-    old_labels = _dict(_dict(old_obj).get("metadata")).get("labels")
-    new_labels = _dict(_dict(new_obj).get("metadata")).get("labels")
-    old_labels = _dict(old_labels)
-    new_labels = _dict(new_labels)
+    old_labels = _labels_of(old_obj)
+    new_labels = _labels_of(new_obj)
     for key in CAN_ASSIGN_LABELS:
         if old_labels.get(key) != new_labels.get(key):
             return True
     return False
+
+
+def claims_platform_ownership(new_obj: Any) -> bool:
+    """Whether the write presents the ClusterRole as platform-installed.
+
+    `heritage: deckhouse` on a platform-shaped name is what makes this webhook
+    read a level out of that name, so a non-exempt requester must not be able
+    to write one. `system-roles.deckhouse.io` is the gate that enforces it, and
+    it is the stricter of the two: it refuses the label to everyone but the
+    platform, where this one exempts break-glass identities. This check is a
+    deliberate second layer, so that narrowing that webhook cannot silently
+    make the level readings here forgeable.
+    """
+    name = _dict(_dict(new_obj).get("metadata")).get("name")
+    if not is_platform_range_role(name if isinstance(name, str) else ""):
+        return False
+    return _labels_of(new_obj).get("heritage") == "deckhouse"
+
+
+def deny_heritage_message(name: str) -> str:
+    return (
+        f'clusterroles.rbac.authorization.k8s.io "{name}" cannot carry '
+        f"heritage: deckhouse under a platform role name; that combination "
+        f"marks a role as platform-installed and is reserved for the platform"
+    )
 
 
 def _indent(text: str, n: int) -> str:
@@ -989,6 +884,7 @@ CROLE_JQ_FILTER = """
   "rules": (.rules // []),
   "accessLevel": (.metadata.annotations["user-authz.deckhouse.io/access-level"] // ""),
   "labels": {
+    "heritage": (.metadata.labels["heritage"] // ""),
     "can-assign-basic-max": (.metadata.labels["user-authz.deckhouse.io/can-assign-basic-max"] // ""),
     "can-assign-scope": (.metadata.labels["user-authz.deckhouse.io/can-assign-scope"] // ""),
     "can-assign-subsystem": (.metadata.labels["user-authz.deckhouse.io/can-assign-subsystem"] // ""),

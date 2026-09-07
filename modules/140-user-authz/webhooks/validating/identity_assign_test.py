@@ -27,8 +27,11 @@ USERS_EDIT = [{"apiGroups": ["deckhouse.io"], "resources": ["users", "groups"],
                "verbs": ["create", "update", "patch", "delete"]}]
 
 
-def entry(name, rules=None, labels=None, access_level=""):
-    return assign.CatalogEntry(name=name, rules=rules or [], labels=labels or {},
+def entry(name, rules=None, labels=None, access_level="", heritage=True):
+    labels = dict(labels or {})
+    if heritage:
+        labels.setdefault("heritage", "deckhouse")
+    return assign.CatalogEntry(name=name, rules=rules or [], labels=labels,
                                access_level=access_level)
 
 
@@ -356,129 +359,13 @@ class TestIdentityCollection(unittest.TestCase):
         }
         self.assertEqual(assign.groups_containing_user(snaps, "admin"), ["a", "b"])
 
-    def test_occupied_roles_ignore_system_subjects(self):
-        snaps = {
-            assign.CAR_SNAP: [{"filterResult": {
-                "name": "human",
-                "accessLevel": "SuperAdmin",
-                "additionalRoles": [],
-                "userSubjects": [],
-                "groupSubjects": ["superadmins"],
-                "saSubjects": [],
-            }}],
-            assign.AR_SNAP: [],
-            assign.CRB_SNAP: [{"filterResult": {
-                "name": "k8s",
-                "role": "cluster-admin",
-                "userSubjects": [],
-                "groupSubjects": ["system:masters"],
-                "saSubjects": [],
-            }}],
-        }
-        self.assertEqual(assign.occupied_grant_roles(snaps), ["user-authz:super-admin"])
-
-    def test_oidc_is_not_claims_closed(self):
-        self.assertFalse(assign.dex_claims_closed({"type": "OIDC", "oidc": {"allowedGroups": ["devs"]}}))
-
-    def test_saml_filter_groups_is_closed(self):
-        self.assertTrue(assign.dex_claims_closed({
-            "type": "SAML", "saml": {"filterGroups": True, "allowedGroups": ["devs"]},
-        }))
-        self.assertFalse(assign.dex_claims_closed({
-            "type": "SAML", "saml": {"allowedGroups": ["devs"]},
-        }))
-
-    def test_open_oidc_targets_occupied_roles(self):
-        snaps = {
-            assign.CAR_SNAP: [{"filterResult": {
-                "name": "g",
-                "accessLevel": "SuperAdmin",
-                "additionalRoles": [],
-                "userSubjects": [],
-                "groupSubjects": ["superadmins"],
-                "saSubjects": [],
-            }}],
-            assign.AR_SNAP: [],
-            assign.CRB_SNAP: [],
-        }
-        self.assertEqual(
-            assign.dex_target_roles({"type": "OIDC"}, snaps),
-            ["user-authz:super-admin"])
-
-    def test_closed_saml_ignores_unlisted_group_grants(self):
-        snaps = {
-            assign.CAR_SNAP: [{"filterResult": {
-                "name": "g",
-                "accessLevel": "SuperAdmin",
-                "additionalRoles": [],
-                "userSubjects": [],
-                "groupSubjects": ["superadmins"],
-                "saSubjects": [],
-            }}],
-            assign.AR_SNAP: [],
-            assign.CRB_SNAP: [],
-        }
-        spec = {"type": "SAML", "saml": {"filterGroups": True, "allowedGroups": ["devs"]}}
-        self.assertEqual(assign.dex_target_roles(spec, snaps), [])
-
-    def test_closed_saml_includes_user_subject_grants(self):
-        snaps = {
-            assign.CAR_SNAP: [{"filterResult": {
-                "name": "g",
-                "accessLevel": "SuperAdmin",
-                "additionalRoles": [],
-                "userSubjects": ["root@corp"],
-                "groupSubjects": ["superadmins"],
-                "saSubjects": [],
-            }}],
-            assign.AR_SNAP: [],
-            assign.CRB_SNAP: [],
-        }
-        spec = {"type": "SAML", "saml": {"filterGroups": True, "allowedGroups": ["devs"]}}
-        self.assertEqual(assign.dex_target_roles(spec, snaps), ["user-authz:super-admin"])
-
-    def test_dex_trust_anchor_ignores_secret_and_display_name(self):
-        old = {"type": "OIDC", "displayName": "corp",
-               "oidc": {"issuer": "https://idp", "clientID": "a", "clientSecret": "old"}}
-        new = {"type": "OIDC", "displayName": "corp-2",
-               "oidc": {"issuer": "https://idp", "clientID": "a", "clientSecret": "new"}}
-        self.assertEqual(assign.dex_trust_anchor(old), assign.dex_trust_anchor(new))
-
-    def test_dex_trust_anchor_changes_with_issuer(self):
-        old = {"type": "OIDC", "oidc": {"issuer": "https://idp"}}
-        new = {"type": "OIDC", "oidc": {"issuer": "https://evil"}}
-        self.assertNotEqual(assign.dex_trust_anchor(old), assign.dex_trust_anchor(new))
-
-    def test_dex_trust_anchor_changes_with_signature_validation(self):
-        old = {"type": "SAML", "saml": {"ssoURL": "https://idp/sso",
-                                        "insecureSkipSignatureValidation": False}}
-        new = {"type": "SAML", "saml": {"ssoURL": "https://idp/sso",
-                                        "insecureSkipSignatureValidation": True}}
-        self.assertNotEqual(assign.dex_trust_anchor(old), assign.dex_trust_anchor(new))
-
-    def test_dex_trust_anchor_changes_with_claim_mapping(self):
-        old = {"type": "OIDC", "oidc": {"issuer": "https://idp",
-                                        "claimMapping": {"email": "email"}}}
-        new = {"type": "OIDC", "oidc": {"issuer": "https://idp",
-                                        "claimMapping": {"email": "nickname"}}}
-        self.assertNotEqual(assign.dex_trust_anchor(old), assign.dex_trust_anchor(new))
-
-    def test_dex_trust_anchor_changes_with_email_attr(self):
-        old = {"type": "SAML", "saml": {"ssoURL": "https://idp/sso", "emailAttr": "mail"}}
-        new = {"type": "SAML", "saml": {"ssoURL": "https://idp/sso", "emailAttr": "nickname"}}
-        self.assertNotEqual(assign.dex_trust_anchor(old), assign.dex_trust_anchor(new))
-
-    def test_dex_trust_anchor_changes_with_unlisted_field(self):
-        old = {"type": "LDAP", "ldap": {"host": "ldap:389", "bindPW": "x",
-                                        "userSearch": {"baseDN": "ou=people"}}}
-        new = {"type": "LDAP", "ldap": {"host": "ldap:389", "bindPW": "y",
-                                        "userSearch": {"baseDN": "ou=all"}}}
-        self.assertNotEqual(assign.dex_trust_anchor(old), assign.dex_trust_anchor(new))
-
-    def test_dex_trust_anchor_ignores_bind_password(self):
-        old = {"type": "LDAP", "ldap": {"host": "ldap:389", "bindPW": "x"}}
-        new = {"type": "LDAP", "ldap": {"host": "ldap:389", "bindPW": "y"}}
-        self.assertEqual(assign.dex_trust_anchor(old), assign.dex_trust_anchor(new))
+    def test_range_ignores_forged_can_assign_labels_without_heritage(self):
+        cat = default_catalog()
+        cat["d8:manage:pwned:manager"] = entry(
+            "d8:manage:pwned:manager", rules=[], labels=SUPER_LABELS, heritage=False)
+        rng = assign.actor_range(["d8:manage:pwned:manager"], cat)
+        self.assertIsNone(rng.basic_max)
+        self.assertIsNone(rng.max_level)
 
     def test_user_record_name_does_not_fallback_to_email(self):
         snaps = {

@@ -35,12 +35,15 @@ PRIVILEGED_GROUP = "superadmins"
 SECURITY = "sec@corp"
 
 
-def clusterrole(name, rules, labels=None):
+def clusterrole(name, rules, labels=None, access_level="", heritage=True):
+    labels = dict(labels or {})
+    if heritage:
+        labels.setdefault("heritage", "deckhouse")
     return {"filterResult": {
         "name": name,
         "rules": rules,
-        "accessLevel": "",
-        "labels": labels or {},
+        "accessLevel": access_level,
+        "labels": labels,
     }}
 
 
@@ -685,191 +688,37 @@ class TestIdentityAssignHook(unittest.TestCase):
             username=SUPERADMIN, extra_snaps=extra))
         tests.assert_validation_allowed(self, out, None)
 
-    def test_clusteradmin_cannot_create_open_oidc_dexprovider(self):
+    def test_clusterrole_cannot_claim_platform_heritage(self):
         out = self.run_hook(ctx(
-            "DexProvider", "CREATE",
-            {"type": "OIDC", "displayName": "corp", "oidc": {"issuer": "https://idp"}},
+            "ClusterRole", "CREATE",
+            {"name": "d8:manage:pwned:admin", "rules": []},
+            username=CLUSTER_ADMIN,
+            labels={"heritage": "deckhouse"}))
+        self.assertFalse(out.validations.data[0]["allowed"])
+        self.assertIn("heritage: deckhouse", out.validations.data[0]["message"])
+
+    def test_clusterrole_platform_name_without_heritage_allowed(self):
+        out = self.run_hook(ctx(
+            "ClusterRole", "CREATE",
+            {"name": "d8:manage:pwned:admin", "rules": []},
             username=CLUSTER_ADMIN))
-        self.assertFalse(out.validations.data[0]["allowed"])
-        self.assertIn("user-authz:super-admin", out.validations.data[0]["message"])
-
-    def test_helpdesk_cannot_create_open_oidc_dexprovider(self):
-        out = self.run_hook(isolated_helpdesk_ctx(
-            "DexProvider", "CREATE",
-            {"type": "OIDC", "displayName": "corp", "oidc": {"allowedGroups": ["devs"]}}))
-        self.assertFalse(out.validations.data[0]["allowed"])
-
-    def test_saml_filtered_ordinary_group_denied_when_superadmin_email_exists(self):
-        out = self.run_hook(ctx(
-            "DexProvider", "CREATE",
-            {"type": "SAML", "displayName": "corp",
-             "saml": {"filterGroups": True, "allowedGroups": ["devs"]}},
-            username=CLUSTER_ADMIN))
-        self.assertFalse(out.validations.data[0]["allowed"])
-        self.assertIn("user-authz:super-admin", out.validations.data[0]["message"])
-
-    def test_saml_filtered_ordinary_group_allowed_if_superadmin_is_group_only(self):
-        context = ctx(
-            "DexProvider", "CREATE",
-            {"type": "SAML", "displayName": "corp",
-             "saml": {"filterGroups": True, "allowedGroups": ["devs"]}},
-            username=CLUSTER_ADMIN)
-        context.snapshots[assign.CAR_SNAP][0].filterResult.userSubjects = []
-        out = self.run_hook(context)
         tests.assert_validation_allowed(self, out, None)
 
-    def test_saml_filtered_superadmin_group_denied(self):
+    def test_clusterrole_custom_name_with_heritage_allowed(self):
         out = self.run_hook(ctx(
-            "DexProvider", "CREATE",
-            {"type": "SAML", "displayName": "corp",
-             "saml": {"filterGroups": True, "allowedGroups": [PRIVILEGED_GROUP]}},
-            username=CLUSTER_ADMIN))
-        self.assertFalse(out.validations.data[0]["allowed"])
-
-    def test_superadmin_can_create_open_oidc_dexprovider(self):
-        out = self.run_hook(ctx(
-            "DexProvider", "CREATE",
-            {"type": "OIDC", "displayName": "corp"},
-            username=SUPERADMIN))
+            "ClusterRole", "CREATE",
+            {"name": "d8:custom:app", "rules": []},
+            username=CLUSTER_ADMIN,
+            labels={"heritage": "deckhouse"}))
         tests.assert_validation_allowed(self, out, None)
 
-    def test_github_closed_teams_denied_when_superadmin_email_exists(self):
+    def test_deckhouse_sa_can_install_platform_clusterrole(self):
         out = self.run_hook(ctx(
-            "DexProvider", "CREATE",
-            {"type": "Github", "displayName": "gh",
-             "github": {"orgs": [{"name": "acme", "teams": ["devs"]}]}},
-            username=CLUSTER_ADMIN))
-        self.assertFalse(out.validations.data[0]["allowed"])
-
-    def test_clusteradmin_can_rename_closed_saml_without_new_targets(self):
-        spec = {"type": "SAML", "displayName": "corp-2",
-                "saml": {"filterGroups": True, "allowedGroups": ["devs"],
-                         "ssoURL": "https://idp/sso"}}
-        old = {"type": "SAML", "displayName": "corp",
-               "saml": {"filterGroups": True, "allowedGroups": ["devs"],
-                        "ssoURL": "https://idp/sso"}}
-        out = self.run_hook(ctx(
-            "DexProvider", "UPDATE", spec, old_spec=old, username=CLUSTER_ADMIN))
+            "ClusterRole", "CREATE",
+            {"name": "d8:manage:all:admin", "rules": []},
+            username="system:serviceaccount:d8-system:deckhouse",
+            labels={"heritage": "deckhouse"}))
         tests.assert_validation_allowed(self, out, None)
-
-    def test_clusteradmin_can_rotate_open_oidc_secret(self):
-        spec = {"type": "OIDC", "displayName": "corp",
-                "oidc": {"issuer": "https://idp", "clientID": "a", "clientSecret": "new"}}
-        old = {"type": "OIDC", "displayName": "corp",
-               "oidc": {"issuer": "https://idp", "clientID": "a", "clientSecret": "old"}}
-        out = self.run_hook(ctx(
-            "DexProvider", "UPDATE", spec, old_spec=old, username=CLUSTER_ADMIN))
-        tests.assert_validation_allowed(self, out, None)
-
-    def test_clusteradmin_cannot_repoint_open_oidc_issuer(self):
-        spec = {"type": "OIDC", "displayName": "corp",
-                "oidc": {"issuer": "https://evil", "clientID": "a", "clientSecret": "x"}}
-        old = {"type": "OIDC", "displayName": "corp",
-               "oidc": {"issuer": "https://idp", "clientID": "a", "clientSecret": "x"}}
-        out = self.run_hook(ctx(
-            "DexProvider", "UPDATE", spec, old_spec=old, username=CLUSTER_ADMIN))
-        self.assertFalse(out.validations.data[0]["allowed"])
-        self.assertIn("user-authz:super-admin", out.validations.data[0]["message"])
-
-    def test_clusteradmin_cannot_repoint_closed_saml_sso(self):
-        spec = {"type": "SAML", "displayName": "corp",
-                "saml": {"filterGroups": True, "allowedGroups": ["devs"],
-                         "ssoURL": "https://evil/sso"}}
-        old = {"type": "SAML", "displayName": "corp",
-               "saml": {"filterGroups": True, "allowedGroups": ["devs"],
-                        "ssoURL": "https://idp/sso"}}
-        out = self.run_hook(ctx(
-            "DexProvider", "UPDATE", spec, old_spec=old, username=CLUSTER_ADMIN))
-        self.assertFalse(out.validations.data[0]["allowed"])
-        self.assertIn("user-authz:super-admin", out.validations.data[0]["message"])
-
-    def test_clusteradmin_cannot_replace_closed_saml_ca(self):
-        spec = {"type": "SAML", "displayName": "corp",
-                "saml": {"filterGroups": True, "allowedGroups": ["devs"],
-                         "ssoURL": "https://idp/sso", "rootCAData": "new"}}
-        old = {"type": "SAML", "displayName": "corp",
-               "saml": {"filterGroups": True, "allowedGroups": ["devs"],
-                        "ssoURL": "https://idp/sso", "rootCAData": "old"}}
-        out = self.run_hook(ctx(
-            "DexProvider", "UPDATE", spec, old_spec=old, username=CLUSTER_ADMIN))
-        self.assertFalse(out.validations.data[0]["allowed"])
-
-    def test_clusteradmin_cannot_skip_saml_signature_validation(self):
-        spec = {"type": "SAML", "displayName": "corp",
-                "saml": {"filterGroups": True, "allowedGroups": ["devs"],
-                         "ssoURL": "https://idp/sso",
-                         "insecureSkipSignatureValidation": True}}
-        old = {"type": "SAML", "displayName": "corp",
-               "saml": {"filterGroups": True, "allowedGroups": ["devs"],
-                        "ssoURL": "https://idp/sso",
-                        "insecureSkipSignatureValidation": False}}
-        out = self.run_hook(ctx(
-            "DexProvider", "UPDATE", spec, old_spec=old, username=CLUSTER_ADMIN))
-        self.assertFalse(out.validations.data[0]["allowed"])
-        self.assertIn("user-authz:super-admin", out.validations.data[0]["message"])
-
-    def test_clusteradmin_cannot_remap_oidc_email_claim(self):
-        spec = {"type": "OIDC", "displayName": "corp",
-                "oidc": {"issuer": "https://idp", "claimMappingOverride": True,
-                         "claimMapping": {"email": "nickname"}}}
-        old = {"type": "OIDC", "displayName": "corp",
-               "oidc": {"issuer": "https://idp", "claimMappingOverride": True,
-                        "claimMapping": {"email": "email"}}}
-        out = self.run_hook(ctx(
-            "DexProvider", "UPDATE", spec, old_spec=old, username=CLUSTER_ADMIN))
-        self.assertFalse(out.validations.data[0]["allowed"])
-
-    def test_clusteradmin_cannot_skip_oidc_email_verification(self):
-        spec = {"type": "OIDC", "displayName": "corp",
-                "oidc": {"issuer": "https://idp", "insecureSkipEmailVerified": True}}
-        old = {"type": "OIDC", "displayName": "corp",
-               "oidc": {"issuer": "https://idp", "insecureSkipEmailVerified": False}}
-        out = self.run_hook(ctx(
-            "DexProvider", "UPDATE", spec, old_spec=old, username=CLUSTER_ADMIN))
-        self.assertFalse(out.validations.data[0]["allowed"])
-
-    def test_clusteradmin_can_rotate_ldap_bind_password(self):
-        spec = {"type": "LDAP", "displayName": "corp",
-                "ldap": {"host": "ldap:389", "bindDN": "cn=svc", "bindPW": "new"}}
-        old = {"type": "LDAP", "displayName": "corp",
-               "ldap": {"host": "ldap:389", "bindDN": "cn=svc", "bindPW": "old"}}
-        out = self.run_hook(ctx(
-            "DexProvider", "UPDATE", spec, old_spec=old, username=CLUSTER_ADMIN))
-        tests.assert_validation_allowed(self, out, None)
-
-    def test_superadmin_can_skip_saml_signature_validation(self):
-        spec = {"type": "SAML", "displayName": "corp",
-                "saml": {"filterGroups": True, "allowedGroups": ["devs"],
-                         "ssoURL": "https://idp/sso",
-                         "insecureSkipSignatureValidation": True}}
-        old = {"type": "SAML", "displayName": "corp",
-               "saml": {"filterGroups": True, "allowedGroups": ["devs"],
-                        "ssoURL": "https://idp/sso",
-                        "insecureSkipSignatureValidation": False}}
-        out = self.run_hook(ctx(
-            "DexProvider", "UPDATE", spec, old_spec=old, username=SUPERADMIN))
-        tests.assert_validation_allowed(self, out, None)
-
-    def test_superadmin_can_repoint_open_oidc_issuer(self):
-        spec = {"type": "OIDC", "displayName": "corp",
-                "oidc": {"issuer": "https://evil"}}
-        old = {"type": "OIDC", "displayName": "corp",
-               "oidc": {"issuer": "https://idp"}}
-        out = self.run_hook(ctx(
-            "DexProvider", "UPDATE", spec, old_spec=old, username=SUPERADMIN))
-        tests.assert_validation_allowed(self, out, None)
-
-    def test_clusteradmin_cannot_open_closed_saml(self):
-        context = ctx(
-            "DexProvider", "UPDATE",
-            {"type": "OIDC", "displayName": "corp", "oidc": {"issuer": "https://idp"}},
-            old_spec={"type": "SAML", "displayName": "corp",
-                      "saml": {"filterGroups": True, "allowedGroups": ["devs"]}},
-            username=CLUSTER_ADMIN)
-        context.snapshots[assign.CAR_SNAP][0].filterResult.userSubjects = []
-        out = self.run_hook(context)
-        self.assertFalse(out.validations.data[0]["allowed"])
-        self.assertIn("user-authz:super-admin", out.validations.data[0]["message"])
 
     def test_clusterrole_unrelated_label_change_allowed(self):
         out = self.run_hook(ctx(

@@ -155,7 +155,7 @@ def validate(ctx: DotMap) -> Optional[str]:
     if kind == "useroperation":
         return validate_useroperation(req, ctx.snapshots, actor, catalog)
     if kind == "dexprovider":
-        return validate_dexprovider(req, ctx.snapshots, actor, catalog)
+        return validate_dexprovider(req, actor, catalog)
     return None
 
 
@@ -261,9 +261,11 @@ def validate_car(req, actor: List[str], catalog: dict) -> Optional[str]:
 
 
 def validate_clusterrole(req) -> Optional[str]:
-    if not assign.can_assign_labels_changed(req.oldObject, req.object):
-        return None
-    return assign.deny_label_message(_meta_name(req.object) or "obj")
+    if assign.can_assign_labels_changed(req.oldObject, req.object):
+        return assign.deny_label_message(_meta_name(req.object) or "obj")
+    if assign.claims_platform_ownership(req.object):
+        return assign.deny_heritage_message(_meta_name(req.object) or "obj")
+    return None
 
 
 def validate_useroperation(req, snapshots, actor: List[str], catalog: dict) -> Optional[str]:
@@ -298,23 +300,12 @@ def validate_useroperation(req, snapshots, actor: List[str], catalog: dict) -> O
     return assign.deny_uo_message(display, leftover, rng)
 
 
-def validate_dexprovider(req, snapshots, actor: List[str], catalog: dict) -> Optional[str]:
-    new_spec = _spec(req.object)
-    new_targets = assign.dex_target_roles(new_spec, snapshots)
-    if req.operation == "UPDATE":
-        old_spec = _spec(req.oldObject)
-        if assign.dex_trust_anchor(new_spec) != assign.dex_trust_anchor(old_spec):
-            targets = new_targets
-        else:
-            old_targets = set(assign.dex_target_roles(old_spec, snapshots))
-            targets = [name for name in new_targets if name not in old_targets]
-    else:
-        targets = new_targets
-    leftover = assign.can_assign(actor, targets, catalog)
-    if leftover is None:
-        return None
-    rng = assign.actor_range(actor, catalog)
-    return assign.deny_dex_message(_meta_name(req.object) or "obj", leftover, rng)
+def validate_dexprovider(req, actor: List[str], catalog: dict) -> Optional[str]:
+    # Reworked in 002-dexprovider-identity-gate: targets are computed from the
+    # identity space the provider can assert (spec.allowedIdentities and the
+    # connector's own group filters). Until that lands, DexProvider writes are
+    # admitted on RBAC alone, as in main.
+    return None
 
 
 if __name__ == "__main__":
