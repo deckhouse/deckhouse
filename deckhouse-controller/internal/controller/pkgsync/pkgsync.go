@@ -80,10 +80,15 @@
 // A version stays a draft until its metadata lands, so no observer takes a
 // half-created version for a complete one; a fill interrupted mid-way heals on
 // the next start. The legacy label keeps the registry path of the module
-// source world ("<module>/release"). No owner is set: the repository the spec
-// names may not exist yet, and an owner reference to a missing object would
-// get the version garbage-collected; the repository scan adopts the stubs it
-// recognizes. An embedded version follows the disk: one version name spans
+// source world ("<module>/release"). A stub gets no owner: the repository the
+// spec names may not exist yet, and an owner reference to a missing object
+// would get the version garbage-collected. A version completed from disk gets
+// what the version controller gives a version it promotes from the registry:
+// the finalizer, and the repository as its owner when the repository exists.
+// A version completed before its repository appeared, like one of the platform
+// repository on the first start, stays without an owner; the embedded
+// repository has no object, so an embedded version never has one. An embedded
+// version follows the disk: one version name spans
 // every rebuild of a release (a dev build always counts as v2.0.0), so its
 // status is refreshed when the module files change and left alone when they
 // match - a no-change restart rewrites nothing. A complete release version is

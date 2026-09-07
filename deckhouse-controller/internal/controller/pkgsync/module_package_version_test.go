@@ -47,6 +47,7 @@ func TestSyncVersionsFromImage(t *testing.T) {
 		assert.False(t, mpv.IsDraft(), "an embedded version must come out complete")
 		assert.True(t, mpv.IsLegacy())
 		assert.Empty(t, mpv.OwnerReferences, "no owner: no repository ever serves an embedded version")
+		assert.Contains(t, mpv.Finalizers, v1alpha1.ModulePackageVersionFinalizer, "the finalizer holds the version while a module runs it")
 
 		require.NotNil(t, mpv.Status.PackageMetadata)
 		assert.Equal(t, "General Availability", mpv.Status.PackageMetadata.Stage)
@@ -403,6 +404,38 @@ func TestEnsureModulePackageVersion(t *testing.T) {
 		assert.Equal(t, "Preview", mpv.Status.PackageMetadata.Stage)
 		assert.Equal(t, int32(910), mpv.Status.PackageMetadata.Weight)
 		assert.NotNil(t, mpv.Status.PackageSchemas)
+	})
+
+	t.Run("filled version is owned by its repository", func(t *testing.T) {
+		repo := &v1alpha1.PackageRepository{
+			ObjectMeta: metav1.ObjectMeta{Name: "deckhouse-modules", UID: "repo-uid"},
+		}
+
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), repo)
+
+		require.NoError(t, s.ensureDraftFilled(ctx, spec, dir))
+
+		mpv := getVersion(t, cl, "deckhouse-modules-console-v1.60.1")
+		assert.False(t, mpv.IsDraft())
+		assert.Contains(t, mpv.Finalizers, v1alpha1.ModulePackageVersionFinalizer)
+
+		require.Len(t, mpv.OwnerReferences, 1, "the repository owns the version it serves")
+		owner := mpv.OwnerReferences[0]
+		assert.Equal(t, v1alpha1.PackageRepositoryKind, owner.Kind)
+		assert.Equal(t, "deckhouse-modules", owner.Name)
+		assert.Equal(t, repo.UID, owner.UID)
+		require.NotNil(t, owner.Controller)
+		assert.True(t, *owner.Controller)
+	})
+
+	t.Run("filled version without a repository has no owner", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir())
+
+		require.NoError(t, s.ensureDraftFilled(ctx, spec, dir))
+
+		mpv := getVersion(t, cl, "deckhouse-modules-console-v1.60.1")
+		assert.Contains(t, mpv.Finalizers, v1alpha1.ModulePackageVersionFinalizer, "the finalizer needs no repository")
+		assert.Empty(t, mpv.OwnerReferences, "an owner reference to a missing repository would get the version garbage-collected")
 	})
 
 	t.Run("draft stub is filled", func(t *testing.T) {

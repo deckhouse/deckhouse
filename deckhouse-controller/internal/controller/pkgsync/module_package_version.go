@@ -31,6 +31,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
@@ -412,10 +413,23 @@ func (s *syncer) fillMetadata(ctx context.Context, mpv *v1alpha1.ModulePackageVe
 	return nil
 }
 
-// removeDraft completes the version: without the draft label every observer may
-// treat the metadata as final.
+// removeDraft completes the version the way the version controller does after a
+// registry pull, so a version filled from disk is indistinguishable from one the
+// controller promoted:
+// - the finalizer routes a delete through the version controller
+// - the repository the spec names owns the version, when the repository exists
+// - without the draft label every observer may treat the metadata as final
 func (s *syncer) removeDraft(ctx context.Context, mpv *v1alpha1.ModulePackageVersion) error {
 	original := mpv.DeepCopy()
+
+	// The finalizer does not mean the version is in use. It only makes a delete
+	// wait for the version controller, which checks status.used: an unused
+	// version is released at once, a used one is held until its module lets go.
+	controllerutil.AddFinalizer(mpv, v1alpha1.ModulePackageVersionFinalizer)
+
+	if err := s.setRepositoryOwner(ctx, mpv); err != nil {
+		return err
+	}
 
 	delete(mpv.Labels, v1alpha1.ModulePackageVersionLabelDraft)
 
@@ -424,6 +438,34 @@ func (s *syncer) removeDraft(ctx context.Context, mpv *v1alpha1.ModulePackageVer
 	}
 
 	s.logger.Debug("module package version filled from disk", slog.String("name", mpv.Name))
+
+	return nil
+}
+
+// setRepositoryOwner makes the repository the version names its controller owner, so
+// the version goes when the repository goes. A version whose repository is not there
+// stays without an owner: an owner reference to a missing object would get the version
+// garbage-collected at once. The embedded repository stands for the image and never
+// has an object.
+func (s *syncer) setRepositoryOwner(ctx context.Context, mpv *v1alpha1.ModulePackageVersion) error {
+	if mpv.Spec.PackageRepositoryName == repositoryNameEmbedded {
+		return nil
+	}
+
+	repo := new(v1alpha1.PackageRepository)
+
+	err := s.reader.Get(ctx, client.ObjectKey{Name: mpv.Spec.PackageRepositoryName}, repo)
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+
+	if err != nil {
+		return fmt.Errorf("get package repository '%s': %w", mpv.Spec.PackageRepositoryName, err)
+	}
+
+	if err := controllerutil.SetControllerReference(repo, mpv, s.writer.Scheme()); err != nil {
+		return fmt.Errorf("set the owner of module package version '%s': %w", mpv.Name, err)
+	}
 
 	return nil
 }

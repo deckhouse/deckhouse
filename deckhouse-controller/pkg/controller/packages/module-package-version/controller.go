@@ -242,7 +242,8 @@ func (r *reconciler) handleCreateOrUpdate(ctx context.Context, mpv *v1alpha1.Mod
 		mpv.Labels[v1alpha1.ModulePackageVersionLabelExistInRegistry] = "true"
 	}
 
-	// Finalizer prevents deletion while Modules reference this version.
+	// The finalizer routes a delete through handleDelete, which holds the version
+	// only while status.used is set; it goes on every version, used or not.
 	if !controllerutil.ContainsFinalizer(mpv, v1alpha1.ModulePackageVersionFinalizer) {
 		controllerutil.AddFinalizer(mpv, v1alpha1.ModulePackageVersionFinalizer)
 	}
