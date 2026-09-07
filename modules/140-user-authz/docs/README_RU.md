@@ -412,9 +412,7 @@ read:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `Editor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`):
 
 ```text
-create:
-    - serviceaccounts/token
-patch:
+get,patch:
     - pods/resize
 write:
     - apps/deployments
@@ -463,6 +461,8 @@ write:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `Admin` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`):
 
 ```text
+create:
+    - serviceaccounts/token
 create,patch,update:
     - pods
 delete,deletecollection:

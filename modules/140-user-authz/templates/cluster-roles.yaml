@@ -270,13 +270,8 @@
   resources:
   - pods/resize
   verbs:
+  - get
   - patch
-- apiGroups:
-  - ""
-  resources:
-  - serviceaccounts/token
-  verbs:
-  - create
 - apiGroups:
   - ""
   resources:
@@ -302,6 +297,12 @@
   - create
   - patch
   - update
+- apiGroups:
+  - ""
+  resources:
+  - serviceaccounts/token
+  verbs:
+  - create
 - apiGroups:
   - "rbac.authorization.k8s.io"
   resources:
