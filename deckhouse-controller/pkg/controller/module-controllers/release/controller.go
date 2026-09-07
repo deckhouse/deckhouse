@@ -744,7 +744,6 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 //   - Maintenance window compliance for disruption minimization
 //   - Manual approval workflows for controlled deployments
 //   - Notification delivery for stakeholder awareness
-//   - Cooldown period enforcement between major releases
 //   - Canary deployment scheduling for gradual rollouts
 //
 // Side Effects:
@@ -1646,7 +1645,7 @@ type TimeResult struct {
 //
 // Minor Release Workflow:
 //   - Higher risk profile requires additional safety measures
-//   - Evaluated conditions: Cooldown periods, canary settings, notifications, windows, approvals
+//   - Evaluated conditions: Canary settings, notifications, windows, approvals
 //   - Disruption approval validation through specialized checker
 //   - Enhanced notification workflow with detailed change communication
 //   - Extended validation period before deployment authorization

@@ -275,8 +275,6 @@ properties:
           - `ENABLE_ENHANCED_RESOURCE_SCOPING`
           - `PILOT_HTTP10`
           - `PILOT_ENABLE_AMBIENT`
-          - `PILOT_ENABLE_GATEWAY_API_DEPLOYMENT_CONTROLLER`
-          - `PILOT_ENABLE_GATEWAY_API_GATEWAYCLASS_CONTROLLER`
       replicasManagement:
         description: |
           Настройки управления репликами и горизонтальным масштабированием istiod.

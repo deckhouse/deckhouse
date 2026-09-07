@@ -32,17 +32,31 @@ has_cgroup2() {
 #  CASE 1: swapBehavior is empty or == NoSwap
 ###############################################
 
-# Stop and mask systemd swap units
-for swapunit in $(systemctl list-units --no-legend --plain --no-pager --type swap | cut -f1 -d" "); do
-  systemctl stop "$swapunit" || true
-  systemctl mask "$swapunit" || true
-done
+# Both generator blocks below must run before the swap units are touched. A unit that is
+# regenerated and reactivated while it is being stopped never reaches a final state, and
+# `systemctl stop` then waits for that state forever.
+#
+# zram-generator generates swap units for zram devices (dev-zram0.swap and friends), and
+# swap.target pulls them back in.
+if [ -f /lib/systemd/system-generators/zram-generator ] && ( [ ! -L /etc/systemd/system-generators/zram-generator ] || [ "$(readlink -f /etc/systemd/system-generators/zram-generator)" != "/dev/null" ] ); then
+  mkdir -p /etc/systemd/system-generators
+  ln -sf /dev/null /etc/systemd/system-generators/zram-generator
+fi
 
 # systemd-gpt-auto-generator automatically detects swap partition in GPT and activates it
 if [ -f /lib/systemd/system-generators/systemd-gpt-auto-generator ] && ( [ ! -L /etc/systemd/system-generators/systemd-gpt-auto-generator ] || [ "$(readlink -f /etc/systemd/system-generators/systemd-gpt-auto-generator)" != "/dev/null" ] ); then
   mkdir -p /etc/systemd/system-generators
   ln -sf /dev/null /etc/systemd/system-generators/systemd-gpt-auto-generator
 fi
+
+# Mask systemd swap units before stopping them, so that nothing can reactivate a unit
+# while it is being stopped. The timeout is what makes `|| true` effective: it catches a
+# non-zero exit, not a hang, and a hanging `systemctl stop` blocks bashible - and with it
+# cloud-init and the node join - indefinitely.
+for swapunit in $(systemctl list-units --no-legend --plain --no-pager --type swap | cut -f1 -d" "); do
+  systemctl mask "$swapunit" || true
+  timeout 30 systemctl stop "$swapunit" || true
+done
 
 # Disable any active swap, no need to restart kubelet
 if ! swapoff -a; then

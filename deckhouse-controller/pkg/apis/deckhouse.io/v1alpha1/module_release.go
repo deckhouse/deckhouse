@@ -157,10 +157,6 @@ func (mr *ModuleRelease) GetChangelogLink() string {
 	return ""
 }
 
-func (mr *ModuleRelease) GetCooldownUntil() *time.Time {
-	return nil
-}
-
 func (mr *ModuleRelease) GetDisruptions() []string {
 	return nil
 }

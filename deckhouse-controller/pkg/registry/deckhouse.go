@@ -26,11 +26,9 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	regTransport "github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/iancoleman/strcase"
-	"gopkg.in/yaml.v2"
 
 	dhRelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
-	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
 	"github.com/deckhouse/deckhouse/pkg/log"
@@ -41,8 +39,6 @@ type deckhouseReleaseService struct {
 
 	registry        string
 	registryOptions []cr.Option
-
-	logger *log.Logger
 }
 
 func newDeckhouseReleaseService(registryAddress string, registryConfig *utils.RegistryConfig, logger *log.Logger) *deckhouseReleaseService {
@@ -50,11 +46,13 @@ func newDeckhouseReleaseService(registryAddress string, registryConfig *utils.Re
 		dc:              dependency.NewDependencyContainer(),
 		registry:        registryAddress,
 		registryOptions: utils.GenerateRegistryOptions(registryConfig, logger),
-		logger:          logger,
 	}
 }
 
-func (svc *deckhouseReleaseService) GetDeckhouseRelease(ctx context.Context, releaseChannel string) (*dhRelease.ReleaseMetadata, error) {
+// GetDeckhouseRelease returns the version.json shipped in the release image of the
+// channel. The command only reports what the registry holds, so it hands out the
+// payload as read instead of the ReleaseMetadata the controller builds from it.
+func (svc *deckhouseReleaseService) GetDeckhouseRelease(ctx context.Context, releaseChannel string) (*dhRelease.ReleaseVersionData, error) {
 	regCli, err := svc.dc.GetRegistryClient(path.Join(svc.registry, "release-channel"), svc.registryOptions...)
 	if err != nil {
 		return nil, fmt.Errorf("get registry client: %w", err)
@@ -70,16 +68,16 @@ func (svc *deckhouseReleaseService) GetDeckhouseRelease(ctx context.Context, rel
 	}
 
 	// TODO: see check_release with same method
-	releaseMetadata, err := svc.fetchReleaseMetadata(img)
+	versionData, err := svc.fetchReleaseVersionData(img)
 	if err != nil {
-		return nil, fmt.Errorf("fetch release metadata: %w", err)
+		return nil, fmt.Errorf("fetch release version data: %w", err)
 	}
 
-	if releaseMetadata.Version == "" {
+	if versionData.Version == "" {
 		return nil, fmt.Errorf("release metadata malformed: no version found")
 	}
 
-	return releaseMetadata, nil
+	return versionData, nil
 }
 
 func (svc *deckhouseReleaseService) ListDeckhouseReleases(ctx context.Context) ([]string, error) {
@@ -96,8 +94,8 @@ func (svc *deckhouseReleaseService) ListDeckhouseReleases(ctx context.Context) (
 	return ls, nil
 }
 
-func (svc *deckhouseReleaseService) fetchReleaseMetadata(img v1.Image) (*dhRelease.ReleaseMetadata, error) {
-	var meta = new(dhRelease.ReleaseMetadata)
+func (svc *deckhouseReleaseService) fetchReleaseVersionData(img v1.Image) (*dhRelease.ReleaseVersionData, error) {
+	var versionData = new(dhRelease.ReleaseVersionData)
 
 	rc, err := cr.Extract(img)
 	if err != nil {
@@ -105,6 +103,8 @@ func (svc *deckhouseReleaseService) fetchReleaseMetadata(img v1.Image) (*dhRelea
 	}
 	defer rc.Close()
 
+	// only version.json is read back, but untarMetadata writes into every buffer
+	// it finds a file for, so all of them have to be there
 	rr := &releaseReader{
 		versionReader:   bytes.NewBuffer(nil),
 		changelogReader: bytes.NewBuffer(nil),
@@ -117,35 +117,11 @@ func (svc *deckhouseReleaseService) fetchReleaseMetadata(img v1.Image) (*dhRelea
 	}
 
 	if rr.versionReader.Len() > 0 {
-		err = json.NewDecoder(rr.versionReader).Decode(&meta)
+		err = json.NewDecoder(rr.versionReader).Decode(versionData)
 		if err != nil {
 			return nil, fmt.Errorf("decode: %w", err)
 		}
 	}
 
-	if rr.moduleReader.Len() > 0 {
-		var ModuleDefinition moduletypes.Definition
-		err = yaml.NewDecoder(rr.moduleReader).Decode(&ModuleDefinition)
-		if err != nil {
-			return nil, fmt.Errorf("unmarshal module yaml failed: %w", err)
-		}
-
-		meta.ModuleDefinition = &ModuleDefinition
-	}
-
-	if rr.changelogReader.Len() > 0 {
-		var changelog map[string]any
-
-		err = yaml.NewDecoder(rr.changelogReader).Decode(&changelog)
-		if err != nil {
-			// if changelog build failed - warn about it but don't fail the release
-			svc.logger.Warn("Unmarshal CHANGELOG yaml failed", log.Err(err))
-
-			changelog = make(map[string]any)
-		}
-
-		meta.Changelog = changelog
-	}
-
-	return meta, nil
+	return versionData, nil
 }

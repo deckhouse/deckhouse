@@ -117,8 +117,6 @@ description: Архитектура ядра модуля virtualization в Deck
    - следит за VirtualMachineInstance ресурсами, обновляет их статус и управляет связанными с ними подами;
    - выполняет авторизацию запросов на получение метрик.
 
-1. [**CDI (Containerized-Data-Importer)**](cdi.html) — KubeVirt на основе спецификации диска и ссылки на образ ВМ в секции `DataVolumeTemplate` ресурса VirtualMachine создаёт DataVolume. CDI импортирует в PVC образ диска из указанного в DataVolume источника. Созданный PVC является диском ВМ, управляемой KubeVirt.
-
 С ядром модуля взаимодействуют следующие внешние компоненты:
 
 1. **Kube-apiserver**:

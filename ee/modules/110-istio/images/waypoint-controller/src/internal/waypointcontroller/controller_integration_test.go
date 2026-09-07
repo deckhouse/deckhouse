@@ -24,6 +24,7 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	policyv1 "k8s.io/api/policy/v1"
+	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -33,7 +34,6 @@ import (
 	"k8s.io/apimachinery/pkg/util/wait"
 	vpav1 "k8s.io/autoscaler/vertical-pod-autoscaler/pkg/apis/autoscaling.k8s.io/v1"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -158,7 +158,7 @@ func setupEnv(t *testing.T) *testEnv {
 			repoCRDDir,
 			testCRDDir,
 		},
-		CRDs:                crdObjs,
+		CRDs:                  crdObjs,
 		ErrorIfCRDPathMissing: true,
 	}
 
@@ -350,6 +350,18 @@ func TestWaypointInstanceLifecycle(t *testing.T) {
 		err := reader.Get(ctx, key(baseName), hpa)
 		if !apierrors.IsNotFound(err) {
 			t.Fatalf("HPA should not exist in Static mode, got err=%v", err)
+		}
+	})
+
+	t.Run("create/Gateway-has-no-network-label", func(t *testing.T) {
+		gw := &gatewayv1.Gateway{}
+		if err := reader.Get(ctx, key(baseName), gw); err != nil {
+			t.Fatalf("get gateway: %v", err)
+		}
+		if v, ok := gw.Labels[TopologyNetworkLabelKey]; ok {
+			t.Errorf("Gateway must not carry %q (got %q): istiod would register it as a "+
+				"cross-network gateway at an in-cluster .svc address, and peer clusters "+
+				"import those entries", TopologyNetworkLabelKey, v)
 		}
 	})
 

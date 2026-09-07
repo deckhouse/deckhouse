@@ -17,18 +17,18 @@
 bb-set-proxy() {
 {{- if .proxy }}
   {{- if .proxy.httpProxy }}
-  export HTTP_PROXY={{ .proxy.httpProxy | quote }}
+  export HTTP_PROXY={{ .proxy.httpProxy | replace "'" "'\"'\"'" | squote }}
   export http_proxy=${HTTP_PROXY}
   {{- end }}
   {{- if .proxy.httpsProxy }}
-  export HTTPS_PROXY={{ .proxy.httpsProxy | quote }}
+  export HTTPS_PROXY={{ .proxy.httpsProxy | replace "'" "'\"'\"'" | squote }}
   export https_proxy=${HTTPS_PROXY}
   {{- end }}
   {{- $noProxy := list "127.0.0.1" "169.254.169.254" "registry.d8-system.svc" .Values.global.clusterConfiguration.clusterDomain .Values.global.clusterConfiguration.podSubnetCIDR .Values.global.clusterConfiguration.serviceSubnetCIDR }}
   {{- if .proxy.noProxy }}
     {{- $noProxy = concat $noProxy .proxy.noProxy }}
   {{- end }}
-  export NO_PROXY={{ $noProxy | join "," | quote }}
+  export NO_PROXY={{ $noProxy | join "," | replace "'" "'\"'\"'" | squote }}
   export no_proxy=${NO_PROXY}
 {{- else }}
   unset HTTP_PROXY http_proxy HTTPS_PROXY https_proxy NO_PROXY no_proxy

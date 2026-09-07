@@ -1,0 +1,355 @@
+#!/usr/bin/env bash
+
+# Copyright 2026 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# Find edition build job on an existing pipeline for the current commit SHA,
+# play it if not successful, wait until success.
+# Writes e2e-build.env with BRANCH (image tag for e2e-framework).
+#
+# If BRANCH is provided and not "pr"-prefixed (e.g. a release/main run where
+# the image is already known to be published), the lookup/play/wait is
+# skipped and the given BRANCH is passed through as-is. This is the single
+# place that decides the final BRANCH value — downstream jobs only ever read
+# it from this job's dotenv artifact.
+#
+# Also resolves the linked merge request (if any) and posts a "started"
+# comment, writing its id (NOTE_ID) and the MR iid (MERGE_REQUEST_IID) to
+# the same dotenv artifact, so the create job can update that comment.
+#
+# Tag naming: .gitlab/build.yml
+# Play job:   https://docs.gitlab.com/api/jobs/#run-a-job
+# Pipelines:  https://docs.gitlab.com/api/pipelines/ (filter by sha)
+set -euo pipefail
+
+DOTENV_FILE="${DOTENV_FILE:-e2e-build.env}"
+SLEEP_SECONDS="${E2E_BUILD_POLL_SLEEP:-30}"
+MAX_ATTEMPTS="${E2E_BUILD_POLL_ATTEMPTS:-480}"
+PIPELINE_WAIT_ATTEMPTS="${E2E_PIPELINE_WAIT_ATTEMPTS:-10}"
+PIPELINE_WAIT_SLEEP="${E2E_PIPELINE_WAIT_SLEEP:-10}"
+
+CUSTOM_BRANCH="${BRANCH:-}"
+E2E_EDITION="${E2E_EDITION:?E2E_EDITION is required}"
+EDITION_LOWER="$(echo "${E2E_EDITION}" | tr '[:upper:]' '[:lower:]')"
+CI_COMMIT_SHA="${CI_COMMIT_SHA:?CI_COMMIT_SHA is required}"
+FOX_TOKEN="${FOX_TOKEN:?FOX_TOKEN is required}"
+
+api() {
+  local method="$1"
+  local url="$2"
+  shift 2
+  curl -sS --fail-with-body \
+    --request "${method}" \
+    --header "PRIVATE-TOKEN: ${FOX_TOKEN}" \
+    "$@" \
+    "${url}"
+}
+
+resolve_ref() {
+  if [[ -n "${CI_COMMIT_TAG:-}" ]]; then
+    echo "${CI_COMMIT_TAG}"
+  elif [[ -n "${CI_COMMIT_BRANCH:-}" ]]; then
+    echo "${CI_COMMIT_BRANCH}"
+  else
+    echo "${CI_COMMIT_REF_NAME}"
+  fi
+}
+
+resolve_build_job_suffix() {
+  if [[ -n "${CI_COMMIT_TAG:-}" ]]; then
+    echo "tag"
+    return
+  fi
+  if [[ "${CI_COMMIT_BRANCH:-}" == "main" ]]; then
+    echo "main"
+    return
+  fi
+  if [[ "${CI_COMMIT_BRANCH:-}" =~ ^release-[0-9]+\.[0-9]+$ ]]; then
+    echo "release-branch"
+    return
+  fi
+  # Feature branches use MR pipelines (build_*:mr).
+  echo "mr"
+}
+
+resolve_image_tag_base() {
+  if [[ -n "${CI_COMMIT_TAG:-}" ]]; then
+    # Release tag publish uses werf slugify of the tag; BRANCH for e2e on tags
+    # is the tag ref (stage registry path differs — e2e-framework TYPE_REGISTRY).
+    echo "${CI_COMMIT_TAG}"
+    return
+  fi
+  if [[ -n "${CI_MERGE_REQUEST_IID:-}" ]]; then
+    echo "pr${CI_MERGE_REQUEST_IID}"
+    return
+  fi
+  # Web/API on a branch: resolve open MR iid (MR builds use prN tags).
+  local mrs
+  mrs="$(api GET "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/merge_requests?state=opened&source_branch=${CI_COMMIT_BRANCH}&per_page=1")"
+  local iid
+  iid="$(echo "${mrs}" | jq -r '.[0].iid // empty')"
+  if [[ -n "${iid}" ]]; then
+    echo "pr${iid}"
+    return
+  fi
+  echo "${CI_COMMIT_REF_SLUG}"
+}
+
+MR_IID=""
+resolve_mr_iid() {
+  if [[ -n "${MR_IID}" ]]; then
+    echo "${MR_IID}"
+    return 0
+  fi
+  if [[ -n "${CI_MERGE_REQUEST_IID:-}" ]]; then
+    MR_IID="${CI_MERGE_REQUEST_IID}"
+    echo "${MR_IID}"
+    return 0
+  fi
+  if [[ -z "${CI_COMMIT_BRANCH:-}" ]]; then
+    return 1
+  fi
+  local mrs iid
+  mrs="$(api GET "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/merge_requests?state=opened&source_branch=${CI_COMMIT_BRANCH}&per_page=1")"
+  iid="$(echo "${mrs}" | jq -r '.[0].iid // empty')"
+  if [[ -z "${iid}" ]]; then
+    return 1
+  fi
+  MR_IID="${iid}"
+  echo "${MR_IID}"
+}
+
+compute_image_tag() {
+  local tag_base="$1"
+  local edition_lower="$2"
+  if [[ -n "${CI_COMMIT_TAG:-}" ]]; then
+    # Tag builds publish without edition suffix in the tag name (.gitlab/build.yml).
+    echo "${tag_base}"
+    return
+  fi
+  if [[ "${edition_lower}" == "fe" ]]; then
+    echo "${tag_base}"
+  else
+    echo "${tag_base}-${edition_lower}"
+  fi
+}
+
+build_job_name_for() {
+  local edition_lower="$1"
+  local suffix="$2"
+  local base
+  case "${edition_lower}" in
+    fe) base="build_fe" ;;
+    ce) base="build_ce" ;;
+    ee) base="build_ee" ;;
+    be) base="build_be" ;;
+    se) base="build_se" ;;
+    se-plus) base="build_se_plus" ;;
+    cse) base="build_cse" ;;
+    *)
+      echo "Unsupported E2E_EDITION='${E2E_EDITION}'" >&2
+      exit 1
+      ;;
+  esac
+  echo "${base}:${suffix}"
+}
+
+list_pipelines_for_sha() {
+  local sha="$1"
+  api GET "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/pipelines?sha=${sha}&per_page=50"
+}
+
+list_pipeline_jobs() {
+  local pipeline_id="$1"
+  api GET "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/pipelines/${pipeline_id}/jobs?per_page=100"
+}
+
+# Prefer newest pipeline for this commit SHA that contains the target build job.
+find_build_job() {
+  local want_name="$1"
+  local sha="$2"
+  local pipelines pipeline_id jobs matched
+  pipelines="$(list_pipelines_for_sha "${sha}")"
+
+  if [[ "$(echo "${pipelines}" | jq 'length')" -eq 0 ]]; then
+    return 1
+  fi
+
+  while IFS= read -r pipeline_id; do
+    [[ -z "${pipeline_id}" ]] && continue
+    jobs="$(list_pipeline_jobs "${pipeline_id}")"
+    matched="$(echo "${jobs}" | jq -c --arg name "${want_name}" \
+      '[.[] | select(.name == $name)] | first // empty')"
+    if [[ -n "${matched}" && "${matched}" != "null" ]]; then
+      echo "${matched}"
+      return 0
+    fi
+  done < <(echo "${pipelines}" | jq -r 'sort_by(.id) | reverse | .[].id')
+
+  return 1
+}
+
+# GitLab may not have created the branch/MR/tag pipeline yet right after push.
+wait_for_build_job() {
+  local want_name="$1"
+  local sha="$2"
+  local attempt job
+
+  for attempt in $(seq 1 "${PIPELINE_WAIT_ATTEMPTS}"); do
+    if job="$(find_build_job "${want_name}" "${sha}")"; then
+      echo "${job}"
+      return 0
+    fi
+    echo "Attempt ${attempt}/${PIPELINE_WAIT_ATTEMPTS}: job '${want_name}' not found for sha ${sha}; waiting ${PIPELINE_WAIT_SLEEP}s"
+    if [[ "${attempt}" -eq "${PIPELINE_WAIT_ATTEMPTS}" ]]; then
+      break
+    fi
+    sleep "${PIPELINE_WAIT_SLEEP}"
+  done
+
+  return 1
+}
+
+play_job() {
+  local job_id="$1"
+  api POST "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/jobs/${job_id}/play" >/dev/null
+}
+
+get_job() {
+  local job_id="$1"
+  api GET "${CI_API_V4_URL}/projects/${CI_PROJECT_ID}/jobs/${job_id}"
+}
+
+wait_for_job_success() {
+  local job_id="$1"
+  local attempt status
+  for attempt in $(seq 1 "${MAX_ATTEMPTS}"); do
+    local job
+    job="$(get_job "${job_id}")"
+    status="$(echo "${job}" | jq -r '.status')"
+    echo "Attempt ${attempt}/${MAX_ATTEMPTS}: job ${job_id} status=${status}"
+    case "${status}" in
+      success)
+        return 0
+        ;;
+      failed|canceled|cancelled|skipped)
+        echo "Build job ${job_id} ended with status=${status}" >&2
+        return 1
+        ;;
+      *)
+        sleep "${SLEEP_SECONDS}"
+        ;;
+    esac
+  done
+  echo "Timeout waiting for job ${job_id}" >&2
+  return 1
+}
+
+write_dotenv() {
+  local branch="$1"
+  local job_name="$2"
+  local note_id="$3"
+  local mr_iid="$4"
+  # RESOLVED_BRANCH duplicates BRANCH under a name no job statically defines.
+  # BRANCH itself is already set as a job-level variable via the e2e-framework
+  # include (inputs.branch, baked in at pipeline-compile time), and GitLab
+  # always prioritizes a job-level variable over a same-named dotenv variable
+  # from `needs` — so plain BRANCH from this dotenv is silently dropped
+  # downstream. Consumers must `export BRANCH="$RESOLVED_BRANCH"` themselves.
+  #
+  # COMMENT_TOKEN carries the same value as this job's own FOX_TOKEN, so
+  # downstream jobs don't need their own vault fetch to talk to the GitLab
+  # API (e.g. to update the e2e comment/labels). This artifact must stay
+  # access-restricted (artifacts:access: none) since it now holds a token.
+  cat > "${DOTENV_FILE}" <<EOF
+BRANCH=${branch}
+RESOLVED_BRANCH=${branch}
+E2E_BUILD_JOB_NAME=${job_name}
+NOTE_ID=${note_id}
+MERGE_REQUEST_IID=${mr_iid}
+COMMENT_TOKEN=${FOX_TOKEN}
+EOF
+  grep -v '^COMMENT_TOKEN=' "${DOTENV_FILE}"
+}
+
+main() {
+  local mr_iid="" note_id=""
+  if mr_iid="$(resolve_mr_iid)"; then
+    echo "MERGE_REQUEST_IID=${mr_iid}"
+    if note_id="$(COMMENT_TOKEN="${FOX_TOKEN}" .gitlab/scripts/e2e-notify.sh start "${mr_iid}")" && [[ -n "${note_id}" ]]; then
+      echo "NOTE_ID=${note_id}"
+    else
+      echo "Failed to post start comment on MR ${mr_iid}" >&2
+      note_id=""
+    fi
+  else
+    echo "No merge request found for this pipeline; skipping e2e status comment"
+  fi
+
+  if [[ -n "${CUSTOM_BRANCH}" && ! "${CUSTOM_BRANCH}" =~ ^[Pp][Rr] ]]; then
+    echo "BRANCH='${CUSTOM_BRANCH}' provided and not pr-prefixed; using as-is (skipping build lookup)"
+    write_dotenv "${CUSTOM_BRANCH}" "" "${note_id}" "${mr_iid}"
+    return
+  fi
+
+  local ref suffix tag_base image_tag job_name job job_id status
+
+  ref="$(resolve_ref)"
+  suffix="$(resolve_build_job_suffix)"
+  tag_base="$(resolve_image_tag_base)"
+  image_tag="$(compute_image_tag "${tag_base}" "${EDITION_LOWER}")"
+  job_name="$(build_job_name_for "${EDITION_LOWER}" "${suffix}")"
+
+  echo "E2E_EDITION=${E2E_EDITION}"
+  echo "REF=${ref}"
+  echo "CI_COMMIT_SHA=${CI_COMMIT_SHA}"
+  echo "TARGET_BUILD_JOB=${job_name}"
+  echo "IMAGE_TAG(BRANCH)=${image_tag}"
+
+  if ! job="$(wait_for_build_job "${job_name}" "${CI_COMMIT_SHA}")"; then
+    echo "Build job '${job_name}' not found in pipelines for sha '${CI_COMMIT_SHA}' (ref '${ref}') after ${PIPELINE_WAIT_ATTEMPTS} attempts" >&2
+    exit 1
+  fi
+
+  job_id="$(echo "${job}" | jq -r '.id')"
+  status="$(echo "${job}" | jq -r '.status')"
+  echo "Found job id=${job_id} status=${status} url=$(echo "${job}" | jq -r '.web_url // empty')"
+
+  case "${status}" in
+    success)
+      echo "Build job already succeeded"
+      ;;
+    manual|created)
+      echo "Playing build job ${job_id}"
+      play_job "${job_id}"
+      wait_for_job_success "${job_id}"
+      ;;
+    failed|canceled|cancelled|skipped)
+      echo "Build job ${job_id} status=${status}; fail e2e (no retry)" >&2
+      exit 1
+      ;;
+    running|pending|waiting_for_resource|preparing|scheduled)
+      echo "Waiting for build job ${job_id}"
+      wait_for_job_success "${job_id}"
+      ;;
+    *)
+      echo "Unexpected job status '${status}' for job ${job_id}" >&2
+      exit 1
+      ;;
+  esac
+
+  write_dotenv "${image_tag}" "${job_name}" "${note_id}" "${mr_iid}"
+}
+
+main "$@"

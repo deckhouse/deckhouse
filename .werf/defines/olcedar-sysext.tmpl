@@ -48,8 +48,9 @@ secrets:
     # The Transit key and its leaf certificate, pinned by serial. They rotate
     # together: the leaf must match the key, so both lines change at once. The
     # policy also allows listing olcedar-root-pki/certs to find a new serial.
-    SIGN_KEY_PATH="olcedar-signer/sign/olcedar-2026-july/sha2-256"
-    SIGNER_CERT_PATH="olcedar-root-pki/cert/0f:17:29:75:b0:43:15:cf:56:01:62:10:47:26:ed:79:51:64:fe:96"
+    SIGN_KEY="dh-engine-2026-sep"
+    SIGN_KEY_PATH="dh-engine-signer/sign/${SIGN_KEY}/sha2-256"
+    SIGNER_CERT_PATH="dh-engine-root-pki/cert/37:8b:81:ed:09:15:ba:a1:76:5c:cb:58:55:c0:a4:49:45:3e:23:e3"
 
     export VAULT_ADDR="$(cat /run/secrets/VAULT_ADDR)"
     export VAULT_TOKEN="$(d8 stronghold write -field=token auth/github/login role="$(cat /run/secrets/WERF_OLCEDAR_VAULT_AUTH_ROLE)" \

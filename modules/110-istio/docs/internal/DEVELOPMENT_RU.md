@@ -8,7 +8,7 @@ searchable: false
 Каждый релиз Istio содержит:
 
 * Исполняемый файл `istioctl` с встроенными helm-чартами (для Deckhouse не используется при деплое, полезен для утилит).
-* Image с оператором и CR `IstioOperator` / `Istio` — **только для версий ниже 1.27.9** (`supportsOperator: true`).
+* Image с sail-оператором и CR `Istio` (`sailoperator.io/v1`) — **только для версий ниже 1.27.9** (`supportsOperator: true`), то есть сейчас только для Istio 1.25. Legacy-CR `IstioOperator` (`install.istio.io/v1alpha1`) больше не создаётся: он остался только для очистки объектов, унаследованных от снятой с поддержки версии 1.21.
 * Набор образов с компонентами Istio (istiod, proxyv2, cni, …).
 * helm-чарты upstream.
 

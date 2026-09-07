@@ -546,9 +546,12 @@ function main() {
 
     until /bin/bash --noprofile --norc -"$sx"eEo pipefail -c "export TERM=xterm-256color; unset CDPATH; cd $BOOTSTRAP_DIR; source /var/lib/bashible/bashbooster.sh; source $step" 2> >(tee "$per_step_log" >&2)
     do
+      # Publish the failing step's own stderr: bb-event-error-create and
+      # bb-bashible-ready-steps-failed read $step_log, which otherwise still
+      # holds the last *successful* step's log.
+      cp -f "$per_step_log" "$step_log" 2>/dev/null || true
       attempt=$(( attempt + 1 ))
       if [ -n "${MAX_RETRIES-}" ] && [ "$attempt" -gt "${MAX_RETRIES}" ]; then
-        cp -f "$per_step_log" "$step_log" 2>/dev/null || true
         {{- if ne .runType "ClusterBootstrap" }}
         bb-event-error-create "$step"
         {{- end }}

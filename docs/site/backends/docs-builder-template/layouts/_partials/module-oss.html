@@ -22,7 +22,7 @@
       <li>
       {{- $itemLine := "" -}}
       {{- if .link }}
-        {{- $itemLine = printf "<a href='%s'>%s</a>" .link .name }}
+        {{- $itemLine = partial "helpers/rewrite-link" (dict "href" .link "inner" .name) }}
       {{- else }}
         {{- $itemLine = .name }}
       {{- end }}

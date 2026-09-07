@@ -148,6 +148,15 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
   - operator: Exists
 `))
 		})
+
+		It("Should configure Pod Security for d8-monitoring namespace", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			namespace := f.KubernetesGlobalResource("Namespace", "d8-monitoring")
+			Expect(namespace.Exists()).To(BeTrue())
+			Expect(namespace.Field(`metadata.labels.pod-security\.kubernetes\.io/enforce`).String()).To(Equal("privileged"))
+			Expect(namespace.Field(`metadata.labels.pod-security\.kubernetes\.io/enforce-version`).String()).To(Equal("latest"))
+		})
 	})
 
 	Context("Cluster with deckhouse on system node", func() {
@@ -351,6 +360,36 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "deckhouse").Exists()).To(BeFalse())
 			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "webhook-handler").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("Security policy labels on the d8-monitoring namespace", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYaml("deckhouse", moduleValuesForMasterNode)
+			f.HelmRender()
+		})
+
+		It("Must be evaluated against the restricted standard in warn mode", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ns := f.KubernetesGlobalResource("Namespace", "d8-monitoring")
+			Expect(ns.Exists()).To(BeTrue())
+			Expect(ns.Field(`metadata.labels.security\.deckhouse\.io/pod-policy`).String()).To(Equal("restricted"))
+			Expect(ns.Field(`metadata.labels.security\.deckhouse\.io/pod-policy-action`).String()).To(Equal("warn"))
+			Expect(ns.Field(`metadata.labels.security\.deckhouse\.io/enable-security-policy-check`).String()).To(Equal("true"))
+		})
+
+		It("Must keep the labels it already had", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			ns := f.KubernetesGlobalResource("Namespace", "d8-monitoring")
+			Expect(ns.Field(`metadata.labels.prometheus\.deckhouse\.io/monitor-watcher-enabled`).String()).To(Equal("true"))
+			Expect(ns.Field(`metadata.labels.prometheus\.deckhouse\.io/rules-watcher-enabled`).String()).To(Equal("true"))
+			Expect(ns.Field(`metadata.labels.prometheus\.deckhouse\.io/scrape-configs-watcher-enabled`).String()).To(Equal("true"))
+			Expect(ns.Field(`metadata.labels.extended-monitoring\.deckhouse\.io/enabled`).Exists()).To(BeTrue())
+			Expect(ns.Field("metadata.labels.heritage").String()).To(Equal("deckhouse"))
 		})
 	})
 })

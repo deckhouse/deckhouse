@@ -1,0 +1,17 @@
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModulePullOverride
+metadata:
+  name: test-module
+spec:
+  imageTag: main
+  scanInterval: 15s
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: test-module
+status:
+  conditions:
+  - type: EnabledByModuleConfig
+    status: "True"

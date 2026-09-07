@@ -170,9 +170,9 @@ type ModuleStatus struct {
 // machine on top of conditions.
 type ModuleStatusSummary struct {
 	// State is the high-level lifecycle state observed for the module.
-	// Always one of: Pending, Failed, Updating, Ready, Degraded, Suspended.
+	// Always one of: Pending, Failed, Updating, Ready, Degraded, Suspended, Deleting.
 	// +optional
-	// +crd-enricher:deckhouse:documentation:examples=[Pending, Failed, Updating, Ready, Degraded, Suspended]
+	// +crd-enricher:deckhouse:documentation:examples=[Pending, Failed, Updating, Ready, Degraded, Suspended, Deleting]
 	State string `json:"state,omitempty"`
 
 	// Message is a human-readable description of the current state.

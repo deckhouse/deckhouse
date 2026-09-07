@@ -428,11 +428,11 @@ common:
     en: Conditional dependency on the module
     ru: Условная зависимость от модуля
   requirements_modules_more:
-    en: more
+    en: read more
     ru: подробнее
   requirements_modules_optional_text_second:
-    en: about conditional dependencies
-    ru: про условные зависимости
+    en: about conditional dependencies in the documentation
+    ru: про условные зависимости читайте в документации
   requirements_modules_optional_text_for_link:
     en: conditional-module-requirements
     ru: условные-зависимости

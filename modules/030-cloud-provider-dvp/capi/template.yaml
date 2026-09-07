@@ -15,6 +15,9 @@ rolloutFields:
   - rootDisk.image.name
   - additionalDisks
 
+providerRolloutFields:
+  - additionalVMLabels
+
 # Optional fields are read with `get`, which yields an empty value instead of failing: the sandbox
 # runs with missingkey=error, so a direct path to an absent key is a render error by design.
 # Required fields (virtualMachine.cpu.cores, virtualMachine.memory.size, rootDisk.image.*, …) are
@@ -55,6 +58,12 @@ template: |
         {{- end }}
         {{- if get .instanceClass.virtualMachine "bootloader" }}
         bootloader: {{ .instanceClass.virtualMachine.bootloader | quote }}
+        {{- end }}
+        {{- with get .provider "additionalVMLabels" }}
+        additionalVMLabels:
+          {{- range $k, $v := . }}
+          {{ $k }}: {{ $v | quote }}
+          {{- end }}
         {{- end }}
         bootDiskImageRef:
           {{- if .instanceClass.rootDisk.image.kind }}
