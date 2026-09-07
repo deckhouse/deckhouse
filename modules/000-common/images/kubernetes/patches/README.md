@@ -179,3 +179,57 @@ Only the source change is carried, the upstream test case is dropped.
 carried on 1.34 (`014`), 1.35 (`014`) and 1.36 (`013`) only.
 
 > Upstream PR https://github.com/kubernetes/kubernetes/pull/141100
+
+### 015-kubelet-checkpoint-state-self-heal.patch (1.34)
+
+Lets the kubelet start when the CPU manager or the memory manager finds its
+checkpoint unusable, instead of exiting.
+
+Upstream refuses to start: `staticPolicy.Start` returns an error,
+`containerManagerImpl.Start` propagates it and kubelet calls `os.Exit(1)` from
+`initializeRuntimeDependentModules`, relying on the service manager to retry
+forever. A node in that state needs a human, and the causes are ordinary: a
+minor upgrade that tightened validation, a changed online-CPU set, changed
+pre-allocated hugepages, a changed NUMA zone count, a torn checkpoint write, or
+per-NUMA `MemTotal` drift across reboots.
+
+The patch implements the half of the upstream advice that was missing ("drain
+this node and remove the policy state file"): the affected manager drops its
+state, and the containers whose assignments lived in that state are stopped, so
+the normal kubelet lifecycle recreates them and the manager pins them again from
+a clean state. Only the affected manager is touched -- memory drifts on its own,
+CPU only changes on hotplug.
+
+Notable properties:
+
+- Victims are collected **before** anything is cleared; after a reset there is
+  nowhere left to read the old assignments from.
+- The stop is synchronous, inside `containerManagerImpl.Start`, before it
+  returns. Kubelet marks the runtime synced only afterwards and `syncLoop` skips
+  every iteration until then, so no pod can be admitted while containers are
+  being stopped. That closes the window in which CPUs and NUMA zones look free
+  in the state while still being physically occupied.
+- The checkpoint is read with the managers' own checkpoint types through
+  upstream's `checkpointmanager`, whose `GetCheckpoint` unmarshals before it
+  verifies the checksum -- so a checkpoint that fails verification is still
+  readable, which is what makes naming the victims possible. Using upstream's
+  types means a future format change breaks the build instead of silently
+  finding no victims.
+- Metrics `kubelet_checkpoint_state_reset_total{manager,reason}`,
+  `..._stopped_containers_total{manager}` and `..._stop_failures_total{manager}`
+  are registered by the patch itself, so `pkg/kubelet/metrics/metrics.go` is not
+  touched. **An alert on the first one is required, not optional**: this patch
+  turns a loud refusal to start into a quiet repair, so a bug in kubelet config
+  generation would restart pinned workload across a whole NodeGroup instead of
+  failing visibly.
+- Every log line carries the `[d8-numa-selfheal]` marker, including one line per
+  manager when the checkpoint validates cleanly -- without it there is no way to
+  tell "nothing was wrong" from "this node runs an unpatched binary".
+  Lines marked `[d8-numa-selfheal-debug]` are temporary bring-up tracing and are
+  meant to be removed once the patch has been validated on a cluster.
+
+Related: the unconditional `rm` of both checkpoints in
+`candi/bashible/common-steps/all/069_start_kubelet.sh.tpl` is removed together
+with this patch -- it was the workaround this replaces.
+
+See issue: https://github.com/kubernetes/kubernetes/issues/131253
