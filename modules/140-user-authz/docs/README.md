@@ -131,7 +131,9 @@ A system or subsystem role does not, by itself, let you grant access to other pe
 
 Creating a User or Group that is not already a grant subject is ordinary object creation.
 
-Creating a User for an email that already carries a grant, writing or deleting a ClusterAuthorizationRule, resetting that identity through UserOperation, or connecting a DexProvider that can assert that email or group, is granting roles. The request is admitted only if the requester already has covering permissions or is explicitly allowed to assign those roles.
+Creating a User for an email that already carries a grant, writing or deleting a ClusterAuthorizationRule, or resetting that identity through UserOperation, is granting roles. The request is admitted only if the requester already has covering permissions or is explicitly allowed to assign those roles.
+
+Connecting a DexProvider is measured the same way against the identities the provider can assert: `spec.allowedIdentities` (emails, email domains, groups) and the provider's own group filters bound that set, and only the roles already granted inside it count. A provider without an email limit can assert every email, including the ones that hold SuperAdmin, so writing it requires SuperAdmin. Details and the list of changes admitted without a check are in the user-authn module documentation.
 
 The ClusterAuthorizationRule `spec.accessLevel` field is a [basic-model](#basic-role-based-model) level: `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`. A `security` subsystem manager can assign any of those except `SuperAdmin`. That manager also cannot assign the Kubernetes `cluster-admin` ClusterRole. Within the granular model the security manager assigns the `security` subsystem roles up to `d8:subsystem:security:manager`.
 
