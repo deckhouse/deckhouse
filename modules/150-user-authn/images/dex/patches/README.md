@@ -244,6 +244,41 @@ no longer match the current DexClient / DexAuthenticator allow-lists start
 failing instead of being extended. Users must sign in again. Changelog must
 say so; backports to 1.77 and 1.76 are appropriate but stricter.
 
+### 020-connector-identity-filters.patch
+
+`001` and `019` bound what a *client* (DexClient / DexAuthenticator) accepts.
+Nothing bounded what a *connector* may assert: any provider could mint any
+email and any group, so connecting a provider was equivalent to being able
+to impersonate every identity in the cluster, including the ones that hold
+SuperAdmin. The identity-assign webhook in user-authz therefore had to
+require SuperAdmin for every provider write.
+
+This patch adds connector-level limits, for every connector type alike:
+
+- `allowedEmails` — exact addresses, compared case-insensitively;
+- `allowedEmailDomains` — the part after the last `@`, exact match
+  (subdomains must be listed explicitly);
+- `allowedGroups` — the `groups` claim is reduced to the intersection; an
+  empty intersection refuses the sign-in.
+
+The fields live on `storage.Connector`, on the config-file `Connector`
+(rendered from `DexProvider.spec.allowedIdentities`) and on the Kubernetes
+`Connector` object. `applyAccessFilters` runs the client filters and then
+the connector limits at every place `019` runs the client filters:
+`finalizeLogin`, `grant_type=password`, token exchange, and both refresh
+checks. A connector unknown to storage has no limits. Static (config file)
+connectors are visible through `WithStaticConnectors`.
+
+Denials return the same `NotAllowedError` as the client filters; the
+reason names the email and says "by connector".
+
+**Impact.** Opt-in: a provider without the block behaves exactly as before.
+With the block set, users outside the lists cannot sign in through that
+provider and existing refresh tokens outside the lists are revoked on the
+next refresh, as `019` does for client lists. The user-authz webhook trusts
+these fields when deciding who may write the provider, so the patch and
+the CRD field ship in the same release.
+
 ### 998-fix-cve.patch
 
 #### Fix CVEs
