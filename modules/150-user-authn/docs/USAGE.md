@@ -670,9 +670,32 @@ Use the `d8 iam user` commands for administrative actions on local users. They c
 
 You can delete, recreate, or run a UserOperation (`ResetPassword`, `Reset2FA`, `Lock`, `Unlock`) against a local user whose email or group membership already carries a grant only if you can assign those roles (covering permissions or an explicit can-assign range). `initiatorType: self` does not bypass that check.
 
-Connecting a DexProvider that can assert an already granted email or group is the same assignment. An OpenID Connect, LDAP, or other provider that does not filter the groups claim to an explicit list can assert any existing grant, including SuperAdmin, so only a requester who can assign those roles may create it. A SAML provider with `filterGroups: true` and a GitHub provider that lists both organizations and teams bound the groups claim to those lists. They do not bound the email claim: any User-subject grant, including SuperAdmin, can still be asserted, so creating such a provider requires being able to assign those roles.
+Connecting a DexProvider is the same assignment. A provider asserts an email and a set of groups, and the Kubernetes username is that email, so the provider reaches every grant that already hangs on the identities it can assert. What it can assert is bounded on two axes by `spec.allowedIdentities`: `emails` and `emailDomains` bound the email, `groups` bounds the groups claim. The provider-specific group filters count as well (`oidc.allowedGroups`, `gitlab.groups`, `crowd.groups`, `bitbucketCloud.teams` without `includeTeamGroups`, `github.orgs[].teams` on every organization, `saml.allowedGroups` together with `filterGroups: true`). An axis without a limit is open and reaches every grant on subjects of that kind.
 
-Updating a provider without adding new target roles, for example rotating a client secret or a bind password, or changing the display name, is not a new assignment. Any other change to the connector settings is checked as a new connection: the provider `type` and its endpoints, the signature and certificate verification switches, and the claim or attribute mapping that decides which value becomes the Kubernetes username.
+SuperAdmin is granted to a User in every cluster, so a provider without an email limit can assert that email and only a SuperAdmin may create or reconnect it. With limits on both axes only the roles already granted to the listed identities count: a ClusterAdmin or a `security` subsystem manager connects a provider for `@contractor.example` and the `contractors` group without a SuperAdmin, as long as none of those identities already holds a role the requester cannot assign. Group names are matched exactly; membership of a Group object in other Group objects does not extend the list, because a token from an external provider carries only the groups the provider asserted.
+
+```yaml
+apiVersion: deckhouse.io/v1
+kind: DexProvider
+metadata:
+  name: contractors
+spec:
+  type: OIDC
+  displayName: Contractors
+  oidc:
+    issuer: https://idp.contractor.example
+    clientID: dex
+    clientSecret: secret
+  allowedIdentities:
+    emailDomains: [contractor.example]
+    groups: [contractors]
+```
+
+Dex enforces the same limits at sign-in: a user whose email is outside `emails` and `emailDomains` is refused, the `groups` claim is reduced to the intersection with `groups`, and an empty intersection is a refusal. Both take effect for every provider type, on top of the provider-specific filters.
+
+Rotating `clientSecret` or `bindPW`, changing `displayName` or `enabled`, narrowing the limits and re-applying the same manifest are admitted without a check. Any other change is measured as a new connection against the provider in its new form: the address of the identity provider, claim or attribute mapping, signature and email verification switches, and widening the limits. Deleting a provider is not checked.
+
+A refused write names the roles the provider could reach and the requester's can-assign range, for example `dexproviders.deckhouse.io "corp": the provider can assert identities that already carry roles [user-authz:super-admin]; the requester's can-assign range is basic<=ClusterAdmin and does not cover them. Narrow spec.allowedIdentities (emails, emailDomains, groups) or ask a SuperAdmin`.
 
 The `ResetPassword`, `Reset2FA`, and `Lock` operations delete the user's Dex OfflineSessions and RefreshToken objects. This terminates the user's active offline sessions and requires re-authentication.
 
