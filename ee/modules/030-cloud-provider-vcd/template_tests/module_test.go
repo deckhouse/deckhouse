@@ -565,6 +565,7 @@ spec:
 			csiNodeDaemonSet := f.KubernetesResource("DaemonSet", "d8-cloud-provider-vcd", "csi-node")
 			Expect(csiNodeDaemonSet.Exists()).To(BeTrue())
 			Expect(csiNodeDaemonSet.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+			Expect(csiNodeDaemonSet.Field("spec.template.spec.serviceAccountName").String()).To(Equal("csi"))
 
 			cddDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-vcd", "cloud-data-discoverer")
 			Expect(cddDeployment.Exists()).To(BeTrue())

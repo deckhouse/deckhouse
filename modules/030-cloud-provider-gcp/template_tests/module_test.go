@@ -321,6 +321,7 @@ var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
 			Expect(pdCSISS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(pdCSIDS.Exists()).To(BeTrue())
 			Expect(pdCSIDS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
+			Expect(pdCSIDS.Field("spec.template.spec.serviceAccountName").String()).To(Equal("csi"))
 			Expect(pdCSIControllerSA.Exists()).To(BeTrue())
 			Expect(pdCSIProvisionerCR.Exists()).To(BeTrue())
 			Expect(pdCSIProvisionerCRB.Exists()).To(BeTrue())
