@@ -155,7 +155,7 @@ def validate(ctx: DotMap) -> Optional[str]:
     if kind == "useroperation":
         return validate_useroperation(req, ctx.snapshots, actor, catalog)
     if kind == "dexprovider":
-        return validate_dexprovider(req, actor, catalog)
+        return validate_dexprovider(req, ctx.snapshots, actor, catalog)
     return None
 
 
@@ -300,12 +300,26 @@ def validate_useroperation(req, snapshots, actor: List[str], catalog: dict) -> O
     return assign.deny_uo_message(display, leftover, rng)
 
 
-def validate_dexprovider(req, actor: List[str], catalog: dict) -> Optional[str]:
-    # Reworked in 002-dexprovider-identity-gate: targets are computed from the
-    # identity space the provider can assert (spec.allowedIdentities and the
-    # connector's own group filters). Until that lands, DexProvider writes are
-    # admitted on RBAC alone, as in main.
-    return None
+def validate_dexprovider(req, snapshots, actor: List[str], catalog: dict) -> Optional[str]:
+    """Gate a provider by the identity space it can assert.
+
+    Targets are the roles already granted to identities inside that space
+    (spec.allowedIdentities plus the connector's own group filters); an open
+    axis reaches every grant on subjects of that kind. Credential rotation,
+    display fields, enabling and narrowing the space are admitted without a
+    check; any other change is measured as a fresh connection.
+    """
+    new_spec = _spec(req.object)
+    if req.operation == "UPDATE" and assign.dex_benign_update(_spec(req.oldObject), new_spec):
+        return None
+    targets = assign.dex_target_roles(new_spec, snapshots)
+    if not targets:
+        return None
+    leftover = assign.can_assign(actor, targets, catalog)
+    if leftover is None:
+        return None
+    rng = assign.actor_range(actor, catalog)
+    return assign.deny_dex_message(_meta_name(req.object) or "obj", leftover, rng)
 
 
 if __name__ == "__main__":
