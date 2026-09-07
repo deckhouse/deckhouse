@@ -12,6 +12,7 @@
 {!{ tmpl.Exec "login_stage_registry_step" $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "login_readonly_registry_step" $ctx | strings.Indent 2 }!}
 {!{ tmpl.Exec "login_rw_registry_step" $ctx | strings.Indent 2 }!}
+{!{ tmpl.Exec "werf_setup_steps" $ctx | strings.Indent 2 }!}
 # </template: promote_image_setup_steps>
 {!{ end }!}
 
