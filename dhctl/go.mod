@@ -23,7 +23,7 @@ require (
 	github.com/deckhouse/lib-dhctl v0.22.0
 	github.com/deckhouse/lib-gossh v0.3.0
 	github.com/deckhouse/module-sdk v0.12.2
-	github.com/flant/kube-client v1.9.1
+	github.com/flant/kube-client v1.6.0
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/go-jose/go-jose/v4 v4.1.4
 	github.com/go-openapi/spec v0.22.1
