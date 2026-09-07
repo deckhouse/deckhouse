@@ -356,7 +356,7 @@ properties:
         description: |
           How much of the platform's domain is reserved.
 
-          Default is `List`. Set `Template` to reserve every hostname the template can render.
+          Set `Template` to reserve every hostname the template can render.
 
           Possible values:
 
