@@ -97,3 +97,5 @@ shell:
     {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o /node-collector cmd/node-collector/main.go`) | indent 6 }}
   - chown root:root /node-collector
   - chmod 0700 /node-collector
+---
+{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}

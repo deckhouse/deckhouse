@@ -1,0 +1,310 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-c610a4dd82d64f6dd9f1f14d385a6f94f236378a855c116997d8e13b42d01c76",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 2,
+  "statements": [
+    {
+      "vulnerability": {
+        "name": "CVE-2026-27145",
+        "description": "crypto/x509: Denial of Service via excessive processing of DNS SAN entries"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "crypto/x509: Denial of Service via excessive processing of DNS SAN entries. Образ node-collector собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "timestamp": "2026-09-07T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32280",
+        "description": "crypto/x509, crypto/tls: Denial of Service in certificate chain building"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "crypto/x509, crypto/tls: Denial of Service in certificate chain building. Образ node-collector собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "timestamp": "2026-09-07T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32281",
+        "description": "crypto/x509: Denial of Service via inefficient certificate chain validation"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "crypto/x509: Denial of Service via inefficient certificate chain validation. Образ node-collector собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "timestamp": "2026-09-07T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32282",
+        "description": "internal/syscall/unix: Root.Chmod can follow symlinks out of the root"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "internal/syscall/unix: Root.Chmod can follow symlinks out of the root. Образ node-collector собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "timestamp": "2026-09-07T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32283",
+        "description": "crypto/tls: Denial of Service via multiple TLS 1.3 key update messages"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "crypto/tls: Denial of Service via multiple TLS 1.3 key update messages. Образ node-collector собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "timestamp": "2026-09-07T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32288",
+        "description": "archive/tar: Denial of Service via maliciously-crafted archive"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "archive/tar: Denial of Service via maliciously-crafted archive. Образ node-collector собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "timestamp": "2026-09-07T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-32289",
+        "description": "html/template: XSS via improper context and brace depth tracking in JS template literals"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "html/template: XSS via improper context and brace depth tracking in JS template literals. Образ node-collector собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "timestamp": "2026-09-07T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33811",
+        "description": "net: Denial of Service via long CNAME response in LookupCNAME (cgo resolver)"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "net: Denial of Service via long CNAME response in LookupCNAME (cgo resolver). Образ node-collector собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "timestamp": "2026-09-07T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33814",
+        "description": "net/http/internal/http2: Denial of Service via malformed SETTINGS_MAX_FRAME_SIZE frame"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "net/http/internal/http2: Denial of Service via malformed SETTINGS_MAX_FRAME_SIZE frame. Образ node-collector собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "timestamp": "2026-09-07T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39820",
+        "description": "net/mail: Denial of Service via crafted email inputs"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "net/mail: Denial of Service via crafted email inputs. Образ node-collector собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "timestamp": "2026-09-07T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39821",
+        "description": "net/http, golang.org/x/net/idna: Privilege escalation via incorrect Punycode label processing"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "net/http, golang.org/x/net/idna: Privilege escalation via incorrect Punycode label processing. Образ node-collector собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "timestamp": "2026-09-07T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39822",
+        "description": "os: Go os.Root symlink following vulnerability allows directory traversal (CWE-61)"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "os: Go os.Root symlink following vulnerability allows directory traversal (CWE-61). Образ node-collector собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "timestamp": "2026-09-07T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39823",
+        "description": "html/template: XSS via improper URL escaping in meta tag content"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "html/template: XSS via improper URL escaping in meta tag content. Образ node-collector собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "timestamp": "2026-09-07T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39825",
+        "description": "net/http/httputil: ReverseProxy forwards hidden query parameters, bypassing security controls"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "net/http/httputil: ReverseProxy forwards hidden query parameters, bypassing security controls. Образ node-collector собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "timestamp": "2026-09-07T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39826",
+        "description": "html/template: XSS due to incorrect script tag escaping"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "html/template: XSS due to incorrect script tag escaping. Образ node-collector собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "timestamp": "2026-09-07T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-39836",
+        "description": "net: Denial of Service via NUL byte in Dial and LookupPort on Windows"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "net: Denial of Service via NUL byte in Dial and LookupPort on Windows. Образ node-collector собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "timestamp": "2026-09-07T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42499",
+        "description": "net/mail: Denial of Service via pathological email address parsing"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "net/mail: Denial of Service via pathological email address parsing. Образ node-collector собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "timestamp": "2026-09-07T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42504",
+        "description": "mime: Denial of Service via maliciously-crafted MIME header"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "mime: Denial of Service via maliciously-crafted MIME header. Образ node-collector собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "timestamp": "2026-09-07T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42505",
+        "description": "crypto/tls: Information disclosure in Encrypted Client Hello"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "crypto/tls: Information disclosure in Encrypted Client Hello. Образ node-collector собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "timestamp": "2026-09-07T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42507",
+        "description": "net/textproto: Misleading error messages via input injection"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/stdlib@v1.25.8"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "net/textproto: Misleading error messages via input injection. Образ node-collector собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "timestamp": "2026-09-07T12:00:00Z"
+    }
+  ],
+  "timestamp": "2026-09-07T12:00:00Z",
+  "last_updated": "2026-09-07T12:00:00Z"
+}
