@@ -1,5 +1,5 @@
 diff --git a/cmd/kubeadm/app/cmd/join.go b/cmd/kubeadm/app/cmd/join.go
-index 12fce4a1cc5..b32f03c96f3 100644
+index 0b590adbee7..40a73c29468 100644
 --- a/cmd/kubeadm/app/cmd/join.go
 +++ b/cmd/kubeadm/app/cmd/join.go
 @@ -444,6 +444,13 @@ func newJoinData(cmd *cobra.Command, args []string, opt *joinOptions, out io.Wri

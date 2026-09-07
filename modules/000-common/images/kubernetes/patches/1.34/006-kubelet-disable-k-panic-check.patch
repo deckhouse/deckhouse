@@ -1,5 +1,5 @@
 diff --git a/pkg/kubelet/cm/container_manager_linux.go b/pkg/kubelet/cm/container_manager_linux.go
-index c65053cd678..5d1cb33510f 100644
+index 7c744da1645..64fe7df63b4 100644
 --- a/pkg/kubelet/cm/container_manager_linux.go
 +++ b/pkg/kubelet/cm/container_manager_linux.go
 @@ -451,7 +451,6 @@ func setupKernelTunables(option KernelTunableBehavior) error {
