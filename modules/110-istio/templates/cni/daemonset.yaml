@@ -126,8 +126,6 @@ spec:
             runAsNonRoot: false
             runAsUser: 0
             runAsGroup: 0
-            seccompProfile:
-              type: RuntimeDefault
           {{- else }}
           securityContext:
             privileged: false
