@@ -21,6 +21,7 @@ import (
 	"sync"
 	"time"
 
+	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
@@ -76,6 +77,7 @@ func RegisterController(
 	mm moduleManager,
 	pm packageManager,
 	conversionsStore *conversion.ConversionsStore,
+	edition *d8edition.Edition,
 	handler *confighandler.Handler,
 	ms metricsstorage.Storage,
 	exts extenders.IExtendersStack,
@@ -89,6 +91,7 @@ func RegisterController(
 		conversionsStore: conversionsStore,
 		moduleManager:    mm,
 		packageManager:   pm,
+		edition:          edition,
 		metricStorage:    ms,
 		configValidator:  configtools.NewValidator(mm, conversionsStore),
 		exts:             exts,
@@ -120,6 +123,7 @@ type reconciler struct {
 	init             *sync.WaitGroup
 	client           client.Client
 	conversionsStore *conversion.ConversionsStore
+	edition          *d8edition.Edition
 	handler          *confighandler.Handler
 	moduleManager    moduleManager
 	packageManager   packageManager
@@ -330,9 +334,8 @@ func (r *reconciler) removeFinalizer(ctx context.Context, module *v1alpha2.Modul
 	})
 }
 
-// TODO: check real bundle, not mock
 func (r *reconciler) IsModuleEnabledByBundle(ctx context.Context, module *v1alpha2.Module) (bool, error) {
-	var mpv *v1alpha1.ModulePackageVersion
+	mpv := &v1alpha1.ModulePackageVersion{}
 	mpvName := v1alpha1.MakeModulePackageVersionName(
 		module.Spec.PackageRepositoryName,
 		module.Name,
@@ -343,13 +346,23 @@ func (r *reconciler) IsModuleEnabledByBundle(ctx context.Context, module *v1alph
 		return false, err
 	}
 
-	for bundle, license := range mpv.Status.PackageMetadata.Licensing.Editions {
-		if bundle != "_default" && bundle != "dev" {
+	// if EnabledInBundles info is empty, module is not enabled by default
+	if mpv.Status.PackageMetadata == nil ||
+		mpv.Status.PackageMetadata.Licensing == nil ||
+		mpv.Status.PackageMetadata.Licensing.Editions == nil {
+		return false, nil
+	}
+
+	for edition, license := range mpv.Status.PackageMetadata.Licensing.Editions {
+		if !license.Available {
+			continue
+		}
+		if edition != "_default" && edition != r.edition.Name {
 			continue
 		}
 
 		for _, bundle := range license.EnabledInBundles {
-			if bundle == "Default" {
+			if bundle == r.edition.Bundle {
 				return true, nil
 			}
 		}

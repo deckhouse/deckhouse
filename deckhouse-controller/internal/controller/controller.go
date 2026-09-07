@@ -183,7 +183,7 @@ func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, op
 		return nil, fmt.Errorf("register module controller: %w", err)
 	}
 
-	err = modulesettings.RegisterController(synced, runtime, operator.ModuleManager, manager, conversionsStore, configHandler, operator.MetricStorage, exts, logger)
+	err = modulesettings.RegisterController(synced, runtime, operator.ModuleManager, manager, conversionsStore, edition, configHandler, operator.MetricStorage, exts, logger)
 	if err != nil {
 		return nil, fmt.Errorf("register module settings controller: %w", err)
 	}
