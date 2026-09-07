@@ -381,6 +381,27 @@ class TestIdentityCollection(unittest.TestCase):
         self.assertEqual(assign.user_record(snaps, email="eve@corp")["name"], "other")
 
 
+class TestUnknownRoles(unittest.TestCase):
+    def test_role_absent_from_catalog_is_leftover_below_superadmin(self):
+        cat = default_catalog()
+        self.assertEqual(assign.can_assign(["user-authz:cluster-admin"], ["gone:role"], cat),
+                         ["gone:role"])
+        self.assertEqual(assign.can_assign(["d8:manage:all:manager"], ["gone:role"], cat),
+                         ["gone:role"])
+
+    def test_superadmin_range_covers_a_role_absent_from_catalog(self):
+        # A ClusterRoleBinding outliving its ClusterRole still names a human
+        # subject; that must not lock SuperAdmin out of every open provider.
+        cat = default_catalog()
+        self.assertIsNone(assign.can_assign(["user-authz:super-admin"], ["gone:role"], cat))
+        self.assertIsNone(assign.can_assign(["cluster-admin"], ["gone:role", "user-authz:super-admin"], cat))
+
+    def test_forged_superadmin_range_does_not_cover_unknown_roles(self):
+        cat = default_catalog()
+        cat["d8:system:pwned"] = entry("d8:system:pwned", rules=[], labels=SUPER_LABELS, heritage=False)
+        self.assertEqual(assign.can_assign(["d8:system:pwned"], ["gone:role"], cat), ["gone:role"])
+
+
 # --- DexProvider: identity space -> targets (specs/002-dexprovider-identity-gate) ---
 
 def car(name, level, users=(), groups=(), additional=()):
