@@ -236,11 +236,13 @@ func (l *Loader) supersedeRelease(ctx context.Context, release *v1alpha1.ModuleR
 
 // restoreRelease places the module of the release on the FS.
 //
-// While the embedded copy of the module is still shipped it wins the module search path,
-// so the downloaded module is only staged (no symlink/mount) and keeps the embedded
-// registry: the embedded image digests do not exist under the source repository, and
-// injecting it would break the module with ImagePullBackOff. Once the embedded copy is
-// dropped on Deckhouse upgrade, the module is activated and pinned to the source registry.
+// If Deckhouse still ships an embedded copy of the module, that copy stays active.
+// The downloaded one is only staged: no symlink or mount, and no source registry.
+// The embedded copy needs the embedded registry: its image digests are not in the
+// source repository, and pulling them from there fails with ImagePullBackOff.
+//
+// Once the embedded copy is gone, the downloaded module is activated and pinned
+// to the source registry.
 func (l *Loader) restoreRelease(ctx context.Context, release *v1alpha1.ModuleRelease) error {
 	moduleName := release.GetModuleName()
 
