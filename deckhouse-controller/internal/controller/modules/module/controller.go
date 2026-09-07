@@ -278,10 +278,53 @@ func (r *reconciler) processModule(ctx context.Context, module *v1alpha2.Module)
 		return res, nil
 	}
 
-	// if err := r.enableModule(ctx, module); err != nil {
-	// 	r.logger.Error("failed to enable the module", slog.String("module", module.Name), log.Err(err))
-	// 	return ctrl.Result{}, err
-	// }
+	if err := r.enableModule(ctx, module); err != nil {
+		r.logger.Error("failed to enable the module", slog.String("module", module.Name), log.Err(err))
+		return res, err
+	}
+
+	// restore documentation for the re-enabled module from its deployed release
+	if err := r.ensureModuleDocumentation(ctx, module); err != nil {
+		r.logger.Error("failed to ensure module documentation", slog.String("module", module.Name), log.Err(err))
+		return res, err
+	}
+
+	// skip system modules
+	if module.Name == moduleDeckhouse || module.Name == moduleGlobal {
+		r.logger.Debug("skip the system module", slog.String("name", module.Name))
+		return res, nil
+	}
+
+	// skip embedded modules
+	if module.IsEmbedded() {
+		r.logger.Debug("skip embedded module", slog.String("name", module.Name))
+		return res, nil
+	}
+
+	if module.Spec.PackageRepositoryName == "" {
+		mp := &v1alpha1.ModulePackage{}
+		if err := r.client.Get(ctx, types.NamespacedName{Name: module.Name}, mp); err != nil {
+			return res, err
+		}
+
+		// set conflict if there are several available sources
+		if len(mp.Status.AvailableRepositories) > 1 {
+			err := utils.UpdateStatus[*v1alpha2.Module](ctx, r.client, module, func(module *v1alpha2.Module) bool {
+				module.Status.Summary.State = status.StateFailed
+				module.SetConditionFalse(status.ConditionEnabled, "", "")
+				module.SetConditionFalse(status.ConditionReady, v1alpha1.ModuleReasonConflict, v1alpha1.ModuleMessageConflict)
+				return true
+			})
+			if err != nil {
+				r.logger.Error("failed to set conflict to module", slog.String("name", module.Name), log.Err(err))
+				return res, err
+			}
+			// fire alert at Conflict
+			r.metricStorage.Grouped().GaugeSet(metricGroup, metrics.D8ModuleAtConflict, 1.0, map[string]string{
+				"module": module.Name,
+			})
+		}
+	}
 
 	return res, nil
 }
@@ -423,4 +466,22 @@ func (r *reconciler) IsModuleEnabledByBundle(ctx context.Context, module *v1alph
 	}
 
 	return false, nil
+}
+
+func (r *reconciler) enableModule(ctx context.Context, module *v1alpha2.Module) error {
+	r.logger.Debug("enable the module", slog.String("module", module.Name))
+	return utils.UpdateStatus[*v1alpha2.Module](ctx, r.client, module, func(module *v1alpha2.Module) bool {
+		if module.IsCondition(status.ConditionEnabled, metav1.ConditionTrue) {
+			return false
+		}
+		module.SetConditionTrue(status.ConditionEnabled)
+
+		return true
+	})
+}
+
+func (r *reconciler) ensureModuleDocumentation(ctx context.Context, module *v1alpha2.Module) error {
+	// TODO: make ensureModuleDocumentation for moduleV2
+
+	return nil
 }
