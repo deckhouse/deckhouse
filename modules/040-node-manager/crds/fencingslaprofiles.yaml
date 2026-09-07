@@ -78,6 +78,8 @@ spec:
                   message: memberlist.probeTimeout must be less than memberlist.probeInterval.
                 - rule: duration(self.fallback.heartbeat) < duration(self.fallback.ttl)
                   message: fallback.heartbeat must be less than fallback.ttl.
+                - rule: duration(self.fallback.heartbeat) >= duration('1ms')
+                  message: fallback.heartbeat must be at least 1ms.
                 - rule: duration(self.fallback.kubernetesAPITimeout) < duration(self.fallback.ttl)
                   message: fallback.kubernetesAPITimeout must be less than fallback.ttl.
                 - rule: duration(self.rejoin.interval) <= duration(self.rejoin.maxInterval)
@@ -171,7 +173,7 @@ spec:
                       type: string
                       pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'
                       description: |
-                        How often an isolated node that still sees the Kubernetes API writes a fallback heartbeat. Must be noticeably less than `ttl`.
+                        How often an isolated node that still sees the Kubernetes API writes a fallback heartbeat. Must be noticeably less than `ttl`, and at least `1ms`: a shorter interval serializes into a sub-millisecond unit that the `heartbeatInterval` field of `FencingFailedNodeState` rejects, so every heartbeat write would fail, and the agent refuses to start rather than leave the node silently unprotected.
                     ttl:
                       type: string
                       pattern: '^([0-9]+(\.[0-9]+)?(ms|s|m|h))+$'

@@ -62,7 +62,7 @@ spec:
                   properties:
                     heartbeat:
                       description: |
-                        Как часто изолированный узел, который всё ещё видит API Kubernetes, записывает fallback heartbeat. Должен быть заметно меньше `ttl`.
+                        Как часто изолированный узел, который всё ещё видит API Kubernetes, записывает fallback heartbeat. Должен быть заметно меньше `ttl` и не меньше `1ms`.
                     ttl:
                       description: |
                         Окно свежести fallback heartbeat. Пока последний heartbeat не старше этого TTL, эвакуация запрещена.
