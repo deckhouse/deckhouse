@@ -64,9 +64,9 @@ The scan options can also be edited in the policy editor, which renders the form
 
 ## What the policy sets
 
-The form for the `sast` action is five groups: "Version and rules", "Blocking", "Paths", "Rule levels" and "Additional arguments". Every option is the policy's, not the scanned project's: the values are written into the job by the server while the pipeline is rendered, so the scanned project's own CI/CD variables cannot change them.
+The form for the `sast` action has five groups: "Version and rules", "Blocking", "Paths", "Rule levels" and "Additional arguments". Every option is the policy's, not the scanned project's: the values are written into the job by the server while the pipeline is rendered, so the scanned project's own CI/CD variables cannot change them.
 
-All five open and close on their own title, and all five start closed. Closed is a statement rather than a folded-away detail: a closed group is one the policy writes nothing into, so that part of the scan keeps its default — the Semgrep integration's value where the integration has one, which for this scanner means the scanner image and nothing else, and the value shipped with this product for everything else. Open a group and fill in a field, and the policy takes that decision over for every project it covers. Save the policy and open it again, and the groups it holds something in come back open, so a saved policy never reads as less than it sets.
+Each opens and closes on its own title, and all five start closed. Closed is a statement rather than a folded-away detail: a closed group is one the policy writes nothing into, so that part of the scan keeps its default — the Semgrep integration's value where the integration has one, which for this scanner means the scanner image and nothing else, and the value shipped with this product for everything else. Open a group and fill in a field, and the policy takes that decision over for every project it covers. Save the policy and open it again, and the groups it holds something in come back open, so a saved policy never reads as less than it sets.
 
 What a closed group has settled is stated at the end of its title line, which is what makes the closed form readable — the threshold and the rule source can be read without opening anything:
 
