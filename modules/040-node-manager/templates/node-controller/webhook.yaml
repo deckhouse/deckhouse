@@ -19,7 +19,7 @@ webhooks:
       name: node-controller-webhook
       namespace: d8-cloud-instance-manager
       path: /validate-deckhouse-io-v1-nodegroup
-  failurePolicy: Fail
+  failurePolicy: {{ include "node_manager_webhook_failure_policy" . }}
   matchPolicy: Equivalent
   sideEffects: None
   rules:
@@ -42,7 +42,7 @@ webhooks:
       name: node-controller-webhook
       namespace: d8-cloud-instance-manager
       path: /validate-deckhouse-io-v1-nodeuser
-  failurePolicy: Fail
+  failurePolicy: {{ include "node_manager_webhook_failure_policy" . }}
   matchPolicy: Equivalent
   sideEffects: None
   rules:
@@ -65,7 +65,7 @@ webhooks:
       name: node-controller-webhook
       namespace: d8-cloud-instance-manager
       path: /validate-deckhouse-io-v1alpha1-staticinstance
-  failurePolicy: Fail
+  failurePolicy: {{ include "node_manager_webhook_failure_policy" . }}
   matchPolicy: Equivalent
   sideEffects: None
   rules:
@@ -89,7 +89,7 @@ webhooks:
       name: node-controller-webhook
       namespace: d8-cloud-instance-manager
       path: /validate-instanceclass-delete
-  failurePolicy: Fail
+  failurePolicy: {{ include "node_manager_webhook_failure_policy" . }}
   matchPolicy: Equivalent
   sideEffects: None
   rules:

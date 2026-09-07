@@ -156,3 +156,10 @@ overlay, this controller would write it without. Remove a name to enable it, put
 {{- define "node_manager_nested_disabled_controllers" -}}
 bashible-context,instance,cluster-prefix-migration,capi-api-version,capi-cluster-resources,capi-control-plane,capi-crd-migration,capi-finalizer-cleanup,capi-machine-deployment,capi-md-metrics,node-config,node-bootstrap,node-operation
 {{- end }}
+
+{{- /* Fail needs a backend that can be scheduled, and a tenant has nowhere to schedule it until a
+node joins - there Fail blocks the NodeGroup that the first node bootstraps from. The selfHosted
+term is what keeps an ordinary cluster's admission independent of this hook. */ -}}
+{{- define "node_manager_webhook_failure_policy" -}}
+{{- if or .Values.global.deckhouseSelfHosted .Values.global.discovery.clusterHasReadyNodes }}Fail{{ else }}Ignore{{ end }}
+{{- end }}
