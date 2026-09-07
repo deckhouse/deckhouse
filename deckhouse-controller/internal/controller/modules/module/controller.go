@@ -21,7 +21,6 @@ import (
 	"sync"
 	"time"
 
-	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
@@ -64,25 +63,24 @@ const (
 
 // RegisterController registers the Module settings controller with the manager.
 func RegisterController(
+	sync *sync.WaitGroup,
 	runtimeManager manager.Manager,
 	mm moduleManager,
 	pm packageManager,
 	conversionsStore *conversion.ConversionsStore,
-	edition *d8edition.Edition,
 	handler *confighandler.Handler,
 	ms metricsstorage.Storage,
 	exts extenders.IExtendersStack,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
-		init:             new(sync.WaitGroup),
+		init:             sync,
 		client:           runtimeManager.GetClient(),
 		logger:           logger,
 		handler:          handler,
 		conversionsStore: conversionsStore,
 		moduleManager:    mm,
 		packageManager:   pm,
-		edition:          edition,
 		metricStorage:    ms,
 		configValidator:  configtools.NewValidator(mm, conversionsStore),
 		exts:             exts,
@@ -111,7 +109,6 @@ type reconciler struct {
 	init             *sync.WaitGroup
 	client           client.Client
 	conversionsStore *conversion.ConversionsStore
-	edition          *d8edition.Edition
 	handler          *confighandler.Handler
 	moduleManager    moduleManager
 	packageManager   packageManager

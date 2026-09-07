@@ -92,10 +92,11 @@ func (suite *ControllerTestSuite) buildReconciler() {
 	suite.manager = &stubManager{}
 
 	rec := &reconciler{
-		init:    new(sync.WaitGroup),
-		client:  suite.Client(),
-		manager: suite.manager,
-		logger:  log.NewNop(),
+		init:   new(sync.WaitGroup),
+		client: suite.Client(),
+		// TODO: fix struct
+		// manager: suite.manager,
+		logger: log.NewNop(),
 	}
 
 	// simulate initialization
