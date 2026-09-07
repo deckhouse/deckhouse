@@ -139,7 +139,13 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 			continue
 		}
 
-		// the package sync resolved the repository the override pulls from, which names the source
+		// get module source from the package repository name.
+		// because for now package repository names are synced from existing module source names via pkgsync mapping funcs.
+		// so in this way we can get the right module source name from the package repository name.
+		//
+		// Example:
+		// 1. At sync: deckhouse MS -> deckhouse-modules PR
+		// 2. At restore: deckhouse-modules PR -> deckhouse MS
 		moduleSourceName := pkgsync.SourceNameForRepository(module.Spec.PackageRepositoryName)
 		if moduleSourceName == "" {
 			l.logger.Info("module does not have an active source, skip restoring module pull override process", slog.String("name", mpo.Name))
