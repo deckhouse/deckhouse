@@ -1,4 +1,11 @@
-templates/*
+templates/alliance
+templates/config-analyzer
+templates/control-plane-ee
+templates/federation
+templates/multicluster
+templates/waypoint-controller
+templates/ztunnel
+templates/validations/*
 hooks/*
 crds/*
 monitoring/prometheus-rules/*

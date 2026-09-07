@@ -206,6 +206,25 @@ func TestDeckhouseInstall(t *testing.T) {
 	}
 }
 
+func TestDeckhouseNamespaceTask(t *testing.T) {
+	fakeClient := client.NewFakeKubernetesClient()
+	task := getNSTask(fakeClient)
+
+	err := task.CreateOrUpdate(t.Context())
+	require.NoError(t, err)
+
+	namespace, err := fakeClient.
+		CoreV1().
+		Namespaces().
+		Get(t.Context(), "d8-system", metav1.GetOptions{})
+	require.NoError(t, err)
+
+	require.Equal(t, "deckhouse", namespace.Labels["heritage"])
+	require.Equal(t, "", namespace.Labels["extended-monitoring.deckhouse.io/enabled"])
+	require.Equal(t, "privileged", namespace.Labels["pod-security.kubernetes.io/enforce"])
+	require.Equal(t, "latest", namespace.Labels["pod-security.kubernetes.io/enforce-version"])
+}
+
 func TestDeckhouseInstallWithDevBranch(t *testing.T) {
 	ctx := t.Context()
 	err := os.Setenv("DHCTL_TEST", "yes")

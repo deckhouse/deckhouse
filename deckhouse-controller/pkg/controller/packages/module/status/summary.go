@@ -58,6 +58,11 @@ const (
 	reasonDisabledByScript = "DisabledByScript"
 )
 
+// reasonHealthUnknown is a summary-local table key, not a reason the health monitor
+// writes: it stands for an intScaled the monitor has not confirmed, which carries no
+// reason of its own.
+const reasonHealthUnknown = "HealthUnknown"
+
 // advice is the user-facing Summary for one (phase, reason) pair: the
 // actionable state, a one-line message and a how-to-solve tip.
 type advice struct {
@@ -200,6 +205,25 @@ var summaryTable = map[phase]map[string]advice{
 			stateFailed,
 			"Update failed: Helm could not apply manifests for the new version; previous version is no longer running",
 			"Resources in the cluster are inconsistent. Check helm history and events in the d8-system namespace. Resolve resource conflicts. If needed, roll back manually via helm rollback.",
+		},
+
+		// Workload gate. The manifests are applied, so the update is still in
+		// flight rather than failed — except a degraded workload, which is the
+		// health monitor's terminal verdict on the new version.
+		"Reconciling": {
+			stateUpdating,
+			"Update applied: the new version's workload is rolling out",
+			"Wait for the rollout to finish. If it stalls, check pod status and events.",
+		},
+		"Degraded": {
+			stateDegraded,
+			"Update applied but the workload health monitor reports degraded",
+			"Check pod status and logs to identify the root cause. Roll back the module version if the new one cannot start.",
+		},
+		reasonHealthUnknown: {
+			stateUpdating,
+			"Update applied: waiting for a workload the health monitor can confirm",
+			"Either no report has arrived yet, or the chart ships no Deployment or StatefulSet, the only kinds the health monitor watches.",
 		},
 	},
 
@@ -346,10 +370,15 @@ func summarize(state condmap.State) (string, string, string) {
 			// conditions sticky. Mirror that success gate here, otherwise a mid-apply
 			// retry over a failed update would report Ready while the conditions a
 			// client also reads still say ManifestsApplyFailed.
-			if state.IntEqual(intManifestsApplied, metav1.ConditionTrue) {
-				return summaryReady.state, summaryReady.message, summaryReady.tip // update done
+			if !state.IntEqual(intManifestsApplied, metav1.ConditionTrue) {
+				return summaryUpdating.state, summaryUpdating.message, summaryUpdating.tip
 			}
-			return summaryUpdating.state, summaryUpdating.message, summaryUpdating.tip
+			// The manifests landed, but only a positive health report makes the new
+			// version ready; anything else is still an update in flight.
+			if !state.IntEqual(intScaled, metav1.ConditionTrue) {
+				return adviseFor(phaseUpdate, workloadReason(state))
+			}
+			return summaryReady.state, summaryReady.message, summaryReady.tip
 		}
 		return adviseFor(phaseUpdate, reasonOf(state, blocker))
 
@@ -401,6 +430,18 @@ var reconcileSummaryChain = []string{
 func reasonOf(state condmap.State, internalCond string) string {
 	intReason, _ := state.GetIntReason(internalCond)
 	return canonicalReason(internalCond, intReason)
+}
+
+// workloadReason returns the health monitor's verdict on the module workload.
+// An absent or reasonless intScaled means the monitor has not reported at all,
+// which is not the same as reporting that there is nothing to observe.
+func workloadReason(state condmap.State) string {
+	reason, _ := state.GetIntReason(intScaled)
+	if reason == "" {
+		return reasonHealthUnknown
+	}
+
+	return reasonOf(state, intScaled)
 }
 
 // adviseFor looks up the Summary for a (phase, reason) pair, falling back to a

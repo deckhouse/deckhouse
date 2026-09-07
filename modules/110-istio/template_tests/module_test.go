@@ -18,6 +18,7 @@ package template_tests
 
 import (
 	"encoding/base64"
+	"fmt"
 	"os"
 	"path/filepath"
 	"testing"
@@ -110,49 +111,55 @@ const jwksResolverAdditionalRootCA = `-----BEGIN CERTIFICATE-----
 MIIDXTCCAkWgAwIBAgIJAN...
 -----END CERTIFICATE-----`
 
-func getSubdirs(dir string) ([]string, error) {
-	var subdirs []string
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if err != nil {
-			return err
-		}
-
-		if info.IsDir() && path != dir && filepath.Base(path) == info.Name() {
-			subdirs = append(subdirs, info.Name())
-			return filepath.SkipDir
-		}
-
-		return nil
-	})
-
+func symlinkEEIntoCE(eeDir, ceDir string) ([]string, error) {
+	entries, err := os.ReadDir(eeDir)
 	if err != nil {
 		return nil, err
 	}
 
-	return subdirs, nil
+	var created []string
+	for _, entry := range entries {
+		eePath := filepath.Join(eeDir, entry.Name())
+		cePath := filepath.Join(ceDir, entry.Name())
+
+		if _, err := os.Lstat(cePath); err == nil {
+			if !entry.IsDir() {
+				return nil, fmt.Errorf("cannot merge %s into CE: %s already exists and is not a directory", eePath, cePath)
+			}
+			nested, err := symlinkEEIntoCE(eePath, cePath)
+			if err != nil {
+				return nil, err
+			}
+			created = append(created, nested...)
+			continue
+		}
+
+		if err := os.Symlink(eePath, cePath); err != nil {
+			return nil, err
+		}
+		created = append(created, cePath)
+	}
+
+	return created, nil
 }
 
 const (
-	istioEETemplatesPath = "/deckhouse/ee/modules/110-istio/templates/"
-	istioCETemplatesPath = "/deckhouse/modules/110-istio/templates/"
+	istioEETemplatesPath = "/deckhouse/ee/modules/110-istio/templates"
+	istioCETemplatesPath = "/deckhouse/modules/110-istio/templates"
 )
+
+var istioEECESymlinks []string
 
 var _ = Describe("Module :: istio :: helm template :: main", func() {
 	BeforeSuite(func() {
-		subDirs, err := getSubdirs(istioEETemplatesPath)
+		created, err := symlinkEEIntoCE(istioEETemplatesPath, istioCETemplatesPath)
 		Expect(err).ShouldNot(HaveOccurred())
-		for _, subDir := range subDirs {
-			err := os.Symlink(istioEETemplatesPath+subDir, istioCETemplatesPath+subDir)
-			Expect(err).ShouldNot(HaveOccurred())
-		}
+		istioEECESymlinks = created
 	})
 
 	AfterSuite(func() {
-		subDirs, err := getSubdirs(istioEETemplatesPath)
-		Expect(err).ShouldNot(HaveOccurred())
-		for _, subDir := range subDirs {
-			err := os.Remove(istioCETemplatesPath + subDir)
-			Expect(err).ShouldNot(HaveOccurred())
+		for _, path := range istioEECESymlinks {
+			Expect(os.Remove(path)).To(Succeed())
 		}
 	})
 
@@ -2092,6 +2099,145 @@ MY_VAR: "myvalue"
 			Expect(ds.Field("spec.template.spec.containers.0.env.#(name==ISTIO_MULTIROOT_MESH).value").String()).To(Equal("true"))
 			Expect(ds.Field("spec.template.spec.containers.0.env.#(name==ENABLE_ENHANCED_RESOURCE_SCOPING).value").String()).To(Equal("true"))
 			Expect(ds.Field("spec.template.spec.containers.0.env.#(name==GOMAXPROCS)").Exists()).To(BeTrue())
+		})
+	})
+
+	Context("validating admission policy", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global", globalValues)
+			f.ValuesSet("global.modulesImages", GetModulesImages())
+			f.ValuesSetFromYamlWithOpenAPIDefaults("istio", istioValues)
+		})
+
+		Context("istiofederations-federation-enabled.deckhouse.io", func() {
+			When("federation is disabled", func() {
+				It("deny IstioFederation creation", func() {
+					f.HelmRender()
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					policy := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", "istiofederations-federation-enabled.deckhouse.io")
+					Expect(policy.Exists()).To(BeTrue())
+					Expect(policy.Field("spec.validations.0.expression").String()).To(Equal("false"))
+
+					binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", "istiofederations-federation-enabled.deckhouse.io")
+					Expect(binding.Exists()).To(BeTrue())
+					Expect(binding.Field("spec.policyName").String()).To(Equal("istiofederations-federation-enabled.deckhouse.io"))
+					Expect(binding.Field("spec.validationActions.0").String()).To(Equal("Deny"))
+				})
+			})
+
+			When("federation is enabled", func() {
+				It("allow IstioFederation creation", func() {
+					f.ValuesSet("istio.federation.enabled", true)
+					f.HelmRender()
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+					Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicy", "istiofederations-federation-enabled.deckhouse.io").
+						Field("spec.validations.0.expression").String()).To(Equal("true"))
+				})
+			})
+		})
+
+		Context("istiomulticlusters-multicluster-enabled.deckhouse.io", func() {
+			When("multicluster is disabled", func() {
+				It("deny IstioMultiCluster creation", func() {
+					f.HelmRender()
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					policy := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", "istiomulticlusters-multicluster-enabled.deckhouse.io")
+					Expect(policy.Exists()).To(BeTrue())
+					Expect(policy.Field("spec.validations.0.expression").String()).To(Equal("false"))
+
+					binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", "istiomulticlusters-multicluster-enabled.deckhouse.io")
+					Expect(binding.Exists()).To(BeTrue())
+					Expect(binding.Field("spec.policyName").String()).To(Equal("istiomulticlusters-multicluster-enabled.deckhouse.io"))
+					Expect(binding.Field("spec.validationActions.0").String()).To(Equal("Deny"))
+				})
+			})
+
+			When("multicluster is enabled", func() {
+				It("allow IstioMultiCluster creation", func() {
+					f.ValuesSet("istio.multicluster.enabled", true)
+					f.HelmRender()
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+					Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicy", "istiomulticlusters-multicluster-enabled.deckhouse.io").
+						Field("spec.validations.0.expression").String()).To(Equal("true"))
+				})
+			})
+		})
+
+		Context("waypointinstances-ambient-enabled.deckhouse.io", func() {
+			When("ambient mesh is disabled", func() {
+				It("deny WaypointInstance creation", func() {
+					f.HelmRender()
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+					policy := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", "waypointinstances-ambient-enabled.deckhouse.io")
+					Expect(policy.Exists()).To(BeTrue())
+					Expect(policy.Field("spec.validations.0.expression").String()).To(Equal("false"))
+
+					binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", "waypointinstances-ambient-enabled.deckhouse.io")
+					Expect(binding.Exists()).To(BeTrue())
+					Expect(binding.Field("spec.policyName").String()).To(Equal("waypointinstances-ambient-enabled.deckhouse.io"))
+					Expect(binding.Field("spec.validationActions.0").String()).To(Equal("Deny"))
+				})
+			})
+
+			When("ambient mesh is enabled", func() {
+				It("allow WaypointInstance creation", func() {
+					f.ValuesSet("istio.ambient.enabled", true)
+					f.HelmRender()
+					Expect(f.RenderError).ShouldNot(HaveOccurred())
+					Expect(f.KubernetesGlobalResource("ValidatingAdmissionPolicy", "waypointinstances-ambient-enabled.deckhouse.io").
+						Field("spec.validations.0.expression").String()).To(Equal("true"))
+				})
+			})
+		})
+
+		Context("public-service-valid.deckhouse.io", func() {
+			It("gates the ExternalName/ports/port-name CEL validations on label presence via objectSelector", func() {
+				f.HelmRender()
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				policy := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", "public-service-valid.deckhouse.io")
+				Expect(policy.Exists()).To(BeTrue())
+				Expect(policy.Field("spec.matchConstraints.resourceRules.0.resources.0").String()).To(Equal("services"))
+				Expect(policy.Field("spec.matchConstraints.objectSelector.matchExpressions.0.key").String()).To(
+					Equal("federation.istio.deckhouse.io/public-service"))
+				Expect(policy.Field("spec.matchConstraints.objectSelector.matchExpressions.0.operator").String()).To(Equal("Exists"))
+				Expect(policy.Field("spec.validations.0.expression").String()).To(Equal(
+					`object.spec.type != 'ExternalName'`))
+				Expect(policy.Field("spec.validations.1.expression").String()).To(Equal(
+					`has(object.spec.ports)`))
+				Expect(policy.Field("spec.validations.2.expression").String()).To(Equal(
+					`variables.portsWithoutName.size() == 0`))
+				Expect(policy.Field("spec.validations.0.message").String()).To(Equal(
+					"A service labeled 'federation.istio.deckhouse.io/public-service' must not be of ExternalName type."))
+				Expect(policy.Field("spec.validations.1.message").String()).To(Equal(
+					"A service labeled 'federation.istio.deckhouse.io/public-service' must define the '.spec.ports' field."))
+
+				binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", "public-service-valid.deckhouse.io")
+				Expect(binding.Exists()).To(BeTrue())
+				Expect(binding.Field("spec.policyName").String()).To(Equal("public-service-valid.deckhouse.io"))
+			})
+		})
+
+		Context("serviceentry-ports-should-exist.deckhouse.io", func() {
+			It("warns on a ServiceEntry with no ports", func() {
+				f.HelmRender()
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				policy := f.KubernetesGlobalResource("ValidatingAdmissionPolicy", "serviceentry-ports-should-exist.deckhouse.io")
+				Expect(policy.Exists()).To(BeTrue())
+				Expect(policy.Field("spec.failurePolicy").String()).To(Equal("Ignore"))
+				Expect(policy.Field("spec.validations.0.expression").String()).To(Equal("has(object.spec.ports)"))
+				Expect(policy.Field("spec.matchConstraints.resourceRules.0.apiGroups.0").String()).To(Equal("networking.istio.io"))
+				Expect(policy.Field("spec.matchConstraints.resourceRules.0.resources.0").String()).To(Equal("serviceentries"))
+
+				binding := f.KubernetesGlobalResource("ValidatingAdmissionPolicyBinding", "serviceentry-ports-should-exist.deckhouse.io")
+				Expect(binding.Exists()).To(BeTrue())
+				Expect(binding.Field("spec.policyName").String()).To(Equal("serviceentry-ports-should-exist.deckhouse.io"))
+				Expect(binding.Field("spec.validationActions.0").String()).To(Equal("Warn"))
+			})
 		})
 	})
 })

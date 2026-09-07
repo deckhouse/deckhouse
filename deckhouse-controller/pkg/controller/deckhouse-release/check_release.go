@@ -37,7 +37,6 @@ import (
 	"github.com/google/go-containerregistry/pkg/v1/remote/transport"
 	"github.com/iancoleman/strcase"
 	"github.com/jonboulle/clockwork"
-	"github.com/spaolacci/murmur3"
 	"go.opentelemetry.io/otel"
 	"gopkg.in/yaml.v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -52,7 +51,6 @@ import (
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
 	releaseUpdater "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/releaseupdater"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
-	"github.com/deckhouse/deckhouse/go_lib/libapi"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -622,7 +620,6 @@ func (f *DeckhouseReleaseFetcher) createRelease(
 
 	ts := metav1.Time{Time: f.clock.Now()}
 	if releaseMetadata.IsCanaryRelease(f.GetReleaseChannel()) {
-		// if cooldown is set, calculate canary delay from cooldown time, not current
 		applyAfter = releaseMetadata.CalculateReleaseDelay(f.GetReleaseChannel(), ts, f.clusterUUID)
 	}
 
@@ -825,20 +822,27 @@ func (f *DeckhouseReleaseFetcher) fetchReleaseMetadata(ctx context.Context, img 
 	}
 
 	if rr.versionReader.Len() > 0 {
-		err = json.NewDecoder(rr.versionReader).Decode(&meta)
+		var versionData ReleaseVersionData
+
+		err = json.NewDecoder(rr.versionReader).Decode(&versionData)
 		if err != nil {
 			return nil, fmt.Errorf("metadata decode: %w", err)
 		}
+
+		meta = versionData.ToMetadata()
 	}
 
+	// module.yaml is not part of the platform release image, but a release image of
+	// a product that ships Deckhouse as a module carries one, and its requirements
+	// take precedence over the kubernetes version from version.json.
 	if rr.moduleReader.Len() > 0 {
 		var moduleDefinition moduletypes.Definition
+
 		err = yaml.NewDecoder(rr.moduleReader).Decode(&moduleDefinition)
 		if err != nil {
 			return nil, fmt.Errorf("unmarshal module yaml failed: %w", err)
 		}
 
-		meta.ModuleDefinition = &moduleDefinition
 		if moduleDefinition.Requirements != nil {
 			if meta.Requirements == nil {
 				meta.Requirements = make(map[string]string, 1)
@@ -1019,46 +1023,6 @@ func getLatestDeployedRelease(releases []*v1alpha1.DeckhouseRelease) (int, *v1al
 	}
 
 	return -1, nil
-}
-
-type ReleaseMetadata struct {
-	Version          string                  `json:"version"`
-	Changelog        map[string]interface{}  `json:"-"`
-	ModuleDefinition *moduletypes.Definition `json:"module,omitempty"`
-
-	Canary       map[string]canarySettings `json:"canary"`
-	Requirements map[string]string         `json:"requirements"`
-	Disruptions  map[string][]string       `json:"disruptions"`
-	Suspend      bool                      `json:"suspend"`
-}
-
-func (m *ReleaseMetadata) IsCanaryRelease(channel string) bool {
-	settings := m.releaseCanarySettings(channel)
-	return settings.Enabled
-}
-
-func (m *ReleaseMetadata) releaseCanarySettings(channel string) canarySettings {
-	return m.Canary[channel]
-}
-
-// https://github.com/deckhouse/deckhouse/issues/332
-func (m *ReleaseMetadata) CalculateReleaseDelay(channel string, ts metav1.Time, clusterUUID string) *metav1.Time {
-	hash := murmur3.Sum64([]byte(clusterUUID + m.Version))
-	wave := hash % uint64(m.releaseCanarySettings(channel).Waves)
-
-	if wave != 0 {
-		delay := time.Duration(wave) * m.releaseCanarySettings(channel).Interval.Duration
-		applyAfter := metav1.NewTime(ts.Add(delay))
-		return &applyAfter
-	}
-
-	return nil
-}
-
-type canarySettings struct {
-	Enabled  bool            `json:"enabled"`
-	Waves    uint            `json:"waves"`
-	Interval libapi.Duration `json:"interval"` // in minutes
 }
 
 func buildSuspendAnnotation(suspend bool) []byte {
