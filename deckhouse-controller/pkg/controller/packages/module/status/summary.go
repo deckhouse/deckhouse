@@ -36,12 +36,12 @@ import (
 //     runtime conditions Unknown, which is what distinguishes it from a
 //     first-install Pending).
 const (
-	statePending   = "Pending"
-	stateFailed    = "Failed"
-	stateUpdating  = "Updating"
-	stateReady     = "Ready"
-	stateDegraded  = "Degraded"
-	stateSuspended = "Suspended"
+	StatePending   = "Pending"
+	StateFailed    = "Failed"
+	StateUpdating  = "Updating"
+	StateReady     = "Ready"
+	StateDegraded  = "Degraded"
+	StateSuspended = "Suspended"
 )
 
 // Scheduler verdict reasons of the intentional-disable family (see the
@@ -72,7 +72,7 @@ type advice struct {
 var summaryTable = map[phase]map[string]advice{
 	phaseInstall: {
 		"Pending": {
-			statePending,
+			StatePending,
 			"Installation is waiting for dependent modules to converge",
 			"Wait for dependent modules to converge automatically. No action required.",
 		},
@@ -80,78 +80,78 @@ var summaryTable = map[phase]map[string]advice{
 		// Scheduler verdicts — the module is blocked, not broken. Which gate
 		// blocked it is the whole message, so every verdict has its own row.
 		reasonDisabled: {
-			statePending,
+			StatePending,
 			"Installation is blocked: the module is disabled",
 			"Enable the module to start the installation.",
 		},
 		reasonDisabledByBundle: {
-			statePending,
+			StatePending,
 			"Installation is blocked: the module is disabled by the edition bundle",
 			"Enable the module explicitly to override the bundle default.",
 		},
 		reasonDisabledByScript: {
-			statePending,
+			StatePending,
 			"Installation is blocked: the module is disabled by its enabled-script",
 			"The enabled-script evaluated to false. Check the cluster state the script depends on, or enable the module explicitly.",
 		},
 		"EnabledScriptError": {
-			stateFailed,
+			StateFailed,
 			"Installation failed: the module's enabled-script failed",
 			"Check the Deckhouse controller logs for the script error. Fix the script or the cluster state it inspects.",
 		},
 		"DependencyNotEnabled": {
-			statePending,
+			StatePending,
 			"Installation is blocked: a required module is not enabled",
 			"Enable the required module listed in the condition message. The installation will continue automatically.",
 		},
 		"DependencyVersionMismatch": {
-			statePending,
+			StatePending,
 			"Installation is blocked: a required module version does not match",
 			"Update the required module to a version matching the constraint in the condition message.",
 		},
 		"AnyOfDependenciesUnmet": {
-			statePending,
+			StatePending,
 			"Installation is blocked: none of the alternative required modules is enabled",
 			"Enable at least one of the modules listed in the condition message.",
 		},
 		"NoneOfDependenciesViolated": {
-			statePending,
+			StatePending,
 			"Installation is blocked: a conflicting module is enabled",
 			"Disable the conflicting module listed in the condition message.",
 		},
 		"VersionLookupFailed": {
-			stateFailed,
+			StateFailed,
 			"Installation failed: a required module version could not be resolved",
 			"Check the required module's state and version. The scheduler will retry automatically.",
 		},
 
 		"DownloadFailed": {
-			stateFailed,
+			StateFailed,
 			"Installation failed: module package could not be downloaded or mounted",
 			"Check network connectivity to the registry, verify imagePullSecret and package signature. Fix the issue — the controller will retry on the next reconcile.",
 		},
 		"LoadFromFilesystemFailed": {
-			stateFailed,
+			StateFailed,
 			"Installation failed: module package on disk could not be loaded",
 			"The on-disk artifact is corrupted or has an invalid structure. Delete the cached package from the node disk and re-pull the image. The controller will retry on the next reconcile.",
 		},
 		"SettingsInvalid": {
-			stateFailed,
+			StateFailed,
 			"Installation failed: module settings did not pass validation",
 			"Fix the ModuleConfig fields that fail OpenAPI validation. The controller will retry automatically after the config is changed.",
 		},
 		"HookInitializationFailed": {
-			stateFailed,
+			StateFailed,
 			"Installation failed: hook synchronization phase failed",
 			"Check the hook pod/job logs (kubectl logs). Fix the hook code or its dependencies. Roll back the module version if needed.",
 		},
 		"HookFailed": {
-			stateFailed,
+			StateFailed,
 			"Installation failed: startup or runtime hooks failed",
 			"Check the failed hook logs. Fix the configuration or hook code. The attempt will be retried on the next reconcile.",
 		},
 		"ManifestsApplyFailed": {
-			stateFailed,
+			StateFailed,
 			"Installation failed: Helm could not apply manifests",
 			"Check helm history and events in the d8-system namespace. Resolve resource conflicts (namespace, CRD, RBAC). The controller will retry on the next reconcile.",
 		},
@@ -164,37 +164,37 @@ var summaryTable = map[phase]map[string]advice{
 	// scheduler verdicts appear here.
 	phaseUpdate: {
 		"Pending": {
-			stateUpdating,
+			StateUpdating,
 			"Update is waiting for dependent modules to converge; previous version is still running",
 			"Wait — the previous version is still working. The update will continue automatically once dependent modules converge.",
 		},
 		"DownloadFailed": {
-			stateUpdating,
+			StateUpdating,
 			"Update is stalled: new version could not be downloaded; previous version is still running",
 			"Check registry connectivity, and image integrity. The previous version continues to work. After fixing, the controller will retry the download.",
 		},
 		"LoadFromFilesystemFailed": {
-			stateUpdating,
+			StateUpdating,
 			"Update is stalled: new version could not be loaded from filesystem; previous version is still running",
 			"Delete the corrupted new version package from the node disk. The previous version continues to work. The controller will retry download and loading.",
 		},
 		"SettingsInvalid": {
-			stateUpdating,
+			StateUpdating,
 			"Update is stalled: new settings did not pass validation; previous version is still running",
 			"Fix the module settings to match the new version's schema. The previous version continues to work. After fixing, the update will continue.",
 		},
 		"HookInitializationFailed": {
-			stateFailed,
+			StateFailed,
 			"Update failed during hook synchronization; previous version is no longer running",
 			"The module is not working. Check the new version's hook logs. Fix the hook/config or manually roll back the module version.",
 		},
 		"HookFailed": {
-			stateFailed,
+			StateFailed,
 			"Update failed: startup or runtime hooks of the new version failed; previous version is no longer running",
 			"The module is not working. Check the new version's hook logs. Fix the hook/config or roll back the module version manually.",
 		},
 		"ManifestsApplyFailed": {
-			stateFailed,
+			StateFailed,
 			"Update failed: Helm could not apply manifests for the new version; previous version is no longer running",
 			"Resources in the cluster are inconsistent. Check helm history and events in the d8-system namespace. Resolve resource conflicts. If needed, roll back manually via helm rollback.",
 		},
@@ -204,42 +204,42 @@ var summaryTable = map[phase]map[string]advice{
 	// problem surfaced with no active update — plus a message and tip.
 	phaseReconcile: {
 		"DownloadFailed": {
-			stateDegraded,
+			StateDegraded,
 			"Reconcile failed: on-disk artifact failed verification; runtime state can no longer be trusted",
 			"The on-disk artifact has been tampered with or corrupted. Verify integrity, delete and re-fetch the package from the registry. The controller will retry reconcile.",
 		},
 		"LoadFromFilesystemFailed": {
-			stateDegraded,
+			StateDegraded,
 			"Reconcile failed: module could not be loaded from filesystem; runtime state can no longer be trusted",
 			"Delete the corrupted package cache on the node. The controller will retry loading; conditions will be restored based on reconcile progress.",
 		},
 		"SettingsInvalid": {
-			stateDegraded,
+			StateDegraded,
 			"Reconcile failed: new settings did not pass validation; previously applied configuration is still in effect",
 			"The previous configuration continues to work. Fix the invalid fields in the module settings. After saving, the controller will re-apply the settings.",
 		},
 		"HookInitializationFailed": {
-			stateDegraded,
+			StateDegraded,
 			"Reconcile failed: hook synchronization phase failed; workload remains scaled but is no longer managed",
 			"Pods are alive but the controller is not managing them. Check the failed hook logs. Fix the hook/config — the controller will retry reconcile.",
 		},
 		"HookFailed": {
-			stateDegraded,
+			StateDegraded,
 			"Reconcile failed: startup or runtime hooks failed; workload remains scaled but is no longer managed",
 			"Pods are alive but the controller is not managing them. Check the failed hook logs. Fix the hook/config — the controller will retry reconcile.",
 		},
 		"ManifestsApplyFailed": {
-			stateDegraded,
+			StateDegraded,
 			"Reconcile failed: Helm could not apply manifests",
 			"Check events in the d8-system namespace and helm history. Resolve resource conflicts (foreign ownership, finalizers, CRD mismatches). The controller will retry reconcile automatically.",
 		},
 		"Degraded": {
-			stateDegraded,
+			StateDegraded,
 			"Reconcile failed: workload health monitor reports degraded",
 			"Workload health monitor reports degraded. Check pod status and logs to identify the root cause.",
 		},
 		"Reconciling": {
-			stateDegraded,
+			StateDegraded,
 			"Reconcile failed: workload is still reconciling",
 			"Workload is still reconciling. Wait for the rollout to complete. If it stays in this state, check pod status and events.",
 		},
@@ -252,7 +252,7 @@ var summaryTable = map[phase]map[string]advice{
 // summarySuspendedDisabled is the fixed Summary for a running module that was
 // switched off — by the user, the bundle or the enabled-script.
 var summarySuspendedDisabled = advice{
-	state:   stateSuspended,
+	state:   StateSuspended,
 	message: "Module is suspended: the module was disabled",
 	tip:     "Enable the module to resume. The controller will restore all conditions and resume operation automatically.",
 }
@@ -260,7 +260,7 @@ var summarySuspendedDisabled = advice{
 // summarySuspendedRequirements is the fixed Summary for a running module that
 // lost a requirement — a dependency was disabled or stopped matching.
 var summarySuspendedRequirements = advice{
-	state:   stateSuspended,
+	state:   StateSuspended,
 	message: "Module is suspended: requirements unmet",
 	tip:     "Solve the module requirements. After it, the controller will automatically restore all conditions and resume operation.",
 }
@@ -268,7 +268,7 @@ var summarySuspendedRequirements = advice{
 // summaryReady is the fixed Summary for a healthy module: install or update
 // completed and every primary condition is True. State alone conveys it, so
 // there is no message or tip.
-var summaryReady = advice{state: stateReady}
+var summaryReady = advice{state: StateReady}
 
 // summaryUpdating is the fixed Summary for an update that is mid-flight with no
 // failing gate: the new version's manifests are still being applied
@@ -276,7 +276,7 @@ var summaryReady = advice{state: stateReady}
 // one running. It is the positive-progress counterpart to summaryReady — see
 // the update branch of summarize for why "no blocker" alone cannot mean Ready.
 var summaryUpdating = advice{
-	state:   stateUpdating,
+	state:   StateUpdating,
 	message: "Update in progress: the new version is being applied; the previous version is still running",
 	tip:     "The previous version continues to run while the new version is applied. No action is required unless this state persists.",
 }
@@ -397,11 +397,11 @@ func adviseFor(ph phase, reason string) (string, string, string) {
 
 	switch ph {
 	case phaseInstall:
-		return stateFailed, "Installation failed: " + reason, ""
+		return StateFailed, "Installation failed: " + reason, ""
 	case phaseUpdate:
-		return stateFailed, "Update failed: " + reason + "; previous version is no longer running", ""
+		return StateFailed, "Update failed: " + reason + "; previous version is no longer running", ""
 	case phaseReconcile:
-		return stateDegraded, "Reconcile failed: " + reason, ""
+		return StateDegraded, "Reconcile failed: " + reason, ""
 	}
 
 	return "", "", ""
@@ -415,5 +415,5 @@ func adviseSchedulerBlocked(reason string) (string, string, string) {
 		return a.state, a.message, a.tip
 	}
 
-	return statePending, "Installation is blocked: " + reason, ""
+	return StatePending, "Installation is blocked: " + reason, ""
 }

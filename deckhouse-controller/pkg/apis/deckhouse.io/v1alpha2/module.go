@@ -17,6 +17,8 @@ limitations under the License.
 package v1alpha2
 
 import (
+	"time"
+
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -166,6 +168,124 @@ type ModuleStatus struct {
 	// +listType=map
 	// +listMapKey=type
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
+}
+
+// +kubebuilder:object:generate=false
+type ConditionOption func(opts *ConditionSettings)
+
+// rewrite default timer (may be usefull for unit tests)
+func WithTimer(fn func() time.Time) func(opts *ConditionSettings) {
+	return func(opts *ConditionSettings) {
+		opts.Timer = fn
+	}
+}
+
+// +kubebuilder:object:generate=false
+type ConditionSettings struct {
+	Timer func() time.Time
+}
+
+func (m *Module) SetConditionTrue(condName string, opts ...ConditionOption) {
+	settings := &ConditionSettings{
+		Timer: time.Now,
+	}
+
+	for _, opt := range opts {
+		opt(settings)
+	}
+
+	for idx, cond := range m.Status.Conditions {
+		if cond.Type == condName {
+			m.Status.Conditions[idx].ObservedGeneration = m.Generation
+			if cond.Status != metav1.ConditionTrue {
+				m.Status.Conditions[idx].LastTransitionTime = metav1.Time{Time: settings.Timer()}
+				m.Status.Conditions[idx].Status = metav1.ConditionTrue
+			}
+			m.Status.Conditions[idx].Reason = ""
+			m.Status.Conditions[idx].Message = ""
+
+			return
+		}
+	}
+
+	m.Status.Conditions = append(m.Status.Conditions, metav1.Condition{
+		Type:               condName,
+		Status:             metav1.ConditionTrue,
+		ObservedGeneration: m.Generation,
+		LastTransitionTime: metav1.Time{Time: settings.Timer()},
+	})
+}
+
+func (m *Module) SetConditionFalse(condName, reason, message string, opts ...ConditionOption) {
+	settings := &ConditionSettings{
+		Timer: time.Now,
+	}
+
+	for _, opt := range opts {
+		opt(settings)
+	}
+
+	for idx, cond := range m.Status.Conditions {
+		if cond.Type == condName {
+			m.Status.Conditions[idx].ObservedGeneration = m.Generation
+			if cond.Status != metav1.ConditionFalse {
+				m.Status.Conditions[idx].LastTransitionTime = metav1.Time{Time: settings.Timer()}
+				m.Status.Conditions[idx].Status = metav1.ConditionFalse
+			}
+			if cond.Reason != reason {
+				m.Status.Conditions[idx].Reason = reason
+			}
+			if cond.Message != message {
+				m.Status.Conditions[idx].Message = message
+			}
+			return
+		}
+	}
+
+	m.Status.Conditions = append(m.Status.Conditions, metav1.Condition{
+		Type:               condName,
+		Status:             metav1.ConditionFalse,
+		Reason:             reason,
+		Message:            message,
+		ObservedGeneration: m.Generation,
+		LastTransitionTime: metav1.Time{Time: settings.Timer()},
+	})
+}
+
+func (m *Module) SetConditionUnknown(condName, reason, message string, opts ...ConditionOption) {
+	settings := &ConditionSettings{
+		Timer: time.Now,
+	}
+
+	for _, opt := range opts {
+		opt(settings)
+	}
+
+	for idx, cond := range m.Status.Conditions {
+		if cond.Type == condName {
+			m.Status.Conditions[idx].ObservedGeneration = m.Generation
+			if cond.Status != metav1.ConditionUnknown {
+				m.Status.Conditions[idx].LastTransitionTime = metav1.Time{Time: settings.Timer()}
+				m.Status.Conditions[idx].Status = metav1.ConditionUnknown
+			}
+			if cond.Reason != reason {
+				m.Status.Conditions[idx].Reason = reason
+			}
+			if cond.Message != message {
+				m.Status.Conditions[idx].Message = message
+			}
+			return
+		}
+	}
+
+	m.Status.Conditions = append(m.Status.Conditions, metav1.Condition{
+		Type:               condName,
+		Status:             metav1.ConditionUnknown,
+		Reason:             reason,
+		Message:            message,
+		ObservedGeneration: m.Generation,
+		LastTransitionTime: metav1.Time{Time: settings.Timer()},
+	})
 }
 
 // ModuleStatusSummary aggregates the high-level lifecycle state, message
