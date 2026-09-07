@@ -1,8 +1,8 @@
-# version=v2.1.13
+# version=v2.1.16
 REGISTRY_PATH: registry.deckhouse.io/container-factory
-base/distroless-fin: "sha256:8699e9434756d2df1aa180791cb05235984f822624cd95ee6e3b1d039fbe9821" # from: scratch
-builder/distroless: "sha256:99308a169fdb3405ddd172e7c30fc79fef71a16a7d57a8d5b11b0b8e8ed4286f" # from: scratch
-builder/golang-1.25: "sha256:de6ad154e9432d77c9fbe32bb1b43baab84cd26ed7f401b4498ebbabff22b064" # from: builder/distroless
-builder/golang-1.26: "sha256:92db515d7e8405bfb5af6f8a4aa68e02a218ec0d35ad22c75576064522d11fd4" # from: builder/distroless
-builder/golang-1.27: "sha256:2c434670939faa480e9318112facaf73f2653e75f62f3fe8f98412740fff5624" # from: builder/distroless
-builder/golang: "sha256:2c434670939faa480e9318112facaf73f2653e75f62f3fe8f98412740fff5624" # from: builder/distroless
+base/distroless-fin: "sha256:bb664d4a1d383aad7eacbdd0c685e99dd5f7c0bb7345c73e8e2ca24c967c816f" # from: scratch
+builder/distroless: "sha256:b11988b03d8a4f87b0e3a5515e1938619f171de0df7d63100cb0a353ef74f3e4" # from: scratch
+builder/golang-1.25: "sha256:43fc81384184f3f51e200778a43b42be27db812704cfba6cf2841b26397ee74c" # from: builder/distroless
+builder/golang-1.26: "sha256:2cedee70f5487ec89548960ebd8c2eb040853dec3a39e846138080d2ad126c18" # from: builder/distroless
+builder/golang-1.27: "sha256:511561c7cf388f6543cb8b399332b72eb5e1d3667c292dadcfd682101b752b71" # from: builder/distroless
+builder/golang: "sha256:511561c7cf388f6543cb8b399332b72eb5e1d3667c292dadcfd682101b752b71" # from: builder/distroless
