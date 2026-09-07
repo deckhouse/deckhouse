@@ -63,17 +63,48 @@ without one. The way through is to give the cluster an upstream for the duration
 cluster but outside Deckhouse's own namespaces, and to take it away again once the new
 implementation holds the images itself. This has been walked end to end on a test cluster.
 
-What it costs: a second copy of the image set while the migration runs. The temporary registry
-holds as much as the `Local` store does, so plan for twice that on disk until the last step removes
-it. Nothing else is spent — the images already on the control-plane nodes are adopted rather than
-downloaded again, see step 6.
+What it costs, on the control-plane disk: **room for four times the image set**, free, before you
+start. Three copies exist at the peak — the `Local` store, the temporary registry holding the set the
+cluster runs, and the set the new implementation is filling with — and the fourth is headroom the
+node must not run out of. Measured on a migration walked end to end: a 13 GiB set (platform with modules) took 21 GiB in the
+temporary registry (two sets — the one the cluster ran and the one it moved to) and grew the store
+from 13.0 to 21.4 GiB, beside the node's own image cache and the system. On a 100 GiB control-plane
+node the peak used 38 GiB; on 50 GiB the same migration ran into pod eviction.
+
+That headroom is not a comfort margin. When free space on a control-plane node runs low, kubelet
+starts evicting pods and pruning images it considers unused — and in a cluster whose registry is
+inside itself, the pruned image can be the registry's own. The store then has no process to serve it
+and the node has nothing to pull from: measured, the storage pod waited on itself for 99 minutes and
+the cluster could only be recovered by loading images onto the node by hand. Plan the disk, and
+watch it while the migration runs.
+
+Adoption is what keeps this from being worse: the images already on the control-plane nodes are
+checked rather than downloaded again, see step 6. What it cannot do is make two DIFFERENT releases
+into one set — the store ends up holding what the old cluster ran and what the new one runs, which is
+why the peak is what it is.
 
 Steps 1 to 4 happen on the release that still carries the previous implementation.
 
 1. Run an OCI registry in a namespace of your own. Any implementation will do; it has to serve TLS
-   with a certificate the cluster can verify, and be reachable from every node. It is "external"
-   only in the sense that matters here: Deckhouse does not manage it, so nothing that happens to
-   the module's own objects takes it down.
+   with a certificate the cluster can verify. It is "external" only in the sense that matters here:
+   Deckhouse does not manage it, so nothing that happens to the module's own objects takes it down.
+
+   **Reachable by ONE address from two places.** In step 3 the nodes pull from it, so the address
+   has to work from a node; in step 6 the module's own syncer reads it from inside a POD, so the same
+   address has to work there too — and the certificate has to cover whatever name you choose.
+
+   Measured, all three on the same cluster:
+
+   | address | from a node | from a pod |
+   |---|---|---|
+   | `hostNetwork` port on the node's own address (`<node ip>:5000`) | 200 | 200 |
+   | Service name (`<service>.<namespace>.svc:<port>`) | does not resolve | 200 |
+   | NodePort on a node's address | 200 | refused, `operation not permitted` |
+
+   So run the registry with `hostNetwork: true` on one node and address it by that node's IP, with
+   the IP in the certificate's SANs. It is the only one of the three that answers both, which keeps
+   the whole migration on a single address — nothing to re-point between steps. A Service name looks
+   tidier and fails in step 3, because a node's container runtime does not resolve cluster DNS.
 
 1. Load the image set into it: `d8 mirror pull` on a machine that has access to the Deckhouse
    registry, then `d8 mirror push` into the temporary one. This is the copy the disk budget above
@@ -95,9 +126,26 @@ Steps 1 to 4 happen on the release that still carries the previous implementatio
 1. Upgrade to the release with the current implementation. The handover happens on the module's
    next reconciliation, and the cluster keeps pulling from the temporary registry throughout.
 
-1. Turn the module on: `mode: Managed` with `storage.cache: true` and the temporary registry as the
-   upstream. The in-cluster storage comes up on the same host path the `Local` store used, so what
-   is already on those disks is adopted: the fill verifies it and fetches only what is missing.
+1. Turn the module on: `mode: Managed` with `storage.cache: true`, the temporary registry as the
+   upstream — **and `storage.source` in the same edit**. The in-cluster storage comes up on the same
+   host path the `Local` store used, so what is already on those disks is adopted: the fill verifies
+   it and fetches only what is missing.
+
+   `storage.source` is not optional here even though the upstream is present, and leaving it for
+   later makes the last step impossible: the schema refuses a `Managed` configuration with no
+   `primary.upstream` unless `storage.source` is there, so the next step comes back as
+   `'storage.source' is required when 'primary.upstream' is not set`. `bundleRef` is a name for the
+   set; `expectedDigests` is the number of distinct digests in it, which is what the bundle you
+   pushed contains:
+
+   ```bash
+   for tar in <bundle dir>/*.tar; do tar -xOf "$tar" --wildcards '*index.json'; done |
+     jq -r '.manifests[]?.digest' | sort -u | wc -l
+   ```
+
+   Changing these settings restarts the registry process, so `RegistryStorage` reports `Failed` for
+   about a minute with an error about reading its own store. Wait for it to return to `Ready` rather
+   than reacting to that state.
 
 1. Wait for the storage to report that it holds the whole set — `phase: Ready` with
    `safeToDropUpstream: true` — and then remove the upstream from the `registry` ModuleConfig. The
