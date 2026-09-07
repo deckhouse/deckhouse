@@ -269,7 +269,7 @@ func (r *reconciler) processModule(ctx context.Context, module *v1alpha2.Module)
 			return false
 		})
 		if err != nil {
-			r.logger.Error("failed to remove allow disabled annotation for module config", slog.String("name", moduleConfig.Name), log.Err(err))
+			r.logger.Error("failed to remove allow disabled annotation for module config", slog.String("name", module.Name), log.Err(err))
 			return res, err
 		}
 
@@ -353,7 +353,7 @@ func (r *reconciler) deleteModule(ctx context.Context, module *v1alpha2.Module) 
 	}
 
 	// disable module
-	if err := r.disableModule(ctx, module, enabledByBundle); err != nil {
+	if err := r.disableModule(ctx, module); err != nil {
 		r.logger.Error("failed to disable the module", slog.String("module", module.Name), log.Err(err))
 		return ctrl.Result{}, err
 	}
