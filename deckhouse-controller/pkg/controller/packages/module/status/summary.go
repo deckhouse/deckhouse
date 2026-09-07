@@ -38,13 +38,13 @@ import (
 //   - Deleting:  the runtime accepted the removal and is tearing the module
 //     down; every condition reports Deleting until the resource disappears.
 const (
-	statePending   = "Pending"
-	stateFailed    = "Failed"
-	stateUpdating  = "Updating"
-	stateReady     = "Ready"
-	stateDegraded  = "Degraded"
-	stateSuspended = "Suspended"
-	stateDeleting  = "Deleting"
+	StatePending   = "Pending"
+	StateFailed    = "Failed"
+	StateUpdating  = "Updating"
+	StateReady     = "Ready"
+	StateDegraded  = "Degraded"
+	StateSuspended = "Suspended"
+	StateDeleting  = "Deleting"
 )
 
 // Scheduler verdict reasons of the intentional-disable family (see the
@@ -53,9 +53,9 @@ const (
 // switched off" from "the module lost a requirement" — the user action
 // differs, while both arrive on the same internal RequirementsMet condition.
 const (
-	reasonDisabled         = "Disabled"
-	reasonDisabledByBundle = "DisabledByBundle"
-	reasonDisabledByScript = "DisabledByScript"
+	ReasonDisabled         = "Disabled"
+	ReasonDisabledByBundle = "DisabledByBundle"
+	ReasonDisabledByScript = "DisabledByScript"
 )
 
 // reasonHealthUnknown is a summary-local table key, not a reason the health monitor
@@ -87,17 +87,17 @@ var summaryTable = map[phase]map[string]advice{
 
 		// Scheduler verdicts — the module is blocked, not broken. Which gate
 		// blocked it is the whole message, so every verdict has its own row.
-		reasonDisabled: {
+		ReasonDisabled: {
 			StatePending,
 			"Installation is blocked: the module is disabled",
 			"Enable the module to start the installation.",
 		},
-		reasonDisabledByBundle: {
+		ReasonDisabledByBundle: {
 			StatePending,
 			"Installation is blocked: the module is disabled by the edition bundle",
 			"Enable the module explicitly to override the bundle default.",
 		},
-		reasonDisabledByScript: {
+		ReasonDisabledByScript: {
 			StatePending,
 			"Installation is blocked: the module is disabled by its enabled-script",
 			"The enabled-script evaluated to false. Check the cluster state the script depends on, or enable the module explicitly.",
@@ -211,17 +211,17 @@ var summaryTable = map[phase]map[string]advice{
 		// flight rather than failed — except a degraded workload, which is the
 		// health monitor's terminal verdict on the new version.
 		"Reconciling": {
-			stateUpdating,
+			StateUpdating,
 			"Update applied: the new version's workload is rolling out",
 			"Wait for the rollout to finish. If it stalls, check pod status and events.",
 		},
 		"Degraded": {
-			stateDegraded,
+			StateDegraded,
 			"Update applied but the workload health monitor reports degraded",
 			"Check pod status and logs to identify the root cause. Roll back the module version if the new one cannot start.",
 		},
 		reasonHealthUnknown: {
-			stateUpdating,
+			StateUpdating,
 			"Update applied: waiting for a workload the health monitor can confirm",
 			"Either no report has arrived yet, or the chart ships no Deployment or StatefulSet, the only kinds the health monitor watches.",
 		},
@@ -294,7 +294,7 @@ var summarySuspendedRequirements = advice{
 
 // summaryDeleting is the fixed Summary for a module the runtime is tearing down.
 var summaryDeleting = advice{
-	state:   stateDeleting,
+	state:   StateDeleting,
 	message: "Module is being deleted",
 	tip:     "No action is required. The resource disappears once its release is taken down.",
 }
@@ -399,7 +399,7 @@ func summarize(state condmap.State) (string, string, string) {
 func suspendedFor(state condmap.State) advice {
 	reason, _ := state.GetIntReason(intRequirementsMet)
 	switch reason {
-	case reasonDisabled, reasonDisabledByBundle, reasonDisabledByScript:
+	case ReasonDisabled, ReasonDisabledByBundle, ReasonDisabledByScript:
 		return summarySuspendedDisabled
 	}
 

@@ -190,7 +190,7 @@ func TestModuleSummaryScenarios(t *testing.T) {
 			wantConds: map[string]*expectedCondition{
 				ConditionScaled: {metav1.ConditionFalse, "Reconciling"},
 			},
-			state:   stateUpdating,
+			state:   StateUpdating,
 			message: "Update applied: the new version's workload is rolling out",
 			tip:     "Wait for the rollout to finish. If it stalls, check pod status and events.",
 		},
@@ -200,7 +200,7 @@ func TestModuleSummaryScenarios(t *testing.T) {
 				withVersionChanged(),
 				withInternalCondition(string(intstatus.ConditionScaled), metav1.ConditionUnknown, ""),
 			),
-			state:   stateUpdating,
+			state:   StateUpdating,
 			message: "Update applied: waiting for a workload the health monitor can confirm",
 			tip:     "Either no report has arrived yet, or the chart ships no Deployment or StatefulSet, the only kinds the health monitor watches.",
 		},
@@ -213,14 +213,14 @@ func TestModuleSummaryScenarios(t *testing.T) {
 			name: "deleting: disabled module is torn down",
 			opts: []mappingOption{
 				installed(),
-				withInternalCondition(intRequirementsMet, metav1.ConditionFalse, reasonDisabled),
+				withInternalCondition(intRequirementsMet, metav1.ConditionFalse, ReasonDisabled),
 				withDeleting(),
 			},
 			wantConds: map[string]*expectedCondition{
 				ConditionEnabled:   {metav1.ConditionFalse, condmap.ReasonDeleting},
 				ConditionInstalled: {metav1.ConditionFalse, condmap.ReasonDeleting},
 			},
-			state:   stateDeleting,
+			state:   StateDeleting,
 			message: "Module is being deleted",
 			tip:     "No action is required. The resource disappears once its release is taken down.",
 		},
@@ -280,6 +280,6 @@ func TestComputeAndApplyConditionsOnDeletion(t *testing.T) {
 		assert.Equal(t, metav1.ConditionFalse, cond.Status, "condition %s status", cond.Type)
 		assert.Equal(t, condmap.ReasonDeleting, cond.Reason, "condition %s reason", cond.Type)
 	}
-	assert.Equal(t, stateDeleting, module.Status.Summary.State)
+	assert.Equal(t, StateDeleting, module.Status.Summary.State)
 	assert.Empty(t, module.Status.CurrentVersion.Version)
 }
