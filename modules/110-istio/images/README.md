@@ -1,5 +1,5 @@
 ## Istio image build targets
-#
+
 The module builds version-specific images for the supported Istio releases:
 
 - `common`, `cni`, `istioctl`, `kiali`, `pilot`, and `proxyv2` for 1.25.2, 1.27.9, and 1.29.6;
