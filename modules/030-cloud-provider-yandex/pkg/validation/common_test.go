@@ -261,3 +261,117 @@ func TestValidateNodeGroupExternalIPAddressesNilState(t *testing.T) {
 		t.Fatalf("ValidateNodeGroupExternalIPAddresses(nil) = %q, want %s", result.Error(), cpvalapi.CodeInternalStateNil)
 	}
 }
+
+// natInstanceLayoutState builds a validation state whose ModuleConfig carries the given layout and
+// withNATInstance parameters and nothing else.
+func natInstanceLayoutState(layout string, natInstance ycsettingsv2.NATInstanceParameters) *State {
+	enabled := true
+
+	return &State{
+		ModuleName:    ycmeta.ModuleName,
+		NamespaceName: ycmeta.Namespace,
+		ModuleConfig: &cpapi.ModuleConfig[*ycsettingsv2.ModuleConfigSettings]{
+			ObjectMeta: cpapi.ObjectMeta{Name: ycmeta.ModuleName},
+			Spec: cpapi.ModuleConfigSpec[*ycsettingsv2.ModuleConfigSettings]{
+				Enabled: &enabled,
+				Version: 2,
+				Settings: &ycsettingsv2.ModuleConfigSettings{
+					Nodes: ycsettingsv2.Nodes{
+						Parameters: ycsettingsv2.NodesParameters{
+							Layout:          layout,
+							WithNATInstance: natInstance,
+						},
+					},
+				},
+			},
+		},
+	}
+}
+
+func TestValidateWithNATInstanceLayoutRequiresSubnet(t *testing.T) {
+	t.Parallel()
+
+	state := natInstanceLayoutState(LayoutWithNATInstance, ycsettingsv2.NATInstanceParameters{
+		ExternalSubnetID: "external",
+	})
+
+	result := ValidateWithNATInstanceLayout(state)
+	if !hasViolationCode(result, CodeNATInstanceSubnetRequired) {
+		t.Fatalf("ValidateWithNATInstanceLayout() = %q, want %s", result.Error(), CodeNATInstanceSubnetRequired)
+	}
+}
+
+func TestValidateWithNATInstanceLayoutAcceptsInternalSubnetID(t *testing.T) {
+	t.Parallel()
+
+	state := natInstanceLayoutState(LayoutWithNATInstance, ycsettingsv2.NATInstanceParameters{
+		InternalSubnetID: "subnet-id",
+	})
+
+	if result := ValidateWithNATInstanceLayout(state); result.HasErrors() {
+		t.Fatalf("ValidateWithNATInstanceLayout() = %q, want no errors", result.Error())
+	}
+}
+
+func TestValidateWithNATInstanceLayoutAcceptsInternalSubnetCIDR(t *testing.T) {
+	t.Parallel()
+
+	state := natInstanceLayoutState(LayoutWithNATInstance, ycsettingsv2.NATInstanceParameters{
+		InternalSubnetCIDR: "10.0.0.0/24",
+	})
+
+	if result := ValidateWithNATInstanceLayout(state); result.HasErrors() {
+		t.Fatalf("ValidateWithNATInstanceLayout() = %q, want no errors", result.Error())
+	}
+}
+
+// Only the WithNATInstance layout carries the requirement: an empty withNATInstance section is
+// the norm for every other layout.
+func TestValidateWithNATInstanceLayoutSkipsOtherLayouts(t *testing.T) {
+	t.Parallel()
+
+	for _, layout := range []string{"Standard", "WithoutNAT", ""} {
+		state := natInstanceLayoutState(layout, ycsettingsv2.NATInstanceParameters{})
+
+		if result := ValidateWithNATInstanceLayout(state); result.HasErrors() {
+			t.Fatalf("ValidateWithNATInstanceLayout(layout=%q) = %q, want no errors", layout, result.Error())
+		}
+	}
+}
+
+// The reported value must not carry anything sensitive: NATInstanceParameters holds subnet and
+// address fields only, while the exporter API key lives in a credential Secret.
+func TestValidateWithNATInstanceLayoutReportsSubnetFieldsOnly(t *testing.T) {
+	t.Parallel()
+
+	natInstance := ycsettingsv2.NATInstanceParameters{ExternalSubnetID: "external"}
+	violations := ValidateWithNATInstanceLayout(
+		natInstanceLayoutState(LayoutWithNATInstance, natInstance),
+	).Errors()
+
+	if len(violations) != 1 {
+		t.Fatalf("ValidateWithNATInstanceLayout() returned %d violations, want 1", len(violations))
+	}
+	if violations[0].Value != natInstance {
+		t.Fatalf("violation value = %v, want %v", violations[0].Value, natInstance)
+	}
+}
+
+func TestValidateWithNATInstanceLayoutWithoutModuleConfig(t *testing.T) {
+	t.Parallel()
+
+	state := natInstanceLayoutState(LayoutWithNATInstance, ycsettingsv2.NATInstanceParameters{})
+	state.ModuleConfig = nil
+
+	if result := ValidateWithNATInstanceLayout(state); result.HasErrors() {
+		t.Fatalf("ValidateWithNATInstanceLayout() = %q, want no errors", result.Error())
+	}
+}
+
+func TestValidateWithNATInstanceLayoutNilState(t *testing.T) {
+	t.Parallel()
+
+	if result := ValidateWithNATInstanceLayout(nil); !hasViolationCode(result, cpvalapi.CodeInternalStateNil) {
+		t.Fatalf("ValidateWithNATInstanceLayout(nil) = %q, want %s", result.Error(), cpvalapi.CodeInternalStateNil)
+	}
+}
