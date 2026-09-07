@@ -163,6 +163,15 @@ func handleYandexClusterConfiguration(_ context.Context, input *go_hook.HookInpu
 	}
 	if ok && mcResult.SettingsV2 != nil {
 		input.Values.Set(discoveryDataValuesPath, discoveryData)
+
+		// The settings come from the v2 ModuleConfig, but the credential Secret may not be applied
+		// yet - reaching this line means IsMigrationResourcesApplied said no. Without this the
+		// credentialSecrets values stay empty and CCM, CSI and the machine-class secrets render
+		// with no service account key.
+		if err := setCredentialSecretsValuesIfAbsent(input, pcc); err != nil {
+			return fmt.Errorf("seed credential secrets from PCC: %w", err)
+		}
+
 		return nil
 	}
 	var mcSettingsV1 ycsettingsv1.ModuleConfigSettings
