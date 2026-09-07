@@ -239,10 +239,9 @@ Denied allow-list refresh returns OAuth2 `access_denied` and removes the
 refresh token from storage. Putting the user back on the allow-list does
 not revive that session; they must sign in again.
 
-**Impact / backports.** Existing refresh tokens whose stored email or groups
-no longer match the current DexClient / DexAuthenticator allow-lists start
-failing instead of being extended. Users must sign in again. Changelog must
-say so; backports to 1.77 and 1.76 are appropriate but stricter.
+**Impact.** Existing refresh tokens whose stored email or groups no longer
+match the current DexClient / DexAuthenticator allow-lists start failing
+instead of being extended. Users must sign in again.
 
 ### 020-connector-identity-filters.patch
 
