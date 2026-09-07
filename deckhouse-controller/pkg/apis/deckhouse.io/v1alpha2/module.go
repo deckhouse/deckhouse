@@ -46,6 +46,8 @@ const (
 
 	// ModuleAnnotationEmbedded marks a module that is embedded in the Deckhouse image.
 	ModuleAnnotationEmbedded = "modules.deckhouse.io/embedded"
+
+	ModuleConfigAnnotationAllowDisable = "modules.deckhouse.io/allow-disabling"
 )
 
 var (

@@ -185,6 +185,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return r.deleteModule(ctx, module)
 	}
 
+	// handle create/update events
 	return r.handleModule(ctx, module)
 }
 
@@ -217,17 +218,70 @@ func (r *reconciler) handleModule(ctx context.Context, module *v1alpha2.Module) 
 		module.Spec.Maintenance,
 		module.Spec.Enabled)
 
+	if err := r.refreshModule(ctx, module.Name); err != nil {
+		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
+	}
+
 	return r.processModule(ctx, module)
 }
 
 func (r *reconciler) processModule(ctx context.Context, module *v1alpha2.Module) (ctrl.Result, error) {
+	defer r.logger.Debug("module reconciled", slog.String("name", module.Name))
 	res := ctrl.Result{}
+
+	// clear conflict metrics
+	metricGroup := fmt.Sprintf(metrics.ModuleConflictMetricGroupTemplate, module.Name)
+	r.metricStorage.Grouped().ExpireGroupMetrics(metricGroup)
 
 	// ensure the finalizer is in place so a later delete can be intercepted
 	if err := r.addFinalizer(ctx, module); err != nil {
 		r.logger.Error("failed to add finalizer", slog.String("name", module.Name), log.Err(err))
 		return res, err
 	}
+
+	if !module.IsEnabled() {
+		// set MPV Used to false
+		if module.IsCondition(status.ConditionEnabled, metav1.ConditionTrue) {
+			mpv := &v1alpha1.ModulePackageVersion{}
+			mpvName := v1alpha1.MakeModulePackageVersionName(module.Spec.PackageRepositoryName, module.Name, module.Spec.PackageVersion)
+			if err := r.client.Get(ctx, types.NamespacedName{Name: mpvName}, mpv); err != nil {
+				return res, err
+			}
+
+			patch := client.MergeFrom(mpv.DeepCopy())
+			mpv.Status.Used = false
+
+			if err := r.client.Status().Patch(ctx, mpv, patch); err != nil {
+				return res, err
+			}
+		}
+
+		if err := r.disableModule(ctx, module); err != nil {
+			r.logger.Error("failed to disable the module", slog.String("module", module.Name), log.Err(err))
+			return res, err
+		}
+
+		err := utils.Update(ctx, r.client, module, func(module *v1alpha2.Module) bool {
+			if _, ok := module.ObjectMeta.Annotations[v1alpha2.ModuleConfigAnnotationAllowDisable]; ok {
+				delete(module.ObjectMeta.Annotations, v1alpha2.ModuleConfigAnnotationAllowDisable)
+				return true
+			}
+			return false
+		})
+		if err != nil {
+			r.logger.Error("failed to remove allow disabled annotation for module config", slog.String("name", moduleConfig.Name), log.Err(err))
+			return res, err
+		}
+
+		// skip disabled modules
+		r.logger.Debug("skip disabled module", slog.String("name", module.Name))
+		return res, nil
+	}
+
+	// if err := r.enableModule(ctx, module); err != nil {
+	// 	r.logger.Error("failed to enable the module", slog.String("module", module.Name), log.Err(err))
+	// 	return ctrl.Result{}, err
+	// }
 
 	return res, nil
 }
@@ -248,11 +302,6 @@ func (r *reconciler) deleteModule(ctx context.Context, module *v1alpha2.Module) 
 	r.metricStorage.GaugeSet(telemetry.WrapName(metrics.DeprecatedModuleIsEnabled), 0.0, map[string]string{metrics.LabelModule: module.GetName()})
 
 	res := ctrl.Result{}
-
-	enabledByBundle, err := r.IsModuleEnabledByBundle(ctx, module)
-	if err != nil {
-		return res, err
-	}
 
 	// skip system modules
 	if module.Name == moduleDeckhouse || module.Name == moduleGlobal {
@@ -276,12 +325,17 @@ func (r *reconciler) deleteModule(ctx context.Context, module *v1alpha2.Module) 
 	return res, nil
 }
 
-func (r *reconciler) disableModule(ctx context.Context, module *v1alpha2.Module, enabledByBundle bool) error {
+func (r *reconciler) disableModule(ctx context.Context, module *v1alpha2.Module) error {
 	r.logger.Debug("disable the module", slog.String("module", module.Name))
 
 	// remove module documentation immediately on disable so docs-builder drops it
 	if err := utils.DeleteModuleDocumentation(ctx, r.client, module.Name); err != nil {
 		return fmt.Errorf("delete module documentation: %w", err)
+	}
+
+	enabledByBundle, err := r.IsModuleEnabledByBundle(ctx, module)
+	if err != nil {
+		return err
 	}
 
 	return utils.UpdateStatus[*v1alpha2.Module](ctx, r.client, module, func(module *v1alpha2.Module) bool {
