@@ -1113,6 +1113,20 @@ var _ = Describe("Module :: registry :: helm template :: v2 token service", func
 		// and out of every certificate.
 		Expect(config).To(ContainSubstring(`addr: "127.0.0.1:5051"`))
 
+		// The key ID format, and the one line without which nothing in a managed mode can pull.
+		//
+		// This module's registry is now upstream distribution v3, which indexes the keys it trusts by
+		// RFC 7638 JWK thumbprint (`GetJWKThumbprint` over the certificate in `rootcertbundle`) and
+		// looks a token's `kid` up in that map. docker_auth defaults to libtrust's legacy key ID —
+		// `7KJG:LEYJ:FHNV:...` — which is the SAME key by a name v3 cannot find, so every request is
+		// answered `token signed by untrusted key with ID` and 401.
+		//
+		// Measured on a cluster: RegistryStorage `Failed`, `491 of 491 references could not be
+		// copied`, containerd and the syncer both refused by a registry holding the very key that
+		// signed their tokens. The fork carries the switch for exactly this (`Add support for registry
+		// v3 key ID format`), and it is off by default.
+		Expect(config).To(ContainSubstring("disable_legacy_key_id: true"))
+
 		// The hashes, never the plaintext: this is the service that verifies a password,
 		// not one that presents it.
 		Expect(config).To(ContainSubstring("RO-HASH"))

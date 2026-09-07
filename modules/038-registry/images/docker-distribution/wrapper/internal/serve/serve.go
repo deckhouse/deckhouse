@@ -42,6 +42,13 @@ limitations under the License.
 // in `Failed` and the syncer reporting `491 of 491 references could not be copied` — with every
 // test in this package green, because the imports were in the _test.go files and so every test
 // built a binary the image did not have.
+//
+// Two of them, both in the import block above with no comment beside them, because goimports
+// rejects a comment attached to an import inside a group: `registry/auth/token` for the
+// `auth.token` section the module's template writes, and `storage/driver/filesystem` for its
+// storage. Upstream's own binary imports eight drivers and three access controllers; the rest are
+// names this module's configuration never writes, and an unused provider is code in the image for
+// nobody.
 package serve
 
 import (
@@ -59,11 +66,8 @@ import (
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/health"
 	dregistry "github.com/distribution/distribution/v3/registry"
-	// The access controller the rendered `auth.token` section names — see the package comment.
 	_ "github.com/distribution/distribution/v3/registry/auth/token"
 	"github.com/distribution/distribution/v3/registry/handlers"
-	// The one storage driver this module's configuration ever names. Upstream's binary imports
-	// eight; the rest would be code in the image for nobody.
 	_ "github.com/distribution/distribution/v3/registry/storage/driver/filesystem"
 	gorhandlers "github.com/gorilla/handlers"
 
