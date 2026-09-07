@@ -62,23 +62,25 @@ Add the following annotations to the application's Ingress resource:
   - `NS`: Value of the `metadata.namespace` parameter of the [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator).
   - `C_DOMAIN`: Cluster domain (the [clusterDomain](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) parameter of the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) resource).
 
-   > **Note:** If the DexAuthenticator `<NAME>` is too long, the Service name may be truncated. To find the correct service name, use the following command (specify the namespace name and DexAuthenticator name):
-   >
-   > ```shell
-   > d8 k get service -n <NS> -l "deckhouse.io/dex-authenticator-for=<NAME>" -o jsonpath='{.items[0].metadata.name}'
-   > ```
-   >
-
-   Example of annotations for an application's Ingress resource for connecting to Dex:
-
-   ```yaml
-   annotations:
-     nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
-     nginx.ingress.kubernetes.io/auth-url: https://app-name-dex-authenticator.app-ns.svc.cluster.local/dex-authenticator/auth
-     nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
-   ```
-
 {% endraw %}
+
+{% alert level="info" %}
+If the DexAuthenticator `<NAME>` is too long, the Service name may be truncated. To find the correct service name, use the following command (specify the namespace name and DexAuthenticator name):
+
+```shell
+d8 k get service -n <NS> -l "deckhouse.io/dex-authenticator-for=<NAME>" -o jsonpath='{.items[0].metadata.name}'
+```
+
+{% endalert %}
+
+Example of annotations for an application's Ingress resource for connecting to Dex:
+
+```yaml
+annotations:
+  nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
+  nginx.ingress.kubernetes.io/auth-url: https://app-name-dex-authenticator.app-ns.svc.cluster.local/dex-authenticator/auth
+  nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
+```
 
 {% endtab %}
 {% tab "Through ALBInstance or ClusterALBInstance" %}

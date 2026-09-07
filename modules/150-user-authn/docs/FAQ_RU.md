@@ -61,23 +61,26 @@ title: "Модуль user-authn: FAQ"
   - `NS` — значение параметра `metadata.namespace` ресурса [DexAuthenticator](/modules/user-authn/cr.html#dexauthenticator);
   - `C_DOMAIN` — домен кластера (параметр [clusterDomain](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-clusterdomain) ресурса [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration)).
 
-   > **Важно:** Если имя DexAuthenticator (`<NAME>`) слишком длинное, имя сервиса (Service) может быть сокращено. Чтобы найти корректное имя сервиса, воспользуйтесь следующей командой (укажите имя неймспейса и аутентификатора):
-   >
-   > ```shell
-   > d8 k get service -n <NS> -l "deckhouse.io/dex-authenticator-for=<NAME>" -o jsonpath='{.items[0].metadata.name}'
-   > ```
-   >
-
-   Пример аннотаций Ingress-ресурса приложения для подключения к Dex:
-
-   ```yaml
-   annotations:
-     nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
-     nginx.ingress.kubernetes.io/auth-url: https://app-name-dex-authenticator.app-ns.svc.cluster.local/dex-authenticator/auth
-     nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
-   ```
-
 {% endraw %}
+
+{% alert level="info" %}
+
+Если имя DexAuthenticator (`<NAME>`) слишком длинное, имя сервиса (Service) может быть сокращено. Чтобы найти корректное имя сервиса, воспользуйтесь следующей командой (укажите имя неймспейса и аутентификатора):
+
+```shell
+d8 k get service -n <NS> -l "deckhouse.io/dex-authenticator-for=<NAME>" -o jsonpath='{.items[0].metadata.name}'
+```
+
+{% endalert %}
+
+Пример аннотаций Ingress-ресурса приложения для подключения к Dex:
+
+```yaml
+annotations:
+  nginx.ingress.kubernetes.io/auth-signin: https://$host/dex-authenticator/sign_in
+  nginx.ingress.kubernetes.io/auth-url: https://app-name-dex-authenticator.app-ns.svc.cluster.local/dex-authenticator/auth
+  nginx.ingress.kubernetes.io/auth-response-headers: X-Auth-Request-User,X-Auth-Request-Email
+```
 
 {% endtab %}
 {% tab "Через ALBInstance или ClusterALBInstance" %}
