@@ -1,0 +1,147 @@
+.github/ @nikolay.mordvintsev @maksim.khimchenko
+.gitlab/ @nikolay.mordvintsev @maksim.khimchenko
+.gitlab-ci.yml @nikolay.mordvintsev @maksim.khimchenko
+.gitleaks.toml @nikolay.mordvintsev @maksim.khimchenko
+000-common/ @denis.romanenko
+**/000-common/images/alt-p11 @nikolay.zykov @georgy.kargin
+**/000-common/images/check-kernel-version @andrey.polovov
+**/000-common/images/cni-** @andrey.polovov
+**/000-common/images/coredns @andrey.polovov
+**/000-common/images/crane @nikolay.gorbatov
+**/000-common/images/csi-** @alexandr.zimin @vasily.oleynikov @sergey.zhemzhitsky
+**/000-common/images/debug-container @andrey.polovov
+**/000-common/images/iptables-wrapper @andrey.polovov
+**/000-common/images/kube-rbac-proxy @aleksandr.sinichkin
+**/000-common/images/kubernetes @nikolay.gorbatov
+**/000-common/images/pause @nikolay.gorbatov
+**/000-common/images/shell-operator @pavel.okhlopkov
+**/000-common/images/vxlan-offloading-fixer @andrey.polovov
+002-deckhouse/ @pavel.okhlopkov
+002-deckhouse/templates/validation.yaml @aleksandr.sinichkin
+007-registrypackages/ @denis.romanenko
+**/007-registrypackages/images/containerd @nikolay.gorbatov
+**/007-registrypackages/images/crictl @nikolay.gorbatov
+**/007-registrypackages/images/cryptsetup @nikolay.gorbatov
+**/007-registrypackages/images/d8-ca-updater @nikolay.zykov @georgy.kargin
+**/007-registrypackages/images/d8-curl @nikolay.zykov @georgy.kargin
+**/007-registrypackages/images/e2fsprogs @nikolay.zykov @georgy.kargin
+**/007-registrypackages/images/erofs @nikolay.zykov @georgy.kargin @nikolay.gorbatov
+**/007-registrypackages/images/growpart @nikolay.zykov @georgy.kargin
+**/007-registrypackages/images/jq @nikolay.zykov @georgy.kargin
+**/007-registrypackages/images/kubectl @nikolay.gorbatov
+**/007-registrypackages/images/kubelet @nikolay.gorbatov
+**/007-registrypackages/images/lsblk @nikolay.zykov @georgy.kargin
+**/007-registrypackages/images/netcat @nikolay.zykov @georgy.kargin
+**/007-registrypackages/images/nfs-mount @nikolay.zykov @georgy.kargin
+**/007-registrypackages/images/nvme-cli @nikolay.zykov @georgy.kargin
+**/007-registrypackages/images/pause @nikolay.gorbatov
+**/007-registrypackages/images/socat @nikolay.zykov @georgy.kargin
+**/007-registrypackages/images/systemctl-power-commands-wrapper @nikolay.zykov @georgy.kargin
+**/007-registrypackages/images/toml-merge @nikolay.zykov @georgy.kargin @nikolay.gorbatov
+**/007-registrypackages/images/virt-what @nikolay.zykov @georgy.kargin
+**/007-registrypackages/images/which @nikolay.zykov @georgy.kargin
+**/007-registrypackages/images/yq @nikolay.zykov @georgy.kargin
+**/007-registrypackages/images/docker-registry @nikolay.zykov @georgy.kargin
+015-admission-policy-engine/ @maksim.nabokikh @aleksandr.sinichkin
+021-cni-cilium/ @andrey.pavlov @andrey.polovov
+025-static-routing-manager/ @andrey.pavlov @andrey.polovov
+030-cloud-provider-*/ @alexey.sulimenko @alexey.voronov
+031-local-path-provisioner/ @alexandr.zimin @vasily.oleynikov @sergey.zhemzhitsky
+035-cni-flannel/ @andrey.pavlov @andrey.polovov
+035-cni-simple-bridge/ @andrey.pavlov @andrey.polovov
+036-kube-proxy/ @andrey.pavlov @andrey.polovov
+038-registry/ @maksim.nabokikh @vadim.martynov
+039-registry-packages-proxy/ @nikolay.zykov @georgy.kargin
+040-control-plane-manager/ @nikolay.gorbatov
+**/040-control-plane-manager/hooks/audit_policy* @maksim.nabokikh @aleksandr.sinichkin
+**/040-control-plane-manager/templates/_authentication_configuration.tpl @maksim.nabokikh @aleksandr.sinichkin
+**/040-control-plane-manager/templates/_authorization_config.tpl @maksim.nabokikh @aleksandr.sinichkin
+040-node-manager/ @nikolay.zykov @georgy.kargin
+**/040-node-manager/images/builder-cuda @sergey.sudilovsky
+**/040-node-manager/images/nvidia-container-toolkit @sergey.sudilovsky
+**/040-node-manager/images/nvidia-dcgm @sergey.sudilovsky
+**/040-node-manager/images/nvidia-dcgm-exporter @sergey.sudilovsky
+**/040-node-manager/images/nvidia-device-plugin @sergey.sudilovsky
+**/040-node-manager/images/nvidia-mig-manager @sergey.sudilovsky
+**/040-node-manager/images/fencing-agent @yuriy.losev @sergey.morozov
+**/040-node-manager/images/cluster-autoscaler @yuriy.losev @sergey.morozov
+**/040-node-manager/images/bashible-apiserver @nikolay.zykov @georgy.kargin @nikolay.gorbatov
+**/040-node-manager/images/integrity-containerd-configurator @nikolay.gorbatov
+**/040-node-manager/images/integrity-controller @nikolay.gorbatov
+**/040-node-manager/images/caps-controller-manager @alexey.sulimenko @alexey.voronov
+**/040-node-manager/templates/fencing-agent @yuriy.losev @sergey.morozov
+**/040-node-manager/templates/cluster-autoscaler @yuriy.losev @sergey.morozov
+**/040-node-manager/templates/integrity-containerd-configurator @nikolay.gorbatov
+**/040-node-manager/templates/integrity-controller @nikolay.gorbatov
+**/040-node-manager/templates/caps-controller-manager @alexey.sulimenko @alexey.voronov
+**/040-node-manager/monitoring/grafana-dashboards/nvidia-gpu @sergey.sudilovsky
+**/040-node-manager/templates/nvidia-gpu @sergey.sudilovsky
+**/040-node-manager/hooks/fencing** @yuriy.losev @sergey.morozov
+**/040-node-manager/hooks/enable_integrity_controller** @nikolay.gorbatov
+**/040-node-manager/e2e/fencing** @yuriy.losev @sergey.morozov
+**/040-node-manager/e2e/cluster-autoscaler @yuriy.losev @sergey.morozov
+040-terraform-manager/ @nikolay.zykov @georgy.kargin
+**/040-terraform-manager/images @alexey.sulimenko @alexey.voronov
+**/040-terraform-manager/images/base-terraform-manager @nikolay.zykov @georgy.kargin
+**/040-terraform-manager/images/base-terraform @nikolay.zykov @georgy.kargin
+**/040-terraform-manager/images/base-opentofu @nikolay.zykov @georgy.kargin
+042-kube-dns/ @andrey.pavlov @andrey.polovov
+050-network-policy-engine/ @andrey.pavlov @andrey.polovov
+101-cert-manager/ @alexandr.dyakonov @aleksandr.sinichkin
+110-istio/ @sergey.kurbatov @andrey.polovov
+140-user-authz/ @maksim.nabokikh @aleksandr.sinichkin
+150-user-authn/ @maksim.nabokikh @aleksandr.sinichkin
+160-multitenancy-manager/ @maksim.nabokikh @aleksandr.sinichkin
+300-prometheus/ @vladimir.guryanov @vadim.lazovsky @maksim.madzhuga
+302-vertical-pod-autoscaler/ @yuriy.losev @sergey.morozov
+303-prometheus-*/ @vladimir.guryanov @vadim.lazovsky
+340-extended-monitoring/ @vladimir.guryanov @vadim.lazovsky @maksim.madzhuga
+340-monitoring-*/ @vladimir.guryanov @vadim.lazovsky @maksim.madzhuga
+350-node-local-dns/ @andrey.pavlov @andrey.polovov
+380-metallb/ @andrey.pavlov @andrey.polovov
+400-descheduler/ @yuriy.losev @sergey.morozov
+402-ingress-nginx/ @mikhail.scherba @andrey.polovov
+450-keepalived/ @andrey.pavlov @andrey.polovov
+450-network-gateway/ @andrey.pavlov @andrey.polovov
+470-chrony/ @nikolay.zykov @georgy.kargin
+491-containerized-data-importer @pavel.tishkov
+500-basic-auth/ @maksim.nabokikh @aleksandr.sinichkin
+500-openvpn/ @andrey.pavlov @andrey.polovov
+500-cilium-hubble/ @andrey.pavlov @andrey.polovov
+500-dashboard/ @evgeny.shevchenko
+500-okmeter/ @vladimir.guryanov @vadim.lazovsky @maksim.madzhuga
+600-secret-copier/ @maksim.nabokikh @aleksandr.sinichkin
+600-namespace-configurator/ @maksim.nabokikh @aleksandr.sinichkin
+610-service-with-healthchecks @andrey.pavlov @andrey.polovov
+800-deckhouse-tools/ @denis.romanenko @nikolay.zykov @georgy.kargin
+810-documentation/ @artem.kladov
+
+/candi/ @nikolay.zykov @georgy.kargin
+/candi/alt_base_images.yml @anton.fomichev
+/candi/control-plane/ @nikolay.gorbatov
+/ee/candi/ @nikolay.zykov @georgy.kargin
+/ee/**/candi/ @nikolay.zykov @georgy.kargin
+candi/version_map.yml @nikolay.gorbatov
+candi/cloud-providers/ @alexey.sulimenko @alexey.voronov
+candi/terraform_versions.yml @alexey.sulimenko @alexey.voronov
+**/030-cloud-provider-*/candi/ @alexey.sulimenko @alexey.voronov
+cloud-controller-manager/ @alexey.sulimenko @alexey.voronov
+csi/ @alexandr.zimin @vasily.oleynikov @sergey.zhemzhitsky
+deckhouse-controller/ @pavel.okhlopkov
+dhctl/ @nikolay.zykov @georgy.kargin
+docs/ @artem.kladov
+docs/documentation/pages/architecture/ @andrey.voytenkov @nikolay.bukharin @artem.kladov
+helm_lib/ @pavel.okhlopkov
+crds/ @artem.kladov
+openapi/ @artem.kladov
+tools/docs/ @artem.kladov
+tools/integrity_check_namespaces @alexey.gavrilov @maksim.khimchenko
+tools/build_includes/integrity-check-** @alexey.gavrilov @maksim.khimchenko
+/pkg/ @pavel.okhlopkov
+testing/cloud_layouts/ @nikolay.mordvintsev @kirill.kramorov @vladimir.portnov @maksim.khimchenko
+/monitoring/prometheus-rules/ @sergey.sizov
+/release.yaml @yuriy.losev @pavel.okhlopkov
+go_lib/cloud-data/ @alexey.sulimenko @alexey.voronov
+go_lib/cloud-provider @alexey.sulimenko @alexey.voronov
+go_lib/registry/ @maksim.nabokikh @vadim.martynov
+go_lib/controlplane/ @nikolay.gorbatov @maksim.mazin
