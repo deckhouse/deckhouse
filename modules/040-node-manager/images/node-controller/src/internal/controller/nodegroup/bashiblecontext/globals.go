@@ -109,9 +109,13 @@ func (s *Service) readClusterConfiguration(ctx context.Context) *bashibleCluster
 	}
 
 	// TODO: Remove when cluster-configuration is removed and use only ModuleConfig
-	// ModuleConfig wins over these deprecated fields when set (see package network). Fail-open,
-	// like the rest of this function: ignore the error and keep the secret's values.
-	mcNetwork, _ := network.FromModuleConfig(ctx, s.reader())
+	// ModuleConfig wins over these deprecated fields when set (see package network). A read
+	// failure here is treated the same as the two above: give nothing rather than silently fall
+	// back to the secret's values, which may already be stale or deleted after a migration.
+	mcNetwork, err := network.FromModuleConfig(ctx, s.reader())
+	if err != nil {
+		return nil
+	}
 	cfg.PodSubnetNodeCIDRPrefix = cmp.Or(mcNetwork.PodSubnetNodeCIDRPrefix, cfg.PodSubnetNodeCIDRPrefix)
 	cfg.PodSubnetCIDR = cmp.Or(mcNetwork.PodSubnetCIDR, cfg.PodSubnetCIDR)
 	cfg.ServiceSubnetCIDR = cmp.Or(mcNetwork.ServiceSubnetCIDR, cfg.ServiceSubnetCIDR)

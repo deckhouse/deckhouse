@@ -23,9 +23,13 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	"github.com/deckhouse/node-controller/internal/network"
 )
@@ -138,6 +142,33 @@ serviceSubnetCIDR: 10.88.0.0/16
 
 	g := s.ReadGlobals(context.Background())
 	assert.Equal(t, "24", g.PodSubnetNodeCIDRPrefix)
+}
+
+// A ModuleConfig read that fails for a real reason (not "absent") must not be treated as "nothing
+// set there": that would silently fall back to whatever the secret says, which may already be
+// stale or deleted after a migration. It must give nothing, the same as the secret Get and YAML
+// unmarshal failures right above it in readClusterConfiguration.
+func TestReadClusterConfiguration_ModuleConfigReadErrorGivesNothing(t *testing.T) {
+	scheme := newScheme(t)
+	gvk := network.ModuleConfigGVK()
+	scheme.AddKnownTypeWithName(gvk, &unstructured.Unstructured{})
+	scheme.AddKnownTypeWithName(gvk.GroupVersion().WithKind("ModuleConfigList"), &unstructured.UnstructuredList{})
+
+	c := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+		secret(kubeSystemNS, clusterConfigSecretName, map[string][]byte{
+			clusterConfigKey: []byte("clusterDomain: cluster.local\npodSubnetNodeCIDRPrefix: \"24\"\n"),
+		}),
+	).WithInterceptorFuncs(interceptor.Funcs{
+		Get: func(ctx context.Context, cl client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+			if key.Name == network.ModuleConfigName {
+				return apierrors.NewForbidden(schema.GroupResource{Resource: "moduleconfigs"}, key.Name, context.Canceled)
+			}
+			return cl.Get(ctx, key, obj, opts...)
+		},
+	}).Build()
+	s := &Service{Client: c}
+
+	assert.Nil(t, s.readClusterConfiguration(context.Background()))
 }
 
 func TestReadClusterConfiguration_NoProxyKeyOmitsBlock(t *testing.T) {
