@@ -109,3 +109,57 @@ func TestSnapshotIsSortedByName(t *testing.T) {
 		t.Errorf("snapshot is not sorted: %v", peers)
 	}
 }
+
+func TestExpectedGenerationMovesOnlyOnRealChange(t *testing.T) {
+	m := New(log.NewNop())
+	m.Upsert(domain.Peer{Name: "worker-1", IP: "10.0.0.1", UID: "uid-1"})
+
+	peers, first := m.Expected()
+	if len(peers) != 1 {
+		t.Fatalf("got %d peers, want 1", len(peers))
+	}
+
+	// The same peer again is not a change.
+	m.Upsert(domain.Peer{Name: "worker-1", IP: "10.0.0.1", UID: "uid-1"})
+
+	if _, again := m.Expected(); again != first {
+		t.Errorf("generation moved from %d to %d on an identical upsert", first, again)
+	}
+
+	// A different IP, a new peer and a removal are.
+	m.Upsert(domain.Peer{Name: "worker-1", IP: "10.0.0.2", UID: "uid-1"})
+	_, afterIP := m.Expected()
+	m.Upsert(domain.Peer{Name: "worker-2", IP: "10.0.0.3", UID: "uid-2"})
+	_, afterAdd := m.Expected()
+	m.Delete("worker-2")
+	_, afterDelete := m.Expected()
+
+	if !(first < afterIP && afterIP < afterAdd && afterAdd < afterDelete) {
+		t.Errorf("generations %d %d %d %d, want strictly increasing", first, afterIP, afterAdd, afterDelete)
+	}
+
+	// Deleting what is not there is not a change either.
+	m.Delete("worker-9")
+
+	if _, noop := m.Expected(); noop != afterDelete {
+		t.Errorf("generation moved from %d to %d on a no-op delete", afterDelete, noop)
+	}
+}
+
+func TestExpectedIsSharedUntilTheNextChange(t *testing.T) {
+	m := New(log.NewNop())
+	m.Upsert(domain.Peer{Name: "worker-1", IP: "10.0.0.1", UID: "uid-1"})
+
+	a, _ := m.Expected()
+	b, _ := m.Expected()
+
+	if &a[0] != &b[0] {
+		t.Error("two idle reads built two slices, the cache is not doing its job")
+	}
+
+	m.Upsert(domain.Peer{Name: "worker-2", IP: "10.0.0.2", UID: "uid-2"})
+
+	if c, _ := m.Expected(); len(c) != 2 || &c[0] == &a[0] {
+		t.Error("a change did not rebuild the slice")
+	}
+}

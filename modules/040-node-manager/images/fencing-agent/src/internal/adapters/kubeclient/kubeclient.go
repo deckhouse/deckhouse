@@ -29,8 +29,17 @@ import (
 	"fencing-agent/internal/domain"
 )
 
+const clientQPS = -1
+
 func NewRestConfig() (*rest.Config, error) {
-	return config.GetConfig()
+	cfg, err := config.GetConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	cfg.QPS = clientQPS
+
+	return cfg, nil
 }
 
 func New(cfg *rest.Config) (kubernetes.Interface, error) {
