@@ -1,3 +1,31 @@
+{{- /*
+Connector-level identity limits from DexProvider.spec.allowedIdentities. Dex enforces them in
+finalizeLogin for every connector type (patch 020); the identity-assign webhook trusts the same
+fields when it decides who may write the provider. Rendered right after the connector name.
+*/ -}}
+{{- define "dex_connector_identity_limits" }}
+  {{- with .allowedIdentities }}
+    {{- if .emails }}
+      allowedEmails:
+      {{- range .emails }}
+      - {{ . | quote }}
+      {{- end }}
+    {{- end }}
+    {{- if .emailDomains }}
+      allowedEmailDomains:
+      {{- range .emailDomains }}
+      - {{ . | quote }}
+      {{- end }}
+    {{- end }}
+    {{- if .groups }}
+      allowedGroups:
+      {{- range .groups }}
+      - {{ . | quote }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
 {{- define "dex_conf" }}
   {{- $context := . }}
   issuer: https://{{ include "helm_lib_module_public_domain" (list $context "dex") }}/
@@ -122,6 +150,7 @@
     - type: github
       id: {{ $provider.id | quote }}
       name: {{ $provider.displayName | quote }}
+      {{- include "dex_connector_identity_limits" $provider }}
       config:
         clientID: {{ $provider.github.clientID | quote }}
         clientSecret: {{ $provider.github.clientSecret | quote }}
@@ -147,6 +176,7 @@
     - type: gitlab
       id: {{ $provider.id | quote }}
       name: {{ $provider.displayName | quote }}
+      {{- include "dex_connector_identity_limits" $provider }}
       config:
         baseURL: {{ $provider.gitlab.baseURL | quote }}
         clientID: {{ $provider.gitlab.clientID | quote }}
@@ -168,6 +198,7 @@
     - type: bitbucket-cloud
       id: {{ $provider.id | quote }}
       name: {{ $provider.displayName | quote }}
+      {{- include "dex_connector_identity_limits" $provider }}
       config:
         clientID: {{ $provider.bitbucketCloud.clientID | quote }}
         clientSecret: {{ $provider.bitbucketCloud.clientSecret | quote }}
@@ -186,6 +217,7 @@
     - type: ldap
       id: {{ $provider.id | quote }}
       name: {{ $provider.displayName | quote }}
+      {{- include "dex_connector_identity_limits" $provider }}
       config:
         host: {{ $provider.ldap.host | quote }}
         {{- if $provider.ldap.insecureSkipVerify }}
@@ -232,6 +264,7 @@
     - type: oidc
       id: {{ $provider.id | quote }}
       name: {{ $provider.displayName | quote }}
+      {{- include "dex_connector_identity_limits" $provider }}
       config:
         issuer: {{ $provider.oidc.issuer | quote }}
         clientID: {{ $provider.oidc.clientID | quote }}
@@ -292,6 +325,7 @@
     - type: atlassian-crowd
       id: {{ $provider.id | quote }}
       name: {{ $provider.displayName | quote }}
+      {{- include "dex_connector_identity_limits" $provider }}
       config:
         baseURL: {{ $provider.crowd.baseURL | quote }}
         clientID: {{ $provider.crowd.clientID | quote }}
@@ -309,6 +343,7 @@
     - type: saml
       id: {{ $provider.id | quote }}
       name: {{ $provider.displayName | quote }}
+      {{- include "dex_connector_identity_limits" $provider }}
       config:
         ssoURL: {{ $provider.saml.ssoURL | quote }}
         {{- if $provider.saml.rootCAData }}
