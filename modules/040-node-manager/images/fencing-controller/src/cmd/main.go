@@ -49,7 +49,7 @@ func main() {
 	logger := newLogger()
 
 	if err := run(logger); err != nil {
-		logger.Error("fencing-controller failed", "error", err)
+		logger.Error("fencing-controller 2.0 failed", "error", err)
 		os.Exit(1)
 	}
 }
