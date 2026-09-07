@@ -265,8 +265,10 @@ The fields live on `storage.Connector`, on the config-file `Connector`
 `Connector` object. `applyAccessFilters` runs the client filters and then
 the connector limits at every place `019` runs the client filters:
 `finalizeLogin`, `grant_type=password`, token exchange, and both refresh
-checks. A connector unknown to storage has no limits. Static (config file)
-connectors are visible through `WithStaticConnectors`.
+checks. Static (config file) connectors are visible through
+`WithStaticConnectors`. A connector missing from storage is an inconsistency
+rather than an unrestricted provider, so the request is refused; a refresh
+token whose connector was removed from the config ends the same way.
 
 Denials return the same `NotAllowedError` as the client filters; the
 reason names the email and says "by connector".

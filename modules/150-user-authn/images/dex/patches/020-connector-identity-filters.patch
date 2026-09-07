@@ -64,10 +64,10 @@ index 7d3792f5..aa38fe64 100644
  
 diff --git a/server/connector_filters_test.go b/server/connector_filters_test.go
 new file mode 100644
-index 00000000..ce40b3d7
+index 00000000..413a43c7
 --- /dev/null
 +++ b/server/connector_filters_test.go
-@@ -0,0 +1,139 @@
+@@ -0,0 +1,140 @@
 +package server
 +
 +import (
@@ -203,15 +203,16 @@ index 00000000..ce40b3d7
 +	var nae *NotAllowedError
 +	require.ErrorAs(t, err, &nae)
 +
-+	// a connector unknown to storage (no limits configured anywhere) does not block
-+	claims = storage.Claims{Email: "ann@other.example", Groups: []string{"staff"}}
-+	require.NoError(t, srv.applyAccessFilters(ctx, client, "missing", &claims))
++	// a connector missing from storage is an inconsistency: fail closed
++	claims = storage.Claims{Email: "ann@corp.example", Groups: []string{"staff"}}
++	err = srv.applyAccessFilters(ctx, client, "missing", &claims)
++	require.ErrorAs(t, err, &nae)
 +}
 diff --git a/server/handlers.go b/server/handlers.go
-index ede7a28f..651d8724 100644
+index ede7a28f..733a99c4 100644
 --- a/server/handlers.go
 +++ b/server/handlers.go
-@@ -791,6 +791,63 @@ func applyClientAccessFilters(client storage.Client, claims *storage.Claims) err
+@@ -791,6 +791,65 @@ func applyClientAccessFilters(client storage.Client, claims *storage.Claims) err
  	return nil
  }
  
@@ -257,7 +258,9 @@ index ede7a28f..651d8724 100644
 +
 +// applyAccessFilters runs the DexClient filters and then the connector's own
 +// limits. Both must pass; the connector is looked up in storage, where static
-+// (config file) connectors are visible through WithStaticConnectors.
++// (config file) connectors are visible through WithStaticConnectors. A login
++// that got this far has a connector by definition, so a connector missing from
++// storage is an inconsistency, not an unrestricted provider: fail closed.
 +func (s *Server) applyAccessFilters(ctx context.Context, client storage.Client, connectorID string, claims *storage.Claims) error {
 +	if err := applyClientAccessFilters(client, claims); err != nil {
 +		return err
@@ -265,7 +268,7 @@ index ede7a28f..651d8724 100644
 +	conn, err := s.storage.GetConnector(ctx, connectorID)
 +	if err != nil {
 +		if errors.Is(err, storage.ErrNotFound) {
-+			return nil
++			return &NotAllowedError{Reason: fmt.Sprintf("Connector %s not found", connectorID)}
 +		}
 +		return fmt.Errorf("failed to retrieve connector %q: %w", connectorID, err)
 +	}
@@ -275,7 +278,7 @@ index ede7a28f..651d8724 100644
  // recordOfflineSessionFailedAttempt increments the failed-attempt counter on
  // the OfflineSessions object for (identity.UserID, connID) and applies a
  // lockout when the configured threshold is reached.
-@@ -872,7 +929,7 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
+@@ -872,7 +931,7 @@ func (s *Server) finalizeLogin(ctx context.Context, identity connector.Identity,
  		return "", false, fmt.Errorf("failed to retrieve client: %w", err)
  	}
  
@@ -284,7 +287,7 @@ index ede7a28f..651d8724 100644
  		return "", false, err
  	}
  
-@@ -1813,8 +1870,8 @@ func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, cli
+@@ -1813,8 +1872,8 @@ func (s *Server) handlePasswordGrant(w http.ResponseWriter, r *http.Request, cli
  		Groups:            identity.Groups,
  	}
  
@@ -295,7 +298,7 @@ index ede7a28f..651d8724 100644
  			"client_id", client.ID,
  			"email", claims.Email,
  			"err", err,
-@@ -2027,8 +2084,8 @@ func (s *Server) handleTokenExchange(w http.ResponseWriter, r *http.Request, cli
+@@ -2027,8 +2086,8 @@ func (s *Server) handleTokenExchange(w http.ResponseWriter, r *http.Request, cli
  		EmailVerified:     identity.EmailVerified,
  		Groups:            identity.Groups,
  	}
