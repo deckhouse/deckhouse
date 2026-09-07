@@ -610,6 +610,71 @@ class TestDexTargetRoles(unittest.TestCase):
         self.assertEqual(targets, ["user-authz:editor"])
 
 
+class TestDexAllowedIdentitiesCombinations(unittest.TestCase):
+    """Every combination of the three lists, against the same grant fixture."""
+
+    def targets(self, **block):
+        return sorted(assign.dex_target_roles(oidc(allowedIdentities=block), dex_snaps()))
+
+    def test_emails_only_leaves_the_group_axis_open(self):
+        # boss is Editor; every Group-subject grant is reachable through the open axis
+        self.assertEqual(self.targets(emails=["boss@contractor.example"]),
+                         ["d8:manage:security:viewer", "user-authz:editor", "user-authz:super-admin"])
+
+    def test_domains_only_leaves_the_group_axis_open(self):
+        self.assertEqual(self.targets(emailDomains=["contractor.example"]),
+                         ["d8:manage:security:viewer", "user-authz:admin", "user-authz:editor",
+                          "user-authz:super-admin"])
+
+    def test_groups_only_leaves_the_email_axis_open(self):
+        # every User-subject grant is reachable; the listed group adds its own
+        self.assertEqual(self.targets(groups=["devs"]),
+                         ["d8:manage:security:viewer", "user-authz:admin", "user-authz:cluster-admin",
+                          "user-authz:editor", "user-authz:super-admin"])
+
+    def test_emails_and_domains_together_close_the_email_axis(self):
+        # root@corp by address, dev@contractor.example by domain; groups stay open
+        self.assertEqual(self.targets(emails=["root@corp"], emailDomains=["contractor.example"]),
+                         ["d8:manage:security:viewer", "user-authz:admin", "user-authz:editor",
+                          "user-authz:super-admin"])
+
+    def test_emails_and_groups(self):
+        self.assertEqual(self.targets(emails=["boss@contractor.example"], groups=["devs"]),
+                         ["d8:manage:security:viewer", "user-authz:editor"])
+
+    def test_domains_and_groups(self):
+        self.assertEqual(self.targets(emailDomains=["contractor.example"], groups=["devs"]),
+                         ["d8:manage:security:viewer", "user-authz:admin", "user-authz:editor"])
+
+    def test_all_three_lists(self):
+        self.assertEqual(self.targets(emails=["alice@corp"], emailDomains=["contractor.example"],
+                                      groups=["devs", "gate-trap"]),
+                         ["d8:manage:security:viewer", "user-authz:admin", "user-authz:cluster-admin",
+                          "user-authz:editor", "user-authz:super-admin"])
+
+    def test_all_three_lists_with_nothing_granted(self):
+        self.assertEqual(self.targets(emails=["nobody@corp"], emailDomains=["nobody.example"],
+                                      groups=["nobody"]), [])
+
+    def test_empty_lists_behave_as_absent(self):
+        self.assertEqual(self.targets(emails=[], emailDomains=[], groups=[]),
+                         self.targets())
+        self.assertEqual(self.targets(emails=[], emailDomains=["contractor.example"], groups=[]),
+                         self.targets(emailDomains=["contractor.example"]))
+
+    def test_emails_list_narrowing_and_widening(self):
+        two = oidc(allowedIdentities={"emails": ["a@corp", "b@corp"], "groups": ["g"]})
+        one = oidc(allowedIdentities={"emails": ["a@corp"], "groups": ["g"]})
+        self.assertTrue(assign.dex_benign_update(two, one))
+        self.assertFalse(assign.dex_benign_update(one, two))
+
+    def test_moving_an_address_into_a_domain_is_not_treated_as_narrowing(self):
+        # a@corp -> domain corp admits more than a@corp did; checked as a fresh connection
+        by_email = oidc(allowedIdentities={"emails": ["a@corp"], "groups": ["g"]})
+        by_domain = oidc(allowedIdentities={"emailDomains": ["corp"], "groups": ["g"]})
+        self.assertFalse(assign.dex_benign_update(by_email, by_domain))
+
+
 class TestDexBenignUpdate(unittest.TestCase):
     def test_identical_is_benign(self):
         self.assertTrue(assign.dex_benign_update(oidc(), oidc()))
