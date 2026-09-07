@@ -2380,6 +2380,58 @@ alerts:
         etcd database size is approaching the limit.
       severity: "3"
       markupFormat: markdown
+    - name: D8KubeletCheckpointStateReset
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/kubelet-checkpoint-state-reset.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        Kubelet on Node `{{ $labels.node }}` was started less than an hour ago and, while starting, found the `{{ $labels.manager }}` manager checkpoint unusable (reason `{{ $labels.reason }}`). It reset the checkpoint instead of refusing to start.
+
+        Running containers that held exclusive CPUs or NUMA memory zones in the reset state were stopped, so kubelet recreates them and assigns the resources again. Expect restarts of Guaranteed Pods on this Node.
+
+        A reset right after a Node reboot is expected, for example, because of per-NUMA memory drift. Repeated resets, or resets on many Nodes at once, may indicate a kubelet configuration problem.
+
+        The alert is resolved an hour after this kubelet start, or earlier if kubelet restarts without a reset.
+
+        To find the affected Pods:
+
+        ```shell
+        d8 k get events -A --field-selector reason=NUMACheckpointReset
+        ```
+
+        The details are also stored on the Node in `/var/lib/kubelet/d8-numa-selfheal.json`.
+      summary: |
+        Kubelet on Node {{ $labels.node }} reset the {{ $labels.manager }} manager checkpoint.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8KubeletCheckpointStateResetStopFailed
+      sourceFile: modules/040-node-manager/monitoring/prometheus-rules/kubelet-checkpoint-state-reset.yaml
+      moduleUrl: 040-node-manager
+      module: node-manager
+      edition: ce
+      description: |
+        After resetting the `{{ $labels.manager }}` manager checkpoint on Node `{{ $labels.node }}`, kubelet failed to stop some containers that held exclusive CPUs or NUMA memory zones.
+
+        Such a container keeps running with the resources it had before the reset, while kubelet has assigned it resources again from the reset state. The new assignment may not match what the container actually uses, so the same CPUs or NUMA zone may end up assigned to another Guaranteed Pod.
+
+        To find the affected Pods:
+
+        ```shell
+        d8 k get events -A --field-selector reason=NUMACheckpointResetFailed
+        ```
+
+        The details are also stored on the Node in `/var/lib/kubelet/d8-numa-selfheal.json`.
+
+        Delete the affected Pods or drain the Node, so their containers are recreated with new assignments. The alert is resolved after kubelet restarts on the Node:
+
+        ```shell
+        systemctl restart kubelet
+        ```
+      summary: |
+        Kubelet on Node {{ $labels.node }} failed to stop containers after a {{ $labels.manager }} manager checkpoint reset.
+      severity: "4"
+      markupFormat: markdown
     - name: D8KubernetesStaleTokensDetected
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
       moduleUrl: 040-control-plane-manager

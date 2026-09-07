@@ -1,5 +1,5 @@
 diff --git a/pkg/kubelet/kuberuntime/kuberuntime_manager.go b/pkg/kubelet/kuberuntime/kuberuntime_manager.go
-index c30377718e6..319815399fc 100644
+index efb3034107d..1fc85061175 100644
 --- a/pkg/kubelet/kuberuntime/kuberuntime_manager.go
 +++ b/pkg/kubelet/kuberuntime/kuberuntime_manager.go
 @@ -1062,7 +1062,7 @@ func (m *kubeGenericRuntimeManager) validateMemoryResizeAction(
