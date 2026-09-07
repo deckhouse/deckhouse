@@ -651,7 +651,7 @@ func (r *reconciler) handleDeployedRelease(ctx context.Context, release *v1alpha
 	// (by module config, by bundle or by an enabled script) - EnabledByModuleManager
 	// reflects the effective enabled state, unlike EnabledByModuleConfig which is only
 	// set for modules enabled explicitly via a ModuleConfig
-	if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, metav1.ConditionTrue) {
+	if module.IsEnabledByModuleManager() {
 		if r.installer.IsEmbeddedPresent(release.GetModuleName()) {
 			// The embedded copy serves the module, so the release is only staged and the
 			// /modules/<name> mount a ModuleDocumentation points at is never created, while

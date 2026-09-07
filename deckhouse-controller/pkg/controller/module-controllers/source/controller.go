@@ -127,8 +127,8 @@ func RegisterController(
 				// handle enable
 				// not found or !true -> true
 				if !oldMod.HasCondition(v1alpha1.ModuleConditionEnabledByModuleConfig) ||
-					!oldMod.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, metav1.ConditionTrue) &&
-						newMod.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, metav1.ConditionTrue) {
+					!oldMod.IsEnabledByModuleConfig() &&
+						newMod.IsEnabledByModuleConfig() {
 					return true
 				}
 				return false

@@ -379,7 +379,7 @@ func (r *reconciler) moduleEnabled(ctx context.Context, name string, module *v1a
 		return *config.Spec.Enabled, nil
 	}
 
-	return module != nil && module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, metav1.ConditionTrue), nil
+	return module != nil && module.IsEnabledByModuleManager(), nil
 }
 
 // ensureDevModule places the module by the override: created when it has no object, moved
@@ -432,7 +432,7 @@ func (r *reconciler) ensureDevModule(ctx context.Context, mpo *v1alpha2.ModulePu
 	}
 
 	return utils.UpdateStatus[*v1alpha2.Module](ctx, r.client, module, func(module *v1alpha2.Module) bool {
-		if module.IsCondition(v1alpha1.ModuleConditionIsOverridden, metav1.ConditionTrue) {
+		if module.IsOverridden() {
 			return false
 		}
 

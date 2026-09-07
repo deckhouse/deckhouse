@@ -27,7 +27,6 @@ import (
 	"go.opentelemetry.io/otel"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
@@ -455,7 +454,7 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 		// Check if module exists in ModuleList and is enabled
 		for _, module := range moduleList.Items {
 			if module.Name == moduleName {
-				if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, metav1.ConditionTrue) {
+				if module.IsEnabledByModuleManager() {
 					c.logger.Debug("migrated module is enabled", slog.String("module", moduleName))
 					moduleEnabled = true
 				} else {

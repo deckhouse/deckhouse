@@ -133,3 +133,29 @@ func assertCondition(t *testing.T, module *Module, condType string, status metav
 	assert.Equal(t, reason, cond.Reason, condType)
 	assert.Equal(t, message, cond.Message, condType)
 }
+
+func TestModuleConditionHelpers(t *testing.T) {
+	withCondition := func(condType string, status metav1.ConditionStatus) *Module {
+		module := new(Module)
+		meta.SetStatusCondition(&module.Status.Conditions, metav1.Condition{Type: condType, Status: status, Reason: "Test"})
+		return module
+	}
+
+	tests := []struct {
+		name     string
+		helper   func(*Module) bool
+		condType string
+	}{
+		{"enabled by module config", (*Module).IsEnabledByModuleConfig, v1alpha1.ModuleConditionEnabledByModuleConfig},
+		{"enabled by module manager", (*Module).IsEnabledByModuleManager, v1alpha1.ModuleConditionEnabledByModuleManager},
+		{"overridden", (*Module).IsOverridden, v1alpha1.ModuleConditionIsOverridden},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.True(t, tt.helper(withCondition(tt.condType, metav1.ConditionTrue)))
+			assert.False(t, tt.helper(withCondition(tt.condType, metav1.ConditionFalse)))
+			assert.False(t, tt.helper(withCondition(tt.condType, metav1.ConditionUnknown)))
+			assert.False(t, tt.helper(new(Module)), "a missing condition is not true")
+		})
+	}
+}

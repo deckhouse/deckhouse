@@ -279,7 +279,7 @@ func NewDeckhouseController(
 			return "", apierrors.NewNotFound(v1alpha2.ModuleGVR.GroupResource(), moduleName)
 		}
 
-		// a dev module follows a tag, so it reports a version no constraint rejects
+		// a dev module follows a tag, so it reports a version which satisfies any constraint.
 		if module.IsDev() {
 			return defaultModuleVersion, nil
 		}

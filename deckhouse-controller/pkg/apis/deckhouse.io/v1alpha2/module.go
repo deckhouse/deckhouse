@@ -326,6 +326,23 @@ func (m *Module) SetDevOverrideTag(tag string) bool {
 	return true
 }
 
+// IsEnabledByModuleConfig reports whether the operator enabled the module through its
+// ModuleConfig or the edition bundle. The scheduler may still keep it off.
+func (m *Module) IsEnabledByModuleConfig() bool {
+	return m.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, metav1.ConditionTrue)
+}
+
+// IsEnabledByModuleManager reports whether the scheduler enabled the module once every
+// extender agreed. This is the module actually running, not only wanted.
+func (m *Module) IsEnabledByModuleManager() bool {
+	return m.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, metav1.ConditionTrue)
+}
+
+// IsOverridden reports whether a ModulePullOverride pins the module to an image tag.
+func (m *Module) IsOverridden() bool {
+	return m.IsCondition(v1alpha1.ModuleConditionIsOverridden, metav1.ConditionTrue)
+}
+
 // IsCondition reports whether the named condition is present with the given status.
 func (m *Module) IsCondition(condType string, status metav1.ConditionStatus) bool {
 	cond := meta.FindStatusCondition(m.Status.Conditions, condType)

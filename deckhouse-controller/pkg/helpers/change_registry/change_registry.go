@@ -43,7 +43,6 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
-	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	deckhousev1alpha2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	kclient "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/cr"
@@ -495,6 +494,6 @@ func moduleEnabled(ctx context.Context, kubeCl *kclient.KubernetesClient, module
 		return false, fmt.Errorf("failed to decode module JSON: %w", err)
 	}
 
-	enabled := module.IsCondition(deckhousev1alpha1.ModuleConditionEnabledByModuleManager, metav1.ConditionTrue)
+	enabled := module.IsEnabledByModuleManager()
 	return enabled, nil
 }

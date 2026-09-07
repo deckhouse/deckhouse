@@ -420,7 +420,7 @@ func (r *reconciler) processModule(ctx context.Context, moduleConfig *v1alpha1.M
 
 	if !moduleConfig.IsEnabled() {
 		// delete all pending releases for EnabledByModuleConfig disabled modules
-		if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, metav1.ConditionTrue) {
+		if module.IsEnabledByModuleConfig() {
 			releases := new(v1alpha1.ModuleReleaseList)
 			selector := client.MatchingLabels{v1alpha1.ModuleReleaseLabelModule: module.Name}
 			if err := r.client.List(ctx, releases, selector); err != nil {
@@ -700,7 +700,7 @@ func (r *reconciler) disableModule(ctx context.Context, module *v1alpha2.Module,
 func (r *reconciler) enableModule(ctx context.Context, module *v1alpha2.Module) error {
 	r.logger.Debug("enable the module", slog.String("module", module.Name))
 	return utils.UpdateStatus[*v1alpha2.Module](ctx, r.client, module, func(module *v1alpha2.Module) bool {
-		if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, metav1.ConditionTrue) {
+		if module.IsEnabledByModuleConfig() {
 			return false
 		}
 		module.SetConditionTrue(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonEnabled)
