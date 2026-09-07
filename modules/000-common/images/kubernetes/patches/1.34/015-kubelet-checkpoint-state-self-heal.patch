@@ -702,10 +702,10 @@ index 00000000000..4b5948b2256
 +}
 diff --git a/pkg/kubelet/cm/checkpointselfheal/selfheal_test.go b/pkg/kubelet/cm/checkpointselfheal/selfheal_test.go
 new file mode 100644
-index 00000000000..d43cc9cdc13
+index 00000000000..f2181f9459a
 --- /dev/null
 +++ b/pkg/kubelet/cm/checkpointselfheal/selfheal_test.go
-@@ -0,0 +1,608 @@
+@@ -0,0 +1,685 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -1314,12 +1314,89 @@ index 00000000000..d43cc9cdc13
 +	c.Labels[kubelettypes.KubernetesPodUIDLabel] = podUID
 +	return c
 +}
++
++func TestStopVictimsStopsAContainerOnceAcrossManagers(t *testing.T) {
++	// Found on a cluster: corrupting both checkpoints while a Guaranteed pod was
++	// running made each manager record the same container as its victim, and the
++	// container was stopped twice. The second stop is a no-op at the runtime, but
++	// it counted a stop and emitted a second pod event, so
++	// stopped_containers_total summed to two while restartCount showed one
++	// restart. Each reset must still record the victim -- both managers really
++	// did lose the assignment -- but the stop happens once.
++	Clear()
++	t.Cleanup(Clear)
++
++	dir := t.TempDir()
++
++	const podUID = "pod-shared"
++	runtime := apitest.NewFakeRuntimeService()
++	runtime.Containers = map[string]*apitest.FakeContainer{
++		"cid": fakeContainerForPod("cid", podUID, "numa-pinned", "default", runtimeapi.ContainerState_CONTAINER_RUNNING),
++	}
++
++	cm := containermap.NewContainerMap()
++	cm.Add(podUID, "app", "cid")
++
++	refs := []ContainerRef{{PodUID: podUID, ContainerName: "app"}}
++	RecordStateReset(ManagerCPU, dir, "cpu_manager_state", refs, cm, errors.New("checkpoint is corrupted"))
++	RecordStateReset(ManagerMemory, dir, "memory_manager_state", refs, cm, errors.New("checkpoint is corrupted"))
++
++	recorder := record.NewFakeRecorder(10)
++	StopVictims(context.Background(), Deps{Runtime: runtime, Recorder: recorder})
++
++	stops := 0
++	for _, call := range runtime.Called {
++		if call == "StopContainer" {
++			stops++
++		}
++	}
++	if stops != 1 {
++		t.Errorf("StopContainer called %d times, want exactly 1", stops)
++	}
++
++	events := 0
++	for {
++		select {
++		case <-recorder.Events:
++			events++
++			continue
++		default:
++		}
++		break
++	}
++	if events != 1 {
++		t.Errorf("emitted %d pod events, want exactly 1", events)
++	}
++
++	// Both resets keep the victim, but only one of them reports a stop.
++	marker := readMarker(t, dir)
++	if len(marker.Resets) != 2 {
++		t.Fatalf("marker has %d resets, want 2", len(marker.Resets))
++	}
++	stopped, skipped := 0, 0
++	for _, r := range marker.Resets {
++		if len(r.Victims) != 1 {
++			t.Fatalf("reset %s has %d victims, want 1", r.Manager, len(r.Victims))
++		}
++		switch v := r.Victims[0]; {
++		case v.Stopped:
++			stopped++
++		case v.Skipped != "":
++			skipped++
++		default:
++			t.Errorf("victim of %s is neither stopped nor skipped: %+v", r.Manager, v)
++		}
++	}
++	if stopped != 1 || skipped != 1 {
++		t.Errorf("marker reports stopped=%d skipped=%d, want 1 and 1", stopped, skipped)
++	}
++}
 diff --git a/pkg/kubelet/cm/checkpointselfheal/stop.go b/pkg/kubelet/cm/checkpointselfheal/stop.go
 new file mode 100644
-index 00000000000..670d4a2defb
+index 00000000000..68c1ac0df42
 --- /dev/null
 +++ b/pkg/kubelet/cm/checkpointselfheal/stop.go
-@@ -0,0 +1,326 @@
+@@ -0,0 +1,372 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -1443,8 +1520,9 @@ index 00000000000..670d4a2defb
 +	stopCtx, cancel := context.WithTimeout(ctx, stopDeadline)
 +	defer cancel()
 +
++	tracker := newStopTracker()
 +	for i := range records {
-+		stopRecord(stopCtx, deps, &records[i], running, meta, live)
++		stopRecord(stopCtx, deps, &records[i], running, meta, live, tracker)
 +	}
 +
 +	writeMarker(stateDir, records)
@@ -1460,6 +1538,37 @@ index 00000000000..670d4a2defb
 +type podMeta struct {
 +	name      string
 +	namespace string
++}
++
++// stopTracker makes sure a container is stopped once per run even when it is a
++// victim of more than one manager.
++//
++// Both managers can lose the same container's assignment in the same start --
++// a corrupt checkpoint on each, or a policy change that invalidates both. Each
++// reset legitimately records the container as its victim, but the container
++// itself must be stopped only once: a second StopContainer is a no-op at the
++// runtime, yet it still counted a stop and emitted a second pod event, so
++// summing stopped_containers_total across managers reported two containers
++// where one had been restarted.
++type stopTracker struct {
++	mu    sync.Mutex
++	owner map[string]ManagerName
++}
++
++func newStopTracker() *stopTracker {
++	return &stopTracker{owner: map[string]ManagerName{}}
++}
++
++// claim reserves a container for stopping. It reports the manager that already
++// claimed it, and whether this caller got the claim.
++func (t *stopTracker) claim(containerID string, manager ManagerName) (ManagerName, bool) {
++	t.mu.Lock()
++	defer t.mu.Unlock()
++	if prev, taken := t.owner[containerID]; taken {
++		return prev, false
++	}
++	t.owner[containerID] = manager
++	return manager, true
 +}
 +
 +// containerRef keys a container the way the managers key their assignments.
@@ -1528,7 +1637,7 @@ index 00000000000..670d4a2defb
 +	return running, meta, live
 +}
 +
-+func stopRecord(ctx context.Context, deps Deps, rec *ResetRecord, running map[string]bool, meta map[string]podMeta, live map[containerRef]string) {
++func stopRecord(ctx context.Context, deps Deps, rec *ResetRecord, running map[string]bool, meta map[string]podMeta, live map[containerRef]string, tracker *stopTracker) {
 +	manager := string(rec.Manager)
 +
 +	var wg sync.WaitGroup
@@ -1570,13 +1679,27 @@ index 00000000000..670d4a2defb
 +		wg.Add(1)
 +		go func() {
 +			defer wg.Done()
-+			stopOne(ctx, deps, rec.Manager, rec.Reason, victim)
++			stopOne(ctx, deps, rec.Manager, rec.Reason, victim, tracker)
 +		}()
 +	}
 +	wg.Wait()
 +}
 +
-+func stopOne(ctx context.Context, deps Deps, manager ManagerName, reason Reason, victim *Victim) {
++func stopOne(ctx context.Context, deps Deps, manager ManagerName, reason Reason, victim *Victim, tracker *stopTracker) {
++	if owner, claimed := tracker.claim(victim.ContainerID, manager); !claimed {
++		// Another manager already stopped this container in this run. Recording
++		// it as a victim here is still correct -- this manager did lose its
++		// assignment -- but stopping, counting and reporting it again would
++		// describe one restart as two.
++		victim.Skipped = "already stopped for the " + string(owner) + " manager"
++		klog.InfoS(LogMarker+" victim already stopped for another manager, not stopping again",
++			"manager", manager, "stoppedBy", owner,
++			"pod", klog.KRef(victim.PodNamespace, victim.PodName),
++			"podUID", victim.PodUID, "containerName", victim.ContainerName,
++			"containerID", victim.ContainerID)
++		return
++	}
++
 +	klog.InfoS(LogMarker+" stopping container so it is recreated and pinned again",
 +		"manager", manager, "reason", reason,
 +		"pod", klog.KRef(victim.PodNamespace, victim.PodName), "podUID", victim.PodUID,

@@ -222,11 +222,25 @@ Notable properties:
   turns a loud refusal to start into a quiet repair, so a bug in kubelet config
   generation would restart pinned workload across a whole NodeGroup instead of
   failing visibly.
+  Two properties matter when writing that alert, both observed on a cluster:
+  the counters live in the kubelet process and therefore **reset on every kubelet
+  restart**, so the rule has to be built on `increase()`/`rate()` rather than on an
+  absolute value; and a `CounterVec` with no observations emits nothing at all --
+  not even `# HELP` -- so the series simply do not exist on a node that has never
+  healed, which is expected rather than a sign the metric is missing.
 - Every log line carries the `[d8-numa-selfheal]` marker, including one line per
   manager when the checkpoint validates cleanly -- without it there is no way to
   tell "nothing was wrong" from "this node runs an unpatched binary".
   Lines marked `[d8-numa-selfheal-debug]` are temporary bring-up tracing and are
   meant to be removed once the patch has been validated on a cluster.
+
+- The marker file is written by the kubelet and **never removed by it**. That is
+  deliberate: kubelet restarts happen for unrelated reasons (a containerd restart, a
+  config change, a binary upgrade), and deleting the marker on the next clean start
+  would throw the signal away before anything had a chance to read it. Deletion
+  belongs to whoever consumes it -- the bashible step that reads it and decides
+  whether the node needs a drain. Until that consumer exists, expect the file to
+  survive reboots; use its `writtenAt` to judge whether it is still relevant.
 
 Related: the unconditional `rm` of both checkpoints in
 `candi/bashible/common-steps/all/069_start_kubelet.sh.tpl` is removed together
