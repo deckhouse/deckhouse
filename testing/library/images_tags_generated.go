@@ -391,6 +391,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"growpart033":                     "imageHash-registrypackages-growpart033",
 		"iptables189":                     "imageHash-registrypackages-iptables189",
 		"jq171":                           "imageHash-registrypackages-jq171",
+		"kernelModulesSysext":             "imageHash-registrypackages-kernelModulesSysext",
 		"kubectl13213":                    "imageHash-registrypackages-kubectl13213",
 		"kubectl13313":                    "imageHash-registrypackages-kubectl13313",
 		"kubectl13411":                    "imageHash-registrypackages-kubectl13411",

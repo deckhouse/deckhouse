@@ -1,0 +1,62 @@
+# In-tree modules of the Deckhouse Engine kernel as a signed system extension, so a
+# NodeExtensionRequest can load them on an Engine node. The kernel image ships every
+# module already signed; this image only picks files.
+{{- if ne $.Env "CSE" }}
+{{- /* Kernel of the engine release pinned in 040-node-manager/images/engine: nodelet
+       only walks the running kernel's /usr/lib/modules/<release>/. */ -}}
+{{- $kernelVersion := "v6.12.85-lvc19-signed" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-kernel-artifact
+final: false
+from: dev-registry.deckhouse.io/container-factory/kernel:{{ $kernelVersion }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact
+final: false
+from: {{ index $.Images "builder/distroless" }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-kernel-artifact
+  add: /lib/modules
+  to: /sysext/usr/lib/modules
+  includePaths:
+  - '*/kernel/drivers/md/persistent-data/dm-persistent-data.ko'
+  - '*/kernel/drivers/md/dm-bio-prison.ko'
+  - '*/kernel/drivers/md/dm-thin-pool.ko'
+  - '*/kernel/drivers/block/nbd.ko'
+  before: install
+{{- include "engine sysext sign imports" $ }}
+{{- include "engine sysext sign secrets" . }}
+shell:
+  beforeInstall:
+  # findutils: find is not in coreutils.
+  - pm install erofs-utils coreutils findutils cryptsetup systemd@260.4
+  - mkdir -p /out
+  install:
+  - mkdir -p /sysext/usr/lib/extension-release.d
+  - printf 'ID=deckhouse-engine\nSYSEXT_LEVEL=1.0\n' > /sysext/usr/lib/extension-release.d/extension-release.kernel-modules
+  # An import glob that matches nothing succeeds silently.
+  - test "$(find /sysext/usr/lib/modules -name '*.ko' | wc -l)" = "4" || { find /sysext/usr/lib/modules; exit 1; }
+  - mkfs.erofs -L _sysext -U 00000000-0000-0000-0000-000000000000 -z lzma,9 /out/kernel-modules.raw sysext/
+  - veritysetup format /out/kernel-modules.raw /out/kernel-modules.verity --root-hash-file=roothash.txt
+  - tr -d ' \n' < roothash.txt > /out/kernel-modules.roothash
+  - veritysetup verify /out/kernel-modules.raw /out/kernel-modules.verity "$(cat /out/kernel-modules.roothash)"
+{{- include "engine sysext sign" "kernel-modules" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext
+from: {{ index $.Images "builder/scratch" }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact
+  add: /out
+  to: /
+  includePaths:
+  - '**/*'
+  before: setup
+imageSpec:
+  config:
+    labels: { "distro": "deckhouse-engine", "sysext_level": "1.0", "kernel": "{{ $kernelVersion }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+{{- include "vex mitigation" (list $ (printf "%s/%s-sysext" $.ModuleName $.ImageName)) }}
+{{- end }}
