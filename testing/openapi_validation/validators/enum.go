@@ -239,8 +239,9 @@ var (
 		},
 		"modules/030-cloud-provider-yandex/crds/instance_class.yaml": {
 			// ignore internal values
-			"spec.versions[0].schema.openAPIV3Schema.properties.spec.properties.diskType",
-			"spec.versions[1].schema.openAPIV3Schema.properties.spec.properties.diskType",
+			"spec.versions[*].schema.openAPIV3Schema.properties.spec.properties.diskType",
+			// v1alpha1 (versions[1], the non-storage version): SOFTWARE_ACCELERATED - migrated in v1.
+			"spec.versions[1].schema.openAPIV3Schema.properties.spec.properties.networkType",
 		},
 		"modules/030-cloud-provider-yandex/openapi/values.yaml": {
 			// ignore internal values
