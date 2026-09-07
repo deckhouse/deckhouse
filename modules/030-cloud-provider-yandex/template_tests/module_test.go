@@ -836,6 +836,28 @@ labels: {}
 					Expect(webhook.Get("matchPolicy").String()).To(Equal("Equivalent"),
 						"%s must accept writes to every served version", webhook.Get("name").String())
 				}
+
+				// Only YandexInstanceClass validates deletion (ValidateInstanceClassDeletion keeps a
+				// class with consumers alive). Every other webhook returns an empty result on Delete,
+				// so gating DELETE there would buy nothing and cost the break-glass path: with
+				// failurePolicy Fail, a webhook outage would block deleting the module's ModuleConfig
+				// or a NodeGroup on a critical: true module.
+				for _, webhook := range webhookConfiguration.Field("webhooks").Array() {
+					name := webhook.Get("name").String()
+					operations := []string{}
+					for _, operation := range webhook.Get("rules.0.operations").Array() {
+						operations = append(operations, operation.String())
+					}
+
+					if name == "yandexinstanceclasses.cloud-provider-yandex.deckhouse.io-v1" {
+						Expect(operations).To(ConsistOf("CREATE", "UPDATE", "DELETE"),
+							"%s validates deletion and must intercept DELETE", name)
+						continue
+					}
+
+					Expect(operations).To(ConsistOf("CREATE", "UPDATE"),
+						"%s does not validate deletion and must not intercept DELETE", name)
+				}
 			})
 		})
 

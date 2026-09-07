@@ -28,7 +28,7 @@ webhooks:
     rules:
       - apiGroups: ["deckhouse.io"]
         apiVersions: ["v1alpha1"]
-        operations: ["CREATE", "UPDATE", "DELETE"]
+        operations: ["CREATE", "UPDATE"]
         resources: ["moduleconfigs"]
         scope: "Cluster"
   - name: secrets.cloud-provider-yandex.deckhouse.io
@@ -55,7 +55,7 @@ webhooks:
     rules:
       - apiGroups: [""]
         apiVersions: ["v1"]
-        operations: ["CREATE", "UPDATE", "DELETE"]
+        operations: ["CREATE", "UPDATE"]
         resources: ["secrets"]
         scope: "Namespaced"
   - name: nodegroups.cloud-provider-yandex.deckhouse.io
@@ -81,7 +81,7 @@ webhooks:
     rules:
       - apiGroups: ["deckhouse.io"]
         apiVersions: ["v1"]
-        operations: ["CREATE", "UPDATE", "DELETE"]
+        operations: ["CREATE", "UPDATE"]
         resources: ["nodegroups"]
         scope: "Cluster"
   # One webhook, on the storage version. matchPolicy: Equivalent makes the apiserver convert a
