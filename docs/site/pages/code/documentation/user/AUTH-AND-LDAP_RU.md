@@ -415,7 +415,7 @@ user_filter: '(!(employeeType=blocked))'                          # собств
 auto_link_ldap_user: true
 ```
 
-#### Поиск учётной запись LDAP
+#### Как ищется учётная запись LDAP
 
 При первом входе через OIDC Deckhouse Code ищет пользователя в LDAP. Для поиска используются два значения из данных OIDC-провайдера:
 
