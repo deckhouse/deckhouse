@@ -24,6 +24,11 @@ limitations under the License.
 //
 // The decisions above it belong to the syncer: which tags may go, whether the run is allowed at all,
 // and what to report. This is the sweep those decisions end in.
+//
+// Like the serve package, this one has to import the storage driver it opens: `factory.Create` looks
+// a driver up by the string the configuration gave it, in a registry each driver fills from its own
+// `init`. A sweep in a binary that never imported it panics with `StorageDriver not registered:
+// filesystem` instead of collecting anything.
 package collect
 
 import (
@@ -33,6 +38,7 @@ import (
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/registry/storage"
 	"github.com/distribution/distribution/v3/registry/storage/driver/factory"
+	_ "github.com/distribution/distribution/v3/registry/storage/driver/filesystem"
 )
 
 // Options are the two questions a sweep asks.

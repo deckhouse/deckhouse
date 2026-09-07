@@ -18,9 +18,16 @@ package serve
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/pem"
 	"io"
 	"log"
 	"log/slog"
+	"math/big"
+	"net/http"
 	"net/http/httptest"
 	"net/url"
 	"os"
@@ -30,7 +37,6 @@ import (
 
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/registry/handlers"
-	_ "github.com/distribution/distribution/v3/registry/storage/driver/filesystem"
 	"github.com/google/go-containerregistry/pkg/name"
 	craneregistry "github.com/google/go-containerregistry/pkg/registry"
 	"github.com/google/go-containerregistry/pkg/v1/random"
@@ -38,6 +44,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/deckhouse/registry-distribution/internal/authproxy"
 	"github.com/deckhouse/registry-distribution/internal/config"
 	"github.com/deckhouse/registry-distribution/internal/upstream"
 )
@@ -257,4 +264,70 @@ func TestTheWriteEndpointRefusesToShareThePort(t *testing.T) {
 
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "two listeners in one process")
+}
+
+// TestTheAppCarriesEveryProviderTheRenderedConfigurationNames is the test that was missing when a
+// binary that passed every test here panicked on a cluster.
+//
+// Upstream names its storage drivers and its access controllers by STRING in the configuration and
+// looks each up in a registry the provider fills from its own `init`. Nothing imports those for a
+// consumer of the library, so a process that reads a perfectly valid configuration panics on it —
+// `StorageDriver not registered: filesystem` at handlers.NewApp, and after that one is fixed,
+// `unable to configure authorization (token)` right behind it.
+//
+// It went unnoticed because the imports lived in this file rather than in the packages under test,
+// so every test here built a binary the image did not have. Measured on a cluster:
+// registry-storage-0 in CrashLoopBackOff with fourteen restarts, RegistryStorage `Failed`, the
+// syncer reporting `491 of 491 references could not be copied`.
+//
+// So this asks for both by the names the module's own template writes, and asks through a real
+// request: the store answers, and the answer is the challenge the cluster's token service is named
+// in. A missing provider cannot pass it.
+func TestTheAppCarriesEveryProviderTheRenderedConfigurationNames(t *testing.T) {
+	settings := storeConfiguration(t.TempDir())
+	settings.Auth = configuration.Auth{"token": configuration.Parameters{
+		"realm":          "https://registry.d8-system.svc:5001" + authproxy.Path,
+		"service":        "Docker registry",
+		"issuer":         "Registry server",
+		"rootcertbundle": tokenCertificate(t),
+		"autoredirect":   false,
+	}}
+
+	served := httptest.NewServer(handlers.NewApp(context.Background(), settings))
+	t.Cleanup(served.Close)
+
+	response, err := served.Client().Get(served.URL + "/v2/")
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = response.Body.Close() })
+
+	assert.Equal(t, http.StatusUnauthorized, response.StatusCode,
+		"the store is up and the token access controller is the one guarding it")
+	assert.Contains(t, response.Header.Get("Www-Authenticate"), authproxy.Path,
+		"and it challenges against the realm the cluster's token service answers on")
+}
+
+// tokenCertificate writes the certificate bundle the token access controller refuses to start
+// without, and returns its path. Self-signed and thrown away with the test: what is under test is
+// that the provider is REGISTERED, not what it accepts as a signature.
+func tokenCertificate(t *testing.T) string {
+	t.Helper()
+
+	key, err := rsa.GenerateKey(rand.Reader, 2048)
+	require.NoError(t, err)
+
+	template := &x509.Certificate{
+		SerialNumber: big.NewInt(1),
+		Subject:      pkix.Name{CommonName: "token"},
+		NotBefore:    time.Now().Add(-time.Hour),
+		NotAfter:     time.Now().Add(time.Hour),
+		KeyUsage:     x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		IsCA:         true,
+	}
+	der, err := x509.CreateCertificate(rand.Reader, template, template, &key.PublicKey, key)
+	require.NoError(t, err)
+
+	path := filepath.Join(t.TempDir(), "token.crt")
+	require.NoError(t, os.WriteFile(path,
+		pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}), 0o600))
+	return path
 }

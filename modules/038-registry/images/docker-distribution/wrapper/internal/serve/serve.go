@@ -32,6 +32,16 @@ limitations under the License.
 //
 // The third is the loopback rewriter, which the cache treats as its upstream — see the upstream
 // package. Nothing outside this process can reach it.
+//
+// One thing this package must do that a library cannot do for it: import the providers the
+// configuration names. Upstream names its storage drivers and its access controllers by STRING and
+// looks each up in a registry the provider fills from its own `init`, so a process that never
+// imports one reads a perfectly valid configuration and then panics on it, before any listener
+// opens. Measured on a cluster: `panic: StorageDriver not registered: filesystem` at
+// handlers.NewApp, registry-storage-0 in CrashLoopBackOff with fourteen restarts, RegistryStorage
+// in `Failed` and the syncer reporting `491 of 491 references could not be copied` — with every
+// test in this package green, because the imports were in the _test.go files and so every test
+// built a binary the image did not have.
 package serve
 
 import (
@@ -49,7 +59,12 @@ import (
 	"github.com/distribution/distribution/v3/configuration"
 	"github.com/distribution/distribution/v3/health"
 	dregistry "github.com/distribution/distribution/v3/registry"
+	// The access controller the rendered `auth.token` section names — see the package comment.
+	_ "github.com/distribution/distribution/v3/registry/auth/token"
 	"github.com/distribution/distribution/v3/registry/handlers"
+	// The one storage driver this module's configuration ever names. Upstream's binary imports
+	// eight; the rest would be code in the image for nobody.
+	_ "github.com/distribution/distribution/v3/registry/storage/driver/filesystem"
 	gorhandlers "github.com/gorilla/handlers"
 
 	"github.com/deckhouse/registry-distribution/internal/authproxy"
