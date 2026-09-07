@@ -140,12 +140,7 @@ roleRef:
   kind: Role
   name: bashible
 subjects:
-- kind: Group
-  name: system:bootstrappers:d8-node-manager
-  apiGroup: rbac.authorization.k8s.io
-- kind: Group
-  name: system:nodes
-  apiGroup: rbac.authorization.k8s.io
+  {{- include "node_manager_bashible_bootstrapper_subjects" . | nindent 2 }}
 
 ---
 # todo remove after 1.47
@@ -230,12 +225,7 @@ roleRef:
   kind: ClusterRole
   name: d8:node-manager:bashible:node-bootstrapped-nodes
 subjects:
-  - kind: Group
-    name: system:bootstrappers:d8-node-manager
-    apiGroup: rbac.authorization.k8s.io
-  - kind: Group
-    name: system:nodes
-    apiGroup: rbac.authorization.k8s.io
+  {{- include "node_manager_bashible_bootstrapper_subjects" . | nindent 2 }}
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -303,9 +293,4 @@ roleRef:
   kind: ClusterRole
   name: d8:node-manager:bashible:bashible-apiserver
 subjects:
-  - kind: Group
-    name: system:nodes
-    apiGroup: rbac.authorization.k8s.io
-  - kind: Group
-    name: system:bootstrappers:d8-node-manager
-    apiGroup: rbac.authorization.k8s.io
+  {{- include "node_manager_bashible_bootstrapper_subjects" . | nindent 2 }}

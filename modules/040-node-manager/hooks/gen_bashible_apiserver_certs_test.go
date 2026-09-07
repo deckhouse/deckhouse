@@ -36,7 +36,9 @@ import (
 )
 
 const (
-	initValuesString       = `{"nodeManager":{"internal":{}}}`
+	// deckhouseSelfHosted is the default of the global schema. Without it the hook takes itself
+	// for a nested cluster, where the certificates belong to the virtual control plane.
+	initValuesString       = `{"global":{"deckhouseSelfHosted":true},"nodeManager":{"internal":{}}}`
 	initConfigValuesString = `{}`
 	bashibleAPIServerNs    = "d8-cloud-instance-manager"
 )

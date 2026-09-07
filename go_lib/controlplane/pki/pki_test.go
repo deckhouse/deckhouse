@@ -101,10 +101,10 @@ func TestCreatePKIBundle_CustomScheme_EtcdOnly(t *testing.T) {
 
 	// Simulate etcd-arbiter mode: only etcd certificates are needed.
 	etcdOnlyScheme := certTreeScheme{
-		EtcdCACertName: {
-			EtcdServerCertName,
-			EtcdPeerCertName,
-			EtcdHealthcheckClientCertName,
+		EtcdCACertBaseName: {
+			EtcdServerCertBaseName,
+			EtcdPeerCertBaseName,
+			EtcdHealthcheckClientCertBaseName,
 		},
 	}
 
@@ -157,7 +157,7 @@ func TestCreatePKIBundle_ApiserverKubeletClientHasNoOrganization(t *testing.T) {
 		WithPKIDir(dir),
 	)
 	require.NoError(t, err)
-	cert, _, err := pkiutil.LoadCertAndKey(dir, string(ApiserverKubeletClientCertName))
+	cert, _, err := pkiutil.LoadCertAndKey(dir, string(ApiserverKubeletClientCertBaseName))
 	require.NoError(t, err)
 	assert.Equal(t, "kube-apiserver-kubelet-client", cert.Subject.CommonName)
 	assert.Empty(t, cert.Subject.Organization)

@@ -1,3 +1,5 @@
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 {{- if .Values.nodeManager.internal.upmeterDiscovery}}
   {{- if len .Values.nodeManager.internal.upmeterDiscovery.ephemeralNodeGroupNames}}
 apiVersion: v1
@@ -11,3 +13,5 @@ data:
     {{ .Values.nodeManager.internal.upmeterDiscovery.ephemeralNodeGroupNames | toJson }}
   {{- end}}
 {{- end}}
+{{- end }}
+{{- /* /vcp-gate */ -}}

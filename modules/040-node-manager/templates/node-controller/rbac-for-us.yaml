@@ -1,3 +1,5 @@
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 ---
 apiVersion: v1
 kind: ServiceAccount
@@ -686,3 +688,5 @@ subjects:
 - kind: Group
   name: system:nodes
   apiGroup: rbac.authorization.k8s.io
+{{- end }}
+{{- /* /vcp-gate */ -}}

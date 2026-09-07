@@ -1,3 +1,5 @@
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 {{- if .Values.global.clusterIsBootstrapped }}
   {{- if (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1/PodMonitor") }}
 ---
@@ -31,3 +33,5 @@ subjects:
   namespace: d8-monitoring
   {{- end }}
 {{- end }}
+{{- end }}
+{{- /* /vcp-gate */ -}}

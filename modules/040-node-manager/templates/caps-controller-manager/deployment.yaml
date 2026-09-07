@@ -1,4 +1,4 @@
-# TODO remove after rewrite caps
+{{- /* TODO remove after rewrite caps */ -}}
 {{- define "static_controller_manager_args" }}
 - --leader-elect-lease-duration=1m
 - --leader-elect-renew-deadline=50s
@@ -27,6 +27,8 @@
 - name: tmp
   emptyDir: {}
 {{- end }}
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 
 {{- if .Values.nodeManager.internal.capsControllerManagerEnabled }}
   {{- $capsConfig := dict -}}
@@ -46,3 +48,5 @@
 
   {{ include "helm_lib_capi_controller_manager_manifests" (list . $capsConfig) }}
 {{- end }}
+{{- end }}
+{{- /* /vcp-gate */ -}}

@@ -31,6 +31,11 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 const rootCAFile = "/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 
 func discoverKubernetesCAHandler(_ context.Context, input *go_hook.HookInput) error {
+	if nestedControlPlane(input) {
+		// The nested Pod mounts no projected serviceaccount CA; kubernetesCA comes from the host via setPhase1Values.
+		return nil
+	}
+
 	caBytes, err := os.ReadFile(rootCAFile)
 	if err != nil {
 		return err

@@ -33,15 +33,15 @@ type ExpirationOption func(*expirationOptions)
 
 type expirationOptions struct {
 	certificatesDir  string
-	leafCertificates []LeafCertName
-	rootCertificates []RootCertName
+	leafCertificates []LeafCertBaseName
+	rootCertificates []RootCertBaseName
 }
 
 type CertificateExpiration struct {
 	Name      string
 	Path      string
 	NotAfter  time.Time
-	Authority RootCertName
+	Authority RootCertBaseName
 	IsCA      bool
 }
 
@@ -69,7 +69,7 @@ func (r *ExpirationReport) add(exp CertificateExpiration, err error) {
 type certificateInventoryItem struct {
 	name      string
 	relPath   string
-	authority RootCertName
+	authority RootCertBaseName
 }
 
 // WithCertificatesDir overrides the directory used by ListCertificateExpirations.
@@ -80,14 +80,14 @@ func WithCertificatesDir(dir string) ExpirationOption {
 }
 
 // WithLeafCertificates restricts ListCertificateExpirations to the provided leaf certificates.
-func WithLeafCertificates(names ...LeafCertName) ExpirationOption {
+func WithLeafCertificates(names ...LeafCertBaseName) ExpirationOption {
 	return func(o *expirationOptions) {
 		o.leafCertificates = append(o.leafCertificates, names...)
 	}
 }
 
 // WithRootCertificates restricts ListCertificateExpirations to the provided root certificates.
-func WithRootCertificates(names ...RootCertName) ExpirationOption {
+func WithRootCertificates(names ...RootCertBaseName) ExpirationOption {
 	return func(o *expirationOptions) {
 		o.rootCertificates = append(o.rootCertificates, names...)
 	}
@@ -204,9 +204,9 @@ func loadCertificateExpiration(path string, item certificateInventoryItem) (Cert
 	}, nil
 }
 
-func defaultCertificateInventory() (map[RootCertName]certificateInventoryItem, map[LeafCertName]certificateInventoryItem) {
-	rootItems := make(map[RootCertName]certificateInventoryItem, len(defaultCertTreeScheme))
-	leafItems := make(map[LeafCertName]certificateInventoryItem)
+func defaultCertificateInventory() (map[RootCertBaseName]certificateInventoryItem, map[LeafCertBaseName]certificateInventoryItem) {
+	rootItems := make(map[RootCertBaseName]certificateInventoryItem, len(defaultCertTreeScheme))
+	leafItems := make(map[LeafCertBaseName]certificateInventoryItem)
 
 	for rootName, leafNames := range defaultCertTreeScheme {
 		rootItems[rootName] = certificateInventoryItem{

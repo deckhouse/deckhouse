@@ -1,3 +1,5 @@
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 {{- if include "machine_controller_manager_enabled" . }}
   {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
 ---
@@ -33,6 +35,8 @@ subjects:
   namespace: d8-cloud-instance-manager
   {{- end }}
 {{- end }}
+{{- end }}
+{{- /* /vcp-gate */ -}}
 
 ---
 apiVersion: rbac.authorization.k8s.io/v1

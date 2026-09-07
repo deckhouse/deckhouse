@@ -1,6 +1,8 @@
 {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
   {{- $engine := $ng.engine | default "" }}
   {{- if or (eq $ng.nodeType "CloudEphemeral") (eq $ng.nodeType "Cloud") }}
+    {{- /* vcp-gate: cloud machinery is self-hosted only; a tenant has no cloud provider. Static/Hybrid manual-bootstrap below renders in both modes. */ -}}
+    {{- if $.Values.global.deckhouseSelfHosted }}
     {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
       {{- if eq $engine "" }}
         {{- if $.Values.nodeManager.internal.cloudProvider.capiClusterKind }}
@@ -28,8 +30,12 @@
         {{- fail (printf "unsupported engine %q for CloudEphemeral NodeGroup %s" $engine $ng.name) }}
       {{- end }}
     {{- end }}
+    {{- end }}
   {{- else }}
     {{- /* StaticMachineTemplate and MachineDeployment are rendered by node-controller (capi.reconcileStaticMDRendered). Only the manual-bootstrap Secret stays in helm. */ -}}
+    {{- /* A nested tenant fills kubernetesCA from the host inputs asynchronously; skip the secret until it is ready rather than fail the whole module render. */ -}}
+    {{- if or $.Values.global.deckhouseSelfHosted $.Values.nodeManager.internal.kubernetesCA }}
     {{- include "node_group_static_or_hybrid_secret" (list $ $ng) }}
+    {{- end }}
   {{- end }}
 {{- end }}

@@ -64,17 +64,17 @@ func TestRenewCertificate_HappyPath(t *testing.T) {
 	dir := t.TempDir()
 
 	caCert, caKey := makeTestCACert(t, "kubernetes")
-	require.NoError(t, writeCertAndKey(dir, string(CACertName), caCert, caKey))
+	require.NoError(t, writeCertAndKey(dir, string(CACertBaseName), caCert, caKey))
 
 	leafCert, leafKey := makeLeafCert(t, "kube-apiserver", caCert, caKey)
-	require.NoError(t, writeCertAndKey(dir, string(ApiserverCertName), leafCert, leafKey))
+	require.NoError(t, writeCertAndKey(dir, string(ApiserverCertBaseName), leafCert, leafKey))
 
-	origCert, err := pkiutil.LoadCert(certPath(dir, string(ApiserverCertName)))
+	origCert, err := pkiutil.LoadCert(certPath(dir, string(ApiserverCertBaseName)))
 	require.NoError(t, err)
 
-	require.NoError(t, RenewCertificate(ApiserverCertName, WithRenewDir(dir)))
+	require.NoError(t, RenewCertificate(ApiserverCertBaseName, WithRenewDir(dir)))
 
-	newCert, err := pkiutil.LoadCert(certPath(dir, string(ApiserverCertName)))
+	newCert, err := pkiutil.LoadCert(certPath(dir, string(ApiserverCertBaseName)))
 	require.NoError(t, err)
 
 	assert.Equal(t, origCert.Subject.CommonName, newCert.Subject.CommonName)
@@ -87,19 +87,19 @@ func TestRenewCertificate_DryRun(t *testing.T) {
 	dir := t.TempDir()
 
 	caCert, caKey := makeTestCACert(t, "kubernetes")
-	require.NoError(t, writeCertAndKey(dir, string(CACertName), caCert, caKey))
+	require.NoError(t, writeCertAndKey(dir, string(CACertBaseName), caCert, caKey))
 
 	leafCert, leafKey := makeLeafCert(t, "kube-apiserver", caCert, caKey)
-	require.NoError(t, writeCertAndKey(dir, string(ApiserverCertName), leafCert, leafKey))
+	require.NoError(t, writeCertAndKey(dir, string(ApiserverCertBaseName), leafCert, leafKey))
 
-	statBefore, err := os.Stat(certPath(dir, string(ApiserverCertName)))
+	statBefore, err := os.Stat(certPath(dir, string(ApiserverCertBaseName)))
 	require.NoError(t, err)
 
 	time.Sleep(50 * time.Millisecond)
 
-	require.NoError(t, RenewCertificate(ApiserverCertName, WithRenewDir(dir), WithDryRun()))
+	require.NoError(t, RenewCertificate(ApiserverCertBaseName, WithRenewDir(dir), WithDryRun()))
 
-	statAfter, err := os.Stat(certPath(dir, string(ApiserverCertName)))
+	statAfter, err := os.Stat(certPath(dir, string(ApiserverCertBaseName)))
 	require.NoError(t, err)
 	assert.Equal(t, statBefore.ModTime(), statAfter.ModTime(), "dry-run must not modify the file on disk")
 }
@@ -114,7 +114,7 @@ func TestRenewCertificate_ErrorSentinels(t *testing.T) {
 			name: "leaf cert missing",
 			setup: func(t *testing.T, dir string) {
 				caCert, caKey := makeTestCACert(t, "kubernetes")
-				require.NoError(t, writeCertAndKey(dir, string(CACertName), caCert, caKey))
+				require.NoError(t, writeCertAndKey(dir, string(CACertBaseName), caCert, caKey))
 			},
 			wantErr: &MissingError{},
 		},
@@ -123,7 +123,7 @@ func TestRenewCertificate_ErrorSentinels(t *testing.T) {
 			setup: func(t *testing.T, dir string) {
 				caCert, caKey := makeTestCACert(t, "kubernetes")
 				leafCert, leafKey := makeLeafCert(t, "kube-apiserver", caCert, caKey)
-				require.NoError(t, writeCertAndKey(dir, string(ApiserverCertName), leafCert, leafKey))
+				require.NoError(t, writeCertAndKey(dir, string(ApiserverCertBaseName), leafCert, leafKey))
 			},
 			wantErr: &CAMissingError{},
 		},
@@ -132,9 +132,9 @@ func TestRenewCertificate_ErrorSentinels(t *testing.T) {
 			setup: func(t *testing.T, dir string) {
 				caCert, caKey := makeTestCACert(t, "kubernetes")
 				leafCert, leafKey := makeLeafCert(t, "kube-apiserver", caCert, caKey)
-				require.NoError(t, writeCertAndKey(dir, string(ApiserverCertName), leafCert, leafKey))
+				require.NoError(t, writeCertAndKey(dir, string(ApiserverCertBaseName), leafCert, leafKey))
 				// Write only the CA cert, not the key.
-				require.NoError(t, writeCert(dir, string(CACertName), caCert))
+				require.NoError(t, writeCert(dir, string(CACertBaseName), caCert))
 			},
 			wantErr: &CAExternalError{},
 		},
@@ -144,8 +144,8 @@ func TestRenewCertificate_ErrorSentinels(t *testing.T) {
 				expiredCA, expiredKey := makeExpiredCACert(t, "kubernetes")
 				freshCA, freshKey := makeTestCACert(t, "kubernetes")
 				leafCert, leafKey := makeLeafCert(t, "kube-apiserver", freshCA, freshKey)
-				require.NoError(t, writeCertAndKey(dir, string(ApiserverCertName), leafCert, leafKey))
-				require.NoError(t, writeCertAndKey(dir, string(CACertName), expiredCA, expiredKey))
+				require.NoError(t, writeCertAndKey(dir, string(ApiserverCertBaseName), leafCert, leafKey))
+				require.NoError(t, writeCertAndKey(dir, string(CACertBaseName), expiredCA, expiredKey))
 			},
 			wantErr: &CAExpiredError{},
 		},
@@ -156,7 +156,7 @@ func TestRenewCertificate_ErrorSentinels(t *testing.T) {
 			dir := t.TempDir()
 			tt.setup(t, dir)
 
-			err := RenewCertificate(ApiserverCertName, WithRenewDir(dir))
+			err := RenewCertificate(ApiserverCertBaseName, WithRenewDir(dir))
 			require.Error(t, err)
 			assert.ErrorAs(t, err, &tt.wantErr)
 		})
@@ -166,11 +166,11 @@ func TestRenewCertificate_ErrorSentinels(t *testing.T) {
 func TestRenewCertificates_AllDefaultLeafs(t *testing.T) {
 	dir := t.TempDir()
 
-	cas := map[RootCertName]struct {
+	cas := map[RootCertBaseName]struct {
 		cert *x509.Certificate
 		key  crypto.Signer
 	}{}
-	for _, caName := range []RootCertName{CACertName, FrontProxyCACertName, EtcdCACertName} {
+	for _, caName := range []RootCertBaseName{CACertBaseName, FrontProxyCACertBaseName, EtcdCACertBaseName} {
 		cert, key := makeTestCACert(t, string(caName))
 		require.NoError(t, writeCertAndKey(dir, string(caName), cert, key))
 		cas[caName] = struct {
@@ -196,7 +196,7 @@ func TestRenewCertificates_AllDefaultLeafs(t *testing.T) {
 }
 
 func TestRenewCertificate_UnknownLeaf(t *testing.T) {
-	err := RenewCertificate(LeafCertName("not-a-real-cert"), WithRenewDir(t.TempDir()))
+	err := RenewCertificate(LeafCertBaseName("not-a-real-cert"), WithRenewDir(t.TempDir()))
 	require.Error(t, err)
 	assert.Contains(t, err.Error(), "unknown leaf certificate")
 }
@@ -205,15 +205,15 @@ func TestRenewCertificates_WithLeafsSubset(t *testing.T) {
 	dir := t.TempDir()
 
 	caCert, caKey := makeTestCACert(t, "kubernetes")
-	require.NoError(t, writeCertAndKey(dir, string(CACertName), caCert, caKey))
+	require.NoError(t, writeCertAndKey(dir, string(CACertBaseName), caCert, caKey))
 
-	for _, name := range []LeafCertName{ApiserverCertName, ApiserverKubeletClientCertName} {
+	for _, name := range []LeafCertBaseName{ApiserverCertBaseName, ApiserverKubeletClientCertBaseName} {
 		leafCert, leafKey := makeLeafCert(t, string(name), caCert, caKey)
 		require.NoError(t, writeCertAndKey(dir, string(name), leafCert, leafKey))
 	}
 
-	statBefore := map[LeafCertName]time.Time{}
-	for _, name := range []LeafCertName{ApiserverCertName, ApiserverKubeletClientCertName} {
+	statBefore := map[LeafCertBaseName]time.Time{}
+	for _, name := range []LeafCertBaseName{ApiserverCertBaseName, ApiserverKubeletClientCertBaseName} {
 		info, err := os.Stat(certPath(dir, string(name)))
 		require.NoError(t, err)
 		statBefore[name] = info.ModTime()
@@ -223,18 +223,18 @@ func TestRenewCertificates_WithLeafsSubset(t *testing.T) {
 
 	report := RenewCertificates(
 		WithRenewDir(dir),
-		WithRenewLeafs(ApiserverCertName),
+		WithRenewLeafs(ApiserverCertBaseName),
 	)
 
 	require.Len(t, report.Entries, 1)
-	assert.Equal(t, ApiserverCertName, report.Entries[0].Name)
+	assert.Equal(t, ApiserverCertBaseName, report.Entries[0].Name)
 	assert.NoError(t, report.Entries[0].Err)
 
-	info, err := os.Stat(certPath(dir, string(ApiserverCertName)))
+	info, err := os.Stat(certPath(dir, string(ApiserverCertBaseName)))
 	require.NoError(t, err)
-	assert.True(t, info.ModTime().After(statBefore[ApiserverCertName]), "apiserver cert should have been renewed")
+	assert.True(t, info.ModTime().After(statBefore[ApiserverCertBaseName]), "apiserver cert should have been renewed")
 
-	info, err = os.Stat(filepath.Join(dir, string(ApiserverKubeletClientCertName)+".crt"))
+	info, err = os.Stat(filepath.Join(dir, string(ApiserverKubeletClientCertBaseName)+".crt"))
 	require.NoError(t, err)
-	assert.Equal(t, statBefore[ApiserverKubeletClientCertName], info.ModTime(), "apiserver-kubelet-client must not be touched")
+	assert.Equal(t, statBefore[ApiserverKubeletClientCertBaseName], info.ModTime(), "apiserver-kubelet-client must not be touched")
 }

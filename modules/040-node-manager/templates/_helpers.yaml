@@ -124,3 +124,28 @@ nodeSelector:
   node.deckhouse.io/gpu: ""
   {{- end }}
 {{- end }}
+
+{{- /* Subjects allowed to act as bashible-apiserver. In a virtual control plane
+tenant it runs in the parent cluster and authenticates as a client-certificate
+User, so the in-tenant ServiceAccount alone grants it nothing. */ -}}
+{{- define "node_manager_bashible_apiserver_subjects" -}}
+- kind: ServiceAccount
+  name: bashible-apiserver
+  namespace: d8-cloud-instance-manager
+{{- if not .Values.global.deckhouseSelfHosted }}
+- kind: User
+  name: bashible-apiserver
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}
+{{- end }}
+
+{{- /* Subjects for bootstrapping nodes. Both a self-hosted cluster and a virtual control plane
+tenant issue their join token with the stock system:bootstrappers:d8-node-manager group. */ -}}
+{{- define "node_manager_bashible_bootstrapper_subjects" -}}
+- kind: Group
+  name: system:bootstrappers:d8-node-manager
+  apiGroup: rbac.authorization.k8s.io
+- kind: Group
+  name: system:nodes
+  apiGroup: rbac.authorization.k8s.io
+{{- end }}

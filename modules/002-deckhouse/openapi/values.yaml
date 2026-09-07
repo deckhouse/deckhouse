@@ -5,8 +5,6 @@ properties:
   internal:
     type: object
     default: {}
-    x-required-for-helm:
-    - currentReleaseImageName
     properties:
       namespaces:
         type: array

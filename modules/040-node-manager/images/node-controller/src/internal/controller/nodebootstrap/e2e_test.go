@@ -29,6 +29,7 @@ import (
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/go_lib/bashiblecontext/names"
 	bootstrapv1alpha1 "github.com/deckhouse/node-controller/api/bootstrap.deckhouse.io/v1alpha1"
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
@@ -348,7 +349,7 @@ func ensureBootstrapToken(ctx context.Context, ngName string) {
 		ObjectMeta: metav1.ObjectMeta{
 			Namespace: nodecommon.KubeSystemNamespace,
 			Name:      testenv.UniqueName("bootstrap-token"),
-			Labels:    map[string]string{nodecommon.BootstrapTokenNodeGroupLabel: ngName},
+			Labels:    map[string]string{names.BootstrapTokenNGLabel: ngName},
 		},
 		Type: corev1.SecretTypeBootstrapToken,
 		Data: map[string][]byte{
@@ -367,7 +368,7 @@ func rotateBootstrapToken(ctx context.Context, ngName string) {
 	secrets := &corev1.SecretList{}
 	Expect(k8sClient.List(ctx, secrets,
 		client.InNamespace(nodecommon.KubeSystemNamespace),
-		client.MatchingLabels{nodecommon.BootstrapTokenNodeGroupLabel: ngName},
+		client.MatchingLabels{names.BootstrapTokenNGLabel: ngName},
 	)).To(Succeed())
 	Expect(secrets.Items).To(HaveLen(1))
 

@@ -66,6 +66,10 @@ func bashibleAPIServerTLSFilter(obj *unstructured.Unstructured) (go_hook.FilterR
 }
 
 func genBashibleAPIServerCertsHandler(ctx context.Context, input *go_hook.HookInput) error {
+	if nestedControlPlane(input) {
+		return nil
+	}
+
 	var cert certificate.Certificate
 	var err error
 

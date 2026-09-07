@@ -92,7 +92,7 @@ properties:
           - ["10.0.0.1:6443", "10.0.0.2:6443", "10.0.0.3:6443"]
         items:
           type: string
-          pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}:[1-9][0-9]{0,4}$'
+          pattern: '^(([0-9]{1,3}\.){3}[0-9]{1,3}|([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?):[1-9][0-9]{0,4}$'
       clusterMasterEndpoints:
         type: array
         description: |
@@ -107,15 +107,14 @@ properties:
         items:
           type: object
           additionalProperties: false
+          # Only address is required, hostname or IP: a self-hosted cluster discovers per-master
+          # IPs with all ports, a VCP tenant emits single-port entries by SNI hostname.
           required:
             - address
-            - kubeApiPort
-            - rppServerPort
-            - rppBootstrapServerPort
           properties:
             address:
               type: string
-              pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}$'
+              pattern: '^(([0-9]{1,3}\.){3}[0-9]{1,3}|([a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?\.)*[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)$'
             kubeApiPort:
               type: integer
               minimum: 1
@@ -150,12 +149,23 @@ properties:
             x-examples:
             - "mytoken"
             default: ""
+          direct:
+            type: boolean
+            description: |
+              Fetch packages straight from the parent registry-packages-proxy over the ALB instead
+              of an in-cluster proxy. Set in a virtual control plane tenant.
       kubernetesCA:
         type: string
         x-examples:
           - LS0tQ0VSVC0tLSBhYWFxcXEgLS1FTkQgQ0VSVC0tLQo=
         description: |
           kubernetes.ca content
+
+      albVIP:
+        type: string
+        description: |
+          Virtual control plane tenant ingress VIP. The node maps the control-plane SNI hostnames
+          to it in /etc/hosts, having no DNS for them. Empty in a self-hosted cluster.
 
       standbyNodeGroups:
         type: array
@@ -211,6 +221,14 @@ properties:
           - LS0tcHJpdmtleS0tLSBhYWFxcXEgLS1lbmQgcHJpdmtleS0tLQo=
         description: |
           Private key for API server used by bashible.
+
+      bashibleContext:
+        type: string
+        description: |
+          Rendered bashible input.yaml. Only set in a nested (virtual control plane)
+          cluster, where no node-controller Pod exists to write the Secret itself.
+        x-examples:
+          - "clusterDomain: cluster.virtual\n"
 
       nodeStatusUpdateFrequency:
         type: [integer, string]

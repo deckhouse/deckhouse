@@ -44,6 +44,12 @@ var componentChecksumDeps = map[string]componentFieldMap{
 			"cert-sans",
 			"encryption-algorithm",
 		},
+		certsChecksumDependsOn: []string{
+			"apiserver.crt",
+			"apiserver-kubelet-client.crt",
+			"apiserver-etcd-client.crt",
+			"front-proxy-client.crt",
+		},
 	},
 	"etcd": {
 		configChecksumDependsOn: []string{
@@ -52,19 +58,26 @@ var componentChecksumDeps = map[string]componentFieldMap{
 		pkiChecksumDependsOn: []string{
 			"encryption-algorithm",
 		},
+		certsChecksumDependsOn: []string{
+			"etcd-server.crt",
+			"etcd-peer.crt",
+			"etcd-healthcheck-client.crt",
+		},
 	},
 	"kube-controller-manager": {
 		configChecksumDependsOn: []string{
 			"kube-controller-manager.yaml.tpl",
 		},
-		pkiChecksumDependsOn: nil,
+		pkiChecksumDependsOn:   nil,
+		certsChecksumDependsOn: []string{},
 	},
 	"kube-scheduler": {
 		configChecksumDependsOn: []string{
 			"kube-scheduler.yaml.tpl",
 			"extra-file-scheduler-config.yaml",
 		},
-		pkiChecksumDependsOn: nil,
+		pkiChecksumDependsOn:   nil,
+		certsChecksumDependsOn: []string{},
 	},
 }
 
@@ -74,6 +87,11 @@ type componentFieldMap struct {
 	// pkiChecksumDependsOn are secret keys of d8-control-plane-manager-config that affect the components pkiChecksum (certSANs, encryption-algorithm)
 	// nil - this component has no PKI leaf cert dependencies.
 	pkiChecksumDependsOn []string
+	// certsChecksumDependsOn are keys of the PKI secret (d8-pki / vcp-<name>-pki) holding the actual
+	// certificate material this component mounts at runtime. A change here (e.g. a renewed leaf cert)
+	// means the component must be restarted to pick up the new certificates.
+	// Empty - this component mounts no PKI certificates (e.g. kube-scheduler).
+	certsChecksumDependsOn []string
 }
 
 // pkiChecksumExcludedKeys are d8-pki keys that are not included in the pkiChecksum calculation.
@@ -174,6 +192,17 @@ func ComponentPKIChecksum(secretData map[string][]byte, component string) (strin
 		return "", nil
 	}
 	return hashKeys(secretData, sortedKeysFromSlice(fieldMap.pkiChecksumDependsOn, secretData)), nil
+}
+
+func ComponentCertsChecksum(secretData map[string][]byte, component string) (string, error) {
+	fieldMap, ok := componentChecksumDeps[component]
+	if !ok {
+		return "", fmt.Errorf("unknown component %q", component)
+	}
+	if len(fieldMap.certsChecksumDependsOn) == 0 {
+		return "", nil
+	}
+	return hashKeys(secretData, sortedKeysFromSlice(fieldMap.certsChecksumDependsOn, secretData)), nil
 }
 
 // ComponentHasPKIChecksum returns true if the component has PKI leaf cert dependencies.

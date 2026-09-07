@@ -82,6 +82,10 @@ func getDefaultMasterNg(clusterType string) (*unstructured.Unstructured, error) 
 }
 
 func createMasterNodeGroup(_ context.Context, input *go_hook.HookInput) error {
+	if nestedControlPlane(input) {
+		return nil
+	}
+
 	clusterType := input.Values.Get("global.clusterConfiguration.clusterType").String()
 
 	ng, err := getDefaultMasterNg(clusterType)

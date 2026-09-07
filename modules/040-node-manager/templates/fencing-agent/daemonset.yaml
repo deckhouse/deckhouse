@@ -2,6 +2,8 @@
 cpu: 10m
 memory: 50Mi
 {{- end }}
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 
 {{ $ctx := . }}
 {{- range $ng := .Values.nodeManager.internal.nodeGroups }}
@@ -126,3 +128,5 @@ spec:
             path: /tmp
   {{- end }}
 {{- end }}
+{{- end }}
+{{- /* /vcp-gate */ -}}

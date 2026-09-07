@@ -23,6 +23,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	sigsyaml "sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/go_lib/bashiblecontext"
+
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
@@ -38,7 +40,7 @@ func renderBootstrapData(ctx context.Context, cl client.Client, reader client.Re
 		return nil, fmt.Errorf("render bootstrap spec: %w", err)
 	}
 
-	tokens, err := nodecommon.BootstrapTokens(ctx, reader)
+	tokens, err := bashiblecontext.BootstrapTokens(ctx, reader)
 	if err != nil {
 		return nil, err
 	}

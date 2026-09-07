@@ -1,3 +1,5 @@
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ValidationWebhook
@@ -36,3 +38,5 @@ handler:
                 False,
             )
         return None, True
+{{- end }}
+{{- /* /vcp-gate */ -}}

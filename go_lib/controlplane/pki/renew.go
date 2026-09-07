@@ -29,7 +29,7 @@ import (
 )
 
 type leafCertificateInfo struct {
-	Name        LeafCertName
+	Name        LeafCertBaseName
 	Description string
 }
 
@@ -37,7 +37,7 @@ type RenewOption func(*renewOptions)
 
 type renewOptions struct {
 	certificatesDir  string
-	leafCertificates []LeafCertName
+	leafCertificates []LeafCertBaseName
 	dryRun           bool
 	extraIP          net.IP
 }
@@ -52,7 +52,7 @@ func WithRenewDir(dir string) RenewOption {
 
 // WithRenewLeafs restricts RenewCertificates to the provided leaf names.
 // When empty, the full default leaf certificate inventory is used.
-func WithRenewLeafs(names ...LeafCertName) RenewOption {
+func WithRenewLeafs(names ...LeafCertBaseName) RenewOption {
 	return func(o *renewOptions) {
 		o.leafCertificates = append(o.leafCertificates, names...)
 	}
@@ -94,13 +94,13 @@ type PKIRenewReport struct {
 //   - *CAExpiredError when the signing CA has expired (renewal is pointless and the cert is left untouched)
 //   - any other error (wrapped) for IO/permissions/signing failures
 type PKIRenewEntry struct {
-	Name      LeafCertName
+	Name      LeafCertBaseName
 	Path      string
-	Authority RootCertName
+	Authority RootCertBaseName
 	Err       error
 }
 
-func (r *PKIRenewReport) add(name LeafCertName, path string, authority RootCertName, err error) {
+func (r *PKIRenewReport) add(name LeafCertBaseName, path string, authority RootCertBaseName, err error) {
 	r.Entries = append(r.Entries, PKIRenewEntry{
 		Name:      name,
 		Path:      path,
@@ -124,7 +124,7 @@ func certConfigFromX509(cert *x509.Certificate) certConfig {
 	}
 }
 
-func caForLeaf(name LeafCertName) (RootCertName, bool) {
+func caForLeaf(name LeafCertBaseName) (RootCertBaseName, bool) {
 	for caName, leafNames := range defaultCertTreeScheme {
 		for _, leafName := range leafNames {
 			if leafName == name {
@@ -135,7 +135,7 @@ func caForLeaf(name LeafCertName) (RootCertName, bool) {
 	return "", false
 }
 
-func renewLeafCert(o *renewOptions, name LeafCertName) error {
+func renewLeafCert(o *renewOptions, name LeafCertBaseName) error {
 	pkiDir := o.certificatesDir
 
 	caName, ok := caForLeaf(name)
@@ -211,7 +211,7 @@ func renewLeafCert(o *renewOptions, name LeafCertName) error {
 //   - *CAExternalError — CA key absent / external CA (skipped)
 //   - *CAExpiredError  — CA already expired (skipped)
 //   - any other error  — IO/permissions/signing failure (skipped)
-func RenewCertificate(name LeafCertName, opts ...RenewOption) error {
+func RenewCertificate(name LeafCertBaseName, opts ...RenewOption) error {
 	o := newRenewOptions(opts...)
 	return renewLeafCert(o, name)
 }
@@ -245,7 +245,7 @@ func RenewCertificates(opts ...RenewOption) PKIRenewReport {
 
 // LeafDescription returns the human-readable description for the given renewable leaf certificate name.
 // Falls back to the string representation of name when no description is found.
-func LeafDescription(name LeafCertName) string {
+func LeafDescription(name LeafCertBaseName) string {
 	for _, info := range defaultLeafCertificates() {
 		if info.Name == name {
 			return info.Description
@@ -257,25 +257,25 @@ func LeafDescription(name LeafCertName) string {
 // defaultLeafCertificates returns the canonical list of renewable control-plane leaf certificates.
 func defaultLeafCertificates() []leafCertificateInfo {
 	return []leafCertificateInfo{
-		{ApiserverCertName, "certificate for serving the Kubernetes API"},
-		{ApiserverKubeletClientCertName, "certificate for the API server to connect to kubelet"},
-		{ApiserverEtcdClientCertName, "certificate the apiserver uses to access etcd"},
-		{FrontProxyClientCertName, "certificate for the front proxy client"},
-		{EtcdServerCertName, "certificate for serving etcd"},
-		{EtcdPeerCertName, "certificate for etcd nodes to communicate with each other"},
-		{EtcdHealthcheckClientCertName, "certificate for liveness probes to healthcheck etcd"},
+		{ApiserverCertBaseName, "certificate for serving the Kubernetes API"},
+		{ApiserverKubeletClientCertBaseName, "certificate for the API server to connect to kubelet"},
+		{ApiserverEtcdClientCertBaseName, "certificate the apiserver uses to access etcd"},
+		{FrontProxyClientCertBaseName, "certificate for the front proxy client"},
+		{EtcdServerCertBaseName, "certificate for serving etcd"},
+		{EtcdPeerCertBaseName, "certificate for etcd nodes to communicate with each other"},
+		{EtcdHealthcheckClientCertBaseName, "certificate for liveness probes to healthcheck etcd"},
 	}
 }
 
 // selectLeafs returns the inventory with only the given names, preserving the canonical order.
 // When names is empty, returned default inventory.
-func selectLeafs(names []LeafCertName) []leafCertificateInfo {
+func selectLeafs(names []LeafCertBaseName) []leafCertificateInfo {
 	full := defaultLeafCertificates()
 	if len(names) == 0 {
 		return full
 	}
 
-	wanted := make(map[LeafCertName]struct{}, len(names))
+	wanted := make(map[LeafCertBaseName]struct{}, len(names))
 	for _, n := range names {
 		wanted[n] = struct{}{}
 	}

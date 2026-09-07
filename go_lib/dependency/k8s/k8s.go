@@ -69,7 +69,7 @@ func NewClient(options ...Option) (Client, error) {
 		config, err = rest.InClusterConfig()
 	}
 	if err != nil {
-		return nil, fmt.Errorf("in cluster config: %w", err)
+		return nil, fmt.Errorf("kubernetes client config: %w", err)
 	}
 
 	clientset, err := kubernetes.NewForConfig(config)

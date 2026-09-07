@@ -1,0 +1,39 @@
+albVIP: 10.20.30.40
+allowedBundles:
+- ubuntu-lts
+apiserverEndpoints:
+- api.golden.example.com:6443
+apiserverProxyCerts:
+  crt: |
+    -----BEGIN CERTIFICATE-----
+    PROXY
+    -----END CERTIFICATE-----
+  key: |
+    -----BEGIN RSA PRIVATE KEY-----
+    PROXY
+    -----END RSA PRIVATE KEY-----
+clusterDNSAddress: 10.96.0.10
+clusterMasterEndpoints:
+- address: api.golden.example.com
+  kubeApiPort: 6443
+  rppBootstrapServerPort: 0
+  rppServerPort: 0
+- address: packages.golden.example.com
+  kubeApiPort: 0
+  rppBootstrapServerPort: 80
+  rppServerPort: 443
+clusterUUID: 11111111-2222-3333-4444-555555555555
+deckhouse:
+  channel: unknown
+  edition: unknown
+  version: vcp
+konnHost: konn.golden.example.com
+kubernetesCA: |
+  -----BEGIN CERTIFICATE-----
+  VCP-CA
+  -----END CERTIFICATE-----
+packagesProxy:
+  direct: true
+  token: rpp-token
+podSubnetNodeCIDRPrefix: "24"
+version: 1

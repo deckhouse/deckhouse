@@ -2,6 +2,8 @@
 cpu: 10m
 memory: 50Mi
 {{- end }}
+{{- /* vcp-gate */ -}}
+{{- if .Values.global.deckhouseSelfHosted }}
 
 {{- if include "machine_controller_manager_enabled" . }}
   {{- if hasKey $.Values.nodeManager.internal "cloudProvider" }}
@@ -149,3 +151,5 @@ spec:
               {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 14 }}
   {{- end }}
 {{- end }}
+{{- end }}
+{{- /* /vcp-gate */ -}}

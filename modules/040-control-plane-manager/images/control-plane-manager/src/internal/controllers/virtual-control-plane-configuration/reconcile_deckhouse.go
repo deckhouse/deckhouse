@@ -1,0 +1,825 @@
+/*
+Copyright 2026 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package virtualcontrolplaneconfiguration
+
+import (
+	"bytes"
+	"context"
+	_ "embed"
+	"errors"
+	"fmt"
+	"maps"
+	"strings"
+	"time"
+
+	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/constants"
+
+	appsv1 "k8s.io/api/apps/v1"
+	authenticationv1 "k8s.io/api/authentication/v1"
+	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/api/equality"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/utils/ptr"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/log"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"sigs.k8s.io/yaml"
+)
+
+const (
+	deckhouseSystemNamespace    = "d8-system"
+	deckhouseDeploymentName     = "deckhouse"
+	deckhouseContainerName      = "deckhouse"
+	deckhouseRegistrySecretName = "deckhouse-registry"
+
+	deckhouseServiceAccountName = "deckhouse"
+
+	deckhouseTokenTTL         = 365 * 24 * time.Hour
+	deckhouseTokenRenewBefore = deckhouseTokenTTL / 2
+
+	deckhouseClusterConfigurationSecretName = "d8-cluster-configuration"
+	deckhouseClusterUUIDConfigMapName       = "d8-cluster-uuid"
+
+	// d8-cluster-is-bootstraped appears in tenant kube-system once node is Ready.
+	clusterIsBootstrappedConfigMapName = "d8-cluster-is-bootstraped"
+	// Restart marker on the tenant deckhouse pod template: the enabled-module list is not recomputed on the
+	// clusterIsBootstrapped transition, so restart the pod once to force it. Workaround until deckhouse subscribes to it.
+	clusterIsBootstrappedAnnotation = "control-plane.deckhouse.io/cluster-is-bootstrapped"
+
+	// The ModuleConfig CRD is installed by the running deckhouse pod itself,
+	// so its absence right after the Deployment rollout is expected.
+	requeueIntervalOnMissingModuleConfigCRD = 10 * time.Second
+)
+
+//go:embed deckhouse/manifests/deployment.yaml
+var deckhouseDeploymentYAML string
+
+//go:embed deckhouse/manifests/moduleconfigs.yaml
+var deckhouseModuleConfigsYAML []byte
+
+// reconcileDeckhouse installs a Deckhouse instance for the tenant cluster.
+// The deckhouse-controller pod runs in the parent cluster (vcp-<name>) with
+// the tenant admin kubeconfig (not-self-hosted mode), and the tenant cluster
+// is seeded with the resources dhctl bootstrap would otherwise create.
+func (r *reconciler) reconcileDeckhouse(
+	ctx context.Context,
+	vcp *controlplanev1alpha1.VirtualControlPlane,
+	apiserverClusterIP string,
+	tenantCA []byte,
+	tr *tenantRegistry,
+) (reconcile.Result, error) {
+	tcs, tc, err := r.tenantClients(ctx, vcp)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("build tenant clients: %w", err)
+	}
+
+	// 1. Tenant: d8-system Namespace. The pod authenticates with its own client certificate bound in tenant-rbac.yaml.tpl, and the module renders its own ServiceAccount.
+	if err := reconcileTenantNamespace(ctx, tc); err != nil {
+		return reconcile.Result{}, fmt.Errorf("reconcile tenant d8-system namespace: %w", err)
+	}
+
+	// 2. Tenant: registry secret (modules reference it for image pulls).
+	if err := r.reconcileTenantRegistrySecret(ctx, tc, tr); err != nil {
+		return reconcile.Result{}, fmt.Errorf("reconcile tenant registry secret: %w", err)
+	}
+
+	// 3. Tenant: ClusterConfiguration read by the global discovery hooks.
+	if err := reconcileTenantClusterConfigurationSecret(ctx, tc, vcp); err != nil {
+		return reconcile.Result{}, fmt.Errorf("reconcile tenant cluster configuration: %w", err)
+	}
+
+	// 4. Tenant: stable cluster UUID.
+	if err := reconcileTenantClusterUUIDConfigMap(ctx, tc, vcp); err != nil {
+		return reconcile.Result{}, fmt.Errorf("reconcile tenant cluster uuid: %w", err)
+	}
+
+	// 5. Tenant: d8-kube-dns Service with the tenant's cluster DNS address, so
+	//    global discovery works before any DNS module is deployed.
+	if err := reconcileTenantKubeDNSService(ctx, tc, vcp); err != nil {
+		return reconcile.Result{}, fmt.Errorf("reconcile tenant kube-dns service: %w", err)
+	}
+
+	// 6. Parent: registry secret copy for image pulls in vcp-<name>.
+	if err := r.reconcileParentRegistrySecret(ctx, vcp); err != nil {
+		return reconcile.Result{}, fmt.Errorf("reconcile parent registry secret: %w", err)
+	}
+
+	// 7. Tenant ServiceAccount and its token, mounted by the Deployment below.
+	if err := r.reconcileDeckhouseServiceAccountToken(ctx, vcp, tc, tcs, tenantCA); err != nil {
+		return reconcile.Result{}, fmt.Errorf("reconcile deckhouse ServiceAccount token: %w", err)
+	}
+
+	// 8. Parent: the deckhouse Deployment. Restart the pod once the tenant reports bootstrapped, so it
+	//    recomputes the enabled-module list (not re-evaluated on the clusterIsBootstrapped transition).
+	isBootstrapped, err := tenantClusterIsBootstrapped(ctx, tc)
+	if err != nil {
+		log.FromContext(ctx).Error(err, "check tenant cluster is bootstrapped; treating as not bootstrapped")
+		isBootstrapped = false
+	}
+	if err := r.reconcileDeckhouseDeployment(ctx, vcp, apiserverClusterIP, isBootstrapped); err != nil {
+		return reconcile.Result{}, fmt.Errorf("reconcile deckhouse Deployment: %w", err)
+	}
+
+	// 9. Tenant: ModuleConfigs; requeue until the pod installs the CRD.
+	if res, err := reconcileTenantModuleConfigs(ctx, tc); err != nil || !res.IsZero() {
+		return res, err
+	}
+
+	return reconcile.Result{}, nil
+}
+
+// reconcileTenantNamespace is create-only: the namespace only has to exist
+// before the deckhouse pod starts; afterwards deckhouse owns it.
+func reconcileTenantNamespace(ctx context.Context, tc client.Client) error {
+	target := buildTargetTenantNamespace()
+
+	_, err := getTenantNamespace(ctx, tc, target.Name)
+	if apierrors.IsNotFound(err) {
+		return createTenantNamespace(ctx, tc, target)
+	}
+
+	return err
+}
+
+func buildTargetTenantNamespace() *corev1.Namespace {
+	return &corev1.Namespace{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: deckhouseSystemNamespace,
+			Labels: map[string]string{
+				constants.HeritageLabelKey: constants.HeritageLabelValue,
+			},
+		},
+	}
+}
+
+func (r *reconciler) reconcileTenantRegistrySecret(ctx context.Context, tc client.Client, tr *tenantRegistry) error {
+	parent, err := r.getSecret(ctx, deckhouseSystemNamespace, deckhouseRegistrySecretName)
+	if apierrors.IsNotFound(err) {
+		// Nothing to copy (e.g. a registry-less dev install).
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("get parent registry secret: %w", err)
+	}
+
+	target := buildTargetRegistrySecret(parent, deckhouseSystemNamespace, deckhouseRegistrySecretName)
+	// Seed the tenant from the external upstream (registry-config), not the parent in-cluster proxy address unreachable from tenant nodes.
+	// Falls back to the parent secret when there is no external upstream.
+	target.Data = resolveTenantRegistryData(parent, tr)
+	// The deckhouse module's chart renders this secret too; without helm
+	// adoption metadata the release install fails with "invalid ownership
+	// metadata" (same pattern as dhctl's DeckhouseRegistrySecret).
+	target.Labels["app.kubernetes.io/managed-by"] = "Helm"
+	target.Labels["app"] = "registry"
+	target.Annotations = map[string]string{
+		"meta.helm.sh/release-name":      "deckhouse",
+		"meta.helm.sh/release-namespace": deckhouseSystemNamespace,
+	}
+
+	current, err := getTenantSecret(ctx, tc, target.Namespace, target.Name)
+	if apierrors.IsNotFound(err) {
+		return createTenantSecret(ctx, tc, target)
+	}
+	if err != nil {
+		return err
+	}
+
+	// Overlay only the registry fields we own: deckhouse re-renders this secret and adds its own keys
+	// (clusterIsBootstrapped, imagesRegistry) which must survive, otherwise the two writers churn it.
+	// An external upstream may carry no CA: drop a stale ca left by a prior clone or by deckhouse.
+	dropCA := tr != nil && tr.CA == ""
+	_, hasCA := current.Data["ca"]
+
+	if isDataSubset(target.Data, current.Data) &&
+		!(dropCA && hasCA) &&
+		isMetadataSubset(target.Labels, current.Labels) &&
+		isMetadataSubset(target.Annotations, current.Annotations) {
+		return nil
+	}
+
+	base := current.DeepCopy()
+	if current.Data == nil {
+		current.Data = map[string][]byte{}
+	}
+	maps.Copy(current.Data, target.Data)
+	if dropCA {
+		delete(current.Data, "ca")
+	}
+	current.Labels = mergeMetadata(current.Labels, target.Labels)
+	current.Annotations = mergeMetadata(current.Annotations, target.Annotations)
+
+	return patchTenantSecret(ctx, tc, base, current)
+}
+
+// isMetadataSubset reports whether every target label/annotation is present
+// on the current object with the same value.
+func isMetadataSubset(target, current map[string]string) bool {
+	for key, value := range target {
+		if current[key] != value {
+			return false
+		}
+	}
+	return true
+}
+
+// isDataSubset checks whether every target key is present in current with the same value.
+func isDataSubset(target, current map[string][]byte) bool {
+	for key, value := range target {
+		if cur, ok := current[key]; !ok || !bytes.Equal(cur, value) {
+			return false
+		}
+	}
+	return true
+}
+
+// buildTargetRegistrySecret builds a copy of the parent cluster's
+// deckhouse-registry Secret for the given namespace and name.
+func buildTargetRegistrySecret(parent *corev1.Secret, namespace, name string) *corev1.Secret {
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: namespace,
+			Labels: map[string]string{
+				constants.HeritageLabelKey: constants.HeritageLabelValue,
+			},
+		},
+		Type: parent.Type,
+		Data: maps.Clone(parent.Data),
+	}
+}
+
+func reconcileTenantClusterConfigurationSecret(
+	ctx context.Context,
+	tc client.Client,
+	vcp *controlplanev1alpha1.VirtualControlPlane,
+) error {
+	target, err := buildTargetTenantClusterConfigurationSecret(vcp)
+	if err != nil {
+		return fmt.Errorf("build ClusterConfiguration: %w", err)
+	}
+
+	current, err := getTenantSecret(ctx, tc, target.Namespace, target.Name)
+	if apierrors.IsNotFound(err) {
+		return createTenantSecret(ctx, tc, target)
+	}
+	if err != nil {
+		return err
+	}
+
+	if equality.Semantic.DeepEqual(current.Data, target.Data) {
+		return nil
+	}
+
+	base := current.DeepCopy()
+	current.Data = target.Data
+
+	return patchTenantSecret(ctx, tc, base, current)
+}
+
+func buildTargetTenantClusterConfigurationSecret(vcp *controlplanev1alpha1.VirtualControlPlane) (*corev1.Secret, error) {
+	networking := vcp.Spec.Networking
+
+	data, err := yaml.Marshal(map[string]any{
+		"apiVersion":              "deckhouse.io/v1",
+		"kind":                    "ClusterConfiguration",
+		"clusterType":             "Static",
+		"kubernetesVersion":       vcp.Spec.KubernetesVersion,
+		"clusterDomain":           networking.ClusterDomain,
+		"serviceSubnetCIDR":       networking.ServiceSubnetCIDR,
+		"podSubnetCIDR":           networking.PodSubnetCIDR,
+		"podSubnetNodeCIDRPrefix": networking.PodSubnetNodeCIDRPrefix,
+		"defaultCRI":              "Containerd",
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      deckhouseClusterConfigurationSecretName,
+			Namespace: constants.KubeSystemNamespace,
+			Labels: map[string]string{
+				"name":                     deckhouseClusterConfigurationSecretName,
+				constants.HeritageLabelKey: constants.HeritageLabelValue,
+			},
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			"cluster-configuration.yaml": data,
+		},
+	}, nil
+}
+
+// reconcileTenantClusterUUIDConfigMap is create-only: the UUID identifies the
+// tenant cluster for its whole lifetime and must never change.
+func reconcileTenantClusterUUIDConfigMap(
+	ctx context.Context,
+	tc client.Client,
+	vcp *controlplanev1alpha1.VirtualControlPlane,
+) error {
+	target := buildTargetTenantClusterUUIDConfigMap(vcp)
+
+	_, err := getTenantConfigMap(ctx, tc, target.Namespace, target.Name)
+	if apierrors.IsNotFound(err) {
+		return createTenantConfigMap(ctx, tc, target)
+	}
+
+	return err
+}
+
+func buildTargetTenantClusterUUIDConfigMap(vcp *controlplanev1alpha1.VirtualControlPlane) *corev1.ConfigMap {
+	return &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      deckhouseClusterUUIDConfigMapName,
+			Namespace: constants.KubeSystemNamespace,
+			Labels: map[string]string{
+				constants.HeritageLabelKey: constants.HeritageLabelValue,
+			},
+		},
+		Data: map[string]string{
+			"cluster-uuid": string(vcp.UID),
+		},
+	}
+}
+
+// reconcileTenantKubeDNSService is create-only: once the tenant's own DNS
+// module takes over the Service, the VCP manager must not fight it.
+func reconcileTenantKubeDNSService(ctx context.Context, tc client.Client, vcp *controlplanev1alpha1.VirtualControlPlane) error {
+	target, err := buildTargetTenantKubeDNSService(vcp)
+	if err != nil {
+		return err
+	}
+
+	_, err = getTenantService(ctx, tc, target.Namespace, target.Name)
+	if apierrors.IsNotFound(err) {
+		return createTenantService(ctx, tc, target)
+	}
+
+	return err
+}
+
+func buildTargetTenantKubeDNSService(vcp *controlplanev1alpha1.VirtualControlPlane) (*corev1.Service, error) {
+	clusterDNS, err := vcp.Spec.Networking.ClusterDNSAddress()
+	if err != nil {
+		return nil, err
+	}
+
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "d8-kube-dns",
+			Namespace: constants.KubeSystemNamespace,
+			Labels: map[string]string{
+				"k8s-app":                      "kube-dns",
+				"app.kubernetes.io/managed-by": "Helm",
+			},
+			Annotations: map[string]string{
+				"meta.helm.sh/release-name":      "kube-dns",
+				"meta.helm.sh/release-namespace": deckhouseSystemNamespace,
+			},
+		},
+		Spec: corev1.ServiceSpec{
+			ClusterIP: clusterDNS,
+			Selector: map[string]string{
+				"k8s-app": "kube-dns",
+			},
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "dns",
+					Protocol:   corev1.ProtocolUDP,
+					Port:       53,
+					TargetPort: intstr.FromInt32(53),
+				},
+				{
+					Name:       "dns-tcp",
+					Protocol:   corev1.ProtocolTCP,
+					Port:       53,
+					TargetPort: intstr.FromInt32(53),
+				},
+			},
+		},
+	}, nil
+}
+
+func (r *reconciler) reconcileParentRegistrySecret(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) error {
+	parent, err := r.getSecret(ctx, deckhouseSystemNamespace, deckhouseRegistrySecretName)
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("get parent registry secret: %w", err)
+	}
+
+	target := buildTargetRegistrySecret(
+		parent,
+		vcp.Namespace,
+		constants.VirtualResourceName(deckhouseRegistrySecretName, vcp.Name),
+	)
+	target.Labels[constants.VirtualControlPlaneScopeLabelKey] = vcp.Name
+	if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
+		return err
+	}
+
+	current, err := r.getSecret(ctx, target.Namespace, target.Name)
+	if apierrors.IsNotFound(err) {
+		return r.createSecret(ctx, target)
+	}
+	if err != nil {
+		return err
+	}
+
+	if equality.Semantic.DeepEqual(current.Data, target.Data) &&
+		equality.Semantic.DeepEqual(current.Labels, target.Labels) &&
+		!ownerReferencesDiffer(current, target) {
+		return nil
+	}
+
+	base := current.DeepCopy()
+	current.Data = target.Data
+	current.Labels = target.Labels
+	syncOwnerReferences(current, target)
+
+	return r.patchSecret(ctx, base, current)
+}
+
+// reconcileDeckhouseServiceAccountToken keeps a mountable copy of a tenant
+// ServiceAccount token in the parent namespace. Deckhouse authenticates to the
+// tenant as system:serviceaccount:d8-system:deckhouse because the admission
+// policies it installs itself (002-deckhouse/templates/validation.yaml) exempt
+// only that identity from touching system namespaces and heritage-labelled
+// objects; a client certificate is denied no matter what RBAC says.
+func (r *reconciler) reconcileDeckhouseServiceAccountToken(
+	ctx context.Context,
+	vcp *controlplanev1alpha1.VirtualControlPlane,
+	tc client.Client,
+	tcs kubernetes.Interface,
+	tenantCA []byte,
+) error {
+	if err := reconcileTenantDeckhouseServiceAccount(ctx, tc); err != nil {
+		return fmt.Errorf("reconcile tenant ServiceAccount: %w", err)
+	}
+
+	name := constants.VirtualResourceName(constants.VirtualDeckhouseTokenSecretName, vcp.Name)
+	current, err := r.getSecret(ctx, vcp.Namespace, name)
+	switch {
+	case apierrors.IsNotFound(err):
+		current = nil
+	case err != nil:
+		return fmt.Errorf("get token Secret: %w", err)
+	case isDeckhouseTokenInSync(current, tenantCA):
+		return nil
+	}
+
+	token, expiresAt, err := requestTenantDeckhouseToken(ctx, tcs)
+	if err != nil {
+		return err
+	}
+
+	target := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: vcp.Namespace,
+			Labels: map[string]string{
+				constants.HeritageLabelKey:                 constants.HeritageLabelValue,
+				constants.VirtualControlPlaneScopeLabelKey: vcp.Name,
+			},
+			Annotations: map[string]string{
+				tokenExpiresAtKey: expiresAt.UTC().Format(time.RFC3339),
+			},
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			"token":     []byte(token),
+			"ca.crt":    tenantCA,
+			"namespace": []byte(deckhouseSystemNamespace),
+		},
+	}
+	if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
+		return err
+	}
+
+	if current == nil {
+		return r.createSecret(ctx, target)
+	}
+
+	base := current.DeepCopy()
+	current.Data = target.Data
+	current.Labels = target.Labels
+	current.Annotations = mergeMetadata(current.Annotations, target.Annotations)
+	syncOwnerReferences(current, target)
+
+	return r.patchSecret(ctx, base, current)
+}
+
+func isDeckhouseTokenInSync(secret *corev1.Secret, tenantCA []byte) bool {
+	return !tokenNeedsRenewal(secret, deckhouseTokenRenewBefore) &&
+		bytes.Equal(secret.Data["ca.crt"], tenantCA)
+}
+
+func requestTenantDeckhouseToken(ctx context.Context, tcs kubernetes.Interface) (string, time.Time, error) {
+	seconds := int64(deckhouseTokenTTL.Seconds())
+	request := &authenticationv1.TokenRequest{
+		Spec: authenticationv1.TokenRequestSpec{ExpirationSeconds: &seconds},
+	}
+
+	response, err := tcs.CoreV1().
+		ServiceAccounts(deckhouseSystemNamespace).
+		CreateToken(ctx, deckhouseServiceAccountName, request, metav1.CreateOptions{})
+	if err != nil {
+		return "", time.Time{}, fmt.Errorf("request token: %w", err)
+	}
+
+	return response.Status.Token, response.Status.ExpirationTimestamp.Time, nil
+}
+
+func reconcileTenantDeckhouseServiceAccount(ctx context.Context, tc client.Client) error {
+	target := &corev1.ServiceAccount{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      deckhouseServiceAccountName,
+			Namespace: deckhouseSystemNamespace,
+			Labels: map[string]string{
+				constants.HeritageLabelKey:     constants.HeritageLabelValue,
+				"app.kubernetes.io/managed-by": "Helm",
+			},
+			Annotations: map[string]string{
+				"helm.sh/resource-policy":        "keep",
+				"meta.helm.sh/release-name":      "deckhouse",
+				"meta.helm.sh/release-namespace": deckhouseSystemNamespace,
+			},
+		},
+		AutomountServiceAccountToken: ptr.To(false),
+	}
+
+	err := tc.Get(ctx, client.ObjectKeyFromObject(target), &corev1.ServiceAccount{})
+	if apierrors.IsNotFound(err) {
+		return tc.Create(ctx, target)
+	}
+
+	return err
+}
+
+func (r *reconciler) reconcileDeckhouseDeployment(
+	ctx context.Context,
+	vcp *controlplanev1alpha1.VirtualControlPlane,
+	apiserverClusterIP string,
+	isBootstrapped bool,
+) error {
+	image, err := r.getParentDeckhouseImage(ctx)
+	if err != nil {
+		return fmt.Errorf("get parent deckhouse image: %w", err)
+	}
+
+	target, err := buildTargetDeckhouseDeployment(vcp, image, apiserverClusterIP, r.parentDeckhouseImageDigest(ctx))
+	if err != nil {
+		return err
+	}
+	if err := setVCPControllerReference(vcp, target, r.scheme); err != nil {
+		return err
+	}
+
+	current, err := r.getDeployment(ctx, target.Namespace, target.Name)
+	if apierrors.IsNotFound(err) {
+		if isBootstrapped {
+			setClusterIsBootstrappedAnnotation(target)
+		}
+		return r.createDeployment(ctx, target)
+	}
+	if err != nil {
+		return err
+	}
+
+	if isBootstrapped || hasClusterIsBootstrappedAnnotation(current) {
+		setClusterIsBootstrappedAnnotation(target)
+	}
+
+	if equality.Semantic.DeepEqual(current.Spec, target.Spec) &&
+		equality.Semantic.DeepEqual(current.Labels, target.Labels) &&
+		!ownerReferencesDiffer(current, target) {
+		return nil
+	}
+
+	base := current.DeepCopy()
+	current.Spec = target.Spec
+	current.Labels = target.Labels
+	syncOwnerReferences(current, target)
+
+	return r.patchDeployment(ctx, base, current)
+}
+
+func buildTargetDeckhouseDeployment(
+	vcp *controlplanev1alpha1.VirtualControlPlane,
+	image string,
+	apiserverClusterIP string,
+	parentImageDigest string,
+) (*appsv1.Deployment, error) {
+	rendered := strings.NewReplacer(
+		"${NAMESPACE}", vcp.Namespace,
+		"${IMAGE_DECKHOUSE}", image,
+		"${APISERVER_CLUSTER_IP}", apiserverClusterIP,
+		"${TOKEN_SECRET_NAME}", constants.VirtualResourceName(constants.VirtualDeckhouseTokenSecretName, vcp.Name),
+	).Replace(deckhouseDeploymentYAML)
+
+	deployment := &appsv1.Deployment{}
+	if err := yaml.Unmarshal([]byte(rendered), deployment); err != nil {
+		return nil, fmt.Errorf("unmarshal deckhouse Deployment: %w", err)
+	}
+
+	deployment.Name = constants.VirtualResourceName(deckhouseDeploymentName, vcp.Name)
+	applyVCPScope(deployment, vcp.Name)
+
+	// A mutable image tag never changes the pod template on a parent rebuild, so the tenant keeps stale content.
+	// The parent's resolved digest here changes with the content and rolls the pod,
+	// which re-pulls the tag.
+	if parentImageDigest != "" {
+		if deployment.Spec.Template.Annotations == nil {
+			deployment.Spec.Template.Annotations = map[string]string{}
+		}
+		deployment.Spec.Template.Annotations["control-plane.deckhouse.io/parent-image-digest"] = parentImageDigest
+	}
+
+	renameImagePullSecret(deployment, deckhouseRegistrySecretName, constants.VirtualResourceName(deckhouseRegistrySecretName, vcp.Name))
+
+	return deployment, nil
+}
+
+// tenantClusterIsBootstrapped reports whether the tenant finished bootstrapping, signalled by the
+// d8-cluster-is-bootstraped ConfigMap deckhouse creates in kube-system once a worker node is Ready.
+func tenantClusterIsBootstrapped(ctx context.Context, tc client.Client) (bool, error) {
+	cm := &corev1.ConfigMap{}
+	err := tc.Get(ctx, client.ObjectKey{Namespace: constants.KubeSystemNamespace, Name: clusterIsBootstrappedConfigMapName}, cm)
+	if apierrors.IsNotFound(err) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func setClusterIsBootstrappedAnnotation(d *appsv1.Deployment) {
+	if d.Spec.Template.Annotations == nil {
+		d.Spec.Template.Annotations = map[string]string{}
+	}
+	d.Spec.Template.Annotations[clusterIsBootstrappedAnnotation] = ""
+}
+
+func hasClusterIsBootstrappedAnnotation(d *appsv1.Deployment) bool {
+	_, ok := d.Spec.Template.Annotations[clusterIsBootstrappedAnnotation]
+	return ok
+}
+
+func reconcileTenantModuleConfigs(ctx context.Context, tc client.Client) (reconcile.Result, error) {
+	objects, err := parseManifestDocs(deckhouseModuleConfigsYAML, "")
+	if err != nil {
+		return reconcile.Result{}, err
+	}
+
+	for _, target := range objects {
+		if err := applyObject(ctx, tc, target, patchTenantObject); err != nil {
+			if isMissingModuleConfigCRD(err) {
+				log.FromContext(ctx).Info("ModuleConfig CRD is not installed by the tenant deckhouse yet, requeueing")
+				return reconcile.Result{RequeueAfter: requeueIntervalOnMissingModuleConfigCRD}, nil
+			}
+
+			return reconcile.Result{}, fmt.Errorf("apply tenant ModuleConfig: %w", err)
+		}
+	}
+
+	return reconcile.Result{}, nil
+}
+
+// isMissingModuleConfigCRD reports whether the error means the ModuleConfig
+// CRD has not been installed by the tenant deckhouse yet.
+func isMissingModuleConfigCRD(err error) bool {
+	var noKind *meta.NoKindMatchError
+	var noResource *meta.NoResourceMatchError
+
+	return errors.As(err, &noKind) || errors.As(err, &noResource)
+}
+
+// Kubernetes I/O helpers (tenant cluster).
+// The tenant client is built per-VCP (see tenantClients), so unlike the
+// parent-cluster helpers on *reconciler these take it as an argument.
+
+// getParentDeckhouseImage reads the image from the parent cluster's own
+// deckhouse Deployment, so the tenant instance follows the parent's releases.
+func (r *reconciler) getParentDeckhouseImage(ctx context.Context) (string, error) {
+	deployment, err := r.getDeployment(ctx, deckhouseSystemNamespace, deckhouseDeploymentName)
+	if err != nil {
+		return "", err
+	}
+
+	for _, container := range deployment.Spec.Template.Spec.Containers {
+		if container.Name == deckhouseContainerName {
+			return container.Image, nil
+		}
+	}
+
+	return "", fmt.Errorf("no %q container", deckhouseContainerName)
+}
+
+// parentDeckhouseImageDigest returns the digest the newest running deckhouse pod resolved to, or "".
+func (r *reconciler) parentDeckhouseImageDigest(ctx context.Context) string {
+	pods := &corev1.PodList{}
+	if err := r.client.List(ctx, pods,
+		client.InNamespace(deckhouseSystemNamespace),
+		client.MatchingLabels{"app": deckhouseDeploymentName},
+	); err != nil {
+		return ""
+	}
+
+	best := ""
+	var bestTS time.Time
+	for i := range pods.Items {
+		pod := &pods.Items[i]
+		if pod.Status.Phase != corev1.PodRunning {
+			continue
+		}
+		for _, cs := range pod.Status.ContainerStatuses {
+			if cs.Name != deckhouseContainerName {
+				continue
+			}
+			if d := digestFromImageID(cs.ImageID); d != "" && pod.CreationTimestamp.After(bestTS) {
+				best, bestTS = d, pod.CreationTimestamp.Time
+			}
+		}
+	}
+	return best
+}
+
+// digestFromImageID returns the repo digest from a containerd imageID (registry/repo@sha256:...),
+// or "" if it carries none.
+func digestFromImageID(imageID string) string {
+	if at := strings.LastIndex(imageID, "@"); at != -1 {
+		return imageID[at+1:]
+	}
+	return ""
+}
+
+// Namespace
+func getTenantNamespace(ctx context.Context, tc client.Client, name string) (*corev1.Namespace, error) {
+	ns := &corev1.Namespace{}
+	err := tc.Get(ctx, client.ObjectKey{Name: name}, ns)
+	return ns, err
+}
+
+func createTenantNamespace(ctx context.Context, tc client.Client, ns *corev1.Namespace) error {
+	return tc.Create(ctx, ns)
+}
+
+// Secret
+func getTenantSecret(ctx context.Context, tc client.Client, namespace, name string) (*corev1.Secret, error) {
+	secret := &corev1.Secret{}
+	err := tc.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, secret)
+	return secret, err
+}
+
+func createTenantSecret(ctx context.Context, tc client.Client, secret *corev1.Secret) error {
+	return tc.Create(ctx, secret)
+}
+
+// patchTenantSecret patches only .data, which has a single writer (this
+// controller), so a merge patch without optimistic lock is safe.
+func patchTenantSecret(ctx context.Context, tc client.Client, base, secret *corev1.Secret) error {
+	return tc.Patch(ctx, secret, client.MergeFrom(base))
+}
+
+// ConfigMap
+func getTenantConfigMap(ctx context.Context, tc client.Client, namespace, name string) (*corev1.ConfigMap, error) {
+	configMap := &corev1.ConfigMap{}
+	err := tc.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, configMap)
+	return configMap, err
+}
+
+func createTenantConfigMap(ctx context.Context, tc client.Client, configMap *corev1.ConfigMap) error {
+	return tc.Create(ctx, configMap)
+}
+
+// Service
+func getTenantService(ctx context.Context, tc client.Client, namespace, name string) (*corev1.Service, error) {
+	service := &corev1.Service{}
+	err := tc.Get(ctx, client.ObjectKey{Namespace: namespace, Name: name}, service)
+	return service, err
+}
+
+func createTenantService(ctx context.Context, tc client.Client, service *corev1.Service) error {
+	return tc.Create(ctx, service)
+}
