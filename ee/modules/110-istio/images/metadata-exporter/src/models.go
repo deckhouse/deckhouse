@@ -65,6 +65,7 @@ type FederationPrivateMetadata struct {
 type MulticlusterPrivateMetadata struct {
 	IngressGateways *[]IngressGateway `json:"ingressGateways,omitempty"`
 	APIHost         string            `json:"apiHost,omitempty"`
+	ClusterID       string            `json:"clusterID,omitempty"`
 	NetworkName     string            `json:"networkName,omitempty"`
 }
 

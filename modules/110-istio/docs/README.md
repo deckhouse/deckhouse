@@ -399,8 +399,8 @@ In case of issues when working with a multi-cluster, it is necessary to check in
 
    <!-- markdownlint-disable MD031 -->
    ```console
-   NAME          SECRET                                     STATUS     ISTIOD
-   cluster-b     d8-istio/istio-remote-secret-cluster-b     synced     istiod-v1x29-5c57d85b54-k8pl7
+   NAME                        SECRET                                     STATUS     ISTIOD
+   cluster-local-2451237693    d8-istio/istio-remote-secret-cluster-b     synced     istiod-v1x29-5c57d85b54-k8pl7
    ```
    {: .nowrap-default }
    <!-- markdownlint-enable MD031 -->

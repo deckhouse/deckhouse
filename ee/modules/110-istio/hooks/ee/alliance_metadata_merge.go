@@ -48,6 +48,7 @@ type IstioFederationMergeCrdInfo struct {
 type IstioMulticlusterMergeCrdInfo struct {
 	APIHost                  string                               `json:"apiHost"`
 	APIJWT                   string                               `json:"apiJWT"`
+	ClusterID                string                               `json:"clusterID"`
 	ClusterUUID              string                               `json:"clusterUUID"`
 	EnableIngressGateway     bool                                 `json:"enableIngressGateway"`
 	EnableInsecureConnection bool                                 `json:"insecureSkipVerify"`
@@ -171,6 +172,7 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	var (
 		igs         *[]eeCrd.MulticlusterIngressGateways
 		apiHost     string
+		clusterID   string
 		networkName string
 		p           *eeCrd.AlliancePublicMetadata
 		uuid        string
@@ -182,6 +184,7 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 			igs = multicluster.Status.MetadataCache.Private.IngressGateways
 		}
 		apiHost = multicluster.Status.MetadataCache.Private.APIHost
+		clusterID = multicluster.Status.MetadataCache.Private.ClusterIDOrDerived()
 		networkName = multicluster.Status.MetadataCache.Private.NetworkName
 	}
 	if multicluster.Status.MetadataCache.Public != nil {
@@ -192,6 +195,7 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 
 	return IstioMulticlusterMergeCrdInfo{
 		APIHost:                  apiHost,
+		ClusterID:                clusterID,
 		ClusterUUID:              uuid,
 		EnableIngressGateway:     multicluster.Spec.EnableIngressGateway,
 		EnableInsecureConnection: multicluster.Spec.Metadata.EnableInsecureConnection,
@@ -207,8 +211,8 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 
 // Simplified struct for storing only essential token data
 type IstioRemoteSecretToken struct {
-	MultiClusterName string `json:"multiClusterName"`
-	Token            string `json:"token"`
+	ClusterID string `json:"clusterID"`
+	Token     string `json:"token"`
 }
 
 // Kubeconfig represents the structure of a kubeconfig file
@@ -231,8 +235,10 @@ type TokenValidationResult struct {
 // If token expires sooner, it will be proactively reissued (hook runs once a month).
 const expiresSoonThreshold = 30 * 24 * time.Hour
 
-// validateJWTToken validates a JWT token and checks if it's expired or expires soon
-func validateJWTToken(tokenString string) TokenValidationResult {
+// validateJWTToken validates a JWT token: it must be addressed to
+// expectedAudience (the peer's clusterUUID) and must not be expired or about
+// to expire.
+func validateJWTToken(tokenString string, expectedAudience string) TokenValidationResult {
 	if tokenString == "" {
 		return TokenValidationResult{
 			NeedReissue: true,
@@ -258,6 +264,13 @@ func validateJWTToken(tokenString string) TokenValidationResult {
 		return TokenValidationResult{
 			NeedReissue: true,
 			Error:       fmt.Sprintf("failed to unmarshal claims: %v", err),
+		}
+	}
+
+	if aud, _ := claims["aud"].(string); aud != expectedAudience {
+		return TokenValidationResult{
+			NeedReissue: true,
+			Error:       fmt.Sprintf("token audience %q doesn't match the expected %q", aud, expectedAudience),
 		}
 	}
 
@@ -293,17 +306,17 @@ func applyIstioRemoteSecretFilter(obj *unstructured.Unstructured) (go_hook.Filte
 		return nil, fmt.Errorf("secret %s is not an istio remote secret", secretName)
 	}
 
-	// Extract cluster name from annotation instead of parsing from secret name
+	// Extract the cluster ID from the annotation instead of parsing from secret name
 	annotations := secret.GetAnnotations()
-	clusterName, exists := annotations["networking.istio.io/cluster"]
+	clusterID, exists := annotations["networking.istio.io/cluster"]
 	if !exists {
 		return nil, fmt.Errorf("secret %s does not have required annotation 'networking.istio.io/cluster'", secretName)
 	}
 
 	// Get the base64-encoded kubeconfig from the field named after the cluster
-	secData, exists := secret.Data[clusterName]
+	secData, exists := secret.Data[clusterID]
 	if !exists {
-		return nil, fmt.Errorf("secret %s does not contain '%s' field", secretName, clusterName)
+		return nil, fmt.Errorf("secret %s does not contain '%s' field", secretName, clusterID)
 	}
 
 	var kubeconfigBytes []byte
@@ -350,8 +363,8 @@ func applyIstioRemoteSecretFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	}
 
 	return IstioRemoteSecretToken{
-		MultiClusterName: clusterName,
-		Token:            token,
+		ClusterID: clusterID,
+		Token:     token,
 	}, nil
 }
 
@@ -403,7 +416,7 @@ func metadataMerge(_ context.Context, input *go_hook.HookInput) error {
 	// Create a map of cluster names to tokens from remote secrets for quick lookup
 	secretTokens := make(map[string]string)
 	for secretInfo := range sdkobjectpatch.SnapshotIter[IstioRemoteSecretToken](input.Snapshots.Get("istioRemoteSecrets")) {
-		secretTokens[secretInfo.MultiClusterName] = secretInfo.Token
+		secretTokens[secretInfo.ClusterID] = secretInfo.Token
 	}
 
 federationsLoop:
@@ -570,23 +583,24 @@ multiclustersLoop:
 		}
 		remotePublicMetadata[multiclusterInfo.Public.ClusterUUID] = *multiclusterInfo.Public
 
-		if multiclusterInfo.APIHost == "" || multiclusterInfo.NetworkName == "" {
+		if multiclusterInfo.APIHost == "" || multiclusterInfo.NetworkName == "" || multiclusterInfo.ClusterID == "" {
 			input.Logger.Warn("private metadata for IstioMulticluster wasn't fetched yet", slog.String("name", multiclusterInfo.Name))
 			continue multiclustersLoop
 		}
+
 		if multiclusterInfo.EnableIngressGateway &&
 			(multiclusterInfo.IngressGateways == nil || len(*multiclusterInfo.IngressGateways) == 0) {
 			input.Logger.Warn("ingressGateways for IstioMulticluster weren't fetched yet", slog.String("name", multiclusterInfo.Name))
 			continue multiclustersLoop
 		}
 
-		// Check existing token from remote secrets and validate it
-		existingToken := secretTokens[multiclusterInfo.Name]
+		// Check existing token from remote secrets and validate it.
+		existingToken := secretTokens[multiclusterInfo.ClusterID]
 
 		input.Logger.Info("validating existing token",
 			slog.String("name", multiclusterInfo.Name))
 
-		validationResult := validateJWTToken(existingToken)
+		validationResult := validateJWTToken(existingToken, multiclusterInfo.ClusterUUID)
 		input.Logger.Info("token validation result",
 			slog.String("name", multiclusterInfo.Name),
 			slog.Bool("needReissue", validationResult.NeedReissue), //nolint:sloglint

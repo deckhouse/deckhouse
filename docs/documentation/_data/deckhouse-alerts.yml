@@ -2046,7 +2046,7 @@ alerts:
       module: istio
       edition: ee
       description: |
-        The Istio control plane instance `{{$labels.istiod}}` cannot synchronize with the remote cluster `{{$labels.cluster_id}}`.
+        {{ if $labels.multicluster_name }}The Istio control plane instance `{{$labels.istiod}}` cannot synchronize with the remote cluster described by IstioMulticluster `{{$labels.multicluster_name}}` (cluster ID `{{$labels.cluster_id}}`).{{ else }}The Istio control plane instance `{{$labels.istiod}}` cannot synchronize with the remote cluster `{{$labels.cluster_id}}`.{{ end }}
 
         Possible causes:
 
@@ -2055,8 +2055,20 @@ alerts:
         - The remote ServiceAccount token is invalid or expired.
         - There is a TLS or certificate issue between the clusters.
         - Remote and local Istio versions mismatch.
+
+        {{ if $labels.multicluster_name }}Inspect the resource:
+
+        ```bash
+        d8 k describe istiomulticluster {{$labels.multicluster_name}}
+        ```
+
+        `Root CA` should be set, `Public Last Fetch Timestamp` should be recent, and `Ingress Gateways` should list the remote cluster's IngressGateway addresses.
+
+        If there is no such resource, this cluster was registered by the secret `{{$labels.secret}}` alone — check the API address and the token in the kubeconfig it stores.
+        {{ else }}No IstioMulticluster resource registered this cluster, so check the API address and the token in the kubeconfig stored in the secret `{{$labels.secret}}`.
+        {{ end }}
       summary: |
-        Istio remote cluster {{$labels.cluster_id}} is not synchronized.
+        {{ if $labels.multicluster_name }}IstioMulticluster {{ $labels.multicluster_name }} is not synchronized.{{ else }}Istio remote cluster {{ $labels.cluster_id }} is not synchronized.{{ end }}
       severity: "4"
       markupFormat: markdown
     - name: D8IstioReservedUIDConflict

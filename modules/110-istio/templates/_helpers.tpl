@@ -33,8 +33,12 @@
   third-party-jwt
 {{- end -}}
 
+{{- define "istioClusterID" -}}
+  {{- .Values.global.discovery.clusterDomain | replace "." "-" }}-{{ adler32sum .Values.global.discovery.clusterUUID -}}
+{{- end -}}
+
 {{- define "istioNetworkName" -}}
-  network-{{ .Values.global.discovery.clusterDomain | replace "." "-" }}-{{ adler32sum $.Values.global.discovery.clusterUUID }}
+  network-{{ include "istioClusterID" . }}
 {{- end -}}
 
 {{- define "istioSupportsAmbient" -}}
