@@ -97,10 +97,10 @@ The module consists of the following components:
 
 1. **User-api**: A component that implements a self-service for users to reset a password for their user account. The service is available to the user only via the DKP web interface and does not require platform administrator rights. The password can only be reset for the current user. User-api validates the incoming requests tokens in dex component. To perform this operation, the component creates UserOperation custom resource of the `ResetPassword` type, which is processed by the user-authn-controller component.
 
-It consists of the following containers:
+   It consists of the following containers:
 
-* **self-signed-generator**: Init container that generates a self-signed certificate when the pod starts.
-* **user-api**: Main container of the service.
+   * **self-signed-generator**: Init container that generates a self-signed certificate when the pod starts.
+   * **user-api**: Main container of the service.
 
 1. **Basic-auth-proxy**: An optional component consisting of a single **proxy** container, which is launched when basic authentication is enabled in the settings of one of an external providers. When connecting to the Kubernetes API, the basic-auth-proxy component performs basic user authentication with external providers via dex, caches credentials validation results, and proxies authenticated requests to the Kubernetes API.
 
