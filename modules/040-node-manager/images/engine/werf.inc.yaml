@@ -1,4 +1,6 @@
-{{- $version := "v0.1.11" }}
+{{- /* Not a release: engine branch fix-kmod-multicall (pipeline 769874), which ships
+       kmod's shared libraries. Back to a tag once engine v0.1.12 is out. */ -}}
+{{- $version := "ea4c125f33d864cc025ca394bf8dee9a72384089ef3a262f29436f51-1788779152798" }}
 {{- if ne $.Env "CSE" }}
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}-artifact

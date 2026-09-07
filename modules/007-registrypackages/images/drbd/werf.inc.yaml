@@ -1,0 +1,153 @@
+# DRBD modules built against the Deckhouse Engine kernel, delivered as a signed system
+# extension for a NodeExtensionRequest. Test scaffold: compiled on alt:sisyphus because
+# no base_images builder has gcc >= 14 together with coccinelle.
+{{- if ne $.Env "CSE" }}
+{{- $drbdVersion := "9.2.18-flant.10" }}
+{{- /* werf tag of the kernel-devel image from kernel branch feat/kernel-devel-export
+       (pipeline 769770): a build separate from the engine kernel's, hence the CRC guard. */ -}}
+{{- $kernelDevelTag := "f75171ea30dadf55f88538863cb062f8febeebd3cd8106d5489e8721-1788776522777" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+final: false
+fromImage: common/src-artifact
+shell:
+  install:
+  # From GitHub: the SOURCE_REPO mirror carries neither deckhouse/3p-drbd nor 3p-drbd-headers.
+  - git clone -b drbd-{{ $drbdVersion }} --depth 1 https://github.com/deckhouse/3p-drbd.git /src/drbd
+  # The drbd-headers submodule at the commit the tag records, not at a branch head.
+  - |
+    set -e
+    headers_sha="$(git -C /src/drbd rev-parse HEAD:drbd/drbd-headers)"
+    git -C /src/drbd/drbd/drbd-headers init -q
+    git -C /src/drbd/drbd/drbd-headers fetch --depth 1 https://github.com/deckhouse/3p-drbd-headers.git "${headers_sha}"
+    git -C /src/drbd/drbd/drbd-headers checkout -q FETCH_HEAD
+  # drbd's Makefile refuses to build without .git unless this file exists. A block,
+  # because a bare "GIT-hash: " list item parses as a YAML mapping.
+  - |
+    set -e
+    git -C /src/drbd rev-parse HEAD | sed 's/^/GIT-hash: /' > /src/drbd/drbd/.drbd_git_revision
+    rm -rf /src/drbd/.git /src/drbd/drbd/drbd-headers/.git
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-kernel-devel-artifact
+final: false
+from: dev-registry.deckhouse.io/container-factory/kernel:{{ $kernelDevelTag }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+final: false
+from: alt:sisyphus
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-src-artifact
+  add: /src/drbd
+  to: /drbd
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-kernel-devel-artifact
+  add: /usr/src
+  to: /usr/src
+  before: install
+# One module of the kernel the node runs, for the CRC guard below.
+- image: {{ $.ModuleName }}/kernel-modules-kernel-artifact
+  add: /lib/modules
+  to: /engine-kernel
+  includePaths:
+  - '*/kernel/drivers/md/dm-thin-pool.ko'
+  before: install
+shell:
+  beforeInstall:
+  - export DEBIAN_FRONTEND=noninteractive
+  - apt-get update
+  - apt-get install -y gcc15 make binutils bc kmod coccinelle patch elfutils-devel bison flex m4 perl coreutils
+  - apt-get clean && rm -rf /var/lib/apt/lists/*
+  # ALT names the compiler x86_64-alt-linux-gcc-15; DRBD's spatch step calls plain gcc.
+  - for n in gcc-15 gcc cc x86_64-alt-linux-gcc; do ln -sf x86_64-alt-linux-gcc-15 /usr/bin/$n; done
+  install:
+  - export KDIR="$(ls -d /usr/src/linux-headers-*)"
+  - export KREL="$(cat ${KDIR}/include/config/kernel.release)"
+  - make -C /drbd module KDIR="${KDIR}" KVER="${KREL}" CC=gcc-15
+  - strip --strip-debug /drbd/drbd/build-current/drbd.ko /drbd/drbd/build-current/drbd_transport_tcp.ko
+  # vermagic must name the kernel the node runs, or insmod fails with "invalid module format".
+  - for m in drbd drbd_transport_tcp; do modinfo -F vermagic /drbd/drbd/build-current/${m}.ko | grep -q "^${KREL} SMP preempt mod_unload modversions" || { modinfo -F vermagic /drbd/drbd/build-current/${m}.ko; exit 1; }; done
+  # The devel tree and the engine kernel are separate builds: every CRC the engine
+  # kernel's own dm-thin-pool.ko imports must be in this tree's Module.symvers, or the
+  # node refuses drbd.ko with "disagrees about version of symbol".
+  - |
+    set -e
+    modprobe --dump-modversions /engine-kernel/*/kernel/drivers/md/dm-thin-pool.ko > /tmp/engine.modversions
+    test -s /tmp/engine.modversions
+    while read -r crc sym; do
+      grep -qE "^${crc}[[:space:]]+${sym}[[:space:]]" "${KDIR}/Module.symvers" || { echo "CRC of ${sym} differs from the engine kernel"; exit 1; }
+    done < /tmp/engine.modversions
+  - mkdir -p /out/usr/lib/modules/${KREL}/extra
+  - cp /drbd/drbd/build-current/drbd.ko /drbd/drbd/build-current/drbd_transport_tcp.ko /out/usr/lib/modules/${KREL}/extra/
+  - cp ${KDIR}/scripts/sign-file /out/sign-file
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact
+final: false
+from: {{ index $.Images "builder/distroless" }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+  add: /out/usr
+  to: /sysext/usr
+  before: install
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-build-artifact
+  add: /out/sign-file
+  to: /sign-file
+  before: install
+{{- include "engine sysext sign imports" $ }}
+{{- include "engine sysext sign secrets" . }}
+shell:
+  beforeInstall:
+  - pm install erofs-utils coreutils cryptsetup systemd@260.4
+  - mkdir -p /out
+  install:
+  - mkdir -p /sysext/usr/lib/extension-release.d
+  - printf 'ID=deckhouse-engine\nSYSEXT_LEVEL=1.0\n' > /sysext/usr/lib/extension-release.d/extension-release.drbd
+  {{- if eq (env "WERF_OLCEDAR_SYSEXT_SIGN_ENABLED" "") "true" }}
+  # The modules signed with the kernel's own Transit key, one at a time. Mirrors the
+  # batch sign step of kernel/images/kernel/package.yml; the Vault login is the one
+  # of "engine sysext sign" in .werf/defines/engine-sysext.tmpl.
+  - pm install openssl curl jq
+  - |
+    set -eo pipefail
+    SIGN_KEY_PATH="dh-engine-signer/sign/dh-engine-2026-sep/sha2-256"
+    SIGNER_CERT_PATH="dh-engine-root-pki/cert/37:8b:81:ed:09:15:ba:a1:76:5c:cb:58:55:c0:a4:49:45:3e:23:e3"
+    export VAULT_ADDR="$(cat /run/secrets/VAULT_ADDR)"
+    export VAULT_TOKEN="$(d8 stronghold write -field=token auth/github/login role="$(cat /run/secrets/WERF_OLCEDAR_VAULT_AUTH_ROLE)" \
+      jwt="$(curl -fsS -H "Authorization: bearer $(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_TOKEN)" "$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_URL)&audience=github-access-aud" | jq -r .value)")"
+    d8 stronghold read -field=certificate "${SIGNER_CERT_PATH}" > /tmp/engine-signer.pem
+    for ko in /sysext/usr/lib/modules/*/extra/*.ko; do
+      SIGNATURE="$(d8 stronghold write -field=signature "${SIGN_KEY_PATH}" prehashed=true signature_algorithm=pkcs1v15 input="$(openssl dgst -sha256 -binary "$ko" | base64 | tr -d '\n')")"
+      printf '%s' "${SIGNATURE#vault:v*:}" | base64 -d > /tmp/ko.sig
+      test -s /tmp/ko.sig || { echo "signing ${ko} produced no signature; see the Vault error above" >&2; exit 1; }
+      /usr/lib/systemd/systemd-keyutil pkcs7 --certificate=/tmp/engine-signer.pem --signature=/tmp/ko.sig --hash-algorithm=sha256 --output=/tmp/ko.p7s
+      /sign-file -s /tmp/ko.p7s sha256 /tmp/engine-signer.pem "$ko"
+      # sign-file says nothing when it writes nothing; the trailer is what the kernel checks.
+      [ "$(tail -c 28 "$ko")" = '~Module signature appended~' ] || { echo "no signature trailer on ${ko}" >&2; exit 1; }
+    done
+  {{- else }}
+  - echo "WERF_OLCEDAR_SYSEXT_SIGN_ENABLED is not true - shipping unsigned kernel modules, an Engine node will refuse to load them"
+  {{- end }}
+  - mkfs.erofs -L _sysext -U 00000000-0000-0000-0000-000000000000 -z lzma,9 /out/drbd.raw sysext/
+  - veritysetup format /out/drbd.raw /out/drbd.verity --root-hash-file=roothash.txt
+  - tr -d ' \n' < roothash.txt > /out/drbd.roothash
+  - veritysetup verify /out/drbd.raw /out/drbd.verity "$(cat /out/drbd.roothash)"
+{{- include "engine sysext sign" "drbd" }}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext
+from: {{ index $.Images "builder/scratch" }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-sysext-artifact
+  add: /out
+  to: /
+  includePaths:
+  - '**/*'
+  before: setup
+imageSpec:
+  config:
+    labels: { "distro": "deckhouse-engine", "sysext_level": "1.0", "drbd": "{{ $drbdVersion }}" }
+    clearUser: true
+    clearWorkingDir: true
+    clearCmd: true
+    clearEntrypoint: true
+    removeEnv: ["/.*/"]
+{{- include "vex mitigation" (list $ (printf "%s/%s-sysext" $.ModuleName $.ImageName)) }}
+{{- end }}
