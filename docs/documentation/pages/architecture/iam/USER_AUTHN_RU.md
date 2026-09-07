@@ -67,7 +67,7 @@ description: Архитектура модуля user-authn в Deckhouse Kuberne
 
    Состоит из следующих контейнеров:
 
-   * **dex** — основной контейнер, реализующий функции Dex; 
+   * **dex** — основной контейнер, реализующий функции Dex;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам провайдера. Является [Open Source-проектом](https://github.com/brancz/kube-rbac-proxy).
 
 1. **Dex-authenticator** — [middleware](https://github.com/oauth2-proxy/oauth2-proxy/blob/master/docs/static/img/simplified-architecture.svg)-сервис для аутентификации запросов к приложениям через сервис аутентификации кластера DKP.
@@ -83,7 +83,7 @@ description: Архитектура модуля user-authn в Deckhouse Kuberne
 1. **User-authn-controller** — контроллер, состоящий из одного контейнера **user-authn-controller** и выполняющий следующие операции:
 
    * управление кастомными ресурсами модуля:
-     
+
      * [Group](/modules/user-authn/cr.html#group) — ресурс, описывающий статическую группу;
      * [User](/modules/user-authn/cr.html#user) — ресурс, описывающий статического пользователя;
      * UserAccount — ресурс, описывающий представление объектов Dex Password и OfflineSessions для веб-интерфейса DKP;
@@ -95,7 +95,7 @@ description: Архитектура модуля user-authn в Deckhouse Kuberne
    * выявление конфликтующих настроек TLS-сертификатов [в конфигурации подключения стороннего провайдера LDAP](/modules/user-authn/cr.html#dexprovider-v1-spec-ldap) и экспорт соответствующей метрики.
 
    User-authn-controller при управлении кастомными ресурсами модуля использует в качестве бэкенда кастомные ресурсы AuthCode, AuthRequest, Password, OfflineSession, Refreshtoken и т.д. API-группы `dex.coreos.com`, используемые провайдером Dex как хранилище.
-     
+
 1. **User-api** — компонент, реализующий сервис сброса пользователем пароля своей учетной записи. Сервис доступен пользователю только через веб-интерфейс DKP и не требует прав администратора платформы. Сбросить можно пароль только для текущего пользователя. User-api валидирует токены поступающих запросов в dex. Для выполнения данной операции компонент создает кастомный ресурс UserOperation с типом `ResetPassword`, который обрабатывается компонентом user-authn-controller.
 
    Состоит из следующих контейнеров:
@@ -111,7 +111,7 @@ description: Архитектура модуля user-authn в Deckhouse Kuberne
 
 1. **Внешние провайдеры аутентификации**.
 1. **Kube-apiserver**:
-   
+
    * управление кастомными ресурсами модуля;
    * авторизация запросов на получение метрик.
 

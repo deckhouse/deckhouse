@@ -82,7 +82,7 @@ The module consists of the following components:
 1. **User-authn-controller**: A controller that consists of a single **user-authn-controller** container and performing following operations:
 
    * Manages module custom resources:
-     
+
      * [Group](/modules/user-authn/cr.html#group): A resource that describes user group.
      * [User](/modules/user-authn/cr.html#user): A resource that describes static user.
      * UserAccount: A resource that describes view of Dex Password and OfflineSessions objects for the DKP web UI.
@@ -95,12 +95,12 @@ The module consists of the following components:
 
    User-authn-controller uses `dex.coreos.com` API group custom resources (AuthCode, AuthRequest, Password, OfflineSession, Refreshtoken, etc. used by Dex as a storage) as a backend to manage module custom resources.
 
-1. **User-api**: A component that implements a self-service for users to reset a pasword for their user account. The service is available to the user only via the DKP web interface and does not require platform administrator rights. The password can only be reset for the current user. User-api validates the incoming requests tokens in dex component. To perform this operation, the component creates UserOperation custom resource of the `ResetPassword` type, which is processed by the user-authn-controller component.
+1. **User-api**: A component that implements a self-service for users to reset a password for their user account. The service is available to the user only via the DKP web interface and does not require platform administrator rights. The password can only be reset for the current user. User-api validates the incoming requests tokens in dex component. To perform this operation, the component creates UserOperation custom resource of the `ResetPassword` type, which is processed by the user-authn-controller component.
 
 It consists of the following containers:
 
-   * **self-signed-generator**: Init container that generates a self-signed certificate when the pod starts.
-   * **user-api**: Main container of the service.
+* **self-signed-generator**: Init container that generates a self-signed certificate when the pod starts.
+* **user-api**: Main container of the service.
 
 1. **Basic-auth-proxy**: An optional component consisting of a single **proxy** container, which is launched when basic authentication is enabled in the settings of one of an external providers. When connecting to the Kubernetes API, the basic-auth-proxy component performs basic user authentication with external providers via dex, caches credentials validation results, and proxies authenticated requests to the Kubernetes API.
 
@@ -109,7 +109,7 @@ It consists of the following containers:
 The module interacts with the following components:
 
 1. **External authentication providers**.
-1. **Kube-apiserver**: 
+1. **Kube-apiserver**:
 
    * Manages module custom resources.
    * Authorizes requests for metrics.
