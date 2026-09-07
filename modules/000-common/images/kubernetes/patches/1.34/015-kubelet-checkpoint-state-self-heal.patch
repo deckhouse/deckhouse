@@ -1,0 +1,2289 @@
+diff --git a/pkg/kubelet/cm/checkpointselfheal/checkpoint.go b/pkg/kubelet/cm/checkpointselfheal/checkpoint.go
+new file mode 100644
+index 00000000000..88976866c56
+--- /dev/null
++++ b/pkg/kubelet/cm/checkpointselfheal/checkpoint.go
+@@ -0,0 +1,109 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package checkpointselfheal
++
++import (
++	"k8s.io/klog/v2"
++	"k8s.io/kubernetes/pkg/kubelet/checkpointmanager"
++	cpustate "k8s.io/kubernetes/pkg/kubelet/cm/cpumanager/state"
++	memorystate "k8s.io/kubernetes/pkg/kubelet/cm/memorymanager/state"
++)
++
++// inspectCheckpoint reports the policy that wrote a manager's checkpoint and
++// the containers it holds assignments for, reading it with that manager's own
++// checkpoint type through upstream's own reader.
++//
++// # Why the error is discarded
++//
++// checkpointmanager.GetCheckpoint unmarshals the file first and verifies the
++// checksum afterwards, so a checkpoint that fails verification is already fully
++// populated by the time the error comes back. That is the property this relies
++// on, and upstream relies on it too: restoreState resets its own struct "back
++// to 0" after a failed read precisely because the failed read left data in it.
++//
++// Reading past the failure is the entire point. The file is about to be
++// deleted, and its contents are the only record of which containers hold
++// assignments. A file that cannot be decoded at all yields no refs, which
++// degrades to "reset without naming victims" rather than to an error.
++//
++// # Why upstream's types instead of our own
++//
++// The on-disk format is versioned and has changed more than once: the CPU
++// manager has had a v1 (entries keyed by container id), a v2 (keyed by pod UID
++// and container name) and, with the pod-level resource managers gate in 1.36, a
++// v3 that adds podEntries; the memory manager has had two. Parsing that by hand
++// would mean re-checking the format on every rebase, and getting it wrong would
++// be silent -- a struct that no longer matches simply yields no victims, and
++// nothing would be stopped.
++//
++// CPUManagerCheckpoint and MemoryManagerCheckpoint always name the *current*
++// format on every branch (in 1.34 CPUManagerCheckpointV2 is an alias of
++// CPUManagerCheckpoint; in 1.36 CPUManagerCheckpoint became the v3 shape and V2
++// was demoted to its own type). So this one source file works unchanged across
++// 1.32 through 1.36, and if a future release reshapes the format, the build
++// breaks here instead of the patch quietly doing nothing.
++//
++// Only PolicyName and Entries are read, and both have been stable across every
++// format so far. Pod-level assignments (podEntries, 1.36, alpha and off by
++// default) are deliberately not read: the field does not exist on the older
++// branches, so touching it would fork this file per version for a feature that
++// is not enabled.
++func inspectCheckpoint(manager ManagerName, stateDir, checkpointName string) (policyName string, refs []ContainerRef) {
++	mgr, err := checkpointmanager.NewCheckpointManager(stateDir)
++	if err != nil {
++		klog.V(2).InfoS(LogMarker+" could not open the checkpoint directory for inspection",
++			"manager", manager, "stateDir", stateDir, "err", err)
++		debug("checkpoint directory could not be opened",
++			"manager", manager, "stateDir", stateDir, "err", err)
++		return "", nil
++	}
++
++	switch manager {
++	case ManagerCPU:
++		cp := cpustate.NewCPUManagerCheckpoint()
++		readErr := mgr.GetCheckpoint(checkpointName, cp)
++		debug("cpu checkpoint read",
++			"stateDir", stateDir, "checkpointName", checkpointName,
++			"policyName", cp.PolicyName, "defaultCPUSet", cp.DefaultCPUSet,
++			"pods", len(cp.Entries), "readErr", readErr)
++		return cp.PolicyName, refsFromEntries(cp.Entries)
++
++	case ManagerMemory:
++		cp := memorystate.NewMemoryManagerCheckpoint()
++		readErr := mgr.GetCheckpoint(checkpointName, cp)
++		debug("memory checkpoint read",
++			"stateDir", stateDir, "checkpointName", checkpointName,
++			"policyName", cp.PolicyName, "numaNodes", len(cp.MachineState),
++			"pods", len(cp.Entries), "readErr", readErr)
++		return cp.PolicyName, refsFromEntries(cp.Entries)
++	}
++
++	klog.ErrorS(nil, LogMarker+" no checkpoint reader for manager", "manager", manager)
++	return "", nil
++}
++
++// refsFromEntries is RefsFrom with a debug line, so that the mapping from the
++// file's contents to the refs it produced is visible while this is being
++// checked on a cluster.
++func refsFromEntries[T any](entries map[string]map[string]T) []ContainerRef {
++	refs := RefsFrom(entries)
++	for _, ref := range refs {
++		debug("checkpoint holds an assignment",
++			"podUID", ref.PodUID, "containerName", ref.ContainerName)
++	}
++	return refs
++}
+diff --git a/pkg/kubelet/cm/checkpointselfheal/debug.go b/pkg/kubelet/cm/checkpointselfheal/debug.go
+new file mode 100644
+index 00000000000..017ddf9ded7
+--- /dev/null
++++ b/pkg/kubelet/cm/checkpointselfheal/debug.go
+@@ -0,0 +1,81 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package checkpointselfheal
++
++import (
++	"k8s.io/klog/v2"
++)
++
++// TEMPORARY -- bring-up tracing, to be deleted once this patch has been
++// validated on a cluster.
++//
++// There are two tiers of logging, and they answer different questions:
++//
++//   - LogMarker, permanent. Which manager reset what, why, which containers
++//     were stopped, and one line per manager when nothing was wrong. Small
++//     enough to keep in production forever.
++//     grep: journalctl -u kubelet | grep d8-numa-selfheal
++//
++//   - DebugMarker, this file. The evidence behind each of those decisions: what
++//     the checkpoint held before it was deleted, every container the runtime
++//     reported and in what state, the per-victim reasoning, how long each stop
++//     took, the marker file as written.
++//     grep: journalctl -u kubelet | grep d8-numa-selfheal-debug
++//
++// These lines are logged unconditionally, at Info, with no switch to turn them
++// on. That is on purpose: they exist for the period in which this patch is
++// being checked on real nodes, and they get deleted afterwards, so a runtime
++// control for them would be a knob nobody ever turns and one more thing to
++// remove later. Info rather than a V level for the same reason -- a V level
++// only shows up if the whole kubelet is run verbosely, which buries these lines
++// among everything else and makes the tracing useless exactly when it is
++// needed.
++//
++// # How to remove
++//
++//	rm pkg/kubelet/cm/checkpointselfheal/debug.go
++//	grep -rn ebug pkg/kubelet/cm/checkpointselfheal/   # delete every hit
++//
++// Nothing outside this package calls into it, so removal cannot break a caller.
++// The manager state before and after a reset deliberately has no line here:
++// upstream already logs it (state_mem's "Updated default CPUSet" when the
++// checkpoint is restored, and the policy's "Static policy initialized" once it
++// re-runs against the empty state), so duplicating it would mean touching the
++// patched upstream files for no new information.
++
++// DebugMarker prefixes this tier. It contains LogMarker's text, so a grep for
++// the permanent marker still finds these lines too, while a grep for this one
++// finds only them.
++const DebugMarker = "[d8-numa-selfheal-debug]"
++
++// debug logs one line of the temporary tier. Values are passed as key/value
++// pairs rather than interpolated into the message, so the lines stay
++// machine-readable like the rest of the kubelet log.
++func debug(msg string, keysAndValues ...interface{}) {
++	klog.InfoS(DebugMarker+" "+msg, keysAndValues...)
++}
++
++// debugBlob returns a bounded rendering of file content. Checkpoints are small,
++// but a corrupt one can hold anything at all, so the size is capped rather than
++// trusted.
++func debugBlob(blob []byte) string {
++	const limit = 2048
++	if len(blob) <= limit {
++		return string(blob)
++	}
++	return string(blob[:limit]) + "...[truncated]"
++}
+diff --git a/pkg/kubelet/cm/checkpointselfheal/doc.go b/pkg/kubelet/cm/checkpointselfheal/doc.go
+new file mode 100644
+index 00000000000..0747600fe92
+--- /dev/null
++++ b/pkg/kubelet/cm/checkpointselfheal/doc.go
+@@ -0,0 +1,70 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++// Package checkpointselfheal lets the kubelet start when the CPU manager or the
++// memory manager finds its checkpoint unusable, instead of exiting.
++//
++// Upstream behaviour is to refuse to start: staticPolicy.Start returns an error,
++// containerManagerImpl.Start propagates it and kubelet calls os.Exit(1) from
++// initializeRuntimeDependentModules, relying on the service manager to retry
++// forever. A node in that state needs a human. The causes are ordinary: a minor
++// upgrade that tightened validation, a changed online-CPU set, changed
++// pre-allocated hugepages, a changed NUMA zone count, a torn checkpoint write,
++// or per-NUMA MemTotal drift across reboots (kubernetes/kubernetes#131253).
++//
++// This package implements the other half of the upstream advice ("drain this
++// node and remove the policy state file"): the affected manager drops its
++// state, and the containers whose assignments lived in that state are stopped
++// so that the normal kubelet lifecycle recreates them and the manager pins them
++// again from a clean state. Only the affected manager is touched -- the causes
++// are independent, and memory drifts on its own while CPU only changes on
++// hotplug.
++//
++// # Ordering contract
++//
++// Victims are collected *before* anything is cleared. After a reset there is no
++// place left to read the old assignments from, so the order is part of the
++// contract rather than an implementation detail.
++//
++// # Why the stop is synchronous
++//
++// StopVictims runs inside containerManagerImpl.Start, before it returns. That
++// matters: kubelet marks the runtime synced only after Start returns, and
++// syncLoop skips every iteration while the runtime is not synced, so no pod can
++// be admitted while we are stopping containers. Between clearing the state and
++// stopping the containers there is a window in which CPUs and memory zones look
++// free in the state while still being physically occupied; a Guaranteed pod
++// admitted in that window would be handed CPUs that another container is still
++// using, turning a restored isolation into a lost one for two pods at once.
++// Doing the stop synchronously closes that window by construction instead of
++// relying on the upstream initialisation order staying the way it is today.
++//
++// The cost is paid knowingly: pod specs are not available that early, so
++// preStop hooks do not run and a fixed grace period is used instead of each
++// pod's terminationGracePeriodSeconds, and kubelet start is delayed by at most
++// stopDeadline on this path. Classifying which victims cannot restart
++// themselves (restartPolicy: Never, pods without a controller) also needs the
++// spec, so it is left to the consumer of the marker file rather than guessed
++// here.
++//
++// # Registry
++//
++// The victim registry is package level. That is deliberate: it keeps the change
++// to the upstream managers down to a few lines each with no interface changes
++// and no test fakes to update, which is what makes this patch cheap to rebase.
++// The kubelet is a single process and both managers are singletons, so there is
++// nothing to disambiguate. Tests use Clear.
++package checkpointselfheal
+diff --git a/pkg/kubelet/cm/checkpointselfheal/metrics.go b/pkg/kubelet/cm/checkpointselfheal/metrics.go
+new file mode 100644
+index 00000000000..c6cba65c043
+--- /dev/null
++++ b/pkg/kubelet/cm/checkpointselfheal/metrics.go
+@@ -0,0 +1,84 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package checkpointselfheal
++
++import (
++	"k8s.io/component-base/metrics"
++	"k8s.io/component-base/metrics/legacyregistry"
++)
++
++// The metrics are registered here rather than in pkg/kubelet/metrics so that
++// this patch does not touch that file: it is large, shared, and rewritten every
++// release, which makes it the most expensive place to carry a downstream
++// change. legacyregistry is the same registry kubelet serves on /metrics, so
++// self-registering changes nothing about how these are exposed.
++//
++// Alerting on these is not optional. This patch turns a loud refusal to start
++// into a quiet self-repair, which means a bug in whatever generates the kubelet
++// config would restart pinned workload across a whole NodeGroup instead of
++// failing visibly. Without an alert nobody would notice.
++
++const subsystem = "kubelet"
++
++var (
++	// resetsTotal counts resets by manager and by reason. Reason is a closed
++	// set derived from the code path, never error text, so it is safe to alert
++	// on and cannot blow up the label cardinality.
++	resetsTotal = metrics.NewCounterVec(
++		&metrics.CounterOpts{
++			Subsystem:      subsystem,
++			Name:           "checkpoint_state_reset_total",
++			Help:           "Cumulative number of times the kubelet reset a CPU or memory manager checkpoint instead of refusing to start. Any increase is a real event.",
++			StabilityLevel: metrics.ALPHA,
++		},
++		[]string{"manager", "reason"},
++	)
++
++	// stoppedContainersTotal counts containers actually stopped to bring
++	// reality back in line with the reset state. Separate from resetsTotal
++	// because a reset right after a reboot stops nothing, while a reset on a
++	// live node is a workload restart.
++	stoppedContainersTotal = metrics.NewCounterVec(
++		&metrics.CounterOpts{
++			Subsystem:      subsystem,
++			Name:           "checkpoint_state_reset_stopped_containers_total",
++			Help:           "Cumulative number of running containers stopped by the kubelet after resetting a CPU or memory manager checkpoint, so that they are recreated and pinned again.",
++			StabilityLevel: metrics.ALPHA,
++		},
++		[]string{"manager"},
++	)
++
++	// stopFailuresTotal counts victims that could not be stopped. Each one is a
++	// container still physically holding CPUs or a NUMA zone that the reset
++	// state now believes to be free, so this is the metric that means the node
++	// needs a human.
++	stopFailuresTotal = metrics.NewCounterVec(
++		&metrics.CounterOpts{
++			Subsystem:      subsystem,
++			Name:           "checkpoint_state_reset_stop_failures_total",
++			Help:           "Cumulative number of containers the kubelet failed to stop after resetting a CPU or memory manager checkpoint. Any increase means a container may still hold CPUs or a NUMA zone that the state considers free.",
++			StabilityLevel: metrics.ALPHA,
++		},
++		[]string{"manager"},
++	)
++)
++
++func init() {
++	legacyregistry.MustRegister(resetsTotal)
++	legacyregistry.MustRegister(stoppedContainersTotal)
++	legacyregistry.MustRegister(stopFailuresTotal)
++}
+diff --git a/pkg/kubelet/cm/checkpointselfheal/selfheal.go b/pkg/kubelet/cm/checkpointselfheal/selfheal.go
+new file mode 100644
+index 00000000000..777b91bf564
+--- /dev/null
++++ b/pkg/kubelet/cm/checkpointselfheal/selfheal.go
+@@ -0,0 +1,323 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package checkpointselfheal
++
++import (
++	"encoding/json"
++	"os"
++	"path/filepath"
++	"sort"
++	"sync"
++	"time"
++
++	"k8s.io/klog/v2"
++	"k8s.io/kubernetes/pkg/kubelet/cm/containermap"
++)
++
++// LogMarker prefixes every log line this package emits, so that one grep finds
++// the whole story on a node:
++//
++//	journalctl -u kubelet | grep d8-numa-selfheal
++//
++// The marker sits in the message text rather than in a structured field on
++// purpose: klog writes the text as msg="...", so the marker survives any
++// --logging-format, while searching by field does not.
++const LogMarker = "[d8-numa-selfheal]"
++
++// Version identifies this patch in the kubelet log. Bump it when the behaviour
++// changes, so that a log from a node says which build produced it.
++const Version = "1"
++
++// MarkerFileName is the machine-readable trace left next to the manager state
++// files. Its directory is the kubelet state directory, so the path follows
++// --root-dir and is never hardcoded.
++const MarkerFileName = "d8-numa-selfheal.json"
++
++// ManagerName is the manager whose checkpoint was reset. Only the affected
++// manager is ever touched.
++type ManagerName string
++
++const (
++	ManagerCPU    ManagerName = "cpu"
++	ManagerMemory ManagerName = "memory"
++)
++
++// Reason is why the checkpoint had to go. It is a closed set derived from the
++// code path taken, never from the text of an error, so that it is safe to use
++// as a metric label and to alert on.
++type Reason string
++
++const (
++	// ReasonPolicyMismatch means the checkpoint on disk was written by a
++	// different policy than the one now configured. Detected structurally, by
++	// comparing the policy name in the file with the configured one.
++	ReasonPolicyMismatch Reason = "policy_mismatch"
++	// ReasonCheckpointCorrupt means the checkpoint could not be restored at all:
++	// a bad checksum, a torn write, unparsable content. Named to match the
++	// enum in the task description.
++	ReasonCheckpointCorrupt Reason = "checkpoint_corrupt"
++	// ReasonStateValidation means the checkpoint was read fine but does not
++	// describe this machine any more: changed CPU topology, changed NUMA zones,
++	// changed hugepages, changed reserved memory, per-NUMA MemTotal drift.
++	ReasonStateValidation Reason = "state_validation"
++)
++
++// ContainerRef identifies a container the way the managers key their
++// assignments: by pod UID and container name, not by container id. A recreated
++// container gets a new id but keeps the same ref, which is exactly why clearing
++// the state is required and stopping alone would not be enough -- the manager
++// would see the pair already present and skip it.
++type ContainerRef struct {
++	PodUID        string `json:"podUID"`
++	ContainerName string `json:"containerName"`
++}
++
++// Victim is a ContainerRef resolved to a container id that the runtime knows
++// about. Fields after ContainerID are filled in by the stopper.
++type Victim struct {
++	PodUID        string `json:"podUID"`
++	ContainerName string `json:"containerName"`
++	ContainerID   string `json:"containerID"`
++
++	PodName      string `json:"podName,omitempty"`
++	PodNamespace string `json:"podNamespace,omitempty"`
++
++	// Stopped reports whether the container was actually stopped. A victim that
++	// was already gone by the time we looked is reported as skipped, not
++	// stopped, and is not counted as a stop.
++	Stopped bool   `json:"stopped"`
++	Skipped string `json:"skipped,omitempty"`
++	Error   string `json:"error,omitempty"`
++}
++
++// ResetRecord is one manager's reset, as it happened.
++type ResetRecord struct {
++	Manager    ManagerName `json:"manager"`
++	Reason     Reason      `json:"reason"`
++	Cause      string      `json:"cause"`
++	StateFile  string      `json:"stateFile"`
++	DetectedAt time.Time   `json:"detectedAt"`
++	Victims    []Victim    `json:"victims"`
++}
++
++// Marker is the JSON written to MarkerFileName. Consumers (bashible, an
++// operator, a node controller) read it to learn that this node healed itself
++// and which workload was disturbed. Whether a victim can restart on its own
++// needs the pod spec, which is not available this early in kubelet start, so
++// that classification is deliberately left to the reader of this file.
++type Marker struct {
++	Version   string        `json:"version"`
++	WrittenAt time.Time     `json:"writtenAt"`
++	Resets    []ResetRecord `json:"resets"`
++}
++
++var registry struct {
++	mu      sync.Mutex
++	records []ResetRecord
++}
++
++// Clear drops everything recorded so far. Only for tests.
++func Clear() {
++	registry.mu.Lock()
++	defer registry.mu.Unlock()
++	registry.records = nil
++}
++
++// Take returns everything recorded so far and empties the registry.
++func Take() []ResetRecord {
++	registry.mu.Lock()
++	defer registry.mu.Unlock()
++	records := registry.records
++	registry.records = nil
++	return records
++}
++
++// Pending reports how many resets are waiting to be acted on. Only for tests
++// and for logging.
++func Pending() int {
++	registry.mu.Lock()
++	defer registry.mu.Unlock()
++	return len(registry.records)
++}
++
++// LogHealthy emits one line per manager whose checkpoint validated cleanly.
++//
++// This line is not decoration. Without it there is no way to tell "the patch
++// ran and found nothing wrong" from "this node is running an unpatched binary",
++// which is the single most common way to waste time debugging this on a
++// cluster.
++func LogHealthy(manager ManagerName) {
++	klog.InfoS(LogMarker+" checkpoint validated, nothing to do",
++		"manager", manager, "patchVersion", Version)
++}
++
++// RefsFrom turns a manager's assignment map into container refs. Both managers
++// key assignments as podUID -> containerName -> something, so one helper covers
++// both and neither state package needs to be imported here.
++func RefsFrom[T any](assignments map[string]map[string]T) []ContainerRef {
++	var refs []ContainerRef
++	for podUID, containers := range assignments {
++		for containerName := range containers {
++			refs = append(refs, ContainerRef{PodUID: podUID, ContainerName: containerName})
++		}
++	}
++	sortRefs(refs)
++	return refs
++}
++
++func sortRefs(refs []ContainerRef) {
++	sort.Slice(refs, func(i, j int) bool {
++		if refs[i].PodUID != refs[j].PodUID {
++			return refs[i].PodUID < refs[j].PodUID
++		}
++		return refs[i].ContainerName < refs[j].ContainerName
++	})
++}
++
++// RecordStateReset remembers the assignments a manager is about to drop with
++// ClearState, and must therefore be called *before* ClearState.
++//
++// It cannot fail and does not block: at this point in kubelet start there is
++// nothing safe to wait for, and a failure here would put us back to refusing to
++// start, which is the whole thing being fixed.
++func RecordStateReset(manager ManagerName, stateDir, checkpointName string, refs []ContainerRef, cm containermap.ContainerMap, cause error) {
++	recordReset(manager, ReasonStateValidation, filepath.Join(stateDir, checkpointName), refs, cm, cause)
++}
++
++// ResetCheckpointFile removes a checkpoint the manager could not restore, so
++// that the next attempt starts from scratch, and records what was lost. It
++// reads the file before removing it, so the victims are known even though the
++// manager itself never managed to load them.
++//
++// It reports whether the file is gone. False means the caller must fail exactly
++// as it did before this patch: we could not make progress, so pretending
++// otherwise would only hide the problem.
++func ResetCheckpointFile(manager ManagerName, stateDir, checkpointName, configuredPolicy string, cm containermap.ContainerMap, cause error) bool {
++	path := filepath.Join(stateDir, checkpointName)
++
++	filePolicy, refs := inspectCheckpoint(manager, stateDir, checkpointName)
++	reason := ReasonCheckpointCorrupt
++	if filePolicy != "" && filePolicy != configuredPolicy {
++		// The file itself is fine; it just belongs to another policy. Worth
++		// separating, because this one is an operator action rather than a
++		// broken node.
++		reason = ReasonPolicyMismatch
++	}
++
++	debug("classified an unusable checkpoint",
++		"manager", manager, "stateFile", path,
++		"policyInFile", filePolicy, "policyConfigured", configuredPolicy,
++		"reason", reason, "assignmentsFound", len(refs))
++
++	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
++		klog.ErrorS(err, LogMarker+" could not remove unusable checkpoint, kubelet will fail as before",
++			"manager", manager, "stateFile", path)
++		return false
++	}
++
++	debug("checkpoint removed", "manager", manager, "stateFile", path)
++	recordReset(manager, reason, path, refs, cm, cause)
++	return true
++}
++
++func recordReset(manager ManagerName, reason Reason, stateFile string, refs []ContainerRef, cm containermap.ContainerMap, cause error) {
++	rec := ResetRecord{
++		Manager:    manager,
++		Reason:     reason,
++		StateFile:  stateFile,
++		DetectedAt: time.Now(),
++		Victims:    resolveVictims(refs, cm),
++	}
++	if cause != nil {
++		rec.Cause = cause.Error()
++	}
++
++	registry.mu.Lock()
++	registry.records = append(registry.records, rec)
++	pending := len(registry.records)
++	registry.mu.Unlock()
++
++	debug("reset recorded",
++		"manager", manager, "reason", reason, "stateFile", stateFile,
++		"assignmentsInOldState", len(refs), "victimsResolved", len(rec.Victims),
++		"pendingResets", pending)
++
++	resetsTotal.WithLabelValues(string(manager), string(reason)).Inc()
++
++	klog.ErrorS(cause, LogMarker+" checkpoint unusable, resetting manager state",
++		"manager", manager, "reason", reason, "stateFile", stateFile,
++		"patchVersion", Version)
++	klog.InfoS(LogMarker+" collected victims before clearing state",
++		"manager", manager, "reason", reason, "victims", len(rec.Victims),
++		"assignmentsInOldState", len(refs))
++	for _, v := range rec.Victims {
++		klog.InfoS(LogMarker+" victim",
++			"manager", manager, "podUID", v.PodUID,
++			"containerName", v.ContainerName, "containerID", v.ContainerID)
++	}
++}
++
++// resolveVictims maps assignment refs onto container ids the runtime reported
++// at startup. A ref with no container id is an assignment left over for a
++// container that no longer exists -- the common case right after a reboot --
++// and there is nothing to stop for it.
++func resolveVictims(refs []ContainerRef, cm containermap.ContainerMap) []Victim {
++	var victims []Victim
++	for _, ref := range refs {
++		containerID, err := cm.GetContainerID(ref.PodUID, ref.ContainerName)
++		if err != nil {
++			klog.V(4).InfoS(LogMarker+" assignment has no live container, nothing to stop",
++				"podUID", ref.PodUID, "containerName", ref.ContainerName)
++			debug("assignment dropped: no container in the runtime map",
++				"podUID", ref.PodUID, "containerName", ref.ContainerName, "err", err)
++			continue
++		}
++		debug("assignment resolved to a container",
++			"podUID", ref.PodUID, "containerName", ref.ContainerName, "containerID", containerID)
++		victims = append(victims, Victim{
++			PodUID:        ref.PodUID,
++			ContainerName: ref.ContainerName,
++			ContainerID:   containerID,
++		})
++	}
++	return victims
++}
++
++// writeMarker leaves the machine-readable trace for whoever has to decide
++// whether this node needs a drain. A failure to write it is logged and
++// otherwise ignored: the containers have already been dealt with, and refusing
++// to start over a missing marker file would defeat the purpose.
++func writeMarker(dir string, records []ResetRecord) {
++	if dir == "" {
++		klog.ErrorS(nil, LogMarker+" no state directory known, skipping marker file")
++		return
++	}
++	path := filepath.Join(dir, MarkerFileName)
++	marker := Marker{Version: Version, WrittenAt: time.Now(), Resets: records}
++
++	blob, err := json.MarshalIndent(marker, "", "  ")
++	if err != nil {
++		klog.ErrorS(err, LogMarker+" could not encode marker file", "path", path)
++		return
++	}
++	if err := os.WriteFile(path, append(blob, '\n'), 0600); err != nil {
++		klog.ErrorS(err, LogMarker+" could not write marker file", "path", path)
++		return
++	}
++	klog.InfoS(LogMarker+" wrote marker file", "path", path, "resets", len(records))
++	debug("marker file content", "path", path, "content", debugBlob(blob))
++}
+diff --git a/pkg/kubelet/cm/checkpointselfheal/selfheal_test.go b/pkg/kubelet/cm/checkpointselfheal/selfheal_test.go
+new file mode 100644
+index 00000000000..59a2b87f1ec
+--- /dev/null
++++ b/pkg/kubelet/cm/checkpointselfheal/selfheal_test.go
+@@ -0,0 +1,549 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package checkpointselfheal
++
++import (
++	"context"
++	"encoding/json"
++	"errors"
++	"os"
++	"path/filepath"
++	"testing"
++
++	"k8s.io/client-go/tools/record"
++	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
++	apitest "k8s.io/cri-api/pkg/apis/testing"
++	kubelettypes "k8s.io/kubelet/pkg/types"
++	"k8s.io/kubernetes/pkg/kubelet/cm/containermap"
++	cpustate "k8s.io/kubernetes/pkg/kubelet/cm/cpumanager/state"
++	memorystate "k8s.io/kubernetes/pkg/kubelet/cm/memorymanager/state"
++)
++
++// cpuCheckpoint is the on-disk shape of a v2 CPU manager checkpoint. It is
++// written out by hand rather than through the state package so that the tests
++// exercise the same thing production does: reading a file somebody else wrote,
++// possibly with a checksum that no longer matches.
++const cpuCheckpoint = `{
++  "policyName": "static",
++  "defaultCpuSet": "0-1",
++  "entries": {
++    "pod-a": {"app": "2-3"},
++    "pod-b": {"app": "4", "sidecar": "5"}
++  },
++  "checksum": 1
++}`
++
++const memoryCheckpoint = `{
++  "policyName": "Static",
++  "machineState": {},
++  "entries": {
++    "pod-a": {"app": [{"numaAffinity": [0], "type": "memory", "size": 1024}]}
++  },
++  "checksum": 1
++}`
++
++func writeFile(t *testing.T, dir, name, content string) string {
++	t.Helper()
++	path := filepath.Join(dir, name)
++	if err := os.WriteFile(path, []byte(content), 0600); err != nil {
++		t.Fatalf("writing %s: %v", path, err)
++	}
++	return path
++}
++
++func TestInspectCheckpoint(t *testing.T) {
++	// The checksum in every fixture is wrong on purpose. Reading anyway is the
++	// whole point: checkpointmanager.GetCheckpoint unmarshals before it
++	// verifies, so the struct is populated by the time the error comes back,
++	// and the file is the only record of which containers hold assignments
++	// before it is deleted.
++	testCases := []struct {
++		name       string
++		manager    ManagerName
++		fileName   string
++		content    string
++		absent     bool
++		wantPolicy string
++		wantRefs   []ContainerRef
++	}{
++		{
++			name:       "cpu checkpoint yields policy and every assignment",
++			manager:    ManagerCPU,
++			fileName:   "cpu_manager_state",
++			content:    cpuCheckpoint,
++			wantPolicy: "static",
++			wantRefs: []ContainerRef{
++				{PodUID: "pod-a", ContainerName: "app"},
++				{PodUID: "pod-b", ContainerName: "app"},
++				{PodUID: "pod-b", ContainerName: "sidecar"},
++			},
++		},
++		{
++			name:       "memory checkpoint yields policy and assignments",
++			manager:    ManagerMemory,
++			fileName:   "memory_manager_state",
++			content:    memoryCheckpoint,
++			wantPolicy: "Static",
++			wantRefs:   []ContainerRef{{PodUID: "pod-a", ContainerName: "app"}},
++		},
++		{
++			name:       "truncated file yields nothing rather than an error",
++			manager:    ManagerCPU,
++			fileName:   "cpu_manager_state",
++			content:    `{"policyName":"static","entries":{"pod-a"`,
++			wantPolicy: "",
++			wantRefs:   nil,
++		},
++		{
++			// A v1 CPU checkpoint keys entries by container id, so it does not
++			// fit the current type. It predates 1.13 and carries no pod UIDs to
++			// recover, so degrading to "reset without naming victims" is the
++			// only thing left to do.
++			name:       "v1 style flat entries yield no assignments",
++			manager:    ManagerCPU,
++			fileName:   "cpu_manager_state",
++			content:    `{"policyName":"static","defaultCpuSet":"0","entries":{"containerid":"1-2"}}`,
++			wantPolicy: "static",
++			wantRefs:   nil,
++		},
++		{
++			name:       "missing file yields nothing",
++			manager:    ManagerCPU,
++			fileName:   "cpu_manager_state",
++			absent:     true,
++			wantPolicy: "",
++			wantRefs:   nil,
++		},
++	}
++
++	for _, tc := range testCases {
++		t.Run(tc.name, func(t *testing.T) {
++			dir := t.TempDir()
++			if !tc.absent {
++				writeFile(t, dir, tc.fileName, tc.content)
++			}
++
++			policy, refs := inspectCheckpoint(tc.manager, dir, tc.fileName)
++			if policy != tc.wantPolicy {
++				t.Errorf("policy: got %q, want %q", policy, tc.wantPolicy)
++			}
++			if len(refs) != len(tc.wantRefs) {
++				t.Fatalf("refs: got %v, want %v", refs, tc.wantRefs)
++			}
++			for i := range refs {
++				if refs[i] != tc.wantRefs[i] {
++					t.Errorf("refs[%d]: got %v, want %v", i, refs[i], tc.wantRefs[i])
++				}
++			}
++		})
++	}
++}
++
++// TestInspectCheckpointUsesUpstreamTypes guards the reason this reader is built
++// the way it is. If a future release reshapes the on-disk format, the intent is
++// that the build breaks rather than this silently returning no victims -- so
++// the types below are the upstream ones on purpose, and this test fails to
++// compile if they stop existing.
++func TestInspectCheckpointUsesUpstreamTypes(t *testing.T) {
++	var (
++		_ = cpustate.NewCPUManagerCheckpoint().Entries
++		_ = memorystate.NewMemoryManagerCheckpoint().Entries
++	)
++}
++
++func TestResetCheckpointFileClassifiesReason(t *testing.T) {
++	testCases := []struct {
++		name             string
++		content          string
++		configuredPolicy string
++		wantReason       Reason
++		wantVictimCount  int
++	}{
++		{
++			// The file is perfectly readable; it just belongs to another
++			// policy. That is an operator action, not a broken node, and it is
++			// detected by comparing policy names rather than by matching error
++			// text.
++			name:             "policy name differs",
++			content:          cpuCheckpoint,
++			configuredPolicy: "none",
++			wantReason:       ReasonPolicyMismatch,
++			wantVictimCount:  1,
++		},
++		{
++			name:             "same policy, so the file itself is the problem",
++			content:          cpuCheckpoint,
++			configuredPolicy: "static",
++			wantReason:       ReasonCheckpointCorrupt,
++			wantVictimCount:  1,
++		},
++		{
++			name:             "unreadable file cannot be classified further",
++			content:          "{{{",
++			configuredPolicy: "static",
++			wantReason:       ReasonCheckpointCorrupt,
++			wantVictimCount:  0,
++		},
++	}
++
++	for _, tc := range testCases {
++		t.Run(tc.name, func(t *testing.T) {
++			Clear()
++			t.Cleanup(Clear)
++
++			dir := t.TempDir()
++			path := writeFile(t, dir, "cpu_manager_state", tc.content)
++
++			cm := containermap.NewContainerMap()
++			cm.Add("pod-a", "app", "cid-a")
++
++			if ok := ResetCheckpointFile(ManagerCPU, dir, "cpu_manager_state", tc.configuredPolicy, cm, errors.New("boom")); !ok {
++				t.Fatal("ResetCheckpointFile reported failure, want success")
++			}
++			if _, err := os.Stat(path); !os.IsNotExist(err) {
++				t.Errorf("checkpoint still present after reset (stat err %v)", err)
++			}
++
++			records := Take()
++			if len(records) != 1 {
++				t.Fatalf("recorded %d resets, want 1", len(records))
++			}
++			if records[0].Reason != tc.wantReason {
++				t.Errorf("reason: got %q, want %q", records[0].Reason, tc.wantReason)
++			}
++			if records[0].Manager != ManagerCPU {
++				t.Errorf("manager: got %q, want %q", records[0].Manager, ManagerCPU)
++			}
++			if records[0].Cause != "boom" {
++				t.Errorf("cause: got %q, want %q", records[0].Cause, "boom")
++			}
++			// Only assignments that map to a container the runtime reported
++			// become victims; pod-b has no container in the map.
++			if len(records[0].Victims) != tc.wantVictimCount {
++				t.Errorf("victims: got %d (%v), want %d", len(records[0].Victims), records[0].Victims, tc.wantVictimCount)
++			}
++		})
++	}
++}
++
++func TestResetCheckpointFileMissingFileIsNotAFailure(t *testing.T) {
++	Clear()
++	t.Cleanup(Clear)
++
++	dir := t.TempDir()
++	if ok := ResetCheckpointFile(ManagerMemory, dir, "memory_manager_state", "Static", containermap.NewContainerMap(), errors.New("boom")); !ok {
++		t.Fatal("ResetCheckpointFile reported failure for an absent file, want success")
++	}
++	if got := Pending(); got != 1 {
++		t.Errorf("pending resets: got %d, want 1", got)
++	}
++}
++
++func TestResetCheckpointFileFailsWhenFileCannotBeRemoved(t *testing.T) {
++	Clear()
++	t.Cleanup(Clear)
++
++	// A directory in place of the checkpoint file cannot be removed by
++	// os.Remove once it has content, which stands in for any unremovable file.
++	// The caller must then fail exactly as it did before this patch: we could
++	// not make progress, and pretending otherwise would hide the problem.
++	dir := t.TempDir()
++	stateDir := filepath.Join(dir, "state")
++	if err := os.MkdirAll(filepath.Join(stateDir, "cpu_manager_state", "child"), 0700); err != nil {
++		t.Fatal(err)
++	}
++
++	if ok := ResetCheckpointFile(ManagerCPU, stateDir, "cpu_manager_state", "static", containermap.NewContainerMap(), errors.New("boom")); ok {
++		t.Error("ResetCheckpointFile reported success, want failure")
++	}
++	if got := Pending(); got != 0 {
++		t.Errorf("pending resets: got %d, want 0 - nothing should be recorded when the reset did not happen", got)
++	}
++}
++
++func TestRecordStateResetKeepsOnlyContainersTheRuntimeKnows(t *testing.T) {
++	Clear()
++	t.Cleanup(Clear)
++
++	cm := containermap.NewContainerMap()
++	cm.Add("pod-live", "app", "cid-live")
++
++	refs := []ContainerRef{
++		{PodUID: "pod-live", ContainerName: "app"},
++		// Left over from before a reboot: the assignment is in the state but
++		// the container is long gone, so there is nothing to stop.
++		{PodUID: "pod-gone", ContainerName: "app"},
++	}
++
++	RecordStateReset(ManagerCPU, "/var/lib/kubelet", "cpu_manager_state", refs, cm, errors.New("topology changed"))
++
++	records := Take()
++	if len(records) != 1 {
++		t.Fatalf("recorded %d resets, want 1", len(records))
++	}
++	if records[0].Reason != ReasonStateValidation {
++		t.Errorf("reason: got %q, want %q", records[0].Reason, ReasonStateValidation)
++	}
++	if records[0].StateFile != "/var/lib/kubelet/cpu_manager_state" {
++		t.Errorf("stateFile: got %q", records[0].StateFile)
++	}
++	if len(records[0].Victims) != 1 || records[0].Victims[0].ContainerID != "cid-live" {
++		t.Fatalf("victims: got %v, want only cid-live", records[0].Victims)
++	}
++}
++
++func TestRefsFromIsDeterministic(t *testing.T) {
++	// Map iteration order is random, so without sorting the marker file and the
++	// logs would differ between runs for identical input, which makes them
++	// useless for comparing two nodes.
++	assignments := map[string]map[string]string{
++		"pod-b": {"z": "", "a": ""},
++		"pod-a": {"app": ""},
++	}
++	want := []ContainerRef{
++		{PodUID: "pod-a", ContainerName: "app"},
++		{PodUID: "pod-b", ContainerName: "a"},
++		{PodUID: "pod-b", ContainerName: "z"},
++	}
++	for i := 0; i < 20; i++ {
++		got := RefsFrom(assignments)
++		if len(got) != len(want) {
++			t.Fatalf("got %v, want %v", got, want)
++		}
++		for j := range got {
++			if got[j] != want[j] {
++				t.Fatalf("iteration %d: got %v, want %v", i, got, want)
++			}
++		}
++	}
++}
++
++func TestTakeEmptiesTheRegistry(t *testing.T) {
++	Clear()
++	t.Cleanup(Clear)
++
++	RecordStateReset(ManagerCPU, "/d", "c", nil, containermap.NewContainerMap(), errors.New("x"))
++	if got := len(Take()); got != 1 {
++		t.Fatalf("first Take returned %d records, want 1", got)
++	}
++	if got := len(Take()); got != 0 {
++		t.Fatalf("second Take returned %d records, want 0", got)
++	}
++}
++
++// fakeContainer builds a running or exited container as the runtime would
++// report it, with the pod labels the stopper reads to name the pod.
++func fakeContainer(id, podName, podNamespace string, state runtimeapi.ContainerState) *apitest.FakeContainer {
++	c := &apitest.FakeContainer{SandboxID: "sandbox-" + id}
++	c.Id = id
++	c.State = state
++	c.Metadata = &runtimeapi.ContainerMetadata{Name: "app"}
++	c.Labels = map[string]string{
++		kubelettypes.KubernetesPodNameLabel:      podName,
++		kubelettypes.KubernetesPodNamespaceLabel: podNamespace,
++	}
++	return c
++}
++
++func TestStopVictims(t *testing.T) {
++	Clear()
++	t.Cleanup(Clear)
++
++	dir := t.TempDir()
++
++	runtime := apitest.NewFakeRuntimeService()
++	runtime.Containers = map[string]*apitest.FakeContainer{
++		"cid-running": fakeContainer("cid-running", "pod-running", "ns", runtimeapi.ContainerState_CONTAINER_RUNNING),
++		// Already finished but not yet garbage collected. Stopping it would be
++		// a spurious action, so it must be skipped.
++		"cid-exited": fakeContainer("cid-exited", "pod-exited", "ns", runtimeapi.ContainerState_CONTAINER_EXITED),
++	}
++
++	cm := containermap.NewContainerMap()
++	cm.Add("pod-running", "app", "cid-running")
++	cm.Add("pod-exited", "app", "cid-exited")
++
++	RecordStateReset(ManagerCPU, dir, "cpu_manager_state", []ContainerRef{
++		{PodUID: "pod-running", ContainerName: "app"},
++		{PodUID: "pod-exited", ContainerName: "app"},
++	}, cm, errors.New("topology changed"))
++
++	recorder := record.NewFakeRecorder(10)
++	StopVictims(context.Background(), Deps{Runtime: runtime, Recorder: recorder})
++
++	if got := runtime.Containers["cid-running"].State; got != runtimeapi.ContainerState_CONTAINER_EXITED {
++		t.Errorf("running victim was not stopped, state %v", got)
++	}
++
++	marker := readMarker(t, dir)
++	if len(marker.Resets) != 1 {
++		t.Fatalf("marker has %d resets, want 1", len(marker.Resets))
++	}
++	byID := map[string]Victim{}
++	for _, v := range marker.Resets[0].Victims {
++		byID[v.ContainerID] = v
++	}
++
++	if v := byID["cid-running"]; !v.Stopped || v.Error != "" {
++		t.Errorf("running victim: got %+v, want stopped without error", v)
++	}
++	if v := byID["cid-running"]; v.PodName != "pod-running" || v.PodNamespace != "ns" {
++		t.Errorf("running victim was not named from runtime labels: %+v", v)
++	}
++	if v := byID["cid-exited"]; v.Stopped || v.Skipped == "" {
++		t.Errorf("exited victim: got %+v, want skipped and not stopped", v)
++	}
++
++	select {
++	case ev := <-recorder.Events:
++		if ev == "" {
++			t.Error("empty event")
++		}
++	default:
++		t.Error("no pod event emitted for the stopped container")
++	}
++
++	// The registry is drained, so a second call must do nothing at all.
++	runtime.Called = nil
++	StopVictims(context.Background(), Deps{Runtime: runtime, Recorder: recorder})
++	if len(runtime.Called) != 0 {
++		t.Errorf("second StopVictims called the runtime: %v", runtime.Called)
++	}
++}
++
++func TestStopVictimsRecordsStopFailures(t *testing.T) {
++	Clear()
++	t.Cleanup(Clear)
++
++	dir := t.TempDir()
++
++	runtime := apitest.NewFakeRuntimeService()
++	runtime.Containers = map[string]*apitest.FakeContainer{
++		"cid": fakeContainer("cid", "pod", "ns", runtimeapi.ContainerState_CONTAINER_RUNNING),
++	}
++	runtime.InjectError("StopContainer", errors.New("runtime is busy"))
++
++	cm := containermap.NewContainerMap()
++	cm.Add("pod", "app", "cid")
++
++	RecordStateReset(ManagerMemory, dir, "memory_manager_state",
++		[]ContainerRef{{PodUID: "pod", ContainerName: "app"}}, cm, errors.New("machine state differs"))
++
++	StopVictims(context.Background(), Deps{Runtime: runtime})
++
++	marker := readMarker(t, dir)
++	victims := marker.Resets[0].Victims
++	if len(victims) != 1 {
++		t.Fatalf("marker has %d victims, want 1", len(victims))
++	}
++	// A victim that could not be stopped is the case that matters most: it is
++	// still holding a NUMA zone the reset state believes to be free, and the
++	// marker is what tells the operator the node needs attention.
++	if victims[0].Stopped || victims[0].Error == "" {
++		t.Errorf("failed victim: got %+v, want not stopped with an error", victims[0])
++	}
++}
++
++func TestStopVictimsWithoutRuntimeStillLeavesAMarker(t *testing.T) {
++	Clear()
++	t.Cleanup(Clear)
++
++	dir := t.TempDir()
++	cm := containermap.NewContainerMap()
++	cm.Add("pod", "app", "cid")
++
++	RecordStateReset(ManagerCPU, dir, "cpu_manager_state",
++		[]ContainerRef{{PodUID: "pod", ContainerName: "app"}}, cm, errors.New("x"))
++
++	StopVictims(context.Background(), Deps{})
++
++	marker := readMarker(t, dir)
++	if len(marker.Resets) != 1 || len(marker.Resets[0].Victims) != 1 {
++		t.Fatalf("unexpected marker: %+v", marker)
++	}
++	if marker.Resets[0].Victims[0].Error == "" {
++		t.Error("victim should carry an error when there is no runtime to stop it with")
++	}
++}
++
++func TestStopVictimsDoesNothingWhenNothingWasReset(t *testing.T) {
++	Clear()
++	t.Cleanup(Clear)
++
++	dir := t.TempDir()
++	runtime := apitest.NewFakeRuntimeService()
++
++	StopVictims(context.Background(), Deps{Runtime: runtime})
++
++	if len(runtime.Called) != 0 {
++		t.Errorf("runtime was called: %v", runtime.Called)
++	}
++	if _, err := os.Stat(filepath.Join(dir, MarkerFileName)); !os.IsNotExist(err) {
++		t.Error("a marker file was written even though nothing was reset")
++	}
++}
++
++func readMarker(t *testing.T, dir string) Marker {
++	t.Helper()
++	blob, err := os.ReadFile(filepath.Join(dir, MarkerFileName))
++	if err != nil {
++		t.Fatalf("reading marker: %v", err)
++	}
++	var marker Marker
++	if err := json.Unmarshal(blob, &marker); err != nil {
++		t.Fatalf("decoding marker: %v", err)
++	}
++	return marker
++}
++
++func TestResetAndStopEndToEnd(t *testing.T) {
++	// The whole flow over a checkpoint that belongs to another policy: read it
++	// past the load that upstream refuses, name the victim, remove the file,
++	// stop the container and leave a marker behind.
++	Clear()
++	t.Cleanup(Clear)
++
++	dir := t.TempDir()
++	writeFile(t, dir, "cpu_manager_state", cpuCheckpoint)
++
++	cm := containermap.NewContainerMap()
++	cm.Add("pod-a", "app", "cid-a")
++
++	runtime := apitest.NewFakeRuntimeService()
++	runtime.Containers = map[string]*apitest.FakeContainer{
++		"cid-a": fakeContainer("cid-a", "pod-a", "ns", runtimeapi.ContainerState_CONTAINER_RUNNING),
++	}
++
++	if ok := ResetCheckpointFile(ManagerCPU, dir, "cpu_manager_state", "none", cm, errors.New("boom")); !ok {
++		t.Fatal("ResetCheckpointFile reported failure")
++	}
++	StopVictims(context.Background(), Deps{Runtime: runtime})
++
++	if got := runtime.Containers["cid-a"].State; got != runtimeapi.ContainerState_CONTAINER_EXITED {
++		t.Errorf("victim state: got %v, want EXITED", got)
++	}
++	marker := readMarker(t, dir)
++	if len(marker.Resets) != 1 || len(marker.Resets[0].Victims) != 1 {
++		t.Fatalf("marker: %+v", marker)
++	}
++	if !marker.Resets[0].Victims[0].Stopped {
++		t.Error("victim not marked stopped")
++	}
++	if marker.Resets[0].Reason != ReasonPolicyMismatch {
++		t.Errorf("reason: got %q, want %q", marker.Resets[0].Reason, ReasonPolicyMismatch)
++	}
++}
+diff --git a/pkg/kubelet/cm/checkpointselfheal/stop.go b/pkg/kubelet/cm/checkpointselfheal/stop.go
+new file mode 100644
+index 00000000000..9f001bb5d42
+--- /dev/null
++++ b/pkg/kubelet/cm/checkpointselfheal/stop.go
+@@ -0,0 +1,286 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package checkpointselfheal
++
++import (
++	"context"
++	"path/filepath"
++	"sync"
++	"time"
++
++	v1 "k8s.io/api/core/v1"
++	"k8s.io/apimachinery/pkg/types"
++	"k8s.io/client-go/tools/record"
++	internalapi "k8s.io/cri-api/pkg/apis"
++	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
++	"k8s.io/klog/v2"
++	kubelettypes "k8s.io/kubelet/pkg/types"
++)
++
++const (
++	// stopGracePeriodSeconds is handed to the runtime as the graceful stop
++	// timeout. Pod specs are not available this early, so each pod's own
++	// terminationGracePeriodSeconds cannot be honoured and a single value has
++	// to serve. It is kept short on purpose: kubelet start is blocked while
++	// this runs, and every second spent here is a second in which the node is
++	// not reconciling anything.
++	stopGracePeriodSeconds = int64(15)
++
++	// stopDeadline bounds the whole operation. Containers are stopped in
++	// parallel, so this is roughly the grace period plus runtime overhead
++	// rather than a per-container budget. Exceeding it is reported loudly:
++	// a victim left running still holds CPUs or a NUMA zone the state now
++	// thinks are free.
++	stopDeadline = 30 * time.Second
++
++	// eventReason is used for the pod events emitted for stopped containers.
++	// Without it the restart is indistinguishable from an ordinary container
++	// crash in kubectl describe.
++	eventReason = "NUMACheckpointReset"
++)
++
++// Deps is what the stopper needs from the container manager. Both fields are
++// already present at the call site, so wiring this in adds no plumbing.
++type Deps struct {
++	// Runtime is the CRI runtime service. It is used to list containers (to
++	// learn which victims are actually running and which pod they belong to)
++	// and to stop them.
++	Runtime internalapi.RuntimeService
++
++	// Recorder emits pod events. May be nil in standalone mode, in which case
++	// the metric and the log remain.
++	Recorder record.EventRecorder
++}
++
++// StopVictims stops the containers whose assignments were dropped by a reset,
++// so that the kubelet lifecycle recreates them and the managers pin them again
++// from a clean state.
++//
++// It must be called from containerManagerImpl.Start, before Start returns:
++// kubelet marks the runtime synced only afterwards and syncLoop skips every
++// iteration until then, so nothing can be admitted while this runs. That is
++// what keeps a freshly admitted Guaranteed pod from being handed CPUs that a
++// victim is still using.
++//
++// It is a no-op when nothing was reset, which is the overwhelmingly common
++// case, and it never returns an error: by the time it runs, the state has
++// already been reset, so there is nothing a caller could usefully do besides
++// what is already being logged and counted.
++func StopVictims(ctx context.Context, deps Deps) {
++	records := Take()
++	if len(records) == 0 {
++		return
++	}
++
++	klog.InfoS(LogMarker+" bringing containers in line with the reset state",
++		"resets", len(records), "patchVersion", Version)
++	debug("stop phase starting",
++		"resets", len(records), "gracePeriodSeconds", stopGracePeriodSeconds,
++		"deadline", stopDeadline, "hasRuntime", deps.Runtime != nil,
++		"hasRecorder", deps.Recorder != nil)
++	for i := range records {
++		debug("reset to act on",
++			"index", i, "manager", records[i].Manager, "reason", records[i].Reason,
++			"stateFile", records[i].StateFile, "victims", len(records[i].Victims),
++			"cause", records[i].Cause)
++	}
++
++	stateDir := markerDir(records)
++
++	if deps.Runtime == nil {
++		// Nothing can be stopped without a runtime. Say so plainly and still
++		// leave the marker: the operator needs to know the node is in this
++		// state even though we could do nothing about it.
++		for i := range records {
++			for j := range records[i].Victims {
++				records[i].Victims[j].Error = "no runtime service available"
++				stopFailuresTotal.WithLabelValues(string(records[i].Manager)).Inc()
++			}
++		}
++		klog.ErrorS(nil, LogMarker+" no runtime service, victims left running")
++		writeMarker(stateDir, records)
++		return
++	}
++
++	running, meta := inspectRuntime(ctx, deps.Runtime)
++
++	stopCtx, cancel := context.WithTimeout(ctx, stopDeadline)
++	defer cancel()
++
++	for i := range records {
++		stopRecord(stopCtx, deps, &records[i], running, meta)
++	}
++
++	writeMarker(stateDir, records)
++
++	klog.InfoS(LogMarker+" finished, kubelet start continues", "resets", len(records))
++	debug("stop phase finished", "resets", len(records))
++}
++
++// podMeta is the pod identity carried in CRI container labels. The managers key
++// assignments by pod UID only, so the name and namespace have to come from the
++// runtime -- the API is not necessarily reachable this early, and the pod specs
++// certainly are not loaded yet.
++type podMeta struct {
++	name      string
++	namespace string
++}
++
++// inspectRuntime returns the set of container ids the runtime reports as
++// running, plus the pod identity for each container it knows about.
++//
++// The running set is what enforces "victims are only containers that are really
++// running": an assignment left over for a container that has already exited but
++// has not been garbage collected yet must not produce a spurious stop.
++func inspectRuntime(ctx context.Context, runtime internalapi.RuntimeService) (map[string]bool, map[string]podMeta) {
++	running := map[string]bool{}
++	meta := map[string]podMeta{}
++
++	containers, err := runtime.ListContainers(ctx, nil)
++	if err != nil {
++		// Without the listing we cannot tell running from exited. Stopping an
++		// already-exited container is harmless, while skipping a running one
++		// leaves the isolation broken, so on error we treat every victim as
++		// running and let the runtime reject the ones that are already gone.
++		klog.ErrorS(err, LogMarker+" could not list containers, will attempt to stop every victim")
++		return nil, meta
++	}
++
++	for _, c := range containers {
++		if c.State == runtimeapi.ContainerState_CONTAINER_RUNNING {
++			running[c.Id] = true
++		}
++		meta[c.Id] = podMeta{
++			name:      c.Labels[kubelettypes.KubernetesPodNameLabel],
++			namespace: c.Labels[kubelettypes.KubernetesPodNamespaceLabel],
++		}
++		// This is the snapshot that explains every "not running, skipped"
++		// decision below, which is otherwise impossible to second-guess.
++		debug("runtime reported a container",
++			"containerID", c.Id, "state", c.State,
++			"containerName", c.GetMetadata().GetName(),
++			"pod", c.Labels[kubelettypes.KubernetesPodNameLabel],
++			"namespace", c.Labels[kubelettypes.KubernetesPodNamespaceLabel])
++	}
++	debug("runtime snapshot complete", "containers", len(containers), "running", len(running))
++	return running, meta
++}
++
++func stopRecord(ctx context.Context, deps Deps, rec *ResetRecord, running map[string]bool, meta map[string]podMeta) {
++	manager := string(rec.Manager)
++
++	var wg sync.WaitGroup
++	for i := range rec.Victims {
++		victim := &rec.Victims[i]
++
++		if m, ok := meta[victim.ContainerID]; ok {
++			victim.PodName = m.name
++			victim.PodNamespace = m.namespace
++		}
++
++		// running == nil means the listing failed and we deliberately try
++		// everything; see inspectRuntime.
++		if running != nil && !running[victim.ContainerID] {
++			debug("victim skipped",
++				"manager", manager, "containerID", victim.ContainerID,
++				"inRunningSet", running[victim.ContainerID], "runtimeListingUsable", running != nil)
++			victim.Skipped = "container not running"
++			klog.InfoS(LogMarker+" victim is not running, nothing to stop",
++				"manager", manager, "podUID", victim.PodUID,
++				"containerName", victim.ContainerName, "containerID", victim.ContainerID)
++			continue
++		}
++
++		wg.Add(1)
++		go func() {
++			defer wg.Done()
++			stopOne(ctx, deps, rec.Manager, rec.Reason, victim)
++		}()
++	}
++	wg.Wait()
++}
++
++func stopOne(ctx context.Context, deps Deps, manager ManagerName, reason Reason, victim *Victim) {
++	klog.InfoS(LogMarker+" stopping container so it is recreated and pinned again",
++		"manager", manager, "reason", reason,
++		"pod", klog.KRef(victim.PodNamespace, victim.PodName), "podUID", victim.PodUID,
++		"containerName", victim.ContainerName, "containerID", victim.ContainerID,
++		"gracePeriodSeconds", stopGracePeriodSeconds)
++
++	started := time.Now()
++	debug("calling StopContainer",
++		"manager", manager, "containerID", victim.ContainerID,
++		"gracePeriodSeconds", stopGracePeriodSeconds)
++
++	if err := deps.Runtime.StopContainer(ctx, victim.ContainerID, stopGracePeriodSeconds); err != nil {
++		debug("StopContainer returned an error",
++			"manager", manager, "containerID", victim.ContainerID,
++			"took", time.Since(started), "err", err)
++		victim.Error = err.Error()
++		stopFailuresTotal.WithLabelValues(string(manager)).Inc()
++		klog.ErrorS(err, LogMarker+" failed to stop container, it may still hold CPUs or a NUMA zone the state considers free",
++			"manager", manager, "pod", klog.KRef(victim.PodNamespace, victim.PodName),
++			"podUID", victim.PodUID, "containerName", victim.ContainerName,
++			"containerID", victim.ContainerID)
++		return
++	}
++
++	victim.Stopped = true
++	stoppedContainersTotal.WithLabelValues(string(manager)).Inc()
++	debug("StopContainer succeeded",
++		"manager", manager, "containerID", victim.ContainerID, "took", time.Since(started))
++	klog.InfoS(LogMarker+" container stopped",
++		"manager", manager, "pod", klog.KRef(victim.PodNamespace, victim.PodName),
++		"podUID", victim.PodUID, "containerName", victim.ContainerName,
++		"containerID", victim.ContainerID)
++
++	emitEvent(deps.Recorder, manager, reason, victim)
++}
++
++// emitEvent puts the reason on the pod itself. Without it the restart looks
++// like an ordinary container crash to whoever runs kubectl describe, and the
++// one piece of information they need -- that the kubelet did this on purpose,
++// and why -- is only in the node's journal.
++//
++// The reference is built by hand because the pod object is not available yet.
++// Name and namespace come from the runtime labels; if they are missing the
++// event would attach to nothing useful, so it is skipped and the log stands.
++func emitEvent(recorder record.EventRecorder, manager ManagerName, reason Reason, victim *Victim) {
++	if recorder == nil || victim.PodName == "" || victim.PodNamespace == "" {
++		return
++	}
++	ref := &v1.ObjectReference{
++		Kind:      "Pod",
++		Name:      victim.PodName,
++		Namespace: victim.PodNamespace,
++		UID:       types.UID(victim.PodUID),
++	}
++	recorder.Eventf(ref, v1.EventTypeWarning, eventReason,
++		"Stopped container %s: the %s manager checkpoint was reset (%s), so the container is recreated to be assigned again",
++		victim.ContainerName, manager, reason)
++}
++
++// markerDir is the directory the marker file goes into: the same directory the
++// manager state files live in, which follows --root-dir.
++func markerDir(records []ResetRecord) string {
++	for _, rec := range records {
++		if rec.StateFile != "" {
++			return filepath.Dir(rec.StateFile)
++		}
++	}
++	return ""
++}
+diff --git a/pkg/kubelet/cm/container_manager_linux.go b/pkg/kubelet/cm/container_manager_linux.go
+index 64fe7df63b4..145d7897727 100644
+--- a/pkg/kubelet/cm/container_manager_linux.go
++++ b/pkg/kubelet/cm/container_manager_linux.go
+@@ -50,6 +50,7 @@ import (
+ 	podresourcesapi "k8s.io/kubelet/pkg/apis/podresources/v1"
+ 	kubefeatures "k8s.io/kubernetes/pkg/features"
+ 	"k8s.io/kubernetes/pkg/kubelet/cadvisor"
++	"k8s.io/kubernetes/pkg/kubelet/cm/checkpointselfheal"
+ 	"k8s.io/kubernetes/pkg/kubelet/cm/cpumanager"
+ 	"k8s.io/kubernetes/pkg/kubelet/cm/devicemanager"
+ 	"k8s.io/kubernetes/pkg/kubelet/cm/dra"
+@@ -631,6 +632,18 @@ func (cm *containerManagerImpl) Start(ctx context.Context, node *v1.Node,
+ 		return fmt.Errorf("start memory manager error: %w", err)
+ 	}
+ 
++	// If either manager had to reset its checkpoint above, the containers that
++	// held assignments in it are still running with CPUs and memory zones that
++	// the fresh state considers free. Stop them here, synchronously, while
++	// nothing can be admitted: kubelet marks the runtime synced only after this
++	// function returns, and syncLoop skips every iteration until it does. Doing
++	// it after Start returns would leave a window in which a new Guaranteed pod
++	// could be handed CPUs another container is still using.
++	checkpointselfheal.StopVictims(ctx, checkpointselfheal.Deps{
++		Runtime:  runtimeService,
++		Recorder: cm.recorder,
++	})
++
+ 	// cache the node Info including resource capacity and
+ 	// allocatable of the node
+ 	cm.nodeInfo = node
+diff --git a/pkg/kubelet/cm/cpumanager/cpu_manager.go b/pkg/kubelet/cm/cpumanager/cpu_manager.go
+index 8b59ba67121..a1f639afd31 100644
+--- a/pkg/kubelet/cm/cpumanager/cpu_manager.go
++++ b/pkg/kubelet/cm/cpumanager/cpu_manager.go
+@@ -29,6 +29,7 @@ import (
+ 	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
+ 	"k8s.io/klog/v2"
+ 
++	"k8s.io/kubernetes/pkg/kubelet/cm/checkpointselfheal"
+ 	"k8s.io/kubernetes/pkg/kubelet/cm/containermap"
+ 	"k8s.io/kubernetes/pkg/kubelet/cm/cpumanager/state"
+ 	"k8s.io/kubernetes/pkg/kubelet/cm/cpumanager/topology"
+@@ -226,17 +227,48 @@ func (m *manager) Start(activePods ActivePodsFunc, sourcesReady config.SourcesRe
+ 	m.containerRuntime = containerRuntime
+ 	m.containerMap = initialContainers
+ 
++	// wasReset keeps the "nothing to do" line below honest: after a reset the
++	// policy does validate cleanly, but saying nothing was wrong would
++	// contradict the reset that was just logged.
++	wasReset := false
++
+ 	stateImpl, err := state.NewCheckpointState(m.stateFileDirectory, cpuManagerStateFileName, m.policy.Name(), m.containerMap)
+ 	if err != nil {
+-		klog.ErrorS(err, "Could not initialize checkpoint manager, please drain node and remove policy state file")
+-		return err
++		// The checkpoint cannot be restored: bad checksum, torn write, or it
++		// belongs to a different policy. Upstream gives up here and kubelet
++		// exits. Drop the file instead and start from scratch; the containers
++		// that held assignments in it are stopped later in
++		// containerManagerImpl.Start so they get recreated and pinned again.
++		if !checkpointselfheal.ResetCheckpointFile(checkpointselfheal.ManagerCPU, m.stateFileDirectory, cpuManagerStateFileName, m.policy.Name(), m.containerMap, err) {
++			klog.ErrorS(err, "Could not initialize checkpoint manager, please drain node and remove policy state file")
++			return err
++		}
++		wasReset = true
++		stateImpl, err = state.NewCheckpointState(m.stateFileDirectory, cpuManagerStateFileName, m.policy.Name(), m.containerMap)
++		if err != nil {
++			klog.ErrorS(err, "Could not initialize checkpoint manager after resetting its state, please drain node and remove policy state file")
++			return err
++		}
+ 	}
+ 	m.state = stateImpl
+ 
+ 	err = m.policy.Start(m.state)
+ 	if err != nil {
+-		klog.ErrorS(err, "Policy start error")
+-		return err
++		// The checkpoint was read but no longer describes this machine. Collect
++		// the victims before clearing, because afterwards there is nowhere left
++		// to read the old assignments from, then let the policy re-run against
++		// the empty state, which is its own initialisation path.
++		checkpointselfheal.RecordStateReset(checkpointselfheal.ManagerCPU, m.stateFileDirectory, cpuManagerStateFileName,
++			checkpointselfheal.RefsFrom(m.state.GetCPUAssignments()), m.containerMap, err)
++		m.state.ClearState()
++		if err = m.policy.Start(m.state); err != nil {
++			klog.ErrorS(err, "Policy start error after resetting manager state")
++			return err
++		}
++		wasReset = true
++	}
++	if !wasReset {
++		checkpointselfheal.LogHealthy(checkpointselfheal.ManagerCPU)
+ 	}
+ 
+ 	klog.V(4).InfoS("CPU manager started", "policy", m.policy.Name())
+diff --git a/pkg/kubelet/cm/cpumanager/selfheal_test.go b/pkg/kubelet/cm/cpumanager/selfheal_test.go
+new file mode 100644
+index 00000000000..b0207f40cca
+--- /dev/null
++++ b/pkg/kubelet/cm/cpumanager/selfheal_test.go
+@@ -0,0 +1,272 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package cpumanager
++
++import (
++	"os"
++	"path/filepath"
++	"testing"
++	"time"
++
++	v1 "k8s.io/api/core/v1"
++	"k8s.io/kubernetes/pkg/kubelet/cm/checkpointselfheal"
++	"k8s.io/kubernetes/pkg/kubelet/cm/containermap"
++	"k8s.io/kubernetes/pkg/kubelet/cm/cpumanager/state"
++	"k8s.io/kubernetes/pkg/kubelet/cm/topologymanager"
++	"k8s.io/utils/cpuset"
++)
++
++// notReadyStub keeps the reconcile loop that Start spawns from purging state
++// while the assertions run. removeStaleState returns early unless the sources
++// are ready, so this makes the test deterministic without changing what is
++// under test.
++type notReadyStub struct{}
++
++func (notReadyStub) AddSource(source string) {}
++func (notReadyStub) AllReady() bool          { return false }
++
++type cpuSelfHealFixture struct {
++	manager *manager
++	policy  Policy
++}
++
++// newCPUSelfHealFixture builds a manager around the real static policy: the
++// point of these tests is that the policy's own "state is empty, initialise"
++// path is what recovers after a reset, so a stub policy would prove nothing.
++func newCPUSelfHealFixture(t *testing.T, cm containermap.ContainerMap) *cpuSelfHealFixture {
++	t.Helper()
++
++	policy, err := NewStaticPolicy(topoSingleSocketHT, 0, cpuset.New(), topologymanager.NewFakeManager(), nil)
++	if err != nil {
++		t.Fatalf("building static policy: %v", err)
++	}
++
++	return &cpuSelfHealFixture{
++		manager: &manager{
++			policy:             policy,
++			stateFileDirectory: t.TempDir(),
++			lastUpdateState:    state.NewMemoryState(),
++			// Long enough that the periodic tick never fires during a test;
++			// wait.Until still runs it once immediately, which notReadyStub
++			// makes harmless.
++			reconcilePeriod: time.Hour,
++			topology:        topoSingleSocketHT,
++		},
++		policy: policy,
++	}
++}
++
++func (f *cpuSelfHealFixture) start(t *testing.T, cm containermap.ContainerMap) error {
++	t.Helper()
++	return f.manager.Start(func() []*v1.Pod { return nil }, notReadyStub{},
++		mockPodStatusProvider{}, mockRuntimeService{}, cm)
++}
++
++// seedCPUCheckpoint writes a checkpoint with a valid checksum through the real
++// state package, so that the failure under test is "this no longer describes
++// the machine" rather than "this file is broken".
++func seedCPUCheckpoint(t *testing.T, dir, policyName string, defaultCPUSet cpuset.CPUSet, assignments state.ContainerCPUAssignments) {
++	t.Helper()
++	seed, err := state.NewCheckpointState(dir, cpuManagerStateFileName, policyName, containermap.NewContainerMap())
++	if err != nil {
++		t.Fatalf("seeding checkpoint: %v", err)
++	}
++	seed.SetDefaultCPUSet(defaultCPUSet)
++	if assignments != nil {
++		seed.SetCPUAssignments(assignments)
++	}
++}
++
++func TestStartHealsChangedCPUTopology(t *testing.T) {
++	// A CPU came online while kubelet was down (chcpu -e, a resized VM), so the
++	// CPUs recorded in the checkpoint no longer add up to the CPUs the machine
++	// reports. Upstream refuses to start; the node then needs a human before it
++	// can run anything at all.
++	checkpointselfheal.Clear()
++	t.Cleanup(checkpointselfheal.Clear)
++
++	f := newCPUSelfHealFixture(t, containermap.NewContainerMap())
++
++	// topoSingleSocketHT has CPUs 0-7; the state knows only 0-6.
++	seedCPUCheckpoint(t, f.manager.stateFileDirectory, f.policy.Name(), cpuset.New(0, 1, 2, 3, 4, 5, 6), nil)
++
++	if err := f.start(t, containermap.NewContainerMap()); err != nil {
++		t.Fatalf("Start returned %v, want nil: kubelet must come up", err)
++	}
++
++	records := checkpointselfheal.Take()
++	if len(records) != 1 {
++		t.Fatalf("recorded %d resets, want exactly 1", len(records))
++	}
++	if records[0].Manager != checkpointselfheal.ManagerCPU {
++		t.Errorf("manager: got %q, want %q", records[0].Manager, checkpointselfheal.ManagerCPU)
++	}
++	if records[0].Reason != checkpointselfheal.ReasonStateValidation {
++		t.Errorf("reason: got %q, want %q", records[0].Reason, checkpointselfheal.ReasonStateValidation)
++	}
++
++	// The policy's empty-state branch has to have run, otherwise the next
++	// restart hits the same wall: every CPU the machine has must be in the
++	// shared pool now.
++	if got := f.manager.state.GetDefaultCPUSet(); !got.Equals(topoSingleSocketHT.CPUDetails.CPUs()) {
++		t.Errorf("defaultCPUSet after heal: got %q, want %q", got, topoSingleSocketHT.CPUDetails.CPUs())
++	}
++}
++
++func TestStartCollectsVictimsBeforeClearingState(t *testing.T) {
++	// The ordering contract: victims are collected first, because after the
++	// reset there is nowhere left to read the old assignments from.
++	checkpointselfheal.Clear()
++	t.Cleanup(checkpointselfheal.Clear)
++
++	cm := containermap.NewContainerMap()
++	cm.Add("pod-pinned", "app", "cid-pinned")
++
++	f := newCPUSelfHealFixture(t, cm)
++	f.manager.containerMap = cm
++
++	seedCPUCheckpoint(t, f.manager.stateFileDirectory, f.policy.Name(),
++		cpuset.New(0, 1, 2, 3, 4, 5),
++		state.ContainerCPUAssignments{
++			"pod-pinned": map[string]cpuset.CPUSet{"app": cpuset.New(6)},
++		})
++
++	if err := f.start(t, cm); err != nil {
++		t.Fatalf("Start returned %v, want nil", err)
++	}
++
++	records := checkpointselfheal.Take()
++	if len(records) != 1 {
++		t.Fatalf("recorded %d resets, want exactly 1", len(records))
++	}
++	if len(records[0].Victims) != 1 {
++		t.Fatalf("victims: got %v, want exactly the pinned container", records[0].Victims)
++	}
++	victim := records[0].Victims[0]
++	if victim.PodUID != "pod-pinned" || victim.ContainerName != "app" || victim.ContainerID != "cid-pinned" {
++		t.Errorf("victim: got %+v, want pod-pinned/app/cid-pinned", victim)
++	}
++	if len(f.manager.state.GetCPUAssignments()) != 0 {
++		t.Errorf("assignments survived the reset: %v", f.manager.state.GetCPUAssignments())
++	}
++}
++
++func TestStartHealsPolicyChange(t *testing.T) {
++	// Flipping the policy leaves a checkpoint written by the previous one.
++	// Detected structurally, by comparing policy names, rather than by matching
++	// the text of an error.
++	checkpointselfheal.Clear()
++	t.Cleanup(checkpointselfheal.Clear)
++
++	cm := containermap.NewContainerMap()
++	cm.Add("pod-a", "app", "cid-a")
++
++	f := newCPUSelfHealFixture(t, cm)
++	f.manager.containerMap = cm
++
++	seedCPUCheckpoint(t, f.manager.stateFileDirectory, string(PolicyNone),
++		cpuset.New(0, 1, 2, 3, 4, 5, 6),
++		state.ContainerCPUAssignments{
++			"pod-a": map[string]cpuset.CPUSet{"app": cpuset.New(7)},
++		})
++
++	if err := f.start(t, cm); err != nil {
++		t.Fatalf("Start returned %v, want nil", err)
++	}
++
++	records := checkpointselfheal.Take()
++	if len(records) != 1 {
++		t.Fatalf("recorded %d resets, want exactly 1", len(records))
++	}
++	if records[0].Reason != checkpointselfheal.ReasonPolicyMismatch {
++		t.Errorf("reason: got %q, want %q", records[0].Reason, checkpointselfheal.ReasonPolicyMismatch)
++	}
++	if len(records[0].Victims) != 1 || records[0].Victims[0].ContainerID != "cid-a" {
++		t.Errorf("victims: got %v, want cid-a, recovered from the old policy's checkpoint", records[0].Victims)
++	}
++}
++
++func TestStartHealsUnreadableCheckpoint(t *testing.T) {
++	checkpointselfheal.Clear()
++	t.Cleanup(checkpointselfheal.Clear)
++
++	cm := containermap.NewContainerMap()
++	cm.Add("pod-a", "app", "cid-a")
++
++	f := newCPUSelfHealFixture(t, cm)
++	f.manager.containerMap = cm
++
++	path := filepath.Join(f.manager.stateFileDirectory, cpuManagerStateFileName)
++	blob := `{"policyName":"static","defaultCpuSet":"0-7","entries":{"pod-a":{"app":"6"}},"checksum":42}`
++	if err := os.WriteFile(path, []byte(blob), 0600); err != nil {
++		t.Fatal(err)
++	}
++
++	if err := f.start(t, cm); err != nil {
++		t.Fatalf("Start returned %v, want nil", err)
++	}
++
++	records := checkpointselfheal.Take()
++	if len(records) != 1 {
++		t.Fatalf("recorded %d resets, want exactly 1", len(records))
++	}
++	if records[0].Reason != checkpointselfheal.ReasonCheckpointCorrupt {
++		t.Errorf("reason: got %q, want %q", records[0].Reason, checkpointselfheal.ReasonCheckpointCorrupt)
++	}
++	if len(records[0].Victims) != 1 || records[0].Victims[0].ContainerID != "cid-a" {
++		t.Errorf("victims: got %v, want cid-a recovered from the unreadable file", records[0].Victims)
++	}
++}
++
++func TestStartLeavesHealthyCheckpointAlone(t *testing.T) {
++	checkpointselfheal.Clear()
++	t.Cleanup(checkpointselfheal.Clear)
++
++	f := newCPUSelfHealFixture(t, containermap.NewContainerMap())
++	seedCPUCheckpoint(t, f.manager.stateFileDirectory, f.policy.Name(), topoSingleSocketHT.CPUDetails.CPUs(), nil)
++
++	if err := f.start(t, containermap.NewContainerMap()); err != nil {
++		t.Fatalf("Start returned %v, want nil", err)
++	}
++	if got := checkpointselfheal.Pending(); got != 0 {
++		t.Errorf("recorded %d resets on a healthy node, want 0", got)
++	}
++}
++
++func TestStartOnlyTouchesTheAffectedManager(t *testing.T) {
++	// Decision: the causes are independent -- memory drifts on its own, CPU
++	// only changes on hotplug -- so a broken CPU checkpoint must not cost the
++	// memory manager its state. Here that is visible as exactly one record,
++	// tagged cpu.
++	checkpointselfheal.Clear()
++	t.Cleanup(checkpointselfheal.Clear)
++
++	f := newCPUSelfHealFixture(t, containermap.NewContainerMap())
++	seedCPUCheckpoint(t, f.manager.stateFileDirectory, f.policy.Name(), cpuset.New(0, 1), nil)
++
++	if err := f.start(t, containermap.NewContainerMap()); err != nil {
++		t.Fatalf("Start returned %v, want nil", err)
++	}
++
++	records := checkpointselfheal.Take()
++	if len(records) != 1 || records[0].Manager != checkpointselfheal.ManagerCPU {
++		t.Fatalf("records: got %v, want a single cpu record", records)
++	}
++	if filepath.Base(records[0].StateFile) != cpuManagerStateFileName {
++		t.Errorf("stateFile: got %q, want the CPU manager state file", records[0].StateFile)
++	}
++}
+diff --git a/pkg/kubelet/cm/memorymanager/memory_manager.go b/pkg/kubelet/cm/memorymanager/memory_manager.go
+index 572f58599a0..a02de3933a9 100644
+--- a/pkg/kubelet/cm/memorymanager/memory_manager.go
++++ b/pkg/kubelet/cm/memorymanager/memory_manager.go
+@@ -32,6 +32,7 @@ import (
+ 	podutil "k8s.io/kubernetes/pkg/api/v1/pod"
+ 	corev1helper "k8s.io/kubernetes/pkg/apis/core/v1/helper"
+ 	kubeletconfig "k8s.io/kubernetes/pkg/kubelet/apis/config"
++	"k8s.io/kubernetes/pkg/kubelet/cm/checkpointselfheal"
+ 	"k8s.io/kubernetes/pkg/kubelet/cm/containermap"
+ 	"k8s.io/kubernetes/pkg/kubelet/cm/memorymanager/state"
+ 	"k8s.io/kubernetes/pkg/kubelet/cm/topologymanager"
+@@ -191,17 +192,43 @@ func (m *manager) Start(ctx context.Context, activePods ActivePodsFunc, sourcesR
+ 	m.containerRuntime = containerRuntime
+ 	m.containerMap = initialContainers
+ 
++	// See the CPU manager for why this flag exists.
++	wasReset := false
++
+ 	stateImpl, err := state.NewCheckpointState(logger, m.stateFileDirectory, memoryManagerStateFileName, m.policy.Name())
+ 	if err != nil {
+-		logger.Error(err, "Could not initialize checkpoint manager, please drain node and remove policy state file")
+-		return err
++		// See the same branch in the CPU manager: reset rather than exit.
++		if !checkpointselfheal.ResetCheckpointFile(checkpointselfheal.ManagerMemory, m.stateFileDirectory, memoryManagerStateFileName, m.policy.Name(), m.containerMap, err) {
++			logger.Error(err, "Could not initialize checkpoint manager, please drain node and remove policy state file")
++			return err
++		}
++		wasReset = true
++		stateImpl, err = state.NewCheckpointState(logger, m.stateFileDirectory, memoryManagerStateFileName, m.policy.Name())
++		if err != nil {
++			logger.Error(err, "Could not initialize checkpoint manager after resetting its state, please drain node and remove policy state file")
++			return err
++		}
+ 	}
+ 	m.state = stateImpl
+ 
+ 	err = m.policy.Start(ctx, m.state)
+ 	if err != nil {
+-		logger.Error(err, "Policy start error")
+-		return err
++		// Unlike the CPU manager there is no reconcile loop here: nothing ever
++		// rewrites cpuset.mems of a running container, so a victim left alone
++		// would hold a NUMA zone the state now believes to be free for as long
++		// as it lives. Stopping it is the only thing that brings the two back
++		// together.
++		checkpointselfheal.RecordStateReset(checkpointselfheal.ManagerMemory, m.stateFileDirectory, memoryManagerStateFileName,
++			checkpointselfheal.RefsFrom(m.state.GetMemoryAssignments()), m.containerMap, err)
++		m.state.ClearState()
++		if err = m.policy.Start(ctx, m.state); err != nil {
++			logger.Error(err, "Policy start error after resetting manager state")
++			return err
++		}
++		wasReset = true
++	}
++	if !wasReset {
++		checkpointselfheal.LogHealthy(checkpointselfheal.ManagerMemory)
+ 	}
+ 
+ 	m.allocatableMemory = m.policy.GetAllocatableMemory(ctx, m.state)
+diff --git a/pkg/kubelet/cm/memorymanager/selfheal_test.go b/pkg/kubelet/cm/memorymanager/selfheal_test.go
+new file mode 100644
+index 00000000000..e9e7774cc98
+--- /dev/null
++++ b/pkg/kubelet/cm/memorymanager/selfheal_test.go
+@@ -0,0 +1,305 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package memorymanager
++
++import (
++	"os"
++	"path/filepath"
++	"testing"
++
++	cadvisorapi "github.com/google/cadvisor/info/v1"
++	v1 "k8s.io/api/core/v1"
++	"k8s.io/klog/v2/ktesting"
++	"k8s.io/kubernetes/pkg/kubelet/cm/checkpointselfheal"
++	"k8s.io/kubernetes/pkg/kubelet/cm/containermap"
++	"k8s.io/kubernetes/pkg/kubelet/cm/memorymanager/state"
++	"k8s.io/kubernetes/pkg/kubelet/cm/topologymanager"
++)
++
++// These tests cover what a single-NUMA-zone test node cannot reproduce at all:
++// per-zone memory drift, a changed zone count, and a victim holding a zone the
++// reset state believes to be free. On one zone cpuset.mems is always "0", so
++// there is nothing to observe there -- the coverage has to live here.
++
++const (
++	mib = uint64(1024 * 1024)
++	gib = 1024 * mib
++)
++
++// twoZoneMachine is the smallest machine that can drift: two NUMA nodes with
++// equal memory, so that a change on one of them is unambiguous.
++func twoZoneMachine() *cadvisorapi.MachineInfo {
++	return &cadvisorapi.MachineInfo{
++		Topology: []cadvisorapi.Node{
++			{Id: 0, Memory: 4 * gib},
++			{Id: 1, Memory: 4 * gib},
++		},
++	}
++}
++
++func twoZoneReserved() systemReservedMemory {
++	return systemReservedMemory{
++		0: map[v1.ResourceName]uint64{v1.ResourceMemory: 512 * mib},
++		1: map[v1.ResourceName]uint64{v1.ResourceMemory: 512 * mib},
++	}
++}
++
++type selfHealFixture struct {
++	manager  *manager
++	policy   *staticPolicy
++	stateDir string
++}
++
++func newSelfHealFixture(t *testing.T, machineInfo *cadvisorapi.MachineInfo, reserved systemReservedMemory, cm containermap.ContainerMap) *selfHealFixture {
++	t.Helper()
++	_, tCtx := ktesting.NewTestContext(t)
++
++	policy, err := NewPolicyStatic(tCtx, machineInfo, reserved, topologymanager.NewFakeManager())
++	if err != nil {
++		t.Fatalf("building static policy: %v", err)
++	}
++
++	return &selfHealFixture{
++		manager: &manager{
++			policy:             policy,
++			stateFileDirectory: t.TempDir(),
++			containerMap:       cm,
++		},
++		policy: policy.(*staticPolicy),
++	}
++}
++
++// seedCheckpoint writes a checkpoint with a *valid* checksum through the real
++// state package. That matters: writing a broken file would exercise the
++// "cannot read the checkpoint" path, while the drift this file is about is only
++// reachable with a file that reads back perfectly and simply no longer
++// describes the machine.
++func seedCheckpoint(t *testing.T, dir, policyName string, machineState state.NUMANodeMap, assignments state.ContainerMemoryAssignments) {
++	t.Helper()
++	logger, _ := ktesting.NewTestContext(t)
++
++	seed, err := state.NewCheckpointState(logger, dir, memoryManagerStateFileName, policyName)
++	if err != nil {
++		t.Fatalf("seeding checkpoint: %v", err)
++	}
++	seed.SetMachineState(machineState)
++	if assignments != nil {
++		seed.SetMemoryAssignments(assignments)
++	}
++}
++
++func TestStartHealsPerZoneMemoryDrift(t *testing.T) {
++	// The kubernetes/kubernetes#131253 shape: the kernel frees a varying amount
++	// of boot-time reserved memory each boot, so a zone's MemTotal comes back a
++	// few tens of MiB different from what the checkpoint recorded. Upstream
++	// refuses to start; the node then needs a human for a difference that
++	// changes nothing about whether the assignments still fit.
++	checkpointselfheal.Clear()
++	t.Cleanup(checkpointselfheal.Clear)
++
++	_, tCtx := ktesting.NewTestContext(t)
++	f := newSelfHealFixture(t, twoZoneMachine(), twoZoneReserved(), containermap.NewContainerMap())
++
++	drifted := f.policy.getDefaultMachineState()
++	drifted[0].MemoryMap[v1.ResourceMemory].TotalMemSize -= 40 * mib
++	seedCheckpoint(t, f.manager.stateFileDirectory, f.policy.Name(), drifted, nil)
++
++	err := f.manager.Start(tCtx, func() []*v1.Pod { return nil }, &sourcesReadyStub{},
++		mockPodStatusProvider{}, mockRuntimeService{}, containermap.NewContainerMap())
++	if err != nil {
++		t.Fatalf("Start returned %v, want nil: kubelet must come up despite the drift", err)
++	}
++
++	records := checkpointselfheal.Take()
++	if len(records) != 1 {
++		t.Fatalf("recorded %d resets, want exactly 1", len(records))
++	}
++	if records[0].Manager != checkpointselfheal.ManagerMemory {
++		t.Errorf("manager: got %q, want %q", records[0].Manager, checkpointselfheal.ManagerMemory)
++	}
++	if records[0].Reason != checkpointselfheal.ReasonStateValidation {
++		t.Errorf("reason: got %q, want %q", records[0].Reason, checkpointselfheal.ReasonStateValidation)
++	}
++	// Right after a reboot -- which is when drift shows up -- there are no
++	// containers, so the reset is free and nothing is stopped.
++	if len(records[0].Victims) != 0 {
++		t.Errorf("victims: got %v, want none", records[0].Victims)
++	}
++
++	// The state the manager ends up with must describe the machine as it is
++	// now, otherwise the next restart hits the same wall.
++	got := f.manager.state.GetMachineState()
++	want := f.policy.getDefaultMachineState()
++	for _, nodeID := range []int{0, 1} {
++		gotSize := got[nodeID].MemoryMap[v1.ResourceMemory].TotalMemSize
++		wantSize := want[nodeID].MemoryMap[v1.ResourceMemory].TotalMemSize
++		if gotSize != wantSize {
++			t.Errorf("node %d TotalMemSize after heal: got %d, want %d", nodeID, gotSize, wantSize)
++		}
++	}
++}
++
++func TestStartStopsContainerHoldingADriftedZone(t *testing.T) {
++	// The dangerous case, and the one a single-zone node cannot show: a running
++	// container is pinned to a zone, the state is reset, and nothing in the
++	// memory manager will ever rewrite that container's cpuset.mems -- there is
++	// no reconcile loop here, unlike the CPU manager. Left alone it would hold
++	// a zone the state reports as free for as long as it lives, and new pods
++	// would be admitted against memory that is not actually there.
++	checkpointselfheal.Clear()
++	t.Cleanup(checkpointselfheal.Clear)
++
++	_, tCtx := ktesting.NewTestContext(t)
++
++	cm := containermap.NewContainerMap()
++	cm.Add("pod-pinned", "app", "cid-pinned")
++
++	f := newSelfHealFixture(t, twoZoneMachine(), twoZoneReserved(), cm)
++
++	assignments := state.ContainerMemoryAssignments{
++		"pod-pinned": map[string][]state.Block{
++			"app": {{NUMAAffinity: []int{0}, Type: v1.ResourceMemory, Size: gib}},
++		},
++	}
++
++	// Build the state the way validateState would expect it for this
++	// assignment, then drift one zone. The assignment accounting is therefore
++	// correct and the drift is the only divergence.
++	machineState := f.policy.getDefaultMachineState()
++	node0 := machineState[0]
++	node0.NumberOfAssignments++
++	node0.Cells = []int{0}
++	node0.MemoryMap[v1.ResourceMemory].Reserved += gib
++	node0.MemoryMap[v1.ResourceMemory].Free -= gib
++	node0.MemoryMap[v1.ResourceMemory].TotalMemSize -= 40 * mib
++
++	seedCheckpoint(t, f.manager.stateFileDirectory, f.policy.Name(), machineState, assignments)
++
++	err := f.manager.Start(tCtx, func() []*v1.Pod { return nil }, &sourcesReadyStub{},
++		mockPodStatusProvider{}, mockRuntimeService{}, cm)
++	if err != nil {
++		t.Fatalf("Start returned %v, want nil", err)
++	}
++
++	records := checkpointselfheal.Take()
++	if len(records) != 1 {
++		t.Fatalf("recorded %d resets, want exactly 1", len(records))
++	}
++	if len(records[0].Victims) != 1 {
++		t.Fatalf("victims: got %v, want exactly the pinned container", records[0].Victims)
++	}
++	victim := records[0].Victims[0]
++	if victim.PodUID != "pod-pinned" || victim.ContainerName != "app" || victim.ContainerID != "cid-pinned" {
++		t.Errorf("victim: got %+v, want pod-pinned/app/cid-pinned", victim)
++	}
++
++	// Collecting victims has to happen before clearing, because afterwards
++	// there is nowhere left to read the assignments from.
++	if len(f.manager.state.GetMemoryAssignments()) != 0 {
++		t.Errorf("assignments survived the reset: %v", f.manager.state.GetMemoryAssignments())
++	}
++}
++
++func TestStartHealsChangedZoneCount(t *testing.T) {
++	// A VM migrated to a host with a different memory map, or an NPS change in
++	// firmware: the checkpoint describes zones that no longer exist.
++	checkpointselfheal.Clear()
++	t.Cleanup(checkpointselfheal.Clear)
++
++	_, tCtx := ktesting.NewTestContext(t)
++	f := newSelfHealFixture(t, twoZoneMachine(), twoZoneReserved(), containermap.NewContainerMap())
++
++	fourZones := &cadvisorapi.MachineInfo{
++		Topology: []cadvisorapi.Node{
++			{Id: 0, Memory: 2 * gib}, {Id: 1, Memory: 2 * gib},
++			{Id: 2, Memory: 2 * gib}, {Id: 3, Memory: 2 * gib},
++		},
++	}
++	stale := newSelfHealFixture(t, fourZones, systemReservedMemory{
++		0: map[v1.ResourceName]uint64{v1.ResourceMemory: 256 * mib},
++		1: map[v1.ResourceName]uint64{v1.ResourceMemory: 256 * mib},
++		2: map[v1.ResourceName]uint64{v1.ResourceMemory: 256 * mib},
++		3: map[v1.ResourceName]uint64{v1.ResourceMemory: 256 * mib},
++	}, containermap.NewContainerMap())
++
++	seedCheckpoint(t, f.manager.stateFileDirectory, f.policy.Name(), stale.policy.getDefaultMachineState(), nil)
++
++	if err := f.manager.Start(tCtx, func() []*v1.Pod { return nil }, &sourcesReadyStub{},
++		mockPodStatusProvider{}, mockRuntimeService{}, containermap.NewContainerMap()); err != nil {
++		t.Fatalf("Start returned %v, want nil", err)
++	}
++
++	if got := checkpointselfheal.Pending(); got != 1 {
++		t.Fatalf("recorded %d resets, want 1", got)
++	}
++	if got := len(f.manager.state.GetMachineState()); got != 2 {
++		t.Errorf("machine state describes %d zones, want 2 (the machine we actually have)", got)
++	}
++}
++
++func TestStartHealsUnreadableCheckpoint(t *testing.T) {
++	// A torn write leaves a file whose checksum does not match. The victims are
++	// still recoverable from it, which is why the file is read before it is
++	// removed.
++	checkpointselfheal.Clear()
++	t.Cleanup(checkpointselfheal.Clear)
++
++	_, tCtx := ktesting.NewTestContext(t)
++
++	cm := containermap.NewContainerMap()
++	cm.Add("pod-a", "app", "cid-a")
++
++	f := newSelfHealFixture(t, twoZoneMachine(), twoZoneReserved(), cm)
++	path := filepath.Join(f.manager.stateFileDirectory, memoryManagerStateFileName)
++	blob := `{"policyName":"Static","machineState":{},"entries":{"pod-a":{"app":[{"numaAffinity":[0],"type":"memory","size":1024}]}},"checksum":42}`
++	if err := os.WriteFile(path, []byte(blob), 0600); err != nil {
++		t.Fatal(err)
++	}
++
++	if err := f.manager.Start(tCtx, func() []*v1.Pod { return nil }, &sourcesReadyStub{},
++		mockPodStatusProvider{}, mockRuntimeService{}, cm); err != nil {
++		t.Fatalf("Start returned %v, want nil", err)
++	}
++
++	records := checkpointselfheal.Take()
++	if len(records) != 1 {
++		t.Fatalf("recorded %d resets, want 1", len(records))
++	}
++	if records[0].Reason != checkpointselfheal.ReasonCheckpointCorrupt {
++		t.Errorf("reason: got %q, want %q", records[0].Reason, checkpointselfheal.ReasonCheckpointCorrupt)
++	}
++	if len(records[0].Victims) != 1 || records[0].Victims[0].ContainerID != "cid-a" {
++		t.Errorf("victims: got %v, want cid-a recovered from the unreadable file", records[0].Victims)
++	}
++}
++
++func TestStartLeavesAHealthyCheckpointAlone(t *testing.T) {
++	checkpointselfheal.Clear()
++	t.Cleanup(checkpointselfheal.Clear)
++
++	_, tCtx := ktesting.NewTestContext(t)
++	f := newSelfHealFixture(t, twoZoneMachine(), twoZoneReserved(), containermap.NewContainerMap())
++	seedCheckpoint(t, f.manager.stateFileDirectory, f.policy.Name(), f.policy.getDefaultMachineState(), nil)
++
++	if err := f.manager.Start(tCtx, func() []*v1.Pod { return nil }, &sourcesReadyStub{},
++		mockPodStatusProvider{}, mockRuntimeService{}, containermap.NewContainerMap()); err != nil {
++		t.Fatalf("Start returned %v, want nil", err)
++	}
++	if got := checkpointselfheal.Pending(); got != 0 {
++		t.Errorf("recorded %d resets on a healthy node, want 0", got)
++	}
++}
