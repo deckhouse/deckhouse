@@ -309,6 +309,23 @@ func (m *Module) ApplyNotInstalledState(conflict bool) bool {
 	return true
 }
 
+// SetDevOverrideTag pins the module to the image tag its pull override names and marks it as
+// a dev module. Reports whether anything changed.
+func (m *Module) SetDevOverrideTag(tag string) bool {
+	if m.Spec.PackageVersion == tag && m.IsDev() {
+		return false
+	}
+
+	if m.Annotations == nil {
+		m.Annotations = make(map[string]string)
+	}
+
+	m.Annotations[ModuleAnnotationDev] = "true"
+	m.Spec.PackageVersion = tag
+
+	return true
+}
+
 // IsCondition reports whether the named condition is present with the given status.
 func (m *Module) IsCondition(condType string, status metav1.ConditionStatus) bool {
 	cond := meta.FindStatusCondition(m.Status.Conditions, condType)

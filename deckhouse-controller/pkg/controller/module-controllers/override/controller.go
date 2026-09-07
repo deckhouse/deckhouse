@@ -393,15 +393,10 @@ func (r *reconciler) ensureDevModule(ctx context.Context, mpo *v1alpha2.ModulePu
 				APIVersion: v1alpha2.ModuleGVK.GroupVersion().String(),
 				Kind:       v1alpha2.ModuleKind,
 			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        mpo.Name,
-				Annotations: map[string]string{v1alpha2.ModuleAnnotationDev: "true"},
-			},
-			Spec: v1alpha2.ModuleSpec{
-				PackageRepositoryName: repository,
-				PackageVersion:        mpo.Spec.ImageTag,
-			},
+			ObjectMeta: metav1.ObjectMeta{Name: mpo.Name},
+			Spec:       v1alpha2.ModuleSpec{PackageRepositoryName: repository},
 		}
+		module.SetDevOverrideTag(mpo.Spec.ImageTag)
 
 		err = r.client.Create(ctx, module)
 		if err != nil && !apierrors.IsAlreadyExists(err) {
@@ -421,12 +416,8 @@ func (r *reconciler) ensureDevModule(ctx context.Context, mpo *v1alpha2.ModulePu
 
 	patch := client.MergeFrom(module.DeepCopy())
 
-	if module.Annotations == nil {
-		module.Annotations = make(map[string]string)
-	}
-	module.Annotations[v1alpha2.ModuleAnnotationDev] = "true"
 	module.Spec.PackageRepositoryName = repository
-	module.Spec.PackageVersion = mpo.Spec.ImageTag
+	module.SetDevOverrideTag(mpo.Spec.ImageTag)
 
 	data, err := patch.Data(module)
 	if err != nil {

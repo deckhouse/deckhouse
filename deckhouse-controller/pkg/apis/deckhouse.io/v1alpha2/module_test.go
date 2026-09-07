@@ -86,6 +86,19 @@ func assertInstalledStatusCleared(t *testing.T, module *Module) {
 	assert.Nil(t, module.Status.Summary, "the summary goes with the package")
 }
 
+func TestModuleSetDevOverrideTag(t *testing.T) {
+	module := &Module{Spec: ModuleSpec{PackageVersion: "v1.0.0"}}
+
+	assert.True(t, module.SetDevOverrideTag("main"), "a module on a release moves onto the tag")
+	assert.Equal(t, "main", module.Spec.PackageVersion)
+	assert.True(t, module.IsDev())
+
+	assert.False(t, module.SetDevOverrideTag("main"), "the tag is settled")
+
+	assert.True(t, module.SetDevOverrideTag("pr123"), "a new tag moves the module again")
+	assert.Equal(t, "pr123", module.Spec.PackageVersion)
+}
+
 func TestModuleApplyNotInstalledState(t *testing.T) {
 	module := &Module{}
 

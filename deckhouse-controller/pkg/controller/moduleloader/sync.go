@@ -146,6 +146,15 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 			continue
 		}
 
+		// pin the module to the tag it runs, as the override controller does at deploy. A no-op
+		// once the package sync has placed the override.
+		err := utils.Update[*v1alpha2.Module](ctx, l.client, module, func(module *v1alpha2.Module) bool {
+			return module.SetDevOverrideTag(mpo.Spec.ImageTag)
+		})
+		if err != nil {
+			return fmt.Errorf("set the module version '%s': %w", module.Name, err)
+		}
+
 		currentNode := app.NodeName()
 		if len(currentNode) == 0 {
 			return errors.New("determine the node name deckhouse pod is running on: missing or empty DECKHOUSE_NODE_NAME env")

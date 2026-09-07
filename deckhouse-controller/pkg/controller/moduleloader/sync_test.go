@@ -283,10 +283,14 @@ func TestRestoreModulesByOverrides(t *testing.T) {
 	t.Run("non-embedded module is restored and pinned to its source registry", func(t *testing.T) {
 		t.Setenv("DECKHOUSE_NODE_NAME", testNodeName)
 
+		// the object lags behind the override: the tag and the dev mark are written here
+		module := enabled(testModule("echo", "example"))
+		module.Spec.PackageVersion = "v0.9.0"
+
 		calls := new(installerCalls)
 		l := newTestLoader(t, newRecordingInstaller(calls, nil),
 			testModuleSource("example", testRepo),
-			enabled(testModule("echo", "example")),
+			module,
 			testReadyMPO("echo", "v1.0.0", testNodeName),
 		)
 
@@ -298,6 +302,10 @@ func TestRestoreModulesByOverrides(t *testing.T) {
 		reg, ok := l.registries["echo"]
 		require.True(t, ok)
 		assert.Equal(t, testRepo, reg.Base)
+
+		restored := getModule(t, l, "echo")
+		assert.Equal(t, "v1.0.0", restored.Spec.PackageVersion, "the module is pinned to the override tag")
+		assert.True(t, restored.IsDev(), "the module carries the dev mark")
 	})
 
 	t.Run("embedded module is skipped", func(t *testing.T) {
