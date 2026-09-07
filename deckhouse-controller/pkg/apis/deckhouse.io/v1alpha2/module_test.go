@@ -48,12 +48,13 @@ func TestModuleIsNotInstalledPhase(t *testing.T) {
 }
 
 func TestModuleSetNotInstalledStatus(t *testing.T) {
-	module := &Module{}
+	module := installedModule()
 	module.SetConditionTrue(v1alpha1.ModuleConditionEnabledByModuleConfig, v1alpha1.ModuleReasonEnabled)
 
 	module.SetNotInstalledStatus()
 
 	assert.Equal(t, v1alpha1.ModulePhaseAvailable, module.Status.Phase)
+	assertInstalledStatusCleared(t, module)
 	assertCondition(t, module, v1alpha1.ModuleConditionEnabledByModuleManager, metav1.ConditionFalse, v1alpha1.ModuleReasonDisabled, "")
 	assertCondition(t, module, v1alpha1.ModuleConditionIsReady, metav1.ConditionFalse, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
 	// the config condition belongs to the config controller and stays
@@ -61,13 +62,28 @@ func TestModuleSetNotInstalledStatus(t *testing.T) {
 }
 
 func TestModuleSetConflictStatus(t *testing.T) {
-	module := &Module{}
+	module := installedModule()
 
 	module.SetConflictStatus()
 
 	assert.Equal(t, v1alpha1.ModulePhaseConflict, module.Status.Phase)
+	assertInstalledStatusCleared(t, module)
 	assertCondition(t, module, v1alpha1.ModuleConditionEnabledByModuleManager, metav1.ConditionFalse, v1alpha1.ModuleReasonDisabled, "")
 	assertCondition(t, module, v1alpha1.ModuleConditionIsReady, metav1.ConditionFalse, v1alpha1.ModuleReasonConflict, v1alpha1.ModuleMessageConflict)
+}
+
+// installedModule carries the status only an installed package reports.
+func installedModule() *Module {
+	return &Module{Status: ModuleStatus{
+		CurrentVersion: &ModuleStatusVersion{Version: "v1.0.0"},
+		Summary:        &ModuleStatusSummary{State: "Ready"},
+	}}
+}
+
+func assertInstalledStatusCleared(t *testing.T, module *Module) {
+	t.Helper()
+	assert.Nil(t, module.Status.CurrentVersion, "the current version goes with the package")
+	assert.Nil(t, module.Status.Summary, "the summary goes with the package")
 }
 
 func TestModuleApplyNotInstalledState(t *testing.T) {

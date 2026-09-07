@@ -270,6 +270,7 @@ func (m *Module) SetNotInstalledStatus() {
 	m.Status.Phase = v1alpha1.ModulePhaseAvailable
 	m.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, v1alpha1.ModuleReasonDisabled, "")
 	m.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
+	m.clearInstalledStatus()
 }
 
 // SetConflictStatus marks a module nothing installed as offered by several repositories with
@@ -278,6 +279,14 @@ func (m *Module) SetConflictStatus() {
 	m.Status.Phase = v1alpha1.ModulePhaseConflict
 	m.SetConditionFalse(v1alpha1.ModuleConditionEnabledByModuleManager, v1alpha1.ModuleReasonDisabled, "")
 	m.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonConflict, v1alpha1.ModuleMessageConflict)
+	m.clearInstalledStatus()
+}
+
+// clearInstalledStatus drops what only an installed package reports: the current version and
+// the summary. The module controller fills both again on the next install.
+func (m *Module) clearInstalledStatus() {
+	m.Status.CurrentVersion = nil
+	m.Status.Summary = nil
 }
 
 // ApplyNotInstalledState puts a module nothing installed into the conflict state while several

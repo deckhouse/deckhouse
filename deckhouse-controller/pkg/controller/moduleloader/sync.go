@@ -90,8 +90,6 @@ func (l *Loader) deleteStaleModuleReleases(ctx context.Context) error {
 			// set available
 			err = ctrlutils.UpdateStatusWithRetry(ctx, l.client, &module, func() error {
 				module.SetNotInstalledStatus()
-				module.Status.CurrentVersion = nil
-				module.Status.Summary = nil
 				return nil
 			})
 			if err != nil {

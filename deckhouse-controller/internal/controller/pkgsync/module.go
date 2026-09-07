@@ -253,9 +253,6 @@ func (s *syncer) ensureAvailableStatus(ctx context.Context, module *v1alpha2.Mod
 		return nil
 	}
 
-	module.Status.CurrentVersion = nil
-	module.Status.Summary = nil
-
 	if err := s.writer.Status().Patch(ctx, module, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("patch module '%s' status: %w", module.Name, err)
 	}
