@@ -45,7 +45,7 @@ A namespace is considered "accessible" if BOTH conditions are met:
 
 - **Watch NOT supported**: Clients must poll for updates. The `resourceVersion` is always empty.
 - **Computed at request time**: The list is calculated based on current RBAC and multi-tenancy rules. Changes propagate after informer cache sync (up to 30 minutes).
-- **Best-effort resource scope detection**: If a resource's scope can't be determined via discovery (transient errors / unavailable APIService), we treat it as namespaced.
+- **Best-effort resource scope detection**: If a resource's scope can't be determined via discovery, we treat it as namespaced. The scope cache is refreshed from discovery every 5 minutes; when discovery fails for some API groups (an unavailable APIService), the entries of those groups are kept from the previous refresh, so a transient outage does not turn a group's cluster-scoped resources into unknown ones.
 
 #### Security
 
