@@ -1,4 +1,10 @@
 positive:
+  configValues:
+    - auth:
+        status:
+          whitelistSourceRanges: ["1.1.1.1/32", "10.0.0.0/8"]
+        webui:
+          whitelistSourceRanges: ["192.168.0.1", "2001:db8::/32"]
   values:
     - auth:
         webui:
@@ -73,3 +79,20 @@ positive:
             -----END EC PRIVATE KEY-----
       smokeMiniDisabled: false
       statusPageAuthDisabled: false
+
+negative:
+  configValues:
+  - auth:
+      status:
+        whitelistSourceRanges: ["not-a-cidr"]
+  - auth:
+      webui:
+        whitelistSourceRanges:
+        - |-
+          1.1.1.1/32
+          ---
+          apiVersion: v1
+          kind: ConfigMap
+          metadata:
+            name: pwned
+            namespace: d8-upmeter

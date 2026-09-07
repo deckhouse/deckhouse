@@ -9,14 +9,14 @@ memory: 25Mi
 apiVersion: autoscaling.k8s.io/v1
 kind: VerticalPodAutoscaler
 metadata:
-  name: {{ $instance }}
+  name: {{ $instance | quote }}
   namespace: kube-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $ (dict "app" $instance)) | nindent 2 }}
 spec:
   targetRef:
     apiVersion: "apps/v1"
     kind: StatefulSet
-    name: {{ $instance }}
+    name: {{ $instance | quote }}
   updatePolicy:
     updateMode: "Initial"
   resourcePolicy:
@@ -32,20 +32,20 @@ spec:
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: {{ $instance }}
+  name: {{ $instance | quote }}
   namespace: kube-{{ $.Chart.Name }}
   {{- include "helm_lib_module_labels" (list $ (dict "app" $instance)) | nindent 2 }}
 spec:
   # Prometheus Pushgateway stores metrics in memory, so if we make more replicas, the data cannot be deleted correctly.
   replicas: 1
-  serviceName: {{ $instance }}
+  serviceName: {{ $instance | quote }}
   selector:
     matchLabels:
-      app: {{ $instance }}
+      app: {{ $instance | quote }}
   template:
     metadata:
       labels:
-        app: {{ $instance }}
+        app: {{ $instance | quote }}
     spec:
       {{- include "helm_lib_node_selector" (tuple $ "system") | nindent 6 }}
       {{- include "helm_lib_tolerations" (tuple $ "system") | nindent 6 }}

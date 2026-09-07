@@ -54,6 +54,9 @@ properties:
           **Внимание!** При использовании совместно с модулем [user-authn](https://deckhouse.ru/modules/user-authn/) необходимо также добавить разрешенные группы в соответствующее поле в [настройках](https://deckhouse.ru/modules/user-authn/cr.html#dexprovider) DexProvider.
       whitelistSourceRanges:
         description: Список адресов в формате CIDR, которым разрешено проходить авторизацию в Grafana и Prometheus.
+        items:
+          type: string
+          pattern: '^(((25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])\.){3}(25[0-5]|2[0-4][0-9]|1[0-9]{2}|[1-9]?[0-9])(/([0-9]|[12][0-9]|3[0-2]))?|([0-9A-Fa-f]{0,4}:){2,7}[0-9A-Fa-f]{0,4}(/([0-9]|[1-9][0-9]|1[01][0-9]|12[0-8]))?)$'
       satisfyAny:
         description: |
           Разрешает пройти только одну из аутентификаций.
@@ -168,6 +171,7 @@ properties:
   longtermScrapeInterval:
     description: |
       Как часто Longterm Prometheus должен собирать себе «снимок» данных из основного Prometheus.
+    pattern: '^([\d]*y)?([\d]*w)?([\d]*d)?([\d]*h)?([\d]*m)?([\d]*s)?$'
   nodeSelector:
     description: |
       Структура, аналогичная `spec.nodeSelector` пода Kubernetes.

@@ -24,7 +24,7 @@ metadata:
     alb.network.deckhouse.io/basic-auth-secret: d8-monitoring/basic-auth
   {{- end }}
   {{- if .Values.prometheus.auth.whitelistSourceRanges }}
-    alb.network.deckhouse.io/whitelist-source-range: {{ .Values.prometheus.auth.whitelistSourceRanges | join "," }}
+    alb.network.deckhouse.io/whitelist-source-range: {{ .Values.prometheus.auth.whitelistSourceRanges | join "," | quote }}
   {{- end }}
 spec:
   hostnames:

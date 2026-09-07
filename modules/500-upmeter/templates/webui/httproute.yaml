@@ -17,7 +17,7 @@ metadata:
     alb.network.deckhouse.io/basic-auth-secret: d8-{{ .Chart.Name }}/basic-auth-webui
   {{- end }}
   {{- if .Values.upmeter.auth.webui.whitelistSourceRanges }}
-    alb.network.deckhouse.io/whitelist-source-range: {{ .Values.upmeter.auth.webui.whitelistSourceRanges | join "," }}
+    alb.network.deckhouse.io/whitelist-source-range: {{ .Values.upmeter.auth.webui.whitelistSourceRanges | join "," | quote }}
   {{- end }}
   {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
     alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
@@ -58,7 +58,7 @@ metadata:
     alb.network.deckhouse.io/basic-auth-secret: d8-{{ .Chart.Name }}/basic-auth-webui
   {{- end }}
   {{- if .Values.upmeter.auth.webui.whitelistSourceRanges }}
-    alb.network.deckhouse.io/whitelist-source-range: {{ .Values.upmeter.auth.webui.whitelistSourceRanges | join "," }}
+    alb.network.deckhouse.io/whitelist-source-range: {{ .Values.upmeter.auth.webui.whitelistSourceRanges | join "," | quote }}
   {{- end }}
   {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
     alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'

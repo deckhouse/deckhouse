@@ -20,7 +20,7 @@ metadata:
     {{- end }}
   {{- end }}
   {{- if .Values.upmeter.auth.status.whitelistSourceRanges }}
-    alb.network.deckhouse.io/whitelist-source-range: {{ .Values.upmeter.auth.status.whitelistSourceRanges | join "," }}
+    alb.network.deckhouse.io/whitelist-source-range: {{ .Values.upmeter.auth.status.whitelistSourceRanges | join "," | quote }}
   {{- end }}
   {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
     alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
@@ -63,7 +63,7 @@ metadata:
     {{- end }}
   {{- end }}
   {{- if .Values.upmeter.auth.status.whitelistSourceRanges }}
-    alb.network.deckhouse.io/whitelist-source-range: {{ .Values.upmeter.auth.status.whitelistSourceRanges | join "," }}
+    alb.network.deckhouse.io/whitelist-source-range: {{ .Values.upmeter.auth.status.whitelistSourceRanges | join "," | quote }}
   {{- end }}
   {{- if or (eq (include "helm_lib_module_https_mode" .) "CertManager") (eq (include "helm_lib_module_https_mode" .) "CustomCertificate") }}
     alb.network.deckhouse.io/response-headers-to-add: '{"Strict-Transport-Security":"max-age=31536000; includeSubDomains"}'
