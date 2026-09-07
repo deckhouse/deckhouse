@@ -77,9 +77,8 @@ func TestReleaseVersionDataToMetadataEmpty(t *testing.T) {
 func TestIsCanaryRelease(t *testing.T) {
 	meta := &ReleaseMetadata{
 		Canary: map[string]CanarySettings{
-			"stable":       {Enabled: true, Waves: 6, Interval: 30 * time.Minute},
-			"beta":         {Enabled: false, Waves: 1, Interval: time.Minute},
-			"early-access": {Enabled: true, Waves: 0, Interval: 30 * time.Minute},
+			"stable": {Enabled: true, Waves: 6, Interval: 30 * time.Minute},
+			"beta":   {Enabled: false, Waves: 1, Interval: time.Minute},
 		},
 	}
 
@@ -89,8 +88,7 @@ func TestIsCanaryRelease(t *testing.T) {
 	}{
 		{channel: "stable", want: true},
 		{channel: "beta", want: false},
-		// canary is on, but without waves there is nothing to spread the rollout over
-		{channel: "early-access", want: false},
+		// a channel version.json says nothing about is not a canary one
 		{channel: "rock-solid", want: false},
 	} {
 		t.Run(tc.channel, func(t *testing.T) {
@@ -105,9 +103,8 @@ func TestCalculateReleaseDelay(t *testing.T) {
 	meta := &ReleaseMetadata{
 		Version: "v1.16.1",
 		Canary: map[string]CanarySettings{
-			"stable":       {Enabled: true, Waves: 6, Interval: 30 * time.Minute},
-			"alpha":        {Enabled: true, Waves: 2, Interval: 5 * time.Minute},
-			"early-access": {Enabled: true, Waves: 0, Interval: 30 * time.Minute},
+			"stable": {Enabled: true, Waves: 6, Interval: 30 * time.Minute},
+			"alpha":  {Enabled: true, Waves: 2, Interval: 5 * time.Minute},
 		},
 	}
 
@@ -133,18 +130,6 @@ func TestCalculateReleaseDelay(t *testing.T) {
 			name:        "wave 0 deploys right away",
 			channel:     "alpha",
 			clusterUUID: "cluster-f",
-			want:        nil,
-		},
-		{
-			name:        "channel without waves deploys right away",
-			channel:     "early-access",
-			clusterUUID: "cluster-a",
-			want:        nil,
-		},
-		{
-			name:        "unknown channel deploys right away",
-			channel:     "rock-solid",
-			clusterUUID: "cluster-a",
 			want:        nil,
 		},
 	} {

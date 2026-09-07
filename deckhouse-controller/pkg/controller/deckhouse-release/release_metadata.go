@@ -87,23 +87,17 @@ type CanarySettings struct {
 	Interval time.Duration
 }
 
-// IsCanaryRelease reports whether the release rolls out in waves on the given channel.
+// IsCanaryRelease reports whether canary is switched on for the given channel.
 func (m *ReleaseMetadata) IsCanaryRelease(channel string) bool {
-	settings := m.Canary[channel]
-
-	// Without waves there is nothing to spread the rollout over, so such a channel
-	// deploys immediately even though canary is switched on for it.
-	return settings.Enabled && settings.Waves > 0
+	return m.Canary[channel].Enabled
 }
 
 // CalculateReleaseDelay spreads clusters over the canary waves of the channel and
 // returns the time this cluster may apply the release at, or nil for the first wave.
+// Only call it for a channel IsCanaryRelease reports true for.
 // https://github.com/deckhouse/deckhouse/issues/332
 func (m *ReleaseMetadata) CalculateReleaseDelay(channel string, ts metav1.Time, clusterUUID string) *metav1.Time {
 	settings := m.Canary[channel]
-	if settings.Waves == 0 {
-		return nil
-	}
 
 	hash := murmur3.Sum64([]byte(clusterUUID + m.Version))
 
