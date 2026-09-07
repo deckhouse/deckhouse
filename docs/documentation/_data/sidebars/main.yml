@@ -1171,10 +1171,6 @@ entries:
                 en: Managed PostgreSQL
                 ru: Managed PostgreSQL
               url: /user/managed-services/postgres/
-            - title:
-                en: FAQ
-                ru: Частые вопросы
-              url: /user/managed-services/faq/
         - title:
             en: Monitoring
             ru: Мониторинг
@@ -1429,7 +1425,7 @@ entries:
             - title:
                 en: Pod-reloader module
                 ru: Модуль pod-reloader
-              url: /architecture/kubernetes-and-scheduling/pod-reloader.html              
+              url: /architecture/kubernetes-and-scheduling/pod-reloader.html
         - title:
             en: Cluster & Infrastructure subsystem
             ru: Подсистема Cluster & Infrastructure
@@ -1613,7 +1609,7 @@ entries:
             - title:
                 en: Cilium-hubble module
                 ru: Модуль cilium-hubble
-              url: /architecture/network/cilium-hubble.html              
+              url: /architecture/network/cilium-hubble.html
             - title:
                 en: Ingress-nginx module
                 ru: Модуль ingress-nginx
@@ -1777,7 +1773,7 @@ entries:
             - title:
                 en: Managed-postgres module
                 ru: Модуль managed-postgres
-              url: /architecture/managed-services/managed-postgres.html   
+              url: /architecture/managed-services/managed-postgres.html
             - title:
                 en: Managed-valkey module
                 ru: Модуль managed-valkey

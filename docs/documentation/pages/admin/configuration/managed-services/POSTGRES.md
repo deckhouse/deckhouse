@@ -466,4 +466,10 @@ In this example:
 
 Users don't need to worry about node selection. Pods are automatically placed on the prepared infrastructure according to the PostgresClass settings.
 
-If no node matches the placement rules, users' Postgres objects stay in the `Pending` state — for diagnostics, see [PostgreSQL instances remain in the Pending state](../../../user/managed-services/faq.html#postgresql-instances-remain-in-the-pending-state) in the FAQ.
+If no node meets the placement rules, users' Postgres objects will remain in the `Pending` state. To determine the cause, you can check the events in the namespace, the Postgres object information, and the PVC status:
+
+```shell
+d8 k describe pods -n my-postgres <POD_NAME>
+d8 k get events -n my-postgres --sort-by=.lastTimestamp
+d8 k get pvc -n my-postgres
+```
