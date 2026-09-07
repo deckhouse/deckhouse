@@ -34,6 +34,18 @@ import (
 
 const albManifestKey = "alb.yaml.tpl"
 
+const packagesReferenceGrantNamespace = "d8-cloud-instance-manager"
+
+func packagesReferenceGrant(vcp *controlplanev1alpha1.VirtualControlPlane) *unstructured.Unstructured {
+	obj := &unstructured.Unstructured{}
+	obj.SetAPIVersion("gateway.networking.k8s.io/v1beta1")
+	obj.SetKind("ReferenceGrant")
+	obj.SetNamespace(packagesReferenceGrantNamespace)
+	obj.SetName(fmt.Sprintf("vcp-%s-%s-packages", vcp.Namespace, vcp.Name))
+
+	return obj
+}
+
 // exposeHost builds a per-VCP hostname (example: api.<name>.<suffix>) used for ALB SNI routing
 func exposeHost(role string, vcp *controlplanev1alpha1.VirtualControlPlane) string {
 	return fmt.Sprintf("%s.%s.%s", role, vcp.Name, constants.VirtualExposeDomainSuffix)

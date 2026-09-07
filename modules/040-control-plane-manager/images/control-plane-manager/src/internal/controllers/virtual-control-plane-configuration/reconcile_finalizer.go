@@ -24,6 +24,7 @@ import (
 	"time"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -62,7 +63,25 @@ func (r *reconciler) reconcileFinalizer(ctx context.Context, vcp *controlplanev1
 }
 
 func (r *reconciler) finalize(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) (reconcile.Result, error) {
+	if err := r.deletePackagesReferenceGrant(ctx, vcp); err != nil {
+		return reconcile.Result{}, err
+	}
+
 	return r.deletePostgresArtifacts(ctx, vcp)
+}
+
+func (r *reconciler) deletePackagesReferenceGrant(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) error {
+	obj := packagesReferenceGrant(vcp)
+
+	err := r.client.Delete(ctx, obj)
+	if apierrors.IsNotFound(err) || meta.IsNoMatchError(err) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("delete packages ReferenceGrant: %w", err)
+	}
+
+	return nil
 }
 
 func (r *reconciler) deletePostgresArtifacts(ctx context.Context, vcp *controlplanev1alpha1.VirtualControlPlane) (reconcile.Result, error) {
@@ -91,7 +110,7 @@ func (r *reconciler) ensurePostgresDeleted(ctx context.Context, vcp *controlplan
 	obj.SetName(constants.VirtualResourceName(constants.VirtualDatastoreName, vcp.Name))
 
 	err := r.client.Get(ctx, client.ObjectKeyFromObject(obj), obj)
-	if apierrors.IsNotFound(err) {
+	if apierrors.IsNotFound(err) || meta.IsNoMatchError(err) {
 		return true, nil
 	}
 	if err != nil {

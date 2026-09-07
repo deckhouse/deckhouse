@@ -1,0 +1,55 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ValidationWebhook
+metadata:
+  name: virtual-control-plane-required-modules
+  {{- include "helm_lib_module_labels" (list . (dict "app" "control-plane-manager")) | nindent 2 }}
+validationObject:
+  name: virtual-control-plane-required-modules.deckhouse.io
+  group: main
+  rules:
+  - apiGroups:   ["control-plane.deckhouse.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE"]
+    resources:   ["virtualcontrolplanes"]
+    scope:       "Namespaced"
+context:
+  - name: required-modules
+    kubernetes:
+      apiVersion: deckhouse.io/v1alpha1
+      kind: Module
+      nameSelector:
+        matchNames: ["managed-postgres", "alb"]
+      jqFilter: |-
+        {
+          "name": .metadata.name,
+          "phase": .status.phase,
+          "enabled": ((.status.conditions // []) | map(select(.type == "EnabledByModuleManager" and .status == "True")) | length > 0)
+        }
+handler:
+  python: |
+    REQUIRED_MODULES = {
+        "managed-postgres": "the tenant control plane datastore",
+        "alb": "publishing the tenant Kubernetes API",
+    }
+
+    def validate(ctx: DotMap) -> tuple[Optional[str], bool]:
+        ready = set()
+        for snap in ctx.snapshots.get("required-modules", []):
+            module = snap.filterResult
+            if module.get("enabled") and module.get("phase") == "Ready":
+                ready.add(module.get("name"))
+
+        missing = [name for name in REQUIRED_MODULES if name not in ready]
+        if not missing:
+            return None, True
+
+        vcp_name = ctx.review.request.object.metadata.name
+        details = ", ".join(
+            f'"{name}" (required for {REQUIRED_MODULES[name]})' for name in missing
+        )
+        return (
+            f'Cannot create VirtualControlPlane "{vcp_name}": module(s) not enabled or not ready: {details}. '
+            f'Enable them via ModuleConfig and wait until their status.phase becomes "Ready".',
+            False,
+        )
