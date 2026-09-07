@@ -879,11 +879,21 @@ class TestDexProviderGate(unittest.TestCase):
         self.allowed(dex_ctx("UPDATE", dex_oidc(clientSecret="new"), old_spec=P1,
                              username=CLUSTER_ADMIN))
 
-    def test_clusteradmin_renames_and_toggles_foreign_open_provider(self):
+    def test_clusteradmin_renames_and_disables_foreign_open_provider(self):
         self.allowed(dex_ctx("UPDATE", dex_oidc(displayName="renamed"), old_spec=P1,
                              username=CLUSTER_ADMIN))
-        self.allowed(dex_ctx("UPDATE", dex_oidc(enabled=True), old_spec=P1,
+        self.allowed(dex_ctx("UPDATE", dex_oidc(enabled=False), old_spec=dex_oidc(enabled=True),
                              username=CLUSTER_ADMIN))
+
+    def test_clusteradmin_cannot_re_enable_foreign_open_provider(self):
+        # P1 is stored disabled; switching it back on is a fresh connection (review #15)
+        self.denied(dex_ctx("UPDATE", dex_oidc(enabled=True), old_spec=P1, username=CLUSTER_ADMIN),
+                    "user-authz:super-admin")
+        self.allowed(dex_ctx("UPDATE", dex_oidc(enabled=True), old_spec=P1, username=SUPERADMIN))
+        # ... and a closed provider within range comes back on for its owner
+        off = dex_oidc(allowedIdentities={"emailDomains": ["contractor.example"], "groups": ["contractors"]})
+        on = dict(off); on["enabled"] = True
+        self.allowed(dex_ctx("UPDATE", on, old_spec=off, username=CLUSTER_ADMIN))
 
     def test_clusteradmin_reapplies_foreign_open_provider(self):
         self.allowed(dex_ctx("UPDATE", dex_oidc(), old_spec=P1, username=CLUSTER_ADMIN))

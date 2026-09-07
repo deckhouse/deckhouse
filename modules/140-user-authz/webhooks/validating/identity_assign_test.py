@@ -402,6 +402,57 @@ class TestUnknownRoles(unittest.TestCase):
         self.assertEqual(assign.can_assign(["d8:system:pwned"], ["gone:role"], cat), ["gone:role"])
 
 
+class TestTargetOwnership(unittest.TestCase):
+    """A level is read off a target role only when the platform installed it (review #14)."""
+
+    def test_rbacv2_target_without_heritage_is_leftover_inside_range(self):
+        cat = default_catalog()
+        cat["d8:manage:networking:user"] = entry("d8:manage:networking:user", rules=STAR, heritage=False)
+        actor = ["d8:manage:security:manager"]
+        cat["d8:manage:security:manager"] = entry("d8:manage:security:manager", rules=CAR_EDIT, labels={
+            "can-assign-basic-max": "ClusterAdmin", "can-assign-scope": "subsystem",
+            "can-assign-subsystem": "networking", "can-assign-max-level": "admin"})
+        self.assertEqual(assign.can_assign(actor, ["d8:manage:networking:user"], cat),
+                         ["d8:manage:networking:user"])
+        cat["d8:manage:networking:user"] = entry("d8:manage:networking:user", rules=STAR)
+        self.assertIsNone(assign.can_assign(actor, ["d8:manage:networking:user"], cat))
+
+    def test_basic_annotation_without_heritage_is_leftover_inside_range(self):
+        cat = default_catalog()
+        cat["d8:x"] = entry("d8:x", rules=STAR, access_level="User", heritage=False)
+        cat["editor-range"] = entry("editor-range", rules=CAR_EDIT, labels={"can-assign-basic-max": "Editor"})
+        # the actor's own range label is honoured only on platform names; use a real one
+        cat["user-authz:editor"] = entry("user-authz:editor", rules=CAR_EDIT, labels={"can-assign-basic-max": "Editor"})
+        actor = ["user-authz:editor"]
+        self.assertEqual(assign.can_assign(actor, ["d8:x"], cat), ["d8:x"])
+        cat["d8:x"] = entry("d8:x", rules=STAR, access_level="User")
+        self.assertIsNone(assign.can_assign(actor, ["d8:x"], cat))
+
+    def test_ladder_name_without_heritage_is_leftover(self):
+        # Rules the actor does not cover, so range is the only way in; the ladder
+        # name alone must not open it.
+        cat = default_catalog()
+        cat["user-authz:user"] = entry("user-authz:user", rules=STAR_ALL, heritage=False)
+        self.assertEqual(assign.can_assign(["user-authz:cluster-admin"], ["user-authz:user"], cat),
+                         ["user-authz:user"])
+        cat["user-authz:user"] = entry("user-authz:user", rules=STAR_ALL)
+        self.assertIsNone(assign.can_assign(["user-authz:cluster-admin"], ["user-authz:user"], cat))
+
+    def test_forged_high_level_still_hits_disaster_first(self):
+        cat = default_catalog()
+        cat["d8:manage:all:superadmin"] = entry("d8:manage:all:superadmin", rules=[], heritage=False)
+        self.assertEqual(assign.can_assign(["user-authz:cluster-admin"], ["d8:manage:all:superadmin"], cat),
+                         ["d8:manage:all:superadmin"])
+        self.assertIsNone(assign.can_assign(["user-authz:super-admin"], ["d8:manage:all:superadmin"], cat))
+
+    def test_basic_level_of_requires_ownership(self):
+        self.assertIsNone(assign.basic_level_of("user-authz:editor", None))
+        self.assertIsNone(assign.basic_level_of("user-authz:editor", entry("user-authz:editor", heritage=False)))
+        self.assertEqual(assign.basic_level_of("user-authz:editor", entry("user-authz:editor")), "Editor")
+        self.assertIsNone(assign.basic_level_of("d8:x", entry("d8:x", access_level="User", heritage=False)))
+        self.assertEqual(assign.basic_level_of("d8:x", entry("d8:x", access_level="User")), "User")
+
+
 # --- DexProvider: identity space -> targets (specs/002-dexprovider-identity-gate) ---
 
 def car(name, level, users=(), groups=(), additional=()):
@@ -685,12 +736,24 @@ class TestDexBenignUpdate(unittest.TestCase):
         new = {"type": "LDAP", "ldap": {"host": "h", "bindPW": "b"}}
         self.assertTrue(assign.dex_benign_update(old, new))
 
-    def test_display_name_and_enabled_are_benign(self):
+    def test_display_name_and_disabling_are_benign(self):
         new = oidc(); new["displayName"] = "renamed"
         self.assertTrue(assign.dex_benign_update(oidc(), new))
-        old = oidc(); old["enabled"] = False
-        new = oidc(); new["enabled"] = True
-        self.assertTrue(assign.dex_benign_update(old, new))
+        on = oidc(); on["enabled"] = True
+        off = oidc(); off["enabled"] = False
+        self.assertTrue(assign.dex_benign_update(on, off))
+        self.assertTrue(assign.dex_benign_update(oidc(), off))  # absent enabled means true
+
+    def test_enabling_is_a_fresh_connection(self):
+        # Disabling is the containment action for a suspect provider; undoing it
+        # must not be free for an actor that could not have created it (review #15).
+        on = oidc(); on["enabled"] = True
+        off = oidc(); off["enabled"] = False
+        self.assertFalse(assign.dex_benign_update(off, on))
+        self.assertFalse(assign.dex_benign_update(off, oidc()))
+        # ... even when the rest of the spec only narrows
+        narrowed_on = oidc(allowedIdentities={"emailDomains": ["a"], "groups": ["g"]})
+        self.assertFalse(assign.dex_benign_update(off, narrowed_on))
 
     def test_list_order_and_null_noise_are_benign(self):
         new = oidc(scopes=["groups", "email", "openid"])

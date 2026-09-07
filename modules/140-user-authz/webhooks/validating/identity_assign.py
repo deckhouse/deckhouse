@@ -484,7 +484,11 @@ def target_group_roles(snapshots: Any, group_name: str) -> List[str]:
 DEX_ALLOWED_IDENTITIES = "allowedIdentities"
 
 # Fields whose change neither moves the identity source nor widens the space.
-DEX_BENIGN_TOP_FIELDS = frozenset({"displayName", "enabled"})
+# `enabled` is handled separately: switching a provider off is free, switching
+# it back on is measured as a fresh connection, because disabling is the
+# containment action for a suspect provider and undoing it must not be free
+# for an actor that could not have created it.
+DEX_BENIGN_TOP_FIELDS = frozenset({"displayName"})
 DEX_CREDENTIAL_FIELDS = frozenset({"clientSecret", "bindPW"})
 
 DEX_CONNECTOR_BLOCKS = ("oidc", "saml", "ldap", "crowd", "gitlab", "github", "bitbucketCloud")
@@ -679,6 +683,12 @@ def _dex_strip(spec: dict, *, limiters: bool) -> dict:
     return out
 
 
+def _dex_enabled(spec: dict) -> bool:
+    # The CRD defaults `enabled` to true; an absent field means enabled.
+    value = spec.get("enabled")
+    return True if value is None else bool(value)
+
+
 def _subset(new: Optional[frozenset], old: Optional[frozenset]) -> bool:
     if old is None:
         return True
@@ -696,6 +706,10 @@ def dex_benign_update(old_spec: Any, new_spec: Any) -> bool:
     """
     old = _dict(old_spec)
     new = _dict(new_spec)
+    if _dex_enabled(new) and not _dex_enabled(old):
+        return False
+    old = {k: v for k, v in old.items() if k != "enabled"}
+    new = {k: v for k, v in new.items() if k != "enabled"}
     if _dex_normalize(_dex_strip(old, limiters=False)) == _dex_normalize(_dex_strip(new, limiters=False)):
         return True
     if _dex_normalize(_dex_strip(old, limiters=True)) != _dex_normalize(_dex_strip(new, limiters=True)):
@@ -772,11 +786,19 @@ def describe_role(name: str, labels: Optional[dict] = None) -> Optional[RoleDesc
 
 
 def basic_level_of(name: str, entry: Optional[CatalogEntry]) -> Optional[str]:
+    """Basic level a role stands for, read only off a platform-owned role.
+
+    Both the ladder names and the access-level annotation are strings a
+    requester with create on clusterroles can put on a role of their own, so
+    neither is trusted without the heritage marker. The disaster check stays
+    name-based on purpose: it only ever makes the verdict stricter.
+    """
+    if not is_platform_owned(entry):
+        return None
     for level, role in BASIC_LEVEL_ROLE.items():
         if name == role:
             return level
-    if (entry and entry.access_level in BASIC_ORDER
-            and is_platform_range_role(name)):
+    if entry.access_level in BASIC_ORDER and is_platform_range_role(name):
         return entry.access_level
     return None
 
@@ -845,12 +867,18 @@ def role_in_range(name: str, entry: Optional[CatalogEntry], rng: AssignRange) ->
     if is_disaster(name, entry):
         return rng.basic_max == "SuperAdmin" or rng.max_level == "superadmin"
 
+    # A range is a statement about platform roles. A self-made role under a
+    # platform name is leftover for everyone below the SuperAdmin range,
+    # whatever its name or annotations claim.
+    if not is_platform_owned(entry):
+        return False
+
     basic = basic_level_of(name, entry)
     if basic and rng.basic_max:
         if BASIC_ORDER[basic] <= BASIC_ORDER[rng.basic_max]:
             return True
 
-    desc = describe_role(name, entry.labels if entry else None)
+    desc = describe_role(name, entry.labels)
     if not desc or not rng.max_level:
         return False
     if RBACV2_ORDER[desc.level] > RBACV2_ORDER[rng.max_level]:

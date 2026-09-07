@@ -693,7 +693,7 @@ spec:
 
 Dex enforces the same limits at sign-in: a user whose email is outside `emails` and `emailDomains` is refused, the `groups` claim is reduced to the intersection with `groups`, and an empty intersection is a refusal. Both take effect for every provider type, on top of the provider-specific filters.
 
-Rotating `clientSecret` or `bindPW`, changing `displayName` or `enabled`, narrowing the limits and re-applying the same manifest are admitted without a check. Any other change is measured as a new connection against the provider in its new form: the address of the identity provider, claim or attribute mapping, signature and email verification switches, and widening the limits. Deleting a provider is not checked.
+Rotating `clientSecret` or `bindPW`, changing `displayName`, disabling the provider, narrowing the limits and re-applying the same manifest are admitted without a check. Any other change is measured as a new connection against the provider in its new form: the address of the identity provider, claim or attribute mapping, signature and email verification switches, widening the limits, and enabling a disabled provider (disabling is how a suspect provider is contained, so undoing it is not free). Deleting a provider is not checked.
 
 A refused write names the roles the provider could reach and the requester's can-assign range, for example `dexproviders.deckhouse.io "corp": the provider can assert identities that already carry roles [user-authz:super-admin]; the requester's can-assign range is basic<=ClusterAdmin and does not cover them. Narrow spec.allowedIdentities (emails, emailDomains, groups) or ask a SuperAdmin`.
 
