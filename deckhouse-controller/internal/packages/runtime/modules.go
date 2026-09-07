@@ -120,7 +120,7 @@ func (r *Runtime) UpdateGlobalSettings(settingsVersion int, settings addonutils.
 		return
 	}
 
-	r.scheduler.Reschedule(name)
+	r.scheduler.Reschedule(name, reasonConfigChanged)
 }
 
 // LoadModules runs the bootstrap's whole module tree through the pipeline UpdateModule and
@@ -192,7 +192,7 @@ func (r *Runtime) enqueueModules(wg *sync.WaitGroup, mods []Module) {
 
 		ctx := r.packages.Update(name, version, module.SettingsVersion, module.Settings, module.Maintenance, false)
 		if ctx == nil {
-			r.scheduler.Reschedule(name)
+			r.scheduler.Reschedule(name, reasonSettingsChanged)
 			continue
 		}
 
