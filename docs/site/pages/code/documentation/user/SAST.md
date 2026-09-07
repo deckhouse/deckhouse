@@ -62,25 +62,46 @@ Then link the policy project to the target project or group in "Settings" → "S
 
 The scan options can also be edited in the policy editor, which renders the form described below.
 
-![The sast action in the policy editor](/images/code/semgrep_policy_form_en.png)
-
 ## What the policy sets
 
-The form for the `sast` action is split into four blocks. Every option is the policy's, not the scanned project's: the values are written into the job by the server while the pipeline is rendered, so the scanned project's own CI/CD variables cannot change them.
+The form for the `sast` action is five groups: "Version and rules", "Blocking", "Paths", "Rule levels" and "Additional arguments". Every option is the policy's, not the scanned project's: the values are written into the job by the server while the pipeline is rendered, so the scanned project's own CI/CD variables cannot change them.
 
-### Rules
+All five open and close on their own title, and all five start closed. Closed is a statement rather than a folded-away detail: a closed group is one the policy writes nothing into, so that part of the scan keeps its default — the Semgrep integration's value where the integration has one, which for this scanner means the scanner image and nothing else, and the value shipped with this product for everything else. Open a group and fill in a field, and the policy takes that decision over for every project it covers. Save the policy and open it again, and the groups it holds something in come back open, so a saved policy never reads as less than it sets.
 
-This block sets which rules the scan runs.
+What a closed group has settled is stated at the end of its title line, which is what makes the closed form readable — the threshold and the rule source can be read without opening anything:
 
-![The Rules and Blocking blocks of the sast action](/images/code/semgrep_policy_rules_en.png)
+| Group | What its closed line states |
+|-------|-----------------------------|
+| "Version and rules" | Where the rules come from — "The set shipped with this product" until the policy picks another source |
+| "Blocking" | The threshold — "High and above" until the policy picks another |
+| "Paths" | Where the path filters come from — "No filters" until the policy picks another |
+| "Rule levels" | The levels the policy switched on, such as "High, Medium". Blank while the policy has set none, which is when all three run |
+| "Additional arguments" | Nothing. Free text is not a choice out of a list, so there is nothing to state |
+
+The first three lines are never blank because their control is a set of radio buttons, which always shows an answer: the policy's, or the first option when the policy has said nothing. The line and the control therefore agree. "Rule levels" is a set rather than a choice, and while the policy has set nothing there is nothing to name — so a blank line there means all three levels run, not that none do.
+
+None of the five groups has a checkbox beside its title. Other scanners have groups that do, and those are modules that can be switched off; these five are the scan itself. Removing the `sast` action from the policy is what turns the scan off.
+
+A field that answers to one choice is drawn under that choice and nowhere else. Picking "A file in the security policy project" as the rule source puts the rule file path beneath that option; picking another source takes the field away rather than leaving it on screen and disabled.
+
+![The sast action in the policy editor](/images/code/semgrep_policy_form_en.png)
+
+### Version and rules
+
+This group sets which semgrep runs, and which rules it runs.
+
+![The "Version and rules" group of the sast action, open](/images/code/semgrep_policy_rules_en.png)
 
 | Field | What it sets |
 |-------|--------------|
+| "Version" | Which version of semgrep the scan runs. The server picks the image that carries it. Left empty, the version shipped with this product is used — see "Where the scanner image comes from". |
 | "Rule set" | Where the rules come from. One of four sources, described below. Default: "The set shipped with this product". |
 | "Rule set path in the image" | Which of the sets carried inside the scanner image to run (see "Rule sets in the image"). Default: `/rules/lgpl`. The scan stops if the image has no set at this path. |
 | "Rules" | The rules themselves, in the scanner's own YAML. Shown when the source is "Rules written in the policy". |
 | "Rule file path" | Path to the rule file inside the project the rules are read from. Default: `.semgrep.yml`. |
 | "Add to the shipped set" | On by default: your own rules run *alongside* the shipped set. Cleared, they run *instead* of it, and everything the shipped set covered stops being checked. |
+
+The group states, above the version field, which image this installation will actually run and which semgrep version ships with the product. Both are worth reading before typing a version, because the image tag and the semgrep version are two different numberings — a larger image tag has meant an older semgrep. Where an integration above the policy names a prepared image in full, the group says so and the version field is not yours to fill in: that image carries the version it carries.
 
 The four rule sources differ in who owns the file:
 
@@ -97,7 +118,7 @@ A rule file the policy named but the scan could not be given is an error, not a 
 
 ### Blocking
 
-This block sets what a finding does to the pipeline.
+This group sets what a finding does to the pipeline.
 
 | Field | What it sets |
 |-------|--------------|
@@ -116,7 +137,7 @@ The list is short on purpose. Semgrep has three severity levels — ERROR, WARNI
 
 ### Paths
 
-This block sets what the scan looks at, and what it leaves out.
+This group sets what the scan looks at, and what it leaves out.
 
 | Field | What it sets |
 |-------|--------------|
@@ -140,7 +161,7 @@ Filters have the same four-way choice of source as rules:
 By default the job sets aside any `.semgrepignore` it finds in the scanned repository — including nested ones in subdirectories — before the scan starts. Picking "A file in the scanned project" is what turns that off, and it is worth being deliberate about:
 
 {% alert level="warning" %}
-"A file in the scanned project" and "Honor the repository's .gitignore" both hand the scanned project the say over what the mandated scan examines. A commit in that project can then narrow the scan that checks it, and the narrowing is invisible in the policy. Both are legitimate delegations — a security team may well decide each project knows its own third-party directories best — but they are delegations, and the policy is where that decision is recorded. Neither is on by default.
+"A file in the scanned project" and "Honor the repository's .gitignore" both hand the scanned project the say over what the mandated scan examines. A commit in that project can then narrow the scan that checks it, and the narrowing is invisible in the policy. Both are legitimate delegations — a security team may well decide each project knows its own third-party directories best — but they are delegations, and the policy is where that decision is recorded. Neither is on by default, and neither is reached without opening this group.
 {% endalert %}
 
 Two more things about the two lists:
@@ -150,14 +171,13 @@ Two more things about the two lists:
 
 A pattern that matches nothing is not a syntax error and the form cannot catch it. What catches it is the job: it prints how many files the scanner actually read, and fails when that number is zero.
 
-### Advanced
+### Rule levels
 
-This block sets which levels of rule run, and the flags this form does not name.
+This group sets which levels of rule run at all.
 
 | Field | What it sets |
 |-------|--------------|
-| "Rule levels" | Which rules run at all: "High" (ERROR), "Medium" (WARNING), "Info" (INFO). All three are on by default. |
-| "Additional arguments" | Flags passed to the scan as written, for what this form does not name. |
+| "Rule levels" | "High" (ERROR), "Medium" (WARNING), "Info" (INFO). All three run while the policy sets none. |
 
 "Rule levels" and "Blocking threshold" look alike and do different things:
 
@@ -168,7 +188,19 @@ This block sets which levels of rule run, and the flags this form does not name.
 
 So leaving a level out removes its findings from the report as well, not merely from blocking — the vulnerability report and DefectDojo both get smaller, and they get smaller silently. A blocking threshold set below the lowest level that runs cannot fire at all; the form says so when that happens.
 
+Opening this group does not by itself change anything: the levels only leave the shipped set of three once the policy has picked a different set, and until it does the group's closed line stays blank.
+
+### Additional arguments
+
+This group sets the flags the rest of the form does not name.
+
+| Field | What it sets |
+|-------|--------------|
+| "Additional arguments" | Flags passed to the scan as written. |
+
 "Additional arguments" is for tuning the runner's resources — timeouts, memory limits, maximum file size — not for changing what the scan is. Flags that redirect or silence the report are refused, as are the flags this form already owns: output and report formats (`--json`, `--sarif`, `--junit-xml`, `--gitlab-sast`, `--gitlab-secrets`, `--output`, `--text` and their paired `*-output` forms), `--config`, `--metrics` and `--baseline-commit`.
+
+The group states beside the field where this scan's findings end up: they are published as a security report, so they reach the vulnerability report and whatever the administrator has connected to it.
 
 ## Rule sets in the image
 
@@ -202,9 +234,9 @@ The sources are listed from weakest to strongest — each one, when set, overrid
 1. The version shipped with this product. This is what runs when nothing else is set.
 1. The instance environment variable `FE_SCANS_SEMGREP_IMAGE` — the decision of the administrator of the whole installation.
 1. The Semgrep integration on the group that owns the policy, or on a group above it (see below).
-1. The version named in the policy itself, in the "Scanner version" field.
+1. The version named in the policy itself, in the "Version" field of the "Version and rules" group.
 
-There is exactly one exception: when the integration names a full image reference rather than a registry — with a tag or a digest — that reference is used as it is, and the version from the policy no longer has anything to replace. The policy editor says which of these three applies as you edit, naming the image or the registry it resolved; where the integration names a full image, it also disables the "Scanner version" field rather than letting you set a value nothing reads.
+There is exactly one exception: when the integration names a full image reference rather than a registry — with a tag or a digest — that reference is used as it is, and the version from the policy no longer has anything to replace. The policy editor says which of these three applies as you edit, naming the image or the registry it resolved; where the integration names a full image, it also disables the "Version" field rather than letting you set a value nothing reads.
 
 ![The policy editor naming an image an integration set](/images/code/semgrep_policy_image_from_integration_en.png)
 
@@ -229,7 +261,7 @@ With both fields empty, the scan runs the image shipped with this product. Nothi
 
 The default is a specific version, not a floating tag: this release ships `registry.gitlab.com/security-products/semgrep:6.25.0`. One tag pins both halves of the scanner at once — the engine and the rule sets carried inside the image — because both live in the same image.
 
-The "Scanner version" field in the policy takes either form of pin:
+The "Version" field in the policy takes either form of pin:
 
 - A version number, such as `6.25.0`, which a person can read and compare.
 - A digest, such as `sha256:aafbcaff…`, which names one build and cannot be moved to another.
