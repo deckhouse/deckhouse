@@ -32,13 +32,21 @@ has_cgroup2() {
 #  CASE 1: swapBehavior is empty or == NoSwap
 ###############################################
 
-# zram-generator generates swap units for zram devices (dev-zram0.swap and friends), and
-# swap.target pulls them back in. Neutralize it before touching the units: a unit that is
+# Both generator blocks below must run before the swap units are touched. A unit that is
 # regenerated and reactivated while it is being stopped never reaches a final state, and
-# `systemctl stop` waits for that state forever.
+# `systemctl stop` then waits for that state forever.
+#
+# zram-generator generates swap units for zram devices (dev-zram0.swap and friends), and
+# swap.target pulls them back in.
 if [ -f /lib/systemd/system-generators/zram-generator ] && ( [ ! -L /etc/systemd/system-generators/zram-generator ] || [ "$(readlink -f /etc/systemd/system-generators/zram-generator)" != "/dev/null" ] ); then
   mkdir -p /etc/systemd/system-generators
   ln -sf /dev/null /etc/systemd/system-generators/zram-generator
+fi
+
+# systemd-gpt-auto-generator automatically detects swap partition in GPT and activates it
+if [ -f /lib/systemd/system-generators/systemd-gpt-auto-generator ] && ( [ ! -L /etc/systemd/system-generators/systemd-gpt-auto-generator ] || [ "$(readlink -f /etc/systemd/system-generators/systemd-gpt-auto-generator)" != "/dev/null" ] ); then
+  mkdir -p /etc/systemd/system-generators
+  ln -sf /dev/null /etc/systemd/system-generators/systemd-gpt-auto-generator
 fi
 
 # Mask systemd swap units before stopping them, so that nothing can reactivate a unit
@@ -49,12 +57,6 @@ for swapunit in $(systemctl list-units --no-legend --plain --no-pager --type swa
   systemctl mask "$swapunit" || true
   timeout 30 systemctl stop "$swapunit" || true
 done
-
-# systemd-gpt-auto-generator automatically detects swap partition in GPT and activates it
-if [ -f /lib/systemd/system-generators/systemd-gpt-auto-generator ] && ( [ ! -L /etc/systemd/system-generators/systemd-gpt-auto-generator ] || [ "$(readlink -f /etc/systemd/system-generators/systemd-gpt-auto-generator)" != "/dev/null" ] ); then
-  mkdir -p /etc/systemd/system-generators
-  ln -sf /dev/null /etc/systemd/system-generators/systemd-gpt-auto-generator
-fi
 
 # Disable any active swap, no need to restart kubelet
 if ! swapoff -a; then
