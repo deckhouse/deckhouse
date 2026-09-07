@@ -170,6 +170,14 @@ type ModuleStatus struct {
 	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type"`
 }
 
+func (m *Module) IsEnabled() bool {
+	if m.Spec.Enabled != nil {
+		return *m.Spec.Enabled
+	}
+
+	return false
+}
+
 // +kubebuilder:object:generate=false
 type ConditionOption func(opts *ConditionSettings)
 

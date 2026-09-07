@@ -22,6 +22,7 @@ import (
 	"time"
 
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
+	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
@@ -33,8 +34,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/confighandler"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
+
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
@@ -93,7 +95,7 @@ func RegisterController(
 		return fmt.Errorf("add preflight: %w", err)
 	}
 
-	if err := ctrl.NewControllerManagedBy(runtime).
+	if err := ctrl.NewControllerManagedBy(runtimeManager).
 		Named(controllerName).
 		For(&v1alpha2.Module{}).
 		WithEventFilter(predicate.Or(predicate.GenerationChangedPredicate{}, predicate.AnnotationChangedPredicate{})).
@@ -189,8 +191,15 @@ func (r *reconciler) runModuleEventLoop(ctx context.Context) error {
 }
 
 func (r *reconciler) handleModule(ctx context.Context, module *v1alpha2.Module) (ctrl.Result, error) {
+	// send an event to addon-operator only if the module exists, or it is the global one
+	basicModule := r.moduleManager.GetModule(module.Name)
+	if module.Name == moduleGlobal || basicModule != nil {
+		r.logger.Debug("send event to operator", slog.String("name", module.Name), slog.Bool("enabled", module.IsEnabled()))
+		r.handler.HandleEvent(module, config.EventUpdate)
+	}
+
 	// apply the module settings-and-enabled change to the package runtime
-	r.manager.UpdateModulesSettings(
+	r.packageManager.UpdateModulesSettings(
 		module.Name,
 		module.Spec.SettingsVersion,
 		module.Spec.Settings.GetMap(),
