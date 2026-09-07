@@ -101,7 +101,7 @@ This group sets which semgrep runs, and which rules it runs.
 | "Rule file path" | Path to the rule file inside the project the rules are read from. Default: `.semgrep.yml`. |
 | "Add to the shipped set" | On by default: your own rules run *alongside* the shipped set. Cleared, they run *instead* of it, and everything the shipped set covered stops being checked. |
 
-The group states, above the version field, which image this installation will actually run and which semgrep version ships with the product. Both are worth reading before typing a version, because the image tag and the semgrep version are two different numberings — a larger image tag has meant an older semgrep. Where an integration above the policy names a prepared image in full, the group says so and the version field is not yours to fill in: that image carries the version it carries.
+Every field carries a hint behind the "?" beside its name, and the hint on "Version" is the one to read first: alongside what the field is for, it names the image this installation will actually run and the semgrep version that ships with the product. Both are worth knowing before typing a version, because the image tag and the semgrep version are two different numberings — a larger image tag has meant an older semgrep. Where an integration above the policy names a prepared image in full, that hint says so and turns amber, and the version field is not yours to fill in: the image carries the version it carries.
 
 The four rule sources differ in who owns the file:
 
@@ -200,7 +200,7 @@ This group sets the flags the rest of the form does not name.
 
 "Additional arguments" is for tuning the runner's resources — timeouts, memory limits, maximum file size — not for changing what the scan is. Flags that redirect or silence the report are refused, as are the flags this form already owns: output and report formats (`--json`, `--sarif`, `--junit-xml`, `--gitlab-sast`, `--gitlab-secrets`, `--output`, `--text` and their paired `*-output` forms), `--config`, `--metrics` and `--baseline-commit`.
 
-The group states beside the field where this scan's findings end up: they are published as a security report, so they reach the vulnerability report and whatever the administrator has connected to it.
+The hint on this field also states where the scan's findings end up: they are published as a security report, so they reach the vulnerability report and whatever the administrator has connected to it.
 
 ## Rule sets in the image
 
@@ -236,9 +236,7 @@ The sources are listed from weakest to strongest — each one, when set, overrid
 1. The Semgrep integration on the group that owns the policy, or on a group above it (see below).
 1. The version named in the policy itself, in the "Version" field of the "Version and rules" group.
 
-There is exactly one exception: when the integration names a full image reference rather than a registry — with a tag or a digest — that reference is used as it is, and the version from the policy no longer has anything to replace. The policy editor says which of these three applies as you edit, naming the image or the registry it resolved; where the integration names a full image, it also disables the "Version" field rather than letting you set a value nothing reads.
-
-![The policy editor naming an image an integration set](/images/code/semgrep_policy_image_from_integration_en.png)
+There is exactly one exception: when the integration names a full image reference rather than a registry — with a tag or a digest — that reference is used as it is, and the version from the policy no longer has anything to replace. The hint on the "Version" field says which of these three applies as you edit, naming the image or the registry it resolved; where the integration names a full image, the field is disabled rather than left accepting a value nothing reads.
 
 The scanned project's own integration record is ignored. The image decides what "the scan ran" even means, and the side being checked does not answer that question.
 
