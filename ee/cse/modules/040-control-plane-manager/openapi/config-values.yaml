@@ -433,7 +433,6 @@ properties:
       podSubnetCIDR:
         type: string
         pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
-        x-unsafe: true
         description: |
           Address space of the cluster's Pods.
 
@@ -443,7 +442,6 @@ properties:
       serviceSubnetCIDR:
         type: string
         pattern: '^[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}/[0-9]{1,2}$'
-        x-unsafe: true
         description: |
           Address space of the cluster's services.
 
@@ -453,7 +451,6 @@ properties:
       podSubnetNodeCIDRPrefix:
         type: string
         pattern: '^[0-9]{1,2}$'
-        x-unsafe: true
         description: |
           The prefix size of the Pod network allocated to each node.
 
