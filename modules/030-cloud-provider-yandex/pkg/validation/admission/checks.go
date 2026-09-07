@@ -101,6 +101,7 @@ func ValidateModuleConfig(state *ycval.State, operation admissionv1.Operation) c
 		result.Merge(
 			ycval.ValidateNodeGroupExternalIPAddresses(state),
 			ycval.ValidateProvisionedStorageClasses(state),
+			ycval.ValidateWithNATInstanceLayout(state),
 		)
 	}
 

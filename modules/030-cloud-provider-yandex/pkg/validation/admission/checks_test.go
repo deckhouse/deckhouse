@@ -246,6 +246,39 @@ func TestValidateModuleConfigAllowsUniqueProvisionedStorageClassNames(t *testing
 	}
 }
 
+// The WithNATInstance subnet requirement has to be enforced here as well as in preflight:
+// ModuleConfig is editable in the cluster, and a layout switch that drops both subnet fields
+// would otherwise only surface at the next converge.
+func TestValidateModuleConfigRejectsWithNATInstanceWithoutSubnet(t *testing.T) {
+	t.Parallel()
+
+	state := validState(t)
+	state.ModuleConfig.Spec.Settings.Nodes.Parameters.Layout = ycval.LayoutWithNATInstance
+	state.ModuleConfig.Spec.Settings.Nodes.Parameters.WithNATInstance = ycsettingsv2.NATInstanceParameters{
+		ExternalSubnetID: "external",
+	}
+
+	result := ValidateModuleConfig(state, admissionv1.Update)
+	if !hasViolationCode(result, ycval.CodeNATInstanceSubnetRequired) {
+		t.Fatalf("ValidateModuleConfig() = %q, want %s", result.Error(), ycval.CodeNATInstanceSubnetRequired)
+	}
+}
+
+func TestValidateModuleConfigAllowsWithNATInstanceWithSubnet(t *testing.T) {
+	t.Parallel()
+
+	state := validState(t)
+	state.ModuleConfig.Spec.Settings.Nodes.Parameters.Layout = ycval.LayoutWithNATInstance
+	state.ModuleConfig.Spec.Settings.Nodes.Parameters.WithNATInstance = ycsettingsv2.NATInstanceParameters{
+		InternalSubnetID: "subnet-id",
+	}
+
+	result := ValidateModuleConfig(state, admissionv1.Update)
+	if result.HasErrors() {
+		t.Fatalf("ValidateModuleConfig() = %q, want no errors", result.Error())
+	}
+}
+
 // Delete is not validated: the ModuleConfig webhook only runs on Create/Update.
 func TestValidateModuleConfigSkipsDelete(t *testing.T) {
 	t.Parallel()
