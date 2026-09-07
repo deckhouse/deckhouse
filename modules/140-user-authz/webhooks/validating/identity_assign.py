@@ -992,14 +992,21 @@ def can_assign(actor_role_names: Sequence[str], target_role_names: Sequence[str]
     Disaster names (cluster-admin, SuperAdmin, rbacv2 superadmin) require the
     SuperAdmin range even when the live ClusterRole was rewritten to rules the
     actor already covers. Cover is only used for non-disaster roles that still
-    have atoms. A role missing from the catalog is leftover: range is not
-    inferred from the name alone.
+    have atoms. A role missing from the catalog is leftover for everyone below
+    the SuperAdmin range: range is not inferred from the name alone.
     """
     targets = [n for n in target_role_names if isinstance(n, str) and n]
     if not targets:
         return None
 
     rng = actor_range(actor_role_names, catalog)
+    # A SuperAdmin range (either ladder) is the only one that may recreate a
+    # role the catalog does not have: a ClusterRoleBinding whose role was
+    # removed still names a human subject and is a target, and it must not lock
+    # such a requester out. Roles the catalog does have are judged one by one,
+    # so a superadmin of one subsystem still cannot hand out the superadmin
+    # role of another subsystem or of the system.
+    superadmin_range = rng.basic_max == "SuperAdmin" or rng.max_level == "superadmin"
     actor_rules = union_rules(actor_role_names, catalog)
     leftover = []
     for name in targets:
@@ -1010,6 +1017,8 @@ def can_assign(actor_role_names: Sequence[str], target_role_names: Sequence[str]
             leftover.append(name)
             continue
         if entry is None:
+            if superadmin_range:
+                continue
             leftover.append(name)
             continue
         if _has_coverable_rules(entry.rules) and covers(actor_rules, entry.rules):
