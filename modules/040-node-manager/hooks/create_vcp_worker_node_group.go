@@ -18,27 +18,41 @@ package hooks
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 )
+
+const vcpWorkerNodeGroupName = "worker"
+
+var vcpNodeGroupGVR = schema.GroupVersionResource{
+	Group:    "deckhouse.io",
+	Version:  "v1",
+	Resource: "nodegroups",
+}
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	// Mirror of createMasterNodeGroup for a virtual control plane tenant:
 	// seed a default static `worker` NodeGroup so a fresh tenant renders a manual-bootstrap secret out of the box.
-	// It is idempotent (CreateIfNotExists) and never patches, so an operator can edit the NG freely.
+	// It never patches, so an operator can edit the NG freely.
 	Queue: "/modules/node-manager/create-vcp-worker-ng",
 	// Ensure crds hook has order 5, create the node group after it.
 	OnStartup: &go_hook.OrderedConfig{Order: 6},
-}, createVCPWorkerNodeGroup)
+}, dependency.WithExternalDependencies(createVCPWorkerNodeGroup))
 
 func getDefaultVCPWorkerNg() (*unstructured.Unstructured, error) {
 	ng := map[string]interface{}{
 		"apiVersion": "deckhouse.io/v1",
 		"kind":       "NodeGroup",
 		"metadata": map[string]interface{}{
-			"name": "worker",
+			"name": vcpWorkerNodeGroupName,
 		},
 		// Manual, not the Automatic default: a one-worker tenant would cordon its only node and
 		// evict kube-dns with nowhere to put it. No NeedDrainNode guard covers a group named worker.
@@ -52,9 +66,24 @@ func getDefaultVCPWorkerNg() (*unstructured.Unstructured, error) {
 	return sdk.ToUnstructured(&ng)
 }
 
-func createVCPWorkerNodeGroup(_ context.Context, input *go_hook.HookInput) error {
+// GET first: CreateIfNotExists still sends the CREATE, so the webhook rejects it when its backend has
+// nowhere to run, wedging the startup phase ahead of helm. No snapshot - onStartup precedes its sync.
+func createVCPWorkerNodeGroup(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	if !nestedControlPlane(input) {
 		return nil
+	}
+
+	kubeClient, err := dc.GetK8sClient()
+	if err != nil {
+		return fmt.Errorf("cannot init Kubernetes client: %w", err)
+	}
+
+	_, err = kubeClient.Dynamic().Resource(vcpNodeGroupGVR).Get(ctx, vcpWorkerNodeGroupName, metav1.GetOptions{})
+	if err == nil {
+		return nil
+	}
+	if !apierrors.IsNotFound(err) {
+		return fmt.Errorf("cannot get NodeGroup %q: %w", vcpWorkerNodeGroupName, err)
 	}
 
 	ng, err := getDefaultVCPWorkerNg()
@@ -62,7 +91,6 @@ func createVCPWorkerNodeGroup(_ context.Context, input *go_hook.HookInput) error
 		return err
 	}
 
-	// Do not patch the node group if it already exists, to avoid conflicts with user changes.
 	input.PatchCollector.CreateIfNotExists(ng)
 
 	return nil
