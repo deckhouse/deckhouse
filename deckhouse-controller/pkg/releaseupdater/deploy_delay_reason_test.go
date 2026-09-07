@@ -59,3 +59,45 @@ func TestDeployDelayReason(t *testing.T) {
 	require.Equal(t, "Release is waiting for the update window, waiting for the 'modules.deckhouse.io/approved: \"true\"' annotation. After approval the release will be delayed until 17 Oct 2019 15:33 UTC", reason.Message(moduleRelease, now))
 	require.Equal(t, "manualApprovalRequiredReason|outOfWindowReason", reason.GoString())
 }
+
+func TestDeployDelayReasonCanaryAndNotification(t *testing.T) {
+	var (
+		deckhouseRelease *v1alpha1.DeckhouseRelease
+		zeroTime         time.Time
+		now              = dependency.TestDC.GetClock().Now()
+	)
+
+	reason := noDelay.add(canaryDelayReason)
+	require.True(t, reason.contains(canaryDelayReason))
+	require.False(t, reason.contains(notificationDelayReason))
+	require.Equal(t, "canaryDelayReason", reason.String())
+	require.Equal(t, "Release is postponed", reason.Message(deckhouseRelease, zeroTime))
+	require.Equal(t, "Release is postponed until 17 Oct 2019 15:33 UTC", reason.Message(deckhouseRelease, now))
+
+	reason = reason.add(notificationDelayReason)
+	require.True(t, reason.contains(notificationDelayReason))
+	require.Equal(t, "canaryDelayReason, notificationDelayReason", reason.String())
+	require.Equal(t, "canaryDelayReason|notificationDelayReason", reason.GoString())
+	// reasons are reported in the order they delay the release, not in flag order
+	require.Equal(t, "Release is postponed, postponed by notification until 17 Oct 2019 15:33 UTC", reason.Message(deckhouseRelease, now))
+
+	reason = reason.add(outOfWindowReason).add(manualApprovalRequiredReason)
+	require.Equal(t,
+		"Release is postponed, postponed by notification, waiting for the update window, "+
+			"waiting for the 'release.deckhouse.io/approved: \"true\"' annotation. "+
+			"After approval the release will be delayed until 17 Oct 2019 15:33 UTC",
+		reason.Message(deckhouseRelease, now))
+}
+
+// the reasons are a bitmask: every flag must own a distinct bit
+func TestDeployDelayReasonFlagsAreDistinctBits(t *testing.T) {
+	seen := noDelay
+
+	for reason := range deployDelayReasonsStr {
+		require.NotEqual(t, noDelay, reason)
+		require.Zero(t, byte(reason)&byte(reason-1), "%s is not a single bit", reason)
+		require.False(t, seen.contains(reason), "%s shares a bit with another reason", reason)
+
+		seen = seen.add(reason)
+	}
+}
