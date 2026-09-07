@@ -114,7 +114,9 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
 	// The BE-edition templates live under ee/be; link them into the module so the render covers
-	// them. Paths are derived from this file, so the suite runs both in CI (/deckhouse) and locally.
+	// them. Paths are derived from this file rather than from the hardcoded /deckhouse checkout
+	// path. Note that the suite still needs the CI layout: charts/helm_lib is a symlink to
+	// /deckhouse/helm_lib, which does not exist in a plain local checkout.
 	_, thisFile, _, _ := runtime.Caller(0)
 	moduleDir := filepath.Join(filepath.Dir(thisFile), "..")
 	repoRoot := filepath.Join(moduleDir, "..", "..")
