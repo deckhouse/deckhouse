@@ -24,6 +24,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -376,8 +377,17 @@ func TestDeleteStaleModuleReleases(t *testing.T) {
 		err := l.client.Get(context.Background(), client.ObjectKey{Name: "echo-v1.0.0"}, new(v1alpha1.ModuleRelease))
 		assert.True(t, apierrors.IsNotFound(err), "stale module release must be deleted")
 
-		// the module object outlives its releases until the sync at the next start drops it
-		assert.Equal(t, "v1.0.0", getModule(t, l, "echo").Spec.PackageVersion)
+		// the module is available again: no package version, the not-installed status, the
+		// repository untouched
+		module := getModule(t, l, "echo")
+		assert.Empty(t, module.Spec.PackageVersion)
+		assert.Equal(t, "example", module.Spec.PackageRepositoryName)
+		assert.Equal(t, v1alpha1.ModulePhaseAvailable, module.Status.Phase)
+
+		ready := meta.FindStatusCondition(module.Status.Conditions, v1alpha1.ModuleConditionIsReady)
+		require.NotNil(t, ready)
+		assert.Equal(t, metav1.ConditionFalse, ready.Status)
+		assert.Equal(t, v1alpha1.ModuleReasonNotInstalled, ready.Reason)
 	})
 
 	t.Run("embedded module is never pruned", func(t *testing.T) {
@@ -390,6 +400,7 @@ func TestDeleteStaleModuleReleases(t *testing.T) {
 
 		err := l.client.Get(context.Background(), client.ObjectKey{Name: "echo-v1.0.0"}, new(v1alpha1.ModuleRelease))
 		assert.NoError(t, err, "embedded module release must be kept")
+		assert.Equal(t, "v1.0.0", getModule(t, l, "echo").Spec.PackageVersion, "embedded module must keep its package")
 	})
 }
 

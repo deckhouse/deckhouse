@@ -31,6 +31,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -51,9 +52,9 @@ func (l *Loader) runDeleteStaleModuleReleasesLoop(ctx context.Context) {
 	})
 }
 
-// deleteStaleModuleReleases deletes the module releases of the modules disabled too long. The
-// release controller uninstalls the deployed one and restarts Deckhouse, and the package sync
-// then drops the module object nothing backs any more.
+// deleteStaleModuleReleases deletes the module releases of the modules disabled too long and
+// puts the modules back to available: no package version, the not-installed status. The
+// release controller uninstalls the deployed release and restarts Deckhouse.
 func (l *Loader) deleteStaleModuleReleases(ctx context.Context) error {
 	modules := new(v1alpha2.ModuleList)
 	if err := l.client.List(ctx, modules); err != nil {
@@ -74,6 +75,27 @@ func (l *Loader) deleteStaleModuleReleases(ctx context.Context) error {
 				if err := l.client.Delete(ctx, &release); err != nil {
 					return fmt.Errorf("delete the '%s' module release for the '%s' module: %w", release.Name, module.Name, err)
 				}
+			}
+
+			// clear the installed package. The repository stays: the source controller
+			// re-picks it for an available module on the next scan.
+			err := ctrlutils.UpdateWithRetry(ctx, l.client, &module, func() error {
+				module.Spec.PackageVersion = ""
+				return nil
+			})
+			if err != nil {
+				return fmt.Errorf("clear the %q module: %w", module.Name, err)
+			}
+
+			// set available
+			err = ctrlutils.UpdateStatusWithRetry(ctx, l.client, &module, func() error {
+				module.SetNotInstalledStatus()
+				module.Status.CurrentVersion = nil
+				module.Status.Summary = nil
+				return nil
+			})
+			if err != nil {
+				return fmt.Errorf("set the Available module phase for the '%s' module: %w", module.Name, err)
 			}
 		}
 	}
