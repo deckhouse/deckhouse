@@ -1196,50 +1196,62 @@ func (m *MetaConfig) effectiveClusterPrefix(cloudPrefix string) string {
 }
 
 // clusterConfigForInfrastructure returns the ClusterConfiguration to feed to the
-// infrastructure utility (Terraform/OpenTofu), with cloud.prefix materialized
-// from the resolved cluster prefix. The Terraform layouts read
-// var.clusterConfiguration.cloud.prefix directly and cannot read the global
-// ModuleConfig, so when the prefix is set only via the global ModuleConfig
-// (and omitted from ClusterConfiguration.cloud) dhctl fills it in for them.
+// infrastructure utility (Terraform/OpenTofu): cloud.prefix materialized from
+// the resolved cluster prefix, and the three network parameters resolved the
+// same way as everywhere else (ModuleConfig control-plane-manager, else the
+// deprecated ClusterConfiguration field). The Terraform layouts read
+// var.clusterConfiguration.* directly and cannot read ModuleConfig:
+//   - cloud.prefix: when set only via the global ModuleConfig (and omitted
+//     from ClusterConfiguration.cloud), dhctl fills it in for them.
+//   - podSubnetCIDR/serviceSubnetCIDR/podSubnetNodeCIDRPrefix: several
+//     providers (OpenStack, HuaweiCloud; GCP with its own fallback default)
+//     read these directly, so once a cluster migrates and the field is
+//     removed from ClusterConfiguration, Terraform would otherwise be handed
+//     an object with no such attribute at all — a hard apply-time error, on
+//     every apply from then on, not just once.
 //
 // It never mutates m.ClusterConfig: that object is persisted verbatim into the
-// d8-cluster-configuration secret, so a prefix set only in the global
-// ModuleConfig must not leak back into the ClusterConfiguration there. The
-// original map is returned unchanged when nothing needs to be added.
+// d8-cluster-configuration secret, so a value that lives only in ModuleConfig
+// must not leak back into the ClusterConfiguration there.
 func (m *MetaConfig) clusterConfigForInfrastructure() map[string]json.RawMessage {
-	if m.ClusterType != CloudClusterType || m.ClusterPrefix == "" {
-		return m.ClusterConfig
-	}
-	// Start from the existing cloud section, or an empty one when it has already
-	// been dropped from ClusterConfiguration — the prefix must still reach the
-	// Terraform layouts either way, never silently empty.
-	cloud := map[string]json.RawMessage{}
-	if rawCloud, ok := m.ClusterConfig["cloud"]; ok {
-		if err := json.Unmarshal(rawCloud, &cloud); err != nil {
-			return m.ClusterConfig
-		}
-		if existing, ok := cloud["prefix"]; ok {
-			var p string
-			if json.Unmarshal(existing, &p) == nil && p == m.ClusterPrefix {
-				return m.ClusterConfig // already materialized, no copy needed
-			}
-		}
-	}
-	prefixJSON, err := json.Marshal(m.ClusterPrefix)
-	if err != nil {
-		return m.ClusterConfig
-	}
-	cloud["prefix"] = prefixJSON
-	newCloud, err := json.Marshal(cloud)
-	if err != nil {
-		return m.ClusterConfig
-	}
-	// Shallow-copy the top-level map so m.ClusterConfig (→ the secret) is untouched.
-	out := make(map[string]json.RawMessage, len(m.ClusterConfig))
+	out := make(map[string]json.RawMessage, len(m.ClusterConfig)+3)
 	for k, v := range m.ClusterConfig {
 		out[k] = v
 	}
-	out["cloud"] = newCloud
+
+	if m.ClusterType == CloudClusterType && m.ClusterPrefix != "" {
+		// Start from the existing cloud section, or an empty one when it has
+		// already been dropped from ClusterConfiguration — the prefix must still
+		// reach the Terraform layouts either way, never silently empty. A
+		// malformed existing section is left untouched rather than guessed at.
+		cloud := map[string]json.RawMessage{}
+		malformed := false
+		if rawCloud, ok := out["cloud"]; ok {
+			malformed = json.Unmarshal(rawCloud, &cloud) != nil
+		}
+		if prefixJSON, err := json.Marshal(m.ClusterPrefix); !malformed && err == nil {
+			cloud["prefix"] = prefixJSON
+			if newCloud, err := json.Marshal(cloud); err == nil {
+				out["cloud"] = newCloud
+			}
+		}
+	}
+
+	network := m.Network()
+	if network.PodSubnetCIDR != "" {
+		if encoded, err := json.Marshal(network.PodSubnetCIDR); err == nil {
+			out["podSubnetCIDR"] = encoded
+		}
+	}
+	if network.ServiceSubnetCIDR != "" {
+		if encoded, err := json.Marshal(network.ServiceSubnetCIDR); err == nil {
+			out["serviceSubnetCIDR"] = encoded
+		}
+	}
+	if encoded, err := json.Marshal(network.PodSubnetNodeCIDRPrefix); err == nil {
+		out["podSubnetNodeCIDRPrefix"] = encoded
+	}
+
 	return out
 }
 
