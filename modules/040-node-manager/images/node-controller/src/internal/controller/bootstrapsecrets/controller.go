@@ -112,7 +112,7 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 	// The image digests are baked literally into every bootstrap.sh, and every
 	// release rewrites them: same argument as the templates above.
 	w.Watches(&corev1.ConfigMap{}, handler.EnqueueRequestsFromMapFunc(r.allNodeGroups),
-		builder.WithPredicates(named(nodecommon.MachineNamespace, imagesDigestsConfigMapName)))
+		builder.WithPredicates(named(nodecommon.MachineNamespace, bootstrap.ImagesDigestsConfigMapName)))
 
 	// The token Secret is created empty and filled by kube-controller-manager moments
 	// later — cluster install. A node bootstrapping in that window bakes in

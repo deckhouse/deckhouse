@@ -37,13 +37,10 @@ import (
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 )
 
-const (
-	// The digests of every image the release ships, in the shape the bashible
-	// templates read them: .images.registrypackages.<name>. bashible-apiserver
-	// and the nodeconfig controller consume the same ConfigMap.
-	imagesDigestsConfigMapName = "bashible-apiserver-files"
-	imagesDigestsKey           = "images_digests.json"
-)
+// imagesDigestsKey is the ConfigMap key the digests live under; the ConfigMap
+// name itself is bootstrap.ImagesDigestsConfigMapName, shared with every other
+// consumer of the render.
+const imagesDigestsKey = "images_digests.json"
 
 // BuildInput collects everything the bootstrap templates read for one NodeGroup.
 // The readers are bashiblecontext's, not copies: ReadEndpoints alone carries the
@@ -109,7 +106,7 @@ func BuildInput(ctx context.Context, svc *bashiblecontext.Service, resolved deri
 
 func readImages(ctx context.Context, r client.Reader) (map[string]any, error) {
 	cm := &corev1.ConfigMap{}
-	key := types.NamespacedName{Namespace: nodecommon.MachineNamespace, Name: imagesDigestsConfigMapName}
+	key := types.NamespacedName{Namespace: nodecommon.MachineNamespace, Name: bootstrap.ImagesDigestsConfigMapName}
 	if err := r.Get(ctx, key, cm); err != nil {
 		return nil, fmt.Errorf("read image digests %s: %w", key, err)
 	}

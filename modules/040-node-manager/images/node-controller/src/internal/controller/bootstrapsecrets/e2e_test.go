@@ -123,20 +123,17 @@ var _ = Describe("Bootstrap secrets controller", func() {
 		}, negativeCheckDuration, eventuallyPoll).Should(BeFalse())
 	})
 
-	// An immutable group gets no bootstrap Secret here, yet nodebootstrap renders the
-	// group's token into every machine's userdata (nodebootstrap/render.go:45) and mints
-	// none: mintToken is the only creator of a bootstrap-token Secret left in the repo.
-	It("mints a bootstrap token for an immutable CloudEphemeral group", func() {
+	// The group is CAPI-served and passes every check, so only the immutable half of the
+	// writeCAPISecrets guard keeps the group-wide cloud-init away. Its token is still minted:
+	// nodebootstrap renders it into every machine's userdata (nodebootstrap/render.go:45).
+	It("mints a bootstrap token but no CAPI secret for an immutable CloudEphemeral group", func() {
+		className := testenv.UniqueName("class")
+		createInstanceClass(className)
+		createCloudProviderRegistration(capiRegistration(`["zone-a"]`))
+
 		name := testenv.UniqueName("immutable")
-		ng := staticNodeGroup(name)
-		ng.Spec.NodeType = deckhousev1.NodeTypeCloudEphemeral
+		ng := capiCloudNodeGroup(name, className)
 		ng.Spec.SystemType = deckhousev1.SystemTypeImmutable
-		ng.Spec.CloudInstances = &deckhousev1.CloudInstancesSpec{
-			ClassReference: deckhousev1.ClassReference{Kind: "DVPInstanceClass", Name: "does-not-matter"},
-			MinPerZone:     1,
-			MaxPerZone:     1,
-			Zones:          []string{"zone-a"},
-		}
 		createNodeGroup(ng)
 
 		Eventually(func(g Gomega) {
@@ -146,6 +143,11 @@ var _ = Describe("Bootstrap secrets controller", func() {
 				client.MatchingLabels{nodecommon.BootstrapTokenNodeGroupLabel: name})).To(Succeed())
 			g.Expect(tokens.Items).NotTo(BeEmpty())
 		}, eventuallyTimeout, eventuallyPoll).Should(Succeed())
+
+		By("writing no group-wide cloud-init: an immutable machine boots from its own NodeBootstrapConfig")
+		Consistently(func() bool {
+			return k8sClient.Get(suiteCtx, capiSecretKey(name, "zone-a"), &corev1.Secret{}) == nil
+		}, negativeCheckDuration, eventuallyPoll).Should(BeFalse())
 	})
 
 	// The other half of "no Secret, and here is why": a group the cloud checks
@@ -279,7 +281,7 @@ var _ = Describe("Bootstrap secrets controller", func() {
 
 		digest := "sha256:jq-" + name
 		cm := &corev1.ConfigMap{}
-		cmKey := types.NamespacedName{Namespace: nodecommon.MachineNamespace, Name: imagesDigestsConfigMapName}
+		cmKey := types.NamespacedName{Namespace: nodecommon.MachineNamespace, Name: bootstrap.ImagesDigestsConfigMapName}
 		Expect(k8sClient.Get(suiteCtx, cmKey, cm)).To(Succeed())
 		original := cm.Data[imagesDigestsKey]
 		cm.Data[imagesDigestsKey] = strings.Replace(original, `"sha256:jq"`, `"`+digest+`"`, 1)

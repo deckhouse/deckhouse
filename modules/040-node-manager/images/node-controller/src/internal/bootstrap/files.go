@@ -35,6 +35,11 @@ import (
 // promise that across a rollback.
 const TemplatesConfigMapName = "bashible-bootstrap-templates"
 
+// ImagesDigestsConfigMapName holds the digests of every image the release ships, read by the
+// templates as .images.registrypackages.<name> and baked literally into every rendered script.
+// A consumer of the render watches this ConfigMap alongside the templates one.
+const ImagesDigestsConfigMapName = "bashible-apiserver-files"
+
 // Files answers the .Files.Get calls the bashible templates make. Keys are
 // basenames: the templates read each other by full path, and both an absolute
 // and a repo-relative spelling of the same file must resolve alike.

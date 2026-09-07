@@ -1419,6 +1419,18 @@ var _ = Describe("Module :: node-manager :: helm template ::", func() {
 			Expect(cm.Field(`data.lib\.sh\.tpl`).String()).To(ContainSubstring("bb-d8-node-name"))
 			Expect(cm.Field(`data.01-bootstrap-prerequisites\.sh\.tpl`).String()).To(ContainSubstring("bb-minget-install"))
 			Expect(cm.Field(`data.bb_node_ip\.sh\.tpl`).String()).To(ContainSubstring("discover_internal_network_cidrs"))
+
+			// node-controller renders these bytes verbatim, so a chomped trailing
+			// newline is a real divergence from the file on disk.
+			for key, path := range map[string]string{
+				`lib\.sh\.tpl`:                        "../candi/bashible/lib.sh.tpl",
+				`01-bootstrap-prerequisites\.sh\.tpl`: "../candi/bashible/bootstrap/01-bootstrap-prerequisites.sh.tpl",
+				`bb_node_ip\.sh\.tpl`:                 "../candi/bashible/bb_node_ip.sh.tpl",
+			} {
+				onDisk, err := os.ReadFile(path)
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(cm.Field("data."+key).String()).To(Equal(string(onDisk)), path)
+			}
 		})
 	})
 

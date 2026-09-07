@@ -43,8 +43,10 @@ import (
 
 	capiv1beta2 "github.com/deckhouse/node-controller/api/cluster.x-k8s.io/v1beta2"
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/bootstrap"
 	"github.com/deckhouse/node-controller/internal/clusterprefix"
 	"github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
 	ngcommon "github.com/deckhouse/node-controller/internal/controller/nodegroup/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/derived_status"
 	"github.com/deckhouse/node-controller/internal/register"
@@ -106,6 +108,15 @@ func (r *MachineDeploymentReconciler) SetupWatches(w register.Watcher) {
 	// can change every rendered MachineClass/MachineDeployment, so re-enqueue all NodeGroups.
 	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.enqueueAllNodeGroups),
 		builder.WithPredicates(predicate.NewPredicateFuncs(isCloudProviderSecret)))
+	// The MCM machine-class Secret carries the same cloud-init as the bootstrap Secrets and is
+	// built from the same three inputs, so the watches that keep those fresh are needed here too
+	// (bootstrapsecrets/controller.go SetupWatches explains each one).
+	w.Watches(&corev1.ConfigMap{}, handler.EnqueueRequestsFromMapFunc(r.enqueueAllNodeGroups),
+		builder.WithPredicates(named(common.MachineNamespace, bootstrap.TemplatesConfigMapName)))
+	w.Watches(&corev1.ConfigMap{}, handler.EnqueueRequestsFromMapFunc(r.enqueueAllNodeGroups),
+		builder.WithPredicates(named(common.MachineNamespace, bootstrap.ImagesDigestsConfigMapName)))
+	w.Watches(&corev1.Secret{}, handler.EnqueueRequestsFromMapFunc(r.enqueueAllNodeGroups),
+		builder.WithPredicates(named(common.MachineNamespace, bashiblecontext.PackagesProxyTokenSecretName)))
 	// The InstanceClass is what the MachineClass and the machine template are rendered from,
 	// and its checksum names the template — an edit here is exactly what must re-render. Without
 	// this watch the change waits for the resync, so the cloud keeps handing out the previous
@@ -136,6 +147,12 @@ func mdToNodeGroup(_ context.Context, obj client.Object) []reconcile.Request {
 		return nil
 	}
 	return []reconcile.Request{{NamespacedName: types.NamespacedName{Name: ng}}}
+}
+
+func named(namespace, name string) predicate.Predicate {
+	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		return obj.GetNamespace() == namespace && obj.GetName() == name
+	})
 }
 
 func isCloudProviderSecret(obj client.Object) bool {

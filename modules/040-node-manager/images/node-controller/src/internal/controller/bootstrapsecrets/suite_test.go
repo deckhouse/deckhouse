@@ -32,6 +32,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/bootstrap"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
 	"github.com/deckhouse/node-controller/internal/testenv"
@@ -188,7 +189,7 @@ func packagesProxyTokenSecret() *corev1.Secret {
 // (bb-rpp-get-install reads registrypackages.rppGet, the prerequisites step the rest).
 func imagesDigestsConfigMap() *corev1.ConfigMap {
 	return &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{Namespace: nodecommon.MachineNamespace, Name: imagesDigestsConfigMapName},
+		ObjectMeta: metav1.ObjectMeta{Namespace: nodecommon.MachineNamespace, Name: bootstrap.ImagesDigestsConfigMapName},
 		Data: map[string]string{imagesDigestsKey: `{"registrypackages":{"jq171":"sha256:jq","d8Curl891":"sha256:curl",` +
 			`"tailLog":"sha256:tail","rppGet":"sha256:rpp"}}`},
 	}
