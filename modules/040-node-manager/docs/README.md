@@ -66,7 +66,7 @@ The following node types that can be worked with within a node group (resource [
 - `Static` — a static node hosted on a bare metal or virtual machine. In the case of a cloud environment, the `cloud-controller-manager` does not manage the node even if one of the cloud providers is enabled. [Learn more about working with static nodes...](#working-with-static-nodes)
 
 {% alert level="info" %}
-For Deckhouse Virtualization Platform (DVP), the DVPClusterConfiguration resource is not used. The `CloudPermanent` node parameters are set in the [NodeGroup](cr.html#nodegroup), [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass), and [`cloud-provider-dvp`](/modules/cloud-provider-dvp/configuration.html) ModuleConfig resources.
+For Deckhouse Virtualization Platform (DVP), the DVPClusterConfiguration resource is not used. The CloudPermanent node parameters are set in the [NodeGroup](cr.html#nodegroup), [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass), and [`cloud-provider-dvp`](/modules/cloud-provider-dvp/configuration.html) ModuleConfig resources.
 {% endalert %}
 
 ## Node grouping and group management

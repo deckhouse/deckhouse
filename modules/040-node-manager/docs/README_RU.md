@@ -68,7 +68,7 @@ description: Deckhouse управляет узлами кластера Kubernet
 - `Static` — статический узел, размещенный на сервере bare metal или виртуальной машине. В случае облака, такой узел не управляется `cloud-controller-manager'ом`, даже если включен один из облачных провайдеров. [Подробнее про работу со статическими узлами...](#работа-со-статическими-узлами)
 
 {% alert level="info" %}
-Для Deckhouse Virtualization Platform (DVP) ресурс DVPClusterConfiguration не используется. Параметры `CloudPermanent`-узлов задаются в ресурсах [NodeGroup](cr.html#nodegroup), [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass) и ModuleConfig [`cloud-provider-dvp`](/modules/cloud-provider-dvp/configuration.html).
+Для Deckhouse Virtualization Platform (DVP) ресурс DVPClusterConfiguration не используется. Параметры CloudPermanent-узлов задаются в ресурсах [NodeGroup](cr.html#nodegroup), [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass) и ModuleConfig [`cloud-provider-dvp`](/modules/cloud-provider-dvp/configuration.html).
 {% endalert %}
 
 ## Группировка узлов и управление группами
