@@ -231,7 +231,9 @@ func (l *Loader) listDeployedReleases(ctx context.Context) ([]v1alpha1.ModuleRel
 
 	// the label may lag behind the status: drop deleted releases and the ones that left the phase
 	releases := slices.DeleteFunc(releaseList.Items, func(release v1alpha1.ModuleRelease) bool {
-		return release.Status.Phase != v1alpha1.ModuleReleasePhaseDeployed || !release.DeletionTimestamp.IsZero()
+		notDeployed := release.Status.Phase != v1alpha1.ModuleReleasePhaseDeployed
+		deleted := !release.DeletionTimestamp.IsZero()
+		return notDeployed || deleted
 	})
 
 	slices.SortFunc(releases, func(a, b v1alpha1.ModuleRelease) int {
