@@ -142,11 +142,16 @@ properties:
                   Объем памяти, выделяемой для компонентов control plane, работающих на каждом master-узле кластера.
       storageClass:
         description: |
-          Имя StorageClass, который будет использоваться для всех компонентов Deckhouse Kubernetes Platform (Prometheus, Grafana, OpenVPN и т. д.).
+          Имя StorageClass, который будет использоваться для всех компонентов Deckhouse Kubernetes Platform (Prometheus, Grafana, OpenVPN и т. д.), если он не переопределен в конфигурации модуля.
 
-            * Если значение не указано, то используется [StorageClass по умолчанию](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass), установленный в кластере.
+          Если значение не указано, то используется [StorageClass по умолчанию](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass), установленный в кластере.
+
+          **Важные замечания:**
+
+            * Если конфигурация модуля определяет свой собственный параметр `storageClass`, то используется значение из конфигурации модуля, а глобальный параметр `modules.storageClass` не применяется.
+            * Если для модуля уже существует PersistentVolumeClaim (PVC), то изменение этого параметра не влияет на существующий PVC и не требует пересоздания дисков. Модуль использует существующий PVC и его StorageClass. Подробнее см. [пример модуля prometheus](/modules/prometheus/configuration.html#parameters-storageclass).
+            * Этот параметр применяется в процессе включения модуля при создании новых PVC.
             * Этот параметр имеет смысл использовать только в исключительных ситуациях.
-            * Этот параметр применяется в процессе включения модуля.
   applications:
     description: |
       Общие параметры приложений экосистемы Deckhouse.

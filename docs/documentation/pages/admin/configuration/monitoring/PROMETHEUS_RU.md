@@ -54,10 +54,14 @@ spec:
       value: monitoring
 ```
 
-Параметр `global.modules.storageClass` используется как значение по умолчанию при создании PVC. Если PVC для Prometheus уже существует, его `storageClassName` определяет фактический `storageClass`, поэтому изменение глобального параметра не изменит существующие PVC. Глобальный параметр может повлиять на хранилище при переходе с `emptyDir` на PVC или если PVC еще не создан. Чтобы изменить StorageClass для `prometheus-main` или `prometheus-longterm`, укажите `storageClass` или `longtermStorageClass` соответственно в `ModuleConfig` модуля `prometheus`.
+## Использование параметра `global.modules.storageClass` для Prometheus
+
+Этот модуль использует глобальный параметр [`global.modules.storageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass) как StorageClass по умолчанию при создании PersistentVolumeClaim. Если PVC для Prometheus уже существует, его StorageClass не изменяется при изменении глобального параметра — изменение глобального параметра не требует пересоздания диска.
+
+Чтобы использовать другой StorageClass для этого модуля, переопределите параметр `storageClass` или `longtermStorageClass` в конфигурации модуля Prometheus. Это изменение повлияет только на новые PVC, которые будут созданы в будущем, и не повлияет на существующие.
 
 {{< alert level="warning" >}}
-При изменении `storageClass` или `longtermStorageClass` в `ModuleConfig` существующий PVC будет удален и создан заново. Перед изменением проверьте политику удаления PersistentVolume и создайте резервную копию данных.
+При изменении `storageClass` или `longtermStorageClass` в конфигурации модуля существующий PVC будет удален и создан заново. Перед изменением проверьте политику удаления PersistentVolume и создайте резервную копию данных.
 {{< /alert >}}
 
 Полное описание всех настроек доступно [в документации модуля `prometheus`](/modules/prometheus/configuration.html).
