@@ -28,7 +28,7 @@ d8 k -n argocd get secret argocd-cluster -o jsonpath='{.data.admin\.password}' |
 ```
 
 {% alert level="warning" %}
-We recommend to change the automatically generated `admin` user password by using Argo CD CLI command:
+We recommend changing the automatically generated `admin` user password using Argo CD CLI command:
 
 ```bash
 argocd login <ARGOCD_DOMAIN>:443 --username admin --password <ADMIN_PASSWORD>
