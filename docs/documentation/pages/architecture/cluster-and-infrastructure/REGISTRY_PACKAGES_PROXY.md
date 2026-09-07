@@ -16,7 +16,7 @@ as well as during cluster operation, to fetch packages from container registries
 The module deploys a highly-available proxy service that:
 
 - Runs on master nodes with `hostNetwork` enabled to ensure availability during bootstrap when CNI is not yet available.
-- Exposes a separate HTTP endpoint on port `4282` for downloading `rpp-get` during node bootstrap. Requests to this port do not go through TLS or kube-rbac-proxy, unlike the main proxy on port `4219`.
+- Exposes a separate HTTP endpoint on port `4282` for downloading `rpp-get` (a utility for interacting with the module's main endpoint) during node bootstrap. Requests to this port do not go through TLS or kube-rbac-proxy, unlike the main proxy on port `4219`.
 - Listens on port `4219` (HTTPS) on each master node's IP address.
 - Provides a `GET /package` endpoint for retrieving registry packages by digest.
 - Implements local caching of retrieved packages (up to 1 GB) to reduce network traffic and improve performance.
