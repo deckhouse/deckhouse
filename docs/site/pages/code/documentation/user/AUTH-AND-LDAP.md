@@ -220,6 +220,90 @@ main:
   }
 ```
 
+### Multiple LDAP servers
+
+The `spec.appConfig.ldap.` section can describe several LDAP servers. The key of an entry is the server name; the provider name is derived from it as `ldap<key>` in lowercase. For example, the `main` key corresponds to the `ldapmain` provider. This name is stored in the account identity and appears in the `server` field of the synchronization log entries.
+
+Each server has its own connection parameters. The synchronization parameters — the `group_sync` section with everything in it, including `role_mapping` — are taken into account only for the server under the `main` key; on the other servers the section is ignored (see [Synchronization scope](#synchronization-scope)):
+
+```yaml
+main:
+  label: 'Head office'
+  host: ldap-main.example.com
+  base: 'ou=People,dc=example,dc=com'
+  uid: 'cn'
+  # Other connection parameters.
+  group_sync: {
+    base: 'ou=Groups,dc=example,dc=com',
+    role_mapping: [
+      { by_name: '.*-developer-.*', gitlab_role: 'developer' }
+    ]
+  }
+contractors:
+  label: 'Contractors'
+  host: ldap-contractors.example.com
+  base: 'ou=People,dc=contractors,dc=example,dc=com'
+  uid: 'cn'
+  # Other connection parameters.
+```
+
+Signing in works through any of the described servers: the sign-in page and the admin area sign-in page show a separate tab for each server. No extra setting is needed to enable this.
+
+Which servers are used depends on the scenario:
+
+| Scenario | Servers used |
+| -------- | ------------ |
+| Signing in through the LDAP form in the web interface | All servers, one tab each |
+| Looking up the account when linking to OIDC (`auto_link_ldap_user`) | All servers, one by one until the first match |
+| Synchronization of users, groups, and access rights | The `ldapmain` server only |
+| Periodic access re-check | `ldapmain`, if the account has its identity; otherwise, the directories of the account's own identities |
+
+#### Synchronization scope
+
+Synchronization of users, groups, and access rights covers a single server — the one whose provider name is `ldapmain`, that is, the server under the `main` key. The other servers remain a source of sign-in, but not a source of groups and rights. The limitation applies both to the scheduled synchronization task and to the synchronization that runs when a user signs in.
+
+{% alert level="warning" %}
+The `ldapmain` name is fixed and cannot be configured. If there is no server under the `main` key in the section, synchronization does not run for any of the described servers.
+{% endalert %}
+
+As a result:
+
+- a user who exists only in a non-main directory can sign in to Deckhouse Code but receives no groups or rights from LDAP — they have to be assigned manually;
+- for a user with two identities (the same primary email address in both directories), groups and rights always come from `ldapmain`, no matter which server they signed in through;
+- the `group_sync` section of non-main servers is not read, so an error in their `group_sync.filter` parameter does not prevent the application from starting. An error in the filter of the `main` server is still detected at startup and keeps the application down.
+
+When synchronization reaches a non-main server, it skips the server and writes a single `INFO` level entry about it, with the name of the skipped server in the `server` field:
+
+```console
+Server is not synchronized: users, groups and permissions come from 'ldapmain' only
+```
+
+#### User identification with multiple servers
+
+A user is looked up first by account identity, then by primary email address:
+
+- if the primary address is the same in both directories, signing in through the second server adds a second LDAP identity to the existing account; no new account is created;
+- if the addresses differ, two separate accounts are created.
+
+The list of account identities is available in the admin area, on the `/admin/users/<username>/identities` page.
+
+#### Access decision with multiple identities
+
+Deckhouse Code periodically, at most once an hour, re-checks the access of an LDAP user: it queries the directory and blocks the account if the entry is not found there, or unblocks it if the entry is found again. If the account has several LDAP identities, the directory for the check is chosen as follows:
+
+- if the `ldapmain` identity is present, only it decides, and the other directories are not queried at all. If the user exists in `ldapmain` and is not disabled there, access is granted; if the user is missing or disabled there, access is denied regardless of what happens in the other directories;
+- if the `ldapmain` identity is absent, meaning the user exists only in non-main directories, the user is checked against their own identities, and access is kept as long as the entry is found in at least one of the corresponding directories.
+
+"The entry is found" means that it exists in the directory and is not disabled through Active Directory. The latter is checked only for directories configured as AD.
+
+The rule is aligned with the synchronization scope: synchronization blocks users based on the `ldapmain` data, and the access re-check blocks exactly the same users. Because of that, signing in through another directory does not lift a block set by synchronization.
+
+{% alert level="warning" %}
+When moving a user from the `ldapmain` directory to another directory, remove the stale `ldapmain` identity from their account on the `/admin/users/<username>/identities` page. As long as that identity is in place, the user stays blocked even if they exist in another directory. The identity is not removed automatically.
+{% endalert %}
+
+Removing or disabling a user in a non-main directory does not revoke access on its own while the user remains in `ldapmain`. Access has to be revoked in the `ldapmain` directory.
+
 ### Groups and access rights
 
 LDAP groups are mapped to GitLab groups. You can assign roles to users based on group names.
@@ -243,7 +327,48 @@ Optional parameters:
 Assigns roles to users based on group names (`cn`):
 
 - `role_mapping.by_name` — a regular expression; if the group name matches, the corresponding role is assigned to the user.
-- `role_mapping.gitlab_role` — the role name in Deckhouse Code (e.g., `guest`, `reporter`, `developer`, `maintainer`, `owner`).
+- `role_mapping.gitlab_role` — the name of a role available on the instance.
+
+The list of available roles comes from the standard role catalog — the same one used to decide which roles can be granted to a group or project member. The catalog is read anew on every synchronization run, so a role disabled at the instance level is not in it and cannot be used in `role_mapping`.
+
+Currently the catalog provides seven names:
+
+| `gitlab_role` | Role | Access level |
+| ------------- | ---- | ------------ |
+| `guest` | Guest | 10 |
+| `planner` | Planner | 15 |
+| `reporter` | Reporter | 20 |
+| `security_manager` | Security Manager | 25 |
+| `developer` | Developer | 30 |
+| `maintainer` | Maintainer | 40 |
+| `owner` | Owner | 50 |
+
+The role name is written exactly as shown in the `gitlab_role` column: lowercase, with words separated by underscores. Case and spaces are not normalized, so `Security Manager`, for example, counts as an unrecognized name.
+
+The `security_manager` role is present in the catalog only if the role is enabled on the instance (the `GITLAB_SECURITY_MANAGER_ROLE` environment variable, enabled by default). If the role is disabled, its name counts as unrecognized.
+
+If several rules match an LDAP group name, the numerically highest access level is assigned. For example, if a group matches both a rule with the `security_manager` role (level 25) and a rule with the `developer` role (level 30), its members get the Developer role.
+
+#### Role name validation
+
+Role names are validated once, at the start of membership distribution — including the rules that no LDAP group matched in that run. This also catches a dormant typo that would otherwise show up only once a matching group appears.
+
+The validation does not interrupt membership distribution:
+
+- LDAP groups whose matching rules are all recognized are processed in full and receive memberships;
+- an unrecognized rule does not take part in the access level calculation;
+- if only unrecognized rules match an LDAP group, no access level is determined for it, and the group is skipped entirely in that run: its current members are neither recalculated nor removed.
+
+The run itself, however, ends with an error — after the groups, the users, and the valid memberships have been written. As a result:
+
+- the run counts as abnormally finished on the metrics page of the synchronization task, and the successful synchronization mark is not updated (see [Manual synchronization run](#manual-synchronization-run));
+- an `ERROR` level entry is written to the logs, listing both the unrecognized names and the full set of valid ones:
+
+  ```console
+  Unknown gitlab_role in group_sync.role_mapping: 'security_manger'. Available roles: guest, planner, reporter, security_manager, developer, maintainer, owner
+  ```
+
+Memberships are also distributed when a user signs in through an LDAP provider. On that path the same error is only written to the logs: the sign-in works as usual, and the remaining memberships are assigned.
 
 ### Group membership resolution
 
