@@ -26,9 +26,7 @@ import (
 	. "github.com/onsi/gomega"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/dynamic"
 	dynamicfake "k8s.io/client-go/dynamic/fake"
 	clienttesting "k8s.io/client-go/testing"
@@ -37,105 +35,41 @@ import (
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
-func legacyTestBinding(kind, namespace, name string, labels map[string]string) *unstructured.Unstructured {
-	obj := &unstructured.Unstructured{Object: map[string]interface{}{
-		"apiVersion": "rbac.authorization.k8s.io/v1",
-		"kind":       kind,
-		"metadata":   map[string]interface{}{"name": name},
-		"roleRef": map[string]interface{}{
-			"apiGroup": "rbac.authorization.k8s.io",
-			"kind":     "ClusterRole",
-			"name":     "user-authz:user",
-		},
-	}}
-	if namespace != "" {
-		obj.SetNamespace(namespace)
-	}
-	if labels != nil {
-		obj.SetLabels(labels)
-	}
-	return obj
-}
-
-func moduleLabels() map[string]string {
-	return map[string]string{"heritage": "deckhouse", "module": "user-authz", "app.kubernetes.io/managed-by": "Helm"}
-}
-
-func newLegacyBindingsFakeClient(objs ...runtime.Object) *dynamicfake.FakeDynamicClient {
-	gvrToListKind := map[schema.GroupVersionResource]string{
-		ruleBindingResources[0]: "ClusterRoleBindingList",
-		ruleBindingResources[1]: "RoleBindingList",
-	}
-	return dynamicfake.NewSimpleDynamicClientWithCustomListKinds(runtime.NewScheme(), gvrToListKind, objs...)
-}
-
-func legacyBindingExists(t *testing.T, c dynamic.Interface, gvr schema.GroupVersionResource, namespace, name string) bool {
-	t.Helper()
-	_, err := c.Resource(gvr).Namespace(namespace).Get(context.Background(), name, metav1.GetOptions{})
-	if err == nil {
-		return true
-	}
-	if apierrors.IsNotFound(err) {
-		return false
-	}
-	t.Fatalf("get %s/%s: %v", namespace, name, err)
-	return false
-}
-
 func TestDeleteLegacyBindings_RemovesPerCustomRoleBindingsOnly(t *testing.T) {
 	crbGVR := ruleBindingResources[0]
 	rbGVR := ruleBindingResources[1]
-
-	c := newLegacyBindingsFakeClient(
-		// legacy per-custom-role bindings of the module: go
-		legacyTestBinding("ClusterRoleBinding", "", "user-authz:dev:admin:custom-cluster-role:d8:user-authz:cert-manager:admin", moduleLabels()),
-		legacyTestBinding("RoleBinding", "team", "user-authz:ns-rule:editor:custom-cluster-role:d8:user-authz:cert-manager:editor", moduleLabels()),
-		// every other binding of the rule stays: level, aggregated, additional role, port-forward
-		legacyTestBinding("ClusterRoleBinding", "", "user-authz:dev:admin", moduleLabels()),
-		legacyTestBinding("ClusterRoleBinding", "", "user-authz:dev:admin:custom", moduleLabels()),
-		legacyTestBinding("ClusterRoleBinding", "", "user-authz:dev:additional-role:custom-cluster-role-lookalike", moduleLabels()),
-		legacyTestBinding("ClusterRoleBinding", "", "user-authz:dev:port-forward", moduleLabels()),
-		// a foreign binding with a legacy-looking name but without the module labels stays
-		legacyTestBinding("ClusterRoleBinding", "", "user-authz:foreign:user:custom-cluster-role:view", nil),
-		// a module object that is not a rule binding stays
-		legacyTestBinding("ClusterRoleBinding", "", "d8:user-authz:admin-kubeconfig", moduleLabels()),
-	)
+	c := newLegacyBindingsFakeClient(legacyFixture()...)
 
 	deleted, err := deleteLegacyBindings(context.Background(), c, 4)
 	if err != nil {
 		t.Fatalf("deleteLegacyBindings: %v", err)
 	}
-	if deleted != 2 {
-		t.Fatalf("deleted = %d, want 2", deleted)
+	if deleted != 3 {
+		t.Fatalf("deleted = %d, want 3", deleted)
 	}
 
-	if legacyBindingExists(t, c, crbGVR, "", "user-authz:dev:admin:custom-cluster-role:d8:user-authz:cert-manager:admin") {
-		t.Error("the legacy ClusterRoleBinding must be deleted")
+	for _, name := range []string{legacyCRB, legacyKeptCRB} {
+		if s := legacyBindingState(t, c, crbGVR, "", name); s != "absent" {
+			t.Errorf("%s = %s, want absent", name, s)
+		}
 	}
-	if legacyBindingExists(t, c, rbGVR, "team", "user-authz:ns-rule:editor:custom-cluster-role:d8:user-authz:cert-manager:editor") {
-		t.Error("the legacy RoleBinding must be deleted")
+	if s := legacyBindingState(t, c, rbGVR, legacyRBNs, legacyRB); s != "absent" {
+		t.Errorf("%s = %s, want absent", legacyRB, s)
 	}
-	for _, name := range []string{
-		"user-authz:dev:admin",
-		"user-authz:dev:admin:custom",
-		"user-authz:dev:additional-role:custom-cluster-role-lookalike",
-		"user-authz:dev:port-forward",
-		"user-authz:foreign:user:custom-cluster-role:view",
-		"d8:user-authz:admin-kubeconfig",
-	} {
-		if !legacyBindingExists(t, c, crbGVR, "", name) {
+	for _, name := range []string{aggregatedCRB, levelCRB, lookalikeCRB, foreignCRB, nonRuleCRB} {
+		if s := legacyBindingState(t, c, crbGVR, "", name); s == "absent" {
 			t.Errorf("%s must survive", name)
 		}
 	}
 }
 
 func TestDeleteLegacyBindings_NoopWithoutLegacyBindingsAndReportsErrors(t *testing.T) {
-	clean := newLegacyBindingsFakeClient(legacyTestBinding("ClusterRoleBinding", "", "user-authz:dev:admin:custom", moduleLabels()))
+	clean := newLegacyBindingsFakeClient(legacyTestBinding("ClusterRoleBinding", "", aggregatedCRB, moduleLabels(), nil))
 	if deleted, err := deleteLegacyBindings(context.Background(), clean, 4); err != nil || deleted != 0 {
 		t.Fatalf("deleted = %d, err = %v, want 0 and no error", deleted, err)
 	}
 
-	failing := newLegacyBindingsFakeClient(legacyTestBinding("ClusterRoleBinding", "", "user-authz:dev:admin:custom-cluster-role:view", moduleLabels()))
+	failing := newLegacyBindingsFakeClient(legacyTestBinding("ClusterRoleBinding", "", legacyCRB, moduleLabels(), keepAnnotations()))
 	failing.PrependReactor("delete", "clusterrolebindings", func(_ clienttesting.Action) (bool, runtime.Object, error) {
 		return true, nil, errors.New("forbidden")
 	})
@@ -151,21 +85,21 @@ var _ = Describe("User Authz hooks :: delete legacy custom-role bindings ::", fu
 
 	BeforeEach(func() {
 		fakeClient = newLegacyBindingsFakeClient(
-			legacyTestBinding("ClusterRoleBinding", "", "user-authz:dev:admin:custom-cluster-role:view", moduleLabels()),
-			legacyTestBinding("ClusterRoleBinding", "", "user-authz:dev:admin:custom", moduleLabels()),
+			legacyTestBinding("ClusterRoleBinding", "", legacyCRB, moduleLabels(), keepAnnotations()),
+			legacyTestBinding("ClusterRoleBinding", "", aggregatedCRB, moduleLabels(), nil),
 		)
 		newModuleBindingsClient = func(dependency.Container) (dynamic.Interface, error) { return fakeClient, nil }
 
-		f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+		f.BindingContexts.Set(f.GenerateAfterHelmContext())
 		f.RunHook()
 	})
 
-	It("Removes the legacy bindings before the release and keeps the aggregated one", func() {
+	It("Removes the legacy binding after the release and keeps the aggregated one", func() {
 		Expect(f).To(ExecuteSuccessfully())
 
-		_, err := fakeClient.Resource(ruleBindingResources[0]).Get(context.Background(), "user-authz:dev:admin:custom-cluster-role:view", metav1.GetOptions{})
+		_, err := fakeClient.Resource(ruleBindingResources[0]).Get(context.Background(), legacyCRB, metav1.GetOptions{})
 		Expect(apierrors.IsNotFound(err)).To(BeTrue())
-		_, err = fakeClient.Resource(ruleBindingResources[0]).Get(context.Background(), "user-authz:dev:admin:custom", metav1.GetOptions{})
+		_, err = fakeClient.Resource(ruleBindingResources[0]).Get(context.Background(), aggregatedCRB, metav1.GetOptions{})
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 })

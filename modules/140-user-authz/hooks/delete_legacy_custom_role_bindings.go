@@ -20,49 +20,26 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"strings"
 	"time"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
 
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/modules/140-user-authz/hooks/internal"
 )
 
-/*
-The chart used to render one binding per custom ClusterRole for every rule,
-user-authz:<rule>:<level>:custom-cluster-role:<role>. A rule now gets a single binding to the
-aggregated role of its level, and the per-role bindings have left the manifest.
-
-Their removal is not left to the release engine on purpose. nelm registers two operations for every
-object that has to go (delete and track absence) and the cost of building the plan grows with the
-square of the number of operations, so on a cluster with thousands of such bindings the release
-would not fit into the release timeout, which is the very failure the aggregation fixes. Instead this
-hook deletes them before the release, in parallel; the engine then only has to notice that the
-objects are gone, one GET each and no operations at all.
-
-The permissions granted through custom ClusterRoles are therefore unavailable between this hook and
-the moment the release creates the aggregated bindings: seconds on an ordinary cluster, a few
-minutes on a very large one. The access-level bindings of the rules are not touched.
-
-Once the legacy bindings are gone the hook only lists the module bindings and finds nothing to do.
-*/
-
-const (
-	// legacyCustomRoleBindingMarker is the part of the name that only the per-custom-role bindings had.
-	legacyCustomRoleBindingMarker = ":custom-cluster-role:"
-
-	deleteLegacyBindingsWorkers = 16
-)
+// The second step of the removal of the per-custom-role bindings, see
+// keep_legacy_custom_role_bindings.go: once the release has created the aggregated bindings, the
+// old ones are deleted in parallel. The release engine has already let them go because of the keep
+// annotation, so this is the only place they are removed from.
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
-	Queue:        internal.Queue("delete-legacy-custom-role-bindings"),
-	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
+	Queue:       internal.Queue("delete-legacy-custom-role-bindings"),
+	OnAfterHelm: &go_hook.OrderedConfig{Order: 10},
 }, dependency.WithExternalDependencies(deleteLegacyCustomRoleBindings))
 
 func deleteLegacyCustomRoleBindings(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
@@ -73,7 +50,7 @@ func deleteLegacyCustomRoleBindings(ctx context.Context, input *go_hook.HookInpu
 
 	started := time.Now()
 
-	deleted, err := deleteLegacyBindings(ctx, dynClient, deleteLegacyBindingsWorkers)
+	deleted, err := deleteLegacyBindings(ctx, dynClient, legacyBindingsWorkers)
 	if err != nil {
 		return fmt.Errorf("delete legacy custom-role bindings: %w", err)
 	}
@@ -84,11 +61,6 @@ func deleteLegacyCustomRoleBindings(ctx context.Context, input *go_hook.HookInpu
 	}
 
 	return nil
-}
-
-// isLegacyCustomRoleBinding reports whether the binding is a per-custom-role binding of a rule.
-func isLegacyCustomRoleBinding(obj *unstructured.Unstructured) bool {
-	return isRuleBinding(obj) && strings.Contains(obj.GetName(), legacyCustomRoleBindingMarker)
 }
 
 // deleteLegacyBindings removes every per-custom-role binding of the module and returns how many
