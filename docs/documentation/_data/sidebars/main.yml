@@ -878,6 +878,18 @@ entries:
                     ru: Управление проектами
                   url: /admin/multitenancy/project-management.html
             - title:
+                en: Managed-services
+                ru: Managed-сервисы
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/configuration/managed-services/
+                - title:
+                    en: Managed PostgreSQL
+                    ru: Managed PostgreSQL
+                  url: /admin/configuration/managed-services/postgres/
+            - title:
                 en: Backup and restore
                 ru: Резервное копирование и восстановление
               url: /admin/configuration/backup/backup-and-restore.html
@@ -1123,6 +1135,18 @@ entries:
             en: Multitenancy
             ru: Мультитенантность
           url: /user/multitenancy/
+        - title:
+            en: Managed-services
+            ru: Managed-сервисы
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /user/managed-services/
+            - title:
+                en: Managed PostgreSQL
+                ru: Managed PostgreSQL
+              url: /user/managed-services/postgres/
         - title:
             en: Monitoring
             ru: Мониторинг
@@ -1377,7 +1401,7 @@ entries:
             - title:
                 en: Pod-reloader module
                 ru: Модуль pod-reloader
-              url: /architecture/kubernetes-and-scheduling/pod-reloader.html              
+              url: /architecture/kubernetes-and-scheduling/pod-reloader.html
         - title:
             en: Cluster & Infrastructure subsystem
             ru: Подсистема Cluster & Infrastructure
@@ -1561,7 +1585,7 @@ entries:
             - title:
                 en: Cilium-hubble module
                 ru: Модуль cilium-hubble
-              url: /architecture/network/cilium-hubble.html              
+              url: /architecture/network/cilium-hubble.html
             - title:
                 en: Ingress-nginx module
                 ru: Модуль ingress-nginx
@@ -1729,7 +1753,7 @@ entries:
             - title:
                 en: Managed-postgres module
                 ru: Модуль managed-postgres
-              url: /architecture/managed-services/managed-postgres.html   
+              url: /architecture/managed-services/managed-postgres.html
             - title:
                 en: Managed-valkey module
                 ru: Модуль managed-valkey
