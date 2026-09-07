@@ -328,6 +328,19 @@ cloudProviderYandex:
 			Expect(discoveryData.Get("kind").String()).To(Equal("YandexCloudDiscoveryData"))
 			Expect(discoveryData.Get("routeTableID").String()).To(Equal("test"))
 		})
+
+		// Reaching this branch means IsMigrationResourcesApplied said no, so the credential Secret
+		// may not be applied yet. The PCC still carries the service account key and it has to reach
+		// the values: without it templates/_helpers.tpl renders an empty d8-credentials and CCM,
+		// CSI and the machine-class secrets come up with no service account key.
+		It("seeds the credential secrets from the PCC while the migration is incomplete", func() {
+			Expect(stateBWithV2).To(ExecuteSuccessfully())
+
+			cred := stateBWithV2.ValuesGet("cloudProviderYandex.internal.credentialSecrets.d8-credentials")
+			Expect(cred.Exists()).To(BeTrue())
+			Expect(cred.Get("authScheme").String()).To(Equal("serviceAccount"))
+			Expect(cred.Get("secret").String()).To(ContainSubstring(`"id": "test"`))
+		})
 	})
 
 	// ---- Migration artifacts: dropped once the new model stands on its own ----
