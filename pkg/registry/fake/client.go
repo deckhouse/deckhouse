@@ -18,8 +18,10 @@ package fake
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -120,17 +122,59 @@ func (c *Client) GetDigest(_ context.Context, tag string) (*v1.Hash, error) {
 	return &h, nil
 }
 
-// GetManifest returns a ManifestResult for the image identified by tag.
-func (c *Client) GetManifest(_ context.Context, tag string) (dkpreg.ManifestResult, error) {
+// GetManifest returns the manifest stored under tag - the index manifest for an
+// entry added with AddIndex, the image manifest otherwise.
+//
+// A platform resolves an index down to that child's manifest, matching the real
+// client; on a plain image it is a no-op there too.
+func (c *Client) GetManifest(_ context.Context, tag string, opts ...dkpreg.ManifestGetOption) (dkpreg.ManifestResult, error) {
+	manifestOptions := &dkpreg.ManifestGetOptions{}
+	for _, opt := range opts {
+		opt.ApplyToManifestGet(manifestOptions)
+	}
+
 	entry, err := c.findImage(tag)
 	if err != nil {
 		return nil, err
 	}
-	raw, err := entry.img.RawManifest()
+
+	if manifestOptions.Platform != nil && entry.isIndex() {
+		img, err := entry.resolveImage(manifestOptions.Platform)
+		if err != nil {
+			return nil, fmt.Errorf("fake: %w: %w", dkpreg.ErrImageNotFound, err)
+		}
+
+		raw, err := img.RawManifest()
+		if err != nil {
+			return nil, fmt.Errorf("fake: raw manifest: %w", err)
+		}
+
+		return dkpclient.NewManifestResultFromBytes(raw), nil
+	}
+
+	raw, err := entry.rawManifest()
 	if err != nil {
 		return nil, fmt.Errorf("fake: raw manifest: %w", err)
 	}
+
 	return dkpclient.NewManifestResultFromBytes(raw), nil
+}
+
+// GetIndex returns the index stored under tag, resolving nothing.
+//
+// A plain image is an error, mirroring the real client: wrapping it in a
+// synthetic one-entry index is not what a caller asking for an index means.
+func (c *Client) GetIndex(_ context.Context, tag string) (v1.ImageIndex, error) {
+	entry, err := c.findImage(tag)
+	if err != nil {
+		return nil, err
+	}
+
+	if !entry.isIndex() {
+		return nil, fmt.Errorf("fake: GetIndex: %q is an image, not an index", tag)
+	}
+
+	return entry.idx, nil
 }
 
 // GetImageConfig returns the v1.ConfigFile for the image identified by tag.
@@ -139,7 +183,13 @@ func (c *Client) GetImageConfig(_ context.Context, tag string) (*v1.ConfigFile, 
 	if err != nil {
 		return nil, err
 	}
-	return entry.img.ConfigFile()
+
+	img, err := entry.resolveImage(nil)
+	if err != nil {
+		return nil, fmt.Errorf("fake: %w", err)
+	}
+
+	return img.ConfigFile()
 }
 
 // CheckImageExists returns nil if the image exists or
@@ -151,19 +201,35 @@ func (c *Client) CheckImageExists(_ context.Context, tag string) error {
 
 // GetImage returns a [dkpreg.Image] for the given tag or digest reference.
 // Digest references start with "@sha256:".
-func (c *Client) GetImage(_ context.Context, ref string, _ ...dkpreg.ImageGetOption) (dkpreg.Image, error) {
-	var entry *imageEntry
-	var err error
+func (c *Client) GetImage(_ context.Context, ref string, opts ...dkpreg.ImageGetOption) (dkpreg.Image, error) {
+	getOptions := &dkpreg.ImageGetOptions{}
+	for _, opt := range opts {
+		opt.ApplyToImageGet(getOptions)
+	}
+
+	var (
+		entry *imageEntry
+		err   error
+	)
 
 	if strings.HasPrefix(ref, "@sha256:") {
 		entry, err = c.findImageByDigest(strings.TrimPrefix(ref, "@"))
 	} else {
 		entry, err = c.findImage(ref)
 	}
+
 	if err != nil {
 		return nil, err
 	}
-	return &registryImage{Image: entry.img}, nil
+
+	// An index resolves to one child, as remote.Image does: without a platform
+	// that is linux/amd64, not the host's architecture.
+	img, err := entry.resolveImage(getOptions.Platform)
+	if err != nil {
+		return nil, fmt.Errorf("fake: %w: %w", dkpreg.ErrImageNotFound, err)
+	}
+
+	return &registryImage{Image: img}, nil
 }
 
 // PushImage stores the image under the current path with the given tag.
@@ -185,7 +251,12 @@ func (c *Client) PushImage(_ context.Context, tag string, img v1.Image, _ ...dkp
 }
 
 // ListTags returns all tags registered under the current path.
-func (c *Client) ListTags(_ context.Context, _ ...dkpreg.ListTagsOption) ([]string, error) {
+func (c *Client) ListTags(_ context.Context, opts ...dkpreg.ListTagsOption) ([]string, error) {
+	listOptions := &dkpreg.ListTagsOptions{}
+	for _, opt := range opts {
+		opt.ApplyToListTags(listOptions)
+	}
+
 	host, repo := c.splitHostRepo()
 	reg, ok := c.registries[host]
 	if !ok {
@@ -195,12 +266,92 @@ func (c *Client) ListTags(_ context.Context, _ ...dkpreg.ListTagsOption) ([]stri
 	if rs == nil {
 		return nil, nil
 	}
-	return rs.listTags(), nil
+	return applyListWindow(rs.listTags(), listOptions.Last, listOptions.N), nil
+}
+
+// applyListWindow reproduces what a registry does with the `last` and `n`
+// parameters: results are ordered lexicographically, everything up to and
+// including last is skipped, and at most n entries come back.
+//
+// The fake used to discard list options entirely, so a test asserting on
+// WithTagsLimit(2) saw every tag and passed while production returned one
+// page - the fake has to be at least as strict as the thing it stands in for.
+func applyListWindow(items []string, last string, n int) []string {
+	sorted := make([]string, len(items))
+	copy(sorted, items)
+	sort.Strings(sorted)
+
+	if last != "" {
+		cut := 0
+		for cut < len(sorted) && sorted[cut] <= last {
+			cut++
+		}
+		sorted = sorted[cut:]
+	}
+
+	if n > 0 && len(sorted) > n {
+		sorted = sorted[:n]
+	}
+
+	return sorted
 }
 
 // ListRepositories returns all repository paths registered under the host of
 // the current path.  The returned paths are relative to the host.
-func (c *Client) ListRepositories(_ context.Context, _ ...dkpreg.ListRepositoriesOption) ([]string, error) {
+// StreamRepositories delivers the catalog as a single page, for the same reason
+// as StreamTags: the fake has no cursor of its own to paginate.
+func (c *Client) StreamRepositories(ctx context.Context, visit func(repos []string) error, opts ...dkpreg.ListRepositoriesOption) error {
+	repos, err := c.ListRepositories(ctx, opts...)
+	if err != nil {
+		return err
+	}
+
+	if len(repos) == 0 {
+		return nil
+	}
+
+	if err := visit(repos); err != nil {
+		if errors.Is(err, dkpreg.ErrStopStreaming) {
+			return nil
+		}
+
+		return err
+	}
+
+	return nil
+}
+
+// StreamTags delivers the repository's tags as a single page. The fake stores
+// tags in memory with no cursor of its own, so there is nothing to paginate -
+// callers that accumulate pages still see the complete list, which is what the
+// real client guarantees.
+func (c *Client) StreamTags(ctx context.Context, visit func(tags []string) error, opts ...dkpreg.ListTagsOption) error {
+	tags, err := c.ListTags(ctx, opts...)
+	if err != nil {
+		return err
+	}
+
+	if len(tags) == 0 {
+		return nil
+	}
+
+	if err := visit(tags); err != nil {
+		if errors.Is(err, dkpreg.ErrStopStreaming) {
+			return nil
+		}
+
+		return err
+	}
+
+	return nil
+}
+
+func (c *Client) ListRepositories(_ context.Context, opts ...dkpreg.ListRepositoriesOption) ([]string, error) {
+	listOptions := &dkpreg.ListRepositoriesOptions{}
+	for _, opt := range opts {
+		opt.ApplyToListRepositories(listOptions)
+	}
+
 	host, repoPrefix := c.splitHostRepo()
 	reg, ok := c.registries[host]
 	if !ok {
@@ -208,18 +359,18 @@ func (c *Client) ListRepositories(_ context.Context, _ ...dkpreg.ListRepositorie
 	}
 
 	all := reg.listRepos()
-	if repoPrefix == "" {
-		return all, nil
+	if repoPrefix != "" {
+		prefix := repoPrefix + "/"
+		var filtered []string
+		for _, r := range all {
+			if strings.HasPrefix(r, prefix) || r == repoPrefix {
+				filtered = append(filtered, r)
+			}
+		}
+		all = filtered
 	}
 
-	prefix := repoPrefix + "/"
-	var filtered []string
-	for _, r := range all {
-		if strings.HasPrefix(r, prefix) || r == repoPrefix {
-			filtered = append(filtered, r)
-		}
-	}
-	return filtered, nil
+	return applyListWindow(all, listOptions.Last, listOptions.N), nil
 }
 
 // DeleteTag removes a tag from the current repository.
@@ -270,6 +421,13 @@ func (c *Client) CopyImage(ctx context.Context, srcTag string, dest dkpreg.Clien
 	if err != nil {
 		return err
 	}
+
+	// An index is copied whole, the way the real client does - flattening it to
+	// one child would silently drop every other platform.
+	if entry.isIndex() {
+		return dest.PushIndex(ctx, destTag, entry.idx)
+	}
+
 	return dest.PushImage(ctx, destTag, entry.img)
 }
 
@@ -288,6 +446,12 @@ func (c *Client) TagImage(_ context.Context, sourceTag, destTag string) error {
 	if !ok {
 		return fmt.Errorf("%w: tag %q", dkpclient.ErrImageNotFound, sourceTag)
 	}
+
+	// Retagging points a second tag at the same manifest, index or image.
+	if entry.isIndex() {
+		return rs.addIndex(destTag, entry.idx)
+	}
+
 	return rs.addImage(destTag, entry.img)
 }
 
@@ -339,6 +503,19 @@ func (c *Client) findImage(tag string) (*imageEntry, error) {
 	rs := reg.getRepo(repo)
 	if rs == nil {
 		return nil, fmt.Errorf("%w: repository %q not found in %q", dkpclient.ErrImageNotFound, repo, host)
+	}
+
+	// A digest identifier addresses the same manifest a tag does, and the real
+	// client resolves "repo@sha256:..." natively. Without this branch the fake
+	// looked a digest up as if it were a tag and reported it missing, so no
+	// test driving the fake could cover a digest reference at all.
+	if strings.HasPrefix(tag, "sha256:") {
+		entry, ok := rs.getByDigest(tag)
+		if !ok {
+			return nil, fmt.Errorf("%w: digest %q not found in %s/%s", dkpclient.ErrImageNotFound, tag, host, repo)
+		}
+
+		return entry, nil
 	}
 
 	entry, ok := rs.getByTag(tag)
