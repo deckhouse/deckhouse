@@ -225,6 +225,20 @@ func (r *Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return ctrl.Result{}, fmt.Errorf("patching status of RegistryUpstream objects: %w", err)
 	}
 
+	// Last, and only once every node reports that the agent serves the pull path: what the previous
+	// implementation left answering the in-cluster address is removed here rather than by Helm. See
+	// legacy_cleanup.go for what happens when it goes too early — it cost a cluster.
+	//
+	// The statuses are re-read rather than taken from `desired`: that describes what was just
+	// applied, while the decision needs what the agents have reported back, which is a later fact.
+	applied := &registryv1alpha1.RegistryNodeList{}
+	if err := r.Client.List(ctx, applied); err != nil {
+		return ctrl.Result{}, fmt.Errorf("listing RegistryNode objects: %w", err)
+	}
+	if err := r.removeLegacyPullPath(ctx, applied.Items); err != nil {
+		return ctrl.Result{}, err
+	}
+
 	if probeFailure != nil {
 		// Retry: the upstream may be down rather than wrong, and the operator should
 		// not have to touch anything for a recovered registry to be picked up.

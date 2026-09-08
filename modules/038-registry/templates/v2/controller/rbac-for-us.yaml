@@ -183,6 +183,27 @@ rules:
     resources: ["secrets"]
     verbs: ["create"]
 
+  # Deleting what the previous implementation left serving the in-cluster address, once the node
+  # agent serves it instead — see internal/controller/layout/legacy_cleanup.go.
+  #
+  # `delete` and nothing else, by name and nothing wider. These four objects outlive the upgrade on
+  # purpose (`helm.sh/resource-policy: keep` in the release before this one), so somebody has to
+  # remove them, and this controller is the only party that knows when every node has stopped
+  # depending on them. It has no reason to read, list or modify them — the decision is made from
+  # RegistryNode statuses it already owns — so `delete` is the whole grant, name-scoped: a blanket
+  # delete on Services in this namespace would let a bug here take out the storage's own Service.
+  - apiGroups: [""]
+    resources: ["services"]
+    resourceNames: ["registry"]
+    verbs: ["delete"]
+  - apiGroups: ["apps"]
+    resources: ["deployments"]
+    resourceNames: ["registry-incluster-proxy"]
+    verbs: ["delete"]
+  - apiGroups: [""]
+    resources: ["secrets"]
+    resourceNames: ["registry-incluster-proxy-config", "registry-pki"]
+    verbs: ["delete"]
 ---
 kind: RoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
