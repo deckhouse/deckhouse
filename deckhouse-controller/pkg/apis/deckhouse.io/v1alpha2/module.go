@@ -193,7 +193,7 @@ func (m *Module) IsCondition(condName string, status metav1.ConditionStatus) boo
 // +kubebuilder:object:generate=false
 type ConditionOption func(opts *ConditionSettings)
 
-// rewrite default timer (may be usefull for unit tests)
+// rewrite default timer (may be useful for unit tests)
 func WithTimer(fn func() time.Time) func(opts *ConditionSettings) {
 	return func(opts *ConditionSettings) {
 		opts.Timer = fn
