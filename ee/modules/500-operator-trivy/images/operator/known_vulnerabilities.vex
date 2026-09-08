@@ -355,7 +355,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "crypto/x509: Denial of Service via excessive processing of DNS SAN entries. Образ operator собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "crypto/x509: Denial of Service via excessive processing of DNS SAN entries. The operator image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -370,7 +370,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "crypto/x509, crypto/tls: Denial of Service in certificate chain building. Образ operator собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "crypto/x509, crypto/tls: Denial of Service in certificate chain building. The operator image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -385,7 +385,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "crypto/x509: Denial of Service via inefficient certificate chain validation. Образ operator собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "crypto/x509: Denial of Service via inefficient certificate chain validation. The operator image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -400,7 +400,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "internal/syscall/unix: Root.Chmod can follow symlinks out of the root. Образ operator собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "internal/syscall/unix: Root.Chmod can follow symlinks out of the root. The operator image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -415,7 +415,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "crypto/tls: Denial of Service via multiple TLS 1.3 key update messages. Образ operator собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "crypto/tls: Denial of Service via multiple TLS 1.3 key update messages. The operator image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -430,7 +430,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "archive/tar: Denial of Service via maliciously-crafted archive. Образ operator собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "archive/tar: Denial of Service via maliciously-crafted archive. The operator image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -445,7 +445,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "html/template: XSS via improper context and brace depth tracking in JS template literals. Образ operator собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "html/template: XSS via improper context and brace depth tracking in JS template literals. The operator image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -460,7 +460,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "net: Denial of Service via long CNAME response in LookupCNAME (cgo resolver). Образ operator собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "net: Denial of Service via long CNAME response in LookupCNAME (cgo resolver). The operator image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -475,7 +475,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "net/http/internal/http2: Denial of Service via malformed SETTINGS_MAX_FRAME_SIZE frame. Образ operator собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "net/http/internal/http2: Denial of Service via malformed SETTINGS_MAX_FRAME_SIZE frame. The operator image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -490,7 +490,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "net/mail: Denial of Service via crafted email inputs. Образ operator собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "net/mail: Denial of Service via crafted email inputs. The operator image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -505,7 +505,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "net/http, golang.org/x/net/idna: Privilege escalation via incorrect Punycode label processing. Образ operator собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "net/http, golang.org/x/net/idna: Privilege escalation via incorrect Punycode label processing. The operator image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -520,7 +520,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "os: Go os.Root symlink following vulnerability allows directory traversal (CWE-61). Образ operator собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "os: Go os.Root symlink following vulnerability allows directory traversal (CWE-61). The operator image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -535,7 +535,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "html/template: XSS via improper URL escaping in meta tag content. Образ operator собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "html/template: XSS via improper URL escaping in meta tag content. The operator image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -550,7 +550,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "net/http/httputil: ReverseProxy forwards hidden query parameters, bypassing security controls. Образ operator собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "net/http/httputil: ReverseProxy forwards hidden query parameters, bypassing security controls. The operator image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -565,7 +565,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "html/template: XSS due to incorrect script tag escaping. Образ operator собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "html/template: XSS due to incorrect script tag escaping. The operator image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -580,7 +580,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "net: Denial of Service via NUL byte in Dial and LookupPort on Windows. Образ operator собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "net: Denial of Service via NUL byte in Dial and LookupPort on Windows. The operator image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -595,7 +595,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "net/mail: Denial of Service via pathological email address parsing. Образ operator собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "net/mail: Denial of Service via pathological email address parsing. The operator image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -610,7 +610,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "mime: Denial of Service via maliciously-crafted MIME header. Образ operator собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "mime: Denial of Service via maliciously-crafted MIME header. The operator image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -625,7 +625,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "crypto/tls: Information disclosure in Encrypted Client Hello. Образ operator собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "crypto/tls: Information disclosure in Encrypted Client Hello. The operator image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -640,7 +640,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "net/textproto: Misleading error messages via input injection. Образ operator собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "net/textproto: Misleading error messages via input injection. The operator image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     }
   ],

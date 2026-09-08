@@ -36,7 +36,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "crypto/x509: Denial of Service via excessive processing of DNS SAN entries. Образ report-updater собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "crypto/x509: Denial of Service via excessive processing of DNS SAN entries. The report-updater image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -51,7 +51,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "crypto/x509, crypto/tls: Denial of Service in certificate chain building. Образ report-updater собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "crypto/x509, crypto/tls: Denial of Service in certificate chain building. The report-updater image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -66,7 +66,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "crypto/x509: Denial of Service via inefficient certificate chain validation. Образ report-updater собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "crypto/x509: Denial of Service via inefficient certificate chain validation. The report-updater image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -81,7 +81,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "internal/syscall/unix: Root.Chmod can follow symlinks out of the root. Образ report-updater собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "internal/syscall/unix: Root.Chmod can follow symlinks out of the root. The report-updater image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -96,7 +96,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "crypto/tls: Denial of Service via multiple TLS 1.3 key update messages. Образ report-updater собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "crypto/tls: Denial of Service via multiple TLS 1.3 key update messages. The report-updater image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -111,7 +111,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "archive/tar: Denial of Service via maliciously-crafted archive. Образ report-updater собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "archive/tar: Denial of Service via maliciously-crafted archive. The report-updater image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -126,7 +126,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "html/template: XSS via improper context and brace depth tracking in JS template literals. Образ report-updater собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "html/template: XSS via improper context and brace depth tracking in JS template literals. The report-updater image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -141,7 +141,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "net: Denial of Service via long CNAME response in LookupCNAME (cgo resolver). Образ report-updater собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "net: Denial of Service via long CNAME response in LookupCNAME (cgo resolver). The report-updater image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -156,7 +156,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "net/http/internal/http2: Denial of Service via malformed SETTINGS_MAX_FRAME_SIZE frame. Образ report-updater собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "net/http/internal/http2: Denial of Service via malformed SETTINGS_MAX_FRAME_SIZE frame. The report-updater image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -171,7 +171,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "net/mail: Denial of Service via crafted email inputs. Образ report-updater собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "net/mail: Denial of Service via crafted email inputs. The report-updater image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -186,7 +186,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "net/http, golang.org/x/net/idna: Privilege escalation via incorrect Punycode label processing. Образ report-updater собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "net/http, golang.org/x/net/idna: Privilege escalation via incorrect Punycode label processing. The report-updater image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -201,7 +201,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "os: Go os.Root symlink following vulnerability allows directory traversal (CWE-61). Образ report-updater собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "os: Go os.Root symlink following vulnerability allows directory traversal (CWE-61). The report-updater image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -216,7 +216,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "html/template: XSS via improper URL escaping in meta tag content. Образ report-updater собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "html/template: XSS via improper URL escaping in meta tag content. The report-updater image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -231,7 +231,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "net/http/httputil: ReverseProxy forwards hidden query parameters, bypassing security controls. Образ report-updater собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "net/http/httputil: ReverseProxy forwards hidden query parameters, bypassing security controls. The report-updater image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -246,7 +246,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "html/template: XSS due to incorrect script tag escaping. Образ report-updater собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "html/template: XSS due to incorrect script tag escaping. The report-updater image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -261,7 +261,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "net: Denial of Service via NUL byte in Dial and LookupPort on Windows. Образ report-updater собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "net: Denial of Service via NUL byte in Dial and LookupPort on Windows. The report-updater image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -276,7 +276,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "net/mail: Denial of Service via pathological email address parsing. Образ report-updater собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "net/mail: Denial of Service via pathological email address parsing. The report-updater image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -291,7 +291,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "mime: Denial of Service via maliciously-crafted MIME header. Образ report-updater собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "mime: Denial of Service via maliciously-crafted MIME header. The report-updater image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -306,7 +306,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "crypto/tls: Information disclosure in Encrypted Client Hello. Образ report-updater собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "crypto/tls: Information disclosure in Encrypted Client Hello. The report-updater image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -321,7 +321,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "net/textproto: Misleading error messages via input injection. Образ report-updater собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
+      "impact_statement": "net/textproto: Misleading error messages via input injection. The report-updater image is built with Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). A fix requires bumping the Go toolchain above the builder version; this will be done as part of the planned builder image upgrade. In the current module configuration, inputs to vulnerable stdlib paths are limited to trusted control-plane/administrative scenarios, which excludes practical exploitation by an untrusted attacker.",
       "timestamp": "2026-09-07T12:00:00Z"
     },
     {
@@ -338,7 +338,7 @@
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "CVE-2026-55092 затрагивает github.com/aquasecurity/trivy@v0.55.2. В образе report-updater зависимость транзитивна / не в execute path основного бинарника (или требует несовместимый major bump). Эксплуатация через интерфейс модуля недостижима.",
+      "impact_statement": "CVE-2026-55092 affects github.com/aquasecurity/trivy@v0.55.2. In the report-updater image the dependency is transitive / not on the main binary execute path (or requires an incompatible major bump). Exploitation via the module interface is not reachable.",
       "timestamp": "2026-09-07T12:00:00Z"
     }
   ],
