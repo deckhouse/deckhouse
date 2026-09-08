@@ -10,6 +10,7 @@ import (
 	_ "github.com/deckhouse/deckhouse/ee/fe/modules/500-okmeter/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-dynamix/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-huaweicloud/hooks"
+	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-metal3/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-openstack/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/030-cloud-provider-vcd/hooks"
 	_ "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee"
