@@ -460,7 +460,7 @@ If an application needs to move to another managed Gateway object, change the ro
 
 ### Linking routes in one namespace to a ListenerSet in another
 
-By default, the Gateway API does not allow routes to reference objects in other namespaces — this must be allowed explicitly. If an HTTPRoute object is created in one namespace and must be attached to a ListenerSet in another namespace, add a ReferenceGrant in the namespace of the target ListenerSet.
+By default, the Gateway API does not allow routes to reference objects in other namespaces — this must be allowed explicitly. If an HTTPRoute object is created in one namespace and must be attached to a ListenerSet in another namespace, add a [ReferenceGrant](https://gateway-api.sigs.k8s.io/reference/api-types/referencegrant/) in the namespace of the target ListenerSet.
 
 The example below shows a shared ListenerSet in namespace `shared-gw`, an application HTTPRoute in namespace `prod`, and a ReferenceGrant that allows this attachment:
 

@@ -183,7 +183,7 @@ spec:
 
 Pods of each version must have the `version: v1` and `version: v2` labels that match the DestinationRule subsets. Before changing weights, confirm that both versions are selected by the `app-svc` Service.
 
-After you apply the manifests, send a series of requests to `app.example.com` and confirm that responses roughly match the configured weights (about 9 to 1). Identify which version responded by whatever the application itself uses to distinguish `stable` from `canary` (for example, a value in the response body or a dedicated HTTP header), for example:
+After you apply the manifests, send a few requests to `app.example.com` and check that traffic is split roughly 90/10. To identify which version responded, use whatever the application itself exposes to distinguish `stable` from `canary` — for example, a value in the response body or a dedicated HTTP header:
 
 ```shell
 for i in $(seq 1 20); do curl -s https://app.example.com/ | grep version; done \

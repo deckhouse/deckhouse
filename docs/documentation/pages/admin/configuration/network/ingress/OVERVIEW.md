@@ -53,7 +53,7 @@ When using the `alb` module, responsibilities are typically split as follows:
 
 - Cluster administrator — deploys cluster-scoped gateway infrastructure with ClusterALBInstance;
 - Namespace administrator — deploys namespaced gateway infrastructure with ALBInstance and configures how traffic is accepted with ListenerSet (hostname, TLS, ports);
-- Application developers — configure routing to the application with HTTPRoute and other route objects.
+- Application developers — configure routing to applications with HTTPRoute and other route objects.
 
 In a typical cluster-wide gateway scenario, the namespace administrator creates the ListenerSet, and application developers create the HTTPRoute. The same person may perform both roles if they have the required permissions.
 
@@ -72,7 +72,7 @@ In a typical cluster-wide gateway scenario, the namespace administrator creates 
 
 Both modules solve the same task — receiving and routing external traffic to applications — but rely on different standards: `ingress-nginx` uses the Ingress API with annotations, while `alb` uses the Kubernetes Gateway API. The modules can be used in a cluster simultaneously. The table below compares their capabilities in the current versions.
 
-Service domains (web interfaces of DKP components and modules via `publicDomainTemplate`) and application domains (routes owned by application teams) are configured differently. Details are in [Publishing service domains](alb/alb-gateway-api.html#publishing-service-domains).
+Service domains (web interfaces of DKP components and modules via `publicDomainTemplate`) and application domains (routes owned by application developers) are configured differently. Details are in [Publishing service domains](alb/alb-gateway-api.html#publishing-service-domains).
 
 | Capability | `ingress-nginx` | `alb` |
 | :--- | :--- | :--- |

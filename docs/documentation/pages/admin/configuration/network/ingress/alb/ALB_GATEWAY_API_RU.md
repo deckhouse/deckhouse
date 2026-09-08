@@ -173,7 +173,7 @@ spec:
 - Для ClusterALBInstance объекты ListenerSet могут располагаться в любом неймспейсе.
 - Для ALBInstance объекты ListenerSet должны располагаться в том же неймспейсе, что и родительский ALBInstance.
 
-В обоих случаях рекомендуется размещать ListenerSet в одном неймспейсе со связанными ресурсами HTTPRoute, GRPCRoute и TLSRoute. В этом случае дополнительные настройки, например создание ReferenceGrant, не требуются.
+В обоих случаях рекомендуется размещать ListenerSet в одном неймспейсе со связанными ресурсами HTTPRoute, GRPCRoute и TLSRoute. В этом случае дополнительные настройки, например, создание ReferenceGrant, не требуются.
 
 В ListenerSet для HTTP/HTTPS указывайте порты `80` и `443`. Это порты слушателей Gateway API. Они не совпадают с параметрами [`hostPort.httpPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport-httpport) и [`hostPort.httpsPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport-httpsport) инлета HostPort, которые задают порты на узле.
 
@@ -445,7 +445,7 @@ spec:
         protocol: TCP
 ```
 
-Контроллер добавит в управляемый объект Gateway слушатель TCP/UDP-трафика с именем секции ([`sectionName`](https://gateway-api.sigs.k8s.io/references/spec/)), например `tcp-port-9000`. Чтобы привязать к нему TCPRoute, укажите в маршруте имя Gateway и соответствующее значение `sectionName`:
+Контроллер добавит в управляемый объект Gateway слушатель TCP/UDP-трафика с именем секции ([`sectionName`](https://gateway-api.sigs.k8s.io/references/spec/)), например, `tcp-port-9000`. Чтобы привязать к нему TCPRoute, укажите в маршруте имя Gateway и соответствующее значение `sectionName`:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -627,7 +627,7 @@ spec:
 ```
 
 {% alert level="warning" %}
-Параметры `enableHTTP3` и `useProxyProtocol` нельзя включать одновременно.
+Параметры `enableHTTP3` и `useProxyProtocol` нельзя включать одновременно: если задать оба параметра, контроллер модуля `alb` отклонит конфигурацию как конфликтующую.
 {% endalert %}
 
 Учитывайте следующее:
@@ -783,7 +783,7 @@ spec:
 - Для ClusterALBInstance или шлюза DKP по умолчанию разместите секрет в неймспейсе `d8-alb`.
 - Для ALBInstance разместите секрет в том же неймспейсе, что и объект ALBInstance.
 
-CA-сертификат должен быть сохранён в ключе `cacert`. Дополнительные Subject Alternative Names для проверки сертификата коллектора задаются параметром [`subjectAltNames`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls-subjectaltnames), а параметр [`insecureSkipVerify`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls-insecureskipverify) отключает проверку сертификата коллектора.
+CA-сертификат должен быть сохранён в ключе `cacert`. Дополнительные Subject Alternative Names для проверки сертификата OpenTelemetry Collector задаются параметром [`subjectAltNames`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls-subjectaltnames), а параметр [`insecureSkipVerify`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls-insecureskipverify) отключает эту проверку.
 
 ```yaml
 apiVersion: v1

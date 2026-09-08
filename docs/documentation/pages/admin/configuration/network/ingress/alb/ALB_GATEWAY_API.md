@@ -777,7 +777,7 @@ If OpenTelemetry tracing must send data over TLS, create a Kubernetes Secret wit
 
 For ClusterALBInstance and the default DKP gateway, place the Secret in the `d8-alb` namespace.
 For ALBInstance, place the Secret in the same namespace as the ALBInstance object.
-The Secret must contain the `cacert` key. Additional Subject Alternative Names for verifying the collector's certificate are set with [`subjectAltNames`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls-subjectaltnames), and [`insecureSkipVerify`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls-insecureskipverify) disables verification of the collector's certificate.
+The Secret must contain the `cacert` key. Additional Subject Alternative Names for verifying the OpenTelemetry Collector certificate are set with [`subjectAltNames`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls-subjectaltnames), and [`insecureSkipVerify`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls-insecureskipverify) disables this verification.
 
 ```yaml
 apiVersion: v1

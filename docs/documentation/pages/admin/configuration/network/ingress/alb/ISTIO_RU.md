@@ -17,7 +17,7 @@ relatedLinks:
 
 ALB средствами Istio реализуется через [Istio Ingress Gateway](#istio-ingress-gateway) или [Ingress NGINX](#ingress-nginx). Для этого используется модуль [`istio`](/modules/istio/).
 
-Используйте этот вариант, если требуется управление трафиком в service mesh, например, canary-маршрутизация или mTLS. Настройка и возможности описаны в [«Документация модуля istio»](/modules/istio/).
+Используйте этот вариант, если требуются расширенные возможности управления трафиком в service mesh, например, canary-маршрутизация или mTLS. Подробнее о настройке и возможностях — в документации модуля [`istio`](/modules/istio/).
 
 Создание [IngressIstioController](/modules/istio/cr.html) и подготовка инфраструктуры — задача администратора кластера. Публикация приложения ресурсами Gateway и VirtualService, в том числе [canary-развёртывание](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#canary-развёртывание-через-virtualservice), описана в разделе [«Публикация приложений средствами Istio»](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#публикация-приложений-с-использованием-ресурса-istio-ingress-gateway).
 
