@@ -145,7 +145,8 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return res, nil
 	}
 
-	// a module a source offers and nothing installed has no package to run
+	// Module loader can remove spec.packageVersion after the module disabled more than 72h
+	// so we need to detect such cases and do the cleanup.
 	if !module.IsInstalled() {
 		res, err := r.handleNotInstalled(ctx, module)
 		if err != nil {
@@ -392,10 +393,20 @@ func (r *reconciler) handleDev(ctx context.Context, module, original *v1alpha2.M
 	return nil
 }
 
-// handleNotInstalled settles a module a source offers and nothing installed: the runtime never
-// runs it, so it holds no finalizer, no package version and no owner reference. A module the
-// runtime ran before its package was uninstalled is torn down first, and the version it was
-// attached to is released, so the version can be garbage collected.
+// handleNotInstalled brings a module without a package version to the "available" state.
+//
+// A module has no package version in two cases:
+// - Source offers a module which was never installed - do nothing
+// - A module was installed, but then disabled for more than 72h, module loader removed spec.packageVersion - run full uninstall
+//
+// The process:
+// 1. module.status.used set to false
+// 2. Remove statistic-registered finalizer
+// 3. Remove owner references (module package and module package version)
+// 3. Remove hash annotation
+// 4. Remove registry-spec-changed annotation
+//
+// For a module nobody installed every step finds nothing to do.
 func (r *reconciler) handleNotInstalled(ctx context.Context, module *v1alpha2.Module) (ctrl.Result, error) {
 	logger := r.logger.With(slog.String("name", module.Name))
 	logger.Debug("handle not installed module")
@@ -412,6 +423,8 @@ func (r *reconciler) handleNotInstalled(ctx context.Context, module *v1alpha2.Mo
 		return ctrl.Result{RequeueAfter: removalRequeueAfter}, nil
 	}
 
+	// Release the version the module was attached to, so the GC can collect it.
+	// Only after the teardown: the uninstall still needs the version's files on disk.
 	if name := ctrlutils.OwnerRefName(module, v1alpha1.ModulePackageVersionKind); name != "" {
 		if err := r.detachVersion(ctx, name); err != nil {
 			logger.Error("failed to detach the module package version", slog.String("mpv", name), log.Err(err))
@@ -420,6 +433,8 @@ func (r *reconciler) handleNotInstalled(ctx context.Context, module *v1alpha2.Mo
 		}
 	}
 
+	// Drop what only an installed module carries. The owner references must go first of all:
+	// otherwise the GC deletes the object along with the version released above.
 	patch := client.MergeFrom(module.DeepCopy())
 	ctrlutils.DropOwnerReferences(module, v1alpha1.ModulePackageVersionKind, v1alpha1.ModulePackageKind)
 	delete(module.Annotations, v1alpha2.ModuleAnnotationHash)
