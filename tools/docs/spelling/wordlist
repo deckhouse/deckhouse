@@ -60,12 +60,15 @@ APIVersion
 app
 apparmor
 AppArmor
+ApplicationSet
+AppProject
 app’s
 apps
 Aps
 arbitr
 aren
 argocd
+ArgoCD
 args
 ARN
 ARP
@@ -1852,6 +1855,7 @@ ZvirtInstanceClass
 аутентифицироваться
 аутентифицирует
 аутентифицируетесь
+аутентифицируйтесь
 Б
 баг
 бакета
@@ -2671,6 +2675,7 @@ ZvirtInstanceClass
 Стрибог
 субресурс
 субресурса
+субресурсов
 сущностей
 сущностям
 сущностями
