@@ -28,7 +28,7 @@ description: Архитектура модуля user-authn в Deckhouse Kuberne
 
 Вариант с использованием dex-authenticator:
 
-![Архитектура модуля user-authn с аутентификацией через dex-authenticator](../../../images/architecture/iam/c4-l2-user-authn.ru.png)
+![Архитектура модуля user-authn с аутентификацией через dex-authenticator](../../images/architecture/iam/c4-l2-user-authn.ru.png)
 
 {% alert level="info" %}
 Для упрощения на следующих схемах показаны только компоненты и их взаимодействия, отличающие эти схемы от варианта с использованием dex-authenticator.
@@ -36,7 +36,7 @@ description: Архитектура модуля user-authn в Deckhouse Kuberne
 
 Вариант с использованием клиента Dex:
 
-![Архитектура модуля user-authn с аутентификацией через Dex](../../../images/architecture/iam/c4-l2-user-authn-dex-client.ru.png)
+![Архитектура модуля user-authn с аутентификацией через Dex](../../images/architecture/iam/c4-l2-user-authn-dex-client.ru.png)
 
 При подключении к API Kubernetes с помощью утилиты `kubectl` или других клиентов Kubernetes с использованием сгенерированного kubeconfig используются отдельные схемы аутентификации:
 
@@ -45,11 +45,11 @@ description: Архитектура модуля user-authn в Deckhouse Kuberne
 
 Вариант подключения к API Kubernetes с аутентификацией по токенам:
 
-![Архитектура модуля user-authn при использовании сгенерированного kubeconfig и аутентификацией по токенам](../../../images/architecture/iam/c4-l2-user-authn-kubeconfig.ru.png)
+![Архитектура модуля user-authn при использовании сгенерированного kubeconfig и аутентификацией по токенам](../../images/architecture/iam/c4-l2-user-authn-kubeconfig.ru.png)
 
 Вариант подключения к API Kubernetes с базовой аутентификацией:
 
-![Архитектура модуля user-authn при использовании сгенерированного kubeconfig и базовой аутентификацией](../../../images/architecture/iam/c4-l2-user-authn-kubeconfig-basic.ru.png)
+![Архитектура модуля user-authn при использовании сгенерированного kubeconfig и базовой аутентификацией](../../images/architecture/iam/c4-l2-user-authn-kubeconfig-basic.ru.png)
 
 ## Компоненты модуля
 
@@ -88,13 +88,13 @@ description: Архитектура модуля user-authn в Deckhouse Kuberne
      * [User](/modules/user-authn/cr.html#user) — ресурс, описывающий статического пользователя;
      * UserAccount — ресурс, описывающий представление объектов Dex Password и OfflineSessions для веб-интерфейса DKP;
      * [UserOperation](/modules/user-authn/cr.html#useroperation) — ресурс, описывающий операции над пользователем (сброс пароля, сброс 2FA, блокировка/разблокировка);
-     * DexProviderCheck — ресурс, описывающий однократную проверку доступности провайдера Dex. Проверка подтверждает, что провайдер существует, активен, Dex доступен, а эндпоинт провайдера достижим. При этом не выполняется полная процедура аутентификации пользователя.
+     * DexProviderCheck — ресурс, описывающий проверку доступности конкретного провайдера Dex. Проверка подтверждает, что провайдер существует, активен, Dex доступен, а эндпоинт провайдера достижим. При этом не выполняется полная процедура аутентификации пользователя.
 
    * удаление пользователей с истекшим сроком действия учетной записи (у которых значение поля [`status.expireAt`](/modules/user-authn/cr.html#user-v1-status-expireat) раньше текущего времени);
    * периодическая проверка доступности настроенных внешних провайдеров аутентификации (используя кастомные ресурсы DexProviderCheck);
    * выявление конфликтующих настроек TLS-сертификатов [в конфигурации подключения стороннего провайдера LDAP](/modules/user-authn/cr.html#dexprovider-v1-spec-ldap) и экспорт соответствующей метрики.
 
-   User-authn-controller при управлении кастомными ресурсами модуля использует в качестве бэкенда кастомные ресурсы AuthCode, AuthRequest, Password, OfflineSession, Refreshtoken и т.д. API-группы `dex.coreos.com`, используемые провайдером Dex как хранилище.
+   User-authn-controller при управлении кастомными ресурсами модуля использует в качестве бэкенда кастомные ресурсы Password, OfflineSession и Refreshtoken API-группы `dex.coreos.com`, используемые провайдером Dex как хранилище.
 
 1. **User-api** — компонент, реализующий сервис сброса пользователем пароля своей учетной записи. Сервис доступен пользователю только через веб-интерфейс DKP и не требует прав администратора платформы. Сбросить можно пароль только для текущего пользователя. User-api валидирует токены поступающих запросов в dex. Для выполнения данной операции компонент создает кастомный ресурс UserOperation с типом `ResetPassword`, который обрабатывается компонентом user-authn-controller.
 

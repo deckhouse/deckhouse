@@ -27,7 +27,7 @@ The architecture of the [`user-authn`](/modules/user-authn/) module at Level 2 o
 
 Using dex-authenticator:
 
-![User-authn module architecture with dex-authenticator authentication](../../../images/architecture/iam/c4-l2-user-authn.png)
+![User-authn module architecture with dex-authenticator authentication](../../images/architecture/iam/c4-l2-user-authn.png)
 
 {% alert level="info" %}
 For simplicity, the following diagrams show only the components and their interactions that distinguish these diagrams from the variant using dex-authenticator.
@@ -35,7 +35,7 @@ For simplicity, the following diagrams show only the components and their intera
 
 Using the Dex client:
 
-![User-authn module architecture with Dex authentication](../../../images/architecture/iam/c4-l2-user-authn-dex-client.png)
+![User-authn module architecture with Dex authentication](../../images/architecture/iam/c4-l2-user-authn-dex-client.png)
 
 When connecting to the Kubernetes API using `kubectl` or other Kubernetes clients with a generated kubeconfig, a separate authentication schemes are used:
 
@@ -44,11 +44,11 @@ When connecting to the Kubernetes API using `kubectl` or other Kubernetes client
 
 Using a generated kubeconfig and a token authentication:
 
-![User-authn module architecture when using a generated kubeconfig and a token authentication](../../../images/architecture/iam/c4-l2-user-authn-kubeconfig.png)
+![User-authn module architecture when using a generated kubeconfig and a token authentication](../../images/architecture/iam/c4-l2-user-authn-kubeconfig.png)
 
 Using a generated kubeconfig and a basic authentication:
 
-![User-authn module architecture when using a generated kubeconfig and a basic authentication](../../../images/architecture/iam/c4-l2-user-authn-kubeconfig-basic.png)
+![User-authn module architecture when using a generated kubeconfig and a basic authentication](../../images/architecture/iam/c4-l2-user-authn-kubeconfig-basic.png)
 
 ## Module components
 
@@ -87,13 +87,13 @@ The module consists of the following components:
      * [User](/modules/user-authn/cr.html#user): A resource that describes static user.
      * UserAccount: A resource that describes view of Dex Password and OfflineSessions objects for the DKP web UI.
      * [UserOperation](/modules/user-authn/cr.html#useroperation): A resource that describes an operation to be applied to a user (password reset, 2FA reset, lock/unlock).
-     * DexProviderCheck: A resource that describes a one-time connectivity check for a DexProvider. The check verifies that the provider exists, is enabled, Dex is reachable, and the provider endpoint is reachable. It does not perform a full user authentication flow.
+     * DexProviderCheck: A resource that describes a connectivity check for the specific DexProvider. The check verifies that the provider exists, is enabled, Dex is reachable, and the provider endpoint is reachable. It does not perform a full user authentication flow.
 
    * Deletes expired Users (users whose [`status.expireAt`](/modules/user-authn/cr.html#user-v1-status-expireat) field is in the past).
    * Checks periodically an availability of configured external authentication providers (using DexProviderCheck custom resources).
    * Finds out conflicting TLS-certificates [in external LDAP provider configuration settings](/modules/user-authn/cr.html#dexprovider-v1-spec-ldap) and exports the corresponding metric.
 
-   User-authn-controller uses `dex.coreos.com` API group custom resources (AuthCode, AuthRequest, Password, OfflineSession, Refreshtoken, etc. used by Dex as a storage) as a backend to manage module custom resources.
+   User-authn-controller uses `dex.coreos.com` API group custom resources (Password, OfflineSession and Refreshtoken used by Dex as a storage) as a backend to manage module custom resources.
 
 1. **User-api**: A component that implements a self-service for users to reset a password for their user account. The service is available to the user only via the DKP web interface and does not require platform administrator rights. The password can only be reset for the current user. User-api validates the incoming requests tokens in dex component. To perform this operation, the component creates UserOperation custom resource of the `ResetPassword` type, which is processed by the user-authn-controller component.
 
