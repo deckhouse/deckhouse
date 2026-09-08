@@ -3,24 +3,12 @@ title: "Публикация приложений средствами Kubernete
 description: "Публикация приложений с Kubernetes Gateway API в Deckhouse Kubernetes Platform. ListenerSet, HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, BackendTLSPolicy, аннотации HTTPRoute и WAF."
 permalink: ru/user/network/ingress/alb/gateway-api.html
 lang: ru
-extractedLinksMax: 4
+extractedLinksMax: 0
 relatedLinks:
   - title: "Использование Application Load Balancer (ALB)"
-    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html
-  - title: "ALB средствами Kubernetes Gateway API"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html
-  - title: "Миграция с ingress-nginx на alb"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/migration.html
+    url: ./
   - title: "Документация модуля alb"
     url: /modules/alb/
-  - title: "Custom Resources модуля alb"
-    url: /modules/alb/cr.html
-  - title: "Параметры модуля alb"
-    url: /modules/alb/configuration.html
-  - title: "FAQ модуля alb"
-    url: /modules/alb/faq.html
-  - title: "Примеры модуля alb"
-    url: /modules/alb/examples.html
 ---
 
 ## Публикация приложений средствами Kubernetes Gateway API

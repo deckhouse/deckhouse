@@ -10,7 +10,7 @@ relatedLinks:
   - title: "ALB средствами Kubernetes Gateway API"
     url: alb-gateway-api.html
   - title: "Использование Application Load Balancer (ALB)"
-    url: ../../../../../user/network/ingress/alb.html
+    url: ../../../../../user/network/ingress/alb/
   - title: "Документация модуля ingress-nginx"
     url: /modules/ingress-nginx/
   - title: "Документация модуля metallb"

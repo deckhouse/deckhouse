@@ -3,18 +3,10 @@ title: "Публикация приложений средствами Ingress N
 description: "Публикация приложений с Ingress NGINX Controller в Deckhouse Kubernetes Platform. Примеры ресурса Ingress, HTTPS, gRPC и проверка."
 permalink: ru/user/network/ingress/alb/nginx.html
 lang: ru
-extractedLinksMax: 4
+extractedLinksMax: 0
 relatedLinks:
-  - title: "Использование Application Load Balancer (ALB)"
-    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html
-  - title: "ALB средствами Ingress NGINX Controller"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/nginx.html
   - title: "Документация модуля ingress-nginx"
     url: /modules/ingress-nginx/
-  - title: "Custom Resources модуля ingress-nginx"
-    url: /modules/ingress-nginx/cr.html
-  - title: "Примеры модуля ingress-nginx"
-    url: /modules/ingress-nginx/examples.html
 ---
 
 ## Публикация приложений средствами Ingress NGINX Controller

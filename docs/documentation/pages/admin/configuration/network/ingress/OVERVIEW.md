@@ -13,7 +13,7 @@ relatedLinks:
   - title: "ALB with Istio"
     url: alb/istio.html
   - title: "Utilizing Application Load Balancer (ALB)"
-    url: ../../../../user/network/ingress/alb.html
+    url: ../../../../user/network/ingress/alb/
 ---
 
 This section describes the approaches to balancing incoming traffic in Deckhouse Kubernetes Platform (DKP):
@@ -115,5 +115,5 @@ To publish an application, follow these steps:
    - Gateway API — when you need a model with role separation and protocols beyond classic Ingress.
    - Ingress NGINX — when you need a mature Ingress-based ALB.
 2. Enable and configure the corresponding module. For Gateway API, complete the ["Steps to take before enabling and configuring ALB in a cluster"](alb/alb-gateway-api.html#steps-to-take-before-enabling-and-configuring-alb-in-a-cluster).
-3. Publish applications using the [ALB user guides](../../../../user/network/ingress/alb.html) (Gateway API, Ingress NGINX, or Istio).
+3. Publish applications using the [ALB user guides](../../../../user/network/ingress/alb/) (Gateway API, Ingress NGINX, or Istio).
 4. To move from Ingress NGINX to Gateway API, follow [Migrating from ingress-nginx to alb](alb/migration.html).

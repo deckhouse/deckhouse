@@ -1043,7 +1043,7 @@ entries:
                     - title:
                         en: Overview
                         ru: Обзор
-                      url: /user/network/ingress/alb.html
+                      url: /user/network/ingress/alb/
                     - title:
                         en: Kubernetes Gateway API
                         ru: Kubernetes Gateway API

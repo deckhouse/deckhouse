@@ -14,7 +14,7 @@ relatedLinks:
   - title: "ALB средствами Istio"
     url: alb/istio.html
   - title: "Использование Application Load Balancer (ALB)"
-    url: ../../../../user/network/ingress/alb.html
+    url: ../../../../user/network/ingress/alb/
 ---
 
 В этом разделе описываются подходы к балансировке входящего трафика в Deckhouse Kubernetes Platform (DKP):
@@ -114,5 +114,5 @@ Kubernetes Gateway API и API Gateway выполняют разные функц
    - Gateway API — если нужна модель с разделением ролей и протоколами шире классического Ingress.
    - Ingress NGINX — если нужен зрелый ALB на Ingress API.
 2. Включите и настройте соответствующий модуль. Для Gateway API выполните [«Действия перед включением и настройкой ALB в кластере»](alb/alb-gateway-api.html#действия-перед-включением-и-настройкой-alb-в-кластере).
-3. Опубликуйте приложения по [руководствам пользователя по ALB](../../../../user/network/ingress/alb.html) (Gateway API, Ingress NGINX или Istio).
+3. Опубликуйте приложения по [руководствам пользователя по ALB](../../../../user/network/ingress/alb/) (Gateway API, Ingress NGINX или Istio).
 4. Для перехода с Ingress NGINX на Gateway API следуйте разделу [«Миграция с ingress-nginx на alb»](alb/migration.html).

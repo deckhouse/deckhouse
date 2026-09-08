@@ -9,7 +9,7 @@ relatedLinks:
   - title: "ALB with Kubernetes Gateway API"
     url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html
   - title: "Utilizing Application Load Balancer (ALB)"
-    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html
+    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb/
   - title: "ingress-nginx module documentation"
     url: /modules/ingress-nginx/
   - title: "ingress-nginx module Custom Resources"

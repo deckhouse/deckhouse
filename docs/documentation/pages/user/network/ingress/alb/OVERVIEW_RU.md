@@ -1,26 +1,18 @@
 ---
 title: "Использование Application Load Balancer (ALB)"
 description: "Настройка Application Load Balancer для HTTP/HTTPS/gRPC трафика в Deckhouse Kubernetes Platform. Использование ingress-nginx, alb (Gateway API) и istio для маршрутизации запросов, терминации SSL/TLS и публикации приложений."
-permalink: ru/user/network/ingress/alb.html
+permalink: ru/user/network/ingress/alb/
 lang: ru
-extractedLinksMax: 4
+extractedLinksMax: 0
 relatedLinks:
   - title: "Публикация приложений средствами Kubernetes Gateway API"
-    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html
+    url: alb/gateway-api.html
   - title: "Публикация приложений средствами Ingress NGINX Controller"
-    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb/nginx.html
+    url: alb/nginx.html
   - title: "Публикация приложений средствами Istio"
-    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html
-  - title: "ALB средствами Kubernetes Gateway API"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html
-  - title: "ALB средствами Ingress NGINX Controller"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/nginx.html
-  - title: "Миграция с ingress-nginx на alb"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/migration.html
-  - title: "ALB средствами Istio"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/istio.html
+    url: alb/istio.html
   - title: "Балансировка входящего трафика"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/
+    url: ../../../../admin/configuration/network/ingress/
   - title: "Документация модуля alb"
     url: /modules/alb/
   - title: "Документация модуля ingress-nginx"
@@ -107,14 +99,7 @@ ALB на основе модуля [`istio`](/modules/istio/) поддержив
 
 ## Следующие шаги
 
-После настройки инфраструктуры выполните следующие действия:
-
-- Публикация приложения:
-  - средствами [Kubernetes Gateway API](alb/gateway-api.html#publishing-with-listenerset-and-httproute) (модуль `alb`);
-  - средствами [Ingress NGINX Controller](alb/nginx.html) (модуль `ingress-nginx`);
-  - средствами [Istio](alb/istio.html) (модуль `istio`).
-- Настройка инфраструктуры — руководства администратора:
-  - [ALB средствами Kubernetes Gateway API](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#создание-управляемого-объекта-gateway);
-  - [ALB средствами Ingress NGINX Controller](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/nginx.html#load-balancing-configuration-examples);
-  - [ALB средствами Istio](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/istio.html#istio-ingress-gateway).
-- Миграция с `ingress-nginx` на `alb` — [«Миграция с ingress-nginx на alb»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/migration.html).
+После настройки инфраструктуры администратором можно выполнить публикацию приложения:
+- средствами [Kubernetes Gateway API](alb/gateway-api.html#publishing-with-listenerset-and-httproute) (модуль `alb`);
+- средствами [Ingress NGINX Controller](alb/nginx.html) (модуль `ingress-nginx`);
+- средствами [Istio](alb/istio.html) (модуль `istio`).

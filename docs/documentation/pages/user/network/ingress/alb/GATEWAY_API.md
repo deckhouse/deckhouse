@@ -2,24 +2,12 @@
 title: "Publishing applications using the Kubernetes Gateway API"
 description: "Publish applications with Kubernetes Gateway API in Deckhouse Kubernetes Platform. ListenerSet, HTTPRoute, GRPCRoute, TLSRoute, TCPRoute, BackendTLSPolicy, HTTPRoute annotations, and WAF."
 permalink: en/user/network/ingress/alb/gateway-api.html
-extractedLinksMax: 4
+extractedLinksMax: 0
 relatedLinks:
   - title: "Utilizing Application Load Balancer (ALB)"
-    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html
-  - title: "ALB with Kubernetes Gateway API"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html
-  - title: "Migrating from ingress-nginx to alb"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/migration.html
+    url: ./
   - title: "alb module documentation"
     url: /modules/alb/
-  - title: "alb module Custom Resources"
-    url: /modules/alb/cr.html
-  - title: "alb module configuration"
-    url: /modules/alb/configuration.html
-  - title: "alb module FAQ"
-    url: /modules/alb/faq.html
-  - title: "alb module examples"
-    url: /modules/alb/examples.html
 ---
 
 ## Publishing applications using the Kubernetes Gateway API

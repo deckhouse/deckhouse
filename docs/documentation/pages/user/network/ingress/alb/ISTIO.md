@@ -2,12 +2,10 @@
 title: "Publishing applications using Istio"
 description: "Publish applications with Istio in Deckhouse Kubernetes Platform. NGINX Ingress with Istio sidecar and Istio Ingress Gateway with Gateway and VirtualService."
 permalink: en/user/network/ingress/alb/istio.html
-extractedLinksMax: 4
+extractedLinksMax: 0
 relatedLinks:
   - title: "Utilizing Application Load Balancer (ALB)"
-    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html
-  - title: "ALB with Istio"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/istio.html
+    url: ./
   - title: "istio module documentation"
     url: /modules/istio/
 ---
