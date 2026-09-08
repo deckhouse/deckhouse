@@ -30,15 +30,13 @@ import (
 )
 
 const (
-	capiNamespace                  = "d8-cloud-instance-manager"
-	cloudProviderSecretName        = common.CloudProviderSecretName
-	cloudProviderSecretNamespace   = common.CloudProviderSecretNamespace
-	clusterConfigSecretName        = "d8-cluster-configuration"
-	clusterConfigSecretNamespace   = "kube-system"
-	clusterUUIDConfigMapName       = "d8-cluster-uuid"
-	clusterUUIDConfigMapNS         = "kube-system"
-	capiClusterContextMapName      = "d8-node-manager-capi-cluster-context"
-	capiClusterContextMapNamespace = "kube-system"
+	capiNamespace                = "d8-cloud-instance-manager"
+	cloudProviderSecretName      = common.CloudProviderSecretName
+	cloudProviderSecretNamespace = common.CloudProviderSecretNamespace
+	clusterConfigSecretName      = "d8-cluster-configuration"
+	clusterConfigSecretNamespace = "kube-system"
+	clusterUUIDConfigMapName     = "d8-cluster-uuid"
+	clusterUUIDConfigMapNS       = "kube-system"
 )
 
 type BaseWithReader struct {
