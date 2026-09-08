@@ -202,6 +202,8 @@ func (r *reconciler) runModuleEventLoop(ctx context.Context) error {
 }
 
 func (r *reconciler) handleModule(ctx context.Context, module *v1alpha2.Module) (ctrl.Result, error) {
+	res := ctrl.Result{}
+
 	// send an event to addon-operator only if the module exists, or it is the global one
 	basicModule := r.moduleManager.GetModule(module.Name)
 	if module.Name == moduleGlobal || basicModule != nil {
@@ -217,8 +219,15 @@ func (r *reconciler) handleModule(ctx context.Context, module *v1alpha2.Module) 
 		module.Spec.Maintenance,
 		module.Spec.Enabled)
 
+	// actualize status of the Module
 	if err := r.refreshModule(ctx, module.Name); err != nil {
-		return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
+		res.RequeueAfter = 1 * time.Second
+		return res, nil
+	}
+
+	// get actual version of the Module
+	if err := r.client.Get(ctx, types.NamespacedName{Name: module.Name}, module); err != nil {
+		return res, nil
 	}
 
 	return r.processModule(ctx, module)
