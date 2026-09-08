@@ -2,15 +2,15 @@
 apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
+  annotations:
+    modules.deckhouse.io/embedded: "true"
   finalizers:
   - module.deckhouse.io/module-registered
-  name: no-settings
+  name: test-module
   resourceVersion: "1002"
 spec:
   enabled: true
-  packageRepositoryName: test-source
-  packageVersion: v1.0.0
-  settingsVersion: 1
+  packageVersion: ""
 status:
   conditions:
   - lastTransitionTime: null
@@ -18,5 +18,12 @@ status:
     reason: ""
     status: "True"
     type: Enabled
+  - lastTransitionTime: null
+    message: turned off by bundle
+    reason: Bundle
+    status: "False"
+    type: Ready
   lastAppliedConfiguration: null
+  summary:
+    state: Updating
   tracking: null

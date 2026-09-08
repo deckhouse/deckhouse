@@ -3,8 +3,13 @@ kind: Module
 metadata:
   name: test-module
 spec:
+  packageRepositoryName: test-source
+  packageVersion: v1.0.0
   settingsVersion: 3
   maintenance: NoResourceReconciliation
   enabled: true
   settings:
     foo: bar
+status:
+  summary:
+    state: Ready

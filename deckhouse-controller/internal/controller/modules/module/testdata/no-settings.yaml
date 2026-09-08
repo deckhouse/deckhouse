@@ -3,4 +3,7 @@ kind: Module
 metadata:
   name: no-settings
 spec:
+  packageRepositoryName: test-source
+  packageVersion: v1.0.0
   settingsVersion: 1
+  enabled: true

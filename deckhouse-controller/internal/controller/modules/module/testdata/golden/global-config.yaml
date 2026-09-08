@@ -4,13 +4,11 @@ kind: Module
 metadata:
   finalizers:
   - module.deckhouse.io/module-registered
-  name: no-settings
+  name: global
   resourceVersion: "1002"
 spec:
   enabled: true
-  packageRepositoryName: test-source
-  packageVersion: v1.0.0
-  settingsVersion: 1
+  packageVersion: ""
 status:
   conditions:
   - lastTransitionTime: null

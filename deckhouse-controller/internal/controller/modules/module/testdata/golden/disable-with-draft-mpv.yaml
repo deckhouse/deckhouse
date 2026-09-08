@@ -5,21 +5,17 @@ metadata:
   finalizers:
   - module.deckhouse.io/module-registered
   name: test-module
-  resourceVersion: "1002"
+  resourceVersion: "1001"
 spec:
-  enabled: true
-  maintenance: NoResourceReconciliation
+  enabled: false
   packageRepositoryName: test-source
   packageVersion: v1.0.0
-  settings:
-    foo: bar
-  settingsVersion: 3
 status:
   conditions:
   - lastTransitionTime: null
-    message: ""
-    reason: ""
-    status: "True"
+    message: disabled
+    reason: Disabled
+    status: "False"
     type: Enabled
   - lastTransitionTime: null
     message: disabled
@@ -30,3 +26,17 @@ status:
   summary:
     state: Updating
   tracking: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
+metadata:
+  labels:
+    packages.deckhouse.io/draft: "true"
+  name: test-source-test-module-v1.0.0
+  resourceVersion: "999"
+spec:
+  packageName: test-module
+  packageRepositoryName: test-source
+  packageVersion: v1.0.0
+status:
+  used: false

@@ -1,0 +1,22 @@
+---
+# The module does not pin a packageRepositoryName and its ModulePackage is available
+# from several repositories, so the controller marks the module as conflicting.
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: test-module
+spec:
+  packageVersion: v1.0.0
+  enabled: true
+status:
+  summary:
+    state: Ready
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
+metadata:
+  name: test-module
+status:
+  availableRepositories:
+  - source-one
+  - source-two
