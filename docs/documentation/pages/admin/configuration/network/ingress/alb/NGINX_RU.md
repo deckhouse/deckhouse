@@ -3,20 +3,16 @@ title: "ALB средствами Ingress NGINX Controller"
 permalink: ru/admin/configuration/network/ingress/alb/nginx.html
 description: "Настройка балансировщика нагрузки приложения с помощью контроллера Ingress NGINX в Deckhouse Kubernetes Platform. Настройка высокой доступности, терминация SSL и конфигурация маршрутизации трафика."
 lang: ru
-extractedLinksMax: 4
+extractedLinksMax: 0
 relatedLinks:
   - title: "Миграция с ingress-nginx на alb"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/migration.html
+    url: migration.html
   - title: "ALB средствами Kubernetes Gateway API"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html
+    url: alb-gateway-api.html
   - title: "Использование Application Load Balancer (ALB)"
-    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb.html
+    url: ../../../../../user/network/ingress/alb.html
   - title: "Документация модуля ingress-nginx"
     url: /modules/ingress-nginx/
-  - title: "Custom Resources модуля ingress-nginx"
-    url: /modules/ingress-nginx/cr.html
-  - title: "Примеры модуля ingress-nginx"
-    url: /modules/ingress-nginx/examples.html
   - title: "Документация модуля metallb"
     url: /modules/metallb/
 ---

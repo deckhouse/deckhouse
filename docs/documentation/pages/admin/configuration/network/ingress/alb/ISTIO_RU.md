@@ -3,23 +3,21 @@ title: "ALB средствами Istio"
 permalink: ru/admin/configuration/network/ingress/alb/istio.html
 description: "Настройка Application Load Balancer с Istio в Deckhouse Kubernetes Platform. Настройка Istio Ingress Gateway, управление трафиком и интеграция с сервис-мешем."
 lang: ru
-extractedLinksMax: 4
+extractedLinksMax: 0
 relatedLinks:
   - title: "Публикация приложений средствами Istio"
-    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html
+    url: ../../../../../user/network/ingress/alb/istio.html
   - title: "Балансировка входящего трафика"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/
+    url: ../
   - title: "Документация модуля istio"
     url: /modules/istio/
-  - title: "Custom Resources модуля istio"
-    url: /modules/istio/cr.html
 ---
 
 ALB средствами Istio реализуется через [Istio Ingress Gateway](#istio-ingress-gateway) или [Ingress NGINX](#ingress-nginx). Для этого используется модуль [`istio`](/modules/istio/).
 
 Используйте этот вариант, если требуются расширенные возможности управления трафиком в сервис-меше, например, canary-маршрутизация или mTLS. Подробнее о настройке и возможностях — в документации модуля [`istio`](/modules/istio/).
 
-Создание [IngressIstioController](/modules/istio/cr.html) и подготовка инфраструктуры — задача администратора кластера. Публикация приложения ресурсами Gateway и VirtualService, в том числе [canary-развёртывание](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#canary-развёртывание-через-virtualservice), описана в разделе [«Публикация приложений с использованием ресурса Istio Ingress Gateway»](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#публикация-приложений-с-использованием-ресурса-istio-ingress-gateway).
+Создание [IngressIstioController](/modules/istio/cr.html) и подготовка инфраструктуры — задача администратора кластера. Публикация приложения ресурсами Gateway и VirtualService, в том числе [canary-развёртывание](../../../../../user/network/ingress/alb/istio.html#canary-развёртывание-через-virtualservice), описана в разделе [«Публикация приложений с использованием ресурса Istio Ingress Gateway»](../../../../../user/network/ingress/alb/istio.html#публикация-приложений-с-использованием-ресурса-istio-ingress-gateway).
 
 ## Ingress для публикации приложений
 

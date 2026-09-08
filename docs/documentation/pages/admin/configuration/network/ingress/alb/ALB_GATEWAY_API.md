@@ -105,10 +105,9 @@ Publishing an application includes enabling the module, creating a managed Gatew
 
 ### Steps before enabling {#steps-to-take-before-enabling-and-configuring-alb-in-a-cluster}
 
-The `alb` module is in Preview. For the current list of supported DKP versions and other parameters, see the [`alb` module configuration](/modules/alb/configuration.html).
-
 Before enabling and configuring ALB in a DKP cluster, do the following:
 
+- Verify that the [requirements](/modules/alb/stable/configuration.html#requirements) for the `alb` module are met.
 - If you need to publish service domains — web interfaces of [DKP service components](/products/kubernetes-platform/documentation/v1/user/web/ui.html) and other modules — set the global parameter [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate). Without this parameter, system HTTPRoute, Gateway, and ListenerSet objects for service domains will not work correctly, and the web interfaces will not be published. If you do not need to publish service domains, you can leave this parameter unset. Details are in ["Publishing service domains"](#publishing-service-domains).
 - Check API version compatibility in ["Alongside third-party Gateway API implementations"](#alongside-third-party-gateway-api) if such solutions are already used in the cluster.
 - On bare metal, for the [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer) inlet prepare an external load balancer or the [`metallb`](/modules/metallb/) module. The [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) inlet is available for ClusterALBInstance only and does not require MetalLB.
@@ -172,7 +171,7 @@ Placement of ListenerSet objects depends on the type of Gateway object in use:
 - For ClusterALBInstance, ListenerSet objects may be placed in any namespace.
 - For ALBInstance, ListenerSet objects must be placed in the same namespace as the parent ALBInstance.
 
-In both cases, place the ListenerSet in the same namespace as the associated HTTPRoute, GRPCRoute, and TLSRoute objects. In that case, you do not need additional setup such as creating a ReferenceGrant.
+In both cases, place the ListenerSet in the same namespace as the associated HTTPRoute, GRPCRoute, and TLSRoute objects. In that case, you do not need additional setup such as creating a [ReferenceGrant](https://gateway-api.sigs.k8s.io/reference/api-types/referencegrant/).
 
 In ListenerSet, use ports `80` and `443` for HTTP/HTTPS. These are Gateway API listener ports. They are not the same as the [`hostPort.httpPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport-httpport) and [`hostPort.httpsPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport-httpsport) parameters of the HostPort inlet, which set ports on the node.
 

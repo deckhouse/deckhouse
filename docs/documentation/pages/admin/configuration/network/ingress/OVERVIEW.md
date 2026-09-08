@@ -76,36 +76,36 @@ Both modules solve the same task — receiving and routing external traffic to a
 
 Service domains (web interfaces of DKP components and modules via `publicDomainTemplate`) and application domains (routes owned by application developers) are configured differently. Details are in [Publishing service domains](alb/alb-gateway-api.html#publishing-service-domains).
 
-| Capability | `ingress-nginx` | `alb` |
-| :--- | :--- | :--- |
-| Routing standard | Ingress API with annotations | Kubernetes Gateway API |
-| Proxy implementation | nginx | Envoy Proxy |
-| Lifecycle stage | General Availability | Preview |
-| Development | Maintenance mode: the upstream Ingress NGINX project no longer develops new features, while DKP provides security updates | Actively developed |
-| Minimum DKP version | Available in all supported versions | 1.76 |
-| DKP editions | All editions | All editions |
-| Role separation model | Cluster administrator, namespace administrator | Cluster administrator, namespace administrator, application developer |
-| Multiple independent entry points | Multiple Ingress controllers selected via `ingressClass` | Multiple Gateway objects selected via `gatewayName`; cluster-scoped and namespaced gateways |
-| HTTP/HTTPS (HTTP/1.1, HTTP/2, HTTP/3) | Yes | Yes ([enabling HTTP/3](alb/alb-gateway-api.html#http3)) |
-| WebSocket | Yes | Yes |
-| gRPC | Yes | Yes |
-| FastCGI | Yes | No |
-| TCP | No | Yes (TCPRoute) |
-| UDP | No | Yes (UDPRoute) |
-| TLS passthrough | Yes | Yes (TLSRoute) |
-| Proxy Protocol | Yes | Yes |
-| Traffic ingress methods | [`LoadBalancer`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-loadbalancer), [`HostPort`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-hostport), and [`HostWithFailover`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v2-spec-inlet) inlets | [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer) and [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) inlets |
-| Automatic TLS certificate issuance (cert-manager) | Yes | Yes |
-| HTTPS policy tuning (TLS versions, ciphers, HSTS) | Yes | TLSv1.2/1.3 by default; HSTS via a response-header annotation |
-| WAF | ModSecurity at the controller or Ingress level | ModSecurity/Coraza at the route level, OWASP CRS preset |
-| External authentication | Yes | Yes |
-| IP allowlist | Yes | Yes |
-| Basic authentication | Yes | Yes |
-| Request rate limiting | Yes | Yes |
-| Session affinity | Yes | Yes |
-| GeoIP | Geo-based request statistics in metrics | [Adding GeoIP fields to headers](alb/alb-gateway-api.html#geoip) based on MaxMind databases |
-| Prometheus metrics and Grafana dashboards | Yes, detailed by namespace, vhost, Ingress resource, and location | Yes: Envoy Proxy metrics and dashboards for requests, routes, and upstreams |
-| OpenTelemetry tracing | Yes | Yes ([configuration](alb/alb-gateway-api.html#tracing)) |
+| Capability | `ingress-nginx`                                                                                                           | `alb`                                                                                                                                                                                    |
+| :--- |:--------------------------------------------------------------------------------------------------------------------------|:-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| Routing standard | Ingress API with annotations                                                                                              | Kubernetes Gateway API                                                                                                                                                                   |
+| Proxy implementation | nginx                                                                                                                     | Envoy Proxy                                                                                                                                                                              |
+| Lifecycle stage | General Availability                                                                                                      | Preview                                                                                                                                                                                  |
+| Development | Maintenance mode: the upstream Ingress NGINX project no longer develops new features, while DKP provides security updates | Actively developed                                                                                                                                                                       |
+| Minimum DKP version | Available in all supported versions                                                                                       | 1.76                                                                                                                                                                                     |
+| DKP editions | All editions                                                                                                              | All editions                                                                                                                                                                             |
+| Role separation model | Cluster administrator, namespace administrator                                                                            | Cluster administrator, namespace administrator, application developer                                                                                                                    |
+| Multiple independent entry points | Multiple Ingress controllers selected via `ingressClass`                                                                  | Multiple Gateway objects selected via `gatewayName`; cluster-scoped and namespaced gateways                                                                                              |
+| HTTP/HTTPS (HTTP/1.1, HTTP/2, HTTP/3) | Yes                                                                                                                       | Yes ([enabling HTTP/3](alb/alb-gateway-api.html#http3))                                                                                                                                  |
+| WebSocket | Yes                                                                                                                       | Yes                                                                                                                                                                                      |
+| gRPC | Yes                                                                                                                       | Yes                                                                                                                                                                                      |
+| FastCGI | Yes                                                                                                                       | No                                                                                                                                                                                       |
+| TCP | No                                                                                                                        | Yes (TCPRoute)                                                                                                                                                                           |
+| UDP | No                                                                                                                        | Yes (UDPRoute)                                                                                                                                                                           |
+| TLS passthrough | Yes                                                                                                                       | Yes (TLSRoute)                                                                                                                                                                           |
+| Proxy Protocol | Yes                                                                                                                       | Yes                                                                                                                                                                                      |
+| Traffic ingress methods | `LoadBalancer`, `HostPort`, and `HostWithFailover` [inlets](./alb/alb-gateway-api.html#inlets)                            | [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer) and [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) inlets |
+| Automatic TLS certificate issuance (cert-manager) | Yes                                                                                                                       | Yes                                                                                                                                                                                      |
+| HTTPS policy tuning (TLS versions, ciphers, HSTS) | Yes                                                                                                                       | TLSv1.2/1.3 by default; HSTS via a response-header annotation                                                                                                                            |
+| WAF | ModSecurity at the controller or Ingress level                                                                            | ModSecurity/Coraza at the route level, OWASP CRS preset                                                                                                                                  |
+| External authentication | Yes                                                                                                                       | Yes                                                                                                                                                                                      |
+| IP allowlist | Yes                                                                                                                       | Yes                                                                                                                                                                                      |
+| Basic authentication | Yes                                                                                                                       | Yes                                                                                                                                                                                      |
+| Request rate limiting | Yes                                                                                                                       | Yes                                                                                                                                                                                      |
+| Session affinity | Yes                                                                                                                       | Yes                                                                                                                                                                                      |
+| GeoIP | Geo-based request statistics in metrics                                                                                   | [Adding GeoIP fields to headers](alb/alb-gateway-api.html#geoip) based on MaxMind databases                                                                                              |
+| Prometheus metrics and Grafana dashboards | Yes, detailed by namespace, vhost, Ingress resource, and location                                                         | Yes: Envoy Proxy metrics and dashboards for requests, routes, and upstreams                                                                                                              |
+| OpenTelemetry tracing | Yes                                                                                                                       | Yes ([configuration](alb/alb-gateway-api.html#tracing))                                                                                                                                  |
 
 ### Next steps
 

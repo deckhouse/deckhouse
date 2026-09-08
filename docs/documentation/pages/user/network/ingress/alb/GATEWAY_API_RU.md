@@ -27,7 +27,7 @@ relatedLinks:
 
 Публикация приложения возможна через общекластерный шлюз (ClusterALBInstance, создаёт администратор кластера) или через отдельный шлюз в неймспейсе приложения (ALBInstance).
 
-Создание управляемого Gateway (ClusterALBInstance или ALBInstance, инлеты, включение модуля) — задача администратора. Настройка инфраструктуры описана в разделе [«Включение модуля и создание Gateway»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#создание-управляемого-объекта-gateway).
+Создание управляемого [Gateway](https://gateway-api.sigs.k8s.io/reference/api-types/gateway/) (ClusterALBInstance или ALBInstance, инлеты, включение модуля) — задача администратора. Настройка инфраструктуры описана в разделе [«Включение модуля и создание Gateway»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#создание-управляемого-объекта-gateway).
 
 Этот сценарий предполагает, что объект ClusterALBInstance или ALBInstance уже создан и перешёл в состояние `Ready`. Запросите у администратора имя и неймспейс управляемого Gateway или получите имя Gateway из поля [`status.gateway`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-status) инстанса:
 
@@ -40,7 +40,7 @@ d8 k -n <NAMESPACE> get albinstance <ALB_INSTANCE_NAME> \
 
 Для ClusterALBInstance управляемый Gateway обычно находится в неймспейсе `d8-alb`. Для ALBInstance — в том же неймспейсе, что и объект ALBInstance. Описание полей статуса — в [`status`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-status).
 
-Администратор неймспейса создаёт ListenerSet, привязанный к этому Gateway ([`spec.parentRef`](https://gateway-api.sigs.k8s.io/guides/user-guides/listener-set/)). Разработчики приложения создают объекты HTTPRoute, привязанные к ListenerSet.
+Администратор неймспейса создаёт [ListenerSet](https://gateway-api.sigs.k8s.io/reference/api-types/listenerset/), привязанный к этому Gateway ([`spec.parentRef`](https://gateway-api.sigs.k8s.io/guides/user-guides/listener-set/)). Разработчики приложения создают объекты HTTPRoute, привязанные к ListenerSet.
 
 Слушатели `d8-http` и `d8-https` предназначены для служебных задач — например, для проверки доступности шлюза или запросов HTTP-01 от `cert-manager`. Не привязывайте к ним маршруты приложений — для публикации приложений используйте ListenerSet.
 
@@ -145,7 +145,7 @@ curl -vk \
 
 ### Работа с объектами GRPCRoute, TLSRoute, TCPRoute и UDPRoute {#grpcroute-tlsroute-tcproute-and-udproute-objects}
 
-Помимо HTTPRoute, для публикации приложений можно использовать GRPCRoute (gRPC-трафик), TLSRoute (сквозная передача TLS) и TCPRoute/UDPRoute (произвольный TCP и UDP-трафик).
+Помимо HTTPRoute, для публикации приложений можно использовать [GRPCRoute](https://gateway-api.sigs.k8s.io/reference/api-types/grpcroute/) (gRPC-трафик), [TLSRoute](https://gateway-api.sigs.k8s.io/reference/api-types/tlsroute/) (сквозная передача TLS) и [TCPRoute](https://gateway-api.sigs.k8s.io/reference/api-types/tcproute/)/[UDPRoute](https://gateway-api.sigs.k8s.io/reference/api-types/udproute/) (произвольный TCP и UDP-трафик).
 
 #### GRPCRoute для gRPC-трафика
 
@@ -461,7 +461,7 @@ spec:
 
 ### Привязка маршрута к ListenerSet в другом неймспейсе
 
-Gateway API по умолчанию запрещает маршрутам ссылаться на объекты в чужих неймспейсах — такую привязку нужно разрешить явно. Если HTTPRoute должен подключаться к ListenerSet из другого неймспейса, добавьте [ReferenceGrant](https://gateway-api.sigs.k8s.io/reference/api-types/referencegrant/) туда, где расположен целевой ListenerSet.
+Gateway API по умолчанию запрещает маршрутам ссылаться на объекты в чужих неймспейсах — такую привязку нужно разрешить явно. Если HTTPRoute и целевой ListenerSet находятся в разных неймспейсах, добавьте [ReferenceGrant](https://gateway-api.sigs.k8s.io/reference/api-types/referencegrant/) рядом с ListenerSet.
 
 В примере ниже — общий ListenerSet в `shared-gw`, прикладной HTTPRoute в `prod` и ReferenceGrant в `shared-gw`, разрешающий такую привязку:
 
@@ -602,7 +602,7 @@ GeoIP и трассировку OpenTelemetry настраивает админ�
 | `alb.network.deckhouse.io/whitelist-source-range` | Список подсетей в формате CIDR через запятую. Задаёт фильтр по IP на уровне маршрута и переопределяет глобальный whitelist (например, `10.1.1.10/32, 10.2.2.2/32`) |
 | `alb.network.deckhouse.io/response-headers-to-add` | JSON-объект дополнительных заголовков ответа (например, `{"Strict-Transport-Security": "max-age=31536000; includeSubDomains"}`) |
 | `alb.network.deckhouse.io/session-affinity` | JSON для закрепления сессии (session affinity) с режимом cookie (`mode`, `path`, `cookieName`, `ttl` и др.); не все поля обязательны (например, `{"mode": "cookie", "path": "/path", "cookieName": "mycookie", "ttl": 0}`) |
-| `alb.network.deckhouse.io/hash-key` | Консистентный хеш для бэкендов Service у объекта HTTPRoute (например, `source-ip`) |
+| `alb.network.deckhouse.io/hash-key` | Ключ консистентного хеширования Envoy для выбора бэкенда Service у объекта HTTPRoute; например, `source-ip` — хеширование по IP-адресу клиента |
 | `alb.network.deckhouse.io/service-upstream` | `"true"`: трафик к upstream идёт через соответствующий сервис, а не напрямую к подам |
 | `alb.network.deckhouse.io/basic-auth-secret` | `namespace/secret` с данными htpasswd для HTTP Basic Auth на этом маршруте |
 | `alb.network.deckhouse.io/satisfy` | `all` или `any`: определяет, нужно ли пройти обе проверки (whitelist и basic-auth) или достаточно одной (по умолчанию `all`) |
