@@ -18,11 +18,19 @@ searchable: false
 
 1. Images в `images/` — по аналогии с предыдущим minor.
 2. Версия в `oss.yaml`.
-3. Общий набор CRD в `crds/vendor/`. Конфигурационные CRD берутся из Istio 1.29.6, а operator/Sail CRD сохраняются для совместимости с Istio 1.25. Для обновления из корня репозитория используйте `go run ./modules/110-istio/crds/update`; параметры описаны в [`crds/vendor/README.md`](../../crds/vendor/README.md).
-4. **Без оператора:** `_rules_v-<major>-<minor>.tpl` + ветка в `_istiod_clusterroles.tpl`.
-5. Grafana — [`istio-grafana-dashboards.sh`](istio-grafana-dashboards.sh).
-6. **Без оператора:** каталог `files/<revision>/` — см. ниже.
-7. [`template_tests/module_test.go`](../../template_tests/module_test.go).
+3. Общий набор CRD в `crds/vendor/`. Конфигурационные CRD берутся из Istio 1.29.6, а operator/Sail CRD сохраняются для совместимости с Istio 1.25. Для обновления выполните `go run ./update-crds` из `modules/110-istio/tools`; параметры описаны в [`crds/vendor/README.md`](../../crds/vendor/README.md).
+4. Проверка бандла CRD — обязательный шаг после любых изменений в `crds/vendor/`, в том числе после правки файлов вручную:
+
+   ```shell
+   cd modules/110-istio/tools
+   go run ./update-crds --check
+   ```
+
+   Проверка не ходит в сеть и валидирует уже закоммиченный бандл: по одному объекту на файл, полный набор имён CRD, ровно одна storage-версия у каждого CRD и сохранение legacy-версий в `served`.
+5. **Без оператора:** `_rules_v-<major>-<minor>.tpl` + ветка в `_istiod_clusterroles.tpl`.
+6. Grafana — [`istio-grafana-dashboards.sh`](istio-grafana-dashboards.sh).
+7. **Без оператора:** каталог `files/<revision>/` — см. ниже.
+8. [`template_tests/module_test.go`](../../template_tests/module_test.go).
 
 ---
 
