@@ -63,10 +63,11 @@ type reconciler struct {
 }
 
 type instanceSpec struct {
-	Online         bool
-	BootMACAddress string
-	BMC            BMCConfig
-	CredentialsRef objectReference
+	Online          bool
+	BootMACAddress  string
+	BMC             BMCConfig
+	CredentialsRef  objectReference
+	RootDeviceHints map[string]interface{}
 }
 
 type objectReference struct {
@@ -146,6 +147,19 @@ func readSpec(instance *unstructured.Unstructured) (instanceSpec, error) {
 	spec.BMC.Insecure, _, _ = unstructured.NestedBool(instance.Object, "spec", "bmc", "insecure")
 	spec.CredentialsRef.Kind, _, _ = unstructured.NestedString(instance.Object, "spec", "bmc", "credentialsRef", "kind")
 	spec.CredentialsRef.Name, _, _ = unstructured.NestedString(instance.Object, "spec", "bmc", "credentialsRef", "name")
+	rootDeviceHints, ok, err := unstructured.NestedMap(instance.Object, "spec", "rootDeviceHints")
+	if err != nil {
+		return spec, fmt.Errorf("spec.rootDeviceHints must be an object: %w", err)
+	}
+	if ok {
+		spec.RootDeviceHints = rootDeviceHints
+	} else {
+		// BareMetalHost defaults missing rootDeviceHints to /dev/sda. That is not
+		// safe for managed hosts: device names are not stable and may point to the
+		// deploy ramdisk media. An empty object disables that default and lets
+		// Ironic choose a suitable disk from hardware inventory.
+		spec.RootDeviceHints = map[string]interface{}{}
+	}
 
 	if spec.BootMACAddress == "" {
 		return spec, fmt.Errorf("spec.bootMACAddress is required")
@@ -254,14 +268,10 @@ func desiredBareMetalHostSpec(spec instanceSpec, resolved ResolvedBMC, secretNam
 		bmc["disableCertificateVerification"] = true
 	}
 	return map[string]interface{}{
-		"online":         spec.Online,
-		"bootMACAddress": spec.BootMACAddress,
-		"bmc":            bmc,
-		// BareMetalHost defaults missing rootDeviceHints to /dev/sda. That is not
-		// safe for managed hosts: device names are not stable and may point to the
-		// deploy ramdisk media. An empty object disables that default and lets
-		// Ironic choose a suitable disk from hardware inventory.
-		"rootDeviceHints": map[string]interface{}{},
+		"online":          spec.Online,
+		"bootMACAddress":  spec.BootMACAddress,
+		"bmc":             bmc,
+		"rootDeviceHints": spec.RootDeviceHints,
 	}
 }
 
@@ -294,7 +304,7 @@ func updateBareMetalHostSpec(bmh *unstructured.Unstructured, spec instanceSpec, 
 		}
 		updated = updated || changed
 	}
-	changed, err := setNestedMap(bmh, map[string]interface{}{}, "spec", "rootDeviceHints")
+	changed, err := setNestedMap(bmh, spec.RootDeviceHints, "spec", "rootDeviceHints")
 	if err != nil {
 		return false, err
 	}
