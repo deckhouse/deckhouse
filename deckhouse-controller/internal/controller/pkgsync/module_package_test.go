@@ -74,7 +74,7 @@ func TestSyncModulePackages(t *testing.T) {
 		assert.Equal(t, []string{"deckhouse-modules"}, pkg.Status.AvailableRepositories)
 	})
 
-	t.Run("a release stub creates no package", func(t *testing.T) {
+	t.Run("a release draft creates no package", func(t *testing.T) {
 		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(),
 			testRelease("parca", "deckhouse", "1.4.3", v1alpha1.ModuleReleasePhaseDeployed),
 		)

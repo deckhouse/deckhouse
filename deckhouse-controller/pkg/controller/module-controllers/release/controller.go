@@ -1449,7 +1449,7 @@ func (r *reconciler) deployModule(ctx context.Context, release *v1alpha1.ModuleR
 		PackageRepositoryName: pkgsync.RepositoryNameForSource(source.Name),
 		PackageVersion:        moduleVersion,
 	}
-	if err = pkgsync.EnsureModulePackageVersion(ctx, r.reader, r.client, r.dependencyContainer, versionSpec, modulePath, logger); err != nil {
+	if err = pkgsync.EnsureDownloadedModulePackageVersion(ctx, r.reader, r.client, r.dependencyContainer, versionSpec, modulePath, logger); err != nil {
 		return fmt.Errorf("ensure the module package version: %w", err)
 	}
 

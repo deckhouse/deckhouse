@@ -35,7 +35,7 @@ var excludedModuleSources = []string{moduleSourceNameDeckhouse, moduleSourceName
 
 // syncPackageRepositories ensures a PackageRepository for every module source
 // except the excluded ones, so the repositories are in place before the
-// version sync leaves its draft stubs. A source being deleted gets none.
+// version sync leaves its drafts. A source being deleted gets none.
 func (s *syncer) syncPackageRepositories(ctx context.Context) error {
 	sources := new(v1alpha1.ModuleSourceList)
 	if err := s.reader.List(ctx, sources); err != nil {

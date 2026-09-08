@@ -23,7 +23,7 @@
 //	ModuleSource except the platform-owned "deckhouse" and "flant"
 //	  └─ PackageRepository <source>: the registry settings follow the source
 //	     on every start, so the module-package-version controller has a live
-//	     repository to promote the draft stubs below from
+//	     repository to promote the drafts below from
 //
 //	embedded modules dir (the running image)
 //	  ├─ embedded-<module>-<deckhouse version>, complete: the metadata and
@@ -36,7 +36,7 @@
 //
 //	deployed or pending ModuleRelease
 //	  ├─ <repository>-<module>-<version>, where the "deckhouse" source maps
-//	  │  to the "deckhouse-modules" repository; a draft stub - the
+//	  │  to the "deckhouse-modules" repository; a draft - the
 //	  │  module-package-version controller fills it once a PackageRepository
 //	  │  exists
 //	  └─ Module <module> from the newest deployed release: its repository
@@ -80,7 +80,7 @@
 // A version stays a draft until its metadata lands, so no observer takes a
 // half-created version for a complete one; a fill interrupted mid-way heals on
 // the next start. The legacy label keeps the registry path of the module
-// source world ("<module>/release"). A stub gets no owner: the repository the
+// source world ("<module>/release"). A draft gets no owner: the repository the
 // spec names may not exist yet, and an owner reference to a missing object
 // would get the version garbage-collected. A version completed from disk gets
 // what the version controller gives a version it promotes from the registry:
@@ -125,12 +125,11 @@ type syncer struct {
 
 // Sync ensures the package objects of the old module stack for the given
 // Deckhouse version and embedded modules dir. The repositories go first, so
-// the version stubs find them in place. A source naming no valid version (no
+// the version drafts find them in place. A source naming no valid version (no
 // module source, an unparsable release version, an illegal object name, an
 // unreadable module dir, broken schema files) is skipped with a warning; an
 // API failure stops the sync. An embedded module skipped here reconciles
-// nowhere, since the Module reconciler resolves the same version - see
-// known-hazards.md.
+// nowhere, since the Module reconciler resolves the same version.
 func Sync(ctx context.Context, reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, embeddedModulesDir, downloadedModulesDir string, logger *log.Logger) error {
 	return newSyncer(reader, writer, dc, deckhouseVersion, embeddedModulesDir, downloadedModulesDir, logger).sync(ctx)
 }
@@ -150,7 +149,7 @@ func newSyncer(reader client.Reader, writer client.Client, dc dependency.Contain
 	}
 }
 
-// sync runs the passes in order: repositories first, so the version stubs
+// sync runs the passes in order: repositories first, so the version drafts
 // find them in place, then the versions, so the modules placed last resolve
 // to an existing one.
 func (s *syncer) sync(ctx context.Context) error {

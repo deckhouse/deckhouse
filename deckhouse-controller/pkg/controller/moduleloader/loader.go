@@ -570,7 +570,7 @@ func (l *Loader) ensurePackageVersion(ctx context.Context, def *moduletypes.Defi
 		PackageVersion:        module.Spec.PackageVersion,
 	}
 
-	return pkgsync.EnsureModulePackageVersion(ctx, l.reader, l.client, l.dependencyContainer, spec, def.Path, l.logger)
+	return pkgsync.EnsureDownloadedModulePackageVersion(ctx, l.reader, l.client, l.dependencyContainer, spec, def.Path, l.logger)
 }
 
 func (l *Loader) ensureModuleSettings(ctx context.Context, module string, rawConfig []byte, conversions []v1alpha1.ModuleSettingsConversion) error {

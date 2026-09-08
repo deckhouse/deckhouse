@@ -380,7 +380,7 @@ func NewDeckhouseController(
 	}
 
 	// The old module stack creates draft versions too: the release controller and the
-	// startup sync stub them for every release, and the repository scan for every version
+	// startup sync create them for every release, and the repository scan for every version
 	// in the registry. The drafts get their metadata here, whatever the feature gates say.
 	err = modulepackageversion.RegisterController(preflightCountDown, runtimeManager, dc, logger)
 	if err != nil {
