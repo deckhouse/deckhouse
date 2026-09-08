@@ -111,6 +111,7 @@ type moduleConfigValidator struct {
 	moduleStorage      moduleStorage
 	metricStorage      metricsstorage.Storage
 	moduleManager      moduleManager
+	packageManager     packageManager
 	configValidator    *configtools.Validator
 	settings           *helpers.DeckhouseSettingsContainer
 	dependencyExtender moduleDependencyExtender

@@ -44,7 +44,8 @@ type Dependency struct {
 	Optional bool
 }
 
-// Getter returns the installed version of a module, or nil when it is absent.
+// Getter returns the installed version of a module, or nil when it is absent or
+// not yet usable as a dependency — not enabled, or still being processed.
 type Getter func(module string) *semver.Version
 
 // NewRule constructs a dependency rule resolving versions through the getter.

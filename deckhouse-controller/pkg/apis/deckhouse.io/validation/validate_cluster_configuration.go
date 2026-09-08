@@ -69,7 +69,7 @@ type cloudConfig struct {
 	Prefix   string `json:"prefix,omitempty"`
 }
 
-func validateKubernetesVersion(version string, mm moduleManager) (*kwhvalidating.ValidatorResult, error) {
+func validateKubernetesVersion(version string, mm packageManager) (*kwhvalidating.ValidatorResult, error) {
 	if version == "Automatic" {
 		version = hooks.DefaultKubernetesVersion
 	}
@@ -79,7 +79,7 @@ func validateKubernetesVersion(version string, mm moduleManager) (*kwhvalidating
 		if moduleName == "" {
 			return rejectResult(err.Error())
 		}
-		if mm.IsModuleEnabled(moduleName) {
+		if mm.IsPackageEnabled(moduleName) {
 			log.Debug("module has unsatisfied requirements", slog.String("name", moduleName))
 			return rejectResult(err.Error())
 		}
@@ -326,10 +326,10 @@ func validateKubernetesVersionDowngrade(oldVersion, newVersion string, baseline 
 	type versionChecker func(oldVersionSemver, newVersionSemver *semver.Version) (*kwhvalidating.ValidatorResult, error)
 	var selectedChecker versionChecker
 
-	var nameForOldVersion = "oldKubernetesVersion"
+	nameForOldVersion := "oldKubernetesVersion"
 	// minorSubCheck validates that downgrade does not exceed 1 minor version.
 	// It allows upgrade without restrictions and only checks downgrade scenarios.
-	var minorSubCheck = func(oldVersionSemver, newVersionSemver *semver.Version) (*kwhvalidating.ValidatorResult, error) {
+	minorSubCheck := func(oldVersionSemver, newVersionSemver *semver.Version) (*kwhvalidating.ValidatorResult, error) {
 		if !hooks.KubernetesVersionBelowFloor(newVersionSemver, oldVersionSemver) {
 			return allowResult(nil)
 		}
@@ -344,7 +344,7 @@ func validateKubernetesVersionDowngrade(oldVersion, newVersion string, baseline 
 	// Upgrade or same version is allowed.
 	// This is simpler than minorSubCheck because Automatic will use deckhouseDefaultKubernetesVersion
 	// which is always safe, so we only need to check if it's a downgrade.
-	var automaticOnlyGreaterCheck = func(oldVersionSemver, newVersionSemver *semver.Version) (*kwhvalidating.ValidatorResult, error) {
+	automaticOnlyGreaterCheck := func(oldVersionSemver, newVersionSemver *semver.Version) (*kwhvalidating.ValidatorResult, error) {
 		if oldVersionSemver.GreaterThan(newVersionSemver) {
 			return rejectResult(
 				fmt.Sprintf(
@@ -363,7 +363,6 @@ func validateKubernetesVersionDowngrade(oldVersion, newVersion string, baseline 
 	if baseline.MaxUsed != "" {
 		var err error
 		maxUsedVersionSemver, err = parseVersion(baseline.MaxUsed)
-
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse max used version: %w", err)
 		}
@@ -497,7 +496,7 @@ func validateClusterConfiguration(ctx context.Context, clusterConfiguration []by
 	return result, nil
 }
 
-func clusterConfigurationHandler(mm moduleManager, cli client.Client, _ *config.SchemaStore) http.Handler {
+func clusterConfigurationHandler(manager packageManager, cli client.Client, _ *config.SchemaStore) http.Handler {
 	validator := kwhvalidating.ValidatorFunc(func(ctx context.Context, ar *model.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		if ar.Operation == model.OperationDelete {
 			return rejectResult("It is forbidden to delete secret d8-cluster-configuration")
@@ -534,7 +533,7 @@ func clusterConfigurationHandler(mm moduleManager, cli client.Client, _ *config.
 			if moduleConfigOwnsKubernetesVersion(ctx, cli) {
 				return allowResult(nil)
 			}
-			return validateKubernetesVersion(clusterConf.KubernetesVersion, mm)
+			return validateKubernetesVersion(clusterConf.KubernetesVersion, manager)
 		})
 
 		criValidator := kwhvalidating.ValidatorFunc(func(_ context.Context, _ *model.AdmissionReview, _ metav1.Object) (*kwhvalidating.ValidatorResult, error) {

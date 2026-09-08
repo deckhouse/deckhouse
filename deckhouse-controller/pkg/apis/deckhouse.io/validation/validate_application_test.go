@@ -58,6 +58,10 @@ func (f *fakePackageManager) CheckConstraints(_ string, constraints schedule.Con
 	return f.checkErr
 }
 
+func (f *fakePackageManager) IsPackageEnabled(_ string) bool {
+	return true
+}
+
 func newApplication(repo, pkg, version string) *v1alpha1.Application {
 	return &v1alpha1.Application{
 		ObjectMeta: metav1.ObjectMeta{Name: "my-app", Namespace: "default"},

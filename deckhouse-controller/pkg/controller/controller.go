@@ -57,7 +57,6 @@ import (
 	packageruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/validation"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	deckhouserelease "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/deckhouse-release"
 	moduleconfig "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/config"
@@ -67,7 +66,6 @@ import (
 	modulesource "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/source"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/objectkeeper"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application"
 	applicationpackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/application-package-version"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module"
 	modulepackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module-package-version"
@@ -75,8 +73,6 @@ import (
 	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
-	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
@@ -328,7 +324,7 @@ func NewDeckhouseController(
 	dc := dependency.NewDependencyContainer()
 	settingsContainer := helpers.NewDeckhouseSettingsContainer(nil, operator.MetricStorage)
 
-	pkgRuntime, err := packageruntime.Build(runtimeManager.GetClient(), operator.ModuleManager, dc, operator.MetricStorage, logger)
+	pkgRuntime, err := packageruntime.Build(runtimeManager.GetClient(), dc, operator.MetricStorage, logger)
 	if err != nil {
 		return nil, fmt.Errorf("create package operator: %w", err)
 	}
@@ -407,11 +403,6 @@ func NewDeckhouseController(
 		if err != nil {
 			return nil, fmt.Errorf("register application package version controller: %w", err)
 		}
-
-		err = application.RegisterController(runtimeManager, pkgRuntime, operator.ModuleManager, logger)
-		if err != nil {
-			return nil, fmt.Errorf("register application controller: %w", err)
-		}
 	}
 
 	// Module package controllers (feature flag)
@@ -429,22 +420,22 @@ func NewDeckhouseController(
 		}
 	}
 
-	if serveWebhooks {
-		// GetWebhookServer, not the server above: this call adds it to the runnables.
-		validation.RegisterAdmissionHandlers(
-			runtimeManager.GetWebhookServer(),
-			runtimeManager.GetClient(),
-			operator.ModuleManager,
-			pkgRuntime,
-			configtools.NewValidator(operator.ModuleManager, conversionsStore),
-			loader,
-			operator.MetricStorage,
-			config.NewSchemaStore(nil),
-			settingsContainer,
-			exts,
-			edition,
-		)
-	}
+	// if serveWebhooks {
+	// 	// GetWebhookServer, not the server above: this call adds it to the runnables.
+	// 	validation.RegisterAdmissionHandlers(
+	// 		runtimeManager.GetWebhookServer(),
+	// 		runtimeManager.GetClient(),
+	// 		operator.ModuleManager,
+	// 		pkgRuntime,
+	// 		configtools.NewValidator(operator.ModuleManager, conversionsStore),
+	// 		loader,
+	// 		operator.MetricStorage,
+	// 		config.NewSchemaStore(nil),
+	// 		settingsContainer,
+	// 		exts,
+	// 		edition,
+	// 	)
+	// }
 
 	return &DeckhouseController{
 		runtimeManager:     runtimeManager,
