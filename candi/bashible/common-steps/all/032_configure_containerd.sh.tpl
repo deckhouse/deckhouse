@@ -73,7 +73,7 @@ root = "/var/lib/containerd"
 state = "/run/containerd"
 plugin_dir = ""
 disabled_plugins = []
-required_plugins = []
+required_plugins = ["io.containerd.snapshotter.v1.erofs"]
 oom_score = 0
 
 [grpc]
