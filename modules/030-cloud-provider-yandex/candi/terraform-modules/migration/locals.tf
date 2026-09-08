@@ -309,7 +309,7 @@ locals {
         platformID   = try(ng.instanceClass.platform, local._default_platform_id)
         diskType     = try(ng.instanceClass.diskType, local._default_disk_type)
         diskSizeGB   = try(ng.instanceClass.diskSizeGB, local._default_disk_size_gb)
-        coreFraction = try(ng.instanceClass.coreFraction, 100)
+        coreFraction = try(ng.instanceClass.coreFraction, null)
         networkType  = try(ng.instanceClass.networkType, "Standard")
         # A public address is requested through nodes.parameters.externalIPAddresses
         # when migrating from a PCC; the boolean covers ModuleConfig-only clusters.

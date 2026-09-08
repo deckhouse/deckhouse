@@ -664,8 +664,8 @@ run "state_a_multiple_node_groups" {
   }
 
   assert {
-    condition     = output.instanceClasses["system-bbc5e661e106"].spec.coreFraction == 100
-    error_message = "expected an omitted coreFraction to default to 100"
+    condition     = output.instanceClasses["system-bbc5e661e106"].spec.coreFraction == null
+    error_message = "expected an omitted coreFraction to stay unset"
   }
 
   # etcd disks exist on master nodes only.
