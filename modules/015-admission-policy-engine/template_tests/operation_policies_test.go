@@ -38,7 +38,7 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: operation 
 	f := SetupHelmConfig(`
 global:
   discovery:
-    kubernetesVersion: "1.32"
+    kubernetesVersion: "1.33"
 admissionPolicyEngine:
   podSecurityStandards: {}
   internal:

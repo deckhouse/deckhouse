@@ -1,8 +1,8 @@
 {{- $baseFeatureGates := list "RotateKubeletServerCertificate=true" "CRDSensitiveData=true" -}}
-{{- if semverCompare ">=1.31 <1.36" .clusterConfiguration.kubernetesVersion }}
+{{- if semverCompare ">=1.33 <1.36" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "TopologyAwareHints=true" -}}
 {{- end }}
-{{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
+{{- if semverCompare ">=1.33 <1.34" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DynamicResourceAllocation=true" -}}
 {{- end }}
 {{- if semverCompare ">=1.34" .clusterConfiguration.kubernetesVersion }}
@@ -27,7 +27,7 @@
 {{- end -}}
 {{- $apiserverFeatureGatesStr := $apiserverFeatureGates | uniq | join "," -}}
 {{- $runtimeConfigList := list "admissionregistration.k8s.io/v1beta1=true" "admissionregistration.k8s.io/v1alpha1=true" -}}
-{{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
+{{- if semverCompare ">=1.33 <1.34" .clusterConfiguration.kubernetesVersion }}
   {{- $runtimeConfigList = append $runtimeConfigList "resource.k8s.io/v1beta1=true" -}}
 {{- end }}
 {{- if semverCompare ">=1.33 <1.36" .clusterConfiguration.kubernetesVersion }}

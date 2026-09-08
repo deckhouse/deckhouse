@@ -83,7 +83,7 @@ func nodeGroupCorpus() []corpusFixture {
 			},
 			result: Result{
 				Engine:            engineNone,
-				KubernetesVersion: "1.32",
+				KubernetesVersion: "1.33",
 				CRIType:           criTypeContainerd,
 				SerializedLabels:  "node-role.kubernetes.io/static-minimal=,node.deckhouse.io/group=static-minimal,node.deckhouse.io/type=Static",
 				UpdateEpoch:       "1000",
@@ -117,7 +117,7 @@ func nodeGroupCorpus() []corpusFixture {
 			},
 			result: Result{
 				Engine:            engineCAPI,
-				KubernetesVersion: "1.32",
+				KubernetesVersion: "1.33",
 				CRIType:           criTypeContainerd,
 				SerializedLabels:  "node-role.kubernetes.io/static-full=,node.deckhouse.io/group=static-full,node.deckhouse.io/type=Static,role=worker",
 				SerializedTaints:  "dedicated=worker:NoExecute",
@@ -160,7 +160,7 @@ func nodeGroupCorpus() []corpusFixture {
 			},
 			result: Result{
 				Engine:            engineNone,
-				KubernetesVersion: "1.32",
+				KubernetesVersion: "1.33",
 				CRIType:           criTypeContainerd,
 				SerializedLabels:  "node-role.kubernetes.io/master=,node.deckhouse.io/group=master,node.deckhouse.io/type=CloudPermanent",
 				SerializedTaints:  "node-role.kubernetes.io/control-plane:NoSchedule",
@@ -198,7 +198,7 @@ func nodeGroupCorpus() []corpusFixture {
 			},
 			result: Result{
 				Engine:            engineMCM,
-				KubernetesVersion: "1.32",
+				KubernetesVersion: "1.33",
 				CRIType:           criTypeContainerd,
 				Zones:             []string{"ru-central1-a", "ru-central1-b"},
 				NodeCapacity:      rawCapacity(`{"cpu":"4","memory":"8Gi"}`),
@@ -218,7 +218,7 @@ func nodeGroupCorpus() []corpusFixture {
 			},
 			result: Result{
 				Engine:            engineCAPI,
-				KubernetesVersion: "1.32",
+				KubernetesVersion: "1.33",
 				CRIType:           criTypeContainerd,
 				Zones:             []string{"a"},
 				InstanceClass:     rawExtension("null"),
