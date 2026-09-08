@@ -127,3 +127,71 @@ func TestLoadGlobalModuleConfig_Absent(t *testing.T) {
 	gmc := loadGlobalModuleConfig(context.Background(), kubeCl)
 	require.Nil(t, gmc)
 }
+
+func mustSeedControlPlaneManagerMC(t *testing.T, kubeCl *client.KubernetesClient, network map[string]interface{}) {
+	t.Helper()
+	settings := map[string]interface{}{}
+	if network != nil {
+		settings["network"] = network
+	}
+	mc := &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "deckhouse.io/v1alpha1",
+		"kind":       "ModuleConfig",
+		"metadata":   map[string]interface{}{"name": "control-plane-manager"},
+		"spec": map[string]interface{}{
+			"version":  float64(3),
+			"settings": settings,
+		},
+	}}
+	_, err := kubeCl.Dynamic().Resource(ModuleConfigGVR).Create(t.Context(), mc, metav1.CreateOptions{})
+	require.NoError(t, err)
+}
+
+func TestLoadControlPlaneManagerModuleConfig_Present(t *testing.T) {
+	kubeCl := client.NewFakeKubernetesClient()
+	mustSeedControlPlaneManagerMC(t, kubeCl, map[string]interface{}{"podSubnetCIDR": "10.11.0.0/16"})
+
+	cpm := loadControlPlaneManagerModuleConfig(context.Background(), kubeCl)
+	require.NotNil(t, cpm)
+	network, _ := cpm.Spec.Settings["network"].(map[string]interface{})
+	require.Equal(t, "10.11.0.0/16", network["podSubnetCIDR"])
+}
+
+func TestLoadControlPlaneManagerModuleConfig_Absent(t *testing.T) {
+	kubeCl := client.NewFakeKubernetesClient()
+
+	// Missing control-plane-manager ModuleConfig must be a soft miss (nil), never an error:
+	// converge/destroy fall back to the deprecated ClusterConfiguration network fields.
+	cpm := loadControlPlaneManagerModuleConfig(context.Background(), kubeCl)
+	require.Nil(t, cpm)
+}
+
+// This is the regression the bug report was: on a cluster whose control-plane-manager
+// ModuleConfig owns the network settings and has had them removed from ClusterConfiguration,
+// Terraform's clusterConfiguration variable must still carry podSubnetCIDR - not the "object has
+// no such attribute" a converge/destroy run got before Cloud() loaded this ModuleConfig at all.
+func TestCloudFiller_LoadsControlPlaneManagerNetworkSettings(t *testing.T) {
+	kubeCl := client.NewFakeKubernetesClient()
+	mustSeedCloudProviderMC(t, kubeCl, "yandex")
+	mustSeedControlPlaneManagerMC(t, kubeCl, map[string]interface{}{
+		"podSubnetCIDR":     "10.11.0.0/16",
+		"serviceSubnetCIDR": "10.22.0.0/16",
+	})
+
+	// podSubnetCIDR/serviceSubnetCIDR already removed from ClusterConfiguration - only
+	// ModuleConfig has them, exactly like the reported cluster.
+	mc := mustMetaConfigForProvider(t, "yandex")
+	mc.ClusterType = CloudClusterType
+	filler := newFromClusterMetaConfigFiller(kubeCl, newSchemaStore(nil, nil))
+
+	_, err := filler.Cloud(context.Background(), mc)
+	require.NoError(t, err)
+
+	infra := mc.clusterConfigForInfrastructure()
+	var podSubnetCIDR, serviceSubnetCIDR string
+	require.NoError(t, json.Unmarshal(infra["podSubnetCIDR"], &podSubnetCIDR),
+		"var.clusterConfiguration.podSubnetCIDR must be present for Terraform")
+	require.NoError(t, json.Unmarshal(infra["serviceSubnetCIDR"], &serviceSubnetCIDR))
+	require.Equal(t, "10.11.0.0/16", podSubnetCIDR)
+	require.Equal(t, "10.22.0.0/16", serviceSubnetCIDR)
+}
