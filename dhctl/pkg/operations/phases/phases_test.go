@@ -262,3 +262,56 @@ func TestResolveSkipPhases(t *testing.T) {
 		})
 	}
 }
+
+// An immutable master takes its configuration over the network and installs
+// itself; there is no bundle to prepare, nothing to run over SSH, and no sshd to
+// wait for. On a live run the bar sat on "Install Kubernetes: Prepare bashible
+// bundle" for four minutes — a step that was never going to happen.
+func TestAnImmutableMasterGetsItsOwnInstallSteps(t *testing.T) {
+	t.Parallel()
+
+	immutable := PhasesFor(OperationBootstrap, ClusterConfig{
+		ClusterType:             "Static",
+		HasClusterConfiguration: true,
+		ImmutableMaster:         true,
+	})
+	bashible := PhasesFor(OperationBootstrap, ClusterConfig{
+		ClusterType:             "Static",
+		HasClusterConfiguration: true,
+	})
+
+	subPhases := func(list []PhaseWithSubPhases, phase OperationPhase) []OperationPhase {
+		t.Helper()
+		for _, declared := range list {
+			if declared.Phase == phase {
+				return declared.SubPhases
+			}
+		}
+		return nil
+	}
+	declares := func(list []PhaseWithSubPhases, phase OperationPhase) bool {
+		for _, declared := range list {
+			if declared.Phase == phase {
+				return true
+			}
+		}
+		return false
+	}
+
+	install := subPhases(immutable, InstallKubernetesPhase)
+	require.Equal(t, []OperationPhase{
+		OperationPhase(InstallKubernetesSubPhaseWaitForMasterInstall),
+		OperationPhase(InstallKubernetesSubPhaseGetClusterAccess),
+	}, install, "an immutable master waits for a control plane and collects credentials, and does nothing else here")
+
+	require.False(t, declares(immutable, WaitForSSHOnMasterPhase),
+		"there is no sshd on an immutable master, so the wait for it cannot succeed — it can only lie")
+	require.True(t, declares(bashible, WaitForSSHOnMasterPhase),
+		"every other master is still reached over SSH")
+
+	require.Contains(t, subPhases(bashible, InstallKubernetesPhase),
+		OperationPhase(InstallKubernetesSubPhaseExecuteBashibleBundle),
+		"the bashible path keeps its own steps")
+	require.NotContains(t, subPhases(bashible, InstallKubernetesPhase),
+		OperationPhase(InstallKubernetesSubPhaseWaitForMasterInstall))
+}

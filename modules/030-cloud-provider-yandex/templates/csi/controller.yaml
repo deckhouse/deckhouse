@@ -29,6 +29,7 @@
 
   {{- $csiControllerConfig := dict }}
   {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
+  {{- $_ := set $csiControllerConfig "capacityEnabled" false }}
   {{- $_ := set $csiControllerConfig "snapshotterEnabled" false }}
   {{- $_ := set $csiControllerConfig "securityPolicyExceptionEnabled" true }}
   {{- $_ := set $csiControllerConfig "additionalControllerArgs" (include "csi_controller_args" . | fromYamlArray) }}
