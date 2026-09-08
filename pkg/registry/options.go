@@ -56,6 +56,10 @@ type ImagePushOption interface {
 }
 
 type ImagePushOptions struct {
+	// AllowNondistributableArtifacts uploads foreign layers instead of skipping
+	// them. Registries that proxy Windows base images need it; for everything
+	// else it wastes bandwidth on blobs the client can fetch from their origin.
+	AllowNondistributableArtifacts bool
 }
 
 // ListTagsOption is some configuration that modifies options for a list tags request.

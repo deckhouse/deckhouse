@@ -141,6 +141,18 @@ func (c *Client) GetManifest(_ context.Context, tag string, _ ...dkpreg.Manifest
 	return dkpclient.NewManifestResultFromBytes(raw), nil
 }
 
+// GetIndex mirrors the real client's refusal to treat a plain image as an
+// index. The fake stores single images only - MustAddImage takes a v1.Image -
+// so a caller asking for an index always gets this error rather than a
+// synthetic one-entry wrapper.
+func (c *Client) GetIndex(_ context.Context, tag string) (v1.ImageIndex, error) {
+	if _, err := c.findImage(tag); err != nil {
+		return nil, err
+	}
+
+	return nil, fmt.Errorf("fake: GetIndex: %q is an image, not an index", tag)
+}
+
 // GetImageConfig returns the v1.ConfigFile for the image identified by tag.
 func (c *Client) GetImageConfig(_ context.Context, tag string) (*v1.ConfigFile, error) {
 	entry, err := c.findImage(tag)

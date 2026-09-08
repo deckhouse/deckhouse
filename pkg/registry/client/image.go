@@ -69,6 +69,11 @@ func (m *ManifestResult) IsIndex() bool {
 var ErrIsIndexManifest = fmt.Errorf("manifest is an index")
 var ErrIsNotIndexManifest = fmt.Errorf("manifest is not an index")
 
+// GetRaw returns the manifest bytes as served, without decoding them.
+func (m *ManifestResult) GetRaw() []byte {
+	return m.rawManifest
+}
+
 func (m *ManifestResult) GetDescriptor() registry.Descriptor {
 	if m.descriptor == nil {
 		return nil

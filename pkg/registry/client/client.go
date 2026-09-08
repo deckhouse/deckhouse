@@ -452,6 +452,49 @@ func (c *Client) GetImage(ctx context.Context, tag string, opts ...registry.Imag
 
 // PushImage pushes an image to the registry at the specified tag
 // The repository is determined by the chained WithSegment() calls
+// GetIndex retrieves a multi-arch index without resolving it to any platform.
+func (c *Client) GetIndex(ctx context.Context, tag string) (v1.ImageIndex, error) {
+	logentry := c.logger.With(
+		slog.String("registry_host", c.registryHost),
+		slog.String("segments", c.constructedSegments),
+		slog.String("tag", tag),
+	)
+
+	logentry.Debug("Getting index")
+
+	ref, err := name.ParseReference(c.buildReference(tag), c.nameOptions()...)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse reference: %w", err)
+	}
+
+	remoteOpts := append([]remote.Option{}, c.options...)
+	remoteOpts = append(remoteOpts, c.withContext(ctx))
+
+	desc, err := remote.Get(ref, remoteOpts...)
+	if err != nil {
+		if sentinel := sentinelFor(err); sentinel != nil {
+			return nil, fmt.Errorf("%w: %w", sentinel, err)
+		}
+
+		return nil, fmt.Errorf("failed to get index: %w", err)
+	}
+
+	// remote.Descriptor.ImageIndex would wrap a plain image in a synthetic
+	// single-entry index, which is not what a caller asking for an index means.
+	if !desc.MediaType.IsIndex() {
+		return nil, fmt.Errorf("%s is not an index (mediaType %q)", ref, desc.MediaType)
+	}
+
+	idx, err := desc.ImageIndex()
+	if err != nil {
+		return nil, fmt.Errorf("failed to read index: %w", err)
+	}
+
+	logentry.Debug("Index retrieved successfully")
+
+	return idx, nil
+}
+
 func (c *Client) PushImage(ctx context.Context, tag string, img v1.Image, opts ...registry.ImagePushOption) error {
 	putImageOptions := &registry.ImagePushOptions{}
 
@@ -473,6 +516,10 @@ func (c *Client) PushImage(ctx context.Context, tag string, img v1.Image, opts .
 	}
 
 	remoteOptions := append([]remote.Option{}, c.options...)
+
+	if putImageOptions.AllowNondistributableArtifacts {
+		remoteOptions = append(remoteOptions, remote.WithNondistributable)
+	}
 	remoteOptions = append(remoteOptions, c.withContext(ctx))
 
 	if err := remote.Write(ref, img, remoteOptions...); err != nil {
@@ -508,6 +555,18 @@ func (c *Client) GetImageConfig(ctx context.Context, tag string) (*v1.ConfigFile
 	logentry.Debug("Image config retrieved successfully")
 
 	return configFile, nil
+}
+
+// WithNondistributable uploads foreign (non-distributable) layers on push
+// instead of skipping them.
+func WithNondistributable() registry.ImagePushOption {
+	return &withNondistributable{}
+}
+
+type withNondistributable struct{}
+
+func (w *withNondistributable) ApplyToImagePush(opts *registry.ImagePushOptions) {
+	opts.AllowNondistributableArtifacts = true
 }
 
 // WithTagsLast sets the pagination cursor; only tags after last are returned.
@@ -1314,6 +1373,10 @@ func (c *Client) PushIndex(ctx context.Context, tag string, idx v1.ImageIndex, o
 
 	remoteOptions := append([]remote.Option{}, c.options...)
 	remoteOptions = append(remoteOptions, c.withContext(ctx))
+
+	if pushOptions.AllowNondistributableArtifacts {
+		remoteOptions = append(remoteOptions, remote.WithNondistributable)
+	}
 
 	if err := remote.WriteIndex(ref, idx, remoteOptions...); err != nil {
 		return fmt.Errorf("failed to push image index: %w", err)

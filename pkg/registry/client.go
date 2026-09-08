@@ -38,6 +38,13 @@ type Client interface {
 	// not the host's platform - so an arm64 caller silently gets amd64.
 	GetImage(ctx context.Context, tag string, opts ...ImageGetOption) (Image, error)
 
+	// GetIndex retrieves a multi-arch index by tag or digest reference.
+	//
+	// Unlike GetImage it resolves nothing: the whole index comes back, which is
+	// what a caller copying or storing every platform needs. A reference that is
+	// a plain image rather than an index is an error.
+	GetIndex(ctx context.Context, tag string) (v1.ImageIndex, error)
+
 	// PushImage pushes a v1.Image to the registry at the specified tag.
 	PushImage(ctx context.Context, tag string, img v1.Image, opts ...ImagePushOption) error
 
