@@ -72,7 +72,7 @@ ALB средствами Istio реализуется через [Istio Ingress 
 
 Поддерживаемые форматы Secret — в [руководстве Istio по форматам ключей](https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats).
 
-Далее разработчики приложения создают ресурсы Gateway и VirtualService. Примеры, в том числе [canary-развёртывание](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#canary-развёртывание-через-virtualservice), — в разделе [«Публикация приложений с использованием ресурса Istio Ingress Gateway»](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#публикация-приложений-с-использованием-ресурса-istio-ingress-gateway).
+Далее разработчики приложения создают ресурсы Gateway и VirtualService. Примеры, в том числе [canary-развёртывание](../../../../../user/network/ingress/alb/istio.html#canary-развёртывание-через-virtualservice), — в разделе [«Публикация приложений с использованием ресурса Istio Ingress Gateway»](../../../../../user/network/ingress/alb/istio.html#публикация-приложений-с-использованием-ресурса-istio-ingress-gateway).
 
 ### Ingress NGINX {#ingress-nginx}
 

@@ -6,11 +6,11 @@ lang: ru
 extractedLinksMax: 0
 relatedLinks:
   - title: "Миграция с ingress-nginx на alb"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/migration.html
+    url: migration.html
   - title: "Публикация приложений средствами Kubernetes Gateway API"
-    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html
+    url: ../../../../../user/network/ingress/alb/gateway-api.html
   - title: "Балансировка входящего трафика"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/
+    url: ../
   - title: "Документация модуля alb"
     url: /modules/alb/
 ---
@@ -38,7 +38,7 @@ ALB средствами Kubernetes Gateway API может использова�
 
 Kubernetes Gateway API и API Gateway — разные понятия. Kubernetes Gateway API — это набор ресурсов Kubernetes для описания маршрутизации трафика к приложениям. API Gateway — архитектурный компонент, предоставляющий единую точку входа к API приложений. Модуль `alb` реализует Kubernetes Gateway API.
 
-Сравнение возможностей модулей `alb` и `ingress-nginx` приведено в разделе [«Сравнение возможностей модулей ingress-nginx и alb»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/#сравнение-возможностей-модулей-ingress-nginx-и-alb).
+Сравнение возможностей модулей `alb` и `ingress-nginx` приведено в разделе [«Сравнение возможностей модулей ingress-nginx и alb»](../#сравнение-возможностей-модулей-ingress-nginx-и-alb).
 
 ### Роли объектов
 
@@ -99,7 +99,7 @@ Gateway API разделяет ответственность между адм�
 Перед включением и настройкой ALB в кластере DKP выполните следующее:
 
 - Проверьте выполнение [требований](/modules/alb/stable/configuration.html#требования) к работе модуля `alb`.
-- Если нужно публиковать служебные домены — веб-интерфейсы [служебных компонентов DKP](/products/kubernetes-platform/documentation/v1/user/web/ui.html) и других модулей, — укажите глобальный параметр [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate). Без этого параметра системные объекты HTTPRoute, Gateway и ListenerSet для служебных доменов не будут работать корректно, и веб-интерфейсы не опубликуются. Если публикация служебных доменов не требуется, параметр можно не указывать. Подробности — в разделе [«Публикация служебных доменов»](#публикация-служебных-доменов).
+- Если нужно публиковать служебные домены — веб-интерфейсы [служебных компонентов DKP](../../../../../user/web/ui.html) и других модулей, — укажите глобальный параметр [`publicDomainTemplate`](../../../../../reference/api/global.html#parameters-modules-publicdomaintemplate). Без этого параметра системные объекты HTTPRoute, Gateway и ListenerSet для служебных доменов не будут работать корректно, и веб-интерфейсы не опубликуются. Если публикация служебных доменов не требуется, параметр можно не указывать. Подробности — в разделе [«Публикация служебных доменов»](#публикация-служебных-доменов).
 - Проверьте совместимость версий API в разделе [«Совместно со сторонними реализациями Gateway API»](#alongside-third-party-gateway-api), если такие решения уже используются в кластере.
 - На bare metal для инлета [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer) подготовьте внешний балансировщик или модуль [`metallb`](/modules/metallb/). Инлет [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) доступен только для ClusterALBInstance и не требует MetalLB.
 
@@ -148,7 +148,7 @@ spec:
     loadBalancer: {}
 ```
 
-После перехода ALBInstance в состояние `Ready` создайте в том же неймспейсе объекты ListenerSet и HTTPRoute. Порядок их настройки и пример публикации приложения приведены в разделе [«Публикация приложения с ListenerSet и HTTPRoute»](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html#publishing-with-listenerset-and-httproute).
+После перехода ALBInstance в состояние `Ready` создайте в том же неймспейсе объекты ListenerSet и HTTPRoute. Порядок их настройки и пример публикации приложения приведены в разделе [«Публикация приложения с ListenerSet и HTTPRoute»]((../../../../../user/network/ingress/alb/gateway-api.html#publishing-with-listenerset-and-httproute).
 
 {% endtab %}
 {% endtabs %}
@@ -209,12 +209,12 @@ spec:
 
 Объекты HTTPRoute, GRPCRoute и TLSRoute привязываются к ListenerSet. TCPRoute и UDPRoute для TCP/UDP-портов из [`additionalPorts`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-additionalports) привязываются напрямую к слушателю объекта Gateway.
 
-Пример создания HTTPRoute для HTTP и HTTPS-трафика и другие сценарии публикации — в разделе [«Публикация приложения с ListenerSet и HTTPRoute»](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html#publishing-with-listenerset-and-httproute).
+Пример создания HTTPRoute для HTTP и HTTPS-трафика и другие сценарии публикации — в разделе [«Публикация приложения с ListenerSet и HTTPRoute»](../../../../../user/network/ingress/alb/gateway-api.html#publishing-with-listenerset-and-httproute).
 
 ## Публикация служебных доменов {#публикация-служебных-доменов}
 
 {% alert level="warning" %}
-Если нужно публиковать служебные домены, укажите глобальный параметр [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) — без него системные объекты HTTPRoute/Gateway/ListenerSet для служебных доменов не будут работать корректно, и веб-интерфейсы служебных компонентов DKP и других модулей не будут опубликованы. Если публикация служебных доменов не нужна, параметр можно не указывать.
+Если нужно публиковать служебные домены, укажите глобальный параметр [`publicDomainTemplate`]((../../../../../reference/api/global.html#parameters-modules-publicdomaintemplate) — без него системные объекты HTTPRoute/Gateway/ListenerSet для служебных доменов не будут работать корректно, и веб-интерфейсы служебных компонентов DKP и других модулей не будут опубликованы. Если публикация служебных доменов не нужна, параметр можно не указывать.
 {% endalert %}
 
 Для предоставления доступа к служебным доменам кластера DKP укажите шлюз по умолчанию. Создайте ClusterALBInstance с нужным типом инлета и [настройками](/modules/alb/cr.html#clusteralbinstance) и установите для него параметр [`spec.defaultDeckhouseGateway: true`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-defaultdeckhousegateway).
@@ -450,7 +450,7 @@ spec:
 Если объект TCPRoute или UDPRoute создаётся в неймспейсе, отличном от неймспейса целевого Gateway, дополнительно создайте в неймспейсе Gateway объект [ReferenceGrant](https://gateway-api.sigs.k8s.io/reference/api-types/referencegrant/), разрешающий ссылки из неймспейса маршрута.
 {% endalert %}
 
-Примеры UDPRoute и шаги публикации приложений — в разделе [«Работа с объектами GRPCRoute, TLSRoute, TCPRoute и UDPRoute»](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html#grpcroute-tlsroute-tcproute-and-udproute-objects).
+Примеры UDPRoute и шаги публикации приложений — в разделе [«Работа с объектами GRPCRoute, TLSRoute, TCPRoute и UDPRoute»]((../../../../../user/network/ingress/alb/gateway-api.html#grpcroute-tlsroute-tcproute-and-udproute-objects).
 
 ### Разделение публичной и административной зон {#public-and-admin-zones}
 
@@ -485,7 +485,7 @@ spec:
     - 10.0.0.0/16
 ```
 
-Далее для каждого шлюза создайте отдельные объекты ListenerSet и маршруты. Примеры публикации приложений приведены в разделе [«Публикация приложения с ListenerSet и HTTPRoute»](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html#publishing-with-listenerset-and-httproute).
+Далее для каждого шлюза создайте отдельные объекты ListenerSet и маршруты. Примеры публикации приложений приведены в разделе [«Публикация приложения с ListenerSet и HTTPRoute»]((../../../../../user/network/ingress/alb/gateway-api.html#publishing-with-listenerset-and-httproute).
 
 ### Публикация в неймспейсе (ALBInstance) {#namespaced-load-balancer}
 
@@ -504,7 +504,7 @@ spec:
     loadBalancer: {}
 ```
 
-После перехода ALBInstance в состояние `Ready` создайте в том же неймспейсе объекты ListenerSet и HTTPRoute. Порядок их настройки и пример публикации приложения приведены в разделе [«Публикация приложения с ListenerSet и HTTPRoute»](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html#publishing-with-listenerset-and-httproute).
+После перехода ALBInstance в состояние `Ready` создайте в том же неймспейсе объекты ListenerSet и HTTPRoute. Порядок их настройки и пример публикации приложения приведены в разделе [«Публикация приложения с ListenerSet и HTTPRoute»]((../../../../../user/network/ingress/alb/gateway-api.html#publishing-with-listenerset-and-httproute).
 
 ### Выпуск TLS-сертификатов с cert-manager {#tls-cert-manager}
 

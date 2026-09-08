@@ -5,23 +5,13 @@ description: "Publishing applications using the Kubernetes Gateway API."
 extractedLinksMax: 4
 relatedLinks:
   - title: "Migrating from ingress-nginx to alb"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/migration.html
+    url: migration.html
   - title: "Publishing applications with Kubernetes Gateway API"
-    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html
+    url: ../../../../../user/network/ingress/alb/gateway-api.html
   - title: "Incoming traffic balancing"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/
+    url: ../
   - title: "alb module documentation"
     url: /modules/alb/
-  - title: "alb module configuration"
-    url: /modules/alb/configuration.html
-  - title: "alb module Custom Resources"
-    url: /modules/alb/cr.html
-  - title: "alb module FAQ"
-    url: /modules/alb/faq.html
-  - title: "alb module examples"
-    url: /modules/alb/examples.html
-  - title: "cert-manager module documentation"
-    url: /modules/cert-manager/
 ---
 
 To implement ALB using the [Kubernetes Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/), the [`alb`](/modules/alb/) module is used.
@@ -47,7 +37,7 @@ The module supports:
 
 Kubernetes Gateway API and an API gateway serve different purposes. The Kubernetes Gateway API is a set of Kubernetes resources that describe how inbound traffic is routed to services. An API gateway is an architectural component that aggregates application APIs behind a single entry point. The `alb` module is an implementation of the Kubernetes Gateway API.
 
-For a capability comparison with `ingress-nginx`, open the ["Comparison of the ingress-nginx and alb modules"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/#comparison-of-the-ingress-nginx-and-alb-modules) section.
+For a capability comparison with `ingress-nginx`, open the ["Comparison of the ingress-nginx and alb modules"](../../../../../user/network/ingress/#comparison-of-the-ingress-nginx-and-alb-modules) section.
 
 ### Object roles
 
@@ -107,8 +97,8 @@ Publishing an application includes enabling the module, creating a managed Gatew
 
 Before enabling and configuring ALB in a DKP cluster, do the following:
 
-- Verify that the [requirements](/modules/alb/configuration.html#requirements) for the `alb` module are met.
-- If you need to publish service domains — web interfaces of [DKP service components](/products/kubernetes-platform/documentation/v1/user/web/ui.html) and other modules — set the global parameter [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate). Without this parameter, system HTTPRoute, Gateway, and ListenerSet objects for service domains will not work correctly, and the web interfaces will not be published. If you do not need to publish service domains, you can leave this parameter unset. Details are in ["Publishing service domains"](#publishing-service-domains).
+- Verify that the [requirements](../../../../../modules/alb/configuration.html#requirements) for the `alb` module are met.
+- If you need to publish service domains — web interfaces of [DKP service components](../../../../../user/web/ui.html) and other modules — set the global parameter [`publicDomainTemplate`](../../../../../reference/api/global.html#parameters-modules-publicdomaintemplate). Without this parameter, system HTTPRoute, Gateway, and ListenerSet objects for service domains will not work correctly, and the web interfaces will not be published. If you do not need to publish service domains, you can leave this parameter unset. Details are in ["Publishing service domains"](#publishing-service-domains).
 - Check API version compatibility in ["Alongside third-party Gateway API implementations"](#alongside-third-party-gateway-api) if such solutions are already used in the cluster.
 - On bare metal, for the [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer) inlet prepare an external load balancer or the [`metallb`](/modules/metallb/) module. The [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) inlet is available for ClusterALBInstance only and does not require MetalLB.
 
@@ -157,7 +147,7 @@ spec:
     loadBalancer: {}
 ```
 
-After the ALBInstance reaches the `Ready` state, create ListenerSet and HTTPRoute objects in the same namespace. Next steps are in ["Publishing an application with ListenerSet and HTTPRoute"](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html#publishing-with-listenerset-and-httproute).
+After the ALBInstance reaches the `Ready` state, create ListenerSet and HTTPRoute objects in the same namespace. Next steps are in ["Publishing an application with ListenerSet and HTTPRoute"](../../../../../user/network/ingress/alb/gateway-api.html#publishing-with-listenerset-and-httproute).
 
 {% endtab %}
 {% endtabs %}
@@ -215,12 +205,12 @@ The following route types are used to route incoming requests:
 - TCPRoute: For routing TCP traffic. For TCP ports from [`additionalPorts`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-additionalports), attach TCPRoute directly to the Gateway listener, not to a ListenerSet.
 - UDPRoute: For routing UDP traffic. For UDP ports from [`additionalPorts`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-additionalports), attach UDPRoute directly to the Gateway listener, not to a ListenerSet.
 
-An example of creating an HTTPRoute for HTTP and HTTPS traffic, and other publishing scenarios, are in ["Publishing an application with ListenerSet and HTTPRoute"](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html#publishing-with-listenerset-and-httproute).
+An example of creating an HTTPRoute for HTTP and HTTPS traffic, and other publishing scenarios, are in ["Publishing an application with ListenerSet and HTTPRoute"](../../../../../user/network/ingress/alb/gateway-api.html#publishing-with-listenerset-and-httproute).
 
 ## Publishing service domains {#publishing-service-domains}
 
 {% alert level="warning" %}
-If you need to publish service domains, set the global parameter [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate) — without it, system HTTPRoute/Gateway/ListenerSet objects for service domains will not work correctly, and the web interfaces of DKP service components and other modules will not be published. If you do not need to publish service domains, you can leave this parameter unset.
+If you need to publish service domains, set the global parameter [`publicDomainTemplate`](../../../../../reference/api/global.html#parameters-modules-publicdomaintemplate) — without it, system HTTPRoute/Gateway/ListenerSet objects for service domains will not work correctly, and the web interfaces of DKP service components and other modules will not be published. If you do not need to publish service domains, you can leave this parameter unset.
 {% endalert %}
 
 To provide access to the DKP cluster’s service domains, specify a default gateway. Create a ClusterALBInstance with the desired inlet type and [configuration](/modules/alb/cr.html#clusteralbinstance), and set [`spec.defaultDeckhouseGateway: true`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-defaultdeckhousegateway) on it.
@@ -463,7 +453,7 @@ spec:
 If a TCPRoute or UDPRoute object is created in a namespace different from the Gateway object namespace, create a [ReferenceGrant](https://gateway-api.sigs.k8s.io/reference/api-types/referencegrant/) object in the Gateway's namespace that allows references from the route's namespace.
 {% endalert %}
 
-UDPRoute examples and application publishing steps are in ["Working with GRPCRoute, TLSRoute, TCPRoute, and UDPRoute objects"](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html#grpcroute-tlsroute-tcproute-and-udproute-objects).
+UDPRoute examples and application publishing steps are in ["Working with GRPCRoute, TLSRoute, TCPRoute, and UDPRoute objects"](../../../../../user/network/ingress/alb/gateway-api.html#grpcroute-tlsroute-tcproute-and-udproute-objects).
 
 ### Separating public and administrative zones {#public-and-admin-zones}
 
@@ -498,7 +488,7 @@ spec:
     - 10.0.0.0/16
 ```
 
-Then create separate ListenerSet objects and routes for each gateway. Application publishing examples are in ["Publishing an application with ListenerSet and HTTPRoute"](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html#publishing-with-listenerset-and-httproute).
+Then create separate ListenerSet objects and routes for each gateway. Application publishing examples are in ["Publishing an application with ListenerSet and HTTPRoute"](../../../../../user/network/ingress/alb/gateway-api.html#publishing-with-listenerset-and-httproute).
 
 ### Namespaced publishing (ALBInstance) {#namespaced-load-balancer}
 
@@ -517,7 +507,7 @@ spec:
     loadBalancer: {}
 ```
 
-After the ALBInstance reaches the `Ready` state, create ListenerSet and HTTPRoute objects in the same namespace. Next steps are in ["Publishing an application with ListenerSet and HTTPRoute"](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html#publishing-with-listenerset-and-httproute).
+After the ALBInstance reaches the `Ready` state, create ListenerSet and HTTPRoute objects in the same namespace. Next steps are in ["Publishing an application with ListenerSet and HTTPRoute"](../../../../../user/network/ingress/alb/gateway-api.html#publishing-with-listenerset-and-httproute).
 
 ### Issuing TLS certificates with cert-manager {#tls-cert-manager}
 

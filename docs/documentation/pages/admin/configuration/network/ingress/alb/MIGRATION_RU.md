@@ -100,9 +100,9 @@ relatedLinks:
 При выборе типа экземпляра учитывайте следующее:
 
 - Используйте [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance) для общего или платформенного объекта Gateway, публикации системных интерфейсов DKP, а также если требуется инлет `HostPort`.
-- Для публикации системных интерфейсов DKP выполните инструкции из раздела [«Публикация служебных доменов»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#публикация-служебных-доменов).
+- Для публикации системных интерфейсов DKP выполните инструкции из раздела [«Публикация служебных доменов»](alb-gateway-api.html#публикация-служебных-доменов).
 - Используйте [ALBInstance](/modules/alb/cr.html#albinstance-v1alpha1-spec) для объекта Gateway, выделенного приложению или команде и управляемого в пределах соответствующего неймспейса. ALBInstance поддерживает инлеты `LoadBalancer` и `ClusterIP`. Для миграции с `ingress-nginx` актуален инлет `LoadBalancer`.
-- Подробное сравнение приведено в разделе [«ClusterALBInstance и ALBInstance»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#clusteralbinstance-and-albinstance).
+- Подробное сравнение приведено в разделе [«ClusterALBInstance и ALBInstance»](alb-gateway-api.html#clusteralbinstance-and-albinstance).
 
 ### Настройка инлета {#inlet-configuration}
 
@@ -159,7 +159,7 @@ relatedLinks:
 Если `ingress-nginx` и `alb` используются одновременно, а сертификаты выпускаются объектами Issuer или ClusterIssuer с механизмом проверки HTTP-01, используйте отдельные ресурсы Certificate и отдельные объекты Secret для путей Ingress API и Gateway API. Иначе возможны конфликты при выпуске или продлении сертификата.
 {% endalert %}
 
-Для [объекта Gateway DKP по умолчанию](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#публикация-служебных-доменов) DKP создаёт отдельный ClusterIssuer с механизмом проверки HTTP-01 Let's Encrypt. Отдельные Certificate и Secret нужны только для объектов Issuer и ClusterIssuer с HTTP-01 и не требуются для объектов, настроенных исключительно на DNS-01.
+Для [объекта Gateway DKP по умолчанию](alb-gateway-api.html#публикация-служебных-доменов) DKP создаёт отдельный ClusterIssuer с механизмом проверки HTTP-01 Let's Encrypt. Отдельные Certificate и Secret нужны только для объектов Issuer и ClusterIssuer с HTTP-01 и не требуются для объектов, настроенных исключительно на DNS-01.
 
 Инструкции по настройке Issuer или ClusterIssuer с механизмом проверки HTTP-01 через Gateway API приведены в разделе [«Добавление собственного HTTP-01 ClusterIssuer или Issuer для ALB»](/modules/alb/faq.html#custom-http01-clusterissuer-alb).
 
@@ -171,7 +171,7 @@ relatedLinks:
 
 ## Шаг 2. Миграция интерфейсов DKP {#step-2-migrating-dkp-interfaces}
 
-Если системные интерфейсы DKP публикуются через Ingress и их нужно перевести на Gateway API, выполните инструкции из раздела [«Публикация служебных доменов»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#публикация-служебных-доменов).
+Если системные интерфейсы DKP публикуются через Ingress и их нужно перевести на Gateway API, выполните инструкции из раздела [«Публикация служебных доменов»](alb-gateway-api.html#публикация-служебных-доменов).
 
 {% alert level="info" %}
 Не все модули DKP пока публикуют служебные HTTPRoute через Gateway API. Команда `jq` из этого раздела покажет, какие модули уже делают это в вашем кластере, — это фактический список опубликованных маршрутов, а не полный перечень возможностей платформы.
@@ -267,7 +267,7 @@ relatedLinks:
 
 По мере развития Gateway API модуль `alb` будет постепенно заменять аннотации соответствующими стандартными ресурсами и полями.
 
-При миграции по возможности используйте стандартные поля Gateway API, а аннотации `ingress-nginx` заменяйте только поддерживаемыми аннотациями `alb` — в том числе после применения `gateway-api.yaml`. Актуальный список приведён в разделе [«Поддерживаемые аннотации HTTPRoute»](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html#поддерживаемые-аннотации-httproute).
+При миграции по возможности используйте стандартные поля Gateway API, а аннотации `ingress-nginx` заменяйте только поддерживаемыми аннотациями `alb` — в том числе после применения `gateway-api.yaml`. Актуальный список приведён в разделе [«Поддерживаемые аннотации HTTPRoute»](../../../../../user/network/ingress/alb/gateway-api.html#поддерживаемые-аннотации-httproute).
 
 Утилита `ingress2gateway` формирует черновик ресурсов Gateway API и не переносит все аннотации `ingress-nginx` автоматически. После преобразования сверьте Ingress с таблицей ниже и перенесите нужные параметры вручную.
 
@@ -275,7 +275,7 @@ relatedLinks:
 | --- | --- |
 | `nginx.ingress.kubernetes.io/whitelist-source-range` | Аннотация HTTPRoute `alb.network.deckhouse.io/whitelist-source-range` |
 | `nginx.ingress.kubernetes.io/service-upstream` | Аннотация HTTPRoute `alb.network.deckhouse.io/service-upstream` |
-| `nginx.ingress.kubernetes.io/upstream-vhost` | Фильтр `URLRewrite` с `hostname` в HTTPRoute ([публикация с Istio-сайдкаром](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html#publishing-with-istio-sidecar)) |
+| `nginx.ingress.kubernetes.io/upstream-vhost` | Фильтр `URLRewrite` с `hostname` в HTTPRoute ([публикация с Istio-сайдкаром](../../../../../user/network/ingress/alb/gateway-api.html#publishing-with-istio-sidecar)) |
 | `nginx.ingress.kubernetes.io/auth-url` / `auth-signin` | Аннотации HTTPRoute `alb.network.deckhouse.io/auth-url` и `alb.network.deckhouse.io/auth-signin` |
 | `nginx.ingress.kubernetes.io/auth-type: basic` и Secret | Аннотация HTTPRoute `alb.network.deckhouse.io/basic-auth-secret` |
 | `nginx.ingress.kubernetes.io/limit-rps` | Аннотация HTTPRoute `alb.network.deckhouse.io/limit-rps` |
@@ -520,5 +520,5 @@ DNS не позволяет выбрать контроллеры, исполь�
 1. Верните обычные значения TTL DNS, убедившись, что клиенты больше не используют старую точку входа.
 
 {% alert level="info" %}
-Часть интерфейсов DKP может по-прежнему публиковаться через Ingress API. Не отключайте модуль `ingress-nginx` и не удаляйте связанные объекты, пока нужные интерфейсы не опубликованы через Gateway API и не проверены. Инструкция находится в разделе [«Публикация служебных доменов»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#публикация-служебных-доменов).
+Часть интерфейсов DKP может по-прежнему публиковаться через Ingress API. Не отключайте модуль `ingress-nginx` и не удаляйте связанные объекты, пока нужные интерфейсы не опубликованы через Gateway API и не проверены. Инструкция находится в разделе [«Публикация служебных доменов»](alb-gateway-api.html#публикация-служебных-доменов).
 {% endalert %}

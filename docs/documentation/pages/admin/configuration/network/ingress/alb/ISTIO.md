@@ -5,13 +5,11 @@ description: "Configure Application Load Balancer with Istio in Deckhouse Kubern
 extractedLinksMax: 4
 relatedLinks:
   - title: "Publishing applications using Istio"
-    url: /products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html
+    url: ../../../../../user/network/ingress/alb/istio.html
   - title: "Incoming traffic balancing"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/
+    url: ../
   - title: "istio module documentation"
     url: /modules/istio/
-  - title: "istio module Custom Resources"
-    url: /modules/istio/cr.html
 ---
 
 ALB with Istio is implemented via [Istio Ingress Gateway](#istio-ingress-gateway) or [Ingress NGINX](#ingress-nginx).
@@ -19,7 +17,7 @@ The [`istio`](/modules/istio/) module is used for this purpose.
 
 Use this option when you need advanced traffic management in a service mesh, for example canary routing or mTLS. Configuration details are in the [`istio`](/modules/istio/) module documentation.
 
-Creating an [IngressIstioController](/modules/istio/cr.html) and preparing infrastructure is a cluster administrator task. Application publishing with Gateway and VirtualService resources, including [canary deployment](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#canary-deployment-with-virtualservice), is described in ["Publishing applications using Istio Ingress Gateway resource"](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#publishing-applications-using-istio-ingress-gateway-resource).
+Creating an [IngressIstioController](/modules/istio/cr.html) and preparing infrastructure is a cluster administrator task. Application publishing with Gateway and VirtualService resources, including [canary deployment](../../../../../user/network/ingress/alb/istio.html#canary-deployment-with-virtualservice), is described in ["Publishing applications using Istio Ingress Gateway resource"](../../../../../user/network/ingress/alb/istio.html#publishing-applications-using-istio-ingress-gateway-resource).
 
 ## Ingress to publish applications
 
@@ -74,10 +72,10 @@ To publish the application using the Istio Ingress Gateway, follow these steps:
 
 Supported Secret formats are in the [Istio guide on key formats](https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats).
 
-Application developers then create the Gateway and VirtualService resources. Examples, including [canary deployment](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#canary-deployment-with-virtualservice), are in ["Publishing applications using Istio Ingress Gateway resource"](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#publishing-applications-using-istio-ingress-gateway-resource).
+Application developers then create the Gateway and VirtualService resources. Examples, including [canary deployment](../../../../../user/network/ingress/alb/istio.html#canary-deployment-with-virtualservice), are in ["Publishing applications using Istio Ingress Gateway resource"](../../../../../user/network/ingress/alb/istio.html#publishing-applications-using-istio-ingress-gateway-resource).
 
 ### Ingress NGINX {#ingress-nginx}
 
 To publish through Ingress NGINX with an Istio sidecar, enable the `enableIstioSidecar` parameter in the [IngressNginxController](/modules/ingress-nginx/cr.html#ingressnginxcontroller) of the [`ingress-nginx`](/modules/ingress-nginx/) module and share the `ingressClass` name with application developers.
 
-Ingress and Service manifests with the required annotations are in ["Publishing applications using Ingress NGINX"](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#publishing-applications-using-ingress-nginx).
+Ingress and Service manifests with the required annotations are in ["Publishing applications using Ingress NGINX"](../../../../..//user/network/ingress/alb/istio.html#publishing-applications-using-ingress-nginx).

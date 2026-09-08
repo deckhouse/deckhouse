@@ -5,11 +5,11 @@ description: "Migrate from the ingress-nginx module to the alb module in Deckhou
 extractedLinksMax: 4
 relatedLinks:
   - title: "ALB with Kubernetes Gateway API"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html
+    url: alb-gateway-api.html
   - title: "ALB with Ingress NGINX Controller"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/nginx.html
+    url: nginx.html
   - title: "Incoming traffic balancing overview"
-    url: /products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/
+    url: ../
   - title: "The alb module documentation"
     url: /modules/alb/
 ---
@@ -99,9 +99,9 @@ On this step, choose the `alb` module instance type (ClusterALBInstance or ALBIn
 When choosing the instance type, keep the following in mind:
 
 - Use [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance) for a shared or platform-level Gateway, for publishing DKP system interfaces, or when the `HostPort` inlet is required.
-- To publish DKP system interfaces, follow [Publishing service domains](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#publishing-service-domains).
+- To publish DKP system interfaces, follow [Publishing service domains](alb-gateway-api.html#publishing-service-domains).
 - Use [ALBInstance](/modules/alb/cr.html#albinstance-v1alpha1-spec) for a Gateway dedicated to an application or team and managed within its namespace. ALBInstance supports the `LoadBalancer` and `ClusterIP` inlets; for migration from `ingress-nginx`, `LoadBalancer` is the relevant one.
-- A detailed comparison is in [ClusterALBInstance and ALBInstance](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#clusteralbinstance-and-albinstance).
+- A detailed comparison is in [ClusterALBInstance and ALBInstance](alb-gateway-api.html#clusteralbinstance-and-albinstance).
 
 ### Inlet configuration {#inlet-configuration}
 
@@ -158,7 +158,7 @@ The inlet type is immutable for both ClusterALBInstance and ALBInstance. To chan
 When `ingress-nginx` and `alb` are used simultaneously and certificates are issued by Issuer or ClusterIssuer resources with HTTP-01 solvers, use separate Certificate resources and Secret objects for the Ingress API and Gateway API paths. Otherwise certificate issuance or renewal may conflict.
 {% endalert %}
 
-DKP provisions a Gateway-specific ClusterIssuer with a Let's Encrypt HTTP-01 solver for the [default DKP Gateway](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#publishing-service-domains). Separate Certificate and Secret objects are required only for Issuer and ClusterIssuer resources with HTTP-01 solvers. This does not apply to resources configured exclusively with DNS-01 solvers.
+DKP provisions a Gateway-specific ClusterIssuer with a Let's Encrypt HTTP-01 solver for the [default DKP Gateway](alb-gateway-api.html#publishing-service-domains). Separate Certificate and Secret objects are required only for Issuer and ClusterIssuer resources with HTTP-01 solvers. This does not apply to resources configured exclusively with DNS-01 solvers.
 
 Instructions for configuring an HTTP-01 issuer with the Gateway API solver are in ["Adding a custom HTTP-01 ClusterIssuer or Issuer for ALB"](/modules/alb/faq.html#custom-http01-clusterissuer-alb).
 
@@ -170,7 +170,7 @@ To finish preparing the infrastructure, do the following:
 
 ## Step 2. Migrating DKP interfaces {#step-2-migrating-dkp-interfaces}
 
-If DKP system interfaces are published through Ingress and must move to the Gateway API, follow [Publishing service domains](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#publishing-service-domains).
+If DKP system interfaces are published through Ingress and must move to the Gateway API, follow [Publishing service domains](alb-gateway-api.html#publishing-service-domains).
 
 {% alert level="info" %}
 Not every DKP module publishes service HTTPRoute objects through the Gateway API yet. The `jq` command from that section shows which modules already do this in your cluster — it lists the routes actually published, not the full set of capabilities the platform supports.
@@ -265,7 +265,7 @@ The Gateway API specification does not cover every implementation-specific traff
 
 As the corresponding features become available in the Gateway API, the `alb` module will gradually replace annotation-based configuration with native Gateway API resources and fields.
 
-During migration, use standard Gateway API fields where possible and replace `ingress-nginx` annotations only with supported `alb` annotations — including after you apply `gateway-api.yaml`. The current list is in ["Supported HTTPRoute annotations"](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html#supported-httproute-annotations).
+During migration, use standard Gateway API fields where possible and replace `ingress-nginx` annotations only with supported `alb` annotations — including after you apply `gateway-api.yaml`. The current list is in ["Supported HTTPRoute annotations"](../../../../..//user/network/ingress/alb/gateway-api.html#supported-httproute-annotations).
 
 The `ingress2gateway` utility produces a draft of Gateway API resources and **does not** migrate every `ingress-nginx` annotation automatically. After conversion, compare the Ingress with the table below and apply the required settings manually.
 
@@ -273,7 +273,7 @@ The `ingress2gateway` utility produces a draft of Gateway API resources and **do
 | --- | --- |
 | `nginx.ingress.kubernetes.io/whitelist-source-range` | HTTPRoute annotation `alb.network.deckhouse.io/whitelist-source-range` |
 | `nginx.ingress.kubernetes.io/service-upstream` | HTTPRoute annotation `alb.network.deckhouse.io/service-upstream` |
-| `nginx.ingress.kubernetes.io/upstream-vhost` | HTTPRoute `URLRewrite` filter with `hostname` (see [publishing with an Istio sidecar](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/gateway-api.html#publishing-with-istio-sidecar)) |
+| `nginx.ingress.kubernetes.io/upstream-vhost` | HTTPRoute `URLRewrite` filter with `hostname` (see [publishing with an Istio sidecar](../../../../../user/network/ingress/alb/gateway-api.html#publishing-with-istio-sidecar)) |
 | `nginx.ingress.kubernetes.io/auth-url` / `auth-signin` | HTTPRoute annotations `alb.network.deckhouse.io/auth-url` and `alb.network.deckhouse.io/auth-signin` |
 | `nginx.ingress.kubernetes.io/auth-type: basic` and a Secret | HTTPRoute annotation `alb.network.deckhouse.io/basic-auth-secret` |
 | `nginx.ingress.kubernetes.io/limit-rps` | HTTPRoute annotation `alb.network.deckhouse.io/limit-rps` |
@@ -518,5 +518,5 @@ After the rollback window closes, do the following:
 1. Restore normal DNS TTLs after confirming that no clients use the old entry point.
 
 {% alert level="info" %}
-Some DKP interfaces may still be published through the Ingress API. Do not disable the `ingress-nginx` module or delete related objects until the required interfaces are published through the Gateway API and validated. Follow ["Publishing service domains"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#publishing-service-domains).
+Some DKP interfaces may still be published through the Ingress API. Do not disable the `ingress-nginx` module or delete related objects until the required interfaces are published through the Gateway API and validated. Follow ["Publishing service domains"](alb-gateway-api.html#publishing-service-domains).
 {% endalert %}
