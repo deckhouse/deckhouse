@@ -32,6 +32,7 @@
 
   {{- $csiControllerConfig := dict }}
   {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}
+  {{- $_ := set $csiControllerConfig "capacityEnabled" false }}
   {{- $_ := set $csiControllerConfig "additionalControllerArgs" (include "csi_controller_args" . | fromYamlArray) }}
   {{- $_ := set $csiControllerConfig "additionalControllerEnvs" (include "csi_controller_envs" . | fromYamlArray) }}
   {{- $_ := set $csiControllerConfig "additionalControllerVolumes" (include "csi_controller_volumes" . | fromYamlArray) }}
