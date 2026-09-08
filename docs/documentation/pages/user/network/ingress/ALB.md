@@ -36,6 +36,8 @@ Application deployment and application-level traffic balancing in Deckhouse Kube
 
 ## Comparison of ALB options
 
+The following sections describe each ALB option and typical scenarios for using it.
+
 ### Ingress NGINX
 
 ALB based on the Ingress NGINX Controller uses the nginx web server and is implemented by the [`ingress-nginx`](/modules/ingress-nginx/) module.
@@ -104,6 +106,8 @@ Before publishing an application, check which ALB mechanisms are enabled and con
 Ask the cluster administrator for the IngressClass, Gateway name and namespace, or Istio ingress class to use in application manifests.
 
 ## Next steps
+
+After setting up the infrastructure, do the following:
 
 - Publish an application with [Kubernetes Gateway API](alb/gateway-api.html#publishing-with-listenerset-and-httproute) (`alb` module).
 - Publish an application with [Ingress NGINX Controller](alb/nginx.html) (`ingress-nginx` module).

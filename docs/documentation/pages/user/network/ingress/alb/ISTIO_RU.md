@@ -15,20 +15,17 @@ relatedLinks:
 
 ## Публикация приложений средствами Istio
 
-Публикация средствами Istio настраивается в два слоя. Администратор кластера разворачивает [IngressIstioController](/modules/istio/cr.html) (и связанную инфраструктуру) в разделе [«Istio Ingress Gateway»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/istio.html#istio-ingress-gateway). Разработчики приложения создают ресурсы Gateway и VirtualService, как показано ниже.
+Публикация средствами Istio настраивается в два слоя. Администратор кластера разворачивает [IngressIstioController](/modules/istio/cr.html) (и связанную инфраструктуру), как описано в разделе [«Istio Ingress Gateway»](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/istio.html#istio-ingress-gateway). Разработчики приложения создают ресурсы Gateway и VirtualService, как показано ниже.
 
-При публикации приложения средствами Istio можно выбрать один из вариантов:
-
-- [«Использование Ingress NGINX»](#публикация-приложений-с-использованием-ingress-nginx).
-- [«Использование Istio Ingress Gateway»](#публикация-приложений-с-использованием-ресурса-istio-ingress-gateway).
+При публикации приложения средствами Istio выберите один из способов: [«Публикация приложений с использованием Ingress NGINX»](#публикация-приложений-с-использованием-ingress-nginx) или [«Публикация приложений с использованием ресурса Istio Ingress Gateway»](#публикация-приложений-с-использованием-ресурса-istio-ingress-gateway).
 
 ### Публикация приложений с использованием Ingress NGINX {#публикация-приложений-с-использованием-ingress-nginx}
 
-Для публикации приложения средствами Ingress NGINX администратор DKP должен настроить Ingress-контроллер, добавив к нему сайдкар от Istio.
+Для публикации приложения средствами Ingress NGINX администратор кластера должен настроить Ingress-контроллер, добавив к нему сайдкар от Istio.
 
 Для публикации приложения подготовьте Ingress-ресурс, который ссылается на сервис. Укажите `ingressClassName` контроллера с Istio-сайдкаром (значение сообщит администратор). Обязательные аннотации для Ingress-ресурса:
 
-- `nginx.ingress.kubernetes.io/service-upstream: "true"` — с этой аннотацией Ingress-контроллер будет отправлять запросы на ClusterIP сервиса (из диапазона Service CIDR) вместо того, чтобы отправлять их напрямую в поды приложения. Сайдкар-контейнер `istio-proxy` перехватывает трафик только в сторону диапазона Service CIDR, остальные запросы отправляются напрямую;
+- `nginx.ingress.kubernetes.io/service-upstream: "true"` — с этой аннотацией Ingress-контроллер будет отправлять запросы на ClusterIP сервиса (из диапазона Service CIDR) вместо того, чтобы отправлять их напрямую в поды приложения. Сайдкар-контейнер `istio-proxy` перехватывает только этот трафик, остальные запросы отправляются напрямую;
 - `nginx.ingress.kubernetes.io/upstream-vhost: productpage.bookinfo.svc` — с этой аннотацией сайдкар сможет идентифицировать прикладной сервис, для которого предназначен запрос.
 
 Примеры:
@@ -47,7 +44,8 @@ metadata:
     # вместо него используется внутренний домен, уже известный Istio.
     nginx.ingress.kubernetes.io/upstream-vhost: productpage.bookinfo.svc
 spec:
-  ingressClassName: nginx # Имя IngressClass контроллера с Istio-сайдкаром.
+  # Имя IngressClass контроллера с Istio-сайдкаром.
+  ingressClassName: nginx
   rules:
     - host: productpage.example.com
       http:
@@ -78,9 +76,9 @@ spec:
 
 ### Публикация приложений с использованием ресурса Istio Ingress Gateway {#публикация-приложений-с-использованием-ресурса-istio-ingress-gateway}
 
-Для публикации приложения средствами Istio Ingress Gateway администратор DKP должен создать ресурс [IngressIstioController](/modules/istio/cr.html).
+Для публикации приложения средствами Istio Ingress Gateway администратор кластера должен создать ресурс [IngressIstioController](/modules/istio/cr.html).
 
-Для публикации приложения с использованием ресурса Istio Ingress Gateway создайте ресурс Gateway. В поле `spec.selector` укажите лейбл, ссылающийся на ingressGatewayClass, и имя секрета, полученные от администратора кластера:
+Для публикации приложения с использованием ресурса Istio Ingress Gateway создайте ресурс Gateway. В поле `spec.selector` укажите лейбл, ссылающийся на `ingressGatewayClass`, и имя Secret, полученные от администратора кластера:
 
 ```yaml
 apiVersion: networking.istio.io/v1beta1
@@ -90,7 +88,7 @@ metadata:
   namespace: app-ns
 spec:
   selector:
-    # Селектор лейблов для использования Istio Ingress Gateway main-hp.
+    # Значение ingressGatewayClass, полученное от администратора кластера.
     istio.deckhouse.io/ingress-gateway-class: istio-hp
   servers:
     - port:
@@ -114,7 +112,7 @@ spec:
         - app.example.com
 ```
 
-Затем определите правила маршрутизации с помощью VirtualService, который связывает шлюз и обслуживаемый им сервис:
+Затем определите правила маршрутизации с помощью VirtualService, который связывает Gateway и обслуживаемый им сервис:
 
 ```yaml
 apiVersion: networking.istio.io/v1beta1
@@ -123,14 +121,16 @@ metadata:
   name: vs-app
   namespace: app-ns
 spec:
+  # Имя ресурса Gateway, созданного выше.
   gateways:
-    - gateway-app # Имя ресурса Gateway, созданного выше.
+    - gateway-app
   hosts:
     - app.example.com
   http:
     - route:
         - destination:
-            host: app-svc # Имя сервиса, на который нужно направить трафик.
+            # Имя сервиса, на который нужно направить трафик.
+            host: app-svc
 ```
 
 ### Canary-развёртывание через VirtualService {#canary-развёртывание-через-virtualservice}
@@ -177,7 +177,7 @@ spec:
           weight: 10
 ```
 
-Поды версий должны иметь лейблы `version: v1` и `version: v2`, совпадающие с subsets в DestinationRule. Перед изменением весов проверьте, что обе версии обслуживаются сервисом `app-svc`.
+Поды версий должны иметь лейблы `version: v1` и `version: v2`, совпадающие с `subsets` в DestinationRule. Перед изменением весов проверьте, что обе версии обслуживаются сервисом `app-svc`.
 
 После применения манифестов отправьте несколько запросов на `app.example.com` и проверьте, что трафик распределяется в заданной пропорции — примерно 90/10. Чтобы определить, какая версия ответила, используйте признак, отличающий `stable` от `canary` в самом приложении, например, значение в теле ответа или отдельный HTTP-заголовок:
 

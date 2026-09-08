@@ -112,7 +112,7 @@ spec:
     - app.example.com
   rules:
     - backendRefs:
-        - name: app-svc # Наименование сервиса приложения
+        - name: app-svc # Наименование сервиса приложения.
           port: 8080
 ```
 
@@ -169,7 +169,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
-          - name: grpc-tls   # Наименование секрета содержащего необходимый TLS-сертификат.
+          - name: grpc-tls   # Наименование объекта Secret, содержащего необходимый TLS-сертификат.
             namespace: prod
 ---
 apiVersion: gateway.networking.k8s.io/v1
@@ -193,9 +193,9 @@ spec:
           port: 9090
 ```
 
-#### TLS passthrough с TLSRoute
+#### Сквозная передача TLS с TLSRoute
 
-Для TLS passthrough, когда расшифровка трафика должна выполняться на стороне приложения, можно использовать либо слушателя TLS, либо слушателя HTTPS.
+Для сквозной передачи TLS (passthrough), когда расшифровка трафика должна выполняться на стороне приложения, можно использовать либо слушателя TLS, либо слушателя HTTPS.
 
 Дополнительные порты задаются в [`spec.inlet.additionalPorts`](/modules/alb/cr.html#albinstance-v1alpha1-spec-inlet-additionalports) объекта, который владеет шлюзом:
 
@@ -238,7 +238,7 @@ spec:
     namespace: prod
   listeners:
     - name: tls-pass
-      port: 8443 # В данном примере для TLS трафика переиспользуется порт 8443.
+      port: 8443 # В данном примере для TLS-трафика переиспользуется порт 8443.
       protocol: TLS
       hostname: pass.example.com
       tls:
@@ -256,7 +256,7 @@ spec:
       kind: ListenerSet
       group: gateway.networking.k8s.io
       sectionName: tls-pass
-      port: 8443 # В данном примере для TLS трафика переиспользуется порт 8443.
+      port: 8443 # В данном примере для TLS-трафика переиспользуется порт 8443.
   hostnames:
     - pass.example.com
   rules:
@@ -268,7 +268,7 @@ spec:
 {% endtab %}
 {% tab "Слушатель HTTPS" %}
 
-Вариант со слушателем HTTPS удобен, когда нужно использовать стандартный обработчик на порту `443`: дополнительный порт для TLS passthrough открывать не требуется.
+Вариант со слушателем HTTPS удобен, когда нужно использовать стандартный обработчик на порту `443`. Дополнительный порт для сквозной передачи TLS открывать не требуется.
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -282,7 +282,7 @@ spec:
     namespace: prod
   listeners:
     - name: https-pass
-      port: 443 # В данном примере для TLS трафика переиспользуется порт 443.
+      port: 443 # В данном примере для TLS-трафика переиспользуется порт 443.
       protocol: HTTPS
       hostname: pass.example.com
       tls:
@@ -300,7 +300,7 @@ spec:
       kind: ListenerSet
       group: gateway.networking.k8s.io
       sectionName: https-pass
-      port: 443 # В данном примере для TLS трафика переиспользуется порт 443.
+      port: 443 # В данном примере для TLS-трафика переиспользуется порт 443.
   hostnames:
     - pass.example.com
   rules:
@@ -328,13 +328,13 @@ spec:
     namespace: prod
   listeners:
     - name: tls-term
-      port: 443 # В данном примере для TLS трафика переиспользуется порт 443.
+      port: 443 # В данном примере для TLS-трафика переиспользуется порт 443.
       protocol: TLS
       hostname: term.example.com
       tls:
         mode: Terminate     # Режим TLS — терминация.
         certificateRefs:
-          - name: term-tls  # Наименование секрета содержащего необходимый TLS-сертификат.
+          - name: term-tls  # Наименование объекта Secret, содержащего необходимый TLS-сертификат.
             namespace: prod
 ---
 apiVersion: gateway.networking.k8s.io/v1alpha2
@@ -524,7 +524,7 @@ spec:
 
 ### Настройка параметров TLS через BackendTLSPolicy
 
-Если трафик от шлюза к бэкенду должен идти по TLS, создайте BackendTLSPolicy в неймспейсе бэкенд-объекта Service. В примере ниже — HTTPRoute, бэкенд Service с именованным портом, ConfigMap с CA bundle и BackendTLSPolicy с TLS-валидацией для этого бэкенда:
+Если трафик от шлюза к бэкенду должен идти по TLS, создайте BackendTLSPolicy в неймспейсе бэкенд-объекта Service. В примере ниже — HTTPRoute, бэкенд-объект Service с именованным портом, ConfigMap с CA bundle и BackendTLSPolicy с TLS-валидацией для этого бэкенда:
 
 ```yaml
 apiVersion: gateway.networking.k8s.io/v1
@@ -599,7 +599,7 @@ GeoIP и трассировку OpenTelemetry настраивает админ�
 | Аннотация | Описание |
 | :--- | :--- |
 | `alb.network.deckhouse.io/tls-disable-protocol` | Отключает протокол обработчика для маршрута с указанным именем хоста (например, значение `http2`). Может быть необходимо в редких случаях, когда используется общий сертификат с несколькими DNS-именами в сочетании с перенаправлением запросов |
-| `alb.network.deckhouse.io/whitelist-source-range` | Ожидает список подсетей в формате CIDR через запятую: фильтр по IP на уровне маршрута; переопределяет глобальный whitelist (например, `10.1.1.10/32, 10.2.2.2/32`) |
+| `alb.network.deckhouse.io/whitelist-source-range` | Список подсетей в формате CIDR через запятую. Задаёт фильтр по IP на уровне маршрута и переопределяет глобальный whitelist (например, `10.1.1.10/32, 10.2.2.2/32`) |
 | `alb.network.deckhouse.io/response-headers-to-add` | JSON-объект дополнительных заголовков ответа (например, `{"Strict-Transport-Security": "max-age=31536000; includeSubDomains"}`) |
 | `alb.network.deckhouse.io/session-affinity` | JSON для закрепления сессии (session affinity) с режимом cookie (`mode`, `path`, `cookieName`, `ttl` и др.); не все поля обязательны (например, `{"mode": "cookie", "path": "/path", "cookieName": "mycookie", "ttl": 0}`) |
 | `alb.network.deckhouse.io/hash-key` | Консистентный хеш для бэкендов Service у объекта HTTPRoute (например, `source-ip`) |
@@ -608,13 +608,13 @@ GeoIP и трассировку OpenTelemetry настраивает админ�
 | `alb.network.deckhouse.io/satisfy` | `all` или `any`: определяет, нужно ли пройти обе проверки (whitelist и basic-auth) или достаточно одной (по умолчанию `all`) |
 | `alb.network.deckhouse.io/auth-url` | Определяет URL внешнего сервиса аутентификации |
 | `alb.network.deckhouse.io/auth-signin` | Определяет URL редиректа для авторизации в случае получения `401` от внешней аутентификации |
-| `alb.network.deckhouse.io/auth-response-headers` | Список через запятую: дополнительные заголовки из ответа auth для передачи в upstream (поверх стандартного allowlist) |
+| `alb.network.deckhouse.io/auth-response-headers` | Список через запятую: дополнительные заголовки из ответа сервиса аутентификации для передачи в upstream (поверх стандартного allowlist) |
 | `alb.network.deckhouse.io/mod-security` | JSON-конфигурация для WAF ModSecurity/Coraza на уровне маршрута |
 | `alb.network.deckhouse.io/rewrite-target` | Позволяет переопределять URL-путь для правил с типом `RegularExpression` с использованием совпавших частей регулярного выражения (например, `/my-path/\1`) |
 | `alb.network.deckhouse.io/buffer-max-request-bytes` | Максимальный размер буфера для буферизации запроса, в байтах (целое число). По умолчанию Envoy Proxy не буферизует запросы |
 | `alb.network.deckhouse.io/limit-rps` | Лимит RPS на маршрут |
-| `alb.network.deckhouse.io/backend-tls-settings` | Например, `{"mode": "SIMPLE", "insecureSkipVerify": true, "clientCertificate": "", "privateKey": "", "caCertificates": "", "sni": "example.com", "secret": "<NAMESPACE>/<SECRET_NAME>"}`; позволяет явно указать параметры TLS подключения к upstream. `<NAMESPACE>` — неймспейс секрета; `<SECRET_NAME>` — имя секрета |
-| `alb.network.deckhouse.io/idle-timeout` | Устанавливает per-route Envoy `idle_timeout`, в секундах. Аналогично таймаутам `proxy-read-timeout`/`proxy-send-timeout` в `ingress-nginx`: это таймаут неактивности, а не таймаут общей длительности запроса |
+| `alb.network.deckhouse.io/backend-tls-settings` | Например, `{"mode": "SIMPLE", "insecureSkipVerify": true, "clientCertificate": "", "privateKey": "", "caCertificates": "", "sni": "example.com", "secret": "<NAMESPACE>/<SECRET_NAME>"}`; позволяет явно указать параметры TLS подключения к upstream. `<NAMESPACE>` — неймспейс Secret; `<SECRET_NAME>` — имя Secret |
+| `alb.network.deckhouse.io/idle-timeout` | Устанавливает `idle_timeout` Envoy на уровне маршрута, в секундах. Аналогично тайм-аутам `proxy-read-timeout`/`proxy-send-timeout` в `ingress-nginx`. Это тайм-аут неактивности, а не тайм-аут общей длительности запроса |
 | `alb.network.deckhouse.io/proxy-buffer-size` | Задаёт максимальный размер заголовков ответа в настройках upstream-кластера; при превышении этого значения Envoy возвращает `503`. Аналогично `nginx.ingress.kubernetes.io/proxy-buffer-size` |
 
 ### Публикация приложения при включённом Istio-сайдкаре {#publishing-with-istio-sidecar}
@@ -658,7 +658,7 @@ spec:
 
 ### WAF на HTTPRoute {#waf-on-httproute}
 
-Аннотация `alb.network.deckhouse.io/mod-security` позволяет включить WAF на базе ModSecurity/Coraza для отдельного HTTPRoute. Конфигурация WAF применяется только к маршруту, для которого указана аннотация, и не влияет на остальные маршруты.
+Аннотация `alb.network.deckhouse.io/mod-security` позволяет включить WAF (Web Application Firewall) на базе ModSecurity/Coraza для отдельного HTTPRoute. Конфигурация WAF применяется только к маршруту, для которого указана аннотация, и не влияет на остальные маршруты.
 
 Аннотация поддерживает следующие поля:
 

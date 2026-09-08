@@ -29,13 +29,15 @@ relatedLinks:
     url: /modules/istio/
 ---
 
-Публикация приложений и балансировка трафика на прикладном уровне в Deckhouse Kubernetes Platform (DKP) может выполняться средствами:
+Публикация приложений и балансировка трафика на прикладном уровне в Deckhouse Kubernetes Platform (DKP) могут выполняться средствами:
 
-- [Ingress NGINX Controller](alb/nginx.html) (модуль `ingress-nginx`).
-- [Kubernetes Gateway API](alb/gateway-api.html) (модуль `alb`).
+- [Ingress NGINX Controller](alb/nginx.html) (модуль `ingress-nginx`);
+- [Kubernetes Gateway API](alb/gateway-api.html) (модуль `alb`);
 - [Istio](alb/istio.html) (модуль `istio`).
 
 ## Сравнение вариантов ALB
+
+Ниже описаны особенности каждого варианта ALB и типичные сценарии их использования.
 
 ### Ingress NGINX
 
@@ -104,6 +106,8 @@ ALB на основе модуля [`istio`](/modules/istio/) поддержив
 Запросите у администратора кластера `ingressClass`, имя и неймспейс Gateway или класс Istio ingress для манифестов приложения.
 
 ## Следующие шаги
+
+После настройки инфраструктуры выполните следующие действия:
 
 - Публикация приложения:
   - средствами [Kubernetes Gateway API](alb/gateway-api.html#publishing-with-listenerset-and-httproute) (модуль `alb`);

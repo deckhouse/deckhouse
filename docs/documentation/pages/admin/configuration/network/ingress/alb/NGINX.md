@@ -422,7 +422,7 @@ In many applications, the same backend serves both the public part and the admin
 - `https://example.com` is the public zone;
 - `https://admin.example.com` is the administrative zone, access to which must be restricted (`ACL`, `mTLS`, `IP whitelist`, and so on).
 
-For this scenario, we recommend offloading administrative traffic to a separate Ingress controller (with a dedicated Ingress class if necessary) and restricting access to it by using the [`spec.acceptRequestsFrom`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter.
+For this scenario, offload administrative traffic to a separate Ingress controller (with a dedicated Ingress class if necessary) and restrict access to it by using the [`spec.acceptRequestsFrom`](/modules/ingress-nginx/cr.html#ingressnginxcontroller-v1-spec-acceptrequestsfrom) parameter.
 
 {% tabs Zone segregation options %}
 {% tab "Single Ingress controller" %}
@@ -480,7 +480,7 @@ With [processing and forwarding of X-Forwarded-* headers enabled](/modules/ingre
 
 #### Using separate Ingress controllers
 
-To avoid that situation, we recommend that you:
+To avoid that situation, do the following:
 
 - Configure access rules at the Ingress resource level.
 - Use separate Ingress controllers.

@@ -16,14 +16,11 @@ relatedLinks:
 
 Application publishing with Istio is configured in two layers. The cluster administrator deploys the [IngressIstioController](/modules/istio/cr.html) (and related infrastructure) as described in ["Istio Ingress Gateway"](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/istio.html#istio-ingress-gateway). Application developers create Gateway and VirtualService resources as shown below.
 
-When deploying an application using Istio, you can choose one of the following options:
-
-- ["Using Ingress NGINX"](#publishing-applications-using-ingress-nginx).
-- ["Publishing applications using Istio Ingress Gateway resource"](#publishing-applications-using-istio-ingress-gateway-resource).
+When deploying an application using Istio, choose one of the following options: ["Publishing applications using Ingress NGINX"](#publishing-applications-using-ingress-nginx) or ["Publishing applications using Istio Ingress Gateway resource"](#publishing-applications-using-istio-ingress-gateway-resource).
 
 ### Publishing applications using Ingress NGINX {#publishing-applications-using-ingress-nginx}
 
-To publish an application using Ingress NGINX, the DKP administrator must configure the Ingress controller by adding an Istio sidecar to it.
+To publish an application using Ingress NGINX, the cluster administrator must configure the Ingress controller by adding an Istio sidecar to it.
 
 To publish an application, prepare an Ingress resource that references a Service. Set `ingressClassName` to the controller with the Istio sidecar (the administrator provides the value). Required annotations for the Ingress resource:
 
@@ -82,9 +79,9 @@ spec:
 
 ### Publishing applications using Istio Ingress Gateway resource {#publishing-applications-using-istio-ingress-gateway-resource}
 
-To publish an application using the Istio Ingress Gateway, the DKP administrator must create an [IngressIstioController](/modules/istio/cr.html) resource.
+To publish an application using the Istio Ingress Gateway, the cluster administrator must create an [IngressIstioController](/modules/istio/cr.html) resource.
 
-To publish an application using the Istio Ingress Gateway resource, create a Gateway. In `spec.selector`, specify the label that references the ingressGatewayClass and the secret name provided by the cluster administrator:
+To publish an application using the Istio Ingress Gateway resource, create a Gateway. In `spec.selector`, specify the label that references `ingressGatewayClass` and the Secret name provided by the cluster administrator:
 
 ```yaml
 apiVersion: networking.istio.io/v1beta1
@@ -94,7 +91,7 @@ metadata:
   namespace: app-ns
 spec:
   selector:
-    # Label selector for using the Istio Ingress Gateway main-hp.
+    # Value of ingressGatewayClass provided by the cluster administrator.
     istio.deckhouse.io/ingress-gateway-class: istio-hp
   servers:
     - port:
@@ -118,7 +115,7 @@ spec:
         - app.example.com
 ```
 
-Then define routing rules with a VirtualService that links the gateway to the service it serves:
+Then define routing rules with a VirtualService that links the Gateway to the service it serves:
 
 ```yaml
 apiVersion: networking.istio.io/v1beta1

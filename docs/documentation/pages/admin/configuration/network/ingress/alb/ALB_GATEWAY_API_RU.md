@@ -15,7 +15,7 @@ relatedLinks:
     url: /modules/alb/
   - title: "Параметры модуля alb"
     url: /modules/alb/configuration.html
-  - title: "Custom Resources модуля alb"
+  - title: "Кастомные ресурсы модуля alb"
     url: /modules/alb/cr.html
   - title: "FAQ модуля alb"
     url: /modules/alb/faq.html
@@ -25,9 +25,9 @@ relatedLinks:
     url: /modules/cert-manager/
 ---
 
-Для реализации ALB средствами [Kubernetes Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/) используется модуль [`alb`](/modules/alb/).
+Для реализации прикладного балансировщика нагрузки (Application Load Balancer, ALB) средствами [Kubernetes Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/) используется модуль [`alb`](/modules/alb/).
 
-Модуль `alb` реализует прикладной балансировщик нагрузки (Application Load Balancer, ALB) и позволяет публиковать приложения с помощью Kubernetes Gateway API. Он разворачивает и настраивает инфраструктуру для приёма и маршрутизации внешних запросов, а также проверяет пользовательскую конфигурацию Gateway API.
+Модуль `alb` реализует прикладной балансировщик нагрузки и позволяет публиковать приложения с помощью Kubernetes Gateway API. Он разворачивает и настраивает инфраструктуру для приёма и маршрутизации внешних запросов, а также проверяет пользовательскую конфигурацию Gateway API.
 
 {% alert level="info" %}
 ALB средствами Kubernetes Gateway API может использоваться в кластере совместно с ALB средствами Ingress NGINX Controller.
@@ -36,7 +36,7 @@ ALB средствами Kubernetes Gateway API может использова�
 
 ## Обзор и схема
 
-Модуль построен на Kubernetes Gateway API — API маршрутизации входящего трафика, расширяющем модель Ingress API. Объект ClusterALBInstance или ALBInstance создаёт управляемый Gateway. К Gateway привязывается ListenerSet, который описывает обработчики входящих запросов. Маршруты направляют трафик к сервисам приложений.
+Модуль построен на Kubernetes Gateway API — API маршрутизации входящего трафика, расширяющий модель Ingress API. Объект ClusterALBInstance или ALBInstance создаёт управляемый Gateway. К Gateway привязывается ListenerSet, который описывает обработчики входящих запросов. Маршруты направляют трафик к сервисам приложений.
 
 ![Схема ресурсов и прохождения трафика Gateway API](../../../../../images/network/ingress/alb/gateway-api-scheme.svg)
 
@@ -102,7 +102,7 @@ ListenerSet — расширение Gateway API. Объект ListenerSet оп�
 
 ## Как настроить ALB
 
-Публикация приложения включает включение модуля, создание управляемого Gateway, ListenerSet и маршрутов.
+Публикация приложения предполагает включение модуля, создание управляемого Gateway, ListenerSet и маршрутов.
 
 ### Действия перед включением и настройкой ALB в кластере {#действия-перед-включением-и-настройкой-alb-в-кластере}
 
@@ -203,7 +203,7 @@ spec:
       tls:
         mode: Terminate
         certificateRefs:
-          - name: app-tls   # Наименование секрета, содержащего необходимый TLS-сертификат.
+          - name: app-tls   # Наименование объекта Secret, содержащего необходимый TLS-сертификат.
             namespace: prod
 
 ```
@@ -257,7 +257,7 @@ ClusterALBInstance должен перейти в состояние `Ready` и 
 В настоящее время не все модули DKP доступны через Gateway API. Не отключайте модуль `ingress-nginx` и не удаляйте связанные с ним объекты, пока необходимые веб-интерфейсы не будут опубликованы через Gateway API и не пройдут проверку.
 {% endalert %}
 
-После настройки шлюза по умолчанию выполните следующую команду, чтобы увидеть, какие модули **уже** опубликовали служебные HTTPRoute через Gateway API в этом кластере. Команда показывает фактический инвентарь маршрутов, а не полный перечень возможностей платформы:
+После настройки шлюза по умолчанию выполните следующую команду, чтобы увидеть, какие модули **уже** опубликовали служебные HTTPRoute через Gateway API в этом кластере. Команда показывает фактический список уже опубликованных маршрутов, а не полный перечень возможностей платформы:
 
 ```shell
 d8 k get httproutes -A -l heritage=deckhouse -o json \
@@ -529,7 +529,7 @@ spec:
 
 Модуль `alb` использует [`cert-manager`](/modules/cert-manager/) для автоматического выпуска TLS-сертификатов. Слушатели `d8-http` и `d8-https` обслуживают запросы HTTP-01 (HTTP-01 challenge) при выпуске сертификата. Чтобы выпустить сертификат для приложения, создайте объект Certificate, который сохранит сертификат в Secret, и укажите этот Secret в `certificateRefs` соответствующего ListenerSet.
 
-Минимальный пример сертификата, который создаёт секрет `app-tls` для ListenerSet:
+Пример сертификата, который создаёт Secret `app-tls` для ListenerSet:
 
 ```yaml
 apiVersion: cert-manager.io/v1
@@ -666,7 +666,7 @@ curl -vk --http3 https://app.example.com/
 
 ### Скачивание баз GeoIP с MaxMind {#maxmind}
 
-Для подключения GeoIP и скачивания баз непосредственно с серверов MaxMind необходимо предварительно создать секрет, содержащий лицензионный ключ, например:
+Для подключения GeoIP и скачивания баз непосредственно с серверов MaxMind необходимо предварительно создать Secret, содержащий лицензионный ключ, например:
 
 ```bash
 d8 k -n prod create secret generic geoip-license \
@@ -674,12 +674,12 @@ d8 k -n prod create secret generic geoip-license \
 ```
 
 {% alert level="info" %}
-При настройке GeoIP для ClusterALBInstance секрет может быть размещён в любом неймспейсе, но рекомендуется разместить его в `d8-alb`.
+При настройке GeoIP для ClusterALBInstance Secret может быть размещён в любом неймспейсе, но рекомендуется разместить его в `d8-alb`.
 
-Для объектов ALBInstance секрет должен располагаться строго в том же неймспейсе, что и объект ALBInstance.
+Для объектов ALBInstance Secret должен располагаться строго в том же неймспейсе, что и объект ALBInstance.
 {% endalert %}
 
-После создания секрета укажите его в параметре [`spec.geoIP.licenseKeySecretRef`](/modules/alb/cr.html#albinstance-v1alpha1-spec-geoip-licensekeysecretref) объекта ClusterALBInstance или ALBInstance, например:
+После создания Secret укажите его в параметре [`spec.geoIP.licenseKeySecretRef`](/modules/alb/cr.html#albinstance-v1alpha1-spec-geoip-licensekeysecretref) объекта ClusterALBInstance или ALBInstance, например:
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -700,7 +700,7 @@ spec:
 
 ### Скачивание баз GeoIP с локального зеркала {#local}
 
-Для подключения GeoIP и скачивания баз с локального зеркала укажите адрес зеркала в параметре [`spec.geoIP.maxmindMirror.url`](/modules/alb/cr.html#albinstance-v1alpha1-spec-geoip-maxmindmirror-url), например:
+Для подключения GeoIP и скачивания баз с локального зеркала укажите его адрес в параметре [`spec.geoIP.maxmindMirror.url`](/modules/alb/cr.html#albinstance-v1alpha1-spec-geoip-maxmindmirror-url), например:
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -760,13 +760,13 @@ spec:
       - GeoLite2-City
 ```
 
-Обновление баз GeoIP осуществляется раз в сутки как на кеширующем сервере, так и в каждом отдельном поде Envoy Proxy с использованием кеширующего сервера.
+Обновление баз GeoIP осуществляется раз в сутки: сначала на кеширующем сервере, а затем в каждом отдельном поде Envoy Proxy, который обращается к этому серверу.
 
 Параметр модуля [`storageClass`](/modules/alb/configuration.html#parameters-storageclass) задаёт PVC для компонентов GeoIP.
 
 ## Настройка трассировки OpenTelemetry {#tracing}
 
-Модуль `alb` поддерживает экспорт трассировок OpenTelemetry из Envoy-прокси.
+Модуль `alb` поддерживает экспорт трассировок OpenTelemetry из Envoy Proxy.
 
 Для включения экспорта укажите адрес OpenTelemetry Collector в параметре [`spec.openTelemetry.tracing.url`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-url) — в формате `http://`, `https://` или `grpc://`, с указанием хоста, порта и, при необходимости, пути (например, для OTLP/HTTP).
 
@@ -778,10 +778,10 @@ spec:
 
 ### Настройка TLS для OpenTelemetry
 
-Чтобы передавать данные трассировки OpenTelemetry по TLS, создайте секрет с CA-сертификатом и укажите его в параметре [`spec.openTelemetry.tracing.tls.caSecretName`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls-casecretname).
+Чтобы передавать данные трассировки OpenTelemetry по TLS, создайте Secret с CA-сертификатом и укажите его в параметре [`spec.openTelemetry.tracing.tls.caSecretName`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls-casecretname).
 
-- Для ClusterALBInstance или шлюза DKP по умолчанию разместите секрет в неймспейсе `d8-alb`.
-- Для ALBInstance разместите секрет в том же неймспейсе, что и объект ALBInstance.
+- Для ClusterALBInstance или шлюза DKP по умолчанию разместите Secret в неймспейсе `d8-alb`.
+- Для ALBInstance разместите Secret в том же неймспейсе, что и объект ALBInstance.
 
 CA-сертификат должен быть сохранён в ключе `cacert`. Дополнительные Subject Alternative Names для проверки сертификата OpenTelemetry Collector задаются параметром [`subjectAltNames`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls-subjectaltnames), а параметр [`insecureSkipVerify`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls-insecureskipverify) отключает эту проверку.
 

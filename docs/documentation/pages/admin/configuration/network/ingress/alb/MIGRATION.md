@@ -170,7 +170,11 @@ To finish preparing the infrastructure, do the following:
 
 ## Step 2. Migrating DKP interfaces {#step-2-migrating-dkp-interfaces}
 
-If DKP system interfaces are published through Ingress and must move to the Gateway API, follow [Publishing service domains](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#publishing-service-domains). Not every DKP module publishes service HTTPRoute objects through the Gateway API yet. After you configure the default gateway, the `jq` command in that section shows the actual inventory of routes already published in the cluster, not a full platform capability matrix.
+If DKP system interfaces are published through Ingress and must move to the Gateway API, follow [Publishing service domains](/products/kubernetes-platform/documentation/v1/admin/configuration/network/ingress/alb/alb-gateway-api.html#publishing-service-domains).
+
+{% alert level="info" %}
+Not every DKP module publishes service HTTPRoute objects through the Gateway API yet. The `jq` command from that section shows which modules already do this in your cluster — it lists the routes actually published, not the full set of capabilities the platform supports.
+{% endalert %}
 
 If you do not need to migrate DKP interfaces, continue with step 3.
 
@@ -363,9 +367,9 @@ The setting applies to every Ingress served by the controller. Before expanding 
 
 The `migrationGateway` parameter works by forwarding an already-accepted, and if needed re-encrypted, HTTP or HTTPS request to the target Service, so it is not supported where nginx does not perform this processing:
 
-- with the `HostPortWithSSLPassthrough` and `LoadBalancerWithSSLPassthrough` inlets — with TLS passthrough, nginx does not decrypt traffic and cannot determine which request to forward;
-- with the `HostWithFailover` inlet — this inlet always uses Proxy Protocol, and `migrationGateway` does not support sending Proxy Protocol to the target Service;
-- with `enableIstioSidecar` — traffic is handled by the Istio sidecar rather than directly by nginx.
+- With the `HostPortWithSSLPassthrough` and `LoadBalancerWithSSLPassthrough` inlets — with TLS passthrough, nginx does not decrypt traffic and cannot determine which request to forward.
+- With the `HostWithFailover` inlet — this inlet always uses Proxy Protocol, and `migrationGateway` does not support sending Proxy Protocol to the target Service.
+- With `enableIstioSidecar` — traffic is handled by the Istio sidecar rather than directly by nginx.
 
 The target Service must accept ordinary HTTP and HTTPS without Proxy Protocol — `migrationGateway` does not send it.
 

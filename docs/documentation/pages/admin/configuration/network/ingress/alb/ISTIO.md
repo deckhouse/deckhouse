@@ -17,11 +17,13 @@ relatedLinks:
 ALB with Istio is implemented via [Istio Ingress Gateway](#istio-ingress-gateway) or [Ingress NGINX](#ingress-nginx).
 The [`istio`](/modules/istio/) module is used for this purpose.
 
-Use this option when you need traffic management in a service mesh (for example, canary routing or mTLS). Configuration details are in the ["istio module documentation"](/modules/istio/).
+Use this option when you need advanced traffic management in a service mesh, for example canary routing or mTLS. Configuration details are in the [`istio`](/modules/istio/) module documentation.
 
 Creating an [IngressIstioController](/modules/istio/cr.html) and preparing infrastructure is a cluster administrator task. Application publishing with Gateway and VirtualService resources, including [canary deployment](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#canary-deployment-with-virtualservice), is described in ["Publishing applications using Istio Ingress Gateway resource"](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#publishing-applications-using-istio-ingress-gateway-resource).
 
 ## Ingress to publish applications
+
+Applications can be published using the Istio Ingress Gateway or through Ingress NGINX with the Istio sidecar enabled.
 
 ### Istio Ingress Gateway {#istio-ingress-gateway}
 
@@ -37,7 +39,7 @@ To publish the application using the Istio Ingress Gateway, follow these steps:
    metadata:
      name: main
    spec:
-     # ingressGatewayClass contains the label selector value used to create the Gateway resource.
+     # The label selector value used to create the Gateway resource.
      ingressGatewayClass: istio-hp
      inlet: HostPort
      hostPort:
@@ -70,7 +72,7 @@ To publish the application using the Istio Ingress Gateway, follow these steps:
        <TLS_KEY_DATA>
    ```
 
-Supported Secret formats are in the [Istio documentation](https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats).
+Supported Secret formats are in the [Istio guide on key formats](https://istio.io/latest/docs/tasks/traffic-management/ingress/secure-ingress/#key-formats).
 
 Application developers then create the Gateway and VirtualService resources. Examples, including [canary deployment](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#canary-deployment-with-virtualservice), are in ["Publishing applications using Istio Ingress Gateway resource"](/products/kubernetes-platform/documentation/v1/user/network/ingress/alb/istio.html#publishing-applications-using-istio-ingress-gateway-resource).
 

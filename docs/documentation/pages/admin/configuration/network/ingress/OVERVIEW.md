@@ -51,13 +51,15 @@ In other words, the Kubernetes Gateway API describes how to configure traffic ro
 
 When using the `alb` module, responsibilities are typically split as follows:
 
-- Cluster administrator — deploys cluster-scoped gateway infrastructure with ClusterALBInstance;
-- Namespace administrator — deploys namespaced gateway infrastructure with ALBInstance and configures how traffic is accepted with ListenerSet (hostname, TLS, ports);
+- Cluster administrator — deploys cluster-scoped gateway infrastructure with ClusterALBInstance.
+- Namespace administrator — deploys namespaced gateway infrastructure with ALBInstance and configures how traffic is accepted with ListenerSet (hostname, TLS, ports).
 - Application developers — configure routing to applications with HTTPRoute and other route objects.
 
 In a typical cluster-wide gateway scenario, the namespace administrator creates the ListenerSet, and application developers create the HTTPRoute. The same person may perform both roles if they have the required permissions.
 
 ### Choosing an ALB implementation
+
+The table below lists the criteria for choosing an ALB implementation.
 
 | Criterion | Ingress NGINX | Gateway API | Istio |
 | --- | --- | --- | --- |
@@ -82,7 +84,7 @@ Service domains (web interfaces of DKP components and modules via `publicDomainT
 | Development | Maintenance mode: the upstream Ingress NGINX project no longer develops new features, while DKP provides security updates | Actively developed |
 | Minimum DKP version | Available in all supported versions | 1.76 |
 | DKP editions | All editions | All editions |
-| Role separation model | cluster administrator, namespace administrator | cluster administrator, namespace administrator, application developer |
+| Role separation model | Cluster administrator, namespace administrator | Cluster administrator, namespace administrator, application developer |
 | Multiple independent entry points | Multiple Ingress controllers selected via `ingressClass` | Multiple Gateway objects selected via `gatewayName`; cluster-scoped and namespaced gateways |
 | HTTP/HTTPS (HTTP/1.1, HTTP/2, HTTP/3) | Yes | Yes ([enabling HTTP/3](alb/alb-gateway-api.html#http3)) |
 | WebSocket | Yes | Yes |
@@ -106,6 +108,8 @@ Service domains (web interfaces of DKP components and modules via `publicDomainT
 | OpenTelemetry tracing | Yes | Yes ([configuration](alb/alb-gateway-api.html#tracing)) |
 
 ### Next steps
+
+To publish an application, follow these steps:
 
 1. Choose an ALB implementation based on the criteria in the table above: [Ingress NGINX](alb/nginx.html), [Gateway API](alb/alb-gateway-api.html), or [Istio](alb/istio.html).
    - Istio — when you need service-mesh traffic management (canary routing, mTLS between Pods).

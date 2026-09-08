@@ -34,7 +34,7 @@ metadata:
 spec:
   ingressClassName: nginx # IngressClass name provided by the cluster administrator.
   rules:
-  - host: application.example.com
+  - host: app.example.com
     http:
       paths:
       - path: /
@@ -49,7 +49,7 @@ spec:
 {% endtab %}
 {% tab "HTTPS" %}
 
-For HTTPS, reference a Secret with the certificate in the `tls` section. The Secret must exist in the same namespace as the Ingress. The certificate can be issued by cert-manager or created by an administrator.
+For HTTPS, reference a Secret with the certificate in the `tls` section. The Secret must exist in the same namespace as the Ingress. The certificate can be issued by `cert-manager` or created by an administrator.
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -61,10 +61,10 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - application.example.com
+        - app.example.com
       secretName: application-tls # Secret with tls.crt and tls.key in the prod namespace.
   rules:
-  - host: application.example.com
+  - host: app.example.com
     http:
       paths:
       - path: /
@@ -79,7 +79,7 @@ spec:
 {% endtab %}
 {% endtabs %}
 
-Additional routing options are set with Ingress annotations. The supported annotation list is in the [`ingress-nginx` module documentation](/modules/ingress-nginx/). Common examples:
+Additional routing options are set with Ingress annotations. The full list of supported annotations is in the [`ingress-nginx` module description](/modules/ingress-nginx/). Common examples:
 
 - `nginx.ingress.kubernetes.io/rewrite-target` — path rewrite.
 - `nginx.ingress.kubernetes.io/whitelist-source-range` — allowed CIDR list.

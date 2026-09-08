@@ -35,7 +35,7 @@ metadata:
 spec:
   ingressClassName: nginx # Имя IngressClass, предоставленное администратором кластера.
   rules:
-  - host: application.example.com
+  - host: app.example.com
     http:
       paths:
       - path: /
@@ -50,7 +50,7 @@ spec:
 {% endtab %}
 {% tab "HTTPS" %}
 
-Для HTTPS укажите Secret с сертификатом в секции `tls`. Secret должен существовать в том же неймспейсе, что и Ingress. Сертификат может выпустить cert-manager или его создаёт администратор.
+Для HTTPS укажите Secret с сертификатом в секции `tls`. Secret должен существовать в том же неймспейсе, что и Ingress. Сертификат может выпустить либо `cert-manager`, либо администратор вручную.
 
 ```yaml
 apiVersion: networking.k8s.io/v1
@@ -62,10 +62,10 @@ spec:
   ingressClassName: nginx
   tls:
     - hosts:
-        - application.example.com
+        - app.example.com
       secretName: application-tls # Secret с tls.crt и tls.key в неймспейсе prod.
   rules:
-  - host: application.example.com
+  - host: app.example.com
     http:
       paths:
       - path: /
@@ -80,7 +80,7 @@ spec:
 {% endtab %}
 {% endtabs %}
 
-Дополнительные параметры маршрутизации задаются аннотациями Ingress. Список поддерживаемых аннотаций — в [документации модуля `ingress-nginx`](/modules/ingress-nginx/). Частые примеры:
+Дополнительные параметры маршрутизации задаются аннотациями Ingress. Полный список поддерживаемых аннотаций — в [описании модуля `ingress-nginx`](/modules/ingress-nginx/). Частые примеры:
 
 - `nginx.ingress.kubernetes.io/rewrite-target` — перезапись пути;
 - `nginx.ingress.kubernetes.io/whitelist-source-range` — список разрешённых CIDR;

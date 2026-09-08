@@ -622,7 +622,7 @@ spec:
 ```
 
 {% alert level="warning" %}
-You cannot enable `enableHTTP3` and `useProxyProtocol` at the same time.
+You cannot enable `enableHTTP3` and `useProxyProtocol` at the same time: if both parameters are set, the `alb` module controller rejects the configuration as conflicting.
 {% endalert %}
 
 Keep the following in mind:
