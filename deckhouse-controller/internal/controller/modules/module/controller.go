@@ -262,9 +262,9 @@ func (r *reconciler) processModule(ctx context.Context, module *v1alpha2.Module)
 	}
 
 	if !module.IsEnabled() {
-		// the module no longer uses its package version, so release it
-		if err := r.setVersionUsed(ctx, module, false); err != nil {
-			r.logger.Error("failed to release the module package version", slog.String("name", module.Name), log.Err(err))
+		// the module no longer uses any of its package versions, so release them
+		if err := r.releaseModuleVersions(ctx, module); err != nil {
+			r.logger.Error("failed to release the module package versions", slog.String("name", module.Name), log.Err(err))
 			return res, err
 		}
 
@@ -295,8 +295,9 @@ func (r *reconciler) processModule(ctx context.Context, module *v1alpha2.Module)
 		return res, err
 	}
 
-	// the module uses its package version, so pin it against garbage collection
-	if err := r.setVersionUsed(ctx, module, true); err != nil {
+	// the module uses its current package version, so pin it against garbage
+	// collection and release any version it switched away from
+	if err := r.pinModuleVersion(ctx, module); err != nil {
 		r.logger.Error("failed to pin the module package version", slog.String("name", module.Name), log.Err(err))
 		return res, err
 	}
@@ -438,34 +439,55 @@ func (r *reconciler) disableModule(ctx context.Context, module *v1alpha2.Module)
 	})
 }
 
-// setVersionUsed marks the module's current package version as used or unused,
-// so an unused version can be garbage-collected while a used one stays pinned.
-// A module with no resolvable version yet — an embedded module before bootstrap,
-// or a version whose ModulePackageVersion is not created — has nothing to mark,
-// which is not an error. The write is skipped when the flag already matches.
-func (r *reconciler) setVersionUsed(ctx context.Context, module *v1alpha2.Module, used bool) error {
-	mpvName := v1alpha1.MakeModulePackageVersionName(module.Spec.PackageRepositoryName, module.Name, module.Spec.PackageVersion)
+// reconcileVersionUsage marks the module's package versions used so that exactly
+// the version named by `pinned` is used and every other version of the same module
+// is released. An empty `pinned` releases them all. It works off the full set of the
+// module's versions (listed by the package label), so switching source or version
+// also drops the version the module moved away from, not just the current one.
+// A write is skipped where the flag already matches.
+func (r *reconciler) reconcileVersionUsage(ctx context.Context, module *v1alpha2.Module, pinned string) error {
+	list := new(v1alpha1.ModulePackageVersionList)
+	if err := r.client.List(ctx, list, client.MatchingLabels{v1alpha1.ModulePackageVersionLabelPackage: module.Name}); err != nil {
+		return fmt.Errorf("list module package versions of '%s': %w", module.Name, err)
+	}
 
-	mpv := new(v1alpha1.ModulePackageVersion)
-	if err := r.client.Get(ctx, types.NamespacedName{Name: mpvName}, mpv); err != nil {
-		if apierrors.IsNotFound(err) {
-			return nil
+	for i := range list.Items {
+		mpv := &list.Items[i]
+
+		used := mpv.Name == pinned
+		if mpv.Status.Used == used {
+			continue
 		}
-		return fmt.Errorf("get module package version '%s': %w", mpvName, err)
-	}
 
-	if mpv.Status.Used == used {
-		return nil
-	}
+		patch := client.MergeFrom(mpv.DeepCopy())
+		mpv.Status.Used = used
 
-	patch := client.MergeFrom(mpv.DeepCopy())
-	mpv.Status.Used = used
-
-	if err := r.client.Status().Patch(ctx, mpv, patch); err != nil {
-		return fmt.Errorf("patch module package version '%s' status: %w", mpvName, err)
+		if err := r.client.Status().Patch(ctx, mpv, patch); err != nil {
+			return fmt.Errorf("patch module package version '%s' status: %w", mpv.Name, err)
+		}
 	}
 
 	return nil
+}
+
+// pinModuleVersion marks the module's current package version used and releases any
+// version it switched away from. It is skipped when no repository is pinned yet: the
+// current version cannot be named until a source is chosen (an embedded module, or a
+// module still resolving its source), and the package controller pins it then.
+func (r *reconciler) pinModuleVersion(ctx context.Context, module *v1alpha2.Module) error {
+	if module.Spec.PackageRepositoryName == "" {
+		return nil
+	}
+
+	name := v1alpha1.MakeModulePackageVersionName(module.Spec.PackageRepositoryName, module.Name, module.Spec.PackageVersion)
+
+	return r.reconcileVersionUsage(ctx, module, name)
+}
+
+// releaseModuleVersions marks every one of the module's package versions unused —
+// a disabled module uses none of them.
+func (r *reconciler) releaseModuleVersions(ctx context.Context, module *v1alpha2.Module) error {
+	return r.reconcileVersionUsage(ctx, module, "")
 }
 
 // addFinalizer puts the controller's finalizer on the Module so a later delete can be handled.

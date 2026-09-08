@@ -61,10 +61,10 @@ metadata:
     packages.deckhouse.io/package: test-module
     packages.deckhouse.io/repository: old-source
   name: old-source-test-module-v1.0.0
-  resourceVersion: "999"
+  resourceVersion: "1000"
 spec:
   packageName: test-module
   packageRepositoryName: old-source
   packageVersion: v1.0.0
 status:
-  used: true
+  used: false
