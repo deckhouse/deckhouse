@@ -18,6 +18,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/template"
@@ -49,6 +50,7 @@ const authenticationConfig = "authentication-config.yaml"
 // bootstrapAuthenticationConfig is what bashible writes into that file, quoted
 // byte for byte from
 // candi/bashible/common-steps/cluster-bootstrap/072_install_control_plane.sh.tpl.
+// A constant, not a template: at bootstrap there is no ModuleConfig to branch on.
 const bootstrapAuthenticationConfig = `apiVersion: apiserver.config.k8s.io/v1beta1
 kind: AuthenticationConfiguration
 anonymous:
@@ -86,6 +88,7 @@ type controlPlaneImages struct {
 	KubeScheduler         string
 }
 
+// manifestsInput is the render context, typed.
 type manifestsInput struct {
 	// NodeName is the etcd member name and the name the node registers under.
 	NodeName string
@@ -110,12 +113,14 @@ type manifestsInput struct {
 }
 
 // bootstrapExtraFiles are the files the manifests reference by path instead of
-// carrying inline; they depend on nothing the render reads.
+// carrying inline. They depend on nothing the render reads, so the node gets the
+// same list on every bootstrap.
 var bootstrapExtraFiles = []renderedFile{{Name: authenticationConfig, Content: bootstrapAuthenticationConfig}}
 
 // renderControlPlaneBundle renders the static pods the first master's control
-// plane is made of. Here rather than on the node: only the installer knows its
-// own release, and the digests, templates and settings all come from it.
+// plane is made of. Here rather than on the node because only the installer
+// knows its own release: the digests, the templates and the settings all come
+// from here.
 func renderControlPlaneBundle(ctx context.Context, in manifestsInput) ([]renderedFile, error) {
 	dir := filepath.Join(in.CandiDir, controlPlaneTemplatesDir)
 	rendered, err := template.RenderTemplatesDir(ctx, dir, in.data(), nil)
@@ -129,8 +134,6 @@ func renderControlPlaneBundle(ctx context.Context, in manifestsInput) ([]rendere
 		return nil, fmt.Errorf("no control-plane templates in %s", dir)
 	}
 
-	// RenderTemplatesDir reads the directory with os.ReadDir, which sorts by
-	// name, so the node is written the same sequence on every render.
 	manifests := make([]renderedFile, 0, len(rendered))
 	for _, artifact := range rendered {
 		manifests = append(manifests, renderedFile{
@@ -138,8 +141,24 @@ func renderControlPlaneBundle(ctx context.Context, in manifestsInput) ([]rendere
 			Content: artifact.Content.String(),
 		})
 	}
+	sortEtcdFirst(manifests)
 
 	return manifests, nil
+}
+
+// sortEtcdFirst puts etcd at the head and the rest in name order, so the same
+// inputs always produce the same sequence of writes on the node.
+func sortEtcdFirst(files []renderedFile) {
+	slices.SortFunc(files, func(a, b renderedFile) int {
+		switch {
+		case a.Name == etcdManifest:
+			return -1
+		case b.Name == etcdManifest:
+			return 1
+		default:
+			return strings.Compare(a.Name, b.Name)
+		}
+	})
 }
 
 // data turns the typed input into the map the templates index into. Three of

@@ -39,8 +39,9 @@ const (
 	NodeUserCRDFile       NodeManagerCRDFile = "nodeuser.yaml"
 	StaticInstanceCRDFile NodeManagerCRDFile = "staticinstance.yaml"
 
-	NodeConfigCRDFile    NodeManagerCRDFile = "nodeconfig.yaml"
-	NodeOperationCRDFile NodeManagerCRDFile = "nodeoperation.yaml"
+	NodeConfigCRDFile           NodeManagerCRDFile = "nodeconfig.yaml"
+	NodeOperationCRDFile        NodeManagerCRDFile = "nodeoperation.yaml"
+	NodeExtensionRequestCRDFile NodeManagerCRDFile = "nodeextensionrequest.yaml"
 	// Under crds/internal: nobody creates the Cluster API bootstrap objects by
 	// hand, so they are kept out of the documentation and installed by a hook.
 	NodeBootstrapConfigCRDFile NodeManagerCRDFile = "internal/nodebootstrapconfig.yaml"
@@ -137,6 +138,12 @@ func WithMCMCRDFile() crdOpt {
 
 func WithInstanceCRDFile() crdOpt {
 	return WithNodeManager(InstanceCRDFile)
+}
+
+// WithNodeUserCRDFile installs the NodeUser CRD, including its status subresource — the only part
+// of it node-controller writes.
+func WithNodeUserCRDFile() crdOpt {
+	return WithNodeManager(NodeUserCRDFile)
 }
 
 func CRDPaths(opts ...crdOpt) []string {

@@ -1,0 +1,54 @@
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModulePullOverride
+metadata:
+  finalizers:
+  - modules.deckhouse.io/mpo-finalizer
+  name: test-module
+  resourceVersion: "1001"
+  uid: 0d9e7f1a-1111-2222-3333-444455556666
+spec:
+  imageTag: main
+  scanInterval: 15s
+status:
+  imageDigest: sha256:cafe
+  message: Ready
+  updatedAt: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: test-module
+  resourceVersion: "1004"
+properties:
+  source: dev
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: null
+    status: "True"
+    type: EnabledByModuleConfig
+  - lastProbeTime: null
+    lastTransitionTime: null
+    status: "True"
+    type: IsOverridden
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleDocumentation
+metadata:
+  labels:
+    module: test-module
+    source: dev
+  name: test-module
+  ownerReferences:
+  - apiVersion: deckhouse.io/v1alpha2
+    controller: true
+    kind: ModulePullOverride
+    name: test-module
+    uid: 0d9e7f1a-1111-2222-3333-444455556666
+  resourceVersion: "1"
+spec:
+  checksum: sha256:cafe
+  path: /modules/test-module
+  version: main
+status: {}

@@ -43,7 +43,7 @@ declare -A skip_components_images=(
   ["baseOpentofu"]="skip"
   ["candi"]="skip"
   ["debugContainer"]="skip"
-  ["olcedar"]="skip"
+  ["engine"]="skip"
 )
 
 # Optional allow-list of "<module>.<image>" keys to scan. Passed via the

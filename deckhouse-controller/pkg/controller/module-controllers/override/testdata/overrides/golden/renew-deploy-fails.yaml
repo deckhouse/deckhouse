@@ -1,0 +1,36 @@
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModulePullOverride
+metadata:
+  annotations:
+    modules.deckhouse.io/renew: "true"
+  finalizers:
+  - modules.deckhouse.io/mpo-finalizer
+  name: test-module
+  resourceVersion: "1004"
+  uid: 0d9e7f1a-1111-2222-3333-444455556666
+spec:
+  imageTag: main
+  scanInterval: 15s
+status:
+  imageDigest: sha256:cafe
+  message: 'Deploy error: download the module ''test-module'': registry is unavailable'
+  updatedAt: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: test-module
+  resourceVersion: "1004"
+properties:
+  source: dev
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: null
+    status: "True"
+    type: EnabledByModuleConfig
+  - lastProbeTime: null
+    lastTransitionTime: null
+    status: "True"
+    type: IsOverridden

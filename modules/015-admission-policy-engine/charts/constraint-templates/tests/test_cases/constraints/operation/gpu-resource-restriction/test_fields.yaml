@@ -1,0 +1,15 @@
+apiVersion: deckhouse.io/v1alpha1
+kind: ConstraintTestFields
+metadata:
+  name: gpu-resource-restriction
+spec:
+  objectKind: Pod
+  objectFields:
+    - path: spec.containers[].resources
+      level: container
+      description: Containers requesting GPU resources will be denied unless the namespace has the specified label.
+      requiredScenarios: [positive, negative, absent, multiContainer, initContainer, ephemeralContainer]
+  applicableTracks:
+    functional: true
+    spePod: false
+    speContainer: false

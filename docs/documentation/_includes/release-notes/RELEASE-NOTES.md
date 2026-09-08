@@ -285,7 +285,7 @@
 - Changes in the [`istio`](https://deckhouse.io/modules/istio/v1.77/) module:
 
   - Added support for Istio 1.27.
-    Users now have access to the new features of the latest Istio release using the Sail operator.
+    Users now have access to the new features of the latest Istio release using an operatorless mode.
 
   - Expanded ambient mesh support.
     [New settings](https://deckhouse.io/modules/istio/v1.77/configuration.html#parameters-ambient) provide more explicit control over ambient mesh, allow using waypoint proxies for Layer 7 traffic processing,

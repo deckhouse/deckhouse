@@ -68,7 +68,7 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 	var errUpdatingSvc error
 	var service corev1.Service
 	err := r.Get(ctx, req.NamespacedName, &service)
-	if err == nil && IsSpecForServiceEqual(service, serviceWithHC) {
+	if err == nil && IsSpecForServiceEqual(service, serviceWithHC) && IsMetadataForServiceEqual(service, serviceWithHC) {
 		r.Logger.Debug("no need to update child Service", "name", req.Name, "namespace", req.Namespace)
 		childService = service
 	} else {
@@ -78,6 +78,17 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 			if err := controllerutil.SetControllerReference(serviceWithHC, &childService, r.Scheme); err != nil {
 				return err
 			}
+
+			// External controllers (MetalLB, cloud providers) read the load balancer
+			// settings from the Service, so the parent metadata has to reach it.
+			desiredAnnotations := propagatedAnnotations(serviceWithHC.Annotations)
+			desiredLabels := serviceWithHC.Labels
+
+			annotations := mergePropagated(childService.Annotations, desiredAnnotations, childService.Annotations[propagatedAnnotationsKey])
+			childService.Labels = mergePropagated(childService.Labels, desiredLabels, childService.Annotations[propagatedLabelsKey])
+
+			annotations = setPropagatedKeys(annotations, propagatedAnnotationsKey, desiredAnnotations)
+			childService.Annotations = setPropagatedKeys(annotations, propagatedLabelsKey, desiredLabels)
 
 			childService.Spec.Selector = map[string]string{}
 			childService.Spec.Ports = serviceWithHC.Spec.Ports
@@ -177,6 +188,21 @@ func IsSpecForServiceEqual(service corev1.Service, shc *networkv1alpha1.ServiceW
 		return false
 	}
 	return true
+}
+
+// IsMetadataForServiceEqual reports whether the child Service already carries the metadata of the parent.
+func IsMetadataForServiceEqual(service corev1.Service, shc *networkv1alpha1.ServiceWithHealthchecks) bool {
+	desiredAnnotations := propagatedAnnotations(shc.Annotations)
+	desiredLabels := shc.Labels
+
+	// A key dropped from the parent changes the stored list, so removals are caught too.
+	if service.Annotations[propagatedAnnotationsKey] != joinKeys(desiredAnnotations) {
+		return false
+	}
+	if service.Annotations[propagatedLabelsKey] != joinKeys(desiredLabels) {
+		return false
+	}
+	return isSubset(desiredAnnotations, service.Annotations) && isSubset(desiredLabels, service.Labels)
 }
 
 // SetupWithManager sets up the controller with the Manager.

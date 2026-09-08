@@ -162,3 +162,71 @@ func TestAssemble_OmitsFailingNodeGroupWithoutPrior(t *testing.T) {
 
 	assert.Empty(t, readAssembledNodeGroups(t, r.Client))
 }
+
+// internalNetworkCIDRs disappearing from the static cluster configuration is either an accident or
+// a decision nobody confirmed: the published CIDRs are kept for every static group — only that
+// block, the rest of each entry stays fresh — the context is still written, and the pass fails so
+// the condition is visible, the way the convert_static_cluster_configuration hook failed.
+func TestAssemble_KeepsPublishedCIDRsAndReportsIt(t *testing.T) {
+	priorInput, err := Marshal(map[string]interface{}{
+		"nodeGroups": []interface{}{
+			map[string]interface{}{
+				"name":              "losing",
+				"nodeType":          "Static",
+				"marker":            "stale-from-prior",
+				"kubernetesVersion": "1.29",
+				"static":            map[string]interface{}{"internalNetworkCIDRs": []interface{}{"172.18.200.0/24"}},
+			},
+			map[string]interface{}{"name": "intact", "nodeType": "Static", "marker": "stale-from-prior"},
+		},
+	})
+	require.NoError(t, err)
+
+	// No d8-static-cluster-configuration Secret: both groups derive an empty CIDR list.
+	r := newReconciler(t,
+		staticNodeGroup("losing"),
+		staticNodeGroup("intact"),
+		secret(secretNamespace, secretName, map[string][]byte{secretInputKey: priorInput}),
+	)
+
+	err = r.Assemble(context.Background())
+	require.ErrorContains(t, err, "internalNetworkCIDRs")
+	require.ErrorContains(t, err, "losing")
+
+	byName := map[string]map[string]interface{}{}
+	for _, ng := range readAssembledNodeGroups(t, r.Client) {
+		el := ng.(map[string]interface{})
+		byName[el["name"].(string)] = el
+	}
+	require.Len(t, byName, 2, "the context must still be published")
+
+	want := map[string]interface{}{"internalNetworkCIDRs": []interface{}{"172.18.200.0/24"}}
+	for _, name := range []string{"losing", "intact"} {
+		entry := byName[name]
+		assert.Equal(t, want, entry["static"], "%s: the CIDRs are one cluster-wide value", name)
+		assert.NotContains(t, entry, "marker", "%s: only the static block comes from the prior entry", name)
+		assert.Equal(t, "1.32", entry["kubernetesVersion"], "%s: everything else must be freshly derived", name)
+	}
+}
+
+// The prior context is a fallback for NodeGroups that still exist, never a source of them: a
+// deleted NodeGroup must leave the published context, or its nodes keep bootstrapping forever.
+func TestAssemble_DropsNodeGroupsThatNoLongerExist(t *testing.T) {
+	priorInput, err := Marshal(map[string]interface{}{
+		"nodeGroups": []interface{}{
+			map[string]interface{}{"name": "deleted", "nodeType": "Static", "marker": "stale-from-prior"},
+		},
+	})
+	require.NoError(t, err)
+
+	r := newReconciler(t,
+		staticNodeGroup("alive"),
+		secret(secretNamespace, secretName, map[string][]byte{secretInputKey: priorInput}),
+	)
+
+	require.NoError(t, r.Assemble(context.Background()))
+
+	ngs := readAssembledNodeGroups(t, r.Client)
+	require.Len(t, ngs, 1)
+	assert.Equal(t, "alive", ngs[0].(map[string]interface{})["name"])
+}

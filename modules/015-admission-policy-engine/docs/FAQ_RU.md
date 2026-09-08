@@ -461,6 +461,19 @@ spec:
       readOnlyRootFilesystem: true
 ```
 
+## Почему мутация Assign или AssignMetadata отклоняется или не применяется?
+
+CRD `Assign`, `AssignMetadata`, `ModifySet` и `AssignImage` импортированы из Gatekeeper без изменений (см. [Mutation Custom Resources](gatekeeper-cr_ru.html#mutation-custom-resources)). При этом webhook мутаций Gatekeeper проверяет ограничения содержимого, которые не отражены в схеме CRD. Модуль `admission-policy-engine` проверяет часть этих ограничений встроенными ValidatingAdmissionPolicy. Благодаря этому `kubectl apply` отклоняет некорректный ресурс сразу, а не пропускает его без предупреждения или отклоняет позже — сам Gatekeeper, с непонятной ошибкой парсера.
+
+Модуль применяет следующие ограничения:
+
+- `deny-invalid-assign-location.deckhouse.io` — поле `spec.location` ресурса `Assign` не может указывать на поле `metadata` (`metadata.name`, `.namespace`, `.labels`, `.annotations`). Для добавления лейблов или аннотаций используйте `AssignMetadata`.
+- `deny-invalid-assignmetadata-location.deckhouse.io` — поле `spec.location` ресурса `AssignMetadata` должно быть строго `metadata.labels.<KEY>` или `metadata.annotations.<KEY>`. Если `<KEY>` содержит символы, отличные от букв, цифр, `_` или `-` (например, ключ с доменным префиксом вида `app.kubernetes.io/name`), возьмите его в кавычки: `metadata.annotations."app.kubernetes.io/name"`.
+- `deny-invalid-assignmetadata-value.deckhouse.io` — поле `spec.parameters.assign.value` ресурса `AssignMetadata` должно быть строкой, так как значения лейблов и аннотаций в Kubernetes — строки.
+- `deny-invalid-mutator-frommetadata-field.deckhouse.io` — поле `spec.parameters.assign.fromMetadata.field` (у ресурсов `Assign` и `AssignMetadata`) обязательно, если задан `fromMetadata`, и допускает только значения `namespace` или `name`.
+- `deny-invalid-assignmetadata-externaldata-datasource.deckhouse.io` — поле `spec.parameters.assign.externalData.dataSource` ресурса `AssignMetadata` поддерживает только значение `Username`. По умолчанию, если поле не задано, оно принимает значение `ValueAtLocation` — это значение по умолчанию тоже отклоняется, поэтому `dataSource: Username` нужно указывать явно. В отличие от `Assign`, значение `ValueAtLocation` не поддерживается, так как при мутации метаданных нет исходного значения в `location`, которое можно прочитать.
+- `deny-mutator-without-match-kinds.deckhouse.io` — поле `spec.match.kinds` обязательно, не может быть пустым в ресурсах `Assign`, `AssignMetadata`, `ModifySet` и `AssignImage`, и в каждом его элементе должны быть заданы непустые `apiGroups` и `kinds` без значения `*` в `kinds`. Это ограничение специфично для Deckhouse: правила `MutatingWebhookConfiguration` `d8-admission-policy-engine-config` формируются только на основе поля `match.kinds` всех перечисленных ресурсов, а `apiGroups`/`kinds` сопоставляются с реальными типами ресурсов Kubernetes. Если элемент не разрешается в конкретный тип ресурса, ресурс с ним никогда не запускает мутацию, хотя сам Gatekeeper по-прежнему считает такой элемент допустимым.
+
 ## Проверка подписи образов
 
 {% alert level="warning" %}
@@ -640,3 +653,69 @@ spec:
 - Используйте `input.review.operation == "CONNECT"` для проверки операций `CONNECT`.
 - Информация о пользователе доступна в `input.review.userInfo.username` и `input.review.userInfo.groups`.
 - Неймспейс доступен в `input.review.namespace`.
+
+## Как ограничить использование GPU-ресурсов в неймспейсах?
+
+Политика `gpuResourceRestriction` в [OperationPolicy](cr.html#operationpolicy)
+запрещает поды, запрашивающие GPU-ресурсы, если на неймспейсе не установлен лейбл, разрешающий
+использование GPU. Проверка выполняется при создании и изменении пода, в том числе при добавлении
+ephemeral-контейнера. Проверяются `resources.requests` и `resources.limits` всех контейнеров,
+init-контейнеров и ephemeral-контейнеров пода. Ресурс с количеством `0` не считается запросом GPU.
+
+Чтобы настроить ограничение использования GPU-ресурсов, выполните следующие шаги:
+
+1. Создайте OperationPolicy с параметром `gpuResourceRestriction`.
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: OperationPolicy
+   metadata:
+     name: gpu-restriction
+   spec:
+     enforcementAction: Deny
+     match:
+       namespaceSelector:
+         labelSelector:
+           matchLabels:
+             operation-policy.deckhouse.io/enabled: "true"
+     policies:
+       gpuResourceRestriction:
+         namespaceLabel:
+           key: "gpu.deckhouse.io/enabled"
+           value: "true"
+         gpuResourcePatterns:
+           - '^nvidia\.com/.*$'
+           - '^amd\.com/gpu$'
+   ```
+
+   Параметр `namespaceLabel` задаёт ключ и значение лейбла, который должен быть установлен на неймспейсе.
+   Параметр `gpuResourcePatterns` содержит список регулярных выражений, с которыми сопоставляются имена
+   GPU-ресурсов. Шаблоны не привязываются к границам строки автоматически, поэтому используйте `^` и `$`,
+   чтобы сопоставлять имя ресурса целиком.
+
+1. Добавьте лейбл политики на неймспейсы, в которых политика должна действовать.
+
+   ```shell
+   d8 k label ns my-namespace operation-policy.deckhouse.io/enabled=true
+   ```
+
+1. Добавьте GPU-лейбл на неймспейсы, в которых использование GPU разрешено.
+
+   ```shell
+   d8 k label ns my-gpu-namespace gpu.deckhouse.io/enabled=true
+   ```
+
+После этого поды, запрашивающие GPU-ресурсы, будут разрешены только в неймспейсах с лейблом
+`gpu.deckhouse.io/enabled: "true"`.
+
+{% alert level="warning" %}
+Политика применяется к подам. Deployment или другой контроллер, запрашивающий GPU-ресурсы, создаётся
+успешно, а отказ отображается в событиях ReplicaSet.
+
+Лейбл неймспейса читается из кеша Gatekeeper. Пока неймспейс отсутствует в этом кеше, например когда
+неймспейс и под применяются одновременно и неймспейс ещё не попал в кеш, политика запрещает поды,
+запрашивающие GPU-ресурсы в этом неймспейсе.
+
+Устройства, запрошенные через механизм [Dynamic Resource Allocation](https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/)
+в поле `spec.resourceClaims`, не являются extended-ресурсами, и политика их не проверяет.
+{% endalert %}
