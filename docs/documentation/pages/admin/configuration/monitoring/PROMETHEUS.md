@@ -55,14 +55,14 @@ spec:
 
 ## Using the `global.modules.storageClass` parameter for Prometheus
 
-This module uses the global [`global.modules.storageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass) parameter as the default StorageClass when creating a PersistentVolumeClaim.
+This module uses the global [`global.modules.storageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass) parameter as the default StorageClass when creating a new PersistentVolumeClaim.
 
-**Changing the global parameter** does not require disk recreation — the module continues to use the existing PVC and its StorageClass.
+If a Prometheus PVC already exists, changing the global parameter does not affect the existing PVC or trigger disk recreation. The module continues to use the existing PVC and its StorageClass.
 
-To use a different StorageClass for this module, override the `storageClass` or `longtermStorageClass` parameter in the Prometheus module configuration.
+If the module configuration defines its own `storageClass` or `longtermStorageClass` value, the module-specific value takes precedence over the global default.
 
 {{< alert level="warning" >}}
-Changing the `storageClass` or `longtermStorageClass` parameter in the module configuration deletes and recreates the existing PVC. All data will be deleted. Back up your data before making this change.
+Changing the `storageClass` or `longtermStorageClass` parameter in the module configuration deletes and recreates the existing PVC. All data will be lost. Back up your data before making this change.
 {{< /alert >}}
 
 A complete description of all settings is available in the [prometheus module documentation](/modules/prometheus/configuration.html).
