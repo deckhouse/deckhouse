@@ -109,6 +109,7 @@ steps:
 {!{- if $isDev }!}
       # PR/dev: build locally, do not push fuzz images; no build-report upload
       DEV_REGISTRY_PATH="${DECKHOUSE_DEV_REGISTRY_HOST}/${REGISTRY_PATH}"
+      export WERF_PROJECT_NAME="deckhouse-fuzz-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
       export WERF_SECONDARY_REPO_1="${DEV_REGISTRY_PATH}"
       unset WERF_REPO
       echo "dev fuzz build: local only, cache from ${WERF_SECONDARY_REPO_1} (no registry push, no build-report upload)"
