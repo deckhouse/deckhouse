@@ -107,7 +107,7 @@ Publishing an application includes enabling the module, creating a managed Gatew
 
 Before enabling and configuring ALB in a DKP cluster, do the following:
 
-- Verify that the [requirements](/modules/alb/stable/configuration.html#requirements) for the `alb` module are met.
+- Verify that the [requirements](/modules/alb/configuration.html#requirements) for the `alb` module are met.
 - If you need to publish service domains — web interfaces of [DKP service components](/products/kubernetes-platform/documentation/v1/user/web/ui.html) and other modules — set the global parameter [`publicDomainTemplate`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-publicdomaintemplate). Without this parameter, system HTTPRoute, Gateway, and ListenerSet objects for service domains will not work correctly, and the web interfaces will not be published. If you do not need to publish service domains, you can leave this parameter unset. Details are in ["Publishing service domains"](#publishing-service-domains).
 - Check API version compatibility in ["Alongside third-party Gateway API implementations"](#alongside-third-party-gateway-api) if such solutions are already used in the cluster.
 - On bare metal, for the [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer) inlet prepare an external load balancer or the [`metallb`](/modules/metallb/) module. The [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) inlet is available for ClusterALBInstance only and does not require MetalLB.
