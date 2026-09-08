@@ -52,6 +52,47 @@ func TestGateDecide(t *testing.T) {
 		enabled: false,
 		blocked: `the cluster is in the "Proxy" mode`,
 	}, {
+		// `Direct`, and the case this gate was widened for.
+		//
+		// A `Direct` cluster pulls through the in-cluster address, and the objects that served
+		// it — the previous implementation's Service and in-cluster proxy — are not rendered by
+		// this release at all. So refusing here does not keep such a cluster safe: it strands it,
+		// with nodes pointing at an address nobody serves and this implementation switched off.
+		//
+		// What makes taking over safe is that the operator has already written where images come
+		// from. Then this implementation serves the same address from that configuration and the
+		// node agent takes over the runtime configuration; the address never goes unserved.
+		name:    "Direct, with the module's own configuration already written",
+		gate:    gate{Legacy: &legacyState{Mode: "Direct"}, ModuleConfigured: true},
+		enabled: true,
+	}, {
+		// Without that configuration there is nothing to serve the address WITH, and switching on
+		// would mean this implementation managing nothing while the previous one's objects go away.
+		name:    "Direct, with nothing configured",
+		gate:    gate{Legacy: &legacyState{Mode: "Direct"}},
+		enabled: false,
+		blocked: `is in the "Direct" mode`,
+	}, {
+		// Configuration does not make a moving cluster safe to take over from: the nodes are
+		// being reconfigured by the previous implementation right now.
+		name:    "Direct, configured, but on its way somewhere else",
+		gate:    gate{Legacy: &legacyState{Mode: "Direct", TargetMode: "Local"}, ModuleConfigured: true},
+		enabled: false,
+		blocked: `transitioning to "Local"`,
+	}, {
+		// `Proxy` and `Local` are not widened, and that is a decision rather than an omission.
+		// Both keep state this release cannot account for: static pods with their own PKI on the
+		// nodes, and for `Local` the image store on the master disks. `Direct` keeps neither.
+		name:    "Proxy stays refused even when configured",
+		gate:    gate{Legacy: &legacyState{Mode: "Proxy"}, ModuleConfigured: true},
+		enabled: false,
+		blocked: `is in the "Proxy" mode`,
+	}, {
+		name:    "Local stays refused even when configured",
+		gate:    gate{Legacy: &legacyState{Mode: "Local"}, ModuleConfigured: true},
+		enabled: false,
+		blocked: `is in the "Local" mode`,
+	}, {
 		name:    "a cluster mid-transition inside the previous implementation",
 		gate:    gate{Legacy: &legacyState{Mode: "Unmanaged", TargetMode: "Local"}},
 		enabled: false,

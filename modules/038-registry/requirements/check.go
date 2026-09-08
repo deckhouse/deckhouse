@@ -67,12 +67,19 @@ func check(required string, getter requirements.ValueGetter) (bool, error) {
 		return true, nil
 	}
 
-	// The advice names the only lever there is. There is no `implementation` setting to pick — the
-	// module's own configuration says so in as many words — and the handover happens on its own once
-	// the previous implementation has let go of the pull path.
+	// The advice names both levers, and which one applies depends on the mode the cluster is in.
+	// There is no `implementation` setting to pick — the module's own configuration says so in as
+	// many words — and in either case the handover happens on its own once the previous
+	// implementation has stopped being the thing that serves the pull path.
+	//
+	// `Direct` gets its own sentence because for it the second lever is the cheaper one: such a
+	// cluster pulls through the in-cluster address, and writing this module's configuration hands
+	// that address over without the full component restart that going through Unmanaged costs.
 	return false, fmt.Errorf(
 		"this release requires the %q registry implementation, and the cluster is running %q; "+
-			"bring `registry.mode` in the deckhouse ModuleConfig to Unmanaged and wait for that "+
-			"transition to finish, after which the handover completes on its own",
+			"either write `mode: Managed` with `primary.upstream` in the registry ModuleConfig — "+
+			"available from a `Direct` cluster, which then hands the in-cluster address over "+
+			"directly — or bring `registry.mode` in the deckhouse ModuleConfig to Unmanaged and "+
+			"wait for that transition to finish; in both cases the handover completes on its own",
 		required, current)
 }

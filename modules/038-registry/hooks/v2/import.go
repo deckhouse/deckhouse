@@ -125,11 +125,26 @@ func filterDeckhouseRegistry(obj *unstructured.Unstructured) (go_hook.FilterResu
 	return config, nil
 }
 
-// moduleConfigFacts is what this needs to know about the module's own ModuleConfig:
-// whether it exists at all, and whether someone has already configured the part that
-// would be suggested.
+// moduleConfigFacts is what the module's own ModuleConfig is read for, by the two hooks that care:
+// this one, which stops offering a suggestion once a primary is written, and the gate, which admits
+// a `Direct` cluster only when there is a configuration to serve its address from.
+//
+// One type and one filter for both, deliberately. They ask about the same object, and two readers
+// with two notions of "configured" is how the gate ends up admitting a cluster whose configuration
+// this module would not act on.
 type moduleConfigFacts struct {
 	HasPrimary bool `json:"hasPrimary"`
+
+	// Managed reports `mode: Managed`. Without it, settings are present and applied to nothing:
+	// the default mode manages no registry, which the schema also says in its own words.
+	Managed bool `json:"managed"`
+}
+
+// Actionable is the question the gate asks: is this a configuration this module can serve images
+// from. Both halves are needed — a mode with no source, or a source under a mode that manages
+// nothing, serves nothing.
+func (f moduleConfigFacts) Actionable() bool {
+	return f.Managed && f.HasPrimary
 }
 
 func filterModuleConfig(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
@@ -139,7 +154,9 @@ func filterModuleConfig(obj *unstructured.Unstructured) (go_hook.FilterResult, e
 	}
 
 	_, hasPrimary := settings["primary"]
-	return moduleConfigFacts{HasPrimary: hasPrimary}, nil
+	mode, _ := settings["mode"].(string)
+
+	return moduleConfigFacts{HasPrimary: hasPrimary, Managed: mode == "Managed"}, nil
 }
 
 func handleImport(_ context.Context, input *go_hook.HookInput) error {

@@ -61,6 +61,11 @@ const (
 
 	blockedMetric      = "d8_registry_migration_pending"
 	blockedMetricGroup = "d8_registry_migration"
+
+	// modeDirect is spelled out rather than imported from the legacy package for the same reason
+	// legacyState is a local copy: the two implementations share no code, and this is a string
+	// read out of a Secret the other one writes.
+	modeDirect = "Direct"
 )
 
 // legacyState is the part of the legacy state machine this gate reads.
@@ -105,6 +110,19 @@ var _ = sdk.RegisterFunc(
 					NameSelector: &types.NameSelector{MatchNames: []string{"d8-system"}},
 				},
 				FilterFunc: filterLegacyState,
+			},
+			{
+				// This module's own ModuleConfig, for the one question the `Direct` case asks:
+				// has the operator said where images come from. Watched rather than read once,
+				// because writing that configuration is exactly the event that makes a `Direct`
+				// cluster takeable — it should not have to wait for anything else to happen.
+				Name:       moduleConfigSnapName,
+				ApiVersion: "deckhouse.io/v1alpha1",
+				Kind:       "ModuleConfig",
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{"registry"},
+				},
+				FilterFunc: filterModuleConfig,
 			},
 		},
 	},
@@ -189,6 +207,11 @@ type gate struct {
 	// LegacyUnreadable is why the legacy state could not be read, when it exists but
 	// could not be decoded.
 	LegacyUnreadable error
+
+	// ModuleConfigured reports that the operator has written this module's own configuration:
+	// `mode: Managed` together with a source of images. It is what makes taking over from
+	// `Direct` safe, and it is deliberately not consulted for any other mode.
+	ModuleConfigured bool
 }
 
 // decide answers whether the current implementation is active, and if not, why.
@@ -223,9 +246,42 @@ func (g gate) decide() (bool, string) {
 		return true, ""
 	}
 
+	// Asked before the modes below, and that order is load-bearing: a cluster on its way somewhere
+	// is being reconfigured by the legacy implementation right now, and no amount of configuration
+	// on this side makes it safe to take its nodes over mid-move. `Unmanaged` heading to
+	// `Unmanaged` is not a move.
+	if g.Legacy.TargetMode != "" && g.Legacy.TargetMode != g.Legacy.Mode &&
+		g.Legacy.TargetMode != string(registry_const.ModeUnmanaged) {
+		return false, fmt.Sprintf(
+			"the legacy implementation is transitioning to %q; wait for it to settle",
+			g.Legacy.TargetMode)
+	}
+
 	switch {
 	case g.Legacy.Mode == "":
 		return false, "the legacy implementation has not recorded a mode yet"
+
+	// `Direct` is admitted when this module's configuration is already written, and refusing it
+	// otherwise is not caution — it is the only safe answer. This release does not render the
+	// legacy implementation's objects at all, so a `Direct` cluster arrives here having lost the
+	// Service and the in-cluster proxy that served the address its nodes pull through. Staying
+	// switched off would leave that address unserved; taking over serves it from the
+	// configuration below, and the node agent takes the runtime configuration from the same
+	// moment. With nothing configured there is nothing to serve it WITH, so the gate stays shut
+	// and the operator is told which lever to pull.
+	//
+	// Widened for `Direct` only. `Proxy` and `Local` keep state this release cannot account for —
+	// static pods with their own PKI on every node, and, for `Local`, the image store on the
+	// master disks — and for them `Unmanaged` remains the way through.
+	case g.Legacy.Mode == modeDirect && g.ModuleConfigured:
+
+	case g.Legacy.Mode == modeDirect:
+		return false, fmt.Sprintf(
+			"the cluster is in the %q mode of the legacy implementation and this module has no "+
+				"configuration of its own; write `mode: Managed` with `primary.upstream` in the "+
+				"registry ModuleConfig — that is what this implementation will serve the "+
+				"in-cluster address from — or bring `registry.mode` to %q instead",
+			g.Legacy.Mode, registry_const.ModeUnmanaged)
 
 	case g.Legacy.Mode != string(registry_const.ModeUnmanaged):
 		return false, fmt.Sprintf(
@@ -261,6 +317,13 @@ func readGate(input *go_hook.HookInput) gate {
 		// Nothing recorded, which is not a failure to read.
 	default:
 		result.LegacyUnreadable = err
+	}
+
+	// Absent configuration reads as false, which is the answer that keeps the gate shut. There is
+	// no third state to distinguish here: a ModuleConfig that cannot be read is a ModuleConfig
+	// nothing can be served from either way.
+	if facts, err := helpers.SnapshotToSingle[moduleConfigFacts](input, moduleConfigSnapName); err == nil {
+		result.ModuleConfigured = facts.Actionable()
 	}
 
 	return result
