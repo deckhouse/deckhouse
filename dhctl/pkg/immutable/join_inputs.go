@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-package bootstrap
+package immutable
 
 import (
 	"context"
@@ -32,19 +32,50 @@ import (
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
-	"github.com/deckhouse/deckhouse/dhctl/pkg/immutable"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
 
-// buildImmutableJoinPayload renders the cloud-init an additional master joins the
+// The objects a joining node is described by, addressed the way node-controller
+// addresses them; see the mirrors named below.
+const (
+	// The kubernetes Service's EndpointSlice, the cluster's own record of where
+	// its apiservers answer.
+	// Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/constants.go.
+	apiServerEndpointSliceNS   = "default"
+	apiServerEndpointSliceName = "kubernetes"
+	apiServerPortName          = "https"
+
+	// clusterCAConfigMap carries the cluster CA every ServiceAccount is given, and
+	// the source node-controller renders day-2 configs from, so a node sees one CA.
+	// Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/constants.go.
+	clusterCAConfigMap = "kube-root-ca.crt"
+	clusterCAKey       = "ca.crt"
+
+	// bootstrapTokenNGLabel labels a bootstrap-token secret with its NodeGroup.
+	// Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodebootstrap/constants.go.
+	bootstrapTokenNGLabel = "node-manager.deckhouse.io/node-group"
+
+	// A Deckhouse hook publishes what a joining node needs after the NodeGroup
+	// arrives, so the first read of a young cluster finds nothing. The budget is
+	// the classic path's wait for the group's cloud config (entity.GetCloudConfig).
+	joinInputAttempts = 225
+	joinInputInterval = time.Second
+)
+
+// BuildJoinPayloadFromCluster renders the cloud-init an additional master joins the
 // running cluster with: the CA, the current bootstrap token, and the live apiservers
-// are read from it; all else matches master 0. No ControlPlaneConfig: see immutable.BuildJoinPayload.
-func buildImmutableJoinPayload(
+// are read from it; all else matches master 0. No ControlPlaneConfig: see BuildJoinPayload.
+// Returns the base64 payload and the raw NodeConfig document.
+func BuildJoinPayloadFromCluster(
 	ctx context.Context,
 	kubeCl *client.KubernetesClient,
 	metaConfig *config.MetaConfig,
 	nodeName string,
-) (string, error) {
+	customization *Customization,
+	inventory *Inventory,
+	pushAddress string,
+	nodeGroupName string,
+) (string, []byte, error) {
 	var (
 		caCert    string
 		token     string
@@ -54,14 +85,14 @@ func buildImmutableJoinPayload(
 	// Retried as one: the three reads are the payload's only inputs from the
 	// running cluster, and each of them is published asynchronously.
 	err := libretry.NewLoop(fmt.Sprintf("Waiting for the cluster to publish what %s joins with", nodeName),
-		waitJoinInputs.attempts, waitJoinInputs.interval).
+		joinInputAttempts, joinInputInterval).
 		RunContext(ctx, func() error {
 			var err error
 			caCert, err = clusterCABase64(ctx, kubeCl)
 			if err != nil {
 				return err
 			}
-			token, err = groupBootstrapToken(ctx, kubeCl, global.MasterNodeGroupName)
+			token, err = groupBootstrapToken(ctx, kubeCl, nodeGroupOrMaster(nodeGroupName))
 			if err != nil {
 				return err
 			}
@@ -69,15 +100,19 @@ func buildImmutableJoinPayload(
 			return err
 		})
 	if err != nil {
-		return "", err
+		return "", nil, err
 	}
 
-	return immutable.BuildJoinPayload(ctx, immutable.JoinPayloadInput{
+	return BuildJoinPayload(ctx, JoinPayloadInput{
 		NodeName:           nodeName,
 		MetaConfig:         metaConfig,
 		CACert:             caCert,
 		BootstrapToken:     token,
 		APIServerEndpoints: endpoints,
+		Customization:      customization,
+		Inventory:          inventory,
+		PushAddress:        pushAddress,
+		NodeGroupName:      nodeGroupName,
 	})
 }
 
@@ -153,7 +188,7 @@ func apiServerEndpoints(ctx context.Context, kubeCl *client.KubernetesClient) ([
 		if pod.DeletionTimestamp != nil || pod.Status.PodIP == "" {
 			continue
 		}
-		set["https://"+net.JoinHostPort(pod.Status.PodIP, strconv.Itoa(immutable.APIServerPort))] = struct{}{}
+		set["https://"+net.JoinHostPort(pod.Status.PodIP, strconv.Itoa(APIServerPort))] = struct{}{}
 	}
 
 	slice, err := kubeCl.DiscoveryV1().

@@ -1,4 +1,4 @@
-# Signing of the dm-verity roothash of an Olcedar sysext image.
+# Signing of the dm-verity roothash of a Deckhouse Engine sysext image.
 #
 # systemd names the verity sidecars after <name>.raw with the .raw suffix stripped
 # — <name>.verity, <name>.roothash, <name>.roothash.p7s — see
@@ -14,7 +14,7 @@
 # and the raw signature Vault returns; the package index the builder pins carries
 # systemd 260.3, which does not ship it, so take the two files from 260.4 instead.
 # Drop that part once the index carries 260.4 and `pm install systemd` is enough.
-{{- define "olcedar sysext sign imports" }}
+{{- define "engine sysext sign imports" }}
 - image: {{ .ModuleName }}/d8
   add: /d8
   to: /usr/bin/d8
@@ -24,7 +24,7 @@
 # The OIDC token is minted inside the build rather than passed in: a GitHub
 # Actions JWT is short lived while a build is not, and ACTIONS_ID_TOKEN_REQUEST_*
 # stay valid for the whole job.
-{{- define "olcedar sysext sign secrets" }}
+{{- define "engine sysext sign secrets" }}
   {{- if eq (env "WERF_OLCEDAR_SYSEXT_SIGN_ENABLED" "") "true" }}
 secrets:
 - id: VAULT_ADDR
@@ -38,7 +38,7 @@ secrets:
   {{- end }}
 {{- end }}
 
-{{- define "olcedar sysext sign" }}
+{{- define "engine sysext sign" }}
   {{- $name := . }}
   {{- if eq (env "WERF_OLCEDAR_SYSEXT_SIGN_ENABLED" "") "true" }}
   - pm install openssl curl jq
@@ -47,7 +47,7 @@ secrets:
 
     # The Transit key and its leaf certificate, pinned by serial. They rotate
     # together: the leaf must match the key, so both lines change at once. The
-    # policy also allows listing olcedar-root-pki/certs to find a new serial.
+    # policy also allows listing dh-engine-root-pki/certs to find a new serial.
     SIGN_KEY="dh-engine-2026-sep"
     SIGN_KEY_PATH="dh-engine-signer/sign/${SIGN_KEY}/sha2-256"
     SIGNER_CERT_PATH="dh-engine-root-pki/cert/37:8b:81:ed:09:15:ba:a1:76:5c:cb:58:55:c0:a4:49:45:3e:23:e3"
@@ -56,15 +56,33 @@ secrets:
     export VAULT_TOKEN="$(d8 stronghold write -field=token auth/github/login role="$(cat /run/secrets/WERF_OLCEDAR_VAULT_AUTH_ROLE)" \
       jwt="$(curl -fsS -H "Authorization: bearer $(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_TOKEN)" "$(cat /run/secrets/ACTIONS_ID_TOKEN_REQUEST_URL)&audience=github-access-aud" | jq -r .value)")"
 
-    d8 stronghold read -field=certificate "${SIGNER_CERT_PATH}" > /tmp/olcedar-signer.pem
-    openssl x509 -in /tmp/olcedar-signer.pem -noout -subject -issuer
+    d8 stronghold read -field=certificate "${SIGNER_CERT_PATH}" > /tmp/engine-signer.pem
+    openssl x509 -in /tmp/engine-signer.pem -noout -subject -issuer
 
+    openssl dgst -sha256 -binary /out/{{ $name }}.roothash > /tmp/roothash.digest
     SIGNATURE="$(d8 stronghold write -field=signature "${SIGN_KEY_PATH}" prehashed=true signature_algorithm=pkcs1v15 \
-      input="$(openssl dgst -sha256 -binary /out/{{ $name }}.roothash | base64 | tr -d '\n')")"
+      input="$(base64 < /tmp/roothash.digest | tr -d '\n')")"
     printf '%s' "${SIGNATURE#vault:v*:}" | base64 -d > /tmp/roothash.sig
 
+    # A refused signature leaves an empty file, and everything below it succeeds on
+    # one: the PKCS#7 wrapper takes it, and the verification below reads back what
+    # was just written. The build has to stop here, where the Vault error is.
+    if [ ! -s /tmp/roothash.sig ]; then
+      echo "signing with transit key ${SIGN_KEY} produced no signature; see the Vault error above" >&2
+      exit 1
+    fi
+
+    # The pinned serial and the transit key rotate together, and nothing else says
+    # they still belong to each other.
+    openssl x509 -in /tmp/engine-signer.pem -pubkey -noout > /tmp/engine-signer.pub
+    if ! openssl pkeyutl -verify -pubin -inkey /tmp/engine-signer.pub -in /tmp/roothash.digest \
+         -sigfile /tmp/roothash.sig -pkeyopt digest:sha256 >/dev/null 2>&1; then
+      echo "the pinned certificate does not verify the signature of transit key ${SIGN_KEY}" >&2
+      exit 1
+    fi
+
     /usr/lib/systemd/systemd-keyutil pkcs7 \
-      --certificate=/tmp/olcedar-signer.pem \
+      --certificate=/tmp/engine-signer.pem \
       --signature=/tmp/roothash.sig \
       --hash-algorithm=sha256 \
       --output=/out/{{ $name }}.roothash.p7s
