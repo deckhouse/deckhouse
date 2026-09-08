@@ -34,6 +34,11 @@ const (
 	raiseCooldown = metricsRunInterval
 	lowerCooldown = 3 * metricsRunInterval
 
+	// The request sits above the measured average, so that real usage stays under
+	// it rather than riding exactly on it. Applied to the proposal only: decide()
+	// keeps comparing the true measurement against the baseline.
+	usageMarginPercent = 10
+
 	neverChanged = time.Duration(math.MaxInt64)
 )
 
@@ -92,6 +97,7 @@ func (r *dynamicResolver) resolve(ctx context.Context, deps resolveDeps, kind re
 			return r.fallback.resolve(ctx, deps, kind)
 		}
 		deps.input.Logger.Warn("autotune: no usage datapoints from the metrics API, holding current requests", "resource", kind)
+		setAutotuneDegraded(deps.input, autotuneDegradedMetricGroup, degradedReasonNoDatapoints)
 		baseline.deficit = r.pendingDeficit(ctx, deps, kind)
 		return baseline, nil
 	}
@@ -190,10 +196,10 @@ func (r *dynamicResolver) proposeRequests(
 
 		switch decide(measured, baseline[comp], cooldownAge[comp]) {
 		case decideRaise:
-			proposed[comp] = measured
+			proposed[comp] = withUsageMargin(measured)
 			raising[comp] = true
 		case decideLower:
-			proposed[comp] = measured
+			proposed[comp] = withUsageMargin(measured)
 		case decideSkip:
 		}
 	}
@@ -231,6 +237,11 @@ func (r *dynamicResolver) gateRaises(
 	}
 	measurement.PendingRaiseSum = proposedSum
 	return proposedSum - headroom
+}
+
+// Kept below raiseThreshold, or committing a request would immediately re-arm the raise that produced it.
+func withUsageMargin(measured int64) int64 {
+	return measured + percentOf(measured, usageMarginPercent)
 }
 
 type decideAction string
