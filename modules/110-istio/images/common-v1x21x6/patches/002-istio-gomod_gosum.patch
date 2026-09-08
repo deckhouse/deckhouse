@@ -1,8 +1,8 @@
 diff --git a/go.mod b/go.mod
-index d6c10ee83f..63dae0d505 100644
+index d6c10ee83f..293462b5e6 100644
 --- a/go.mod
 +++ b/go.mod
-@@ -1,42 +1,44 @@
+@@ -1,48 +1,50 @@
  module istio.io/istio
  
 -go 1.21
@@ -60,6 +60,13 @@ index d6c10ee83f..63dae0d505 100644
  	github.com/google/go-containerregistry v0.17.0
  	github.com/google/gofuzz v1.2.0
  	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
+ 	github.com/google/uuid v1.6.0
+ 	github.com/gorilla/mux v1.8.1
+-	github.com/gorilla/websocket v1.5.1
++	github.com/gorilla/websocket v1.5.3
+ 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
+ 	github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0
+ 	github.com/hashicorp/go-multierror v1.1.1
 @@ -60,46 +62,46 @@ require (
  	github.com/openshift/api v0.0.0-20240111155829-b6df9ba0be95
  	github.com/pires/go-proxyproto v0.7.0
@@ -261,7 +268,7 @@ index d6c10ee83f..63dae0d505 100644
  	gopkg.in/ini.v1 v1.67.0 // indirect
  	k8s.io/component-base v0.29.0 // indirect
 diff --git a/go.sum b/go.sum
-index 10100f8bfd..60b59b282b 100644
+index 10100f8bfd..4018f95770 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,24 +1,1215 @@
@@ -1708,7 +1715,7 @@ index 10100f8bfd..60b59b282b 100644
  github.com/golang/protobuf v1.4.0-rc.1/go.mod h1:ceaxUfeHdC40wWswd/P6IGgMaK3YpKi5j83Wpe3EHw8=
  github.com/golang/protobuf v1.4.0-rc.1.0.20200221234624-67d41d38c208/go.mod h1:xKAWHe0F5eneWXFV3EuXVDTCmh+JuBKY0li0aMyXATA=
  github.com/golang/protobuf v1.4.0-rc.2/go.mod h1:LlEzMj4AhA7rCAGe4KMBDvJI+AwstrUpVNzEA03Pprs=
-@@ -316,65 +1568,127 @@ github.com/golang/protobuf v1.4.1/go.mod h1:U8fpvMrcmy5pZrNK1lt4xCsGvpyWQ/VVv6QD
+@@ -316,67 +1568,129 @@ github.com/golang/protobuf v1.4.1/go.mod h1:U8fpvMrcmy5pZrNK1lt4xCsGvpyWQ/VVv6QD
  github.com/golang/protobuf v1.4.2/go.mod h1:oDoupMAO8OvCJWAcko0GGGIgR6R6ocIYbsSw735rRwI=
  github.com/golang/protobuf v1.4.3/go.mod h1:oDoupMAO8OvCJWAcko0GGGIgR6R6ocIYbsSw735rRwI=
  github.com/golang/protobuf v1.5.0/go.mod h1:FsONVRAS9T7sI+LIUmWTfcYkHO4aIWwzhcaSAoJOfIk=
@@ -1838,9 +1845,13 @@ index 10100f8bfd..60b59b282b 100644
  github.com/gorilla/websocket v0.0.0-20170926233335-4201258b820c/go.mod h1:E7qHFY5m1UJ88s3WnNqhKjPHQ0heANvMoAMk2YaljkQ=
  github.com/gorilla/websocket v1.4.0/go.mod h1:E7qHFY5m1UJ88s3WnNqhKjPHQ0heANvMoAMk2YaljkQ=
 -github.com/gorilla/websocket v1.4.2/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
- github.com/gorilla/websocket v1.5.1 h1:gmztn0JnHVt9JZquRuzLw3g4wouNVzKL15iLr/zn/QY=
- github.com/gorilla/websocket v1.5.1/go.mod h1:x3kM2JMyaluk02fnUJpQuwD2dCS5NDG2ZHL0uE0tcaY=
+-github.com/gorilla/websocket v1.5.1 h1:gmztn0JnHVt9JZquRuzLw3g4wouNVzKL15iLr/zn/QY=
+-github.com/gorilla/websocket v1.5.1/go.mod h1:x3kM2JMyaluk02fnUJpQuwD2dCS5NDG2ZHL0uE0tcaY=
++github.com/gorilla/websocket v1.5.3 h1:saDtZ6Pbx/0u+bgYQ3q96pZgCzfhKXGPqt7kZ72aNNg=
++github.com/gorilla/websocket v1.5.3/go.mod h1:YR8l580nyteQvAITg2hZ9XVh4b55+EU/adAjf1fMHhE=
  github.com/grafana/regexp v0.0.0-20221122212121-6b5c0a4cb7fd h1:PpuIBO5P3e9hpqBD0O/HjhShYuM6XE0i/lbE6J94kww=
+ github.com/grafana/regexp v0.0.0-20221122212121-6b5c0a4cb7fd/go.mod h1:M5qHK+eWfAv8VR/265dIuEpL3fNfeC21tXXp9itM24A=
+ github.com/gregjones/httpcache v0.0.0-20180305231024-9cad4c3443a7/go.mod h1:FecbI9+v66THATjSRHfNgh1IVFe/9kFxbXtjV0ctIMA=
 @@ -390,6 +1704,8 @@ github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0 h1:Ovs26xHkKqVztRpIrF/92Bcuy
  github.com/grpc-ecosystem/go-grpc-prometheus v1.2.0/go.mod h1:8NvIoxWQoOIhqOTXgfV/d3M/q6VIi02HzZEHgUlZvzk=
  github.com/grpc-ecosystem/grpc-gateway v1.9.0/go.mod h1:vNeuVxBJEsws4ogUvrchl83t/GYV9WGTSLVdBhOQFDY=
