@@ -3,10 +3,10 @@ title: Модуль gpu
 permalink: ru/architecture/cluster-and-infrastructure/infrastructure/gpu.html
 lang: ru
 search: gpu, llm
-description: Архитектура модуля gpu в Deckhouse Kubernetes Platform.
+description: Архитектура модуля gpu в Deckhouse Platform.
 ---
 
-[Модуль `gpu`](/modules/gpu/) обеспечивает управление графическими процессорами (Graphics Processing Units, GPU) в Deckhouse Kubernetes Platform (DKP).
+[Модуль `gpu`](/modules/gpu/) обеспечивает управление графическими процессорами (Graphics Processing Units, GPU) в Deckhouse Platform (DP).
 
 Модуль работает в двух взаимоисключающих режимах, которые переключаются [параметром `dra.enabled`](/modules/gpu/configuration.html#parameters-dra):
 
@@ -38,7 +38,7 @@ description: Архитектура модуля gpu в Deckhouse Kubernetes Pla
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`gpu`](/modules/gpu/) в режиме DRA на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура модуля [`gpu`](/modules/gpu/) в режиме DRA на уровне 2 модели C4 и его взаимодействия с другими компонентами DP изображены на следующей диаграмме:
 
 ![Архитектура модуля gpu в режиме DRA](../../../images/architecture/cluster-and-infrastructure/c4-l2-gpu-dra.ru.svg)
 
@@ -129,7 +129,7 @@ description: Архитектура модуля gpu в Deckhouse Kubernetes Pla
 
 ### Архитектура модуля
 
-Архитектура модуля [`gpu`](/modules/gpu/) в режиме Device Plugin на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура модуля [`gpu`](/modules/gpu/) в режиме Device Plugin на уровне 2 модели C4 и его взаимодействия с другими компонентами DP изображены на следующей диаграмме:
 
 ![Архитектура модуля gpu в режиме Device Plugin](../../../images/architecture/cluster-and-infrastructure/c4-l2-gpu-device-plugin.ru.svg)
 

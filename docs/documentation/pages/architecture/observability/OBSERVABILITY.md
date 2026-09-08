@@ -2,7 +2,7 @@
 title: Observability module
 permalink: en/architecture/observability/observability.html
 search: observability, grafana, alertmanager, dashboard
-description: Architecture of the observability module in Deckhouse Kubernetes Platform.
+description: Architecture of the observability module in Deckhouse Platform.
 ---
 
 The `observability` module extends the functionality of the [`prometheus`](/modules/prometheus/) module and the [Deckhouse web UI](/modules/console/), providing additional capabilities for flexible management of metrics, dashboards, and alerts, as well as access control mechanisms for them.
@@ -27,7 +27,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`observability`](/modules/observability/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the [`observability`](/modules/observability/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
 ![Observability module architecture](../../images/architecture/observability/c4-l2-observability.svg)
 
@@ -41,7 +41,7 @@ The module consists of the following components:
 
 1. **Alert-kube-api**: Consists of a single **alert-kube-api** container and implements [Kubernetes Extension API Server](https://kubernetes.io/docs/tasks/extend-kubernetes/setup-extension-api-server/) that extends Kubernetes API with ObservabilityAlert и ClusterObservabilityAlert custom resources. Alert-kube-api allows you to request alerts as custom resources using the Alertmanager component as a backend and caches them in memory for quick access.
 
-1. **Alertmanager**: Receives alerts from prometheus-main component of the [`prometheus`](/modules/prometheus/) module, processes and sends them to the end recipients. DKP supports sending alerts through the following delivery channels:
+1. **Alertmanager**: Receives alerts from prometheus-main component of the [`prometheus`](/modules/prometheus/) module, processes and sends them to the end recipients. DP supports sending alerts through the following delivery channels:
 
    * `Email`
    * `Telegram`

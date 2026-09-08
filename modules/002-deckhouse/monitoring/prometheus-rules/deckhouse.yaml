@@ -761,9 +761,9 @@
     annotations:
       plk_markup_format: markdown
       plk_protocol_version: "1"
-      summary: Incorrect Deckhouse Kubernetes Platform edition.
+      summary: Incorrect Deckhouse Platform edition.
       description: |
-        Specify a Deckhouse Kubernetes Platform edition in `{{ $labels.module }}` ModuleConfig.
+        Specify a Deckhouse Platform edition in `{{ $labels.module }}` ModuleConfig.
 
         ```bash
         d8 k patch moduleconfig {{ $labels.module }} --type merge --patch '{"spec": {"settings": {"license": {"edition": "DKP_EDITION"}}}}'

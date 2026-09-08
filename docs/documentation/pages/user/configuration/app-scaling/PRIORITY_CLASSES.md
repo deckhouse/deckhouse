@@ -1,16 +1,16 @@
 ---
 title: "Priority classes"
 permalink: en/user/configuration/app-scaling/priority-classes.html
-description: "Using priority classes in Deckhouse Kubernetes Platform: configuration examples, preemption demonstration, and practical diagnostics."
+description: "Using priority classes in Deckhouse Platform: configuration examples, preemption demonstration, and practical diagnostics."
 ---
 
 A priority class defines which pods are more important when a node runs out of resources. You can assign a class in a Deployment manifest, verify preemption, and figure out why a pod is stuck in `Pending`.
 
 ## Using a priority class in a Deployment
 
-Deckhouse Kubernetes Platform (DKP) already provides a set of priority classes. The following example shows how to use a priority class in a Deployment pod template.
+Deckhouse Platform (DP) already provides a set of priority classes. The following example shows how to use a priority class in a Deployment pod template.
 
-Create a file `deployment-with-priority.yaml` to deploy an application with the DKP predefined class `production-high` (value `9000`, see [Available priority classes](/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/pod-eviction/priority-classes.html#available-priority-classes)):
+Create a file `deployment-with-priority.yaml` to deploy an application with the DP predefined class `production-high` (value `9000`, see [Available priority classes](/products/kubernetes-platform/documentation/v1/admin/configuration/app-scaling/pod-eviction/priority-classes.html#available-priority-classes)):
 
 ```yaml
 apiVersion: apps/v1

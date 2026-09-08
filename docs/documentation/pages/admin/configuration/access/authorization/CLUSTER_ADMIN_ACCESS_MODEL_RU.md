@@ -1,11 +1,11 @@
 ---
 title: "Модель административного доступа к кластеру"
 permalink: ru/admin/configuration/access/authorization/cluster-admin-access-model.html
-description: "Модель административного доступа к кластеру Deckhouse Kubernetes Platform"
+description: "Модель административного доступа к кластеру Deckhouse Platform"
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform (DKP) поддерживает размещение нескольких файлов kubeconfig на master-узлах (поддержка реализуется модулем [`control-plane-manager`](/modules/control-plane-manager/)). Понимание их назначения важно для безопасного администрирования кластера.
+Deckhouse Platform (DP) поддерживает размещение нескольких файлов kubeconfig на master-узлах (поддержка реализуется модулем [`control-plane-manager`](/modules/control-plane-manager/)). Понимание их назначения важно для безопасного администрирования кластера.
 
 ## Файлы kubeconfig на master-узлах
 
@@ -22,7 +22,7 @@ Deckhouse Kubernetes Platform (DKP) поддерживает размещени�
 
 Начиная с Kubernetes 1.29, kubeadm генерирует `admin.conf` с группой `kubeadm:cluster-admins` вместо `system:masters`. Это обеспечивает управляемый через RBAC административный доступ, который может быть отозван путём удаления ClusterRoleBinding `kubeadm:cluster-admins` (или нескольких привязок).
 
-Если модуль [`user-authz`](/modules/user-authz/) **выключен**, DKP привязывает группу `kubeadm:cluster-admins` к встроенной роли `cluster-admin` с wildcard-правами (как в обычном кластере kubeadm без дополнительной настройки RBAC).
+Если модуль [`user-authz`](/modules/user-authz/) **выключен**, DP привязывает группу `kubeadm:cluster-admins` к встроенной роли `cluster-admin` с wildcard-правами (как в обычном кластере kubeadm без дополнительной настройки RBAC).
 
 Если модуль `user-authz` **включён**, группа привязывается к `user-authz:cluster-admin`, а вторая ClusterRoleBinding добавляет роль `d8:control-plane-manager:admin-kubeconfig-supplement` (правила сверх высокоуровневой роли, например, для сертификатов и компонентов control plane). Вместе они заменяют одну wildcard-роль `cluster-admin` для этой идентичности. Для полного неограниченного доступа используйте `super-admin.conf`.
 

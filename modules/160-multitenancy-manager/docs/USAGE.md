@@ -5,7 +5,7 @@ title: "The multitenancy-manager module: usage examples"
 
 ## Default project templates
 
-The following project templates are included in the Deckhouse Kubernetes Platform:
+The following project templates are included in the Deckhouse Platform:
 
 - `default` — a template that covers basic project use cases:
   - resource limitation
@@ -663,9 +663,9 @@ To add access management for a new cluster-wide resource:
 
 1. After registering the cluster-wide resource, configure references to it using GrantableClusterResourceReference as described in ["Configuring validation of a cluster-wide resource reference"](#configuring-validation-of-a-cluster-wide-resource-reference).
 
-#### Using x-deckhouse-grantable-resource in DKP application settings
+#### Using x-deckhouse-grantable-resource in DP application settings
 
-To manage access to cluster-wide resources in DKP application settings, use the `x-deckhouse-grantable-resource` OpenAPI extension. In this case, deckhouse-controller automatically checks the availability of the specified resource and assigns the default value when necessary. You do not need to create GrantableClusterResourceReference manually.
+To manage access to cluster-wide resources in DP application settings, use the `x-deckhouse-grantable-resource` OpenAPI extension. In this case, deckhouse-controller automatically checks the availability of the specified resource and assigns the default value when necessary. You do not need to create GrantableClusterResourceReference manually.
 
 For a description of the extension and usage examples, refer to ["Application development"](/products/kubernetes-platform/documentation/v1/architecture/marketplace/application-development.html#defaulting-from-cluster-resource-grants-x-deckhouse-grantable-resource).
 

@@ -4,8 +4,8 @@ allowed_values: allowed values
 additional_property_name: item (key) name
 pattern_property_name: regular expression for parameter name
 search_placeholder_text: Search documentation
-search_context_dkpdocs_and_modules: The search is performed throughout DKP documentation and modules.
-search_context_modules: The search is performed throughout modules, excluding the DKP documentation.
+search_context_dkpdocs_and_modules: The search is performed throughout DP documentation and modules.
+search_context_modules: The search is performed throughout modules, excluding the DP documentation.
 search_context_only_product_docs: The search is performed throughout the product documentation, excluding modules.
 modules: modules
 modules2: modules
@@ -93,8 +93,8 @@ module_release_channel_details_content: |
   To change the module release channel, follow the [instruction](/products/kubernetes-platform/documentation/v1/faq.html#how-do-i-change-the-release-channel-for-a-module).
 module_versions: Module versions
 module_version: Module version
-embedded_in_dkp: Embedded in DKP
-module_crd_warning_1: The Deckhouse Kubernetes Platform installs CRDs but does not remove them when a module is disabled. If you no longer need the created CRDs, delete them.
+embedded_in_dkp: Embedded in DP
+module_crd_warning_1: The Deckhouse Platform installs CRDs but does not remove them when a module is disabled. If you no longer need the created CRDs, delete them.
 ossPageBlock1: |
   <h2>Third-party components</h2>
   <p>List of third-party software used in the <MODULE> module:</p>

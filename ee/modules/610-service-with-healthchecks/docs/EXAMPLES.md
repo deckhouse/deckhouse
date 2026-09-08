@@ -1,6 +1,6 @@
 ---
 title: "Module service-with-healthchecks: examples"
-description: "Configuring a Load Balancer with the service-with-healthchecks Module in Deckhouse Kubernetes Platform"
+description: "Configuring a Load Balancer with the service-with-healthchecks Module in Deckhouse Platform"
 ---
 
 {% alert level="info" %}

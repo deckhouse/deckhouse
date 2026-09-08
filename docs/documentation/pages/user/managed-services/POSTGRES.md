@@ -7,7 +7,7 @@ relatedLinks:
     url: "faq.html"
 ---
 
-Users can create and configure PostgreSQL if this capability has been enabled in the DKP cluster by the administrator.
+Users can create and configure PostgreSQL if this capability has been enabled in the DP cluster by the administrator.
 
 The user sets the required configuration using a Postgres object that points to a specific service class (PostgresClass), which defines the available parameters and limits. The PostgresClass is created and configured by the cluster administrator.
 

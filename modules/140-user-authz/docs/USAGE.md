@@ -31,7 +31,7 @@ roleRef:
 The rights that the user will get will be limited to namespaces starting with `d8-` or `kube-`.
 
 The user will be able to:
-- View, modify, delete, and create Kubernetes resources and DKP modules;
+- View, modify, delete, and create Kubernetes resources and DP modules;
 - Modify module configurations (view, modify, delete, and create `moduleConfig` resources);
 - Execute the following commands on pods and services:
   - `kubectl attach`
@@ -66,7 +66,7 @@ roleRef:
 ```
 
 {% offtopic title="The rights that the user will get" %}
-The rights that the user will get will be limited to the following list of DKP module namespaces from the `networking` subsystem (the actual list depends on the list of modules included in the cluster):
+The rights that the user will get will be limited to the following list of DP module namespaces from the `networking` subsystem (the actual list depends on the list of modules included in the cluster):
 - `d8-cni-cilium`
 - `d8-cni-flannel`
 - `d8-cni-simple-bridge`
@@ -159,7 +159,7 @@ The user will be able to:
 The example uses the [experimental role-based](./#experimental-role-based-model).
 {% endalert %}
 
-To assign rights to a user manage application resources within a namespace, but without the ability to configure DKP modules, use the role `d8:use:role:admin` in `RoleBinding` in the corresponding namespace.
+To assign rights to a user manage application resources within a namespace, but without the ability to configure DP modules, use the role `d8:use:role:admin` in `RoleBinding` in the corresponding namespace.
 
 Example of assigning rights to an application developer (User `app-developer`) in namespace `myapp`:
 
@@ -211,7 +211,7 @@ In the `myapp` namespace, the user will be able to:
   - `StatefulSet`
   - `VerticalPodAutoscaler`
   - `VolumeSnapshot`
-- View, edit, delete, and create the following DKP module resources:
+- View, edit, delete, and create the following DP module resources:
   - `DexAuthenticator`
   - `DexClient`
   - `PodLogginConfig`

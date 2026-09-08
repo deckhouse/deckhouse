@@ -2,10 +2,10 @@
 title: Registry module
 permalink: en/architecture/deckhouse/registry.html
 search: registry, container registry, direct mode, proxy mode, local mode, unmanaged mode
-description: Architecture of the registry module in Deckhouse Kubernetes Platform.
+description: Architecture of the registry module in Deckhouse Platform.
 ---
 
-The `registry` module manages the registry settings for Deckhouse Kubernetes Platform (DKP) components.
+The `registry` module manages the registry settings for Deckhouse Platform (DP) components.
 
 The module can operate in the following modes:
 
@@ -28,7 +28,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`registry`](/modules/registry/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the [`registry`](/modules/registry/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
 The [`registry`](/modules/registry/) module in `Direct` mode:
 

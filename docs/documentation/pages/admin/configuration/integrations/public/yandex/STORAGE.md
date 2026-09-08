@@ -3,7 +3,7 @@ title: Storage and load balancing in Yandex Cloud
 permalink: en/admin/integrations/public/yandex/storage.html
 ---
 
-This section covers additional aspects of Deckhouse Kubernetes Platform (DKP) integration with Yandex Cloud:
+This section covers additional aspects of Deckhouse Platform (DP) integration with Yandex Cloud:
 
 - Attaching cloud disks via CSI.
 - Automatic StorageClass creation.
@@ -13,11 +13,11 @@ This section covers additional aspects of Deckhouse Kubernetes Platform (DKP) in
 
 ## Storage (CSI and StorageClass)
 
-DKP integrates with Yandex Cloud block storage via the Container Storage Interface (CSI) component.
-This allows DKP clusters to automatically provision and attach disks
+DP integrates with Yandex Cloud block storage via the Container Storage Interface (CSI) component.
+This allows DP clusters to automatically provision and attach disks
 and use standard Kubernetes PersistentVolumeClaim resources for working with the storage.
 
-DKP automatically creates StorageClass resources for all supported Yandex Cloud disk types,
+DP automatically creates StorageClass resources for all supported Yandex Cloud disk types,
 enabling immediate storage usage without the need to define classes manually.
 
 The following disk types are supported:
@@ -48,11 +48,11 @@ settings:
     - network-hdd
 ```
 
-In this example, DKP will not create StorageClass resources for any `network-ssd` or `network-hdd` disks.
+In this example, DP will not create StorageClass resources for any `network-ssd` or `network-hdd` disks.
 
 ### Creating additional StorageClasses and block size
 
-The [`settings.storageClass.provision`](/modules/cloud-provider-yandex/configuration.html#parameters-storageclass-provision) parameter lets you create additional StorageClasses or override the parameters of StorageClasses created by DKP by default.
+The [`settings.storageClass.provision`](/modules/cloud-provider-yandex/configuration.html#parameters-storageclass-provision) parameter lets you create additional StorageClasses or override the parameters of StorageClasses created by DP by default.
 
 Use the [`blockSize`](/modules/cloud-provider-yandex/configuration.html#parameters-storageclass-provision-blocksize) parameter to set the [block size](https://yandex.cloud/en/docs/compute/operations/disk-create/empty-disk-blocksize) for provisioned disks. The block size determines the maximum disk size: `8Ti` for `4Ki`, and it doubles with each next block size up to `256Ti` for `128Ki`.
 
@@ -79,16 +79,16 @@ After a disk is created, its block size cannot be changed. Changing the `blockSi
 
 ### Setting the default StorageClass
 
-By default, DKP determines the StorageClass using the `storageclass.kubernetes.io/is-default-class=true` annotation.
+By default, DP determines the StorageClass using the `storageclass.kubernetes.io/is-default-class=true` annotation.
 
-To explicitly set a different default StorageClass, use the global DKP parameter [`global.defaultClusterStorageClass`](../../../../reference/api/global.html#parameters-defaultclusterstorageclass).
+To explicitly set a different default StorageClass, use the global DP parameter [`global.defaultClusterStorageClass`](../../../../reference/api/global.html#parameters-defaultclusterstorageclass).
 You can modify it with the following command:
 
 ```shell
 kubectl edit mc global
 ```
 
-If `defaultClusterStorageClass` is not specified, DKP determines the default StorageClass in the following order:
+If `defaultClusterStorageClass` is not specified, DP determines the default StorageClass in the following order:
 
 - A StorageClass with the annotation `storageclass.kubernetes.io/is-default-class='true'` (if it exists in the cluster).
 - The first StorageClass in alphabetical order auto-created by the cloud provider.
@@ -322,8 +322,8 @@ To increase the size of a PVC, follow these steps:
 
 ### External LoadBalancer
 
-DKP automatically watches for Kubernetes Service objects of type LoadBalancer.
-When such a service is created, DKP creates the following resources:
+DP automatically watches for Kubernetes Service objects of type LoadBalancer.
+When such a service is created, DP creates the following resources:
 
 - **NetworkLoadBalancer**: A Yandex Cloud network load balancer.
 - **TargetGroup**: A group of endpoints for traffic distribution.
@@ -450,7 +450,7 @@ Health check parameters (for LB target groups created by the controller):
 
 ## Applying changes
 
-DKP does not recreate existing Machine objects when configuration parameters change.
+DP does not recreate existing Machine objects when configuration parameters change.
 Node recreation occurs only when:
 
 - [NodeGroup](/modules/node-manager/cr.html#nodegroup) section parameters change.
@@ -471,7 +471,7 @@ This command reconciles the cluster state with the configuration defined in the 
 
 In clusters that use Machine Controller Manager (MCM), changing the [`networkType`](/modules/cloud-provider-yandex/cr.html#yandexinstanceclass-v1-spec-networktype) parameter in a YandexInstanceClass resource does not trigger automatic recreation of existing CloudEphemeral nodes. Although the MachineClass is updated, the network acceleration type of existing virtual machines in Yandex Cloud remains unchanged.
 
-DKP intentionally does not take the `networkType` parameter into account when determining whether CloudEphemeral nodes should be recreated in MCM. If it did, updating DKP would recreate CloudEphemeral nodes in all clusters where `networkType` is specified, even if its value had not changed.
+DP intentionally does not take the `networkType` parameter into account when determining whether CloudEphemeral nodes should be recreated in MCM. If it did, updating DP would recreate CloudEphemeral nodes in all clusters where `networkType` is specified, even if its value had not changed.
 
 In Cluster API, the `networkType` parameter is taken into account when determining whether nodes should be recreated, so changing it automatically triggers node recreation. New CloudEphemeral NodeGroups in Yandex Cloud use Cluster API by default.
 
@@ -479,7 +479,7 @@ If you changed `networkType` in an MCM-based cluster and want the new value to a
 
 ## Integrating manually created VMs
 
-DKP allows you to connect existing VMs in Yandex Cloud to the Kubernetes cluster as nodes.
+DP allows you to connect existing VMs in Yandex Cloud to the Kubernetes cluster as nodes.
 These nodes are called CloudStatic and they are not directly managed by the [`node-manager`](/modules/node-manager/) module
 but can still be used in the cluster.
 

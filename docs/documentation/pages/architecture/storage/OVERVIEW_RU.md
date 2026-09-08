@@ -3,12 +3,12 @@ title: Подсистема Storage
 permalink: ru/architecture/storage/
 lang: ru
 search: storage, подсистема хранения, хранилище
-description: Архитектура подсистемы Storage в Deckhouse Kubernetes Platform.
+description: Архитектура подсистемы Storage в Deckhouse Platform.
 extractedLinksOnlyMax: 0
 extractedLinksMax: 0
 ---
 
-В данном подразделе описана архитектура подсистемы Storage (подсистемы хранения) Deckhouse Kubernetes Platform (DKP).
+В данном подразделе описана архитектура подсистемы Storage (подсистемы хранения) Deckhouse Platform (DP).
 
 В подсистему Storage входят следующие модули:
 

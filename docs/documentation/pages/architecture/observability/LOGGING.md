@@ -2,7 +2,7 @@
 title: Logging modules
 permalink: en/architecture/observability/logging.html
 search: logging, loki, log-shipper, vector
-description: Architecture of the log-shipper and loki modules in Deckhouse Kubernetes Platform.
+description: Architecture of the log-shipper and loki modules in Deckhouse Platform.
 ---
 
 ## Log-shipper module
@@ -10,7 +10,7 @@ description: Architecture of the log-shipper and loki modules in Deckhouse Kuber
 The `log-shipper` module simplifies log collection configuration in Kubernetes clusters. It allows collecting logs both from applications running in the cluster and from the cluster nodes, and then forwarding them to any log storage system — either internal or external (for example, Loki, Elasticsearch, and others).
 
 {% alert level="info" %}
-Deckhouse Kubernetes Platform (DKP) provides integration with log storage systems. The storage systems themselves must be deployed and configured by the user.
+Deckhouse Platform (DP) provides integration with log storage systems. The storage systems themselves must be deployed and configured by the user.
 {% endalert %}
 
 For more details about module configuration and usage examples, refer to the [corresponding documentation section](/modules/log-shipper/).
@@ -24,7 +24,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`log-shipper`](/modules/log-shipper/) module and its interactions with other components of DKP are shown in the following diagram:
+The Level 2 C4 architecture of the [`log-shipper`](/modules/log-shipper/) module and its interactions with other components of DP are shown in the following diagram:
 
 ![Log-shipper module architecture](../../images/architecture/observability/c4-l2-log-shipper.png)
 
@@ -84,7 +84,7 @@ For more details about module configuration and usage examples, refer to the [co
 
 ### Module architecture
 
-The Level 2 C4 architecture of the [`loki`](/modules/loki/) module and its interactions with other components of DKP are shown in the following diagram:
+The Level 2 C4 architecture of the [`loki`](/modules/loki/) module and its interactions with other components of DP are shown in the following diagram:
 
 ![Loki module architecture](../../images/architecture/observability/c4-l2-loki.png)
 

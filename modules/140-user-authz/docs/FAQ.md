@@ -310,15 +310,15 @@ If the resource belongs to a namespace, you need to extend the use role instead 
 
 This role will be added to the `d8:use:role:user:kubernetes` role.
 
-## How do I migrate custom roles to the new scheme in DKP 1.78?
+## How do I migrate custom roles to the new scheme in DP 1.78?
 
 {% alert level="warning" %}
-This section describes the [role model renaming](./#migration-to-the-new-role-names-in-dkp-178) that will take effect in DKP 1.78. Prior to DKP 1.78, custom roles keep working under the old scheme.
+This section describes the [role model renaming](./#migration-to-the-new-role-names-in-dp-178) that will take effect in DP 1.78. Prior to DP 1.78, custom roles keep working under the old scheme.
 {% endalert %}
 
-Along with the role renaming ([name mapping](./#migration-to-the-new-role-names-in-dkp-178)) in DKP 1.78, the label scheme that drives aggregation will change.
+Along with the role renaming ([name mapping](./#migration-to-the-new-role-names-in-dp-178)) in DP 1.78, the label scheme that drives aggregation will change.
 
-Custom roles created with the old scheme **will stop aggregating permissions** after upgrading to DKP 1.78: the built-in capabilities will be relabeled, and the old aggregation selectors (for example, `rbac.deckhouse.io/kind: manage` + `rbac.deckhouse.io/aggregate-to-<subsystem>-as`) will no longer match them. No compatibility aliases are created for custom roles — they must be updated manually.
+Custom roles created with the old scheme **will stop aggregating permissions** after upgrading to DP 1.78: the built-in capabilities will be relabeled, and the old aggregation selectors (for example, `rbac.deckhouse.io/kind: manage` + `rbac.deckhouse.io/aggregate-to-<subsystem>-as`) will no longer match them. No compatibility aliases are created for custom roles — they must be updated manually.
 
 Mapping between the old and the new scheme:
 
@@ -342,7 +342,7 @@ Aggregation selectors match labels, not names, so updating the selectors will be
 
 ### Migration steps
 
-After upgrading to DKP 1.78, do the following:
+After upgrading to DP 1.78, do the following:
 
 1. Create a new version of a custom role — with the `d8:custom:` prefix, the `rbac.deckhouse.io/kind: custom-role` label, and the new aggregation selectors. See the before and after examples below.
 1. Recreate your capabilities with the `rbac.deckhouse.io/kind: custom-capability` label and the `d8:custom:` name prefix.
@@ -479,7 +479,7 @@ Labels on ClusterRole objects:
 | `rbac.deckhouse.io/namespace` | Namespace | Unchanged | An additional namespace where a RoleBinding is automatically created for the role holders |
 | `rbac.deckhouse.io/capability` | — | A unique capability name (for example, `system-capability.deckhouse.view`) | A machine-readable identifier of a built-in capability |
 | `rbac.deckhouse.io/deprecated` | — | `"true"` on alias roles | The role is deprecated and will be removed; migrate the bindings to the new role |
-| `module` | Module name | Unchanged | Marks a built-in object as belonging to a DKP module; handy in aggregation selectors together with `scope` |
+| `module` | Module name | Unchanged | Marks a built-in object as belonging to a DP module; handy in aggregation selectors together with `scope` |
 | `heritage: deckhouse` | Platform object marker | Unchanged | Must not be set on custom objects |
 
 Annotations on ClusterRole objects (the old scheme did not use annotations):
@@ -488,7 +488,7 @@ Annotations on ClusterRole objects (the old scheme did not use annotations):
 |------------|---------|
 | `ru.meta.deckhouse.io/title`, `ru.meta.deckhouse.io/description` | The displayed name and description of a role/capability in Russian (the platform sets them on built-in objects; you can set your own on custom ones) |
 | `en.meta.deckhouse.io/title`, `en.meta.deckhouse.io/description` | Same in English |
-| `rbac.deckhouse.io/deprecated-replaced-by` | Introduced in DKP 1.78 together with the new scheme. The aggregation rules of the previous roles will change so that these roles keep granting the same permissions as their new counterparts — existing bindings will not break. However, the previous roles are kept for one release only: during that time, the bindings must be migrated to the new roles. The annotation is set on every previous role and contains the name of the new role that is equivalent to it in terms of permissions — that is the role to migrate to |
+| `rbac.deckhouse.io/deprecated-replaced-by` | Introduced in DP 1.78 together with the new scheme. The aggregation rules of the previous roles will change so that these roles keep granting the same permissions as their new counterparts — existing bindings will not break. However, the previous roles are kept for one release only: during that time, the bindings must be migrated to the new roles. The annotation is set on every previous role and contains the name of the new role that is equivalent to it in terms of permissions — that is the role to migrate to |
 
 ### Adding a custom capability (in the new scheme)
 

@@ -1,7 +1,7 @@
 ---
 title: "Балансировка входящего трафика"
 permalink: ru/admin/configuration/network/ingress/
-description: "Настройка балансировки входящего трафика в Deckhouse Kubernetes Platform с NLB и ALB. Маршрутизация трафика, SSL-терминация и настройка балансировки на уровне приложений."
+description: "Настройка балансировки входящего трафика в Deckhouse Platform с NLB и ALB. Маршрутизация трафика, SSL-терминация и настройка балансировки на уровне приложений."
 lang: ru
 extractedLinksMax: 0
 relatedLinks:
@@ -17,7 +17,7 @@ relatedLinks:
     url: ../../../../user/network/ingress/alb/
 ---
 
-В этом разделе описываются подходы к балансировке входящего трафика в Deckhouse Kubernetes Platform (DKP):
+В этом разделе описываются подходы к балансировке входящего трафика в Deckhouse Platform (DP):
 
 - NLB (Network Load Balancer) — работает на сетевом уровне, маршрутизирует трафик по IP-адресам и портам без анализа содержимого запросов.
 - ALB (Application Load Balancer) — действует на прикладном уровне, анализирует HTTP(S)-заголовки, пути и домены. Поддерживает SSL-терминацию и маршрутизацию в зависимости от содержимого запроса.
@@ -31,7 +31,7 @@ relatedLinks:
 
 ## Балансировка на прикладном уровне (ALB)
 
-Для балансировки трафика на уровне приложений в DKP доступны следующие решения:
+Для балансировки трафика на уровне приложений в DP доступны следующие решения:
 
 - [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx) (модуль [`ingress-nginx`](/modules/ingress-nginx/));
 - [Kubernetes Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/) (модуль [`alb`](/modules/alb/));

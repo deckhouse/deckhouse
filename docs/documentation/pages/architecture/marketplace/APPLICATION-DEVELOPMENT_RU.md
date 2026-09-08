@@ -1,7 +1,7 @@
 ---
 title: Разработка приложений
 permalink: ru/architecture/marketplace/application-development.html
-description: "Создание пакета Application для Deckhouse Kubernetes Platform Marketplace: бутстрап, структура проекта, package.yaml, настройка CI/CD, локальная сборка и организация OCI-артефактов в реестре."
+description: "Создание пакета Application для Deckhouse Platform Marketplace: бутстрап, структура проекта, package.yaml, настройка CI/CD, локальная сборка и организация OCI-артефактов в реестре."
 lang: ru
 search: application development, package.yaml, d8 package, разработка приложения, структура пакета, CI/CD пакета
 ---
@@ -107,7 +107,7 @@ requirements:
 | `type` | Да | `Application` или `Module` |
 | `stage` | Да | Стадия зрелости (`Preview`, `General Availability` и т. д.) |
 | `category` | Да | Категория для классификации в каталоге |
-| `requirements.deckhouse` | Нет | Ограничение на минимальную версию DKP |
+| `requirements.deckhouse` | Нет | Ограничение на минимальную версию DP |
 | `requirements.kubernetes` | Нет | Ограничение на минимальную версию Kubernetes |
 | `requirements.modules` | Нет | Зависимости от модулей (semver-ограничения) |
 

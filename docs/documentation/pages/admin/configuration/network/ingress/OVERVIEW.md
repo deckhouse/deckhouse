@@ -1,7 +1,7 @@
 ---
 title: "Incoming traffic balancing"
 permalink: en/admin/configuration/network/ingress/
-description: "Configure ingress load balancing in Deckhouse Kubernetes Platform with NLB and ALB. Traffic routing, SSL termination, and application-level load balancing setup."
+description: "Configure ingress load balancing in Deckhouse Platform with NLB and ALB. Traffic routing, SSL termination, and application-level load balancing setup."
 extractedLinksMax: 4
 relatedLinks:
   - title: "ALB with Ingress NGINX Controller"
@@ -16,7 +16,7 @@ relatedLinks:
     url: ../../../../user/network/ingress/alb/
 ---
 
-This section describes the approaches to balancing incoming traffic in Deckhouse Kubernetes Platform (DKP):
+This section describes the approaches to balancing incoming traffic in Deckhouse Platform (DP):
 
 - NLB (Network Load Balancer) — operates at the network level, routing traffic based on IP addresses
   and ports without inspecting request contents.
@@ -32,7 +32,7 @@ NLB-based load balancing can be implemented in two ways:
 
 ## Application-level load balancing (ALB)
 
-For application-level traffic balancing, DKP provides the following solutions:
+For application-level traffic balancing, DP provides following solutions:
 
 - [Ingress NGINX Controller](https://github.com/kubernetes/ingress-nginx) (via the [`ingress-nginx`](/modules/ingress-nginx/) module).
 - [Kubernetes Gateway API](https://kubernetes.io/docs/concepts/services-networking/gateway/) ([`alb`](/modules/alb/) module).

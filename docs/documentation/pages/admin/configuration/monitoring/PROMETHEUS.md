@@ -1,11 +1,11 @@
 ---
 title: "Configuring a system for collecting and storing metrics"
 permalink: en/admin/configuration/monitoring/prometheus.html
-description: "Configure Prometheus metrics collection and storage in Deckhouse Kubernetes Platform. Deckhouse Prom++ setup, metrics configuration, and monitoring system management."
+description: "Configure Prometheus metrics collection and storage in Deckhouse Platform. Deckhouse Prom++ setup, metrics configuration, and monitoring system management."
 ---
 
-{% alert level="info" %}
-Starting from version 1.71, Deckhouse Kubernetes Platform uses [Deckhouse Prom++](/products/prompp/) instead of Prometheus.
+{% alert %}
+Starting from version 1.71, Deckhouse Platform uses [Deckhouse Prom++](/products/prompp/) instead of Prometheus.
 {% endalert %}
 
 ## Prometheus capabilities
@@ -19,7 +19,7 @@ Prometheus collects metrics and executes rules:
 
 ## Prometheus operation
 
-Prometheus is installed by the [`prometheus`](/modules/prometheus/) module of DKP, which performs the following functions:
+Prometheus is installed by the [`prometheus`](/modules/prometheus/) module of DP, which performs the following functions:
 - Defines the following custom resources:
   - `Prometheus`: Defines the *Prometheus* installation (cluster).
   - `ServiceMonitor`: Defines how to collect metrics from services.
