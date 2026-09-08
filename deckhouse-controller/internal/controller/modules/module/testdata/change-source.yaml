@@ -1,17 +1,11 @@
 ---
-# The module does not pin a packageRepositoryName, so the controller resolves the
-# package through its ModulePackage. With a single available repository there is no
-# conflict and reconciliation succeeds.
 apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: test-module
 spec:
-  packageVersion: v1.0.0
   enabled: true
-status:
-  summary:
-    state: Ready
+  packageVersion: v1.0.0
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModulePackage
