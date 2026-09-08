@@ -10,6 +10,10 @@ metadata:
     rbac.deckhouse.io/level: subsystem
     rbac.deckhouse.io/subsystem: security
     rbac.deckhouse.io/aggregate-to-all-as: manager
+    user-authz.deckhouse.io/can-assign-basic-max: ClusterAdmin
+    user-authz.deckhouse.io/can-assign-scope: subsystem
+    user-authz.deckhouse.io/can-assign-subsystem: security
+    user-authz.deckhouse.io/can-assign-max-level: admin
 aggregationRule:
   clusterRoleSelectors:
     - matchLabels:
