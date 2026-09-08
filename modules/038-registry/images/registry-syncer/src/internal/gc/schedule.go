@@ -72,6 +72,20 @@ type Plan struct {
 // pass, before doing any of the work that can fail.
 const unknownPlanRetry = time.Minute
 
+// planRecheck bounds how long a scheduled wait goes without looking at the configuration again.
+//
+// The wait used to be one sleep to the next firing, so a schedule was only ever re-read after it
+// fired: an operator who corrected `15 0 * * *` to `*/15 * * * *` saw nothing happen until the
+// following midnight, and nothing said why. Measured on a cache cluster: the schedule was changed
+// at 16:31 and the replica stayed asleep on the plan it had read at 16:12, due at 00:15.
+//
+// Five minutes rather than a tighter loop, because the cost is paid on every replica for the life
+// of the cluster while the benefit is bounded by how fast an operator expects a correction to take
+// effect. What a wake-up does is call `Plan`, which reads state this process already holds — but a
+// wake-up is not free, and there is nothing to gain from noticing a new schedule in one second
+// rather than in five minutes.
+const planRecheck = 5 * time.Minute
+
 // fillingRetry is how long the collection waits out a fill.
 //
 // Short, and deliberately not "until the next slot in the schedule": a fill of a whole release set
@@ -220,25 +234,31 @@ func (s *Scheduler) Run(ctx context.Context) {
 			continue
 		}
 
-		now := s.now()
-		next := schedule.Next(now)
-		wait := next.Sub(now)
+		next := schedule.Next(s.now())
 
 		s.Log.Info("the next garbage collection is scheduled", "at", next.Format(time.RFC3339))
-		if !s.sleep(ctx, wait) {
+		outcome, current := s.waitUntil(ctx, next, plan)
+		switch outcome {
+		case waitStopped:
 			return
+		case waitReplanned:
+			s.Log.Info("the garbage collection configuration changed while waiting, so the schedule is read again",
+				"was", plan.Schedule, "now", current.Schedule, "enabled", current.Enabled)
+			continue
 		}
 
 		// Asked here rather than before the wait, because the wait is where a fill usually
-		// starts: the answer that matters is the one at the moment of firing.
+		// starts: the answer that matters is the one at the moment of firing. `current` is that
+		// answer — the last plan the wait read — where `plan` is the one the schedule was
+		// computed from and can be a whole period old.
 		//
 		// Two questions, not one. `filling` is whether a pass is in flight; `FillPending` is
 		// whether the store is owed a fill at all — and the second is the one that holds between
 		// passes, where the first says "no" for thirty seconds at a time on a store that is far
 		// from complete.
-		if plan.FillPending || s.filling() || s.pushing() {
+		if current.FillPending || s.filling() || s.pushing() {
 			s.Log.Info("the store is being written to, so the collection waits",
-				"fill_in_flight", s.filling(), "fill_pending", plan.FillPending,
+				"fill_in_flight", s.filling(), "fill_pending", current.FillPending,
 				"push_in_flight", s.pushing(), "retry_in", fillingRetry.String())
 			if !s.sleep(ctx, fillingRetry) {
 				return
@@ -248,6 +268,61 @@ func (s *Scheduler) Run(ctx context.Context) {
 
 		s.fire(ctx)
 	}
+}
+
+// waitOutcome says why a scheduled wait ended.
+type waitOutcome int
+
+const (
+	// waitDue: the moment the schedule named has arrived.
+	waitDue waitOutcome = iota
+
+	// waitReplanned: the configuration changed under the wait, so the schedule it was computed
+	// from no longer describes what was asked for.
+	waitReplanned
+
+	// waitStopped: the context ended.
+	waitStopped
+)
+
+// waitUntil waits for a collection to become due, looking at the configuration as it goes.
+//
+// Returns the last plan it read along with the outcome, so the caller decides on the freshest
+// answer it can have rather than on one taken a period ago.
+//
+// A change of `Schedule` or `Enabled` ends the wait; a change of `FillPending` does not. The first
+// two are what the wait itself was computed from, so a wait that outlives them is waiting for the
+// wrong moment. The third is read at the moment of firing anyway, and it flips on its own as fills
+// come and go — ending the wait for it would restart the schedule every time a fill finished.
+func (s *Scheduler) waitUntil(ctx context.Context, next time.Time, planned Plan) (waitOutcome, Plan) {
+	current := planned
+
+	// Counted down by what was asked for rather than re-read from the clock, because a completed
+	// sleep IS its duration: that is the contract the injected `Sleep` documents, and consulting
+	// the clock instead would make this loop unable to end under a test that freezes it.
+	remaining := next.Sub(s.now())
+
+	for remaining > 0 {
+		chunk := remaining
+		if chunk > planRecheck {
+			chunk = planRecheck
+		}
+		if !s.sleep(ctx, chunk) {
+			return waitStopped, current
+		}
+		remaining -= chunk
+
+		// An unknown plan is not a change: it is what a replica reports for a moment after a
+		// restart, and treating it as one would drop a schedule that is still perfectly good.
+		if read := s.Plan(); read.Known {
+			current = read
+			if read.Schedule != planned.Schedule || read.Enabled != planned.Enabled {
+				return waitReplanned, current
+			}
+		}
+	}
+
+	return waitDue, current
 }
 
 // fire runs one collection, bounded by the window and serialised against the other replicas.
