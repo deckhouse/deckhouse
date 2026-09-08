@@ -504,7 +504,6 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"operatorTrivy": map[string]interface{}{
 		"nodeCollector":            "imageHash-operatorTrivy-nodeCollector",
-		"nodeCollectorVexArtifact": "imageHash-operatorTrivy-nodeCollectorVexArtifact",
 		"operator":                 "imageHash-operatorTrivy-operator",
 		"operatorVexArtifact":      "imageHash-operatorTrivy-operatorVexArtifact",
 		"reportUpdater":            "imageHash-operatorTrivy-reportUpdater",
