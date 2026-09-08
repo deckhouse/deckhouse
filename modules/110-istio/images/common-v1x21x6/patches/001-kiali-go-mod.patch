@@ -40,14 +40,14 @@ index b382b2645..faba3c5e7 100644
  
  	"github.com/kiali/kiali/business"
 diff --git a/go.mod b/go.mod
-index 8d25423d6..4ee6df7a9 100644
+index 8d25423d6..4eb2cfc15 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,12 +1,12 @@
  module github.com/kiali/kiali
  
 -go 1.20
-+go 1.26.0
++go 1.25.0
  
  require (
  	github.com/NYTimes/gziphandler v1.1.1
@@ -143,7 +143,7 @@ index 8d25423d6..4ee6df7a9 100644
 +	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 +	go.opentelemetry.io/otel/metric v1.44.0 // indirect
 +	go.opentelemetry.io/proto/otlp v1.10.0 // indirect
-+	golang.org/x/crypto v0.56.0 // indirect
++	golang.org/x/crypto v0.55.0 // indirect
 +	golang.org/x/oauth2 v0.36.0 // indirect
 +	golang.org/x/sys v0.47.0 // indirect
 +	golang.org/x/term v0.45.0 // indirect
@@ -157,7 +157,7 @@ index 8d25423d6..4ee6df7a9 100644
  	gopkg.in/yaml.v3 v3.0.1 // indirect
  	k8s.io/klog/v2 v2.100.1 // indirect
 diff --git a/go.sum b/go.sum
-index 3efdcd93f..9a2f26209 100644
+index 3efdcd93f..0ddb1f0bb 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,12 +1,15 @@
@@ -343,8 +343,8 @@ index 3efdcd93f..9a2f26209 100644
 -golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
 -golang.org/x/crypto v0.15.0 h1:frVn1TEaCEaZcn3Tmd7Y2b5KKPaZ+I32Q2OA3kYp5TA=
 -golang.org/x/crypto v0.15.0/go.mod h1:4ChreQoLWfG3xLDer1WdlH5NdlQ3+mwnQq1YTKY+72g=
-+golang.org/x/crypto v0.56.0 h1:GUh5Ii4J5jtcseSMiRqr1jXCNHoxjeV9Fmekc2oLy6Y=
-+golang.org/x/crypto v0.56.0/go.mod h1:OMW5y6CY9l38uPLmxU6l6pwcXp1obtLo3e6gT7gQR2I=
++golang.org/x/crypto v0.55.0 h1:+KWHjbgOaAQ66dh/YlkZKHlz9ZUlq61AFirAR9ntP8M=
++golang.org/x/crypto v0.55.0/go.mod h1:uq0V9dE/fzQuJtbnL+2EhWOE63vo164FY8xqEnV9xis=
  golang.org/x/exp v0.0.0-20231006140011-7918f672742d h1:jtJma62tbqLibJ5sFQz8bKtEM8rJBtfilJ2qTU199MI=
  golang.org/x/exp v0.0.0-20231006140011-7918f672742d/go.mod h1:ldy0pHrwJyGW56pPQzzkH36rKxoZW1tw7ZJpeKx+hdo=
  golang.org/x/mod v0.2.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=

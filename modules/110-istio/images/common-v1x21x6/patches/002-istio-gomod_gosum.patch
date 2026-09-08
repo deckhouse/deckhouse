@@ -1,12 +1,12 @@
 diff --git a/go.mod b/go.mod
-index d6c10ee83f..293462b5e6 100644
+index d6c10ee83f..17266104d7 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,48 +1,50 @@
  module istio.io/istio
  
 -go 1.21
-+go 1.26.0
++go 1.25.0
  
  // Client-go does not handle different versions of mergo due to some breaking changes - use the matching version
  replace github.com/imdario/mergo => github.com/imdario/mergo v0.3.5
@@ -259,7 +259,7 @@ index d6c10ee83f..293462b5e6 100644
 -	golang.org/x/text v0.14.0 // indirect
 -	golang.org/x/tools v0.17.0 // indirect
 -	google.golang.org/appengine v1.6.8 // indirect
-+	golang.org/x/crypto v0.56.0 // indirect
++	golang.org/x/crypto v0.55.0 // indirect
 +	golang.org/x/mod v0.38.0 // indirect
 +	golang.org/x/term v0.45.0 // indirect
 +	golang.org/x/text v0.41.0 // indirect
@@ -268,7 +268,7 @@ index d6c10ee83f..293462b5e6 100644
  	gopkg.in/ini.v1 v1.67.0 // indirect
  	k8s.io/component-base v0.29.0 // indirect
 diff --git a/go.sum b/go.sum
-index 10100f8bfd..4018f95770 100644
+index 10100f8bfd..9ba7632317 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,24 +1,1215 @@
@@ -2194,8 +2194,8 @@ index 10100f8bfd..4018f95770 100644
  golang.org/x/crypto v0.19.0/go.mod h1:Iy9bg/ha4yyC70EfRS8jz+B6ybOBKMaSxLj6P6oBDfU=
 -golang.org/x/crypto v0.21.0 h1:X31++rzVUdKhX5sWmSOFZxx8UW/ldWx55cbf08iNAMA=
  golang.org/x/crypto v0.21.0/go.mod h1:0BP7YvVV9gBbVKyeTG0Gyn+gZm94bibOW5BjDEYAOMs=
-+golang.org/x/crypto v0.56.0 h1:GUh5Ii4J5jtcseSMiRqr1jXCNHoxjeV9Fmekc2oLy6Y=
-+golang.org/x/crypto v0.56.0/go.mod h1:OMW5y6CY9l38uPLmxU6l6pwcXp1obtLo3e6gT7gQR2I=
++golang.org/x/crypto v0.55.0 h1:+KWHjbgOaAQ66dh/YlkZKHlz9ZUlq61AFirAR9ntP8M=
++golang.org/x/crypto v0.55.0/go.mod h1:uq0V9dE/fzQuJtbnL+2EhWOE63vo164FY8xqEnV9xis=
 +golang.org/x/exp v0.0.0-20180321215751-8460e604b9de/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 +golang.org/x/exp v0.0.0-20180807140117-3d87b88a115f/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
  golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=

@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index cec3efa8..3aa7501b 100644
+index cec3efa8..e560288f 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,46 +1,47 @@
@@ -8,7 +8,7 @@ index cec3efa8..3aa7501b 100644
 -go 1.23.0
 -
 -toolchain go1.23.4
-+go 1.26.0
++go 1.25.0
  
  // Client-go does not handle different versions of mergo due to some breaking changes - use the matching version
  // This replacement is aligned with istio/istio's go.mod
@@ -225,7 +225,7 @@ index cec3efa8..3aa7501b 100644
 -	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 +	go.yaml.in/yaml/v2 v2.4.3 // indirect
 +	go.yaml.in/yaml/v3 v3.0.4 // indirect
-+	golang.org/x/crypto v0.56.0 // indirect
++	golang.org/x/crypto v0.55.0 // indirect
 +	golang.org/x/exp v0.0.0-20251017212417-90e834f514db // indirect
 +	golang.org/x/net v0.57.0 // indirect
 +	golang.org/x/oauth2 v0.36.0 // indirect
@@ -273,7 +273,7 @@ index cec3efa8..3aa7501b 100644
 +	sigs.k8s.io/yaml v1.6.0 // indirect
  )
 diff --git a/go.sum b/go.sum
-index f432a32d..c83231af 100644
+index f432a32d..2eb5037c 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,15 +1,15 @@
@@ -884,8 +884,8 @@ index f432a32d..c83231af 100644
 +go.yaml.in/yaml/v2 v2.4.3/go.mod h1:zSxWcmIDjOzPXpjlTTbAsKokqkDNAVtZO0WOMiT90s8=
 +go.yaml.in/yaml/v3 v3.0.4 h1:tfq32ie2Jv2UxXFdLJdh3jXuOzWiL1fo0bu/FbuKpbc=
 +go.yaml.in/yaml/v3 v3.0.4/go.mod h1:DhzuOOF2ATzADvBadXxruRBLzYTpT36CKvDb3+aBEFg=
-+golang.org/x/crypto v0.56.0 h1:GUh5Ii4J5jtcseSMiRqr1jXCNHoxjeV9Fmekc2oLy6Y=
-+golang.org/x/crypto v0.56.0/go.mod h1:OMW5y6CY9l38uPLmxU6l6pwcXp1obtLo3e6gT7gQR2I=
++golang.org/x/crypto v0.55.0 h1:+KWHjbgOaAQ66dh/YlkZKHlz9ZUlq61AFirAR9ntP8M=
++golang.org/x/crypto v0.55.0/go.mod h1:uq0V9dE/fzQuJtbnL+2EhWOE63vo164FY8xqEnV9xis=
 +golang.org/x/exp v0.0.0-20251017212417-90e834f514db h1:by6IehL4BH5k3e3SJmcoNbOobMey2SLpAF79iPOEBvw=
 +golang.org/x/exp v0.0.0-20251017212417-90e834f514db/go.mod h1:j/pmGrbnkbPtQfxEe5D0VQhZC6qKbfKifgD0oM7sR70=
 +golang.org/x/mod v0.38.0 h1:MECBjubtXD7yj4HrhIUcywNaGeNVUdfVnxmPajOk4yk=

@@ -1,12 +1,12 @@
 diff --git a/go.mod b/go.mod
-index ee1916998..85391de20 100644
+index ee1916998..2d517ce25 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,14 +1,14 @@
  module github.com/kiali/kiali
  
 -go 1.23.2
-+go 1.26.0
++go 1.25.0
  
  require (
  	github.com/Masterminds/semver/v3 v3.3.1
@@ -102,7 +102,7 @@ index ee1916998..85391de20 100644
 -	golang.org/x/sys v0.28.0 // indirect
 -	golang.org/x/term v0.27.0 // indirect
 -	golang.org/x/text v0.21.0 // indirect
-+	golang.org/x/crypto v0.56.0 // indirect
++	golang.org/x/crypto v0.55.0 // indirect
 +	golang.org/x/net v0.57.0 // indirect
 +	golang.org/x/sys v0.47.0 // indirect
 +	golang.org/x/term v0.45.0 // indirect
@@ -119,7 +119,7 @@ index ee1916998..85391de20 100644
  	gopkg.in/yaml.v3 v3.0.1 // indirect
  	k8s.io/apiextensions-apiserver v0.31.1 // indirect
 diff --git a/go.sum b/go.sum
-index 8cba35f8b..a2813d0bc 100644
+index 8cba35f8b..2a0a8e216 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -8,6 +8,8 @@ github.com/beorn7/perks v1.0.1 h1:VlbKKnNfV8bJzeqoa4cOKqO6bYr3WgKZxO8Z16+hsOM=
@@ -260,8 +260,8 @@ index 8cba35f8b..a2813d0bc 100644
 -golang.org/x/crypto v0.31.0/go.mod h1:kDsLvtWBEx7MV9tJOj9bnXsPbxwJQ6csT/x4KIN4Ssk=
 +golang.org/x/crypto v0.0.0-20210921155107-089bfa567519/go.mod h1:GvvjBRRGRdwPK5ydBHafDWAxML/pGHZbMvKqRZ5+Abc=
 +golang.org/x/crypto v0.19.0/go.mod h1:Iy9bg/ha4yyC70EfRS8jz+B6ybOBKMaSxLj6P6oBDfU=
-+golang.org/x/crypto v0.56.0 h1:GUh5Ii4J5jtcseSMiRqr1jXCNHoxjeV9Fmekc2oLy6Y=
-+golang.org/x/crypto v0.56.0/go.mod h1:OMW5y6CY9l38uPLmxU6l6pwcXp1obtLo3e6gT7gQR2I=
++golang.org/x/crypto v0.55.0 h1:+KWHjbgOaAQ66dh/YlkZKHlz9ZUlq61AFirAR9ntP8M=
++golang.org/x/crypto v0.55.0/go.mod h1:uq0V9dE/fzQuJtbnL+2EhWOE63vo164FY8xqEnV9xis=
  golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f h1:99ci1mjWVBWwJiEKYY6jWa4d2nTQVIEhZIptnrVb1XY=
  golang.org/x/exp v0.0.0-20240416160154-fe59bbe5cc7f/go.mod h1:/lliqkxwWAhPjf5oSOIJup2XcqJaw8RGS6k3TGEc7GI=
  golang.org/x/mod v0.2.0/go.mod h1:s0Qsj1ACt9ePp/hMypM3fl4fZqREWJwdYDEqhRiZZUA=

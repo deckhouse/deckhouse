@@ -1,12 +1,12 @@
 diff --git a/go.mod b/go.mod
-index 2ca62a410c..29e6a175fd 100644
+index 2ca62a410c..da7648ef93 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,119 +1,120 @@
  module istio.io/istio
  
 -go 1.23.0
-+go 1.26.0
++go 1.25.0
  
  require (
 -	cloud.google.com/go/compute/metadata v0.6.0
@@ -309,7 +309,7 @@ index 2ca62a410c..29e6a175fd 100644
 -	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 +	go.yaml.in/yaml/v2 v2.4.4 // indirect
 +	go.yaml.in/yaml/v3 v3.0.4 // indirect
-+	golang.org/x/crypto v0.56.0 // indirect
++	golang.org/x/crypto v0.55.0 // indirect
 +	golang.org/x/exp v0.0.0-20260218203240-3dfff04db8fa // indirect
 +	golang.org/x/mod v0.38.0 // indirect
 +	golang.org/x/term v0.45.0 // indirect
@@ -340,7 +340,7 @@ index 2ca62a410c..29e6a175fd 100644
 +	k8s.io/kube-openapi => k8s.io/kube-openapi v0.0.0-20241212222426-2c72e554b1e7
  )
 diff --git a/go.sum b/go.sum
-index 5354185bcf..8f1aefdc5f 100644
+index 5354185bcf..d864b481fa 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,27 +1,27 @@
@@ -966,8 +966,8 @@ index 5354185bcf..8f1aefdc5f 100644
  golang.org/x/crypto v0.19.0/go.mod h1:Iy9bg/ha4yyC70EfRS8jz+B6ybOBKMaSxLj6P6oBDfU=
 -golang.org/x/crypto v0.36.0 h1:AnAEvhDddvBdpY+uR+MyHmuZzzNqXSe/GvuDeob5L34=
 -golang.org/x/crypto v0.36.0/go.mod h1:Y4J0ReaxCR1IMaabaSMugxJES1EpwhBHhv2bDHklZvc=
-+golang.org/x/crypto v0.56.0 h1:GUh5Ii4J5jtcseSMiRqr1jXCNHoxjeV9Fmekc2oLy6Y=
-+golang.org/x/crypto v0.56.0/go.mod h1:OMW5y6CY9l38uPLmxU6l6pwcXp1obtLo3e6gT7gQR2I=
++golang.org/x/crypto v0.55.0 h1:+KWHjbgOaAQ66dh/YlkZKHlz9ZUlq61AFirAR9ntP8M=
++golang.org/x/crypto v0.55.0/go.mod h1:uq0V9dE/fzQuJtbnL+2EhWOE63vo164FY8xqEnV9xis=
  golang.org/x/exp v0.0.0-20190121172915-509febef88a4/go.mod h1:CJ0aWSM057203Lf6IL+f9T1iT9GByDxfZKAQTCR3kQA=
 -golang.org/x/exp v0.0.0-20241215155358-4a5509556b9e h1:4qufH0hlUYs6AO6XmZC3GqfDPGSXHVXUFR6OND+iJX4=
 -golang.org/x/exp v0.0.0-20241215155358-4a5509556b9e/go.mod h1:qj5a5QZpwLU2NLQudwIN5koi3beDhSAlJwa67PuM98c=
