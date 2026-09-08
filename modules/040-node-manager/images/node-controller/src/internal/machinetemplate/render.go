@@ -93,8 +93,7 @@ func deepCopy(m map[string]any) (map[string]any, error) {
 	return out, nil
 }
 
-// parseNamedTemplate parses an arbitrary provider template using the same
-// deterministic sandbox as machine templates.
+// parseNamedTemplate uses the restricted function set and fails on missing context keys.
 func parseNamedTemplate(name, text string) (*template.Template, error) {
 	return template.
 		New(name).
@@ -103,9 +102,8 @@ func parseNamedTemplate(name, text string) (*template.Template, error) {
 		Parse(text)
 }
 
-// RenderSandboxedTemplate renders a provider template using the deterministic
-// template-function sandbox. The context is copied because some Sprig
-// functions, such as set and merge, mutate maps.
+// RenderSandboxedTemplate renders a provider template using the restricted
+// function set and a copy of its context.
 func RenderSandboxedTemplate(
 	name string,
 	text string,

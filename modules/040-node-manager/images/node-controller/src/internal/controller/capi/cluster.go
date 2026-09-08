@@ -18,11 +18,11 @@ package capi
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/types"
@@ -36,6 +36,8 @@ import (
 	sigsyaml "sigs.k8s.io/yaml"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/clusterprefix"
+	"github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
 	"github.com/deckhouse/node-controller/internal/register"
 )
 
@@ -47,6 +49,11 @@ type ClusterReconciler struct {
 	BaseWithReader
 }
 
+var clusterReconcileRequest = []reconcile.Request{{NamespacedName: types.NamespacedName{
+	Name:      cloudProviderSecretName,
+	Namespace: cloudProviderSecretNamespace,
+}}}
+
 func isProviderTemplateSecret(namespace, name string) bool {
 	return namespace == providerTemplateSecretNamespace &&
 		strings.HasPrefix(name, "d8-cloud-provider-") &&
@@ -55,41 +62,57 @@ func isProviderTemplateSecret(namespace, name string) bool {
 
 func isClusterReconcileRequest(req ctrl.Request) bool {
 	if req.Namespace == cloudProviderSecretNamespace &&
-		req.Name == cloudProviderSecretName {
+		(req.Name == cloudProviderSecretName || req.Name == clusterConfigSecretName) {
 		return true
 	}
 
 	return isProviderTemplateSecret(req.Namespace, req.Name)
 }
 
+// ForPredicates limits the primary Secret watch to inputs that can change cloud
+// cluster resources. Provider template Secrets are matched by name because the
+// active provider is discovered at runtime.
+func (r *ClusterReconciler) ForPredicates() []predicate.Predicate {
+	return []predicate.Predicate{predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		return isClusterReconcileRequest(ctrl.Request{NamespacedName: types.NamespacedName{
+			Name:      obj.GetName(),
+			Namespace: obj.GetNamespace(),
+		}})
+	})}
+}
+
 func (r *ClusterReconciler) SetupWatches(w register.Watcher) {
-	// WithEventFilter is controller-wide, so it also covers the NodeGroup watch below.
-	// NodeGroup events must always pass — on a static cluster the cloud-provider Secret may not
-	// exist, and NodeGroup is the only trigger for ensureStaticCluster. The Secret (primary For)
-	// is filtered down to the cloud-provider and CAPI provider-template Secrets.
-	w.WithEventFilter(predicate.NewPredicateFuncs(func(obj client.Object) bool {
-		if _, ok := obj.(*deckhousev1.NodeGroup); ok {
-			return true
-		}
-
-		if obj.GetNamespace() == cloudProviderSecretNamespace &&
-			obj.GetName() == cloudProviderSecretName {
-			return true
-		}
-
-		return isProviderTemplateSecret(obj.GetNamespace(), obj.GetName())
-	}))
-
-	// Re-enqueue only on spec/generation changes — NodeGroup status updates must not trigger
-	// a no-op re-ensure, otherwise the createIfNotExists path logs on every status bump.
-	w.Watches(&deckhousev1.NodeGroup{}, handler.EnqueueRequestsFromMapFunc(
+	enqueue := handler.EnqueueRequestsFromMapFunc(
 		func(_ context.Context, _ client.Object) []reconcile.Request {
-			return []reconcile.Request{{NamespacedName: types.NamespacedName{
-				Name:      cloudProviderSecretName,
-				Namespace: cloudProviderSecretNamespace,
-			}}}
+			return clusterReconcileRequest
 		},
-	), builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+	)
+
+	// NodeGroup status updates do not affect static cluster resources.
+	w.Watches(&deckhousev1.NodeGroup{}, enqueue,
+		builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+
+	// Cluster templates may depend on control-plane endpoints.
+	w.Watches(&corev1.Pod{}, enqueue, builder.WithPredicates(
+		predicate.NewPredicateFuncs(func(obj client.Object) bool {
+			return obj.GetNamespace() == "kube-system" &&
+				obj.GetLabels()["component"] == "kube-apiserver" &&
+				obj.GetLabels()["tier"] == "control-plane"
+		}),
+	))
+	w.Watches(&discoveryv1.EndpointSlice{}, enqueue, builder.WithPredicates(
+		predicate.NewPredicateFuncs(func(obj client.Object) bool {
+			return obj.GetNamespace() == "default" && obj.GetName() == "kubernetes"
+		}),
+	))
+
+	// Cluster templates may use the global cluster prefix to name provider resources.
+	moduleConfig := newUnstructured("deckhouse.io", "v1alpha1", "ModuleConfig")
+	w.Watches(moduleConfig, enqueue, builder.WithPredicates(
+		predicate.NewPredicateFuncs(func(obj client.Object) bool {
+			return obj.GetName() == clusterprefix.GlobalModuleConfigName
+		}),
+	))
 }
 
 func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -113,16 +136,12 @@ func (r *ClusterReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	return ctrl.Result{}, nil
 }
 
-func (r *ClusterReconciler) ensureCloudCluster(
-	ctx context.Context,
-	clusterConfig *clusterConfiguration,
-) error {
+func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, clusterConfig *clusterConfiguration) error {
 	logger := log.FromContext(ctx)
 
 	secret := &corev1.Secret{}
 	if err := r.APIReader.Get(ctx, types.NamespacedName{
-		Name:      cloudProviderSecretName,
-		Namespace: cloudProviderSecretNamespace,
+		Name: cloudProviderSecretName, Namespace: cloudProviderSecretNamespace,
 	}, secret); err != nil {
 		if client.IgnoreNotFound(err) == nil {
 			return nil
@@ -130,10 +149,11 @@ func (r *ClusterReconciler) ensureCloudCluster(
 		return fmt.Errorf("get cloud-provider secret: %w", err)
 	}
 
-	clusterName := string(secret.Data["capiClusterName"])
-	clusterKind := string(secret.Data["capiClusterKind"])
-	infraAPIVersion := string(secret.Data["capiClusterAPIVersion"])
-	cloudType := string(secret.Data["type"])
+	cloudProvider := decodeCloudProviderSecret(secret.Data)
+	clusterName, _ := cloudProvider["capiClusterName"].(string)
+	clusterKind, _ := cloudProvider["capiClusterKind"].(string)
+	infraAPIVersion, _ := cloudProvider["capiClusterAPIVersion"].(string)
+	cloudType, _ := cloudProvider["type"].(string)
 
 	if clusterName == "" || clusterKind == "" {
 		return nil
@@ -147,30 +167,16 @@ func (r *ClusterReconciler) ensureCloudCluster(
 		infraAPIVersion = "infrastructure.cluster.x-k8s.io/v1alpha1"
 	}
 
-	provider := map[string]any{}
-	if rawProvider := secret.Data[cloudType]; len(rawProvider) > 0 {
-		if err := json.Unmarshal(rawProvider, &provider); err != nil {
-			return fmt.Errorf(
-				"decode %s provider configuration: %w",
-				cloudType,
-				err,
-			)
-		}
-	}
-
-	clusterTemplateContext := map[string]any{
-		"name":          clusterName,
-		"namespace":     capiNamespace,
-		"podSubnet":     clusterConfig.PodSubnetCIDR,
-		"serviceSubnet": clusterConfig.ServiceSubnetCIDR,
-		"domain":        clusterConfig.ClusterDomain,
+	provider, _ := cloudProvider[cloudType].(map[string]interface{})
+	if provider == nil {
+		provider = map[string]interface{}{}
 	}
 
 	if err := r.ensureProviderInfrastructure(
 		ctx,
 		cloudType,
 		provider,
-		clusterTemplateContext,
+		clusterConfig,
 		infraAPIVersion,
 		clusterKind,
 		clusterName,
@@ -199,12 +205,8 @@ func (r *ClusterReconciler) ensureCloudCluster(
 		},
 		"spec": map[string]interface{}{
 			"clusterNetwork": map[string]interface{}{
-				"pods": map[string]interface{}{
-					"cidrBlocks": []interface{}{clusterConfig.PodSubnetCIDR},
-				},
-				"services": map[string]interface{}{
-					"cidrBlocks": []interface{}{clusterConfig.ServiceSubnetCIDR},
-				},
+				"pods":          map[string]interface{}{"cidrBlocks": []interface{}{clusterConfig.PodSubnetCIDR}},
+				"services":      map[string]interface{}{"cidrBlocks": []interface{}{clusterConfig.ServiceSubnetCIDR}},
 				"serviceDomain": clusterConfig.ClusterDomain,
 			},
 			"infrastructureRef": map[string]interface{}{
@@ -242,16 +244,8 @@ func (r *ClusterReconciler) ensureCloudCluster(
 			"checks": map[string]interface{}{
 				"nodeStartupTimeoutSeconds": int64(1200),
 				"unhealthyNodeConditions": []interface{}{
-					map[string]interface{}{
-						"type":           "Ready",
-						"status":         "Unknown",
-						"timeoutSeconds": int64(300),
-					},
-					map[string]interface{}{
-						"type":           "Ready",
-						"status":         "False",
-						"timeoutSeconds": int64(300),
-					},
+					map[string]interface{}{"type": "Ready", "status": "Unknown", "timeoutSeconds": int64(300)},
+					map[string]interface{}{"type": "Ready", "status": "False", "timeoutSeconds": int64(300)},
 				},
 			},
 		},
@@ -261,12 +255,7 @@ func (r *ClusterReconciler) ensureCloudCluster(
 		return fmt.Errorf("create MachineHealthCheck: %w", err)
 	}
 
-	logger.V(1).Info(
-		"ensured cloud CAPI cluster resources",
-		"cluster",
-		clusterName,
-	)
-
+	logger.V(1).Info("ensured cloud CAPI cluster resources", "cluster", clusterName)
 	return nil
 }
 
@@ -274,7 +263,7 @@ func (r *ClusterReconciler) ensureProviderInfrastructure(
 	ctx context.Context,
 	cloudType string,
 	provider map[string]any,
-	cluster map[string]any,
+	clusterConfig *clusterConfiguration,
 	expectedAPIVersion string,
 	expectedKind string,
 	expectedName string,
@@ -294,8 +283,7 @@ func (r *ClusterReconciler) ensureProviderInfrastructure(
 	}
 
 	if !found {
-		// The provider has not migrated to the new cluster-template contract.
-		// Its infrastructure resource is still rendered by Helm.
+		// Keep the legacy Helm path until the provider publishes cluster-template.yaml.
 		return nil
 	}
 
@@ -304,82 +292,32 @@ func (r *ClusterReconciler) ensureProviderInfrastructure(
 		return fmt.Errorf("cloud provider %s: %w", cloudType, err)
 	}
 
-	objects, err := renderClusterTemplate(contract, provider, cluster)
+	templateContext, err := r.buildClusterTemplateContext(
+		ctx,
+		provider,
+		clusterConfig,
+		expectedName,
+	)
+	if err != nil {
+		return fmt.Errorf("build %s cluster-template context: %w", cloudType, err)
+	}
+
+	objects, err := renderClusterTemplate(contract, templateContext)
 	if err != nil {
 		return fmt.Errorf("cloud provider %s: %w", cloudType, err)
 	}
 
-	infrastructureCount := 0
-
-	// Validate every rendered object before applying anything. This prevents
-	// partially applying a template that contains a valid Secret followed by
-	// an invalid or missing infrastructure object.
-	for _, object := range objects {
-		if object.GetNamespace() != capiNamespace {
-			return fmt.Errorf(
-				"provider infrastructure %s %s must be in namespace %s",
-				object.GetKind(),
-				object.GetName(),
-				capiNamespace,
-			)
-		}
-
-		isInfrastructureObject :=
-			object.GetAPIVersion() == expectedAPIVersion &&
-				object.GetKind() == expectedKind
-
-		isAuxiliarySecret :=
-			object.GetAPIVersion() == "v1" &&
-				object.GetKind() == "Secret"
-
-		if !isInfrastructureObject && !isAuxiliarySecret {
-			return fmt.Errorf(
-				"cluster-template cannot create %s %s",
-				object.GetAPIVersion(),
-				object.GetKind(),
-			)
-		}
-
-		if !isInfrastructureObject {
-			continue
-		}
-
-		if object.GetName() != expectedName {
-			return fmt.Errorf(
-				"provider infrastructure %s must be named %q, got %q",
-				expectedKind,
-				expectedName,
-				object.GetName(),
-			)
-		}
-
-		infrastructureCount++
-	}
-
-	if infrastructureCount == 0 {
-		return fmt.Errorf(
-			"cluster-template did not render expected %s %s",
-			expectedKind,
-			expectedName,
-		)
-	}
-
-	if infrastructureCount > 1 {
-		return fmt.Errorf(
-			"cluster-template rendered more than one %s",
-			expectedKind,
-		)
+	if err := validateClusterTemplateObjects(
+		objects,
+		expectedAPIVersion,
+		expectedKind,
+		expectedName,
+	); err != nil {
+		return fmt.Errorf("cloud provider %s: %w", cloudType, err)
 	}
 
 	for _, object := range objects {
-		labels := object.GetLabels()
-		if labels == nil {
-			labels = map[string]string{}
-		}
-
-		labels["heritage"] = "deckhouse"
-		labels["module"] = "node-manager"
-		object.SetLabels(labels)
+		prepareClusterTemplateObject(object)
 
 		if err := r.Client.Patch(
 			ctx,
@@ -400,10 +338,41 @@ func (r *ClusterReconciler) ensureProviderInfrastructure(
 	return nil
 }
 
-func (r *ClusterReconciler) ensureStaticCluster(
+func (r *ClusterReconciler) buildClusterTemplateContext(
 	ctx context.Context,
+	provider map[string]any,
 	clusterConfig *clusterConfiguration,
-) error {
+	clusterName string,
+) (clusterTemplateContext, error) {
+	endpoints, err := (&bashiblecontext.Service{
+		Client: r.Client,
+		Reader: r.APIReader,
+	}).ReadEndpoints(ctx)
+	if err != nil {
+		return clusterTemplateContext{}, fmt.Errorf("discover control-plane endpoints: %w", err)
+	}
+
+	prefix, err := clusterprefix.Resolve(ctx, r.APIReader)
+	if err != nil {
+		return clusterTemplateContext{}, fmt.Errorf("resolve cluster prefix: %w", err)
+	}
+
+	return clusterTemplateContext{
+		Provider: provider,
+		Cluster: clusterTemplateClusterContext{
+			Name:            clusterName,
+			Namespace:       capiNamespace,
+			PodSubnet:       clusterConfig.PodSubnetCIDR,
+			ServiceSubnet:   clusterConfig.ServiceSubnetCIDR,
+			Domain:          clusterConfig.ClusterDomain,
+			Prefix:          prefix,
+			MasterEndpoints: endpoints.ClusterMasterEndpoints,
+			MasterAddresses: endpoints.APIServerEndpoints,
+		},
+	}, nil
+}
+
+func (r *ClusterReconciler) ensureStaticCluster(ctx context.Context, clusterConfig *clusterConfiguration) error {
 	logger := log.FromContext(ctx)
 
 	ngList := &deckhousev1.NodeGroupList{}
@@ -418,7 +387,6 @@ func (r *ClusterReconciler) ensureStaticCluster(
 			break
 		}
 	}
-
 	if !hasStatic {
 		return nil
 	}
@@ -439,12 +407,8 @@ func (r *ClusterReconciler) ensureStaticCluster(
 		},
 		"spec": map[string]interface{}{
 			"clusterNetwork": map[string]interface{}{
-				"pods": map[string]interface{}{
-					"cidrBlocks": []interface{}{clusterConfig.PodSubnetCIDR},
-				},
-				"services": map[string]interface{}{
-					"cidrBlocks": []interface{}{clusterConfig.ServiceSubnetCIDR},
-				},
+				"pods":          map[string]interface{}{"cidrBlocks": []interface{}{clusterConfig.PodSubnetCIDR}},
+				"services":      map[string]interface{}{"cidrBlocks": []interface{}{clusterConfig.ServiceSubnetCIDR}},
 				"serviceDomain": clusterConfig.ClusterDomain,
 			},
 			"infrastructureRef": map[string]interface{}{
@@ -482,11 +446,7 @@ func (r *ClusterReconciler) ensureStaticCluster(
 			"checks": map[string]interface{}{
 				"nodeStartupTimeoutSeconds": int64(1200),
 				"unhealthyNodeConditions": []interface{}{
-					map[string]interface{}{
-						"type":           "Ready",
-						"status":         "Unknown",
-						"timeoutSeconds": int64(2147483647),
-					},
+					map[string]interface{}{"type": "Ready", "status": "Unknown", "timeoutSeconds": int64(2147483647)},
 				},
 			},
 		},
@@ -497,19 +457,14 @@ func (r *ClusterReconciler) ensureStaticCluster(
 	}
 
 	logger.V(1).Info("ensured static CAPI cluster resources")
-
 	return nil
 }
 
-func (r *ClusterReconciler) createIfNotExists(
-	ctx context.Context,
-	obj *unstructured.Unstructured,
-) error {
+func (r *ClusterReconciler) createIfNotExists(ctx context.Context, obj *unstructured.Unstructured) error {
 	err := r.Client.Create(ctx, obj)
 	if err != nil && !errors.IsAlreadyExists(err) {
 		return err
 	}
-
 	return nil
 }
 
@@ -519,9 +474,7 @@ type clusterConfiguration struct {
 	ClusterDomain     string `json:"clusterDomain"`
 }
 
-func (r *ClusterReconciler) readClusterConfiguration(
-	ctx context.Context,
-) (*clusterConfiguration, error) {
+func (r *ClusterReconciler) readClusterConfiguration(ctx context.Context) (*clusterConfiguration, error) {
 	secret := &corev1.Secret{}
 	if err := r.APIReader.Get(ctx, types.NamespacedName{
 		Name:      clusterConfigSecretName,
@@ -532,9 +485,7 @@ func (r *ClusterReconciler) readClusterConfiguration(
 
 	raw, ok := secret.Data["cluster-configuration.yaml"]
 	if !ok {
-		return nil, fmt.Errorf(
-			"cluster-configuration secret missing cluster-configuration.yaml key",
-		)
+		return nil, fmt.Errorf("cluster-configuration secret missing cluster-configuration.yaml key")
 	}
 
 	cfg := &clusterConfiguration{}
