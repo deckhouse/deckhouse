@@ -257,6 +257,11 @@ func desiredBareMetalHostSpec(spec instanceSpec, resolved ResolvedBMC, secretNam
 		"online":         spec.Online,
 		"bootMACAddress": spec.BootMACAddress,
 		"bmc":            bmc,
+		// BareMetalHost defaults missing rootDeviceHints to /dev/sda. That is not
+		// safe for managed hosts: device names are not stable and may point to the
+		// deploy ramdisk media. An empty object disables that default and lets
+		// Ironic choose a suitable disk from hardware inventory.
+		"rootDeviceHints": map[string]interface{}{},
 	}
 }
 
@@ -289,6 +294,11 @@ func updateBareMetalHostSpec(bmh *unstructured.Unstructured, spec instanceSpec, 
 		}
 		updated = updated || changed
 	}
+	changed, err := setNestedMap(bmh, map[string]interface{}{}, "spec", "rootDeviceHints")
+	if err != nil {
+		return false, err
+	}
+	updated = updated || changed
 	return updated, nil
 }
 
@@ -306,6 +316,14 @@ func setNestedBool(obj *unstructured.Unstructured, value bool, fields ...string)
 		return false, err
 	}
 	return true, unstructured.SetNestedField(obj.Object, value, fields...)
+}
+
+func setNestedMap(obj *unstructured.Unstructured, value map[string]interface{}, fields ...string) (bool, error) {
+	current, ok, err := unstructured.NestedMap(obj.Object, fields...)
+	if err != nil || ok && reflect.DeepEqual(current, value) {
+		return false, err
+	}
+	return true, unstructured.SetNestedMap(obj.Object, value, fields...)
 }
 
 func cachedResolvedBMC(instance *unstructured.Unstructured, spec instanceSpec, credentialsVersion string) (ResolvedBMC, bool) {

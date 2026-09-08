@@ -22,6 +22,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strconv"
 	"strings"
 	"testing"
@@ -96,6 +97,7 @@ func TestReconcileCreatesResolvedBareMetalHost(t *testing.T) {
 	assertNestedString(t, bmh, "redfish+https://192.0.2.10/redfish/v1/Systems/1", "spec", "bmc", "address")
 	assertNestedString(t, bmh, "server-bmh-credentials", "spec", "bmc", "credentialsName")
 	assertNestedString(t, bmh, "f2:4e:c6:e6:af:ac", "spec", "bootMACAddress")
+	assertNestedMap(t, bmh, map[string]interface{}{}, "spec", "rootDeviceHints")
 	if got := bmh.GetLabels()["pool"]; got != "workers" {
 		t.Fatalf("expected pool label workers, got %q", got)
 	}
@@ -153,7 +155,7 @@ func TestUpdateBareMetalHostPreservesUnmanagedSpec(t *testing.T) {
 	if err != nil || !changed {
 		t.Fatalf("update BMH: changed=%v err=%v", changed, err)
 	}
-	assertNestedString(t, bmh, "/dev/sda", "spec", "rootDeviceHints", "deviceName")
+	assertNestedMap(t, bmh, map[string]interface{}{}, "spec", "rootDeviceHints")
 	assertNestedString(t, bmh, "metadata", "spec", "automatedCleaningMode")
 	assertNestedString(t, bmh, "ipmi://192.0.2.10:623", "spec", "bmc", "address")
 }
@@ -218,6 +220,14 @@ func assertNestedString(t *testing.T, obj *unstructured.Unstructured, want strin
 	got, found, err := unstructured.NestedString(obj.Object, fields...)
 	if err != nil || !found || got != want {
 		t.Fatalf("field %s: want %q, got %q, found=%v, err=%v", strings.Join(fields, "."), want, got, found, err)
+	}
+}
+
+func assertNestedMap(t *testing.T, obj *unstructured.Unstructured, want map[string]interface{}, fields ...string) {
+	t.Helper()
+	got, found, err := unstructured.NestedMap(obj.Object, fields...)
+	if err != nil || !found || !reflect.DeepEqual(got, want) {
+		t.Fatalf("field %s: want %#v, got %#v, found=%v, err=%v", strings.Join(fields, "."), want, got, found, err)
 	}
 }
 
