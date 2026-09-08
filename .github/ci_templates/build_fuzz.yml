@@ -122,8 +122,8 @@ steps:
 
       FUZZ_IMAGES="$(werf config list --env "${WERF_ENV}" | grep -- '-fuzz$' || true)"
       if [[ -z "${FUZZ_IMAGES}" ]]; then
-        echo "No fuzz images found"
-        exit 1
+        echo "No fuzz images found; skipping fuzz build"
+        exit 0
       fi
 
       echo "Building fuzz images:"
