@@ -31,8 +31,14 @@ type SSHCredentialsSpec struct {
 	// A username to connect to the host via SSH.
 	User string `json:"user"`
 	// Private SSH key in PEM format encoded as base64 string.
+	//
+	// The value is masked: the API returns `<omitted>` to callers that are not allowed to read the `sshcredentials/sensitive` subresource.
+	// +crd-enricher:deckhouse:sensitive-data
 	PrivateSSHKey string `json:"privateSSHKey"`
 	// A sudo password for the user.
+	//
+	// The value is masked: the API returns `<omitted>` to callers that are not allowed to read the `sshcredentials/sensitive` subresource.
+	// +crd-enricher:deckhouse:sensitive-data
 	SudoPassword string `json:"sudoPassword,omitempty"`
 
 	//+kubebuilder:default:=22
