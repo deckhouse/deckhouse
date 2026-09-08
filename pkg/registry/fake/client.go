@@ -122,35 +122,59 @@ func (c *Client) GetDigest(_ context.Context, tag string) (*v1.Hash, error) {
 	return &h, nil
 }
 
-// GetManifest returns a ManifestResult for the image identified by tag.
-// GetManifest returns the manifest of the image stored under tag.
+// GetManifest returns the manifest stored under tag - the index manifest for an
+// entry added with AddIndex, the image manifest otherwise.
 //
-// Platform options are accepted but have nothing to resolve: the fake stores
-// single-platform images, never indexes, and the real client only resolves a
-// platform when the reference is an index - so both return the manifest as
-// stored.
-func (c *Client) GetManifest(_ context.Context, tag string, _ ...dkpreg.ManifestGetOption) (dkpreg.ManifestResult, error) {
+// A platform resolves an index down to that child's manifest, matching the real
+// client; on a plain image it is a no-op there too.
+func (c *Client) GetManifest(_ context.Context, tag string, opts ...dkpreg.ManifestGetOption) (dkpreg.ManifestResult, error) {
+	manifestOptions := &dkpreg.ManifestGetOptions{}
+	for _, opt := range opts {
+		opt.ApplyToManifestGet(manifestOptions)
+	}
+
 	entry, err := c.findImage(tag)
 	if err != nil {
 		return nil, err
 	}
-	raw, err := entry.img.RawManifest()
+
+	if manifestOptions.Platform != nil && entry.isIndex() {
+		img, err := entry.resolveImage(manifestOptions.Platform)
+		if err != nil {
+			return nil, fmt.Errorf("fake: %w: %w", dkpreg.ErrImageNotFound, err)
+		}
+
+		raw, err := img.RawManifest()
+		if err != nil {
+			return nil, fmt.Errorf("fake: raw manifest: %w", err)
+		}
+
+		return dkpclient.NewManifestResultFromBytes(raw), nil
+	}
+
+	raw, err := entry.rawManifest()
 	if err != nil {
 		return nil, fmt.Errorf("fake: raw manifest: %w", err)
 	}
+
 	return dkpclient.NewManifestResultFromBytes(raw), nil
 }
 
-// GetIndex mirrors the real client's refusal to treat a plain image as an
-// index. The fake stores single images only - MustAddImage takes a v1.Image -
-// so a caller asking for an index always gets this error rather than a
-// synthetic one-entry wrapper.
+// GetIndex returns the index stored under tag, resolving nothing.
+//
+// A plain image is an error, mirroring the real client: wrapping it in a
+// synthetic one-entry index is not what a caller asking for an index means.
 func (c *Client) GetIndex(_ context.Context, tag string) (v1.ImageIndex, error) {
-	if _, err := c.findImage(tag); err != nil {
+	entry, err := c.findImage(tag)
+	if err != nil {
 		return nil, err
 	}
 
-	return nil, fmt.Errorf("fake: GetIndex: %q is an image, not an index", tag)
+	if !entry.isIndex() {
+		return nil, fmt.Errorf("fake: GetIndex: %q is an image, not an index", tag)
+	}
+
+	return entry.idx, nil
 }
 
 // GetImageConfig returns the v1.ConfigFile for the image identified by tag.
@@ -159,7 +183,13 @@ func (c *Client) GetImageConfig(_ context.Context, tag string) (*v1.ConfigFile, 
 	if err != nil {
 		return nil, err
 	}
-	return entry.img.ConfigFile()
+
+	img, err := entry.resolveImage(nil)
+	if err != nil {
+		return nil, fmt.Errorf("fake: %w", err)
+	}
+
+	return img.ConfigFile()
 }
 
 // CheckImageExists returns nil if the image exists or
@@ -171,19 +201,35 @@ func (c *Client) CheckImageExists(_ context.Context, tag string) error {
 
 // GetImage returns a [dkpreg.Image] for the given tag or digest reference.
 // Digest references start with "@sha256:".
-func (c *Client) GetImage(_ context.Context, ref string, _ ...dkpreg.ImageGetOption) (dkpreg.Image, error) {
-	var entry *imageEntry
-	var err error
+func (c *Client) GetImage(_ context.Context, ref string, opts ...dkpreg.ImageGetOption) (dkpreg.Image, error) {
+	getOptions := &dkpreg.ImageGetOptions{}
+	for _, opt := range opts {
+		opt.ApplyToImageGet(getOptions)
+	}
+
+	var (
+		entry *imageEntry
+		err   error
+	)
 
 	if strings.HasPrefix(ref, "@sha256:") {
 		entry, err = c.findImageByDigest(strings.TrimPrefix(ref, "@"))
 	} else {
 		entry, err = c.findImage(ref)
 	}
+
 	if err != nil {
 		return nil, err
 	}
-	return &registryImage{Image: entry.img}, nil
+
+	// An index resolves to one child, as remote.Image does: without a platform
+	// that is linux/amd64, not the host's architecture.
+	img, err := entry.resolveImage(getOptions.Platform)
+	if err != nil {
+		return nil, fmt.Errorf("fake: %w: %w", dkpreg.ErrImageNotFound, err)
+	}
+
+	return &registryImage{Image: img}, nil
 }
 
 // PushImage stores the image under the current path with the given tag.
@@ -375,6 +421,13 @@ func (c *Client) CopyImage(ctx context.Context, srcTag string, dest dkpreg.Clien
 	if err != nil {
 		return err
 	}
+
+	// An index is copied whole, the way the real client does - flattening it to
+	// one child would silently drop every other platform.
+	if entry.isIndex() {
+		return dest.PushIndex(ctx, destTag, entry.idx)
+	}
+
 	return dest.PushImage(ctx, destTag, entry.img)
 }
 
@@ -393,6 +446,12 @@ func (c *Client) TagImage(_ context.Context, sourceTag, destTag string) error {
 	if !ok {
 		return fmt.Errorf("%w: tag %q", dkpclient.ErrImageNotFound, sourceTag)
 	}
+
+	// Retagging points a second tag at the same manifest, index or image.
+	if entry.isIndex() {
+		return rs.addIndex(destTag, entry.idx)
+	}
+
 	return rs.addImage(destTag, entry.img)
 }
 
@@ -444,6 +503,19 @@ func (c *Client) findImage(tag string) (*imageEntry, error) {
 	rs := reg.getRepo(repo)
 	if rs == nil {
 		return nil, fmt.Errorf("%w: repository %q not found in %q", dkpclient.ErrImageNotFound, repo, host)
+	}
+
+	// A digest identifier addresses the same manifest a tag does, and the real
+	// client resolves "repo@sha256:..." natively. Without this branch the fake
+	// looked a digest up as if it were a tag and reported it missing, so no
+	// test driving the fake could cover a digest reference at all.
+	if strings.HasPrefix(tag, "sha256:") {
+		entry, ok := rs.getByDigest(tag)
+		if !ok {
+			return nil, fmt.Errorf("%w: digest %q not found in %s/%s", dkpclient.ErrImageNotFound, tag, host, repo)
+		}
+
+		return entry, nil
 	}
 
 	entry, ok := rs.getByTag(tag)
