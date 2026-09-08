@@ -59,6 +59,28 @@ spec:
                   description: Размер образа модуля.
                 pullDuration:
                   description: Время загрузки модуля.
+                migrations:
+                  description: |
+                    Миграции, выполненные релизом, включая унаследованные от ранее развёрнутого релиза.
+                  items:
+                    properties:
+                      name:
+                        description: Имя файла миграции, например `001_add_index.up.sql`.
+                      version:
+                        description: Числовой префикс имени файла миграции.
+                      direction:
+                        description: Направление, в котором выполнялась миграция.
+                      status:
+                        description: Результат выполнения миграции.
+                      affected:
+                        description: |
+                          Количество объектов, изменённых миграцией. Ноль означает, что миграция ничему не
+                          соответствовала: это успешное отсутствие изменений, а не ошибка, но обычно признак
+                          того, что миграция сделала не то, что задумывал её автор.
+                      message:
+                        description: Сообщение об ошибке невыполненной миграции.
+                      lastTransitionTime:
+                        description: Время выполнения миграции.
       subresources:
         status: {}
       additionalPrinterColumns:
