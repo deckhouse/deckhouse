@@ -149,6 +149,14 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 		suite.reconcile("no-settings")
 	})
 
+	suite.Run("ready module", func() {
+		suite.setupTestController("ready-module.yaml")
+		// the scheduler runs the module and it has fully converged (phase Ready),
+		// which is the only case that yields Summary.State=Ready.
+		suite.r.moduleManager.(*mockModuleManager).addReadyModule("test-module")
+		suite.reconcile("test-module")
+	})
+
 	suite.Run("disable module", func() {
 		suite.setupTestController("disable-module.yaml")
 		suite.reconcile("test-module")
@@ -265,10 +273,25 @@ func (m *mockModuleManager) GetModuleNames() []string {
 }
 
 func (m *mockModuleManager) GetModule(name string) *modules.BasicModule {
+	if bm, ok := m.modules[name]; ok {
+		return bm
+	}
 	if name == "test-module" || name == "deckhouse" {
 		return &modules.BasicModule{Name: name}
 	}
-	return m.modules[name]
+	return nil
+}
+
+// addReadyModule registers a module the scheduler runs and that has fully
+// converged: IsModuleEnabled reports it on, and GetModule returns a module in
+// the Ready run phase with no hook or module errors.
+func (m *mockModuleManager) addReadyModule(name string) {
+	bm, err := modules.NewBasicModule(name, "", 0, nil, nil, nil)
+	if err != nil {
+		panic(err)
+	}
+	bm.SetPhase(modules.Ready)
+	m.modules[name] = bm
 }
 
 func (m *mockModuleManager) GetGlobal() *modules.GlobalModule {
