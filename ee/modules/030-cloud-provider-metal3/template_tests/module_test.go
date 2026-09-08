@@ -54,6 +54,18 @@ var _ = Describe("Module :: cloud-provider-metal3 :: helm template ::", func() {
 		f.ValuesSetFromYaml("global", globalValues)
 		f.ValuesSet("global.modulesImages", GetModulesImages())
 		f.ValuesSetFromYaml("cloudProviderMetal3", `internal:
+  baremetalOperatorWebhookCert:
+    ca: bmo-ca
+    crt: bmo-crt
+    key: bmo-key
+  ironicStandaloneOperatorWebhookCert:
+    ca: irso-ca
+    crt: irso-crt
+    key: irso-key
+  capm3WebhookCert:
+    ca: capm3-ca
+    crt: capm3-crt
+    key: capm3-key
   providerDiscoveryData:
     zones:
     - provisioning
@@ -165,6 +177,23 @@ dhcp:
 			bmoWebhook := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "baremetal-operator-validating-webhook-configuration")
 			Expect(bmoWebhook.Exists()).To(BeTrue())
 			Expect(bmoWebhook.Field("webhooks.0.clientConfig.service.namespace").String()).To(Equal("d8-cloud-provider-metal3"))
+			Expect(bmoWebhook.Field("webhooks.0.clientConfig.caBundle").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("bmo-ca"))))
+
+			bmoWebhookSecret := f.KubernetesResource("Secret", "d8-cloud-provider-metal3", "bmo-webhook-server-cert")
+			Expect(bmoWebhookSecret.Exists()).To(BeTrue())
+			Expect(bmoWebhookSecret.Field("data.ca\\.crt").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("bmo-ca"))))
+
+			irsoWebhook := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "ironic-standalone-operator-validating-webhook-configuration")
+			Expect(irsoWebhook.Exists()).To(BeTrue())
+			Expect(irsoWebhook.Field("webhooks.0.clientConfig.caBundle").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("irso-ca"))))
+
+			capm3Webhook := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "capm3-validating-webhook-configuration")
+			Expect(capm3Webhook.Exists()).To(BeTrue())
+			Expect(capm3Webhook.Field("webhooks.0.clientConfig.caBundle").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("capm3-ca"))))
+
+			capm3MutatingWebhook := f.KubernetesGlobalResource("MutatingWebhookConfiguration", "capm3-mutating-webhook-configuration")
+			Expect(capm3MutatingWebhook.Exists()).To(BeTrue())
+			Expect(capm3MutatingWebhook.Field("webhooks.0.clientConfig.caBundle").String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("capm3-ca"))))
 		})
 	})
 

@@ -354,8 +354,8 @@ spec:
           defaultMode: 420
           secretName: irso-webhook-server-cert
 ---
-apiVersion: cert-manager.io/v1
-kind: Certificate
+apiVersion: v1
+kind: Secret
 metadata:
   annotations:
     werf.io/delete-dependency-ironic: state=absent,kind=Ironic,group=ironic.metal3.io,version=v1alpha1,name=ironic,namespace=d8-cloud-provider-metal3
@@ -366,40 +366,19 @@ metadata:
     app.kubernetes.io/managed-by: kustomize
     app.kubernetes.io/name: certificate
     app.kubernetes.io/part-of: ironic-standalone-operator
-  name: ironic-standalone-operator-serving-cert
+  name: irso-webhook-server-cert
   namespace: d8-cloud-provider-metal3
-spec:
-  dnsNames:
-  - ironic-standalone-operator-webhook-service.d8-cloud-provider-metal3.svc
-  - ironic-standalone-operator-webhook-service.d8-cloud-provider-metal3.svc.cluster.local
-  issuerRef:
-    kind: Issuer
-    name: ironic-standalone-operator-selfsigned-issuer
-  secretName: irso-webhook-server-cert
----
-apiVersion: cert-manager.io/v1
-kind: Issuer
-metadata:
-  annotations:
-    werf.io/delete-dependency-ironic: state=absent,kind=Ironic,group=ironic.metal3.io,version=v1alpha1,name=ironic,namespace=d8-cloud-provider-metal3
-  labels:
-    app.kubernetes.io/component: certificate
-    app.kubernetes.io/created-by: ironic-standalone-operator
-    app.kubernetes.io/instance: selfsigned-issuer
-    app.kubernetes.io/managed-by: kustomize
-    app.kubernetes.io/name: issuer
-    app.kubernetes.io/part-of: ironic-standalone-operator
-  name: ironic-standalone-operator-selfsigned-issuer
-  namespace: d8-cloud-provider-metal3
-spec:
-  selfSigned: {}
+type: kubernetes.io/tls
+data:
+  tls.crt: {{ .Values.cloudProviderMetal3.internal.ironicStandaloneOperatorWebhookCert.crt | b64enc | quote }}
+  tls.key: {{ .Values.cloudProviderMetal3.internal.ironicStandaloneOperatorWebhookCert.key | b64enc | quote }}
+  ca.crt: {{ .Values.cloudProviderMetal3.internal.ironicStandaloneOperatorWebhookCert.ca | b64enc | quote }}
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
   annotations:
     werf.io/delete-dependency-ironic: state=absent,kind=Ironic,group=ironic.metal3.io,version=v1alpha1,name=ironic,namespace=d8-cloud-provider-metal3
-    cert-manager.io/inject-ca-from: d8-cloud-provider-metal3/ironic-standalone-operator-serving-cert
   labels:
     app.kubernetes.io/component: webhook
     app.kubernetes.io/created-by: ironic-standalone-operator
@@ -416,6 +395,7 @@ webhooks:
       name: ironic-standalone-operator-webhook-service
       namespace: d8-cloud-provider-metal3
       path: /validate-ironic-metal3-io-v1alpha1-ironic
+    caBundle: {{ .Values.cloudProviderMetal3.internal.ironicStandaloneOperatorWebhookCert.ca | b64enc | quote }}
   failurePolicy: Fail
   name: validate-ironic.ironic.metal3.io
   rules:
