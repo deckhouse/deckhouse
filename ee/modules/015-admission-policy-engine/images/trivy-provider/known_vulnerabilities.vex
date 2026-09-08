@@ -2,16 +2,14 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-fc1d5deddaa81550dea7f4a50b3975a7c18832da2d65abd5642934472389651d",
   "author": "Deckhouse <contact@deckhouse.io>",
-  "version": 3,
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
         "@id": "https://bdu.fstec.ru/vul/2025-09312",
         "description": "A vulnerability in the firewalld daemon, part of the Moby containerization framework, is related to improper resource initialization. Exploitation of this vulnerability could allow an attacker to gain unauthorized access to protected information.",
         "name": "CVE-2025-54410",
-        "aliases": [
-          "BDU:2025-09312"
-        ]
+        "aliases": [ "BDU:2025-09312" ]
       },
       "products": [
         {
@@ -23,36 +21,30 @@
       "impact_statement": "Moby is an open source container framework developed by Docker Inc. that is distributed as Docker Engine, Mirantis Container Runtime, and various other downstream projects/products. A firewalld firewall controller daemon vulnerability affects Moby releases before 28.0.0. When firewalld reloads, Docker fails to re-create iptables rules that isolate bridge networks, allowing any container to access all ports on any other container across different bridge networks on the same host. Deckhouse Kubernetes Platform is not vulnerable as it does not use this functionality for container isolation.",
       "timestamp": "2025-10-14T11:19:11.56805Z"
     },
+
     {
       "vulnerability": {
         "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-33997",
         "description": "Off-by-one error in plugin privilege validation",
         "name": "CVE-2026-33997",
-        "aliases": [
-          "GHSA-pxq6-2prw-chj9"
-        ]
+        "aliases": [ "GHSA-pxq6-2prw-chj9" ]
       },
       "products": [
-        {
-          "@id": "pkg:golang/github.com/docker/docker@v27.3.1+incompatible"
-        },
-        {
-          "@id": "pkg:golang/github.com/docker/docker@v27.1.1+incompatible"
-        }
+        { "@id": "pkg:golang/github.com/docker/docker@v27.3.1+incompatible" },
+        { "@id": "pkg:golang/github.com/docker/docker@v27.1.1+incompatible" }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Prior to version 29.3.1, a security vulnerability has been detected that allows plugins privilege validation to be bypassed during docker plugin install. Due to an error in the daemon's privilege comparison logic, the daemon may incorrectly accept a privilege set that differs from the one approved by the user. Plugins that request exactly one privilege are also affected, because no comparison is performed at all. This issue has been patched in version 29.3.1. Deckhouse Kubernetes Platform is not affected by this since it does not ship or use Docker daemon or its plugins in any way.",
       "timestamp": "2025-10-14T11:19:11.56805Z"
     },
+
     {
       "vulnerability": {
         "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-41567",
         "description": "PUT /containers/{id}/archive can execute a container-provided decompression binary on the host",
         "name": "CVE-2026-41567",
-        "aliases": [
-          "GHSA-x86f-5xw2-fm2r"
-        ]
+        "aliases": [ "GHSA-x86f-5xw2-fm2r" ]
       },
       "products": [
         {
@@ -64,58 +56,47 @@
       "impact_statement": "Moby is an open source container framework. In vulnerable versions, when a compressed archive is uploaded via PUT /containers/{id}/archive (or piped through docker cp -), the daemon may resolve decompression binaries from the container filesystem and execute attacker-controlled binaries with daemon privileges. Deckhouse Kubernetes Platform is not affected because admissionPolicyEngine trivyProvider is a Go binary and does not run, embed, or expose Docker daemon archive APIs.",
       "timestamp": "2026-06-17T15:25:00Z"
     },
+
     {
       "vulnerability": {
         "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-33747",
         "description": "Malicious frontend can cause file escape outside of storage root",
         "name": "CVE-2026-33747",
-        "aliases": [
-          "GHSA-4c29-8rgm-jvjj"
-        ]
+        "aliases": [ "GHSA-4c29-8rgm-jvjj" ]
       },
       "products": [
-        {
-          "@id": "pkg:golang/github.com/moby/buildkit@v0.16.0"
-        },
-        {
-          "@id": "pkg:golang/github.com/moby/buildkit@v0.15.1"
-        }
+        {"@id": "pkg:golang/github.com/moby/buildkit@v0.16.0"},
+        {"@id": "pkg:golang/github.com/moby/buildkit@v0.15.1"}
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
       "impact_statement": "BuildKit is a toolkit for converting source code to build artifacts in an efficient, expressive and repeatable manner. Prior to version 0.28.1, when using a custom BuildKit frontend, the frontend can craft an API message that causes files to be written outside of the BuildKit state directory for the execution context. Deckhouse Kubernetes Platform is not affected by this since it does not ship or utilize Buildkit.",
       "timestamp": "2026-04-17T12:23:32Z"
     },
+
     {
       "vulnerability": {
         "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-33748",
         "description": "Git URL subdir component can cause access to restricted files",
         "name": "CVE-2026-33748",
-        "aliases": [
-          "GHSA-4vrq-3vrq-g6gg"
-        ]
+        "aliases": [ "GHSA-4vrq-3vrq-g6gg" ]
       },
       "products": [
-        {
-          "@id": "pkg:golang/github.com/moby/buildkit@v0.16.0"
-        },
-        {
-          "@id": "pkg:golang/github.com/moby/buildkit@v0.15.1"
-        }
+        {"@id": "pkg:golang/github.com/moby/buildkit@v0.16.0"},
+        {"@id": "pkg:golang/github.com/moby/buildkit@v0.15.1"}
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_present",
       "impact_statement": "BuildKit is a toolkit for converting source code to build artifacts in an efficient, expressive and repeatable manner. Prior to version 0.28.1, insufficient validation of Git URL fragment subdir components may allow access to files outside the checked-out Git repository root. Possible access is limited to files on the same mounted filesystem. Deckhouse Kubernetes Platform is not affected by this since it does not ship or utilize Buildkit.",
       "timestamp": "2026-04-17T12:23:32Z"
     },
+
     {
       "vulnerability": {
         "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-34040",
         "description": "AuthZ plugin bypass with oversized request body",
         "name": "CVE-2026-34040",
-        "aliases": [
-          "GHSA-x744-4wpc-v9h2"
-        ]
+        "aliases": [ "GHSA-x744-4wpc-v9h2" ]
       },
       "products": [
         {
@@ -130,6 +111,7 @@
       "impact_statement": "Moby is an open source container framework. Prior to version 29.3.1, a security vulnerability has been detected that allows attackers to bypass authorization plugins (AuthZ). Deckhouse Kubernetes Platform is not affected as it does not rely on these plugins in any way and does not ship them.",
       "timestamp": "2026-04-17T12:23:32Z"
     },
+
     {
       "vulnerability": {
         "@id": "https://nvd.nist.gov/vuln/detail/CVE-2025-15558",
@@ -155,14 +137,13 @@
       "impact_statement": "Docker CLI for Windows searches for plugin binaries in C:\\ProgramData\\Docker\\cli-plugins, a directory that does not exist by default. A low-privileged attacker can create this directory and place malicious CLI plugin binaries (docker-compose.exe, docker-buildx.exe, etc.) that are executed when a victim user opens Docker Desktop or invokes Docker CLI plugin features, and allow privilege-escalation if the docker CLI is executed as a privileged user. This issue does not affect Deckhouse Kubernetes Platform because it does not use or ship Docker.",
       "timestamp": "2026-04-17T12:23:32Z"
     },
+
     {
       "vulnerability": {
         "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-22703",
         "description": "Verification accepts any valid Rekor entry under certain conditions",
         "name": "CVE-2026-22703",
-        "aliases": [
-          "GHSA-whqx-f9j3-ch6m"
-        ]
+        "aliases": [ "GHSA-whqx-f9j3-ch6m" ]
       },
       "products": [
         {
@@ -174,14 +155,13 @@
       "impact_statement": "Prior to versions 2.6.2 and 3.0.4, Cosign bundle can be crafted to successfully verify an artifact even if the embedded Rekor entry does not reference the artifact's digest, signature or public key. When verifying a Rekor entry, Cosign verifies the Rekor entry signature, and also compares the artifact's digest, the user's public key from either a Fulcio certificate or provided by the user, and the artifact signature to the Rekor entry contents. Without these comparisons, Cosign would accept any response from Rekor as valid. A malicious actor that has compromised a user's identity or signing key could construct a valid Cosign bundle by including any arbitrary Rekor entry, thus preventing the user from being able to audit the signing event. This issue has been patched in versions 2.6.2 and 3.0.4. Deckhouse Kubernetes Platform is not vulnerable as it does not utilize cosign bundles for verification.",
       "timestamp": "2026-05-16T12:31:20Z"
     },
+
     {
       "vulnerability": {
         "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-23831",
         "description": "COSE v0.0.1 entry type nil pointer dereference in Canonicalize via empty Message",
         "name": "CVE-2026-23831",
-        "aliases": [
-          "GHSA-273p-m2cw-6833"
-        ]
+        "aliases": [ "GHSA-273p-m2cw-6833" ]
       },
       "products": [
         {
@@ -193,15 +173,13 @@
       "impact_statement": "Rekor is a software supply chain transparency log. In versions 1.4.3 and below, the entry implementation can panic on attacker-controlled input when canonicalizing a proposed entry with an empty spec.message, causing nil Pointer Dereference. Function validate() returns nil (success) when message is empty, leaving sign1Msg uninitialized, and Canonicalize() later dereferences v.sign1Msg.Payload. A malformed proposed entry of the cose/v0.0.1 type can cause a panic on a thread within the Rekor process. The thread is recovered so the client receives a 500 error message and service still continues, so the availability impact of this is minimal. Deckhouse Kubernetes Platform is not vulnerable since it does not utilize rekor in any way.",
       "timestamp": "2026-05-16T12:31:20Z"
     },
+
     {
       "vulnerability": {
         "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-48702",
         "description": "Rekor: Denial of Service due to unbounded gzip decompression in Alpine intoto/rekord entry types",
         "name": "CVE-2026-48702",
-        "aliases": [
-          "GHSA-47q9-m4ww-924m",
-          "GO-2026-5778"
-        ]
+        "aliases": [ "GHSA-47q9-m4ww-924m", "GO-2026-5778" ]
       },
       "products": [
         {
@@ -213,14 +191,13 @@
       "impact_statement": "Rekor is a software supply chain transparency log server. Prior to 1.5.2, its intoto/rekord entry types decompress attacker-supplied gzip payloads without a size limit, allowing a decompression-bomb DoS against a running Rekor server. Deckhouse Kubernetes Platform is not affected as admissionPolicyEngine trivyProvider does not run a Rekor server or expose Rekor's entry-parsing endpoints - it only pulls in sigstore/rekor as a transitive dependency.",
       "timestamp": "2026-08-13T00:00:00Z"
     },
+
     {
       "vulnerability": {
         "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-24117",
         "description": "Server-Side Request Forgery (SSRF) via provided public key URL",
         "name": "CVE-2026-24117",
-        "aliases": [
-          "GHSA-4c4x-jm2x-pf9j"
-        ]
+        "aliases": [ "GHSA-4c4x-jm2x-pf9j" ]
       },
       "products": [
         {
@@ -232,14 +209,13 @@
       "impact_statement": "Rekor is a software supply chain transparency log. In versions 1.4.3 and below, attackers can trigger SSRF to arbitrary internal services because /api/v1/index/retrieve supports retrieving a public key via user-provided URL. Since the SSRF only can trigger GET requests, the request cannot mutate state. The response from the GET request is not returned to the caller so data exfiltration is not possible. A malicious actor could attempt to probe an internal network through Blind SSRF. Deckhouse is not vulnerable as it does not rely on Rekor in any way.",
       "timestamp": "2026-05-16T12:31:20Z"
     },
+
     {
       "vulnerability": {
         "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-24137",
         "description": "Legacy TUF client allows for arbitrary file writes with target cache path traversal",
         "name": "CVE-2026-24137",
-        "aliases": [
-          "GHSA-fcv2-xgw5-pqxf"
-        ]
+        "aliases": [ "GHSA-fcv2-xgw5-pqxf" ]
       },
       "products": [
         {
@@ -267,14 +243,13 @@
       "impact_statement": "Deckhouse Kubernetes Platform is not affected in admissionPolicyEngine trivyProvider context, because trivyProvider is a Go binary and does not run or expose Docker daemon code paths required to trigger this vulnerability.",
       "timestamp": "2026-06-22T14:35:00Z"
     },
+
     {
       "vulnerability": {
         "@id": "https://nvd.nist.gov/vuln/detail/CVE-2026-41568",
         "description": "Race condition in docker cp mount setup allows creation of arbitrary empty files on the host via symlink swap",
         "name": "CVE-2026-41568",
-        "aliases": [
-          "GHSA-vp62-88p7-qqf5"
-        ]
+        "aliases": [ "GHSA-vp62-88p7-qqf5" ]
       },
       "products": [
         {
@@ -285,7 +260,9 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Moby is an open source container framework. In Docker Engine prior to version 29.5.1, a race condition during docker cp mount setup allows a malicious container to create empty files or directories at arbitrary absolute paths on the host filesystem when an operator initiates docker cp or calls PUT/HEAD /containers/{id}/archive API endpoints. Deckhouse Kubernetes Platform is not affected because admissionPolicyEngine trivyProvider is a Go binary and does not run, embed, or expose Docker daemon archive/copy code paths required to trigger this vulnerability.",
       "timestamp": "2026-06-24T12:00:00Z"
-    },
+    }
+,
+
     {
       "vulnerability": {
         "@id": "https://pkg.go.dev/vuln/GO-2026-5932",
@@ -293,322 +270,17 @@
         "name": "GO-2026-5932"
       },
       "products": [
-        {
-          "@id": "pkg:golang/golang.org/x/crypto"
-        },
-        {
-          "@id": "pkg:golang/golang.org/x/crypto@v0.53.0"
-        },
-        {
-          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
-        }
+        { "@id": "pkg:golang/golang.org/x/crypto" },
+        { "@id": "pkg:golang/golang.org/x/crypto@v0.53.0" },
+        { "@id": "pkg:golang/golang.org/x/crypto@v0.55.0" }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "GO-2026-5932 affects unmaintained golang.org/x/crypto/openpgp with no fixed version. admissionPolicyEngine trivyProvider only uses other x/crypto subpackages; openpgp is not imported or executed.",
       "timestamp": "2026-09-03T10:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-27145",
-        "description": "crypto/x509: Denial of Service via excessive processing of DNS SAN entries"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/stdlib@v1.25.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "crypto/x509: Denial of Service via excessive processing of DNS SAN entries. Образ trivy-provider собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
-      "timestamp": "2026-09-07T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-32280",
-        "description": "crypto/x509, crypto/tls: Denial of Service in certificate chain building"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/stdlib@v1.25.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "crypto/x509, crypto/tls: Denial of Service in certificate chain building. Образ trivy-provider собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
-      "timestamp": "2026-09-07T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-32281",
-        "description": "crypto/x509: Denial of Service via inefficient certificate chain validation"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/stdlib@v1.25.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "crypto/x509: Denial of Service via inefficient certificate chain validation. Образ trivy-provider собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
-      "timestamp": "2026-09-07T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-32282",
-        "description": "internal/syscall/unix: Root.Chmod can follow symlinks out of the root"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/stdlib@v1.25.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "internal/syscall/unix: Root.Chmod can follow symlinks out of the root. Образ trivy-provider собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
-      "timestamp": "2026-09-07T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-32283",
-        "description": "crypto/tls: Denial of Service via multiple TLS 1.3 key update messages"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/stdlib@v1.25.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "crypto/tls: Denial of Service via multiple TLS 1.3 key update messages. Образ trivy-provider собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
-      "timestamp": "2026-09-07T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-32288",
-        "description": "archive/tar: Denial of Service via maliciously-crafted archive"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/stdlib@v1.25.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "archive/tar: Denial of Service via maliciously-crafted archive. Образ trivy-provider собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
-      "timestamp": "2026-09-07T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-32289",
-        "description": "html/template: XSS via improper context and brace depth tracking in JS template literals"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/stdlib@v1.25.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "html/template: XSS via improper context and brace depth tracking in JS template literals. Образ trivy-provider собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
-      "timestamp": "2026-09-07T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-33811",
-        "description": "net: Denial of Service via long CNAME response in LookupCNAME (cgo resolver)"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/stdlib@v1.25.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "net: Denial of Service via long CNAME response in LookupCNAME (cgo resolver). Образ trivy-provider собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
-      "timestamp": "2026-09-07T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-33814",
-        "description": "net/http/internal/http2: Denial of Service via malformed SETTINGS_MAX_FRAME_SIZE frame"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/stdlib@v1.25.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "net/http/internal/http2: Denial of Service via malformed SETTINGS_MAX_FRAME_SIZE frame. Образ trivy-provider собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
-      "timestamp": "2026-09-07T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-39820",
-        "description": "net/mail: Denial of Service via crafted email inputs"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/stdlib@v1.25.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "net/mail: Denial of Service via crafted email inputs. Образ trivy-provider собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
-      "timestamp": "2026-09-07T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-39821",
-        "description": "net/http, golang.org/x/net/idna: Privilege escalation via incorrect Punycode label processing"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/stdlib@v1.25.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "net/http, golang.org/x/net/idna: Privilege escalation via incorrect Punycode label processing. Образ trivy-provider собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
-      "timestamp": "2026-09-07T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-39822",
-        "description": "os: Go os.Root symlink following vulnerability allows directory traversal (CWE-61)"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/stdlib@v1.25.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "os: Go os.Root symlink following vulnerability allows directory traversal (CWE-61). Образ trivy-provider собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
-      "timestamp": "2026-09-07T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-39823",
-        "description": "html/template: XSS via improper URL escaping in meta tag content"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/stdlib@v1.25.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "html/template: XSS via improper URL escaping in meta tag content. Образ trivy-provider собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
-      "timestamp": "2026-09-07T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-39825",
-        "description": "net/http/httputil: ReverseProxy forwards hidden query parameters, bypassing security controls"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/stdlib@v1.25.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "net/http/httputil: ReverseProxy forwards hidden query parameters, bypassing security controls. Образ trivy-provider собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
-      "timestamp": "2026-09-07T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-39826",
-        "description": "html/template: XSS due to incorrect script tag escaping"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/stdlib@v1.25.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "html/template: XSS due to incorrect script tag escaping. Образ trivy-provider собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
-      "timestamp": "2026-09-07T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-39836",
-        "description": "net: Denial of Service via NUL byte in Dial and LookupPort on Windows"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/stdlib@v1.25.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "net: Denial of Service via NUL byte in Dial and LookupPort on Windows. Образ trivy-provider собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
-      "timestamp": "2026-09-07T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-42499",
-        "description": "net/mail: Denial of Service via pathological email address parsing"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/stdlib@v1.25.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "net/mail: Denial of Service via pathological email address parsing. Образ trivy-provider собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
-      "timestamp": "2026-09-07T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-42504",
-        "description": "mime: Denial of Service via maliciously-crafted MIME header"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/stdlib@v1.25.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "mime: Denial of Service via maliciously-crafted MIME header. Образ trivy-provider собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
-      "timestamp": "2026-09-07T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-42505",
-        "description": "crypto/tls: Information disclosure in Encrypted Client Hello"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/stdlib@v1.25.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "crypto/tls: Information disclosure in Encrypted Client Hello. Образ trivy-provider собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
-      "timestamp": "2026-09-07T12:00:00Z"
-    },
-    {
-      "vulnerability": {
-        "name": "CVE-2026-42507",
-        "description": "net/textproto: Misleading error messages via input injection"
-      },
-      "products": [
-        {
-          "@id": "pkg:golang/stdlib@v1.25.8"
-        }
-      ],
-      "status": "not_affected",
-      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
-      "impact_statement": "net/textproto: Misleading error messages via input injection. Образ trivy-provider собран с Go stdlib v1.25.8 (Deckhouse builder golang:1.25.8, GOTOOLCHAIN=local). Исправление требует bump Go toolchain выше версии builder; будет выполнено в рамках планового апгрейда builder-образа. В текущей конфигурации модуля входные данные для уязвимых путей stdlib ограничены доверенным control-plane/административными сценариями, что исключает практическую эксплуатацию со стороны недоверенного нарушителя.",
-      "timestamp": "2026-09-07T12:00:00Z"
     }
+
   ],
   "timestamp": "2026-05-16T12:31:20Z",
-  "last_updated": "2026-09-07T12:00:00Z"
+  "last_updated": "2026-09-03T10:00:00Z"
 }

@@ -4,14 +4,13 @@ package library
 
 var DefaultImagesDigests = map[string]interface{}{
 	"admissionPolicyEngine": map[string]interface{}{
-		"constraintExporter":            "imageHash-admissionPolicyEngine-constraintExporter",
-		"constraintExporterVexArtifact": "imageHash-admissionPolicyEngine-constraintExporterVexArtifact",
-		"gatekeeper":                    "imageHash-admissionPolicyEngine-gatekeeper",
-		"gatekeeperVexArtifact":         "imageHash-admissionPolicyEngine-gatekeeperVexArtifact",
-		"ratify":                        "imageHash-admissionPolicyEngine-ratify",
-		"ratifyVexArtifact":             "imageHash-admissionPolicyEngine-ratifyVexArtifact",
-		"trivyProvider":                 "imageHash-admissionPolicyEngine-trivyProvider",
-		"trivyProviderVexArtifact":      "imageHash-admissionPolicyEngine-trivyProviderVexArtifact",
+		"constraintExporter":       "imageHash-admissionPolicyEngine-constraintExporter",
+		"gatekeeper":               "imageHash-admissionPolicyEngine-gatekeeper",
+		"gatekeeperVexArtifact":    "imageHash-admissionPolicyEngine-gatekeeperVexArtifact",
+		"ratify":                   "imageHash-admissionPolicyEngine-ratify",
+		"ratifyVexArtifact":        "imageHash-admissionPolicyEngine-ratifyVexArtifact",
+		"trivyProvider":            "imageHash-admissionPolicyEngine-trivyProvider",
+		"trivyProviderVexArtifact": "imageHash-admissionPolicyEngine-trivyProviderVexArtifact",
 	},
 	"basicAuth": map[string]interface{}{
 		"nginx": "imageHash-basicAuth-nginx",

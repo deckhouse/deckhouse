@@ -42,5 +42,3 @@ shell:
     {{- include "image-build.build" (set $ "BuildCommand" `go build -ldflags="-s -w" -o /constraint_exporter`) | indent 4 }}
   - chown 64535:64535 /constraint_exporter
   - chmod 0700 /constraint_exporter
----
-{{- include "vex mitigation" (list $ (printf "%s/%s" $.ModuleName $.ImageName)) }}
