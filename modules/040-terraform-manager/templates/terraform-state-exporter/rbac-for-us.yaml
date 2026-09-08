@@ -89,6 +89,23 @@ rules:
   resources: ["moduleconfigs"]
   resourceNames: ["cloud-provider-{{ .Values.global.clusterConfiguration.cloud.provider | lower }}", "global"]
   verbs: ["get"]
+# In-cluster dhctl resolves the cloud provider bundle through the module chain when the
+# provider is an external module: the Module object says which ModuleSource it came from and
+# which version runs, and a ModulePullOverride pins the image directly. A denied read is
+# tolerated (the mounted images-digests ConfigMap answers instead), so this only makes the
+# resolution work rather than merely not crash.
+- apiGroups: ["deckhouse.io"]
+  resources: ["modules"]
+  resourceNames: ["cloud-provider-{{ .Values.global.clusterConfiguration.cloud.provider | lower }}"]
+  verbs: ["get"]
+- apiGroups: ["deckhouse.io"]
+  resources: ["modulepulloverrides"]
+  resourceNames: ["cloud-provider-{{ .Values.global.clusterConfiguration.cloud.provider | lower }}"]
+  verbs: ["get"]
+# The ModuleSource is named by the Module, so it cannot be pinned by name here.
+- apiGroups: ["deckhouse.io"]
+  resources: ["modulesources"]
+  verbs: ["get"]
 - apiGroups: ["deckhouse.io"]
   resources: ["{{ .Values.global.clusterConfiguration.cloud.provider | lower }}instanceclasses"]
   verbs: ["get", "list"]

@@ -369,7 +369,7 @@ func getOptsFromRegistryConfig(ctx context.Context, ref name.Reference, cfg *Reg
 		return opts, fmt.Errorf("creating authenticator: %w", err)
 	}
 	opts = append(opts, remote.WithAuth(auth))
-	if cfg.ca != "" {
+	if cfg.ca != "" || strings.EqualFold(cfg.scheme, "HTTP") {
 		transport, err := registryutil.NewRegistryTransport(ctx, cfg.scheme, cfg.ca)
 		if err != nil {
 			return nil, err
@@ -388,7 +388,15 @@ func DownloadAndUnpackImage(ctx context.Context, imageRef, destDir, cacheDir str
 		otattribute.String("image.destDir", destDir),
 	)
 
-	ref, err := name.ParseReference(imageRef)
+	// A plain-HTTP registry has to be declared at parse time: without name.Insecure
+	// go-containerregistry dials TLS regardless of anything the transport says, and the pull
+	// fails with a handshake error against a registry the caller already reached over HTTP
+	// (a ModuleSource with scheme: HTTP resolves its metadata that way).
+	var nameOpts []name.Option
+	if strings.EqualFold(regConfig.scheme, "HTTP") {
+		nameOpts = append(nameOpts, name.Insecure)
+	}
+	ref, err := name.ParseReference(imageRef, nameOpts...)
 	if err != nil {
 		return fmt.Errorf("parsing image reference %q: %w", imageRef, err)
 	}

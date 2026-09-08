@@ -40,6 +40,7 @@ import (
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config/registry"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/minget"
+	"github.com/deckhouse/deckhouse/dhctl/pkg/util/input"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/util/maputil"
 )
 
@@ -87,6 +88,11 @@ type MetaConfig struct {
 	// embedded in the installer image. Required by LoadInstallerVersion and
 	// DeckhouseInstaller.GetImageTag.
 	VersionFilePath string `json:"-"`
+
+	// Recovered from ResourcesYAML. Kept apart from ModuleConfigs on purpose: those are created
+	// in the cluster before deckhouse is installed, while this one has to land after its
+	// ModuleSource.
+	externalProviderModuleConfig *ModuleConfig `json:"-"`
 }
 
 type imagesDigests map[string]map[string]any
@@ -173,6 +179,10 @@ func (m *MetaConfig) Prepare(ctx context.Context, validatorProvider MetaConfigVa
 			return nil, fmt.Errorf("parse cloud provider resources: %w", err)
 		}
 		m.CloudProviderVars = cv
+	}
+
+	if err := m.recoverExternalProviderModuleConfig(); err != nil {
+		return nil, err
 	}
 
 	if err := m.applyCloudProviderModuleSettings(); err != nil {
@@ -379,6 +389,9 @@ func (m *MetaConfig) applyCloudProviderModuleSettings() error {
 			picked = mc
 		}
 	}
+	if picked == nil && m.externalProviderModuleConfig != nil && len(m.externalProviderModuleConfig.Spec.Settings) > 0 {
+		picked = m.externalProviderModuleConfig
+	}
 	if picked == nil {
 		return nil
 	}
@@ -561,7 +574,10 @@ func (m *MetaConfig) findProviderModuleConfig() *ModuleConfig {
 	if m == nil || m.ProviderName == "" {
 		return nil
 	}
-	return m.FindModuleConfig(CloudProviderModuleName(m.ProviderName))
+	if mc := m.FindModuleConfig(CloudProviderModuleName(m.ProviderName)); mc != nil {
+		return mc
+	}
+	return m.externalProviderModuleConfig
 }
 
 // HasProviderModuleConfig reports whether the cluster carries a
@@ -913,6 +929,9 @@ func (m *MetaConfig) DeepCopy() *MetaConfig {
 	out.StaticClusterConfig = cloneMap(m.StaticClusterConfig)
 	out.CloudProviderVars = cloneCloudProviderVars(m.CloudProviderVars)
 	out.ModuleConfigs = cloneModuleConfigs(m.ModuleConfigs)
+	if m.externalProviderModuleConfig != nil {
+		out.externalProviderModuleConfig = cloneModuleConfigs([]*ModuleConfig{m.externalProviderModuleConfig})[0]
+	}
 	out.VersionMap = cloneMap(m.VersionMap)
 	out.Images = cloneNestedMap(m.Images)
 	if m.TerraNodeGroupSpecs != nil {
@@ -1291,4 +1310,26 @@ func GetIndexFromNodeName(name string) (int, error) {
 		return 0, err
 	}
 	return index, nil
+}
+
+// The document lands in ResourcesYAML whenever its module is absent from the installer's modules
+// dir. Unpacking the provider bundle does not move it back: LoadProviderDir accepts only the names
+// in schemaFileNames, which does not include config-values.yaml. An already-parsed ModuleConfig
+// wins, it went through validation.
+func (m *MetaConfig) recoverExternalProviderModuleConfig() error {
+	if m.ProviderName == "" || m.ResourcesYAML == "" {
+		return nil
+	}
+	if m.FindModuleConfig(CloudProviderModuleName(m.ProviderName)) != nil {
+		return nil
+	}
+
+	md, err := ParseModuleDocs(input.YAMLSplitRegexp.Split(strings.TrimSpace(m.ResourcesYAML), -1))
+	if err != nil {
+		return fmt.Errorf("recover cloud provider module config: %w", err)
+	}
+	if mc := md.ProviderConfigs[CloudProviderModuleName(m.ProviderName)]; mc != nil {
+		m.externalProviderModuleConfig = mc
+	}
+	return nil
 }

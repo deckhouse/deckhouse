@@ -64,6 +64,7 @@ func (p *InfrastructureUtilProvider) setupBinary(ctx context.Context, conf *conf
 		return fsutils.CreateLinkIfNotExists(ctx, bundled, checkIsExecFile, destination)
 	}
 
+	// Edition-wide binaries, not provider ones: no provider module publishes them.
 	downloaded := filepath.Join(conf.DownloadRootDir, binaryName)
 	if _, err := os.Stat(downloaded); err != nil {
 		if err := downloadImage(ctx, conf, imageName, "terraformManager", conf.ShowProgress); err != nil {
@@ -88,6 +89,11 @@ func downloadImage(ctx context.Context, conf *config.MetaConfig, name, section s
 			scheme = strings.ToUpper(conf.DeckhouseConfig.RegistryScheme)
 		}
 		regConfig, err = image.RegistryConfigFromDockerConfig(dc, scheme, conf.DeckhouseConfig.ImagesRepo)
+		if err == nil {
+			// RegistryConfigFromDockerConfig only decodes credentials, so a registry behind a
+			// private CA fails here with x509 unless the CA is carried over by hand.
+			regConfig.SetCA(conf.DeckhouseConfig.RegistryCA)
+		}
 		imageName = conf.DeckhouseConfig.ImagesRepo + "@"
 	} else {
 		regConfig, err = image.NewRegistryConfig(string(conf.Registry.Settings.RemoteData.Scheme), conf.Registry.Settings.RemoteData.ImagesRepo, conf.Registry.Settings.RemoteData.Username, conf.Registry.Settings.RemoteData.Password, conf.Registry.Settings.RemoteData.CA)

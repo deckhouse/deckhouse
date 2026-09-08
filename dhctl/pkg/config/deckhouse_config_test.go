@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
 )
@@ -442,4 +443,78 @@ spec:
 		_, err := PrepareDeckhouseInstallConfig(t.Context(), metaConfig, &options.New().Global)
 		require.Error(t, err)
 	})
+}
+
+// An external provider's ModuleConfig never reaches MetaConfig.ModuleConfigs: parseDocument files
+// it under ResourcesYAML and recoverExternalProviderModuleConfig keeps it in a field of its own.
+// The installer still has to see it - HasProviderModuleConfig gates the provider namespace and
+// the d8-candi-cloud-provider-discovery-data Secret, which is the only source of discovery data
+// the module has when there is no d8-provider-cluster-configuration.
+func TestPrepareDeckhouseInstallConfigProviderModuleConfig(t *testing.T) {
+	const externalProviderResources = `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: cloud-provider-dvp
+spec:
+  version: 1
+  source: deckhouse
+  settings:
+    nodes:
+      parameters:
+        layout: Standard
+`
+
+	deckhouseModuleConfig := func() *ModuleConfig {
+		return &ModuleConfig{
+			ObjectMeta: metav1.ObjectMeta{Name: "deckhouse"},
+			Spec:       ModuleConfigSpec{Version: 1, Settings: SettingsValues{}},
+		}
+	}
+
+	tests := []struct {
+		name       string
+		metaConfig *MetaConfig
+		expect     bool
+	}{
+		{
+			name: "external provider, recovered from ResourcesYAML",
+			metaConfig: &MetaConfig{
+				ProviderName:  "dvp",
+				ModuleConfigs: []*ModuleConfig{deckhouseModuleConfig()},
+				ResourcesYAML: externalProviderResources,
+			},
+			expect: true,
+		},
+		{
+			name: "in-tree provider, parsed into ModuleConfigs",
+			metaConfig: &MetaConfig{
+				ProviderName: "dvp",
+				ModuleConfigs: []*ModuleConfig{
+					deckhouseModuleConfig(),
+					{ObjectMeta: metav1.ObjectMeta{Name: CloudProviderModuleName("dvp")}},
+				},
+			},
+			expect: true,
+		},
+		{
+			name: "no provider ModuleConfig anywhere",
+			metaConfig: &MetaConfig{
+				ProviderName:  "dvp",
+				ModuleConfigs: []*ModuleConfig{deckhouseModuleConfig()},
+			},
+			expect: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			require.NoError(t, tt.metaConfig.recoverExternalProviderModuleConfig())
+			require.Equal(t, tt.expect, tt.metaConfig.HasProviderModuleConfig())
+
+			installConfig, err := PrepareDeckhouseInstallConfig(t.Context(), tt.metaConfig, &options.New().Global)
+			require.NoError(t, err)
+			require.Equal(t, tt.expect, installConfig.HasProviderModuleConfig())
+		})
+	}
 }

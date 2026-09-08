@@ -16,10 +16,16 @@
 
 source /deckhouse/shell_lib.sh
 
+# Both anchors are outputs of dhctl's infrastructure pipeline, written by
+# SaveClusterInfrastructureState: the legacy flow patches d8-provider-cluster-configuration,
+# the ModuleConfig flow writes d8-candi-cloud-provider-discovery-data. Neither the
+# cloud-provider ModuleConfig nor the credentials Secret works here: those are inputs, and
+# Commander puts them into clusters whose infrastructure it manages itself.
 function __main__() {
-  if ! kubectl -n kube-system get secret d8-provider-cluster-configuration >/dev/null 2>&1 ; then
+  if ! kubectl -n kube-system get secret d8-provider-cluster-configuration >/dev/null 2>&1 &&
+     ! kubectl get secrets --all-namespaces --field-selector metadata.name=d8-candi-cloud-provider-discovery-data -o name 2>/dev/null | grep -q . ; then
     echo "false" > "$MODULE_ENABLED_RESULT"
-    echo "secret 'kube-system/d8-provider-cluster-configuration' is not present" > "$MODULE_ENABLED_REASON"
+    echo "neither secret 'kube-system/d8-provider-cluster-configuration' nor 'd8-cloud-provider-*/d8-candi-cloud-provider-discovery-data' is present" > "$MODULE_ENABLED_REASON"
 
   elif ! kubectl -n d8-system get secret d8-cluster-terraform-state >/dev/null 2>&1 ; then
     echo "false" > "$MODULE_ENABLED_RESULT"
