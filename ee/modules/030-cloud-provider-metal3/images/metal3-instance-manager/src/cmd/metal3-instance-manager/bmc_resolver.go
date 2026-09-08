@@ -78,6 +78,7 @@ func (r *networkBMCResolver) Resolve(ctx context.Context, config BMCConfig, user
 	return ResolvedBMC{}, fmt.Errorf("no supported BMC protocol resolved: Redfish: %v; IPMI: %v", redfishErr, ipmiErr)
 }
 
+// func for resolve Redfish protocol
 func (r *networkBMCResolver) resolveRedfish(ctx context.Context, config BMCConfig, username, password string, probeTimeout time.Duration) (ResolvedBMC, error) {
 	var errs []error
 	for _, endpoint := range redfishEndpoints(config) {
