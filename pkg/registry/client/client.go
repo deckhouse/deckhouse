@@ -67,8 +67,14 @@ type Client struct {
 	// remote options for go-containerregistry
 	options []remote.Option
 	// auth is stored separately from remote options to build authenticated
-	// HTTP transports for direct registry requests (listTagsPage).
+	// HTTP transports for direct registry requests (StreamTags).
 	auth authn.Authenticator
+	// keychain is kept for the same reason as auth: the direct HTTP path has to
+	// resolve credentials itself, and a client built with WithKeychain has no
+	// explicit authenticator to fall back on.
+	keychain authn.Keychain
+	// userAgent is kept so direct requests carry the same header remote.* sends.
+	userAgent string
 	// baseTransport carries CA/TLS/proxy settings for direct HTTP requests.
 	baseTransport http.RoundTripper
 	// insecure flag for HTTP connections
@@ -114,6 +120,8 @@ func NewClientWithOptions(host string, opts *Options) *Client {
 		registryHost:  host,
 		options:       buildRemoteOptions(opts, logger, baseTransport),
 		auth:          opts.Auth,
+		keychain:      opts.Keychain,
+		userAgent:     opts.UserAgent,
 		baseTransport: baseTransport,
 		timeout:       opts.Timeout,
 		logger:        logger,
@@ -171,11 +179,16 @@ func (c *Client) WithSegment(segments ...string) registry.Client {
 		return c
 	}
 
+	// Every field is copied explicitly because Client embeds a sync.Once, which
+	// rules out `nc := *c` (go vet's copylocks). Any field added to Client has
+	// to be added here too, or it is silently dropped on the first chained call.
 	return &Client{
 		registryHost:  c.registryHost,
 		segments:      append(append([]string(nil), c.segments...), segments...),
 		options:       c.options,
 		auth:          c.auth,
+		keychain:      c.keychain,
+		userAgent:     c.userAgent,
 		baseTransport: c.baseTransport,
 		logger:        c.logger,
 		insecure:      c.insecure,
@@ -412,48 +425,18 @@ func (w *withTagsLimit) ApplyToListTags(opts *registry.ListTagsOptions) {
 
 // ListTags returns tags for the repository built by WithSegment calls.
 //
-// Without options, all tags are returned. WithTagsLimit(n) returns at most one page
-// of n tags. WithTagsLast(tag) returns tags lexicographically after tag.
-// Both options can be combined.
+// Without options every page of the registry's Link-cursor chain is walked and
+// the complete list is returned - never a partial one. WithTagsLimit(n) returns
+// at most one page of n tags and WithTagsLast(tag) starts after tag; both can be
+// combined. StreamTags is the same walk without accumulating the result.
 func (c *Client) ListTags(ctx context.Context, opts ...registry.ListTagsOption) ([]string, error) {
-	listOptions := &registry.ListTagsOptions{}
-	for _, opt := range opts {
-		opt.ApplyToListTags(listOptions)
-	}
+	var tags []string
 
-	c.logger.With(
-		slog.String("registry_host", c.registryHost),
-		slog.String("segments", c.constructedSegments),
-		slog.Int("limit", listOptions.N),
-		slog.String("last", listOptions.Last),
-	).Debug("Listing tags")
+	err := c.StreamTags(ctx, func(page []string) error {
+		tags = append(tags, page...)
 
-	ref, err := name.ParseReference(c.GetRegistry(), c.nameOptions()...)
-	if err != nil {
-		return nil, fmt.Errorf("parse reference: %w", err)
-	}
-
-	repo := ref.Context()
-
-	if listOptions.N > 0 || listOptions.Last != "" {
-		if c.timeout > 0 {
-			var cancel context.CancelFunc
-			ctx, cancel = context.WithTimeout(ctx, c.timeout)
-			defer cancel()
-		}
-
-		tags, err := c.listTagsPage(ctx, repo, listOptions.Last, listOptions.N)
-		if err != nil {
-			return nil, err
-		}
-
-		c.logger.Debug("Tags listed", slog.Int("count", len(tags)))
-
-		return tags, nil
-	}
-
-	remoteOpts := append(append([]remote.Option{}, c.options...), c.withContext(ctx))
-	tags, err := remote.List(repo, remoteOpts...)
+		return nil
+	}, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -463,38 +446,126 @@ func (c *Client) ListTags(ctx context.Context, opts ...registry.ListTagsOption) 
 	return tags, nil
 }
 
-// listTagsPage fetches a single page of tags (pageSize > 0) or all remaining pages via direct HTTP.
-// When pageSize is 0, the registry picks its own page size and all pages are collected via Link headers.
-func (c *Client) listTagsPage(ctx context.Context, repo name.Repository, last string, pageSize int) ([]string, error) {
+// StreamTags invokes visit once per page of tags as it arrives.
+//
+// This is the single tag-listing path: ListTags is a thin accumulator on top,
+// so both share the guarantees below.
+//
+// The `n` query parameter is sent only when WithTagsLimit asked for a page size.
+// Registries that reject an `n` they do not implement answer 400 and would fail
+// the whole listing, and asking for large pages buys nothing when the cursor is
+// followed to the end anyway.
+//
+// Returning ErrStopStreaming from visit ends the walk cleanly; any other error
+// from visit is propagated unchanged.
+func (c *Client) StreamTags(ctx context.Context, visit func(tags []string) error, opts ...registry.ListTagsOption) error {
+	listOptions := &registry.ListTagsOptions{}
+	for _, opt := range opts {
+		opt.ApplyToListTags(listOptions)
+	}
+
+	logentry := c.logger.With(
+		slog.String("registry_host", c.registryHost),
+		slog.String("segments", c.constructedSegments),
+		slog.Int("limit", listOptions.N),
+		slog.String("last", listOptions.Last),
+	)
+
+	logentry.Debug("Streaming tags")
+
+	ref, err := name.ParseReference(c.GetRegistry(), c.nameOptions()...)
+	if err != nil {
+		return fmt.Errorf("parse reference: %w", err)
+	}
+
+	repo := ref.Context()
+
+	if c.timeout > 0 {
+		var cancel context.CancelFunc
+
+		ctx, cancel = context.WithTimeout(ctx, c.timeout)
+		defer cancel()
+	}
+
 	httpClient, err := c.registryHTTPClient(ctx, repo)
 	if err != nil {
-		return nil, fmt.Errorf("create registry client: %w", err)
+		return fmt.Errorf("create registry client: %w", err)
 	}
 
-	nextURL := tagsURL(repo, last, pageSize)
-	var allTags []string
+	// A registry that ignores `last` and echoes the same Link cursor on every
+	// response keeps this walk going forever, re-delivering the same page. A
+	// cursor already followed cannot make progress, so refusing it turns a
+	// broken registry into an error instead of a hang.
+	seen := make(map[string]struct{})
 
-	for nextURL != "" {
-		tags, next, err := c.fetchTagsPage(ctx, httpClient, nextURL)
+	pageURL := tagsURL(repo, listOptions.Last, listOptions.N)
+	pages := 0
+
+	for pageURL != "" {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+
+		tags, next, err := c.fetchTagsPage(ctx, httpClient, pageURL)
 		if err != nil {
-			return nil, err
+			return err
 		}
 
-		allTags = append(allTags, tags...)
+		pages++
 
-		if pageSize > 0 {
-			return allTags, nil
+		if err := visit(tags); err != nil {
+			if errors.Is(err, registry.ErrStopStreaming) {
+				logentry.Debug("Tag streaming stopped by caller", slog.Int("pages", pages))
+
+				return nil
+			}
+
+			return err
 		}
 
-		nextURL = next
+		// WithTagsLimit asks for exactly one page; continuing is the caller's
+		// business, via WithTagsLast on the next call.
+		if listOptions.N > 0 {
+			break
+		}
+
+		if next != "" {
+			if _, dup := seen[next]; dup {
+				return fmt.Errorf("list tags for %s: registry keeps returning the same pagination cursor %q, refusing to loop", repo, next)
+			}
+
+			seen[next] = struct{}{}
+		}
+
+		pageURL = next
 	}
 
-	return allTags, nil
+	logentry.Debug("Tag streaming finished", slog.Int("pages", pages))
+
+	return nil
 }
 
 // registryHTTPClient creates an authenticated HTTP client for direct registry requests.
+//
+// Credentials resolve the way buildRemoteOptions hands them to remote.*: an
+// explicit authenticator wins, otherwise the keychain is resolved for this
+// repository. Without the keychain branch the direct path went out anonymous
+// for every client built with WithKeychain, so a private registry answered 401.
+//
+// The transport is then wrapped the way remote.* wraps its own, so direct
+// requests keep retry-on-temporary-failure and the configured User-Agent.
 func (c *Client) registryHTTPClient(ctx context.Context, repo name.Repository) (*http.Client, error) {
 	auth := c.auth
+
+	if auth == nil && c.keychain != nil {
+		resolved, err := c.keychain.Resolve(repo)
+		if err != nil {
+			return nil, fmt.Errorf("resolve credentials for %s: %w", repo, err)
+		}
+
+		auth = resolved
+	}
+
 	if auth == nil {
 		auth = authn.Anonymous
 	}
@@ -502,6 +573,12 @@ func (c *Client) registryHTTPClient(ctx context.Context, repo name.Repository) (
 	rt, err := transport.NewWithContext(ctx, repo.Registry, auth, c.baseTransport, []string{repo.Scope(transport.PullScope)})
 	if err != nil {
 		return nil, fmt.Errorf("build transport: %w", err)
+	}
+
+	rt = transport.NewRetry(rt)
+
+	if c.userAgent != "" {
+		rt = transport.NewUserAgent(rt, c.userAgent)
 	}
 
 	return &http.Client{Transport: rt}, nil

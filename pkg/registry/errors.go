@@ -21,4 +21,9 @@ var (
 	// ErrImageNotFound is returned when a requested image tag or digest does not
 	// exist in the registry.
 	ErrImageNotFound = errors.New("image not found")
+
+	// ErrStopStreaming, returned from a StreamTags visit function, ends the walk
+	// early without being reported as a failure. Use it when the caller has seen
+	// everything it needs and further pages would be wasted round trips.
+	ErrStopStreaming = errors.New("stop streaming")
 )

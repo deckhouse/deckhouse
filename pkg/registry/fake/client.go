@@ -18,6 +18,7 @@ package fake
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -200,6 +201,31 @@ func (c *Client) ListTags(_ context.Context, _ ...dkpreg.ListTagsOption) ([]stri
 
 // ListRepositories returns all repository paths registered under the host of
 // the current path.  The returned paths are relative to the host.
+// StreamTags delivers the repository's tags as a single page. The fake stores
+// tags in memory with no cursor of its own, so there is nothing to paginate -
+// callers that accumulate pages still see the complete list, which is what the
+// real client guarantees.
+func (c *Client) StreamTags(ctx context.Context, visit func(tags []string) error, opts ...dkpreg.ListTagsOption) error {
+	tags, err := c.ListTags(ctx, opts...)
+	if err != nil {
+		return err
+	}
+
+	if len(tags) == 0 {
+		return nil
+	}
+
+	if err := visit(tags); err != nil {
+		if errors.Is(err, dkpreg.ErrStopStreaming) {
+			return nil
+		}
+
+		return err
+	}
+
+	return nil
+}
+
 func (c *Client) ListRepositories(_ context.Context, _ ...dkpreg.ListRepositoriesOption) ([]string, error) {
 	host, repoPrefix := c.splitHostRepo()
 	reg, ok := c.registries[host]

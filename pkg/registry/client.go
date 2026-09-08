@@ -54,7 +54,18 @@ type Client interface {
 	CheckImageExists(ctx context.Context, tag string) error
 
 	// ListTags returns tags for the repository built by WithSegment calls.
+	// The registry's Link-cursor chain is walked to the end, so the result is
+	// the complete list or an error - never a silently truncated page. Ask for
+	// a single page explicitly with WithTagsLimit / WithTagsLast.
 	ListTags(ctx context.Context, opts ...ListTagsOption) ([]string, error)
+
+	// StreamTags invokes visit once per page of tags as it arrives, so a caller
+	// can walk a repository with very many tags without buffering all of them.
+	// It is the non-accumulating form of ListTags and accepts the same options.
+	//
+	// Returning ErrStopStreaming from visit ends the walk without surfacing as
+	// an error; any other error from visit is returned to the caller as-is.
+	StreamTags(ctx context.Context, visit func(tags []string) error, opts ...ListTagsOption) error
 
 	// ListRepositories lists repositories visible from the registry.
 	ListRepositories(ctx context.Context, opts ...ListRepositoriesOption) ([]string, error)
