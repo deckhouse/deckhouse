@@ -24,6 +24,7 @@ memory: 25Mi
   {{- $additionalNodeVolumeMounts := $config.additionalNodeVolumeMounts }}
   {{- $additionalNodeLivenessProbesCmd := $config.additionalNodeLivenessProbesCmd }}
   {{- $livenessProbePort := $config.livenessProbePort }}
+  {{- $nodeMetricsPort := $config.nodeMetricsPort }}
   {{- $additionalNodeSelectorTerms := $config.additionalNodeSelectorTerms }}
   {{- $customNodeSelector := $config.customNodeSelector }}
   {{- $forceCsiNodeAndStaticNodesDepoloy := $config.forceCsiNodeAndStaticNodesDepoloy | default false }}
@@ -68,13 +69,15 @@ spec:
         {{- include "node_driver_registrar_resources" $context | nindent 8 }}
       maxAllowed:
         cpu: 25m
-        memory: 50Mi
+        memory: 64Mi
+    {{- /* The node container is the driver itself, so its peak depends on the backend: the
+           observed 7-day peaks range from 24Mi/1m for csi-nfs to 84Mi/70m for csi-huawei. */}}
     - containerName: "node"
       minAllowed:
         {{- include "node_resources" $context | nindent 8 }}
       maxAllowed:
-        cpu: 25m
-        memory: 50Mi
+        cpu: 100m
+        memory: 128Mi
     {{- end }}
 ---
 kind: DaemonSet
@@ -205,6 +208,16 @@ spec:
       {{- if $additionalNodeEnvs }}
         env:
         {{- $additionalNodeEnvs | toYaml | nindent 8 }}
+      {{- end }}
+      {{- if $nodeMetricsPort }}
+        {{- /* Named so that a PodMonitor can select it by name. A DaemonSet has no
+               Service, so without a named containerPort the only way to scrape it
+               is a numeric targetPort, which silently follows the container's port
+               if it ever moves. */}}
+        ports:
+        - name: metrics
+          containerPort: {{ $nodeMetricsPort }}
+          protocol: TCP
       {{- end }}
       {{- if $csiNodeLifecycle }}
         lifecycle:
