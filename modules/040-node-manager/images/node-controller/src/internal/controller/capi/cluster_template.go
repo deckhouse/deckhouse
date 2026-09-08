@@ -22,10 +22,11 @@ import (
 	"io"
 	"strings"
 
-	"github.com/deckhouse/node-controller/internal/machinetemplate"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	k8syaml "k8s.io/apimachinery/pkg/util/yaml"
 	sigsyaml "sigs.k8s.io/yaml"
+
+	"github.com/deckhouse/node-controller/internal/machinetemplate"
 )
 
 const (
@@ -33,11 +34,42 @@ const (
 	clusterTemplateContractVersion = "v1"
 )
 
-// clusterTemplateContract describes the provider-owned template stored in
-// d8-cloud-provider-<type>-capi Secret.
 type clusterTemplateContract struct {
 	Version  string `json:"version"`
 	Template string `json:"template"`
+}
+
+// clusterTemplateContext is the provider-independent input exposed to cluster templates.
+type clusterTemplateContext struct {
+	Provider map[string]any
+	Cluster  clusterTemplateClusterContext
+}
+
+type clusterTemplateClusterContext struct {
+	Name            string
+	Namespace       string
+	PodSubnet       string
+	ServiceSubnet   string
+	Domain          string
+	Prefix          string
+	MasterEndpoints []map[string]interface{}
+	MasterAddresses []string
+}
+
+func (c clusterTemplateContext) toMap() map[string]any {
+	return map[string]any{
+		"provider": c.Provider,
+		"cluster": map[string]any{
+			"name":            c.Cluster.Name,
+			"namespace":       c.Cluster.Namespace,
+			"podSubnet":       c.Cluster.PodSubnet,
+			"serviceSubnet":   c.Cluster.ServiceSubnet,
+			"domain":          c.Cluster.Domain,
+			"prefix":          c.Cluster.Prefix,
+			"masterEndpoints": c.Cluster.MasterEndpoints,
+			"masterAddresses": c.Cluster.MasterAddresses,
+		},
+	}
 }
 
 func parseClusterTemplateContract(data []byte) (*clusterTemplateContract, error) {
@@ -62,8 +94,7 @@ func parseClusterTemplateContract(data []byte) (*clusterTemplateContract, error)
 	return contract, nil
 }
 
-// decodeClusterTemplateObjects converts a rendered multi-document YAML
-// into Kubernetes unstructured objects.
+// decodeClusterTemplateObjects decodes a rendered multi-document YAML manifest.
 func decodeClusterTemplateObjects(data []byte) ([]*unstructured.Unstructured, error) {
 	decoder := k8syaml.NewYAMLOrJSONDecoder(bytes.NewReader(data), 4096)
 	objects := make([]*unstructured.Unstructured, 0)
@@ -112,22 +143,14 @@ func decodeClusterTemplateObjects(data []byte) ([]*unstructured.Unstructured, er
 	return objects, nil
 }
 
-// renderClusterTemplate renders a provider-owned cluster template and
-// converts its YAML documents into Kubernetes objects.
 func renderClusterTemplate(
 	contract *clusterTemplateContract,
-	provider map[string]any,
-	cluster map[string]any,
+	context clusterTemplateContext,
 ) ([]*unstructured.Unstructured, error) {
-	context := map[string]any{
-		"provider": provider,
-		"cluster":  cluster,
-	}
-
 	rendered, err := machinetemplate.RenderSandboxedTemplate(
 		"cluster-template",
 		contract.Template,
-		context,
+		context.toMap(),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("render cluster-template contract: %w", err)
@@ -139,4 +162,96 @@ func renderClusterTemplate(
 	}
 
 	return objects, nil
+}
+
+// validateClusterTemplateObjects limits the contract to the infrastructure cluster
+// declared by the provider registration and the credential Secrets it refers to. The
+// whole template is validated before the first object is written, so a bad second YAML
+// document cannot leave a partially applied result behind.
+func validateClusterTemplateObjects(
+	objects []*unstructured.Unstructured,
+	expectedAPIVersion string,
+	expectedKind string,
+	expectedName string,
+) error {
+	infrastructureCount := 0
+	seen := make(map[string]struct{}, len(objects))
+
+	for _, object := range objects {
+		if object.GetNamespace() != capiNamespace {
+			return fmt.Errorf(
+				"provider infrastructure %s %s must be in namespace %s",
+				object.GetKind(),
+				object.GetName(),
+				capiNamespace,
+			)
+		}
+
+		identity := strings.Join([]string{
+			object.GetAPIVersion(),
+			object.GetKind(),
+			object.GetNamespace(),
+			object.GetName(),
+		}, "/")
+		if _, exists := seen[identity]; exists {
+			return fmt.Errorf("cluster-template rendered duplicate object %s", identity)
+		}
+		seen[identity] = struct{}{}
+
+		isInfrastructureObject :=
+			object.GetAPIVersion() == expectedAPIVersion &&
+				object.GetKind() == expectedKind
+		isAuxiliarySecret :=
+			object.GetAPIVersion() == "v1" &&
+				object.GetKind() == "Secret"
+
+		if !isInfrastructureObject && !isAuxiliarySecret {
+			return fmt.Errorf(
+				"cluster-template cannot create %s %s",
+				object.GetAPIVersion(),
+				object.GetKind(),
+			)
+		}
+
+		if !isInfrastructureObject {
+			continue
+		}
+		if object.GetName() != expectedName {
+			return fmt.Errorf(
+				"provider infrastructure %s must be named %q, got %q",
+				expectedKind,
+				expectedName,
+				object.GetName(),
+			)
+		}
+
+		infrastructureCount++
+	}
+
+	if infrastructureCount == 0 {
+		return fmt.Errorf(
+			"cluster-template did not render expected %s %s",
+			expectedKind,
+			expectedName,
+		)
+	}
+	return nil
+}
+
+func prepareClusterTemplateObject(object *unstructured.Unstructured) {
+	labels := object.GetLabels()
+	if labels == nil {
+		labels = map[string]string{}
+	}
+	labels["heritage"] = "deckhouse"
+	labels["module"] = "node-manager"
+	object.SetLabels(labels)
+
+	// Keep adopted resources when the legacy Helm manifest is removed.
+	annotations := object.GetAnnotations()
+	if annotations == nil {
+		annotations = map[string]string{}
+	}
+	annotations["helm.sh/resource-policy"] = "keep"
+	object.SetAnnotations(annotations)
 }
