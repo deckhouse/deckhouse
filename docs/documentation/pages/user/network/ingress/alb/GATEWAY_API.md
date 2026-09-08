@@ -598,7 +598,7 @@ Because the current Gateway API specification does not yet cover all features re
 | Annotation | Description |
 | :--- | :--- |
 | `alb.network.deckhouse.io/tls-disable-protocol` | Disables the listener protocol for the route with the specified hostname (for example, value `http2`). This may be required in rare cases when a shared certificate with several DNS names is used together with request redirection |
-| `alb.network.deckhouse.io/whitelist-source-range` | Expects a comma-separated list of subnets in CIDR format: an IP filter at route level; overrides the global whitelist (for example, `10.1.1.10/32, 10.2.2.2/32`) |
+| `alb.network.deckhouse.io/whitelist-source-range` | A comma-separated list of subnets in CIDR format. Sets an IP filter at route level and overrides the global whitelist (for example, `10.1.1.10/32, 10.2.2.2/32`) |
 | `alb.network.deckhouse.io/response-headers-to-add` | JSON object with additional response headers (for example, `{"Strict-Transport-Security": "max-age=31536000; includeSubDomains"}`) |
 | `alb.network.deckhouse.io/session-affinity` | JSON for session affinity with cookie mode (`mode`, `path`, `cookieName`, `ttl`, etc.); not every field is required (for example, `{"mode": "cookie", "path": "/path", "cookieName": "mycookie", "ttl": 0}`) |
 | `alb.network.deckhouse.io/hash-key` | Consistent hashing for Service backends of the HTTPRoute object (for example, `source-ip`) |
@@ -607,7 +607,7 @@ Because the current Gateway API specification does not yet cover all features re
 | `alb.network.deckhouse.io/satisfy` | `all` or `any`: defines whether both checks must be satisfied (whitelist and basic-auth) or only one of them (default `all`) |
 | `alb.network.deckhouse.io/auth-url` | Defines the URL of the external authentication service |
 | `alb.network.deckhouse.io/auth-signin` | Defines the redirect URL for authentication when `401` is returned by external authentication |
-| `alb.network.deckhouse.io/auth-response-headers` | Comma-separated list: additional headers from the auth response to pass upstream (on top of the standard allowlist) |
+| `alb.network.deckhouse.io/auth-response-headers` | Comma-separated list: additional headers from the authentication service response to pass upstream (on top of the standard allowlist) |
 | `alb.network.deckhouse.io/mod-security` | JSON configuration for the per-route ModSecurity/Coraza WAF |
 | `alb.network.deckhouse.io/rewrite-target` | Allows rewriting paths for rules with `RegularExpression` type by using regex capture groups (for example, `/my-path/\1`) |
 | `alb.network.deckhouse.io/buffer-max-request-bytes` | Defines the buffer size that may be used when requests are buffered; the value is in bytes (integer). By default Envoy Proxy does not buffer requests |
@@ -657,7 +657,7 @@ spec:
 
 ### WAF on HTTPRoute {#waf-on-httproute}
 
-The `alb.network.deckhouse.io/mod-security` annotation enables the ModSecurity/Coraza WAF for a specific HTTPRoute. The WAF is configured per route and does not affect other routes unless the same annotation is added there.
+The `alb.network.deckhouse.io/mod-security` annotation enables the ModSecurity/Coraza WAF (Web Application Firewall) for a specific HTTPRoute. The WAF is configured per route and does not affect other routes unless the same annotation is added there.
 
 Supported annotation fields:
 

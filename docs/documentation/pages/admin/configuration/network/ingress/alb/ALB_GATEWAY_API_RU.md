@@ -26,14 +26,14 @@ ALB средствами Kubernetes Gateway API может использова�
 
 ## Обзор и схема
 
-Модуль построен на Kubernetes Gateway API — API маршрутизации входящего трафика, расширяющий модель Ingress API. Объект [ClusterALBInstance](/modules/alb/stable/cr.html#clusteralbinstance) или [ALBInstance](/modules/alb/stable/cr.html#albinstance) создаёт управляемый [Gateway](https://gateway-api.sigs.k8s.io/reference/api-types/gateway/). К Gateway привязывается [ListenerSet](https://gateway-api.sigs.k8s.io/reference/api-types/listenerset/), который описывает обработчики входящих запросов. Маршруты направляют трафик к сервисам приложений.
+Модуль построен на Kubernetes Gateway API — API маршрутизации входящего трафика, расширяющий модель Ingress API. Объект [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance) или [ALBInstance](/modules/alb/cr.html#albinstance) создаёт управляемый [Gateway](https://gateway-api.sigs.k8s.io/reference/api-types/gateway/). К Gateway привязывается [ListenerSet](https://gateway-api.sigs.k8s.io/reference/api-types/listenerset/), который описывает обработчики входящих запросов. Маршруты направляют трафик к сервисам приложений.
 
 ![Схема прохождения трафика Gateway API](../../../../../images/network/ingress/alb/gateway-api-scheme.svg)
 
 Модуль поддерживает:
 
 - единый декларативный API для HTTP/HTTPS, gRPC, TCP, UDP и TLS passthrough;
-- разделение ответственности между администратором кластера ([ClusterALBInstance](/modules/alb/stable/cr.html#clusteralbinstance) или [ALBInstance](/modules/alb/stable/cr.html#albinstance)), администратором неймспейса (ALBInstance и ListenerSet — hostname, TLS, порты) и разработчиками приложения (маршруты);
+- разделение ответственности между администратором кластера ([ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance) или [ALBInstance](/modules/alb/cr.html#albinstance)), администратором неймспейса (ALBInstance и ListenerSet — hostname, TLS, порты) и разработчиками приложения (маршруты);
 - обработку запросов: WAF на уровне маршрута, внешнюю аутентификацию, списки разрешённых IP-адресов, ограничение частоты запросов, закрепление сессии (session affinity), GeoIP, BackendTLSPolicy, Proxy Protocol и HTTP/3.
 
 Kubernetes Gateway API и API Gateway — разные понятия. Kubernetes Gateway API — это набор ресурсов Kubernetes для описания маршрутизации трафика к приложениям. API Gateway — архитектурный компонент, предоставляющий единую точку входа к API приложений. Модуль `alb` реализует Kubernetes Gateway API.
@@ -98,7 +98,7 @@ Gateway API разделяет ответственность между адм�
 
 Перед включением и настройкой ALB в кластере DKP выполните следующее:
 
-- Проверьте выполнение [требований](/modules/alb/stable/configuration.html#требования) к работе модуля `alb`.
+- Проверьте выполнение [требований](/modules/alb/configuration.html#требования) к работе модуля `alb`.
 - Если нужно публиковать служебные домены — веб-интерфейсы [служебных компонентов DKP](../../../../../user/web/ui.html) и других модулей, — укажите глобальный параметр [`publicDomainTemplate`](../../../../../reference/api/global.html#parameters-modules-publicdomaintemplate). Без этого параметра системные объекты HTTPRoute, Gateway и ListenerSet для служебных доменов не будут работать корректно, и веб-интерфейсы не опубликуются. Если публикация служебных доменов не требуется, параметр можно не указывать. Подробности — в разделе [«Публикация служебных доменов»](#публикация-служебных-доменов).
 - Проверьте совместимость версий API в разделе [«Совместно со сторонними реализациями Gateway API»](#alongside-third-party-gateway-api), если такие решения уже используются в кластере.
 - На bare metal для инлета [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer) подготовьте внешний балансировщик или модуль [`metallb`](/modules/metallb/). Инлет [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) доступен только для ClusterALBInstance и не требует MetalLB.
@@ -148,7 +148,7 @@ spec:
     loadBalancer: {}
 ```
 
-После перехода ALBInstance в состояние `Ready` создайте в том же неймспейсе объекты ListenerSet и HTTPRoute. Порядок их настройки и пример публикации приложения приведены в разделе [«Публикация приложения с ListenerSet и HTTPRoute»]((../../../../../user/network/ingress/alb/gateway-api.html#publishing-with-listenerset-and-httproute).
+После перехода ALBInstance в состояние `Ready` создайте в том же неймспейсе объекты ListenerSet и HTTPRoute. Порядок их настройки и пример публикации приложения приведены в разделе [«Публикация приложения с ListenerSet и HTTPRoute»](../../../../../user/network/ingress/alb/gateway-api.html#publishing-with-listenerset-and-httproute).
 
 {% endtab %}
 {% endtabs %}
@@ -214,7 +214,7 @@ spec:
 ## Публикация служебных доменов {#публикация-служебных-доменов}
 
 {% alert level="warning" %}
-Если нужно публиковать служебные домены, укажите глобальный параметр [`publicDomainTemplate`]((../../../../../reference/api/global.html#parameters-modules-publicdomaintemplate) — без него системные объекты HTTPRoute/Gateway/ListenerSet для служебных доменов не будут работать корректно, и веб-интерфейсы служебных компонентов DKP и других модулей не будут опубликованы. Если публикация служебных доменов не нужна, параметр можно не указывать.
+Если нужно публиковать служебные домены, укажите глобальный параметр [`publicDomainTemplate`](../../../../../reference/api/global.html#parameters-modules-publicdomaintemplate) — без него системные объекты HTTPRoute/Gateway/ListenerSet для служебных доменов не будут работать корректно, и веб-интерфейсы служебных компонентов DKP и других модулей не будут опубликованы. Если публикация служебных доменов не нужна, параметр можно не указывать.
 {% endalert %}
 
 Для предоставления доступа к служебным доменам кластера DKP укажите шлюз по умолчанию. Создайте ClusterALBInstance с нужным типом инлета и [настройками](/modules/alb/cr.html#clusteralbinstance) и установите для него параметр [`spec.defaultDeckhouseGateway: true`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-defaultdeckhousegateway).
@@ -450,7 +450,7 @@ spec:
 Если объект TCPRoute или UDPRoute создаётся в неймспейсе, отличном от неймспейса целевого Gateway, дополнительно создайте в неймспейсе Gateway объект [ReferenceGrant](https://gateway-api.sigs.k8s.io/reference/api-types/referencegrant/), разрешающий ссылки из неймспейса маршрута.
 {% endalert %}
 
-Примеры UDPRoute и шаги публикации приложений — в разделе [«Работа с объектами GRPCRoute, TLSRoute, TCPRoute и UDPRoute»]((../../../../../user/network/ingress/alb/gateway-api.html#grpcroute-tlsroute-tcproute-and-udproute-objects).
+Примеры UDPRoute и шаги публикации приложений — в разделе [«Работа с объектами GRPCRoute, TLSRoute, TCPRoute и UDPRoute»](../../../../../user/network/ingress/alb/gateway-api.html#grpcroute-tlsroute-tcproute-and-udproute-objects).
 
 ### Разделение публичной и административной зон {#public-and-admin-zones}
 
@@ -485,7 +485,7 @@ spec:
     - 10.0.0.0/16
 ```
 
-Далее для каждого шлюза создайте отдельные объекты ListenerSet и маршруты. Примеры публикации приложений приведены в разделе [«Публикация приложения с ListenerSet и HTTPRoute»]((../../../../../user/network/ingress/alb/gateway-api.html#publishing-with-listenerset-and-httproute).
+Далее для каждого шлюза создайте отдельные объекты ListenerSet и маршруты. Примеры публикации приложений приведены в разделе [«Публикация приложения с ListenerSet и HTTPRoute»](../../../../../user/network/ingress/alb/gateway-api.html#publishing-with-listenerset-and-httproute).
 
 ### Публикация в неймспейсе (ALBInstance) {#namespaced-load-balancer}
 
@@ -504,7 +504,7 @@ spec:
     loadBalancer: {}
 ```
 
-После перехода ALBInstance в состояние `Ready` создайте в том же неймспейсе объекты ListenerSet и HTTPRoute. Порядок их настройки и пример публикации приложения приведены в разделе [«Публикация приложения с ListenerSet и HTTPRoute»]((../../../../../user/network/ingress/alb/gateway-api.html#publishing-with-listenerset-and-httproute).
+После перехода ALBInstance в состояние `Ready` создайте в том же неймспейсе объекты ListenerSet и HTTPRoute. Порядок их настройки и пример публикации приложения приведены в разделе [«Публикация приложения с ListenerSet и HTTPRoute»](../../../../../user/network/ingress/alb/gateway-api.html#publishing-with-listenerset-and-httproute).
 
 ### Выпуск TLS-сертификатов с cert-manager {#tls-cert-manager}
 

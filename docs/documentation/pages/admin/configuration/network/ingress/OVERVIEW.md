@@ -63,7 +63,6 @@ The table below lists the criteria for choosing an ALB implementation.
 
 | Criterion | Ingress NGINX | Gateway API | Istio |
 | --- | --- | --- | --- |
-| Status in DKP | General Availability | Preview (DKP ≥ 1.76) | [Depends on edition and configuration](/modules/istio/) |
 | Publishing API | Ingress + annotations | Gateway, ListenerSet, routes | Gateway, VirtualService, DestinationRule |
 | Protocols | HTTP/HTTPS, gRPC (Ingress) | HTTP/HTTPS, gRPC, TLS, TCP, UDP | HTTP/HTTPS, gRPC, TCP (Istio Gateway) |
 | Role separation | IngressClass + Ingress | ClusterALBInstance/ALBInstance → ListenerSet → routes | IngressIstioController + Istio Gateway |
@@ -84,7 +83,7 @@ Service domains (web interfaces of DKP components and modules via `publicDomainT
 | Development | Maintenance mode: the upstream Ingress NGINX project no longer develops new features, while DKP provides security updates | Actively developed                                                                                                                                                                       |
 | Minimum DKP version | Available in all supported versions                                                                                       | 1.76                                                                                                                                                                                     |
 | DKP editions | All editions                                                                                                              | All editions                                                                                                                                                                             |
-| Role separation model | Cluster administrator, namespace administrator                                                                            | Cluster administrator, namespace administrator, application developer                                                                                                                    |
+| Role separation model | Cluster administrator, namespace administrator                                                                            | Cluster administrator, namespace administrator, application developers                                                                                                                    |
 | Multiple independent entry points | Multiple Ingress controllers selected via `ingressClass`                                                                  | Multiple Gateway objects selected via `gatewayName`; cluster-scoped and namespaced gateways                                                                                              |
 | HTTP/HTTPS (HTTP/1.1, HTTP/2, HTTP/3) | Yes                                                                                                                       | Yes ([enabling HTTP/3](alb/alb-gateway-api.html#http3))                                                                                                                                  |
 | WebSocket | Yes                                                                                                                       | Yes                                                                                                                                                                                      |
@@ -117,4 +116,4 @@ To publish an application, follow these steps:
    - Ingress NGINX — when you need a mature Ingress-based ALB.
 2. Enable and configure the corresponding module. For Gateway API, complete the ["Steps to take before enabling and configuring ALB in a cluster"](alb/alb-gateway-api.html#steps-to-take-before-enabling-and-configuring-alb-in-a-cluster).
 3. Publish applications using the [ALB user guides](../../../../user/network/ingress/alb.html) (Gateway API, Ingress NGINX, or Istio).
-4. To move from `ingress-nginx` to Gateway API, follow [Migrating from ingress-nginx to alb](alb/migration.html).
+4. To move from Ingress NGINX to Gateway API, follow [Migrating from ingress-nginx to alb](alb/migration.html).
