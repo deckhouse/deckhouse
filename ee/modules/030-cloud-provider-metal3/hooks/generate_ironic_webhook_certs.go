@@ -18,19 +18,17 @@ package hooks
 
 import "github.com/deckhouse/deckhouse/go_lib/hooks/tls_certificate"
 
-const metal3Namespace = "d8-cloud-provider-metal3"
-
 var _ = tls_certificate.RegisterInternalTLSHook(tls_certificate.GenSelfSignedTLSHookConf{
 	SANs: tls_certificate.DefaultSANs([]string{
-		"baremetal-operator-webhook-service." + metal3Namespace,
-		"baremetal-operator-webhook-service." + metal3Namespace + ".svc",
-		tls_certificate.ClusterDomainSAN("baremetal-operator-webhook-service." + metal3Namespace),
-		tls_certificate.ClusterDomainSAN("baremetal-operator-webhook-service." + metal3Namespace + ".svc"),
+		"ironic-standalone-operator-webhook-service." + metal3Namespace,
+		"ironic-standalone-operator-webhook-service." + metal3Namespace + ".svc",
+		tls_certificate.ClusterDomainSAN("ironic-standalone-operator-webhook-service." + metal3Namespace),
+		tls_certificate.ClusterDomainSAN("ironic-standalone-operator-webhook-service." + metal3Namespace + ".svc"),
 	}),
 
-	CN: "baremetal-operator-webhook",
+	CN: "ironic-standalone-operator-webhook",
 
 	Namespace:            metal3Namespace,
-	TLSSecretName:        "bmo-webhook-server-cert",
-	FullValuesPathPrefix: "cloudProviderMetal3.internal.baremetalOperatorWebhookCert",
+	TLSSecretName:        "irso-webhook-server-cert",
+	FullValuesPathPrefix: "cloudProviderMetal3.internal.ironicStandaloneOperatorWebhookCert",
 })
