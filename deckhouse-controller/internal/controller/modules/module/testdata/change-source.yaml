@@ -6,6 +6,15 @@ metadata:
 spec:
   enabled: true
   packageVersion: v1.0.0
+  packageRepositoryName: new-source
+status:
+  conditions:
+  - status: "True"
+    type: Enabled
+  - status: "True"
+    type: Ready
+  summary:
+    state: Ready
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModulePackage
@@ -13,4 +22,35 @@ metadata:
   name: test-module
 status:
   availableRepositories:
-  - test-source
+  - old-source
+  - new-source
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
+metadata:
+  name: old-source-test-module-v1.0.0
+  labels:
+    packages.deckhouse.io/repository: old-source
+    packages.deckhouse.io/package: test-module
+    packages.deckhouse.io/exist-in-registry: "true"
+spec:
+  packageName: test-module
+  packageRepositoryName: old-source
+  packageVersion: v1.0.0
+status:
+  used: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
+metadata:
+  name: new-source-test-module-v1.0.0
+  labels:
+    packages.deckhouse.io/repository: new-source
+    packages.deckhouse.io/package: test-module
+    packages.deckhouse.io/exist-in-registry: "true"
+spec:
+  packageName: test-module
+  packageRepositoryName: new-source
+  packageVersion: v1.0.0
+status:
+  used: false

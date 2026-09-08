@@ -8,6 +8,7 @@ metadata:
   resourceVersion: "1002"
 spec:
   enabled: true
+  packageRepositoryName: new-source
   packageVersion: v1.0.0
 status:
   conditions:
@@ -33,4 +34,37 @@ metadata:
   resourceVersion: "999"
 status:
   availableRepositories:
-  - test-source
+  - old-source
+  - new-source
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
+metadata:
+  labels:
+    packages.deckhouse.io/exist-in-registry: "true"
+    packages.deckhouse.io/package: test-module
+    packages.deckhouse.io/repository: new-source
+  name: new-source-test-module-v1.0.0
+  resourceVersion: "999"
+spec:
+  packageName: test-module
+  packageRepositoryName: new-source
+  packageVersion: v1.0.0
+status:
+  used: false
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackageVersion
+metadata:
+  labels:
+    packages.deckhouse.io/exist-in-registry: "true"
+    packages.deckhouse.io/package: test-module
+    packages.deckhouse.io/repository: old-source
+  name: old-source-test-module-v1.0.0
+  resourceVersion: "999"
+spec:
+  packageName: test-module
+  packageRepositoryName: old-source
+  packageVersion: v1.0.0
+status:
+  used: true
