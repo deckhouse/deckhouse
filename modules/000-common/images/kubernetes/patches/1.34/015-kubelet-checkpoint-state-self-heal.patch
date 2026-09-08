@@ -368,10 +368,10 @@ index 00000000000..c6cba65c043
 +}
 diff --git a/pkg/kubelet/cm/checkpointselfheal/selfheal.go b/pkg/kubelet/cm/checkpointselfheal/selfheal.go
 new file mode 100644
-index 00000000000..9ba77393793
+index 00000000000..e2091d174a8
 --- /dev/null
 +++ b/pkg/kubelet/cm/checkpointselfheal/selfheal.go
-@@ -0,0 +1,350 @@
+@@ -0,0 +1,331 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -399,7 +399,6 @@ index 00000000000..9ba77393793
 +	"time"
 +
 +	"k8s.io/klog/v2"
-+	"k8s.io/kubernetes/pkg/kubelet/cm/containermap"
 +)
 +
 +// LogMarker prefixes every log line this package emits, so that one grep finds
@@ -455,13 +454,19 @@ index 00000000000..9ba77393793
 +// container gets a new id but keeps the same ref, which is exactly why clearing
 +// the state is required and stopping alone would not be enough -- the manager
 +// would see the pair already present and skip it.
++//
++// Two comparable string fields, so this doubles as a map key -- the stopper
++// indexes the runtime's containers by it.
 +type ContainerRef struct {
 +	PodUID        string `json:"podUID"`
 +	ContainerName string `json:"containerName"`
 +}
 +
-+// Victim is a ContainerRef resolved to a container id that the runtime knows
-+// about. Fields after ContainerID are filled in by the stopper.
++// Victim is an assignment that a reset dropped, and what became of the
++// container that held it. Only PodUID and ContainerName are known when the
++// reset is recorded; everything else is filled in by the stopper, which is
++// where the runtime is available and where the assignment is resolved to a
++// container id.
 +type Victim struct {
 +	PodUID        string `json:"podUID"`
 +	ContainerName string `json:"containerName"`
@@ -469,11 +474,6 @@ index 00000000000..9ba77393793
 +
 +	PodName      string `json:"podName,omitempty"`
 +	PodNamespace string `json:"podNamespace,omitempty"`
-+
-+	// SupersededID is the container id that came out of containerMap when it
-+	// turned out to belong to an already replaced container. Kept so the marker
-+	// file shows that the aim was corrected rather than silently changed.
-+	SupersededID string `json:"supersededID,omitempty"`
 +
 +	// Stopped reports whether the container was actually stopped. A victim that
 +	// was already gone by the time we looked is reported as skipped, not
@@ -573,8 +573,8 @@ index 00000000000..9ba77393793
 +// It cannot fail and does not block: at this point in kubelet start there is
 +// nothing safe to wait for, and a failure here would put us back to refusing to
 +// start, which is the whole thing being fixed.
-+func RecordStateReset(manager ManagerName, stateDir, checkpointName string, refs []ContainerRef, cm containermap.ContainerMap, cause error) {
-+	recordReset(manager, ReasonStateValidation, filepath.Join(stateDir, checkpointName), refs, cm, cause)
++func RecordStateReset(manager ManagerName, stateDir, checkpointName string, refs []ContainerRef, cause error) {
++	recordReset(manager, ReasonStateValidation, filepath.Join(stateDir, checkpointName), refs, cause)
 +}
 +
 +// ResetCheckpointFile removes a checkpoint the manager could not restore, so
@@ -585,7 +585,7 @@ index 00000000000..9ba77393793
 +// It reports whether the file is gone. False means the caller must fail exactly
 +// as it did before this patch: we could not make progress, so pretending
 +// otherwise would only hide the problem.
-+func ResetCheckpointFile(manager ManagerName, stateDir, checkpointName, configuredPolicy string, cm containermap.ContainerMap, cause error) bool {
++func ResetCheckpointFile(manager ManagerName, stateDir, checkpointName, configuredPolicy string, cause error) bool {
 +	path := filepath.Join(stateDir, checkpointName)
 +
 +	filePolicy, refs := inspectCheckpoint(manager, stateDir, checkpointName)
@@ -609,17 +609,25 @@ index 00000000000..9ba77393793
 +	}
 +
 +	debug("checkpoint removed", "manager", manager, "stateFile", path)
-+	recordReset(manager, reason, path, refs, cm, cause)
++	recordReset(manager, reason, path, refs, cause)
 +	return true
 +}
 +
-+func recordReset(manager ManagerName, reason Reason, stateFile string, refs []ContainerRef, cm containermap.ContainerMap, cause error) {
++func recordReset(manager ManagerName, reason Reason, stateFile string, refs []ContainerRef, cause error) {
++	// Every dropped assignment becomes a victim, named by the only thing known
++	// here. Which container -- if any -- is behind each of them is decided by
++	// the stopper, from the runtime snapshot it takes anyway.
++	victims := make([]Victim, 0, len(refs))
++	for _, ref := range refs {
++		victims = append(victims, Victim{PodUID: ref.PodUID, ContainerName: ref.ContainerName})
++	}
++
 +	rec := ResetRecord{
 +		Manager:    manager,
 +		Reason:     reason,
 +		StateFile:  stateFile,
 +		DetectedAt: time.Now(),
-+		Victims:    resolveVictims(refs, cm),
++		Victims:    victims,
 +	}
 +	if cause != nil {
 +		rec.Cause = cause.Error()
@@ -632,7 +640,7 @@ index 00000000000..9ba77393793
 +
 +	debug("reset recorded",
 +		"manager", manager, "reason", reason, "stateFile", stateFile,
-+		"assignmentsInOldState", len(refs), "victimsResolved", len(rec.Victims),
++		"assignmentsInOldState", len(refs),
 +		"pendingResets", pending)
 +
 +	resetsTotal.WithLabelValues(string(manager), string(reason)).Inc()
@@ -645,35 +653,8 @@ index 00000000000..9ba77393793
 +		"assignmentsInOldState", len(refs))
 +	for _, v := range rec.Victims {
 +		klog.InfoS(LogMarker+" victim",
-+			"manager", manager, "podUID", v.PodUID,
-+			"containerName", v.ContainerName, "containerID", v.ContainerID)
++			"manager", manager, "podUID", v.PodUID, "containerName", v.ContainerName)
 +	}
-+}
-+
-+// resolveVictims maps assignment refs onto container ids the runtime reported
-+// at startup. A ref with no container id is an assignment left over for a
-+// container that no longer exists -- the common case right after a reboot --
-+// and there is nothing to stop for it.
-+func resolveVictims(refs []ContainerRef, cm containermap.ContainerMap) []Victim {
-+	var victims []Victim
-+	for _, ref := range refs {
-+		containerID, err := cm.GetContainerID(ref.PodUID, ref.ContainerName)
-+		if err != nil {
-+			klog.V(4).InfoS(LogMarker+" assignment has no live container, nothing to stop",
-+				"podUID", ref.PodUID, "containerName", ref.ContainerName)
-+			debug("assignment dropped: no container in the runtime map",
-+				"podUID", ref.PodUID, "containerName", ref.ContainerName, "err", err)
-+			continue
-+		}
-+		debug("assignment resolved to a container",
-+			"podUID", ref.PodUID, "containerName", ref.ContainerName, "containerID", containerID)
-+		victims = append(victims, Victim{
-+			PodUID:        ref.PodUID,
-+			ContainerName: ref.ContainerName,
-+			ContainerID:   containerID,
-+		})
-+	}
-+	return victims
 +}
 +
 +// markerHistoryLimit caps how many resets the marker file keeps, so that a node
@@ -724,10 +705,10 @@ index 00000000000..9ba77393793
 +}
 diff --git a/pkg/kubelet/cm/checkpointselfheal/selfheal_test.go b/pkg/kubelet/cm/checkpointselfheal/selfheal_test.go
 new file mode 100644
-index 00000000000..e40875092bd
+index 00000000000..ed9ae6f7623
 --- /dev/null
 +++ b/pkg/kubelet/cm/checkpointselfheal/selfheal_test.go
-@@ -0,0 +1,832 @@
+@@ -0,0 +1,878 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -904,7 +885,9 @@ index 00000000000..e40875092bd
 +		content          string
 +		configuredPolicy string
 +		wantReason       Reason
-+		wantVictimCount  int
++		// Every dropped assignment is recorded as a victim; what became of the
++		// container behind it is decided later, by the stopper.
++		wantVictimCount int
 +	}{
 +		{
 +			// The file is perfectly readable; it just belongs to another
@@ -915,14 +898,14 @@ index 00000000000..e40875092bd
 +			content:          cpuCheckpoint,
 +			configuredPolicy: "none",
 +			wantReason:       ReasonPolicyMismatch,
-+			wantVictimCount:  1,
++			wantVictimCount:  3,
 +		},
 +		{
 +			name:             "same policy, so the file itself is the problem",
 +			content:          cpuCheckpoint,
 +			configuredPolicy: "static",
 +			wantReason:       ReasonCheckpointCorrupt,
-+			wantVictimCount:  1,
++			wantVictimCount:  3,
 +		},
 +		{
 +			name:             "unreadable file cannot be classified further",
@@ -941,10 +924,7 @@ index 00000000000..e40875092bd
 +			dir := t.TempDir()
 +			path := writeFile(t, dir, "cpu_manager_state", tc.content)
 +
-+			cm := containermap.NewContainerMap()
-+			cm.Add("pod-a", "app", "cid-a")
-+
-+			if ok := ResetCheckpointFile(ManagerCPU, dir, "cpu_manager_state", tc.configuredPolicy, cm, errors.New("boom")); !ok {
++			if ok := ResetCheckpointFile(ManagerCPU, dir, "cpu_manager_state", tc.configuredPolicy, errors.New("boom")); !ok {
 +				t.Fatal("ResetCheckpointFile reported failure, want success")
 +			}
 +			if _, err := os.Stat(path); !os.IsNotExist(err) {
@@ -964,8 +944,7 @@ index 00000000000..e40875092bd
 +			if records[0].Cause != "boom" {
 +				t.Errorf("cause: got %q, want %q", records[0].Cause, "boom")
 +			}
-+			// Only assignments that map to a container the runtime reported
-+			// become victims; pod-b has no container in the map.
++			// cpuCheckpoint holds three assignments, and all three are lost.
 +			if len(records[0].Victims) != tc.wantVictimCount {
 +				t.Errorf("victims: got %d (%v), want %d", len(records[0].Victims), records[0].Victims, tc.wantVictimCount)
 +			}
@@ -978,7 +957,7 @@ index 00000000000..e40875092bd
 +	t.Cleanup(Clear)
 +
 +	dir := t.TempDir()
-+	if ok := ResetCheckpointFile(ManagerMemory, dir, "memory_manager_state", "Static", containermap.NewContainerMap(), errors.New("boom")); !ok {
++	if ok := ResetCheckpointFile(ManagerMemory, dir, "memory_manager_state", "Static", errors.New("boom")); !ok {
 +		t.Fatal("ResetCheckpointFile reported failure for an absent file, want success")
 +	}
 +	if got := Pending(); got != 1 {
@@ -1000,7 +979,7 @@ index 00000000000..e40875092bd
 +		t.Fatal(err)
 +	}
 +
-+	if ok := ResetCheckpointFile(ManagerCPU, stateDir, "cpu_manager_state", "static", containermap.NewContainerMap(), errors.New("boom")); ok {
++	if ok := ResetCheckpointFile(ManagerCPU, stateDir, "cpu_manager_state", "static", errors.New("boom")); ok {
 +		t.Error("ResetCheckpointFile reported success, want failure")
 +	}
 +	if got := Pending(); got != 0 {
@@ -1008,21 +987,24 @@ index 00000000000..e40875092bd
 +	}
 +}
 +
-+func TestRecordStateResetKeepsOnlyContainersTheRuntimeKnows(t *testing.T) {
++func TestRecordStateResetRecordsEveryDroppedAssignment(t *testing.T) {
++	// The recording phase does not know, and does not ask, which container is
++	// behind an assignment: the managers run before the stop phase takes its
++	// runtime snapshot, and the only source available that early answers
++	// "which container for this pair" at random once a container has been
++	// recreated. So every dropped assignment is recorded, and the stopper says
++	// what became of it.
 +	Clear()
 +	t.Cleanup(Clear)
-+
-+	cm := containermap.NewContainerMap()
-+	cm.Add("pod-live", "app", "cid-live")
 +
 +	refs := []ContainerRef{
 +		{PodUID: "pod-live", ContainerName: "app"},
 +		// Left over from before a reboot: the assignment is in the state but
-+		// the container is long gone, so there is nothing to stop.
++		// the container is long gone.
 +		{PodUID: "pod-gone", ContainerName: "app"},
 +	}
 +
-+	RecordStateReset(ManagerCPU, "/var/lib/kubelet", "cpu_manager_state", refs, cm, errors.New("topology changed"))
++	RecordStateReset(ManagerCPU, "/var/lib/kubelet", "cpu_manager_state", refs, errors.New("topology changed"))
 +
 +	records := Take()
 +	if len(records) != 1 {
@@ -1034,8 +1016,16 @@ index 00000000000..e40875092bd
 +	if records[0].StateFile != "/var/lib/kubelet/cpu_manager_state" {
 +		t.Errorf("stateFile: got %q", records[0].StateFile)
 +	}
-+	if len(records[0].Victims) != 1 || records[0].Victims[0].ContainerID != "cid-live" {
-+		t.Fatalf("victims: got %v, want only cid-live", records[0].Victims)
++	if len(records[0].Victims) != 2 {
++		t.Fatalf("victims: got %v, want both assignments", records[0].Victims)
++	}
++	for _, v := range records[0].Victims {
++		if v.ContainerID != "" {
++			t.Errorf("victim %+v carries a container id; resolving is the stopper's job", v)
++		}
++		if v.Stopped || v.Skipped != "" || v.Error != "" {
++			t.Errorf("victim %+v already has an outcome before the stop phase ran", v)
++		}
 +	}
 +}
 +
@@ -1069,7 +1059,7 @@ index 00000000000..e40875092bd
 +	Clear()
 +	t.Cleanup(Clear)
 +
-+	RecordStateReset(ManagerCPU, "/d", "c", nil, containermap.NewContainerMap(), errors.New("x"))
++	RecordStateReset(ManagerCPU, "/d", "c", nil, errors.New("x"))
 +	if got := len(Take()); got != 1 {
 +		t.Fatalf("first Take returned %d records, want 1", got)
 +	}
@@ -1078,14 +1068,17 @@ index 00000000000..e40875092bd
 +	}
 +}
 +
-+// fakeContainer builds a running or exited container as the runtime would
-+// report it, with the pod labels the stopper reads to name the pod.
-+func fakeContainer(id, podName, podNamespace string, state runtimeapi.ContainerState) *apitest.FakeContainer {
++// fakeContainerForPod builds a running or exited container as the runtime would
++// report it. The pod UID label matters: it is half of the key the stopper
++// resolves an assignment by. The name and namespace labels are what the stopper
++// reads to name the pod in the log, the marker and the event.
++func fakeContainerForPod(id, podUID, podName, podNamespace string, state runtimeapi.ContainerState) *apitest.FakeContainer {
 +	c := &apitest.FakeContainer{SandboxID: "sandbox-" + id}
 +	c.Id = id
 +	c.State = state
 +	c.Metadata = &runtimeapi.ContainerMetadata{Name: "app"}
 +	c.Labels = map[string]string{
++		kubelettypes.KubernetesPodUIDLabel:       podUID,
 +		kubelettypes.KubernetesPodNameLabel:      podName,
 +		kubelettypes.KubernetesPodNamespaceLabel: podNamespace,
 +	}
@@ -1100,10 +1093,10 @@ index 00000000000..e40875092bd
 +
 +	runtime := apitest.NewFakeRuntimeService()
 +	runtime.Containers = map[string]*apitest.FakeContainer{
-+		"cid-running": fakeContainer("cid-running", "pod-running", "ns", runtimeapi.ContainerState_CONTAINER_RUNNING),
++		"cid-running": fakeContainerForPod("cid-running", "pod-running", "pod-running", "ns", runtimeapi.ContainerState_CONTAINER_RUNNING),
 +		// Already finished but not yet garbage collected. Stopping it would be
 +		// a spurious action, so it must be skipped.
-+		"cid-exited": fakeContainer("cid-exited", "pod-exited", "ns", runtimeapi.ContainerState_CONTAINER_EXITED),
++		"cid-exited": fakeContainerForPod("cid-exited", "pod-exited", "pod-exited", "ns", runtimeapi.ContainerState_CONTAINER_EXITED),
 +	}
 +
 +	cm := containermap.NewContainerMap()
@@ -1113,7 +1106,7 @@ index 00000000000..e40875092bd
 +	RecordStateReset(ManagerCPU, dir, "cpu_manager_state", []ContainerRef{
 +		{PodUID: "pod-running", ContainerName: "app"},
 +		{PodUID: "pod-exited", ContainerName: "app"},
-+	}, cm, errors.New("topology changed"))
++	}, errors.New("topology changed"))
 +
 +	recorder := record.NewFakeRecorder(10)
 +	StopVictims(context.Background(), Deps{Runtime: runtime, Recorder: recorder})
@@ -1166,7 +1159,7 @@ index 00000000000..e40875092bd
 +
 +	runtime := apitest.NewFakeRuntimeService()
 +	runtime.Containers = map[string]*apitest.FakeContainer{
-+		"cid": fakeContainer("cid", "pod", "ns", runtimeapi.ContainerState_CONTAINER_RUNNING),
++		"cid": fakeContainerForPod("cid", "pod", "pod", "ns", runtimeapi.ContainerState_CONTAINER_RUNNING),
 +	}
 +	runtime.InjectError("StopContainer", errors.New("runtime is busy"))
 +
@@ -1174,7 +1167,7 @@ index 00000000000..e40875092bd
 +	cm.Add("pod", "app", "cid")
 +
 +	RecordStateReset(ManagerMemory, dir, "memory_manager_state",
-+		[]ContainerRef{{PodUID: "pod", ContainerName: "app"}}, cm, errors.New("machine state differs"))
++		[]ContainerRef{{PodUID: "pod", ContainerName: "app"}}, errors.New("machine state differs"))
 +
 +	StopVictims(context.Background(), Deps{Runtime: runtime})
 +
@@ -1200,7 +1193,7 @@ index 00000000000..e40875092bd
 +	cm.Add("pod", "app", "cid")
 +
 +	RecordStateReset(ManagerCPU, dir, "cpu_manager_state",
-+		[]ContainerRef{{PodUID: "pod", ContainerName: "app"}}, cm, errors.New("x"))
++		[]ContainerRef{{PodUID: "pod", ContainerName: "app"}}, errors.New("x"))
 +
 +	StopVictims(context.Background(), Deps{})
 +
@@ -1258,10 +1251,10 @@ index 00000000000..e40875092bd
 +
 +	runtime := apitest.NewFakeRuntimeService()
 +	runtime.Containers = map[string]*apitest.FakeContainer{
-+		"cid-a": fakeContainer("cid-a", "pod-a", "ns", runtimeapi.ContainerState_CONTAINER_RUNNING),
++		"cid-a": fakeContainerForPod("cid-a", "pod-a", "pod-a", "ns", runtimeapi.ContainerState_CONTAINER_RUNNING),
 +	}
 +
-+	if ok := ResetCheckpointFile(ManagerCPU, dir, "cpu_manager_state", "none", cm, errors.New("boom")); !ok {
++	if ok := ResetCheckpointFile(ManagerCPU, dir, "cpu_manager_state", "none", errors.New("boom")); !ok {
 +		t.Fatal("ResetCheckpointFile reported failure")
 +	}
 +	StopVictims(context.Background(), Deps{Runtime: runtime})
@@ -1270,26 +1263,47 @@ index 00000000000..e40875092bd
 +		t.Errorf("victim state: got %v, want EXITED", got)
 +	}
 +	marker := readMarker(t, dir)
-+	if len(marker.Resets) != 1 || len(marker.Resets[0].Victims) != 1 {
++	if len(marker.Resets) != 1 {
 +		t.Fatalf("marker: %+v", marker)
-+	}
-+	if !marker.Resets[0].Victims[0].Stopped {
-+		t.Error("victim not marked stopped")
 +	}
 +	if marker.Resets[0].Reason != ReasonPolicyMismatch {
 +		t.Errorf("reason: got %q, want %q", marker.Resets[0].Reason, ReasonPolicyMismatch)
 +	}
++	// All three assignments in the file are recorded; only pod-a has a
++	// container to stop, and the marker says so for each of them.
++	byRef := map[ContainerRef]Victim{}
++	for _, v := range marker.Resets[0].Victims {
++		byRef[ContainerRef{PodUID: v.PodUID, ContainerName: v.ContainerName}] = v
++	}
++	if len(byRef) != 3 {
++		t.Fatalf("victims: %+v, want all three assignments", marker.Resets[0].Victims)
++	}
++	if v := byRef[ContainerRef{PodUID: "pod-a", ContainerName: "app"}]; !v.Stopped || v.ContainerID != "cid-a" {
++		t.Errorf("pod-a victim: %+v, want stopped cid-a", v)
++	}
++	for _, ref := range []ContainerRef{{PodUID: "pod-b", ContainerName: "app"}, {PodUID: "pod-b", ContainerName: "sidecar"}} {
++		if v := byRef[ref]; v.Stopped || v.Skipped == "" {
++			t.Errorf("%v victim: %+v, want skipped and not stopped", ref, v)
++		}
++	}
 +}
 +
-+func TestStopVictimsRetargetsARecreatedContainer(t *testing.T) {
++func TestStopVictimsPicksTheRunningContainerWhenAPairHasSeveral(t *testing.T) {
 +	// Found on a cluster: after one heal the pod's container is recreated, so
 +	// the runtime reports two containers for the same (pod, container name) --
-+	// the exited predecessor and the live replacement. containerMap keeps only
-+	// one id per pair and which one it keeps depends on the order
-+	// ListContainers returned them, so the victim can point at the container
-+	// that has already exited. Skipping it as "not running" would leave the
-+	// live container holding the CPUs and the NUMA zone that the state has
-+	// just given up, which is exactly the divergence being repaired.
++	// the exited predecessor and the live replacement. An assignment key with
++	// several containers is the one ambiguity there is, and the running one has
++	// to win: it is the container physically holding the CPUs and the NUMA zone
++	// the state has just released, so skipping it as "not running" would leave
++	// exactly the divergence being repaired.
++	//
++	// This used to be a correction rather than a choice. The victim was
++	// resolved while the managers were still starting, by asking containermap
++	// for the container of a pair -- a map keyed by container id, walked until
++	// the first match, so with two candidates it answered at random -- and the
++	// wrong answer was then retargeted in the stop phase. Now the resolution
++	// happens once, from the runtime snapshot, in the direction where the
++	// answer is unique.
 +	Clear()
 +	t.Cleanup(Clear)
 +
@@ -1302,13 +1316,8 @@ index 00000000000..e40875092bd
 +		"cid-new": fakeContainerForPod("cid-new", podUID, "numa-pinned", "default", runtimeapi.ContainerState_CONTAINER_RUNNING),
 +	}
 +
-+	// containerMap resolved the pair to the stale container, as it did on the
-+	// cluster.
-+	cm := containermap.NewContainerMap()
-+	cm.Add(podUID, "app", "cid-old")
-+
 +	RecordStateReset(ManagerCPU, dir, "cpu_manager_state",
-+		[]ContainerRef{{PodUID: podUID, ContainerName: "app"}}, cm, errors.New("checkpoint is corrupted"))
++		[]ContainerRef{{PodUID: podUID, ContainerName: "app"}}, errors.New("checkpoint is corrupted"))
 +
 +	StopVictims(context.Background(), Deps{Runtime: runtime})
 +
@@ -1324,20 +1333,38 @@ index 00000000000..e40875092bd
 +	if v.ContainerID != "cid-new" {
 +		t.Errorf("victim aimed at %q, want the running container cid-new", v.ContainerID)
 +	}
-+	if v.SupersededID != "cid-old" {
-+		t.Errorf("supersededID = %q, want cid-old so the correction is visible", v.SupersededID)
-+	}
 +	if !v.Stopped || v.Error != "" {
 +		t.Errorf("victim: %+v, want stopped without error", v)
 +	}
 +}
 +
-+// fakeContainerForPod is fakeContainer with an explicit pod UID label, which is
-+// what the retargeting index is built from.
-+func fakeContainerForPod(id, podUID, podName, podNamespace string, state runtimeapi.ContainerState) *apitest.FakeContainer {
-+	c := fakeContainer(id, podName, podNamespace, state)
-+	c.Labels[kubelettypes.KubernetesPodUIDLabel] = podUID
-+	return c
++// TestStopVictimsPicksTheRunningContainerWhicheverWayItIsListed pins the rule
++// down. The old resolution walked a map and took the first match, so with two
++// candidates it was a coin flip; this must not be. FakeRuntimeService lists
++// from a map, whose iteration order Go randomises, so repeating the run
++// exercises both orders.
++func TestStopVictimsPicksTheRunningContainerWhicheverWayItIsListed(t *testing.T) {
++	const podUID = "pod-recreated"
++
++	for i := 0; i < 20; i++ {
++		Clear()
++
++		dir := t.TempDir()
++		runtime := apitest.NewFakeRuntimeService()
++		runtime.Containers = map[string]*apitest.FakeContainer{
++			"cid-old": fakeContainerForPod("cid-old", podUID, "numa-pinned", "default", runtimeapi.ContainerState_CONTAINER_EXITED),
++			"cid-new": fakeContainerForPod("cid-new", podUID, "numa-pinned", "default", runtimeapi.ContainerState_CONTAINER_RUNNING),
++		}
++
++		RecordStateReset(ManagerCPU, dir, "cpu_manager_state",
++			[]ContainerRef{{PodUID: podUID, ContainerName: "app"}}, errors.New("x"))
++		StopVictims(context.Background(), Deps{Runtime: runtime})
++
++		if got := readMarker(t, dir).Resets[0].Victims[0].ContainerID; got != "cid-new" {
++			t.Fatalf("iteration %d: victim aimed at %q, want cid-new", i, got)
++		}
++	}
++	Clear()
 +}
 +
 +func TestStopVictimsStopsAContainerOnceAcrossManagers(t *testing.T) {
@@ -1363,8 +1390,8 @@ index 00000000000..e40875092bd
 +	cm.Add(podUID, "app", "cid")
 +
 +	refs := []ContainerRef{{PodUID: podUID, ContainerName: "app"}}
-+	RecordStateReset(ManagerCPU, dir, "cpu_manager_state", refs, cm, errors.New("checkpoint is corrupted"))
-+	RecordStateReset(ManagerMemory, dir, "memory_manager_state", refs, cm, errors.New("checkpoint is corrupted"))
++	RecordStateReset(ManagerCPU, dir, "cpu_manager_state", refs, errors.New("checkpoint is corrupted"))
++	RecordStateReset(ManagerMemory, dir, "memory_manager_state", refs, errors.New("checkpoint is corrupted"))
 +
 +	recorder := record.NewFakeRecorder(10)
 +	StopVictims(context.Background(), Deps{Runtime: runtime, Recorder: recorder})
@@ -1472,9 +1499,9 @@ index 00000000000..e40875092bd
 +	cm.Add("pod-mem", "app", "cid-mem")
 +
 +	RecordStateReset(ManagerCPU, dir, "cpu_manager_state",
-+		[]ContainerRef{{PodUID: "pod-cpu", ContainerName: "app"}}, cm, errors.New("topology changed"))
++		[]ContainerRef{{PodUID: "pod-cpu", ContainerName: "app"}}, errors.New("topology changed"))
 +	RecordStateReset(ManagerMemory, dir, "memory_manager_state",
-+		[]ContainerRef{{PodUID: "pod-mem", ContainerName: "app"}}, cm, errors.New("machine state differs"))
++		[]ContainerRef{{PodUID: "pod-mem", ContainerName: "app"}}, errors.New("machine state differs"))
 +
 +	// Shorter than stopDeadline, so a regression fails here quickly instead of
 +	// waiting out the real budget.
@@ -1510,7 +1537,7 @@ index 00000000000..e40875092bd
 +	cmFirst := containermap.NewContainerMap()
 +	cmFirst.Add("pod-first", "app", "cid-first")
 +	RecordStateReset(ManagerMemory, dir, "memory_manager_state",
-+		[]ContainerRef{{PodUID: "pod-first", ContainerName: "app"}}, cmFirst, errors.New("machine state differs"))
++		[]ContainerRef{{PodUID: "pod-first", ContainerName: "app"}}, errors.New("machine state differs"))
 +	StopVictims(context.Background(), Deps{Runtime: failing})
 +
 +	// A later kubelet start heals again, this time without trouble.
@@ -1521,7 +1548,7 @@ index 00000000000..e40875092bd
 +	cmSecond := containermap.NewContainerMap()
 +	cmSecond.Add("pod-second", "app", "cid-second")
 +	RecordStateReset(ManagerCPU, dir, "cpu_manager_state",
-+		[]ContainerRef{{PodUID: "pod-second", ContainerName: "app"}}, cmSecond, errors.New("topology changed"))
++		[]ContainerRef{{PodUID: "pod-second", ContainerName: "app"}}, errors.New("topology changed"))
 +	StopVictims(context.Background(), Deps{Runtime: healthy})
 +
 +	marker := readMarker(t, dir)
@@ -1562,10 +1589,10 @@ index 00000000000..e40875092bd
 +}
 diff --git a/pkg/kubelet/cm/checkpointselfheal/stop.go b/pkg/kubelet/cm/checkpointselfheal/stop.go
 new file mode 100644
-index 00000000000..998404583b7
+index 00000000000..1bf790e8d47
 --- /dev/null
 +++ b/pkg/kubelet/cm/checkpointselfheal/stop.go
-@@ -0,0 +1,358 @@
+@@ -0,0 +1,380 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -1670,21 +1697,26 @@ index 00000000000..998404583b7
 +	stateDir := markerDir(records)
 +
 +	if deps.Runtime == nil {
-+		// Nothing can be stopped without a runtime. Say so plainly and still
-+		// leave the marker: the operator needs to know the node is in this
-+		// state even though we could do nothing about it.
-+		for i := range records {
-+			for j := range records[i].Victims {
-+				records[i].Victims[j].Error = "no runtime service available"
-+				stopFailuresTotal.WithLabelValues(string(records[i].Manager)).Inc()
-+			}
-+		}
++		// Nothing can be stopped, and nothing can even be identified, without
++		// a runtime. Say so plainly and still leave the marker: the operator
++		// needs to know the node is in this state even though we could do
++		// nothing about it.
++		giveUp(stateDir, records, "no runtime service available")
 +		klog.ErrorS(nil, LogMarker+" no runtime service, victims left running")
-+		writeMarker(stateDir, records)
 +		return
 +	}
 +
-+	running, meta, live := inspectRuntime(ctx, deps.Runtime)
++	byRef, meta, listed := inspectRuntime(ctx, deps.Runtime)
++	if !listed {
++		// The listing is the only thing that turns an assignment into a
++		// container id, so without it there is nothing to aim at. Saying so is
++		// better than the alternative: StopContainer succeeds on a container
++		// that has already exited, so guessing would report a stop that never
++		// restarted anything, in the very file a drain decision is made from.
++		giveUp(stateDir, records, "runtime listing failed, victim could not be identified")
++		klog.ErrorS(nil, LogMarker+" could not list containers, victims left running")
++		return
++	}
 +
 +	stopCtx, cancel := context.WithTimeout(ctx, stopDeadline)
 +	defer cancel()
@@ -1701,7 +1733,7 @@ index 00000000000..998404583b7
 +	var wg sync.WaitGroup
 +	stopped := map[string]ManagerName{}
 +	for i := range records {
-+		stopRecord(stopCtx, deps, &records[i], running, meta, live, stopped, &wg)
++		stopRecord(stopCtx, deps, &records[i], byRef, meta, stopped, &wg)
 +	}
 +	wg.Wait()
 +
@@ -1709,6 +1741,20 @@ index 00000000000..998404583b7
 +
 +	klog.InfoS(LogMarker+" finished, kubelet start continues", "resets", len(records))
 +	debug("stop phase finished", "resets", len(records))
++}
++
++// giveUp marks every victim as unhandled and leaves the marker anyway. Reached
++// when the runtime cannot be talked to at all: the containers are still out
++// there holding CPUs and NUMA zones the state has just given up, and the
++// marker is the only thing that will tell anyone.
++func giveUp(stateDir string, records []ResetRecord, reason string) {
++	for i := range records {
++		for j := range records[i].Victims {
++			records[i].Victims[j].Error = reason
++			stopFailuresTotal.WithLabelValues(string(records[i].Manager)).Inc()
++		}
++	}
++	writeMarker(stateDir, records)
 +}
 +
 +// podMeta is the pod identity carried in CRI container labels. The managers key
@@ -1720,107 +1766,110 @@ index 00000000000..998404583b7
 +	namespace string
 +}
 +
-+// containerRef keys a container the way the managers key their assignments.
-+type containerRef struct {
-+	podUID        string
-+	containerName string
++// containerAtRef is what the runtime has for one assignment key.
++type containerAtRef struct {
++	id      string
++	running bool
 +}
 +
-+// inspectRuntime returns the set of container ids the runtime reports as
-+// running, the pod identity for each container it knows about, and an index
-+// from assignment key to the *running* container for that key.
++// inspectRuntime indexes the runtime's containers by the key the managers use
++// for their assignments, and reports the pod identity of each container.
 +//
-+// The running set is what enforces "victims are only containers that are really
-+// running": an assignment left over for a container that has already exited but
-+// has not been garbage collected yet must not produce a spurious stop.
++// The index is built by walking the containers, because that is the direction
++// in which the answer is unique: a container belongs to exactly one (pod,
++// container name) pair, while a pair can have several containers. Asking the
++// other way round -- give me the container for this pair -- is what
++// containermap.GetContainerID does, and it walks a map keyed by container id
++// and returns whichever match it meets first, so with a recreated container it
++// answers at random. Nothing upstream depends on which id comes back from it;
++// this package used to, and got the already exited predecessor, skipped it as
++// "not running", and left the live container holding the CPUs the state had
++// just released.
 +//
-+// The index exists because containerMap holds a single container id per
-+// (pod, container name) pair while the runtime can report several -- a
-+// recreated container leaves its predecessor behind until garbage collection,
-+// and which of the two ends up in containerMap depends on the order
-+// ListContainers happened to return them. Trusting that order means sometimes
-+// aiming at a container that has already exited and leaving the live one
-+// running with an assignment that no longer exists in the state.
-+func inspectRuntime(ctx context.Context, runtime internalapi.RuntimeService) (map[string]bool, map[string]podMeta, map[containerRef]string) {
-+	running := map[string]bool{}
++// Where a pair does have several containers -- a recreated one leaves its
++// predecessor behind until garbage collection -- the running one wins, since
++// that is the one physically holding the CPUs and the NUMA zone. That rule is
++// the only ambiguity there is, and it is stated here rather than left to the
++// order something happened to be listed in.
++//
++// The bool reports whether the listing succeeded at all. It has to be handled
++// by the caller: without it no assignment can be turned into a container id.
++func inspectRuntime(ctx context.Context, runtime internalapi.RuntimeService) (map[ContainerRef]containerAtRef, map[string]podMeta, bool) {
++	byRef := map[ContainerRef]containerAtRef{}
 +	meta := map[string]podMeta{}
-+	live := map[containerRef]string{}
 +
 +	containers, err := runtime.ListContainers(ctx, nil)
 +	if err != nil {
-+		// Without the listing we cannot tell running from exited. Stopping an
-+		// already-exited container is harmless, while skipping a running one
-+		// leaves the isolation broken, so on error we treat every victim as
-+		// running and let the runtime reject the ones that are already gone.
-+		klog.ErrorS(err, LogMarker+" could not list containers, will attempt to stop every victim")
-+		return nil, meta, live
++		klog.ErrorS(err, LogMarker+" could not list containers, victims cannot be identified")
++		return byRef, meta, false
 +	}
 +
 +	for _, c := range containers {
-+		if c.State == runtimeapi.ContainerState_CONTAINER_RUNNING {
-+			running[c.Id] = true
-+		}
++		running := c.State == runtimeapi.ContainerState_CONTAINER_RUNNING
 +		meta[c.Id] = podMeta{
 +			name:      c.Labels[kubelettypes.KubernetesPodNameLabel],
 +			namespace: c.Labels[kubelettypes.KubernetesPodNamespaceLabel],
 +		}
-+		if c.State == runtimeapi.ContainerState_CONTAINER_RUNNING {
-+			key := containerRef{
-+				podUID:        c.Labels[kubelettypes.KubernetesPodUIDLabel],
-+				containerName: c.GetMetadata().GetName(),
-+			}
-+			if key.podUID != "" && key.containerName != "" {
-+				live[key] = c.Id
-+			}
-+		}
-+		// This is the snapshot that explains every "not running, skipped"
-+		// decision below, which is otherwise impossible to second-guess.
++		// This is the snapshot that explains every "skipped" decision below,
++		// which is otherwise impossible to second-guess.
 +		debug("runtime reported a container",
-+			"containerID", c.Id, "state", c.State,
++			"containerID", c.Id, "state", c.State, "running", running,
 +			"containerName", c.GetMetadata().GetName(),
 +			"pod", c.Labels[kubelettypes.KubernetesPodNameLabel],
 +			"namespace", c.Labels[kubelettypes.KubernetesPodNamespaceLabel])
++
++		key := ContainerRef{
++			PodUID:        c.Labels[kubelettypes.KubernetesPodUIDLabel],
++			ContainerName: c.GetMetadata().GetName(),
++		}
++		if key.PodUID == "" || key.ContainerName == "" {
++			continue
++		}
++		if prev, seen := byRef[key]; seen && prev.running && !running {
++			continue
++		}
++		byRef[key] = containerAtRef{id: c.Id, running: running}
 +	}
-+	debug("runtime snapshot complete",
-+		"containers", len(containers), "running", len(running), "liveByAssignment", len(live))
-+	return running, meta, live
++
++	debug("runtime snapshot complete", "containers", len(containers), "assignmentKeys", len(byRef))
++	return byRef, meta, true
 +}
 +
 +// stopRecord queues one reset's victims for stopping. stopped is shared across
 +// resets and carries the manager that owns each container; it is only ever
 +// touched from here, and StopVictims calls this for one reset at a time, so it
 +// needs no lock.
-+func stopRecord(ctx context.Context, deps Deps, rec *ResetRecord, running map[string]bool, meta map[string]podMeta, live map[containerRef]string, stopped map[string]ManagerName, wg *sync.WaitGroup) {
++func stopRecord(ctx context.Context, deps Deps, rec *ResetRecord, byRef map[ContainerRef]containerAtRef, meta map[string]podMeta, stopped map[string]ManagerName, wg *sync.WaitGroup) {
 +	manager := string(rec.Manager)
 +
 +	for i := range rec.Victims {
 +		victim := &rec.Victims[i]
 +
-+		// The id that came out of containerMap can belong to a container that
-+		// has already been replaced: the map keeps one id per (pod, container
-+		// name) and the runtime reports both the old and the new one. Aim at
-+		// the container that is actually running for this assignment, so that
-+		// a recreated container is not skipped while it still holds the CPUs
-+		// or the NUMA zone the state has just given up.
-+		if id, ok := live[containerRef{podUID: victim.PodUID, containerName: victim.ContainerName}]; ok && id != victim.ContainerID {
-+			klog.InfoS(LogMarker+" retargeting victim to the running container for this assignment",
-+				"manager", manager, "podUID", victim.PodUID, "containerName", victim.ContainerName,
-+				"fromContainerID", victim.ContainerID, "toContainerID", id)
-+			victim.SupersededID = victim.ContainerID
-+			victim.ContainerID = id
++		// The assignment is resolved to a container here and nowhere else, from
++		// the one snapshot taken above. Doing it earlier, while the managers
++		// were still starting, meant asking containermap for the container of a
++		// pair -- a question with no single answer once a container has been
++		// recreated -- and then correcting the answer at this point.
++		at, ok := byRef[ContainerRef{PodUID: victim.PodUID, ContainerName: victim.ContainerName}]
++		if !ok {
++			// An assignment left over for a container that no longer exists at
++			// all: the common case right after a reboot.
++			victim.Skipped = "no container for this assignment"
++			klog.InfoS(LogMarker+" assignment has no container, nothing to stop",
++				"manager", manager, "podUID", victim.PodUID, "containerName", victim.ContainerName)
++			continue
 +		}
 +
-+		if m, ok := meta[victim.ContainerID]; ok {
++		victim.ContainerID = at.id
++		if m, ok := meta[at.id]; ok {
 +			victim.PodName = m.name
 +			victim.PodNamespace = m.namespace
 +		}
 +
-+		// running == nil means the listing failed and we deliberately try
-+		// everything; see inspectRuntime.
-+		if running != nil && !running[victim.ContainerID] {
-+			debug("victim skipped",
-+				"manager", manager, "containerID", victim.ContainerID,
-+				"inRunningSet", running[victim.ContainerID], "runtimeListingUsable", running != nil)
++		// "Victims are only containers that are really running": an assignment
++		// whose container has already exited but has not been garbage collected
++		// yet must not produce a spurious stop.
++		if !at.running {
 +			victim.Skipped = "container not running"
 +			klog.InfoS(LogMarker+" victim is not running, nothing to stop",
 +				"manager", manager, "podUID", victim.PodUID,
@@ -2058,7 +2107,7 @@ index 64fe7df63b4..145d7897727 100644
  	// allocatable of the node
  	cm.nodeInfo = node
 diff --git a/pkg/kubelet/cm/cpumanager/cpu_manager.go b/pkg/kubelet/cm/cpumanager/cpu_manager.go
-index 8b59ba67121..a1f639afd31 100644
+index 8b59ba67121..da5088c3987 100644
 --- a/pkg/kubelet/cm/cpumanager/cpu_manager.go
 +++ b/pkg/kubelet/cm/cpumanager/cpu_manager.go
 @@ -29,6 +29,7 @@ import (
@@ -2087,7 +2136,7 @@ index 8b59ba67121..a1f639afd31 100644
 +		// exits. Drop the file instead and start from scratch; the containers
 +		// that held assignments in it are stopped later in
 +		// containerManagerImpl.Start so they get recreated and pinned again.
-+		if !checkpointselfheal.ResetCheckpointFile(checkpointselfheal.ManagerCPU, m.stateFileDirectory, cpuManagerStateFileName, m.policy.Name(), m.containerMap, err) {
++		if !checkpointselfheal.ResetCheckpointFile(checkpointselfheal.ManagerCPU, m.stateFileDirectory, cpuManagerStateFileName, m.policy.Name(), err) {
 +			klog.ErrorS(err, "Could not initialize checkpoint manager, please drain node and remove policy state file")
 +			return err
 +		}
@@ -2109,7 +2158,7 @@ index 8b59ba67121..a1f639afd31 100644
 +		// to read the old assignments from, then let the policy re-run against
 +		// the empty state, which is its own initialisation path.
 +		checkpointselfheal.RecordStateReset(checkpointselfheal.ManagerCPU, m.stateFileDirectory, cpuManagerStateFileName,
-+			checkpointselfheal.RefsFrom(m.state.GetCPUAssignments()), m.containerMap, err)
++			checkpointselfheal.RefsFrom(m.state.GetCPUAssignments()), err)
 +		m.state.ClearState()
 +		if err = m.policy.Start(m.state); err != nil {
 +			klog.ErrorS(err, "Policy start error after resetting manager state")
@@ -2124,10 +2173,10 @@ index 8b59ba67121..a1f639afd31 100644
  	klog.V(4).InfoS("CPU manager started", "policy", m.policy.Name())
 diff --git a/pkg/kubelet/cm/cpumanager/selfheal_test.go b/pkg/kubelet/cm/cpumanager/selfheal_test.go
 new file mode 100644
-index 00000000000..b0207f40cca
+index 00000000000..d5ad7d9e007
 --- /dev/null
 +++ b/pkg/kubelet/cm/cpumanager/selfheal_test.go
-@@ -0,0 +1,272 @@
+@@ -0,0 +1,278 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -2286,9 +2335,15 @@ index 00000000000..b0207f40cca
 +	if len(records[0].Victims) != 1 {
 +		t.Fatalf("victims: got %v, want exactly the pinned container", records[0].Victims)
 +	}
++	// The victim is named by the assignment key, which is all the recording
++	// phase knows: which container is behind it is resolved later, by the
++	// stopper, from its own runtime snapshot.
 +	victim := records[0].Victims[0]
-+	if victim.PodUID != "pod-pinned" || victim.ContainerName != "app" || victim.ContainerID != "cid-pinned" {
-+		t.Errorf("victim: got %+v, want pod-pinned/app/cid-pinned", victim)
++	if victim.PodUID != "pod-pinned" || victim.ContainerName != "app" {
++		t.Errorf("victim: got %+v, want pod-pinned/app", victim)
++	}
++	if victim.ContainerID != "" {
++		t.Errorf("victim carries container id %q; resolving is the stopper's job", victim.ContainerID)
 +	}
 +	if len(f.manager.state.GetCPUAssignments()) != 0 {
 +		t.Errorf("assignments survived the reset: %v", f.manager.state.GetCPUAssignments())
@@ -2325,8 +2380,8 @@ index 00000000000..b0207f40cca
 +	if records[0].Reason != checkpointselfheal.ReasonPolicyMismatch {
 +		t.Errorf("reason: got %q, want %q", records[0].Reason, checkpointselfheal.ReasonPolicyMismatch)
 +	}
-+	if len(records[0].Victims) != 1 || records[0].Victims[0].ContainerID != "cid-a" {
-+		t.Errorf("victims: got %v, want cid-a, recovered from the old policy's checkpoint", records[0].Victims)
++	if len(records[0].Victims) != 1 || records[0].Victims[0].PodUID != "pod-a" {
++		t.Errorf("victims: got %v, want pod-a recovered from the old policy's checkpoint", records[0].Victims)
 +	}
 +}
 +
@@ -2357,8 +2412,8 @@ index 00000000000..b0207f40cca
 +	if records[0].Reason != checkpointselfheal.ReasonCheckpointCorrupt {
 +		t.Errorf("reason: got %q, want %q", records[0].Reason, checkpointselfheal.ReasonCheckpointCorrupt)
 +	}
-+	if len(records[0].Victims) != 1 || records[0].Victims[0].ContainerID != "cid-a" {
-+		t.Errorf("victims: got %v, want cid-a recovered from the unreadable file", records[0].Victims)
++	if len(records[0].Victims) != 1 || records[0].Victims[0].PodUID != "pod-a" {
++		t.Errorf("victims: got %v, want pod-a recovered from the unreadable file", records[0].Victims)
 +	}
 +}
 +
@@ -2401,7 +2456,7 @@ index 00000000000..b0207f40cca
 +	}
 +}
 diff --git a/pkg/kubelet/cm/memorymanager/memory_manager.go b/pkg/kubelet/cm/memorymanager/memory_manager.go
-index 572f58599a0..a02de3933a9 100644
+index 572f58599a0..b803f0efc12 100644
 --- a/pkg/kubelet/cm/memorymanager/memory_manager.go
 +++ b/pkg/kubelet/cm/memorymanager/memory_manager.go
 @@ -32,6 +32,7 @@ import (
@@ -2424,7 +2479,7 @@ index 572f58599a0..a02de3933a9 100644
 -		logger.Error(err, "Could not initialize checkpoint manager, please drain node and remove policy state file")
 -		return err
 +		// See the same branch in the CPU manager: reset rather than exit.
-+		if !checkpointselfheal.ResetCheckpointFile(checkpointselfheal.ManagerMemory, m.stateFileDirectory, memoryManagerStateFileName, m.policy.Name(), m.containerMap, err) {
++		if !checkpointselfheal.ResetCheckpointFile(checkpointselfheal.ManagerMemory, m.stateFileDirectory, memoryManagerStateFileName, m.policy.Name(), err) {
 +			logger.Error(err, "Could not initialize checkpoint manager, please drain node and remove policy state file")
 +			return err
 +		}
@@ -2447,7 +2502,7 @@ index 572f58599a0..a02de3933a9 100644
 +		// as it lives. Stopping it is the only thing that brings the two back
 +		// together.
 +		checkpointselfheal.RecordStateReset(checkpointselfheal.ManagerMemory, m.stateFileDirectory, memoryManagerStateFileName,
-+			checkpointselfheal.RefsFrom(m.state.GetMemoryAssignments()), m.containerMap, err)
++			checkpointselfheal.RefsFrom(m.state.GetMemoryAssignments()), err)
 +		m.state.ClearState()
 +		if err = m.policy.Start(ctx, m.state); err != nil {
 +			logger.Error(err, "Policy start error after resetting manager state")
@@ -2462,10 +2517,10 @@ index 572f58599a0..a02de3933a9 100644
  	m.allocatableMemory = m.policy.GetAllocatableMemory(ctx, m.state)
 diff --git a/pkg/kubelet/cm/memorymanager/selfheal_test.go b/pkg/kubelet/cm/memorymanager/selfheal_test.go
 new file mode 100644
-index 00000000000..e9e7774cc98
+index 00000000000..a433d4ac834
 --- /dev/null
 +++ b/pkg/kubelet/cm/memorymanager/selfheal_test.go
-@@ -0,0 +1,305 @@
+@@ -0,0 +1,311 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -2670,9 +2725,15 @@ index 00000000000..e9e7774cc98
 +	if len(records[0].Victims) != 1 {
 +		t.Fatalf("victims: got %v, want exactly the pinned container", records[0].Victims)
 +	}
++	// The victim is named by the assignment key, which is all the recording
++	// phase knows: which container is behind it is resolved later, by the
++	// stopper, from its own runtime snapshot.
 +	victim := records[0].Victims[0]
-+	if victim.PodUID != "pod-pinned" || victim.ContainerName != "app" || victim.ContainerID != "cid-pinned" {
-+		t.Errorf("victim: got %+v, want pod-pinned/app/cid-pinned", victim)
++	if victim.PodUID != "pod-pinned" || victim.ContainerName != "app" {
++		t.Errorf("victim: got %+v, want pod-pinned/app", victim)
++	}
++	if victim.ContainerID != "" {
++		t.Errorf("victim carries container id %q; resolving is the stopper's job", victim.ContainerID)
 +	}
 +
 +	// Collecting victims has to happen before clearing, because afterwards
@@ -2750,8 +2811,8 @@ index 00000000000..e9e7774cc98
 +	if records[0].Reason != checkpointselfheal.ReasonCheckpointCorrupt {
 +		t.Errorf("reason: got %q, want %q", records[0].Reason, checkpointselfheal.ReasonCheckpointCorrupt)
 +	}
-+	if len(records[0].Victims) != 1 || records[0].Victims[0].ContainerID != "cid-a" {
-+		t.Errorf("victims: got %v, want cid-a recovered from the unreadable file", records[0].Victims)
++	if len(records[0].Victims) != 1 || records[0].Victims[0].PodUID != "pod-a" {
++		t.Errorf("victims: got %v, want pod-a recovered from the unreadable file", records[0].Victims)
 +	}
 +}
 +
