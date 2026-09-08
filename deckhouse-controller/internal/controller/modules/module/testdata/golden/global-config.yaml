@@ -5,23 +5,10 @@ metadata:
   finalizers:
   - module.deckhouse.io/module-registered
   name: global
-  resourceVersion: "1002"
+  resourceVersion: "1000"
 spec:
   enabled: true
   packageVersion: ""
 status:
-  conditions:
-  - lastTransitionTime: null
-    message: ""
-    reason: ""
-    status: "True"
-    type: Enabled
-  - lastTransitionTime: null
-    message: installing
-    reason: Installing
-    status: "False"
-    type: Ready
   lastAppliedConfiguration: null
-  summary:
-    state: Pending
   tracking: null

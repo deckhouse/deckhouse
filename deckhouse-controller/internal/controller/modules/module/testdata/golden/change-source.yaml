@@ -45,13 +45,13 @@ metadata:
     packages.deckhouse.io/package: test-module
     packages.deckhouse.io/repository: new-source
   name: new-source-test-module-v1.0.0
-  resourceVersion: "999"
+  resourceVersion: "1000"
 spec:
   packageName: test-module
   packageRepositoryName: new-source
   packageVersion: v1.0.0
 status:
-  used: false
+  used: true
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModulePackageVersion

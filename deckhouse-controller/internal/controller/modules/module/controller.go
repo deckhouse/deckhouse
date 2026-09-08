@@ -219,6 +219,20 @@ func (r *reconciler) handleModule(ctx context.Context, module *v1alpha2.Module) 
 		module.Spec.Maintenance,
 		module.Spec.Enabled)
 
+	// The global module is not an installable module: it only stores settings,
+	// which are forwarded to addon-operator above. It has no package, version or
+	// lifecycle status to reconcile — only its finalizer, which lets a later
+	// delete be forwarded to addon-operator as well.
+	if module.Name == moduleGlobal {
+		if err := r.addFinalizer(ctx, module); err != nil {
+			r.logger.Error("failed to add finalizer", slog.String("name", module.Name), log.Err(err))
+			return res, err
+		}
+
+		r.logger.Debug("skip processing the global module", slog.String("name", module.Name))
+		return res, nil
+	}
+
 	// actualize status of the Module
 	if err := r.refreshModule(ctx, module.Name); err != nil {
 		res.RequeueAfter = 1 * time.Second
@@ -248,20 +262,10 @@ func (r *reconciler) processModule(ctx context.Context, module *v1alpha2.Module)
 	}
 
 	if !module.IsEnabled() {
-		// set MPV Used to false
-		if module.IsCondition(status.ConditionEnabled, metav1.ConditionTrue) {
-			mpv := &v1alpha1.ModulePackageVersion{}
-			mpvName := v1alpha1.MakeModulePackageVersionName(module.Spec.PackageRepositoryName, module.Name, module.Spec.PackageVersion)
-			if err := r.client.Get(ctx, types.NamespacedName{Name: mpvName}, mpv); err != nil {
-				return res, err
-			}
-
-			patch := client.MergeFrom(mpv.DeepCopy())
-			mpv.Status.Used = false
-
-			if err := r.client.Status().Patch(ctx, mpv, patch); err != nil {
-				return res, err
-			}
+		// the module no longer uses its package version, so release it
+		if err := r.setVersionUsed(ctx, module, false); err != nil {
+			r.logger.Error("failed to release the module package version", slog.String("name", module.Name), log.Err(err))
+			return res, err
 		}
 
 		if err := r.disableModule(ctx, module); err != nil {
@@ -291,14 +295,20 @@ func (r *reconciler) processModule(ctx context.Context, module *v1alpha2.Module)
 		return res, err
 	}
 
+	// the module uses its package version, so pin it against garbage collection
+	if err := r.setVersionUsed(ctx, module, true); err != nil {
+		r.logger.Error("failed to pin the module package version", slog.String("name", module.Name), log.Err(err))
+		return res, err
+	}
+
 	// restore documentation for the re-enabled module from its deployed release
 	if err := r.ensureModuleDocumentation(ctx, module); err != nil {
 		r.logger.Error("failed to ensure module documentation", slog.String("module", module.Name), log.Err(err))
 		return res, err
 	}
 
-	// skip system modules
-	if module.Name == moduleDeckhouse || module.Name == moduleGlobal {
+	// skip the deckhouse module (global is handled earlier, in handleModule)
+	if module.Name == moduleDeckhouse {
 		r.logger.Debug("skip the system module", slog.String("name", module.Name))
 		return res, nil
 	}
@@ -359,7 +369,8 @@ func (r *reconciler) deleteModule(ctx context.Context, module *v1alpha2.Module) 
 
 	res := ctrl.Result{}
 
-	// skip system modules
+	// System modules are protected: their delete is forwarded to addon-operator
+	// above, but the finalizer is kept so the singleton is not garbage-collected.
 	if module.Name == moduleDeckhouse || module.Name == moduleGlobal {
 		r.logger.Debug("skip system module", slog.String("name", module.Name))
 		return res, nil
@@ -425,6 +436,36 @@ func (r *reconciler) disableModule(ctx context.Context, module *v1alpha2.Module)
 
 		return true
 	})
+}
+
+// setVersionUsed marks the module's current package version as used or unused,
+// so an unused version can be garbage-collected while a used one stays pinned.
+// A module with no resolvable version yet — an embedded module before bootstrap,
+// or a version whose ModulePackageVersion is not created — has nothing to mark,
+// which is not an error. The write is skipped when the flag already matches.
+func (r *reconciler) setVersionUsed(ctx context.Context, module *v1alpha2.Module, used bool) error {
+	mpvName := v1alpha1.MakeModulePackageVersionName(module.Spec.PackageRepositoryName, module.Name, module.Spec.PackageVersion)
+
+	mpv := new(v1alpha1.ModulePackageVersion)
+	if err := r.client.Get(ctx, types.NamespacedName{Name: mpvName}, mpv); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("get module package version '%s': %w", mpvName, err)
+	}
+
+	if mpv.Status.Used == used {
+		return nil
+	}
+
+	patch := client.MergeFrom(mpv.DeepCopy())
+	mpv.Status.Used = used
+
+	if err := r.client.Status().Patch(ctx, mpv, patch); err != nil {
+		return fmt.Errorf("patch module package version '%s' status: %w", mpvName, err)
+	}
+
+	return nil
 }
 
 // addFinalizer puts the controller's finalizer on the Module so a later delete can be handled.
