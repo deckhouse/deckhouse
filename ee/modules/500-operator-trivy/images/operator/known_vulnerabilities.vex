@@ -64,6 +64,15 @@
         },
         {
           "@id": "pkg:golang/github.com/docker/cli@v27.2.1+incompatible"
+        },
+        {
+          "@id": "pkg:golang/github.com/docker/cli@v29.0.3+incompatible"
+        },
+        {
+          "@id": "pkg:golang/github.com/docker/cli@v29.0.3%2Bincompatible"
+        },
+        {
+          "@id": "pkg:golang/github.com/docker/cli"
         }
       ],
       "status": "not_affected",
