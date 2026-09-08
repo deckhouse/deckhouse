@@ -114,6 +114,7 @@ properties:
           - namespace
         description: |
           > **Deprecated**. Use [settings.modules.gatewayAPI.gateway](#parameters-modules-gatewayAPI-gateway) instead.
+          
           Reference to the Gateway object (from the Gateway API) used by DKP modules when creating Gateway API resources.
 
           If not specified, modules use the Gateway automatically discovered in the cluster (if any).
@@ -145,6 +146,7 @@ properties:
         x-doc-deprecated: true
         description: |
           > **Deprecated**. Use [settings.modules.ingress.ingressClass](#parameters-modules-ingress-ingressClass) instead.
+          
           Default [IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class) name used by DKP modules when creating Ingress resources.
 
           Some modules support their own `ingressClass` parameter, which lets you use a different IngressClass instead of the default one.

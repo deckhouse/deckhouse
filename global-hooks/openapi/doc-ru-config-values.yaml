@@ -78,6 +78,7 @@ properties:
       gatewayAPIGateway:
         description: |
           > **Устарел**. Используйте параметр [settings.modules.gatewayAPI.gateway](#parameters-modules-gatewayAPI-gateway).
+          
           Ссылка на объект Gateway (из Gateway API), используемый модулями DKP при создании ресурсов Gateway API.
 
           Если параметр не указан, модули используют Gateway, автоматически обнаруженный в кластере (если он есть).
@@ -105,6 +106,7 @@ properties:
       ingressClass:
         description: |
           > **Устарел**. Используйте параметр [settings.modules.ingress.ingressClass](#parameters-modules-ingress-ingressClass).
+          
           Имя класса Ingress-контроллера ([IngressClass](https://kubernetes.io/docs/concepts/services-networking/ingress/#ingress-class)), используемого модулями DKP по умолчанию при создании Ingress-ресурсов.
 
           Некоторые модули поддерживают собственный параметр `ingressClass`, позволяющий использовать другой класс Ingress-контроллера вместо используемого по умолчанию.
