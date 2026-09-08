@@ -27,6 +27,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	pkgmodules "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/modules"
 	pkgruntime "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/runtime"
@@ -43,6 +44,10 @@ const (
 	// embeddedRepositoryName stands for the Deckhouse image itself and resolves to no
 	// PackageRepository — unlike `deckhouse`, which is a name a real repository may take.
 	embeddedRepositoryName = "embedded"
+
+	// globalModuleName is the reserved name of the global module, which the image ships in
+	// the global hooks dir and the runtime builds itself.
+	globalModuleName = "global"
 )
 
 // placement is where a module's package comes from, as the bootstrap derives it.
@@ -149,6 +154,10 @@ func (c *Controller) embeddedPlacements(ctx context.Context) (map[string]placeme
 		placements[name] = placement{repository: embeddedRepositoryName, version: version, embedded: true}
 	}
 
+	// The global module ships in the image too, at a fixed name and a dir of its own, so it is
+	// placed without reading anything: it carries no definition to read a name out of.
+	placements[globalModuleName] = placement{repository: embeddedRepositoryName, version: version, embedded: true}
+
 	return placements, nil
 }
 
@@ -220,7 +229,10 @@ func (c *Controller) releasePlacements(ctx context.Context) (map[string]placemen
 			continue
 		}
 
-		placements[name] = placement{repository: release.GetModuleSource(), version: release.GetModuleVersion()}
+		placements[name] = placement{
+			repository: pkgsync.RepositoryNameForSource(release.GetModuleSource()),
+			version:    release.GetModuleVersion(),
+		}
 	}
 
 	return placements, nil
@@ -420,6 +432,7 @@ func (c *Controller) loadModules(ctx context.Context, modules []v1alpha2.Module)
 	// one repository backs many modules, so each is resolved once
 	remotes := make(map[string]registry.Remote)
 
+	runtimeModules := make([]pkgruntime.Module, 0, len(modules))
 	for i := range modules {
 		module := &modules[i]
 
@@ -428,10 +441,17 @@ func (c *Controller) loadModules(ctx context.Context, modules []v1alpha2.Module)
 			continue
 		}
 
+		// The runtime built the global module itself out of the global hooks dir before the
+		// bootstrap ran, so nothing is loaded for it; only its settings cross over.
+		if module.Name == globalModuleName {
+			c.manager.UpdateGlobalSettings(module.Spec.SettingsVersion, module.Spec.Settings.GetMap())
+
+			continue
+		}
+
 		// an embedded module is on disk already and its repository resolves to nothing
 		if module.IsEmbedded() {
-			c.manager.UpdateEmbeddedModule(runtimeModule(module))
-
+			runtimeModules = append(runtimeModules, runtimeModule(module, registry.Remote{}))
 			continue
 		}
 
@@ -452,11 +472,13 @@ func (c *Controller) loadModules(ctx context.Context, modules []v1alpha2.Module)
 			remotes[module.Spec.PackageRepositoryName] = remote
 		}
 
-		pkg := runtimeModule(module)
+		pkg := runtimeModule(module, remote)
 		pkg.Definition = pkgmodules.Definition{Name: module.Name, Version: module.Spec.PackageVersion}
 
-		c.manager.UpdateModule(remote, pkg, false)
+		runtimeModules = append(runtimeModules, pkg)
 	}
+
+	c.manager.LoadModules(ctx, runtimeModules)
 
 	return nil
 }
@@ -509,12 +531,13 @@ func (c *Controller) cleanupPackages(ctx context.Context, modules []v1alpha2.Mod
 }
 
 // runtimeModule is what the runtime needs of a module: its identity, settings and enabled intent.
-func runtimeModule(module *v1alpha2.Module) pkgruntime.Module {
+func runtimeModule(module *v1alpha2.Module, remote registry.Remote) pkgruntime.Module {
 	return pkgruntime.Module{
 		Name:            module.Name,
 		Settings:        module.Spec.Settings.GetMap(),
 		SettingsVersion: module.Spec.SettingsVersion,
 		Maintenance:     module.Spec.Maintenance,
 		Enabled:         module.Spec.Enabled,
+		Repository:      remote,
 	}
 }

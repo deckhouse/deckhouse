@@ -37,7 +37,7 @@ func TestSyncPackageRepositories(t *testing.T) {
 		require.NoError(t, s.sync(ctx))
 
 		repo := getRepository(t, cl, "external")
-		assert.Equal(t, "deckhouse", repo.Labels["heritage"])
+		assert.NotContains(t, repo.Labels, "heritage", "the repository mirrors a user's module source, it is not deckhouse-owned")
 		assert.Equal(t, "HTTPS", repo.Spec.Registry.Scheme)
 		assert.Equal(t, "registry.example.io/external", repo.Spec.Registry.Repo)
 		assert.Equal(t, "ZG9ja2VyY2Zn", repo.Spec.Registry.DockerCFG)
