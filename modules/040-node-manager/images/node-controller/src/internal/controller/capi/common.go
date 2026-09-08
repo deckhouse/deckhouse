@@ -37,6 +37,10 @@ const (
 	// MachineDeployments can advertise CPU/memory to the autoscaler. It carries every NodeGroup that
 	// can hold a machine, not only the scale-from-zero ones.
 	nodeCapacityConfigMapName = "d8-node-manager-capi-node-capacity"
+	// instanceClassChecksumConfigMapName is rendered by helm with the current instance-class
+	// checksum of every CAPI NodeGroup. It is the only source of the checksum: the infrastructure
+	// templates are kept forever, so their annotations also carry every stale value.
+	instanceClassChecksumConfigMapName = "d8-node-manager-capi-instance-class-checksum"
 )
 
 type BaseWithReader struct {

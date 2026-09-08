@@ -17,13 +17,20 @@ limitations under the License.
 package capi
 
 import (
+	"context"
 	"strings"
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
+	"github.com/deckhouse/node-controller/internal/common"
 )
 
 func ptr[T any](v T) *T { return &v }
@@ -250,5 +257,44 @@ func TestApplyMachineDeploymentSpecPatchInvalidYAML(t *testing.T) {
 	err := applyMachineDeploymentSpecPatch(spec, "template: [", nil)
 	if err == nil {
 		t.Fatal("expected invalid patch error, got nil")
+	}
+}
+
+// The current checksum comes from the ConfigMap helm renders; the annotations of the
+// infrastructure templates are not consulted, because helm keeps every template a NodeGroup ever
+// had and a stale one is as likely to be listed first as the current one.
+func TestReadInstanceClassChecksumIgnoresStaleTemplates(t *testing.T) {
+	scheme := runtime.NewScheme()
+	if err := corev1.AddToScheme(scheme); err != nil {
+		t.Fatalf("add corev1 scheme: %v", err)
+	}
+	templateGVK := schema.GroupVersionKind{Group: "infrastructure.cluster.x-k8s.io", Version: "v1alpha1", Kind: "DeckhouseMachineTemplate"}
+	scheme.AddKnownTypeWithName(templateGVK, &unstructured.Unstructured{})
+	scheme.AddKnownTypeWithName(templateGVK.GroupVersion().WithKind("DeckhouseMachineTemplateList"), &unstructured.UnstructuredList{})
+
+	staleTemplate := func(name string) *unstructured.Unstructured {
+		tmpl := &unstructured.Unstructured{}
+		tmpl.SetGroupVersionKind(templateGVK)
+		tmpl.SetNamespace(common.MachineNamespace)
+		tmpl.SetName(name)
+		tmpl.SetLabels(map[string]string{"node-group": "worker"})
+		tmpl.SetAnnotations(map[string]string{"checksum/instance-class": "stale"})
+		return tmpl
+	}
+	checksums := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{Name: instanceClassChecksumConfigMapName, Namespace: common.MachineNamespace},
+		Data:       map[string]string{"worker": "current"},
+	}
+	cl := fakeclient.NewClientBuilder().WithScheme(scheme).
+		WithRuntimeObjects(checksums, staleTemplate("worker-aaaaaaaa"), staleTemplate("worker-bbbbbbbb")).
+		Build()
+	r := &MachineDeploymentReconciler{BaseWithReader: BaseWithReader{APIReader: cl}}
+
+	got, err := r.readInstanceClassChecksum(context.Background(), "worker")
+	if err != nil {
+		t.Fatalf("readInstanceClassChecksum: %v", err)
+	}
+	if got != "current" {
+		t.Fatalf("checksum = %q, want %q from the ConfigMap", got, "current")
 	}
 }

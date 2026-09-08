@@ -226,12 +226,12 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 		return nil
 	}
 
-	instanceClassChecksum, err := r.readInstanceClassChecksum(ctx, cloudConfig, ng.Name)
+	instanceClassChecksum, err := r.readInstanceClassChecksum(ctx, ng.Name)
 	if err != nil {
 		return err
 	}
 	if instanceClassChecksum == "" {
-		logger.V(1).Info("skipping: infrastructure template not found yet, waiting for helm")
+		logger.V(1).Info("skipping: instance-class checksum not published yet, waiting for helm")
 		return nil
 	}
 
@@ -571,33 +571,21 @@ func (r *MachineDeploymentReconciler) readInstancePrefix(ctx context.Context) (s
 	return cfg.Cloud.Prefix, nil
 }
 
-func (r *MachineDeploymentReconciler) readInstanceClassChecksum(ctx context.Context, cloudConfig *cloudProviderConfig, ngName string) (string, error) {
-	gv, err := schema.ParseGroupVersion(cloudConfig.capiMachineTemplateAPIVersion)
-	if err != nil {
-		return "", fmt.Errorf("parse capiMachineTemplateAPIVersion %q: %w", cloudConfig.capiMachineTemplateAPIVersion, err)
-	}
-
-	templateList := &unstructured.UnstructuredList{}
-	templateList.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   gv.Group,
-		Version: gv.Version,
-		Kind:    cloudConfig.capiMachineTemplateKind + "List",
-	})
-
-	if err := r.APIReader.List(ctx, templateList,
-		client.InNamespace(common.MachineNamespace),
-		client.MatchingLabels{"node-group": ngName},
-	); err != nil {
-		return "", fmt.Errorf("list infrastructure templates for %s: %w", ngName, err)
-	}
-
-	for i := range templateList.Items {
-		annotations := templateList.Items[i].GetAnnotations()
-		if v, ok := annotations["checksum/instance-class"]; ok && v != "" {
-			return v, nil
+// readInstanceClassChecksum returns the instance-class checksum helm computed for the NodeGroup
+// on its last render. Helm publishes it through a ConfigMap it owns outright, so the value follows
+// the InstanceClass in both directions; the infrastructure templates cannot serve as the source
+// because helm keeps every one of them and their annotations carry the stale checksums too.
+func (r *MachineDeploymentReconciler) readInstanceClassChecksum(ctx context.Context, ngName string) (string, error) {
+	cm := &corev1.ConfigMap{}
+	if err := r.APIReader.Get(ctx, types.NamespacedName{
+		Name: instanceClassChecksumConfigMapName, Namespace: common.MachineNamespace,
+	}, cm); err != nil {
+		if errors.IsNotFound(err) {
+			return "", nil
 		}
+		return "", fmt.Errorf("get configmap %s: %w", instanceClassChecksumConfigMapName, err)
 	}
-	return "", nil
+	return strings.TrimSpace(cm.Data[ngName]), nil
 }
 
 func applyMachineDeploymentSpecPatch(spec map[string]interface{}, rawPatch string, vars map[string]string) error {

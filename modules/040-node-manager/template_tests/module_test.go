@@ -1246,6 +1246,17 @@ ccc: ddd
 				Expect(machineDeployment.Exists()).To(BeFalse())
 			})
 
+			It("publishes the instance-class checksum node-controller names the template by", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				checksums := f.KubernetesResource("ConfigMap", "d8-cloud-instance-manager", "d8-node-manager-capi-instance-class-checksum")
+				openStackTemplate := f.KubernetesResource("OpenStackMachineTemplate", "d8-cloud-instance-manager", "worker-d03da7ca")
+				Expect(checksums.Exists()).To(BeTrue())
+				Expect(openStackTemplate.Exists()).To(BeTrue())
+				Expect(checksums.Field("data.worker").String()).ToNot(BeEmpty())
+				Expect(checksums.Field("data.worker").String()).To(Equal(openStackTemplate.Field("metadata.annotations.checksum/instance-class").String()))
+			})
+
 			It("must render allowed address pairs for internal OpenStack networks", func() {
 				Expect(f.RenderError).ShouldNot(HaveOccurred())
 
