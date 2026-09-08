@@ -27,22 +27,22 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template :: controller
 	var ctlValidationConfigs = []struct {
 		name                 string
 		controllerValidation interface{}
-		expectControllers   bool
+		expectControllers    bool
 	}{
 		{
 			name:                 "controllerValidation true (default) — matches Pods and controllers",
 			controllerValidation: true,
-			expectControllers:   true,
+			expectControllers:    true,
 		},
 		{
 			name:                 "controllerValidation false — matches only Pods",
 			controllerValidation: false,
-			expectControllers:   false,
+			expectControllers:    false,
 		},
 		{
 			name:                 "controllerValidation not set — defaults to true (matches Pods and controllers)",
 			controllerValidation: nil,
-			expectControllers:   true,
+			expectControllers:    true,
 		},
 	}
 

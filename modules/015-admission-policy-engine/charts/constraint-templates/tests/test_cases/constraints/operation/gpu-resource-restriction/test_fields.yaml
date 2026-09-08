@@ -4,6 +4,13 @@ metadata:
   name: gpu-resource-restriction
 spec:
   objectKind: Pod
+  objectKinds:
+    - Pod
+    - Deployment
+    - CronJob
+  operations:
+    - CREATE
+    - UPDATE
   objectFields:
     - path: spec.containers[].resources
       level: container

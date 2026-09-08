@@ -390,8 +390,7 @@ spec:
   enforcementAction: {{ $cr.spec.enforcementAction | default "deny" | lower }}
   match:
     kinds:
-      - apiGroups: [""]
-        kinds: ["Pod"]
+{{- include "workload_kinds" . }}
     {{- include "constraint_selector" (list $cr) }}
   parameters:
     namespaceLabel:
