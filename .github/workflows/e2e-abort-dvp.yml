@@ -88,12 +88,14 @@ jobs:
       pull-requests: write
     outputs:
 
+      run_containerd_1_32: ${{ steps.check.outputs.run_containerd_1_32 }}
       run_containerd_1_33: ${{ steps.check.outputs.run_containerd_1_33 }}
       run_containerd_1_34: ${{ steps.check.outputs.run_containerd_1_34 }}
       run_containerd_1_35: ${{ steps.check.outputs.run_containerd_1_35 }}
       run_containerd_1_36: ${{ steps.check.outputs.run_containerd_1_36 }}
       run_containerd_1_37: ${{ steps.check.outputs.run_containerd_1_37 }}
       run_containerd_automatic: ${{ steps.check.outputs.run_containerd_automatic }}
+      run_containerdv2_1_32: ${{ steps.check.outputs.run_containerdv2_1_32 }}
       run_containerdv2_1_33: ${{ steps.check.outputs.run_containerdv2_1_33 }}
       run_containerdv2_1_34: ${{ steps.check.outputs.run_containerdv2_1_34 }}
       run_containerdv2_1_35: ${{ steps.check.outputs.run_containerdv2_1_35 }}
@@ -4763,12 +4765,12 @@ jobs:
 
   last_comment:
     name: Update comment on finish
-    needs: ["started_at","run_containerd_1_33","run_containerd_1_34","run_containerd_1_35","run_containerd_1_36","run_containerd_1_37","run_containerd_automatic","run_containerdv2_1_33","run_containerdv2_1_34","run_containerdv2_1_35","run_containerdv2_1_36","run_containerdv2_1_37","run_containerdv2_automatic"]
+    needs: ["started_at","run_containerd_1_32","run_containerd_1_33","run_containerd_1_34","run_containerd_1_35","run_containerd_1_36","run_containerd_1_37","run_containerd_automatic","run_containerdv2_1_32","run_containerdv2_1_33","run_containerdv2_1_34","run_containerdv2_1_35","run_containerdv2_1_36","run_containerdv2_1_37","run_containerdv2_automatic"]
     if: ${{ always() }}
     runs-on: "regular"
     env:
       JOB_NAMES: |
-        {"run_containerd_1_33":"destroy cluster: DVP, Containerd, Kubernetes 1.33","run_containerd_1_34":"destroy cluster: DVP, Containerd, Kubernetes 1.34","run_containerd_1_35":"destroy cluster: DVP, Containerd, Kubernetes 1.35","run_containerd_1_36":"destroy cluster: DVP, Containerd, Kubernetes 1.36","run_containerd_1_37":"destroy cluster: DVP, Containerd, Kubernetes 1.37","run_containerd_automatic":"destroy cluster: DVP, Containerd, Kubernetes Automatic","run_containerdv2_1_33":"destroy cluster: DVP, ContainerdV2, Kubernetes 1.33","run_containerdv2_1_34":"destroy cluster: DVP, ContainerdV2, Kubernetes 1.34","run_containerdv2_1_35":"destroy cluster: DVP, ContainerdV2, Kubernetes 1.35","run_containerdv2_1_36":"destroy cluster: DVP, ContainerdV2, Kubernetes 1.36","run_containerdv2_1_37":"destroy cluster: DVP, ContainerdV2, Kubernetes 1.37","run_containerdv2_automatic":"destroy cluster: DVP, ContainerdV2, Kubernetes Automatic"}
+        {"run_containerd_1_32":"destroy cluster: DVP, Containerd, Kubernetes 1.32","run_containerd_1_33":"destroy cluster: DVP, Containerd, Kubernetes 1.33","run_containerd_1_34":"destroy cluster: DVP, Containerd, Kubernetes 1.34","run_containerd_1_35":"destroy cluster: DVP, Containerd, Kubernetes 1.35","run_containerd_1_36":"destroy cluster: DVP, Containerd, Kubernetes 1.36","run_containerd_1_37":"destroy cluster: DVP, Containerd, Kubernetes 1.37","run_containerd_automatic":"destroy cluster: DVP, Containerd, Kubernetes Automatic","run_containerdv2_1_32":"destroy cluster: DVP, ContainerdV2, Kubernetes 1.32","run_containerdv2_1_33":"destroy cluster: DVP, ContainerdV2, Kubernetes 1.33","run_containerdv2_1_34":"destroy cluster: DVP, ContainerdV2, Kubernetes 1.34","run_containerdv2_1_35":"destroy cluster: DVP, ContainerdV2, Kubernetes 1.35","run_containerdv2_1_36":"destroy cluster: DVP, ContainerdV2, Kubernetes 1.36","run_containerdv2_1_37":"destroy cluster: DVP, ContainerdV2, Kubernetes 1.37","run_containerdv2_automatic":"destroy cluster: DVP, ContainerdV2, Kubernetes Automatic"}
     steps:
 
       # <template: checkout_step>
