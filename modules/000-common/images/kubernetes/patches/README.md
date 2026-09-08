@@ -33,12 +33,31 @@ Fixes a bug where pods with hostNetwork ignored host aliases (k8s < 1.32):
 
 Add resource quota ignore mechanism for k8s pvc and pod based on labels
 
-### kubelet-graceful-shutdown-cleanup-memory-manager-state
+### kubelet-graceful-shutdown-cleanup-memory-manager-state (1.32, 1.33, 1.35, 1.36 -- removed on 1.34)
 
 This patch ensures that the Memory Manager state file is removed during a graceful node shutdown.
 
 The Memory Manager stores the node memory state in a file. After a reboot, the amount of used memory may slightly differ from the previous state, which can make the stored state invalid and prevent the kubelet from starting. Removing the state file before shutdown ensures that the Memory Manager starts with a clean state after the reboot.
 See issue: https://github.com/kubernetes/kubernetes/issues/131253
+
+**Removed on 1.34**, superseded by `015-kubelet-checkpoint-state-self-heal`, which repairs the
+divergence at kubelet start regardless of how the node went down -- including a power cut, which
+this patch never covered.
+
+Removing it is not only cleanup. Deleting the state file produces a state the self-heal patch
+cannot detect: with no file, `restoreState` takes the `ErrCheckpointNotFound` branch, writes a
+fresh state, and `validateState` then compares it against `getDefaultMachineState()` and finds
+them equal -- no error, so no reset, no victims and no signal. That matters because the deletion
+fires as soon as a shutdown event arrives, and a shutdown can still be **cancelled**: the file is
+already gone while the kubelet keeps running, and the next kubelet restart silently initialises
+the memory manager from scratch while pinned containers are still holding their NUMA zones.
+
+Dropping it required re-rolling two patches that carried `cleanupMemoryManagerState()` in their
+context: CE `012-fix-scheduler-node-graceful-shutdown` (its hunk only normalised the block's
+indentation and became meaningless) and EE
+`100-kubelet-graceful-shutdown-wait-for-external-inhibitors` (it relocated the call). The EE patch
+keeps its own feature -- waiting for external inhibit locks -- untouched; only the references to
+the removed function are gone.
 
 ### kubelet-disable-k-panic-check
 
