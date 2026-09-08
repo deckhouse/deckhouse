@@ -234,7 +234,7 @@ func registryAuth(dockerConfig []byte, address string) (string, error) {
 }
 
 // sandboxImage resolves the pause image against the cluster's own registry.
-// Mirrors dhctl/pkg/immutable/digests.go:140.
+// Mirrors dhctl/pkg/immutable/digests.go:152.
 func sandboxImage(images map[string]map[string]string, imagesRepo string) (string, error) {
 	digest, err := digestAt(images, pauseDigestGroup, pauseDigestName)
 	if err != nil {
@@ -426,7 +426,7 @@ func sysextDigests(all map[string]map[string]string, kubernetesVersion string) (
 	}
 
 	// The image names carry the version with the separators stripped:
-	// containerdSysext224, kubernetesCniSysext162, kubeletSysext1356. Neither of
+	// containerdSysext2, kubernetesCniSysext162, kubeletSysext135. Neither of
 	// these two follows the Kubernetes version, so neither is looked up by it.
 	imagePrefixes := map[string]string{
 		containerdExtension: "containerdSysext",
@@ -497,15 +497,24 @@ func soleDigest(packages map[string]string, prefix string) (string, error) {
 	}
 }
 
-// pickKubeletDigest returns the newest patch of the kubelet extension serving a
-// Kubernetes minor version: for 1.35 the prefix pins kubeletSysext135, so the
-// remaining suffix is the patch alone and compares numerically — a string
-// compare would put patch 6 over patch 10.
-// Mirrors dhctl/pkg/immutable/digests.go:127.
+// pickKubeletDigest returns the kubelet extension serving a Kubernetes minor
+// version. The image name carries the minor alone, so kubeletSysext135 is the
+// whole key and one minor can only ever have one image: version_map.yml holds a
+// single patch per minor.
+//
+// Releases that still named the image after the patch wrote kubeletSysext1356
+// instead, and the ConfigMap in the cluster is written by whichever release is
+// installed, so those names are accepted as a fallback while an upgrade is in
+// flight. Then the newest patch wins, compared numerically — a string compare
+// would put patch 6 over patch 10.
+// Mirrors dhctl/pkg/immutable/digests.go:133.
 func pickKubeletDigest(packages map[string]string, kubernetesVersion string) string {
 	minor := strings.ReplaceAll(kubernetesVersion, ".", "")
 	if minor == "" {
 		return ""
+	}
+	if digest := packages["kubeletSysext"+minor]; digest != "" {
+		return digest
 	}
 	best, bestPatch := "", -1
 	for name, patch := range versionedImages(packages, "kubeletSysext"+minor) {

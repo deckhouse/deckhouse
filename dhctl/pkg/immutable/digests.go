@@ -43,7 +43,7 @@ func ValidateSysext(_ context.Context, metaConfig *config.MetaConfig) error {
 
 // sysextExtensions looks the extensions up in images_digests.json. The image
 // names there are produced by the sprig camelcase function, which strips the
-// separators: kubelet-sysext-1-34-9 becomes registrypackages.kubeletSysext1349.
+// separators: kubelet-sysext-1-34 becomes registrypackages.kubeletSysext134.
 func sysextExtensions(images map[string]any, kubernetesVersion string) ([]extension, error) {
 	packages, err := digestGroup(images, registryPackagesDigestsKey)
 	if err != nil {
@@ -65,7 +65,7 @@ func sysextExtensions(images map[string]any, kubernetesVersion string) ([]extens
 	// document omits, and pruning nodelet stops the agent's own unit for good.
 	extensions := []extension{
 		{Name: containerdExtension, Digest: containerd, RequestedBy: platformExtensionRequestedBy},
-		{Name: kubeletExtension, Digest: newestPatchDigest(packages, "kubeletSysext"+minor), RequestedBy: platformExtensionRequestedBy},
+		{Name: kubeletExtension, Digest: kubeletDigest(packages, minor), RequestedBy: platformExtensionRequestedBy},
 		{Name: cniExtension, Digest: cni, RequestedBy: platformExtensionRequestedBy},
 		{Name: nodeletExtension, Digest: packages[nodeletSysextImage], RequestedBy: platformExtensionRequestedBy},
 	}
@@ -121,12 +121,24 @@ func soleDigest(packages map[string]string, prefix string) (string, error) {
 	}
 }
 
-// newestPatchDigest returns the newest image with the given prefix, which pins
-// everything but the patch, so the suffix is one number and compares as one.
-// Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/sources.go:507.
-func newestPatchDigest(packages map[string]string, prefix string) string {
+// kubeletDigest returns the kubelet extension serving a Kubernetes minor
+// version. The image name carries the minor alone, so kubeletSysext135 is the
+// whole key and one minor can only ever have one image: version_map.yml holds a
+// single patch per minor.
+//
+// Releases that still named the image after the patch wrote kubeletSysext1356
+// instead, so those names are accepted as a fallback and the newest patch wins,
+// compared numerically — a string compare would put patch 6 over patch 10.
+// Mirrors modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/sources.go:511.
+func kubeletDigest(packages map[string]string, minor string) string {
+	if minor == "" {
+		return ""
+	}
+	if digest := packages["kubeletSysext"+minor]; digest != "" {
+		return digest
+	}
 	best, bestPatch := "", -1
-	for name, patch := range versionedImages(packages, prefix) {
+	for name, patch := range versionedImages(packages, "kubeletSysext"+minor) {
 		if patch > bestPatch {
 			best, bestPatch = packages[name], patch
 		}

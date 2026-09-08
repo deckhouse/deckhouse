@@ -39,7 +39,21 @@ func TestPickKubeletDigest(t *testing.T) {
 		want     string
 	}{
 		{
-			name: "two-digit patch wins over one-digit (numeric, not lexicographic)",
+			name:     "the minor-only name is the whole key",
+			packages: map[string]string{"kubeletSysext135": "sha256:minor"},
+			version:  "1.35",
+			want:     "sha256:minor",
+		},
+		{
+			// A ConfigMap written by a release that still named the image after
+			// the patch, read by this one mid-upgrade.
+			name:     "a leftover patch-suffixed name does not outrank the minor-only one",
+			packages: map[string]string{"kubeletSysext135": "sha256:minor", "kubeletSysext13510": "sha256:patch10"},
+			version:  "1.35",
+			want:     "sha256:minor",
+		},
+		{
+			name: "with only patch-suffixed names, two-digit patch wins over one-digit (numeric, not lexicographic)",
 			packages: map[string]string{
 				"kubeletSysext1356":  "sha256:patch6",
 				"kubeletSysext13510": "sha256:patch10",
@@ -50,6 +64,12 @@ func TestPickKubeletDigest(t *testing.T) {
 		{
 			name:     "another minor version is not this one's kubelet",
 			packages: map[string]string{"kubeletSysext1346": "sha256:v134"},
+			version:  "1.35",
+			want:     "",
+		},
+		{
+			name:     "another minor's minor-only name is not this one's kubelet either",
+			packages: map[string]string{"kubeletSysext134": "sha256:v134"},
 			version:  "1.35",
 			want:     "",
 		},
@@ -351,9 +371,9 @@ func dnsService(name, app, clusterIP string) client.Object {
 // would leave every node's agent frozen at whatever the OS image carries.
 func TestSysextDigestsAgent(t *testing.T) {
 	packages := map[string]string{
-		"containerdSysext224":    "sha256:c",
+		"containerdSysext2":      "sha256:c",
 		"kubernetesCniSysext162": "sha256:n",
-		"kubeletSysext1356":      "sha256:k",
+		"kubeletSysext135":       "sha256:k",
 		"nodeletSysext":          "sha256:a",
 	}
 
