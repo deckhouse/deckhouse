@@ -36,9 +36,9 @@ searchable: false
 
 ## Версия без оператора: каталог `files/<revision>/`
 
-Читать только если `supportsOperator: false`. Иначе inject через IOP/Istio CR ([`istios.yaml`](../../templates/control-plane/istios.yaml)).
+Читать только если `supportsOperator: false`. Иначе inject через IOP/Istio CR ([`istios.yaml`](../../templates/control-plane/iop/istios.yaml)).
 
-`<revision>` = `versionMap.<ver>.revision` (1.27.x → `v1x27`).
+`<revision>` = `versionMap.<ver>.revision` (1.29.x → `v1x29`).
 
 ### Что это
 
@@ -54,28 +54,28 @@ files/<revision>/
 
 Mesh (`istio-<revision>`) — в [`configmap-mesh.yaml`](../../templates/control-plane/configmap-mesh.yaml), **не** в `files/`.
 
-Образец для копирования: **`files/v1x27/`**.
+Образец для копирования: **`files/v1x29/`**.
 
-### Как добавить новую revision (пример 1.28)
+### Как добавить новую revision (пример 1.30)
 
-**A. Модуль в целом** — images, oss, CRD, hooks, `_rules_v-1-28.tpl`, тесты (как в общих шагах выше).
+**A. Модуль в целом** — images, oss, CRD, hooks, `_rules_v-1-30.tpl`, тесты (как в общих шагах выше).
 
-**B. Каталог files/<revision>** — обычно 3 команды и всё
+**B. Каталог `files/<revision>`** — обычно 3 команды и всё
 
 ```bash
 # 1. Клон нужного тега Istio
-git clone --depth 1 --branch 1.28.0 <ISTIO_REPO.git> /tmp/istio
+git clone --depth 1 --branch 1.30.0 <ISTIO_REPO.git> /tmp/istio
 UP=/tmp/istio/manifests/charts/istio-control/istio-discovery
 
 # 2. Скопировать предыдущую revision целиком
-cp -r files/v1x27 files/v1x28
+cp -r files/v1x29 files/v1x30
 
 # 3. Заменить только upstream-тела шаблонов (без правок)
-cp "$UP/files/injection-template.yaml"         files/v1x28/static/sidecar-injection-template.yaml
-cp "$UP/files/gateway-injection-template.yaml" files/v1x28/static/gateway-injection-template.yaml
+cp "$UP/files/injection-template.yaml"         files/v1x30/static/sidecar-injection-template.yaml
+cp "$UP/files/gateway-injection-template.yaml" files/v1x30/static/gateway-injection-template.yaml
 ```
 
-**На этом для большинства minor bump достаточно.**  
+**На этом для большинства minor bump достаточно.**
 `templates/sidecar-injection-values.yaml` и `sidecar-injection-config.yaml` уже лежат в копии — **не трогаем**, если static не требует новых настроек.
 
 **C. Control plane** (не `files/`) — istiod, webhooks, mesh: шаблоны в `templates/control-plane/`, env в [`deployment.yaml`](../../templates/control-plane/deployment.yaml).
@@ -87,9 +87,9 @@ cp "$UP/files/gateway-injection-template.yaml" files/v1x28/static/gateway-inject
 | `sidecar-injection-values.yaml` | Новый static-шаблон ссылается на `.Values.…`, которого нет в нашем JSON. Или осознанно меняется D8-логика (образы, CNI, sidecar ranges). |
 | `sidecar-injection-config.yaml` | Upstream изменил `defaultTemplates`, селекторы inject, или нужны новые имена шаблонов. Блоки **`d8-*`** — только Deckhouse, обычно копируются как есть. |
 
-**Как проверить, нужен ли values:** после `cp` static откройте новые `static/*.yaml`, поищите `.Values.` — если поле используется без запасного default в шаблоне, добавьте его в `sidecar-injection-values.yaml` (с D8-хелперами, как в `v1x27`).
+**Как проверить, нужен ли values:** после `cp` static откройте новые `static/*.yaml`, поищите `.Values.` — если поле используется без запасного default в шаблоне, добавьте его в `sidecar-injection-values.yaml` (с D8-хелперами, как в `v1x29`).
 
-**Как проверить config:** откройте upstream  
+**Как проверить config:** откройте upstream
 `$UP/templates/istiod-injector-configmap.yaml`, секция `config:` (до `templates:`) — сравните с верхом нашего `sidecar-injection-config.yaml`. Если Istio не менял policy/селекторы — не трогайте.
 
 ### Важно: не сравнивать наш JSON с upstream JSON
