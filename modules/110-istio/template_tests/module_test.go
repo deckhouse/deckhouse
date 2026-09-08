@@ -1182,6 +1182,8 @@ users:
 			Expect(f.KubernetesResource("ServiceAccount", "d8-istio", "multicluster-api-proxy").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:istio:multicluster:api-proxy").Exists()).To(BeTrue())
 			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:istio:multicluster:api-proxy").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Role", "d8-istio", "multicluster:api-proxy").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("RoleBinding", "d8-istio", "multicluster:api-proxy").Exists()).To(BeTrue())
 
 			Expect(f.KubernetesResource("Deployment", "d8-istio", "metadata-exporter").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("VerticalPodAutoscaler", "d8-istio", "metadata-exporter").Exists()).To(BeTrue())
