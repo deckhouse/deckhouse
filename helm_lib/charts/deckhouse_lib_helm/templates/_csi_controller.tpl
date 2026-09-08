@@ -156,55 +156,63 @@ spec:
   updatePolicy:
     updateMode: "InPlaceOrRecreate"
   resourcePolicy:
+    {{- /* The recommender runs with --round-memory-bytes=67108864, so it never emits a memory
+           recommendation below 64Mi and always rounds up to a multiple of it. A maxAllowed.memory
+           that is not a multiple of 64Mi wastes the remainder; one below 64Mi caps every
+           recommendation unconditionally. It also splits --pod-recommendation-min-cpu-millicores=25
+           evenly across the containers of a pod, so a maxAllowed.cpu below 25m is always binding
+           for a single-container pod. Ceilings here are multiples of 64Mi covering the observed
+           7-day peaks with headroom; raising them reserves nothing, since container requests come
+           from minAllowed. */}}
     containerPolicies:
     - containerName: "provisioner"
       minAllowed:
         {{- include "provisioner_resources" $context | nindent 8 }}
       maxAllowed:
-        cpu: 20m
-        memory: 50Mi
+        cpu: 50m
+        memory: 128Mi
     - containerName: "attacher"
       minAllowed:
         {{- include "attacher_resources" $context | nindent 8 }}
       maxAllowed:
-        cpu: 20m
-        memory: 50Mi
+        cpu: 50m
+        memory: 128Mi
     {{- if $resizerEnabled }}
     - containerName: "resizer"
       minAllowed:
         {{- include "resizer_resources" $context | nindent 8 }}
       maxAllowed:
-        cpu: 20m
-        memory: 50Mi
+        cpu: 50m
+        memory: 128Mi
     {{- end }}
     {{- if and $syncerEnabled $syncerImage }}
     - containerName: "syncer"
       minAllowed:
         {{- include "syncer_resources" $context | nindent 8 }}
       maxAllowed:
-        cpu: 20m
-        memory: 50Mi
+        cpu: 50m
+        memory: 128Mi
     {{- end }}
     {{- if $snapshotterEnabled }}
     - containerName: "snapshotter"
       minAllowed:
         {{- include "snapshotter_resources" $context | nindent 8 }}
       maxAllowed:
-        cpu: 20m
-        memory: 50Mi
+        cpu: 50m
+        memory: 128Mi
     {{- end }}
     - containerName: "livenessprobe"
       minAllowed:
         {{- include "livenessprobe_resources" $context | nindent 8 }}
       maxAllowed:
-        cpu: 20m
-        memory: 50Mi
+        cpu: 25m
+        memory: 64Mi
     - containerName: "controller"
       minAllowed:
         {{- include "controller_resources" $context | nindent 8 }}
       maxAllowed:
-        cpu: 20m
-        memory: 100Mi
+        cpu: 100m
+        memory: 256Mi
     {{- if $additionalControllerVPA }}
     {{- $additionalControllerVPA | toYaml | nindent 4 }}
     {{- end }}

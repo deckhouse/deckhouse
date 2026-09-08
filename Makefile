@@ -648,7 +648,7 @@ CODE_GENERATOR_VERSION ?= v0.34.8
 YQ_VERSION ?= v4.47.2
 GOTESTSUM_VERSION ?= v1.13.0
 ## Pinned lib-helm version, mirrored from helm_lib/Chart.yaml by "make update-lib-helm".
-LIB_HELM_VERSION ?= 1.72.14
+LIB_HELM_VERSION ?= 1.72.17
 
 ## Generate werf
 .PHONY: generate-werf

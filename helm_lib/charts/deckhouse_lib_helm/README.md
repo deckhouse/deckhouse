@@ -1608,7 +1608,7 @@ list:
 
 #### Usage
 
-`{{ include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized" "without-storage-problems") }} `
+`{{ include "helm_lib_tolerations" (tuple . "any-node" "with-uninitialized") }} `
 
 #### Arguments
 
@@ -1704,11 +1704,11 @@ list:
 
 ### _helm_lib_additional_tolerations_storage_problems
 
- Additional strategy "storage-problems" - used for shedule critical components on nodes with drbd problems. This additional strategy enabled by default in any base strategy except "wildcard". 
+ Additional strategy "storage-problems" - deprecated, renders nothing. It used to tolerate the DRBD taints drbd.linbit.com/lost-quorum, drbd.linbit.com/force-io-error and drbd.linbit.com/ignore-fail-over on every base strategy except "wildcard". Nothing sets those taints anymore, so the strategy is kept as a no-op to let existing "with-storage-problems" and "without-storage-problems" call sites keep rendering, and will be removed once they are gone. 
 
 #### Usage
 
-`{{ include "helm_lib_tolerations" (tuple . "any-node" "without-storage-problems") }} `
+`{{ include "helm_lib_tolerations" (tuple . "any-node" "with-storage-problems") }} `
 
 
 
