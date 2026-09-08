@@ -59,11 +59,9 @@ import (
 	modulepackageversion "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module-package-version"
 	packagerepository "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository"
 	packagerepositoryoperation "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/package-repository-operation"
-	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/helpers"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
 )
@@ -152,12 +150,6 @@ func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, op
 	configHandler := confighandler.New(runtime.GetClient(), conversionsStore, settingsCh)
 	operator.SetupKubeConfigManager(configHandler)
 
-	edition, err := edition.Parse("dev")
-	if err != nil {
-		return nil, err
-	}
-	exts := extenders.NewExtendersStack(edition, func() (bool, error) { return true, nil }, logger.Named("extenders"))
-
 	err = metrics.RegisterDeckhouseControllerMetrics(ms)
 	if err != nil {
 		return nil, fmt.Errorf("register deckhouse controller metrics: %w", err)
@@ -183,7 +175,7 @@ func Build(ctx context.Context, rest *rest.Config, ms metricsstorage.Storage, op
 		return nil, fmt.Errorf("register module controller: %w", err)
 	}
 
-	err = modulesettings.RegisterController(synced, runtime, operator.ModuleManager, manager, conversionsStore, edition, configHandler, operator.MetricStorage, exts, logger)
+	err = modulesettings.RegisterController(synced, runtime, operator.ModuleManager, manager, conversionsStore, configHandler, operator.MetricStorage, logger)
 	if err != nil {
 		return nil, fmt.Errorf("register module settings controller: %w", err)
 	}

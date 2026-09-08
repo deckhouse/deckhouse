@@ -23,7 +23,6 @@ import (
 
 	"github.com/flant/addon-operator/pkg/kube_config_manager/config"
 	"github.com/flant/addon-operator/pkg/module_manager/models/modules"
-	"github.com/flant/addon-operator/pkg/module_manager/models/modules/events"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,10 +42,8 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/packages/module/status"
-	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/go_lib/configtools"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
-	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/telemetry"
 	"github.com/deckhouse/deckhouse/pkg/log"
 	metricsstorage "github.com/deckhouse/deckhouse/pkg/metrics-storage"
@@ -76,10 +73,8 @@ func RegisterController(
 	mm moduleManager,
 	pm packageManager,
 	conversionsStore *conversion.ConversionsStore,
-	edition *d8edition.Edition,
 	handler *confighandler.Handler,
 	ms metricsstorage.Storage,
-	exts extenders.IExtendersStack,
 	logger *log.Logger,
 ) error {
 	r := &reconciler{
@@ -90,10 +85,8 @@ func RegisterController(
 		conversionsStore: conversionsStore,
 		moduleManager:    mm,
 		packageManager:   pm,
-		edition:          edition,
 		metricStorage:    ms,
 		configValidator:  configtools.NewValidator(mm, conversionsStore),
-		exts:             exts,
 	}
 
 	r.init.Add(1)
@@ -122,24 +115,22 @@ type reconciler struct {
 	init             *sync.WaitGroup
 	client           client.Client
 	conversionsStore *conversion.ConversionsStore
-	edition          *d8edition.Edition
 	handler          *confighandler.Handler
 	moduleManager    moduleManager
 	packageManager   packageManager
 	metricStorage    metricsstorage.Storage
 	configValidator  *configtools.Validator
-	exts             extenders.IExtendersStack
 	logger           *log.Logger
 }
 
+// moduleManager exposes the addon-operator lookups this controller still needs:
+// GetModule to gate the config event, and GetModule/GetGlobal for the config
+// values validator. Module lifecycle status is no longer derived here — it is
+// owned by the package status service (pkg/controller/packages/module/status),
+// which reflects the runtime scheduler verdict onto the Module resource.
 type moduleManager interface {
-	AreModulesInited() bool
-	IsModuleEnabled(moduleName string) bool
-	GetModuleNames() []string
 	GetModule(name string) *modules.BasicModule
 	GetGlobal() *modules.GlobalModule
-	GetUpdatedByExtender(name string) (string, error)
-	GetModuleEventsChannel() chan events.ModuleEvent
 }
 
 type packageManager interface {
@@ -157,7 +148,7 @@ func (r *reconciler) preflight(ctx context.Context) error {
 
 	r.init.Done()
 
-	return r.runModuleEventLoop(ctx)
+	return nil
 }
 
 // Reconcile applies a Module's settings-and-enabled change to the package runtime.
@@ -188,22 +179,7 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 	return r.handleModule(ctx, module)
 }
 
-// runModuleEventLoop triggers module refreshing at any event from addon-operator
-func (r *reconciler) runModuleEventLoop(ctx context.Context) error {
-	for moduleEvent := range r.moduleManager.GetModuleEventsChannel() {
-		if moduleEvent.ModuleName != "" {
-			if err := r.refreshModule(ctx, moduleEvent.ModuleName); err != nil {
-				r.logger.Debug("failed to handle the event for the module", slog.String("name", moduleEvent.ModuleName), log.Err(err))
-			}
-		}
-	}
-
-	return nil
-}
-
 func (r *reconciler) handleModule(ctx context.Context, module *v1alpha2.Module) (ctrl.Result, error) {
-	res := ctrl.Result{}
-
 	// send an event to addon-operator only if the module exists, or it is the global one
 	basicModule := r.moduleManager.GetModule(module.Name)
 	if module.Name == moduleGlobal || basicModule != nil {
@@ -211,24 +187,15 @@ func (r *reconciler) handleModule(ctx context.Context, module *v1alpha2.Module) 
 		r.handler.HandleEvent(module, config.EventUpdate)
 	}
 
-	// apply the module settings-and-enabled change to the package runtime
+	// apply the module settings-and-enabled change to the package runtime; the
+	// resulting lifecycle status is reflected onto the Module by the package
+	// status service, not by this controller.
 	r.packageManager.UpdateModulesSettings(
 		module.Name,
 		module.Spec.SettingsVersion,
 		module.Spec.Settings.GetMap(),
 		module.Spec.Maintenance,
 		module.Spec.Enabled)
-
-	// actualize status of the Module
-	if err := r.refreshModule(ctx, module.Name); err != nil {
-		res.RequeueAfter = 1 * time.Second
-		return res, nil
-	}
-
-	// get actual version of the Module
-	if err := r.client.Get(ctx, types.NamespacedName{Name: module.Name}, module); err != nil {
-		return res, nil
-	}
 
 	return r.processModule(ctx, module)
 }
@@ -286,11 +253,6 @@ func (r *reconciler) processModule(ctx context.Context, module *v1alpha2.Module)
 		return res, nil
 	}
 
-	if err := r.enableModule(ctx, module); err != nil {
-		r.logger.Error("failed to enable the module", slog.String("module", module.Name), log.Err(err))
-		return res, err
-	}
-
 	// restore documentation for the re-enabled module from its deployed release
 	if err := r.ensureModuleDocumentation(ctx, module); err != nil {
 		r.logger.Error("failed to ensure module documentation", slog.String("module", module.Name), log.Err(err))
@@ -315,19 +277,9 @@ func (r *reconciler) processModule(ctx context.Context, module *v1alpha2.Module)
 			return res, err
 		}
 
-		// set conflict if there are several available sources
+		// fire alert if there are several available sources; the conflict verdict
+		// on the Module status itself is owned by the package status service.
 		if len(mp.Status.AvailableRepositories) > 1 {
-			err := utils.UpdateStatus[*v1alpha2.Module](ctx, r.client, module, func(module *v1alpha2.Module) bool {
-				module.Status.Summary.State = status.StateFailed
-				module.SetConditionFalse(status.ConditionEnabled, "", "")
-				module.SetConditionFalse(status.ConditionReady, v1alpha1.ModuleReasonConflict, v1alpha1.ModuleMessageConflict)
-				return true
-			})
-			if err != nil {
-				r.logger.Error("failed to set conflict to module", slog.String("name", module.Name), log.Err(err))
-				return res, err
-			}
-			// fire alert at Conflict
 			r.metricStorage.Grouped().GaugeSet(metricGroup, metrics.D8ModuleAtConflict, 1.0, map[string]string{
 				"module": module.Name,
 			})
@@ -379,40 +331,14 @@ func (r *reconciler) deleteModule(ctx context.Context, module *v1alpha2.Module) 
 func (r *reconciler) disableModule(ctx context.Context, module *v1alpha2.Module) error {
 	r.logger.Debug("disable the module", slog.String("module", module.Name))
 
-	// remove module documentation immediately on disable so docs-builder drops it
+	// remove module documentation immediately on disable so docs-builder drops it;
+	// the disabled lifecycle status (Enabled=False, Suspended, ...) is reflected
+	// onto the Module by the package status service from the scheduler verdict.
 	if err := utils.DeleteModuleDocumentation(ctx, r.client, module.Name); err != nil {
 		return fmt.Errorf("delete module documentation: %w", err)
 	}
 
-	enabledByBundle, err := r.IsModuleEnabledByBundle(ctx, module)
-	if err != nil {
-		return err
-	}
-
-	return utils.UpdateStatus[*v1alpha2.Module](ctx, r.client, module, func(module *v1alpha2.Module) bool {
-		if module.IsCondition(status.ConditionEnabled, metav1.ConditionFalse) {
-			return false
-		}
-
-		switch module.Status.Summary.State {
-		case status.StateFailed,
-			status.StatePending:
-			// modules in Conflict should not be installed, and they cannot receive events, so set Available phase manually
-			// same thing if module is not installed
-			module.Status.Summary.State = status.StateSuspended
-			module.SetConditionFalse(status.ConditionEnabled, "", "")
-			module.SetConditionFalse(status.ConditionReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
-		default:
-			if !enabledByBundle {
-				module.SetConditionFalse(status.ConditionReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
-			}
-		}
-
-		module.SetConditionFalse(status.ConditionEnabled, "", "")
-		module.SetConditionUnknown(status.ConditionConfigurationApplied, "", "")
-
-		return true
-	})
+	return nil
 }
 
 // addFinalizer puts the controller's finalizer on the Module so a later delete can be handled.
@@ -436,55 +362,6 @@ func (r *reconciler) removeFinalizer(ctx context.Context, module *v1alpha2.Modul
 		}
 
 		return false
-	})
-}
-
-func (r *reconciler) IsModuleEnabledByBundle(ctx context.Context, module *v1alpha2.Module) (bool, error) {
-	mpv := &v1alpha1.ModulePackageVersion{}
-	mpvName := v1alpha1.MakeModulePackageVersionName(
-		module.Spec.PackageRepositoryName,
-		module.Name,
-		module.Spec.PackageVersion,
-	)
-
-	if err := r.client.Get(ctx, types.NamespacedName{Name: mpvName}, mpv); err != nil {
-		return false, err
-	}
-
-	// if EnabledInBundles info is empty, module is not enabled by default
-	if mpv.Status.PackageMetadata == nil ||
-		mpv.Status.PackageMetadata.Licensing == nil ||
-		mpv.Status.PackageMetadata.Licensing.Editions == nil {
-		return false, nil
-	}
-
-	for edition, license := range mpv.Status.PackageMetadata.Licensing.Editions {
-		if !license.Available {
-			continue
-		}
-		if edition != "_default" && edition != r.edition.Name {
-			continue
-		}
-
-		for _, bundle := range license.EnabledInBundles {
-			if bundle == r.edition.Bundle {
-				return true, nil
-			}
-		}
-	}
-
-	return false, nil
-}
-
-func (r *reconciler) enableModule(ctx context.Context, module *v1alpha2.Module) error {
-	r.logger.Debug("enable the module", slog.String("module", module.Name))
-	return utils.UpdateStatus[*v1alpha2.Module](ctx, r.client, module, func(module *v1alpha2.Module) bool {
-		if module.IsCondition(status.ConditionEnabled, metav1.ConditionTrue) {
-			return false
-		}
-		module.SetConditionTrue(status.ConditionEnabled)
-
-		return true
 	})
 }
 
