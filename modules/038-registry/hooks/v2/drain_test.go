@@ -466,3 +466,63 @@ func TestTheScanIsEmptyOnceEverythingMoved(t *testing.T) {
 	require.NoError(t, err)
 	assert.Zero(t, count)
 }
+
+// TestWhenTheClusterMayBePointedBackAtTheUpstream is the ordering that took a migrating cluster's
+// control plane down.
+//
+// Pointing the cluster at the upstream re-renders every image reference onto it, and the nodes can
+// only follow once the agent answers for a registry they hold no credentials or authority for. The
+// cluster's record of that is the published image address: while it is absent, this secret is what
+// renders resolve images through, and moving it moves the ground out from under the nodes.
+//
+// Measured on a cluster migrating from the legacy `Direct` mode, before the second half of the
+// condition existed: the legacy implementation had written the in-cluster address, this read as a
+// cluster ready to be given a destination, control-plane-manager rewrote the etcd manifest to the
+// upstream, the image could not be pulled, and the apiserver went down behind etcd.
+func TestWhenTheClusterMayBePointedBackAtTheUpstream(t *testing.T) {
+	inCluster := &registryIdentity{Address: registry_const.Host}
+	upstream := &ConfigUpstream{Host: "registry.deckhouse.io", Path: "/deckhouse/ee"}
+
+	tests := []struct {
+		name             string
+		identity         *registryIdentity
+		upstream         *ConfigUpstream
+		rendersInCluster bool
+		want             identityDecision
+	}{{
+		name:             "the agent serves the address the cluster renders: there is a destination to write",
+		identity:         inCluster,
+		upstream:         upstream,
+		rendersInCluster: true,
+		want:             identityRestore,
+	}, {
+		name:     "the same cluster before the agent got there, which is the migration window",
+		identity: inCluster,
+		upstream: upstream,
+		want:     identityPostponed,
+	}, {
+		name:             "air-gapped: no upstream exists to point at, whatever the nodes are doing",
+		identity:         inCluster,
+		upstream:         nil,
+		rendersInCluster: true,
+		want:             identityNoDestination,
+	}, {
+		name:             "the address already names somewhere else, which is an operator's business",
+		identity:         &registryIdentity{Address: "registry.example.com"},
+		upstream:         upstream,
+		rendersInCluster: true,
+		want:             identityLeaveAlone,
+	}, {
+		name:             "no secret at all, which is what a cluster mid-bootstrap looks like",
+		identity:         nil,
+		upstream:         upstream,
+		rendersInCluster: true,
+		want:             identityLeaveAlone,
+	}}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, identityAction(tt.identity, tt.upstream, tt.rendersInCluster))
+		})
+	}
+}

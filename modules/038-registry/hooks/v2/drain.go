@@ -97,10 +97,11 @@ const (
 	// no code with that one.
 	registryIdentitySecretName = "deckhouse-registry"
 
-	drainSnapName            = "drain-record"
-	registryIdentitySnapName = "registry-identity"
-	registryConfigSnapName   = "registry-config-resource"
-	drainMetricGroup         = "registry_drain"
+	drainSnapName                 = "drain-record"
+	registryIdentitySnapName      = "registry-identity"
+	registryConfigSnapName        = "registry-config-resource"
+	imageAddressPublishedSnapName = "image-address-published"
+	drainMetricGroup              = "registry_drain"
 
 	// referenceExamples is how many names are logged and no more. The count is the decision; the names
 	// are there to make an alert actionable, and a list of sixteen in a log line is neither.
@@ -190,6 +191,23 @@ var _ = sdk.RegisterFunc(
 					NameSelector: &types.NameSelector{MatchNames: []string{"d8-system"}},
 				},
 				FilterFunc: filterRegistryIdentity,
+			},
+			{
+				// Watched for its own existence, which is the cluster's record that image
+				// references have moved to the in-cluster address — published only once every
+				// node's agent is applying the layout it was given. See `imageAddressState.switched`.
+				Name:       imageAddressPublishedSnapName,
+				ApiVersion: "v1",
+				Kind:       "ConfigMap",
+				NameSelector: &types.NameSelector{
+					MatchNames: []string{ImageAddressConfigMapName},
+				},
+				NamespaceSelector: &types.NamespaceSelector{
+					NameSelector: &types.NameSelector{MatchNames: []string{"d8-system"}},
+				},
+				FilterFunc: func(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
+					return obj.GetName(), nil
+				},
 			},
 			{
 				// The resolved configuration as the controller has it, which is what a drain serves
@@ -356,16 +374,17 @@ func handleDrain(ctx context.Context, input *go_hook.HookInput, dc dependency.Co
 	// Attempted on every serving pass rather than once at the transition, and guarded by the state of the
 	// object itself: a write lost to a restart or a failed patch would otherwise leave the cluster with
 	// nowhere to go and a drain that can never finish.
-	switch identity := currentRegistryIdentity(input); {
-	case served.Primary.Upstream == nil:
-		// Nothing to restore: this cluster was serving from its own store with no upstream at all, which
-		// is the air-gapped case. The withdrawal then genuinely has no destination, and it will not
-		// finish until somebody gives the cluster one — which is what the alert says, and it is a far
-		// better outcome than taking the only registry away from a cluster that cannot reach any other.
+	switch identityAction(currentRegistryIdentity(input), served.Primary.Upstream,
+		theClusterRendersTheInClusterAddress(input)) {
+	case identityNoDestination:
 		input.Logger.Warn("the module has no upstream to point the cluster back at, so the withdrawal cannot complete",
 			"help", "give the cluster a registry to pull from, or ask for Managed again")
 
-	case identity != nil && identity.Address == registry_const.Host:
+	case identityPostponed:
+		input.Logger.Debug("not pointing the cluster at the upstream yet: image references still " +
+			"resolve through this secret and the node agent is not serving the in-cluster address")
+
+	case identityRestore:
 		if err := restoreRegistryIdentity(input, served.Primary.Upstream); err != nil {
 			return err
 		}
@@ -734,6 +753,65 @@ func currentRegistryIdentity(input *go_hook.HookInput) *registryIdentity {
 	return &identity
 }
 
+// identityDecision is what to do about the cluster's recorded registry on a serving pass.
+type identityDecision int
+
+const (
+	// identityLeaveAlone: the address is not this module's to change. Either it already names
+	// somewhere else — an operator's edit is not overruled — or there is no secret at all, which
+	// is what a cluster mid-bootstrap looks like.
+	identityLeaveAlone identityDecision = iota
+
+	// identityNoDestination: an air-gapped cluster, serving from its own store with no upstream.
+	// A withdrawal has genuinely nowhere to go, and saying so beats taking the only registry away
+	// from a cluster that cannot reach another.
+	identityNoDestination
+
+	// identityPostponed: the address is this module's to change, and it is too early to change it.
+	identityPostponed
+
+	// identityRestore: write the upstream, so a withdrawal has somewhere to move to.
+	identityRestore
+)
+
+// identityAction decides between them.
+//
+// `rendersInCluster` is the half that was missing, and the whole reason this is a function rather
+// than a condition: the in-cluster address in the secret does not by itself mean this module put
+// it there. The previous implementation writes the same address, so on a cluster migrating from it
+// this looked like "a cluster bootstrapped into the module, ready to be given a destination" while
+// it was really "a cluster whose every render still resolves images through this secret, and whose
+// nodes have no way to reach the upstream yet".
+func identityAction(identity *registryIdentity, upstream *ConfigUpstream, rendersInCluster bool) identityDecision {
+	if upstream == nil {
+		return identityNoDestination
+	}
+	if identity == nil || identity.Address != registry_const.Host {
+		return identityLeaveAlone
+	}
+	if !rendersInCluster {
+		return identityPostponed
+	}
+
+	return identityRestore
+}
+
+// theClusterRendersTheInClusterAddress answers whether the pull path has finished changing hands.
+//
+// Read off the ConfigMap the address hook publishes, because that object IS the cluster's record
+// of the answer: it appears only when every node's agent is applying the layout it was given, and
+// it is sticky by design. So its presence means image references already name the in-cluster
+// address, and the `deckhouse-registry` secret has stopped being what renders resolve images
+// through — which is precisely the condition under which that secret may be repointed.
+//
+// Absent is a no, including on a cluster where it is absent because this module never published
+// it. Such a cluster is one where every render still reads the secret, which is the case where
+// repointing it does the most damage.
+func theClusterRendersTheInClusterAddress(input *go_hook.HookInput) bool {
+	_, err := helpers.SnapshotToSingle[string](input, imageAddressPublishedSnapName)
+	return err == nil
+}
+
 // restoreRegistryIdentity points the cluster back at the registry the module was fetching from.
 //
 // This is what makes `Unmanaged` reachable at all on a cluster that was bootstrapped INTO this module.
@@ -753,6 +831,13 @@ func currentRegistryIdentity(input *go_hook.HookInput) *registryIdentity {
 // Kept idempotent by its own condition rather than by a flag: while the address still names the
 // in-cluster registry there is something to do, and once it does not, there is not. An operator who
 // edits the secret by hand afterwards is not overruled.
+//
+// That condition alone is not enough to say WHEN, though, and the caller adds the missing half. The
+// in-cluster address is also what the previous implementation writes, so on a cluster migrating from
+// it this reads as "there is something to do" while the nodes are still pulling through that
+// implementation's proxy and the agent is not installed. Moving the cluster to the upstream there
+// names a host the nodes have nothing for: measured on a `Direct` cluster, the etcd manifest was
+// rewritten to the upstream, could not be pulled, and the control plane went down behind it.
 func restoreRegistryIdentity(input *go_hook.HookInput, upstream *ConfigUpstream) error {
 	credentials, err := upstreamCredentials(upstream)
 	if err != nil {
