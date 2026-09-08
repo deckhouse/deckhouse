@@ -368,10 +368,10 @@ index 00000000000..c6cba65c043
 +}
 diff --git a/pkg/kubelet/cm/checkpointselfheal/selfheal.go b/pkg/kubelet/cm/checkpointselfheal/selfheal.go
 new file mode 100644
-index 00000000000..4b5948b2256
+index 00000000000..9ba77393793
 --- /dev/null
 +++ b/pkg/kubelet/cm/checkpointselfheal/selfheal.go
-@@ -0,0 +1,328 @@
+@@ -0,0 +1,350 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -676,6 +676,10 @@ index 00000000000..4b5948b2256
 +	return victims
 +}
 +
++// markerHistoryLimit caps how many resets the marker file keeps, so that a node
++// healing on every restart cannot grow it without end. The newest are kept.
++const markerHistoryLimit = 16
++
 +// writeMarker leaves the machine-readable trace for whoever has to decide
 +// whether this node needs a drain. A failure to write it is logged and
 +// otherwise ignored: the containers have already been dealt with, and refusing
@@ -686,7 +690,24 @@ index 00000000000..4b5948b2256
 +		return
 +	}
 +	path := filepath.Join(dir, MarkerFileName)
-+	marker := Marker{Version: Version, WrittenAt: time.Now(), Resets: records}
++
++	// Resets already in the file are carried forward. Nothing but the consumer
++	// removes this file, so whatever is still in it describes a heal nobody has
++	// acted on yet -- possibly one whose victim could not be stopped, which is
++	// the single signal meaning the node needs a human. Replacing the file
++	// would drop that silently on the next heal. Content that cannot be decoded
++	// is dropped instead: reporting the reset that just happened matters more.
++	var previous Marker
++	if blob, err := os.ReadFile(path); err == nil {
++		if err := json.Unmarshal(blob, &previous); err != nil {
++			klog.ErrorS(err, LogMarker+" existing marker file cannot be decoded, replacing it", "path", path)
++		}
++	}
++	resets := append(previous.Resets, records...)
++	if len(resets) > markerHistoryLimit {
++		resets = resets[len(resets)-markerHistoryLimit:]
++	}
++	marker := Marker{Version: Version, WrittenAt: time.Now(), Resets: resets}
 +
 +	blob, err := json.MarshalIndent(marker, "", "  ")
 +	if err != nil {
@@ -697,15 +718,16 @@ index 00000000000..4b5948b2256
 +		klog.ErrorS(err, LogMarker+" could not write marker file", "path", path)
 +		return
 +	}
-+	klog.InfoS(LogMarker+" wrote marker file", "path", path, "resets", len(records))
++	klog.InfoS(LogMarker+" wrote marker file",
++		"path", path, "resets", len(records), "carriedForward", len(previous.Resets))
 +	debug("marker file content", "path", path, "content", debugBlob(blob))
 +}
 diff --git a/pkg/kubelet/cm/checkpointselfheal/selfheal_test.go b/pkg/kubelet/cm/checkpointselfheal/selfheal_test.go
 new file mode 100644
-index 00000000000..f2181f9459a
+index 00000000000..e40875092bd
 --- /dev/null
 +++ b/pkg/kubelet/cm/checkpointselfheal/selfheal_test.go
-@@ -0,0 +1,685 @@
+@@ -0,0 +1,832 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -730,9 +752,12 @@ index 00000000000..f2181f9459a
 +	"errors"
 +	"os"
 +	"path/filepath"
++	"sync"
 +	"testing"
++	"time"
 +
 +	"k8s.io/client-go/tools/record"
++	internalapi "k8s.io/cri-api/pkg/apis"
 +	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
 +	apitest "k8s.io/cri-api/pkg/apis/testing"
 +	kubelettypes "k8s.io/kubelet/pkg/types"
@@ -1391,12 +1416,156 @@ index 00000000000..f2181f9459a
 +		t.Errorf("marker reports stopped=%d skipped=%d, want 1 and 1", stopped, skipped)
 +	}
 +}
++
++// gateRuntime holds every StopContainer call until the expected number of them
++// are in flight together, which is how "one pass over every victim" is
++// asserted without depending on timing.
++type gateRuntime struct {
++	internalapi.RuntimeService
++
++	want int
++	mu   sync.Mutex
++	seen int
++	once sync.Once
++	all  chan struct{}
++}
++
++func (g *gateRuntime) StopContainer(ctx context.Context, containerID string, timeout int64) error {
++	g.mu.Lock()
++	g.seen++
++	reached := g.seen >= g.want
++	g.mu.Unlock()
++	if reached {
++		g.once.Do(func() { close(g.all) })
++	}
++	select {
++	case <-g.all:
++	case <-ctx.Done():
++		return ctx.Err()
++	}
++	return g.RuntimeService.StopContainer(ctx, containerID, timeout)
++}
++
++func TestStopVictimsStopsEveryResetsVictimsInOnePass(t *testing.T) {
++	// The two managers do not hold the same set of assignments: memory holds
++	// one for every Guaranteed pod, the CPU manager only for those asking for
++	// whole CPUs, so a Guaranteed pod with a fractional CPU request is a victim
++	// of memory alone. Draining the resets one after another made them share
++	// the deadline in sequence, and since the resets come in the order the
++	// managers started, the starved one was memory -- the manager with no
++	// reconcile loop, where a victim left running goes on holding a NUMA zone
++	// the reset state believes to be free.
++	Clear()
++	t.Cleanup(Clear)
++
++	dir := t.TempDir()
++
++	fake := apitest.NewFakeRuntimeService()
++	fake.Containers = map[string]*apitest.FakeContainer{
++		"cid-cpu": fakeContainerForPod("cid-cpu", "pod-cpu", "pinned-cpu", "ns", runtimeapi.ContainerState_CONTAINER_RUNNING),
++		"cid-mem": fakeContainerForPod("cid-mem", "pod-mem", "pinned-mem", "ns", runtimeapi.ContainerState_CONTAINER_RUNNING),
++	}
++	runtime := &gateRuntime{RuntimeService: fake, want: 2, all: make(chan struct{})}
++
++	cm := containermap.NewContainerMap()
++	cm.Add("pod-cpu", "app", "cid-cpu")
++	cm.Add("pod-mem", "app", "cid-mem")
++
++	RecordStateReset(ManagerCPU, dir, "cpu_manager_state",
++		[]ContainerRef{{PodUID: "pod-cpu", ContainerName: "app"}}, cm, errors.New("topology changed"))
++	RecordStateReset(ManagerMemory, dir, "memory_manager_state",
++		[]ContainerRef{{PodUID: "pod-mem", ContainerName: "app"}}, cm, errors.New("machine state differs"))
++
++	// Shorter than stopDeadline, so a regression fails here quickly instead of
++	// waiting out the real budget.
++	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
++	defer cancel()
++	StopVictims(ctx, Deps{Runtime: runtime})
++
++	for _, rec := range readMarker(t, dir).Resets {
++		for _, v := range rec.Victims {
++			if !v.Stopped {
++				t.Errorf("victim of the %s manager was not stopped: %+v", rec.Manager, v)
++			}
++		}
++	}
++}
++
++func TestWriteMarkerCarriesForwardResetsNobodyConsumed(t *testing.T) {
++	// Only the consumer removes the marker, so a marker still on disk describes
++	// a heal nobody has acted on. Replacing it on the next heal threw the older
++	// record away -- including a victim that could not be stopped, the one case
++	// that means the node needs a drain.
++	Clear()
++	t.Cleanup(Clear)
++
++	dir := t.TempDir()
++
++	failing := apitest.NewFakeRuntimeService()
++	failing.Containers = map[string]*apitest.FakeContainer{
++		"cid-first": fakeContainerForPod("cid-first", "pod-first", "first", "ns", runtimeapi.ContainerState_CONTAINER_RUNNING),
++	}
++	failing.InjectError("StopContainer", errors.New("runtime is busy"))
++
++	cmFirst := containermap.NewContainerMap()
++	cmFirst.Add("pod-first", "app", "cid-first")
++	RecordStateReset(ManagerMemory, dir, "memory_manager_state",
++		[]ContainerRef{{PodUID: "pod-first", ContainerName: "app"}}, cmFirst, errors.New("machine state differs"))
++	StopVictims(context.Background(), Deps{Runtime: failing})
++
++	// A later kubelet start heals again, this time without trouble.
++	healthy := apitest.NewFakeRuntimeService()
++	healthy.Containers = map[string]*apitest.FakeContainer{
++		"cid-second": fakeContainerForPod("cid-second", "pod-second", "second", "ns", runtimeapi.ContainerState_CONTAINER_RUNNING),
++	}
++	cmSecond := containermap.NewContainerMap()
++	cmSecond.Add("pod-second", "app", "cid-second")
++	RecordStateReset(ManagerCPU, dir, "cpu_manager_state",
++		[]ContainerRef{{PodUID: "pod-second", ContainerName: "app"}}, cmSecond, errors.New("topology changed"))
++	StopVictims(context.Background(), Deps{Runtime: healthy})
++
++	marker := readMarker(t, dir)
++	if len(marker.Resets) != 2 {
++		t.Fatalf("marker holds %d resets, want 2 - the unconsumed one must survive: %+v", len(marker.Resets), marker.Resets)
++	}
++	if marker.Resets[0].Manager != ManagerMemory || marker.Resets[0].Victims[0].Error == "" {
++		t.Errorf("first reset: got %+v, want the carried-forward memory reset with its stop failure", marker.Resets[0])
++	}
++	if marker.Resets[1].Manager != ManagerCPU {
++		t.Errorf("second reset: got %q, want %q", marker.Resets[1].Manager, ManagerCPU)
++	}
++}
++
++func TestWriteMarkerCapsCarriedHistory(t *testing.T) {
++	dir := t.TempDir()
++	var seeded []ResetRecord
++	for i := 0; i < markerHistoryLimit+5; i++ {
++		seeded = append(seeded, ResetRecord{Manager: ManagerCPU, StateFile: filepath.Join(dir, "cpu_manager_state")})
++	}
++	blob, err := json.MarshalIndent(Marker{Version: Version, Resets: seeded}, "", "  ")
++	if err != nil {
++		t.Fatal(err)
++	}
++	if err := os.WriteFile(filepath.Join(dir, MarkerFileName), blob, 0600); err != nil {
++		t.Fatal(err)
++	}
++
++	writeMarker(dir, []ResetRecord{{Manager: ManagerMemory, StateFile: filepath.Join(dir, "memory_manager_state")}})
++
++	marker := readMarker(t, dir)
++	if len(marker.Resets) != markerHistoryLimit {
++		t.Fatalf("marker holds %d resets, want the cap of %d", len(marker.Resets), markerHistoryLimit)
++	}
++	if last := marker.Resets[len(marker.Resets)-1]; last.Manager != ManagerMemory {
++		t.Errorf("newest reset: got %q, want %q - the newest must never be dropped", last.Manager, ManagerMemory)
++	}
++}
 diff --git a/pkg/kubelet/cm/checkpointselfheal/stop.go b/pkg/kubelet/cm/checkpointselfheal/stop.go
 new file mode 100644
-index 00000000000..68c1ac0df42
+index 00000000000..998404583b7
 --- /dev/null
 +++ b/pkg/kubelet/cm/checkpointselfheal/stop.go
-@@ -0,0 +1,372 @@
+@@ -0,0 +1,358 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -1439,11 +1608,11 @@ index 00000000000..68c1ac0df42
 +	// not reconciling anything.
 +	stopGracePeriodSeconds = int64(15)
 +
-+	// stopDeadline bounds the whole operation. Containers are stopped in
-+	// parallel, so this is roughly the grace period plus runtime overhead
-+	// rather than a per-container budget. Exceeding it is reported loudly:
-+	// a victim left running still holds CPUs or a NUMA zone the state now
-+	// thinks are free.
++	// stopDeadline bounds the whole operation. Every victim of every reset is
++	// stopped in the same pass, so this is the grace period plus runtime
++	// overhead rather than a per-container or per-manager budget. Exceeding it
++	// is reported loudly: a victim left running still holds CPUs or a NUMA
++	// zone the state now thinks are free.
 +	stopDeadline = 30 * time.Second
 +
 +	// eventReason is used for the pod events emitted for stopped containers.
@@ -1520,10 +1689,21 @@ index 00000000000..68c1ac0df42
 +	stopCtx, cancel := context.WithTimeout(ctx, stopDeadline)
 +	defer cancel()
 +
-+	tracker := newStopTracker()
++	// One pass over every reset, waited on once. Draining the resets one after
++	// another shared the deadline in sequence instead, so a manager whose
++	// containers used their whole grace period left nothing for the next one --
++	// and the resets come in the order the managers started, which makes the
++	// starved one memory, the manager with no reconcile loop, where a victim
++	// left running goes on holding a NUMA zone the state now believes free.
++	// The victim sets are not the same set either: memory holds an assignment
++	// for every Guaranteed pod, the CPU manager only for those asking for
++	// whole CPUs.
++	var wg sync.WaitGroup
++	stopped := map[string]ManagerName{}
 +	for i := range records {
-+		stopRecord(stopCtx, deps, &records[i], running, meta, live, tracker)
++		stopRecord(stopCtx, deps, &records[i], running, meta, live, stopped, &wg)
 +	}
++	wg.Wait()
 +
 +	writeMarker(stateDir, records)
 +
@@ -1538,37 +1718,6 @@ index 00000000000..68c1ac0df42
 +type podMeta struct {
 +	name      string
 +	namespace string
-+}
-+
-+// stopTracker makes sure a container is stopped once per run even when it is a
-+// victim of more than one manager.
-+//
-+// Both managers can lose the same container's assignment in the same start --
-+// a corrupt checkpoint on each, or a policy change that invalidates both. Each
-+// reset legitimately records the container as its victim, but the container
-+// itself must be stopped only once: a second StopContainer is a no-op at the
-+// runtime, yet it still counted a stop and emitted a second pod event, so
-+// summing stopped_containers_total across managers reported two containers
-+// where one had been restarted.
-+type stopTracker struct {
-+	mu    sync.Mutex
-+	owner map[string]ManagerName
-+}
-+
-+func newStopTracker() *stopTracker {
-+	return &stopTracker{owner: map[string]ManagerName{}}
-+}
-+
-+// claim reserves a container for stopping. It reports the manager that already
-+// claimed it, and whether this caller got the claim.
-+func (t *stopTracker) claim(containerID string, manager ManagerName) (ManagerName, bool) {
-+	t.mu.Lock()
-+	defer t.mu.Unlock()
-+	if prev, taken := t.owner[containerID]; taken {
-+		return prev, false
-+	}
-+	t.owner[containerID] = manager
-+	return manager, true
 +}
 +
 +// containerRef keys a container the way the managers key their assignments.
@@ -1637,10 +1786,13 @@ index 00000000000..68c1ac0df42
 +	return running, meta, live
 +}
 +
-+func stopRecord(ctx context.Context, deps Deps, rec *ResetRecord, running map[string]bool, meta map[string]podMeta, live map[containerRef]string, tracker *stopTracker) {
++// stopRecord queues one reset's victims for stopping. stopped is shared across
++// resets and carries the manager that owns each container; it is only ever
++// touched from here, and StopVictims calls this for one reset at a time, so it
++// needs no lock.
++func stopRecord(ctx context.Context, deps Deps, rec *ResetRecord, running map[string]bool, meta map[string]podMeta, live map[containerRef]string, stopped map[string]ManagerName, wg *sync.WaitGroup) {
 +	manager := string(rec.Manager)
 +
-+	var wg sync.WaitGroup
 +	for i := range rec.Victims {
 +		victim := &rec.Victims[i]
 +
@@ -1676,30 +1828,33 @@ index 00000000000..68c1ac0df42
 +			continue
 +		}
 +
++		// Both managers can lose the same container's assignment in the same
++		// start -- a corrupt checkpoint on each, or a policy change that
++		// invalidates both. Recording it as a victim of each is still correct,
++		// but the container must be stopped only once: a second StopContainer
++		// is a no-op at the runtime, yet it still counted a stop and emitted a
++		// second pod event, so summing stopped_containers_total across managers
++		// reported two containers where one had been restarted.
++		if owner, taken := stopped[victim.ContainerID]; taken {
++			victim.Skipped = "already stopped for the " + string(owner) + " manager"
++			klog.InfoS(LogMarker+" victim already stopped for another manager, not stopping again",
++				"manager", manager, "stoppedBy", owner,
++				"pod", klog.KRef(victim.PodNamespace, victim.PodName),
++				"podUID", victim.PodUID, "containerName", victim.ContainerName,
++				"containerID", victim.ContainerID)
++			continue
++		}
++		stopped[victim.ContainerID] = rec.Manager
++
 +		wg.Add(1)
 +		go func() {
 +			defer wg.Done()
-+			stopOne(ctx, deps, rec.Manager, rec.Reason, victim, tracker)
++			stopOne(ctx, deps, rec.Manager, rec.Reason, victim)
 +		}()
 +	}
-+	wg.Wait()
 +}
 +
-+func stopOne(ctx context.Context, deps Deps, manager ManagerName, reason Reason, victim *Victim, tracker *stopTracker) {
-+	if owner, claimed := tracker.claim(victim.ContainerID, manager); !claimed {
-+		// Another manager already stopped this container in this run. Recording
-+		// it as a victim here is still correct -- this manager did lose its
-+		// assignment -- but stopping, counting and reporting it again would
-+		// describe one restart as two.
-+		victim.Skipped = "already stopped for the " + string(owner) + " manager"
-+		klog.InfoS(LogMarker+" victim already stopped for another manager, not stopping again",
-+			"manager", manager, "stoppedBy", owner,
-+			"pod", klog.KRef(victim.PodNamespace, victim.PodName),
-+			"podUID", victim.PodUID, "containerName", victim.ContainerName,
-+			"containerID", victim.ContainerID)
-+		return
-+	}
-+
++func stopOne(ctx context.Context, deps Deps, manager ManagerName, reason Reason, victim *Victim) {
 +	klog.InfoS(LogMarker+" stopping container so it is recreated and pinned again",
 +		"manager", manager, "reason", reason,
 +		"pod", klog.KRef(victim.PodNamespace, victim.PodName), "podUID", victim.PodUID,
@@ -1768,6 +1923,108 @@ index 00000000000..68c1ac0df42
 +		}
 +	}
 +	return ""
++}
+diff --git a/pkg/kubelet/cm/checkpointselfheal_barrier_test.go b/pkg/kubelet/cm/checkpointselfheal_barrier_test.go
+new file mode 100644
+index 00000000000..48f60a09107
+--- /dev/null
++++ b/pkg/kubelet/cm/checkpointselfheal_barrier_test.go
+@@ -0,0 +1,96 @@
++/*
++Copyright 2026 The Kubernetes Authors.
++
++Licensed under the Apache License, Version 2.0 (the "License");
++you may not use this file except in compliance with the License.
++You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++Unless required by applicable law or agreed to in writing, software
++distributed under the License is distributed on an "AS IS" BASIS,
++WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++See the License for the specific language governing permissions and
++limitations under the License.
++*/
++
++package cm
++
++import (
++	"bytes"
++	"go/ast"
++	"go/parser"
++	"go/printer"
++	"go/token"
++	"strings"
++	"testing"
++)
++
++// TestStopVictimsRunsSynchronouslyInsideStart guards the one property that
++// keeps a checkpoint reset from losing isolation instead of restoring it.
++//
++// A reset leaves containers running on CPUs and memory zones that the fresh
++// state reports as free, so a Guaranteed pod admitted in that window would be
++// handed CPUs another container is still using. What closes the window is that
++// the stop happens inside containerManagerImpl.Start, before it returns:
++// kubelet calls setRuntimeSync only after
++// oneTimeInitializer.Do(initializeRuntimeDependentModules), and syncLoop skips
++// every iteration until it does, so nothing can be admitted while we stop.
++//
++// That is a property of one call site, and nothing else in the tree fails if
++// the call is moved after the return, put behind a condition or handed to a
++// goroutine: it would still compile, still pass every other test, and break
++// only under load on a real node. Hence this test, against the source.
++func TestStopVictimsRunsSynchronouslyInsideStart(t *testing.T) {
++	fset := token.NewFileSet()
++	file, err := parser.ParseFile(fset, "container_manager_linux.go", nil, 0)
++	if err != nil {
++		t.Fatalf("parsing container_manager_linux.go: %v", err)
++	}
++
++	var body *ast.BlockStmt
++	for _, decl := range file.Decls {
++		fn, ok := decl.(*ast.FuncDecl)
++		if ok && fn.Name.Name == "Start" && fn.Recv != nil && fn.Body != nil &&
++			strings.Contains(render(fset, fn.Recv.List[0].Type), "containerManagerImpl") {
++			body = fn.Body
++		}
++	}
++	if body == nil {
++		t.Fatal("containerManagerImpl.Start not found")
++	}
++
++	managersAt, stopAt := -1, -1
++	for i, stmt := range body.List {
++		src := render(fset, stmt)
++		if strings.Contains(src, "cm.cpuManager.Start(") || strings.Contains(src, "cm.memoryManager.Start(") {
++			managersAt = i
++		}
++		// Required to be a plain expression statement of the function body.
++		// That is what rules out "go StopVictims(...)", a call behind an if,
++		// and a call moved into a helper Start may or may not reach.
++		if _, ok := stmt.(*ast.ExprStmt); ok && strings.HasPrefix(src, "checkpointselfheal.StopVictims(") {
++			stopAt = i
++		}
++	}
++
++	if stopAt < 0 {
++		t.Fatal("checkpointselfheal.StopVictims is not a plain statement of containerManagerImpl.Start; " +
++			"the reset could then leave victims running while pods are already being admitted")
++	}
++	if managersAt < 0 {
++		t.Fatal("neither manager's Start found in containerManagerImpl.Start")
++	}
++	if stopAt < managersAt {
++		t.Errorf("StopVictims is at statement %d, before the managers at %d: "+
++			"the managers are what record the victims, so stopping earlier stops nothing", stopAt, managersAt)
++	}
++}
++
++func render(fset *token.FileSet, node ast.Node) string {
++	var buf bytes.Buffer
++	if err := printer.Fprint(&buf, fset, node); err != nil {
++		return ""
++	}
++	return buf.String()
 +}
 diff --git a/pkg/kubelet/cm/container_manager_linux.go b/pkg/kubelet/cm/container_manager_linux.go
 index 64fe7df63b4..145d7897727 100644
