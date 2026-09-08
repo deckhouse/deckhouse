@@ -43,11 +43,17 @@ memory: 50Mi
   - controllerPort: port for controller probes (default: 8081)
   - controllerMetricsPort: port for controller metrics (optional, no port exposed if not set)
   - controllerMetricsProxyPort: port for a kube-rbac-proxy in front of the metrics
-    (optional). When set, the controller's own metrics port is NOT declared as a
-    containerPort -- the controller is expected to bind it on 127.0.0.1 -- and the
-    only port on the pod is the proxy's, named "https-metrics". Scraping it requires
+    (optional). When set, the only port on the pod is the proxy's, named
+    "https-metrics", and METRICS_BIND_ADDRESS is emitted as 127.0.0.1:<controllerMetricsPort>
+    so the controller's own endpoint answers nobody but the proxy. Scraping it requires
     "get" on <resource>/prometheus-metrics, which the module grants to the Prometheus
     scraper with a Role of its own.
+
+    Do NOT pass METRICS_BIND_ADDRESS through additionalControllerEnvs: it is emitted
+    here, and a second entry of the same name is what the env-variables-duplicates
+    lint rule reports. Omitting a containerPort does not keep a process off the pod IP
+    -- containerPort is metadata -- so the env is the only thing that actually holds
+    the loopback contract.
 */ -}}
 {{- define "helm_lib_module_controller_manifests" }}
   {{- $context := index . 0 }}
@@ -228,6 +234,20 @@ spec:
               valueFrom:
                 fieldRef:
                   fieldPath: metadata.namespace
+            {{- if $controllerMetricsPort }}
+            {{- /* Loopback when a proxy fronts the endpoint, the pod IP otherwise. This is
+                   what the contract rests on: dropping the containerPort below does not stop
+                   a process from binding the wildcard, and every module repeating this env
+                   by hand is one edit away from an unauthenticated /metrics on the pod IP --
+                   or, since the two ports carry the same number by default, from the two
+                   containers racing for it. */}}
+            - name: METRICS_BIND_ADDRESS
+              {{- if $controllerMetricsProxyPort }}
+              value: "127.0.0.1:{{ $controllerMetricsPort }}"
+              {{- else }}
+              value: ":{{ $controllerMetricsPort }}"
+              {{- end }}
+            {{- end }}
             {{- if $additionalControllerEnvs }}
             {{- $additionalControllerEnvs | toYaml | nindent 12 }}
             {{- end }}
@@ -330,11 +350,17 @@ spec:
               path: /livez
               port: {{ $controllerMetricsProxyPort }}
               scheme: HTTPS
-          readinessProbe:
-            httpGet:
-              path: /livez
-              port: {{ $controllerMetricsProxyPort }}
-              scheme: HTTPS
+          {{- /* No readinessProbe on purpose. Readiness of this pod gates the endpoints of
+                 the Services that select it -- the webhook Service this template renders next
+                 to the Deployment, and in some modules an APIService -- and admission
+                 configurations default to failurePolicy: Fail. A sidecar that only serves
+                 metrics must not be able to take cluster-wide admission, or an aggregated API
+                 group, out of rotation; a wedged proxy is still restarted by the liveness
+                 probe.
+
+                 The cost is that the pod is Ready before this container listens, so a scrape
+                 or two can fail during a rollout. That is the trade being made on purpose:
+                 a few gaps in a metric against an admission or discovery outage. */}}
           resources:
             requests:
               {{- include "helm_lib_module_ephemeral_storage_only_logs" $context | nindent 14 }}

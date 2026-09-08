@@ -86,6 +86,10 @@
 | [helm_lib_module_common_image_no_fail](#helm_lib_module_common_image_no_fail) |
 | [helm_lib_module_image_digest](#helm_lib_module_image_digest) |
 | [helm_lib_module_image_digest_no_fail](#helm_lib_module_image_digest_no_fail) |
+| [helm_lib_internal_module_own_package](#helm_lib_internal_module_own_package) |
+| [helm_lib_internal_module_package_registry_base](#helm_lib_internal_module_package_registry_base) |
+| [helm_lib_internal_module_raw_name](#helm_lib_internal_module_raw_name) |
+| [helm_lib_internal_module_registry_base](#helm_lib_internal_module_registry_base) |
 | **Module Ingress Class** |
 | [helm_lib_module_ingress_class](#helm_lib_module_ingress_class) |
 | **Module Ingress Snippets** |
@@ -1024,7 +1028,7 @@ list:
 
 #### Usage
 
-`{{ include "helm_lib_module_image_no_fail" (list . "<container-name>") }} `
+`{{ include "helm_lib_module_image_no_fail" (list . "<container-name>" "<module-name>(optional)") }} `
 
 #### Arguments
 
@@ -1091,6 +1095,48 @@ list:
 list:
 -  Template context with .Values, .Chart, etc 
 -  Container name 
+
+
+### helm_lib_internal_module_own_package
+
+ Decide whether the images resolve from the module's own package. 
+ Returns a non-empty string when the context carries a package and no other module was named. 
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc 
+-  An explicit module name asks for another module's image, which only the global map holds 
+
+
+### helm_lib_internal_module_package_registry_base
+
+ Resolve the registry path of the images shipped in the module's own package. 
+ Returns the platform registry base for an embedded package, the package path otherwise, empty when unresolvable. 
+
+#### Arguments
+
+-  Embedded packages are built into the platform image set, so their images are addressed by digest alone 
+
+
+### helm_lib_internal_module_raw_name
+
+ Resolve the module name passed to an image helper. 
+ Returns the optional third argument, or the chart name when it is omitted. 
+
+
+
+### helm_lib_internal_module_registry_base
+
+ Resolve the registry path the legacy module images live in. 
+ Returns the platform registry base, or the external module override when the module values set one. 
+
+#### Arguments
+
+list:
+-  Template context with .Values, .Chart, etc 
+-  Camelcased module name, the key the module values live under 
+-  Path appended to the override host 
 
 ## Module Ingress Class
 
