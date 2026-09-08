@@ -266,25 +266,22 @@ func (b *ConfigBuilder) build() (*Config, error) {
 	}
 	ret.Version = version
 
-	// Validate before publishing, not only on the way in.
+	// The built configuration is deliberately not validated here.
 	//
-	// Two of the inputs here come from objects the module does not own: the
-	// master node addresses are read from Node.status.addresses, and the
-	// Unmanaged parameters from the deckhouse-registry secret. They reach
-	// `server <value>;` in the node balancer's NGINX configuration and the
-	// directory names under /etc/containerd/registry.d, and the rules for those
-	// sinks live in bashible.Config.Validate.
+	// Two of the inputs come from objects the module does not own -- the master
+	// node addresses from Node.status.addresses, and the Unmanaged parameters
+	// from the deckhouse-registry secret -- and they reach sinks with no quoting
+	// of their own. The rules that bound them live in bashible.Config.Validate,
+	// and they are applied by the consumer: bashible-apiserver validates the
+	// secret when it reads it, in pkg/template/registry/controller.go, and
+	// refuses one it cannot validate.
 	//
-	// Without this check the rules were applied only by the consumer, in
-	// bashible-apiserver, which refuses the secret it cannot validate -- so a
-	// single malformed node address stopped registry configuration updates for
-	// the whole cluster, with the reason visible only on the other side. Failing
-	// here names the offending value instead, and stops relying on a validation
-	// call in another module to be the only one.
-	if err := bashible.Config(ret).Validate(); err != nil {
-		return nil, fmt.Errorf("built configuration is invalid: %w", err)
-	}
-
+	// Validating here as well was tried and reverted. A check in this hook is a
+	// check on Deckhouse's own internal state, and a false positive in it does
+	// not reject one value -- it fails the orchestrator hook, which stops
+	// everything else the hook does. The consumer is the right place: it is
+	// where the data crosses a boundary, and a refusal there costs the registry
+	// configuration rather than the module.
 	return &ret, nil
 }
 

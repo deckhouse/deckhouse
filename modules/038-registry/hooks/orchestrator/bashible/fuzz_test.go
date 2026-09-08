@@ -32,20 +32,20 @@ limitations under the License.
 // TM-17 and TM-18 are both assessed as critical, and both are about exactly
 // this: a value from cluster state reaching those two sinks.
 //
-// The oracle is a single statement, and it is deliberately not a restatement of
-// the hook's own logic: whatever build() produces must satisfy
-// bashible.Config.Validate(). That model carries the rules for these sinks
-// (helpers.ProxyEndpoint for endpoints, helpers.MirrorHost and
-// helpers.RegistryHost for hosts), and the secret this hook writes is the same
-// document the consumer side validates. A configuration this producer emits and
-// the model rejects is one that reaches nodes without ever meeting those rules.
+// The oracle is not "the result validates". Bounding these values belongs to the
+// consumer, and bashible-apiserver does it when it reads the secret; the rules
+// themselves are pinned by the tests next to the model, in
+// go_lib/registry/models/bashible. What this harness holds build() to is what
+// only build() can get wrong: reporting the addresses it was given, in order,
+// and reporting them the same way twice. A fabricated, dropped or reordered
+// endpoint validates perfectly well and points a node at the wrong master.
 
 package bashible
 
 import (
 	"testing"
 
-	"github.com/deckhouse/deckhouse/go_lib/registry/models/bashible"
+	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
 func FuzzConfigBuilderMasterNodesIPs(f *testing.F) {
@@ -96,7 +96,7 @@ func FuzzConfigBuilderMasterNodesIPs(f *testing.F) {
 			return
 		}
 
-		assertConfigValidates(t, config, "MasterNodesIPs", builder.MasterNodesIPs)
+		assertProducerInvariants(t, builder, config, "MasterNodesIPs", builder.MasterNodesIPs)
 	})
 }
 
@@ -147,39 +147,72 @@ func FuzzConfigBuilderUnmanaged(f *testing.F) {
 			return
 		}
 
-		assertConfigValidates(t, config, "Unmanaged.ImagesRepo", []string{imagesRepo, scheme})
+		assertProducerInvariants(t, builder, config, "Unmanaged.ImagesRepo", []string{imagesRepo, scheme})
 	})
 }
 
-// assertConfigValidates is the whole oracle: the secret this hook writes must be
-// a document the model accepts.
-func assertConfigValidates(t *testing.T, config *Config, field string, values []string) {
+// assertProducerInvariants states what build() itself has to guarantee.
+//
+// Not that the result validates: bounding these values is the consumer's job,
+// and bashible-apiserver does it when it reads the secret. A check here would be
+// a check on Deckhouse's own internal state, where a false positive fails the
+// orchestrator hook rather than one field -- see the note in build().
+//
+// What build() does owe its caller is that it reports the addresses it was given
+// and nothing else. Fabricating, dropping or reordering an endpoint would
+// misattribute it to another node, and that is invisible to the consumer: every
+// value would still validate, and the wrong node would be proxied to.
+func assertProducerInvariants(t *testing.T, builder ConfigBuilder, config *Config, field string, values []string) {
 	t.Helper()
 
 	if config == nil {
 		t.Fatalf("build() returned no config and no error for %s = %q", field, values)
 	}
 
-	if err := bashible.Config(*config).Validate(); err != nil {
-		t.Fatalf("build() produced a configuration that bashible.Config.Validate() rejects, "+
-			"from %s = %q:\n\t%v\n"+
-			"proxyEndpoints = %q\n"+
-			"hosts = %v\n"+
-			"This configuration is written to d8-system/registry-bashible-config and read by "+
-			"every node, where the endpoints become `server <value>;` in the balancer's NGINX "+
-			"configuration and the hosts become directory names under "+
-			"/etc/containerd/registry.d. Nothing between here and those sinks applies these "+
-			"rules: the hook's Config is a distinct named type and carries no Validate method.",
-			field, values, err, config.ProxyEndpoints, hostNames(config))
+	want := registry_const.GenerateProxyEndpoints(builder.MasterNodesIPs)
+	if len(builder.MasterNodesIPs) == 0 {
+		want = []string{}
 	}
-}
 
-func hostNames(config *Config) []string {
-	names := make([]string, 0, len(config.Hosts))
-	for host := range config.Hosts {
-		names = append(names, host)
+	// Only Proxy and Local produce endpoints at all; the other modes produce an
+	// empty list regardless of the addresses collected.
+	produces := builder.ModeParams.Proxy != nil || builder.ModeParams.Local != nil
+	if !produces {
+		if len(config.ProxyEndpoints) != 0 {
+			t.Fatalf("build() produced %d endpoint(s) in a mode that has no balancer, from %s = %q",
+				len(config.ProxyEndpoints), field, values)
+		}
+		return
 	}
-	return names
+
+	if len(config.ProxyEndpoints) != len(want) {
+		t.Fatalf("build() produced %d endpoint(s) for %d address(es), from %s = %q:\n\tgot  %q\n\twant %q",
+			len(config.ProxyEndpoints), len(want), field, values, config.ProxyEndpoints, want)
+	}
+	for i := range want {
+		if config.ProxyEndpoints[i] != want[i] {
+			t.Fatalf("endpoint[%d] is %q, expected %q, from %s = %q; the order has to hold or an "+
+				"endpoint stops being attributable to the node it came from",
+				i, config.ProxyEndpoints[i], want[i], field, values)
+		}
+	}
+
+	// The version is what every node compares against to decide whether it is up
+	// to date, so an empty one would stall the rollout silently.
+	if config.Version == "" {
+		t.Fatalf("build() produced no version, from %s = %q", field, values)
+	}
+
+	// Building twice from the same inputs has to give the same version, or the
+	// nodes chase a version that keeps changing.
+	again, err := builder.build()
+	if err != nil {
+		t.Fatalf("build() succeeded and then failed for the same inputs: %v", err)
+	}
+	if again.Version != config.Version {
+		t.Fatalf("build() is not deterministic for %s = %q: %q then %q",
+			field, values, config.Version, again.Version)
+	}
 }
 
 // splitFuzzList reads the fuzzed string as a comma-separated list, so one string
