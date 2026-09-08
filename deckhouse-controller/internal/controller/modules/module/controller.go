@@ -56,18 +56,9 @@ const (
 	// controllerName is the name the controller is registered under in the manager.
 	controllerName = "d8-modulev2-settings-controller"
 
-	// maxConcurrentReconciles = 1
-
-	// moduleNotFoundInterval = 3 * time.Minute
-
 	moduleDeckhouse = "deckhouse"
 	moduleGlobal    = "global"
 )
-
-// // settingsManager applies a module's settings-and-enabled change to the package runtime.
-// type settingsManager interface {
-// 	UpdateModulesSettings(name string, settingsVersion int, settings addonutils.Values, maintenance string, enabled *bool)
-// }
 
 // RegisterController registers the Module settings controller with the manager.
 func RegisterController(
