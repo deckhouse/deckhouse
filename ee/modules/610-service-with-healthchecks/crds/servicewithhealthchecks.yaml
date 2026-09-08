@@ -318,6 +318,7 @@ spec:
                   The default value,
                   `Cluster`, uses the standard behavior of routing to all endpoints evenly
                   (possibly modified by topology and other features).
+                default: Cluster
                 type: string
               ipFamilies:
                 description: |-
@@ -570,6 +571,7 @@ spec:
                   ExternalName aliases this service to the specified `externalName`.
                   Several other fields do not apply to ExternalName services.
                   [More info.](https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types)
+                default: ClusterIP
                 type: string
             required:
             - healthcheck
@@ -577,6 +579,19 @@ spec:
           status:
             description: Defines the observed state of ServiceWithHealthchecks
             properties:
+              clusterIP:
+                description: |-
+                  The address of the child Service: the one requested in `spec.clusterIP`, or the one the cluster allocated.
+
+                  The address is reported here and is never written back into the spec.
+                type: string
+              clusterIPs:
+                description: |-
+                  All the addresses of the child Service, one per IP family.
+                items:
+                  type: string
+                type: array
+                x-kubernetes-list-type: atomic
               conditions:
                 description: Current service state
                 items:
@@ -802,6 +817,9 @@ spec:
       type: string
     - jsonPath: .status.conditions[?(@.type=="Ready")].status
       name: Ready
+      type: string
+    - jsonPath: .status.clusterIP
+      name: ClusterIP
       type: string
     - jsonPath: .status.loadBalancer.ingress[0].ip
       name: ExternalIP
