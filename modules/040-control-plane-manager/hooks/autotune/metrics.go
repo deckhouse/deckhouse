@@ -44,6 +44,7 @@ const (
 	degradedReasonNodesTooSmall = "nodes_too_small"
 	degradedReasonListPods      = "list_pods"
 	degradedReasonReadThrough   = "read_through"
+	degradedReasonNoDatapoints  = "no_datapoints"
 )
 
 func setAutotuneDegraded(input *go_hook.HookInput, group, reason string) {

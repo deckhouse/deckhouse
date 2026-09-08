@@ -98,9 +98,16 @@ spec:
       memory: 500Mi
 ```
 
-The specified values are used as a common requests budget for control plane components on each master node. Deckhouse Kubernetes Platform (DKP) distributes this budget between control plane static pods when rendering their manifests.
+The specified values are used as a common requests budget for control plane components on each master node. Deckhouse Kubernetes Platform (DKP) distributes this budget between control plane static pods when rendering their manifests in the following fixed proportions:
 
-If CPU or memory requests are not explicitly specified, the module automatically calculates requests for the corresponding resource for each control plane component once a day based on the average usage over the previous seven days. Explicitly specifying the total amount of CPU or memory disables automatic request calculation for that resource for all control plane components. The specified amount is distributed among the components in fixed proportions.
+| Component                 | Share | Requests for `cpu: 1000m` | Requests for `memory: 500Mi` |
+| ------------------------- | ----- | ------------------------- | ---------------------------- |
+| `kube-apiserver`          | 45%   | `450m`                    | `225Mi`                      |
+| `etcd`                    | 35%   | `350m`                    | `175Mi`                      |
+| `kube-controller-manager` | 10%   | `100m`                    | `50Mi`                       |
+| `kube-scheduler`          | 10%   | `100m`                    | `50Mi`                       |
+
+If CPU or memory requests are not explicitly specified, the module automatically calculates requests for the corresponding resource for each control plane component once a day based on the average usage over the previous seven days, plus a 10% margin so that actual usage stays below the request. In this mode the proportions above do not apply: each component gets a request derived from its own measured usage. Explicitly specifying the total amount of CPU or memory disables automatic request calculation for that resource for all control plane components.
 
 {% alert level="info" %}
 These settings do not apply if the cluster control plane is managed by a cloud provider, for example in GKE, AKS, or EKS.
