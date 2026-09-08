@@ -89,6 +89,14 @@ func LoadEmbeddedSchemas(moduleDir string) ([]byte, []byte, error) {
 	return loadPackageSchemas(moduleDir)
 }
 
+// LoadGlobalSchemas reads the raw settings and values schemas of the global
+// module from the given global hooks dir. Unlike LoadEmbeddedSchemas it resolves
+// no weight prefix: the global dir carries none, and it holds no definition file
+// either, so the schemas are all a reader gets. A dir without them yields nils.
+func LoadGlobalSchemas(globalHooksDir string) ([]byte, []byte, error) {
+	return loadPackageSchemas(globalHooksDir)
+}
+
 // loadPackageSchemas reads settings.yaml (or legacy config-values.yaml) and
 // values.yaml from the specified directory. Package schemas:
 //

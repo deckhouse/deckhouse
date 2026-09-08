@@ -24,10 +24,64 @@ import (
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 )
 
-// imageEntry holds a single image and its pre-computed digest.
+// imageEntry holds a single manifest and its pre-computed digest. Exactly one
+// of img and idx is set: an entry added through AddIndex is a multi-arch index,
+// everything else is a plain image.
 type imageEntry struct {
 	img    v1.Image
+	idx    v1.ImageIndex
 	digest v1.Hash
+}
+
+// isIndex reports whether the entry holds a multi-arch index.
+func (e *imageEntry) isIndex() bool { return e.idx != nil }
+
+// rawManifest returns the manifest bytes the registry would serve for this
+// entry - the index manifest for an index, the image manifest otherwise.
+func (e *imageEntry) rawManifest() ([]byte, error) {
+	if e.isIndex() {
+		return e.idx.RawManifest()
+	}
+
+	return e.img.RawManifest()
+}
+
+// resolveImage returns the image this entry addresses, resolving an index to
+// the child matching platform.
+//
+// A nil platform picks linux/amd64 because that is what
+// go-containerregistry's remote.Image defaults to - not the host's platform.
+// The fake has to make the same choice or a test would disagree with
+// production about which child a platform-less request returns.
+func (e *imageEntry) resolveImage(platform *v1.Platform) (v1.Image, error) {
+	if !e.isIndex() {
+		return e.img, nil
+	}
+
+	want := v1.Platform{OS: "linux", Architecture: "amd64"}
+	if platform != nil {
+		want = *platform
+	}
+
+	manifest, err := e.idx.IndexManifest()
+	if err != nil {
+		return nil, fmt.Errorf("read index manifest: %w", err)
+	}
+
+	for _, child := range manifest.Manifests {
+		if child.Platform == nil || !child.Platform.Satisfies(want) {
+			continue
+		}
+
+		img, err := e.idx.Image(child.Digest)
+		if err != nil {
+			return nil, fmt.Errorf("read image %s: %w", child.Digest, err)
+		}
+
+		return img, nil
+	}
+
+	return nil, fmt.Errorf("index has no manifest for platform %s", want.String())
 }
 
 // repoStore stores the images for a single repository
@@ -62,6 +116,27 @@ func (rs *repoStore) addImage(tag string, img v1.Image) error {
 	}
 	rs.byTag[tag] = entry
 	rs.byDigest[digest.String()] = entry
+	return nil
+}
+
+func (rs *repoStore) addIndex(tag string, idx v1.ImageIndex) error {
+	digest, err := idx.Digest()
+	if err != nil {
+		return fmt.Errorf("compute digest: %w", err)
+	}
+
+	entry := &imageEntry{idx: idx, digest: digest}
+
+	rs.mu.Lock()
+	defer rs.mu.Unlock()
+
+	if _, exists := rs.byTag[tag]; !exists {
+		rs.tags = append(rs.tags, tag)
+	}
+
+	rs.byTag[tag] = entry
+	rs.byDigest[digest.String()] = entry
+
 	return nil
 }
 
@@ -186,6 +261,34 @@ func (r *Registry) AddImage(repoPath, tag string, img v1.Image) error {
 
 // MustAddImage is like [AddImage] but panics on error.  Intended for test
 // setup where error propagation is inconvenient.
+// AddIndex stores a multi-arch index under repoPath:tag, so a test can cover
+// the index paths - pull keeping every platform, --platform resolution,
+// classifying a reference as an index - which single images cannot exercise.
+func (r *Registry) AddIndex(repoPath, tag string, idx v1.ImageIndex) error {
+	if tag == "" {
+		return fmt.Errorf("stub: tag must not be empty")
+	}
+
+	repoPath = normPath(repoPath)
+
+	r.mu.Lock()
+	rs, ok := r.repos[repoPath]
+	if !ok {
+		rs = newRepoStore()
+		r.repos[repoPath] = rs
+	}
+	r.mu.Unlock()
+
+	return rs.addIndex(tag, idx)
+}
+
+// MustAddIndex is AddIndex for tests that treat a failure as fatal.
+func (r *Registry) MustAddIndex(repoPath, tag string, idx v1.ImageIndex) {
+	if err := r.AddIndex(repoPath, tag, idx); err != nil {
+		panic(fmt.Sprintf("stub.Registry.MustAddIndex: %v", err))
+	}
+}
+
 func (r *Registry) MustAddImage(repoPath, tag string, img v1.Image) {
 	if err := r.AddImage(repoPath, tag, img); err != nil {
 		panic(fmt.Sprintf("stub.Registry.MustAddImage: %v", err))

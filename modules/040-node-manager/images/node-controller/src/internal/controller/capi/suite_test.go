@@ -36,6 +36,7 @@ import (
 	deckhousev1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	mcmv1alpha1 "github.com/deckhouse/node-controller/api/machine.sapcloud.io/v1alpha1"
 	"github.com/deckhouse/node-controller/internal/common"
+	"github.com/deckhouse/node-controller/internal/controller/nodegroup/bashiblecontext"
 	"github.com/deckhouse/node-controller/internal/testenv"
 )
 
@@ -63,6 +64,10 @@ spec:
       vmClassName: test
 `
 
+// suiteClusterUUID is what the fixture stamps the cluster with; specs that assert
+// on a rendered artifact compare against it.
+const suiteClusterUUID = "11111111-2222-3333-4444-555555555555"
+
 // instanceClassChecksumFixture keeps the checksum stable per NodeGroup, matching the
 // contract that a changed instance class changes the checksum (irrelevant for this suite).
 const instanceClassChecksumFixture = `{{ .nodeGroup.name }}`
@@ -70,6 +75,14 @@ const instanceClassChecksumFixture = `{{ .nodeGroup.name }}`
 func testdataDir() string {
 	_, self, _, _ := runtime.Caller(0)
 	return filepath.Join(filepath.Dir(self), "testdata")
+}
+
+// The machine-class render builds its own bashiblecontext.Service, which reads the
+// cluster CA from the pod's projected service-account volume — a path no test process
+// has, and BuildInput refuses an empty CA. In init, so both the specs and the plain
+// tests of this package see the fixture.
+func init() {
+	bashiblecontext.RootCAFiles = []string{filepath.Join(testdataDir(), "ca.crt")}
 }
 
 // TestCAPIMachineDeploymentControllerEnvtest runs the envtest-backed integration suite for
@@ -163,7 +176,7 @@ var _ = BeforeSuite(func() {
 	uuidCM := &corev1.ConfigMap{}
 	uuidCM.Namespace = clusterUUIDConfigMapNS
 	uuidCM.Name = clusterUUIDConfigMapName
-	uuidCM.Data = map[string]string{"cluster-uuid": "11111111-2222-3333-4444-555555555555"}
+	uuidCM.Data = map[string]string{"cluster-uuid": suiteClusterUUID}
 	Expect(client.IgnoreAlreadyExists(k8sClient.Create(suiteCtx, uuidCM))).To(Succeed())
 
 	By("publishing the cluster-kubernetes configmap")

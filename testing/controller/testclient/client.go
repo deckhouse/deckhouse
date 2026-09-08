@@ -28,6 +28,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/crds"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/go_lib/project"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -65,6 +66,7 @@ func New(logger *log.Logger, initObjects []client.Object) (*Client, error) {
 			&v1alpha1.ModuleSource{},
 			&v1alpha1.ModuleRelease{},
 			&v1alpha1.Module{},
+			&v1alpha2.ModulePullOverride{},
 		).
 		Build()
 

@@ -12,7 +12,11 @@ import (
 
 	"k8s.io/client-go/discovery"
 	"k8s.io/klog/v2"
+
+	"permission-browser-apiserver/pkg/authorizer/multitenancy"
 )
+
+var _ multitenancy.ResourceScope = (*ResourceScopeCache)(nil)
 
 const (
 	// defaultRefreshInterval is how often the scope cache refreshes from discovery.
@@ -76,11 +80,35 @@ func (c *ResourceScopeCache) IsNamespaced(group, resource string) bool {
 	return namespaced
 }
 
+// Scope reports whether the resource is namespaced and whether the snapshot
+// contains it. Unlike IsNamespaced, a miss is not coerced to cluster-scoped:
+// multi-tenancy uses !known as "treat like namespaced" so a discovery hole
+// cannot fail-open. IsNamespaced stays fail-closed-as-cluster-scoped for
+// AccessibleNamespaces (a false namespaced=true would list every namespace).
+//
+// A nil *ResourceScopeCache answers like an empty one, so a typed nil handed to an interface value
+// is as safe as a nil interface.
+func (c *ResourceScopeCache) Scope(group, resource string) (bool, bool) {
+	if c == nil {
+		return false, false
+	}
+
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	namespaced, known := c.scopeMap[group+"/"+resource]
+	return namespaced, known
+}
+
 // HasResource reports whether the discovery snapshot serves the resource at
 // all. An empty or stale-in-the-negative cache answers false: a caller uses
 // this to make a claim the plain RBAC answer would not support, and a claim
 // about a resource we have never seen is worse than no claim.
 func (c *ResourceScopeCache) HasResource(group, resource string) bool {
+	if c == nil {
+		return false
+	}
+
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 
@@ -147,6 +175,10 @@ func matchesResource(ruleResources []string, resource string) bool {
 // This can be used for readiness checks: an empty cache means we could not
 // fetch discovery data yet and would treat all unknown resources as cluster-scoped.
 func (c *ResourceScopeCache) HasData() bool {
+	if c == nil {
+		return false
+	}
+
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	return len(c.scopeMap) > 0
@@ -179,28 +211,48 @@ func (c *ResourceScopeCache) StartRefreshLoop(stopCh <-chan struct{}) {
 	}
 }
 
-// refresh fetches all API resources from discovery and rebuilds the scope map.
-// On error, the existing cache is preserved (stale data is better than no data).
+// refresh fetches the served resources from discovery and merges them into the scope map.
+//
+// ServerGroupsAndResources lists every version of every group, subresources included (the
+// preferred-resources call drops the names with a "/"), so HasNamespacedResourceMatching sees the
+// same resources RBAC does. On a partial failure the call returns the lists it did fetch together
+// with an ErrGroupDiscoveryFailed naming the GroupVersions it could not. The entries of those groups
+// are carried over from the previous snapshot: a miss in the map now decides an authorization
+// answer (Scope), so an APIService that is down for a minute must not evict its resources. A group
+// that is neither returned nor reported as failed has left the cluster and its entries go. Any other
+// error, or an empty result, preserves the whole snapshot.
 func (c *ResourceScopeCache) refresh() {
 	if c.discoveryClient == nil {
 		klog.V(4).Info("ResourceScopeCache: no discovery client, skipping refresh")
 		return
 	}
 
-	// ServerPreferredResources returns resources for all groups in one call.
-	// It may return partial results along with an error for some groups.
-	resourceLists, err := c.discoveryClient.ServerPreferredResources()
+	_, resourceLists, err := c.discoveryClient.ServerGroupsAndResources()
+
+	// failedGroups are the groups whose entries are kept from the previous snapshot.
+	failedGroups := map[string]struct{}{}
 	if err != nil {
-		// ServerPreferredResources may return partial results with an error.
-		// If we got some results, use them; otherwise preserve the old cache.
-		if len(resourceLists) == 0 {
-			klog.Warningf("ResourceScopeCache: discovery failed completely: %v, preserving existing cache", err)
+		failedVersions, partial := discovery.GroupDiscoveryFailedErrorGroups(err)
+		if !partial || len(resourceLists) == 0 {
+			klog.Warningf("ResourceScopeCache: discovery failed: %v, preserving existing cache", err)
 			return
 		}
-		klog.V(4).Infof("ResourceScopeCache: discovery returned partial results: %v", err)
+		for gv := range failedVersions {
+			failedGroups[gv.Group] = struct{}{}
+		}
+		klog.V(4).Infof("ResourceScopeCache: discovery returned partial results, keeping the previous entries of %d groups: %v", len(failedGroups), err)
 	}
 
 	newMap := make(map[string]bool)
+
+	c.mu.RLock()
+	for key, namespaced := range c.scopeMap {
+		group, _, _ := strings.Cut(key, "/")
+		if _, keep := failedGroups[group]; keep {
+			newMap[key] = namespaced
+		}
+	}
+	c.mu.RUnlock()
 
 	for _, resourceList := range resourceLists {
 		if resourceList == nil {

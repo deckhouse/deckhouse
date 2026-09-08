@@ -13,6 +13,6 @@ Deckhouse Kubernetes Platform интегрируется с инфраструк
 - Интеграция с модулем [`node-manager`](/modules/node-manager/) для поддержки DVPInstanceClass при описании [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
 {% alert level="info" %}
-Модуль автоматически включается для всех облачных кластеров, развернутых в DVP.
-Модуль не имеет настроек.
+Интеграция с DVP включается автоматически для всех облачных кластеров, развёрнутых в DVP.
+Дополнительная настройка не требуется.
 {% endalert %}

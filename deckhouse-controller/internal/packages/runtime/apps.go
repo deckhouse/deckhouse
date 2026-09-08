@@ -53,6 +53,7 @@ type App struct {
 	Settings        addonutils.Values
 	SettingsVersion int // schema version from Application.Spec.Version (reserved for future use)
 	Maintenance     string
+	Repository      registry.Remote
 }
 
 // UpdateApp handles application creation and version changes from the Application controller.
@@ -66,7 +67,7 @@ type App struct {
 //
 // Settings are applied lazily: the scheduler's schedulePackage reads pending settings
 // from the Store via GetPendingSettings when the package is scheduled for startup.
-func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
+func (r *Runtime) UpdateApp(app App) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
@@ -98,8 +99,8 @@ func (r *Runtime) UpdateApp(repo registry.Remote, app App) {
 	r.status.NewStatus(name)
 
 	tasks := []queue.Task{
-		taskdeploy.NewAppTask(name, packageName, version, repo, r.appDeployer, r.status, r.logger),
-		taskload.NewAppTask(name, repo, r.loadApp, r.status, r.logger),
+		taskdeploy.NewAppTask(name, packageName, version, app.Repository, r.appDeployer, r.status, r.logger),
+		taskload.NewAppTask(name, app.Repository, r.loadApp, r.status, r.logger),
 	}
 
 	// If there's an existing app, disable it first
@@ -209,6 +210,8 @@ func (r *Runtime) RemoveApp(namespace, instance string) bool {
 	if ctx == nil {
 		return true
 	}
+
+	r.status.SetDeleting(name)
 
 	if pkg := r.apps[name]; pkg != nil {
 		r.queueService.Enqueue(ctx, name, taskdisable.NewTask(pkg, pkg.GetNamespace(), false, r.nelmService, r.queueService, r.logger))

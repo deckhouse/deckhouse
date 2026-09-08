@@ -22,6 +22,19 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+const (
+	ModulePullOverrideAnnotationDeployedOn = "modules.deckhouse.io/deployed-on"
+	ModulePullOverrideAnnotationRenew      = "modules.deckhouse.io/renew"
+	ModulePullOverrideFinalizer            = "modules.deckhouse.io/mpo-finalizer"
+
+	ModulePullOverrideMessageReady          = "Ready"
+	ModulePullOverrideMessageModuleEmbedded = "The module is embedded"
+	ModulePullOverrideMessageModuleDisabled = "The module disabled"
+	ModulePullOverrideMessageModuleNotFound = "The module not found"
+	ModulePullOverrideMessageSourceNotFound = "The source not found"
+	ModulePullOverrideMessageNoSource       = "The module does not have an active source"
+)
+
 var (
 	ModulePullOverrideGVR = schema.GroupVersionResource{
 		Group:    SchemeGroupVersion.Group,
@@ -106,6 +119,14 @@ func (mo *ModulePullOverride) GetReleaseVersion() string {
 // GetWeight returns the weight of the module
 func (mo *ModulePullOverride) GetWeight() uint32 {
 	return mo.Status.Weight
+}
+
+// IsRenewRequested reports whether the renew annotation is set on the module pull
+// override, which forces a redeploy of the module even when its image digest is
+// unchanged.
+func (mo *ModulePullOverride) IsRenewRequested() bool {
+	v, ok := mo.Annotations[ModulePullOverrideAnnotationRenew]
+	return ok && v == "true"
 }
 
 // +kubebuilder:object:root=true

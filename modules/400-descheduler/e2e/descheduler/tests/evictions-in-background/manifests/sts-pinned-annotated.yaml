@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: test-sts
+  labels:
+    e2e-test: ($stsTestLabel)
+spec:
+  serviceName: test-sts
+  replicas: ($stsReplicas)
+  updateStrategy:
+    type: OnDelete
+  selector:
+    matchLabels:
+      e2e-test: ($stsTestLabel)
+  template:
+    metadata:
+      labels:
+        e2e-test: ($stsTestLabel)
+      annotations:
+        # Marks the pod as "evict in background": with the EvictionsInBackground feature
+        # gate on, the descheduler treats its eviction as a request rather than as an
+        # immediate eviction — but only if the owning controller answers the eviction API
+        # call with 429 and "Eviction triggered evacuation". No such controller exists in
+        # this test, so the eviction must proceed exactly as it would without the annotation.
+        descheduler.alpha.kubernetes.io/request-evict-only: ""
+    spec:
+      nodeName: ($targetNode)
+      terminationGracePeriodSeconds: 5
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            - labelSelector:
+                matchLabels:
+                  e2e-test: ($antiTargetValue)
+              topologyKey: kubernetes.io/hostname
+      containers:
+        - name: pause
+          image: registry.k8s.io/pause:3.9
+          resources:
+            requests:
+              cpu: 10m
+              memory: 16Mi

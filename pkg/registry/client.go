@@ -32,7 +32,18 @@ type Client interface {
 	GetRegistry() string
 
 	// GetImage retrieves a remote image by tag or digest reference.
+	//
+	// For a multi-arch reference, pass WithPlatform to choose the child image.
+	// Without it the underlying library resolves to a hardcoded linux/amd64 -
+	// not the host's platform - so an arm64 caller silently gets amd64.
 	GetImage(ctx context.Context, tag string, opts ...ImageGetOption) (Image, error)
+
+	// GetIndex retrieves a multi-arch index by tag or digest reference.
+	//
+	// Unlike GetImage it resolves nothing: the whole index comes back, which is
+	// what a caller copying or storing every platform needs. A reference that is
+	// a plain image rather than an index is an error.
+	GetIndex(ctx context.Context, tag string) (v1.ImageIndex, error)
 
 	// PushImage pushes a v1.Image to the registry at the specified tag.
 	PushImage(ctx context.Context, tag string, img v1.Image, opts ...ImagePushOption) error
@@ -43,8 +54,14 @@ type Client interface {
 	// GetDigest returns the digest hash for the given tag or digest reference.
 	GetDigest(ctx context.Context, tag string) (*v1.Hash, error)
 
-	// GetManifest retrieves the manifest for a specific image reference.
-	GetManifest(ctx context.Context, tag string) (ManifestResult, error)
+	// GetManifest retrieves the manifest for a specific image reference, as the
+	// registry served it.
+	//
+	// For a multi-arch reference the result is the index itself. Pass
+	// WithPlatform to resolve it to one child image's manifest instead; unlike
+	// GetImage, omitting the platform resolves nothing rather than defaulting to
+	// linux/amd64.
+	GetManifest(ctx context.Context, tag string, opts ...ManifestGetOption) (ManifestResult, error)
 
 	// GetImageConfig retrieves the image config file containing labels and metadata.
 	GetImageConfig(ctx context.Context, tag string) (*v1.ConfigFile, error)
@@ -54,10 +71,30 @@ type Client interface {
 	CheckImageExists(ctx context.Context, tag string) error
 
 	// ListTags returns tags for the repository built by WithSegment calls.
+	// The registry's Link-cursor chain is walked to the end, so the result is
+	// the complete list or an error - never a silently truncated page. Ask for
+	// a single page explicitly with WithTagsLimit / WithTagsLast.
 	ListTags(ctx context.Context, opts ...ListTagsOption) ([]string, error)
 
-	// ListRepositories lists repositories visible from the registry.
+	// StreamTags invokes visit once per page of tags as it arrives, so a caller
+	// can walk a repository with very many tags without buffering all of them.
+	// It is the non-accumulating form of ListTags and accepts the same options.
+	//
+	// Returning ErrStopStreaming from visit ends the walk without surfacing as
+	// an error; any other error from visit is returned to the caller as-is.
+	StreamTags(ctx context.Context, visit func(tags []string) error, opts ...ListTagsOption) error
+
+	// ListRepositories lists repositories visible from the registry, walking the
+	// catalog cursor to the end so the result is complete or an error.
+	//
+	// Registries that do not implement /v2/_catalog - Docker Hub, GCR and
+	// Artifact Registry among them - report ErrCatalogNotSupported.
 	ListRepositories(ctx context.Context, opts ...ListRepositoriesOption) ([]string, error)
+
+	// StreamRepositories is to ListRepositories what StreamTags is to ListTags:
+	// visit is invoked once per page as it arrives, and ErrStopStreaming ends
+	// the walk without being reported as a failure.
+	StreamRepositories(ctx context.Context, visit func(repos []string) error, opts ...ListRepositoriesOption) error
 
 	// DeleteTag deletes a specific tag from the registry.
 	DeleteTag(ctx context.Context, tag string) error

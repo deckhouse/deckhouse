@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
-	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -34,6 +33,7 @@ import (
 	"github.com/flant/kube-client/manifest"
 	"github.com/google/uuid"
 	"github.com/werf/nelm/pkg/common"
+	"github.com/werf/nelm/pkg/legacy/progrep"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -59,6 +59,9 @@ const (
 	// managedByAnnotation marks a release as owned by this service.
 	managedByAnnotation      = "packages.deckhouse.io/managed-by"
 	managedByAnnotationValue = "deckhouse"
+
+	packageLabel  = "packages.deckhouse.io/package"
+	instanceLabel = "packages.deckhouse.io/instance"
 )
 
 const (
@@ -68,6 +71,14 @@ const (
 	envPackageNelmTimeout = "PACKAGE_NELM_TIMEOUT"
 	// defaultPackageNelmTimeout applies when envPackageNelmTimeout is unset or malformed.
 	defaultPackageNelmTimeout = 30 * time.Minute
+
+	// timeoutGrace keeps nelm's own deadline behind ours: both bound the same
+	// apply, but only ours cancels with a cause naming what it waited for.
+	timeoutGrace = time.Minute
+
+	// maxNamedResources bounds how many resources a timeout cause names — the
+	// text reaches a package condition message.
+	maxNamedResources = 5
 )
 
 const (
@@ -108,6 +119,12 @@ type Package interface {
 	GetMaintenance() MaintenanceState
 }
 
+// application interface abstracts application operations needed for the run cycle.
+type application interface {
+	GetInstance() string
+	GetPackage() string
+}
+
 // Service manages Helm release lifecycle via nelm client.
 // It provides upgrade, deletion, and rendering operations.
 type Service struct {
@@ -116,6 +133,8 @@ type Service struct {
 	client         *nelm.Client // nelm client for Helm operations
 	monitorManager *drift.Manager
 
+	timeout time.Duration // bounds one release apply
+
 	status *status.Service
 
 	logger *log.Logger
@@ -123,6 +142,8 @@ type Service struct {
 
 // NewService creates a new nelm service for managing Helm releases.
 func NewService(kubeClient *klient.Client, callback drift.AbsentCallback, status *status.Service, logger *log.Logger) *Service {
+	timeout := resolveTimeout()
+
 	nelmClient := nelm.New(logger,
 		nelm.WithResourcesLabels(map[string]string{
 			"heritage": "deckhouse",
@@ -130,12 +151,15 @@ func NewService(kubeClient *klient.Client, callback drift.AbsentCallback, status
 		nelm.WithReleaseAnnotations(map[string]string{
 			managedByAnnotation: managedByAnnotationValue,
 		}),
-		nelm.WithTimeout(resolveTimeout()),
+		// nelm's deadline is a backstop behind ours: a non-zero Timeout is what makes
+		// ReleaseInstall return context.Cause rather than its own unwind error.
+		nelm.WithTimeout(timeout+timeoutGrace),
 	)
 
 	return &Service{
 		tmpDir:         os.TempDir(),
 		client:         nelmClient,
+		timeout:        timeout,
 		status:         status,
 		monitorManager: drift.New(kubeClient, nelmClient, callback, logger),
 		logger:         logger.Named(nelmServiceTracer),
@@ -236,12 +260,6 @@ func (s *Service) Delete(ctx context.Context, namespace, name string) error {
 	return s.client.Delete(ctx, namespace, name)
 }
 
-// UpgradeOptions holds options for upgrading a Helm release.
-type UpgradeOptions struct {
-	TrackingOptions common.TrackingOptions
-	ExtraLabels     map[string]string
-}
-
 // Upgrade installs or upgrades a Helm release for a package.
 //
 // Smart upgrade logic:
@@ -266,7 +284,7 @@ type UpgradeOptions struct {
 // policy stops guarding them against manual edits.
 //
 // Returns ErrPackageNotHelm if the package doesn't contain a valid Helm chart.
-func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package, opts UpgradeOptions) error {
+func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) error {
 	ctx, span := otel.Tracer(nelmServiceTracer).Start(ctx, "Upgrade")
 	defer span.End()
 
@@ -317,12 +335,25 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package, op
 	// rendered-manifest checksum and forces exactly one upgrade on enter/leave.
 	resourcesLabels := map[string]string{
 		health.LabelKey: pkg.GetName(),
+		packageLabel:    pkg.GetName(),
 	}
 	if state == NoResourceReconciliation {
 		resourcesLabels[nelm.ReleaseLabelMaintenance] = ""
 	}
 
-	maps.Copy(resourcesLabels, opts.ExtraLabels)
+	trackingOptions := common.TrackingOptions{
+		NoPodLogs: true,
+	}
+
+	if app, ok := pkg.(application); ok {
+		resourcesLabels[instanceLabel] = app.GetInstance()
+		// application has separate package name
+		resourcesLabels[packageLabel] = app.GetPackage()
+	} else {
+		// options needed for modules
+		trackingOptions.NoFinalTracking = true
+		trackingOptions.LegacyHelmCompatibleTracking = true
+	}
 
 	s.logger.Debug("render nelm chart",
 		slog.String("path", pkg.GetPath()),
@@ -363,10 +394,19 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package, op
 		return nil
 	}
 
+	// Tracking still holds the previous apply's report, which a deadline reached
+	// before this one reports anything would name as ours.
+	s.status.ResetTracking(pkg.GetName())
+
+	// The deadline is ours, so an apply that outlives it is cancelled with a cause
+	// naming what it waited for, the way the runtime names a reschedule.
+	ctx, stopDeadline := s.withApplyDeadline(ctx, pkg.GetName())
+	defer stopDeadline()
+
 	// Install or upgrade the release
 	err = s.client.Install(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
 		OnTrackingEvent: s.status.UpdateTracking,
-		TrackingOptions: opts.TrackingOptions,
+		TrackingOptions: trackingOptions,
 		Path:            pkg.GetPath(),
 		ValuesPaths:     []string{valuesPath},
 		RootValues:      pkg.GetRuntimeValues(),
@@ -653,12 +693,84 @@ func (s *Service) isHelmChart(path string) (bool, error) {
 }
 
 // resolveTimeout returns the nelm release-operation timeout: the PACKAGE_NELM_TIMEOUT
-// value (a Go duration such as "30m") when it is set and valid, otherwise
+// value (a Go duration such as "30m") when it is set and positive, otherwise
 // defaultPackageNelmTimeout.
 func resolveTimeout() time.Duration {
-	if d, err := time.ParseDuration(os.Getenv(envPackageNelmTimeout)); err == nil {
+	if d, err := time.ParseDuration(os.Getenv(envPackageNelmTimeout)); err == nil && d > 0 {
 		return d
 	}
 
 	return defaultPackageNelmTimeout
+}
+
+// withApplyDeadline bounds ctx by the service timeout, cancelling it with a cause
+// that names the resources the apply never finished. The returned function ends
+// the deadline and must be called.
+func (s *Service) withApplyDeadline(ctx context.Context, name string) (context.Context, func()) {
+	ctx, cancel := context.WithCancelCause(ctx)
+	timer := time.AfterFunc(s.timeout, func() { cancel(s.applyTimeoutCause(name, s.timeout)) })
+
+	return ctx, func() {
+		timer.Stop()
+		cancel(nil)
+	}
+}
+
+// applyTimeoutCause is the cancellation cause for an apply that outlived the
+// timeout. Tracking holds the stage nelm was executing, collected by the status
+// service from the progress reports the apply was sending.
+func (s *Service) applyTimeoutCause(name string, timeout time.Duration) error {
+	waiting := waitingFor(s.status.GetStatus(name).Tracking.Report.Operations)
+	if len(waiting) == 0 {
+		return fmt.Errorf("apply timed out after %s", timeout)
+	}
+
+	return fmt.Errorf("apply timed out after %s, waiting for %s", timeout, joinResources(waiting))
+}
+
+// waitingFor names the unfinished resources of ops as "Kind/Name". Operations
+// already under way — progressing, or failed and being retried — are what an
+// apply hangs on, so the queued ones are named only when there are none.
+func waitingFor(ops []progrep.Operation) []string {
+	started := resourcesByStatus(ops,
+		progrep.OperationStatusProgressing, progrep.OperationStatusFailed)
+	if len(started) > 0 {
+		return started
+	}
+
+	return resourcesByStatus(ops, progrep.OperationStatusPending)
+}
+
+// resourcesByStatus renders the distinct resources of ops in one of statuses. A
+// resource with several operations — an apply and a readiness track, say — is
+// named once.
+func resourcesByStatus(ops []progrep.Operation, statuses ...progrep.OperationStatus) []string {
+	resources := make([]string, 0, len(ops))
+	seen := make(map[string]struct{}, len(ops))
+
+	for _, op := range ops {
+		if !slices.Contains(statuses, op.Status) {
+			continue
+		}
+
+		resource := op.Kind + "/" + op.Name
+		if _, ok := seen[resource]; ok {
+			continue
+		}
+
+		seen[resource] = struct{}{}
+		resources = append(resources, resource)
+	}
+
+	return resources
+}
+
+// joinResources renders at most maxNamedResources resources and counts the rest.
+func joinResources(resources []string) string {
+	if len(resources) <= maxNamedResources {
+		return strings.Join(resources, ", ")
+	}
+
+	return fmt.Sprintf("%s and %d more",
+		strings.Join(resources[:maxNamedResources], ", "), len(resources)-maxNamedResources)
 }

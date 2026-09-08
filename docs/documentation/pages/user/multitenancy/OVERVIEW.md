@@ -135,3 +135,25 @@ If the new template’s chart defines resources that already exist in the namesp
 {% endalert %}
 
 For details on project templates and their creation, refer to the [Administration section](../../admin/multitenancy.html).
+
+## Viewing available cluster-wide resources
+
+A cluster administrator can restrict the use of cluster-wide resources in projects. For example, the administrator can define which StorageClasses, ClusterIssuers, and ClusterRoles are available to a project.
+
+To view the cluster-wide resources available to a project, run the following command:
+
+```shell
+d8 k get available -n <PROJECT_NAME>
+```
+
+To view available resources of a specific type and the value used by default, specify the corresponding AvailableClusterResource. For example, for StorageClass:
+
+```shell
+d8 k get available storageclasses -n <PROJECT_NAME> -o yaml
+```
+
+If you see a message such as `[multitenancy] <KIND> "<OBJECT_NAME>" references "<RESOURCE_NAME>" which is not available to project "<PROJECT_NAME>"` when creating or modifying a resource, the specified cluster-wide resource is unavailable to the project. Select an available resource from the corresponding AvailableClusterResource or ask the cluster administrator to add it.
+
+For some fields, automatic default value assignment can be configured. For example, if `storageClassName` is not specified when creating a PersistentVolumeClaim, the StorageClass used by default in the project can be automatically assigned to this field.
+
+For more information about using available cluster-wide resources, refer to the [`multitenancy-manager`](/modules/multitenancy-manager/usage.html#for-project-users) module documentation.

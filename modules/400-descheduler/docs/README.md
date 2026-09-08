@@ -35,6 +35,20 @@ No user action is required: the module discovers the `metrics.k8s.io` API group 
 When `metrics.k8s.io` is not available, the module falls back to the default behavior: resource usage is estimated from pod requests and limits.
 {% endalert %}
 
+## Evictions in background
+
+The module runs the descheduler with the upstream `EvictionsInBackground` feature gate enabled (`--feature-gates EvictionsInBackground=true`). There is no module setting for it: the behavior is part of the module and requires no configuration.
+
+By default, the descheduler expects every eviction to complete immediately: the eviction API request either succeeds or is rejected. Some workloads cannot be evicted that way — for example, a pod backing a virtual machine has to be live-migrated first, which may take minutes and may need retries.
+
+With the feature gate enabled, an eviction of a pod annotated with `descheduler.alpha.kubernetes.io/request-evict-only` is treated as a *request* to start the eviction. The controller that owns the pod rejects the eviction API call with `429 Too Many Requests` and marks the pod with the `descheduler.alpha.kubernetes.io/eviction-in-progress` annotation while it performs the actual eviction (for example, a live migration). The descheduler keeps track of such pods and counts them against its eviction limits until the pod is gone or the annotation is removed, so it doesn't start more evictions than allowed while the previous ones are still in progress.
+
+Pods without the `descheduler.alpha.kubernetes.io/request-evict-only` annotation are evicted as usual, so nothing changes for clusters where no workload implements its own eviction policy.
+
+{% alert level="info" %}
+The feature gate is in the alpha stage in the upstream [descheduler](https://github.com/kubernetes-sigs/descheduler) project (see [KEP-1397](https://github.com/kubernetes-sigs/descheduler/issues/1397)). It changes nothing on its own: without a controller that answers the eviction request as described above, the descheduler behaves exactly as it did before.
+{% endalert %}
+
 ## Strategies
 
 ### HighNodeUtilization

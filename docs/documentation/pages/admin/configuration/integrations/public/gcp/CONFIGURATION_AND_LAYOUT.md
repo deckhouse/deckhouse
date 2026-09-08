@@ -26,6 +26,17 @@ Deckhouse Kubernetes Platform (DKP) supports two layouts for deploying resources
 ![Standard layout in GCP](../../../../images/cloud-provider-gcp/gcp-standard.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10164&t=Qb5yyWumzPiTBtfL-0 --->
 
+When a cluster is created, DKP creates the following firewall rules in the cluster VPC:
+
+- `<CLUSTER_PREFIX>-ssh-and-ping`: Allows incoming traffic over the ICMP and TCP (port `22`) protocols to nodes with the `<CLUSTER_PREFIX>` network tag from the CIDRs listed in [`sshAllowList`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (default `0.0.0.0/0`).
+- `<CLUSTER_PREFIX>-intercommunication`: Allows any traffic between nodes with the `<CLUSTER_PREFIX>` network tag, as well as from the pod subnet ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)).
+
+Custom firewall rules are applied to nodes through additional network tags ([`additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags)):
+
+- For master nodes, in the [`masterNodeGroup.instanceClass.additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags) parameter of the [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) resource.
+- For static nodes, in the [`nodeGroups[].instanceClass.additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-nodegroups-instanceclass-additionalnetworktags) parameter of the [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) resource.
+- For ephemeral nodes, in the [`spec.additionalNetworkTags`](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass-v1-spec-additionalnetworktags) parameter of the [GCPInstanceClass](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) resource.
+
 Example layout configuration:
 
 ```yaml
@@ -97,6 +108,17 @@ provider:
 
 ![WithoutNAT layout in GCP](../../../../images/cloud-provider-gcp/gcp-withoutnat.png)
 <!--- Source: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10296&t=Qb5yyWumzPiTBtfL-0 --->
+
+When a cluster is created, DKP creates the following firewall rules in the cluster VPC:
+
+- `<CLUSTER_PREFIX>-ssh-and-ping`: Allows incoming traffic over the ICMP and TCP (port `22`) protocols to nodes with the `<CLUSTER_PREFIX>` network tag from the CIDRs listed in [`sshAllowList`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (default `0.0.0.0/0`).
+- `<CLUSTER_PREFIX>-intercommunication`: Allows any traffic between nodes with the `<CLUSTER_PREFIX>` network tag, as well as from the pod subnet ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)).
+
+Custom firewall rules are applied to nodes through additional network tags ([`additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags)):
+
+- For master nodes, in the [`masterNodeGroup.instanceClass.additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags) parameter of the [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) resource.
+- For static nodes, in the [`nodeGroups[].instanceClass.additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-nodegroups-instanceclass-additionalnetworktags) parameter of the [GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration) resource.
+- For ephemeral nodes, in the [`spec.additionalNetworkTags`](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass-v1-spec-additionalnetworktags) parameter of the [GCPInstanceClass](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) resource.
 
 Example layout configuration:
 
@@ -256,30 +278,6 @@ spec:
     type: pd-standard
     autoDelete: true
 ```
-
-### Configuring node security policies
-
-You may need to restrict or allow incoming and outgoing traffic on GCP virtual machines for various reasons:
-
-- Allowing access to cluster nodes from VMs in other subnets.
-- Allowing access to static node ports for an application.
-- Restricting access to external resources or other VMs in the cloud following the requirements of the security team.
-
-To implement this, use additional [network tags](https://cloud.google.com/vpc/docs/add-remove-network-tags).
-
-### Setting additional network tags for static and master nodes
-
-This parameter can be set during cluster creation or in an existing cluster.
-In both cases, the additional network tags must be specified in GCPClusterConfiguration:
-
-- **For master nodes**: Under the [`additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags) field of the `masterNodeGroup` section.
-- **For static nodes**: Under the [`additionalNetworkTags`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-nodegroups-instanceclass-additionalnetworktags) field of the `nodeGroups` section for the corresponding node group.
-
-The `additionalNetworkTags` field is an array of strings with network tag names.
-
-### Setting additional network tags for ephemeral nodes
-
-Specify the `additionalNetworkTags` parameter in each [GCPInstanceClass](/modules/cloud-provider-gcp/cr.html#gcpinstanceclass) resource in the cluster that requires extra network tags.
 
 ### Adding CloudStatic nodes to the cluster
 

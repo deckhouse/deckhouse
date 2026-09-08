@@ -94,6 +94,13 @@ func SetupWithManager(mgr ctrl.Manager) error {
 	hookServer.Register("/validate-instanceclass-delete", &webhook.Admission{
 		Handler: &InstanceClassDeleteValidator{},
 	})
+	// Validating webhook refusing a reserved NodeExtensionRequest sysext name.
+	hookServer.Register("/validate-deckhouse-io-v1alpha1-nodeextensionrequest", &webhook.Admission{
+		Handler: &NodeExtensionRequestValidator{decoder: decoder},
+	})
+	hookServer.Register("/validate-internal-deckhouse-io-v1alpha1-nodeconfig", &webhook.Admission{
+		Handler: &NodeConfigValidator{decoder: decoder},
+	})
 
 	// Unified conversion webhook (NodeGroup + Instance) with cluster state access.
 	hookServer.Register("/convert", &ConversionHandler{
@@ -710,7 +717,7 @@ func adoptingBashibleNodes(req admission.Request, ng, oldNG *v1.NodeGroup) bool 
 
 // getBashibleNodes returns the group's nodes that bashible has configured: the
 // label bashible sets once and never removes. The checksum annotation is blind
-// here (approval-waiting nodes delete it); olcedar nodes never get the label.
+// here (approval-waiting nodes delete it); Deckhouse Engine nodes never get the label.
 func (w *NodeGroupValidator) getBashibleNodes(ctx context.Context, nodeGroupName string) ([]string, error) {
 	webhookLog.Info("listing Nodes", "filter", "bashible-first-run-finished", "nodeGroup", nodeGroupName)
 	// Unwrapped: the caller says which group it was listing for.

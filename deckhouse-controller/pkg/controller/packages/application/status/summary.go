@@ -36,6 +36,9 @@ import (
 //   - Suspended: a hard dependency was disabled under a running app
 //     (Installed=False/RequirementsUnmet with the runtime conditions Unknown,
 //     which is what distinguishes it from a first-install Pending).
+//   - Deleting:  the runtime accepted the removal and is tearing the
+//     application down; every condition reports Deleting until the resource
+//     disappears.
 const (
 	statePending   = "Pending"
 	stateFailed    = "Failed"
@@ -43,6 +46,7 @@ const (
 	stateReady     = "Ready"
 	stateDegraded  = "Degraded"
 	stateSuspended = "Suspended"
+	stateDeleting  = "Deleting"
 )
 
 // advice is the user-facing Summary for one (phase, canonical reason) pair:
@@ -226,6 +230,14 @@ var summarySuspended = advice{
 	tip:     "Solve the application requirements. After it, the controller will automatically restore all conditions and resume operation.",
 }
 
+// summaryDeleting is the fixed Summary for an application the runtime is tearing
+// down.
+var summaryDeleting = advice{
+	state:   stateDeleting,
+	message: "Application is being deleted",
+	tip:     "No action is required. The resource disappears once its release and files are taken down.",
+}
+
 // summaryReady is the fixed Summary for a healthy application: install or update
 // completed and every primary condition is True. State alone conveys it, so
 // there is no message or tip.
@@ -250,6 +262,12 @@ var summaryUpdating = advice{
 // install-completion check below mirrors mapInstalled's success condition so
 // the freshly-installed run reports ready rather than pending.
 func summarize(state condmap.State) (string, string, string) {
+	// Deleting outranks every other signal: the conditions still describe the last
+	// reconcile, so reading them would report a problem the user cannot act on.
+	if state.IsDeleting() {
+		return summaryDeleting.state, summaryDeleting.message, summaryDeleting.tip
+	}
+
 	// Suspended — dependency disabled under a running app. Shares the mapper's
 	// definition exactly, so the two can never drift apart.
 	if isDependencyDisabled(state) {
