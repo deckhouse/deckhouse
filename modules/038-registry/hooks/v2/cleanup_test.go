@@ -36,6 +36,10 @@ func TestTheCleanupDeletesOnlyWhatHasNoOwnerAndNoReader(t *testing.T) {
 		"the previous implementation's state machine is what the handover left behind")
 
 	spared := map[string]string{
+		"registry-pki": "it is the TLS material the legacy in-cluster proxy serves the pull path " +
+			"with, and at this moment the nodes are still configured for that proxy and the agent " +
+			"is not installed yet; the registry controller removes it once every node reports the " +
+			"agent reconciled and listening",
 		BashibleConfigSecretName: "this implementation writes it: deleting it un-tells every node " +
 			"which registry to use",
 		"deckhouse-registry": "it is the imagePullSecret of this module's own storage and controller, " +

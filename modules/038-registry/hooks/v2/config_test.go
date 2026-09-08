@@ -207,3 +207,64 @@ func TestBuildBootstrapLayoutCarriesMirrors(t *testing.T) {
 	assert.Equal(t, registryv1alpha1.SchemeHTTPS, upstream.Mirrors[0].Scheme,
 		"an unspecified scheme has to default, or the agent builds a URL with none")
 }
+
+// TestBashibleHostsStayReadableByThePreviousRelease is the window between the handover and
+// the node getting this release's bundle.
+//
+// bashible-apiserver is rolled out by its own module during the same release, so for the
+// first minutes the node renders the PREVIOUS bundle against the configuration written
+// here — a bundle with no agent step, which does not skip the step that writes per-registry
+// drop-in directories. Whatever this says is therefore what every pull on the node goes
+// through, and it has to be the upstream, with its credentials and the rewrite from the
+// in-cluster path.
+//
+// Measured on a cluster migrating from the legacy `Direct` mode, before this was true: the
+// in-cluster address was named as its own upstream with no credentials, the step turned it
+// into a 94-byte drop-in, and every pull on every node failed — including the ones the new
+// release needed in order to finish rolling out, so nothing could repair it.
+func TestBashibleHostsStayReadableByThePreviousRelease(t *testing.T) {
+	config := buildRegistryConfig(licensedSettings(t))
+
+	built, err := buildBashibleConfig(config, registryv1alpha1.Auth{}, "", testAddresses)
+	require.NoError(t, err)
+
+	host, found := built.Hosts[registry_const.Host]
+	require.True(t, found, "the in-cluster address is what every image reference names")
+	require.Len(t, host.Mirrors, 1)
+	mirror := host.Mirrors[0]
+
+	assert.Equal(t, "registry.deckhouse.io", mirror.Host,
+		"a node without the agent has to reach the upstream itself")
+	assert.NotEqual(t, registry_const.Host, mirror.Host,
+		"naming the in-cluster address as its own upstream is the failure this covers")
+	assert.Equal(t, "https", mirror.Scheme)
+	assert.Equal(t, registry_const.LicenseUsername, mirror.Auth.Username,
+		"the previous implementation's proxy is gone; the upstream still asks for credentials")
+	assert.Equal(t, "the-license-key", mirror.Auth.Password)
+	require.Len(t, mirror.Rewrites, 1, "the in-cluster path is not the upstream's path")
+	assert.Equal(t, registry_const.PathRegexp, mirror.Rewrites[0].From)
+	assert.Equal(t, "deckhouse/ee", mirror.Rewrites[0].To)
+}
+
+// TestBashibleHostsInAirGapNameTheInClusterAddress is the case where there is nothing
+// truthful to write: no upstream exists, and the cache that stands in for it is not up
+// while a previous bundle could still be rendering.
+//
+// It costs nothing, because a cluster configured this way was installed with this
+// implementation and has no previous bundle to be read by.
+func TestBashibleHostsInAirGapNameTheInClusterAddress(t *testing.T) {
+	config := buildRegistryConfig(decode(t, `{
+		"mode": "Managed",
+		"storage": {"cache": true, "source": {"expectedDigests": 12}}
+	}`))
+	require.Nil(t, config.Primary.Upstream)
+
+	built, err := buildBashibleConfig(config, registryv1alpha1.Auth{}, "", testAddresses)
+	require.NoError(t, err)
+	require.NoError(t, built.Validate(), "the node context still has to validate")
+
+	host := built.Hosts[registry_const.Host]
+	require.Len(t, host.Mirrors, 1)
+	assert.Equal(t, registry_const.Host, host.Mirrors[0].Host)
+	assert.Empty(t, host.Mirrors[0].Rewrites)
+}

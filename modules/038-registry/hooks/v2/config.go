@@ -230,6 +230,18 @@ func resolveAuth(license, username, password string) *ConfigAuth {
 // bashible step that writes per-registry drop-in directories, handing that directory to
 // the agent. Everything else in this structure exists because the node context is
 // shared with the legacy implementation and has to remain valid.
+//
+// "Has to remain valid" is not a formality, and it is not satisfied by being well-formed.
+// A node does not render this configuration with the templates of the release that wrote
+// it: bashible-apiserver is rolled out by its own module during the same release, so for
+// the first minutes after the handover the node renders the PREVIOUS release's bundle
+// against this content. That bundle has no agent step and does not skip the step that
+// writes per-registry directories, so whatever `Hosts` says here is what the node ends up
+// pulling through. Measured on a cluster migrating from the legacy `Direct` mode: a
+// self-referential entry became a 94-byte drop-in naming the in-cluster address as its own
+// upstream with no credentials, every pull on every node failed, and because the pull path
+// is how the new release finishes rolling out, nothing could repair it — the control plane
+// went to ImagePullBackOff behind it.
 func buildBashibleConfig(
 	config RegistryConfig, access registryv1alpha1.Auth, ca string, addresses []string,
 ) (*bashible_model.Config, error) {
@@ -256,14 +268,7 @@ func buildBashibleConfig(
 		// Empty, which is also how the step that installs the legacy node-side proxy
 		// learns to remove itself. The agent replaces it.
 		ProxyEndpoints: []string{},
-		Hosts: map[string]bashible_model.ConfigHosts{
-			registry_const.Host: {
-				Mirrors: []bashible_model.ConfigMirrorHost{{
-					Scheme: registry_const.Scheme,
-					Host:   registry_const.Host,
-				}},
-			},
-		},
+		Hosts:          legacyReadableHosts(config),
 	}
 
 	version, err := registry_pki.ComputeHash(&result)
@@ -273,6 +278,63 @@ func buildBashibleConfig(
 	result.Version = version
 
 	return &result, nil
+}
+
+// legacyReadableHosts describes the pull path for a node that has not got the agent yet.
+//
+// Read by the previous release's bashible step, and by nothing else: once the node renders
+// with this release's bundle, the agent owns the runtime's registry directory and the step
+// that reads this is skipped. So this exists for one window, and in that window it is the
+// only thing the node has.
+//
+// What it must produce is what the legacy implementation produced for the same address —
+// the upstream, its credentials, its authority, and the rewrite from the in-cluster path to
+// the upstream one. The shape is deliberately the same as `DirectModeParams.hostMirrors`,
+// which is what a `Direct` cluster was pulling through right up to the handover.
+//
+// Leaving `Hosts` empty instead is not the safer option it looks like: the legacy step
+// removes directories the configuration no longer names, so an empty map takes the working
+// directory away and fails the same way, one step later.
+//
+// An air-gapped cluster has no upstream to name, and the cache that replaces it is not up
+// while the previous bundle is still rendering. There is nothing truthful to write, so the
+// in-cluster address is named as its own — the state that costs nothing on a cluster that
+// was installed with this implementation, since no legacy step will ever read it.
+func legacyReadableHosts(config RegistryConfig) map[string]bashible_model.ConfigHosts {
+	upstream := config.Primary.Upstream
+	if upstream == nil {
+		return map[string]bashible_model.ConfigHosts{
+			registry_const.Host: {
+				Mirrors: []bashible_model.ConfigMirrorHost{{
+					Scheme: registry_const.Scheme,
+					Host:   registry_const.Host,
+				}},
+			},
+		}
+	}
+
+	mirror := bashible_model.ConfigMirrorHost{
+		Host:   upstream.Host,
+		Scheme: strings.ToLower(upstream.Scheme),
+		CA:     upstream.CA,
+		Rewrites: []bashible_model.ConfigRewrite{{
+			From: registry_const.PathRegexp,
+			To:   strings.TrimLeft(upstream.Path, "/"),
+		}},
+	}
+	// Already resolved by the time it reaches here — a license key has been expanded into the
+	// pair it stands for — so it is copied across rather than resolved again.
+	if auth := upstream.Auth; auth != nil {
+		mirror.Auth = bashible_model.ConfigAuth{
+			Username: auth.Username,
+			Password: auth.Password,
+			Auth:     auth.Auth,
+		}
+	}
+
+	return map[string]bashible_model.ConfigHosts{
+		registry_const.Host: {Mirrors: []bashible_model.ConfigMirrorHost{mirror}},
+	}
 }
 
 // buildBootstrapLayout is the routing a node uses before it has ever reached the API.

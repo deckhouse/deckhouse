@@ -18,8 +18,11 @@ limitations under the License.
 //
 // Most of it needs no hook and gets none: everything that implementation created through Helm stops
 // rendering the moment the handover happens, and Helm removes it on the same release. Measured on a
-// migrated cluster — `registry-state`, `registry-pki`, the node configuration secrets, its Service and
-// its DaemonSet were all already gone, with nothing asked of anyone.
+// migrated cluster — `registry-state`, the node configuration secrets, its Service and its DaemonSet
+// were all already gone, with nothing asked of anyone.
+//
+// The objects still serving the pull path at that moment are the exception, and they are deliberately
+// held back rather than removed on the same release: see the note on `registry-pki` below.
 //
 // What remains is the handful of objects nobody owns in the Helm sense, written straight to the API by
 // the installer and by bashible before any module ran. They have no owner to remove them and no reader
@@ -68,11 +71,19 @@ const (
 	// remove it beyond tidiness.
 	InitSecretName = "registry-init"
 
-	// LegacyPKISecretName and the state secret are Helm-owned and normally leave with the render
-	// that stops declaring them. Deleted here as well because "normally" is doing work in that
-	// sentence: a release that failed midway, or an object somebody annotated to survive, leaves
-	// them behind, and a deletion of something already absent costs nothing.
-	LegacyPKISecretName = "registry-pki"
+	// LegacyStateSecretName's companion, `registry-pki`, is NOT on this list, and that is the
+	// one exclusion here that is about timing rather than ownership.
+	//
+	// It is the TLS material the legacy in-cluster proxy serves with, and that proxy is still
+	// the pull path at this moment: this hook runs at the handover, while the nodes are still
+	// configured for it and the agent that replaces it is not installed yet. Removing it here
+	// took the fallback away exactly when it was still load-bearing — and it did so past the
+	// `helm.sh/resource-policy: keep` the previous release puts on it for this reason, which
+	// made the annotation look effective while it was being overruled from here.
+	//
+	// It is removed by the registry controller instead, which has the one fact this hook does
+	// not: whether every node has the agent reconciled and listening. See
+	// images/registry-controller/src/internal/controller/layout/legacy_cleanup.go.
 
 	cleanupSwitchSnapName = "handover-recorded"
 )
@@ -154,6 +165,5 @@ func legacyLeftovers() []string {
 	return []string{
 		InitSecretName,
 		LegacyStateSecretName,
-		LegacyPKISecretName,
 	}
 }
