@@ -3771,6 +3771,52 @@ alerts:
         Too many UpmeterHookProbe objects in the cluster.
       severity: "9"
       markupFormat: markdown
+    - name: D8UserAuthzReleaseSlow
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/release-duration.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        Applying the `user-authz` Helm release took more than 5 minutes on average over the last 30 minutes. A release that does not finish within the module release timeout (20 minutes) fails, changes to ClusterAuthorizationRule and AuthorizationRule objects stop being applied and platform updates stall (the `D8DeckhouseCouldNotRunModule` alert fires in that case).
+
+        The usual cause is the size of the release: thousands of ClusterAuthorizationRule/AuthorizationRule objects, or many ClusterRoles annotated with `user-authz.deckhouse.io/access-level` bound one by one. Check the number of rules and of the module bindings:
+
+        ```bash
+        d8 k get clusterauthorizationrules --no-headers | wc -l
+        d8 k get authorizationrules -A --no-headers | wc -l
+        d8 k get clusterrolebindings -l heritage=deckhouse,module=user-authz --no-headers | wc -l
+        d8 k get rolebindings -A -l heritage=deckhouse,module=user-authz --no-headers | wc -l
+        ```
+
+        Check the module queue and the Deckhouse log for the release:
+
+        ```bash
+        d8 s queue list
+        d8 k -n d8-system logs deploy/deckhouse | grep '"module":"user-authz"'
+        ```
+      summary: |
+        The user-authz module release takes more than 5 minutes.
+      severity: "5"
+      markupFormat: markdown
+    - name: D8UserAuthzRenderSlow
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/release-duration.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        Rendering the templates of the `user-authz` module took more than 30 seconds on average over the last 30 minutes; normally it takes about a second. Render time grows with the number of objects in the release, so this is an early sign that the release is getting too large and may stop fitting into the module release timeout.
+
+        Check the number of rules and of the module bindings:
+
+        ```bash
+        d8 k get clusterauthorizationrules --no-headers | wc -l
+        d8 k get authorizationrules -A --no-headers | wc -l
+        d8 k get clusterrolebindings -l heritage=deckhouse,module=user-authz --no-headers | wc -l
+        ```
+      summary: |
+        Rendering the user-authz module templates takes more than 30 seconds.
+      severity: "6"
+      markupFormat: markdown
     - name: D8UsingFeatureGateWillBeDeprecated
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
       moduleUrl: 040-control-plane-manager
