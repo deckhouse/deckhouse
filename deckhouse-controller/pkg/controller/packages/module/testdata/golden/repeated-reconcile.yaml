@@ -30,9 +30,11 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModulePackage
 metadata:
   name: test-module
-  resourceVersion: "1"
+  resourceVersion: "2"
   uid: package-uid
-status: {}
+status:
+  usedBy:
+    version: v1.0.1
 ---
 apiVersion: deckhouse.io/v1alpha1
 kind: ModulePackageVersion

@@ -189,7 +189,6 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		assert.True(suite.T(), result.IsZero(), "a settled module must not be requeued")
 
 		require.Len(suite.T(), suite.manager.updated, 1)
-		assert.Equal(suite.T(), testRemote, suite.manager.updated[0].repo)
 		assert.False(suite.T(), suite.manager.updated[0].forced,
 			"a released module changes version through its spec, so nothing has to be forced")
 		assert.Equal(suite.T(), packageruntime.Module{
@@ -199,6 +198,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 			SettingsVersion: 2,
 			Maintenance:     "NoResourceReconciliation",
 			Enabled:         ptr.To(true),
+			Repository:      testRemote,
 		}, suite.manager.updated[0].module)
 
 		assert.True(suite.T(), suite.getVersion(versionName).Status.Used)
@@ -354,7 +354,6 @@ func (suite *ControllerTestSuite) TestReconcile() {
 			"a repush under the same tag moves nothing in the API server")
 
 		require.Len(suite.T(), suite.manager.updated, 1)
-		assert.Equal(suite.T(), testRemote, suite.manager.updated[0].repo)
 		assert.True(suite.T(), suite.manager.updated[0].forced,
 			"change detection sees the same tag either way, so only force carries a repush through")
 		assert.Equal(suite.T(), packageruntime.Module{
@@ -364,6 +363,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 			SettingsVersion: 1,
 			Maintenance:     "NoResourceReconciliation",
 			Enabled:         ptr.To(true),
+			Repository:      testRemote,
 		}, suite.manager.updated[0].module)
 		assert.Equal(suite.T(), []digestCall{{repo: testRemote, name: moduleName, tag: "main"}},
 			suite.manager.digestCalls,
@@ -892,7 +892,6 @@ func newPackageManagerStub(t *testing.T) *packageManagerStub {
 }
 
 type updatedModule struct {
-	repo   registry.Remote
 	module packageruntime.Module
 	forced bool
 }
@@ -908,8 +907,8 @@ type digestCall struct {
 	tag  string
 }
 
-func (s *packageManagerStub) UpdateModule(repo registry.Remote, mod packageruntime.Module, force bool) {
-	s.updated = append(s.updated, updatedModule{repo: repo, module: mod, forced: force})
+func (s *packageManagerStub) UpdateModule(mod packageruntime.Module, force bool) {
+	s.updated = append(s.updated, updatedModule{module: mod, forced: force})
 }
 
 func (s *packageManagerStub) UpdateEmbeddedModule(mod packageruntime.Module) {
@@ -917,6 +916,8 @@ func (s *packageManagerStub) UpdateEmbeddedModule(mod packageruntime.Module) {
 }
 
 func (s *packageManagerStub) UpdateModulesSettings(string, int, addonutils.Values, string, *bool) {}
+
+func (s *packageManagerStub) UpdateGlobalSettings(int, addonutils.Values) {}
 
 func (s *packageManagerStub) GetModuleDigest(_ context.Context, repo registry.Remote, name, tag string) (string, error) {
 	s.digestCalls = append(s.digestCalls, digestCall{repo: repo, name: name, tag: tag})
