@@ -76,39 +76,101 @@ Use our [checklist](/products/kubernetes-platform/guides/production.html) to mak
 <h2 class="cards-blocks__title text_h2">
 Deploying your first application
 </h2>
+<p class="cards-blocks__lead">Your cluster is up and still empty. Below are the ways to get an application into it — from a single command to a full GitOps pipeline. If you just want to see something running, start with the first one.</p>
 <div class="cards-blocks__cards">
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-⟳ <span class="cards-item__title-text">Setting up a CI/CD system</span>
+⌨ <span class="cards-item__title-text">Start here: plain manifests</span>
 </h3>
 <div class="cards-item__text" markdown="1">
-[Create](/modules/user-authz/usage.html#creating-a-serviceaccount-for-a-machine-and-granting-it-access)
-a ServiceAccount to use for deploying to the cluster and grant it all the necessary privileges.
+No extra tooling to install — everything you need is already in `d8`. The `d8 k` command is a built-in `kubectl`: apply your application manifests, and a minute later it is running in the cluster.
 
-You can use the generated `kubeconfig` file in Kubernetes with any deployment system.
+<!-- TODO: link -->
+[Deploy your first application](#TODO)
 </div>
 </div>
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-🔀 <span class="cards-item__title-text">Routing traffic</span>
+🧩 <span class="cards-item__title-text">An application from the Marketplace</span>
 </h3>
 <div class="cards-item__text" markdown="1">
-Create a `Service` and `Ingress` for your application.
+Pick a ready-made application from the catalog and install it into your namespace — no hunting for charts and figuring out their values. Your cluster administrator fills the catalog; the Marketplace is available from DKP 1.76.
 
-[Learn more](/modules/ingress-nginx/) about the capabilities of the `ingress-nginx` module.
+<!-- TODO: link -->
+[More about the Marketplace](/products/kubernetes-platform/documentation/latest/admin/configuration/marketplace/)
 </div>
 </div>
 
 <div class="cards-item cards-item_inverse">
 <h3 class="cards-item__title text_h3">
-🔍 <span class="cards-item__title-text">Monitoring your application</span>
+🗄 <span class="cards-item__title-text">Managed services</span>
 </h3>
 <div class="cards-item__text" markdown="1">
-Add `prometheus.deckhouse.io/custom-target: "my-app"` and `prometheus.deckhouse.io/port: "80"` annotations to the Service created.
+Bring up PostgreSQL, Kafka, ClickHouse, RabbitMQ, OpenSearch, or another service with Deckhouse modules — scaling, backups, and upgrades are the platform's job.
 
-For more information, see the `monitoring-custom` module's [documentation](/modules/monitoring-custom/).
+<!-- TODO: link -->
+[More about managed services](/products/kubernetes-platform/features/managed-services/)
+</div>
+</div>
+
+<div class="cards-item cards-item_inverse">
+<h3 class="cards-item__title text_h3">
+🚢 <span class="cards-item__title-text">Building and shipping your own application</span>
+</h3>
+<div class="cards-item__text" markdown="1">
+Build your images, push them to the registry, and deploy the application to the cluster — with one tool, `d8 delivery-kit`, instead of three.
+
+<!-- TODO: link -->
+[More about Delivery Kit](/products/delivery-kit/)
+</div>
+</div>
+
+<div class="cards-item cards-item_inverse">
+<h3 class="cards-item__title text_h3">
+🔁 <span class="cards-item__title-text">GitOps: deploy with Argo CD</span>
+</h3>
+<div class="cards-item__text" markdown="1">
+Keep your application manifests in Git — Argo CD brings the cluster in line with what they describe. Argo CD itself is deployed and maintained by the platform, so you never install it by hand.
+
+<!-- TODO: link -->
+[More about the operator-argo module](/products/kubernetes-platform/documentation/latest/admin/configuration/delivery/argocd/)
+</div>
+</div>
+
+<div class="cards-item cards-item_inverse">
+<h3 class="cards-item__title text_h3">
+⎈ <span class="cards-item__title-text">Helm charts without <code>helm install</code></span>
+</h3>
+<div class="cards-item__text" markdown="1">
+Add a Helm or OCI repository, pick a chart and a version — the platform installs the release and maintains it.
+
+<!-- TODO: link -->
+[More about the operator-helm module](/modules/operator-helm/stable/)
+</div>
+</div>
+
+<div class="cards-item cards-item_inverse">
+<h3 class="cards-item__title text_h3">
+⟳ <span class="cards-item__title-text">Integration with your existing CI/CD system</span>
+</h3>
+<div class="cards-item__text" markdown="1">
+Create a ServiceAccount with deploy permissions for the cluster — you get a `kubeconfig` that suits any delivery system for Kubernetes.
+
+[More about service access to the cluster](/modules/user-authz/usage.html#creating-a-serviceaccount-for-a-machine-and-granting-it-access)
+</div>
+</div>
+
+<div class="cards-item cards-item_inverse">
+<h3 class="cards-item__title text_h3">
+🖥 <span class="cards-item__title-text">Legacy applications in a virtual machine</span>
+</h3>
+<div class="cards-item__text" markdown="1">
+Can't containerize an application? Run it as a virtual machine in this same cluster: the same API, the same permissions, the same practices as for containers.
+
+<!-- TODO: link -->
+[More about Deckhouse Virtualization Platform](/products/virtualization-platform/documentation/)
 </div>
 </div>
 
