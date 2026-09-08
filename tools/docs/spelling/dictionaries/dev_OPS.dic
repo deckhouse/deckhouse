@@ -1,4 +1,4 @@
-2838
+2840
 1GB
 2GB
 5XX
@@ -483,6 +483,7 @@ MVCC
 MYACCESSKEY
 MachineClass
 MachineClasses
+MachineConfig
 MachineControllerManager
 MachineDeployment
 MachineSet
@@ -826,6 +827,7 @@ TMPDIR
 TODO
 TOTP
 TaintToleration
+Talos
 TargetGroup
 Taskfile
 Terraform
