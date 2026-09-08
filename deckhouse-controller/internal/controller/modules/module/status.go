@@ -77,6 +77,10 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha2.Module) {
 		return
 	}
 
+	if module.Status.Summary == nil {
+		module.Status.Summary = &v1alpha2.ModuleStatusSummary{}
+	}
+
 	if r.moduleManager.IsModuleEnabled(module.Name) {
 		module.SetConditionTrue(status.ConditionEnabled)
 
