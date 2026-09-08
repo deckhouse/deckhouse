@@ -30,3 +30,26 @@ Fixes CVE-2025-30204 CVE-2025-22868 CVE-2024-28180
 ### 006-return-200-on-success-and-header-on-fail.patch
 
 Oauth2-proxy returns 200 (instead of 202) when the request is authenticated and adds "X-Auth-Request-Result" header on fail.
+
+
+### 999-fuzz-handlers.patch
+
+Go native fuzz tests for oauth2-proxy user-input surfaces. Applied last.
+
+Targets:
+
+- HTTP mux via `ServeHTTP`: `/`, `/robots.txt`, `/oauth2/sign_in`,
+  `/oauth2/sign_out`, `/oauth2/start`, `/oauth2/callback`, `/oauth2/auth`,
+  `/oauth2/userinfo`, cookies, `Authorization`, `X-Forwarded-*`
+- `ManualSignIn`, `LoadCookiedSession`, `redeemCode`
+- Deckhouse cookie-refresh JSON ticket parser (`decodeTicket`,
+  `decodeTicketFromRequest`)
+- JWT bearer/basic session loader
+
+`*_test.go` is not compiled into the image. Run from a patched source tree:
+
+```
+go test -run=^$ -fuzz=FuzzServeHTTP -fuzztime=12h .
+go test -run=^$ -fuzz=FuzzDecodeTicket$ -fuzztime=12h ./pkg/sessions/persistence
+go test -run=^$ -fuzz=FuzzJwtSessionLoader$ -fuzztime=12h ./pkg/middleware
+```
