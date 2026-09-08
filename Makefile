@@ -369,14 +369,14 @@ lint-doc-spellcheck-pr:
 .PHONY: docs-spellcheck-generate-dictionary
 docs-spellcheck-generate-dictionary: ## Generate a dictionary (run it after adding new words to the tools/docs/spelling/wordlist file).
 	@echo "Sorting wordlist..."
-	@sort ./tools/docs/spelling/wordlist -o ./tools/docs/spelling/wordlist
+	@LC_ALL=C sort ./tools/docs/spelling/wordlist -o ./tools/docs/spelling/wordlist
 	@echo "Validating wordlist..."
 	@./tools/docs/spelling/validate_wordlist.sh
 	@echo "Generating dictionary..."
 	@test -f ./tools/docs/spelling/dictionaries/dev_OPS.dic && rm ./tools/docs/spelling/dictionaries/dev_OPS.dic
 	@touch ./tools/docs/spelling/dictionaries/dev_OPS.dic
 	@cat ./tools/docs/spelling/wordlist | wc -l | sed 's/^[ \t]*//g' > ./tools/docs/spelling/dictionaries/dev_OPS.dic
-	@sort ./tools/docs/spelling/wordlist >> ./tools/docs/spelling/dictionaries/dev_OPS.dic
+	@LC_ALL=C sort ./tools/docs/spelling/wordlist >> ./tools/docs/spelling/dictionaries/dev_OPS.dic
 	@echo "Don't forget to commit changes and push it!"
 	@git diff --stat
 
