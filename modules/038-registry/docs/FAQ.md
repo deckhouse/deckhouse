@@ -26,18 +26,37 @@ that the previous implementation has let go of the pull path. Both configure the
 every node, which registry the container runtime asks and with which credentials, so running
 both would not merge those answers but race them.
 
-Step 1 belongs BEFORE the upgrade to the release that carries the current implementation. That
-release renders none of the previous implementation's objects, so a cluster that arrives in
-`Direct`, `Proxy` or `Local` has already lost them, and step 1 is no longer available to it: the
-mode switching it asks for is performed by the very code that is gone. Such a cluster is recovered
-by returning to the previous release, completing step 1 there, and upgrading again. An air-gapped
-`Local` cluster cannot complete step 1 as written, because it has no upstream to be `Unmanaged`
-against; it has a procedure of its own — see
-[how do I migrate an air-gapped Local cluster](#how-do-i-migrate-an-air-gapped-local-cluster).
+What "let go" means depends on which mode the cluster is in, and one mode does not have to pass
+through `Unmanaged` at all:
 
-1. Bring the registry configuration in the `deckhouse` ModuleConfig to `Unmanaged`. If that
-   cluster is in `Direct`, `Proxy` or `Local`, follow
-   [the mode switching examples](examples.html#examples-for-the-previous-implementation).
+| mode of the previous implementation | what makes the handover possible | when |
+|---|---|---|
+| `Unmanaged` | nothing — it is already off the pull path | — |
+| `Direct` | this module's own configuration: `mode: Managed` with `primary.upstream` | before or after the upgrade |
+| `Proxy` | `registry.mode: Unmanaged` in the `deckhouse` ModuleConfig | **before** the upgrade |
+| `Local` | [a procedure of its own](#how-do-i-migrate-an-air-gapped-local-cluster) | **before** the upgrade |
+
+"Before the upgrade" is not a recommendation. The release that carries the current implementation
+renders none of the previous implementation's objects, so a cluster that arrives in `Proxy` or
+`Local` has already lost them, and the mode switching it needs is performed by the very code that
+is gone. Such a cluster is recovered by returning to the previous release, switching there, and
+upgrading again.
+
+`Direct` is the exception, and it is the reason the settings of the current implementation are
+accepted one release early: written before the upgrade they sit unused, and are picked up on the
+other side. Such a cluster pulls through an in-cluster address, and that address is handed over
+directly rather than abandoned — see [from `Direct`](#from-direct).
+
+Whichever path applies, the cluster records which implementation it is running, and a release may
+require it. The check ships from this release on; the release that declares the requirement is the
+one that refuses to install until the handover is possible, and it says so naming both levers.
+
+### From `Unmanaged`
+
+Nothing to switch: the previous implementation manages nothing in this mode. A cluster in another
+mode that is taking this path rather than the one for its own mode brings the registry
+configuration in the `deckhouse` ModuleConfig to `Unmanaged` first — see
+[the mode switching examples](examples.html#examples-for-the-previous-implementation).
 
 1. Wait for that transition to settle — `mode: Unmanaged` with no pending target mode:
 
@@ -53,6 +72,91 @@ against; it has a procedure of its own — see
    with the registry to pull from. A ready-made configuration for your cluster is published in
    the `registry-suggested-config` secret — see
    [enabling the module](examples.html#enabling-the-module).
+
+### From `Direct`
+
+`Direct` is the mode whose nodes pull through an address inside the cluster, served by the previous
+implementation's proxy. That is exactly what the current implementation serves too, so here the
+address changes hands instead of being abandoned — which is why this mode needs no trip through
+`Unmanaged`, and no component restart on the way.
+
+1. Write this module's configuration BEFORE the upgrade, from what the cluster already pulls
+   through. The `deckhouse` ModuleConfig has it under `registry.direct`: `imagesRepo` splits into
+   `host` and `path`, and the credentials are the same `license` (or `username`/`password`), with
+   `ca` if the registry needs one:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: registry
+   spec:
+     enabled: true
+     version: 1
+     settings:
+       mode: Managed
+       primary:
+         upstream:
+           scheme: HTTPS
+           host: registry.deckhouse.io
+           path: /deckhouse/ee
+           auth:
+             license: <LICENSE_KEY>
+   ```
+
+   The previous release accepts these settings and acts on none of them, so nothing changes in the
+   cluster until the upgrade. Writing them afterwards works too, but leaves a window in which the
+   in-cluster address has nothing serving it, so before is better.
+
+1. Upgrade. The handover happens on the module's next reconciliation, and the pull path is
+   continuous across it: the previous implementation's Service and proxy keep serving the address
+   until the node agent has taken it over on every node, and only then does the controller remove
+   them.
+
+1. Watch it as it goes. Measured on a `Direct` cluster walked end to end: the handover was recorded
+   about two minutes after the new version started, the node agent appeared on the nodes about seven
+   minutes later, and the objects of the previous implementation were removed a minute after that —
+   with pulls working at every point in between.
+
+   ```bash
+   d8 k -n d8-system get secret registry-v2-switch >/dev/null 2>&1 && echo "handed over"
+   d8 k get registrynode -o custom-columns='NODE:.metadata.name,READY:.status.reconciled,SERVING:.status.proxyListening'
+   ```
+
+1. If the configuration is missing when the new version arrives, the handover does not happen and
+   the module says why on every reconciliation: `this module has no configuration of its own; write
+   'mode: Managed' with 'primary.upstream' in the registry ModuleConfig`. Write it then — the
+   cluster keeps pulling through the address the previous implementation still serves, and the
+   handover follows.
+
+### From `Proxy`
+
+`Proxy` keeps a proxy of its own on every node, with certificate material of its own, and the
+current implementation cannot account for that state. So this mode goes through `Unmanaged`, and it
+can: unlike an air-gapped `Local` cluster, a `Proxy` cluster has an upstream to be `Unmanaged`
+against — the one its proxies were caching from.
+
+1. Bring `registry.mode` to `Unmanaged` in the `deckhouse` ModuleConfig, keeping the same registry
+   address and credentials — see
+   [the mode switching examples](examples.html#examples-for-the-previous-implementation). Every node
+   is reconfigured to pull straight from the upstream, so the cluster loses the caching `Proxy`
+   provided for the duration.
+
+1. Wait for the transition to settle — `mode: Unmanaged` with no pending target mode. The gate
+   refuses a cluster caught mid-transition, and says which mode it is heading to:
+
+   ```bash
+   d8 k -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
+   ```
+
+1. Upgrade. The handover happens on the next reconciliation and changes no behaviour: `Unmanaged`
+   means the current implementation manages nothing either.
+
+1. To get the in-cluster caching back, set `mode: Managed` with `storage.cache: true` and the same
+   upstream. The shape differs from `Proxy` — one store with replicas on the master nodes, and an
+   agent in front of every pull rather than a proxy per node — so read
+   [how the cache is filled and reclaimed](#the-cache-keeps-growing-what-reclaims-it) before
+   enabling it on a cluster with a tight control-plane disk.
 
 ## How do I migrate an air-gapped `Local` cluster?
 
