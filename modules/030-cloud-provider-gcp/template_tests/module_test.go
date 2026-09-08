@@ -321,6 +321,8 @@ var _ = Describe("Module :: cloud-provider-gcp :: helm template ::", func() {
 
 			Expect(pdCSICSIDriver.Exists()).To(BeTrue())
 			Expect(pdCSISS.Exists()).To(BeTrue())
+			Expect(pdCSISS.Field("spec.template.spec.containers.0.args").String()).ToNot(ContainSubstring("--enable-capacity"))
+			Expect(pdCSISS.Field("spec.template.spec.containers.0.args").String()).ToNot(ContainSubstring("--capacity-ownerref-level=2"))
 			Expect(pdCSISS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
 			Expect(pdCSIDS.Exists()).To(BeTrue())
 			Expect(pdCSIDS.Field("spec.template.spec.dnsPolicy").String()).To(Equal("ClusterFirstWithHostNet"))
