@@ -359,33 +359,20 @@ spec:
           defaultMode: 420
           secretName: capm3-webhook-service-cert
 ---
-apiVersion: cert-manager.io/v1
-kind: Certificate
+apiVersion: v1
+kind: Secret
 metadata:
-  name: capm3-serving-cert
+  name: capm3-webhook-service-cert
   namespace: d8-cloud-provider-metal3
-spec:
-  dnsNames:
-  - capm3-webhook-service.d8-cloud-provider-metal3.svc
-  - capm3-webhook-service.d8-cloud-provider-metal3.svc.cluster.local
-  issuerRef:
-    kind: Issuer
-    name: capm3-selfsigned-issuer
-  secretName: capm3-webhook-service-cert
----
-apiVersion: cert-manager.io/v1
-kind: Issuer
-metadata:
-  name: capm3-selfsigned-issuer
-  namespace: d8-cloud-provider-metal3
-spec:
-  selfSigned: {}
+type: kubernetes.io/tls
+data:
+  tls.crt: {{ .Values.cloudProviderMetal3.internal.capm3WebhookCert.crt | b64enc | quote }}
+  tls.key: {{ .Values.cloudProviderMetal3.internal.capm3WebhookCert.key | b64enc | quote }}
+  ca.crt: {{ .Values.cloudProviderMetal3.internal.capm3WebhookCert.ca | b64enc | quote }}
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
-  annotations:
-    cert-manager.io/inject-ca-from: d8-cloud-provider-metal3/capm3-serving-cert
   name: capm3-mutating-webhook-configuration
 webhooks:
 - admissionReviewVersions:
@@ -396,6 +383,7 @@ webhooks:
       name: capm3-webhook-service
       namespace: d8-cloud-provider-metal3
       path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-metal3cluster
+    caBundle: {{ .Values.cloudProviderMetal3.internal.capm3WebhookCert.ca | b64enc | quote }}
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: default.metal3cluster.infrastructure.cluster.x-k8s.io
@@ -418,6 +406,7 @@ webhooks:
       name: capm3-webhook-service
       namespace: d8-cloud-provider-metal3
       path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-metal3clustertemplate
+    caBundle: {{ .Values.cloudProviderMetal3.internal.capm3WebhookCert.ca | b64enc | quote }}
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: default.metal3clustertemplate.infrastructure.cluster.x-k8s.io
@@ -440,6 +429,7 @@ webhooks:
       name: capm3-webhook-service
       namespace: d8-cloud-provider-metal3
       path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-metal3data
+    caBundle: {{ .Values.cloudProviderMetal3.internal.capm3WebhookCert.ca | b64enc | quote }}
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: default.metal3data.infrastructure.cluster.x-k8s.io
@@ -462,6 +452,7 @@ webhooks:
       name: capm3-webhook-service
       namespace: d8-cloud-provider-metal3
       path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-metal3dataclaim
+    caBundle: {{ .Values.cloudProviderMetal3.internal.capm3WebhookCert.ca | b64enc | quote }}
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: default.metal3dataclaim.infrastructure.cluster.x-k8s.io
@@ -484,6 +475,7 @@ webhooks:
       name: capm3-webhook-service
       namespace: d8-cloud-provider-metal3
       path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-metal3datatemplate
+    caBundle: {{ .Values.cloudProviderMetal3.internal.capm3WebhookCert.ca | b64enc | quote }}
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: default.metal3datatemplate.infrastructure.cluster.x-k8s.io
@@ -506,6 +498,7 @@ webhooks:
       name: capm3-webhook-service
       namespace: d8-cloud-provider-metal3
       path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-metal3machine
+    caBundle: {{ .Values.cloudProviderMetal3.internal.capm3WebhookCert.ca | b64enc | quote }}
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: default.metal3machine.infrastructure.cluster.x-k8s.io
@@ -528,6 +521,7 @@ webhooks:
       name: capm3-webhook-service
       namespace: d8-cloud-provider-metal3
       path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-metal3machinetemplate
+    caBundle: {{ .Values.cloudProviderMetal3.internal.capm3WebhookCert.ca | b64enc | quote }}
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: default.metal3machinetemplate.infrastructure.cluster.x-k8s.io
@@ -550,6 +544,7 @@ webhooks:
       name: capm3-webhook-service
       namespace: d8-cloud-provider-metal3
       path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-metal3remediation
+    caBundle: {{ .Values.cloudProviderMetal3.internal.capm3WebhookCert.ca | b64enc | quote }}
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: default.metal3remediation.infrastructure.cluster.x-k8s.io
@@ -572,6 +567,7 @@ webhooks:
       name: capm3-webhook-service
       namespace: d8-cloud-provider-metal3
       path: /mutate-infrastructure-cluster-x-k8s-io-v1beta1-metal3remediationtemplate
+    caBundle: {{ .Values.cloudProviderMetal3.internal.capm3WebhookCert.ca | b64enc | quote }}
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: default.metal3remediationtemplate.infrastructure.cluster.x-k8s.io
@@ -590,8 +586,6 @@ webhooks:
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration
 metadata:
-  annotations:
-    cert-manager.io/inject-ca-from: d8-cloud-provider-metal3/capm3-serving-cert
   name: capm3-validating-webhook-configuration
 webhooks:
 - admissionReviewVersions:
@@ -602,6 +596,7 @@ webhooks:
       name: capm3-webhook-service
       namespace: d8-cloud-provider-metal3
       path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-metal3cluster
+    caBundle: {{ .Values.cloudProviderMetal3.internal.capm3WebhookCert.ca | b64enc | quote }}
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: validation.metal3cluster.infrastructure.cluster.x-k8s.io
@@ -624,6 +619,7 @@ webhooks:
       name: capm3-webhook-service
       namespace: d8-cloud-provider-metal3
       path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-metal3clustertemplate
+    caBundle: {{ .Values.cloudProviderMetal3.internal.capm3WebhookCert.ca | b64enc | quote }}
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: validation.metal3clustertemplate.infrastructure.cluster.x-k8s.io
@@ -646,6 +642,7 @@ webhooks:
       name: capm3-webhook-service
       namespace: d8-cloud-provider-metal3
       path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-metal3data
+    caBundle: {{ .Values.cloudProviderMetal3.internal.capm3WebhookCert.ca | b64enc | quote }}
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: validation.metal3data.infrastructure.cluster.x-k8s.io
@@ -668,6 +665,7 @@ webhooks:
       name: capm3-webhook-service
       namespace: d8-cloud-provider-metal3
       path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-metal3dataclaim
+    caBundle: {{ .Values.cloudProviderMetal3.internal.capm3WebhookCert.ca | b64enc | quote }}
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: validation.metal3dataclaim.infrastructure.cluster.x-k8s.io
@@ -690,6 +688,7 @@ webhooks:
       name: capm3-webhook-service
       namespace: d8-cloud-provider-metal3
       path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-metal3datatemplate
+    caBundle: {{ .Values.cloudProviderMetal3.internal.capm3WebhookCert.ca | b64enc | quote }}
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: validation.metal3datatemplate.infrastructure.cluster.x-k8s.io
@@ -712,6 +711,7 @@ webhooks:
       name: capm3-webhook-service
       namespace: d8-cloud-provider-metal3
       path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-metal3machine
+    caBundle: {{ .Values.cloudProviderMetal3.internal.capm3WebhookCert.ca | b64enc | quote }}
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: validation.metal3machine.infrastructure.cluster.x-k8s.io
@@ -734,6 +734,7 @@ webhooks:
       name: capm3-webhook-service
       namespace: d8-cloud-provider-metal3
       path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-metal3machinetemplate
+    caBundle: {{ .Values.cloudProviderMetal3.internal.capm3WebhookCert.ca | b64enc | quote }}
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: validation.metal3machinetemplate.infrastructure.cluster.x-k8s.io
@@ -756,6 +757,7 @@ webhooks:
       name: capm3-webhook-service
       namespace: d8-cloud-provider-metal3
       path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-metal3remediation
+    caBundle: {{ .Values.cloudProviderMetal3.internal.capm3WebhookCert.ca | b64enc | quote }}
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: validation.metal3remediation.infrastructure.cluster.x-k8s.io
@@ -778,6 +780,7 @@ webhooks:
       name: capm3-webhook-service
       namespace: d8-cloud-provider-metal3
       path: /validate-infrastructure-cluster-x-k8s-io-v1beta1-metal3remediationtemplate
+    caBundle: {{ .Values.cloudProviderMetal3.internal.capm3WebhookCert.ca | b64enc | quote }}
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: validation.metal3remediationtemplate.infrastructure.cluster.x-k8s.io

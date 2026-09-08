@@ -203,6 +203,48 @@ properties:
     default: {}
     additionalProperties: false
     properties:
+      baremetalOperatorWebhookCert:
+        type: object
+        default: {}
+        x-required-for-helm:
+        - crt
+        - key
+        - ca
+        properties:
+          crt:
+            type: string
+          key:
+            type: string
+          ca:
+            type: string
+      ironicStandaloneOperatorWebhookCert:
+        type: object
+        default: {}
+        x-required-for-helm:
+        - crt
+        - key
+        - ca
+        properties:
+          crt:
+            type: string
+          key:
+            type: string
+          ca:
+            type: string
+      capm3WebhookCert:
+        type: object
+        default: {}
+        x-required-for-helm:
+        - crt
+        - key
+        - ca
+        properties:
+          crt:
+            type: string
+          key:
+            type: string
+          ca:
+            type: string
       ramdiskImage:
         type: object
         additionalProperties: false
