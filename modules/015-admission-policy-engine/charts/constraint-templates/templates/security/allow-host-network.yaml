@@ -74,6 +74,7 @@ spec:
               import data.lib.exception.allowed_values_or_empty
               import data.lib.exception.path_value_resolved
               import data.lib.exception.resolve_spe_from_labels
+              import data.lib.common.review_kind
 
               violation contains {"msg": msg, "details": {}} if {
                 not input.review.operation == "DELETE"
@@ -91,7 +92,7 @@ spec:
                 effective_ranges := port_ranges(spe_ports_applied)
                 range_result := check_ports_with_protocol_in_ranges(ports, "hostPorts", effective_ranges, spe_ports)
                 failed := failed_result(bool_result, range_result)
-                msg := violation_message("The hostNetwork or hostPort are not allowed", sprintf("pod: %v", [obj.metadata.name]), failed.detail)
+                msg := violation_message("The hostNetwork or hostPort are not allowed", sprintf("%v: %v", [review_kind, obj.metadata.name]), failed.detail)
               }
 
               host_network_result(obj, allow_host_network, spe) := result if {

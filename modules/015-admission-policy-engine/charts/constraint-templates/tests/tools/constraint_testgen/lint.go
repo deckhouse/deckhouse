@@ -44,8 +44,12 @@ type lintFinding struct {
 //
 //	object.get(container, "imagePullPolicy", "IfNotPresent")
 //	object.get(obj, "priorityClassName", "system-cluster-critical")
+//
+// The first argument allows one level of nesting: `[^,]+` alone stopped at the
+// first comma, so `object.get(object.get(input.review, "object", {}), "kind",
+// "")` — exactly the shape this rule exists for — went uninspected.
 var objectGetEmptyDefaultRe = regexp.MustCompile(
-	`object\.get\(\s*[^,]+,\s*"[^"]+"\s*,\s*""\s*\)`,
+	`object\.get\(\s*(?:[^,()]|object\.get\([^()]*\))+,\s*"[^"]+"\s*,\s*""\s*\)`,
 )
 
 // listContainsEmptyRe matches list_contains(..., "") — checking for an empty
@@ -58,7 +62,7 @@ var listContainsEmptyRe = regexp.MustCompile(
 
 // notHasFieldThenGetRe matches patterns where a field is accessed with
 // object.get and then checked with `not` without a has_field guard — the
-// C2/C3 class of bug.  This is intentionally conservative: it only flags
+// same class of bug.  This is intentionally conservative: it only flags
 // `not <something with object.get(..., "")>` on the same line.
 var notObjectGetEmptyRe = regexp.MustCompile(
 	`not\s+.*object\.get\([^,]+,\s*"[^"]+"\s*,\s*""\s*\)`,
@@ -99,7 +103,7 @@ func runLint(templatesRoot string) error {
 	if err != nil {
 		return err
 	}
-	// T9: Also scan for fail-open on unknown kind in common.rego.
+	// Also scan for fail-open on unknown kind in common.rego.
 	failOpenFindings, ferr := lintFailOpen(templatesRoot)
 	if ferr != nil {
 		return ferr
@@ -164,7 +168,8 @@ func lintContent(file, content string) []lintFinding {
 		}
 
 		// Rule: object-get-empty-default
-		// Catches: C2 (priority-class), C3 (image-pull-policy)
+		// Both priority-class and image-pull-policy shipped this bug: an absent
+		// field became "" and then failed an equality or membership check.
 		// Pattern: object.get(x, "field", "") used in a violation-trigger context.
 		if loc := objectGetEmptyDefaultRe.FindStringIndex(line); loc != nil {
 			// The empty default is fine when the very next line rejects "" — the
@@ -185,29 +190,29 @@ func lintContent(file, content string) []lintFinding {
 				File:    file,
 				Line:    lineNum,
 				Rule:    "object-get-empty-default",
-				Message: "object.get(..., \"\") turns an absent field into a concrete empty string — use has_field() guard or a non-empty default to avoid false-positive violations (see PR #21556 review C2/C3)",
+				Message: "object.get(..., \"\") turns an absent field into a concrete empty string — use has_field() guard or a non-empty default to avoid false-positive violations",
 			})
 		}
 
 		// Rule: list-contains-empty
-		// Catches: C2 (priority-class) — list_contains(["foo"], "") is the direct trigger
+		// The direct trigger of the priority-class bug: list_contains(["foo"], "").
 		if loc := listContainsEmptyRe.FindStringIndex(line); loc != nil && !isRuleAllowedAt(lines, i, "list-contains-empty") {
 			findings = append(findings, lintFinding{
 				File:    file,
 				Line:    lineNum,
 				Rule:    "list-contains-empty",
-				Message: "list_contains(..., \"\") is undefined in OPA, so `not list_contains(..., \"\")` is always true — guard with has_field() before the membership check (see PR #21556 review C2)",
+				Message: "list_contains(..., \"\") is undefined in OPA, so `not list_contains(..., \"\")` is always true — guard with has_field() before the membership check",
 			})
 		}
 
 		// Rule: not-object-get-empty
-		// Catches: C2, C3 — the `not` + object.get(..., "") combination
+		// The `not` + object.get(..., "") combination behind the same two bugs.
 		if loc := notObjectGetEmptyRe.FindStringIndex(line); loc != nil && !isRuleAllowedAt(lines, i, "not-object-get-empty") {
 			findings = append(findings, lintFinding{
 				File:    file,
 				Line:    lineNum,
 				Rule:    "not-object-get-empty",
-				Message: "`not` with object.get(..., \"\") silently inverts to true when the field is absent — add a has_field() guard (see PR #21556 review C2/C3)",
+				Message: "`not` with object.get(..., \"\") silently inverts to true when the field is absent — add a has_field() guard",
 			})
 		}
 	}
@@ -215,15 +220,18 @@ func lintContent(file, content string) []lintFinding {
 	return findings
 }
 
-// workloadKindAllowListRe matches the hardcoded workload_kind allow-list in
-// common.rego. When an unknown/absent kind yields an empty pod spec, all
-// container-level checks silently pass (fail-open). For a security module this
-// is dangerous. (PR #21556 review M1)
-var workloadKindAllowListRe = regexp.MustCompile(`workload_kind`)
-
-// emptyPodSpecRe matches patterns where pod_spec is set to {} for unknown
-// kinds, causing input_containers to be empty and checks to silently pass.
-var emptyPodSpecRe = regexp.MustCompile(`pod_spec\s*:=\s*\{\}`)
+// emptyPodSpecRe matches a pod-spec resolution that ends in a bare `{}`. When an
+// unknown or absent kind yields an empty pod spec, input_containers is empty and
+// every container-level check silently passes. For a security module an
+// unrecognised input must not mean "allowed".
+//
+// The pattern deliberately covers both spellings, because the guard is only
+// worth having if it still fires after the code is rewritten: a direct
+// assignment (`pod_spec := {}`) and a terminal `else := {}` on either pod_spec
+// rule. An earlier version of this rule also required the identifier
+// `workload_kind` on a preceding line; that helper was replaced by
+// `pod_template_paths`, which left the rule unable to fire at all.
+var emptyPodSpecRe = regexp.MustCompile(`pod_spec(_of\([^)]*\))?\s*:=\s*\{\}|^\s*\}\s*else\s*:=\s*\{\}`)
 
 // lintFailOpen scans common.rego for the fail-open-on-unknown-kind pattern.
 func lintFailOpen(templatesRoot string) ([]lintFinding, error) {
@@ -250,17 +258,16 @@ func lintFailOpen(templatesRoot string) ([]lintFinding, error) {
 		}
 		content := string(data)
 		lines := strings.Split(content, "\n")
-		hasWorkloadKind := false
 		for i, line := range lines {
-			if workloadKindAllowListRe.MatchString(line) {
-				hasWorkloadKind = true
+			if strings.HasPrefix(strings.TrimSpace(line), "#") {
+				continue
 			}
-			if hasWorkloadKind && emptyPodSpecRe.MatchString(line) {
+			if emptyPodSpecRe.MatchString(line) {
 				findings = append(findings, lintFinding{
 					File:    p,
 					Line:    i + 1,
 					Rule:    "fail-open-unknown-kind",
-					Message: "pod_spec defaults to {} for unknown kind — container-level checks silently pass (fail-open). For a security module an unrecognised input should not mean 'allowed'. Consider falling back to object.get(obj, \"spec\", {}) or emitting an explicit violation on unknown kind (see PR #21556 review M1)",
+					Message: "pod_spec defaults to {} for unknown kind — container-level checks silently pass (fail-open). For a security module an unrecognised input should not mean 'allowed'. Consider falling back to object.get(obj, \"spec\", {}) or emitting an explicit violation on unknown kind",
 				})
 			}
 		}

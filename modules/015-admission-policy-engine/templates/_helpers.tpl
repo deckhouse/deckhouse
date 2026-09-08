@@ -1,6 +1,6 @@
 {{/*
   constraint_selector renders the namespace/label selectors from the CR's match section.
-  NOTE on labelSelector semantics (PR #21556 review M3):
+  NOTE on labelSelector semantics:
   Gatekeeper's match.labelSelector evaluates against the reviewed object's own
   metadata.labels. For Pods this is the pod's labels. For controllers (Deployment,
   StatefulSet, etc.) this is the controller's TOP-LEVEL metadata.labels, NOT the

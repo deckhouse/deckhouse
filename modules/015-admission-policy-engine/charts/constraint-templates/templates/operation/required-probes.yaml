@@ -37,6 +37,7 @@ spec:
               package d8.operation_policies
 
               import data.lib.common.pod_spec
+              import data.lib.common.review_kind
 
               # Probes (livenessProbe, readinessProbe, startupProbe) are only valid
               # on regular containers. Kubernetes rejects probes on initContainers
@@ -56,5 +57,5 @@ spec:
               }
 
               get_violation_message(container, review, probe) := msg if {
-                msg := sprintf("Container <%v> in your <%v> <%v> has no <%v>", [container.name, review.kind.kind, review.object.metadata.name, probe])
+                msg := sprintf("Container <%v> in your <%v> <%v> has no <%v>", [container.name, review_kind, review.object.metadata.name, probe])
               }

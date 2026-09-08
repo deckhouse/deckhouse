@@ -80,7 +80,18 @@ spec:
                   # absent from parameters — and an undefined argument makes the whole
                   # check_allowlist_denylist call undefined, silently skipping this violation
                   # rule entirely. Default explicitly so a missing key can't disable the check.
-                  allowed := object.get(input.parameters, "allowedSysctls", [])
+                  #
+                  # The two defaults are deliberately asymmetric. An absent allowlist means
+                  # the SecurityPolicy set only forbiddenSysctls, i.e. it is a denylist and
+                  # nothing outside that denylist is restricted: `["*"]`, which both
+                  # value_in_set and denied understand. Defaulting it to `[]` instead would
+                  # turn such a policy into a total ban on every sysctl the workload sets.
+                  # An absent denylist forbids nothing, so `[]` is right there.
+                  #
+                  # An allowlist that is present but empty keeps its literal meaning — an
+                  # allowlist that permits nothing — matching how a non-empty allowlist
+                  # already behaves.
+                  allowed := object.get(input.parameters, "allowedSysctls", ["*"])
                   forbidden := object.get(input.parameters, "forbiddenSysctls", [])
                   result := check_allowlist_denylist(
                     sysctl,

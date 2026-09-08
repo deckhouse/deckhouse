@@ -205,11 +205,18 @@ review_kind := kind if {
 # between Pods (where Kubernetes mutations have already been applied) and
 # controllers (where the pod template is checked pre-mutation).
 #
-# Use case: when a mutation-sensitive field (resources, runAsUser, seccompProfile,
-# etc.) is ABSENT from a controller's pod template, Kubernetes admission
-# controllers (LimitRange, PodSecurity, ServiceAccount admission) may still
-# inject it at Pod creation time. Constraints can use `is_controller` to skip
-# violations for absent fields, avoiding false positives on controllers.
+# Use case: when a mutation-sensitive field is ABSENT from a controller's pod
+# template, something may still fill it in before the Pod is created, so
+# denying the controller would reject a workload whose Pods end up compliant.
+# Constraints use `is_controller` to skip violations for such absent fields.
+#
+# Be precise about what actually fills a field in. LimitRange defaults
+# `container.resources` and the ServiceAccount plugin adds the token volume
+# mount — both mutate the Pod. PodSecurity Admission does not: it only
+# validates and never modifies an object, so it is never a reason to be
+# lenient. For anything else (`runAsUser`, `seccompProfile`) the source is a
+# mutating webhook, including a Gatekeeper `Assign` mutator, which a given
+# cluster may simply not have.
 # =============================================================================
 is_controller if {
   pod_template_paths[object.get(review_object, "kind", "")]

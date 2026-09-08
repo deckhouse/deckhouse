@@ -45,7 +45,10 @@ spec:
               package d8.operation_policies
 
               object_name := input.review.object.metadata.name
-              object_kind := input.review.kind.kind
+              # input.review.kind.kind has no default: an AdmissionReview without it makes
+              # this rule undefined and swallows the violation. This template pulls in no
+              # shared library, so default here instead of importing lib.common.review_kind.
+              object_kind := object.get(input.review, ["kind", "kind"], "workload")
 
               violation contains {"msg": msg} if {
                   not input.review.operation == "DELETE"

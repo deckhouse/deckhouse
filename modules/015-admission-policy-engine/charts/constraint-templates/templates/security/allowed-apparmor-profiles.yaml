@@ -74,6 +74,7 @@ spec:
               import data.lib.common.object_namespace
               import data.lib.common.effective_metadata
               import data.lib.resolve_value.resolve_from_sources
+              import data.lib.common.review_kind
 
               apparmor_translation := {
                 "RuntimeDefault": ["runtime/default"],
@@ -102,5 +103,5 @@ spec:
                 spe_allowed_expanded := expand(spe_allowed, apparmor_translation)
                 result := check_value_with_glob(profile, allowed, spe_allowed_expanded)
                 not result.allowed
-                msg := violation_message("AppArmor profile is not allowed", sprintf("pod: %v, container: %v", [input.review.object.metadata.name, container.name]), result.detail)
+                msg := violation_message("AppArmor profile is not allowed", sprintf("%v: %v, container: %v", [review_kind, input.review.object.metadata.name, container.name]), result.detail)
               }

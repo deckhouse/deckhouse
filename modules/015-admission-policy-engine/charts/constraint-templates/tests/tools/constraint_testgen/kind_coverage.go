@@ -69,12 +69,12 @@ type kindCoverageResult struct {
 // computeKindCoverage reads test_fields.yaml (for required kinds) and
 // test-matrix.yaml (for actual case kinds), then cross-checks them.
 //
-// T1: Tracks object kind as a first-class coverage dimension.
-// Catches: C1 (no Deployment+initContainer case), M3 (labelSelector mismatch on
-// controller kinds).
+// Object kind is a first-class coverage dimension: a rule extended to match
+// controllers but tested only against Pods looks fully covered otherwise.
 //
-// T6: Counts how many cases rely on name-based scenario inference (i.e. have
-// no explicit fields[] block). Emits a warning when any case lacks fields[].
+// It also counts cases that rely on name-based scenario inference (no explicit
+// fields[] block) and warns about them, since a renamed case then silently
+// stops counting towards coverage.
 func computeKindCoverage(dir string, fields *testFieldsDoc) (*kindCoverageResult, error) {
 	matrixPath := filepath.Join(dir, "test-matrix.yaml")
 	b, err := os.ReadFile(matrixPath)
@@ -110,7 +110,7 @@ func computeKindCoverage(dir string, fields *testFieldsDoc) (*kindCoverageResult
 		}
 	}
 
-	// T6: fields[] are not visible in the minimal struct above, so count
+	// fields[] are not visible in the minimal struct above, so count
 	// name-inferred cases from a full parse of the same bytes.
 	nameInferred := countNameInferredCases(b)
 
@@ -118,7 +118,7 @@ func computeKindCoverage(dir string, fields *testFieldsDoc) (*kindCoverageResult
 		NameInferredCount: nameInferred,
 	}
 
-	// T1: Required kinds from test_fields.yaml.
+	// Required kinds from test_fields.yaml.
 	if fields != nil && len(fields.Spec.ObjectKinds) > 0 {
 		result.RequiredKinds = fields.Spec.ObjectKinds
 		for _, k := range fields.Spec.ObjectKinds {
@@ -172,7 +172,7 @@ func kindCoverageWarnings(r *kindCoverageResult) []string {
 	for _, k := range r.MissingKinds {
 		warns = append(warns, fmt.Sprintf("missing test case for required object kind %q (declared in test_fields.yaml spec.objectKinds)", k))
 	}
-	// T6: Warn when cases rely on name-based inference.
+	// Warn when cases rely on name-based inference.
 	if r.NameInferredCount > 0 {
 		warns = append(warns, fmt.Sprintf("%d case(s) have no explicit fields[] block — relying on case-name substring matching for scenario coverage (deprecated, add fields[] to each case)", r.NameInferredCount))
 	}

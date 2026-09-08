@@ -639,12 +639,16 @@ spec:
                   name: nginx
       exception: ''
       exceptionRef: ''
-    - name: controller-allowed-by-spe-on-top-level-metadata
-      violations: 'no'
+    # The SPE label is resolved from the pod template only, so the same label on
+    # the controller's top-level metadata grants no exception and the non-compliant
+    # pod template is denied. Without this case only the lib-level object_labels
+    # test covers the decision; the template-level wiring was unverified.
+    - name: controller-denied-when-spe-label-only-on-top-level-metadata
+      violations: 'yes'
       assertionMessage: ''
       fields:
       - path: spec.template.spec.securityContext.sysctls[].name
-        scenario: speMatch
+        scenario: speAbsent
       inventory:
       - base: securityPolicyException
         merge:
@@ -659,12 +663,11 @@ spec:
         base: admissionDeployment
         merge:
           metadata:
-            name: controller-allowed-by-spe-on-top-level-metadata
+            name: controller-denied-spe-label-on-top-level-metadata
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-sysctls-spe-top
           spec:
             template:
-              metadata:
-                labels:
-                  security.deckhouse.io/security-policy-exception: allow-sysctls-spe-top
               spec:
                 securityContext:
                   sysctls:
@@ -675,3 +678,77 @@ spec:
                   name: nginx
       exception: ''
       exceptionRef: ''
+  # A SecurityPolicy that sets only forbiddenSysctls renders a constraint with
+  # no allowedSysctls key. Such a policy is a denylist: it must deny what it
+  # names and leave every other sysctl alone.
+  - name: security-policy-forbidden-only
+    gatorBlock: security-policy-forbidden-only
+    defaultObjectBase: ''
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/policy_forbidden_only.yaml
+    cases:
+    - name: 030-allowed-safe-sysctl-under-denylist-only-policy
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.sysctls
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed-safe-sysctl-denylist-only
+          spec:
+            securityContext:
+              sysctls:
+              - name: net.ipv4.ip_unprivileged_port_start
+                value: '1024'
+            containers:
+            - image: nginx
+              name: nginx
+    - name: 031-disallowed-forbidden-sysctl-under-denylist-only-policy
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.securityContext.sysctls
+        scenario: negative
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed-forbidden-sysctl-denylist-only
+          spec:
+            securityContext:
+              sysctls:
+              - name: kernel.msgmax
+                value: '65536'
+            containers:
+            - image: nginx
+              name: nginx
+    - name: 032-allowed-safe-sysctl-on-controller-under-denylist-only-policy
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.securityContext.sysctls
+        scenario: positive
+      exception: ''
+      exceptionRef: ''
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-allowed-safe-sysctl-denylist-only
+          spec:
+            template:
+              spec:
+                securityContext:
+                  sysctls:
+                  - name: net.ipv4.ip_unprivileged_port_start
+                    value: '1024'
+                containers:
+                - image: nginx
+                  name: nginx

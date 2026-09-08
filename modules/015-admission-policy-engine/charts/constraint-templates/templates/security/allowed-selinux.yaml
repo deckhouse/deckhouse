@@ -76,6 +76,7 @@ spec:
               import data.lib.exception.resolve_spe_for_container
               import data.lib.exception.resolve_spe_from_labels
               import data.lib.message.violation_message
+              import data.lib.common.review_kind
 
               # Disallow top-level custom SELinux options
               violation contains {"msg": msg, "details": {}} if {
@@ -91,7 +92,7 @@ spec:
                   spe_allowed
                 )
                 not result.allowed
-                msg := violation_message("SELinux options are not allowed", sprintf("pod: %v", [input.review.object.metadata.name]), result.detail)
+                msg := violation_message("SELinux options are not allowed", sprintf("%v: %v", [review_kind, input.review.object.metadata.name]), result.detail)
               }
 
               # Disallow container-level custom SELinux options
@@ -109,7 +110,7 @@ spec:
                   spe_allowed
                 )
                 not result.allowed
-                msg := violation_message("SELinux options are not allowed", sprintf("pod: %v, container: %v", [input.review.object.metadata.name, c.name]), result.detail)
+                msg := violation_message("SELinux options are not allowed", sprintf("%v: %v, container: %v", [review_kind, input.review.object.metadata.name, c.name]), result.detail)
               }
 
               input_security_context contains c if {

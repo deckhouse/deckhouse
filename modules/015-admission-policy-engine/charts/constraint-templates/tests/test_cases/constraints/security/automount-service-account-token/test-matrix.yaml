@@ -333,7 +333,7 @@ spec:
                 - image: nginx
                   name: nginx
                 automountServiceAccountToken: true
-    # Regression: controller UPDATE must still be checked (N3).
+    # Regression: controller UPDATE must still be checked.
     # The Pod-specific is_update guard must NOT skip controller UPDATEs.
     # This case uses a Deployment with automountServiceAccountToken: true,
     # simulating an UPDATE (helm upgrade / kubectl apply). If the rule

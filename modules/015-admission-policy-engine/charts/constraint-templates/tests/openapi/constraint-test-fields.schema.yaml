@@ -124,8 +124,8 @@ definitions:
         type: string
         description: |
           Which container arrays the rule iterates over. Used to verify that
-          test cases exercise each declared scope. Catches the C1/H3 class
-          of bug where input_containers silently expands from containers to
+          test cases exercise each declared scope. Catches the class of bug
+          where input_containers silently expands from containers to
           containers+initContainers+ephemeralContainers.
         enum:
           - Containers

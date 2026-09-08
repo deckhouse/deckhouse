@@ -105,11 +105,12 @@ Webhook работает с `failurePolicy: Fail`.
 |---|---|---|
 | `D8RequiredResources` | `container.resources` (когда не заданы ни `limits`, ни `requests`) | LimitRange |
 | `D8AllowedUsers` | `runAsUser`, `runAsGroup`, `fsGroup`, `supplementalGroups` (с правилами `MustRunAs` / `MustRunAsNonRoot`) | Мутирующий webhook, в том числе мутатор `Assign` Gatekeeper |
-| `D8AllowedSeccompProfiles` | `seccompProfile.type` (при отсутствии во всех источниках) | Мутирующий webhook, в том числе мутатор `Assign` Gatekeeper |
 
 Например, Deployment без `resources` в шаблоне пода **не будет** отклонён ограничением `D8RequiredResources`, так как LimitRange в неймспейсе может добавить `requests` и `limits` по умолчанию. Однако если `resources` заданы частично (например, только `limits.memory`, но не `limits.cpu`), нарушение всё равно будет зафиксировано.
 
-Только `D8RequiredResources` опирается на встроенный компонент Kubernetes. Для двух остальных в кластере без подходящего мутатора проверка этих полей на уровне контроллера не выполняется, и нарушение проявится при создании пода. Pod Security Admission в перечень источников не входит: этот компонент только проверяет объект и никогда его не изменяет.
+`D8RequiredResources` опирается на встроенный компонент Kubernetes, `D8AllowedUsers` — нет: в кластере без подходящего мутатора проверка этих полей на уровне контроллера не выполняется, и нарушение проявится при создании пода. Pod Security Admission в перечень источников не входит: этот компонент только проверяет объект и никогда его не изменяет.
+
+`D8AllowedSeccompProfiles` в мягком режиме не нуждается: контейнер, для которого профиль не задан ни в одном источнике, разрешён и в поде, поэтому контроллеры и поды здесь ведут себя одинаково.
 
 ### Ограничения с неполной проверкой на уровне контроллеров
 

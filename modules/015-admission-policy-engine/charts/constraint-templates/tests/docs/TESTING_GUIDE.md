@@ -909,7 +909,7 @@ match:
 {{- include "workload_kinds" . }}
 ```
 
-The helper is defined in `templates/_helpers.tpl` and outputs Pod, Deployment, StatefulSet, DaemonSet, ReplicationController, Job, CronJob. ReplicaSet is intentionally excluded (see H2).
+The helper is defined in `templates/_helpers.tpl` and outputs Pod, Deployment, StatefulSet, DaemonSet, ReplicationController, Job, CronJob. ReplicaSet is intentionally excluded: it is created by the Deployment controller, so a denial there surfaces only in the Deployment status.
 
 Keep the `constraints/*.yaml` fixtures in step with what the helper renders, so a suite validates the scope that is actually deployed. `webhook-scope` checks both sides: `replicaset-in-kinds` for the helper and the constraint templates, `replicaset-in-test-fixture` for the fixtures. `lib.common.pod_template_paths` still resolves ReplicaSet, so a hand-written Constraint that matches it keeps working.
 

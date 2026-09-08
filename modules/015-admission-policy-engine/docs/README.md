@@ -100,11 +100,12 @@ The following constraints skip violations for absent fields when reviewing contr
 |---|---|---|
 | `D8RequiredResources` | `container.resources` (when neither `limits` nor `requests` is set) | LimitRange |
 | `D8AllowedUsers` | `runAsUser`, `runAsGroup`, `fsGroup`, `supplementalGroups` (with `MustRunAs` / `MustRunAsNonRoot`) | A mutating webhook, including a Gatekeeper `Assign` mutator |
-| `D8AllowedSeccompProfiles` | `seccompProfile.type` (when not set in any source) | A mutating webhook, including a Gatekeeper `Assign` mutator |
 
 For example, a Deployment without `resources` in its pod template is **not** denied by `D8RequiredResources`, because a LimitRange in the namespace may add default `requests` and `limits`. If `resources` is set partially (for example, only `limits.memory` but not `limits.cpu`), the violation is still enforced.
 
-Only `D8RequiredResources` relies on an in-tree component. For the other two, a cluster without a matching mutator gets no controller-level enforcement of these fields, and the violation surfaces at Pod creation instead. Pod Security Admission is not one of the sources listed above: it only validates and never modifies an object.
+`D8RequiredResources` relies on an in-tree component. `D8AllowedUsers` does not: in a cluster without a matching mutator it gets no controller-level enforcement of these fields, and the violation surfaces at Pod creation instead. Pod Security Admission is not one of the sources listed above — it only validates and never modifies an object.
+
+`D8AllowedSeccompProfiles` needs no lenient mode: a container that sets no profile in any source is allowed on a Pod as well, so controllers and Pods already behave the same.
 
 ### Constraints with limited controller-level coverage
 

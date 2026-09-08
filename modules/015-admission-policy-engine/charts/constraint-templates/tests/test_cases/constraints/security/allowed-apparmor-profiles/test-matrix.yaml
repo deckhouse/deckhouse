@@ -682,12 +682,16 @@ spec:
                   name: nginx
       exception: ''
       exceptionRef: ''
-    - name: controller-allowed-by-spe-on-top-level-metadata
-      violations: 'no'
+    # The SPE label is resolved from the pod template only, so the same label on
+    # the controller's top-level metadata grants no exception and the non-compliant
+    # pod template is denied. Without this case only the lib-level object_labels
+    # test covers the decision; the template-level wiring was unverified.
+    - name: controller-denied-when-spe-label-only-on-top-level-metadata
+      violations: 'yes'
       assertionMessage: ''
       fields:
       - path: spec.template.metadata.annotations
-        scenario: speMatch
+        scenario: speAbsent
       inventory:
       - base: securityPolicyException
         merge:
@@ -702,12 +706,12 @@ spec:
         base: admissionDeployment
         merge:
           metadata:
-            name: controller-allowed-by-spe-on-top-level-metadata
+            name: controller-denied-spe-label-on-top-level-metadata
+            labels:
+              security.deckhouse.io/security-policy-exception: allow-apparmor-spe-top
           spec:
             template:
               metadata:
-                labels:
-                  security.deckhouse.io/security-policy-exception: allow-apparmor-spe-top
                 annotations:
                   container.apparmor.security.beta.kubernetes.io/nginx: unconfined
               spec:

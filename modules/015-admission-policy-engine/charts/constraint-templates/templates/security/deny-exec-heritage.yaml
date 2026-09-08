@@ -71,6 +71,7 @@ spec:
                 object.get(input.review, "requestSubResource", object.get(input.review, "subResource", "")) == ""
               }
 
+              # lint:allow=object-get-empty-default — an anonymous or absent userInfo must yield "", which matches none of the allowed usernames below.
               review_username := object.get(object.get(input.review, "userInfo", {}), "username", "")
 
               is_allowed_user if {

@@ -39,6 +39,7 @@ spec:
 
               import data.lib.common.pod_spec
               import data.lib.common.has_field
+              import data.lib.common.review_kind
 
               # Image pull policy is only meaningful for regular containers.
               # We check only pod_spec.containers (not initContainers/ephemeralContainers)
@@ -52,5 +53,5 @@ spec:
                 has_field(container, "imagePullPolicy")
                 provided := container.imagePullPolicy
                 required != provided
-                msg := sprintf("Container <%v> in your %v <%v> has invalid pull policy: <%v>", [container.name, input.review.kind.kind, input.review.object.metadata.name, provided])
+                msg := sprintf("Container <%v> in your %v <%v> has invalid pull policy: <%v>", [container.name, review_kind, input.review.object.metadata.name, provided])
               }

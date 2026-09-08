@@ -61,6 +61,7 @@ spec:
               import data.lib.exception.allowed_values_or_empty
               import data.lib.exception.resolve_spe_from_labels
               import data.lib.message.violation_message
+              import data.lib.common.review_kind
 
               violation contains {"msg": msg, "details": {}} if {
                 not input.review.operation == "DELETE"
@@ -77,7 +78,7 @@ spec:
                   spe_paths
                 )
                 not result.allowed
-                msg := violation_message("HostPath volume is not allowed", sprintf("pod: %v", [input.review.object.metadata.name]), result.detail)
+                msg := violation_message("HostPath volume is not allowed", sprintf("%v: %v", [review_kind, input.review.object.metadata.name]), result.detail)
               }
 
               get_allowed_paths(arg) := out if {

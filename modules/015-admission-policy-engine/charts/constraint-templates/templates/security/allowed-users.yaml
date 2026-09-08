@@ -194,8 +194,11 @@ spec:
                 not get_field_value("runAsUser", container, pod_spec)
                 params.rule == "MustRunAs"
                 # Absent on a controller: a mutator may still set it before the
-                # Pod is created, so do not deny the controller here.
-                not controller_absent_run_as_user(container)
+                # Pod is created, so do not deny the controller here. Only
+                # runAsUser is inspected — under MustRunAs a runAsNonRoot the
+                # container happens to set does not satisfy the rule, so it must
+                # not decide whether this branch is lenient.
+                not controller_absent_field("runAsUser", container)
                 allowed_by_policy := sprintf("Allowed runAsUser: %v", [params])
                 actual_value := "Actual runAsUser: not set"
                 labels := object_labels
@@ -305,7 +308,7 @@ spec:
                 params.rule == "MustRunAs"
                 # Absent on a controller: a mutator may still set it before the
                 # Pod is created, so do not deny the controller here.
-                not controller_absent_group_field(field, container)
+                not controller_absent_field(field, container)
                 allowed_by_policy := sprintf("Allowed %v: %v", [field, params])
                 actual_value := sprintf("Actual %v: not set", [field])
                 msg := sprintf("Container %v is attempting to run as disallowed %v. | %v | %v", [container.name, field, actual_value, allowed_by_policy])
@@ -371,18 +374,21 @@ spec:
               # decided per container. A pod-wide decision would let one
               # container that sets runAsUser make every other container in the
               # same template fail for not setting it.
+              # MustRunAsNonRoot is satisfied by either field, so both must be absent
+              # before the branch below is treated leniently.
               controller_absent_run_as_user(container) if {
                 is_controller
                 not seccontext_field_present("runAsUser", container)
                 not seccontext_field_present("runAsNonRoot", container)
               }
 
-              # Same rule for the group fields (runAsGroup, fsGroup,
-              # supplementalGroups).
-              controller_absent_group_field(field, container) if {
+              # Single-field variant, used by the MustRunAs branch and by the group
+              # fields (runAsGroup, fsGroup, supplementalGroups).
+              controller_absent_field(field, container) if {
                 is_controller
                 not seccontext_field_present(field, container)
               }
+
 
               # True when the field is set either on this container or on the pod
               # template, which is the precedence get_field_value applies.
