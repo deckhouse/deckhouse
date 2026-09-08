@@ -53,6 +53,31 @@ cloudProviderDvp:
     defaultStorageClass: stale-default
 `
 
+	const initValuesWithExactExcludeAndProvider = `
+cloudProviderDvp:
+  provider:
+    parameters:
+      namespace: test-ns
+  storage:
+    parameters:
+      excludedStorageClasses:
+      - fast
+  internal: {}
+`
+
+	const initValuesWithDefaultExcludeAndProvider = `
+cloudProviderDvp:
+  provider:
+    parameters:
+      namespace: test-ns
+  storage:
+    parameters:
+      excludedStorageClasses:
+      - replicated
+  internal:
+    defaultStorageClass: replicated
+`
+
 	const initValuesWithBrokenExcludeAndProvider = `
 cloudProviderDvp:
   provider:
@@ -339,6 +364,97 @@ volumeBindingMode: WaitForFirstConsumer
 			Expect(f.ValuesGet("cloudProviderDvp.internal.defaultStorageClass").String()).To(Equal("replicated"))
 			Expect(f.KubernetesGlobalResource("StorageClass", "replicated").Exists()).To(BeFalse())
 			Expect(f.KubernetesGlobalResource("StorageClass", "retained").Exists()).To(BeTrue())
+		})
+	})
+
+	Context("When excludedStorageClasses contains a plain StorageClass name", func() {
+		similarlyNamedDiscoveryData := `
+{
+  "apiVersion": "deckhouse.io/v1",
+  "kind": "DVPCloudDiscoveryData",
+  "zones": ["default"],
+  "storageClasses": [
+    {
+      "name": "fast",
+      "volumeBindingMode": "Immediate",
+      "reclaimPolicy": "Delete",
+      "allowVolumeExpansion": false,
+      "isEnabled": true,
+      "isDefault": false
+    },
+    {
+      "name": "ultra-fast-ssd",
+      "volumeBindingMode": "Immediate",
+      "reclaimPolicy": "Delete",
+      "allowVolumeExpansion": false,
+      "isEnabled": true,
+      "isDefault": false
+    }
+  ]
+}
+`
+
+		similarlyNamedDiscoverySecret := fmt.Sprintf(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cloud-provider-discovery-data
+  namespace: kube-system
+data:
+  "discovery-data.json": %s
+`, base64.StdEncoding.EncodeToString([]byte(similarlyNamedDiscoveryData)))
+
+		f := HookExecutionConfigInit(initValuesWithExactExcludeAndProvider, `{}`)
+		BeforeEach(func() {
+			f.BindingContexts.Set(
+				f.GenerateBeforeHelmContext(),
+				f.KubeStateSet(similarlyNamedDiscoverySecret),
+			)
+			f.RunHook()
+		})
+
+		It("Should match the whole name and keep the classes it is only a part of", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cloudProviderDvp.internal.storageClasses").String()).To(MatchJSON(`
+[
+  {
+    "name": "ultra-fast-ssd",
+    "dvpStorageClass": "ultra-fast-ssd",
+    "volumeBindingMode": "WaitForFirstConsumer",
+    "reclaimPolicy": "Delete",
+    "allowVolumeExpansion": false,
+    "isDefault": false
+  }
+]
+`))
+		})
+	})
+
+	Context("When excludedStorageClasses contains the default StorageClass", func() {
+		f := HookExecutionConfigInit(initValuesWithDefaultExcludeAndProvider, `{}`)
+		BeforeEach(func() {
+			f.BindingContexts.Set(
+				f.GenerateBeforeHelmContext(),
+				f.KubeStateSet(discoverySecret+existingStorageClass),
+			)
+			f.RunHook()
+		})
+
+		It("Should exclude the default class and drop defaultStorageClass", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cloudProviderDvp.internal.storageClasses").String()).To(MatchJSON(`
+[
+  {
+    "name": "excluded-fast",
+    "dvpStorageClass": "Excluded Fast",
+    "volumeBindingMode": "WaitForFirstConsumer",
+    "reclaimPolicy": "Retain",
+    "allowVolumeExpansion": false,
+    "isDefault": false
+  }
+]
+`))
+			Expect(f.ValuesGet("cloudProviderDvp.internal.defaultStorageClass").Exists()).To(BeFalse())
 		})
 	})
 

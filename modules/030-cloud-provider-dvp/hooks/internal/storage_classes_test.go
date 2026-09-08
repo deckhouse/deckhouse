@@ -43,6 +43,29 @@ var _ = Describe("Modules :: cloud-provider-dvp :: hooks :: internal :: storage 
 		Entry("trims dots and dashes", ".. YY fast SSD-foo.-", "yy-fast-ssd-foo"),
 	)
 
+	DescribeTable("NewExcludes",
+		func(patterns []string, name string, expected bool) {
+			excludes, err := NewExcludes(patterns)
+			Expect(err).ShouldNot(HaveOccurred())
+			Expect(excludes.Match(name)).To(Equal(expected))
+		},
+		Entry("matches nothing when there are no patterns", nil, "fast", false),
+		Entry("matches an exact name", []string{"fast"}, "fast", true),
+		Entry("does not match a name containing the pattern", []string{"fast"}, "ultra-fast-ssd", false),
+		Entry("does not match a name the pattern starts with", []string{"fast"}, "fast-ssd", false),
+		Entry("matches the whole name with a wildcard pattern", []string{"excluded-.*"}, "excluded-legacy", true),
+		Entry("does not match a prefix with a wildcard pattern", []string{".*-fast"}, "ultra-fast-ssd", false),
+		Entry("keeps explicit anchors working", []string{"^fast$"}, "fast", true),
+		Entry("anchors alternations as a whole", []string{"fast|slow"}, "slow", true),
+		Entry("does not match a part of an alternation", []string{"fast|slow"}, "very-slow", false),
+		Entry("matches when any pattern matches", []string{"fast", "slow"}, "slow", true),
+	)
+
+	It("NewExcludes fails on an invalid pattern", func() {
+		_, err := NewExcludes([]string{"excluded-([a-z"})
+		Expect(err).Should(HaveOccurred())
+	})
+
 	DescribeTable("StorageClassToValue",
 		func(input *storagev1.StorageClass, expected StorageClass) {
 			Expect(StorageClassToValue(input)).To(Equal(expected))

@@ -141,7 +141,14 @@ func HandleStorageClassesFromDiscoveryData(
 // setStorageClassesValues is the single place where StorageClasses reach the module values, so
 // every source of StorageClasses is filtered by `storage.parameters.excludedStorageClasses`.
 func setStorageClassesValues(input *go_hook.HookInput, storageClasses []StorageClass) error {
-	excludes, err := regexpset.NewFromValues(input.Values, excludedStorageClassesPath)
+	patternValues := input.Values.Get(excludedStorageClassesPath).Array()
+
+	patterns := make([]string, 0, len(patternValues))
+	for _, pattern := range patternValues {
+		patterns = append(patterns, pattern.String())
+	}
+
+	excludes, err := NewExcludes(patterns)
 	if err != nil {
 		return fmt.Errorf("failed to compile '%s': %v", excludedStorageClassesPath, err)
 	}
@@ -186,6 +193,18 @@ func setStorageClassesValues(input *go_hook.HookInput, storageClasses []StorageC
 	input.Logger.Info("Discovered default storage class from DVP cloud provider", slog.String("storage_class", defaultSC))
 
 	return nil
+}
+
+// NewExcludes compiles `storage.parameters.excludedStorageClasses` patterns into a set of anchored
+// regular expressions: a pattern has to match the whole StorageClass name, so a plain name in the
+// list stays an exact name — `fast` excludes `fast` and not `ultra-fast-ssd`.
+func NewExcludes(patterns []string) (regexpset.RegExpSet, error) {
+	anchored := make([]string, 0, len(patterns))
+	for _, pattern := range patterns {
+		anchored = append(anchored, "^("+pattern+")$")
+	}
+
+	return regexpset.New(anchored...)
 }
 
 // GetStorageClassName converts a DVP StorageClass name into a Kubernetes object name that satisfies
