@@ -94,9 +94,6 @@ func (suite *ControllerTestSuite) SetupSuite() {
 			&v1alpha1.ModulePackage{},
 			&v1alpha1.ModulePackageVersion{},
 		},
-		// The used flag is what the reconciler releases, so a fixture that starts out
-		// used has to survive seeding — otherwise every detach assertion passes vacuously.
-		SeedStatusSubresources: []client.Object{&v1alpha1.ModulePackageVersion{}},
 		SnapshotKinds: []schema.GroupVersionKind{
 			v1alpha2.SchemeGroupVersion.WithKind("Module"),
 			v1alpha1.SchemeGroupVersion.WithKind("ModulePackage"),
@@ -115,8 +112,8 @@ func (suite *ControllerTestSuite) setupController(filename string) {
 	suite.ctr = reconcilerFor(suite.T(), suite.Client(), suite.manager)
 }
 
-// reconcilerFor registers the controller behind an init gate that is already open, which
-// is the state a running controller reconciles in.
+// reconcilerFor registers the controller with nothing to wait for: a zero WaitGroup returns
+// from Wait immediately, which is the state a running controller reconciles in.
 func reconcilerFor(t *testing.T, cl client.Client, manager *packageManagerStub) reconcile.Reconciler {
 	t.Helper()
 
@@ -309,7 +306,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		assert.Contains(suite.T(), annotations, "packages.deckhouse.io/keep-me")
 	})
 
-	suite.Run("embedded module reaches the runtime without a repository", func() {
+	suite.Run("embedded module reaches the runtime as embedded, not as released", func() {
 		suite.setupController("embedded.yaml")
 
 		result, err := suite.ctr.Reconcile(ctx, request(moduleName))
@@ -427,7 +424,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		assert.False(suite.T(), suite.getVersion(versionName).Status.Used)
 
 		err = suite.Client().Get(ctx, client.ObjectKey{Name: moduleName}, new(v1alpha2.Module))
-		assert.True(suite.T(), apierrors.IsNotFound(err), "the finalizer must be released")
+		assert.Truef(suite.T(), apierrors.IsNotFound(err), "the finalizer must be released, got %v", err)
 	})
 
 	suite.Run("deleted embedded module undeploys nothing", func() {
@@ -464,7 +461,7 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		require.NoError(suite.T(), err, "a version that is gone needs no cleanup")
 
 		err = suite.Client().Get(ctx, client.ObjectKey{Name: moduleName}, new(v1alpha2.Module))
-		assert.True(suite.T(), apierrors.IsNotFound(err), "the finalizer must be released")
+		assert.Truef(suite.T(), apierrors.IsNotFound(err), "the finalizer must be released, got %v", err)
 	})
 }
 
@@ -543,7 +540,7 @@ func TestRelinkDoesNotClaimTheNewVersionWhenTheOldOneIsStuck(t *testing.T) {
 }
 
 func TestCommitFailureLeavesTheRuntimeAheadOfTheAPI(t *testing.T) {
-	cl := seedFakeClient(t, "version-switch.yaml", interceptor.Funcs{Patch: failModulePatch(1)})
+	cl := seedFakeClient(t, "version-switch.yaml", interceptor.Funcs{Patch: failFirstModulePatch()})
 
 	manager := newPackageManagerStub(t)
 	ctr := reconcilerFor(t, cl, manager)
@@ -564,7 +561,7 @@ func TestCommitFailureLeavesTheRuntimeAheadOfTheAPI(t *testing.T) {
 }
 
 func TestDevHashIsNotRecordedWhenThePatchFails(t *testing.T) {
-	cl := seedFakeClient(t, "dev-released-version.yaml", interceptor.Funcs{Patch: failModulePatch(1)})
+	cl := seedFakeClient(t, "dev-released-version.yaml", interceptor.Funcs{Patch: failFirstModulePatch()})
 
 	manager := newPackageManagerStub(t)
 	ctr := reconcilerFor(t, cl, manager)
@@ -695,7 +692,7 @@ func TestDeleteWaitsForRuntimeTeardown(t *testing.T) {
 }
 
 func TestDeleteFailureKeepsTheFinalizerUntilTheRetry(t *testing.T) {
-	cl := seedFakeClient(t, "delete.yaml", interceptor.Funcs{Patch: failModulePatch(1)})
+	cl := seedFakeClient(t, "delete.yaml", interceptor.Funcs{Patch: failFirstModulePatch()})
 
 	mod := new(v1alpha2.Module)
 	require.NoError(t, cl.Get(context.Background(), client.ObjectKey{Name: moduleName}, mod))
@@ -717,7 +714,7 @@ func TestDeleteFailureKeepsTheFinalizerUntilTheRetry(t *testing.T) {
 	require.NoError(t, err, "the retry must not trip over the version it has already released")
 
 	err = cl.Get(context.Background(), client.ObjectKey{Name: moduleName}, mod)
-	assert.True(t, apierrors.IsNotFound(err))
+	assert.Truef(t, apierrors.IsNotFound(err), "the finalizer must be released, got %v", err)
 }
 
 func TestDeleteFailsOnUnreadableVersion(t *testing.T) {
@@ -772,8 +769,8 @@ func TestDevModuleIsNotHandedOverOnAnUnresolvedDigest(t *testing.T) {
 }
 
 // seedFakeClient builds a client from a fixture and wraps it with funcs, for the paths that
-// only show up when a write or a read fails. Seeding uses Create plus a status Update for a
-// version that starts out used, so funcs passed here must leave those two alone.
+// only show up when a write or a read fails. Seeding uses Create, so funcs passed here
+// must leave it alone.
 func seedFakeClient(t *testing.T, fixture string, funcs interceptor.Funcs) client.Client {
 	t.Helper()
 
@@ -793,32 +790,22 @@ func seedFakeClient(t *testing.T, fixture string, funcs interceptor.Funcs) clien
 		Build()
 
 	for _, obj := range objs {
-		// Create strips the status of a status subresource, and the used flag a fixture
-		// starts out with is what the detach paths act on.
-		mpv, used := obj.(*v1alpha1.ModulePackageVersion)
-		used = used && mpv.Status.Used
-
 		require.NoError(t, cl.Create(context.TODO(), obj))
-
-		if used {
-			mpv.Status.Used = true
-			require.NoError(t, cl.Status().Update(context.TODO(), mpv))
-		}
 	}
 
 	return cl
 }
 
-// failModulePatch rejects the first n patches of the Module itself, leaving status patches
+// failFirstModulePatch rejects the first patch of the Module itself, leaving status patches
 // and every other object alone, so a test can pick out one write in the middle of a pass.
-func failModulePatch(n int) func(context.Context, client.WithWatch, client.Object, client.Patch,
+func failFirstModulePatch() func(context.Context, client.WithWatch, client.Object, client.Patch,
 	...client.PatchOption) error {
-	left := n
+	failed := false
 
 	return func(ctx context.Context, cl client.WithWatch, obj client.Object, patch client.Patch,
 		opts ...client.PatchOption) error {
-		if _, ok := obj.(*v1alpha2.Module); ok && left > 0 {
-			left--
+		if _, ok := obj.(*v1alpha2.Module); ok && !failed {
+			failed = true
 
 			return errors.New("patch rejected")
 		}

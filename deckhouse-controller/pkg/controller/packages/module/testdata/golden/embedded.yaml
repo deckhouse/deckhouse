@@ -45,7 +45,7 @@ apiVersion: deckhouse.io/v1alpha1
 kind: ModulePackageVersion
 metadata:
   name: deckhouse-test-module-v0.9.0
-  resourceVersion: "3"
+  resourceVersion: "2"
   uid: downloaded-version-uid
 spec:
   packageName: test-module
