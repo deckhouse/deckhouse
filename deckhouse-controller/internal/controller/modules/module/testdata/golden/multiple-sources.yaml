@@ -1,0 +1,37 @@
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  finalizers:
+  - module.deckhouse.io/module-registered
+  name: test-module
+  resourceVersion: "1003"
+spec:
+  enabled: true
+  packageVersion: v1.0.0
+status:
+  conditions:
+  - lastTransitionTime: null
+    message: ""
+    reason: ""
+    status: "False"
+    type: Enabled
+  - lastTransitionTime: null
+    message: several available sources
+    reason: Conflict
+    status: "False"
+    type: Ready
+  lastAppliedConfiguration: null
+  summary:
+    state: Failed
+  tracking: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
+metadata:
+  name: test-module
+  resourceVersion: "999"
+status:
+  availableRepositories:
+  - source-one
+  - source-two

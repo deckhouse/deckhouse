@@ -1,0 +1,20 @@
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  finalizers:
+  - module.deckhouse.io/module-registered
+  name: global
+  resourceVersion: "1002"
+spec:
+  enabled: true
+  packageVersion: ""
+status:
+  conditions:
+  - lastTransitionTime: null
+    message: ""
+    reason: ""
+    status: "True"
+    type: Enabled
+  lastAppliedConfiguration: null
+  tracking: null
