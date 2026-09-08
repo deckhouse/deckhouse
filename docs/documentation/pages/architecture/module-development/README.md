@@ -1,29 +1,29 @@
 ---
-title: "Deckhouse Kubernetes Platform module development"
+title: "Deckhouse Platform module development"
 permalink: en/architecture/module-development/
 lang: en
-description: Overview of Deckhouse Kubernetes Platform module architecture — module types, development stages, required tools, and entry points for module development.
+description: Overview of Deckhouse Platform module architecture — module types, development stages, required tools, and entry points for module development.
 ---
 
-A module is a set of resources and applications designed to extend the functionality of the Deckhouse Kubernetes Platform.
+A module is a set of resources and applications designed to extend the functionality of the Deckhouse Platform.
 
-This section is dedicated to the architecture of DKP modules. It will help you understand how modules are structured, how to develop and debug them, and how they interact with other components of the platform.
+This section is dedicated to the architecture of DP modules. It will help you understand how modules are structured, how to develop and debug them, and how they interact with other components of the platform.
 
-Deckhouse Kubernetes Platform (DKP) can work with the following types of modules:
+Deckhouse Platform (DP) can work with the following types of modules:
 
-* Built-in modules. These are included in DKP. Their release cycle is tied to the DKP release cycle.
-* Modules from [module source](/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source). The release cycle for these modules is not tied to the DKP release cycle.
+* Built-in modules. These are included in DP. Their release cycle is tied to the DP release cycle.
+* Modules from [module source](/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#module-source). The release cycle for these modules is not tied to the DP release cycle.
 
 Creating a module consists of the following stages:
 
 * **Development**: creating module code and its structure in the Git repository. The [**Module structure**](structure/) section outlines which components there are and in which directories they are located.
 * **Building**: creating a module artifact and pushing it to the container registry. The [**Building and publishing**](build/) section describes where images are stored in the registry and at what paths they are available.
-* **Running in a cluster**: delivering the module to a cluster managed by the DKP. The [**Running in a cluster**](run/) section describes how to activate the module, configure its parameters, and test its functionality (including handling CRDs and troubleshooting).
-* **Dependencies**: configuring module dependencies, including DKP versions, Kubernetes, and other critical components. This stage is covered in the [**Module dependencies**](dependencies/) section.
+* **Running in a cluster**: delivering the module to a cluster managed by the DP. The [**Running in a cluster**](run/) section describes how to activate the module, configure its parameters, and test its functionality (including handling CRDs and troubleshooting).
+* **Dependencies**: configuring module dependencies, including DP versions, Kubernetes, and other critical components. This stage is covered in the [**Module dependencies**](dependencies/) section.
 
 ## Requirements
 
-You will need the following tools to develop DKP modules:
+You will need the following tools to develop DP modules:
 
 * [git](https://git-scm.com) — version control system;
 * [sed](https://github.com/mirror/sed) — stream editor;
@@ -36,14 +36,14 @@ The container registry where [module artifacts](build/) will be stored must supp
 
 ## Before you start
 
-To get an idea of how DKP modules work, check out [addon-operator](https://github.com/flant/addon-operator) and [shell-operator](https://github.com/flant/shell-operator).
+To get an idea of how DP modules work, check out [addon-operator](https://github.com/flant/addon-operator) and [shell-operator](https://github.com/flant/shell-operator).
 
 * Review the operator documentation on the concept of hooks, e.g., [what a hook configuration is and what functions it provides](https://flant.github.io/shell-operator/HOOKS.html#hook-configuration). The configuration is used to configure the data that will be available from the hook.
 * Check out [bindings](https://github.com/flant/addon-operator/blob/main/docs/src/HOOKS.md#bindings). Bindings are events that trigger the hook. They are specified in the hook configuration. A hook can be triggered not only by Kubernetes events, but also, e.g., on a schedule or before a module is started.
 > The Hook allows you to keep values in memory and use them later when rendering Helm templates. We recommend reading the [Hooks and Helm values](https://github.com/flant/addon-operator/blob/main/docs/src/OVERVIEW.md#hooks-and-helm-values) section to learn more about this feature as well as the module's operating cycle.
 * Explore [the concept of snapshots](https://flant.github.io/shell-operator/HOOKS.html#snapshots). With snapshots, you can implement a reconciliation loop approach that is more efficient than event subscription.
- > This is how DKP implements support for all existing backend module hooks.
-* Additionally, hooks can be used instead of the Prometheus exporter. Hooks can provide metrics that DKP will export. See [metrics](https://github.com/flant/addon-operator/blob/main/docs/src/metrics/METRICS_FROM_HOOKS.md#custom-metrics).
+ > This is how DP implements support for all existing backend module hooks.
+* Additionally, hooks can be used instead of the Prometheus exporter. Hooks can provide metrics that DP will export. See [metrics](https://github.com/flant/addon-operator/blob/main/docs/src/metrics/METRICS_FROM_HOOKS.md#custom-metrics).
 
 ## Got a question?
 

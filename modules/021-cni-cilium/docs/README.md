@@ -90,7 +90,7 @@ Cilium fully replaces the functionality of the `kube-proxy` module, so `kube-pro
 
 ## Using selective load balancing algorithm for services
 
-In Deckhouse Kubernetes Platform, you can apply the following algorithms to load balance service traffic:
+In Deckhouse Platform, you can apply the following algorithms to load balance service traffic:
 
 * `Random`: Randomly select a backend for each connection. Easy to implement, but does not always provide even distribution.
 * `Maglev`: Uses consistent hashing to distribute traffic evenly, suitable for large-scale services.
@@ -107,9 +107,9 @@ This mechanism requires Linux kernel version 5.15 or higher to work correctly.
 
 ## Using Egress Gateway
 
-{% alert level="warning" %}The feature is available only in the following Deckhouse Kubernetes Platform editions: SE+, EE.{% endalert %}
+{% alert level="warning" %}The feature is available only in the following Deckhouse Platform editions: SE+, EE, Ultimate.{% endalert %}
 
-Egress Gateway in Deckhouse Kubernetes Platform can be used in one of two modes: [Basic mode](#basic-mode) and [Virtual IP mode](#virtual-ip-mode). Use Custom Resource [EgressGateway](cr.html#egressgateway) (parameter `spec.sourceIP.node`) to select the mode.
+Egress Gateway in Deckhouse Platform can be used in one of two modes: [Basic mode](#basic-mode) and [Virtual IP mode](#virtual-ip-mode). Use Custom Resource [EgressGateway](cr.html#egressgateway) (parameter `spec.sourceIP.node`) to select the mode.
 
 ### Basic mode
 
@@ -127,7 +127,7 @@ The ability to dynamically assign additional IP addresses to nodes is implemente
 
 ## Exporting data from Hubble
 
-Deckhouse Kubernetes Platform allows to configure data export from Hubble running inside Cilium agents using the cluster-scoped custom resource [HubbleMonitoringConfig](cr.html#hubblemonitoringconfig).
+Deckhouse Platform allows to configure data export from Hubble running inside Cilium agents using the cluster-scoped custom resource [HubbleMonitoringConfig](cr.html#hubblemonitoringconfig).
 To enable export, [create a HubbleMonitoringConfig resource](examples.html#hubblemonitoringconfig).
 
 {% alert level="warning" %}

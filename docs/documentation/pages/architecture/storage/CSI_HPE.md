@@ -2,7 +2,7 @@
 title: Csi-hpe module
 permalink: en/architecture/storage/external/csi-hpe.html
 search: csi-hpe, hpe
-description: Architecture of the csi-hpe module in Deckhouse Kubernetes Platform.
+description: Architecture of the csi-hpe module in Deckhouse Platform.
 ---
 
 The [`csi-hpe`](/modules/csi-hpe/) module is designed to manage volumes using HPE storage systems. It enables creating StorageClass resources in Kubernetes using the HPEStorageClass custom resource.
@@ -18,7 +18,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`csi-hpe`](/modules/csi-hpe/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the [`csi-hpe`](/modules/csi-hpe/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
 ![csi-hpe module architecture](../../../images/architecture/storage/c4-l2-csi-hpe.png)
 
@@ -40,7 +40,7 @@ The module consists of the following components:
     * **controller**: Main container.
     * **webhooks**: Sidecar container implementing a webhook server for StorageClass validation.
 
-1. **CSI driver (hpe)**: CSI driver implementation for the `csi.hpe.com` provisioner. To study the typical CSI driver architecture used in DKP, refer to [the CSI driver documentation page](../csi-drivers/csi-driver.html).
+1. **CSI driver (hpe)**: CSI driver implementation for the `csi.hpe.com` provisioner. To study the typical CSI driver architecture used in DP, refer to [the CSI driver documentation page](../csi-drivers/csi-driver.html).
 
 1. **Primera3par-csp**: A service container provider (Container Storage Provider, CSP) responsible for integrating the CSI driver with HPE Primera and 3PAR storage systems. It handles communication between Kubernetes and the storage arrays, manages session handling, and path replication.
 

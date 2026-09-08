@@ -1,18 +1,18 @@
 ---
-title: Управление кластерами DKP
+title: Управление кластерами DP
 permalink: ru/architecture/deckhouse/commander.html
 lang: ru
 search: commander, commander-agent, modules
-description: Архитектура модулей commander и commander-agent в Deckhouse Kubernetes Platform.
+description: Архитектура модулей commander и commander-agent в Deckhouse Platform.
 ---
 
-Для реализации механизма управления кластерами Deckhouse Kubernetes Platform (DKP) используются модули [`commander`](/modules/commander/) и [`commander-agent`](/modules/commander-agent/).
+Для реализации механизма управления кластерами Deckhouse Platform (DP) используются модули [`commander`](/modules/commander/) и [`commander-agent`](/modules/commander-agent/).
 
-Кластер DKP, в котором установлен модуль `commander`, является *управляющим* кластером. Кластер DKP с установленным модулем `commander-agent` является *управляемым*.
+Кластер DP, в котором установлен модуль `commander`, является *управляющим* кластером. Кластер DP с установленным модулем `commander-agent` является *управляемым*.
 
 ## Модуль commander
 
-Модуль [`commander`](/modules/commander/) реализует веб-приложение, позволяющее создавать однотипные кластеры на базе DKP, управлять их конфигурациями и жизненным циклом.
+Модуль [`commander`](/modules/commander/) реализует веб-приложение, позволяющее создавать однотипные кластеры на базе DP, управлять их конфигурациями и жизненным циклом.
 
 Для установки модуля [`commander`](/modules/commander/) требуется экземпляр PostgreSQL, который может быть развёрнут вне кластера или в нём с помощью модуля [`managed-postgresql`](/modules/managed-postgresql/).
 
@@ -34,7 +34,7 @@ description: Архитектура модулей commander и commander-agent 
 * На схеме изображены только основные контейнеры каждого компонента.
 {% endalert %}
 
-Архитектура модуля [`commander`](/modules/commander/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура модуля [`commander`](/modules/commander/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DP изображены на следующей диаграмме:
 
 ![Архитектура модуля commander](../../images/architecture/deckhouse/c4-l2-commander.ru.svg)
 
@@ -97,11 +97,11 @@ description: Архитектура модулей commander и commander-agent 
    * **sidekiq** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к основному контейнеру.
 
-1. **Cluster-manager** (Deployment) — компонент, реализующий выполнение задач по развёртыванию и управлению конфигурацией управляемых кластеров DKP, запрошенных компонентом backend.
+1. **Cluster-manager** (Deployment) — компонент, реализующий выполнение задач по развёртыванию и управлению конфигурацией управляемых кластеров DP, запрошенных компонентом backend.
 
    При создании нового кластера cluster-manager создаёт следующие ресурсы в неймспейсе `d8-commander` в управляющем кластере:
 
-   * Deployment и Secret с именем `dhctl-<REGISTRY_HASH>-<VERSION>` — запуск [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl/) в режиме gRPC-сервера. Cluster-manager использует RPC-вызовы для установки и настройки кластера DKP;
+   * Deployment и Secret с именем `dhctl-<REGISTRY_HASH>-<VERSION>` — запуск [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl/) в режиме gRPC-сервера. Cluster-manager использует RPC-вызовы для установки и настройки кластера DP;
    * для обработки подключений от `commander-agent` и реализации обратного канала взаимодействия с control plane соответствующего кластера:
      * Deployment (`ampg-connector-<UUID>`);
      * Service:
@@ -131,11 +131,11 @@ description: Архитектура модулей commander и commander-agent 
    * **cluster-manager** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к основному контейнеру.
 
-1. **Dhctl-&lt;REGISTRY_HASH&gt;-&lt;VERSION&gt;** (Deployment) — компонент, состоящий из одного контейнера **dhctl**, запускает утилиту [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl/) в режиме gRPC-сервера. Cluster-manager выполняет RPC-вызовы к серверу `dhctl` для установки или настройки управляемого кластера DKP.
+1. **Dhctl-&lt;REGISTRY_HASH&gt;-&lt;VERSION&gt;** (Deployment) — компонент, состоящий из одного контейнера **dhctl**, запускает утилиту [dhctl](https://github.com/deckhouse/deckhouse/tree/main/dhctl/) в режиме gRPC-сервера. Cluster-manager выполняет RPC-вызовы к серверу `dhctl` для установки или настройки управляемого кластера DP.
 
-1. **Ampg-connector-&lt;UUID&gt;** (Deployment) — компонент, состоящий из одного контейнера **main**. Создаёт туннель и позволяет проксировать запросы к control plane управляемого кластера DKP через входящее подключение от `commander-agent`.
+1. **Ampg-connector-&lt;UUID&gt;** (Deployment) — компонент, состоящий из одного контейнера **main**. Создаёт туннель и позволяет проксировать запросы к control plane управляемого кластера DP через входящее подключение от `commander-agent`.
 
-   Компонент создаётся cluster-manager для каждого управляемого кластера DKP.
+   Компонент создаётся cluster-manager для каждого управляемого кластера DP.
 
 1. **Cluster-checker** (Deployment) — компонент периодически выполняет запуск задач по проверке кластеров.
 
@@ -155,7 +155,7 @@ description: Архитектура модулей commander и commander-agent 
 
 1. **Redis** (Deployment) — компонент состоит из одного контейнера **redis** и реализует отдельный экземпляр базы данных [Redis](https://github.com/redis/redis), отвечающий за хранение данных об очередях задач и состояниях сессий commander.
 
-1. **Console-frontend** (Deployment) — предоставляет веб-интерфейс администрирования управляемого кластера DKP.
+1. **Console-frontend** (Deployment) — предоставляет веб-интерфейс администрирования управляемого кластера DP.
 
    Состоит из следующих контейнеров:
 
@@ -163,9 +163,9 @@ description: Архитектура модулей commander и commander-agent 
    * **wait-migrations** — init-контейнер, ожидающий выполнения всех миграций в базе данных;
    * **nginx** — основной контейнер.
 
-1. **Console-backend** (Deployment) — API-бэкенд администрирования управляемого кластера DKP, обслуживающий запросы от компонента cluster-manager.
+1. **Console-backend** (Deployment) — API-бэкенд администрирования управляемого кластера DP, обслуживающий запросы от компонента cluster-manager.
 
-   Console-backend использует ресурсы Secret и Service, создаваемые компонентом cluster-manager, для подключения к control plane управляемого кластера DKP.
+   Console-backend использует ресурсы Secret и Service, создаваемые компонентом cluster-manager, для подключения к control plane управляемого кластера DP.
 
    Состоит из следующих контейнеров:
 
@@ -217,7 +217,7 @@ description: Архитектура модулей commander и commander-agent 
 
 1. **Billing-prometheus** (StatefulSet) — компонент запускает [Deckhouse Prom++](/products/prompp/) в режиме приёма метрик по протоколу [Prometheus Remote Write](https://prometheus.io/docs/specs/prw/remote_write_spec/).
 
-   Модуль [`prometheus`](/modules/prometheus/), установленный в управляемом кластере DKP, отправляет метрики. Компонент хранит историю потребления ресурсов всеми управляемыми кластерами, что является важным источником данных для формирования отчётов по биллингу.
+   Модуль [`prometheus`](/modules/prometheus/), установленный в управляемом кластере DP, отправляет метрики. Компонент хранит историю потребления ресурсов всеми управляемыми кластерами, что является важным источником данных для формирования отчётов по биллингу.
 
    Состоит из следующих контейнеров:
 
@@ -263,11 +263,11 @@ description: Архитектура модулей commander и commander-agent 
 
    * авторизация запросов.
 
-1. **Хранилище образов** — получение доступных релизов DKP по каналам обновлений.
+1. **Хранилище образов** — получение доступных релизов DP по каналам обновлений.
 
 1. **Экземпляр PostgreSQL** — долговременное хранение состояния и метаданных кластеров, задач, токенов, проектов, параметров биллинга и отчётов.
 
-1. **Управляемый кластер** — создание, изменение или удаление кластера DKP.
+1. **Управляемый кластер** — создание, изменение или удаление кластера DP.
 
 С модулем взаимодействуют следующие внешние компоненты:
 
@@ -277,13 +277,13 @@ description: Архитектура модулей commander и commander-agent 
 
 ## Модуль commander-agent
 
-Модуль [`commander-agent`](/modules/commander-agent/) реализует служебное подключение к управляющему кластеру DKP.
+Модуль [`commander-agent`](/modules/commander-agent/) реализует служебное подключение к управляющему кластеру DP.
 
 Подробнее с описанием настроек модуля можно ознакомиться [в разделе документации модуля](/modules/commander-agent/).
 
 ### Архитектура модуля commander-agent
 
-Архитектура модуля [`commander-agent`](/modules/commander-agent/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура модуля [`commander-agent`](/modules/commander-agent/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DP изображены на следующей диаграмме:
 
 ![Архитектура модуля commander-agent](../../images/architecture/deckhouse/c4-l2-commander-agent.ru.svg)
 
@@ -301,10 +301,10 @@ Agent выполняет следующие действия:
   * `PVC` — общий объём подключаемых дисков, ГиБ;
   * `Nodes` — общее количество узлов;
 * собирает информацию о доступности кластера;
-* устанавливает защищённое подключение к управляющему кластеру DKP;
-* отправляет метрики и информацию о доступности кластера в управляющий кластер DKP;
+* устанавливает защищённое подключение к управляющему кластеру DP;
+* отправляет метрики и информацию о доступности кластера в управляющий кластер DP;
 * настраивает аутентификацию пользователей через Dex-провайдер управляющего кластера;
-* если в управляющем кластере включён биллинг, agent создаёт кастомный ресурс [PrometheusRemoteWrite](/modules/prometheus/cr.html#prometheusremotewrite) для отправки метрик в сервис биллинга управляющего кластера DKP.
+* если в управляющем кластере включён биллинг, agent создаёт кастомный ресурс [PrometheusRemoteWrite](/modules/prometheus/cr.html#prometheusremotewrite) для отправки метрик в сервис биллинга управляющего кластера DP.
 
 ### Взаимодействия модуля
 

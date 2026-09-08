@@ -3,7 +3,7 @@ title: Модуль cloud-provider-yandex
 permalink: ru/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-yandex.html
 lang: ru
 search: cloud-provider-yandex, cloud provider yandex
-description: Архитектура модуля cloud-provider-yandex в Deckhouse Kubernetes Platform.
+description: Архитектура модуля cloud-provider-yandex в Deckhouse Platform.
 ---
 
 Модуль `cloud-provider-yandex` управляет взаимодействием с облачными ресурсами [Yandex Cloud](https://yandex.cloud/ru). Он позволяет модулю [`node-manager`](/modules/node-manager/) использовать ресурсы Yandex Cloud при заказе узлов для описанной [группы узлов](/modules/node-manager/cr.html#nodegroup).
@@ -19,7 +19,7 @@ description: Архитектура модуля cloud-provider-yandex в Deckho
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура модуля [`cloud-provider-yandex`](/modules/cloud-provider-yandex/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
 ![Архитектура модуля cloud-provider-yandex](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-yandex.ru.png)
 
@@ -57,7 +57,7 @@ description: Архитектура модуля cloud-provider-yandex в Deckho
     * **cloud-metrics-exporter** — основной контейнер;
     * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам, получаемым от cloud-metrics-exporter.
 
-4. **CSI-драйвер (yandex)** — реализация CSI-драйвера для Yandex Cloud. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться на [соответствующей странице документации](../../storage/csi-drivers/csi-driver.html).
+4. **CSI-драйвер (yandex)** — реализация CSI-драйвера для Yandex Cloud. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DP, можно ознакомиться на [соответствующей странице документации](../../storage/csi-drivers/csi-driver.html).
 
    CSI-драйвер (yandex) не поддерживает работу со снимками. По этой причине в поде `csi-controller` отсутствует сайдкар-контейнер snapshotter ([external-snapshotter](https://github.com/kubernetes-csi/external-snapshotter)).
 

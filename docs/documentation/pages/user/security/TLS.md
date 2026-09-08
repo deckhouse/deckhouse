@@ -1,20 +1,20 @@
 ---
 title: Configuration of using TLS certificates
-description: "Managing TLS certificates in Deckhouse Kubernetes Platform. Working with Certificate and ClusterIssuer, automatic certificate retrieval via tls-acme, integration with Let's Encrypt and other CAs."
+description: "Managing TLS certificates in Deckhouse Platform. Working with Certificate and ClusterIssuer, automatic certificate retrieval via tls-acme, integration with Let's Encrypt and other CAs."
 permalink: en/user/security/tls.html
 ---
 
-Deckhouse Kubernetes Platform (DKP) provides built-in tools for managing TLS certificates,
+Deckhouse Platform (DP) provides built-in tools for managing TLS certificates,
 simplifying setup and management of traffic encryption for applications running in the cluster.
 
-This page covers the following aspects of certificate usage in DKP:
+This page covers the following aspects of certificate usage in DP:
 
 - Manually requesting TLS certificates using the Certificate and ClusterIssuer resources.
 - Securely storing and using credentials for accessing certificate authorities (CAs).
 - Automatically obtaining certificates using the `tls-acme` annotation in Ingress resources.
 
 {% alert level="info" %}
-For a general overview of certificate management in DKP, the list of supported issuers, and setup recommendations,
+For a general overview of certificate management in DP, the list of supported issuers, and setup recommendations,
 refer to [Certificate management](../../admin/configuration/security/certificates.html).
 {% endalert %}
 
@@ -94,7 +94,7 @@ For mode details on CAA records, refer to [Let's Encrypt documentation](https://
      cloudflareEmail: some@mail.somedomain
    ```
 
-   DKP will automatically create a ClusterIssuer and Secret for Cloudflare in the `d8-cert-manager` namespace.
+   DP will automatically create a ClusterIssuer and Secret for Cloudflare in the `d8-cert-manager` namespace.
 
 1. Create a Certificate resource using Cloudflare for DNS validation.
    This option becomes available only after the `cloudflareGlobalAPIKey` and `cloudflareEmail` parameters are configured:
@@ -180,7 +180,7 @@ For mode details on CAA records, refer to [Let's Encrypt documentation](https://
      route53SecretAccessKey: <SECRET_ACCESS_KEY>
    ```
 
-   DKP will automatically create a ClusterIssuer and Secret for Route53 in the `d8-cert-manager` namespace.
+   DP will automatically create a ClusterIssuer and Secret for Route53 in the `d8-cert-manager` namespace.
 
 1. Create a Certificate resource for validation with Route53.
    This option becomes available only after the `route53AccessKeyID` and `route53SecretAccessKey` parameters are configured:
@@ -217,7 +217,7 @@ For mode details on CAA records, refer to [Let's Encrypt documentation](https://
 
 1. Save the Base64 string in the [`cloudDNSServiceAccount`](/modules/cert-manager/configuration.html#parameters-clouddnsserviceaccount) parameter.
 
-   DKP will automatically create a ClusterIssuer and Secret for CloudDNS in the `d8-cert-manager` namespace.
+   DP will automatically create a ClusterIssuer and Secret for CloudDNS in the `d8-cert-manager` namespace.
 
 1. Create a Certificate resource using CloudDNS for validation:
 
@@ -368,7 +368,7 @@ To generate a certificate, we'll use the `openssl` utility.
 
 ## Protecting credentials
 
-If you prefer not to store credentials in the DKP configuration, you can create a separate Secret and reference it in the ClusterIssuer resource.
+If you prefer not to store credentials in the DP configuration, you can create a separate Secret and reference it in the ClusterIssuer resource.
 
 To do this, follow these steps:
 
@@ -433,7 +433,7 @@ To do this, follow these steps:
 
 ## Support for tls-acme annotation
 
-DKP supports the annotation `kubernetes.io/tls-acme: "true"` in Ingress resources.
+DP supports the annotation `kubernetes.io/tls-acme: "true"` in Ingress resources.
 The `cert-manager-ingress-shim` component watches for this annotation
 and automatically creates Certificate resources in the same namespace as the Ingress.
 

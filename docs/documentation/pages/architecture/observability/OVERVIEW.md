@@ -2,16 +2,16 @@
 title: Observability subsystem
 permalink: en/architecture/observability/
 search: observability subsystem
-description: Observability subsystem architecture in Deckhouse Kubernetes Platform.
+description: Observability subsystem architecture in Deckhouse Platform.
 extractedLinksOnlyMax: 0
 extractedLinksMax: 0
 ---
 
-This section describes the architecture of the Observability subsystem of Deckhouse Kubernetes Platform (DKP).
+This section describes the architecture of the Observability subsystem of Deckhouse Platform (DP).
 
 The Observability subsystem includes the following modules:
 
-* [`prometheus`](/modules/prometheus/): Deploys a monitoring stack with predefined settings for DKP and applications, simplifying the initial configuration.
+* [`prometheus`](/modules/prometheus/): Deploys a monitoring stack with predefined settings for DP and applications, simplifying the initial configuration.
 * [`operator-prometheus`](/modules/operator-prometheus/): Installs [Prometheus Operator](https://github.com/coreos/prometheus-operator), which automates the deployment and management of [Prometheus](https://prometheus.io/) instances.
 * [`prometheus-metrics-adapter`](/modules/prometheus-metrics-adapter/): Allows HPA and VPA autoscalers to use monitoring metrics when making scaling decisions.
 * [`log-shipper`](/modules/log-shipper/): Simplifies log collection setup in Kubernetes clusters.

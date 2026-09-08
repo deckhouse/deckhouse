@@ -1,10 +1,10 @@
 ---
 title: Hooks
 permalink: en/architecture/marketplace/hooks.html
-description: "Writing Go hooks for Deckhouse Kubernetes Platform Marketplace Applications using ApplicationHookInput. Instance-scoped ObjectPatcher and settings validation hooks."
+description: "Writing Go hooks for Deckhouse Platform Marketplace Applications using ApplicationHookInput. Instance-scoped ObjectPatcher and settings validation hooks."
 ---
 
-Application hooks are written in Go using the same module-sdk as Deckhouse Kubernetes Platform (DKP) module hooks. The key difference is that Application hooks use `ApplicationHookInput` instead of `HookInput`, which adds Application-specific capabilities and enforces namespace isolation.
+Application hooks are written in Go using the same module-sdk as Deckhouse Platform (DP) module hooks. The key difference is that Application hooks use `ApplicationHookInput` instead of `HookInput`, which adds Application-specific capabilities and enforces namespace isolation.
 
 ## ApplicationHookInput
 
@@ -43,7 +43,7 @@ func onSync(ctx context.Context, input applicationhook.ApplicationHookInput) err
 
 ## Settings validation hook
 
-Applications can include a settings validation hook that runs before DKP applies changes. This is used when OpenAPI schema validation is insufficient — for example, to check business logic constraints across multiple settings fields.
+Applications can include a settings validation hook that runs before DP applies changes. This is used when OpenAPI schema validation is insufficient — for example, to check business logic constraints across multiple settings fields.
 
 The hook implements a `Check` function with the signature:
 

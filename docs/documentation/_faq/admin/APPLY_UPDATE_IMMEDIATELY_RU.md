@@ -1,9 +1,9 @@
 ---
-title: Как применить обновление DKP, минуя окна обновлений, canary-release и ручной режим обновлений?
+title: Как применить обновление DP, минуя окна обновлений, canary-release и ручной режим обновлений?
 lang: ru
 ---
 
-Чтобы применить обновление DKP немедленно, установите в соответствующем ресурсе [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) аннотацию `release.deckhouse.io/apply-now: "true"`.
+Чтобы применить обновление DP немедленно, установите в соответствующем ресурсе [DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) аннотацию `release.deckhouse.io/apply-now: "true"`.
 
 В этом случае будут проигнорированы окна обновления, [настройки canary-release](../user/network/canary-deployment.html) и [режим ручного обновления кластера](../admin/configuration/update/configuration.html#ручное-подтверждение-обновлений). Обновление применится сразу после установки аннотации.
 

@@ -49,8 +49,8 @@ entries:
                 ru: Восстановление после потери кворума
               url: /stronghold/documentation/admin/standalone/raft-lost-quorum-recovery.html
         - title:
-            en: Launch in DKP
-            ru: Запуск в DKP
+            en: Launch in DP
+            ru: Запуск в DP
           folders:
             - title:
                 en: Install

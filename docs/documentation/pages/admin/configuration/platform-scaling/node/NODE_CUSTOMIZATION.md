@@ -1,7 +1,7 @@
 ---
 title: "Custom node configuration"
 permalink: en/admin/configuration/platform-scaling/node/node-customization.html
-description: "Configure custom node settings in Deckhouse Kubernetes Platform. NodeGroupConfiguration setup, bash script automation, and node customization for cluster infrastructure."
+description: "Configure custom node settings in Deckhouse Platform. NodeGroupConfiguration setup, bash script automation, and node customization for cluster infrastructure."
 ---
 
 To automate actions on group nodes, use the [NodeGroupConfiguration](/modules/node-manager/cr.html#nodegroupconfiguration) resource. It allows you to run bash scripts on the nodes using the [Bash Booster](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/bashbooster) command set, as well as apply the [Go Template](https://pkg.go.dev/text/template) templating engine. This is useful for automating operations such as:
@@ -134,11 +134,11 @@ post-install() {
 
 ## Monitoring script execution
 
-Applying NodeGroupConfiguration triggers an update of the **`bashible` configuration of the node group** in the specified groups. DKP automatically detects the change in this configuration and then sets the `UPTODATE` field (in the output of the `d8 k get nodegroup` command) to `0`. The `UPTODATE` field shows how many nodes have already been brought to the **target `bashible` configuration of the node group**; a value of `0` means that no node has been brought to the target `bashible` configuration yet (i.e., the update has not been applied to any node).
+Applying NodeGroupConfiguration triggers an update of the **`bashible` configuration of the node group** in the specified groups. DP automatically detects the change in this configuration and then sets the `UPTODATE` field (in the output of the `d8 k get nodegroup` command) to `0`. The `UPTODATE` field shows how many nodes have already been brought to the **target `bashible` configuration of the node group**; a value of `0` means that no node has been brought to the target `bashible` configuration yet (i.e., the update has not been applied to any node).
 
-DKP controls the start of updates on nodes via the `update.node.deckhouse.io/approved` annotation on the `Node` object. By default, the update runs simultaneously on one node from each group. Update parallelism is defined by the [`maxConcurrent`](/modules/node-manager/cr.html#nodegroup-v1-spec-update-maxconcurrent) parameter in the node group configuration. When DKP selects a node to update (taking the queue and `maxConcurrent` into account), it sets the `update.node.deckhouse.io/approved` annotation, after which the `bashible` service on that node begins applying the **target `bashible` configuration of the node group**.
+DP controls the start of updates on nodes via the `update.node.deckhouse.io/approved` annotation on the `Node` object. By default, the update runs simultaneously on one node from each group. Update parallelism is defined by the [`maxConcurrent`](/modules/node-manager/cr.html#nodegroup-v1-spec-update-maxconcurrent) parameter in the node group configuration. When DP selects a node to update (taking the queue and `maxConcurrent` into account), it sets the `update.node.deckhouse.io/approved` annotation, after which the `bashible` service on that node begins applying the **target `bashible` configuration of the node group**.
 
-You can view the node annotations set by DKP to start the update using the following command:
+You can view the node annotations set by DP to start the update using the following command:
 
 ```bash
 d8 k get nodes -o json | jq '.items[] | select(.metadata.annotations."update.node.deckhouse.io/approved"=="") | .metadata.name' -r
@@ -176,7 +176,7 @@ rm /var/lib/bashible/configuration_checksum
 
 When writing scripts, it's important to consider the following features of their usage in Deckhouse:
 
-1. Scripts in DKP are executed every 4 hours or based on external triggers. Therefore, it's important to write scripts in a way that they first check whether changes are necessary, to avoid repeated or unnecessary actions on each execution.
+1. Scripts in DP are executed every 4 hours or based on external triggers. Therefore, it's important to write scripts in a way that they first check whether changes are necessary, to avoid repeated or unnecessary actions on each execution.
 1. There are [predefined scripts](https://github.com/deckhouse/deckhouse/tree/main/candi/bashible/common-steps/all) that perform various actions, including service installation and configuration. It's important to consider this when assigning priority to custom scripts. For example, if a custom script restarts a service, it must run after the script that installs that service. Otherwise, the custom script won't be able to run during the initial provisioning of the node (since the service won’t be installed yet).
 
 Useful specifics of certain scripts:
@@ -1099,5 +1099,5 @@ spec:
 When adding a node to the cluster, the labels specified in the files will be automatically affixed to the node.
 
 {% alert level="warning" %}
-Note that it is not possible to add labels used in DKP in this way. This method will only work with custom labels that do not overlap with those reserved for Deckhouse.
+Note that it is not possible to add labels used in DP in this way. This method will only work with custom labels that do not overlap with those reserved for Deckhouse.
 {% endalert %}

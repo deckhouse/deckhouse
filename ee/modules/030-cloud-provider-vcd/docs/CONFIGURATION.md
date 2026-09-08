@@ -7,7 +7,7 @@ The module is automatically enabled for all cloud clusters deployed in VMware Cl
 
 ## List of required VMware Cloud Director services
 
-The following VMware Cloud Director service must be available for Deckhouse Kubernetes Platform to operate:
+The following VMware Cloud Director service must be available for Deckhouse Platform to operate:
 
 | Service                   | API version      |
 | :------------------------ | :---------:      |

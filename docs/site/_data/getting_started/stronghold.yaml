@@ -35,11 +35,11 @@ installTypes:
     iconPath: images/icons/platforms/corp_cloud_vmware.png
     type: existing-dkp
     name:
-      en: Existing DKP cluster
-      ru: Существующий кластер DKP
+      en: Existing DP cluster
+      ru: Существующий кластер DP
     pages_title:
-      en: "Deckhouse Stronghold in an existing Deckhouse Kubernetes Platform cluster"
-      ru: "Deckhouse Stronghold в существующем кластере Deckhouse Kubernetes Platform"
+      en: "Deckhouse Stronghold in an existing Deckhouse Platform cluster"
+      ru: "Deckhouse Stronghold в существующем кластере Deckhouse Platform"
     #layout:
     #  code: standard
     #  name: Standard

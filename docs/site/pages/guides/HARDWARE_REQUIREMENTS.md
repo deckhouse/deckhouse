@@ -1,12 +1,12 @@
 ---
 title: Picking resources for a bare metal cluster
 permalink: en/guides/hardware-requirements.html
-description: Hardware requirements for cluster nodes managed by Deckhouse Kubernetes Platform.
+description: Hardware requirements for cluster nodes managed by Deckhouse Platform.
 lang: en
 layout: sidebar-guides
 ---
 
-Before deploying a cluster running Deckhouse Kubernetes Platform, you have to plan the configuration of the future cluster and decide on the parameters of its nodes (e.g., RAM, CPU, etc.).
+Before deploying a cluster running Deckhouse Platform, you have to plan the configuration of the future cluster and decide on the parameters of its nodes (e.g., RAM, CPU, etc.).
 
 ## Installation Planning
 
@@ -15,12 +15,12 @@ Before deploying a cluster, you need to plan for the resources that you might ne
 * What is the expected load?
 * Does your cluster require a high load mode?
 * Does your cluster require a high availability mode?
-* Which Deckhouse Kubernetes Platform (DKP) modules do you intend to use?
+* Which Deckhouse Platform (DP) modules do you intend to use?
 
 The answers to these questions can help you estimate the number of nodes recommended for your cluster deployment. See [Deployment Scenarios](#deployment-scenarios) to learn more.
 
 {% alert level="info" %}
-The information below applies to a Deckhouse Kubernetes Platform installation running the [Default module set](/products/kubernetes-platform/documentation/v1/admin/configuration/#module-bundles).
+The information below applies to a Deckhouse Platform installation running the [Default module set](/products/kubernetes-platform/documentation/v1/admin/configuration/#module-bundles).
 {% endalert %}
 
 ## Deployment Scenarios
@@ -71,20 +71,20 @@ Where:
 * **master nodes** — nodes that manage the cluster;
 * **frontend nodes** — nodes that balance incoming traffic; Ingress controllers run on them;
 * **monitoring nodes** — used to run Grafana, Prometheus, and other monitoring components;
-* **system nodes** — intended to run DKP modules;
+* **system nodes** — intended to run DP modules;
 * **worker nodes** — intended to run user applications.
 
 See [Configuration Features](./production.html#things-to-consider-when-configuring) of the "Going to Production" guide for details on these node types.
 
 Features of the configurations listed in the table above:
 
-* **Minimum** — Minimum cluster configuration is suitable for small, light-load projects with low reliability requirements. It is up to you to define the characteristics of the worker node based on the expected user load. Note that in this configuration, some of the DKP components will also run on the worker node.
+* **Minimum** — Minimum cluster configuration is suitable for small, light-load projects with low reliability requirements. It is up to you to define the characteristics of the worker node based on the expected user load. Note that in this configuration, some of the DP components will also run on the worker node.
   > Such a cluster configuration is risky because if a single master node fails, the entire cluster will be affected.
 * **Typical** — This is the recommended configuration that can tolerate the failure of two master nodes. It greatly improves service availability.
 * **Increased load** — Unlike the typical configuration, this configuration includes dedicated monitoring nodes, enabling a high level of observability in the cluster even under high loads.
 
 {% alert level="info" %}
-Starting with version 1.74, Deckhouse Kubernetes Platform has a module integrity control mechanism that protects modules from being replaced or modified. This mechanism is enabled automatically when the operating system on the nodes where DKP is installed supports the `erofs` kernel module. If this kernel module is not present, DKP will continue to operate without the module integrity control mechanism, but an alert will be displayed indicating that this functionality is not working.
+Starting with version 1.74, Deckhouse Platform has a module integrity control mechanism that protects modules from being replaced or modified. This mechanism is enabled automatically when the operating system on the nodes where DP is installed supports the `erofs` kernel module. If this kernel module is not present, DP will continue to operate without the module integrity control mechanism, but an alert will be displayed indicating that this functionality is not working.
 {% endalert %}
 
 ## Deciding on the amount of resources needed for nodes
@@ -103,7 +103,7 @@ Starting with version 1.74, Deckhouse Kubernetes Platform has a module integrity
     <tr>
       <td rowspan="6" style="width: 45%;">
         <b>Minimum</b><br><br>
-        <i>The way the cluster will run on minimum requirement nodes largely depends on which DKP modules are enabled.<br>
+        <i>The way the cluster will run on minimum requirement nodes largely depends on which DP modules are enabled.<br>
         We recommend increasing node resources if the number of enabled modules is large.<br><br>
         </i>
       </td>
@@ -220,7 +220,7 @@ We recommend load testing the application and adjusting the server capacity acco
 
 ### Configuration examples
 
-To deploy Deckhouse Kubernetes Platform Enterprise Edition with the [Default](/modules/deckhouse/configuration.html#parameters-bundle) module set, the following node configuration is required:
+To deploy Deckhouse Platform Enterprise Edition with the [Default](/modules/deckhouse/configuration.html#parameters-bundle) module set, the following node configuration is required:
 
 * **master nodes** — 1 node, 4 CPU, 8 GB RAM;
 * **frontend nodes** — 1 node, 2 CPU, 4 GB RAM;
@@ -228,7 +228,7 @@ To deploy Deckhouse Kubernetes Platform Enterprise Edition with the [Default](/m
 * **worker nodes** — 1 node, 4 CPU, 8 GB RAM.
 
 {% alert level="info" %}
-If needed, you can also run DKP in the same configuration on a single node with 16 CPU and 32 GB RAM for a virtual machine, or 10 CPU and 24 GB RAM for a bare metal server.
+If needed, you can also run DP in the same configuration on a single node with 16 CPU and 32 GB RAM for a virtual machine, or 10 CPU and 24 GB RAM for a bare metal server.
 {% endalert %}
 
 ## Node Hardware Requirements
@@ -256,4 +256,4 @@ Join our [Telegram channel](https://t.me/deckhouse) to stay up to date.
 
 Join the [Deckhouse community](https://deckhouse.io/community/about.html) for updates on important developments and news. There, you will be able to chat with others and learn from their experiences. This way, you can avoid many common mistakes.
 
-The Deckhouse Kubernetes Platform team knows firsthand the dedication it takes to set up and orchestrate a production Kubernetes cluster. We're thrilled if DKP empowers you to bring your vision to life. Share your journey and ignite others to embark on their own Kubernetes endeavors!
+The Deckhouse Platform team knows firsthand the dedication it takes to set up and orchestrate a production Kubernetes cluster. We're thrilled if DP empowers you to bring your vision to life. Share your journey and ignite others to embark on their own Kubernetes endeavors!

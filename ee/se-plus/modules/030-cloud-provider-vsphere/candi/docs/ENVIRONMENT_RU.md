@@ -7,7 +7,7 @@ description: "Настройка VMware vSphere для работы облачн
 
 ## Требования к окружению
 
-Для корректной работы Deckhouse Kubernetes Platform с VMware vSphere необходимы:
+Для корректной работы Deckhouse Platform с VMware vSphere необходимы:
 
 - Доступ к vCenter;
 - Пользователь с необходимым набором привилегий;
@@ -51,7 +51,7 @@ description: "Настройка VMware vSphere для работы облачн
 
 > О том, как создать и назначить роль пользователю, читайте в разделах [«Настройка через vSphere Client»](#настройка-через-vsphere-client) и [«Настройка через govc»](#настройка-через-govc).
 
-Детальный список привилегий, необходимых для работы Deckhouse Kubernetes Platform в vSphere:
+Детальный список привилегий, необходимых для работы Deckhouse Platform в vSphere:
 
 <table>
   <thead>
@@ -107,7 +107,7 @@ description: "Настройка VMware vSphere для работы облачн
         <code>Folder.Move</code><br/>
         <code>Folder.Rename</code>
       </td>
-      <td>Группировка кластера Deckhouse Kubernetes Platform в одном <code>Folder</code> в vSphere Inventory.</td>
+      <td>Группировка кластера Deckhouse Platform в одном <code>Folder</code> в vSphere Inventory.</td>
     </tr>
     <tr>
       <td>Global</td>
@@ -119,7 +119,7 @@ description: "Настройка VMware vSphere для работы облачн
         <code>Global.GlobalTag</code><br/>
         <code>Global.SystemTag</code>
       </td>
-      <td>Доступ к глобальным и системным тегам, используемым Deckhouse Kubernetes Platform при работе с объектами vSphere.</td>
+      <td>Доступ к глобальным и системным тегам, используемым Deckhouse Platform при работе с объектами vSphere.</td>
     </tr>
     <tr>
       <td>vSphere Tagging</td>
@@ -147,13 +147,13 @@ description: "Настройка VMware vSphere для работы облачн
         <code>InventoryService.Tagging.ModifyUsedByForCategory</code><br/>
         <code>InventoryService.Tagging.ModifyUsedByForTag</code>
       </td>
-      <td>Deckhouse Kubernetes Platform использует теги для определения доступных ему объектов <code>Datacenter</code>, <code>Cluster</code> и <code>Datastore</code>, а также для определения виртуальных машин, находящихся под его управлением.</td>
+      <td>Deckhouse Platform использует теги для определения доступных ему объектов <code>Datacenter</code>, <code>Cluster</code> и <code>Datastore</code>, а также для определения виртуальных машин, находящихся под его управлением.</td>
     </tr>
     <tr>
       <td>Network</td>
       <td>Assign network</td>
       <td><code>Network.Assign</code></td>
-      <td>Подключение сетей и port group к виртуальным машинам кластера Deckhouse Kubernetes Platform.</td>
+      <td>Подключение сетей и port group к виртуальным машинам кластера Deckhouse Platform.</td>
     </tr>
     <tr>
       <td>Resource</td>
@@ -171,7 +171,7 @@ description: "Настройка VMware vSphere для работы облачн
         <code>Resource.EditPool</code><br/>
         <code>Resource.RenamePool</code>
       </td>
-      <td>Размещение виртуальных машин кластера Deckhouse Kubernetes Platform в целевом пуле ресурсов и управление этим пулом.</td>
+      <td>Размещение виртуальных машин кластера Deckhouse Platform в целевом пуле ресурсов и управление этим пулом.</td>
     </tr>
     <tr>
       <td>VM Storage Policies (<em>Profile-driven Storage Privileges</em> в vSphere 7)</td>
@@ -259,7 +259,7 @@ description: "Настройка VMware vSphere для работы облачн
         <code>VirtualMachine.Config.SwapPlacement</code><br/>
         <code>VirtualMachine.Config.UpgradeVirtualHardware</code>
       </td>
-      <td>Управление жизненным циклом виртуальных машин кластера Deckhouse Kubernetes Platform.</td>
+      <td>Управление жизненным циклом виртуальных машин кластера Deckhouse Platform.</td>
     </tr>
     <tr>
       <td>Virtual Machine > Edit Inventory</td>
@@ -275,7 +275,7 @@ description: "Настройка VMware vSphere для работы облачн
         <code>VirtualMachine.Inventory.Delete</code><br/>
         <code>VirtualMachine.Inventory.Move</code>
       </td>
-      <td>Создание, удаление и перемещение виртуальных машин кластера Deckhouse Kubernetes Platform в инвентаре vSphere.</td>
+      <td>Создание, удаление и перемещение виртуальных машин кластера Deckhouse Platform в инвентаре vSphere.</td>
     </tr>
     <tr>
       <td>Virtual Machine > Guest Operations</td>
@@ -325,7 +325,7 @@ description: "Настройка VMware vSphere для работы облачн
         <code>VirtualMachine.Provisioning.PutVmFiles</code><br/>
         <code>VirtualMachine.Provisioning.ReadCustSpecs</code>
       </td>
-      <td>Клонирование шаблонов виртуальных машин, их настройка и развертывание при создании узлов кластера Deckhouse Kubernetes Platform.</td>
+      <td>Клонирование шаблонов виртуальных машин, их настройка и развертывание при создании узлов кластера Deckhouse Platform.</td>
     </tr>
     <tr>
       <td>Virtual Machine > Snapshot Management</td>
@@ -544,10 +544,10 @@ govc permissions.set -principal <username>@vsphere.local -role deckhouse /
 
 #### Подготовка образа виртуальной машины
 
-DKP использует `cloud-init` для настройки виртуальной машины после запуска.
+DP использует `cloud-init` для настройки виртуальной машины после запуска.
 
 {% alert level="warning" %}
-Отключите VMware Guest OS Customization (а также любые механизмы vApp/OS customization, если они применимы в вашей схеме) для шаблона и виртуальных машин кластера. DKP выполняет первичную настройку узлов через `cloud-init` (datasource VMware GuestInfo). Включенная customization может конфликтовать с `cloud-init` и приводить к некорректной инициализации узла.
+Отключите VMware Guest OS Customization (а также любые механизмы vApp/OS customization, если они применимы в вашей схеме) для шаблона и виртуальных машин кластера. DP выполняет первичную настройку узлов через `cloud-init` (datasource VMware GuestInfo). Включенная customization может конфликтовать с `cloud-init` и приводить к некорректной инициализации узла.
 {% endalert %}
 
 Чтобы подготовить `cloud-init` и образ ВМ, выполните следующие действия:
@@ -619,12 +619,12 @@ enabled
 {% endalert %}
 
 {% alert %}
-DKP создаёт диски виртуальных машин с типом `eagerZeroedThick`, но тип дисков созданных ВМ будет изменён без уведомления, согласно настроенным в vSphere `VM Storage Policy`.
+DP создаёт диски виртуальных машин с типом `eagerZeroedThick`, но тип дисков созданных ВМ будет изменён без уведомления, согласно настроенным в vSphere `VM Storage Policy`.
 Подробнее можно прочитать в [документации](https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/8-0/vsphere-single-host-management-vmware-host-client-8-0/virtual-machine-management-with-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/configuring-virtual-machines-in-the-vsphere-host-client-vSphereSingleHostManagementVMwareHostClient/virtual-disk-configuration-vSphereSingleHostManagementVMwareHostClient/about-virtual-disk-provisioning-policies-vSphereSingleHostManagementVMwareHostClient.html).
 {% endalert %}
 
 {% alert %}
-DKP использует интерфейс `ens192`, как интерфейс по умолчанию для виртуальных машин в vSphere. Поэтому, при использовании статических IP-адресов в [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork), вы должны в образе ОС создать интерфейс с именем `ens192`, как интерфейс по умолчанию.
+DP использует интерфейс `ens192`, как интерфейс по умолчанию для виртуальных машин в vSphere. Поэтому, при использовании статических IP-адресов в [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork), вы должны в образе ОС создать интерфейс с именем `ens192`, как интерфейс по умолчанию.
 {% endalert %}
 
 ## Инфраструктура

@@ -1,11 +1,11 @@
 ---
 title: "Обеспечение высокой доступности и отказоустойчивости (keepalived)"
 permalink: ru/admin/configuration/network/ingress/keepalived.html
-description: "Настройка keepalived для высокой доступности в Deckhouse Kubernetes Platform. Конфигурация отказоустойчивости и настройка сетевой избыточности для инфраструктуры кластера."
+description: "Настройка keepalived для высокой доступности в Deckhouse Platform. Конфигурация отказоустойчивости и настройка сетевой избыточности для инфраструктуры кластера."
 lang: ru
 ---
 
-В Deckhouse Kubernetes Platform для обеспечения высокой доступности и отказоустойчивости можно использовать модуль [`keepalived`](/modules/keepalived/).
+В Deckhouse Platform для обеспечения высокой доступности и отказоустойчивости можно использовать модуль [`keepalived`](/modules/keepalived/).
 
 <!-- Перенесено из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/keepalived/ -->
 

@@ -3,10 +3,10 @@ title: Модуль user-authn
 permalink: ru/architecture/iam/user-authn.html
 lang: ru
 search: authentication, user-authn, аутентификация
-description: Архитектура модуля user-authn в Deckhouse Kubernetes Platform.
+description: Архитектура модуля user-authn в Deckhouse Platform.
 ---
 
-Модуль `user-authn` реализует единую систему аутентификации, интегрированную с Kubernetes и веб-интерфейсами, используемыми в модулях Deckhouse Kubernetes Platform (DKP), например, в модуле [`console`](/modules/console/).
+Модуль `user-authn` реализует единую систему аутентификации, интегрированную с Kubernetes и веб-интерфейсами, используемыми в модулях Deckhouse Platform (DP), например, в модуле [`console`](/modules/console/).
 
 Подробнее с настройками модуля и примерами его использования можно ознакомиться в [соответствующем разделе документации](/modules/user-authn/).
 
@@ -19,12 +19,12 @@ description: Архитектура модуля user-authn в Deckhouse Kuberne
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-В DKP для служебных сервисов и пользовательских приложений используются две схемы аутентификации:
+В DP для служебных сервисов и пользовательских приложений используются две схемы аутентификации:
 
 * с использованием dex-authenticator;
 * с использованием клиента Dex.
 
-Архитектура модуля [`user-authn`](/modules/user-authn/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующих диаграммах.
+Архитектура модуля [`user-authn`](/modules/user-authn/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DP изображены на следующих диаграммах.
 
 Вариант с использованием dex-authenticator:
 
@@ -49,7 +49,7 @@ description: Архитектура модуля user-authn в Deckhouse Kuberne
    * **dex** — основной контейнер, реализующий функции Dex;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам провайдера.
 
-2. **Dex-authenticator** — [middleware](https://github.com/oauth2-proxy/oauth2-proxy/blob/master/docs/static/img/simplified-architecture.svg)-сервис для аутентификации запросов к приложениям через сервис аутентификации кластера DKP.
+2. **Dex-authenticator** — [middleware](https://github.com/oauth2-proxy/oauth2-proxy/blob/master/docs/static/img/simplified-architecture.svg)-сервис для аутентификации запросов к приложениям через сервис аутентификации кластера DP.
 
    При соответствующей настройке Ingress-контроллера (через модуль `auth_request` NGINX) запросы сначала направляются в dex-authenticator для аутентификации.
 
@@ -68,7 +68,7 @@ description: Архитектура модуля user-authn в Deckhouse Kuberne
 
 С модулем взаимодействуют следующие внешние компоненты:
 
-1. **Ingress-контроллер** — перенаправляет в dex-authenticator запросы на аутентификацию в служебных сервисах DKP и в пользовательских приложениях.
+1. **Ingress-контроллер** — перенаправляет в dex-authenticator запросы на аутентификацию в служебных сервисах DP и в пользовательских приложениях.
 
 2. **Пользовательские приложения** — могут аутентифицироваться в dex напрямую (без dex-authenticator), если для приложения настроен OAuth2-клиент в Dex. Подробнее с настройкой клиента Dex можно ознакомиться в [документации модуля `user-authn`](/modules/user-authn/usage.html#настройка-oauth2-клиента-в-dex-для-подключения-приложения).
 

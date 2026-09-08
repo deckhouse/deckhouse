@@ -1,11 +1,11 @@
 ---
 title: "Балансировка средствами MetalLB"
 permalink: ru/admin/configuration/network/ingress/nlb/metallb.html
-description: "Настройка балансировки нагрузки MetalLB в Deckhouse Kubernetes Platform для bare-metal и облачных сред. Поддержка сервисов LoadBalancer и управление IP-адресами."
+description: "Настройка балансировки нагрузки MetalLB в Deckhouse Platform для bare-metal и облачных сред. Поддержка сервисов LoadBalancer и управление IP-адресами."
 lang: ru
 ---
 
-Модуль [`metallb`](/modules/metallb/) реализует поддержку сервисов типа LoadBalancer в кластерах Deckhouse Kubernetes Platform (DKP).
+Модуль [`metallb`](/modules/metallb/) реализует поддержку сервисов типа LoadBalancer в кластерах Deckhouse Platform (DP).
 Он подходит как для bare-metal-кластеров, так и для облачных, в которых недоступны встроенные балансировщики от провайдера.
 
 <!-- перенесено с минимальными изменениями из https://deckhouse.ru/products/kubernetes-platform/documentation/latest/modules/metallb/ -->
@@ -13,7 +13,7 @@ lang: ru
 Поддерживаются два режима работы:
 
 - **Layer 2** — усовершенствованный (относительно стандартного режима L2 в MetalLB) механизм балансировки, который позволяет использовать несколько публичных адресов для сервисов.
-- **BGP** — полностью основан на решении [MetalLB](https://metallb.io/) и доступен только в DKP Enterprise Edition.
+- **BGP** — полностью основан на решении [MetalLB](https://metallb.io/) и доступен только в DP Enterprise Edition.
 
 ## Режим Layer 2
 
@@ -180,7 +180,7 @@ curl -s -o /dev/null -w "%{http_code}" 192.168.2.102:8000
 ## Режим BGP
 
 {% alert level="info" %}
-Доступен только в DKP Enterprise Edition.
+Доступен только в DP Enterprise Edition, DP Ultimate и DP Certified Pro.
 {% endalert %}
 
 [`metallb`](/modules/metallb/) в режиме BGP используется для предоставления сервисов типа LoadBalancer в кластерах Kubernetes, развёрнутых на физической инфраструктуре.

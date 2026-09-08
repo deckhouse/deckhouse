@@ -3,7 +3,7 @@ title: Модуль metallb
 permalink: ru/architecture/network/metallb.html
 lang: ru
 search: metallb, балансировщик, режим bgp, режим layer 2
-description: Архитектура модуля metallb в Deckhouse Kubernetes Platform.
+description: Архитектура модуля metallb в Deckhouse Platform.
 ---
 
 Модуль `metallb` реализует механизм LoadBalancer для сервисов в bare-metal-кластерах.
@@ -24,7 +24,7 @@ description: Архитектура модуля metallb в Deckhouse Kubernetes
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`metallb`](/modules/metallb/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующих диаграммах.
+Архитектура модуля [`metallb`](/modules/metallb/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующих диаграммах.
 
 MetalLB в режиме Layer 2:
 

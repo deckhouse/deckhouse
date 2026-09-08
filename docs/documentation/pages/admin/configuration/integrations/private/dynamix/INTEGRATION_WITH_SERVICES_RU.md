@@ -4,7 +4,7 @@ permalink: ru/admin/integrations/private/dynamix/services.html
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform интегрируется с облачной платформой Basis Dynamix и использует [ресурсы DynamixInstanceClass](/modules/cloud-provider-dynamix/cr.html#dynamixinstanceclass) для описания характеристик виртуальных машин, разворачиваемых в кластере.
+Deckhouse Platform интегрируется с облачной платформой Basis Dynamix и использует [ресурсы DynamixInstanceClass](/modules/cloud-provider-dynamix/cr.html#dynamixinstanceclass) для описания характеристик виртуальных машин, разворачиваемых в кластере.
 
 ## Основные возможности
 

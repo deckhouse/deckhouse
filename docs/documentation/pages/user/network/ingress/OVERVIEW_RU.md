@@ -1,11 +1,11 @@
 ---
 title: "Обработка входящего трафика"
-description: "Настройка Network Load Balancer (NLB) и Application Load Balancer (ALB) в Deckhouse Kubernetes Platform. Балансировка TCP/UDP трафика и HTTP/HTTPS запросов. Предоставление внешнего доступа к приложениям."
+description: "Настройка Network Load Balancer (NLB) и Application Load Balancer (ALB) в Deckhouse Platform. Балансировка TCP/UDP трафика и HTTP/HTTPS запросов. Предоставление внешнего доступа к приложениям."
 permalink: ru/user/network/ingress/
 lang: ru
 ---
 
-Балансировщики Network Load Balancer (NLB) и Application Load Balancer (ALB) используются для предоставления внешнего доступа к приложениям, развернутым в кластере под управлением Deckhouse Kubernetes Platform.
+Балансировщики Network Load Balancer (NLB) и Application Load Balancer (ALB) используются для предоставления внешнего доступа к приложениям, развернутым в кластере под управлением Deckhouse Platform.
 
 ## Особенности и назначение NLB
 

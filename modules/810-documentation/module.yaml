@@ -1,8 +1,8 @@
 name: documentation
 stage: General Availability
 descriptions:
-  en: Creates a documentation web UI for the Deckhouse version currently used in a cluster.
-  ru: Создает веб-интерфейс с документацией, соответствующей запущенной версии Deckhouse Kubernetes Platform.
+  en: Creates a documentation web UI for the Deckhouse Platform version currently used in a cluster.
+  ru: Создает веб-интерфейс с документацией, соответствующей запущенной версии Deckhouse Platform.
 namespace: d8-system
 accessibility:
   editions:

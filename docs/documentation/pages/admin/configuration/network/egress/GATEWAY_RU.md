@@ -5,7 +5,7 @@ lang: ru
 ---
 
 {% alert level="warning" %}
-Функция доступна в DKP Standard Edition+, Enterprise Edition, SE Lite (1.73), CSE Pro (1.73).
+Функция доступна в DP Standard Edition+, Enterprise Edition, DP Core, DP Ultimate, SE Lite (1.73), CSE Pro (1.73), DP Certified Lite, DP Certified Pro.
 {% endalert %}
 
 Egress Gateway позволяет централизованно управлять исходящим трафиком и контролировать его, а также обеспечивает такие функции, как шифрование, маршрутизация и мониторинг.

@@ -3,7 +3,7 @@ title: Модуль csi-hpe
 permalink: ru/architecture/storage/external/csi-hpe.html
 lang: ru
 search: csi-hpe, hpe
-description: Архитектура модуля csi-hpe в Deckhouse Kubernetes Platform.
+description: Архитектура модуля csi-hpe в Deckhouse Platform.
 ---
 
 Модуль [`csi-hpe`](/modules/csi-hpe/) предназначен для управления томами c использованием систем хранения данных HPE. Он позволяет создавать StorageClass в Kubernetes с помощью ресурса HPEStorageClass.
@@ -19,7 +19,7 @@ description: Архитектура модуля csi-hpe в Deckhouse Kubernetes
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`csi-hpe`](/modules/csi-hpe/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура модуля [`csi-hpe`](/modules/csi-hpe/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
 ![Архитектура модуля csi-hpe](../../../images/architecture/storage/c4-l2-csi-hpe.ru.png)
 
@@ -41,7 +41,7 @@ description: Архитектура модуля csi-hpe в Deckhouse Kubernetes
     * **controller** — основной контейнер;
     * **webhooks** — сайдкар-контейнер, реализующий вебхук-сервер для проверки StorageClass.
 
-1. **CSI-драйвер (hpe)** — реализация CSI-драйвера, использующего provisioner `csi.hpe.com`. С типовой архитектурой CSI-драйвера, используемого в DKP, можно ознакомиться [в описании архитектуры CSI-драйвера](../csi-drivers/csi-driver.html).
+1. **CSI-драйвер (hpe)** — реализация CSI-драйвера, использующего provisioner `csi.hpe.com`. С типовой архитектурой CSI-драйвера, используемого в DP, можно ознакомиться [в описании архитектуры CSI-драйвера](../csi-drivers/csi-driver.html).
 
 1. **Primera3par-csp** — сервисный контейнер-провайдер (Container Storage Provider, CSP), обеспечивающий интеграцию CSI-драйвера с системами хранения данных HPE Primera и 3PAR. Выполняет функции взаимодействия между Kubernetes и СХД, а также управляет сессиями и репликацией путей.
 

@@ -3,14 +3,14 @@ title: CSI-драйвер VMware vSphere
 permalink: ru/architecture/storage/csi-drivers/csi-driver-vsphere.html
 lang: ru
 search: csi vsphere, csi-vsphere, container storage interface, vmware vsphere
-description: Описание архитектуры CSI-драйвера для VMware vSphere в Deckhouse Kubernetes Platform.
+description: Описание архитектуры CSI-драйвера для VMware vSphere в Deckhouse Platform.
 ---
 
-Для управления постоянными томами хранения в Deckhouse Kubernetes Platform (DKP) используется CSI-драйвер (плагин).
+Для управления постоянными томами хранения в Deckhouse Platform (DP) используется CSI-драйвер (плагин).
 
 [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) — это стандартный интерфейс, который унифицирует доступ к хранилищам и упрощает интеграцию различных систем хранения в кластеры.
 
-В модуле [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) используется [`csi-vsphere`](/modules/csi-vsphere/) (основан на [vSphere CSI Driver](https://github.com/kubernetes-sigs/vsphere-csi-driver)), который отличается от драйверов, применяемых в DKP, наличием компонента syncer, специфичного для VMware vSphere.
+В модуле [`cloud-provider-vsphere`](/modules/cloud-provider-vsphere/) используется [`csi-vsphere`](/modules/csi-vsphere/) (основан на [vSphere CSI Driver](https://github.com/kubernetes-sigs/vsphere-csi-driver)), который отличается от драйверов, применяемых в DP, наличием компонента syncer, специфичного для VMware vSphere.
 
 ## Архитектура драйвера
 
@@ -21,7 +21,7 @@ description: Описание архитектуры CSI-драйвера для
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура CSI-драйвера [`csi-vsphere`](/modules/csi-vsphere/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура CSI-драйвера [`csi-vsphere`](/modules/csi-vsphere/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
 ![Архитектура CSI-драйвера csi-vsphere](../../../images/architecture/storage/c4-l2-csi-driver-vsphere.ru.png)
 
@@ -37,7 +37,7 @@ CSI-драйвер состоит из следующих компонентов
 
    * **сайдкар-контейнеры контроллера** — поддерживаемые сообществом Kubernetes внешние контроллеры (external controllers).
 
-     Они необходимы, поскольку persistent volume controller, запущенный в kube-controller-manager (компонент [control plane кластера DKP](../../kubernetes-and-scheduling/control-plane.html)), не имеет интерфейса взаимодействия с CSI-драйверами. Внешние контроллеры следят за ресурсами PersistentVolumeClaim и вызывают соответствующие функции CSI-драйвера в контейнере controller. Они также выполняют служебные функции, такие как получение информации о плагине и его capabilities или проверка состояния драйвера (liveness probe).
+     Они необходимы, поскольку persistent volume controller, запущенный в kube-controller-manager (компонент [control plane кластера DP](../../kubernetes-and-scheduling/control-plane.html)), не имеет интерфейса взаимодействия с CSI-драйверами. Внешние контроллеры следят за ресурсами PersistentVolumeClaim и вызывают соответствующие функции CSI-драйвера в контейнере controller. Они также выполняют служебные функции, такие как получение информации о плагине и его capabilities или проверка состояния драйвера (liveness probe).
 
      Внешние контроллеры взаимодействуют c контейнером controller по gRPC через Unix-сокеты.
 

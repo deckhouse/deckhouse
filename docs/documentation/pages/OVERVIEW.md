@@ -1,7 +1,7 @@
 ---
-title: Deckhouse Kubernetes Platform documentation
+title: Deckhouse Platform documentation
 permalink: en/
-description: Deckhouse Kubernetes Platform Documentation.
+description: Deckhouse Platform Documentation.
 rootLLMStxtURL: /products/kubernetes-platform/documentation/v1/llms.txt
 ---
 
@@ -15,7 +15,11 @@ rootLLMStxtURL: /products/kubernetes-platform/documentation/v1/llms.txt
 {% include pdf_download_modal.html %}
 {%- endunless %}
 
-Welcome to the home page of the Deckhouse Kubernetes Platform documentation.
+{% alert level="info" %}
+Starting with version 1.76, the product name Deckhouse Kubernetes Platform has been changed to Deckhouse Platform in the documentation.
+{% endalert %}
+
+Welcome to the home page of the Deckhouse Platform documentation.
 {% if site.mode != 'module' %}We recommend starting with the [Getting started](/products/kubernetes-platform/gs/) guide for those who haven't yet tried the platform. It provides step-by-step instructions for deploying the platform to any infrastructure.{% endif %}
 
 Here are some tips on how to find what you need:
@@ -24,12 +28,12 @@ Here are some tips on how to find what you need:
 - Check [this list](reference/revision-comparison.html) if you are looking for information on a particular module.
 - The menu on the left is for searching by scope.
 
-{% if site.mode != 'module' %}Note that the Deckhouse Kubernetes Platform documentation for different versions may vary. Select the version you need from the drop-down list at the top of the page. The list contains up-to-date versions of the documentation.{% endif %}
+{% if site.mode != 'module' %}Note that the Deckhouse Platform documentation for different versions may vary. Select the version you need from the drop-down list at the top of the page. The list contains up-to-date versions of the documentation.{% endif %}
 
 If you have any questions, feel free to contact us at [Telegram channel]({{ site.social_links[page.lang]['telegram'] }}). We will do our best to help you.
 
 Commercial Edition users can contact us at [email](mailto:support@deckhouse.io). We will be glad to provide assistance!
 
-Interested in improving Deckhouse Kubernetes Platform? Feel free to open a GitHub [Issue](https://github.com/deckhouse/deckhouse/issues/), suggest an [idea](https://github.com/deckhouse/deckhouse/discussions) or join the list of [contributors](https://github.com/deckhouse/deckhouse/blob/main/CONTRIBUTING.md).
+Interested in improving Deckhouse Platform? Feel free to open a GitHub [Issue](https://github.com/deckhouse/deckhouse/issues/), suggest an [idea](https://github.com/deckhouse/deckhouse/discussions) or join the list of [contributors](https://github.com/deckhouse/deckhouse/blob/main/CONTRIBUTING.md).
 
 Feel like you can contribute a lot more? Then join our [team](https://job.flant.ru/)! We look forward to welcoming new professionals!

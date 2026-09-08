@@ -43,7 +43,7 @@
     },
     {
       "title": "The cert-manager module",
-      "description": "Managing certificates in the Deckhouse Kubernetes Platform cluster.",
+      "description": "Managing certificates in the Deckhouse Platform cluster.",
       "module": "cert-manager",
       "embedded": "true",
       "tags": [
@@ -55,7 +55,7 @@
       "url": "cert-manager/",
       "ru": {
         "title": "Модуль cert-manager",
-        "description": "Управление сертификатами в кластере Deckhouse Kubernetes Platform."
+        "description": "Управление сертификатами в кластере Deckhouse Platform."
       },
       "metadata": {
         "name": "cert-manager",
@@ -95,7 +95,7 @@
       "url": "chrony/",
       "ru": {
         "title": "Модуль chrony",
-        "description": "Синхронизация времени в кластере Deckhouse Kubernetes Platform."
+        "description": "Синхронизация времени в кластере Deckhouse Platform."
       },
       "metadata": {
         "name": "chrony",
@@ -123,7 +123,7 @@
     },
     {
       "title": "The cilium-hubble module",
-      "description": "Visualization of the Deckhouse Kubernetes Platform cluster network stack using Cilium Hubble.",
+      "description": "Visualization of the Deckhouse Platform cluster network stack using Cilium Hubble.",
       "webIfaces": [
         {
           "name": "hubble"
@@ -142,7 +142,7 @@
       "url": "cilium-hubble/",
       "ru": {
         "title": "Модуль cilium-hubble",
-        "description": "Визуализация сетевого стека кластера Deckhouse Kubernetes Platform с помощью Cilium Hubble.",
+        "description": "Визуализация сетевого стека кластера Deckhouse Platform с помощью Cilium Hubble.",
         "webIfaces": [
           {
             "name": "hubble"
@@ -180,7 +180,7 @@
     },
     {
       "title": "Cloud provider — AWS",
-      "description": "Cloud resource management in Deckhouse Kubernetes Platform using Amazon AWS.",
+      "description": "Cloud resource management in Deckhouse Platform using Amazon AWS.",
       "module": "cloud-provider-aws",
       "embedded": "true",
       "tags": [
@@ -192,7 +192,7 @@
       "url": "cloud-provider-aws/",
       "ru": {
         "title": "Cloud provider — AWS",
-        "description": "Управление облачными ресурсами в Deckhouse Kubernetes Platform с помощью Amazon AWS."
+        "description": "Управление облачными ресурсами в Deckhouse Platform с помощью Amazon AWS."
       },
       "metadata": {
         "name": "cloud-provider-aws",
@@ -311,7 +311,7 @@
     },
     {
       "title": "Cloud provider — Azure",
-      "description": "Cloud resource management in Deckhouse Kubernetes Platform using Microsoft Azure.",
+      "description": "Cloud resource management in Deckhouse Platform using Microsoft Azure.",
       "module": "cloud-provider-azure",
       "embedded": "true",
       "tags": [
@@ -323,7 +323,7 @@
       "url": "cloud-provider-azure/",
       "ru": {
         "title": "Cloud provider — Azure",
-        "description": "Управление облачными ресурсами в Deckhouse Kubernetes Platform с помощью Microsoft Azure."
+        "description": "Управление облачными ресурсами в Deckhouse Platform с помощью Microsoft Azure."
       },
       "metadata": {
         "name": "cloud-provider-azure",
@@ -433,7 +433,7 @@
     },
     {
       "title": "Cloud provider — DVP",
-      "description": "Deckhouse Kubernetes Platform integration with the Deckhouse Virtualization Platform. Deployment of DKP clusters on top of the DVP.",
+      "description": "Deckhouse Platform integration with the Deckhouse Virtualization Platform. Deployment of DP clusters on top of the DVP.",
       "module": "cloud-provider-dvp",
       "embedded": "true",
       "tags": [
@@ -446,7 +446,7 @@
       "url": "cloud-provider-dvp/",
       "ru": {
         "title": "Cloud provider — DVP",
-        "description": "Интеграция Deckhouse Kubernetes Platform с платформой виртуализации Deckhouse Virtualization Platform. Развертывание кластеров DKP поверх DVP."
+        "description": "Интеграция Deckhouse Platform с платформой виртуализации Deckhouse Virtualization Platform. Развертывание кластеров DP поверх DVP."
       },
       "metadata": {
         "name": "cloud-provider-dvp",
@@ -476,7 +476,7 @@
     },
     {
       "title": "Cloud provider — Dynamix",
-      "description": "Management of virtual servers and containers in the Deckhouse Kubernetes Platform using Dynamix.",
+      "description": "Management of virtual servers and containers in the Deckhouse Platform using Dynamix.",
       "module": "cloud-provider-dynamix",
       "embedded": "true",
       "tags": [
@@ -489,7 +489,7 @@
       "url": "cloud-provider-dynamix/",
       "ru": {
         "title": "Cloud provider — Basis Dynamix",
-        "description": "Управление виртуальными серверами и контейнерами в Deckhouse Kubernetes Platform с помощью Basis Dynamix."
+        "description": "Управление виртуальными серверами и контейнерами в Deckhouse Platform с помощью Basis Dynamix."
       },
       "metadata": {
         "name": "cloud-provider-dynamix",
@@ -519,7 +519,7 @@
     },
     {
       "title": "Cloud provider — GCP",
-      "description": "Cloud resource management in Deckhouse Kubernetes Platform using Google Cloud Platform.",
+      "description": "Cloud resource management in Deckhouse Platform using Google Cloud Platform.",
       "module": "cloud-provider-gcp",
       "embedded": "true",
       "tags": [
@@ -531,7 +531,7 @@
       "url": "cloud-provider-gcp/",
       "ru": {
         "title": "Cloud provider — GCP",
-        "description": "Управление облачными ресурсами в Deckhouse Kubernetes Platform с помощью Google Cloud Platform."
+        "description": "Управление облачными ресурсами в Deckhouse Platform с помощью Google Cloud Platform."
       },
       "metadata": {
         "name": "cloud-provider-gcp",
@@ -641,7 +641,7 @@
     },
     {
       "title": "Cloud provider — Huawei Cloud",
-      "description": "Cloud resource management in Deckhouse Kubernetes Platform using Huawei Cloud.",
+      "description": "Cloud resource management in Deckhouse Platform using Huawei Cloud.",
       "module": "cloud-provider-huaweicloud",
       "embedded": "true",
       "tags": [
@@ -653,7 +653,7 @@
       "url": "cloud-provider-huaweicloud/",
       "ru": {
         "title": "Cloud provider — Huawei Cloud",
-        "description": "Управление облачными ресурсами в Deckhouse Kubernetes Platform с помощью Huawei Cloud."
+        "description": "Управление облачными ресурсами в Deckhouse Platform с помощью Huawei Cloud."
       },
       "metadata": {
         "name": "cloud-provider-huaweicloud",
@@ -701,7 +701,7 @@
     },
     {
       "title": "Cloud provider — OpenStack",
-      "description": "Cloud resource management in Deckhouse Kubernetes Platform using OpenStack.",
+      "description": "Cloud resource management in Deckhouse Platform using OpenStack.",
       "module": "cloud-provider-openstack",
       "embedded": "true",
       "tags": [
@@ -713,7 +713,7 @@
       "url": "cloud-provider-openstack/",
       "ru": {
         "title": "Cloud provider — OpenStack",
-        "description": "Управление облачными ресурсами в Deckhouse Kubernetes Platform с помощью OpenStack."
+        "description": "Управление облачными ресурсами в Deckhouse Platform с помощью OpenStack."
       },
       "metadata": {
         "name": "cloud-provider-openstack",
@@ -823,7 +823,7 @@
     },
     {
       "title": "Cloud provider — VMware Cloud Director",
-      "description": "Cloud resource management in Deckhouse Kubernetes Platform using VMware Cloud Director.",
+      "description": "Cloud resource management in Deckhouse Platform using VMware Cloud Director.",
       "module": "cloud-provider-vcd",
       "embedded": "true",
       "tags": [
@@ -835,7 +835,7 @@
       "url": "cloud-provider-vcd/",
       "ru": {
         "title": "Cloud provider — VMware Cloud Director",
-        "description": "Управление облачными ресурсами в Deckhouse Kubernetes Platform с помощью VMware Cloud Director."
+        "description": "Управление облачными ресурсами в Deckhouse Platform с помощью VMware Cloud Director."
       },
       "metadata": {
         "name": "cloud-provider-vcd",
@@ -944,7 +944,7 @@
     },
     {
       "title": "Cloud provider — VMware vSphere",
-      "description": "Managing cloud resources in Deckhouse Kubernetes Platform based on VMware vSphere.",
+      "description": "Managing cloud resources in Deckhouse Platform based on VMware vSphere.",
       "module": "cloud-provider-vsphere",
       "embedded": "true",
       "tags": [
@@ -957,7 +957,7 @@
       "url": "cloud-provider-vsphere/",
       "ru": {
         "title": "Cloud provider — VMware vSphere",
-        "description": "Управление облачными ресурсами в Deckhouse Kubernetes Platform на базе VMware vSphere."
+        "description": "Управление облачными ресурсами в Deckhouse Platform на базе VMware vSphere."
       },
       "metadata": {
         "name": "cloud-provider-vsphere",
@@ -1067,7 +1067,7 @@
     },
     {
       "title": "Cloud provider — Yandex Cloud",
-      "description": "Cloud resource management in Deckhouse Kubernetes Platform using Yandex Cloud.",
+      "description": "Cloud resource management in Deckhouse Platform using Yandex Cloud.",
       "module": "cloud-provider-yandex",
       "embedded": "true",
       "tags": [
@@ -1079,7 +1079,7 @@
       "url": "cloud-provider-yandex/",
       "ru": {
         "title": "Cloud provider — Yandex Cloud",
-        "description": "Управление облачными ресурсами в Deckhouse Kubernetes Platform с помощью Yandex Cloud."
+        "description": "Управление облачными ресурсами в Deckhouse Platform с помощью Yandex Cloud."
       },
       "metadata": {
         "name": "cloud-provider-yandex",
@@ -1136,7 +1136,7 @@
     },
     {
       "title": "Cloud provider — zVirt",
-      "description": "Managing cloud resources in Deckhouse Kubernetes Platform based on zVirt.",
+      "description": "Managing cloud resources in Deckhouse Platform based on zVirt.",
       "module": "cloud-provider-zvirt",
       "embedded": "true",
       "tags": [
@@ -1149,7 +1149,7 @@
       "url": "cloud-provider-zvirt/",
       "ru": {
         "title": "Cloud provider — zVirt",
-        "description": "Управление облачными ресурсами в Deckhouse Kubernetes Platform на базе zVirt."
+        "description": "Управление облачными ресурсами в Deckhouse Platform на базе zVirt."
       },
       "metadata": {
         "name": "cloud-provider-zvirt",
@@ -1248,7 +1248,7 @@
     },
     {
       "title": "The cni-flannel module",
-      "description": "Ensuring the network operation in the Deckhouse Kubernetes Platform cluster based on Flannel.",
+      "description": "Ensuring the network operation in the Deckhouse Platform cluster based on Flannel.",
       "module": "cni-flannel",
       "embedded": "true",
       "tags": [
@@ -1260,7 +1260,7 @@
       "url": "cni-flannel/",
       "ru": {
         "title": "Модуль cni-flannel",
-        "description": "Обеспечение работы сети в кластере Deckhouse Kubernetes Platform на базе flannel."
+        "description": "Обеспечение работы сети в кластере Deckhouse Platform на базе flannel."
       },
       "metadata": {
         "name": "cni-flannel",
@@ -1291,7 +1291,7 @@
     },
     {
       "title": "The cni-simple-bridge module",
-      "description": "Ensuring network operation in the Deckhouse Kubernetes Platform cluster with limited functionality.",
+      "description": "Ensuring network operation in the Deckhouse Platform cluster with limited functionality.",
       "module": "cni-simple-bridge",
       "embedded": "true",
       "tags": [
@@ -1303,7 +1303,7 @@
       "url": "cni-simple-bridge/",
       "ru": {
         "title": "Модуль cni-simple-bridge",
-        "description": "Обеспечение работы сети в кластере Deckhouse Kubernetes Platform ограниченной функциональности."
+        "description": "Обеспечение работы сети в кластере Deckhouse Platform ограниченной функциональности."
       },
       "metadata": {
         "name": "cni-simple-bridge",
@@ -1429,7 +1429,7 @@
         "namespace": "d8-system",
         "disable": {
           "confirmation": true,
-          "message": "Disabling this module will completely stop normal operation of the Deckhouse Kubernetes Platform."
+          "message": "Disabling this module will completely stop normal operation of the Deckhouse Platform."
         },
         "descriptions": {
           "en": "Configures main Deckhouse parameters: logging level, set of modules enabled by default, and release channel.",
@@ -1497,7 +1497,7 @@
     },
     {
       "title": "The descheduler module",
-      "description": "Deckhouse Kubernetes Platform, the descheduler module. Every 15 minutes, analyzes the cluster state and performs pod eviction according to the conditions described in the active strategies.",
+      "description": "Deckhouse Platform, the descheduler module. Every 15 minutes, analyzes the cluster state and performs pod eviction according to the conditions described in the active strategies.",
       "module": "descheduler",
       "embedded": "true",
       "tags": [
@@ -1509,7 +1509,7 @@
       "url": "descheduler/",
       "ru": {
         "title": "Модуль descheduler",
-        "description": "Модуль descheduler Deckhouse Kubernetes Platform. Каждые 15 минут анализирует состояние кластера и выполняет вытеснение подов, соответствующих условиям, описанным в активных стратегиях."
+        "description": "Модуль descheduler Deckhouse Platform. Каждые 15 минут анализирует состояние кластера и выполняет вытеснение подов, соответствующих условиям, описанным в активных стратегиях."
       },
       "metadata": {
         "name": "descheduler",
@@ -1537,7 +1537,7 @@
     },
     {
       "title": "The documentation module",
-      "description": "A web interface with documentation for the Deckhouse Kubernetes Platform.",
+      "description": "A web interface with documentation for the Deckhouse Platform.",
       "webIfaces": [
         {
           "name": "documentation"
@@ -1554,7 +1554,7 @@
       "url": "documentation/",
       "ru": {
         "title": "Модуль documentation",
-        "description": "Веб-интерфейс с документацией Deckhouse Kubernetes Platform.",
+        "description": "Веб-интерфейс с документацией Deckhouse Platform.",
         "webIfaces": [
           {
             "name": "documentation"
@@ -1566,7 +1566,7 @@
         "stage": "General Availability",
         "descriptions": {
           "en": "Creates a documentation web UI for the Deckhouse version currently used in a cluster.",
-          "ru": "Создает веб-интерфейс с документацией, соответствующей запущенной версии Deckhouse Kubernetes Platform."
+          "ru": "Создает веб-интерфейс с документацией, соответствующей запущенной версии Deckhouse Platform."
         },
         "namespace": "d8-system",
         "oss": []
@@ -1671,7 +1671,7 @@
     },
     {
       "title": "The keepalived module",
-      "description": "Management of keepalived clusters on Deckhouse Kubernetes Platform nodes.",
+      "description": "Management of keepalived clusters on Deckhouse Platform nodes.",
       "module": "keepalived",
       "embedded": "true",
       "tags": [
@@ -1685,7 +1685,7 @@
       "url": "keepalived/",
       "ru": {
         "title": "Модуль keepalived",
-        "description": "Управление кластерами keepalived на узлах Deckhouse Kubernetes Platform."
+        "description": "Управление кластерами keepalived на узлах Deckhouse Platform."
       },
       "metadata": {
         "name": "keepalived",
@@ -1753,7 +1753,7 @@
     },
     {
       "title": "The kube-proxy module",
-      "description": "Managing kube-proxy components on a Deckhouse Kubernetes Platform cluster node.",
+      "description": "Managing kube-proxy components on a Deckhouse Platform cluster node.",
       "module": "kube-proxy",
       "embedded": "true",
       "tags": [
@@ -1765,7 +1765,7 @@
       "url": "kube-proxy/",
       "ru": {
         "title": "Модуль kube-proxy",
-        "description": "Управление компонентами kube-proxy на узле кластера Deckhouse Kubernetes Platform."
+        "description": "Управление компонентами kube-proxy на узле кластера Deckhouse Platform."
       },
       "metadata": {
         "name": "kube-proxy",
@@ -1785,7 +1785,7 @@
     },
     {
       "title": "The local-path-provisioner module",
-      "description": "Management of local storage on Kubernetes nodes in the Deckhouse Kubernetes Platform.",
+      "description": "Management of local storage on Kubernetes nodes in the Deckhouse Platform.",
       "module": "local-path-provisioner",
       "embedded": "true",
       "tags": [
@@ -1797,7 +1797,7 @@
       "url": "local-path-provisioner/",
       "ru": {
         "title": "Модуль local-path-provisioner",
-        "description": "Управление локальным хранилищем на узлах Kubernetes в Deckhouse Kubernetes Platform."
+        "description": "Управление локальным хранилищем на узлах Kubernetes в Deckhouse Platform."
       },
       "metadata": {
         "name": "local-path-provisioner",
@@ -1867,7 +1867,7 @@
     },
     {
       "title": "The monitoring-deckhouse module",
-      "description": "Monitoring of Deckhouse Kubernetes Platform components and services.",
+      "description": "Monitoring of Deckhouse Platform components and services.",
       "module": "monitoring-deckhouse",
       "embedded": "true",
       "tags": [
@@ -1878,7 +1878,7 @@
       "url": "monitoring-deckhouse/",
       "ru": {
         "title": "Модуль monitoring-deckhouse",
-        "description": "Мониторинг компонентов и сервисов Deckhouse Kubernetes Platform."
+        "description": "Мониторинг компонентов и сервисов Deckhouse Platform."
       },
       "metadata": {
         "name": "monitoring-deckhouse",
@@ -1888,8 +1888,8 @@
         ],
         "namespace": "d8-monitoring",
         "descriptions": {
-          "en": "Monitoring of Deckhouse Kubernetes Platform components and services.",
-          "ru": "Мониторинг компонентов и сервисов Deckhouse Kubernetes Platform."
+          "en": "Monitoring of Deckhouse Platform components and services.",
+          "ru": "Мониторинг компонентов и сервисов Deckhouse Platform."
         },
         "requirements": {
           "modules": {
@@ -1934,7 +1934,7 @@
     },
     {
       "title": "The namespace-configurator module",
-      "description": "Automatic management of annotations and labels on namespaces in the Deckhouse Kubernetes Platform.",
+      "description": "Automatic management of annotations and labels on namespaces in the Deckhouse Platform.",
       "module": "namespace-configurator",
       "embedded": "true",
       "tags": [
@@ -1946,7 +1946,7 @@
       "url": "namespace-configurator/",
       "ru": {
         "title": "Модуль namespace-configurator",
-        "description": "Автоматическое управление аннотациями и лейблами на пространствах имён в Deckhouse Kubernetes Platform."
+        "description": "Автоматическое управление аннотациями и лейблами на пространствах имён в Deckhouse Platform."
       },
       "metadata": {
         "name": "namespace-configurator",
@@ -1961,7 +1961,7 @@
     },
     {
       "title": "The network-gateway module",
-      "description": "Creates a network gateway using Deckhouse Kubernetes Platform nodes.",
+      "description": "Creates a network gateway using Deckhouse Platform nodes.",
       "module": "network-gateway",
       "embedded": "true",
       "tags": [
@@ -1973,7 +1973,7 @@
       "url": "network-gateway/",
       "ru": {
         "title": "Модуль network-gateway",
-        "description": "Постройка сетевого шлюза из узлов кластера Deckhouse Kubernetes Platform."
+        "description": "Постройка сетевого шлюза из узлов кластера Deckhouse Platform."
       },
       "metadata": {
         "name": "network-gateway",
@@ -1993,7 +1993,7 @@
     },
     {
       "title": "The network-policy-engine module",
-      "description": "Managing network policies in the Deckhouse Kubernetes Platform cluster.",
+      "description": "Managing network policies in the Deckhouse Platform cluster.",
       "module": "network-policy-engine",
       "embedded": "true",
       "tags": [
@@ -2006,7 +2006,7 @@
       "url": "network-policy-engine/",
       "ru": {
         "title": "Модуль network-policy-engine",
-        "description": "Управление сетевыми политиками в кластере Deckhouse Kubernetes Platform."
+        "description": "Управление сетевыми политиками в кластере Deckhouse Platform."
       },
       "metadata": {
         "name": "network-policy-engine",
@@ -2034,7 +2034,7 @@
     },
     {
       "title": "The node-local-dns module",
-      "description": "Caching DNS server on each node of the Deckhouse Kubernetes Platform cluster.",
+      "description": "Caching DNS server on each node of the Deckhouse Platform cluster.",
       "module": "node-local-dns",
       "embedded": "true",
       "tags": [
@@ -2046,7 +2046,7 @@
       "url": "node-local-dns/",
       "ru": {
         "title": "Модуль node-local-dns",
-        "description": "Кеширующий DNS-сервер на каждом узле кластера Deckhouse Kubernetes Platform."
+        "description": "Кеширующий DNS-сервер на каждом узле кластера Deckhouse Platform."
       },
       "metadata": {
         "name": "node-local-dns",
@@ -2128,7 +2128,7 @@
     },
     {
       "title": "The okmeter module",
-      "description": "Installation of the Okmeter agent in the Deckhouse Kubernetes Platform cluster.",
+      "description": "Installation of the Okmeter agent in the Deckhouse Platform cluster.",
       "module": "okmeter",
       "embedded": "true",
       "tags": [
@@ -2141,7 +2141,7 @@
       "url": "okmeter/",
       "ru": {
         "title": "Модуль okmeter",
-        "description": "Установка агента Okmeter в кластер Deckhouse Kubernetes Platform."
+        "description": "Установка агента Okmeter в кластер Deckhouse Platform."
       },
       "metadata": {
         "name": "okmeter",
@@ -2159,7 +2159,7 @@
     },
     {
       "title": "The openvpn module",
-      "description": "Access to Deckhouse Kubernetes Platform cluster resources via OpenVPN with certificate-based authentication.",
+      "description": "Access to Deckhouse Platform cluster resources via OpenVPN with certificate-based authentication.",
       "webIfaces": [
         {
           "name": "openvpn-admin"
@@ -2177,7 +2177,7 @@
       "url": "openvpn/",
       "ru": {
         "title": "Модуль openvpn",
-        "description": "Доступ к ресурсам кластера Deckhouse Kubernetes Platform через OpenVPN с аутентификацией по сертификатам.",
+        "description": "Доступ к ресурсам кластера Deckhouse Platform через OpenVPN с аутентификацией по сертификатам.",
         "webIfaces": [
           {
             "name": "openvpn-admin"
@@ -2227,7 +2227,7 @@
     },
     {
       "title": "The operator-prometheus module",
-      "description": "Installation and management of the monitoring system in the Deckhouse Kubernetes Platform cluster.",
+      "description": "Installation and management of the monitoring system in the Deckhouse Platform cluster.",
       "module": "operator-prometheus",
       "embedded": "true",
       "tags": [
@@ -2239,7 +2239,7 @@
       "url": "operator-prometheus/",
       "ru": {
         "title": "Модуль operator-prometheus",
-        "description": "Установка и управление системой мониторинга в кластере Deckhouse Kubernetes Platform."
+        "description": "Установка и управление системой мониторинга в кластере Deckhouse Platform."
       },
       "metadata": {
         "name": "operator-prometheus",
@@ -2269,7 +2269,7 @@
         "instruction"
       ],
       "search": "prometheus",
-      "description": "Monitoring of the Deckhouse Kubernetes Platform cluster using Prometheus and Grafana.",
+      "description": "Monitoring of the Deckhouse Platform cluster using Prometheus and Grafana.",
       "webIfaces": [
         {
           "name": "grafana"
@@ -2290,7 +2290,7 @@
           "instruction"
         ],
         "search": "prometheus",
-        "description": "Мониторинг кластера Deckhouse Kubernetes Platform на базе Prometheus и Grafana.",
+        "description": "Мониторинг кластера Deckhouse Platform на базе Prometheus и Grafana.",
         "webIfaces": [
           {
             "name": "grafana"
@@ -2361,7 +2361,7 @@
     },
     {
       "title": "Registry Module",
-      "description": "Configuration management of DKP component registry.",
+      "description": "Configuration management of DP component registry.",
       "module": "registry",
       "embedded": "true",
       "tags": [
@@ -2374,7 +2374,7 @@
       "url": "registry/",
       "ru": {
         "title": "Модуль registry",
-        "description": "Управление конфигурацией registry компонентов DKP."
+        "description": "Управление конфигурацией registry компонентов DP."
       },
       "metadata": {
         "name": "registry",
@@ -2387,7 +2387,7 @@
         "namespace": "d8-system",
         "disable": {
           "confirmation": true,
-          "message": "Disabling this module will completely stop normal operation of the Deckhouse Kubernetes Platform."
+          "message": "Disabling this module will completely stop normal operation of the Deckhouse Platform."
         },
         "descriptions": {
           "en": "Manages the configuration of the registry of Deckhouse components and provides an internal container registry.",
@@ -2429,7 +2429,7 @@
     },
     {
       "title": "The secret-copier module",
-      "description": "Automatic copying of Secrets across namespaces in the Deckhouse Kubernetes Platform cluster.",
+      "description": "Automatic copying of Secrets across namespaces in the Deckhouse Platform cluster.",
       "module": "secret-copier",
       "embedded": "true",
       "tags": [
@@ -2441,7 +2441,7 @@
       "url": "secret-copier/",
       "ru": {
         "title": "Модуль secret-copier",
-        "description": "Автоматическое копирование секретов по пространствам имён в кластере Deckhouse Kubernetes Platform."
+        "description": "Автоматическое копирование секретов по пространствам имён в кластере Deckhouse Platform."
       },
       "metadata": {
         "name": "secret-copier",
@@ -2459,7 +2459,7 @@
     },
     {
       "title": "The service-with-healthchecks module",
-      "description": "Readiness Probes with the service-with-healthchecks Module in Deckhouse Kubernetes Platform",
+      "description": "Readiness Probes with the service-with-healthchecks Module in Deckhouse Platform",
       "module": "service-with-healthchecks",
       "embedded": "true",
       "tags": [
@@ -2472,7 +2472,7 @@
       "url": "service-with-healthchecks/",
       "ru": {
         "title": "Модуль service-with-healthchecks",
-        "description": "Readiness-пробы с модулем service-with-healthchecks в Deckhouse Kubernetes Platform"
+        "description": "Readiness-пробы с модулем service-with-healthchecks в Deckhouse Platform"
       },
       "metadata": {
         "name": "service-with-healthchecks",
@@ -2487,7 +2487,7 @@
     },
     {
       "title": "The terraform-manager module",
-      "description": "Description of the Deckhouse Kubernetes Platform terraform-manager module. Ensures that the objects in the cluster correspond to the Terraform state.",
+      "description": "Description of the Deckhouse Platform terraform-manager module. Ensures that the objects in the cluster correspond to the Terraform state.",
       "module": "terraform-manager",
       "embedded": "true",
       "tags": [
@@ -2501,7 +2501,7 @@
       "url": "terraform-manager/",
       "ru": {
         "title": "Модуль terraform-manager",
-        "description": "Описание модуля terraform-manager Deckhouse Kubernetes Platform. Модуль следит за приведением объектов в кластере к состоянию, описанному в Terraform state."
+        "description": "Описание модуля terraform-manager Deckhouse Platform. Модуль следит за приведением объектов в кластере к состоянию, описанному в Terraform state."
       },
       "metadata": {
         "name": "terraform-manager",
@@ -2530,7 +2530,7 @@
     {
       "title": "The user-authn module",
       "search": "kube config generator",
-      "description": "A unified authentication system for Deckhouse Kubernetes Platform, integrated with Kubernetes and Deckhouse Kubernetes Platform web interfaces.",
+      "description": "A unified authentication system for Deckhouse Platform, integrated with Kubernetes and Deckhouse Platform web interfaces.",
       "webIfaces": [
         {
           "name": "kubeconfig",
@@ -2549,7 +2549,7 @@
       "ru": {
         "title": "Модуль user-authn",
         "search": "kube config generator",
-        "description": "Единая система аутентификации Deckhouse Kubernetes Platform, интегрированная с Kubernetes и веб-интерфейсами Deckhouse Kubernetes Platform.",
+        "description": "Единая система аутентификации Deckhouse Platform, интегрированная с Kubernetes и веб-интерфейсами Deckhouse Platform.",
         "webIfaces": [
           {
             "name": "kubeconfig",
@@ -2594,7 +2594,7 @@
     },
     {
       "title": "The user-authz module",
-      "description": "Authorization and role-based access control to the resources of the Deckhouse Kubernetes Platform cluster.",
+      "description": "Authorization and role-based access control to the resources of the Deckhouse Platform cluster.",
       "module": "user-authz",
       "embedded": "true",
       "tags": [
@@ -2606,7 +2606,7 @@
       "url": "user-authz/",
       "ru": {
         "title": "Модуль user-authz",
-        "description": "Авторизация и управление доступом пользователей к ресурсам кластера Deckhouse Kubernetes Platform."
+        "description": "Авторизация и управление доступом пользователей к ресурсам кластера Deckhouse Platform."
       },
       "metadata": {
         "name": "user-authz",
@@ -2625,7 +2625,7 @@
     {
       "title": "The vertical-pod-autoscaler module",
       "search": "autoscaler",
-      "description": "Automatic calculation and setting of resource request parameters for pods in the Deckhouse Kubernetes Platform cluster.",
+      "description": "Automatic calculation and setting of resource request parameters for pods in the Deckhouse Platform cluster.",
       "module": "vertical-pod-autoscaler",
       "embedded": "true",
       "tags": [
@@ -2638,7 +2638,7 @@
       "ru": {
         "title": "Модуль vertical-pod-autoscaler",
         "search": "autoscaler",
-        "description": "Автоматическое вычисление и установка параметров запроса ресурсов подов в кластере Deckhouse Kubernetes Platform."
+        "description": "Автоматическое вычисление и установка параметров запроса ресурсов подов в кластере Deckhouse Platform."
       },
       "metadata": {
         "name": "vertical-pod-autoscaler",

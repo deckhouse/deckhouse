@@ -4,7 +4,7 @@ permalink: en/admin/multitenancy/project-management.html
 description: Project management
 ---
 
-Deckhouse Kubernetes Platform includes a set of templates for creating projects:
+Deckhouse Platform includes a set of templates for creating projects:
 
 - `default` is a template for basic project use cases:
   - resource limits
@@ -301,7 +301,7 @@ This mechanism works independently of RBAC. RBAC determines *who can create and 
 
 The mechanism uses four custom resources:
 
-- [GrantableClusterResourceDefinition](/modules/multitenancy-manager/cr.html#grantableclusterresourcedefinition) registers a type of cluster-wide resource whose access can be managed. These resources are provided by DKP or module developers.
+- [GrantableClusterResourceDefinition](/modules/multitenancy-manager/cr.html#grantableclusterresourcedefinition) registers a type of cluster-wide resource whose access can be managed. These resources are provided by DP or module developers.
 - [GrantableClusterResourceReference](/modules/multitenancy-manager/cr.html#grantableclusterresourcereference) defines where a registered cluster-wide resource is used, for example, which resource field contains a reference to it. These resources are provided by modules.
 - [ClusterResourceGrantPolicy](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy) defines access rules. Using labels, a cluster administrator selects the projects to which the policy applies and defines the allowed and denied resources, as well as the resource used by default.
 - [AvailableClusterResource](/modules/multitenancy-manager/cr.html#availableclusterresource) is a read-only list of cluster-wide resources available to the project, created by the controller.

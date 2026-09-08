@@ -2,12 +2,12 @@
 title: "Запуск и проверка модуля в кластере"
 permalink: ru/architecture/module-development/run/
 lang: ru
-description: Запуск модуля в кластере Deckhouse Kubernetes Platform с помощью ModuleSource, ModuleUpdatePolicy и ModuleConfig, а также проверка его работоспособности.
+description: Запуск модуля в кластере Deckhouse Platform с помощью ModuleSource, ModuleUpdatePolicy и ModuleConfig, а также проверка его работоспособности.
 ---
 
-В этом разделе рассмотрен процесс запуска модуля в кластере Deckhouse Kubernetes Platform (DKP), а также подключение Deckhouse Module Tools для проверки модуля и сбора метрик.
+В этом разделе рассмотрен процесс запуска модуля в кластере Deckhouse Platform (DP), а также подключение Deckhouse Module Tools для проверки модуля и сбора метрик.
 
-## Запуск модуля в кластере DKP
+## Запуск модуля в кластере DP
 
 Чтобы запустить модуль в кластере, необходимо выполнить следующие шаги:
 
@@ -17,12 +17,12 @@ description: Запуск модуля в кластере Deckhouse Kubernetes 
 
 ### Источник модулей
 
-Deckhouse Kubernetes Platform (DKP) может работать со следующими видами модулей:
+Deckhouse Platform (DP) может работать со следующими видами модулей:
 
-- Встроенные модули. Входят в состав DKP. Релизный цикл привязан к релизному циклу DKP.
-- Модули из [источника модулей](/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей). Релизный цикл таких модулей не привязан к релизному циклу DKP.
+- Встроенные модули. Входят в состав DP. Релизный цикл привязан к релизному циклу DP.
+- Модули из [источника модулей](/products/kubernetes-platform/documentation/v1/architecture/module-development/run/#источник-модулей). Релизный цикл таких модулей не привязан к релизному циклу DP.
 
-Чтобы указать, откуда кластеру получать информацию о модулях, создайте ресурс [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource). В нем задаются адрес хранилища образов контейнеров, из которого DKP будет загружать модули, параметры аутентификации и другие настройки доступа.
+Чтобы указать, откуда кластеру получать информацию о модулях, создайте ресурс [ModuleSource](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulesource). В нем задаются адрес хранилища образов контейнеров, из которого DP будет загружать модули, параметры аутентификации и другие настройки доступа.
 
 Пример ресурса ModuleSource:
 
@@ -37,7 +37,7 @@ spec:
     dockerCfg: <base64 encoded credentials>
 ```
 
-После создания ресурса ModuleSource DKP начнет выполнять периодическую (раз в три минуты) синхронизацию данных с источником модулей (загружать информацию о модулях, доступны в источнике).
+После создания ресурса ModuleSource DP начнет выполнять периодическую (раз в три минуты) синхронизацию данных с источником модулей (загружать информацию о модулях, доступны в источнике).
 
 Проверить состояние синхронизации можно с помощью следующей команды:
 
@@ -91,7 +91,7 @@ module-1 module-2
 d8 k get ms  -o jsonpath='{.items[*].status.modules[*].name}'
 ```
 
-После создания ресурса ModuleSource и успешной синхронизации, в кластере должны начать появляться _модули_ — ресурсы [Module](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#module) (DKP создает их автоматически, создавать их не нужно).
+После создания ресурса ModuleSource и успешной синхронизации, в кластере должны начать появляться _модули_ — ресурсы [Module](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#module) (DP создает их автоматически, создавать их не нужно).
 Посмотреть список модулей можно с помощью следующей команды:
 
 ```shell
@@ -157,7 +157,7 @@ status:
 
 За включение модуля отвечает параметр `enabled` ModuleConfig. Если модуль доступен из нескольких источников (ресурс ModuleSource), необходимый источник можно указать в параметре `source`.
 
-Политику обновления (имя ModuleUpdatePolicy) можно указать в параметре `updatePolicy`. Политику обновления можно не указывать, — в этом случае она будет унаследована от параметров обновления Deckhouse Kubernetes Platform ([releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) и [update](/modules/deckhouse/configuration.html#parameters-update) ModuleConfig `deckhouse`).
+Политику обновления (имя ModuleUpdatePolicy) можно указать в параметре `updatePolicy`. Политику обновления можно не указывать, — в этом случае она будет унаследована от параметров обновления Deckhouse Platform ([releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) и [update](/modules/deckhouse/configuration.html#parameters-update) ModuleConfig `deckhouse`).
 
 Пример ModuleConfig для включения модуля `module-one` из источника `example`:
 
@@ -338,12 +338,12 @@ d8 system module approve <module-name> <version>
 
 ### Политика обновления модуля
 
-Политика обновления модуля — это правила, по которым DKP обновляет модули в кластере. Она определяется ресурсом [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy), в котором можно настроить:
+Политика обновления модуля — это правила, по которым DP обновляет модули в кластере. Она определяется ресурсом [ModuleUpdatePolicy](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleupdatepolicy), в котором можно настроить:
 - режим обновления модуля (автоматический, ручной, обновления отключены);
 - канал стабильности, используемый при обновлении;
 - окна автоматического обновления, в пределах которых разрешено обновление модуля.
 
-Создавать ресурс ModuleUpdatePolicy не обязательно. Если политика обновления для модуля не определена (отсутствует соответствующий ресурс ModuleUpdatePolicy), то настройки обновления соответствуют настройкам обновления самого DKP (параметр [update](/modules/deckhouse/configuration.html#parameters-update) модуля `deckhouse`).
+Создавать ресурс ModuleUpdatePolicy не обязательно. Если политика обновления для модуля не определена (отсутствует соответствующий ресурс ModuleUpdatePolicy), то настройки обновления соответствуют настройкам обновления самого DP (параметр [update](/modules/deckhouse/configuration.html#parameters-update) модуля `deckhouse`).
 
 Пример ресурса ModuleUpdatePolicy, политика обновления которого разрешает автоматическое обновление модуля по понедельникам и средам с 13:30 до 14:00 UTC:
 
@@ -368,7 +368,7 @@ spec:
 
 ### Включение модуля в кластере
 
-Прежде чем включить модуль, проверьте что он доступен для включения. Выполните следующую команду, чтобы вывести список всех доступных модулей DKP:
+Прежде чем включить модуль, проверьте что он доступен для включения. Выполните следующую команду, чтобы вывести список всех доступных модулей DP:
 
 ```shell
 d8 k get modules
@@ -392,9 +392,9 @@ module-two                   Available   False     False
 
 Вывод показывает, что модуль `module-one` доступен для включения.
 
-Если модуля нет в списке, то проверьте что определен [источник модулей](#источник-модулей) и модуль есть в списке в источнике модулей. Также проверьте [политику обновления](#политика-обновления-модуля) модуля (если она определена). Если политика обновления модуля не определена, то она соответствует политике обновления DKP (параметр [releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) и секция [update](/modules/deckhouse/configuration.html#parameters-update) параметров модуля `deckhouse`).
+Если модуля нет в списке, то проверьте что определен [источник модулей](#источник-модулей) и модуль есть в списке в источнике модулей. Также проверьте [политику обновления](#политика-обновления-модуля) модуля (если она определена). Если политика обновления модуля не определена, то она соответствует политике обновления DP (параметр [releaseChannel](/modules/deckhouse/configuration.html#parameters-releasechannel) и секция [update](/modules/deckhouse/configuration.html#parameters-update) параметров модуля `deckhouse`).
 
-Включить модуль можно аналогично встроенному модулю DKP любым из следующих способов:
+Включить модуль можно аналогично встроенному модулю DP любым из следующих способов:
 - Выполнить следующую команду (укажите имя модуля):
 
   ```shell
@@ -458,7 +458,7 @@ module-two                   Available   False     False
   {: .nowrap-default }
   <!-- markdownlint-enable MD031 -->
 
-По аналогии [с DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) (ресурсом релиза DKP) у модулей есть аналогичный ресурс — [ModuleRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease). DKP создает ModuleRelease исходя из того, что хранится в хранилище образов.
+По аналогии [с DeckhouseRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#deckhouserelease) (ресурсом релиза DP) у модулей есть аналогичный ресурс — [ModuleRelease](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#modulerelease). DP создает ModuleRelease исходя из того, что хранится в хранилище образов.
 При поиске проблем с модулем проверьте также доступные в кластере ModuleRelease:
 
 ```shell

@@ -1,11 +1,11 @@
 ---
 title: "Network"
 permalink: en/admin/configuration/network/
-description: "Configure networking in Deckhouse Kubernetes Platform with CNI, ingress, egress, load balancing, and network policies. Complete network configuration and management guide."
+description: "Configure networking in Deckhouse Platform with CNI, ingress, egress, load balancing, and network policies. Complete network configuration and management guide."
 ---
 
 Unlike basic Kubernetes installations,
-Deckhouse Kubernetes Platform (DKP) handles network configuration through modules and custom resources,
+Deckhouse Platform (DP) handles network configuration through modules and custom resources,
 which simplifies and standardizes the setup process.
 
 The platform supports:
@@ -19,12 +19,12 @@ The platform supports:
 
 [Incoming traffic](../network/ingress/) is managed using Ingress controllers.
 These controllers route user requests to the appropriate applications and services based on rules defined in Ingress resources.
-In DKP, traffic can be managed at both the network level (NLB – Network Load Balancer)
+In DP, traffic can be managed at both the network level (NLB – Network Load Balancer)
 and the application level (ALB – Application Load Balancer).
 
 ## Managing outgoing traffic
 
-DKP administrators can configure and manage [outgoing traffic](../network/egress/gateway.html)
+DP administrators can configure and manage [outgoing traffic](../network/egress/gateway.html)
 to ensure correct processing and routing of all outgoing data.
 
 Configuring outgoing traffic enables connection control and filtering,
@@ -36,12 +36,12 @@ Outgoing traffic management is implemented using the Egress Gateway feature
 
 ## Internal network configuration
 
-DKP provides a wide range of options for managing the [internal network](../network/internal/configuration.html).
+DP provides a wide range of options for managing the [internal network](../network/internal/configuration.html).
 Administrators can configure pod-to-pod and pod-to-node communication, as well as traffic encryption using various technologies and tools.
 
 ## Configuring inter-cluster communication
 
-DKP supports two approaches to organizing communication between independent and codependent clusters:
+DP supports two approaches to organizing communication between independent and codependent clusters:
 
 - [Multicluster](../network/alliance/multicluster.html) — combines clusters to share resources,
   balance loads, and improve fault tolerance.
@@ -54,7 +54,7 @@ For more information on configuring inter-cluster communication, refer to [Inter
 
 ## Network policies
 
-[Network policies](./policy/configuration.html) in DKP describe rules that regulate interactions between objects within the cluster and define ingress and egress traffic for those objects. They isolate pods, protect against internal cluster attacks, and control access to external services and filter incoming and outgoing connections.
+[Network policies](./policy/configuration.html) in DP describe rules that regulate interactions between objects within the cluster and define ingress and egress traffic for those objects. They isolate pods, protect against internal cluster attacks, and control access to external services and filter incoming and outgoing connections.
 
 The section includes the following pages:
 

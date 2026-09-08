@@ -2,10 +2,10 @@
 title: Operator-argo module
 permalink: en/architecture/delivery/operator-argo.html
 search: operator-argo, GitOps, Argo CD, application deployment
-description: Architecture of the operator-argo module in Deckhouse Kubernetes Platform.
+description: Architecture of the operator-argo module in Deckhouse Platform.
 ---
 
-The [`operator-argo`](/modules/operator-argo/) module deploys [Argo CD Operator](https://github.com/argoproj-labs/argocd-operator) in a Deckhouse Kubernetes Platform (DKP) cluster. The module enables to install Argo CD in a DKP cluster using the ArgoCD resource.
+The [`operator-argo`](/modules/operator-argo/) module deploys [Argo CD Operator](https://github.com/argoproj-labs/argocd-operator) in a Deckhouse Platform (DP) cluster. The module enables to install Argo CD in a DP cluster using the ArgoCD resource.
 
 The module works with the following custom resources:
 
@@ -30,7 +30,7 @@ The following simplifications are made in the diagram:
 * Only the main containers of each component are shown in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`operator-argo`](/modules/operator-argo/) module and its interactions with other DKP components are shown in the following diagrams:
+The Level 2 C4 architecture of the [`operator-argo`](/modules/operator-argo/) module and its interactions with other DP components are shown in the following diagrams:
 
 - Main module operator:
 
@@ -52,7 +52,7 @@ The Level 2 C4 architecture of the [`operator-argo`](/modules/operator-argo/) mo
 
 The module consists of the following components:
 
-1. **Argocd-operator-controller-manager** (Deployment): Implementation of [Argo CD Operator](https://github.com/argoproj-labs/argocd-operator) that allows deploying Argo CD instances in a DKP cluster. The component works with the following custom resources:
+1. **Argocd-operator-controller-manager** (Deployment): Implementation of [Argo CD Operator](https://github.com/argoproj-labs/argocd-operator) that allows deploying Argo CD instances in a DP cluster. The component works with the following custom resources:
    - [ArgoCD](/modules/operator-argo/cr.html#argocd): Main resource for deploying and configuring an Argo CD instance.
    - [ArgoCDExport](/modules/operator-argo/cr.html#argocdexport): Exports Argo CD configuration and state for backup or migration. The operator reads the ArgoCDExport custom resource and creates a Job/CronJob with the same name as the ArgoCDExport resource. The created Job/CronJob performs backup of the Argo CD instance configuration.
    - [NamespaceManagement](/modules/operator-argo/cr.html#namespacemanagement): Defines namespace management rules for an Argo CD instance. The operator watches the NamespaceManagement custom resource and updates the `argocd-cmd-params-cm` ConfigMap accordingly.
@@ -140,7 +140,7 @@ The module consists of the following components:
    To enable the component, define parameters in [`.spec.sso.dex`](/modules/operator-argo/cr.html#argocd-v1beta1-spec-sso-dex) section of the ArgoCD custom resource.
 
    {% alert level="warning" %}
-   For Argo CD user authentication in DKP, the `operator-argo` module supports integration with the [`user-authn`](/modules/user-authn/) module (built-in DKP authentication). Other external providers via Dex are not used in this configuration.
+   For Argo CD user authentication in DP, the `operator-argo` module supports integration with the [`user-authn`](/modules/user-authn/) module (built-in DP authentication). Other external providers via Dex are not used in this configuration.
 
    For more details about module usage examples, refer to the [corresponding documentation section](/modules/operator-argo/examples.html#authentication).
    {% endalert %}

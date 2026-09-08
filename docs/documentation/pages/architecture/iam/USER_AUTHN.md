@@ -2,10 +2,10 @@
 title: User-authn module
 permalink: en/architecture/iam/user-authn.html
 search: authentication, user-authn
-description: Architecture of the user-authn module in Deckhouse Kubernetes Platform.
+description: Architecture of the user-authn module in Deckhouse Platform.
 ---
 
-The `user-authn` module implements a unified authentication system integrated with Kubernetes and the web interfaces used by modules of Deckhouse Kubernetes Platform (DKP), such as the [`console`](/modules/console/) module.
+The `user-authn` module implements a unified authentication system integrated with Kubernetes and the web interfaces used by modules of Deckhouse Platform (DP), such as the [`console`](/modules/console/) module.
 
 For more details about module configuration and usage examples, refer to the [corresponding documentation section](/modules/user-authn/).
 
@@ -18,12 +18,12 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-In DKP, two authentication schemes are used for platform services and user applications:
+In DP, two authentication schemes are used for platform services and user applications:
 
 * Using dex-authenticator
 * Using the Dex client
 
-The architecture of the [`user-authn`](/modules/user-authn/) module at Level 2 of the C4 model and its interactions with other DKP components are shown in the following diagrams.
+The architecture of the [`user-authn`](/modules/user-authn/) module at Level 2 of the C4 model and its interactions with other DP components are shown in the following diagrams.
 
 Using dex-authenticator:
 
@@ -48,7 +48,7 @@ The module consists of the following components:
    * **dex**: Main container implementing Dex functions.
    * **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC that provides secure access to provider metrics.
 
-2. **Dex-authenticator**: [Middleware](https://github.com/oauth2-proxy/oauth2-proxy/blob/master/docs/static/img/simplified-architecture.svg) service used to authenticate requests to applications through the DKP cluster authentication service.
+2. **Dex-authenticator**: [Middleware](https://github.com/oauth2-proxy/oauth2-proxy/blob/master/docs/static/img/simplified-architecture.svg) service used to authenticate requests to applications through the DP cluster authentication service.
 
    When the Ingress controller is configured accordingly (using the NGINX `auth_request` module), requests are first forwarded to dex-authenticator for authentication.
 
@@ -67,7 +67,7 @@ The module interacts with the following components:
 
 The following external components interact with the module:
 
-1. **Ingress controller**: Forwards authentication requests to dex-authenticator for DKP platform services and user applications.
+1. **Ingress controller**: Forwards authentication requests to dex-authenticator for DP platform services and user applications.
 
 2. **User applications**: Can authenticate directly with dex (without dex-authenticator) if an OAuth2 client is configured in Dex for the application. For more details about configuring a Dex client, refer to the [`user-authn` module documentation](/modules/user-authn/usage.html#configuring-the-oauth2-client-in-dex-for-connecting-an-application).
 

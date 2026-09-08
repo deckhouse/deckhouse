@@ -12,7 +12,7 @@ If, during the switching process, the image of a module did not reload and the m
 To switch an already running cluster to `Direct` mode, follow these steps:
 
 {% alert level="danger" %}
-The first switch from `Unmanaged` to `Direct` mode will result in a full restart of all DKP components.
+The first switch from `Unmanaged` to `Direct` mode will result in a full restart of all DP components.
 {% endalert %}
 
 1. Before switching, perform the [migration to use the `registry` module](faq.html#how-to-migrate-to-the-registry-module).
@@ -112,7 +112,7 @@ The first switch from `Unmanaged` to `Direct` mode will result in a full restart
 To switch an already running cluster to `Proxy` mode, follow these steps:
 
 {% alert level="danger" %}
-- The first switch from `Unmanaged` to `Proxy` mode will result in a full restart of all DKP components.
+- The first switch from `Unmanaged` to `Proxy` mode will result in a full restart of all DP components.
 - Switching from `Local` mode to `Proxy` mode is not available. To switch from `Local` mode, you must switch the registry to another available mode (for example: `Direct`).
 {% endalert %}
 
@@ -213,7 +213,7 @@ To switch an already running cluster to `Proxy` mode, follow these steps:
 To switch an already running cluster to `Local` mode, follow these steps:
 
 {% alert level="danger" %}
-- The first switch from `Unmanaged` to `Local` mode will result in a full restart of all DKP components.
+- The first switch from `Unmanaged` to `Local` mode will result in a full restart of all DP components.
 - Switching from `Proxy` mode to `Local` mode is not available. To switch from `Proxy` mode, you must switch the registry to another available mode (for example: `Direct`).
 {% endalert %}
 
@@ -271,7 +271,7 @@ To switch an already running cluster to `Local` mode, follow these steps:
    - no tasks to handle.
    ```
 
-1. Prepare archives with DKP images of the current version. To do this, use the `d8 mirror` command.
+1. Prepare archives with DP images of the current version. To do this, use the `d8 mirror` command.
 
    Example:
 
@@ -401,7 +401,7 @@ To switch an already running cluster to `Local` mode, follow these steps:
 To switch an already running cluster to `Unmanaged` mode, follow these steps:
 
 {% alert level="danger" %}
-Changing the registry in `Unmanaged` mode will result in a full restart of all DKP components.
+Changing the registry in `Unmanaged` mode will result in a full restart of all DP components.
 {% endalert %}
 
 1. Before switching, perform the [migration to use the `registry` module](faq.html#how-to-migrate-to-the-registry-module).

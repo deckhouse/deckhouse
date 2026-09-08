@@ -3,18 +3,18 @@ title: Подсистема Cluster & Infrastructure
 permalink: ru/architecture/cluster-and-infrastructure/
 lang: ru
 search: cluster & infrastructure, управление узлами
-description: Архитектура подсистемы Cluster & Infrastructure в Deckhouse Kubernetes Platform.
+description: Архитектура подсистемы Cluster & Infrastructure в Deckhouse Platform.
 extractedLinksOnlyMax: 0
 extractedLinksMax: 0
 ---
 
-Данный раздел посвящён архитектуре подсистемы Cluster & Infrastructure платформы Deckhouse Kubernetes Platform (DKP).
+Данный раздел посвящён архитектуре подсистемы Cluster & Infrastructure Deckhouse Platform (DP).
 
 Подсистема Cluster & Infrastructure отвечает за инфраструктурную часть управления Kubernetes-кластером. Управление узлами кластера реализовано с помощью модуля [`node-manager`](/modules/node-manager/), а взаимодействие с IaaS-провайдерами — через соответствующие модули семейства `cloud-provider-`.
 
 В разделе описаны:
 
-* Механизмы управления всеми используемыми в DKP типами узлов, а также [гибридными группами узлов и кластерами](node-management/hybrid-nodegroups-and-clusters.html).
+* Механизмы управления всеми используемыми в DP типами узлов, а также [гибридными группами узлов и кластерами](node-management/hybrid-nodegroups-and-clusters.html).
 * Служба [bashible](node-management/bashible.html), которая является ключевым компонентом подсистемы Cluster & Infrastructure. Bashible используется модулем [`node-manager`](/modules/node-manager/) для управления конфигурацией узлов.
 
 В подсистему Cluster & Infrastructure также входят следующие модули:
@@ -22,7 +22,7 @@ extractedLinksMax: 0
 * [`chrony`](/modules/chrony/) — обеспечивает синхронизацию времени на всех узлах кластера;
 * [`registry-packages-proxy`](/modules/registry-packages-proxy/) — предоставляет внутренний прокси-сервер для пакетов хранилища образов контейнеров;
 * [`terraform-manager`](/modules/terraform-manager/) — предоставляет инструменты для работы с состоянием Terraform в Kubernetes-кластере;
-* модули облачных провайдеров, поддерживаемых DKP:
+* модули облачных провайдеров, поддерживаемых DP:
 
   * [`cloud-provider-aws`](/modules/cloud-provider-aws/);
   * [`cloud-provider-azure`](/modules/cloud-provider-azure/);

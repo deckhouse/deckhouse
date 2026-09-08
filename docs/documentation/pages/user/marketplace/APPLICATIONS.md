@@ -1,7 +1,7 @@
 ---
 title: Installing and managing applications
 permalink: en/user/marketplace/applications.html
-description: "Install, update, and delete applications in Deckhouse Kubernetes Platform Marketplace. Browse available package versions, create Application, check status conditions, and manage multiple instances."
+description: "Install, update, and delete applications in Deckhouse Platform Marketplace. Browse available package versions, create Application, check status conditions, and manage multiple instances."
 lang: en
 search: Application, install application, application conditions, installing application, application conditions, updating application
 ---
@@ -104,7 +104,7 @@ The application state is described in detail through a set of conditions:
 | `UpdateInstalled` | New version downloaded, manifests and hooks applied for the update |
 | `ConfigurationApplied` | User settings successfully applied |
 | `Scaled` | All pod replicas are in Ready state |
-| `Managed` | Application is correctly managed by DKP |
+| `Managed` | Application is correctly managed by DP |
 | `Ready` | Application is fully operational |
 
 To quickly view all conditions, use the following command:
@@ -134,12 +134,12 @@ status:
   summary:
     state: Updating
     message: "Update is waiting for dependent modules to converge; previous version is still serving"
-    tip: "Waiting until DKP processes all dependent modules to start the update."
+    tip: "Waiting until DP processes all dependent modules to start the update."
 ```
 
 - **`state`** — current high-level state of the application.
 - **`message`** — explains why the application is in this state.
-- **`tip`** — what to do to resolve the issue or what DKP is waiting for.
+- **`tip`** — what to do to resolve the issue or what DP is waiting for.
 
 ## Multiple instances
 
@@ -188,7 +188,7 @@ While the update is in progress, the `UpdateInstalled` condition will be `False`
 If the specified version does not exist in the repository, `UpdateInstalled` becomes `False` with `reason: UpdateFailed`, and the current version keeps running.
 
 {% alert level="warning" %}
-Specifying an older version (downgrade) is allowed, but DKP does not apply any migration logic on rollback. Verify settings compatibility with the target version before applying the change, if necessary.
+Specifying an older version (downgrade) is allowed, but DP does not apply any migration logic on rollback. Verify settings compatibility with the target version before applying the change, if necessary.
 {% endalert %}
 
 ## Deleting an application

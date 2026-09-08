@@ -4,7 +4,7 @@ permalink: ru/test/user/projects.html
 lang: ru
 ---
 
-В данном разделе описаны процессы работы **администратора [проекта](glossary.html#проект)** в Deckhouse Kubernetes Platform (DKP).
+В данном разделе описаны процессы работы **администратора [проекта](glossary.html#проект)** в Deckhouse Platform (DP).
 
 Процессы работы **администратора [системы](../concepts/glossary.html#система)** с [проектами](../concepts/glossary.html#проект) описаны в [разделе "Администрирование"](../admin/projects.html).
 

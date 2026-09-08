@@ -3,10 +3,10 @@ title: Модуль terraform-manager
 permalink: ru/architecture/cluster-and-infrastructure/infrastructure/terraform-manager.html
 lang: ru
 search: terraform manager, terraform
-description: Архитектура модуля terraform-manager в Deckhouse Kubernetes Platform для управления состоянием Terraform и инфраструктурными ресурсами кластера.
+description: Архитектура модуля terraform-manager в Deckhouse Platform для управления состоянием Terraform и инфраструктурными ресурсами кластера.
 ---
 
-Модуль `terraform-manager` предоставляет инструменты для работы с состоянием Terraform в кластере DKP.
+Модуль `terraform-manager` предоставляет инструменты для работы с состоянием Terraform в кластере DP.
 
 Подробнее с настройками модуля можно ознакомиться в [соответствующем разделе документации](/modules/terraform-manager/configuration.html).
 
@@ -19,7 +19,7 @@ description: Архитектура модуля terraform-manager в Deckhouse 
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`terraform-manager`](/modules/terraform-manager/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура модуля [`terraform-manager`](/modules/terraform-manager/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
 ![Архитектура модуля terraform-manager](../../../images/architecture/cluster-and-infrastructure/c4-l2-terraform-manager.ru.png)
 

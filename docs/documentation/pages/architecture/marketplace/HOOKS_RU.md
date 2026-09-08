@@ -1,12 +1,12 @@
 ---
 title: Хуки
 permalink: ru/architecture/marketplace/hooks.html
-description: "Написание Go-хуков для Applications в Deckhouse Kubernetes Platform Marketplace с использованием ApplicationHookInput. ObjectPatcher, ограниченный неймспейсом, и хуки валидации настроек."
+description: "Написание Go-хуков для Applications в Deckhouse Platform Marketplace с использованием ApplicationHookInput. ObjectPatcher, ограниченный неймспейсом, и хуки валидации настроек."
 lang: ru
 search: application hooks, ApplicationHookInput, settingscheck, хуки приложения, валидация настроек
 ---
 
-Хуки Application пишутся на Go с использованием того же module-sdk, что и хуки модулей Deckhouse Kubernetes Platform (DKP). Ключевое отличие в том, что хуки Application используют `ApplicationHookInput` вместо `HookInput` — это добавляет возможности, специфичные для Application, и обеспечивает изоляцию неймспейса.
+Хуки Application пишутся на Go с использованием того же module-sdk, что и хуки модулей Deckhouse Platform (DP). Ключевое отличие в том, что хуки Application используют `ApplicationHookInput` вместо `HookInput` — это добавляет возможности, специфичные для Application, и обеспечивает изоляцию неймспейса.
 
 ## ApplicationHookInput
 
@@ -45,7 +45,7 @@ func onSync(ctx context.Context, input applicationhook.ApplicationHookInput) err
 
 ## Хук валидации настроек
 
-Application может содержать хук валидации настроек, выполняющийся до того, как DKP применяет изменения. Используется когда валидации через OpenAPI-схему недостаточно — например, для проверки бизнес-логики между несколькими полями настроек.
+Application может содержать хук валидации настроек, выполняющийся до того, как DP применяет изменения. Используется когда валидации через OpenAPI-схему недостаточно — например, для проверки бизнес-логики между несколькими полями настроек.
 
 Хук реализует функцию `Check` с сигнатурой:
 

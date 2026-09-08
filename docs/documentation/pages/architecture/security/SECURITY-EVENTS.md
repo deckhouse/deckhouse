@@ -2,10 +2,10 @@
 title: Security events architecture
 permalink: en/architecture/security/security-events.html
 search: security events, security-events-manager, event collection, event delivery
-description: Architecture for collecting, processing, and delivering security events in Deckhouse Kubernetes Platform.
+description: Architecture for collecting, processing, and delivering security events in Deckhouse Platform.
 ---
 
-The [`security-events-manager`](/modules/security-events-manager/) module within Deckhouse Kubernetes Platform (DKP) performs declarative collection, processing,
+The [`security-events-manager`](/modules/security-events-manager/) module within Deckhouse Platform (DP) performs declarative collection, processing,
 normalization, and delivery of security events extracted from logs of applications
 and Kubernetes infrastructure components.
 

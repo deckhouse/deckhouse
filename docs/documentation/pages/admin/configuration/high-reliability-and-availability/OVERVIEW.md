@@ -6,7 +6,7 @@ description: High reliability and availability
 
 The reliability and resilience of a Kubernetes cluster are key characteristics
 that define the stability of the infrastructure.
-Deckhouse Kubernetes Platform (DKP) ensures high availability (HA) and fault tolerance
+Deckhouse Platform (DP) ensures high availability (HA) and fault tolerance
 through built-in mechanisms and modules.
 
 When HA mode is enabled, critical cluster components are launched with the necessary redundancy
@@ -18,7 +18,7 @@ If the cluster has more than one master node, HA mode is automatically enabled,
 both during the initial deployment and when additional nodes are added later.
 Recommended roles and number of nodes can be found in [Recommendations for configuring cluster nodes and preventing overload](recommendations.html).
 
-DKP provides chaos engineering tools to test cluster resilience.
+DP provides chaos engineering tools to test cluster resilience.
 These tools let you deliberately or randomly disrupt individual components and observe the infrastructure's response.
 For information on configuring these tools, refer to [Chaos engineering](chaos-engineering.html).
 

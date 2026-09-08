@@ -6,13 +6,13 @@ permalink: en/admin/configuration/registry/third-party.html
 {% alert level="warning" %}
 This page applies only to Managed Kubernetes clusters. Registry management through the `registry` module is not available in these clusters.
 
-For clusters fully managed by Deckhouse Kubernetes Platform (DKP), registry settings are configured in the [registry](/modules/deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module configuration. For an example, see ["Managing the registry in DKP-managed clusters"](managing-interaction.html).
+For clusters fully managed by Deckhouse Platform (DP), registry settings are configured in the [registry](/modules/deckhouse/configuration.html#parameters-registry) section of the `deckhouse` module configuration. For an example, see ["Managing the registry in DP-managed clusters"](managing-interaction.html).
 
-The information on this page applies to clusters that use containerd v1 or containerd v2 as their primary container runtime. However, containerd v2 is the current standard for DKP. If you need to migrate to containerd v2, refer to the section ["Migrating container runtime to containerd v2"](../platform-scaling/node/migrating.html) to verify availability and perform the migration.
+The information on this page applies to clusters that use containerd v1 or containerd v2 as their primary container runtime. However, containerd v2 is the current standard for DP. If you need to migrate to containerd v2, refer to the section ["Migrating container runtime to containerd v2"](../platform-scaling/node/migrating.html) to verify availability and perform the migration.
 {% endalert %}
 
 {% alert level="warning" %}
-Using registries other than `registry.deckhouse.io` and `registry.deckhouse.ru` is only available in commercial editions of the Deckhouse Kubernetes Platform.
+Using registries other than `registry.deckhouse.io` and `registry.deckhouse.ru` is only available in commercial editions of the Deckhouse Platform.
 {% endalert %}
 
 {% alert level="info" %}
@@ -21,14 +21,14 @@ The methods for adding a configuration for a registry are described in the secti
 
 To switch the cluster to use an external registry, follow these steps:
 
-1. Run the `deckhouse-controller helper change-registry` command from the DKP pod with the parameters of the new registry.  
+1. Run the `deckhouse-controller helper change-registry` command from the DP pod with the parameters of the new registry.  
    Example:
 
    ```shell
    d8 k -n d8-system exec -ti svc/deckhouse-leader -c deckhouse -- deckhouse-controller helper change-registry --user MY-USER --password MY-PASSWORD registry.example.com/deckhouse/ee
    ```
 
-1. If the registry uses self-signed certificates, place the corresponding root certificate in the file `/tmp/ca.crt` inside the DKP pod and add the -`-ca-file /tmp/ca.crt` option to the command.
+1. If the registry uses self-signed certificates, place the corresponding root certificate in the file `/tmp/ca.crt` inside the DP pod and add the -`-ca-file /tmp/ca.crt` option to the command.
    Alternatively, insert the CA content into a variable, as shown below:
 
    ```shell
@@ -91,8 +91,8 @@ To switch the cluster to use an external registry, follow these steps:
    Aug 13 05:03:10 kube-master-0 systemd[1]: bashible.service: Consumed 1.075s CPU time.
    ```
 
-1. If you need to disable automatic DKP upgrades through the external registry, remove the `releaseChannel` parameter from the `deckhouse` module configuration.
-   After that, automatic platform upgrades will be disabled, and you will need to manage the DKP version manually.
+1. If you need to disable automatic DP upgrades through the external registry, remove the `releaseChannel` parameter from the `deckhouse` module configuration.
+   After that, automatic platform upgrades will be disabled, and you will need to manage the DP version manually.
 1. Check if any pods in the cluster are still using the original registry address:
 
    ```shell

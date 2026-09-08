@@ -1,13 +1,13 @@
 ---
 title: "Интеграция с внешними провайдерами аутентификации"
 permalink: ru/admin/configuration/access/authentication/external-authentication-providers.html
-description: "Интеграция платформы Deckhouse Kubernetes Platform с внешними провайдерами аутентификации включая LDAP, OIDC, GitHub, GitLab, Atlassian Crowd и Bitbucket. Пошаговое руководство по настройке."
+description: "Интеграция платформы Deckhouse Platform с внешними провайдерами аутентификации включая LDAP, OIDC, GitHub, GitLab, Atlassian Crowd и Bitbucket. Пошаговое руководство по настройке."
 lang: ru
 ---
 
 Подключение внешнего провайдера аутентификации позволяет использовать единые учетные данные для входа в несколько кластеров и одновременно работать с несколькими провайдерами.
 
-DKP поддерживает подключение следующих внешних провайдеров и протоколов аутентификации:
+DP поддерживает подключение следующих внешних провайдеров и протоколов аутентификации:
 
 - [LDAP (например, Active Directory)](#интеграция-по-ldap);
 - [OIDC (например, Okta, Keycloak, Gluu, Blitz Identity Provider)](#интеграция-по-oidc-openid-connect);
@@ -161,7 +161,7 @@ spec:
     * «Claim value»: `true`;
     * «Claim JSON Type»: `boolean`.
   
-  После этого в клиенте, зарегистрированном для кластера DKP, в разделе «Clients» для `Client scopes` замените значение `email` на `email_dkp`.
+  После этого в клиенте, зарегистрированном для кластера DP, в разделе «Clients» для `Client scopes` замените значение `email` на `email_dkp`.
 
   В [ресурсе DexProvider](/modules/user-authn/cr.html#dexprovider) укажите параметр `insecureSkipEmailVerified: true` и в поле `.spec.oidc.scopes` замените название Client Scope на `email_dkp`, следуя примеру:
 

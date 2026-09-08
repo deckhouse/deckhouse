@@ -3,7 +3,7 @@ title: Модуль cloud-provider-aws
 permalink: ru/architecture/cluster-and-infrastructure/cloud-providers/cloud-provider-aws.html
 lang: ru
 search: cloud-provider-aws, cloud provider aws, amazon web services
-description: Архитектура модуля cloud-provider-aws в Deckhouse Kubernetes Platform.
+description: Архитектура модуля cloud-provider-aws в Deckhouse Platform.
 ---
 
 Модуль [`cloud-provider-aws`](/modules/cloud-provider-aws/) обеспечивает интеграцию с облачными ресурсами [Amazon Web Services](https://aws.amazon.com/). Он используется модулем [`node-manager`](/modules/node-manager/) для заказа узлов в соответствии [с настройками группы узлов](/modules/node-manager/cr.html#nodegroup).
@@ -19,7 +19,7 @@ description: Архитектура модуля cloud-provider-aws в Deckhouse
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`cloud-provider-aws`](/modules/cloud-provider-aws/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура модуля [`cloud-provider-aws`](/modules/cloud-provider-aws/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
 ![Архитектура модуля cloud-provider-aws](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-provider-aws.ru.png)
 
@@ -50,9 +50,9 @@ description: Архитектура модуля cloud-provider-aws в Deckhouse
    * **cloud-data-discoverer** — основной контейнер;
    * **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищенного доступа к метрикам контейнера cloud-data-discoverer.
 
-1. **CSI-драйвер (aws)** — реализация CSI-драйвера для AWS. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DKP, можно ознакомиться в [соответствующем разделе документации](../../storage/csi-drivers/csi-driver.html).
+1. **CSI-драйвер (aws)** — реализация CSI-драйвера для AWS. С типовой архитектурой CSI-драйвера, используемого в модулях `cloud-provider-*` DP, можно ознакомиться в [соответствующем разделе документации](../../storage/csi-drivers/csi-driver.html).
 
-1. **Node-termination-handler** — [AWS Node Termination Handler](https://github.com/aws/aws-node-termination-handler), отвечает за обработку DKP событий от сервисов AWS о недоступности экземпляров EC2.
+1. **Node-termination-handler** — [AWS Node Termination Handler](https://github.com/aws/aws-node-termination-handler), отвечает за обработку DP событий от сервисов AWS о недоступности экземпляров EC2.
 
    Node-termination-handler обрабатывает следующие события AWS:
 

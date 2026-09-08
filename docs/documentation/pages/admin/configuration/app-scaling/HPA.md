@@ -1,7 +1,7 @@
 ---
 title: "Horizontal pod autoscaling"
 permalink: en/admin/configuration/app-scaling/hpa.html
-description: "Configure Horizontal Pod Autoscaler (HPA) in Deckhouse Kubernetes Platform. Automatic pod scaling based on CPU, memory, and custom metrics for optimal resource utilization."
+description: "Configure Horizontal Pod Autoscaler (HPA) in Deckhouse Platform. Automatic pod scaling based on CPU, memory, and custom metrics for optimal resource utilization."
 ---
 
 ## How Horizontal Scaling (HPA) works
@@ -10,14 +10,14 @@ Horizontal Pod Autoscaler (HPA) is a mechanism for automatically adjusting (up o
 
 ## Available metric types for HPA
 
-Horizontal scaling in DKP can be based on any available metrics, such as:
+Horizontal scaling in DP can be based on any available metrics, such as:
 
 1. [Pod CPU and memory usage](hpa.html#scaling-based-on-cpu-and-memory).
    - Configured using the [HorizontalPodAutoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale-walkthrough/) resource.  
      For example, you can define a Resource-type metric with `averageUtilization = 70` for CPU, so that the application scales up when average CPU usage reaches 70%.
 
-1. [DKP object metric](hpa.html#scaling-based-on-object-metrics) (Ingress, Service) or pod-based metrics (sum or average across all pods of a controller).
-   - Enables scaling based on metrics attached to DKP objects (e.g., Ingress, Service), or metrics aggregated from pods (sum or average per controller). Resources like ServiceMetric and IngressMetric are used for this.
+1. [DP object metric](hpa.html#scaling-based-on-object-metrics) (Ingress, Service) or pod-based metrics (sum or average across all pods of a controller).
+   - Enables scaling based on metrics attached to DP objects (e.g., Ingress, Service), or metrics aggregated from pods (sum or average per controller). Resources like ServiceMetric and IngressMetric are used for this.
 
 1. [Any other metrics, including external data](hpa.html#scaling-based-on-external-data) (such as Amazon SQS metrics, cloud load balancers, SaaS services, etc.).
    - Useful when the metric source is outside the cluster. Metric calculation rules are configured using the [ClusterObservabilityMetricsRulesGroup](/modules/observability/cr.html#clusterobservabilitymetricsrulesgroup) resource (for cluster-wide metrics) and the [ObservabilityMetricsRulesGroup](/modules/observability/cr.html#observabilitymetricsrulesgroup) resource (for namespaced metrics) and require enabling the [`observability`](/modules/observability/) module.
@@ -43,7 +43,7 @@ If metrics fluctuate, wrap the metric in an aggregation function (e.g., `avg_ove
 
 ## How to enable or disable HPA
 
-HPA does not require separate activation in DKP. However, if you want to scale based on metrics other than CPU and memory, you must enable the [`prometheus-metrics-adapter`](/modules/prometheus-metrics-adapter/) module. See how to enable it [in the documentation](scaling-by-metrics.html#how-to-enable-prometheus-metrics-adapter).
+HPA does not require separate activation in DP. However, if you want to scale based on metrics other than CPU and memory, you must enable the [`prometheus-metrics-adapter`](/modules/prometheus-metrics-adapter/) module. See how to enable it [in the documentation](scaling-by-metrics.html#how-to-enable-prometheus-metrics-adapter).
 
 ## HPA configuration
 

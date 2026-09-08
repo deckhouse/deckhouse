@@ -7,7 +7,7 @@ description: Модуль admission-policy-engine Deckhouse позволяет �
 
 Admission-политики — это правила, которые применяются к объектам (например Pod и Service) в момент их создания и изменения в кластере (но не в процессе их работы), на основе информации, представленной в их манифесте. Эти политики направлены на формализацию параметров которые разрешены или запрещены в манифестах объектов.
 
-В DKP политики разделены на три категории:
+В DP политики разделены на три категории:
 
 - [Pod Security Standards](#pod-security-standards) — политики, реализующие требования соответствующих [Pod Security Standards](https://kubernetes.io/docs/concepts/security/pod-security-standards/).
 - [Операционные политики](#операционные-политики) — политики для создания дополнительных требований к объектам, с помощью валидации значений параметров **не связанных напрямую** с безопасностью (например, список допустимых префиксов для образов контейнеров, политика скачивания образов, список необходимых проб для контейнеров и т.д.).
@@ -333,7 +333,7 @@ status:
 - `Restricted` — политика со значительными ограничениями. Предъявляет самые жёсткие требования к подам.
 
 {% alert level="info" %}
-В Deckhouse Kubernetes Platform эти политики реализуются средствами Gatekeeper и контролируются admission-контроллерами модуля `admission-policy-engine`, а не контролером [Pod Security Admission](https://kubernetes.io/docs/concepts/security/pod-security-admission/) от Kubernetes. Из Kubernetes взяты только описания политик.
+В Deckhouse Platform эти политики реализуются средствами Gatekeeper и контролируются admission-контроллерами модуля `admission-policy-engine`, а не контролером [Pod Security Admission](https://kubernetes.io/docs/concepts/security/pod-security-admission/) от Kubernetes. Из Kubernetes взяты только описания политик.
 {% endalert %}
 
 Подробнее про каждый набор политик и их ограничения можно прочитать в [документации Kubernetes](https://kubernetes.io/docs/concepts/security/pod-security-standards/#profile-details).

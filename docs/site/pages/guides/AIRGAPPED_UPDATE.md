@@ -1,13 +1,13 @@
 ---
-title: Updating DKP in air-gapped environment
+title: Updating DP in air-gapped environment
 permalink: en/guides/airgapped-update.html
-description: A guide for updating Deckhouse Kubernetes Platform in an air-gapped environment.
+description: A guide for updating Deckhouse Platform in an air-gapped environment.
 lang: en
 layout: sidebar-guides
 ---
 
 {% alert level="info" %}
-This guide is intended for DKP Enterprise Edition,
+This guide is intended for DP Enterprise Edition,
 but the mechanism is the same [for other editions](../documentation/v1/reference/revision-comparison.html).
 
 To run the commands given in the guide, you need to authenticate in the container registry `registry.deckhouse.io`. Use `license-token` as the username and the your license token as the password for authentication.
@@ -18,8 +18,8 @@ Install it first following the [official instructions](https://github.com/google
 
 ## Platform update mechanism using release channels
 
-Deckhouse Kubernetes Platform (DKP) updates are based on [release channels](../documentation/v1/architecture/updating.html#release-channels).
-You can check which release channel is configured for your DKP installation
+Deckhouse Platform (DP) updates are based on [release channels](../documentation/v1/architecture/updating.html#release-channels).
+You can check which release channel is configured for your DP installation
 in the [`deckhouse`](/modules/deckhouse/configuration.html) ModuleConfig by running the following command:
 
 ```bash
@@ -32,12 +32,12 @@ Example output:
 Stable
 ```
 
-Technically, a DKP update works as follows: the registry contains an image with the name `release-channel`
+Technically, a DP update works as follows: the registry contains an image with the name `release-channel`
 and a tag corresponding to the release channel.
-This tag points to an image of a specific DKP version (when a new version is released,
+This tag points to an image of a specific DP version (when a new version is released,
 the tag is updated to point to the new image).
 
-Let's examine the contents of a DKP Enterprise Edition image with the Alpha release channel.
+Let's examine the contents of a DP Enterprise Edition image with the Alpha release channel.
 
 To do that, run the following command:
 
@@ -120,7 +120,7 @@ The image contains two key files:
   }
   ```
 
-When the `version` field changes in `version.json` in the registry, DKP applies a new release in the cluster:
+When the `version` field changes in `version.json` in the registry, DP applies a new release in the cluster:
 a `deckhouserelease` object is created and the update process begins.
 
 {% alert level="info" %}
@@ -129,10 +129,10 @@ you need to manually approve the new version before it is applied.
 {% endalert %}
 
 If there is a gap between the minor version running in the cluster and the one in the `release-channel` image,
-DKP will automatically attempt to reconstruct intermediate `deckhouserelease` objects to perform a sequential update.
+DP will automatically attempt to reconstruct intermediate `deckhouserelease` objects to perform a sequential update.
 
 {% alert level="warning" %}
-Note that DKP can't be updated non-sequentially by skipping minor releases (patch releases are not affected).
+Note that DP can't be updated non-sequentially by skipping minor releases (patch releases are not affected).
 Minor releases often include migrations that must be applied in order.
 These migrations may be removed over time.
 Skipping minor releases may result in:
@@ -145,7 +145,7 @@ Skipping minor releases may result in:
 
 Modules from source have a similar update mechanism, but their release cycle is decoupled from the platform and fully independent.
 
-The cluster contains [ModuleSource](../documentation/v1/reference/api/cr.html#modulesource) resources tracked by DKP,
+The cluster contains [ModuleSource](../documentation/v1/reference/api/cr.html#modulesource) resources tracked by DP,
 which determine the list of available modules.
 
 To see from which repository modules will be installed, run the following command:
@@ -203,7 +203,7 @@ changelog.yaml
 version.json
 ```
 
-Similarly to the DKP image, the module image contains the `changelog.yaml` and `version.json` files.
+Similarly to the DP image, the module image contains the `changelog.yaml` and `version.json` files.
 
 To view the contents of `version.json`, run the following command:
 
@@ -220,7 +220,7 @@ Example contents of `version.json`:
 ```
 
 The `version` field contains the module version.
-When it changes, DKP applies a new release (a `modulerelease` object is created and the update process begins).
+When it changes, DP applies a new release (a `modulerelease` object is created and the update process begins).
 
 {% alert level="warning" %}
 Note that modules can't be updated non-sequentially by skipping minor releases (patch releases are not affected).
@@ -233,21 +233,21 @@ Skipping minor releases may result in:
 {% endalert %}
 
 If required minor versions are missing,
-DKP will report an error that may look as follows: `minor version is greater than deployed $version by one`.
+DP will report an error that may look as follows: `minor version is greater than deployed $version by one`.
 
 If there is a gap between the minor version running in the cluster and the one in the `release` image,
-DKP will automatically attempt to reconstruct intermediate `modulerelease` objects to perform a sequential update.
+DP will automatically attempt to reconstruct intermediate `modulerelease` objects to perform a sequential update.
 
 ## Vulnerability scanner database update mechanism
 
 {% alert level="warning" %}
-Available in DKP Enterprise Edition.
+Available in DP EE, Ultimate.
 {% endalert %}
 
 Vulnerability databases are updated every 6 hours.
 The `operator-trivy` module in the cluster downloads them from the registry once during this period.
 
-Vulnerability database images in [DKP EE](/modules/operator-trivy/) have fixed names and tags and are available at:
+Vulnerability database images in [DP EE](/modules/operator-trivy/) have fixed names and tags and are available at:
 
 ```bash
 registry.deckhouse.io/deckhouse/ee/security/trivy-db:2
@@ -264,16 +264,16 @@ d8 mirror pull --source='registry.deckhouse.io/deckhouse/ee' --license='YOUR_LIC
 
 ## Example workflow for updating the platform, modules, and vulnerability databases
 
-To update DKP, its modules, and vulnerability databases to the latest versions in an air-gapped environment,
+To update DP, its modules, and vulnerability databases to the latest versions in an air-gapped environment,
 download the latest patch releases of all required platform minor versions and modules, then upload them to your registry.
 
 Running `d8 mirror pull --source='registry.deckhouse.io/deckhouse/ee' --license='YOUR_LICENSE_TOKEN' $(pwd)/d8-bundle`
-downloads all release channel images and all modules (over 30 in DKP EE).
+downloads all release channel images and all modules (over 30 in DP EE).
 This results in a very large `d8-bundle` (at the time of writing, the volume of the `d8-bundle` directory is more than 50 GB).
 
 To avoid this, download only the images relevant to your version following these guidelines:
 
-1. Get the DKP version in your cluster using the following command:
+1. Get the DP version in your cluster using the following command:
 
    ```bash
    d8 k -n d8-system get deployment deckhouse -o json | jq -r '.metadata.annotations | {"core.deckhouse.io/edition","core.deckhouse.io/version"}'
@@ -343,8 +343,8 @@ When trying to download platform images with `d8 mirror pull d8-bundle/ --licens
 you may encounter the following error:
 
 ```console
-Sep  9 00:10:57.145 INFO  ╔ Pull Deckhouse Kubernetes Platform
-Sep  9 00:11:01.532 ERROR Pull Deckhouse Kubernetes Platform failed error="Find tags to mirror: Find versions to mirror: get stable release version from registry: Cannot mirror Deckhouse: source registry contains suspended release channel \"stable\", try again later"
+Sep  9 00:10:57.145 INFO  ╔ Pull Deckhouse Platform
+Sep  9 00:11:01.532 ERROR Pull Deckhouse Platform failed error="Find tags to mirror: Find versions to mirror: get stable release version from registry: Cannot mirror Deckhouse: source registry contains suspended release channel \"stable\", try again later"
 Error: pull failed, see the log for details
 ```
 
@@ -362,7 +362,7 @@ d8 mirror pull d8-bundle/ --license='YOUR_LICENSE_KEY' --deckhouse-tag='v1.71.3'
 Example output:
 
 ```console
-Sep 16 12:56:25.074 INFO  ╔ Pull Deckhouse Kubernetes Platform
+Sep 16 12:56:25.074 INFO  ╔ Pull Deckhouse Platform
 Sep 16 12:56:25.713 INFO  ║ Skipped releases lookup as tag "v1.71.3" is specifically requested with --deckhouse-tag
 Sep 16 12:56:25.714 INFO  ║ Creating OCI Image Layouts
 Sep 16 12:56:25.720 INFO  ║ Resolving tags

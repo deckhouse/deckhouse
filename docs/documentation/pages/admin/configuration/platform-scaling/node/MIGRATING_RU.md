@@ -27,14 +27,14 @@ d8 system edit cluster-configuration
 - На сервере нет кастомных конфигураций в `/etc/containerd/conf.d` ([пример кастомной конфигурации](/modules/node-manager/faq.html#как-использовать-containerd-с-поддержкой-nvidia-gpu)).
 
 {% alert level="warning" %}
-На узлах с Ubuntu в AWS модуль ядра `erofs`, необходимый для containerd v2, поставляется отдельным пакетом `linux-modules-extra`. DKP устанавливает его автоматически, но для части ядер, преимущественно устаревших, этот пакет больше не публикуется в APT-репозитории. В этом случае установка пропускается, в логах узла появляется предупреждение, узел получает лейбл `node.deckhouse.io/containerd-v2-unsupported`, и по нему срабатывает [алерт `D8NodeContainerdV2NotSupported`](../../../../reference/alerts.html#node-manager-d8nodecontainerdv2notsupported).
+На узлах с Ubuntu в AWS модуль ядра `erofs`, необходимый для containerd v2, поставляется отдельным пакетом `linux-modules-extra`. DP устанавливает его автоматически, но для части ядер, преимущественно устаревших, этот пакет больше не публикуется в APT-репозитории. В этом случае установка пропускается, в логах узла появляется предупреждение, узел получает лейбл `node.deckhouse.io/containerd-v2-unsupported`, и по нему срабатывает [алерт `D8NodeContainerdV2NotSupported`](../../../../reference/alerts.html#node-manager-d8nodecontainerdv2notsupported).
 
 Проблема подтверждена на ядрах `5.15.0-1028-aws`, `6.8.0-1024-aws` и `6.8.0-1029-aws`. Чтобы мигрировать такие узлы, переключите группу узлов на более свежий AMI или ядро, в котором есть `erofs`.
 
 Перед миграцией проверьте, есть ли в кластере такие узлы: сверьтесь с алертами и списком узлов с этим лейблом (команды приведены ниже).
 {% endalert %}
 
-При несоответствии одному из требований, описанных [в общих параметрах кластера](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri), Deckhouse Kubernetes Platform добавляет на узел лейбл `node.deckhouse.io/containerd-v2-unsupported`. Если на узле есть кастомные конфигурации в директориях `/etc/containerd/conf.d/` (если на узлах кластера используется CRI containerd v1) или `/etc/containerd/conf2.d/` (если на узлах кластера используется CRI containerd v2), на него добавляется лейбл `node.deckhouse.io/containerd-config=custom`.
+При несоответствии одному из требований, описанных [в общих параметрах кластера](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-defaultcri), Deckhouse Platform добавляет на узел лейбл `node.deckhouse.io/containerd-v2-unsupported`. Если на узле есть кастомные конфигурации в директориях `/etc/containerd/conf.d/` (если на узлах кластера используется CRI containerd v1) или `/etc/containerd/conf2.d/` (если на узлах кластера используется CRI containerd v2), на него добавляется лейбл `node.deckhouse.io/containerd-config=custom`.
 
 При наличии одного из этих лейблов смена параметра [`spec.cri.type`](/modules/node-manager/cr.html#nodegroup-v1-spec-cri-type) для группы узлов будет недоступна. Узлы, которые не подходят под условия миграции можно посмотреть с помощью команд:
 
@@ -88,4 +88,4 @@ ls -l /etc/containerd/conf.d
        type: ContainerdV2
    ```
 
-   При переходе на containerd v2 Deckhouse Kubernetes Platform начнет поочерёдное обновление узлов.
+   При переходе на containerd v2 Deckhouse Platform начнет поочерёдное обновление узлов.

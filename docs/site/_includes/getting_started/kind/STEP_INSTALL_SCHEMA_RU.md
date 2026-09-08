@@ -23,7 +23,7 @@ Deckhouse будет установлен в **минимальной** конф
 ## Установка
 
 {% alert level="warning" %}
-Если вы устанавливаете Deckhouse Kubernetes Platform в kind на компьютер Apple с процессором с архитектурой ARM, отключите Rosetta для Docker Desktop.
+Если вы устанавливаете Deckhouse Platform в kind на компьютер Apple с процессором с архитектурой ARM, отключите Rosetta для Docker Desktop.
 Для этого в интерфейсе Docker Desktop перейдите в `Settings > General > Virtual Machine Options` и отключите опцию `Use Rosetta for x86_64/amd64 emulation on Apple Silicon`.
 {% endalert %}
 
@@ -34,7 +34,7 @@ Deckhouse будет установлен в **минимальной** конф
 bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/tools/kind-d8.sh)"
 ```
 
-- Либо выполните следующую команду для установки коммерческой редакции Deckhouse Kubernetes Platform, указав лицензионный ключ:
+- Либо выполните следующую команду для установки коммерческой редакции Deckhouse Platform, указав лицензионный ключ:
 
 ```shell
  echo <LICENSE_KEY> | docker login -u license-token --password-stdin registry.deckhouse.ru
@@ -49,7 +49,7 @@ bash -c "$(curl -Ls https://raw.githubusercontent.com/deckhouse/deckhouse/main/t
 Waiting for the Ingress controller to be ready.........................................
 Ingress controller is running.
 
-You have installed Deckhouse Kubernetes Platform in kind!
+You have installed Deckhouse Platform in kind!
 
 Don't forget that the default kubectl context has been changed to 'kind-d8'.
 

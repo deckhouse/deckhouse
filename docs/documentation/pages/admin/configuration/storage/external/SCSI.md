@@ -3,13 +3,13 @@ title: "SCSI-based data storage"
 permalink: en/admin/configuration/storage/external/scsi.html
 ---
 
-Deckhouse Kubernetes Platform (DKP) supports managing storage connected via iSCSI or Fibre Channel, enabling working with volumes at the block device level. This allows for the integration of storage systems with Kubernetes and management through a CSI driver.
+Deckhouse Platform (DP) supports managing storage connected via iSCSI or Fibre Channel, enabling working with volumes at the block device level. This allows for the integration of storage systems with Kubernetes and management through a CSI driver.
 
-This page provides instructions for connecting SCSI devices in DKP, creating SCSITarget, StorageClass, and verifying system functionality.
+This page provides instructions for connecting SCSI devices in DP, creating SCSITarget, StorageClass, and verifying system functionality.
 
 ## Supported features
 
-DKP supports:
+DP supports:
 
 - Detecting Logical Unit Numbers (LUN) via iSCSI or Fibre Channel.
 - Creating PersistentVolume (PV) from pre-provisioned LUN.
@@ -20,7 +20,7 @@ DKP supports:
 
 ## Limitations
 
-DKP doesn't support:
+DP doesn't support:
 
 - Creating LUN on storage systems.
 - Resizing LUN.
@@ -39,7 +39,7 @@ The following requirements are applicable to the infrastructure and cluster node
 - For Fibre Channel connections:
   - Fibre Channel Host Bus Adapters (FC HBA) must be installed and available on cluster nodes (`/sys/class/fc_host/host*`).
   - In the Storage Area Network (SAN), LUN zoning and masking must be configured, providing node initiators with access to the storage target ports.
-  - Necessary LUNs must be pre-provisioned on the storage system. DKP does not create LUNs.
+  - Necessary LUNs must be pre-provisioned on the storage system. DP does not create LUNs.
   - The `multipath-tools` package must be installed on nodes.
 
 ## Quick start
@@ -136,7 +136,7 @@ To configure a connection based on Fibre Channel, do the following:
 
 1. Before creating the SCSITarget resource, configure zoning and LUN masking on the SAN so that cluster nodes can access the necessary LUNs.
 
-1. Create the SCSITarget resource. In the [`spec.fibreChannel.WWNs`](/modules/csi-scsi-generic/cr.html#scsitarget-v1alpha1-spec-fibrechannel-wwns) field, define a World Wide Port Name (WWPN) of the target storage ports, which expose the necessary LUNs. DKP discovers devices by matching the defined WWPNs against paths under `/dev/disk/by-path/`.
+1. Create the SCSITarget resource. In the [`spec.fibreChannel.WWNs`](/modules/csi-scsi-generic/cr.html#scsitarget-v1alpha1-spec-fibrechannel-wwns) field, define a World Wide Port Name (WWPN) of the target storage ports, which expose the necessary LUNs. DP discovers devices by matching the defined WWPNs against paths under `/dev/disk/by-path/`.
 
    Define the WWPNs in one of the following formats:
 
@@ -144,7 +144,7 @@ To configure a connection based on Fibre Channel, do the following:
    - With colons (`20:01:c8:9f:1a:cd:61:17`)
    - With the `0x` prefix (`0x2001c89f1acd6117`)
 
-   DKP triggers an FC host scan during discovery and volume attach. It does not configure the commutators or log in to targets.
+   DP triggers an FC host scan during discovery and volume attach. It does not configure the commutators or log in to targets.
 
    Configuration example with two target storage system ports for multipath:
 

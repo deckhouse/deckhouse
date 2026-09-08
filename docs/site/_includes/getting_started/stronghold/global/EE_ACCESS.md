@@ -3,13 +3,13 @@
 <div class="license-form__wrap">
 <div class="license-form-enter">
 <h3 class="text text_h3">
-  Enter Deckhouse Kubernetes Platform license key
+  Enter Deckhouse Platform license key
 </h3>
 
 <div class="form form--inline">
   <div class="form__row">
     <label class="label">
-      DKP license key
+      DP license key
     </label>
     <input id="license-token-input" class="textfield"
       type="text" license-token-{{ revision }} name="license-token-{{ revision }}"

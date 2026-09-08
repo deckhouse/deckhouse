@@ -1,7 +1,7 @@
 В этом руководстве вы по шагам установите Deckhouse Virtualization Platform (DVP) на тестовый стенд: один master-узел, один worker-узел и внешний NFS-сервер для дисков виртуальных машин (ВМ). По окончанию установки вы войдёте в веб-интерфейс и познакомитесь с возможностями DVP.
 
 {% alert level="info" %}
-Возможности виртуализации доступны как в DVP (самостоятельный продукт, для которого предназначено это руководство), так и в модуле [`virtualization`](/modules/virtualization/) в отдельных редакциях [Deckhouse Kubernetes Platform (DKP)](/products/kubernetes-platform/). Подробная информация о возможностях виртуализации описана в разделе [«Редакции платформы»](/products/virtualization-platform/documentation/about/editions.html).
+Возможности виртуализации доступны как в DVP (самостоятельный продукт, для которого предназначено это руководство), так и в модуле [`virtualization`](/modules/virtualization/) в отдельных редакциях [Deckhouse Platform (DP)](/products/kubernetes-platform/). Подробная информация о возможностях виртуализации описана в разделе [«Редакции платформы»](/products/virtualization-platform/documentation/about/editions.html).
 {% endalert %}
 
 На схеме ниже показана архитектура тестового стенда для этого руководства:

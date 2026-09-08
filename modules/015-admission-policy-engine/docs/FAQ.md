@@ -5,7 +5,7 @@ description: "Answers to frequently asked questions about the admission-policy-e
 
 ## How do I configure alternative security policy management solutions?
 
-For DKP to work correctly, extended privileges are required to run and operate system component payloads. If you are using some alternative security policy management solution (e. g., Kyverno) instead of the admission-policy-engine module, you have to configure exceptions for the following namespaces:
+For DP to work correctly, extended privileges are required to run and operate system component payloads. If you are using some alternative security policy management solution (e. g., Kyverno) instead of the admission-policy-engine module, you have to configure exceptions for the following namespaces:
 
 - `kube-system`;
 - all namespaces with the `d8-*` prefix (e.g., `d8-system`).
@@ -477,12 +477,12 @@ The module enforces the following restrictions:
 ## Verification of image signatures
 
 {% alert level="warning" %}
-Available in the following DKP editions: SE+, EE, CSE Lite, CSE Pro.
+Available in the following DP editions: SE+, EE, Ultimate.
 
 Cosign versions up to v2 are supported. Versions v3 and above are not supported.
 {% endalert %}
 
-The module implements a function for verifying signatures of container images signed using [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys). For more details on signing and verifying container images, see the [DKP documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/security/policies.html#image-signature-verification).
+The module implements a function for verifying signatures of container images signed using [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys). For more details on signing and verifying container images, see the [DP documentation](/products/kubernetes-platform/documentation/v1/admin/configuration/security/policies.html#image-signature-verification).
 
 ## How to block deleting a node without a label
 
@@ -563,7 +563,7 @@ This policy doesn't apply to the following users who are allowed to run `kubectl
 
 ### Built-in policy for finalizers
 
-To protect objects managed by DKP controllers, the `admission-policy-engine` module includes a built-in ValidatingAdmissionPolicy `deny-deckhouse-finalizers.deckhouse.io` that forbids removing finalizers containing the `deckhouse.io` substring on any cluster objects.
+To protect objects managed by DP controllers, the `admission-policy-engine` module includes a built-in ValidatingAdmissionPolicy `deny-deckhouse-finalizers.deckhouse.io` that forbids removing finalizers containing the `deckhouse.io` substring on any cluster objects.
 
 This policy doesn't apply to the following users who are allowed to remove such finalizers:
 

@@ -3,7 +3,7 @@ title: "Caching DNS requests on cluster nodes"
 permalink: en/admin/configuration/network/other/dns-caching.html
 ---
 
-In Deckhouse Kubernetes Platform, you can deploy a local caching DNS server on each cluster node.
+In Deckhouse Platform, you can deploy a local caching DNS server on each cluster node.
 It exports metrics to Prometheus for visualization in a [Grafana dashboard](/modules/node-local-dns/#grafana-dashboard).
 
 This feature is implemented by the [`node-local-dns`](/modules/node-local-dns/) module.

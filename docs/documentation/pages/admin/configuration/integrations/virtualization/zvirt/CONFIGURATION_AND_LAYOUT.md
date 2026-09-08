@@ -5,7 +5,7 @@ permalink: en/admin/integrations/virtualization/zvirt/layout.html
 
 ## Standard
 
-The Standard layout is used to integrate Deckhouse Kubernetes Platform with a zVirt virtual infrastructure.
+The Standard layout is used to integrate Deckhouse Platform with a zVirt virtual infrastructure.
 This layout assumes that all nodes are deployed within a single zVirt cluster
 with centralized management of templates, storage, and networking.
 

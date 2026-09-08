@@ -1,7 +1,7 @@
 ---
 title: "Configuring role-based access control"
 permalink: en/admin/configuration/delivery/argocd/rbac/
-description: "Configuring Argo CD role-based access control in Deckhouse Kubernetes Platform."
+description: "Configuring Argo CD role-based access control in Deckhouse Platform."
 lang: en
 relatedLinks:
   - title: "Official Argo CD website"
@@ -10,7 +10,7 @@ relatedLinks:
     url: "https://argocd-operator.readthedocs.io"
 ---
 
-Argo CD uses its own role-based access control (RBAC) model, which is not based on the Kubernetes or Deckhouse Kubernetes Platform role model. The Argo CD role model lets you restrict access to resources and operations through its own policies and roles.
+Argo CD uses its own role-based access control (RBAC) model, which is not based on the Kubernetes or Deckhouse Platform role model. The Argo CD role model lets you restrict access to resources and operations through its own policies and roles.
 
 Before configuring role-based access control, complete [authentication and authorization setup](../authentication/). After that, assign roles to users and groups and set permissions at the level of the entire Argo CD instance or individual projects with an [AppProject](/modules/operator-argo/cr.html#appproject) object.
 

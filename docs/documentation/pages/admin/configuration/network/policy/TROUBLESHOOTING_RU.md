@@ -2,7 +2,7 @@
 title: "Диагностика и наблюдаемость политик"
 permalink: ru/admin/configuration/network/policy/troubleshooting.html
 description: |
-  Способы проверки применённых сетевых политик в Deckhouse Kubernetes Platform: kubectl describe, Hubble UI и CLI, flow logs, чек-лист «политика не применяется».
+  Способы проверки применённых сетевых политик в Deckhouse Platform: kubectl describe, Hubble UI и CLI, flow logs, чек-лист «политика не применяется».
 lang: ru
 relatedLinks:
   - title: "HubbleMonitoringConfig — модуль cni-cilium"
@@ -62,7 +62,7 @@ Hubble отображает вердикты политик в реальном 
 
 В Hubble UI видны соединения между подами и сервисами с пометками `forwarded`, `dropped` и `audit`. Drop-события показывают, какая политика отклонила трафик и какое поле правила сработало.
 
-Через `hubble observe` можно фильтровать события по типу. В DKP клиент `hubble` поставляется вместе с агентом, поэтому команды удобно запускать через `d8 k exec` в под cilium-agent:
+Через `hubble observe` можно фильтровать события по типу. В DP клиент `hubble` поставляется вместе с агентом, поэтому команды удобно запускать через `d8 k exec` в под cilium-agent:
 
 ```bash
 d8 k -n d8-cni-cilium exec -it ds/agent -- hubble observe --type policy-verdict --verdict DROPPED
@@ -71,7 +71,7 @@ d8 k -n d8-cni-cilium exec -it ds/agent -- hubble observe --from-pod my-app/clie
 ```
 
 {% alert level="info" %}
-В DKP нет отдельного исполняемого файла `d8 hubble`. Доступ к Hubble CLI обеспечивается через `exec` в под `cilium-agent`, как показано выше. Флаг `-it` нужен для потокового вывода при использовании без `--last`.
+В DP нет отдельного исполняемого файла `d8 hubble`. Доступ к Hubble CLI обеспечивается через `exec` в под `cilium-agent`, как показано выше. Флаг `-it` нужен для потокового вывода при использовании без `--last`.
 {% endalert %}
 
 Каждый агент видит события только своего узла. Для общего сбора событий по кластеру используйте Hubble UI или экспорт через [HubbleMonitoringConfig](/modules/cni-cilium/cr.html#hubblemonitoringconfig).

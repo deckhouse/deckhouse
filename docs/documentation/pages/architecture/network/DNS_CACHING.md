@@ -2,7 +2,7 @@
 title: "Caching DNS server in a cluster"
 permalink: en/architecture/network/dns-caching.html
 search: DNS caching, cluster DNS, DNS performance, DNS optimization
-description: Using caching DNS server in Deckhouse Kubernetes Platform to mitigate network delays.
+description: Using caching DNS server in Deckhouse Platform to mitigate network delays.
 ---
 
 Standard DNS operation in Kubernetes comes with a series of issues
@@ -19,7 +19,7 @@ that may cause degradation of key service performance indicators:
 Any minor network delays can significantly degrade service quality due to the above-mentioned issues.
 
 One possible solution is to install a DNS server on each node.
-In Deckhouse Kubernetes Platform, this is implemented using the [`node-local-dns`](/modules/node-local-dns/) module.
+In Deckhouse Platform, this is implemented using the [`node-local-dns`](/modules/node-local-dns/) module.
 
 When using a caching DNS server,
 external requests (that are not already cached) will still be attempted to resolve through the internal zone chain first.

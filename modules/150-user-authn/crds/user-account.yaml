@@ -21,7 +21,7 @@ spec:
         openAPIV3Schema:
           type: object
           description: |
-            Controller-projected view of Dex Password and `OfflineSessions` objects for the DKP web UI.
+            Controller-projected view of Dex Password and `OfflineSessions` objects for the DP web UI.
 
             Do not create or edit UserAccount resources. The `user-authn` controller owns them.
             The source of truth for login credentials and session state remains Dex.
@@ -37,7 +37,7 @@ spec:
               description: |
                 Observed account state projected from Dex.
                 
-                This is a DKP web UI view only
+                This is a DP web UI view only
                 and does not store credentials or connector secrets.
               properties:
                 email:

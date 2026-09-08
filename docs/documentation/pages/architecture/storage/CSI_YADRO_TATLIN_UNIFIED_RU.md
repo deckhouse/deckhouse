@@ -3,7 +3,7 @@ title: Модуль csi-yadro-tatlin-unified
 permalink: ru/architecture/storage/external/csi-yadro-tatlin-unified.html
 lang: ru
 search: csi-yadro-tatlin-unified, yadro tatlin unified
-description: Архитектура модуля csi-yadro-tatlin-unified в Deckhouse Kubernetes Platform.
+description: Архитектура модуля csi-yadro-tatlin-unified в Deckhouse Platform.
 ---
 
 Модуль [`csi-yadro-tatlin-unified`](/modules/csi-yadro-tatlin-unified/) предназначен для управления томами c использованием систем хранения данных TATLIN.UNIFIED. Он позволяет создавать StorageClass в Kubernetes с помощью ресурса YadroTatlinUnifiedStorageClass.
@@ -19,7 +19,7 @@ description: Архитектура модуля csi-yadro-tatlin-unified в Dec
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`csi-yadro-tatlin-unified`](/modules/csi-yadro-tatlin-unified/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура модуля [`csi-yadro-tatlin-unified`](/modules/csi-yadro-tatlin-unified/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
 ![Архитектура модуля csi-yadro-tatlin-unified](../../../images/architecture/storage/c4-l2-csi-yadro-tatlin-unified.ru.png)
 
@@ -39,7 +39,7 @@ description: Архитектура модуля csi-yadro-tatlin-unified в Dec
     * **controller** — основной контейнер;
     * **webhook** — сайдкар-контейнер, реализующий вебхук-сервер для проверки ресурсов StorageClass.
 
-1. **CSI-драйвер (yadro-tatlin-unified)** — реализация CSI-драйвера, использующего provisioner `csi-tatlinunified.yadro.com`. С типовой архитектурой CSI-драйвера, используемого в DKP, можно ознакомиться [на странице описания CSI-драйвера](../csi-drivers/csi-driver.html).
+1. **CSI-драйвер (yadro-tatlin-unified)** — реализация CSI-драйвера, использующего provisioner `csi-tatlinunified.yadro.com`. С типовой архитектурой CSI-драйвера, используемого в DP, можно ознакомиться [на странице описания CSI-драйвера](../csi-drivers/csi-driver.html).
 
 1. **Scheduler-extender** — состоит из одного контейнера, представляет собой расширение (extender) для kube-scheduler. Реализует специфичную для подов логику размещения при использовании томов СХД TATLIN.UNIFIED. При планировании подов учитываются селекторы узлов, заданные в кастомном ресурсе YadroTatlinUnifiedStorageConnection в параметрах [`controlPlane`](/modules/csi-yadro-tatlin-unified/cr.html#yadrotatlinunifiedstorageconnection-v1alpha1-spec-controlplane) и [`dataPlane`](/modules/csi-yadro-tatlin-unified/cr.html#yadrotatlinunifiedstorageconnection-v1alpha1-spec-dataplane).
 

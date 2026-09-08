@@ -1,14 +1,14 @@
 ---
 title: Marketplace
 permalink: ru/architecture/marketplace/
-description: "Архитектура подсистемы Deckhouse Kubernetes Platform Marketplace. Абстракция Package, типы единиц поставки, модель ресурсов и обзор подсистемы."
+description: "Архитектура подсистемы Deckhouse Platform Marketplace. Абстракция Package, типы единиц поставки, модель ресурсов и обзор подсистемы."
 lang: ru
 search: marketplace architecture, package abstraction, application module, архитектура marketplace, абстракция package
 ---
 
-Marketplace — это подсистема Deckhouse Kubernetes Platform (DKP), управляющая жизненным циклом единиц поставки, называемых **Packages** (пакетами). Package может быть **Application** (пользовательская нагрузка, развёртываемая в неймспейс) или **Module** (расширение возможностей кластера). В настоящее время поддерживаются только Applications; поддержка Module запланирована на будущую версию.
+Marketplace — это подсистема Deckhouse Platform (DP), управляющая жизненным циклом единиц поставки, называемых **Packages** (пакетами). Package может быть **Application** (пользовательская нагрузка, развёртываемая в неймспейс) или **Module** (расширение возможностей кластера). В настоящее время поддерживаются только Applications; поддержка Module запланирована на будущую версию.
 
-Marketplace доступен начиная с DKP версии 1.76.
+Marketplace доступен начиная с DP версии 1.76.
 
 ## Разделы
 

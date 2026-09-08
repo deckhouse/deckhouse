@@ -165,7 +165,7 @@ spec:
                     Name (username) of the target local User resource.
 
                     Used for operations on users that are managed
-                    by DKP via the User CRD (the built-in local connector).
+                    by DP via the User CRD (the built-in local connector).
                     
                     > Only one of the fields can be specified at the same time: `user` or `target`.
                   x-doc-examples: ['jane.doe']
@@ -217,7 +217,7 @@ spec:
     
                     * `admin`: By an administrator (e.g. via `d8 iam user` CLI or a manual UserOperation).
                     * `system`: Automatically by the system (e.g. automatic lockout after exceeding `passwordPolicy.lockout.maxAttempts`).
-                    * `self`: By the user (self-service password reset in the DKP authentication interface).
+                    * `self`: By the user (self-service password reset in the DP authentication interface).
                 resetPassword:
                   type: object
                   description: "Parameters for password reset."

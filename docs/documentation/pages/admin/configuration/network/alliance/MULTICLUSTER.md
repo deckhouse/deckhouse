@@ -6,7 +6,7 @@ permalink: en/admin/configuration/network/alliance/multicluster.html
 ## Multicluster of Istio funds
 
 {% alert level="info" %}
-Available only in DKP Enterprise Edition (EE).
+Available only in DP Enterprise Edition (EE) and DP Ultimate.
 {% endalert %}
 
 ### Requirements for clusters

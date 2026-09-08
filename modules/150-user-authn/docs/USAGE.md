@@ -4,7 +4,7 @@ title: "The user-authn module: usage"
 
 ## An example of the module configuration
 
-The example shows the configuration of the `user-authn` module in the Deckhouse Kubernetes Platform.
+The example shows the configuration of the `user-authn` module in the Deckhouse Platform.
 
 {% raw %}
 
@@ -205,7 +205,7 @@ If email verification is not enabled in Keycloak, to properly use it as an ident
     * "Claim value": `true`
     * "Claim JSON Type": `boolean`
 
-  After that, in the client registered for the DKP cluster in "Clients", change `Client scopes` from `email` to `email_dkp`.
+  After that, in the client registered for the DP cluster in "Clients", change `Client scopes` from `email` to `email_dkp`.
 
   In the DexProvider resource, specify `insecureSkipEmailVerified: true` and in the `.spec.oidc.scopes` field, change the Client Scope name to `email_dkp` following the example:
   
@@ -534,7 +534,7 @@ The annotation registers the client as a trusted peer of the privileged `kuberne
 {% alert level="warning" %}
 Access granted this way applies at the cluster level, even though DexClient and DexAuthenticator are namespaced resources. Therefore, only a subject with permissions to modify the `user-authn` module configuration can add the annotation or change its value to `"true"`. For example, this permission is granted by the `d8:manage:permission:module:user-authn:edit` role. Permissions to create DexClient or DexAuthenticator resources in an individual namespace are not sufficient.
 
-Adding the annotation is restricted regardless of its value, including `"false"`. This is required for compatibility with DKP versions earlier than 1.78, where access is granted based on the presence of the annotation regardless of its value. If access to the Kubernetes API server is not required, do not add the annotation.
+Adding the annotation is restricted regardless of its value, including `"false"`. This is required for compatibility with DP versions earlier than 1.78, where access is granted based on the presence of the annotation regardless of its value. If access to the Kubernetes API server is not required, do not add the annotation.
 
 The restriction does not apply to resources that already have the annotation. A user with permissions to modify such a resource can continue to modify it, including removing the annotation or changing its value to disable access.
 {% endalert %}
@@ -718,7 +718,7 @@ By default, commands wait for the operation to complete. To only create a UserOp
 
 #### Self-service password reset
 
-A local user can reset their own password in the DKP authentication interface. This creates a UserOperation resource with `type: ResetPassword` and `initiatorType: self`.
+A local user can reset their own password in the DP authentication interface. This creates a UserOperation resource with `type: ResetPassword` and `initiatorType: self`.
 
 Self-service password reset is available only for local accounts (the built-in `Local` connector). Users who sign in through external authentication providers must contact the administrator of the corresponding system.
 

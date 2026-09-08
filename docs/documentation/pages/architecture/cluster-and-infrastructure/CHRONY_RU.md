@@ -3,10 +3,10 @@ title: Модуль chrony
 permalink: ru/architecture/cluster-and-infrastructure/infrastructure/chrony.html
 lang: ru
 search: chrony, ntp, time sync
-description: Архитектура модуля chrony в Deckhouse Kubernetes Platform.
+description: Архитектура модуля chrony в Deckhouse Platform.
 ---
 
-Модуль [`chrony`](/modules/chrony/) обеспечивает синхронизацию времени на всех узлах кластера Deckhouse Kubernetes Platform (DKP) с использованием реализации NTP-сервера/клиента [chrony](https://chrony-project.org/).
+Модуль [`chrony`](/modules/chrony/) обеспечивает синхронизацию времени на всех узлах кластера Deckhouse Platform (DP) с использованием реализации NTP-сервера/клиента [chrony](https://chrony-project.org/).
 
 Подробнее с описанием модуля можно ознакомиться [в соответствующем разделе документации](/modules/chrony/configuration.html).
 
@@ -19,7 +19,7 @@ description: Архитектура модуля chrony в Deckhouse Kubernetes 
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`chrony`](/modules/chrony/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура модуля [`chrony`](/modules/chrony/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DP изображены на следующей диаграмме:
 
 ![Архитектура модуля chrony](../../../images/architecture/cluster-and-infrastructure/c4-l2-chrony.ru.png)
 

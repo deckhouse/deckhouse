@@ -1,11 +1,11 @@
 ---
 title: "Настройка Locality failover с Istio"
-description: "Настройка географического failover с использованием Istio в Deckhouse Kubernetes Platform. Управление приоритетной маршрутизацией трафика между зонами с помощью DestinationRule и node labels."
+description: "Настройка географического failover с использованием Istio в Deckhouse Platform. Управление приоритетной маршрутизацией трафика между зонами с помощью DestinationRule и node labels."
 permalink: ru/user/network/locality_failover_istio.html
 lang: ru
 ---
 
-В Deckhouse Kubernetes Platform можно реализовать механизм Locality failover средствами модуля [istio](/modules/istio/).
+В Deckhouse Platform можно реализовать механизм Locality failover средствами модуля [istio](/modules/istio/).
 Перед настройкой механизма убедитесь, что модуль включен в кластере.
 
 Механизм Locality failover управляет маршрутизацией трафика и направляет его на приоритетный фейловер в случае недоступности определённых экземпляров сервисов.

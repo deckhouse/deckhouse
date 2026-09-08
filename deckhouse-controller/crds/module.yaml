@@ -87,7 +87,7 @@ spec:
                 requirements:
                   type: object
                   x-kubernetes-preserve-unknown-fields: true
-                  description: Module dependencies, a set of requirements that must be met for Deckhouse Kubernetes Platform (DKP) to run the module.
+                  description: Module dependencies, a set of requirements that must be met for Deckhouse Platform (DP) to run the module.
                   properties:
                     deckhouse:
                       type: string
@@ -97,7 +97,7 @@ spec:
                       description: Required Kubernetes version.
                     bootstrapped:
                       type: string
-                      description: Required cluster installation status (for built-in DKP modules only).
+                      description: Required cluster installation status (for built-in DP modules only).
                     modules:
                       type: object
                       description: A list of other enabled modules required for the module.

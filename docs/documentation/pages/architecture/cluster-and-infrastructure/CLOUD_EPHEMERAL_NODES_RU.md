@@ -17,7 +17,7 @@ description: Архитектура модуля node-manager для CloudEpheme
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`node-manager`](/modules/node-manager/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Kubernetes Platform (DKP) изображены на следующей диаграмме:
+Архитектура модуля [`node-manager`](/modules/node-manager/) на уровне 2 модели C4 и его взаимодействия с другими компонентами Deckhouse Platform (DP) изображены на следующей диаграмме:
 
 ![Архитектура модуля node-manager для CloudEphemeral-узлов](../../../images/architecture/cluster-and-infrastructure/c4-l2-cloud-ephemeral-nodes.ru.png)
 

@@ -2,7 +2,7 @@
 title: Authentication
 permalink: en/architecture/iam/authentication.html
 search: authentication, kubeconfig, user authentication, access control, kubernetes API access
-description: Authentication features in Deckhouse Kubernetes Platform.
+description: Authentication features in Deckhouse Platform.
 ---
 
 ## Connecting to Kubernetes API using a generated kubeconfig
@@ -11,7 +11,7 @@ description: Authentication features in Deckhouse Kubernetes Platform.
 
 1. **Initialization**. Before the kube-apiserver starts, it requests the configuration endpoint of the OIDC provider (in this case — Dex) to retrieve the `issuer` and JWKS endpoint settings for token validation.
 
-1. **Kubeconfig generation**. The Deckhouse Kubernetes Platform (DKP) web UI generates a kubeconfig file that includes an `ID token` and a `refresh token`. This file is used by `kubectl` or other Kubernetes clients.
+1. **Kubeconfig generation**. The Deckhouse Platform (DP) web UI generates a kubeconfig file that includes an `ID token` and a `refresh token`. This file is used by `kubectl` or other Kubernetes clients.
 
 1. **Authentication when accessing the API**. Upon receiving a request with an `ID token`, the `kube-apiserver` verifies the token's signature using keys from the JWKS endpoint. It then compares the `iss` (issuer) and `aud` (audience) claims in the token against the server configuration.
 
@@ -34,9 +34,9 @@ Each user is allowed a maximum of 20 login attempts. Once this limit is reached,
    This may be optional for some applications, such as Upmeter, where other authorization mechanisms are used.  
    However, for applications like the Kubernetes Dashboard, this behavior is critical, as the Dashboard forwards the `ID token` to access the Kubernetes API on behalf of the user.
 
-## DKP-specific Dex extensions
+## DP-specific Dex extensions
 
-DKP uses a modified version of Dex that supports:
+DP uses a modified version of Dex that supports:
 
 * Groups for static user accounts and the Bitbucket Cloud provider (via the [`bitbucketCloud`](/modules/user-authn/cr.html#dexprovider-v1-spec-bitbucketcloud) parameter).
 * Passing the `group` claim to clients.
@@ -44,6 +44,6 @@ DKP uses a modified version of Dex that supports:
 
 ## High availability mode
 
-DKP supports a high-availability mode via the `highAvailability` setting.  
+DP supports a high-availability mode via the `highAvailability` setting.  
 When enabled, multiple authenticator instances are deployed with redundancy to ensure continuous service.  
 If any of the authenticators fail, active user authentication sessions are preserved and remain uninterrupted.

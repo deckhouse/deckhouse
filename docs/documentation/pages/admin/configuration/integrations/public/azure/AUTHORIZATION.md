@@ -1,7 +1,7 @@
 ---
 title: Connection and authorization in Microsoft Azure
 permalink: en/admin/integrations/public/azure/authorization.html
-description: "Configure Azure connection and authorization for Deckhouse Kubernetes Platform. Service principal setup, credentials configuration, and Azure integration requirements for cloud deployment."
+description: "Configure Azure connection and authorization for Deckhouse Platform. Service principal setup, credentials configuration, and Azure integration requirements for cloud deployment."
 ---
 
 ## Requirements
@@ -10,7 +10,7 @@ description: "Configure Azure connection and authorization for Deckhouse Kuberne
 The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
 {% endalert %}
 
-To ensure Deckhouse Kubernetes Platform (DKP) works correctly with Microsoft Azure, the following conditions must be met:
+To ensure Deckhouse Platform (DP) works correctly with Microsoft Azure, the following conditions must be met:
 
 - The selected region must support Availability Zones.
 - All virtual machines must have the `cloud-init` package installed.
@@ -27,7 +27,7 @@ Make sure all nodes run Linux kernel 5.8 or newer and that firewall rules allow 
 
 ## Accessing the Azure API
 
-To manage Azure resources from DKP, you need a service account with the `Contributor` role within the appropriate subscription.
+To manage Azure resources from DP, you need a service account with the `Contributor` role within the appropriate subscription.
 Follow these steps:
 
 1. Install Azure CLI and log in:

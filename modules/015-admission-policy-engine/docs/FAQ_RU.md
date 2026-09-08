@@ -5,7 +5,7 @@ description: "Ответы на часто задаваемые вопросы �
 
 ## Как настроить альтернативные решения по управлению политиками безопасности?
 
-Для корректной работы DKP необходимы расширенные привилегии на запуск и работу полезной нагрузки системных компонентов. Если вместо модуля admission-policy-engine используется альтернативное решение по управлению политиками безопасности (например, Kyverno), необходима настройка исключений для следующих неймспейсов:
+Для корректной работы DP необходимы расширенные привилегии на запуск и работу полезной нагрузки системных компонентов. Если вместо модуля admission-policy-engine используется альтернативное решение по управлению политиками безопасности (например, Kyverno), необходима настройка исключений для следующих неймспейсов:
 
 - `kube-system`;
 - все неймспейсы с префиксом `d8-*` (например, `d8-system`).
@@ -477,12 +477,12 @@ CRD `Assign`, `AssignMetadata`, `ModifySet` и `AssignImage` импортиро�
 ## Проверка подписи образов
 
 {% alert level="warning" %}
-Доступно в следующих редакциях DKP: SE+, EE, CSE Lite, CSE Pro.
+Доступно в следующих редакциях DP: SE+, EE, Ultimate, CSE Lite, CSE Pro, Certified Pro, Certified Lite.
 
 Поддерживается Cosign не выше v2. Версии v3 и выше не поддерживаются.
 {% endalert %}
 
-В модуле реализована функция проверки подписи образов контейнеров, подписанных с помощью инструмента [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys). Подробнее о подписании и проверке образов контейнеров можно узнать в [документации DKP](/products/kubernetes-platform/documentation/v1/admin/configuration/security/policies.html#проверка-подписи-образов).
+В модуле реализована функция проверки подписи образов контейнеров, подписанных с помощью инструмента [Cosign](https://docs.sigstore.dev/cosign/key_management/signing_with_self-managed_keys/#:~:text=To%20generate%20a%20key%20pair,prompted%20to%20provide%20a%20password.&text=Alternatively%2C%20you%20can%20use%20the,%2C%20ECDSA%2C%20and%20ED25519%20keys). Подробнее о подписании и проверке образов контейнеров можно узнать в [документации DP](/products/kubernetes-platform/documentation/v1/admin/configuration/security/policies.html#проверка-подписи-образов).
 
 ## Как запретить удаление узла без лейбла
 
@@ -563,7 +563,7 @@ spec:
 
 ### Встроенная политика для финалайзеров
 
-Для защиты объектов, управляемых контроллерами DKP, в модуле `admission-policy-engine` предусмотрена встроенная ValidatingAdmissionPolicy `deny-deckhouse-finalizers.deckhouse.io`, которая запрещает удалять финалайзеры, содержащие подстроку `deckhouse.io`, на любых объектах кластера.
+Для защиты объектов, управляемых контроллерами DP, в модуле `admission-policy-engine` предусмотрена встроенная ValidatingAdmissionPolicy `deny-deckhouse-finalizers.deckhouse.io`, которая запрещает удалять финалайзеры, содержащие подстроку `deckhouse.io`, на любых объектах кластера.
 
 Политика не распространяется на следующих пользователей, которым разрешено снимать такие финалайзеры:
 

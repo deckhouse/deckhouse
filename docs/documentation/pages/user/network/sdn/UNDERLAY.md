@@ -13,7 +13,7 @@ Physical network interfaces can be connected to pods in one of two modes:
 - `Shared`: Virtual Functions (VF) are created from Physical Functions (PF) using SR-IOV, and multiple pods can share the same hardware.
 - `Dedicated`: Each pod gets exclusive access to the entire PF.
 
-For more information about the capabilities and features of working with Underlay networks in DKP, see the section [Configuring and connecting underlay networks for hardware device forwarding](../../../admin/configuration/network/sdn/configure.html#configuring-and-connecting-underlay-networks-for-hardware-device-passthrough).
+For more information about the capabilities and features of working with Underlay networks in DP, see the section [Configuring and connecting underlay networks for hardware device forwarding](../../../admin/configuration/network/sdn/configure.html#configuring-and-connecting-underlay-networks-for-hardware-device-passthrough).
 
 ## Connecting physical network interfaces to pods
 

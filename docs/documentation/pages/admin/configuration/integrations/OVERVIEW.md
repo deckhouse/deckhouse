@@ -3,7 +3,7 @@ title: Integration with IaaS
 permalink: en/admin/integrations/integrations-overview.html
 ---
 
-Deckhouse Kubernetes Platform (DKP) provides built-in tools
+Deckhouse Platform (DP) provides built-in tools
 for integrating with various cloud providers and virtualization systems.
 These tools let you:
 

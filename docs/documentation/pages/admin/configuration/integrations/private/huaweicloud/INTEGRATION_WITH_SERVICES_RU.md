@@ -4,7 +4,7 @@ permalink: ru/admin/integrations/private/huaweicloud/services.html
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform использует облачные возможности Huawei Cloud для работы Kubernetes-кластера. При этом поддерживаются следующие функции:
+Deckhouse Platform использует облачные возможности Huawei Cloud для работы Kubernetes-кластера. При этом поддерживаются следующие функции:
 
 - управление ресурсами Huawei Cloud через `cloud-controller-manager`;
 - заказ дисков с использованием CSI-драйвера;

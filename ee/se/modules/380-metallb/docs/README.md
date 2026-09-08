@@ -36,7 +36,7 @@ Thus:
 
 ## BGP Mode
 
-{% alert level="warning" %}Available only in Enterprise Edition.{% endalert %}
+{% alert level="warning" %}Available in EE and Ultimate editions.{% endalert %}
 
 Metallb in BGP mode provides an efficient and scalable way to expose `LoadBalancer` type Services in Kubernetes clusters running on bare metal. By utilizing the standardized BGP protocol, metallb seamlessly integrates into existing network infrastructure and ensures high availability of Services.
 

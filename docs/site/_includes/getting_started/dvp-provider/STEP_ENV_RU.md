@@ -1,6 +1,6 @@
 {%- include getting_started/global/partials/NOTICES_ENVIRONMENT.liquid %}
 
-Чтобы развернуть Deckhouse Kubernetes Platform на DVP, выполните предварительную настройку в системе виртуализации. Для этого создайте пользователя (ServiceAccount), назначьте ему права и получите kubeconfig.
+Чтобы развернуть Deckhouse Platform на DVP, выполните предварительную настройку в системе виртуализации. Для этого создайте пользователя (ServiceAccount), назначьте ему права и получите kubeconfig.
 
 1. Создайте пользователя (ServiceAccount и токен), выполнив следующую команду:
 

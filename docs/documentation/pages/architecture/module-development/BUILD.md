@@ -4,14 +4,14 @@ permalink: en/architecture/module-development/build/
 description: Types of module artifacts (container images, module image, release) and how they are built and published to a container registry.
 ---
 
-Deckhouse Kubernetes Platform (DKP) uses container registry to pull a module and update it. The container registry stores module artifacts. Module artifacts are created when a module is built and can then be uploaded (published) to the registry.
+Deckhouse Platform (DP) uses container registry to pull a module and update it. The container registry stores module artifacts. Module artifacts are created when a module is built and can then be uploaded (published) to the registry.
 
 ## Types of module artifacts
 
 Module builds create three types of artifacts that are pushed to the container registry:
 - **Images of application containers**. The build rules and source code for these images are stored in the [images](../structure/#images) subdirectory of the _application name_ directory. The built images are then specified in the templates and run in the cluster. Images are tagged with the [content-based tags](https://werf.io/documentation/v1.2/usage/build/process.html#tagging-images). Note that the [lib-helm](https://github.com/deckhouse/lib-helm) library must be enabled to use them in the templates.
 - **Module image**. The module assembly rules are in the `werf.yaml` file in the module directory. The [semantic versioning](https://semver.org/) is used as image tags.
-- **Release**. Module version artifact. Based on the release data, DKP decides whether to update a module in the cluster. Releases have two types of tags: a [semantic versioning](https://semver.org/) tag (just like with the module image) and a tag that matches the release channel (e.g., `alpha`, `beta`, etc.). [In the module template](https://github.com/deckhouse/modules-template/) there is an example of workfklow for GitHub Actions, where the release is created automatically during building.
+- **Release**. Module version artifact. Based on the release data, DP decides whether to update a module in the cluster. Releases have two types of tags: a [semantic versioning](https://semver.org/) tag (just like with the module image) and a tag that matches the release channel (e.g., `alpha`, `beta`, etc.). [In the module template](https://github.com/deckhouse/modules-template/) there is an example of workfklow for GitHub Actions, where the release is created automatically during building.
 
 ## Building module artifacts and publishing them to the container registry
 

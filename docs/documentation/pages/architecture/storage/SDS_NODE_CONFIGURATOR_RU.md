@@ -3,7 +3,7 @@ title: Модуль sds-node-configurator
 permalink: ru/architecture/storage/sds-node-configurator.html
 lang: ru
 search: sds-node-configurator, lvm, block device, блочное устройство, volume group, группа томов, thin pool, thin том, thin volume, logical volume, логический том
-description: Архитектура модуля sds-node-configurator в Deckhouse Kubernetes Platform.
+description: Архитектура модуля sds-node-configurator в Deckhouse Platform.
 ---
 
 Модуль [`sds-node-configurator`](/modules/sds-node-configurator/) управляет LVM на узлах кластера с помощью кастомных ресурсов Kubernetes и выполняет следующие операции:
@@ -24,7 +24,7 @@ description: Архитектура модуля sds-node-configurator в Deckho
 - Поды могут быть запущены в нескольких репликах, однако на схеме каждый под показан в единственном экземпляре.
 {% endalert %}
 
-Архитектура модуля [`sds-node-configurator`](/modules/sds-node-configurator/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DKP изображены на следующей диаграмме:
+Архитектура модуля [`sds-node-configurator`](/modules/sds-node-configurator/) на уровне 2 модели C4 и его взаимодействия с другими компонентами DP изображены на следующей диаграмме:
 
 ![Архитектура модуля sds-node-configurator](../../images/architecture/storage/c4-l2-sds-node-configurator.ru.png)
 
@@ -46,7 +46,7 @@ description: Архитектура модуля sds-node-configurator в Deckho
    Компонент содержит следующие контейнеры:
 
    - **controller** — основной контейнер;
-   - **webhook** — сайдкар-контейнер, реализующий вебхук-сервер для проверки кастомных ресурсов [LVMLogicalVolumeSnapshot](/modules/sds-node-configurator/cr.html#lvmlogicalvolumesnapshot). Если используемая редакция DKP не поддерживает функционал снимков логических томов LVM, кастомный ресурс [LVMLogicalVolumeSnapshot](/modules/sds-node-configurator/cr.html#lvmlogicalvolumesnapshot) не проходит валидацию.
+   - **webhook** — сайдкар-контейнер, реализующий вебхук-сервер для проверки кастомных ресурсов [LVMLogicalVolumeSnapshot](/modules/sds-node-configurator/cr.html#lvmlogicalvolumesnapshot). Если используемая редакция DP не поддерживает функционал снимков логических томов LVM, кастомный ресурс [LVMLogicalVolumeSnapshot](/modules/sds-node-configurator/cr.html#lvmlogicalvolumesnapshot) не проходит валидацию.
 
 ## Взаимодействия модуля
 

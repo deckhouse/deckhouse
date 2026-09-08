@@ -1,7 +1,7 @@
 ---
 title: "Adding and managing bare-metal nodes"
 permalink: en/admin/configuration/platform-scaling/node/bare-metal-node.html
-description: "Manage bare-metal nodes in Deckhouse Kubernetes Platform. Node addition, configuration, and lifecycle management."
+description: "Manage bare-metal nodes in Deckhouse Platform. Node addition, configuration, and lifecycle management."
 ---
 
 For more details on sizing resources for a bare-metal cluster, see the [“Hardware requirements for bare-metal cluster”](/products/kubernetes-platform/guides/hardware-requirements.html) guide.
@@ -41,7 +41,7 @@ For more details on sizing resources for a bare-metal cluster, see the [“Hardw
 If you have previously increased the number of master nodes in the cluster in the NodeGroup `master` (parameter [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)), before adding nodes using automatic method, [make sure](../control-plane/scaling-and-changing-master-nodes.html#adding-master-nodes-to-a-static-or-hybrid-cluster) that they will not be "captured".
 {% endalert %}
 
-DKP supports automatic addition of physical (bare-metal) servers to the cluster without the need to manually run an installation script on each node. To enable this:
+DP supports automatic addition of physical (bare-metal) servers to the cluster without the need to manually run an installation script on each node. To enable this:
 
 1. Prepare the server (OS, networking):
    - Install a supported operating system.
@@ -49,7 +49,7 @@ DKP supports automatic addition of physical (bare-metal) servers to the cluster 
    - Create a system user (e.g., `ubuntu`) for SSH access.
    - Ensure the user can execute commands using `sudo`.
 
-1. Create an [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) object to define access to the server. DKP uses this object to connect to the server over SSH. It specifies:
+1. Create an [SSHCredentials](/modules/node-manager/cr.html#sshcredentials) object to define access to the server. DP uses this object to connect to the server over SSH. It specifies:
    - A private SSH key encoded in Base64 format.
    - The OS user.
    - The SSH port.
@@ -102,7 +102,7 @@ DKP supports automatic addition of physical (bare-metal) servers to the cluster 
 
    These states reflect the current stage of node management. CAPS automatically transitions a StaticInstance between these states depending on whether a node needs to be added or removed from a group.
 
-1. Create a [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource describing how DKP should use these servers:
+1. Create a [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource describing how DP should use these servers:
 
    ```yaml
    apiVersion: deckhouse.io/v1
@@ -133,7 +133,7 @@ DKP supports automatic addition of physical (bare-metal) servers to the cluster 
    - CAPS automatically maintains the number of nodes in the group according to the `count` parameter.
    - When a node is removed, CAPS performs cleanup and disconnection, and the corresponding StaticInstance transitions to the `Pending` status, allowing it to be reused.
 
-After the node group is created, a script for adding servers to the group will become available. DKP will wait for the required number of StaticInstance objects that match the specified labels. As soon as such an object appears, DKP will use the provided IP address and SSH connection parameters to run the `bootstrap.sh` script and add the server to the group.
+After the node group is created, a script for adding servers to the group will become available. DP will wait for the required number of StaticInstance objects that match the specified labels. As soon as such an object appears, DP will use the provided IP address and SSH connection parameters to run the `bootstrap.sh` script and add the server to the group.
 
 ## Modifying a static cluster configuration
 

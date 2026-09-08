@@ -1,6 +1,6 @@
 ---
 title: "Publishing applications using Istio"
-description: "Publish applications with Istio in Deckhouse Kubernetes Platform. NGINX Ingress with Istio sidecar and Istio Ingress Gateway with Gateway and VirtualService."
+description: "Publish applications with Istio in Deckhouse Platform. NGINX Ingress with Istio sidecar and Istio Ingress Gateway with Gateway and VirtualService."
 permalink: en/user/network/ingress/alb/istio.html
 extractedLinksMax: 0
 relatedLinks:
@@ -134,7 +134,7 @@ spec:
 
 ### Canary deployment with VirtualService {#canary-deployment-with-virtualservice}
 
-For a general overview of canary in Deckhouse Kubernetes Platform (DKP), see ["Canary deployment"](/products/kubernetes-platform/documentation/v1/user/network/canary-deployment.html). The example below uses VirtualService and DestinationRule.
+For a general overview of canary in Deckhouse Platform (DP), see ["Canary deployment"](/products/kubernetes-platform/documentation/v1/user/network/canary-deployment.html). The example below uses VirtualService and DestinationRule.
 
 To shift traffic gradually between application versions, use a DestinationRule with subsets and weights in the VirtualService. The example below sends 90% of traffic to the stable version and 10% to canary:
 

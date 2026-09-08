@@ -2,10 +2,10 @@
 title: Managed-valkey module
 permalink: en/architecture/managed-services/managed-valkey.html
 search: managed-valkey, valkey
-description: Architecture of the managed-valkey module in Deckhouse Kubernetes Platform.
+description: Architecture of the managed-valkey module in Deckhouse Platform.
 ---
 
-The [`managed-valkey`](/modules/managed-valkey/) module manages [Valkey](https://github.com/valkey-io/valkey) instances (a Redis-compatible in-memory data store) in Deckhouse Kubernetes Platform (DKP). It provides:
+The [`managed-valkey`](/modules/managed-valkey/) module manages [Valkey](https://github.com/valkey-io/valkey) instances (a Redis-compatible in-memory data store) in Deckhouse Platform (DP). It provides:
 
 * **Automatic Deployment**: Creates a Valkey instance using a simple YAML configuration.
 * **Standalone**: Supports deployment of a standalone instance.
@@ -25,7 +25,7 @@ The following assumptions are used to simplify the diagram:
 * Pods can run with multiple replicas, but only one replica of each Pod is shown in the diagram.
 {% endalert %}
 
-The level-2 C4 architecture of the [`managed-valkey`](/modules/managed-valkey/) module and its interactions with other components of DKP are shown in the following diagram:
+The level-2 C4 architecture of the [`managed-valkey`](/modules/managed-valkey/) module and its interactions with other components of DP are shown in the following diagram:
 
 ![Managed-valkey module architecture](../../images/architecture/managed-services/c4-l2-managed-valkey.svg)
 

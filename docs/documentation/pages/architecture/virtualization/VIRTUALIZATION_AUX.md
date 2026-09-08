@@ -2,7 +2,7 @@
 title: Auxiliary components
 permalink: en/architecture/virtualization/auxiliary.html
 search: virtualization-audit, virtualization-dra, dra
-description: Architecture of auxiliary components of virtualization module in Deckhouse Kubernetes Platform.
+description: Architecture of auxiliary components of virtualization module in Deckhouse Platform.
 ---
 
 The [`virtualization`](/modules/virtualization/) module uses components that implement the following auxiliary functions:
@@ -25,7 +25,7 @@ The following simplifications are made in the diagram:
 - Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`virtualization`](/modules/virtualization/) module auxiliary components for security events audit and their interactions with other components of DKP is shown in the following diagram:
+The Level 2 C4 architecture of the [`virtualization`](/modules/virtualization/) module auxiliary components for security events audit and their interactions with other components of DP is shown in the following diagram:
 
 ![Architecture of the virtualization-audit component of the virtualization module](../../images/architecture/virtualization/c4-l2-virtualization-audit.png)
 
@@ -53,7 +53,7 @@ The following external components interact with virtualization-audit:
 
 ### Architecture
 
-The Level 2 C4 architecture of other [`virtualization`](/modules/virtualization/) module auxiliary components and their interactions with other components of DKP is shown in the following diagram:
+The Level 2 C4 architecture of other [`virtualization`](/modules/virtualization/) module auxiliary components and their interactions with other components of DP is shown in the following diagram:
 
 ![Architecture of other virtualization module auxiliary components](../../images/architecture/virtualization/c4-l2-virtualization-misc.png)
 

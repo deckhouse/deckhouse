@@ -1,9 +1,9 @@
 ---
 title: "Cloud provider — Azure"
-description: "Управление облачными ресурсами в Deckhouse Kubernetes Platform с помощью Microsoft Azure."
+description: "Управление облачными ресурсами в Deckhouse Platform с помощью Microsoft Azure."
 ---
 
-Модуль `cloud-provider-azure` обеспечивает интеграцию Deckhouse Kubernetes Platform с [Microsoft Azure](https://portal.azure.com/). Он предоставляет возможность модулю [`node-manager`](/modules/node-manager/) использовать ресурсы Azure при заказе узлов для [NodeGroup](/modules/node-manager/cr.html#nodegroup).
+Модуль `cloud-provider-azure` обеспечивает интеграцию Deckhouse Platform с [Microsoft Azure](https://portal.azure.com/). Он предоставляет возможность модулю [`node-manager`](/modules/node-manager/) использовать ресурсы Azure при заказе узлов для [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
 Функции модуля `cloud-provider-azure`:
 

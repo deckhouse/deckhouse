@@ -3,7 +3,7 @@ title: Integration with Microsoft Azure services
 permalink: en/admin/integrations/public/azure/services.html
 ---
 
-Deckhouse Kubernetes Platform (DKP) leverages Azure cloud features for full integration with Kubernetes.
+Deckhouse Platform (DP) leverages Azure cloud features for full integration with Kubernetes.
 When running a cluster on Azure, it automatically:
 
 - Creates network routes for the PodNetwork.
@@ -23,7 +23,7 @@ To resolve this, manually add a rule for any UDP port to an existing LoadBalance
 
 ## Support for Service Endpoints
 
-DKP supports connections to Azure services via Service Endpoints.
+DP supports connections to Azure services via Service Endpoints.
 These endpoints:
 
 - Allow access to Azure services without using public IP addresses.

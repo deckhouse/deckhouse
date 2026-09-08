@@ -3,10 +3,10 @@ title: Модуль descheduler
 permalink: ru/architecture/kubernetes-and-scheduling/descheduler.html
 lang: ru
 search: descheduler, перераспределение, балансировка
-description: Архитектура модуля descheduler в Deckhouse Kubernetes Platform.
+description: Архитектура модуля descheduler в Deckhouse Platform.
 ---
 
-Модуль [`descheduler`](/modules/descheduler/) обеспечивает работу [Descheduler](https://github.com/kubernetes-sigs/descheduler) в Deckhouse Kubernetes Platform (DKP).
+Модуль [`descheduler`](/modules/descheduler/) обеспечивает работу [Descheduler](https://github.com/kubernetes-sigs/descheduler) в Deckhouse Platform (DP).
 
 Модуль периодически анализирует состояние кластера и вытесняет поды, соответствующие условиям [активных стратегий](/modules/descheduler/#стратегии). Вытесненные поды вновь проходят процесс планирования с учётом текущего состояния кластера. Это позволяет перераспределить рабочие нагрузки в соответствии с выбранной стратегией.
 
@@ -23,7 +23,7 @@ description: Архитектура модуля descheduler в Deckhouse Kubern
 * Поды могут быть запущены в нескольких репликах, однако на схеме все поды изображены в одной реплике.
 {% endalert %}
 
-Архитектура модуля [`descheduler`](/modules/descheduler/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DKP показаны на следующей диаграмме:
+Архитектура модуля [`descheduler`](/modules/descheduler/) на уровне 2 модели C4 и его взаимодействие с другими компонентами DP показаны на следующей диаграмме:
 
 ![Архитектура модуля descheduler](../../images/architecture/kubernetes-and-scheduling/c4-l2-descheduler.ru.svg)
 

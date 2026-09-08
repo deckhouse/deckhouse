@@ -2,10 +2,10 @@
 title: NFS CSI driver
 permalink: en/architecture/storage/csi-drivers/csi-driver-nfs.html
 search: csi-nfs, nfs
-description: Overview of the CSI driver architecture for NFS-based volumes in Deckhouse Kubernetes Platform.
+description: Overview of the CSI driver architecture for NFS-based volumes in Deckhouse Platform.
 ---
 
-The CSI driver `csi-nfs` is the implementation of the [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) standard to manage NFS-based volumes in Deckhouse Kubernetes Platform (DKP).
+The CSI driver `csi-nfs` is the implementation of the [Container Storage Interface (CSI)](https://github.com/container-storage-interface/spec/blob/master/spec.md) standard to manage NFS-based volumes in Deckhouse Platform (DP).
 
 ## Driver architecture
 
@@ -16,7 +16,7 @@ The following simplifications are made in the diagram:
 * Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the `csi-nfs` CSI driver and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the `csi-nfs` CSI driver and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
 ![Architecture of the csi-nfs CSI driver](../../../images/architecture/storage/c4-l2-csi-driver-nfs.png)
 
@@ -38,7 +38,7 @@ The `csi-nfs` CSI driver consists of the following components:
 
    * **controller sidecar containers**: Kubernetes community-maintained external controllers.
 
-     These controllers are required because the persistent volume controller running in kube-controller-manager (a component of the [DKP control plane](../../kubernetes-and-scheduling/control-plane.html)) does not provide an interface for direct interaction with CSI drivers. External controllers monitor PersistentVolumeClaim resources and call the corresponding CSI driver functions in the controller container. They also perform auxiliary tasks such as retrieving plugin information and capabilities or checking driver health (liveness probe).
+     These controllers are required because the persistent volume controller running in kube-controller-manager (a component of the [DP control plane](../../kubernetes-and-scheduling/control-plane.html)) does not provide an interface for direct interaction with CSI drivers. External controllers monitor PersistentVolumeClaim resources and call the corresponding CSI driver functions in the controller container. They also perform auxiliary tasks such as retrieving plugin information and capabilities or checking driver health (liveness probe).
 
      External controllers communicate with the controller container over gRPC via Unix sockets.
 

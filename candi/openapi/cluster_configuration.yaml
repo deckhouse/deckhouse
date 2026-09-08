@@ -153,7 +153,7 @@ apiVersions:
         description: |
           **Deprecated.** Use [`kubernetesVersion`](/modules/control-plane-manager/configuration.html#parameters-kubernetesversion) in the `control-plane-manager` ModuleConfig instead (`d8 k edit mc control-plane-manager`).
 
-          The cluster Kubernetes version is resolved in the following order: `kubernetesVersion` parameter in the `control-plane-manager` ModuleConfig, then this field, then the version the current DKP release defaults to. The ModuleConfig setting wins whenever it is set, `Default` included.
+          The cluster Kubernetes version is resolved in the following order: `kubernetesVersion` parameter in the `control-plane-manager` ModuleConfig, then this field, then the version the current DP release defaults to. The ModuleConfig setting wins whenever it is set, `Default` included.
 
           This field is optional. While it pins a version and the `kubernetesVersion` in the `control-plane-manager` ModuleConfig setting is unset, this field is what decides the cluster version.  The `D8ObsoleteKubernetesVersionFieldInClusterConfiguration` alert appears in the cluster simply because the field is present — including when the ModuleConfig setting already decides the version — and clears it once the field is removed.
 

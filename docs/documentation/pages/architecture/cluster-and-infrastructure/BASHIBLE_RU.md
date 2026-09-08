@@ -3,7 +3,7 @@ title: Bashible
 permalink: ru/architecture/cluster-and-infrastructure/node-management/bashible.html
 lang: ru
 search: архитектура bashible, bashible-api-server
-description: Архитектура bashible в Deckhouse Kubernetes Platform — выполнение bash-скриптов для настройки узлов, работа bashible-api-server.
+description: Архитектура bashible в Deckhouse Platform — выполнение bash-скриптов для настройки узлов, работа bashible-api-server.
 ---
 
 ## Bashible-скрипты и служба bashible

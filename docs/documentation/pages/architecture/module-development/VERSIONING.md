@@ -1,10 +1,10 @@
 ---
 title: "Versioning modules"
 permalink: en/architecture/module-development/versioning/
-description: Semantic versioning, release channels, and API versioning for Deckhouse Kubernetes Platform modules, including module lifecycle stages.
+description: Semantic versioning, release channels, and API versioning for Deckhouse Platform modules, including module lifecycle stages.
 ---
 
-Deckhouse Kubernetes Platform (DKP) uses [semantic versioning](https://semver.org/) for modules.
+Deckhouse Platform (DP) uses [semantic versioning](https://semver.org/) for modules.
 
 When choosing a version, stick to the following guidelines:
 
@@ -113,7 +113,7 @@ Highlights:
 
 ## API versioning
 
-Modules in DKP use custom resources to interact with users. The `apiVersion` parameter with the API version of these resources is set according to the following rules:
+Modules in DP use custom resources to interact with users. The `apiVersion` parameter with the API version of these resources is set according to the following rules:
 
 - `v1alphaX` refers to an API that has just been published. This API needs to be tested to see how user-friendly it is, as well as how valid and consistent its settings are.
 - `v1betaX` refers to the API that has passed initial testing. Its logical development and refinement is in progress.

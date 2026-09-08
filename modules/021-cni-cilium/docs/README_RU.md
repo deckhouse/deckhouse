@@ -90,7 +90,7 @@ Cilium полностью заменяет собой функционал мо�
 
 ## Использование выборочного алгоритма балансировки нагрузки для сервисов
 
-В Deckhouse Kubernetes Platform для балансировки нагрузки трафика сервисов можно применять следующие алгоритмы:
+В Deckhouse Platform для балансировки нагрузки трафика сервисов можно применять следующие алгоритмы:
 
 * `Random` — случайный выбор бэкенда для каждого соединения. Прост в реализации, но не всегда обеспечивает равномерное распределение.
 * `Maglev` — использует консистентное хеширование для равномерного распределения трафика, подходит для масштабных сервисов с множеством бэкендов, которые часто ротируются.
@@ -107,9 +107,9 @@ Cilium полностью заменяет собой функционал мо�
 
 ## Использование Egress Gateway
 
-{% alert level="warning" %}Доступно в следующих редакциях Deckhouse Kubernetes Platform: SE+, EE, CSE Lite (1.73), CSE Pro (1.73).{% endalert %}
+{% alert level="warning" %}Доступно в следующих редакциях Deckhouse Platform: SE+, EE, Ultimate, CSE Lite (1.73), CSE Pro (1.73), Certified Pro, DP Certified Lite.{% endalert %}
 
-Egress Gateway в Deckhouse Kubernetes Platform может быть использован в одном из двух режимов: [Базовый](#базовый-режим) и [Режим с Virtual IP](#режим-с-virtual-ip). Для выбора режима используйте ресурс [EgressGateway](cr.html#egressgateway) (параметр `spec.sourceIP.node`).
+Egress Gateway в Deckhouse Platform может быть использован в одном из двух режимов: [Базовый](#базовый-режим) и [Режим с Virtual IP](#режим-с-virtual-ip). Для выбора режима используйте ресурс [EgressGateway](cr.html#egressgateway) (параметр `spec.sourceIP.node`).
 
 ### Базовый режим
 
@@ -127,7 +127,7 @@ Egress Gateway в Deckhouse Kubernetes Platform может быть исполь
 
 ## Экспорт данных из Hubble
 
-Deckhouse Kubernetes Platform позволяет настраивать экспорт данных из Hubble, работающего внутри агентов Cilium, с помощью кластерного пользовательского ресурса [HubbleMonitoringConfig](cr.html#hubblemonitoringconfig):
+Deckhouse Platform позволяет настраивать экспорт данных из Hubble, работающего внутри агентов Cilium, с помощью кластерного пользовательского ресурса [HubbleMonitoringConfig](cr.html#hubblemonitoringconfig):
 Чтобы включить экспорт, [создайте ресурс HubbleMonitoringConfig](examples.html#hubblemonitoringconfig).
 
 {% alert level="warning" %}

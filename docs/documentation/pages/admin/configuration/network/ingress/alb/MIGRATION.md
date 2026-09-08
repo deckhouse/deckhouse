@@ -1,7 +1,7 @@
 ---
 title: "Migrating from ingress-nginx to alb"
 permalink: en/admin/configuration/network/ingress/alb/migration.html
-description: "Migrate from the ingress-nginx module to the alb module in Deckhouse Kubernetes Platform: Gateway API cutover, traffic switching, and rollback."
+description: "Migrate from the ingress-nginx module to the alb module in Deckhouse Platform: Gateway API cutover, traffic switching, and rollback."
 extractedLinksMax: 4
 relatedLinks:
   - title: "ALB with Kubernetes Gateway API"
@@ -16,12 +16,12 @@ relatedLinks:
 
 This guide describes migration from the `ingress-nginx` module to the `alb` module. Within this migration, application publishing transitions from the Ingress API to the Gateway API.
 
-The guide covers model differences, preparing `alb` module infrastructure with ClusterALBInstance or ALBInstance and a managed Gateway, migrating applications to the Gateway API, migrating Deckhouse Kubernetes Platform (DKP) system interfaces, switching traffic to the `alb` module, and rolling back if needed.
+The guide covers model differences, preparing `alb` module infrastructure with ClusterALBInstance or ALBInstance and a managed Gateway, migrating applications to the Gateway API, migrating Deckhouse  Platform (DP) system interfaces, switching traffic to the `alb` module, and rolling back if needed.
 
 Procedure:
 
 1. [Preparing alb module infrastructure](#step-1-preparing-alb-infrastructure).
-1. [Migrating DKP interfaces](#step-2-migrating-dkp-interfaces) — only if system interfaces currently use Ingress and must move to the Gateway API.
+1. [Migrating DP interfaces](#step-2-migrating-dkp-interfaces) — only if system interfaces currently use Ingress and must move to the Gateway API.
 1. [Migrating application publishing](#step-3-migrating-application-publishing).
 1. [Switching traffic to the alb module](#step-4-switching-traffic-to-alb).
 1. [Cleanup](#step-5-cleanup).
@@ -30,13 +30,13 @@ Procedure:
 
 Main reasons to move from the Ingress API to the Gateway API:
 
-- Active maintenance of the upstream Ingress NGINX project used by DKP has ended. Further upstream development of features, fixes, and integrations is no longer expected. For new application publishing scenarios, use the Gateway API.
+- Active maintenance of the upstream Ingress NGINX project used by DP has ended. Further upstream development of features, fixes, and integrations is no longer expected. For new application publishing scenarios, use the Gateway API.
 - Unlike the Ingress API, the Gateway API describes routes with protocol-specific resources, configures traffic entry points explicitly, controls route attachment, and manages cross-namespace access through dedicated resources. Complex traffic configurations can be defined with API resources instead of relying mainly on controller-specific annotations.
 - The Gateway API separates responsibilities by role. Cluster and network administrators manage traffic infrastructure and Gateway objects through [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance) or [ALBInstance](/modules/alb/cr.html#albinstance-v1alpha1-spec). Namespace administrators configure traffic reception through ListenerSet objects (hostname, TLS, ports). Application developers define routing with HTTPRoute and other route resources. This separation supports delegated configuration, validation, and gradual migration.
 
 ## Model comparison {#model-comparison}
 
-This section compares how administrators define traffic infrastructure, how DKP provisions it, and how application routing configuration is translated into data-plane configuration.
+This section compares how administrators define traffic infrastructure, how DP provisions it, and how application routing configuration is translated into data-plane configuration.
 
 ### Ingress API and ingress-nginx
 
@@ -48,8 +48,8 @@ HTTP and HTTPS traffic processing through the `ingress-nginx` module is configur
 
 1. A cluster administrator creates a cluster-scoped IngressNginxController object.
 1. The IngressNginxController specifies the name of the IngressClass it uses. If the name is omitted, `nginx` is used.
-1. DKP reconciles the object and provisions the required infrastructure, including the IngressClass. Multiple IngressNginxController objects can use the same IngressClass.
-1. By default, DKP resources are published through the IngressClass named `nginx`. A different class can be selected in the DKP global configuration.
+1. DP reconciles the object and provisions the required infrastructure, including the IngressClass. Multiple IngressNginxController objects can use the same IngressClass.
+1. By default, DP resources are published through the IngressClass named `nginx`. A different class can be selected in the DP global configuration.
 1. Network administrators or application development teams create Ingress objects that select the required IngressClass explicitly or implicitly.
 1. The resulting nginx configuration combines infrastructure settings from IngressNginxController with the Ingress objects selected by the IngressClass.
 
@@ -64,7 +64,7 @@ HTTP, HTTPS, gRPC, TLS, TCP, and UDP traffic processing through the `alb` module
 1. A cluster administrator creates a cluster-scoped ClusterALBInstance object.
 1. The ClusterALBInstance specifies infrastructure parameters and the mandatory `gatewayName`, which identifies the managed Gateway.
 1. The `alb` module controller reconciles the object and provisions the managed Gateway and the required traffic-processing infrastructure. Multiple ClusterALBInstance objects can use the same `gatewayName` and therefore the same Gateway.
-1. If a default DKP Gateway is configured, DKP modules create their ListenerSet, HTTPRoute, and other Gateway API resources for that Gateway.
+1. If a default DP Gateway is configured, DP modules create their ListenerSet, HTTPRoute, and other Gateway API resources for that Gateway.
 1. Network administrators or application development teams create Gateway API resources and attach them to the managed Gateway.
 1. The resulting Envoy Proxy configuration combines infrastructure settings from ClusterALBInstance with the configuration represented by the Gateway API resources attached to the Gateway.
 
@@ -98,8 +98,8 @@ On this step, choose the `alb` module instance type (ClusterALBInstance or ALBIn
 
 When choosing the instance type, keep the following in mind:
 
-- Use [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance) for a shared or platform-level Gateway, for publishing DKP system interfaces, or when the `HostPort` inlet is required.
-- To publish DKP system interfaces, follow [Publishing service domains](alb-gateway-api.html#publishing-service-domains).
+- Use [ClusterALBInstance](/modules/alb/cr.html#clusteralbinstance) for a shared or platform-level Gateway, for publishing DP system interfaces, or when the `HostPort` inlet is required.
+- To publish DP system interfaces, follow [Publishing service domains](alb-gateway-api.html#publishing-service-domains).
 - Use [ALBInstance](/modules/alb/cr.html#albinstance-v1alpha1-spec) for a Gateway dedicated to an application or team and managed within its namespace. ALBInstance supports the `LoadBalancer` and `ClusterIP` inlets; for migration from `ingress-nginx`, `LoadBalancer` is the relevant one.
 - A detailed comparison is in [ClusterALBInstance and ALBInstance](alb-gateway-api.html#clusteralbinstance-and-albinstance).
 
@@ -158,7 +158,7 @@ The inlet type is immutable for both ClusterALBInstance and ALBInstance. To chan
 When `ingress-nginx` and `alb` are used simultaneously and certificates are issued by Issuer or ClusterIssuer resources with HTTP-01 solvers, use separate Certificate resources and Secret objects for the Ingress API and Gateway API paths. Otherwise certificate issuance or renewal may conflict.
 {% endalert %}
 
-DKP provisions a Gateway-specific ClusterIssuer with a Let's Encrypt HTTP-01 solver for the [default DKP Gateway](alb-gateway-api.html#publishing-service-domains). Separate Certificate and Secret objects are required only for Issuer and ClusterIssuer resources with HTTP-01 solvers. This does not apply to resources configured exclusively with DNS-01 solvers.
+DP provisions a Gateway-specific ClusterIssuer with a Let's Encrypt HTTP-01 solver for the [default DP Gateway](alb-gateway-api.html#publishing-service-domains). Separate Certificate and Secret objects are required only for Issuer and ClusterIssuer resources with HTTP-01 solvers. This does not apply to resources configured exclusively with DNS-01 solvers.
 
 Instructions for configuring an HTTP-01 issuer with the Gateway API solver are in ["Adding a custom HTTP-01 ClusterIssuer or Issuer for ALB"](/modules/alb/faq.html#custom-http01-clusterissuer-alb).
 
@@ -168,15 +168,15 @@ To finish preparing the infrastructure, do the following:
 1. Wait until the instance and the managed Gateway are ready.
 1. Prepare separate Certificate resources and Secret objects for the Gateway API path when Issuer or ClusterIssuer resources with HTTP-01 solvers are used at the same time.
 
-## Step 2. Migrating DKP interfaces {#step-2-migrating-dkp-interfaces}
+## Step 2. Migrating DP interfaces {#step-2-migrating-dkp-interfaces}
 
-If DKP system interfaces are published through Ingress and must move to the Gateway API, follow [Publishing service domains](alb-gateway-api.html#publishing-service-domains).
+If DP system interfaces are published through Ingress and must move to the Gateway API, follow [Publishing service domains](alb-gateway-api.html#publishing-service-domains).
 
 {% alert level="info" %}
-Not every DKP module publishes service HTTPRoute objects through the Gateway API yet. The `jq` command from that section shows which modules already do this in your cluster — it lists the routes actually published, not the full set of capabilities the platform supports.
+Not every DP module publishes service HTTPRoute objects through the Gateway API yet. The `jq` command from that section shows which modules already do this in your cluster — it lists the routes actually published, not the full set of capabilities the platform supports.
 {% endalert %}
 
-If you do not need to migrate DKP interfaces, continue with step 3.
+If you do not need to migrate DP interfaces, continue with step 3.
 
 ## Step 3. Migrating application publishing {#step-3-migrating-application-publishing}
 
@@ -262,7 +262,7 @@ Pass all related resources as input so the converter can preserve the supported 
 
 #### Extending Gateway API with annotations
 
-The Gateway API specification does not cover every implementation-specific traffic-management feature required by DKP. The `alb` module therefore uses HTTPRoute annotations for options that are not yet represented by standard Gateway API fields.
+The Gateway API specification does not cover every implementation-specific traffic-management feature required by DP. The `alb` module therefore uses HTTPRoute annotations for options that are not yet represented by standard Gateway API fields.
 
 As the corresponding features become available in the Gateway API, the `alb` module will gradually replace annotation-based configuration with native Gateway API resources and fields.
 
@@ -514,10 +514,10 @@ After the rollback window closes, do the following:
 
 1. Remove `migrationGateway` if it is still set.
 1. Disable `http01CertificateSolverBridging` and `ingress2Gateway` if they are still enabled.
-1. Delete Ingress resources and Ingress NGINX Controllers that no longer serve applications or DKP system interfaces.
+1. Delete Ingress resources and Ingress NGINX Controllers that no longer serve applications or DP system interfaces.
 1. Remove unused load balancers, certificates, Secret objects, and DNS records.
 1. Restore normal DNS TTLs after confirming that no clients use the old entry point.
 
 {% alert level="info" %}
-Some DKP interfaces may still be published through the Ingress API. Do not disable the `ingress-nginx` module or delete related objects until the required interfaces are published through the Gateway API and validated. Follow ["Publishing service domains"](alb-gateway-api.html#publishing-service-domains).
+Some DP interfaces may still be published through the Ingress API. Do not disable the `ingress-nginx` module or delete related objects until the required interfaces are published through the Gateway API and validated. Follow ["Publishing service domains"](alb-gateway-api.html#publishing-service-domains).
 {% endalert %}

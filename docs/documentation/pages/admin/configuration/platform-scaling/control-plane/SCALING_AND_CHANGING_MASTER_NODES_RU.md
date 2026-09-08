@@ -8,7 +8,7 @@ lang: ru
 
 ### Режимы работы control plane
 
-Deckhouse Kubernetes Platform (DKP) поддерживает два режима работы control plane:
+Deckhouse Platform (DP) поддерживает два режима работы control plane:
 
 1. **Single-master**:
    - `kube-apiserver` использует только локальный экземпляр etcd;
@@ -23,7 +23,7 @@ Deckhouse Kubernetes Platform (DKP) поддерживает два режима
 
 ### Автоматическое масштабирование master-узлов
 
-Deckhouse Kubernetes Platform (DKP) позволяет автоматически добавлять и удалять master-узлы, используя лейбл `node-role.kubernetes.io/control-plane=""`.
+Deckhouse Platform (DP) позволяет автоматически добавлять и удалять master-узлы, используя лейбл `node-role.kubernetes.io/control-plane=""`.
 
 Автоматическое управление master-узлами:
 
@@ -47,13 +47,13 @@ Deckhouse Kubernetes Platform (DKP) позволяет автоматическ�
 Для стабильности кластера необходимо поддерживать нечётное число узлов с etcd для обеспечения кворума.
 {% endalert %}
 
-Deckhouse Kubernetes Platform (DKP) поддерживает автоматическое и ручное масштабирование master-узлов как в облачных, так и в bare-metal кластерах:
+Deckhouse Platform (DP) поддерживает автоматическое и ручное масштабирование master-узлов как в облачных, так и в bare-metal кластерах:
 
 1. **Миграция single-master → multi-master**:
 
    - добавьте один или несколько новых master-узлов;
    - установите им лейбл `node-role.kubernetes.io/control-plane=""`;
-   - DKP автоматически:
+   - DP автоматически:
      - развернёт все компоненты control plane;
      - настроит узлы для работы с etcd-кластером;
      - синхронизирует сертификаты и конфигурационные файлы.
@@ -161,9 +161,9 @@ Deckhouse Kubernetes Platform (DKP) поддерживает автоматич�
 
    В процессе авторизации необходимо будет ввести `Username` и `Password`.
 
-   > При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
+   > При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Platform.
 
-1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
+1. **На локальной машине** запустите контейнер установщика DP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
@@ -296,7 +296,7 @@ Deckhouse Kubernetes Platform (DKP) поддерживает автоматич�
    d8 k delete node <MASTER_NODE_NAME>
    ```
 
-1. На удаляемом master-узле очистите данные DKP. Команда необратимо удаляет данные Kubernetes и DKP с узла. Перед выполнением убедитесь, что выбран правильный узел и созданы необходимые резервные копии:
+1. На удаляемом master-узле очистите данные DP. Команда необратимо удаляет данные Kubernetes и DP с узла. Перед выполнением убедитесь, что выбран правильный узел и созданы необходимые резервные копии:
 
    ```shell
    bash /var/lib/bashible/cleanup_static_node.sh --yes-i-am-sane-and-i-understand-what-i-am-doing
@@ -384,8 +384,8 @@ Deckhouse Kubernetes Platform (DKP) поддерживает автоматич�
 Если в кластере используется модуль [`stronghold`](/modules/stronghold/), перед изменением master-узлов убедитесь, что модуль находится в полностью работоспособном состоянии. Перед началом изменений настоятельно рекомендуется создать [резервную копию данных модуля](/products/stronghold/documentation/admin/backups/overview/).
 {% endalert %}
 
-В процессе установки Deckhouse Kubernetes Platform с настройками по умолчанию в NodeGroup `master` отсутствует секция [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Из-за этого после изменения количества узлов `staticInstances` в NodeGroup `master` (параметр [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)) при добавлении обычного узла с помощью Cluster API Provider Static (CAPS) он может быть «перехвачен» и добавлен в NodeGroup `master`, даже если в соответствующем ему `StaticInstance` (в `metadata`) указан лейбл с `role`, отличающейся от `master`.
-Чтобы избежать этого «перехвата», после установки DKP измените NodeGroup `master` — добавьте в нее секцию [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Пример NodeGroup `master` с `spec.staticInstances.labelSelector`:
+В процессе установки Deckhouse Platform с настройками по умолчанию в NodeGroup `master` отсутствует секция [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Из-за этого после изменения количества узлов `staticInstances` в NodeGroup `master` (параметр [`spec.staticInstances.count`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-count)) при добавлении обычного узла с помощью Cluster API Provider Static (CAPS) он может быть «перехвачен» и добавлен в NodeGroup `master`, даже если в соответствующем ему `StaticInstance` (в `metadata`) указан лейбл с `role`, отличающейся от `master`.
+Чтобы избежать этого «перехвата», после установки DP измените NodeGroup `master` — добавьте в нее секцию [`spec.staticInstances.labelSelector`](/modules/node-manager/cr.html#nodegroup-v1-spec-staticinstances-labelselector) с настройками фильтра лейблов по ресурсам `staticInstances`. Пример NodeGroup `master` с `spec.staticInstances.labelSelector`:
 
 ```yaml
 apiVersion: deckhouse.io/v1
@@ -461,9 +461,9 @@ spec:
 
    В процессе авторизации необходимо будет ввести `Username` и `Password`.
 
-   > При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
+   > При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Platform.
 
-1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
+1. **На локальной машине** запустите контейнер установщика DP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
@@ -525,7 +525,7 @@ spec:
 1. Сделайте [резервную копию etcd](../../backup/backup-and-restore.html#резервное-копирование-etcd) и директории `/etc/kubernetes`.
 1. Скопируйте полученный архив за пределы кластера (например, на локальную машину).
 1. Убедитесь, что в кластере нет алертов, которые могут помешать обновлению master-узлов.
-1. Убедитесь, что очередь DKP пуста:
+1. Убедитесь, что очередь DP пуста:
 
    ```shell
    d8 system queue list
@@ -539,9 +539,9 @@ spec:
 
    В процессе авторизации необходимо будет ввести `Username` и `Password`.
 
-   > При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Kubernetes Platform.
+   > При авторизации в хранилище `registry.deckhouse.ru` поле `Username` должно иметь значение `license-token`, а `Password` — содержать ключ лицензии Deckhouse Platform.
 
-1. **На локальной машине** запустите контейнер установщика DKP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
+1. **На локальной машине** запустите контейнер установщика DP соответствующей редакции и версии (измените адрес хранилища образов при необходимости):
 
    ```bash
    DH_VERSION=$(d8 k -n d8-system get deployment deckhouse -o jsonpath='{.metadata.annotations.core\.deckhouse\.io\/version}') 
@@ -584,9 +584,9 @@ spec:
    d8 system queue list
    ```
 
-### Доступ к контроллеру DKP в мультимастерном кластере
+### Доступ к контроллеру DP в мультимастерном кластере
 
-В кластерах с несколькими master-узлами DKP запускается в режиме высокой доступности (в нескольких экземплярах). Для доступа к активному контроллеру DKP можно использовать следующую команду (на примере команды `deckhouse-controller queue list`):
+В кластерах с несколькими master-узлами DP запускается в режиме высокой доступности (в нескольких экземплярах). Для доступа к активному контроллеру DP можно использовать следующую команду (на примере команды `deckhouse-controller queue list`):
 
 ```shell
 d8 system queue list

@@ -1,16 +1,16 @@
 ---
 title: Integration with software and security solutions
 permalink: en/admin/configuration/security/integration.html
-description: "Configure KUMA and antivirus software integration in Deckhouse Kubernetes Platform. Security event forwarding, audit log analysis, and Kaspersky integration setup."
+description: "Configure KUMA and antivirus software integration in Deckhouse Platform. Security event forwarding, audit log analysis, and Kaspersky integration setup."
 ---
 
-Deckhouse Kubernetes Platform (DKP) supports integration with Kaspersky Unified Monitoring and Analysis Platform (KUMA),
+Deckhouse Platform (DP) supports integration with Kaspersky Unified Monitoring and Analysis Platform (KUMA),
 a unified monitoring and analysis system by Kaspersky Lab.
 As part of the integration, security events and audit logs from the cluster are sent to KUMA for further analysis.
 
 ## Sending logs to KUMA
 
-To send logs to KUMA, configure [log collection and delivery in DKP](../logging/delivery.html) using the following resources:
+To send logs to KUMA, configure [log collection and delivery in DP](../logging/delivery.html) using the following resources:
 
 - [ClusterLogDestination](/modules/log-shipper/cr.html#clusterlogdestination): Defines log storage parameters.
 - [ClusterLoggingConfig](/modules/log-shipper/cr.html#clusterloggingconfig): Defines cluster log collection parameters.
@@ -189,7 +189,7 @@ On the KUMA side, configure the appropriate resources for receiving events.
 
 Kaspersky Container Security (KCS) requires extended access rights to the OS kernel in order to monitor the execution environment. Specifically, the `kcs-ih` (Image Hub) component must run in privileged mode. To do this, certain process privilege management mechanisms at the Linux OS kernel level must be disabled. For more details, see the [Kaspersky Container Security](https://support.kaspersky.com/container-security/2.1/306180) documentation.
 
-To enable KCS runtime monitoring in a DKP cluster, assign the label `security.deckhouse.io/pod-policy=privileged` to the namespace where KCS components are located.
+To enable KCS runtime monitoring in a DP cluster, assign the label `security.deckhouse.io/pod-policy=privileged` to the namespace where KCS components are located.
 
 Example command for assigning a label:
 
@@ -199,7 +199,7 @@ d8 k label namespace kcs security.deckhouse.io/pod-policy=privileged
 
 ## Antivirus scanning exclusions for nodes
 
-If antivirus software is installed on DKP cluster nodes (for example, Kaspersky Endpoint Security for Linux, KESL),
+If antivirus software is installed on DP cluster nodes (for example, Kaspersky Endpoint Security for Linux, KESL),
 you may need to exclude Deckhouse service directories from scanning to avoid false positives.
 
 List of Deckhouse service directories (also available [CSV format](/products/kubernetes-platform/documentation/v1/deckhouse-directories.csv)):
@@ -223,7 +223,7 @@ List of Deckhouse service directories (also available [CSV format](/products/kub
 
 ### KESL configuration recommendations
 
-To ensure DKP functions correctly with KESL installed, follow these steps:
+To ensure DP functions correctly with KESL installed, follow these steps:
 
 1. Disable the following KESL tasks:
 
@@ -236,7 +236,7 @@ To ensure DKP functions correctly with KESL installed, follow these steps:
 
 1. Make sure node resources meet the requirements of:
 
-   - [DKP](/products/kubernetes-platform/guides/production.html#resource-requirements)
+   - [DP](/products/kubernetes-platform/guides/production.html#resource-requirements)
    - [KESL](https://support.kaspersky.com/KES4Linux/12.1.0/en-US/197642.htm)
 
 1. For performance optimization, follow the [official Kaspersky recommendations](https://support.kaspersky.com/KES4Linux/12.1.0/en-US/206054.htm).

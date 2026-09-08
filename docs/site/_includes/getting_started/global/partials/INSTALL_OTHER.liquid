@@ -1,6 +1,6 @@
 {% assign revision=include.revision %}
 
-Use a container image to install the **Deckhouse Kubernetes Platform**. It is necessary to transfer configuration file to the container{%- if page.platform_type != 'existing' %} as well as SSH keys for accessing **the master node** (further, it is assumed that the SSH key `~/.ssh/<SSH_PRIVATE_KEY_FILE>` from the personal computer of the user performing the installation is used){% endif %}.
+Use a container image to install the **Deckhouse Platform**. It is necessary to transfer configuration file to the container{%- if page.platform_type != 'existing' %} as well as SSH keys for accessing **the master node** (further, it is assumed that the SSH key `~/.ssh/<SSH_PRIVATE_KEY_FILE>` from the personal computer of the user performing the installation is used){% endif %}.
 
 Run the installer on the **personal computer**.
 
@@ -93,7 +93,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 {%- else %} registry.deckhouse.io/deckhouse/{{ revision }}/install:{% if revision == 'ce' %}early-access{% else %}stable{% endif %}{% endif %} bash
 ```
 {%- if page.platform_code == "bm-private" %}
-> If you are installing the Deckhouse Kubernetes Platform in a private environment with access to the public Deckhouse registry via a proxy server, specify the proxy server access parameters in the container launch command. Example (for DKP SE+):
+> If you are installing the Deckhouse Platform in a private environment with access to the public Deckhouse registry via a proxy server, specify the proxy server access parameters in the container launch command. Example (for DP SE+):
 > ```text
 > docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" -v "$PWD/dhctl-tmp:/tmp/dhctl" --env HTTP_PROXY="http://proxy.company.tld:8888" --env HTTPS_PROXY="http://proxy.company.tld:8888" --env http_proxy="http://proxy.company.tld:8888" --env https_proxy="http://proxy.company.tld:8888" --env NO_PROXY=".company.tld,192.168.0.0/24" --env no_proxy=".company.tld,192.168.0.0/24" registry.deckhouse.ru/deckhouse/se-plus/install:stable bash
 > ```
@@ -109,7 +109,7 @@ docker run --pull=always {% if page.platform_code == "kind" %} --network host {%
 {%- else %} registry.deckhouse.io/deckhouse/{{ revision }}/install:{% if revision == 'ce' %}early-access{% else %}stable{% endif %}{% endif %} bash -c "chmod 400 /tmp/.ssh/<SSH_PRIVATE_KEY_FILE>; bash"
 ```
 {%- if page.platform_code == "bm-private" %}
-> If you are installing the Deckhouse Kubernetes Platform in a private environment with access to the public Deckhouse registry via a proxy server, specify the proxy server access parameters in the container launch command. Example (for DKP SE+):
+> If you are installing the Deckhouse Platform in a private environment with access to the public Deckhouse registry via a proxy server, specify the proxy server access parameters in the container launch command. Example (for DP SE+):
 > ```text
 > docker run --pull=always -it -v "%cd%\config.yml:/config.yml" -v "%userprofile%\.ssh\:/tmp/.ssh/" -v "%cd%\dhctl-tmp:/tmp/dhctl" --env HTTP_PROXY="http://proxy.company.tld:8888" --env HTTPS_PROXY="http://proxy.company.tld:8888" --env http_proxy="http://proxy.company.tld:8888" --env https_proxy="http://proxy.company.tld:8888" --env NO_PROXY=".company.tld,192.168.0.0/24" --env no_proxy=".company.tld,192.168.0.0/24" registry.deckhouse.ru/deckhouse/se-plus/install:stable bash
 > ```
@@ -209,10 +209,10 @@ kubectl -n d8-ingress-nginx get po
 
 Wait for the Ingress controller Pod to switch to `Ready` state.
 
-You have installed Deckhouse Kubernetes Platform in `kind`!
+You have installed Deckhouse Platform in `kind`!
 {%- else %}
 
-Almost everything is ready for a fully-fledged Deckhouse Kubernetes Platform to work!
+Almost everything is ready for a fully-fledged Deckhouse Platform to work!
 {%- endif %}
 
 <!-- Troubleshooting in existing cluster //-->

@@ -6,7 +6,7 @@ lang: ru
 
 ## Список необходимых сервисов VMware Cloud Director
 
-Для работы Deckhouse Kubernetes Platform должен быть доступен следующий сервис VMware Cloud Director:
+Для работы Deckhouse Platform должен быть доступен следующий сервис VMware Cloud Director:
 
 | Сервис                    | Версия API    |
 | :------------------------ | :--------:    |
@@ -18,7 +18,7 @@ lang: ru
 
 ## Схемы размещения
 
-Deckhouse Kubernetes Platform поддерживает две схемы размещения ресурсов в VCD.
+Deckhouse Platform поддерживает две схемы размещения ресурсов в VCD.
 
 ### Standard
 
@@ -183,7 +183,7 @@ masterNodeGroup:
 
 ## Конфигурация
 
-Интеграция осуществляется с помощью [ресурса VCDClusterConfiguration](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration), который описывает конфигурацию облачного кластера в VCD и используется системой виртуализации, если управляющий слой (control plane) кластера размещён в системе. Отвечающий за интеграцию модуль DKP настраивается автоматически, исходя из выбранной схемы размещения.
+Интеграция осуществляется с помощью [ресурса VCDClusterConfiguration](/modules/cloud-provider-vcd/cluster_configuration.html#vcdclusterconfiguration), который описывает конфигурацию облачного кластера в VCD и используется системой виртуализации, если управляющий слой (control plane) кластера размещён в системе. Отвечающий за интеграцию модуль DP настраивается автоматически, исходя из выбранной схемы размещения.
 
 Чтобы изменить конфигурацию в запущенном кластере, выполните следующую команду:
 

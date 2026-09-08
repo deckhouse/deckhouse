@@ -3,20 +3,20 @@ title: Geo-reserving
 permalink: en/architecture/disaster-resilience/geo-reserving.html
 ---
 
-**Geo-reserving**, in the context of disaster resilience in Deckhouse Kubernetes Platform (DKP),
+**Geo-reserving**, in the context of disaster resilience in Deckhouse Platform (DP),
 is a method of increasing fault tolerance by combining multiple independent Kubernetes clusters
 into a single multi-cluster system (multi-cluster) distributed across different geographic locations.
 
-DKP offers several tools to unite multiple clusters into a multi-cluster.
+DP offers several tools to unite multiple clusters into a multi-cluster.
 This approach ensures automatic routing of both external and internal traffic to another cluster
 with an available copy of the application, in case it becomes unavailable in the original cluster.
 
 Clusters can be combined using:
 
 - The built-in Istio-based Service Mesh.
-- DKP’s networking features powered by Cilium.
+- DP’s networking features powered by Cilium.
 
-Enabling multi-cluster functionality requires deploying one DKP cluster per region
+Enabling multi-cluster functionality requires deploying one DP cluster per region
 and then connecting them using a declarative API.
 It is important that the application can run in parallel across different regions,
 and that there is a stable network connection between the regions.
@@ -61,7 +61,7 @@ Key aspects of `active-standby` balancing:
 ## Storage organization in a multi-cluster
 
 Storage system organization and configuration in a multi-cluster are handled by the administrator.
-DKP supports various storage systems.
+DP supports various storage systems.
 The choice of a suitable solution depends on requirements of performance,
 fault tolerance, and data synchronization methods.
 For details on supported storage systems, their features and configuration, refer to [Storage](../../admin/configuration/storage/).

@@ -1,10 +1,10 @@
 ---
 title: "Pod restart on configuration change"
 permalink: en/admin/configuration/app-scaling/pod-restart.html
-description: "Configure automatic pod restart on configuration changes in Deckhouse Kubernetes Platform. Pod reloader integration for ConfigMap and Secret updates with pod restart automation."
+description: "Configure automatic pod restart on configuration changes in Deckhouse Platform. Pod reloader integration for ConfigMap and Secret updates with pod restart automation."
 ---
 
-Deckhouse Kubernetes Platform can automatically restart Pods when certain ConfigMap or Secret resources are modified. This functionality is based on the [Reloader](https://github.com/stakater/Reloader) project and is controlled via annotations added to Pod controllers (Deployment, DaemonSet, StatefulSet).
+Deckhouse Platform can automatically restart Pods when certain ConfigMap or Secret resources are modified. This functionality is based on the [Reloader](https://github.com/stakater/Reloader) project and is controlled via annotations added to Pod controllers (Deployment, DaemonSet, StatefulSet).
 
 {% alert %}
 Reloader is not designed to be highly available.

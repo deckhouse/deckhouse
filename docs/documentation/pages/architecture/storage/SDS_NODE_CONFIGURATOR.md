@@ -2,7 +2,7 @@
 title: Sds-node-configurator module
 permalink: en/architecture/storage/sds-node-configurator.html
 search: sds-node-configurator, lvm, block device, volume group, thin pool, thin volume, logical volume
-description: Architecture of the sds-node-configurator module in Deckhouse Kubernetes Platform.
+description: Architecture of the sds-node-configurator module in Deckhouse Platform.
 ---
 
 The [`sds-node-configurator`](/modules/sds-node-configurator/) manages block devices and LVM on Kubernetes cluster nodes through Kubernetes custom resources, performing following operations:
@@ -23,7 +23,7 @@ The following simplifications are made in the diagram:
 - Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the [`sds-node-configurator`](/modules/sds-node-configurator/) module and its interactions with other components of DKP are shown in the following diagrams:
+The Level 2 C4 architecture of the [`sds-node-configurator`](/modules/sds-node-configurator/) module and its interactions with other components of DP are shown in the following diagrams:
 
 ![sds-node-configurator module architecture](../../images/architecture/storage/c4-l2-sds-node-configurator.png)
 
@@ -45,7 +45,7 @@ The module consists of the following components:
    It consists of the following containers:
 
    - **controller**: Main container.
-   - **webhook**: Sidecar container that implements a webhook server for [LVMLogicalVolumeSnapshot](/modules/sds-node-configurator/cr.html#lvmlogicalvolumesnapshot) custom resources validation. If used edition of DKP does not support LVM logical volume snapshots functionality, [LVMLogicalVolumeSnapshot](/modules/sds-node-configurator/cr.html#lvmlogicalvolumesnapshot) custom resource does not pass validation.
+   - **webhook**: Sidecar container that implements a webhook server for [LVMLogicalVolumeSnapshot](/modules/sds-node-configurator/cr.html#lvmlogicalvolumesnapshot) custom resources validation. If used edition of DP does not support LVM logical volume snapshots functionality, [LVMLogicalVolumeSnapshot](/modules/sds-node-configurator/cr.html#lvmlogicalvolumesnapshot) custom resource does not pass validation.
 
 ## Module interactions
 

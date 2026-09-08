@@ -1,9 +1,9 @@
 ---
 title: "Cloud provider — Huawei Cloud"
-description: "Управление облачными ресурсами в Deckhouse Kubernetes Platform с помощью Huawei Cloud."
+description: "Управление облачными ресурсами в Deckhouse Platform с помощью Huawei Cloud."
 ---
 
-Модуль `cloud-provider-huaweicloud` обеспечивает интеграцию Deckhouse Kubernetes Platform с [Huawei Cloud](https://www.huaweicloud.com/). Он предоставляет возможность модулю [`node-manager`](/modules/node-manager/) использовать ресурсы Huawei Cloud при заказе узлов для [NodeGroup](/modules/node-manager/cr.html#nodegroup).
+Модуль `cloud-provider-huaweicloud` обеспечивает интеграцию Deckhouse Platform с [Huawei Cloud](https://www.huaweicloud.com/). Он предоставляет возможность модулю [`node-manager`](/modules/node-manager/) использовать ресурсы Huawei Cloud при заказе узлов для [NodeGroup](/modules/node-manager/cr.html#nodegroup).
 
 Функции модуля `cloud-provider-huaweicloud`:
 

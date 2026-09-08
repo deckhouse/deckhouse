@@ -1,12 +1,12 @@
 ---
 title: Сканирование
 permalink: ru/admin/configuration/marketplace/scanning.html
-description: "Мониторинг и управление операциями сканирования репозиториев пакетов в Deckhouse Kubernetes Platform Marketplace. Просмотр истории сканирований, проверка прогресса и запуск сканирования вручную через PackageRepositoryOperation."
+description: "Мониторинг и управление операциями сканирования репозиториев пакетов в Deckhouse Platform Marketplace. Просмотр истории сканирований, проверка прогресса и запуск сканирования вручную через PackageRepositoryOperation."
 lang: ru
 search: PackageRepositoryOperation, scanning, scan operation, сканирование, операция сканирования, репозиторий пакетов
 ---
 
-Deckhouse Kubernetes Platform (DKP) использует [PackageRepositoryOperation](../../../reference/api/cr.html#packagerepositoryoperation) для сканирования реестров пакетов. Каждая операция сканирования обнаруживает новые версии пакетов и создаёт или обновляет объекты [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion). Операции создаются автоматически по расписанию или могут создаваться вручную при необходимости.
+Deckhouse Platform (DP) использует [PackageRepositoryOperation](../../../reference/api/cr.html#packagerepositoryoperation) для сканирования реестров пакетов. Каждая операция сканирования обнаруживает новые версии пакетов и создаёт или обновляет объекты [ApplicationPackageVersion](../../../reference/api/cr.html#applicationpackageversion). Операции создаются автоматически по расписанию или могут создаваться вручную при необходимости.
 
 ## Просмотр операций сканирования
 

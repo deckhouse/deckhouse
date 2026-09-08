@@ -1,11 +1,11 @@
 ---
 title: "Настройка узлов для программно-определяемых хранилищ"
 permalink: ru/admin/configuration/storage/sds/node-configurator/about.html
-description: "Настройка автоматического управления логическими томами в Deckhouse Kubernetes Platform. Автоматическое управление LVM, обнаружение блочных устройств и конфигурация хранилища на узлах кластера."
+description: "Настройка автоматического управления логическими томами в Deckhouse Platform. Автоматическое управление LVM, обнаружение блочных устройств и конфигурация хранилища на узлах кластера."
 lang: ru
 ---
 
-Deckhouse Kubernetes Platform предоставляет возможность автоматического управления логическими томами (Logical Volume Manager, LVM) на узлах кластера с помощью пользовательских ресурсов Kubernetes. Эта функциональность обеспечивается [модулем `sds-node-configurator`](/modules/sds-node-configurator/) и включает в себя:
+Deckhouse Platform предоставляет возможность автоматического управления логическими томами (Logical Volume Manager, LVM) на узлах кластера с помощью пользовательских ресурсов Kubernetes. Эта функциональность обеспечивается [модулем `sds-node-configurator`](/modules/sds-node-configurator/) и включает в себя:
 
 - Обнаружение блочных устройств на каждом узле и создание соответствующих ресурсов [BlockDevice](/modules/sds-node-configurator/cr.html#blockdevice).
   

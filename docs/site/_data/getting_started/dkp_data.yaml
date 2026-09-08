@@ -41,8 +41,8 @@ installTypes:
       code: without_nat
       name: WithoutNAT
     pages_title:
-      en: "Deckhouse Kubernetes Platform in Amazon AWS"
-      ru: "Deckhouse Kubernetes Platform в Amazon AWS"
+      en: "Deckhouse Platform in Amazon AWS"
+      ru: "Deckhouse Platform в Amazon AWS"
     type: cloud
     name:
       en: Amazon AWS
@@ -79,8 +79,8 @@ installTypes:
       code: standard
       name: Standard
     pages_title:
-      en: "Deckhouse Kubernetes Platform on Deckhouse Virtualization Platform (DVP)"
-      ru: "Deckhouse Kubernetes Platform на Deckhouse Virtualization Platform (DVP)"
+      en: "Deckhouse Platform on Deckhouse Virtualization Platform (DVP)"
+      ru: "Deckhouse Platform на Deckhouse Virtualization Platform (DVP)"
     type: cloud
     installer_support: true
     name:
@@ -154,8 +154,8 @@ installTypes:
       code: without_nat
       name: WithoutNAT
     pages_title:
-      en: "Deckhouse Kubernetes Platform in Google Cloud"
-      ru: "Deckhouse Kubernetes Platform в Google Cloud"
+      en: "Deckhouse Platform in Google Cloud"
+      ru: "Deckhouse Platform в Google Cloud"
     type: cloud
     name:
       en: Google Cloud
@@ -193,8 +193,8 @@ installTypes:
       code: standard
       name: Standard
     pages_title:
-      en: "Deckhouse Kubernetes Platform on Huawei Cloud"
-      ru: "Deckhouse Kubernetes Platform на Huawei Cloud"
+      en: "Deckhouse Platform on Huawei Cloud"
+      ru: "Deckhouse Platform на Huawei Cloud"
     type: cloud
     name:
       en: Huawei Cloud
@@ -231,8 +231,8 @@ installTypes:
       code: standard
       name: Standard
     pages_title:
-      en: "Deckhouse Kubernetes Platform in Microsoft Azure"
-      ru: "Deckhouse Kubernetes Platform в Microsoft Azure"
+      en: "Deckhouse Platform in Microsoft Azure"
+      ru: "Deckhouse Platform в Microsoft Azure"
     type: cloud
     name:
       en: Microsoft Azure
@@ -270,8 +270,8 @@ installTypes:
       code: standard
       name: Standard
     pages_title:
-      en: "Deckhouse Kubernetes Platform on OpenStack"
-      ru: "Deckhouse Kubernetes Platform на OpenStack"
+      en: "Deckhouse Platform on OpenStack"
+      ru: "Deckhouse Platform на OpenStack"
     type: cloud
     installer_support: true
     name:
@@ -346,8 +346,8 @@ installTypes:
       code: standard
       name: Standard
     pages_title:
-      en: "Deckhouse Kubernetes Platform on OVH (OpenStack)"
-      ru: "Deckhouse Kubernetes Platform в OVH (OpenStack)"
+      en: "Deckhouse Platform on OVH (OpenStack)"
+      ru: "Deckhouse Platform в OVH (OpenStack)"
     type: cloud
     name:
       en: OVH Cloud
@@ -385,8 +385,8 @@ installTypes:
       code: standard
       name: Standard
     pages_title:
-      en: "Deckhouse Kubernetes Platform on Selectel (OpenStack)"
-      ru: "Deckhouse Kubernetes Platform в Selectel (OpenStack)"
+      en: "Deckhouse Platform on Selectel (OpenStack)"
+      ru: "Deckhouse Platform в Selectel (OpenStack)"
     type: cloud
     installer_support: true
     name:
@@ -461,8 +461,8 @@ installTypes:
       code: standard
       name: Standard
     pages_title:
-      en: "Deckhouse Kubernetes Platform on VK Cloud (OpenStack)"
-      ru: "Deckhouse Kubernetes Platform в VK Cloud (OpenStack)"
+      en: "Deckhouse Platform on VK Cloud (OpenStack)"
+      ru: "Deckhouse Platform в VK Cloud (OpenStack)"
     type: cloud
     installer_support: true
     name:
@@ -539,8 +539,8 @@ installTypes:
       en: VMware Cloud Director
       ru: VMware Cloud Director
     pages_title:
-      en: "Deckhouse Kubernetes Platform on VMware Cloud Director"
-      ru: "Deckhouse Kubernetes Platform на VMware Cloud Director"
+      en: "Deckhouse Platform on VMware Cloud Director"
+      ru: "Deckhouse Platform на VMware Cloud Director"
     layout:
       code: with_nat
       name: WithNAT
@@ -616,8 +616,8 @@ installTypes:
       en: VMware vSphere
       ru: VMware vSphere
     pages_title:
-      en: "Deckhouse Kubernetes Platform on VMware vSphere"
-      ru: "Deckhouse Kubernetes Platform на VMware vSphere"
+      en: "Deckhouse Platform on VMware vSphere"
+      ru: "Deckhouse Platform на VMware vSphere"
     layout:
       code: standard
       name: Standard
@@ -689,8 +689,8 @@ installTypes:
       code: standard
       name: Standard
     pages_title:
-      en: "Deckhouse Kubernetes Platform in Yandex Cloud"
-      ru: "Deckhouse Kubernetes Platform в Yandex Cloud"
+      en: "Deckhouse Platform in Yandex Cloud"
+      ru: "Deckhouse Platform в Yandex Cloud"
     type: cloud
     installer_support: true
     name:
@@ -766,8 +766,8 @@ installTypes:
       code: standard
       name: Standard
     pages_title:
-      en: "Deckhouse Kubernetes Platform on Zvirt"
-      ru: "Deckhouse Kubernetes Platform на Zvirt"
+      en: "Deckhouse Platform on Zvirt"
+      ru: "Deckhouse Platform на Zvirt"
     type: cloud
     installer_support: true
     # Например, это надписи на плитке
@@ -844,7 +844,7 @@ installTypes:
       code: standard
       name: Standard
     pages_title:
-      ru: "Deckhouse Kubernetes Platform в Basis Dynamix"
+      ru: "Deckhouse Platform в Basis Dynamix"
     type: cloud
     name:
       en: "Basis Dynamix"
@@ -878,8 +878,8 @@ installTypes:
   existing:
     iconPath: images/icons/platforms/kubernetes.svg
     pages_title:
-      en: "Deckhouse Kubernetes Platform in existing cluster"
-      ru: "Deckhouse Kubernetes Platform в существующем кластере"
+      en: "Deckhouse Platform in existing cluster"
+      ru: "Deckhouse Platform в существующем кластере"
     type: existing
     name:
       en: Existing cluster
@@ -908,8 +908,8 @@ installTypes:
   kind:
     iconPath: images/icons/platforms/kind.png
     pages_title:
-      en: "Deckhouse Kubernetes Platform in kind"
-      ru: "Deckhouse Kubernetes Platform в kind"
+      en: "Deckhouse Platform in kind"
+      ru: "Deckhouse Platform в kind"
     type: special
     name:
       en: Using kind
@@ -928,8 +928,8 @@ installTypes:
   bm-private:
     iconPath: images/icons/platforms/lock.png
     pages_title:
-      en: "Deckhouse Kubernetes Platform in a private environment"
-      ru: "Deckhouse Kubernetes Platform в закрытом окружении"
+      en: "Deckhouse Platform in a private environment"
+      ru: "Deckhouse Platform в закрытом окружении"
     type: baremetal
     name:
       en: Private environment
@@ -963,8 +963,8 @@ installTypes:
   bm:
     iconPath: images/icons/platforms/bare_metal.png
     pages_title:
-      en: "Deckhouse Kubernetes Platform for bare metal"
-      ru: "Deckhouse Kubernetes Platform на bare metal"
+      en: "Deckhouse Platform for bare metal"
+      ru: "Deckhouse Platform на bare metal"
     type: baremetal
     installer_support: true
     name:
@@ -1031,8 +1031,8 @@ installTypes:
     languages: ["ru"]
     iconPath: images/icons/platforms/red.png
     pages_title:
-      en: "Deckhouse Kubernetes Platform for RED virtualization"
-      ru: "Deckhouse Kubernetes Platform на РЕД виртуализации"
+      en: "Deckhouse Platform for RED virtualization"
+      ru: "Deckhouse Platform на РЕД виртуализации"
     type: baremetal
     name:
       en: RED virtualization
@@ -1070,8 +1070,8 @@ installTypes:
     languages: ["ru"]
     iconPath: images/icons/platforms/spacevm.png
     pages_title:
-      en: "Deckhouse Kubernetes Platform for SpaceVM"
-      ru: "Deckhouse Kubernetes Platform на SpaceVM"
+      en: "Deckhouse Platform for SpaceVM"
+      ru: "Deckhouse Platform на SpaceVM"
     type: baremetal
     name:
       en: SpaceVM

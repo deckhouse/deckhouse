@@ -1,6 +1,6 @@
 ---
 title: Веб-интерфейс генерации kubeconfig
-description: "Веб-интерфейс для создания конфигурационных файлов kubeconfig в Deckhouse Kubernetes Platform. Генерация конфигурации для подключения к кластеру через kubectl для Linux, macOS, Windows."
+description: "Веб-интерфейс для создания конфигурационных файлов kubeconfig в Deckhouse Platform. Генерация конфигурации для подключения к кластеру через kubectl для Linux, macOS, Windows."
 permalink: ru/user/web/kubeconfig.html
 lang: ru
 ---

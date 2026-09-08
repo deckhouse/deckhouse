@@ -7,7 +7,7 @@ lang: en
 
 If a cloud cluster was installed using the `<PROVIDER>ClusterConfiguration` configuration (for example, DVPClusterConfiguration, AWSClusterConfiguration, and so on), this configuration must be migrated to the new ModuleConfig-based model.
 
-Deckhouse Kubernetes Platform is transitioning from a single `<PROVIDER>ClusterConfiguration` resource to a model where the cloud provider configuration is split across four separate resources:
+Deckhouse Platform is transitioning from a single `<PROVIDER>ClusterConfiguration` resource to a model where the cloud provider configuration is split across four separate resources:
 
 1. [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) for the `cloud-provider-<PROVIDER>` module — provider and layout settings;
 1. A Secret with credentials of the `cloud-provider.deckhouse.io/credentials` type — access to the cloud API;
@@ -15,10 +15,10 @@ Deckhouse Kubernetes Platform is transitioning from a single `<PROVIDER>ClusterC
 1. [NodeGroup](/modules/node-manager/cr.html#nodegroup) — node group configuration.
 
 {% alert level="warning" %}
-Migration is mandatory. This is not an optional step: support for `<PROVIDER>ClusterConfiguration` will be removed. Until the migration is completed, DKP upgrades may be blocked.
+Migration is mandatory. This is not an optional step: support for `<PROVIDER>ClusterConfiguration` will be removed. Until the migration is completed, DP upgrades may be blocked.
 {% endalert %}
 
-The migration is safe. It implies the applying of automatically prepared DKP resources **does not cause nodes to be recreated**. However, explicit administrator action is required — the resources must be reviewed and applied manually.
+The migration is safe. It implies the applying of automatically prepared DP resources **does not cause nodes to be recreated**. However, explicit administrator action is required — the resources must be reviewed and applied manually.
 
 ## How to migrate
 

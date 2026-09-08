@@ -8,7 +8,7 @@ lang: ru
 
 Данный раздел описывает возможные схемы размещения узлов кластера в инфраструктуре Google Cloud Platform (GCP) и связанные с ними настройки. От выбора схемы (layout) зависят принципы сетевого взаимодействия, наличие публичных IP-адресов, маршрутизация исходящего трафика и способ подключения к узлам.
 
-DKP поддерживает две схемы размещения ресурсов в облаке GCP.
+DP поддерживает две схемы размещения ресурсов в облаке GCP.
 
 ### Standard
 
@@ -22,7 +22,7 @@ DKP поддерживает две схемы размещения ресурс
 ![resources](../../../../images/cloud-provider-gcp/gcp-standard.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10164&t=Qb5yyWumzPiTBtfL-0 --->
 
-При создании кластера DKP создаёт в VPC кластера следующие правила файрвола:
+При создании кластера DP создаёт в VPC кластера следующие правила файрвола:
 
 - `<CLUSTER_PREFIX>-ssh-and-ping` — разрешение входящего трафика по протоколам ICMP и TCP (порт `22`) к узлам с network tag `<CLUSTER_PREFIX>` из CIDR, указанных в [`sshAllowList`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (по умолчанию `0.0.0.0/0`);
 - `<CLUSTER_PREFIX>-intercommunication` — разрешение любого трафика между узлами с network tag `<CLUSTER_PREFIX>`, а также из подсети подов ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)).
@@ -104,7 +104,7 @@ provider:
 ![resources](../../../../images/cloud-provider-gcp/gcp-withoutnat.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10296&t=Qb5yyWumzPiTBtfL-0 --->
 
-При создании кластера DKP создаёт в VPC кластера следующие правила файрвола:
+При создании кластера DP создаёт в VPC кластера следующие правила файрвола:
 
 - `<CLUSTER_PREFIX>-ssh-and-ping` — разрешение входящего трафика по протоколам ICMP и TCP (порт `22`) к узлам с network tag `<CLUSTER_PREFIX>` из CIDR, указанных в [`sshAllowList`](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (по умолчанию `0.0.0.0/0`);
 - `<CLUSTER_PREFIX>-intercommunication` — разрешение любого трафика между узлами с network tag `<CLUSTER_PREFIX>`, а также из подсети подов ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)).
@@ -171,7 +171,7 @@ provider:
 
 ## Конфигурация
 
-Интеграции с GCP осуществляется с помощью [ресурса GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration), который описывает конфигурацию облачного кластера в GCP и используется облачным провайдером, если управляющий слой (control plane) кластера размещён в облаке. Отвечающий за интеграцию модуль DKP настраивается автоматически, исходя из выбранной схемы размещения.
+Интеграции с GCP осуществляется с помощью [ресурса GCPClusterConfiguration](/modules/cloud-provider-gcp/cluster_configuration.html#gcpclusterconfiguration), который описывает конфигурацию облачного кластера в GCP и используется облачным провайдером, если управляющий слой (control plane) кластера размещён в облаке. Отвечающий за интеграцию модуль DP настраивается автоматически, исходя из выбранной схемы размещения.
 
 Выполните следующую команду, чтобы изменить конфигурацию в работающем кластере:
 

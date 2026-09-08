@@ -13,7 +13,7 @@ The **first matching rule** determines the logging level.
 
 ## Policy structure
 
-Deckhouse Kubernetes Platform (DKP) deploys a basic audit policy by default, which can be extended with user-defined rules.
+Deckhouse Platform (DP) deploys a basic audit policy by default, which can be extended with user-defined rules.
 
 [Kubernetes documentation](https://kubernetes.io/docs/tasks/debug/debug-cluster/audit/#audit-policy)
 [Policy resource field structure](https://kubernetes.io/docs/reference/config-api/apiserver-audit.v1/#audit-k8s-io-v1-PolicyRule)
@@ -72,7 +72,7 @@ If a request comes from a user who belongs to at least one group listed in `user
 
 ## Built-in audit rules
 
-Deckhouse Kubernetes Platform uses the following audit rules, which can be extended by users:
+Deckhouse Platform uses the following audit rules, which can be extended by users:
 - [Do not log frequent updates for `Endpoints`, `EndpointSlices`, and `Events`.](#rule-1)
 - [Do not log leader election operations on `Lease` resources.](#rule-2)
 - [Do not log cert-manager leader election ConfigMaps.](#rule-3)

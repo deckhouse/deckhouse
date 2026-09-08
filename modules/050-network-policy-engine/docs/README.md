@@ -1,6 +1,6 @@
 ---
 title: "The network-policy-engine module"
-description: "Managing network policies in the Deckhouse Kubernetes Platform cluster."
+description: "Managing network policies in the Deckhouse Platform cluster."
 ---
 
 {% alert level="warning" %}

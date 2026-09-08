@@ -2,7 +2,7 @@
 title: "Структура модуля"
 permalink: ru/architecture/module-development/structure/
 lang: ru
-description: Структура директорий модуля Deckhouse Kubernetes Platform — charts, CRD, docs, хуки, образы, OpenAPI-схемы, шаблоны и метаданные module.yaml.
+description: Структура директорий модуля Deckhouse Platform — charts, CRD, docs, хуки, образы, OpenAPI-схемы, шаблоны и метаданные module.yaml.
 ---
 
 Исходный код модуля и правила его сборки должны находиться в директории с определённой структурой. Ближайший аналог — Helm chart.
@@ -109,7 +109,7 @@ description: Структура директорий модуля Deckhouse Kube
 
 В папке `/charts` находятся вспомогательные чарты Helm, которые используются при рендере шаблонов.
 
-У Deckhouse Kubernetes Platform (DKP) существует собственная библиотека для работы с шаблонами – [lib-helm](https://github.com/deckhouse/lib-helm). О возможностях библиотеки можно почитать [в репозитории lib-helm](https://github.com/deckhouse/lib-helm/blob/main/charts/helm_lib/README.md). Чтобы положить библиотеку в модуль, загрузите [tgz-архив](https://github.com/deckhouse/lib-helm/releases/) с нужным релизом и переместите его в директорию `/charts` модуля.
+У Deckhouse Platform (DP) существует собственная библиотека для работы с шаблонами – [lib-helm](https://github.com/deckhouse/lib-helm). О возможностях библиотеки можно почитать [в репозитории lib-helm](https://github.com/deckhouse/lib-helm/blob/main/charts/helm_lib/README.md). Чтобы положить библиотеку в модуль, загрузите [tgz-архив](https://github.com/deckhouse/lib-helm/releases/) с нужным релизом и переместите его в директорию `/charts` модуля.
 
 ## crds
 
@@ -130,7 +130,7 @@ description: Структура директорий модуля Deckhouse Kube
 ## docs
 
 {% alert %}
-Статус [жизненного цикла](../versioning/#жизненный-цикл-модуля) модуля указывается в [module.yaml](#moduleyaml). Доступность модуля в редакциях Deckhouse Kubernetes Platform не определяется разработчиком модуля.
+Статус [жизненного цикла](../versioning/#жизненный-цикл-модуля) модуля указывается в [module.yaml](#moduleyaml). Доступность модуля в редакциях Deckhouse Platform не определяется разработчиком модуля.
 {% endalert %}
 
 В папке `/docs` находится документация к модулю. Следующие вложенные директории в папке docs игнорируются при сборке документации:
@@ -287,7 +287,7 @@ description: Структура директорий модуля Deckhouse Kube
 
 Имя образа совпадает с именем директории для этого модуля, записанным в нотации *camelCase* с маленькой буквы. Например, директории `/images/echo-server` соответствует имя образа `echoServer`.
 
-Собранные образы имеют content-based теги, которые можно использовать в сборке других образов. Чтобы использовать content-based теги образов, [подключите библиотеку lib-helm](#charts). Вы также можете воспользоваться другими функциями [библиотеки helm_lib](https://github.com/deckhouse/lib-helm/tree/main/charts/helm_lib) Deckhouse Kubernetes Platform.
+Собранные образы имеют content-based теги, которые можно использовать в сборке других образов. Чтобы использовать content-based теги образов, [подключите библиотеку lib-helm](#charts). Вы также можете воспользоваться другими функциями [библиотеки helm_lib](https://github.com/deckhouse/lib-helm/tree/main/charts/helm_lib) Deckhouse Platform.
 
 Пример использования content-based тега образа в Helm-чарте:
 
@@ -376,7 +376,7 @@ properties:
 
 #### Валидации x-deckhouse-validations (CEL)
 
-При разработке модуля для Deckhouse Kubernetes Platform вы можете использовать расширение OpenAPI `x-deckhouse-validations` для описания сложных правил валидации параметров модуля на языке Common Expression Language (CEL).
+При разработке модуля для Deckhouse Platform вы можете использовать расширение OpenAPI `x-deckhouse-validations` для описания сложных правил валидации параметров модуля на языке Common Expression Language (CEL).
 
 При использовании таких правил валидации учитывайте следующие особенности:
 
@@ -535,7 +535,7 @@ properties:
 
 ## .helmignore
 
-Исключите файлы из Helm-релиза с помощью `.helmignore`. В случае модулей DKP директории `/crds`, `/images`, `/hooks`, `/openapi` обязательно добавляйте в `.helmignore`, чтобы избежать превышения лимита размера Helm-релиза в 1 Мб.
+Исключите файлы из Helm-релиза с помощью `.helmignore`. В случае модулей DP директории `/crds`, `/images`, `/hooks`, `/openapi` обязательно добавляйте в `.helmignore`, чтобы избежать превышения лимита размера Helm-релиза в 1 Мб.
 
 ## Chart.yaml
 
@@ -566,8 +566,8 @@ dependencies:
 | `namespace` | Строка | Неймспейс, в котором будут развёрнуты компоненты модуля |
 | `subsystems` | Массив строк | Список подсистем, к которым относится модуль |
 | `accessibility` | Объект | Настройки доступности модуля |
-| `accessibility.editions` | Объект | Настройки работы модуля в редакциях DKP |
-| `accessibility.editions.available` | Булевый | Определяет доступность модуля в редакции DKP |
+| `accessibility.editions` | Объект | Настройки работы модуля в редакциях DP |
+| `accessibility.editions.available` | Булевый | Определяет доступность модуля в редакции DP |
 | `accessibility.editions.enabledInBundles` | Массив строк | Список наборов модулей, в которых модуль должен быть включён по умолчанию |
 | `descriptions` | Объект | Произвольное текстовое описание назначения модуля |
 | `descriptions.en` | Строка | Текстовое описание на английском языке |
@@ -584,8 +584,8 @@ dependencies:
 |---|---|---|
 | `name` | Строка, обязательный параметр | Имя модуля в Kebab Case. Например, `echo-server` |
 | `exclusiveGroup` | Строка | Если несколько модулей имеют одно и то же значение этого параметра, то только один из них может быть активен в системе одновременно. Это предотвращает конфликты между модулями, выполняющими схожие или несовместимые задачи |
-| `requirements` | Объект | [Зависимости](../dependencies/) модуля — условия, при которых Deckhouse Kubernetes Platform (DKP) может запустить модуль |
-| `requirements.deckhouse` | Строка | Зависимость от [версии Deckhouse Kubernetes Platform](../dependencies/#зависимость-от-версии-deckhouse-kubernetes-platform) |
+| `requirements` | Объект | [Зависимости](../dependencies/) модуля — условия, при которых Deckhouse Platform (DP) может запустить модуль |
+| `requirements.deckhouse` | Строка | Зависимость от [версии Deckhouse Platform](../dependencies/#зависимость-от-версии-deckhouse-kubernetes-platform) |
 | `requirements.kubernetes` | Строка | Зависимость от [версии Kubernetes](../dependencies/#зависимость-от-версии-kubernetes) |
 | `requirements.modules` | Объект | Зависимость от [версий других модулей](../dependencies/#зависимость-от-версии-других-модулей) |
 | `stage` | Строка | [Стадия жизненного цикла модуля](../versioning/#определение-стабильности-модуля). Допустимые значения: `Experimental`, `Preview`, `General Availability`, `Deprecated`. Если `stage` установлен в `Experimental`, модуль нельзя включить по умолчанию. Чтобы разрешить использовать такие модули, установите [соответствующий параметр](/modules/deckhouse/configuration.html#parameters-allowexperimentalmodules) в `true` |
@@ -622,9 +622,9 @@ disable:
   message: "Отключение этого модуля приведёт к удалению всех созданных им ресурсов."
 ```
 
-### Настройка доступности модуля в редакциях DKP
+### Настройка доступности модуля в редакциях DP
 
-Параметр `accessibility` позволяет задать редакции DKP и наборы модулей (bundles), в которых будет доступен модуль,
+Параметр `accessibility` позволяет задать редакции DP и наборы модулей (bundles), в которых будет доступен модуль,
 а также определить, будет ли он включаться по умолчанию.
 
 ```yaml
@@ -661,7 +661,7 @@ accessibility:
 
     {% alert level="warning" %}
     Обратите внимание, что в этот набор не входят базовые модули (например, модуль работы с CNI).
-    Без включения базовых модулей DKP может работать только в уже развёрнутом кластере.
+    Без включения базовых модулей DP может работать только в уже развёрнутом кластере.
     Список модулей, которые нужно включить вручную при установке, приведён в разделе [«Особенности работы с набором модулей Minimal»](../../../admin/configuration/#особенности-работы-с-набором-модулей-minimal).
     {% endalert %}
 - Блоки с названиями редакций. Позволяют задать поведение модуля в указанных редакциях.
@@ -677,8 +677,8 @@ accessibility:
 
 #### Примеры конфигурации
 
-В следующем примере конфигурации модуль будет недоступен во всех редакциях, кроме DKP Enterprise Edition.
-В DKP Enterprise Edition модуль будет включён по умолчанию в наборе модулей `Managed`.
+В следующем примере конфигурации модуль будет недоступен во всех редакциях, кроме DP Enterprise Edition.
+В DP Enterprise Edition модуль будет включён по умолчанию в наборе модулей `Managed`.
 
 ```yaml
 accessibility:
@@ -691,7 +691,7 @@ accessibility:
         - Managed
 ```
 
-В следующем примере конфигурации модуль будет доступен во всех редакциях DKP.
+В следующем примере конфигурации модуль будет доступен во всех редакциях DP.
 В наборах модулей `Managed` и `Default` модуль будет включён по умолчанию.
 
 ```yaml
@@ -704,9 +704,9 @@ accessibility:
         - Default
 ```
 
-В следующем примере модуль будет доступен во всех редакциях DKP.
+В следующем примере модуль будет доступен во всех редакциях DP.
 Модуль будет включён в наборах модулей `Default` и `Managed` во всех редакциях,
-кроме DKP Basic Edition и DKP Community Edition.
+кроме DP Basic Edition и DP Community Edition.
 
 ```yaml
 accessibility:

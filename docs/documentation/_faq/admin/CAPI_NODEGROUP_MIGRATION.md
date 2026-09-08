@@ -5,7 +5,7 @@ subsystems:
 lang: en
 ---
 
-Deckhouse Kubernetes Platform is migrating CloudEphemeral node management from Machine Controller Manager (MCM) to Cluster API (CAPI).
+Deckhouse Platform is migrating CloudEphemeral node management from Machine Controller Manager (MCM) to Cluster API (CAPI).
 
 At the moment, migration from MCM to CAPI is supported for the following cloud providers:
 

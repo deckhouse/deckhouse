@@ -64,7 +64,7 @@ For a configuration example, refer to ["Denying individual resources"](usage.htm
 
 If no ClusterResourceGrantPolicy is configured for a resource, its availability is determined by its registration. The resource is available to all projects if [`defaultAvailability: All`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-defaultavailability) (the default value) is set in GrantableClusterResourceDefinition and the resource does not match the [`excluded`](cr.html#grantableclusterresourcedefinition-v1alpha1-spec-excluded) filters.
 
-For example, the `clusterroles` definition provided by DKP excludes all ClusterRoles without the `rbac.deckhouse.io/delegatable` label. Therefore, such roles are unavailable in RoleBinding even when no policies are configured.
+For example, the `clusterroles` definition provided by DP excludes all ClusterRoles without the `rbac.deckhouse.io/delegatable` label. Therefore, such roles are unavailable in RoleBinding even when no policies are configured.
 
 To restrict access, create a [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy) and specify the projects and the cluster-wide resources available to them.
 
@@ -100,7 +100,7 @@ For example, to create a PersistentVolumeClaim, a user must have the appropriate
 
 After the module is disabled, cluster-wide resource availability checks and automatic default value assignment are no longer performed. Existing objects remain unchanged.
 
-Fields that use the `x-deckhouse-grantable-resource` extension in DKP application settings are no longer checked either.
+Fields that use the `x-deckhouse-grantable-resource` extension in DP application settings are no longer checked either.
 
 The `d8:use:dict` role in the `user-authz` module continues to work.
 

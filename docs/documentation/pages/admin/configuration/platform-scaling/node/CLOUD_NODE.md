@@ -1,20 +1,20 @@
 ---
 title: "Adding and managing cloud nodes"
 permalink: en/admin/configuration/platform-scaling/node/cloud-node.html
-description: "Manage cloud nodes in Deckhouse Kubernetes Platform including CloudEphemeral, CloudPermanent, and CloudStatic nodes. Auto-scaling, node lifecycle management, and cloud provider integration."
+description: "Manage cloud nodes in Deckhouse Platform including CloudEphemeral, CloudPermanent, and CloudStatic nodes. Auto-scaling, node lifecycle management, and cloud provider integration."
 ---
 
-In Deckhouse Kubernetes Platform (DKP), cloud nodes can be of the following types:
+In Deckhouse Platform (DP), cloud nodes can be of the following types:
 
 - **CloudEphemeral** — temporary nodes that are automatically created and deleted.
 - **CloudPermanent** — permanent nodes managed manually via `replicas`.
-- **CloudStatic** — static cloud nodes. The machines are created manually or by external tools and DKP connects them to the cluster and manages them just like the regular nodes.
+- **CloudStatic** — static cloud nodes. The machines are created manually or by external tools and DP connects them to the cluster and manages them just like the regular nodes.
 
 Below are instructions for adding and configuring each type.
 
 ## Adding CloudEphemeral nodes in a cloud cluster
 
-CloudEphemeral nodes are automatically created and managed within the cluster using the Machine Controller Manager (MCM) or Cluster API (depending on configuration) — both components are part of the [`node-manager`](/modules/node-manager/) module in DKP.
+CloudEphemeral nodes are automatically created and managed within the cluster using the Machine Controller Manager (MCM) or Cluster API (depending on configuration) — both components are part of the [`node-manager`](/modules/node-manager/) module in DP.
 
 To add nodes:
 
@@ -70,7 +70,7 @@ To add nodes:
 
 ## Configuration for CloudEphemeral NodeGroups
 
-NodeGroups of CloudEphemeral type are designed for automatic scaling by creating and removing virtual machines in the cloud using the Machine Controller Manager (MCM). This type of groups is commonly used in cloud-based DKP clusters.
+NodeGroups of CloudEphemeral type are designed for automatic scaling by creating and removing virtual machines in the cloud using the Machine Controller Manager (MCM). This type of groups is commonly used in cloud-based DP clusters.
 
 Node configuration is defined in the `cloudInstances` section and includes parameters for scaling, zoning, fault tolerance, and prioritization.
 
@@ -100,7 +100,7 @@ d8 system edit provider-cluster-configuration
 
 ## NodeGroup autoscaling
 
-In Deckhouse Kubernetes Platform (DKP), node group autoscaling is performed based on resource demands (CPU and memory) by the `Cluster Autoscaler` component, which is part of the [`node-manager`](/modules/node-manager/) module.
+In Deckhouse Platform (DP), node group autoscaling is performed based on resource demands (CPU and memory) by the `Cluster Autoscaler` component, which is part of the [`node-manager`](/modules/node-manager/) module.
 
 Autoscaling is triggered only when there are Pending pods that cannot be scheduled on existing nodes due to insufficient resources (e.g., CPU or memory). In this case, `Cluster Autoscaler` attempts to add nodes based on the NodeGroup configuration.
 
@@ -178,7 +178,7 @@ Now let's increase the number of replicas to 5. As a result, two Pods will enter
 ### Allocating nodes for specific workloads
 
 {% alert level="warning" %}
-You cannot use the `deckhouse.io` domain in `labels` and `taints` keys of the [NodeGroup](/modules/node-manager/cr.html#nodegroup). It is reserved for DKP components. Use the `dedicated` or `dedicated.client.com` keys instead.
+You cannot use the `deckhouse.io` domain in `labels` and `taints` keys of the [NodeGroup](/modules/node-manager/cr.html#nodegroup). It is reserved for DP components. Use the `dedicated` or `dedicated.client.com` keys instead.
 {% endalert %}
 
 There are two ways to solve this problem:
@@ -187,7 +187,7 @@ There are two ways to solve this problem:
 1. You cat set taints to NodeGroup's `spec.nodeTemplate.taints` and then remove them via the `Pod`'s [`spec.tolerations`](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/) parameter. In this case, you disallow running applications on these nodes unless those applications are explicitly allowed.
 
 {% alert level="info" %}
-DKP tolerates the `dedicated` key by default, so we recommend using the `dedicated` key with any value for taints on your dedicated nodes.
+DP tolerates the `dedicated` key by default, so we recommend using the `dedicated` key with any value for taints on your dedicated nodes.
 
 To use custom keys for taints (e.g., `dedicated.client.com`), you must add the key's value to the `modules.placement.customTolerationKeys` parameter. This way, Deckhouse can deploy system components (e.g., `cni-flannel`) to these dedicated nodes.
 {% endalert %}
@@ -504,7 +504,7 @@ spec:
 
 ## Adding CloudPermanent nodes to a cloud cluster
 
-To add `CloudPermanent` nodes to a DKP cloud cluster:
+To add `CloudPermanent` nodes to a DP cloud cluster:
 
 1. Make sure that the corresponding cloud provider module is enabled, for example, [`cloud-provider-yandex`](/modules/cloud-provider-yandex/), [`cloud-provider-openstack`](/modules/cloud-provider-openstack/), or [`cloud-provider-aws`](/modules/cloud-provider-aws/).
 
@@ -520,7 +520,7 @@ To add `CloudPermanent` nodes to a DKP cloud cluster:
    d8 k -n d8-system get module cloud-provider-yandex
    ```
 
-1. Add a `CloudPermanent` node group to the `nodeGroups` section of the `(Provider)ClusterConfiguration` object. `CloudPermanent` nodes are managed by Terraform built into DKP.
+1. Add a `CloudPermanent` node group to the `nodeGroups` section of the `(Provider)ClusterConfiguration` object. `CloudPermanent` nodes are managed by Terraform built into DP.
 
    To edit the configuration of a running cluster, use the following command:
 
@@ -553,7 +553,7 @@ To add `CloudPermanent` nodes to a DKP cloud cluster:
 
    Field names and structure may differ for other cloud providers. Refer to the `(Provider)ClusterConfiguration` specification or the documentation for the corresponding cloud provider, for example, [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration).
 
-1. Start the DKP installer container on your local computer or an administrative host. Use an image with the same edition and version as the cluster:
+1. Start the DP installer container on your local computer or an administrative host. Use an image with the same edition and version as the cluster:
 
    ```shell
    docker run --pull=always --rm -it \
@@ -595,7 +595,7 @@ To add `CloudPermanent` nodes to a DKP cloud cluster:
 
    The new nodes are also available in the Deckhouse web interface.
 
-Deckhouse Kubernetes Platform can run on top of Managed Kubernetes services, such as GKE and EKS. In this case, the [`node-manager`](/modules/node-manager/) module manages node configuration and automates node-related operations, but some features may be limited by the API of the corresponding cloud provider.
+Deckhouse Platform can run on top of Managed Kubernetes services, such as GKE and EKS. In this case, the [`node-manager`](/modules/node-manager/) module manages node configuration and automates node-related operations, but some features may be limited by the API of the corresponding cloud provider.
 
 ## Adding a CloudStatic node to a cluster
 

@@ -27,7 +27,7 @@ spec:
           description: |
             Defines the configuration of a source of Deckhouse modules.
 
-            For more information about installing the module from the source, see the section ["Running the module in the DKP cluster"](../../architecture/module-development/run/#running-the-module-in-the-dkp-cluster).
+            For more information about installing the module from the source, see the section ["Running the module in the DP cluster"](../../architecture/module-development/run/#running-the-module-in-the-dp-cluster).
           x-doc-examples:
             - apiVersion: deckhouse.io/v1alpha1
               kind: ModuleSource

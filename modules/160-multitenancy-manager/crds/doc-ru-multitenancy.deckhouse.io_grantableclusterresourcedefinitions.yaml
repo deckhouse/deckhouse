@@ -12,7 +12,7 @@ spec:
 
             Места использования cluster-wide-ресурса в других ресурсах Kubernetes регистрируются отдельно с помощью GrantableClusterResourceReference.
 
-            GrantableClusterResourceDefinition создаётся DKP или разработчиком модуля. Для управления доступом к дополнительным типам cluster-wide-ресурсов можно создавать собственные определения.
+            GrantableClusterResourceDefinition создаётся DP или разработчиком модуля. Для управления доступом к дополнительным типам cluster-wide-ресурсов можно создавать собственные определения.
 
             Подробнее — [в разделе «Примеры использования»](usage.html#управление-доступом-к-cluster-wide-ресурсам).
           properties:

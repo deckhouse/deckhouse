@@ -117,7 +117,7 @@ tags:
 
 ## Назначение AWSClusterConfiguration
 
-[Ресурс AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) описывает параметры кластера и используется Deckhouse Kubernetes Platform (DKP) для:
+[Ресурс AWSClusterConfiguration](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration) описывает параметры кластера и используется Deckhouse Platform (DP) для:
 
 - задания схемы размещения и сетевых CIDR;
 - конфигурации master- и рабочих узлов;
@@ -162,13 +162,13 @@ vpcNetworkCIDR: 10.241.0.0/16
 
 ## Группы безопасности
 
-Группы безопасности (security groups) в AWS используются для управления входящим и исходящим сетевым трафиком на виртуальные машины. В DKP они позволяют:
+Группы безопасности (security groups) в AWS используются для управления входящим и исходящим сетевым трафиком на виртуальные машины. В DP они позволяют:
 
 - разрешить подключение к узлам кластера с других подсетей;
 - открыть доступ к приложениям, размещённым на статических узлах;
 - ограничить или разрешить доступ к внешним ресурсам в соответствии с требованиями безопасности.
 
-Если задан параметр [`disableDefaultSecurityGroup: false`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup), при создании кластера DKP создаёт группы безопасности по умолчанию:
+Если задан параметр [`disableDefaultSecurityGroup: false`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-disabledefaultsecuritygroup), при создании кластера DP создаёт группы безопасности по умолчанию:
 
 - `<CLUSTER_PREFIX>-node` — назначается узлам кластера:
   - разрешение любого исходящего трафика в `0.0.0.0/0`;
@@ -272,7 +272,7 @@ IPv4 CIDR у обоих VPC должен различаться.
 
 ## Использование существующего VPC (existingVPCID)
 
-[Параметр `existingVPCID`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-existingvpcid) в ресурсе AWSClusterConfiguration позволяет использовать уже существующий VPC для развертывания кластера DKP, вместо создания нового VPC автоматически.
+[Параметр `existingVPCID`](/modules/cloud-provider-aws/cluster_configuration.html#awsclusterconfiguration-existingvpcid) в ресурсе AWSClusterConfiguration позволяет использовать уже существующий VPC для развертывания кластера DP, вместо создания нового VPC автоматически.
 
 Этот параметр может быть полезен в случаях, когда:
 
@@ -281,7 +281,7 @@ IPv4 CIDR у обоих VPC должен различаться.
 - политика безопасности или архитектурные требования запрещают автоматическое создание VPC.
 
 {% alert level="warning" %}
-Если в существующем VPC уже есть Internet Gateway, попытка развертывания базовой инфраструктуры завершится ошибкой. В текущей версии DKP не поддерживается повторное использование уже существующего Internet Gateway.
+Если в существующем VPC уже есть Internet Gateway, попытка развертывания базовой инфраструктуры завершится ошибкой. В текущей версии DP не поддерживается повторное использование уже существующего Internet Gateway.
 {% endalert %}
 
 Совместимость с другими параметрами:

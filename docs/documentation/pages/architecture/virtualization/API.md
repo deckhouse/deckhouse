@@ -2,7 +2,7 @@
 title: Virtualization API
 permalink: en/architecture/virtualization/api.html
 search: virtualization controller, virtualization api
-description: Architecture of the Virtualization API component of virtualization module in Deckhouse Kubernetes Platform.
+description: Architecture of the Virtualization API component of virtualization module in Deckhouse Platform.
 ---
 
 The Virtualization API component of the [`virtualization`](/modules/virtualization/) module manages custom resources of the following API groups:
@@ -55,7 +55,7 @@ The following simplifications are made in the diagram:
 - Pods may run multiple replicas. However, each pod is shown as a single replica in the diagram.
 {% endalert %}
 
-The Level 2 C4 architecture of the Virtualization API component of the [`virtualization`](/modules/virtualization/) module and its interactions with other components of Deckhouse Kubernetes Platform (DKP) are shown in the following diagram:
+The Level 2 C4 architecture of the Virtualization API component of the [`virtualization`](/modules/virtualization/) module and its interactions with other components of Deckhouse Platform (DP) are shown in the following diagram:
 
 ![Architecture of the Virtualization API component of virtualization module](../../images/architecture/virtualization/c4-l2-virtualization-api.png)
 

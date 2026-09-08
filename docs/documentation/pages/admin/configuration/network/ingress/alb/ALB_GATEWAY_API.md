@@ -62,7 +62,7 @@ The characteristics and differences between them are described in the table:
 | | ClusterALBInstance | ALBInstance |
 | :--- | :--- | :--- |
 | Purpose | Deploy a cluster-wide Gateway object | Deploy a local Gateway object |
-| Typical use case | - Common entry point (cluster-wide gateway).<br> - System gateway for publishing web interfaces of Deckhouse Kubernetes Platform (DKP) service components and other modules (may require ["Steps before enabling"](#steps-to-take-before-enabling-and-configuring-alb-in-a-cluster)).<br> - Platform gateway | Dedicated gateway for an application or team in a dedicated namespace |
+| Typical use case | - Common entry point (cluster-wide gateway).<br> - System gateway for publishing web interfaces of Deckhouse Platform (DP) service components and other modules (may require ["Steps before enabling"](#steps-to-take-before-enabling-and-configuring-alb-in-a-cluster)).<br> - Platform gateway | Dedicated gateway for an application or team in a dedicated namespace |
 | Supported inlet types | [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer), [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) | [`LoadBalancer`](/modules/alb/cr.html#albinstance-v1alpha1-spec-inlet-loadbalancer), [`ClusterIP`](/modules/alb/cr.html#albinstance-v1alpha1-spec-inlet-clusterip) |
 | Proxy implementation | Envoy Proxy | Envoy Proxy |
 | Deployment type | DaemonSet | Deployment |
@@ -95,10 +95,10 @@ Publishing an application includes enabling the module, creating a managed Gatew
 
 ### Steps before enabling {#steps-to-take-before-enabling-and-configuring-alb-in-a-cluster}
 
-Before enabling and configuring ALB in a DKP cluster, do the following:
+Before enabling and configuring ALB in a DP cluster, do the following:
 
 - Verify that the [requirements](/modules/alb/configuration.html#requirements) for the `alb` module are met.
-- If you need to publish service domains — web interfaces of [DKP service components](../../../../../user/web/ui.html) and other modules — set the global parameter [`publicDomainTemplate`](../../../../../reference/api/global.html#parameters-modules-publicdomaintemplate). Without this parameter, system HTTPRoute, Gateway, and ListenerSet objects for service domains will not work correctly, and the web interfaces will not be published. If you do not need to publish service domains, you can leave this parameter unset. Details are in ["Publishing service domains"](#publishing-service-domains).
+- If you need to publish service domains — web interfaces of [DP service components](../../../../../user/web/ui.html) and other modules — set the global parameter [`publicDomainTemplate`](../../../../../reference/api/global.html#parameters-modules-publicdomaintemplate). Without this parameter, system HTTPRoute, Gateway, and ListenerSet objects for service domains will not work correctly, and the web interfaces will not be published. If you do not need to publish service domains, you can leave this parameter unset. Details are in ["Publishing service domains"](#publishing-service-domains).
 - Check API version compatibility in ["Alongside third-party Gateway API implementations"](#alongside-third-party-gateway-api) if such solutions are already used in the cluster.
 - On bare metal, for the [`LoadBalancer`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-loadbalancer) inlet prepare an external load balancer or the [`metallb`](/modules/metallb/) module. The [`HostPort`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-inlet-hostport) inlet is available for ClusterALBInstance only and does not require MetalLB.
 
@@ -210,10 +210,10 @@ An example of creating an HTTPRoute for HTTP and HTTPS traffic, and other publis
 ## Publishing service domains {#publishing-service-domains}
 
 {% alert level="warning" %}
-If you need to publish service domains, set the global parameter [`publicDomainTemplate`](../../../../../reference/api/global.html#parameters-modules-publicdomaintemplate) — without it, system HTTPRoute/Gateway/ListenerSet objects for service domains will not work correctly, and the web interfaces of DKP service components and other modules will not be published. If you do not need to publish service domains, you can leave this parameter unset.
+If you need to publish service domains, set the global parameter [`publicDomainTemplate`](../../../../../reference/api/global.html#parameters-modules-publicdomaintemplate) — without it, system HTTPRoute/Gateway/ListenerSet objects for service domains will not work correctly, and the web interfaces of DP service components and other modules will not be published. If you do not need to publish service domains, you can leave this parameter unset.
 {% endalert %}
 
-To provide access to the DKP cluster’s service domains, specify a default gateway. Create a ClusterALBInstance with the desired inlet type and [configuration](/modules/alb/cr.html#clusteralbinstance), and set [`spec.defaultDeckhouseGateway: true`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-defaultdeckhousegateway) on it.
+To provide access to the DP cluster’s service domains, specify a default gateway. Create a ClusterALBInstance with the desired inlet type and [configuration](/modules/alb/cr.html#clusteralbinstance), and set [`spec.defaultDeckhouseGateway: true`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-defaultdeckhousegateway) on it.
 
 Example of a ClusterALBInstance manifest with `spec.defaultDeckhouseGateway: true`:
 
@@ -239,7 +239,7 @@ d8 k get clusteralbinstances
 The ClusterALBInstance must reach the `Ready` state and create the managed Gateway. After that, ListenerSet and HTTPRoute objects appear in the corresponding system namespaces.
 
 {% alert level="info" %}
-Currently, not all DKP modules are available through the Gateway API. Do not disable the `ingress-nginx` module or delete related objects until the required web interfaces are published through the Gateway API and validated.
+Currently, not all DP modules are available through the Gateway API. Do not disable the `ingress-nginx` module or delete related objects until the required web interfaces are published through the Gateway API and validated.
 {% endalert %}
 
 After you configure the default gateway, run the following command to see which modules have **already** published service HTTPRoute objects through the Gateway API in this cluster. The command shows the actual route inventory, not a full platform capability matrix:
@@ -257,18 +257,18 @@ d8 k get httproutes -A -l heritage=deckhouse -o json \
   | column -t -s $'\t'
 ```
 
-### Selecting the default DKP gateway when using multiple ClusterALBInstances
+### Selecting the default DP gateway when using multiple ClusterALBInstances
 
 A cluster can have multiple cluster-scoped gateways simultaneously, each marked as the default gateway (with the [`spec.defaultDeckhouseGateway: true`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-defaultdeckhousegateway) flag set for the corresponding ClusterALBInstance). In that case, the default gateway is the Gateway object created by the ClusterALBInstance object with the earliest `creationTimestamp` (that is, the one created first).
 
-If no ClusterALBInstance object is marked as the default gateway, DKP allows the Gateway object created by the `alb` module for the instance named `main` to be used as the default gateway.
+If no ClusterALBInstance object is marked as the default gateway, DP allows the Gateway object created by the `alb` module for the instance named `main` to be used as the default gateway.
 
-### Changing the default DKP gateway
+### Changing the default DP gateway
 
-If DKP system domains need to move to another Gateway object, complete these steps:
+If DP system domains need to move to another Gateway object, complete these steps:
 
 1. Create a new ClusterALBInstance object that describes the required settings and set [`spec.defaultDeckhouseGateway: true`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-defaultdeckhousegateway) on it.
-1. In the current ClusterALBInstance object that provides the default DKP gateway, set `spec.defaultDeckhouseGateway: false`.
+1. In the current ClusterALBInstance object that provides the default DP gateway, set `spec.defaultDeckhouseGateway: false`.
 1. Check that all system ListenerSet objects now point to the new Gateway object in `spec.parentRef`.
 
 ## Examples for different environments {#infrastructure-examples}
@@ -526,14 +526,14 @@ Certificates are issued by the [`cert-manager`](/modules/cert-manager/) module. 
 
 ## Using with other modules and third-party solutions {#using-with-other-modules-and-third-party-solutions}
 
-ALBs implemented using the Kubernetes Gateway API in a DKP cluster can be used in conjunction with ALBs implemented using the Ingress NGINX Controller, as well as with ALBs based on third-party Gateway API solutions. For a step-by-step cutover, see [Migrating from ingress-nginx to alb](migration.html).
+ALBs implemented using the Kubernetes Gateway API in a DP cluster can be used in conjunction with ALBs implemented using the Ingress NGINX Controller, as well as with ALBs based on third-party Gateway API solutions. For a step-by-step cutover, see [Migrating from ingress-nginx to alb](migration.html).
 
 ### Alongside ingress-nginx {#alongside-ingress-nginx}
 
 ALBs implemented using the Kubernetes Gateway API can run in a cluster alongside ["ALB with Ingress NGINX Controller"](nginx.html). In that case, use a separate ClusterIssuer object for each ALB type so that certificate settings and lifecycles are managed independently. The same external hostname must not be served by both ALBs at once without an explicit split at the DNS or external load balancer layer.
 
 {% alert level="info" %}
-For the DKP gateway, a ClusterIssuer object is automatically created by default. This same ClusterIssuer object is used to issue certificates for system domains.
+For the DP gateway, a ClusterIssuer object is automatically created by default. This same ClusterIssuer object is used to issue certificates for system domains.
 {% endalert %}
 
 ### Alongside third-party Gateway API implementations {#alongside-third-party-gateway-api}
@@ -752,7 +752,7 @@ Configure TLS in [`spec.openTelemetry.tracing.tls`](/modules/alb/cr.html#cluster
 
 If OpenTelemetry tracing must send data over TLS, create a Kubernetes Secret with the CA certificate and reference it from [`spec.openTelemetry.tracing.tls.caSecretName`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls-casecretname).
 
-For ClusterALBInstance and the default DKP gateway, place the Secret in the `d8-alb` namespace.
+For ClusterALBInstance and the default DP gateway, place the Secret in the `d8-alb` namespace.
 For ALBInstance, place the Secret in the same namespace as the ALBInstance object.
 The Secret must contain the `cacert` key. Additional Subject Alternative Names for verifying the OpenTelemetry Collector certificate are set with [`subjectAltNames`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls-subjectaltnames), and [`insecureSkipVerify`](/modules/alb/cr.html#clusteralbinstance-v1alpha1-spec-opentelemetry-tracing-tls-insecureskipverify) disables this verification.
 

@@ -19,7 +19,7 @@ A **Package** is an abstract unit that encompasses either an **Application** or 
 
 ## Resource model
 
-Deckhouse Kubernetes Platform (DKP) Marketplace uses five custom resources:
+Deckhouse Platform (DP) Marketplace uses five custom resources:
 
 <script src="/assets/js/mermaid.min.js"></script>
 <script>mermaid.initialize({ startOnLoad: true });</script>
@@ -47,7 +47,7 @@ Each [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackagev
 - `status.packageMetadata.description` — localized (`en`/`ru`) package description
 - `status.packageMetadata.category` — catalog category
 - `status.packageMetadata.stage` — maturity stage (`Preview`, `General Availability`, etc.)
-- `status.packageMetadata.requirements` — DKP and Kubernetes version constraints; module dependencies (`mandatory`, `conditional`, `anyOf`, `noneOf`)
+- `status.packageMetadata.requirements` — DP and Kubernetes version constraints; module dependencies (`mandatory`, `conditional`, `anyOf`, `noneOf`)
 - `status.packageMetadata.versionCompatibilityRules` — upgrade and downgrade rules
 - `status.packageSchemas.settingsSchema` — OpenAPI v3 schema used to validate `Application.spec.settings`
 - `status.packageSchemas.valuesSchema` — OpenAPI v3 schema for effective values passed to hooks and templates
@@ -55,10 +55,10 @@ Each [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackagev
 ## Scan-to-deploy lifecycle
 
 1. Administrator creates [PackageRepository](../../reference/api/cr.html#packagerepository).
-2. DKP creates a [PackageRepositoryOperation](../../reference/api/cr.html#packagerepositoryoperation) automatically (first scan on creation, then every `scanInterval`).
+2. DP creates a [PackageRepositoryOperation](../../reference/api/cr.html#packagerepositoryoperation) automatically (first scan on creation, then every `scanInterval`).
 3. The operation scans the registry and creates [ApplicationPackageVersion](../../reference/api/cr.html#applicationpackageversion) objects for each discovered version.
 4. User creates an [Application](../../reference/api/cr.html#application) in their namespace referencing `packageName`, `packageVersion`, and optionally `packageRepositoryName`.
-5. DKP validates `spec.settings` against the `settingsSchema` from the corresponding ApplicationPackageVersion.
+5. DP validates `spec.settings` against the `settingsSchema` from the corresponding ApplicationPackageVersion.
 6. Nelm deploys the Helm templates from the package bundle.
 7. Conditions on the Application reflect deployment progress: `Installed` → `ConfigurationApplied` → `Scaled` → `Ready`.
 

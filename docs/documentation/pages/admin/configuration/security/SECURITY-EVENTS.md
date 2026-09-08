@@ -1,16 +1,16 @@
 ---
 title: Security events
 permalink: en/admin/configuration/security/events/security-events.html
-description: "Configure collection, processing, and delivery of security events in Deckhouse Kubernetes Platform. Unified security events pipeline from application and Kubernetes infrastructure logs."
+description: "Configure collection, processing, and delivery of security events in Deckhouse Platform. Unified security events pipeline from application and Kubernetes infrastructure logs."
 ---
 
-Deckhouse Kubernetes Platform (DKP) provides tools for declarative collection, processing,
+Deckhouse Platform (DP) provides tools for declarative collection, processing,
 normalization, and delivery of security events extracted from logs of applications
 and Kubernetes infrastructure components.
 
 A security event is a structured record of an action or fact that is significant from an information security perspective.
 
-DKP lets you:
+DP lets you:
 
 - Collect security events from various sources (pod logs, node files, Kubernetes API audit).
 - Bring events to a unified format with a mandatory minimum set of attributes.
@@ -23,7 +23,7 @@ The auxiliary [`log-shipper`](/modules/log-shipper/) module is used for log coll
 
 ## Dependencies and requirements
 
-The `security-events-manager` module requires the following DKP modules:
+The `security-events-manager` module requires the following DP modules:
 
 - [`log-shipper`](/modules/log-shipper/): Collects logs from pod sources and node files, performs preliminary record selection.
 - [`loki`](/modules/loki/): Provides in-cluster storage for security events (used by default as a destination).

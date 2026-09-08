@@ -4,17 +4,17 @@ permalink: ru/admin/configuration/platform-scaling/node/cloud-node.html
 lang: ru
 ---
 
-В Deckhouse Kubernetes Platform (DKP) облачные узлы могут быть следующих типов:
+В Deckhouse Platform (DP) облачные узлы могут быть следующих типов:
 
 - **CloudEphemeral** — временные, автоматически создаваемые и удаляемые узлы;
 - **CloudPermanent** — постоянные узлы, управляемые вручную через `replicas`;
-- **CloudStatic** — статические облачные узлы. Машины создаются вручную или внешними средствами, а DKP подключает их к кластеру и управляет ими как обычными узлами.
+- **CloudStatic** — статические облачные узлы. Машины создаются вручную или внешними средствами, а DP подключает их к кластеру и управляет ими как обычными узлами.
 
 Ниже приведены инструкции по добавлению и настройке каждого типа.
 
 ## Добавление CloudEphemeral-узлов в облачном кластере
 
-CloudEphemeral-узлы автоматически создаются и управляются в кластере с помощью Machine Controller Manager (MCM) или Cluster API (в зависимости от конфигурации) — оба компонента входят в состав модуля [`node-manager`](/modules/node-manager/) в DKP.
+CloudEphemeral-узлы автоматически создаются и управляются в кластере с помощью Machine Controller Manager (MCM) или Cluster API (в зависимости от конфигурации) — оба компонента входят в состав модуля [`node-manager`](/modules/node-manager/) в DP.
 
 Для добавления узлов:
 
@@ -70,7 +70,7 @@ CloudEphemeral-узлы автоматически создаются и упр�
 
 ## Настройки для групп с узлами CloudEphemeral
 
-Группы узлов с типом CloudEphemeral предназначены для автоматического масштабирования за счёт создания и удаления виртуальных машин в облаке с помощью Machine Controller Manager (MCM). Этот тип групп широко применяется в облачных кластерах DKP.
+Группы узлов с типом CloudEphemeral предназначены для автоматического масштабирования за счёт создания и удаления виртуальных машин в облаке с помощью Machine Controller Manager (MCM). Этот тип групп широко применяется в облачных кластерах DP.
 
 Конфигурация узлов задаётся в секции `cloudInstances` и включает параметры для масштабирования, зонирования, резервирования и приоритизации.
 
@@ -100,7 +100,7 @@ d8 system edit provider-cluster-configuration
 
 ## Автомасштабирование группы узлов
 
-В Deckhouse Kubernetes Platform (DKP) автомасштабирование группы узлов происходит на основе потребностей в ресурсах (CPU и память) и выполняется компонентом `Cluster Autoscaler`, входящим в модуль [`node-manager`](/modules/node-manager/).
+В Deckhouse Platform (DP) автомасштабирование группы узлов происходит на основе потребностей в ресурсах (CPU и память) и выполняется компонентом `Cluster Autoscaler`, входящим в модуль [`node-manager`](/modules/node-manager/).
 
 Автоматическое масштабирование происходит только при наличии Pending-подов, которые не могут быть запущены на существующих узлах из-за нехватки ресурсов (например, CPU или памяти). В этом случае `Cluster Autoscaler` пытается добавить узлы, основываясь на конфигурации NodeGroup.
 
@@ -178,7 +178,7 @@ spec:
 ### Выделение узлов под специфические нагрузки
 
 {% alert level="warning" %}
-Запрещено использование домена `deckhouse.io` в ключах `labels` и `taints` у [NodeGroup](/modules/node-manager/cr.html#nodegroup). Он зарезервирован для компонентов DKP. Следует отдавать предпочтение в пользу ключей `dedicated` или `dedicated.client.com`.
+Запрещено использование домена `deckhouse.io` в ключах `labels` и `taints` у [NodeGroup](/modules/node-manager/cr.html#nodegroup). Он зарезервирован для компонентов DP. Следует отдавать предпочтение в пользу ключей `dedicated` или `dedicated.client.com`.
 {% endalert %}
 
 Для решений данной задачи существуют два механизма:
@@ -187,7 +187,7 @@ spec:
 1. Установка ограничений в NodeGroup `spec.nodeTemplate.taints` с дальнейшим снятием их в `Pod` [`spec.tolerations`](https://kubernetes.io/docs/concepts/scheduling-eviction/taint-and-toleration/). Запрещает исполнение не разрешенных явно приложений на этих узлах.
 
 {% alert level="info" %}
-DKP по умолчанию поддерживает использование taint с ключом `dedicated`, поэтому рекомендуется применять этот ключ с любым значением для taints на ваших выделенных узлах.
+DP по умолчанию поддерживает использование taint с ключом `dedicated`, поэтому рекомендуется применять этот ключ с любым значением для taints на ваших выделенных узлах.
 
 Если требуется использовать другие ключи для taints (например, `dedicated.client.com`), необходимо добавить соответствующее значение ключа в параметр `modules.placement.customTolerationKeys`. Это обеспечит разрешение системным компонентам, таким как `cni-flannel`, использовать эти узлы.
 {% endalert %}
@@ -503,7 +503,7 @@ spec:
 
 ## Добавление CloudPermanent-узлов в облачном кластере
 
-Чтобы добавить узлы типа CloudPermanent в облачный кластер DKP:
+Чтобы добавить узлы типа CloudPermanent в облачный кластер DP:
 
 1. Убедитесь, что включён модуль соответствующего облачного провайдера, например [`cloud-provider-yandex`](/modules/cloud-provider-yandex/), [`cloud-provider-openstack`](/modules/cloud-provider-openstack/) или [`cloud-provider-aws`](/modules/cloud-provider-aws/).
 
@@ -519,7 +519,7 @@ spec:
    d8 k -n d8-system get module cloud-provider-yandex
    ```
 
-1. Добавьте группу узлов типа `CloudPermanent` в секцию `nodeGroups` объекта (Provider)ClusterConfiguration. Узлы типа `CloudPermanent` управляются через Terraform, встроенный в DKP.
+1. Добавьте группу узлов типа `CloudPermanent` в секцию `nodeGroups` объекта (Provider)ClusterConfiguration. Узлы типа `CloudPermanent` управляются через Terraform, встроенный в DP.
 
    Отредактировать конфигурацию работающего кластера можно с помощью команды:
 
@@ -552,7 +552,7 @@ spec:
 
    Для других облачных провайдеров названия и структура параметров могут отличаться. Актуальные поля можно посмотреть в описании (Provider)ClusterConfiguration или в документации по соответствующему облачному провайдеру, например [YandexClusterConfiguration](/modules/cloud-provider-yandex/cluster_configuration.html#yandexclusterconfiguration).
 
-1. На локальном компьютере или административном узле запустите установочный контейнер DKP. Используйте образ той же редакции и версии, что и в кластере:
+1. На локальном компьютере или административном узле запустите установочный контейнер DP. Используйте образ той же редакции и версии, что и в кластере:
 
    ```shell
    docker run --pull=always --rm -it \
@@ -594,7 +594,7 @@ spec:
 
    Также список новых узлов доступен в веб-интерфейсе Deckhouse.
 
-Deckhouse Kubernetes Platform может работать поверх сервисов Managed Kubernetes (например, GKE и EKS). При этом модуль [`node-manager`](/modules/node-manager/) обеспечивает управление конфигурацией и автоматизацию действий с узлами, но возможности могут быть ограничены API соответствующего облачного провайдера.
+Deckhouse Platform может работать поверх сервисов Managed Kubernetes (например, GKE и EKS). При этом модуль [`node-manager`](/modules/node-manager/) обеспечивает управление конфигурацией и автоматизацию действий с узлами, но возможности могут быть ограничены API соответствующего облачного провайдера.
 
 ## Добавление CloudStatic узла в кластер
 

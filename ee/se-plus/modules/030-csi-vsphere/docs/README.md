@@ -32,7 +32,7 @@ The module deploys the VMware vSphere CSI driver components that:
 To use the module in a cluster, the following system requirements must be met:
 
 - All cluster nodes must be virtual machines created with vSphere tooling.
-- The vSphere VM name must **exactly match** the node hostname in the Deckhouse Kubernetes Platform cluster.
+- The vSphere VM name must **exactly match** the node hostname in the Deckhouse Platform cluster.
 - Each VM must have `disk.EnableUUID:TRUE` set so the platform can identify attached volumes reliably.
 
 ## Architecture

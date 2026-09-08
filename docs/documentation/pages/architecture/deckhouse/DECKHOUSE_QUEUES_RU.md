@@ -3,16 +3,16 @@ title: Механизм очередей
 permalink: ru/architecture/deckhouse/queues.html
 lang: ru
 search: deckhouse, deckhouse-controller, modules, queue
-description: Описание работы очередей контроллера Deckhouse в Deckhouse Kubernetes Platform.
+description: Описание работы очередей контроллера Deckhouse в Deckhouse Platform.
 ---
 
-Модуль [`deckhouse`](/modules/deckhouse/) реализует ядро Deckhouse Kubernetes Platform (DKP), выполняющее различные операции по управлению платформой с использованием механизма очередей. Подробнее с архитектурой модуля можно ознакомиться в [соответствующем разделе документации](./deckhouse.html).
+Модуль [`deckhouse`](/modules/deckhouse/) реализует ядро Deckhouse Platform (DP), выполняющее различные операции по управлению платформой с использованием механизма очередей. Подробнее с архитектурой модуля можно ознакомиться в [соответствующем разделе документации](./deckhouse.html).
 
 Контроллер Deckhouse реализует очереди addon-operator и marketplace.
 
 ## Очереди addon-operator
 
-**Очереди addon-operator** — это основной механизм обработки встроенных и внешних модулей DKP. Очередь реализована в [shell-operator](https://github.com/flant/shell-operator) и расширена типами задач [addon-operator](https://github.com/flant/addon-operator). Контроллер Deckhouse синхронизирует кастомные ресурсы [ModuleConfig](../../reference/api/cr.html#moduleconfig) и обновляет глобальные или модульные values для addon-operator.
+**Очереди addon-operator** — это основной механизм обработки встроенных и внешних модулей DP. Очередь реализована в [shell-operator](https://github.com/flant/shell-operator) и расширена типами задач [addon-operator](https://github.com/flant/addon-operator). Контроллер Deckhouse синхронизирует кастомные ресурсы [ModuleConfig](../../reference/api/cr.html#moduleconfig) и обновляет глобальные или модульные values для addon-operator.
 
 Типы задач:
 

@@ -7,7 +7,7 @@ The module is automatically enabled for all cloud clusters deployed in Huawei Cl
 
 ## List of required Huawei Cloud services
 
-A list of services required for Deckhouse Kubernetes Platform to work in Huawei Cloud:
+A list of services required for Deckhouse Platform to work in Huawei Cloud:
 
 | Service                         | API version |
 |:--------------------------------|:-----------:|

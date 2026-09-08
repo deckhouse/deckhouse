@@ -4,9 +4,9 @@ permalink: ru/test/architecture/rbac.html
 lang: ru
 ---
 
-В данном разделе описаны детали реализации [ролевой модели](../concepts/glossary.html#ролевая-модель) в Deckhouse Kubernetes Platform (DKP).
+В данном разделе описаны детали реализации [ролевой модели](../concepts/glossary.html#ролевая-модель) в Deckhouse Platform (DP).
 
-Ролевая модель в DKP построена на принципе агрегации: мелкие [роли](../concepts/glossary.html#ролевая-модель) объединяются в более крупные, что облегчает расширение за счёт собственных ролей.
+Ролевая модель в DP построена на принципе агрегации: мелкие [роли](../concepts/glossary.html#ролевая-модель) объединяются в более крупные, что облегчает расширение за счёт собственных ролей.
 
 В Deckhouse ресурсы `ClusterAuthorizationRule` и `AuthorizationRule` не используются. Настройка прав доступа осуществляется стандартными средствами RBAC Kubernetes путём создания ресурсов `RoleBinding`, `ProjectRoleBinding` или `ClusterProjectRoleBinding` с указанием подготовленных [ролей](../concepts/glossary.html#ролевая-модель).
 
