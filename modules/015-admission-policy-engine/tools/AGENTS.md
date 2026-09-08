@@ -128,14 +128,34 @@ has changed since, or if the numbers don't match what you observe.
    (SecurityPolicyException) resolution builds and holds intermediate
    objects even when no exception applies. Memory spread across rules
    (~8x) is much narrower than time spread (~100x) - most rules share a
-   common per-eval allocation floor (~14,000 B/op, ~270 allocs/op) before
-   any rule-specific logic runs: OPA's own floor plus the pod-spec/label
-   resolution every converted policy now goes through (`lib.common`).
-   Controller-level checks raised that floor from ~12,000 B/op, ~230
-   allocs/op; the *ranking* above did not change, and the two figures
-   `README.md` quotes for the most expensive templates moved by well under
-   1% (`allowed-proc-mount` disallowed 1 934 -> 1 942, `allow-privileged`
-   disallowed 1 432 -> 1 439, same Pod fixtures).
+   common per-eval allocation floor before any rule-specific logic runs:
+   OPA's own floor plus the pod-spec/label resolution every converted
+   policy goes through (`lib.common`).
+
+   Controller-level checks did **not** raise that floor for Pod reviews:
+   measured on identical Pod fixtures, the cheap rules are unchanged
+   (`allowed-repos` allowed 231 -> 231 allocs/op, `priority-class` 239 ->
+   239, `allow-host-processes` 231 -> 231), and so are the two figures
+   `README.md` quotes for the most expensive templates
+   (`allowed-proc-mount` disallowed 1 933 -> 1 941, `allow-privileged`
+   disallowed 1 432 -> 1 439). ~12,000 B/op, ~230 allocs/op is still the
+   Pod floor; ~14,000 B/op, ~270 allocs/op is the floor for a *controller*
+   review, which is a new kind of review rather than a regression of an
+   existing one.
+
+   What did regress on the Pod path is a minority of rules: 23 of 78
+   same-fixture measurements moved by 5-70%, led by `allowed-users`
+   disallowed (250 -> 424 allocs/op), `vulnerable-images` (407 -> 587),
+   `allowed-host-paths` disallowed (925 -> 1 252) and
+   `verify-image-signature` (523 -> 630). The remaining 53 are unchanged
+   within 1%. The *ranking* above did not change.
+
+   **Do not compare `ns/op` between two runs of `rulebench`/`bench_rules.py`
+   on a workstation.** The same configuration varies by up to 7x between
+   runs (`deny-exec-heritage` disallowed measured 356k / 522k / 72k ns/op
+   across three consecutive runs with an identical 783 allocs/op). Compare
+   `allocs/op` and `B/op`, which reproduce to under 1%, and treat `ns/op`
+   as an order-of-magnitude signal only.
 
 5. **`--audit-interval` is currently `60`** in
    `../templates/audit-deployment.yaml` (upstream Gatekeeper's own default is
@@ -152,7 +172,20 @@ has changed since, or if the numbers don't match what you observe.
   anything.** Both tools pick their "allowed"/"disallowed" samples by
   filename convention from `rendered/test_samples/**`, walking the
   subdirectories in sorted order - so `external-data/` and `other/` are
-  reached before `pods/`. Several constraints therefore benchmark against a
+  reached before `pods/`. Controller fixtures are the same trap: a file
+  named `001-controller-allowed-*.yaml` sorts first and contains "allowed",
+  so a constraint with controller test cases is benchmarked on a Deployment
+  review by default. To compare against a historical Pod number, move the
+  controller samples aside first:
+
+  ```bash
+  cd charts/constraint-templates/tests/test_cases/constraints
+  find . -path '*/rendered/test_samples/*' -name '*controller*.yaml' \
+    -exec sh -c 'mv "$1" "$1.aside"' _ {} \;
+  ../../tools/rulebench.sh .
+  find . -name '*.aside' -exec sh -c 'mv "$1" "${1%.aside}"' _ {} \;
+  ```
+ Several constraints therefore benchmark against a
   document that is not a workload at all (`vulnerable-images` and
   `verify-image-signature` pick an `ExternalDataInventory`; `allowed-users`
   picked a `Namespace`), which exercises the unknown-kind fail-safe path

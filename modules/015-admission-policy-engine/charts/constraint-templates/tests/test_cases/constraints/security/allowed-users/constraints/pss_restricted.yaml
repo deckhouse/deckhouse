@@ -9,13 +9,11 @@ spec:
       - apiGroups: [""]
         kinds: ["Pod"]
       - apiGroups: ["apps"]
-        kinds: ["Deployment", "StatefulSet", "DaemonSet", "ReplicaSet"]
+        kinds: ["Deployment", "StatefulSet", "DaemonSet"]
       - apiGroups: [""]
         kinds: ["ReplicationController"]
       - apiGroups: ["batch"]
         kinds: ["Job", "CronJob"]
-      - apiGroups: ["apps"]
-        kinds: ["Deployment", "DaemonSet"]
     namespaceSelector:
       matchExpressions:
         - key: security.deckhouse.io/pod-policy

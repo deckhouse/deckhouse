@@ -16,6 +16,7 @@ package lib.check_set
 
 import data.lib.common.get_field
 import data.lib.common.effective_labels
+import data.lib.common.normalized_pod_object
 import data.lib.exception.allowed_values_or_empty
 import data.lib.exception.path_value_resolved
 import data.lib.exception.resolve_spe_for_container
@@ -63,22 +64,33 @@ check_container_value_in_set(container, field_path, field_name, allowed_set, spe
   }
 }
 
-# Check that a pod-level field value is in an allowed set
+# Check that a pod-level field value is in an allowed set.
+#
+# field_path is relative to the object, e.g. ["spec", "dnsPolicy"]. As in
+# lib.check_bool.check_pod_bool it is resolved against the object normalized to
+# a pod-like shape, so a controller's pod template is read instead of the
+# controller's own spec. Keep the two libraries in step: they are called with
+# the same kind of path and must agree on what "pod level" means.
+#
+# Not currently referenced by any shipped ConstraintTemplate — the templates
+# resolve pod-level fields through lib.common.pod_spec directly. Kept for
+# handwritten constraints, and kept consistent so wiring it up cannot silently
+# read the wrong spec.
 check_pod_value_in_set(obj, field_path, field_name, allowed_set, spe_path) := result if {
-  value := get_field(obj, field_path, null)
+  value := get_field(normalized_pod_object(obj), field_path, null)
   value == null
   result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_pod_value_in_set(obj, field_path, field_name, allowed_set, spe_path) := result if {
-  value := get_field(obj, field_path, null)
+  value := get_field(normalized_pod_object(obj), field_path, null)
   value != null
   value_in_set(value, allowed_set)
   result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_pod_value_in_set(obj, field_path, field_name, allowed_set, spe_path) := result if {
-  value := get_field(obj, field_path, null)
+  value := get_field(normalized_pod_object(obj), field_path, null)
   value != null
   not value_in_set(value, allowed_set)
   labels := effective_labels(obj)
@@ -90,7 +102,7 @@ check_pod_value_in_set(obj, field_path, field_name, allowed_set, spe_path) := re
 }
 
 check_pod_value_in_set(obj, field_path, field_name, allowed_set, spe_path) := result if {
-  value := get_field(obj, field_path, null)
+  value := get_field(normalized_pod_object(obj), field_path, null)
   value != null
   not value_in_set(value, allowed_set)
   labels := effective_labels(obj)
@@ -108,22 +120,24 @@ check_pod_value_in_set(obj, field_path, field_name, allowed_set, spe_path) := re
   }
 }
 
-# Check that all values in an array field are in an allowed set (with wildcard and prefix support)
+# Check that all values in an array field are in an allowed set (with wildcard
+# and prefix support). Same normalization and the same "unused but consistent"
+# note as check_pod_value_in_set above.
 check_pod_array_in_set(obj, field_path, field_name, allowed_set, spe_path) := result if {
-  values := get_field(obj, field_path, [])
+  values := get_field(normalized_pod_object(obj), field_path, [])
   count(values) == 0
   result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_pod_array_in_set(obj, field_path, field_name, allowed_set, spe_path) := result if {
-  values := get_field(obj, field_path, [])
+  values := get_field(normalized_pod_object(obj), field_path, [])
   count(values) > 0
   all_in_set_or_prefix(values, allowed_set)
   result := {"allowed": true, "msg": "", "detail": {}}
 }
 
 check_pod_array_in_set(obj, field_path, field_name, allowed_set, spe_path) := result if {
-  values := get_field(obj, field_path, [])
+  values := get_field(normalized_pod_object(obj), field_path, [])
   count(values) > 0
   not all_in_set_or_prefix(values, allowed_set)
   labels := effective_labels(obj)
@@ -135,7 +149,7 @@ check_pod_array_in_set(obj, field_path, field_name, allowed_set, spe_path) := re
 }
 
 check_pod_array_in_set(obj, field_path, field_name, allowed_set, spe_path) := result if {
-  values := get_field(obj, field_path, [])
+  values := get_field(normalized_pod_object(obj), field_path, [])
   count(values) > 0
   not all_in_set_or_prefix(values, allowed_set)
   labels := effective_labels(obj)

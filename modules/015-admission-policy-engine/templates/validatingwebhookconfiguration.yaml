@@ -12,6 +12,20 @@ matchPolicy: Exact
 sideEffects: None
 {{- end }}
 
+{{/*
+  webhook-scope:allow=webhook-delete-on-controllers — DELETE interception is intended, not an oversight.
+
+  Policies must be able to forbid deleting a resource, so the webhook has to see
+  the DELETE operation: a Rego rule that inspects `input.review.operation ==
+  "DELETE"` (or `input.review.oldObject`) can only run if the request reaches
+  Gatekeeper at all. Restricting the rules below to CREATE/UPDATE would silently
+  remove that capability for every current and future policy.
+
+  The trade-off is accepted deliberately: while Gatekeeper is unavailable and
+  `failurePolicy: Fail` is in effect, deleting a tracked resource is blocked
+  along with creating one. Operators recover by scaling the webhook back up, or
+  by removing the ValidatingWebhookConfiguration, exactly as for CREATE.
+*/}}
 {{- define "validating.webhook.tracked.resources"}}
   {{- range $trackResource := .Values.admissionPolicyEngine.internal.trackedConstraintResources }}
 - apiGroups:

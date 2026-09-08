@@ -48,6 +48,9 @@ metadata:
   name: <constraint-name>           # Must match directory name
 spec:
   objectKind: Pod
+  objectKinds:                      # Optional: kinds every suite must cover
+    - Pod
+    - Deployment
   objectFields:
     - path: <exact.field.path>       # e.g. spec.hostNetwork
       level: pod|container|initContainer
@@ -398,11 +401,17 @@ Two additional `constraint_testgen` subcommands provide static analysis:
 # Lint: detect Rego anti-patterns (object.get(..., "") default, fail-open on unknown kind)
 go run $constraint_testgen lint
 
-# Webhook-scope: detect Helm template issues (ReplicaSet in kinds, duplicated kinds blocks, DELETE on controllers)
+# Webhook-scope: detect Helm template and fixture issues (ReplicaSet in kinds,
+# duplicated kinds blocks, DELETE on controllers)
 go run $constraint_testgen webhook-scope
 ```
 
-Run both before committing constraint template changes. See [`docs/TESTING_GUIDE.md`](docs/TESTING_GUIDE.md) for rule details.
+Run both before committing constraint template changes. Both are expected to be
+green: if a finding is a deliberate decision, silence that one rule with a
+directive that states why (`# lint:allow=<rule> — <reason>` above the line, or
+`{{/* webhook-scope:allow=<rule> — <reason> */}}` in the file). Never silence a
+finding by loosening the rule itself. See
+[`docs/TESTING_GUIDE.md`](docs/TESTING_GUIDE.md) for rule details.
 
 ## Controller-level constraint patterns
 
@@ -410,13 +419,17 @@ When a constraint matches both Pods and controllers (Deployment, StatefulSet, et
 
 1. **`labelSelector`** evaluates against the reviewed object's own `metadata.labels`. For controllers, this is the **top-level** metadata, not the pod template's `spec.template.metadata.labels`.
 
-2. **`is_update` guard**: if a rule checks immutable Pod fields (e.g. `automountServiceAccountToken`), scope the guard to `kind == "Pod"` only — controller UPDATEs should still be checked since pod template fields are mutable.
+2. **`is_update` guard**: if a rule checks immutable Pod fields (e.g. `automountServiceAccountToken`), scope the guard to `kind == "Pod"` only — controller UPDATEs should still be checked since pod template fields are mutable. A gator suite case cannot declare the review operation, so cover this with an OPA unit test under `files/libs` rather than with a matrix case.
 
 3. **`input_containers` vs `pod_spec.containers`**: `input_containers` includes `containers + initContainers + ephemeralContainers`. Use `pod_spec.containers` only for rules where Kubernetes doesn't support the field on init/ephemeral containers (e.g. probes, imagePullPolicy). Use `input_containers` for security rules that should check all container types.
 
 4. **SPE label/annotation resolution**: for controllers, SPE-relevant labels and annotations are resolved from the pod template only (`spec.template.metadata`), not the controller's top-level metadata.
 
-5. **`workload_kinds` helper**: always use `{{- include "workload_kinds" . }}` instead of inline YAML kind blocks in constraint templates.
+5. **`workload_kinds` helper**: always use `{{- include "workload_kinds" . }}` instead of inline YAML kind blocks in constraint templates, and keep the `constraints/*.yaml` test fixtures in step with what it renders — `webhook-scope` checks both.
+
+6. **Lenient mode**: when a rule skips an absent field on controllers, name the component that actually fills the field in. LimitRange really does default `container.resources`. Pod Security Admission does not qualify — it only validates and never modifies an object — so for fields like `runAsUser` or `seccompProfile.type` the source is a mutating webhook, including a Gatekeeper `Assign` mutator. Decide leniency per container, never for the pod template as a whole.
+
+7. **Violation messages**: use `lib.common.review_kind` instead of hardcoding "Pod". A denied Deployment that reports `Pod <name>` sends the reader looking for an object that was never created.
 
 ## Checklist before committing
 
@@ -428,10 +441,11 @@ When a constraint matches both Pods and controllers (Deployment, StatefulSet, et
 - [ ] `go run $constraint_testgen generate -bundle ./test-matrix.yaml` succeeds
 - [ ] `gator verify -v ./rendered` passes
 - [ ] `go run $constraint_testgen verify` passes
-- [ ] `go run $constraint_testgen coverage -tests-root ./ -format table` shows 100%
-- [ ] `go run $constraint_testgen lint` passes (no anti-patterns)
-- [ ] `go run $constraint_testgen webhook-scope` passes (no webhook scope issues)
-- [ ] `rendered/` artifacts are committed alongside source files
+- [ ] `go run $constraint_testgen coverage -tests-root ./ -format table` shows 100% and status `OK`
+- [ ] `go run $constraint_testgen lint` passes (no anti-patterns); any opt-out carries a `# lint:allow=<rule> — <reason>` directive
+- [ ] `go run $constraint_testgen webhook-scope` passes (no webhook scope issues); any opt-out carries a `webhook-scope:allow=<rule> — <reason>` directive
+- [ ] For a constraint matching controllers: `constraints/*.yaml` kinds match what `workload_kinds` renders, and at least one case asserts a controller-level violation message
+- [ ] `rendered/` is regenerated and green locally — it is gitignored (`test_cases/.gitignore`) and rebuilt by CI, so never commit it
 - [ ] For a **new** constraint, or a change to a **shared lib** (`../files/libs/`):
       benchmark it with `tools/bench_rules.py`/`tools/rulebench.sh` (they
       reuse the `rendered/test_samples/` fixtures you just generated - no

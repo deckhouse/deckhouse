@@ -16,7 +16,6 @@ spec:
       - Deployment
       - StatefulSet
       - DaemonSet
-      - ReplicaSet
     - apiGroups:
       - ''
       kinds:

@@ -112,7 +112,7 @@ spec:
                 value: val2
     - name: example-disallowed-envs-same-name-same-container
       violations: 'yes'
-      assertionMessage: 'Container <nginx> in pod <disallowed> has duplicated env variable names: ''key1'''
+      assertionMessage: 'Container <nginx> in Pod <disallowed> has duplicated env variable names: ''key1'''
       fields:
       - path: spec.containers[].env[].name
         scenario: negative
@@ -163,7 +163,7 @@ spec:
                 value: val2
     - name: example-disallowed-init-envs-same-name-same-container
       violations: 'yes'
-      assertionMessage: 'Container <init> in pod <disallowed-init-envs-same-name-same-container> has duplicated env variable names: ''key1'''
+      assertionMessage: 'Container <init> in Pod <disallowed-init-envs-same-name-same-container> has duplicated env variable names: ''key1'''
       fields:
       - path: spec.initContainers[].env[].name
         scenario: negative

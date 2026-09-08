@@ -1750,3 +1750,55 @@ spec:
                     runAsNonRoot: false
       exception: ''
       exceptionRef: ''
+    # Lenient mode is decided per container. `app` omits runAsUser and
+    # runAsNonRoot, so a mutator may still set them and the controller must not
+    # be denied on its behalf — even though the sidecar next to it is explicit.
+    # A pod-wide decision would report `app` here.
+    - name: controller-allowed-absent-runasuser-next-to-explicit-container
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.containers[].securityContext.runAsUser
+        scenario: multiContainer
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-absent-next-to-explicit
+          spec:
+            template:
+              spec:
+                containers:
+                - image: nginx
+                  name: sidecar
+                  securityContext:
+                    runAsUser: 1000
+                - image: nginx
+                  name: app
+      exception: ''
+      exceptionRef: ''
+    # The explicit container is still checked on its own merits: an explicitly
+    # disallowed value is never covered by leniency, whatever its neighbours do.
+    - name: controller-disallowed-explicit-root-next-to-absent-container
+      violations: 'yes'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.containers[].securityContext.runAsUser
+        scenario: multiContainer
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-explicit-root-next-to-absent
+          spec:
+            template:
+              spec:
+                containers:
+                - image: nginx
+                  name: sidecar
+                  securityContext:
+                    runAsUser: 0
+                - image: nginx
+                  name: app
+      exception: ''
+      exceptionRef: ''

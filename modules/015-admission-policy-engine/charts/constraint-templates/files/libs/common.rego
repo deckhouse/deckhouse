@@ -179,6 +179,23 @@ effective_metadata := input.review.object.metadata if {
   meta := object.get(review_object, "metadata", {})
 }
 
+# Kind of the object under review, for use in violation messages.
+#
+# Constraints match controllers as well as Pods, so a message must not hardcode
+# the word "Pod": a denied Deployment that reports "Pod <name>" sends the reader
+# looking for an object that was never created. Falls back to "workload" rather
+# than to "", so a review without a kind still produces a readable sentence.
+#
+# input.review.kind.kind is deliberately not used: it has no default and can be
+# undefined, which would make the whole message rule undefined and swallow the
+# violation.
+review_kind := kind if {
+  kind := object.get(review_object, "kind", "")
+  kind != ""
+} else := "workload" if {
+  true
+}
+
 # =============================================================================
 # Controller detection helper
 # =============================================================================

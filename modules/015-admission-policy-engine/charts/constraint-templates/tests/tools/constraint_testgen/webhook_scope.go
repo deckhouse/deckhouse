@@ -18,6 +18,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -71,10 +72,26 @@ func lintTestConstraintFixtures(templatesRoot string) ([]webhookFinding, error) 
 	if err != nil {
 		return nil, err
 	}
-	// templatesRoot is .../templates; test fixtures live under
-	// .../tests/test_cases/constraints/
-	testsRoot := filepath.Join(filepath.Dir(filepath.Dir(abs)), "tests", "test_cases", "constraints")
-	if _, err := os.Stat(testsRoot); os.IsNotExist(err) {
+	// templatesRoot is either the module's own templates directory
+	// (<module>/templates) or the chart's one
+	// (<module>/charts/constraint-templates/templates). The fixtures always live
+	// under <module>/charts/constraint-templates/tests/test_cases/constraints, so
+	// try both layouts instead of assuming one — the earlier single guess pointed
+	// at modules/tests/test_cases/constraints, which never exists, and silently
+	// disabled this whole check.
+	moduleRoot := filepath.Dir(abs)
+	candidates := []string{
+		filepath.Join(moduleRoot, "charts", "constraint-templates", "tests", "test_cases", "constraints"),
+		filepath.Join(moduleRoot, "tests", "test_cases", "constraints"),
+	}
+	testsRoot := ""
+	for _, c := range candidates {
+		if st, statErr := os.Stat(c); statErr == nil && st.IsDir() {
+			testsRoot = c
+			break
+		}
+	}
+	if testsRoot == "" {
 		return nil, nil
 	}
 	err = filepath.Walk(testsRoot, func(p string, info os.FileInfo, err error) error {
@@ -103,10 +120,17 @@ func lintTestConstraintFixtures(templatesRoot string) ([]webhookFinding, error) 
 	return findings, err
 }
 
+// lintFixtureContent honours the same webhook-scope:allow= directive as the
+// template rules, so a fixture that intentionally covers a kind outside
+// workload_kinds can document that instead of being rewritten.
+
 // lintFixtureContent checks a test constraint fixture for ReplicaSet in
 // match.kinds.
 func lintFixtureContent(file, content string) []webhookFinding {
 	var findings []webhookFinding
+	if _, ok := allowedRules(content)["replicaset-in-test-fixture"]; ok {
+		return nil
+	}
 	lines := strings.Split(content, "\n")
 	for i, line := range lines {
 		if strings.Contains(line, "ReplicaSet") {
@@ -151,11 +175,35 @@ func lintWebhookTemplates(templatesRoot string) ([]webhookFinding, error) {
 	return findings, err
 }
 
+// allowDirectiveRe matches a deliberate, documented suppression of one rule for
+// the whole file:
+//
+//	# webhook-scope:allow=<rule> — <reason>
+//	{{/* webhook-scope:allow=<rule> — <reason> */}}
+//
+// The reason is mandatory: a bare directive with nothing after the rule name is
+// ignored, so silencing a rule always leaves the justification next to it.
+var webhookAllowDirectiveRe = regexp.MustCompile(`webhook-scope:allow=([a-z-]+)\s+(\S.*)`)
+
+// allowedRules collects the rules a file deliberately opts out of.
+func allowedRules(content string) map[string]struct{} {
+	out := map[string]struct{}{}
+	for _, m := range webhookAllowDirectiveRe.FindAllStringSubmatch(content, -1) {
+		reason := strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(m[2]), "*/}}"))
+		if reason == "" {
+			continue
+		}
+		out[m[1]] = struct{}{}
+	}
+	return out
+}
+
 // lintWebhookContent scans a single file's content for webhook scope issues.
 func lintWebhookContent(file, content string) []webhookFinding {
 	var findings []webhookFinding
 	lines := strings.Split(content, "\n")
 	fileName := filepath.Base(file)
+	allowed := allowedRules(content)
 
 	for i, line := range lines {
 		lineNum := i + 1
@@ -172,7 +220,8 @@ func lintWebhookContent(file, content string) []webhookFinding {
 		// Catches: H2 — ReplicaSet in constraint match.kinds
 		// Only flag in constraint.yaml files (where match.kinds is defined)
 		// or _helpers.tpl (where the workload kinds block is defined).
-		if (strings.Contains(fileName, "constraint.yaml") || strings.Contains(fileName, "_helpers.tpl")) &&
+		if _, ok := allowed["replicaset-in-kinds"]; !ok &&
+			(strings.Contains(fileName, "constraint.yaml") || strings.Contains(fileName, "_helpers.tpl")) &&
 			strings.Contains(line, "ReplicaSet") {
 			findings = append(findings, webhookFinding{
 				File:    file,
@@ -185,7 +234,8 @@ func lintWebhookContent(file, content string) []webhookFinding {
 		// Rule: webhook-delete-on-controllers
 		// Catches: H2 — DELETE intercepted on controllers
 		// Only flag in validatingwebhookconfiguration.yaml
-		if strings.Contains(fileName, "validatingwebhookconfiguration") {
+		if _, ok := allowed["webhook-delete-on-controllers"]; !ok &&
+			strings.Contains(fileName, "validatingwebhookconfiguration") {
 			if strings.Contains(strings.ToLower(trimmed), "delete") {
 				findings = append(findings, webhookFinding{
 					File:    file,
@@ -200,7 +250,8 @@ func lintWebhookContent(file, content string) []webhookFinding {
 	// Rule: duplicated-kinds-block
 	// Catches: L1 — the same 6-line kinds: block pasted ~30 times
 	// Count occurrences of the workload kinds pattern across the file
-	if strings.Contains(fileName, "constraint.yaml") || strings.Contains(fileName, "_helpers.tpl") {
+	_, dupAllowed := allowed["duplicated-kinds-block"]
+	if !dupAllowed && (strings.Contains(fileName, "constraint.yaml") || strings.Contains(fileName, "_helpers.tpl")) {
 		workloadKindCount := strings.Count(content, "Deployment, StatefulSet, DaemonSet, ReplicaSet")
 		if workloadKindCount > 1 {
 			findings = append(findings, webhookFinding{

@@ -56,6 +56,7 @@ spec:
               import data.lib.common.pod_spec
               import data.lib.exception.allowed_values_or_empty
               import data.lib.exception.resolve_spe_from_labels
+              import data.lib.common.review_kind
 
               violation contains {"msg": msg, "details": {}} if {
                 not input.review.operation == "DELETE"
@@ -73,5 +74,5 @@ spec:
                   {}
                 )
                 not result.allowed
-                msg := sprintf("The volume type %v is not allowed, pod: %v. | %v", [field, obj.metadata.name, result.msg])
+                msg := sprintf("The volume type %v is not allowed, %v: %v. | %v", [field, review_kind, obj.metadata.name, result.msg])
               }

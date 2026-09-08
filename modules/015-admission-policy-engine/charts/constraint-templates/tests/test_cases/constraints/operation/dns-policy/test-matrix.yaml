@@ -138,3 +138,27 @@ spec:
                 dnsPolicy: ClusterFirst
       exception: ''
       exceptionRef: ''
+    # The message must name the kind actually under review. Before review_kind
+    # was introduced this case reported "Pod <...>" for a Deployment, sending
+    # the reader after an object that was never created.
+    - name: controller-disallowed-dns-policy-names-the-controller-kind
+      violations: 'yes'
+      assertionMessage: Deployment <controller-disallowed-dns-policy> with hostNetwork must have 'ClusterFirstWithHostNet' dnsPolicy
+      fields:
+      - path: spec.template.spec.dnsPolicy
+        scenario: negative
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-disallowed-dns-policy
+          spec:
+            template:
+              spec:
+                containers:
+                - image: nginx
+                  name: nginx
+                hostNetwork: true
+                dnsPolicy: ClusterFirst
+      exception: ''
+      exceptionRef: ''

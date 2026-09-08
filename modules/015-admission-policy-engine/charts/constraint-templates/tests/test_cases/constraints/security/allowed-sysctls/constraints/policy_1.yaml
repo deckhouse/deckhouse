@@ -9,7 +9,7 @@ spec:
       - apiGroups: [""]
         kinds: ["Pod"]
       - apiGroups: ["apps"]
-        kinds: ["Deployment", "StatefulSet", "DaemonSet", "ReplicaSet"]
+        kinds: ["Deployment", "StatefulSet", "DaemonSet"]
       - apiGroups: [""]
         kinds: ["ReplicationController"]
       - apiGroups: ["batch"]

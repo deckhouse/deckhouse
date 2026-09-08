@@ -48,24 +48,30 @@ type kindCoverageDoc struct {
 	} `yaml:"spec"`
 }
 
-// kindCoverageResult reports which required object kinds and operations are
-// covered by the test matrix, and which are missing.
+// kindCoverageResult reports which required object kinds are covered by the
+// test matrix, and which are missing.
+//
+// Admission operations are deliberately not tracked here. A gator suite case
+// carries only object, inventory and assertions — there is no way to declare
+// the review operation — so any per-operation requirement would be reported as
+// permanently unmet. A check that can never pass is worse than no check: it
+// trains readers to skip the warnings that do mean something. Operation-level
+// behaviour (for example the `is_update` guard in
+// automount-service-account-token) is covered by the OPA unit tests under
+// files/libs instead.
 type kindCoverageResult struct {
 	RequiredKinds     []string
 	CoveredKinds      []string
 	MissingKinds      []string
-	RequiredOps       []string
-	CoveredOps        []string
-	MissingOps        []string
 	NameInferredCount int
 }
 
-// computeKindCoverage reads test_fields.yaml (for required kinds/operations) and
+// computeKindCoverage reads test_fields.yaml (for required kinds) and
 // test-matrix.yaml (for actual case kinds), then cross-checks them.
 //
-// T1: Tracks kind and operation as first-class coverage dimensions.
-// Catches: C1 (no Deployment+initContainer case), H3 (no UPDATE case for
-// automount-sa-token), M3 (labelSelector mismatch on controller kinds).
+// T1: Tracks object kind as a first-class coverage dimension.
+// Catches: C1 (no Deployment+initContainer case), M3 (labelSelector mismatch on
+// controller kinds).
 //
 // T6: Counts how many cases rely on name-based scenario inference (i.e. have
 // no explicit fields[] block). Emits a warning when any case lacks fields[].
@@ -85,7 +91,6 @@ func computeKindCoverage(dir string, fields *testFieldsDoc) (*kindCoverageResult
 
 	// Collect covered kinds from case bases.
 	coveredKindSet := map[string]struct{}{}
-	nameInferred := 0
 	for _, block := range doc.Spec.Blocks {
 		blockDefault := block.DefaultObjectBase
 		if blockDefault == "" {
@@ -102,13 +107,12 @@ func computeKindCoverage(dir string, fields *testFieldsDoc) (*kindCoverageResult
 					coveredKindSet[base.Document.Kind] = struct{}{}
 				}
 			}
-			// T6: Check if the case has explicit fields[] — we can't see them
-			// in this minimal struct, so we re-parse the full matrix for this.
 		}
 	}
 
-	// Re-parse with the full matrixCoverageDoc to count name-inferred cases.
-	nameInferred = countNameInferredCases(b)
+	// T6: fields[] are not visible in the minimal struct above, so count
+	// name-inferred cases from a full parse of the same bytes.
+	nameInferred := countNameInferredCases(b)
 
 	result := &kindCoverageResult{
 		NameInferredCount: nameInferred,
@@ -131,21 +135,8 @@ func computeKindCoverage(dir string, fields *testFieldsDoc) (*kindCoverageResult
 		}
 	}
 
-	// T1: Required operations — currently we can't extract per-case operations
-	// from the matrix (the schema doesn't have an operation field yet), but we
-	// report what the test_fields.yaml declares as required so the coverage
-	// report can surface the gap.
-	if fields != nil && len(fields.Spec.Operations) > 0 {
-		result.RequiredOps = fields.Spec.Operations
-		// Without per-case operation data, all required ops are "missing"
-		// until the matrix schema gains an operation field.
-		result.MissingOps = append(result.MissingOps, fields.Spec.Operations...)
-	}
-
 	sort.Strings(result.CoveredKinds)
 	sort.Strings(result.MissingKinds)
-	sort.Strings(result.CoveredOps)
-	sort.Strings(result.MissingOps)
 
 	return result, nil
 }
@@ -180,9 +171,6 @@ func kindCoverageWarnings(r *kindCoverageResult) []string {
 	var warns []string
 	for _, k := range r.MissingKinds {
 		warns = append(warns, fmt.Sprintf("missing test case for required object kind %q (declared in test_fields.yaml spec.objectKinds)", k))
-	}
-	for _, op := range r.MissingOps {
-		warns = append(warns, fmt.Sprintf("missing test case for required admission operation %q (declared in test_fields.yaml spec.operations; matrix schema needs per-case operation field)", op))
 	}
 	// T6: Warn when cases rely on name-based inference.
 	if r.NameInferredCount > 0 {

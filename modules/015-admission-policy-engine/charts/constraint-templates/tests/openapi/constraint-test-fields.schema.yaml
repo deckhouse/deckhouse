@@ -62,18 +62,6 @@ properties:
           type: string
           minLength: 1
         uniqueItems: true
-      operations:
-        type: array
-        description: |
-          Required admission operations that must be covered by test cases
-          (CREATE, UPDATE, DELETE). The coverage tool reports missing
-          operations until the test-matrix schema gains per-case operation
-          fields. This catches the H3 class of bug (is_update guard skips
-          controller-level UPDATE checks).
-        items:
-          type: string
-          enum: [CREATE, UPDATE, DELETE]
-        uniqueItems: true
       applicableTracks:
         type: object
         description: Enabled test tracks. At least one track must be explicitly true.

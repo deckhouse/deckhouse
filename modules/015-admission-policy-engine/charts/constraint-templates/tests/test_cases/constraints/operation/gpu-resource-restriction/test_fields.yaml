@@ -8,9 +8,6 @@ spec:
     - Pod
     - Deployment
     - CronJob
-  operations:
-    - CREATE
-    - UPDATE
   objectFields:
     - path: spec.containers[].resources
       level: container

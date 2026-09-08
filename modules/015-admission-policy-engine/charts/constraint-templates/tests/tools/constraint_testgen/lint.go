@@ -64,6 +64,34 @@ var notObjectGetEmptyRe = regexp.MustCompile(
 	`not\s+.*object\.get\([^,]+,\s*"[^"]+"\s*,\s*""\s*\)`,
 )
 
+// allowDirectiveRe matches a deliberate opt-out of one lint rule, written as a
+// Rego comment on the line directly above the code it covers:
+//
+//	# lint:allow=object-get-empty-default — the "" default is rejected below
+//	name := object.get(input.review, "namespace", "")
+//
+// The reason after the rule name is mandatory, so an opt-out always states why
+// the pattern is safe here. Scoping the directive to a single line keeps it from
+// silently covering code added later in the same file.
+var lintAllowDirectiveRe = regexp.MustCompile(`lint:allow=([a-z-]+)\s+(\S.*)`)
+
+// isRuleAllowedAt reports whether the line above lines[i] opts out of rule.
+// Consecutive comment lines are walked upwards, so a directive may sit above a
+// longer explanatory comment.
+func isRuleAllowedAt(lines []string, i int, rule string) bool {
+	for j := i - 1; j >= 0; j-- {
+		trimmed := strings.TrimSpace(lines[j])
+		if !strings.HasPrefix(trimmed, "#") {
+			return false
+		}
+		m := lintAllowDirectiveRe.FindStringSubmatch(trimmed)
+		if m != nil && m[1] == rule && strings.TrimSpace(m[2]) != "" {
+			return true
+		}
+	}
+	return false
+}
+
 // runLint scans ConstraintTemplate Rego source files under templatesRoot for
 // known anti-patterns that have caused review regressions.
 func runLint(templatesRoot string) error {
@@ -138,42 +166,19 @@ func lintContent(file, content string) []lintFinding {
 		// Rule: object-get-empty-default
 		// Catches: C2 (priority-class), C3 (image-pull-policy)
 		// Pattern: object.get(x, "field", "") used in a violation-trigger context.
-		// We suppress false positives where the result is used to build response
-		// objects, retrieve data for display, or is already guarded by a has_field
-		// or != "" check on the same line.
 		if loc := objectGetEmptyDefaultRe.FindStringIndex(line); loc != nil {
-			// Skip if the line is building a map/object (response construction),
-			// not a violation condition.
-			if strings.Contains(line, "\"errors\"") ||
-				strings.Contains(line, "\"system_error\"") ||
-				strings.Contains(line, "\"responses\"") {
-				continue
-			}
-			// Skip if the result is immediately checked for non-emptiness
-			// (e.g. `img != ""` on the same or next line means absence is handled).
+			// The empty default is fine when the very next line rejects "" — the
+			// absent case is then handled explicitly rather than turned into a
+			// concrete value that feeds a comparison.
 			if i+1 < len(lines) && strings.Contains(lines[i+1], "!=") && strings.Contains(lines[i+1], `""`) {
 				continue
 			}
-			// Skip data retrieval patterns like object.get(c, "image", "")
-			// followed by img != "" — the empty default is intentional for filtering.
-			if strings.Contains(line, `"image"`) && strings.Contains(line, `object.get(c`) {
-				continue
-			}
-			// Skip if the line retrieves heritage/heritage label or operation field
-			// — these are intentional "check if field exists" patterns.
-			if strings.Contains(line, `"heritage"`) || strings.Contains(line, `"operation"`) {
-				continue
-			}
-			// Skip subresource resolution patterns.
-			if strings.Contains(line, `"subResource"`) || strings.Contains(line, `"requestSubResource"`) {
-				continue
-			}
-			// Skip dnsPolicy check — absent dnsPolicy + hostNetwork is a real violation.
-			if strings.Contains(line, `"dnsPolicy"`) {
-				continue
-			}
-			// Skip vulnerability ID retrieval.
-			if strings.Contains(line, `"id"`) && strings.Contains(line, `object.get(vuln`) {
+			// Anything else must carry an explicit, justified opt-out on the
+			// preceding line. Matching on field names ("image", "dnsPolicy", …)
+			// instead would tie the linter to identifiers it has no business
+			// knowing: renaming a variable silently changes what is checked, and
+			// a genuinely new bug next to a blessed field name is swallowed.
+			if isRuleAllowedAt(lines, i, "object-get-empty-default") {
 				continue
 			}
 			findings = append(findings, lintFinding{
@@ -186,7 +191,7 @@ func lintContent(file, content string) []lintFinding {
 
 		// Rule: list-contains-empty
 		// Catches: C2 (priority-class) — list_contains(["foo"], "") is the direct trigger
-		if loc := listContainsEmptyRe.FindStringIndex(line); loc != nil {
+		if loc := listContainsEmptyRe.FindStringIndex(line); loc != nil && !isRuleAllowedAt(lines, i, "list-contains-empty") {
 			findings = append(findings, lintFinding{
 				File:    file,
 				Line:    lineNum,
@@ -197,7 +202,7 @@ func lintContent(file, content string) []lintFinding {
 
 		// Rule: not-object-get-empty
 		// Catches: C2, C3 — the `not` + object.get(..., "") combination
-		if loc := notObjectGetEmptyRe.FindStringIndex(line); loc != nil {
+		if loc := notObjectGetEmptyRe.FindStringIndex(line); loc != nil && !isRuleAllowedAt(lines, i, "not-object-get-empty") {
 			findings = append(findings, lintFinding{
 				File:    file,
 				Line:    lineNum,

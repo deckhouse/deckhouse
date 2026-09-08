@@ -33,13 +33,23 @@ Policies validate pod-creating controllers at CREATE and UPDATE time. This provi
 
 The following objects are validated:
 
-| API group | Resource kind                      | Operations     |
-| --------- | ---------------------------------- | -------------- |
-| (core)    | Pod                                | CREATE, UPDATE |
-| apps      | Deployment, StatefulSet, DaemonSet | CREATE, UPDATE |
-| (core)    | ReplicationController              | CREATE, UPDATE |
-| batch     | Job, CronJob                       | CREATE, UPDATE |
-| (core)    | pods/exec, pods/attach             | CONNECT        |
+| API group | Resource kind                      | Operations             |
+| --------- | ---------------------------------- | ---------------------- |
+| (core)    | Pod                                | CREATE, UPDATE, DELETE |
+| apps      | Deployment, StatefulSet, DaemonSet | CREATE, UPDATE, DELETE |
+| (core)    | ReplicationController              | CREATE, UPDATE, DELETE |
+| batch     | Job, CronJob                       | CREATE, UPDATE, DELETE |
+| (core)    | pods/exec, pods/attach             | CONNECT                |
+
+`DELETE` is intercepted so that a policy can forbid deleting a resource:
+a rule that inspects `input.review.operation` only runs if the request reaches Gatekeeper.
+
+{% alert level="warning" %}
+The webhook uses `failurePolicy: Fail`.
+While Gatekeeper is unavailable, both creating and deleting the resource kinds listed above is blocked.
+To restore operations, bring the `gatekeeper-controller-manager` deployment back up
+or remove the `d8-admission-policy-engine-config` ValidatingWebhookConfiguration.
+{% endalert %}
 
 {% alert level="warning" %}
 Controller-level checks run against the **original pod template** (`spec.template`), not against the manifest that results from all mutations.
@@ -57,6 +67,13 @@ As a result, a selector that matches the pods a controller creates does not by i
 and an exclusion selector (`NotIn`/`DoesNotExist`) that excludes those pods may not take effect at the controller level.
 In both cases the controller itself must be matched by the `labelSelector`.
 
+This also applies to the `security.deckhouse.io/skip-pss-check` label, which excludes an object from the Pod Security Standards constraints.
+The label is read from the reviewed object's own `metadata.labels`, so a workload that carries it only on the pod template
+(`spec.template.metadata.labels`) is exempt at the Pod level but still checked at the controller level.
+To exempt such a workload completely, set the label on the controller's top-level `metadata.labels` as well.
+Unlike SecurityPolicyException, this cannot be resolved from the pod template: the exclusion is evaluated by Gatekeeper's `match.labelSelector`,
+before any policy code runs.
+
 ### SecurityPolicyException label resolution for controllers
 
 For controller kinds, SecurityPolicyException (SPE) labels and annotations are taken from the **pod template's metadata** (`spec.template.metadata`), not from the controller's top-level metadata. This ensures SPEs apply to the pods the controller creates, not to the controller object itself.
@@ -64,6 +81,8 @@ For controller kinds, SecurityPolicyException (SPE) labels and annotations are t
 ### Disabling controller-level validation
 
 Controller-level validation can be disabled using the [`controllerValidation`](configuration.html#parameters-podsecuritystandards-controllervalidation) parameter in the module settings.
+Despite living in the `podSecurityStandards` section, the parameter applies to every constraint that reads a pod spec,
+including the ones generated from OperationPolicy and SecurityPolicy resources.
 
 When `controllerValidation: false`, constraints are applied only to Pods. In this case:
 
@@ -71,19 +90,27 @@ When `controllerValidation: false`, constraints are applied only to Pods. In thi
 - SecurityPolicyException labels on `spec.template.metadata.labels` of controllers are not resolved, since constraints are not applied to controllers;
 - Pods are still validated at launch time, as they are when `true` is set.
 
-### Lenient mode for fields injected by Kubernetes
+### Lenient mode for fields that may be filled in before the pod is created
 
-When controller-level validation is enabled, some constraints use a **lenient mode** for fields that Kubernetes admission controllers (LimitRange, PodSecurity, ServiceAccount admission) may inject at Pod creation time. This prevents false positives where a controller's pod template lacks a field that would be added automatically before the Pod is created.
+Some constraints use a **lenient mode** for fields that may be absent from a controller's pod template and still be present on the Pod the controller creates. This prevents denying a workload whose pods would in fact be compliant.
 
-The following constraints skip violations for absent fields when reviewing controllers (but still enforce violations when fields are **explicitly set** to disallowed values):
+The following constraints skip violations for absent fields when reviewing controllers, while still enforcing them when a field is **explicitly set** to a disallowed value. The decision is made per container: a container that omits the field is treated leniently even if another container in the same pod template sets it.
 
-| Constraint | Skipped fields (when absent on controllers) | Kubernetes component |
+| Constraint | Skipped fields (when absent on controllers) | What may fill the field in |
 |---|---|---|
-| `D8RequiredResources` | `container.resources` (when completely absent) | LimitRange |
-| `D8AllowedUsers` | `runAsUser`, `runAsGroup`, `fsGroup`, `supplementalGroups` (with `MustRunAs` / `MustRunAsNonRoot`) | PodSecurity admission |
-| `D8AllowedSeccompProfiles` | `seccompProfile.type` (when not set in any source) | PodSecurity admission |
+| `D8RequiredResources` | `container.resources` (when neither `limits` nor `requests` is set) | LimitRange |
+| `D8AllowedUsers` | `runAsUser`, `runAsGroup`, `fsGroup`, `supplementalGroups` (with `MustRunAs` / `MustRunAsNonRoot`) | A mutating webhook, including a Gatekeeper `Assign` mutator |
+| `D8AllowedSeccompProfiles` | `seccompProfile.type` (when not set in any source) | A mutating webhook, including a Gatekeeper `Assign` mutator |
 
-For example, a Deployment without `resources` in its pod template will **not** be denied by `D8RequiredResources`, because a LimitRange in the namespace may inject default `requests` and `limits`. However, if `resources` is partially set (e.g., only `limits.memory` but not `limits.cpu`), the violation is still enforced.
+For example, a Deployment without `resources` in its pod template is **not** denied by `D8RequiredResources`, because a LimitRange in the namespace may add default `requests` and `limits`. If `resources` is set partially (for example, only `limits.memory` but not `limits.cpu`), the violation is still enforced.
+
+Only `D8RequiredResources` relies on an in-tree component. For the other two, a cluster without a matching mutator gets no controller-level enforcement of these fields, and the violation surfaces at Pod creation instead. Pod Security Admission is not one of the sources listed above: it only validates and never modifies an object.
+
+### Constraints with limited controller-level coverage
+
+Some checks depend on data that only exists after mutation, so they cannot deny a controller even though they deny its pods.
+
+`D8AutomountServiceAccountToken` detects the token mount either from `spec.automountServiceAccountToken: true` or from a container that mounts `/var/run/secrets/kubernetes.io/serviceaccount`. The ServiceAccount admission plugin adds that mount to the Pod, not to the controller's pod template. A workload that simply omits `automountServiceAccountToken` therefore passes the controller-level check, and the denial appears when its pods are created. To get the denial at the controller level, set `automountServiceAccountToken: false` explicitly in the pod template.
 
 ## Pod validation when policies are modified or new ones are added
 

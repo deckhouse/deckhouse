@@ -7,9 +7,6 @@ spec:
   objectKinds:
     - Pod
     - Deployment
-  operations:
-    - CREATE
-    - UPDATE
   objectFields:
     - path: spec.priorityClassName
       level: pod

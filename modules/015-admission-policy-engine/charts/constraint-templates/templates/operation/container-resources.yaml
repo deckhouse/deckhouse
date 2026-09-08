@@ -84,11 +84,13 @@ spec:
                 msg := sprintf("container <%v> does not have <%v> requests defined", [container.name, missing])
               }
 
-              # Returns true when the current review object is a controller
-              # (Deployment, StatefulSet, etc.) and the container has no
-              # resources defined at all. In this case, LimitRange admission
-              # may inject resources at Pod creation time, so we skip the
-              # violation to avoid false positives on controllers.
+              # Lenient mode for controllers: true when the object under review
+              # is a controller and this container declares no resources at all.
+              # LimitRange really does mutate a Pod on creation and fill in
+              # default requests/limits, so denying the controller here would
+              # reject workloads whose Pods end up compliant. Unlike the seccomp
+              # and runAsUser cases, this one is backed by an in-tree admission
+              # plugin rather than by an optional mutating webhook.
               #
               # `not container.resources` looks right but is never true against
               # a real apiserver: corev1.Container.Resources is a plain struct

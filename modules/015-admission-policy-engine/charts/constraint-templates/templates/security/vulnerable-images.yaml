@@ -69,6 +69,7 @@ spec:
 
                 response := {
                   "errors": object.get(provider_data, "errors", []),
+                  # lint:allow=object-get-empty-default — this builds the provider response, not a violation condition; callers test count(system_error) > 0.
                   "system_error": object.get(provider_data, "system_error", ""),
                   "responses": responses,
                 }

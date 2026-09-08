@@ -29,20 +29,21 @@ spec:
               package d8.operation_policies
 
               import data.lib.common.pod_spec
+              import data.lib.common.review_kind
 
               violation contains {"msg": msg} if {
                 not input.review.operation == "DELETE"
                 container := input_containers_envs[_]
                 cdata := container.envs[_]
                 count(cdata) > 1
-                msg := sprintf("Container <%v> in pod <%v> has duplicated env variable names: '%v'", [container.name, input.review.object.metadata.name, cdata[0]])
+                msg := sprintf("Container <%v> in %v <%v> has duplicated env variable names: '%v'", [container.name, review_kind, input.review.object.metadata.name, cdata[0]])
               }
 
               violation contains {"msg": msg} if {
                 not input.review.operation == "DELETE"
                 cdata := input_containers[_]
                 count(cdata) > 1
-                msg := sprintf("Pod <%v> has duplicated container names: '%v'", [input.review.object.metadata.name, cdata[0]])
+                msg := sprintf("%v <%v> has duplicated container names: '%v'", [review_kind, input.review.object.metadata.name, cdata[0]])
               }
 
               container_names := {name: list |

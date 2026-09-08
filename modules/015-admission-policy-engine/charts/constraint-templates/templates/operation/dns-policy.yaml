@@ -28,16 +28,18 @@ spec:
               package d8.operation_policies
 
               import data.lib.common.pod_spec
+              import data.lib.common.review_kind
 
               violation contains {"msg": msg} if {
                 not input.review.operation == "DELETE"
                 hostNetwork := object.get(pod_spec, "hostNetwork", false)
                 hostNetwork == true
+                # lint:allow=object-get-empty-default — an absent dnsPolicy together with hostNetwork: true is itself the violation, so "" must reach the comparison below.
                 dnsPolicy := object.get(pod_spec, "dnsPolicy", "")
                 dnsPolicy != "ClusterFirstWithHostNet"
                 msg := get_message(input.review.object.metadata.name)
               }
 
               get_message(name) := message if {
-                message := sprintf("Pod <%v> with hostNetwork must have 'ClusterFirstWithHostNet' dnsPolicy", [name])
+                message := sprintf("%v <%v> with hostNetwork must have 'ClusterFirstWithHostNet' dnsPolicy", [review_kind, name])
               }

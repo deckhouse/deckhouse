@@ -37,6 +37,7 @@ spec:
 
               import data.lib.common.pod_spec
               import data.lib.common.has_field
+              import data.lib.common.review_kind
 
               violation contains {"msg": msg} if {
                 not input.review.operation == "DELETE"
@@ -46,7 +47,7 @@ spec:
                 has_field(pod_spec, "priorityClassName")
                 priority_class := pod_spec.priorityClassName
                 not list_contains(input.parameters.priorityClassNames, priority_class)
-                msg := sprintf("Pod <%v> has invalid priority class: %v, allowed: %v", [input.review.object.metadata.name, priority_class, input.parameters.priorityClassNames])
+                msg := sprintf("%v <%v> has invalid priority class: %v, allowed: %v", [review_kind, input.review.object.metadata.name, priority_class, input.parameters.priorityClassNames])
               }
 
               list_contains(list, elem) if {

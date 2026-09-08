@@ -148,12 +148,20 @@ spec:
                 msg := violation_message("Seccomp profile is not allowed", sprintf("container: %v", [container.name]), result.detail)
               }
 
-              # Returns true when the current review object is a controller
-              # (Deployment, StatefulSet, etc.) and no seccomp profile is set
-              # in any source (container field, pod field, or annotation).
-              # PodSecurity admission may default seccompProfile.type to
-              # RuntimeDefault at Pod creation, so we skip to avoid false
-              # positives on controllers.
+              # Lenient mode for controllers: true when the object under review
+              # is a controller and this container resolves no seccomp profile
+              # from any source (container field, pod field, or annotation).
+              #
+              # A controller is reviewed before any mutation, so an unset profile
+              # may still be filled in on the Pod the controller creates. The
+              # sources that do that are a Gatekeeper `Assign` mutator matching
+              # Pods and any third-party mutating webhook. PodSecurity admission
+              # is not one of them: it only validates and never mutates. The
+              # kubelet `seccompDefault` option is not one either — it applies at
+              # container start and never appears in the Pod spec.
+              #
+              # `profile` is resolved per container above, so the decision is per
+              # container rather than for the template as a whole.
               controller_seccomp_absent(profile) if {
                 is_controller
                 profile == ""

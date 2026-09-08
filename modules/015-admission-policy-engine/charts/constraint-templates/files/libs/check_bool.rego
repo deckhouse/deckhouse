@@ -71,6 +71,12 @@ bool_violation_msg(field_name, actual, expected, true, spe_allowed) := out if {
 # field_path is relative to the object, e.g. ["spec", "hostNetwork"]. It is
 # resolved against the object normalized to a pod-like shape, so a controller's
 # pod template is read instead of the controller's own spec.
+#
+# Not currently referenced by any shipped ConstraintTemplate — the templates
+# resolve pod-level fields through lib.common.pod_spec directly. Kept for
+# handwritten constraints, and kept in step with
+# lib.check_set.check_pod_value_in_set so wiring either one up cannot silently
+# read the wrong spec.
 check_pod_bool(obj, field_path, field_name, expected, default_val, spe_path) := result if {
   actual := get_field(normalized_pod_object(obj), field_path, default_val)
   actual == expected

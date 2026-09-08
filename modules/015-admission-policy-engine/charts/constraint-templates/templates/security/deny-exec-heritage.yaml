@@ -31,19 +31,23 @@ spec:
               }
 
               is_connect if {
+                # lint:allow=object-get-empty-default — the value is compared against a literal, so an absent operation stays distinguishable instead of matching.
                 object.get(input.review, "operation", "") == "CREATE"
               }
 
               is_connect if {
+                # lint:allow=object-get-empty-default — "" is the value being tested for: a review without an operation is treated as CONNECT.
                 object.get(input.review, "operation", "") == ""
               }
 
               subresource_is(sub) if {
+                # lint:allow=object-get-empty-default — a request with no subresource must yield "" so the checks below can tell it apart from exec/attach.
                 sr := object.get(input.review, "requestSubResource", object.get(input.review, "subResource", ""))
                 sr == sub
               }
 
               subresource_is(sub) if {
+                # lint:allow=object-get-empty-default — a request with no subresource must yield "" so the checks below can tell it apart from exec/attach.
                 sr := object.get(input.review, "requestSubResource", object.get(input.review, "subResource", ""))
                 endswith(sr, sprintf("/%v", [sub]))
               }
@@ -63,6 +67,7 @@ spec:
 
               connect_to_pod_exec_or_attach if {
                 is_connect
+                # lint:allow=object-get-empty-default — "" is the value being tested for: a CONNECT without a subresource.
                 object.get(input.review, "requestSubResource", object.get(input.review, "subResource", "")) == ""
               }
 
@@ -112,6 +117,7 @@ spec:
                 namespace := input.review.namespace
                 podName := input.review.name
                 pod := data.inventory.namespace[namespace]["v1"].Pod[podName]
+                # lint:allow=object-get-empty-default — a pod without the label must yield "", which never equals "deckhouse" and so never marks the pod as ours.
                 label := object.get(pod.metadata.labels, "heritage", "")
               }
 

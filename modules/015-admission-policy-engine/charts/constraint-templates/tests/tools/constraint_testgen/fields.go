@@ -32,7 +32,6 @@ type testFieldsDoc struct {
 		ObjectFields     []testFieldSpec `yaml:"objectFields"`
 		SpeFields        []testFieldSpec `yaml:"speFields"`
 		ObjectKinds      []string        `yaml:"objectKinds"`
-		Operations       []string        `yaml:"operations"`
 		ApplicableTracks struct {
 			Functional   *bool `yaml:"functional"`
 			SpePod       *bool `yaml:"spePod"`

@@ -65,6 +65,7 @@ spec:
               import data.lib.common.object_namespace
               import data.lib.exception.allowed_values_or_empty
               import data.lib.exception.resolve_spe_from_labels
+              import data.lib.common.review_kind
 
               violation contains {"msg": msg, "details": {}} if {
                   not input.review.operation == "DELETE"
@@ -89,5 +90,5 @@ spec:
                     {}
                   )
                   not result.allowed
-                  msg := sprintf("The sysctl is not allowed, pod: %v. | %v", [input.review.object.metadata.name, result.msg])
+                  msg := sprintf("The sysctl is not allowed, %v: %v. | %v", [review_kind, input.review.object.metadata.name, result.msg])
               }
