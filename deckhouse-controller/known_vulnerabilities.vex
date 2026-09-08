@@ -2,7 +2,7 @@
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "https://openvex.dev/docs/public/vex-5a4509a04e8128126aee080324a6b663a7748bf44b58a9a4b9c74d4801844f53",
   "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 23,
+  "version": 24,
   "statements": [
     {
       "vulnerability": {
@@ -436,12 +436,18 @@
           "@id": "pkg:golang/golang.org/x/crypto@v0.45.0"
         },
         {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.53.0"
+        },
+        {
           "@id": "pkg:golang/golang.org/x/crypto@v0.54.0"
+        },
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
-      "impact_statement": "Пакет golang.org/x/crypto/openpgp признан неподдерживаемым, исправленной версии не существует. В deckhouse-controller он попадает только через helm.sh/helm/v3/pkg/provenance и github.com/werf/3p-helm/pkg/provenance. Проверка провенанс-подписей Helm-чартов не выполняется, код не в пути выполнения.",
+      "impact_statement": "Пакет golang.org/x/crypto/openpgp признан неподдерживаемым, исправленной версии не существует. В бинарнике deckhouse-controller (v0.45.0, v0.54.0) модуль приходит только через helm.sh/helm/v3/pkg/provenance и github.com/werf/3p-helm/pkg/provenance, проверка провенанс-подписей Helm-чартов не выполняется. Версии v0.53.0 и v0.55.0 приходят из бинарников хуков модулей, вложенных в образ, где golang.org/x/crypto тянется транзитивно через github.com/deckhouse/module-sdk -> github.com/cloudflare/cfssl и даёт только пакеты cryptobyte, ed25519, ocsp и pkcs12. Пакет openpgp не импортируется ни в один из бинарников, Trivy размечает модуль целиком по buildinfo.",
       "timestamp": "2026-08-27T12:00:00Z"
     },
     {
@@ -821,8 +827,78 @@
       "justification": "vulnerable_code_not_present",
       "impact_statement": "Модуль golang.org/x/image приходит транзитивно через github.com/flant/addon-operator -> github.com/goccy/go-graphviz. Из модуля используются только декодеры bmp и tiff и парсер шрифтов sfnt. Уязвимость находится в golang.org/x/image/vp8l, который не импортируется и в бинарь не попадает.",
       "timestamp": "2026-09-01T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-33812"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/image@v0.38.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_cannot_be_controlled_by_adversary",
+      "impact_statement": "Модуль golang.org/x/image приходит транзитивно через github.com/flant/addon-operator -> github.com/goccy/go-graphviz. Парсер golang.org/x/image/font/sfnt вызывается при отрисовке подписей графа зависимостей модулей, но разбирает только вкомпилированные в бинарь шрифты golang.org/x/image/font/gofont/goregular и golang.org/x/image/font/basicfont; загрузка внешних шрифтов не предусмотрена. Содержимое шрифта не контролируется извне, поэтому уязвимость не эксплуатируема.",
+      "timestamp": "2026-09-07T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-42500"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/image@v0.38.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Модуль golang.org/x/image приходит транзитивно через github.com/flant/addon-operator -> github.com/goccy/go-graphviz. Уязвимость в golang.org/x/image/bmp достигается только при декодировании изображения, подключённого к графу атрибутом image=; DOT-описание формируется самим addon-operator из графа зависимостей модулей и внешних изображений не содержит. Отрисовка доступна только через debug-сервер addon-operator на unix-сокете внутри пода, функция bmp.Decode на недоверенных данных не вызывается.",
+      "timestamp": "2026-09-07T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46599"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/image@v0.38.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Модуль golang.org/x/image приходит транзитивно через github.com/flant/addon-operator -> github.com/goccy/go-graphviz. Уязвимость в golang.org/x/image/tiff достигается только при декодировании изображения, подключённого к графу атрибутом image=; DOT-описание формируется самим addon-operator из графа зависимостей модулей и внешних изображений не содержит. Отрисовка доступна только через debug-сервер addon-operator на unix-сокете внутри пода, функция tiff.Decode на недоверенных данных не вызывается.",
+      "timestamp": "2026-09-07T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46602"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/image@v0.38.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Модуль golang.org/x/image приходит транзитивно через github.com/flant/addon-operator -> github.com/goccy/go-graphviz. Уязвимость в golang.org/x/image/tiff достигается только при декодировании изображения, подключённого к графу атрибутом image=; DOT-описание формируется самим addon-operator из графа зависимостей модулей и внешних изображений не содержит. Отрисовка доступна только через debug-сервер addon-operator на unix-сокете внутри пода, функция tiff.Decode на недоверенных данных не вызывается.",
+      "timestamp": "2026-09-07T12:00:00Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-46604"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/image@v0.38.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Модуль golang.org/x/image приходит транзитивно через github.com/flant/addon-operator -> github.com/goccy/go-graphviz. Уязвимость в golang.org/x/image/tiff достигается только при декодировании изображения, подключённого к графу атрибутом image=; DOT-описание формируется самим addon-operator из графа зависимостей модулей и внешних изображений не содержит. Отрисовка доступна только через debug-сервер addon-operator на unix-сокете внутри пода, функция tiff.Decode на недоверенных данных не вызывается.",
+      "timestamp": "2026-09-07T12:00:00Z"
     }
   ],
   "timestamp": "2026-03-05T12:00:00Z",
-  "last_updated": "2026-09-01T12:00:00Z"
+  "last_updated": "2026-09-07T12:00:00Z"
 }
