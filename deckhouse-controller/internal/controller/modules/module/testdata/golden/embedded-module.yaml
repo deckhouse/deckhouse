@@ -19,13 +19,13 @@ status:
     status: "True"
     type: Enabled
   - lastTransitionTime: null
-    message: turned off by bundle
-    reason: Bundle
+    message: installing
+    reason: Installing
     status: "False"
     type: Ready
   lastAppliedConfiguration: null
   summary:
-    state: Updating
+    state: Pending
   tracking: null
 ---
 apiVersion: deckhouse.io/v1alpha1

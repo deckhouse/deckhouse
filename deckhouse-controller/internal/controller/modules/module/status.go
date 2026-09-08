@@ -27,6 +27,7 @@ import (
 	scriptextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/script_enabled"
 	staticextender "github.com/flant/addon-operator/pkg/module_manager/scheduler/extenders/static"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -70,7 +71,15 @@ func (r *reconciler) refreshModule(ctx context.Context, moduleName string) error
 	return nil
 }
 
-// refreshModuleStatus refreshes module status by addon-operator
+// refreshModuleStatus refreshes the Module status from addon-operator's live
+// view of the module. The result is expressed in the v1alpha2 status model:
+// the Enabled and Ready conditions and the high-level Summary.State, one of
+// Pending, Failed, Updating, Ready, Degraded or Suspended.
+//
+// The runtime conditions the package status service owns (Installed, Scaled,
+// Managed, ...) are deliberately left untouched here — this controller only
+// reflects what addon-operator can tell it: whether the scheduler runs the
+// module and whether its hooks and run succeeded.
 func (r *reconciler) refreshModuleStatus(module *v1alpha2.Module) {
 	basicModule := r.moduleManager.GetModule(module.Name)
 	if basicModule == nil {
@@ -81,139 +90,150 @@ func (r *reconciler) refreshModuleStatus(module *v1alpha2.Module) {
 		module.Status.Summary = &v1alpha2.ModuleStatusSummary{}
 	}
 
+	// Remember whether the module was already running before this refresh. It is
+	// the only signal that separates a first install from a reconcile of a working
+	// version, and a scheduler switch-off of a running module from a module that
+	// never started.
+	wasReady := module.IsCondition(status.ConditionReady, metav1.ConditionTrue)
+
 	if r.moduleManager.IsModuleEnabled(module.Name) {
-		module.SetConditionTrue(status.ConditionEnabled)
-
-		if hookErr := basicModule.GetLastHookError(); hookErr != nil {
-			module.Status.Summary.State = status.StateFailed
-			module.SetConditionFalse(status.ConditionReady, "HookFailed", hookErr.Error())
-			return
-		}
-
-		if moduleError := basicModule.GetModuleError(); moduleError != nil {
-			module.Status.Summary.State = status.StateFailed
-			module.SetConditionFalse(status.ConditionReady, "LoadFromFilesystemFailed", moduleError.Error())
-			return
-		}
-
-		switch basicModule.GetPhase() {
-		// Best effort alarm!
-		//
-		// Actually, this condition is not correct because the `CanRunHelm` status appears right before the first run.c
-		// The right approach is to check the queue for the module run task.
-		// However, there are too many addon-operator internals involved.
-		// We should consider moving these statuses to the `Module` resource,
-		// which is directly controlled by addon-operator.
-		case modules.Ready:
-			if !basicModule.HasReadiness() {
-				module.Status.Summary.State = status.StateReady
-				module.SetConditionTrue(status.ConditionReady)
-			}
-
-		case modules.Startup:
-			if module.Status.Summary.State == status.StateUpdating {
-				module.Status.Summary.State = status.StateDegraded
-				module.SetConditionFalse(status.ConditionReady, "Pending", "installing")
-			} else {
-				module.Status.Summary.State = status.StateDegraded
-				module.SetConditionFalse(status.ConditionReady, "Reconciling", "reconciling")
-			}
-
-		case modules.OnStartupDone:
-			if module.Status.Summary.State != status.StateUpdating {
-				module.SetConditionFalse(status.ConditionReady, v1alpha1.ModuleReasonReconciling, v1alpha1.ModuleMessageOnStartupHook)
-			} else {
-				module.SetConditionFalse(status.ConditionReady, v1alpha1.ModuleReasonInstalling, v1alpha1.ModuleMessageOnStartupHook)
-			}
-		}
-
+		r.refreshEnabledModuleStatus(module, basicModule, wasReady)
 		return
 	}
 
-	updatedBy, updatedByErr := r.moduleManager.GetUpdatedByExtender(module.Name)
-	if updatedByErr != nil {
-		module.Status.Summary.State = status.StateFailed
-		module.SetConditionFalse(status.ConditionEnabled, v1alpha1.ModuleReasonError, updatedByErr.Error())
-		module.SetConditionFalse(status.ConditionReady, v1alpha1.ModuleReasonError, updatedByErr.Error())
+	r.refreshDisabledModuleStatus(module, basicModule, wasReady)
+}
+
+// refreshEnabledModuleStatus reflects the state of a module the scheduler runs.
+func (r *reconciler) refreshEnabledModuleStatus(module *v1alpha2.Module, basicModule *modules.BasicModule, wasReady bool) {
+	module.SetConditionTrue(status.ConditionEnabled)
+
+	// A module or hook failure means the module is not working. On a first install
+	// there is no previous version to fall back on (Failed); on a running module
+	// the previous run still stands but has become unhealthy (Degraded).
+	brokenState := status.StateFailed
+	if wasReady {
+		brokenState = status.StateDegraded
+	}
+
+	if moduleErr := basicModule.GetModuleError(); moduleErr != nil {
+		module.Status.Summary.State = brokenState
+		module.SetConditionFalse(status.ConditionReady, v1alpha1.ModuleReasonModuleError, moduleErr.Error())
 		return
 	}
 
-	var reason string
-	var message string
-
-	switch extenders.ExtenderName(updatedBy) {
-	case "", staticextender.Name:
-		reason = v1alpha1.ModuleReasonBundle
-		message = v1alpha1.ModuleMessageBundle
-		if !module.IsEmbedded() {
-			reason = v1alpha1.ModuleReasonDisabled
-			message = v1alpha1.ModuleMessageDisabled
-		}
-
-	case kubeconfigextender.Name:
-		reason = v1alpha1.ModuleReasonModuleConfig
-		message = v1alpha1.ModuleMessageModuleConfig
-
-	case dynamicextender.Name:
-		reason = v1alpha1.ModuleReasonDynamicGlobalHookExtender
-		message = v1alpha1.ModuleMessageDynamicGlobalHookExtender
-
-	case scriptextender.Name:
-		reason = v1alpha1.ModuleReasonEnabledScriptExtender
-		message = v1alpha1.ModuleMessageEnabledScriptExtender
-		if txt := basicModule.GetEnabledScriptReason(); txt != nil && *txt != "" {
-			message += ": " + *txt
-		}
-	case d7sversionextender.Name:
-		reason = v1alpha1.ModuleReasonDeckhouseVersionExtender
-		_, errMsg := r.exts.GetDeckhouseVersion().Filter(module.Name, map[string]string{})
-		message = v1alpha1.ModuleMessageDeckhouseVersionExtender
-		if errMsg != nil {
-			message += ": " + errMsg.Error()
-		}
-
-	case editionavailablextender.Name:
-		module.Status.Summary.State = status.StateFailed
-		reason = v1alpha1.ModuleReasonEditionAvailableExtender
-		_, errMsg := r.exts.GetEditionAvailable().Filter(module.Name, map[string]string{})
-		if errMsg != nil {
-			message = errMsg.Error()
-		}
-
-	case editionenabledextender.Name:
-		module.Status.Summary.State = status.StateUpdating
-		reason = v1alpha1.ModuleReasonEditionEnabledExtender
-		_, errMsg := r.exts.GetEditionEnabled().Filter(module.Name, map[string]string{})
-		if errMsg != nil {
-			message = errMsg.Error()
-		}
-
-	case k8sversionextender.Name:
-		reason = v1alpha1.ModuleReasonKubernetesVersionExtender
-		_, errMsg := k8sversionextender.Instance().Filter(module.Name, map[string]string{})
-		message = v1alpha1.ModuleMessageKubernetesVersionExtender
-		if errMsg != nil {
-			message += ": " + errMsg.Error()
-		}
-
-	case bootstrappedextender.Name:
-		reason = v1alpha1.ModuleReasonBootstrappedExtender
-		message = v1alpha1.ModuleMessageBootstrappedExtender
-
-	case moduledependencyextender.Name:
-		reason = v1alpha1.ModuleReasonModuleDependencyExtender
-		_, errMsg := moduledependencyextender.Instance().Filter(module.Name, map[string]string{})
-		message = v1alpha1.ModuleMessageModuleDependencyExtender
-		if errMsg != nil {
-			message += ": " + errMsg.Error()
-		}
+	if hookErr := basicModule.GetLastHookError(); hookErr != nil {
+		module.Status.Summary.State = brokenState
+		module.SetConditionFalse(status.ConditionReady, v1alpha1.ModuleReasonHookError, hookErr.Error())
+		return
 	}
 
-	// do not change phase of not installed module
-	if module.Status.Summary.State != status.StateFailed && module.Status.Summary.State != status.StateSuspended {
+	// The module has fully converged: every run phase completed.
+	if basicModule.GetPhase() == modules.Ready {
+		module.Status.Summary.State = status.StateReady
+		module.SetConditionTrue(status.ConditionReady)
+		return
+	}
+
+	// Still converging. A running module keeps serving its previous version while
+	// it re-applies, so it stays Ready and reports Updating rather than flapping;
+	// a first install has nothing to serve yet, so it is Pending with Ready=False.
+	if wasReady {
 		module.Status.Summary.State = status.StateUpdating
+		module.SetConditionTrue(status.ConditionReady)
+		return
+	}
+
+	module.Status.Summary.State = status.StatePending
+	module.SetConditionFalse(status.ConditionReady, v1alpha1.ModuleReasonInstalling, v1alpha1.ModuleMessageInstalling)
+}
+
+// refreshDisabledModuleStatus reflects the state of a module the scheduler does
+// not run. A module that was working and got switched off is Suspended; a module
+// that never started and is blocked by the bundle, an extender or an explicit
+// disable is Pending. Either way the reason explains which gate keeps it off.
+func (r *reconciler) refreshDisabledModuleStatus(module *v1alpha2.Module, basicModule *modules.BasicModule, wasReady bool) {
+	updatedBy, err := r.moduleManager.GetUpdatedByExtender(module.Name)
+	if err != nil {
+		module.Status.Summary.State = status.StateFailed
+		module.SetConditionFalse(status.ConditionEnabled, v1alpha1.ModuleReasonError, err.Error())
+		module.SetConditionFalse(status.ConditionReady, v1alpha1.ModuleReasonError, err.Error())
+		return
+	}
+
+	reason, message := r.disabledReason(module, basicModule, updatedBy)
+
+	if wasReady {
+		module.Status.Summary.State = status.StateSuspended
+	} else {
+		module.Status.Summary.State = status.StatePending
 	}
 
 	module.SetConditionFalse(status.ConditionEnabled, reason, message)
 	module.SetConditionFalse(status.ConditionReady, reason, message)
+}
+
+// disabledReason translates the extender that owns the scheduler's decision into
+// a user-facing reason and message explaining why the module is switched off.
+func (r *reconciler) disabledReason(module *v1alpha2.Module, basicModule *modules.BasicModule, updatedBy string) (string, string) {
+	switch extenders.ExtenderName(updatedBy) {
+	case "", staticextender.Name:
+		if module.IsEmbedded() {
+			return v1alpha1.ModuleReasonBundle, v1alpha1.ModuleMessageBundle
+		}
+		return v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled
+
+	case kubeconfigextender.Name:
+		return v1alpha1.ModuleReasonModuleConfig, v1alpha1.ModuleMessageModuleConfig
+
+	case dynamicextender.Name:
+		return v1alpha1.ModuleReasonDynamicGlobalHookExtender, v1alpha1.ModuleMessageDynamicGlobalHookExtender
+
+	case scriptextender.Name:
+		message := v1alpha1.ModuleMessageEnabledScriptExtender
+		if txt := basicModule.GetEnabledScriptReason(); txt != nil && *txt != "" {
+			message += ": " + *txt
+		}
+		return v1alpha1.ModuleReasonEnabledScriptExtender, message
+
+	case d7sversionextender.Name:
+		message := v1alpha1.ModuleMessageDeckhouseVersionExtender
+		if _, errMsg := r.exts.GetDeckhouseVersion().Filter(module.Name, map[string]string{}); errMsg != nil {
+			message += ": " + errMsg.Error()
+		}
+		return v1alpha1.ModuleReasonDeckhouseVersionExtender, message
+
+	case editionavailablextender.Name:
+		message := ""
+		if _, errMsg := r.exts.GetEditionAvailable().Filter(module.Name, map[string]string{}); errMsg != nil {
+			message = errMsg.Error()
+		}
+		return v1alpha1.ModuleReasonEditionAvailableExtender, message
+
+	case editionenabledextender.Name:
+		message := ""
+		if _, errMsg := r.exts.GetEditionEnabled().Filter(module.Name, map[string]string{}); errMsg != nil {
+			message = errMsg.Error()
+		}
+		return v1alpha1.ModuleReasonEditionEnabledExtender, message
+
+	case k8sversionextender.Name:
+		message := v1alpha1.ModuleMessageKubernetesVersionExtender
+		if _, errMsg := k8sversionextender.Instance().Filter(module.Name, map[string]string{}); errMsg != nil {
+			message += ": " + errMsg.Error()
+		}
+		return v1alpha1.ModuleReasonKubernetesVersionExtender, message
+
+	case bootstrappedextender.Name:
+		return v1alpha1.ModuleReasonBootstrappedExtender, v1alpha1.ModuleMessageBootstrappedExtender
+
+	case moduledependencyextender.Name:
+		message := v1alpha1.ModuleMessageModuleDependencyExtender
+		if _, errMsg := moduledependencyextender.Instance().Filter(module.Name, map[string]string{}); errMsg != nil {
+			message += ": " + errMsg.Error()
+		}
+		return v1alpha1.ModuleReasonModuleDependencyExtender, message
+	}
+
+	return v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled
 }

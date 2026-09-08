@@ -16,5 +16,12 @@ status:
     reason: ""
     status: "True"
     type: Enabled
+  - lastTransitionTime: null
+    message: installing
+    reason: Installing
+    status: "False"
+    type: Ready
   lastAppliedConfiguration: null
+  summary:
+    state: Pending
   tracking: null

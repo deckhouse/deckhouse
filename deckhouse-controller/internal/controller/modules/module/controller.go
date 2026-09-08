@@ -318,8 +318,13 @@ func (r *reconciler) processModule(ctx context.Context, module *v1alpha2.Module)
 		// set conflict if there are several available sources
 		if len(mp.Status.AvailableRepositories) > 1 {
 			err := utils.UpdateStatus[*v1alpha2.Module](ctx, r.client, module, func(module *v1alpha2.Module) bool {
+				// The module is enabled but cannot be installed while several
+				// sources offer the same package — a hard failure, not a scheduler
+				// switch-off, so Enabled stays as it is and Ready carries the cause.
+				if module.Status.Summary == nil {
+					module.Status.Summary = &v1alpha2.ModuleStatusSummary{}
+				}
 				module.Status.Summary.State = status.StateFailed
-				module.SetConditionFalse(status.ConditionEnabled, "", "")
 				module.SetConditionFalse(status.ConditionReady, v1alpha1.ModuleReasonConflict, v1alpha1.ModuleMessageConflict)
 				return true
 			})
@@ -394,22 +399,29 @@ func (r *reconciler) disableModule(ctx context.Context, module *v1alpha2.Module)
 			return false
 		}
 
-		switch module.Status.Summary.State {
-		case status.StateFailed,
-			status.StatePending:
-			// modules in Conflict should not be installed, and they cannot receive events, so set Available phase manually
-			// same thing if module is not installed
-			module.Status.Summary.State = status.StateSuspended
-			module.SetConditionFalse(status.ConditionEnabled, "", "")
-			module.SetConditionFalse(status.ConditionReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
-		default:
-			if !enabledByBundle {
-				module.SetConditionFalse(status.ConditionReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
-			}
+		if module.Status.Summary == nil {
+			module.Status.Summary = &v1alpha2.ModuleStatusSummary{}
 		}
 
-		module.SetConditionFalse(status.ConditionEnabled, "", "")
-		module.SetConditionUnknown(status.ConditionConfigurationApplied, "", "")
+		// A module that was working and is switched off is Suspended; one that
+		// never started is simply Pending its (now cancelled) first install.
+		if module.IsCondition(status.ConditionReady, metav1.ConditionTrue) {
+			module.Status.Summary.State = status.StateSuspended
+		} else {
+			module.Status.Summary.State = status.StatePending
+		}
+
+		module.SetConditionFalse(status.ConditionEnabled, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
+
+		// The module may still be turned on by the edition bundle even though its
+		// own spec disables it; in that case its readiness is not this decision's
+		// to retract.
+		if !enabledByBundle {
+			module.SetConditionFalse(status.ConditionReady, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
+		}
+
+		// The desired configuration is no longer being maintained by the runtime.
+		module.SetConditionUnknown(status.ConditionConfigurationApplied, v1alpha1.ModuleReasonDisabled, v1alpha1.ModuleMessageDisabled)
 
 		return true
 	})
@@ -483,6 +495,18 @@ func (r *reconciler) enableModule(ctx context.Context, module *v1alpha2.Module) 
 			return false
 		}
 		module.SetConditionTrue(status.ConditionEnabled)
+
+		// The module has just been enabled but has not converged yet — the
+		// scheduler has not reported it running, so an addon-operator event has
+		// not refreshed the real state. Reflect a first-install Pending until it
+		// does, unless the module is already ready (a re-enable of a working one).
+		if !module.IsCondition(status.ConditionReady, metav1.ConditionTrue) {
+			if module.Status.Summary == nil {
+				module.Status.Summary = &v1alpha2.ModuleStatusSummary{}
+			}
+			module.Status.Summary.State = status.StatePending
+			module.SetConditionFalse(status.ConditionReady, v1alpha1.ModuleReasonInstalling, v1alpha1.ModuleMessageInstalling)
+		}
 
 		return true
 	})
