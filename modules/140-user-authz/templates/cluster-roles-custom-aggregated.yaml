@@ -1,0 +1,31 @@
+{{- /*
+  Aggregated custom ClusterRoles.
+
+  A ClusterRole annotated with `user-authz.deckhouse.io/access-level: <Level>` extends the
+  <Level> high-level role and every role above it. Instead of binding each rule to each such
+  ClusterRole separately, a rule gets one binding to `user-authz:<level>:custom`, whose rules
+  are the union of all custom ClusterRoles of that level and of the levels below it. The union
+  is maintained by the kube-controller-manager aggregation controller through the access-level
+  label, which hooks/handle_custom_cluster_roles.go keeps equal to the annotation.
+
+  `rules` is deliberately omitted: the aggregation controller owns it.
+*/}}
+{{- define "user_authz_custom_aggregation_selectors" }}
+  {{- range $level := . }}
+- matchLabels:
+    user-authz.deckhouse.io/access-level: {{ $level }}
+  {{- end }}
+{{- end }}
+
+{{- $levels := list "User" "PrivilegedUser" "Editor" "Admin" "ClusterEditor" "ClusterAdmin" }}
+{{- range $i, $level := $levels }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: user-authz:{{ $level | kebabcase }}:custom
+  {{- include "helm_lib_module_labels" (list $) | nindent 2 }}
+aggregationRule:
+  clusterRoleSelectors:
+  {{- include "user_authz_custom_aggregation_selectors" (slice $levels 0 (add1 $i)) | nindent 2 }}
+{{- end }}
