@@ -204,7 +204,7 @@ The lock check is connector-scoped: local users read `Password` only, everyone
 else reads `OfflineSessions` only. A local `UserOperation` Lock therefore does
 not block an LDAP login with the same email, and the reverse.
 
-### 999-fix-cve.patch
+### 998-fix-cve.patch
 
 #### Fix CVEs
 
@@ -230,3 +230,23 @@ not block an LDAP login with the same email, and the reverse.
 #### GHSA
 
 - GHSA-hrxh-6v49-42gf
+
+### 999-fuzz-handlers.patch
+
+Go native fuzz tests for every Dex HTTP handler that accepts user-controlled
+input (query, form, headers, cookies, tokens, path parameters). Applied last
+so the tests always compile against the fully patched tree.
+
+Targets: `handleToken`, `handlePublicKeys`, `handleUserInfo`,
+`handleAuthorization`, `handleConnectorLogin`, `handleConnectorCallback`,
+`handlePasswordLogin`, `handleApproval`, `handleDeviceToken`,
+`handleDeviceTokenDeprecated`, `handleDeviceExchange`, `verifyUserCode`,
+`handleDeviceCode`, `handleDeviceCallback`, `handleIntrospect`,
+`handleTOTPVerify`, `handlePasswordChange`, plus `ServeHTTP` (discovery,
+healthz, static) and `FuzzAllHandlers`.
+
+`*_test.go` is not compiled into the Dex image. Run from a patched source tree:
+
+```
+go test -vet=off -run=^$ -fuzz=FuzzAllHandlers -fuzztime=12h ./server
+```
