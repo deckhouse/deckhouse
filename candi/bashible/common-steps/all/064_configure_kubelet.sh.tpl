@@ -322,8 +322,8 @@ https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
 */}}
 featureGates:
   RotateKubeletServerCertificate: true
-{{- if semverCompare ">=1.32 <1.34" .kubernetesVersion }}
-{{- /* DynamicResourceAllocation: GA default=true since 1.34, explicitly enable for 1.32-1.33 */}}
+{{- if semverCompare ">=1.33 <1.34" .kubernetesVersion }}
+{{- /* DynamicResourceAllocation: GA default=true since 1.34, explicitly enable for 1.33 */}}
   DynamicResourceAllocation: true
 {{- end }}
 {{- if semverCompare ">=1.33" .kubernetesVersion }}

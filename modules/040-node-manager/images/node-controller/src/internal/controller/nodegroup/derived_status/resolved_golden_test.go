@@ -58,7 +58,7 @@ func TestResolvedNodeGroup_Golden_CloudPermanent(t *testing.T) {
 		}),
 	}, Result{
 		Engine:            "None",
-		KubernetesVersion: "1.32",
+		KubernetesVersion: "1.33",
 		CRIType:           "Containerd",
 		SerializedLabels:  "node-role.kubernetes.io/cp1=,node.deckhouse.io/group=cp1,node.deckhouse.io/type=CloudPermanent",
 		SerializedTaints:  "",
@@ -66,7 +66,7 @@ func TestResolvedNodeGroup_Golden_CloudPermanent(t *testing.T) {
 	})
 
 	assertResolvedMatchesGolden(t, nodeGroupValues, `{
-		"kubernetesVersion": "1.32",
+		"kubernetesVersion": "1.33",
 		"cri": { "type": "Containerd" },
 		"engine": "None",
 		"kubelet": {
@@ -101,7 +101,7 @@ func TestResolvedNodeGroup_Golden_CloudEphemeralProcessed(t *testing.T) {
 		CloudProcessed: true,
 	}, Result{
 		Engine:            "None",
-		KubernetesVersion: "1.32",
+		KubernetesVersion: "1.33",
 		CRIType:           "Containerd",
 		Zones:             []string{"a", "b", "c"},
 		InstanceClass:     nil,
@@ -128,7 +128,7 @@ func TestResolvedNodeGroup_Golden_CloudEphemeralProcessed(t *testing.T) {
 		"serializedLabels": "node-role.kubernetes.io/proper1=,node.deckhouse.io/group=proper1,node.deckhouse.io/type=CloudEphemeral",
 		"serializedTaints": "",
 		"manualRolloutID": "",
-		"kubernetesVersion": "1.32",
+		"kubernetesVersion": "1.33",
 		"cri": { "type": "Containerd" },
 		"engine": "None",
 		"name": "proper1",
@@ -152,7 +152,7 @@ func TestResolvedNodeGroup_Golden_EmptyZones(t *testing.T) {
 		CloudProcessed: true,
 	}, Result{
 		Engine:            "None",
-		KubernetesVersion: "1.32",
+		KubernetesVersion: "1.33",
 		CRIType:           "Containerd",
 		Zones:             []string{},
 		InstanceClass:     nil,
@@ -182,7 +182,7 @@ func TestResolvedNodeGroup_Golden_Static(t *testing.T) {
 		},
 	}, Result{
 		Engine:            "None",
-		KubernetesVersion: "1.32",
+		KubernetesVersion: "1.33",
 		CRIType:           "Containerd",
 		SerializedLabels:  "node-role.kubernetes.io/static1=,node.deckhouse.io/group=static1,node.deckhouse.io/type=Static",
 		SerializedTaints:  "",
@@ -190,7 +190,7 @@ func TestResolvedNodeGroup_Golden_Static(t *testing.T) {
 	})
 
 	assertResolvedMatchesGolden(t, nodeGroupValues, `{
-		"kubernetesVersion": "1.32",
+		"kubernetesVersion": "1.33",
 		"cri": { "type": "Containerd" },
 		"engine": "None",
 		"kubelet": {

@@ -80,8 +80,8 @@ func buildCloudResolvedMap(t *testing.T, kubernetesVersion string, minPerZone, m
 }
 
 func TestBashibleChecksum_UpscaleInvariance(t *testing.T) {
-	small := buildCloudResolvedMap(t, "1.32", float64(1), float64(3), []string{"a", "b"})
-	large := buildCloudResolvedMap(t, "1.32", float64(5), float64(10), []string{"a", "b", "c"})
+	small := buildCloudResolvedMap(t, "1.33", float64(1), float64(3), []string{"a", "b"})
+	large := buildCloudResolvedMap(t, "1.33", float64(5), float64(10), []string{"a", "b", "c"})
 
 	assert.Equal(t,
 		bashibleNodeGroupChecksum(t, small),
@@ -91,12 +91,12 @@ func TestBashibleChecksum_UpscaleInvariance(t *testing.T) {
 }
 
 func TestBashibleChecksum_MeaningfulFieldChanges(t *testing.T) {
-	v132 := buildCloudResolvedMap(t, "1.32", float64(1), float64(3), []string{"a", "b"})
-	v131 := buildCloudResolvedMap(t, "1.31", float64(1), float64(3), []string{"a", "b"})
+	v134 := buildCloudResolvedMap(t, "1.34", float64(1), float64(3), []string{"a", "b"})
+	v133 := buildCloudResolvedMap(t, "1.33", float64(1), float64(3), []string{"a", "b"})
 
 	assert.NotEqual(t,
-		bashibleNodeGroupChecksum(t, v132),
-		bashibleNodeGroupChecksum(t, v131),
+		bashibleNodeGroupChecksum(t, v134),
+		bashibleNodeGroupChecksum(t, v133),
 		"a non-stripped field (kubernetesVersion) must change the checksum",
 	)
 }
@@ -115,7 +115,7 @@ func TestBashibleChecksum_GoldenParity(t *testing.T) {
 		CloudProcessed: true,
 	}, Result{
 		Engine:            "None",
-		KubernetesVersion: "1.32",
+		KubernetesVersion: "1.33",
 		CRIType:           "Containerd",
 		Zones:             []string{"a", "b", "c"},
 		InstanceClass:     nil,
@@ -140,7 +140,7 @@ func TestBashibleChecksum_GoldenParity(t *testing.T) {
 		"serializedLabels": "node-role.kubernetes.io/proper1=,node.deckhouse.io/group=proper1,node.deckhouse.io/type=CloudEphemeral",
 		"serializedTaints": "",
 		"manualRolloutID": "",
-		"kubernetesVersion": "1.32",
+		"kubernetesVersion": "1.33",
 		"cri": { "type": "Containerd" },
 		"engine": "None",
 		"name": "proper1",
