@@ -61,6 +61,41 @@ func GenerateRegistryOptionsFromModuleSource(ms *v1alpha1.ModuleSource, clusterU
 // constant itself only so that a test can point it at a file it is allowed to create.
 var agentCAFile = registry_const.AgentCAFile
 
+// WithAgentAuthority points the agent-authority lookup at path and returns a function that
+// puts it back. It exists for tests in other packages: whether the agent serves the pull path
+// is decided by a file under /etc/kubernetes, which a test cannot create, and the behaviour on
+// each side of that decision is reached through this package from several of them.
+func WithAgentAuthority(path string) func() {
+	previous := agentCAFile
+	agentCAFile = path
+	return func() { agentCAFile = previous }
+}
+
+// agentServesLocally reports whether the node agent is what stands behind the in-cluster
+// address on this node.
+//
+// The address alone does not say so. The previous implementation of the registry module
+// serves the very same name from an in-cluster proxy Service, and a cluster migrating from
+// it still names that address everywhere while nothing listens on the loopback one yet.
+// Reading the address as "the agent" there is a deadlock rather than a failed fetch: this
+// process dials a port with nothing behind it, cannot start, and so never gets to install
+// the agent that would have made the assumption true.
+//
+// The authority is the one thing that separates the two, and it separates them on the axis
+// that matters. It is generated on the node in the same step that starts the agent, so it
+// exists exactly where the agent is the answer, and its absence is what a cluster that has
+// not had the handover looks like. Being node-local, it is also readable without asking the
+// cluster anything, which this has to be: it is consulted on the path that fetches the
+// modules this process needs in order to run at all.
+// Not cached, and an empty file counts as absent: bashible writes the authority on a node
+// that may still be coming up, so the file appears after this process starts, and it appears
+// by being created and then written to. The sibling translation in registry-packages-proxy
+// reads it the same way, for the same reasons.
+func agentServesLocally() bool {
+	info, err := os.Stat(agentCAFile)
+	return err == nil && info.Size() > 0
+}
+
 // Dial is the address to actually connect to in order to reach a repository.
 //
 // Everything the cluster records names the in-cluster registry, because a recorded address is
@@ -73,6 +108,13 @@ var agentCAFile = registry_const.AgentCAFile
 //
 // So the translation happens here, at the one place that has to dial, and nowhere else.
 func Dial(repository string) string {
+	// Before the handover the in-cluster address is served by the previous implementation's
+	// proxy, which is reachable under that name and under no other. Translating then points
+	// this process at a closed port.
+	if !agentServesLocally() {
+		return repository
+	}
+
 	if host, rest, found := strings.Cut(repository, "/"); found && host == registry_const.Host {
 		return registry_const.ProxyHost + "/" + rest
 	}
@@ -107,8 +149,13 @@ func Dial(repository string) string {
 // module took it over: the deckhouse ModuleSource sat on `"127.0.0.1:5001/system/deckhouse/
 // modules" credentials not found in the dockerCfg`, and no module could be fetched again.
 func (rc *RegistryConfig) ForRepository(repository string, logger *log.Logger) *RegistryConfig {
-	// Either spelling of the same agent: as recorded, or as dialled.
-	if !registry_const.IsInCluster(repository) && !registry_const.IsLocalAgent(repository) {
+	// Either spelling of the same agent: as recorded, or as dialled. The loopback one can
+	// only be the agent; the recorded one is the agent only once the agent serves it, and
+	// until then it is the previous implementation's proxy, which wants exactly the scheme,
+	// authority and credentials the cluster recorded for it.
+	servedByTheAgent := registry_const.IsLocalAgent(repository) ||
+		(registry_const.IsInCluster(repository) && agentServesLocally())
+	if !servedByTheAgent {
 		return rc
 	}
 

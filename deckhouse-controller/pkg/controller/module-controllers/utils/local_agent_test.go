@@ -203,6 +203,8 @@ func TestRegistryConfigFromSecretFollowsTheAddressItWillDial(t *testing.T) {
 // the agent as its own registry is a loop and is refused. A node that joined later, or one that
 // had collected its images, would not have started them at all.
 func TestDialTranslatesOnlyTheInClusterAddress(t *testing.T) {
+	withAgentCA(t, "AGENT-CA")
+
 	tests := []struct {
 		name       string
 		repository string
@@ -254,4 +256,56 @@ func TestForRepositoryAcceptsEitherSpellingOfTheAgent(t *testing.T) {
 		assert.Equal(t, "AGENT-CA", got.CA, repository)
 		assert.Equal(t, registry_const.Scheme, got.Scheme, repository)
 	}
+}
+
+// TestDialKeepsTheInClusterAddressUntilTheAgentServesIt is the deadlock this guards against.
+//
+// A cluster on the previous implementation's `Direct` mode pulls through the in-cluster
+// address, served by an in-cluster proxy Service. Nothing listens on the loopback address
+// there, and the agent that would is installed by this very process. Translating the address
+// before the handover therefore does not degrade a fetch, it removes the only way this
+// process could start: it died in `init module loader` on `dial tcp 127.0.0.1:5001: connect:
+// connection refused`, before any hook ran, so the handover it was supposed to perform could
+// never begin and no retry could ever succeed.
+func TestDialKeepsTheInClusterAddressUntilTheAgentServesIt(t *testing.T) {
+	withAgentCA(t, "")
+
+	for _, repository := range []string{
+		registry_const.HostWithPath,
+		registry_const.HostWithPath + "/modules/upmeter",
+		registry_const.Host,
+	} {
+		assert.Equal(t, repository, Dial(repository),
+			"the proxy behind this address is reachable under this name and no other")
+	}
+
+	// The loopback address is left alone either way — there is nothing to translate.
+	assert.Equal(t, registry_const.ProxyHostWithPath, Dial(registry_const.ProxyHostWithPath))
+}
+
+// TestForRepositoryKeepsTheProxyCredentialsBeforeHandover covers the other half of the same
+// mistake, and the more destructive half.
+//
+// The agent asks its clients for no credentials, so fetching through it clears them. The
+// proxy that serves the same address before the handover does ask, and it is reached over
+// its own authority — both of which the cluster recorded in the registry secret. Clearing
+// them there does not merely fail to authenticate: a docker config is looked up by host, and
+// one with no entry for the host being dialled makes building the client fail outright.
+func TestForRepositoryKeepsTheProxyCredentialsBeforeHandover(t *testing.T) {
+	withAgentCA(t, "")
+
+	config := &RegistryConfig{
+		Scheme:       "https",
+		CA:           "PROXY-CA",
+		DockerConfig: "CFG",
+		Login:        "user",
+		Password:     "pass",
+	}
+	got := config.ForRepository(registry_const.HostWithPath, log.NewNop())
+
+	assert.Equal(t, "PROXY-CA", got.CA, "the proxy is verified by what the cluster recorded")
+	assert.Equal(t, "CFG", got.DockerConfig, "and it does ask for credentials")
+	assert.Equal(t, "user", got.Login)
+	assert.Equal(t, "pass", got.Password)
+	assert.Equal(t, "https", got.Scheme)
 }

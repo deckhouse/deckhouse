@@ -17,11 +17,15 @@ limitations under the License.
 package downloader
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/module-controllers/utils"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 )
 
@@ -40,6 +44,12 @@ func downloaderFor(repo string) *ModuleDownloader {
 // address is read by whatever renders an image reference; the translation belongs at the point
 // of dialling, which is what this covers.
 func TestRepositoryDialsTheAgentButLeavesEverythingElseAlone(t *testing.T) {
+	// The translation happens only where the agent is the thing behind the in-cluster
+	// address, and what says so is its authority on the node.
+	ca := filepath.Join(t.TempDir(), "ca.crt")
+	require.NoError(t, os.WriteFile(ca, []byte("AGENT-CA"), 0o600))
+	t.Cleanup(utils.WithAgentAuthority(ca))
+
 	tests := []struct {
 		name  string
 		repo  string
@@ -72,4 +82,19 @@ func TestRepositoryDialsTheAgentButLeavesEverythingElseAlone(t *testing.T) {
 			assert.Equal(t, tt.want, downloaderFor(tt.repo).repository(tt.parts...))
 		})
 	}
+}
+
+// TestRepositoryKeepsWhatTheSourceRecordsBeforeTheHandover is the same gap read from the other
+// side, on a cluster the registry module has not taken over yet.
+//
+// The previous implementation of the module serves the in-cluster address from a proxy Service,
+// so a source naming that address is reachable under that name and under no other. Dialling the
+// loopback one there reaches a closed port — and this is the path that fetches modules, so the
+// process that would have installed the agent cannot start.
+func TestRepositoryKeepsWhatTheSourceRecordsBeforeTheHandover(t *testing.T) {
+	t.Cleanup(utils.WithAgentAuthority(filepath.Join(t.TempDir(), "absent")))
+
+	assert.Equal(t,
+		registry_const.HostWithPath+"/modules/upmeter/release",
+		downloaderFor(registry_const.HostWithPath+"/modules").repository("upmeter", "release"))
 }
