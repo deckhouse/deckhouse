@@ -485,6 +485,7 @@ MVCC
 MYACCESSKEY
 MachineClass
 MachineClasses
+MachineConfig
 MachineControllerManager
 MachineDeployment
 MachineSet
@@ -833,6 +834,7 @@ TMPDIR
 TODO
 TOTP
 TaintToleration
+Talos
 TargetGroup
 Taskfile
 Terraform
