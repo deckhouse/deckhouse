@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
@@ -122,7 +123,13 @@ func (c *Client) GetDigest(_ context.Context, tag string) (*v1.Hash, error) {
 }
 
 // GetManifest returns a ManifestResult for the image identified by tag.
-func (c *Client) GetManifest(_ context.Context, tag string) (dkpreg.ManifestResult, error) {
+// GetManifest returns the manifest of the image stored under tag.
+//
+// Platform options are accepted but have nothing to resolve: the fake stores
+// single-platform images, never indexes, and the real client only resolves a
+// platform when the reference is an index - so both return the manifest as
+// stored.
+func (c *Client) GetManifest(_ context.Context, tag string, _ ...dkpreg.ManifestGetOption) (dkpreg.ManifestResult, error) {
 	entry, err := c.findImage(tag)
 	if err != nil {
 		return nil, err
@@ -186,7 +193,12 @@ func (c *Client) PushImage(_ context.Context, tag string, img v1.Image, _ ...dkp
 }
 
 // ListTags returns all tags registered under the current path.
-func (c *Client) ListTags(_ context.Context, _ ...dkpreg.ListTagsOption) ([]string, error) {
+func (c *Client) ListTags(_ context.Context, opts ...dkpreg.ListTagsOption) ([]string, error) {
+	listOptions := &dkpreg.ListTagsOptions{}
+	for _, opt := range opts {
+		opt.ApplyToListTags(listOptions)
+	}
+
 	host, repo := c.splitHostRepo()
 	reg, ok := c.registries[host]
 	if !ok {
@@ -196,11 +208,61 @@ func (c *Client) ListTags(_ context.Context, _ ...dkpreg.ListTagsOption) ([]stri
 	if rs == nil {
 		return nil, nil
 	}
-	return rs.listTags(), nil
+	return applyListWindow(rs.listTags(), listOptions.Last, listOptions.N), nil
+}
+
+// applyListWindow reproduces what a registry does with the `last` and `n`
+// parameters: results are ordered lexicographically, everything up to and
+// including last is skipped, and at most n entries come back.
+//
+// The fake used to discard list options entirely, so a test asserting on
+// WithTagsLimit(2) saw every tag and passed while production returned one
+// page - the fake has to be at least as strict as the thing it stands in for.
+func applyListWindow(items []string, last string, n int) []string {
+	sorted := make([]string, len(items))
+	copy(sorted, items)
+	sort.Strings(sorted)
+
+	if last != "" {
+		cut := 0
+		for cut < len(sorted) && sorted[cut] <= last {
+			cut++
+		}
+		sorted = sorted[cut:]
+	}
+
+	if n > 0 && len(sorted) > n {
+		sorted = sorted[:n]
+	}
+
+	return sorted
 }
 
 // ListRepositories returns all repository paths registered under the host of
 // the current path.  The returned paths are relative to the host.
+// StreamRepositories delivers the catalog as a single page, for the same reason
+// as StreamTags: the fake has no cursor of its own to paginate.
+func (c *Client) StreamRepositories(ctx context.Context, visit func(repos []string) error, opts ...dkpreg.ListRepositoriesOption) error {
+	repos, err := c.ListRepositories(ctx, opts...)
+	if err != nil {
+		return err
+	}
+
+	if len(repos) == 0 {
+		return nil
+	}
+
+	if err := visit(repos); err != nil {
+		if errors.Is(err, dkpreg.ErrStopStreaming) {
+			return nil
+		}
+
+		return err
+	}
+
+	return nil
+}
+
 // StreamTags delivers the repository's tags as a single page. The fake stores
 // tags in memory with no cursor of its own, so there is nothing to paginate -
 // callers that accumulate pages still see the complete list, which is what the
@@ -226,7 +288,12 @@ func (c *Client) StreamTags(ctx context.Context, visit func(tags []string) error
 	return nil
 }
 
-func (c *Client) ListRepositories(_ context.Context, _ ...dkpreg.ListRepositoriesOption) ([]string, error) {
+func (c *Client) ListRepositories(_ context.Context, opts ...dkpreg.ListRepositoriesOption) ([]string, error) {
+	listOptions := &dkpreg.ListRepositoriesOptions{}
+	for _, opt := range opts {
+		opt.ApplyToListRepositories(listOptions)
+	}
+
 	host, repoPrefix := c.splitHostRepo()
 	reg, ok := c.registries[host]
 	if !ok {
@@ -234,18 +301,18 @@ func (c *Client) ListRepositories(_ context.Context, _ ...dkpreg.ListRepositorie
 	}
 
 	all := reg.listRepos()
-	if repoPrefix == "" {
-		return all, nil
+	if repoPrefix != "" {
+		prefix := repoPrefix + "/"
+		var filtered []string
+		for _, r := range all {
+			if strings.HasPrefix(r, prefix) || r == repoPrefix {
+				filtered = append(filtered, r)
+			}
+		}
+		all = filtered
 	}
 
-	prefix := repoPrefix + "/"
-	var filtered []string
-	for _, r := range all {
-		if strings.HasPrefix(r, prefix) || r == repoPrefix {
-			filtered = append(filtered, r)
-		}
-	}
-	return filtered, nil
+	return applyListWindow(all, listOptions.Last, listOptions.N), nil
 }
 
 // DeleteTag removes a tag from the current repository.
