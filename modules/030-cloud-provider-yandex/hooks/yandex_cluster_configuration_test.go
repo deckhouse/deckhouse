@@ -266,12 +266,17 @@ ru-central1-c: test
 
 	// ---- PCC still present while the ModuleConfig is already v2 ----
 	//
-	// The hook projects the PCC only while the ModuleConfig is v1. Once it has been converted to
-	// v2 the config values are the source of truth and no PCC-derived value may overwrite them:
-	// FilterModuleConfig leaves SettingsV1 empty for a v2 ModuleConfig, so projecting anyway
-	// would replace every section with a zero value - excludedStorageClasses would stop being
-	// honoured (storage_classes.go would recreate the excluded StorageClasses) and the CCM would
-	// lose additionalExternalNetworkIDs.
+	// The PCC wins for the infrastructure sections whichever version the ModuleConfig carries,
+	// mirroring use_pcc = has_pcc && !new_resources_complete in
+	// candi/terraform-modules/migration/locals.tf. Letting a v2 ModuleConfig win here instead
+	// left the workloads reading it while terraform still planned the infrastructure from the
+	// PCC, so the two disagreed for the whole migration window.
+	//
+	// storage and ccm stay with the operator: nothing in candi/ reads them, and
+	// FilterModuleConfig leaves SettingsV1 empty for a v2 ModuleConfig, so projecting them would
+	// replace both with a zero value - excludedStorageClasses would stop being honoured
+	// (storage_classes.go would recreate the excluded StorageClasses) and the CCM would lose
+	// additionalExternalNetworkIDs.
 	stateBWithV2 := HookExecutionConfigInit(`
 global:
   discovery: {}
@@ -296,33 +301,40 @@ cloudProviderYandex:
 	stateBWithV2.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
 	stateBWithV2.RegisterCRD("deckhouse.io", "v1", "YandexInstanceClass", false)
 	stateBWithV2.RegisterCRD("deckhouse.io", "v1", "NodeGroup", false)
-	Context("PCC present but the ModuleConfig is already v2 — config values win", func() {
+	Context("PCC present but the ModuleConfig is already v2 — the PCC still drives infrastructure", func() {
 		BeforeEach(func() {
 			stateBWithV2.BindingContexts.Set(stateBWithV2.KubeStateSet(stateB + "\n---\n" + moduleConfigV2))
 			stateBWithV2.RunHook()
 		})
 
-		It("leaves every settings section untouched, including the ones the PCC also carries", func() {
+		// The same values terraform derives from the PCC while use_pcc holds, so the workloads and
+		// the infrastructure describe one cluster instead of two.
+		It("projects the PCC onto the infrastructure sections", func() {
+			Expect(stateBWithV2).To(ExecuteSuccessfully())
+
+			Expect(stateBWithV2.ValuesGet("cloudProviderYandex.provider.parameters.cloudID").String()).To(Equal("test"))
+			Expect(stateBWithV2.ValuesGet("cloudProviderYandex.provider.parameters.folderID").String()).To(Equal("test"))
+			Expect(stateBWithV2.ValuesGet("cloudProviderYandex.nodes.parameters.layout").String()).To(Equal("WithNATInstance"))
+			Expect(stateBWithV2.ValuesGet("cloudProviderYandex.nodes.parameters.nodeNetworkCIDR").String()).To(Equal("84.201.160.148/31"))
+			Expect(stateBWithV2.ValuesGet("cloudProviderYandex.nodes.parameters.sshPublicKey").String()).To(Equal("ssh-rsa AAAAAbbbb"))
+		})
+
+		// terraform never reads these two, and the v1 projection they come from is empty under a
+		// v2 ModuleConfig, so they must survive the projection untouched.
+		It("leaves the storage and ccm sections to the config values", func() {
 			Expect(stateBWithV2).To(ExecuteSuccessfully())
 
 			Expect(stateBWithV2.ValuesGet("cloudProviderYandex.storage.parameters.excludedStorageClasses").AsStringSlice()).
 				To(Equal([]string{"network-hdd"}))
 			Expect(stateBWithV2.ValuesGet("cloudProviderYandex.ccm.parameters.additionalExternalNetworkIDs").AsStringSlice()).
 				To(Equal([]string{"operator-net"}))
-
-			// The PCC carries cloudID/folderID "test" and layout WithNATInstance; under a v2
-			// ModuleConfig none of it may reach the values.
-			Expect(stateBWithV2.ValuesGet("cloudProviderYandex.provider.parameters.cloudID").String()).To(Equal("from-module-config"))
-			Expect(stateBWithV2.ValuesGet("cloudProviderYandex.provider.parameters.folderID").String()).To(Equal("from-module-config"))
-			Expect(stateBWithV2.ValuesGet("cloudProviderYandex.nodes.parameters.layout").String()).To(Equal("Standard"))
-			Expect(stateBWithV2.ValuesGet("cloudProviderYandex.nodes.parameters.nodeNetworkCIDR").String()).To(Equal("10.10.0.0/16"))
 		})
 
 		It("still writes the discovery data, so the workloads keep rendering", func() {
 			Expect(stateBWithV2).To(ExecuteSuccessfully())
 
 			// The PCC payload is the only discovery source here, and it must go through
-			// MergeDiscoveryData: the type markers and the region have to be present.
+			// SetDefaults: the type markers and the region have to be present.
 			discoveryData := stateBWithV2.ValuesGet("cloudProviderYandex.internal.providerDiscoveryData")
 			Expect(discoveryData.Get("apiVersion").String()).To(Equal("deckhouse.io/v1"))
 			Expect(discoveryData.Get("kind").String()).To(Equal("YandexCloudDiscoveryData"))

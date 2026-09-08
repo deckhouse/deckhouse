@@ -161,19 +161,6 @@ func handleYandexClusterConfiguration(_ context.Context, input *go_hook.HookInpu
 	if err != nil {
 		return fmt.Errorf("unmarshal module_config snapshots: %w", err)
 	}
-	if ok && mcResult.SettingsV2 != nil {
-		input.Values.Set(discoveryDataValuesPath, discoveryData)
-
-		// The settings come from the v2 ModuleConfig, but the credential Secret may not be applied
-		// yet - reaching this line means IsMigrationResourcesApplied said no. Without this the
-		// credentialSecrets values stay empty and CCM, CSI and the machine-class secrets render
-		// with no service account key.
-		if err := setCredentialSecretsValuesIfAbsent(input, pcc); err != nil {
-			return fmt.Errorf("seed credential secrets from PCC: %w", err)
-		}
-
-		return nil
-	}
 	var mcSettingsV1 ycsettingsv1.ModuleConfigSettings
 	if ok && mcResult.SettingsV1 != nil {
 		mcSettingsV1 = *mcResult.SettingsV1
@@ -185,7 +172,9 @@ func handleYandexClusterConfiguration(_ context.Context, input *go_hook.HookInpu
 		discoveryData,
 	)
 
-	if err := setPCCAndMCtoRootValues(input, pcc, mcSettingsV2); err != nil {
+	hasMCV2 := ok && mcResult.SettingsV2 != nil
+
+	if err := setPCCAndMCtoRootValues(input, pcc, mcSettingsV2, hasMCV2); err != nil {
 		return fmt.Errorf("map PCC and MC v1 to root values: %w", err)
 	}
 
@@ -207,15 +196,23 @@ func isHybridCluster(input *go_hook.HookInput, snapshotName string) bool {
 
 // setPCCAndMCtoRootValues writes PCC fields into cloudProviderYandex settings paths
 // in State B, following Yandex's leaf-only pattern:
+//
+// The credential secrets are seeded either way: the PCC still carries the service account key
+// while the migration is incomplete, and without it templates/_helpers.tpl renders an empty
+// d8-credentials, leaving CCM, CSI and the machine-class secrets with no key.
 func setPCCAndMCtoRootValues(
 	input *go_hook.HookInput,
 	pcc ycpccv1.YandexProviderClusterConfiguration,
 	mcSettings ycsettingsv2.ModuleConfigSettings,
+	hasMCV2 bool,
 ) error {
 	input.Values.Set("cloudProviderYandex.provider", mcSettings.Provider)
 	setSectionParameters(input, "cloudProviderYandex.nodes", mcSettings.Nodes.Parameters)
-	setSectionParameters(input, "cloudProviderYandex.storage", mcSettings.Storage.Parameters)
-	setSectionParameters(input, "cloudProviderYandex.ccm", mcSettings.CCM.Parameters)
+
+	if !hasMCV2 {
+		setSectionParameters(input, "cloudProviderYandex.storage", mcSettings.Storage.Parameters)
+		setSectionParameters(input, "cloudProviderYandex.ccm", mcSettings.CCM.Parameters)
+	}
 
 	return setCredentialSecretsValuesIfAbsent(input, pcc)
 }
