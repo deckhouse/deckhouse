@@ -53,9 +53,10 @@ type CPU struct {
 	Cores int `json:"cores"`
 
 	// Fraction is a guaranteed share of CPU time that will be allocated to the VM.
-	// Expressed as percentage.
+	// Expressed as percentage, or "Auto" to hand the share over to the Vertical
+	// VirtualMachine Autoscaler of the parent DVP cluster (EE).
 	// +kubebuilder:default="100%"
-	// +kubebuilder:validation:Pattern=`^100%$|^[1-9][0-9]?%$`
+	// +kubebuilder:validation:Pattern=`^(Auto|(100|[1-9][0-9]?)%)$`
 	Fraction string `json:"cpuFraction"`
 }
 

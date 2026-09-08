@@ -175,10 +175,10 @@ properties:
                           coreFraction:
                             type: string
                             default: "100%"
-                            pattern: ^100%$|^[1-9][0-9]?%$
+                            pattern: ^(Auto|(100|[1-9][0-9]?)%)$
                             description: |
                               Guaranteed share of CPU that will be allocated to the VM. Specified as a percentage.
-                              Supported values: `1% - 100%`.
+                              Supported values: `1% - 100%`, or `Auto` to hand the share over to the Vertical VirtualMachine Autoscaler of the parent DVP cluster.
                             example: "100%"
                       memory:
                         type: object
