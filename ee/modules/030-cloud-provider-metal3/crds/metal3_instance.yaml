@@ -75,6 +75,41 @@ spec:
                 type: string
                 pattern: '^([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}$'
                 description: MAC address of the NIC used for PXE boot.
+              rootDeviceHints:
+                type: object
+                description: Hints for Ironic root disk selection. If omitted, an empty object is passed to BareMetalHost to avoid its unsafe /dev/sda default.
+                properties:
+                  deviceName:
+                    type: string
+                    description: A Linux device name like "/dev/vda", or a by-path link. The hint must match the actual value exactly.
+                  hctl:
+                    type: string
+                    description: A SCSI bus address like 0:0:0:0. The hint must match the actual value exactly.
+                  minSizeGigabytes:
+                    type: integer
+                    minimum: 0
+                    description: The minimum size of the device in Gigabytes.
+                  model:
+                    type: string
+                    description: A vendor-specific device identifier. The hint can be a substring of the actual value.
+                  rotational:
+                    type: boolean
+                    description: True if the device should use spinning media, false otherwise.
+                  serialNumber:
+                    type: string
+                    description: Device serial number. The hint must match the actual value exactly.
+                  vendor:
+                    type: string
+                    description: The name of the vendor or manufacturer of the device. The hint can be a substring of the actual value.
+                  wwn:
+                    type: string
+                    description: Unique storage identifier. The hint must match the actual value exactly.
+                  wwnVendorExtension:
+                    type: string
+                    description: Unique vendor storage identifier. The hint must match the actual value exactly.
+                  wwnWithExtension:
+                    type: string
+                    description: Unique storage identifier with the vendor extension appended. The hint must match the actual value exactly.
               bmc:
                 type: object
                 required:

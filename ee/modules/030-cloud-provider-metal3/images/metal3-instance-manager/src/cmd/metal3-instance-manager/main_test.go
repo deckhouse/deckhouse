@@ -135,6 +135,66 @@ func TestGeneratedSecretNameFitsKubernetesLimit(t *testing.T) {
 	}
 }
 
+func TestReconcilePassesRootDeviceHintsToBareMetalHost(t *testing.T) {
+	scheme := runtime.NewScheme()
+	if err := corev1.AddToScheme(scheme); err != nil {
+		t.Fatal(err)
+	}
+	scheme.AddKnownTypeWithName(metal3InstanceGVK, &unstructured.Unstructured{})
+	scheme.AddKnownTypeWithName(metal3InstanceGVK.GroupVersion().WithKind("Metal3InstanceList"), &unstructured.UnstructuredList{})
+	scheme.AddKnownTypeWithName(bareMetalHostGVK, &unstructured.Unstructured{})
+	scheme.AddKnownTypeWithName(bareMetalHostGVK.GroupVersion().WithKind("BareMetalHostList"), &unstructured.UnstructuredList{})
+
+	instance := testInstance()
+	if err := unstructured.SetNestedMap(instance.Object, map[string]interface{}{
+		"wwn":          "eui.36363730546091630025384700000001",
+		"serialNumber": "S667NG0T609163",
+	}, "spec", "rootDeviceHints"); err != nil {
+		t.Fatal(err)
+	}
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Name: "server-bmc", Namespace: "d8-cloud-instance-manager"},
+		Type:       corev1.SecretType(credentialsSecretType),
+		Data: map[string][]byte{
+			"authScheme": []byte(authSchemeUserPassword),
+			"identity":   []byte("admin"),
+			"secret":     []byte("password"),
+		},
+	}
+	kubeClient := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(instance, secret).
+		WithStatusSubresource(instance).
+		Build()
+	r := &reconciler{
+		Client:          kubeClient,
+		targetNamespace: "d8-cloud-instance-manager",
+		resolver: &staticResolver{resolved: ResolvedBMC{
+			Protocol:   "IPMI",
+			Address:    "ipmi://192.0.2.10:623",
+			SystemUUID: testSystemUUID,
+		}},
+	}
+	request := ctrl.Request{NamespacedName: types.NamespacedName{Name: "server", Namespace: "d8-cloud-instance-manager"}}
+
+	if _, err := r.Reconcile(context.Background(), request); err != nil {
+		t.Fatalf("add finalizer: %v", err)
+	}
+	if _, err := r.Reconcile(context.Background(), request); err != nil {
+		t.Fatalf("reconcile resources: %v", err)
+	}
+
+	bmh := &unstructured.Unstructured{}
+	bmh.SetGroupVersionKind(bareMetalHostGVK)
+	if err := kubeClient.Get(context.Background(), request.NamespacedName, bmh); err != nil {
+		t.Fatalf("get generated BMH: %v", err)
+	}
+	assertNestedMap(t, bmh, map[string]interface{}{
+		"wwn":          "eui.36363730546091630025384700000001",
+		"serialNumber": "S667NG0T609163",
+	}, "spec", "rootDeviceHints")
+}
+
 func TestUpdateBareMetalHostPreservesUnmanagedSpec(t *testing.T) {
 	bmh := &unstructured.Unstructured{Object: map[string]interface{}{
 		"spec": map[string]interface{}{
@@ -148,9 +208,10 @@ func TestUpdateBareMetalHostPreservesUnmanagedSpec(t *testing.T) {
 		},
 	}}
 	changed, err := updateBareMetalHostSpec(bmh, instanceSpec{
-		Online:         true,
-		BootMACAddress: "f2:4e:c6:e6:af:ac",
-		BMC:            BMCConfig{Insecure: true},
+		Online:          true,
+		BootMACAddress:  "f2:4e:c6:e6:af:ac",
+		BMC:             BMCConfig{Insecure: true},
+		RootDeviceHints: map[string]interface{}{},
 	}, ResolvedBMC{Address: "ipmi://192.0.2.10:623"}, "new")
 	if err != nil || !changed {
 		t.Fatalf("update BMH: changed=%v err=%v", changed, err)
