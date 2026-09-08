@@ -147,7 +147,7 @@ d8 k get projecttemplates <ИМЯ_ШАБЛОНА_ПРОЕКТА> -o jsonpath='{.
 ### Пропуск создания лейбла `heritage: multitenancy-manager`
 
 По умолчанию все ресурсы, созданные из ProjectTemplate, получают лейбл `heritage: multitenancy-manager`.  
-Он запрещают изменение ресурсов пользователями или любым контроллером, кроме `multitenancy-manager`.  
+Он запрещает изменение ресурсов пользователями или любым контроллером, кроме `multitenancy-manager`.  
 Если необходимо разрешить изменение ресурса (например, для совместимости с другими системами, или в случае реализации собственного контроля изменения создаваемых объектов), добавьте к ресурсу лейбл `projects.deckhouse.io/skip-heritage-label`.
 
 Пример:
@@ -295,76 +295,22 @@ data:
        heritage: my-custom-label
    ```
 
-## Выдача кластерных ресурсов проектам
+## Управление доступом к cluster-wide-ресурсам
 
-`multitenancy-manager` позволяет администраторам кластера управлять тем, какие кластерные ресурсы (например, StorageClass) можно использовать из неймспейсов проектов.
+Модуль `multitenancy-manager` позволяет администраторам кластера определять для каждого проекта, какие
+cluster-wide-ресурсы (например, StorageClass, ClusterIssuer, ClusterRole, LoadBalancerClass) можно
+использовать из неймспейсов проектов, и какое значение используется по умолчанию.
 
-Для этого используются кастомные ресурсы:
+Механизм работает независимо от RBAC. RBAC определяет, *кто может создавать и изменять* объекты, а механизм управления доступом к cluster-wide-ресурсам — *какие ресурсы* могут использовать эти объекты.
 
-- GrantableClusterResourceDefinition (cluster-scoped) — регистрирует кластерный ресурс, который
-  можно выдавать проектам. Определяет тип ресурса (`grantedResource`), где проверяются ссылки на него
-  (`usageReferences`), базовую доступность (`defaultAvailability`) и способ определения значения по умолчанию для проекта
-  (`defaultFrom`). Каждая ссылка отдельно включает подстановку значения по умолчанию через `default: true`. Указывайте этот параметр только для полей, значение которых всегда должно быть задано (например, `storageClassName` у `PersistentVolumeClaim`). Если отсутствие ссылки имеет смысл (например, для аннотации-переключателя), не указывайте `default: true`. В этом случае такая ссылка по-прежнему будет проверяться и учитываться в квоте,
-  но её значение не будет подставляться автоматически.
-- ClusterResourceGrantPolicy (cluster-scoped) — выбирает проекты (по меткам неймспейса через
-  `projectSelector`) и для каждого ресурса (`resourceName`) задаёт разрешённые имена (`allowed`,
-  `allowedSelector`) и значение по умолчанию (`default`). Если задан allow-лист, использовать можно только ресурсы из этого списка.
-- AvailableClusterResource (namespaced, read-only, короткое имя `available`) — формируемый контроллером каталог доступных для проекта кластерных ресурсов. Пользователи проекта могут использовать его, чтобы узнать, какие ресурсы им доступны
-- ClusterResourceGrant (namespaced) — определяет квоты проекта на кластерные ресурсы (лимиты на количество объектов и
-  на измеряемые величины, например запрошенный объём хранилища). В статусе объекта отображается текущее потребление.
+В механизме участвуют четыре кастомных ресурса:
 
-{% raw %}
+- [GrantableClusterResourceDefinition](/modules/multitenancy-manager/cr.html#grantableclusterresourcedefinition) — регистрирует тип cluster-wide-ресурсов, доступом к которому можно управлять. Такие ресурсы поставляются DKP или разработчиками модулей;
+- [GrantableClusterResourceReference](/modules/multitenancy-manager/cr.html#grantableclusterresourcereference) — определяет, где используется зарегистрированный cluster-wide-ресурс. Например, какое поле ресурса содержит ссылку на него. Такие ресурсы поставляются модулями;
+- [ClusterResourceGrantPolicy](/modules/multitenancy-manager/cr.html#clusterresourcegrantpolicy) — задаёт правила доступа. Администратор кластера с помощью лейблов выбирает проекты, на которые распространяется политика, определяет разрешённые и запрещённые ресурсы, а также ресурс, используемый по умолчанию;
+- [AvailableClusterResource](/modules/multitenancy-manager/cr.html#availableclusterresource) — создаваемый контроллером список cluster-wide-ресурсов, доступных проекту, который предназначен только для чтения.
 
-```yaml
-apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: GrantableClusterResourceDefinition
-metadata:
-  name: storageclasses
-spec:
-  grantedResource:
-    apiGroup: storage.k8s.io
-    kind: StorageClass
-  enforcement: Managed
-  defaultAvailability: All
-  defaultFrom:
-    annotationKey: storageclass.kubernetes.io/is-default-class
-  usageReferences:
-    - rule:
-        apiGroups:
-          - ""
-        apiVersions:
-          - v1
-        resources:
-          - persistentvolumeclaims
-      fieldPath: $.spec.storageClassName
-      default: true
----
-apiVersion: multitenancy.deckhouse.io/v1alpha1
-kind: ClusterResourceGrantPolicy
-metadata:
-  name: production-storage
-spec:
-  projectSelector:
-    matchLabels:
-      environment: production
-  resources:
-    - resourceName: storageclasses
-      default: fast-ssd          # Перекрывает дефолт по аннотации.
-      allowed:
-        - fast-ssd
-        - standard
-      allowedSelector:           # Дополнительно разрешает любой StorageClass с меткой shared=true.
-        matchLabels:
-          shared: "true"
-```
+Пока администратор не создал ClusterResourceGrantPolicy, доступность ресурсов определяется их регистрацией: ресурсы доступны всем проектам, если в GrantableClusterResourceDefinition задано `defaultAvailability: All` (значение по умолчанию) и ресурс не попадает под фильтры `excluded`.
+Проверка доступа выполняется только для объектов в неймспейсах проектов. Если политика доступа изменяется, уже используемые существующими объектами cluster-wide-ресурсы остаются доступными для этих объектов.
 
-{% endraw %}
-
-Особенности применения:
-
-- Проверяющий (validating) вебхук запрещает создание/обновление объектов в подходящих проектах, если
-  используемое значение не разрешено. Уже присутствующие в объекте значения при обновлении не блокируются — существующие объекты продолжают работать.
-- Мутирующий (mutating) вебхук подставляет значение по умолчанию только при создании и только в
-  ссылки, помеченные `default: true`. Ссылки без неё (например, аннотации-переключатели) никогда
-  не заполняются.
-- Grant без совпавших проектов (или проект без совпавших grant’ов) ничего не ограничивает.
+Подробное описание механизма управления доступом приведено [в документации модуля `multitenancy-manager`](/modules/multitenancy-manager/#управление-доступом-к-cluster-wide-ресурсам).

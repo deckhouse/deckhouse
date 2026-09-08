@@ -106,7 +106,7 @@ status:
       publicServices:
       - {"hostame": "some-outdated.host", "ports": [{"name": "ppp", "port": 111}]} # must be overwritten by the new data
     public:
-      clusterUUID: bad-cluster-uuid # should be changed
+      clusterUUID: proper-uuid-1 # pinned after first successful discovery
       rootCA: bad-root-ca
       authnKeyPub: bad-authn-key-pub
 ---
@@ -817,6 +817,72 @@ status: {}
 					"endpoint":        "https://public-wrong-format/metadata/public/public.json",
 				},
 			}))
+		})
+	})
+
+	Context("Pinned remote cluster UUID", func() {
+		privateEndpointRequested := false
+
+		BeforeEach(func() {
+			privateEndpointRequested = false
+			f.ValuesSet("istio.federation.enabled", true)
+			f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioFederation
+metadata:
+  name: uuid-mismatch
+spec:
+  trustDomain: remote.cluster
+  metadataEndpoint: https://uuid-mismatch/metadata/
+status:
+  metadataCache:
+    public:
+      clusterUUID: pinned-uuid
+      authnKeyPub: pinned-authn-key
+      rootCA: pinned-root-ca
+`)
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
+			dependency.TestDC.HTTPClient.DoMock.
+				Set(func(req *http.Request) (*http.Response, error) {
+					if req.URL.Path == "/metadata/private/federation.json" {
+						privateEndpointRequested = true
+					}
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Body: io.NopCloser(bytes.NewBufferString(`{
+							"clusterUUID": "unexpected-uuid",
+							"authnKeyPub": "remote-authn-key",
+							"rootCA": "remote-root-ca"
+						}`)),
+					}, nil
+				})
+			f.RunHook()
+		})
+
+		It("does not issue a JWT or overwrite pinned public metadata when the UUID changes", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(privateEndpointRequested).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("IstioFederation", "uuid-mismatch").Field("status.metadataCache.public.clusterUUID").String()).To(Equal("pinned-uuid"))
+
+			var conditions []discoveryConditionRow
+			Expect(json.Unmarshal([]byte(f.KubernetesGlobalResource("IstioFederation", "uuid-mismatch").Field("status.conditions").String()), &conditions)).To(Succeed())
+			Expect(discoveryConditionsByType(conditions)["PublicMetadataExchangeReady"].Reason).To(Equal("ClusterUUIDMismatch"))
+			Expect(discoveryConditionsByType(conditions)["PrivateMetadataExchangeReady"].Status).To(Equal("Unknown"))
+
+			m := f.MetricsCollector.CollectedMetrics()
+			Expect(m).To(ContainElement(BeEquivalentTo(operation.MetricOperation{
+				Name:   federationUUIDMismatchMetricName,
+				Group:  federationMetricsGroup,
+				Action: operation.ActionGaugeSet,
+				Value:  ptr.To(1.0),
+				Labels: map[string]string{
+					"federation_name": "uuid-mismatch",
+					"endpoint":        "https://uuid-mismatch/metadata/public/public.json",
+					"pinned_uuid":     "pinned-uuid",
+					"actual_uuid":     "unexpected-uuid",
+				},
+			})))
 		})
 	})
 })

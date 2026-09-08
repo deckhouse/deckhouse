@@ -70,6 +70,8 @@ nodes:
   parameters:
     layout: Standard
     sshPublicKey: ssh-rsa AAAAB3N
+    additionalVMLabels:
+      network-access: bastion
 provider:
   parameters:
     namespace: cloud-provider01
@@ -367,9 +369,6 @@ const tolerationsAnyNodeWithUninitialized = `
   operator: "Exists"
 - key: DeletionCandidateOfClusterAutoscaler
 - key: ToBeDeletedByClusterAutoscaler
-- key: drbd.linbit.com/lost-quorum
-- key: drbd.linbit.com/force-io-error
-- key: drbd.linbit.com/ignore-fail-over
 - effect: NoSchedule
   key: node.deckhouse.io/bashible-uninitialized
   operator: Exists
@@ -568,6 +567,7 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			Expect(providerRegistrationSecretData).To(Not(BeEmpty()))
 			Expect(providerRegistrationSecretData["capiClusterName"].String()).To(Equal(base64.StdEncoding.EncodeToString([]byte(providerID))))
 			Expect(providerRegistrationSecretData["sshPublicKey"].String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("ssh-rsa AAAAB3N"))))
+			Expect(providerRegistrationSecretData["dvp"].String()).To(Equal(base64.StdEncoding.EncodeToString([]byte(`{"additionalVMLabels":{"network-access":"bastion"}}`))))
 
 			providerSpecificRegistrationSecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-node-manager-cloud-provider-%s", providerID))
 			Expect(providerSpecificRegistrationSecret.Exists()).To(BeTrue())
@@ -577,6 +577,7 @@ var _ = Describe("Module :: cloud-provider-dvp :: helm template ::", func() {
 			Expect(providerSpecificRegistrationSecretData).To(Not(BeEmpty()))
 			Expect(providerSpecificRegistrationSecretData["capiClusterName"].String()).To(Equal(base64.StdEncoding.EncodeToString([]byte(providerID))))
 			Expect(providerSpecificRegistrationSecretData["sshPublicKey"].String()).To(Equal(base64.StdEncoding.EncodeToString([]byte("ssh-rsa AAAAB3N"))))
+			Expect(providerSpecificRegistrationSecretData["dvp"].String()).To(Equal(base64.StdEncoding.EncodeToString([]byte(`{"additionalVMLabels":{"network-access":"bastion"}}`))))
 
 			providerSpecificCAPISecret := f.KubernetesResource("Secret", "kube-system", fmt.Sprintf("d8-cloud-provider-%s-capi", providerID))
 			Expect(providerSpecificCAPISecret.Exists()).To(BeTrue())

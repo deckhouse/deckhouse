@@ -35,8 +35,9 @@ import (
 )
 
 var (
-	federationMetricsGroup = "federation_discovery"
-	federationMetricName   = "d8_istio_federation_metadata_endpoints_fetch_error_count"
+	federationMetricsGroup           = "federation_discovery"
+	federationMetricName             = "d8_istio_federation_metadata_endpoints_fetch_error_count"
+	federationUUIDMismatchMetricName = "d8_istio_federation_remote_cluster_uuid_mismatch"
 )
 
 type IstioFederationDiscoveryCrdInfo struct {
@@ -57,6 +58,17 @@ func (i *IstioFederationDiscoveryCrdInfo) SetMetricMetadataEndpointError(mc sdkp
 	}
 
 	mc.Set(federationMetricName, isError, labels, metrics.WithGroup(federationMetricsGroup))
+}
+
+func (i *IstioFederationDiscoveryCrdInfo) SetMetricRemoteClusterUUIDMismatch(mc sdkpkg.MetricsCollector, pinnedUUID, actualUUID string) {
+	labels := map[string]string{
+		"federation_name": i.Name,
+		"endpoint":        i.PublicMetadataEndpoint,
+		"pinned_uuid":     pinnedUUID,
+		"actual_uuid":     actualUUID,
+	}
+
+	mc.Set(federationUUIDMismatchMetricName, 1, labels, metrics.WithGroup(federationMetricsGroup))
 }
 
 func (i *IstioFederationDiscoveryCrdInfo) PatchMetadataCache(pc go_hook.PatchCollector, scope string, meta interface{}) error {
@@ -142,7 +154,7 @@ func federationDiscovery(_ context.Context, input *go_hook.HookInput, dc depende
 
 		var publicMetadata eeCrd.AlliancePublicMetadata
 		var privateMetadata eeCrd.FederationPrivateMetadata
-		var httpOption []http.Option
+		httpOption := []http.Option{http.WithRestrictedNetworkAccess()}
 		protocolMap := map[string]string{
 			"https":    "TLS",
 			"tls":      "TLS",
@@ -196,6 +208,17 @@ func federationDiscovery(_ context.Context, input *go_hook.HookInput, dc depende
 			input.Logger.Warn("bad public metadata format in endpoint for IstioFederation", slog.String("endpoint", federationInfo.PublicMetadataEndpoint), slog.String("name", federationInfo.Name))
 			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 1)
 			publicCondition := getCondition(AllianceConditionPublicMetadataExchangeReady, prior, metav1.ConditionFalse, "InvalidPublicMetadata", "clusterUUID, authnKeyPub, and rootCA must be non-empty", t)
+			pendingPrivateCondition := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionUnknown, "AwaitingPublic", "Public metadata exchange has not succeeded yet.", t)
+			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioFederation", federationInfo.Name, federationInfo.PriorConditions, []metav1.Condition{publicCondition, pendingPrivateCondition}, t)
+			continue
+		}
+		if federationInfo.ClusterUUID != "" && publicMetadata.ClusterUUID != federationInfo.ClusterUUID {
+			t := timeNow()
+			msg := fmt.Sprintf("pinned cluster UUID %q does not match public metadata UUID %q", federationInfo.ClusterUUID, publicMetadata.ClusterUUID)
+			input.Logger.Warn("remote cluster UUID does not match pinned IstioFederation metadata", slog.String("endpoint", federationInfo.PublicMetadataEndpoint), slog.String("name", federationInfo.Name), slog.String("pinned_cluster_uuid", federationInfo.ClusterUUID), slog.String("actual_cluster_uuid", publicMetadata.ClusterUUID))
+			federationInfo.SetMetricMetadataEndpointError(input.MetricsCollector, federationInfo.PublicMetadataEndpoint, 1)
+			federationInfo.SetMetricRemoteClusterUUIDMismatch(input.MetricsCollector, federationInfo.ClusterUUID, publicMetadata.ClusterUUID)
+			publicCondition := getCondition(AllianceConditionPublicMetadataExchangeReady, prior, metav1.ConditionFalse, "ClusterUUIDMismatch", msg, t)
 			pendingPrivateCondition := getCondition(AllianceConditionPrivateMetadataExchangeReady, prior, metav1.ConditionUnknown, "AwaitingPublic", "Public metadata exchange has not succeeded yet.", t)
 			patchAllianceDiscoveryConditions(input.PatchCollector, "IstioFederation", federationInfo.Name, federationInfo.PriorConditions, []metav1.Condition{publicCondition, pendingPrivateCondition}, t)
 			continue

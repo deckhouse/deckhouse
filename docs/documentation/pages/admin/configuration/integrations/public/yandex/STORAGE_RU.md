@@ -47,7 +47,7 @@ settings:
 
 ### Создание дополнительных StorageClass и размер блока
 
-Параметр [`settings.storageClass.provision`](/modules/cloud-provider-yandex/configuration.html#parameters-storageclass-provision) позволяет создавать дополнительные StorageClass или переопределять параметры StorageClass, создаваемых модулем по умолчанию.
+Параметр [`settings.storageClass.provision`](/modules/cloud-provider-yandex/configuration.html#parameters-storageclass-provision) позволяет создавать дополнительные StorageClass или переопределять параметры StorageClass, создаваемых DKP по умолчанию.
 
 С помощью параметра [`blockSize`](/modules/cloud-provider-yandex/configuration.html#parameters-storageclass-provision-blocksize) можно задать [размер блока](https://cloud.yandex.ru/docs/compute/operations/disk-create/empty-disk-blocksize) для создаваемых дисков. От размера блока зависит максимальный размер диска: для значения `4Ki` максимальный размер составляет `8Ti`, а при каждом последующем увеличении размера блока удваивается — вплоть до `256Ti` при `128Ki`.
 

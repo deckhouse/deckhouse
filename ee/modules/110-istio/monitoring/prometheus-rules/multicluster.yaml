@@ -54,6 +54,34 @@
           ```
 
 
+    - alert: D8IstioMulticlusterRemoteClusterUUIDMismatch
+      expr: max by (multicluster_name, endpoint, pinned_uuid, actual_uuid) (d8_istio_multicluster_remote_cluster_uuid_mismatch == 1)
+      for: 5m
+      labels:
+        severity_level: "4"
+        tier: cluster
+      annotations:
+        plk_markup_format: "markdown"
+        plk_protocol_version: "1"
+        plk_create_group_if_not_exists__d8_istio_multicluster_remote_cluster_uuid_mismatch: D8IstioMulticlusterRemoteClusterUUIDMismatchGroup,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        plk_grouped_by__d8_istio_multicluster_remote_cluster_uuid_mismatch: D8IstioMulticlusterRemoteClusterUUIDMismatchGroup,tier=~tier,prometheus=deckhouse,kubernetes=~kubernetes
+        summary: IstioMulticluster peer cluster UUID changed.
+        description: |
+          Public metadata from `{{$labels.endpoint}}` for IstioMulticluster `{{$labels.multicluster_name}}` reports cluster UUID `{{$labels.actual_uuid}}`, but the previously pinned UUID is `{{$labels.pinned_uuid}}`.
+
+          Deckhouse stops private metadata exchange and does not send a multicluster JWT until the peer identity is confirmed again.
+
+          Check whether `spec.metadataEndpoint` was pointed to another cluster or the remote endpoint was replaced.
+
+          To inspect the resource:
+
+          ```bash
+          d8 k get istiomulticluster {{$labels.multicluster_name}} -o yaml
+          curl {{$labels.endpoint}}
+          ```
+
+          If the peer change is intentional, recreate the IstioMulticluster resource so a new UUID can be pinned.
+
     - alert: D8IstioRemoteClusterNotSynced
       expr:  min by (cluster_id, secret, istiod) (istio_remote_cluster_up) == 0
       for: 5m

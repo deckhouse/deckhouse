@@ -2,6 +2,8 @@
 {%- assign moduleSnakeName = page['module-snake-name'] %}
 {%- assign moduleKebabName = page['module-kebab-name'] %}
 
+{% unless site.d8Revision == 'CSE' %}
+
 {%- assign bundlesEnabledCount = 0 %}
 {%- assign bundlesDisabledCount = 0 %}
 {%- for bundle in site.data.bundles.bundleNames %}
@@ -63,3 +65,4 @@
      {%- endif %}
   {%- endif %}
 {%- endif %}
+{% endunless %}

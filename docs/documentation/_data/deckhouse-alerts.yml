@@ -1894,6 +1894,30 @@ alerts:
         Federation metadata endpoint failed.
       severity: "6"
       markupFormat: markdown
+    - name: D8IstioFederationRemoteClusterUUIDMismatch
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/federation.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        Public metadata from `{{$labels.endpoint}}` for IstioFederation `{{$labels.federation_name}}` reports cluster UUID `{{$labels.actual_uuid}}`, but the previously pinned UUID is `{{$labels.pinned_uuid}}`.
+
+        Deckhouse stops private metadata exchange and does not send a federation JWT until the peer identity is confirmed again.
+
+        Check whether `spec.metadataEndpoint` was pointed to another cluster or the remote endpoint was replaced.
+
+        To inspect the resource:
+
+        ```bash
+        d8 k get istiofederation {{$labels.federation_name}} -o yaml
+        curl {{$labels.endpoint}}
+        ```
+
+        If the peer change is intentional, recreate the IstioFederation resource so a new UUID can be pinned.
+      summary: |
+        IstioFederation peer cluster UUID changed.
+      severity: "4"
+      markupFormat: markdown
     - name: D8IstioGlobalControlplaneDoesntWork
       sourceFile: modules/110-istio/monitoring/prometheus-rules/controlplane.yaml
       moduleUrl: 110-istio
@@ -1957,6 +1981,30 @@ alerts:
       summary: |
         Multicluster remote API host health check failed.
       severity: "6"
+      markupFormat: markdown
+    - name: D8IstioMulticlusterRemoteClusterUUIDMismatch
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/multicluster.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        Public metadata from `{{$labels.endpoint}}` for IstioMulticluster `{{$labels.multicluster_name}}` reports cluster UUID `{{$labels.actual_uuid}}`, but the previously pinned UUID is `{{$labels.pinned_uuid}}`.
+
+        Deckhouse stops private metadata exchange and does not send a multicluster JWT until the peer identity is confirmed again.
+
+        Check whether `spec.metadataEndpoint` was pointed to another cluster or the remote endpoint was replaced.
+
+        To inspect the resource:
+
+        ```bash
+        d8 k get istiomulticluster {{$labels.multicluster_name}} -o yaml
+        curl {{$labels.endpoint}}
+        ```
+
+        If the peer change is intentional, recreate the IstioMulticluster resource so a new UUID can be pinned.
+      summary: |
+        IstioMulticluster peer cluster UUID changed.
+      severity: "4"
       markupFormat: markdown
     - name: D8IstioOperatorReconcileError
       sourceFile: modules/110-istio/monitoring/prometheus-rules/operator.yaml

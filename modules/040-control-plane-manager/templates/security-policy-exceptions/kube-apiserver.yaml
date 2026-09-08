@@ -1,0 +1,71 @@
+{{- if or (.Values.global.discovery.apiVersions | has "deckhouse.io/v1alpha1/SecurityPolicyException") (.Capabilities.APIVersions.Has "deckhouse.io/v1alpha1/SecurityPolicyException") }}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: SecurityPolicyException
+metadata:
+  name: kube-apiserver
+  namespace: kube-system
+  {{- include "helm_lib_module_labels" (list . (dict "app" "kube-apiserver")) | nindent 2 }}
+spec:
+  securityContext:
+    runAsNonRoot:
+      allowedValue: false
+      metadata:
+        description: |
+          kube-apiserver must run as root to read host PKI, CA bundles and optional
+          audit log directories on the master node.
+    runAsUser:
+      allowedValues:
+        - 0
+      metadata:
+        description: |
+          UID 0 is required for hostPath access to certificates and audit logs.
+  network:
+    hostNetwork:
+      allowedValue: true
+      metadata:
+        description: |
+          kube-apiserver is a static control-plane pod that listens on the node
+          network for Kubernetes API clients.
+  volumes:
+    types:
+      allowedValues:
+        - hostPath
+      metadata:
+        description: |
+          kube-apiserver mounts host PKI, CA trust stores and Deckhouse extra files.
+    hostPath:
+      allowedValues:
+        - path: /etc/kubernetes/deckhouse/extra-files
+          readOnly: true
+          metadata:
+            description: Deckhouse-managed apiserver configuration snippets.
+        - path: /etc/kubernetes/pki
+          readOnly: true
+          metadata:
+            description: Kubernetes control-plane PKI directory.
+        - path: /etc/pki
+          readOnly: true
+          metadata:
+            description: Host OS PKI trust store.
+        - path: /etc/ssl/certs
+          readOnly: true
+          metadata:
+            description: Host SSL certificate bundle.
+        - path: /usr/local/share/ca-certificates
+          readOnly: true
+          metadata:
+            description: Locally installed CA certificates.
+        - path: /usr/share/ca-certificates
+          readOnly: true
+          metadata:
+            description: Distribution CA certificates.
+        {{- if .Values.controlPlaneManager.internal.auditPolicy }}
+          {{- if eq .Values.controlPlaneManager.apiserver.auditLog.output "File" }}
+        - path: {{ .Values.controlPlaneManager.apiserver.auditLog.path }}
+          readOnly: false
+          metadata:
+            description: Optional file-based audit log directory.
+          {{- end }}
+        {{- end }}
+{{- end }}

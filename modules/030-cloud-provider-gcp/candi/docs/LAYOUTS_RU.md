@@ -17,6 +17,17 @@ description: "Описание схем размещения и взаимоде
 ![resources](images/gcp-standard.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10164&t=IvETjbByf1MSQzcm-0 --->
 
+При создании кластера модуль создаёт в VPC кластера следующие правила файрвола:
+
+- `<CLUSTER_PREFIX>-ssh-and-ping` — разрешение входящего трафика по протоколам ICMP и TCP (порт `22`) к узлам с network tag `<CLUSTER_PREFIX>` из CIDR, указанных в [`sshAllowList`](cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (по умолчанию `0.0.0.0/0`);
+- `<CLUSTER_PREFIX>-intercommunication` — разрешение любого трафика между узлами с network tag `<CLUSTER_PREFIX>`, а также из подсети подов ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)).
+
+Собственные правила файрвола применяются к узлам через дополнительные network tags ([`additionalNetworkTags`](cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags)):
+
+- для master-узлов — в параметре [`masterNodeGroup.instanceClass.additionalNetworkTags`](cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags) ресурса [GCPClusterConfiguration](cluster_configuration.html#gcpclusterconfiguration);
+- для статических узлов — в параметре [`nodeGroups[].instanceClass.additionalNetworkTags`](cluster_configuration.html#gcpclusterconfiguration-nodegroups-instanceclass-additionalnetworktags) ресурса [GCPClusterConfiguration](cluster_configuration.html#gcpclusterconfiguration);
+- для эфемерных узлов — в параметре [`spec.additionalNetworkTags`](cr.html#gcpinstanceclass-v1-spec-additionalnetworktags) ресурса [GCPInstanceClass](cr.html#gcpinstanceclass).
+
 Пример конфигурации схемы размещения:
 
 ```yaml
@@ -87,6 +98,17 @@ provider:
 
 ![resources](images/gcp-withoutnat.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10296&t=IvETjbByf1MSQzcm-0 --->
+
+При создании кластера модуль создаёт в VPC кластера следующие правила файрвола:
+
+- `<CLUSTER_PREFIX>-ssh-and-ping` — разрешение входящего трафика по протоколам ICMP и TCP (порт `22`) к узлам с network tag `<CLUSTER_PREFIX>` из CIDR, указанных в [`sshAllowList`](cluster_configuration.html#gcpclusterconfiguration-sshallowlist) (по умолчанию `0.0.0.0/0`);
+- `<CLUSTER_PREFIX>-intercommunication` — разрешение любого трафика между узлами с network tag `<CLUSTER_PREFIX>`, а также из подсети подов ([`podSubnetCIDR`](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration-podsubnetcidr)).
+
+Собственные правила файрвола применяются к узлам через дополнительные network tags ([`additionalNetworkTags`](cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags)):
+
+- для master-узлов — в параметре [`masterNodeGroup.instanceClass.additionalNetworkTags`](cluster_configuration.html#gcpclusterconfiguration-masternodegroup-instanceclass-additionalnetworktags) ресурса [GCPClusterConfiguration](cluster_configuration.html#gcpclusterconfiguration);
+- для статических узлов — в параметре [`nodeGroups[].instanceClass.additionalNetworkTags`](cluster_configuration.html#gcpclusterconfiguration-nodegroups-instanceclass-additionalnetworktags) ресурса [GCPClusterConfiguration](cluster_configuration.html#gcpclusterconfiguration);
+- для эфемерных узлов — в параметре [`spec.additionalNetworkTags`](cr.html#gcpinstanceclass-v1-spec-additionalnetworktags) ресурса [GCPInstanceClass](cr.html#gcpinstanceclass).
 
 Пример конфигурации схемы размещения:
 

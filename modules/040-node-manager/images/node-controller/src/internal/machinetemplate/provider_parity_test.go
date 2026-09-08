@@ -88,7 +88,11 @@ func providerFixtures() []providerFixture {
 
 			registrationPath: "../../../../../../030-cloud-provider-dvp/templates/registration.yaml",
 			contractPath:     "../../../../../../030-cloud-provider-dvp/capi/template.yaml",
-			providerConfig:   map[string]any{},
+			providerConfig: map[string]any{
+				"additionalVMLabels": map[string]any{
+					"network-access": "bastion",
+				},
+			},
 			instanceClass: map[string]any{
 				"virtualMachine": map[string]any{
 					"virtualMachineClassName": "generic-vm-class",
@@ -105,6 +109,10 @@ func providerFixtures() []providerFixture {
 					map[string]any{"size": "10Gi", "storageClass": "linstor-thin-r2"},
 				},
 				"etcdDisk": map[string]any{"size": "20Gi", "storageClass": "linstor-thin-r1"},
+			},
+			rolloutExceptions: map[string]string{
+				"additionalVMLabels":                "additionalVMLabels is a new provider-config field introduced with the v2 contract; v1 did not hash it, but changing VM labels must create a new template generation.",
+				"additionalVMLabels.network-access": "additionalVMLabels is a new provider-config field introduced with the v2 contract; v1 did not hash it, but changing VM labels must create a new template generation.",
 			},
 			manualRolloutIDIgnoredByV1: true,
 		},
@@ -323,6 +331,10 @@ func TestProviderConfigRolloutParity(t *testing.T) {
 
 			for _, path := range providerMutationPaths(fixture, contract) {
 				t.Run(path, func(t *testing.T) {
+					if reason, documented := fixture.rolloutExceptions[path]; documented {
+						t.Skip(reason)
+					}
+
 					mutated := mutateSpec(t, fixture.providerConfig, path)
 
 					mutatedChecksum := renderLegacyChecksumWithProvider(t, fixture, checksumTemplate, fixture.instanceClass, mutated, "")

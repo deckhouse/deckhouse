@@ -22,11 +22,13 @@ import (
 
 	"github.com/onsi/ginkgo/v2"
 	"github.com/onsi/gomega"
+	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/envtest"
+	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
 // Suite is a running envtest apiserver with the controllers of the test binary
@@ -47,6 +49,26 @@ type Suite struct {
 // (DeferCleanup in BeforeSuite does), and skip on !AssetsAvailable() first.
 func StartSuite(w io.Writer, addToScheme []func(*runtime.Scheme) error, crdPaths ...string) (*Suite, func()) {
 	ginkgo.GinkgoHelper()
+	return startSuite(w, addToScheme, nil, nil, crdPaths)
+}
+
+// StartSuiteWithWebhooks is StartSuite with the given ValidatingWebhookConfigurations
+// installed, so the specs see the admission the cluster sees. setupWebhooks registers
+// the handlers on the manager (pass webhook.SetupWithManager); it blocks until the
+// webhook server answers.
+func StartSuiteWithWebhooks(w io.Writer, addToScheme []func(*runtime.Scheme) error,
+	validating []*admissionregistrationv1.ValidatingWebhookConfiguration,
+	setupWebhooks func(manager.Manager) error, crdPaths ...string,
+) (*Suite, func()) {
+	ginkgo.GinkgoHelper()
+	return startSuite(w, addToScheme, validating, setupWebhooks, crdPaths)
+}
+
+func startSuite(w io.Writer, addToScheme []func(*runtime.Scheme) error,
+	validating []*admissionregistrationv1.ValidatingWebhookConfiguration,
+	setupWebhooks func(manager.Manager) error, crdPaths []string,
+) (*Suite, func()) {
+	ginkgo.GinkgoHelper()
 
 	SetupLogger(w)
 	ctx, cancel := context.WithCancel(context.Background())
@@ -57,16 +79,33 @@ func StartSuite(w io.Writer, addToScheme []func(*runtime.Scheme) error, crdPaths
 		gomega.Expect(add(scheme)).To(gomega.Succeed())
 	}
 
-	env, cfg, c, err := Start(scheme, crdPaths...)
+	var (
+		env *envtest.Environment
+		cfg *rest.Config
+		c   client.Client
+		err error
+	)
+	if len(validating) == 0 {
+		env, cfg, c, err = Start(scheme, crdPaths...)
+	} else {
+		env, cfg, c, err = StartWithWebhooks(scheme, validating, crdPaths...)
+	}
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
 
-	mgr, err := NewManager(ctx, cfg, scheme)
+	mgr, err := NewManagerWithWebhooks(ctx, cfg, scheme, webhookOptions(env, validating))
 	gomega.Expect(err).NotTo(gomega.HaveOccurred())
+	if setupWebhooks != nil {
+		gomega.Expect(setupWebhooks(mgr)).To(gomega.Succeed())
+	}
 
 	go func() {
 		defer ginkgo.GinkgoRecover()
 		gomega.Expect(mgr.Start(ctx)).To(gomega.Succeed())
 	}()
+
+	if len(validating) > 0 {
+		gomega.Expect(WaitForWebhookServer(ctx, &env.WebhookInstallOptions)).To(gomega.Succeed())
+	}
 
 	suite := &Suite{
 		Env:       env,
@@ -80,4 +119,13 @@ func StartSuite(w io.Writer, addToScheme []func(*runtime.Scheme) error, crdPaths
 		cancel()
 		gomega.Expect(env.Stop()).To(gomega.Succeed())
 	}
+}
+
+// webhookOptions is nil unless the suite installed webhooks, so a suite without
+// them gets a manager with no webhook server, exactly as before.
+func webhookOptions(env *envtest.Environment, validating []*admissionregistrationv1.ValidatingWebhookConfiguration) *envtest.WebhookInstallOptions {
+	if len(validating) == 0 {
+		return nil
+	}
+	return &env.WebhookInstallOptions
 }

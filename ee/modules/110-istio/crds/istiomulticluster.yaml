@@ -96,6 +96,7 @@ spec:
                     Readiness of metadata exchange with the remote cluster.
 
                     - `PublicMetadataExchangeReady` — remote `public.json` is reachable and valid.
+                      When `status.metadataCache.public.clusterUUID` is already set, the UUID returned by the endpoint must match it; otherwise the condition becomes `False` with reason `ClusterUUIDMismatch`.
                     - `PrivateMetadataExchangeReady` — remote private metadata is reachable and valid.
                     - `RemoteAPIServerReady` — remote multicluster API host (`apiHost`) serves the authenticated `/api` endpoint.
                     - `DataplaneConnectionReady` — cross-cluster dataplane health probe to the remote `alliance-healthcheck` service succeeded.

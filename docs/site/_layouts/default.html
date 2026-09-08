@@ -18,6 +18,7 @@
   </div>
   {% include footer.html %}
 
+{%- unless site.d8Revision == 'CSE' %}
 <script type="text/javascript">
   // Fix second level topnav menu for GS and guides sections.
   let subUrls = ['/gs/', '/guides/', '/modules/'];
@@ -35,5 +36,6 @@
 {% if site.google_analytics %}
 {% include google_analytics.html %}
 {% endif %}
+{%- endunless %}
 </body>
 </html>

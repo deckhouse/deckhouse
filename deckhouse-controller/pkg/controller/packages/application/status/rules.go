@@ -22,6 +22,12 @@ import (
 )
 
 // External condition types — what the user sees on the Application resource.
+//
+// The reason vocabulary documented per condition below describes a application that
+// exists. While one is being removed the mapper bypasses the rules entirely and
+// reports every condition here as False/Deleting, so each vocabulary gains that
+// reason and the guarantees stated below — Installed's stickiness, Scaled's
+// exclusive ownership by the health monitor — do not hold on that path.
 const (
 	// ConditionInstalled reflects the state of the first install of the application.
 	// True when the install pipeline completed; False while it is blocked or has failed
@@ -279,18 +285,18 @@ func isInstallComplete(state condmap.State) bool {
 	return state.AllIntEqual(metav1.ConditionTrue, intManifestsApplied, intScaled)
 }
 
-// buildMapper returns the standard set of mappers in evaluation order.
+// buildMapper returns the standard set of mappers in evaluation order. Each map
+// declares the condition it owns, which is also the set the mapper reports as
+// Deleting while the application is being removed.
 func buildMapper() condmap.Mapper {
-	return condmap.Mapper{
-		Maps: []condmap.Map{
-			mapInstalled,
-			mapUpdateInstalled,
-			mapReady,
-			mapScaled,
-			mapManaged,
-			mapConfigurationApplied,
-		},
-	}
+	return condmap.NewMapper(
+		condmap.Map{Type: ConditionInstalled, Fn: mapInstalled},
+		condmap.Map{Type: ConditionUpdateInstalled, Fn: mapUpdateInstalled},
+		condmap.Map{Type: ConditionReady, Fn: mapReady},
+		condmap.Map{Type: ConditionScaled, Fn: mapScaled},
+		condmap.Map{Type: ConditionManaged, Fn: mapManaged},
+		condmap.Map{Type: ConditionConfigurationApplied, Fn: mapConfigurationApplied},
+	)
 }
 
 // Convention for all mappers below: failure checks come BEFORE success checks.

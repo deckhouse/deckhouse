@@ -330,6 +330,7 @@ var DefaultImagesDigests = map[string]interface{}{
 		"clusterAutoscaler135":     "imageHash-nodeManager-clusterAutoscaler135",
 		"clusterAutoscaler136":     "imageHash-nodeManager-clusterAutoscaler136",
 		"d8ShutdownInhibitor":      "imageHash-nodeManager-d8ShutdownInhibitor",
+		"engine":                   "imageHash-nodeManager-engine",
 		"fencingAgent":             "imageHash-nodeManager-fencingAgent",
 		"kubernetesApiProxy":       "imageHash-nodeManager-kubernetesApiProxy",
 		"machineControllerManager": "imageHash-nodeManager-machineControllerManager",
@@ -344,7 +345,6 @@ var DefaultImagesDigests = map[string]interface{}{
 		"nvidiaMigManager134":      "imageHash-nodeManager-nvidiaMigManager134",
 		"nvidiaMigManager135":      "imageHash-nodeManager-nvidiaMigManager135",
 		"nvidiaMigManager136":      "imageHash-nodeManager-nvidiaMigManager136",
-		"olcedar":                  "imageHash-nodeManager-olcedar",
 	},
 	"openvpn": map[string]interface{}{
 		"easyrsaMigrator":     "imageHash-openvpn-easyrsaMigrator",

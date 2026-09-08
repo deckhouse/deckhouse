@@ -461,6 +461,19 @@ Then, in order to fulfill the requirements of the above security policies, the f
       readOnlyRootFilesystem: true
 ```
 
+## Why is an Assign or AssignMetadata mutation rejected or silently ignored?
+
+The `Assign`, `AssignMetadata`, `ModifySet`, and `AssignImage` CRDs are imported from Gatekeeper without modification (see [Mutation Custom Resources](gatekeeper-cr.html#mutation-custom-resources)). However, the Gatekeeper mutation webhook enforces content restrictions that go beyond the CRD schema. The `admission-policy-engine` module enforces the checkable restrictions with built-in ValidatingAdmissionPolicies. As a result, `kubectl apply` rejects an invalid resource immediately instead of silently ignoring it or having Gatekeeper reject it later with an unclear parser error.
+
+The module enforces the following restrictions:
+
+- `deny-invalid-assign-location.deckhouse.io` — the `spec.location` field of `Assign` cannot target the `metadata` field (`metadata.name`, `.namespace`, `.labels`, `.annotations`). Use `AssignMetadata` to add labels or annotations.
+- `deny-invalid-assignmetadata-location.deckhouse.io` — the `spec.location` field of `AssignMetadata` must be exactly `metadata.labels.<KEY>` or `metadata.annotations.<KEY>`. If `<KEY>` contains characters other than letters, digits, `_`, or `-` (for example, a domain-prefixed key such as `app.kubernetes.io/name`), wrap it in quotes: `metadata.annotations."app.kubernetes.io/name"`.
+- `deny-invalid-assignmetadata-value.deckhouse.io` — the `spec.parameters.assign.value` field of `AssignMetadata` must be a string, because Kubernetes label and annotation values are strings.
+- `deny-invalid-mutator-frommetadata-field.deckhouse.io` — the `spec.parameters.assign.fromMetadata.field` field (in `Assign` and `AssignMetadata`) is mandatory once `fromMetadata` is set, and accepts only `namespace` or `name`.
+- `deny-invalid-assignmetadata-externaldata-datasource.deckhouse.io` — the `spec.parameters.assign.externalData.dataSource` field of `AssignMetadata` supports only `Username`. This field defaults to `ValueAtLocation` when omitted, and that default is rejected too — set `dataSource: Username` explicitly. Unlike `Assign`, `AssignMetadata` doesn't support `ValueAtLocation`, because a metadata mutation has no source value at `location` to read.
+- `deny-mutator-without-match-kinds.deckhouse.io` — the `spec.match.kinds` field is required and must not be empty in `Assign`, `AssignMetadata`, `ModifySet`, and `AssignImage` resources, and every entry in it must set non-empty `apiGroups` and `kinds` without a `*` kind. This restriction is specific to Deckhouse: the `d8-admission-policy-engine-config` MutatingWebhookConfiguration rules are generated only from the `match.kinds` field across all resources of these kinds, resolving `apiGroups`/`kinds` through the Kubernetes REST mapper. A resource with an entry that doesn't resolve to a concrete resource type never triggers a mutation, even though Gatekeeper itself would still treat it as valid.
+
 ## Verification of image signatures
 
 {% alert level="warning" %}
@@ -640,3 +653,68 @@ Key data and checks available when validating `CONNECT` operations:
 - Use `input.review.operation == "CONNECT"` to check for `CONNECT` operations.
 - User information is available in `input.review.userInfo.username` and `input.review.userInfo.groups`.
 - The namespace is available in `input.review.namespace`.
+
+## How do I restrict GPU resource usage in namespaces?
+
+The `gpuResourceRestriction` policy in [OperationPolicy](cr.html#operationpolicy)
+denies the pods that request GPU resources when the namespace has no label allowing GPU usage.
+The check runs on pod creation and update, including when an ephemeral container is added.
+Both `resources.requests` and `resources.limits` of every container, init container,
+and ephemeral container are inspected. A resource with a quantity of `0` is not treated as a GPU request.
+
+To set up GPU resource restriction:
+
+1. Create an OperationPolicy with the `gpuResourceRestriction` setting.
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: OperationPolicy
+   metadata:
+     name: gpu-restriction
+   spec:
+     enforcementAction: Deny
+     match:
+       namespaceSelector:
+         labelSelector:
+           matchLabels:
+             operation-policy.deckhouse.io/enabled: "true"
+     policies:
+       gpuResourceRestriction:
+         namespaceLabel:
+           key: "gpu.deckhouse.io/enabled"
+           value: "true"
+         gpuResourcePatterns:
+           - '^nvidia\.com/.*$'
+           - '^amd\.com/gpu$'
+   ```
+
+   The `namespaceLabel` parameter defines the label key and value that must be present on the namespace.
+   The `gpuResourcePatterns` parameter lists the regular expressions matched against GPU resource names.
+   Patterns are not anchored implicitly, so use `^` and `$` to match the whole resource name.
+
+1. Add the policy label to the namespaces where the policy must be enforced.
+
+   ```shell
+   d8 k label ns my-namespace operation-policy.deckhouse.io/enabled=true
+   ```
+
+1. Add the GPU label to the namespaces where GPU usage is allowed.
+
+   ```shell
+   d8 k label ns my-gpu-namespace gpu.deckhouse.io/enabled=true
+   ```
+
+After that, the pods that request GPU resources are allowed only in the namespaces
+with the `gpu.deckhouse.io/enabled: "true"` label.
+
+{% alert level="warning" %}
+The policy is applied to pods. A Deployment or another controller that requests GPU resources
+is created successfully, and the denial is reported in the ReplicaSet events.
+
+The namespace label is read from the Gatekeeper cache. While a namespace is missing from that cache,
+for example when the namespace and the pod are applied together and the namespace has not been cached yet,
+the policy denies the pods that request GPU resources in that namespace.
+
+The devices requested through [Dynamic Resource Allocation](https://kubernetes.io/docs/concepts/scheduling-eviction/dynamic-resource-allocation/)
+in the `spec.resourceClaims` field are not extended resources, and the policy does not check them.
+{% endalert %}

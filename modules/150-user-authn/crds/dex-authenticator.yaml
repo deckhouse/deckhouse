@@ -82,9 +82,15 @@ spec:
                   description: |-
                     Request to application will be sent with `Authorization: Bearer` header when the option is switched to true.
 
+                    When enabled, the header carries a signed Dex ID token (`id_token`) containing the user's email, name, and group membership. This is the only way to pass the user's groups to the application via DexAuthenticator: a separate `X-Auth-Request-Groups` header with groups is not sent.
+
                     > **Warning.** Enable it only if the application can process this header.
                     >
-                    > When setting `sendAuthorizationHeader: true`, list all necessary headers in the `nginx.ingress.kubernetes.io/auth-response-headers` annotation of the Ingress, since the `Authorization` header is not transmitted by default.
+                    > When setting `sendAuthorizationHeader: true`, list all necessary headers in the application's Ingress resource (if the application is published through an Ingress) or in the HTTPRoute resource (if the application is published through an ALBInstance or ClusterALBInstance of the [`alb`](/modules/alb/) module).
+                    >
+                    > Also, if the application is published through an Ingress resource, when setting `sendAuthorizationHeader: true`, increase the header buffer size, since a JWT with many groups may not fit into the default buffer.
+                    >
+                    > For details on specifying the headers and increasing the buffer, see [How to pass the user's login and groups to an application](faq.html#how-to-pass-the-users-login-and-groups-to-an-application).
                 applicationIngressCertificateSecretName:
                   type: string
                   description: |-
@@ -463,9 +469,15 @@ spec:
                   description: |-
                     Request to application will be sent with `Authorization: Bearer` header when the option is switched to true.
 
+                    When enabled, the header carries a signed Dex ID token (`id_token`) containing the user's email, name, and group membership. This is the only way to pass the user's groups to the application via DexAuthenticator: a separate `X-Auth-Request-Groups` header with groups is not sent.
+
                     > **Warning.** Enable it only if the application can process this header.
                     >
-                    > When setting `sendAuthorizationHeader: true`, list all necessary headers in the `nginx.ingress.kubernetes.io/auth-response-headers` annotation of the Ingress, since the `Authorization` header is not transmitted by default.
+                    > When setting `sendAuthorizationHeader: true`, list all necessary headers in the application's Ingress resource (if the application is published through an Ingress) or in the HTTPRoute resource (if the application is published through an ALBInstance or ClusterALBInstance of the [`alb`](/modules/alb/) module).
+                    >
+                    > Also, if the application is published through an Ingress resource, when setting `sendAuthorizationHeader: true`, increase the header buffer size, since a JWT with many groups may not fit into the default buffer.
+                    >
+                    > For details on specifying the headers and increasing the buffer, see [How to pass the user's login and groups to an application](faq.html#how-to-pass-the-users-login-and-groups-to-an-application).
                 keepUsersLoggedInFor:
                   type: string
                   description: |-

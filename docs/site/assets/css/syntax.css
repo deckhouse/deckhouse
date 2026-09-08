@@ -48,7 +48,7 @@
 .highlight .k, .highlight .kn, .highlight .kp, .highlight .kt, .highlight .kv {
   color: #0000FF;
 }
-.highlight .s, .highlight .sb, .highlight .sc, .highlight .dl, .highlight .sd, .highlight .s2, .highlight .se, .highlight .sh, .highlight .si, .highlight .sx, .highlight .sr, .highlight .s1, .highlight .ss {
+.highlight .s, .highlight .sb, .highlight .sc, .highlight .dl, .highlight .sd, .highlight .s2, .highlight .se, .highlight .sh, .highlight .si, .highlight .sx, .highlight .sr, .highlight .s1, .highlight .ss, .highlight .l, .highlight .m {
   color: #009C00;
 }
 .highlight .sa {

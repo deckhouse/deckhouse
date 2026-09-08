@@ -1,0 +1,25 @@
+# TEST FIXTURE. Minimal InstanceClass CRD standing in for a provider-owned one, so the consumer
+# sync has a registered kind to write status.nodeGroupConsumers on. Schema-free.
+#
+# No `subresources` section, like every real provider's InstanceClass — checked in eleven files:
+# ten candi/openapi/instance_class.yaml plus the DVP one under crds/.
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: d8testinstanceclasses.deckhouse.io
+spec:
+  group: deckhouse.io
+  names:
+    kind: D8TestInstanceClass
+    listKind: D8TestInstanceClassList
+    plural: d8testinstanceclasses
+    singular: d8testinstanceclass
+  scope: Cluster
+  versions:
+    - name: v1
+      served: true
+      storage: true
+      schema:
+        openAPIV3Schema:
+          type: object
+          x-kubernetes-preserve-unknown-fields: true
