@@ -4,7 +4,8 @@
   Helm names the CAPI infrastructure template and the bootstrap Secret after this checksum and
   keeps every one it ever rendered (helm.sh/resource-policy: keep), so node-controller cannot
   tell the current template from the stale ones by looking at them. This ConfigMap is not kept
-  and always carries the checksum of the last render.
+  and always carries the checksum of the last render, byte for byte as node-group.yaml hashed it
+  into the template and Secret names.
 */ -}}
 apiVersion: v1
 kind: ConfigMap
@@ -18,7 +19,7 @@ data:
     {{- if .Values.nodeManager.internal.cloudProvider.capiClusterKind }}
       {{- range $ng := .Values.nodeManager.internal.nodeGroups | default list }}
         {{- if and (or (eq $ng.nodeType "CloudEphemeral") (eq $ng.nodeType "Cloud")) (ne ($ng.engine | default "") "MCM") }}
-          {{- $checksum := include "capi_node_group_instance_class_checksum" (list $ $ng) | trim }}
+          {{- $checksum := include "capi_node_group_instance_class_checksum" (list $ $ng) }}
           {{- if $checksum }}
             {{- $published = true }}
   {{ $ng.name }}: {{ $checksum | quote }}

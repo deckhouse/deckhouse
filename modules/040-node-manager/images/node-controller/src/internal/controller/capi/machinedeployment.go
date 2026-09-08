@@ -231,7 +231,8 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 		return err
 	}
 	if instanceClassChecksum == "" {
-		logger.V(1).Info("skipping: instance-class checksum not published yet, waiting for helm")
+		logger.Info("skipping: instance-class checksum not published yet, waiting for helm",
+			"configMap", instanceClassChecksumConfigMapName)
 		return nil
 	}
 
@@ -585,7 +586,8 @@ func (r *MachineDeploymentReconciler) readInstanceClassChecksum(ctx context.Cont
 		}
 		return "", fmt.Errorf("get configmap %s: %w", instanceClassChecksumConfigMapName, err)
 	}
-	return strings.TrimSpace(cm.Data[ngName]), nil
+	// Returned as published: helm hashed this exact string into the template and Secret names.
+	return cm.Data[ngName], nil
 }
 
 func applyMachineDeploymentSpecPatch(spec map[string]interface{}, rawPatch string, vars map[string]string) error {
