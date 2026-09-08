@@ -20,7 +20,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-// NodeConfig is the desired state of a Deckhouse olcedar node, stored at
+// NodeConfig is the desired state of a Deckhouse Engine node, stored at
 // /config/nodeconfig.yaml and as a cluster CRD (crds/nodeconfig.yaml, generated).
 // Keep identical with nodelet's internal/config/types.go and dhctl's spec-only mirrors.
 // +kubebuilder:object:root=true
@@ -80,6 +80,10 @@ type NodeConfigStatus struct {
 	// +listType=map
 	// +listMapKey=name
 	Units []UnitStatus `json:"units,omitempty"`
+	// Network is what the node resolved for itself: the interface it took its
+	// cluster address from, and that address. Written by the node alone.
+	// +optional
+	Network *NetworkStatus `json:"network,omitempty"`
 	// LastReconcileTime is when the node last finished a reconcile pass — the
 	// only thing in the status that ages, so it is what tells a dead agent from
 	// a healthy one. Republished coarsely: judge staleness in tens of minutes.
@@ -123,6 +127,17 @@ type OSImageStatus struct {
 	// different digest.
 	// +optional
 	FailedDigest string `json:"failedDigest,omitempty"`
+}
+
+// NetworkStatus is the address the node joined the cluster on and the
+// interface it sits on.
+type NetworkStatus struct {
+	// ClusterInterface is the NIC the address was taken from.
+	// +optional
+	ClusterInterface string `json:"clusterInterface,omitempty"`
+	// Address is the address kubelet registered the node with.
+	// +optional
+	Address string `json:"address,omitempty"`
 }
 
 // ExtensionStatus is the reconcile outcome of one system extension.
@@ -201,6 +216,23 @@ type NodeSpec struct {
 	// +optional
 	// +kubebuilder:validation:items:Pattern=`^(https?://)?(\[[0-9A-Fa-f:]+\]|[A-Za-z0-9]([-A-Za-z0-9]*[A-Za-z0-9])?([.][A-Za-z0-9]([-A-Za-z0-9]*[A-Za-z0-9])?)*):(6553[0-5]|655[0-2][0-9]|65[0-4][0-9]{2}|6[0-4][0-9]{3}|[1-5][0-9]{4}|[1-9][0-9]{0,3})/?$`
 	APIServerEndpoints []string `json:"apiServerEndpoints,omitempty"`
+	// InternalNetworkCIDRs are the subnets the cluster's own traffic runs on.
+	// The node picks the interface holding an address inside one of them and
+	// registers with that address; a node with one NIC needs none of this.
+	// The pattern is StaticClusterConfiguration's own
+	// (candi/openapi/static_cluster_configuration.yaml): IPv4 only.
+	// +optional
+	// +kubebuilder:validation:MaxItems=64
+	// +kubebuilder:validation:items:Pattern=`^(([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])\.){3}([0-9]|[1-9][0-9]|1[0-9]{2}|2[0-4][0-9]|25[0-5])(\/(3[0-2]|[1-2][0-9]|[0-9]))$`
+	InternalNetworkCIDRs []string `json:"internalNetworkCIDRs,omitempty"`
+	// StatusToken is the bearer presented to the node's :50000 status port.
+	// Whoever writes the document mints it (dhctl, or the NodeConfigTemplate
+	// render for a hand-installed machine); the cluster carries it over
+	// untouched, having no way to tell the node a new one. Deliberately not
+	// marked sensitive: the apiserver would answer "<omitted>" and the
+	// carry-over would write that back, destroying the token.
+	// +optional
+	StatusToken string `json:"statusToken,omitempty"`
 	// UpdatePolicy controls how and when the node is updated.
 	// +optional
 	UpdatePolicy UpdatePolicy `json:"updatePolicy,omitempty"`
@@ -226,6 +258,7 @@ type Registry struct {
 	// Address is the registry host, optionally with a port, e.g.
 	// "registry.deckhouse.io" or "registry.example.com:5000".
 	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Pattern=`^\S+$`
 	Address string `json:"address"`
 	// Path is the repository path within the registry, e.g. "/deckhouse/ce".
 	// +optional
@@ -243,6 +276,7 @@ type Registry struct {
 	// Auth is the base64-encoded "user:password" pair, as it appears in the
 	// "auth" field of a docker config.
 	// +optional
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9+/]+={0,2}$`
 	Auth string `json:"auth,omitempty"`
 }
 
@@ -470,6 +504,7 @@ type Network struct {
 	// +optional
 	NTP NTP `json:"ntp,omitempty"`
 	// +optional
+	// +kubebuilder:validation:XValidation:rule="self.filter(i, has(i.cluster) && i.cluster).size() <= 1",message="at most one interface may be marked as the cluster interface"
 	Interfaces []NetworkInterface `json:"interfaces,omitempty"`
 	// +optional
 	Routes []Route `json:"routes,omitempty"`
@@ -500,6 +535,10 @@ type NetworkInterface struct {
 	Addresses []string `json:"addresses,omitempty"`
 	// +optional
 	Gateway string `json:"gateway,omitempty"`
+	// Cluster names this NIC the one the cluster's traffic runs on, for a
+	// machine whose addressing spec.internalNetworkCIDRs cannot tell apart.
+	// +optional
+	Cluster bool `json:"cluster,omitempty"`
 }
 
 // NodeLabelValue carries a label value unvalidated: a NodeGroup takes any
@@ -556,6 +595,10 @@ type Kubelet struct {
 	// +kubebuilder:default="50Mi"
 	// +kubebuilder:validation:XValidation:rule="isQuantity(self) && sign(quantity(self)) > 0",message="containerLogMaxSize must be a positive Kubernetes quantity"
 	ContainerLogMaxSize string `json:"containerLogMaxSize,omitempty"`
+	// Maintainers: the maximum below is 1000 because the on-node loader enforces
+	// it; kept in step by hand. Separated from the comment below by a blank line
+	// on purpose — controller-gen ships the touching comment group into the CRD.
+
 	// ContainerLogMaxFiles is the number of rotated log files to retain.
 	// +optional
 	// +kubebuilder:validation:Minimum=1
@@ -588,12 +631,6 @@ type Kubelet struct {
 	// to false: nothing approves serving CSRs until Deckhouse is installed.
 	// +optional
 	ServerTLSBootstrap *bool `json:"serverTLSBootstrap,omitempty"`
-	// NodeIP is the address kubelet registers the node with (--node-ip). Left
-	// empty kubelet picks an address itself, which on a multi-homed node is not
-	// always the one the cluster routes to.
-	// +optional
-	// +kubebuilder:validation:XValidation:rule="self == '' || isIP(self)",message="nodeIP must be a valid IP address"
-	NodeIP string `json:"nodeIP,omitempty"`
 	// ResourceReservation controls how much CPU, memory and disk are held back
 	// from pods for the system itself (kubeReserved).
 	// +optional
@@ -636,10 +673,11 @@ type ContainerRuntime struct {
 	// MaxConcurrentDownloads limits parallel image layer downloads. Zero is
 	// containerd's "no limit", and a NodeGroup takes any integer
 	// (crds/node_group.yaml:1638): a value it accepts must be accepted here.
+	// The default is bashible's (candi/bashible/common-steps/all/032_configure_containerd.sh.tpl).
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:default=3
-	MaxConcurrentDownloads int `json:"maxConcurrentDownloads,omitempty"`
+	// +kubebuilder:default=8
+	MaxConcurrentDownloads *int `json:"maxConcurrentDownloads,omitempty"`
 }
 
 // UpdatePolicy controls how/when the node is updated.

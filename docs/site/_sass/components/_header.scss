@@ -722,6 +722,8 @@ html {
                 width: fit-content;
                 color: mixins.$ntrl-300;
                 font-size: 12.5px;
+                user-select: none;
+
 
                 &::after {
                     content: "";
