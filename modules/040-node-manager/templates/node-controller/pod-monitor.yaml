@@ -1,5 +1,3 @@
-{{- /* vcp-gate */ -}}
-{{- if .Values.global.deckhouseSelfHosted }}
 {{- if (.Capabilities.APIVersions.Has "monitoring.coreos.com/v1/PodMonitor") }}
 ---
 apiVersion: monitoring.coreos.com/v1
@@ -33,5 +31,3 @@ spec:
     matchNames:
     - d8-cloud-instance-manager
 {{- end }}
-{{- end }}
-{{- /* /vcp-gate */ -}}

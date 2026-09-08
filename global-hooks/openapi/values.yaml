@@ -82,6 +82,12 @@ properties:
         type: boolean
         default: false
         x-examples: [ true, false ]
+      clusterHasReadyNodes:
+        type: boolean
+        default: false
+        description: |
+          Whether the cluster currently has at least one Ready node, masters included
+        x-examples: [ true, false ]
       clusterMasterCount:
         type: integer
         minimum: 0
