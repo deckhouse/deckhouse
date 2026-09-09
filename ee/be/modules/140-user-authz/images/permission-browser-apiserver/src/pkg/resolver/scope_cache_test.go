@@ -226,6 +226,60 @@ func TestRefresh_PartialDiscoveryError_KeepsTheFailedGroups(t *testing.T) {
 
 	_, known = cache.Scope("removed.example.com", "widgets")
 	assert.False(t, known, "a group that discovery neither returned nor reported as failed has left the cluster")
+
+	// GroupUnavailable is how the multi-tenancy engine tells "this resource does not exist" from
+	// "we could not read this group". Getting it wrong is not a missing feature, it is a grant: a
+	// group whose entries were never read would look absent, absent means no opinion for a
+	// cluster-scoped request, and the rule's cluster-wide binding would then let RBAC serve a
+	// cluster-wide list of a namespaced resource to a subject limited to one namespace.
+	//
+	// Every test above uses a hand-written fake for it, so until this assertion the production
+	// implementation - the read side of unavailableGroups - was never called by anything.
+	assert.True(t, cache.GroupUnavailable("metrics.k8s.io"), "a group discovery reported as failed is unavailable")
+	assert.False(t, cache.GroupUnavailable("apps"), "a group discovery returned is available")
+	assert.False(t, cache.GroupUnavailable(""), "the core group is available")
+	assert.False(t, cache.GroupUnavailable("removed.example.com"), "a group that has left the cluster is absent, not unavailable")
+}
+
+// A healthy refresh must clear a group that was unavailable before, or the engine keeps denying
+// cluster-scoped requests for it after the APIService comes back.
+func TestGroupUnavailable_ClearedByAHealthyRefresh(t *testing.T) {
+	failing := newMockDiscovery(
+		[]*metav1.APIResourceList{{
+			GroupVersion: "v1",
+			APIResources: []metav1.APIResource{{Name: "pods", Namespaced: true, Kind: "Pod"}},
+		}},
+		&discovery.ErrGroupDiscoveryFailed{Groups: map[schema.GroupVersion]error{
+			{Group: "metrics.k8s.io", Version: "v1beta1"}: fmt.Errorf("the server is currently unable to handle the request"),
+		}},
+	)
+	cache := &ResourceScopeCache{discoveryClient: failing, scopeMap: make(map[string]bool)}
+	cache.refresh()
+	assert.True(t, cache.GroupUnavailable("metrics.k8s.io"))
+
+	cache.discoveryClient = newMockDiscovery([]*metav1.APIResourceList{
+		{
+			GroupVersion: "v1",
+			APIResources: []metav1.APIResource{{Name: "pods", Namespaced: true, Kind: "Pod"}},
+		},
+		{
+			GroupVersion: "metrics.k8s.io/v1beta1",
+			APIResources: []metav1.APIResource{{Name: "nodes", Namespaced: false, Kind: "NodeMetrics"}},
+		},
+	}, nil)
+	cache.refresh()
+
+	assert.False(t, cache.GroupUnavailable("metrics.k8s.io"), "the group answered this time")
+	namespaced, known := cache.Scope("metrics.k8s.io", "nodes")
+	assert.True(t, known)
+	assert.False(t, namespaced)
+}
+
+// A typed nil handed to an interface value must answer like a nil interface, which is what the
+// three sibling methods promise and what engine.resourceScopeOf relies on.
+func TestGroupUnavailable_NilReceiver(t *testing.T) {
+	var cache *ResourceScopeCache
+	assert.False(t, cache.GroupUnavailable("anything"))
 }
 
 // TestRefresh_NonDiscoveryError_PreservesCache tests that an error other than a partial group
