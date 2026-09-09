@@ -17,6 +17,8 @@ limitations under the License.
 package template_tests
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 	"sort"
@@ -1244,6 +1246,23 @@ ccc: ddd
 				Expect(clusterAutoscalerMCMDeploy.Exists()).To(BeFalse())
 				Expect(clusterAutoscalerDeploy.Field("spec.template.spec.containers.0.args").String()).To(ContainSubstring("--cloud-provider=clusterapi"))
 				Expect(machineDeployment.Exists()).To(BeFalse())
+			})
+
+			It("publishes the instance-class checksum node-controller names the template by", func() {
+				Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+				checksums := f.KubernetesResource("ConfigMap", "d8-cloud-instance-manager", "d8-node-manager-capi-instance-class-checksum")
+				Expect(checksums.Exists()).To(BeTrue())
+				checksum := checksums.Field("data.worker").String()
+				Expect(checksum).ToNot(BeEmpty())
+
+				// node-controller names the template sha256(clusterUUID+zone+checksum)[:8] from this
+				// value (capi/machinedeployment.go); a byte of difference from what node-group.yaml
+				// hashed would point the MachineDeployment at a template that does not exist.
+				sum := sha256.Sum256([]byte("f49dd1c3-a63a-4565-a06c-625e35587eab" + "zonea" + checksum))
+				templateName := "worker-" + hex.EncodeToString(sum[:])[:8]
+				Expect(templateName).To(Equal("worker-d03da7ca"))
+				Expect(f.KubernetesResource("OpenStackMachineTemplate", "d8-cloud-instance-manager", templateName).Exists()).To(BeTrue())
 			})
 
 			It("must render allowed address pairs for internal OpenStack networks", func() {

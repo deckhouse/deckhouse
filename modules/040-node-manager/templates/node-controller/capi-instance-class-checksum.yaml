@@ -1,0 +1,33 @@
+{{- /*
+  Bridge the instance-class checksum helm computes into node-controller.
+
+  Helm names the CAPI infrastructure template and the bootstrap Secret after this checksum and
+  keeps every one it ever rendered (helm.sh/resource-policy: keep), so node-controller cannot
+  tell the current template from the stale ones by looking at them. This ConfigMap is not kept
+  and always carries the checksum of the last render, byte for byte as node-group.yaml hashed it
+  into the template and Secret names.
+*/ -}}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: d8-node-manager-capi-instance-class-checksum
+  namespace: d8-cloud-instance-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "node-controller")) | nindent 2 }}
+data:
+  {{- $published := false }}
+  {{- if hasKey .Values.nodeManager.internal "cloudProvider" }}
+    {{- if .Values.nodeManager.internal.cloudProvider.capiClusterKind }}
+      {{- range $ng := .Values.nodeManager.internal.nodeGroups | default list }}
+        {{- if and (or (eq $ng.nodeType "CloudEphemeral") (eq $ng.nodeType "Cloud")) (ne ($ng.engine | default "") "MCM") }}
+          {{- $checksum := include "capi_node_group_instance_class_checksum" (list $ $ng) }}
+          {{- if $checksum }}
+            {{- $published = true }}
+  {{ $ng.name }}: {{ $checksum | quote }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- if not $published }}
+  _placeholder: ""
+  {{- end }}

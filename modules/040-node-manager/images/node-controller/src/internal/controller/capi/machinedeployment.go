@@ -74,6 +74,25 @@ func (r *MachineDeploymentReconciler) SetupWatches(w register.Watcher) {
 		builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 	w.Watches(&capiv1beta2.MachineDeployment{}, handler.EnqueueRequestsFromMapFunc(mdToNodeGroup),
 		builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+	w.Watches(&corev1.ConfigMap{}, handler.EnqueueRequestsFromMapFunc(checksumConfigMapToNodeGroups))
+}
+
+// checksumConfigMapToNodeGroups enqueues every NodeGroup named in the checksum ConfigMap helm just
+// rewrote, so an InstanceClass change reaches the MachineDeployment without waiting for an
+// unrelated NodeGroup event. The cache holds only this ConfigMap (see common.CacheOptions).
+func checksumConfigMapToNodeGroups(_ context.Context, obj client.Object) []reconcile.Request {
+	if obj.GetNamespace() != common.MachineNamespace || obj.GetName() != common.InstanceClassChecksumConfigMapName {
+		return nil
+	}
+	cm, ok := obj.(*corev1.ConfigMap)
+	if !ok {
+		return nil
+	}
+	requests := make([]reconcile.Request, 0, len(cm.Data))
+	for ngName := range cm.Data {
+		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: ngName}})
+	}
+	return requests
 }
 
 func mdToNodeGroup(_ context.Context, obj client.Object) []reconcile.Request {
@@ -226,12 +245,13 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 		return nil
 	}
 
-	instanceClassChecksum, err := r.readInstanceClassChecksum(ctx, cloudConfig, ng.Name)
+	instanceClassChecksum, err := r.readInstanceClassChecksum(ctx, ng.Name)
 	if err != nil {
 		return err
 	}
 	if instanceClassChecksum == "" {
-		logger.V(1).Info("skipping: infrastructure template not found yet, waiting for helm")
+		logger.Info("skipping: instance-class checksum not published yet, waiting for helm",
+			"configMap", common.InstanceClassChecksumConfigMapName)
 		return nil
 	}
 
@@ -571,33 +591,22 @@ func (r *MachineDeploymentReconciler) readInstancePrefix(ctx context.Context) (s
 	return cfg.Cloud.Prefix, nil
 }
 
-func (r *MachineDeploymentReconciler) readInstanceClassChecksum(ctx context.Context, cloudConfig *cloudProviderConfig, ngName string) (string, error) {
-	gv, err := schema.ParseGroupVersion(cloudConfig.capiMachineTemplateAPIVersion)
-	if err != nil {
-		return "", fmt.Errorf("parse capiMachineTemplateAPIVersion %q: %w", cloudConfig.capiMachineTemplateAPIVersion, err)
-	}
-
-	templateList := &unstructured.UnstructuredList{}
-	templateList.SetGroupVersionKind(schema.GroupVersionKind{
-		Group:   gv.Group,
-		Version: gv.Version,
-		Kind:    cloudConfig.capiMachineTemplateKind + "List",
-	})
-
-	if err := r.APIReader.List(ctx, templateList,
-		client.InNamespace(common.MachineNamespace),
-		client.MatchingLabels{"node-group": ngName},
-	); err != nil {
-		return "", fmt.Errorf("list infrastructure templates for %s: %w", ngName, err)
-	}
-
-	for i := range templateList.Items {
-		annotations := templateList.Items[i].GetAnnotations()
-		if v, ok := annotations["checksum/instance-class"]; ok && v != "" {
-			return v, nil
+// readInstanceClassChecksum returns the instance-class checksum helm computed for the NodeGroup
+// on its last render. Helm publishes it through a ConfigMap it owns outright, so the value follows
+// the InstanceClass in both directions; the infrastructure templates cannot serve as the source
+// because helm keeps every one of them and their annotations carry the stale checksums too.
+func (r *MachineDeploymentReconciler) readInstanceClassChecksum(ctx context.Context, ngName string) (string, error) {
+	cm := &corev1.ConfigMap{}
+	if err := r.APIReader.Get(ctx, types.NamespacedName{
+		Name: common.InstanceClassChecksumConfigMapName, Namespace: common.MachineNamespace,
+	}, cm); err != nil {
+		if errors.IsNotFound(err) {
+			return "", nil
 		}
+		return "", fmt.Errorf("get configmap %s: %w", common.InstanceClassChecksumConfigMapName, err)
 	}
-	return "", nil
+	// Returned as published: helm hashed this exact string into the template and Secret names.
+	return cm.Data[ngName], nil
 }
 
 func applyMachineDeploymentSpecPatch(spec map[string]interface{}, rawPatch string, vars map[string]string) error {
@@ -624,7 +633,7 @@ type nodeCapacityValues struct {
 // that can hold a machine, not only for the scale-from-zero ones: the autoscaler needs a template
 // NodeInfo for every group it discovers, and a discovered group with neither a registered Node nor
 // a template makes ResourcesLeft fail cluster-wide with "No node info for: <group>".
-func (r *MachineDeploymentReconciler) readNodeCapacity(ctx context.Context, ngName string) (cpu, memory string) {
+func (r *MachineDeploymentReconciler) readNodeCapacity(ctx context.Context, ngName string) (string, string) {
 	cm := &corev1.ConfigMap{}
 	if err := r.APIReader.Get(ctx, types.NamespacedName{
 		Name: nodeCapacityConfigMapName, Namespace: common.MachineNamespace,
