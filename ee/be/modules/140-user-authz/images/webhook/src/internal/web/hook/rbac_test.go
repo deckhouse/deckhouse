@@ -8,7 +8,6 @@ package hook
 import (
 	"io"
 	"log"
-	"regexp"
 	"testing"
 
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -16,6 +15,9 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
+
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/binding"
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/rules"
 
 	"webhook/internal/cache"
 )
@@ -106,7 +108,10 @@ func TestAuthorizeRequestWithIndependentRBAC(t *testing.T) {
 
 	evaluator := newTestRBACEvaluator(t, rbacObjs...)
 
-	limitedRegex, _ := regexp.Compile("^limited-.*$")
+	limited := rulesFor(
+		rules.Rule{Name: "alice", Subjects: []rules.Subject{{Kind: "User", Name: "alice"}}, LimitNamespaces: []string{"limited-.*"}},
+		rules.Rule{Name: "bob", Subjects: []rules.Subject{{Kind: "User", Name: "bob"}}, LimitNamespaces: []string{"limited-.*"}},
+	)
 	newHandler := func() *Handler {
 		return &Handler{
 			logger: log.New(io.Discard, "", 0),
@@ -116,12 +121,8 @@ func TestAuthorizeRequestWithIndependentRBAC(t *testing.T) {
 				},
 				coreResources: cache.CoreResourcesDict{"pods": struct{}{}},
 			},
-			directory: map[string]map[string]DirectoryEntry{
-				"User": {
-					"alice": {LimitNamespaces: []*regexp.Regexp{limitedRegex}},
-					"bob":   {LimitNamespaces: []*regexp.Regexp{limitedRegex}},
-				},
-			},
+			rules:           limited,
+			bindings:        binding.NewIndex(),
 			nsLister:        newFakeNamespaceLister(nil),
 			nsSynced:        func() bool { return true },
 			independentRBAC: evaluator,

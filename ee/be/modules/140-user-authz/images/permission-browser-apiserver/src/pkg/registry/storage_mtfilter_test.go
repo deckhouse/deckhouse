@@ -7,8 +7,6 @@ package registry
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -20,6 +18,7 @@ import (
 	"permission-browser-apiserver/pkg/apis/authorization/v1alpha1"
 	"permission-browser-apiserver/pkg/authorizer/composite"
 	"permission-browser-apiserver/pkg/authorizer/multitenancy"
+	"permission-browser-apiserver/pkg/authorizer/multitenancy/mttest"
 )
 
 // allowAllAuthorizer grants every request. BulkSAR results then follow only
@@ -46,16 +45,9 @@ func (s staticResourceScope) Scope(group, resource string) (namespaced, known bo
 
 func (s staticResourceScope) HasData() bool { return len(s) > 0 }
 
-func writeMTConfig(t *testing.T, body string) string {
-	t.Helper()
-	path := filepath.Join(t.TempDir(), "config.json")
-	require.NoError(t, os.WriteFile(path, []byte(body), 0o600))
-	return path
-}
-
 func mustMTEngine(t *testing.T, config string) *multitenancy.Engine {
 	t.Helper()
-	engine, err := multitenancy.NewEngine(writeMTConfig(t, config), nil, nil, staticResourceScope{
+	engine, err := multitenancy.NewEngine(mttest.LegacyJSON(t, config), mttest.NoBindings(), nil, nil, staticResourceScope{
 		"/pods":  true,
 		"/nodes": false,
 	})

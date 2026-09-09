@@ -9,16 +9,82 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"regexp"
 	"testing"
 
-	"webhook/internal/cache"
-
 	corev1 "k8s.io/api/core/v1"
+	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
+
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/binding"
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/rules"
+
+	"webhook/internal/cache"
 )
+
+// staticRules is a RulesProvider over a directory built once from a fixed set of rules.
+type staticRules struct {
+	dir *rules.Directory
+}
+
+func (s staticRules) Directory() *rules.Directory { return s.dir }
+func (s staticRules) HasSynced() bool             { return s.dir != nil }
+
+func rulesFor(rs ...rules.Rule) staticRules {
+	dir, _ := rules.NewBuilder().Build(rs)
+	return staticRules{dir: dir}
+}
+
+func groupRule(name, group string, limit []string, system bool) rules.Rule {
+	return rules.Rule{Name: name, Subjects: []rules.Subject{{Kind: "Group", Name: group}}, LimitNamespaces: limit, AllowAccessToSystemNamespaces: system}
+}
+
+// fixtureRules mirror the directory the tests used to assemble by hand: one rule per group, named
+// after the scope it grants.
+func fixtureRules() staticRules {
+	selector := &rules.NamespaceSelector{LabelSelector: &metav1.LabelSelector{
+		MatchLabels: map[string]string{"match": "true"},
+		MatchExpressions: []metav1.LabelSelectorRequirement{
+			{Key: "expression", Operator: "In", Values: []string{"match", "allow"}},
+		},
+	}}
+	return rulesFor(
+		groupRule("normal", "normal", nil, false),
+		groupRule("system-allowed", "system-allowed", nil, true),
+		groupRule("limited", "limited", []string{"test-.*"}, false),
+		groupRule("limited-with-system-regex", "limited-with-system-regex", []string{"d8-.*"}, false),
+		groupRule("limited-with-unlimited-regex", "limited-with-unlimited-regex", []string{".*"}, false),
+		groupRule("limited-and-system-allowed", "limited-and-system-allowed", []string{"test-.*"}, true),
+		groupRule("limited-with-unlimited-regex-and-system-allowed", "limited-with-unlimited-regex-and-system-allowed", []string{".*"}, true),
+		rules.Rule{Name: "limited-namespace-selector", Subjects: []rules.Subject{{Kind: "Group", Name: "limited-namespace-selector"}}, NamespaceSelector: selector},
+		rules.Rule{Name: "limited-with-match-any-namespace-selector", Subjects: []rules.Subject{{Kind: "Group", Name: "limited-with-match-any-namespace-selector"}}, NamespaceSelector: &rules.NamespaceSelector{MatchAny: true}},
+	)
+}
+
+func fixtureCache() *dummyCache {
+	return &dummyCache{
+		data: map[string]map[string]bool{
+			"test/v1": {
+				"object1": true,
+				"object2": false,
+			},
+			"v1": {
+				"namespaces": false,
+				"services":   true,
+			},
+		},
+		preferredVersions: map[string]string{
+			"object2.test": "v1",
+			"object1.test": "v1",
+		},
+		coreResources: cache.CoreResourcesDict{
+			"pods":       struct{}{},
+			"namespaces": struct{}{},
+			"services":   struct{}{},
+		},
+	}
+}
 
 func TestAuthorizeRequest(t *testing.T) {
 	tc := []struct {
@@ -598,88 +664,11 @@ func TestAuthorizeRequest(t *testing.T) {
 
 	for _, testCase := range tc {
 		t.Run(testCase.Name, func(t *testing.T) {
-			nsRegex, _ := regexp.Compile("^test-.*$")
-			allRegex, _ := regexp.Compile("^.*$")
-			systemRegex, _ := regexp.Compile("^d8-.*$")
-			namespaceSelector := &NamespaceSelector{
-				LabelSelector: &metav1.LabelSelector{
-					MatchLabels: map[string]string{
-						"match": "true",
-					},
-					MatchExpressions: []metav1.LabelSelectorRequirement{
-						{
-							Key:      "expression",
-							Operator: "In",
-							Values:   []string{"match", "allow"},
-						},
-					},
-				},
-			}
-			namespaceSelectorMatchAny := &NamespaceSelector{
-				MatchAny: true,
-			}
-
 			handler := &Handler{
-				logger: log.New(io.Discard, "", 0),
-				cache: &dummyCache{
-					data: map[string]map[string]bool{
-						"test/v1": {
-							"object1": true,
-							"object2": false,
-						},
-						"v1": {
-							"namespaces": false,
-							"services":   true,
-						},
-					},
-					preferredVersions: map[string]string{
-						"object2.test": "v1",
-						"object1.test": "v1",
-					},
-					coreResources: cache.CoreResourcesDict{
-						"pods":       struct{}{},
-						"namespaces": struct{}{},
-						"services":   struct{}{},
-					},
-				},
-				directory: map[string]map[string]DirectoryEntry{
-					"Group": {
-						"normal": {
-							NamespaceFiltersAbsent: true,
-						},
-						"system-allowed": {
-							NamespaceFiltersAbsent:        true,
-							AllowAccessToSystemNamespaces: true,
-						},
-						"limited": {
-							LimitNamespaces: []*regexp.Regexp{nsRegex},
-						},
-						"limited-with-system-regex": {
-							LimitNamespaces: []*regexp.Regexp{systemRegex},
-						},
-						"limited-with-unlimited-regex": {
-							LimitNamespaces: []*regexp.Regexp{allRegex},
-						},
-						"limited-and-system-allowed": {
-							LimitNamespaces:               []*regexp.Regexp{nsRegex},
-							AllowAccessToSystemNamespaces: true,
-						},
-						"limited-with-unlimited-regex-and-system-allowed": {
-							LimitNamespaces:               []*regexp.Regexp{allRegex},
-							AllowAccessToSystemNamespaces: true,
-						},
-						"limited-namespace-selector": {
-							NamespaceSelectors: []*NamespaceSelector{
-								namespaceSelector,
-							},
-						},
-						"limited-with-match-any-namespace-selector": {
-							NamespaceSelectors: []*NamespaceSelector{
-								namespaceSelectorMatchAny,
-							},
-						},
-					},
-				},
+				logger:   log.New(io.Discard, "", 0),
+				cache:    fixtureCache(),
+				rules:    fixtureRules(),
+				bindings: binding.NewIndex(),
 				nsLister: newFakeNamespaceLister(testCase.Namespaces),
 				nsSynced: func() bool { return true },
 			}
@@ -767,40 +756,59 @@ func (l *fakeNamespaceLister) Get(name string) (*corev1.Namespace, error) {
 	return nil, fmt.Errorf("namespaces %q not found", name)
 }
 
-func TestWrapRegexpTest(t *testing.T) {
-	tc := []struct {
-		Name   string
-		Input  string
-		Output string
-	}{
-		{
-			Name:   "Wrap",
-			Input:  ".*",
-			Output: "^.*$",
-		},
-		{
-			Name:   "Wrap tail",
-			Input:  "^.*",
-			Output: "^.*$",
-		},
-		{
-			Name:   "Wrap head",
-			Input:  ".*$",
-			Output: "^.*$",
-		},
-		{
-			Name:   "No wrap",
-			Input:  "^.*$",
-			Output: "^.*$",
-		},
+// ruleBinding is a ClusterRoleBinding as user-authz-controller creates it for a rule.
+func ruleBinding(name, username string) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Labels: map[string]string{
+			binding.LabelHeritage: binding.HeritageValue, binding.LabelModule: binding.ModuleName, binding.LabelManagedBy: binding.ManagedByValue,
+		}},
+		Subjects: []rbacv1.Subject{{Kind: rbacv1.UserKind, Name: username}},
+		RoleRef:  rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: "user-authz:admin"},
+	}
+}
+
+// A subject bound by a rule binding whose rule is not in the directory is restricted until the rule
+// arrives: the binding is created seconds after the rule, and this webhook may see it first.
+func TestAuthorizeRequest_UnknownRuleBindingRestricts(t *testing.T) {
+	idx := binding.NewIndex()
+	idx.Upsert(ruleBinding("user-authz:late:admin", "carol"))
+
+	handler := &Handler{
+		logger:   log.New(io.Discard, "", 0),
+		cache:    fixtureCache(),
+		rules:    fixtureRules(), // knows nothing about the rule "late"
+		bindings: idx,
+		nsLister: newFakeNamespaceLister(nil),
+		nsSynced: func() bool { return true },
 	}
 
-	for _, testCase := range tc {
-		t.Run(testCase.Name, func(t *testing.T) {
-			res := wrapRegex(testCase.Input)
-			if testCase.Output != res {
-				t.Fatalf("got %q, expected %q", res, testCase.Output)
-			}
-		})
+	namespaced := &WebhookRequest{Spec: WebhookResourceSpec{User: "carol", ResourceAttributes: WebhookResourceAttributes{Group: "test", Version: "v1", Resource: "object1", Namespace: "team-a"}}}
+	if got := handler.authorizeRequest(namespaced); !got.Status.Denied || got.Status.Reason != rules.NoNamespaceAccessReason {
+		t.Errorf("namespaced request of a subject with an unobserved rule must be denied, got %+v", got.Status)
+	}
+	clusterScoped := &WebhookRequest{Spec: WebhookResourceSpec{User: "carol", ResourceAttributes: WebhookResourceAttributes{Group: "test", Version: "v1", Resource: "object1"}}}
+	if got := handler.authorizeRequest(clusterScoped); !got.Status.Denied || got.Status.Reason != rules.NamespaceLimitedAccessReason {
+		t.Errorf("cluster-scoped request of a subject with an unobserved rule must be denied, got %+v", got.Status)
+	}
+
+	// once the rule is in the directory, its own scope applies
+	handler.rules = rulesFor(rules.Rule{Name: "late", Subjects: []rules.Subject{{Kind: "User", Name: "carol"}}, LimitNamespaces: []string{"team-a"}})
+	if got := handler.authorizeRequest(&WebhookRequest{Spec: namespaced.Spec}); got.Status.Denied {
+		t.Errorf("the rule opens team-a, got %+v", got.Status)
+	}
+	other := &WebhookRequest{Spec: WebhookResourceSpec{User: "carol", ResourceAttributes: WebhookResourceAttributes{Group: "test", Version: "v1", Resource: "object1", Namespace: "team-b"}}}
+	if got := handler.authorizeRequest(other); !got.Status.Denied {
+		t.Errorf("the rule does not open team-b, got %+v", got.Status)
+	}
+
+	// a directory that has not been listed yet restricts too
+	handler.rules = staticRules{}
+	if got := handler.authorizeRequest(&WebhookRequest{Spec: namespaced.Spec}); !got.Status.Denied {
+		t.Errorf("an unsynced directory must restrict a subject bound by a rule, got %+v", got.Status)
+	}
+	// but a subject nobody binds gets no opinion, as before
+	nobody := &WebhookRequest{Spec: WebhookResourceSpec{User: "dave", ResourceAttributes: WebhookResourceAttributes{Group: "test", Version: "v1", Resource: "object1", Namespace: "team-a"}}}
+	if got := handler.authorizeRequest(nobody); got.Status.Denied {
+		t.Errorf("a subject without rule bindings is not restricted, got %+v", got.Status)
 	}
 }

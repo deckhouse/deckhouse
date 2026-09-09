@@ -8,13 +8,14 @@ package hook
 import (
 	"fmt"
 	"log"
-	"strings"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/informers"
 	rbaclisters "k8s.io/client-go/listers/rbac/v1"
 	kcache "k8s.io/client-go/tools/cache"
+
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/binding"
 )
 
 // independentRBACResolver reports whether a request is allowed by RBAC grants
@@ -23,26 +24,18 @@ type independentRBACResolver interface {
 	AllowsIndependently(spec *WebhookResourceSpec) bool
 }
 
-// carManagedCRBPrefix is the name prefix of ClusterRoleBindings rendered from
-// ClusterAuthorizationRules by the user-authz module (see
-// modules/140-user-authz/templates/cluster-role-bindings.yaml:
-// "user-authz:<car-name>:<postfix>").
-const carManagedCRBPrefix = "user-authz:"
-
 // isCARManagedClusterRoleBinding reports whether the ClusterRoleBinding was
-// generated from a ClusterAuthorizationRule by the user-authz module.
+// generated from a ClusterAuthorizationRule by the user-authz module (by its
+// Helm chart in earlier releases, by user-authz-controller now); the naming
+// contract lives in go_lib/user-authz/binding.
 //
 // Such bindings are cluster-wide by construction, but their intended scope is
 // the CAR's multi-tenancy options (limitNamespaces etc.), which is exactly
 // what this webhook enforces. They must therefore be excluded when we check
 // whether the user has access *independently* of any CAR - otherwise the
 // CAR's accessLevel would leak into namespaces outside its limitNamespaces.
-func isCARManagedClusterRoleBinding(binding *rbacv1.ClusterRoleBinding) bool {
-	if !strings.HasPrefix(binding.Name, carManagedCRBPrefix) {
-		return false
-	}
-	bindingLabels := binding.GetLabels()
-	return bindingLabels["heritage"] == "deckhouse" && bindingLabels["module"] == "user-authz"
+func isCARManagedClusterRoleBinding(crb *rbacv1.ClusterRoleBinding) bool {
+	return binding.IsRuleBinding(crb.Name, crb.GetLabels())
 }
 
 // RBACEvaluator checks requests against RBAC objects from informer caches.

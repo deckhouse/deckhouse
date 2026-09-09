@@ -12,6 +12,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
+
+	"permission-browser-apiserver/pkg/authorizer/multitenancy/mttest"
 )
 
 // staticResourceScope is a test ResourceScope. Missing keys are unknown, and
@@ -58,7 +60,7 @@ const (
 
 func engineWithKnownScopes(t *testing.T, config string) *Engine {
 	t.Helper()
-	e, err := NewEngine(writeConfigJSON(t, config), nil, nil, coreResourceScope())
+	e, err := NewEngine(mttest.LegacyJSON(t, config), mttest.NoBindings(), nil, nil, coreResourceScope())
 	require.NoError(t, err)
 	return e
 }
@@ -253,7 +255,7 @@ func TestEngine_Authorize_UnknownCoreResourceMatchesWebhook(t *testing.T) {
 // of that carve-out: with no snapshot at all we cannot tell a missing
 // resource from missing discovery, and the webhook denies too.
 func TestEngine_Authorize_EmptySnapshotDeniesCoreResource(t *testing.T) {
-	editor, err := NewEngine(writeConfigJSON(t, editorCARConfig), nil, nil, staticResourceScope{})
+	editor, err := NewEngine(mttest.LegacyJSON(t, editorCARConfig), mttest.NoBindings(), nil, nil, staticResourceScope{})
 	require.NoError(t, err)
 
 	got := authorizeGroupedResource(t, editor, "editor@example.io", "", "pods")
@@ -262,7 +264,7 @@ func TestEngine_Authorize_EmptySnapshotDeniesCoreResource(t *testing.T) {
 }
 
 func TestEngine_Authorize_NilScopeIsDenied(t *testing.T) {
-	editor, err := NewEngine(writeConfigJSON(t, editorCARConfig), nil, nil, nil)
+	editor, err := NewEngine(mttest.LegacyJSON(t, editorCARConfig), mttest.NoBindings(), nil, nil, nil)
 	require.NoError(t, err)
 
 	got := authorizeResource(t, editor, "editor@example.io", "list", "pods", "")

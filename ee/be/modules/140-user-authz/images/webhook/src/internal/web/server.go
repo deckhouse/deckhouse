@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package web
 
 import (
+	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"fmt"
@@ -14,10 +15,18 @@ import (
 	"os"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	kcache "k8s.io/client-go/tools/cache"
+
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/binding"
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/metrics"
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/source"
 
 	discoverycache "webhook/internal/cache"
 	"webhook/internal/web/hook"
@@ -34,6 +43,14 @@ const (
 	authClientCA = "/etc/ssl/apiserver-authentication-requestheader-client-ca/ca.crt"
 
 	ListenAddr = "127.0.0.1:40443"
+
+	// MetricsListenAddr is a node-local plaintext listener that serves only /metrics. A
+	// kube-rbac-proxy sidecar fronts it on the pod IP for Prometheus; the authorization listener
+	// above stays mutually authenticated for the API server alone. The webhook runs on the host
+	// network, so this port must be free on the node (see the DaemonSet).
+	MetricsListenAddr = "127.0.0.1:4208"
+
+	metricsNamespace = "user_authz_webhook"
 )
 
 func buildTLSConfig() (*tls.Config, error) {
@@ -66,6 +83,8 @@ type Server struct {
 	logger          *log.Logger
 	informerFactory informers.SharedInformerFactory
 	informersSynced []kcache.InformerSynced
+	rules           *source.Source
+	registry        *prometheus.Registry
 }
 
 func NewServer(logger *log.Logger) (*Server, error) {
@@ -78,6 +97,10 @@ func NewServer(logger *log.Logger) (*Server, error) {
 	if err != nil {
 		return nil, err
 	}
+	dynamicClient, err := dynamic.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
 
 	c := discoverycache.NewNamespacedDiscoveryCache(logger, config.Host)
 	informerFactory := informers.NewSharedInformerFactory(clientSet, 0)
@@ -87,7 +110,30 @@ func NewServer(logger *log.Logger) (*Server, error) {
 	// by RoleBindings or non-CAR ClusterRoleBindings must not be denied.
 	rbacEvaluator := hook.NewRBACEvaluator(logger, informerFactory)
 
-	h, err := hook.NewHandler(logger, c, nsInformer.Lister(), nsInformer.Informer().HasSynced, rbacEvaluator)
+	// The index of rule bindings is fed from the same ClusterRoleBinding informer: it tells the
+	// handler which rules bind a subject, so a rule the webhook has not observed yet still restricts.
+	ruleBindings := binding.NewIndex()
+	if _, err := informerFactory.Rbac().V1().ClusterRoleBindings().Informer().AddEventHandler(ruleBindings.EventHandler()); err != nil {
+		return nil, fmt.Errorf("register rule bindings index: %w", err)
+	}
+
+	registry := prometheus.NewRegistry()
+	registry.MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
+	rulesMetrics := metrics.New(metricsNamespace)
+	if err := rulesMetrics.Register(registry); err != nil {
+		return nil, fmt.Errorf("register rules metrics: %w", err)
+	}
+
+	// The rules are read from the ClusterAuthorizationRules themselves. The source is not part of
+	// the caches the listener waits for: at bootstrap the CRD may not exist yet, and a webhook that
+	// does not listen denies every request of the cluster (the authorizer is fail-closed). Until the
+	// rules are listed, the bindings index makes every subject of a rule maximally restricted.
+	rulesSource := source.New(dynamicClient, source.Options{
+		Observer: rulesMetrics,
+		Logf:     logger.Printf,
+	})
+
+	h, err := hook.NewHandler(logger, c, nsInformer.Lister(), nsInformer.Informer().HasSynced, rbacEvaluator, rulesSource, ruleBindings)
 	if err != nil {
 		return nil, err
 	}
@@ -97,6 +143,8 @@ func NewServer(logger *log.Logger) (*Server, error) {
 		handler:         h,
 		informerFactory: informerFactory,
 		informersSynced: append([]kcache.InformerSynced{nsInformer.Informer().HasSynced}, rbacEvaluator.Synced()...),
+		rules:           rulesSource,
+		registry:        registry,
 	}, nil
 }
 
@@ -108,7 +156,7 @@ func (s *Server) prepareHTTPServer() (*http.Server, error) {
 		err := s.cache.Check()
 		if err == nil {
 			w.WriteHeader(http.StatusOK)
-			_, _ = w.Write([]byte("Ok."))
+			_, _ = fmt.Fprintf(w, "Ok. rules: %s", s.rules.State())
 			return
 		}
 
@@ -141,20 +189,19 @@ func (s *Server) Run() error {
 		return err
 	}
 
-	// Register and stop config updater
-	stopCh := make(chan struct{})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	s.informerFactory.Start(stopCh)
+	s.informerFactory.Start(ctx.Done())
 
-	if ok := kcache.WaitForCacheSync(stopCh, s.informersSynced...); !ok {
+	if ok := kcache.WaitForCacheSync(ctx.Done(), s.informersSynced...); !ok {
 		return fmt.Errorf("failed to sync informer caches")
 	}
 
-	go s.handler.StartRenewConfigLoop(stopCh)
+	go s.rules.Run(ctx)
+	go s.serveMetrics(ctx)
 
-	httpServer.RegisterOnShutdown(func() {
-		close(stopCh)
-	})
+	httpServer.RegisterOnShutdown(cancel)
 
 	s.logger.Println("server is starting to listen on ", ListenAddr, "...")
 
@@ -163,4 +210,29 @@ func (s *Server) Run() error {
 	}
 
 	return nil
+}
+
+// serveMetrics runs the node-local plaintext /metrics listener until the context is cancelled. A
+// failure to listen is logged, not fatal: the webhook authorizes requests whether or not its
+// metrics are scraped, and letting the authorizer stay up matters more than the metrics.
+func (s *Server) serveMetrics(ctx context.Context) {
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.HandlerFor(s.registry, promhttp.HandlerOpts{}))
+
+	srv := &http.Server{
+		Addr:         MetricsListenAddr,
+		Handler:      mux,
+		ErrorLog:     s.logger,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+
+	go func() {
+		<-ctx.Done()
+		_ = srv.Close()
+	}()
+
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		s.logger.Printf("metrics listener on %s stopped: %v", MetricsListenAddr, err)
+	}
 }
