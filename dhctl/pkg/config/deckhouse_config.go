@@ -242,55 +242,6 @@ func PrepareDeckhouseInstallConfig(ctx context.Context, metaConfig *MetaConfig, 
 		metaConfig.ModuleConfigs = append(metaConfig.ModuleConfigs, deckhouseCm)
 	}
 
-	// Default global.modules.ingress.enabled to false, but only when the user
-	// provided a "global" ModuleConfig that leaves the field unset entirely.
-	// The global OpenAPI schema itself defaults this to true, so without this
-	// explicit write bootstrap would end up with ingress enabled by default;
-	// a user who already has an opinion (true or false) is never overridden.
-	// A cluster with no "global" ModuleConfig at all is left alone: we don't
-	// synthesize one just to carry this default.
-	for _, mc := range metaConfig.ModuleConfigs {
-		if mc.GetName() != "global" {
-			continue
-		}
-
-		if mc.Spec.Settings == nil {
-			mc.Spec.Settings = map[string]any{}
-		}
-
-		modulesRaw, hasModules := mc.Spec.Settings["modules"]
-		if !hasModules {
-			mc.Spec.Settings["modules"] = map[string]any{
-				"ingress": map[string]any{"enabled": false},
-			}
-			break
-		}
-
-		modules, ok := modulesRaw.(map[string]any)
-		if !ok {
-			dhlog.FromContext(ctx).ErrorContext(ctx, "modules is not a map in global mc, skipping ingress.enabled default")
-			break
-		}
-
-		ingressRaw, hasIngress := modules["ingress"]
-		if !hasIngress {
-			modules["ingress"] = map[string]any{"enabled": false}
-			break
-		}
-
-		ingress, ok := ingressRaw.(map[string]any)
-		if !ok {
-			dhlog.FromContext(ctx).ErrorContext(ctx, "modules.ingress is not a map in global mc, skipping ingress.enabled default")
-			break
-		}
-
-		if _, hasEnabled := ingress["enabled"]; !hasEnabled {
-			ingress["enabled"] = false
-		}
-
-		break
-	}
-
 	moduleConfigCRDPath := ""
 	if globalOptions != nil {
 		moduleConfigCRDPath = globalOptions.ModuleConfigCRDPath
