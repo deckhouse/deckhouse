@@ -97,7 +97,6 @@ func (r *dynamicResolver) resolve(ctx context.Context, deps resolveDeps, kind re
 			return r.fallback.resolve(ctx, deps, kind)
 		}
 		deps.input.Logger.Warn("autotune: no usage datapoints from the metrics API, holding current requests", "resource", kind)
-		setAutotuneDegraded(deps.input, autotuneDegradedMetricGroup, degradedReasonNoDatapoints)
 		baseline.deficit = r.pendingDeficit(ctx, deps, kind)
 		return baseline, nil
 	}
