@@ -1,0 +1,79 @@
+Subject: [PATCH] Replace the VM when its NIC configuration changes
+
+initialization_nic carried ForceNew on the block alone, which in the SDK does not
+reach the attributes inside it, and vmUpdate sends only name and comment. Editing
+an address, netmask, gateway or interface name therefore planned as an in-place
+update that reached oVirt as nothing at all: the new value landed in state while
+the VM kept the old one.
+
+The configuration is applied when the VM is created, so every field of it now
+replaces the VM.
+
+---
+diff --git a/internal/ovirt/resource_ovirt_vm.go b/internal/ovirt/resource_ovirt_vm.go
+index a835d94..6eae976 100644
+--- a/internal/ovirt/resource_ovirt_vm.go
++++ b/internal/ovirt/resource_ovirt_vm.go
+@@ -188,24 +188,29 @@ var vmSchema = map[string]*schema.Schema{
+ 				"name": {
+ 					Type:     schema.TypeString,
+ 					Required: true,
++					ForceNew: true,
+ 				},
+ 				"ipv4": {
+ 					Type:     schema.TypeList,
+ 					Required: true,
+ 					MaxItems: 1,
++					ForceNew: true,
+ 					Elem: &schema.Resource{
+ 						Schema: map[string]*schema.Schema{
+ 							"address": {
+ 								Type:     schema.TypeString,
+ 								Optional: true,
++								ForceNew: true,
+ 							},
+ 							"netmask": {
+ 								Type:     schema.TypeString,
+ 								Optional: true,
++								ForceNew: true,
+ 							},
+ 							"gateway": {
+ 								Type:     schema.TypeString,
+ 								Optional: true,
++								ForceNew: true,
+ 							},
+ 						},
+ 					},
+@@ -214,26 +219,31 @@ var vmSchema = map[string]*schema.Schema{
+ 					Type:     schema.TypeList,
+ 					Optional: true,
+ 					MaxItems: 1,
++					ForceNew: true,
+ 					Elem: &schema.Resource{
+ 						Schema: map[string]*schema.Schema{
+ 							"address": {
+ 								Type:     schema.TypeString,
+ 								Optional: true,
++								ForceNew: true,
+ 							},
+ 							"netmask": {
+ 								Type:     schema.TypeString,
+ 								Optional: true,
++								ForceNew: true,
+ 							},
+ 							"gateway": {
+ 								Type:     schema.TypeString,
+ 								Optional: true,
++								ForceNew: true,
+ 							},
+ 						},
+ 					},
+ 				},
+ 			},
+ 		},
+-		Description: "Initial NIC configuration.",
++		Description: "Initial NIC configuration. Applied when the VM is created, so any " +
++			"change to it replaces the VM.",
+ 	},
+ 	"memory": {
+ 		Type:             schema.TypeInt,
