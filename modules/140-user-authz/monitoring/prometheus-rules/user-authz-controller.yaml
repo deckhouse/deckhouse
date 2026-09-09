@@ -22,8 +22,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_user_authz_controller_unavailable: "D8UserAuthzControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_user_authz_controller_unavailable: "D8UserAuthzControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_user_authz_controller_malfunctioning: "D8UserAuthzControllerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_controller_malfunctioning: "D8UserAuthzControllerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: user-authz-controller has unavailable replicas.
       description: |-
         Deckhouse has detected unavailable replicas in the `user-authz-controller` deployment in the `d8-user-authz` namespace.
@@ -54,8 +54,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_user_authz_controller_unavailable: "D8UserAuthzControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_user_authz_controller_unavailable: "D8UserAuthzControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_user_authz_controller_malfunctioning: "D8UserAuthzControllerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_controller_malfunctioning: "D8UserAuthzControllerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: Prometheus is unable to scrape user-authz-controller.
       description: |-
         Prometheus cannot scrape metrics from `user-authz-controller` in the `d8-user-authz` namespace.
@@ -89,8 +89,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
-      plk_create_group_if_not_exists__d8_user_authz_controller_unavailable: "D8UserAuthzControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_user_authz_controller_unavailable: "D8UserAuthzControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_user_authz_controller_malfunctioning: "D8UserAuthzControllerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_controller_malfunctioning: "D8UserAuthzControllerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: user-authz-controller reconcile errors are high for {{ $labels.controller }}.
       description: |-
         Controller `{{ $labels.controller }}` of `user-authz-controller` has a reconcile error rate above 0.1 errors per second for more than 10 minutes.
@@ -115,8 +115,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
-      plk_create_group_if_not_exists__d8_user_authz_controller_unavailable: "D8UserAuthzControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_user_authz_controller_unavailable: "D8UserAuthzControllerUnavailable,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_user_authz_controller_malfunctioning: "D8UserAuthzControllerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_controller_malfunctioning: "D8UserAuthzControllerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: user-authz-controller cannot converge the bindings of {{ $labels.kind }}.
       description: |-
         For more than 15 minutes some bindings of `{{ $labels.kind }}` objects differ from the state `user-authz-controller` wants (missing, superfluous, or with different subjects, roleRef, labels or owner). The controller reports drift only while its writes fail, so users may be missing access or keep access they should have lost.
@@ -143,8 +143,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
-      plk_create_group_if_not_exists__d8_user_authz_authorization_rule_invalid: "D8UserAuthzAuthorizationRuleInvalid,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_user_authz_authorization_rule_invalid: "D8UserAuthzAuthorizationRuleInvalid,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_user_authz_invalid_rules: "D8UserAuthzInvalidRules,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_invalid_rules: "D8UserAuthzInvalidRules,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The bindings of {{ $labels.kind }} {{ if $labels.rule_namespace }}{{ $labels.rule_namespace }}/{{ end }}{{ $labels.name }} cannot be applied ({{ $labels.reason }}).
       description: |-
         `user-authz-controller` cannot apply the bindings of {{ $labels.kind }} `{{ if $labels.rule_namespace }}{{ $labels.rule_namespace }}/{{ end }}{{ $labels.name }}`; the `Ready` condition of the object is `False` with the reason `{{ $labels.reason }}`.
@@ -170,8 +170,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
-      plk_create_group_if_not_exists__d8_user_authz_authorization_rule_invalid: "D8UserAuthzAuthorizationRuleInvalid,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_user_authz_authorization_rule_invalid: "D8UserAuthzAuthorizationRuleInvalid,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_user_authz_invalid_rules: "D8UserAuthzInvalidRules,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_invalid_rules: "D8UserAuthzInvalidRules,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: "{{ $value }} {{ $labels.kind }} objects cannot be applied ({{ $labels.reason }})."
       description: |-
         `user-authz-controller` reports {{ $value }} {{ $labels.kind }} objects whose bindings cannot be applied, reason `{{ $labels.reason }}`. Up to 50 of them are named by the `D8UserAuthzAuthorizationRuleInvalid` alerts; a large number with the reason `ApplyError` points at a cluster-wide cause (an admission webhook, API server errors) rather than at the objects.
@@ -195,8 +195,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: markdown
-      plk_create_group_if_not_exists__d8_user_authz_custom_roles_not_aggregated: "D8UserAuthzCustomRolesNotAggregated,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_user_authz_custom_roles_not_aggregated: "D8UserAuthzCustomRolesNotAggregated,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_user_authz_custom_roles_malfunctioning: "D8UserAuthzCustomRolesMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_custom_roles_malfunctioning: "D8UserAuthzCustomRolesMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The aggregated ClusterRole of the {{ $labels.level }} access level has no rules although custom roles for it exist.
       description: |-
         Custom ClusterRoles annotated with `user-authz.deckhouse.io/access-level` are granted to users through the aggregated ClusterRole `user-authz:<level>:custom`, which `kube-controller-manager` fills from the roles labelled with the level. For more than 10 minutes the aggregated role of the `{{ $labels.level }}` level has no rules while custom roles it must aggregate exist, so users of that level (and every level above it) have none of the custom permissions.
