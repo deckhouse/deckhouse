@@ -496,11 +496,18 @@ func (c *NamespacedDiscoveryCache) Get(apiGroup, resource string) (bool, error) 
 					c.storeEmpty(apiGroup)
 					return false, fmt.Errorf("api group %s is not served: %w", apiGroup, ErrResourceAbsent)
 				}
-				return false, err
+				// Anything else is a failure to refresh, and it must not throw away what we
+				// already know: a listing of this group succeeded once and did not carry the
+				// resource. Returning the error instead would deny, which is the 403-for-a-
+				// resource-that-does-not-exist this change exists to remove, brought back for the
+				// duration of every API server blip. The refresh only guards against a resource
+				// installed since that listing, and a resource cannot be installed while the API
+				// server cannot be reached, so nothing is lost by keeping the negative.
+				c.logger.Printf("could not re-list %s to confirm that %s is absent, using the previous listing: %v", apiGroup, resource, err)
+			} else {
+				namespacedInfo, _ = c.getFromCache(apiGroup)
+				namespaced, ok = namespacedInfo.Data[resource]
 			}
-
-			namespacedInfo, _ = c.getFromCache(apiGroup)
-			namespaced, ok = namespacedInfo.Data[resource]
 		}
 		if !ok {
 			// A listing of the group succeeded and does not carry the resource, so this is an
