@@ -28,12 +28,50 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestCheckedInBundle(t *testing.T) {
-	if err := checkBundle("../vendor"); err != nil {
+const bundleDir = "../../crds/vendor"
+
+func TestDefaultOutputDirResolvesCheckedInBundle(t *testing.T) {
+	got, err := defaultOutputDir()
+	if err != nil {
 		t.Fatal(err)
 	}
 
-	paths, err := filepath.Glob("../vendor/*.yaml")
+	want, err := filepath.Abs(bundleDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != want {
+		t.Errorf("defaultOutputDir() = %q, want %q", got, want)
+	}
+}
+
+func TestModulePath(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		goMod string
+		want  string
+	}{
+		{name: "plain", goMod: "module istio-tools\n\ngo 1.26.4\n", want: "istio-tools"},
+		{name: "quoted", goMod: "module \"istio-tools\"\n", want: "istio-tools"},
+		{name: "trailing comment", goMod: "module istio-tools // tools\n", want: "istio-tools"},
+		{name: "commented out", goMod: "// module istio-tools\n", want: ""},
+		{name: "no directive", goMod: "go 1.26.4\n", want: ""},
+		{name: "lookalike token", goMod: "modules\n", want: ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := modulePath([]byte(tc.goMod)); got != tc.want {
+				t.Errorf("modulePath(%q) = %q, want %q", tc.goMod, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestCheckedInBundle(t *testing.T) {
+	if err := checkBundle(bundleDir); err != nil {
+		t.Fatal(err)
+	}
+
+	paths, err := filepath.Glob(filepath.Join(bundleDir, "*.yaml"))
 	if err != nil {
 		t.Fatal(err)
 	}

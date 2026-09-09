@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Command update splits upstream Istio CRD bundles into the installed
+// Command update-crds splits upstream Istio CRD bundles into the installed
 // compatibility bundle and validates the result.
 package main
 
@@ -36,10 +36,12 @@ import (
 )
 
 const (
-	defaultOutputDir = "modules/110-istio/crds/vendor"
-	maxDownloadSize  = 16 << 20
-	istioVersion     = "1.29.6"
-	sailVersion      = "1.25.2"
+	toolsModulePath          = "istio-tools"
+	bundleDirFromToolsModule = "../crds/vendor"
+
+	maxDownloadSize = 16 << 20
+	istioVersion    = "1.29.6"
+	sailVersion     = "1.25.2"
 
 	// This compatibility CRD was retained by Deckhouse when upstream Istio
 	// removed the in-cluster operator chart. Keep it embedded so regeneration
@@ -192,17 +194,25 @@ func main() {
 }
 
 func run(args []string) error {
-	flags := flag.NewFlagSet("istio-crd-update", flag.ContinueOnError)
+	flags := flag.NewFlagSet("update-crds", flag.ContinueOnError)
 	flags.SetOutput(io.Discard)
 
 	var opts options
 	flags.BoolVar(&opts.check, "check", false, "validate the installed bundle")
-	flags.StringVar(&opts.outputDir, "output-dir", defaultOutputDir, "installed compatibility bundle directory")
+	flags.StringVar(&opts.outputDir, "output-dir", "", "installed compatibility bundle directory (default: crds/vendor next to the istio-tools module)")
 	if err := flags.Parse(args); err != nil {
 		return err
 	}
 	if flags.NArg() != 0 {
 		return fmt.Errorf("unexpected positional arguments: %s", strings.Join(flags.Args(), " "))
+	}
+
+	if opts.outputDir == "" {
+		dir, err := defaultOutputDir()
+		if err != nil {
+			return err
+		}
+		opts.outputDir = dir
 	}
 
 	if opts.check {
@@ -218,6 +228,65 @@ func run(args []string) error {
 		return err
 	}
 	return replaceBundle(opts.outputDir, objects)
+}
+
+func defaultOutputDir() (string, error) {
+	dir, err := os.Getwd()
+	if err != nil {
+		return "", fmt.Errorf("determine working directory: %w", err)
+	}
+
+	current := dir
+	for {
+		if isToolsModuleRoot(current) {
+			// The module root is unambiguous, so a missing bundle is a
+			// broken checkout rather than a reason to keep searching.
+			bundleDir := filepath.Join(current, bundleDirFromToolsModule)
+			if !isDir(bundleDir) {
+				return "", fmt.Errorf("found the %s module at %s, but its bundle directory %s is missing: restore it or pass --output-dir", toolsModulePath, current, bundleDir)
+			}
+			return bundleDir, nil
+		}
+
+		parent := filepath.Dir(current)
+		if parent == current {
+			return "", fmt.Errorf("no %s module found at or above %s: run the command from modules/110-istio/tools or pass --output-dir", toolsModulePath, dir)
+		}
+		current = parent
+	}
+}
+
+func isToolsModuleRoot(dir string) bool {
+	data, err := os.ReadFile(filepath.Join(dir, "go.mod"))
+	if err != nil {
+		return false
+	}
+	return modulePath(data) == toolsModulePath
+}
+
+func modulePath(goMod []byte) string {
+	for line := range strings.SplitSeq(string(goMod), "\n") {
+		if comment := strings.Index(line, "//"); comment >= 0 {
+			line = line[:comment]
+		}
+		rest, ok := strings.CutPrefix(strings.TrimSpace(line), "module")
+		if !ok || rest == "" {
+			continue
+		}
+		path := strings.TrimSpace(rest)
+		if path == rest {
+			// No separator after the directive: this is some other token
+			// starting with "module", not the module directive.
+			continue
+		}
+		return strings.Trim(path, `"`)
+	}
+	return ""
+}
+
+func isDir(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && info.IsDir()
 }
 
 func sailURL(name string) string {
