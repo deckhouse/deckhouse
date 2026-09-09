@@ -363,4 +363,43 @@ var FeatureGatesMap = map[string]ComponentFeatures{
 			"TaintTolerationComparisonOperators",
 		},
 	},
+	"1.37": {
+		Deprecated: []string{
+			"KubeProxyIPVS",
+		},
+		Kubelet: []string{
+			"AtomicWriteVolumeUserFields",
+			"ContainerStopSignals",
+			"CRIListStreaming",
+			"EmptyDirVolumeMode",
+			"GRPCContainerProbeTLS",
+			"H2CContainerProbe",
+			"InPlacePodVerticalScalingMemoryBackedVolumes",
+			"MutablePVNodeAffinity",
+			"PodLogsQuerySplitStreams",
+		},
+		APIServer: []string{
+			"AtomicWriteVolumeUserFields",
+			"ContainerStopSignals",
+			"CRDObservedGenerationTracking",
+			"CrossNamespaceVolumeDataSource",
+			"EmptyDirVolumeMode",
+			"GRPCContainerProbeTLS",
+			"H2CContainerProbe",
+			"InPlacePodVerticalScalingMemoryBackedVolumes",
+			"MutablePVNodeAffinity",
+			"PodLogsQuerySplitStreams",
+			"ShardedListAndWatch",
+			"StatefulSetRecreateStrategy",
+			"TaintTolerationComparisonOperators",
+		},
+		KubeControllerManager: []string{
+			"ControllerManagerReleaseLeaderElectionLockOnExit",
+			"CrossNamespaceVolumeDataSource",
+			"StatefulSetRecreateStrategy",
+		},
+		KubeScheduler: []string{
+			"TaintTolerationComparisonOperators",
+		},
+	},
 }
