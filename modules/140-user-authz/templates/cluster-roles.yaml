@@ -467,7 +467,7 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: user-authz:cluster-admin
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "user-authz.deckhouse.io/can-assign-basic-max" "ClusterAdmin")) | nindent 2 }}
 rules:
 {{- include "user_authz_common_rules" (list $ "ClusterAdmin") }}
 {{- include "user_authz_user_rules" . }}
@@ -481,6 +481,6 @@ apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: user-authz:super-admin
-  {{- include "helm_lib_module_labels" (list .) | nindent 2 }}
+  {{- include "helm_lib_module_labels" (list . (dict "user-authz.deckhouse.io/can-assign-basic-max" "SuperAdmin" "user-authz.deckhouse.io/can-assign-scope" "system" "user-authz.deckhouse.io/can-assign-max-level" "superadmin")) | nindent 2 }}
 rules:
 {{- include "user_authz_super_admin_rules" . }}

@@ -52,6 +52,7 @@ var (
 	)
 )
 
+// FetchKubeconfigInput is everything FetchKubeconfig needs.
 type FetchKubeconfigInput struct {
 	// Address is the host:port dhctl reaches the endpoint on, either the master
 	// directly or the local end of a tunnel through the bastion.
@@ -65,6 +66,7 @@ type FetchKubeconfigInput struct {
 	Material *HandoffMaterial
 }
 
+// Status is what the node reports about its own bootstrap.
 type Status struct {
 	Phase   Phase  `json:"phase"`
 	Message string `json:"message,omitempty"`
@@ -121,6 +123,7 @@ func ConfirmCollected(ctx context.Context, in FetchKubeconfigInput) error {
 	return err
 }
 
+// call performs one authenticated request against the node's bootstrap channel.
 func (in FetchKubeconfigInput) call(ctx context.Context, method, path string) ([]byte, error) {
 	endpointMissing := in.Address == "" || in.ServerName == ""
 	if endpointMissing || in.Material == nil {

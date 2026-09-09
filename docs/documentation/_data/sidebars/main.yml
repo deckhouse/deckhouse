@@ -1531,6 +1531,10 @@ entries:
                     ru: Модуль gpu
                   url: /architecture/cluster-and-infrastructure/infrastructure/gpu.html
                 - title:
+                    en: Registry-packages-proxy module
+                    ru: Модуль registry-packages-proxy
+                  url: /architecture/cluster-and-infrastructure/infrastructure/registry-packages-proxy.html
+                - title:
                     en: Terraform-manager module
                     ru: Модуль terraform-manager
                   url: /architecture/cluster-and-infrastructure/infrastructure/terraform-manager.html
@@ -1750,6 +1754,10 @@ entries:
                 en: Observability module
                 ru: Модуль observability
               url: /architecture/observability/observability.html
+            - title:
+                en: Extended-monitoring module
+                ru: Модуль extended-monitoring
+              url: /architecture/observability/extended-monitoring.html              
             - title:
                 en: Monitoring-kubernetes module
                 ru: Модуль monitoring-kubernetes

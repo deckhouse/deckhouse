@@ -189,7 +189,21 @@ func (m *MetaConfig) Prepare(ctx context.Context, validatorProvider MetaConfigVa
 		return nil, err
 	}
 
+	nilEmptyNodeTemplates(m.TerraNodeGroupSpecs)
+
 	return validateProviderConfig(ctx, validatorProvider, m)
+}
+
+// nilEmptyNodeTemplates spells "no node template" as nil, the way the cluster
+// side of the comparison does (entity.GetNodeGroupTemplates). dhctl writes
+// spec.nodeTemplate: {} for a group whose config sets none, and check reads
+// that object back as the config side on an mc-flow cluster.
+func nilEmptyNodeTemplates(specs []TerraNodeGroupSpec) {
+	for i := range specs {
+		if len(specs[i].NodeTemplate) == 0 {
+			specs[i].NodeTemplate = nil
+		}
+	}
 }
 
 // extractProviderClusterFields populates the typed Layout, MasterNodeGroupSpec
@@ -271,9 +285,11 @@ func applyNodeGroupReplicasFromCloudProviderVars(m *MetaConfig) error {
 			}
 			r, _ := nodeGroupMinPerZone(ng)
 			nodeTemplate, _ := nestedMap(ng, "spec", "nodeTemplate")
+			systemType, _ := nestedString(ng, "spec", "systemType")
 			m.TerraNodeGroupSpecs = append(m.TerraNodeGroupSpecs, TerraNodeGroupSpec{
 				Name:         name,
 				Replicas:     r,
+				SystemType:   systemType,
 				NodeTemplate: nodeTemplate,
 			})
 		}
@@ -332,6 +348,16 @@ func sortedKeys(m map[string]map[string]interface{}) []string {
 	}
 	sort.Strings(keys)
 	return keys
+}
+
+// nestedString reads a string at path, and "" when the path names anything else.
+func nestedString(obj map[string]interface{}, path ...string) (string, bool) {
+	parent, ok := nestedMap(obj, path[:len(path)-1]...)
+	if !ok {
+		return "", false
+	}
+	value, ok := parent[path[len(path)-1]].(string)
+	return value, ok
 }
 
 func nestedMap(obj map[string]interface{}, path ...string) (map[string]interface{}, bool) {
@@ -526,19 +552,32 @@ func (m *MetaConfig) GetClusterDomain() string {
 	return m.ClusterDomain
 }
 
-func (m *MetaConfig) FindTerraNodeGroup(ctx context.Context, nodeGroupName string) []byte {
-	for index, ng := range m.TerraNodeGroupSpecs {
-		if ng.Name == nodeGroupName {
-			var terraNodeGroups []json.RawMessage
-			err := json.Unmarshal(m.ProviderClusterConfig["nodeGroups"], &terraNodeGroups)
-			if err != nil {
-				dhlog.FromContext(ctx).ErrorContext(ctx, fmt.Sprint(err))
-				return nil
-			}
-			return terraNodeGroups[index]
-		}
+// FindTerraNodeGroup returns the node group's raw provider cluster configuration
+// entry, or nil when there is none: an mc-flow cluster carries no nodeGroups there
+// at all. Nil settings is expected downstream, a parse failure is not.
+func (m *MetaConfig) FindTerraNodeGroup(_ context.Context, nodeGroupName string) ([]byte, error) {
+	raw := m.ProviderClusterConfig["nodeGroups"]
+	if len(raw) == 0 {
+		return nil, nil
 	}
-	return nil
+
+	for index, ng := range m.TerraNodeGroupSpecs {
+		if ng.Name != nodeGroupName {
+			continue
+		}
+		var terraNodeGroups []json.RawMessage
+		if err := json.Unmarshal(raw, &terraNodeGroups); err != nil {
+			return nil, fmt.Errorf("unmarshal node groups from provider cluster configuration: %w", err)
+		}
+		// An explicitly empty nodeGroups list still lets the specs be derived from
+		// the cluster NodeGroups, so the index need not address the raw list.
+		if index >= len(terraNodeGroups) {
+			return nil, nil
+		}
+		return terraNodeGroups[index], nil
+	}
+
+	return nil, nil
 }
 
 func (m *MetaConfig) IsStatic() bool {

@@ -68,13 +68,15 @@ spec:
         {{- include "node_driver_registrar_resources" $context | nindent 8 }}
       maxAllowed:
         cpu: 25m
-        memory: 50Mi
+        memory: 64Mi
+    {{- /* The node container is the driver itself, so its peak depends on the backend: the
+           observed 7-day peaks range from 24Mi/1m for csi-nfs to 84Mi/70m for csi-huawei. */}}
     - containerName: "node"
       minAllowed:
         {{- include "node_resources" $context | nindent 8 }}
       maxAllowed:
-        cpu: 25m
-        memory: 50Mi
+        cpu: 100m
+        memory: 128Mi
     {{- end }}
 ---
 kind: DaemonSet

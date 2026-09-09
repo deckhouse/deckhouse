@@ -1,0 +1,320 @@
+---
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  labels:
+    heritage: deckhouse
+    module: multitenancy-manager
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.20.0
+  name: clusterresourcegrantpolicies.multitenancy.deckhouse.io
+spec:
+  group: multitenancy.deckhouse.io
+  names:
+    kind: ClusterResourceGrantPolicy
+    listKind: ClusterResourceGrantPolicyList
+    plural: clusterresourcegrantpolicies
+    shortNames:
+    - crgp
+    singular: clusterresourcegrantpolicy
+  scope: Cluster
+  versions:
+  - additionalPrinterColumns:
+    - jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1alpha1
+    schema:
+      openAPIV3Schema:
+        description: |-
+          Defines a policy for project access to cluster-wide resources and the values used by default.
+
+          The resource applies to projects whose namespaces match `spec.projectSelector`. For each type of cluster-wide resource, the policy allows you to configure allowed and denied resources, as well as their availability rules and default values.
+
+          The cluster-wide resource type is specified using `spec.resources[].resourceName`, which references the corresponding GrantableClusterResourceDefinition.
+
+          The policy is created by a cluster administrator.
+
+          For configuration examples, refer to [Usage examples](usage.html#for-cluster-administrators).
+        properties:
+          apiVersion:
+            description: |-
+              APIVersion defines the versioned schema of this representation of an object.
+              Servers should convert recognized schemas to the latest internal value, and
+              may reject unrecognized values.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+            x-doc-skip: true
+          kind:
+            description: |-
+              Kind is a string value representing the REST resource this object represents.
+              Servers may infer this from the endpoint the client submits requests to.
+              Cannot be updated.
+              In CamelCase.
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds
+            type: string
+            x-doc-skip: true
+          metadata:
+            type: object
+            x-doc-skip: true
+          spec:
+            description: ClusterResourceGrantPolicy parameters.
+            properties:
+              projectSelector:
+                description: |-
+                  Label selector for projects to which the policy applies.
+
+                  If the selector is not specified, the policy does not apply to any projects. An empty selector matches all projects.
+                properties:
+                  matchExpressions:
+                    description: |-
+                      List of label selector expressions.
+
+                      All expressions must match.
+                    items:
+                      description: |-
+                        Label selector expression.
+                      properties:
+                        key:
+                          description: Label key to which the expression applies.
+                          type: string
+                        operator:
+                          description: |-
+                            Operator that defines the relationship between the key and the set of values.
+                          type: string
+                        values:
+                          description: |-
+                            List of label values.
+
+                            For the `In` and `NotIn` operators, the list must contain at least one value. For the `Exists` and `DoesNotExist` operators, the list must be empty.
+                          items:
+                            type: string
+                          type: array
+                          x-kubernetes-list-type: atomic
+                      required:
+                      - key
+                      - operator
+                      type: object
+                    type: array
+                    x-kubernetes-list-type: atomic
+                  matchLabels:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      Set of labels for projects to which the policy applies.
+
+                      All specified labels must match.
+                    type: object
+                type: object
+                x-kubernetes-map-type: atomic
+              resources:
+                description: Access settings for cluster-wide resources for the selected projects.
+                items:
+                  description: |-
+                    Access settings for one type of cluster-wide resource.
+                  properties:
+                    allowed:
+                      description: |-
+                        List of names of cluster-wide resources available to the projects.
+
+                        Combined with resources selected using `allowedSelector`.
+                      items:
+                        type: string
+                      type: array
+                    allowedSelector:
+                      description: |-
+                        Label selector for cluster-wide resources available to the projects.
+
+                        Combined with resources specified in `allowed`. Applies only to cluster-wide resources represented by Kubernetes objects.
+                      properties:
+                        matchExpressions:
+                          description: |-
+                            List of label selector expressions.
+
+                            All expressions must match.
+                          items:
+                            description: |-
+                              Label selector expression.
+                            properties:
+                              key:
+                                description: Label key to which the expression applies.
+                                type: string
+                              operator:
+                                description: |-
+                                  Operator that defines the relationship between the key and the set of values.
+                                type: string
+                              values:
+                                description: |-
+                                  List of label values.
+
+                                  For the `In` and `NotIn` operators, the list must contain at least one value. For the `Exists` and `DoesNotExist` operators, the list must be empty.
+                                items:
+                                  type: string
+                                type: array
+                                x-kubernetes-list-type: atomic
+                            required:
+                            - key
+                            - operator
+                            type: object
+                          type: array
+                          x-kubernetes-list-type: atomic
+                        matchLabels:
+                          additionalProperties:
+                            type: string
+                          description: |-
+                            Set of labels for cluster-wide resources.
+
+                            All specified labels must match.
+                          type: object
+                      type: object
+                      x-kubernetes-map-type: atomic
+                    availabilityDefault:
+                      description: |-
+                        Determines the availability of cluster-wide resources that are not explicitly specified using `allowed`, `allowedSelector`, `denied`, or `deniedSelector`.
+
+                        Overrides `defaultAvailability` of the corresponding GrantableClusterResourceDefinition for the projects selected by the policy.
+
+                        `All` makes all such cluster-wide resources available, while `None` makes them unavailable.
+
+                        Usually, you do not need to specify this parameter. If `allowed` or `allowedSelector` is set and `availabilityDefault` is not specified, access to all other cluster-wide resources of this type is automatically denied. Set this parameter explicitly only to change availability without specifying a list of allowed resources: `All` to make all resources of the type available, or `None` to make them unavailable.
+                      enum:
+                      - All
+                      - None
+                      type: string
+                    default:
+                      description: |-
+                        Name of the cluster-wide resource used by default in the selected projects.
+
+                        Overrides the value determined using `defaultFrom` in the corresponding GrantableClusterResourceDefinition.
+                      type: string
+                    denied:
+                      description: |-
+                        List of names of cluster-wide resources unavailable to the projects.
+
+                        Deny rules take precedence over `allowed` and `allowedSelector`.
+                      items:
+                        type: string
+                      type: array
+                    deniedSelector:
+                      description: |-
+                        Label selector for cluster-wide resources unavailable to the projects.
+
+                        Deny rules take precedence over `allowed` and `allowedSelector`. Applies only to cluster-wide resources represented by Kubernetes objects.
+                      properties:
+                        matchExpressions:
+                          description: |-
+                            List of label selector expressions.
+
+                            All expressions must match.
+                          items:
+                            description: |-
+                              Label selector expression.
+                            properties:
+                              key:
+                                description: Label key to which the expression applies.
+                                type: string
+                              operator:
+                                description: |-
+                                  Operator that defines the relationship between the key and the set of values.
+                                type: string
+                              values:
+                                description: |-
+                                  List of label values.
+
+                                  For the `In` and `NotIn` operators, the list must contain at least one value. For the `Exists` and `DoesNotExist` operators, the list must be empty.
+                                items:
+                                  type: string
+                                type: array
+                                x-kubernetes-list-type: atomic
+                            required:
+                            - key
+                            - operator
+                            type: object
+                          type: array
+                          x-kubernetes-list-type: atomic
+                        matchLabels:
+                          additionalProperties:
+                            type: string
+                          description: |-
+                            Set of labels for cluster-wide resources.
+
+                            All specified labels must match.
+                          type: object
+                      type: object
+                      x-kubernetes-map-type: atomic
+                    resourceName:
+                      description: Name of the GrantableClusterResourceDefinition for which the access settings are configured.
+                      type: string
+                  required:
+                  - resourceName
+                  type: object
+                type: array
+            required:
+            - resources
+            type: object
+          status:
+            description: ClusterResourceGrantPolicy status.
+            properties:
+              conditions:
+                description: Current state of the ClusterResourceGrantPolicy.
+                items:
+                  description: Information about one aspect of the current resource state.
+                  properties:
+                    lastTransitionTime:
+                      description: |-
+                        Time when the condition last changed.
+                      format: date-time
+                      type: string
+                    message:
+                      description: |-
+                        Message with additional information about the condition state.
+                      maxLength: 32768
+                      type: string
+                    observedGeneration:
+                      description: |-
+                        Resource generation on which the condition state is based.
+                      format: int64
+                      minimum: 0
+                      type: integer
+                    reason:
+                      description: |-
+                        Reason for the last change in the condition state.
+                      maxLength: 1024
+                      minLength: 1
+                      pattern: ^[A-Za-z]([A-Za-z0-9_,:]*[A-Za-z0-9_])?$
+                      type: string
+                    status:
+                      description: Condition state.
+                      enum:
+                      - "True"
+                      - "False"
+                      - Unknown
+                      type: string
+                    type:
+                      description: Condition type.
+                      maxLength: 316
+                      pattern: ^([a-z0-9]([-a-z0-9]*[a-z0-9])?(\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*/)?(([A-Za-z0-9][-A-Za-z0-9_.]*)?[A-Za-z0-9])$
+                      type: string
+                  required:
+                  - lastTransitionTime
+                  - message
+                  - reason
+                  - status
+                  - type
+                  type: object
+                type: array
+                x-kubernetes-list-map-keys:
+                - type
+                x-kubernetes-list-type: map
+              observedGeneration:
+                description: Latest resource generation processed by the controller.
+                format: int64
+                type: integer
+            type: object
+        required:
+        - spec
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}
