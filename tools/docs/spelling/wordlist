@@ -209,6 +209,7 @@ DSS
 DVCR
 DVP
 DVPClusterConfiguration
+DVPInstanceClass
 DaemonSet
 DaemonSets
 Daemonset
