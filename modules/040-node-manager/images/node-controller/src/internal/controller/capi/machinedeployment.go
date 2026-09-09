@@ -633,7 +633,7 @@ type nodeCapacityValues struct {
 // that can hold a machine, not only for the scale-from-zero ones: the autoscaler needs a template
 // NodeInfo for every group it discovers, and a discovered group with neither a registered Node nor
 // a template makes ResourcesLeft fail cluster-wide with "No node info for: <group>".
-func (r *MachineDeploymentReconciler) readNodeCapacity(ctx context.Context, ngName string) (cpu, memory string) {
+func (r *MachineDeploymentReconciler) readNodeCapacity(ctx context.Context, ngName string) (string, string) {
 	cm := &corev1.ConfigMap{}
 	if err := r.APIReader.Get(ctx, types.NamespacedName{
 		Name: nodeCapacityConfigMapName, Namespace: common.MachineNamespace,
