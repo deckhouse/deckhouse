@@ -220,7 +220,9 @@ Currently, the multi-tenancy mode (namespace-based authorization) is implemented
 
 If a [ClusterAuthorizationRule](cr.html#clusterauthorizationrule) Custom Resource contains the `namespaceSelector` field, neither `limitNamespaces` nor `allowAccessToSystemNamespaces`are taken into consideration.
 
-The `allowAccessToSystemNamespaces`, `namespaceSelector` and `limitNamespaces` options in the custom resource will no longer be applied if the authorization system's webhook is unavailable for some reason. As a result, users will have access to all namespaces. After the webhook availability is restored, the options will become relevant again.
+If the authorization webhook becomes unavailable, requests are **denied**, not allowed. The webhook is the first authorizer in the API server's chain and is configured with `failurePolicy: Deny`, so a request it cannot answer never reaches RBAC. The identities listed in the `matchConditions` of the `AuthorizationConfiguration` are the exception: control-plane components, kubelets, the `kube-system` service accounts and the `d8-*` service accounts do not go through the webhook at all, so the cluster keeps running and Deckhouse can restore the webhook.
+
+This is the opposite of how the module behaved before the structured authorization configuration, where the webhook ran after RBAC and its unavailability meant the multi-tenancy options simply stopped applying.
 
 ### Default access list for each role
 
