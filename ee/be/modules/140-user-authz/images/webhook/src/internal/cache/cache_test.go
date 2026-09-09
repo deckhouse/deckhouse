@@ -203,6 +203,52 @@ func TestCacheGetIfNoResource(t *testing.T) {
 	}
 }
 
+// A refresh that fails must not throw away an authoritative negative. The whole point of answering
+// 404 rather than 403 for a resource that does not exist is that the answer is stable; if every API
+// server blip turned it back into a denial, the fix would hold only while the cluster is healthy.
+func TestCacheGetKeepsTheNegativeWhenTheRefreshFails(t *testing.T) {
+	var fail atomic.Bool
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if fail.Load() {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.Header().Add("Content-Type", "application/json")
+		w.Write([]byte(testResponse))
+	}))
+	defer server.Close()
+
+	cache := NamespacedDiscoveryCache{
+		client:               server.Client(),
+		kubernetesAPIAddress: server.URL,
+		logger:               log.New(io.Discard, "", log.LstdFlags),
+		data:                 make(map[string]*namespacedCacheEntry),
+		preferredVersions:    make(map[string]*preferredVersionCacheEntry),
+	}
+	now := time.Now()
+	cache.now = func() time.Time { return now }
+
+	// A successful listing that does not carry the resource.
+	if _, err := cache.Get("test", "ghosts"); !errors.Is(err, ErrResourceAbsent) {
+		t.Fatalf("with discovery healthy: got %v, want ErrResourceAbsent", err)
+	}
+
+	// The interval passes and discovery is now unreachable. The answer must not change: the
+	// listing that produced it succeeded, and a resource cannot be installed while the API server
+	// cannot be reached.
+	cache.now = func() time.Time { return now.Add(negativeRenewInterval) }
+	fail.Store(true)
+	if _, err := cache.Get("test", "ghosts"); !errors.Is(err, ErrResourceAbsent) {
+		t.Fatalf("with discovery unreachable: got %v, want ErrResourceAbsent (a denial here is a 403 for a resource that does not exist)", err)
+	}
+
+	// A group that was never listed is a different matter: nothing authoritative is known, so the
+	// failure has to propagate and the decision fails closed.
+	if _, err := cache.Get("never-listed/v1", "things"); err == nil || errors.Is(err, ErrResourceAbsent) {
+		t.Fatalf("an unlisted group during an outage: got %v, want a plain error so the decision denies", err)
+	}
+}
+
 // A group the API server does not serve must be remembered too. The caller picks the group out of
 // the request path, so an unknown group is the cheapest possible way to ask for a listing; if the
 // 404 leaves no entry behind, the rate limit never applies to it and every request is a fresh round
