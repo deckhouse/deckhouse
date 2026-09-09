@@ -81,7 +81,7 @@ All nodes placed in different zones must have access to shared datastores with m
 
 ## List of required privileges
 
-The role for the platform account includes the privileges listed below. The privileges are grouped by the tasks the platform performs in vSphere.
+The role for the platform account includes the privileges listed below. They are grouped by the operations that the platform performs in vSphere.
 
 To create the role and assign it to a user, refer to [Creating and assigning a role in vSphere Client](authorization.html#creating-and-assigning-a-role-in-vsphere-client) and [Creating and assigning a role with govc](authorization.html#creating-and-assigning-a-role-with-govc).
 

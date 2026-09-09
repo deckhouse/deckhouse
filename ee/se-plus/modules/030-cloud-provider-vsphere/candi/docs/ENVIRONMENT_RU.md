@@ -41,7 +41,7 @@ description: "Настройка VMware vSphere для работы облачн
 
 ## Список необходимых привилегий
 
-Роль для учётной записи платформы включает привилегии, перечисленные ниже. Привилегии сгруппированы по задачам, которые платформа выполняет во vSphere.
+Роль для учётной записи платформы включает перечисленные ниже привилегии. Они сгруппированы по операциям, которые платформа выполняет во vSphere.
 
 Как создать роль и назначить её пользователю, описано в разделах [«Создание и назначение роли с использованием vSphere Client»](#создание-и-назначение-роли-с-использованием-vsphere-client) и [«Создание и назначение роли с использованием govc»](#создание-и-назначение-роли-с-использованием-govc).
 
@@ -612,7 +612,7 @@ DKP использует интерфейс `ens192`, как интерфейс 
 
 #### Адресация узлов
 
-По умолчанию узлы получают адреса по DHCP. Для узлов, которые создаёт установщик, адреса задаются статически в параметре [`mainNetworkIPAddresses`](cluster_configuration.html#vsphereclusterconfiguration-masternodegroup-instanceclass-mainnetworkipaddresses). Узлы, которые заказываются по ресурсу [VsphereInstanceClass](cr.html#vsphereinstanceclass), статическую адресацию не поддерживают, им нужен DHCP.
+По умолчанию узлы получают адреса по DHCP. Для узлов, которые создаёт установщик, адреса задаются статически в параметре [`mainNetworkIPAddresses`](cluster_configuration.html#vsphereclusterconfiguration-masternodegroup-instanceclass-mainnetworkipaddresses). Для узлов, которые заказываются по ресурсу [VsphereInstanceClass](cr.html#vsphereinstanceclass), статическая адресация не поддерживается, такие узлы получают адреса по DHCP.
 
 Адреса назначаются узлам группы по порядку, поэтому задайте их столько же, сколько узлов в группе. Если адресов меньше, список используется повторно и один адрес достаётся нескольким узлам.
 
@@ -650,11 +650,11 @@ masterNodeGroup:
 
 #### Несколько сетей
 
-Дополнительные интерфейсы виртуальных машин подключаются к сетям из параметра [`additionalNetworks`](cluster_configuration.html#vsphereclusterconfiguration-masternodegroup-instanceclass-additionalnetworks). Так отделяют, например, трафик BGP от трафика узлов.
+Дополнительные интерфейсы виртуальных машин подключаются к сетям из параметра [`additionalNetworks`](cluster_configuration.html#vsphereclusterconfiguration-masternodegroup-instanceclass-additionalnetworks). Например, через дополнительный интерфейс подключают сеть для трафика BGP.
 
 Когда сетей несколько, укажите, какие из них платформа считает внутренними, а какие внешними. По именам сетей из параметров [`internalNetworkNames`](cluster_configuration.html#vsphereclusterconfiguration-internalnetworknames) и [`externalNetworkNames`](cluster_configuration.html#vsphereclusterconfiguration-externalnetworknames) компонент `vsphere-cloud-controller-manager` проставляет адреса InternalIP и ExternalIP в объекте Node. В этих параметрах указывается имя сети, а не путь к ней.
 
-Параметр [`internalNetworkCIDR`](cluster_configuration.html#vsphereclusterconfiguration-internalnetworkcidr) задаёт подсеть, из которой master-узлы получают адреса во внутренней сети. Адреса выделяются начиная с десятого. Параметр обязателен, если в конфигурации есть секция `nodeGroups`.
+Параметр [`internalNetworkCIDR`](cluster_configuration.html#vsphereclusterconfiguration-internalnetworkcidr) задаёт подсеть, из которой master-узлы получают адреса во внутренней сети. Адреса выделяются начиная с десятого. Параметр обязателен, если в конфигурации есть секция [`nodeGroups`](cluster_configuration.html#vsphereclusterconfiguration-nodegroups).
 
 Пример конфигурации с двумя сетями:
 
@@ -691,10 +691,6 @@ masterNodeGroup:
 
 1. **Через NSX-T.** Если в инфраструктуре развёрнут NSX-T, `cloud-controller-manager` заказывает в нём балансировщик для каждого сервиса с типом LoadBalancer. Имя пула адресов, путь к шлюзу Tier-1 и учётные данные задаются в секции [`nsxt`](configuration.html#parameters-nsxt).
 
-{% alert level="warning" %}
-Балансировщики NSX-T реализованы в `cloud-controller-manager` как альфа-возможность. Платформа включает её переменной `ENABLE_ALPHA_NSXT_LB`, когда в конфигурации задана секция `nsxt`.
-{% endalert %}
-
 ### Использование хранилища данных
 
 Кластер использует Datastore для двух задач:
@@ -702,7 +698,7 @@ masterNodeGroup:
 - размещение root-дисков виртуальных машин;
 - размещение томов PersistentVolume.
 
-Обе задачи может обслуживать один Datastore. Тогда планируйте свободное место с учётом дисков узлов и томов одновременно.
+Один Datastore может обслуживать обе задачи. При планировании свободного места учитывайте и диски узлов, и тома.
 
 Datastore должен отвечать следующим требованиям:
 
@@ -712,7 +708,9 @@ Datastore должен отвечать следующим требования�
 
 #### Диски узлов
 
-Datastore для root-дисков задаётся параметром `datastore` группы узлов, путь указывается относительно Datacenter. Размер диска задаётся параметром `rootDiskSize`. Для узлов, которые создаёт установщик, размер по умолчанию составляет 50 ГиБ. Для узлов по ресурсу VsphereInstanceClass он составляет 20 ГиБ. Значение меньше размера диска в шаблоне задать нельзя.
+Datastore для root-дисков задаётся параметром [`datastore`](cr.html#vsphereinstanceclass-v1-spec-datastore) группы узлов, путь указывается относительно Datacenter. Размер диска задаётся параметром [`rootDiskSize`](cr.html#vsphereinstanceclass-v1-spec-rootdisksize). Для узлов, которые создаёт установщик, размер по умолчанию составляет 50 ГиБ. Для узлов по ресурсу [VsphereInstanceClass](cr.html#vsphereinstanceclass) он составляет 20 ГиБ. Значение меньше размера диска в шаблоне приводит к ошибке клонирования.
+
+Пример группы узлов с отдельным Datastore и увеличенным root-диском:
 
 ```yaml
 nodeGroups:
@@ -749,7 +747,7 @@ govc storage.policy.ls "<POLICY_NAME>"
 
 Имя StorageClass с политикой складывается из имени Datastore и имени политики. Платформа приводит его к нижнему регистру, заменяет пробелы на дефисы и удаляет остальные символы, кроме дефиса и точки. Например, для Datastore `lun_1` и политики `Gold Policy` получается StorageClass `lun1-gold-policy`.
 
-Чтобы платформа обнаружила политики, учётной записи vSphere нужна привилегия `StorageProfile.View` из группы [«Хранилище»](#хранилище). Набор StorageClass формируется автоматически, поэтому политика для отдельного StorageClass вручную не задаётся.
+Чтобы платформа обнаружила политики, учётной записи vSphere нужна привилегия `StorageProfile.View` из [списка необходимых привилегий](#список-необходимых-привилегий). Набор StorageClass формируется автоматически, поэтому политика для отдельного StorageClass вручную не задаётся.
 
 Чтобы для части Datastore StorageClass не создавались, перечислите их в параметре [`exclude`](configuration.html#parameters-storageclass-exclude):
 
@@ -770,7 +768,7 @@ spec:
 
 Параметр принимает имена и регулярные выражения, каждое из которых должно совпадать с именем Datastore целиком. Частичное совпадение не учитывается. Например, для Datastore `vsanDatastore` выражение `vsan` не исключает ни одного StorageClass, а `vsan.*` исключает все. Исключение убирает и базовый StorageClass, и StorageClass с политиками для этого Datastore. Отдельный StorageClass с политикой по его собственному имени параметр не исключает.
 
-Чтобы задать StorageClass по умолчанию, используйте глобальный параметр [`global.defaultClusterStorageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass). Параметр модуля [`default`](configuration.html#parameters-storageclass-default) устарел.
+Чтобы задать StorageClass по умолчанию, используйте глобальный параметр [`global.defaultClusterStorageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass).
 
 #### Режим работы CSI
 
@@ -786,11 +784,18 @@ d8 k -n <NAMESPACE> patch pvc <PVC_NAME> -p '{"spec":{"resources":{"requests":{"
 
 Дополнительные действия не требуются. Платформа расширяет том в vSphere, затем kubelet расширяет файловую систему на узле, к которому том подключён. Рабочая нагрузка при этом не перезапускается.
 
-Пока расширение выполняется, в статусе PersistentVolumeClaim присутствуют condition `Resizing` и `FileSystemResizePending`. После того как kubelet расширит файловую систему, оба condition удаляются, а поле `status.capacity` содержит новый размер:
+Пока расширение выполняется, в статусе PersistentVolumeClaim присутствуют condition `Resizing` и `FileSystemResizePending`. После того как kubelet расширит файловую систему, оба condition удаляются, а поле `status.capacity` содержит новый размер. Команда ниже выводит текущий размер тома и список condition:
 
 ```shell
 d8 k -n <NAMESPACE> get pvc <PVC_NAME> \
   -o jsonpath='{.status.capacity.storage}{"\n"}{range .status.conditions[*]}{.type}={.status} {end}'
+```
+
+Пример вывода для тома, расширение которого завершилось. В первой строке размер, вторая строка пустая, потому что condition в статусе не осталось:
+
+```console
+2Gi
+
 ```
 
 Если condition `Resizing` остаётся в статусе, расширение без отключения тома в этой конфигурации недоступно, например в legacy-режиме с дисками FCD. Ограничение описано в [issue проекта external-resizer](https://github.com/kubernetes-csi/external-resizer/issues/44). Чтобы расширить такой том, отключите его от узла:
@@ -815,12 +820,12 @@ d8 k -n <NAMESPACE> get pvc <PVC_NAME> \
 
 #### Просмотр томов в vSphere Client
 
-Тома, заказанные через CSI, отображаются в vSphere Client. Откройте «Menu» → «Inventory» → «Hosts and Clusters», выберите объект Cluster, перейдите на вкладку «Monitor» и в разделе «Cloud Native Storage» выберите «Container Volumes». Тот же список доступен на объектах vCenter, Datacenter и Datastore, но не на виртуальной машине. Для каждого тома приводятся имя, метки, Datastore, соответствие политике хранения («Compliance Status»), доступность («Health Status») и размер.
+Тома, заказанные через CSI, отображаются в vSphere Client. Откройте «Menu» → «Inventory» → «Hosts and Clusters», выберите объект Cluster, перейдите на вкладку «Monitor» и в разделе «Cloud Native Storage» выберите «Container Volumes». Для каждого тома приводятся имя, лейблы, Datastore, соответствие политике хранения («Compliance Status»), доступность («Health Status») и размер.
 
 ![Список CNS-томов](images/cns-volumes/container-volumes.png)
 
 Имя тома в vSphere совпадает с именем PersistentVolume в кластере.
 
-По значку слева от имени тома открывается панель с подробностями. На вкладке «Kubernetes objects» приводятся пространство имён, имя и метки PersistentVolumeClaim, а также рабочая нагрузка, которая использует том.
+По значку слева от имени тома открывается панель с подробностями. На вкладке «Kubernetes objects» приводятся неймспейс, имя и лейблы PersistentVolumeClaim, а также рабочая нагрузка, которая использует том.
 
 ![Подробности CNS-тома](images/cns-volumes/container-volume-details.png)

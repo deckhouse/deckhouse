@@ -41,7 +41,7 @@ The following prerequisites must be met for Deckhouse Kubernetes Platform to wor
 
 ## List of required privileges
 
-The role for the platform account includes the privileges listed below. The privileges are grouped by the tasks the platform performs in vSphere.
+The role for the platform account includes the privileges listed below. They are grouped by the operations that the platform performs in vSphere.
 
 To create the role and assign it to a user, refer to [Creating and assigning a role in vSphere Client](#creating-and-assigning-a-role-in-vsphere-client) and [Creating and assigning a role with govc](#creating-and-assigning-a-role-with-govc).
 
@@ -604,7 +604,7 @@ The network must meet the following requirements:
 
 #### Node addressing
 
-By default, nodes get their addresses over DHCP. For nodes created by the installer, addresses are set statically in the [`mainNetworkIPAddresses`](cluster_configuration.html#vsphereclusterconfiguration-masternodegroup-instanceclass-mainnetworkipaddresses) parameter. Nodes ordered through the [VsphereInstanceClass](cr.html#vsphereinstanceclass) resource do not support static addressing, they require DHCP.
+By default, nodes get their addresses over DHCP. For nodes created by the installer, addresses are set statically in the [`mainNetworkIPAddresses`](cluster_configuration.html#vsphereclusterconfiguration-masternodegroup-instanceclass-mainnetworkipaddresses) parameter. Static addressing is not supported for the nodes ordered through the [VsphereInstanceClass](cr.html#vsphereinstanceclass) resource, such nodes get their addresses over DHCP.
 
 Addresses are assigned to the nodes of a group in order, so provide as many addresses as there are nodes in the group. If there are fewer addresses, the list is reused and the same address goes to several nodes.
 
@@ -642,11 +642,11 @@ masterNodeGroup:
 
 #### Multiple networks
 
-Secondary interfaces of virtual machines connect to the networks listed in the [`additionalNetworks`](cluster_configuration.html#vsphereclusterconfiguration-masternodegroup-instanceclass-additionalnetworks) parameter. This is how BGP traffic is separated from node traffic, for example.
+Secondary interfaces of virtual machines connect to the networks listed in the [`additionalNetworks`](cluster_configuration.html#vsphereclusterconfiguration-masternodegroup-instanceclass-additionalnetworks) parameter. For example, an additional interface is used to connect the network for BGP traffic.
 
 When there are several networks, specify which of them the platform treats as internal and which as external. Based on the network names from the [`internalNetworkNames`](cluster_configuration.html#vsphereclusterconfiguration-internalnetworknames) and [`externalNetworkNames`](cluster_configuration.html#vsphereclusterconfiguration-externalnetworknames) parameters, the `vsphere-cloud-controller-manager` component sets the InternalIP and ExternalIP addresses in the Node object. These parameters take the name of the network, not its path.
 
-The [`internalNetworkCIDR`](cluster_configuration.html#vsphereclusterconfiguration-internalnetworkcidr) parameter sets the subnet that master nodes get their addresses from in the internal network. Addresses are allocated starting with the tenth one. The parameter is required if the configuration contains the `nodeGroups` section.
+The [`internalNetworkCIDR`](cluster_configuration.html#vsphereclusterconfiguration-internalnetworkcidr) parameter sets the subnet that master nodes get their addresses from in the internal network. Addresses are allocated starting with the tenth one. The parameter is required if the configuration contains the [`nodeGroups`](cluster_configuration.html#vsphereclusterconfiguration-nodegroups) section.
 
 An example of a configuration with two networks:
 
@@ -683,10 +683,6 @@ Inbound traffic is balanced in one of three ways.
 
 1. **Through NSX-T.** If NSX-T is deployed in the infrastructure, `cloud-controller-manager` orders a load balancer in it for every service of the LoadBalancer type. The address pool name, the Tier-1 gateway path, and the credentials are set in the [`nsxt`](configuration.html#parameters-nsxt) section.
 
-{% alert level="warning" %}
-NSX-T load balancers are implemented in `cloud-controller-manager` as an alpha feature. The platform enables it with the `ENABLE_ALPHA_NSXT_LB` variable when the `nsxt` section is set in the configuration.
-{% endalert %}
-
 ### Using the datastore
 
 The cluster uses a Datastore for two purposes:
@@ -694,7 +690,7 @@ The cluster uses a Datastore for two purposes:
 - Placing the root disks of virtual machines.
 - Placing PersistentVolume volumes.
 
-A single Datastore can serve both purposes. In that case, plan the free space for node disks and volumes together.
+A single Datastore can serve both purposes. When planning the free space, take both the node disks and the volumes into account.
 
 A Datastore must meet the following requirements:
 
@@ -704,7 +700,9 @@ A Datastore must meet the following requirements:
 
 #### Node disks
 
-The Datastore for root disks is set in the `datastore` parameter of a node group, with the path relative to the Datacenter. The disk size is set in the `rootDiskSize` parameter. For nodes created by the installer, the default size is 50 GiB. For nodes ordered through the VsphereInstanceClass resource, it is 20 GiB. A value smaller than the template disk size is not allowed.
+The Datastore for root disks is set in the [`datastore`](cr.html#vsphereinstanceclass-v1-spec-datastore) parameter of a node group, with the path relative to the Datacenter. The disk size is set in the [`rootDiskSize`](cr.html#vsphereinstanceclass-v1-spec-rootdisksize) parameter. For nodes created by the installer, the default size is 50 GiB. For nodes ordered through the [VsphereInstanceClass](cr.html#vsphereinstanceclass) resource, it is 20 GiB. A value smaller than the template disk size makes cloning fail.
+
+An example of a node group with a separate Datastore and a larger root disk:
 
 ```yaml
 nodeGroups:
@@ -741,7 +739,7 @@ For every Datastore tagged with a zone tag, the platform creates a StorageClass.
 
 The name of a StorageClass with a policy combines the Datastore name and the policy name. The platform converts it to lowercase, replaces spaces with hyphens, and removes the remaining characters except hyphens and dots. For example, the `lun_1` Datastore and the `Gold Policy` policy produce the `lun1-gold-policy` StorageClass.
 
-For the platform to discover the policies, the vSphere account needs the `StorageProfile.View` privilege from the [Storage](#storage) group. The StorageClass set is generated automatically, so a policy is not set for an individual StorageClass manually.
+For the platform to discover the policies, the vSphere account needs the `StorageProfile.View` privilege from the [list of required privileges](#list-of-required-privileges). The StorageClass set is generated automatically, so a policy is not set for an individual StorageClass manually.
 
 To keep StorageClasses from being created for some of the Datastores, list them in the [`exclude`](configuration.html#parameters-storageclass-exclude) parameter:
 
@@ -762,7 +760,7 @@ spec:
 
 The parameter takes names and regular expressions, each of which must match the Datastore name in full. A partial match is not taken into account. For example, for the `vsanDatastore` Datastore, the `vsan` expression excludes no StorageClass, while `vsan.*` excludes all of them. An exclusion removes both the base StorageClass and the StorageClasses with policies for that Datastore. The parameter does not exclude an individual StorageClass with a policy by its own name.
 
-To set the default StorageClass, use the global [`global.defaultClusterStorageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass) parameter. The [`default`](configuration.html#parameters-storageclass-default) module parameter is deprecated.
+To set the default StorageClass, use the global [`global.defaultClusterStorageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass) parameter.
 
 #### CSI operation mode
 
@@ -778,11 +776,18 @@ d8 k -n <NAMESPACE> patch pvc <PVC_NAME> -p '{"spec":{"resources":{"requests":{"
 
 No further action is required. The platform expands the volume in vSphere, then kubelet expands the file system on the node the volume is attached to. The workload is not restarted.
 
-While the expansion is in progress, the PersistentVolumeClaim status contains the `Resizing` and `FileSystemResizePending` conditions. Once kubelet has expanded the file system, both conditions are removed and the `status.capacity` field contains the new size:
+While the expansion is in progress, the PersistentVolumeClaim status contains the `Resizing` and `FileSystemResizePending` conditions. Once kubelet has expanded the file system, both conditions are removed and the `status.capacity` field contains the new size. The command below prints the current volume size and the list of conditions:
 
 ```shell
 d8 k -n <NAMESPACE> get pvc <PVC_NAME> \
   -o jsonpath='{.status.capacity.storage}{"\n"}{range .status.conditions[*]}{.type}={.status} {end}'
+```
+
+An example of the output for a volume whose expansion has finished. The first line is the size, and the second line is empty because no conditions are left in the status:
+
+```console
+2Gi
+
 ```
 
 If the `Resizing` condition remains in the status, expanding without detaching the volume is unavailable in this configuration, for example in the legacy mode with FCD volumes. The limitation is described in an [external-resizer issue](https://github.com/kubernetes-csi/external-resizer/issues/44). To expand such a volume, detach it from the node:
@@ -807,7 +812,7 @@ If the `Resizing` condition remains in the status, expanding without detaching t
 
 #### Viewing volumes in vSphere Client
 
-Volumes provisioned through CSI are shown in vSphere Client. Open "Menu" → "Inventory" → "Hosts and Clusters", select a Cluster object, go to the "Monitor" tab, and choose "Container Volumes" under "Cloud Native Storage". The same list is available on the vCenter, Datacenter, and Datastore objects, but not on a virtual machine. For every volume, the list shows the name, labels, Datastore, storage policy compliance ("Compliance Status"), availability ("Health Status"), and size.
+Volumes provisioned through CSI are shown in vSphere Client. Open "Menu" → "Inventory" → "Hosts and Clusters", select a Cluster object, go to the "Monitor" tab, and choose "Container Volumes" under "Cloud Native Storage". For every volume, the list shows the name, labels, Datastore, storage policy compliance ("Compliance Status"), availability ("Health Status"), and size.
 
 ![List of CNS volumes](images/cns-volumes/container-volumes.png)
 

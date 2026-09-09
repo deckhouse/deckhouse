@@ -105,11 +105,18 @@ d8 k -n <NAMESPACE> patch pvc <PVC_NAME> -p '{"spec":{"resources":{"requests":{"
 
 Дополнительные действия не требуются. DKP расширяет том в vSphere, затем kubelet расширяет файловую систему на узле, к которому том подключён. Рабочая нагрузка при этом не перезапускается.
 
-Пока расширение выполняется, в статусе PVC присутствуют condition `Resizing` и `FileSystemResizePending`. После того как kubelet расширит файловую систему, оба condition удаляются, а поле `status.capacity` содержит новый размер:
+Пока расширение выполняется, в статусе PVC присутствуют condition `Resizing` и `FileSystemResizePending`. После того как kubelet расширит файловую систему, оба condition удаляются, а поле `status.capacity` содержит новый размер. Команда ниже выводит текущий размер тома и список condition:
 
 ```shell
 d8 k -n <NAMESPACE> get pvc <PVC_NAME> \
   -o jsonpath='{.status.capacity.storage}{"\n"}{range .status.conditions[*]}{.type}={.status} {end}'
+```
+
+Пример вывода для тома, расширение которого завершилось. В первой строке размер, вторая строка пустая, потому что condition в статусе не осталось:
+
+```console
+2Gi
+
 ```
 
 Если condition `Resizing` остаётся в статусе, расширение без отключения тома в этой конфигурации недоступно, например в legacy-режиме с дисками FCD. Ограничение описано в [issue проекта external-resizer](https://github.com/kubernetes-csi/external-resizer/issues/44). Чтобы расширить такой том, отключите его от узла:
@@ -134,13 +141,13 @@ d8 k -n <NAMESPACE> get pvc <PVC_NAME> \
 
 ### Просмотр томов в vSphere Client
 
-Тома, заказанные через CSI, отображаются в vSphere Client. Откройте «Menu» → «Inventory» → «Hosts and Clusters», выберите объект Cluster, перейдите на вкладку «Monitor» и в разделе «Cloud Native Storage» выберите «Container Volumes». Тот же список доступен на объектах vCenter, Datacenter и Datastore, но не на виртуальной машине. Для каждого тома приводятся имя, метки, Datastore, соответствие политике хранения («Compliance Status»), доступность («Health Status») и размер.
+Тома, заказанные через CSI, отображаются в vSphere Client. Откройте «Menu» → «Inventory» → «Hosts and Clusters», выберите объект Cluster, перейдите на вкладку «Monitor» и в разделе «Cloud Native Storage» выберите «Container Volumes». Для каждого тома приводятся имя, лейблы, Datastore, соответствие политике хранения («Compliance Status»), доступность («Health Status») и размер.
 
 ![Список CNS-томов](../../../../images/cloud-provider-vsphere/cns-volumes/container-volumes.png)
 
 Имя тома в vSphere совпадает с именем PersistentVolume в кластере.
 
-По значку слева от имени тома открывается панель с подробностями. На вкладке «Kubernetes objects» приводятся пространство имён, имя и метки PersistentVolumeClaim, а также рабочая нагрузка, которая использует том.
+По значку слева от имени тома открывается панель с подробностями. На вкладке «Kubernetes objects» приводятся неймспейс, имя и лейблы PersistentVolumeClaim, а также рабочая нагрузка, которая использует том.
 
 ![Подробности CNS-тома](../../../../images/cloud-provider-vsphere/cns-volumes/container-volume-details.png)
 
@@ -158,7 +165,3 @@ d8 k -n <NAMESPACE> get pvc <PVC_NAME> \
    - IP-адреса BGP-роутеров, номер автономной системы (ASN) роутеров и номер ASN кластера, а также диапазон адресов, который кластер анонсирует.
 
 1. **Через NSX-T.** Если в инфраструктуре развёрнут NSX-T, `cloud-controller-manager` заказывает в нём балансировщик для каждого сервиса с типом LoadBalancer. Имя пула адресов, путь к шлюзу Tier-1 и учётные данные задаются в секции [`nsxt`](/modules/cloud-provider-vsphere/configuration.html#parameters-nsxt).
-
-{% alert level="warning" %}
-Балансировщики NSX-T реализованы в `cloud-controller-manager` как альфа-возможность. Платформа включает её переменной `ENABLE_ALPHA_NSXT_LB`, когда в конфигурации задана секция `nsxt`.
-{% endalert %}

@@ -32,6 +32,8 @@ DKP поддерживает гибридную интеграцию с VMware v
 
 Как добавлять узлы, изменять их количество и удалять их, описано в разделах [«Основы управления узлами в Deckhouse»](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html) и [«Добавление и управление облачными узлами»](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html). Пример группы узлов для vSphere приведён в разделе [«Создание группы узлов»](/modules/cloud-provider-vsphere/examples.html#создание-группы-узлов).
 
+Примеры манифестов для vSphere собраны в разделе [«Примеры»](/modules/cloud-provider-vsphere/examples.html) документации модуля.
+
 Ниже описаны действия, которые выполняются только в кластерах на vSphere.
 
 ### Удаление CloudPermanent-узлов в vSphere

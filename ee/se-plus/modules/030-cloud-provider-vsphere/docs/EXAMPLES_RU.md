@@ -3,8 +3,7 @@ title: "Cloud provider — VMware vSphere: примеры"
 ---
 
 На этой странице собраны типовые сценарии настройки облачного провайдера VMware vSphere.
-Примеры расположены от простого к сложному.
-Полное описание параметров приведено в разделах [«Настройки»](configuration.html) и [«Custom Resources»](cr.html).
+Полное описание параметров приведено в разделах [«Настройки»](configuration.html) и [«Кастомные ресурсы»](cr.html).
 
 ## Создание группы узлов
 
@@ -56,7 +55,7 @@ spec:
 d8 k get nodes -l node.deckhouse.io/group=worker
 ```
 
-Как изменить количество узлов в группе и как удалить группу, описано в документации модуля [`node-manager`](/modules/node-manager/).
+Как изменить количество узлов в группе и как удалить группу, описано в документации модуля [`node-manager`](/modules/node-manager/faq.html).
 
 ## Подключение к vCenter в существующем кластере
 
@@ -109,7 +108,7 @@ d8 k get module cloud-provider-vsphere -o wide
 ## Ограничение набора StorageClass
 
 DKP создаёт StorageClass для каждого размеченного тегами Datastore, а при настроенных политиках хранения SPBM — ещё и для каждого сочетания Datastore и политики.
-В примере из кластера исключаются StorageClass медленных хранилищ, чтобы разработчики не заказывали на них тома.
+В примере из кластера исключаются StorageClass двух Datastore.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -126,8 +125,8 @@ spec:
         - ".*-lun101-.*"
 ```
 
-В параметре `exclude` перечисляются имена Datastore или регулярные выражения для них. Выражение должно совпадать с именем целиком, частичное совпадение не учитывается.
-Исключение убирает и основной StorageClass, и все StorageClass с политиками хранения для этого Datastore. StorageClass с политикой по его собственному имени исключить нельзя.
+В параметре [`exclude`](configuration.html#parameters-storageclass-exclude) перечисляются имена Datastore или регулярные выражения для них. Выражение должно совпадать с именем целиком, частичное совпадение не учитывается.
+Исключение убирает и основной StorageClass, и все StorageClass с политиками хранения для этого Datastore. Отдельный StorageClass с политикой по его собственному имени параметр не исключает.
 
 Убедитесь, что лишние StorageClass пропали из кластера:
 
@@ -165,8 +164,8 @@ spec:
 
 - `<STORAGE_NETWORK_PATH>` — путь к дополнительной сети относительно Datacenter.
 
-Параметр `cpuLimit` задаёт предел потребления процессора в МГц.
-Параметр `memoryReservation` резервирует память в процентах от значения `memory`, по умолчанию он равен 80.
+Параметр [`cpuLimit`](cr.html#vsphereinstanceclass-v1-spec-runtimeoptions-cpulimit) задаёт предел потребления процессора в МГц.
+Параметр [`memoryReservation`](cr.html#vsphereinstanceclass-v1-spec-runtimeoptions-memoryreservation) резервирует память в процентах от значения [`memory`](cr.html#vsphereinstanceclass-v1-spec-memory), по умолчанию он равен 80.
 
 {% alert level="warning" %}
 Занижение параметра `cpuLimit` замедляет работу узла.

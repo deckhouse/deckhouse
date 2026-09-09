@@ -32,6 +32,8 @@ A cluster on vSphere uses nodes of four types:
 
 Adding nodes, changing their number, and deleting them are covered in the [Node management basics in Deckhouse](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html) and [Adding and managing cloud nodes](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html) sections. An example of a node group for vSphere is given in the [Creating a node group](/modules/cloud-provider-vsphere/examples.html#creating-a-node-group) section.
 
+Manifest examples for vSphere are collected in the [Examples](/modules/cloud-provider-vsphere/examples.html) section of the module documentation.
+
 The steps below apply only to clusters on vSphere.
 
 ### Removing CloudPermanent nodes in vSphere

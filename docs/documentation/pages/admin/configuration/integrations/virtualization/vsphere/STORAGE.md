@@ -104,11 +104,18 @@ d8 k -n <NAMESPACE> patch pvc <PVC_NAME> -p '{"spec":{"resources":{"requests":{"
 
 No additional actions are required. DKP expands the volume in vSphere, and then kubelet expands the file system on the node the volume is attached to. The workload is not restarted.
 
-While the expansion is in progress, the PVC status contains the `Resizing` and `FileSystemResizePending` conditions. After kubelet expands the file system, both conditions are removed and the `status.capacity` field contains the new size:
+While the expansion is in progress, the PVC status contains the `Resizing` and `FileSystemResizePending` conditions. After kubelet expands the file system, both conditions are removed and the `status.capacity` field contains the new size. The command below prints the current volume size and the list of conditions:
 
 ```shell
 d8 k -n <NAMESPACE> get pvc <PVC_NAME> \
   -o jsonpath='{.status.capacity.storage}{"\n"}{range .status.conditions[*]}{.type}={.status} {end}'
+```
+
+An example of the output for a volume whose expansion has finished. The first line is the size, and the second line is empty because no conditions are left in the status:
+
+```console
+2Gi
+
 ```
 
 If the `Resizing` condition remains in the status, expanding without detaching the volume is unavailable in this configuration, for example in the legacy mode with FCD volumes. The limitation is described in an [external-resizer issue](https://github.com/kubernetes-csi/external-resizer/issues/44). To expand such a volume, detach it from the node:
@@ -133,7 +140,7 @@ If the `Resizing` condition remains in the status, expanding without detaching t
 
 ### Viewing volumes in vSphere Client
 
-Volumes provisioned through CSI are shown in vSphere Client. Open "Menu" → "Inventory" → "Hosts and Clusters", select a Cluster object, go to the "Monitor" tab, and choose "Container Volumes" under "Cloud Native Storage". The same list is available on the vCenter, Datacenter, and Datastore objects, but not on a virtual machine. For every volume, the list shows the name, labels, Datastore, storage policy compliance ("Compliance Status"), availability ("Health Status"), and size.
+Volumes provisioned through CSI are shown in vSphere Client. Open "Menu" → "Inventory" → "Hosts and Clusters", select a Cluster object, go to the "Monitor" tab, and choose "Container Volumes" under "Cloud Native Storage". For every volume, the list shows the name, labels, Datastore, storage policy compliance ("Compliance Status"), availability ("Health Status"), and size.
 
 ![List of CNS volumes](../../../../images/cloud-provider-vsphere/cns-volumes/container-volumes.png)
 
@@ -157,7 +164,3 @@ Inbound traffic is balanced in one of three ways.
    - IP addresses of the BGP routers, the autonomous system number (ASN) of the routers and the ASN of the cluster, and the range of addresses that the cluster announces.
 
 1. **Through NSX-T.** If NSX-T is deployed in the infrastructure, `cloud-controller-manager` orders a load balancer in it for every service of the LoadBalancer type. The address pool name, the Tier-1 gateway path, and the credentials are set in the [`nsxt`](/modules/cloud-provider-vsphere/configuration.html#parameters-nsxt) section.
-
-{% alert level="warning" %}
-NSX-T load balancers are implemented in `cloud-controller-manager` as an alpha feature. The platform enables it with the `ENABLE_ALPHA_NSXT_LB` variable when the `nsxt` section is set in the configuration.
-{% endalert %}

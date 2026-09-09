@@ -24,6 +24,6 @@ The same resource specifies the instance class of the node group in the `cloudIn
 For vSphere, the instance class is the [VsphereInstanceClass](cr.html#vsphereinstanceclass) custom resource that describes the parameters of the virtual machines.
 
 Environment requirements, connecting to vCenter, networking, inbound traffic, and storage are covered in the [Infrastructure](environment.html#infrastructure) section.
-Adding and removing cluster nodes is covered in the [`node-manager`](/modules/node-manager/) module documentation, and an example of a node group for vSphere is given in the [Creating a node group](examples.html#creating-a-node-group) section.
+Adding and removing cluster nodes is covered in the [`node-manager`](/modules/node-manager/faq.html) module documentation, and an example of a node group for vSphere is given in the [Creating a node group](examples.html#creating-a-node-group) section.
 
 {% include module-settings.liquid %}

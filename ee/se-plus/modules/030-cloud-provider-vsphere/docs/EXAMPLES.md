@@ -3,7 +3,6 @@ title: "Cloud provider — VMware vSphere: examples"
 ---
 
 This page collects common configuration scenarios for the VMware vSphere cloud provider.
-Examples are ordered from simple to complex.
 For a full description of the parameters, refer to [Configuration](configuration.html) and [Custom Resources](cr.html).
 
 ## Creating a node group
@@ -56,7 +55,7 @@ Wait for the nodes to reach the `Ready` state:
 d8 k get nodes -l node.deckhouse.io/group=worker
 ```
 
-Changing the number of nodes in a group and deleting a group are covered in the [`node-manager`](/modules/node-manager/) module documentation.
+Changing the number of nodes in a group and deleting a group are covered in the [`node-manager`](/modules/node-manager/faq.html) module documentation.
 
 ## Connecting to vCenter in an existing cluster
 
@@ -109,7 +108,7 @@ d8 k get module cloud-provider-vsphere -o wide
 ## Limiting the set of StorageClasses
 
 DKP creates a StorageClass for every tagged Datastore, and with SPBM storage policies configured, also for every combination of a Datastore and a policy.
-The example excludes the StorageClasses of slow storage from the cluster so that developers do not order volumes on them.
+The example excludes the StorageClasses of two Datastores from the cluster.
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -126,8 +125,8 @@ spec:
         - ".*-lun101-.*"
 ```
 
-The `exclude` parameter takes Datastore names or regular expressions for them. An expression must match the name in full, a partial match is not taken into account.
-An exclusion removes both the base StorageClass and all StorageClasses with storage policies for that Datastore. A StorageClass with a policy cannot be excluded by its own name.
+The [`exclude`](configuration.html#parameters-storageclass-exclude) parameter takes Datastore names or regular expressions for them. An expression must match the name in full, a partial match is not taken into account.
+An exclusion removes both the base StorageClass and all StorageClasses with storage policies for that Datastore. The parameter does not exclude an individual StorageClass with a policy by its own name.
 
 Make sure the unnecessary StorageClasses are gone from the cluster:
 
@@ -165,8 +164,8 @@ Placeholder values:
 
 - `<STORAGE_NETWORK_PATH>`: Path to the additional network relative to the Datacenter.
 
-The `cpuLimit` parameter sets the CPU consumption limit in MHz.
-The `memoryReservation` parameter reserves memory as a percentage of the `memory` value, and defaults to 80.
+The [`cpuLimit`](cr.html#vsphereinstanceclass-v1-spec-runtimeoptions-cpulimit) parameter sets the CPU consumption limit in MHz.
+The [`memoryReservation`](cr.html#vsphereinstanceclass-v1-spec-runtimeoptions-memoryreservation) parameter reserves memory as a percentage of the [`memory`](cr.html#vsphereinstanceclass-v1-spec-memory) value, and defaults to 80.
 
 {% alert level="warning" %}
 Setting `cpuLimit` too low slows the node down.
