@@ -243,6 +243,17 @@ class StickyHeaderTable {
     this.tableElement.addEventListener('disabledStickiness.stickyThead', () => this.disableStickiness());
 
     this.tableContainer.addEventListener('scroll', () => this.syncScroll(this.tableContainer, this.tableHeaderCopy));
+
+    window.addEventListener('scroll', () => this.updateStickyVisibility());
+  }
+
+  updateStickyVisibility() {
+    if (!this.isSticky || !this.tableHeaderCopy) return;
+
+    const tableBottom = this.tableElement.getBoundingClientRect().bottom;
+    const stickyHeaderBottom = this.TopOffset + this.tableHeaderCopy.offsetHeight;
+
+    this.tableHeaderCopy.style.visibility = tableBottom <= stickyHeaderBottom ? 'hidden' : '';
   }
 
   initStickyThead(evt = 'default') {
@@ -255,6 +266,7 @@ class StickyHeaderTable {
       cachedHeaderHeight: true,
     });
     this.syncHeadersWidth();
+    this.updateStickyVisibility();
   }
 
   syncHeadersWidth(){
@@ -335,7 +347,10 @@ class StickyHeaderTable {
         this.waitForHeaderCopyReady(this.tableHeaderCopy, () => {
           this.tableHeaderCopy.scrollLeft = this.tableContainer.scrollLeft;
           this.tableHeaderCopy.style.visibility = '';
+          this.updateStickyVisibility();
         });
+      } else {
+        this.updateStickyVisibility();
       }
     }
   }
@@ -344,6 +359,7 @@ class StickyHeaderTable {
     this.isSticky = false;
     if (this.tableHeaderCopy) {
       this.tableHeaderCopy.classList.remove('sticky');
+      this.tableHeaderCopy.style.visibility = '';
     }
   }
 }
