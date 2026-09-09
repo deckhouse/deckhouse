@@ -14,7 +14,7 @@
     && request.userInfo.username != "system:serviceaccount:d8-system:deckhouse"
     && request.userInfo.username != "system:serviceaccount:d8-multitenancy-manager:multitenancy-manager"
     && request.userInfo.username != "system:serviceaccount:d8-user-authz:controller"
-    && !request.userInfo.groups.exists(g, g == "system:serviceaccounts:d8-system" || g == "system:serviceaccounts:kube-system" || g == "system:masters" || g == "system:nodes")` }}
+    && !request.userInfo.groups.exists(g, g == "system:serviceaccounts:d8-system" || g == "system:serviceaccounts:kube-system" || g == "system:serviceaccounts:d8-user-authz" || g == "system:masters" || g == "system:nodes")` }}
 ---
 apiVersion: admissionregistration.k8s.io/v1
 kind: ValidatingWebhookConfiguration

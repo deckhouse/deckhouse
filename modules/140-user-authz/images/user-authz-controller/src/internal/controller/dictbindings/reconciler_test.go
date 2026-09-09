@@ -191,6 +191,23 @@ func TestReconcile_MigratesBindingsOfTheFormerDictRole(t *testing.T) {
 	}
 }
 
+// A binding to a deprecated alias of a namespace role still grants the dictionary: the alias keeps
+// the old name alive for one release, and its holders must not lose d8:dict with it.
+func TestReconcile_LegacyAliasHoldersKeepDict(t *testing.T) {
+	t.Parallel()
+	c := reconcileWith(t,
+		roleBinding("team", "old-devs", "d8:use:role:user", nil, user("legacy-jane")),
+		roleBinding("team", "old-k8s", "d8:use:role:admin:kubernetes", nil, user("legacy-bob")),
+	)
+
+	subjects := dictSubjects(t, c)
+	for _, name := range []string{"legacy-jane", "legacy-bob"} {
+		if _, ok := subjects[SubjectKey(user(name))]; !ok {
+			t.Errorf("%s holds a deprecated namespace role and must keep d8:dict", name)
+		}
+	}
+}
+
 func TestReconcile_IsIdempotent(t *testing.T) {
 	t.Parallel()
 	c := reconcileWith(t, roleBinding("team", "devs", "d8:namespace:user", nil, user("jane"), sa("", "bot")))

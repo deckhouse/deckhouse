@@ -73,6 +73,10 @@ const (
 	labelDict      = "rbac.deckhouse.io/dict"
 
 	useRolePrefix = "d8:namespace:"
+	// legacyUseRolePrefix is the previous name of the namespace roles, kept for one release as
+	// deprecated aliases (templates/rbacv2-compat); their holders keep the dictionary too. Remove
+	// together with the aliases.
+	legacyUseRolePrefix = "d8:use:role:"
 )
 
 // DictLabels mark the ClusterRoleBindings this reconciler owns.
@@ -264,7 +268,7 @@ func contributesSubjects(rb *rbacv1.RoleBinding) bool {
 
 	deckhouse := rb.Labels[labelHeritage] == "deckhouse"
 
-	if !deckhouse && strings.HasPrefix(rb.RoleRef.Name, useRolePrefix) {
+	if !deckhouse && (strings.HasPrefix(rb.RoleRef.Name, useRolePrefix) || strings.HasPrefix(rb.RoleRef.Name, legacyUseRolePrefix)) {
 		return true
 	}
 

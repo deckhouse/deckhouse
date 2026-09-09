@@ -232,6 +232,15 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			legacyManage := f.KubernetesGlobalResource("ClusterRole", "d8:manage:all:manager")
 			Expect(legacyManage.Exists()).To(BeTrue())
 			Expect(legacyManage.Field(`metadata.labels.rbac\.deckhouse\.io/deprecated`).String()).To(Equal("true"))
+			// an alias repeats the can-assign range of its target, so holders of the old name keep
+			// the right to assign roles for the compatibility release
+			Expect(legacyManage.Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-scope`).String()).To(Equal("system"))
+			Expect(legacyManage.Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-max-level`).String()).To(Equal("admin"))
+			legacySecurity := f.KubernetesGlobalResource("ClusterRole", "d8:manage:security:manager")
+			Expect(legacySecurity.Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-subsystem`).String()).To(Equal("security"))
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:manage:all:viewer").Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-basic-max`).Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:system:superadmin").Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-max-level`).String()).To(Equal("superadmin"))
+			Expect(f.KubernetesGlobalResource("ClusterRole", "d8:subsystem:security:superadmin").Field(`metadata.labels.user-authz\.deckhouse\.io/can-assign-subsystem`).String()).To(Equal("security"))
 			legacyUse := f.KubernetesGlobalResource("ClusterRole", "d8:use:role:admin")
 			Expect(legacyUse.Exists()).To(BeTrue())
 			Expect(legacyUse.Field(`metadata.labels.rbac\.deckhouse\.io/deprecated`).String()).To(Equal("true"))

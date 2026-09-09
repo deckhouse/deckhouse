@@ -42,6 +42,17 @@
   {{- $aliases = append $aliases (dict "name" (printf "d8:use:role:%s:kubernetes" $level) "selector" "aggregate-to-namespace-as" "level" $level "target" (printf "d8:namespace:%s" $level)) -}}
 {{- end -}}
 
+{{- /*
+  The can-assign ranges of the identity-assign webhook live on the new roles as labels, and
+  aggregation copies rules, not labels. An alias therefore repeats the range of its target, so a
+  subject still bound to the old name keeps the right to assign roles for the compatibility release,
+  not only the rights the target aggregates.
+*/ -}}
+{{- $canAssign := dict
+  "d8:system:manager" (dict "user-authz.deckhouse.io/can-assign-basic-max" "ClusterAdmin" "user-authz.deckhouse.io/can-assign-scope" "system" "user-authz.deckhouse.io/can-assign-max-level" "admin")
+  "d8:subsystem:security:manager" (dict "user-authz.deckhouse.io/can-assign-basic-max" "ClusterAdmin" "user-authz.deckhouse.io/can-assign-scope" "subsystem" "user-authz.deckhouse.io/can-assign-subsystem" "security" "user-authz.deckhouse.io/can-assign-max-level" "admin")
+-}}
+
 {{- range $alias := $aliases }}
 ---
 apiVersion: rbac.authorization.k8s.io/v1
@@ -58,6 +69,9 @@ metadata:
     heritage: deckhouse
     module: user-authz
     rbac.deckhouse.io/deprecated: "true"
+    {{- range $key, $value := (index $canAssign $alias.target | default dict) }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
 aggregationRule:
   clusterRoleSelectors:
     - matchLabels:

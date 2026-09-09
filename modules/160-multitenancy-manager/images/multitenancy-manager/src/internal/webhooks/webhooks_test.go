@@ -234,6 +234,14 @@ func TestIsGranted_SystemRequestBypass(t *testing.T) {
 	if resp := serve(t, v, "/is-granted", r); !resp.Allowed {
 		t.Fatal("a system (d8-system) request must bypass the grant allow-list — never lock a module's Helm release")
 	}
+	// user-authz-controller writes the AuthorizationRule RoleBindings into project namespaces and
+	// retries a denial forever, like a Helm release does.
+	rc := review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", lbService("forbidden", "LoadBalancer"), nil)
+	rc.Request.UserInfo.Username = "system:serviceaccount:d8-user-authz:controller"
+	rc.Request.UserInfo.Groups = []string{"system:serviceaccounts", "system:serviceaccounts:d8-user-authz"}
+	if resp := serve(t, v, "/is-granted", rc); !resp.Allowed {
+		t.Fatal("user-authz-controller must bypass the grant allow-list — never lock its reconcile loop")
+	}
 	// A plain user with the same forbidden value is still denied (fast, terminal — no retry, no lock).
 	if resp := serve(t, v, "/is-granted", review(admissionv1.Create, svcGVR, svcGVK, "proj", "s", lbService("forbidden", "LoadBalancer"), nil)); resp.Allowed {
 		t.Fatal("a normal user must still be denied an ungranted value")

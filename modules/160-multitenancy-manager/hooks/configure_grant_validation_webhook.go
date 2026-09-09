@@ -95,7 +95,7 @@ var systemWriterMatchConditions = []admissionregistrationv1.MatchCondition{
 	},
 	{
 		Name:       "exclude-system-serviceaccounts",
-		Expression: `!request.userInfo.groups.exists(g, g == "system:serviceaccounts:d8-system" || g == "system:serviceaccounts:kube-system")`,
+		Expression: `!request.userInfo.groups.exists(g, g == "system:serviceaccounts:d8-system" || g == "system:serviceaccounts:kube-system" || g == "system:serviceaccounts:d8-user-authz")`,
 	},
 	{
 		Name:       "exclude-cluster-admins-and-nodes",

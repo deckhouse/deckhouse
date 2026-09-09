@@ -38,14 +38,16 @@ import (
 
 // automatedSystemWriterGroups are the AUTOMATED system writers whose requests must never be denied by
 // the grant guardrail, otherwise a module's Helm release (applied by the deckhouse-controller from
-// system:serviceaccounts:d8-system) deadlocks the module's queue. Unlike protect.go's broader
-// systemBypassGroups, system:masters is absent here: the handler itself still polices a
-// cluster-admin (unit tests call the handler directly). In-cluster, matchConditions skip
-// system:masters before this code runs.
+// system:serviceaccounts:d8-system) or the reconcile loop of user-authz-controller (which writes
+// the AuthorizationRule RoleBindings into project namespaces from
+// system:serviceaccounts:d8-user-authz) deadlocks. Unlike protect.go's broader systemBypassGroups,
+// system:masters is absent here: the handler itself still polices a cluster-admin (unit tests call
+// the handler directly). In-cluster, matchConditions skip system:masters before this code runs.
 var automatedSystemWriterGroups = map[string]struct{}{
-	"system:nodes":                       {},
-	"system:serviceaccounts:kube-system": {},
-	"system:serviceaccounts:d8-system":   {},
+	"system:nodes":                         {},
+	"system:serviceaccounts:kube-system":   {},
+	"system:serviceaccounts:d8-system":     {},
+	"system:serviceaccounts:d8-user-authz": {},
 }
 
 func isAutomatedSystemWriter(req *admissionv1.AdmissionRequest) bool {
