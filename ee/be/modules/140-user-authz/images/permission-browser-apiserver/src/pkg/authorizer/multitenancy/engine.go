@@ -16,6 +16,7 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog/v2"
 
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/decision"
 	"github.com/deckhouse/deckhouse/go_lib/user-authz/rules"
 )
 
@@ -132,135 +133,76 @@ func NewEngine(rulesProvider RulesProvider, bindings RuleBindings, nsLister core
 
 // Authorize implements authorizer.Authorizer
 // This authorizer only denies; it never allows (returns NoOpinion if access is not restricted)
+//
+// The sequence lives in go_lib/user-authz/decision, which the authorization webhook calls with the
+// same inputs. What this apiserver reports and what the API server enforces are the same question,
+// and they used to be two implementations of it that drifted: a resource that does not exist was
+// reported as permitted here and forbidden there.
 func (e *Engine) Authorize(ctx context.Context, attrs authorizer.Attributes) (authorizer.Decision, string, error) {
 	if !attrs.IsResourceRequest() {
 		return authorizer.DecisionNoOpinion, "", nil
 	}
 
-	user := attrs.GetUser()
-	if user == nil {
+	info := attrs.GetUser()
+	if info == nil {
 		return authorizer.DecisionNoOpinion, "", nil
 	}
 
-	entries := e.affectedEntries(user.GetName(), user.GetGroups())
-	if len(entries) == 0 {
-		// NOTE: We intentionally return NoOpinion here (not Deny) even for users without CAR.
-		// This method is part of the Kubernetes authorizer chain for API requests.
-		// NoOpinion means "I have no opinion, let RBAC decide".
-		// If we returned Deny here, users without CAR couldn't do ANYTHING,
-		// even with valid RBAC permissions (RoleBindings).
-		//
-		// The deny-by-default logic is applied only in GetNamespaceAccessType /
-		// IsNamespaceAllowedWithFilter, which are used for filtering the
-		// accessiblenamespaces API response (data filtering), not for API
-		// request authorization.
-		return authorizer.DecisionNoOpinion, "", nil
+	// NOTE: a subject no rule names gets NoOpinion, not Deny. This method is part of the
+	// authorizer chain for API requests, and denying here would stop users without a
+	// ClusterAuthorizationRule from doing anything their RoleBindings allow. Deny-by-default
+	// belongs to GetNamespaceAccessType, which filters the reported namespaces rather than
+	// authorizing a request.
+	result := decision.Authorize(decision.Request{
+		User:      info.GetName(),
+		Groups:    info.GetGroups(),
+		Namespace: attrs.GetNamespace(),
+		Resource:  attrs.GetResource(),
+		APIGroup:  attrs.GetAPIGroup(),
+	}, e.sources(ctx, attrs))
+
+	if result.Denied() {
+		return authorizer.DecisionDeny, result.Reason, nil
 	}
-
-	combined := rules.Combine(entries)
-
-	// Check namespaced request
-	if attrs.GetNamespace() != "" {
-		return e.authorizeNamespacedRequest(ctx, attrs, &combined)
-	}
-
-	// Check cluster-scoped request for namespaced resource
-	if attrs.GetResource() != "" {
-		return e.authorizeClusterScopedRequest(ctx, attrs, &combined)
-	}
-
 	return authorizer.DecisionNoOpinion, "", nil
 }
 
-// authorizeNamespacedRequest checks if the user can access the specific namespace.
-//
-// The multi-tenancy scope here is CAR-only (LimitNamespaces, namespaceSelectors,
-// the system-namespace gate): inside that scope the CAR's cluster-wide
-// accessLevel binding is meant to apply, so we return NoOpinion and let RBAC
-// decide. Outside that scope the request is denied unless CAR-independent RBAC
-// explicitly grants it - this both keeps RoleBinding/AuthorizationRule access
-// working and prevents the CAR accessLevel from leaking into namespaces not
-// listed in limitNamespaces.
-func (e *Engine) authorizeNamespacedRequest(ctx context.Context, attrs authorizer.Attributes, entry *rules.Entry) (authorizer.Decision, string, error) {
-	if !entry.HasAnyFilters() {
-		return authorizer.DecisionNoOpinion, "", nil
+// sources are the facts the shared decision needs and this apiserver holds.
+func (e *Engine) sources(ctx context.Context, attrs authorizer.Attributes) decision.Sources {
+	src := decision.Sources{
+		Directory:       e.rules.Directory(),
+		Bindings:        e.bindings,
+		NamespaceLabels: e.namespaceLabels(),
+		ResourceScope:   e.resourceScopeOf,
+		Logf:            klog.V(4).Infof,
+		OnRestricted: func(username, rule string) {
+			klog.V(2).Infof("user %q is bound by rule %q not observed binding it (rules synced: %v); restricting until the rule arrives",
+				username, rule, e.rules.HasSynced())
+		},
 	}
-
-	allowed, err := rules.NamespaceAllowed(entry, attrs.GetNamespace(), e.namespaceLabels())
-	if err != nil {
-		// A namespace that does not exist fails the lookup as well as a cache problem. Neither
-		// reaches the caller (see noNamespaceAccessReason); the operator gets the detail here.
-		klog.V(4).Infof("namespace selector check for %q failed: %v", attrs.GetNamespace(), err)
+	if e.independentRBAC != nil && attrs != nil {
+		src.IndependentRBAC = func() bool { return e.independentRBAC.AllowsIndependently(ctx, attrs) }
 	}
-	if allowed {
-		return authorizer.DecisionNoOpinion, "", nil
-	}
-
-	// The namespace is outside the CAR scope. Requests granted by
-	// CAR-independent RBAC (RoleBindings in the namespace, non-CAR
-	// ClusterRoleBindings) must not be denied.
-	if e.independentRBAC != nil && e.independentRBAC.AllowsIndependently(ctx, attrs) {
-		return authorizer.DecisionNoOpinion, "", nil
-	}
-
-	return authorizer.DecisionDeny, noNamespaceAccessReason, nil
+	return src
 }
 
-// authorizeClusterScopedRequest checks if cluster-scoped requests for namespaced resources should be denied
-func (e *Engine) authorizeClusterScopedRequest(ctx context.Context, attrs authorizer.Attributes, entry *rules.Entry) (authorizer.Decision, string, error) {
-	if !entry.HasAnyFilters() {
-		return authorizer.DecisionNoOpinion, "", nil
-	}
-
-	// Known cluster-scoped resources are not limited by namespace filters.
-	// Everything else (namespaced, or unknown) is treated as namespaced so a
-	// discovery miss cannot fail-open through a CAR ClusterRoleBinding. The one
-	// exception is a core resource absent from a populated snapshot: it does not
-	// exist, and the webhook lets RBAC answer that case instead of denying it,
-	// so BulkSAR must not report Deny where the webhook would not.
-	var scope rules.ResourceScope
-	if e.resourceScope != nil {
-		group := attrs.GetAPIGroup()
-		scope.Namespaced, scope.Known = e.resourceScope.Scope(group, attrs.GetResource())
-		// The snapshot covers the whole cluster, so a resource it does not carry does not exist -
-		// unless its group is one the last refresh could not read, which is a hole, not an answer.
-		scope.Absent = e.resourceScope.HasData() && !e.resourceScope.GroupUnavailable(group)
-	}
-	if !rules.ClusterScopedDenied(scope) {
-		return authorizer.DecisionNoOpinion, "", nil
-	}
-
-	if e.independentRBAC != nil && e.independentRBAC.AllowsIndependently(ctx, attrs) {
-		return authorizer.DecisionNoOpinion, "", nil
-	}
-	return authorizer.DecisionDeny, namespaceLimitedAccessReason, nil
-}
-
-// affectedEntries collects the directory entries of the User/ServiceAccount/Groups.
-//
-// It also applies the ordering guard, the same one the webhook applies: the bindings of a rule and
-// the rule itself reach this apiserver over independent watches, so the bindings can be ahead. When
-// a binding says it binds the subject to a rule whose observed copy does not name that subject (the
-// rule is unknown, or known but not yet updated), the subject gets a maximally restricted entry, so
-// the report never shows more than the webhook will allow. The restriction lifts by itself when the
-// rule arrives.
-//
-// The restricted entry only bites a subject that has no observed entry of its own: rules union, so
-// an entry already observed stays as wide as it is (see rules.Combine).
+// affectedEntries are the directory entries that apply to a subject, with the ordering guard
+// applied. It is the shared one; the method exists so callers inside this package read naturally.
 func (e *Engine) affectedEntries(username string, groups []string) []rules.Entry {
-	dir := e.rules.Directory()
-	entries := dir.Lookup(username, groups)
+	return decision.Entries(e.sources(context.Background(), nil), username, groups)
+}
 
-	for _, rule := range e.bindings.RulesFor(username, groups) {
-		if dir.RuleCovers(rule, username, groups) {
-			continue
-		}
-		klog.V(2).Infof("user %q is bound by rule %q not observed binding it (rules synced: %v); restricting until the rule arrives", username, rule, e.rules.HasSynced())
-		entries = append(entries, rules.Restricted())
-		break
+// resourceScopeOf reads the background snapshot. It never fails: a resource the snapshot does not
+// carry is absent when its group was read, and unknown when it was not, which the shared decision
+// tells apart on its own.
+func (e *Engine) resourceScopeOf(group, resource string) (rules.ResourceScope, error) {
+	var scope rules.ResourceScope
+	if e.resourceScope == nil {
+		return scope, nil
 	}
-
-	return entries
+	scope.Namespaced, scope.Known = e.resourceScope.Scope(group, resource)
+	scope.Absent = e.resourceScope.HasData() && !e.resourceScope.GroupUnavailable(group)
+	return scope, nil
 }
 
 // namespaceLabels returns the label lookup for the namespaceSelector check, or nil when the engine
@@ -289,41 +231,30 @@ func (e *Engine) namespaceLabels() rules.NamespaceLabels {
 //   - accessType: AllNamespacesAllowed, NoNamespacesAllowed, or FilteredAccess
 //   - filter: the combined directory entry for filtering (only valid when accessType == FilteredAccess)
 //
-// This method computes the affected entries once and returns the filter for reuse,
-// avoiding redundant lookups when filtering multiple namespaces.
+// The folding is the shared one; what stays here is this apiserver's own policy for a subject no
+// rule names. An authorizer must let RBAC decide that case, but a report that filters a list has to
+// choose, and it chooses deny-by-default unless the subject is in a privileged group.
 func (e *Engine) GetNamespaceAccessType(userInfo user.Info) (NamespaceAccessType, *DirectoryEntry) {
 	if userInfo == nil {
 		return AllNamespacesAllowed, nil
 	}
 
-	entries := e.affectedEntries(userInfo.GetName(), userInfo.GetGroups())
-	if len(entries) == 0 {
-		// No ClusterAuthorizationRules apply to this user.
-		// Privileged users (system:masters, etc.) bypass MT restrictions.
-		if isPrivilegedUser(userInfo.GetGroups()) {
-			klog.V(4).Infof("GetNamespaceAccessType: user=%s is privileged, all namespaces allowed", userInfo.GetName())
-			return AllNamespacesAllowed, nil
-		}
-		// Non-privileged users without CAR get no access (deny-by-default).
+	access, entry := decision.NamespaceAccess(e.sources(context.Background(), nil),
+		userInfo.GetName(), userInfo.GetGroups(), isPrivilegedUser(userInfo.GetGroups()))
+
+	switch access {
+	case decision.AllNamespaces:
+		return AllNamespacesAllowed, nil
+	case decision.NoNamespaces:
 		klog.V(4).Infof("GetNamespaceAccessType: user=%s has no CAR and is not privileged (deny-by-default)", userInfo.GetName())
 		return NoNamespacesAllowed, nil
+	default:
+		return FilteredAccess, &entry
 	}
-
-	combined := rules.Combine(entries)
-	if !combined.HasAnyFilters() {
-		return AllNamespacesAllowed, nil
-	}
-
-	// User has restrictions - caller must filter each namespace
-	return FilteredAccess, &combined
 }
 
 // IsNamespaceAllowedWithFilter checks if a namespace is allowed using a pre-computed filter.
 // Use this with the filter returned by GetNamespaceAccessType to avoid redundant lookups.
 func (e *Engine) IsNamespaceAllowedWithFilter(namespace string, filter *DirectoryEntry) bool {
-	if filter == nil {
-		return true
-	}
-	allowed, _ := rules.NamespaceAllowed(filter, namespace, e.namespaceLabels())
-	return allowed
+	return decision.NamespaceAllowed(e.sources(context.Background(), nil), filter, namespace)
 }
