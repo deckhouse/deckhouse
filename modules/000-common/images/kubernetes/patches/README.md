@@ -253,13 +253,32 @@ Notable properties:
   Lines marked `[d8-numa-selfheal-debug]` are temporary bring-up tracing and are
   meant to be removed once the patch has been validated on a cluster.
 
-- The marker file is written by the kubelet and **never removed by it**. That is
-  deliberate: kubelet restarts happen for unrelated reasons (a containerd restart, a
-  config change, a binary upgrade), and deleting the marker on the next clean start
-  would throw the signal away before anything had a chance to read it. Deletion
-  belongs to whoever consumes it -- the bashible step that reads it and decides
-  whether the node needs a drain. Until that consumer exists, expect the file to
-  survive reboots; use its `writtenAt` to judge whether it is still relevant.
+- The marker file `/var/lib/kubelet/d8-numa-selfheal.json` is written by the kubelet
+  and **never removed by it**. That is deliberate: kubelet restarts happen for
+  unrelated reasons (a containerd restart, a config change, a binary upgrade), and
+  deleting the marker on the next clean start would throw the signal away before
+  anything had a chance to read it. Deletion belongs to whoever consumes it -- the
+  step that reads it and decides whether the node needs a drain. **That consumer
+  does not exist yet**, so for now expect the file to survive reboots; use its
+  `writtenAt` to judge whether it is still relevant.
+
+  For the same reason, resets already in the file are carried forward rather than
+  overwritten, capped at the 16 most recent. A marker still on disk describes a heal
+  nobody has acted on yet -- possibly one whose victim could not be stopped, which is
+  the single case that means the node needs a human -- and replacing the file would
+  drop that silently on the next heal.
+
+- A victim is resolved to a container id **in the stop phase**, from the one CRI
+  snapshot taken there, and not while the managers are still starting. Resolving it
+  earlier meant asking `containermap.GetContainerID` for the container of a
+  `(pod, container name)` pair. That map is keyed by container id and is walked until
+  the first match, so once a container has been recreated its exited predecessor is
+  listed alongside the live one and the answer is whichever the randomised map
+  iteration meets first -- observed on a cluster as a victim aimed at an
+  already-exited container while the live one kept the CPUs the state had just
+  released. The stop phase walks containers instead, the direction in which the
+  answer is unique, and where a pair really does have several containers the running
+  one wins by an explicit rule.
 
 Related: the unconditional `rm` of both checkpoints in
 `candi/bashible/common-steps/all/069_start_kubelet.sh.tpl` is removed together
