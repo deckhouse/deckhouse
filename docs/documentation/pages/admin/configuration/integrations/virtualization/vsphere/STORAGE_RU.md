@@ -162,4 +162,3 @@ d8 k -n <NAMESPACE> get pvc <PVC_NAME> \
 {% alert level="warning" %}
 Балансировщики NSX-T реализованы в `cloud-controller-manager` как альфа-возможность. Платформа включает её переменной `ENABLE_ALPHA_NSXT_LB`, когда в конфигурации задана секция `nsxt`.
 {% endalert %}
-

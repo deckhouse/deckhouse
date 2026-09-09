@@ -812,6 +812,7 @@ d8 k -n <NAMESPACE> get pvc <PVC_NAME> \
    ```shell
    d8 k uncordon <NODE_NAME>
    ```
+
 #### Просмотр томов в vSphere Client
 
 Тома, заказанные через CSI, отображаются в vSphere Client. Откройте «Menu» → «Inventory» → «Hosts and Clusters», выберите объект Cluster, перейдите на вкладку «Monitor» и в разделе «Cloud Native Storage» выберите «Container Volumes». Тот же список доступен на объектах vCenter, Datacenter и Datastore, но не на виртуальной машине. Для каждого тома приводятся имя, метки, Datastore, соответствие политике хранения («Compliance Status»), доступность («Health Status») и размер.

@@ -804,6 +804,7 @@ If the `Resizing` condition remains in the status, expanding without detaching t
    ```shell
    d8 k uncordon <NODE_NAME>
    ```
+
 #### Viewing volumes in vSphere Client
 
 Volumes provisioned through CSI are shown in vSphere Client. Open "Menu" → "Inventory" → "Hosts and Clusters", select a Cluster object, go to the "Monitor" tab, and choose "Container Volumes" under "Cloud Native Storage". The same list is available on the vCenter, Datacenter, and Datastore objects, but not on a virtual machine. For every volume, the list shows the name, labels, Datastore, storage policy compliance ("Compliance Status"), availability ("Health Status"), and size.

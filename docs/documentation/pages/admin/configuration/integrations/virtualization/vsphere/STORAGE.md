@@ -161,4 +161,3 @@ Inbound traffic is balanced in one of three ways.
 {% alert level="warning" %}
 NSX-T load balancers are implemented in `cloud-controller-manager` as an alpha feature. The platform enables it with the `ENABLE_ALPHA_NSXT_LB` variable when the `nsxt` section is set in the configuration.
 {% endalert %}
-
