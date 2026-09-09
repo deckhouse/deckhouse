@@ -28,7 +28,18 @@ package rules
 // used to decide" is a claim about a few thousand combinations, and a claim that size should be
 // checked by a machine on every run rather than argued once in a review.
 //
-// Two deliberate differences are asserted rather than hidden, at the bottom of the file.
+// What this file does NOT establish, stated so nobody reads more into it than it proves:
+//
+//   - The comparison is against the WEBHOOK's implementation. permission-browser had a second copy
+//     of the same decision, and it is not transcribed here. The two had drifted, which is why the
+//     library exists; only one side of that drift is pinned below.
+//   - The cases are a cross-product of a hand-picked list of rule shapes and namespace names. It is
+//     a few thousand comparisons, not a few thousand independent scenarios, and nothing is
+//     generated or fuzzed: a disagreement on a shape outside the list is unreachable from here.
+//
+// Deliberate differences are asserted rather than hidden, at the bottom of the file: the namespaced
+// ones in TestLegacyEquivalence_DeliberateDifferences, and the cluster-scoped one - the 403 that
+// should have been a 404 - in TestLegacyEquivalence_ClusterScoped.
 
 import (
 	"fmt"
@@ -418,5 +429,79 @@ func TestLegacyEquivalence_DeliberateDifferences(t *testing.T) {
 	}
 	if !libraryDenied(dir, "alice", nil, "team-b", labels.Set{}) {
 		t.Error("and it must not open anything beyond itself")
+	}
+}
+
+// legacyClusterScopedDenied transcribes authorizeClusterScopedRequest from the same commit, in the
+// terms the library now uses. The original asked the discovery cache directly; what mattered was
+// which of its answers denied:
+//
+//   - a preferred-version lookup that failed             -> deny (internal error)
+//   - the core group, resource not in the core listing   -> no opinion, let RBAC answer
+//   - a Get that failed                                  -> deny (internal error)
+//   - namespaced, and the subject is limited             -> deny
+//   - cluster-scoped                                     -> no opinion
+//
+// coreGroup says whether the request named the core group, because that is the only place the old
+// code distinguished "does not exist" from "could not ask".
+func legacyClusterScopedDenied(scope ResourceScope, coreGroup bool) bool {
+	if scope.Known {
+		return scope.Namespaced
+	}
+	if coreGroup && scope.Absent {
+		// The core listing answered and does not carry the resource.
+		return false
+	}
+	// Anything else was a lookup error, and a lookup error denied.
+	return true
+}
+
+// TestLegacyEquivalence_ClusterScoped compares the cluster-scoped half, which the rest of this file
+// does not cover - and which is where the two implementations had actually diverged.
+//
+// Three of the four outcomes are unchanged. The fourth is the fix: a resource in a NAMED group that
+// discovery says does not exist used to be a denial, because the old code could not tell that
+// answer from a failure to reach discovery, and the user saw Forbidden for something that was never
+// there. The library separates the two, so RBAC answers and the API server produces the 404 it owes.
+func TestLegacyEquivalence_ClusterScoped(t *testing.T) {
+	cases := []struct {
+		name      string
+		scope     ResourceScope
+		coreGroup bool
+		// differs is set on the one cell where the library is meant to disagree.
+		differs bool
+	}{
+		{name: "a cluster-scoped resource", scope: ResourceScope{Known: true, Namespaced: false}},
+		{name: "a namespaced resource", scope: ResourceScope{Known: true, Namespaced: true}},
+		{name: "a lookup that did not happen", scope: ResourceScope{}},
+		{name: "a lookup that did not happen, core group", scope: ResourceScope{}, coreGroup: true},
+		{name: "the core group does not carry it", scope: ResourceScope{Absent: true}, coreGroup: true},
+		{
+			name:    "a named group does not carry it",
+			scope:   ResourceScope{Absent: true},
+			differs: true,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			legacy := legacyClusterScopedDenied(tc.scope, tc.coreGroup)
+			library := ClusterScopedDenied(tc.scope)
+
+			if tc.differs {
+				if legacy == library {
+					t.Fatalf("this cell is supposed to differ, both answered %v; if the behaviour was "+
+						"changed back, say so here", library)
+				}
+				if library {
+					t.Error("the library must NOT deny a resource discovery says does not exist: " +
+						"RBAC answers and the API server returns 404")
+				}
+				return
+			}
+			if legacy != library {
+				t.Errorf("legacy denied=%v, library denied=%v", legacy, library)
+			}
+		})
 	}
 }

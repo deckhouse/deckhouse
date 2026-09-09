@@ -10,7 +10,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/assert"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 
 	"github.com/deckhouse/deckhouse/go_lib/user-authz/rules"
@@ -83,7 +83,10 @@ func TestEngine_ConcurrentAuthorize(t *testing.T) {
 				}
 
 				_, _, err := e.Authorize(ctx, attrs)
-				require.NoError(t, err)
+				// assert, not require: require calls t.FailNow, which is runtime.Goexit, and the
+				// testing package forbids that outside the test goroutine - the failure would be
+				// misattributed and the remaining iterations would vanish silently.
+				assert.NoError(t, err)
 			}
 		}(i)
 	}
@@ -175,7 +178,10 @@ func TestEngine_ConcurrentClusterScopedAuthorize(t *testing.T) {
 				}
 
 				_, _, err := e.Authorize(ctx, attrs)
-				require.NoError(t, err)
+				// assert, not require: require calls t.FailNow, which is runtime.Goexit, and the
+				// testing package forbids that outside the test goroutine - the failure would be
+				// misattributed and the remaining iterations would vanish silently.
+				assert.NoError(t, err)
 			}
 		}(i)
 	}

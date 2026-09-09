@@ -80,17 +80,44 @@ func benchmarkLookup(b *testing.B, count int) {
 func BenchmarkScaleLookup500(b *testing.B)  { benchmarkLookup(b, 500) }
 func BenchmarkScaleLookup2000(b *testing.B) { benchmarkLookup(b, 2000) }
 
-// The namespace decision itself, on an entry that has to walk its patterns.
-func BenchmarkScaleNamespaceAllowed(b *testing.B) {
+// The namespace decision itself. Two cases, because they cost very different things and only one
+// of them is the interesting one.
+//
+// The subject below is in a group that aggregates forty rules, so its combined entry carries about
+// eighty patterns. Asking about a namespace its own rule opens returns on the first matcher and
+// says nothing about scale - that is Hit. Asking about a namespace no pattern opens walks all of
+// them, which is what a denial costs, and denials are the common answer on the authorization path
+// for a subject a rule limits. That is Miss.
+func benchmarkNamespaceAllowed(b *testing.B, namespace string, want bool) {
+	b.Helper()
 	dir, _ := NewBuilder().Build(benchRules(2000))
 	entry := Combine(dir.Lookup("user-1000@example.com", []string{"team-0"}))
+	if len(entry.LimitNamespaces) < 50 {
+		b.Fatalf("the fixture entry carries %d patterns; the benchmark is meant to walk a large one", len(entry.LimitNamespaces))
+	}
+	allowed, err := NamespaceAllowed(&entry, namespace, nil)
+	if err != nil {
+		b.Fatal(err)
+	}
+	if allowed != want {
+		b.Fatalf("NamespaceAllowed(%q) = %v, want %v: the benchmark measures the wrong path", namespace, allowed, want)
+	}
+
 	b.ReportAllocs()
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		if _, err := NamespaceAllowed(&entry, "ns-1000", nil); err != nil {
+		if _, err := NamespaceAllowed(&entry, namespace, nil); err != nil {
 			b.Fatal(err)
 		}
 	}
+}
+
+func BenchmarkScaleNamespaceAllowedHit(b *testing.B) {
+	benchmarkNamespaceAllowed(b, "ns-1000", true)
+}
+
+func BenchmarkScaleNamespaceAllowedMiss(b *testing.B) {
+	benchmarkNamespaceAllowed(b, "ns-does-not-match-anything", false)
 }
 
 // The ordering guard asks this for every rule a binding claims binds the subject.
