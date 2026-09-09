@@ -12,12 +12,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/fields"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
+	corev1listers "k8s.io/client-go/listers/core/v1"
+	"k8s.io/client-go/tools/cache"
 
 	"github.com/deckhouse/deckhouse/go_lib/user-authz/binding"
 	"github.com/deckhouse/deckhouse/go_lib/user-authz/rules"
@@ -120,6 +123,76 @@ func (m *mockUserInfo) GetName() string               { return m.name }
 func (m *mockUserInfo) GetUID() string                { return "" }
 func (m *mockUserInfo) GetGroups() []string           { return m.groups }
 func (m *mockUserInfo) GetExtra() map[string][]string { return nil }
+
+// A namespaceSelector whose namespace cannot be read must deny, and the unsynced-cache guard is
+// part of that: a report built from an empty namespace cache would open every namespace the
+// selector matches vacuously.
+//
+// The selector matches a namespace with no labels (DoesNotExist), so swallowing the error and
+// using an empty label set shows up as a grant rather than hiding behind a selector that would not
+// have matched anyway.
+func TestEngine_Authorize_NamespaceLookupFailureDenies(t *testing.T) {
+	selector := &rules.NamespaceSelector{LabelSelector: &metav1.LabelSelector{
+		MatchExpressions: []metav1.LabelSelectorRequirement{
+			{Key: "quarantine", Operator: metav1.LabelSelectorOpDoesNotExist},
+		},
+	}}
+	indexer := cache.NewIndexer(cache.MetaNamespaceKeyFunc, cache.Indexers{})
+	if err := indexer.Add(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "labelless"}}); err != nil {
+		t.Fatal(err)
+	}
+
+	synced := true
+	e := &Engine{
+		rules: newSwappableRules(rules.Rule{
+			Name:              "by-selector",
+			Subjects:          []rules.Subject{{Kind: "User", Name: "selector-user"}},
+			NamespaceSelector: selector,
+		}),
+		bindings:      binding.NewIndex(),
+		nsLister:      corev1listers.NewNamespaceLister(indexer),
+		nsSynced:      func() bool { return synced },
+		resourceScope: coreResourceScope(),
+	}
+
+	attrsFor := func(ns string) *mockAttrs {
+		return &mockAttrs{
+			userInfo:   &mockUserInfo{name: "selector-user"},
+			namespace:  ns,
+			resource:   "pods",
+			verb:       "get",
+			isResource: true,
+		}
+	}
+
+	// The control: a namespace that exists and carries no labels is opened.
+	got, _, err := e.Authorize(context.Background(), attrsFor("labelless"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got == authorizer.DecisionDeny {
+		t.Fatal("the selector matches a namespace with no labels, so it must be opened")
+	}
+
+	// A namespace the lister does not have is denied, not treated as label-less.
+	got, _, err = e.Authorize(context.Background(), attrsFor("missing"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != authorizer.DecisionDeny {
+		t.Error("a namespace the lister cannot resolve was not denied")
+	}
+
+	// And while the namespace cache is still filling, every selector lookup fails closed.
+	synced = false
+	got, _, err = e.Authorize(context.Background(), attrsFor("labelless"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != authorizer.DecisionDeny {
+		t.Error("a selector evaluated against an unsynced namespace cache was not denied")
+	}
+}
 
 func TestEngine_AuthorizeNamespacedRequest(t *testing.T) {
 	e := &Engine{
