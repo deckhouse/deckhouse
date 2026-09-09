@@ -25,15 +25,15 @@ import (
 	ycsdk "github.com/yandex-cloud/go-sdk"
 	"github.com/yandex-cloud/go-sdk/iamkey"
 
-	"github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
+	clouddatav1alpha1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1alpha1"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 type Discoverer struct {
 	logger      *log.Logger
+	sdk         *ycsdk.SDK
 	folderID    string
 	clusterUUID string
-	sdk         *ycsdk.SDK
 }
 
 func NewDiscoverer(logger *log.Logger) *Discoverer {
@@ -78,33 +78,33 @@ func NewDiscoverer(logger *log.Logger) *Discoverer {
 	}
 }
 
-func (d *Discoverer) CheckCloudConditions(ctx context.Context) ([]v1alpha1.CloudCondition, error) {
+func (d *Discoverer) CheckCloudConditions(ctx context.Context) ([]clouddatav1alpha1.CloudCondition, error) {
 	return nil, nil
 }
 
 // NotImplemented
-func (d *Discoverer) InstanceTypes(ctx context.Context) ([]v1alpha1.InstanceType, error) {
+func (d *Discoverer) InstanceTypes(ctx context.Context) ([]clouddatav1alpha1.InstanceType, error) {
 	return nil, nil
 }
 
-// NotImplemented
-func (d *Discoverer) DiscoveryData(ctx context.Context, cloudProviderDiscoveryData []byte) ([]byte, error) {
-	return nil, nil
-}
-
-func (d *Discoverer) DisksMeta(ctx context.Context) ([]v1alpha1.DiskMeta, error) {
+func (d *Discoverer) DisksMeta(ctx context.Context) ([]clouddatav1alpha1.DiskMeta, error) {
 	disks, err := d.getDisksCreatedByCSIDriver(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get disks: %v", err)
 	}
 
-	disksMeta := make([]v1alpha1.DiskMeta, 0, len(disks))
+	disksMeta := make([]clouddatav1alpha1.DiskMeta, 0, len(disks))
 
 	for _, disk := range disks {
-		disksMeta = append(disksMeta, v1alpha1.DiskMeta{ID: disk.Id, Name: disk.Name})
+		disksMeta = append(disksMeta, clouddatav1alpha1.DiskMeta{ID: disk.Id, Name: disk.Name})
 	}
 
 	return disksMeta, nil
+}
+
+// NotImplemented
+func (d *Discoverer) DiscoveryData(_ context.Context, _ []byte) ([]byte, error) {
+	return nil, nil
 }
 
 func (d *Discoverer) getDisksCreatedByCSIDriver(ctx context.Context) ([]*compute.Disk, error) {

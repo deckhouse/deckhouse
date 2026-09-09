@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
-	"regexp"
 	"sort"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
@@ -30,6 +29,8 @@ import (
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
+
+	"github.com/deckhouse/deckhouse/go_lib/regexpset"
 )
 
 type StorageClass struct {
@@ -82,30 +83,17 @@ func applyModuleStorageClassesFilter(obj *unstructured.Unstructured) (go_hook.Fi
 	return sc, nil
 }
 
-func compileRegexps(patterns []string) ([]*regexp.Regexp, error) {
-	regexps := make([]*regexp.Regexp, 0, len(patterns))
+func compileRegexps(patterns []string) (regexpset.RegExpSet, error) {
+	anchored := make([]string, 0, len(patterns))
 	for _, pattern := range patterns {
-		r, err := regexp.Compile(pattern)
-		if err != nil {
-			return nil, err
-		}
-		regexps = append(regexps, r)
+		anchored = append(anchored, "^("+pattern+")$")
 	}
 
-	return regexps, nil
-}
-
-func matchCheck(regexps []*regexp.Regexp, storageClassName string) bool {
-	for _, r := range regexps {
-		if r.MatchString(storageClassName) {
-			return true
-		}
-	}
-	return false
+	return regexpset.New(anchored...)
 }
 
 func storageClasses(_ context.Context, input *go_hook.HookInput) error {
-	provisionValues := input.Values.Get("cloudProviderYandex.storageClass.provision").Array()
+	provisionValues := input.Values.Get("cloudProviderYandex.storage.parameters.provisionedStorageClasses").Array()
 
 	provision := make([]StorageClass, 0, len(provisionValues))
 	provisionNames := make(map[string]struct{}, len(provisionValues))
@@ -132,21 +120,21 @@ func storageClasses(_ context.Context, input *go_hook.HookInput) error {
 	}
 	storageClassesFilteredProvision = append(storageClassesFilteredProvision, provision...)
 
-	excludeValues := input.Values.Get("cloudProviderYandex.storageClass.exclude").Array()
+	excludeValues := input.Values.Get("cloudProviderYandex.storage.parameters.excludedStorageClasses").Array()
 
 	excludePatterns := make([]string, 0, len(excludeValues))
 	for _, excludePattern := range excludeValues {
 		excludePatterns = append(excludePatterns, excludePattern.String())
 	}
 
-	excludeRegexps, err := compileRegexps(excludePatterns)
+	excludeRegexpSet, err := compileRegexps(excludePatterns)
 	if err != nil {
-		return fmt.Errorf("storageClass.exclude set creation error: %v", err)
+		return fmt.Errorf("storage.parameters.excludedStorageClasses set creation error: %v", err)
 	}
 
 	storageClassesFiltered := make([]StorageClass, 0, len(storageClassesFilteredProvision))
 	for _, storageClass := range storageClassesFilteredProvision {
-		if !matchCheck(excludeRegexps, storageClass.Name) {
+		if !excludeRegexpSet.Match(storageClass.Name) {
 			storageClassesFiltered = append(storageClassesFiltered, storageClass)
 		}
 	}

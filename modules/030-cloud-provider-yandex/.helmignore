@@ -3,6 +3,8 @@ docs
 enabled
 hooks
 images
+pkg
+tools
 template_tests
 openapi
 README.md

@@ -118,7 +118,7 @@ func providerFixtures() []providerFixture {
 		},
 		{
 			name:    "yandex",
-			crdPath: "../../../../../../030-cloud-provider-yandex/candi/openapi/instance_class.yaml",
+			crdPath: "../../../../../../030-cloud-provider-yandex/crds/instance_class.yaml",
 
 			registrationPath: "../../../../../../030-cloud-provider-yandex/templates/registration.yaml",
 			contractPath:     "../../../../../../030-cloud-provider-yandex/capi/template.yaml",

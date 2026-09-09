@@ -23,9 +23,9 @@ resource "yandex_iam_service_account" "monitoring_sa" {
 resource "yandex_resourcemanager_folder_iam_binding" "monitoring_sa" {
   count = var.apiKey == "Auto" ? 1 : 0
 
-  folder_id   = var.folderID
-  role        = "monitoring.viewer"
-  members     = [
+  folder_id = var.folderID
+  role      = "monitoring.viewer"
+  members = [
     join(":", ["serviceAccount", yandex_iam_service_account.monitoring_sa[0].id])
   ]
 }

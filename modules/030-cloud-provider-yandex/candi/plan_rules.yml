@@ -1,0 +1,2 @@
+vmResource:
+  type: yandex_compute_instance

@@ -6,7 +6,7 @@
 {{- define "csi_controller_args" }}
 - "--address=$(MY_POD_IP):12302"
 - "--endpoint=unix:///csi/csi.sock"
-- {{ printf "--folder-id=%s" (.Values.cloudProviderYandex.internal.providerClusterConfiguration.provider.folderID | required "providerClusterConfiguration.provider.folderID is required") | quote }}
+- {{ printf "--folder-id=%s" (.Values.cloudProviderYandex.provider.parameters.folderID | required "provider.parameters.folderID is required") | quote }}
 - {{ printf "--cluster-uuid=%s" .Values.global.discovery.clusterUUID | quote }}
 {{- end }}
 
@@ -25,7 +25,7 @@
 
 
 {{- $csiControllerImage := include "helm_lib_module_image_no_fail" (list . "yandexCsiPlugin") }}
-{{- if $csiControllerImage }}
+{{- if and $csiControllerImage (not (default false (dig "storage" "disabled" false .Values.cloudProviderYandex))) }}
 
   {{- $csiControllerConfig := dict }}
   {{- $_ := set $csiControllerConfig "controllerImage" $csiControllerImage }}

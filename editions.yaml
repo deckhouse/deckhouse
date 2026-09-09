@@ -15,7 +15,6 @@ editions:
     - aws
     - azure
     - gcp
-    - yandex
   # skip adding fix imports for release. need only for CE edition in general case
   skipFixingImports: true
 

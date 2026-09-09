@@ -14,7 +14,7 @@
 
 resource "yandex_vpc_network" "kube" {
   count = local.existing_network_id != "" ? 0 : 1
-  name = local.prefix
+  name  = local.prefix
 }
 
 locals {
@@ -22,14 +22,15 @@ locals {
 }
 
 module "vpc_components" {
-  source = "../../../terraform-modules/vpc-components"
-  layout = local.layout
-  prefix = local.prefix
-  network_id = local.network_id
-  node_network_cidr = local.node_network_cidr
+  source                         = "../../../terraform-modules/vpc-components"
+  layout                         = local.layout
+  prefix                         = local.prefix
+  network_id                     = local.network_id
+  node_network_cidr              = local.node_network_cidr
   existing_zone_to_subnet_id_map = local.existing_zone_to_subnet_id_map
-  dhcp_domain_name = local.dhcp_domain_name
-  dhcp_domain_name_servers = local.dhcp_domain_name_servers
+  existing_route_table_id        = local.existing_route_table_id
+  dhcp_domain_name               = local.dhcp_domain_name
+  dhcp_domain_name_servers       = local.dhcp_domain_name_servers
 
   labels = local.labels
 }
