@@ -9,6 +9,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -22,6 +23,7 @@ import (
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
+	kcache "k8s.io/client-go/tools/cache"
 	"k8s.io/component-base/metrics/legacyregistry"
 	"k8s.io/klog/v2"
 
@@ -42,6 +44,9 @@ import (
 // metricsNamespace prefixes the rules metrics of this apiserver; the webhook uses its own, so the
 // two consumers can be compared side by side.
 const metricsNamespace = "user_authz_permission_browser"
+
+// registerMetricsOnce guards the process-global metric registry.
+var registerMetricsOnce sync.Once
 
 var (
 	// Scheme defines methods for serializing and deserializing API objects.
@@ -145,6 +150,10 @@ func initInformers() (*initResult, error) {
 type rulesInputs struct {
 	rules    *source.Source
 	bindings *binding.Index
+	// bindingsSynced reports that the index has actually been fed. The informer reports synced once
+	// the initial list has been popped, while handlers are fed from a separate queue, so a report
+	// built on the informer's word alone could miss the bindings that make a subject restricted.
+	bindingsSynced kcache.InformerSynced
 }
 
 // initRules wires the rules feeds. The bindings index is fed from the same ClusterRoleBinding
@@ -152,18 +161,21 @@ type rulesInputs struct {
 // ClusterAuthorizationRules, run in the background from New.
 func initRules(init *initResult) (*rulesInputs, error) {
 	bindings := binding.NewIndex()
-	if _, err := init.informerFactory.Rbac().V1().ClusterRoleBindings().Informer().AddEventHandler(bindings.EventHandler()); err != nil {
+	bindingsSynced, err := init.informerFactory.Rbac().V1().ClusterRoleBindings().Informer().AddEventHandler(bindings.EventHandler())
+	if err != nil {
 		return nil, fmt.Errorf("register rule bindings index: %w", err)
 	}
 
 	rulesMetrics := metrics.New(metricsNamespace)
-	legacyregistry.RawMustRegister(rulesMetrics)
+	// The legacy registry is process-global and its raw registration panics on a duplicate, so a
+	// second server in the same process must not register again.
+	registerMetricsOnce.Do(func() { legacyregistry.RawMustRegister(rulesMetrics) })
 
 	rules := source.New(init.dynamicClient, source.Options{
 		Observer: rulesMetrics,
 		Logf:     klog.Infof,
 	})
-	return &rulesInputs{rules: rules, bindings: bindings}, nil
+	return &rulesInputs{rules: rules, bindings: bindings, bindingsSynced: bindingsSynced.HasSynced}, nil
 }
 
 // initAuthorizers creates the composite authorizer from RBAC and multi-tenancy engines.
@@ -308,6 +320,9 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 		// maximally restricted. Readiness waits for the list; a cluster without the CRD is ready,
 		// there are no rules to wait for.
 		if err := genericServer.AddReadyzChecks(healthz.NamedCheck("user-authz-rules", func(_ *http.Request) error {
+			if !inputs.bindingsSynced() {
+				return fmt.Errorf("the ClusterRoleBindings of the rules are not indexed yet")
+			}
 			if state := inputs.rules.State(); state == source.StateUnsynced {
 				if lastErr := inputs.rules.LastError(); lastErr != nil {
 					return fmt.Errorf("ClusterAuthorizationRules are not listed yet: %v", lastErr)

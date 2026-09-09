@@ -258,7 +258,8 @@ func NewRBACEvaluator(logger *log.Logger, informerFactory informers.SharedInform
 	clusterRoleBindings := rbacInformers.ClusterRoleBindings()
 
 	index := newIndependentCRBIndex()
-	if _, err := clusterRoleBindings.Informer().AddEventHandler(index.eventHandler()); err != nil {
+	indexSynced, err := clusterRoleBindings.Informer().AddEventHandler(index.eventHandler())
+	if err != nil {
 		return nil, fmt.Errorf("register the independent ClusterRoleBinding index: %w", err)
 	}
 
@@ -273,6 +274,10 @@ func NewRBACEvaluator(logger *log.Logger, informerFactory informers.SharedInform
 			roleBindings.Informer().HasSynced,
 			clusterRoles.Informer().HasSynced,
 			clusterRoleBindings.Informer().HasSynced,
+			// The informer reports synced once the initial list has been popped; the handler that
+			// fills the index is fed from a separate queue. Answering from a half-filled index
+			// would deny requests that a non-CAR ClusterRoleBinding grants.
+			indexSynced.HasSynced,
 		},
 	}, nil
 }

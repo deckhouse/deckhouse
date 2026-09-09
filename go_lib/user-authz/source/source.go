@@ -27,6 +27,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"k8s.io/apimachinery/pkg/api/equality"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/client-go/dynamic"
@@ -97,8 +98,11 @@ type Source struct {
 	builder  *rules.Builder
 	opts     Options
 
-	dir    atomic.Pointer[rules.Directory]
-	dirty  chan struct{}
+	dir   atomic.Pointer[rules.Directory]
+	dirty chan struct{}
+	// listed is signalled once, when the initial list completes, so the first directory is
+	// published without waiting out the debounce window.
+	listed chan struct{}
 	synced atomic.Bool
 
 	mu        sync.Mutex
@@ -120,14 +124,23 @@ func New(client dynamic.Interface, opts Options) *Source {
 		builder:  rules.NewBuilder(),
 		opts:     opts,
 		dirty:    make(chan struct{}, 1),
+		listed:   make(chan struct{}, 1),
 	}
 	// Errors during the initial list normally surface only as a log line of the reflector; a missing
 	// CRD must be told apart from an unreachable API server, so the handler records them.
 	_ = informer.SetWatchErrorHandler(s.watchError)
 	_ = informer.SetTransform(rules.Project)
 	_, _ = informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc:    func(interface{}) { s.markDirty() },
-		UpdateFunc: func(_, _ interface{}) { s.markDirty() },
+		AddFunc: func(interface{}) { s.markDirty() },
+		UpdateFunc: func(oldObj, newObj interface{}) {
+			// Both objects have already been through Project, which keeps only the fields the
+			// directory reads. An update that leaves them equal (a label, an annotation, a
+			// re-list) would rebuild every map to the same result, so skip it.
+			if specUnchanged(oldObj, newObj) {
+				return
+			}
+			s.markDirty()
+		},
 		DeleteFunc: func(interface{}) { s.markDirty() },
 	})
 	return s
@@ -183,7 +196,35 @@ func (s *Source) awaitSync(ctx context.Context) {
 	s.crdGone = false
 	s.lastError = nil
 	s.mu.Unlock()
-	s.markDirty()
+	// Publish the first directory at once. There is nothing to coalesce yet, and until it exists
+	// every subject of a rule is treated as restricted, so waiting out the debounce window would be
+	// pure added exposure.
+	select {
+	case s.listed <- struct{}{}:
+	default:
+	}
+}
+
+// specUnchanged reports whether two projected rules carry the same spec. It is deliberately
+// conservative: anything it cannot compare counts as changed.
+func specUnchanged(oldObj, newObj interface{}) bool {
+	oldRule, ok := oldObj.(*unstructured.Unstructured)
+	if !ok {
+		return false
+	}
+	newRule, ok := newObj.(*unstructured.Unstructured)
+	if !ok {
+		return false
+	}
+	oldSpec, _, err := unstructured.NestedFieldNoCopy(oldRule.Object, "spec")
+	if err != nil {
+		return false
+	}
+	newSpec, _, err := unstructured.NestedFieldNoCopy(newRule.Object, "spec")
+	if err != nil {
+		return false
+	}
+	return equality.Semantic.DeepEqual(oldSpec, newSpec)
 }
 
 func (s *Source) markDirty() {
@@ -213,6 +254,14 @@ func (s *Source) rebuildLoop(ctx context.Context) {
 		select {
 		case <-ctx.Done():
 			return
+		case <-s.listed:
+			if armed {
+				timer.Stop()
+				armed = false
+			}
+			if s.informer.HasSynced() {
+				s.rebuild()
+			}
 		case <-s.dirty:
 			if !armed {
 				timer.Reset(s.opts.Debounce)

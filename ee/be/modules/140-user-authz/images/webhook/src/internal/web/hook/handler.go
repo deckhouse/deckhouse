@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"sync"
 
 	"k8s.io/apimachinery/pkg/labels"
 	corev1listers "k8s.io/client-go/listers/core/v1"
@@ -63,6 +64,9 @@ type Handler struct {
 
 	rules    RulesProvider
 	bindings RuleBindings
+
+	// reported remembers the (subject, rule) pairs the ordering guard has already logged.
+	reported sync.Map
 }
 
 // NewHandler wires the handler. rulesProvider and bindings are required: without the rules the
@@ -249,25 +253,46 @@ func (h *Handler) authorizeRequest(request *WebhookRequest) *WebhookRequest {
 
 // affectedEntries collects the directory entries of the User/ServiceAccount/Groups of the request.
 //
-// It also applies the ordering guard: user-authz-controller creates the ClusterRoleBindings of a
-// rule seconds after the rule, and the rule and the bindings reach this webhook over independent
-// watches. A subject bound by a rule binding whose rule is not in the directory (the directory lags,
-// or has not been listed yet) is treated as maximally restricted, so the cluster-wide binding never
-// grants more than the rule will. The restriction lifts by itself when the rule arrives.
+// It also applies the ordering guard: user-authz-controller creates and updates the
+// ClusterRoleBindings of a rule around the same time as the rule, and the rule and its bindings
+// reach this webhook over independent watches, so the bindings can be ahead. When a binding says it
+// binds the subject to a rule whose observed copy does not name that subject (the rule is unknown,
+// or known but not yet updated), the subject gets a maximally restricted entry, so the cluster-wide
+// binding never grants more than the rule will. The restriction lifts by itself when the rule
+// arrives.
+//
+// The restricted entry only bites a subject that has no observed entry of its own: rules union, so
+// an entry the webhook has already observed stays as wide as it is (see rules.Combine). That is
+// deliberate - an unobserved rule may only widen a subject's scope, so clamping what is already
+// known would deny access the observed rules legitimately grant.
 func (h *Handler) affectedEntries(r *WebhookRequest) []rules.Entry {
 	dir := h.rules.Directory()
 	entries := dir.Lookup(r.Spec.User, r.Spec.Group)
 
 	for _, rule := range h.bindings.RulesFor(r.Spec.User, r.Spec.Group) {
-		if dir.KnowsRule(rule) {
+		if dir.RuleCovers(rule, r.Spec.User, r.Spec.Group) {
 			continue
 		}
-		h.logger.Printf("user %q is bound by rule %q the webhook has not observed yet (rules synced: %v); restricting until it arrives", r.Spec.User, rule, h.rules.HasSynced())
+		h.reportRestricted(r.Spec.User, rule)
 		entries = append(entries, rules.Restricted())
 		break
 	}
 
 	return entries
+}
+
+// reportRestricted logs the ordering guard once per subject and rule. The guard is evaluated on
+// every request, and an orphaned rule binding would otherwise log on every request of its subject,
+// forever - on the authorization path, behind the logger's process-wide lock.
+func (h *Handler) reportRestricted(username, rule string) {
+	key := username + "\x00" + rule
+	if _, seen := h.reported.Load(key); seen {
+		return
+	}
+	if _, loaded := h.reported.LoadOrStore(key, struct{}{}); loaded {
+		return
+	}
+	h.logger.Printf("user %q is bound by rule %q the webhook has not observed binding it (rules synced: %v); restricting until the rule arrives", username, rule, h.rules.HasSynced())
 }
 
 // namespaceLabels returns the labels of a namespace for the namespaceSelector check.

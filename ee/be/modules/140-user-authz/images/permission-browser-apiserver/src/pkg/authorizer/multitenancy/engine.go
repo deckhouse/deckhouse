@@ -232,20 +232,24 @@ func (e *Engine) authorizeClusterScopedRequest(ctx context.Context, attrs author
 
 // affectedEntries collects the directory entries of the User/ServiceAccount/Groups.
 //
-// It also applies the ordering guard: user-authz-controller creates the ClusterRoleBindings of a
-// rule seconds after the rule, and the rule and the bindings reach this apiserver over independent
-// watches. A subject bound by a rule binding whose rule is not in the directory (the directory
-// lags, or has not been listed yet) is treated as maximally restricted, so the report never shows
-// more than the webhook will allow. The restriction lifts by itself when the rule arrives.
+// It also applies the ordering guard, the same one the webhook applies: the bindings of a rule and
+// the rule itself reach this apiserver over independent watches, so the bindings can be ahead. When
+// a binding says it binds the subject to a rule whose observed copy does not name that subject (the
+// rule is unknown, or known but not yet updated), the subject gets a maximally restricted entry, so
+// the report never shows more than the webhook will allow. The restriction lifts by itself when the
+// rule arrives.
+//
+// The restricted entry only bites a subject that has no observed entry of its own: rules union, so
+// an entry already observed stays as wide as it is (see rules.Combine).
 func (e *Engine) affectedEntries(username string, groups []string) []rules.Entry {
 	dir := e.rules.Directory()
 	entries := dir.Lookup(username, groups)
 
 	for _, rule := range e.bindings.RulesFor(username, groups) {
-		if dir.KnowsRule(rule) {
+		if dir.RuleCovers(rule, username, groups) {
 			continue
 		}
-		klog.V(2).Infof("user %q is bound by rule %q not observed yet (rules synced: %v); restricting until it arrives", username, rule, e.rules.HasSynced())
+		klog.V(2).Infof("user %q is bound by rule %q not observed binding it (rules synced: %v); restricting until the rule arrives", username, rule, e.rules.HasSynced())
 		entries = append(entries, rules.Restricted())
 		break
 	}
