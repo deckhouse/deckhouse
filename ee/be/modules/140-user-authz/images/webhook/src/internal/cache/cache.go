@@ -43,6 +43,17 @@ const (
 	// deterministically well within the container's livenessProbe budget, instead of
 	// relying on the much larger transport-level dial/handshake timeouts.
 	requestTimeout = 2 * time.Second
+
+	// negativeRenewInterval bounds how often a resource that a group's listing does not carry
+	// makes the webhook list that group again.
+	//
+	// The listing happens on the authorization path. Without a bound, every request for a resource
+	// that does not exist costs one discovery request to the API server, and any subject a rule
+	// covers can drive that at whatever rate they like - against the component the whole cluster's
+	// authorization is waiting on. With it, a group is re-listed at most this often no matter how
+	// many such requests arrive, and a resource installed since the last listing becomes visible
+	// within the interval instead of on the very next request.
+	negativeRenewInterval = 10 * time.Second
 )
 
 type Cache interface {
@@ -451,24 +462,47 @@ func (c *NamespacedDiscoveryCache) Get(apiGroup, resource string) (bool, error) 
 		}
 	}
 
-	// if cache for api group exists but there is no resource, we should update the cache entry for the whole group
+	// The group is listed but does not carry the resource. It may have been installed since the
+	// listing, so list the group again - but not more often than negativeRenewInterval, and
+	// without the retry loop. This is the authorization path and the caller chooses the resource
+	// name, so both the rate and the duration of the work have to be bounded.
 	namespaced, ok := namespacedInfo.Data[resource]
 	if !ok {
-		if err := c.renewCache(apiGroup); err != nil {
-			return false, err
+		if c.now().Sub(namespacedInfo.AddTime) >= negativeRenewInterval {
+			if err := c.renewCacheOnceNoRetry(apiGroup); err != nil {
+				return false, err
+			}
+
+			namespacedInfo, _ = c.getFromCache(apiGroup)
+			namespaced, ok = namespacedInfo.Data[resource]
 		}
-
-		namespacedInfo, _ = c.getFromCache(apiGroup)
-
-		namespaced, ok = namespacedInfo.Data[resource]
 		if !ok {
-			// The listing above succeeded and does not carry the resource, so this is an answer,
-			// not a failure to ask.
+			// A listing of the group succeeded and does not carry the resource, so this is an
+			// answer, not a failure to ask.
 			return false, fmt.Errorf("resource %s/%s is not found in cluster: %w", apiGroup, resource, ErrResourceAbsent)
 		}
 	}
 
 	return namespaced, nil
+}
+
+// renewCacheOnceNoRetry lists a group exactly once. renewCache retries for up to twenty seconds,
+// which is right for a cold start and wrong on the authorization path: the API server gives the
+// webhook three seconds and then denies, so the retries only pile up work for requests whose
+// answer nobody is waiting for any more.
+func (c *NamespacedDiscoveryCache) renewCacheOnceNoRetry(apiGroup string) error {
+	path := apiV1Path
+	if apiGroup != "v1" {
+		path = "/apis/" + apiGroup
+	}
+
+	req, cancel, err := c.newGetRequest(path)
+	if err != nil {
+		return fmt.Errorf("renew cache prepare request: %w", err)
+	}
+	defer cancel()
+
+	return c.renewCacheOnce(apiGroup, req)
 }
 
 func (c *NamespacedDiscoveryCache) isEntryExpired(e *cacheEntry) bool {

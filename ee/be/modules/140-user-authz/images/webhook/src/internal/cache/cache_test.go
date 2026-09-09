@@ -7,11 +7,13 @@ package cache
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -186,6 +188,11 @@ func TestCacheGetIfNoResource(t *testing.T) {
 
 	delete(cache.data["test"].Data, "nodes")
 
+	// A resource missing from the listing is looked up again - but only once the listing is older
+	// than negativeRenewInterval, so move past it.
+	now := cache.now()
+	cache.now = func() time.Time { return now.Add(negativeRenewInterval) }
+
 	namespaced, err := cache.Get("test", "nodes")
 	if err != nil {
 		t.Fatal(err)
@@ -193,6 +200,57 @@ func TestCacheGetIfNoResource(t *testing.T) {
 
 	if namespaced != false {
 		t.Fatalf("nodes namespaced: %v != %v", namespaced, false)
+	}
+}
+
+// A resource that is not there must not make the webhook list its group on every request: the
+// listing is a request to the API server made from the authorization path, and the caller picks
+// the resource name.
+func TestCacheGetAbsentResourceDoesNotRelistWithinTheInterval(t *testing.T) {
+	var listings int32
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&listings, 1)
+		w.Header().Add("Content-Type", "application/json")
+		w.Write([]byte(testResponse))
+	}))
+	defer server.Close()
+
+	cache := NamespacedDiscoveryCache{
+		client:               server.Client(),
+		kubernetesAPIAddress: server.URL,
+		logger:               log.New(io.Discard, "", log.LstdFlags),
+		data:                 make(map[string]*namespacedCacheEntry),
+		preferredVersions:    make(map[string]*preferredVersionCacheEntry),
+	}
+	now := time.Now()
+	cache.now = func() time.Time { return now }
+
+	// The first lookup of an unknown group lists it once.
+	if _, err := cache.Get("test", "ghosts"); !errors.Is(err, ErrResourceAbsent) {
+		t.Fatalf("first lookup: got %v, want ErrResourceAbsent", err)
+	}
+	if got := atomic.LoadInt32(&listings); got != 1 {
+		t.Fatalf("the first lookup listed the group %d times, want 1", got)
+	}
+
+	// Every further lookup within the interval is answered from what was listed.
+	for i := 0; i < 50; i++ {
+		if _, err := cache.Get("test", "ghosts"); !errors.Is(err, ErrResourceAbsent) {
+			t.Fatalf("lookup %d: got %v, want ErrResourceAbsent", i, err)
+		}
+	}
+	if got := atomic.LoadInt32(&listings); got != 1 {
+		t.Fatalf("50 more lookups listed the group %d times in total, want 1", got)
+	}
+
+	// Once the interval has passed, the group is listed again - a resource installed since then
+	// has to become visible.
+	cache.now = func() time.Time { return now.Add(negativeRenewInterval) }
+	if _, err := cache.Get("test", "ghosts"); !errors.Is(err, ErrResourceAbsent) {
+		t.Fatalf("after the interval: got %v, want ErrResourceAbsent", err)
+	}
+	if got := atomic.LoadInt32(&listings); got != 2 {
+		t.Fatalf("the lookup after the interval listed the group %d times in total, want 2", got)
 	}
 }
 
