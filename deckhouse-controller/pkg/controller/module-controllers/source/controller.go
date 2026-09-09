@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"slices"
 	"sort"
 	"sync"
 	"time"
@@ -664,28 +663,4 @@ func (r *reconciler) deleteModuleSource(ctx context.Context, source *v1alpha1.Mo
 	}
 
 	return ctrl.Result{}, nil
-}
-
-// moduleSourcesOfConfig maps a module config onto the module sources its module may come from:
-// the one the config names and the ones offering the module.
-func (r *reconciler) moduleSourcesOfConfig(ctx context.Context, obj client.Object) []reconcile.Request {
-	config := obj.(*v1alpha1.ModuleConfig)
-
-	moduleSourceNames, err := utils.AvailableModuleSources(ctx, r.client, config.Name)
-	if err != nil {
-		r.logger.Warn("failed to get the module sources offering the module", slog.String("module", config.Name), log.Err(err))
-
-		return nil
-	}
-
-	if configured := pkgsync.ConfiguredModuleSource(config); configured != "" && !slices.Contains(moduleSourceNames, configured) {
-		moduleSourceNames = append(moduleSourceNames, configured)
-	}
-
-	requests := make([]reconcile.Request, 0, len(moduleSourceNames))
-	for _, moduleSourceName := range moduleSourceNames {
-		requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKey{Name: moduleSourceName}})
-	}
-
-	return requests
 }

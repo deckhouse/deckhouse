@@ -439,7 +439,7 @@ spec:
                   state:
                     description: |-
                       State is the high-level lifecycle state observed for the module.
-                      Always one of: Pending, Failed, Updating, Ready, Degraded, Suspended.
+                      Always one of: Pending, Failed, Updating, Ready, Degraded, Suspended, Deleting.
                     type: string
                     x-doc-examples:
                     - Pending
@@ -448,6 +448,7 @@ spec:
                     - Ready
                     - Degraded
                     - Suspended
+                    - Deleting
                   tip:
                     description: |-
                       Tip is a human-readable instruction on how to resolve the current
