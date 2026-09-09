@@ -1,5 +1,5 @@
 diff --git a/go.mod b/go.mod
-index d6c10ee83f..17266104d7 100644
+index d6c10ee83f..855db4122f 100644
 --- a/go.mod
 +++ b/go.mod
 @@ -1,48 +1,50 @@
@@ -114,7 +114,7 @@ index d6c10ee83f..17266104d7 100644
 -	golang.org/x/sys v0.18.0
 -	golang.org/x/time v0.5.0
 +	golang.org/x/exp v0.0.0-20240506185415-9bf2ced13842
-+	golang.org/x/net v0.57.0
++	golang.org/x/net v0.58.0
 +	golang.org/x/oauth2 v0.36.0
 +	golang.org/x/sync v0.22.0
 +	golang.org/x/sys v0.47.0
@@ -130,7 +130,7 @@ index d6c10ee83f..17266104d7 100644
 +	google.golang.org/genproto v0.0.0-20260128011058-8636f8732409
 +	google.golang.org/genproto/googleapis/api v0.0.0-20260526163538-3dc84a4a5aaa
 +	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa
-+	google.golang.org/grpc v1.83.1
++	google.golang.org/grpc v1.83.2
 +	google.golang.org/protobuf v1.36.11
  	gopkg.in/natefinch/lumberjack.v2 v2.2.1
  	gopkg.in/yaml.v2 v2.4.0
@@ -268,7 +268,7 @@ index d6c10ee83f..17266104d7 100644
  	gopkg.in/ini.v1 v1.67.0 // indirect
  	k8s.io/component-base v0.29.0 // indirect
 diff --git a/go.sum b/go.sum
-index 10100f8bfd..9ba7632317 100644
+index 10100f8bfd..6c7c921242 100644
 --- a/go.sum
 +++ b/go.sum
 @@ -1,24 +1,1215 @@
@@ -2345,8 +2345,8 @@ index 10100f8bfd..9ba7632317 100644
  golang.org/x/net v0.21.0/go.mod h1:bIjVDfnllIU7BJ2DNgfnXvpSvtn8VRwhlsaeUTyUS44=
 -golang.org/x/net v0.23.0 h1:7EYJ93RZ9vYSZAIb2x3lnuvqO5zneoD6IvWjuhfxjTs=
 -golang.org/x/net v0.23.0/go.mod h1:JKghWKKOSdJwpW2GEx0Ja7fmaKnMsbu+MWVZTokSYmg=
-+golang.org/x/net v0.57.0 h1:K5+3DljvIuDG9/Jv9rvyMywYNFCQ9RSUY6OOTTkT+tE=
-+golang.org/x/net v0.57.0/go.mod h1:KpXc8iv+r3XplLAG/f7Jsf9RPszJzdR0f58q9vGOuEU=
++golang.org/x/net v0.58.0 h1:ynWG7rqYi4ccpTEuPZ2QGWHktVEM9DMCj9yzDE0Q7To=
++golang.org/x/net v0.58.0/go.mod h1:YwCddHnFlT7eLQqVprV19OnhLGtc5xOKgE0RyqgfWAU=
  golang.org/x/oauth2 v0.0.0-20180821212333-d2e6202438be/go.mod h1:N/0e6XlmueqKjAGxoOufVs8QHGRruUQn6yWY3a++T0U=
  golang.org/x/oauth2 v0.0.0-20190226205417-e64efc72b421/go.mod h1:gOpvHmFTYa4IltrdGE7lF6nIHvwfUNPOp7c8zoXwtLw=
  golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45/go.mod h1:gOpvHmFTYa4IltrdGE7lF6nIHvwfUNPOp7c8zoXwtLw=
@@ -3030,8 +3030,8 @@ index 10100f8bfd..9ba7632317 100644
 +google.golang.org/grpc v1.60.0/go.mod h1:OlCHIeLYqSSsLi6i49B5QGdzaMZK9+M7LXN2FKz4eGM=
 +google.golang.org/grpc v1.60.1/go.mod h1:OlCHIeLYqSSsLi6i49B5QGdzaMZK9+M7LXN2FKz4eGM=
 +google.golang.org/grpc v1.62.1/go.mod h1:IWTG0VlJLCh1SkC58F7np9ka9mx/WNkjl4PGJaiq+QE=
-+google.golang.org/grpc v1.83.1 h1:HIO0+BEtBP6soyqvqC8sNUjZ7bTs+0hFQuFF+RAy++Y=
-+google.golang.org/grpc v1.83.1/go.mod h1:kDyl6SKsiHKt0uylY5gtn5cEjkrIOhQOGDgIc4JGwzQ=
++google.golang.org/grpc v1.83.2 h1:EManeRomTObA0BU7I8vXgg/78uE5MJ9M8B39EX2WscU=
++google.golang.org/grpc v1.83.2/go.mod h1:YPI1hK3kDked6iHvgX3tR0y+nX/qpMFKhPgFsokw1S8=
 +google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0/go.mod h1:6Kw0yEErY5E/yWrBtf03jp27GLLJujG4z/JK95pnjjw=
  google.golang.org/protobuf v0.0.0-20200109180630-ec00e32a8dfd/go.mod h1:DFci5gLYBciE7Vtevhsrf46CRTquxDuWsQurQQe4oz8=
  google.golang.org/protobuf v0.0.0-20200221191635-4d8936d0db64/go.mod h1:kwYJMbMJ01Woi6D6+Kah6886xMZcty6N08ah7+eCXa0=
