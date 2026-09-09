@@ -150,14 +150,42 @@
       },
       "products": [
         {
-          "@id": "pkg:golang/golang.org/x/crypto@v0.53.0"
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
         }
       ],
       "status": "not_affected",
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "GO-2026-5932 concerns golang.org/x/crypto/openpgp, which is unmaintained and unsafe by design. This component does not import or execute the openpgp package; golang.org/x/crypto is pulled in transitively for other subpackages. Exploitation of openpgp via this binary is not available.",
-      "timestamp": "2026-07-24T12:00:00.000000000Z"
+      "timestamp": "2026-09-08T12:32:54.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-56855"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2026-56855 is a denial of service in golang.org/x/crypto/ssh: a malicious peer can deadlock a connection by sending crafted messages on an already established channel. This component does not import or execute the golang.org/x/crypto/ssh package and neither accepts nor initiates SSH connections; golang.org/x/crypto is pulled in transitively for other subpackages only.",
+      "timestamp": "2026-09-09T09:20:42.000000000Z"
+    },
+    {
+      "vulnerability": {
+        "name": "CVE-2026-78662"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "CVE-2026-78662 is a denial of service in golang.org/x/crypto/ssh: a malicious peer can flood the incoming requests of a channel that is not yet established and deadlock the connection. This component does not import or execute the golang.org/x/crypto/ssh package and neither accepts nor initiates SSH connections; golang.org/x/crypto is pulled in transitively for other subpackages only.",
+      "timestamp": "2026-09-09T09:20:42.000000000Z"
     }
   ],
-  "timestamp": "2026-07-24T12:00:00Z"
+  "timestamp": "2026-09-09T09:20:42Z"
 }
