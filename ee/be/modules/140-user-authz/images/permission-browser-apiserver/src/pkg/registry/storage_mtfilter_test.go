@@ -45,6 +45,10 @@ func (s staticResourceScope) Scope(group, resource string) (namespaced, known bo
 
 func (s staticResourceScope) HasData() bool { return len(s) > 0 }
 
+// GroupUnavailable: the fixture is a complete snapshot, so nothing is missing because a group
+// could not be read.
+func (s staticResourceScope) GroupUnavailable(string) bool { return false }
+
 func mustMTEngine(t *testing.T, config string) *multitenancy.Engine {
 	t.Helper()
 	engine, err := multitenancy.NewEngine(mttest.LegacyJSON(t, config), mttest.NoBindings(), nil, nil, staticResourceScope{

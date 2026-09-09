@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hook
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -265,6 +266,9 @@ func TestAuthorizeRequest(t *testing.T) {
 			},
 		},
 		{
+			// No version of the group serves the resource, which is discovery answering that it
+			// does not exist. RBAC decides, and the API server turns that into a 404 rather than
+			// telling the caller they are forbidden from something that is not there.
 			Name:  "Cluster scoped. Without version. Version does not exists",
 			Group: []string{"normal"},
 			Attributes: WebhookResourceAttributes{
@@ -274,8 +278,8 @@ func TestAuthorizeRequest(t *testing.T) {
 				Namespace: "",
 			},
 			ResultStatus: WebhookRequestStatus{
-				Denied: true,
-				Reason: "webhook: kubernetes api request error",
+				Denied: false,
+				Reason: "",
 			},
 		},
 		{
@@ -698,10 +702,23 @@ type dummyCache struct {
 	data              map[string]map[string]bool
 	preferredVersions map[string]string
 	coreResources     cache.CoreResourcesDict
+	// err, when set, stands for a discovery lookup that did not happen: a timeout, a 5xx, an
+	// aggregated APIService that is down. The real cache reports that differently from a resource
+	// it looked up and did not find, and the handler must too.
+	err error
 }
 
 func (d *dummyCache) Get(api, key string) (bool, error) {
-	return d.data[api][key], nil
+	if d.err != nil {
+		return false, d.err
+	}
+	namespaced, ok := d.data[api][key]
+	if !ok {
+		// What the real cache returns after listing the group successfully and not finding the
+		// resource in it.
+		return false, fmt.Errorf("resource %s/%s is not found in cluster: %w", api, key, cache.ErrResourceAbsent)
+	}
+	return namespaced, nil
 }
 
 func (d *dummyCache) GetCoreResources() (cache.CoreResourcesDict, error) {
@@ -709,11 +726,14 @@ func (d *dummyCache) GetCoreResources() (cache.CoreResourcesDict, error) {
 }
 
 func (d *dummyCache) GetPreferredVersion(group, resource string) (string, error) {
+	if d.err != nil {
+		return "", d.err
+	}
 	if v, ok := d.preferredVersions[fmt.Sprintf("%s.%s", resource, group)]; ok {
 		return v, nil
 	}
 
-	return "", fmt.Errorf("not found")
+	return "", fmt.Errorf("no version of %s serves %s: %w", group, resource, cache.ErrNotFound)
 }
 
 func (d *dummyCache) Check() error {
@@ -896,5 +916,111 @@ func TestAuthorizeRequest_GuardDoesNotNarrowObservedScope(t *testing.T) {
 	outOfScope := WebhookResourceSpec{User: "carol", ResourceAttributes: WebhookResourceAttributes{Group: "test", Version: "v1", Resource: "object1", Namespace: "team-b"}}
 	if got := handler.authorizeRequest(&WebhookRequest{Spec: outOfScope}); !got.Status.Denied {
 		t.Errorf("neither rule opens team-b, got %+v", got.Status)
+	}
+}
+
+// A cluster-scoped request for a resource that does not exist must not be denied. The webhook
+// cannot know whether RBAC grants it, and the API server answers 404 for a resource that is not
+// there - so denying turned every typo and every uninstalled CRD into "Forbidden" for anyone a
+// rule limits, including a SuperAdmin.
+func TestAuthorizeClusterScoped_AbsentResourceIsLeftToRBAC(t *testing.T) {
+	handler := &Handler{
+		logger:   log.New(io.Discard, "", 0),
+		cache:    fixtureCache(),
+		rules:    fixtureRules(),
+		bindings: binding.NewIndex(),
+		nsLister: newFakeNamespaceLister(nil),
+		nsSynced: func() bool { return true },
+	}
+
+	cases := []struct {
+		name  string
+		attrs WebhookResourceAttributes
+	}{
+		{
+			// The API server fills the version for real traffic, which is why the old escape hatch
+			// for a missing resource never ran outside hand-written SubjectAccessReviews.
+			"a resource of a group that does not exist, version filled in",
+			WebhookResourceAttributes{Group: "nonexistent.example.com", Version: "v1", Resource: "foos", Verb: "list"},
+		},
+		{
+			"a core resource that does not exist, version filled in",
+			WebhookResourceAttributes{Version: "v1", Resource: "foobars", Verb: "list"},
+		},
+		{
+			"a resource of a known group that the group does not serve",
+			WebhookResourceAttributes{Group: "test", Version: "v1", Resource: "nosuchthing", Verb: "list"},
+		},
+		{
+			"no version, as a hand-written SubjectAccessReview leaves it",
+			WebhookResourceAttributes{Group: "nonexistent.example.com", Resource: "foos", Verb: "list"},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := handler.authorizeRequest(&WebhookRequest{
+				Spec: WebhookResourceSpec{User: "limited", Group: []string{"limited"}, ResourceAttributes: tc.attrs},
+			})
+			if got.Status.Denied {
+				t.Errorf("denied with %q; a resource that does not exist is RBAC's to answer", got.Status.Reason)
+			}
+		})
+	}
+}
+
+// The distinction the fix rests on: when discovery could not be consulted we do not know whether
+// the resource is namespaced, and a cluster-wide list of a namespaced resource is exactly what a
+// limited subject must not get through the cluster-wide binding of its rule.
+func TestAuthorizeClusterScoped_UnreachableDiscoveryStillDenies(t *testing.T) {
+	broken := fixtureCache()
+	broken.err = errors.New("dial tcp 10.0.0.1:6443: i/o timeout")
+
+	handler := &Handler{
+		logger:   log.New(io.Discard, "", 0),
+		cache:    broken,
+		rules:    fixtureRules(),
+		bindings: binding.NewIndex(),
+		nsLister: newFakeNamespaceLister(nil),
+		nsSynced: func() bool { return true },
+	}
+
+	got := handler.authorizeRequest(&WebhookRequest{
+		Spec: WebhookResourceSpec{
+			User:               "limited",
+			Group:              []string{"limited"},
+			ResourceAttributes: WebhookResourceAttributes{Version: "v1", Resource: "services", Verb: "list"},
+		},
+	})
+	if !got.Status.Denied {
+		t.Error("a lookup that did not happen must keep the request closed")
+	}
+	if got.Status.Reason != internalErrorReason {
+		t.Errorf("reason = %q, want the internal error reason", got.Status.Reason)
+	}
+}
+
+// A subject nobody limits is unaffected either way: the handler never reaches discovery for it.
+func TestAuthorizeClusterScoped_UnfilteredSubjectIgnoresDiscovery(t *testing.T) {
+	broken := fixtureCache()
+	broken.err = errors.New("dial tcp 10.0.0.1:6443: i/o timeout")
+
+	handler := &Handler{
+		logger:   log.New(io.Discard, "", 0),
+		cache:    broken,
+		rules:    fixtureRules(),
+		bindings: binding.NewIndex(),
+		nsLister: newFakeNamespaceLister(nil),
+		nsSynced: func() bool { return true },
+	}
+
+	got := handler.authorizeRequest(&WebhookRequest{
+		Spec: WebhookResourceSpec{
+			User:               "nobody-limits-me",
+			ResourceAttributes: WebhookResourceAttributes{Version: "v1", Resource: "services", Verb: "list"},
+		},
+	})
+	if got.Status.Denied {
+		t.Errorf("denied with %q; the webhook has no opinion about a subject no rule names", got.Status.Reason)
 	}
 }

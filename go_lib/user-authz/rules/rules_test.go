@@ -256,9 +256,9 @@ func TestClusterScopedDenied(t *testing.T) {
 	}{
 		{"cluster-scoped resource", ResourceScope{Known: true, Namespaced: false}, false},
 		{"namespaced resource", ResourceScope{Known: true, Namespaced: true}, true},
-		{"unknown resource of a group", ResourceScope{Known: false}, true},
-		{"unknown core resource, snapshot empty", ResourceScope{Known: false, Core: true}, true},
-		{"unknown core resource, snapshot populated: does not exist, RBAC answers", ResourceScope{Known: false, Core: true, CoreGroupPopulated: true}, false},
+		{"could not look the resource up: stay closed", ResourceScope{Known: false}, true},
+		{"discovery answered and the resource is absent: RBAC answers, the API server 404s", ResourceScope{Known: false, Absent: true}, false},
+		{"absent is only consulted when the resource is unknown", ResourceScope{Known: true, Namespaced: true, Absent: true}, true},
 	}
 	for _, tc := range cases {
 		if got := ClusterScopedDenied(tc.scope); got != tc.want {

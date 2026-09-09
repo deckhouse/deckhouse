@@ -58,15 +58,18 @@ type IndependentRBACChecker interface {
 // !known like namespaced: failing open would let a CAR ClusterRoleBinding
 // report Allow for a cluster-scoped list of a namespaced resource.
 //
-// HasData separates "the snapshot exists and does not list this resource"
-// from "there is no snapshot at all". The webhook makes the same distinction,
-// and only the first case, for the core group, lets RBAC answer.
+// HasData separates "the snapshot exists and does not list this resource" from
+// "there is no snapshot at all", and GroupUnavailable separates it further: a
+// resource missing from a group the last refresh could not read is missing
+// because nobody looked. Only a resource missing from a snapshot that did read
+// its group is genuinely absent, and only then may RBAC answer.
 //
 // Implemented by resolver.ResourceScopeCache. This package must not import
 // resolver (resolver already imports multitenancy).
 type ResourceScope interface {
 	Scope(group, resource string) (bool, bool)
 	HasData() bool
+	GroupUnavailable(group string) bool
 }
 
 // RulesProvider hands out the current directory of ClusterAuthorizationRules. Directory is nil
@@ -215,10 +218,13 @@ func (e *Engine) authorizeClusterScopedRequest(ctx context.Context, attrs author
 	// exception is a core resource absent from a populated snapshot: it does not
 	// exist, and the webhook lets RBAC answer that case instead of denying it,
 	// so BulkSAR must not report Deny where the webhook would not.
-	scope := rules.ResourceScope{Core: attrs.GetAPIGroup() == ""}
+	var scope rules.ResourceScope
 	if e.resourceScope != nil {
-		scope.Namespaced, scope.Known = e.resourceScope.Scope(attrs.GetAPIGroup(), attrs.GetResource())
-		scope.CoreGroupPopulated = e.resourceScope.HasData()
+		group := attrs.GetAPIGroup()
+		scope.Namespaced, scope.Known = e.resourceScope.Scope(group, attrs.GetResource())
+		// The snapshot covers the whole cluster, so a resource it does not carry does not exist -
+		// unless its group is one the last refresh could not read, which is a hole, not an answer.
+		scope.Absent = e.resourceScope.HasData() && !e.resourceScope.GroupUnavailable(group)
 	}
 	if !rules.ClusterScopedDenied(scope) {
 		return authorizer.DecisionNoOpinion, "", nil

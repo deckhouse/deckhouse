@@ -55,6 +55,12 @@ type Cache interface {
 var _ Cache = (*NamespacedDiscoveryCache)(nil)
 var ErrNotFound = errors.New("not found")
 
+// ErrResourceAbsent means discovery answered for the group and the resource is not in the answer.
+// It is separate from ErrNotFound, which is the API server's 404 for the group itself, and from
+// every other error, which means the lookup did not happen. A caller may let RBAC answer for the
+// two absences; it must keep failing closed for the rest.
+var ErrResourceAbsent = errors.New("resource is absent from the api group")
+
 type cacheEntry struct {
 	TTL     time.Duration
 	AddTime time.Time
@@ -456,7 +462,9 @@ func (c *NamespacedDiscoveryCache) Get(apiGroup, resource string) (bool, error) 
 
 		namespaced, ok = namespacedInfo.Data[resource]
 		if !ok {
-			return false, fmt.Errorf("resource %s/%s is not found in cluster", apiGroup, resource)
+			// The listing above succeeded and does not carry the resource, so this is an answer,
+			// not a failure to ask.
+			return false, fmt.Errorf("resource %s/%s is not found in cluster: %w", apiGroup, resource, ErrResourceAbsent)
 		}
 	}
 
