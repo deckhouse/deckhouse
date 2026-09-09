@@ -78,19 +78,26 @@ type ResourceScope struct {
 	Known bool
 	// Namespaced is the answer when Known.
 	Namespaced bool
-	// CoreGroupPopulated is set when discovery has a snapshot of the core group, so an unknown
-	// core resource is one that does not exist rather than one not looked up yet.
-	CoreGroupPopulated bool
-	// Core is set for a resource of the core group (empty apiGroup).
-	Core bool
+	// Absent is set when discovery answered and the answer is that the resource does not exist:
+	// the API server said the group has no such version, or a resource listing that had just
+	// succeeded does not carry it.
+	//
+	// It must NOT be set when discovery could not be consulted at all - a timeout, a 5xx, an
+	// aggregated APIService that is down. "We looked and it is not there" and "we could not look"
+	// are the same absence of data and opposite answers, and conflating them is what made every
+	// unknown resource a denial.
+	Absent bool
 }
 
 // ClusterScopedDenied reports whether a cluster-scoped request for the resource (a list or watch
 // across all namespaces, or a request for a cluster-scoped object) must be denied for an entry with
-// filters. A cluster-scoped resource is never limited by namespaces. A namespaced or unknown
-// resource is: an unknown resource is treated as namespaced so that a discovery miss cannot open a
-// cluster-wide list. The one exception is a core resource absent from a populated core snapshot:
-// it does not exist, and RBAC is left to answer, which it does with a denial of its own.
+// filters.
+//
+// A cluster-scoped resource is never limited by namespaces. A resource that does not exist cannot
+// list anything either, so RBAC is left to answer, and the API server turns that into the 404 the
+// caller deserves instead of a misleading 403. Everything else - a namespaced resource, or one we
+// could not look up - is denied, so that a discovery outage cannot open a cluster-wide list through
+// the cluster-wide ClusterRoleBinding of a rule.
 //
 // The caller must first check HasAnyFilters, and afterwards may still let CAR-independent RBAC
 // override the denial.
@@ -98,7 +105,7 @@ func ClusterScopedDenied(scope ResourceScope) bool {
 	if scope.Known && !scope.Namespaced {
 		return false
 	}
-	if !scope.Known && scope.Core && scope.CoreGroupPopulated {
+	if !scope.Known && scope.Absent {
 		return false
 	}
 	return true

@@ -37,10 +37,14 @@ type ResourceScopeCache struct {
 	// If zero, bootstrapRefreshInterval is used.
 	bootstrapInterval time.Duration
 
-	// mu protects scopeMap.
+	// mu protects scopeMap and unavailableGroups.
 	// Key format: "apiGroup/resource" (core group is empty string).
 	mu       sync.RWMutex
 	scopeMap map[string]bool // true = namespaced, false = cluster-scoped
+	// unavailableGroups are the groups the last refresh could not read, whose entries were carried
+	// over from the previous snapshot. A resource missing from one of them is missing because we
+	// could not look, which is a different answer from "it does not exist".
+	unavailableGroups map[string]struct{}
 }
 
 // NewResourceScopeCache creates a new cache and performs initial population from discovery.
@@ -52,6 +56,7 @@ func NewResourceScopeCache(discoveryClient discovery.DiscoveryInterface) *Resour
 		refreshInterval:   defaultRefreshInterval,
 		bootstrapInterval: bootstrapRefreshInterval,
 		scopeMap:          make(map[string]bool),
+		unavailableGroups: make(map[string]struct{}),
 	}
 
 	// Perform initial population
@@ -171,6 +176,16 @@ func matchesResource(ruleResources []string, resource string) bool {
 	return false
 }
 
+// GroupUnavailable reports whether the last refresh failed to read this group. A resource that is
+// not in the snapshot is only genuinely absent when its group was read successfully; otherwise the
+// snapshot has a hole there and the caller must keep failing closed.
+func (c *ResourceScopeCache) GroupUnavailable(group string) bool {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	_, unavailable := c.unavailableGroups[group]
+	return unavailable
+}
+
 // HasData returns true if the cache has been populated with any entries.
 // This can be used for readiness checks: an empty cache means we could not
 // fetch discovery data yet and would treat all unknown resources as cluster-scoped.
@@ -283,6 +298,7 @@ func (c *ResourceScopeCache) refresh() {
 
 	c.mu.Lock()
 	c.scopeMap = newMap
+	c.unavailableGroups = failedGroups
 	c.mu.Unlock()
 
 	klog.V(4).Infof("ResourceScopeCache: refreshed with %d resources", len(newMap))

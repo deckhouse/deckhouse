@@ -7,6 +7,7 @@ package hook
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
@@ -178,48 +179,15 @@ func (h *Handler) authorizeClusterScopedRequest(request *WebhookRequest, entry *
 		return request
 	}
 
-	// if resource is not nil and namespace is nil
-	apiVersion := request.Spec.ResourceAttributes.Version
-	group := request.Spec.ResourceAttributes.Group
-	resource := request.Spec.ResourceAttributes.Resource
-	var apiGroup string
-
-	if apiVersion == "" || apiVersion == "*" {
-		if group != "" {
-			var err error
-			apiVersion, err = h.cache.GetPreferredVersion(group, resource)
-			if err != nil {
-				// could not check whether resource is namespaced or not (from cache) - deny access
-				return h.fillDenyRequest(request, internalErrorReason, err.Error())
-			}
-		} else {
-			k8sCoreResources, err := h.cache.GetCoreResources()
-			if err != nil {
-				return h.fillDenyRequest(request, internalErrorReason, err.Error())
-			}
-			// A core resource absent from the core snapshot does not exist: let RBAC decide.
-			if _, found := k8sCoreResources[resource]; !found {
-				return request
-			}
-
-			// apiVersion and group both empty, which means that this is a core Kubernetes resource
-			apiVersion = "v1"
-		}
-	}
-
-	if group != "" {
-		apiGroup = group + "/" + apiVersion
-	} else {
-		apiGroup = apiVersion
-	}
-
-	namespaced, err := h.cache.Get(apiGroup, resource)
+	scope, err := h.resourceScope(request)
 	if err != nil {
-		// could not check whether resource is namespaced or not (from cache) - deny access
+		// The lookup did not happen, so we do not know whether this resource is namespaced. A
+		// cluster-wide list of a namespaced resource is exactly what the filters exist to stop, so
+		// this stays closed.
 		return h.fillDenyRequest(request, internalErrorReason, err.Error())
 	}
 
-	if !rules.ClusterScopedDenied(rules.ResourceScope{Known: true, Namespaced: namespaced}) {
+	if !rules.ClusterScopedDenied(scope) {
 		return request
 	}
 	// Cluster-scoped access to a namespaced resource granted by a non-CAR
@@ -229,6 +197,53 @@ func (h *Handler) authorizeClusterScopedRequest(request *WebhookRequest, entry *
 	}
 	// we should not allow cluster-scoped requests for the namespaced objects if access to the namespaces is limited
 	return h.fillDenyRequest(request, rules.NamespaceLimitedAccessReason, "")
+}
+
+// resourceScope asks discovery what the request's resource is. It returns an error only when the
+// question could not be answered; a resource discovery reports as nonexistent comes back as an
+// answer with Absent set, so that the caller lets RBAC reply and the API server produces the 404
+// the caller is owed rather than a 403 about a resource that was never there.
+func (h *Handler) resourceScope(request *WebhookRequest) (rules.ResourceScope, error) {
+	apiVersion := request.Spec.ResourceAttributes.Version
+	group := request.Spec.ResourceAttributes.Group
+	resource := request.Spec.ResourceAttributes.Resource
+
+	// A SubjectAccessReview written by hand may leave the version out; the API server always fills
+	// it for real traffic. Resolve it the same way in both cases.
+	if apiVersion == "" || apiVersion == "*" {
+		if group == "" {
+			apiVersion = "v1"
+		} else {
+			preferred, err := h.cache.GetPreferredVersion(group, resource)
+			if err != nil {
+				if absent(err) {
+					return rules.ResourceScope{Absent: true}, nil
+				}
+				return rules.ResourceScope{}, err
+			}
+			apiVersion = preferred
+		}
+	}
+
+	apiGroup := apiVersion
+	if group != "" {
+		apiGroup = group + "/" + apiVersion
+	}
+
+	namespaced, err := h.cache.Get(apiGroup, resource)
+	if err != nil {
+		if absent(err) {
+			return rules.ResourceScope{Absent: true}, nil
+		}
+		return rules.ResourceScope{}, err
+	}
+	return rules.ResourceScope{Known: true, Namespaced: namespaced}, nil
+}
+
+// absent reports whether the error means discovery answered and the resource is not there: the API
+// server 404'd the group, or a successful listing of it does not carry the resource.
+func absent(err error) bool {
+	return errors.Is(err, cache.ErrNotFound) || errors.Is(err, cache.ErrResourceAbsent)
 }
 
 func (h *Handler) authorizeRequest(request *WebhookRequest) *WebhookRequest {

@@ -27,6 +27,10 @@ func (s staticResourceScope) Scope(group, resource string) (namespaced, known bo
 
 func (s staticResourceScope) HasData() bool { return len(s) > 0 }
 
+// GroupUnavailable: the fixture is a complete snapshot, so nothing is missing because a group
+// could not be read.
+func (s staticResourceScope) GroupUnavailable(string) bool { return false }
+
 func coreResourceScope() staticResourceScope {
 	return staticResourceScope{
 		"/pods":  true,
@@ -231,13 +235,36 @@ func authorizeGroupedResource(t *testing.T, e *Engine, userName, group, resource
 	return decision
 }
 
-func TestEngine_Authorize_UnknownGroupedResourceIsDenied(t *testing.T) {
+// A resource that discovery says does not exist is left to RBAC, whether or not it has an API
+// group. The API server then answers 404, which is what the caller is owed; denying it told a
+// SuperAdmin they lacked permission for something that was never there.
+func TestEngine_Authorize_UnknownGroupedResourceIsLeftToRBAC(t *testing.T) {
 	editor := engineWithKnownScopes(t, editorCARConfig)
 
 	got := authorizeGroupedResource(t, editor, "editor@example.io", "example.io", "doesnotexist")
-	assert.Equal(t, authorizer.DecisionDeny, got,
-		"a grouped resource absent from the scope snapshot must not fail-open")
+	assert.Equal(t, authorizer.DecisionNoOpinion, got,
+		"a resource the snapshot does not carry does not exist, so RBAC answers and the API server 404s")
 }
+
+// The other side of it: when the group could not be read, the resource is missing from the
+// snapshot because nobody looked, and that must keep failing closed.
+func TestEngine_Authorize_UnreadableGroupStillDenies(t *testing.T) {
+	scope := unavailableGroupScope{staticResourceScope: coreResourceScope(), unavailable: "example.io"}
+	editor, err := NewEngine(mttest.LegacyJSON(t, editorCARConfig), mttest.NoBindings(), nil, nil, scope)
+	require.NoError(t, err)
+
+	got := authorizeGroupedResource(t, editor, "editor@example.io", "example.io", "doesnotexist")
+	assert.Equal(t, authorizer.DecisionDeny, got,
+		"a hole in the snapshot is not an answer; a cluster-wide list must not slip through it")
+}
+
+// unavailableGroupScope is a snapshot with one group the last refresh could not read.
+type unavailableGroupScope struct {
+	staticResourceScope
+	unavailable string
+}
+
+func (s unavailableGroupScope) GroupUnavailable(group string) bool { return group == s.unavailable }
 
 // TestEngine_Authorize_UnknownCoreResourceMatchesWebhook locks parity with
 // the enforcement webhook, which permits an unknown core resource so RBAC can
