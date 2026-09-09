@@ -80,11 +80,6 @@ func fixtureCache() *dummyCache {
 			"object2.test": "v1",
 			"object1.test": "v1",
 		},
-		coreResources: cache.CoreResourcesDict{
-			"pods":       struct{}{},
-			"namespaces": struct{}{},
-			"services":   struct{}{},
-		},
 	}
 }
 
@@ -702,7 +697,6 @@ func TestAuthorizeRequest(t *testing.T) {
 type dummyCache struct {
 	data              map[string]map[string]bool
 	preferredVersions map[string]string
-	coreResources     cache.CoreResourcesDict
 	// err, when set, stands for a discovery lookup that did not happen: a timeout, a 5xx, an
 	// aggregated APIService that is down. The real cache reports that differently from a resource
 	// it looked up and did not find, and the handler must too.

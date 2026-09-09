@@ -7,9 +7,7 @@ package cache
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -124,58 +122,6 @@ func TestCachePreferredVersionGet(t *testing.T) {
 
 	if version != expectedVersion {
 		t.Fatalf("acme.cert-manager.io did not get after expire: %v != %v", version, expectedVersion)
-	}
-}
-
-func TestCacheCoreResources(t *testing.T) {
-	cache := newTestCoreResourcesCache()
-
-	coreResources := cache.getCoreResourcesFromCache()
-	if len(coreResources) != 0 {
-		t.Fatalf("cache is not empty")
-	}
-
-	coreResources, err := cache.GetCoreResources()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	var apiResourceList APIResourceList
-	err = json.Unmarshal([]byte(coreResourcesResponse), &apiResourceList)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	expectedCoreResources := make(CoreResourcesDict, len(apiResourceList.Resources))
-	for _, resource := range apiResourceList.Resources {
-		expectedCoreResources[getResourceNameBeforeSlash(resource.Name)] = struct{}{}
-	}
-
-	if fmt.Sprint(expectedCoreResources) != fmt.Sprint(coreResources) {
-		t.Fatal("received list of core resources doesn't match the expected one")
-	}
-
-	coreResources = cache.getCoreResourcesFromCache()
-	if len(coreResources) == 0 {
-		t.Fatalf("cache wasn't populated")
-	}
-
-	now := cache.now()
-	// change client here to not be able to update the cache
-	cache.now = func() time.Time { return now.Add(time.Hour * 3) }
-
-	coreResources = cache.getCoreResourcesFromCache()
-	if len(coreResources) != 0 {
-		t.Fatalf("cache is not expired")
-	}
-
-	coreResources, err = cache.GetCoreResources()
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if fmt.Sprint(expectedCoreResources) != fmt.Sprint(coreResources) {
-		t.Fatal("received list of core resources doesn't match the expected one after expiration")
 	}
 }
 
@@ -532,7 +478,6 @@ func newTestCoreResourcesCache() *NamespacedDiscoveryCache {
 	cache.logger = log.New(io.Discard, "", log.LstdFlags)
 	cache.data = make(map[string]*namespacedCacheEntry)
 	cache.preferredVersions = make(map[string]*preferredVersionCacheEntry)
-	cache.coreResources = new(coreResourcesCache)
 
 	server.Config.ErrorLog = cache.logger
 

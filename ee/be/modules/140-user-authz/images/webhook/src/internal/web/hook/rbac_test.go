@@ -22,8 +22,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/go_lib/user-authz/binding"
 	"github.com/deckhouse/deckhouse/go_lib/user-authz/rules"
-
-	"webhook/internal/cache"
 )
 
 func newTestRBACEvaluator(t *testing.T, objs ...runtime.Object) *RBACEvaluator {
@@ -126,7 +124,6 @@ func TestAuthorizeRequestWithIndependentRBAC(t *testing.T) {
 				data: map[string]map[string]bool{
 					"v1": {"pods": true},
 				},
-				coreResources: cache.CoreResourcesDict{"pods": struct{}{}},
 			},
 			rules:           limited,
 			bindings:        binding.NewIndex(),

@@ -18,7 +18,6 @@ import (
 	"net/http"
 	"os"
 	"slices"
-	"strings"
 	"sync"
 	"time"
 
@@ -118,13 +117,6 @@ func newPreferredVersionCacheEntry(addTime time.Time, version string) *preferred
 	}
 }
 
-type CoreResourcesDict map[string]struct{}
-
-type coreResourcesCache struct {
-	*cacheEntry
-	dict CoreResourcesDict
-}
-
 type NamespacedDiscoveryCache struct {
 	logger *log.Logger
 
@@ -135,9 +127,6 @@ type NamespacedDiscoveryCache struct {
 
 	muPv              sync.RWMutex
 	preferredVersions map[string]*preferredVersionCacheEntry
-
-	muCr          sync.RWMutex
-	coreResources *coreResourcesCache
 
 	now func() time.Time
 
@@ -158,7 +147,6 @@ func NewNamespacedDiscoveryCache(logger *log.Logger, apiAddress string) *Namespa
 		logger:            logger,
 		data:              make(map[string]*namespacedCacheEntry),
 		preferredVersions: make(map[string]*preferredVersionCacheEntry),
-		coreResources:     new(coreResourcesCache),
 		now:               time.Now,
 
 		kubernetesAPIAddress: apiAddress,
@@ -353,71 +341,6 @@ func (c *NamespacedDiscoveryCache) requestPreferredVersion(group, resource strin
 	}
 
 	return preferredVersion, nil
-}
-
-// GetCoreResources returns a dict of currently available resources from the core apigroup
-func (c *NamespacedDiscoveryCache) GetCoreResources() (CoreResourcesDict, error) {
-	coreResources := c.getCoreResourcesFromCache()
-	if len(coreResources) != 0 {
-		return coreResources, nil
-	}
-
-	coreResources, err := c.requestCoreResources()
-	if err != nil {
-		return nil, err
-	}
-
-	c.muCr.Lock()
-	c.coreResources = &coreResourcesCache{
-		cacheEntry: newCacheEntry(c.now()),
-		dict:       coreResources,
-	}
-	c.muCr.Unlock()
-
-	return coreResources, nil
-}
-
-func (c *NamespacedDiscoveryCache) getCoreResourcesFromCache() CoreResourcesDict {
-	c.muCr.RLock()
-	defer c.muCr.RUnlock()
-	if len(c.coreResources.dict) != 0 && !c.isEntryExpired(c.coreResources.cacheEntry) {
-		return c.coreResources.dict
-	}
-
-	return nil
-}
-
-func getResourceNameBeforeSlash(resourceName string) string {
-	return strings.Split(resourceName, "/")[0]
-}
-
-func (c *NamespacedDiscoveryCache) requestCoreResources() (CoreResourcesDict, error) {
-	var coreResources CoreResourcesDict
-	if err := Retry(func() (bool, error) {
-		req, cancel, err := c.newGetRequest(apiV1Path)
-		if err != nil {
-			return false, fmt.Errorf("build request for core resources: %w", err)
-		}
-		defer cancel()
-
-		var apiResourceList APIResourceList
-		if err = c.execRequest(req, "request list of core resources", &apiResourceList); err != nil {
-			return true, fmt.Errorf("request list of core resources: %w", err)
-		}
-
-		discoveredCoreResources := make(CoreResourcesDict, len(apiResourceList.Resources))
-		for _, resource := range apiResourceList.Resources {
-			discoveredCoreResources[getResourceNameBeforeSlash(resource.Name)] = struct{}{}
-		}
-
-		coreResources = discoveredCoreResources
-
-		return false, nil
-	}); err != nil {
-		return nil, fmt.Errorf("get list of core resources: %w", err)
-	}
-
-	return coreResources, nil
 }
 
 func (c *NamespacedDiscoveryCache) preferredVersionFromCache(group, resource string) string {
