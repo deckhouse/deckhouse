@@ -1,6 +1,6 @@
 ---
 title: "The istio module: examples"
-description: "Practical examples of using the istio module: routing, balancing, authorization, ingress, telemetry, control plane upgrades, and automated data plane sidecar upgrades."
+description: "Practical examples of using the istio module: routing, balancing, authorization, ingress, ambient migration, telemetry, and control plane and data plane upgrades."
 ---
 
 ## Circuit Breaker
@@ -731,15 +731,17 @@ spec:
 
 {% alert level="warning" %}Available in Enterprise Edition only.{% endalert %}
 
-{% alert level="warning" %}Ambient mesh support is experimental and not recommended for production use.{% endalert %}
+{% alert level="warning" %}
+Ambient mode can be enabled in clusters that use DKP multicluster or federation, but multicluster and federation features are not supported for ambient-enrolled pods.
+{% endalert %}
 
 The ambient mesh components mentioned in this section are described on the [module overview page](./#ambient-mesh).
 
 ### Enabling ambient mesh
 
-Ambient mode requires the [`CNIPlugin`](#cniplugin-application-traffic-redirection-mode-restrictions) traffic redirection mode and Istio 1.25 or newer.
+Ambient mode requires Istio 1.25 or newer and the [`CNIPlugin`](#cniplugin-application-traffic-redirection-mode-restrictions) traffic redirection mode.
 
-The following is a module configuration example with the ambient mode enabled:
+The following is a module configuration example with ambient mode enabled:
 
 ```yaml
 apiVersion: deckhouse.io/v1alpha1
@@ -756,21 +758,21 @@ spec:
       enabled: true
 ```
 
-Once enabled, the module runs the `ztunnel` DaemonSet and the waypoint controller. To enroll workloads into the ambient mesh, follow the steps below.
+Enabling ambient mode installs the `ztunnel` DaemonSet and the waypoint controller, but does not change existing sidecar workloads or enroll application namespaces automatically. This makes it possible to prepare the ambient data plane before migrating applications.
 
 ### Enrolling workloads into the ambient (L4) mesh
 
-Add the `istio.io/dataplane-mode=ambient` label to a namespace to capture the traffic of its pods with `ztunnel`. This provides L4 features (mutual TLS, identity, L4 authorization) without a sidecar:
+Add the `istio.io/dataplane-mode=ambient` label to a namespace to capture the traffic of its pods with `ztunnel`. This provides mutual TLS, workload identity, L4 authorization, and L4 telemetry without sidecars:
 
 ```shell
-d8 k label namespace myns istio.io/dataplane-mode=ambient
+d8 k label namespace myns istio.io/dataplane-mode=ambient --overwrite
 ```
 
-### Adding a waypoint for L7 features
+Existing eligible sidecar-free pods are enrolled without a restart. Pods that already contain an Istio sidecar remain in sidecar mode because sidecar interception takes precedence. To migrate such pods, disable sidecar injection and recreate them as described below.
 
-To get L7 features (HTTP routing, L7 authorization, richer telemetry), create a [WaypointInstance](cr.html#waypointinstance) resource in the namespace:
+### Adding a service waypoint for L7 features
 
-The following is a WaypointInstance resource example, which creates a waypoint for all workloads and services in a namespace:
+A service waypoint adds HTTP routing, L7 authorization, request authentication, and richer telemetry for traffic addressed to Kubernetes Services. Create a [WaypointInstance](cr.html#waypointinstance) in the application namespace:
 
 ```yaml
 apiVersion: network.deckhouse.io/v1alpha1
@@ -779,7 +781,7 @@ metadata:
   name: main
   namespace: myns
 spec:
-  waypointFor: All
+  waypointFor: Service
   replicasManagement:
     mode: Static
     static:
@@ -796,36 +798,346 @@ spec:
         max: 2000Mi
 ```
 
-The controller provisions the waypoint infrastructure (Deployment, Service, Gateway, VPA, and a PDB — when the effective replica count is `>= 2`). The controller **does not** attach workloads to the waypoint. You can do that with the `istio.io/use-waypoint` label.
+The controller creates the waypoint infrastructure, including a Deployment, Service, Gateway, VPA, and a PDB when the effective replica count is at least two. For a `WaypointInstance` named `main`, the generated Gateway and other namespaced resources are named `d8-waypoint-main`.
 
-To attach all workloads and services in the namespace to the waypoint, run the following command:
-
-```shell
-d8 k label namespace myns istio.io/use-waypoint=main
-```
-
-To attach a single service or workload, run the following command:
+The controller does not attach Services to the waypoint. Attach all Services in the namespace by labeling the namespace with the generated Gateway name:
 
 ```shell
-d8 k -n myns label service myservice istio.io/use-waypoint=main
+d8 k label namespace myns istio.io/use-waypoint=d8-waypoint-main --overwrite
 ```
+
+Alternatively, attach an individual Service:
+
+```shell
+d8 k -n myns label service myservice istio.io/use-waypoint=d8-waypoint-main --overwrite
+```
+
+{% alert level="warning" %}
+The seamless migration procedure below supports service waypoints and traffic sent to a Kubernetes Service address. Workload waypoints, direct pod-IP traffic, and headless Services do not provide the same sidecar-to-waypoint interoperability and must not be relied on for seamless migration.
+{% endalert %}
+
+### Migrating from sidecar mode to ambient mode
+
+DKP supports a gradual and seamless namespace-by-namespace and service-by-service migration. After ambient is enabled, existing sidecars continue to work. When a Service is attached to a service waypoint, sidecars that have not yet been removed route Service-addressed traffic through that waypoint. Consequently, waypoint routing and L7 policy can be verified before any application pod is restarted without a sidecar.
+
+Migrate one namespace completely and verify it before proceeding to the next namespace.
+
+#### 1. Audit and back up the current configuration
+
+Before proceeding, verify that the namespace and its dependencies meet these prerequisites:
+
+- every Istio control-plane revision used by the namespace and by callers of its Services is 1.25 or newer. This includes revisions used by existing sidecars during the transition
+- the module uses the `CNIPlugin` traffic redirection mode and ambient mode is enabled
+- application traffic does not depend on DKP multicluster or federation features
+- the mesh contains no VM workloads that must communicate as ambient workloads, because VM workloads cannot join the ambient mesh
+- no applicable `PeerAuthentication` uses `mode: DISABLE`, because ambient mesh always uses mutual TLS between mesh workloads
+- no required configuration depends on `EnvoyFilter`, because waypoints do not support `EnvoyFilter`
+- every required egress restriction and route has an ambient-compatible replacement and has been tested from an ambient workload
+
+{% alert level="warning" %}
+Sidecar egress controls are not migrated automatically. Removing a sidecar can interrupt required external traffic or allow traffic that was previously restricted. Treat unresolved egress behavior as a migration blocker.
+{% endalert %}
+
+Resolve every incompatible dependency before migrating the namespace.
+
+Before changing a namespace:
+
+- record whether it uses `istio-injection=enabled` or `istio.io/rev=<revision>`, and inventory every pod template with an explicit `sidecar.istio.io/inject` label or annotation, including both `true` and `false` values
+- inventory all pod-owning resources, including Deployments, StatefulSets, DaemonSets, Jobs, CronJobs, standalone ReplicaSets, bare Pods, and workloads managed by custom operators
+- inventory `VirtualService`, `DestinationRule`, `ServiceEntry`, `Sidecar`, `AuthorizationPolicy`, `RequestAuthentication`, `PeerAuthentication`, `Telemetry`, `WasmPlugin`, and `EnvoyFilter` resources
+- identify all callers of the namespace's Services, including ingress traffic and clients in other namespaces
+- identify sidecar egress controls such as `outboundTrafficPolicy: REGISTRY_ONLY`, `Sidecar.egress.hosts`, `ServiceEntry.exportTo`, and routes through egress gateways
+- back up the namespace, workloads, and Istio resources in your configuration repository or export them with `d8 k get ... -o yaml`
+- record every namespace and Service label, policy, and route that you change so that rollback is reproducible
+
+#### 2. Prepare L7 routing and policies
+
+Throughout this migration, add the ambient equivalents alongside the existing sidecar policies rather than replacing them. Both sets enforce in parallel so that traffic stays protected regardless of whether it flows through a sidecar or a waypoint. Only after the waypoint path is verified do you remove the obsolete selector-based L7 policies (see step 4), while keeping the selector-based L4 policies that ztunnel must continue to enforce.
+
+Policy enforcement moves when traffic starts using a service waypoint: the waypoint enforces policy for Service-addressed traffic, while the destination ztunnel enforces workload-targeted L4 policy. Prepare the ambient equivalents before attaching Services to the waypoint.
+
+Routing resources require a separate controlled cutover. An `HTTPRoute` whose `parentRefs` targets a Service can affect existing sidecars as soon as the route is accepted, even before the Service is attached to a waypoint. Do not assume that the `VirtualService` remains authoritative until waypoint attachment.
+
+| Sidecar-mode resource | Migration action |
+| --- | --- |
+| `VirtualService` | Migrate to Gateway API `HTTPRoute`. `VirtualService` support with ambient waypoints is Alpha. First make the `HTTPRoute` behaviorally equivalent to the `VirtualService`, then apply it as a controlled routing cutover. Verify existing sidecar traffic immediately and remove the `VirtualService` promptly. Do not rely on precedence between overlapping resources or leave both configured for the same Service. |
+| `DestinationRule` traffic policy | Usually no change. The waypoint applies supported traffic policies. |
+| `DestinationRule` subsets used for routing | Create a separate Kubernetes Service for each version and reference those Services from `HTTPRoute.backendRefs`. |
+| L4 `AuthorizationPolicy` | Selector-based policies containing only L4 attributes can remain and are enforced by ztunnel. Add a Service-targeted policy if the same decision must also be enforced at the waypoint, and ensure that workload policy permits the waypoint identity. |
+| L7 `AuthorizationPolicy` | Copy the rules to a policy with `targetRefs` pointing to the protected Service. Remove the old selector-based L7 policy after waypoint traffic has been verified and before restarting pods without sidecars. |
+| `RequestAuthentication` and `WasmPlugin` | Attach to the Service or waypoint with `targetRefs`. |
+| `EnvoyFilter` | Not supported by waypoints. Replace it or treat it as a migration blocker. |
+
+For example, an L7 authorization policy for the `reviews` Service must target the Service rather than its pods:
+
+```yaml
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: reviews-get
+  namespace: myns
+spec:
+  targetRefs:
+    - group: ""
+      kind: Service
+      name: reviews
+  action: ALLOW
+  rules:
+    - to:
+        - operation:
+            methods: ["GET"]
+```
+
+A waypoint does not impersonate the original client. The destination pod sees the waypoint's service account as the source identity. If an existing selector-based L4 `ALLOW` policy restricts source principals, namespaces, or service accounts, add a pod-targeted rule that permits the waypoint service account. Without it, activating the waypoint can block traffic even when the waypoint policy allows the request. Keep any other pod-targeted L4 rules that ztunnel must continue to enforce.
+
+Get the generated waypoint's service account before writing the policy:
+
+```shell
+d8 k -n myns get deployment d8-waypoint-main -o jsonpath='{.spec.template.spec.serviceAccountName}'
+```
+
+For example, the following policy allows the generated waypoint to reach pods labeled `app: reviews`. Replace `cluster.local` if a different trust domain is used:
+
+```yaml
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: reviews-from-waypoint
+  namespace: myns
+spec:
+  selector:
+    matchLabels:
+      app: reviews
+  action: ALLOW
+  rules:
+    - from:
+        - source:
+            principals:
+              - cluster.local/ns/myns/sa/d8-waypoint-main
+```
+
+Keep sidecar-oriented policies alongside their ambient equivalents while validating waypoint traffic. Selector-based policies containing L7 attributes are not valid for ambient workloads: ztunnel cannot evaluate HTTP attributes and applies them fail-safe, which can deny all matching connections. Remove those old L7 policies after the waypoint path has been verified and before restarting any pod without a sidecar.
+
+For detailed resource and policy conversion examples, refer to [Migrate policies](https://istio.io/latest/docs/ambient/migrate/migrate-policies/) in the Istio documentation.
+
+{% alert level="info" %}
+Upstream Istio documentation may warn that traffic from a sidecar pod bypasses a destination service waypoint during migration. DKP's Istio builds add sidecar-to-service-waypoint interoperability, so this limitation does not apply to eligible Service-addressed traffic from DKP sidecars. Bypass prevention is still relevant for direct pod-IP traffic and other paths that do not address the Kubernetes Service.
+{% endalert %}
+
+{% alert level="warning" %}
+Review `DestinationRule` resources that use consistent-hash load balancing. A destination waypoint may not preserve the source-side endpoint selection performed by a sidecar, even though the resource is accepted. If affinity is required, verify it explicitly or treat the dependency as a migration blocker.
+{% endalert %}
+
+When replacing a `VirtualService`, use the following sequence:
+
+1. Create a behaviorally equivalent `HTTPRoute`, including equivalent matches, rewrites, redirects, timeouts, retries, and backend weights where supported.
+2. Apply the `HTTPRoute` and wait until its `Accepted` and `ResolvedRefs` conditions are `True`.
+3. Immediately exercise representative traffic from existing sidecars. Applying the `HTTPRoute` is the routing cutover. It is not merely preparation for waypoint attachment.
+4. Remove the replaced `VirtualService` promptly and verify traffic again.
+
+Applying and deleting two different resources is not atomic. A short coexistence interval may occur, but it must be treated as part of the controlled cutover. If the `HTTPRoute` intentionally changes behavior or cannot reproduce required `VirtualService` behavior, test and schedule that change separately rather than combining it with sidecar removal.
+
+#### 3. Deploy and activate the service waypoint
+
+Create a `WaypointInstance` with `spec.waypointFor: Service` as shown above. Deploying the waypoint alone does not change the traffic path. Wait until the instance is synchronized and its Deployment is available:
+
+```shell
+d8 k -n myns get waypointinstance main
+d8 k -n myns rollout status deployment/d8-waypoint-main
+```
+
+After policies are prepared, attach Services to the waypoint one at a time so that each traffic path can be verified independently:
+
+```shell
+d8 k -n myns label service myservice istio.io/use-waypoint=d8-waypoint-main --overwrite
+```
+
+Traffic addressed to that Service is now routed through the waypoint from both existing sidecars and ambient workloads. Exercise representative application paths and verify connectivity, routing, authorization, and telemetry. If verification fails, detach the Service while investigating:
+
+```shell
+d8 k -n myns label service myservice istio.io/use-waypoint-
+```
+
+Repeat for every Service that requires the waypoint. Workloads that need only ambient L4 features do not require one. A Service needs a waypoint not only when an L7 routing or authorization policy applies to it, but also when its clients depend on request-level (L7) load balancing: ztunnel provides mutual TLS and L4 balancing between endpoints, but does not distribute individual HTTP requests. If in doubt, attach the waypoint. Keep individual Service labels if only selected Services need L7 processing. If every Service in the namespace must use the waypoint, add the namespace label, verify traffic, and then remove `istio.io/use-waypoint` from every Service that was attached explicitly:
+
+```shell
+d8 k label namespace myns istio.io/use-waypoint=d8-waypoint-main --overwrite
+d8 k -n myns label service myservice istio.io/use-waypoint-
+```
+
+Before removing sidecars from a client namespace, ensure that every destination Service on which it depends has a verified waypoint and supports traffic from ambient clients. This prevents L7 routing or policy from being skipped on cross-namespace paths.
+
+Istio ingress gateways bypass a waypoint by default. If ingress traffic must be subject to the destination Service's waypoint policies, opt in on each externally accessed Service and verify the ingress path separately:
+
+```shell
+d8 k -n myns label service myservice istio.io/ingress-use-waypoint=true --overwrite
+```
+
+#### 4. Remove obsolete L7 policies and switch the namespace to ambient mode
+
+After the waypoint path has been verified, remove selector-based L7 `AuthorizationPolicy` resources whose rules are now enforced by `targetRefs`-based waypoint policies. Do not remove selector-based L4 policies that ztunnel must continue to enforce. Proceed only after confirming that all traffic which depends on the removed L7 policies uses a waypoint-enabled Kubernetes Service address. Direct pod-IP and headless-Service paths are migration blockers because they can bypass the service waypoint and lose L7 enforcement.
+
+Then enroll the namespace in ambient mode:
+
+```shell
+d8 k label namespace myns istio.io/dataplane-mode=ambient --overwrite
+```
+
+Confirm that the pods are known to ztunnel before changing sidecar injection. Run `istioctl` from the DKP debug container as described in [Debugging Istio with istioctl from the debug container](#debugging-istio-with-istioctl-from-the-debug-container):
+
+```shell
+istioctl ztunnel-config workloads -n d8-istio | grep myns
+```
+
+The pods should be listed with `HBONE` as their protocol. Pods that currently have sidecars remain handled by their sidecars even though they are present in ztunnel's workload configuration.
+
+Then remove the namespace's sidecar injection label. Keeping this order avoids a period in which newly created pods use neither sidecars nor ztunnel:
+
+```shell
+# Namespace using the default Istio revision.
+d8 k label namespace myns istio-injection-
+
+# Namespace pinned with istio.io/rev=<revision>.
+d8 k label namespace myns istio.io/rev-
+```
+
+Also remove any pod-template-level `sidecar.istio.io/inject=true` label or annotation. Such an override can continue injecting a sidecar even after namespace-level injection is disabled.
+
+The ambient label dynamically enrolls eligible running sidecar-free pods, but it does not remove an injected sidecar or modify a pod template. Pods that still have sidecars remain in sidecar mode. Recreate pods gradually according to their controller type:
+
+- restart Deployments, StatefulSets, and DaemonSets one workload at a time, waiting for each rollout to become ready
+- update CronJob job templates so that future Jobs are created without sidecars
+- update and recreate bare Pods, standalone ReplicaSets, and workloads managed by custom operators using their authoritative manifests or operator-specific procedure
+
+For example:
+
+```shell
+d8 k -n myns rollout restart deployment/myapp
+d8 k -n myns rollout status deployment/myapp
+```
+
+During the rollout, old sidecar pods and new ambient pods can coexist and communicate through the service waypoint. Do not proceed until every relevant running application pod has been recreated without a sidecar.
+
+#### 5. Verify the migrated namespace
+
+Confirm that:
+
+- application pods no longer contain the `istio-proxy` container
+- the `ztunnel` pod is ready on every node that runs an application pod
+- `WaypointInstance/main` is synchronized and `deployment/d8-waypoint-main` is available
+- traffic between migrated workloads, remaining sidecar workloads, and ingress clients succeeds
+- HTTP routing, authorization, request authentication, telemetry, retries, and failure handling behave as expected
+
+The following command lists non-terminal application pods that still contain a sidecar. Generated waypoint pods are excluded because their Envoy container is also named `istio-proxy`:
+
+```shell
+d8 k -n myns get pods -o json | jq -r '
+  .items[]
+  | select(.status.phase != "Succeeded" and .status.phase != "Failed")
+  | select(.metadata.labels["gateway.networking.k8s.io/gateway-name"] == null)
+  | select(any(.spec.containers[]?; .name == "istio-proxy"))
+  | .metadata.name'
+```
+
+Investigate every returned pod. Determine its owner before changing it:
+
+```shell
+d8 k -n myns get pod <pod-name> \
+  -o jsonpath='{range .metadata.ownerReferences[*]}{.kind}{"/"}{.name}{"\n"}{end}'
+```
+
+The result must be empty before considering the namespace fully migrated. Do not migrate the next namespace until the current namespace has passed its application-specific checks.
+
+#### 6. Clean up transitional configuration
+
+After all pods in the namespace run in ambient mode and the new policy behavior is verified:
+
+- confirm that no obsolete selector-based L7 policies remain
+- confirm that no replaced `VirtualService` overlaps an `HTTPRoute` for the same Service
+- retain selector-based L4 policies that ztunnel still enforces, including policies that restrict direct workload access to the waypoint identity where required
+- retain the `WaypointInstance`, `istio.io/use-waypoint` attachment, and ambient policies
+
+### Rolling a namespace back to sidecar mode
+
+Keep the waypoint, ambient enrollment, and ambient policies in place while restoring sidecars. Restore the namespace's original injection label without removing the ambient label:
+
+```shell
+# For the default revision:
+d8 k label namespace myns istio-injection=enabled --overwrite
+
+# Or restore the original revision:
+d8 k label namespace myns istio.io/rev=<original-revision> --overwrite
+```
+
+Restore the original workload-level injection settings. In particular, remove any explicit `sidecar.istio.io/inject=false` setting that would prevent sidecar injection. Update the authoritative pod templates and recreate pods gradually according to their controller type:
+
+- restart Deployments, StatefulSets, and DaemonSets one at a time
+- update CronJob templates so that future Jobs receive sidecars
+- recreate bare Pods, standalone ReplicaSets, and custom-operator-managed workloads using their normal management procedure
+
+Verify each workload before proceeding:
+
+```shell
+d8 k -n myns rollout restart deployment/myapp
+d8 k -n myns rollout status deployment/myapp
+```
+
+Replacement pods receive sidecars, while pods not yet restarted remain protected by ztunnel. The following command lists non-terminal application pods that do not contain an `istio-proxy` container; generated waypoint pods are excluded:
+
+```shell
+d8 k -n myns get pods -o json | jq -r '
+  .items[]
+  | select(.status.phase != "Succeeded" and .status.phase != "Failed")
+  | select(.metadata.labels["gateway.networking.k8s.io/gateway-name"] == null)
+  | select(any(.spec.containers[]?; .name == "istio-proxy") | not)
+  | .metadata.name'
+```
+
+Investigate every returned pod and correct its owning resource or pod template. The result must be empty before removing ambient enrollment:
+
+```shell
+d8 k label namespace myns istio.io/dataplane-mode-
+```
+
+Removing ambient enrollment while a running application pod is still sidecar-free leaves that pod outside both Istio data planes.
+
+Restore the sidecar routing, authorization, and egress resources removed during migration before detaching the waypoint. Replace each ambient `HTTPRoute` with a behaviorally equivalent original `VirtualService` as a controlled cutover: apply the `VirtualService`, immediately verify sidecar traffic, remove the overlapping `HTTPRoute` promptly, and verify again. Do not rely on precedence between the two resources or leave both configured for the same Service. Because applying and deleting separate resources is not atomic, schedule any intentional routing change separately. Restore selector-based L7 policies only after the affected workloads have sidecars.
+
+{% alert level="warning" %}
+Do not restore selector-based L7 policies while affected sidecar-free pods remain. Ztunnel cannot evaluate their HTTP attributes and may deny matching connections.
+{% endalert %}
+
+Detach Services from the waypoint one at a time and verify routing and policy after each change. Remove the label from the namespace if namespace-level attachment was used, or from every individually attached Service. Also remove the ingress opt-in where it was added:
+
+```shell
+d8 k label namespace myns istio.io/use-waypoint-
+d8 k -n myns label service myservice istio.io/use-waypoint-
+d8 k -n myns label service myservice istio.io/ingress-use-waypoint-
+```
+
+After all Services work through sidecars without the waypoint, remove ambient-only policies and routes, and then delete the `WaypointInstance`. Restoring sidecars can be gradual, but switching routing and policy resources is not necessarily atomic. Test the rollback procedure before using it in production environment.
 
 ### Disabling ambient mesh
 
 {% alert level="warning" %}
-Before disabling ambient mode, delete all WaypointInstance resources. With ambient mode disabled, the waypoint controller is not running and cannot reconcile or clean up waypoint resources. This leaves orphaned waypoints, which are reported by Deckhouse Kubernetes Platform (DKP) in the [`D8IstioActiveWaypointsWithAmbientDisabled`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istioactivewaypointswithambientdisabled) alert.
+Before disabling ambient mode, migrate or remove all ambient workloads and delete all WaypointInstance resources. With ambient mode disabled, the waypoint controller is not running and cannot reconcile or clean up waypoint resources. This leaves orphaned waypoints, which are reported by DKP in the [`D8IstioActiveWaypointsWithAmbientDisabled`](/products/kubernetes-platform/documentation/v1/reference/alerts.html#istio-d8istioactivewaypointswithambientdisabled) alert.
 {% endalert %}
 
-To disable the ambient mode, follow these steps:
+To disable ambient mode:
 
-1. Check if any WaypointInstance resources remain and delete them as necessary using the following commands:
+1. For each namespace enrolled in ambient mode, choose one of the following options before disabling ambient:
+   - Roll back to sidecar mode: Follow [Rolling a namespace back to sidecar mode](#rolling-a-namespace-back-to-sidecar-mode). Verify that all workloads which must remain in the mesh have sidecars before removing `istio.io/dataplane-mode=ambient`.
+   - Leave the mesh: Remove `istio.io/dataplane-mode=ambient` only after confirming that sidecar-free workloads can operate without Istio mTLS, authorization, routing, and telemetry. Removing this label immediately places such workloads outside both Istio data planes.
+
+   Remove stale namespace and Service waypoint attachment labels after completing the selected option.
+2. Check for and delete every `WaypointInstance`:
 
    ```shell
    d8 k get waypointinstance -A
    d8 k -n myns delete waypointinstance main
    ```
 
-2. Disable the ambient mode by setting [`ambient.enabled`](configuration.html#parameters-ambient-enabled) to `false` in the module configuration.
+3. Set [`ambient.enabled`](configuration.html#parameters-ambient-enabled) to `false` in the module configuration.
 
 ## Control the data-plane behavior
 

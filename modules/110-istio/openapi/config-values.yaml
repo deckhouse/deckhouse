@@ -985,8 +985,6 @@ properties:
         x-doc-d8Editions:
         - ee
         - cse-pro
-        x-doc-skip: true
-        x-experimental: true
         default: {}
         properties:
           resourcesManagement:
@@ -1181,7 +1179,6 @@ properties:
     x-doc-d8Editions:
     - ee
     - cse-pro
-    x-experimental: true
     default: {"enabled": false}
     properties:
       enabled:
@@ -1189,7 +1186,6 @@ properties:
         default: false
         description: |
           Enable ambient mesh.
-        x-experimental: true
         x-examples: [true]
       waypointController:
         type: object
@@ -1198,7 +1194,6 @@ properties:
         x-doc-d8Editions:
         - ee
         - cse-pro
-        x-experimental: true
         default: {}
         properties:
           resourcesManagement:
