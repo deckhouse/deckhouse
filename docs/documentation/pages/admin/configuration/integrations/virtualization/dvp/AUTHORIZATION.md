@@ -114,8 +114,6 @@ The Secret is created during cluster installation together with the other resour
 - The `authScheme` field is set to `kubeconfig`.
 - The `secret` field contains the Base64-encoded kubeconfig.
 
-The `identity` field is not used with the `kubeconfig` scheme.
-
 ```yaml
 apiVersion: v1
 kind: Secret
@@ -129,8 +127,6 @@ stringData:
 ```
 
 Replace `<KUBE_CONFIG_BASE64>` with the Base64-encoded kubeconfig.
-
-The Secret is checked by a webhook. The platform rejects the Secret if the `authScheme` field is set to another scheme, the `secret` field is empty, the `identity` field is set, or the content of the `secret` field cannot be decoded as a valid kubeconfig. An update that changes the Secret type is rejected as well.
 
 To change the credentials, update the `secret` field:
 

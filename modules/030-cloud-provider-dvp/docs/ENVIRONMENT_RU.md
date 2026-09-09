@@ -114,8 +114,6 @@ base64 kubeconfig | tr -d '\n'
 - поле `authScheme` со значением `kubeconfig`;
 - поле `secret` с kubeconfig в кодировке Base64.
 
-Поле `identity` для схемы `kubeconfig` не используется.
-
 ```yaml
 apiVersion: v1
 kind: Secret
@@ -129,8 +127,6 @@ stringData:
 ```
 
 Замените `<KUBE_CONFIG_BASE64>` на kubeconfig в кодировке Base64.
-
-Секрет проверяется вебхуком. Платформа отклоняет секрет, если в поле `authScheme` указана другая схема, поле `secret` пустое, задано поле `identity` или содержимое поля `secret` не декодируется как корректный kubeconfig. Обновление, которое меняет тип секрета, платформа тоже отклоняет.
 
 Чтобы сменить учётные данные, обновите поле `secret`:
 
