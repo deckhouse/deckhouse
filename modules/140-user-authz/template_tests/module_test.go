@@ -170,7 +170,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 
 	Context("With custom resources (incl. limitNamespaces), enabledMultiTenancy and controlPlaneConfigurator", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd"]`)
+			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd", "prometheus"]`)
 			f.ValuesSetFromYaml("userAuthz.internal.clusterAuthRuleCrds", testCLusterRoleCRDsWithLimitNamespaces)
 			f.ValuesSetFromYaml("userAuthz.internal.authRuleCrds", testRoleCRDs)
 
@@ -308,11 +308,11 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(ds.Field("spec.template.spec.containers.1.env").String()).To(ContainSubstring("http://127.0.0.1:4243/metrics"))
 			// The sidecar authorizes scrapers against the virtual subresource granted in rbac-to-us.
 			Expect(ds.Field("spec.template.spec.containers.1.env").String()).To(ContainSubstring("prometheus-metrics"))
-			role := f.KubernetesResource("Role", "d8-user-authz", "access-to-user-authz-webhook-prometheus-metrics")
+			role := f.KubernetesResource("Role", "d8-user-authz", "access-to-webhook-prometheus-metrics")
 			Expect(role.Exists()).To(BeTrue())
 			Expect(role.Field("rules").String()).To(ContainSubstring("daemonsets/prometheus-metrics"))
 			Expect(role.Field("rules").String()).To(ContainSubstring("user-authz-webhook"))
-			Expect(f.KubernetesResource("RoleBinding", "d8-user-authz", "access-to-user-authz-webhook-prometheus-metrics").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("RoleBinding", "d8-user-authz", "access-to-webhook-prometheus-metrics").Exists()).To(BeTrue())
 			// The sidecar needs d8:rbac-proxy to ask the API server about the scraper.
 			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:webhook:rbac-proxy").Exists()).To(BeTrue())
 

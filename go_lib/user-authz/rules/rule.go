@@ -142,7 +142,7 @@ func Project(obj interface{}) (interface{}, error) {
 
 // SubjectKey is the directory key of a subject: the kind and the name the API server puts into
 // user info. ServiceAccounts are keyed by their username system:serviceaccount:<namespace>:<name>.
-func SubjectKey(s Subject) (kind, name string) {
+func SubjectKey(s Subject) (string, string) {
 	if s.Kind == "ServiceAccount" {
 		return s.Kind, "system:serviceaccount:" + s.Namespace + ":" + s.Name
 	}
