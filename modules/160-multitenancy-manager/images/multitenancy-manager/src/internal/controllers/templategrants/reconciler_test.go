@@ -144,7 +144,7 @@ func TestReconcile_MissingReferenceRequeues(t *testing.T) {
 
 	res, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: "demo"}})
 	require.NoError(t, err)
-	assert.True(t, res.Requeue, "a missing reference must requeue")
+	assert.Positive(t, res.RequeueAfter, "a missing reference must requeue")
 
 	getPolicy(t, c, "template-demo-inline") // inline still materialized
 	err = c.Get(context.Background(), client.ObjectKey{Name: "template-demo-absent"}, &grantsv1alpha1.ClusterResourceGrantPolicy{})
@@ -157,4 +157,5 @@ func TestReconcile_TemplateGoneIsNoop(t *testing.T) {
 	res, err := r.Reconcile(context.Background(), ctrl.Request{NamespacedName: types.NamespacedName{Name: "ghost"}})
 	require.NoError(t, err)
 	assert.False(t, res.Requeue)
+	assert.Zero(t, res.RequeueAfter)
 }
