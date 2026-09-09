@@ -19,6 +19,12 @@ To ensure Deckhouse Kubernetes Platform (DKP) works correctly with Microsoft Azu
   - `cloud-final.service`
   - `cloud-init.service`
 
+{% alert level="warning" %}
+Starting with version 1.77, new clusters in Azure use the Cilium CNI by default with pod traffic tunneling over VXLAN. In existing clusters, the CNI stays unchanged.
+
+Make sure all nodes run Linux kernel 5.8 or newer and that firewall rules allow UDP traffic between nodes. For the list of ports, see [Network interaction of the platform components](../../../../reference/network_interaction.html); for CNI settings, see [Internal network configuration](../../../configuration/network/internal/configuration.html).
+{% endalert %}
+
 ## Accessing the Azure API
 
 To manage Azure resources from DKP, you need a service account with the `Contributor` role within the appropriate subscription.

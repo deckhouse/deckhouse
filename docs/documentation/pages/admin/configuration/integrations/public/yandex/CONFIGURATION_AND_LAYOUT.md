@@ -498,6 +498,8 @@ Below are general guidelines for configuring security groups.
 Incorrectly configured security group rules may negatively impact on cluster operation.
 Read through the [security group specifics in Yandex Cloud](https://yandex.cloud/en/docs/vpc/concepts/security-groups#security-groups-notes) before using them in production environments.
 
+If the cluster uses Cilium with pod traffic tunneling over VXLAN, allow UDP traffic between nodes on the ports listed in [Network interaction of the platform components](../../../../reference/network_interaction.html).
+
 1. Identify the cloud network used by the DKP cluster.
 
    The network name matches the `prefix` field in the [ClusterConfiguration](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#clusterconfiguration) resource.
