@@ -11,7 +11,7 @@ When running a cluster on Azure, it automatically:
 - Removes nodes from the cluster that no longer exist in the cloud.
 - Updates node metadata to reflect the current configuration.
 - Provisions disks for nodes via CSI.
-- Connects the required CNI network (a simple bridge is used).
+- Connects the required CNI network ([`cni-cilium`](/modules/cni-cilium/) is used).
 - Makes [AzureInstanceClass](/modules/cloud-provider-azure/cr.html#azureinstanceclass) definitions available for virtual machines, which can be used later in [NodeGroup](/modules/node-manager/cr.html#nodegroup-v1-spec-cloudinstances-classreference) configurations.
 
 {% alert level="info" %}
