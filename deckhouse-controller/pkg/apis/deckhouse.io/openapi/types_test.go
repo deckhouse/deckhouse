@@ -175,6 +175,7 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 			"storageClass": {
 				Type:                 StringOrArray{"string"},
 				XGrant:               "storageclasses",
+				XImmutable:           true,
 				XUIOrder:             int64Ptr(0),
 				XUIValidationMessage: "must reference an existing StorageClass",
 			},
@@ -222,6 +223,9 @@ func TestMarshalRoundtrip_xDeckhouseExtensions(t *testing.T) {
 	}
 	if sc.XUIValidationMessage != "must reference an existing StorageClass" {
 		t.Errorf("x-deckhouse-ui-validation-message: got %q", sc.XUIValidationMessage)
+	}
+	if !sc.XImmutable {
+		t.Errorf("x-deckhouse-immutable: got false, want true")
 	}
 
 	rep, ok := restored.Properties["replicas"]
@@ -475,10 +479,10 @@ func realModuleSchema() *OpenAPIV3Schema {
 				XUIOrder:    int64Ptr(2),
 				XValidations: []ValidationRule{
 					{
-						Expression:      "self >= 1 && self <= 10",
-						Message:   "replicas must be between 1 and 10",
-						Reason:    stringPtr("FieldValueInvalid"),
-						FieldPath: ".replicas",
+						Expression: "self >= 1 && self <= 10",
+						Message:    "replicas must be between 1 and 10",
+						Reason:     stringPtr("FieldValueInvalid"),
+						FieldPath:  ".replicas",
 					},
 				},
 			},
@@ -554,8 +558,8 @@ func realModuleSchema() *OpenAPIV3Schema {
 		},
 		XValidations: []ValidationRule{
 			{
-				Expression:    "has(self.storageClass) && self.storageClass != ''",
-				Message: "storageClass is required",
+				Expression: "has(self.storageClass) && self.storageClass != ''",
+				Message:    "storageClass is required",
 			},
 		},
 	}
