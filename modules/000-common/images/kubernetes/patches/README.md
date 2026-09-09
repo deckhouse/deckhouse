@@ -33,14 +33,14 @@ Fixes a bug where pods with hostNetwork ignored host aliases (k8s < 1.32):
 
 Add resource quota ignore mechanism for k8s pvc and pod based on labels
 
-### kubelet-graceful-shutdown-cleanup-memory-manager-state (1.32, 1.33, 1.35, 1.36 -- removed on 1.34)
+### kubelet-graceful-shutdown-cleanup-memory-manager-state (1.32 only -- removed on 1.33+)
 
 This patch ensures that the Memory Manager state file is removed during a graceful node shutdown.
 
 The Memory Manager stores the node memory state in a file. After a reboot, the amount of used memory may slightly differ from the previous state, which can make the stored state invalid and prevent the kubelet from starting. Removing the state file before shutdown ensures that the Memory Manager starts with a clean state after the reboot.
 See issue: https://github.com/kubernetes/kubernetes/issues/131253
 
-**Removed on 1.34**, superseded by `015-kubelet-checkpoint-state-self-heal`, which repairs the
+**Removed on 1.33 through 1.36**, superseded by `kubelet-checkpoint-state-self-heal`, which repairs the
 divergence at kubelet start regardless of how the node went down -- including a power cut, which
 this patch never covered.
 
@@ -53,7 +53,7 @@ already gone while the kubelet keeps running, and the next kubelet restart silen
 the memory manager from scratch while pinned containers are still holding their NUMA zones.
 
 Dropping it required re-rolling two patches that carried `cleanupMemoryManagerState()` in their
-context: CE `012-fix-scheduler-node-graceful-shutdown` (its hunk only normalised the block's
+context: CE `fix-scheduler-node-graceful-shutdown` (its hunk only normalised the block's
 indentation and became meaningless) and EE
 `100-kubelet-graceful-shutdown-wait-for-external-inhibitors` (it relocated the call). The EE patch
 keeps its own feature -- waiting for external inhibit locks -- untouched; only the references to
@@ -199,7 +199,12 @@ carried on 1.34 (`014`), 1.35 (`014`) and 1.36 (`013`) only.
 
 > Upstream PR https://github.com/kubernetes/kubernetes/pull/141100
 
-### 015-kubelet-checkpoint-state-self-heal.patch (1.34)
+### kubelet-checkpoint-state-self-heal.patch (1.33+)
+
+Carried on 1.33 (`014`), 1.34 (`015`), 1.35 (`015`) and 1.36 (`014`); the numbers differ because
+each version's chain does. The `pkg/kubelet/cm/checkpointselfheal` package the patch adds is
+byte-identical across all four; only the call sites differ, following the upstream logger and
+checkpoint APIs of each release.
 
 Lets the kubelet start when the CPU manager or the memory manager finds its
 checkpoint unusable, instead of exiting.
