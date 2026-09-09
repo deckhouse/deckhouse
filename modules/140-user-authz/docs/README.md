@@ -127,15 +127,15 @@ The system and subsystem roles do not grant access to the namespace of user appl
 
 They grant access only to system namespaces (starting with `d8-` or `kube-`), and only to those system namespaces where the modules of the corresponding role subsystem are running.
 
-A manage role does not, by itself, let you grant access to other people.
+A system or subsystem role does not, by itself, let you grant access to other people.
 
 Creating a User or Group that is not already a grant subject is ordinary object creation.
 
 Creating a User for an email that already carries a grant, or writing a ClusterAuthorizationRule, is granting roles. The request is admitted only if the requester already has covering permissions or is explicitly allowed to assign those roles.
 
-The ClusterAuthorizationRule `spec.accessLevel` field is a [current-model](#current-role-based-model) level: `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`. A `security` subsystem manager can assign any of those except `SuperAdmin`. That manager also cannot assign the Kubernetes `cluster-admin` ClusterRole. Experimental-model security roles stop at `d8:subsystem:security:admin`.
+The ClusterAuthorizationRule `spec.accessLevel` field is a [basic-model](#basic-role-based-model) level: `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`. A `security` subsystem manager can assign any of those except `SuperAdmin`. That manager also cannot assign the Kubernetes `cluster-admin` ClusterRole. Within the granular model the security manager assigns the `security` subsystem roles up to `d8:subsystem:security:manager`.
 
-Webhook deny messages call the `accessLevel` values basic, so they are not confused with manage-role levels (`viewer` / `manager`).
+Webhook deny messages call the `accessLevel` values basic, so they are not confused with the granular role levels (`viewer` / `manager` / `superadmin`).
 
 Permission to create User and Group objects in the `user-authn` module is not enough: it does not grant the roles already attached to that email.
 {% endalert %}

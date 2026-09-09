@@ -13,6 +13,12 @@ metadata:
     rbac.deckhouse.io/use-role: admin
     rbac.deckhouse.io/kind: role
     rbac.deckhouse.io/scope: system
+    # can-assign range of the identity-assign webhook: a system manager assigns basic access levels
+    # up to ClusterAdmin and granular roles up to the manager level of any scope, but no superadmin
+    # role, cluster-admin or SuperAdmin.
+    user-authz.deckhouse.io/can-assign-basic-max: ClusterAdmin
+    user-authz.deckhouse.io/can-assign-scope: system
+    user-authz.deckhouse.io/can-assign-max-level: admin
 aggregationRule:
   clusterRoleSelectors:
     - matchLabels:

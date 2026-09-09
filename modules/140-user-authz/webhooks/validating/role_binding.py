@@ -72,9 +72,13 @@ CAPABILITY_MARKER = "-capability:"
 
 # Identities that legitimately manage bindings; excluded at the API server via matchConditions and
 # repeated here as defense-in-depth for clusters where matchConditions are unavailable.
+# user-authz-controller reconciles the ClusterRoleBindings of the ClusterAuthorizationRules (roleRef
+# user-authz:*, which this webhook allows anyway); the exemption keeps its initial adoption of the
+# existing bindings and every later reconcile off the webhook path.
 PRIVILEGED_USERS = {
     "system:apiserver",
     "system:serviceaccount:d8-system:deckhouse",
+    "system:serviceaccount:d8-user-authz:controller",
 }
 
 CONFIG = """
@@ -87,6 +91,8 @@ kubernetesValidating:
     name: exclude-kube-apiserver
   - expression: ("system:serviceaccount:d8-system:deckhouse" != request.userInfo.username)
     name: exclude-deckhouse
+  - expression: ("system:serviceaccount:d8-user-authz:controller" != request.userInfo.username)
+    name: exclude-user-authz-controller
   rules:
   - apiGroups:   ["rbac.authorization.k8s.io"]
     apiVersions: ["*"]

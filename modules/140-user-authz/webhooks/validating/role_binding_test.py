@@ -143,6 +143,10 @@ class TestRoleBindingValidation(unittest.TestCase):
         out = self.run_hook(binding_context("d8:project:admin", username="system:apiserver"))
         tests.assert_validation_allowed(self, out, None)
 
+    def test_user_authz_controller_bypasses(self):
+        out = self.run_hook(binding_context("d8:namespace:admin", username="system:serviceaccount:d8-user-authz:controller"))
+        tests.assert_validation_allowed(self, out, None)
+
 
 if __name__ == "__main__":
     unittest.main()

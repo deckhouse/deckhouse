@@ -34,9 +34,10 @@ rules:
   resources: ["clusterroles", "clusterrolebindings"]
   verbs: ["get", "list", "watch"]
 - apiGroups: ["rbac.authorization.k8s.io"]
-  # rolebindings/clusterrolebindings: live-listed on demand by the user-authz rbacv2-system-resource-*
-  # webhooks to determine whether the requester is a superadmin (no informer / cluster-wide watch).
-  resources: ["rolebindings", "clusterrolebindings"]
+  # rolebindings: live-listed on demand by the user-authz rbacv2-system-resource-* webhooks to
+  # determine whether the requester is a superadmin (no informer / cluster-wide watch). The
+  # clusterrolebindings they list are covered by the watch rule above.
+  resources: ["rolebindings"]
   verbs: ["get", "list"]
 - apiGroups: ["network.deckhouse.io"]
   resources: ["metalloadbalancerclasses"]
