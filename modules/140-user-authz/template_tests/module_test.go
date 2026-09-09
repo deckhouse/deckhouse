@@ -157,10 +157,10 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			// and must not be part of the ClusterRole: cluster-wide, it would let the controller
 			// take over the lease of any other component in the cluster.
 			Expect(role.Field("rules").String()).NotTo(ContainSubstring("leases"))
-			lease := f.KubernetesResource("Role", "d8-user-authz", "d8:user-authz:controller:leader-election")
+			lease := f.KubernetesResource("Role", "d8-user-authz", "controller")
 			Expect(lease.Exists()).To(BeTrue())
 			Expect(lease.Field("rules").String()).To(ContainSubstring("leases"))
-			Expect(f.KubernetesResource("RoleBinding", "d8-user-authz", "d8:user-authz:controller:leader-election").
+			Expect(f.KubernetesResource("RoleBinding", "d8-user-authz", "controller").
 				Field("subjects.0.name").String()).To(Equal("controller"))
 		})
 
