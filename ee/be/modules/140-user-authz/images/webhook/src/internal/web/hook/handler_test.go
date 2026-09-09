@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hook
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -721,10 +722,6 @@ func (d *dummyCache) Get(api, key string) (bool, error) {
 	return namespaced, nil
 }
 
-func (d *dummyCache) GetCoreResources() (cache.CoreResourcesDict, error) {
-	return d.coreResources, nil
-}
-
 func (d *dummyCache) GetPreferredVersion(group, resource string) (string, error) {
 	if d.err != nil {
 		return "", d.err
@@ -736,7 +733,7 @@ func (d *dummyCache) GetPreferredVersion(group, resource string) (string, error)
 	return "", fmt.Errorf("no version of %s serves %s: %w", group, resource, cache.ErrNotFound)
 }
 
-func (d *dummyCache) Check() error {
+func (d *dummyCache) Check(context.Context) error {
 	return nil
 }
 

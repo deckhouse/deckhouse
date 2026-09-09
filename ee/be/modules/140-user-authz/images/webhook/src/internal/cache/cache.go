@@ -70,8 +70,7 @@ const (
 type Cache interface {
 	Get(string, string) (bool, error)
 	GetPreferredVersion(group, resource string) (string, error)
-	GetCoreResources() (CoreResourcesDict, error)
-	Check() error
+	Check(ctx context.Context) error
 }
 
 var _ Cache = (*NamespacedDiscoveryCache)(nil)
@@ -173,7 +172,13 @@ func NewNamespacedDiscoveryCache(logger *log.Logger, apiAddress string) *Namespa
 // larger transport-level dial/handshake timeouts. The caller must call the returned
 // cancel func once done with the request.
 func (c *NamespacedDiscoveryCache) newGetRequest(path string) (*http.Request, context.CancelFunc, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	return c.newGetRequestWithContext(context.Background(), path)
+}
+
+// newGetRequestWithContext is newGetRequest for a caller that has a context of its own - a probe,
+// or an authorization request - so the work stops when the caller stops waiting.
+func (c *NamespacedDiscoveryCache) newGetRequestWithContext(parent context.Context, path string) (*http.Request, context.CancelFunc, error) {
+	ctx, cancel := context.WithTimeout(parent, requestTimeout)
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.kubernetesAPIAddress+path, nil)
 	if err != nil {
@@ -184,19 +189,22 @@ func (c *NamespacedDiscoveryCache) newGetRequest(path string) (*http.Request, co
 	return req, cancel, nil
 }
 
-func (c *NamespacedDiscoveryCache) Check() error {
-	return Retry(func() (bool, error) {
-		req, cancel, err := c.newGetRequest("/version")
-		if err != nil {
-			return false, fmt.Errorf("check Kubernetes API create request: %w", err)
-		}
-		defer cancel()
+// Check asks the API server whether it is there. One attempt, bounded by the caller's context.
+//
+// It used to retry: ten attempts of a two-second request with sleeps between them, about twenty-one
+// seconds in all, from a readiness handler whose client gives up after four and whose probe fires
+// every few seconds. So the one moment the check matters - the API server being unreachable - was
+// the moment it accumulated overlapping goroutines, each holding a connection to the API server
+// that is already struggling, for answers nobody is waiting for any more. Retrying a liveness
+// question is the wrong shape anyway: the probe itself is the retry.
+func (c *NamespacedDiscoveryCache) Check(ctx context.Context) error {
+	req, cancel, err := c.newGetRequestWithContext(ctx, "/version")
+	if err != nil {
+		return fmt.Errorf("check Kubernetes API create request: %w", err)
+	}
+	defer cancel()
 
-		if err := c.execRequest(req, "check API", nil); err != nil {
-			return true, err
-		}
-		return false, nil
-	})
+	return c.execRequest(req, "check API", nil)
 }
 
 func (c *NamespacedDiscoveryCache) initClient() {
@@ -457,8 +465,11 @@ func (c *NamespacedDiscoveryCache) Get(apiGroup, resource string) (bool, error) 
 
 	switch {
 	case !ok:
-		// there is no cache, renew
-		if err := c.renewCache(apiGroup); err != nil {
+		// The group has never been listed. One attempt, not the retry loop: this is the
+		// authorization path, the caller chose the group, and the API server gives the whole
+		// webhook three seconds before it gives up and denies - retries past that only pile up
+		// work for an answer nobody is waiting for.
+		if err := c.renewCacheOnceNoRetry(apiGroup); err != nil {
 			// A group the API server 404s has to be remembered as empty, or the rate limit below
 			// never applies to it: the caller picks the group out of the request path, so an
 			// unknown group is the cheapest way to ask for a listing, and without an entry every

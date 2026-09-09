@@ -6,6 +6,7 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package cache
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -409,9 +410,13 @@ func TestCacheCheck(t *testing.T) {
 	cache.client = server.Client()
 	cache.kubernetesAPIAddress = server.URL
 
-	expectedErr := "check API: kube response error: 500 ERROR: exceeded retry limit"
+	// One attempt, and the error says what happened. Check used to retry ten times over about
+	// twenty seconds; the readiness probe that calls it gives up long before that and fires again,
+	// so the retries only accumulated overlapping requests against an API server that is already
+	// unreachable. The probe period is the retry.
+	expectedErr := "check API: kube response error: 500 ERROR"
 
-	err := cache.Check()
+	err := cache.Check(context.Background())
 	if err.Error() != expectedErr {
 		t.Fatalf("%q received, expected %q", err.Error(), expectedErr)
 	}
@@ -420,9 +425,42 @@ func TestCacheCheck(t *testing.T) {
 	cache.client = server.Client()
 	cache.kubernetesAPIAddress = server.URL
 
-	err = cache.Check()
+	err = cache.Check(context.Background())
 	if err != nil {
 		t.Fatalf("%q received, expected nil", err.Error())
+	}
+}
+
+// A caller that stops waiting stops the work. The readiness handler passes the request's context,
+// so a probe the kubelet has already given up on does not leave a request in flight against an API
+// server that is struggling.
+func TestCacheCheckHonoursTheCallersContext(t *testing.T) {
+	blocked := make(chan struct{})
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		<-blocked
+	}))
+	defer server.Close()
+	defer close(blocked)
+
+	cache := NamespacedDiscoveryCache{
+		client:               server.Client(),
+		kubernetesAPIAddress: server.URL,
+		logger:               log.New(io.Discard, "", log.LstdFlags),
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+
+	done := make(chan error, 1)
+	go func() { done <- cache.Check(ctx) }()
+
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("a cancelled check returned success")
+		}
+	case <-time.After(requestTimeout):
+		t.Fatal("the check outlived its cancelled context")
 	}
 }
 

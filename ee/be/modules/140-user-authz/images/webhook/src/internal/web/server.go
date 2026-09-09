@@ -205,13 +205,13 @@ func (s *Server) prepareHTTPServer() (*http.Server, error) {
 	// Readiness. Here the API server does belong: a webhook that cannot reach it will not see new
 	// rules, and a rollout must not move on to the next master while that is true. Nothing routes
 	// to this Pod, so the only effect of being unready is to hold the rollout and show up.
-	router.HandleFunc("/readyz", func(w http.ResponseWriter, _ *http.Request) {
+	router.HandleFunc("/readyz", func(w http.ResponseWriter, r *http.Request) {
 		if !s.synced.Load() {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			_, _ = fmt.Fprintln(w, "the informer caches are still filling")
 			return
 		}
-		if err := s.cache.Check(); err != nil {
+		if err := s.cache.Check(r.Context()); err != nil {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			_, _ = fmt.Fprintf(w, "the api server is unreachable: %v", err)
 			return
