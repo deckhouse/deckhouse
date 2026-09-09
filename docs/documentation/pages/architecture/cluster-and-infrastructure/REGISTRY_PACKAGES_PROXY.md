@@ -23,7 +23,7 @@ The module deploys a highly-available proxy service that:
 - Watches the `deckhouse-registry` Secret in the `d8-system` namespace to obtain credentials for the main registry.
 - Watches [ModuleSource](../../../reference/api/cr.html#modulesource) and [PackageRepository](../../../reference/api/cr.html#packagerepository) custom resources to obtain registry credentials.
 - Uses RBAC-based authorization to secure access to the proxy and metrics endpoints.
-- Exposes a public HTTPS API (via Ingress) for [Deckhouse CLI](/products/kubernetes-platform/documentation/v1/cli/d8/) binaries and plugins.
+- Exposes a public HTTPS API (via Ingress) for [Deckhouse CLI](../../../cli/d8/) binaries and plugins.
 - Exposes an in-cluster HTTPS API for package icons (no public Ingress).
 
 For more information about the module, see the [module overview section](/modules/registry-packages-proxy/).
@@ -68,4 +68,4 @@ The following external components interact with the module:
 
 1. **Console**: Retrieves package icons.
 
-1. **Deckhouse CLI**: Retrieves versions of the [`d8`](/products/kubernetes-platform/documentation/v1/cli/d8/) utility and its plugins.
+1. **Deckhouse CLI**: Retrieves versions of the [`d8`](../../../cli/d8/) utility and its plugins.
