@@ -134,7 +134,7 @@ spec:
 
 ### Canary deployment with VirtualService {#canary-deployment-with-virtualservice}
 
-For a general overview of canary in DKP, see ["Canary deployment"](/products/kubernetes-platform/documentation/v1/user/network/canary-deployment.html). The example below uses VirtualService and DestinationRule.
+For a general overview of canary in Deckhouse Kubernetes Platform (DKP), see ["Canary deployment"](/products/kubernetes-platform/documentation/v1/user/network/canary-deployment.html). The example below uses VirtualService and DestinationRule.
 
 To shift traffic gradually between application versions, use a DestinationRule with subsets and weights in the VirtualService. The example below sends 90% of traffic to the stable version and 10% to canary:
 

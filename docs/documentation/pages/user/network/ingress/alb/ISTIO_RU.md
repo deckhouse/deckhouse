@@ -133,7 +133,7 @@ spec:
 
 ### Canary-развёртывание через VirtualService {#canary-развёртывание-через-virtualservice}
 
-Общий обзор canary в DKP — в разделе [«Canary-развёртывание»](/products/kubernetes-platform/documentation/v1/user/network/canary-deployment.html). Ниже — пример на VirtualService и DestinationRule.
+Общий обзор canary в Deckhouse Kubernetes Platform (DKP) — в разделе [«Canary-развёртывание»](/products/kubernetes-platform/documentation/v1/user/network/canary-deployment.html). Ниже — пример на VirtualService и DestinationRule.
 
 Для постепенного переключения трафика между версиями приложения используйте DestinationRule с подмножествами (subsets) и веса в VirtualService. Пример направляет 90% трафика на стабильную версию и 10% на canary:
 

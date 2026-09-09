@@ -581,7 +581,7 @@ GeoIP and OpenTelemetry tracing are configured by the administrator on ClusterAL
 
 ### Supported HTTPRoute annotations {#supported-httproute-annotations}
 
-Because the current Gateway API specification does not yet cover all features required for a DKP cluster, the module provides HTTPRoute annotations for the missing options. The controller reads these keys from `HTTPRoute.metadata.annotations`.
+Because the current Gateway API specification does not yet cover all features required for a Deckhouse Kubernetes Platform (DKP) cluster, the module provides HTTPRoute annotations for the missing options. The controller reads these keys from `HTTPRoute.metadata.annotations`.
 
 | Annotation | Description |
 | :--- | :--- |
