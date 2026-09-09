@@ -195,6 +195,7 @@ To convert Ingress resources to Gateway API resources, do the following:
    ```shell
    d8 k apply -f gateway-api.yaml
    ```
+
 1. Verify Gateway, ListenerSet, and route statuses before switching traffic.
 
 #### Using the built-in ingress2gateway tool
