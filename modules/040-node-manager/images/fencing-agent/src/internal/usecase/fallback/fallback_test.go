@@ -673,3 +673,91 @@ func TestOwnRecordIsRemovedOnceTheCacheSyncs(t *testing.T) {
 		t.Errorf("calls = %v, want the own record deleted once the cache synced", h.store.calls)
 	}
 }
+
+
+func TestStaleVerdictClosesTheGate(t *testing.T) {
+	h := newHarness(t, newStore())
+
+	h.monitor.reconcile(t.Context())
+
+	if feed, _ := h.monitor.ShouldFeed(); !feed {
+		t.Fatal("a fresh verdict of quorum must keep the gate open")
+	}
+
+	h.clock.advance(h.monitor.verdictMaxAge() + time.Second)
+
+	feed, reason := h.monitor.ShouldFeed()
+	if feed {
+		t.Error("a verdict past its age must close the gate, whatever it said")
+	}
+
+	if !strings.Contains(reason, "no longer knows whether it has quorum") {
+		t.Errorf("reason = %q, want it to name the lost verdict", reason)
+	}
+}
+
+// The dangerous stale verdict is "quorum held": it is the one that keeps feeding.
+func TestStaleQuorumVerdictDoesNotOutrankItsAge(t *testing.T) {
+	h := newHarness(t, newStore())
+
+	h.monitor.reconcile(t.Context())
+
+	if s := h.monitor.Snapshot(); !s.HasQuorum {
+		t.Fatalf("snapshot = %+v, want the quorum this test goes stale on", s)
+	}
+
+	h.clock.advance(h.monitor.verdictMaxAge() + time.Second)
+
+	if feed, _ := h.monitor.ShouldFeed(); feed {
+		t.Error("a stale quorum verdict must not keep the gate open")
+	}
+}
+
+func TestEveryPassRefreshesTheVerdict(t *testing.T) {
+	h := newHarness(t, newStore())
+
+	for range 5 {
+		h.clock.advance(h.monitor.verdictMaxAge())
+		h.monitor.reconcile(t.Context())
+
+		if feed, reason := h.monitor.ShouldFeed(); !feed {
+			t.Fatalf("ShouldFeed = %v %q right after a pass, want open", feed, reason)
+		}
+	}
+}
+
+// Tripping this resets the node, so the budget has to clear the slowest pass the
+// loop can have by a wide margin.
+func TestVerdictMaxAgeClearsTheSlowestPass(t *testing.T) {
+	profiles := map[string]struct {
+		heartbeat, apiTimeout, watchdogTimeout time.Duration
+	}{
+		"critical": {250 * time.Millisecond, 500 * time.Millisecond, 3 * time.Second},
+		"medium":   {time.Second, 2 * time.Second, 10 * time.Second},
+		"moderate": {2 * time.Second, 5 * time.Second, 30 * time.Second},
+		"slow":     {5 * time.Second, 10 * time.Second, 60 * time.Second},
+	}
+
+	for name, p := range profiles {
+		t.Run(name, func(t *testing.T) {
+			m := New(
+				Params{
+					Node:            domain.NodeIdentity{Name: nodeName, UID: nodeUID},
+					Heartbeat:       p.heartbeat,
+					APITimeout:      p.apiTimeout,
+					WatchdogTimeout: p.watchdogTimeout,
+				},
+				Deps{},
+				log.NewNop(),
+			)
+
+			if got, want := m.verdictMaxAge(), maxPasses*m.pass(); got < want {
+				t.Errorf("verdictMaxAge = %s, want at least %d passes of %s", got, maxPasses, m.pass())
+			}
+
+			if got := m.verdictMaxAge(); got < p.watchdogTimeout {
+				t.Errorf("verdictMaxAge = %s, want at least the kernel deadline %s", got, p.watchdogTimeout)
+			}
+		})
+	}
+}

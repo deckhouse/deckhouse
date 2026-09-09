@@ -104,11 +104,11 @@ type Deps struct {
 	Open func() (Device, error)
 	// Nowayout reports the kernel setting that makes Magic Close a no-op. It must
 	// not open the device.
-	Nowayout func() (bool, error)
-	State    StateSource
-	Events   EventRecorder
+	Nowayout   func() (bool, error)
+	State      StateSource
+	Events     EventRecorder
 	ShouldFeed func() (bool, string)
-	Now func() time.Time
+	Now        func() time.Time
 }
 
 type Manager struct {

@@ -36,6 +36,8 @@ const (
 	idleTick = time.Second
 
 	maxFailures = 5
+
+	maxPasses = 4
 )
 
 const (
@@ -69,6 +71,7 @@ type Params struct {
 	Node       domain.NodeIdentity
 	Heartbeat  time.Duration
 	APITimeout time.Duration
+	WatchdogTimeout time.Duration
 }
 
 type Deps struct {
@@ -81,7 +84,8 @@ type Deps struct {
 }
 
 type Snapshot struct {
-	Observed     bool
+	Observed bool
+	ObservedAt   time.Time
 	HasQuorum    bool
 	Alive        int
 	Expected     int
@@ -134,10 +138,16 @@ func (m *Monitor) Snapshot() Snapshot {
 
 func (m *Monitor) ShouldFeed() (bool, string) {
 	s := m.Snapshot()
+	age := m.deps.Now().Sub(s.ObservedAt)
 
 	switch {
 	case !s.Observed:
 		return true, "fallback monitor has not run yet"
+	// Before the quorum cases on purpose: a stale verdict of "quorum held" is
+	// exactly the one that would keep an isolated node alive.
+	case age > m.verdictMaxAge():
+		return false, fmt.Sprintf("the newest fallback verdict is %s old, past the %s this agent trusts: it no longer knows whether it has quorum",
+			age.Truncate(time.Second), m.verdictMaxAge())
 	case s.HasQuorum:
 		return true, ""
 	case s.Active && s.APIReachable:
@@ -146,6 +156,21 @@ func (m *Monitor) ShouldFeed() (bool, string) {
 		return false, fmt.Sprintf("no gossip quorum (%d of %d alive, quorum %d) and the Kubernetes API is unreachable",
 			s.Alive, s.Expected, s.Quorum)
 	}
+}
+
+// verdictMaxAge is how old the newest verdict may be before the gate stops
+// trusting it. The kernel deadline floors it; the other term is a few of this
+// loop's own worst-case passes, so a pass that spends its whole API budget never
+// costs a node a reset.
+func (m *Monitor) verdictMaxAge() time.Duration {
+	return max(m.params.WatchdogTimeout, maxPasses*m.pass())
+}
+
+// pass is the longest one reconcile plus the wait after it can reasonably take:
+// the idle tick, a heartbeat interval, or a reconcile that spends its API budget
+// twice over — List then Delete, or Create then Heartbeat.
+func (m *Monitor) pass() time.Duration {
+	return max(idleTick, m.params.Heartbeat, 2*m.params.APITimeout)
 }
 
 func (m *Monitor) Run(ctx context.Context) error {
@@ -183,6 +208,7 @@ func (m *Monitor) reconcile(ctx context.Context) {
 
 	s := m.Snapshot()
 	s.Observed = true
+	s.ObservedAt = now
 	s.HasQuorum = view.HasQuorum()
 	s.Alive, s.Expected, s.Quorum = view.AliveCount(), view.ExpectedCount(), view.QuorumSize()
 

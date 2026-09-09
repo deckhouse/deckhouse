@@ -115,6 +115,7 @@ func (a *Agent) fallbackParams() fallback.Params {
 		Node:       a.identity,
 		Heartbeat:  a.sla.Fallback.Heartbeat.Duration,
 		APITimeout: a.sla.Fallback.KubernetesAPITimeout.Duration,
+		WatchdogTimeout: a.sla.Watchdog.Timeout.Duration,
 	}
 }
 

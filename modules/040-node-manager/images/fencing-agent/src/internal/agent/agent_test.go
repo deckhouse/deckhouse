@@ -364,3 +364,9 @@ func TestCacheSyncDelayStopsWithTheAgent(t *testing.T) {
 		t.Errorf("unexpected %s event on shutdown", reason)
 	})
 }
+
+func TestFallbackParamsCarryTheWatchdogTimeout(t *testing.T) {
+	if params := testAgent().fallbackParams(); params.WatchdogTimeout != 60*time.Second {
+		t.Errorf("WatchdogTimeout is %s, want watchdog.timeout (60s)", params.WatchdogTimeout)
+	}
+}
