@@ -182,26 +182,25 @@ func TestCheckCidrIntersection(t *testing.T) {
 			},
 		},
 		{
-			name: "missing podSubnetCIDR",
+			// A CIDR set nowhere is not this check's concern - RequireNetwork enforces presence
+			// where it matters, and a cluster whose control plane dhctl did not create (no
+			// ClusterConfiguration, e.g. EKS) routinely has neither CIDR anywhere.
+			name: "missing podSubnetCIDR: nothing to compare, skipped",
 			fields: fields{metaConfig: &config.MetaConfig{
 				ClusterConfig: map[string]json.RawMessage{
 					"serviceSubnetCIDR": []byte(`"10.0.0.0/8"`),
 				},
 			}},
-			wantErr: func(t assert.TestingT, err error, i ...any) bool {
-				return assert.ErrorContains(t, err, "podSubnetCIDR is set neither in ModuleConfig control-plane-manager (spec.settings.network) nor in ClusterConfiguration")
-			},
+			wantErr: assert.NoError,
 		},
 		{
-			name: "missing serviceSubnetCIDR",
+			name: "missing serviceSubnetCIDR: nothing to compare, skipped",
 			fields: fields{metaConfig: &config.MetaConfig{
 				ClusterConfig: map[string]json.RawMessage{
 					"podSubnetCIDR": []byte(`"10.0.0.0/8"`),
 				},
 			}},
-			wantErr: func(t assert.TestingT, err error, i ...any) bool {
-				return assert.ErrorContains(t, err, "serviceSubnetCIDR is set neither in ModuleConfig control-plane-manager (spec.settings.network) nor in ClusterConfiguration")
-			},
+			wantErr: assert.NoError,
 		},
 		{
 			name: "no ClusterConfiguration, resolved from ModuleConfig",
@@ -212,13 +211,11 @@ func TestCheckCidrIntersection(t *testing.T) {
 			wantErr: assert.NoError,
 		},
 		{
-			name: "no ClusterConfiguration and no ModuleConfig",
+			name: "no ClusterConfiguration and no ModuleConfig: nothing to compare, skipped",
 			fields: fields{metaConfig: &config.MetaConfig{
 				ClusterConfig: nil,
 			}},
-			wantErr: func(t assert.TestingT, err error, i ...any) bool {
-				return assert.ErrorContains(t, err, "podSubnetCIDR is set neither in ModuleConfig control-plane-manager (spec.settings.network) nor in ClusterConfiguration")
-			},
+			wantErr: assert.NoError,
 		},
 		{
 			name: "invalid podSubnetCIDR",

@@ -44,12 +44,17 @@ func (c CidrIntersectionCheck) Run(ctx context.Context) error {
 		return fmt.Errorf("metaConfig is required")
 	}
 
-	podCIDR, serviceCIDR, err := getCIDRs(c.MetaConfig)
-	if err != nil {
-		return err
+	// A cluster whose control plane dhctl did not create (no ClusterConfiguration, e.g. EKS) may
+	// leave both CIDRs unset in ModuleConfig too - dhctl never renders them anywhere for such a
+	// cluster, so there is nothing to compare. RequireNetwork is what enforces presence for the
+	// clusters where it matters (see its own comment); this check only ever rejects two CIDRs
+	// that are both set and do intersect.
+	network := c.MetaConfig.Network()
+	if network.PodSubnetCIDR == "" || network.ServiceSubnetCIDR == "" {
+		return nil
 	}
 
-	return cidrIntersects(podCIDR, serviceCIDR)
+	return cidrIntersects(network.PodSubnetCIDR, network.ServiceSubnetCIDR)
 }
 
 func CidrIntersection(meta *config.MetaConfig) preflight.Check {
