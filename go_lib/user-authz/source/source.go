@@ -255,9 +255,22 @@ func (s *Source) rebuildLoop(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-s.listed:
+			// Publish the first directory without waiting out the debounce window. The signal can
+			// also arrive after the debounced path already published one - WaitForCacheSync polls,
+			// so the add handlers of the initial list may well have fired a build first - and then
+			// there is nothing to do: rebuilding the same store again is pure waste.
+			if s.Directory() != nil {
+				continue
+			}
 			if armed {
 				timer.Stop()
 				armed = false
+			}
+			// The initial list fired the add handler of every object, and the build below is exactly
+			// what that signal asks for.
+			select {
+			case <-s.dirty:
+			default:
 			}
 			if s.informer.HasSynced() {
 				s.rebuild()

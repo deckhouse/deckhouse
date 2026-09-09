@@ -21,6 +21,7 @@ spec:
     updateMode: "InPlaceOrRecreate"
   resourcePolicy:
     containerPolicies:
+    {{- include "helm_lib_vpa_kube_rbac_proxy_resources" . | nindent 4 }}
     - containerName: apiserver
       minAllowed:
         {{- include "permission_browser_resources" . | nindent 8 }}
@@ -117,6 +118,56 @@ spec:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "permission_browser_resources" . | nindent 12 }}
+{{- end }}
+      # The rules metrics are served on the loopback address only; this sidecar is what makes them
+      # reachable for Prometheus. The aggregated API server's own port stays behind the aggregation
+      # layer, which Prometheus cannot scrape.
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4276"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
+        env:
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            upstreams:
+            - upstream: http://127.0.0.1:4276/metrics
+              path: /metrics
+              authorization:
+                resourceAttributes:
+                  namespace: d8-{{ .Chart.Name }}
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: deployments
+                  subresource: prometheus-metrics
+                  name: permission-browser-apiserver
+        ports:
+        - containerPort: 4276
+          name: https-metrics
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 4276
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 4276
+            scheme: HTTPS
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
 {{- end }}
       volumes:
       - name: user-authz-webhook-config

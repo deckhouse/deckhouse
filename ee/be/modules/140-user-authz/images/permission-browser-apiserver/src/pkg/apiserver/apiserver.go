@@ -9,9 +9,11 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"sync"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/collectors"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -24,7 +26,6 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	kcache "k8s.io/client-go/tools/cache"
-	"k8s.io/component-base/metrics/legacyregistry"
 	"k8s.io/klog/v2"
 
 	"github.com/deckhouse/deckhouse/go_lib/user-authz/binding"
@@ -41,12 +42,17 @@ import (
 	"permission-browser-apiserver/pkg/resolver"
 )
 
-// metricsNamespace prefixes the rules metrics of this apiserver; the webhook uses its own, so the
-// two consumers can be compared side by side.
-const metricsNamespace = "user_authz_permission_browser"
+const (
+	// metricsNamespace prefixes the rules metrics of this apiserver; the webhook uses its own, so
+	// the two consumers can be compared side by side.
+	metricsNamespace = "user_authz_permission_browser"
 
-// registerMetricsOnce guards the process-global metric registry.
-var registerMetricsOnce sync.Once
+	// metricsListenAddr is a plaintext listener that serves only /metrics. A kube-rbac-proxy
+	// sidecar fronts it on the pod IP for Prometheus, so the aggregated API server's own port stays
+	// behind the aggregation layer. The address is the loopback one, so nothing outside the Pod
+	// reaches it directly.
+	metricsListenAddr = "127.0.0.1:4276"
+)
 
 var (
 	// Scheme defines methods for serializing and deserializing API objects.
@@ -154,6 +160,31 @@ type rulesInputs struct {
 	// the initial list has been popped, while handlers are fed from a separate queue, so a report
 	// built on the informer's word alone could miss the bindings that make a subject restricted.
 	bindingsSynced kcache.InformerSynced
+	registry       *prometheus.Registry
+}
+
+// serveMetrics runs the plaintext /metrics listener until the context is cancelled. A failure to
+// listen is logged, not fatal: the apiserver answers requests whether or not its metrics are
+// scraped.
+func (in *rulesInputs) serveMetrics(ctx context.Context) {
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", promhttp.HandlerFor(in.registry, promhttp.HandlerOpts{}))
+
+	srv := &http.Server{
+		Addr:         metricsListenAddr,
+		Handler:      mux,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
+
+	go func() {
+		<-ctx.Done()
+		_ = srv.Close()
+	}()
+
+	if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		klog.Warningf("metrics listener on %s stopped: %v", metricsListenAddr, err)
+	}
 }
 
 // initRules wires the rules feeds. The bindings index is fed from the same ClusterRoleBinding
@@ -166,16 +197,23 @@ func initRules(init *initResult) (*rulesInputs, error) {
 		return nil, fmt.Errorf("register rule bindings index: %w", err)
 	}
 
+	registry := prometheus.NewRegistry()
+	registry.MustRegister(collectors.NewGoCollector(), collectors.NewProcessCollector(collectors.ProcessCollectorOpts{}))
 	rulesMetrics := metrics.New(metricsNamespace)
-	// The legacy registry is process-global and its raw registration panics on a duplicate, so a
-	// second server in the same process must not register again.
-	registerMetricsOnce.Do(func() { legacyregistry.RawMustRegister(rulesMetrics) })
+	if err := rulesMetrics.Register(registry); err != nil {
+		return nil, fmt.Errorf("register rules metrics: %w", err)
+	}
 
 	rules := source.New(init.dynamicClient, source.Options{
 		Observer: rulesMetrics,
 		Logf:     klog.Infof,
 	})
-	return &rulesInputs{rules: rules, bindings: bindings, bindingsSynced: bindingsSynced.HasSynced}, nil
+	return &rulesInputs{
+		rules:          rules,
+		bindings:       bindings,
+		bindingsSynced: bindingsSynced.HasSynced,
+		registry:       registry,
+	}, nil
 }
 
 // initAuthorizers creates the composite authorizer from RBAC and multi-tenancy engines.
@@ -350,6 +388,7 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 	// rule maximally restricted.
 	if inputs != nil {
 		go inputs.rules.Run(ctx)
+		go inputs.serveMetrics(ctx)
 	}
 
 	// Create namespace resolver for AccessibleNamespace API
