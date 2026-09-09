@@ -33,10 +33,6 @@ func (c *Cloud) GetLoadBalancer(
 	clusterName string,
 	service *corev1.Service,
 ) (*corev1.LoadBalancerStatus, bool, error) {
-	if !wantsDefaultLoadBalancer(service) {
-		return nil, false, nil
-	}
-
 	name := defaultLoadBalancerName(service)
 	svc, err := c.dvpService.LoadBalancerService.GetLoadBalancerByName(ctx, name)
 	if err != nil {
@@ -89,10 +85,6 @@ func (c *Cloud) EnsureLoadBalancerDeleted(
 	clusterName string,
 	service *corev1.Service,
 ) error {
-	if !wantsDefaultLoadBalancer(service) {
-		return nil
-	}
-
 	name := defaultLoadBalancerName(service)
 
 	return c.dvpService.LoadBalancerService.DeleteLoadBalancerByName(ctx, name)
