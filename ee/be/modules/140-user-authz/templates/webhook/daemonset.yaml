@@ -138,6 +138,10 @@ spec:
           periodSeconds: 5
           successThreshold: 1
           failureThreshold: 3
+          # /healthcheck asks the API server, and that check retries for up to ~21s, while kubelet
+          # defaults an exec probe to 1s. Without this the probe reports a failure whenever the API
+          # server is merely slow. 15s is what kube-apiserver's own probes use.
+          timeoutSeconds: 15
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
