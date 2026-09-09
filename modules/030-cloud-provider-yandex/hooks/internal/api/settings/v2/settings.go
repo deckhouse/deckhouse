@@ -154,7 +154,8 @@ type NATInstanceResources struct {
 type StorageParameters struct {
 	// Defines additional StorageClasses or overrides the parameters of the ones created by default.
 	ProvisionedStorageClasses []ProvisionedStorageClass `json:"provisionedStorageClasses,omitempty"`
-	// List of storage classes to exclude from use in the cluster.
+	// List of regular expressions matched against the whole name of a StorageClass to exclude
+	// from use in the cluster. Applied after ProvisionedStorageClasses.
 	ExcludedStorageClasses []string `json:"excludedStorageClasses,omitempty"`
 }
 

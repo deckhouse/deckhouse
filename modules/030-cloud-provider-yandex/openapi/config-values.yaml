@@ -230,13 +230,20 @@ properties:
         additionalProperties: false
         properties:
           excludedStorageClasses:
-            description: List of storage classes to exclude from use in the cluster.
+            description: |-
+              List of StorageClasses to exclude from use in the cluster.
+
+              Each item is a regular expression matched against the whole StorageClass name: `network-ssd` excludes only the `network-ssd` StorageClass, while `network-ssd.*` excludes every StorageClass whose name starts with `network-ssd`.
+
+              The list is applied after `provisionedStorageClasses`, so it also filters out the StorageClasses defined there.
             items:
               type: string
             type: array
           provisionedStorageClasses:
-            description: Defines additional StorageClasses or overrides the parameters
-              of the ones created by default.
+            description: |-
+              Defines additional StorageClasses or overrides the parameters of the ones created by default.
+
+              A StorageClass created by default is overridden when its name matches the `name` field exactly.
             items:
               additionalProperties: false
               properties:
