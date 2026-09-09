@@ -13,8 +13,8 @@ description: Архитектура модуля istio в Deckhouse Kubernetes P
 Модуль работает со следующими кастомными ресурсами API-группы `deckhouse.io`:
 
 - [IngressIstioController](/modules/istio/cr.html#ingressistiocontroller) — описывает инстанс Istio ingress gateway, обслуживающий выбранный класс шлюза;
-- [IstioFederation](/modules/istio/cr.html#istiofederation) — назначает удалённый кластер доверенным для федерации сервис-меш (DKP EE);
-- [IstioMulticluster](/modules/istio/cr.html#istiomulticluster) — назначает удалённый кластер доверенным для multicluster-конфигурации (DKP EE);
+- [IstioFederation](/modules/istio/cr.html#istiofederation) — назначает один или несколько удалённых кластеров доверенными для федерации сервис-меш (DKP EE);
+- [IstioMulticluster](/modules/istio/cr.html#istiomulticluster) — назначает один или несколько удалённых кластеров доверенными для multicluster-конфигурации (DKP EE);
 - [WaypointInstance](/modules/istio/cr.html#waypointinstance) — описывает ambient-прокси waypoint, создаваемый компонентом waypoint-controller (DKP EE).
 
 Модуль также устанавливает и использует кастомные ресурсы [Istio](https://istio.io/) (API-группы `networking.istio.io`, `security.istio.io`, `telemetry.istio.io`, `extensions.istio.io`). Подробнее можно ознакомиться [в справочнике кастомных ресурсов Istio](/modules/istio/istio-cr.html).
@@ -111,7 +111,11 @@ description: Архитектура модуля istio в Deckhouse Kubernetes P
    - **istio-config-analyzer** — основной контейнер;
    - **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищённого доступа к метрикам.
 
-1. **Istio-cni-node** (DaemonSet) — компонент CNI-плагина Istio, настраивающий перехват трафика подов на каждом узле кластера без настройки iptables-правил через init-контейнер в каждом поде.
+1. **Istio-cni-node** (DaemonSet) — компонент Istio, настраивающий CNI-плагин на каждом узле кластера и выполняющий настройку перехвата трафика подов в ambient-режиме работы Istio.
+
+   Компонент подготавливает исполняемый файл `istio-cni` и дописывает его как дополнительный плагин в первый обнаруженный CNI-конфиг в каталоге `/etc/cni/net.d/` на каждом узле кластера. В стандартной конфигурации DKP это файл `05-cilium.conflist`, который создаёт CNI-плагин Cilium модуля [`cni-cilium`](/modules/cni-cilium/). При создании каждого пода kubelet (через containerd) вызывает оба CNI-плагина по очереди — сначала cilium, потом istio-cni. Результат работы первого плагина передаётся второму.
+
+   В ambient-режиме работы Istio компонент обрабатывает API-запросы от CNI-плагина `istio-cni` и настраивает маршрутизацию к компоненту ztunnel.
 
    Компонент создаётся контроллером Deckhouse, если параметр [`.settings.dataPlane.trafficRedirectionSetupMode`](/modules/istio/configuration.html#parameters-dataplane-trafficredirectionsetupmode) в настройках модуля принимает значение `CNIPlugin` (по умолчанию — `InitContainer`).
 
@@ -119,6 +123,16 @@ description: Архитектура модуля istio в Deckhouse Kubernetes P
 
    - **install-cni** — основной контейнер, устанавливающий и настраивающий CNI-плагин на узле;
    - **kube-rbac-proxy** — сайдкар-контейнер с авторизующим прокси на основе Kubernetes RBAC для организации защищённого доступа к метрикам install-cni.
+
+1. **Istio-cni** — исполняемый файл, запускаемый компонентом containerd, который получает команду (например, ADD при запуске контейнера и DEL при его удалении) и остальные параметры через переменные окружения в соответствии [со спецификацией CNI](https://www.cni.dev/docs/spec/#cni-operations), а JSON-конфигурацию — через stdin.
+
+   При запуске Istio-cni выполняет следующие действия:
+
+   - обрабатывает входные данные от containerd: JSON-конфигурацию, имя и неймспейс пода;
+   - получает информацию о подах и неймспейсах в kube-apiserver;
+   - останавливает обработку, если неймспейс находится в `exclude_namespaces` (параметр конфигурации в ConfigMap `cni-config`);
+   - в ambient-режиме проверяет, включен ли под в ambient через лейблы и, если да, сообщает об этом компоненту istio-cni-node через Unix-сокет;
+   - в сайдкар-режиме проверяет отсутствие контейнера istio-init и наличие контейнера istio-proxy в поде, а также аннотации и, если условия выполняются, заходит в сетевое пространство имён (netns) пода и настраивает перехват входящего и исходящего трафика, выполняя команды `iptables` или `nftables`.
 
 1. **Ztunnel** (DaemonSet) — компонент ambient-режима Istio, обеспечивающий L4-прослойку данных (mTLS, авторизацию на уровне L4) без добавления сайдкара к приложению пользователя. Запускается на каждом узле кластера.
 

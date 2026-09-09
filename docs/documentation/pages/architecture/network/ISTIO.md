@@ -14,8 +14,8 @@ The module works with the following custom resources.
 Resources managed directly by the module (the `deckhouse.io` group):
 
 * [IngressIstioController](/modules/istio/cr.html#ingressistiocontroller): Describes an Istio ingress gateway instance serving the selected gateway class.
-* [IstioFederation](/modules/istio/cr.html#istiofederation): Marks a remote cluster as trusted for mesh federation (Enterprise Edition).
-* [IstioMulticluster](/modules/istio/cr.html#istiomulticluster): Marks a remote cluster as trusted for a multicluster configuration (Enterprise Edition).
+* [IstioFederation](/modules/istio/cr.html#istiofederation): Marks one or more remote clusters as trusted for mesh federation (Enterprise Edition).
+* [IstioMulticluster](/modules/istio/cr.html#istiomulticluster): Marks one or more remote clusters as trusted for a multicluster configuration (Enterprise Edition).
 * [WaypointInstance](/modules/istio/cr.html#waypointinstance): Describes a waypoint ambient proxy created by the waypoint-controller component (Enterprise Edition).
 
 The module also installs and uses the standard [Istio](https://istio.io/) custom resources (the `networking.istio.io`, `security.istio.io`, `telemetry.istio.io`, and `extensions.istio.io` groups — VirtualService, DestinationRule, Gateway, PeerAuthentication, and others). For more details, see the [Istio custom resource reference](/modules/istio/istio-cr.html).
@@ -112,7 +112,11 @@ The module consists of the following components:
    * **istio-config-analyzer**: Main container.
    * **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC, providing secure access to metrics.
 
-1. **Istio-cni-node** (DaemonSet): Istio CNI plugin component that configures pod traffic interception on each cluster node without configuring iptables rules via an init container in each pod.
+1. **Istio-cni-node** (DaemonSet): Istio component that installs the CNI plugin on each cluster node and, in Istio ambient mode, sets up traffic interception for pods.
+
+   The component prepares the `istio-cni` binary and appends it as an additional plugin to the first CNI config found in the `/etc/cni/net.d/` directory on each cluster node. In the standard DKP configuration this is the `05-cilium.conflist` file, created by the Cilium CNI plugin of the [`cni-cilium`](/modules/cni-cilium/) module. When creating each pod, kubelet (via containerd) calls both CNI plugins in sequence — first cilium, then istio-cni. The result produced by the first plugin is passed to the second.
+
+   In Istio ambient mode, the component handles API requests from the `istio-cni` CNI plugin and configures routing to the ztunnel component.
 
    The component is created by the Deckhouse controller if the [`.settings.dataPlane.trafficRedirectionSetupMode`](/modules/istio/configuration.html#parameters-dataplane-trafficredirectionsetupmode) module parameter is set to `CNIPlugin` (the default is `InitContainer`).
 
@@ -120,6 +124,16 @@ The module consists of the following components:
 
    * **install-cni**: Main container that installs and configures the CNI plugin on the node.
    * **kube-rbac-proxy**: Sidecar container with an authorization proxy based on Kubernetes RBAC, providing secure access to install-cni metrics.
+
+1. **Istio-cni**: binary invoked by containerd, which receives the command (for example, ADD when a container starts and DEL when it is removed) and other parameters via environment variables, per the [CNI specification](https://www.cni.dev/docs/spec/#cni-operations), and the JSON configuration via stdin.
+
+   On each invocation, istio-cni performs the following actions:
+
+   * Processes the input from containerd: the JSON configuration, and the pod's name and namespace.
+   * Retrieves pod and namespace information from kube-apiserver.
+   * Stops processing if the namespace is in `exclude_namespaces` (a configuration parameter in the `cni-config` ConfigMap).
+   * In ambient mode, checks whether the pod is enabled for ambient via labels and, if so, notifies the istio-cni-node component via a Unix socket.
+   * In sidecar mode, checks that the pod has no `istio-init` container, has an `istio-proxy` container, and checks annotations; if the conditions are met, it enters the pod's network namespace (netns) and sets up interception of inbound and outbound traffic by running `iptables` or `nftables` commands.
 
 1. **Ztunnel** (DaemonSet): Istio ambient mode component that provides the L4 data plane (mTLS, L4-level authorization) without adding a sidecar to the user's application. Runs on every cluster node.
 
