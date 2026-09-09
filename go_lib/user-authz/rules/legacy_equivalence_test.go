@@ -305,6 +305,7 @@ func equivalenceRules(subject Subject) []Rule {
 
 // TestLegacyEquivalence_SingleRule compares every rule shape on its own.
 func TestLegacyEquivalence_SingleRule(t *testing.T) {
+	t.Parallel()
 	subject := Subject{Kind: "User", Name: "alice"}
 	compared := 0
 	for _, rule := range equivalenceRules(subject) {
@@ -330,6 +331,7 @@ func TestLegacyEquivalence_SingleRule(t *testing.T) {
 // TestLegacyEquivalence_RulePairs compares every ordered pair, which is where the union of entries
 // and the priority between limits, selectors and the system flag actually get exercised.
 func TestLegacyEquivalence_RulePairs(t *testing.T) {
+	t.Parallel()
 	subject := Subject{Kind: "User", Name: "alice"}
 	all := equivalenceRules(subject)
 	compared, mismatches := 0, 0
@@ -363,6 +365,7 @@ func TestLegacyEquivalence_RulePairs(t *testing.T) {
 // TestLegacyEquivalence_SubjectKinds checks that a subject is found by the same key in both: the
 // username for a User, the canonical name for a ServiceAccount, the group name for a Group.
 func TestLegacyEquivalence_SubjectKinds(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		subject Subject
 		user    string
@@ -401,6 +404,7 @@ func TestLegacyEquivalence_SubjectKinds(t *testing.T) {
 // TestLegacyEquivalence_DeliberateDifferences records where the library is meant to differ, so that
 // a change to either behaviour has to come here and say so.
 func TestLegacyEquivalence_DeliberateDifferences(t *testing.T) {
+	t.Parallel()
 	subject := Subject{Kind: "User", Name: "alice"}
 
 	// A rule with an uncompilable pattern made the old rebuild return early, leaving the previous
@@ -456,6 +460,47 @@ func legacyClusterScopedDenied(scope ResourceScope, coreGroup bool) bool {
 	return true
 }
 
+// TestLegacyEquivalence_AlternationAnchoring records the one namespaced difference: an alternation
+// in limitNamespaces is now anchored on both branches.
+//
+// The old code anchored by concatenation, so "team-.*|kube-system" became
+// (^team-.*)|(kube-system$) and opened every namespace whose name ended in "kube-system". The
+// cross-product above does not catch this because its fixture patterns contain no alternation -
+// which is exactly why it is written out here instead of being left to luck.
+//
+// This is a narrowing change. A rule written with an alternation stops covering names it was never
+// meant to cover; nothing gains access.
+func TestLegacyEquivalence_AlternationAnchoring(t *testing.T) {
+	t.Parallel()
+	const pattern = "team-.*|kube-system"
+
+	legacy, err := regexp.Compile(legacyWrapRegex(pattern))
+	if err != nil {
+		t.Fatal(err)
+	}
+	current, err := newCompileCache().compile(pattern)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// What both agree on: the branches as written.
+	for _, ns := range []string{"team-a", "kube-system"} {
+		if !legacy.MatchString(ns) || !current.Matches(ns) {
+			t.Errorf("%q must be covered by both", ns)
+		}
+	}
+
+	// And the difference.
+	const leaked = "attacker-kube-system"
+	if !legacy.MatchString(leaked) {
+		t.Fatalf("the reference implementation is supposed to match %q; if it no longer does, this "+
+			"difference has been resolved elsewhere and this test should say so", leaked)
+	}
+	if current.Matches(leaked) {
+		t.Errorf("%q is still covered: the alternation is not anchored on both branches", leaked)
+	}
+}
+
 // TestLegacyEquivalence_ClusterScoped compares the cluster-scoped half, which the rest of this file
 // does not cover - and which is where the two implementations had actually diverged.
 //
@@ -464,6 +509,7 @@ func legacyClusterScopedDenied(scope ResourceScope, coreGroup bool) bool {
 // answer from a failure to reach discovery, and the user saw Forbidden for something that was never
 // there. The library separates the two, so RBAC answers and the API server produces the 404 it owes.
 func TestLegacyEquivalence_ClusterScoped(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name      string
 		scope     ResourceScope

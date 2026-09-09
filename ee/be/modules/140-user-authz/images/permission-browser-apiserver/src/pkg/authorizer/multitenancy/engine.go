@@ -59,18 +59,16 @@ type IndependentRBACChecker interface {
 // !known like namespaced: failing open would let a CAR ClusterRoleBinding
 // report Allow for a cluster-scoped list of a namespaced resource.
 //
-// HasData separates "the snapshot exists and does not list this resource" from
-// "there is no snapshot at all", and GroupUnavailable separates it further: a
-// resource missing from a group the last refresh could not read is missing
-// because nobody looked. Only a resource missing from a snapshot that did read
-// its group is genuinely absent, and only then may RBAC answer.
+// One method, returning the type the decision consumes. The distinctions it has to draw - the
+// snapshot lists the resource, the snapshot exists and does not, there is no snapshot, the group
+// could not be read - belong next to the data that answers them. Split across three predicates they
+// were assembled here instead, which meant every test fake had to reassemble them the same way, and
+// a fake that did not left the suite green and the behaviour unsafe.
 //
 // Implemented by resolver.ResourceScopeCache. This package must not import
 // resolver (resolver already imports multitenancy).
 type ResourceScope interface {
-	Scope(group, resource string) (bool, bool)
-	HasData() bool
-	GroupUnavailable(group string) bool
+	ScopeOf(group, resource string) rules.ResourceScope
 }
 
 // RulesProvider hands out the current directory of ClusterAuthorizationRules. Directory is nil
@@ -195,17 +193,13 @@ func (e *Engine) affectedEntries(username string, groups []string) []rules.Entry
 	return decision.Entries(e.sources(context.Background(), nil), username, groups)
 }
 
-// resourceScopeOf reads the background snapshot. It never fails: a resource the snapshot does not
-// carry is absent when its group was read, and unknown when it was not, which the shared decision
-// tells apart on its own.
+// resourceScopeOf reads the background snapshot. It never fails: an engine with no snapshot source
+// answers "nothing is known", which the shared decision treats as a reason to deny.
 func (e *Engine) resourceScopeOf(group, resource string) (rules.ResourceScope, error) {
-	var scope rules.ResourceScope
 	if e.resourceScope == nil {
-		return scope, nil
+		return rules.ResourceScope{}, nil
 	}
-	scope.Namespaced, scope.Known = e.resourceScope.Scope(group, resource)
-	scope.Absent = e.resourceScope.HasData() && !e.resourceScope.GroupUnavailable(group)
-	return scope, nil
+	return e.resourceScope.ScopeOf(group, resource), nil
 }
 
 // namespaceLabels returns the label lookup for the namespaceSelector check, or nil when the engine

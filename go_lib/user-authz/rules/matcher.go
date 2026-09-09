@@ -56,7 +56,21 @@ func (m Matcher) MatchesEverything() bool {
 
 // WrapRegex anchors a limitNamespaces entry: the patterns are matched against the whole namespace
 // name, so "team" must not cover "team-2".
+//
+// An alternation needs a group around it. Alternation binds looser than anything else in a regular
+// expression, so anchoring "team-.*|kube-system" by concatenation gives (^team-.*)|(kube-system$):
+// the second branch is anchored only at the end, and matches any namespace whose name ENDS in
+// "kube-system" - "attacker-kube-system" among them. Nobody writing `a|b` in limitNamespaces means
+// that. A non-capturing group anchors every branch.
+//
+// Everything without a top-level alternation is anchored by concatenation exactly as before, which
+// keeps the compiled pattern of an ordinary rule byte-identical: the literal fast path below reads
+// the pattern back, and so does MatchesEverything.
 func WrapRegex(pattern string) string {
+	if hasTopLevelAlternation(pattern) {
+		inner := strings.TrimSuffix(strings.TrimPrefix(pattern, "^"), "$")
+		return "^(?:" + inner + ")$"
+	}
 	if !strings.HasPrefix(pattern, "^") {
 		pattern = "^" + pattern
 	}
@@ -64,6 +78,38 @@ func WrapRegex(pattern string) string {
 		pattern += "$"
 	}
 	return pattern
+}
+
+// hasTopLevelAlternation reports whether the pattern contains a "|" that separates whole branches,
+// as opposed to one nested in a group or inside a character class where it is a literal.
+func hasTopLevelAlternation(pattern string) bool {
+	depth := 0
+	inClass := false
+	for i := 0; i < len(pattern); i++ {
+		switch pattern[i] {
+		case '\\':
+			i++ // whatever follows is a literal, including "|", "[" and "("
+		case '[':
+			if !inClass {
+				inClass = true
+			}
+		case ']':
+			inClass = false
+		case '(':
+			if !inClass {
+				depth++
+			}
+		case ')':
+			if !inClass && depth > 0 {
+				depth--
+			}
+		case '|':
+			if !inClass && depth == 0 {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // regexMetacharacters are the characters that make a limitNamespaces entry a regular expression

@@ -285,6 +285,72 @@ func TestSource_WatchErrorKeepsDirectory(t *testing.T) {
 	}
 }
 
+// A watch that keeps failing eventually means the directory has stopped tracking the cluster, and
+// saying so is the difference between a stale answer and a wrong one. What must NOT happen is
+// reporting it early: this state gates the readiness of a fail-closed authorizer on every master.
+func TestSource_StaleAfterEnoughConsecutiveWatchErrors(t *testing.T) {
+	client := newClient(car("team-a", "1", []string{"alice"}, "team-a"))
+	s := New(client, Options{Debounce: 20 * time.Millisecond, DegradeAfterWatchErrors: 3, Logf: t.Logf})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go s.Run(ctx)
+
+	eventually(t, "the first directory", func() bool { return s.Directory() != nil })
+
+	// Below the threshold nothing changes. A handful of transient errors is a normal day.
+	s.watchError(nil, errors.New("connection refused"))
+	s.watchError(nil, errors.New("connection refused"))
+	if got := s.State(); got != StateSynced {
+		t.Fatalf("state = %v after 2 of 3 errors, want %v: the threshold must not be eager", got, StateSynced)
+	}
+
+	s.watchError(nil, errors.New("connection refused"))
+	if got := s.State(); got != StateStale {
+		t.Errorf("state = %v after the threshold, want %v", got, StateStale)
+	}
+
+	// The directory itself is untouched: it is a real snapshot, and the webhook keeps answering
+	// from it. Only readiness changes.
+	if s.Directory() == nil || !s.Directory().KnowsRule("team-a") {
+		t.Error("going stale must not drop the rules already known")
+	}
+
+	// And a successful sync clears the count, so a source that recovers reports healthy again
+	// rather than staying stale for the life of the process.
+	s.mu.Lock()
+	s.consecutiveWatchErrors = 0
+	s.mu.Unlock()
+	if got := s.State(); got != StateSynced {
+		t.Errorf("state = %v after recovery, want %v", got, StateSynced)
+	}
+}
+
+// A source that has never listed the cluster is Unsynced, not Stale, however many errors it has
+// seen: there is no directory to be stale about, and the two states mean different things to the
+// consumers - Unsynced closes the webhook's serving gate, Stale deliberately does not.
+func TestSource_NeverListedStaysUnsynced(t *testing.T) {
+	s := New(newClient(), Options{Debounce: 20 * time.Millisecond, DegradeAfterWatchErrors: 2, Logf: t.Logf})
+	s.watchError(nil, errors.New("connection refused"))
+	s.watchError(nil, errors.New("connection refused"))
+	s.watchError(nil, errors.New("connection refused"))
+
+	if got := s.State(); got != StateUnsynced {
+		t.Errorf("state = %v, want %v", got, StateUnsynced)
+	}
+}
+
+// A missing CRD outranks staleness: there are no rules to track, so an empty directory is the
+// truth and the consumer must not be held unready for it.
+func TestSource_CRDMissingOutranksStale(t *testing.T) {
+	s := New(newClient(), Options{Debounce: 20 * time.Millisecond, DegradeAfterWatchErrors: 1, Logf: t.Logf})
+	s.synced.Store(true)
+	s.watchError(nil, apierrors.NewNotFound(rules.GroupVersionResource.GroupResource(), ""))
+
+	if got := s.State(); got != StateCRDMissing {
+		t.Errorf("state = %v, want %v", got, StateCRDMissing)
+	}
+}
+
 // Run returns when its context is cancelled.
 func TestSource_RunStopsWithContext(t *testing.T) {
 	s := New(newClient(car("team-a", "1", []string{"alice"}, "team-a")), Options{Debounce: 20 * time.Millisecond, Logf: t.Logf})

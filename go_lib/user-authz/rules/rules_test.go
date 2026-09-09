@@ -55,6 +55,7 @@ func entryOf(t *testing.T, d *Directory, username string, groups ...string) Entr
 }
 
 func TestMatcher_LiteralAndRegex(t *testing.T) {
+	t.Parallel()
 	c := newCompileCache()
 
 	literal, err := c.compile("team-a")
@@ -97,14 +98,71 @@ func TestMatcher_LiteralAndRegex(t *testing.T) {
 }
 
 func TestWrapRegex(t *testing.T) {
-	for in, want := range map[string]string{"a": "^a$", "^a": "^a$", "a$": "^a$", "^a$": "^a$", ".*": "^.*$"} {
+	t.Parallel()
+	for in, want := range map[string]string{
+		"a": "^a$", "^a": "^a$", "a$": "^a$", "^a$": "^a$", ".*": "^.*$",
+		// An alternation gets a group, so that both branches are anchored. Written without one,
+		// "^team-.*|kube-system$" parses as (^team-.*)|(kube-system$).
+		"team-.*|kube-system":   "^(?:team-.*|kube-system)$",
+		"^team-.*|kube-system$": "^(?:team-.*|kube-system)$",
+		// A "|" that is not a top-level alternation is left where it is, so an ordinary pattern
+		// keeps the byte-identical form the literal fast path and MatchesEverything read back.
+		"(a|b)-ns":    "^(a|b)-ns$",
+		"[a|b]-ns":    "^[a|b]-ns$",
+		`a\|b`:        `^a\|b$`,
+		"team-[0-9]+": "^team-[0-9]+$",
+	} {
 		if got := WrapRegex(in); got != want {
 			t.Errorf("WrapRegex(%q) = %q, want %q", in, got, want)
 		}
 	}
 }
 
+// The anchoring bug, stated as the access it granted: a rule limited to "team-.*|kube-system" used
+// to open every namespace whose name merely ended in "kube-system".
+func TestWrapRegex_AlternationDoesNotLeakASuffixMatch(t *testing.T) {
+	t.Parallel()
+	c := newCompileCache()
+	m, err := c.compile("team-.*|kube-system")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, ns := range []string{"team-a", "team-", "kube-system"} {
+		if !m.Matches(ns) {
+			t.Errorf("%q must be covered", ns)
+		}
+	}
+	for _, ns := range []string{"attacker-kube-system", "d8-kube-system", "other"} {
+		if m.Matches(ns) {
+			t.Errorf("%q must NOT be covered: only the two branches as written are", ns)
+		}
+	}
+}
+
+func TestHasTopLevelAlternation(t *testing.T) {
+	t.Parallel()
+	for in, want := range map[string]bool{
+		"a|b":         true,
+		"^a|b$":       true,
+		"a":           false,
+		"(a|b)":       false,
+		"(a|b)|c":     true,
+		"[a|b]":       false,
+		"[a|b]|c":     true,
+		`a\|b`:        false,
+		`\[a|b`:       true,
+		"((a|b)|c)":   false,
+		"team-[0-9]+": false,
+	} {
+		if got := hasTopLevelAlternation(in); got != want {
+			t.Errorf("hasTopLevelAlternation(%q) = %v, want %v", in, got, want)
+		}
+	}
+}
+
 func TestBuild_LimitNamespaces(t *testing.T) {
+	t.Parallel()
 	d, stats := build(t,
 		Rule{Name: "team-a", Subjects: []Subject{user("alice"), group("devs")}, LimitNamespaces: []string{"team-a", "team-a-.*"}},
 		Rule{Name: "ops", Subjects: []Subject{group("devs")}, LimitNamespaces: []string{"ops"}, AllowAccessToSystemNamespaces: true},
@@ -138,6 +196,7 @@ func TestBuild_LimitNamespaces(t *testing.T) {
 }
 
 func TestBuild_NoFilters(t *testing.T) {
+	t.Parallel()
 	d, _ := build(t, Rule{Name: "open", Subjects: []Subject{user("bob")}})
 	bob := entryOf(t, d, "bob")
 	if !bob.NamespaceFiltersAbsent || !bob.HasAnyFilters() {
@@ -162,6 +221,7 @@ func TestBuild_NoFilters(t *testing.T) {
 }
 
 func TestBuild_NamespaceSelector(t *testing.T) {
+	t.Parallel()
 	selector := &NamespaceSelector{LabelSelector: &metav1.LabelSelector{MatchLabels: map[string]string{"team": "a"}}}
 	d, _ := build(t,
 		// limitNamespaces and the system flag are ignored when a selector is present
@@ -200,6 +260,7 @@ func TestBuild_NamespaceSelector(t *testing.T) {
 }
 
 func TestBuild_Quarantine(t *testing.T) {
+	t.Parallel()
 	d, stats := build(t,
 		Rule{Name: "broken", Subjects: []Subject{user("dave")}, LimitNamespaces: []string{"team-(", "team-b"}},
 		Rule{Name: "fine", Subjects: []Subject{user("erin")}, LimitNamespaces: []string{"team-c"}},
@@ -234,6 +295,7 @@ func TestBuild_Quarantine(t *testing.T) {
 }
 
 func TestRestricted(t *testing.T) {
+	t.Parallel()
 	r := Restricted()
 	if !r.HasAnyFilters() {
 		t.Fatal("the restricted entry must have filters")
@@ -249,6 +311,7 @@ func TestRestricted(t *testing.T) {
 }
 
 func TestClusterScopedDenied(t *testing.T) {
+	t.Parallel()
 	cases := []struct {
 		name  string
 		scope ResourceScope
@@ -268,6 +331,7 @@ func TestClusterScopedDenied(t *testing.T) {
 }
 
 func TestLookup_ServiceAccountsAndNil(t *testing.T) {
+	t.Parallel()
 	d, _ := build(t, Rule{Name: "sa", Subjects: []Subject{{Kind: "ServiceAccount", Name: "bot", Namespace: "ci"}}, LimitNamespaces: []string{"ci"}})
 	if len(d.Lookup("system:serviceaccount:ci:bot", nil)) != 1 {
 		t.Errorf("a service account is looked up by its username")
@@ -282,6 +346,7 @@ func TestLookup_ServiceAccountsAndNil(t *testing.T) {
 }
 
 func TestFromUnstructured_AndProject(t *testing.T) {
+	t.Parallel()
 	u := &unstructured.Unstructured{Object: map[string]interface{}{
 		"apiVersion": "deckhouse.io/v1",
 		"kind":       "ClusterAuthorizationRule",
@@ -338,6 +403,7 @@ func TestFromUnstructured_AndProject(t *testing.T) {
 }
 
 func TestIsSystemNamespace(t *testing.T) {
+	t.Parallel()
 	for ns, want := range map[string]bool{"kube-system": true, "d8-monitoring": true, "default": true, "antiopa": true, "loghouse": true, "team-a": false, "kube": false, "d8": false, "defaults": false} {
 		if got := IsSystemNamespace(ns); got != want {
 			t.Errorf("IsSystemNamespace(%q) = %v, want %v", ns, got, want)
@@ -349,6 +415,7 @@ func TestIsSystemNamespace(t *testing.T) {
 // guard depends on this: a subject added to an existing rule keeps the rule's name, so a name-only
 // check would think the rule already accounted for it.
 func TestDirectoryRuleCovers(t *testing.T) {
+	t.Parallel()
 	dir, _ := NewBuilder().Build([]Rule{{
 		Name: "team-a",
 		Subjects: []Subject{

@@ -49,6 +49,10 @@ const (
 	// empty directory is the truth, not a failure; the informer keeps retrying and will sync once
 	// the CRD appears.
 	StateCRDMissing
+	// StateStale: the rules were listed once, and the watch has been failing ever since. The
+	// directory is real but is no longer tracking the cluster, which is worth reporting as not
+	// ready - the rules it serves are as old as the moment the watch broke.
+	StateStale
 )
 
 // String implements fmt.Stringer.
@@ -60,6 +64,8 @@ func (s State) String() string {
 		return "synced"
 	case StateCRDMissing:
 		return "crd-missing"
+	case StateStale:
+		return "stale"
 	}
 	return fmt.Sprintf("state(%d)", int(s))
 }
@@ -85,12 +91,30 @@ type Options struct {
 	Observer Observer
 	// Logf receives diagnostics; nil discards them.
 	Logf func(format string, args ...interface{})
+	// DegradeAfterWatchErrors is how many consecutive list/watch failures, with no success in
+	// between, make a source that has already synced report itself stale. Zero means
+	// DefaultDegradeAfterWatchErrors.
+	DegradeAfterWatchErrors int
 }
 
 // DefaultDebounce is the rebuild coalescing window: long enough to fold the initial list of thousands
 // of rules and the bursts a batch of changes produces into one build, short enough to stay far below
 // the API server's 30 s cache of authorizer answers.
 const DefaultDebounce = 200 * time.Millisecond
+
+// DefaultDegradeAfterWatchErrors is how many consecutive list/watch failures it takes before a
+// source that listed the cluster once admits it is no longer tracking it.
+//
+// Twenty is deliberately lenient. This gates the readiness of a DaemonSet on every master of a
+// fail-closed authorizer, so the cost of being too eager is a rollout that stalls, or an operator
+// chasing an instance that was fine - while the cost of being too slow is only that a stale
+// directory is reported by its metrics rather than by readiness, which is where it was reported
+// before this existed at all. client-go backs the reflector off to about thirty seconds between
+// retries, so twenty failures is on the order of ten minutes of continuous failure.
+//
+// The number has not been calibrated against a real degradation; see the card in specs for the
+// experiment that would justify tightening it.
+const DefaultDegradeAfterWatchErrors = 20
 
 // Source is the informer-backed provider of a rules.Directory.
 type Source struct {
@@ -108,6 +132,11 @@ type Source struct {
 	mu        sync.Mutex
 	lastError error
 	crdGone   bool
+	// consecutiveWatchErrors counts list/watch failures with no success in between. It is what
+	// turns a permanently broken watch into a state change, and it is reset by every successful
+	// sync and by every rebuild that the informer feeds.
+	consecutiveWatchErrors int
+	degradeAfter           int
 }
 
 // New builds a Source over a dynamic client. Run must be called for it to do anything.
@@ -119,12 +148,16 @@ func New(client dynamic.Interface, opts Options) *Source {
 		opts.Logf = func(string, ...interface{}) {}
 	}
 	informer := dynamicinformer.NewFilteredDynamicInformer(client, rules.GroupVersionResource, "", opts.Resync, cache.Indexers{}, nil).Informer()
+	if opts.DegradeAfterWatchErrors <= 0 {
+		opts.DegradeAfterWatchErrors = DefaultDegradeAfterWatchErrors
+	}
 	s := &Source{
-		informer: informer,
-		builder:  rules.NewBuilder(),
-		opts:     opts,
-		dirty:    make(chan struct{}, 1),
-		listed:   make(chan struct{}, 1),
+		degradeAfter: opts.DegradeAfterWatchErrors,
+		informer:     informer,
+		builder:      rules.NewBuilder(),
+		opts:         opts,
+		dirty:        make(chan struct{}, 1),
+		listed:       make(chan struct{}, 1),
 	}
 	// Errors during the initial list normally surface only as a log line of the reflector; a missing
 	// CRD must be told apart from an unreachable API server, so the handler records them.
@@ -158,14 +191,28 @@ func (s *Source) HasSynced() bool {
 }
 
 // State reports the freshness state.
+//
+// A source that listed the cluster once and then lost its watch for good - RBAC revoked, a wedged
+// reflector, an API server that keeps refusing - used to stay Synced forever, because the first
+// list had succeeded and nothing ever took that back. The directory it serves is then a snapshot of
+// whenever the watch broke, and readiness had no way to notice.
+//
+// After DegradeAfterWatchErrors consecutive failures with no success in between, it reports
+// Unsynced again. The threshold is deliberately lenient: this predicate gates the readiness of a
+// DaemonSet on every master of a fail-closed authorizer, so a handful of transient errors must not
+// move it. client-go backs off to about thirty seconds between reflector retries, so the default
+// is on the order of ten minutes of continuous failure.
 func (s *Source) State() State {
-	if s.synced.Load() {
-		return StateSynced
-	}
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	if s.crdGone {
 		return StateCRDMissing
+	}
+	if s.synced.Load() && s.consecutiveWatchErrors < s.degradeAfter {
+		return StateSynced
+	}
+	if s.synced.Load() {
+		return StateStale
 	}
 	return StateUnsynced
 }
@@ -195,6 +242,7 @@ func (s *Source) awaitSync(ctx context.Context) {
 	s.mu.Lock()
 	s.crdGone = false
 	s.lastError = nil
+	s.consecutiveWatchErrors = 0
 	s.mu.Unlock()
 	// Publish the first directory at once. There is nothing to coalesce yet, and until it exists
 	// every subject of a rule is treated as restricted, so waiting out the debounce window would be
@@ -238,7 +286,14 @@ func (s *Source) watchError(_ *cache.Reflector, err error) {
 	s.mu.Lock()
 	s.lastError = err
 	s.crdGone = apierrors.IsNotFound(err)
+	s.consecutiveWatchErrors++
+	degraded := s.synced.Load() && s.consecutiveWatchErrors == s.degradeAfter
 	s.mu.Unlock()
+
+	if degraded {
+		s.opts.Logf("rules source: %d list/watch errors in a row; the directory is no longer tracking "+
+			"the cluster and this instance reports itself stale", s.degradeAfter)
+	}
 	if s.opts.Observer != nil {
 		s.opts.Observer.WatchError(err)
 	}
