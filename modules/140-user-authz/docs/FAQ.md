@@ -64,6 +64,46 @@ Because `Jane Doe` matches two rules, some calculations will be made:
 If there is a rule without the `namespaceSelector` option and `limitNamespaces` deprecated option, it means that all namespaces are allowed excluding system namespaces, which will affect the resulting limit namespaces calculation.
 {% endalert %}
 
+## What happens to the bindings when the cluster is updated to the release with the controller?
+
+Nothing is recreated, and no access is interrupted. The bindings the Helm chart used to render are
+adopted in place by `user-authz-controller`: the same objects, the same names, with the chart's
+metadata removed and an `ownerReference` to the rule added.
+
+The one thing to plan for is the **release that performs the migration**. A hook stamps
+`helm.sh/resource-policy: keep` on every live binding before Helm runs, so the release engine cannot
+delete them when they disappear from the rendered manifest — and then the engine makes one pass over
+the previous manifest, fetching every object in it to notice that it must be kept. That pass is
+proportional to the number of bindings and happens exactly once:
+
+| Bindings in the release | What to expect |
+|---|---|
+| up to ~5000 | the release takes longer than usual and finishes on its own |
+| more than ~5000 | the pass can exceed the 20-minute module release timeout |
+
+For a cluster above that size, do the upgrade with a raised timeout or on the previous release
+engine, and put it back afterwards:
+
+```bash
+# one of the two, for the duration of the upgrade
+d8 k -n d8-system set env deploy/deckhouse HELM_TIMEOUT=60m
+d8 k -n d8-system set env deploy/deckhouse USE_NELM=false
+```
+
+Count what you have before deciding:
+
+```bash
+d8 k get clusterrolebindings -l heritage=deckhouse,module=user-authz --no-headers | wc -l
+d8 k get rolebindings -A -l heritage=deckhouse,module=user-authz --no-headers | wc -l
+```
+
+If the hook cannot stamp every binding it fails and the release does not start, which leaves the
+bindings exactly as they were. That is deliberate: a release that ran without the marks would delete
+them.
+
+The cost is one-time. Once the controller owns the bindings, the release no longer contains objects
+whose number depends on the number of rules, and its duration stops depending on them.
+
 ## How do I check that the controller keeps the bindings in sync?
 
 The `user-authz-controller` component reconciles the ClusterRoleBindings and RoleBindings of every ClusterAuthorizationRule and AuthorizationRule, the `d8:use:dict` grants of the experimental role model, and the projections of manage-role bindings into namespaced use RoleBindings. Three sources tell whether it is healthy.
