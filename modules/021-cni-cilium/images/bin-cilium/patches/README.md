@@ -43,3 +43,15 @@ container side, and covers only that side.
 
 Upstream <https://github.com/cilium/cilium/pull/24100>
 Test `~/src/kind/d8-1.20-tests/002-stable-mac/`
+
+## 003-mtu.patch
+
+Give endpoint devices `RouteMTU` instead of `DeviceMTU`.
+
+A virtual machine inside a pod takes its MTU from the link, not from the pod's
+default route, so a device left at `DeviceMTU` makes the guest emit frames the
+overlay cannot carry. Covers creation time (CNI plugin and health endpoint) and
+the endpoint MTU updater, which would otherwise reset the devices.
+
+Upstream issue <https://github.com/cilium/cilium/issues/23711>
+Test `~/src/kind/d8-1.20-tests/003-mtu/`
