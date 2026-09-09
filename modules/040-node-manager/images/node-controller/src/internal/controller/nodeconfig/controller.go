@@ -144,7 +144,9 @@ func (r *Reconciler) SetupWatches(w register.Watcher) {
 
 // moduleConfigNetworkGroupChanged reports whether spec.settings.network differs between the two
 // ModuleConfig revisions. Both objects come off an unstructured-backed informer (see cache.go); a
-// type assertion failure is a "cannot tell" that must not silently drop the event, so it answers true.
+// type assertion failure, or spec/spec.settings existing but not being a map (NestedFieldNoCopy's
+// error case), is a "cannot tell" that must not silently drop the event, so it answers true rather
+// than comparing two nils that both came from a walk that never actually completed.
 func moduleConfigNetworkGroupChanged(oldObj, newObj client.Object) bool {
 	oldU, ok := oldObj.(*unstructured.Unstructured)
 	if !ok {
@@ -155,8 +157,14 @@ func moduleConfigNetworkGroupChanged(oldObj, newObj client.Object) bool {
 		return true
 	}
 
-	oldNetwork, _, _ := unstructured.NestedFieldNoCopy(oldU.UnstructuredContent(), "spec", "settings", "network")
-	newNetwork, _, _ := unstructured.NestedFieldNoCopy(newU.UnstructuredContent(), "spec", "settings", "network")
+	oldNetwork, _, err := unstructured.NestedFieldNoCopy(oldU.UnstructuredContent(), "spec", "settings", "network")
+	if err != nil {
+		return true
+	}
+	newNetwork, _, err := unstructured.NestedFieldNoCopy(newU.UnstructuredContent(), "spec", "settings", "network")
+	if err != nil {
+		return true
+	}
 	return !apiequality.Semantic.DeepEqual(oldNetwork, newNetwork)
 }
 
