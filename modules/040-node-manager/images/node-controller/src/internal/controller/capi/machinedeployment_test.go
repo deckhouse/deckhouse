@@ -282,7 +282,7 @@ func TestReadInstanceClassChecksumIgnoresStaleTemplates(t *testing.T) {
 		return tmpl
 	}
 	checksums := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{Name: instanceClassChecksumConfigMapName, Namespace: common.MachineNamespace},
+		ObjectMeta: metav1.ObjectMeta{Name: common.InstanceClassChecksumConfigMapName, Namespace: common.MachineNamespace},
 		Data:       map[string]string{"worker": "current"},
 	}
 	cl := fakeclient.NewClientBuilder().WithScheme(scheme).

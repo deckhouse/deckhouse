@@ -19,4 +19,8 @@ package common
 const (
 	MachineNamespace                 = "d8-cloud-instance-manager"
 	ConfigurationChecksumsSecretName = "configuration-checksums"
+	// InstanceClassChecksumConfigMapName is rendered by helm with the current instance-class
+	// checksum of every CAPI NodeGroup. It is the only source of the checksum: the infrastructure
+	// templates are kept forever, so their annotations also carry every stale value.
+	InstanceClassChecksumConfigMapName = "d8-node-manager-capi-instance-class-checksum"
 )

@@ -74,6 +74,25 @@ func (r *MachineDeploymentReconciler) SetupWatches(w register.Watcher) {
 		builder.WithPredicates(predicate.GenerationChangedPredicate{}))
 	w.Watches(&capiv1beta2.MachineDeployment{}, handler.EnqueueRequestsFromMapFunc(mdToNodeGroup),
 		builder.WithPredicates(predicate.GenerationChangedPredicate{}))
+	w.Watches(&corev1.ConfigMap{}, handler.EnqueueRequestsFromMapFunc(checksumConfigMapToNodeGroups))
+}
+
+// checksumConfigMapToNodeGroups enqueues every NodeGroup named in the checksum ConfigMap helm just
+// rewrote, so an InstanceClass change reaches the MachineDeployment without waiting for an
+// unrelated NodeGroup event. The cache holds only this ConfigMap (see common.CacheOptions).
+func checksumConfigMapToNodeGroups(_ context.Context, obj client.Object) []reconcile.Request {
+	if obj.GetNamespace() != common.MachineNamespace || obj.GetName() != common.InstanceClassChecksumConfigMapName {
+		return nil
+	}
+	cm, ok := obj.(*corev1.ConfigMap)
+	if !ok {
+		return nil
+	}
+	requests := make([]reconcile.Request, 0, len(cm.Data))
+	for ngName := range cm.Data {
+		requests = append(requests, reconcile.Request{NamespacedName: types.NamespacedName{Name: ngName}})
+	}
+	return requests
 }
 
 func mdToNodeGroup(_ context.Context, obj client.Object) []reconcile.Request {
@@ -232,7 +251,7 @@ func (r *MachineDeploymentReconciler) reconcileCloudMDs(ctx context.Context, ng 
 	}
 	if instanceClassChecksum == "" {
 		logger.Info("skipping: instance-class checksum not published yet, waiting for helm",
-			"configMap", instanceClassChecksumConfigMapName)
+			"configMap", common.InstanceClassChecksumConfigMapName)
 		return nil
 	}
 
@@ -579,12 +598,12 @@ func (r *MachineDeploymentReconciler) readInstancePrefix(ctx context.Context) (s
 func (r *MachineDeploymentReconciler) readInstanceClassChecksum(ctx context.Context, ngName string) (string, error) {
 	cm := &corev1.ConfigMap{}
 	if err := r.APIReader.Get(ctx, types.NamespacedName{
-		Name: instanceClassChecksumConfigMapName, Namespace: common.MachineNamespace,
+		Name: common.InstanceClassChecksumConfigMapName, Namespace: common.MachineNamespace,
 	}, cm); err != nil {
 		if errors.IsNotFound(err) {
 			return "", nil
 		}
-		return "", fmt.Errorf("get configmap %s: %w", instanceClassChecksumConfigMapName, err)
+		return "", fmt.Errorf("get configmap %s: %w", common.InstanceClassChecksumConfigMapName, err)
 	}
 	// Returned as published: helm hashed this exact string into the template and Secret names.
 	return cm.Data[ngName], nil

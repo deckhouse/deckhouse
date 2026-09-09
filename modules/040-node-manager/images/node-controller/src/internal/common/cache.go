@@ -73,6 +73,16 @@ func CacheOptions() (cache.Options, client.Options) {
 					},
 				},
 			},
+			// Only the checksum ConfigMap is watched; every other ConfigMap is read through APIReader.
+			&corev1.ConfigMap{}: {
+				Namespaces: map[string]cache.Config{
+					MachineNamespace: {
+						FieldSelector: fields.SelectorFromSet(fields.Set{
+							"metadata.name": InstanceClassChecksumConfigMapName,
+						}),
+					},
+				},
+			},
 			&mcmv1alpha1.Machine{}: machineNS,
 			&capiv1beta2.Machine{}: machineNS,
 			newUnstructured("machine.sapcloud.io", "v1alpha1", "MachineDeployment"):                 machineNS,
