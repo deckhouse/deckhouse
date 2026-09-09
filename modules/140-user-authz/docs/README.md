@@ -170,7 +170,7 @@ The module provides three access levels for system and subsystem roles:
 
 ### Global resource dictionaries
 
-In addition to the use and manage roles, the module creates a special ClusterRole `d8:use:dict`. It
+In addition to the roles and capabilities of the granular model, the module creates a special ClusterRole `d8:dict`. It
 grants **read-only** access to cluster-scoped "reference" resources that users commonly need to discover
 when creating objects — for example, a user creating a PersistentVolumeClaim needs to see the available
 StorageClasses, and a user creating an Ingress needs to see the IngressClasses.
@@ -188,14 +188,14 @@ The role grants `get`, `list`, `watch` on the following resources:
 
 #### Automatic binding
 
-The `d8:use:dict` ClusterRoleBinding is created **automatically** whenever a RoleBinding references a
-`d8:use:role:*` role (experimental model) or a legacy `user-authz:*` role (current model). This means
+The `d8:dict` ClusterRoleBinding is created **automatically** whenever a RoleBinding references a
+`d8:namespace:*` role (granular model) or a `user-authz:*` role (basic model). This means
 project users can discover reference resources without any manual configuration. The binding appears with
 the RoleBinding and is removed when it is deleted. The binding is created and managed entirely by the
-`user-authz` module. You do not create it yourself.
+`user-authz-controller` component of the module. You do not create it yourself.
 
 {% alert level="info" %}
-The `d8:use:dict` role is independent of the `multitenancy-manager` cluster-wide resource access management mechanism: it only gives
+The `d8:dict` role is independent of the `multitenancy-manager` cluster-wide resource access management mechanism: it only gives
 **read** access to reference resources so users can discover them. The mechanism controls *which resource values* a project may actually reference when creating objects.
 {% endalert %}
 

@@ -43,10 +43,10 @@ const validatingWebhookConfigurationName = "cluster-objects-grants-validator"
 // Auto-wrapped (managed-by-namespace) projects are EXCLUDED: they are plain orphan
 // namespaces wrapped only for accounting and must behave like ordinary namespaces
 // (allowNamespacesWithoutProjects). Enforcing the grant allow-list there
-// breaks the legacy access-level RoleBindings (d8:user-authz:*) that the user-authz
-// Helm release emits for CARs/AuthorizationRules targeting such a namespace: the
-// release then fails on this webhook and retries forever, deadlocking the user-authz
-// module ('main' queue). The ValidatingAdmissionPolicy exemption for the same label is narrower:
+// breaks the basic-model RoleBindings (user-authz:*) that user-authz-controller emits for
+// AuthorizationRules targeting such a namespace: the controller then fails on this webhook and
+// retries forever (before #22828 the same happened to the user-authz Helm release, deadlocking the
+// module's 'main' queue). The ValidatingAdmissionPolicy exemption for the same label is narrower:
 // it skips only Namespace UPDATE/DELETE, not every resource inside the namespace.
 var projectNamespaceSelector = &v1.LabelSelector{
 	MatchLabels: map[string]string{"heritage": "multitenancy-manager"},
@@ -62,7 +62,8 @@ var projectNamespaceSelector = &v1.LabelSelector{
 // writers — evaluated locally (CEL), BEFORE any network call to the webhook backend. This is the
 // anti-deadlock guarantee: the grant allow-list exists to police PROJECT USERS, but every module's
 // resources land in project namespaces via that module's Helm release applied by the
-// deckhouse-controller (system:serviceaccount:d8-system:deckhouse). With failurePolicy: Fail, if the
+// deckhouse-controller (system:serviceaccount:d8-system:deckhouse), or, for the AuthorizationRule
+// bindings, via user-authz-controller (system:serviceaccount:d8-user-authz:controller). With failurePolicy: Fail, if the
 // webhook is denied OR merely unreachable/slow, that server-side apply fails and addon-operator
 // retries it forever, locking the module's queue (observed: user-authz emitting
 // "RoleBinding/...:d8:user-authz:*:user" into every project namespace -> "webhook retry timed out

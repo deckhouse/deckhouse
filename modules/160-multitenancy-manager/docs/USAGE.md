@@ -206,7 +206,7 @@ The following automatically applies in **all** namespaces of the project (the ma
 - **Access**: the [ProjectRoleBinding](cr.html#projectrolebinding) and [ClusterProjectRoleBinding](cr.html#clusterprojectrolebinding) bindings, including the automatic access of the project administrators. When a new namespace is added, all existing bindings fan out into it without any user action.
 - **Namespaced template objects**: the network policy (`networkPolicy.mode: Isolated`) and the log collection setup (`logShipping`) are created in every namespace of the project. The network isolation allows traffic between the namespaces of one project.
 - **Cluster-scoped template policies** (`OperationPolicy`, the `SecurityPolicy` from `allowedUIDs`/`allowedGIDs`): they select namespaces by the `projects.deckhouse.io/project` label, that is, they cover the whole project.
-- **Inherited labels**: the pod security profile (`security.deckhouse.io/pod-policy`), extended monitoring (`extended-monitoring.deckhouse.io/enabled`), vulnerability scanning (`security-scanning.deckhouse.io/enabled`), and the template label (`projects.deckhouse.io/project-template`) are synced from the main namespace to the additional ones. The sync is complete: if a feature is turned off in the template, the label is removed from the additional namespaces as well. Thanks to the template label, the [cluster resource availability rules](#granting-cluster-scoped-resources-to-projects) also apply in all namespaces of the project.
+- **Inherited labels**: the pod security profile (`security.deckhouse.io/pod-policy`), extended monitoring (`extended-monitoring.deckhouse.io/enabled`), vulnerability scanning (`security-scanning.deckhouse.io/enabled`), and the template label (`projects.deckhouse.io/project-template`) are synced from the main namespace to the additional ones. The sync is complete: if a feature is turned off in the template, the label is removed from the additional namespaces as well. Thanks to the template label, the [cluster resource availability rules](#managing-access-to-cluster-wide-resources) also apply in all namespaces of the project.
 
 The following stays in the **main** namespace only:
 
@@ -399,7 +399,7 @@ Available fields (all optional; the complete reference is [in the ProjectTemplat
 | `allowedUIDs`, `allowedGIDs` | The allowed UID/GID ranges of the project containers. |
 | `runtimeAudit.enabled` | Auditing the project processes' access to the Linux kernel. |
 | `namespaceMetadata.labels`, `namespaceMetadata.annotations` | Extra labels and annotations of the project namespaces. |
-| `resources`, `grantPolicies` | [Granting cluster-scoped resources to projects](#granting-cluster-scoped-resources-to-projects). |
+| `resources`, `grantPolicies` | [Granting cluster-scoped resources through a project template](#granting-cluster-scoped-resources-through-a-project-template). |
 | `parametersSchema.openAPIV3Schema` | The schema of parameters set when creating a project. |
 
 An example of a structured template:
@@ -890,6 +890,29 @@ spec:
 
 {% endraw %}
 
+#### Granting cluster-scoped resources through a project template
+
+The availability rules for cluster-scoped resources can be set directly in a [structured template](#structured-templates) — they then automatically apply to all projects created from that template:
+
+- `spec.resources` — the rules "inside" the template: the same format as `resources` in a ClusterResourceGrantPolicy (resource name, `allowed`/`allowedSelector`, `default`);
+- `spec.grantPolicies` — a list of names of **library** ClusterResourceGrantPolicy objects. A library policy describes a reusable set of rules and must not have a `projectSelector` — which projects it applies to is determined by the referencing template. This way, for example, a "corporate StorageClasses" policy can be maintained by one administrator and used by several templates.
+
+```yaml
+apiVersion: deckhouse.io/v1alpha2
+kind: ProjectTemplate
+metadata:
+  name: my-template
+spec:
+  resources:
+    - resourceName: storageclasses
+      allowed: ["standard"]
+      default: standard
+  grantPolicies:
+    - corporate-issuers   # A library ClusterResourceGrantPolicy without a projectSelector.
+```
+
+For each source, the controller creates a service policy named `template-<template>-<source>` (for `spec.resources` — `template-<template>-inline`); the `inline` name is reserved for library policies. A reference to a non-existent policy or to a policy with a `projectSelector` is rejected when the template is created.
+
 ### For project users
 
 Project users can view the cluster-wide resources available to them and check the values used by default.
@@ -935,6 +958,25 @@ For some cluster-wide resources, the administrator can configure a default value
 For example, if `fast-ssd` is configured as the default StorageClass, the `fast-ssd` value can be automatically assigned to `.spec.storageClassName` when a PersistentVolumeClaim is created without this field.
 
 You can specify a value explicitly by selecting any resource available to the project from the corresponding AvailableClusterResource.
+
+#### Cases when a project may have no default
+
+AvailableClusterResource reports the project default in `status.default`, and flags it among the
+names in `status.available` with `default: true`. Both may be absent, which is a normal state rather
+than an error — a resource can be granted without any name being the one to fall back on. It happens
+in four cases:
+
+- the grant policy sets no `default` and the registration has no `defaultFrom`;
+- the resource is value-backed (granted as a list of values rather than as objects of the cluster),
+  and `defaultFrom` does not apply to it;
+- `defaultFrom` is set, but the number of objects carrying that annotation is not exactly one:
+  a default by annotation is defined only when a single object claims it;
+- a default is set but the project may not use it — for example, the cluster-wide default
+  StorageClass is not among the names granted to this project. It is deliberately dropped, so that
+  the defaulting webhook never fills in a value the validating webhook would reject a moment later.
+
+The practical effect of the last one is that the field stays empty and the object is created (or
+denied) by the usual rules, instead of being denied over a name the project's user never chose.
 
 ### For module developers
 

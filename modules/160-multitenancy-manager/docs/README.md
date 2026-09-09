@@ -205,7 +205,7 @@ DKP registers the following cluster-wide resources:
 | `clusterissuers` | ClusterIssuer (cert-manager.io) | Certificate `.spec.issuerRef.name`; Ingress: `cert-manager.io/cluster-issuer` annotation | `FillEmpty` or `None` |
 | `clusterroles` | ClusterRole (rbac.authorization.k8s.io) | RoleBinding `.roleRef.name` | `None` |
 
-The `clusterroles` registration excludes all ClusterRole objects without the `rbac.deckhouse.io/delegatable` label. By default, only namespace-level roles (`d8:use:role:*` and the deprecated `user-authz:*` roles) are available in RoleBinding.
+The `clusterroles` registration excludes all ClusterRole objects without the `rbac.deckhouse.io/delegatable` label. By default, only the namespace and project roles of the granular model (`d8:namespace:*`, `d8:project:*`) and the `user-authz:*` roles of the basic model are available in RoleBinding.
 
 The `clusterissuers` definition is registered only when the `cert-manager` module is enabled.
 
