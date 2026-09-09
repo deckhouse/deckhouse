@@ -78,10 +78,18 @@ func applyMultitenancyOptionsFilter(obj *unstructured.Unstructured) (go_hook.Fil
 
 	// Exactly the three the webhook is responsible for. Everything else in a rule is RBAC, which
 	// user-authz-controller applies whether or not multi-tenancy is on.
-	for _, option := range []string{"limitNamespaces", "namespaceSelector", "allowAccessToSystemNamespaces"} {
-		if _, ok := spec[option]; ok {
-			rule.Options = append(rule.Options, option)
-		}
+	//
+	// The value matters, not the key. A rule that spells out `allowAccessToSystemNamespaces: false`
+	// or that has had its `limitNamespaces` emptied asks for nothing the webhook would enforce, and
+	// reporting it would send an operator looking for a problem that is not there.
+	if namespaces, ok := spec["limitNamespaces"].([]interface{}); ok && len(namespaces) > 0 {
+		rule.Options = append(rule.Options, "limitNamespaces")
+	}
+	if selector, ok := spec["namespaceSelector"].(map[string]interface{}); ok && len(selector) > 0 {
+		rule.Options = append(rule.Options, "namespaceSelector")
+	}
+	if allow, ok := spec["allowAccessToSystemNamespaces"].(bool); ok && allow {
+		rule.Options = append(rule.Options, "allowAccessToSystemNamespaces")
 	}
 	return rule, nil
 }
