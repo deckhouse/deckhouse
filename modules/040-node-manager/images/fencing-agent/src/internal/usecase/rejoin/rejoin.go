@@ -36,8 +36,9 @@ type Params struct {
 }
 
 type Deps struct {
-	Attempt      func(ctx context.Context) error
-	HasQuorum    func() bool
+	Attempt   func(ctx context.Context) error
+	HasQuorum func() bool
+	NotMember    func(err error) bool
 	APIReachable func() bool
 	Changed      <-chan struct{}
 	Sleep        func(ctx context.Context, d time.Duration) bool
@@ -47,6 +48,7 @@ type Loop struct {
 	params Params
 	deps   Deps
 	logger *log.Logger
+	reportedNotMember bool
 }
 
 func New(params Params, deps Deps, logger *log.Logger) *Loop {
@@ -71,6 +73,7 @@ func (l *Loop) Run(ctx context.Context) error {
 			}
 
 			attempts, delay = 0, l.params.Interval
+			l.reportedNotMember = false
 
 			select {
 			case <-ctx.Done():
@@ -94,7 +97,7 @@ func (l *Loop) Run(ctx context.Context) error {
 		attempts++
 
 		if err := l.deps.Attempt(ctx); err != nil {
-			l.logger.Warn("rejoin attempt failed", "error", err, "attempt", attempts, "next_in", delay.String())
+			l.reportAttemptError(err, attempts, delay)
 		} else if l.deps.HasQuorum() {
 			continue
 		} else {
@@ -109,6 +112,24 @@ func (l *Loop) Run(ctx context.Context) error {
 	}
 
 	return nil
+}
+
+func (l *Loop) reportAttemptError(err error, attempt int, delay time.Duration) {
+	if l.deps.NotMember != nil && l.deps.NotMember(err) {
+		if l.reportedNotMember {
+			return
+		}
+
+		l.reportedNotMember = true
+
+		l.logger.Warn("this node is not a member of its NodeGroup, rejoin is not attempted until that changes", "error", err)
+
+		return
+	}
+
+	l.reportedNotMember = false
+
+	l.logger.Warn("rejoin attempt failed", "error", err, "attempt", attempt, "next_in", delay.String())
 }
 
 func jitter(delay time.Duration) time.Duration {

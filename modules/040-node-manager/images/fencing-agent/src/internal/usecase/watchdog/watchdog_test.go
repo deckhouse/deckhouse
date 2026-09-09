@@ -476,6 +476,41 @@ func TestManagerNeverReArmsWhileTheNodeIsBeingRemoved(t *testing.T) {
 	}
 }
 
+func TestManagerDisarmsWhenTheNodeLeavesItsNodeGroup(t *testing.T) {
+	h := newHarness(t)
+
+	h.tick(t)
+
+	h.state.set(Snapshot{Observed: true, LeftNodeGroup: true, NodeGroup: "worker-2"})
+	h.tick(t)
+	h.tick(t)
+
+	keepAlives, magicCloses, _ := h.device.counters()
+	if magicCloses != 1 {
+		t.Errorf("magic closes: %d, want exactly one disarm after the Node left the group", magicCloses)
+	}
+
+	if keepAlives != 1 {
+		t.Errorf("keepalives: %d, want no feeding for a Node this group no longer contains", keepAlives)
+	}
+
+	if h.events.count(reasonDisarmed) != 1 {
+		t.Errorf("disarm events: %d, want the operator told once", h.events.count(reasonDisarmed))
+	}
+
+	if !h.manager.Ready() {
+		t.Error("leaving the group is a deliberate state and must not turn the pod NotReady")
+	}
+
+	// Relabeled back into the group: fencing comes back with it.
+	h.state.set(Snapshot{Observed: true, NodeGroup: "worker"})
+	h.tick(t)
+
+	if h.opener.opens() != 2 {
+		t.Errorf("device was opened %d times, want a re-arm once the Node is back in its group", h.opener.opens())
+	}
+}
+
 // Without WDIOF_MAGICCLOSE the kernel ignores the disarm, so stopping the feed
 // would panic the Node mid-operation.
 func TestManagerKeepsFeedingWhenTheDeviceCannotBeDisarmed(t *testing.T) {
@@ -538,30 +573,6 @@ func TestManagerKeepsFeedingWhenTheDisarmFails(t *testing.T) {
 
 	if !h.manager.Ready() {
 		t.Error("feeding through a planned operation is the best available state, not a fault")
-	}
-}
-
-func TestManagerStopsTheAgentWhenTheOwnNodeUIDChanged(t *testing.T) {
-	h := newHarness(t)
-
-	h.tick(t)
-
-	h.state.set(Snapshot{Observed: true, UIDMismatch: true})
-
-	err := h.manager.tick()
-	if err == nil || !errors.Is(err, errFatal) {
-		t.Fatalf("tick error is %v, want a fatal error so the pod restarts with a fresh identity", err)
-	}
-
-	if h.events.count(reasonIdentityChanged) != 1 {
-		t.Errorf("identity events: %d, want 1", h.events.count(reasonIdentityChanged))
-	}
-
-	// The deferred Close in the agent is what disarms on the way out.
-	h.manager.Close()
-
-	if _, magicCloses, _ := h.device.counters(); magicCloses != 1 {
-		t.Errorf("magic closes: %d, want the device disarmed on shutdown", magicCloses)
 	}
 }
 

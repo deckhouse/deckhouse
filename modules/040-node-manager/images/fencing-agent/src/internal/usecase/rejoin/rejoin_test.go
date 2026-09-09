@@ -17,8 +17,10 @@ limitations under the License.
 package rejoin
 
 import (
+	"bytes"
 	"context"
 	"errors"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -31,6 +33,27 @@ const (
 	interval    = time.Millisecond
 	maxInterval = 4 * time.Millisecond
 )
+
+var errNotMember = errors.New("this node is not a member of its NodeGroup any more")
+
+type syncBuffer struct {
+	mu  sync.Mutex
+	buf bytes.Buffer
+}
+
+func (b *syncBuffer) Write(p []byte) (int, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	return b.buf.Write(p)
+}
+
+func (b *syncBuffer) String() string {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+
+	return b.buf.String()
+}
 
 type harness struct {
 	loop *Loop
@@ -46,6 +69,12 @@ type harness struct {
 }
 
 func newHarness(t *testing.T) *harness {
+	t.Helper()
+
+	return newLoggedHarness(t, log.NewNop())
+}
+
+func newLoggedHarness(t *testing.T, logger *log.Logger) *harness {
 	t.Helper()
 
 	h := &harness{api: true, changed: make(chan struct{}, 1)}
@@ -65,6 +94,7 @@ func newHarness(t *testing.T) *harness {
 			return err
 		},
 		HasQuorum:    func() bool { h.mu.Lock(); defer h.mu.Unlock(); return h.quorum },
+		NotMember:    func(err error) bool { return errors.Is(err, errNotMember) },
 		APIReachable: func() bool { h.mu.Lock(); defer h.mu.Unlock(); return h.api },
 		Changed:      h.changed,
 		Sleep: func(ctx context.Context, d time.Duration) bool {
@@ -79,7 +109,7 @@ func newHarness(t *testing.T) *harness {
 				return true
 			}
 		},
-	}, log.NewNop())
+	}, logger)
 
 	return h
 }
@@ -242,4 +272,30 @@ func TestAttemptErrorsBackOffLikeAFailedRejoin(t *testing.T) {
 	within(t, sleeps[0], interval)
 	within(t, sleeps[1], 2*interval)
 	within(t, sleeps[2], 4*interval)
+}
+
+func TestTheNotMemberVerdictIsLoggedOncePerEpisode(t *testing.T) {
+	logs := &syncBuffer{}
+	h := newLoggedHarness(t, log.NewLogger(log.WithOutput(logs), log.WithHandlerType(log.JSONHandlerType)))
+
+	h.failAttempts(errNotMember)
+
+	stop := h.run(t)
+	waitFor(t, func() bool { return h.attempts.Load() >= 3 })
+
+	if got := strings.Count(logs.String(), "rejoin is not attempted until that changes"); got != 1 {
+		t.Errorf("the verdict was logged %d times over %d attempts, want once", got, h.attempts.Load())
+	}
+
+	if got := strings.Count(logs.String(), "rejoin attempt failed"); got != 0 {
+		t.Errorf("the generic failure line appeared %d times for a membership verdict", got)
+	}
+
+	h.failAttempts(errors.New("no seed accepted the connection"))
+	waitFor(t, func() bool { return strings.Contains(logs.String(), "rejoin attempt failed") })
+
+	h.failAttempts(errNotMember)
+	waitFor(t, func() bool { return strings.Count(logs.String(), "rejoin is not attempted until that changes") == 2 })
+
+	stop()
 }

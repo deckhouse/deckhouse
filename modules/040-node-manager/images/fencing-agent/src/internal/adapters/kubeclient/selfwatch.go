@@ -131,6 +131,7 @@ func nodeSignals(node *corev1.Node) domain.NodeSignals {
 
 	signals := domain.NodeSignals{
 		UID:                string(node.UID),
+		NodeGroup:          node.Labels[domain.NodeGroupLabel],
 		MaintenanceReasons: make([]string, 0, len(annotations)),
 	}
 

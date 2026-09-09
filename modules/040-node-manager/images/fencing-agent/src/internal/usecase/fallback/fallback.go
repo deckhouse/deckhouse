@@ -81,6 +81,7 @@ type Deps struct {
 	Events      EventRecorder
 	Now         func() time.Time
 	CacheSynced func() bool
+	InNodeGroup func() bool
 }
 
 type Snapshot struct {
@@ -109,6 +110,7 @@ type Monitor struct {
 	failures       int
 	deleted        types.UID
 	recordVanished bool
+	leftNodeGroup bool
 }
 
 func New(params Params, deps Deps, logger *log.Logger) *Monitor {
@@ -118,6 +120,10 @@ func New(params Params, deps Deps, logger *log.Logger) *Monitor {
 
 	if deps.CacheSynced == nil {
 		deps.CacheSynced = func() bool { return true }
+	}
+
+	if deps.InNodeGroup == nil {
+		deps.InNodeGroup = func() bool { return true }
 	}
 
 	return &Monitor{
@@ -212,6 +218,14 @@ func (m *Monitor) reconcile(ctx context.Context) {
 	s.HasQuorum = view.HasQuorum()
 	s.Alive, s.Expected, s.Quorum = view.AliveCount(), view.ExpectedCount(), view.QuorumSize()
 
+	if !m.deps.InNodeGroup() {
+		m.leaveNodeGroup(ctx, s)
+
+		return
+	}
+
+	m.rejoinNodeGroup()
+
 	switch {
 	case s.HasQuorum && s.Active:
 		s.Active = false
@@ -247,6 +261,40 @@ func (m *Monitor) reconcile(ctx context.Context) {
 	}
 
 	m.beat(ctx, s.QuorumLostAt)
+}
+
+func (m *Monitor) leaveNodeGroup(ctx context.Context, s Snapshot) {
+	s.Active = false
+	s.QuorumLostAt = time.Time{}
+
+	m.failures = 0
+	m.recordVanished = false
+
+	m.store(s)
+
+	if !m.leftNodeGroup {
+		m.leftNodeGroup = true
+
+		m.logger.Warn("this node is not a member of its NodeGroup, the fallback record is not written any more",
+			"alive", s.Alive,
+			"expected", s.Expected,
+			"quorum", s.Quorum,
+		)
+	}
+
+	if m.deps.CacheSynced() {
+		m.removeOwnRecord(ctx)
+	}
+}
+
+func (m *Monitor) rejoinNodeGroup() {
+	if !m.leftNodeGroup {
+		return
+	}
+
+	m.leftNodeGroup = false
+
+	m.logger.Info("this node is a member of its NodeGroup again, the fallback monitor resumes")
 }
 
 func (m *Monitor) removeOwnRecord(ctx context.Context) {

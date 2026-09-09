@@ -87,6 +87,7 @@ func (j *Joiner) Joined() bool {
 // is cancelled; a permanent failure keeps the pod NotReady instead of crashing.
 func (j *Joiner) Bootstrap(ctx context.Context) {
 	backoff := j.params.RetryInterval
+	reportedNotMember := false
 
 	for attempt := 1; ; attempt++ {
 		err := j.Attempt(ctx)
@@ -102,11 +103,20 @@ func (j *Joiner) Bootstrap(ctx context.Context) {
 			return
 		}
 
-		j.logger.Warn("memberlist bootstrap join failed, retrying",
-			"error", err,
-			"attempt", attempt,
-			"backoff", backoff.String(),
-		)
+		switch {
+		case !errors.Is(err, ErrNotMember):
+			reportedNotMember = false
+
+			j.logger.Warn("memberlist bootstrap join failed, retrying",
+				"error", err,
+				"attempt", attempt,
+				"backoff", backoff.String(),
+			)
+		case !reportedNotMember:
+			reportedNotMember = true
+
+			j.logger.Warn("this node is not a member of its NodeGroup, the join is retried until that changes", "error", err)
+		}
 
 		if !sleep(ctx, j.delay(backoff)) {
 			return

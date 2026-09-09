@@ -222,6 +222,36 @@ func TestSeedListRefusesWhenTheNodeLeftTheGroup(t *testing.T) {
 	}
 }
 
+func TestBootstrapNeverJoinsANodeThatLeftTheGroup(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+
+	lister := &fakeLister{peers: []domain.Peer{
+		{Name: "worker-2", IP: "10.0.0.2", UID: "uid-2"},
+	}}
+	lister.onCall = func(call int64) {
+		if call == 3 {
+			cancel()
+		}
+	}
+
+	cluster := &fakeCluster{}
+	joiner := newJoiner(t, lister, cluster)
+
+	joiner.Bootstrap(ctx)
+
+	if joiner.Joined() {
+		t.Error("a node missing from its NodeGroup must not be reported as joined")
+	}
+
+	if len(cluster.seeds) != 0 {
+		t.Errorf("join must not be attempted by a node that left the group, got %v", cluster.seeds)
+	}
+
+	if calls := lister.calls.Load(); calls < 3 {
+		t.Errorf("the seed list was rebuilt %d times, want the loop to keep retrying so a relabel is noticed", calls)
+	}
+}
+
 func TestSeedListRefusesARecreatedNode(t *testing.T) {
 	lister := &fakeLister{peers: []domain.Peer{
 		{Name: "worker-1", IP: "10.0.0.1", UID: "uid-1-recreated"},

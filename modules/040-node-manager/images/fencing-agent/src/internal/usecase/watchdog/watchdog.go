@@ -73,6 +73,7 @@ const (
 	stateFeeding     = ""
 	stateMaintenance = "Maintenance"
 	stateRemoval     = "PlannedRemoval"
+	stateLeftGroup   = "LeftNodeGroup"
 	stateGateClosed  = "FeedGateClosed"
 )
 
@@ -282,12 +283,6 @@ func (m *Manager) tick() error {
 	snapshot := m.deps.State.Snapshot()
 
 	switch {
-	case snapshot.UIDMismatch:
-		// Recreated under the same name: the identity and profile read at startup no
-		// longer describe this machine, and only a restart refreshes them.
-		m.deps.Events.Warning(reasonIdentityChanged, "Node was recreated with a different uid, restarting the agent")
-
-		return fmt.Errorf("%w: own node was recreated with a different uid", errFatal)
 	case !snapshot.Observed:
 		// Arming before the own-Node cache is filled would hide maintenance
 		// annotations and let the agent fence through a planned operation.
@@ -296,6 +291,8 @@ func (m *Manager) tick() error {
 		return nil
 	case snapshot.PlannedRemoval:
 		return m.applyState(stateRemoval, snapshot.RemovalReason)
+	case snapshot.LeftNodeGroup:
+		return m.applyState(stateLeftGroup, leftGroupDetail(snapshot.NodeGroup))
 	case snapshot.Maintenance:
 		return m.applyState(stateMaintenance, strings.Join(snapshot.MaintenanceReasons, ","))
 	}
@@ -351,6 +348,15 @@ func (m *Manager) trackVerdict(provisional bool, reason string) {
 		"Watchdog has been feeding without a fencing verdict for %s, this node cannot be fenced locally: %s",
 		waited.Truncate(time.Second), reason,
 	))
+}
+
+// leftGroupDetail names where the Node went, for the log line and the Event.
+func leftGroupDetail(nodeGroup string) string {
+	if nodeGroup == "" {
+		return "the node group label is gone"
+	}
+
+	return fmt.Sprintf("the node is labeled into node group %q now", nodeGroup)
 }
 
 // applyState disarms the watchdog on purpose: maintenance or a planned removal.

@@ -172,6 +172,7 @@ type harness struct {
 	events   *stubEvents
 	clock    *clock
 	synced   bool
+	inGroup  bool
 }
 
 func peers(names ...string) []domain.Peer {
@@ -194,6 +195,7 @@ func newHarness(t *testing.T, store *stubStore) *harness {
 		events:   &stubEvents{},
 		clock:    &clock{now: time.Date(2026, 6, 2, 15, 0, 0, 0, time.UTC)},
 		synced:   true,
+		inGroup:  true,
 	}
 	store.now = h.clock.Now
 
@@ -210,6 +212,7 @@ func newHarness(t *testing.T, store *stubStore) *harness {
 			Events:      h.events,
 			Now:         h.clock.Now,
 			CacheSynced: func() bool { return h.synced },
+			InNodeGroup: func() bool { return h.inGroup },
 		},
 		log.NewNop(),
 	)
@@ -224,6 +227,12 @@ func (h *harness) loseQuorum(ctx context.Context) {
 
 func (h *harness) regainQuorum(ctx context.Context) {
 	h.alive.members = slices.Clone(group)
+	h.monitor.reconcile(ctx)
+}
+
+func (h *harness) leaveNodeGroup(ctx context.Context) {
+	h.expected.peers = peers("worker-2", "worker-3")
+	h.inGroup = false
 	h.monitor.reconcile(ctx)
 }
 
@@ -759,5 +768,82 @@ func TestVerdictMaxAgeClearsTheSlowestPass(t *testing.T) {
 				t.Errorf("verdictMaxAge = %s, want at least the kernel deadline %s", got, p.watchdogTimeout)
 			}
 		})
+	}
+}
+
+func TestNoFallbackRecordIsWrittenAfterLeavingTheNodeGroup(t *testing.T) {
+	h := newHarness(t, newStore())
+
+	h.alive.members = []string{nodeName}
+	h.leaveNodeGroup(t.Context())
+
+	if len(h.store.calls) != 0 {
+		t.Errorf("calls = %v, want no writes into the group this node left", h.store.calls)
+	}
+
+	if snapshot := h.monitor.Snapshot(); snapshot.Active {
+		t.Errorf("snapshot = %+v, want no fallback mode outside the NodeGroup", snapshot)
+	}
+
+	if len(h.events.normal) != 0 {
+		t.Errorf("events = %v, want no fallback events for a group this node is not in", h.events.normal)
+	}
+
+	// Fallback paces the loop by the heartbeat, and nothing advances it here.
+	if wait := h.monitor.wait(); wait != idleTick {
+		t.Errorf("wait = %s, want the idle tick %s instead of a spin", wait, idleTick)
+	}
+}
+
+func TestTheOwnFallbackRecordIsRemovedAfterLeavingTheNodeGroup(t *testing.T) {
+	h := newHarness(t, newStore())
+
+	h.loseQuorum(t.Context())
+
+	if len(h.store.states) != 1 {
+		t.Fatalf("states = %v, want the fallback record this node wrote while it was a member", h.store.states)
+	}
+
+	h.clock.advance(heartbeat)
+	h.leaveNodeGroup(t.Context())
+
+	if deletes(h.store.calls) != 1 {
+		t.Errorf("calls = %v, want the own record taken back exactly once", h.store.calls)
+	}
+
+	if len(h.store.states) != 0 {
+		t.Errorf("states = %v, want the record of a node that left the group removed", h.store.states)
+	}
+
+	// A second pass must not write it back or delete it twice.
+	before := len(h.store.calls)
+
+	h.clock.advance(heartbeat)
+	h.monitor.reconcile(t.Context())
+
+	if len(h.store.calls) != before {
+		t.Errorf("calls = %v, want nothing after the record is gone", h.store.calls[before:])
+	}
+}
+
+func TestTheFallbackMonitorResumesAfterTheNodeIsRelabeledBack(t *testing.T) {
+	h := newHarness(t, newStore())
+
+	h.alive.members = []string{nodeName}
+	h.leaveNodeGroup(t.Context())
+
+	h.expected.peers = peers(group...)
+	h.inGroup = true
+
+	h.clock.advance(heartbeat)
+	h.monitor.reconcile(t.Context())
+
+	want := []string{"heartbeat:" + nodeName, "create:" + nodeName, "heartbeat:" + nodeName}
+	if !slices.Equal(h.store.calls, want) {
+		t.Fatalf("calls = %v, want %v once the Node is back in its group", h.store.calls, want)
+	}
+
+	if snapshot := h.monitor.Snapshot(); !snapshot.Active {
+		t.Errorf("snapshot = %+v, want fallback mode back with the membership", snapshot)
 	}
 }

@@ -33,6 +33,8 @@ type Snapshot struct {
 	// UIDMismatch means the Node was recreated under the same name, so the identity
 	// and profile the agent started with are stale.
 	UIDMismatch bool
+	NodeGroup string
+	LeftNodeGroup bool
 	// Maintenance is true while any maintenance annotation is present.
 	Maintenance        bool
 	MaintenanceReasons []string
@@ -49,15 +51,16 @@ type Snapshot struct {
 // is sticky, because re-arming a Node that is being deleted would panic it
 // mid-removal.
 type SelfState struct {
-	expectedUID string
-	logger      *log.Logger
+	expectedUID       string
+	expectedNodeGroup string
+	logger            *log.Logger
 
 	mu    sync.Mutex
 	state Snapshot
 }
 
-func NewSelfState(expectedUID string, logger *log.Logger) *SelfState {
-	return &SelfState{expectedUID: expectedUID, logger: logger}
+func NewSelfState(expectedUID, expectedNodeGroup string, logger *log.Logger) *SelfState {
+	return &SelfState{expectedUID: expectedUID, expectedNodeGroup: expectedNodeGroup, logger: logger}
 }
 
 func (s *SelfState) Observe(signals domain.NodeSignals) {
@@ -69,6 +72,8 @@ func (s *SelfState) Observe(signals domain.NodeSignals) {
 	s.state.Observed = true
 	s.state.Maintenance = signals.Maintenance
 	s.state.MaintenanceReasons = slices.Clone(signals.MaintenanceReasons)
+	s.state.NodeGroup = signals.NodeGroup
+	s.state.LeftNodeGroup = signals.NodeGroup != s.expectedNodeGroup
 
 	if signals.UID != "" && signals.UID != s.expectedUID {
 		s.state.UIDMismatch = true
@@ -130,5 +135,13 @@ func (s *SelfState) logTransitions(previous Snapshot) {
 
 	if s.state.UIDMismatch && !previous.UIDMismatch {
 		s.logger.Error("own node was recreated with a different uid", "expected_uid", s.expectedUID)
+	}
+
+	if s.state.LeftNodeGroup != previous.LeftNodeGroup {
+		s.logger.Info("own node group membership changed",
+			"left_node_group", s.state.LeftNodeGroup,
+			"node_group", s.state.NodeGroup,
+			"expected_node_group", s.expectedNodeGroup,
+		)
 	}
 }

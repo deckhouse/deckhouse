@@ -183,9 +183,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		return fmt.Errorf("create node watcher: %w", err)
 	}
 
-	// The own Node gets its own informer: the watchdog must keep seeing maintenance
-	// annotations even if the Node loses the NodeGroup label.
-	selfState := watchdog.NewSelfState(a.identity.UID, a.logger)
+	selfState := watchdog.NewSelfState(a.identity.UID, a.cfg.NodeGroup, a.logger)
 
 	selfWatcher, err := kubeclient.NewSelfWatcher(a.deps.K8sClient, a.identity.Name, selfState, a.logger)
 	if err != nil {
@@ -211,6 +209,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		Events:      recorder,
 		Now:         time.Now,
 		CacheSynced: closed(synced),
+		InNodeGroup: func() bool { return !selfState.Snapshot().LeftNodeGroup },
 	}, a.logger)
 
 	watchdogManager := watchdog.New(a.watchdogParams(), watchdog.Deps{
@@ -230,7 +229,8 @@ func (a *Agent) Run(ctx context.Context) error {
 	joiner := join.New(members, cluster, a.joinParams(), a.logger)
 
 	rejoiner := rejoin.New(a.rejoinParams(), rejoin.Deps{
-		Attempt: joiner.Attempt,
+		Attempt:   joiner.Attempt,
+		NotMember: func(err error) bool { return errors.Is(err, join.ErrNotMember) },
 		HasQuorum: func() bool {
 			expected, _, _ := members.Snapshot()
 
@@ -253,6 +253,10 @@ func (a *Agent) Run(ctx context.Context) error {
 	}, a.logger)
 
 	g, gctx := errgroup.WithContext(ctx)
+
+	g.Go(func() error {
+		return watchdog.NewIdentityGuard(selfState, recorder, a.sla.Watchdog.FeedInterval.Duration, a.logger).Run(gctx)
+	})
 
 	g.Go(func() error {
 		ready := readiness(joiner.Joined, watchdogManager.Ready, closed(synced))
