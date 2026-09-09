@@ -40,8 +40,8 @@ type NamespaceLabels func(namespace string) (labels.Set, error)
 //
 // The caller must first check HasAnyFilters: an entry without filters has no opinion at all, and
 // this function would report every non-system namespace as allowed.
-func NamespaceAllowed(entry *Entry, namespace string, nsLabels NamespaceLabels) (allowed bool, err error) {
-	allowed = entry.NamespaceFiltersAbsent
+func NamespaceAllowed(entry *Entry, namespace string, nsLabels NamespaceLabels) (bool, error) {
+	allowed := entry.NamespaceFiltersAbsent
 	if !allowed {
 		for _, m := range entry.LimitNamespaces {
 			if m.Matches(namespace) {
