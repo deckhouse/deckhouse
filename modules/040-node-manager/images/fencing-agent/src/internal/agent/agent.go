@@ -27,7 +27,6 @@ import (
 
 	"github.com/deckhouse/deckhouse/pkg/log"
 
-	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 	"fencing-agent/internal/adapters/events"
 	"fencing-agent/internal/adapters/fencingstate"
 	"fencing-agent/internal/adapters/kubeclient"
@@ -42,6 +41,8 @@ import (
 	"fencing-agent/internal/usecase/membership"
 	"fencing-agent/internal/usecase/rejoin"
 	"fencing-agent/internal/usecase/watchdog"
+
+	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 )
 
 type Agent struct {
@@ -120,6 +121,17 @@ func (a *Agent) rejoinParams() rejoin.Params {
 	}
 }
 
+func closed(barrier <-chan struct{}) func() bool {
+	return func() bool {
+		select {
+		case <-barrier:
+			return true
+		default:
+			return false
+		}
+	}
+}
+
 func (a *Agent) Run(ctx context.Context) error {
 	if a.deps.K8sClient == nil || a.deps.FencingClient == nil || a.deps.FencingCache == nil {
 		return errors.New("agent dependencies are not wired: K8sClient, FencingClient and FencingCache are required")
@@ -179,12 +191,17 @@ func (a *Agent) Run(ctx context.Context) error {
 		a.sla.Fallback.KubernetesAPITimeout.Duration,
 	)
 
+	joined := make(chan struct{})
+
+	synced := make(chan struct{})
+
 	monitor := fallback.New(a.fallbackParams(), fallback.Deps{
-		Alive:    cluster,
-		Expected: members,
-		States:   states,
-		Events:   recorder,
-		Now:      time.Now,
+		Alive:       cluster,
+		Expected:    members,
+		States:      states,
+		Events:      recorder,
+		Now:         time.Now,
+		CacheSynced: closed(synced),
 	}, a.logger)
 
 	watchdogManager := watchdog.New(a.watchdogParams(), watchdog.Deps{
@@ -228,11 +245,6 @@ func (a *Agent) Run(ctx context.Context) error {
 
 	g, gctx := errgroup.WithContext(ctx)
 
-	// joined gates everything that may write to Kubernetes on behalf of the
-	// NodeGroup: before the join this agent sees no peers and would read that as
-	// a cluster-wide failure.
-	joined := make(chan struct{})
-
 	g.Go(func() error {
 		ready := func() bool { return joiner.Joined() && watchdogManager.Ready() }
 
@@ -254,8 +266,6 @@ func (a *Agent) Run(ctx context.Context) error {
 	g.Go(func() error {
 		return a.deps.FencingCache.Start(gctx)
 	})
-
-	synced := make(chan struct{})
 
 	g.Go(func() error {
 		select {
@@ -285,7 +295,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		select {
 		case <-gctx.Done():
 			return nil
-		case <-synced:
+		case <-joined:
 		}
 
 		a.logger.Info("starting the fallback monitor",
@@ -300,7 +310,7 @@ func (a *Agent) Run(ctx context.Context) error {
 		select {
 		case <-gctx.Done():
 			return nil
-		case <-synced:
+		case <-joined:
 		}
 
 		a.logger.Info("starting the rejoin loop",

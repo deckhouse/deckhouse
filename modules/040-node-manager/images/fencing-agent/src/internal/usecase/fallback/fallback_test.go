@@ -68,6 +68,7 @@ type stubStore struct {
 	states   []v1alpha1.FencingFailedNodeState
 	calls    []string
 	sections []v1alpha1.FencingFailedNodeStateFallback
+	lists int
 
 	failHeartbeat     error
 	failCreate        error
@@ -82,6 +83,8 @@ func newStore(states ...v1alpha1.FencingFailedNodeState) *stubStore {
 }
 
 func (s *stubStore) List(_ context.Context) ([]v1alpha1.FencingFailedNodeState, error) {
+	s.lists++
+
 	if s.failList != nil {
 		return nil, s.failList
 	}
@@ -168,6 +171,7 @@ type harness struct {
 	store    *stubStore
 	events   *stubEvents
 	clock    *clock
+	synced   bool
 }
 
 func peers(names ...string) []domain.Peer {
@@ -189,6 +193,7 @@ func newHarness(t *testing.T, store *stubStore) *harness {
 		store:    store,
 		events:   &stubEvents{},
 		clock:    &clock{now: time.Date(2026, 6, 2, 15, 0, 0, 0, time.UTC)},
+		synced:   true,
 	}
 	store.now = h.clock.Now
 
@@ -199,11 +204,12 @@ func newHarness(t *testing.T, store *stubStore) *harness {
 			APITimeout: time.Second,
 		},
 		Deps{
-			Alive:    h.alive,
-			Expected: h.expected,
-			States:   h.store,
-			Events:   h.events,
-			Now:      h.clock.Now,
+			Alive:       h.alive,
+			Expected:    h.expected,
+			States:      h.store,
+			Events:      h.events,
+			Now:         h.clock.Now,
+			CacheSynced: func() bool { return h.synced },
 		},
 		log.NewNop(),
 	)
@@ -600,5 +606,70 @@ func TestAdoptedPeersRecordIsRemovedOnQuorum(t *testing.T) {
 
 	if len(h.store.states) != 0 {
 		t.Errorf("record still present: %+v", h.store.states)
+	}
+}
+
+// The three tests below pin the monitor's independence from the
+// FencingFailedNodeState informer. That cache never syncs while the Kubernetes
+// API is unreachable, and the watchdog's feed gate is this monitor's verdict: a
+// monitor that waits for the cache leaves the gate open on a node the cluster has
+// already given up on.
+
+func TestFirstPassObservesWithoutTheInformerCache(t *testing.T) {
+	h := newHarness(t, newStore())
+	h.synced = false
+
+	h.monitor.reconcile(t.Context())
+
+	if s := h.monitor.Snapshot(); !s.Observed || !s.HasQuorum {
+		t.Errorf("snapshot = %+v after one pass with no cache, want observed with quorum", s)
+	}
+
+	if feed, reason := h.monitor.ShouldFeed(); !feed || reason != "" {
+		t.Errorf("ShouldFeed = %v %q with quorum, want open on the gossip verdict", feed, reason)
+	}
+}
+
+func TestGateClosesWithoutTheInformerCache(t *testing.T) {
+	store := newStore()
+	store.failHeartbeat = errors.New("dial tcp: i/o timeout")
+	store.failList = errors.New("dial tcp: i/o timeout")
+
+	h := newHarness(t, store)
+	h.synced = false
+
+	h.loseQuorum(t.Context())
+
+	feed, reason := h.monitor.ShouldFeed()
+	if feed || !strings.Contains(reason, "unreachable") {
+		t.Fatalf("ShouldFeed = %v %q with no quorum, no cache and no API, want closed so the watchdog starves", feed, reason)
+	}
+}
+
+// The record only protects this Node from evacuation, so leaving it a few passes
+// longer is free. Reading an unsynced cache is not: the read blocks until its own
+// timeout, once per pass.
+func TestOwnRecordIsRemovedOnceTheCacheSyncs(t *testing.T) {
+	h := newHarness(t, newStore())
+	h.synced = false
+
+	h.loseQuorum(t.Context())
+	h.clock.advance(heartbeat)
+	h.regainQuorum(t.Context())
+
+	if h.store.lists != 0 {
+		t.Fatalf("the store was read %d times before the cache synced, want none", h.store.lists)
+	}
+
+	if len(h.store.states) != 1 {
+		t.Fatalf("states = %+v, want the record still there while the cache is unsynced", h.store.states)
+	}
+
+	h.synced = true
+	h.clock.advance(heartbeat)
+	h.monitor.reconcile(t.Context())
+
+	if !slices.Contains(h.store.calls, "delete:"+nodeName+":cr-"+nodeName) {
+		t.Errorf("calls = %v, want the own record deleted once the cache synced", h.store.calls)
 	}
 }

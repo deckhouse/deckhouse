@@ -77,6 +77,7 @@ type Deps struct {
 	States   StateStore
 	Events   EventRecorder
 	Now      func() time.Time
+	CacheSynced func() bool
 }
 
 type Snapshot struct {
@@ -109,6 +110,10 @@ type Monitor struct {
 func New(params Params, deps Deps, logger *log.Logger) *Monitor {
 	if deps.Now == nil {
 		deps.Now = time.Now
+	}
+
+	if deps.CacheSynced == nil {
+		deps.CacheSynced = func() bool { return true }
 	}
 
 	return &Monitor{
@@ -204,7 +209,9 @@ func (m *Monitor) reconcile(ctx context.Context) {
 	m.store(s)
 
 	if s.HasQuorum {
-		m.removeOwnRecord(ctx)
+		if m.deps.CacheSynced() {
+			m.removeOwnRecord(ctx)
+		}
 
 		return
 	}
