@@ -157,10 +157,33 @@ func NewServer(logger *log.Logger) (*Server, error) {
 		cache:           c,
 		handler:         h,
 		informerFactory: informerFactory,
-		informersSynced: append([]kcache.InformerSynced{nsInformer.Informer().HasSynced, ruleBindingsSynced.HasSynced}, rbacEvaluator.Synced()...),
-		rules:           rulesSource,
-		registry:        registry,
+		informersSynced: append([]kcache.InformerSynced{
+			nsInformer.Informer().HasSynced,
+			ruleBindingsSynced.HasSynced,
+			rulesListed(rulesSource),
+		}, rbacEvaluator.Synced()...),
+		rules:    rulesSource,
+		registry: registry,
 	}, nil
+}
+
+// rulesListed reports whether the rules are known well enough to decide with.
+//
+// It has to be part of the serving gate, not just of readiness. The bindings index and the rules
+// come over independent watches, and the ordering guard turns "this subject is bound by a rule I
+// have not observed" into a maximally restricted entry - which is right while the rules are merely
+// behind, and catastrophic if the rules were never listed at all: with an empty directory and a
+// filled index, EVERY subject whose access comes only from a ClusterAuthorizationRule is denied,
+// and the API server caches each of those denials for unauthorizedTTL. Serving that is strictly
+// worse than serving 503, which is not cached. Gating on it costs nothing, because a webhook that
+// cannot decide has nothing to say.
+//
+// A cluster whose CRD is not served is ready: there can be no rules, so the empty directory is the
+// truth rather than a gap. This is the same predicate permission-browser's readiness uses.
+func rulesListed(src *source.Source) kcache.InformerSynced {
+	return func() bool {
+		return src.State() != source.StateUnsynced
+	}
 }
 
 func (s *Server) prepareHTTPServer() (*http.Server, error) {
@@ -250,6 +273,9 @@ func (s *Server) Run() error {
 	// process started, and until it did the API server got a connection error on every request and
 	// the kubelet's probes killed a container that was making progress. Requests that arrive early
 	// are refused by gateOnCaches, which is the same outcome as a closed port but says why.
+	// Start the rules source before waiting on it: rulesListed is one of the predicates below.
+	go s.rules.Run(ctx)
+
 	go func() {
 		if ok := kcache.WaitForCacheSync(ctx.Done(), s.informersSynced...); !ok {
 			s.logger.Println("informer caches were not synced before shutdown")
@@ -259,7 +285,6 @@ func (s *Server) Run() error {
 		s.logger.Println("informer caches are synced; serving authorization decisions")
 	}()
 
-	go s.rules.Run(ctx)
 	go s.serveMetrics(ctx)
 
 	httpServer.RegisterOnShutdown(cancel)

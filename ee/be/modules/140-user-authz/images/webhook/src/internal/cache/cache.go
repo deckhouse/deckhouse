@@ -44,15 +44,26 @@ const (
 	// relying on the much larger transport-level dial/handshake timeouts.
 	requestTimeout = 2 * time.Second
 
-	// negativeRenewInterval bounds how often a resource that a group's listing does not carry
-	// makes the webhook list that group again.
+	// negativeRenewInterval bounds how often a group is listed again because the answer to a
+	// lookup was not in what we already have.
 	//
-	// The listing happens on the authorization path. Without a bound, every request for a resource
-	// that does not exist costs one discovery request to the API server, and any subject a rule
-	// covers can drive that at whatever rate they like - against the component the whole cluster's
-	// authorization is waiting on. With it, a group is re-listed at most this often no matter how
-	// many such requests arrive, and a resource installed since the last listing becomes visible
-	// within the interval instead of on the very next request.
+	// The listing happens on the authorization path, and the caller chooses both the group and the
+	// resource name - kube-apiserver parses them lexically out of the request path before it
+	// authorizes anything. Without a bound, every request naming something that does not exist
+	// costs one discovery request to the API server, and any subject a rule covers can drive that
+	// at whatever rate they like, against the component the whole cluster's authorization is
+	// waiting on. With it, a group is listed at most this often no matter how many such requests
+	// arrive.
+	//
+	// The cost is a staleness window, and it is worth stating plainly: for up to this long after a
+	// group was listed, a resource added to it since - a freshly installed CRD - is reported as
+	// absent. For a cluster-scoped request that means no opinion rather than a denial, so a subject
+	// a rule limits to some namespaces could list a newly installed namespaced resource
+	// cluster-wide until the next listing. Installing a CRD already requires far more privilege
+	// than that yields, and the platform tolerates comparable windows elsewhere (the API server
+	// caches this webhook's answers for 30 seconds), so the trade is deliberate: a bounded,
+	// privilege-gated staleness window in exchange for closing an unbounded amplifier that any
+	// tenant can drive.
 	negativeRenewInterval = 10 * time.Second
 )
 
@@ -448,6 +459,15 @@ func (c *NamespacedDiscoveryCache) Get(apiGroup, resource string) (bool, error) 
 	case !ok:
 		// there is no cache, renew
 		if err := c.renewCache(apiGroup); err != nil {
+			// A group the API server 404s has to be remembered as empty, or the rate limit below
+			// never applies to it: the caller picks the group out of the request path, so an
+			// unknown group is the cheapest way to ask for a listing, and without an entry every
+			// request for one would produce a fresh round trip. An empty entry answers the same
+			// way - the resource is not in it - while the interval bounds the re-listing.
+			if errors.Is(err, ErrNotFound) {
+				c.storeEmpty(apiGroup)
+				return false, fmt.Errorf("api group %s is not served: %w", apiGroup, ErrResourceAbsent)
+			}
 			return false, err
 		}
 
@@ -470,6 +490,12 @@ func (c *NamespacedDiscoveryCache) Get(apiGroup, resource string) (bool, error) 
 	if !ok {
 		if c.now().Sub(namespacedInfo.AddTime) >= negativeRenewInterval {
 			if err := c.renewCacheOnceNoRetry(apiGroup); err != nil {
+				// The group stopped being served since it was listed. That is an answer, not a
+				// failure to ask, and it is remembered for the same reason as above.
+				if errors.Is(err, ErrNotFound) {
+					c.storeEmpty(apiGroup)
+					return false, fmt.Errorf("api group %s is not served: %w", apiGroup, ErrResourceAbsent)
+				}
 				return false, err
 			}
 
@@ -484,6 +510,14 @@ func (c *NamespacedDiscoveryCache) Get(apiGroup, resource string) (bool, error) 
 	}
 
 	return namespaced, nil
+}
+
+// storeEmpty remembers that a group carries nothing, so the lookups that follow are answered from
+// the entry and bounded by negativeRenewInterval like any other miss.
+func (c *NamespacedDiscoveryCache) storeEmpty(apiGroup string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.data[apiGroup] = newNamespacedCacheEntry(c.now())
 }
 
 // renewCacheOnceNoRetry lists a group exactly once. renewCache retries for up to twenty seconds,
