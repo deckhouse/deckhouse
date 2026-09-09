@@ -14,8 +14,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_user_authz_deprecated_rbacv2: "D8UserAuthzDeprecatedRBACv2RoleInUse,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_user_authz_deprecated_rbacv2: "D8UserAuthzDeprecatedRBACv2RoleInUse,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_user_authz_deprecated_rbacv2: "D8UserAuthzDeprecatedRBACv2,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_deprecated_rbacv2: "D8UserAuthzDeprecatedRBACv2,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: A binding still references a deprecated RBACv2 role.
       description: |-
         The `{{ $labels.binding_kind }}` `{{ $labels.binding_name }}`{{ if $labels.namespace }} in namespace `{{ $labels.namespace }}`{{ end }} references the deprecated RBACv2 ClusterRole `{{ $labels.role_name }}`.
@@ -45,8 +45,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_user_authz_deprecated_rbacv2_cap: "D8UserAuthzDeprecatedRBACv2CapabilityInUse,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_user_authz_deprecated_rbacv2_cap: "D8UserAuthzDeprecatedRBACv2CapabilityInUse,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_user_authz_deprecated_rbacv2: "D8UserAuthzDeprecatedRBACv2,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_deprecated_rbacv2: "D8UserAuthzDeprecatedRBACv2,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: A binding references a deprecated RBACv2 capability that no longer grants access.
       description: |-
         The `{{ $labels.binding_kind }}` `{{ $labels.binding_name }}`{{ if $labels.namespace }} in namespace `{{ $labels.namespace }}`{{ end }} binds the deprecated RBACv2 capability `{{ $labels.role_name }}` directly.
