@@ -207,6 +207,24 @@ Permission Browser exports the same set under the `user_authz_permission_browser
 - `D8UserAuthzWebhookRulesWatchErrors` on a sustained watch error rate for 15 minutes.
 - `D8UserAuthzWebhookRulesStale` when the directory has not been rebuilt for a day (expected in a cluster where the rules do not change).
 
+## Why does a change to a ClusterAuthorizationRule take up to 30 seconds to take effect?
+
+Because the API server caches the webhook's answers. The `AuthorizationConfiguration` that `control-plane-manager` renders gives the webhook `authorizedTTL: 5m`, `unauthorizedTTL: 30s` and `timeout: 3s`; the cache key is the whole SubjectAccessReview, so a repeated identical request is answered from the cache without asking the webhook again.
+
+The webhook never allows. A rule says where an access level applies, not whether it grants the verb — that is RBAC's question, and answering it here would take RBAC out of the chain. So every answer the webhook gives is either a denial or no opinion, both of which are cached under `unauthorizedTTL`, and `authorizedTTL` never applies to it.
+
+What this costs is the no-opinion case. If a user made a request while nothing limited them, the API server remembers that no-opinion for 30 seconds, and during those 30 seconds RBAC alone answers the identical request. Creating a rule, or narrowing one, therefore takes effect for a given request within 30 seconds of the last time that exact request was made, and not within the informer's window:
+
+```bash
+# Immediately after creating a limiting rule, an identical request asked in the preceding
+# 30 seconds is still answered from the cache.
+d8 k auth can-i --as=user@example.com get pods -n other-namespace
+sleep 30
+d8 k auth can-i --as=user@example.com get pods -n other-namespace
+```
+
+The window cannot be flushed without restarting `kube-apiserver`. It is also why the webhook answers `503` rather than a denial while its caches are still filling at startup: a denial would be remembered for 30 seconds after the webhook is ready to answer properly.
+
 ## How do I extend a role or create a new one?
 
 [The experimental role model](./#experimental-role-based-model) is based on the aggregation principle; it compiles smaller roles into larger ones,
