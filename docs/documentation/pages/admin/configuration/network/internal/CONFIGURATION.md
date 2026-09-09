@@ -5,7 +5,9 @@ permalink: en/admin/configuration/network/internal/configuration.html
 
 In Deckhouse Kubernetes Platform, networking is configured using CNI plugins.
 The recommended option is Cilium, which suits most use cases.
-Other supported CNIs include Flannel and Simple Bridge, typically used with cloud providers.
+Other supported CNIs include Flannel and Simple Bridge.
+
+In cloud clusters, the installer adds the CNI module recommended by the cloud provider if the installation config specifies no CNI module. For Azure, Google Cloud, and Yandex Cloud, this is `cni-cilium` with pod traffic tunneling over VXLAN. If a different CNI module is specified, the installer offers to replace it with the recommended one and keeps your config if you decline. In existing clusters, the CNI stays unchanged when DKP is updated.
 
 Network parameters are specified during the deployment of the DKP cluster:
 

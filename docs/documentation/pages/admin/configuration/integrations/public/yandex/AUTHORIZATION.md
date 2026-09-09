@@ -34,6 +34,12 @@ systemctl status cloud-final.service
 systemctl status cloud-init.service
 ```
 
+{% alert level="warning" %}
+Starting with version 1.77, new clusters in Yandex Cloud use the Cilium CNI by default with pod traffic tunneling over VXLAN. In existing clusters, the CNI stays unchanged.
+
+Make sure all nodes run Linux kernel 5.8 or newer and that security groups allow UDP traffic between nodes. For the list of ports, see [Network interaction of the platform components](../../../../reference/network_interaction.html); for CNI settings, see [Internal network configuration](../../../configuration/network/internal/configuration.html).
+{% endalert %}
+
 ## Creating a service account
 
 To enable DKP to manage Yandex Cloud resources, create a service account and assign it editing permissions.

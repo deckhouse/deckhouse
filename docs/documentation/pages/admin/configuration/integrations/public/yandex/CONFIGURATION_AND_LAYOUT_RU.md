@@ -459,6 +459,8 @@ spec:
 
 Ниже приведены общие рекомендации по настройке групп безопасности. Некорректная настройка групп безопасности может сказаться на работоспособности кластера. Ознакомьтесь с [особенностями работы групп безопасности](https://cloud.yandex.ru/ru/docs/vpc/concepts/security-groups#security-groups-notes) в Yandex Cloud перед использованием в продуктивных средах.
 
+Если в кластере используется Cilium с туннелированием трафика подов через VXLAN, разрешите UDP-трафик между узлами на портах, которые перечислены в разделе [«Сетевое взаимодействие компонентов платформы»](../../../../reference/network_interaction.html).
+
 1. Определите облачную сеть, в которой работает кластер Deckhouse Kubernetes Platform.
 
    Название сети совпадает с параметром [`prefix`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-prefix) ModuleConfig `global`.
