@@ -837,6 +837,54 @@ func TestAuthorizeRequest_UnlistedDirectoryDeniesEverySubjectOfARule(t *testing.
 	}
 }
 
+// A namespaceSelector whose namespace cannot be read must deny.
+//
+// Both wrong answers look alike from outside - a selector that does not match denies too - so the
+// selector here is one that WOULD match a namespace with no labels at all. If the lister error is
+// swallowed and an empty label set used instead, the subject is granted a namespace nobody
+// evaluated the selector against.
+func TestAuthorizeRequest_NamespaceLookupFailureDenies(t *testing.T) {
+	selector := &rules.NamespaceSelector{LabelSelector: &metav1.LabelSelector{
+		MatchExpressions: []metav1.LabelSelectorRequirement{
+			{Key: "quarantine", Operator: metav1.LabelSelectorOpDoesNotExist},
+		},
+	}}
+	handler := &Handler{
+		logger: log.New(io.Discard, "", 0),
+		cache:  fixtureCache(),
+		rules: rulesFor(rules.Rule{
+			Name:              "by-selector",
+			Subjects:          []rules.Subject{{Kind: "User", Name: "selector-user"}},
+			NamespaceSelector: selector,
+		}),
+		bindings: binding.NewIndex(),
+		nsLister: newFakeNamespaceLister([]runtime.Object{
+			&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "labelless"}},
+		}),
+	}
+
+	// The control: a namespace that exists and carries no labels is opened by this selector.
+	req := &WebhookRequest{Spec: WebhookResourceSpec{
+		User:               "selector-user",
+		ResourceAttributes: WebhookResourceAttributes{Namespace: "labelless", Resource: "pods", Verb: "get"},
+	}}
+	handler.authorizeRequest(req)
+	if req.Status.Denied {
+		t.Fatalf("the selector matches a namespace with no labels; got denied with %q", req.Status.Reason)
+	}
+
+	// And a namespace the lister cannot resolve is denied rather than treated as label-less.
+	denied := &WebhookRequest{Spec: WebhookResourceSpec{
+		User:               "selector-user",
+		ResourceAttributes: WebhookResourceAttributes{Namespace: "unreadable", Resource: "pods", Verb: "get"},
+	}}
+	handler.authorizeRequest(denied)
+	if !denied.Status.Denied || denied.Status.Reason != noNamespaceAccessReason {
+		t.Errorf("a namespace whose labels could not be read was not denied: denied=%v reason=%q",
+			denied.Status.Denied, denied.Status.Reason)
+	}
+}
+
 // A subject bound by a rule binding whose rule is not in the directory is restricted until the rule
 // arrives: the binding is created seconds after the rule, and this webhook may see it first.
 func TestAuthorizeRequest_UnknownRuleBindingRestricts(t *testing.T) {

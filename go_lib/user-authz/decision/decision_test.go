@@ -20,6 +20,7 @@ import (
 	"errors"
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 
 	"github.com/deckhouse/deckhouse/go_lib/user-authz/rules"
@@ -68,6 +69,52 @@ func TestAuthorize_Namespaced(t *testing.T) {
 	// A subject no rule names is not this layer's business.
 	if got := Authorize(Request{User: "bob", Namespace: "team-b"}, src); got.Denied() {
 		t.Errorf("a subject without a rule gets no opinion, got %+v", got)
+	}
+}
+
+// A namespaceSelector that cannot be evaluated must deny, not shrug.
+//
+// This is the "an error must never become no opinion by accident" case, and it is worth a test of
+// its own because both wrong answers look the same from outside: a rule whose selector does not
+// match denies too. The way to tell them apart is a selector that WOULD match an empty label set -
+// DoesNotExist matches a namespace with no labels at all - so if the lookup error is swallowed and
+// the empty set is used, the subject is granted a namespace nobody ever evaluated the selector
+// against.
+func TestAuthorize_NamespaceLabelLookupFailureDenies(t *testing.T) {
+	selector := &rules.NamespaceSelector{LabelSelector: &metav1.LabelSelector{
+		MatchExpressions: []metav1.LabelSelectorRequirement{
+			{Key: "quarantine", Operator: metav1.LabelSelectorOpDoesNotExist},
+		},
+	}}
+	src := Sources{
+		Directory: dir(rules.Rule{
+			Name:              "by-selector",
+			Subjects:          []rules.Subject{{Kind: "User", Name: "alice"}},
+			NamespaceSelector: selector,
+		}),
+		Bindings: staticBindings{},
+	}
+	req := Request{User: "alice", Namespace: "team-a"}
+
+	// The control: the selector does match a namespace with no labels, so a successful lookup
+	// opens it. Without this the test below could pass for the wrong reason.
+	src.NamespaceLabels = func(string) (labels.Set, error) { return labels.Set{}, nil }
+	if got := Authorize(req, src); got.Denied() {
+		t.Fatalf("the selector matches an empty label set, so a successful lookup opens the namespace; got %+v", got)
+	}
+
+	// And when the labels cannot be read at all, the same request must be denied: an unevaluated
+	// selector is not a matching selector.
+	src.NamespaceLabels = func(string) (labels.Set, error) { return nil, errors.New("informer cache is not ready") }
+	got := Authorize(req, src)
+	if !got.Denied() || got.Reason != rules.NoNamespaceAccessReason {
+		t.Errorf("a namespace whose labels could not be read was not denied: %+v", got)
+	}
+
+	// A grant that exists independently of any rule still survives, as everywhere else.
+	src.IndependentRBAC = func() bool { return true }
+	if got := Authorize(req, src); got.Denied() {
+		t.Errorf("an independent grant must survive a failed lookup too, got %+v", got)
 	}
 }
 
