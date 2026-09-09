@@ -33,14 +33,6 @@ function wait-kubelet-client-certificate() {
 if bb-flag? kubelet-need-restart; then
 
   bb-log-warning "kubelet-need-restart flag is set, restarting kubelet"
-  # The CPU and memory manager checkpoints are deliberately left alone here.
-  # They used to be deleted on every kubelet restart, which meant that a
-  # containerd restart or a kubelet binary upgrade silently dropped the pinning
-  # of running Guaranteed pods. Upstream asks for two steps -- drain the node
-  # and delete the state file -- and only the second was implemented.
-  # A diverged checkpoint is now detected and repaired by kubelet itself, which
-  # also stops the containers whose assignments were lost so they are recreated
-  # and pinned again. See patch 015-kubelet-checkpoint-state-self-heal.
   {{ $kubernetesVersion := .kubernetesVersion | toString }}
   {{ if eq $kubernetesVersion "1.32" }}
   # https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.32.md#no-really-you-must-read-this-before-you-upgrade
