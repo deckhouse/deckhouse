@@ -363,7 +363,7 @@ Deckhouse Kubernetes Platform с набором модулей `Minimal` без 
 1. Если параметр `nodeSelector` модуля не указан, то Deckhouse попытается вычислить `nodeSelector` автоматически. В этом случае, если в кластере присутствуют узлы с [лейблами из списка или лейблами определенного формата](#особенности-автоматики-зависящие-от-типа-модуля), Deckhouse укажет их в качестве `nodeSelector` ресурсам модуля.
 1. Если параметр `tolerations` модуля не указан, то подам модуля автоматически устанавливаются все возможные toleration'ы, ([подробнее](#особенности-автоматики-зависящие-от-типа-модуля)).
 1. Отключить автоматическое вычисление параметров `nodeSelector` или `tolerations` можно, указав значение `false`.
-1. При отсутствии в кластере [выделенных узлов](#особенности-автоматики-зависящие-от-типа-модуля) и автоматическом выборе `nodeSelector` (см. п. 1), `nodeSelector` в ресурсах модуля указан не будет. Модуль в таком случае будет использовать любой узел с не конфликтующими `taints`.
+1. При отсутствии в кластере [выделенных узлов](#особенности-автоматики-зависящие-от-типа-модуля) и автоматическом выборе `nodeSelector`, как описано в пункте 1, `nodeSelector` в ресурсах модуля указан не будет. Модуль в таком случае будет использовать любой узел с не конфликтующими `taints`.
 
 Возможность настройки `nodeSelector` и `tolerations` отключена для модулей:
 
@@ -373,10 +373,15 @@ Deckhouse Kubernetes Platform с набором модулей `Minimal` без 
 ### Особенности автоматики, зависящие от типа модуля
 
 {% alert level="info" %}
-Ниже описана базовая (общая) логика автоматического выбора узлов для размещения компонентов модулей, когда в настройках модуля не заданы явные значения `nodeSelector` и `tolerations`. Некоторые модули могут дополнять или изменять эту логику (например, использовать механизмы Kubernetes, такие как [affinity/anti-affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity), [`topologySpreadConstraints`](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/#topologyspreadconstraints-field), или собственные правила выбора узлов). Подробности см. в документации соответствующего модуля.
+Ниже описана базовая (общая) логика автоматического выбора узлов для размещения компонентов модулей, когда в настройках модуля не заданы явные значения `nodeSelector` и `tolerations`. Некоторые модули могут дополнять или изменять эту логику (например, использовать механизмы Kubernetes, такие как [affinity/anti-affinity](https://kubernetes.io/docs/concepts/scheduling-eviction/assign-pod-node/#inter-pod-affinity-and-anti-affinity), [`topologySpreadConstraints`](https://kubernetes.io/docs/concepts/scheduling-eviction/topology-spread-constraints/#topologyspreadconstraints-field), или собственные правила выбора узлов). Подробности приведены в документации соответствующего модуля.
 {% endalert %}
 
+Если `nodeSelector` не задан явно в конфигурации модуля, Deckhouse определяет размещение компонентов автоматически. Порядок выбора узлов зависит от типа модуля.
+
 {% raw %}
+* Модуль `console`:
+  * Если `nodeSelector` не задан явно в конфигурации модуля, компоненты модуля размещаются на control-plane-узлах.
+  * Если control-plane-узлы недоступны для такого размещения, используются узлы с лейблом `node-role.deckhouse.io/system`.
 * Модули *monitoring* ([`operator-prometheus`](/modules/operator-prometheus/), [`prometheus`](/modules/prometheus/) и [`vertical-pod-autoscaler`](/modules/vertical-pod-autoscaler/)):
   * Порядок поиска узлов (для определения [`nodeSelector`](/modules/prometheus/configuration.html#parameters-nodeselector)):
     1. Наличие узла с лейблом `node-role.deckhouse.io/MODULE_NAME`.
