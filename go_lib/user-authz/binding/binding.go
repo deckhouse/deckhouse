@@ -57,13 +57,27 @@ func RuleNameOf(bindingName string) (string, bool) {
 	return name, true
 }
 
-// IsRuleBinding reports whether a binding with that name and labels is a binding of a rule, whether
+// IsRuleBinding reports whether a binding with that name and labels belongs to a rule, whether
 // rendered by the Helm chart of the module in earlier releases or by user-authz-controller. Both
-// mark their bindings with the module labels, and the chart never rendered a binding outside the
-// user-authz:<rule>:<postfix> namespace of names.
+// mark their bindings with the module labels, and neither ever rendered a binding outside the
+// user-authz: namespace of names.
+//
+// It deliberately asks only for the prefix and the labels, not for a parseable rule name: consumers
+// use it to exclude the bindings of a rule from the grants that hold independently of any rule, and
+// there a binding whose name they cannot parse has to be excluded too. Use RuleOf when the rule's
+// name itself is needed.
 func IsRuleBinding(name string, labels map[string]string) bool {
-	if _, ok := RuleNameOf(name); !ok {
+	if !strings.HasPrefix(name, NamePrefix) {
 		return false
 	}
 	return labels[LabelHeritage] == HeritageValue && labels[LabelModule] == ModuleName
+}
+
+// RuleOf returns the rule a binding belongs to: it must carry the module labels and a name of the
+// form user-authz:<rule>:<postfix>.
+func RuleOf(name string, labels map[string]string) (string, bool) {
+	if !IsRuleBinding(name, labels) {
+		return "", false
+	}
+	return RuleNameOf(name)
 }

@@ -296,6 +296,51 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(manifest).To(ContainSubstring("protocol: TCP"))
 		})
 
+		It("Should expose the webhook metrics for Prometheus", func() {
+			ds := f.KubernetesResource("DaemonSet", "d8-user-authz", "user-authz-webhook")
+			Expect(ds.Exists()).To(BeTrue())
+
+			// The webhook serves metrics on 127.0.0.1 and the sidecar publishes them on the node.
+			Expect(ds.Field("spec.template.spec.containers.1.name").String()).To(Equal("kube-rbac-proxy"))
+			Expect(ds.Field("spec.template.spec.containers.1.ports.0.containerPort").Int()).To(Equal(int64(4233)))
+			Expect(ds.Field("spec.template.spec.containers.1.ports.0.name").String()).To(Equal("https-metrics"))
+			Expect(ds.Field("spec.template.spec.containers.1.args").String()).To(ContainSubstring(":4233"))
+			Expect(ds.Field("spec.template.spec.containers.1.env").String()).To(ContainSubstring("http://127.0.0.1:4243/metrics"))
+			// The sidecar authorizes scrapers against the virtual subresource granted in rbac-to-us.
+			Expect(ds.Field("spec.template.spec.containers.1.env").String()).To(ContainSubstring("prometheus-metrics"))
+			role := f.KubernetesResource("Role", "d8-user-authz", "access-to-user-authz-webhook-prometheus-metrics")
+			Expect(role.Exists()).To(BeTrue())
+			Expect(role.Field("rules").String()).To(ContainSubstring("daemonsets/prometheus-metrics"))
+			Expect(role.Field("rules").String()).To(ContainSubstring("user-authz-webhook"))
+			Expect(f.KubernetesResource("RoleBinding", "d8-user-authz", "access-to-user-authz-webhook-prometheus-metrics").Exists()).To(BeTrue())
+			// The sidecar needs d8:rbac-proxy to ask the API server about the scraper.
+			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:webhook:rbac-proxy").Exists()).To(BeTrue())
+
+			// The alert rules select job="user-authz-webhook": the PodMonitor takes the job name from
+			// the app label of the pods, so both must stay in place.
+			podMonitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "user-authz-webhook")
+			Expect(podMonitor.Exists()).To(BeTrue())
+			Expect(podMonitor.Field("spec.jobLabel").String()).To(Equal("app"))
+			Expect(podMonitor.Field("spec.podMetricsEndpoints.0.port").String()).To(Equal("https-metrics"))
+			Expect(ds.Field("spec.template.metadata.labels.app").String()).To(Equal("user-authz-webhook"))
+
+			rule := f.KubernetesResource("PrometheusRule", "d8-system", "user-authz-user-authz-webhook")
+			Expect(rule.Exists()).To(BeTrue())
+			Expect(rule.Field("spec.groups").String()).To(ContainSubstring("D8UserAuthzWebhookRulesNotSynced"))
+			Expect(rule.Field("spec.groups").String()).To(ContainSubstring(`job="user-authz-webhook"`))
+		})
+
+		It("Should let the webhook and permission-browser watch the ClusterAuthorizationRules", func() {
+			// Both read the multi-tenancy options straight from the rules instead of a rendered file.
+			webhookRole := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:webhook")
+			Expect(webhookRole.Exists()).To(BeTrue())
+			Expect(webhookRole.Field("rules").String()).To(ContainSubstring("clusterauthorizationrules"))
+
+			browserRole := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:permission-browser-apiserver")
+			Expect(browserRole.Exists()).To(BeTrue())
+			Expect(browserRole.Field("rules").String()).To(ContainSubstring("clusterauthorizationrules"))
+		})
+
 		It("Should deploy permission-browser-apiserver and supporting objects", func() {
 			Expect(f.KubernetesResource("Deployment", "d8-user-authz", "permission-browser-apiserver").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Service", "d8-user-authz", "permission-browser-apiserver").Exists()).To(BeTrue())

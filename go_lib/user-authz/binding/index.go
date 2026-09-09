@@ -79,10 +79,10 @@ func (i *Index) Upsert(crb *rbacv1.ClusterRoleBinding) {
 
 	i.removeLocked(crb.Name)
 
-	if !IsRuleBinding(crb.Name, crb.Labels) {
+	rule, ok := RuleOf(crb.Name, crb.Labels)
+	if !ok {
 		return
 	}
-	rule, _ := RuleNameOf(crb.Name)
 	c := contribution{rule: rule}
 	for _, s := range crb.Subjects {
 		key := subjectKey(s)

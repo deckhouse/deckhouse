@@ -812,3 +812,89 @@ func TestAuthorizeRequest_UnknownRuleBindingRestricts(t *testing.T) {
 		t.Errorf("a subject without rule bindings is not restricted, got %+v", got.Status)
 	}
 }
+
+// The controller updates the bindings of a rule when a subject is added to it, and the binding can
+// reach the webhook before the rule's own update. The rule keeps its name throughout, so the guard
+// has to notice that the observed copy of the rule does not name the new subject yet - otherwise
+// the cluster-wide binding grants that subject every namespace.
+func TestAuthorizeRequest_SubjectAddedToKnownRuleRestricts(t *testing.T) {
+	// The directory's copy of "team-a" still names only alice.
+	observed := rulesFor(rules.Rule{
+		Name:            "team-a",
+		Subjects:        []rules.Subject{{Kind: "User", Name: "alice"}},
+		LimitNamespaces: []string{"dev"},
+	})
+
+	// The controller has already added bob to the bindings of the same rule.
+	idx := binding.NewIndex()
+	idx.Upsert(ruleBinding("user-authz:team-a:admin", "bob"))
+
+	handler := &Handler{
+		logger:   log.New(io.Discard, "", 0),
+		cache:    fixtureCache(),
+		rules:    observed,
+		bindings: idx,
+		nsLister: newFakeNamespaceLister(nil),
+		nsSynced: func() bool { return true },
+	}
+
+	inDev := WebhookResourceSpec{User: "bob", ResourceAttributes: WebhookResourceAttributes{Group: "test", Version: "v1", Resource: "object1", Namespace: "dev"}}
+	if got := handler.authorizeRequest(&WebhookRequest{Spec: inDev}); !got.Status.Denied {
+		t.Errorf("bob is bound by team-a but the observed rule does not name him; must be denied, got %+v", got.Status)
+	}
+	elsewhere := WebhookResourceSpec{User: "bob", ResourceAttributes: WebhookResourceAttributes{Group: "test", Version: "v1", Resource: "object1", Namespace: "kube-system"}}
+	if got := handler.authorizeRequest(&WebhookRequest{Spec: elsewhere}); !got.Status.Denied {
+		t.Errorf("the same holds for a system namespace, got %+v", got.Status)
+	}
+
+	// alice, whom the observed rule does name, keeps exactly the rule's scope.
+	aliceDev := WebhookResourceSpec{User: "alice", ResourceAttributes: WebhookResourceAttributes{Group: "test", Version: "v1", Resource: "object1", Namespace: "dev"}}
+	if got := handler.authorizeRequest(&WebhookRequest{Spec: aliceDev}); got.Status.Denied {
+		t.Errorf("alice is named by the rule and dev is in its scope, got %+v", got.Status)
+	}
+
+	// Once the rule's own update lands, bob gets the rule's scope and nothing more.
+	handler.rules = rulesFor(rules.Rule{
+		Name:            "team-a",
+		Subjects:        []rules.Subject{{Kind: "User", Name: "alice"}, {Kind: "User", Name: "bob"}},
+		LimitNamespaces: []string{"dev"},
+	})
+	if got := handler.authorizeRequest(&WebhookRequest{Spec: inDev}); got.Status.Denied {
+		t.Errorf("the updated rule opens dev for bob, got %+v", got.Status)
+	}
+	if got := handler.authorizeRequest(&WebhookRequest{Spec: elsewhere}); !got.Status.Denied {
+		t.Errorf("the updated rule does not open kube-system, got %+v", got.Status)
+	}
+}
+
+// A subject that already has an observed rule keeps its scope when the guard fires for another
+// rule: rules union, so an unobserved one may only widen, and clamping the observed scope would
+// deny access the observed rule legitimately grants.
+func TestAuthorizeRequest_GuardDoesNotNarrowObservedScope(t *testing.T) {
+	observed := rulesFor(rules.Rule{
+		Name:            "known",
+		Subjects:        []rules.Subject{{Kind: "User", Name: "carol"}},
+		LimitNamespaces: []string{"team-a"},
+	})
+
+	idx := binding.NewIndex()
+	idx.Upsert(ruleBinding("user-authz:unobserved:admin", "carol"))
+
+	handler := &Handler{
+		logger:   log.New(io.Discard, "", 0),
+		cache:    fixtureCache(),
+		rules:    observed,
+		bindings: idx,
+		nsLister: newFakeNamespaceLister(nil),
+		nsSynced: func() bool { return true },
+	}
+
+	inScope := WebhookResourceSpec{User: "carol", ResourceAttributes: WebhookResourceAttributes{Group: "test", Version: "v1", Resource: "object1", Namespace: "team-a"}}
+	if got := handler.authorizeRequest(&WebhookRequest{Spec: inScope}); got.Status.Denied {
+		t.Errorf("the observed rule opens team-a and the guard must not take that away, got %+v", got.Status)
+	}
+	outOfScope := WebhookResourceSpec{User: "carol", ResourceAttributes: WebhookResourceAttributes{Group: "test", Version: "v1", Resource: "object1", Namespace: "team-b"}}
+	if got := handler.authorizeRequest(&WebhookRequest{Spec: outOfScope}); !got.Status.Denied {
+		t.Errorf("neither rule opens team-b, got %+v", got.Status)
+	}
+}

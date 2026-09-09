@@ -27,8 +27,8 @@ import (
 	"github.com/deckhouse/deckhouse/go_lib/user-authz/rules"
 )
 
-// Metrics implements source.Observer with Prometheus collectors. The component label tells the
-// webhook of one master from permission-browser in the same series.
+// Metrics implements source.Observer with Prometheus collectors. Each consumer passes its own
+// metric namespace to New, which is what tells the webhook's series from permission-browser's.
 type Metrics struct {
 	rulesObserved      prometheus.Gauge
 	maxResourceVersion prometheus.Gauge

@@ -28,7 +28,7 @@ git:
         - '**/go.sum'
   # go.mod replaces github.com/deckhouse/deckhouse/go_lib/user-authz with a relative path that
   # resolves to /go_lib/user-authz from /src.
-  - add: /{{ $.ModulePath }}go_lib/user-authz
+  - add: /go_lib/user-authz
     to: /go_lib/user-authz
     includePaths:
       - '**/*.go'

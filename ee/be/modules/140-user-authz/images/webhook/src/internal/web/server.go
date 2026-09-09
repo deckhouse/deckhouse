@@ -48,7 +48,7 @@ const (
 	// kube-rbac-proxy sidecar fronts it on the pod IP for Prometheus; the authorization listener
 	// above stays mutually authenticated for the API server alone. The webhook runs on the host
 	// network, so this port must be free on the node (see the DaemonSet).
-	MetricsListenAddr = "127.0.0.1:4208"
+	MetricsListenAddr = "127.0.0.1:4243"
 
 	metricsNamespace = "user_authz_webhook"
 )
@@ -115,8 +115,15 @@ func NewServer(logger *log.Logger) (*Server, error) {
 
 	// The index of rule bindings is fed from the same ClusterRoleBinding informer: it tells the
 	// handler which rules bind a subject, so a rule the webhook has not observed yet still restricts.
+	//
+	// The registration's own HasSynced is what the listener has to wait for, not the informer's:
+	// the informer reports synced once the initial list has been popped, while handlers are fed
+	// from a separate queue. Serving before the index is filled would let a rule-bound subject look
+	// unbound, and the cluster-wide binding of its rule would then grant it every namespace - an
+	// answer the API server caches for authorizedTTL.
 	ruleBindings := binding.NewIndex()
-	if _, err := informerFactory.Rbac().V1().ClusterRoleBindings().Informer().AddEventHandler(ruleBindings.EventHandler()); err != nil {
+	ruleBindingsSynced, err := informerFactory.Rbac().V1().ClusterRoleBindings().Informer().AddEventHandler(ruleBindings.EventHandler())
+	if err != nil {
 		return nil, fmt.Errorf("register rule bindings index: %w", err)
 	}
 
@@ -145,7 +152,7 @@ func NewServer(logger *log.Logger) (*Server, error) {
 		cache:           c,
 		handler:         h,
 		informerFactory: informerFactory,
-		informersSynced: append([]kcache.InformerSynced{nsInformer.Informer().HasSynced}, rbacEvaluator.Synced()...),
+		informersSynced: append([]kcache.InformerSynced{nsInformer.Informer().HasSynced, ruleBindingsSynced.HasSynced}, rbacEvaluator.Synced()...),
 		rules:           rulesSource,
 		registry:        registry,
 	}, nil

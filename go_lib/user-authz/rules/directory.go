@@ -60,6 +60,12 @@ func Restricted() Entry {
 	return Entry{}
 }
 
+// Note for callers of Restricted: it is the zero entry, and Combine is a union, so combining it
+// with an entry that has already been observed leaves that entry unchanged. On its own it denies
+// every namespace. That is what the ordering guard wants in both cases - a subject with no observed
+// entry is denied, and a subject that already has one keeps exactly the scope its observed rules
+// grant - so do not "fix" Combine to let a restricted marker clamp the others.
+
 // HasAnyFilters reports whether the entry limits namespaces at all. An entry without filters is one
 // the webhook has no opinion about: a rule with matchAny, or a rule without limits that also opens
 // the system namespaces.
@@ -104,6 +110,11 @@ type Directory struct {
 	serviceAccounts map[string]Entry
 	// rules are the names of the rules the directory was built from.
 	rules map[string]struct{}
+	// ruleSubjects maps a rule name to the subjects this directory's copy of it names. The ordering
+	// guard needs more than the rule's name: a subject added to an existing rule reaches a consumer
+	// as an updated ClusterRoleBinding while the rule keeps its name, so only the subject lists can
+	// tell whether the binding is ahead of the rule.
+	ruleSubjects map[string]map[string]struct{}
 	// maxResourceVersion is the highest resourceVersion among the rules, the watermark a consumer
 	// reports so that the lag behind the controller can be measured.
 	maxResourceVersion uint64
@@ -139,6 +150,7 @@ func (b *Builder) Build(rules []Rule) (*Directory, Stats) {
 		groups:          make(map[string]Entry),
 		serviceAccounts: make(map[string]Entry),
 		rules:           make(map[string]struct{}, len(rules)),
+		ruleSubjects:    make(map[string]map[string]struct{}, len(rules)),
 		quarantined:     make(map[string]error),
 	}
 	inUse := make(map[string]struct{})
@@ -192,6 +204,13 @@ func (b *Builder) Build(rules []Rule) (*Directory, Stats) {
 			if bucket == nil {
 				continue
 			}
+			subjects := d.ruleSubjects[rule.Name]
+			if subjects == nil {
+				subjects = make(map[string]struct{}, len(rule.Subjects))
+				d.ruleSubjects[rule.Name] = subjects
+			}
+			subjects[kind+"/"+name] = struct{}{}
+
 			entry := bucket[name]
 			entry.NamespaceFiltersAbsent = entry.NamespaceFiltersAbsent || filtersAbsent
 			entry.Quarantined = entry.Quarantined || broken != nil
@@ -259,6 +278,42 @@ func (d *Directory) KnowsRule(name string) bool {
 	return ok
 }
 
+// RuleCovers reports whether this directory's copy of the rule names the subject: the username as
+// a User or as a ServiceAccount, or any of the groups. A rule the directory does not have at all
+// covers nobody.
+//
+// This is the question the ordering guard has to ask, and asking only KnowsRule is not enough. The
+// bindings of a rule and the rule itself reach a consumer over independent watches, so a consumer
+// can see either one first, in two different ways:
+//
+//   - a whole new rule: its bindings may arrive first, and the rule name is unknown;
+//   - a subject added to an existing rule: the controller updates the same bindings, which keep
+//     their names, so the rule stays "known" while its observed copy still lacks the subject.
+//
+// In both cases the cluster-wide binding is in place before the scope that is meant to limit it, so
+// the subject must be treated as restricted until the rule's own update lands.
+func (d *Directory) RuleCovers(ruleName, username string, groups []string) bool {
+	if d == nil {
+		return false
+	}
+	subjects, ok := d.ruleSubjects[ruleName]
+	if !ok {
+		return false
+	}
+	if _, ok := subjects["User/"+username]; ok {
+		return true
+	}
+	if _, ok := subjects["ServiceAccount/"+username]; ok {
+		return true
+	}
+	for _, group := range groups {
+		if _, ok := subjects["Group/"+group]; ok {
+			return true
+		}
+	}
+	return false
+}
+
 // Len is the number of rules the directory was built from.
 func (d *Directory) Len() int {
 	if d == nil {
@@ -280,5 +335,13 @@ func (d *Directory) Quarantined() map[string]error {
 	if d == nil {
 		return nil
 	}
-	return d.quarantined
+	if len(d.quarantined) == 0 {
+		return nil
+	}
+	// A copy: the directory is immutable once built, and callers must not be able to change it.
+	out := make(map[string]error, len(d.quarantined))
+	for name, err := range d.quarantined {
+		out[name] = err
+	}
+	return out
 }

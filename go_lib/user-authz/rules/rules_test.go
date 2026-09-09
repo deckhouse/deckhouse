@@ -344,3 +344,38 @@ func TestIsSystemNamespace(t *testing.T) {
 		}
 	}
 }
+
+// A directory answers RuleCovers only for the subjects its own copy of the rule names. The ordering
+// guard depends on this: a subject added to an existing rule keeps the rule's name, so a name-only
+// check would think the rule already accounted for it.
+func TestDirectoryRuleCovers(t *testing.T) {
+	dir, _ := NewBuilder().Build([]Rule{{
+		Name: "team-a",
+		Subjects: []Subject{
+			{Kind: "User", Name: "alice"},
+			{Kind: "Group", Name: "devs"},
+			{Kind: "ServiceAccount", Name: "bot", Namespace: "ci"},
+		},
+		LimitNamespaces: []string{"dev"},
+	}})
+
+	if !dir.RuleCovers("team-a", "alice", nil) {
+		t.Error("the rule names alice")
+	}
+	if !dir.RuleCovers("team-a", "someone", []string{"devs"}) {
+		t.Error("the rule names the group devs")
+	}
+	if !dir.RuleCovers("team-a", "system:serviceaccount:ci:bot", nil) {
+		t.Error("the rule names the service account")
+	}
+	if dir.RuleCovers("team-a", "bob", []string{"ops"}) {
+		t.Error("the rule does not name bob, so the guard must fire")
+	}
+	if dir.RuleCovers("team-b", "alice", nil) {
+		t.Error("an unknown rule covers nobody")
+	}
+	var nilDir *Directory
+	if nilDir.RuleCovers("team-a", "alice", nil) {
+		t.Error("a directory that has not been built covers nobody")
+	}
+}
