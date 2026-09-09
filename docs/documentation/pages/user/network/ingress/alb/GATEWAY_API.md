@@ -776,4 +776,3 @@ Current WAF notes and limitations:
 - Valid `paranoiaLevel` values are `1`–`4`. In practice it is recommended to start with `1`.
 - The WAF currently inspects only incoming requests to the application and can block such requests when rules match. Responses sent back to the client are not inspected.
 - Rules from ConfigMap values may be multiline: lines ending with `\` are joined automatically.
-
