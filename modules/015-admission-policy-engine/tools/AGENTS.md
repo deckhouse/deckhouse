@@ -9,6 +9,7 @@ about this specific module, so you don't have to rediscover it.
 
 | Resource | Path | Purpose |
 |----------|------|---------|
+| Measurement record | [`MEASUREMENTS.md`](MEASUREMENTS.md) | Which method answers which question, the pitfalls that invalidate a measurement, and the current per-rule/per-cycle numbers with the cluster they came from. **Read this first** — it saves re-deriving figures and repeating known mistakes |
 | Live diagnostics | [`README.md`](README.md) | What each live script checks, how to read it, the CPU-scaling model, worked examples |
 | Broad live sweep | [`live_resource_check.sh`](live_resource_check.sh) | Pods, restarts, usage over time, Gatekeeper's own metrics, cluster-wide scale/events |
 | One-cycle cost | [`audit_cycle_cost.sh`](audit_cycle_cost.sh) | Exact CPU-seconds/allocations for one audit cycle, no `--enable-pprof` needed |
@@ -165,6 +166,10 @@ has changed since, or if the numbers don't match what you observe.
    cluster size, per the projection in `README.md`), but no open PR sets it
    as of this writing. Check the manifest yourself before assuming it's
    done, and update this note once it lands.
+
+Every figure quoted above, together with the method and the cluster it was
+measured on, is recorded in [`MEASUREMENTS.md`](MEASUREMENTS.md). Update that
+document when you re-measure, so the numbers keep a single source of truth.
 
 ## Tooling notes worth knowing before you re-derive them
 
