@@ -16,8 +16,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_user_authz_release_slow: "D8UserAuthzReleaseSlow,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_user_authz_release_slow: "D8UserAuthzReleaseSlow,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_user_authz_malfunctioning: "D8UserAuthzMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_malfunctioning: "D8UserAuthzMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The user-authz module release takes more than 5 minutes.
       description: |-
         Applying the `user-authz` Helm release took more than 5 minutes on average over the last 30 minutes. A release that does not finish within the module release timeout (20 minutes) fails, changes to ClusterAuthorizationRule and AuthorizationRule objects stop being applied and platform updates stall (the `D8DeckhouseCouldNotRunModule` alert fires in that case).
@@ -54,8 +54,8 @@
     annotations:
       plk_protocol_version: "1"
       plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_user_authz_render_slow: "D8UserAuthzRenderSlow,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_user_authz_render_slow: "D8UserAuthzRenderSlow,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_create_group_if_not_exists__d8_user_authz_malfunctioning: "D8UserAuthzMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_malfunctioning: "D8UserAuthzMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: Rendering the user-authz module templates takes more than 30 seconds.
       description: |-
         Rendering the templates of the `user-authz` module took more than 30 seconds on average over the last 30 minutes; normally it takes about a second. Render time grows with the number of objects in the release, so this is an early sign that the release is getting too large and may stop fitting into the module release timeout.
