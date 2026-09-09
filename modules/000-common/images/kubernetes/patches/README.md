@@ -258,11 +258,10 @@ Notable properties:
   needs a human, and it is otherwise invisible in `kubectl describe`, which shows the pod
   running normally with no events at all for this case.
 
-- Every log line carries the `[d8-numa-selfheal]` marker, including one line per
-  manager when the checkpoint validates cleanly -- without it there is no way to
-  tell "nothing was wrong" from "this node runs an unpatched binary".
-  Lines marked `[d8-numa-selfheal-debug]` are temporary bring-up tracing and are
-  meant to be removed once the patch has been validated on a cluster.
+- Logging follows the surrounding kubelet: no message prefix, values in structured
+  fields. A reset is logged at error level with its manager, reason and the number of
+  lost assignments; each stopped container gets one line; a clean checkpoint is logged
+  at `V(4)`, which tells "nothing was wrong" apart from "this code did not run".
 
 - The marker file `/var/lib/kubelet/d8-numa-selfheal.json` is written by the kubelet
   and **never removed by it**. That is deliberate: kubelet restarts happen for
