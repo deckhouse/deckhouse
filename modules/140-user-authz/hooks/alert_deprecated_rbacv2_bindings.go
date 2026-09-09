@@ -52,7 +52,7 @@ const deprecatedRBACv2Metric = "d8_rbacv2_deprecated_role_in_use"
 //     fix. (d8:manage:permission:* is a subset of the d8:manage: prefix, so it is matched there and
 //     then reclassified as a capability below.)
 //
-// d8:use:dict is intentionally absent: the handle_dict_bindings hook migrates its bindings to d8:dict.
+// d8:use:dict is intentionally absent: user-authz-controller migrates its bindings to d8:dict.
 var deprecatedRoleNamePrefixes = []string{
 	"d8:manage:",
 	"d8:use:role:",

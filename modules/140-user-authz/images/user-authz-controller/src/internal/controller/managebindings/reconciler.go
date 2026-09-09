@@ -14,21 +14,22 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package managebindings projects the ClusterRoleBindings of the experimental role model's manage
-// roles (d8:manage:*) into namespaced use RoleBindings.
+// Package managebindings projects the ClusterRoleBindings of the system and subsystem roles of the
+// granular role model (d8:system:*, d8:subsystem:<subsystem>:*) into namespaced RoleBindings.
 //
-// A manage role carries the label rbac.deckhouse.io/use-role naming the use role its subjects get
-// in the namespaces of the modules it manages. Those namespaces are found through the role's
-// aggregation rule: every manage ClusterRole matched by the selectors contributes the namespace in
-// its rbac.deckhouse.io/namespace label, and roles that aggregate further are followed to any
-// depth (subsystem roles aggregating module roles, "all" aggregating subsystems). For each manage
-// ClusterRoleBinding and each such namespace a RoleBinding d8:use:<use-role>:binding:<binding> is
-// kept; automated use RoleBindings that are no longer expected are removed. The whole set is
-// recomputed on every change (single request key); the ClusterRoleBindings are read through a cache
-// index by roleRef, one lookup per manage role, so that a reconcile does not copy every
-// ClusterRoleBinding of the cluster. A manage role is any ClusterRole labelled
-// rbac.deckhouse.io/kind=manage, whatever its name (the hook this reconciler replaces matched by
-// label too; user-created manage roles of the legacy scheme are named custom:*).
+// A system or subsystem role carries the label rbac.deckhouse.io/use-role naming the namespace role
+// its subjects get in the namespaces of the modules it manages. Those namespaces are found through
+// the role's aggregation rule: every ClusterRole matched by the selectors contributes the namespace
+// in its rbac.deckhouse.io/namespace label (the system capabilities of the modules carry it), and
+// roles that aggregate further are followed to any depth (subsystem roles aggregating capabilities,
+// system roles aggregating subsystems, superadmin roles aggregating managers). For each such
+// ClusterRoleBinding and each namespace a RoleBinding d8:namespace:<use-role>:binding:<binding> is
+// kept; automated RoleBindings that are no longer expected are removed. The whole set is recomputed
+// on every change (single request key); the ClusterRoleBindings are read through a cache index by
+// roleRef, one lookup per role, so that a reconcile does not copy every ClusterRoleBinding of the
+// cluster. A manage role is any ClusterRole labelled rbac.deckhouse.io/scope=system or =subsystem,
+// whatever its name and kind (the hook this reconciler replaces selected by scope too; user-created
+// roles of the legacy scheme are named custom:*).
 package managebindings
 
 import (
@@ -45,6 +46,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/selection"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -66,21 +68,39 @@ const (
 	AutomatedIndexField = "user-authz.deckhouse.io/automated-use-binding"
 	automatedIndexValue = "true"
 
-	LabelKind      = "rbac.deckhouse.io/kind"
+	LabelScope     = "rbac.deckhouse.io/scope"
 	LabelUseRole   = "rbac.deckhouse.io/use-role"
 	LabelNamespace = "rbac.deckhouse.io/namespace"
 	labelHeritage  = "heritage"
 	labelAutomated = "rbac.deckhouse.io/automated"
 	labelDict      = "rbac.deckhouse.io/dict"
 
-	KindManage = "manage"
+	ScopeSystem    = "system"
+	ScopeSubsystem = "subsystem"
 
-	useRolePrefix         = "d8:use:role:"
+	useRolePrefix         = "d8:namespace:"
 	relatedWithAnnotation = "rbac.deckhouse.io/related-with"
 )
 
-// ManageRoleLabels select the manage ClusterRoles.
-var ManageRoleLabels = map[string]string{LabelKind: KindManage}
+// ManageRoleSelector selects the manage ClusterRoles: the roles and capabilities of the system and
+// subsystem scopes. The capabilities carry no use-role and project nothing themselves, but they are
+// the leaves of the aggregation graph that carry the namespaces, so they have to be in the cache.
+var ManageRoleSelector = labels.NewSelector().Add(mustRequirement(LabelScope, selection.In, ScopeSystem, ScopeSubsystem))
+
+func mustRequirement(key string, op selection.Operator, values ...string) labels.Requirement {
+	requirement, err := labels.NewRequirement(key, op, values)
+	if err != nil {
+		panic(err)
+	}
+	return *requirement
+}
+
+// isManageRole reports whether a ClusterRole with the given labels belongs to the system or
+// subsystem scope.
+func isManageRole(roleLabels map[string]string) bool {
+	scope := roleLabels[LabelScope]
+	return scope == ScopeSystem || scope == ScopeSubsystem
+}
 
 // AutomatedLabels mark the use RoleBindings this reconciler owns.
 var AutomatedLabels = map[string]string{labelHeritage: "deckhouse", labelAutomated: "true"}
@@ -105,9 +125,9 @@ func RoleRefIndexValue(obj client.Object) []string {
 	return []string{crb.RoleRef.Name}
 }
 
-// IsManageBinding reports whether obj is a ClusterRoleBinding to a manage role, looked up through
-// reader (the manager's cache, which holds the manage ClusterRoles only, so a miss means "not a
-// manage role").
+// IsManageBinding reports whether obj is a ClusterRoleBinding to a system or subsystem role, looked
+// up through reader (the manager's cache, which holds the ClusterRoles of those scopes only, so a
+// miss means "not a manage role").
 func IsManageBinding(reader client.Reader, obj client.Object) bool {
 	crb, ok := obj.(*rbacv1.ClusterRoleBinding)
 	if !ok || crb.RoleRef.Kind != "ClusterRole" {
@@ -117,7 +137,7 @@ func IsManageBinding(reader client.Reader, obj client.Object) bool {
 	if err := reader.Get(context.Background(), client.ObjectKey{Name: crb.RoleRef.Name}, role); err != nil {
 		return false
 	}
-	return role.Labels[LabelKind] == KindManage
+	return isManageRole(role.Labels)
 }
 
 // AutomatedIndexValue is the indexer of AutomatedIndexField.
@@ -156,7 +176,7 @@ func (r *Reconciler) SetupWithManager(mgr manager.Manager) error {
 	})
 
 	manageRole := eitherSide(func(obj client.Object) bool {
-		return obj.GetLabels()[LabelKind] == KindManage
+		return isManageRole(obj.GetLabels())
 	})
 
 	automatedUseBinding := eitherSide(func(obj client.Object) bool {
@@ -187,7 +207,7 @@ func eitherSide(match func(client.Object) bool) predicate.Funcs {
 // binding could not be written.
 func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconcile.Result, error) {
 	roles := &rbacv1.ClusterRoleList{}
-	if err := r.client.List(ctx, roles, client.MatchingLabels(ManageRoleLabels)); err != nil {
+	if err := r.client.List(ctx, roles, client.MatchingLabelsSelector{Selector: ManageRoleSelector}); err != nil {
 		return reconcile.Result{}, fmt.Errorf("list manage clusterroles: %w", err)
 	}
 	resolver := NewResolver(roles.Items)
@@ -317,8 +337,8 @@ func merged(have, want map[string]string) map[string]string {
 	return out
 }
 
-// Resolver answers, for a manage role, which use role it grants and in which namespaces, following
-// the aggregation rules of the manage roles to any depth. Results are memoised per role.
+// Resolver answers, for a system or subsystem role, which namespace role it grants and in which
+// namespaces, following the aggregation rules to any depth. Results are memoised per role.
 type Resolver struct {
 	roles      map[string]*rbacv1.ClusterRole
 	selectors  map[string][]labels.Selector
@@ -350,8 +370,9 @@ func NewResolver(roles []rbacv1.ClusterRole) *Resolver {
 	return r
 }
 
-// UseRoleAndNamespaces resolves the use role granted by the manage role roleName and the sorted
-// namespaces it applies to. The empty use role means "not a manage role we project".
+// UseRoleAndNamespaces resolves the namespace role granted by the role roleName and the sorted
+// namespaces it applies to. The empty use role means "not a role we project" (capabilities carry no
+// use-role).
 func (r *Resolver) UseRoleAndNamespaces(roleName string) (string, []string) {
 	role, ok := r.roles[roleName]
 	if !ok {
@@ -411,7 +432,7 @@ func UseBinding(manage *rbacv1.ClusterRoleBinding, useRole, namespace string) *r
 	return &rbacv1.RoleBinding{
 		TypeMeta: metav1.TypeMeta{APIVersion: rbacv1.SchemeGroupVersion.String(), Kind: "RoleBinding"},
 		ObjectMeta: metav1.ObjectMeta{
-			Name:        fmt.Sprintf("d8:use:%s:binding:%s", useRole, manage.Name),
+			Name:        fmt.Sprintf("d8:namespace:%s:binding:%s", useRole, manage.Name),
 			Namespace:   namespace,
 			Labels:      maps.Clone(AutomatedLabels),
 			Annotations: map[string]string{relatedWithAnnotation: manage.Name},

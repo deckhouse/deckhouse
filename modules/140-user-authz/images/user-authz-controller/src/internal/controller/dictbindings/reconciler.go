@@ -14,13 +14,15 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-// Package dictbindings grants the d8:use:dict ClusterRole to every subject that holds a use role.
+// Package dictbindings grants the d8:dict ClusterRole to every subject that holds a namespace role.
 //
-// Subjects are collected from RoleBindings of the experimental role model (roleRef d8:use:role:*,
-// not created by Deckhouse) and from the RoleBindings the module itself creates for the current
-// model's namespaced rules (roleRef user-authz:user|privileged-user|editor|admin). Each distinct
-// subject gets one ClusterRoleBinding d8:dict:*; bindings whose subject no longer holds any use
-// role, duplicates, and bindings that lost their roleRef or subject are removed. The whole set is
+// Subjects are collected from RoleBindings of the granular role model (roleRef d8:namespace:*, not
+// created by Deckhouse) and from the RoleBindings the module itself creates for the basic model's
+// namespaced rules (roleRef user-authz:user|privileged-user|editor|admin). Each distinct subject
+// gets one ClusterRoleBinding d8:dict:*; bindings whose subject no longer holds any namespace role,
+// duplicates, bindings to the former dict role name d8:use:dict, and bindings that lost their
+// roleRef or subject are removed (roleRef is immutable, so a renamed role means a recreated
+// binding). The whole set is
 // recomputed on every change, so the reconciler is keyed by a single constant request; the
 // contributing RoleBindings are read through a cache index, so a reconcile copies only them and
 // not every RoleBinding of the cluster.
@@ -54,7 +56,7 @@ const (
 	// RequestName is the constant key every event is mapped to.
 	RequestName = "dict-bindings"
 
-	// SourceIndexField indexes the RoleBindings whose subjects must hold d8:use:dict.
+	// SourceIndexField indexes the RoleBindings whose subjects must hold d8:dict.
 	SourceIndexField = "user-authz.deckhouse.io/dict-source"
 	sourceIndexValue = "true"
 	// OwnedIndexField indexes the dict ClusterRoleBindings this reconciler owns: a plain label
@@ -62,7 +64,7 @@ const (
 	OwnedIndexField = "user-authz.deckhouse.io/dict-binding"
 	ownedIndexValue = "true"
 
-	DictRoleName      = "d8:use:dict"
+	DictRoleName      = "d8:dict"
 	NamePrefix        = "d8:dict:"
 	SubjectAnnotation = "rbac.deckhouse.io/subject"
 
@@ -70,7 +72,7 @@ const (
 	labelAutomated = "rbac.deckhouse.io/automated"
 	labelDict      = "rbac.deckhouse.io/dict"
 
-	useRolePrefix = "d8:use:role:"
+	useRolePrefix = "d8:namespace:"
 )
 
 // DictLabels mark the ClusterRoleBindings this reconciler owns.
@@ -80,7 +82,7 @@ var DictLabels = map[string]string{
 	labelDict:      "true",
 }
 
-// reservedRoleRefs are the current-model use roles bound by the module's own RoleBindings.
+// reservedRoleRefs are the basic-model roles bound by the module's own RoleBindings.
 var reservedRoleRefs = []string{
 	"user-authz:user",
 	"user-authz:privileged-user",
@@ -88,7 +90,7 @@ var reservedRoleRefs = []string{
 	"user-authz:admin",
 }
 
-// Reconciler keeps one d8:dict:* ClusterRoleBinding per subject holding a use role.
+// Reconciler keeps one d8:dict:* ClusterRoleBinding per subject holding a namespace role.
 type Reconciler struct {
 	client client.Client
 	log    logr.Logger
@@ -220,7 +222,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 					reason = "duplicate of another dict binding"
 				default:
 					if _, wanted := subjects[key]; !wanted {
-						reason = "subject holds no use role"
+						reason = "subject holds no namespace role"
 					} else {
 						granted[key] = struct{}{}
 						delete(subjects, key)
@@ -252,9 +254,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, _ reconcile.Request) (reconc
 	return reconcile.Result{}, errors.Join(errs...)
 }
 
-// contributesSubjects reports whether the RoleBinding's subjects must hold d8:use:dict: either a
-// user-created binding to an experimental use role, or a module-created binding of a namespaced
-// rule of the current model.
+// contributesSubjects reports whether the RoleBinding's subjects must hold d8:dict: either a
+// user-created binding to a namespace role of the granular model, or a module-created binding of a
+// namespaced rule of the basic model.
 func contributesSubjects(rb *rbacv1.RoleBinding) bool {
 	if rb.RoleRef.Kind != "ClusterRole" {
 		return false
