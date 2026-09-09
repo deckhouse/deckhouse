@@ -1,4 +1,4 @@
-2860
+2869
 1GB
 2GB
 5XX
@@ -151,6 +151,7 @@ ClusterObservabilityAlert
 ClusterPodLoggingConfig
 ClusterRole
 ClusterRoleBinding
+ClusterRoles
 ClusterVirtualImage
 CoC
 Colocating
@@ -652,6 +653,8 @@ Prestable
 PrimaryIPFromEgressGatewayNodeInterface
 PriorityClass
 PriorityLevelConfiguration
+ProjectNamespace
+ProjectRoleBinding
 ProjectTemplate
 ProjectType
 PromQL
@@ -1164,6 +1167,7 @@ de
 deckhouse
 defaultCRI
 defaultClusterStorageClass
+delegatable
 descheduled
 descheduler
 descheduling
@@ -1727,6 +1731,7 @@ unicode
 uninstall
 uninstalled
 uninstalling
+unioned
 unmarshalling
 unschedulable
 uploadproxy
@@ -2335,6 +2340,7 @@ zoneTagCategory
 незапрошенных
 незашифрованном
 неизменяем
+неизменяемо
 неинтерактивном
 неймспейс
 неймспейса
@@ -2456,6 +2462,7 @@ zoneTagCategory
 переиспользования
 переиспользовать
 переиспользоваться
+переиспользуемый
 перенаправление
 перенаправления
 перенаправлениям
@@ -2512,6 +2519,7 @@ zoneTagCategory
 подсетям
 подсетями
 подсетях
+подсистемные
 покоммитное
 помотрим
 превью
@@ -2591,6 +2599,7 @@ zoneTagCategory
 рендеринга
 рендеринге
 рендерится
+рендерятся
 репликационным
 реплицированного
 реплицированные
