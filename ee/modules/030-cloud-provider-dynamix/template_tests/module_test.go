@@ -100,22 +100,16 @@ internal:
     kind: DynamixCloudProviderDiscoveryData
     zones:
       - zone-1
-    storageEndpoints:
-      - name: Default
-        pools:
-          - pool_a
-          - pool_b
-        isEnabled: true
-        isDefault: true
+    storagePolicies:
+      - name: storage_policy01
+        limitIOPS: 2000
+      - name: storage_policy02
+        limitIOPS: 0
   storageClasses:
-    - name: dynamix-ssd
-      storageEndpoint: SharedTatlin_G1_SEP
-      pool: pool_a
-      allowVolumeExpansion: true
-    - name: dynamix-hdd
-      storageEndpoint: SharedTatlin_G1_SEP
-      pool: pool_b
-      allowVolumeExpansion: false`
+    - name: storagepolicy01
+      storagePolicy: storage_policy01
+    - name: storagepolicy02
+      storagePolicy: storage_policy02`
 
 const tolerationsAnyNodeWithUninitialized = `
 - key: node-role.kubernetes.io/master
@@ -220,6 +214,21 @@ var _ = Describe("Module :: cloud-provider-dynamix :: helm template ::", func() 
 			capdDeployment := f.KubernetesResource("Deployment", "d8-cloud-provider-dynamix", "capd-controller-manager")
 			Expect(capdDeployment.Exists()).To(BeTrue())
 			Expect(capdDeployment.Field("spec.template.metadata.labels.cluster\\.x-k8s\\.io/provider").String()).To(Equal("infrastructure-dynamix"))
+
+			for _, sc := range []struct{ name, storagePolicy string }{
+				{"storagepolicy01", "storage_policy01"},
+				{"storagepolicy02", "storage_policy02"},
+			} {
+				storageClass := f.KubernetesGlobalResource("StorageClass", sc.name)
+				Expect(storageClass.Exists()).To(BeTrue())
+				Expect(storageClass.Field("provisioner").String()).To(Equal("dynamix.deckhouse.io"))
+				Expect(storageClass.Field("allowVolumeExpansion").Bool()).To(BeTrue())
+				// A StorageClass is described by exactly two parameters: the account it belongs
+				// to and the storage policy the CSI driver creates disks in.
+				Expect(storageClass.Field("parameters").String()).To(MatchYAML(fmt.Sprintf(`
+account: acc_user
+storagePolicy: %s`, sc.storagePolicy)))
+			}
 
 			userAuthzUser := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:cloud-provider-dynamix:user")
 			Expect(userAuthzUser.Exists()).To(BeTrue())

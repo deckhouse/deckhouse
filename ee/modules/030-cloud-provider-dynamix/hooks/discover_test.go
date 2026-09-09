@@ -21,6 +21,22 @@ cloudProviderDynamix:
   internal: {}
 `
 
+	initValuesWithExclude := `
+cloudProviderDynamix:
+  internal: {}
+  storageClass:
+    exclude:
+    - .*-hdd
+    - storagepolicy02
+`
+
+	initValuesWithDefault := `
+cloudProviderDynamix:
+  internal: {}
+  storageClass:
+    default: storagepolicy02
+`
+
 	storageClasses := `
 ---
 apiVersion: storage.k8s.io/v1
@@ -36,10 +52,10 @@ metadata:
     meta.helm.sh/release-namespace: d8-system
 provisioner: dynamix.deckhouse.io
 parameters:
-  storageEndpoint: defaultEndpoint
-  pool: defaultPool
+  account: acc_user
+  storagePolicy: Default Policy
 reclaimPolicy: Delete
-allowVolumeExpansion: false
+allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
 ---
 apiVersion: storage.k8s.io/v1
@@ -72,10 +88,10 @@ metadata:
     meta.helm.sh/release-namespace: d8-system
 provisioner: dynamix.deckhouse.io
 parameters:
-  storageEndpoint: hddEndpoint
-  pool: hddPool
+  account: acc_user
+  storagePolicy: HDD Policy
 reclaimPolicy: Delete
-allowVolumeExpansion: false
+allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
 `
 
@@ -86,7 +102,7 @@ metadata:
   name: manual-default
 provisioner: dynamix.deckhouse.io
 parameters:
-  storageEndpoint: "MANUAL-DEFAULT"
+  storagePolicy: "MANUAL-DEFAULT"
 reclaimPolicy: Delete
 allowVolumeExpansion: false
 volumeBindingMode: WaitForFirstConsumer
@@ -99,37 +115,15 @@ metadata:
     storageclass.kubernetes.io/is-default-class: 'true'
 provisioner: dynamix.deckhouse.io
 parameters:
-  storageEndpoint: "MANUAL-SAS"
+  storagePolicy: "MANUAL-SAS"
 reclaimPolicy: Delete
 allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
 `
 
-	//nolint:misspell
-	discoveryData := `
-{
-  "apiVersion": "deckhouse.io/v1",
-  "kind": "DynamixCloudProviderDiscoveryData",
-  "storageEndpoints": [
-    {
-      "name": "D1",
-      "pools": ["poolD1"],
-      "isEnabled": true
- 	},
-    {
-      "name": "D2",
-      "pools": ["poolD2"],
-      "isEnabled": false
- 	},
-    {
-      "name": "D3",
-      "pools": ["poolD3"],
-      "isEnabled": true
- 	},
-  ]
-}`
-
-	state := fmt.Sprintf(`
+	discoveryDataSecret := func(discoveryData string) string {
+		return fmt.Sprintf(`
+---
 apiVersion: v1
 kind: Secret
 metadata:
@@ -138,6 +132,101 @@ metadata:
 data:
   "discovery-data.json": %s
 `, base64.StdEncoding.EncodeToString([]byte(discoveryData)))
+	}
+
+	singlePolicyDiscoveryData := `
+{
+  "apiVersion": "deckhouse.io/v1",
+  "kind": "DynamixCloudProviderDiscoveryData",
+  "storagePolicies": [
+    {
+      "name": "Storage Policy 01",
+      "limitIOPS": 2000
+    }
+  ]
+}`
+
+	severalPoliciesDiscoveryData := `
+{
+  "apiVersion": "deckhouse.io/v1",
+  "kind": "DynamixCloudProviderDiscoveryData",
+  "storagePolicies": [
+    {
+      "name": "storage_policy02",
+      "limitIOPS": 0
+    },
+    {
+      "name": "Storage Policy 01",
+      "limitIOPS": 2000
+    },
+    {
+      "name": "fast-hdd",
+      "limitIOPS": 500
+    }
+  ]
+}`
+
+	emptyDiscoveryData := `
+{
+  "apiVersion": "deckhouse.io/v1",
+  "kind": "DynamixCloudProviderDiscoveryData"
+}`
+
+	collidingPoliciesDiscoveryData := `
+{
+  "apiVersion": "deckhouse.io/v1",
+  "kind": "DynamixCloudProviderDiscoveryData",
+  "storagePolicies": [
+    {
+      "name": "Storage Policy 01",
+      "limitIOPS": 2000
+    },
+    {
+      "name": "storage-policy-01",
+      "limitIOPS": 500
+    }
+  ]
+}`
+
+	// StorageClasses of a cluster provisioned before 4.6: named after a storage endpoint,
+	// parameterized with the endpoint and the pool. "storage-policy-01" collides with the
+	// name the "Storage Policy 01" policy normalizes to, "legacy-sep" does not.
+	legacyStorageClasses := `
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: storage-policy-01
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-dynamix
+provisioner: dynamix.deckhouse.io
+parameters:
+  account: acc_user
+  location: dynamix
+  storageEndpoint: SharedTatlin_G1_SEP
+  pool: pool_a
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: legacy-sep
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-dynamix
+provisioner: dynamix.deckhouse.io
+parameters:
+  account: acc_user
+  location: dynamix
+  storageEndpoint: SharedTatlin_G2_SEP
+  pool: pool_b
+reclaimPolicy: Delete
+allowVolumeExpansion: true
+volumeBindingMode: WaitForFirstConsumer
+`
 
 	a := HookExecutionConfigInit(initValues, `{}`)
 	Context("Cluster has empty state", func() {
@@ -159,21 +248,17 @@ data:
 			b.RunHook()
 		})
 
-		It("Should discover all volumeTypes only for storage classes where deployed by cloudProviderDynamix module", func() {
+		It("Should restore storage classes deployed by the cloudProviderDynamix module from their storagePolicy parameter", func() {
 			Expect(b).To(ExecuteSuccessfully())
 			Expect(b.ValuesGet("cloudProviderDynamix.internal.storageClasses").String()).To(MatchJSON(`
 [
-         {
+          {
             "name": "default",
-            "storageEndpoint": "defaultEndpoint",
-			"pool": "defaultPool",
-			"allowVolumeExpansion": false
+            "storagePolicy": "Default Policy"
           },
           {
             "name": "hdd",
-            "storageEndpoint": "hddEndpoint",
-			"pool": "hddPool",
-			"allowVolumeExpansion": false
+            "storagePolicy": "HDD Policy"
           }
 ]
 `))
@@ -187,7 +272,7 @@ data:
 			c.RunHook()
 		})
 
-		It("Should not discover manual volumeTypes", func() {
+		It("Should not discover manual storage classes", func() {
 			Expect(c).To(ExecuteSuccessfully())
 			Expect(c.ValuesGet("cloudProviderDynamix.internal.storageClasses").String()).To(BeEmpty())
 		})
@@ -200,21 +285,17 @@ data:
 			d.RunHook()
 		})
 
-		It("Should discover all deckhouse managed volumeTypes and no default", func() {
+		It("Should discover only deckhouse managed storage classes", func() {
 			Expect(d).To(ExecuteSuccessfully())
 			Expect(d.ValuesGet("cloudProviderDynamix.internal.storageClasses").String()).To(MatchJSON(`
 [
-         {
+          {
             "name": "default",
-            "storageEndpoint": "defaultEndpoint",
-			"pool": "defaultPool",
-			"allowVolumeExpansion": false
+            "storagePolicy": "Default Policy"
           },
           {
             "name": "hdd",
-            "storageEndpoint": "hddEndpoint",
-			"pool": "hddPool",
-			"allowVolumeExpansion": false
+            "storagePolicy": "HDD Policy"
           }
 ]
 `))
@@ -222,30 +303,168 @@ data:
 	})
 
 	e := HookExecutionConfigInit(initValues, `{}`)
-	Context("Provider data is successfully discovered", func() {
+	Context("Discovery data has a single storage policy", func() {
 		BeforeEach(func() {
-			e.BindingContexts.Set(e.KubeStateSet(state))
+			e.BindingContexts.Set(e.KubeStateSet(discoveryDataSecret(singlePolicyDiscoveryData)))
 			e.RunHook()
 		})
 
-		It("Should discover all enabled volumeTypes and no default", func() {
+		It("Should create a single storage class named after the normalized policy name", func() {
 			Expect(e).To(ExecuteSuccessfully())
 			Expect(e.ValuesGet("cloudProviderDynamix.internal.storageClasses").String()).To(MatchJSON(`
 [
           {
-            "name": "d1",
-            "storageEndpoint": "D1",
-            "pool": "poolD1",
-            "allowVolumeExpansion": true
-          },
-          {
-            "name": "d3",
-            "storageEndpoint": "D3",
-            "pool": "poolD3",
-            "allowVolumeExpansion": true
+            "name": "storage-policy-01",
+            "storagePolicy": "Storage Policy 01"
           }
 ]
 `))
+		})
+
+		It("Should store the discovery data as is", func() {
+			Expect(e).To(ExecuteSuccessfully())
+			Expect(e.ValuesGet("cloudProviderDynamix.internal.providerDiscoveryData").String()).To(MatchJSON(`
+{
+  "apiVersion": "deckhouse.io/v1",
+  "kind": "DynamixCloudProviderDiscoveryData",
+  "storagePolicies": [
+    {
+      "name": "Storage Policy 01",
+      "limitIOPS": 2000
+    }
+  ]
+}
+`))
+		})
+	})
+
+	f := HookExecutionConfigInit(initValues, `{}`)
+	Context("Discovery data has several storage policies", func() {
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.KubeStateSet(discoveryDataSecret(severalPoliciesDiscoveryData)))
+			f.RunHook()
+		})
+
+		It("Should create one storage class per policy, ordered by name", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cloudProviderDynamix.internal.storageClasses").String()).To(MatchJSON(`
+[
+          {
+            "name": "fast-hdd",
+            "storagePolicy": "fast-hdd"
+          },
+          {
+            "name": "storage-policy-01",
+            "storagePolicy": "Storage Policy 01"
+          },
+          {
+            "name": "storagepolicy02",
+            "storagePolicy": "storage_policy02"
+          }
+]
+`))
+		})
+	})
+
+	g := HookExecutionConfigInit(initValuesWithExclude, `{}`)
+	Context("Discovery data has several storage policies and storageClass.exclude is set", func() {
+		BeforeEach(func() {
+			g.BindingContexts.Set(g.KubeStateSet(discoveryDataSecret(severalPoliciesDiscoveryData)))
+			g.RunHook()
+		})
+
+		It("Should skip excluded storage classes", func() {
+			Expect(g).To(ExecuteSuccessfully())
+			Expect(g.ValuesGet("cloudProviderDynamix.internal.storageClasses").String()).To(MatchJSON(`
+[
+          {
+            "name": "storage-policy-01",
+            "storagePolicy": "Storage Policy 01"
+          }
+]
+`))
+		})
+	})
+
+	h := HookExecutionConfigInit(initValuesWithDefault, `{}`)
+	Context("Discovery data has several storage policies and storageClass.default is set", func() {
+		BeforeEach(func() {
+			h.BindingContexts.Set(h.KubeStateSet(discoveryDataSecret(severalPoliciesDiscoveryData)))
+			h.RunHook()
+		})
+
+		It("Should put the default storage class first, the rest stays ordered by name", func() {
+			Expect(h).To(ExecuteSuccessfully())
+			Expect(h.ValuesGet("cloudProviderDynamix.internal.storageClasses").String()).To(MatchJSON(`
+[
+          {
+            "name": "storagepolicy02",
+            "storagePolicy": "storage_policy02"
+          },
+          {
+            "name": "fast-hdd",
+            "storagePolicy": "fast-hdd"
+          },
+          {
+            "name": "storage-policy-01",
+            "storagePolicy": "Storage Policy 01"
+          }
+]
+`))
+		})
+	})
+
+	i := HookExecutionConfigInit(initValues, `{}`)
+	Context("Discovery data has no storage policies", func() {
+		BeforeEach(func() {
+			i.BindingContexts.Set(i.KubeStateSet(discoveryDataSecret(emptyDiscoveryData)))
+			i.RunHook()
+		})
+
+		It("Should not create any storage class", func() {
+			Expect(i).To(ExecuteSuccessfully())
+			Expect(i.ValuesGet("cloudProviderDynamix.internal.storageClasses").String()).To(MatchJSON(`[]`))
+		})
+	})
+
+	j := HookExecutionConfigInit(initValues, `{}`)
+	Context("Two storage policies normalize to the same storage class name", func() {
+		BeforeEach(func() {
+			j.BindingContexts.Set(j.KubeStateSet(discoveryDataSecret(collidingPoliciesDiscoveryData)))
+			j.RunHook()
+		})
+
+		It("Should keep one of them, picked independently of the discovery data order", func() {
+			Expect(j).To(ExecuteSuccessfully())
+			Expect(j.ValuesGet("cloudProviderDynamix.internal.storageClasses").String()).To(MatchJSON(`
+[
+          {
+            "name": "storage-policy-01",
+            "storagePolicy": "Storage Policy 01"
+          }
+]
+`))
+		})
+	})
+
+	k := HookExecutionConfigInit(initValues, `{}`)
+	Context("Cluster still has pre-4.6 storage classes", func() {
+		BeforeEach(func() {
+			k.BindingContexts.Set(k.KubeStateSet(legacyStorageClasses + discoveryDataSecret(singlePolicyDiscoveryData)))
+			k.RunHook()
+		})
+
+		It("Should delete the one the chart re-renders with different parameters", func() {
+			Expect(k).To(ExecuteSuccessfully())
+			// StorageClass.parameters are immutable: Helm cannot patch storageEndpoint/pool
+			// into account/storagePolicy, so the hook deletes it before Helm runs.
+			Expect(k.KubernetesGlobalResource("StorageClass", "storage-policy-01").Exists()).To(BeFalse())
+		})
+
+		It("Should leave alone the one the chart no longer renders", func() {
+			Expect(k).To(ExecuteSuccessfully())
+			// Not part of the release any more, so Helm removes it on its own.
+			Expect(k.KubernetesGlobalResource("StorageClass", "legacy-sep").Exists()).To(BeTrue())
 		})
 	})
 })

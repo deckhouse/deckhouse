@@ -15,4 +15,4 @@ force_searchable: true
 
 {% include module-requirements.liquid %}
 
-Модуль не имеет настроек.
+{% include module-settings.liquid %}
