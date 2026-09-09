@@ -1,11 +1,11 @@
 ---
-title: "Registry Module: FAQ"
+title: "Registry module: FAQ"
 description: "Frequently asked questions about the Deckhouse Kubernetes Platform registry module: migrating to the module, cache maintenance, and troubleshooting registry issues."
 ---
 
 ## How does the migration to the registry module work?
 
-There are two ways a DKP cluster's image pull path can be managed:
+There are two ways a Deckhouse Kubernetes Platform (DKP) cluster's image pull path can be managed:
 
 - **the previous implementation** — the `registry` section of the
   [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry), with the
@@ -74,7 +74,7 @@ waiting for:
 d8 k -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
 ```
 
-## How do I migrate from `Unmanaged` mode?
+## How do I migrate from Unmanaged mode?
 
 In `Unmanaged` mode the previous implementation does not manage the pull path, so there is
 nothing to prepare: the handover happens on its own.
@@ -96,7 +96,7 @@ nothing to prepare: the handover happens on its own.
    published in the `registry-suggested-config` secret — see
    [enabling the module](examples.html#enabling-the-module).
 
-## How do I migrate from `Direct` mode?
+## How do I migrate from Direct mode?
 
 In `Direct` mode the nodes pull images through an in-cluster address served by the previous
 implementation's proxy. The module serves the same address, so the migration is a direct
@@ -147,7 +147,7 @@ handover of that address: no switch through `Unmanaged` is needed, and no compon
    minutes later, and the objects of the previous implementation were removed a minute after
    that. Pulls worked at every point in between.
 
-## How do I migrate from `Proxy` mode?
+## How do I migrate from Proxy mode?
 
 `Proxy` mode keeps a proxy of its own, with its own certificates, on every node — state the
 module cannot adopt. So the cluster must first be switched to `Unmanaged`, and this can only be
@@ -176,14 +176,14 @@ done before the upgrade.
    on a cluster with little free disk space on the control-plane nodes, read
    [how the cache is filled and cleaned up](#the-cache-keeps-growing-what-reclaims-it).
 
-## How do I migrate an air-gapped cluster from `Local` mode?
+## How do I migrate an air-gapped cluster from Local mode?
 
 In `Local` mode the cluster's registry lives inside the cluster itself, and there is no
 external one. The standard procedure does not apply here: it goes through `Unmanaged`, where
 every node pulls directly from an external registry — and this cluster has none.
 
 The way through is to give the cluster an external registry temporarily: run it in the same
-cluster, but outside the Deckhouse namespaces; switch the cluster to it; upgrade; let the
+cluster, but outside the DKP namespaces; switch the cluster to it; upgrade; let the
 module's storage fill up; then remove it. The procedure has been verified end to end on a test
 cluster.
 
@@ -217,7 +217,7 @@ Steps 1–4 are performed before the upgrade, on the release that still contains
 implementation.
 
 1. Run a temporary OCI registry in a namespace of your own. Any registry implementation will
-   do, but it must serve TLS with a certificate the cluster can verify. Deckhouse must not
+   do, but it must serve TLS with a certificate the cluster can verify. DKP must not
    manage it: whatever happens to the module's own objects, the temporary registry must keep
    working.
 
@@ -227,8 +227,8 @@ implementation.
 
    | Address | From a node | From a pod |
    |---|---|---|
-   | `hostNetwork` port at the node's own IP (`<node ip>:5000`) | works | works |
-   | Service name (`<service>.<namespace>.svc:<port>`) | does not resolve | works |
+   | `hostNetwork` port at the node's own IP (`<NODE_IP>:5000`) | works | works |
+   | Service name (`<SERVICE>.<NAMESPACE>.svc:<PORT>`) | does not resolve | works |
    | NodePort at a node's IP | works | fails: `operation not permitted` |
 
    Use the first option: run the registry with `hostNetwork: true` on one node, address it by
@@ -237,7 +237,7 @@ implementation.
    runtime on a node does not resolve cluster DNS.
 
 1. Load the image set into the temporary registry: run `d8 mirror pull` on a machine with
-   access to the Deckhouse registry, then `d8 mirror push` into the temporary one. This is the
+   access to the DKP registry, then `d8 mirror push` into the temporary one. This is the
    copy the disk budget above accounts for.
 
 1. Point the previous implementation at the temporary registry and switch it to `Unmanaged`:
@@ -271,11 +271,11 @@ implementation.
    number of distinct digests in it. Count them in the bundle you pushed:
 
    ```bash
-   for tar in <bundle dir>/*.tar; do tar -xOf "$tar" --wildcards '*index.json'; done |
+   for tar in <BUNDLE_DIR>/*.tar; do tar -xOf "$tar" --wildcards '*index.json'; done |
      jq -r '.manifests[]?.digest' | sort -u | wc -l
    ```
 
-   Changing these settings restarts the registry process, so `RegistryStorage` reports
+   Changing these settings restarts the registry process, so the RegistryStorage resource reports
    `Failed` for about a minute with an error about reading its own store. This is expected;
    wait for it to return to `Ready`.
 
@@ -328,11 +328,11 @@ miss otherwise.
 : A change to the primary upstream was rejected, and the cluster keeps using the last working
   one. The `outcome` label tells the problems apart: `unreachable` — network or the registry
   itself; `auth` — usually an expired license key; `sentinel` — the registry responded and
-  accepted the credentials, but does not contain the Deckhouse images (usually a wrong
+  accepted the credentials, but does not contain the DKP images (usually a wrong
   repository path).
 
 `D8RegistryUpstreamRejected`
-: A `RegistryUpstream` resource was not accepted, so pulls for the registry it names are not
+: A RegistryUpstream resource was not accepted, so pulls for the registry it names are not
   intercepted. The `reason` label says whether it conflicts with the primary registry or with
   another resource claiming the same name.
 
@@ -364,7 +364,7 @@ NODE:.metadata.name,STALE:.status.staleStorageDataBytes
 If you are not going to turn the cache back on, remove the directory on the node:
 
 ```bash
-ssh <node> 'du -sh /opt/deckhouse/registry && sudo rm -rf /opt/deckhouse/registry'
+ssh <NODE> 'du -sh /opt/deckhouse/registry && sudo rm -rf /opt/deckhouse/registry'
 ```
 
 ## The cache keeps growing. What reclaims it?
@@ -429,6 +429,8 @@ unexpected hour is worse than not collecting.
 
 ### Turning it off
 
+Garbage collection is turned off in the module settings:
+
 ```yaml
 spec:
   settings:
@@ -456,7 +458,7 @@ d8 k -n kube-system logs -l component=registry-agent --tail=100
 The configuration the agent has, and whether it agrees with the cluster:
 
 ```bash
-d8 k get registrynode <node> -o jsonpath='{.status}' | jq
+d8 k get registrynode <NODE> -o jsonpath='{.status}' | jq
 ```
 
 The agent's metrics — its own view of the pulls passing through it. They are read directly
@@ -465,14 +467,14 @@ has to work when the API server does not, and a kube-rbac-proxy beside it would 
 against that same API server:
 
 ```bash
-ssh <node> 'curl -s http://127.0.0.1:4286/metrics | grep d8_registry_agent'
+ssh <NODE> 'curl -s http://127.0.0.1:4286/metrics | grep d8_registry_agent'
 ```
 
 The configuration given to the container runtime. It is a single file, regardless of how many
 registries are configured:
 
 ```bash
-ssh <node> 'cat /etc/containerd/registry.d/_default/hosts.toml'
+ssh <NODE> 'cat /etc/containerd/registry.d/_default/hosts.toml'
 ```
 
 If this file is missing, the agent has not applied a configuration yet: nothing on the node
@@ -480,6 +482,8 @@ can pull, and the reason is in the agent's log. If the file is present and pulls
 the failure is beyond the agent — the metrics above name the target that failed and the error.
 
 ## How do I check the state of the in-cluster cache?
+
+The state of the cache is published in the status of the RegistryStorage resource:
 
 ```bash
 d8 k get registrystorage registry -o jsonpath='{.status}' | jq
@@ -508,7 +512,7 @@ Containerd v2 uses the new format by default. For more details, see the section 
 
 #### For containerd v2
 
-1. Switch to using the `registry` module. To do this, specify the `Unmanaged` mode parameters in the `deckhouse` `moduleConfig`. If you are using a registry other than `registry.deckhouse.io`, refer to the [`deckhouse`](/modules/deckhouse/latest/configuration.html) module documentation for proper configuration.
+1. Switch to using the `registry` module. To do this, specify the `Unmanaged` mode parameters in the ModuleConfig `deckhouse`. If you are using a registry other than `registry.deckhouse.io`, refer to the [`deckhouse`](/modules/deckhouse/latest/configuration.html) module documentation for proper configuration.
 
    You can view the current registry settings using the following command:
 
@@ -535,9 +539,9 @@ Containerd v2 uses the new format by default. For more details, see the section 
            license: <LICENSE_KEY> # Replace with your license key
    ```
 
-1. Wait for the switch to complete. Example [status output](./faq.html#how-to-check-the-registry-mode-switch-status):
+1. Wait for the switch to complete. Example [status output](#how-to-check-the-registry-mode-switch-status):
 
-   ```yaml
+   ```console
    conditions:
    # ...
      - lastTransitionTime: "..."
@@ -560,7 +564,7 @@ Containerd v2 uses the new format by default. For more details, see the section 
 
 1. Make sure that nodes with containerd v1 do not have any [custom registry configurations](/modules/node-manager/latest/faq.html#how-to-add-configuration-for-an-additional-registry) located in the `/etc/containerd/conf.d` directory.
 
-1. If configurations are present, you need to migrate to the new registry configuration format in containerd. To do this, add new configuration files to the `/etc/containerd/registry.d` directory. These configurations will take effect after switching to the `registry` module. To add configurations, prepare a `NodeGroupConfiguration`. For more details, see the section [with a description of configuration methods](/modules/node-manager/latest/faq.html#how-to-add-configuration-for-an-additional-registry). Example:
+1. If configurations are present, you need to migrate to the new registry configuration format in containerd. To do this, add new configuration files to the `/etc/containerd/registry.d` directory. These configurations will take effect after switching to the `registry` module. To add configurations, prepare a NodeGroupConfiguration. For more details, see the section [with a description of configuration methods](/modules/node-manager/latest/faq.html#how-to-add-configuration-for-an-additional-registry). Example:
 
    ```yaml
    apiVersion: deckhouse.io/v1alpha1
@@ -614,7 +618,7 @@ Containerd v2 uses the new format by default. For more details, see the section 
    ctr -n k8s.io images pull --hosts-dir=/etc/containerd/registry.d/ --plain-http private.registry.example/registry/path:tag
    ```
 
-1. Switch to using the `registry` module. To do this, specify the `Unmanaged` mode parameters in the `deckhouse` `moduleConfig`. If you are using a registry other than `registry.deckhouse.io`, refer to the [`deckhouse`](/modules/deckhouse/latest/configuration.html) module documentation for proper configuration.
+1. Switch to using the `registry` module. To do this, specify the `Unmanaged` mode parameters in the ModuleConfig `deckhouse`. If you are using a registry other than `registry.deckhouse.io`, refer to the [`deckhouse`](/modules/deckhouse/latest/configuration.html) module documentation for proper configuration.
 
    You can view the current registry settings using the following command:
 
@@ -641,11 +645,11 @@ Containerd v2 uses the new format by default. For more details, see the section 
            license: <LICENSE_KEY> # Replace with your license key
    ```
 
-1. After applying, wait for the following message to appear in the [switch status](faq.html#how-to-check-the-registry-mode-switch-status):
+1. After applying, wait for the following message to appear in the [switch status](#how-to-check-the-registry-mode-switch-status):
 
    Example output:
 
-   ```yaml
+   ```console
    conditions:
    # ...
    - lastTransitionTime: "2025-08-13T15:22:34Z"
@@ -695,9 +699,9 @@ Containerd v2 uses the new format by default. For more details, see the section 
        [ -f "$file" ] && rm -f "$file"
    ```
 
-1. After removing the old configurations, make sure that the switch has resumed. Example of the [switch status](faq.html#how-to-check-the-registry-mode-switch-status):
+1. After removing the old configurations, make sure that the switch has resumed. Example of the [switch status](#how-to-check-the-registry-mode-switch-status):
 
-   ```yaml
+   ```console
    conditions:
    # ...
    - lastTransitionTime: "2025-08-13T16:42:09Z"
@@ -707,9 +711,9 @@ Containerd v2 uses the new format by default. For more details, see the section 
      type: ContainerdConfigPreflightReady
    ```
 
-1. Wait for the switch to complete. Example of the [switch status](faq.html#how-to-check-the-registry-mode-switch-status):
+1. Wait for the switch to complete. Example of the [switch status](#how-to-check-the-registry-mode-switch-status):
 
-   ```yaml
+   ```console
    conditions:
    # ...
      - lastTransitionTime: "..."
@@ -766,9 +770,9 @@ Containerd v2 uses the new format by default. For more details, see the section 
            license: <LICENSE_KEY>
    ```
 
-1. Check the switch status using the [instruction](./faq.html#how-to-check-the-registry-mode-switch-status). Example output:
+1. Check the switch status using the [instruction](#how-to-check-the-registry-mode-switch-status). Example output:
 
-   ```yaml
+   ```console
    conditions:
    # ...
    - lastTransitionTime: "..."
@@ -796,9 +800,9 @@ Containerd v2 uses the new format by default. For more details, see the section 
          mode: Unmanaged
    ```
 
-1. Check the switch status using the [instruction](./faq.html#how-to-check-the-registry-mode-switch-status). Example output:
+1. Check the switch status using the [instruction](#how-to-check-the-registry-mode-switch-status). Example output:
 
-   ```yaml
+   ```console
    conditions:
    # ...
    - lastTransitionTime: "..."
@@ -865,9 +869,9 @@ Containerd v2 uses the new format by default. For more details, see the section 
    d8 k -n d8-system delete secret registry-bashible-config
    ```
 
-1. After deletion, wait for the switch to complete. Use the [instruction](faq.html#how-to-check-the-registry-mode-switch-status) to track the progress. Example output:
+1. After deletion, wait for the switch to complete. Use the [instruction](#how-to-check-the-registry-mode-switch-status) to track the progress. Example output:
 
-   ```yaml
+   ```console
    conditions:
    # ...
    - lastTransitionTime: "..."
@@ -880,7 +884,7 @@ Containerd v2 uses the new format by default. For more details, see the section 
    target_mode: Unmanaged
    ```
 
-1. If containerd v1 is used, apply the previously prepared `NodeGroupConfiguration` with custom registry configurations.
+1. If containerd v1 is used, apply the previously prepared NodeGroupConfiguration with custom registry configurations.
 
 1. Disable the `registry` module. Example:
 
@@ -906,7 +910,7 @@ d8 k -n d8-system -o yaml get secret registry-state | yq -C -P '.data | del .sta
 
 Example output:
 
-```yaml
+```console
 conditions:
   - lastTransitionTime: "2025-07-15T12:52:46Z"
     message: 'registry.deckhouse.io: all 157 items are checked'

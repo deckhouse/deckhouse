@@ -126,23 +126,23 @@ because clusters are still running it, and it is the operator who has to move a 
 before the upgrade, not after.
 
 {% alert level="danger" %}
-Prepare the cluster BEFORE upgrading to this release. The upgrade is blocked while the previous
+Prepare the cluster BEFORE upgrading to this release: the upgrade is blocked while the previous
 implementation is running in `Proxy` or `Local` mode, or in `Direct` mode without a configured
-`registry` ModuleConfig. This release renders none of the previous implementation's objects, and
-the mode switching a cluster needs is performed by the code of the previous release — so all
-preparation happens there.
+`registry` ModuleConfig.
+{% endalert %}
 
-A cluster in `Proxy` is brought to `Unmanaged`. An air-gapped `Local` cluster does not fit that
-procedure — it goes through a mode where every node pulls straight from an upstream, and such a
-cluster has none — so it has a procedure of its own: see
+This release renders none of the previous implementation's objects, and the mode switching a
+cluster needs is performed by the code of the previous release — so all preparation happens
+there. A cluster in `Proxy` is brought to `Unmanaged`. An air-gapped `Local` cluster does not
+fit that procedure — it goes through a mode where every node pulls straight from an upstream,
+and such a cluster has none — so it has a procedure of its own: see
 [how to migrate an air-gapped cluster from Local mode](faq.html#how-do-i-migrate-an-air-gapped-cluster-from-local-mode).
 
-A cluster in `Direct` needs no mode switch — only this module's configuration, written before the
-upgrade. Its objects are kept deliberately — the previous release annotates them to survive its
-own removal — so they go on serving the in-cluster address its nodes pull through until this
-module's node agent has taken that address over. See
+A cluster in `Direct` needs no mode switch — only this module's configuration, written before
+the upgrade. Its objects are kept deliberately — the previous release annotates them to survive
+its own removal — so they go on serving the in-cluster address its nodes pull through until
+this module's node agent has taken that address over. See
 [migrating from `Direct`](faq.html#how-do-i-migrate-from-direct-mode).
-{% endalert %}
 
 
 It is configured through the [`deckhouse` ModuleConfig](/modules/deckhouse/configuration.html#parameters-registry)
