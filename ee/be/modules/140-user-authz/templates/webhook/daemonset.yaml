@@ -110,9 +110,6 @@ spec:
         - name: KUBERNETES_SERVICE_PORT
           value: "6443"
         volumeMounts:
-        - mountPath: /etc/user-authz-webhook/
-          name: user-authz-webhook-config
-          readOnly: true
         - mountPath: /etc/ssl/user-authz-webhook
           name: user-authz-webhook-secret
         - mountPath: /etc/ssl/apiserver-authentication-requestheader-client-ca
@@ -225,7 +222,4 @@ spec:
       - name: apiserver-authentication-requestheader-client-ca
         configMap:
           name: apiserver-authentication-requestheader-client-ca
-      - name: user-authz-webhook-config
-        configMap:
-          name: user-authz-webhook
 {{- end }}

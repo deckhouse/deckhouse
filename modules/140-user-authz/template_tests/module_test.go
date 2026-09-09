@@ -34,82 +34,6 @@ func Test(t *testing.T) {
 	RunSpecs(t, "")
 }
 
-const (
-	testCLusterRoleCRDsWithLimitNamespaces = `---
-- name: testenev
-  spec:
-    accessLevel: Admin
-    allowScale: true
-    limitNamespaces:
-    - default
-    - .*
-    subjects:
-    - kind: User
-      name: Efrem Testenev
-    additionalRoles:
-    - apiGroup: rbac.authorization.k8s.io
-      kind: ClusterRole
-      name: cluster-write-all
-`
-
-	testCLusterRoleCRDsWithAllowAccessToSystemNamespaces = `---
-- name: testenev
-  spec:
-    accessLevel: Admin
-    allowScale: true
-    allowAccessToSystemNamespaces: true
-    subjects:
-    - kind: User
-      name: Efrem Testenev
-    additionalRoles:
-    - apiGroup: rbac.authorization.k8s.io
-      kind: ClusterRole
-      name: cluster-write-all
-`
-
-	// Mirrors the config.json rendered by webhook/configmap.yaml: CARs in
-	// "crds", ARs in "ars".
-	testCLusterRoleCRDsWithCRDsKey = `---
-crds:
-- name: testenev
-  spec:
-    accessLevel: Admin
-    allowScale: true
-    limitNamespaces:
-    - default
-    - .*
-    subjects:
-    - kind: User
-      name: Efrem Testenev
-    additionalRoles:
-    - apiGroup: rbac.authorization.k8s.io
-      kind: ClusterRole
-      name: cluster-write-all
-ars:
-- name: testenev-namespaced
-  namespace: testenv
-  spec:
-    accessLevel: Editor
-    allowScale: true
-    subjects:
-    - kind: User
-      name: Namespace Testenev
-`
-
-	testRoleCRDs = `---
-- name: testenev-namespaced
-  namespace: testenv
-  spec:
-    accessLevel: Editor
-    allowScale: true
-    subjects:
-    - kind: User
-      name: Namespace Testenev
-`
-)
-
-var testCRDsWithCRDsKeyJSON, _ = ConvertYAMLToJSON([]byte(testCLusterRoleCRDsWithCRDsKey))
-
 var _ = Describe("Module :: user-authz :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
@@ -149,12 +73,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		// Ensure the root userAuthz object exists (some EE templates access .Values.userAuthz.* directly).
 		f.ValuesSet("userAuthz.enableMultiTenancy", false)
 
-		// Minimal defaults to avoid nil-pointer panics in EE templates when rendering without explicitly
-		// setting all userAuthz.internal.* values in a particular test context.
-		// - webhook/configmap.yaml iterates over .Values.userAuthz.internal.clusterAuthRuleCrds even when enableMultiTenancy=false
-		// - webhook/secret.yaml requires webhookCertificate when enableMultiTenancy=true
-		f.ValuesSetFromYaml("userAuthz.internal.clusterAuthRuleCrds", `[]`)
-		f.ValuesSetFromYaml("userAuthz.internal.authRuleCrds", `[]`)
+		// webhook/secret.yaml requires webhookCertificate when enableMultiTenancy=true.
 
 		f.ValuesSet("global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA", "test")
 		f.ValuesSet("userAuthz.internal.webhookCertificate.ca", "test")
@@ -171,8 +90,6 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 	Context("With custom resources (incl. limitNamespaces), enabledMultiTenancy and controlPlaneConfigurator", func() {
 		BeforeEach(func() {
 			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd", "prometheus"]`)
-			f.ValuesSetFromYaml("userAuthz.internal.clusterAuthRuleCrds", testCLusterRoleCRDsWithLimitNamespaces)
-			f.ValuesSetFromYaml("userAuthz.internal.authRuleCrds", testRoleCRDs)
 
 			f.ValuesSet("userAuthz.enableMultiTenancy", true)
 			f.ValuesSet("userAuthz.controlPlaneConfigurator.enabled", true)
@@ -244,8 +161,14 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "apiserver-authentication-requestheader-client-ca").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("Secret", "d8-user-authz", "user-authz-webhook").Exists()).To(BeTrue())
 
-			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "user-authz-webhook").Exists()).To(BeTrue())
-			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "user-authz-webhook").Field("data.config\\.json").String()).To(MatchJSON(testCRDsWithCRDsKeyJSON))
+			// The rendered config.json is gone: both consumers read the rules from the API. Its
+			// absence is asserted rather than merely unmentioned, because bringing it back would
+			// quietly restore a second, slower source of the same truth.
+			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "user-authz-webhook").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("DaemonSet", "d8-user-authz", "user-authz-webhook").
+				Field("spec.template.spec.volumes").String()).NotTo(ContainSubstring("user-authz-webhook-config"))
+			Expect(f.KubernetesResource("Deployment", "d8-user-authz", "permission-browser-apiserver").
+				Field("spec.template.spec.volumes").String()).NotTo(ContainSubstring("user-authz-webhook-config"))
 
 			// Mirrors enableMultiTenancy for the multitenancy.py validating webhook — rendered
 			// in the same block (and thus the same apply) as the namespace above.
@@ -438,13 +361,17 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 
 	Context("With CAR (incl. limitNamespaces) and not enabledMultiTenancy", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("userAuthz.internal.clusterAuthRuleCrds", testCLusterRoleCRDsWithLimitNamespaces)
 			f.HelmRender()
 		})
 
-		It("Helm should fail", func() {
-			Expect(f.RenderError).Should(HaveOccurred())
-			Expect(f.RenderError.Error()).Should(ContainSubstring("You must turn on userAuthz.enableMultiTenancy to use limitNamespaces option in your ClusterAuthorizationRule resources."))
+		// A rule whose multi-tenancy options cannot take effect used to stop the whole module from
+		// rendering. One rule, which anybody allowed to create them can write, then froze every
+		// other change to the module, and the message reached only whoever read the release logs.
+		// The condition is reported by the alert_multitenancy_disabled hook instead.
+		It("Should render: the rule is reported, not fatal", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("DaemonSet", "d8-user-authz", "user-authz-webhook").Exists()).To(BeFalse(),
+				"the webhook that would enforce those options is not deployed with multi-tenancy off")
 		})
 	})
 
@@ -716,15 +643,13 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		})
 	})
 
-	Context("With CAR (incl. limitNamespaces) and not enabledMultiTenancy", func() {
+	Context("With CAR (incl. allowAccessToSystemNamespaces) and not enabledMultiTenancy", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("userAuthz.internal.clusterAuthRuleCrds", testCLusterRoleCRDsWithAllowAccessToSystemNamespaces)
 			f.HelmRender()
 		})
 
-		It("Helm should fail", func() {
-			Expect(f.RenderError).Should(HaveOccurred())
-			Expect(f.RenderError.Error()).Should(ContainSubstring("You must turn on userAuthz.enableMultiTenancy to use allowAccessToSystemNamespaces flag in your ClusterAuthorizationRule resources."))
+		It("Should render: the rule is reported by a metric, not by refusing to render", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
 		})
 	})
 

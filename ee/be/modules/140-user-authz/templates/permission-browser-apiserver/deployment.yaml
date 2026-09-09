@@ -90,9 +90,6 @@ spec:
           name: https
           protocol: TCP
         volumeMounts:
-        - mountPath: /etc/user-authz-webhook/
-          name: user-authz-webhook-config
-          readOnly: true
         - mountPath: /etc/ssl/permission-browser-apiserver
           name: permission-browser-apiserver-certs
           readOnly: true
@@ -170,9 +167,6 @@ spec:
             {{- include "helm_lib_container_kube_rbac_proxy_resources" . | nindent 12 }}
 {{- end }}
       volumes:
-      - name: user-authz-webhook-config
-        configMap:
-          name: user-authz-webhook
       - name: permission-browser-apiserver-certs
         secret:
           secretName: permission-browser-apiserver
