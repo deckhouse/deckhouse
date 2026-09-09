@@ -21,6 +21,7 @@ import (
 
 	libcon "github.com/deckhouse/lib-connection/pkg"
 	"github.com/deckhouse/lib-connection/pkg/settings"
+	sshconfig "github.com/deckhouse/lib-connection/pkg/ssh/config"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app"
@@ -30,8 +31,9 @@ import (
 )
 
 type CreateProvidersOptions struct {
-	allowMissingHostsFromCache bool
-	kubeConfig                 string
+	allowMissingHostsFromCache   bool
+	allowMissingConnectionConfig bool
+	kubeConfig                   string
 }
 
 type CreateProvidersOption func(*CreateProvidersOptions)
@@ -45,6 +47,16 @@ func AllowMissingHostsFromCache() CreateProvidersOption {
 func WithKubeConfig(kubeConfig string) CreateProvidersOption {
 	return func(o *CreateProvidersOptions) {
 		o.kubeConfig = kubeConfig
+	}
+}
+
+// AllowMissingConnectionConfig hands out a hostless, keyless initializer instead of nil when
+// the request carries no connection config. Bootstrap is written against a present initializer:
+// cluster-bootstrapper.go takes its settings and config from it, and an immutable cluster is
+// installed without ssh at all, so the dhctl command line hands it a hostless initializer too.
+func AllowMissingConnectionConfig() CreateProvidersOption {
+	return func(o *CreateProvidersOptions) {
+		o.allowMissingConnectionConfig = true
 	}
 }
 
@@ -92,6 +104,15 @@ func CreateProviders(ctx context.Context, config string, isDebug bool, tmpDir st
 			return nil, nil, cleanuper.AsFunc(), fmt.Errorf("initializing providers: %w", err)
 		}
 	}
+
+	if sshProviderInitializer == nil && options.allowMissingConnectionConfig {
+		// Config must be non-nil: lib-connection dereferences it while cloning the connection.
+		sshProviderInitializer = providerinitializer.NewSSHProviderInitializer(
+			settings.NewBaseProviders(params),
+			&sshconfig.ConnectionConfig{Config: &sshconfig.Config{}},
+		)
+	}
+
 	if sshProviderInitializer != nil {
 		cleanuper.Add(func() error {
 			return sshProviderInitializer.Cleanup(ctx)

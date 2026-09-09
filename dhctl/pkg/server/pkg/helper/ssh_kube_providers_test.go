@@ -163,3 +163,18 @@ func TestCreateProvidersKubeConfigWithoutConnectionConfig(t *testing.T) {
 	require.NotNil(t, kubeProvider)
 	require.NoError(t, cleanup())
 }
+
+func TestCreateProvidersAllowMissingConnectionConfig(t *testing.T) {
+	sshProviderInitializer, kubeProvider, cleanup, err := CreateProviders(
+		t.Context(), "", false, t.TempDir(),
+		AllowMissingConnectionConfig(),
+		WithKubeConfig(kubeconfigYAML),
+	)
+	require.NoError(t, err)
+	require.NotNil(t, sshProviderInitializer)
+	require.NotNil(t, sshProviderInitializer.GetSettings())
+	require.NotNil(t, sshProviderInitializer.GetConfig())
+	require.False(t, sshProviderInitializer.CheckHosts(t.Context()))
+	require.NotNil(t, kubeProvider)
+	require.NoError(t, cleanup())
+}
