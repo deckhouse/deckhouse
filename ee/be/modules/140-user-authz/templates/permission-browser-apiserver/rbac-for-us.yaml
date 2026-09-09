@@ -21,6 +21,10 @@ rules:
 - apiGroups: ["rbac.authorization.k8s.io"]
   resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
   verbs: ["get", "list", "watch"]
+# The multi-tenancy rules are read from the ClusterAuthorizationRules themselves
+- apiGroups: ["deckhouse.io"]
+  resources: ["clusterauthorizationrules"]
+  verbs: ["get", "list", "watch"]
 # Access to discovery API for checking if resources are namespaced
 - nonResourceURLs: ["/version", "/api", "/api/*", "/apis", "/apis/*"]
   verbs: ["get"]

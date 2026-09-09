@@ -3,6 +3,11 @@ cpu: 25m
 memory: 50Mi
 {{- end }}
 
+{{- define "kube_rbac_proxy_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
 {{- if .Values.userAuthz.enableMultiTenancy }}
   {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
@@ -26,6 +31,12 @@ spec:
         {{- include "webhook_resources" . | nindent 8 }}
       maxAllowed:
         cpu: 50m
+        memory: 50Mi
+    - containerName: kube-rbac-proxy
+      minAllowed:
+        {{- include "kube_rbac_proxy_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 20m
         memory: 50Mi
   {{- end }}
 
@@ -52,8 +63,14 @@ spec:
       - port: 40443
         protocol: TCP
         metadata:
-          description: Node-local authorization webhook listener.    
-{{- end }}   
+          description: Node-local authorization webhook listener.
+      # kube-rbac-proxy exposes the webhook metrics on the node IP for Prometheus; the webhook itself
+      # serves them only on 127.0.0.1. hostNetwork pods must declare their host ports.
+      - port: 4207
+        protocol: TCP
+        metadata:
+          description: Metrics endpoint fronted by kube-rbac-proxy.
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -120,6 +137,61 @@ spec:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
 {{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
             {{- include "webhook_resources" . | nindent 12 }}
+{{- end }}
+      - name: kube-rbac-proxy
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_common_image" (list . "kubeRbacProxy") }}
+        args:
+        - "--secure-listen-address=$(KUBE_RBAC_PROXY_LISTEN_ADDRESS):4207"
+        - "--v=2"
+        - "--logtostderr=true"
+        - "--stale-cache-interval=1h30m"
+        - "--livez-path=/livez"
+        env:
+        # Use the node-local kube-apiserver endpoint for the same reason the webhook does: hostNetwork
+        # pods may be blocked from the "kubernetes" ClusterIP.
+        - name: KUBERNETES_SERVICE_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: status.hostIP
+        - name: KUBERNETES_SERVICE_PORT
+          value: "6443"
+        - name: KUBE_RBAC_PROXY_LISTEN_ADDRESS
+          valueFrom:
+            fieldRef:
+              fieldPath: status.podIP
+        - name: KUBE_RBAC_PROXY_CONFIG
+          value: |
+            upstreams:
+            - upstream: http://127.0.0.1:4208/metrics
+              path: /metrics
+              authorization:
+                resourceAttributes:
+                  namespace: d8-{{ .Chart.Name }}
+                  apiGroup: apps
+                  apiVersion: v1
+                  resource: daemonsets
+                  subresource: prometheus-metrics
+                  name: user-authz-webhook
+        ports:
+        - containerPort: 4207
+          name: https-metrics
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            path: /livez
+            port: 4207
+            scheme: HTTPS
+        readinessProbe:
+          httpGet:
+            path: /livez
+            port: 4207
+            scheme: HTTPS
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}
+{{- if not ( .Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "kube_rbac_proxy_resources" . | nindent 12 }}
 {{- end }}
       volumes:
       - name: user-authz-webhook-secret

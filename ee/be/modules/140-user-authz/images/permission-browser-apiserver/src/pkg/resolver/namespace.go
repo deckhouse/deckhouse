@@ -449,7 +449,7 @@ func (r *NamespaceResolver) filterByMultitenancy(userInfo user.Info, candidates 
 		return result
 	}
 
-	// Get access type and filter in one call to avoid redundant affectedDirs lookups
+	// Get access type and filter in one call to avoid redundant rule lookups
 	accessType, filter := r.mtEngine.GetNamespaceAccessType(userInfo)
 
 	switch accessType {

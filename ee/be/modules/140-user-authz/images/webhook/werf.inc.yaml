@@ -30,6 +30,19 @@ git:
         - '**/*.go'
         - '**/go.mod'
         - '**/go.sum'
+  # go.mod replaces github.com/deckhouse/deckhouse/go_lib/user-authz with a relative path that
+  # resolves to /go_lib/user-authz from /src.
+  - add: /{{ $.ModulePath }}go_lib/user-authz
+    to: /go_lib/user-authz
+    includePaths:
+      - '**/*.go'
+      - '**/go.mod'
+      - '**/go.sum'
+    stageDependencies:
+      install:
+        - '**/*.go'
+        - '**/go.mod'
+        - '**/go.sum'
 shell:
   install:
     - cd /src
@@ -41,6 +54,10 @@ import:
   - image: {{ $.ModuleName }}/{{ $.ImageName }}-user-authz-webhook-src-artifact
     add: /src
     to: /src
+    before: install
+  - image: {{ $.ModuleName }}/{{ $.ImageName }}-user-authz-webhook-src-artifact
+    add: /go_lib/user-authz
+    to: /go_lib/user-authz
     before: install
 mount:
 {{ include "mount points for golang builds" . }}

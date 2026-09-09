@@ -80,7 +80,6 @@ spec:
         - --secure-port=8443
         - --tls-cert-file=/etc/ssl/permission-browser-apiserver/tls.crt
         - --tls-private-key-file=/etc/ssl/permission-browser-apiserver/tls.key
-        - --user-authz-config=/etc/user-authz-webhook/config.json
         - --authentication-kubeconfig=/etc/kubernetes/kubeconfig.yaml
         - --authorization-kubeconfig=/etc/kubernetes/kubeconfig.yaml
         - --enable-priority-and-fairness=false

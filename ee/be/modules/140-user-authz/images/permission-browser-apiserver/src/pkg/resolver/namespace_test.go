@@ -6,8 +6,6 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package resolver
 
 import (
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -21,6 +19,7 @@ import (
 	"k8s.io/client-go/kubernetes/fake"
 
 	"permission-browser-apiserver/pkg/authorizer/multitenancy"
+	"permission-browser-apiserver/pkg/authorizer/multitenancy/mttest"
 )
 
 // TestServiceAccountSubjectMatching tests the SA namespace defaulting edge case
@@ -579,8 +578,8 @@ func TestResolveAccessibleNamespaces_RBACv2UserWithoutCAR(t *testing.T) {
 	}
 
 	// Multi-tenancy engine is active, but its CAR directory is empty (the user has no CAR) — the
-	// normal RBAC v2 situation. The nonexistent config path leaves the directory empty.
-	mtEngine, err := multitenancy.NewEngine("/nonexistent-user-authz-config.json", nil, nil, nil)
+	// normal RBAC v2 situation.
+	mtEngine, err := multitenancy.NewEngine(mttest.Rules(), mttest.NoBindings(), nil, nil, nil)
 	require.NoError(t, err)
 
 	resolver := setupResolver(t, objs, mtEngine)
@@ -959,16 +958,12 @@ func TestResolveAccessibleNamespaces_DefaultIsSystem(t *testing.T) {
 
 // Helper functions
 
-// newMTEngineFromConfig writes a user-authz config.json with the supplied raw body
-// and returns a multitenancy.Engine built from it. The engine's directory is loaded
-// during construction. nil listers/discovery are sufficient here because these
+// newMTEngineFromConfig returns a multitenancy.Engine over the ClusterAuthorizationRules of the
+// supplied user-authz config.json body. nil listers/discovery are sufficient here because these
 // scenarios do not exercise namespaceSelector or resource-scope discovery.
 func newMTEngineFromConfig(t *testing.T, body string) *multitenancy.Engine {
 	t.Helper()
-	dir := t.TempDir()
-	path := filepath.Join(dir, "config.json")
-	require.NoError(t, os.WriteFile(path, []byte(body), 0o600))
-	engine, err := multitenancy.NewEngine(path, nil, nil, nil)
+	engine, err := multitenancy.NewEngine(mttest.LegacyJSON(t, body), mttest.NoBindings(), nil, nil, nil)
 	require.NoError(t, err)
 	return engine
 }
@@ -978,9 +973,6 @@ func newMTEngineFromConfig(t *testing.T, body string) *multitenancy.Engine {
 // separate fake client populated from objs; setupResolver builds its own.
 func newMTEngineWithNamespaces(t *testing.T, body string, objs []runtime.Object) *multitenancy.Engine {
 	t.Helper()
-	dir := t.TempDir()
-	path := filepath.Join(dir, "config.json")
-	require.NoError(t, os.WriteFile(path, []byte(body), 0o600))
 
 	client := fake.NewSimpleClientset(objs...)
 	factory := informers.NewSharedInformerFactory(client, 0)
@@ -993,7 +985,7 @@ func newMTEngineWithNamespaces(t *testing.T, body string, objs []runtime.Object)
 		require.True(t, ok, "informer %v failed to sync", typ)
 	}
 
-	engine, err := multitenancy.NewEngine(path, lister, func() bool { return true }, nil)
+	engine, err := multitenancy.NewEngine(mttest.LegacyJSON(t, body), mttest.NoBindings(), lister, func() bool { return true }, nil)
 	require.NoError(t, err)
 	return engine
 }

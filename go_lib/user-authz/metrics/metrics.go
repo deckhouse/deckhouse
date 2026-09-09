@@ -85,17 +85,33 @@ func New(namespace string) *Metrics {
 	}
 }
 
-// Register registers the collectors.
-func (m *Metrics) Register(reg prometheus.Registerer) error {
-	for _, c := range []prometheus.Collector{
+var _ prometheus.Collector = (*Metrics)(nil)
+
+func (m *Metrics) collectors() []prometheus.Collector {
+	return []prometheus.Collector{
 		m.rulesObserved, m.maxResourceVersion, m.subjects, m.quarantined, m.updatedTimestamp,
 		m.synced, m.rebuildDuration, m.rebuilds, m.watchErrors,
-	} {
-		if err := reg.Register(c); err != nil {
-			return err
-		}
 	}
-	return nil
+}
+
+// Register registers the collectors with a Prometheus registry.
+func (m *Metrics) Register(reg prometheus.Registerer) error {
+	return reg.Register(m)
+}
+
+// Describe implements prometheus.Collector, so the metrics can also be handed to a registry that
+// takes raw collectors, such as the one of a Kubernetes-style apiserver.
+func (m *Metrics) Describe(ch chan<- *prometheus.Desc) {
+	for _, c := range m.collectors() {
+		c.Describe(ch)
+	}
+}
+
+// Collect implements prometheus.Collector.
+func (m *Metrics) Collect(ch chan<- prometheus.Metric) {
+	for _, c := range m.collectors() {
+		c.Collect(ch)
+	}
 }
 
 // DirectoryRebuilt implements source.Observer.
