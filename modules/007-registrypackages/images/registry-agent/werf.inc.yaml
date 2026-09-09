@@ -1,0 +1,67 @@
+{{- $version := "01.01.26" }}
+{{- /*
+Packaging of the node agent for delivery by bashible.
+
+The agent is what lets a node pull images, so it cannot be pulled through the registry
+the way an ordinary component is: at the moment it is needed, the registry it would come
+from is not reachable yet. So the image is wrapped here into an OCI archive, installed on
+the node as a package, and imported into the container runtime locally — the same path
+kubernetes-api-proxy and registry-proxy already take.
+
+The image itself is built in the module (registry/registry-agent); this only wraps it.
+*/}}
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}
+from: {{ index $.Images "builder/scratch" }}
+import:
+- image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+  add: /
+  to: /
+  includePaths:
+  - registry-agent.tar
+  - install
+  - uninstall
+  before: setup
+imageSpec:
+  config:
+    labels: {"distro": "all", "version": "all", "registry-agent": "{{ $version }}" }
+---
+image: {{ $.ModuleName }}/{{ $.ImageName }}-artifact
+from: {{ index $.Images "builder/golang-alpine" }}
+final: false
+git:
+- add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/scripts
+  to: /
+  stageDependencies:
+    setup:
+    - '**/*'
+import:
+- image: common/crane
+  add: /crane
+  to: /crane
+  before: setup
+- from: {{ index $.Images "tools/jq" }}
+  add: /usr/bin/jq
+  before: setup
+dependencies:
+- image: registry/registry-agent
+  before: setup
+  imports:
+  - type: ImageDigest
+    targetEnv: IMAGE_DIGEST
+  - type: ImageRepo
+    targetEnv: IMAGE_REPO
+secrets:
+- id: REGISTRY_USER
+  env: REGISTRY_USER
+- id: REGISTRY_PASSWORD
+  env: REGISTRY_PASSWORD
+shell:
+  setup:
+  - case "$IMAGE_REPO" in *.local/*) export param="--insecure" ;; esac
+  - /crane auth login --password "$(cat /run/secrets/REGISTRY_PASSWORD)" --username "$(cat /run/secrets/REGISTRY_USER)" "${IMAGE_REPO%%/*}"
+  - /crane pull --format oci $IMAGE_REPO@$IMAGE_DIGEST $param /tmp/image
+  - rm -f ~/.docker/config.json
+  - jq '.manifests[0].annotations = {"org.opencontainers.image.ref.name":"deckhouse.local/images:registry-agent"}' /tmp/image/index.json > /tmp/index.updated.json && mv /tmp/index.updated.json /tmp/image/index.json
+  - tar -C /tmp/image -cf /registry-agent.tar .
+  - rm -rf /tmp/image

@@ -34,6 +34,14 @@ requirements:
   "istioMinimalVersion": "1.25" # modules/110-istio/requirements/check.go
   "unmetCloudConditions": "true" # modules/040-node-manager/requirements/check.go
   "nodesMinimalLinuxKernelVersion": "5.8.0" # modules/021-cni-cilium/requirements/check.go
+  # NOT "registryImplementation" yet, and the omission is the mechanism rather than an oversight.
+  # A requirement is evaluated by the version already INSTALLED, so the check has to ship one
+  # release ahead of the key that uses it: modules/038-registry/requirements/check.go registers it
+  # from this release on, and the release that wants to refuse installing on a cluster still
+  # running the previous registry implementation declares
+  #   "registryImplementation": "V2"
+  # here. Declaring it in the same release as the check is refused by
+  # testing/validate_release_requirements.sh, for exactly this reason.
   # "checkContainerdV1NodesPresent": "false" # modules/040-node-manager/requirements/check.go; injected with 'true' only for CSE via .werf/werf-release-channel.yaml (CSE drops containerd v1)
 
 # map of disruptions, associated with a specific release. You have to register check functions before specified release

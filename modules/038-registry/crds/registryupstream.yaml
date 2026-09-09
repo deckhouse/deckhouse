@@ -1,0 +1,237 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: registryupstreams.deckhouse.io
+  labels:
+    heritage: deckhouse
+    module: registry
+spec:
+  group: deckhouse.io
+  scope: Cluster
+  names:
+    plural: registryupstreams
+    singular: registryupstream
+    kind: RegistryUpstream
+    shortNames:
+      - rup
+  preserveUnknownFields: false
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Match
+          type: string
+          description: "The registry host intercepted on the nodes."
+          jsonPath: .spec.match
+        - name: Upstream
+          type: string
+          description: "Where the intercepted pulls are sent."
+          jsonPath: .spec.upstream.host
+        - name: Accepted
+          type: boolean
+          description: "Whether the controller compiled this upstream into the per-node layout."
+          jsonPath: .status.accepted
+        - name: Conflict
+          type: string
+          description: "Why the object was rejected."
+          jsonPath: .status.conflict
+          priority: 1
+        - name: Age
+          type: date
+          description: "Time since creation."
+          jsonPath: .metadata.creationTimestamp
+      schema:
+        openAPIV3Schema:
+          type: object
+          description: |
+            Declares an additional registry the cluster routes to, on top of the primary one.
+
+            This is the supported way for a module, an administrator or a user to bring their own registry. A module creates the object with an `ownerReference` on itself, so the object is garbage-collected together with the module; a GitOps tool owning ModuleConfig never competes for field ownership, because every upstream is a separate object.
+
+            Traffic through these upstreams is **always transit**: the agent proxies the pull, substituting credentials and the certificate authority, and streams it through without writing to disk or to the cache. Cache space is finite and reserved for Deckhouse components, all the more so in an air-gapped cluster where the cache is the only source of images.
+
+            A `match` already claimed by another object, or one that would shadow the primary path, is rejected rather than silently merged. See `status.conflict`.
+          required:
+            - spec
+          properties:
+            spec:
+              type: object
+              required:
+                - match
+                - upstream
+              properties:
+                match:
+                  type: string
+                  minLength: 1
+                  pattern: '^[a-zA-Z0-9]([-a-zA-Z0-9]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([-a-zA-Z0-9]*[a-zA-Z0-9])?)*(:[0-9]{1,5})?$'
+                  description: |
+                    The registry host intercepted on the nodes.
+                  x-doc-example: 'images.virtualization.example.com'
+                upstream:
+                  type: object
+                  description: |
+                    Where the intercepted pulls are actually sent.
+                  required:
+                    - host
+                  properties:
+                    scheme:
+                      type: string
+                      enum:
+                        - HTTP
+                        - HTTPS
+                      default: HTTPS
+                      description: |
+                        The protocol used to reach the registry.
+                    host:
+                      type: string
+                      minLength: 1
+                      description: |
+                        The registry host, optionally with a port.
+                      x-doc-example: 'registry-vendor.example.com'
+                    path:
+                      type: string
+                      description: |
+                        The repository prefix inside the registry.
+                      x-doc-example: '/virt'
+                    ca:
+                      type: string
+                      description: |
+                        A PEM-encoded certificate authority bundle used to verify the registry when `scheme` is `HTTPS`.
+                    auth:
+                      type: object
+                      description: |
+                        Credentials for the registry.
+
+                        **Sensitive.** Credentials are stored inline in the object rather than referenced from a Secret, so that the node agent stays self-sufficient while the API server is unreachable.
+                      properties:
+                        username:
+                          type: string
+                          description: |
+                            The username for basic authentication.
+                        password:
+                          type: string
+                          description: |
+                            The password for basic authentication.
+                        auth:
+                          type: string
+                          description: |
+                            Pre-encoded `base64("username:password")`.
+
+                            Takes precedence over `username` and `password` when set.
+                    mirrors:
+                      type: array
+                      description: |
+                        Additional addresses serving **the same** content as the registry, used for failover.
+                      items:
+                        type: object
+                        required:
+                          - host
+                        properties:
+                          scheme:
+                            type: string
+                            enum:
+                              - HTTP
+                              - HTTPS
+                            default: HTTPS
+                            description: |
+                              The protocol used to reach the mirror.
+                          host:
+                            type: string
+                            minLength: 1
+                            description: |
+                              The mirror host, optionally with a port.
+                          path:
+                            type: string
+                            description: |
+                              The repository prefix inside the mirror.
+                          ca:
+                            type: string
+                            description: |
+                              A PEM-encoded certificate authority bundle used to verify the mirror.
+                          auth:
+                            type: object
+                            description: |
+                              Credentials for the mirror.
+
+                              **Sensitive.** See `upstream.auth`.
+                            properties:
+                              username:
+                                type: string
+                                description: |
+                                  The username for basic authentication.
+                              password:
+                                type: string
+                                description: |
+                                  The password for basic authentication.
+                              auth:
+                                type: string
+                                description: |
+                                  Pre-encoded `base64("username:password")`.
+            status:
+              type: object
+              properties:
+                observedGeneration:
+                  type: integer
+                  format: int64
+                  description: |
+                    The `spec` generation the controller last acted on.
+                accepted:
+                  type: boolean
+                  description: |
+                    Whether the controller compiled this upstream into the per-node layout.
+                conflict:
+                  type: string
+                  description: |
+                    Why the object was rejected: which object already holds the `match`, or that the `match` would shadow the primary path.
+
+                    Empty when the object is accepted.
+                conditions:
+                  type: array
+                  description: |
+                    The arbitration result with a machine-readable reason.
+
+                    - `Accepted` — whether the upstream is part of the per-node layout.
+                  x-kubernetes-list-type: map
+                  x-kubernetes-list-map-keys:
+                    - type
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                      - lastTransitionTime
+                      - reason
+                    properties:
+                      type:
+                        type: string
+                        description: |
+                          The condition type.
+                      status:
+                        type: string
+                        enum:
+                          - "True"
+                          - "False"
+                          - Unknown
+                        description: |
+                          The condition status.
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                        description: |
+                          The `spec` generation the condition was set for.
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                        description: |
+                          When the condition last changed.
+                      reason:
+                        type: string
+                        description: |
+                          A machine-readable reason for the condition.
+                      message:
+                        type: string
+                        description: |
+                          A human-readable explanation.

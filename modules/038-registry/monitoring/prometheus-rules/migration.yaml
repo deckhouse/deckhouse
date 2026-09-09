@@ -1,0 +1,205 @@
+- name: d8.registry.migration
+  rules:
+  - alert: D8RegistryMigrationPending
+    expr: max by (reason) (d8_registry_migration_pending) > 0
+    for: 5m
+    labels:
+      severity_level: "8"
+      tier: cluster
+      d8_module: registry
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_registry_migration_pending: "D8RegistryMigrationPending,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_migration_pending: "D8RegistryMigrationPending,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The registry module is still running its previous implementation.
+      description: |-
+        This cluster still pulls images the way the previous implementation of the
+        `registry` module arranged it, and the handover to the current one has not
+        happened.
+
+        Reason: `{{ $labels.reason }}`
+
+        Read the reason first, because it separates two very different situations:
+
+        - The reason says the previous implementation has **not recorded a mode yet**,
+          or that it is **transitioning**. Nothing is wrong: the handover is waiting for
+          a state to settle and will happen on its own.
+
+        - The reason names a mode **other than `Unmanaged`** — `Direct`, `Proxy` or
+          `Local`. Then this cluster's pull path is already degraded, and this alert is
+          how it shows: this release renders none of the previous implementation's
+          objects, so the in-cluster proxy, the `registry` Service and the per-node
+          secrets it served are gone, while the nodes still point at them. Images
+          already on a node keep working; anything that has to be pulled will not.
+          Do not wait for this to resolve itself — it will not. Go to
+          `D8RegistryMigrationPreflightBlocked`, which says what to do per case, and
+          for `Local` note that the documented procedure does not apply at all.
+
+        The handover waits because both implementations configure the same thing on
+        every node: which registry the container runtime asks, and with which
+        credentials. Running both would not merge those two answers, it would race
+        them. So the current implementation takes over only once the previous one has
+        let go of the pull path, which is its `Unmanaged` state.
+
+        What to do:
+
+        1. Bring the registry configuration in the `deckhouse` ModuleConfig to
+           `Unmanaged` and wait for that transition to finish:
+
+           ```
+           kubectl get mc deckhouse -o jsonpath='{.spec.settings.registry.mode}'
+           kubectl -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
+           ```
+
+        2. Once the state reports `mode: Unmanaged` with no pending target mode, the
+           handover happens on the module's next reconciliation and this alert clears.
+           The cluster keeps pulling from the same registry throughout.
+
+        3. To have the module manage the pull path afterwards, set `mode: Managed` in
+           the `registry` ModuleConfig together with the registry to pull from. The
+           module publishes a ready-made configuration for this cluster in the
+           `registry-suggested-config` secret in `d8-system`.
+
+  # Scoped to the blocking checks on purpose. The rest of the preflight names work an operator
+  # has to do before starting, which is a decision they make on their own schedule; these two
+  # say the documented procedure does not apply to this cluster at all, and an operator who
+  # starts it anyway takes the cluster's pull path down.
+  - alert: D8RegistryMigrationPreflightBlocked
+    expr: max by (check, detail) (d8_registry_migration_preflight{blocking="true"}) > 0
+    for: 15m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: registry
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_registry_migration_preflight: "D8RegistryMigrationPreflightBlocked,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_migration_preflight: "D8RegistryMigrationPreflightBlocked,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The registry migration must not be started on this cluster yet.
+      description: |-
+        A precondition of the `registry` module's migration is not met, and the migration
+        must not be started until it is: `{{ $labels.check }}` — {{ $labels.detail }}.
+
+        Whether anything is broken right now depends on which check it is, and the list
+        below says so per case: `upstream_reachable` and `node_containerd_registry_config`
+        are work to do before starting, while `mode` and `not_local` mean the cluster is
+        already past the point where the documented procedure could be started cleanly.
+
+        What each blocking check means:
+
+        - `mode` — the cluster arrived on this release without having been brought to
+          `Unmanaged` first, or the previous implementation is mid-transition. This release
+          renders none of the previous implementation's objects, so whatever they served —
+          the in-cluster proxy in `Proxy`, the `registry` Service — is already gone, and
+          the nodes still point at it. The discriminator has NOT flipped while this is
+          failing, so the way back is the image: return the previous release, bring the
+          cluster to `Unmanaged` by the documented procedure, then upgrade again.
+
+        - `not_local` — the cluster's registry *is* the cluster (`Local`). The ordinary
+          procedure brings the cluster through `Unmanaged`, where every node pulls straight
+          from an upstream, and this cluster has no upstream to pull from: the previous
+          implementation does not even write node configuration in `Unmanaged` without one.
+          This cluster has a procedure of its own instead — an OCI registry stood up in a
+          namespace of your own, loaded with the image set and declared as the upstream for
+          the length of the migration, then removed once the in-cluster storage holds the
+          set itself. The blobs already on the control-plane nodes are adopted rather than
+          downloaded again; what it costs is a second copy of the set on disk while the
+          temporary registry exists. See "How do I migrate an air-gapped Local cluster?" in
+          the module's FAQ, and do not start the ordinary procedure here.
+
+        - `node_containerd_registry_config` — one or more nodes carry a containerd
+          `conf.d` file that sets registry fields of its own. Under the current
+          implementation that file is not merged: the node's registry configuration comes
+          from `/etc/containerd/registry.d`, and the bashible step refuses to merge a
+          file that would contradict it — by failing, which stops that node's whole
+          convergence, including kubelet configuration and version upgrades. The detail
+          names the nodes. Move those settings into `/etc/containerd/registry.d` before
+          the handover.
+
+        - `upstream_reachable` — the registry this cluster pulls from does not answer. The
+          procedure points every node straight at it, so starting now turns a documented
+          step into an outage. Fix the reachability first:
+
+          ```
+          kubectl -n d8-system get secret registry-state -o jsonpath='{.data.state}' | base64 -d | head
+          kubectl -n d8-system logs deploy/deckhouse -c deckhouse | grep -i 'registry checker'
+          ```
+
+        The non-blocking checks are reported by the same metric with `blocking="false"`:
+
+        ```
+        d8_registry_migration_preflight
+        ```
+
+  # Its own alert rather than a line in the migration one: this is not about migrating, it is about a
+  # cluster that already runs this implementation and has a node whose next ordinary bashible run will
+  # stop converging. An operator who reads it has minutes of work to do and, usually, hours before the
+  # consequence — which is exactly the gap the alert exists to close.
+  - alert: D8RegistryNodeForeignRegistryConfig
+    expr: max by (node) (d8_registry_node_foreign_registry_config) > 0
+    for: 5m
+    labels:
+      severity_level: "5"
+      tier: cluster
+      d8_module: registry
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_registry_foreign_config: "D8RegistryNodeForeignRegistryConfig,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_registry_foreign_config: "D8RegistryNodeForeignRegistryConfig,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: Node {{ $labels.node }} carries container runtime registry configuration the registry module did not write.
+      description: |-
+        Node `{{ $labels.node }}` has a file under `/etc/containerd/conf.d/` (containerd v1) or
+        `/etc/containerd/conf2.d/` (containerd v2) that configures a registry, and the `registry`
+        module manages this cluster's registry configuration. Two writers of that configuration is
+        not a state the platform supports, so bashible refuses to merge such a file.
+
+        **Right now nothing is broken, and that is the danger.** The refusal happens inside the
+        bashible step that builds the container runtime configuration, and that step only runs when
+        something makes it run. Until then the file has no effect at all — measured on a test
+        cluster: the file was added, bashible reported "Configuration is in sync, nothing to do",
+        and the configuration was simply ignored.
+
+        The step does run on its own, though: a node re-applies its whole configuration
+        periodically (roughly every four hours), and also on any registry change, platform upgrade
+        or reboot. At that point the step fails with
+
+        ```
+        Failed to merge /etc/containerd/conf.d/<file>: it contains custom registry fields,
+        configure them in /etc/containerd/registry.d instead
+        ```
+
+        and retries, so the node stops applying configuration entirely — hours after the change
+        that caused it, and with nothing else to connect the two.
+
+        What to do, before that happens:
+
+        1. Find the file on the node:
+
+           ```
+           ls /etc/containerd/conf.d/ /etc/containerd/conf2.d/ 2>/dev/null
+           grep -l registry /etc/containerd/conf.d/*.toml /etc/containerd/conf2.d/*.toml 2>/dev/null
+           ```
+
+        2. Move the registry part of it to a host directory, which is where this platform
+           configures registries and where the module's node agent leaves other people's entries
+           alone:
+
+           ```
+           /etc/containerd/registry.d/<registry host>/hosts.toml
+           ```
+
+        3. Remove the registry section from the `conf.d` file (anything non-registry in it can
+           stay), and remove the `NodeGroupConfiguration` that writes it if that is where it comes
+           from.
+
+        Doing it across a fleet with a `NodeGroupConfiguration` has one catch worth knowing in
+        advance: give it a **weight below 32**. The step that refuses the file is
+        `032_configure_containerd`, and a node stops at the step that fails — so a repair placed at
+        a later weight never runs on the nodes that need it most. Measured: a cleanup
+        configuration at weight 10 reached both nodes and cleared the label in 90 seconds.
+
+        A node already stuck in the retry loop recovers on its own once the file is gone: measured,
+        the configuration checksum returned in 75 seconds.

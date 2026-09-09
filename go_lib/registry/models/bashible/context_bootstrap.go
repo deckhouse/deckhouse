@@ -73,6 +73,24 @@ func (c ContextBootstrapProxy) ToMap() map[string]any {
 type ContextBootstrap struct {
 	Init  initsecret.Config      `json:"init" yaml:"init"`
 	Proxy *ContextBootstrapProxy `json:"proxy,omitempty" yaml:"proxy,omitempty"`
+
+	// FromBundle marks a bootstrap whose images came from a bundle rather than from a registry the
+	// cluster can reach.
+	//
+	// The bootstrap steps this context feeds are the previous implementation's, and on this path they
+	// are borrowed for one job only: standing up a registry on the first master and filling it, so
+	// that a cluster with no upstream anywhere can start at all. Everything after that belongs to the
+	// current implementation, which is what the operator actually configured.
+	//
+	// So this field exists to tell those steps apart: the ones that bring the registry up on the node
+	// must still run, and the one that hands the cluster the previous implementation's state machine
+	// must not — there is nothing in such a cluster to execute that state machine, and the record of
+	// it left behind is read as "the old implementation is mid-transition", which is a state the
+	// current one refuses to take over from.
+	//
+	// Absent in every existing cluster, and the steps read it as "not from a bundle", which is what
+	// they did before it existed.
+	FromBundle bool `json:"fromBundle,omitempty" yaml:"fromBundle,omitempty"`
 }
 
 func (c ContextBootstrap) Validate() error {
@@ -89,6 +107,13 @@ func (c ContextBootstrap) ToMap() map[string]any {
 
 	if c.Proxy != nil {
 		m["proxy"] = c.Proxy.ToMap()
+	}
+
+	// Only when true: the steps ask `not (.registry.bootstrap).fromBundle`, and an explicit false
+	// would read the same, but every existing cluster renders this map without the key at all — so
+	// leaving it out keeps the two indistinguishable.
+	if c.FromBundle {
+		m["fromBundle"] = c.FromBundle
 	}
 
 	return m

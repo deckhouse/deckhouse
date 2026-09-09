@@ -82,6 +82,7 @@ jobs:
       changes_docs: ${{ steps.changes.outputs.docs }}
       changes_not_markdown: ${{ steps.changes.outputs.not_markdown }}
       changes_node_controller: ${{ steps.changes.outputs.node_controller }}
+      changes_registry_images: ${{ steps.changes.outputs.registry_images }}
 
       build_CE: ${{ steps.pr_props.outputs.build_CE }}
       build_EE: ${{ steps.pr_props.outputs.build_EE }}
@@ -288,6 +289,12 @@ jobs:
               - '!./**/*.md'
             node_controller:
               - './modules/040-node-manager/images/node-controller/**'
+            # The registry module's binaries live under their own go.mod, which `make tests-modules`
+            # does not reach: `./modules/...` stops at a nested module boundary. Without this filter
+            # and the job it gates, their tests are written and never run.
+            registry_images:
+              - './modules/038-registry/images/**'
+              - './go_lib/registry/**'
 
       # Stop workflow if external PR contains dangerous changes.
       - name: Fail workflow on dangerous changes

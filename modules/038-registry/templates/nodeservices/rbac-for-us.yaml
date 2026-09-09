@@ -1,3 +1,11 @@
+{{- /*
+  Access for the legacy node services. Unconditional until now, in a file with no values in
+  it at all — which is why it was the one legacy object that survived every gate: a cluster
+  the current implementation owns carried a service account and a cluster role for a
+  DaemonSet that does not exist. See _ownership.tpl.
+*/ -}}
+{{- if eq (include "registry_legacy_owns_the_cluster" .) "true" -}}
+---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
@@ -64,3 +72,4 @@ roleRef:
   kind: ClusterRole
   name: d8:{{ .Chart.Name }}:nodeservices
   apiGroup: rbac.authorization.k8s.io
+{{- end }}

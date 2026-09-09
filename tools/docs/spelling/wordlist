@@ -1590,9 +1590,15 @@ regex
 regexes
 regexp
 regionTagCategory
+RegistryConfig
 registryDockerCfg
 registryImagesRepo
+RegistryNode
+RegistryNodes
 registrysecret
+RegistryStorage
+RegistryUpstream
+reindex
 releaseChannel
 repo
 repos
@@ -1714,6 +1720,7 @@ tunnelMode
 txt
 uid
 un
+unconfigured
 uncordoned
 uninstall
 uninstalled

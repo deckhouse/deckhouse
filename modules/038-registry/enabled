@@ -20,25 +20,40 @@ function __main__() {
   # By default, the module is disabled
   echo "false" >"$MODULE_ENABLED_RESULT"
 
-  # Enable the module only if all of the following conditions are met:
+  # One condition: global.clusterConfiguration exists, which is what says the cluster is
+  # managed by Deckhouse. Without it the cluster is externally managed (EKS and the like)
+  # and this module has no runtime to configure. The same check control-plane-manager makes
+  # on startup.
+  #
+  # Deliberately NOT conditional on the container runtime, which this module used to read
+  # from defaultCRI. Two reasons, and the second is the one that settles it:
+  #
+  #   - There is nothing to gain. The runtime decides per node group, not per cluster, and
+  #     that decision is already made where it belongs: the bashible steps that install the
+  #     node agent are conditional on the CRI of the node group they are rendered for. A
+  #     cluster-wide answer read here could only ever be a worse copy of it. And at its
+  #     default `Unmanaged` this module deploys nothing at all, so being enabled costs
+  #     nothing on a cluster that never configures it.
+  #
+  #   - defaultCRI lives in the node-manager ModuleConfig, and this module is 038 while
+  #     node-manager is 040. Reading a later module's configuration inverts the ordering
+  #     they are numbered for: the value may not be materialized when this runs, so the
+  #     answer would depend on evaluation order rather than on the cluster. The deprecated
+  #     ClusterConfiguration.defaultCRI is no better — it lost its schema default when the
+  #     setting moved, so reading it silently stops matching on any cluster that follows
+  #     the current guidance, and a module that owns how the whole cluster pulls images
+  #     then quietly is not there.
+  #
+  # A cluster whose runtime this module cannot configure, asked to manage the registry
+  # anyway, is not left silent: the controller writes a layout for every node, no agent
+  # applies it, and D8RegistryNodeNotConverged says so — with the node names, which a
+  # cluster-wide gate never could.
 
-  # 1. global.clusterConfiguration exists — this indicates that the cluster is managed by Deckhouse.
-  #    If it's missing, the cluster is considered externally managed (e.g., AWS, Yandex Cloud),
-  #    and the module must not be enabled.
-  #    This check is consistent with the validation performed by the control-plane-manager on startup.
-
-  # 2. global.clusterConfiguration.defaultCRI is set and is in the allowed list
-  #    of container runtimes the module supports.
-
-  if values::has global.clusterConfiguration && values::has global.clusterConfiguration.defaultCRI; then
-    containerd_mode=$(values::get global.clusterConfiguration.defaultCRI)
-
-    case "$containerd_mode" in
-      "Containerd" | "ContainerdV2")
-        echo "true" >"$MODULE_ENABLED_RESULT"
-        ;;
-    esac
+  if ! values::has global.clusterConfiguration; then
+    return 0
   fi
+
+  echo "true" >"$MODULE_ENABLED_RESULT"
 }
 
 enabled::run "$@"

@@ -74,25 +74,43 @@ func (p *InfrastructureUtilProvider) setupBinary(ctx context.Context, conf *conf
 	return fsutils.CreateLinkIfNotExists(ctx, downloaded, checkIsExecFile, destination)
 }
 
-func downloadImage(ctx context.Context, conf *config.MetaConfig, name, section string, showProgress bool) error {
-	var regConfig *image.RegistryConfig
-	var err error
-	var imageName string
-	if govalue.NotNil(conf.DeckhouseConfig) {
-		dc, decodeErr := image.DecodeDockerConfig(conf.DeckhouseConfig.RegistryDockerCfg)
-		if decodeErr != nil {
-			return decodeErr
+// imageSource is where to pull an installer-side image from: the registry to talk to and the prefix
+// its images are named by.
+//
+// Two sources, and which one applies is decided by whether the legacy field says anything at all.
+// `MetaConfig.DeckhouseConfig` is a struct value rather than a pointer, so the nil check this used to
+// make was true unconditionally and the second branch was unreachable — invisible for every
+// installation that names a registry in `InitConfiguration.deckhouse`, and fatal for one that names
+// none: an empty dockercfg decodes to no bytes at all, and the download dies with "unmarshaling
+// dockerconfig JSON: unexpected end of JSON input" before it ever asks where the images are.
+//
+// An installation from a bundle is exactly that case, and it is not an exotic one: the images are
+// served by a local registry reached over a reverse tunnel, which has no credentials to state and no
+// address anybody typed. `conf.Registry` is the resolved registry for every mode, so reaching for it
+// is the general answer rather than a special case — the legacy field simply keeps precedence
+// wherever it does state a registry.
+func imageSource(conf *config.MetaConfig) (*image.RegistryConfig, string, error) {
+	if dc := conf.DeckhouseConfig; dc.RegistryDockerCfg != "" && dc.ImagesRepo != "" {
+		cfg, err := image.DecodeDockerConfig(dc.RegistryDockerCfg)
+		if err != nil {
+			return nil, "", err
 		}
 		scheme := "HTTPS"
-		if strings.ToUpper(conf.DeckhouseConfig.RegistryScheme) == "HTTP" || strings.ToUpper(conf.DeckhouseConfig.RegistryScheme) == "HTTPS" {
-			scheme = strings.ToUpper(conf.DeckhouseConfig.RegistryScheme)
+		if upper := strings.ToUpper(dc.RegistryScheme); upper == "HTTP" || upper == "HTTPS" {
+			scheme = upper
 		}
-		regConfig, err = image.RegistryConfigFromDockerConfig(dc, scheme, conf.DeckhouseConfig.ImagesRepo)
-		imageName = conf.DeckhouseConfig.ImagesRepo + "@"
-	} else {
-		regConfig, err = image.NewRegistryConfig(string(conf.Registry.Settings.RemoteData.Scheme), conf.Registry.Settings.RemoteData.ImagesRepo, conf.Registry.Settings.RemoteData.Username, conf.Registry.Settings.RemoteData.Password, conf.Registry.Settings.RemoteData.CA)
-		imageName = conf.Registry.Settings.RemoteData.ImagesRepo + "@"
+		regConfig, err := image.RegistryConfigFromDockerConfig(cfg, scheme, dc.ImagesRepo)
+		return regConfig, dc.ImagesRepo + "@", err
 	}
+
+	remote := conf.Registry.Settings.RemoteData
+	regConfig, err := image.NewRegistryConfig(
+		string(remote.Scheme), remote.ImagesRepo, remote.Username, remote.Password, remote.CA)
+	return regConfig, remote.ImagesRepo + "@", err
+}
+
+func downloadImage(ctx context.Context, conf *config.MetaConfig, name, section string, showProgress bool) error {
+	regConfig, imageName, err := imageSource(conf)
 
 	if govalue.IsNil(conf.ShowProgress) {
 		conf.ShowProgress = false

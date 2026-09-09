@@ -229,7 +229,10 @@ func (r *reconciler) handleModuleSource(ctx context.Context, source *v1alpha1.Mo
 	opts := utils.GenerateRegistryOptionsFromModuleSource(source, r.clusterUUID, r.logger)
 
 	// create a registry client
-	registryClient, err := r.dc.GetRegistryClient(source.Spec.Registry.Repo, opts...)
+	// Translated because this dials it. The repository is recorded as the in-cluster address,
+	// which is also what the images under it are rendered from, and only the loopback one can
+	// actually be connected to from here.
+	registryClient, err := r.dc.GetRegistryClient(utils.Dial(source.Spec.Registry.Repo), opts...)
 	if err != nil {
 		r.logger.Error("failed to get registry client for the module source", slog.String("source_name", source.Name), log.Err(err))
 		if uerr := r.updateModuleSourceStatusMessage(ctx, source, err.Error()); uerr != nil {

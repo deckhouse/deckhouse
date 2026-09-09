@@ -105,7 +105,8 @@ if ! systemd-run \
       \"registry-proxy:{{ .images.registrypackages.registryProxy }}\" \
       \"kubernetes-api-proxy:{{ .images.registrypackages.kubernetesApiProxy }}\" \
       \"toml-merge:{{ .images.registrypackages.tomlMerge01 }}\" \
-      \"pause:{{ .images.registrypackages.pause }}\"" \
+      \"pause:{{ .images.registrypackages.pause }}\"{{ if .registry.agent }} \
+      \"registry-agent:{{ .images.registrypackages.registryAgent }}\"{{ end }}" \
     >/dev/null 2>&1; then
   bb-log-warning "systemd-run failed to launch $unit, step 007 will fetch packages inline"
   return 0 2>/dev/null || exit 0

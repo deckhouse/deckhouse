@@ -14,6 +14,7 @@
 package registry
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -155,6 +156,22 @@ type ModeModel struct {
 	RemoteImagesRepo    string
 	RemoteData          Data
 	TTL                 string
+
+	// AgentOwnsRuntime means the first master is installed with the node agent already on it,
+	// rather than with the container runtime pointed straight at the upstream.
+	//
+	// It is what closes the deployment circle. The agent is a static pod whose image comes from a
+	// registry package, and every package a node fetches comes through registry-packages-proxy —
+	// which on a running cluster reaches the registry THROUGH the agent. A cluster whose first
+	// master has no agent therefore has no way to install one: measured on a cache-less cluster as
+	// `[registry-agent] attempt 6 failed` on the master and thirty failed `rpp-get` attempts on
+	// every worker after it, with no node ever joining.
+	//
+	// The installer is the one party outside that circle: its own proxy serves packages over the
+	// dhctl tunnel, from the upstream named in the configuration, needing nothing in the cluster.
+	// So the first master gets its agent from there, and from then on the proxy on that master
+	// serves every other node through the agent beside it.
+	AgentOwnsRuntime bool
 }
 
 func (m ModeModel) InClusterData(pki PKI) (Data, error) {
@@ -174,6 +191,10 @@ func (m ModeModel) InClusterData(pki PKI) (Data, error) {
 }
 
 func (m ModeModel) BashibleConfig(pki PKI) (BashibleConfig, error) {
+	if m.AgentOwnsRuntime {
+		return m.agentBashibleConfig()
+	}
+
 	var (
 		mirrors   map[string]bashible.ConfigHosts
 		endpoints []string
@@ -208,6 +229,89 @@ func (m ModeModel) BashibleConfig(pki PKI) (BashibleConfig, error) {
 
 	cfg.Version = version
 	return cfg, cfg.Validate()
+}
+
+// agentBashibleConfig is what the first master is told when it comes up with the agent on it.
+//
+// The same shape the module writes for every node once it is running — the agent marker, the
+// in-cluster address, no proxy endpoints and one host with no credentials on it — because a node
+// whose configuration changes the moment the module takes over is a node that rolls its container
+// runtime for no reason. The credentials are deliberately absent here: they belong to the layout
+// the agent routes by, and nothing else on the node has to hold them.
+func (m ModeModel) agentBashibleConfig() (BashibleConfig, error) {
+	layout, err := m.agentBootstrapLayout()
+	if err != nil {
+		return BashibleConfig{}, err
+	}
+
+	cfg := BashibleConfig{
+		Agent: &bashible.ConfigAgent{
+			Endpoint:   constant.ProxyHost,
+			DropInFile: constant.AgentDropInFile,
+			Layout:     layout,
+		},
+		Mode:       string(m.Mode),
+		ImagesBase: constant.HostWithPath,
+		// Empty rather than absent: this is also how the step that installs the legacy node-side
+		// proxy learns to remove itself.
+		ProxyEndpoints: []string{},
+		Hosts: map[string]bashible.ConfigHosts{
+			constant.Host: {
+				Mirrors: []bashible.ConfigMirrorHost{{
+					Scheme: constant.Scheme,
+					Host:   constant.Host,
+				}},
+			},
+		},
+	}
+
+	version, err := registry_pki.ComputeHash(&cfg)
+	if err != nil {
+		return BashibleConfig{}, fmt.Errorf("compute version: %w", err)
+	}
+
+	cfg.Version = version
+	return cfg, cfg.Validate()
+}
+
+// agentBootstrapLayout is the routing the agent uses before it has ever reached an API server.
+//
+// On the first master there is no API server to ask yet — it is what this node is about to bring
+// up — so the upstream from the installation configuration is written into the layout directly.
+// The controller replaces it with the cluster's own answer as soon as there is one, and from then
+// on this file is not consulted again.
+//
+// Only the upstream, and no storage backend: the store does not exist during the installation
+// even when the cluster is going to have one, and naming an address that answers nothing would
+// cost every pull a failed attempt before its fallback.
+func (m ModeModel) agentBootstrapLayout() (string, error) {
+	host, path := m.RemoteData.AddressAndPath()
+
+	endpoint := layoutEndpoint{
+		Scheme: string(m.RemoteData.Scheme),
+		Host:   host,
+		Path:   path,
+		CA:     m.RemoteData.CA,
+	}
+	if m.RemoteData.Username != "" || m.RemoteData.Password != "" {
+		endpoint.Auth = &layoutAuth{
+			Username: m.RemoteData.Username,
+			Password: m.RemoteData.Password,
+		}
+	}
+
+	spec := bootstrapLayout{
+		Backends: []layoutBackend{{
+			Name:           backendUpstream,
+			layoutEndpoint: endpoint,
+		}},
+	}
+
+	encoded, err := json.Marshal(spec)
+	if err != nil {
+		return "", fmt.Errorf("encode the bootstrap layout: %w", err)
+	}
+	return string(encoded), nil
 }
 
 func (m ModeModel) toDirectInClusterData(pki PKI) Data {

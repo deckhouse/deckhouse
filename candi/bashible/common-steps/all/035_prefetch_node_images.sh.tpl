@@ -90,6 +90,9 @@ runtime_endpoint="unix:///run/containerd/containerd.sock"
 parallelism=8
 per_image_total_deadline=600
 cri_ready_deadline=120
+# Generous, because it spans the kubelet starting and the agent's first pass. On timeout
+# the prefetch is simply given up; the kubelet pulls what is missing.
+agent_ready_deadline=900
 
 # Phase-1 list: bootstrap-critical control-plane images. Step 072 (install control
 # plane) blocks on etcd/apiserver/controller-manager/scheduler being in the image
@@ -185,6 +188,30 @@ until crictl --runtime-endpoint="$runtime_endpoint" info >/dev/null 2>&1; do
   fi
   sleep 1
 done
+{{- if $.registry.agent }}
+
+# Every reference below names the in-cluster registry address, and under the node agent
+# that address is only reachable through the agent. So the prefetch has to wait for it.
+#
+# It cannot simply run earlier instead: the agent is a static pod, so it does not start
+# until the kubelet does, which is a good deal later than this step. Waiting here keeps
+# the prefetch running in the background across all of that, which is the point of it —
+# the alternative would be to give it up under the agent, and let every master pull its
+# cold-start images serially once the kubelet asks for them.
+#
+# The condition is the drop-in the agent writes, not a port being open: the agent writes
+# it only once it has a layout to route by, which is exactly when a pull can succeed.
+agent_hosts_file="{{ $.registry.agent.dropInFile }}"
+deadline=$((SECONDS + agent_ready_deadline))
+until [ -s "$agent_hosts_file" ]; do
+  if [ $SECONDS -ge $deadline ]; then
+    log "$(ts) ABORT the node agent did not configure the runtime within ${agent_ready_deadline}s"
+    exit 0
+  fi
+  sleep 2
+done
+log "$(ts) the node agent is routing, starting the prefetch"
+{{- end }}
 
 # Image size in bytes via a targeted CRI inspect; "-" on failure or jq absent.
 get_image_size() {

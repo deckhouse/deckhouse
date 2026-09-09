@@ -1,7 +1,7 @@
 {{- $moduleGateway := dict }}
 {{- include "helm_lib_module_gateway" (list . $moduleGateway) }}
 {{- $orchestrator := .Values.registry.internal.orchestrator -}}
-{{- if and $moduleGateway (($orchestrator).state).ingress_enabled .Values.global.modules.publicDomainTemplate (.Values.global.enabledModules | has "cert-manager") (include "helm_lib_kind_exists" (list . "HTTPRoute")) (include "helm_lib_kind_exists" (list . "ListenerSet")) -}}
+{{- if and $moduleGateway (eq (include "registry_legacy_owns_the_cluster" .) "true") (($orchestrator).state).ingress_enabled .Values.global.modules.publicDomainTemplate (.Values.global.enabledModules | has "cert-manager") (include "helm_lib_kind_exists" (list . "HTTPRoute")) (include "helm_lib_kind_exists" (list . "ListenerSet")) -}}
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: ListenerSet

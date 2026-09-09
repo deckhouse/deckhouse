@@ -1,24 +1,34 @@
-{{- $version := "v2.8.3-deckhouse.5"}}
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-src-artifact"
 fromImage: common/src-artifact
 final: false
+# The registry itself is `github.com/distribution/distribution/v3`, resolved through GOPROXY like every
+# other dependency of this repository. What is built here is the wrapper around it — under `wrapper/`,
+# about a thousand lines — and that is the whole of what this module adds to the upstream registry.
+#
+# It used to be the upstream project copied into this repository: 205 files, based on a release upstream
+# stopped maintaining after v3.0.0, carrying nine patches and every security bump they implied. Four of
+# those patches turned out to be upstream options by now (`proxy.ttl: 0` for a cache that never expires,
+# `autoredirect` with `autoredirectpath` for the token challenge, `http.tls.clientauth` for client
+# certificates), one described a deletion upstream does not perform, and the rest are the wrapper: the
+# mapping of repository paths done in front of the cache, the token request forwarded to the service on
+# the loopback, the trust decision about a forwarded client address, and the listener that accepts a
+# push.
 git:
   - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/scripts
     to: /src/scripts
     stageDependencies:
       install:
         - '**/*'
-secrets:
-  - id: SOURCE_REPO
-    value: "{{ $.SOURCE_REPO }}"
+  - add: /{{ $.ModulePath }}modules/{{ $.ModulePriority }}-{{ $.ModuleName }}/images/{{ $.ImageName }}/wrapper
+    to: /src/distribution
+    stageDependencies:
+      install:
+        - '**/*'
 shell:
   install:
     - mkdir -m 1777 /src/tmp
     - chmod +x /src/scripts/*
-    - git config --global advice.detachedHead false
-    - git clone --depth 1 --single-branch --branch {{ $version }} $(cat /run/secrets/SOURCE_REPO)/deckhouse/3p-distribution.git /src/distribution
-    - rm -rf /src/distribution/.git
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}-artifact"
 from: {{ index $.Images "builder/golang" }}
@@ -39,10 +49,10 @@ shell:
     - export GOARCH=amd64
     - export CGO_ENABLED=0
     - cd /src/distribution
-    - make build
-    - make binaries
-    - chmod +x ./registry
-    - mv ./bin/registry /registry
+    # Named `registry`, because the image's entrypoint and the syncer both call it that: `registry
+    # serve <config>` and `registry garbage-collect <config>` are the two commands, unchanged from
+    # when this was the upstream binary itself.
+    - go build -ldflags="-s -w" -o /registry .
 ---
 image: "{{ $.ModuleName }}/{{ $.ImageName }}"
 fromImage: common/distroless

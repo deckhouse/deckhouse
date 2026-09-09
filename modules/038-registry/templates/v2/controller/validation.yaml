@@ -1,0 +1,71 @@
+{{- /*
+The compensating control for the cluster-wide grant in rbac-for-us.yaml.
+
+Rendered under the same discriminator as that grant and against a fixed
+apiVersion, with no helm_lib_kind_exists gate: a gate answers from the Helm
+capabilities, which the template tests cannot satisfy, so a gated file is never
+rendered in CI — and a policy that silently does not exist is exactly the failure
+that matters here. ValidatingAdmissionPolicy has been GA since Kubernetes 1.30
+and candi/version_map.yml supports 1.32 upwards, so the gate would protect
+nothing either.
+*/ -}}
+{{- if eq (include "registry_v2_manages" .) "true" }}
+{{- $policyName := "registrynodes-own-node-only.deckhouse.io" }}
+---
+# The agent reaches the API with its kubelet identity, and RegistryNode is
+# cluster-scoped, so RBAC can only grant the verbs cluster-wide: every kubelet in
+# the cluster holds update on every node's RegistryNode status.
+#
+# That status is load-bearing for the whole cluster's pull path. The hook that
+# decides whether image references may name the in-cluster registry publishes the
+# address once every node reports the layout applied, and never takes it back —
+# so a single node reporting on behalf of the others moves every workload in the
+# cluster onto an address the other nodes have not been configured to resolve,
+# permanently. This policy is what makes a node's report a statement about
+# itself; node-manager narrows the same kind of grant the same way.
+#
+# It covers every write surface of the resource rather than the verbs the agent's
+# ClusterRole happens to grant today: a verb added to that role later must not
+# open a door the policy never looked at. Reads are outside admission and are not
+# constrained here — a node may read its neighbours' objects, which is safe
+# because RegistryNode carries the same global configuration for every node and
+# names its credentials rather than holding them.
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicy
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" (printf "%s-agent" .Chart.Name))) | nindent 2 }}
+spec:
+  failurePolicy: Fail
+  matchConstraints:
+    resourceRules:
+    - apiGroups:   ["deckhouse.io"]
+      apiVersions: ["*"]
+      operations:  ["CREATE", "UPDATE", "DELETE"]
+      # The resource and every subresource of it, status included.
+      resources:   ["registrynodes", "registrynodes/*"]
+  matchConditions:
+  # Only kubelets are constrained. The controller writes an object for every node
+  # by design, and neither it nor Deckhouse is in this group.
+  - name: kubelets-only
+    expression: '"system:nodes" in request.userInfo.groups'
+  variables:
+  # A RegistryNode is named after its node. On DELETE there is no object to read
+  # the name from, so it comes off the request.
+  - name: owner
+    expression: '"system:node:" + (request.operation == "DELETE" ? request.name : object.metadata.name)'
+  validations:
+  - expression: 'request.userInfo.username == variables.owner'
+    reason: Forbidden
+    messageExpression: |
+      "a node may only write its own RegistryNode; " + request.userInfo.username + " tried to " + request.operation + " " + request.name
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingAdmissionPolicyBinding
+metadata:
+  name: {{ $policyName }}
+  {{- include "helm_lib_module_labels" (list . (dict "app" (printf "%s-agent" .Chart.Name))) | nindent 2 }}
+spec:
+  policyName: {{ $policyName }}
+  validationActions: [Deny]
+{{- end }}
