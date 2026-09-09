@@ -88,7 +88,13 @@ func TestSyncModulesPlacement(t *testing.T) {
 
 	require.NoError(t, s.syncModules(ctx))
 
-	assert.ElementsMatch(t, []string{"bare", "console", "echo", "parca", "solo", "upmeter"}, listModuleNames(t, cl))
+	assert.ElementsMatch(t, []string{"bare", "console", "echo", "global", "parca", "solo", "upmeter"}, listModuleNames(t, cl))
+
+	// the global module is placed off the image like an embedded one, without a dir to read
+	global := getModule(t, cl, "global")
+	assert.True(t, global.IsEmbedded())
+	assert.Equal(t, "embedded", global.Spec.PackageRepositoryName)
+	assert.Equal(t, "v1.80.3", global.Spec.PackageVersion)
 
 	echo := getModule(t, cl, "echo")
 	assert.Equal(t, "embedded", echo.Spec.PackageRepositoryName)
@@ -199,7 +205,7 @@ func TestSyncModulesDisposesUnbackedModules(t *testing.T) {
 
 	require.NoError(t, s.syncModules(ctx))
 
-	assert.ElementsMatch(t, []string{"echo", "migrated", "stale"}, listModuleNames(t, cl))
+	assert.ElementsMatch(t, []string{"echo", "global", "migrated", "stale"}, listModuleNames(t, cl))
 
 	migrated := getModule(t, cl, "migrated")
 	assert.False(t, migrated.IsEmbedded())
@@ -257,7 +263,7 @@ func TestSyncModulesAvailable(t *testing.T) {
 
 	require.NoError(t, s.syncModules(ctx))
 
-	assert.ElementsMatch(t, []string{"echo", "single", "shared", "chosen", "contested", "gone", "fetching"}, listModuleNames(t, cl))
+	assert.ElementsMatch(t, []string{"echo", "global", "single", "shared", "chosen", "contested", "gone", "fetching"}, listModuleNames(t, cl))
 
 	echo := getModule(t, cl, "echo")
 	assert.True(t, echo.IsEmbedded())

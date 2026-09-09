@@ -17,10 +17,12 @@ limitations under the License.
 package fake_test
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"testing"
 
+	"github.com/deckhouse/deckhouse/pkg/registry"
 	dkpclient "github.com/deckhouse/deckhouse/pkg/registry/client"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -343,4 +345,80 @@ func TestClient_CrossRegistryRouting(t *testing.T) {
 	tagsFromDst, err := clientDst.WithSegment("lib").ListTags(t.Context())
 	require.NoError(t, err)
 	assert.Contains(t, tagsFromDst, "v1")
+}
+
+// The fake used to discard list options, so a test asserting on WithTagsLimit
+// saw every tag and passed while production returned a single page. A fake that
+// is laxer than the thing it stands in for hides exactly the bugs it exists to
+// catch.
+func TestClient_ListOptionsAreHonoured(t *testing.T) {
+	reg := fake.NewRegistry("registry.example.com")
+	img := fake.NewImageBuilder().MustBuild()
+
+	for _, tag := range []string{"v3", "v1", "v4", "v2"} {
+		reg.MustAddImage("app", tag, img)
+	}
+
+	c := fake.NewClient(reg).WithSegment("app")
+
+	t.Run("results are ordered lexicographically", func(t *testing.T) {
+		tags, err := c.ListTags(context.Background())
+		require.NoError(t, err)
+		assert.Equal(t, []string{"v1", "v2", "v3", "v4"}, tags)
+	})
+
+	t.Run("limit returns a single page", func(t *testing.T) {
+		tags, err := c.ListTags(context.Background(), dkpclient.WithTagsLimit(2))
+		require.NoError(t, err)
+		assert.Equal(t, []string{"v1", "v2"}, tags)
+	})
+
+	t.Run("last skips up to and including the cursor", func(t *testing.T) {
+		tags, err := c.ListTags(context.Background(), dkpclient.WithTagsLast("v2"))
+		require.NoError(t, err)
+		assert.Equal(t, []string{"v3", "v4"}, tags)
+	})
+
+	t.Run("last and limit combine", func(t *testing.T) {
+		tags, err := c.ListTags(context.Background(), dkpclient.WithTagsLast("v1"), dkpclient.WithTagsLimit(2))
+		require.NoError(t, err)
+		assert.Equal(t, []string{"v2", "v3"}, tags)
+	})
+
+	t.Run("repository options are honoured too", func(t *testing.T) {
+		multi := fake.NewRegistry("registry.example.com")
+		for _, repo := range []string{"c-app", "a-app", "b-app"} {
+			multi.MustAddImage(repo, "v1", img)
+		}
+
+		repos, err := fake.NewClient(multi).ListRepositories(context.Background(), dkpclient.WithReposLimit(2))
+		require.NoError(t, err)
+		assert.Equal(t, []string{"a-app", "b-app"}, repos)
+	})
+}
+
+func TestClient_StreamTags(t *testing.T) {
+	reg := fake.NewRegistry("registry.example.com")
+	reg.MustAddImage("app", "v1", fake.NewImageBuilder().MustBuild())
+	reg.MustAddImage("app", "v2", fake.NewImageBuilder().MustBuild())
+
+	c := fake.NewClient(reg).WithSegment("app")
+
+	t.Run("delivers the stored tags", func(t *testing.T) {
+		var seen []string
+
+		require.NoError(t, c.StreamTags(context.Background(), func(tags []string) error {
+			seen = append(seen, tags...)
+
+			return nil
+		}))
+		assert.Equal(t, []string{"v1", "v2"}, seen)
+	})
+
+	t.Run("ErrStopStreaming is not a failure", func(t *testing.T) {
+		err := c.StreamTags(context.Background(), func([]string) error {
+			return registry.ErrStopStreaming
+		})
+		assert.NoError(t, err)
+	})
 }

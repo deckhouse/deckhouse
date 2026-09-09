@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"io/fs"
 	"log/slog"
-	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -60,6 +59,9 @@ const (
 	// managedByAnnotation marks a release as owned by this service.
 	managedByAnnotation      = "packages.deckhouse.io/managed-by"
 	managedByAnnotationValue = "deckhouse"
+
+	packageLabel  = "packages.deckhouse.io/package"
+	instanceLabel = "packages.deckhouse.io/instance"
 )
 
 const (
@@ -115,6 +117,12 @@ type Package interface {
 	// GetMaintenance reports the package's maintenance mode; the package itself
 	// decides whether its resources must be reconciled.
 	GetMaintenance() MaintenanceState
+}
+
+// application interface abstracts application operations needed for the run cycle.
+type application interface {
+	GetInstance() string
+	GetPackage() string
 }
 
 // Service manages Helm release lifecycle via nelm client.
@@ -252,12 +260,6 @@ func (s *Service) Delete(ctx context.Context, namespace, name string) error {
 	return s.client.Delete(ctx, namespace, name)
 }
 
-// UpgradeOptions holds options for upgrading a Helm release.
-type UpgradeOptions struct {
-	TrackingOptions common.TrackingOptions
-	ExtraLabels     map[string]string
-}
-
 // Upgrade installs or upgrades a Helm release for a package.
 //
 // Smart upgrade logic:
@@ -282,7 +284,7 @@ type UpgradeOptions struct {
 // policy stops guarding them against manual edits.
 //
 // Returns ErrPackageNotHelm if the package doesn't contain a valid Helm chart.
-func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package, opts UpgradeOptions) error {
+func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package) error {
 	ctx, span := otel.Tracer(nelmServiceTracer).Start(ctx, "Upgrade")
 	defer span.End()
 
@@ -333,12 +335,25 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package, op
 	// rendered-manifest checksum and forces exactly one upgrade on enter/leave.
 	resourcesLabels := map[string]string{
 		health.LabelKey: pkg.GetName(),
+		packageLabel:    pkg.GetName(),
 	}
 	if state == NoResourceReconciliation {
 		resourcesLabels[nelm.ReleaseLabelMaintenance] = ""
 	}
 
-	maps.Copy(resourcesLabels, opts.ExtraLabels)
+	trackingOptions := common.TrackingOptions{
+		NoPodLogs: true,
+	}
+
+	if app, ok := pkg.(application); ok {
+		resourcesLabels[instanceLabel] = app.GetInstance()
+		// application has separate package name
+		resourcesLabels[packageLabel] = app.GetPackage()
+	} else {
+		// options needed for modules
+		trackingOptions.NoFinalTracking = true
+		trackingOptions.LegacyHelmCompatibleTracking = true
+	}
 
 	s.logger.Debug("render nelm chart",
 		slog.String("path", pkg.GetPath()),
@@ -391,7 +406,7 @@ func (s *Service) Upgrade(ctx context.Context, namespace string, pkg Package, op
 	// Install or upgrade the release
 	err = s.client.Install(ctx, namespace, pkg.GetName(), nelm.InstallOptions{
 		OnTrackingEvent: s.status.UpdateTracking,
-		TrackingOptions: opts.TrackingOptions,
+		TrackingOptions: trackingOptions,
 		Path:            pkg.GetPath(),
 		ValuesPaths:     []string{valuesPath},
 		RootValues:      pkg.GetRuntimeValues(),

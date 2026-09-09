@@ -12,6 +12,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 )
 
@@ -185,4 +186,24 @@ func TestIdentityReadAuthorizerPassesThroughAllowAndError(t *testing.T) {
 	failing := NewIdentityReadAuthorizer(&stubAuthorizer{decision: authorizer.DecisionNoOpinion, err: errors.New("informer not synced")}, projectCRDInstalled())
 	_, _, err = failing.Authorize(context.Background(), projectAttributes("list"))
 	assert.Error(t, err)
+}
+
+type bindStub struct {
+	stubAuthorizer
+	bound user.Info
+}
+
+func (s *bindStub) BindSubject(ctx context.Context, u user.Info) context.Context {
+	s.bound = u
+	return ctx
+}
+
+func TestIdentityReadAuthorizer_BindSubjectForwards(t *testing.T) {
+	inner := &bindStub{}
+	auth := NewIdentityReadAuthorizer(inner, projectCRDInstalled())
+	u := &user.DefaultInfo{Name: "editor@example.io"}
+
+	auth.BindSubject(context.Background(), u)
+
+	assert.Equal(t, u, inner.bound)
 }

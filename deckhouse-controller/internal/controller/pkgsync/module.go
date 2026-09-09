@@ -23,6 +23,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/Masterminds/semver/v3"
@@ -294,6 +295,14 @@ func (s *syncer) embeddedPlacements() (map[string]placement, error) {
 		}
 	}
 
+	// The global module ships in the image too, at a fixed name and a dir of its own, so it is
+	// placed without reading anything: it carries no definition to read a name out of.
+	placements[packageNameGlobal] = placement{
+		repository: repositoryNameEmbedded,
+		version:    version,
+		embedded:   true,
+	}
+
 	return placements, nil
 }
 
@@ -315,6 +324,22 @@ func embeddedModuleName(dir string) (string, error) {
 	}
 
 	return def.Name, nil
+}
+
+// weightFromDirName parses the "<weight>-<name>" contract of the embedded
+// modules dir; a name without the prefix yields zero.
+func weightFromDirName(dirName string) int32 {
+	prefix, _, found := strings.Cut(dirName, "-")
+	if !found {
+		return 0
+	}
+
+	weight, err := strconv.Atoi(prefix)
+	if err != nil {
+		return 0
+	}
+
+	return int32(weight)
 }
 
 // moduleNameFromDirName strips the "<weight>-" prefix of an embedded module directory.

@@ -41,6 +41,10 @@ const (
 	// repositoryNameEmbedded stands for the Deckhouse image itself and
 	// resolves to no PackageRepository object.
 	repositoryNameEmbedded = "embedded"
+
+	// packageNameGlobal is the reserved name of the global module, whose files
+	// live in the global hooks dir rather than under the embedded modules dir.
+	packageNameGlobal = "global"
 )
 
 // RepositoryNameForSource maps a ModuleSource name to the name of the

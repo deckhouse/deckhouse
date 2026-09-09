@@ -456,6 +456,7 @@ var DefaultImagesDigests = map[string]interface{}{
 	},
 	"userAuthz": map[string]interface{}{
 		"permissionBrowserApiserver": "imageHash-userAuthz-permissionBrowserApiserver",
+		"userAuthzController":        "imageHash-userAuthz-userAuthzController",
 		"webhook":                    "imageHash-userAuthz-webhook",
 	},
 	"verticalPodAutoscaler": map[string]interface{}{

@@ -79,8 +79,7 @@ func (s *syncer) ensurePackageRepository(ctx context.Context, source *v1alpha1.M
 				Kind:       v1alpha1.PackageRepositoryKind,
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:   name,
-				Labels: map[string]string{"heritage": "deckhouse"},
+				Name: name,
 			},
 			Spec: v1alpha1.PackageRepositorySpec{Registry: desired},
 		}

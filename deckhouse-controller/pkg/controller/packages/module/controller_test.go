@@ -50,7 +50,9 @@ type stubManager struct {
 
 func (s *stubManager) UpdateModulesSettings(string, int, addonutils.Values, string, *bool) {}
 
-func (s *stubManager) UpdateModule(_ registry.Remote, module packageruntime.Module, _ bool) {
+func (s *stubManager) UpdateGlobalSettings(int, addonutils.Values) {}
+
+func (s *stubManager) UpdateModule(module packageruntime.Module, _ bool) {
 	s.updated = append(s.updated, module.Name)
 }
 
@@ -92,7 +94,7 @@ func newTestReconciler(t *testing.T, objects ...client.Object) (*reconciler, *st
 
 	cli := fake.NewClientBuilder().
 		WithScheme(sc).
-		WithStatusSubresource(&v1alpha1.ModulePackageVersion{}, &v1alpha2.Module{}).
+		WithStatusSubresource(&v1alpha1.ModulePackageVersion{}, &v1alpha1.ModulePackage{}, &v1alpha2.Module{}).
 		WithObjects(objects...).
 		Build()
 

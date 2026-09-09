@@ -72,6 +72,10 @@ const (
 
 	// controllerName is the name of the controller.
 	controllerName = "deckhouse-controller"
+
+	// globalModuleName is the reserved name of the global module, which the image ships in
+	// the global hooks dir and the runtime builds itself.
+	globalModuleName = "global"
 )
 
 // Controller drives modules through the package runtime alone, without addon-operator.
@@ -338,7 +342,7 @@ func (c *Controller) Start(ctx context.Context) error {
 	// image ships the embedded modules; give each of them a package version
 	// object, the user module sources their repositories and every module its
 	// v1alpha2 object, while the controllers still wait for the sync.
-	if err := pkgsync.Sync(ctx, c.ctrl.GetAPIReader(), c.ctrl.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, app.DownloadedModulesDir(), c.logger.Named("pkgsync")); err != nil {
+	if err := pkgsync.Sync(ctx, c.ctrl.GetAPIReader(), c.ctrl.GetClient(), c.dc, app.Version, app.EmbeddedModulesDir, app.DownloadedModulesDir(), app.GlobalHooksDir, c.logger.Named("pkgsync")); err != nil {
 		return fmt.Errorf("sync package objects: %w", err)
 	}
 
@@ -422,6 +426,7 @@ func (c *Controller) loadModules(ctx context.Context, modules []v1alpha2.Module)
 	// one repository backs many modules, so each is resolved once
 	remotes := make(map[string]registry.Remote)
 
+	runtimeModules := make([]pkgruntime.Module, 0, len(modules))
 	for i := range modules {
 		module := &modules[i]
 
@@ -436,10 +441,17 @@ func (c *Controller) loadModules(ctx context.Context, modules []v1alpha2.Module)
 			continue
 		}
 
+		// The runtime built the global module itself out of the global hooks dir before the
+		// bootstrap ran, so nothing is loaded for it; only its settings cross over.
+		if module.Name == globalModuleName {
+			c.manager.UpdateGlobalSettings(module.Spec.SettingsVersion, module.Spec.Settings.GetMap())
+
+			continue
+		}
+
 		// an embedded module is on disk already and its repository resolves to nothing
 		if module.IsEmbedded() {
-			c.manager.UpdateEmbeddedModule(runtimeModule(module))
-
+			runtimeModules = append(runtimeModules, runtimeModule(module, registry.Remote{}))
 			continue
 		}
 
@@ -460,11 +472,13 @@ func (c *Controller) loadModules(ctx context.Context, modules []v1alpha2.Module)
 			remotes[module.Spec.PackageRepositoryName] = remote
 		}
 
-		pkg := runtimeModule(module)
+		pkg := runtimeModule(module, remote)
 		pkg.Definition = pkgmodules.Definition{Name: module.Name, Version: module.Spec.PackageVersion}
 
-		c.manager.UpdateModule(remote, pkg, false)
+		runtimeModules = append(runtimeModules, pkg)
 	}
+
+	c.manager.LoadModules(ctx, runtimeModules)
 
 	return nil
 }
@@ -518,12 +532,13 @@ func (c *Controller) cleanupPackages(ctx context.Context, modules []v1alpha2.Mod
 }
 
 // runtimeModule is what the runtime needs of a module: its identity, settings and enabled intent.
-func runtimeModule(module *v1alpha2.Module) pkgruntime.Module {
+func runtimeModule(module *v1alpha2.Module, remote registry.Remote) pkgruntime.Module {
 	return pkgruntime.Module{
 		Name:            module.Name,
 		Settings:        module.Spec.Settings.GetMap(),
 		SettingsVersion: module.Spec.SettingsVersion,
 		Maintenance:     module.Spec.Maintenance,
 		Enabled:         module.Spec.Enabled,
+		Repository:      remote,
 	}
 }

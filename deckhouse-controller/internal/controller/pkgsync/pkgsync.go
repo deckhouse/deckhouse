@@ -34,6 +34,13 @@
 //	  └─ Module <module>: repository "embedded", the reduced Deckhouse
 //	     version, the embedded annotation
 //
+//	global hooks dir (the running image)
+//	  ├─ embedded-global-<deckhouse version>, complete: the global module
+//	  │  ships in the image like an embedded one, but carries no definition
+//	  │  file, so only its settings/values schemas come off disk and its
+//	  │  metadata stays empty
+//	  └─ ModulePackage global, empty: as for an embedded module
+//
 //	deployed or pending ModuleRelease
 //	  ├─ <repository>-<module>-<version>, where the "deckhouse" source maps
 //	  │  to the "deckhouse-modules" repository; a draft - the
@@ -119,23 +126,25 @@ type syncer struct {
 	deckhouseVersion     string
 	embeddedModulesDir   string
 	downloadedModulesDir string
+	globalHooksDir       string
 
 	logger *log.Logger
 }
 
 // Sync ensures the package objects of the old module stack for the given
-// Deckhouse version and embedded modules dir. The repositories go first, so
-// the version drafts find them in place. A source naming no valid version (no
-// module source, an unparsable release version, an illegal object name, an
-// unreadable module dir, broken schema files) is skipped with a warning; an
-// API failure stops the sync. An embedded module skipped here reconciles
-// nowhere, since the Module reconciler resolves the same version.
-func Sync(ctx context.Context, reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, embeddedModulesDir, downloadedModulesDir string, logger *log.Logger) error {
-	return newSyncer(reader, writer, dc, deckhouseVersion, embeddedModulesDir, downloadedModulesDir, logger).sync(ctx)
+// Deckhouse version, embedded modules dir, downloaded modules dir and global hooks
+// dir. The repositories go first, so the version drafts find them in place. A
+// source naming no valid version (no module source, an unparsable release
+// version, an illegal object name, an unreadable module dir, broken or missing
+// schema files) is skipped with a warning; an API failure stops the sync. An
+// embedded module skipped here reconciles nowhere, since the Module reconciler
+// resolves the same version.
+func Sync(ctx context.Context, reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, embeddedModulesDir, downloadedModulesDir, globalHooksDir string, logger *log.Logger) error {
+	return newSyncer(reader, writer, dc, deckhouseVersion, embeddedModulesDir, downloadedModulesDir, globalHooksDir, logger).sync(ctx)
 }
 
 // newSyncer builds a syncer for the given Deckhouse version and module dirs.
-func newSyncer(reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, embeddedModulesDir, downloadedModulesDir string, logger *log.Logger) *syncer {
+func newSyncer(reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, embeddedModulesDir, downloadedModulesDir, globalHooksDir string, logger *log.Logger) *syncer {
 	return &syncer{
 		reader: reader,
 		writer: writer,
@@ -144,6 +153,7 @@ func newSyncer(reader client.Reader, writer client.Client, dc dependency.Contain
 		deckhouseVersion:     deckhouseVersion,
 		embeddedModulesDir:   embeddedModulesDir,
 		downloadedModulesDir: downloadedModulesDir,
+		globalHooksDir:       globalHooksDir,
 
 		logger: logger,
 	}
