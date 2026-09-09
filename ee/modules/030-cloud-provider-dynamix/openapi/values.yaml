@@ -278,8 +278,9 @@ properties:
         x-examples:
         - apiVersion: deckhouse.io/v1
           kind: DynamixCloudProviderDiscoveryData
-          storageEndpoints:
-          - name: Default
+          storagePolicies:
+          - name: storage_policy01
+            limitIOPS: 2000
         properties:
           apiVersion:
             type: string
@@ -291,24 +292,20 @@ properties:
             type: array
             items:
               type: string
-          storageEndpoints:
+          storagePolicies:
             type: array
             items:
               type: object
+              additionalProperties: false
               required: [name]
               properties:
                 name:
                   type: string
                   minLength: 1
-                pools:
-                  type: array
-                  items:
-                    type: string
-                isEnabled:
-                  type: boolean
-                isDefault:
-                  type: boolean
-            description: List of storage classes.
+                limitIOPS:
+                  type: integer
+                  minimum: 0
+            description: List of storage policies available to the account.
       cniSecretData:
         type: string
         x-examples:
@@ -320,9 +317,5 @@ properties:
           properties:
             name:
               type: string
-            storageEndpoint:
+            storagePolicy:
               type: string
-            pool:
-              type: string
-            allowVolumeExpansion:
-              type: boolean
