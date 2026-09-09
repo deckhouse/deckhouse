@@ -308,6 +308,17 @@ func writeSections(settings writeSettings) {
 			return
 		}
 
+		// Virtual Control Plane is EE+FE only, nothing of it may reach CSE. The hooks are listed here
+		// too: hooksPathRegex below only filters the modules-with-exclude include, so without this
+		// they would still land in modules-tests.
+		if settings.Edition == "CSE" &&
+			(strings.Contains(file, "/ee/modules/040-control-plane-manager/crds") ||
+				strings.Contains(file, "/ee/modules/040-control-plane-manager/hooks") ||
+				strings.Contains(file, "/ee/modules/040-control-plane-manager/templates/virtual-control-plane") ||
+				strings.Contains(file, "/ee/modules/040-control-plane-manager/virtual-control-plane-templates")) {
+			return
+		}
+
 		hooksPathRegex := regexp.MustCompile(`\d+-[\w\-]+\/hooks`)
 		// we do not want to add hooks to the modules-with-exclude include
 		// this include is used in the dev-prebuild image, which does not use the hooks folder
@@ -510,6 +521,11 @@ func writeStageDepsSections(settings writeSettings) {
 		}
 		// modules/500-okmeter/hooks empty if FE override one files ee/fe/modules/500-okmeter/hooks/update_agent_image.go
 		if file == prefix+"/modules/500-okmeter/hooks" && settings.Edition == "FE" {
+			return
+		}
+		// Same VCP exclusion as in writeSections: otherwise register.go compiles the hook into the
+		// CSE binary, where the VirtualControlPlane CRD does not exist
+		if settings.Edition == "CSE" && strings.Contains(file, "/ee/modules/040-control-plane-manager/hooks") {
 			return
 		}
 		hooksPathRegex := regexp.MustCompile(`\d+-[\w\-]+\/hooks`)

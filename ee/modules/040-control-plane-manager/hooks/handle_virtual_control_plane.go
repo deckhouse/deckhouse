@@ -25,6 +25,10 @@ import (
 	"k8s.io/utils/ptr"
 )
 
+// moduleQueue duplicates the CE hooks package constant: this hook moved to ee/ (VCP is EE+FE
+// only), and the two directories are separate Go packages even though both are named "hooks".
+const moduleQueue = "/modules/control-plane-manager"
+
 const hasVirtualControlPlanePath = "controlPlaneManager.internal.hasVirtualControlPlane"
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{

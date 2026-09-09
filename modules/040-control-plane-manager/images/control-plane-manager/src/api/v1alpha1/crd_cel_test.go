@@ -42,9 +42,10 @@ import (
 )
 
 // crdCopies are the two on-disk representations of the VirtualControlPlane CRD, relative to
-// this package.
+// this package. The hand-maintained copy lives under ee/ (VCP ships in EE and FE only) and is
+// therefore absent from a CE checkout, where its absence is a skip rather than a failure.
 var crdCopies = map[string]string{
-	"hand-maintained": "../../../../../crds/virtual_control_plane.yaml",
+	"hand-maintained": "../../../../../../../ee/modules/040-control-plane-manager/crds/virtual_control_plane.yaml",
 	"generated":       "../../config/crd/bases/control-plane.deckhouse.io_virtualcontrolplanes.yaml",
 }
 
@@ -55,6 +56,9 @@ func networkingValidator(t *testing.T, path string) *schemacel.Validator {
 	t.Helper()
 
 	raw, err := os.ReadFile(filepath.Clean(path))
+	if os.IsNotExist(err) {
+		t.Skipf("CRD %s is absent in this checkout", path)
+	}
 	if err != nil {
 		t.Fatalf("read CRD: %v", err)
 	}

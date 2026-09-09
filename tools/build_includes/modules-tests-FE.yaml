@@ -660,6 +660,81 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/040-control-plane-manager/crds/doc-ru-virtual_control_plane.yaml
+  to: /deckhouse/modules/040-control-plane-manager/crds/doc-ru-virtual_control_plane.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-control-plane-manager/crds/virtual_control_plane.yaml
+  to: /deckhouse/modules/040-control-plane-manager/crds/virtual_control_plane.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-control-plane-manager/hooks/handle_virtual_control_plane.go
+  to: /deckhouse/modules/040-control-plane-manager/hooks/handle_virtual_control_plane.go
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-control-plane-manager/hooks/handle_virtual_control_plane_test.go
+  to: /deckhouse/modules/040-control-plane-manager/hooks/handle_virtual_control_plane_test.go
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-control-plane-manager/templates/virtual-control-plane.yaml
+  to: /deckhouse/modules/040-control-plane-manager/templates/virtual-control-plane.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-control-plane-manager/templates/virtual-control-plane-validation-webhook.yaml
+  to: /deckhouse/modules/040-control-plane-manager/templates/virtual-control-plane-validation-webhook.yaml
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-control-plane-manager/virtual-control-plane-templates/alb.yaml.tpl
+  to: /deckhouse/modules/040-control-plane-manager/virtual-control-plane-templates/alb.yaml.tpl
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-control-plane-manager/virtual-control-plane-templates/cilium-operator.yaml.tpl
+  to: /deckhouse/modules/040-control-plane-manager/virtual-control-plane-templates/cilium-operator.yaml.tpl
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-control-plane-manager/virtual-control-plane-templates/cilium-vcp.yaml.tpl
+  to: /deckhouse/modules/040-control-plane-manager/virtual-control-plane-templates/cilium-vcp.yaml.tpl
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-control-plane-manager/virtual-control-plane-templates/datastore.yaml.tpl
+  to: /deckhouse/modules/040-control-plane-manager/virtual-control-plane-templates/datastore.yaml.tpl
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-control-plane-manager/virtual-control-plane-templates/konnectivity-agent.yaml.tpl
+  to: /deckhouse/modules/040-control-plane-manager/virtual-control-plane-templates/konnectivity-agent.yaml.tpl
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-control-plane-manager/virtual-control-plane-templates/kube-apiserver.yaml.tpl
+  to: /deckhouse/modules/040-control-plane-manager/virtual-control-plane-templates/kube-apiserver.yaml.tpl
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-control-plane-manager/virtual-control-plane-templates/kube-controller-manager.yaml.tpl
+  to: /deckhouse/modules/040-control-plane-manager/virtual-control-plane-templates/kube-controller-manager.yaml.tpl
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-control-plane-manager/virtual-control-plane-templates/kube-scheduler.yaml.tpl
+  to: /deckhouse/modules/040-control-plane-manager/virtual-control-plane-templates/kube-scheduler.yaml.tpl
+  stageDependencies:
+    install:
+        - '**/*'
+- add: /ee/modules/040-control-plane-manager/virtual-control-plane-templates/tenant-rbac.yaml.tpl
+  to: /deckhouse/modules/040-control-plane-manager/virtual-control-plane-templates/tenant-rbac.yaml.tpl
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/040-node-manager/cloud-providers/openstack
   to: /deckhouse/modules/040-node-manager/cloud-providers/openstack
   excludePaths:
