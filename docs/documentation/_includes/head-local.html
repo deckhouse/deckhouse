@@ -1,2 +1,16 @@
 {%- assign assetHash = site.time | date: "%Y-%m-%d %H:%M:%S" | sha256 -%}
 <script type="text/javascript" src="/assets/js/clusterlocal.js?v={{ assetHash }}"></script>
+
+{%- comment -%}
+  Сборка внутри кластера осталась на прежней шапке (header-legacy.html): у неё
+  своё меню и свой werf-файл. Мобильное меню и переключатель языков этой шапки
+  живут в двух скриптах ниже. Из общего head-site.html они убраны — там шапку
+  рисует остров, который делает и то и другое сам.
+
+  Подключены именно здесь, потому что это единственный файл, попадающий на
+  страницу ровно при `site.mode == 'module'`: head-site.html приезжает по SSI
+  уже отрендеренным сборкой сайта, поэтому условие внутри него ничего бы не
+  решало.
+{%- endcomment -%}
+<script type="text/javascript" src="/assets/js/language-switch.js?v={{ assetHash }}"></script>
+<script type="text/javascript" src="/assets/js/adaptive/header-mobile.js?v={{ assetHash }}"></script>

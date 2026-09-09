@@ -1,0 +1,214 @@
+// Оформление шапки-острова.
+//
+// Здесь только значения: библиотека объявляет их как `var(--ik-*, дефолт)`,
+// поэтому объявление на `:root` доходит до компонента и не спорит с ним по
+// весу. Классы библиотеки не переопределяются — кроме блока в конце, где
+// собрано то, для чего переменной пока нет.
+//
+// Значения сняты замером с работающей шапки (`getComputedStyle`), а не
+// вычитаны из `_header.scss`: у сайта своя палитра, и она не совпадает с той,
+// что у первого потребителя. Дробные числа ниже — именно замеры, а не чьи-то
+// решения: прежняя шапка получала их из процентов и em, и совпадение с ней
+// проверяется на шести ширинах.
+//
+// Границы ступеней берутся из миксинов сайта (`_breakpoints.scss`), чтобы
+// шапка ехала по той же лестнице, что и всё остальное: l = 1024, xl = 1200,
+// xxl = 1440, xxxl = 1664, m = 728.
+
+@use "components/common/_variables.scss";
+@use "components/common/_breakpoints.scss";
+
+// Цвета, которых в палитре сайта нет отдельными переменными.
+$header-ink: #262429; // текст пунктов меню и ряда продукта
+$header-row2-bg: #f6fafe; // подложка второго ряда
+$header-accent-hover: #0040cc; // залитая кнопка под курсором
+
+// Вертикальные отступы ряда продукта, по ступеням. Числа дробные, потому что
+// у прежней шапки это проценты от размера шрифта.
+$row2-pad-xxxl: 20px;
+$row2-pad-base: 18.512px;
+$row2-pad-xxl: 18.288px;
+$row2-pad-xl: 20.576px;
+$row2-pad-l: 19.648px;
+$row2-pad-m: 18px;
+
+// Кегль подписей на средних ступенях — тоже замер, а не круглое число.
+$nav-font-size-narrow: 11.9px;
+$button-font-size-xl: 10.16px;
+
+:root {
+  // Общий уровень: типографика и цвета сайта.
+  --ik-font-family: Onest, sans-serif;
+  --ik-font-size-base: 14px;
+  --ik-line-height: 1.3;
+  --ik-fg-default: #{variables.$color-main};
+  --ik-fg-accent: #{variables.$color-alt};
+  --ik-bg-accent: #{variables.$color-alt};
+  --ik-bg-accent-hover: #{$header-accent-hover};
+
+  // Первый ряд.
+  --ik-header-bg: #{variables.$white};
+  --ik-header-container-padding-x: 48px;
+  --ik-header-row1-padding-y: 12px;
+  --ik-header-row1-padding-y-wide: 16px;
+  --ik-header-left-gap: 40px;
+  --ik-header-right-gap: 16px;
+  --ik-header-actions-gap: 16px;
+  --ik-header-logo-width: 165px;
+  --ik-header-logo-height: 30px;
+
+  --ik-header-nav-gap: 12px;
+  --ik-header-nav-font-size: 15px;
+  --ik-header-nav-line-height: 20px;
+  --ik-header-nav-color: #{$header-ink};
+  --ik-header-nav-color-hover: #{variables.$color-alt};
+
+  // У прежней шапки под стрелкой раскрывающегося пункта 19px: отступ 9 плюс
+  // стрелка 10. Стрелка библиотеки — 8px, и менять её размер значило бы
+  // объявить переменную компонента на его же классе (правило 4) — а заодно
+  // разойтись с той же стрелкой в мобильном листе, который лежит вне этого
+  // контейнера. Поэтому ширину добирает отступ: 11 + 8 = те же 19.
+  --ik-menu-trigger-gap: 11px;
+
+  // Кнопки правого блока.
+  --ik-button-font-size: 14px;
+  --ik-button-font-weight: 400;
+  --ik-button-radius: 0;
+  --ik-button-border-width: 2px;
+  --ik-button-padding: 8px 12px;
+  --ik-button-primary-bg: #{variables.$color-alt};
+  --ik-button-primary-bg-hover: #{$header-accent-hover};
+  --ik-button-secondary-bg: transparent;
+  --ik-button-secondary-color: #{variables.$color-alt};
+  --ik-button-secondary-border-color: #{variables.$color-alt};
+
+  // Второй ряд.
+  --ik-header-row2-bg: #{$header-row2-bg};
+  --ik-header-row2-padding: #{$row2-pad-base} 0;
+  --ik-header-row2-gap: 20px 34.08px;
+  --ik-header-row2-nav-gap: 13.12px 16px;
+  --ik-header-product-font-size: 18px;
+  --ik-header-product-font-weight: 400;
+  --ik-header-product-color: #{$header-ink};
+  --ik-header-row2-link-font-size: 15px;
+  --ik-header-row2-link-line-height: 20px;
+  --ik-header-row2-link-color: #{$header-ink};
+}
+
+// Самая просторная ступень.
+@include breakpoints.min-w(xxxl) {
+  :root {
+    --ik-header-nav-font-size: 16px;
+    --ik-header-row2-link-font-size: 16px;
+    --ik-header-row2-nav-gap: 12px 24px;
+    --ik-header-row2-padding: #{$row2-pad-xxxl} 0;
+    --ik-button-padding: 10px 16px;
+  }
+}
+
+// 1200–1439: мельче подписи и кнопки.
+@include breakpoints.max-w(xxl) {
+  :root {
+    --ik-header-left-gap: 24px;
+    --ik-header-nav-font-size: #{$nav-font-size-narrow};
+    --ik-header-row2-padding: #{$row2-pad-xxl} 0;
+    --ik-header-row2-link-font-size: #{$nav-font-size-narrow};
+    --ik-header-product-font-size: 16px;
+    --ik-button-font-size: 12px;
+    --ik-button-padding: 8px 10px;
+  }
+}
+
+// 1024–1199: сужаются отступы контейнера и весь правый блок.
+@include breakpoints.max-w(xl) {
+  :root {
+    --ik-header-container-padding-x: 32px;
+    --ik-header-row1-padding-y-wide: 12px;
+    --ik-header-nav-gap: 12px 16px;
+    --ik-header-right-gap: 8px;
+    --ik-header-actions-gap: 8px;
+    --ik-header-row2-padding: #{$row2-pad-xl} 0;
+    --ik-header-row2-gap: 20px 33.6px;
+    --ik-header-row2-nav-gap: 12px 20px;
+    --ik-button-font-size: #{$button-font-size-xl};
+    --ik-button-padding: 4px 6.4px;
+  }
+}
+
+// Ниже 1024 остров сам уводит верхний ряд и кнопки в лист, поэтому значения
+// кнопок здесь — это значения кнопок внутри листа.
+@include breakpoints.max-w(l) {
+  :root {
+    --ik-header-container-padding-x: 32px;
+    --ik-header-row2-padding: #{$row2-pad-l} 0;
+    --ik-header-product-font-size: 16px;
+    --ik-button-font-size: 14px;
+    --ik-button-padding: 10.5px 21px;
+  }
+}
+
+// Ниже 728: бейдж продукта и отступы ещё мельче.
+@include breakpoints.max-w(m) {
+  :root {
+    --ik-header-container-padding-x: 20px;
+    --ik-header-row2-padding: #{$row2-pad-m} 0;
+    --ik-header-product-font-size: 14px;
+  }
+}
+
+// Второй канал: то, для чего у библиотеки нет переменной.
+//
+// Правило хоста весит столько же, сколько правило библиотеки, и выигрывает
+// порядком подключения — этот файл едет в `site.css`, который подключается
+// после бандла. Каждая строка здесь — заявка на переменную в библиотеке:
+// `--ik-button-letter-spacing`, `--ik-button-line-height`,
+// `--ik-header-product-icon-size`, `--ik-header-product-line-height` и радиус
+// залитой кнопки отдельно от контурной. Пока их нет, оформление держится на
+// именах классов, и переименование класса сломает его молча.
+
+.ik-button {
+  letter-spacing: 0.14px;
+  line-height: 21px;
+}
+
+.ik-button--primary {
+  border-radius: 1px;
+}
+
+.ik-header__product .ik-icon {
+  width: 24px;
+  height: 24px;
+}
+
+.ik-header__product-title {
+  line-height: 19px;
+}
+
+@include breakpoints.max-w(xxl) {
+  .ik-button {
+    line-height: 18px;
+  }
+}
+
+@include breakpoints.max-w(xl) {
+  .ik-button {
+    line-height: 15.24px;
+  }
+
+  .ik-header__product .ik-icon {
+    width: 20px;
+    height: 20px;
+  }
+}
+
+@include breakpoints.max-w(l) {
+  .ik-button {
+    line-height: 21px;
+  }
+}
+
+@include breakpoints.max-w(m) {
+  .ik-header__product-title {
+    line-height: 18.2px;
+  }
+}

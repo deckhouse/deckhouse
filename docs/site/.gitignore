@@ -8,3 +8,6 @@ backend/releasechannels
 backend/root
 /backends/docs-builder-template/public/
 .hugo_build.lock
+assets/islandkit/
+node_modules/
+_data/islandkit_header.json

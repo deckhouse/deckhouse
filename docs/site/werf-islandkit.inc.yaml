@@ -1,0 +1,83 @@
+{{- /*
+  Стадия, которая печатает шапку.
+
+  Шапка сайта — контентный остров islandKit: разметка обязана быть в ответе
+  сервера, а не собираться скриптом после загрузки. Библиотека выкладывает
+  серверный рендерер на PHP, здесь же Ruby, поэтому разметку печатает тот же
+  Vue-компонент, что работает в браузере, — через серверный рендеринг Vue.
+  Третьего описания структуры не появляется, и паритет держится по построению.
+
+  Стадия ставит пакет из npm по закреплённой версии, рендерит фрагменты
+  (продукт × язык) и оттуда же копирует самодостаточный бандл. В сборку сайта
+  уезжают три вещи: `_includes/_generated`, `_data/islandkit_header.json` и
+  `assets/islandkit/<версия>`.
+
+  Стадия включена: файл подключён в `werf-web-frontend.inc.yaml`, импорты
+  прописаны в `web-frontend-artifact`, сгенерированного в дереве нет. Чтобы
+  поднять версию библиотеки, хватит одной строки — `islandkitVersion` ниже.
+  Адрес ассетов содержит номер, поэтому неизменяемый кеш обновится сам.
+*/ -}}
+
+{{- /*
+  Версии закреплены точно, все три. Диапазон вида `vue@3` означал бы, что два
+  прогона одного коммита кладут разный код по одному и тому же адресу
+  `/assets/islandkit/<версия>/` — а этот адрес объявлен неизменяемым, и на нём
+  стоит кеширование. `@vue/server-renderer` назван явно, хотя приезжает
+  зависимостью vue: подниматься он должен вместе с vue, а не как повезёт.
+*/ -}}
+{{- $islandkitVersion := "0.4.1" }}
+{{- $vueVersion := "3.5.41" }}
+
+image: site-islandkit-artifact
+from: {{ index $.Images "builder/node-alpine" }}
+final: false
+git:
+- add: /docs/site
+  to: /site
+  includePaths:
+  - _tools/islandkit
+  - _data/header-products.json
+  - _data/i18n.yaml
+  # Меню из репозитория. В прод-окружениях его перезаписывает импорт ниже, но
+  # файлы нужны всегда: скрипт читает их безусловно, и без них локальная
+  # сборка падала бы с ENOENT ещё до первой страницы.
+  - _data/topnav.json
+  - _data/topnav-l2-products.json
+  - _config.yml
+  - pages/includes
+  stageDependencies:
+    setup: ['**/*']
+{{- if and (ne $.Env "development") (ne $.Env "module") (ne $.Env "local") }}
+import:
+# Свежее меню из того же места, что и для Jekyll: иначе шапка застынет на
+# копии, лежавшей в репозитории, пока остальной сайт обновляется из API.
+- image: site-external-artifacts
+  add: /data/topnav.json
+  to: /site/_data/topnav.json
+  before: setup
+- image: site-external-artifacts
+  add: /data/topnav-l2-products.json
+  to: /site/_data/topnav-l2-products.json
+  before: setup
+{{- end }}
+shell:
+  setup:
+  - cd /site
+  # `--ignore-scripts`: установка не должна исполнять lifecycle-скрипты чужих
+  # пакетов в билд-образе с сетью. Ни одному из трёх они не нужны — это чистый
+  # JavaScript без нативных сборок.
+  - npm init -y --silent
+  - >-
+    npm install --no-audit --no-fund --silent --ignore-scripts
+    islandkit@{{ $islandkitVersion }}
+    vue@{{ $vueVersion }}
+    @vue/server-renderer@{{ $vueVersion }}
+  # Сверка того, что реально встало, с тем, что закреплено: `npm install` без
+  # lock-файла — единственное место, где сборка могла бы тихо разойтись с
+  # адресом, под которым публикует результат.
+  - test "$(node -p "require('islandkit/package.json').version")" = "{{ $islandkitVersion }}"
+  - node _tools/islandkit/render-header.mjs
+  - mkdir -p /data
+  - cp -R /site/_includes/_generated /data/_generated
+  - cp /site/_data/islandkit_header.json /data/islandkit_header.json
+  - cp -R /site/assets/islandkit /data/islandkit-assets
