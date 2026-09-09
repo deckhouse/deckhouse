@@ -28,3 +28,18 @@ address is accepted even when it falls outside the local node's podCIDR.
 
 Upstream <https://github.com/cilium/cilium/pull/24098>
 Test `~/src/kind/d8-1.20-tests/001-request-ip/`
+
+## 002-stable-mac.patch
+
+Predefined MAC addresses for virtualization workloads:
+
+    endpoint-interface-mac: 0a:d8:00:00:00:11
+    endpoint-interface-host-mac: 0a:d8:00:00:00:22
+
+Needed by DVP: a VM keeps its MAC across a live migration, and the host side
+address is the one the pod ARPs for its gateway, so it has to be identical on
+every node. Upstream's per-pod `cni.cilium.io/mac-address` still overrides the
+container side, and covers only that side.
+
+Upstream <https://github.com/cilium/cilium/pull/24100>
+Test `~/src/kind/d8-1.20-tests/002-stable-mac/`
