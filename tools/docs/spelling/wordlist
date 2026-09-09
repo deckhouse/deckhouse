@@ -150,6 +150,7 @@ ClusterObservabilityAlert
 ClusterPodLoggingConfig
 ClusterRole
 ClusterRoleBinding
+ClusterRoles
 ClusterVirtualImage
 CoC
 Colocating
@@ -647,6 +648,8 @@ Prestable
 PrimaryIPFromEgressGatewayNodeInterface
 PriorityClass
 PriorityLevelConfiguration
+ProjectNamespace
+ProjectRoleBinding
 ProjectTemplate
 ProjectType
 PromQL
@@ -845,7 +848,6 @@ UEFI
 UI
 UID
 UIs
-unioned
 UNPACKEDSIZE
 UPTODATE
 URIs
@@ -1095,14 +1097,11 @@ clusterIP
 clusterIssuer
 clusterIssuerName
 clusterIssues
-clusterlocal
-ClusterResourceGrant
-ClusterResourceGrantPolicy
-ClusterRoles
 clusterType
 clusterauthorizationrule
 clusterconfiguration
 clusterissuer
+clusterlocal
 cmctl
 cmp
 cni
@@ -1162,11 +1161,6 @@ de
 deckhouse
 defaultCRI
 defaultClusterStorageClass
-defragment
-defragmentation
-Defragmentation
-defragmenting
-Defragmenting
 delegatable
 descheduled
 descheduler
@@ -1571,9 +1565,6 @@ preload
 printf
 prioritization
 priorityClassName
-programmatically
-ProjectNamespace
-ProjectRoleBinding
 projectTypeName
 prometheus
 promtail
@@ -1731,6 +1722,7 @@ uncordoned
 uninstall
 uninstalled
 uninstalling
+unioned
 unmarshalling
 unschedulable
 uploadproxy
@@ -2586,8 +2578,8 @@ zoneTagCategory
 рендеринга
 рендеринге
 рендерится
-репликационным
 рендерятся
+репликационным
 реплицированного
 реплицированные
 реплицированных
