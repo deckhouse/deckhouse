@@ -172,7 +172,7 @@ d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100
 | `user_authz_webhook_rules_directory_rebuilds_total`, `user_authz_webhook_rules_directory_rebuild_duration_seconds` | Количество пересборок и время, которое они занимают. |
 | `user_authz_webhook_rules_watch_errors_total` | Ошибки list/watch informer'а правил. |
 
-Permission Browser отдаёт тот же набор с префиксом `user_authz_permission_browser` на `/metrics` своего API-сервера. По умолчанию он не собирается: API-сервер находится за слоем агрегации, поэтому для сбора нужна отдельная конфигурация скрейпа.
+Permission Browser отдаёт тот же набор с префиксом `user_authz_permission_browser`. Отдаёт он их так же — на loopback-адресе за sidecar'ом `kube-rbac-proxy`, собирает `PodMonitor` `permission-browser-apiserver`; порт самого API-сервера остаётся за слоем агрегации, который Prometheus скрейпить не может. За ним следят два алерта: `D8UserAuthzPermissionBrowserTargetDown` и `D8UserAuthzPermissionBrowserRulesNotSynced`. Некомпилируемое правило и постоянные ошибки watch — свойство кластера, а не одного потребителя, поэтому о них уже сообщают алерты webhook'а выше.
 
 **Алерты** (в правилах Prometheus `d8_user_authz`, группа `D8UserAuthzWebhookMalfunctioning`): `D8UserAuthzWebhookTargetDown` — webhook не скрейпится 5 минут (пока алерт активен, остальные сработать не могут), `D8UserAuthzWebhookRulesNotSynced` — экземпляр 10 минут не получил список правил, `D8UserAuthzWebhookRulesQuarantined` — правило 10 минут не компилируется, `D8UserAuthzWebhookRulesWatchErrors` — устойчивые ошибки watch в течение 15 минут, `D8UserAuthzWebhookRulesStale` — каталог не пересобирался сутки (норма для кластера, где правила не меняются).
 

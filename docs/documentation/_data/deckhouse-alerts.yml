@@ -3634,6 +3634,49 @@ alerts:
         A legacy RBACv2 custom role is present in the cluster.
       severity: "7"
       markupFormat: markdown
+    - name: D8UserAuthzPermissionBrowserRulesNotSynced
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/permission-browser-apiserver.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        For more than 10 minutes at least one `permission-browser-apiserver` replica has not listed the `ClusterAuthorizationRules` (its rules informer reports `synced=0`).
+
+        While the rules are not listed, every subject bound by a controller-managed ClusterRoleBinding is reported as having no namespace access at all, so users see an empty or heavily truncated list of accessible namespaces. The report corrects itself once the informer syncs.
+
+        A cluster where the `ClusterAuthorizationRule` CRD does not exist also reports `synced=0`; there are then no rules to report on.
+
+        Check the replicas and their access to the CRD:
+
+        ```bash
+        d8 k -n d8-user-authz get pods -l app=permission-browser-apiserver
+        d8 k -n d8-user-authz logs -l app=permission-browser-apiserver -c apiserver --tail=100
+        d8 k get crd clusterauthorizationrules.deckhouse.io
+        ```
+      summary: |
+        Permission Browser has not listed the ClusterAuthorizationRules.
+      severity: "7"
+      markupFormat: markdown
+    - name: D8UserAuthzPermissionBrowserTargetDown
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/permission-browser-apiserver.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        Prometheus cannot collect metrics from `permission-browser-apiserver` in the `d8-user-authz` namespace.
+
+        Permission Browser keeps answering requests, but while this alert is active it cannot be told whether it has the current `ClusterAuthorizationRules`, so the access it reports may silently differ from the access the API server enforces.
+
+        Check the Deployment, its metrics sidecar and the scrape target:
+
+        ```bash
+        d8 k -n d8-user-authz get pods -l app=permission-browser-apiserver -o wide
+        d8 k -n d8-user-authz logs -l app=permission-browser-apiserver -c kube-rbac-proxy --tail=50
+        ```
+      summary: |
+        Prometheus is unable to scrape the Permission Browser API server.
+      severity: "7"
+      markupFormat: markdown
     - name: D8UserAuthzPermissionBrowserUnavailable
       sourceFile: modules/140-user-authz/monitoring/prometheus-rules/permission-browser-apiserver.yaml
       moduleUrl: 140-user-authz
@@ -3696,6 +3739,105 @@ alerts:
         ```
       summary: |
         Rendering the user-authz module templates takes more than 30 seconds.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8UserAuthzWebhookRulesNotSynced
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        For more than 10 minutes at least one `user-authz-webhook` instance has not listed the `ClusterAuthorizationRules` (its rules informer reports `synced=0`).
+
+        While the rules are not listed, the webhook keeps every subject that a controller-managed ClusterRoleBinding binds maximally restricted: those users are denied namespaced and cluster-scoped access until the rules arrive. The restriction lifts on its own once the informer syncs.
+
+        A cluster where the `ClusterAuthorizationRule` CRD does not exist at all also reports `synced=0`; in that case there are no rules and no rule bindings, so nobody is restricted.
+
+        Check the webhook and its access to the CRD:
+
+        ```bash
+        d8 k -n d8-user-authz get pods -l app=user-authz-webhook -o wide
+        d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100
+        d8 k get crd clusterauthorizationrules.deckhouse.io
+        ```
+      summary: |
+        The user-authz webhook has not listed the ClusterAuthorizationRules.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8UserAuthzWebhookRulesQuarantined
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        For more than 10 minutes the `user-authz-webhook` has quarantined at least one `ClusterAuthorizationRule`: its `limitNamespaces` pattern or `namespaceSelector` could not be compiled. The rule is kept and the rest of it still applies, but the broken filter is left out, so its subjects get a narrower scope than written and are denied where the filter was meant to allow.
+
+        Find the offending rule (an invalid regular expression in `limitNamespaces` or a malformed `namespaceSelector`):
+
+        ```bash
+        d8 k get clusterauthorizationrules -o custom-columns=NAME:.metadata.name,LIMIT:.spec.limitNamespaces,SELECTOR:.spec.namespaceSelector
+        d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100 | grep -i quarantin
+        ```
+      summary: |
+        A ClusterAuthorizationRule cannot be compiled by the webhook.
+      severity: "7"
+      markupFormat: markdown
+    - name: D8UserAuthzWebhookRulesStale
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        The `user-authz-webhook` has not rebuilt its `ClusterAuthorizationRule` directory for more than 24 hours. That is normal in a cluster where nobody changes the rules, and expected where there are none.
+
+        It is worth a look only together with a change that should have arrived: if a rule was edited and this timestamp did not move, the webhook is serving a frozen directory and is enforcing the rules as they were.
+
+        Compare what the webhook holds with what the cluster has:
+
+        ```bash
+        d8 k get clusterauthorizationrules -o custom-columns=NAME:.metadata.name,RV:.metadata.resourceVersion
+        d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100
+        ```
+      summary: |
+        The user-authz webhook has not rebuilt its rules directory for a day.
+      severity: "8"
+      markupFormat: markdown
+    - name: D8UserAuthzWebhookRulesWatchErrors
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        For more than 15 minutes the `user-authz-webhook` rules informer has been failing to watch the `ClusterAuthorizationRules` (a non-zero rate of watch errors). New or changed rules may not be reaching the webhook, so multi-tenancy decisions can lag behind what users configure.
+
+        Check the webhook's access to the API and its logs:
+
+        ```bash
+        d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100
+        d8 k auth can-i watch clusterauthorizationrules.deckhouse.io --as=system:serviceaccount:d8-user-authz:webhook
+        ```
+      summary: |
+        The user-authz webhook cannot watch the ClusterAuthorizationRules.
+      severity: "7"
+      markupFormat: markdown
+    - name: D8UserAuthzWebhookTargetDown
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        Prometheus cannot collect metrics from `user-authz-webhook` in the `d8-user-authz` namespace.
+
+        The webhook keeps authorizing requests, but while this alert is active the other webhook alerts cannot fire: a webhook that has not listed the `ClusterAuthorizationRules`, or that quarantined a rule, will go unnoticed.
+
+        Check the DaemonSet, its metrics sidecar and the scrape target:
+
+        ```bash
+        d8 k -n d8-user-authz get pods -l app=user-authz-webhook -o wide
+        d8 k -n d8-user-authz logs -l app=user-authz-webhook -c kube-rbac-proxy --tail=50
+        ```
+      summary: |
+        Prometheus is unable to scrape the user-authz webhook.
       severity: "6"
       markupFormat: markdown
     - name: D8UsingFeatureGateWillBeDeprecated

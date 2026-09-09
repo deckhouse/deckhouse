@@ -447,6 +447,11 @@ groups:
     description:
       en: "`sdn` agent healthcheck"
       ru: "Healthcheck компонента agent модуля `sdn`"
+  - ports: "4276"
+    protocol: TCP
+    description:
+      en: "`user-authz` Permission Browser API server metrics"
+      ru: "Метрики API-сервера Permission Browser модуля `user-authz`"
   - ports: "4135-4199"
     protocol: TCP
     description:

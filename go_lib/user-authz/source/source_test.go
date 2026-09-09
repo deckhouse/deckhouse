@@ -18,15 +18,20 @@ package source
 
 import (
 	"context"
+	"errors"
+	"strconv"
 	"sync"
 	"testing"
 	"time"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/dynamic/fake"
+	k8stesting "k8s.io/client-go/testing"
 
 	"github.com/deckhouse/deckhouse/go_lib/user-authz/rules"
 )
@@ -49,9 +54,10 @@ func car(name, rv string, subjects []string, limit ...string) *unstructured.Unst
 }
 
 type recorder struct {
-	mu      sync.Mutex
-	updates []rules.Stats
-	synced  []bool
+	mu          sync.Mutex
+	updates     []rules.Stats
+	synced      []bool
+	watchErrors []error
 }
 
 func (r *recorder) DirectoryRebuilt(stats rules.Stats, _ time.Duration) {
@@ -64,7 +70,17 @@ func (r *recorder) SyncedChanged(s bool) {
 	defer r.mu.Unlock()
 	r.synced = append(r.synced, s)
 }
-func (r *recorder) WatchError(error) {}
+func (r *recorder) WatchError(err error) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.watchErrors = append(r.watchErrors, err)
+}
+
+func (r *recorder) watchErrorCount() int {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return len(r.watchErrors)
+}
 
 func (r *recorder) count() int {
 	r.mu.Lock()
@@ -91,6 +107,22 @@ func eventually(t *testing.T, what string, cond func() bool) {
 		time.Sleep(10 * time.Millisecond)
 	}
 	t.Fatalf("timed out waiting for %s", what)
+}
+
+// quiesce waits until the rebuild count stops moving and returns it.
+func quiesce(t *testing.T, rec *recorder) int {
+	t.Helper()
+	last := -1
+	for i := 0; i < 50; i++ {
+		time.Sleep(20 * time.Millisecond)
+		if got := rec.count(); got == last {
+			return got
+		} else {
+			last = got
+		}
+	}
+	t.Fatalf("the source never stopped rebuilding")
+	return 0
 }
 
 func TestSource_BuildsAndFollowsChanges(t *testing.T) {
@@ -182,4 +214,202 @@ func TestSource_QuarantineIsReported(t *testing.T) {
 	if len(entries) != 1 || !entries[0].Quarantined {
 		t.Errorf("dave = %+v", entries)
 	}
+}
+
+// A cluster without the ClusterAuthorizationRule CRD is a normal bootstrap state, not a failure:
+// the source must keep retrying, report it as such, and never publish an empty directory that a
+// consumer would mistake for "there are no rules".
+func TestSource_CRDMissing(t *testing.T) {
+	client := newClient()
+	client.PrependReactor("list", "clusterauthorizationrules", func(k8stesting.Action) (bool, runtime.Object, error) {
+		return true, nil, apierrors.NewNotFound(rules.GroupVersionResource.GroupResource(), "")
+	})
+	client.PrependWatchReactor("clusterauthorizationrules", func(k8stesting.Action) (bool, watch.Interface, error) {
+		return true, nil, apierrors.NewNotFound(rules.GroupVersionResource.GroupResource(), "")
+	})
+
+	rec := &recorder{}
+	s := New(client, Options{Debounce: 20 * time.Millisecond, Observer: rec, Logf: t.Logf})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go s.Run(ctx)
+
+	eventually(t, "the missing CRD to be noticed", func() bool { return rec.watchErrorCount() > 0 })
+
+	if got := s.State(); got != StateCRDMissing {
+		t.Errorf("state = %v, want %v", got, StateCRDMissing)
+	}
+	if s.HasSynced() {
+		t.Error("the source cannot be synced without the CRD")
+	}
+	if s.Directory() != nil {
+		t.Error("no directory may be published: nil means \"the rules are not known\", an empty one means \"there are none\"")
+	}
+	if s.LastError() == nil {
+		t.Error("the error must be readable")
+	}
+	// A nil directory answers every question conservatively.
+	if s.Directory().RuleCovers("team-a", "alice", nil) {
+		t.Error("a directory that does not exist covers nobody")
+	}
+}
+
+// A list/watch failure that is not a missing CRD is reported as such, and the source keeps the
+// directory it already had rather than dropping the rules of the cluster.
+func TestSource_WatchErrorKeepsDirectory(t *testing.T) {
+	client := newClient(car("team-a", "1", []string{"alice"}, "team-a"))
+	rec := &recorder{}
+	s := New(client, Options{Debounce: 20 * time.Millisecond, Observer: rec, Logf: t.Logf})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go s.Run(ctx)
+
+	eventually(t, "the first directory", func() bool { return s.Directory() != nil })
+	if got := s.State(); got != StateSynced {
+		t.Fatalf("state = %v, want %v", got, StateSynced)
+	}
+
+	s.watchError(nil, errors.New("connection refused"))
+
+	if s.Directory() == nil {
+		t.Error("a watch error must not drop the rules already known")
+	}
+	if !s.Directory().KnowsRule("team-a") {
+		t.Error("the directory must still hold the rule")
+	}
+	if got := s.State(); got != StateSynced {
+		t.Errorf("state = %v: an unreachable API server is not a missing CRD", got)
+	}
+	if rec.watchErrorCount() == 0 {
+		t.Error("the error must reach the observer, it is what the alert counts")
+	}
+}
+
+// Run returns when its context is cancelled.
+func TestSource_RunStopsWithContext(t *testing.T) {
+	s := New(newClient(car("team-a", "1", []string{"alice"}, "team-a")), Options{Debounce: 20 * time.Millisecond, Logf: t.Logf})
+	ctx, cancel := context.WithCancel(context.Background())
+
+	done := make(chan struct{})
+	go func() {
+		s.Run(ctx)
+		close(done)
+	}()
+
+	eventually(t, "the first directory", func() bool { return s.Directory() != nil })
+	cancel()
+
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("Run did not return after its context was cancelled")
+	}
+}
+
+// The first directory is published as soon as the initial list completes. Waiting out the debounce
+// window would be pure exposure: until the directory exists every subject of a rule is restricted.
+func TestSource_FirstBuildSkipsDebounce(t *testing.T) {
+	s := New(newClient(car("team-a", "1", []string{"alice"}, "team-a")),
+		Options{Debounce: 30 * time.Second, Logf: t.Logf})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	started := time.Now()
+	go s.Run(ctx)
+	eventually(t, "the first directory", func() bool { return s.Directory() != nil })
+
+	if took := time.Since(started); took > 5*time.Second {
+		t.Errorf("the first build took %s: it waited out the debounce window", took)
+	}
+	if !s.Directory().KnowsRule("team-a") {
+		t.Error("the first directory must hold the rule")
+	}
+}
+
+// An update that leaves the fields the directory reads untouched does not rebuild it. At a few
+// thousand rules a rebuild is not free, and a re-list or a label edit must not pay for one.
+func TestSource_UnchangedSpecDoesNotRebuild(t *testing.T) {
+	obj := car("team-a", "1", []string{"alice"}, "team-a")
+	client := newClient(obj)
+	rec := &recorder{}
+	s := New(client, Options{Debounce: 20 * time.Millisecond, Observer: rec, Logf: t.Logf})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go s.Run(ctx)
+
+	eventually(t, "the first directory", func() bool { return s.Directory() != nil })
+	// Let the startup settle so the count below measures only what the update causes.
+	before := quiesce(t, rec)
+
+	// Only a label changes; Project drops labels entirely, so the projected spec is untouched.
+	labelled := obj.DeepCopy()
+	labelled.SetResourceVersion("2")
+	labelled.SetLabels(map[string]string{"touched": "yes"})
+	if _, err := client.Resource(rules.GroupVersionResource).Update(ctx, labelled, metav1.UpdateOptions{}); err != nil {
+		t.Fatalf("update: %v", err)
+	}
+
+	// A rebuild would land within a few debounce windows; give it room and expect none.
+	time.Sleep(300 * time.Millisecond)
+	if got := rec.count(); got != before {
+		t.Errorf("rebuilds went %d -> %d: a metadata-only update must not rebuild the directory", before, got)
+	}
+
+	// A real change still does rebuild it.
+	changed := obj.DeepCopy()
+	changed.SetResourceVersion("3")
+	if err := unstructured.SetNestedStringSlice(changed.Object, []string{"team-b"}, "spec", "limitNamespaces"); err != nil {
+		t.Fatalf("set limitNamespaces: %v", err)
+	}
+	if _, err := client.Resource(rules.GroupVersionResource).Update(ctx, changed, metav1.UpdateOptions{}); err != nil {
+		t.Fatalf("update: %v", err)
+	}
+	eventually(t, "the rebuild after a real change", func() bool { return rec.count() > before })
+}
+
+// Readers hit the directory while the informer replaces it. Run with -race.
+func TestSource_ConcurrentReadsDuringRebuilds(t *testing.T) {
+	client := newClient(car("team-a", "1", []string{"alice"}, "team-a"))
+	s := New(client, Options{Debounce: time.Millisecond, Logf: func(string, ...interface{}) {}})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go s.Run(ctx)
+	eventually(t, "the first directory", func() bool { return s.Directory() != nil })
+
+	stop := make(chan struct{})
+	var wg sync.WaitGroup
+	for i := 0; i < 16; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				select {
+				case <-stop:
+					return
+				default:
+				}
+				dir := s.Directory()
+				dir.Lookup("alice", []string{"devs"})
+				dir.RuleCovers("team-a", "alice", nil)
+				dir.KnowsRule("team-a")
+				_ = dir.Len()
+				_ = dir.MaxResourceVersion()
+				_ = s.HasSynced()
+				_ = s.State()
+			}
+		}()
+	}
+
+	for i := 2; i < 40; i++ {
+		rv := strconv.Itoa(i)
+		obj := car("team-"+rv, rv, []string{"alice"}, "ns-"+rv)
+		if _, err := client.Resource(rules.GroupVersionResource).Create(ctx, obj, metav1CreateOptions()); err != nil {
+			t.Errorf("create: %v", err)
+			break
+		}
+	}
+
+	time.Sleep(200 * time.Millisecond)
+	close(stop)
+	wg.Wait()
 }

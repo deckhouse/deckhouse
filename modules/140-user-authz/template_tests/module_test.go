@@ -330,6 +330,30 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(rule.Field("spec.groups").String()).To(ContainSubstring(`job="user-authz-webhook"`))
 		})
 
+		It("Should expose the permission-browser metrics for Prometheus", func() {
+			deployment := f.KubernetesResource("Deployment", "d8-user-authz", "permission-browser-apiserver")
+			Expect(deployment.Exists()).To(BeTrue())
+
+			// The apiserver's own port is behind the aggregation layer, so the metrics come out of a
+			// loopback endpoint through the sidecar instead.
+			Expect(deployment.Field("spec.template.spec.containers.1.name").String()).To(Equal("kube-rbac-proxy"))
+			Expect(deployment.Field("spec.template.spec.containers.1.ports.0.containerPort").Int()).To(Equal(int64(4276)))
+			Expect(deployment.Field("spec.template.spec.containers.1.ports.0.name").String()).To(Equal("https-metrics"))
+			Expect(deployment.Field("spec.template.spec.containers.1.env").String()).To(ContainSubstring("http://127.0.0.1:4276/metrics"))
+
+			role := f.KubernetesResource("Role", "d8-user-authz", "access-to-permission-browser-apiserver-prometheus-metrics")
+			Expect(role.Exists()).To(BeTrue())
+			Expect(role.Field("rules").String()).To(ContainSubstring("deployments/prometheus-metrics"))
+			Expect(f.KubernetesResource("RoleBinding", "d8-user-authz", "access-to-permission-browser-apiserver-prometheus-metrics").Exists()).To(BeTrue())
+
+			// The alert rules select job="permission-browser-apiserver"; the PodMonitor takes the job
+			// name from the app label of the pods.
+			podMonitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "permission-browser-apiserver")
+			Expect(podMonitor.Exists()).To(BeTrue())
+			Expect(podMonitor.Field("spec.jobLabel").String()).To(Equal("app"))
+			Expect(deployment.Field("spec.template.metadata.labels.app").String()).To(Equal("permission-browser-apiserver"))
+		})
+
 		It("Should let the webhook and permission-browser watch the ClusterAuthorizationRules", func() {
 			// Both read the multi-tenancy options straight from the rules instead of a rendered file.
 			webhookRole := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:webhook")
