@@ -23,8 +23,8 @@ description: "Настройка тегов, datastore, пользователя
 
 ```shell
 export GOVC_URL=example.com
-export GOVC_USERNAME=<username>@vsphere.local
-export GOVC_PASSWORD=<password>
+export GOVC_USERNAME=<USERNAME>@vsphere.local
+export GOVC_PASSWORD=<PASSWORD>
 export GOVC_INSECURE=1
 ```
 
@@ -52,14 +52,14 @@ export GOVC_INSECURE=1
 1. Назначьте тег региона на Datacenter:
 
    ```shell
-   govc tags.attach -c k8s-region test-region /<DatacenterName>
+   govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>
    ```
 
 1. Назначьте теги зон на объекты Cluster:
 
    ```shell
-   govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/host/<ClusterName1>
-   govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/host/<ClusterName2>
+   govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/host/<CLUSTER_NAME_1>
+   govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/host/<CLUSTER_NAME_2>
    ```
 
 ## Конфигурация Datastore
@@ -71,11 +71,11 @@ export GOVC_INSECURE=1
 Для автоматического создания StorageClass в кластере назначьте теги региона и зоны на объекты Datastore:
 
 ```shell
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName1>
-govc tags.attach -c k8s-zone test-zone-1 /<DatacenterName>/datastore/<DatastoreName1>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
+govc tags.attach -c k8s-zone test-zone-1 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_1>
 
-govc tags.attach -c k8s-region test-region /<DatacenterName>/datastore/<DatastoreName2>
-govc tags.attach -c k8s-zone test-zone-2 /<DatacenterName>/datastore/<DatastoreName2>
+govc tags.attach -c k8s-region test-region /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
+govc tags.attach -c k8s-zone test-zone-2 /<DATACENTER_NAME>/datastore/<DATASTORE_NAME_2>
 ```
 
 ## Создание и назначение роли
@@ -98,5 +98,5 @@ govc role.create deckhouse \
 Назначьте пользователю роль на объекте vCenter:
 
 ```shell
-govc permissions.set -principal <username>@vsphere.local -role deckhouse /
+govc permissions.set -principal <USERNAME>@vsphere.local -role deckhouse /
 ```

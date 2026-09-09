@@ -3,17 +3,17 @@ title: Integration with VMware vSphere services
 permalink: en/admin/integrations/virtualization/vsphere/services.html
 ---
 
-Deckhouse Kubernetes Platform integrates with VMware vSphere infrastructure and uses [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) resources
-to describe the specifications of virtual machines created as part of the Kubernetes cluster.
+Deckhouse Kubernetes Platform integrates with VMware vSphere infrastructure. The specifications of virtual machines created as part of the cluster are described in the [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) resource,
+and the cloud infrastructure parameters of the cluster are set in the [VsphereClusterConfiguration](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration) resource.
 
 Key features:
 
-- Provisioning and removal of virtual machines via the vCenter API.
+- Provisioning and removal of virtual machines via the vCenter API. How this works for different node types is covered in the [vSphere resource management](#vsphere-resource-management) section.
 - Node placement across multiple clusters ([`zones`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-zones)) and datacenters ([`region`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-region)).
-- Use of VM templates with `cloud-init`.
-- Support for networks with DHCP, static addressing, and additional interfaces.
-- Storage management: provisioning root disks and PVCs based on Datastore or CNS disks.
-- Support for incoming traffic load balancing:
+- Use of VM templates with `cloud-init`. The image requirements and template preparation are covered in the [Connecting to and authorizing in VMware vSphere](authorization.html#preparing-the-virtual-machine-image) section.
+- Support for networks with DHCP, static addressing, and additional interfaces. The resource layout is shown in the [Standard layout](layout.html#standard) section.
+- Storage management. Provisioning root disks and PersistentVolume volumes on Datastores and CNS disks is covered in the [Storage](storage.html#storage) section.
+- Support for incoming traffic load balancing, covered in the [Load balancing](storage.html#load-balancing) section:
   - Via external load balancers.
   - Via MetalLB (in BGP mode).
 
@@ -22,6 +22,17 @@ DKP supports hybrid integration with VMware vSphere. For configuration details, 
 {% endalert %}
 
 ## vSphere resource management
+
+A cluster on vSphere uses nodes of four types:
+
+- [CloudEphemeral](../../../../architecture/cluster-and-infrastructure/node-management/cloud-ephemeral-nodes.html): the platform orders, creates, and deletes such nodes automatically. Their number is set in the [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource, and the virtual machine parameters are described in the [VsphereInstanceClass](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass) resource.
+- [CloudPermanent](../../../../architecture/cluster-and-infrastructure/node-management/cloud-permanent-nodes.html): permanent nodes whose configuration comes from the [`nodeGroups`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-nodegroups) section of the VsphereClusterConfiguration resource. Changes are applied with the `dhctl converge` command. The cluster master nodes are of this type.
+- [CloudStatic](../../../../architecture/cluster-and-infrastructure/node-management/cloud-static-nodes.html): vSphere virtual machines created manually or by third-party tools and connected to the cluster. They are managed by `cloud-controller-manager`, so such nodes get region and zone metadata, and when a virtual machine is deleted from vSphere, the corresponding Node object is deleted from the cluster.
+- [Static](../../../../architecture/cluster-and-infrastructure/node-management/static-nodes.html): nodes on bare metal servers or on virtual machines that are not managed by the cloud provider.
+
+Adding nodes, changing their number, and deleting them are covered in the [Node management basics in Deckhouse](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/node-management.html) and [Adding and managing cloud nodes](/products/kubernetes-platform/documentation/v1/admin/configuration/platform-scaling/node/cloud-node.html) sections. An example of a node group for vSphere is given in the [Creating a node group](/modules/cloud-provider-vsphere/examples.html#creating-a-node-group) section.
+
+The steps below apply only to clusters on vSphere.
 
 ### Removing CloudPermanent nodes in vSphere
 

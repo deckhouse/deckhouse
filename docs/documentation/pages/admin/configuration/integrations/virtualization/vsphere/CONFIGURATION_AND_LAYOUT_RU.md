@@ -31,10 +31,10 @@ provider:
   password: '<PASSWORD>'
   insecure: true
 vmFolderPath: dev
+internalNetworkCIDR: 192.168.199.0/24
 regionTagCategory: k8s-region
 zoneTagCategory: k8s-zone
 region: X1
-internalNetworkCIDR: 192.168.199.0/24
 masterNodeGroup:
   replicas: 1
   zones:
@@ -65,12 +65,16 @@ zones:
 
 Обязательные параметры [ресурса VsphereClusterConfiguration](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration):
 
+- `layout` — название схемы размещения. Поддерживается только `Standard`;
+- `provider` — параметры подключения к vCenter;
 - `region` — тег, присвоенный объекту Datacenter;
 - `zoneTagCategory` и `regionTagCategory` — категории тегов, по которым распознаются регионы и зоны;
-- `internalNetworkCIDR` — подсеть для назначения внутренних IP-адресов;
-- `vmFolderPath` — путь до папки, в которой будут размещаться виртуальные машины кластера;
-- `sshPublicKey` — публичный SSH-ключ для доступа к узлам;
-- `zones` — список зон, доступных для размещения узлов.
+- `zones` — список зон, доступных для размещения узлов;
+- `masterNodeGroup` — параметры группы master-узлов;
+- `vmFolderPath` — путь до директории, в которой будут размещаться виртуальные машины кластера;
+- `sshPublicKey` — публичный SSH-ключ для доступа к узлам.
+
+Параметр `internalNetworkCIDR` обязателен, если в конфигурации есть `nodeGroups`. Установщик проверяет его при создании статических узлов и без него завершается с ошибкой. Он также нужен, если в `masterNodeGroup.instanceClass` заданы `additionalNetworks`. В этом случае DKP выделяет адреса master-узлов из указанной подсети начиная с десятого адреса. Если групп `nodeGroups` нет и master-узлы используют одну сеть, параметр можно не указывать.
 
 {% alert level="info" %}
 Все узлы, размещённые в разных зонах, должны иметь доступ к общим datastore с аналогичными тегами зоны.
@@ -78,299 +82,151 @@ zones:
 
 ## Список необходимых привилегий
 
+Роль для учётной записи платформы включает привилегии, перечисленные ниже. Привилегии сгруппированы по задачам, которые платформа выполняет во vSphere.
+
+Как создать роль и назначить её пользователю, описано в разделах [«Создание и назначение роли с использованием vSphere Client»](authorization.html#создание-и-назначение-роли-с-использованием-vsphere-client) и [«Создание и назначение роли с использованием govc»](authorization.html#создание-и-назначение-роли-с-использованием-govc).
+
+### Базовый доступ
+
+vSphere назначает эти привилегии автоматически при создании любой роли. Они дают компонентам платформы доступ на чтение объектов vSphere Inventory.
+
+| Привилегия в UI | Привилегия в API | Назначение в DKP |
+| --- | --- | --- |
+| — | `System.Anonymous` | Обращение к методам vCenter, не требующим авторизации |
+| — | `System.Read` | Чтение состояния и параметров объектов |
+| — | `System.View` | Просмотр объектов инвентаря |
+
+### Теги регионов и зон
+
+По тегам платформа определяет доступные ей объекты Datacenter, Cluster и Datastore и помечает виртуальные машины, которыми управляет.
+
+| Привилегия в UI | Привилегия в API | Назначение в DKP |
+| --- | --- | --- |
+| Global tag | `Global.GlobalTag` | Работа с глобальными тегами vCenter |
+| System tag | `Global.SystemTag` | Работа с системными тегами vCenter |
+| Assign or Unassign vSphere Tag | `InventoryService.Tagging.AttachTag` | Чтение тегов региона и зоны и пометка виртуальных машин кластера |
+| Assign or Unassign vSphere Tag on Object | `InventoryService.Tagging.ObjectAttachable` | Назначение тега конкретному объекту инвентаря |
+| Create vSphere Tag | `InventoryService.Tagging.CreateTag` | Создание тегов, которыми помечаются виртуальные машины кластера |
+| Create vSphere Tag Category | `InventoryService.Tagging.CreateCategory` | Создание категорий `deckhouse-cluster-name` и `deckhouse-node-role` для этих тегов |
+| Delete vSphere Tag | `InventoryService.Tagging.DeleteTag` | Удаление тегов, созданных платформой |
+| Delete vSphere Tag Category | `InventoryService.Tagging.DeleteCategory` | Удаление категорий, созданных платформой |
+| Edit vSphere Tag | `InventoryService.Tagging.EditTag` | Изменение тегов, созданных платформой |
+| Edit vSphere Tag Category | `InventoryService.Tagging.EditCategory` | Изменение категорий, созданных платформой |
+| Modify UsedBy Field for Category | `InventoryService.Tagging.ModifyUsedByForCategory` | Изменение служебного поля UsedBy у категории |
+| Modify UsedBy Field for Tag | `InventoryService.Tagging.ModifyUsedByForTag` | Изменение служебного поля UsedBy у тега |
+
+### Хранилище
+
+Привилегии нужны для размещения дисков виртуальных машин, динамического заказа PersistentVolume и чтения политик хранения SPBM.
+
 {% alert level="info" %}
-Подробнее о том, как создать и назначить роль пользователю можно ознакомиться в разделах[«Настройка через vSphere Client»](authorization.html#настройка-через-vsphere-client) и [«Настройка через govc»](authorization.html#настройка-через-govc).
+В vSphere 7 привилегия `StorageProfile.View` находится в интерфейсе в разделе «Profile-driven storage».
 {% endalert %}
 
-**Детальный список привилегий, необходимых для работы Deckhouse Kubernetes Platform в vSphere:**
+| Привилегия в UI | Привилегия в API | Назначение в DKP |
+| --- | --- | --- |
+| Searchable | `Cns.Searchable` | Поиск дисков CNS во всём vCenter при обнаружении ресурсов |
+| Allocate space | `Datastore.AllocateSpace` | Выделение места под диски узлов и тома PersistentVolume |
+| Browse datastore | `Datastore.Browse` | Просмотр файлов на Datastore |
+| Low level file operations | `Datastore.FileManagement` | Операции с файлами дисков на Datastore |
+| View VM storage policies | `StorageProfile.View` | Чтение политик хранения SPBM для создания StorageClass |
 
-<table>
-  <thead>
-    <tr>
-      <th>Категория привилегий в UI</th>
-      <th>Список привилегий в UI</th>
-      <th>Список привилегий в API</th>
-      <th>Назначение привилегий в Deckhouse</th>
-    </tr>
-  </thead>
-  <tbody>
-    <tr>
-      <td>—</td>
-      <td>— (назначаются по умолчанию при создании роли)</td>
-      <td>
-        <code>System.Anonymous</code><br/>
-        <code>System.Read</code><br/>
-        <code>System.View</code>
-      </td>
-      <td>Базовый доступ к объектам vSphere Inventory, необходимый для работы всех компонентов интеграции Deckhouse с vSphere.</td>
-    </tr>
-    <tr>
-      <td>Cns</td>
-      <td>Searchable</td>
-      <td><code>Cns.Searchable</code></td>
-      <td>Поиск и сопоставление объектов Container Native Storage при работе CSI-драйвера с томами Kubernetes.</td>
-    </tr>
-    <tr>
-      <td>Datastore</td>
-      <td>
-        Allocate space,<br/>
-        Browse datastore,<br/>
-        Low level file operations
-      </td>
-      <td>
-        <code>Datastore.AllocateSpace</code><br/>
-        <code>Datastore.Browse</code><br/>
-        <code>Datastore.FileManagement</code>
-      </td>
-      <td>Выделение дисков при создании виртуальных машин и заказе <code>PersistentVolumes</code> в кластере.</td>
-    </tr>
-    <tr>
-      <td>Folder</td>
-      <td>
-        Create folder,<br/>
-        Delete folder,<br/>
-        Move folder,<br/>
-        Rename folder
-      </td>
-      <td>
-        <code>Folder.Create</code><br/>
-        <code>Folder.Delete</code><br/>
-        <code>Folder.Move</code><br/>
-        <code>Folder.Rename</code>
-      </td>
-      <td>Группировка кластера Deckhouse Kubernetes Platform в одном <code>Folder</code> в vSphere Inventory.</td>
-    </tr>
-    <tr>
-      <td>Global</td>
-      <td>
-        Global tag,<br/>
-        System tag
-      </td>
-      <td>
-        <code>Global.GlobalTag</code><br/>
-        <code>Global.SystemTag</code>
-      </td>
-      <td>Доступ к глобальным и системным тегам, используемым Deckhouse Kubernetes Platform при работе с объектами vSphere.</td>
-    </tr>
-    <tr>
-      <td>vSphere Tagging</td>
-      <td>
-        Assign or Unassign vSphere Tag,<br/>
-        Assign or Unassign vSphere Tag on Object,<br/>
-        Create vSphere Tag,<br/>
-        Create vSphere Tag Category,<br/>
-        Delete vSphere Tag,<br/>
-        Delete vSphere Tag Category,<br/>
-        Edit vSphere Tag,<br/>
-        Edit vSphere Tag Category,<br/>
-        Modify UsedBy Field for Category,<br/>
-        Modify UsedBy Field for Tag
-      </td>
-      <td>
-        <code>InventoryService.Tagging.AttachTag</code><br/>
-        <code>InventoryService.Tagging.ObjectAttachable</code><br/>
-        <code>InventoryService.Tagging.CreateTag</code><br/>
-        <code>InventoryService.Tagging.CreateCategory</code><br/>
-        <code>InventoryService.Tagging.DeleteTag</code><br/>
-        <code>InventoryService.Tagging.DeleteCategory</code><br/>
-        <code>InventoryService.Tagging.EditTag</code><br/>
-        <code>InventoryService.Tagging.EditCategory</code><br/>
-        <code>InventoryService.Tagging.ModifyUsedByForCategory</code><br/>
-        <code>InventoryService.Tagging.ModifyUsedByForTag</code>
-      </td>
-      <td>Deckhouse Kubernetes Platform использует теги для определения доступных ему объектов <code>Datacenter</code>, <code>Cluster</code> и <code>Datastore</code>, а также для определения виртуальных машин, находящихся под его управлением.</td>
-    </tr>
-    <tr>
-      <td>Network</td>
-      <td>Assign network</td>
-      <td><code>Network.Assign</code></td>
-      <td>Подключение сетей и port group к виртуальным машинам кластера Deckhouse Kubernetes Platform.</td>
-    </tr>
-    <tr>
-      <td>Resource</td>
-      <td>
-        Assign virtual machine to resource pool,<br/>
-        Create resource pool,<br/>
-        Modify resource pool,<br/>
-        Remove resource pool,<br/>
-        Rename resource pool
-      </td>
-      <td>
-        <code>Resource.AssignVMToPool</code><br/>
-        <code>Resource.CreatePool</code><br/>
-        <code>Resource.DeletePool</code><br/>
-        <code>Resource.EditPool</code><br/>
-        <code>Resource.RenamePool</code>
-      </td>
-      <td>Размещение виртуальных машин кластера Deckhouse Kubernetes Platform в целевом пуле ресурсов и управление этим пулом.</td>
-    </tr>
-    <tr>
-      <td>VM Storage Policies (<em>Profile-driven Storage Privileges</em> в vSphere 7)</td>
-      <td>View VM storage policies (<em>Profile-driven storage view</em> в vSphere 7)</td>
-      <td><code>StorageProfile.View</code></td>
-      <td>Просмотр политик хранения, используемых при создании виртуальных машин и динамическом заказе томов в кластере.</td>
-    </tr>
-    <tr>
-      <td>vApp</td>
-      <td>
-        Add virtual machine,<br/>
-        Assign resource pool,<br/>
-        Create,<br/>
-        Delete,<br/>
-        Import,<br/>
-        Power Off,<br/>
-        Power On,<br/>
-        View OVF Environment,<br/>
-        vApp application configuration,<br/>
-        vApp instance configuration,<br/>
-        vApp resource configuration
-      </td>
-      <td>
-        <code>VApp.ApplicationConfig</code><br/>
-        <code>VApp.AssignResourcePool</code><br/>
-        <code>VApp.AssignVM</code><br/>
-        <code>VApp.Create</code><br/>
-        <code>VApp.Delete</code><br/>
-        <code>VApp.ExtractOvfEnvironment</code><br/>
-        <code>VApp.Import</code><br/>
-        <code>VApp.InstanceConfig</code><br/>
-        <code>VApp.PowerOff</code><br/>
-        <code>VApp.PowerOn</code><br/>
-        <code>VApp.ResourceConfig</code>
-      </td>
-      <td>Управление операциями, связанными с развертыванием и конфигурацией vApp и OVF-шаблонов, используемых при создании виртуальных машин.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Change Configuration</td>
-      <td>
-        Add existing disk,<br/>
-        Add new disk,<br/>
-        Add or remove device,<br/>
-        Advanced configuration,<br/>
-        Set annotation,<br/>
-        Change CPU count,<br/>
-        Toggle disk change tracking,<br/>
-        Extend virtual disk,<br/>
-        Acquire disk lease,<br/>
-        Modify device settings,<br/>
-        Configure managedBy,<br/>
-        Change Memory,<br/>
-        Query unowned files,<br/>
-        Configure Raw device,<br/>
-        Reload from path,<br/>
-        Remove disk,<br/>
-        Rename,<br/>
-        Reset guest information,<br/>
-        Change resource,<br/>
-        Change Settings,<br/>
-        Change Swapfile placement,<br/>
-        Upgrade virtual machine compatibility
-      </td>
-      <td>
-        <code>VirtualMachine.Config.AddExistingDisk</code><br/>
-        <code>VirtualMachine.Config.AddNewDisk</code><br/>
-        <code>VirtualMachine.Config.AddRemoveDevice</code><br/>
-        <code>VirtualMachine.Config.AdvancedConfig</code><br/>
-        <code>VirtualMachine.Config.Annotation</code><br/>
-        <code>VirtualMachine.Config.CPUCount</code><br/>
-        <code>VirtualMachine.Config.ChangeTracking</code><br/>
-        <code>VirtualMachine.Config.DiskExtend</code><br/>
-        <code>VirtualMachine.Config.DiskLease</code><br/>
-        <code>VirtualMachine.Config.EditDevice</code><br/>
-        <code>VirtualMachine.Config.ManagedBy</code><br/>
-        <code>VirtualMachine.Config.Memory</code><br/>
-        <code>VirtualMachine.Config.QueryUnownedFiles</code><br/>
-        <code>VirtualMachine.Config.RawDevice</code><br/>
-        <code>VirtualMachine.Config.ReloadFromPath</code><br/>
-        <code>VirtualMachine.Config.RemoveDisk</code><br/>
-        <code>VirtualMachine.Config.Rename</code><br/>
-        <code>VirtualMachine.Config.ResetGuestInfo</code><br/>
-        <code>VirtualMachine.Config.Resource</code><br/>
-        <code>VirtualMachine.Config.Settings</code><br/>
-        <code>VirtualMachine.Config.SwapPlacement</code><br/>
-        <code>VirtualMachine.Config.UpgradeVirtualHardware</code>
-      </td>
-      <td>Управление жизненным циклом виртуальных машин кластера Deckhouse Kubernetes Platform.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Edit Inventory</td>
-      <td>
-        Create new,<br/>
-        Create from existing,<br/>
-        Remove,<br/>
-        Move
-      </td>
-      <td>
-        <code>VirtualMachine.Inventory.Create</code><br/>
-        <code>VirtualMachine.Inventory.CreateFromExisting</code><br/>
-        <code>VirtualMachine.Inventory.Delete</code><br/>
-        <code>VirtualMachine.Inventory.Move</code>
-      </td>
-      <td>Создание, удаление и перемещение виртуальных машин кластера Deckhouse Kubernetes Platform в инвентаре vSphere.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Guest Operations</td>
-      <td>Guest Operation Queries</td>
-      <td><code>VirtualMachine.GuestOperations.Query</code></td>
-      <td>Получение информации из гостевой операционной системы виртуальных машин.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Interaction</td>
-      <td>
-        Answer question,<br/>
-        Device connection,<br/>
-        Guest operating system management by VIX API,<br/>
-        Power Off,<br/>
-        Power On,<br/>
-        Reset,<br/>
-        Configure CD media,<br/>
-        Install VMware Tools
-      </td>
-      <td>
-        <code>VirtualMachine.Interact.AnswerQuestion</code><br/>
-        <code>VirtualMachine.Interact.DeviceConnection</code><br/>
-        <code>VirtualMachine.Interact.GuestControl</code><br/>
-        <code>VirtualMachine.Interact.PowerOff</code><br/>
-        <code>VirtualMachine.Interact.PowerOn</code><br/>
-        <code>VirtualMachine.Interact.Reset</code><br/>
-        <code>VirtualMachine.Interact.SetCDMedia</code><br/>
-        <code>VirtualMachine.Interact.ToolsInstall</code>
-      </td>
-      <td>Управление состоянием виртуальных машин, подключением устройств и взаимодействием с гостевой операционной системой.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Provisioning</td>
-      <td>
-        Clone virtual machine,<br/>
-        Customize guest,<br/>
-        Deploy template,<br/>
-        Allow virtual machine download,<br/>
-        Allow virtual machine files upload,<br/>
-        Read customization specifications
-      </td>
-      <td>
-        <code>VirtualMachine.Provisioning.Clone</code><br/>
-        <code>VirtualMachine.Provisioning.Customize</code><br/>
-        <code>VirtualMachine.Provisioning.DeployTemplate</code><br/>
-        <code>VirtualMachine.Provisioning.GetVmFiles</code><br/>
-        <code>VirtualMachine.Provisioning.PutVmFiles</code><br/>
-        <code>VirtualMachine.Provisioning.ReadCustSpecs</code>
-      </td>
-      <td>Клонирование шаблонов виртуальных машин, их настройка и развертывание при создании узлов кластера Deckhouse Kubernetes Platform.</td>
-    </tr>
-    <tr>
-      <td>Virtual Machine > Snapshot Management</td>
-      <td>
-        Create snapshot,<br/>
-        Remove Snapshot,<br/>
-        Rename Snapshot
-      </td>
-      <td>
-        <code>VirtualMachine.State.CreateSnapshot</code><br/>
-        <code>VirtualMachine.State.RemoveSnapshot</code><br/>
-        <code>VirtualMachine.State.RenameSnapshot</code>
-      </td>
-      <td>Управление снимками виртуальных машин и томов в сценариях, где эта функциональность используется компонентами платформы.</td>
-    </tr>
-  </tbody>
-</table>
+### Размещение виртуальных машин
+
+Платформа группирует виртуальные машины кластера в отдельной директории, размещает их в пуле ресурсов и подключает к сетям.
+
+| Привилегия в UI | Привилегия в API | Назначение в DKP |
+| --- | --- | --- |
+| Create folder | `Folder.Create` | Создание директории по пути из параметра [`vmFolderPath`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-vmfolderpath) |
+| Delete folder | `Folder.Delete` | Удаление этой директории вместе с кластером |
+| Move folder | `Folder.Move` | Перемещение директории при изменении пути |
+| Rename folder | `Folder.Rename` | Переименование директории при изменении пути |
+| Assign virtual machine to resource pool | `Resource.AssignVMToPool` | Размещение виртуальных машин в пуле ресурсов |
+| Create resource pool | `Resource.CreatePool` | Создание вложенного пула ресурсов в каждой зоне |
+| Modify resource pool | `Resource.EditPool` | Изменение параметров этого пула |
+| Remove resource pool | `Resource.DeletePool` | Удаление пула вместе с кластером |
+| Rename resource pool | `Resource.RenamePool` | Переименование пула |
+| Assign network | `Network.Assign` | Подключение виртуальных машин к сетям из параметров [`mainNetwork`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-mainnetwork) и [`additionalNetworks`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-additionalnetworks) |
+
+### Создание виртуальных машин
+
+Виртуальные машины создаются клонированием подготовленного шаблона и регистрируются в инвентаре vSphere.
+
+| Привилегия в UI | Привилегия в API | Назначение в DKP |
+| --- | --- | --- |
+| Clone virtual machine | `VirtualMachine.Provisioning.Clone` | Клонирование шаблона из параметра [`template`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-template) |
+| Deploy template | `VirtualMachine.Provisioning.DeployTemplate` | Развёртывание виртуальной машины из шаблона |
+| Customize guest | `VirtualMachine.Provisioning.Customize` | Настройка гостевой операционной системы при клонировании |
+| Read customization specifications | `VirtualMachine.Provisioning.ReadCustSpecs` | Чтение спецификаций настройки гостевой операционной системы |
+| Allow virtual machine download | `VirtualMachine.Provisioning.GetVmFiles` | Чтение файлов виртуальной машины |
+| Allow virtual machine files upload | `VirtualMachine.Provisioning.PutVmFiles` | Запись файлов виртуальной машины |
+| Create new | `VirtualMachine.Inventory.Create` | Создание виртуальной машины в инвентаре |
+| Create from existing | `VirtualMachine.Inventory.CreateFromExisting` | Создание виртуальной машины на основе существующей |
+| Remove | `VirtualMachine.Inventory.Delete` | Удаление виртуальной машины при уменьшении числа узлов |
+| Move | `VirtualMachine.Inventory.Move` | Перемещение виртуальной машины в директорию кластера |
+
+### Настройка виртуальных машин
+
+Платформа задаёт параметры виртуальных машин при создании и меняет их при изменении группы узлов или инстанс-класса.
+
+| Привилегия в UI | Привилегия в API | Назначение в DKP |
+| --- | --- | --- |
+| Add new disk | `VirtualMachine.Config.AddNewDisk` | Создание root-диска виртуальной машины |
+| Add existing disk | `VirtualMachine.Config.AddExistingDisk` | Подключение существующего диска |
+| Remove disk | `VirtualMachine.Config.RemoveDisk` | Отключение диска |
+| Extend virtual disk | `VirtualMachine.Config.DiskExtend` | Увеличение диска до размера из параметра [`rootDiskSize`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-rootdisksize) и расширение томов |
+| Acquire disk lease | `VirtualMachine.Config.DiskLease` | Получение блокировки диска на время операций с ним |
+| Toggle disk change tracking | `VirtualMachine.Config.ChangeTracking` | Управление отслеживанием изменённых блоков диска |
+| Configure Raw device | `VirtualMachine.Config.RawDevice` | Настройка проброшенных устройств (RDM) |
+| Change CPU count | `VirtualMachine.Config.CPUCount` | Задание числа vCPU из параметра [`numCPUs`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-numcpus) |
+| Change Memory | `VirtualMachine.Config.Memory` | Задание объёма памяти из параметра [`memory`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-memory) |
+| Change resource | `VirtualMachine.Config.Resource` | Резервирование памяти из параметра [`memoryReservation`](/modules/cloud-provider-vsphere/cr.html#vsphereinstanceclass-v1-spec-runtimeoptions-memoryreservation) и ограничение ресурсов |
+| Change Swapfile placement | `VirtualMachine.Config.SwapPlacement` | Выбор места для файла подкачки |
+| Add or remove device | `VirtualMachine.Config.AddRemoveDevice` | Добавление и удаление устройств, в том числе сетевых адаптеров |
+| Modify device settings | `VirtualMachine.Config.EditDevice` | Изменение параметров устройств |
+| Change Settings | `VirtualMachine.Config.Settings` | Изменение общих параметров виртуальной машины |
+| Advanced configuration | `VirtualMachine.Config.AdvancedConfig` | Передача конфигурации `cloud-init` через `guestinfo` |
+| Set annotation | `VirtualMachine.Config.Annotation` | Запись заметок к виртуальной машине |
+| Rename | `VirtualMachine.Config.Rename` | Переименование виртуальной машины |
+| Configure managedBy | `VirtualMachine.Config.ManagedBy` | Пометка виртуальной машины как управляемой платформой |
+| Reset guest information | `VirtualMachine.Config.ResetGuestInfo` | Сброс сведений, полученных от гостевой операционной системы |
+| Query unowned files | `VirtualMachine.Config.QueryUnownedFiles` | Проверка файлов, не принадлежащих виртуальной машине |
+| Reload from path | `VirtualMachine.Config.ReloadFromPath` | Перечитывание конфигурации виртуальной машины из файла |
+| Upgrade virtual machine compatibility | `VirtualMachine.Config.UpgradeVirtualHardware` | Повышение версии оборудования виртуальной машины |
+
+### Управление состоянием виртуальных машин
+
+Привилегии нужны для включения и выключения виртуальных машин, подключения устройств, чтения сведений из гостевой операционной системы и работы со снимками. Снимки заказываются, если в кластере включён модуль [`snapshot-controller`](/modules/snapshot-controller/).
+
+| Привилегия в UI | Привилегия в API | Назначение в DKP |
+| --- | --- | --- |
+| Power On | `VirtualMachine.Interact.PowerOn` | Включение виртуальной машины |
+| Power Off | `VirtualMachine.Interact.PowerOff` | Выключение виртуальной машины |
+| Reset | `VirtualMachine.Interact.Reset` | Перезагрузка виртуальной машины |
+| Answer question | `VirtualMachine.Interact.AnswerQuestion` | Ответ на запросы vSphere, которые блокируют работу машины |
+| Device connection | `VirtualMachine.Interact.DeviceConnection` | Подключение и отключение устройств работающей машины |
+| Configure CD media | `VirtualMachine.Interact.SetCDMedia` | Подключение образа к приводу CD/DVD |
+| Install VMware Tools | `VirtualMachine.Interact.ToolsInstall` | Установка VMware Tools |
+| Guest operating system management by VIX API | `VirtualMachine.Interact.GuestControl` | Управление гостевой операционной системой через VIX API |
+| Guest Operation Queries | `VirtualMachine.GuestOperations.Query` | Чтение сведений о состоянии гостевой операционной системы |
+| Create snapshot | `VirtualMachine.State.CreateSnapshot` | Создание снимка |
+| Remove Snapshot | `VirtualMachine.State.RemoveSnapshot` | Удаление снимка |
+| Rename Snapshot | `VirtualMachine.State.RenameSnapshot` | Переименование снимка |
+
+### vApp
+
+Операции с vApp и OVF-шаблонами. Требуются, если шаблоны виртуальных машин или сами машины входят в состав vApp.
+
+| Привилегия в UI | Привилегия в API | Назначение в DKP |
+| --- | --- | --- |
+| Create | `VApp.Create` | Создание vApp |
+| Delete | `VApp.Delete` | Удаление vApp |
+| Import | `VApp.Import` | Импорт OVF или OVA в vApp |
+| Add virtual machine | `VApp.AssignVM` | Добавление виртуальной машины в vApp |
+| Assign resource pool | `VApp.AssignResourcePool` | Назначение пула ресурсов для vApp |
+| Power On | `VApp.PowerOn` | Включение vApp |
+| Power Off | `VApp.PowerOff` | Выключение vApp |
+| vApp application configuration | `VApp.ApplicationConfig` | Изменение прикладных параметров vApp |
+| vApp instance configuration | `VApp.InstanceConfig` | Изменение параметров экземпляра vApp |
+| vApp resource configuration | `VApp.ResourceConfig` | Изменение параметров ресурсов vApp |
+| View OVF Environment | `VApp.ExtractOvfEnvironment` | Чтение окружения OVF виртуальной машины |
