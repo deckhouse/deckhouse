@@ -38,6 +38,7 @@ func TestSyncPackageRepositories(t *testing.T) {
 
 		repo := getRepository(t, cl, "external")
 		assert.NotContains(t, repo.Labels, "heritage", "the repository mirrors a user's module source, it is not deckhouse-owned")
+		assert.Equal(t, []metav1.OwnerReference{sourceOwnerReference(testModuleSource("external", ""))}, repo.OwnerReferences, "the source owns the repository")
 		assert.Equal(t, "HTTPS", repo.Spec.Registry.Scheme)
 		assert.Equal(t, "registry.example.io/external", repo.Spec.Registry.Repo)
 		assert.Equal(t, "ZG9ja2VyY2Zn", repo.Spec.Registry.DockerCFG)
@@ -104,9 +105,29 @@ func TestSyncPackageRepositories(t *testing.T) {
 		assert.Equal(t, 30*time.Minute, after.Spec.ScanInterval.Duration, "the scan interval survives")
 	})
 
+	t.Run("adopts an existing repository", func(t *testing.T) {
+		source := testModuleSource("external", "registry.example.io/external")
+		stale := sourceOwnerReference(source)
+		stale.UID = "external-old-uid"
+		existing := &v1alpha1.PackageRepository{
+			ObjectMeta: metav1.ObjectMeta{Name: "external", OwnerReferences: []metav1.OwnerReference{stale}},
+			Spec:       v1alpha1.PackageRepositorySpec{Registry: registryFromSource(source)},
+		}
+
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), existing, source)
+
+		require.NoError(t, s.sync(ctx))
+
+		after := getRepository(t, cl, existing.Name)
+		assert.Equal(t, []metav1.OwnerReference{sourceOwnerReference(source)}, after.OwnerReferences, "the reference to the source created again is replaced")
+	})
+
 	t.Run("keeps a repository matching the source untouched", func(t *testing.T) {
 		existing := &v1alpha1.PackageRepository{
-			ObjectMeta: metav1.ObjectMeta{Name: "external"},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:            "external",
+				OwnerReferences: []metav1.OwnerReference{sourceOwnerReference(testModuleSource("external", ""))},
+			},
 			Spec: v1alpha1.PackageRepositorySpec{
 				Registry: v1alpha1.PackageRepositorySpecRegistry{
 					Scheme:    "HTTPS",
