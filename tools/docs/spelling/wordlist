@@ -1094,11 +1094,14 @@ clusterIP
 clusterIssuer
 clusterIssuerName
 clusterIssues
+clusterlocal
+ClusterResourceGrant
+ClusterResourceGrantPolicy
+ClusterRoles
 clusterType
 clusterauthorizationrule
 clusterconfiguration
 clusterissuer
-clusterlocal
 cmctl
 cmp
 cni
@@ -1158,6 +1161,12 @@ de
 deckhouse
 defaultCRI
 defaultClusterStorageClass
+defragment
+defragmentation
+Defragmentation
+defragmenting
+Defragmenting
+delegatable
 descheduled
 descheduler
 descheduling
@@ -1561,6 +1570,9 @@ preload
 printf
 prioritization
 priorityClassName
+programmatically
+ProjectNamespace
+ProjectRoleBinding
 projectTypeName
 prometheus
 promtail
@@ -2315,6 +2327,7 @@ zoneTagCategory
 незапрошенных
 незашифрованном
 неизменяем
+неизменяемо
 неинтерактивном
 неймспейс
 неймспейса
@@ -2436,6 +2449,7 @@ zoneTagCategory
 переиспользования
 переиспользовать
 переиспользоваться
+переиспользуемый
 перенаправление
 перенаправления
 перенаправлениям
@@ -2491,6 +2505,7 @@ zoneTagCategory
 подсетям
 подсетями
 подсетях
+подсистемные
 покоммитное
 помотрим
 превью
@@ -2571,6 +2586,7 @@ zoneTagCategory
 рендеринге
 рендерится
 репликационным
+рендерятся
 реплицированного
 реплицированные
 реплицированных
