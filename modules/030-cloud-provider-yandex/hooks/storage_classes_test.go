@@ -44,6 +44,28 @@ cloudProviderYandex:
       - bar
 `
 
+		initValuesStringExcludeExactSSD = `
+global:
+  discovery: {}
+cloudProviderYandex:
+  internal: {}
+  storage:
+    parameters:
+      excludedStorageClasses:
+      - network-ssd
+`
+
+		initValuesStringExcludeSSDPrefix = `
+global:
+  discovery: {}
+cloudProviderYandex:
+  internal: {}
+  storage:
+    parameters:
+      excludedStorageClasses:
+      - network-ssd.*
+`
+
 		initValuesStringProvision = `
 global:
   discovery: {}
@@ -169,6 +191,58 @@ parameters:
   {
 	"name": "network-ssd-nonreplicated",
 	"type": "network-ssd-nonreplicated"
+  }
+]
+`))
+		})
+	})
+
+	x := HookExecutionConfigInit(initValuesStringExcludeExactSSD, `{}`)
+
+	Context("Cluster with an exact name in excludedStorageClasses", func() {
+		BeforeEach(func() {
+			x.BindingContexts.Set(x.GenerateBeforeHelmContext())
+			x.RunHook()
+		})
+
+		// Patterns are anchored, so `network-ssd` matches the whole name only and does not
+		// touch `network-ssd-nonreplicated`/`network-ssd-io-m3`.
+		It("Should exclude only the storageClass with exactly that name", func() {
+			Expect(x).To(ExecuteSuccessfully())
+			Expect(x.ValuesGet("cloudProviderYandex.internal.storageClasses").String()).To(MatchJSON(`
+[
+  {
+	"name": "network-hdd",
+	"type": "network-hdd"
+  },
+  {
+	"name": "network-ssd-io-m3",
+	"type": "network-ssd-io-m3"
+  },
+  {
+	"name": "network-ssd-nonreplicated",
+	"type": "network-ssd-nonreplicated"
+  }
+]
+`))
+		})
+	})
+
+	pr := HookExecutionConfigInit(initValuesStringExcludeSSDPrefix, `{}`)
+
+	Context("Cluster with a prefix pattern in excludedStorageClasses", func() {
+		BeforeEach(func() {
+			pr.BindingContexts.Set(pr.GenerateBeforeHelmContext())
+			pr.RunHook()
+		})
+
+		It("Should exclude every storageClass matching the pattern", func() {
+			Expect(pr).To(ExecuteSuccessfully())
+			Expect(pr.ValuesGet("cloudProviderYandex.internal.storageClasses").String()).To(MatchJSON(`
+[
+  {
+	"name": "network-hdd",
+	"type": "network-hdd"
   }
 ]
 `))

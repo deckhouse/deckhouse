@@ -262,11 +262,23 @@ type NATInstanceResources struct {
 // +deckhouse:DisableAdditionalProperties=true
 type StorageParameters struct {
 	// Defines additional StorageClasses or overrides the parameters of the ones created by default.
+	//
+	// A StorageClass created by default is overridden when its name matches the `name` field exactly.
 	// +deckhouse:ru:description:value="Определяет дополнительные StorageClass'ы или переопределяет параметры создаваемых по умолчанию."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="Создаваемый по умолчанию StorageClass переопределяется, если его имя точно совпадает со значением поля `name`."
 	// +optional
 	ProvisionedStorageClasses []ProvisionedStorageClass `json:"provisionedStorageClasses,omitempty"`
-	// List of storage classes to exclude from use in the cluster.
-	// +deckhouse:ru:description:value="Список классов хранения, исключаемых из использования в кластере."
+	// List of StorageClasses to exclude from use in the cluster.
+	//
+	// Each item is a regular expression matched against the whole StorageClass name: `network-ssd` excludes only the `network-ssd` StorageClass, while `network-ssd.*` excludes every StorageClass whose name starts with `network-ssd`.
+	//
+	// The list is applied after `provisionedStorageClasses`, so it also filters out the StorageClasses defined there.
+	// +deckhouse:ru:description:value="Список StorageClass'ов, исключаемых из использования в кластере."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="Каждый элемент — регулярное выражение, которое сопоставляется с именем StorageClass целиком: `network-ssd` исключает только StorageClass `network-ssd`, а `network-ssd.*` — все StorageClass'ы, имя которых начинается с `network-ssd`."
+	// +deckhouse:ru:description:value=
+	// +deckhouse:ru:description:value="Список применяется после `provisionedStorageClasses`, поэтому исключает и определённые в нём StorageClass'ы."
 	// +optional
 	ExcludedStorageClasses []string `json:"excludedStorageClasses,omitempty"`
 }

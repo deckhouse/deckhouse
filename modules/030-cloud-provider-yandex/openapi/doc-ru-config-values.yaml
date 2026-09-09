@@ -194,13 +194,19 @@ properties:
         properties:
           excludedStorageClasses:
             description: |
-              Список классов хранения, исключаемых из использования в кластере.
+              Список StorageClass'ов, исключаемых из использования в кластере.
+
+              Каждый элемент — регулярное выражение, которое сопоставляется с именем StorageClass целиком: `network-ssd` исключает только StorageClass `network-ssd`, а `network-ssd.*` — все StorageClass'ы, имя которых начинается с `network-ssd`.
+
+              Список применяется после `provisionedStorageClasses`, поэтому исключает и определённые в нём StorageClass'ы.
             items:
               type: string
             type: array
           provisionedStorageClasses:
             description: |
               Определяет дополнительные StorageClass'ы или переопределяет параметры создаваемых по умолчанию.
+
+              Создаваемый по умолчанию StorageClass переопределяется, если его имя точно совпадает со значением поля `name`.
             items:
               properties:
                 blockSize:
