@@ -72,11 +72,11 @@ type Params struct {
 }
 
 type Deps struct {
-	Alive    AliveLister
-	Expected ExpectedSnapshotter
-	States   StateStore
-	Events   EventRecorder
-	Now      func() time.Time
+	Alive       AliveLister
+	Expected    ExpectedSnapshotter
+	States      StateStore
+	Events      EventRecorder
+	Now         func() time.Time
 	CacheSynced func() bool
 }
 

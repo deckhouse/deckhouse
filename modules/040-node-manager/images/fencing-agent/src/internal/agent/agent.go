@@ -45,6 +45,10 @@ import (
 	v1alpha1 "fencing-agent/api/node-manager.deckhouse.io/v1alpha1"
 )
 
+const fencingCacheSyncGrace = 30 * time.Second
+
+const cacheSyncWarning = "FencingStateCacheNotSynced"
+
 type Agent struct {
 	cfg      *config.Config
 	deps     Deps
@@ -119,6 +123,10 @@ func (a *Agent) rejoinParams() rejoin.Params {
 		Interval:    a.sla.Rejoin.Interval.Duration,
 		MaxInterval: a.sla.Rejoin.MaxInterval.Duration,
 	}
+}
+
+func readiness(joined, watchdogReady, cacheSynced func() bool) func() bool {
+	return func() bool { return joined() && watchdogReady() && cacheSynced() }
 }
 
 func closed(barrier <-chan struct{}) func() bool {
@@ -246,9 +254,21 @@ func (a *Agent) Run(ctx context.Context) error {
 	g, gctx := errgroup.WithContext(ctx)
 
 	g.Go(func() error {
-		ready := func() bool { return joiner.Joined() && watchdogManager.Ready() }
+		ready := readiness(joiner.Joined, watchdogManager.Ready, closed(synced))
 
 		return health.NewServer(a.cfg.HealthProbeBindAddress, a.logger, ready, watchdogManager.Alive).Run(gctx)
+	})
+
+	g.Go(func() error {
+		select {
+		case <-gctx.Done():
+			return nil
+		case <-joined:
+		}
+
+		a.reportCacheSyncDelay(gctx, synced, fencingCacheSyncGrace, recorder.Warning)
+
+		return nil
 	})
 
 	g.Go(func() error {
@@ -363,4 +383,31 @@ func (a *Agent) Run(ctx context.Context) error {
 	a.logger.Info("fencing-agent stopped")
 
 	return nil
+}
+
+func (a *Agent) reportCacheSyncDelay(ctx context.Context, synced <-chan struct{}, grace time.Duration, warn func(reason, message string)) {
+	timer := time.NewTimer(grace)
+	defer timer.Stop()
+
+	select {
+	case <-ctx.Done():
+		return
+	case <-synced:
+		return
+	case <-timer.C:
+	}
+
+	a.logger.Error("the fencing state cache has not synced, this agent cannot record a failed peer of its NodeGroup",
+		"waited", grace.String(),
+	)
+	warn(cacheSyncWarning, fmt.Sprintf(
+		"The FencingFailedNodeState cache has not synced in %s: this agent cannot record a failed peer of its NodeGroup",
+		grace,
+	))
+
+	select {
+	case <-ctx.Done():
+	case <-synced:
+		a.logger.Info("the fencing state cache synced")
+	}
 }

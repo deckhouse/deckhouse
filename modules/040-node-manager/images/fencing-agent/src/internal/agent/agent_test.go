@@ -17,10 +17,12 @@ limitations under the License.
 package agent
 
 import (
+	"context"
 	"go/ast"
 	"go/parser"
 	"go/token"
 	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -299,4 +301,66 @@ func TestWatchdogIsArmedBehindTheJoinAndNothingElse(t *testing.T) {
 	if len(barriers) != 0 {
 		t.Errorf("the watchdog waits on %v: it is armed by the goroutine that opens the join barrier", barriers)
 	}
+}
+
+func TestReadinessNeedsTheInformerCache(t *testing.T) {
+	yes := func() bool { return true }
+	no := func() bool { return false }
+
+	cases := map[string]struct {
+		joined, watchdog, cache func() bool
+		want                    bool
+	}{
+		"all three":            {joined: yes, watchdog: yes, cache: yes, want: true},
+		"not joined":           {joined: no, watchdog: yes, cache: yes, want: false},
+		"watchdog policy down": {joined: yes, watchdog: no, cache: yes, want: false},
+		"cache never synced": {joined: yes, watchdog: yes, cache: no, want: false},
+	}
+
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			if got := readiness(tc.joined, tc.watchdog, tc.cache)(); got != tc.want {
+				t.Errorf("readiness = %v, want %v", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestCacheSyncDelayIsReportedOnceTheGraceExpires(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	var reasons []string
+
+	testAgent().reportCacheSyncDelay(ctx, make(chan struct{}), time.Millisecond, func(reason, message string) {
+		reasons = append(reasons, reason)
+
+		if !strings.Contains(message, "failed peer") {
+			t.Errorf("message = %q, want it to name the consequence", message)
+		}
+
+		cancel()
+	})
+
+	if !slices.Equal(reasons, []string{cacheSyncWarning}) {
+		t.Errorf("events = %v, want exactly one %s", reasons, cacheSyncWarning)
+	}
+}
+
+func TestCacheSyncWithinTheGraceIsSilent(t *testing.T) {
+	synced := make(chan struct{})
+	close(synced)
+
+	testAgent().reportCacheSyncDelay(t.Context(), synced, time.Minute, func(reason, _ string) {
+		t.Errorf("unexpected %s event for a cache that synced in time", reason)
+	})
+}
+
+func TestCacheSyncDelayStopsWithTheAgent(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	testAgent().reportCacheSyncDelay(ctx, make(chan struct{}), time.Minute, func(reason, _ string) {
+		t.Errorf("unexpected %s event on shutdown", reason)
+	})
 }

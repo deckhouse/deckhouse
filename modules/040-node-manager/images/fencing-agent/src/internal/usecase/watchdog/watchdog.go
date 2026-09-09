@@ -65,6 +65,7 @@ const (
 	reasonRefused         = "WatchdogRefused"
 	reasonStarvation      = "WatchdogStarvation"
 	reasonIdentityChanged = "NodeIdentityChanged"
+	reasonGateUndecided   = "WatchdogGateUndecided"
 )
 
 // Feeding states, used to log and event a transition exactly once.
@@ -84,6 +85,8 @@ const (
 	// livenessGrace floors the staleness window, so fast profiles do not fail
 	// /healthz on ordinary scheduler jitter.
 	livenessGrace = 5 * time.Second
+
+	verdictGrace = 5 * time.Second
 )
 
 // errFatal marks failures the agent must not survive: a watchdog that cannot be
@@ -101,10 +104,11 @@ type Deps struct {
 	Open func() (Device, error)
 	// Nowayout reports the kernel setting that makes Magic Close a no-op. It must
 	// not open the device.
-	Nowayout   func() (bool, error)
-	State      StateSource
-	Events     EventRecorder
+	Nowayout func() (bool, error)
+	State    StateSource
+	Events   EventRecorder
 	ShouldFeed func() (bool, string)
+	Now func() time.Time
 }
 
 type Manager struct {
@@ -123,13 +127,21 @@ type Manager struct {
 	// does not advertise it, or a disarm already failed. It is sticky, and from
 	// then on planned operations keep feeding.
 	cannotDisarm bool
+	// undecidedSince is when the gate last went provisional, zero while it has a
+	// verdict.
+	undecidedSince time.Time
 
-	started  atomic.Bool
-	ready    atomic.Bool
-	lastTick atomic.Int64
+	started       atomic.Bool
+	ready         atomic.Bool
+	gateUndecided atomic.Bool
+	lastTick      atomic.Int64
 }
 
 func New(params Params, deps Deps, logger *log.Logger) *Manager {
+	if deps.Now == nil {
+		deps.Now = time.Now
+	}
+
 	return &Manager{params: params, deps: deps, logger: logger}
 }
 
@@ -200,11 +212,8 @@ func (m *Manager) Close() {
 	m.ready.Store(false)
 }
 
-// Ready reports that the policy is being carried out: armed and fed, or disarmed
-// on purpose for a planned operation. It answers "is this agent healthy", not
-// "is fencing armed", so maintenance does not flap pod readiness.
 func (m *Manager) Ready() bool {
-	return m.started.Load() && m.ready.Load()
+	return m.started.Load() && m.ready.Load() && !m.gateUndecided.Load()
 }
 
 // Alive reports that the feed loop is still ticking. Diagnostics only: the probe
@@ -221,7 +230,7 @@ func (m *Manager) Alive() bool {
 		return true
 	}
 
-	return time.Since(time.Unix(0, last)) < max(3*m.params.FeedInterval, livenessGrace)
+	return m.deps.Now().Sub(time.Unix(0, last)) < max(3*m.params.FeedInterval, livenessGrace)
 }
 
 func (m *Manager) validate() error {
@@ -291,7 +300,12 @@ func (m *Manager) tick() error {
 		return m.applyState(stateMaintenance, strings.Join(snapshot.MaintenanceReasons, ","))
 	}
 
-	if feed, reason := m.deps.ShouldFeed(); !feed {
+	feed, reason := m.deps.ShouldFeed()
+
+	// A closed gate is a verdict too, so only an open gate can be provisional.
+	m.trackVerdict(feed && reason != "", reason)
+
+	if !feed {
 		m.starve(reason)
 
 		return nil
@@ -300,6 +314,43 @@ func (m *Manager) tick() error {
 	m.resumeFeeding()
 
 	return m.feed()
+}
+
+func (m *Manager) trackVerdict(provisional bool, reason string) {
+	if !provisional {
+		m.undecidedSince = time.Time{}
+
+		if m.gateUndecided.Swap(false) {
+			m.logger.Info("the feed gate reached a verdict")
+		}
+
+		return
+	}
+
+	now := m.deps.Now()
+
+	if m.undecidedSince.IsZero() {
+		m.undecidedSince = now
+
+		return
+	}
+
+	waited := now.Sub(m.undecidedSince)
+
+	if waited < max(4*m.params.FeedInterval, verdictGrace) || m.gateUndecided.Load() {
+		return
+	}
+
+	m.gateUndecided.Store(true)
+
+	m.logger.Error("the feed gate has no verdict, the watchdog keeps feeding on the start-up grace",
+		"reason", reason,
+		"waited", waited.String(),
+	)
+	m.deps.Events.Warning(reasonGateUndecided, fmt.Sprintf(
+		"Watchdog has been feeding without a fencing verdict for %s, this node cannot be fenced locally: %s",
+		waited.Truncate(time.Second), reason,
+	))
 }
 
 // applyState disarms the watchdog on purpose: maintenance or a planned removal.
@@ -538,7 +589,7 @@ func (m *Manager) recordFailure(err error) {
 }
 
 func (m *Manager) touch() {
-	m.lastTick.Store(time.Now().UnixNano())
+	m.lastTick.Store(m.deps.Now().UnixNano())
 }
 
 // wholeSeconds mirrors the rounding the device adapter applies, so the timeout
