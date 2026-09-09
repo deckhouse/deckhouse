@@ -5,5 +5,3 @@ positive:
         enabled: false
   values:
     - internal:
-        clusterAuthRuleCrds: []
-        authRuleCrds: []
