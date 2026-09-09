@@ -180,6 +180,9 @@ func matchesResource(ruleResources []string, resource string) bool {
 // not in the snapshot is only genuinely absent when its group was read successfully; otherwise the
 // snapshot has a hole there and the caller must keep failing closed.
 func (c *ResourceScopeCache) GroupUnavailable(group string) bool {
+	if c == nil {
+		return false
+	}
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	_, unavailable := c.unavailableGroups[group]

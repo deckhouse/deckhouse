@@ -208,24 +208,38 @@ func absent(err error) bool {
 	return errors.Is(err, cache.ErrNotFound) || errors.Is(err, cache.ErrResourceAbsent)
 }
 
-// reportRestricted logs the ordering guard once per subject and rule. The guard is evaluated on
-// every request, and an orphaned rule binding would otherwise log on every request of its subject,
-// forever - on the authorization path, behind the logger's process-wide lock.
+// reportRestricted logs the ordering guard once per rule. The guard is evaluated on every request,
+// and an orphaned rule binding would otherwise log on every request of its subject, forever - on
+// the authorization path, behind the logger's process-wide lock.
+//
+// The memo is keyed on the rule alone, not on the subject. A rule binds a Group as readily as a
+// User, so keying on the username would add a permanent entry for every distinct authenticated user
+// in that group - on a large OIDC cluster, during exactly the window where the guard is firing for
+// everyone, in a DaemonSet on every master. The rule name is what an operator needs; the first
+// username to hit it is in the message.
 func (h *Handler) reportRestricted(username, rule string) {
-	key := username + "\x00" + rule
-	if _, seen := h.reported.Load(key); seen {
+	if _, seen := h.reported.Load(rule); seen {
 		return
 	}
-	if _, loaded := h.reported.LoadOrStore(key, struct{}{}); loaded {
+	if _, loaded := h.reported.LoadOrStore(rule, struct{}{}); loaded {
 		return
 	}
-	h.logger.Printf("user %q is bound by rule %q the webhook has not observed binding it (rules synced: %v); restricting until the rule arrives", username, rule, h.rules.HasSynced())
+	h.logger.Printf("rule %q binds subjects the webhook has not observed it naming (first seen for %q; rules synced: %v); restricting them until the rule arrives", rule, username, h.rules.HasSynced())
 }
 
 // namespaceLabels returns the labels of a namespace for the namespaceSelector check.
+//
+// It refuses while the namespace cache is still filling. An empty cache answers "no such
+// namespace" for every name, which is indistinguishable from a namespace that genuinely has no
+// labels - and a selector like DoesNotExist matches that, so a selector would open namespaces it
+// was never evaluated against. The error denies instead. permission-browser's engine has always
+// checked this; the webhook stored the predicate and never consulted it.
 func (h *Handler) namespaceLabels(namespaceName string) (labels.Set, error) {
 	if h.nsLister == nil {
 		return nil, fmt.Errorf("namespace lister is not initialized")
+	}
+	if h.nsSynced != nil && !h.nsSynced() {
+		return nil, fmt.Errorf("namespace cache is not synced yet")
 	}
 
 	namespace, err := h.nsLister.Get(namespaceName)

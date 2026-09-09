@@ -18,6 +18,7 @@ package rules
 
 import (
 	"fmt"
+	"maps"
 	"strconv"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -228,9 +229,12 @@ func (b *Builder) Build(rules []Rule) (*Directory, Stats) {
 	b.cache.evict(inUse)
 
 	return d, Stats{
-		Rules:              len(rules),
-		Subjects:           len(d.users) + len(d.groups) + len(d.serviceAccounts),
-		Quarantined:        d.quarantined,
+		Rules:    len(rules),
+		Subjects: len(d.users) + len(d.groups) + len(d.serviceAccounts),
+		// A copy, for the same reason Quarantined() returns one: the directory is immutable
+		// once built, and Stats travels to observers and metric callbacks that must not be able
+		// to change what the running decision reads.
+		Quarantined:        maps.Clone(d.quarantined),
 		MaxResourceVersion: d.maxResourceVersion,
 	}
 }
