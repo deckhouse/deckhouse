@@ -19,12 +19,15 @@ package validation
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/Masterminds/semver/v3"
 	addonutils "github.com/flant/addon-operator/pkg/utils"
 	"github.com/flant/addon-operator/pkg/values/validation"
+	"github.com/go-openapi/spec"
 	kwhhttp "github.com/slok/kubewebhook/v2/pkg/http"
 	kwhmodel "github.com/slok/kubewebhook/v2/pkg/model"
 	kwhvalidating "github.com/slok/kubewebhook/v2/pkg/webhook/validating"
@@ -33,6 +36,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/apps"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/schedule"
+	packageschema "github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/values/schema"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 )
 
@@ -42,10 +46,17 @@ const maxApplicationNameLength = 24
 
 // applicationValidationHandler validates Application create and update requests.
 func applicationValidationHandler(cli client.Client, manager packageManager) http.Handler {
-	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, _ *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
+	vf := kwhvalidating.ValidatorFunc(func(ctx context.Context, review *kwhmodel.AdmissionReview, obj metav1.Object) (*kwhvalidating.ValidatorResult, error) {
 		app, ok := obj.(*v1alpha1.Application)
 		if !ok {
 			return nil, fmt.Errorf("expect Application as unstructured, got %T", obj)
+		}
+
+		// The previously stored object is what immutable settings fields are frozen
+		// against. It is only present on UPDATE; on CREATE every field is still free.
+		oldApp, err := extractOldApplication(review)
+		if err != nil {
+			return nil, err
 		}
 
 		// no sense to check already deleted app
@@ -78,7 +89,7 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 			warnings = res.Warnings
 		}
 
-		if err := validateAppAgainstApv(ctx, cli, manager, app); err != nil {
+		if err := validateAppAgainstApv(ctx, cli, manager, app, oldApp); err != nil {
 			// The denial message is the only feedback `kubectl apply` prints, and
 			// it arrives without the object it belongs to: name the Application
 			// and the package version whose requirements were evaluated, so the
@@ -114,7 +125,7 @@ func applicationValidationHandler(cli client.Client, manager packageManager) htt
 //
 // This is called during admission webhook validation to reject Applications whose
 // settings are malformed or whose cluster requirements are not satisfied.
-func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packageManager, app *v1alpha1.Application) error {
+func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packageManager, app, oldApp *v1alpha1.Application) error {
 	// Build the deterministic APV name from the Application's spec fields (repo, package, version).
 	name := v1alpha1.MakeApplicationPackageVersionName(app.Spec.PackageRepositoryName, app.Spec.PackageName, app.Spec.PackageVersion)
 
@@ -128,7 +139,7 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 		return fmt.Errorf("application package version '%s' is draft", name)
 	}
 
-	if err := validateAppSettings(apv, app); err != nil {
+	if err := validateAppSettings(apv, app, oldApp); err != nil {
 		return fmt.Errorf("validate settings: %w", err)
 	}
 
@@ -322,7 +333,9 @@ func validateAppAgainstApv(ctx context.Context, cli client.Client, manager packa
 // under the package name. Returns nil when the APV publishes no settings schema — the
 // webhook treats an absent schema as "nothing to validate" rather than a rejection,
 // so packages that ship without a schema remain installable.
-func validateAppSettings(apv *v1alpha1.ApplicationPackageVersion, app *v1alpha1.Application) error {
+//
+// On UPDATE it additionally enforces x-deckhouse-immutable against oldApp.
+func validateAppSettings(apv *v1alpha1.ApplicationPackageVersion, app, oldApp *v1alpha1.Application) error {
 	if apv.Status.PackageSchemas == nil {
 		return nil
 	}
@@ -332,18 +345,68 @@ func validateAppSettings(apv *v1alpha1.ApplicationPackageVersion, app *v1alpha1.
 		return nil
 	}
 
-	schema, err := json.Marshal(schemas.SettingsSchema.OpenAPIV3Schema)
+	rawSchema, err := json.Marshal(schemas.SettingsSchema.OpenAPIV3Schema)
 	if err != nil {
 		return fmt.Errorf("get settings schema: %w", err)
 	}
 
-	storage, err := validation.NewSchemaStorage(schema, nil)
+	storage, err := validation.NewSchemaStorage(rawSchema, nil)
 	if err != nil {
 		return fmt.Errorf("create storage schema: %w", err)
 	}
 
 	values := addonutils.Values{app.Spec.PackageName: app.Spec.Settings.GetMap()}
-	return storage.ValidateConfigValues(app.Spec.PackageName, values)
+	if err = storage.ValidateConfigValues(app.Spec.PackageName, values); err != nil {
+		return err
+	}
+
+	return checkImmutableSettings(storage.Schemas[validation.ConfigValuesSchema], app, oldApp)
+}
+
+// extractOldApplication decodes the stored object the admission request replaces.
+// Returns nil on CREATE, where there is nothing an immutable field could deviate from.
+func extractOldApplication(review *kwhmodel.AdmissionReview) (*v1alpha1.Application, error) {
+	if review == nil || review.Operation != kwhmodel.OperationUpdate || len(review.OldObjectRaw) == 0 {
+		return nil, nil
+	}
+
+	oldApp := new(v1alpha1.Application)
+	if err := json.Unmarshal(review.OldObjectRaw, oldApp); err != nil {
+		// Failing the request is the safe direction: silently skipping the check would
+		// turn a decoding glitch into a way past immutability.
+		return nil, fmt.Errorf("unmarshal old Application: %w", err)
+	}
+
+	return oldApp, nil
+}
+
+// checkImmutableSettings rejects an update that changes a settings field marked
+// x-deckhouse-immutable. Skipped when there is no previous object to compare against.
+func checkImmutableSettings(settingsSchema *spec.Schema, app, oldApp *v1alpha1.Application) error {
+	if oldApp == nil || settingsSchema == nil {
+		return nil
+	}
+
+	// Defaults go on both sides so that a key left out of the manifest compares equal
+	// to the value the application actually runs with — otherwise dropping the key
+	// would read as "never set" and slip past the check. ApplyDefaults mutates in
+	// place, which is safe here because GetMap decodes a fresh map on every call.
+	oldSettings := oldApp.Spec.Settings.GetMap()
+	newSettings := app.Spec.Settings.GetMap()
+	validation.ApplyDefaults(oldSettings, settingsSchema)
+	validation.ApplyDefaults(newSettings, settingsSchema)
+
+	errs := packageschema.CheckImmutable(settingsSchema, oldSettings, newSettings)
+	if len(errs) == 0 {
+		return nil
+	}
+
+	msgs := make([]string, 0, len(errs))
+	for _, err := range errs {
+		msgs = append(msgs, err.Error())
+	}
+
+	return errors.New(strings.Join(msgs, "; "))
 }
 
 // parsePackageConstraint parses the optional semver expression on a PackageConstraint,
