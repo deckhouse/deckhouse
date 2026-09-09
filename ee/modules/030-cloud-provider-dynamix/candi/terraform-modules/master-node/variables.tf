@@ -35,12 +35,9 @@ locals {
   image_name                = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "imageName", null)
   resource_group_name       = join("-", [local.resource_name_prefix, "rg"])
   kubernetes_data_disk_name = join("-", [local.master_node_name, "kubernetes-data"])
-  location                  = lookup(var.providerClusterConfiguration, "location", null)
-  storage_endpoint          = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "storageEndpoint", null)
-  pool                      = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "pool", null)
+  storage_policy            = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "storagePolicy", lookup(var.providerClusterConfiguration, "storagePolicy", null))
   extnet_name               = lookup(var.providerClusterConfiguration.masterNodeGroup.instanceClass, "externalNetwork", null)
   vins_name                 = join("-", [local.resource_name_prefix, "vins"])
-  driver                    = "KVM_X86"
   net_type_vins             = "VINS"
   net_type_extnet           = "EXTNET"
 
