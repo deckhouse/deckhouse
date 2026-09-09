@@ -358,6 +358,31 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		})
 	})
 
+	Context("Without enabledMultiTenancy", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd"]`)
+			f.HelmRender()
+		})
+
+		// user-authz-controller is rendered whether or not MultiTenancy is on, so the objects
+		// it needs — the namespace it lives in and the secret it pulls its image with — have
+		// to be unconditional as well. While they were gated, the release could not converge:
+		// server-side apply rejected the controller with `namespaces "d8-user-authz" not found`.
+		It("Should create the namespace and registry secret the controller needs", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesGlobalResource("Namespace", "d8-user-authz").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Secret", "d8-user-authz", "deckhouse-registry").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Deployment", "d8-user-authz", "user-authz-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("PodDisruptionBudget", "d8-user-authz", "user-authz-controller").Exists()).To(BeTrue())
+		})
+
+		It("Should not mirror the multitenancy state, so the webhook reads it as disabled", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "d8-user-authz-multitenancy-state").Exists()).To(BeFalse())
+		})
+	})
+
 	Context("Namespace access permissions based on edition", func() {
 		Context("EE edition (non-CE)", func() {
 			BeforeEach(func() {
