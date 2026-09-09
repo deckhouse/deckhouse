@@ -44,6 +44,11 @@ SECURITY_LABELS = {
 }
 
 CLUSTER_ADMIN_LABELS = {"can-assign-basic-max": "ClusterAdmin"}
+SYSTEM_MANAGER_LABELS = {
+    "can-assign-basic-max": "ClusterAdmin",
+    "can-assign-scope": "system",
+    "can-assign-max-level": "admin",
+}
 SUPER_LABELS = {
     "can-assign-basic-max": "SuperAdmin",
     "can-assign-scope": "system",
@@ -71,6 +76,13 @@ def default_catalog():
         entry("d8:subsystem:security:superadmin", rules=STAR_ALL),
         entry("d8:system:superadmin", rules=STAR_ALL),
         entry("d8:namespace:admin", rules=USERS_EDIT),
+        # the granular catalog: the ranges live on the system and subsystem managers
+        entry("d8:system:manager", rules=CAR_EDIT + USERS_EDIT, labels=SYSTEM_MANAGER_LABELS),
+        entry("d8:subsystem:security:manager", rules=CAR_EDIT + USERS_EDIT, labels=SECURITY_LABELS),
+        entry("d8:subsystem:security:viewer", rules=[]),
+        entry("d8:subsystem:networking:manager", rules=[]),
+        entry("d8:namespace:superadmin", rules=STAR_ALL),
+        entry("d8:system-capability:user-authz:edit", rules=CAR_EDIT),
     )
 
 
@@ -135,6 +147,73 @@ class TestDescribeAndRange(unittest.TestCase):
                          ["d8:subsystem:security:superadmin"])
         self.assertEqual(assign.can_assign(actor, ["d8:system:superadmin"], cat),
                          ["d8:system:superadmin"])
+
+    def test_granular_security_manager_range(self):
+        cat = default_catalog()
+        actor = ["d8:subsystem:security:manager"]
+        # basic levels up to ClusterAdmin
+        self.assertIsNone(assign.can_assign(actor, ["user-authz:cluster-admin"], cat))
+        self.assertEqual(assign.can_assign(actor, ["user-authz:super-admin"], cat), ["user-authz:super-admin"])
+        # security roles up to the manager level, nothing outside the subsystem
+        self.assertIsNone(assign.can_assign(actor, ["d8:subsystem:security:viewer"], cat))
+        self.assertIsNone(assign.can_assign(actor, ["d8:subsystem:security:manager"], cat))
+        self.assertEqual(assign.can_assign(actor, ["d8:subsystem:security:superadmin"], cat),
+                         ["d8:subsystem:security:superadmin"])
+        self.assertEqual(assign.can_assign(actor, ["d8:subsystem:networking:manager"], cat),
+                         ["d8:subsystem:networking:manager"])
+        # disasters stay out of reach
+        self.assertEqual(assign.can_assign(actor, ["cluster-admin"], cat), ["cluster-admin"])
+        self.assertEqual(assign.can_assign(actor, ["d8:system:superadmin"], cat), ["d8:system:superadmin"])
+        self.assertEqual(assign.can_assign(actor, ["d8:namespace:superadmin"], cat), ["d8:namespace:superadmin"])
+
+    def test_granular_system_manager_range(self):
+        cat = default_catalog()
+        actor = ["d8:system:manager"]
+        self.assertIsNone(assign.can_assign(actor, ["user-authz:cluster-admin"], cat))
+        self.assertIsNone(assign.can_assign(actor, ["d8:subsystem:security:manager"], cat))
+        self.assertIsNone(assign.can_assign(actor, ["d8:subsystem:networking:manager"], cat))
+        self.assertIsNone(assign.can_assign(actor, ["d8:system:manager"], cat))
+        self.assertEqual(assign.can_assign(actor, ["d8:system:superadmin"], cat), ["d8:system:superadmin"])
+        self.assertEqual(assign.can_assign(actor, ["user-authz:super-admin"], cat), ["user-authz:super-admin"])
+
+    def test_security_superadmin_range_stays_inside_its_subsystem(self):
+        cat = default_catalog()
+        cat["d8:subsystem:security:superadmin"] = entry("d8:subsystem:security:superadmin", rules=[], labels={
+            "can-assign-basic-max": "SuperAdmin",
+            "can-assign-scope": "subsystem",
+            "can-assign-subsystem": "security",
+            "can-assign-max-level": "superadmin",
+        })
+        cat["d8:subsystem:networking:superadmin"] = entry("d8:subsystem:networking:superadmin", rules=[])
+        actor = ["d8:subsystem:security:superadmin"]
+        # the basic disasters are within reach of any superadmin range
+        self.assertIsNone(assign.can_assign(actor, ["user-authz:super-admin"], cat))
+        self.assertIsNone(assign.can_assign(actor, ["cluster-admin"], cat))
+        # its own subsystem up to superadmin
+        self.assertIsNone(assign.can_assign(actor, ["d8:subsystem:security:superadmin"], cat))
+        self.assertIsNone(assign.can_assign(actor, ["d8:subsystem:security:manager"], cat))
+        # superadmin roles of another scope are not
+        self.assertEqual(assign.can_assign(actor, ["d8:system:superadmin"], cat), ["d8:system:superadmin"])
+        self.assertEqual(assign.can_assign(actor, ["d8:subsystem:networking:superadmin"], cat),
+                         ["d8:subsystem:networking:superadmin"])
+        self.assertEqual(assign.can_assign(actor, ["d8:namespace:superadmin"], cat), ["d8:namespace:superadmin"])
+
+    def test_system_superadmin_range_reaches_every_superadmin_role(self):
+        cat = default_catalog()
+        cat["d8:system:superadmin"] = entry("d8:system:superadmin", rules=[], labels=SUPER_LABELS)
+        cat["d8:subsystem:networking:superadmin"] = entry("d8:subsystem:networking:superadmin", rules=[])
+        actor = ["d8:system:superadmin"]
+        for target in ["cluster-admin", "user-authz:super-admin", "d8:system:superadmin",
+                       "d8:subsystem:security:superadmin", "d8:subsystem:networking:superadmin",
+                       "d8:namespace:superadmin"]:
+            self.assertIsNone(assign.can_assign(actor, [target], cat), target)
+
+    def test_capability_carries_no_range(self):
+        # capabilities cannot be bound through a ClusterRoleBinding and carry no range: a subject
+        # holding only the user-authz edit capability assigns nothing it does not cover
+        cat = default_catalog()
+        self.assertEqual(assign.can_assign(["d8:system-capability:user-authz:edit"], ["user-authz:user"], cat),
+                         ["user-authz:user"])
 
     def test_empty_target_allows(self):
         self.assertIsNone(assign.can_assign([], [], default_catalog()))

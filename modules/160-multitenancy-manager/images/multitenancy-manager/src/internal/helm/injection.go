@@ -28,7 +28,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"controller/apis/deckhouse.io/v1alpha1"
-	"controller/apis/deckhouse.io/v1alpha2"
+	"controller/apis/deckhouse.io/v1alpha3"
 )
 
 // ErrParameterInjection is returned when a project parameter does not stay a value in the rendered
@@ -43,7 +43,7 @@ var lineBreakToSpace = strings.NewReplacer("\n", " ", "\r", " ", "\u0085", " ", 
 
 // ensureParametersStayValues renders the template and checks that no parameter became structure in
 // it. Callers that have the render already should use ensureRenderedParametersStayValues.
-func (c *Client) ensureParametersStayValues(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate) error {
+func (c *Client) ensureParametersStayValues(project *v1alpha3.Project, template *v1alpha1.ProjectTemplate) error {
 	if _, carries := sanitizedParameters(project); !carries {
 		return nil
 	}
@@ -83,7 +83,7 @@ func (c *Client) ensureParametersStayValues(project *v1alpha2.Project, template 
 // (fromYaml) is refused as well: it does turn the parameter into structure, and nothing here can
 // tell that structure from an injected one. That is why the check runs where a release is about to
 // be applied rather than on every reconcile -- a project that already reconciled is left alone.
-func (c *Client) ensureRenderedParametersStayValues(project *v1alpha2.Project, template *v1alpha1.ProjectTemplate, actual string) error {
+func (c *Client) ensureRenderedParametersStayValues(project *v1alpha3.Project, template *v1alpha1.ProjectTemplate, actual string) error {
 	parameters, carries := sanitizedParameters(project)
 	if !carries {
 		return nil
@@ -126,7 +126,7 @@ func (c *Client) ensureRenderedParametersStayValues(project *v1alpha2.Project, t
 // sanitizedParameters returns the parameters with their line breaks replaced, and whether they
 // carried any. Nothing in them that can end a scalar means the second render would repeat the first,
 // so the check has nothing to compare.
-func sanitizedParameters(project *v1alpha2.Project) (map[string]any, bool) {
+func sanitizedParameters(project *v1alpha3.Project) (map[string]any, bool) {
 	// A project without parameters is answered separately: the rewrite turns no parameters into
 	// empty ones, and DeepEqual does not call an empty map equal to a nil one.
 	if len(project.Spec.Parameters) == 0 {

@@ -26,10 +26,20 @@ var skipDocRe = regexp.MustCompile(`doc-ru-.+\.y[a]?ml$|_RU\.md$|\.ru\.md$|\.ru\
 var skipI18NRe = regexp.MustCompile(`/i18n/`)
 var skipSelfRe = regexp.MustCompile(`no_cyrillic(_test)?.go$`)
 
+// RBACv2 templates ship the localized metadata of the objects they define: every
+// capability and role carries ru.meta.deckhouse.io/{title,description} annotations,
+// which the platform and the UI show to Russian-speaking users.
+var skipRBACv2Re = regexp.MustCompile(`/templates/rbacv2[^/]*/`)
+
 var skipFiles = map[string]struct{}{
 	"modules/040-control-plane-manager/hooks/audit_policy.go":    {}, // The code contains a description in Russian and English in the body of each object. This is necessary for autodoc.
 	"tools/audit_policy/templates/short_block_ru.gotmpl":         {}, // Gotemplate for autodoc, contain russian text
 	"tools/audit_policy/templates/detailed_rules_page_ru.gotmpl": {}, // Gotemplate for autodoc, contain russian text
+	// The three spell out the Russian titles and descriptions a module has to put on its
+	// RBACv2 objects, so the Russian is the payload rather than a slip.
+	"modules/140-user-authz/docs/internal/RBACV2_MODULE_MIGRATION.md":        {},
+	"modules/140-user-authz/docs/internal/RBACV2_MODULE_MIGRATION_PROMPT.md": {},
+	"modules/140-user-authz/docs/internal/rbacv2-migrate-module.sh":          {},
 }
 
 func RunNoCyrillicValidation(info *DiffInfo, title string, description string) (exitCode int) {
@@ -99,6 +109,11 @@ func RunNoCyrillicValidation(info *DiffInfo, title string, description string) (
 
 			if skipSelfRe.MatchString(fileName) {
 				msgs.Add(NewSkip(fileName, "self"))
+				continue
+			}
+
+			if skipRBACv2Re.MatchString(fileName) {
+				msgs.Add(NewSkip(fileName, "localized role metadata"))
 				continue
 			}
 

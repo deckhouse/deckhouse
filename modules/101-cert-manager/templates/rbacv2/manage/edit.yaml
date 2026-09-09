@@ -6,10 +6,16 @@ metadata:
     heritage: deckhouse
     module: cert-manager
     rbac.deckhouse.io/aggregate-to-security-as: manager
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.cert-manager.edit"
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-cert-manager
-  name: d8:manage:permission:module:cert-manager:edit
+  name: d8:system-capability:cert-manager:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module cert-manager: edit configuration"
+    ru.meta.deckhouse.io/title: "Модуль cert-manager: управление конфигурацией"
+    en.meta.deckhouse.io/description: "Manage the cert-manager module configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля cert-manager."
 rules:
 - apiGroups:
   - cert-manager.io

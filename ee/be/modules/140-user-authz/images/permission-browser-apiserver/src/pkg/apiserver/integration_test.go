@@ -15,7 +15,9 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	rbacv1 "k8s.io/api/rbac/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apiserver/pkg/authentication/user"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	"k8s.io/apiserver/pkg/endpoints/request"
@@ -26,6 +28,7 @@ import (
 	"permission-browser-apiserver/pkg/authorizer/composite"
 	"permission-browser-apiserver/pkg/authorizer/rbacadapter"
 	"permission-browser-apiserver/pkg/registry"
+	"permission-browser-apiserver/pkg/resolver"
 )
 
 // TestIntegration_BulkSARWithFakeClient tests the full flow with fake Kubernetes client
@@ -628,6 +631,108 @@ func TestIntegration_LargeBulkRequest(t *testing.T) {
 	// Performance check - should complete in reasonable time
 	assert.Less(t, duration, 5*time.Second, "100 checks should complete in under 5 seconds")
 	t.Logf("100 authorization checks completed in %v", duration)
+}
+
+// TestIntegration_SubjectAccessReport walks the whole SubjectAccessReport path
+// with fake clients: informers -> resolver -> REST storage. It is the guard
+// against wiring regressions that unit tests of the parts cannot catch.
+func TestIntegration_SubjectAccessReport(t *testing.T) {
+	objects := []runtime.Object{
+		&rbacv1.ClusterRole{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "d8:system:manager",
+				Labels:      map[string]string{"rbac.deckhouse.io/kind": "role", "rbac.deckhouse.io/scope": "system"},
+				Annotations: map[string]string{"en.meta.deckhouse.io/title": "System Manager"},
+			},
+			Rules: []rbacv1.PolicyRule{
+				{APIGroups: []string{""}, Resources: []string{"pods"}, Verbs: []string{"get", "list"}},
+			},
+		},
+		&rbacv1.ClusterRoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "managers"},
+			RoleRef:    rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: "d8:system:manager"},
+			Subjects:   []rbacv1.Subject{{Kind: rbacv1.GroupKind, Name: "ops"}},
+		},
+		&rbacv1.Role{
+			ObjectMeta: metav1.ObjectMeta{Name: "local-editor", Namespace: "team-a"},
+			Rules: []rbacv1.PolicyRule{
+				{APIGroups: []string{"apps"}, Resources: []string{"deployments"}, Verbs: []string{"update"}},
+			},
+		},
+		&rbacv1.RoleBinding{
+			ObjectMeta: metav1.ObjectMeta{Name: "local-editor", Namespace: "team-a"},
+			RoleRef:    rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "Role", Name: "local-editor"},
+			Subjects:   []rbacv1.Subject{{Kind: rbacv1.UserKind, Name: "alice"}},
+		},
+	}
+
+	client := fake.NewSimpleClientset(objects...)
+	informerFactory := informers.NewSharedInformerFactory(client, 0)
+	rbacInformers := informerFactory.Rbac().V1()
+
+	subjectAccess := resolver.NewSubjectAccessResolver(
+		rbacInformers.Roles().Lister(),
+		rbacInformers.RoleBindings().Lister(),
+		rbacInformers.ClusterRoles().Lister(),
+		rbacInformers.ClusterRoleBindings().Lister(),
+		nil,
+		nil,
+		nil,
+	)
+
+	stopCh := make(chan struct{})
+	defer close(stopCh)
+	informerFactory.Start(stopCh)
+	informerFactory.WaitForCacheSync(stopCh)
+
+	storages := registry.GetStorage(registry.Storages{
+		Authorizer:    rbacadapter.NewRBACAuthorizer(informerFactory),
+		SubjectAccess: subjectAccess,
+	})
+
+	storage, ok := storages["subjectaccessreports"].(*registry.SubjectAccessStorage)
+	require.True(t, ok, "SubjectAccessReport storage must be registered")
+
+	// The caller reports on somebody else, which the RBAC authorizer above
+	// denies: only a self report is possible without an explicit grant.
+	_, err := storage.Create(createTestContext("observer", nil), &v1alpha1.SubjectAccessReport{
+		Spec: v1alpha1.SubjectAccessReportSpec{
+			Subject: &v1alpha1.SubjectReference{Kind: v1alpha1.SubjectKindUser, Name: "alice"},
+		},
+	}, nil, nil)
+	require.Error(t, err)
+	assert.True(t, apierrors.IsForbidden(err))
+
+	result, err := storage.Create(createTestContext("alice", []string{"ops"}), &v1alpha1.SubjectAccessReport{}, nil, nil)
+	require.NoError(t, err)
+
+	report, ok := result.(*v1alpha1.SubjectAccessReport)
+	require.True(t, ok)
+
+	assert.Equal(t, "alice", report.Status.Subject.Name)
+	require.Len(t, report.Status.RoleAssignments, 2)
+
+	var clusterScope, namespaceScope *v1alpha1.AccessScope
+	for i := range report.Status.Scopes {
+		if report.Status.Scopes[i].Cluster {
+			clusterScope = &report.Status.Scopes[i]
+			continue
+		}
+		namespaceScope = &report.Status.Scopes[i]
+	}
+
+	require.NotNil(t, clusterScope, "the group grant must produce a cluster scope")
+	require.Len(t, clusterScope.Resources, 1)
+	assert.Equal(t, "pods", clusterScope.Resources[0].Resource)
+	require.Len(t, clusterScope.Resources[0].Sources, 1)
+	assert.Equal(t, "Group", clusterScope.Resources[0].Sources[0].MatchedBy.Kind)
+	assert.Equal(t, "System Manager", clusterScope.Resources[0].Sources[0].Role.Titles["en"])
+
+	require.NotNil(t, namespaceScope, "the RoleBinding must produce a namespace scope")
+	assert.Equal(t, []string{"team-a"}, namespaceScope.Namespaces)
+	require.Len(t, namespaceScope.Resources, 1)
+	assert.Equal(t, "deployments", namespaceScope.Resources[0].Resource)
+	assert.Equal(t, "User", namespaceScope.Resources[0].Sources[0].MatchedBy.Kind)
 }
 
 // Helper functions and mocks

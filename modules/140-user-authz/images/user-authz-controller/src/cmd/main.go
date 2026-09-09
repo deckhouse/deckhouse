@@ -28,7 +28,6 @@ import (
 	"github.com/go-logr/logr"
 	"go.uber.org/zap/zapcore"
 	rbacv1 "k8s.io/api/rbac/v1"
-	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -139,9 +138,10 @@ func newManagerOptions(scheme *runtime.Scheme) manager.Options {
 	// Every (Cluster)RoleBinding is cached: the dict and manage reconcilers derive their state from
 	// user-created bindings too. managedFields are stripped to keep the informers small, and the
 	// reconcilers read through field indexes so that a reconcile never copies the whole cache.
-	// ClusterRoles are cached only for the manage roles the manage-bindings reconciler resolves.
+	// ClusterRoles are cached only for the system and subsystem scopes the manage-bindings reconciler
+	// resolves.
 	manageRoles := cache.ByObject{
-		Label: labels.SelectorFromSet(labels.Set(managebindings.ManageRoleLabels)),
+		Label: managebindings.ManageRoleSelector,
 	}
 
 	// Leader election is always on: even a single-replica Deployment has two pods during a rolling

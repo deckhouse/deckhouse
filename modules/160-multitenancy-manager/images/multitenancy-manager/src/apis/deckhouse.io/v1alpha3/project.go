@@ -1,0 +1,481 @@
+/*
+Copyright 2026 Flant JSC
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
+package v1alpha3
+
+import (
+	"bytes"
+	"encoding/json"
+	"slices"
+
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
+)
+
+const (
+	ProjectStateError    = "Error"
+	ProjectStateDeployed = "Deployed"
+
+	ProjectConditionProjectTemplateFound      = "ProjectTemplateFound"
+	ProjectConditionProjectValidated          = "Validated"
+	ProjectConditionProjectResourcesUpgraded  = "ResourcesUpgraded"
+	ProjectConditionStandardFieldsApplied     = "StandardFieldsApplied"
+	ProjectConditionTemplateResourcesFiltered = "TemplateResourcesFiltered"
+	ProjectConditionTemplateRolesAllowed      = "TemplateRolesAllowed"
+
+	ProjectAnnotationRequireSync = "projects.deckhouse.io/require-sync"
+
+	ProjectFinalizer = "projects.deckhouse.io/project-exists"
+
+	ProjectLabelVirtualProject = "projects.deckhouse.io/virtual-project"
+
+	ResourceLabelProject  = "projects.deckhouse.io/project"
+	ResourceLabelTemplate = "projects.deckhouse.io/project-template"
+
+	ResourceLabelSkipHeritage = "projects.deckhouse.io/skip-heritage-label"
+	ResourceLabelUnmanaged    = "projects.deckhouse.io/unmanaged"
+
+	ResourceLabelHeritage        = "heritage"
+	ResourceHeritageMultitenancy = "multitenancy-manager"
+	ResourceHeritageDeckhouse    = "deckhouse"
+
+	// ResourceLabelManagedBy with value ManagedByController marks objects that the controller
+	// creates from the Project standard fields (administrators, quota). Such objects must not be
+	// edited or removed by users; only the controller reconciles them.
+	ResourceLabelManagedBy = "projects.deckhouse.io/managed-by"
+	ManagedByController    = "controller"
+
+	NamespaceAnnotationAdopt = "projects.deckhouse.io/adopt"
+
+	// ProjectLabelManagedByNamespace marks a Project that the controller auto-created to wrap a
+	// user-created namespace while allowNamespacesWithoutProjects is enabled. The namespace is the
+	// source of truth: such a project's spec is controller-managed and the project webhook rejects
+	// manual spec edits, except for removing this label, which detaches the project.
+	ProjectLabelManagedByNamespace = "multitenancy.deckhouse.io/project-managed-by-namespace"
+	ManagedByNamespace             = "true"
+
+	// NamespaceFinalizerManagedProject is set on a user namespace wrapped into a
+	// managed-by-namespace Project, so the controller observes the namespace deletion (namespaces
+	// usually carry no finalizer and would vanish before a delete event is processed) and cascades
+	// it to the managed Project before the namespace disappears.
+	NamespaceFinalizerManagedProject = "multitenancy.deckhouse.io/managed-project"
+
+	ReleaseLabelHashsum = "hashsum"
+
+	// Names of the controller-managed standard-field objects in the project namespace.
+	ProjectQuotaName              = "d8-project-quota"
+	ProjectAdministratorsBinding  = "d8-administrators"
+	ProjectAdministratorsRoleName = "d8:project:admin"
+)
+
+// Namespace kinds in the project status.
+const (
+	NamespaceKindMain       = "Main"
+	NamespaceKindAdditional = "Additional"
+)
+
+const (
+	ProjectKind     = "Project"
+	ProjectResource = "projects"
+)
+
+var _ runtime.Object = &Project{}
+
+type ProjectList struct {
+	metav1.TypeMeta `json:",inline"`
+	metav1.ListMeta `json:"metadata,omitempty"`
+	Items           []Project `json:"items"`
+}
+
+var _ runtime.Object = &ProjectList{}
+
+func (p *ProjectList) DeepCopyObject() runtime.Object {
+	return p.DeepCopy()
+}
+func (p *ProjectList) DeepCopy() *ProjectList {
+	if p == nil {
+		return nil
+	}
+	newObj := new(ProjectList)
+	p.DeepCopyInto(newObj)
+	return newObj
+}
+func (p *ProjectList) DeepCopyInto(newObj *ProjectList) {
+	*newObj = *p
+	newObj.TypeMeta = p.TypeMeta
+	p.ListMeta.DeepCopyInto(&newObj.ListMeta)
+	if p.Items != nil {
+		in, out := &p.Items, &newObj.Items
+		*out = make([]Project, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+}
+
+type Project struct {
+	metav1.TypeMeta   `json:",inline"`
+	metav1.ObjectMeta `json:"metadata,omitempty"`
+
+	Spec   ProjectSpec   `json:"spec,omitempty"`
+	Status ProjectStatus `json:"status,omitempty"`
+}
+
+func (p *Project) DeepCopyObject() runtime.Object {
+	return p.DeepCopy()
+}
+func (p *Project) DeepCopy() *Project {
+	if p == nil {
+		return nil
+	}
+	newObj := Project{}
+	p.DeepCopyInto(&newObj)
+	return &newObj
+}
+func (p *Project) DeepCopyInto(newObj *Project) {
+	*newObj = *p
+	p.ObjectMeta.DeepCopyInto(&newObj.ObjectMeta)
+	p.Spec.DeepCopyInto(&newObj.Spec)
+	p.Status.DeepCopyInto(&newObj.Status)
+}
+
+// Administrator is a user or group that gets the d8:project:admin role in the project.
+type Administrator struct {
+	// Kind of the subject: User or Group.
+	Kind string `json:"kind"`
+	// Name of the subject.
+	Name string `json:"name"`
+}
+
+type ProjectSpec struct {
+	// Description of the Project
+	Description string `json:"description,omitempty"`
+
+	// Name of ProjectTemplate to use to create Project. Optional: when empty, the controller
+	// only ensures the project namespace and the standard fields (administrators, quota).
+	ProjectTemplateName string `json:"projectTemplateName,omitempty"`
+
+	// Administrators of the project. The controller grants each of them the d8:project:admin role
+	// via an auto-managed ProjectRoleBinding.
+	Administrators []Administrator `json:"administrators,omitempty"`
+
+	// Quota is the resource quota of the project, applied as a ResourceQuota in the project namespace.
+	// Keys/values follow the ResourceQuota.spec.hard format (e.g. requests.cpu: "100").
+	Quota corev1.ResourceList `json:"quota,omitempty"`
+
+	// Values for resource templates from ProjectTemplate
+	// in helm values format that map to the open-api specification
+	// from the ValuesSchema ProjectTemplate field
+	Parameters map[string]any `json:"parameters,omitempty"`
+}
+
+func (p *ProjectSpec) DeepCopy() *ProjectSpec {
+	if p == nil {
+		return nil
+	}
+	newObj := new(ProjectSpec)
+	p.DeepCopyInto(newObj)
+	return newObj
+}
+func (p *ProjectSpec) DeepCopyInto(newObj *ProjectSpec) {
+	*newObj = *p
+	if p.Administrators != nil {
+		newObj.Administrators = make([]Administrator, len(p.Administrators))
+		copy(newObj.Administrators, p.Administrators)
+	}
+	if p.Quota != nil {
+		newObj.Quota = p.Quota.DeepCopy()
+	}
+	if p.Parameters != nil {
+		// Parameters hold arbitrary JSON (nested maps/slices) from the template values, so a
+		// shallow per-key copy would share nested references with the cached object. DeepCopyJSON
+		// performs a full recursive copy.
+		newObj.Parameters = runtime.DeepCopyJSON(p.Parameters)
+	}
+}
+
+// NamespaceStatus describes a single namespace that belongs to the project.
+type NamespaceStatus struct {
+	// Name of the namespace.
+	Name string `json:"name"`
+	// Kind of the namespace: Main or Additional.
+	Kind string `json:"kind,omitempty"`
+}
+
+// UnmarshalJSON keeps backward compatibility with projects whose status.namespaces was stored by
+// older controllers as a list of plain namespace-name strings (e.g. ["foo","foo-bar"]). Without this
+// the typed client fails to decode such objects on LIST/WATCH ("cannot unmarshal string into ...
+// NamespaceStatus"), which prevents the cache from syncing and crashes the controller at startup.
+func (n *NamespaceStatus) UnmarshalJSON(data []byte) error {
+	trimmed := bytes.TrimSpace(data)
+	if len(trimmed) > 0 && trimmed[0] == '"' {
+		var name string
+		if err := json.Unmarshal(trimmed, &name); err != nil {
+			return err
+		}
+		n.Name = name
+		n.Kind = ""
+		return nil
+	}
+
+	// Use an alias to avoid recursing into this method for the object form.
+	type alias NamespaceStatus
+	var decoded alias
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	*n = NamespaceStatus(decoded)
+	return nil
+}
+
+type ProjectStatus struct {
+	// Used namespaces
+	Namespaces []NamespaceStatus `json:"namespaces,omitempty"`
+
+	// Usage is the current utilization of the project quota.
+	Usage corev1.ResourceList `json:"usage,omitempty"`
+
+	// Rendered resources
+	Resources map[string]map[string]ResourceKind `json:"resources,omitempty"`
+
+	// Observed generation
+	ObservedGeneration int64 `json:"observedGeneration,omitempty"`
+
+	// Template generation
+	TemplateGeneration int64 `json:"templateGeneration,omitempty"`
+
+	// Project conditions
+	Conditions []Condition `json:"conditions,omitempty"`
+
+	// Current state.
+	State string `json:"state,omitempty"`
+}
+
+func (p *Project) SetState(state string) {
+	p.Status.State = state
+}
+
+func (p *Project) SetObservedGeneration(generation int64) {
+	p.Status.ObservedGeneration = generation
+}
+
+func (p *Project) SetTemplateGeneration(generation int64) {
+	p.Status.TemplateGeneration = generation
+}
+
+func (p *Project) AddResource(obj *unstructured.Unstructured, installed bool) {
+	if p.Status.Resources == nil {
+		p.Status.Resources = make(map[string]map[string]ResourceKind)
+	}
+
+	if _, exists := p.Status.Resources[obj.GetAPIVersion()]; !exists {
+		p.Status.Resources[obj.GetAPIVersion()] = make(map[string]ResourceKind)
+	}
+
+	if existing, ok := p.Status.Resources[obj.GetAPIVersion()][obj.GetKind()]; ok {
+		if !slices.Contains(existing.Names, obj.GetName()) {
+			existing.Names = append(existing.Names, obj.GetName())
+		}
+		existing.Installed = installed
+		p.Status.Resources[obj.GetAPIVersion()][obj.GetKind()] = existing
+		return
+	}
+
+	p.Status.Resources[obj.GetAPIVersion()][obj.GetKind()] = ResourceKind{
+		Installed: installed,
+		Names:     []string{obj.GetName()},
+	}
+}
+
+func (p *ProjectStatus) DeepCopy() *ProjectStatus {
+	if p == nil {
+		return nil
+	}
+	newObj := new(ProjectStatus)
+	p.DeepCopyInto(newObj)
+	return newObj
+}
+func (p *ProjectStatus) DeepCopyInto(newObj *ProjectStatus) {
+	*newObj = *p
+	if p.Conditions != nil {
+		in, out := &p.Conditions, &newObj.Conditions
+		*out = make([]Condition, len(*in))
+		for i := range *in {
+			(*in)[i].DeepCopyInto(&(*out)[i])
+		}
+	}
+	if p.Namespaces != nil {
+		in, out := &p.Namespaces, &newObj.Namespaces
+		*out = make([]NamespaceStatus, len(*in))
+		copy(*out, *in)
+	}
+	if p.Usage != nil {
+		newObj.Usage = p.Usage.DeepCopy()
+	}
+	if p.Resources != nil {
+		newObj.Resources = make(map[string]map[string]ResourceKind, len(p.Resources))
+		for outerKey, innerMap := range p.Resources {
+			if innerMap == nil {
+				newObj.Resources[outerKey] = nil
+				continue
+			}
+
+			newInnerMap := make(map[string]ResourceKind, len(innerMap))
+			for innerKey, resourceKind := range innerMap {
+				var newResourceKind ResourceKind
+				resourceKind.DeepCopyInto(&newResourceKind)
+				newInnerMap[innerKey] = newResourceKind
+			}
+			newObj.Resources[outerKey] = newInnerMap
+		}
+	}
+}
+
+type ResourceKind struct {
+	Installed bool     `json:"installed"`
+	Names     []string `json:"names,omitempty"`
+}
+
+func (o *ResourceKind) DeepCopyInto(newObj *ResourceKind) {
+	*newObj = *o
+	if o.Names != nil {
+		newObj.Names = make([]string, len(o.Names))
+		copy(newObj.Names, o.Names)
+	}
+}
+
+type Condition struct {
+	// Type is the type of the condition.
+	Type string `json:"type,omitempty"`
+	// Human-readable message indicating details about last transition.
+	Message string `json:"message,omitempty"`
+	// Status is the status of the condition.
+	// Can be True, False, Unknown.
+	Status corev1.ConditionStatus `json:"status,omitempty"`
+	// Timestamp of when the condition was last probed.
+	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty"`
+	// Last time the condition transitioned from one status to another.
+	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
+}
+
+func (p *Project) ClearConditions() {
+	p.Status.Conditions = []Condition{}
+}
+
+// IsConditionFalse reports whether the named condition is present and set to False.
+func (p *Project) IsConditionFalse(condName string) bool {
+	for _, cond := range p.Status.Conditions {
+		if cond.Type == condName {
+			return cond.Status == corev1.ConditionFalse
+		}
+	}
+	return false
+}
+
+func (p *Project) SetConditionTrue(condName string) {
+	for idx, cond := range p.Status.Conditions {
+		if cond.Type == condName {
+			p.Status.Conditions[idx].LastProbeTime = metav1.Now()
+			if cond.Status == corev1.ConditionFalse {
+				p.Status.Conditions[idx].LastTransitionTime = metav1.Now()
+				p.Status.Conditions[idx].Status = corev1.ConditionTrue
+			}
+			p.Status.Conditions[idx].Message = ""
+			return
+		}
+	}
+
+	p.Status.Conditions = append(p.Status.Conditions, Condition{
+		Type:               condName,
+		Status:             corev1.ConditionTrue,
+		LastProbeTime:      metav1.Now(),
+		LastTransitionTime: metav1.Now(),
+	})
+}
+
+func (p *Project) SetConditionFalse(condName, message string) {
+	for idx, cond := range p.Status.Conditions {
+		if cond.Type == condName {
+			p.Status.Conditions[idx].LastProbeTime = metav1.Now()
+			if cond.Status == corev1.ConditionTrue {
+				p.Status.Conditions[idx].LastTransitionTime = metav1.Now()
+				p.Status.Conditions[idx].Status = corev1.ConditionFalse
+			}
+			if cond.Message != message {
+				p.Status.Conditions[idx].Message = message
+			}
+			return
+		}
+	}
+
+	p.Status.Conditions = append(p.Status.Conditions, Condition{
+		Type:               condName,
+		Status:             corev1.ConditionFalse,
+		Message:            message,
+		LastProbeTime:      metav1.Now(),
+		LastTransitionTime: metav1.Now(),
+	})
+}
+
+// SetCondition adds or updates the named condition in the list, mirroring the transition semantics
+// of the Project condition helpers above: LastTransitionTime changes only on a real Status
+// transition, while LastProbeTime tracks the latest meaningful change. It reports whether the slice
+// was modified, so a caller can skip a no-op status write (and the reconcile it would re-trigger).
+// It is the single condition helper shared by the ProjectRoleBinding, ClusterProjectRoleBinding and
+// ProjectNamespace reconcilers.
+func SetCondition(conditions *[]Condition, condType string, status corev1.ConditionStatus, message string) bool {
+	now := metav1.Now()
+	for i := range *conditions {
+		cond := &(*conditions)[i]
+		if cond.Type != condType {
+			continue
+		}
+		if cond.Status == status && cond.Message == message {
+			return false
+		}
+		if cond.Status != status {
+			cond.LastTransitionTime = now
+		}
+		cond.Status = status
+		cond.Message = message
+		cond.LastProbeTime = now
+		return true
+	}
+	*conditions = append(*conditions, Condition{
+		Type:               condType,
+		Status:             status,
+		Message:            message,
+		LastProbeTime:      now,
+		LastTransitionTime: now,
+	})
+	return true
+}
+
+func (c *Condition) DeepCopy() *Condition {
+	if c == nil {
+		return nil
+	}
+	newObj := new(Condition)
+	c.DeepCopyInto(newObj)
+	return newObj
+}
+func (c *Condition) DeepCopyInto(newObj *Condition) {
+	*newObj = *c
+	c.LastTransitionTime.DeepCopyInto(&newObj.LastTransitionTime)
+	c.LastProbeTime.DeepCopyInto(&newObj.LastProbeTime)
+}

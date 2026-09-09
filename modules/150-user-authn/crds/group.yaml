@@ -40,7 +40,7 @@ spec:
               properties:
                 name:
                   type: string
-                  description: Unique group name.
+                  description: Unique group name that appears in the token `groups` claim and in RBAC subjects. Not `metadata.name`.
                 members:
                   type: array
                   description: List of group members.
@@ -59,7 +59,7 @@ spec:
                           - Group
                       name:
                         type: string
-                        description: User or group name.
+                        description: For kind User — User.metadata.name. For kind Group — the nested Group.spec.name (the name that appears in tokens), not metadata.name.
                 status:
                   type: object
                   required: []

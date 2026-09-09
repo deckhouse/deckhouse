@@ -1,0 +1,38 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:subsystem-capability:networking:manage_resources
+  annotations:
+    en.meta.deckhouse.io/title: "Networking: manage cluster resources"
+    ru.meta.deckhouse.io/title: "Сеть: управление кластерными ресурсами"
+    en.meta.deckhouse.io/description: "Manage cluster-scoped networking resources."
+    ru.meta.deckhouse.io/description: "Управление кластерными сетевыми ресурсами."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "subsystem-capability.networking.manage_resources"
+    rbac.deckhouse.io/scope: subsystem
+    rbac.deckhouse.io/subsystem: networking
+    rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
+    rbac.deckhouse.io/aggregate-to-networking-as: manager
+rules:
+  - apiGroups:
+      - networking.k8s.io
+    resources:
+      - ingressclasses
+    verbs:
+      - create
+      - delete
+      - patch
+      - update
+  - apiGroups:
+      - flowcontrol.apiserver.k8s.io
+    resources:
+      - prioritylevelconfigurations
+      - flowschemas
+    verbs:
+      - create
+      - update
+      - patch
+      - delete

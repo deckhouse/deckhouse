@@ -1,0 +1,24 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:namespace-capability:kubernetes:forward_port
+  annotations:
+    en.meta.deckhouse.io/title: "Port forwarding"
+    ru.meta.deckhouse.io/title: "Проброс портов"
+    en.meta.deckhouse.io/description: "Port-forward to pods."
+    ru.meta.deckhouse.io/description: "Проброс портов к подам."
+  labels:
+    heritage: deckhouse
+    module: user-authz
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "namespace-capability.kubernetes.forward_port"
+    rbac.deckhouse.io/scope: namespace
+    rbac.deckhouse.io/aggregate-to-namespace-as: user
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - pods/portforward
+    verbs:
+      - create
+      - get

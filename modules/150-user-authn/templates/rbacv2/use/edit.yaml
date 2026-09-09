@@ -5,9 +5,16 @@ metadata:
   labels:
     heritage: deckhouse
     module: user-authn
-    rbac.deckhouse.io/aggregate-to-kubernetes-as: manager
-    rbac.deckhouse.io/kind: use
-  name: d8:use:capability:module:user-authn:edit
+    rbac.deckhouse.io/aggregate-to-namespace-as: manager
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "namespace-capability.user-authn.edit"
+    rbac.deckhouse.io/scope: namespace
+  name: d8:namespace-capability:user-authn:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module user-authn: edit"
+    ru.meta.deckhouse.io/title: "Модуль user-authn: редактирование"
+    en.meta.deckhouse.io/description: "Manage user-authn resources in a namespace."
+    ru.meta.deckhouse.io/description: "Управление ресурсами модуля user-authn в пространстве имён."
 rules:
 - apiGroups:
   - deckhouse.io
