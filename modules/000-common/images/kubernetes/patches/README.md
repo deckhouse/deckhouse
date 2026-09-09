@@ -201,102 +201,31 @@ carried on 1.34 (`014`), 1.35 (`014`) and 1.36 (`013`) only.
 
 ### kubelet-checkpoint-state-self-heal.patch (1.33+)
 
-Carried on 1.33 (`014`), 1.34 (`015`), 1.35 (`015`) and 1.36 (`014`); the numbers differ because
-each version's chain does. The `pkg/kubelet/cm/checkpointselfheal` package the patch adds is
-byte-identical across all four; only the call sites differ, following the upstream logger and
-checkpoint APIs of each release.
-
 Lets the kubelet start when the CPU manager or the memory manager finds its
-checkpoint unusable, instead of exiting.
+checkpoint unusable, instead of exiting. Upstream propagates the error from
+`staticPolicy.Start` up to `initializeRuntimeDependentModules`, which calls
+`os.Exit(1)`, so the node ends up in a restart loop and needs a human — while the
+causes are ordinary: a changed online-CPU set, changed hugepages, a changed NUMA
+zone count, a torn checkpoint write, or per-NUMA `MemTotal` drift across reboots.
 
-Upstream refuses to start: `staticPolicy.Start` returns an error,
-`containerManagerImpl.Start` propagates it and kubelet calls `os.Exit(1)` from
-`initializeRuntimeDependentModules`, relying on the service manager to retry
-forever. A node in that state needs a human, and the causes are ordinary: a
-minor upgrade that tightened validation, a changed online-CPU set, changed
-pre-allocated hugepages, a changed NUMA zone count, a torn checkpoint write, or
-per-NUMA `MemTotal` drift across reboots.
+The affected manager (only that one) drops its state, and the containers whose
+assignments lived in it are stopped, so the normal kubelet lifecycle recreates them
+and the manager pins them again from a clean state. The stop is synchronous, inside
+`containerManagerImpl.Start` before the runtime is marked synced, so no pod can be
+admitted while CPUs and NUMA zones look free in the state but are still occupied.
 
-The patch implements the half of the upstream advice that was missing ("drain
-this node and remove the policy state file"): the affected manager drops its
-state, and the containers whose assignments lived in that state are stopped, so
-the normal kubelet lifecycle recreates them and the manager pins them again from
-a clean state. Only the affected manager is touched -- memory drifts on its own,
-CPU only changes on hotplug.
+A reset is reported by the metrics `kubelet_checkpoint_state_reset_total{manager,reason}`,
+`..._stopped_containers_total{manager}`, `..._stop_failures_total{manager}`, by the pod
+events `NUMACheckpointReset` and `NUMACheckpointResetFailed`, and by the report file
+`/var/lib/kubelet/d8-numa-selfheal.json`, which the kubelet writes but never removes —
+deleting it belongs to whoever reads it and decides whether the node needs a drain. The
+failed variants are the ones needing attention: such a container keeps running while its
+CPUs or NUMA zone are already given away in the reset state.
 
-Notable properties:
-
-- The lost assignments are collected **before** anything is cleared; after a reset there is
-  nowhere left to read the old assignments from.
-- The stop is synchronous, inside `containerManagerImpl.Start`, before it
-  returns. Kubelet marks the runtime synced only afterwards and `syncLoop` skips
-  every iteration until then, so no pod can be admitted while containers are
-  being stopped. That closes the window in which CPUs and NUMA zones look free
-  in the state while still being physically occupied.
-- The checkpoint is read with the managers' own checkpoint types through
-  upstream's `checkpointmanager`, whose `GetCheckpoint` unmarshals before it
-  verifies the checksum -- so a checkpoint that fails verification is still
-  readable, which is what makes naming the affected containers possible. Using upstream's
-  types means a future format change breaks the build instead of silently
-  finding nothing.
-- Metrics `kubelet_checkpoint_state_reset_total{manager,reason}`,
-  `..._stopped_containers_total{manager}` and `..._stop_failures_total{manager}`
-  are registered by the patch itself, so `pkg/kubelet/metrics/metrics.go` is not
-  touched. **An alert on the first one is required, not optional**: this patch
-  turns a loud refusal to start into a quiet repair, so a bug in kubelet config
-  generation would restart pinned workload across a whole NodeGroup instead of
-  failing visibly.
-  Two properties matter when writing that alert, both observed on a cluster:
-  the counters live in the kubelet process and therefore **reset on every kubelet
-  restart**, so the rule has to be built on `increase()`/`rate()` rather than on an
-  absolute value; and a `CounterVec` with no observations emits nothing at all --
-  not even `# HELP` -- so the series simply do not exist on a node that has never
-  healed, which is expected rather than a sign the metric is missing.
-- Two pod events, kept deliberately separate. `NUMACheckpointReset` on a container that
-  was stopped -- without it the restart is indistinguishable from an ordinary crash,
-  because the stop goes straight to the runtime and kubelet emits no `Killing` of its
-  own; what the reader does see is `Created`/`Started` from the normal lifecycle, with
-  nothing between them explaining the restart. And `NUMACheckpointResetFailed` on a
-  container that could **not** be stopped: it keeps running while its CPUs or NUMA zone
-  are already given away in the reset state, so the next Guaranteed pod admitted here
-  can be handed the same resources. Alert on the second one -- it is the outcome that
-  needs a human, and it is otherwise invisible in `kubectl describe`, which shows the pod
-  running normally with no events at all for this case.
-
-- Logging follows the surrounding kubelet: no message prefix, values in structured
-  fields. A reset is logged at error level with its manager, reason and the number of
-  lost assignments; each stopped container gets one line; a clean checkpoint is logged
-  at `V(4)`, which tells "nothing was wrong" apart from "this code did not run".
-
-- The reset report `/var/lib/kubelet/d8-numa-selfheal.json` is written by the kubelet
-  and **never removed by it**. That is deliberate: kubelet restarts happen for
-  unrelated reasons (a containerd restart, a config change, a binary upgrade), and
-  deleting the report on the next clean start would throw the signal away before
-  anything had a chance to read it. Deletion belongs to whoever consumes it -- the
-  step that reads it and decides whether the node needs a drain. **That consumer
-  does not exist yet**, so for now expect the file to survive reboots; use its
-  `writtenAt` to judge whether it is still relevant.
-
-  For the same reason, resets already in the file are carried forward rather than
-  overwritten, capped at the 16 most recent. A report still on disk describes a repair
-  nobody has acted on yet -- possibly one whose container could not be stopped, which is
-  the single case that means the node needs a human -- and replacing the file would
-  drop that silently on the next heal.
-
-- A lost assignment is resolved to a container id **in the stop phase**, from the one CRI
-  snapshot taken there, and not while the managers are still starting. Resolving it
-  earlier meant asking `containermap.GetContainerID` for the container of a
-  `(pod, container name)` pair. That map is keyed by container id and is walked until
-  the first match, so once a container has been recreated its exited predecessor is
-  listed alongside the live one and the answer is whichever the randomised map
-  iteration meets first -- observed on a cluster as a stop aimed at an
-  already-exited container while the live one kept the CPUs the state had just
-  released. The stop phase walks containers instead, the direction in which the
-  answer is unique, and where a pair really does have several containers the running
-  one wins by an explicit rule.
-
-Related: the unconditional `rm` of both checkpoints in
-`candi/bashible/common-steps/all/069_start_kubelet.sh.tpl` is removed together
-with this patch -- it was the workaround this replaces.
+Carried on 1.33 (`014`), 1.34 (`015`), 1.35 (`015`) and 1.36 (`014`) — the numbers follow
+each version's chain, the added `pkg/kubelet/cm/checkpointselfheal` package is identical
+across all four. The unconditional `rm` of both checkpoints in
+`candi/bashible/common-steps/all/069_start_kubelet.sh.tpl` is removed together with it: it
+was the workaround this replaces.
 
 See issue: https://github.com/kubernetes/kubernetes/issues/131253
