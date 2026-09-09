@@ -695,7 +695,7 @@ index 00000000000..7410440d430
 +	return ""
 +}
 diff --git a/pkg/kubelet/cm/container_manager_linux.go b/pkg/kubelet/cm/container_manager_linux.go
-index 64fe7df63b4..b3dc03a9607 100644
+index 11f7ea02ef0..4bace8c4371 100644
 --- a/pkg/kubelet/cm/container_manager_linux.go
 +++ b/pkg/kubelet/cm/container_manager_linux.go
 @@ -50,6 +50,7 @@ import (
@@ -706,7 +706,7 @@ index 64fe7df63b4..b3dc03a9607 100644
  	"k8s.io/kubernetes/pkg/kubelet/cm/cpumanager"
  	"k8s.io/kubernetes/pkg/kubelet/cm/devicemanager"
  	"k8s.io/kubernetes/pkg/kubelet/cm/dra"
-@@ -631,6 +632,13 @@ func (cm *containerManagerImpl) Start(ctx context.Context, node *v1.Node,
+@@ -638,6 +639,13 @@ func (cm *containerManagerImpl) Start(ctx context.Context, node *v1.Node,
  		return fmt.Errorf("start memory manager error: %w", err)
  	}
  
@@ -721,10 +721,10 @@ index 64fe7df63b4..b3dc03a9607 100644
  	// allocatable of the node
  	cm.nodeInfo = node
 diff --git a/pkg/kubelet/cm/cpumanager/cpu_manager.go b/pkg/kubelet/cm/cpumanager/cpu_manager.go
-index 8b59ba67121..d7d46e01f2a 100644
+index c1b4b7dec04..afb1f2e58ba 100644
 --- a/pkg/kubelet/cm/cpumanager/cpu_manager.go
 +++ b/pkg/kubelet/cm/cpumanager/cpu_manager.go
-@@ -29,6 +29,7 @@ import (
+@@ -30,6 +30,7 @@ import (
  	runtimeapi "k8s.io/cri-api/pkg/apis/runtime/v1"
  	"k8s.io/klog/v2"
  
@@ -732,7 +732,7 @@ index 8b59ba67121..d7d46e01f2a 100644
  	"k8s.io/kubernetes/pkg/kubelet/cm/containermap"
  	"k8s.io/kubernetes/pkg/kubelet/cm/cpumanager/state"
  	"k8s.io/kubernetes/pkg/kubelet/cm/cpumanager/topology"
-@@ -226,17 +227,43 @@ func (m *manager) Start(activePods ActivePodsFunc, sourcesReady config.SourcesRe
+@@ -230,17 +231,43 @@ func (m *manager) Start(ctx context.Context, activePods ActivePodsFunc, sourcesR
  	m.containerRuntime = containerRuntime
  	m.containerMap = initialContainers
  
@@ -740,48 +740,48 @@ index 8b59ba67121..d7d46e01f2a 100644
 +	// must not be logged.
 +	wasReset := false
 +
- 	stateImpl, err := state.NewCheckpointState(m.stateFileDirectory, cpuManagerStateFileName, m.policy.Name(), m.containerMap)
+ 	stateImpl, err := state.NewCheckpointState(logger, m.stateFileDirectory, cpuManagerStateFileName, m.policy.Name(), m.containerMap)
  	if err != nil {
--		klog.ErrorS(err, "Could not initialize checkpoint manager, please drain node and remove policy state file")
+-		logger.Error(err, "Could not initialize checkpoint manager, please drain node and remove policy state file")
 -		return err
 +		// Upstream gives up here and kubelet exits. Drop the unusable file and
 +		// start from scratch instead; the containers that held assignments in
 +		// it are stopped later, in containerManagerImpl.Start.
 +		if !checkpointselfheal.ResetCheckpointFile(checkpointselfheal.ManagerCPU, m.stateFileDirectory, cpuManagerStateFileName, m.policy.Name(), err) {
-+			klog.ErrorS(err, "Could not initialize checkpoint manager, please drain node and remove policy state file")
++			logger.Error(err, "Could not initialize checkpoint manager, please drain node and remove policy state file")
 +			return err
 +		}
 +		wasReset = true
-+		stateImpl, err = state.NewCheckpointState(m.stateFileDirectory, cpuManagerStateFileName, m.policy.Name(), m.containerMap)
++		stateImpl, err = state.NewCheckpointState(logger, m.stateFileDirectory, cpuManagerStateFileName, m.policy.Name(), m.containerMap)
 +		if err != nil {
-+			klog.ErrorS(err, "Could not initialize checkpoint manager after resetting its state, please drain node and remove policy state file")
++			logger.Error(err, "Could not initialize checkpoint manager after resetting its state, please drain node and remove policy state file")
 +			return err
 +		}
  	}
  	m.state = stateImpl
  
- 	err = m.policy.Start(m.state)
+ 	err = m.policy.Start(logger, m.state)
  	if err != nil {
--		klog.ErrorS(err, "Policy start error")
+-		logger.Error(err, "Policy start error")
 -		return err
-+		// The checkpoint no longer describes this machine. Victims are collected
-+		// before clearing, because afterwards the old assignments are gone.
++		// The checkpoint no longer describes this machine. Lost assignments are
++		// collected before clearing, because afterwards they are gone.
 +		checkpointselfheal.RecordClearedState(checkpointselfheal.ManagerCPU, m.stateFileDirectory, cpuManagerStateFileName,
 +			checkpointselfheal.AssignmentKeysFrom(m.state.GetCPUAssignments()), err)
 +		m.state.ClearState()
-+		if err = m.policy.Start(m.state); err != nil {
-+			klog.ErrorS(err, "Policy start error after resetting manager state")
++		if err = m.policy.Start(logger, m.state); err != nil {
++			logger.Error(err, "Policy start error after resetting manager state")
 +			return err
 +		}
 +		wasReset = true
 +	}
 +	if !wasReset {
-+		klog.V(4).InfoS("Checkpoint validated, nothing to do", "manager", checkpointselfheal.ManagerCPU)
++		logger.V(4).Info("Checkpoint validated, nothing to do", "manager", checkpointselfheal.ManagerCPU)
  	}
  
- 	klog.V(4).InfoS("CPU manager started", "policy", m.policy.Name())
+ 	logger.V(4).Info("CPU manager started", "policy", m.policy.Name())
 diff --git a/pkg/kubelet/cm/memorymanager/memory_manager.go b/pkg/kubelet/cm/memorymanager/memory_manager.go
-index 572f58599a0..e6feef34344 100644
+index 585ebff1013..2570ede2bb3 100644
 --- a/pkg/kubelet/cm/memorymanager/memory_manager.go
 +++ b/pkg/kubelet/cm/memorymanager/memory_manager.go
 @@ -32,6 +32,7 @@ import (
@@ -817,17 +817,17 @@ index 572f58599a0..e6feef34344 100644
  	}
  	m.state = stateImpl
  
- 	err = m.policy.Start(ctx, m.state)
+ 	err = m.policy.Start(logger, m.state)
  	if err != nil {
 -		logger.Error(err, "Policy start error")
 -		return err
 +		// Unlike the CPU manager there is no reconcile loop here: nothing
-+		// rewrites cpuset.mems of a running container, so stopping the victim
-+		// is the only way to bring state and reality back together.
++		// rewrites cpuset.mems of a running container, so stopping the
++		// container is the only way to bring state and reality back together.
 +		checkpointselfheal.RecordClearedState(checkpointselfheal.ManagerMemory, m.stateFileDirectory, memoryManagerStateFileName,
 +			checkpointselfheal.AssignmentKeysFrom(m.state.GetMemoryAssignments()), err)
 +		m.state.ClearState()
-+		if err = m.policy.Start(ctx, m.state); err != nil {
++		if err = m.policy.Start(logger, m.state); err != nil {
 +			logger.Error(err, "Policy start error after resetting manager state")
 +			return err
 +		}
@@ -837,4 +837,4 @@ index 572f58599a0..e6feef34344 100644
 +		logger.V(4).Info("Checkpoint validated, nothing to do", "manager", checkpointselfheal.ManagerMemory)
  	}
  
- 	m.allocatableMemory = m.policy.GetAllocatableMemory(ctx, m.state)
+ 	m.allocatableMemory = m.policy.GetAllocatableMemory(m.state)
