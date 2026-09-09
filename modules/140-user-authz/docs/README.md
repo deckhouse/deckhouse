@@ -405,6 +405,8 @@ read:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `Editor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`):
 
 ```text
+get,patch:
+    - pods/resize
 write:
     - apps/deployments
     - apps/statefulsets
@@ -452,6 +454,8 @@ write:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `Admin` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`):
 
 ```text
+create:
+    - serviceaccounts/token
 create,patch,update:
     - pods
 delete,deletecollection:
@@ -584,6 +588,8 @@ read-write:
     - nodes/pods
     - nodes/proxy
     - nodes/stats
+update:
+    - namespaces/finalize
 write:
     - cilium.io/ciliumclusterwidenetworkpolicies
     - cilium.io/ciliumnetworkpolicies
