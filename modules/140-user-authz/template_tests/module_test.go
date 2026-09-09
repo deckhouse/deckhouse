@@ -152,7 +152,16 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(role.Field("rules").String()).To(ContainSubstring("clusterauthorizationrules/status"))
 			Expect(role.Field("rules").String()).To(ContainSubstring(`"bind"`))
 			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:controller").Field("subjects.0.name").String()).To(Equal("controller"))
-			Expect(role.Field("rules").String()).To(ContainSubstring("leases"))
+
+			// The leader-election lease lives in the module's own namespace, so its grant is a Role
+			// and must not be part of the ClusterRole: cluster-wide, it would let the controller
+			// take over the lease of any other component in the cluster.
+			Expect(role.Field("rules").String()).NotTo(ContainSubstring("leases"))
+			lease := f.KubernetesResource("Role", "d8-user-authz", "d8:user-authz:controller:leader-election")
+			Expect(lease.Exists()).To(BeTrue())
+			Expect(lease.Field("rules").String()).To(ContainSubstring("leases"))
+			Expect(f.KubernetesResource("RoleBinding", "d8-user-authz", "d8:user-authz:controller:leader-election").
+				Field("subjects.0.name").String()).To(Equal("controller"))
 		})
 
 		It("Should deploy authorization webhook and supporting objects", func() {
