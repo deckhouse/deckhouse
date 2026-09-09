@@ -179,7 +179,14 @@ func NewServer(logger *log.Logger) (*Server, error) {
 // cannot decide has nothing to say.
 //
 // A cluster whose CRD is not served is ready: there can be no rules, so the empty directory is the
-// truth rather than a gap. This is the same predicate permission-browser's readiness uses.
+// truth rather than a gap.
+//
+// A directory that HAS been listed and has since gone stale still counts as listed here, and that
+// is deliberate. Stale means the watch is broken, not that the rules are unknown; the directory is
+// a real snapshot of the cluster as of whenever the watch broke, and answering from it is far
+// better than what closing this gate would do - 503 on every authorization request in the cluster.
+// Staleness belongs in readiness, which holds a rollout and shows up in monitoring without taking
+// anything away. See the readyz handler below.
 func rulesListed(src *source.Source) kcache.InformerSynced {
 	return func() bool {
 		return src.State() != source.StateUnsynced
@@ -214,6 +221,14 @@ func (s *Server) prepareHTTPServer() (*http.Server, error) {
 		if err := s.cache.Check(r.Context()); err != nil {
 			w.WriteHeader(http.StatusServiceUnavailable)
 			_, _ = fmt.Fprintf(w, "the api server is unreachable: %v", err)
+			return
+		}
+		// A watch that has been failing for long enough that the directory no longer tracks the
+		// cluster. The webhook keeps answering from what it has - see rulesListed - but it should
+		// not look healthy while doing it, and a rollout should not move on to the next master.
+		if s.rules.State() == source.StateStale {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = fmt.Fprintf(w, "the rules are stale: %v", s.rules.LastError())
 			return
 		}
 		w.WriteHeader(http.StatusOK)

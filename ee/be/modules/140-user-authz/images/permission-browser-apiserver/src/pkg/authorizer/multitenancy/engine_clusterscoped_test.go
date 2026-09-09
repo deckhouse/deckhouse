@@ -13,6 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/rules"
+
 	"permission-browser-apiserver/pkg/authorizer/multitenancy/mttest"
 )
 
@@ -20,16 +22,15 @@ import (
 // an empty map stands for a snapshot discovery never filled.
 type staticResourceScope map[string]bool
 
-func (s staticResourceScope) Scope(group, resource string) (namespaced, known bool) {
-	namespaced, known = s[group+"/"+resource]
-	return namespaced, known
+// ScopeOf mirrors the production derivation, which now lives in the cache rather than in the
+// caller: a key present is an answer; a key absent is an answer only if there is a snapshot at all.
+// The fixture is a complete snapshot, so nothing here is missing because a group could not be read.
+func (s staticResourceScope) ScopeOf(group, resource string) rules.ResourceScope {
+	if namespaced, known := s[group+"/"+resource]; known {
+		return rules.ResourceScope{Known: true, Namespaced: namespaced}
+	}
+	return rules.ResourceScope{Absent: len(s) > 0}
 }
-
-func (s staticResourceScope) HasData() bool { return len(s) > 0 }
-
-// GroupUnavailable: the fixture is a complete snapshot, so nothing is missing because a group
-// could not be read.
-func (s staticResourceScope) GroupUnavailable(string) bool { return false }
 
 func coreResourceScope() staticResourceScope {
 	return staticResourceScope{
@@ -258,13 +259,20 @@ func TestEngine_Authorize_UnreadableGroupStillDenies(t *testing.T) {
 		"a hole in the snapshot is not an answer; a cluster-wide list must not slip through it")
 }
 
-// unavailableGroupScope is a snapshot with one group the last refresh could not read.
+// unavailableGroupScope is a snapshot with one group the last refresh could not read. A resource
+// missing from such a group is missing because nobody looked, so it is neither known nor absent.
 type unavailableGroupScope struct {
 	staticResourceScope
 	unavailable string
 }
 
-func (s unavailableGroupScope) GroupUnavailable(group string) bool { return group == s.unavailable }
+func (s unavailableGroupScope) ScopeOf(group, resource string) rules.ResourceScope {
+	scope := s.staticResourceScope.ScopeOf(group, resource)
+	if !scope.Known && group == s.unavailable {
+		scope.Absent = false
+	}
+	return scope
+}
 
 // TestEngine_Authorize_UnknownCoreResourceMatchesWebhook locks parity with
 // the enforcement webhook, which permits an unknown core resource so RBAC can

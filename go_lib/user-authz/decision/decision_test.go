@@ -54,6 +54,7 @@ func scopeOf(scope rules.ResourceScope, err error) ResourceScopeFunc {
 }
 
 func TestAuthorize_Namespaced(t *testing.T) {
+	t.Parallel()
 	src := Sources{
 		Directory: dir(limited("team-a", "alice", "team-a")),
 		Bindings:  staticBindings{},
@@ -81,6 +82,7 @@ func TestAuthorize_Namespaced(t *testing.T) {
 // the empty set is used, the subject is granted a namespace nobody ever evaluated the selector
 // against.
 func TestAuthorize_NamespaceLabelLookupFailureDenies(t *testing.T) {
+	t.Parallel()
 	selector := &rules.NamespaceSelector{LabelSelector: &metav1.LabelSelector{
 		MatchExpressions: []metav1.LabelSelectorRequirement{
 			{Key: "quarantine", Operator: metav1.LabelSelectorOpDoesNotExist},
@@ -119,6 +121,7 @@ func TestAuthorize_NamespaceLabelLookupFailureDenies(t *testing.T) {
 }
 
 func TestAuthorize_IndependentRBACOverridesTheDenial(t *testing.T) {
+	t.Parallel()
 	src := Sources{
 		Directory:       dir(limited("team-a", "alice", "team-a")),
 		Bindings:        staticBindings{},
@@ -132,6 +135,7 @@ func TestAuthorize_IndependentRBACOverridesTheDenial(t *testing.T) {
 }
 
 func TestAuthorize_ClusterScoped(t *testing.T) {
+	t.Parallel()
 	base := Sources{
 		Directory: dir(limited("team-a", "alice", "team-a")),
 		Bindings:  staticBindings{},
@@ -176,6 +180,7 @@ func TestAuthorize_ClusterScoped(t *testing.T) {
 }
 
 func TestAuthorize_OrderingGuard(t *testing.T) {
+	t.Parallel()
 	// The binding says alice is bound by a rule the directory has not observed naming her.
 	src := Sources{
 		Directory: dir(limited("team-a", "someone-else", "team-a")),
@@ -215,6 +220,7 @@ func TestAuthorize_OrderingGuard(t *testing.T) {
 }
 
 func TestAuthorize_NonResourceRequest(t *testing.T) {
+	t.Parallel()
 	src := Sources{
 		Directory: dir(limited("team-a", "alice", "team-a")),
 		Bindings:  staticBindings{},
@@ -226,6 +232,7 @@ func TestAuthorize_NonResourceRequest(t *testing.T) {
 }
 
 func TestNamespaceAccess(t *testing.T) {
+	t.Parallel()
 	src := Sources{
 		Directory: dir(
 			limited("team-a", "alice", "team-a"),

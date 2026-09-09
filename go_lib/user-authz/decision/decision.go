@@ -29,8 +29,14 @@ limitations under the License.
 package decision
 
 import (
+	"sync"
+
 	"github.com/deckhouse/deckhouse/go_lib/user-authz/rules"
 )
+
+// warnMissingBindings keeps the complaint in Entries to one line per process. It is on the
+// authorization path, so a consumer wired up wrongly would otherwise log on every request, forever.
+var warnMissingBindings sync.Once
 
 // InternalErrorReason is the answer when the decision needed a fact that could not be fetched. It
 // is deliberately vague: the operator gets the detail from the log, the caller does not.
@@ -126,6 +132,16 @@ func Entries(src Sources, username string, groups []string) []rules.Entry {
 	entries := src.Directory.Lookup(username, groups)
 
 	if src.Bindings == nil {
+		// A consumer that does not supply the bindings has switched the ordering guard off. Both
+		// consumers reject nil in their constructors, so reaching this is a programming error - and
+		// it is the kind that produces no symptom at all until a rule's cluster-wide binding
+		// outruns the rule and grants somebody every namespace. Denying instead is not an option:
+		// without the index there is no way to tell "no rule limits this subject" from "a rule I
+		// have not observed limits it", so it would deny everyone. Say so, loudly and once.
+		warnMissingBindings.Do(func() {
+			src.logf("user-authz decision: no rule-bindings index was supplied; the ordering guard " +
+				"is disabled and a rule binding that arrives before its rule will grant every namespace")
+		})
 		return entries
 	}
 	for _, rule := range src.Bindings.RulesFor(username, groups) {

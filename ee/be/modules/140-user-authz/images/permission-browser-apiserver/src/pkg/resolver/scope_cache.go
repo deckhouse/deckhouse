@@ -13,6 +13,8 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/klog/v2"
 
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/rules"
+
 	"permission-browser-apiserver/pkg/authorizer/multitenancy"
 )
 
@@ -187,6 +189,35 @@ func (c *ResourceScopeCache) GroupUnavailable(group string) bool {
 	defer c.mu.RUnlock()
 	_, unavailable := c.unavailableGroups[group]
 	return unavailable
+}
+
+// ScopeOf answers the whole question the multi-tenancy decision asks, in the type it consumes.
+//
+// The derivation used to live in the caller, assembled from Scope, HasData and GroupUnavailable.
+// That put the line that decides whether a discovery hole fails open or closed away from the data
+// it reasons about, and made every test fake responsible for reproducing it - a fake that got it
+// wrong left the suite green and the behaviour unsafe.
+//
+// It also took three separate read locks, so the three answers could come from either side of a
+// refresh: a resource could be reported missing from a snapshot while HasData described the next
+// one. One lock now, one snapshot, one answer.
+func (c *ResourceScopeCache) ScopeOf(group, resource string) rules.ResourceScope {
+	if c == nil {
+		return rules.ResourceScope{}
+	}
+
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
+	namespaced, known := c.scopeMap[group+"/"+resource]
+	if known {
+		return rules.ResourceScope{Known: true, Namespaced: namespaced}
+	}
+
+	// Not in the snapshot. That is an answer only if there IS a snapshot and it did read this
+	// group; otherwise nobody looked, and the caller has to keep failing closed.
+	_, unavailable := c.unavailableGroups[group]
+	return rules.ResourceScope{Absent: len(c.scopeMap) > 0 && !unavailable}
 }
 
 // HasData returns true if the cache has been populated with any entries.

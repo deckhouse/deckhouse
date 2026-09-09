@@ -361,11 +361,17 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 			if !inputs.bindingsSynced() {
 				return fmt.Errorf("the ClusterRoleBindings of the rules are not indexed yet")
 			}
-			if state := inputs.rules.State(); state == source.StateUnsynced {
+			switch inputs.rules.State() {
+			case source.StateUnsynced:
 				if lastErr := inputs.rules.LastError(); lastErr != nil {
 					return fmt.Errorf("ClusterAuthorizationRules are not listed yet: %v", lastErr)
 				}
 				return fmt.Errorf("ClusterAuthorizationRules are not listed yet")
+			case source.StateStale:
+				// Listed once, and the watch has been failing since. The report this apiserver
+				// serves is a snapshot of whenever that happened, and saying so is the whole
+				// difference between a stale answer and a wrong one.
+				return fmt.Errorf("ClusterAuthorizationRules are no longer being tracked: %v", inputs.rules.LastError())
 			}
 			return nil
 		})); err != nil {
