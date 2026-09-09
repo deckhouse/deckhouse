@@ -103,3 +103,40 @@ Encode the generated kubeconfig using Base64 (put it in the `d8-credentials` Sec
 ```bash
 base64 kubeconfig | tr -d '\n'
 ```
+
+## Credentials Secret
+
+The credentials for accessing the parent cluster API are stored in a separate Secret rather than in the ModuleConfig. The provider reads it when starting the components that access the DVP API.
+
+The Secret is created during cluster installation together with the other resources of the initial configuration. If the module is added to a running cluster, the Secret is applied after the module creates the namespace. The Secret must meet the following requirements:
+
+- The name is `d8-credentials` and the namespace is `d8-cloud-provider-dvp`.
+- The type is `cloud-provider.deckhouse.io/credentials`.
+- The `authScheme` field is set to `kubeconfig`.
+- The `secret` field contains the Base64-encoded kubeconfig.
+
+The `identity` field is not used with the `kubeconfig` scheme.
+
+```yaml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-credentials
+  namespace: d8-cloud-provider-dvp
+type: cloud-provider.deckhouse.io/credentials
+stringData:
+  authScheme: kubeconfig
+  secret: <KUBE_CONFIG_BASE64>
+```
+
+Replace `<KUBE_CONFIG_BASE64>` with the Base64-encoded kubeconfig.
+
+The Secret is checked by a webhook. The platform rejects the Secret if the `authScheme` field is set to another scheme, the `secret` field is empty, the `identity` field is set, or the content of the `secret` field cannot be decoded as a valid kubeconfig. An update that changes the Secret type is rejected as well.
+
+To change the credentials, update the `secret` field:
+
+```shell
+d8 k -n d8-cloud-provider-dvp edit secret d8-credentials
+```
+
+In clusters migrated to ModuleConfig, the kubeconfig is moved to this Secret from the `provider.kubeconfigDataBase64` parameter of the DVPClusterConfiguration resource.

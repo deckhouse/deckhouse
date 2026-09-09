@@ -93,7 +93,7 @@ spec:
 Параметры облачного провайдера DVP задаются в четырёх ресурсах:
 
 - [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) модуля `cloud-provider-dvp` задаёт схему размещения и параметры подключения к родительскому кластеру;
-- секрет `d8-credentials` в неймспейсе `d8-cloud-provider-dvp` хранит учётные данные для доступа к API родительского кластера;
+- секрет `d8-credentials` в неймспейсе `d8-cloud-provider-dvp` хранит учётные данные для доступа к API родительского кластера, его формат описан в разделе [«Секрет с учётными данными»](authorization.html#секрет-с-учётными-данными);
 - [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass) описывает параметры виртуальных машин;
 - [NodeGroup](/modules/node-manager/cr.html#nodegroup) описывает группы узлов и ссылается на инстанс-класс.
 

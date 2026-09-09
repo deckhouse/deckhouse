@@ -92,7 +92,7 @@ spec:
 The DVP cloud provider parameters are set in four resources:
 
 - The [ModuleConfig](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#moduleconfig) of the `cloud-provider-dvp` module defines the layout and the parent cluster connection parameters.
-- The `d8-credentials` Secret in the `d8-cloud-provider-dvp` namespace stores the credentials for accessing the parent cluster API.
+- The `d8-credentials` Secret in the `d8-cloud-provider-dvp` namespace stores the credentials for accessing the parent cluster API. Its format is covered in the [Credentials Secret](authorization.html#credentials-secret) section.
 - The [DVPInstanceClass](/modules/cloud-provider-dvp/cr.html#dvpinstanceclass) resource describes the virtual machine parameters.
 - The [NodeGroup](/modules/node-manager/cr.html#nodegroup) resource describes the node groups and references the instance class.
 
