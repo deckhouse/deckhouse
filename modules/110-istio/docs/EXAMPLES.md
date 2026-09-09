@@ -677,6 +677,8 @@ spec:
 
 {% alert level="warning" %}Available in Enterprise Edition and Certified Security Edition Pro only.{% endalert %}
 
+{% alert level="warning" %}Federation covers sidecar-mode workloads only. For details, refer to [Ambient mesh limitations](./#ambient-mesh-limitations).{% endalert %}
+
 Cluster A:
 
 ```yaml
@@ -705,6 +707,8 @@ spec:
 
 {% alert level="warning" %}Available in Enterprise Edition and Certified Security Edition Pro only.{% endalert %}
 
+{% alert level="warning" %}Multicluster covers sidecar-mode workloads only. For details, refer to [Ambient mesh limitations](./#ambient-mesh-limitations).{% endalert %}
+
 Cluster A:
 
 ```yaml
@@ -729,9 +733,11 @@ spec:
 
 ## Ambient mesh
 
-{% alert level="warning" %}Available in Enterprise Edition only.{% endalert %}
+{% alert level="warning" %}Available in Enterprise Edition and Certified Security Edition Pro only.{% endalert %}
 
 {% alert level="warning" %}Ambient mesh support is experimental and not recommended for production use.{% endalert %}
+
+{% alert level="warning" %}Ambient-mode workloads cannot take part in federation or multicluster. For details, refer to [Ambient mesh limitations](./#ambient-mesh-limitations).{% endalert %}
 
 The ambient mesh components mentioned in this section are described on the [module overview page](./#ambient-mesh).
 

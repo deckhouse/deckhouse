@@ -26,6 +26,10 @@ lang: ru
   >
   > Istio работает в режиме [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) — поды разных кластеров взаимодействуют друг с другом только через Istio ingress gateway. Прямое взаимодействие между подами разных кластеров не поддерживается.
 
+{% alert level="warning" %}
+В мультикластере могут участвовать только рабочие нагрузки в режиме сайдкаров. Подробнее — в разделе [Ограничения ambient mesh](/modules/istio/#ограничения-ambient-mesh).
+{% endalert %}
+
 ### Общие принципы
 
 <div data-presentation="../../../../presentations/istio/multicluster_common_principles_ru.pdf"></div>

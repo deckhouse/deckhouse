@@ -679,6 +679,8 @@ spec:
 
 {% alert level="warning" %}Доступно в редакциях Enterprise Edition и Certified Security Edition Pro.{% endalert %}
 
+{% alert level="warning" %}Федерация работает только с рабочими нагрузками в режиме сайдкаров. Подробнее — в разделе [Ограничения ambient mesh](./#ограничения-ambient-mesh).{% endalert %}
+
 Cluster A:
 
 ```yaml
@@ -707,6 +709,8 @@ spec:
 
 {% alert level="warning" %}Доступно в редакциях Enterprise Edition и Certified Security Edition Pro.{% endalert %}
 
+{% alert level="warning" %}Мультикластер работает только с рабочими нагрузками в режиме сайдкаров. Подробнее — в разделе [Ограничения ambient mesh](./#ограничения-ambient-mesh).{% endalert %}
+
 Cluster A:
 
 ```yaml
@@ -734,6 +738,8 @@ spec:
 {% alert level="warning" %}Доступно только в Enterprise Edition и Certified Security Edition Pro.{% endalert %}
 
 {% alert level="warning" %}Поддержка ambient mesh является экспериментальной и не рекомендуется для использования в production-окружении.{% endalert %}
+
+{% alert level="warning" %}Рабочие нагрузки в режиме ambient не могут участвовать в федерации и мультикластере. Подробнее — в разделе [Ограничения ambient mesh](./#ограничения-ambient-mesh).{% endalert %}
 
 Упоминаемые в этом подразделе компоненты ambient mesh описаны [на странице с основным описанием модуля](./#ambient-mesh).
 
