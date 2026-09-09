@@ -4,4 +4,8 @@ positive:
       controlPlaneConfigurator:
         enabled: false
   values:
-    - internal:
+    # An empty object rather than an empty key: nothing under `internal` is required, and the
+    # module has to validate with none of it set. It used to be written as a bare `internal:`,
+    # which is null and only validated because a default inside the subtree happened to
+    # materialize it into an object.
+    - internal: {}
