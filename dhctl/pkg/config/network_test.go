@@ -135,3 +135,55 @@ func TestRequireNetwork(t *testing.T) {
 	})
 }
 
+func TestRequireNetworkSingleSource(t *testing.T) {
+	t.Run("set only in ClusterConfiguration", func(t *testing.T) {
+		m := metaConfigWithNetwork(t, map[string]string{"podSubnetCIDR": "10.111.0.0/16", "serviceSubnetCIDR": "10.222.0.0/16"}, nil)
+		if err := m.RequireNetworkSingleSource(); err != nil {
+			t.Fatalf("RequireNetworkSingleSource: %v", err)
+		}
+	})
+
+	t.Run("set only in ModuleConfig", func(t *testing.T) {
+		m := metaConfigWithNetwork(t, nil, map[string]interface{}{"podSubnetCIDR": "10.111.0.0/16", "serviceSubnetCIDR": "10.222.0.0/16"})
+		if err := m.RequireNetworkSingleSource(); err != nil {
+			t.Fatalf("RequireNetworkSingleSource: %v", err)
+		}
+	})
+
+	t.Run("set nowhere", func(t *testing.T) {
+		m := metaConfigWithNetwork(t, nil, nil)
+		if err := m.RequireNetworkSingleSource(); err != nil {
+			t.Fatalf("RequireNetworkSingleSource: %v", err)
+		}
+	})
+
+	t.Run("one field set in both documents", func(t *testing.T) {
+		m := metaConfigWithNetwork(t,
+			map[string]string{"podSubnetCIDR": "10.99.0.0/16"},
+			map[string]interface{}{"podSubnetCIDR": "10.111.0.0/16"},
+		)
+		err := m.RequireNetworkSingleSource()
+		if err == nil {
+			t.Fatal("expected an error naming podSubnetCIDR")
+		}
+		if got, want := err.Error(), "podSubnetCIDR"; !strings.Contains(got, want) {
+			t.Fatalf("error = %q, want it to mention %q", got, want)
+		}
+	})
+
+	t.Run("all three fields set in both documents", func(t *testing.T) {
+		cc := map[string]string{"podSubnetCIDR": "10.99.0.0/16", "serviceSubnetCIDR": "10.88.0.0/16", "podSubnetNodeCIDRPrefix": "22"}
+		mc := map[string]interface{}{"podSubnetCIDR": "10.111.0.0/16", "serviceSubnetCIDR": "10.222.0.0/16", "podSubnetNodeCIDRPrefix": "23"}
+		m := metaConfigWithNetwork(t, cc, mc)
+		err := m.RequireNetworkSingleSource()
+		if err == nil {
+			t.Fatal("expected an error naming all three fields")
+		}
+		for _, want := range []string{"podSubnetCIDR", "serviceSubnetCIDR", "podSubnetNodeCIDRPrefix"} {
+			if !strings.Contains(err.Error(), want) {
+				t.Fatalf("error = %q, want it to mention %q", err.Error(), want)
+			}
+		}
+	})
+}
+

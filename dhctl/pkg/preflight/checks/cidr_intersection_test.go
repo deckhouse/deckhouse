@@ -20,9 +20,21 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 )
+
+func metaConfigWithModuleConfigNetwork(t *testing.T, network map[string]interface{}) *config.MetaConfig {
+	t.Helper()
+
+	return &config.MetaConfig{
+		ModuleConfigs: []*config.ModuleConfig{{
+			ObjectMeta: metav1.ObjectMeta{Name: "control-plane-manager"},
+			Spec:       config.ModuleConfigSpec{Settings: config.SettingsValues{"network": network}},
+		}},
+	}
+}
 
 func TestGetCidrFromMetaConfig(t *testing.T) {
 	tests := []struct {
@@ -192,11 +204,21 @@ func TestCheckCidrIntersection(t *testing.T) {
 			},
 		},
 		{
-			name: "no ClusterConfiguration",
+			name: "no ClusterConfiguration, resolved from ModuleConfig",
+			fields: fields{metaConfig: metaConfigWithModuleConfigNetwork(t, map[string]interface{}{
+				"podSubnetCIDR":     "10.111.0.0/16",
+				"serviceSubnetCIDR": "10.222.0.0/16",
+			})},
+			wantErr: assert.NoError,
+		},
+		{
+			name: "no ClusterConfiguration and no ModuleConfig",
 			fields: fields{metaConfig: &config.MetaConfig{
 				ClusterConfig: nil,
 			}},
-			wantErr: assert.NoError,
+			wantErr: func(t assert.TestingT, err error, i ...any) bool {
+				return assert.ErrorContains(t, err, "podSubnetCIDR is set neither in ModuleConfig control-plane-manager (spec.settings.network) nor in ClusterConfiguration")
+			},
 		},
 		{
 			name: "invalid podSubnetCIDR",

@@ -144,6 +144,28 @@ func (m *MetaConfig) Network() NetworkSettings {
 	return out
 }
 
+// RequireNetworkSingleSource fails when a parameter is set in both documents at once. A
+// half-migrated cluster with different values in each document is impossible to resolve
+// unambiguously at bootstrap, even though Network() would silently pick the ModuleConfig one.
+func (m *MetaConfig) RequireNetworkSingleSource() error {
+	var both []string
+	for _, p := range m.networkParams() {
+		if p.mc != "" && p.cc != "" {
+			both = append(both, p.name)
+		}
+	}
+
+	if len(both) == 0 {
+		return nil
+	}
+
+	return fmt.Errorf(
+		"%s must be set in only one of ModuleConfig control-plane-manager (spec.settings.network) "+
+			"or ClusterConfiguration (deprecated), not both",
+		strings.Join(both, " and "),
+	)
+}
+
 // RequireNetwork fails when either CIDR is set in neither document.
 //
 // This obligation used to belong to the ClusterConfiguration schema, which listed both CIDRs as

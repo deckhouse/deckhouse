@@ -21,41 +21,36 @@ import (
 	preflight "github.com/deckhouse/deckhouse/dhctl/pkg/preflight"
 )
 
-type CidrIntersectionCheck struct {
+type NetworkSingleSourceCheck struct {
 	MetaConfig *config.MetaConfig
 }
 
-const CidrIntersectionCheckName preflight.CheckName = "cidr-intersection"
+const NetworkSingleSourceCheckName preflight.CheckName = "network-single-source"
 
-func (CidrIntersectionCheck) Description() string {
-	return "cluster CIDRs do not intersect"
+func (NetworkSingleSourceCheck) Description() string {
+	return "cluster network parameters are declared in only one of ClusterConfiguration or ModuleConfig control-plane-manager"
 }
 
-func (CidrIntersectionCheck) Phase() preflight.Phase {
+func (NetworkSingleSourceCheck) Phase() preflight.Phase {
 	return preflight.PhasePreInfra
 }
 
-func (CidrIntersectionCheck) RetryPolicy() preflight.RetryPolicy {
+func (NetworkSingleSourceCheck) RetryPolicy() preflight.RetryPolicy {
 	return preflight.RetryPolicy{Attempts: 1}
 }
 
-func (c CidrIntersectionCheck) Run(ctx context.Context) error {
+func (c NetworkSingleSourceCheck) Run(ctx context.Context) error {
 	if c.MetaConfig == nil {
 		return fmt.Errorf("metaConfig is required")
 	}
 
-	podCIDR, serviceCIDR, err := getCIDRs(c.MetaConfig)
-	if err != nil {
-		return err
-	}
-
-	return cidrIntersects(podCIDR, serviceCIDR)
+	return c.MetaConfig.RequireNetworkSingleSource()
 }
 
-func CidrIntersection(meta *config.MetaConfig) preflight.Check {
-	check := CidrIntersectionCheck{MetaConfig: meta}
+func NetworkSingleSource(meta *config.MetaConfig) preflight.Check {
+	check := NetworkSingleSourceCheck{MetaConfig: meta}
 	return preflight.Check{
-		Name:        CidrIntersectionCheckName,
+		Name:        NetworkSingleSourceCheckName,
 		Description: check.Description(),
 		Phase:       check.Phase(),
 		Retry:       check.RetryPolicy(),
