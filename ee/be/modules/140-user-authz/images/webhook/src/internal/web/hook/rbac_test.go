@@ -6,8 +6,11 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hook
 
 import (
+	"fmt"
 	"io"
 	"log"
+	"reflect"
+	"sort"
 	"testing"
 
 	rbacv1 "k8s.io/api/rbac/v1"
@@ -15,6 +18,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes/fake"
+	kcache "k8s.io/client-go/tools/cache"
 
 	"github.com/deckhouse/deckhouse/go_lib/user-authz/binding"
 	"github.com/deckhouse/deckhouse/go_lib/user-authz/rules"
@@ -27,7 +31,10 @@ func newTestRBACEvaluator(t *testing.T, objs ...runtime.Object) *RBACEvaluator {
 
 	client := fake.NewSimpleClientset(objs...)
 	informerFactory := informers.NewSharedInformerFactory(client, 0)
-	evaluator := NewRBACEvaluator(log.New(io.Discard, "", 0), informerFactory)
+	evaluator, err := NewRBACEvaluator(log.New(io.Discard, "", 0), informerFactory)
+	if err != nil {
+		t.Fatalf("build the RBAC evaluator: %v", err)
+	}
 
 	stopCh := make(chan struct{})
 	t.Cleanup(func() { close(stopCh) })
@@ -278,5 +285,192 @@ func TestRBACEvaluatorUnsyncedCaches(t *testing.T) {
 	}
 	if evaluator.AllowsIndependently(spec) {
 		t.Error("expected the evaluator to fail closed with unsynced caches")
+	}
+}
+
+// plainCRB is a ClusterRoleBinding that no ClusterAuthorizationRule generated.
+func plainCRB(name string, subjects ...rbacv1.Subject) *rbacv1.ClusterRoleBinding {
+	return &rbacv1.ClusterRoleBinding{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Subjects:   subjects,
+		RoleRef:    rbacv1.RoleRef{APIGroup: rbacv1.GroupName, Kind: "ClusterRole", Name: "some-role"},
+	}
+}
+
+// indexedFor returns the names of the bindings the index answers for a request, sorted.
+func indexedFor(idx *independentCRBIndex, user string, groups ...string) []string {
+	var names []string
+	for _, crb := range idx.forRequest(user, groups) {
+		names = append(names, crb.Name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// The index has to answer exactly what a full scan with subjectsMatch would: the bindings naming
+// the user, its groups, or its ServiceAccount identity, and nothing else.
+func TestIndependentCRBIndex_LookupBySubjectKind(t *testing.T) {
+	idx := newIndependentCRBIndex()
+	idx.upsert(plainCRB("by-user", rbacv1.Subject{Kind: rbacv1.UserKind, Name: "alice"}))
+	idx.upsert(plainCRB("by-group", rbacv1.Subject{Kind: rbacv1.GroupKind, Name: "devs"}))
+	idx.upsert(plainCRB("by-sa", rbacv1.Subject{Kind: rbacv1.ServiceAccountKind, Name: "runner", Namespace: "ci"}))
+	idx.upsert(plainCRB("someone-else", rbacv1.Subject{Kind: rbacv1.UserKind, Name: "bob"}))
+
+	if got := indexedFor(idx, "alice"); !reflect.DeepEqual(got, []string{"by-user"}) {
+		t.Errorf("user lookup: got %v", got)
+	}
+	if got := indexedFor(idx, "alice", "devs"); !reflect.DeepEqual(got, []string{"by-group", "by-user"}) {
+		t.Errorf("user and group lookup: got %v", got)
+	}
+	if got := indexedFor(idx, "system:serviceaccount:ci:runner"); !reflect.DeepEqual(got, []string{"by-sa"}) {
+		t.Errorf("service account lookup: got %v", got)
+	}
+	if got := indexedFor(idx, "nobody", "no-group"); got != nil {
+		t.Errorf("an unbound subject must match nothing, got %v", got)
+	}
+}
+
+// A binding naming both the user and one of its groups is evaluated once, not twice.
+func TestIndependentCRBIndex_DeduplicatesAcrossSubjects(t *testing.T) {
+	idx := newIndependentCRBIndex()
+	idx.upsert(plainCRB("both",
+		rbacv1.Subject{Kind: rbacv1.UserKind, Name: "alice"},
+		rbacv1.Subject{Kind: rbacv1.GroupKind, Name: "devs"},
+	))
+
+	if got := indexedFor(idx, "alice", "devs"); !reflect.DeepEqual(got, []string{"both"}) {
+		t.Errorf("expected the binding once, got %v", got)
+	}
+}
+
+// An update that moves a binding to another subject must stop answering for the old one: the
+// previous contribution is withdrawn, not left behind.
+func TestIndependentCRBIndex_UpdateWithdrawsOldSubjects(t *testing.T) {
+	idx := newIndependentCRBIndex()
+	idx.upsert(plainCRB("moving", rbacv1.Subject{Kind: rbacv1.UserKind, Name: "alice"}))
+	idx.upsert(plainCRB("moving", rbacv1.Subject{Kind: rbacv1.UserKind, Name: "bob"}))
+
+	if got := indexedFor(idx, "alice"); got != nil {
+		t.Errorf("alice must no longer be bound, got %v", got)
+	}
+	if got := indexedFor(idx, "bob"); !reflect.DeepEqual(got, []string{"moving"}) {
+		t.Errorf("bob must be bound, got %v", got)
+	}
+	if idx.len() != 1 {
+		t.Errorf("an update must not duplicate the binding, index holds %d", idx.len())
+	}
+}
+
+func TestIndependentCRBIndex_Delete(t *testing.T) {
+	idx := newIndependentCRBIndex()
+	crb := plainCRB("gone", rbacv1.Subject{Kind: rbacv1.UserKind, Name: "alice"})
+	idx.upsert(crb)
+	idx.delete(crb)
+
+	if got := indexedFor(idx, "alice"); got != nil {
+		t.Errorf("a deleted binding must not be returned, got %v", got)
+	}
+	if idx.len() != 0 {
+		t.Errorf("the index must be empty, holds %d", idx.len())
+	}
+}
+
+// The bindings a ClusterAuthorizationRule generated are the ones whose scope this webhook
+// enforces; they must never count as an independent grant, and a binding that gains the module's
+// labels is withdrawn from the index.
+func TestIndependentCRBIndex_ExcludesCARManaged(t *testing.T) {
+	idx := newIndependentCRBIndex()
+	idx.upsert(ruleBinding("user-authz:rule:admin", "alice"))
+	if got := indexedFor(idx, "alice"); got != nil {
+		t.Errorf("a CAR-generated binding must not be indexed, got %v", got)
+	}
+
+	// The same name without the module labels is an ordinary binding.
+	idx.upsert(plainCRB("user-authz:rule:admin", rbacv1.Subject{Kind: rbacv1.UserKind, Name: "alice"}))
+	if got := indexedFor(idx, "alice"); !reflect.DeepEqual(got, []string{"user-authz:rule:admin"}) {
+		t.Errorf("expected the unlabelled binding to be indexed, got %v", got)
+	}
+
+	// ...and once it gains them, it stops answering.
+	idx.upsert(ruleBinding("user-authz:rule:admin", "alice"))
+	if got := indexedFor(idx, "alice"); got != nil {
+		t.Errorf("a binding that became CAR-generated must be withdrawn, got %v", got)
+	}
+}
+
+// The informer reports a delete it could not observe directly as a tombstone.
+func TestIndependentCRBIndex_EventHandlerTombstone(t *testing.T) {
+	idx := newIndependentCRBIndex()
+	crb := plainCRB("tombstoned", rbacv1.Subject{Kind: rbacv1.UserKind, Name: "alice"})
+
+	handler := idx.eventHandler()
+	handler.OnAdd(crb, false)
+	if got := indexedFor(idx, "alice"); !reflect.DeepEqual(got, []string{"tombstoned"}) {
+		t.Fatalf("expected the binding to be indexed, got %v", got)
+	}
+
+	handler.OnDelete(kcache.DeletedFinalStateUnknown{Key: "tombstoned", Obj: crb})
+	if got := indexedFor(idx, "alice"); got != nil {
+		t.Errorf("a tombstoned delete must withdraw the binding, got %v", got)
+	}
+}
+
+// benchCRBs builds n ordinary ClusterRoleBindings, plus one that names the user under test, in the
+// proportion a cluster with a few thousand ClusterAuthorizationRules has: most bindings belong to
+// somebody else, and half of them are CAR-generated.
+func benchCRBs(n int) []*rbacv1.ClusterRoleBinding {
+	out := make([]*rbacv1.ClusterRoleBinding, 0, n+1)
+	for i := 0; i < n; i++ {
+		name := fmt.Sprintf("binding-%d", i)
+		subject := rbacv1.Subject{Kind: rbacv1.UserKind, Name: fmt.Sprintf("user-%d", i)}
+		if i%2 == 0 {
+			out = append(out, ruleBinding(fmt.Sprintf("user-authz:rule-%d:editor", i), subject.Name))
+			continue
+		}
+		out = append(out, plainCRB(name, subject))
+	}
+	out = append(out, plainCRB("the-one", rbacv1.Subject{Kind: rbacv1.GroupKind, Name: "target-group"}))
+	return out
+}
+
+// BenchmarkIndependentCRB_IndexLookup measures what a request costs now: one map lookup per
+// subject of the request.
+func BenchmarkIndependentCRB_IndexLookup(b *testing.B) {
+	idx := newIndependentCRBIndex()
+	for _, crb := range benchCRBs(20000) {
+		idx.upsert(crb)
+	}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		if got := idx.forRequest("someone", []string{"target-group"}); len(got) != 1 {
+			b.Fatalf("expected the one binding, got %d", len(got))
+		}
+	}
+}
+
+// BenchmarkIndependentCRB_FullScan measures what a request used to cost: a scan of every
+// ClusterRoleBinding in the cluster with the subject match run on each one.
+func BenchmarkIndependentCRB_FullScan(b *testing.B) {
+	all := benchCRBs(20000)
+	spec := &WebhookResourceSpec{User: "someone", Group: []string{"target-group"}}
+
+	b.ReportAllocs()
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		matched := 0
+		for _, crb := range all {
+			if isCARManagedClusterRoleBinding(crb) {
+				continue
+			}
+			if !subjectsMatch(crb.Subjects, spec, "") {
+				continue
+			}
+			matched++
+		}
+		if matched != 1 {
+			b.Fatalf("expected the one binding, got %d", matched)
+		}
 	}
 }
