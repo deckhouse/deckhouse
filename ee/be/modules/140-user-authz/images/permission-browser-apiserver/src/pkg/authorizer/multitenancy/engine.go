@@ -174,7 +174,10 @@ func (e *Engine) sources(ctx context.Context, attrs authorizer.Attributes) decis
 		Bindings:        e.bindings,
 		NamespaceLabels: e.namespaceLabels(),
 		ResourceScope:   e.resourceScopeOf,
-		Logf:            klog.V(4).Infof,
+		// V(2), not V(4): the only thing this logs is why a request was denied, and the webhook
+		// logs the same line at default verbosity. A denial nobody can see the reason for is the
+		// hardest kind of support case.
+		Logf: klog.V(2).Infof,
 		OnRestricted: func(username, rule string) {
 			klog.V(2).Infof("user %q is bound by rule %q not observed binding it (rules synced: %v); restricting until the rule arrives",
 				username, rule, e.rules.HasSynced())
