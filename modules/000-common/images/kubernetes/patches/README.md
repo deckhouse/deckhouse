@@ -247,6 +247,17 @@ Notable properties:
   absolute value; and a `CounterVec` with no observations emits nothing at all --
   not even `# HELP` -- so the series simply do not exist on a node that has never
   healed, which is expected rather than a sign the metric is missing.
+- Two pod events, kept deliberately separate. `NUMACheckpointReset` on a container that
+  was stopped -- without it the restart is indistinguishable from an ordinary crash,
+  because the stop goes straight to the runtime and kubelet emits no `Killing` of its
+  own; what the reader does see is `Created`/`Started` from the normal lifecycle, with
+  nothing between them explaining the restart. And `NUMACheckpointResetFailed` on a
+  container that could **not** be stopped: it keeps running while its CPUs or NUMA zone
+  are already given away in the reset state, so the next Guaranteed pod admitted here
+  can be handed the same resources. Alert on the second one -- it is the outcome that
+  needs a human, and it is otherwise invisible in `kubectl describe`, which shows the pod
+  running normally with no events at all for this case.
+
 - Every log line carries the `[d8-numa-selfheal]` marker, including one line per
   manager when the checkpoint validates cleanly -- without it there is no way to
   tell "nothing was wrong" from "this node runs an unpatched binary".

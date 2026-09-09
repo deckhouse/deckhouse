@@ -705,10 +705,10 @@ index 00000000000..e2091d174a8
 +}
 diff --git a/pkg/kubelet/cm/checkpointselfheal/selfheal_test.go b/pkg/kubelet/cm/checkpointselfheal/selfheal_test.go
 new file mode 100644
-index 00000000000..ed9ae6f7623
+index 00000000000..c43ffb8ab76
 --- /dev/null
 +++ b/pkg/kubelet/cm/checkpointselfheal/selfheal_test.go
-@@ -0,0 +1,878 @@
+@@ -0,0 +1,950 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -733,6 +733,7 @@ index 00000000000..ed9ae6f7623
 +	"errors"
 +	"os"
 +	"path/filepath"
++	"strings"
 +	"sync"
 +	"testing"
 +	"time"
@@ -1169,7 +1170,8 @@ index 00000000000..ed9ae6f7623
 +	RecordStateReset(ManagerMemory, dir, "memory_manager_state",
 +		[]ContainerRef{{PodUID: "pod", ContainerName: "app"}}, errors.New("machine state differs"))
 +
-+	StopVictims(context.Background(), Deps{Runtime: runtime})
++	recorder := record.NewFakeRecorder(10)
++	StopVictims(context.Background(), Deps{Runtime: runtime, Recorder: recorder})
 +
 +	marker := readMarker(t, dir)
 +	victims := marker.Resets[0].Victims
@@ -1181,6 +1183,76 @@ index 00000000000..ed9ae6f7623
 +	// marker is what tells the operator the node needs attention.
 +	if victims[0].Stopped || victims[0].Error == "" {
 +		t.Errorf("failed victim: got %+v, want not stopped with an error", victims[0])
++	}
++
++	// And it has to be visible where an operator looks first. Without an event
++	// here kubectl describe shows nothing at all for this outcome: no
++	// NUMACheckpointReset (that is only emitted after a successful stop) and no
++	// Created/Started either, because nothing was recreated.
++	select {
++	case ev := <-recorder.Events:
++		if !strings.Contains(ev, eventReasonFailed) {
++			t.Errorf("event %q does not carry reason %q", ev, eventReasonFailed)
++		}
++		if !strings.Contains(ev, "runtime is busy") {
++			t.Errorf("event %q does not mention why the stop failed", ev)
++		}
++		if !strings.Contains(ev, "still running") {
++			t.Errorf("event %q does not say the container is still running", ev)
++		}
++	default:
++		t.Error("no pod event emitted for a victim that could not be stopped")
++	}
++}
++
++func TestStopVictimsEventsDistinguishSuccessFromFailure(t *testing.T) {
++	// The two outcomes must not share a reason: "the workload was restarted" is
++	// routine, "this container still holds resources the state gave away" needs
++	// a human, and only the second one is worth alerting on. Same reasoning as
++	// the split between stopped_containers_total and stop_failures_total.
++	for _, tc := range []struct {
++		name       string
++		injectErr  bool
++		wantReason string
++	}{
++		{name: "stopped", injectErr: false, wantReason: eventReason},
++		{name: "could not stop", injectErr: true, wantReason: eventReasonFailed},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			Clear()
++			t.Cleanup(Clear)
++
++			dir := t.TempDir()
++			runtime := apitest.NewFakeRuntimeService()
++			runtime.Containers = map[string]*apitest.FakeContainer{
++				"cid": fakeContainerForPod("cid", "pod", "pod", "ns", runtimeapi.ContainerState_CONTAINER_RUNNING),
++			}
++			if tc.injectErr {
++				runtime.InjectError("StopContainer", errors.New("runtime is busy"))
++			}
++
++			cm := containermap.NewContainerMap()
++			cm.Add("pod", "app", "cid")
++			RecordStateReset(ManagerCPU, dir, "cpu_manager_state",
++				[]ContainerRef{{PodUID: "pod", ContainerName: "app"}}, errors.New("boom"))
++
++			recorder := record.NewFakeRecorder(10)
++			StopVictims(context.Background(), Deps{Runtime: runtime, Recorder: recorder})
++
++			select {
++			case ev := <-recorder.Events:
++				if !strings.Contains(ev, tc.wantReason) {
++					t.Errorf("event %q, want reason %q", ev, tc.wantReason)
++				}
++				// The reasons must not be prefixes of each other in a way that
++				// makes a filter match both.
++				if tc.wantReason == eventReason && strings.Contains(ev, eventReasonFailed) {
++					t.Errorf("success event %q also matches the failure reason", ev)
++				}
++			default:
++				t.Fatal("no event emitted")
++			}
++		})
 +	}
 +}
 +
@@ -1589,10 +1661,10 @@ index 00000000000..ed9ae6f7623
 +}
 diff --git a/pkg/kubelet/cm/checkpointselfheal/stop.go b/pkg/kubelet/cm/checkpointselfheal/stop.go
 new file mode 100644
-index 00000000000..1bf790e8d47
+index 00000000000..688766df5f7
 --- /dev/null
 +++ b/pkg/kubelet/cm/checkpointselfheal/stop.go
-@@ -0,0 +1,380 @@
+@@ -0,0 +1,423 @@
 +/*
 +Copyright 2026 The Kubernetes Authors.
 +
@@ -1646,6 +1718,15 @@ index 00000000000..1bf790e8d47
 +	// Without it the restart is indistinguishable from an ordinary container
 +	// crash in kubectl describe.
 +	eventReason = "NUMACheckpointReset"
++
++	// eventReasonFailed marks the case that actually needs a human: the
++	// container could not be stopped, so it keeps running with an assignment
++	// the reset state no longer has. Kept separate from eventReason on purpose
++	// -- "the workload was restarted" and "this node is in a dangerous state"
++	// are different events, and only the second one is worth alerting on. Same
++	// split as between the stopped_containers_total and stop_failures_total
++	// metrics.
++	eventReasonFailed = "NUMACheckpointResetFailed"
 +)
 +
 +// Deps is what the stopper needs from the container manager. Both fields are
@@ -1925,6 +2006,7 @@ index 00000000000..1bf790e8d47
 +			"manager", manager, "pod", klog.KRef(victim.PodNamespace, victim.PodName),
 +			"podUID", victim.PodUID, "containerName", victim.ContainerName,
 +			"containerID", victim.ContainerID)
++		emitStopFailedEvent(deps.Recorder, manager, reason, victim, err)
 +		return
 +	}
 +
@@ -1941,26 +2023,59 @@ index 00000000000..1bf790e8d47
 +}
 +
 +// emitEvent puts the reason on the pod itself. Without it the restart looks
-+// like an ordinary container crash to whoever runs kubectl describe, and the
-+// one piece of information they need -- that the kubelet did this on purpose,
-+// and why -- is only in the node's journal.
-+//
-+// The reference is built by hand because the pod object is not available yet.
-+// Name and namespace come from the runtime labels; if they are missing the
-+// event would attach to nothing useful, so it is skipped and the log stands.
++// like an ordinary container crash to whoever runs kubectl describe: the stop
++// goes straight to the runtime, bypassing kubelet's own kill path, so kubelet
++// emits no Killing event of its own. What the reader does see is Created and
++// Started from the normal lifecycle recreating the container -- and without
++// this event, nothing between them explains where the restart came from.
 +func emitEvent(recorder record.EventRecorder, manager ManagerName, reason Reason, victim *Victim) {
-+	if recorder == nil || victim.PodName == "" || victim.PodNamespace == "" {
++	ref := podRef(recorder, victim)
++	if ref == nil {
 +		return
 +	}
-+	ref := &v1.ObjectReference{
++	recorder.Eventf(ref, v1.EventTypeWarning, eventReason,
++		"Stopped container %s: the %s manager checkpoint was reset (%s), so the container is recreated to be assigned again",
++		victim.ContainerName, manager, reason)
++}
++
++// emitStopFailedEvent reports the one outcome that needs a human. The container
++// is still running, and its CPUs or NUMA zone are already given away in the
++// reset state, so the next Guaranteed pod admitted here can be handed the same
++// resources -- exactly the divergence this whole patch exists to prevent.
++//
++// Without this event the situation is invisible where an operator would look
++// first: kubectl describe shows the pod running normally, with no
++// NUMACheckpointReset (that one is only emitted after a successful stop) and no
++// Created/Started (nothing was recreated, because nothing was stopped). The
++// only other traces are a line in the node's journal and the nameless
++// stop_failures_total counter, which says it happened but not to whom.
++func emitStopFailedEvent(recorder record.EventRecorder, manager ManagerName, reason Reason, victim *Victim, cause error) {
++	ref := podRef(recorder, victim)
++	if ref == nil {
++		return
++	}
++	recorder.Eventf(ref, v1.EventTypeWarning, eventReasonFailed,
++		"Failed to stop container %s after the %s manager checkpoint was reset (%s): %v. "+
++			"The container is still running with an assignment the reset state no longer has, "+
++			"so it may hold CPUs or a NUMA zone that the state now considers free. This node needs attention.",
++		victim.ContainerName, manager, reason, cause)
++}
++
++// podRef builds the object reference by hand, because the pod object is not
++// loaded this early in kubelet start. Name and namespace come from the runtime
++// labels; without them the event would attach to nothing useful, so it is
++// skipped and the log line stands on its own. A nil recorder is standalone
++// mode, where there is no API to send events to at all.
++func podRef(recorder record.EventRecorder, victim *Victim) *v1.ObjectReference {
++	if recorder == nil || victim.PodName == "" || victim.PodNamespace == "" {
++		return nil
++	}
++	return &v1.ObjectReference{
 +		Kind:      "Pod",
 +		Name:      victim.PodName,
 +		Namespace: victim.PodNamespace,
 +		UID:       types.UID(victim.PodUID),
 +	}
-+	recorder.Eventf(ref, v1.EventTypeWarning, eventReason,
-+		"Stopped container %s: the %s manager checkpoint was reset (%s), so the container is recreated to be assigned again",
-+		victim.ContainerName, manager, reason)
 +}
 +
 +// markerDir is the directory the marker file goes into: the same directory the
