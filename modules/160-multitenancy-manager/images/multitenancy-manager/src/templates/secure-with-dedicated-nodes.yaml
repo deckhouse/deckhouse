@@ -96,6 +96,13 @@ spec:
             If specified, the project will be monitored by the Deckhouse log shipper and send logs to the specified cluster log destination.
             The names of the custom resource must be specified in the `clusterLogDestinationName` field.
           type: string
+        requiredRequests:
+          description: |
+            When true, workloads in the project must specify CPU and memory requests.
+            A Deny-mode OperationPolicy enforces this. Adoption of an existing namespace
+            sets the parameter to false so running workloads are not blocked.
+          type: boolean
+          default: true
         securityScanningEnabled:
           description: |
             Allows you to run periodic vulnerability scans. It is based on the Trivy project.

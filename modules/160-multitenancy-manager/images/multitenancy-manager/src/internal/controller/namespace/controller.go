@@ -20,7 +20,6 @@ import (
 	"context"
 	"fmt"
 	"reflect"
-	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -42,22 +41,32 @@ import (
 	"controller/apis/deckhouse.io/v1alpha3"
 	namespacemanager "controller/internal/manager/namespace"
 	projectmanager "controller/internal/manager/project"
+	"controller/internal/namespaces"
+	"controller/internal/startup"
 )
 
-const controllerName = "d8-namespace-controller"
+const (
+	controllerName = "d8-namespace-controller"
 
-func Register(runtimeManager manager.Manager, logger logr.Logger, allowOrphanNamespaces bool) error {
+	// upmeterNamespacePrefix covers canary / probe namespaces that are not all
+	// covered by namespaces.IsSystem (that helper only knows upmeter-probe-namespace-).
+	upmeterNamespacePrefix = "upmeter-"
+)
+
+func Register(runtimeManager manager.Manager, logger logr.Logger, migration *startup.Migration) error {
 	r := &reconciler{
-		init:                  new(sync.WaitGroup),
-		logger:                logger.WithName(controllerName),
-		client:                runtimeManager.GetClient(),
-		manager:               namespacemanager.New(runtimeManager.GetClient(), logger),
-		allowOrphanNamespaces: allowOrphanNamespaces,
+		init:    new(sync.WaitGroup),
+		logger:  logger.WithName(controllerName),
+		client:  runtimeManager.GetClient(),
+		manager: namespacemanager.New(runtimeManager.GetClient(), logger),
 	}
 
 	r.init.Add(1)
 
-	namespaceController, err := controller.New(controllerName, runtimeManager, controller.Options{Reconciler: r})
+	namespaceController, err := controller.New(controllerName, runtimeManager, controller.Options{
+		Reconciler:              r,
+		MaxConcurrentReconciles: namespacemanager.WorkLimit,
+	})
 	if err != nil {
 		return fmt.Errorf("create namespace controller: %w", err)
 	}
@@ -76,7 +85,7 @@ func Register(runtimeManager manager.Manager, logger logr.Logger, allowOrphanNam
 				return true
 			},
 			func() error {
-				return r.manager.Init(ctx, runtimeManager.GetWebhookServer().StartedChecker(), r.init)
+				return r.manager.Init(ctx, runtimeManager.GetWebhookServer().StartedChecker(), r.init, migration)
 			},
 		)
 	})); err != nil {
@@ -86,18 +95,17 @@ func Register(runtimeManager manager.Manager, logger logr.Logger, allowOrphanNam
 	r.logger.Info("initialize namespace controller")
 	return ctrl.NewControllerManagedBy(runtimeManager).
 		For(&corev1.Namespace{}).
-		WithEventFilter(customPredicate[client.Object]{logger: logger, allowOrphanNamespaces: allowOrphanNamespaces}).
+		WithEventFilter(customPredicate[client.Object]{logger: logger}).
 		Complete(namespaceController)
 }
 
 var _ reconcile.Reconciler = &reconciler{}
 
 type reconciler struct {
-	init                  *sync.WaitGroup
-	manager               *namespacemanager.Manager
-	client                client.Client
-	logger                logr.Logger
-	allowOrphanNamespaces bool
+	init    *sync.WaitGroup
+	manager *namespacemanager.Manager
+	client  client.Client
+	logger  logr.Logger
 }
 
 func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -115,80 +123,58 @@ func (r *reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Resu
 		return reconcile.Result{}, err
 	}
 
-	// handle the namespace deletion: cascade to the managed-by-namespace project and release the
-	// namespace finalizer.
+	// Retired markers (finalizer / managed-by-namespace label) must be peeled on every
+	// reconcile, including Terminating namespaces. Migration used to do this only when
+	// the project still needed a template; a half-finished run left glue nobody removes.
+	if namespacemanager.HasRetiredMarkers(namespace) {
+		if err := r.manager.ClearRetiredMarkers(ctx, namespace); err != nil {
+			return reconcile.Result{}, err
+		}
+	}
+
+	// A namespace on its way out is otherwise left alone: the project owns it now, and
+	// deleting it only makes the project reconcile recreate it.
 	if !namespace.DeletionTimestamp.IsZero() {
-		r.logger.Info("the namespace is being deleted", "namespace", namespace.Name)
-		return r.manager.HandleDeletion(ctx, namespace)
-	}
-
-	// explicit adoption flow takes precedence over auto-wrap.
-	if _, ok := namespace.Annotations[v1alpha3.NamespaceAnnotationAdopt]; ok {
-		r.logger.Info("adopt the namespace into a project", "namespace", namespace.Name)
-		return r.manager.Adopt(ctx, namespace)
-	}
-
-	// auto-wrap is only active when orphan namespaces are allowed.
-	if !r.allowOrphanNamespaces {
 		return reconcile.Result{}, nil
 	}
 
-	// Wrap a fresh candidate, and keep an already-wrapped namespace in sync. After the first wrap
-	// the project reconciler stamps the main namespace with the project-ownership label, so the
-	// namespace is no longer an auto-wrap *candidate*; the managed-project finalizer is what marks
-	// it as already wrapped and still needing its user labels/annotations mirrored into the managed
-	// project's spec.parameters.namespace on every update (not only at create time).
-	wrapped := slices.Contains(namespace.Finalizers, v1alpha3.NamespaceFinalizerManagedProject)
-	if !isAutoWrapCandidate(namespace) && !wrapped {
+	if !isAdoptionCandidate(namespace) {
 		return reconcile.Result{}, nil
 	}
 
-	r.logger.Info("ensure the managed project for the namespace", "namespace", namespace.Name)
-	return r.manager.Wrap(ctx, namespace)
+	return r.manager.Adopt(ctx, namespace)
 }
 
-// isAutoWrapCandidate reports whether a namespace may be auto-wrapped into a managed-by-namespace
-// project: it must not be the default namespace, a reserved (d8-/kube-) namespace, a
-// deckhouse-managed namespace (heritage=deckhouse), or a namespace already owned by a project. The
-// latter covers both a project's main namespace and the additional namespaces created by a
-// ProjectNamespace - neither must be turned into a separate managed-by-namespace project.
-func isAutoWrapCandidate(obj metav1.Object) bool {
+// isAdoptionCandidate reports whether a namespace has to be turned into a project of its own.
+func isAdoptionCandidate(obj metav1.Object) bool {
 	name := obj.GetName()
 	if name == projectmanager.DefaultProjectName {
 		return false
 	}
-	if strings.HasPrefix(name, projectmanager.DeckhouseNamespacePrefix) || strings.HasPrefix(name, projectmanager.KubernetesNamespacePrefix) {
+	if len(name) > v1alpha3.ProjectNameMaxLength {
 		return false
 	}
-	if obj.GetLabels()[v1alpha3.ResourceLabelHeritage] == v1alpha3.ResourceHeritageDeckhouse {
+	if namespaces.IsSystem(name) || strings.HasPrefix(name, upmeterNamespacePrefix) {
 		return false
 	}
-	if _, owned := obj.GetLabels()[v1alpha3.ResourceLabelProject]; owned {
+	labels := obj.GetLabels()
+	switch labels[v1alpha3.ResourceLabelHeritage] {
+	case v1alpha3.ResourceHeritageDeckhouse, v1alpha3.ResourceHeritageUpmeter:
+		return false
+	}
+	if _, owned := labels[v1alpha3.ResourceLabelProject]; owned {
 		return false
 	}
 	return true
 }
 
-type customPredicate[T metav1.Object] struct {
-	predicate.TypedFuncs[T]
-	logger                logr.Logger
-	allowOrphanNamespaces bool
+func needsReconcile(obj metav1.Object) bool {
+	return namespacemanager.HasRetiredMarkers(obj) || isAdoptionCandidate(obj)
 }
 
-// shouldHandle decides whether a namespace event is relevant: namespaces carrying the managed-project
-// finalizer (so sync and deletion keep working even if the flag flips), namespaces requesting
-// adoption, and - when orphan namespaces are allowed - auto-wrap candidates.
-func (p customPredicate[T]) shouldHandle(obj metav1.Object) bool {
-	if slices.Contains(obj.GetFinalizers(), v1alpha3.NamespaceFinalizerManagedProject) {
-		return true
-	}
-	if _, ok := obj.GetAnnotations()[v1alpha3.NamespaceAnnotationAdopt]; ok {
-		return true
-	}
-	if !p.allowOrphanNamespaces {
-		return false
-	}
-	return isAutoWrapCandidate(obj)
+type customPredicate[T metav1.Object] struct {
+	predicate.TypedFuncs[T]
+	logger logr.Logger
 }
 
 func (p customPredicate[T]) Create(e event.TypedCreateEvent[T]) bool {
@@ -196,7 +182,7 @@ func (p customPredicate[T]) Create(e event.TypedCreateEvent[T]) bool {
 		p.logger.Error(nil, "create event has no object", "event", e)
 		return false
 	}
-	return p.shouldHandle(e.Object)
+	return needsReconcile(e.Object)
 }
 
 func (p customPredicate[T]) Update(e event.TypedUpdateEvent[T]) bool {
@@ -208,17 +194,17 @@ func (p customPredicate[T]) Update(e event.TypedUpdateEvent[T]) bool {
 		p.logger.Error(nil, "update event has no new object for update", "event", e)
 		return false
 	}
-	return p.shouldHandle(e.ObjectNew)
+	return needsReconcile(e.ObjectNew)
 }
 
-// Delete is intentionally ignored: namespaces wrapped by the controller carry a finalizer, so their
-// deletion is observed as an Update (DeletionTimestamp set) and handled there.
+// Delete is intentionally ignored: a namespace that disappears is recreated by the reconcile of the
+// project that owns it, and a namespace that never belonged to a project has nothing to clean up.
 func (p customPredicate[T]) Delete(_ event.TypedDeleteEvent[T]) bool {
 	return false
 }
 
 func isNil(arg any) bool {
-	if v := reflect.ValueOf(arg); !v.IsValid() || ((v.Kind() == reflect.Ptr ||
+	if v := reflect.ValueOf(arg); !v.IsValid() || ((v.Kind() == reflect.Pointer ||
 		v.Kind() == reflect.Interface ||
 		v.Kind() == reflect.Slice ||
 		v.Kind() == reflect.Map ||

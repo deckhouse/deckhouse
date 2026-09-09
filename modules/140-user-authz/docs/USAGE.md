@@ -397,7 +397,7 @@ Configuration options:
 
 > The `SuperAdmin` access level **does not lift** the namespace restrictions specified in the `namespaceSelector` and `limitNamespaces` parameters. If you need to grant access to all namespaces, specify the scope explicitly, including via [`namespaceSelector.matchAny`](cr.html#clusterauthorizationrule-v1-spec-namespaceselector).
 
-If several `ClusterAuthorizationRule` resources match the same subject, the allowed namespaces are **unioned**; the effective `accessLevel` is the **most powerful** among all matching rules. For details, refer to the [FAQ](faq.html#what-if-there-are-two-clusterauthorizationrules-matching-to-a-single-user).
+If several `ClusterAuthorizationRule` resources match the same subject, the allowed namespaces are **combined**; the effective `accessLevel` is the **most powerful** among all matching rules. For details, refer to the [FAQ](faq.html#what-if-there-are-two-clusterauthorizationrules-matching-to-a-single-user).
 
 {% alert level="warning" %}
 Namespace restrictions from ClusterAuthorizationRule are enforced by the authorization webhook chain. If the webhook is unavailable, these restrictions **do not apply** until the webhook is reachable again. For more information, see the [module description](./#basic-role-based-model).
