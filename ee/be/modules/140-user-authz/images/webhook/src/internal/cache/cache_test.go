@@ -203,6 +203,73 @@ func TestCacheGetIfNoResource(t *testing.T) {
 	}
 }
 
+// A group the API server does not serve must be remembered too. The caller picks the group out of
+// the request path, so an unknown group is the cheapest possible way to ask for a listing; if the
+// 404 leaves no entry behind, the rate limit never applies to it and every request is a fresh round
+// trip to the API server from the authorization path.
+func TestCacheGetUnknownGroupIsNegativelyCached(t *testing.T) {
+	var listings int32
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&listings, 1)
+		w.Header().Add("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	cache := NamespacedDiscoveryCache{
+		client:               server.Client(),
+		kubernetesAPIAddress: server.URL,
+		logger:               log.New(io.Discard, "", log.LstdFlags),
+		data:                 make(map[string]*namespacedCacheEntry),
+		preferredVersions:    make(map[string]*preferredVersionCacheEntry),
+	}
+	now := time.Now()
+	cache.now = func() time.Time { return now }
+
+	// A group that is not served is an answer - the resource is absent - not a failure to ask.
+	if _, err := cache.Get("nosuchgroup/v1", "things"); !errors.Is(err, ErrResourceAbsent) {
+		t.Fatalf("first lookup: got %v, want ErrResourceAbsent", err)
+	}
+	first := atomic.LoadInt32(&listings)
+	if first == 0 {
+		t.Fatal("the first lookup did not ask the API server at all")
+	}
+
+	// And every lookup within the interval is answered without asking again.
+	for i := 0; i < 50; i++ {
+		if _, err := cache.Get("nosuchgroup/v1", "things"); !errors.Is(err, ErrResourceAbsent) {
+			t.Fatalf("lookup %d: got %v, want ErrResourceAbsent", i, err)
+		}
+	}
+	if got := atomic.LoadInt32(&listings); got != first {
+		t.Fatalf("50 further lookups produced %d discovery requests in total, want %d", got, first)
+	}
+
+	// A different made-up group is a different key, so it costs its own listing and no more. This
+	// is what bounds the amplifier: work is proportional to distinct groups over the interval, not
+	// to the request rate.
+	before := atomic.LoadInt32(&listings)
+	for i := 0; i < 20; i++ {
+		if _, err := cache.Get("othergroup/v1", "things"); !errors.Is(err, ErrResourceAbsent) {
+			t.Fatalf("other group lookup %d: got %v", i, err)
+		}
+	}
+	perGroup := atomic.LoadInt32(&listings) - before
+	if perGroup != first {
+		t.Fatalf("20 lookups of a second unknown group produced %d discovery requests, want %d", perGroup, first)
+	}
+
+	// Once the interval passes the group is asked about again, so a CRD installed since then is
+	// picked up.
+	cache.now = func() time.Time { return now.Add(negativeRenewInterval) }
+	if _, err := cache.Get("nosuchgroup/v1", "things"); !errors.Is(err, ErrResourceAbsent) {
+		t.Fatalf("after the interval: got %v, want ErrResourceAbsent", err)
+	}
+	if got := atomic.LoadInt32(&listings); got <= perGroup+before {
+		t.Fatal("the lookup after the interval did not re-ask the API server")
+	}
+}
+
 // A resource that is not there must not make the webhook list its group on every request: the
 // listing is a request to the API server made from the authorization path, and the caller picks
 // the resource name.

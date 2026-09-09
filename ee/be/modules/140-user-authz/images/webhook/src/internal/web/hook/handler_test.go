@@ -787,6 +787,56 @@ func ruleBinding(name, username string) *rbacv1.ClusterRoleBinding {
 	}
 }
 
+// TestAuthorizeRequest_UnlistedDirectoryDeniesEverySubjectOfARule pins the state the serving gate
+// exists to keep off the wire, and the reason that gate has to wait for the rules and not only for
+// the bindings.
+//
+// The bindings index and the rules arrive over independent watches. With the index filled and the
+// directory still nil - the rules were never listed at all - the ordering guard cannot tell "this
+// rule does not cover you" from "I have not observed this rule", so EVERY subject whose access
+// comes from a ClusterAuthorizationRule is denied. Each denial is correct in isolation and
+// catastrophic in bulk: the API server caches denials for unauthorizedTTL, so they outlive the
+// startup that produced them. Answering 503 instead costs nothing, because a webhook in this state
+// has nothing to say.
+//
+// If this test ever starts reporting "no opinion", rulesListed in server.go may be relaxed. While
+// it reports a denial, the serving gate must include the rules source.
+func TestAuthorizeRequest_UnlistedDirectoryDeniesEverySubjectOfARule(t *testing.T) {
+	idx := binding.NewIndex()
+	idx.Upsert(ruleBinding("user-authz:team-a:admin", "alice"))
+
+	handler := &Handler{
+		logger:   log.New(io.Discard, "", 0),
+		cache:    fixtureCache(),
+		rules:    staticRules{dir: nil}, // the rules have not been listed even once
+		bindings: idx,
+	}
+
+	req := &WebhookRequest{Spec: WebhookResourceSpec{
+		User:               "alice",
+		ResourceAttributes: WebhookResourceAttributes{Namespace: "team-a", Resource: "pods", Verb: "get"},
+	}}
+	handler.authorizeRequest(req)
+
+	if !req.Status.Denied {
+		t.Fatal("a subject bound by a rule the webhook has never listed was granted; " +
+			"if that is now intended, revisit rulesListed in server.go before relaxing this test")
+	}
+	if req.Status.Reason != noNamespaceAccessReason {
+		t.Errorf("reason = %q, want %q", req.Status.Reason, noNamespaceAccessReason)
+	}
+
+	// A subject no binding names is still none of this layer's business, listed or not.
+	other := &WebhookRequest{Spec: WebhookResourceSpec{
+		User:               "nobody",
+		ResourceAttributes: WebhookResourceAttributes{Namespace: "team-a", Resource: "pods", Verb: "get"},
+	}}
+	handler.authorizeRequest(other)
+	if other.Status.Denied {
+		t.Errorf("an unbound subject was denied: %q", other.Status.Reason)
+	}
+}
+
 // A subject bound by a rule binding whose rule is not in the directory is restricted until the rule
 // arrives: the binding is created seconds after the rule, and this webhook may see it first.
 func TestAuthorizeRequest_UnknownRuleBindingRestricts(t *testing.T) {
