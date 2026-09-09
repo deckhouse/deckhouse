@@ -117,30 +117,45 @@ spec:
           name: user-authz-webhook-secret
         - mountPath: /etc/ssl/apiserver-authentication-requestheader-client-ca
           name: apiserver-authentication-requestheader-client-ca
+        # The caches this webhook decides from take a while to fill on a large cluster, and until
+        # they are the listener answers 503. That is a startup condition, not a liveness one, so it
+        # is the startup probe that waits it out - otherwise liveness kills a container that is
+        # making progress, and the restart begins the same wait again.
+        startupProbe:
+          exec:
+            command:
+            - /healthcheck
+            - readyz
+          periodSeconds: 5
+          failureThreshold: 60
+          timeoutSeconds: 15
+        # Liveness asks this process alone whether it is still serving. It must not depend on the
+        # API server: the webhook keeps deciding from its caches while the API server is away, and
+        # restarting it then only throws those caches away.
         livenessProbe:
           exec:
             command:
             - /healthcheck
-          # Wait for one minute before restarting the container to avoid crashloopbackoofs in case if apiserver restarts
+            - healthz
           initialDelaySeconds: 5
           periodSeconds: 10
           successThreshold: 1
           failureThreshold: 6
-        # The rollout must not move to the next master until this one is actually authorizing: the
-        # webhook is fail-closed, and it spends its first moments waiting for the informer caches.
-        # The probe has to be an exec for the same reason the liveness probe is - the listener
+          # Without this the kubelet applies its 1s default, and the probe fails whenever the node
+          # is merely busy. 15s is what kube-apiserver's own probes use.
+          timeoutSeconds: 15
+        # Readiness does consult the API server, and holds the rollout on this master while it is
+        # unreachable. The probe has to be an exec for the same reason the others are: the listener
         # requires a client certificate.
         readinessProbe:
           exec:
             command:
             - /healthcheck
+            - readyz
           initialDelaySeconds: 2
           periodSeconds: 5
           successThreshold: 1
           failureThreshold: 3
-          # /healthcheck asks the API server, and that check retries for up to ~21s, while kubelet
-          # defaults an exec probe to 1s. Without this the probe reports a failure whenever the API
-          # server is merely slow. 15s is what kube-apiserver's own probes use.
           timeoutSeconds: 15
         resources:
           requests:

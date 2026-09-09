@@ -13,6 +13,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync/atomic"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -85,6 +86,10 @@ type Server struct {
 	informersSynced []kcache.InformerSynced
 	rules           *source.Source
 	registry        *prometheus.Registry
+
+	// synced is set once every cache the decision depends on has been filled. The listener opens
+	// before that, so the field is what tells the two apart.
+	synced atomic.Bool
 }
 
 func NewServer(logger *log.Logger) (*Server, error) {
@@ -161,17 +166,35 @@ func NewServer(logger *log.Logger) (*Server, error) {
 func (s *Server) prepareHTTPServer() (*http.Server, error) {
 	router := http.NewServeMux()
 
-	router.Handle("/", s.handler)
+	router.Handle("/", s.gateOnCaches(s.handler))
+
+	// Liveness. It answers from this process alone, and a restart is the right response to it
+	// failing. It deliberately does not ask the API server: the webhook decides from its caches, so
+	// it keeps working while the API server is away, and restarting it then only throws those
+	// caches away and rebuilds them against an API server that is still away. Tying liveness to the
+	// API server is what let the kubelet kill this container at the moment the API server came
+	// back, taking authorization for the whole cluster with it.
 	router.HandleFunc("/healthz", func(w http.ResponseWriter, _ *http.Request) {
-		err := s.cache.Check()
-		if err == nil {
-			w.WriteHeader(http.StatusOK)
-			_, _ = fmt.Fprintf(w, "Ok. rules: %s", s.rules.State())
+		w.WriteHeader(http.StatusOK)
+		_, _ = fmt.Fprintf(w, "Ok. rules: %s", s.rules.State())
+	})
+
+	// Readiness. Here the API server does belong: a webhook that cannot reach it will not see new
+	// rules, and a rollout must not move on to the next master while that is true. Nothing routes
+	// to this Pod, so the only effect of being unready is to hold the rollout and show up.
+	router.HandleFunc("/readyz", func(w http.ResponseWriter, _ *http.Request) {
+		if !s.synced.Load() {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = fmt.Fprintln(w, "the informer caches are still filling")
 			return
 		}
-
-		w.WriteHeader(http.StatusInternalServerError)
-		_, _ = w.Write([]byte(err.Error()))
+		if err := s.cache.Check(); err != nil {
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = fmt.Fprintf(w, "the api server is unreachable: %v", err)
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = fmt.Fprintf(w, "Ok. rules: %s", s.rules.State())
 	})
 
 	tlsCfg, err := buildTLSConfig()
@@ -192,6 +215,24 @@ func (s *Server) prepareHTTPServer() (*http.Server, error) {
 	return srv, nil
 }
 
+// gateOnCaches refuses authorization requests until the caches the decision reads are filled.
+//
+// It answers 503 rather than a denial on purpose. A denial is an answer, and the API server caches
+// answers for unauthorizedTTL - a deny issued during startup would outlive the startup by that long
+// and keep denying after the webhook was ready. An error is not cached, so the very first request
+// after the caches fill is decided properly. It is also the same outcome the closed port used to
+// produce, so nothing becomes more permissive; it just stops being a mystery in the logs.
+func (s *Server) gateOnCaches(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !s.synced.Load() {
+			s.logger.Printf("refusing an authorization request: the informer caches are still filling")
+			http.Error(w, "user-authz webhook: the informer caches are still filling", http.StatusServiceUnavailable)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 // Run starts webhook server and its configuration renewal. It will exit only if the webserver stops listening.
 func (s *Server) Run() error {
 	httpServer, err := s.prepareHTTPServer()
@@ -204,9 +245,19 @@ func (s *Server) Run() error {
 
 	s.informerFactory.Start(ctx.Done())
 
-	if ok := kcache.WaitForCacheSync(ctx.Done(), s.informersSynced...); !ok {
-		return fmt.Errorf("failed to sync informer caches")
-	}
+	// Open the listener before the caches are warm. On a cluster with tens of thousands of
+	// ClusterRoleBindings the sync takes long enough that the port used to appear minutes after the
+	// process started, and until it did the API server got a connection error on every request and
+	// the kubelet's probes killed a container that was making progress. Requests that arrive early
+	// are refused by gateOnCaches, which is the same outcome as a closed port but says why.
+	go func() {
+		if ok := kcache.WaitForCacheSync(ctx.Done(), s.informersSynced...); !ok {
+			s.logger.Println("informer caches were not synced before shutdown")
+			return
+		}
+		s.synced.Store(true)
+		s.logger.Println("informer caches are synced; serving authorization decisions")
+	}()
 
 	go s.rules.Run(ctx)
 	go s.serveMetrics(ctx)

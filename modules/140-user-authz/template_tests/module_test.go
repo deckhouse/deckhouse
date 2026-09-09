@@ -296,6 +296,26 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(manifest).To(ContainSubstring("protocol: TCP"))
 		})
 
+		It("Should probe the webhook without depending on the API server for liveness", func() {
+			ds := f.KubernetesResource("DaemonSet", "d8-user-authz", "user-authz-webhook")
+			Expect(ds.Exists()).To(BeTrue())
+
+			// Every probe needs an explicit timeout: /healthcheck talks over the network, and the
+			// kubelet's default for an exec probe is one second.
+			for _, probe := range []string{"startupProbe", "livenessProbe", "readinessProbe"} {
+				field := "spec.template.spec.containers.0." + probe
+				Expect(ds.Field(field).Exists()).To(BeTrue(), probe)
+				Expect(ds.Field(field+".timeoutSeconds").Int()).To(BeNumerically(">=", 5), probe)
+			}
+
+			// Liveness must ask the local question and readiness the one that involves the API
+			// server; swapping them is what let the kubelet kill the webhook during an API server
+			// restart.
+			Expect(ds.Field("spec.template.spec.containers.0.livenessProbe.exec.command").String()).To(ContainSubstring("healthz"))
+			Expect(ds.Field("spec.template.spec.containers.0.readinessProbe.exec.command").String()).To(ContainSubstring("readyz"))
+			Expect(ds.Field("spec.template.spec.containers.0.startupProbe.exec.command").String()).To(ContainSubstring("readyz"))
+		})
+
 		It("Should expose the webhook metrics for Prometheus", func() {
 			ds := f.KubernetesResource("DaemonSet", "d8-user-authz", "user-authz-webhook")
 			Expect(ds.Exists()).To(BeTrue())
