@@ -399,13 +399,21 @@ metadata:
   name: {{ .Chart.Name }}:agent
   namespace: d8-system
   {{- include "helm_lib_module_labels" (list . (dict "app" (printf "%s-agent" .Chart.Name))) | nindent 2 }}
+# The node's own identity and nothing else.
+#
+# `system:bootstrappers:d8-node-manager` stood here too, on the reasoning that a new node
+# resolves its layout before the kubelet has an identity. It never did: the agent reads the
+# API with `/etc/kubernetes/kubelet.conf` and with no other credentials (see the agent's
+# `DefaultKubeconfig`), and that file does not exist until the kubelet has completed its TLS
+# bootstrap — step 061 writes the bootstrap credentials to `bootstrap-kubelet.conf`, which
+# nothing in this module opens. Until then the agent pulls from the layout on disk, which is
+# what that layout is for.
+#
+# What listing the group did instead was make a leaked bootstrap token a reader of every
+# registry credential in the cluster.
 subjects:
   - kind: Group
     name: system:nodes
-    apiGroup: rbac.authorization.k8s.io
-  # New nodes resolve their layout before the kubelet has a node identity.
-  - kind: Group
-    name: system:bootstrappers:d8-node-manager
     apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: Role
@@ -418,13 +426,10 @@ apiVersion: rbac.authorization.k8s.io/v1
 metadata:
   name: d8:{{ .Chart.Name }}:agent
   {{- include "helm_lib_module_labels" (list . (dict "app" (printf "%s-agent" .Chart.Name))) | nindent 2 }}
+# The bootstrap group is deliberately absent here as well; see the RoleBinding above.
 subjects:
   - kind: Group
     name: system:nodes
-    apiGroup: rbac.authorization.k8s.io
-  # New nodes read their layout before the kubelet has a node identity.
-  - kind: Group
-    name: system:bootstrappers:d8-node-manager
     apiGroup: rbac.authorization.k8s.io
 roleRef:
   kind: ClusterRole

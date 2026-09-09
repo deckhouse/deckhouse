@@ -43,6 +43,11 @@ type authority struct {
 	certificate *x509.Certificate
 	key         *ecdsa.PrivateKey
 	pem         []byte
+
+	// chain is what a peer has to send along with a leaf this authority signed for the
+	// verifier to get from that leaf to a root it trusts. Empty for a root authority,
+	// which needs nothing; one certificate for an intermediate.
+	chain [][]byte
 }
 
 func newAuthority(t *testing.T, name string) *authority {
@@ -99,7 +104,46 @@ func (a *authority) issue(t *testing.T, name string, usage x509.ExtKeyUsage) tls
 	leaf, err := x509.ParseCertificate(der)
 	require.NoError(t, err)
 
-	return tls.Certificate{Certificate: [][]byte{der}, PrivateKey: key, Leaf: leaf}
+	return tls.Certificate{
+		Certificate: append([][]byte{der}, a.chain...),
+		PrivateKey:  key,
+		Leaf:        leaf,
+	}
+}
+
+// intermediate returns an authority this one signed, which issues leaves of its own.
+//
+// The case exists in the field: an ingress fronted by a PKI that signs through an intermediate
+// presents a leaf that does not verify against the root by itself, only through the intermediate
+// it sends with it.
+func (a *authority) intermediate(t *testing.T, name string) *authority {
+	t.Helper()
+
+	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	require.NoError(t, err)
+
+	template := &x509.Certificate{
+		SerialNumber:          big.NewInt(3),
+		Subject:               pkix.Name{CommonName: name},
+		NotBefore:             time.Now().Add(-time.Hour),
+		NotAfter:              time.Now().Add(time.Hour),
+		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageDigitalSignature,
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+	}
+
+	der, err := x509.CreateCertificate(rand.Reader, template, a.certificate, &key.PublicKey, a.key)
+	require.NoError(t, err)
+
+	certificate, err := x509.ParseCertificate(der)
+	require.NoError(t, err)
+
+	return &authority{
+		certificate: certificate,
+		key:         key,
+		pem:         pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: der}),
+		chain:       append([][]byte{der}, a.chain...),
+	}
 }
 
 func (a *authority) file(t *testing.T) string {
@@ -205,6 +249,30 @@ func TestTheForwardedAddressIsBelievedOnlyBehindTheRightCertificate(t *testing.T
 		address := seen(t, ingress, authorityFile, nil)
 		assert.NotContains(t, address, "203.0.113.7")
 		assert.Contains(t, address, "127.0.0.1", "the request is served, it just speaks for itself")
+	})
+
+	t.Run("an intermediate between the authority and the front", func(t *testing.T) {
+		// The reason the chain is read at all. Verified against the root alone this leaf does
+		// not chain to anything, and refusing it would stop believing a legitimate ingress.
+		through := ingress.intermediate(t, "ingress issuing authority")
+		certificate := through.issue(t, "ingress-controller", x509.ExtKeyUsageClientAuth)
+
+		assert.Equal(t, "203.0.113.7:0", seen(t, ingress, authorityFile, &certificate),
+			"a leaf signed through an intermediate is still the front, and it sends the intermediate")
+	})
+
+	t.Run("a trusted certificate appended to somebody else's chain", func(t *testing.T) {
+		// The hole this decision closes. TLS proves possession of a private key for the leaf
+		// and for nothing else in the chain, so a peer may append whatever it likes — here,
+		// the certificate genuinely issued to the ingress, over its own key. Walking the whole
+		// chain accepted that; only the leaf may decide.
+		forged := elsewhere.issue(t, "ingress-controller", x509.ExtKeyUsageClientAuth)
+		forged.Certificate = append(forged.Certificate, trustedCertificate.Certificate[0])
+
+		address := seen(t, ingress, authorityFile, &forged)
+		assert.NotContains(t, address, "203.0.113.7",
+			"a certificate the peer cannot prove it owns is not its certificate")
+		assert.Contains(t, address, "127.0.0.1")
 	})
 
 	t.Run("no authority configured", func(t *testing.T) {

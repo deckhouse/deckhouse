@@ -83,23 +83,39 @@ func Handler(clientCertCA string, next http.Handler) (http.Handler, error) {
 // Verified against the configured authority and required to be a client certificate: a server
 // certificate from the same authority is not a licence to speak for somebody else's address, and
 // this module issues both.
+//
+// The decision is the leaf's alone, and that is the whole point. TLS proves possession of a
+// private key for PeerCertificates[0] and for nothing else in the list: everything after it is a
+// chain the peer chose to send. Accepting any member of that chain — what this did until a review
+// asked why — believed anybody who appended a certificate this authority had ever issued to
+// somebody, their own key underneath it, which on this listener means anybody who can reach it.
+//
+// The rest of the list is still read, as intermediates, because that is what it is for: an
+// authority that signs through an intermediate leaves the leaf unverifiable against the root on
+// its own, and refusing that case would quietly stop believing a legitimate front.
 func presentedTrustedCertificate(request *http.Request, pool *x509.CertPool) bool {
-	if request.TLS == nil {
+	if request.TLS == nil || len(request.TLS.PeerCertificates) == 0 {
 		return false
 	}
 
-	for _, certificate := range request.TLS.PeerCertificates {
+	leaf := request.TLS.PeerCertificates[0]
+	if leaf == nil {
+		return false
+	}
+
+	intermediates := x509.NewCertPool()
+	for _, certificate := range request.TLS.PeerCertificates[1:] {
 		if certificate == nil {
 			continue
 		}
-		if _, err := certificate.Verify(x509.VerifyOptions{
-			Roots:     pool,
-			KeyUsages: []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
-		}); err != nil {
-			continue
-		}
-		return true
+		intermediates.AddCert(certificate)
 	}
 
-	return false
+	_, err := leaf.Verify(x509.VerifyOptions{
+		Roots:         pool,
+		Intermediates: intermediates,
+		KeyUsages:     []x509.ExtKeyUsage{x509.ExtKeyUsageClientAuth},
+	})
+
+	return err == nil
 }

@@ -41,6 +41,7 @@
 agent_path="/etc/kubernetes/registry-agent"
 pki_path="${agent_path}/pki"
 bootstrap_layout="${agent_path}/bootstrap-layout.json"
+agent_kubeconfig="${agent_path}/kubeconfig"
 cache_path="/var/lib/deckhouse/registry-agent"
 
 # The certificate authorities this cluster accepts, staged one file per registry by step 003 for
@@ -220,41 +221,85 @@ if [[ ! -e "${bootstrap_layout}" ]]; then
 fi
 chmod 0600 "${bootstrap_layout}"
 
-# The kubelet's own credentials are how the agent reads this node's layout, so that nothing
-# has to be distributed to the node for it. The directory is mounted, not the file, and
-# unconditionally — every narrower choice has been tried and each fails differently:
+# The agent's own kubeconfig, over the certificate the kubelet keeps for itself.
+#
+# The agent reads this node's layout with the kubelet's identity, so that nothing has to be
+# distributed to the node for it. What it read until now was `/etc/kubernetes/kubelet.conf`,
+# and that meant mounting the whole directory, because every narrower mount of that one file
+# had been tried and each failed:
 #
 #   - FileOrCreate on kubelet.conf has the kubelet create an empty one, and step 061 skips
 #     generating the bootstrap kubeconfig when that file exists, so the node never completes
 #     its TLS bootstrap;
 #   - File on kubelet.conf leaves the pod pending until it appears, which is exactly the
 #     window in which a node being bootstrapped has nothing else able to pull images;
-#   - mounting it only once it exists — what this step did until a test cluster showed
-#     otherwise — decides the question at the one moment the answer is "not yet" and never
-#     revisits it. The comment here used to claim the mount would appear on a later bashible
-#     pass. It does not: bashible skips a bundle it has already applied ("Configuration is in
-#     sync, nothing to do"), so the step never runs again and the agent on that node stays
-#     without API access for the life of the node — pulling from the layout it was installed
-#     with, reporting success, and never applying anything the cluster configures. Whether it
-#     happened at all depended on which came first, the step or the kubeconfig.
+#   - mounting it only once it exists decides the question at the one moment the answer is
+#     "not yet" and never revisits it, because bashible skips a bundle it has already applied
+#     ("Configuration is in sync, nothing to do"). The agent on such a node stays without API
+#     access for the life of the node — pulling from the layout it was installed with,
+#     reporting success, and never applying anything the cluster configures.
 #
-# Mounting the directory read-only costs nothing this agent does not already have: it runs as
-# root in the host's namespaces on this node. What it buys is that the agent finds the
-# credentials whenever they appear, because it re-reads the path on every connection attempt.
+# On a master that directory is also `pki/ca.key` and `admin.conf`, and this agent is the one
+# component of the module that parses what an external registry answers. Read-only or not,
+# code execution in it reached the cluster's certificate authority.
+#
+# So the file is written here instead, and none of the three failures applies to it: nothing
+# else creates it, this step writes it on every pass, and it lives in the directory the agent
+# already has. The identity is still the kubelet's, by reference to the certificate the
+# kubelet rotates for itself — the same reference `kubelet.conf` holds — so nothing is copied
+# and nothing goes stale. Until the node completes its TLS bootstrap that certificate does
+# not exist, the agent finds no credentials and pulls from the bootstrap layout, which is
+# what the layout is for.
+#
+# The authority is embedded rather than referenced, because neither copy of it is there the
+# whole time: step 098 clears `/var/lib/bashible/ca.crt` once bootstrap finishes, and
+# `/etc/kubernetes/pki/ca.crt` — the copy step 060 leaves on every node — does not exist yet
+# when this step first runs. Either file is the same certificate.
+#
+# Written only when one of them is readable. An absent kubeconfig is the "no credentials yet"
+# path the agent already handles; an empty or truncated one would be retried forever.
+agent_ca=""
+if [[ -s /var/lib/bashible/ca.crt ]]; then
+  agent_ca="/var/lib/bashible/ca.crt"
+elif [[ -s /etc/kubernetes/pki/ca.crt ]]; then
+  agent_ca="/etc/kubernetes/pki/ca.crt"
+fi
+
+if [[ -z "${agent_ca}" ]]; then
+  bb-log-warning "No cluster CA on the node yet; the registry agent runs on the layout on disk"
+else
+  bb-sync-file "${agent_kubeconfig}" - << EOF
+apiVersion: v1
+kind: Config
+current-context: registry-agent@default
+clusters:
+- cluster:
+    certificate-authority-data: $(base64 -w0 < "${agent_ca}")
+    server: https://127.0.0.1:6445
+  name: default
+contexts:
+- context:
+    cluster: default
+    user: registry-agent
+  name: registry-agent@default
+users:
+- name: registry-agent
+  user:
+    client-certificate: /var/lib/kubelet/pki/kubelet-client-current.pem
+    client-key: /var/lib/kubelet/pki/kubelet-client-current.pem
+EOF
+  chmod 0600 "${agent_kubeconfig}"
+fi
+
+# What the agent is given of the node besides its own directory: the certificate the kubelet
+# rotates for itself, and nothing else under /etc.
 kubeconfig_mount="$(cat << "MOUNT"
-    - mountPath: /etc/kubernetes
-      name: kubeconfig
-      readOnly: true
     - mountPath: /var/lib/kubelet/pki
       name: kubelet-pki
       readOnly: true
 MOUNT
 )"
 kubeconfig_volume="$(cat << "VOLUME"
-  - hostPath:
-      path: /etc/kubernetes
-      type: Directory
-    name: kubeconfig
   - hostPath:
       path: /var/lib/kubelet/pki
       type: DirectoryOrCreate
@@ -324,6 +369,7 @@ spec:
     - --containerd-registry-dir=${drop_in_root}
     - --pki-dir=${pki_path}
     - --bootstrap-layout=${bootstrap_layout}
+    - --kubeconfig=${agent_kubeconfig}
     - --layout-cache=${cache_path}/layout.json
     - --trust-dir=${trust_path}
     env:
@@ -346,11 +392,8 @@ spec:
     # Written by the agent, and by nothing else.
     - mountPath: ${drop_in_root}
       name: containerd-registry-d
-    - mountPath: ${pki_path}
-      name: pki
-      readOnly: true
-    - mountPath: ${bootstrap_layout}
-      name: bootstrap-layout
+    - mountPath: ${agent_path}
+      name: agent-material
       readOnly: true
     - mountPath: ${cache_path}
       name: layout-cache
@@ -366,13 +409,9 @@ ${kubeconfig_mount}
       type: DirectoryOrCreate
     name: containerd-registry-d
   - hostPath:
-      path: ${pki_path}
+      path: ${agent_path}
       type: Directory
-    name: pki
-  - hostPath:
-      path: ${bootstrap_layout}
-      type: File
-    name: bootstrap-layout
+    name: agent-material
   - hostPath:
       path: ${cache_path}
       type: DirectoryOrCreate

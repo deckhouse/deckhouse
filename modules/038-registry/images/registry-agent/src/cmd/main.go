@@ -55,13 +55,19 @@ import (
 	"github.com/deckhouse/registry-agent/internal/status"
 )
 
-// DefaultKubeconfig is the kubelet's own credentials, which every node already has.
+// DefaultKubeconfig is the agent's own kubeconfig over the kubelet's client certificate.
 //
-// Used rather than a service account token so that nothing has to be distributed to the
-// node for the agent to read its layout: the kubelet's identity is in the
+// The identity is the kubelet's rather than a service account's so that nothing has to be
+// distributed to the node for the agent to read its layout: that identity is in the
 // `system:nodes` group, and the layout objects are readable by that group precisely
 // because they carry no per-node secrets.
-const DefaultKubeconfig = "/etc/kubernetes/kubelet.conf"
+//
+// The file is the agent's and not `/etc/kubernetes/kubelet.conf`, though it names the same
+// rotating certificate, because reading the kubelet's own file meant mounting the directory
+// it sits in — which on a master is also the cluster's certificate authority. Written by the
+// bashible step that installs this agent; absent until then, which the connect loop treats
+// as "no credentials yet".
+const DefaultKubeconfig = "/etc/kubernetes/registry-agent/kubeconfig"
 
 // buildScheme registers every kind this agent reads or writes.
 //

@@ -467,6 +467,29 @@ var _ = Describe("Module :: registry :: helm template :: v2 controller", func() 
 			Expect(agentBinding.Exists()).To(BeTrue())
 			Expect(agentBinding.Field("subjects").String()).To(ContainSubstring("system:nodes"))
 
+			// And to that group alone. The bootstrap group was listed here and in the
+			// Role below on the reasoning that a node reads its layout before the
+			// kubelet has an identity; the agent has no code path that opens the
+			// bootstrap kubeconfig, so all the grant ever did was make a leaked
+			// bootstrap token a reader of every registry credential in the cluster.
+			secretBinding := f.KubernetesResource("RoleBinding", "d8-system", "registry:agent")
+			Expect(secretBinding.Exists()).To(BeTrue())
+			Expect(secretBinding.Field("subjects").String()).To(ContainSubstring("system:nodes"))
+			for _, binding := range []string{
+				agentBinding.Field("subjects").String(),
+				secretBinding.Field("subjects").String(),
+			} {
+				Expect(binding).ShouldNot(ContainSubstring("bootstrappers"))
+			}
+
+			// The credentials themselves stay named down to the one object, which is
+			// what keeps the grant above from being a grant over every secret a node
+			// might want.
+			secretRole := f.KubernetesResource("Role", "d8-system", "registry:agent")
+			Expect(secretRole.Exists()).To(BeTrue())
+			Expect(secretRole.Field("rules").String()).To(ContainSubstring("registry-resolved-auth"))
+			Expect(secretRole.Field("rules").String()).ShouldNot(ContainSubstring("list"))
+
 			// Leader election is namespaced, so it must be a Role and not part of the
 			// ClusterRole.
 			Expect(f.KubernetesResource("Role", "d8-system", "registry:controller").
