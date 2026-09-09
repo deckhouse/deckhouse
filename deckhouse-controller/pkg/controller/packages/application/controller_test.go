@@ -197,10 +197,10 @@ func (suite *ControllerTestSuite) TestReconcile() {
 				Name:         "deckhouse",
 				Repository:   "registry.example.com/test",
 				DockerConfig: "test-docker-cfg",
-				Scheme:       "https",
 				CA:           "test-ca",
+				Scheme:       "https",
 			},
-		}, suite.manager.updated[0].app)
+		}, suite.manager.updated[0])
 	})
 
 	suite.Run("maintenance mode reaches the runtime", func() {
@@ -706,12 +706,8 @@ func newPackageManagerStub(t *testing.T) *packageManagerStub {
 	}
 }
 
-type updatedApp struct {
-	app packageruntime.App
-}
-
 func (s *packageManagerStub) UpdateApp(app packageruntime.App) {
-	s.updated = append(s.updated, updatedApp{app: app})
+	s.updated = append(s.updated, app)
 }
 
 func (s *packageManagerStub) RemoveApp(namespace, name string) bool {
