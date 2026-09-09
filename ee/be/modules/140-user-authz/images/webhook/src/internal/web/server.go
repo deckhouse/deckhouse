@@ -108,7 +108,10 @@ func NewServer(logger *log.Logger) (*Server, error) {
 
 	// RBAC informers back the CAR-independent grants check: requests allowed
 	// by RoleBindings or non-CAR ClusterRoleBindings must not be denied.
-	rbacEvaluator := hook.NewRBACEvaluator(logger, informerFactory)
+	rbacEvaluator, err := hook.NewRBACEvaluator(logger, informerFactory)
+	if err != nil {
+		return nil, err
+	}
 
 	// The index of rule bindings is fed from the same ClusterRoleBinding informer: it tells the
 	// handler which rules bind a subject, so a rule the webhook has not observed yet still restricts.
