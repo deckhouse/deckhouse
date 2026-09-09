@@ -32,7 +32,7 @@ spec:
 There is no choice of implementation to make. A cluster that has never run the previous
 implementation of this module uses the current one from the start. A cluster that has runs
 the previous one until it is brought to its `Unmanaged` state, after which the migration
-completes on its own — see [how to complete the migration](faq.html#how-do-i-complete-the-migration).
+completes on its own — see [how the migration works](faq.html#how-does-the-migration-to-the-registry-module-work).
 
 {% alert level="info" %}
 Settings without `mode: Managed` are rejected rather than ignored. A configuration that is

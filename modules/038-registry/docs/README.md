@@ -126,20 +126,22 @@ because clusters are still running it, and it is the operator who has to move a 
 before the upgrade, not after.
 
 {% alert level="danger" %}
-Bring the cluster to `Unmanaged` BEFORE upgrading to this release.
+Prepare the cluster BEFORE upgrading to this release. The upgrade is blocked while the previous
+implementation is running in `Proxy` or `Local` mode, or in `Direct` mode without a configured
+`registry` ModuleConfig. This release renders none of the previous implementation's objects, and
+the mode switching a cluster needs is performed by the code of the previous release — so all
+preparation happens there.
 
-This release renders none of the previous implementation's objects. A cluster that arrives here
-still in `Direct`, `Proxy` or `Local` loses them on the first reconciliation — the in-cluster
-proxy, the `registry` Service and the per-node configuration they served — while its nodes still
-point at them. Images already on a node keep working; anything that has to be pulled will not, and
-there is no way to complete the migration from that state: the way back is the previous release,
-where the cluster can be brought to `Unmanaged` by the documented procedure and then upgraded
-again.
+A cluster in `Proxy` is brought to `Unmanaged`. An air-gapped `Local` cluster does not fit that
+procedure — it goes through a mode where every node pulls straight from an upstream, and such a
+cluster has none — so it has a procedure of its own: see
+[how to migrate an air-gapped cluster from Local mode](faq.html#how-do-i-migrate-an-air-gapped-cluster-from-local-mode).
 
-An air-gapped `Local` cluster does not fit this procedure — it goes through `Unmanaged`, where every
-node pulls straight from an upstream, and such a cluster has none. It has a procedure of its own,
-which also begins before the upgrade: see
-[how do I migrate an air-gapped Local cluster](faq.html#how-do-i-migrate-an-air-gapped-local-cluster).
+A cluster in `Direct` needs no mode switch — only this module's configuration, written before the
+upgrade. Its objects are kept deliberately — the previous release annotates them to survive its
+own removal — so they go on serving the in-cluster address its nodes pull through until this
+module's node agent has taken that address over. See
+[migrating from `Direct`](faq.html#how-do-i-migrate-from-direct-mode).
 {% endalert %}
 
 
@@ -158,15 +160,20 @@ rather than through this module's own settings, and works as a state machine wit
   deprecated non-configurable form set at
   [installation](/products/kubernetes-platform/documentation/v1/reference/api/cr.html#initconfiguration-deckhouse-imagesrepo).
 
-Of the four, only `Unmanaged` survives an upgrade to this release: it is the one mode whose
-objects served nothing to begin with, so removing them takes nothing away. From `Unmanaged` the
-handover to the current implementation happens on its own — see
-[how to complete the migration](faq.html#how-do-i-complete-the-migration). The two never both
-manage a cluster: which one is active decides what is created at all, so there is no state in
-which both configure the same node.
+Of the four, two survive an upgrade to this release, for different reasons. `Unmanaged` is the
+mode whose objects served nothing to begin with, so removing them takes nothing away, and the
+handover happens on its own. `Direct` survives because the address its nodes pull through is one
+this module serves too: the previous release marks the objects behind that address to outlive its
+own removal, and they keep serving it until the node agent takes it over — so what the cluster
+needs is this module's configuration rather than a mode switch. Both paths are in
+[how the migration works](faq.html#how-does-the-migration-to-the-registry-module-work). The two
+implementations never both manage a cluster: which one is active decides what is created at all,
+so there is no state in which both configure the same node.
 
-The other three are a one-way door. Bringing the cluster to `Unmanaged` is only possible on a
-release that still renders the previous implementation, which means before the upgrade; the
+`Proxy` and `Local` are a one-way door. Both keep state this release cannot account for — a proxy
+with certificate material of its own on every node, and, for `Local`, the image store on the
+master disks — so they go through `Unmanaged`, and bringing a cluster there is only possible on a
+release that still renders the previous implementation, which means before the upgrade. The
 `D8RegistryMigrationPreflightBlocked` alert reports the same check from inside the cluster.
 
 ### Mode switching restrictions

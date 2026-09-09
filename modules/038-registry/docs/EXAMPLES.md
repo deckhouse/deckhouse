@@ -80,7 +80,7 @@ d8 k get registrystorage registry -o jsonpath='{.status}' | jq '{phase,fill,lead
 
 Turning it back off is the same change in reverse, and just as safe. The blobs on disk are left
 alone, so turning it on again refills from what is already there rather than from scratch — see
-[how to reclaim that space](faq.html#a-node-still-holds-cache-data-nothing-uses)
+[how to reclaim that space](faq.html#how-do-i-remove-leftover-cache-data-from-a-node)
 if you do not intend to.
 
 ## Going air-gapped
@@ -209,12 +209,12 @@ enabled.
 
 Cache data on the control-plane nodes is deliberately left behind, so that turning the cache on
 again refills from what is already there. See
-[how to reclaim that space](faq.html#a-node-still-holds-cache-data-nothing-uses).
+[how to reclaim that space](faq.html#how-do-i-remove-leftover-cache-data-from-a-node).
 
 ## Examples for the previous implementation
 
 Everything below applies to a cluster still running the implementation configured through the
-`deckhouse` ModuleConfig. See [how to complete the migration](faq.html#how-do-i-complete-the-migration).
+`deckhouse` ModuleConfig. See [how the migration works](faq.html#how-does-the-migration-to-the-registry-module-work).
 
 ### Switching to the `Direct` Mode
 
