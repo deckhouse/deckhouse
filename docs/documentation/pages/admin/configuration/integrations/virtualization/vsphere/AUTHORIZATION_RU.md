@@ -160,6 +160,12 @@ DKP использует интерфейс `ens192`, как интерфейс 
 
    ![Подготовка шаблона, шаг 4](../../../../images/cloud-provider-vsphere/vm-template-setup/convert-to-template.png)
 
+## Подключение к vCenter
+
+Источник настроек подключения зависит от того, где размещён control plane кластера. Если control plane работает в облаке, адрес vCenter и учётные данные задаются в секции [`provider`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-provider) ресурса VsphereClusterConfiguration. Если control plane работает на виртуальных машинах или bare metal, те же данные задаются параметрами модуля [`host`](/modules/cloud-provider-vsphere/configuration.html#parameters-host), [`username`](/modules/cloud-provider-vsphere/configuration.html#parameters-username) и [`password`](/modules/cloud-provider-vsphere/configuration.html#parameters-password).
+
+Платформа подключается к vCenter по TLS и проверяет сертификат. Как передать цепочку сертификатов центра сертификации, описано в разделе [«Проверка TLS-сертификата vCenter»](#проверка-tls-сертификата-vcenter).
+
 ## Проверка TLS-сертификата vCenter
 
 DKP подключается к vCenter по TLS и проверяет его сертификат. Если сертификат vCenter выпущен собственным или корпоративным центром сертификации, передайте цепочку сертификатов этого центра в параметре [`caBundle`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-provider-cabundle). Проверка сертификата при этом остаётся включённой.

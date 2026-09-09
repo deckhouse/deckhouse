@@ -91,21 +91,21 @@ govc storage.policy.ls "<POLICY_NAME>"
 
 ### Режим работы CSI
 
-Подсистема хранения по умолчанию использует CNS-диски с возможностью изменения размера без отключения тома от узла (online resize). Также поддерживается работа в legacy-режиме с FCD-дисками, в котором изменение размера без отключения тома недоступно. Поведение подсистемы устанавливается с помощью [параметра `compatibilityFlag`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-compatibilityflag).
+По умолчанию подсистема хранения использует диски CNS с возможностью изменения размера без отключения тома от узла (online resize). Также поддерживается работа в legacy-режиме с дисками FCD, в котором изменение размера без отключения тома недоступно. Режим выбирается параметром [`compatibilityFlag`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-compatibilityflag).
 
-### Изменение размера тома (PVC)
+### Увеличение размера PersistentVolumeClaim
 
-Deckhouse Kubernetes Platform поддерживает изменение размера PersistentVolume без отключения тома от узла (online resize), начиная с версии vSphere 7.0U2.
+Платформа поддерживает изменение размера PersistentVolume без отключения тома от узла (online resize), начиная с версии vSphere 7.0U2.
 
-Чтобы увеличить том, измените запрошенный размер в PVC:
+Чтобы увеличить том, измените запрошенный размер в PersistentVolumeClaim:
 
 ```shell
 d8 k -n <NAMESPACE> patch pvc <PVC_NAME> -p '{"spec":{"resources":{"requests":{"storage":"2Gi"}}}}'
 ```
 
-Дополнительные действия не требуются. DKP расширяет том в vSphere, затем kubelet расширяет файловую систему на узле, к которому том подключён. Рабочая нагрузка при этом не перезапускается.
+Дополнительные действия не требуются. Платформа расширяет том в vSphere, затем kubelet расширяет файловую систему на узле, к которому том подключён. Рабочая нагрузка при этом не перезапускается.
 
-Пока расширение выполняется, в статусе PVC присутствуют condition `Resizing` и `FileSystemResizePending`. После того как kubelet расширит файловую систему, оба condition удаляются, а поле `status.capacity` содержит новый размер. Команда ниже выводит текущий размер тома и список condition:
+Пока расширение выполняется, в статусе PersistentVolumeClaim присутствуют condition `Resizing` и `FileSystemResizePending`. После того как kubelet расширит файловую систему, оба condition удаляются, а поле `status.capacity` содержит новый размер. Команда ниже выводит текущий размер тома и список condition:
 
 ```shell
 d8 k -n <NAMESPACE> get pvc <PVC_NAME> \
@@ -127,11 +127,11 @@ d8 k -n <NAMESPACE> get pvc <PVC_NAME> \
    d8 k cordon <NODE_NAME>
    ```
 
-   Замените `<NODE_NAME>` на имя узла, где работает под, использующий PVC.
+   Замените `<NODE_NAME>` на имя узла, где работает рабочая нагрузка, использующая PersistentVolumeClaim.
 
-1. Удалите под, использующий PVC, чтобы том отключился от узла.
+1. Удалите рабочую нагрузку, использующую PersistentVolumeClaim, чтобы том отключился от узла.
 
-1. Дождитесь удаления condition `Resizing` из статуса PVC.
+1. Дождитесь удаления condition `Resizing` из статуса PersistentVolumeClaim.
 
 1. Разрешите планирование на узел:
 

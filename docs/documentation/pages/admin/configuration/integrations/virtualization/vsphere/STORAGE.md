@@ -90,13 +90,13 @@ Replace `<POLICY_NAME>` with the policy name as shown in the "VM Storage Policie
 
 ### CSI operation mode
 
-The storage subsystem uses CNS disks by default, with support for resizing without detaching the volume from the node (online resize). Legacy mode with FCD disks is also supported, but resizing without detaching the volume is not available in it. The subsystem behavior is configured via the [`compatibilityFlag`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-compatibilityflag) parameter.
+By default, the storage subsystem uses CNS disks that support resizing without detaching the volume from the node (online resize). The legacy mode with FCD disks is also supported, in which resizing without detaching the volume is unavailable. The mode is selected by the [`compatibilityFlag`](/modules/cloud-provider-vsphere/configuration.html#parameters-storageclass-compatibilityflag) parameter.
 
-### Resizing a volume (PVCs)
+### Expanding a PersistentVolumeClaim
 
-DKP supports PersistentVolume resizing without detaching the volume from the node (online resize) starting with vSphere 7.0U2.
+The platform supports resizing a PersistentVolume without detaching it from the node (online resize), starting with vSphere 7.0U2.
 
-To expand a volume, change the requested size in the PVC:
+To expand a volume, change the requested size in the PersistentVolumeClaim:
 
 ```shell
 d8 k -n <NAMESPACE> patch pvc <PVC_NAME> -p '{"spec":{"resources":{"requests":{"storage":"2Gi"}}}}'
@@ -104,7 +104,7 @@ d8 k -n <NAMESPACE> patch pvc <PVC_NAME> -p '{"spec":{"resources":{"requests":{"
 
 No additional actions are required. DKP expands the volume in vSphere, and then kubelet expands the file system on the node the volume is attached to. The workload is not restarted.
 
-While the expansion is in progress, the PVC status contains the `Resizing` and `FileSystemResizePending` conditions. After kubelet expands the file system, both conditions are removed and the `status.capacity` field contains the new size. The command below prints the current volume size and the list of conditions:
+While the expansion is in progress, the PersistentVolumeClaim status contains the `Resizing` and `FileSystemResizePending` conditions. After kubelet expands the file system, both conditions are removed and the `status.capacity` field contains the new size. The command below prints the current volume size and the list of conditions:
 
 ```shell
 d8 k -n <NAMESPACE> get pvc <PVC_NAME> \
@@ -126,11 +126,11 @@ If the `Resizing` condition remains in the status, expanding without detaching t
    d8 k cordon <NODE_NAME>
    ```
 
-   Replace `<NODE_NAME>` with the name of the node that hosts the Pod using the PVC.
+   Replace `<NODE_NAME>` with the name of the node that runs the workload using the PersistentVolumeClaim.
 
-1. Delete the Pod that uses the PVC so that the volume is detached from the node.
+1. Delete the workload that uses the PersistentVolumeClaim so that the volume is detached from the node.
 
-1. Wait until the `Resizing` condition is removed from the PVC status.
+1. Wait until the `Resizing` condition is removed from the PersistentVolumeClaim status.
 
 1. Allow scheduling on the node again:
 

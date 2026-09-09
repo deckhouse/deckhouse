@@ -668,7 +668,7 @@ masterNodeGroup:
     - K8S_3
 ```
 
-### Inbound traffic
+### Load balancing
 
 Inbound traffic is balanced in one of three ways.
 
@@ -767,6 +767,8 @@ To set the default StorageClass, use the global [`global.defaultClusterStorageCl
 By default, the storage subsystem uses CNS disks that support resizing without detaching the volume from the node (online resize). The legacy mode with FCD disks is also supported, in which resizing without detaching the volume is unavailable. The mode is selected by the [`compatibilityFlag`](configuration.html#parameters-storageclass-compatibilityflag) parameter.
 
 #### Expanding a PersistentVolumeClaim
+
+The platform supports resizing a PersistentVolume without detaching it from the node (online resize), starting with vSphere 7.0U2.
 
 To expand a volume, change the requested size in the PersistentVolumeClaim:
 

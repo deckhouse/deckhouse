@@ -151,6 +151,12 @@ Once the image is ready, do the following in vSphere Client:
 
    ![Preparing the template, step 4](../../../../images/cloud-provider-vsphere/vm-template-setup/convert-to-template.png)
 
+## Connecting to vCenter
+
+Where the connection settings come from depends on where the cluster control plane runs. If the control plane runs in the cloud, the vCenter address and credentials are set in the [`provider`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-provider) section of the VsphereClusterConfiguration resource. If the control plane runs on virtual machines or bare metal, the same data is set in the [`host`](/modules/cloud-provider-vsphere/configuration.html#parameters-host), [`username`](/modules/cloud-provider-vsphere/configuration.html#parameters-username), and [`password`](/modules/cloud-provider-vsphere/configuration.html#parameters-password) parameters of the module.
+
+The platform connects to vCenter over TLS and verifies the certificate. Passing the certificate authority chain is covered in the [vCenter TLS certificate verification](#vcenter-tls-certificate-verification) section.
+
 ## vCenter TLS certificate verification
 
 DKP connects to vCenter over TLS and verifies its certificate. If the vCenter certificate is issued by a custom or enterprise certificate authority, pass the certificate chain of that authority in the [`caBundle`](/modules/cloud-provider-vsphere/cluster_configuration.html#vsphereclusterconfiguration-provider-cabundle) parameter. Certificate verification stays enabled in this case.

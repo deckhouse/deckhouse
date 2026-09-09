@@ -107,7 +107,7 @@ d8 k get module cloud-provider-vsphere -o wide
 
 ## Ограничение набора StorageClass
 
-DKP создаёт StorageClass для каждого размеченного тегами Datastore, а при настроенных политиках хранения SPBM — ещё и для каждого сочетания Datastore и политики.
+DKP создаёт StorageClass для каждого размеченного тегами Datastore, а при настроенных политиках хранения SPBM — также для каждого сочетания Datastore и политики.
 В примере из кластера исключаются StorageClass двух Datastore.
 
 ```yaml
