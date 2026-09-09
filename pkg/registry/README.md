@@ -212,11 +212,13 @@ Client
 ├── PushImage(ctx, tag, v1.Image, ...ImagePushOption) error
 ├── PushIndex(ctx, tag, v1.ImageIndex, ...ImagePushOption) error
 ├── GetDigest(ctx, tag) (*v1.Hash, error)
-├── GetManifest(ctx, tag) (ManifestResult, error)
+├── GetManifest(ctx, tag, ...ManifestGetOption) (ManifestResult, error)
 ├── GetImageConfig(ctx, tag) (*v1.ConfigFile, error)
 ├── CheckImageExists(ctx, tag) error
 ├── ListTags(ctx, ...ListTagsOption) ([]string, error)
+├── StreamTags(ctx, visit, ...ListTagsOption) error
 ├── ListRepositories(ctx, ...ListRepositoriesOption) ([]string, error)
+├── StreamRepositories(ctx, visit, ...ListRepositoriesOption) error
 ├── DeleteTag(ctx, tag) error
 ├── DeleteByDigest(ctx, v1.Hash) error
 ├── TagImage(ctx, sourceTag, destTag) error
@@ -717,6 +719,26 @@ than a concrete `*client.Client`, the image is pulled and re-pushed via `PushIma
 
 ### List Tags
 
+`ListTags` and `ListRepositories` walk the registry's `Link` cursor to the end, so the
+result is the complete list or an error - never a page, and never a silently truncated
+list. `StreamTags` and `StreamRepositories` are the same walk without buffering: `visit`
+is called once per page as it arrives, and returning `registry.ErrStopStreaming` ends the
+walk without being reported as a failure.
+
+```go
+err := registryClient.StreamTags(ctx, func(page []string) error {
+    for _, tag := range page {
+        fmt.Println(tag)
+    }
+
+    return nil
+})
+```
+
+`WithTagsLimit(n)` / `WithReposLimit(n)` opt out of the full walk and return one page of
+at most n entries; continue from it with `WithTagsLast` / `WithReposLast`.
+
+
 The `ListTags` method supports server-side pagination for large repositories:
 
 ```go
@@ -922,7 +944,22 @@ if err != nil {
 &v1.Platform{OS: "linux", Architecture: "arm", Variant: "v7"}
 ```
 
-**Note**: If no platform is specified, the registry typically returns the manifest for the host's native platform.
+> **Important**: if no platform is specified, you do **not** get the host's native platform.
+> `go-containerregistry` falls back to a hardcoded `linux/amd64`, so `GetImage` on a
+> multi-arch reference returns the amd64 child even on an arm64 machine. Pass
+> `WithPlatform` whenever the answer has to match the caller's architecture.
+>
+> `GetManifest` behaves differently on purpose: without a platform it returns the
+> reference **as served**, which for a multi-arch tag is the index itself rather than
+> any single image's manifest. Pass `WithPlatform` to resolve it to one child:
+>
+> ```go
+> res, err := registryClient.GetManifest(ctx, "v1.0.0",
+>     client.WithPlatform{Platform: &v1.Platform{OS: "linux", Architecture: "arm64"}})
+> ```
+>
+> A platform the index does not carry returns `registry.ErrImageNotFound`, and a
+> platform on a single-image reference is a no-op.
 
 ### Working with Context
 
@@ -1126,8 +1163,20 @@ registryClient = client.NewClientWithOptions("registry.example.com", opts)
 | Error | Package | Description |
 |---|---|---|
 | `ErrImageNotFound` | `registry` and `client` | Image tag or digest does not exist |
+| `ErrRepositoryNotFound` | `registry` | Repository is unknown to the registry (`NAME_UNKNOWN`). Unwraps to `ErrImageNotFound`, so code that only checks for a missing image keeps working |
+| `ErrAccessDenied` | `registry` | Registry refused the request for lack of rights: HTTP 401/403, or `UNAUTHORIZED`/`DENIED` |
+| `ErrCatalogNotSupported` | `registry` | Registry does not implement `/v2/_catalog` (Docker Hub, GCR, Artifact Registry) |
+| `ErrStopStreaming` | `registry` | Returned *by the caller* from a `StreamTags`/`StreamRepositories` visit function to end the walk early |
 | `ErrIsIndexManifest` | `client` | `GetManifest()` called on an index manifest |
 | `ErrIsNotIndexManifest` | `client` | `GetIndexManifest()` called on a non-index manifest |
+
+Classification happens once, inside the client, where the typed `*transport.Error` is
+still in hand - so `errors.Is` is enough downstream and callers never need to match on
+HTTP status codes or error-message substrings.
+
+`ErrAccessDenied` deliberately does **not** imply "not found": a token-auth registry
+denies anything outside the identity's scope whether or not the target exists, so a
+denied request says nothing about existence.
 
 ```go
 import (

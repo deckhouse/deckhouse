@@ -18,6 +18,8 @@ module "static-node" {
   cluster_uuid = var.clusterUUID
   node_index = var.nodeIndex
   node_group = local.node_group
+  imdsv2 = lookup(var.providerClusterConfiguration, "imdsv2", false)
+  imdsv2_managed = contains(keys(var.providerClusterConfiguration), "imdsv2")
   root_volume_size = local.root_volume_size
   root_volume_type = local.root_volume_type
   additional_security_groups = local.additional_security_groups

@@ -74,7 +74,6 @@ func createFakePSM(ic registry.Client) registryService.ServiceManagerInterface[r
 	return psm
 }
 
-
 // applicationVersionImage builds a version image with Application type label and package.yaml.
 func applicationVersionImage() *fakeRegistry.ImageBuilder {
 	return fakeRegistry.NewImageBuilder().
@@ -87,6 +86,11 @@ func moduleVersionImage() *fakeRegistry.ImageBuilder {
 	return fakeRegistry.NewImageBuilder().
 		WithLabel("io.deckhouse.package.type", "Module").
 		WithFile("package.yaml", "type: Module\n")
+}
+
+// releaseChannelImage builds a release channel image: a copy of the version image it points to.
+func releaseChannelImage(version string) *fakeRegistry.ImageBuilder {
+	return applicationVersionImage().WithFile("version.json", `{"version":"`+version+`"}`)
 }
 
 // legacyReleaseImage builds a release image carrying the legacy module manifest, the marker the
@@ -184,13 +188,16 @@ func (suite *ControllerTestSuite) SetupSuite() {
 			&v1alpha1.PackageRepository{},
 		},
 		SeedStatusSubresources: []client.Object{
+			&v1alpha1.ApplicationPackage{},
 			&v1alpha1.ApplicationPackageVersion{},
 			&v1alpha1.PackageRepository{},
+			&v1alpha1.ModulePackage{},
 			&v1alpha1.ModulePackageVersion{},
 		},
 		SnapshotKinds: []schema.GroupVersionKind{
 			v1alpha1.SchemeGroupVersion.WithKind("PackageRepositoryOperation"),
 			v1alpha1.SchemeGroupVersion.WithKind("Application"),
+			v1alpha1.SchemeGroupVersion.WithKind("ApplicationPackage"),
 			v1alpha1.SchemeGroupVersion.WithKind("ApplicationPackageVersion"),
 			v1alpha1.SchemeGroupVersion.WithKind("ModulePackageVersion"),
 			v1alpha1.SchemeGroupVersion.WithKind("ModulePackage"),
@@ -771,6 +778,100 @@ func (suite *ControllerTestSuite) TestReconcile() {
 		psm := createFakePSM(newInternalClient(reg))
 
 		suite.setupController("old-image-no-metadata.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("release channels of a v2 package", func() {
+		// "latest" names no known channel and must stay out of the matrix.
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/version", "v1.0.0", applicationVersionImage().MustBuild())
+		reg.MustAddImage("test-package/version", "v1.1.0", applicationVersionImage().MustBuild())
+		reg.MustAddImage("test-package/release-channel", "alpha", releaseChannelImage("v1.1.0").MustBuild())
+		reg.MustAddImage("test-package/release-channel", "stable", releaseChannelImage("v1.0.0").MustBuild())
+		reg.MustAddImage("test-package/release-channel", "latest", releaseChannelImage("v1.1.0").MustBuild())
+
+		psm := createFakePSM(newInternalClient(reg))
+
+		suite.setupController("release-channels.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("release channels of a legacy module", func() {
+		// A legacy module keeps its channels in /release next to the version tags.
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/release", "v1.0.0", legacyReleaseImage().MustBuild())
+		reg.MustAddImage("test-package/release", "stable", releaseChannelImage("v1.0.0").MustBuild())
+
+		ic := &legacyRegistryClient{Client: newInternalClient(reg)}
+		psm := createFakePSM(ic)
+
+		suite.setupController("release-channels-legacy.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("release channel moved onto a known version", func() {
+		// An incremental scan lists no new version, so it detects no package type. The matrix must still
+		// follow the registry: stable moved onto a known version, and alpha is gone.
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/version", "v1.0.0", applicationVersionImage().MustBuild())
+		reg.MustAddImage("test-package/release-channel", "stable", releaseChannelImage("v1.0.0").MustBuild())
+
+		psm := createFakePSM(newInternalClient(reg))
+
+		suite.setupController("release-channel-moved.yaml", withPackageServiceManager(psm))
+		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
+
+		err := repeat(func() error {
+			_, err := suite.ctr.Reconcile(ctx, ctrl.Request{
+				NamespacedName: k8stypes.NamespacedName{Name: operation.Name},
+			})
+			return err
+		})
+
+		require.NoError(suite.T(), err)
+	})
+
+	suite.Run("unreadable release channels keep the known matrix", func() {
+		// The channel image carries no version.json, so nothing is read. That must not pass for
+		// "offered on no channel" and wipe the known matrix.
+		reg := fakeRegistry.NewRegistry(registryHost)
+		reg.MustAddImage("", "test-package", fakeRegistry.NewImageBuilder().MustBuild())
+		reg.MustAddImage("test-package/version", "v1.0.0", applicationVersionImage().MustBuild())
+		reg.MustAddImage("test-package/release-channel", "stable", applicationVersionImage().MustBuild())
+
+		psm := createFakePSM(newInternalClient(reg))
+
+		suite.setupController("release-channels-unreadable.yaml", withPackageServiceManager(psm))
 		operation := suite.getPackageRepositoryOperation("deckhouse-scan-1571326380")
 
 		err := repeat(func() error {

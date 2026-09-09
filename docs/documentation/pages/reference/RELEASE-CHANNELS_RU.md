@@ -3,6 +3,7 @@ title: Каналы обновлений
 permalink: ru/reference/release-channels.html
 toc: false
 lang: ru
+editionsNotAvailable: [cse]
 search: release channels, update channels, update strategy, каналы обновлений, стратегия обновлений
 ---
 

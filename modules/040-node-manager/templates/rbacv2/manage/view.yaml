@@ -24,6 +24,7 @@ rules:
   - instancetypescatalogs
   - nodegroupconfigurations
   - nodegroups
+  - nodeoperations
   - nodeusers
   - sshcredentials
   - staticinstances

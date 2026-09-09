@@ -11,6 +11,8 @@ The module implements two role-based models: the [granular](#granular-role-based
 The models are not resource-compatible — automatic conversion is impossible — but they [can be used at the same time](faq.html#can-the-basic-and-the-granular-role-based-models-be-used-at-the-same-time): the permissions of both models are summed up.
 {% endalert %}
 
+The bindings that grant users the access levels of ClusterAuthorizationRule and AuthorizationRule are reconciled by the `user-authz-controller` component: it watches the rules and keeps their ClusterRoleBindings and RoleBindings in sync, and reports the result in the `status` of each rule (`kubectl get clusterauthorizationrules` shows the `READY` and `BINDINGS` columns). A rule with an unsupported `accessLevel` gets `Ready=False` with the `InvalidSpec` reason instead of breaking the module.
+
 <div style="height: 0;" id="the-new-role-based-model"></div>
 <div style="height: 0;" id="experimental-role-based-model"></div>
 
@@ -124,6 +126,18 @@ A role assigned via ProjectRoleBinding automatically applies in **all** namespac
 The system and subsystem roles do not grant access to the namespace of user applications.
 
 They grant access only to system namespaces (starting with `d8-` or `kube-`), and only to those system namespaces where the modules of the corresponding role subsystem are running.
+
+A manage role does not, by itself, let you grant access to other people.
+
+Creating a User or Group that is not already a grant subject is ordinary object creation.
+
+Creating a User for an email that already carries a grant, or writing a ClusterAuthorizationRule, is granting roles. The request is admitted only if the requester already has covering permissions or is explicitly allowed to assign those roles.
+
+The ClusterAuthorizationRule `spec.accessLevel` field is a [current-model](#current-role-based-model) level: `User`, `PrivilegedUser`, `Editor`, `Admin`, `ClusterEditor`, `ClusterAdmin`, `SuperAdmin`. A `security` subsystem manager can assign any of those except `SuperAdmin`. That manager also cannot assign the Kubernetes `cluster-admin` ClusterRole. Experimental-model security roles stop at `d8:subsystem:security:admin`.
+
+Webhook deny messages call the `accessLevel` values basic, so they are not confused with manage-role levels (`viewer` / `manager`).
+
+Permission to create User and Group objects in the `user-authn` module is not enough: it does not grant the roles already attached to that email.
 {% endalert %}
 
 System and subsystem roles are intended for assigning rights to manage the entire platform or a part of it (the [subsystem](#subsystems-of-the-role-based-model)), but not the users applications themselves. The subsystem role, for example, can allow a security administrator to manage security modules (responsible for the security functions of the cluster). Thus, the security administrator will be able to configure authentication, authorization, security policies, etc., but will not be able to manage other cluster functions (such as network and monitoring settings) or change settings in the namespaces of users applications.
@@ -153,6 +167,37 @@ The module provides three access levels for system and subsystem roles:
 - `viewer` — allows viewing standard Kubernetes resources, the configuration of modules (ModuleConfig resources), cluster-wide resources of modules, and namespaced resources of modules in the module namespace;
 - `manager` — in addition to the level `viewer` it allows managing standard Kubernetes resources, the configuration of modules (ModuleConfig resources), cluster-wide resources of modules, and namespaced resources of modules in the module namespace;
 - `superadmin` — in addition to the level `manager` it allows managing system resources of the subsystem modules.
+
+### Global resource dictionaries
+
+In addition to the use and manage roles, the module creates a special ClusterRole `d8:use:dict`. It
+grants **read-only** access to cluster-scoped "reference" resources that users commonly need to discover
+when creating objects — for example, a user creating a PersistentVolumeClaim needs to see the available
+StorageClasses, and a user creating an Ingress needs to see the IngressClasses.
+
+The role grants `get`, `list`, `watch` on the following resources:
+
+- `storageclasses` (storage.k8s.io), plus `csidrivers`, `csinodes`, `volumeattachments`
+- `volumesnapshotclasses` (snapshot.storage.k8s.io)
+- `ingressclasses` (networking.k8s.io)
+- `priorityclasses` (scheduling.k8s.io)
+- `runtimeclasses` (node.k8s.io)
+- `virtualmachineclasses`, `clustervirtualimages` (virtualization.deckhouse.io)
+- `clusterlogdestinations` (deckhouse.io)
+- `customresourcedefinitions` (apiextensions.k8s.io) — `get`, `list` only
+
+#### Automatic binding
+
+The `d8:use:dict` ClusterRoleBinding is created **automatically** whenever a RoleBinding references a
+`d8:use:role:*` role (experimental model) or a legacy `user-authz:*` role (current model). This means
+project users can discover reference resources without any manual configuration. The binding appears with
+the RoleBinding and is removed when it is deleted. The binding is created and managed entirely by the
+`user-authz` module. You do not create it yourself.
+
+{% alert level="info" %}
+The `d8:use:dict` role is independent of the `multitenancy-manager` cluster-wide resource access management mechanism: it only gives
+**read** access to reference resources so users can discover them. The mechanism controls *which resource values* a project may actually reference when creating objects.
+{% endalert %}
 
 ### Subsystems of the role-based model
 
@@ -366,6 +411,8 @@ read:
     - configmaps
     - connection.gatekeeper.sh/connections
     - constraints.gatekeeper.sh/*
+    - deckhouse.io/applicationpackages
+    - deckhouse.io/applicationpackageversions
     - deckhouse.io/applications
     - deckhouse.io/awsinstanceclasses
     - deckhouse.io/azureinstanceclasses
@@ -382,6 +429,7 @@ read:
     - deckhouse.io/keepalivedinstances
     - deckhouse.io/localpathprovisioners
     - deckhouse.io/nodegroups
+    - deckhouse.io/nodeoperations
     - deckhouse.io/openstackinstanceclasses
     - deckhouse.io/operationpolicies
     - deckhouse.io/projectnamespaces
@@ -557,9 +605,6 @@ delete,deletecollection:
     - apps/replicasets
     - cert-manager.io/certificaterequests
     - extensions/replicasets
-read:
-    - deckhouse.io/applicationpackages
-    - deckhouse.io/applicationpackageversions
 read-write:
     - deckhouse.io/authorizationrules
 write:
@@ -575,15 +620,17 @@ write:
 {{site.data.i18n.common.role[page.lang] | capitalize }} `ClusterEditor` ({{site.data.i18n.common.includes_rules_from[page.lang]}} `User`, `PrivilegedUser`, `Editor`):
 
 ```text
+create,delete:
+    - deckhouse.io/nodeoperations
 delete,deletecollection:
     - acme.cert-manager.io/challenges
     - acme.cert-manager.io/orders
     - cert-manager.io/certificaterequests
+get,list:
+    - templates.internal.deckhouse.io/nodeconfigtemplates
 patch,update:
     - nodes
 read:
-    - deckhouse.io/applicationpackages
-    - deckhouse.io/applicationpackageversions
     - deckhouse.io/containerdintegritypolicies
     - deckhouse.io/ingressistiocontrollers
     - deckhouse.io/istiofederations

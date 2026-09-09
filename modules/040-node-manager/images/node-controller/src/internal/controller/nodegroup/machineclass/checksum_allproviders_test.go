@@ -78,14 +78,17 @@ func everyProviderField() map[string]interface{} {
 }
 
 func minimalCloudProvider() map[string]interface{} {
-	// Only vcd reads .Values…cloudProvider; the others ignore the argument.
-	return map[string]interface{}{"vcd": map[string]interface{}{"server": "https://localhost"}}
+	// VCD and AWS read .Values…cloudProvider; the others ignore the argument.
+	return map[string]interface{}{
+		"aws": map[string]interface{}{"imdsv2": false},
+		"vcd": map[string]interface{}{"server": "https://localhost"},
+	}
 }
 
 // TestRenderChecksum_AllProviderTemplates is the structural guard for every provider, including
 // the ones with no helm-era golden: each template must render, must be deterministic, and must
-// depend on nothing outside instanceClass and manualRolloutID. A NodeGroup rename or a version
-// bump leaking into the checksum would roll every node in the group.
+// depend on nothing outside instanceClass, manualRolloutID, and explicitly supported provider
+// settings. A NodeGroup rename or a version bump leaking into the checksum would roll every node.
 func TestRenderChecksum_AllProviderTemplates(t *testing.T) {
 	for name, path := range allChecksumTemplates {
 		t.Run(name, func(t *testing.T) {
@@ -111,7 +114,7 @@ func TestRenderChecksum_AllProviderTemplates(t *testing.T) {
 			withNoise, err := RenderChecksum(tmpl, noisy, minimalCloudProvider())
 			require.NoError(t, err)
 			assert.Equal(t, first, withNoise,
-				"only instanceClass and manualRolloutID may affect the checksum — anything else rolls nodes on unrelated edits")
+				"unrelated NodeGroup fields must not affect the checksum")
 
 			changed := everyProviderField()
 			changed["manualRolloutID"] = "ignored-here"

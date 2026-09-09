@@ -272,7 +272,10 @@ func checkNodeState(ctx context.Context, kubeCl *client.KubernetesClient, metaCo
 		nodeGroupName = global.MasterNodeGroupName
 	} else {
 		// Node group settings are only for the static node.
-		nodeGroupSettingsFromConfig = metaConfig.FindTerraNodeGroup(ctx, nodeGroup.Name)
+		nodeGroupSettingsFromConfig, err = metaConfig.FindTerraNodeGroup(ctx, nodeGroup.Name)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	var stateSavers []infrastructure.SaverDestination

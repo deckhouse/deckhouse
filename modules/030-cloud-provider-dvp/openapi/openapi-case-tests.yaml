@@ -21,6 +21,11 @@ positive:
         zones:
           - zone-a
           - zone-b
+        ingressPorts:
+          - 22
+          - 6443
+        additionalVMLabels:
+          network-access: bastion
     provider:
       parameters:
         namespace: my-ns
@@ -58,5 +63,16 @@ negative:
       parameters:
         namespace: default
         networkPolicy: Restricted
+  - storage:
+      parameters: {}
+    nodes:
+      parameters:
+        layout: Standard
+        sshPublicKey: "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQ test@host"
+        ingressPorts:
+          - 0
+    provider:
+      parameters:
+        namespace: default
   values:
   - { somethingInConfig: yes }

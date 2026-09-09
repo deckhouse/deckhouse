@@ -82,6 +82,11 @@ type ApplicationPackageStatus struct {
 	// List of repository names where this application package is available.
 	// +optional
 	AvailableRepositories []string `json:"availableRepositories,omitempty"`
+
+	// Versions the release channels of each repository point to, keyed by repository name and then
+	// by release channel name.
+	// +optional
+	ReleaseChannels PackageReleaseChannels `json:"releaseChannels,omitempty"`
 }
 
 // ApplicationPackageStatusInstance identifies one application using the package, and at which version.

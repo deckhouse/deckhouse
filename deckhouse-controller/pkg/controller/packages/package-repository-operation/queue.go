@@ -69,17 +69,19 @@ func (r *reconciler) processNextPackage(ctx context.Context, op *v1alpha1.Packag
 
 	repo := svc.GetRepository()
 
-	// Ensure the appropriate package resource based on detected type.
+	// Ensure the appropriate package resource for the package type.
 	// Skip resource creation for unrecognized packages (e.g. legacy modules without metadata).
-	switch result.PackageType {
+	switch packageType(result, repo, currentPackage.Name) {
 	case operations.PackageTypeModule:
-		if ensureErr := r.ensureModulePackage(ctx, currentPackage.Name, repo.Name, repo.UID); ensureErr != nil {
+		channels := r.scanReleaseChannels(ctx, svc, currentPackage.Name)
+		if ensureErr := r.ensureModulePackage(ctx, currentPackage.Name, repo.Name, repo.UID, channels); ensureErr != nil {
 			r.logger.Error("failed to ensure module package resource",
 				slog.String("package", currentPackage.Name),
 				log.Err(ensureErr))
 		}
 	case operations.PackageTypeApplication:
-		if ensureErr := r.ensureApplicationPackage(ctx, currentPackage.Name, repo.Name, repo.UID); ensureErr != nil {
+		channels := r.scanReleaseChannels(ctx, svc, currentPackage.Name)
+		if ensureErr := r.ensureApplicationPackage(ctx, currentPackage.Name, repo.Name, repo.UID, channels); ensureErr != nil {
 			r.logger.Error("failed to ensure application package resource",
 				slog.String("package", currentPackage.Name),
 				log.Err(ensureErr))
@@ -173,9 +175,40 @@ func (r *reconciler) dequeuePackageWithResult(ctx context.Context, op *v1alpha1.
 	return ctrl.Result{RequeueAfter: 1 * time.Second}, nil
 }
 
-// ensureModulePackage creates the ModulePackage for a scanned module and lists the repository
-// among the ones offering it.
-func (r *reconciler) ensureModulePackage(ctx context.Context, packageName, repoName string, repoUID apitypes.UID) error {
+// packageType falls back to the type the repository already recorded: an incremental scan that lists
+// no version has no image to detect it from, and would otherwise skip the package entirely.
+func packageType(result *operations.Result, repo *v1alpha1.PackageRepository, packageName string) operations.PackageType {
+	if result.PackageType != "" {
+		return result.PackageType
+	}
+
+	for _, pkg := range repo.Status.Packages {
+		if pkg.Name == packageName {
+			return operations.PackageType(pkg.Type)
+		}
+	}
+
+	return ""
+}
+
+// scanReleaseChannels reads what this repository's channels point to, or nil to keep the known matrix.
+// Read per package, not per version: a channel can move onto a version the cluster already holds.
+func (r *reconciler) scanReleaseChannels(ctx context.Context, svc *operations.OperationService, packageName string) map[string]string {
+	channels, err := svc.ScanReleaseChannels(ctx, packageName)
+	if err != nil {
+		r.logger.Warn("failed to scan release channels",
+			slog.String("package", packageName),
+			log.Err(err))
+
+		return nil
+	}
+
+	return channels
+}
+
+// ensureModulePackage creates the ModulePackage for a scanned module, lists the repository among the
+// ones offering it and records where its release channels point.
+func (r *reconciler) ensureModulePackage(ctx context.Context, packageName, repoName string, repoUID apitypes.UID, channels map[string]string) error {
 	pkg := new(v1alpha1.ModulePackage)
 	err := r.client.Get(ctx, client.ObjectKey{Name: packageName}, pkg)
 	if err != nil && !apierrors.IsNotFound(err) {
@@ -212,15 +245,22 @@ func (r *reconciler) ensureModulePackage(ctx context.Context, packageName, repoN
 		}
 	}
 
-	// Check if repository is already listed
-	if slices.Contains(pkg.Status.AvailableRepositories, repoName) {
-		return nil
-	}
-
-	// Update existing package to add repository to available repositories
 	original := pkg.DeepCopy()
 
-	pkg.Status.AvailableRepositories = append(pkg.Status.AvailableRepositories, repoName)
+	var update bool
+
+	if !slices.Contains(pkg.Status.AvailableRepositories, repoName) {
+		update = true
+		pkg.Status.AvailableRepositories = append(pkg.Status.AvailableRepositories, repoName)
+	}
+
+	if pkg.Status.ReleaseChannels.SetChannels(repoName, channels) {
+		update = true
+	}
+
+	if !update {
+		return nil
+	}
 
 	if err := r.client.Status().Patch(ctx, pkg, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("update module package status: %w", err)
@@ -229,9 +269,9 @@ func (r *reconciler) ensureModulePackage(ctx context.Context, packageName, repoN
 	return nil
 }
 
-// ensureApplicationPackage creates the ApplicationPackage for a scanned package and lists the
-// repository among the ones offering it.
-func (r *reconciler) ensureApplicationPackage(ctx context.Context, packageName, repoName string, repoUID apitypes.UID) error {
+// ensureApplicationPackage creates the ApplicationPackage for a scanned package, lists the repository
+// among the ones offering it and records where its release channels point.
+func (r *reconciler) ensureApplicationPackage(ctx context.Context, packageName, repoName string, repoUID apitypes.UID, channels map[string]string) error {
 	pkg := new(v1alpha1.ApplicationPackage)
 	err := r.client.Get(ctx, client.ObjectKey{Name: packageName}, pkg)
 	if err != nil && !apierrors.IsNotFound(err) {
@@ -269,15 +309,22 @@ func (r *reconciler) ensureApplicationPackage(ctx context.Context, packageName, 
 		}
 	}
 
-	// Check if repository is already listed
-	if slices.Contains(pkg.Status.AvailableRepositories, repoName) {
-		return nil
-	}
-
-	// Update existing package to add repository to available repositories
 	original := pkg.DeepCopy()
 
-	pkg.Status.AvailableRepositories = append(pkg.Status.AvailableRepositories, repoName)
+	var update bool
+
+	if !slices.Contains(pkg.Status.AvailableRepositories, repoName) {
+		update = true
+		pkg.Status.AvailableRepositories = append(pkg.Status.AvailableRepositories, repoName)
+	}
+
+	if pkg.Status.ReleaseChannels.SetChannels(repoName, channels) {
+		update = true
+	}
+
+	if !update {
+		return nil
+	}
 
 	if err := r.client.Status().Patch(ctx, pkg, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("update application package status: %w", err)

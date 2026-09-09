@@ -17,6 +17,15 @@ config:
       - ACTIONS_ID_TOKEN_REQUEST_TOKEN
       - VAULT_KEY
       - WERF_SIGN_KEY
+      - FUZZ_S3_ENDPOINT
+      - FUZZ_S3_ACCESS_KEY
+      - FUZZ_S3_SECRET_KEY
+      - FUZZ_S3_REPOSITORY
+      - FUZZ_S3_BRANCH_SLUG
+      - FUZZ_ENABLE_RUN
+      - FUZZ_PKG
+      - FUZZ_TARGET
+      - FUZZ_TIME
       - WERF_OLCEDAR_SYSEXT_SIGN_ENABLED
     allowUncommittedFiles: ["tools/build_includes/*"]
   secrets:
@@ -33,12 +42,21 @@ config:
       - WERF_VAULT_AUTH_JWT
       - WERF_SIGN_KEY
       - WERF_OLCEDAR_VAULT_AUTH_ROLE
+      - FUZZ_S3_ENDPOINT
+      - FUZZ_S3_ACCESS_KEY
+      - FUZZ_S3_SECRET_KEY
+      - FUZZ_S3_REPOSITORY
+      - FUZZ_S3_BRANCH_SLUG
     allowValueIds:
       - SOURCE_REPO
       - GOPROXY
       - CLOUD_PROVIDERS_SOURCE_REPO
       - CARGO_PROXY
       - DECKHOUSE_PRIVATE_REPO
+      - FUZZ_ENABLE_RUN
+      - FUZZ_PKG
+      - FUZZ_TARGET
+      - FUZZ_TIME
   stapel:
     mount:
       allowBuildDir: true

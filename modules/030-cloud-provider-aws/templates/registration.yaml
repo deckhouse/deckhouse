@@ -15,6 +15,7 @@ machineClassKind: {{ b64enc "AWSMachineClass" | quote }}
 {{- $_ := set $awsValues "providerAccessKeyId" $context.Values.cloudProviderAws.internal.providerAccessKeyId }}
 {{- $_ := set $awsValues "providerSecretAccessKey" $context.Values.cloudProviderAws.internal.providerSecretAccessKey }}
 {{- $_ := set $awsValues "region" $context.Values.cloudProviderAws.internal.region }}
+{{- $_ := set $awsValues "imdsv2" $context.Values.cloudProviderAws.internal.imdsv2 }}
 {{- $_ := set $awsValues "instances" dict }}
 {{- $_ := set $awsValues.instances "ami" $context.Values.cloudProviderAws.internal.instances.ami }}
 {{- $_ := set $awsValues.instances "additionalSecurityGroups" $context.Values.cloudProviderAws.internal.instances.additionalSecurityGroups }}

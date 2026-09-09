@@ -1,0 +1,132 @@
+ci:
+  fixes:
+    - summary: Add REGCTL_CONFIG
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22707
+    - summary: Fix regctl in 1.76 build.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22809
+common:
+  fixes:
+    - summary: >-
+        Quote user-controlled values in the prometheus, upmeter, prometheus-pushgateway and extended-monitoring
+        templates to prevent YAML injection into the module release.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22774
+deckhouse:
+  fixes:
+    - summary: validate the hardlink target when extracting module and package images
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22644
+deckhouse-controller:
+  fixes:
+    - summary: >-
+        Honor a channel-level release suspend for clusters that reach the suspended version through a
+        step-by-step update.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22746
+      impact: >-
+        A Deckhouse release suspended on its release channel is no longer applied by clusters that are
+        behind and reach it through a step-by-step update. The suspend flag lives only in the release-channel
+        image; previously it was dropped when the target release was built from its per-version image,
+        so lagging clusters updated to a suspended release anyway.
+    - summary: Fix tests for check_release_tests
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22808
+descheduler:
+  features:
+    - summary: Always run the descheduler with the upstream `EvictionsInBackground` feature gate enabled.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22803
+      impact: >-
+        The `descheduler` Deployment in `d8-descheduler` restarts once on upgrade to pick up the new argument.
+        Descheduling behavior is unchanged for workloads that do not implement their own eviction policy.
+docs:
+  features:
+    - summary: Add managed-valkey module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22726
+    - summary: Add monitoring-kubernetes module architecture section.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22841
+    - summary: Add documentation for Managed PostgreSQL service.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/20233
+  fixes:
+    - summary: >-
+        Documented the identity collision rules for local Group and User objects and the allow-access-to-kubernetes
+        annotation, and corrected the described scope of a security subsystem manage role.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22636
+    - summary: add static cluster OS change for master nodes and Stronghold backup alerts
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22638
+node-manager:
+  fixes:
+    - summary: Fix NodeCapacity calculation.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22677
+    - summary: >-
+        Hide the CAPS SSH key and sudo password in SSHCredentials from users without the `sshcredentials/sensitive`
+        subresource.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22631
+      impact: >-
+        The SSH key and sudo password in `SSHCredentials` (used by CAPS to reach static nodes) are now
+
+        returned as `<omitted>` to callers without `get` on the `sshcredentials/sensitive` subresource,
+
+        masked in the audit log, and encrypted in etcd when `apiserver.encryptionEnabled` is on.
+
+        `d8:manage:infrastructure:viewer` and `:manager` no longer see these values. CAPS still does,
+        and
+
+        so does every holder of a `deckhouse.io` wildcard, since `*` matches subresources: `SuperAdmin`,
+
+        the `kubeadm:cluster-admins` group, and the `deckhouse` and `webhook-handler` SAs of `d8-system`.
+
+
+        For masked readers the `last-applied-configuration` annotation disappears from `get -o yaml`,
+
+        and creating an `SSHCredentials` with `<omitted>` fails with `422 Invalid` — editing still works.
+
+        Treat previously exposed keys as leaked and rotate them. With `apiserver.encryptionEnabled` on,
+
+        rewrite existing objects to encrypt them: `d8 k get sshcredentials -o json | d8 k replace -f -`.
+service-with-healthchecks:
+  fixes:
+    - summary: >-
+        Fixed an API server overload issue ("status storm"), resolved validation errors for ClusterIP
+        services, corrected pod readiness evaluation logic, and improved code quality.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/19455
+      impact: >-
+        The `service-with-healthchecks` status logic was heavily refactored to reduce API and etcd load.
+        If you rely on `lastProbeTime` observability on every probe, explicitly enable `verboseStatus`
+        in the module configuration.
+    - summary: Annotations and labels of a ServiceWithHealthchecks are now copied to the Service created
+        for it.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22878
+      impact: >-
+        After the update, the controller adds the annotations and labels of every ServiceWithHealthchecks
+        to the Service created for it.
+
+        If a ServiceWithHealthchecks of the `LoadBalancer` type carries annotations that configure the
+        load balancer
+
+        (`network.deckhouse.io/load-balancer-ips`, `network.deckhouse.io/load-balancer-shared-ip-key`
+        and similar),
+
+        the load balancer controller applies them and may assign a different address to the service, which
+        causes a short interruption of the connections.
+    - summary: >-
+        Stopped publishing terminated pods in EndpointSlices and started publishing pods being deleted
+        as terminating endpoints.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22879
+      impact: >-
+        Endpoints for pods in a terminal phase (Failed/Succeeded) are no longer published. In DVP clusters
+        this prevents traffic from being routed to a VirtualMachine IP that has been reused by another
+        pod. Pods being deleted are now published with the serving and terminating conditions, which enables
+        the graceful shutdown flow for consumers. Pod readiness is derived from the PodReady condition,
+        and stale probe results are reset when a pod becomes not ready, is recreated, or changes its IP.
+user-authz:
+  fixes:
+    - summary: >-
+        The identity collision check no longer applies to the platform's own identities, so a retried
+        bootstrap creates the initial User again instead of timing out.
+      pull_request: https://github.com/deckhouse/deckhouse/pull/22873
+      impact: >-
+        The installer, the deckhouse ServiceAccount, holders of the cluster
+
+        administrator kubeconfig and the kube-system / d8-system ServiceAccounts
+
+        can create a User or a Group named by an existing authorization rule
+
+        without the acknowledgement annotation. Every other requester is checked
+
+        as before.

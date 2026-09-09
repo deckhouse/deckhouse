@@ -234,3 +234,32 @@ spec:
         authSecretName: cred-secret
         query: "SELECT NOT pg_is_in_recovery()"
 ```
+
+## Passing annotations and labels to the child Service
+
+The annotations and labels of a ServiceWithHealthchecks are copied to the Service created by the module. This is required for controllers that read the parameters of a load balancer from the Service only, for example MetalLB:
+
+```yaml
+apiVersion: network.deckhouse.io/v1alpha1
+kind: ServiceWithHealthchecks
+metadata:
+  name: postgres-read
+  annotations:
+    network.deckhouse.io/load-balancer-ips: 192.168.217.217
+    network.deckhouse.io/load-balancer-shared-ip-key: key-to-share
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 5432
+    protocol: TCP
+    targetPort: 5432
+  selector:
+    app: postgres
+  healthcheck:
+    probes:
+    - mode: TCP
+      tcp:
+        targetPort: 5432
+```
+
+The keys copied during the last reconciliation are stored in the `network.deckhouse.io/propagated-annotations` and `network.deckhouse.io/propagated-labels` annotations of the child Service. Thanks to these lists, a key removed from the ServiceWithHealthchecks is removed from the Service too, while annotations and labels set by other controllers (for example, `metallb.universe.tf/ip-allocated-from-pool`) are kept untouched.

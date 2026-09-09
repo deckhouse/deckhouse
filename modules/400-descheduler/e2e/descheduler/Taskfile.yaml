@@ -4,6 +4,9 @@ includes:
   descheduler-minreplicas-not-supported:
     taskfile: ./tests/descheduler-minreplicas-not-supported/Taskfile.yml
     dir: ./tests/descheduler-minreplicas-not-supported
+  evictions-in-background:
+    taskfile: ./tests/evictions-in-background/Taskfile.yml
+    dir: ./tests/evictions-in-background
   exclude-namespaces-from-processing:
     taskfile: ./tests/exclude-namespaces-from-processing/Taskfile.yml
     dir: ./tests/exclude-namespaces-from-processing
@@ -31,6 +34,7 @@ tasks:
     desc: Run all descheduler e2e tests
     cmds:
       - task: descheduler-minreplicas-not-supported:run
+      - task: evictions-in-background:run
       - task: exclude-namespaces-from-processing:run
       - task: high-node-utilization:run
       - task: low-node-utilization:run
@@ -43,6 +47,7 @@ tasks:
     desc: Dry-Run all descheduler e2e tests
     cmds:
       - task: descheduler-minreplicas-not-supported:dry-run
+      - task: evictions-in-background:dry-run
       - task: exclude-namespaces-from-processing:dry-run
       - task: high-node-utilization:dry-run
       - task: low-node-utilization:dry-run

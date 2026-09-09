@@ -402,6 +402,27 @@ alerts:
         Cloud data discoverer cannot save data to a Kubernetes resource.
       severity: "6"
       markupFormat: markdown
+    - name: D8CloudProviderAWSIMDSv2NotConverged
+      sourceFile: modules/030-cloud-provider-aws/monitoring/prometheus-rules/imdsv2.tpl
+      moduleUrl: 030-cloud-provider-aws
+      module: cloud-provider-aws
+      edition: ce
+      description: |-
+        `imdsv2: true` is set in `AWSClusterConfiguration`, but {{ $value }} EC2 instances of the cluster
+        still accept metadata requests without a session token, which leaves them more exposed to unauthorized
+        metadata access, including through SSRF attacks.
+
+        Existing instances are not reconfigured by the setting alone:
+
+        1. Master, static and bastion instances are updated by a converge run. Start the DKP installer and run `dhctl converge`.
+        2. Ephemeral instances are re-created when their nodes are rolled, which happens on its own. Check that the nodes of every `CloudEphemeral` NodeGroup are being replaced: `d8 k get nodegroups`.
+
+        The instance state is re-read once per discovery period of the cloud data discoverer (one hour by default),
+        so the alert can lag behind the last node being replaced.
+      summary: |
+        Some EC2 instances of the cluster still allow IMDSv1.
+      severity: "6"
+      markupFormat: markdown
     - name: D8CloudProviderDVPMigrationPending
       sourceFile: modules/030-cloud-provider-dvp/monitoring/prometheus-rules/migration.yaml
       moduleUrl: 030-cloud-provider-dvp
@@ -1873,6 +1894,30 @@ alerts:
         Federation metadata endpoint failed.
       severity: "6"
       markupFormat: markdown
+    - name: D8IstioFederationRemoteClusterUUIDMismatch
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/federation.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        Public metadata from `{{$labels.endpoint}}` for IstioFederation `{{$labels.federation_name}}` reports cluster UUID `{{$labels.actual_uuid}}`, but the previously pinned UUID is `{{$labels.pinned_uuid}}`.
+
+        Deckhouse stops private metadata exchange and does not send a federation JWT until the peer identity is confirmed again.
+
+        Check whether `spec.metadataEndpoint` was pointed to another cluster or the remote endpoint was replaced.
+
+        To inspect the resource:
+
+        ```bash
+        d8 k get istiofederation {{$labels.federation_name}} -o yaml
+        curl {{$labels.endpoint}}
+        ```
+
+        If the peer change is intentional, recreate the IstioFederation resource so a new UUID can be pinned.
+      summary: |
+        IstioFederation peer cluster UUID changed.
+      severity: "4"
+      markupFormat: markdown
     - name: D8IstioGlobalControlplaneDoesntWork
       sourceFile: modules/110-istio/monitoring/prometheus-rules/controlplane.yaml
       moduleUrl: 110-istio
@@ -1936,6 +1981,30 @@ alerts:
       summary: |
         Multicluster remote API host health check failed.
       severity: "6"
+      markupFormat: markdown
+    - name: D8IstioMulticlusterRemoteClusterUUIDMismatch
+      sourceFile: ee/modules/110-istio/monitoring/prometheus-rules/multicluster.yaml
+      moduleUrl: 110-istio
+      module: istio
+      edition: ee
+      description: |
+        Public metadata from `{{$labels.endpoint}}` for IstioMulticluster `{{$labels.multicluster_name}}` reports cluster UUID `{{$labels.actual_uuid}}`, but the previously pinned UUID is `{{$labels.pinned_uuid}}`.
+
+        Deckhouse stops private metadata exchange and does not send a multicluster JWT until the peer identity is confirmed again.
+
+        Check whether `spec.metadataEndpoint` was pointed to another cluster or the remote endpoint was replaced.
+
+        To inspect the resource:
+
+        ```bash
+        d8 k get istiomulticluster {{$labels.multicluster_name}} -o yaml
+        curl {{$labels.endpoint}}
+        ```
+
+        If the peer change is intentional, recreate the IstioMulticluster resource so a new UUID can be pinned.
+      summary: |
+        IstioMulticluster peer cluster UUID changed.
+      severity: "4"
       markupFormat: markdown
     - name: D8IstioOperatorReconcileError
       sourceFile: modules/110-istio/monitoring/prometheus-rules/operator.yaml
@@ -3491,6 +3560,52 @@ alerts:
         Permission Browser API server has unavailable replicas.
       severity: "6"
       markupFormat: markdown
+    - name: D8UserAuthzReleaseSlow
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/release-duration.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        Applying the `user-authz` Helm release took more than 5 minutes on average over the last 30 minutes. A release that does not finish within the module release timeout (20 minutes) fails, changes to ClusterAuthorizationRule and AuthorizationRule objects stop being applied and platform updates stall (the `D8DeckhouseCouldNotRunModule` alert fires in that case).
+
+        The usual cause is the size of the release: thousands of ClusterAuthorizationRule/AuthorizationRule objects, or many ClusterRoles annotated with `user-authz.deckhouse.io/access-level` bound one by one. Check the number of rules and of the module bindings:
+
+        ```bash
+        d8 k get clusterauthorizationrules --no-headers | wc -l
+        d8 k get authorizationrules -A --no-headers | wc -l
+        d8 k get clusterrolebindings -l heritage=deckhouse,module=user-authz --no-headers | wc -l
+        d8 k get rolebindings -A -l heritage=deckhouse,module=user-authz --no-headers | wc -l
+        ```
+
+        Check the module queue and the Deckhouse log for the release:
+
+        ```bash
+        d8 s queue list
+        d8 k -n d8-system logs deploy/deckhouse | grep '"module":"user-authz"'
+        ```
+      summary: |
+        The user-authz module release takes more than 5 minutes.
+      severity: "5"
+      markupFormat: markdown
+    - name: D8UserAuthzRenderSlow
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/release-duration.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        Rendering the templates of the `user-authz` module took more than 30 seconds on average over the last 30 minutes; normally it takes about a second. Render time grows with the number of objects in the release, so this is an early sign that the release is getting too large and may stop fitting into the module release timeout.
+
+        Check the number of rules and of the module bindings:
+
+        ```bash
+        d8 k get clusterauthorizationrules --no-headers | wc -l
+        d8 k get authorizationrules -A --no-headers | wc -l
+        d8 k get clusterrolebindings -l heritage=deckhouse,module=user-authz --no-headers | wc -l
+        ```
+      summary: |
+        Rendering the user-authz module templates takes more than 30 seconds.
+      severity: "6"
+      markupFormat: markdown
     - name: D8UsingFeatureGateWillBeDeprecated
       sourceFile: modules/040-control-plane-manager/monitoring/prometheus-rules/control-plane-manager.yaml
       moduleUrl: 040-control-plane-manager
@@ -5028,6 +5143,7 @@ modules-having-alerts:
     - admission-policy-engine
     - cert-manager
     - chrony
+    - cloud-provider-aws
     - cloud-provider-dvp
     - cloud-provider-huaweicloud
     - cloud-provider-yandex

@@ -12,6 +12,16 @@ description: "Схемы размещения Huawei Cloud для работы �
 ![Схема размещения Standard](images/huawei-standard.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-10811&t=IvETjbByf1MSQzcm-0 --->
 
+Параметр [`internalNetworkSecurity`](cluster_configuration.html#huaweicloudclusterconfiguration-standard-internalnetworksecurity) (по умолчанию `true`) включает создание группы безопасности (SecurityGroup) при создании кластера. Модуль создаёт группу с именем префикса кластера и назначает её узлам.
+
+Будут созданы следующие правила входящего трафика:
+
+- разрешение входящего трафика по протоколу TCP и порту `22` из `0.0.0.0/0`;
+- разрешение входящего трафика по протоколу ICMP из `0.0.0.0/0`;
+- разрешение входящего трафика по протоколу TCP и портам `30000`–`32767` для использования сервисов типа `NodePort`. Входящий трафик по протоколу UDP на порты `NodePort` по умолчанию не разрешается.
+
+Собственные группы безопасности для CloudEphemeral-узлов задаются в ресурсе [HuaweiCloudInstanceClass](cr.html#huaweicloudinstanceclass) параметром [`spec.securityGroups`](cr.html#huaweicloudinstanceclass-v1-spec-securitygroups) и применяются вместе с группой, созданной модулем.
+
 Пример конфигурации схемы размещения:
 
 ```yaml
@@ -47,6 +57,16 @@ masterNodeGroup:
 
 ![Схема размещения VpcPeering](images/huawei-vpc-peering-ru.png)
 <!--- Исходник: https://www.figma.com/design/T3ycFB7P6vZIL359UJAm7g/%D0%98%D0%BA%D0%BE%D0%BD%D0%BA%D0%B8-%D0%B8-%D1%81%D1%85%D0%B5%D0%BC%D1%8B?node-id=995-11715&t=IvETjbByf1MSQzcm-0 --->
+
+Параметр [`internalNetworkSecurity`](cluster_configuration.html#huaweicloudclusterconfiguration-vpcpeering-internalnetworksecurity) (по умолчанию `true`) включает создание группы безопасности (SecurityGroup) при создании кластера. Модуль создаёт группу с именем префикса кластера и назначает её узлам.
+
+Будут созданы следующие правила входящего трафика:
+
+- разрешение входящего трафика по протоколу TCP и порту `22` из `0.0.0.0/0`;
+- разрешение входящего трафика по протоколу ICMP из `0.0.0.0/0`;
+- разрешение входящего трафика по протоколу TCP и портам `30000`–`32767` для использования сервисов типа `NodePort`. Входящий трафик по протоколу UDP на порты `NodePort` по умолчанию не разрешается.
+
+Собственные группы безопасности для CloudEphemeral-узлов задаются в ресурсе [HuaweiCloudInstanceClass](cr.html#huaweicloudinstanceclass) параметром [`spec.securityGroups`](cr.html#huaweicloudinstanceclass-v1-spec-securitygroups) и применяются вместе с группой, созданной модулем.
 
 Пример конфигурации схемы размещения:
 

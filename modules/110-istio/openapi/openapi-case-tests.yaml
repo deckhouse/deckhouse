@@ -72,6 +72,12 @@ positive:
     - {}
 negative:
   configValues:
+  # globalVersion with unsupported version
+    - globalVersion: "1.99"
+  # additionalVersions with unsupported version
+    - additionalVersions: ["1.5"]
+  # additionalVersions mixing supported and unsupported versions
+    - additionalVersions: ["1.29", "1.88"]
   #Bad cpu limit value
     - sidecar:
         resourcesManagement:

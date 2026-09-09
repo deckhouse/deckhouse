@@ -1,0 +1,167 @@
+spec:
+  versions:
+    - name: v1alpha1
+      schema:
+        openAPIV3Schema:
+          description: |
+            Определяет политику доступа проектов к cluster-wide-ресурсам и значения, используемые по умолчанию.
+
+            Ресурс применяется к проектам, неймспейсы которых соответствуют `spec.projectSelector`. Для каждого типа cluster-wide-ресурсов политика позволяет настроить разрешённые и запрещённые ресурсы, а также правила их доступности и значения по умолчанию.
+
+            Тип cluster-wide-ресурсов задаётся с помощью `spec.resources[].resourceName`, который ссылается на соответствующий GrantableClusterResourceDefinition.
+
+            Политика создаётся администратором кластера.
+
+            Примеры настройки приведены [в разделе «Примеры использования»](usage.html#для-администраторов-кластера).
+          properties:
+            spec:
+              description: Параметры ClusterResourceGrantPolicy.
+              properties:
+                projectSelector:
+                  description: |-
+                    Селектор лейблов проектов, к которым применяется политика.
+
+                    Если селектор не задан, политика не применяется ни к одному проекту. Пустой селектор соответствует всем проектам.
+                  properties:
+                    matchExpressions:
+                      description: |-
+                        Список выражений селектора лейблов.
+
+                        Все выражения должны выполняться одновременно.
+                      items:
+                        description: |-
+                          Выражение селектора лейблов.
+                        properties:
+                          key:
+                            description: Ключ лейбла, к которому применяется выражение.
+                          operator:
+                            description: |-
+                              Оператор, определяющий отношение ключа к набору значений.
+                          values:
+                            description: |-
+                              Список значений лейбла.
+
+                              Для операторов `In` и `NotIn` список должен содержать хотя бы одно значение. Для операторов `Exists` и `DoesNotExist` список должен быть пустым.
+                    matchLabels:
+                      description: |-
+                        Набор лейблов проектов, к которым применяется политика.
+
+                        Все указанные лейблы должны совпадать.
+                resources:
+                  description: Настройки доступа к cluster-wide-ресурсам для выбранных проектов.
+                  items:
+                    description: |-
+                      Настройки доступа к одному типу cluster-wide-ресурсов.
+                    properties:
+                      allowed:
+                        description: |-
+                          Список имён cluster-wide-ресурсов, доступных проектам.
+
+                          Объединяется с ресурсами, выбранными с помощью `allowedSelector`.
+                      allowedSelector:
+                        description: |-
+                          Селектор лейблов cluster-wide-ресурсов, доступных проектам.
+
+                          Объединяется с ресурсами, указанными в `allowed`. Применяется только к cluster-wide-ресурсам, представленным объектами Kubernetes.
+                        properties:
+                          matchExpressions:
+                            description: |-
+                              Список выражений селектора лейблов.
+
+                              Все выражения должны выполняться одновременно.
+                            items:
+                              description: |-
+                                Выражение селектора лейблов.
+                              properties:
+                                key:
+                                  description: Ключ лейбла, к которому применяется выражение.
+                                operator:
+                                  description: |-
+                                    Оператор, определяющий отношение ключа к набору значений.
+                                values:
+                                  description: |-
+                                    Список значений лейбла.
+
+                                    Для операторов `In` и `NotIn` список должен содержать хотя бы одно значение. Для операторов `Exists` и `DoesNotExist` список должен быть пустым.
+                          matchLabels:
+                            description: |-
+                              Набор лейблов cluster-wide-ресурсов.
+
+                              Все указанные лейблы должны совпадать.
+                      availabilityDefault:
+                        description: |-
+                          Определяет доступность cluster-wide-ресурсов, не указанных явно с помощью `allowed`, `allowedSelector`, `denied` или `deniedSelector`.
+
+                          Переопределяет `defaultAvailability` соответствующего GrantableClusterResourceDefinition для проектов, выбранных политикой.
+
+                          Значение `All` предоставляет доступ ко всем таким cluster-wide-ресурсам, а `None` запрещает доступ к ним.
+
+                          Указывать параметр обычно не требуется. Если задан `allowed` или `allowedSelector`, а `availabilityDefault` не указан, доступ к остальным cluster-wide-ресурсам этого типа автоматически запрещается. Задавайте параметр явно, только чтобы изменить доступность без списка разрешённых ресурсов: `All` — открыть доступ ко всем ресурсам типа, `None` — закрыть его.
+                      default:
+                        description: |-
+                          Имя cluster-wide-ресурса, используемого в выбранных проектах по умолчанию.
+
+                          Переопределяет значение, определённое с помощью `defaultFrom` в соответствующем GrantableClusterResourceDefinition.
+                      denied:
+                        description: |-
+                          Список имён cluster-wide-ресурсов, недоступных проектам.
+
+                          Запрет имеет приоритет над `allowed` и `allowedSelector`.
+                      deniedSelector:
+                        description: |-
+                          Селектор лейблов cluster-wide-ресурсов, недоступных проектам.
+
+                          Запрет имеет приоритет над `allowed` и `allowedSelector`. Применяется только к cluster-wide-ресурсам, представленным объектами Kubernetes.
+                        properties:
+                          matchExpressions:
+                            description: |-
+                              Список выражений селектора лейблов.
+
+                              Все выражения должны выполняться одновременно.
+                            items:
+                              description: |-
+                                Выражение селектора лейблов.
+                              properties:
+                                key:
+                                  description: Ключ лейбла, к которому применяется выражение.
+                                operator:
+                                  description: |-
+                                    Оператор, определяющий отношение ключа к набору значений.
+                                values:
+                                  description: |-
+                                    Список значений лейбла.
+
+                                    Для операторов `In` и `NotIn` список должен содержать хотя бы одно значение. Для операторов `Exists` и `DoesNotExist` список должен быть пустым.
+                          matchLabels:
+                            description: |-
+                              Набор лейблов cluster-wide-ресурсов.
+
+                              Все указанные лейблы должны совпадать.
+                      resourceName:
+                        description: Имя GrantableClusterResourceDefinition, для которого задаются настройки доступа.
+            status:
+              description: Состояние ClusterResourceGrantPolicy.
+              properties:
+                conditions:
+                  description: Текущее состояние ClusterResourceGrantPolicy.
+                  items:
+                    description: Информация об одном из аспектов текущего состояния ресурса.
+                    properties:
+                      lastTransitionTime:
+                        description: |-
+                          Время последнего изменения состояния условия.
+                      message:
+                        description: |-
+                          Сообщение с дополнительной информацией о состоянии условия.
+                      observedGeneration:
+                        description: |-
+                          Поколение ресурса, на основе которого сформировано состояние условия.
+                      reason:
+                        description: |-
+                          Причина последнего изменения состояния условия.
+                      status:
+                        description: Состояние условия.
+                      type:
+                        description: Тип условия.
+                observedGeneration:
+                  description: Последнее поколение ресурса, обработанное контроллером.

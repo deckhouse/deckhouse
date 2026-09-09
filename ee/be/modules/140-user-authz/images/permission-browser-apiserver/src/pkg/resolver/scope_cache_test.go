@@ -15,6 +15,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/version"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/openapi"
@@ -112,6 +113,31 @@ func TestIsNamespaced_UnknownResource(t *testing.T) {
 		"unknown core resource should be assumed cluster-scoped")
 }
 
+// TestScope_KnownVsUnknown pins the three-way answer used by multi-tenancy:
+// known namespaced, known cluster-scoped, and !known. IsNamespaced must keep
+// coercing !known to cluster-scoped so AccessibleNamespaces does not inflate.
+func TestScope_KnownVsUnknown(t *testing.T) {
+	cache := &ResourceScopeCache{
+		scopeMap: map[string]bool{
+			"/pods":  true,
+			"/nodes": false,
+		},
+	}
+
+	namespaced, known := cache.Scope("", "pods")
+	assert.True(t, namespaced)
+	assert.True(t, known)
+
+	namespaced, known = cache.Scope("", "nodes")
+	assert.False(t, namespaced)
+	assert.True(t, known)
+
+	namespaced, known = cache.Scope("custom.example.com", "unknownresource")
+	assert.False(t, namespaced)
+	assert.False(t, known)
+	assert.False(t, cache.IsNamespaced("custom.example.com", "unknownresource"))
+}
+
 // TestRefresh_UpdatesCache tests that refresh updates the cache with new data
 func TestRefresh_UpdatesCache(t *testing.T) {
 	client := newMockDiscovery(testAPIResources(), nil)
@@ -148,7 +174,8 @@ func TestRefresh_DiscoveryError_PreservesCache(t *testing.T) {
 	assert.False(t, cache.IsNamespaced("", "namespaces"), "namespaces should still be in cache after failed refresh")
 }
 
-// TestRefresh_PartialDiscoveryError_UsesPartialResults tests that partial results are used
+// TestRefresh_PartialDiscoveryError_UsesPartialResults tests that the groups discovery did
+// return are taken even when other groups failed.
 func TestRefresh_PartialDiscoveryError_UsesPartialResults(t *testing.T) {
 	// Discovery returns partial results with an error
 	partialResources := []*metav1.APIResourceList{
@@ -160,8 +187,11 @@ func TestRefresh_PartialDiscoveryError_UsesPartialResults(t *testing.T) {
 			},
 		},
 	}
+	partialErr := &discovery.ErrGroupDiscoveryFailed{Groups: map[schema.GroupVersion]error{
+		{Group: "metrics.k8s.io", Version: "v1beta1"}: fmt.Errorf("the server is currently unable to handle the request"),
+	}}
 	cache := &ResourceScopeCache{
-		discoveryClient: newMockDiscovery(partialResources, fmt.Errorf("partial error")),
+		discoveryClient: newMockDiscovery(partialResources, partialErr),
 		scopeMap:        make(map[string]bool),
 	}
 
@@ -170,6 +200,85 @@ func TestRefresh_PartialDiscoveryError_UsesPartialResults(t *testing.T) {
 	// Should use partial results
 	assert.True(t, cache.IsNamespaced("", "pods"))
 	assert.False(t, cache.IsNamespaced("", "nodes"))
+}
+
+// TestRefresh_PartialDiscoveryError_KeepsTheFailedGroups tests that a group whose discovery
+// failed keeps its previous entries (a down APIService must not turn its cluster-scoped
+// resources into !known, which the multi-tenancy engine treats as namespaced), that a group
+// discovery did return is replaced, and that a group that is neither returned nor failed is gone.
+func TestRefresh_PartialDiscoveryError_KeepsTheFailedGroups(t *testing.T) {
+	cache := &ResourceScopeCache{
+		discoveryClient: newMockDiscovery(
+			[]*metav1.APIResourceList{
+				{
+					GroupVersion: "v1",
+					APIResources: []metav1.APIResource{{Name: "pods", Namespaced: true, Kind: "Pod"}},
+				},
+				{
+					GroupVersion: "apps/v1",
+					APIResources: []metav1.APIResource{{Name: "deployments", Namespaced: true, Kind: "Deployment"}},
+				},
+			},
+			&discovery.ErrGroupDiscoveryFailed{Groups: map[schema.GroupVersion]error{
+				{Group: "metrics.k8s.io", Version: "v1beta1"}: fmt.Errorf("the server is currently unable to handle the request"),
+			}},
+		),
+		scopeMap: map[string]bool{
+			"/pods":                       true,
+			"apps/deployments":            true,
+			"apps/gone-in-this-version":   true,  // apps was returned: its old entries are replaced
+			"metrics.k8s.io/nodes":        false, // metrics.k8s.io failed: its entries are kept
+			"metrics.k8s.io/pods":         true,
+			"removed.example.com/widgets": false, // neither returned nor failed: the group is gone
+		},
+	}
+
+	cache.refresh()
+
+	namespaced, known := cache.Scope("metrics.k8s.io", "nodes")
+	assert.True(t, known, "the failed group must keep its entries")
+	assert.False(t, namespaced)
+	_, known = cache.Scope("metrics.k8s.io", "pods")
+	assert.True(t, known)
+
+	_, known = cache.Scope("apps", "deployments")
+	assert.True(t, known)
+	_, known = cache.Scope("apps", "gone-in-this-version")
+	assert.False(t, known, "a returned group is replaced by what discovery returned")
+
+	_, known = cache.Scope("removed.example.com", "widgets")
+	assert.False(t, known, "a group that discovery neither returned nor reported as failed has left the cluster")
+}
+
+// TestRefresh_NonDiscoveryError_PreservesCache tests that an error other than a partial group
+// failure preserves the whole snapshot even if some lists came back with it.
+func TestRefresh_NonDiscoveryError_PreservesCache(t *testing.T) {
+	cache := &ResourceScopeCache{
+		discoveryClient: newMockDiscovery(
+			[]*metav1.APIResourceList{{GroupVersion: "v1", APIResources: []metav1.APIResource{{Name: "pods", Namespaced: true}}}},
+			fmt.Errorf("connection refused"),
+		),
+		scopeMap: map[string]bool{"/nodes": false},
+	}
+
+	cache.refresh()
+
+	_, known := cache.Scope("", "nodes")
+	assert.True(t, known, "the previous snapshot must survive an unclassified discovery error")
+	_, known = cache.Scope("", "pods")
+	assert.False(t, known)
+}
+
+// TestNilCache_AnswersLikeEmpty tests that a nil *ResourceScopeCache, which a caller may hand to
+// an interface value by mistake, behaves like an empty cache instead of panicking.
+func TestNilCache_AnswersLikeEmpty(t *testing.T) {
+	var cache *ResourceScopeCache
+
+	namespaced, known := cache.Scope("", "pods")
+	assert.False(t, namespaced)
+	assert.False(t, known)
+	assert.False(t, cache.HasData())
+	assert.False(t, cache.HasResource("", "pods"))
 }
 
 // TestRefresh_NilDiscovery tests refresh with nil discovery client

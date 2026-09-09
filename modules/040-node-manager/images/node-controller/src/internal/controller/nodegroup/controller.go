@@ -20,11 +20,13 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	apiequality "k8s.io/apimachinery/pkg/api/equality"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
@@ -58,13 +60,22 @@ func init() {
 
 type Status struct {
 	register.Base
-	apiReader        client.Reader
 	cache            cache.Cache
 	conditionService ngconditions.Service
+
+	// sweepMu guards the two flags below and nothing else; it is never held across a sweep.
+	sweepMu    sync.Mutex
+	sweeping   bool
+	sweepDirty bool
+	// unstorableConsumers holds, per kind, when its accepted consumers patch last failed to come
+	// back in the response; the kind is skipped for statusResyncInterval and then retried. Only a
+	// sweep touches it, and the flags above keep sweeps from overlapping.
+	unstorableConsumers map[schema.GroupVersionKind]time.Time
+	// now reads the clock for that cooldown; nil means time.Now.
+	now func() time.Time
 }
 
 func (r *Status) Setup(_ context.Context, mgr ctrl.Manager) error {
-	r.apiReader = mgr.GetAPIReader()
 	r.cache = mgr.GetCache()
 	return nil
 }
@@ -107,6 +118,10 @@ func (r *Status) secretToAllNodeGroups(ctx context.Context, _ client.Object) []r
 func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	logger := log.FromContext(ctx)
 	logger.V(1).Info("reconciling nodegroup status", "name", req.Name)
+
+	// A cluster-wide sweep, so it runs before the NodeGroup read: on a delete event the object
+	// is already gone and the class it referenced still has to be cleared.
+	r.sweepInstanceClassConsumers(ctx)
 
 	ng, err := nodecommon.GetNodeGroup(ctx, r.Client, req.Name)
 	if err != nil {
@@ -218,7 +233,8 @@ func (r *Status) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, 
 	// left empty so a later reconcile — re-triggered by the cloud-provider
 	// secret watch — can fill it, instead of getting stuck on a sticky "None".
 	if ng.Status.Engine == "" {
-		if engine := derivedResult.Engine; engine != "" && engine != "None" {
+		engine := derivedResult.Engine
+		if engine != "" && engine != "None" {
 			ng.Status.Engine = engine
 		}
 	}

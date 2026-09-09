@@ -46,9 +46,10 @@ Show module requirements.
           {%- assign formattedValue = formattedValue | strip | append: "." %}
         {%- endif %}
         <li class="module-requirements__item">
-          <code>{{ moduleName }}</code>: {{ formattedValue }}
           {%- if isOptional %}
           <span> {{ site.data.i18n.common.requirements_modules_optional_text_first[page.lang] }} <a href="/modules/{{ moduleName }}/">{{ moduleName }}</a> (<a href="/products/kubernetes-platform/documentation/v1/architecture/module-development/dependencies/#{{ site.data.i18n.common.requirements_modules_optional_text_for_link[page.lang] }}">{{ site.data.i18n.common.requirements_modules_more[page.lang] }}</a> {{ site.data.i18n.common.requirements_modules_optional_text_second[page.lang] }}).</span>
+          {%- else %}
+          <code>{{ moduleName }}</code>: {{ formattedValue }}
           {%- endif %}
         </li>
       {%- endfor %}

@@ -92,7 +92,7 @@ data:
         # `charset` only appends the encoding to the types listed here, and the
         # default list has no text/markdown: the per-page Markdown of the AI
         # export would be served without a charset and a browser would guess it.
-        charset_types text/html text/xml text/plain text/vnd.wap.wml application/javascript application/rss+xml text/markdown;
+        charset_types text/xml text/plain text/vnd.wap.wml application/javascript application/rss+xml text/markdown;
         access_log     /dev/stdout json_combined;
 
         rewrite ^/modules$ /modules/ redirect;

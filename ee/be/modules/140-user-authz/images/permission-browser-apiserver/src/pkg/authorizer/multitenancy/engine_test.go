@@ -829,6 +829,96 @@ func TestEngine_RenewDirectories_InvalidRegexPreservesPreviousDirectory(t *testi
 	assert.Empty(t, e.affectedDirs("bob", nil))
 }
 
+// TestEngine_RenewDirectories_MalformedSelectorStaysLocal locks that an
+// uncompilable namespaceSelector costs only the rule that carries it.
+// Precompiling selectors must not turn one bad CAR into a cluster-wide loss
+// of multi-tenancy: an aborted reload leaves the directory empty, and an
+// empty directory means Authorize returns NoOpinion for everyone.
+func TestEngine_RenewDirectories_MalformedSelectorStaysLocal(t *testing.T) {
+	path := writeConfigJSON(t, `{
+		"crds": [
+			{
+				"name": "broken",
+				"spec": {
+					"namespaceSelector": {"labelSelector": {"matchExpressions": [{"key": "team", "operator": "Exists", "values": ["nope"]}]}},
+					"subjects": [{"kind": "User", "name": "bob"}]
+				}
+			},
+			{
+				"name": "healthy",
+				"spec": {
+					"limitNamespaces": ["team-a"],
+					"subjects": [{"kind": "User", "name": "alice"}]
+				}
+			}
+		]
+	}`)
+	e := &Engine{
+		configPath: path,
+		directory:  map[string]map[string]DirectoryEntry{},
+	}
+
+	e.renewDirectories()
+
+	require.Len(t, e.affectedDirs("alice", nil), 1, "a healthy CAR must survive a broken sibling")
+
+	entries := e.affectedDirs("bob", nil)
+	require.Len(t, entries, 1)
+	require.Len(t, entries[0].NamespaceSelectors, 1)
+	assert.Nil(t, entries[0].compiledSelectors[0],
+		"the malformed selector is left uncompiled and index-aligned, not dropped")
+}
+
+// TestEngine_Authorize_MalformedSelectorDeniesOnlyItsSubject is the Authorize
+// view of the same config: alice keeps her filter and bob, whose only rule
+// cannot be evaluated, is denied rather than waved through.
+func TestEngine_Authorize_MalformedSelectorDeniesOnlyItsSubject(t *testing.T) {
+	e, err := NewEngine(writeConfigJSON(t, `{
+		"crds": [
+			{
+				"name": "broken",
+				"spec": {
+					"namespaceSelector": {"labelSelector": {"matchExpressions": [{"key": "team", "operator": "Exists", "values": ["nope"]}]}},
+					"subjects": [{"kind": "User", "name": "bob"}]
+				}
+			},
+			{
+				"name": "healthy",
+				"spec": {
+					"limitNamespaces": ["team-a"],
+					"subjects": [{"kind": "User", "name": "alice"}]
+				}
+			}
+		]
+	}`), nil, nil, nil)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name string
+		user string
+		ns   string
+		want authorizer.Decision
+	}{
+		{name: "alice inside her limitNamespaces", user: "alice", ns: "team-a", want: authorizer.DecisionNoOpinion},
+		{name: "alice outside her limitNamespaces", user: "alice", ns: "team-b", want: authorizer.DecisionDeny},
+		{name: "bob under the malformed selector", user: "bob", ns: "team-a", want: authorizer.DecisionDeny},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			decision, _, err := e.Authorize(context.Background(), &mockAttrs{
+				userInfo:   &mockUserInfo{name: tt.user},
+				verb:       "get",
+				resource:   "pods",
+				namespace:  tt.ns,
+				isResource: true,
+			})
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, decision)
+		})
+	}
+}
+
 // fakeIndependentChecker simulates the CAR-independent RBAC check: it grants
 // requests only in the listed namespaces (e.g. as an AR's RoleBinding or a
 // plain RoleBinding would).

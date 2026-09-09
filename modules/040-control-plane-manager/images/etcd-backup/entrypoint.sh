@@ -19,8 +19,9 @@ cd /tmp/
 etcd=etcd-backup.snapshot
 archive=etcd-backup.tar.gz
 backup_dir_on_host=${HOSTPATH}
+etcd_endpoint=${NODEIP}
 etcdctl \
-    --endpoints=https://127.0.0.1:2379 \
+    --endpoints=https://$etcd_endpoint:2379 \
     --cacert=/etc/kubernetes/pki/etcd/ca.crt \
     --cert=/etc/kubernetes/pki/etcd/healthcheck-client.crt \
     --key=/etc/kubernetes/pki/etcd/healthcheck-client.key \

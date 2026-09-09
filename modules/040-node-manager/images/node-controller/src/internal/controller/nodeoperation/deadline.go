@@ -33,16 +33,23 @@ import (
 // or deletion must not cut short a drain that is still legitimately running.
 func hardDeadline(op *v1alpha1.NodeOperation) time.Time {
 	switch {
-	case op.Status.StartedAt != nil:
-		// The node has the work and owes an answer.
-		return op.Status.StartedAt.Time.Add(operationTimeout)
-	case op.Status.DrainDeadline != nil:
+	case awaitingEviction(op) && op.Status.DrainDeadline != nil:
 		// Waiting for an eviction that was given until then, plus the margin
 		// every stretch gets for the plumbing around it.
 		return op.Status.DrainDeadline.Time.Add(operationTimeout)
+	case op.Status.StartedAt != nil:
+		// The node has the work and owes an answer.
+		return op.Status.StartedAt.Time.Add(operationTimeout)
 	default:
 		return op.CreationTimestamp.Time.Add(operationTimeout)
 	}
+}
+
+// awaitingEviction reports what the operation is still waiting for. A Drain is
+// the eviction, so it waits for one until it ends; any other operation only
+// until the workload is gone and the node was handed the work.
+func awaitingEviction(op *v1alpha1.NodeOperation) bool {
+	return op.Spec.Type == v1alpha1.NodeOperationTypeDrain || op.Status.StartedAt == nil
 }
 
 // adoptDrainDeadline gives a parent the deadline its child eviction runs to;
@@ -70,8 +77,8 @@ func (r *Reconciler) expire(ctx context.Context, op *v1alpha1.NodeOperation, dea
 // passed, so the record says which node is holding the group up.
 func timedOut(op *v1alpha1.NodeOperation, deadline time.Time) (string, string) {
 	when := deadline.UTC().Format(time.RFC3339)
-	if op.Status.StartedAt != nil {
-		return "NodeTimedOut", fmt.Sprintf("node %s did not report back by %s", op.Spec.NodeName, when)
+	if awaitingEviction(op) {
+		return "PreparationTimedOut", fmt.Sprintf("node %s was not prepared by %s: its workload has not finished leaving", op.Spec.NodeName, when)
 	}
-	return "PreparationTimedOut", fmt.Sprintf("node %s was not prepared by %s: its workload has not finished leaving", op.Spec.NodeName, when)
+	return "NodeTimedOut", fmt.Sprintf("node %s did not report back by %s", op.Spec.NodeName, when)
 }

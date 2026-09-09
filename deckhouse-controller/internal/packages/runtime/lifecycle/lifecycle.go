@@ -53,11 +53,24 @@ type Package struct {
 	maintenance     string            // pending maintenance mode, consumed by GetPendingMaintenance
 	removing        bool              // EventRemove was issued and its teardown has not finished
 
-	ctx    context.Context    // root context, cancelled on version change or remove
-	cancel context.CancelFunc // cancels root and all children
+	ctx    context.Context         // root context, cancelled on version change or remove
+	cancel context.CancelCauseFunc // cancels root and all children
 
-	cancels map[int]context.CancelFunc // per-event child context cancels
+	cancels map[int]context.CancelCauseFunc // per-event child context cancels
 }
+
+// CancelCause is a reason a package context was cancelled. It answers to
+// context.Canceled, so generic cancellation checks keep working on the error a
+// cancelled task returns while the text still names the trigger.
+type CancelCause string
+
+func (c CancelCause) Error() string { return string(c) }
+
+func (c CancelCause) Is(target error) bool { return target == context.Canceled }
+
+// errVersionChanged is the cancellation cause when the whole context tree is
+// replaced because the package version changed (or a reload was forced).
+var errVersionChanged = CancelCause("package version changed")
 
 // newContext creates or renews a context for the given event type.
 //
@@ -66,21 +79,24 @@ type Package struct {
 //
 // For child events (EventSchedule): cancels only the previous context for the
 // same event key, then creates a new child of the current root.
-func (p *Package) newContext(event int) context.Context {
+//
+// cause is what the cancelled tasks report via context.Cause, so a run cut short
+// here can name why instead of surfacing a bare "context canceled".
+func (p *Package) newContext(event int, cause error) context.Context {
 	if event == EventUpdate || event == EventRemove {
 		clear(p.cancels)
 		if p.cancel != nil {
-			p.cancel()
+			p.cancel(cause)
 		}
-		p.ctx, p.cancel = context.WithCancel(context.Background())
+		p.ctx, p.cancel = context.WithCancelCause(context.Background())
 		return p.ctx
 	}
 
 	if stored, ok := p.cancels[event]; ok {
-		stored()
+		stored(cause)
 	}
 
-	ctx, cancel := context.WithCancel(p.ctx)
+	ctx, cancel := context.WithCancelCause(p.ctx)
 	p.cancels[event] = cancel
 	return ctx
 }

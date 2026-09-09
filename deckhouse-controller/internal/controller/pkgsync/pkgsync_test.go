@@ -18,6 +18,8 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -32,7 +34,16 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
+// newTestSyncer builds a syncer whose global hooks dir holds no schemas, so the global version
+// it writes carries none either and only the embedded dir and the objects under test are asserted on.
 func newTestSyncer(t *testing.T, version, embeddedDir string, objects ...client.Object) (*syncer, client.Client) {
+	t.Helper()
+
+	return newTestSyncerWithGlobal(t, version, embeddedDir, t.TempDir(), objects...)
+}
+
+// newTestSyncerWithGlobal builds a syncer over both dirs, for the tests that drive the global module.
+func newTestSyncerWithGlobal(t *testing.T, version, embeddedDir, globalDir string, objects ...client.Object) (*syncer, client.Client) {
 	t.Helper()
 
 	sc, err := project.Scheme()
@@ -44,7 +55,21 @@ func newTestSyncer(t *testing.T, version, embeddedDir string, objects ...client.
 		WithObjects(objects...).
 		Build()
 
-	return newSyncer(cl, cl, dependency.NewMockedContainer(), version, embeddedDir, log.NewNop()), cl
+	return newSyncer(cl, cl, dependency.NewMockedContainer(), version, embeddedDir, globalDir, log.NewNop()), cl
+}
+
+// writeLegacyOpenAPI writes the openapi files under the legacy config-values.yaml name the
+// global hooks dir still uses.
+func writeLegacyOpenAPI(t *testing.T, dir, settings, values string) {
+	t.Helper()
+	openAPIDir := filepath.Join(dir, "openapi")
+	require.NoError(t, os.MkdirAll(openAPIDir, 0o755))
+	if settings != "" {
+		require.NoError(t, os.WriteFile(filepath.Join(openAPIDir, "config-values.yaml"), []byte(settings), 0o644))
+	}
+	if values != "" {
+		require.NoError(t, os.WriteFile(filepath.Join(openAPIDir, "values.yaml"), []byte(values), 0o644))
+	}
 }
 
 func writeModuleYAML(t *testing.T, dir, content string) {
@@ -110,6 +135,41 @@ func listVersionNames(t *testing.T, cl client.Client) []string {
 	return names
 }
 
+func listPackageNames(t *testing.T, cl client.Client) []string {
+	t.Helper()
+
+	list := new(v1alpha1.ModulePackageList)
+	require.NoError(t, cl.List(context.Background(), list))
+
+	names := make([]string, 0, len(list.Items))
+	for _, item := range list.Items {
+		names = append(names, item.Name)
+	}
+
+	return names
+}
+
+// listModuleVersionNames lists every version except the global module's, whose name carries
+// the running Deckhouse version and so is matched by prefix. Every sync writes that one, so a
+// test about the embedded modules dir or the releases drops it to keep asserting only on its
+// own producer; TestSyncGlobalVersion covers it directly.
+func listModuleVersionNames(t *testing.T, cl client.Client) []string {
+	t.Helper()
+
+	return slices.DeleteFunc(listVersionNames(t, cl), func(name string) bool {
+		return strings.HasPrefix(name, repositoryNameEmbedded+"-"+packageNameGlobal+"-")
+	})
+}
+
+// listModulePackageNames is listModuleVersionNames for the catalog entries.
+func listModulePackageNames(t *testing.T, cl client.Client) []string {
+	t.Helper()
+
+	return slices.DeleteFunc(listPackageNames(t, cl), func(name string) bool {
+		return name == packageNameGlobal
+	})
+}
+
 func getVersion(t *testing.T, cl client.Client, name string) *v1alpha1.ModulePackageVersion {
 	t.Helper()
 
@@ -154,7 +214,7 @@ func TestRepositoryNameForSource(t *testing.T) {
 	}
 
 	for _, c := range cases {
-		assert.Equal(t, c.want, repositoryNameForSource(c.source), c.source)
+		assert.Equal(t, c.want, RepositoryNameForSource(c.source), c.source)
 	}
 }
 
@@ -176,12 +236,12 @@ func TestSyncIsIdempotent(t *testing.T) {
 	for _, name := range listVersionNames(t, cl) {
 		versions[name] = getVersion(t, cl, name).ResourceVersion
 	}
-	require.Len(t, versions, 3)
+	require.Len(t, versions, 4, "two releases, one embedded module and the global one")
 	repositoryRV := getRepository(t, cl, "external").ResourceVersion
 
 	require.NoError(t, s.sync(ctx))
 
-	assert.Len(t, listVersionNames(t, cl), 3)
+	assert.Len(t, listVersionNames(t, cl), 4)
 	for name, rv := range versions {
 		assert.Equal(t, rv, getVersion(t, cl, name).ResourceVersion, name)
 	}

@@ -39,13 +39,15 @@ import (
 )
 
 const (
-	packageVersionSegment = "version"
-	packageReleaseSegment = "release"
+	packageVersionSegment        = "version"
+	packageReleaseSegment        = "release"
+	packageReleaseChannelSegment = "release-channel"
 
-	packagesServiceName       = "packages"
-	packageServiceName        = "package"
-	packageVersionServiceName = "package_version"
-	packageReleaseServiceName = "package_release"
+	packagesServiceName              = "packages"
+	packageServiceName               = "package"
+	packageVersionServiceName        = "package_version"
+	packageReleaseServiceName        = "package_release"
+	packageReleaseChannelServiceName = "package_release_channel"
 )
 
 type ServiceManagerInterface[T any] interface {
@@ -200,8 +202,9 @@ type PackageService struct {
 	client registry.Client
 
 	*BasicService
-	packageVersion *PackageVersionService
-	packageRelease *PackageReleaseService
+	packageVersion        *PackageVersionService
+	packageRelease        *PackageReleaseService
+	packageReleaseChannel *PackageReleaseChannelService
 
 	logger *log.Logger
 }
@@ -211,9 +214,10 @@ func NewPackageService(client registry.Client, logger *log.Logger) *PackageServi
 	return &PackageService{
 		client: client,
 
-		BasicService:   NewBasicService(packageServiceName, client, logger),
-		packageVersion: NewPackageVersionService(NewBasicService(packageVersionServiceName, client.WithSegment(packageVersionSegment), logger)),
-		packageRelease: NewPackageReleaseService(NewBasicService(packageReleaseServiceName, client.WithSegment(packageReleaseSegment), logger)),
+		BasicService:          NewBasicService(packageServiceName, client, logger),
+		packageVersion:        NewPackageVersionService(NewBasicService(packageVersionServiceName, client.WithSegment(packageVersionSegment), logger)),
+		packageRelease:        NewPackageReleaseService(NewBasicService(packageReleaseServiceName, client.WithSegment(packageReleaseSegment), logger)),
+		packageReleaseChannel: NewPackageReleaseChannelService(NewBasicService(packageReleaseChannelServiceName, client.WithSegment(packageReleaseChannelSegment), logger)),
 
 		logger: logger,
 	}
@@ -227,6 +231,12 @@ func (s *PackageService) Versions() *PackageVersionService {
 // Release returns the service for accessing <package>/release path (legacy v1alpha1 modules).
 func (s *PackageService) Release() *PackageReleaseService {
 	return s.packageRelease
+}
+
+// ReleaseChannels returns the service for accessing <package>/release-channel path, where the version
+// image a channel points to is published under the channel name.
+func (s *PackageService) ReleaseChannels() *PackageReleaseChannelService {
+	return s.packageReleaseChannel
 }
 
 // GetRoot gets path of the registry root
@@ -252,6 +262,17 @@ type PackageReleaseService struct {
 
 func NewPackageReleaseService(basicService *BasicService) *PackageReleaseService {
 	return &PackageReleaseService{
+		PackageVersionService: NewPackageVersionService(basicService),
+	}
+}
+
+// PackageReleaseChannelService reads the <package>/release-channel path, where each tag names a channel.
+type PackageReleaseChannelService struct {
+	*PackageVersionService
+}
+
+func NewPackageReleaseChannelService(basicService *BasicService) *PackageReleaseChannelService {
+	return &PackageReleaseChannelService{
 		PackageVersionService: NewPackageVersionService(basicService),
 	}
 }
@@ -363,7 +384,8 @@ func (s *PackageVersionService) extractPackageVersionMetadata(rc io.ReadCloser) 
 	defer rc.Close()
 
 	drr := &packageVersionReader{
-		versionReader: bytes.NewBuffer(nil),
+		versionReader:   bytes.NewBuffer(nil),
+		changelogReader: bytes.NewBuffer(nil),
 	}
 
 	err := drr.untarMetadata(rc)

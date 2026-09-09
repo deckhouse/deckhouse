@@ -66,9 +66,76 @@ DKP поддерживает аутентификацию в container registry 
 
 В качестве приватного container registry можно использовать любой из поддерживаемых. Протестирована и гарантируется работа со следующими container registry — [Nexus](https://github.com/sonatype/nexus-public), [Harbor](https://github.com/goharbor/harbor), [Artifactory](https://jfrog.com/artifactory/), [Docker Registry](https://docs.docker.com/registry/), [Quay](https://quay.io/).
 
-В рамках этого руководства будет для примера использован [Harbor](https://goharbor.io/). Он поддерживает настройку политик и управление доступом на основе ролей (RBAC), выполняет проверку образов на уязвимости и позволяет помечать доверенные артефакты. Harbor входит в состав проектов CNCF.
+Ниже приведены инструкции по развёртыванию двух вариантов приватного container registry — [Docker Registry](https://docs.docker.com/registry/) и [Harbor](https://goharbor.io/). Выберите подходящий вариант на соответствующей вкладке.
 
-### Установка Harbor
+### Установка container registry
+
+{% tabs registry-install %}
+{% tab "Docker Registry" %}
+
+Установите Docker Registry из репозиториев вашего дистрибутива. Например, для РедОС команда будет выглядеть так:
+
+```bash
+dnf install registry httpd-tools
+```
+
+Сгенерируйте для него пользователя и пароль, используя утилиту htpasswd. Например, для генерации пользователя `deckhouse` с паролем `deckhouse` команда будет выглядеть так:
+
+```bash
+htpasswd -bcB /etc/registry/htpasswd deckhouse deckhouse
+```
+
+Сгенерируйте самоподписанный сертификат, который будет использоваться для работы с registry:
+
+```bash
+openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 -keyout /etc/registry/private.key -out /etc/registry/public.crt -days 3650 -nodes -subj "/C=RU/ST=SPB/L=SPB/O=FLANT/OU=ARCH/CN=registry.local" -addext "subjectAltName=DNS:registry.local"
+```
+
+Не забудьте заменить `registry.local` на адрес, который будет использоваться для хранилища образов в вашей сети.
+
+Обновите конфигурацию registry, указав созданные сертификаты. Отредактируйте файл конфигурации `/etc/registry/config.yml`:
+
+```yaml
+version: 0.1
+log:
+  fields:
+    service: registry
+storage:
+  cache:
+    blobdescriptor: inmemory
+  filesystem:
+    rootdirectory: /var/lib/registry
+  delete:
+    enabled: true
+http:
+  addr: :443
+  tls:
+    certificate: /etc/registry/public.crt
+    key: /etc/registry/private.key
+  headers:
+    X-Content-Type-Options: [nosniff]
+auth:
+  htpasswd:
+    realm: basic-realm
+    path: /etc/registry/htpasswd
+health:
+  storagedriver:
+    enabled: true
+    interval: 10s
+    threshold: 3
+```
+
+Добавьте сервис в автозапуск и убедитесь, что он работает:
+
+```bash
+systemctl enable --now registry.service
+systemctl status registry.service
+```
+
+{% endtab %}
+{% tab "Harbor" %}
+
+В дальнейших разделах руководства в качестве примера используется Harbor. Он поддерживает настройку политик и управление доступом на основе ролей (RBAC), выполняет проверку образов на уязвимости и позволяет помечать доверенные артефакты. Harbor входит в состав проектов CNCF.
 
 Установите последнюю версию Harbor [из GitHub-репозитория](https://github.com/goharbor/harbor/releases) проекта. Для этого скачайте архив с установщиком из нужного релиза, выбрав вариант с `harbor-offline-installer` в названии.
 
@@ -122,55 +189,22 @@ tar -zxf ./harbor-offline-installer-v2.14.1.tgz
 ```bash
 cd harbor/
 mkdir certs
+cd certs
 ```
 
-Перейдите в созданную директорию и сгенерируйте сертификаты для внешнего доступа следующими командами:
+Сгенерируйте самоподписанный сертификат, который будет использоваться для работы с Harbor:
 
 ```bash
-openssl genrsa -out ca.key 4096
+openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:prime256v1 \
+  -keyout registry.local.key -out registry.local.crt \
+  -sha256 -days 3650 -nodes \
+  -subj "/C=RU/ST=SPB/L=SPB/O=FLANT/OU=ARCH/CN=registry.local" \
+  -addext "subjectAltName=DNS:registry.local"
 ```
 
-```bash
-openssl req -x509 -new -nodes -sha512 -days 3650 -subj "/C=RU/ST=Moscow/L=Moscow/O=example/OU=Personal/CN=myca.local" -key ca.key -out ca.crt
-```
+Не забудьте заменить `registry.local` на адрес, который будет использоваться для хранилища образов в вашей сети.
 
-Сгенерируйте сертификаты для внутреннего доменного имени `harbor.example`, чтобы внутри приватной сети обращаться к ВМ с Harbor по защищённому соединению.
-
-{% alert level="warning" %}
-В приведённых ниже командах замените `<INTERNAL_IP_ADDRESS>` на внутренний IP-адрес виртуальной машины с Harbor. Этот адрес используется узлами кластера и другими сервисами для доступа к container registry из закрытого контура.
-{% endalert %}
-
-```bash
-openssl genrsa -out harbor.example.key 4096
-```
-
-```bash
-openssl req -sha512 -new -subj "/C=RU/ST=Moscow/L=Moscow/O=example/OU=Personal/CN=harbor.example" -key harbor.example.key -out harbor.example.csr
-```
-
-```bash
-cat > v3.ext <<-EOF
-authorityKeyIdentifier=keyid, issuer
-basicConstraints=CA:FALSE
-keyUsage = digitalSignature, nonRepudiation, keyEncipherment, dataEncipherment
-extendedKeyUsage = serverAuth
-subjectAltName = @alt_names
-
-[alt_names]
-IP.1=<INTERNAL_IP_ADDRESS>
-DNS.1=harbor.example
-EOF
-```
-
-```bash
-openssl x509 -req -sha512 -days 3650 -extfile v3.ext -CA ca.crt -CAkey ca.key -CAcreateserial -in harbor.example.csr -out harbor.example.crt
-```
-
-```bash
-openssl x509 -inform PEM -in harbor.example.crt -out harbor.example.cert
-```
-
-Проверьте, что все сертификаты созданы успешно:
+Проверьте, что сертификаты созданы успешно:
 
 ```bash
 ls -la
@@ -180,38 +214,36 @@ ls -la
 
 ```bash
 $ ls -la
-total 40
+total 12
 drwxrwxr-x 2 ubuntu ubuntu 4096 Dec  5 14:58 .
 drwxrwxr-x 3 ubuntu ubuntu 4096 Dec  4 12:53 ..
--rw-rw-r-- 1 ubuntu ubuntu 2037 Dec  5 14:57 ca.crt
--rw------- 1 ubuntu ubuntu 3272 Dec  5 14:57 ca.key
--rw-rw-r-- 1 ubuntu ubuntu   41 Dec  5 14:58 ca.srl
--rw-rw-r-- 1 ubuntu ubuntu 2122 Dec  5 14:58 harbor.example.cert
--rw-rw-r-- 1 ubuntu ubuntu 2122 Dec  5 14:58 harbor.example.crt
--rw-rw-r-- 1 ubuntu ubuntu 1704 Dec  5 14:57 harbor.example.csr
--rw------- 1 ubuntu ubuntu 3268 Dec  5 14:57 harbor.example.key
--rw-rw-r-- 1 ubuntu ubuntu  247 Dec  5 14:58 v3.ext
+-rw-rw-r-- 1 ubuntu ubuntu  909 Dec  5 14:58 registry.local.crt
+-rw------- 1 ubuntu ubuntu  292 Dec  5 14:57 registry.local.key
 ```
 
 {% endofftopic %}
 
-Далее настройте Docker для работы с приватным container registry, доступ к которому выполняется по TLS. Для этого создайте директорию `harbor.example` в `/etc/docker/certs.d/`:
+Далее настройте Docker для работы с приватным container registry, доступ к которому выполняется по TLS. Для этого создайте директорию `registry.local` в `/etc/docker/certs.d/`:
 
 ```bash
-sudo mkdir -p /etc/docker/certs.d/harbor.example
+sudo mkdir -p /etc/docker/certs.d/registry.local
 ```
 
 > Параметр `-p` указывает утилите `mkdir` создать родительские директории, если они отсутствуют (в данном случае — директорию `certs.d`).
 
-Скопируйте в неё созданные сертификаты:
+Скопируйте в неё созданный сертификат как корневой CA (для самоподписанного сертификата это тот же файл):
 
 ```bash
-cp ca.crt /etc/docker/certs.d/harbor.example/
-cp harbor.example.cert /etc/docker/certs.d/harbor.example/
-cp harbor.example.key /etc/docker/certs.d/harbor.example/
+cp registry.local.crt /etc/docker/certs.d/registry.local/ca.crt
 ```
 
-Эти сертификаты будут использоваться при обращении к registry по доменному имени `harbor.example`.
+Этот сертификат будет использоваться при обращении к registry по доменному имени `registry.local`.
+
+Вернитесь в корневую директорию установщика Harbor:
+
+```bash
+cd ..
+```
 
 Скопируйте шаблон конфигурационного файла, который поставляется вместе с установщиком:
 
@@ -221,9 +253,9 @@ cp harbor.yml.tmpl harbor.yml
 
 Измените в `harbor.yml` следующие параметры:
 
-* `hostname` — укажите `harbor.example` (для него генерировались сертификаты);
-* `certificate` — укажите путь к сгенерированному сертификату в директории `certs` (например, `/home/ubuntu/harbor/certs/harbor.example.crt`);
-* `private_key` — укажите путь к приватному ключу (например, `/home/ubuntu/harbor/certs/harbor.example.key`);
+* `hostname` — укажите `registry.local` (для него генерировались сертификаты);
+* `certificate` — укажите путь к сгенерированному сертификату в директории `certs` (например, `/home/ubuntu/harbor/certs/registry.local.crt`);
+* `private_key` — укажите путь к приватному ключу (например, `/home/ubuntu/harbor/certs/registry.local.key`);
 * `harbor_admin_password` — задайте пароль для доступа в веб-интерфейс.
 
 Сохраните файл.
@@ -235,7 +267,7 @@ cp harbor.yml.tmpl harbor.yml
 
 # The IP address or hostname to access admin UI and registry service.
 # DO NOT use localhost or 127.0.0.1, because Harbor needs to be accessed by external clients.
-hostname: harbor.example
+hostname: registry.local
 
 # http related config
 http:
@@ -247,8 +279,8 @@ https:
   # https port for harbor, default is 443
   port: 443
   # The path of cert and key files for nginx
-  certificate: /home/ubuntu/harbor/certs/harbor.example.crt
-  private_key: /home/ubuntu/harbor/certs/harbor.example.key
+  certificate: /home/ubuntu/harbor/certs/registry.local.crt
+  private_key: /home/ubuntu/harbor/certs/registry.local.key
   # enable strong ssl ciphers (default: false)
   # strong_ssl_ciphers: false
 
@@ -617,10 +649,10 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 
 {% endofftopic %}
 
-Добавьте в файл `/etc/hosts` на ВМ с Harbor ассоциацию доменного имени `harbor.example` с `localhost`, чтобы можно было обращаться к Harbor по этому имени с этой же машины:
+Добавьте в файл `/etc/hosts` на ВМ с Harbor ассоциацию доменного имени `registry.local` с `localhost`, чтобы можно было обращаться к Harbor по этому имени с этой же машины:
 
 ```bash
-127.0.0.1 localhost harbor.example
+127.0.0.1 localhost registry.local
 ```
 
 {% alert level="warning" %}
@@ -640,18 +672,18 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 
 На этом установка Harbor завершена! 🎉
 
-### Настройка Harbor
+#### Настройка Harbor
 
 Создайте проект и пользователя, от имени которого будет выполняться работа с этим проектом.
 
-Откройте веб-интерфейс Harbor по адресу `harbor.example`. Обратите внимание — доступ к этому интерфейсу из внешней сети закрыт, подключение возможно только с узла, имеющего доступ к внутреннему контуру.
+Откройте веб-интерфейс Harbor по адресу `registry.local`. Обратите внимание — доступ к этому интерфейсу из внешней сети закрыт, подключение возможно только с узла, имеющего доступ к внутреннему контуру.
 
 <div style="text-align: center;">
 <img src="/images/guides/install_to_private_environment/harbor_main_page_ru.png" alt="Главная страница Harbor...">
 </div>
 
 {% alert level="info" %}
-Чтобы открыть Harbor по доменному имени `harbor.example` с рабочего компьютера, добавьте соответствующую запись в файл `/etc/hosts`, указав внутренний IP-адрес ВМ с Harbor.
+Чтобы открыть Harbor по доменному имени `registry.local` с рабочего компьютера, добавьте соответствующую запись в файл `/etc/hosts`, указав внутренний IP-адрес ВМ с Harbor.
 {% endalert %}
 
 Для входа в интерфейс воспользуйтесь логином и паролем, указанными в конфигурационном файле `harbor.yml`.
@@ -701,6 +733,10 @@ ef18d7f24777   goharbor/redis-photon:v2.14.1         "redis-server /etc/r…"   
 </div>
 
 На этом настройка Harbor завершена! 🎉
+
+{% endtab %}
+{% endtabs %}
+<br>
 
 ## Копирование образов DKP в приватный container registry
 
@@ -887,7 +923,7 @@ $ ls -lh
 * `<PASSWORD>` — токен, выданный при создании robot-аккаунта.
 
 ```bash
-d8 mirror push $(pwd)/d8-bundle 'harbor.example:443/deckhouse/<РЕДАКЦИЯ_DKP>' --registry-login='robot$<ROBOT_ACCOUNT_NAME>' --registry-password='<PASSWORD>' --tls-skip-verify
+d8 mirror push $(pwd)/d8-bundle 'registry.local:443/deckhouse/<РЕДАКЦИЯ_DKP>' --registry-login='robot$<ROBOT_ACCOUNT_NAME>' --registry-password='<PASSWORD>' --tls-skip-verify
 ```
 
 > Флаг `--tls-skip-verify` указывает утилите доверять сертификату registry и пропустить его проверку.
@@ -897,14 +933,14 @@ d8 mirror push $(pwd)/d8-bundle 'harbor.example:443/deckhouse/<РЕДАКЦИЯ_
 {% offtopic title="Пример успешного завершения процесса заливки образов..." %}
 
 ```text
-Dec 11 18:25:32.350 INFO  ║ Pushing harbor.example:443/deckhouse/ee/modules/virtualization/release
-Dec 11 18:25:32.351 INFO  ║ [1 / 7] Pushing image harbor.example:443/deckhouse/ee/modules/virtualization/release:alpha
-Dec 11 18:25:32.617 INFO  ║ [2 / 7] Pushing image harbor.example:443/deckhouse/ee/modules/virtualization/release:beta
-Dec 11 18:25:32.760 INFO  ║ [3 / 7] Pushing image harbor.example:443/deckhouse/ee/modules/virtualization/release:early-access
-Dec 11 18:25:32.895 INFO  ║ [4 / 7] Pushing image harbor.example:443/deckhouse/ee/modules/virtualization/release:rock-solid
-Dec 11 18:25:33.081 INFO  ║ [5 / 7] Pushing image harbor.example:443/deckhouse/ee/modules/virtualization/release:stable
-Dec 11 18:25:33.142 INFO  ║ [6 / 7] Pushing image harbor.example:443/deckhouse/ee/modules/virtualization/release:v1.1.3
-Dec 11 18:25:33.213 INFO  ║ [7 / 7] Pushing image harbor.example:443/deckhouse/ee/modules/virtualization/release:v1.2.2
+Dec 11 18:25:32.350 INFO  ║ Pushing registry.local:443/deckhouse/ee/modules/virtualization/release
+Dec 11 18:25:32.351 INFO  ║ [1 / 7] Pushing image registry.local:443/deckhouse/ee/modules/virtualization/release:alpha
+Dec 11 18:25:32.617 INFO  ║ [2 / 7] Pushing image registry.local:443/deckhouse/ee/modules/virtualization/release:beta
+Dec 11 18:25:32.760 INFO  ║ [3 / 7] Pushing image registry.local:443/deckhouse/ee/modules/virtualization/release:early-access
+Dec 11 18:25:32.895 INFO  ║ [4 / 7] Pushing image registry.local:443/deckhouse/ee/modules/virtualization/release:rock-solid
+Dec 11 18:25:33.081 INFO  ║ [5 / 7] Pushing image registry.local:443/deckhouse/ee/modules/virtualization/release:stable
+Dec 11 18:25:33.142 INFO  ║ [6 / 7] Pushing image registry.local:443/deckhouse/ee/modules/virtualization/release:v1.1.3
+Dec 11 18:25:33.213 INFO  ║ [7 / 7] Pushing image registry.local:443/deckhouse/ee/modules/virtualization/release:v1.2.2
 Dec 11 18:25:33.414 INFO  ║ Pushing module tag for virtualization
 Dec 11 18:25:33.837 INFO  ╚ Push module: virtualization succeeded in 43.313801312s
 Dec 11 18:25:33.837 INFO   Modules pushed: code, commander-agent, commander, console, csi-ceph, csi-hpe, csi-huawei, csi-netapp, csi-nfs, csi-s3, csi-scsi-generic, csi-yadro-tatlin-unified, development-platform, managed-postgres, neuvector, observability-platform, observability, operator-argo, operator-ceph, operator-postgres,
@@ -923,19 +959,19 @@ Dec 11 18:25:33.837 INFO   Modules pushed: code, commander-agent, commander, con
 
 ## Вход в registry для запуска установщика
 
-Выполните вход на хост, с которого будет запускаться установщик (в примере — bastion-хост). На этой машине имя `harbor.example` должно разрешаться в адрес ВМ с Harbor (через запись в `/etc/hosts` или DNS).
-На этом же хосте настройте доверие Docker к TLS-реестру аналогично разделу про Harbor: создайте каталог `/etc/docker/certs.d/harbor.example/` и разместите в нём необходимые сертификаты. Их можно скопировать с ВМ с Harbor либо подготовить заново.
+Выполните вход на хост, с которого будет запускаться установщик (в примере — bastion-хост). На этой машине имя `registry.local` должно разрешаться в адрес ВМ с Harbor (через запись в `/etc/hosts` или DNS).
+На этом же хосте настройте доверие Docker к TLS-реестру аналогично разделу про Harbor: создайте каталог `/etc/docker/certs.d/registry.local/` и разместите в нём необходимые сертификаты. Их можно скопировать с ВМ с Harbor либо подготовить заново.
 
 Выполните вход в registry Harbor, чтобы Docker получил доступ к образу установщика [dhctl](../documentation/v1/installing/):
 
 ```bash
-docker login harbor.example
+docker login registry.local
 ```
 
 {% offtopic title="Пример успешного выполнения команды..." %}
 
 ```text
-$ docker login harbor.example
+$ docker login registry.local
 Username: deckhouse
 Password: 
 
@@ -985,9 +1021,9 @@ Login Succeeded
 Для правильного выбора ресурсов серверов ознакомьтесь с [рекомендациями по подготовке к production](/products/kubernetes-platform/guides/production.html) и [инструкцией](/products/kubernetes-platform/guides/hardware-requirements.html) по выбору типов и количества узлов кластера, а также ресурсов для них, в зависимости от ваших требований к эксплуатации будущего кластера.
 {% endalert %}
 
-### Сопоставление `harbor.example` с адресом ВМ с Harbor
+### Сопоставление `registry.local` с адресом ВМ с Harbor
 
-Чтобы серверы, на которых будут разворачиваться master и worker-узлы, могли получить доступ к приватному registry, настройте на них соответствие доменного имени `harbor.example` внутреннему IP-адресу ВМ с Harbor в приватной сети.
+Чтобы серверы, на которых будут разворачиваться master и worker-узлы, могли получить доступ к приватному registry, настройте на них соответствие доменного имени `registry.local` внутреннему IP-адресу ВМ с Harbor в приватной сети.
 
 Для этого по очереди подключитесь к каждому серверу и добавьте запись в `/etc/hosts` (а при необходимости также в облачный шаблон, если провайдер управляет этим файлом).
 
@@ -1020,27 +1056,27 @@ Login Succeeded
 {% endofftopic %}
 
 ```console
-<INTERNAL-IP-ADDRESS> harbor.example proxy.local
+<INTERNAL-IP-ADDRESS> registry.local proxy.local
 ```
 
 > Не забудьте заменить `<INTERNAL-IP-ADDRESS>` на реальный внутренний IP-адрес ВМ с Harbor.
 
-### Создание пользователя для master-узла
+### Настройка подключения к master-узлу
 
-Для выполнения установки DKP создайте на будущем master-узле пользователя, под которым будет выполняться подключение и установка платформы.
+Для выполнения установки DKP добавьте на будущем master-узле пользователю, под которым будет выполняться установка платформы, публичную часть своего SSH-ключа в `.ssh/authorized_keys`.
 
 Выполните команды от `root` (подставьте публичную часть своего SSH-ключа):
 
 ```console
-useradd deckhouse -m -s /bin/bash -G sudo
-echo 'deckhouse ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
-mkdir /home/deckhouse/.ssh
+mkdir /home/<USER>/.ssh
 export KEY='ssh-rsa AAAAB3NzaC1yc2EAAAADA...'
-echo $KEY >> /home/deckhouse/.ssh/authorized_keys
-chown -R deckhouse:deckhouse /home/deckhouse
-chmod 700 /home/deckhouse/.ssh
-chmod 600 /home/deckhouse/.ssh/authorized_keys
+echo $KEY >> /home/<USER>/.ssh/authorized_keys
+chmod 700 /home/<USER>/.ssh
+chmod 600 /home/<USER>/.ssh/authorized_keys
+echo '<USER> ALL=(ALL) NOPASSWD: ALL' | sudo EDITOR='tee -a' visudo
 ```
+
+Здесь `<USER>` — имя пользователя на master-узле.
 
 {% offtopic title="Как узнать публичную часть ключа..." %}
 Узнать публичную часть ключа можно командой `cat ~/.ssh/id_rsa.pub`.
@@ -1048,17 +1084,15 @@ chmod 600 /home/deckhouse/.ssh/authorized_keys
 
 В результате этих команд:
 
-* создаётся новый пользователь `deckhouse`, который добавляется в группу `sudo`;
+* пользователь `<USER>`добавляется в группу `sudo` (если это не было предусмотрено изначально в выбранной ОС);
 * настраиваются права на повышение привилегий без ввода пароля;
 * копируется публичная часть ключа, по которому можно будет войти на сервер под этим пользователем.
 
-Проверьте подключение под новым пользователем:
+Проверьте подключение под пользователем:
 
 ```bash
-ssh -J ubuntu@<BASTION_IP> deckhouse@<NODE_IP>
+ssh -J ubuntu@<BASTION_IP> <USER>@<NODE_IP>
 ```
-
-Если вход выполнен успешно, пользователь создан корректно.
 
 ### Создание пользователя для worker-узла
 
@@ -1165,7 +1199,7 @@ Status: Downloaded newer image for ubuntu/squid:latest
   proxy:
     httpProxy: http://proxy.local:3128
     httpsProxy: https://proxy.local:3128
-    noProxy: ["harbor.example", "proxy.local", "10.128.0.8", "10.128.0.32", "10.128.0.18"]
+    noProxy: ["registry.local", "proxy.local", "10.128.0.8", "10.128.0.32", "10.128.0.18"]
   ```
 
   Здесь указываются следующие параметры:
@@ -1196,16 +1230,16 @@ Status: Downloaded newer image for ubuntu/squid:latest
 
   ```yaml
   settings:
-  modules:
-    # Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
-    # Например, Grafana для %s.test.local будет доступна на домене 'grafana.test.local'.
-    # Домен НЕ ДОЛЖЕН совпадать с указанным в параметре clusterDomain ресурса ClusterConfiguration.
-    # Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
-    publicDomainTemplate: "%s.test.local"
-    # Способ реализации протокола HTTPS, используемый модулями Deckhouse.
-    https:
-      certManager:
-        clusterIssuerName: selfsigned
+    modules:
+      # Шаблон, который будет использоваться для составления адресов системных приложений в кластере.
+      # Например, Grafana для %s.test.local будет доступна на домене 'grafana.test.local'.
+      # Домен НЕ ДОЛЖЕН совпадать с указанным в параметре clusterDomain ресурса ClusterConfiguration.
+      # Можете изменить на свой сразу, либо следовать шагам руководства и сменить его после установки.
+      publicDomainTemplate: "%s.test.local"
+      # Способ реализации протокола HTTPS, используемый модулями Deckhouse.
+      https:
+        certManager:
+          clusterIssuerName: selfsigned
   ```
 
   Параметр `settings.modules.https` в ModuleConfig/global поддерживает несколько [режимов](../documentation/v1/reference/api/global.html): `CertManager` — заказ сертификата у указанного `ClusterIssuer` (не обязательно `selfsigned`, можно задать свой издатель — корпоративный CA, HashiCorp Vault, Venafi и т. д., см. [обзор в документации по сертификатам](../documentation/v1/admin/configuration/security/certificates.html)); `CustomCertificate` — готовая пара «сертификат + ключ» в Secret формата `kubernetes.io/tls` в неймспейсе `d8-system`, при внешнем TLS-терминаторе возможен режим `OnlyInURI`. Сочетание `selfsigned` и отключение Let's Encrypt в блоке выше показывает простой пример использования HTTPS в изолированном контуре без ACME/Let's Encrypt.
@@ -1262,7 +1296,7 @@ defaultCRI: "ContainerdV2"
 proxy:
   httpProxy: http://proxy.local:3128
   httpsProxy: https://proxy.local:3128
-  noProxy: ["harbor.example", "proxy.local", "10.128.0.8", "10.128.0.32", "10.128.0.18"]
+  noProxy: ["registry.local", "proxy.local", "10.128.0.8", "10.128.0.32", "10.128.0.18"]
 ---
 # Настройки модуля deckhouse.
 # https://deckhouse.ru/modules/deckhouse/configuration.html
@@ -1382,11 +1416,11 @@ internalNetworkCIDRs:
 Перенесите подготовленный конфигурационный файл на хост, с которого выполняется установка, например в директорию `~/deckhouse`. Перейдите в директорию и запустите установщик командой:
 
 ```bash
-docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" --network=host -v "$PWD/dhctl-tmp:/tmp/dhctl" harbor.example/deckhouse/<РЕДАКЦИЯ_DKP>/install:stable bash
+docker run --pull=always -it -v "$PWD/config.yml:/config.yml" -v "$HOME/.ssh/:/tmp/.ssh/" --network=host -v "$PWD/dhctl-tmp:/tmp/dhctl" registry.local/deckhouse/<РЕДАКЦИЯ_DKP>/install:stable bash
 ```
 
 {% offtopic title="Если появилась ошибка `509: certificate signed by unknown authority`..." %}
-Даже при наличии сертификатов в `/etc/docker/certs.d/harbor.example/` Docker может выдавать ошибку о неизвестном центре сертификации (это типично для самоподписанных сертификатов). В таком случае, как правило, помогает добавление `ca.crt` в системное хранилище доверенных сертификатов с последующим перезапуском Docker.
+Даже при наличии сертификатов в `/etc/docker/certs.d/registry.local/` Docker может выдавать ошибку о неизвестном центре сертификации (это типично для самоподписанных сертификатов). В таком случае, как правило, помогает добавление `ca.crt` в системное хранилище доверенных сертификатов с последующим перезапуском Docker.
 {% endofftopic %}
 
 {% alert level="info" %}
@@ -1516,8 +1550,8 @@ dhctl bootstrap --ssh-user=deckhouse --ssh-host=<master_ip> --ssh-agent-private-
   ```console
   $ sudo -i d8 k get no
   NAME               STATUS   ROLES                  AGE    VERSION
-  d8cluster          Ready    control-plane,master   30m   v1.23.17
-  d8cluster-worker   Ready    worker                 10m   v1.23.17
+  d8cluster          Ready    control-plane,master   30m   v1.34.10
+  d8cluster-worker   Ready    worker                 10m   v1.34.10
   ```
   {: .nowrap-default }
   <!-- markdownlint-enable MD031 -->
@@ -1582,25 +1616,9 @@ controller-nginx-r6hxc                     3/3     Running   0          5m
 
 ### Создание пользователя для доступа в веб-интерфейсы кластера
 
-Создайте на master-узле файл `user.yml`, содержащий описание учётной записи пользователя и прав доступа:
+Создайте на master-узле файл `user.yml`, содержащий описание учётной записи пользователя, группы и прав доступа:
 
 ```yaml
-# Настройки RBAC и авторизации.
-# https://deckhouse.ru/modules/user-authz/cr.html#clusterauthorizationrule
-apiVersion: deckhouse.io/v1
-kind: ClusterAuthorizationRule
-metadata:
-  name: admin
-spec:
-  # Список учётных записей Kubernetes RBAC.
-  subjects:
-  - kind: User
-    name: admin@deckhouse.io
-  # Предустановленный шаблон уровня доступа.
-  accessLevel: SuperAdmin
-  # Разрешить пользователю делать kubectl port-forward.
-  portForwarding: true
----
 # Данные статического пользователя.
 # https://deckhouse.ru/modules/user-authn/cr.html#user
 apiVersion: deckhouse.io/v1
@@ -1615,6 +1633,34 @@ spec:
   # echo -n '3xqgv2auys' | htpasswd -BinC 10 "" | cut -d: -f2 | tr -d '\n' | base64 -w0; echo
   # Возможно, захотите изменить.
   password: 'JDJhJDEwJGtsWERBY1lxMUVLQjVJVXoxVkNrSU8xVEI1a0xZYnJNWm16NmtOeng5VlI2RHBQZDZhbjJH'
+---
+# Группа пользователей.
+# https://deckhouse.ru/modules/user-authn/cr.html#group
+apiVersion: deckhouse.io/v1alpha1
+kind: Group
+metadata:
+  name: admins
+spec:
+  name: admins
+  members:
+  - kind: User
+    name: admin
+---
+# Настройки RBAC и авторизации.
+# https://deckhouse.ru/modules/user-authz/cr.html#clusterauthorizationrule
+apiVersion: deckhouse.io/v1
+kind: ClusterAuthorizationRule
+metadata:
+  name: admin
+spec:
+  # Список субъектов Kubernetes RBAC.
+  subjects:
+  - kind: Group
+    name: admins
+  # Предустановленный шаблон уровня доступа.
+  accessLevel: SuperAdmin
+  # Разрешить пользователю делать kubectl port-forward.
+  portForwarding: true
 ```
 
 Примените его, выполнив на master-узле следующую команду:
@@ -1645,7 +1691,6 @@ $PUBLIC_IP kubeconfig.test.local
 $PUBLIC_IP openvpn-admin.test.local
 $PUBLIC_IP prometheus.test.local
 $PUBLIC_IP status.test.local
-$PUBLIC_IP tools.test.local
 $PUBLIC_IP upmeter.test.local
 EOF
 "
@@ -1657,7 +1702,7 @@ EOF
 
 Все установлено, настроено и работает! Теперь можно воспользоваться предоставляемыми веб-интерфейсами для управления кластером:
 
-* **Веб-интерфейс Deckhouse** — управление кластером и основными компонентами. Адрес: **console.test.local**.
+* **Веб-интерфейс Deckhouse** — управление кластером и основными компонентами. Адрес: **console.test.local**. Утилиту командной строки `d8` можно скачать из этого интерфейса.
 * **Документация** — документация по установленной в кластере версии DKP. Адрес: **documentation.test.local**.
 * **Мониторинг** — дэшборды Grafana, поставляемые с DKP. Адрес: **grafana.test.local** (путь к Prometheus: **/prometheus/**).
   Подробнее [в документации](/products/kubernetes-platform/documentation/v1/admin/configuration/monitoring/).

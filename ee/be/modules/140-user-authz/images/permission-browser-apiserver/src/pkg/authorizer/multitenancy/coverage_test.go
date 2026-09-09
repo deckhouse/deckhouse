@@ -90,7 +90,7 @@ func TestEngine_InitialConfigLoad(t *testing.T) {
 		configPath,
 		informerFactory.Core().V1().Namespaces().Lister(),
 		func() bool { return true },
-		fakeClient.Discovery(),
+		coreResourceScope(),
 	)
 	require.NoError(t, err)
 
@@ -167,7 +167,7 @@ func TestEngine_SystemNamespaces(t *testing.T) {
 		configPath,
 		informerFactory.Core().V1().Namespaces().Lister(),
 		func() bool { return true },
-		fakeClient.Discovery(),
+		coreResourceScope(),
 	)
 	require.NoError(t, err)
 
@@ -258,7 +258,7 @@ func TestEngine_GroupBasedRules(t *testing.T) {
 		configPath,
 		informerFactory.Core().V1().Namespaces().Lister(),
 		func() bool { return true },
-		fakeClient.Discovery(),
+		coreResourceScope(),
 	)
 	require.NoError(t, err)
 
@@ -364,7 +364,7 @@ func TestEngine_ServiceAccountRules(t *testing.T) {
 		configPath,
 		informerFactory.Core().V1().Namespaces().Lister(),
 		func() bool { return true },
-		fakeClient.Discovery(),
+		coreResourceScope(),
 	)
 	require.NoError(t, err)
 
@@ -472,7 +472,7 @@ func TestEngine_MatchAnySelector(t *testing.T) {
 		configPath,
 		informerFactory.Core().V1().Namespaces().Lister(),
 		func() bool { return true },
-		fakeClient.Discovery(),
+		coreResourceScope(),
 	)
 	require.NoError(t, err)
 
@@ -503,7 +503,7 @@ func TestEngine_NonResourceRequestSkipped(t *testing.T) {
 		configPath,
 		informerFactory.Core().V1().Namespaces().Lister(),
 		func() bool { return true },
-		fakeClient.Discovery(),
+		coreResourceScope(),
 	)
 	require.NoError(t, err)
 
