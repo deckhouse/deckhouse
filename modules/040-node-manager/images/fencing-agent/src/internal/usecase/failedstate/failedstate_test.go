@@ -405,7 +405,7 @@ func TestExistingRecordIsLeftAlone(t *testing.T) {
 	const failed = "worker-3"
 
 	earlier := v1alpha1.FencingFailedNodeStateFailed{
-		DetectedAt: metav1.NewTime(time.Date(2026, 6, 2, 14, 0, 0, 0, time.UTC)),
+		DetectedAt: metav1.NewMicroTime(time.Date(2026, 6, 2, 14, 0, 0, 0, time.UTC)),
 		DetectedBy: "worker-9",
 		Reason:     v1alpha1.FailedReasonMemberlistDead,
 	}

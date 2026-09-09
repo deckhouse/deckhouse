@@ -69,7 +69,7 @@ func stored(t *testing.T, c client.Client, name string) *v1alpha1.FencingFailedN
 
 func failedSection() v1alpha1.FencingFailedNodeStateFailed {
 	return v1alpha1.FencingFailedNodeStateFailed{
-		DetectedAt: metav1.NewTime(time.Date(2026, 6, 2, 15, 0, 1, 0, time.UTC)),
+		DetectedAt: metav1.NewMicroTime(time.Date(2026, 6, 2, 15, 0, 1, 250000000, time.UTC)),
 		DetectedBy: "worker-1",
 		Reason:     v1alpha1.FailedReasonMemberlistDead,
 		AliveCount: 3,
@@ -191,7 +191,7 @@ func TestMarkFailedKeepsTheFirstDetection(t *testing.T) {
 
 	later := failedSection()
 	later.DetectedBy = "worker-2"
-	later.DetectedAt = metav1.NewTime(first.DetectedAt.Add(time.Minute))
+	later.DetectedAt = metav1.NewMicroTime(first.DetectedAt.Add(time.Minute))
 
 	recorded, err := states.MarkFailed(t.Context(), testPeerName, later)
 	if err != nil {

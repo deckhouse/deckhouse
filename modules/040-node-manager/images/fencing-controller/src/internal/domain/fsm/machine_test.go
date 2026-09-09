@@ -323,7 +323,7 @@ func incident(
 
 	if failedAgo != nil {
 		state.Status.Failed = &v1alpha1.FencingFailedNodeStateFailed{
-			DetectedAt: metav1.NewTime(observedAt.Add(-*failedAgo)),
+			DetectedAt: metav1.NewMicroTime(observedAt.Add(-*failedAgo)),
 			DetectedBy: "worker-1",
 			Reason:     v1alpha1.FailedReasonMemberlistDead,
 			AliveCount: 3,

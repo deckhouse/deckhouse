@@ -68,9 +68,9 @@ type EventRecorder interface {
 }
 
 type Params struct {
-	Node       domain.NodeIdentity
-	Heartbeat  time.Duration
-	APITimeout time.Duration
+	Node            domain.NodeIdentity
+	Heartbeat       time.Duration
+	APITimeout      time.Duration
 	WatchdogTimeout time.Duration
 }
 
@@ -84,7 +84,7 @@ type Deps struct {
 }
 
 type Snapshot struct {
-	Observed bool
+	Observed     bool
 	ObservedAt   time.Time
 	HasQuorum    bool
 	Alive        int

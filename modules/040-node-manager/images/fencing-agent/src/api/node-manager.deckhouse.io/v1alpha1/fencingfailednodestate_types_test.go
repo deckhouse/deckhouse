@@ -38,7 +38,7 @@ func TestStatusSectionsAreIsolated(t *testing.T) {
 			name: "failed writer does not serialize fallback",
 			status: FencingFailedNodeStateStatus{
 				Failed: &FencingFailedNodeStateFailed{
-					DetectedAt: metav1.NewTime(time.Unix(0, 0).UTC()),
+					DetectedAt: metav1.NewMicroTime(time.Unix(0, 0).UTC()),
 					DetectedBy: "worker-1",
 					Reason:     FailedReasonMemberlistDead,
 					AliveCount: 3,

@@ -190,3 +190,45 @@ func TestAPIServerHoldsTheHeartbeatToMicroseconds(t *testing.T) {
 		})
 	}
 }
+
+// The evacuation delay is measured from detectedAt, so the microseconds the Go
+// type encodes have to survive the schema instead of being rounded away.
+func TestAPIServerAcceptsTheDetectionThisAdapterRecords(t *testing.T) {
+	section, err := json.Marshal(map[string]any{
+		"status": map[string]any{"failed": failedSection()},
+	})
+	if err != nil {
+		t.Fatalf("encode the failed section: %v", err)
+	}
+
+	if !strings.Contains(string(section), `"detectedAt":"2026-06-02T15:00:01.250000Z"`) {
+		t.Errorf("encoded section %s, want detectedAt to keep its microseconds", section)
+	}
+
+	if errs := apiServerVerdict(t, crdBaseObject(), section); len(errs) > 0 {
+		t.Errorf("the api server would reject the detection %s: %v", section, errs)
+	}
+}
+
+func TestAPIServerHoldsTheDetectionToMicroseconds(t *testing.T) {
+	section := func(at string) []byte {
+		return []byte(`{"status":{"failed":{"detectedBy":"worker-1","reason":"MemberlistDead","aliveCount":3,"quorumSize":3,"detectedAt":"` + at + `"}}}`)
+	}
+
+	for name, at := range map[string]string{
+		"whole seconds": "2026-06-02T15:00:01Z",
+		"milliseconds":  "2026-06-02T15:00:01.250Z",
+		"nanoseconds":   "2026-06-02T15:00:01.250000000Z",
+	} {
+		t.Run(name, func(t *testing.T) {
+			errs := apiServerVerdict(t, crdBaseObject(), section(at))
+			if len(errs) == 0 {
+				t.Fatalf("the api server accepted detectedAt %q, want the pattern to refuse it", at)
+			}
+
+			if got := errs[0].Error(); !strings.Contains(got, "detectedAt") {
+				t.Errorf("rejected with %q, want the complaint to be about detectedAt", got)
+			}
+		})
+	}
+}

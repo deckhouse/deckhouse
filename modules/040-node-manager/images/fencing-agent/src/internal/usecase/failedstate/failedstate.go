@@ -370,7 +370,7 @@ func (w *Writer) report(
 	}
 
 	failed := v1alpha1.FencingFailedNodeStateFailed{
-		DetectedAt: metav1.NewTime(inc.detectedAt),
+		DetectedAt: metav1.NewMicroTime(inc.detectedAt),
 		DetectedBy: w.params.NodeName,
 		Reason:     v1alpha1.FailedReasonMemberlistDead,
 		AliveCount: int32(view.AliveCount()),
