@@ -281,6 +281,45 @@ versions = {
             "TaintTolerationComparisonOperators",
         ],
     },
+    "1.37": {
+        "deprecated": [
+            "KubeProxyIPVS",
+        ],
+        "kubelet": [
+            "AtomicWriteVolumeUserFields",
+            "ContainerStopSignals",
+            "CRIListStreaming",
+            "EmptyDirVolumeMode",
+            "GRPCContainerProbeTLS",
+            "H2CContainerProbe",
+            "InPlacePodVerticalScalingMemoryBackedVolumes",
+            "MutablePVNodeAffinity",
+            "PodLogsQuerySplitStreams",
+        ],
+        "apiserver": [
+            "AtomicWriteVolumeUserFields",
+            "ContainerStopSignals",
+            "CRDObservedGenerationTracking",
+            "CrossNamespaceVolumeDataSource",
+            "EmptyDirVolumeMode",
+            "GRPCContainerProbeTLS",
+            "H2CContainerProbe",
+            "InPlacePodVerticalScalingMemoryBackedVolumes",
+            "MutablePVNodeAffinity",
+            "PodLogsQuerySplitStreams",
+            "ShardedListAndWatch",
+            "StatefulSetRecreateStrategy",
+            "TaintTolerationComparisonOperators",
+        ],
+        "kubeControllerManager": [
+            "ControllerManagerReleaseLeaderElectionLockOnExit",
+            "CrossNamespaceVolumeDataSource",
+            "StatefulSetRecreateStrategy",
+        ],
+        "kubeScheduler": [
+            "TaintTolerationComparisonOperators",
+        ],
+    },
 }
 
 def is_forbidden(version: str, feature_name: str) -> bool:
