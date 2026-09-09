@@ -42,8 +42,8 @@ var _ = Describe("Module :: node-manager :: helm template :: NodeConfigTemplate 
 	It("hands the template to whoever may add a node, and to nobody else", func() {
 		Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-		edit := f.KubernetesGlobalResource("ClusterRole", "d8:manage:permission:module:node-manager:edit")
-		view := f.KubernetesGlobalResource("ClusterRole", "d8:manage:permission:module:node-manager:view")
+		edit := f.KubernetesGlobalResource("ClusterRole", "d8:system-capability:node-manager:edit")
+		view := f.KubernetesGlobalResource("ClusterRole", "d8:system-capability:node-manager:view")
 		Expect(edit.Exists()).To(BeTrue())
 		Expect(view.Exists()).To(BeTrue())
 

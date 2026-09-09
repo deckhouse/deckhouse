@@ -40,8 +40,8 @@ var _ = Describe("Module :: node-manager :: helm template :: NodeOperation right
 	It("lets the manage roles read and create operations", func() {
 		Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-		view := f.KubernetesGlobalResource("ClusterRole", "d8:manage:permission:module:node-manager:view")
-		edit := f.KubernetesGlobalResource("ClusterRole", "d8:manage:permission:module:node-manager:edit")
+		view := f.KubernetesGlobalResource("ClusterRole", "d8:system-capability:node-manager:view")
+		edit := f.KubernetesGlobalResource("ClusterRole", "d8:system-capability:node-manager:edit")
 		Expect(view.Exists()).To(BeTrue())
 		Expect(edit.Exists()).To(BeTrue())
 
