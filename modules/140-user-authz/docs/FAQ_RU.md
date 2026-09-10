@@ -261,8 +261,8 @@ d8 k auth can-i --as=user@example.com get pods -n other-namespace
 
 | Метрика | Описание |
 |---|---|
-| `d8_user_authz_rule_needs_multitenancy{name,options}` | Одна серия на каждое затронутое правило, не более пятидесяти, с параметрами, которые не применятся. |
-| `d8_user_authz_rules_needing_multitenancy` | Общее число затронутых правил, включая те, что не попали в первые пятьдесят. |
+| `d8_user_authz_rule_needs_multitenancy{name,options}` | Одна серия на каждое затронутое правило, не более 50, с параметрами, которые не применятся. |
+| `d8_user_authz_rules_needing_multitenancy` | Общее число затронутых правил, включая те, что не попали в первые 50. |
 
 Алерт `D8UserAuthzRuleNeedsMultiTenancy` называет отдельное правило, а `D8UserAuthzRulesNeedMultiTenancy` срабатывает, когда затронутых правил больше, чем называет первый алерт. Оба входят в группу `D8UserAuthzMisconfigured`.
 
