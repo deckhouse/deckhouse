@@ -22,13 +22,13 @@ import (
 	"slices"
 	"time"
 
-	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/ctrlutils"
@@ -52,9 +52,11 @@ func (l *Loader) runDeleteStaleModuleReleasesLoop(ctx context.Context) {
 	})
 }
 
-// deleteStaleModuleReleases deletes module releases for modules that disabled too long
+// deleteStaleModuleReleases deletes the module releases of the modules disabled too long and
+// puts the modules back to available: no package version, the not-installed status. The
+// release controller uninstalls the deployed release and restarts Deckhouse.
 func (l *Loader) deleteStaleModuleReleases(ctx context.Context) error {
-	modules := new(v1alpha1.ModuleList)
+	modules := new(v1alpha2.ModuleList)
 	if err := l.client.List(ctx, modules); err != nil {
 		return fmt.Errorf("list all modules: %w", err)
 	}
@@ -75,22 +77,19 @@ func (l *Loader) deleteStaleModuleReleases(ctx context.Context) error {
 				}
 			}
 
-			// clear module
+			// clear the installed package. The repository stays: the source controller
+			// re-picks it for an available module on the next scan.
 			err := ctrlutils.UpdateWithRetry(ctx, l.client, &module, func() error {
-				availableSources := module.Properties.AvailableSources
-				module.Properties = v1alpha1.ModuleProperties{
-					AvailableSources: availableSources,
-				}
+				module.Spec.PackageVersion = ""
 				return nil
 			})
 			if err != nil {
 				return fmt.Errorf("clear the %q module: %w", module.Name, err)
 			}
 
-			// set available and skip
+			// set available
 			err = ctrlutils.UpdateStatusWithRetry(ctx, l.client, &module, func() error {
-				module.Status.Phase = v1alpha1.ModulePhaseAvailable
-				module.SetConditionFalse(v1alpha1.ModuleConditionIsReady, v1alpha1.ModuleReasonNotInstalled, v1alpha1.ModuleMessageNotInstalled)
+				module.SetNotInstalledStatus()
 				return nil
 			})
 			if err != nil {
@@ -117,7 +116,7 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 			continue
 		}
 
-		module := new(v1alpha1.Module)
+		module := new(v1alpha2.Module)
 		if err := l.client.Get(ctx, client.ObjectKey{Name: mpo.Name}, module); err != nil {
 			if !apierrors.IsNotFound(err) {
 				l.logger.Error("failed to get module", slog.String("name", mpo.Name), log.Err(err))
@@ -135,20 +134,28 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 		}
 
 		// module must be enabled
-		if !module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleConfig, corev1.ConditionTrue) {
+		if !module.IsEnabledByModuleConfig() {
 			l.logger.Info("module disabled, skip restoring module pull override process", slog.String("name", mpo.Name))
 			continue
 		}
 
-		// source must be
-		if module.Properties.Source == "" {
+		// get module source from the package repository name.
+		// because for now package repository names are synced from existing module source names via pkgsync mapping funcs.
+		// so in this way we can get the right module source name from the package repository name.
+		//
+		// Example:
+		// 1. At sync: deckhouse MS -> deckhouse-modules PR
+		// 2. At restore: deckhouse-modules PR -> deckhouse MS
+		moduleSourceName := pkgsync.SourceNameForRepository(module.Spec.PackageRepositoryName)
+		if moduleSourceName == "" {
 			l.logger.Info("module does not have an active source, skip restoring module pull override process", slog.String("name", mpo.Name))
 			continue
 		}
 
-		err := utils.Update[*v1alpha1.Module](ctx, l.client, module, func(module *v1alpha1.Module) bool {
-			module.Properties.Version = mpo.Spec.ImageTag
-			return true
+		// pin the module to the tag it runs, as the override controller does at deploy. A no-op
+		// once the package sync has placed the override.
+		err := utils.Update[*v1alpha2.Module](ctx, l.client, module, func(module *v1alpha2.Module) bool {
+			return module.SetDevOverrideTag(mpo.Spec.ImageTag)
 		})
 		if err != nil {
 			return fmt.Errorf("set the module version '%s': %w", module.Name, err)
@@ -162,7 +169,7 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 		// if deployedOn annotation value doesn't equal to current node name - overwrite the module from the repository
 		if deployedOn := mpo.GetAnnotations()[v1alpha2.ModulePullOverrideAnnotationDeployedOn]; deployedOn != currentNode {
 			l.logger.Info("reinitialize module pull override due to stale deployedOn annotation", slog.String("name", mpo.Name))
-			if err = l.installer.Uninstall(ctx, moduleName); err != nil {
+			if err := l.installer.Uninstall(ctx, moduleName); err != nil {
 				return fmt.Errorf("uninstall module pull override: %w", err)
 			}
 
@@ -171,18 +178,18 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 			}
 			mpo.ObjectMeta.Annotations[v1alpha2.ModulePullOverrideAnnotationDeployedOn] = currentNode
 
-			if err = l.client.Update(ctx, &mpo); err != nil {
+			if err := l.client.Update(ctx, &mpo); err != nil {
 				l.logger.Warn("failed to annotate module pull override", slog.String("name", mpo.Name), log.Err(err))
 			}
 		}
 
 		// get relevant module source
 		source := new(v1alpha1.ModuleSource)
-		if err = l.client.Get(ctx, client.ObjectKey{Name: module.Properties.Source}, source); err != nil {
-			return fmt.Errorf("get the module source '%s' for the module '%s': %w", module.Properties.Source, mpo.Name, err)
+		if err := l.client.Get(ctx, client.ObjectKey{Name: moduleSourceName}, source); err != nil {
+			return fmt.Errorf("get the module source '%s' for the module '%s': %w", moduleSourceName, mpo.Name, err)
 		}
 
-		if err = l.installer.Restore(ctx, source, moduleName, mpo.Spec.ImageTag); err != nil {
+		if err := l.installer.Restore(ctx, source, moduleName, mpo.Spec.ImageTag); err != nil {
 			return fmt.Errorf("restore the module '%s': %w", moduleName, err)
 		}
 
@@ -194,46 +201,21 @@ func (l *Loader) restoreModulesByOverrides(ctx context.Context) error {
 
 // restoreModulesByReleases checks ModuleReleases with Deployed status and restores them on the FS
 func (l *Loader) restoreModulesByReleases(ctx context.Context) error {
-	labelSelector := client.MatchingLabels{
-		v1alpha1.ModuleReleaseLabelStatus: v1alpha1.ModuleReleaseLabelDeployed,
+	releases, err := l.listDeployedReleases(ctx)
+	if err != nil {
+		return err
 	}
-
-	releaseList := new(v1alpha1.ModuleReleaseList)
-	if err := l.client.List(ctx, releaseList, labelSelector); err != nil {
-		return fmt.Errorf("list releases: %w", err)
-	}
-
-	// sort releases by version (to check previous deployed)
-	releases := releaseList.Items
-	slices.SortFunc(releases, func(a, b v1alpha1.ModuleRelease) int {
-		return a.GetVersion().Compare(b.GetVersion())
-	})
 
 	deployedReleases := make(map[string]v1alpha1.ModuleRelease)
 	for _, release := range releases {
 		moduleName := release.GetModuleName()
 
-		// ignore deleted release and not deployed
-		if release.Status.Phase != v1alpha1.ModuleReleasePhaseDeployed || !release.ObjectMeta.DeletionTimestamp.IsZero() {
-			continue
+		if previous, ok := deployedReleases[moduleName]; ok {
+			l.supersedeRelease(ctx, &previous)
 		}
-
-		// if we already have deployed release - make it superseded
-		deployedRelease, ok := deployedReleases[moduleName]
-		if ok {
-			updatedDeployedRelease := deployedRelease.DeepCopy()
-			updatedDeployedRelease.Status.Phase = v1alpha1.ModuleReleasePhaseSuperseded
-			updatedDeployedRelease.Status.Message = ""
-			updatedDeployedRelease.Status.TransitionTime = metav1.NewTime(l.dependencyContainer.GetClock().Now().UTC())
-
-			if err := l.client.Status().Patch(ctx, updatedDeployedRelease, client.MergeFrom(&deployedRelease)); err != nil {
-				l.logger.Error("patch previous deployed module release", slog.String("name", release.GetName()), log.Err(err))
-			}
-		}
-
 		deployedReleases[moduleName] = release
 
-		// if ModulePullOverride exists, don't check and restore overridden release
+		// an overridden module is restored by its ModulePullOverride instead
 		exists, err := utils.ModulePullOverrideExists(ctx, l.client, moduleName)
 		if err != nil {
 			return fmt.Errorf("get module pull override for the '%s' module: %w", moduleName, err)
@@ -243,79 +225,83 @@ func (l *Loader) restoreModulesByReleases(ctx context.Context) error {
 			continue
 		}
 
-		// update module version
-		moduleExists := true
-		module := new(v1alpha1.Module)
-		if err = l.client.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return fmt.Errorf("get the module '%s': %w", moduleName, err)
-			}
-			moduleExists = false
-			l.logger.Warn("module is missing, skip setting version", slog.String("name", release.Spec.ModuleName))
-		} else {
-			l.logger.Debug("set module version", slog.String("name", moduleName), slog.String("version", release.GetModuleVersion()))
-			err = ctrlutils.UpdateWithRetry(ctx, l.client, module, func() error {
-				module.Properties.Version = release.GetModuleVersion()
-				return nil
-			})
-			if err != nil {
-				return fmt.Errorf("update the module '%s': %w", moduleName, err)
-			}
+		if err = l.restoreRelease(ctx, &release); err != nil {
+			return err
 		}
-
-		// get relevant module source
-		source := new(v1alpha1.ModuleSource)
-		if err = l.client.Get(ctx, client.ObjectKey{Name: release.GetModuleSource()}, source); err != nil {
-			return fmt.Errorf("get the module source '%s' for the module '%s': %w", source.Name, moduleName, err)
-		}
-
-		// While the embedded copy of the module is still shipped on the filesystem
-		// it wins the module search path, so a downloaded module of the same name
-		// must only be staged (no symlink/mount), not activated. Once the embedded
-		// copy is dropped on Deckhouse upgrade, this restore activates the staged
-		// module instead.
-		if l.installer.IsEmbeddedPresent(moduleName) {
-			l.logger.Info("module is still embedded, stage the release without activating it", slog.String("name", moduleName))
-			if err = l.installer.StageFromRegistry(ctx, source, moduleName, release.GetModuleVersion()); err != nil {
-				return fmt.Errorf("stage the module '%s': %w", moduleName, err)
-			}
-
-			// The embedded copy is still serving the module, so it must keep rendering
-			// images from the embedded registry (digests baked into the Deckhouse image).
-			// Do NOT inject the source registry here: that would make the embedded module
-			// pull <sourceRepo>/modules/<name>@<embeddedDigest>, a path that does not exist
-			// (the digest belongs to the embedded image, not the source's module image),
-			// breaking the module with ImagePullBackOff. The source registry is injected
-			// only once the embedded copy is dropped and the module is activated (below).
-			continue
-		}
-
-		if err = l.installer.Restore(ctx, source, moduleName, release.GetModuleVersion()); err != nil {
-			return fmt.Errorf("restore the module '%s': %w", moduleName, err)
-		}
-
-		// The embedded copy is gone (otherwise it would have been staged above),
-		// so the module is now served from the downloaded source. Flip its active
-		// source off the "Embedded" sentinel: this keeps the controller-side view
-		// (module.IsEmbedded()) consistent with the on-disk reality reported by
-		// IsEmbeddedPresent, and hands the module over to the regular source-owned
-		// flow (release ensuring, source switching). This is the single point where
-		// a migrated module transitions from embedded to external.
-		if moduleExists && module.IsEmbedded() {
-			l.logger.Info("embedded copy is gone, switch the module active source", slog.String("name", moduleName), slog.String("source_name", source.Name))
-			err = ctrlutils.UpdateWithRetry(ctx, l.client, module, func() error {
-				if module.Properties.Source == v1alpha1.ModuleSourceEmbedded {
-					module.Properties.Source = source.Name
-				}
-				return nil
-			})
-			if err != nil {
-				return fmt.Errorf("switch the active source for the module '%s': %w", moduleName, err)
-			}
-		}
-
-		l.registries[moduleName] = utils.BuildRegistryValue(source)
 	}
+
+	return nil
+}
+
+// listDeployedReleases returns the releases in the Deployed phase sorted by version ascending.
+func (l *Loader) listDeployedReleases(ctx context.Context) ([]v1alpha1.ModuleRelease, error) {
+	labelSelector := client.MatchingLabels{
+		v1alpha1.ModuleReleaseLabelStatus: v1alpha1.ModuleReleaseLabelDeployed,
+	}
+
+	releaseList := new(v1alpha1.ModuleReleaseList)
+	if err := l.client.List(ctx, releaseList, labelSelector); err != nil {
+		return nil, fmt.Errorf("list releases: %w", err)
+	}
+
+	// the label may lag behind the status: drop deleted releases and the ones that left the phase
+	releases := slices.DeleteFunc(releaseList.Items, func(release v1alpha1.ModuleRelease) bool {
+		notDeployed := release.Status.Phase != v1alpha1.ModuleReleasePhaseDeployed
+		deleted := !release.DeletionTimestamp.IsZero()
+		return notDeployed || deleted
+	})
+
+	slices.SortFunc(releases, func(a, b v1alpha1.ModuleRelease) int {
+		return a.GetVersion().Compare(b.GetVersion())
+	})
+
+	return releases, nil
+}
+
+// supersedeRelease marks the deployed release replaced by a newer deployed one.
+// A patch failure is logged only: the newer release is restored regardless.
+func (l *Loader) supersedeRelease(ctx context.Context, release *v1alpha1.ModuleRelease) {
+	updated := release.DeepCopy()
+	updated.Status.Phase = v1alpha1.ModuleReleasePhaseSuperseded
+	updated.Status.Message = ""
+	updated.Status.TransitionTime = metav1.NewTime(l.dependencyContainer.GetClock().Now().UTC())
+
+	if err := l.client.Status().Patch(ctx, updated, client.MergeFrom(release)); err != nil {
+		l.logger.Error("patch previous deployed module release", slog.String("name", release.GetName()), log.Err(err))
+	}
+}
+
+// restoreRelease places the module of the release on the FS.
+//
+// If Deckhouse still ships an embedded copy of the module, that copy stays active.
+// The downloaded one is only staged: no symlink or mount, and no source registry.
+// The embedded copy needs the embedded registry: its image digests are not in the
+// source repository, and pulling them from there fails with ImagePullBackOff.
+//
+// Once the embedded copy is gone, the downloaded module is activated and pinned
+// to the source registry.
+func (l *Loader) restoreRelease(ctx context.Context, release *v1alpha1.ModuleRelease) error {
+	moduleName := release.GetModuleName()
+
+	source := new(v1alpha1.ModuleSource)
+	if err := l.client.Get(ctx, client.ObjectKey{Name: release.GetModuleSource()}, source); err != nil {
+		return fmt.Errorf("get the module source '%s' for the module '%s': %w", release.GetModuleSource(), moduleName, err)
+	}
+
+	if l.installer.IsEmbeddedPresent(moduleName) {
+		l.logger.Info("module is still embedded, stage the release without activating it", slog.String("name", moduleName))
+		if err := l.installer.StageFromRegistry(ctx, source, moduleName, release.GetModuleVersion()); err != nil {
+			return fmt.Errorf("stage the module '%s': %w", moduleName, err)
+		}
+
+		return nil
+	}
+
+	if err := l.installer.Restore(ctx, source, moduleName, release.GetModuleVersion()); err != nil {
+		return fmt.Errorf("restore the module '%s': %w", moduleName, err)
+	}
+
+	l.registries[moduleName] = utils.BuildRegistryValue(source)
 
 	return nil
 }

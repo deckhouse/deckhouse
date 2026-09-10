@@ -66,6 +66,7 @@ func New(logger *log.Logger, initObjects []client.Object) (*Client, error) {
 			&v1alpha1.ModuleSource{},
 			&v1alpha1.ModuleRelease{},
 			&v1alpha1.Module{},
+			&v1alpha2.Module{},
 			&v1alpha2.ModulePullOverride{},
 		).
 		Build()

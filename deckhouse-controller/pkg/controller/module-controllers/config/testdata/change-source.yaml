@@ -8,18 +8,18 @@ spec:
   source: new-source
   updatePolicy: Manual
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: test-module
-properties:
-  source: old-source
+spec:
+  packageRepositoryName: old-source
+  packageVersion: v1.0.0
   updatePolicy: Auto
-  availableSources:
-    - old-source
-    - new-source
 status:
   phase: Ready
   conditions:
     - type: EnabledByModuleConfig
-      status: "True" 
+      status: "True"
+      reason: Enabled
+      lastTransitionTime: "2024-01-01T00:00:00Z"

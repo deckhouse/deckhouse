@@ -47,6 +47,7 @@ func TestSyncVersionsFromImage(t *testing.T) {
 		assert.False(t, mpv.IsDraft(), "an embedded version must come out complete")
 		assert.True(t, mpv.IsLegacy())
 		assert.Empty(t, mpv.OwnerReferences, "no owner: no repository ever serves an embedded version")
+		assert.Contains(t, mpv.Finalizers, v1alpha1.ModulePackageVersionFinalizer, "the finalizer holds the version while a module runs it")
 
 		require.NotNil(t, mpv.Status.PackageMetadata)
 		assert.Equal(t, "General Availability", mpv.Status.PackageMetadata.Stage)
@@ -236,7 +237,7 @@ func TestSyncVersionsFromImage(t *testing.T) {
 		dir := t.TempDir()
 		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\nstage: General Availability\n")
 
-		stub := &v1alpha1.ModulePackageVersion{
+		draft := &v1alpha1.ModulePackageVersion{
 			ObjectMeta: metav1.ObjectMeta{
 				Name: "embedded-echo-v1.80.0",
 				Labels: map[string]string{
@@ -251,10 +252,10 @@ func TestSyncVersionsFromImage(t *testing.T) {
 			},
 		}
 
-		s, cl := newTestSyncer(t, "v1.80.0", dir, stub)
+		s, cl := newTestSyncer(t, "v1.80.0", dir, draft)
 		require.NoError(t, s.sync(ctx))
 
-		mpv := getVersion(t, cl, stub.Name)
+		mpv := getVersion(t, cl, draft.Name)
 		assert.False(t, mpv.IsDraft(), "the leftover draft must be completed")
 		require.NotNil(t, mpv.Status.PackageMetadata)
 		assert.Equal(t, "General Availability", mpv.Status.PackageMetadata.Stage)
@@ -420,7 +421,7 @@ func TestSyncGlobalVersion(t *testing.T) {
 func TestSyncVersionsFromReleases(t *testing.T) {
 	ctx := context.Background()
 
-	t.Run("creates a draft stub for deployed and pending releases", func(t *testing.T) {
+	t.Run("creates a draft for deployed and pending releases", func(t *testing.T) {
 		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(),
 			testRelease("parca", "deckhouse", "1.4.3", v1alpha1.ModuleReleasePhaseDeployed),
 			testRelease("console", "deckhouse", "1.60.1", v1alpha1.ModuleReleasePhasePending),
@@ -439,7 +440,7 @@ func TestSyncVersionsFromReleases(t *testing.T) {
 		assert.Equal(t, "parca", mpv.Spec.PackageName)
 		assert.Equal(t, "deckhouse-modules", mpv.Spec.PackageRepositoryName)
 		assert.Equal(t, "v1.4.3", mpv.Spec.PackageVersion)
-		assert.True(t, mpv.IsDraft(), "the stub must wait for the metadata as a draft")
+		assert.True(t, mpv.IsDraft(), "the draft must wait for the metadata")
 		assert.True(t, mpv.IsLegacy())
 		assert.Equal(t, "deckhouse", mpv.Labels["heritage"])
 		assert.Equal(t, "deckhouse-modules", mpv.Labels[v1alpha1.ModulePackageVersionLabelRepository])
@@ -487,5 +488,104 @@ func TestSyncVersionsFromReleases(t *testing.T) {
 		after := getVersion(t, cl, existing.Name)
 		assert.Equal(t, before.ResourceVersion, after.ResourceVersion)
 		assert.False(t, after.IsDraft(), "a complete version must not become a draft")
+	})
+}
+
+func TestEnsureDownloadedModulePackageVersion(t *testing.T) {
+	ctx := context.Background()
+
+	dir := filepath.Join(t.TempDir(), "console")
+	writeModuleYAML(t, dir, "name: console\nstage: Preview\nweight: 910\n")
+	writeOpenAPI(t, dir, "type: object\nproperties:\n  replicas:\n    type: integer\n", "type: object\n")
+
+	spec := v1alpha1.ModulePackageVersionSpec{
+		PackageName:           "console",
+		PackageRepositoryName: "deckhouse-modules",
+		PackageVersion:        "v1.60.1",
+	}
+
+	t.Run("missing version is created and filled", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir())
+
+		require.NoError(t, s.completeDownloadedModulePackageVersion(ctx, spec, dir))
+
+		mpv := getVersion(t, cl, "deckhouse-modules-console-v1.60.1")
+		assert.False(t, mpv.IsDraft())
+		assert.True(t, mpv.IsLegacy())
+		assert.Equal(t, "Preview", mpv.Status.PackageMetadata.Stage)
+		assert.Equal(t, int32(910), mpv.Status.PackageMetadata.Weight)
+		assert.NotNil(t, mpv.Status.PackageSchemas)
+	})
+
+	t.Run("filled version is owned by its repository", func(t *testing.T) {
+		repo := &v1alpha1.PackageRepository{
+			ObjectMeta: metav1.ObjectMeta{Name: "deckhouse-modules", UID: "repo-uid"},
+		}
+
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), repo)
+
+		require.NoError(t, s.completeDownloadedModulePackageVersion(ctx, spec, dir))
+
+		mpv := getVersion(t, cl, "deckhouse-modules-console-v1.60.1")
+		assert.False(t, mpv.IsDraft())
+		assert.Contains(t, mpv.Finalizers, v1alpha1.ModulePackageVersionFinalizer)
+
+		require.Len(t, mpv.OwnerReferences, 1, "the repository owns the version it serves")
+		owner := mpv.OwnerReferences[0]
+		assert.Equal(t, v1alpha1.PackageRepositoryKind, owner.Kind)
+		assert.Equal(t, "deckhouse-modules", owner.Name)
+		assert.Equal(t, repo.UID, owner.UID)
+		require.NotNil(t, owner.Controller)
+		assert.True(t, *owner.Controller)
+	})
+
+	t.Run("filled version without a repository has no owner", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir())
+
+		require.NoError(t, s.completeDownloadedModulePackageVersion(ctx, spec, dir))
+
+		mpv := getVersion(t, cl, "deckhouse-modules-console-v1.60.1")
+		assert.Contains(t, mpv.Finalizers, v1alpha1.ModulePackageVersionFinalizer, "the finalizer needs no repository")
+		assert.Empty(t, mpv.OwnerReferences, "an owner reference to a missing repository would get the version garbage-collected")
+	})
+
+	t.Run("draft is filled", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir())
+		_, err := s.createModulePackageVersionDraft(ctx, "deckhouse-modules-console-v1.60.1", spec)
+		require.NoError(t, err)
+
+		require.NoError(t, s.completeDownloadedModulePackageVersion(ctx, spec, dir))
+
+		mpv := getVersion(t, cl, "deckhouse-modules-console-v1.60.1")
+		assert.False(t, mpv.IsDraft())
+		assert.Equal(t, "Preview", mpv.Status.PackageMetadata.Stage)
+	})
+
+	t.Run("complete version is final", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir())
+		_, err := s.createModulePackageVersionDraft(ctx, "deckhouse-modules-console-v1.60.1", spec)
+		require.NoError(t, err)
+
+		mpv := getVersion(t, cl, "deckhouse-modules-console-v1.60.1")
+		scanned := &v1alpha1.ModulePackageVersionStatusMetadata{Stage: "General Availability", Weight: 900}
+		require.NoError(t, s.fillMetadata(ctx, mpv, scanned, nil))
+		require.NoError(t, s.removeDraft(ctx, mpv))
+		rv := getVersion(t, cl, "deckhouse-modules-console-v1.60.1").ResourceVersion
+
+		require.NoError(t, s.completeDownloadedModulePackageVersion(ctx, spec, dir))
+
+		mpv = getVersion(t, cl, "deckhouse-modules-console-v1.60.1")
+		assert.Equal(t, rv, mpv.ResourceVersion)
+		assert.Equal(t, "General Availability", mpv.Status.PackageMetadata.Stage)
+	})
+
+	t.Run("unreadable module dir leaves the draft", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir())
+		_, err := s.createModulePackageVersionDraft(ctx, "deckhouse-modules-console-v1.60.1", spec)
+		require.NoError(t, err)
+
+		require.NoError(t, s.completeDownloadedModulePackageVersion(ctx, spec, filepath.Join(t.TempDir(), "missing")))
+
+		assert.True(t, getVersion(t, cl, "deckhouse-modules-console-v1.60.1").IsDraft())
 	})
 }

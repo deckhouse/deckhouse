@@ -35,6 +35,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/yaml"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/controller/pkgsync"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	moduletypes "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/moduleloader/types"
@@ -137,35 +138,79 @@ func newStorageModule(t *testing.T, name, stage, exclusiveGroup string) *modulet
 	return module
 }
 
-// newModuleCR builds a v1alpha1.Module custom resource so that the cli.Get
-// lookup in the handler returns an object instead of a NotFound error.
-func newModuleCR(name string, availableSources []string, stage string) *v1alpha1.Module {
-	return &v1alpha1.Module{
-		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Properties: v1alpha1.ModuleProperties{
-			Stage:            stage,
-			AvailableSources: availableSources,
-		},
+// newModuleCR builds what the module resolution reads: the sources offering the module,
+// the installed module object and the package version carrying its metadata, so a test
+// exercises the branches after the lookups instead of the not-found short-circuits.
+func newModuleCR(name string, availableSources []string, stage string) []client.Object {
+	return newModuleObjects(name, availableSources, false, &v1alpha1.ModulePackageVersionStatusMetadata{Stage: stage})
+}
+
+// newEmbeddedModuleCR builds a module the image ships that external sources already
+// publish, i.e. a module mid embedded->external migration. It is used to assert that the
+// source-availability check guards this case at admission time too.
+func newEmbeddedModuleCR(name string, availableSources []string) []client.Object {
+	return newModuleObjects(name, availableSources, true, nil)
+}
+
+// newModuleCRWithRequirements builds an installed module whose package declares
+// parent-module requirements, to exercise the dependency check that reads them from the
+// package metadata when the extender itself has no registered constraints. The legacy
+// "!optional" suffix marks a conditional parent.
+func newModuleCRWithRequirements(name string, availableSources []string, stage string, parentModules map[string]string) []client.Object {
+	modules := &v1alpha1.PackageModulesRequirements{}
+	for parent, constraint := range parentModules {
+		dependency := v1alpha1.PackageModuleDependency{Name: parent, Constraint: strings.TrimSuffix(constraint, " !optional")}
+		if strings.HasSuffix(constraint, "!optional") {
+			modules.Conditional = append(modules.Conditional, dependency)
+		} else {
+			modules.Mandatory = append(modules.Mandatory, dependency)
+		}
 	}
+
+	return newModuleObjects(name, availableSources, false, &v1alpha1.ModulePackageVersionStatusMetadata{
+		Stage:        stage,
+		Requirements: &v1alpha1.PackageRequirements{Modules: modules},
+	})
 }
 
-// newEmbeddedModuleCR builds a Module CR that is still embedded (Source ==
-// "Embedded") but already published in external sources, i.e. a module mid
-// embedded->external migration. It is used to assert that the source-availability
-// check guards this case at admission time too.
-func newEmbeddedModuleCR(name string, availableSources []string) *v1alpha1.Module {
-	m := newModuleCR(name, availableSources, "")
-	m.Properties.Source = v1alpha1.ModuleSourceEmbedded
-	return m
-}
+// newModuleObjects assembles the module package naming the repositories of the module sources
+// offering the module, the module and its package version.
+func newModuleObjects(name string, availableModuleSources []string, embedded bool, metadata *v1alpha1.ModulePackageVersionStatusMetadata) []client.Object {
+	objects := make([]client.Object, 0, 3)
 
-// newModuleCRWithRequirements builds a Module CR that declares parent-module
-// requirements, to exercise the dependency extender fallback that reads them
-// from the Module CR when the extender itself has no registered constraints.
-func newModuleCRWithRequirements(name string, availableSources []string, stage string, parentModules map[string]string) *v1alpha1.Module {
-	m := newModuleCR(name, availableSources, stage)
-	m.Properties.Requirements = &v1alpha1.ModuleRequirements{ParentModules: parentModules}
-	return m
+	if len(availableModuleSources) > 0 {
+		availableRepositories := make([]string, 0, len(availableModuleSources))
+		for _, moduleSourceName := range availableModuleSources {
+			availableRepositories = append(availableRepositories, pkgsync.RepositoryNameForSource(moduleSourceName))
+		}
+
+		objects = append(objects, &v1alpha1.ModulePackage{
+			ObjectMeta: metav1.ObjectMeta{Name: name},
+			Status:     v1alpha1.ModulePackageStatus{AvailableRepositories: availableRepositories},
+		})
+	}
+
+	repository, version := "deckhouse-modules", "v1.0.0"
+	module := &v1alpha2.Module{
+		ObjectMeta: metav1.ObjectMeta{Name: name},
+		Spec:       v1alpha2.ModuleSpec{PackageRepositoryName: repository, PackageVersion: version},
+	}
+	if embedded {
+		module.Annotations = map[string]string{v1alpha2.ModuleAnnotationEmbedded: "true"}
+		module.Spec.PackageRepositoryName = "embedded"
+		repository = "embedded"
+	}
+	objects = append(objects, module)
+
+	if metadata != nil {
+		objects = append(objects, &v1alpha1.ModulePackageVersion{
+			ObjectMeta: metav1.ObjectMeta{Name: v1alpha1.MakeModulePackageVersionName(repository, name, version)},
+			Spec:       v1alpha1.ModulePackageVersionSpec{PackageName: name, PackageRepositoryName: repository, PackageVersion: version},
+			Status:     v1alpha1.ModulePackageVersionStatus{PackageMetadata: metadata},
+		})
+	}
+
+	return objects
 }
 
 func newModuleConfigFull(name string, enabled *bool, source, updatePolicy string) *v1alpha1.ModuleConfig {
@@ -650,7 +695,7 @@ func TestModuleConfigValidationHandler_ModuleResolution(t *testing.T) {
 		operation           string
 		newConfig           *v1alpha1.ModuleConfig
 		oldConfig           *v1alpha1.ModuleConfig
-		moduleCR            *v1alpha1.Module
+		moduleCR            []client.Object
 		expectCheckEnabling bool
 		wantAllowed         bool
 		wantMessage         string
@@ -728,7 +773,7 @@ func TestModuleConfigValidationHandler_ModuleResolution(t *testing.T) {
 				dependencyExtender.CheckEnablingMock.Expect(moduleName).Return(nil)
 			}
 
-			handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, false, tt.moduleCR)
+			handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, false, tt.moduleCR...)
 
 			review := newModuleConfigAdmissionReview(tt.operation, tt.newConfig, tt.oldConfig)
 
@@ -951,7 +996,7 @@ func TestModuleConfigValidationHandler_CELTransition(t *testing.T) {
 			// checkExperimentalFromModuleCR rejects the request with "not found".
 			var objs []client.Object
 			if tt.operation == "UPDATE" {
-				objs = append(objs, newModuleCR(moduleName, []string{}, ""))
+				objs = append(objs, newModuleCR(moduleName, []string{}, "")...)
 			}
 			handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator, objs...)
 
@@ -1169,7 +1214,7 @@ func TestModuleConfigValidationHandler_UpdatePolicy(t *testing.T) {
 			// old=true,new=true: no enabling transition, no dependency check
 			dependencyExtender := moduledependency.NewIExtenderMock(t)
 
-			objs := []client.Object{newModuleCR(moduleName, []string{"alpha"}, "")}
+			objs := newModuleCR(moduleName, []string{"alpha"}, "")
 			if tt.registerPolicy {
 				objs = append(objs, newUpdatePolicy(policyName))
 			}
@@ -1265,7 +1310,7 @@ func TestModuleConfigValidationHandler_ExperimentalOnUpdate(t *testing.T) {
 
 			var objs []client.Object
 			if tt.registerModuleCR {
-				objs = append(objs, newModuleCR(moduleName, []string{"alpha"}, tt.moduleCRStage))
+				objs = append(objs, newModuleCR(moduleName, []string{"alpha"}, tt.moduleCRStage)...)
 			}
 
 			handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, tt.allowExperimental, objs...)
@@ -1305,7 +1350,7 @@ func TestModuleConfigValidationHandler_DependencyFallbackFromModuleCR(t *testing
 		operation      string
 		newConfig      *v1alpha1.ModuleConfig
 		oldConfig      *v1alpha1.ModuleConfig
-		moduleCR       *v1alpha1.Module
+		moduleCR       []client.Object
 		enabledParents map[string]bool
 		dependencyErr  error
 		wantAllowed    bool
@@ -1406,7 +1451,7 @@ func TestModuleConfigValidationHandler_DependencyFallbackFromModuleCR(t *testing
 
 			var objs []client.Object
 			if tt.moduleCR != nil {
-				objs = append(objs, tt.moduleCR)
+				objs = append(objs, tt.moduleCR...)
 			}
 
 			handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, false, objs...)
@@ -1445,7 +1490,7 @@ func TestModuleConfigValidationHandler_ConfigValidation(t *testing.T) {
 		dependencyExtender := moduledependency.NewIExtenderMock(t)
 
 		// nil validator returns an error for settings supplied without spec.version
-		handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, false, newModuleCR(moduleName, []string{"alpha"}, ""))
+		handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, false, newModuleCR(moduleName, []string{"alpha"}, "")...)
 
 		cfg := newModuleConfigFull(moduleName, boolPtr(true), "alpha", "")
 		cfg.Spec.Version = 0
@@ -1473,7 +1518,7 @@ func TestModuleConfigValidationHandler_ConfigValidation(t *testing.T) {
 		// a validator with a (empty) conversions store but no values validator emits
 		// a warning for a spec.version without spec.settings
 		validator := configtools.NewValidator(nil, conversion.NewConversionsStore())
-		handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator, newModuleCR(moduleName, []string{"alpha"}, ""))
+		handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, false, nil, validator, newModuleCR(moduleName, []string{"alpha"}, "")...)
 
 		cfg := newModuleConfigFull(moduleName, boolPtr(true), "alpha", "")
 		cfg.Spec.Version = 1
@@ -1505,7 +1550,7 @@ func TestModuleConfigValidationHandler_StorageModuleNotFound(t *testing.T) {
 	// the Module CR is found and advertises multiple sources, so a "multiple sources"
 	// warning is produced before the storage lookup fails
 	moduleCR := newModuleCR(moduleName, []string{"alpha", "beta"}, "")
-	handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, false, moduleCR)
+	handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, false, moduleCR...)
 
 	review := newModuleConfigAdmissionReview(
 		"UPDATE",
@@ -1564,7 +1609,7 @@ func TestModuleConfigValidationHandler_ExclusiveGroup(t *testing.T) {
 			dependencyExtender := moduledependency.NewIExtenderMock(t)
 
 			moduleCR := newModuleCR(moduleName, []string{"alpha"}, "")
-			handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, false, moduleCR)
+			handler := newTestHandlerWithObjects(t, storage, manager, dependencyExtender, false, moduleCR...)
 
 			review := newModuleConfigAdmissionReview(
 				"UPDATE",
@@ -1669,7 +1714,7 @@ func TestModuleConfigValidationHandler_Experimental(t *testing.T) {
 			}
 
 			moduleCR := newModuleCR(moduleName, []string{"alpha"}, tt.moduleCRStage)
-			handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, tt.allowExperimental, tt.allowedExperimental, configtools.NewValidator(nil, nil), moduleCR)
+			handler := newTestHandlerWithValidator(t, storage, manager, dependencyExtender, tt.allowExperimental, tt.allowedExperimental, configtools.NewValidator(nil, nil), moduleCR...)
 
 			// CREATE that enables the module triggers the experimental gate
 			review := newModuleConfigAdmissionReview("CREATE", newModuleConfigFull(moduleName, boolPtr(true), "alpha", ""), nil)

@@ -33,6 +33,7 @@ import (
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/metrics"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/extenders/kubernetesversion"
 	"github.com/deckhouse/deckhouse/go_lib/dependency/requirements"
@@ -433,7 +434,7 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 	c.logger.Debug("checking migrated modules", slog.Any("modules", modules))
 
 	// Fetch ModuleConfigs and ModuleSources
-	moduleList := &v1alpha1.ModuleList{}
+	moduleList := &v1alpha2.ModuleList{}
 	if err := c.k8sclient.List(ctx, moduleList); err != nil {
 		return fmt.Errorf("failed to list Modules: %w", err)
 	}
@@ -453,7 +454,7 @@ func (c *migratedModulesCheck) Verify(ctx context.Context, dr *v1alpha1.Deckhous
 		// Check if module exists in ModuleList and is enabled
 		for _, module := range moduleList.Items {
 			if module.Name == moduleName {
-				if module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, corev1.ConditionTrue) {
+				if module.IsEnabledByModuleManager() {
 					c.logger.Debug("migrated module is enabled", slog.String("module", moduleName))
 					moduleEnabled = true
 				} else {

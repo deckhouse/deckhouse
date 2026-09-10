@@ -35,7 +35,10 @@ spec:
   update:
     mode: Manual
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: echo
+spec:
+  packageRepositoryName: test
+  packageVersion: v0.0.1

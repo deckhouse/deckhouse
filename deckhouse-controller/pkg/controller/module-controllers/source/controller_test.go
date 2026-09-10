@@ -17,7 +17,6 @@ package source
 import (
 	"context"
 	"errors"
-	"fmt"
 	"strings"
 	"sync"
 	"testing"
@@ -30,6 +29,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -135,7 +135,7 @@ func (suite *ControllerTestSuite) buildReconciler(options ...reconcilerOption) {
 func (suite *ControllerTestSuite) SetupSuite() {
 	suite.Init(reconcilertest.Config{
 		StatusSubresources: []client.Object{
-			&v1alpha1.Module{},
+			&v1alpha2.Module{},
 			&v1alpha1.ModuleSource{},
 			&v1alpha1.ModuleRelease{},
 		},
@@ -582,6 +582,321 @@ spec:
 	assert.Len(suite.T(), source.Status.AvailableModules, 0)
 }
 
+// A module some repository offers and nothing installed has an object of its own.
+func (suite *ControllerTestSuite) TestAvailableModules() {
+	const firstSource = `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 912e02634dd8b7222cc42906e35f1e79
+  name: test-source-1
+spec:
+  scanInterval: 6h30m
+  registry:
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+`
+
+	const secondSource = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 912e02634dd8b7222cc42906e35f1e79
+  name: test-source-2
+spec:
+  scanInterval: 6h30m
+  registry:
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+`
+	// the repository scan found the module in the repository of the first source
+	const packageInFirst = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
+metadata:
+  name: available
+status:
+  availableRepositories:
+    - test-source-1
+`
+	// the repository scan found the module in the repositories of both sources
+	const packageInBoth = `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
+metadata:
+  name: available
+status:
+  availableRepositories:
+    - test-source-1
+    - test-source-2
+`
+
+	scan := func(modules ...string) {
+		dc := newMockedContainerWithData(suite.T(), "v1.2.3", modules, []string{})
+		suite.r.dc = dc
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource("test-source-1"))
+		require.NoError(suite.T(), err)
+	}
+
+	suite.Run("no repository offers the module yet", func() {
+		suite.setupTestControllerRaw(firstSource)
+		scan("available")
+
+		err := suite.Client().Get(context.TODO(), types.NamespacedName{Name: "available"}, new(v1alpha2.Module))
+		assert.True(suite.T(), apierrors.IsNotFound(err), "a module the repository scan has not reached has no object")
+		assert.Empty(suite.T(), suite.releases().Items, "a module nothing enabled fetches no release")
+	})
+
+	suite.Run("a single repository offers the module", func() {
+		suite.setupTestControllerRaw(firstSource + packageInFirst)
+		scan("available")
+
+		module := suite.module("available")
+		assert.Equal(suite.T(), "test-source-1", module.Spec.PackageRepositoryName)
+		assert.Empty(suite.T(), module.Spec.PackageVersion)
+		assert.Equal(suite.T(), "Stable", module.Spec.ReleaseChannel, "the channel of the embedded policy")
+		assert.Equal(suite.T(), v1alpha1.ModulePhaseAvailable, module.Status.Phase)
+		assert.Equal(suite.T(), v1alpha1.ModuleReasonNotInstalled, conditionReason(module, v1alpha1.ModuleConditionIsReady))
+		assert.True(suite.T(), module.IsCondition(v1alpha1.ModuleConditionEnabledByModuleManager, "False"))
+		assert.Empty(suite.T(), suite.releases().Items, "a module nothing enabled fetches no release")
+	})
+
+	suite.Run("several repositories offer the module and the config picks none", func() {
+		suite.setupTestControllerRaw(firstSource + secondSource + packageInBoth + `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: available
+spec:
+  enabled: true
+`)
+		scan("available")
+
+		module := suite.module("available")
+		assert.Empty(suite.T(), module.Spec.PackageRepositoryName, "no repository is picked")
+		assert.Equal(suite.T(), v1alpha1.ModulePhaseConflict, module.Status.Phase)
+		assert.Equal(suite.T(), v1alpha1.ModuleReasonConflict, conditionReason(module, v1alpha1.ModuleConditionIsReady))
+		assert.Empty(suite.T(), suite.releases().Items, "nothing installs a module in conflict")
+	})
+
+	suite.Run("several repositories offer the module and the config picks one", func() {
+		suite.setupTestControllerRaw(firstSource + secondSource + packageInBoth + `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: available
+spec:
+  enabled: true
+  source: test-source-2
+`)
+		scan("available")
+
+		module := suite.module("available")
+		assert.Equal(suite.T(), "test-source-2", module.Spec.PackageRepositoryName)
+		assert.Equal(suite.T(), v1alpha1.ModulePhaseAvailable, module.Status.Phase)
+		assert.Empty(suite.T(), suite.releases().Items, "the other source installs the module")
+	})
+
+	suite.Run("an enabled module fetches its first release", func() {
+		suite.setupTestControllerRaw(firstSource + packageInFirst + `
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: available
+spec:
+  enabled: true
+`)
+		scan("available")
+
+		module := suite.module("available")
+		assert.Equal(suite.T(), "test-source-1", module.Spec.PackageRepositoryName)
+		assert.Empty(suite.T(), module.Spec.PackageVersion, "the deploy fills the version")
+		assert.Equal(suite.T(), v1alpha1.ModulePhaseDownloading, module.Status.Phase)
+		assert.NotEmpty(suite.T(), suite.releases().Items)
+	})
+
+	suite.Run("an installed module keeps its placement when another repository offers it", func() {
+		suite.setupTestControllerRaw(firstSource + packageInFirst + `
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: available
+spec:
+  packageRepositoryName: test-source-2
+  packageVersion: v1.0.0
+  releaseChannel: Alpha
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: available
+spec:
+  enabled: true
+`)
+		scan("available")
+
+		module := suite.module("available")
+		assert.Equal(suite.T(), "test-source-2", module.Spec.PackageRepositoryName)
+		assert.Equal(suite.T(), "v1.0.0", module.Spec.PackageVersion)
+		assert.Equal(suite.T(), "Alpha", module.Spec.ReleaseChannel)
+		assert.Empty(suite.T(), module.Status.Phase, "the not-installed state belongs to a module nothing installed")
+		assert.Empty(suite.T(), suite.releases().Items, "the module comes from the other source")
+	})
+}
+
+// A source that stops listing a module, or goes away, re-places the module's object by the
+// repositories that still offer it; the object of a module nothing installed and no repository
+// offers goes.
+func (suite *ControllerTestSuite) TestAvailableCleanup() {
+	const sources = `
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 912e02634dd8b7222cc42906e35f1e79
+  name: test-source-1
+  finalizers:
+  - modules.deckhouse.io/module-exists
+spec:
+  scanInterval: 6h30m
+  registry:
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+status:
+  modules:
+  - name: gone
+  - name: shared
+  - name: installed
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleSource
+metadata:
+  annotations:
+    modules.deckhouse.io/registry-spec-checksum: 912e02634dd8b7222cc42906e35f1e79
+  name: test-source-2
+spec:
+  scanInterval: 6h30m
+  registry:
+    dockerCfg: YXNiCg==
+    repo: dev-registry.deckhouse.io/deckhouse/modules
+    scheme: HTTPS
+status:
+  modules:
+  - name: shared
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: gone
+spec:
+  packageRepositoryName: test-source-1
+  releaseChannel: Stable
+status:
+  phase: Available
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: shared
+spec:
+  releaseChannel: Stable
+status:
+  phase: Available
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: Module
+metadata:
+  name: installed
+spec:
+  packageRepositoryName: test-source-1
+  packageVersion: v1.0.0
+  releaseChannel: Stable
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
+metadata:
+  name: gone
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
+metadata:
+  name: shared
+status:
+  availableRepositories:
+    - test-source-2
+`
+
+	assertCleaned := func() {
+		err := suite.Client().Get(context.TODO(), types.NamespacedName{Name: "gone"}, new(v1alpha2.Module))
+		assert.True(suite.T(), apierrors.IsNotFound(err), "no repository offers the module any more")
+
+		shared := suite.module("shared")
+		assert.Equal(suite.T(), "test-source-2", shared.Spec.PackageRepositoryName, "the remaining repository places the module")
+		assert.Equal(suite.T(), v1alpha1.ModulePhaseAvailable, shared.Status.Phase)
+
+		installed := suite.module("installed")
+		assert.Equal(suite.T(), "test-source-1", installed.Spec.PackageRepositoryName, "an installed module is not touched")
+		assert.Equal(suite.T(), "v1.0.0", installed.Spec.PackageVersion)
+	}
+
+	suite.Run("the source stops offering the modules", func() {
+		suite.setupTestControllerRaw(sources)
+
+		dc := newMockedContainerWithData(suite.T(), "v1.2.3", []string{}, []string{})
+		suite.r.dc = dc
+		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource("test-source-1"))
+		require.NoError(suite.T(), err)
+
+		assertCleaned()
+	})
+
+	suite.Run("the source is deleted", func() {
+		suite.setupTestControllerRaw(sources)
+
+		_, err := suite.r.deleteModuleSource(context.TODO(), suite.moduleSource("test-source-1"))
+		require.NoError(suite.T(), err)
+
+		assertCleaned()
+		assert.Empty(suite.T(), suite.moduleSource("test-source-1").Finalizers)
+	})
+}
+
+func (suite *ControllerTestSuite) module(name string) *v1alpha2.Module {
+	module := new(v1alpha2.Module)
+	require.NoError(suite.T(), suite.Client().Get(context.TODO(), types.NamespacedName{Name: name}, module))
+
+	return module
+}
+
+func (suite *ControllerTestSuite) releases() *v1alpha1.ModuleReleaseList {
+	releases := new(v1alpha1.ModuleReleaseList)
+	require.NoError(suite.T(), suite.Client().List(context.TODO(), releases))
+
+	return releases
+}
+
+func conditionReason(module *v1alpha2.Module, condType string) string {
+	for _, cond := range module.Status.Conditions {
+		if cond.Type == condType {
+			return cond.Reason
+		}
+	}
+
+	return ""
+}
+
 func (suite *ControllerTestSuite) moduleSource(name string) *v1alpha1.ModuleSource {
 	source := new(v1alpha1.ModuleSource)
 	err := suite.Client().Get(context.TODO(), types.NamespacedName{Name: name}, source)
@@ -663,394 +978,6 @@ accessibility:
 	}, nil)
 
 	return dc
-}
-
-// TestUpdateModulePropertiesFromRegistry tests that modules in Phase: Available
-// get their properties updated from registry when new version with different metadata appears.
-//
-// Scenario:
-// 1. Module exists with Phase: Available, Stage: Experimental
-// 2. New version in registry has Stage: Stable
-// 3. After processModules, Module.Properties.Stage should be updated to Stable
-func (suite *ControllerTestSuite) TestUpdateModulePropertiesFromRegistry() {
-	suite.Run("available module updates all properties from registry", func() {
-		// Initial state: module with Phase: Available and old properties
-		initialManifest := `
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleSource
-metadata:
-  annotations:
-    modules.deckhouse.io/registry-spec-checksum: 912e02634dd8b7222cc42906e35f1e79
-    modules.deckhouse.io/default-source: "true"
-  name: test-source
-spec:
-  registry:
-    dockerCfg: YXNiCg==
-    repo: dev-registry.deckhouse.io/deckhouse/modules
-    scheme: HTTPS
----
-apiVersion: deckhouse.io/v1alpha1
-kind: Module
-metadata:
-  name: testmodule
-properties:
-  source: test-source
-  stage: Experimental
-  weight: 900
-  namespace: d8-testmodule-old
-  version: v1.0.0
-  critical: false
-  subsystems:
-    - old-subsystem
-  exclusiveGroup: old-group
-  availableSources:
-    - test-source
-status:
-  phase: Available
-  conditions:
-    - type: EnabledByModuleConfig
-      status: "False"
-`
-		// Mock registry to return new version with ALL properties changed
-		dc := newMockedContainerWithModuleDefinition(suite.T(),
-			"v1.1.0",
-			[]string{"testmodule"},
-			[]string{},
-			map[string]moduleDefinitionConfig{
-				"testmodule": {
-					stage:          "Stable",
-					weight:         850,
-					namespace:      "d8-testmodule-new",
-					critical:       true,
-					subsystems:     []string{"security", "monitoring"},
-					exclusiveGroup: "new-exclusive-group",
-					requirements: &v1alpha1.ModuleRequirements{
-						ModulePlatformRequirements: v1alpha1.ModulePlatformRequirements{
-							Deckhouse:  ">= 1.60",
-							Kubernetes: ">= 1.28",
-						},
-					},
-					disableOptions: &v1alpha1.ModuleDisableOptions{
-						Confirmation: true,
-						Message:      "This module is critical for cluster operation",
-					},
-					accessibility: map[string]struct {
-						available        bool
-						enabledInBundles []string
-					}{
-						"fe": {
-							available:        true,
-							enabledInBundles: []string{"Default", "Managed"},
-						},
-					},
-				},
-			},
-		)
-
-		suite.setupTestControllerRaw(initialManifest, withDependencyContainer(dc))
-
-		// Execute
-		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource("test-source"))
-		require.NoError(suite.T(), err)
-
-		// Verify: ALL module properties should be updated from registry
-		module := suite.module("testmodule")
-
-		// Properties from updateModulePropertiesFromDefinition:
-		// props.Stage = def.Stage
-		assert.Equal(suite.T(), "Stable", module.Properties.Stage, "Stage should be updated")
-
-		// props.Weight = def.Weight
-		assert.Equal(suite.T(), uint32(850), module.Properties.Weight, "Weight should be updated")
-
-		// props.Critical = def.Critical
-		assert.Equal(suite.T(), true, module.Properties.Critical, "Critical should be updated")
-
-		// props.Namespace = def.Namespace
-		assert.Equal(suite.T(), "d8-testmodule-new", module.Properties.Namespace, "Namespace should be updated")
-
-		// props.Subsystems = def.Subsystems
-		assert.Equal(suite.T(), []string{"security", "monitoring"}, module.Properties.Subsystems, "Subsystems should be updated")
-
-		// props.ExclusiveGroup = def.ExclusiveGroup
-		assert.Equal(suite.T(), "new-exclusive-group", module.Properties.ExclusiveGroup, "ExclusiveGroup should be updated")
-
-		// props.Requirements = def.Requirements
-		require.NotNil(suite.T(), module.Properties.Requirements, "Requirements should not be nil")
-		assert.Equal(suite.T(), ">= 1.60", module.Properties.Requirements.Deckhouse, "Requirements.Deckhouse should be updated")
-		assert.Equal(suite.T(), ">= 1.28", module.Properties.Requirements.Kubernetes, "Requirements.Kubernetes should be updated")
-
-		// props.DisableOptions = def.DisableOptions
-		require.NotNil(suite.T(), module.Properties.DisableOptions, "DisableOptions should not be nil")
-		assert.Equal(suite.T(), true, module.Properties.DisableOptions.Confirmation, "DisableOptions.Confirmation should be updated")
-		assert.Equal(suite.T(), "This module is critical for cluster operation", module.Properties.DisableOptions.Message, "DisableOptions.Message should be updated")
-
-		// props.Accessibility = def.Accessibility.ToV1Alpha1()
-		require.NotNil(suite.T(), module.Properties.Accessibility, "Accessibility should not be nil")
-		require.Contains(suite.T(), module.Properties.Accessibility.Editions, "fe", "Accessibility should contain 'fe' edition")
-		assert.Equal(suite.T(), true, module.Properties.Accessibility.Editions["fe"].Available, "Accessibility.Editions[fe].Available should be true")
-		assert.Equal(suite.T(), []string{"Default", "Managed"}, module.Properties.Accessibility.Editions["fe"].EnabledInBundles, "Accessibility.Editions[fe].EnabledInBundles should be updated")
-
-		// props.Version = moduleVersion
-		assert.Equal(suite.T(), "v1.1.0", module.Properties.Version, "Version should be updated")
-	})
-
-	suite.Run("non-available module does not update properties from registry", func() {
-		// Initial state: module with Phase: Ready (installed) - properties should NOT be updated
-		initialManifest := `
-apiVersion: deckhouse.io/v1alpha1
-kind: ModuleSource
-metadata:
-  annotations:
-    modules.deckhouse.io/registry-spec-checksum: 912e02634dd8b7222cc42906e35f1e79
-    modules.deckhouse.io/default-source: "true"
-  name: test-source
-spec:
-  registry:
-    dockerCfg: YXNiCg==
-    repo: dev-registry.deckhouse.io/deckhouse/modules
-    scheme: HTTPS
----
-apiVersion: deckhouse.io/v1alpha1
-kind: Module
-metadata:
-  name: installedmodule
-properties:
-  source: test-source
-  stage: Experimental
-  weight: 900
-  namespace: d8-installedmodule
-  version: v1.0.0
-  critical: false
-  subsystems:
-    - old-subsystem
-  exclusiveGroup: old-group
-  availableSources:
-    - test-source
-status:
-  phase: Ready
-  conditions:
-    - type: EnabledByModuleConfig
-      status: "True"
-    - type: EnabledByModuleManager
-      status: "True"
-`
-		// Mock registry to return new version with ALL properties changed
-		dc := newMockedContainerWithModuleDefinition(suite.T(),
-			"v1.1.0",
-			[]string{"installedmodule"},
-			[]string{},
-			map[string]moduleDefinitionConfig{
-				"installedmodule": {
-					stage:          "Stable",
-					weight:         850,
-					namespace:      "d8-installedmodule-new",
-					critical:       true,
-					subsystems:     []string{"security", "monitoring"},
-					exclusiveGroup: "new-exclusive-group",
-					requirements: &v1alpha1.ModuleRequirements{
-						ModulePlatformRequirements: v1alpha1.ModulePlatformRequirements{
-							Deckhouse:  ">= 1.60",
-							Kubernetes: ">= 1.28",
-						},
-					},
-					disableOptions: &v1alpha1.ModuleDisableOptions{
-						Confirmation: true,
-						Message:      "This module is critical",
-					},
-					accessibility: map[string]struct {
-						available        bool
-						enabledInBundles []string
-					}{
-						"fe": {
-							available:        true,
-							enabledInBundles: []string{"Default"},
-						},
-					},
-				},
-			},
-		)
-
-		suite.setupTestControllerRaw(initialManifest, withDependencyContainer(dc))
-
-		// Execute
-		_, err := suite.r.handleModuleSource(context.TODO(), suite.moduleSource("test-source"))
-		require.NoError(suite.T(), err)
-
-		// Verify: ALL module properties should NOT be updated (Phase != Available)
-		module := suite.module("installedmodule")
-
-		// All properties should remain unchanged:
-		assert.Equal(suite.T(), "Experimental", module.Properties.Stage, "Stage should NOT be updated for installed module")
-		assert.Equal(suite.T(), uint32(900), module.Properties.Weight, "Weight should NOT be updated for installed module")
-		assert.Equal(suite.T(), false, module.Properties.Critical, "Critical should NOT be updated for installed module")
-		assert.Equal(suite.T(), "d8-installedmodule", module.Properties.Namespace, "Namespace should NOT be updated for installed module")
-		assert.Equal(suite.T(), []string{"old-subsystem"}, module.Properties.Subsystems, "Subsystems should NOT be updated for installed module")
-		assert.Equal(suite.T(), "old-group", module.Properties.ExclusiveGroup, "ExclusiveGroup should NOT be updated for installed module")
-		assert.Nil(suite.T(), module.Properties.Requirements, "Requirements should remain nil for installed module")
-		assert.Nil(suite.T(), module.Properties.DisableOptions, "DisableOptions should remain nil for installed module")
-		assert.Nil(suite.T(), module.Properties.Accessibility, "Accessibility should remain nil for installed module")
-		assert.Equal(suite.T(), "v1.0.0", module.Properties.Version, "Version should NOT be updated for installed module")
-	})
-}
-
-// moduleDefinitionConfig holds configuration for mocking module definition.
-// All fields correspond to properties updated in updateModulePropertiesFromDefinition.
-type moduleDefinitionConfig struct {
-	stage          string
-	weight         uint32
-	namespace      string
-	critical       bool
-	subsystems     []string
-	exclusiveGroup string
-	requirements   *v1alpha1.ModuleRequirements
-	disableOptions *v1alpha1.ModuleDisableOptions
-	accessibility  map[string]struct {
-		available        bool
-		enabledInBundles []string
-	}
-}
-
-// newMockedContainerWithModuleDefinition creates a mocked container that returns
-// specific module definitions for each module
-func newMockedContainerWithModuleDefinition(
-	t minimock.Tester,
-	versionInChannel string,
-	modules, tags []string,
-	definitions map[string]moduleDefinitionConfig,
-) *dependency.MockedContainer {
-	dc := dependency.NewMockedContainer()
-
-	dc.CRClientMap = map[string]cr.Client{
-		"dev-registry.deckhouse.io/deckhouse/modules": cr.NewClientMock(t).ListTagsMock.Return(modules, nil),
-	}
-
-	for _, module := range modules {
-		moduleVersionsMock := cr.NewClientMock(t)
-
-		if len(tags) > 0 {
-			dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module] = moduleVersionsMock.ListTagsMock.Optional().Return(tags, nil)
-		}
-
-		def, ok := definitions[module]
-		if !ok {
-			def = moduleDefinitionConfig{
-				stage:     "General Availability",
-				weight:    900,
-				namespace: "d8-" + module,
-				critical:  false,
-			}
-		}
-
-		// Capture def for closure
-		moduleDef := def
-		moduleName := module
-
-		dc.CRClientMap["dev-registry.deckhouse.io/deckhouse/modules/"+module+"/release"] = moduleVersionsMock.ImageMock.Optional().Set(func(_ context.Context, imageTag string) (crv1.Image, error) {
-			_, err := semver.NewVersion(imageTag)
-			if err != nil {
-				imageTag = versionInChannel
-			}
-
-			moduleYaml := buildModuleYaml(moduleName, moduleDef)
-
-			return &crfake.FakeImage{
-				ManifestStub: manifestStub,
-				LayersStub: func() ([]crv1.Layer, error) {
-					return []crv1.Layer{
-						&utils.FakeLayer{},
-						&utils.FakeLayer{FilesContent: map[string]string{
-							"module.yaml":  moduleYaml,
-							"version.json": `{"version": "` + imageTag + `"}`,
-						}},
-					}, nil
-				},
-				DigestStub: func() (crv1.Hash, error) {
-					return crv1.Hash{Algorithm: "sha256", Hex: "abc123"}, nil
-				},
-			}, nil
-		})
-	}
-
-	dc.CRClient.ListTagsMock.Return(modules, nil)
-
-	dc.CRClient.ImageMock.Return(&crfake.FakeImage{
-		ManifestStub: manifestStub,
-		LayersStub: func() ([]crv1.Layer, error) {
-			return []crv1.Layer{&utils.FakeLayer{}, &utils.FakeLayer{FilesContent: map[string]string{"version.json": `{"version": "` + versionInChannel + `"}`}}}, nil
-		},
-		DigestStub: func() (crv1.Hash, error) {
-			return crv1.Hash{Algorithm: "sha256", Hex: "abc123"}, nil
-		},
-	}, nil)
-
-	return dc
-}
-
-// module helper to get module by name
-func (suite *ControllerTestSuite) module(name string) *v1alpha1.Module {
-	module := new(v1alpha1.Module)
-	err := suite.Client().Get(context.TODO(), types.NamespacedName{Name: name}, module)
-	require.NoError(suite.T(), err)
-
-	return module
-}
-
-// buildModuleYaml generates module.yaml content from moduleDefinitionConfig
-func buildModuleYaml(moduleName string, def moduleDefinitionConfig) string {
-	var sb strings.Builder
-
-	sb.WriteString(fmt.Sprintf("name: %s\n", moduleName))
-	sb.WriteString(fmt.Sprintf("weight: %d\n", def.weight))
-	sb.WriteString(fmt.Sprintf("stage: \"%s\"\n", def.stage))
-	sb.WriteString(fmt.Sprintf("namespace: %s\n", def.namespace))
-	sb.WriteString(fmt.Sprintf("critical: %t\n", def.critical))
-
-	if len(def.subsystems) > 0 {
-		sb.WriteString("subsystems:\n")
-		for _, s := range def.subsystems {
-			sb.WriteString(fmt.Sprintf("  - %s\n", s))
-		}
-	}
-
-	if def.exclusiveGroup != "" {
-		sb.WriteString(fmt.Sprintf("exclusiveGroup: %s\n", def.exclusiveGroup))
-	}
-
-	if def.requirements != nil {
-		sb.WriteString("requirements:\n")
-		if def.requirements.Deckhouse != "" {
-			sb.WriteString(fmt.Sprintf("  deckhouse: \"%s\"\n", def.requirements.Deckhouse))
-		}
-		if def.requirements.Kubernetes != "" {
-			sb.WriteString(fmt.Sprintf("  kubernetes: \"%s\"\n", def.requirements.Kubernetes))
-		}
-	}
-
-	if def.disableOptions != nil {
-		sb.WriteString("disable:\n")
-		sb.WriteString(fmt.Sprintf("  confirmation: %t\n", def.disableOptions.Confirmation))
-		if def.disableOptions.Message != "" {
-			sb.WriteString(fmt.Sprintf("  message: \"%s\"\n", def.disableOptions.Message))
-		}
-	}
-
-	if def.accessibility != nil {
-		sb.WriteString("accessibility:\n")
-		sb.WriteString("  editions:\n")
-		for editionName, edition := range def.accessibility {
-			sb.WriteString(fmt.Sprintf("    %s:\n", editionName))
-			sb.WriteString(fmt.Sprintf("      available: %t\n", edition.available))
-			if len(edition.enabledInBundles) > 0 {
-				sb.WriteString("      enabledInBundles:\n")
-				for _, bundle := range edition.enabledInBundles {
-					sb.WriteString(fmt.Sprintf("        - %s\n", bundle))
-				}
-			}
-		}
-	}
-
-	return sb.String()
 }
 
 func (suite *ControllerTestSuite) TestFilterInvalidModuleNames() {

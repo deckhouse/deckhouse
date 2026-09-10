@@ -38,6 +38,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	deckhousev1alpha1 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	deckhousev1alpha2 "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	kclient "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/client"
 )
 
@@ -459,24 +460,32 @@ func Test_moduleEnabled(t *testing.T) {
 		{
 			name: "Module exists and enabled",
 			module: toUnstructured(fmt.Sprintf(`
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: registry
+spec:
+  packageRepositoryName: embedded
+  packageVersion: v1.80.0
 status:
   conditions:
   - type: %q
     status: "True"
+    reason: Enabled
+    lastTransitionTime: "2024-01-01T00:00:00Z"
 `, deckhousev1alpha1.ModuleConditionEnabledByModuleManager)),
 			expectedEnable: true,
 		},
 		{
 			name: "Module exists and disabled",
 			module: toUnstructured(`
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: registry
+spec:
+  packageRepositoryName: embedded
+  packageVersion: v1.80.0
 status:
   conditions: []
 `),
@@ -492,7 +501,7 @@ status:
 			if tt.module != nil {
 				_, err := kubeCl.
 					Dynamic().
-					Resource(deckhousev1alpha1.ModuleGVR).
+					Resource(deckhousev1alpha2.ModuleGVR).
 					Namespace("").
 					Create(ctx, tt.module, metav1.CreateOptions{})
 				require.NoError(t, err, "failed to create test module")

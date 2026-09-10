@@ -29,19 +29,20 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/validation"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
 // syncModulePackageVersions ensures a version object for every module package
 // the old stack carries: embedded modules and the global one come out complete
-// with the disk metadata and schemas, deployed and pending releases become
-// draft stubs.
+// with the disk metadata and schemas, deployed and pending releases become drafts.
 func (s *syncer) syncModulePackageVersions(ctx context.Context) error {
-	if err := s.syncVersionsFromImage(ctx); err != nil {
+	if err := s.syncModulePackageVersionsFromImage(ctx); err != nil {
 		return err
 	}
 
@@ -49,12 +50,12 @@ func (s *syncer) syncModulePackageVersions(ctx context.Context) error {
 		return err
 	}
 
-	return s.syncVersionsFromReleases(ctx)
+	return s.syncModulePackageVersionsFromReleases(ctx)
 }
 
-// syncVersionsFromImage walks the embedded modules dir and ensures a complete
+// syncModulePackageVersionsFromImage walks the embedded modules dir and ensures a complete
 // version for every module the running image ships.
-func (s *syncer) syncVersionsFromImage(ctx context.Context) error {
+func (s *syncer) syncModulePackageVersionsFromImage(ctx context.Context) error {
 	version := app.EmbeddedPackageVersion(s.deckhouseVersion)
 
 	entries, err := os.ReadDir(s.embeddedModulesDir)
@@ -67,7 +68,7 @@ func (s *syncer) syncVersionsFromImage(ctx context.Context) error {
 			continue
 		}
 
-		if err := s.ensureEmbeddedVersion(ctx, entry.Name(), version); err != nil {
+		if err := s.ensureEmbeddedModulePackageVersion(ctx, entry.Name(), version); err != nil {
 			return err
 		}
 	}
@@ -75,10 +76,10 @@ func (s *syncer) syncVersionsFromImage(ctx context.Context) error {
 	return nil
 }
 
-// ensureEmbeddedVersion ensures the complete version of one module shipped in
+// ensureEmbeddedModulePackageVersion ensures the complete version of one module shipped in
 // the image; the metadata and the settings/values schemas come from the
 // module files on disk.
-func (s *syncer) ensureEmbeddedVersion(ctx context.Context, dirName, version string) error {
+func (s *syncer) ensureEmbeddedModulePackageVersion(ctx context.Context, dirName, version string) error {
 	moduleDir := filepath.Join(s.embeddedModulesDir, dirName)
 
 	def, err := loader.LoadEmbeddedDefinition(moduleDir)
@@ -95,24 +96,14 @@ func (s *syncer) ensureEmbeddedVersion(ctx context.Context, dirName, version str
 	}
 
 	// no repository offers an embedded package, so no scan ever creates its
-	// catalog entry; the sync does
+	// package object; the sync does
 	if err := s.ensureModulePackageExists(ctx, def.Name); err != nil {
 		return err
 	}
 
-	meta := def.ConvertToStatusMetadata()
-
-	settingsRaw, valuesRaw, err := loader.LoadEmbeddedSchemas(moduleDir)
+	meta, schemas, err := versionFromDir(moduleDir)
 	if err != nil {
 		s.logger.Warn("module dir holds no readable schemas, skip its package version",
-			slog.String("dir", moduleDir), log.Err(err))
-
-		return nil
-	}
-
-	schemas, err := v1alpha1.ParsePackageSchemas(settingsRaw, valuesRaw)
-	if err != nil {
-		s.logger.Warn("module schemas do not parse, skip its package version",
 			slog.String("dir", moduleDir), log.Err(err))
 
 		return nil
@@ -124,7 +115,82 @@ func (s *syncer) ensureEmbeddedVersion(ctx context.Context, dirName, version str
 		PackageVersion:        version,
 	}
 
-	return s.ensureFilled(ctx, name, spec, meta, schemas)
+	return s.completeEmbeddedModulePackageVersion(ctx, name, spec, meta, schemas)
+}
+
+// versionFromDir reads what a version carries from the module files: the
+// definition as the metadata and the settings/values schemas.
+func versionFromDir(moduleDir string) (*v1alpha1.ModulePackageVersionStatusMetadata, *v1alpha1.PackageVersionStatusSchemas, error) {
+	def, err := loader.LoadEmbeddedDefinition(moduleDir)
+	if err != nil {
+		return nil, nil, fmt.Errorf("load definition: %w", err)
+	}
+
+	settingsRaw, valuesRaw, err := loader.LoadEmbeddedSchemas(moduleDir)
+	if err != nil {
+		return nil, nil, fmt.Errorf("load schemas: %w", err)
+	}
+
+	schemas, err := v1alpha1.ParsePackageSchemas(settingsRaw, valuesRaw)
+	if err != nil {
+		return nil, nil, fmt.Errorf("parse schemas: %w", err)
+	}
+
+	return def.ConvertToStatusMetadata(), schemas, nil
+}
+
+// EnsureDownloadedModulePackageVersion completes the version of a module installed from a
+// repository with the module files in moduleDir: the version is created as a
+// draft when missing, its metadata and schemas are filled from the files and
+// the draft label is dropped. A version that is already complete is final:
+// the repository scan described it, and the disk must not overwrite that. The
+// callers run where the files are certainly on disk, the module loader after a
+// restore and the release controller at deploy, so the metadata reaches the
+// readers at once, without waiting for the version controller to pull the image.
+func EnsureDownloadedModulePackageVersion(ctx context.Context, reader client.Reader, writer client.Client, dc dependency.Container, spec v1alpha1.ModulePackageVersionSpec, moduleDir string, logger *log.Logger) error {
+	return newSyncer(reader, writer, dc, "", "", "", "", logger).completeDownloadedModulePackageVersion(ctx, spec, moduleDir)
+}
+
+// completeDownloadedModulePackageVersion fills the MPV named by the spec from the module files
+// unless it is already complete.
+func (s *syncer) completeDownloadedModulePackageVersion(ctx context.Context, spec v1alpha1.ModulePackageVersionSpec, moduleDir string) error {
+	name := v1alpha1.MakeModulePackageVersionName(spec.PackageRepositoryName, spec.PackageName, spec.PackageVersion)
+	if !s.validName(name, spec.PackageName) {
+		return nil
+	}
+
+	mpv := new(v1alpha1.ModulePackageVersion)
+
+	err := s.reader.Get(ctx, client.ObjectKey{Name: name}, mpv)
+	if err != nil && !apierrors.IsNotFound(err) {
+		return fmt.Errorf("get module package version '%s': %w", name, err)
+	}
+
+	missing := apierrors.IsNotFound(err)
+	if !missing && !mpv.IsDraft() {
+		return nil
+	}
+
+	meta, schemas, err := versionFromDir(moduleDir)
+	if err != nil {
+		s.logger.Warn("module dir holds no readable package files, leave its package version as is",
+			slog.String("dir", moduleDir), slog.String("name", name), log.Err(err))
+
+		return nil
+	}
+
+	if missing {
+		mpv, err = s.createModulePackageVersionDraft(ctx, name, spec)
+		if err != nil {
+			return err
+		}
+	}
+
+	if err := s.fillMetadata(ctx, mpv, meta, schemas); err != nil {
+		return err
+	}
+
+	return s.removeDraft(ctx, mpv)
 }
 
 // syncGlobalVersion ensures the complete version of the global module, which
@@ -174,11 +240,11 @@ func (s *syncer) syncGlobalVersion(ctx context.Context) error {
 		PackageVersion:        version,
 	}
 
-	return s.ensureFilled(ctx, name, spec, new(v1alpha1.ModulePackageVersionStatusMetadata), schemas)
+	return s.completeEmbeddedModulePackageVersion(ctx, name, spec, new(v1alpha1.ModulePackageVersionStatusMetadata), schemas)
 }
 
-// syncVersionsFromReleases ensures a draft stub for every deployed or pending release.
-func (s *syncer) syncVersionsFromReleases(ctx context.Context) error {
+// syncModulePackageVersionsFromReleases ensures a draft for every deployed or pending release.
+func (s *syncer) syncModulePackageVersionsFromReleases(ctx context.Context) error {
 	releases := new(v1alpha1.ModuleReleaseList)
 	if err := s.reader.List(ctx, releases); err != nil {
 		return fmt.Errorf("list module releases: %w", err)
@@ -196,7 +262,7 @@ func (s *syncer) syncVersionsFromReleases(ctx context.Context) error {
 			continue
 		}
 
-		if err := s.ensureStub(ctx, name, spec); err != nil {
+		if err := s.ensureModulePackageVersionDraft(ctx, name, spec); err != nil {
 			return err
 		}
 	}
@@ -254,14 +320,14 @@ func (s *syncer) validName(name, moduleName string) bool {
 	return true
 }
 
-// ensureFilled converges the version to the disk content: created if missing,
+// completeEmbeddedModulePackageVersion converges the version to the disk content: created if missing,
 // the metadata and schemas brought to what the module files hold, no draft
 // label. One version name spans every rebuild of a release, so a complete
 // version whose status drifted from the disk is refreshed in place; a
-// matching one is left untouched. An existing draft, either a stub of an
+// matching one is left untouched. An existing draft, either one of an
 // older build or a leftover of an interrupted fill, is completed the same
 // way.
-func (s *syncer) ensureFilled(ctx context.Context, name string, spec v1alpha1.ModulePackageVersionSpec, meta *v1alpha1.ModulePackageVersionStatusMetadata, schemas *v1alpha1.PackageVersionStatusSchemas) error {
+func (s *syncer) completeEmbeddedModulePackageVersion(ctx context.Context, name string, spec v1alpha1.ModulePackageVersionSpec, meta *v1alpha1.ModulePackageVersionStatusMetadata, schemas *v1alpha1.PackageVersionStatusSchemas) error {
 	mpv := new(v1alpha1.ModulePackageVersion)
 
 	err := s.reader.Get(ctx, client.ObjectKey{Name: name}, mpv)
@@ -272,7 +338,7 @@ func (s *syncer) ensureFilled(ctx context.Context, name string, spec v1alpha1.Mo
 	if apierrors.IsNotFound(err) {
 		// the draft label holds until the metadata lands, so no observer can
 		// take a half-created version for a complete one
-		mpv, err = s.createStub(ctx, name, spec)
+		mpv, err = s.createModulePackageVersionDraft(ctx, name, spec)
 		if err != nil {
 			return err
 		}
@@ -297,9 +363,9 @@ func (s *syncer) ensureFilled(ctx context.Context, name string, spec v1alpha1.Mo
 	return s.removeDraft(ctx, mpv)
 }
 
-// ensureStub makes sure the version exists at least as a draft stub; any
+// ensureModulePackageVersionDraft makes sure the version exists at least as a draft; any
 // existing object, draft or complete, is left as is.
-func (s *syncer) ensureStub(ctx context.Context, name string, spec v1alpha1.ModulePackageVersionSpec) error {
+func (s *syncer) ensureModulePackageVersionDraft(ctx context.Context, name string, spec v1alpha1.ModulePackageVersionSpec) error {
 	err := s.reader.Get(ctx, client.ObjectKey{Name: name}, new(v1alpha1.ModulePackageVersion))
 	if err == nil {
 		return nil
@@ -309,16 +375,16 @@ func (s *syncer) ensureStub(ctx context.Context, name string, spec v1alpha1.Modu
 		return fmt.Errorf("get module package version '%s': %w", name, err)
 	}
 
-	if _, err := s.createStub(ctx, name, spec); err != nil {
+	if _, err := s.createModulePackageVersionDraft(ctx, name, spec); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-// createStub creates the version as a draft with the labels the repository
+// createModulePackageVersionDraft creates the version as a draft with the labels the repository
 // scan puts on the versions it creates itself.
-func (s *syncer) createStub(ctx context.Context, name string, spec v1alpha1.ModulePackageVersionSpec) (*v1alpha1.ModulePackageVersion, error) {
+func (s *syncer) createModulePackageVersionDraft(ctx context.Context, name string, spec v1alpha1.ModulePackageVersionSpec) (*v1alpha1.ModulePackageVersion, error) {
 	mpv := &v1alpha1.ModulePackageVersion{
 		TypeMeta: metav1.TypeMeta{
 			APIVersion: v1alpha1.ModulePackageVersionGVK.GroupVersion().String(),
@@ -377,10 +443,23 @@ func (s *syncer) fillMetadata(ctx context.Context, mpv *v1alpha1.ModulePackageVe
 	return nil
 }
 
-// removeDraft completes the version: without the draft label every observer may
-// treat the metadata as final.
+// removeDraft completes the version the way the version controller does after a
+// registry pull, so a version filled from disk is indistinguishable from one the
+// controller promoted:
+// - the finalizer routes a delete through the version controller
+// - the repository the spec names owns the version, when the repository exists
+// - without the draft label every observer may treat the metadata as final
 func (s *syncer) removeDraft(ctx context.Context, mpv *v1alpha1.ModulePackageVersion) error {
 	original := mpv.DeepCopy()
+
+	// The finalizer does not mean the version is in use. It only makes a delete
+	// wait for the version controller, which checks status.used: an unused
+	// version is released at once, a used one is held until its module lets go.
+	controllerutil.AddFinalizer(mpv, v1alpha1.ModulePackageVersionFinalizer)
+
+	if err := s.setRepositoryOwner(ctx, mpv); err != nil {
+		return err
+	}
 
 	delete(mpv.Labels, v1alpha1.ModulePackageVersionLabelDraft)
 
@@ -389,6 +468,34 @@ func (s *syncer) removeDraft(ctx context.Context, mpv *v1alpha1.ModulePackageVer
 	}
 
 	s.logger.Debug("module package version filled from disk", slog.String("name", mpv.Name))
+
+	return nil
+}
+
+// setRepositoryOwner makes the repository the version names its controller owner, so
+// the version goes when the repository goes. A version whose repository is not there
+// stays without an owner: an owner reference to a missing object would get the version
+// garbage-collected at once. The embedded repository stands for the image and never
+// has an object.
+func (s *syncer) setRepositoryOwner(ctx context.Context, mpv *v1alpha1.ModulePackageVersion) error {
+	if mpv.Spec.PackageRepositoryName == repositoryNameEmbedded {
+		return nil
+	}
+
+	repo := new(v1alpha1.PackageRepository)
+
+	err := s.reader.Get(ctx, client.ObjectKey{Name: mpv.Spec.PackageRepositoryName}, repo)
+	if apierrors.IsNotFound(err) {
+		return nil
+	}
+
+	if err != nil {
+		return fmt.Errorf("get package repository '%s': %w", mpv.Spec.PackageRepositoryName, err)
+	}
+
+	if err := controllerutil.SetControllerReference(repo, mpv, s.writer.Scheme()); err != nil {
+		return fmt.Errorf("set the owner of module package version '%s': %w", mpv.Name, err)
+	}
 
 	return nil
 }

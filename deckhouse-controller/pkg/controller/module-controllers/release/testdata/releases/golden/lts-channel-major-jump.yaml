@@ -66,18 +66,24 @@ status:
   pullDuration: 0s
   transitionTime: null
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   labels:
     modules.deckhouse.io/update-policy: test-lts
   name: testmodule
-  resourceVersion: "1000"
-properties: {}
+  resourceVersion: "1001"
+spec:
+  packageRepositoryName: test-source
+  packageVersion: v1.0.0
+  releaseChannel: Stable
 status:
   conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: ""
+    reason: Deployed
     status: "True"
     type: LastReleaseDeployed
+  lastAppliedConfiguration: null
   phase: Ready
+  tracking: null

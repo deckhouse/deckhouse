@@ -43,7 +43,8 @@ const (
 	ModulePackageVersionConditionReasonGetRegistryClientErr = "GetRegistryClientError"
 	ModulePackageVersionConditionReasonGetImageErr          = "GetImageError"
 
-	// Finalizer blocking deletion while any module still uses the version.
+	// Tell the MPV controller not to delete the MPV immediately but to check
+	// its status.used first: it says whether any module uses this version and can it be deleted.
 	ModulePackageVersionFinalizer = "modulepackageversion.deckhouse.io/used-by-module"
 )
 

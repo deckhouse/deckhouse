@@ -17,8 +17,6 @@ limitations under the License.
 package v1alpha1
 
 import (
-	"time"
-
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -71,6 +69,14 @@ const (
 	ModuleReasonInstalling                = "Installing"
 	ModuleReasonError                     = "Error"
 
+	// Reasons of the True and Unknown states. A v1alpha2 condition must carry a
+	// non-empty reason, so every state names one.
+	ModuleReasonEnabled    = "Enabled"
+	ModuleReasonReady      = "Ready"
+	ModuleReasonDeployed   = "Deployed"
+	ModuleReasonOverridden = "Overridden"
+	ModuleReasonUnknown    = "Unknown"
+
 	ModuleMessageBundle                    = "turned off by bundle"
 	ModuleMessageModuleConfig              = "turned off by module config"
 	ModuleMessageDynamicGlobalHookExtender = "turned off by global hook"
@@ -117,7 +123,6 @@ var _ runtime.Object = (*Module)(nil)
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Cluster
-// +kubebuilder:storageversion
 // +kubebuilder:printcolumn:name="Weight",type="integer",JSONPath=".properties.weight",priority=1,description="Module weight"
 // +kubebuilder:printcolumn:name="Stage",type="string",JSONPath=".properties.stage",description="Module stage"
 // +kubebuilder:printcolumn:name="Release channel",type="string",JSONPath=".properties.releaseChannel",priority=1,description="Release channel of the module."
@@ -143,15 +148,6 @@ type Module struct {
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Properties ModuleProperties `json:"properties,omitempty"`
-
-	// +Spec preserves the raw spec of newer API versions (for example, v1alpha2) so that
-	// +their fields are not pruned when an object is stored as this (storage) version.
-	// +Conversion strategy is None, so fields are not remapped between versions; this only
-	// +prevents data loss on round-trip. Consumers that need the newer fields must read the
-	// +object in its own version.
-	// +kubebuilder:pruning:PreserveUnknownFields
-	// +optional
-	Spec *runtime.RawExtension `json:"spec,omitempty"`
 
 	Status ModuleStatus `json:"status,omitempty"`
 }
@@ -254,205 +250,6 @@ type ModuleCondition struct {
 	LastProbeTime metav1.Time `json:"lastProbeTime,omitempty"`
 	// +Last time the condition transitioned from one status to another.
 	LastTransitionTime metav1.Time `json:"lastTransitionTime,omitempty"`
-}
-
-func (m *Module) IsEmbedded() bool {
-	return m.Properties.Source == ModuleSourceEmbedded
-}
-
-// IsEnabledByBundle checks if the module enabled in the specific edition and bundle
-func (m *Module) IsEnabledByBundle(editionName, bundleName string) bool {
-	if m.Properties.Accessibility == nil {
-		return false
-	}
-
-	access := m.Properties.Accessibility
-
-	if len(access.Editions) == 0 {
-		return false
-	}
-
-	// an explicit edition entry is authoritative: it fully defines the enabled
-	// bundles for the edition and does not fall back to the default settings
-	if edition, ok := access.Editions[editionName]; ok {
-		return isEnabledInBundle(edition.EnabledInBundles, bundleName)
-	}
-
-	// no edition entry — fall back to the default settings
-	defaultSettings, ok := access.Editions["_default"]
-	if !ok {
-		return false
-	}
-
-	return isEnabledInBundle(defaultSettings.EnabledInBundles, bundleName)
-}
-
-func isEnabledInBundle(bundles []string, requested string) bool {
-	for _, bundle := range bundles {
-		if bundle == requested {
-			return true
-		}
-	}
-
-	return false
-}
-
-func (m *Module) IsCondition(condName string, status corev1.ConditionStatus) bool {
-	for _, cond := range m.Status.Conditions {
-		if cond.Type == condName {
-			return cond.Status == status
-		}
-	}
-
-	return false
-}
-
-// +kubebuilder:object:generate=false
-type ConditionOption func(opts *ConditionSettings)
-
-func WithTimer(fn func() time.Time) func(opts *ConditionSettings) {
-	return func(opts *ConditionSettings) {
-		opts.Timer = fn
-	}
-}
-
-// +kubebuilder:object:generate=false
-type ConditionSettings struct {
-	Timer func() time.Time
-}
-
-func (m *Module) SetConditionTrue(condName string, opts ...ConditionOption) {
-	settings := &ConditionSettings{
-		Timer: time.Now,
-	}
-
-	for _, opt := range opts {
-		opt(settings)
-	}
-
-	for idx, cond := range m.Status.Conditions {
-		if cond.Type == condName {
-			m.Status.Conditions[idx].LastProbeTime = metav1.Time{Time: settings.Timer()}
-			if cond.Status != corev1.ConditionTrue {
-				m.Status.Conditions[idx].LastTransitionTime = metav1.Time{Time: settings.Timer()}
-				m.Status.Conditions[idx].Status = corev1.ConditionTrue
-			}
-			m.Status.Conditions[idx].Reason = ""
-			m.Status.Conditions[idx].Message = ""
-
-			return
-		}
-	}
-
-	m.Status.Conditions = append(m.Status.Conditions, ModuleCondition{
-		Type:               condName,
-		Status:             corev1.ConditionTrue,
-		LastProbeTime:      metav1.Time{Time: settings.Timer()},
-		LastTransitionTime: metav1.Time{Time: settings.Timer()},
-	})
-}
-
-func (m *Module) SetConditionFalse(condName, reason, message string, opts ...ConditionOption) {
-	settings := &ConditionSettings{
-		Timer: time.Now,
-	}
-
-	for _, opt := range opts {
-		opt(settings)
-	}
-
-	for idx, cond := range m.Status.Conditions {
-		if cond.Type == condName {
-			m.Status.Conditions[idx].LastProbeTime = metav1.Time{Time: settings.Timer()}
-			if cond.Status != corev1.ConditionFalse {
-				m.Status.Conditions[idx].LastTransitionTime = metav1.Time{Time: settings.Timer()}
-				m.Status.Conditions[idx].Status = corev1.ConditionFalse
-			}
-			if cond.Reason != reason {
-				m.Status.Conditions[idx].Reason = reason
-			}
-			if cond.Message != message {
-				m.Status.Conditions[idx].Message = message
-			}
-			return
-		}
-	}
-
-	m.Status.Conditions = append(m.Status.Conditions, ModuleCondition{
-		Type:               condName,
-		Status:             corev1.ConditionFalse,
-		Reason:             reason,
-		Message:            message,
-		LastProbeTime:      metav1.Time{Time: settings.Timer()},
-		LastTransitionTime: metav1.Time{Time: settings.Timer()},
-	})
-}
-
-func (m *Module) SetConditionUnknown(condName, reason, message string, opts ...ConditionOption) {
-	settings := &ConditionSettings{
-		Timer: time.Now,
-	}
-
-	for _, opt := range opts {
-		opt(settings)
-	}
-
-	for idx, cond := range m.Status.Conditions {
-		if cond.Type == condName {
-			m.Status.Conditions[idx].LastProbeTime = metav1.Time{Time: settings.Timer()}
-			if cond.Status != corev1.ConditionUnknown {
-				m.Status.Conditions[idx].LastTransitionTime = metav1.Time{Time: settings.Timer()}
-				m.Status.Conditions[idx].Status = corev1.ConditionUnknown
-			}
-			if cond.Reason != reason {
-				m.Status.Conditions[idx].Reason = reason
-			}
-			if cond.Message != message {
-				m.Status.Conditions[idx].Message = message
-			}
-			return
-		}
-	}
-
-	m.Status.Conditions = append(m.Status.Conditions, ModuleCondition{
-		Type:               condName,
-		Status:             corev1.ConditionUnknown,
-		Reason:             reason,
-		Message:            message,
-		LastProbeTime:      metav1.Time{Time: settings.Timer()},
-		LastTransitionTime: metav1.Time{Time: settings.Timer()},
-	})
-}
-
-func (m *Module) DisabledByModuleConfigMoreThan(timeout time.Duration) bool {
-	for _, cond := range m.Status.Conditions {
-		if cond.Type == ModuleConditionEnabledByModuleConfig && cond.Status == corev1.ConditionFalse {
-			return time.Since(cond.LastTransitionTime.Time) >= timeout
-		}
-	}
-
-	return false
-}
-
-func (m *Module) HasCondition(condName string) bool {
-	for _, cond := range m.Status.Conditions {
-		if cond.Type == condName {
-			return true
-		}
-	}
-	return false
-}
-
-func (m *Module) GetVersion() string {
-	return m.Properties.Version
-}
-
-func (m *Module) IsExperimental() bool {
-	return m.Properties.Stage == ExperimentalModuleStage
-}
-
-func (m *Module) IsDeprecated() bool {
-	return m.Properties.Stage == DeprecatedModuleStage
 }
 
 // +kubebuilder:object:root=true

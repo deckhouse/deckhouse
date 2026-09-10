@@ -1004,6 +1004,7 @@ type: Opaque
 
 	rec := &reconciler{
 		client:               suite.Suite.Client(),
+		reader:               suite.Suite.Client(),
 		downloadedModulesDir: d8env.GetDownloadedModulesDir(),
 		dependencyContainer:  dependency.NewDependencyContainer(),
 		log:                  logger,
@@ -1090,8 +1091,8 @@ func (suite *ReleaseControllerTestSuite) assembleInitObject(strObj string) clien
 		require.NoError(suite.T(), err)
 		obj = policy
 
-	case v1alpha1.ModuleGVK.Kind:
-		module := new(v1alpha1.Module)
+	case v1alpha2.ModuleGVK.Kind:
+		module := new(v1alpha2.Module)
 		err = yaml.Unmarshal(raw, module)
 		require.NoError(suite.T(), err)
 		obj = module
@@ -1135,7 +1136,7 @@ func (suite *ReleaseControllerTestSuite) fetchResults() []byte {
 		Kinds: []schema.GroupVersionKind{
 			v1alpha1.SchemeGroupVersion.WithKind("ModuleSource"),
 			v1alpha1.SchemeGroupVersion.WithKind("ModuleRelease"),
-			v1alpha1.SchemeGroupVersion.WithKind("Module"),
+			v1alpha2.SchemeGroupVersion.WithKind("Module"),
 			v1alpha1.SchemeGroupVersion.WithKind("ModuleDocumentation"),
 		},
 		ObjectNormalizers: []reconcilertest.ObjectNormalizer{stripDeletionTimestamp},

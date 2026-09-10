@@ -114,13 +114,17 @@ status:
   size: 0
   transitionTime: "2024-05-03T20:55:49Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: upmeter
+spec:
+  packageRepositoryName: foxtrot
+  packageVersion: v1.71.0
 status:
   conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
-    status: "True"
-    type: LastReleaseDeployed
+  - type: LastReleaseDeployed
+    status: 'True'
+    reason: Deployed
+    message: ''
+    lastTransitionTime: '2019-10-17T15:33:00Z'

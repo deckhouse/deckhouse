@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	"maps"
+	"slices"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/openapi"
 )
@@ -290,4 +291,27 @@ type PackageVersionCompatibilityRule struct {
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	MaxRollback int32 `json:"maxRollback,omitempty"`
+}
+
+// PackageLicensingDefaultEdition is the licensing entry that applies to every
+// edition without an entry of its own.
+const PackageLicensingDefaultEdition = "_default"
+
+// IsEnabledInBundle reports whether the edition enables the package in the bundle
+// by default. An explicit edition entry is authoritative and does not fall back
+// to the default one.
+func (l *PackageLicensing) IsEnabledInBundle(edition, bundle string) bool {
+	if l == nil || len(l.Editions) == 0 {
+		return false
+	}
+
+	license, ok := l.Editions[edition]
+	if !ok {
+		license, ok = l.Editions[PackageLicensingDefaultEdition]
+		if !ok {
+			return false
+		}
+	}
+
+	return slices.Contains(license.EnabledInBundles, bundle)
 }

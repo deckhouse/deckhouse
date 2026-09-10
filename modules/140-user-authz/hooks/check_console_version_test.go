@@ -25,7 +25,7 @@ import (
 
 var _ = Describe("user-authz :: hooks :: check_console_version ::", func() {
 	f := HookExecutionConfigInit(`{"userAuthz":{"internal":{}}}`, `{}`)
-	f.RegisterCRD("deckhouse.io", "v1alpha1", "Module", false)
+	f.RegisterCRD("deckhouse.io", "v1alpha2", "Module", false)
 
 	Context("Console module is not installed", func() {
 		BeforeEach(func() {
@@ -44,12 +44,12 @@ var _ = Describe("user-authz :: hooks :: check_console_version ::", func() {
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: console
-properties:
-  version: v1.43.2
+spec:
+  packageVersion: v1.43.2
 status:
   phase: Ready
 `))
@@ -67,12 +67,12 @@ status:
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: console
-properties:
-  version: v1.44.0
+spec:
+  packageVersion: v1.44.0
 status:
   phase: Ready
 `))
@@ -90,12 +90,12 @@ status:
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: console
-properties:
-  version: v1.45.1
+spec:
+  packageVersion: v1.45.1
 status:
   phase: Ready
 `))
@@ -113,11 +113,11 @@ status:
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: console
-properties: {}
+spec: {}
 status:
   phase: Ready
 `))
@@ -134,12 +134,12 @@ status:
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: console
-properties:
-  version: v1.43.0
+spec:
+  packageVersion: v1.43.0
 status:
   phase: Ready
 `))
@@ -155,12 +155,12 @@ status:
 			BeforeEach(func() {
 				f.BindingContexts.Set(f.KubeStateSet(`
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: console
-properties:
-  version: v1.44.0
+spec:
+  packageVersion: v1.44.0
 status:
   phase: Ready
 `))
@@ -178,12 +178,12 @@ status:
 		BeforeEach(func() {
 			f.BindingContexts.Set(f.KubeStateSet(`
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: console
-properties:
-  version: v1.43.0
+spec:
+  packageVersion: v1.43.0
 status:
   phase: Ready
 `))

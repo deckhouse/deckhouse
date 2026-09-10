@@ -31,6 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/controller/confighandler"
 	d8edition "github.com/deckhouse/deckhouse/deckhouse-controller/pkg/edition"
 	"github.com/deckhouse/deckhouse/go_lib/configtools/conversion"
@@ -56,13 +57,18 @@ func TestControllerTestSuite(t *testing.T) {
 func (suite *ControllerTestSuite) SetupSuite() {
 	suite.Init(reconcilertest.Config{
 		StatusSubresources: []client.Object{
-			&v1alpha1.Module{},
+			&v1alpha2.Module{},
 			&v1alpha1.ModuleConfig{},
 			&v1alpha1.ModuleRelease{},
+			&v1alpha1.ModuleSource{},
+		},
+		SeedStatusSubresources: []client.Object{
+			&v1alpha2.Module{},
+			&v1alpha1.ModuleSource{},
 		},
 		SnapshotKinds: []schema.GroupVersionKind{
 			v1alpha1.SchemeGroupVersion.WithKind("ModuleConfig"),
-			v1alpha1.SchemeGroupVersion.WithKind("Module"),
+			v1alpha2.SchemeGroupVersion.WithKind("Module"),
 			v1alpha1.SchemeGroupVersion.WithKind("ModuleRelease"),
 		},
 		ObjectNormalizers: []reconcilertest.ObjectNormalizer{clearModuleConditionTimes},
@@ -122,12 +128,11 @@ func (suite *ControllerTestSuite) buildReconciler() {
 // clearModuleConditionTimes drops timestamp fields from Module conditions to keep
 // golden snapshots stable.
 func clearModuleConditionTimes(obj client.Object) {
-	module, ok := obj.(*v1alpha1.Module)
+	module, ok := obj.(*v1alpha2.Module)
 	if !ok {
 		return
 	}
 	for i := range module.Status.Conditions {
-		module.Status.Conditions[i].LastProbeTime = metav1.Time{}
 		module.Status.Conditions[i].LastTransitionTime = metav1.Time{}
 	}
 }
@@ -160,8 +165,16 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("module conflict with multiple sources", func() {
 		suite.setupTestController("multiple-sources.yaml")
-		_, err := suite.r.handleModuleConfig(context.TODO(), suite.moduleConfig("test-module"))
+		res, err := suite.r.handleModuleConfig(context.TODO(), suite.moduleConfig("test-module"))
 		require.NoError(suite.T(), err)
+		assert.True(suite.T(), res.IsZero(), "an available module waits for its deploy without a requeue")
+	})
+
+	suite.Run("unknown module", func() {
+		suite.setupTestController("unknown-module.yaml")
+		res, err := suite.r.handleModuleConfig(context.TODO(), suite.moduleConfig("unknown-module"))
+		require.NoError(suite.T(), err)
+		assert.Equal(suite.T(), moduleNotFoundInterval, res.RequeueAfter)
 	})
 
 	suite.Run("embedded module", func() {
@@ -172,6 +185,36 @@ func (suite *ControllerTestSuite) TestCreateReconcile() {
 
 	suite.Run("disable with pending releases", func() {
 		suite.setupTestController("disable-with-releases.yaml")
+		_, err := suite.r.handleModuleConfig(context.TODO(), suite.moduleConfig("test-module"))
+		require.NoError(suite.T(), err)
+	})
+
+	// the config enables a module nothing installed and several sources offer, picking none:
+	// the config reports the conflict and the module is in the conflict state
+	suite.Run("available module in conflict with multiple repositories", func() {
+		suite.setupTestController("multiple-sources-available.yaml")
+		_, err := suite.r.handleModuleConfig(context.TODO(), suite.moduleConfig("test-module"))
+		require.NoError(suite.T(), err)
+	})
+
+	// the config enables a module nothing installed and a single source offers: the config
+	// fields are mirrored, the module stays available until its deploy
+	suite.Run("enable available module", func() {
+		suite.setupTestController("available-enable-single.yaml")
+		_, err := suite.r.handleModuleConfig(context.TODO(), suite.moduleConfig("test-module"))
+		require.NoError(suite.T(), err)
+	})
+
+	// the config disables a module nothing installed that was fetching its first release
+	suite.Run("disable available module", func() {
+		suite.setupTestController("available-disable.yaml")
+		_, err := suite.r.handleModuleConfig(context.TODO(), suite.moduleConfig("test-module"))
+		require.NoError(suite.T(), err)
+	})
+
+	// the config picks a source for a module in conflict: the module is available again
+	suite.Run("available module conflict resolved", func() {
+		suite.setupTestController("available-conflict-resolved.yaml")
 		_, err := suite.r.handleModuleConfig(context.TODO(), suite.moduleConfig("test-module"))
 		require.NoError(suite.T(), err)
 	})

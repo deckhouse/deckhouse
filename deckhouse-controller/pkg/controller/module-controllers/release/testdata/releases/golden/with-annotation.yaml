@@ -21,7 +21,8 @@ kind: ModuleRelease
 metadata:
   annotations:
     a: b
-    modules.deckhouse.io/apply-now: "true"
+    modules.deckhouse.io/isUpdating: "true"
+    modules.deckhouse.io/notified: "true"
   finalizers:
   - modules.deckhouse.io/exist-on-fs
   - modules.deckhouse.io/metrics-registered
@@ -38,22 +39,33 @@ metadata:
     kind: ModuleSource
     name: deckhouse-prod
     uid: 2a376b24-f3ee-4d0a-8188-a6b09671bff7
-  resourceVersion: "1000"
+  resourceVersion: "1007"
 spec:
   moduleName: deckhouse-commander
   version: 1.3.10
   weight: 900
 status:
   approved: false
-  phase: Pending
+  phase: Deployed
   pullDuration: 307.070601ms
   size: 3087774
   transitionTime: "2024-05-05T10:41:06Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: deckhouse-commander
-  resourceVersion: "999"
-properties: {}
-status: {}
+  resourceVersion: "1001"
+spec:
+  packageRepositoryName: deckhouse-prod
+  packageVersion: v1.3.10
+  releaseChannel: Stable
+status:
+  conditions:
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: ""
+    reason: Deployed
+    status: "True"
+    type: LastReleaseDeployed
+  lastAppliedConfiguration: null
+  tracking: null

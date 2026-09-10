@@ -8,5 +8,5 @@ spec:
   imageTag: main
   scanInterval: 15s
 status:
-  message: The module not found
+  message: The module disabled
   updatedAt: null

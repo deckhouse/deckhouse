@@ -1,0 +1,11 @@
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: unknown-module
+  resourceVersion: "1001"
+spec:
+  enabled: true
+status:
+  message: 'Ignored: unknown module name'
+  version: "1"

@@ -56,16 +56,22 @@ status:
   pullDuration: 0s
   transitionTime: "2024-05-03T20:55:49Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
+  annotations:
+    modules.deckhouse.io/embedded: "true"
   name: parca
   resourceVersion: "1000"
-properties:
-  source: Embedded
+spec:
+  packageRepositoryName: embedded
+  packageVersion: v1.80.0
 status:
   conditions:
-  - lastProbeTime: "2019-10-17T15:33:00Z"
-    lastTransitionTime: "2019-10-17T15:33:00Z"
+  - lastTransitionTime: "2019-10-17T15:33:00Z"
+    message: ""
+    reason: Deployed
     status: "True"
     type: LastReleaseDeployed
+  lastAppliedConfiguration: null
+  tracking: null

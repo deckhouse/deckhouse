@@ -1,4 +1,3 @@
----
 apiVersion: deckhouse.io/v1alpha1
 kind: ModuleSource
 metadata:
@@ -12,20 +11,38 @@ spec:
     repo: dev-registry.deckhouse.io/deckhouse/modules
     scheme: HTTPS
 status:
-  message: ""
+  message: ''
   modules:
-    - name: ingressnginx
+  - name: ingressnginx
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: ingressnginx
-properties:
-  source: Embedded
-  availableSources:
-    - test-source-1
+  annotations:
+    modules.deckhouse.io/embedded: 'true'
+spec:
+  packageRepositoryName: embedded
+  packageVersion: v1.80.0
 status:
-  phase: Available
   conditions:
-    - type: EnabledByModuleConfig
-      status: "True"
+  - type: EnabledByModuleConfig
+    status: 'True'
+    reason: Enabled
+    message: ''
+    lastTransitionTime: '2019-10-17T15:33:00Z'
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModuleConfig
+metadata:
+  name: ingressnginx
+spec:
+  enabled: true
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: ModulePackage
+metadata:
+  name: ingressnginx
+status:
+  availableRepositories:
+    - test-source-1

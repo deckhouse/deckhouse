@@ -89,9 +89,12 @@ spec:
   update:
     mode: Manual
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: demo
+spec:
+  packageRepositoryName: test-source
+  packageVersion: v1.68.0
 status:
   phase: Ready

@@ -60,9 +60,12 @@ status:
   modulesCount: 1
   syncTime: "2024-05-03T21:05:05Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: parca
+spec:
+  packageRepositoryName: foxtrot-suitable
+  packageVersion: v0.26.2
 status:
   phase: Ready

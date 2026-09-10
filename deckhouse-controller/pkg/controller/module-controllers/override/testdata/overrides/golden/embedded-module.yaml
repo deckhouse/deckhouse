@@ -11,11 +11,16 @@ status:
   message: The module is embedded
   updatedAt: null
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
+  annotations:
+    modules.deckhouse.io/embedded: "true"
   name: test-module
   resourceVersion: "999"
-properties:
-  source: Embedded
-status: {}
+spec:
+  packageRepositoryName: embedded
+  packageVersion: v1.80.0
+status:
+  lastAppliedConfiguration: null
+  tracking: null

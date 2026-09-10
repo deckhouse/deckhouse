@@ -57,16 +57,25 @@ status:
   size: 0
   transitionTime: "2024-05-03T20:55:49Z"
 ---
-apiVersion: deckhouse.io/v1alpha1
+apiVersion: deckhouse.io/v1alpha2
 kind: Module
 metadata:
   name: parca
-properties:
-  source: Embedded
+  annotations:
+    modules.deckhouse.io/embedded: 'true'
+spec:
+  packageRepositoryName: embedded
+  packageVersion: v1.80.0
 status:
   phase: Ready
   conditions:
-    - type: EnabledByModuleConfig
-      status: "True"
-    - type: EnabledByModuleManager
-      status: "True"
+  - type: EnabledByModuleConfig
+    status: 'True'
+    reason: Enabled
+    message: ''
+    lastTransitionTime: '2019-10-17T15:33:00Z'
+  - type: EnabledByModuleManager
+    status: 'True'
+    reason: Enabled
+    message: ''
+    lastTransitionTime: '2019-10-17T15:33:00Z'
