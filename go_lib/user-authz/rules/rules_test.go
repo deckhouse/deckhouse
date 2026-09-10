@@ -18,6 +18,8 @@ package rules
 
 import (
 	"errors"
+	"regexp"
+	"strings"
 	"testing"
 
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -100,17 +102,20 @@ func TestMatcher_LiteralAndRegex(t *testing.T) {
 func TestWrapRegex(t *testing.T) {
 	t.Parallel()
 	for in, want := range map[string]string{
-		"a": "^a$", "^a": "^a$", "a$": "^a$", "^a$": "^a$", ".*": "^.*$",
-		// An alternation gets a group, so that both branches are anchored. Written without one,
+		"a": "^(?:a)$", ".*": "^(?:.*)$",
+		// An entry that writes its own anchors keeps them inside the group, where they mean the
+		// same thing.
+		"^a": "^(?:^a)$", "a$": "^(?:a$)$", "^a$": "^(?:^a$)$",
+		// The alternation, which is why the group is there at all: written without one,
 		// "^team-.*|kube-system$" parses as (^team-.*)|(kube-system$).
 		"team-.*|kube-system":   "^(?:team-.*|kube-system)$",
-		"^team-.*|kube-system$": "^(?:team-.*|kube-system)$",
-		// A "|" that is not a top-level alternation is left where it is, so an ordinary pattern
-		// keeps the byte-identical form the literal fast path and MatchesEverything read back.
-		"(a|b)-ns":    "^(a|b)-ns$",
-		"[a|b]-ns":    "^[a|b]-ns$",
-		`a\|b`:        `^a\|b$`,
-		"team-[0-9]+": "^team-[0-9]+$",
+		"^team-.*|kube-system$": "^(?:^team-.*|kube-system$)$",
+		// And an entry that needs no group is wrapped all the same: deciding needed a scanner,
+		// and the scanner was the bug.
+		"(a|b)-ns":    "^(?:(a|b)-ns)$",
+		"[a|b]-ns":    "^(?:[a|b]-ns)$",
+		`a\|b`:        `^(?:a\|b)$`,
+		"team-[0-9]+": "^(?:team-[0-9]+)$",
 	} {
 		if got := WrapRegex(in); got != want {
 			t.Errorf("WrapRegex(%q) = %q, want %q", in, got, want)
@@ -159,34 +164,108 @@ func TestWrapRegex_QuotedRunDoesNotHideAnAlternation(t *testing.T) {
 	}
 }
 
-func TestHasTopLevelAlternation(t *testing.T) {
+// A POSIX class name hid a top-level alternation from the scanner that used to decide whether to
+// wrap: "[" opened the class, the "]" of ":alpha:" closed it in the scanner's eyes, the "(" that
+// followed counted as a group, and the "|" was then seen as nested. The pattern stayed anchored by
+// concatenation and its second branch matched any name that merely ended in it.
+func TestWrapRegex_PosixClassDoesNotHideAnAlternation(t *testing.T) {
 	t.Parallel()
-	for in, want := range map[string]bool{
-		"a|b":     true,
-		"^a|b$":   true,
-		"a":       false,
-		"(a|b)":   false,
-		"(a|b)|c": true,
-		"[a|b]":   false,
-		"[a|b]|c": true,
-		// RE2 supports \Q...\E, and everything inside is literal - including a "(" that opens no
-		// group. A scanner that misses this believes it is inside a group at the "|", leaves the
-		// pattern anchored by concatenation, and the second branch then matches any name that
-		// merely ENDS in it.
-		`\Q(\E|x`:     true,
-		`\Q|\E`:       false,
-		`\Qa|b\E`:     false,
-		`\Qa|b\E|c`:   true,
-		`\Q[\E|x`:     true,
-		`\Q\E|x`:      true,
-		`a\Q(\Eb`:     false,
-		`a\|b`:        false,
-		`\[a|b`:       true,
-		"((a|b)|c)":   false,
-		"team-[0-9]+": false,
-	} {
-		if got := hasTopLevelAlternation(in); got != want {
-			t.Errorf("hasTopLevelAlternation(%q) = %v, want %v", in, got, want)
+	c := newCompileCache()
+	m, err := c.compile("[[:alpha:](]|kube-system")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, ns := range []string{"a", "(", "kube-system"} {
+		if !m.Matches(ns) {
+			t.Errorf("%q must be covered: it is one of the branches as written", ns)
+		}
+	}
+	if m.Matches("attacker-kube-system") {
+		t.Error(`"attacker-kube-system" must NOT be covered`)
+	}
+}
+
+// Wrapping used to strip the entry's own anchors first, and it could not tell an anchor from an
+// escaped dollar: `a|b\$` became `^(?:a|b\)$`, which does not compile, so the rule was
+// quarantined and its subjects lost the scope the pattern granted.
+func TestWrapRegex_EscapedDollarIsNotAnAnchor(t *testing.T) {
+	t.Parallel()
+	c := newCompileCache()
+	m, err := c.compile(`a|b\$`)
+	if err != nil {
+		t.Fatalf("a pattern RE2 accepts must compile: %v", err)
+	}
+	for _, ns := range []string{"a", "b$"} {
+		if !m.Matches(ns) {
+			t.Errorf("%q must be covered", ns)
+		}
+	}
+	for _, ns := range []string{"b", "ab$", "b$x"} {
+		if m.Matches(ns) {
+			t.Errorf("%q must NOT be covered", ns)
+		}
+	}
+}
+
+// Why the scanner could go: wrapping every entry in a group accepts exactly the names the older
+// anchoring accepted, wherever that one compiled at all. The corpus carries every pattern the
+// scanner's own table listed, plus the two it got wrong.
+func TestWrapRegex_UnconditionalGroupMatchesTheOldAnchoring(t *testing.T) {
+	t.Parallel()
+
+	// oldAnchoring is what WrapRegex did before: a group only when the scanner saw a top-level
+	// alternation, concatenation otherwise.
+	oldAnchoring := func(pattern string, wrap bool) string {
+		if wrap {
+			return "^(?:" + strings.TrimSuffix(strings.TrimPrefix(pattern, "^"), "$") + ")$"
+		}
+		if !strings.HasPrefix(pattern, "^") {
+			pattern = "^" + pattern
+		}
+		if !strings.HasSuffix(pattern, "$") {
+			pattern += "$"
+		}
+		return pattern
+	}
+
+	// pattern -> whether the old scanner wrapped it.
+	corpus := map[string]bool{
+		"a": false, "team-a": false, "team-.*": false, ".*": false, ".+": false,
+		"^team-a$": false, "^team-a": false, "team-a$": false, "team-[0-9]+": false,
+		"a|b": true, "^a|b$": true, "(a|b)": false, "(a|b)|c": true, "[a|b]": false,
+		"[a|b]|c": true, "((a|b)|c)": false, ".*|foo": true, "kube-.*|d8-.*": true,
+		`\Q(\E|x`: true, `\Q|\E`: false, `\Qa|b\E`: false, `\Qa|b\E|c`: true,
+		`\Q[\E|x`: true, `\Q\E|x`: true, `a\Q(\Eb`: false, `a\|b`: false, `\[a|b`: true,
+		"[[:alpha:]]": false, "a{2,3}": false, `\d+`: false, "[^a]": false, "(?i)kube-.*": false,
+	}
+
+	// The two patterns the scanner got wrong are deliberately NOT here: for them the answer must
+	// change, and it does - TestWrapRegex_PosixClassDoesNotHideAnAlternation and
+	// TestWrapRegex_EscapedDollarIsNotAnAnchor state what it changes to.
+
+	names := []string{
+		"a", "b", "c", "x", "yx", "(", "team-a", "team-ab", "attacker-team-a",
+		"kube-system", "attacker-kube-system", "d8-system", "kube-dns", "KUBE-DNS",
+		"a|b", "alpha", "aa", "aaa", "12", "$", `b$`, "^", "foo", "",
+	}
+
+	for pattern, wrapped := range corpus {
+		old := oldAnchoring(pattern, wrapped)
+		oldRe, oldErr := regexp.Compile(old)
+		newRe, newErr := regexp.Compile(WrapRegex(pattern))
+		if newErr != nil {
+			t.Errorf("%q: the wrapped form must compile: %v", pattern, newErr)
+			continue
+		}
+		if oldErr != nil {
+			// `a|b\$` is the case: the old form did not compile, so there is nothing to compare
+			// and nothing to lose.
+			continue
+		}
+		for _, ns := range names {
+			if oldRe.MatchString(ns) != newRe.MatchString(ns) {
+				t.Errorf("%q: %q matched %v before and %v now", pattern, ns, oldRe.MatchString(ns), newRe.MatchString(ns))
+			}
 		}
 	}
 }

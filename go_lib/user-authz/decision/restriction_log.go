@@ -50,11 +50,18 @@ type RestrictionLog struct {
 	mu sync.Mutex
 	// reported maps a rule to when it was last reported.
 	reported map[string]time.Time
+	// lastSweep is when the whole memo was last cleaned of rules that stopped restricting.
+	lastSweep time.Time
 	// now is the clock, replaced in tests.
 	now func() time.Time
 }
 
 // Allow reports whether the caller should write a line about this rule now.
+//
+// It reads and writes one key. Cleaning the whole memo on every call would be a walk of it per
+// authorization request - the guard runs on all of them - and during a rollout on a cluster with
+// thousands of rules that is thousands of iterations under this mutex, per request, to expire
+// entries that are hours old. The sweep happens on its own schedule instead.
 func (l *RestrictionLog) Allow(rule string) bool {
 	if l == nil {
 		return false
@@ -71,17 +78,32 @@ func (l *RestrictionLog) Allow(rule string) bool {
 	if l.reported == nil {
 		l.reported = make(map[string]time.Time)
 	}
-	// Rules that stopped restricting leave the memo, which also bounds it: the keys are rule
-	// names, so it can never hold more than there are rules, and in practice far fewer.
+	l.sweepLocked(now)
+
+	if at, seen := l.reported[rule]; seen {
+		if now.Sub(at) >= restrictionForget {
+			// This rule stopped restricting long enough ago that the next episode is its own.
+			delete(l.reported, rule)
+		} else if now.Sub(at) < restrictionRepeat {
+			return false
+		}
+	}
+	l.reported[rule] = now
+	return true
+}
+
+// sweepLocked drops the rules that stopped restricting, at most once per restrictionForget. It
+// bounds the memo - the keys are rule names, so it can never hold more than there are rules - and
+// it is what makes a later episode of the same rule report itself as a new one. The caller holds
+// the mutex.
+func (l *RestrictionLog) sweepLocked(now time.Time) {
+	if !l.lastSweep.IsZero() && now.Sub(l.lastSweep) < restrictionForget {
+		return
+	}
+	l.lastSweep = now
 	for name, at := range l.reported {
 		if now.Sub(at) >= restrictionForget {
 			delete(l.reported, name)
 		}
 	}
-
-	if at, seen := l.reported[rule]; seen && now.Sub(at) < restrictionRepeat {
-		return false
-	}
-	l.reported[rule] = now
-	return true
 }

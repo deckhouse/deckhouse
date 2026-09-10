@@ -55,6 +55,38 @@ class TestLimitNamespacesPatternValidation(unittest.TestCase):
             with self.subTest(pattern=pattern):
                 self.assertEqual([], self.errors_for(pattern), "must not be rejected: RE2 compiles it")
 
+    def test_escaped_quantifiers_and_octal_escapes_are_accepted(self):
+        """The same class of mistake as compiling with Python's re, from two other directions.
+
+        In `a\\?+` the "?" is an escaped literal and the "+" repeats it: RE2 compiles it, and a check
+        that reads the character before the "+" out of the raw string sees a possessive quantifier
+        that is not there. And `\\123` is an octal escape, not a backreference - RE2 reads a
+        backslash and two or three octal digits as one character.
+
+        Every pattern here was compiled with Go's regexp to confirm it is accepted.
+        """
+        for pattern in [r"a\?+", r"a\*+", r"a\++", r"a\}+", r"\123", r"\12", r"\777",
+                        r"\0", r"\000", r"[+]+", r"\Q+\E+"]:
+            with self.subTest(pattern=pattern):
+                self.assertEqual([], self.errors_for(pattern), "must not be rejected: RE2 compiles it")
+
+    def test_quantifiers_and_escapes_re2_refuses_are_still_rejected(self):
+        """The other half: what Go's regexp does refuse must keep being refused."""
+        for pattern, description in [
+            (r"a*+", "possessive quantifier"),
+            (r"a?+", "possessive quantifier"),
+            (r"a{2}+", "possessive quantifier"),
+            (r"(a)++", "possessive quantifier"),
+            (r"\1", "backreference"),
+            (r"\9", "backreference"),
+            (r"\18", "backreference"),
+            (r"\800", "backreference"),
+        ]:
+            with self.subTest(pattern=pattern):
+                errors = self.errors_for(pattern)
+                self.assertEqual(1, len(errors), errors)
+                self.assertIn(description, errors[0])
+
     def test_ordinary_patterns_are_accepted(self):
         for pattern in ["team-a", "team-.*", "team-[0-9]+", "team-.*|kube-system", "(a|b)-ns",
                         ".*", "(?i)team", "(?is)team", "(?i:team)", "a{2,10}", "a{1000}"]:

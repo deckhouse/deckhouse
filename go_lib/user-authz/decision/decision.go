@@ -50,20 +50,27 @@ const nsLookupInterval = 10 * time.Second
 // simply by varying the name. That is a log volume nobody chose, on the machines that can least
 // afford to run out of disk. Throttled, the operator still learns that lookups are failing and
 // how often, which is the whole diagnostic value of the line.
-var nsLookupComplaints = &throttle{every: nsLookupInterval}
+var nsLookupComplaints = &Throttle{Every: nsLookupInterval}
 
-type throttle struct {
+// Throttle bounds how often a line is written and counts what it swallowed in between.
+//
+// It is exported because both consumers need it on their own hot paths - the webhook's listener
+// refuses every request in the cluster while its caches fill - and a second copy of eleven lines
+// in a stack whose point is one implementation would be a joke at this PR's expense.
+type Throttle struct {
+	// Every is the minimum interval between two lines. A zero value writes every time.
+	Every time.Duration
+
 	mu         sync.Mutex
-	every      time.Duration
 	last       time.Time
 	suppressed int
 }
 
-// allow reports whether to write the line now, and how many were suppressed since the last one.
-func (t *throttle) allow(now time.Time) (bool, int) {
+// Allow reports whether to write the line now, and how many were suppressed since the last one.
+func (t *Throttle) Allow(now time.Time) (bool, int) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
-	if !t.last.IsZero() && now.Sub(t.last) < t.every {
+	if !t.last.IsZero() && now.Sub(t.last) < t.Every {
 		t.suppressed++
 		return false, 0
 	}
@@ -76,7 +83,7 @@ func (t *throttle) allow(now time.Time) (bool, int) {
 // logNamespaceLookupFailure reports that the namespace could not be looked up, at most once per
 // nsLookupInterval, saying how many complaints it swallowed in between.
 func (s Sources) logNamespaceLookupFailure(namespace string, err error) {
-	write, suppressed := nsLookupComplaints.allow(time.Now())
+	write, suppressed := nsLookupComplaints.Allow(time.Now())
 	if !write {
 		return
 	}

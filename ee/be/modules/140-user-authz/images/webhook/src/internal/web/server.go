@@ -13,7 +13,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -27,6 +26,7 @@ import (
 	kcache "k8s.io/client-go/tools/cache"
 
 	"github.com/deckhouse/deckhouse/go_lib/user-authz/binding"
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/decision"
 	"github.com/deckhouse/deckhouse/go_lib/user-authz/metrics"
 	"github.com/deckhouse/deckhouse/go_lib/user-authz/source"
 
@@ -95,7 +95,7 @@ type Server struct {
 	synced atomic.Bool
 
 	// startupRefusals throttles the line gateOnCaches writes while the caches fill.
-	startupRefusals throttle
+	startupRefusals decision.Throttle
 }
 
 func NewServer(logger *log.Logger) (*Server, error) {
@@ -130,8 +130,9 @@ func NewServer(logger *log.Logger) (*Server, error) {
 	// The registration's own HasSynced is what the listener has to wait for, not the informer's:
 	// the informer reports synced once the initial list has been popped, while handlers are fed
 	// from a separate queue. Serving before the index is filled would let a rule-bound subject look
-	// unbound, and the cluster-wide binding of its rule would then grant it every namespace - an
-	// answer the API server caches for authorizedTTL.
+	// unbound, and the cluster-wide binding of its rule would then grant it every namespace. The
+	// API server caches that for unauthorizedTTL: this webhook never answers Allow, so no answer
+	// of its own is ever cached under authorizedTTL, the no-opinion ones included.
 	ruleBindings := binding.NewIndex()
 	ruleBindingsSynced, err := informerFactory.Rbac().V1().ClusterRoleBindings().Informer().AddEventHandler(ruleBindings.EventHandler())
 	if err != nil {
@@ -170,7 +171,7 @@ func NewServer(logger *log.Logger) (*Server, error) {
 		}, rbacEvaluator.Synced()...),
 		rules:           rulesSource,
 		registry:        registry,
-		startupRefusals: throttle{every: time.Second},
+		startupRefusals: decision.Throttle{Every: time.Second},
 	}, nil
 }
 
@@ -275,7 +276,7 @@ func (s *Server) gateOnCaches(next http.Handler) http.Handler {
 			// tens of thousands of bindings - the request rate is highest too, so the unthrottled
 			// line turned a slow startup into a flood in the master's log at the moment the
 			// operator most needs to read it.
-			if write, suppressed := s.startupRefusals.allow(time.Now()); write {
+			if write, suppressed := s.startupRefusals.Allow(time.Now()); write {
 				if suppressed > 0 {
 					s.logger.Printf("refusing authorization requests: the informer caches are still filling (%d more refused in the last second)", suppressed)
 				} else {
@@ -287,27 +288,6 @@ func (s *Server) gateOnCaches(next http.Handler) http.Handler {
 		}
 		next.ServeHTTP(w, r)
 	})
-}
-
-// throttle bounds how often a line is written, counting what it swallowed in between.
-type throttle struct {
-	mu         sync.Mutex
-	every      time.Duration
-	last       time.Time
-	suppressed int
-}
-
-func (t *throttle) allow(now time.Time) (bool, int) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
-	if !t.last.IsZero() && now.Sub(t.last) < t.every {
-		t.suppressed++
-		return false, 0
-	}
-	suppressed := t.suppressed
-	t.suppressed = 0
-	t.last = now
-	return true, suppressed
 }
 
 // Run starts webhook server and its configuration renewal. It will exit only if the webserver stops listening.
