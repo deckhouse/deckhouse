@@ -1,0 +1,50 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: capi-user-credentials
+  namespace: d8-cloud-instance-manager
+  labels:
+    app: capo-controller-manager
+    heritage: deckhouse
+    module: node-manager
+type: Opaque
+data:
+  cacert: test-ca
+  clouds.yaml: |-
+    clouds:
+      openstack:
+        auth:
+          auth_url: "https://keystone.example/v3"
+          username: "cloud-user"
+          password: "cloud-password"
+          project_name: "project-name"
+          user_domain_name: "Default"
+          project_domain_name: "Default"
+        region_name: "RegionOne"
+        identity_api_version: 3
+---
+apiVersion: infrastructure.cluster.x-k8s.io/v1beta1
+kind: OpenStackCluster
+metadata:
+  name: openstack
+  namespace: d8-cloud-instance-manager
+  labels:
+    app: capo-controller-manager
+    heritage: deckhouse
+    module: node-manager
+spec:
+  apiServerLoadBalancer:
+    enabled: false
+  disableAPIServerFloatingIP: true
+  controlPlaneEndpoint:
+    host: 192.0.2.10
+    port: 6443
+  network:
+    filter:
+      name: internal
+  externalNetwork:
+    filter:
+      name: public
+  identityRef:
+    cloudName: openstack
+    name: capi-user-credentials
