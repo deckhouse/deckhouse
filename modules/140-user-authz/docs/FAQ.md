@@ -251,6 +251,8 @@ The cache cannot be flushed without restarting `kube-apiserver`.
 
 For the resource of a CRD installed a moment ago, the delay reaches 40 seconds. The webhook learns whether a resource is namespaced from discovery, which it queries no more often than once every 10 seconds, and the API server then caches the answer for another 30 seconds.
 
+During those seconds the namespace limits do not apply to that resource: the webhook does not know it exists, gives no opinion, and RBAC alone answers — so a subject whose rule limits it to some namespaces can list the new resource across the whole cluster. Installing a CRD requires far more privilege than that yields, which is why discovery is queried at a bounded rate rather than on every request. Permission Browser has a window of the same order for its own report, up to 30 seconds.
+
 ## Why is a rule reported as needing multi-tenancy?
 
 The `limitNamespaces`, `namespaceSelector` and `allowAccessToSystemNamespaces` options are enforced by the authorization webhook, which is deployed only when [`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy) is enabled. A rule that uses these options while multi-tenancy is disabled is applied without them: the subjects named in the rule hold its access level in **every** namespace of the cluster, including the system ones.

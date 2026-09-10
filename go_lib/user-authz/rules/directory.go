@@ -197,7 +197,7 @@ func (b *Builder) Build(rules []Rule) (*Directory, Stats) {
 					broken = fmt.Errorf("limitNamespaces pattern %q: %w", pattern, err)
 					continue
 				}
-				inUse[m.pattern] = struct{}{}
+				inUse[m.entry] = struct{}{}
 				matchers = append(matchers, m)
 			}
 		}

@@ -272,6 +272,114 @@ func TestCacheGetKeepsTheNegativeWhenTheRefreshFails(t *testing.T) {
 	}
 }
 
+// Resolving the preferred version of one absent resource after another costs the group's listings
+// once, not once per name.
+//
+// The resource name comes out of the request path, so this is the cheapest question a subject a
+// rule covers can ask. Resolving it used to list the group and every version of it again for each
+// distinct name, and to remember each answer under a key carrying that name - in the same bounded
+// map as the group keys, so the names also evicted the memory that bounds the other path.
+func TestCachePreferredVersionResolvesFromTheCachedListings(t *testing.T) {
+	var listings int32
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&listings, 1)
+		w.Header().Add("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/apis/acme.cert-manager.io":
+			w.Write([]byte(preferredVersionResponse))
+		case "/apis/acme.cert-manager.io/v1":
+			w.Write([]byte(discoveryByVersionResponse))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte{})
+		}
+	}))
+	defer server.Close()
+
+	cache := NamespacedDiscoveryCache{
+		client:               server.Client(),
+		kubernetesAPIAddress: server.URL,
+		logger:               log.New(io.Discard, "", log.LstdFlags),
+		data:                 make(map[string]*namespacedCacheEntry),
+		preferredVersions:    make(map[string]*preferredVersionCacheEntry),
+		negative:             make(map[string]negativeEntry),
+		inflight:             make(map[string]chan struct{}),
+	}
+	now := time.Now()
+	cache.now = func() time.Time { return now }
+
+	// The group has to be walked once: its versions, then the versions themselves.
+	if _, err := cache.GetPreferredVersion("acme.cert-manager.io", "ghosts"); !errors.Is(err, ErrResourceAbsent) {
+		t.Fatalf("first lookup: got %v, want ErrResourceAbsent", err)
+	}
+	first := atomic.LoadInt32(&listings)
+	if first == 0 {
+		t.Fatal("the first lookup asked the API server nothing at all")
+	}
+
+	// Every other name in the same group is answered from what that walk cached.
+	for i := 0; i < 50; i++ {
+		name := fmt.Sprintf("ghosts-%d", i)
+		if _, err := cache.GetPreferredVersion("acme.cert-manager.io", name); !errors.Is(err, ErrResourceAbsent) {
+			t.Fatalf("%s: got %v, want ErrResourceAbsent", name, err)
+		}
+	}
+	if got := atomic.LoadInt32(&listings); got != first {
+		t.Errorf("50 further resource names cost %d more requests, want 0", got-first)
+	}
+
+	// And a resource that IS served is still found.
+	if version, err := cache.GetPreferredVersion("acme.cert-manager.io", "challenges"); err != nil || version != "v1" {
+		t.Errorf("challenges resolved to %q, %v; want v1", version, err)
+	}
+}
+
+// Cycling resource names must not evict what bounds the group listings.
+func TestCachePreferredVersionDoesNotEvictTheGroupNegatives(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Add("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/apis/acme.cert-manager.io":
+			w.Write([]byte(preferredVersionResponse))
+		case "/apis/acme.cert-manager.io/v1":
+			w.Write([]byte(discoveryByVersionResponse))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte{})
+		}
+	}))
+	defer server.Close()
+
+	cache := NamespacedDiscoveryCache{
+		client:               server.Client(),
+		kubernetesAPIAddress: server.URL,
+		logger:               log.New(io.Discard, "", log.LstdFlags),
+		data:                 make(map[string]*namespacedCacheEntry),
+		preferredVersions:    make(map[string]*preferredVersionCacheEntry),
+		negative:             make(map[string]negativeEntry),
+		inflight:             make(map[string]chan struct{}),
+	}
+	now := time.Now()
+	cache.now = func() time.Time { return now }
+
+	// A group that is not served: this is the answer the negative memory holds.
+	if _, err := cache.Get("unserved/v1", "things"); !errors.Is(err, ErrResourceAbsent) {
+		t.Fatalf("got %v, want ErrResourceAbsent", err)
+	}
+	if absent, known := cache.recentNegative("unserved/v1"); !known || !absent {
+		t.Fatalf("the group's answer was not remembered: known=%v absent=%v", known, absent)
+	}
+
+	// Ask about more distinct resource names than the memory can hold.
+	for i := 0; i < maxUnservedGroups*2; i++ {
+		cache.GetPreferredVersion("acme.cert-manager.io", fmt.Sprintf("ghosts-%d", i))
+	}
+
+	if absent, known := cache.recentNegative("unserved/v1"); !known || !absent {
+		t.Errorf("the group's answer was evicted by resource names: known=%v absent=%v", known, absent)
+	}
+}
+
 // A listing that FAILS must be remembered too, not only one that answered.
 //
 // The rate limit used to key on the cache entry, which a failed listing never creates - so a group

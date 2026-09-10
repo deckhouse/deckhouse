@@ -116,6 +116,12 @@ type namespacedCacheEntry struct {
 	Data map[string]bool
 }
 
+// groupVersionsCacheEntry is the list of versions a group serves, newest first.
+type groupVersionsCacheEntry struct {
+	*cacheEntry
+	Versions []string
+}
+
 func newNamespacedCacheEntry(addTime time.Time) *namespacedCacheEntry {
 	return &namespacedCacheEntry{
 		cacheEntry: newCacheEntry(addTime),
@@ -145,6 +151,12 @@ type NamespacedDiscoveryCache struct {
 
 	muPv              sync.RWMutex
 	preferredVersions map[string]*preferredVersionCacheEntry
+
+	// muGroups guards groupVersionLists: the versions each API group serves, cached for the same
+	// hour as the resource listings. The list is what resolving a preferred version starts from,
+	// and the group name comes out of the request path.
+	muGroups          sync.Mutex
+	groupVersionLists map[string]*groupVersionsCacheEntry
 
 	// muNegative guards negative, which remembers the groups a listing did not produce an answer
 	// for - either because the API server said it does not serve them, or because the attempt
@@ -177,6 +189,7 @@ func NewNamespacedDiscoveryCache(logger *log.Logger, apiAddress string) *Namespa
 		preferredVersions: make(map[string]*preferredVersionCacheEntry),
 		negative:          make(map[string]negativeEntry),
 		inflight:          make(map[string]chan struct{}),
+		groupVersionLists: make(map[string]*groupVersionsCacheEntry),
 		now:               time.Now,
 
 		kubernetesAPIAddress: apiAddress,
@@ -275,6 +288,40 @@ func (c *NamespacedDiscoveryCache) renewCacheOnce(apiGroup string, req *http.Req
 	return nil
 }
 
+// groupVersions is the group's list of served versions, newest first, cached for the same hour as
+// the resource listings.
+//
+// Without the cache every question about a resource nobody serves paid for this listing again, and
+// the resource name comes out of the request path - so a subject a rule covers could name a new one
+// on every request and drive a listing each time. It is the group that is cached and not the
+// question, so a new resource name in a group already listed costs nothing.
+func (c *NamespacedDiscoveryCache) groupVersions(apiGroup string) ([]string, error) {
+	c.muGroups.Lock()
+	if entry, ok := c.groupVersionLists[apiGroup]; ok && !c.isEntryExpired(entry.cacheEntry) {
+		versions := entry.Versions
+		c.muGroups.Unlock()
+		return versions, nil
+	}
+	c.muGroups.Unlock()
+
+	versions, err := c.availableAPIGroupVersionsInDescendingOrder(apiGroup)
+	if err != nil {
+		return nil, err
+	}
+
+	c.muGroups.Lock()
+	if c.groupVersionLists == nil {
+		c.groupVersionLists = make(map[string]*groupVersionsCacheEntry)
+	}
+	c.groupVersionLists[apiGroup] = &groupVersionsCacheEntry{
+		cacheEntry: newCacheEntry(c.now()),
+		Versions:   versions,
+	}
+	c.muGroups.Unlock()
+
+	return versions, nil
+}
+
 func (c *NamespacedDiscoveryCache) availableAPIGroupVersionsInDescendingOrder(apiGroup string) ([]string, error) {
 	req, cancel, err := c.newGetRequest("/apis/" + apiGroup)
 	if err != nil {
@@ -301,35 +348,33 @@ func (c *NamespacedDiscoveryCache) availableAPIGroupVersionsInDescendingOrder(ap
 
 // requestPreferredVersion finds the newest version of the group that serves the resource.
 //
-// One attempt per listing, like every other listing on this path: this runs while the API server
-// waits out the three seconds it gives the whole webhook, and the retry loop this used to use took
-// up to twenty seconds per version of the group.
+// It asks Get, which is the same question one group/version at a time, so the listings come out of
+// the hourly cache that path already fills and the rate limit that protects it is the same one.
+// Resolving by listing the versions here again meant a second, unbounded copy of that path: the
+// listings were not cached, and the answers were remembered under a key carrying the resource name
+// - in the same bounded map as the group keys, so cycling resource names evicted the memory that
+// bounds Get.
 func (c *NamespacedDiscoveryCache) requestPreferredVersion(group, resource string) (string, error) {
-	availableVersions, err := c.availableAPIGroupVersionsInDescendingOrder(group)
+	availableVersions, err := c.groupVersions(group)
 	if err != nil {
 		return "", fmt.Errorf("get available apigroup versions: %w", err)
 	}
 
 	for _, version := range availableVersions {
-		req, cancel, err := c.newGetRequest(fmt.Sprintf("/apis/%s/%s", group, version))
-		if err != nil {
-			return "", fmt.Errorf("request %s %s/%s version build error: %w", resource, group, version, err)
+		apiGroup := group + "/" + version
+		if group == "" {
+			apiGroup = version
 		}
 
-		var apiResourceList APIResourceList
-		err = c.execRequest(req, "request list of resources", &apiResourceList)
-		cancel()
-		if err != nil {
-			// The version was listed a moment ago and is gone now. Nothing to conclude from it;
-			// the other versions still have to be looked at.
-			if errors.Is(err, ErrNotFound) {
-				continue
-			}
-			return "", fmt.Errorf("get preferred version: %w", err)
-		}
-
-		if apiResourceList.Has(resource) {
+		switch _, err := c.Get(apiGroup, resource); {
+		case err == nil:
 			return version, nil
+		case errors.Is(err, ErrResourceAbsent), errors.Is(err, ErrNotFound):
+			// This version does not serve it, or has gone away since the group was listed. Neither
+			// says anything about the other versions.
+			continue
+		default:
+			return "", fmt.Errorf("get preferred version: %w", err)
 		}
 	}
 
@@ -358,59 +403,26 @@ func (c *NamespacedDiscoveryCache) preferredVersionFromCache(group, resource str
 // GetPreferredVersion resolves the newest version of the group that serves the resource, for the
 // reviews that arrive without one.
 //
-// Bounded the same way the group listings are, and for the same reason: the group and the resource
-// both come out of the request path, so a resource nobody serves is the cheapest question to ask
-// and it used to cost a listing of every version of the group, every time it was asked. The
-// negative memory holds the answer for negativeRenewInterval, and concurrent askers share one
-// resolution instead of each starting their own.
+// The work it does is bounded by what it asks: the group's versions and each version's resource
+// listing are cached for an hour, and both are shared with Get. So the first question about a group
+// costs one listing per version and every question after it - about any resource, existing or not -
+// is answered from what is already held. There is no memo of its own to keep: a resolved version is
+// cached below, and an unresolved one costs nothing to conclude again.
 func (c *NamespacedDiscoveryCache) GetPreferredVersion(group, resource string) (string, error) {
-	key := preferredVersionKey(group, resource)
-
-	// Twice at most: the second pass is for the caller that waited for somebody else's resolution
-	// and now reads what it concluded.
-	for range 2 {
-		if version := c.preferredVersionFromCache(group, resource); version != "" {
-			return version, nil
-		}
-		if absent, known := c.recentNegative(key); known {
-			if absent {
-				return "", fmt.Errorf("no version of api group %s serves %s: %w", group, resource, ErrResourceAbsent)
-			}
-			return "", fmt.Errorf("the versions of api group %s could not be listed recently", group)
-		}
-
-		var resolved string
-		ran, err := c.once(key, func() error {
-			version, err := c.requestPreferredVersion(group, resource)
-			if err != nil {
-				// Absent and unreachable are both remembered, and kept apart: the first lets RBAC
-				// answer, the second denies.
-				c.noteNegative(key, errors.Is(err, ErrResourceAbsent) || errors.Is(err, ErrNotFound))
-				return err
-			}
-
-			c.muPv.Lock()
-			c.preferredVersions[fmt.Sprintf("%s.%s", resource, group)] = newPreferredVersionCacheEntry(c.now(), version)
-			c.muPv.Unlock()
-
-			resolved = version
-			return nil
-		})
-		if ran {
-			if err != nil {
-				return "", err
-			}
-			return resolved, nil
-		}
+	if version := c.preferredVersionFromCache(group, resource); version != "" {
+		return version, nil
 	}
 
-	return "", fmt.Errorf("preferred version of %s.%s was not resolved", resource, group)
-}
+	version, err := c.requestPreferredVersion(group, resource)
+	if err != nil {
+		return "", err
+	}
 
-// preferredVersionKey namespaces the negative memory of this path away from the group listings
-// that share the map. An API group key is "group/version" and never carries a colon.
-func preferredVersionKey(group, resource string) string {
-	return "preferred-version:" + group + "/" + resource
+	c.muPv.Lock()
+	defer c.muPv.Unlock()
+	c.preferredVersions[fmt.Sprintf("%s.%s", resource, group)] = newPreferredVersionCacheEntry(c.now(), version)
+
+	return version, nil
 }
 
 func (c *NamespacedDiscoveryCache) getFromCache(apiGroup string) (*namespacedCacheEntry, bool) {

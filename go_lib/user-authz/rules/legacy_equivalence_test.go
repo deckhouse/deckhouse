@@ -472,32 +472,52 @@ func legacyClusterScopedDenied(scope ResourceScope, coreGroup bool) bool {
 // meant to cover; nothing gains access.
 func TestLegacyEquivalence_AlternationAnchoring(t *testing.T) {
 	t.Parallel()
-	const pattern = "team-.*|kube-system"
-
-	legacy, err := regexp.Compile(legacyWrapRegex(pattern))
-	if err != nil {
-		t.Fatal(err)
-	}
-	current, err := newCompileCache().compile(pattern)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	// What both agree on: the branches as written.
-	for _, ns := range []string{"team-a", "kube-system"} {
-		if !legacy.MatchString(ns) || !current.Matches(ns) {
-			t.Errorf("%q must be covered by both", ns)
+	for _, tc := range []struct {
+		pattern string
+		covered []string
+		leaked  string
+	}{
+		{
+			pattern: "team-.*|kube-system",
+			covered: []string{"team-a", "kube-system"},
+			leaked:  "attacker-kube-system",
+		},
+		{
+			// The same leak reached through a POSIX class name. It is written out because the
+			// scanner that used to decide when to anchor an alternation ended the character class
+			// at the "]" of ":alpha:" and stopped seeing the "|" as top-level - so this pattern
+			// leaked for one revision longer than the one above.
+			pattern: "[[:alpha:](]|kube-system",
+			covered: []string{"a", "(", "kube-system"},
+			leaked:  "attacker-kube-system",
+		},
+	} {
+		legacy, err := regexp.Compile(legacyWrapRegex(tc.pattern))
+		if err != nil {
+			t.Fatalf("%q: %v", tc.pattern, err)
 		}
-	}
+		current, err := newCompileCache().compile(tc.pattern)
+		if err != nil {
+			t.Fatalf("%q: %v", tc.pattern, err)
+		}
 
-	// And the difference.
-	const leaked = "attacker-kube-system"
-	if !legacy.MatchString(leaked) {
-		t.Fatalf("the reference implementation is supposed to match %q; if it no longer does, this "+
-			"difference has been resolved elsewhere and this test should say so", leaked)
-	}
-	if current.Matches(leaked) {
-		t.Errorf("%q is still covered: the alternation is not anchored on both branches", leaked)
+		// What both agree on: the branches as written.
+		for _, ns := range tc.covered {
+			if !legacy.MatchString(ns) || !current.Matches(ns) {
+				t.Errorf("%q: %q must be covered by both", tc.pattern, ns)
+			}
+		}
+
+		// And the difference.
+		if !legacy.MatchString(tc.leaked) {
+			t.Fatalf("%q: the reference implementation is supposed to match %q; if it no longer "+
+				"does, this difference has been resolved elsewhere and this test should say so",
+				tc.pattern, tc.leaked)
+		}
+		if current.Matches(tc.leaked) {
+			t.Errorf("%q: %q is still covered: the alternation is not anchored on both branches",
+				tc.pattern, tc.leaked)
+		}
 	}
 }
 

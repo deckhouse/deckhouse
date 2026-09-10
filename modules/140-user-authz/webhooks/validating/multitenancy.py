@@ -323,23 +323,47 @@ def re2_unsupported_construct(pattern: str) -> str:
                         return "a repetition of %s, above RE2's limit of %d" % (part, RE2_MAX_REPEAT)
 
     # A backreference written as \1 .. \9. Scanned separately because _spans hides escapes.
+    #
+    # Not every \<digit> is one: Go reads \ plus two or three octal digits as a character, so
+    # "\123" compiles and only a lone "\1" - a digit with no octal digit after it - does not.
+    # Rejecting the octal form locked administrators out of editing rules that work.
     i = 0
     while i < len(pattern) - 1:
         if pattern[i] == "\\":
-            if pattern[i + 1].isdigit() and pattern[i + 1] != "0":
+            nxt = pattern[i + 1]
+            if nxt.isdigit() and nxt != "0" and not _is_octal_escape(pattern, i):
                 return "a backreference"
             i += 2
             continue
         i += 1
 
     # A possessive quantifier: ++, *+, ?+, }+ . RE2 has no possessive form.
-    for i, ch, in_class, in_quote in _spans(pattern):
-        if in_class or in_quote or ch != "+":
+    #
+    # The quantifier has to be the one the regular expression means, not the character that
+    # happens to precede the "+" in the string: in "a\?+" the "?" is an escaped literal and the
+    # "+" repeats it, which RE2 compiles. _spans yields the unescaped characters, so the previous
+    # one it yielded is the previous character of the expression.
+    prev = ""
+    for _, ch, in_class, in_quote in _spans(pattern):
+        if in_class or in_quote:
+            prev = ""
             continue
-        if i > 0 and pattern[i - 1] in "+*?}":
+        if ch == "+" and prev in ("+", "*", "?", "}"):
             return "a possessive quantifier"
+        prev = ch
 
     return ""
+
+
+def _is_octal_escape(pattern: str, backslash: int) -> bool:
+    """Reports whether pattern[backslash:] is \ plus two or three octal digits, which RE2 reads as
+    a character. A single \1 is not, and neither is \18: the 8 is not an octal digit."""
+    digits = 0
+    for ch in pattern[backslash + 1:backslash + 4]:
+        if ch not in "01234567":
+            break
+        digits += 1
+    return digits >= 2
 
 
 def validate_car_limit_namespaces_patterns(obj: DotMap) -> tuple[list[str], list[str]]:
