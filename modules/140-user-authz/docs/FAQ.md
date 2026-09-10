@@ -241,7 +241,7 @@ Permission Browser exports the same set under the `user_authz_permission_browser
 
 **Alerts** (in the `d8_user_authz` Prometheus rules, grouped as `D8UserAuthzWebhookMalfunctioning`):
 
-- `D8UserAuthzWebhookTargetDown` when any instance has not been scraped for 5 minutes — per instance, not only when all of them are gone, because on several masters one silent instance is the case worth knowing about.
+- `D8UserAuthzWebhookTargetDown` when any instance has not been scraped for 5 minutes — any one of them, not all of them together, because on several masters one silent instance is the case worth knowing about (it is a single alert either way: the expression counts the silent instances rather than naming them).
 - `D8UserAuthzWebhookRulesQuarantined` when a rule does not compile for 10 minutes.
 - `D8UserAuthzWebhookRulesWatchErrors` on a sustained watch error rate for 10 minutes.
 
@@ -266,6 +266,16 @@ d8 k auth can-i --as=user@example.com get pods -n other-namespace
 ```
 
 The window cannot be flushed without restarting `kube-apiserver`. It is also why the webhook answers `503` rather than a denial while its caches are still filling at startup: a denial would be remembered for 30 seconds after the webhook is ready to answer properly.
+
+A freshly installed CRD adds a second window on top of this one, and the two add up rather than
+overlap. To apply a namespace filter the webhook has to know whether the resource is namespaced,
+which it learns from discovery, and it lists an API group at most once every 10 seconds. A resource
+added to a group listed a moment ago is therefore unknown for up to those 10 seconds, and the answer
+computed from that is then cached by the API server for another 30 — about 40 seconds in the worst
+case between installing the CRD and multi-tenancy filtering requests for it. The rate limit is
+deliberate: the API group and the resource name come out of the request path, so without it any
+subject a rule covers could make every request they send cost the API server a discovery call.
+Installing a CRD requires far more privilege than those 40 seconds yield.
 
 ## What does it mean when a rule "needs multi-tenancy"?
 

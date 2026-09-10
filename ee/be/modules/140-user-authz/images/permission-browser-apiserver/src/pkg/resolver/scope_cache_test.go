@@ -303,6 +303,77 @@ func TestRefresh_NonDiscoveryError_PreservesCache(t *testing.T) {
 
 // TestNilCache_AnswersLikeEmpty tests that a nil *ResourceScopeCache, which a caller may hand to
 // an interface value by mistake, behaves like an empty cache instead of panicking.
+// A resource the snapshot does not hold pulls the next refresh forward.
+//
+// The authorization webhook re-lists a group within ten seconds of being asked about something it
+// does not hold; this cache used to wait out its five-minute cycle. Both feed the same decision, so
+// for those five minutes this apiserver reported one answer and the API server enforced another.
+func TestScopeOf_AMissPullsTheRefreshForward(t *testing.T) {
+	discovery := newMockDiscovery(testAPIResources(), nil)
+	cache := NewResourceScopeCache(discovery)
+	// Long enough that a test that passes cannot be passing because of the cycle.
+	cache.refreshInterval = time.Hour
+	cache.bootstrapInterval = time.Hour
+
+	if scope := cache.ScopeOf("example.com", "widgets"); scope.Known {
+		t.Fatalf("before the CRD exists: got %+v, want a miss", scope)
+	}
+
+	// The CRD is installed.
+	discovery.serve(append(testAPIResources(), &metav1.APIResourceList{
+		GroupVersion: "example.com/v1",
+		APIResources: []metav1.APIResource{{Name: "widgets", Namespaced: true}},
+	}))
+
+	// The miss above scheduled the refresh; it converges without anybody waiting an hour.
+	deadline := time.Now().Add(5 * time.Second)
+	for {
+		if scope := cache.ScopeOf("example.com", "widgets"); scope.Known {
+			if !scope.Namespaced {
+				t.Fatalf("after the refresh: got %+v, want a namespaced resource", scope)
+			}
+			break
+		}
+		if time.Now().After(deadline) {
+			t.Fatal("the miss never produced a refresh: the snapshot is still the old one")
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
+// And the misses are rate-limited: refresh() lists every group in the cluster.
+func TestScopeOf_MissesDoNotRefreshOnEveryLookup(t *testing.T) {
+	discovery := newMockDiscovery(testAPIResources(), nil)
+	cache := NewResourceScopeCache(discovery)
+	cache.refreshInterval = time.Hour
+	cache.bootstrapInterval = time.Hour
+	now := time.Now()
+	cache.now = func() time.Time { return now }
+
+	after := func() int {
+		// The refresh a miss triggers runs in its own goroutine; give it room to finish before
+		// counting, or the test measures scheduling rather than the rate limit.
+		time.Sleep(200 * time.Millisecond)
+		return discovery.listingCount()
+	}
+
+	constructed := discovery.listingCount()
+	for i := 0; i < 200; i++ {
+		cache.ScopeOf("example.com", "widgets")
+		cache.ScopeOf("example.com", "gadgets")
+	}
+	if got := after() - constructed; got != 1 {
+		t.Errorf("400 lookups of resources that do not exist produced %d refreshes, want 1", got)
+	}
+
+	// Once the interval has passed, one more, so a CRD installed meanwhile is still noticed.
+	now = now.Add(missRefreshInterval)
+	cache.ScopeOf("example.com", "widgets")
+	if got := after() - constructed; got != 2 {
+		t.Errorf("after the interval: %d refreshes in total, want 2", got)
+	}
+}
+
 func TestNilCache_AnswersLikeEmpty(t *testing.T) {
 	var cache *ResourceScopeCache
 
@@ -566,17 +637,43 @@ func testAPIResources() []*metav1.APIResourceList {
 
 // mockDiscovery implements discovery.DiscoveryInterface for testing.
 // Only ServerPreferredResources is implemented; other methods return zero values.
+//
+// It is guarded by a mutex and counts its listings so a test can change what the cluster serves
+// while the cache is running and see how often the cache asked.
 type mockDiscovery struct {
+	mu        sync.Mutex
 	resources []*metav1.APIResourceList
 	err       error
+	listings  int
 }
 
 func newMockDiscovery(resources []*metav1.APIResourceList, err error) *mockDiscovery {
 	return &mockDiscovery{resources: resources, err: err}
 }
 
-func (m *mockDiscovery) ServerPreferredResources() ([]*metav1.APIResourceList, error) {
+// serve replaces what the cluster serves, as installing a CRD would.
+func (m *mockDiscovery) serve(resources []*metav1.APIResourceList) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.resources = resources
+}
+
+// listingCount is how many times the cache has listed discovery.
+func (m *mockDiscovery) listingCount() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.listings
+}
+
+func (m *mockDiscovery) snapshot() ([]*metav1.APIResourceList, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.listings++
 	return m.resources, m.err
+}
+
+func (m *mockDiscovery) ServerPreferredResources() ([]*metav1.APIResourceList, error) {
+	return m.snapshot()
 }
 
 // The following methods satisfy the discovery.DiscoveryInterface but are not used by ResourceScopeCache.
@@ -586,6 +683,8 @@ func (m *mockDiscovery) ServerGroups() (*metav1.APIGroupList, error) {
 }
 
 func (m *mockDiscovery) ServerResourcesForGroupVersion(groupVersion string) (*metav1.APIResourceList, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
 	for _, rl := range m.resources {
 		if rl.GroupVersion == groupVersion {
 			return rl, nil
@@ -595,11 +694,12 @@ func (m *mockDiscovery) ServerResourcesForGroupVersion(groupVersion string) (*me
 }
 
 func (m *mockDiscovery) ServerGroupsAndResources() ([]*metav1.APIGroup, []*metav1.APIResourceList, error) {
-	return nil, m.resources, m.err
+	resources, err := m.snapshot()
+	return nil, resources, err
 }
 
 func (m *mockDiscovery) ServerPreferredNamespacedResources() ([]*metav1.APIResourceList, error) {
-	return m.resources, m.err
+	return m.snapshot()
 }
 
 func (m *mockDiscovery) ServerVersion() (*version.Info, error) {

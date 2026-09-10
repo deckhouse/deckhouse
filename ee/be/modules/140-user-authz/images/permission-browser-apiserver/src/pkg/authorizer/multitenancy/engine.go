@@ -46,6 +46,19 @@ type IndependentRBACChecker interface {
 // were assembled here instead, which meant every test fake had to reassemble them the same way, and
 // a fake that did not left the suite green and the behaviour unsafe.
 //
+// There is deliberately no version here, and this is the one input the authorization webhook has
+// and this apiserver does not: the webhook asks discovery about the group/version the request
+// names, resolving the preferred version when the review does not carry one. The snapshot behind
+// this method is version-agnostic - every version of a group contributes to one map keyed by
+// group and resource. It costs nothing in practice, because scope is a property of the resource
+// rather than of the version that serves it: a CustomResourceDefinition declares spec.scope once
+// for all its versions, and no built-in resource changes scope between group-versions. An
+// aggregated APIService could in principle serve one resource with two scopes in two versions;
+// the snapshot would then keep whichever version discovery listed last. Plumbing the version
+// through would mean keeping the preferred version of every group here as well, to answer the
+// reviews that carry no version - a second copy of the webhook's resolution logic to serve a case
+// nothing in the platform produces.
+//
 // Implemented by resolver.ResourceScopeCache. This package must not import
 // resolver (resolver already imports multitenancy).
 type ResourceScope interface {
@@ -124,6 +137,13 @@ func (e *Engine) Authorize(ctx context.Context, attrs authorizer.Attributes) (au
 
 	info := attrs.GetUser()
 	if info == nil {
+		return authorizer.DecisionNoOpinion, "", nil
+	}
+
+	// The API server never asks the webhook about these identities, so their requests to every
+	// other API are not multi-tenancy filtered. Filtering them here would make this apiserver the
+	// one place in the cluster where a control-plane identity is limited by a rule.
+	if decision.ExemptFromWebhook(info.GetName()) {
 		return authorizer.DecisionNoOpinion, "", nil
 	}
 
@@ -219,6 +239,16 @@ func (e *Engine) namespaceLabels() rules.NamespaceLabels {
 // documented policy described behaviour the product did not have.
 func (e *Engine) GetNamespaceAccessType(userInfo user.Info) (NamespaceAccessType, *DirectoryEntry) {
 	if userInfo == nil {
+		return AllNamespacesAllowed, nil
+	}
+
+	// A subject the API server never asks the webhook about is not limited by any rule, whatever
+	// the rules say about it - and a rule does not have to name it deliberately, since a rule
+	// whose subjects include a group like system:authenticated covers every service account in
+	// the cluster. Reporting a limit that is not enforced is the same class of mistake as
+	// enforcing one that is not reported.
+	if decision.ExemptFromWebhook(userInfo.GetName()) {
+		klog.V(4).Infof("GetNamespaceAccessType: user=%s is excluded from the authorization webhook by the AuthorizationConfiguration, so no rule limits it", userInfo.GetName())
 		return AllNamespacesAllowed, nil
 	}
 
