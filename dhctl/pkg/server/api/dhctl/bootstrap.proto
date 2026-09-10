@@ -48,8 +48,8 @@ message BootstrapStart {
   string state = 7;
   string post_bootstrap_script = 8;
   BootstrapStartOptions options = 9;
-  // kubeconfig points the kube provider straight at the API server. connection_config is still
-  // required: this operation reaches the nodes over ssh.
+  // kubeconfig points the kube provider straight at the API server. connection_config may be
+  // empty: an immutable cluster is installed without ssh, every other one reaches its nodes over it.
   string kubeconfig = 10;
 }
 
