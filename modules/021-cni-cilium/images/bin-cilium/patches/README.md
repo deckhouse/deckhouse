@@ -98,3 +98,17 @@ Note this changes forwarding, not only logging: the policy is programmed with th
 configured egress IP, where unpatched the entry stays `0.0.0.0`.
 
 Test `~/src/kind/d8-1.20-tests/013-egw-unassigned-ip/`
+
+## 018-fix-svacer.patch
+
+Nil guard in `ICMPField.UnmarshalJSON`: a missing or null `type` panics in
+`IntOrString.IntValue()`, because `String()` tolerates a nil receiver and
+returns `"<nil>"` so the preceding check does not short circuit.
+
+Not reachable from a running cluster in 1.20 -- the CRD marks `type` as
+required, and `cilium-dbg policy import` no longer exists -- but it clears the
+Svace `DEREF_OF_NULL` finding in this build (see `SvaceBuildOptions` in
+`werf.inc.yaml`).
+
+Test `~/src/kind/d8-1.20-tests/018-icmp-nil-type/` (unit test; its negative
+control runs the same test against a pristine v1.20.1 worktree, where it panics)
