@@ -8,14 +8,14 @@ positive:
 
   # only tolerations
   - tolerations:
-    - {"key":"dedicated.deckhouse.io","operator":"Equal","value":"cert-manager"}
-    - {"key":"dedicated.deckhouse.io","operator":"Equal","value":"system"}
+    - {"key":"dedicated.deckhouse.io","operator":"equal","value":"cert-manager"}
+    - {"key":"dedicated.deckhouse.io","operator":"equal","value":"system"}
 
   # node selector with tolerations
   - nodeSelector: {"disk-type": "ssd"}
     tolerations:
-      - { "key": "dedicated.deckhouse.io","operator": "Equal","value": "cert-manager" }
-      - { "key": "dedicated.deckhouse.io","operator": "Equal","value": "system" }
+      - { "key": "dedicated.deckhouse.io","operator": "equal","value": "cert-manager" }
+      - { "key": "dedicated.deckhouse.io","operator": "equal","value": "system" }
 
   # cloudflare settings
   - cloudflareGlobalAPIKey: "key"
@@ -32,17 +32,23 @@ positive:
   # gcloud SA
   - cloudDNSServiceAccount: "eyJzYSI6ICJhYmNkZWZnaEBzZXJ2aWNlYWNjb3VudC5jb20iLCAicHJvamVjdF9pZCI6ImFhYWFhIn0="
 
+  # yandex cloud dns
+  - yandexFolderID: "b1gabcdefghijklmnopq"
+    yandexServiceAccountJSON: "eyJpZCI6ImFqZSIsInNlcnZpY2VfYWNjb3VudF9pZCI6ImFqZSJ9"
+
   # all in
   - nodeSelector: { "disk-type": "ssd" }
     tolerations:
-      - { "key": "dedicated.deckhouse.io","operator": "Equal","value": "cert-manager" }
-      - { "key": "dedicated.deckhouse.io","operator": "Equal","value": "system" }
+      - { "key": "dedicated.deckhouse.io","operator": "equal","value": "cert-manager" }
+      - { "key": "dedicated.deckhouse.io","operator": "equal","value": "system" }
     cloudflareGlobalAPIKey: "key"
     cloudflareEmail: "example@example.com"
     route53AccessKeyID: "key id"
     route53SecretAccessKey: "key"
     digitalOceanCredentials: "creds"
     cloudDNSServiceAccount: 'eyJzYSI6ICJhYmNkZWZnaEBzZXJ2aWNlYWNjb3VudC5jb20iLCAicHJvamVjdF9pZCI6ImFhYWFhIn0='
+    yandexFolderID: "b1gabcdefghijklmnopq"
+    yandexServiceAccountJSON: "eyJpZCI6ImFqZSIsInNlcnZpY2VfYWNjb3VudF9pZCI6ImFqZSJ9"
 
   values:
   - internal:
@@ -62,3 +68,4 @@ negative:
   - tolerations: [{"incorrect key": "val"}]
   - cloudflareEmail: "not email"
   - cloudDNSServiceAccount: "must be base64 encoded json-string with 'project_id' field"
+  - yandexServiceAccountJSON: "must be base64 encoded json"

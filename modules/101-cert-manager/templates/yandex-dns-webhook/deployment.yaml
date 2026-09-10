@@ -1,0 +1,103 @@
+{{- define "yandex_dns_webhook_resources" }}
+cpu: 10m
+memory: 25Mi
+{{- end }}
+
+{{- if and (hasKey .Values.certManager "yandexFolderID") (hasKey .Values.certManager "yandexServiceAccountJSON") }}
+{{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+---
+apiVersion: autoscaling.k8s.io/v1
+kind: VerticalPodAutoscaler
+metadata:
+  name: yandex-dns-webhook
+  namespace: d8-cert-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "yandex-dns-webhook")) | nindent 2 }}
+spec:
+  targetRef:
+    apiVersion: "apps/v1"
+    kind: Deployment
+    name: yandex-dns-webhook
+  updatePolicy:
+    updateMode: "Initial"
+  resourcePolicy:
+    containerPolicies:
+    - containerName: "yandex-dns-webhook"
+      minAllowed:
+        {{- include "yandex_dns_webhook_resources" . | nindent 8 }}
+      maxAllowed:
+        cpu: 50m
+        memory: 100Mi
+{{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: yandex-dns-webhook
+  namespace: d8-cert-manager
+  {{- include "helm_lib_module_labels" (list . (dict "app" "yandex-dns-webhook")) | nindent 2 }}
+spec:
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
+  revisionHistoryLimit: 2
+  selector:
+    matchLabels:
+      app: yandex-dns-webhook
+  template:
+    metadata:
+      annotations:
+        checksum/certificate: {{ include (print .Template.BasePath "/yandex-dns-webhook/secret-tls.yaml") . | sha256sum }}
+      labels:
+        app: yandex-dns-webhook
+    spec:
+      serviceAccountName: yandex-dns-webhook
+      automountServiceAccountToken: true
+      {{- include "helm_lib_priority_class" (tuple . "cluster-medium") | nindent 6 }}
+      {{- include "helm_lib_pod_anti_affinity_for_ha" (list . (dict "app" "yandex-dns-webhook")) | nindent 6 }}
+      {{- include "helm_lib_node_selector" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_tolerations" (tuple . "system") | nindent 6 }}
+      {{- include "helm_lib_module_pod_security_context_run_as_user_nobody" . | nindent 6 }}
+      imagePullSecrets:
+      - name: deckhouse-registry
+      containers:
+      - name: yandex-dns-webhook
+        {{- include "helm_lib_module_container_security_context_pss_restricted_flexible" dict | nindent 8 }}
+        image: {{ include "helm_lib_module_image" (list . "certManagerWebhookYandex") }}
+        args:
+        - --tls-cert-file=/tls/tls.crt
+        - --tls-private-key-file=/tls/tls.key
+        - --secure-port=6443
+        env:
+        - name: GROUP_NAME
+          value: acme.cloud.yandex.com
+        ports:
+        - name: https
+          containerPort: 6443
+          protocol: TCP
+        livenessProbe:
+          httpGet:
+            scheme: HTTPS
+            path: /healthz
+            port: https
+        readinessProbe:
+          httpGet:
+            scheme: HTTPS
+            path: /healthz
+            port: https
+        volumeMounts:
+        - name: certs
+          mountPath: /tls
+          readOnly: true
+        - name: tmp
+          mountPath: /tmp
+        resources:
+          requests:
+            {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
+{{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            {{- include "yandex_dns_webhook_resources" . | nindent 12 }}
+{{- end }}
+      volumes:
+      - name: certs
+        secret:
+          secretName: yandex-dns-webhook-tls
+      - name: tmp
+        emptyDir: {}
+{{- end }}

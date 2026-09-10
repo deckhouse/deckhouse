@@ -61,46 +61,13 @@ If necessary, you can create such `ClusterIssuer` yourself.
 An example of using AWS Route53 is available in the section [How to protect `cert-manager` credentials](#how-to-secure-cert-manager-credentials).  
 The list of all possible `ClusterIssuer`s that can be created is available in the [module templates](https://github.com/deckhouse/deckhouse/tree/main/modules/101-cert-manager/templates/cert-manager).
 
-Using third-party DNS providers is implemented via the `webhook` method.  
+Built-in providers configured via module settings: Cloudflare, Amazon Route53, DigitalOcean, Google Cloud DNS, and Yandex Cloud DNS.
+For Yandex Cloud DNS, see [Issuing a DNS wildcard certificate using Yandex Cloud DNS](usage.html#issuing-a-dns-wildcard-certificate-using-yandex-cloud-dns).
+
+Using other third-party DNS providers is implemented via the `webhook` method.
 
 When cert-manager makes an `ACME` `DNS-01` call, it sends a request to the webhook server, which then performs the necessary operations to update the DNS record.  
-When using this method, you need to place a service that will process the hook and create a TXT record in the DNS provider.  
-
-As an example, let's consider using the `Yandex Cloud DNS` service.
-
-1. To process the webhook, first place the `Yandex Cloud DNS ACME webhook` service in the cluster according to the [official documentation](https://github.com/yandex-cloud/cert-manager-webhook-yandex)  
-
-1. Then, create the `ClusterIssuer` resource:
-
-   ```yaml
-   apiVersion: cert-manager.io/v1
-   kind: ClusterIssuer
-   metadata:
-     name: yc-clusterissuer
-     namespace: default
-   spec:
-     acme:
-       # You must replace this email address with your own.
-       # Let's Encrypt will use this to contact you about expiring
-       # certificates, and issues related to your account.
-       email: your@email.com
-       server: https://acme-staging-v02.api.letsencrypt.org/directory
-       privateKeySecretRef:
-         # Secret resource that will be used to store the account's private key.
-         name: secret-ref
-       solvers:
-         - dns01:
-             webhook:
-               config:
-                 # The ID of the folder where dns-zone located in
-                 folder: <your folder ID>
-                 # This is the secret used to access the service account
-                 serviceAccountSecretRef:
-                   name: cert-manager-secret
-                   key: iamkey.json
-               groupName: acme.cloud.yandex.com
-               solverName: yandex-cloud-dns
-   ```
+When using this method, you need to place a service that will process the hook and create a TXT record in the DNS provider, then create a `ClusterIssuer` with `dns01.webhook` solver settings according to the webhook documentation.
 
 ## How to add an additional `Issuer` and `ClusterIssuer` using HashiCorp Vault to issue certificates?
 

@@ -71,45 +71,11 @@ the [`cert-manager`](/modules/cert-manager/) module must be able to create TXT r
 `cert-manager` includes built-in support for popular DNS providers such as AWS Route53, Google Cloud DNS, Cloudflare, and others.
 A full list is available in the [official `cert-manager` documentation](https://cert-manager.io/docs/configuration/acme/dns01/).
 
+The Deckhouse `cert-manager` module can automatically create ClusterIssuers for Cloudflare, Amazon Route53, DigitalOcean, Google Cloud DNS, and Yandex Cloud DNS when the corresponding module settings are filled in.
+For Yandex Cloud DNS, see [Issuing a DNS wildcard certificate using Yandex Cloud DNS](/modules/cert-manager/usage.html#issuing-a-dns-wildcard-certificate-using-yandex-cloud-dns).
+
 If your provider is not directly supported, you can configure a webhook
-and deploy a custom ACME handler in the cluster that performs the necessary DNS record updates.
-
-The following example is based on using Yandex Cloud DNS:
-
-1. To handle the webhook, deploy the `Yandex Cloud DNS ACME webhook` service in the cluster
-   according to the [official documentation](https://github.com/yandex-cloud/cert-manager-webhook-yandex).
-
-1. Create a ClusterIssuer resource using the following example:
-
-   ```yaml
-   apiVersion: cert-manager.io/v1
-   kind: ClusterIssuer
-   metadata:
-     name: yc-clusterissuer
-     namespace: default
-   spec:
-     acme:
-       # Replace this email address with your own.
-       # Let's Encrypt will use it to notify you about expiring certificates
-       # and issues related to your account.
-       email: your@email.com
-       server: https://acme-staging-v02.api.letsencrypt.org/directory
-       privateKeySecretRef:
-         # The Secret resource used to store the account private key.
-         name: secret-ref
-       solvers:
-         - dns01:
-             webhook:
-               config:
-                 # The folder ID containing your DNS zone.
-                 folder: <your-folder-ID>
-                 # Secret used to access the service account.
-                 serviceAccountSecretRef:
-                   name: cert-manager-secret
-                   key: iamkey.json
-               groupName: acme.cloud.yandex.com
-               solverName: yandex-cloud-dns
-   ```
+and deploy a custom ACME handler in the cluster that performs the necessary DNS record updates, then create a `ClusterIssuer` with `dns01.webhook` solver settings according to the webhook documentation.
 
 ### Adding a ClusterIssuer that uses a custom certificate authority (CA)
 

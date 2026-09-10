@@ -6,3 +6,9 @@
   id: cert-manager
   version: 1.20.3
   # Do not forget update flant patch branch in 3p repo!
+- name: cert-manager-webhook-yandex
+  link: https://github.com/yandex-cloud/cert-manager-webhook-yandex
+  description: ACME DNS-01 webhook for Yandex Cloud DNS.
+  license: Apache License 2.0
+  id: cert-manager-webhook-yandex
+  version: 1a7dd500a97e9206fa5cfebb102decd3889e3544
