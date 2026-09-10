@@ -36,9 +36,9 @@ func TestSyncPackageRepositories(t *testing.T) {
 
 		require.NoError(t, s.sync(ctx))
 
-		repo := getRepository(t, cl, "external")
+		repo := getPackageRepository(t, cl, "external")
 		assert.NotContains(t, repo.Labels, "heritage", "the repository mirrors a user's module source, it is not deckhouse-owned")
-		assert.Equal(t, []metav1.OwnerReference{sourceOwnerReference(testModuleSource("external", ""))}, repo.OwnerReferences, "the source owns the repository")
+		assert.Equal(t, []metav1.OwnerReference{moduleSourceOwnerReference(testModuleSource("external", ""))}, repo.OwnerReferences, "the source owns the repository")
 		assert.Equal(t, "HTTPS", repo.Spec.Registry.Scheme)
 		assert.Equal(t, "registry.example.io/external", repo.Spec.Registry.Repo)
 		assert.Equal(t, "ZG9ja2VyY2Zn", repo.Spec.Registry.DockerCFG)
@@ -56,7 +56,7 @@ func TestSyncPackageRepositories(t *testing.T) {
 
 		require.NoError(t, s.sync(ctx))
 
-		assert.Empty(t, listRepositoryNames(t, cl))
+		assert.Empty(t, listPackageRepositoryNames(t, cl))
 	})
 
 	t.Run("skips a source being deleted", func(t *testing.T) {
@@ -69,7 +69,7 @@ func TestSyncPackageRepositories(t *testing.T) {
 
 		require.NoError(t, s.sync(ctx))
 
-		assert.Empty(t, listRepositoryNames(t, cl))
+		assert.Empty(t, listPackageRepositoryNames(t, cl))
 	})
 
 	t.Run("refreshes the registry of an existing repository from the source", func(t *testing.T) {
@@ -94,7 +94,7 @@ func TestSyncPackageRepositories(t *testing.T) {
 
 		require.NoError(t, s.sync(ctx))
 
-		after := getRepository(t, cl, existing.Name)
+		after := getPackageRepository(t, cl, existing.Name)
 		assert.Equal(t, "registry.example.io/external", after.Spec.Registry.Repo, "the registry follows the source")
 		assert.Equal(t, "HTTPS", after.Spec.Registry.Scheme)
 		assert.Equal(t, "ZG9ja2VyY2Zn", after.Spec.Registry.DockerCFG)
@@ -107,26 +107,26 @@ func TestSyncPackageRepositories(t *testing.T) {
 
 	t.Run("adopts an existing repository", func(t *testing.T) {
 		source := testModuleSource("external", "registry.example.io/external")
-		stale := sourceOwnerReference(source)
+		stale := moduleSourceOwnerReference(source)
 		stale.UID = "external-old-uid"
 		existing := &v1alpha1.PackageRepository{
 			ObjectMeta: metav1.ObjectMeta{Name: "external", OwnerReferences: []metav1.OwnerReference{stale}},
-			Spec:       v1alpha1.PackageRepositorySpec{Registry: registryFromSource(source)},
+			Spec:       v1alpha1.PackageRepositorySpec{Registry: registryFromModuleSource(source)},
 		}
 
 		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), existing, source)
 
 		require.NoError(t, s.sync(ctx))
 
-		after := getRepository(t, cl, existing.Name)
-		assert.Equal(t, []metav1.OwnerReference{sourceOwnerReference(source)}, after.OwnerReferences, "the reference to the source created again is replaced")
+		after := getPackageRepository(t, cl, existing.Name)
+		assert.Equal(t, []metav1.OwnerReference{moduleSourceOwnerReference(source)}, after.OwnerReferences, "the reference to the source created again is replaced")
 	})
 
 	t.Run("keeps a repository matching the source untouched", func(t *testing.T) {
 		existing := &v1alpha1.PackageRepository{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:            "external",
-				OwnerReferences: []metav1.OwnerReference{sourceOwnerReference(testModuleSource("external", ""))},
+				OwnerReferences: []metav1.OwnerReference{moduleSourceOwnerReference(testModuleSource("external", ""))},
 			},
 			Spec: v1alpha1.PackageRepositorySpec{
 				Registry: v1alpha1.PackageRepositorySpecRegistry{
@@ -142,11 +142,11 @@ func TestSyncPackageRepositories(t *testing.T) {
 		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), existing,
 			testModuleSource("external", "registry.example.io/external"),
 		)
-		before := getRepository(t, cl, existing.Name)
+		before := getPackageRepository(t, cl, existing.Name)
 
 		require.NoError(t, s.sync(ctx))
 
-		after := getRepository(t, cl, existing.Name)
+		after := getPackageRepository(t, cl, existing.Name)
 		assert.Equal(t, before.ResourceVersion, after.ResourceVersion, "a matching repository is not rewritten")
 	})
 }

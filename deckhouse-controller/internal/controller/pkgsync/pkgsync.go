@@ -147,9 +147,9 @@ func (s *syncer) sync(ctx context.Context) error {
 	return s.syncModulePackageVersions(ctx)
 }
 
-// RepositoryNameForSource maps a ModuleSource name to the name of the
+// PackageRepositoryNameForModuleSource maps a ModuleSource name to the name of the
 // PackageRepository serving the same registry path.
-func RepositoryNameForSource(sourceName string) string {
+func PackageRepositoryNameForModuleSource(sourceName string) string {
 	if sourceName == moduleSourceNameDeckhouse {
 		return repositoryNameDeckhouseModules
 	}
