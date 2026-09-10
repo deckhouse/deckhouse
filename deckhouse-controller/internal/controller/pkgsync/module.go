@@ -28,6 +28,7 @@ import (
 
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/app"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/internal/packages/loader"
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
@@ -43,13 +44,40 @@ func (s *syncer) syncModules(ctx context.Context) error {
 		return err
 	}
 
+	moduleConfigs, err := s.moduleConfigsByName(ctx)
+	if err != nil {
+		return err
+	}
+
 	for _, moduleName := range moduleNames {
-		if err := s.ensureEmbeddedModule(ctx, moduleName, embeddedPackageVersion); err != nil {
+		if err := s.ensureEmbeddedModule(ctx, moduleName, embeddedPackageVersion, moduleConfigs[moduleName]); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+// moduleConfigsByName reads the module configs the cluster carries.
+// A config under deletion counts as gone: its settings are on their way out.
+func (s *syncer) moduleConfigsByName(ctx context.Context) (map[string]*v1alpha1.ModuleConfig, error) {
+	list := new(v1alpha1.ModuleConfigList)
+	if err := s.reader.List(ctx, list); err != nil {
+		return nil, fmt.Errorf("list module configs: %w", err)
+	}
+
+	moduleConfigs := make(map[string]*v1alpha1.ModuleConfig, len(list.Items))
+
+	for index := range list.Items {
+		moduleConfig := &list.Items[index]
+		if !moduleConfig.DeletionTimestamp.IsZero() {
+			continue
+		}
+
+		moduleConfigs[moduleConfig.Name] = moduleConfig
+	}
+
+	return moduleConfigs, nil
 }
 
 // embeddedModuleNames reads the names of the modules from the embedded modules dir.
@@ -89,7 +117,7 @@ func (s *syncer) embeddedModuleNames() ([]string, error) {
 // - the embedded repository name is reserved, no PackageRepository serves it
 // - only the fields below are written, the module has other writers
 // - a patch with no drift is not sent
-func (s *syncer) ensureEmbeddedModule(ctx context.Context, moduleName, packageVersion string) error {
+func (s *syncer) ensureEmbeddedModule(ctx context.Context, moduleName, packageVersion string, moduleConfig *v1alpha1.ModuleConfig) error {
 	module := new(v1alpha2.Module)
 
 	if err := s.reader.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
@@ -97,12 +125,13 @@ func (s *syncer) ensureEmbeddedModule(ctx context.Context, moduleName, packageVe
 			return fmt.Errorf("get the '%s' module: %w", moduleName, err)
 		}
 
-		return s.createEmbeddedModule(ctx, moduleName, packageVersion)
+		return s.createEmbeddedModule(ctx, moduleName, packageVersion, moduleConfig)
 	}
 
 	patch := client.MergeFrom(module.DeepCopy())
 
 	applyEmbeddedModule(module, packageVersion)
+	applyModuleConfig(module, moduleConfig)
 
 	patchData, err := patch.Data(module)
 	if err != nil {
@@ -124,10 +153,11 @@ func (s *syncer) ensureEmbeddedModule(ctx context.Context, moduleName, packageVe
 
 // createEmbeddedModule writes a module the cluster does not carry yet.
 // Rare: the old module stack creates an object for every module it knows.
-func (s *syncer) createEmbeddedModule(ctx context.Context, moduleName, packageVersion string) error {
+func (s *syncer) createEmbeddedModule(ctx context.Context, moduleName, packageVersion string, moduleConfig *v1alpha1.ModuleConfig) error {
 	module := &v1alpha2.Module{ObjectMeta: metav1.ObjectMeta{Name: moduleName}}
 
 	applyEmbeddedModule(module, packageVersion)
+	applyModuleConfig(module, moduleConfig)
 
 	if err := s.writer.Create(ctx, module); err != nil && !apierrors.IsAlreadyExists(err) {
 		return fmt.Errorf("create the '%s' module: %w", moduleName, err)
@@ -149,4 +179,23 @@ func applyEmbeddedModule(module *v1alpha2.Module, packageVersion string) {
 	}
 
 	module.Annotations[v1alpha2.ModuleAnnotationEmbedded] = "true"
+}
+
+// applyModuleConfig mirrors the module config into the module spec.
+// The four fields belong to the config alone: with no config they are cleared,
+// so a module keeps no settings the user has deleted.
+func applyModuleConfig(module *v1alpha2.Module, moduleConfig *v1alpha1.ModuleConfig) {
+	if moduleConfig == nil {
+		module.Spec.Enabled = nil
+		module.Spec.Settings = nil
+		module.Spec.SettingsVersion = 0
+		module.Spec.Maintenance = ""
+
+		return
+	}
+
+	module.Spec.Enabled = moduleConfig.Spec.Enabled
+	module.Spec.Settings = moduleConfig.Spec.Settings
+	module.Spec.SettingsVersion = moduleConfig.Spec.Version
+	module.Spec.Maintenance = moduleConfig.Spec.Maintenance
 }

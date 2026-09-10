@@ -19,12 +19,14 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha1"
 	"github.com/deckhouse/deckhouse/deckhouse-controller/pkg/apis/deckhouse.io/v1alpha2"
 )
 
@@ -69,11 +71,10 @@ func TestSyncEmbeddedModules(t *testing.T) {
 		assert.Equal(t, []string{"echo"}, listModuleNames(t, cl))
 	})
 
-	t.Run("an existing module keeps what the sync does not own", func(t *testing.T) {
+	t.Run("an existing module keeps the annotations of other writers", func(t *testing.T) {
 		dir := t.TempDir()
 		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
 
-		enabled := true
 		existing := &v1alpha2.Module{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:        "echo",
@@ -82,7 +83,6 @@ func TestSyncEmbeddedModules(t *testing.T) {
 			Spec: v1alpha2.ModuleSpec{
 				PackageRepositoryName: "deckhouse-modules",
 				PackageVersion:        "v1.2.3",
-				Enabled:               &enabled,
 			},
 		}
 
@@ -94,8 +94,6 @@ func TestSyncEmbeddedModules(t *testing.T) {
 		assert.Equal(t, "v1.80.0", module.Spec.PackageVersion)
 		assert.True(t, module.IsEmbedded())
 		assert.Equal(t, "echoes back", module.Annotations["en.meta.deckhouse.io/description"])
-		require.NotNil(t, module.Spec.Enabled)
-		assert.True(t, *module.Spec.Enabled, "the module config owns this field, the sync does not")
 	})
 
 	t.Run("a second pass writes nothing", func(t *testing.T) {
@@ -110,6 +108,78 @@ func TestSyncEmbeddedModules(t *testing.T) {
 		require.NoError(t, s.sync(ctx))
 		assert.Equal(t, version, getModule(t, cl, "echo").ResourceVersion)
 	})
+}
+
+func TestSyncModulesFromModuleConfig(t *testing.T) {
+	ctx := context.Background()
+
+	echoOnDisk := func(t *testing.T) string {
+		t.Helper()
+
+		dir := t.TempDir()
+		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
+
+		return dir
+	}
+
+	t.Run("mirrors the config into the spec", func(t *testing.T) {
+		enabled := true
+		moduleConfig := testModuleConfig("echo")
+		moduleConfig.Spec.Enabled = &enabled
+		moduleConfig.Spec.Version = 2
+		moduleConfig.Spec.Maintenance = "NoResourceReconciliation"
+		moduleConfig.Spec.Settings = &v1alpha1.MappedFields{Raw: []byte(`{"logLevel":"Debug"}`)}
+
+		s, cl := newTestSyncer(t, "v1.80.0", echoOnDisk(t), moduleConfig)
+		require.NoError(t, s.sync(ctx))
+
+		module := getModule(t, cl, "echo")
+		require.NotNil(t, module.Spec.Enabled)
+		assert.True(t, *module.Spec.Enabled)
+		assert.Equal(t, 2, module.Spec.SettingsVersion)
+		assert.Equal(t, "NoResourceReconciliation", module.Spec.Maintenance)
+		require.NotNil(t, module.Spec.Settings)
+		assert.JSONEq(t, `{"logLevel":"Debug"}`, string(module.Spec.Settings.Raw))
+	})
+
+	t.Run("clears the settings of a module with no config", func(t *testing.T) {
+		enabled := true
+		existing := &v1alpha2.Module{
+			ObjectMeta: metav1.ObjectMeta{Name: "echo"},
+			Spec: v1alpha2.ModuleSpec{
+				Enabled:         &enabled,
+				SettingsVersion: 2,
+				Maintenance:     "NoResourceReconciliation",
+				Settings:        &v1alpha1.MappedFields{Raw: []byte(`{"logLevel":"Debug"}`)},
+			},
+		}
+
+		s, cl := newTestSyncer(t, "v1.80.0", echoOnDisk(t), existing)
+		require.NoError(t, s.sync(ctx))
+
+		module := getModule(t, cl, "echo")
+		assert.Nil(t, module.Spec.Enabled)
+		assert.Nil(t, module.Spec.Settings)
+		assert.Zero(t, module.Spec.SettingsVersion)
+		assert.Empty(t, module.Spec.Maintenance)
+	})
+
+	t.Run("a config under deletion counts as gone", func(t *testing.T) {
+		enabled := true
+		moduleConfig := testModuleConfig("echo")
+		moduleConfig.Spec.Enabled = &enabled
+		moduleConfig.DeletionTimestamp = &metav1.Time{Time: time.Now()}
+		moduleConfig.Finalizers = []string{"modules.deckhouse.io/test"}
+
+		s, cl := newTestSyncer(t, "v1.80.0", echoOnDisk(t), moduleConfig)
+		require.NoError(t, s.sync(ctx))
+
+		assert.Nil(t, getModule(t, cl, "echo").Spec.Enabled)
+	})
+}
+
+func testModuleConfig(name string) *v1alpha1.ModuleConfig {
+	return &v1alpha1.ModuleConfig{ObjectMeta: metav1.ObjectMeta{Name: name}}
 }
 
 func listModuleNames(t *testing.T, cl client.Client) []string {
