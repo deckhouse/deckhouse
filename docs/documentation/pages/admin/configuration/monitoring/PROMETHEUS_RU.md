@@ -5,9 +5,9 @@ description: "Настройка сбора и хранения метрик Pro
 lang: ru
 ---
 
-{{< alert level="info" >}}
+{% alert level="info" %}
 Начиная с версии 1.71, в Deckhouse Kubernetes Platform используется [Deckhouse Prom++](/products/prompp/) вместо Prometheus.
-{{< /alert >}}
+{% endalert %}
 
 ## Назначение Prometheus
 
@@ -62,8 +62,8 @@ spec:
 
 Чтобы использовать другой StorageClass для этого модуля, переопределите параметр `storageClass` или `longtermStorageClass` в конфигурации модуля Prometheus.
 
-{{< alert level="warning" >}}
-При изменении параметра `storageClass` или `longtermStorageClass` в конфигурации модуля существующий PVC будет удален и создан заново. Все данные будут удалены. Перед изменением создайте резервную копию данных.
-{{< /alert >}}
+{% alert level="warning" %}
+При изменении параметра `storageClass` или `longtermStorageClass` в конфигурации модуля существующий PVC будет удалён и создан заново. Все данные будут удалены. Перед изменением создайте резервную копию данных.
+{% endalert %}
 
 Полное описание всех настроек доступно [в документации модуля `prometheus`](/modules/prometheus/configuration.html).

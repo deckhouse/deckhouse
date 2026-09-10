@@ -4,9 +4,9 @@ permalink: en/admin/configuration/monitoring/prometheus.html
 description: "Configure Prometheus metrics collection and storage in Deckhouse Kubernetes Platform. Deckhouse Prom++ setup, metrics configuration, and monitoring system management."
 ---
 
-{{< alert level="info" >}}
+{% alert level="info" %}
 Starting from version 1.71, Deckhouse Kubernetes Platform uses [Deckhouse Prom++](/products/prompp/) instead of Prometheus.
-{{< /alert >}}
+{% endalert %}
 
 ## Prometheus capabilities
 
@@ -61,8 +61,8 @@ If a Prometheus PVC already exists, changing the global parameter does not affec
 
 If the module configuration defines its own `storageClass` or `longtermStorageClass` value, the module-specific value takes precedence over the global default.
 
-{{< alert level="warning" >}}
+{% alert level="warning" %}
 Changing the `storageClass` or `longtermStorageClass` parameter in the module configuration deletes and recreates the existing PVC. All data will be lost. Back up your data before making this change.
-{{< /alert >}}
+{% endalert %}
 
 A complete description of all settings is available in the [prometheus module documentation](/modules/prometheus/configuration.html).
