@@ -161,5 +161,14 @@ spec:
                                 type: string
                               port:
                                 type: integer
+                        ambientGateways:
+                          type: array
+                          items:
+                            type: object
+                            properties:
+                              address:
+                                type: string
+                              port:
+                                type: integer
                         ca:
                           type: string

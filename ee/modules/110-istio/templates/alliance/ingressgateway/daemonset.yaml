@@ -1,36 +1,8 @@
-{{- define "istio_proxy_resources" }}
-cpu: 50m
-memory: 100Mi
-{{- end }}
-
 {{- if or .Values.istio.federation.enabled (and .Values.istio.multicluster.enabled .Values.istio.internal.multiclustersNeedIngressGateway) }}
   {{- $versionInfo := get .Values.istio.internal.versionMap .Values.istio.internal.globalVersion }}
   {{- $revision := get $versionInfo "revision" }}
   {{- $imageSuffix := get $versionInfo "imageSuffix" }}
-  {{- if (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
----
-apiVersion: autoscaling.k8s.io/v1
-kind: VerticalPodAutoscaler
-metadata:
-  name: ingressgateway
-  namespace: d8-{{ .Chart.Name }}
-  {{- include "helm_lib_module_labels" (list . (dict "app" "ingressgateway")) | nindent 2 }}
-spec:
-  targetRef:
-    apiVersion: "apps/v1"
-    kind: DaemonSet
-    name: ingressgateway
-  updatePolicy:
-    updateMode: "Initial"
-  resourcePolicy:
-    containerPolicies:
-    - containerName: istio-proxy
-      minAllowed:
-        {{- include "istio_proxy_resources" . | nindent 8 }}
-      maxAllowed:
-        memory: 200Mi
-        cpu: 100m
- {{- end }}
+  {{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
 ---
 apiVersion: apps/v1
 kind: DaemonSet
@@ -46,6 +18,7 @@ spec:
     metadata:
       annotations:
         {{ include "helm_lib_prevent_ds_eviction_annotation" . | nindent 8 }}
+        checksum/proxy-bootstrap-config: {{ include "istioProxyBootstrapConfig" (list $ $revision $supportsAmbient) | sha256sum }}
         {{- with $.Values.istio.alliance.ingressGateway.gatewayPodAnnotations }}
         {{- . | toYaml | nindent 8 }}
         {{- end }}
@@ -189,9 +162,10 @@ spec:
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_logs_with_extra" 10 | nindent 12 }}
-  {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
-            {{- include "istio_proxy_resources" . | nindent 12 }}
-  {{- end }}
+            {{- if not (.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
+            cpu: 100m
+            memory: 128Mi
+            {{- end }}
         volumeMounts:
         - name: workload-socket
           mountPath: /var/run/secrets/workload-spiffe-uds

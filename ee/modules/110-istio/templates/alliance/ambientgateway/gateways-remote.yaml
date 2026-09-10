@@ -1,0 +1,30 @@
+{{- if include "istioAmbientMulticlusterEnabled" . }}
+{{- range $multicluster := $.Values.istio.internal.multiclusters }}
+{{- if and $multicluster.enableIngressGateway $multicluster.ambientGateways $multicluster.networkName }}
+{{- range $index, $ambientGateway := $multicluster.ambientGateways }}
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ambientgateway-remote-{{ $multicluster.name }}-{{ $index }}
+  namespace: d8-{{ $.Chart.Name }}
+  annotations:
+    gateway.istio.io/service-account: ambientgateway
+  {{- include "helm_lib_module_labels" (list $ (dict
+      "app" "ambientgateway"
+      "istio.io/rev" (include "istioGlobalRevision" $)
+      "topology.istio.io/network" ($multicluster.networkName | toString)
+  )) | nindent 2 }}
+spec:
+  gatewayClassName: istio-remote
+  addresses:
+  - type: IPAddress
+    value: {{ $ambientGateway.address | quote }}
+  listeners:
+  - name: hbone
+    port: {{ $ambientGateway.port | int }}
+    protocol: HBONE
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

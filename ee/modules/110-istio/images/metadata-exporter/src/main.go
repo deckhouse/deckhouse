@@ -22,6 +22,13 @@ import (
 var (
 	privateAllianceDeprecatedSubdomainRequests                               *prometheus.CounterVec
 	privateAllianceMetadataEndpointRequestedViaDeprecatedSubdomainMetricName = "d8_istio_alliance_metadata_exporter_requested_via_deprecated_subdomain"
+
+	ambientGatewayAddressUnusable = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Name: "d8_istio_alliance_metadata_exporter_ambient_gateway_address_unusable",
+			Help: "The ambient east-west gateway is deployed but has no address peers can dial, so no ambientGateways are published to them.",
+		},
+	)
 )
 
 var logger = log.New(os.Stdout, "http: ", log.LstdFlags)
@@ -91,7 +98,7 @@ func httpHandlerHealthz(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	var exp, err = New("d8-istio", "ingressgateway")
+	var exp, err = New("d8-istio", "ingressgateway", "ambientgateway")
 
 	if err != nil {
 		logger.Fatalf("Failed to create Exporter: %v", err)
@@ -127,7 +134,7 @@ func main() {
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		exp.watchIngressGateways(ctx)
+		exp.startInformers(ctx)
 	}()
 
 	server := &http.Server{
@@ -185,4 +192,6 @@ func registerMetadataExporterMetrics(reg prometheus.Registerer) {
 	)
 	reg.MustRegister(a)
 	privateAllianceDeprecatedSubdomainRequests = a
+
+	reg.MustRegister(ambientGatewayAddressUnusable)
 }
