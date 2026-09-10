@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"reflect"
 	"slices"
+	"time"
 
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -30,6 +31,13 @@ import (
 const (
 	endpointControllerLabelKey = "endpointslice.kubernetes.io/managed-by"
 	controllerName             = "servicewithhealthchecks"
+
+	// resyncPeriod bounds how long an EndpointSlice of a node that no longer exists may stay
+	// published. clearNotUsedEPS runs on reconciliation only, and nothing watches Nodes, so
+	// without the resync a removed node would keep a dead endpoint in the child Service until
+	// the next unrelated event on the object. It is longer than the agent's own resync because
+	// this only performs cleanup, and each pass lists Nodes cluster-wide from the cache.
+	resyncPeriod = 5 * time.Minute
 )
 
 // ServiceWithHealthchecksReconciler reconciles a ServiceWithHealthchecks object
@@ -143,13 +151,13 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 	kubernetes.SortConditions(originalServiceWithHC.Status.Conditions)
 
 	if reflect.DeepEqual(originalServiceWithHC.Status, serviceWithHC.Status) {
-		return ctrl.Result{}, nil
+		return ctrl.Result{RequeueAfter: resyncPeriod}, nil
 	}
 
 	if err := r.Status().Patch(ctx, serviceWithHC, patch); err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to update ServiceWithHealthchecks Status: %w", err)
 	}
-	return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: resyncPeriod}, nil
 }
 
 func createStatusConditionForService(err error, svcName string) metav1.Condition {
