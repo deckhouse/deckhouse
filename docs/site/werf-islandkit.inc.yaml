@@ -25,7 +25,7 @@
   стоит кеширование. `@vue/server-renderer` назван явно, хотя приезжает
   зависимостью vue: подниматься он должен вместе с vue, а не как повезёт.
 */ -}}
-{{- $islandkitVersion := "0.4.1" }}
+{{- $islandkitVersion := "0.5.0" }}
 {{- $vueVersion := "3.5.41" }}
 
 image: site-islandkit-artifact

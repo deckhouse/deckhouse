@@ -22,6 +22,7 @@
 $header-ink: #262429; // текст пунктов меню и ряда продукта
 $header-row2-bg: #f6fafe; // подложка второго ряда
 $header-accent-hover: #0040cc; // залитая кнопка под курсором
+$sheet-link-color: #3b426d; // ссылки в мобильном листе
 
 // Вертикальные отступы ряда продукта, по ступеням. Числа дробные, потому что
 // у прежней шапки это проценты от размера шрифта.
@@ -63,12 +64,29 @@ $button-font-size-xl: 10.16px;
   --ik-header-nav-color: #{$header-ink};
   --ik-header-nav-color-hover: #{variables.$color-alt};
 
-  // У прежней шапки под стрелкой раскрывающегося пункта 19px: отступ 9 плюс
-  // стрелка 10. Стрелка библиотеки — 8px, и менять её размер значило бы
-  // объявить переменную компонента на его же классе (правило 4) — а заодно
-  // разойтись с той же стрелкой в мобильном листе, который лежит вне этого
-  // контейнера. Поэтому ширину добирает отступ: 11 + 8 = те же 19.
-  --ik-menu-trigger-gap: 11px;
+  // Стрелка раскрывающегося пункта.
+  //
+  // Прежняя шапка рисует её фоном псевдоэлемента: «галочка» обводкой 10×6,
+  // прижатая к правому краю ссылки, внутри её же padding-right. Библиотека по
+  // умолчанию рисует залитый треугольник на бордерах — это только дефолт, и
+  // весь глиф объявлен переменными, для того они и есть. На `:root` их
+  // объявлять можно: правило 4 запрещает объявлять переменную компонента на
+  // его собственном классе, а не в общем месте.
+  //
+  // Глиф взят с работающей шапки как есть, вместе с цветом: он вшит в сам SVG,
+  // поэтому под курсором не меняется — ровно как в прежней шапке.
+  --ik-select-arrow-width: 10px;
+  --ik-select-arrow-height: 6px;
+  --ik-select-arrow-border: 0;
+  --ik-select-arrow: url("data:image/svg+xml,%3Csvg width='13' height='8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='m11.02 1.5-5 5-5-5' stroke='%23222A5D' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
+    no-repeat 50% 100% / contain;
+
+  // Место, которое пункт со стрелкой занимает сверх подписи. У прежней шапки
+  // это padding-right, и он меняется по ступеням: 19 от 1440, 14 от 1200, 12
+  // от 1024 (снято из её CSS, не подбором ширин). У острова стрелка — реальный
+  // флекс-элемент, поэтому то же расстояние складывается из зазора и её
+  // ширины: отступ = слот − 10.
+  --ik-menu-trigger-gap: 9px;
 
   // Кнопки правого блока.
   --ik-button-font-size: 14px;
@@ -93,6 +111,20 @@ $button-font-size-xl: 10.16px;
   --ik-header-row2-link-font-size: 15px;
   --ik-header-row2-link-line-height: 20px;
   --ik-header-row2-link-color: #{$header-ink};
+
+  // Мобильный лист. Дерево навигации на этом сайте существует только внутри
+  // него, поэтому переменные объявлены здесь, а не под медиавыражением.
+  //
+  // Значения сняты с прежнего меню: заголовок раздела набран прописными
+  // обычного веса, а не полужирным строчными, и ссылки в списке темнее общего
+  // акцента. Иконки в этом списке прежнее меню не показывает, хотя на широком
+  // экране показывает те же самые, — библиотека для такого случая и завела
+  // `--ik-nav-tree-icon-display`, чтобы не вычищать иконки из данных.
+  --ik-nav-tree-section-font-weight: 400;
+  --ik-nav-tree-section-color: #{$header-ink};
+  --ik-nav-tree-section-text-transform: uppercase;
+  --ik-nav-tree-color: #{$sheet-link-color};
+  --ik-nav-tree-icon-display: none;
 }
 
 // Самая просторная ступень.
@@ -111,6 +143,7 @@ $button-font-size-xl: 10.16px;
   :root {
     --ik-header-left-gap: 24px;
     --ik-header-nav-font-size: #{$nav-font-size-narrow};
+    --ik-menu-trigger-gap: 4px; // слот 14 − стрелка 10
     --ik-header-row2-padding: #{$row2-pad-xxl} 0;
     --ik-header-row2-link-font-size: #{$nav-font-size-narrow};
     --ik-header-product-font-size: 16px;
@@ -125,6 +158,7 @@ $button-font-size-xl: 10.16px;
     --ik-header-container-padding-x: 32px;
     --ik-header-row1-padding-y-wide: 12px;
     --ik-header-nav-gap: 12px 16px;
+    --ik-menu-trigger-gap: 2px; // слот 12 − стрелка 10
     --ik-header-right-gap: 8px;
     --ik-header-actions-gap: 8px;
     --ik-header-row2-padding: #{$row2-pad-xl} 0;
