@@ -18,10 +18,12 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
 
+	"github.com/Masterminds/semver/v3"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -33,24 +35,50 @@ import (
 	"github.com/deckhouse/deckhouse/pkg/log"
 )
 
-// syncModules writes a Module for every embedded module.
-// Every embedded package of one Deckhouse build carries the same version, the
-// one app.EmbeddedPackageVersion reduces the Deckhouse version to.
+// syncModules writes a Module for every module whose files the cluster carries.
+// A module the sync finds nowhere keeps the object another writer gave it.
+//
+// The embedded copy wins over a deployed release: it is what the binary carries
+// on disk right now, and the release takes the module over only once an upgrade
+// drops that copy.
 func (s *syncer) syncModules(ctx context.Context) error {
-	embeddedPackageVersion := app.EmbeddedPackageVersion(s.deckhouseVersion)
-
-	moduleNames, err := s.embeddedModuleNames()
-	if err != nil {
-		return err
-	}
-
 	moduleConfigs, err := s.moduleConfigsByName(ctx)
 	if err != nil {
 		return err
 	}
 
-	for _, moduleName := range moduleNames {
-		if err := s.ensureEmbeddedModule(ctx, moduleName, embeddedPackageVersion, moduleConfigs[moduleName]); err != nil {
+	embeddedModuleNames, err := s.embeddedModuleNames()
+	if err != nil {
+		return err
+	}
+
+	// every module of one build carries the same version, the one
+	// app.EmbeddedPackageVersion reduces the Deckhouse version to
+	embeddedPackageVersion := app.EmbeddedPackageVersion(s.deckhouseVersion)
+
+	for _, moduleName := range embeddedModuleNames {
+		if err := s.ensureModule(ctx, moduleName, repositoryNameEmbedded, embeddedPackageVersion, moduleConfigs[moduleName]); err != nil {
+			return err
+		}
+	}
+
+	deployedReleases, err := s.deployedModuleReleasesByModule(ctx)
+	if err != nil {
+		return err
+	}
+
+	// the modules are independent: the order only keeps the log readable
+	for _, moduleName := range slices.Sorted(maps.Keys(deployedReleases)) {
+		if slices.Contains(embeddedModuleNames, moduleName) {
+			continue
+		}
+
+		moduleRelease := deployedReleases[moduleName]
+
+		repositoryName := PackageRepositoryNameForModuleSource(moduleRelease.GetModuleSource())
+
+		// the version parses: deployedModuleReleasesByModule dropped the releases it does not
+		if err := s.ensureModule(ctx, moduleName, repositoryName, moduleRelease.GetModuleVersion(), moduleConfigs[moduleName]); err != nil {
 			return err
 		}
 	}
@@ -58,18 +86,100 @@ func (s *syncer) syncModules(ctx context.Context) error {
 	return nil
 }
 
+// embeddedModuleNames reads the names of the modules from the embedded modules dir.
+// A dir with no readable definition is skipped with a warning, the same way the
+// ModulePackageVersion pass skips it.
+func (s *syncer) embeddedModuleNames() ([]string, error) {
+	dirEntries, err := os.ReadDir(s.embeddedModulesDir)
+	if err != nil {
+		return nil, fmt.Errorf("read embedded modules dir: %w", err)
+	}
+
+	moduleNames := make([]string, 0, len(dirEntries))
+
+	for _, dirEntry := range dirEntries {
+		if !dirEntry.IsDir() || slices.Contains(app.DummyModules, dirEntry.Name()) {
+			continue
+		}
+
+		moduleDir := filepath.Join(s.embeddedModulesDir, dirEntry.Name())
+
+		moduleDefinition, err := loader.LoadEmbeddedDefinition(moduleDir)
+		if err != nil {
+			s.logger.Warn("module dir holds no readable definition, skip its module",
+				slog.String("dir", moduleDir), log.Err(err))
+
+			continue
+		}
+
+		moduleNames = append(moduleNames, moduleDefinition.Name)
+	}
+
+	return moduleNames, nil
+}
+
+// deployedModuleReleasesByModule reads the release each module runs:
+//   - only a deployed release counts, a pending one is not on disk yet
+//   - the newest wins, a restart mid upgrade leaves two of them deployed
+//   - a release with no module source or an unparsable version is skipped with a
+//     warning, its version getters panic on such a value
+func (s *syncer) deployedModuleReleasesByModule(ctx context.Context) (map[string]*v1alpha1.ModuleRelease, error) {
+	moduleReleaseList := new(v1alpha1.ModuleReleaseList)
+	if err := s.reader.List(ctx, moduleReleaseList); err != nil {
+		return nil, fmt.Errorf("list module releases: %w", err)
+	}
+
+	deployedReleases := make(map[string]*v1alpha1.ModuleRelease, len(moduleReleaseList.Items))
+	deployedVersions := make(map[string]*semver.Version, len(moduleReleaseList.Items))
+
+	for index := range moduleReleaseList.Items {
+		moduleRelease := &moduleReleaseList.Items[index]
+
+		if moduleRelease.Status.Phase != v1alpha1.ModuleReleasePhaseDeployed || !moduleRelease.DeletionTimestamp.IsZero() {
+			continue
+		}
+
+		if moduleRelease.GetModuleSource() == "" {
+			s.logger.Warn("release has no module source, skip its module",
+				slog.String("release", moduleRelease.Name))
+
+			continue
+		}
+
+		releaseVersion, err := semver.NewVersion(moduleRelease.Spec.Version)
+		if err != nil {
+			s.logger.Warn("release version is not a semver, skip its module",
+				slog.String("release", moduleRelease.Name),
+				slog.String("version", moduleRelease.Spec.Version), log.Err(err))
+
+			continue
+		}
+
+		moduleName := moduleRelease.GetModuleName()
+
+		if deployedVersion, ok := deployedVersions[moduleName]; ok && !releaseVersion.GreaterThan(deployedVersion) {
+			continue
+		}
+
+		deployedVersions[moduleName] = releaseVersion
+		deployedReleases[moduleName] = moduleRelease
+	}
+
+	return deployedReleases, nil
+}
+
 // moduleConfigsByName reads the module configs the cluster carries.
 // A config under deletion counts as gone: its settings are on their way out.
 func (s *syncer) moduleConfigsByName(ctx context.Context) (map[string]*v1alpha1.ModuleConfig, error) {
-	list := new(v1alpha1.ModuleConfigList)
-	if err := s.reader.List(ctx, list); err != nil {
+	moduleConfigList := new(v1alpha1.ModuleConfigList)
+	if err := s.reader.List(ctx, moduleConfigList); err != nil {
 		return nil, fmt.Errorf("list module configs: %w", err)
 	}
 
-	moduleConfigs := make(map[string]*v1alpha1.ModuleConfig, len(list.Items))
+	moduleConfigs := make(map[string]*v1alpha1.ModuleConfig, len(moduleConfigList.Items))
 
-	for index := range list.Items {
-		moduleConfig := &list.Items[index]
+	for index := range moduleConfigList.Items {
+		moduleConfig := &moduleConfigList.Items[index]
 		if !moduleConfig.DeletionTimestamp.IsZero() {
 			continue
 		}
@@ -80,44 +190,11 @@ func (s *syncer) moduleConfigsByName(ctx context.Context) (map[string]*v1alpha1.
 	return moduleConfigs, nil
 }
 
-// embeddedModuleNames reads the names of the modules from the embedded modules dir.
-// A dir with no readable definition is skipped with a warning, the same way its
-// package version is.
-func (s *syncer) embeddedModuleNames() ([]string, error) {
-	entries, err := os.ReadDir(s.embeddedModulesDir)
-	if err != nil {
-		return nil, fmt.Errorf("read embedded modules dir: %w", err)
-	}
-
-	moduleNames := make([]string, 0, len(entries))
-
-	for _, entry := range entries {
-		if !entry.IsDir() || slices.Contains(app.DummyModules, entry.Name()) {
-			continue
-		}
-
-		moduleDir := filepath.Join(s.embeddedModulesDir, entry.Name())
-
-		definition, err := loader.LoadEmbeddedDefinition(moduleDir)
-		if err != nil {
-			s.logger.Warn("module dir holds no readable definition, skip its module",
-				slog.String("dir", moduleDir), log.Err(err))
-
-			continue
-		}
-
-		moduleNames = append(moduleNames, definition.Name)
-	}
-
-	return moduleNames, nil
-}
-
-// ensureEmbeddedModule points the module at its embedded package:
+// ensureModule brings the module in line with the files it runs and its config:
 // - the object is created when the cluster carries none
-// - the embedded repository name is reserved, no PackageRepository serves it
 // - only the fields below are written, the module has other writers
 // - a patch with no drift is not sent
-func (s *syncer) ensureEmbeddedModule(ctx context.Context, moduleName, packageVersion string, moduleConfig *v1alpha1.ModuleConfig) error {
+func (s *syncer) ensureModule(ctx context.Context, moduleName, repositoryName, packageVersion string, moduleConfig *v1alpha1.ModuleConfig) error {
 	module := new(v1alpha2.Module)
 
 	if err := s.reader.Get(ctx, client.ObjectKey{Name: moduleName}, module); err != nil {
@@ -125,12 +202,12 @@ func (s *syncer) ensureEmbeddedModule(ctx context.Context, moduleName, packageVe
 			return fmt.Errorf("get the '%s' module: %w", moduleName, err)
 		}
 
-		return s.createEmbeddedModule(ctx, moduleName, packageVersion, moduleConfig)
+		return s.createModule(ctx, moduleName, repositoryName, packageVersion, moduleConfig)
 	}
 
 	patch := client.MergeFrom(module.DeepCopy())
 
-	applyEmbeddedModule(module, packageVersion)
+	applyModuleVersion(module, repositoryName, packageVersion)
 	applyModuleConfig(module, moduleConfig)
 
 	patchData, err := patch.Data(module)
@@ -151,12 +228,12 @@ func (s *syncer) ensureEmbeddedModule(ctx context.Context, moduleName, packageVe
 	return nil
 }
 
-// createEmbeddedModule writes a module the cluster does not carry yet.
+// createModule writes a module the cluster does not carry yet.
 // Rare: the old module stack creates an object for every module it knows.
-func (s *syncer) createEmbeddedModule(ctx context.Context, moduleName, packageVersion string, moduleConfig *v1alpha1.ModuleConfig) error {
+func (s *syncer) createModule(ctx context.Context, moduleName, repositoryName, packageVersion string, moduleConfig *v1alpha1.ModuleConfig) error {
 	module := &v1alpha2.Module{ObjectMeta: metav1.ObjectMeta{Name: moduleName}}
 
-	applyEmbeddedModule(module, packageVersion)
+	applyModuleVersion(module, repositoryName, packageVersion)
 	applyModuleConfig(module, moduleConfig)
 
 	if err := s.writer.Create(ctx, module); err != nil && !apierrors.IsAlreadyExists(err) {
@@ -168,11 +245,19 @@ func (s *syncer) createEmbeddedModule(ctx context.Context, moduleName, packageVe
 	return nil
 }
 
-// applyEmbeddedModule points the module spec at its embedded package and marks
-// the module as embedded.
-func applyEmbeddedModule(module *v1alpha2.Module, packageVersion string) {
-	module.Spec.PackageRepositoryName = repositoryNameEmbedded
+// applyModuleVersion writes spec.packageRepositoryName and spec.packageVersion,
+// and marks whether the module is embedded. The mark is written and cleared on
+// every pass: an upgrade drops the embedded copy and the module moves to a
+// repository.
+func applyModuleVersion(module *v1alpha2.Module, repositoryName, packageVersion string) {
+	module.Spec.PackageRepositoryName = repositoryName
 	module.Spec.PackageVersion = packageVersion
+
+	if repositoryName != repositoryNameEmbedded {
+		delete(module.Annotations, v1alpha2.ModuleAnnotationEmbedded)
+
+		return
+	}
 
 	if module.Annotations == nil {
 		module.Annotations = make(map[string]string, 1)

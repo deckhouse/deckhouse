@@ -110,6 +110,83 @@ func TestSyncEmbeddedModules(t *testing.T) {
 	})
 }
 
+func TestSyncModulesFromModuleReleases(t *testing.T) {
+	ctx := context.Background()
+
+	t.Run("a deployed release names the repository and the version", func(t *testing.T) {
+		release := testModuleRelease("echo", "deckhouse", "1.2.3", v1alpha1.ModuleReleasePhaseDeployed)
+
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), release)
+		require.NoError(t, s.sync(ctx))
+
+		module := getModule(t, cl, "echo")
+		assert.Equal(t, "deckhouse-modules", module.Spec.PackageRepositoryName, "the deckhouse source serves the deckhouse-modules repository")
+		assert.Equal(t, "v1.2.3", module.Spec.PackageVersion)
+		assert.False(t, module.IsEmbedded())
+	})
+
+	t.Run("the newest deployed release wins", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(),
+			testModuleRelease("echo", "example", "1.2.3", v1alpha1.ModuleReleasePhaseDeployed),
+			testModuleRelease("echo", "example", "1.10.0", v1alpha1.ModuleReleasePhaseDeployed))
+		require.NoError(t, s.sync(ctx))
+
+		assert.Equal(t, "v1.10.0", getModule(t, cl, "echo").Spec.PackageVersion)
+	})
+
+	t.Run("a release that is not deployed places nothing", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(),
+			testModuleRelease("echo", "example", "1.2.3", v1alpha1.ModuleReleasePhasePending))
+		require.NoError(t, s.sync(ctx))
+
+		assert.Empty(t, listModuleNames(t, cl))
+	})
+
+	t.Run("a release with no source or a broken version is skipped", func(t *testing.T) {
+		sourceless := testModuleRelease("echo", "example", "1.2.3", v1alpha1.ModuleReleasePhaseDeployed)
+		sourceless.Labels = nil
+
+		broken := testModuleRelease("broken", "example", "not-a-semver", v1alpha1.ModuleReleasePhaseDeployed)
+
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), sourceless, broken)
+		require.NoError(t, s.sync(ctx))
+
+		assert.Empty(t, listModuleNames(t, cl))
+	})
+
+	t.Run("the embedded copy outranks a deployed release", func(t *testing.T) {
+		dir := t.TempDir()
+		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
+
+		s, cl := newTestSyncer(t, "v1.80.0", dir,
+			testModuleRelease("echo", "example", "1.2.3", v1alpha1.ModuleReleasePhaseDeployed))
+		require.NoError(t, s.sync(ctx))
+
+		module := getModule(t, cl, "echo")
+		assert.Equal(t, "embedded", module.Spec.PackageRepositoryName)
+		assert.Equal(t, "v1.80.0", module.Spec.PackageVersion)
+		assert.True(t, module.IsEmbedded())
+	})
+
+	t.Run("a module that left the image loses the embedded mark", func(t *testing.T) {
+		existing := &v1alpha2.Module{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:        "echo",
+				Annotations: map[string]string{v1alpha2.ModuleAnnotationEmbedded: "true"},
+			},
+			Spec: v1alpha2.ModuleSpec{PackageRepositoryName: "embedded", PackageVersion: "v1.79.0"},
+		}
+
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), existing,
+			testModuleRelease("echo", "example", "1.2.3", v1alpha1.ModuleReleasePhaseDeployed))
+		require.NoError(t, s.sync(ctx))
+
+		module := getModule(t, cl, "echo")
+		assert.Equal(t, "example", module.Spec.PackageRepositoryName)
+		assert.False(t, module.IsEmbedded())
+	})
+}
+
 func TestSyncModulesFromModuleConfig(t *testing.T) {
 	ctx := context.Background()
 
