@@ -77,7 +77,13 @@ var (
 	// everything under it", which is what an operator writes and what the rule's
 	// own description promises. It was refused before, so a legitimate no_proxy
 	// was rejected.
-	noProxyTokenRegexp = regexp.MustCompile(`^\*$|^\.?[0-9A-Za-z*]([0-9A-Za-z*._:/-]*[0-9A-Za-z*])?$`)
+	// The trailing slash is allowed for the same reason as the leading dot: the
+	// schema for `proxy.noProxy` in candi/openapi/cluster_configuration.yaml
+	// admits it (`^[a-z0-9\-\./]+$`), so an operator may have written
+	// `example.com/` or `10.0.0.0/8/`. It is useless rather than dangerous --
+	// the value becomes a NO_PROXY environment variable through `quote` -- and
+	// refusing it would reject a configuration the platform accepts.
+	noProxyTokenRegexp = regexp.MustCompile(`^\*$|^\.?[0-9A-Za-z*]([0-9A-Za-z*._:/-]*[0-9A-Za-z*])?/?$`)
 
 	// accountNameRegexp matches a registry account name.
 	accountNameRegexp = regexp.MustCompile(`^[0-9A-Za-z]([0-9A-Za-z._-]*[0-9A-Za-z])?$`)
@@ -496,10 +502,24 @@ func registryAddress(raw string) error {
 	return nil
 }
 
-// ProxyURL validates an HTTP proxy address: `http(s)://host[:port]` and nothing
-// more. Credentials, a path, a query or a fragment are rejected, both because
-// the module has no use for them and because they widen the set of characters
-// that reach the generated configuration.
+// ProxyURL validates an HTTP proxy address: `http(s)://[user[:password]@]host[:port]`
+// and nothing after that. A path, a query or a fragment are rejected.
+//
+// The shape is the one candi/openapi/cluster_configuration.yaml states for
+// `proxy.httpProxy` and `proxy.httpsProxy`, which is where these values come
+// from, and credentials are part of it -- its own examples are
+// `https://user:password@proxy.company.my:8443` and the percent-encoded forms
+// `DOMAIN%5Cuser` and `user%40domain.local`. A rule stricter than the schema
+// rejects configurations the platform documents as valid, which is why this one
+// follows the schema rather than the module's own preferences.
+//
+// Credentials are safe here because of where the value goes: the only sink in
+// this module is a container environment variable in the static pod manifest,
+// substituted through `quote`, so it is a YAML double-quoted scalar and no
+// shell is involved. Were that to change -- were a proxy URL ever to reach an
+// unquoted heredoc the way ProxyEndpoint and MirrorHost do -- this rule would
+// have to constrain the userinfo characters as well, because the schema admits
+// `$`, `(`, `)`, `;` and `&` there.
 //
 // A bare "/" is tolerated as the path, because it is the empty path: an operator
 // who writes `http://proxy:8080/` has named the same proxy as
@@ -529,9 +549,6 @@ func proxyURL(raw string) error {
 	if parsed.Host == "" {
 		return errors.New("must carry a host")
 	}
-	if parsed.User != nil {
-		return errors.New("must not carry credentials")
-	}
 	if parsed.Path != "" && parsed.Path != "/" {
 		return fmt.Errorf("must not carry a path, got %q", parsed.Path)
 	}
@@ -544,12 +561,26 @@ func proxyURL(raw string) error {
 	if parsed.Opaque != "" {
 		return fmt.Errorf("must be a hierarchical URL, got %q", parsed.Opaque)
 	}
-	// The raw value is what gets rendered, not the parsed components, so it must
-	// be the canonical form of the URL it parses to. Without this a value can
-	// carry characters the component checks never see: "http://host#" parses to a
-	// clean URL with an empty fragment, yet still contains the "#".
-	if canonical := parsed.String(); canonical != raw {
-		return fmt.Errorf("must be a canonical URL, got %q for %q", raw, canonical)
+	// The raw value is what gets rendered, not the parsed components, so the raw
+	// value is what has to end at the authority. The component checks above do
+	// not catch everything on their own: "http://host#" parses to a clean URL
+	// with an empty fragment, yet still carries the "#" into the file.
+	//
+	// This is checked on the string rather than by comparing against
+	// parsed.String(), because Go's re-encoding is not the schema's. A password
+	// of "p@ss:word" is written `p%40ss:word`, which the schema allows and
+	// parsed.String() rewrites to `p%40ss%3Aword` -- so a canonical-form
+	// comparison would reject a documented value for a difference that exists
+	// only inside net/url.
+	prefix := parsed.Scheme + "://"
+	if !strings.HasPrefix(strings.ToLower(raw), prefix) {
+		// net/url lowercases the scheme and tolerates forms this does not, so
+		// the offset of the authority is established rather than assumed.
+		return fmt.Errorf("must begin with %q", prefix)
+	}
+	authority := strings.TrimSuffix(raw[len(prefix):], "/")
+	if index := strings.IndexAny(authority, "/?#"); index >= 0 {
+		return fmt.Errorf("must carry nothing after the host, got %q", authority[index:])
 	}
 
 	return HostWithOptionalPort(parsed.Host)

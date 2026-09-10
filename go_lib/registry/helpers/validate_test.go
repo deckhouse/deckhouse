@@ -472,11 +472,25 @@ func TestSchemeAddressAndProxy(t *testing.T) {
 		{in: "http://proxy.example.com/path", why: "a path the module has no use for"},
 		{in: "http://proxy.example.com?q=1", why: "a query"},
 		{in: "http://proxy.example.com#f", why: "a fragment"},
-		{in: "http://user:pass@proxy.example.com", why: "credentials"},
+		// Credentials are part of the documented shape, not an abuse of it:
+		// cluster_configuration.yaml gives these very forms as the examples for
+		// proxy.httpProxy, including the percent-encoded ones a Windows domain
+		// account and an account with an "@" in it require.
+		{in: "http://user:pass@proxy.example.com", accept: true, why: "credentials, which the schema documents"},
+		{in: "https://user:password@proxy.company.my:8443", accept: true, why: "the schema's own example"},
+		{in: "https://DOMAIN%5Cuser:password@proxy.company.my:8443", accept: true, why: "a Windows domain account, percent-encoded"},
+		{in: "https://user%40domain.local:password@proxy.company.my:8443", accept: true, why: "an account carrying an @, percent-encoded"},
+		{in: "https://user@proxy.company.my", accept: true, why: "a user with no password"},
+		{in: "https://user:p%40ss:word@proxy.company.my:8443", accept: true, why: "a colon in the password, which the schema allows and net/url would re-encode"},
+		{in: "http://user:pass@proxy.example.com/path", why: "credentials do not license a path"},
+		{in: "http://user:pass@proxy.example.com#f", why: "credentials do not license a fragment"},
 		{in: "http://0#", why: "a fragment the component checks alone would miss"},
 		{in: "http://proxy.example.com:99999", why: "a port out of range"},
 		{in: "http://proxy.example.com:abc", why: "a port that is not a number"},
-		{in: "HTTP://proxy.example.com", why: "a scheme that is not canonical"},
+		// A scheme is case-insensitive per RFC 3986 and net/url normalises it,
+		// so this names the same proxy. It was refused only as a side effect of
+		// the canonical-form comparison that had to go.
+		{in: "HTTP://proxy.example.com", accept: true, why: "an upper-case scheme names the same proxy"},
 		{in: "http://proxy.example.com\n", why: "a line break"},
 		{in: "$(id)", why: "a substitution"},
 		{in: "", accept: true, why: "a proxy that is not configured"},
@@ -491,6 +505,10 @@ func TestSchemeAddressAndProxy(t *testing.T) {
 		{in: "*", accept: true, why: "the wildcard"},
 		{in: "*.example.com", accept: true, why: "a wildcard suffix"},
 		{in: "registry.d8-system.svc:5001", accept: true, why: "a host with a port"},
+		{in: "example.com/", accept: true, why: "a trailing slash, which the noProxy schema admits"},
+		{in: "10.0.0.0/8/", accept: true, why: "a CIDR with a trailing slash, likewise"},
+		{in: "/", why: "a slash alone is not an entry"},
+		{in: "..", why: "not a host, a suffix or a block"},
 		{in: "localhost,,127.0.0.1", why: "an empty entry"},
 		{in: ",", why: "nothing but a separator"},
 		{in: "local host", why: "a space inside an entry"},
