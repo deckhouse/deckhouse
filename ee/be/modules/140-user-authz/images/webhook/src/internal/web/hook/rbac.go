@@ -101,7 +101,7 @@ func (i *independentCRBIndex) upsert(crb *rbacv1.ClusterRoleBinding) {
 		return
 	}
 	if isCARManagedClusterRoleBinding(crb) {
-		i.delete(crb)
+		i.deleteByName(crb.Name)
 		return
 	}
 
@@ -125,14 +125,14 @@ func (i *independentCRBIndex) upsert(crb *rbacv1.ClusterRoleBinding) {
 	i.keysOf[crb.Name] = keys
 }
 
-// delete withdraws the binding from the index.
-func (i *independentCRBIndex) delete(crb *rbacv1.ClusterRoleBinding) {
-	if crb == nil {
+// deleteByName withdraws the binding from the index.
+func (i *independentCRBIndex) deleteByName(name string) {
+	if name == "" {
 		return
 	}
 	i.mu.Lock()
 	defer i.mu.Unlock()
-	i.withdrawLocked(crb.Name)
+	i.withdrawLocked(name)
 }
 
 // withdrawLocked removes every contribution of the binding. The caller holds the write lock.
@@ -202,18 +202,23 @@ func (i *independentCRBIndex) eventHandler() kcache.ResourceEventHandler {
 			}
 		},
 		DeleteFunc: func(obj interface{}) {
-			crb, ok := obj.(*rbacv1.ClusterRoleBinding)
-			if !ok {
-				// The informer reports a delete it could not observe directly as a tombstone.
-				tombstone, isTombstone := obj.(kcache.DeletedFinalStateUnknown)
-				if !isTombstone {
+			switch v := obj.(type) {
+			case *rbacv1.ClusterRoleBinding:
+				i.deleteByName(v.Name)
+			case kcache.DeletedFinalStateUnknown:
+				// The informer reports a delete it could not observe directly as a tombstone. Its
+				// Obj is usually the last known object, but it is not guaranteed to be one, and
+				// dropping the event then leaves the binding in the index for the life of the
+				// process. A stale entry here claims a CAR-independent grant that no longer
+				// exists, and that claim OVERRIDES the multi-tenancy denial - so this has to fail
+				// towards forgetting. ClusterRoleBindings are cluster-scoped, so the tombstone
+				// key is the name. The rule-bindings index in the library does the same.
+				if crb, ok := v.Obj.(*rbacv1.ClusterRoleBinding); ok {
+					i.deleteByName(crb.Name)
 					return
 				}
-				if crb, ok = tombstone.Obj.(*rbacv1.ClusterRoleBinding); !ok {
-					return
-				}
+				i.deleteByName(v.Key)
 			}
-			i.delete(crb)
 		},
 	}
 }

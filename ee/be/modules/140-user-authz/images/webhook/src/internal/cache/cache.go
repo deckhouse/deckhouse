@@ -275,102 +275,71 @@ func (c *NamespacedDiscoveryCache) renewCacheOnce(apiGroup string, req *http.Req
 	return nil
 }
 
-func (c *NamespacedDiscoveryCache) renewCache(apiGroup string) error {
-	path := apiV1Path
-	if apiGroup != "v1" {
-		path = "/apis/" + apiGroup
+func (c *NamespacedDiscoveryCache) availableAPIGroupVersionsInDescendingOrder(apiGroup string) ([]string, error) {
+	req, cancel, err := c.newGetRequest("/apis/" + apiGroup)
+	if err != nil {
+		return nil, fmt.Errorf("build request for available apigroup versions: %w", err)
+	}
+	defer cancel()
+
+	var apiGroupVersions APIGroupResponse
+	if err := c.execRequest(req, "request available apigroup versions", &apiGroupVersions); err != nil {
+		return nil, fmt.Errorf("request available apigroup versions: %w", err)
 	}
 
-	return Retry(func() (bool, error) {
-		req, cancel, err := c.newGetRequest(path)
-		if err != nil {
-			return false, fmt.Errorf("renew cache prepare request: %w", err)
-		}
-		defer cancel()
-
-		if err := c.renewCacheOnce(apiGroup, req); err != nil {
-			return true, err
-		}
-
-		return false, nil
-	})
-}
-
-func (c *NamespacedDiscoveryCache) getAvailableAPIGroupVerionsInDescendingOrder(apiGroup string) ([]string, error) {
-	path := "/apis/" + apiGroup
-
-	availableVersions := make([]string, 0)
-
-	err := Retry(func() (bool, error) {
-		req, cancel, err := c.newGetRequest(path)
-		if err != nil {
-			return false, fmt.Errorf("build request for available apigroup versions: %w", err)
-		}
-		defer cancel()
-
-		var apiGroupVersions APIGroupResponse
-		if err = c.execRequest(req, "request available apigroup versions", &apiGroupVersions); err != nil {
-			return true, fmt.Errorf("request available apigroup verions: %w", err)
-		}
-
-		for _, v := range apiGroupVersions.Versions {
-			availableVersions = append(availableVersions, v.Version)
-		}
-
-		return false, nil
-	})
+	availableVersions := make([]string, 0, len(apiGroupVersions.Versions))
+	for _, v := range apiGroupVersions.Versions {
+		availableVersions = append(availableVersions, v.Version)
+	}
 
 	slices.SortFunc(availableVersions, func(v1, v2 string) int {
 		return -(k8sversion.CompareKubeAwareVersionStrings(v1, v2))
 	})
 
-	return availableVersions, err
+	return availableVersions, nil
 }
 
+// requestPreferredVersion finds the newest version of the group that serves the resource.
+//
+// One attempt per listing, like every other listing on this path: this runs while the API server
+// waits out the three seconds it gives the whole webhook, and the retry loop this used to use took
+// up to twenty seconds per version of the group.
 func (c *NamespacedDiscoveryCache) requestPreferredVersion(group, resource string) (string, error) {
-	preferredVersion := ""
-
-	availableVersions, err := c.getAvailableAPIGroupVerionsInDescendingOrder(group)
+	availableVersions, err := c.availableAPIGroupVersionsInDescendingOrder(group)
 	if err != nil {
 		return "", fmt.Errorf("get available apigroup versions: %w", err)
 	}
 
 	for _, version := range availableVersions {
-		path := fmt.Sprintf("/apis/%s/%s", group, version)
-		if err := Retry(func() (bool, error) {
-			req, cancel, err := c.newGetRequest(path)
-			if err != nil {
-				return false, fmt.Errorf("request %s %s/%s version build error: %w", resource, group, version, err)
-			}
-			defer cancel()
+		req, cancel, err := c.newGetRequest(fmt.Sprintf("/apis/%s/%s", group, version))
+		if err != nil {
+			return "", fmt.Errorf("request %s %s/%s version build error: %w", resource, group, version, err)
+		}
 
-			var apiResourceList APIResourceList
-			if err = c.execRequest(req, "request list of resources", &apiResourceList); err != nil {
-				return true, fmt.Errorf("request list of resources: %w", err)
-			}
-
-			if apiResourceList.Has(resource) {
-				preferredVersion = version
-			}
-
-			return false, nil
-		}); err != nil {
+		var apiResourceList APIResourceList
+		err = c.execRequest(req, "request list of resources", &apiResourceList)
+		cancel()
+		if err != nil {
+			// The version was listed a moment ago and is gone now. Nothing to conclude from it;
+			// the other versions still have to be looked at.
 			if errors.Is(err, ErrNotFound) {
 				continue
 			}
 			return "", fmt.Errorf("get preferred version: %w", err)
 		}
 
-		if preferredVersion != "" {
-			break
+		if apiResourceList.Has(resource) {
+			return version, nil
 		}
 	}
 
-	if preferredVersion == "" {
-		return "", fmt.Errorf("failed to discover preferred version for %s.%s", resource, group)
-	}
-
-	return preferredVersion, nil
+	// Every version of the group answered and none of them serves this resource. That is an
+	// answer, and it has to say so: the caller lets RBAC reply to an absent resource, and the API
+	// server then produces the 404 the caller is owed, instead of a 403 about a resource that was
+	// never there. This used to be a plain error, which denies - and the reviews that take this
+	// path are the ones with no version in them, which is what `kubectl auth can-i` sends, so the
+	// wrong answer landed in the middle of the tool people debug with.
+	return "", fmt.Errorf("no version of api group %s serves %s: %w", group, resource, ErrResourceAbsent)
 }
 
 func (c *NamespacedDiscoveryCache) preferredVersionFromCache(group, resource string) string {
@@ -386,23 +355,62 @@ func (c *NamespacedDiscoveryCache) preferredVersionFromCache(group, resource str
 	return ""
 }
 
+// GetPreferredVersion resolves the newest version of the group that serves the resource, for the
+// reviews that arrive without one.
+//
+// Bounded the same way the group listings are, and for the same reason: the group and the resource
+// both come out of the request path, so a resource nobody serves is the cheapest question to ask
+// and it used to cost a listing of every version of the group, every time it was asked. The
+// negative memory holds the answer for negativeRenewInterval, and concurrent askers share one
+// resolution instead of each starting their own.
 func (c *NamespacedDiscoveryCache) GetPreferredVersion(group, resource string) (string, error) {
-	version := c.preferredVersionFromCache(group, resource)
-	if version != "" {
-		return version, nil
+	key := preferredVersionKey(group, resource)
+
+	// Twice at most: the second pass is for the caller that waited for somebody else's resolution
+	// and now reads what it concluded.
+	for range 2 {
+		if version := c.preferredVersionFromCache(group, resource); version != "" {
+			return version, nil
+		}
+		if absent, known := c.recentNegative(key); known {
+			if absent {
+				return "", fmt.Errorf("no version of api group %s serves %s: %w", group, resource, ErrResourceAbsent)
+			}
+			return "", fmt.Errorf("the versions of api group %s could not be listed recently", group)
+		}
+
+		var resolved string
+		ran, err := c.once(key, func() error {
+			version, err := c.requestPreferredVersion(group, resource)
+			if err != nil {
+				// Absent and unreachable are both remembered, and kept apart: the first lets RBAC
+				// answer, the second denies.
+				c.noteNegative(key, errors.Is(err, ErrResourceAbsent) || errors.Is(err, ErrNotFound))
+				return err
+			}
+
+			c.muPv.Lock()
+			c.preferredVersions[fmt.Sprintf("%s.%s", resource, group)] = newPreferredVersionCacheEntry(c.now(), version)
+			c.muPv.Unlock()
+
+			resolved = version
+			return nil
+		})
+		if ran {
+			if err != nil {
+				return "", err
+			}
+			return resolved, nil
+		}
 	}
 
-	version, err := c.requestPreferredVersion(group, resource)
-	if err != nil {
-		return "", err
-	}
+	return "", fmt.Errorf("preferred version of %s.%s was not resolved", resource, group)
+}
 
-	c.muPv.Lock()
-	defer c.muPv.Unlock()
-
-	c.preferredVersions[fmt.Sprintf("%s.%s", resource, group)] = newPreferredVersionCacheEntry(c.now(), version)
-
-	return version, nil
+// preferredVersionKey namespaces the negative memory of this path away from the group listings
+// that share the map. An API group key is "group/version" and never carries a colon.
+func preferredVersionKey(group, resource string) string {
+	return "preferred-version:" + group + "/" + resource
 }
 
 func (c *NamespacedDiscoveryCache) getFromCache(apiGroup string) (*namespacedCacheEntry, bool) {
@@ -601,36 +609,46 @@ func (c *NamespacedDiscoveryCache) clearNegative(apiGroup string) {
 // arrives while the first is in flight goes out on its own. The cost of the miss is multiplied by
 // the concurrency of the authorization path, which is the whole cluster.
 func (c *NamespacedDiscoveryCache) listOnce(apiGroup string) error {
+	_, err := c.once(apiGroup, func() error {
+		err := c.renewCacheOnceNoRetry(apiGroup)
+		if err == nil {
+			// The group answers again, so what a previous attempt concluded about it is history.
+			// Left in place it would suppress the next refresh for up to an interval after a
+			// listing that actually succeeded.
+			c.clearNegative(apiGroup)
+		}
+		return err
+	})
+	// A caller that waited for somebody else's listing gets no error: whatever that listing
+	// concluded is recorded now, and the caller re-reads the caches to see it.
+	return err
+}
+
+// once runs fn unless an identical call is already in flight, in which case it waits for that one
+// and returns false - the caller then reads whatever fn recorded rather than asking again. The
+// first result says whether fn ran here, the second is its error.
+func (c *NamespacedDiscoveryCache) once(key string, fn func() error) (bool, error) {
 	c.muInflight.Lock()
 	if c.inflight == nil {
 		c.inflight = make(map[string]chan struct{})
 	}
-	if done, running := c.inflight[apiGroup]; running {
+	if done, running := c.inflight[key]; running {
 		c.muInflight.Unlock()
 		<-done
-		// The listing that was already running has finished; its result is in the caches, and the
-		// caller re-reads them. Reporting no error here is right: whatever it concluded is now
-		// recorded, and the caller's own re-read decides.
-		return nil
+		return false, nil
 	}
 	done := make(chan struct{})
-	c.inflight[apiGroup] = done
+	c.inflight[key] = done
 	c.muInflight.Unlock()
 
-	err := c.renewCacheOnceNoRetry(apiGroup)
-	if err == nil {
-		// The group answers again, so what a previous attempt concluded about it is history. Left
-		// in place it would suppress the next refresh for up to an interval after a listing that
-		// actually succeeded.
-		c.clearNegative(apiGroup)
-	}
+	err := fn()
 
 	c.muInflight.Lock()
-	delete(c.inflight, apiGroup)
+	delete(c.inflight, key)
 	c.muInflight.Unlock()
 	close(done)
 
-	return err
+	return true, err
 }
 
 // renewCacheOnceNoRetry lists a group exactly once. renewCache retries for up to twenty seconds,

@@ -114,18 +114,19 @@ spec:
           name: user-authz-webhook-secret
         - mountPath: /etc/ssl/apiserver-authentication-requestheader-client-ca
           name: apiserver-authentication-requestheader-client-ca
-        # The caches this webhook decides from take a while to fill on a large cluster, and until
-        # they are the listener answers 503. That is a startup condition, not a liveness one, so it
-        # is the startup probe that waits it out - otherwise liveness kills a container that is
-        # making progress, and the restart begins the same wait again.
-        startupProbe:
-          exec:
-            command:
-            - /healthcheck
-            - readyz
-          periodSeconds: 5
-          failureThreshold: 60
-          timeoutSeconds: 15
+        # There is deliberately no startupProbe.
+        #
+        # It used to run /healthcheck readyz for up to five minutes, on the reasoning that the
+        # caches take a while to fill on a large cluster and liveness would otherwise kill a
+        # container that is making progress. Liveness cannot: it asks healthz, which answers from
+        # this process alone and returns 200 as soon as the listener is open - which happens before
+        # the caches are warm, on purpose. So the probe protected against nothing, and the one
+        # thing it could still do was kill the container after five minutes of readyz failing.
+        # readyz fails when the API server is unreachable, which on a rebooting master is the
+        # normal state for a while, so the probe turned "the API server is not up yet" into
+        # CrashLoopBackOff - on the fail-closed authorizer the cluster's every request waits for.
+        # Readiness alone gives what the design wants here: the rollout stops, nothing is killed.
+        #
         # Liveness asks this process alone whether it is still serving. It must not depend on the
         # API server: the webhook keeps deciding from its caches while the API server is away, and
         # restarting it then only throws those caches away.
@@ -199,16 +200,22 @@ spec:
         - containerPort: 4233
           name: https-metrics
           protocol: TCP
+        # Both probes need an explicit timeout for the same reason the webhook's do: the kubelet
+        # defaults to one second, and a master that is merely busy then fails them. A flapping
+        # sidecar makes the Pod unready, which holds the rollout of the component the cluster's
+        # authorization depends on, and restarts the only path its metrics take out.
         livenessProbe:
           httpGet:
             path: /livez
             port: 4233
             scheme: HTTPS
+          timeoutSeconds: 15
         readinessProbe:
           httpGet:
             path: /livez
             port: 4233
             scheme: HTTPS
+          timeoutSeconds: 15
         resources:
           requests:
             {{- include "helm_lib_module_ephemeral_storage_only_logs" . | nindent 12 }}

@@ -876,6 +876,53 @@ func TestAuthorizeRequest_NamespaceLookupFailureDenies(t *testing.T) {
 	}
 }
 
+// A namespace cache that has not filled yet denies, it does not answer "no labels".
+//
+// An empty cache says "no such namespace" for every name, which is what a namespace with no labels
+// looks like - and a DoesNotExist selector matches that, so a rule would open every namespace in
+// the cluster for as long as the cache took to fill. The webhook held this predicate and did not
+// consult it; nothing exercised the branch once it did.
+func TestAuthorizeRequest_UnsyncedNamespaceCacheDenies(t *testing.T) {
+	selector := &rules.NamespaceSelector{LabelSelector: &metav1.LabelSelector{
+		MatchExpressions: []metav1.LabelSelectorRequirement{
+			{Key: "quarantine", Operator: metav1.LabelSelectorOpDoesNotExist},
+		},
+	}}
+	newHandler := func(synced bool) *Handler {
+		return &Handler{
+			logger: log.New(io.Discard, "", 0),
+			cache:  fixtureCache(),
+			rules: rulesFor(rules.Rule{
+				Name:              "by-selector",
+				Subjects:          []rules.Subject{{Kind: "User", Name: "selector-user"}},
+				NamespaceSelector: selector,
+			}),
+			bindings: binding.NewIndex(),
+			nsLister: newFakeNamespaceLister([]runtime.Object{
+				&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "labelless"}},
+			}),
+			nsSynced: func() bool { return synced },
+		}
+	}
+	request := func() *WebhookRequest {
+		return &WebhookRequest{Spec: WebhookResourceSpec{
+			User:               "selector-user",
+			ResourceAttributes: WebhookResourceAttributes{Namespace: "labelless", Resource: "pods", Verb: "get"},
+		}}
+	}
+
+	// The control: with the cache filled, this selector opens a namespace with no labels.
+	if got := newHandler(true).authorizeRequest(request()); got.Status.Denied {
+		t.Fatalf("with the cache synced the selector opens the namespace; got denied with %q", got.Status.Reason)
+	}
+
+	// And with it still filling, the same request is denied rather than answered from nothing.
+	got := newHandler(false).authorizeRequest(request())
+	if !got.Status.Denied || got.Status.Reason != rules.NoNamespaceAccessReason {
+		t.Errorf("an unsynced namespace cache must deny: denied=%v reason=%q", got.Status.Denied, got.Status.Reason)
+	}
+}
+
 // A subject bound by a rule binding whose rule is not in the directory is restricted until the rule
 // arrives: the binding is created seconds after the rule, and this webhook may see it first.
 func TestAuthorizeRequest_UnknownRuleBindingRestricts(t *testing.T) {

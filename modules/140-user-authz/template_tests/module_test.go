@@ -259,7 +259,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 
 			// Every probe needs an explicit timeout: /healthcheck talks over the network, and the
 			// kubelet's default for an exec probe is one second.
-			for _, probe := range []string{"startupProbe", "livenessProbe", "readinessProbe"} {
+			for _, probe := range []string{"livenessProbe", "readinessProbe"} {
 				field := "spec.template.spec.containers.0." + probe
 				Expect(ds.Field(field).Exists()).To(BeTrue(), probe)
 				Expect(ds.Field(field+".timeoutSeconds").Int()).To(BeNumerically(">=", 5), probe)
@@ -270,7 +270,20 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			// restart.
 			Expect(ds.Field("spec.template.spec.containers.0.livenessProbe.exec.command").String()).To(ContainSubstring("healthz"))
 			Expect(ds.Field("spec.template.spec.containers.0.readinessProbe.exec.command").String()).To(ContainSubstring("readyz"))
-			Expect(ds.Field("spec.template.spec.containers.0.startupProbe.exec.command").String()).To(ContainSubstring("readyz"))
+
+			// And there must be no startupProbe. It ran readyz, which needs the API server, and
+			// killed the container after five minutes of it failing - so a master coming back
+			// without its API server yet put the fail-closed authorizer into CrashLoopBackOff.
+			// It guarded nothing: liveness asks healthz, which answers from the process alone.
+			Expect(ds.Field("spec.template.spec.containers.0.startupProbe").Exists()).To(BeFalse())
+
+			// The metrics sidecar needs the same explicit timeout: a flapping sidecar makes the
+			// Pod unready, which holds the rollout of the whole DaemonSet.
+			for _, probe := range []string{"livenessProbe", "readinessProbe"} {
+				field := "spec.template.spec.containers.1." + probe
+				Expect(ds.Field(field).Exists()).To(BeTrue(), probe)
+				Expect(ds.Field(field+".timeoutSeconds").Int()).To(BeNumerically(">=", 5), probe)
+			}
 		})
 
 		It("Should expose the webhook metrics for Prometheus", func() {
@@ -393,7 +406,12 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		})
 	})
 
-	Context("With CAR (incl. limitNamespaces) and not enabledMultiTenancy", func() {
+	// Both of these contexts used to be named for a ClusterAuthorizationRule they set up through
+	// userAuthz.internal.crds. The rules do not travel through values any more - the webhook reads
+	// them from the API - so the setup quietly became empty and the two tests rendered the
+	// defaults, twice, under names that promised otherwise. What is still true and worth pinning
+	// is what multi-tenancy being off does to the render, so that is what this checks, once.
+	Context("With multi-tenancy off", func() {
 		BeforeEach(func() {
 			f.HelmRender()
 		})
@@ -402,10 +420,16 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		// rendering. One rule, which anybody allowed to create them can write, then froze every
 		// other change to the module, and the message reached only whoever read the release logs.
 		// The condition is reported by the alert_multitenancy_disabled hook instead.
-		It("Should render: the rule is reported, not fatal", func() {
+		It("Should render, and deploy nothing that enforces the options that cannot take effect", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 			Expect(f.KubernetesResource("DaemonSet", "d8-user-authz", "user-authz-webhook").Exists()).To(BeFalse(),
 				"the webhook that would enforce those options is not deployed with multi-tenancy off")
+			Expect(f.KubernetesResource("Deployment", "d8-user-authz", "permission-browser-apiserver").Exists()).To(BeFalse(),
+				"and neither is the apiserver that reports them")
+			// Their PodMonitors go with them: a scrape target for a component that is not there is
+			// what made the TargetDown alerts fire on every cluster with the default settings.
+			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "user-authz-webhook").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("PodMonitor", "d8-monitoring", "permission-browser-apiserver").Exists()).To(BeFalse())
 		})
 	})
 
@@ -684,16 +708,6 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:cluster-editor")
 			Expect(cr.Exists()).To(BeTrue())
 			Expect(cr.Field("rules").String()).NotTo(ContainSubstring("namespaces/finalize"))
-		})
-	})
-
-	Context("With CAR (incl. allowAccessToSystemNamespaces) and not enabledMultiTenancy", func() {
-		BeforeEach(func() {
-			f.HelmRender()
-		})
-
-		It("Should render: the rule is reported by a metric, not by refusing to render", func() {
-			Expect(f.RenderError).ShouldNot(HaveOccurred())
 		})
 	})
 

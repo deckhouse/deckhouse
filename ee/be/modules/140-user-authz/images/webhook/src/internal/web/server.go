@@ -13,6 +13,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -90,6 +91,9 @@ type Server struct {
 	// synced is set once every cache the decision depends on has been filled. The listener opens
 	// before that, so the field is what tells the two apart.
 	synced atomic.Bool
+
+	// startupRefusals throttles the line gateOnCaches writes while the caches fill.
+	startupRefusals throttle
 }
 
 func NewServer(logger *log.Logger) (*Server, error) {
@@ -162,8 +166,9 @@ func NewServer(logger *log.Logger) (*Server, error) {
 			ruleBindingsSynced.HasSynced,
 			rulesListed(rulesSource),
 		}, rbacEvaluator.Synced()...),
-		rules:    rulesSource,
-		registry: registry,
+		rules:           rulesSource,
+		registry:        registry,
+		startupRefusals: throttle{every: time.Second},
 	}, nil
 }
 
@@ -263,12 +268,44 @@ func (s *Server) prepareHTTPServer() (*http.Server, error) {
 func (s *Server) gateOnCaches(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !s.synced.Load() {
-			s.logger.Printf("refusing an authorization request: the informer caches are still filling")
+			// One line per second, not one per request. Every authorization request in the cluster
+			// arrives here while the caches fill, and on the cluster where that takes longest -
+			// tens of thousands of bindings - the request rate is highest too, so the unthrottled
+			// line turned a slow startup into a flood in the master's log at the moment the
+			// operator most needs to read it.
+			if write, suppressed := s.startupRefusals.allow(time.Now()); write {
+				if suppressed > 0 {
+					s.logger.Printf("refusing authorization requests: the informer caches are still filling (%d more refused in the last second)", suppressed)
+				} else {
+					s.logger.Printf("refusing an authorization request: the informer caches are still filling")
+				}
+			}
 			http.Error(w, "user-authz webhook: the informer caches are still filling", http.StatusServiceUnavailable)
 			return
 		}
 		next.ServeHTTP(w, r)
 	})
+}
+
+// throttle bounds how often a line is written, counting what it swallowed in between.
+type throttle struct {
+	mu         sync.Mutex
+	every      time.Duration
+	last       time.Time
+	suppressed int
+}
+
+func (t *throttle) allow(now time.Time) (bool, int) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if !t.last.IsZero() && now.Sub(t.last) < t.every {
+		t.suppressed++
+		return false, 0
+	}
+	suppressed := t.suppressed
+	t.suppressed = 0
+	t.last = now
+	return true, suppressed
 }
 
 // Run starts webhook server and its configuration renewal. It will exit only if the webserver stops listening.

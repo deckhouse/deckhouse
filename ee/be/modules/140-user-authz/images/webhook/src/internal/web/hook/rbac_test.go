@@ -362,13 +362,54 @@ func TestIndependentCRBIndex_Delete(t *testing.T) {
 	idx := newIndependentCRBIndex()
 	crb := plainCRB("gone", rbacv1.Subject{Kind: rbacv1.UserKind, Name: "alice"})
 	idx.upsert(crb)
-	idx.delete(crb)
+	idx.deleteByName(crb.Name)
 
 	if got := indexedFor(idx, "alice"); got != nil {
 		t.Errorf("a deleted binding must not be returned, got %v", got)
 	}
 	if idx.len() != 0 {
 		t.Errorf("the index must be empty, holds %d", idx.len())
+	}
+}
+
+// A delete the informer did not observe directly still has to withdraw the binding.
+//
+// The tombstone usually carries the last known object, and the handler used to give up when it did
+// not. Giving up leaves the entry in the index for the life of the process, and a stale entry here
+// claims a CAR-independent grant that no longer exists - a claim that OVERRIDES the multi-tenancy
+// denial, so the subject keeps namespace-wide access the deleted binding gave them.
+func TestIndependentCRBIndex_TombstoneWithoutTheObject(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		tombstone kcache.DeletedFinalStateUnknown
+	}{
+		{
+			name:      "carrying the object",
+			tombstone: kcache.DeletedFinalStateUnknown{Key: "gone", Obj: plainCRB("gone", rbacv1.Subject{Kind: rbacv1.UserKind, Name: "alice"})},
+		},
+		{
+			// A watch replaced under the informer can leave a key with something else behind it.
+			name:      "carrying something else",
+			tombstone: kcache.DeletedFinalStateUnknown{Key: "gone", Obj: &rbacv1.RoleBinding{}},
+		},
+		{
+			name:      "carrying nothing",
+			tombstone: kcache.DeletedFinalStateUnknown{Key: "gone"},
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			idx := newIndependentCRBIndex()
+			idx.upsert(plainCRB("gone", rbacv1.Subject{Kind: rbacv1.UserKind, Name: "alice"}))
+
+			idx.eventHandler().OnDelete(tc.tombstone)
+
+			if got := indexedFor(idx, "alice"); got != nil {
+				t.Errorf("the binding is still indexed after its delete: %v", got)
+			}
+			if idx.len() != 0 {
+				t.Errorf("the index must be empty, holds %d", idx.len())
+			}
+		})
 	}
 }
 

@@ -22,7 +22,7 @@ import (
 func TestCacheRenew(t *testing.T) {
 	cache := newTestCache()
 
-	err := cache.renewCache("test")
+	err := cache.renewCacheOnceNoRetry("test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -127,10 +127,84 @@ func TestCachePreferredVersionGet(t *testing.T) {
 	}
 }
 
+// A resource no version of the group serves is an ANSWER, not a failure to ask.
+//
+// This used to come back as a plain error, which denies - the 403-for-a-resource-that-does-not-
+// exist that ErrResourceAbsent exists to prevent, on the one path where it was still happening.
+// The path is not exotic: it is taken by every review that arrives without an apiVersion, which is
+// what `kubectl auth can-i` sends, so the wrong answer landed in the tool people debug with.
+func TestCachePreferredVersionAbsentResourceIsAbsentNotAnError(t *testing.T) {
+	cache := newTestPreferredVersionCache()
+
+	_, err := cache.GetPreferredVersion("acme.cert-manager.io", "ghosts")
+	if !errors.Is(err, ErrResourceAbsent) {
+		t.Fatalf("got %v, want ErrResourceAbsent so the caller lets RBAC answer and the request 404s", err)
+	}
+}
+
+// And that answer is remembered, so asking for it repeatedly does not list the group every time.
+func TestCachePreferredVersionAbsentResourceIsNotResolvedOnEveryRequest(t *testing.T) {
+	var listings int32
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&listings, 1)
+		w.Header().Add("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/apis/acme.cert-manager.io":
+			w.Write([]byte(preferredVersionResponse))
+		case "/apis/acme.cert-manager.io/v1":
+			w.Write([]byte(discoveryByVersionResponse))
+		default:
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte{})
+		}
+	}))
+	defer server.Close()
+
+	cache := NamespacedDiscoveryCache{
+		client:               server.Client(),
+		kubernetesAPIAddress: server.URL,
+		logger:               log.New(io.Discard, "", log.LstdFlags),
+		data:                 make(map[string]*namespacedCacheEntry),
+		preferredVersions:    make(map[string]*preferredVersionCacheEntry),
+		negative:             make(map[string]negativeEntry),
+		inflight:             make(map[string]chan struct{}),
+	}
+	now := time.Now()
+	cache.now = func() time.Time { return now }
+
+	// The first resolution walks the group: the versions, then each version until one serves the
+	// resource or all of them have answered.
+	if _, err := cache.GetPreferredVersion("acme.cert-manager.io", "ghosts"); !errors.Is(err, ErrResourceAbsent) {
+		t.Fatalf("first lookup: got %v, want ErrResourceAbsent", err)
+	}
+	first := atomic.LoadInt32(&listings)
+	if first == 0 {
+		t.Fatal("the first lookup asked the API server nothing at all")
+	}
+
+	for i := 0; i < 50; i++ {
+		if _, err := cache.GetPreferredVersion("acme.cert-manager.io", "ghosts"); !errors.Is(err, ErrResourceAbsent) {
+			t.Fatalf("lookup %d: got %v, want ErrResourceAbsent", i, err)
+		}
+	}
+	if got := atomic.LoadInt32(&listings); got != first {
+		t.Errorf("50 more lookups produced %d further requests to the API server, want 0", got-first)
+	}
+
+	// Once the interval passes it asks again, so a resource installed meanwhile is found.
+	cache.now = func() time.Time { return now.Add(negativeRenewInterval) }
+	if _, err := cache.GetPreferredVersion("acme.cert-manager.io", "ghosts"); !errors.Is(err, ErrResourceAbsent) {
+		t.Fatalf("after the interval: got %v, want ErrResourceAbsent", err)
+	}
+	if got := atomic.LoadInt32(&listings); got <= first {
+		t.Errorf("after the interval the group was not asked about again (%d requests in total)", got)
+	}
+}
+
 func TestCacheGetIfNoResource(t *testing.T) {
 	cache := newTestCache()
 
-	err := cache.renewCache("test")
+	err := cache.renewCacheOnceNoRetry("test")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -522,7 +596,7 @@ func TestCacheAbsentResourceDoesNotRelistWhileTheListingKeepsFailing(t *testing.
 func TestCacheStale(t *testing.T) {
 	cache := newTestCache()
 
-	err := cache.renewCache("test")
+	err := cache.renewCacheOnceNoRetry("test")
 	if err != nil {
 		t.Fatal(err)
 	}
