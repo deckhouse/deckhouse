@@ -138,7 +138,7 @@ The multi-tenancy engine applies the same restrictions as the `user-authz-webhoo
 
 - `limitNamespaces`: Regex patterns for allowed namespaces
 - `namespaceSelector`: Label selectors for allowed namespaces
-- `allowAccessToSystemNamespaces`: Access to `kube-*`, `d8-*`, `default` namespaces
+- `allowAccessToSystemNamespaces`: Access to the system namespaces — `default`, `kube-*`, `d8-*`, `antiopa`, `loghouse` (the list lives in `go_lib/user-authz/rules`, and this apiserver reads it from there rather than keeping its own)
 - Cluster-scoped requests for namespaced resources are denied if user has namespace restrictions
 
 ## Local Development
@@ -205,11 +205,15 @@ below is not exhaustive.
 
 ### General
 - RBAC rules and namespace information are served from watch-driven informers, so changes land within seconds. The 30-minute figure in the code is the informer resync interval — a periodic re-list that guards against a missed watch event, not the propagation delay.
-- The multi-tenancy config file is re-read every second. The file itself is a projected ConfigMap, and kubelet refreshes it on its own sync period, so a `ClusterAuthorizationRule` change takes up to about a minute to reach the running pod.
+- The `ClusterAuthorizationRules` come from a watch of the API, not from a file. A change reaches this apiserver in about a second. It used to read a projected ConfigMap that kubelet refreshed on its own sync period, which put roughly a minute between writing a rule and this component knowing about it — and a ceiling of about two thousand rules on the ConfigMap itself.
 
 ## Health Endpoints
 
-- `/readyz`: Returns 200 once the resource scope cache has been populated at least once, in addition to the generic apiserver's own readiness checks
+- `/readyz`: in addition to the generic apiserver's own checks, `resource-scope-cache` (the discovery snapshot has been populated at least once) and `user-authz-rules` (the `ClusterAuthorizationRules` have been listed and the `ClusterRoleBindings` that point at them are indexed). Until the rules are known, every subject a rule binds is treated as maximally restricted, so answering before that would report an access level nobody has.
 - `/livez`: Returns 200 when server is alive
 
-This component registers no custom Prometheus metrics. Request rates and latencies are available from the generic apiserver metrics it inherits, for example `apiserver_request_duration_seconds{resource="bulksubjectaccessreviews"}`.
+## Metrics
+
+The rules informer exports the same metrics as the webhook's, under the `user_authz_permission_browser` prefix — how many rules it holds, how many are quarantined, when the directory was last rebuilt, the watch error count, the highest `resourceVersion` observed. They are served in plaintext on `127.0.0.1:4276` and published by a `kube-rbac-proxy` sidecar; the apiserver's own port stays behind the aggregation layer, which Prometheus cannot scrape.
+
+Request rates and latencies come from the generic apiserver metrics it inherits, for example `apiserver_request_duration_seconds{resource="bulksubjectaccessreviews"}`.
