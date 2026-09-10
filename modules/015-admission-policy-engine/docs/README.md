@@ -360,7 +360,7 @@ The following modes are supported:
 Configuring the policy enforcement mode is done by setting the label `security.deckhouse.io/pod-policy-action=<POLICY_ACTION>` on the corresponding namespace.
 To set the policy enforcement mode globally, use the [`enforcementaction`](configuration.html#parameters-podsecuritystandards-enforcementaction) parameter.
 
-Example of setting the "warn" mode for PSS policies for all pods in the `my-namespace` namespace:
+Example of setting the `warn` mode for PSS policies for all pods in the `my-namespace` namespace:
 
 ```bash
 d8 k label ns my-namespace security.deckhouse.io/pod-policy-action=warn
