@@ -40,10 +40,9 @@ locals {
   root_disk_size       = lookup(local.instance_class, "rootDiskSizeGb", 50)
   image_name           = lookup(local.instance_class, "imageName", null)
   resource_group_name  = join("-", [local.resource_name_prefix, "rg"])
-  pool                 = lookup(local.instance_class, "pool", null)
+  storage_policy       = lookup(local.instance_class, "storagePolicy", lookup(var.providerClusterConfiguration, "storagePolicy", null))
   extnet_name          = lookup(local.instance_class, "externalNetwork", null)
   vins_name            = join("-", [local.resource_name_prefix, "vins"])
-  driver               = "KVM_X86"
   net_type_vins        = "VINS"
   net_type_extnet      = "EXTNET"
 

@@ -109,6 +109,9 @@ location: *!CHANGE_LOCATION!*
 # [<en>] Account name.
 # [<ru>] Имя аккаунта.
 account: *!CHANGE_ACCOUNT!*
+# [<en>] The name of the storage policy to use for VM disks by default.
+# [<ru>] Имя storage policy, используемой по умолчанию для дисков виртуальных машин.
+storagePolicy: *!CHANGE_STORAGE_POLICY!*
 # [<en>] Dynamix API access parameters
 # [<ru>] Параметры доступа к Dynamix API
 provider:
@@ -142,12 +145,6 @@ masterNodeGroup:
     # [<en>] OS image name to use for VM deployment.
     # [<ru>] Имя образа ОС, используемое для развертывания ВМ.
     imageName: *!CHANGE_IMAGE_NAME*
-    # [<en>] Storage name.
-    # [<ru>] Имя хранилища.
-    storageEndpoint: *!CHANGE_STORAGE_ENDPOINT*
-    # [<en>] Pool name.
-    # [<ru>] Имя пула хранения.
-    pool: *!CHANGE_POOL*
     # [<en>] External network name.
     # [<ru>] Имя внешней сети.
     externalNetwork: *!CHANGE_EXTERNAL_NETWORK*

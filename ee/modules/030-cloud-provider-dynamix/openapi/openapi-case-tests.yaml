@@ -1,10 +1,15 @@
 positive:
   configValues:
   - {}
+  - storageClass:
+      exclude: [".*-hdd", "storage-policy01"]
+      default: "storage-policy01"
   values:
   - { internal: {} }
 negative:
   configValues:
   - { somethingInConfig: yes }
+  - storageClass:
+      exclude: "storage-policy01"
   values:
   - { somethingInConfig: yes }

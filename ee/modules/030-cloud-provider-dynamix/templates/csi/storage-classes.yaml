@@ -13,8 +13,5 @@ allowVolumeExpansion: true
 volumeBindingMode: WaitForFirstConsumer
 parameters:
   account: {{ $providerClusterConfiguration.account | quote }}
-  location: {{ $providerClusterConfiguration.location | quote }}
-  storageEndpoint: {{ $storageClass.storageEndpoint | quote }}
-  pool: {{ $storageClass.pool | quote }}
-  allowVolumeExpansion: {{ $storageClass.allowVolumeExpansion | toString | quote }}
+  storagePolicy: {{ $storageClass.storagePolicy | quote }}
 {{- end }}

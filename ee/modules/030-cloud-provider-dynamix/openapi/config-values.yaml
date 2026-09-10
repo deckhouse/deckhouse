@@ -1,2 +1,36 @@
 type: object
 properties:
+  storageClass:
+    type: object
+    default: {}
+    description: |
+      The module automatically creates a StorageClass for every storage policy available to the cluster account.
+    properties:
+      exclude:
+        type: array
+        description: |
+          A list of StorageClass names (or regex expressions for names) to exclude from the creation in the cluster.
+        items:
+          type: string
+        x-examples:
+          - [".*-hdd", "storage-policy01"]
+      default:
+        type: string
+        deprecated: true
+        x-doc-deprecated: true
+        x-examples:
+          - "storage-policy01"
+        description: |-
+          The name of StorageClass the module marks as default among the ones it creates.
+
+          It only applies while nothing else claims the default: a StorageClass that already
+          carries the default annotation keeps it, and `global.defaultClusterStorageClass`
+          overrides both. So this parameter picks the default of a cluster that does not have
+          one yet; it does not move the annotation in a cluster that already has a default.
+
+          If the parameter is omitted, the default StorageClass is either:
+
+          * an arbitrary StorageClass present in the cluster that has the default annotation;
+          * the first (in lexicographic order) StorageClass created by the module.
+
+          > **Parameter is deprecated.** Instead, use the global parameter [global.defaultClusterStorageClass](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-defaultclusterstorageclass).
