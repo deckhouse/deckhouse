@@ -29,17 +29,17 @@ Depending on how pods are created, there are differences in how the API generate
 
 ## Controller-level validation
 
-Policies validate pod-creating controllers at CREATE and UPDATE time. This provides early feedback when a workload is created or updated, before any Pod is launched, and also surfaces creation denials when deploying via CI (CI rarely creates Pods directly, and Pod creation errors from controllers are often not displayed).
+Policies validate pod-creating controllers at `CREATE` and `UPDATE` time. This provides early feedback when a workload is created or updated, before any Pod is launched, and also surfaces creation denials when deploying via CI (CI rarely creates Pods directly, and Pod creation errors from controllers are often not displayed).
 
 The following objects are validated:
 
-| API group | Resource kind                      | Operations             |
-| --------- | ---------------------------------- | ---------------------- |
-| (core)    | Pod                                | CREATE, UPDATE, DELETE |
-| apps      | Deployment, StatefulSet, DaemonSet | CREATE, UPDATE, DELETE |
-| (core)    | ReplicationController              | CREATE, UPDATE, DELETE |
-| batch     | Job, CronJob                       | CREATE, UPDATE, DELETE |
-| (core)    | pods/exec, pods/attach             | CONNECT                |
+| API group | Resource kind                      | Operations                   |
+| --------- | ---------------------------------- |------------------------------|
+| (core)    | Pod                                | `CREATE`, `UPDATE`, `DELETE` |
+| apps      | Deployment, StatefulSet, DaemonSet | `CREATE`, `UPDATE`, `DELETE` |
+| (core)    | ReplicationController              | `CREATE`, `UPDATE`, `DELETE` |
+| batch     | Job, CronJob                       | `CREATE`, `UPDATE`, `DELETE` |
+| (core)    | pods/exec, pods/attach             | `CONNECT`                    |
 
 `DELETE` is intercepted so that a policy can forbid deleting a resource:
 a rule that inspects `input.review.operation` only runs if the request reaches Gatekeeper.
