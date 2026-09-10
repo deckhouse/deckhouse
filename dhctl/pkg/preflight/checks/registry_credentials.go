@@ -16,7 +16,6 @@ package checks
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -27,12 +26,14 @@ import (
 type RegistryCredentialsCheck struct {
 	MetaConfig    *config.MetaConfig
 	InstallConfig *config.DeckhouseInstaller
+
+	descriptor imageDescriptorProvider
 }
 
 const RegistryCredentialsCheckName preflight.CheckName = "registry-credentials"
 
 func (RegistryCredentialsCheck) Description() string {
-	return "registry credentials are valid"
+	return "deckhouse image is available in registry"
 }
 
 func (RegistryCredentialsCheck) Phase() preflight.Phase {
@@ -48,30 +49,20 @@ func (c RegistryCredentialsCheck) Run(ctx context.Context) error {
 		return fmt.Errorf("metaConfig and installConfig are required")
 	}
 
-	image, err := c.InstallConfig.GetRemoteImage(ctx, true)
-	if err != nil {
-		return err
-	}
-	if image == "registry.deckhouse.ru/deckhouse/ce" {
-		return nil
-	}
-
-	client, err := prepareAuthHTTPClient(ctx, c.MetaConfig)
-	if err != nil {
-		return err
-	}
-
-	authData := c.MetaConfig.Registry.Settings.RemoteData.AuthBase64()
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 
-	if err := checkBasicRegistryAuth(ctx, c.MetaConfig, authData, client); err == nil {
-		return nil
-	} else if !errors.Is(err, ErrAuthRegistryFailed) {
-		return err
+	_, err := deckhouseImageConfig(
+		ctx,
+		c.MetaConfig,
+		c.InstallConfig,
+		c.descriptor,
+	)
+	if err != nil {
+		return fmt.Errorf("cannot resolve deckhouse image config: %w", err)
 	}
 
-	return checkTokenRegistryAuth(ctx, c.MetaConfig, authData, client)
+	return nil
 }
 
 func RegistryCredentials(meta *config.MetaConfig, cfg *config.DeckhouseInstaller) preflight.Check {
@@ -79,6 +70,7 @@ func RegistryCredentials(meta *config.MetaConfig, cfg *config.DeckhouseInstaller
 		MetaConfig:    meta,
 		InstallConfig: cfg,
 	}
+
 	return preflight.Check{
 		Name:        RegistryCredentialsCheckName,
 		Description: check.Description(),
