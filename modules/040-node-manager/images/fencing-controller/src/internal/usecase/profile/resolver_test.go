@@ -21,6 +21,7 @@ import (
 	"errors"
 	"os"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -224,6 +225,67 @@ func TestResolveRejectsNoObject(t *testing.T) {
 	if _, err := NewResolver(&stubGetter{}).Resolve(context.Background(), nil); err == nil {
 		t.Error("resolve of a nil object succeeded, want an error")
 	}
+}
+
+// TestResolveServesConcurrentIncidents exercises the snapshot map from several
+// goroutines at once, which is what the race detector needs to say anything
+// about it. controller-runtime serializes the reconciles of one object, but not
+// those of different ones, and one resolver serves every incident in the
+// cluster.
+func TestResolveServesConcurrentIncidents(t *testing.T) {
+	resolver := NewResolver(&concurrentGetter{profiles: shippedProfiles(t)})
+
+	var wg sync.WaitGroup
+
+	// Two goroutines per profile: the same key of the snapshot map is read,
+	// written and dropped concurrently, and a snapshot leaking between keys
+	// shows up as the timings of another profile.
+	for range 2 {
+		for _, name := range v1alpha1.ProfileNames() {
+			state := incidentOn("worker-"+name.ObjectName(), name)
+
+			wg.Add(1)
+
+			go func() {
+				defer wg.Done()
+
+				for range 50 {
+					got, err := resolver.Resolve(context.Background(), state)
+					if err != nil {
+						t.Errorf("resolve %s: %v", name, err)
+
+						return
+					}
+
+					if want := shippedTimings[name]; got != want {
+						t.Errorf("resolved %+v for %s, want %+v", got, name, want)
+
+						return
+					}
+
+					resolver.Forget(state.Name)
+				}
+			}()
+		}
+	}
+
+	wg.Wait()
+}
+
+// concurrentGetter is the read-only half of stubGetter: it counts nothing, so
+// the goroutines above race on the resolver and not on the stub.
+type concurrentGetter struct {
+	profiles map[string]*v1alpha1.FencingSLAProfile
+}
+
+func (c *concurrentGetter) GetSLAProfile(_ context.Context, name string) (*v1alpha1.FencingSLAProfile, error) {
+	profile, ok := c.profiles[name]
+	if !ok {
+		return nil, apierrors.NewNotFound(
+			schema.GroupResource{Group: v1alpha1.GroupVersion.Group, Resource: "fencingslaprofiles"}, name)
+	}
+
+	return profile, nil
 }
 
 type stubGetter struct {

@@ -32,9 +32,11 @@ import (
 
 	v1alpha1 "fencing-controller/api/node-manager.deckhouse.io/v1alpha1"
 	"fencing-controller/internal/adapters/fencingstate"
+	"fencing-controller/internal/adapters/node"
 	"fencing-controller/internal/common"
 	"fencing-controller/internal/config"
 	"fencing-controller/internal/controllers/fencingfailednodestate"
+	"fencing-controller/internal/usecase/noderef"
 	"fencing-controller/internal/usecase/profile"
 )
 
@@ -47,7 +49,7 @@ func main() {
 	logger := newLogger()
 
 	if err := run(logger); err != nil {
-		logger.Error("fencing-controller failed", "error", err)
+		logger.Error("fencing-controller 2.0 failed", "error", err)
 		os.Exit(1)
 	}
 }
@@ -89,9 +91,12 @@ func runManager(ctx context.Context, cfg *config.Config, logger *log.Logger) err
 	}
 
 	profiles := profile.NewResolver(fencingstate.NewProfiles(mgr.GetClient()))
+	// The uncached reader keeps the controller from watching every Node of the
+	// cluster to check the identity of the occasional failed one.
+	nodes := noderef.NewValidator(node.NewReader(mgr.GetAPIReader()))
 	recorder := mgr.GetEventRecorderFor(common.ControllerName)
 
-	if err := fencingfailednodestate.New(mgr.GetClient(), profiles, recorder).SetupWithManager(mgr); err != nil {
+	if err := fencingfailednodestate.New(mgr.GetClient(), nodes, profiles, recorder).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("set up %s controller: %w", common.ControllerName, err)
 	}
 

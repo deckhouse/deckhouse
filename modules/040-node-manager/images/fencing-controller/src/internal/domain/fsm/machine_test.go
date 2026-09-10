@@ -169,6 +169,23 @@ func TestAdvance(t *testing.T) {
 			wantEvents: nil,
 			wantState:  StateDone,
 		},
+		// The signals of the status say nothing about the progress of a deletion
+		// that is already running, or about an error to retry, so the ADR
+		// describes no arrow out of either on them.
+		"evicting is not moved by the signals": {
+			phase:        v1alpha1.PhaseEvicting,
+			failedAgo:    ago(30 * time.Second),
+			heartbeatAgo: ago(100 * time.Millisecond),
+			wantEvents:   nil,
+			wantState:    StateEvicting,
+		},
+		"error is not moved by the signals": {
+			phase:        v1alpha1.PhaseError,
+			failedAgo:    ago(30 * time.Second),
+			heartbeatAgo: ago(100 * time.Millisecond),
+			wantEvents:   nil,
+			wantState:    StateError,
+		},
 	} {
 		t.Run(name, func(t *testing.T) {
 			machine := restore(t, incident(tc.phase, tc.failedAgo, tc.heartbeatAgo))
@@ -207,6 +224,92 @@ func TestAdvanceWaitsWhileTheProfileIsUnresolved(t *testing.T) {
 
 			if machine.State() != StateSuspected {
 				t.Errorf("ended in %s, want the incident to stay in %s", machine.State(), StateSuspected)
+			}
+		})
+	}
+}
+
+// TestFireCrossesOneArrowTheReconcilerChose covers the events the reconciler
+// decides on itself rather than reading them off the status.
+func TestFireCrossesOneArrowTheReconcilerChose(t *testing.T) {
+	// The refusal on a broken reference to a Node is described out of every
+	// state of the ADR, the terminal ones included.
+	t.Run("the invalid reference arrow leaves every state", func(t *testing.T) {
+		for _, from := range adrStates {
+			t.Run(string(from), func(t *testing.T) {
+				machine := &FSM{state: from}
+
+				if !machine.Fire(EventInvalidNodeReference) {
+					t.Fatalf("%s did not cross the %s arrow", from, EventInvalidNodeReference)
+				}
+
+				if machine.State() != StateError {
+					t.Errorf("ended in %s, want %s", machine.State(), StateError)
+				}
+			})
+		}
+	})
+
+	t.Run("an arrow the state does not have is not crossed", func(t *testing.T) {
+		machine := &FSM{state: StateSuspected}
+
+		if machine.Fire(EventEvictionStarted) {
+			t.Errorf("%s crossed the %s arrow, which the ADR does not describe", StateSuspected, EventEvictionStarted)
+		}
+
+		if machine.State() != StateSuspected {
+			t.Errorf("the machine moved to %s on a refused event", machine.State())
+		}
+	})
+
+	// A phase that names no state of the machine leads nowhere, not even to the
+	// refusal that every real state has.
+	t.Run("nothing is crossed from a state the ADR does not describe", func(t *testing.T) {
+		machine := &FSM{state: State("Draining")}
+
+		if machine.Fire(EventInvalidNodeReference) {
+			t.Errorf("an unknown state crossed the %s arrow", EventInvalidNodeReference)
+		}
+	})
+}
+
+// TestAdvanceTreatsFutureTimestampsAsNotElapsed covers a writer whose clock runs
+// ahead of the controller's. Both signals then read in the direction that keeps
+// the Node: a heartbeat that is dated in the future still counts as confirmed
+// liveness, and a failure dated in the future has not aged into the evacuation
+// delay yet, so the skew can delay an eviction but never cause one.
+func TestAdvanceTreatsFutureTimestampsAsNotElapsed(t *testing.T) {
+	const skew = -time.Minute
+
+	for name, tc := range map[string]struct {
+		phase        v1alpha1.FencingFailedNodeStatePhase
+		failedAgo    *time.Duration
+		heartbeatAgo *time.Duration
+		wantEvents   []Event
+		wantState    State
+	}{
+		"a heartbeat from the future is fresh": {
+			failedAgo:    ago(30 * time.Second),
+			heartbeatAgo: ago(skew),
+			wantEvents:   []Event{EventFallbackFresh},
+			wantState:    StateFallbackAlive,
+		},
+		"a failure from the future has not elapsed": {
+			failedAgo:  ago(skew),
+			wantEvents: []Event{EventFailedDetected},
+			wantState:  StateSuspected,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			state := incident(tc.phase, tc.failedAgo, tc.heartbeatAgo)
+			machine := restore(t, state)
+
+			if got := machine.Advance(state, critical, observedAt); !slices.Equal(got, tc.wantEvents) {
+				t.Errorf("fired %v, want %v", got, tc.wantEvents)
+			}
+
+			if machine.State() != tc.wantState {
+				t.Errorf("ended in %s, want %s", machine.State(), tc.wantState)
 			}
 		})
 	}
@@ -283,6 +386,14 @@ func TestRequeueAfter(t *testing.T) {
 			phase:     v1alpha1.PhaseSuspected,
 			failedAgo: ago(200 * time.Millisecond),
 			want:      0,
+		},
+		// The deadline of a failure dated in the future is that much further
+		// away, so the timer waits it out instead of firing at once.
+		"a failure from the future is waited out": {
+			phase:     v1alpha1.PhaseSuspected,
+			failedAgo: ago(-time.Minute),
+			params:    critical,
+			want:      time.Minute + 1200*time.Millisecond,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {

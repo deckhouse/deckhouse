@@ -102,6 +102,8 @@ spec:
                     Current state of the fencing state machine for the node.
 
                     `Healthy` is unreachable in practice: a healthy node has no `FencingFailedNodeState`, so absence of the object is the healthy signal.
+
+                    `Error` is also the state of an object that does not identify a live node. It is reached from any other phase, and the `InvalidNodeReference` condition names the invariant that broke.
                   enum:
                     - Healthy
                     - Suspected
@@ -204,6 +206,8 @@ spec:
                     Conditions describing the incident, maintained by the fencing controller. A condition is a blocker that sits on top of a phase instead of replacing it, so the same problem can be reported in any phase.
 
                     `ConfigurationError` is set while the SLA profile named by `spec.profileRef.name` cannot be resolved. The node is not evacuated in that state, because the evacuation delay and the fallback TTL the controller has to respect are unknown.
+
+                    `InvalidNodeReference` is set when the object does not identify a live node, and its `reason` names which invariant broke: `NodeNotFound` when the node the object is named after is gone, `MissingOwnerReference` when `metadata.ownerReferences` does not hold exactly one reference to a `v1` `Node`, `NameMismatch` when that reference names another node, and `UIDMismatch` when the node was recreated under the same name. No pods are deleted and no node is deleted on behalf of such an object, and the incident is not retried.
                   x-kubernetes-list-type: map
                   x-kubernetes-list-map-keys:
                     - type

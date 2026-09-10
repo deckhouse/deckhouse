@@ -60,3 +60,25 @@ const (
 	ReasonProfileUnavailable = "ProfileUnavailable"
 	ReasonProfileResolved    = "ProfileResolved"
 )
+
+// ConditionTypeInvalidNodeReference reports that the incident does not identify
+// a live Node, so the pods of that Node are never deleted on its behalf.
+const ConditionTypeInvalidNodeReference = "InvalidNodeReference"
+
+// The reasons of ConditionTypeInvalidNodeReference are the machine-readable
+// causes the ADR names, one per rule of the pre-reconcile validation.
+const (
+	// ReasonMissingOwnerReference: metadata.ownerReferences does not hold
+	// exactly one reference to a v1 Node.
+	ReasonMissingOwnerReference = "MissingOwnerReference"
+	// ReasonNameMismatch: the owner reference names a Node other than the one
+	// metadata.name names.
+	ReasonNameMismatch = "NameMismatch"
+	// ReasonUIDMismatch: the Node was recreated, so the object refers to an
+	// identity that no longer exists.
+	ReasonUIDMismatch = "UIDMismatch"
+	// ReasonNodeNotFound: the Node the object names is gone.
+	ReasonNodeNotFound = "NodeNotFound"
+	// ReasonNodeReferenceValid: the object identifies the live Node it names.
+	ReasonNodeReferenceValid = "NodeReferenceValid"
+)

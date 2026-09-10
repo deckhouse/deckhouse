@@ -31,7 +31,9 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/record"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -41,6 +43,7 @@ import (
 	v1alpha1 "fencing-controller/api/node-manager.deckhouse.io/v1alpha1"
 	"fencing-controller/internal/common"
 	"fencing-controller/internal/domain/fsm"
+	"fencing-controller/internal/usecase/noderef"
 	"fencing-controller/internal/usecase/profile"
 )
 
@@ -122,7 +125,10 @@ func TestReconcileAdvancesThePhase(t *testing.T) {
 			}
 
 			assertAgentSectionsUntouched(t, incident, got)
-			assertCondition(t, got, metav1.ConditionFalse, common.ReasonProfileResolved)
+			assertObservedGeneration(t, got)
+			assertProfileCondition(t, got, metav1.ConditionFalse, common.ReasonProfileResolved)
+			assertCondition(t, got, common.ConditionTypeInvalidNodeReference,
+				metav1.ConditionFalse, common.ReasonNodeReferenceValid)
 
 			if published := h.events(); len(published) != 0 {
 				t.Errorf("an incident that was never blocked published %v, want silence", published)
@@ -224,6 +230,189 @@ func TestReconcileLeavesTheHealthyPhaseUnwritten(t *testing.T) {
 	}
 }
 
+// TestReconcileRefusesAnInvalidNodeReference walks the causes the ADR names. The
+// object stays where it is in every one of them: nothing is deleted on behalf of
+// an object that does not identify a live Node.
+func TestReconcileRefusesAnInvalidNodeReference(t *testing.T) {
+	for name, problem := range map[string]*noderef.Problem{
+		"the node is gone":        {Reason: common.ReasonNodeNotFound, Message: "Node is gone."},
+		"there is no owner":       {Reason: common.ReasonMissingOwnerReference, Message: "No owner reference."},
+		"the owner names another": {Reason: common.ReasonNameMismatch, Message: "Owner names another node."},
+		"the node was recreated":  {Reason: common.ReasonUIDMismatch, Message: "Owner points at a stale UID."},
+	} {
+		t.Run(name, func(t *testing.T) {
+			incident := failedState()
+			// Old enough that a valid reference would send it to ReadyToEvict.
+			incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-20 * time.Second))
+			incident.Status.Phase = v1alpha1.PhaseSuspected
+
+			h := newHarness(t, incident)
+			h.nodes.problem = problem
+
+			res, err := h.reconcile()
+			if err != nil {
+				t.Fatalf("reconcile returned %v, want the refusal to be terminal rather than retried", err)
+			}
+
+			if res != (ctrl.Result{}) {
+				t.Errorf("reconcile requeued %+v for a refused incident, want no timer", res)
+			}
+
+			got := h.get()
+
+			if got.Status.Phase != v1alpha1.PhaseError {
+				t.Errorf("phase is %q, want %q", got.Status.Phase, v1alpha1.PhaseError)
+			}
+
+			assertCondition(t, got, common.ConditionTypeInvalidNodeReference, metav1.ConditionTrue, problem.Reason)
+			assertAgentSectionsUntouched(t, incident, got)
+			assertObservedGeneration(t, got)
+
+			published := h.events()
+			if len(published) != 1 {
+				t.Fatalf("published %v, want one event naming the broken invariant", published)
+			}
+
+			assertEvent(t, published[0], corev1.EventTypeWarning, problem.Reason, problem.Message)
+
+			// The incident will not be evacuated, so what the controller keeps
+			// about the node outside its object goes with it.
+			if len(h.profiles.forgotten) != 1 || h.profiles.forgotten[0] != nodeName {
+				t.Errorf("forgot %v, want the timings of %q to be dropped", h.profiles.forgotten, nodeName)
+			}
+		})
+	}
+}
+
+// TestReconcileValidatesBeforeItResolvesTheProfile pins the order of the two
+// checks. The ADR puts identity before any transition of the machine, and the
+// order also decides what happens when both are broken at once: resolving first
+// would answer a Node that is gone with a configuration error, and that error is
+// retried with backoff forever instead of ending the incident.
+func TestReconcileValidatesBeforeItResolvesTheProfile(t *testing.T) {
+	incident := failedState()
+	incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-20 * time.Second))
+
+	h := newHarness(t, incident)
+	h.nodes.problem = &noderef.Problem{Reason: common.ReasonNodeNotFound, Message: "Node is gone."}
+	h.profiles.err = missingProfile()
+
+	if _, err := h.reconcile(); err != nil {
+		t.Fatalf("reconcile returned %v, want the terminal answer of the identity check", err)
+	}
+
+	if len(h.profiles.resolved) != 0 {
+		t.Errorf("the profile of %v was resolved, want the identity check to answer first", h.profiles.resolved)
+	}
+
+	got := h.get()
+
+	assertCondition(t, got, common.ConditionTypeInvalidNodeReference, metav1.ConditionTrue, common.ReasonNodeNotFound)
+
+	if blocker := meta.FindStatusCondition(got.Status.Conditions, common.ConditionTypeConfigurationError); blocker != nil {
+		t.Errorf("condition %s was reported as %q on an incident whose node is gone",
+			blocker.Type, blocker.Reason)
+	}
+}
+
+// TestReconcileAnnouncesTheRefusalOnce keeps a refused incident from being
+// announced again on every pass over it.
+func TestReconcileAnnouncesTheRefusalOnce(t *testing.T) {
+	h := newHarness(t, failedState())
+	h.nodes.problem = &noderef.Problem{Reason: common.ReasonUIDMismatch, Message: "Owner points at a stale UID."}
+
+	if _, err := h.reconcile(); err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
+
+	if published := h.events(); len(published) != 1 {
+		t.Fatalf("published %v, want one event naming the broken invariant", published)
+	}
+
+	if _, err := h.reconcile(); err != nil {
+		t.Fatalf("second reconcile: %v", err)
+	}
+
+	if repeated := h.events(); len(repeated) != 0 {
+		t.Errorf("the second pass published %v, want the refusal announced once", repeated)
+	}
+
+	// The refusal is idempotent: the second pass finds the machine in Error,
+	// refuses again and has nothing new to write.
+	if h.statusPatches != 1 {
+		t.Errorf("two passes over a refused incident wrote the status %d times, want once", h.statusPatches)
+	}
+}
+
+// TestReconcileKeepsARefusedIncidentRefused records the consequence of putting
+// the refusal in the phase: the error state has no arrow back on the signals of
+// the status, so an object that is repaired after it was refused stays parked
+// there. Recovery goes through the object, not through the phase: the garbage
+// collector removes the object of a node that is gone or was recreated, and the
+// agent creates a new one.
+func TestReconcileKeepsARefusedIncidentRefused(t *testing.T) {
+	incident := failedState()
+	incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-20 * time.Second))
+
+	h := newHarness(t, incident)
+	h.nodes.problem = &noderef.Problem{Reason: common.ReasonUIDMismatch, Message: "Owner points at a stale UID."}
+
+	if _, err := h.reconcile(); err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
+
+	h.events()
+	h.nodes.problem = nil
+
+	res, err := h.reconcile()
+	if err != nil {
+		t.Fatalf("reconcile after the reference was repaired: %v", err)
+	}
+
+	got := h.get()
+
+	// The blocker does not outlive its cause, so an operator sees the reference
+	// is fine now.
+	assertCondition(t, got, common.ConditionTypeInvalidNodeReference,
+		metav1.ConditionFalse, common.ReasonNodeReferenceValid)
+
+	if got.Status.Phase != v1alpha1.PhaseError {
+		t.Errorf("phase is %q, want the refused incident to stay in %q", got.Status.Phase, v1alpha1.PhaseError)
+	}
+
+	if res.RequeueAfter != 0 {
+		t.Errorf("reconcile requeued after %s, want no timer for an incident that cannot move", res.RequeueAfter)
+	}
+}
+
+// TestReconcileRetriesWhenTheNodeCannotBeRead separates an unreadable API from a
+// broken reference: only the second one is an answer about the object.
+func TestReconcileRetriesWhenTheNodeCannotBeRead(t *testing.T) {
+	apiDown := apierrors.NewServiceUnavailable("etcd leader changed")
+
+	incident := failedState()
+	incident.Status.Phase = v1alpha1.PhaseSuspected
+
+	h := newHarness(t, incident)
+	h.nodes.err = apiDown
+
+	if _, err := h.reconcile(); !errors.Is(err, apiDown) {
+		t.Fatalf("reconcile returned %v, want the API error so controller-runtime retries with backoff", err)
+	}
+
+	if h.statusPatches != 0 {
+		t.Errorf("reconcile wrote the status %d times for a transient failure, want none", h.statusPatches)
+	}
+
+	if got := h.get().Status.Phase; got != v1alpha1.PhaseSuspected {
+		t.Errorf("phase moved to %q while the identity of the node was unknown", got)
+	}
+
+	if published := h.events(); len(published) != 0 {
+		t.Errorf("a transient failure published %v, want nothing blamed on the object", published)
+	}
+}
+
 // TestReconcileReportsAnUnusableProfile is the degraded configuration case: the
 // incident keeps the phase it had and never reaches the eviction path.
 func TestReconcileReportsAnUnusableProfile(t *testing.T) {
@@ -250,7 +439,7 @@ func TestReconcileReportsAnUnusableProfile(t *testing.T) {
 				t.Errorf("phase moved from %q to %q while the profile was unusable", phase, got.Status.Phase)
 			}
 
-			assertCondition(t, got, metav1.ConditionTrue, common.ReasonProfileUnavailable)
+			assertProfileCondition(t, got, metav1.ConditionTrue, common.ReasonProfileUnavailable)
 			assertAgentSectionsUntouched(t, incident, got)
 		})
 	}
@@ -269,7 +458,7 @@ func TestReconcileClearsTheConditionOnceTheProfileIsBack(t *testing.T) {
 		t.Fatal("reconcile succeeded while the profile was missing")
 	}
 
-	assertCondition(t, h.get(), metav1.ConditionTrue, common.ReasonProfileUnavailable)
+	assertProfileCondition(t, h.get(), metav1.ConditionTrue, common.ReasonProfileUnavailable)
 
 	h.profiles.err = nil
 
@@ -279,7 +468,7 @@ func TestReconcileClearsTheConditionOnceTheProfileIsBack(t *testing.T) {
 
 	got := h.get()
 
-	assertCondition(t, got, metav1.ConditionFalse, common.ReasonProfileResolved)
+	assertProfileCondition(t, got, metav1.ConditionFalse, common.ReasonProfileResolved)
 
 	if got.Status.Phase != v1alpha1.PhaseSuspected {
 		t.Errorf("phase is %q, want %q", got.Status.Phase, v1alpha1.PhaseSuspected)
@@ -455,6 +644,90 @@ func TestReconcileTreatsMissingObjectAsHealthy(t *testing.T) {
 	}
 }
 
+// TestReconcileTreatsADeletedObjectAsHealthy covers the object that is on its
+// way out but still readable, which is how a deletion looks while the garbage
+// collector works through it: the node has no active fencing signal any more, so
+// there is nothing left to write to it and nothing to wake up for.
+func TestReconcileTreatsADeletedObjectAsHealthy(t *testing.T) {
+	deletedAt := metav1.NewTime(observedAt.Add(-time.Second))
+
+	incident := failedState()
+	incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-2 * time.Second))
+	incident.DeletionTimestamp = &deletedAt
+	// The fake client keeps a deleted object around only while something holds
+	// it, which is also the only way this state lasts in a real cluster.
+	incident.Finalizers = []string{"foregroundDeletion"}
+
+	h := newHarness(t, incident)
+
+	res, err := h.reconcile()
+	if err != nil {
+		t.Fatalf("reconcile: %v", err)
+	}
+
+	if res != (ctrl.Result{}) {
+		t.Errorf("reconcile requeued %+v for an object that is being deleted", res)
+	}
+
+	if h.statusPatches != 0 {
+		t.Errorf("reconcile wrote the status of a deleted object %d times, want none", h.statusPatches)
+	}
+
+	if len(h.nodes.validated) != 0 {
+		t.Errorf("reconcile validated the reference of a deleted object")
+	}
+
+	if len(h.profiles.forgotten) != 1 || h.profiles.forgotten[0] != nodeName {
+		t.Errorf("forgot %v, want the timings of %q to be dropped", h.profiles.forgotten, nodeName)
+	}
+}
+
+// TestReconcileReturnsStatusPatchFailures covers the write of the one part of the
+// object the controller owns. A conflict means another writer got there first and
+// the decision has to be taken again against the object as it now is, so the
+// failure is returned rather than swallowed.
+func TestReconcileReturnsStatusPatchFailures(t *testing.T) {
+	conflict := apierrors.NewConflict(
+		schema.GroupResource{Group: v1alpha1.GroupVersion.Group, Resource: "fencingfailednodestates"},
+		nodeName,
+		errors.New("the object has been modified"),
+	)
+
+	for name, arrange := range map[string]func(h *harness){
+		"advancing the phase": func(*harness) {},
+		"reporting an unusable profile": func(h *harness) {
+			h.profiles.err = missingProfile()
+		},
+		"refusing a broken reference": func(h *harness) {
+			h.nodes.problem = &noderef.Problem{Reason: common.ReasonNodeNotFound, Message: "Node is gone."}
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			incident := failedState()
+			incident.Status.Failed.DetectedAt = metav1.NewTime(observedAt.Add(-2 * time.Second))
+
+			h := newHarness(t, incident)
+			h.statusPatchErr = conflict
+
+			arrange(h)
+
+			if _, err := h.reconcile(); !errors.Is(err, conflict) {
+				t.Fatalf("reconcile returned %v, want the conflict so the decision is taken again", err)
+			}
+
+			if h.statusPatches != 1 {
+				t.Errorf("reconcile attempted the status patch %d times, want one attempt per pass", h.statusPatches)
+			}
+
+			// Announcing a blocker that was never recorded would leave an event
+			// no condition backs up.
+			if published := h.events(); len(published) != 0 {
+				t.Errorf("a failed write published %v, want nothing announced", published)
+			}
+		})
+	}
+}
+
 func TestReconcileReturnsAPIErrors(t *testing.T) {
 	apiDown := apierrors.NewServiceUnavailable("etcd leader changed")
 
@@ -467,7 +740,7 @@ func TestReconcileReturnsAPIErrors(t *testing.T) {
 		}).
 		Build()
 
-	reconciler := New(c, &stubProfiles{}, record.NewFakeRecorder(eventBuffer))
+	reconciler := New(c, &stubNodes{}, &stubProfiles{}, record.NewFakeRecorder(eventBuffer))
 
 	if _, err := reconciler.Reconcile(t.Context(), request(nodeName)); !errors.Is(err, apiDown) {
 		t.Fatalf("reconcile returned %v, want the API error so controller-runtime retries with backoff", err)
@@ -556,10 +829,13 @@ type harness struct {
 	t             *testing.T
 	client        client.Client
 	reconciler    *Reconciler
+	nodes         *stubNodes
 	profiles      *stubProfiles
 	recorder      *record.FakeRecorder
 	statusPatches int
 	clockReads    int
+	// statusPatchErr, when set, is what the API answers the status patch with.
+	statusPatchErr error
 }
 
 func newHarness(t *testing.T, objects ...client.Object) *harness {
@@ -569,7 +845,12 @@ func newHarness(t *testing.T, objects ...client.Object) *harness {
 	// one instead of reading what its predecessors left behind.
 	configurationErrorGauge.Reset()
 
-	h := &harness{t: t, profiles: &stubProfiles{params: medium}, recorder: record.NewFakeRecorder(eventBuffer)}
+	h := &harness{
+		t:        t,
+		nodes:    &stubNodes{},
+		profiles: &stubProfiles{params: medium},
+		recorder: record.NewFakeRecorder(eventBuffer),
+	}
 
 	reject := func(verb string) error {
 		t.Errorf("reconcile issued %s, the controller owns the status subresource only", verb)
@@ -610,12 +891,16 @@ func newHarness(t *testing.T, objects ...client.Object) *harness {
 			) error {
 				h.statusPatches++
 
+				if h.statusPatchErr != nil {
+					return h.statusPatchErr
+				}
+
 				return c.SubResource(subResource).Patch(ctx, obj, patch, opts...)
 			},
 		}).
 		Build()
 
-	h.reconciler = New(h.client, h.profiles, h.recorder)
+	h.reconciler = New(h.client, h.nodes, h.profiles, h.recorder)
 	h.reconciler.now = h.clock(observedAt)
 
 	return h
@@ -667,10 +952,13 @@ func (h *harness) get() *v1alpha1.FencingFailedNodeState {
 type stubProfiles struct {
 	params    fsm.Params
 	err       error
+	resolved  []string
 	forgotten []string
 }
 
-func (s *stubProfiles) Resolve(context.Context, *v1alpha1.FencingFailedNodeState) (fsm.Params, error) {
+func (s *stubProfiles) Resolve(_ context.Context, incident *v1alpha1.FencingFailedNodeState) (fsm.Params, error) {
+	s.resolved = append(s.resolved, incident.Name)
+
 	if s.err != nil {
 		return fsm.Params{}, s.err
 	}
@@ -682,15 +970,45 @@ func (s *stubProfiles) Forget(node string) {
 	s.forgotten = append(s.forgotten, node)
 }
 
+// stubNodes accepts the reference of every incident unless a test says
+// otherwise, which is the case the rest of the reconcile is about.
+type stubNodes struct {
+	problem   *noderef.Problem
+	err       error
+	validated []string
+}
+
+func (s *stubNodes) Validate(_ context.Context, incident *v1alpha1.FencingFailedNodeState) (*noderef.Problem, error) {
+	s.validated = append(s.validated, incident.Name)
+
+	return s.problem, s.err
+}
+
+// newScheme registers what the controller reads, which is the fencing API and
+// the core objects, exactly as the manager does.
 func newScheme(t *testing.T) *runtime.Scheme {
 	t.Helper()
 
 	s := runtime.NewScheme()
+	if err := clientgoscheme.AddToScheme(s); err != nil {
+		t.Fatalf("register client-go scheme: %v", err)
+	}
+
 	if err := v1alpha1.AddToScheme(s); err != nil {
 		t.Fatalf("add fencing API to scheme: %v", err)
 	}
 
 	return s
+}
+
+// assertObservedGeneration checks the status says which version of the object it
+// was calculated from.
+func assertObservedGeneration(t *testing.T, incident *v1alpha1.FencingFailedNodeState) {
+	t.Helper()
+
+	if got := incident.Status.ObservedGeneration; got != incident.Generation {
+		t.Errorf("status observed generation %d, want the generation %d it was written for", got, incident.Generation)
+	}
 }
 
 // assertAgentSectionsUntouched checks the controller stayed out of the parts of
@@ -732,14 +1050,15 @@ func assertEvent(t *testing.T, event, wantType, wantReason string, wantInMessage
 func assertCondition(
 	t *testing.T,
 	incident *v1alpha1.FencingFailedNodeState,
+	conditionType string,
 	want metav1.ConditionStatus,
 	wantReason string,
 ) {
 	t.Helper()
 
-	got := meta.FindStatusCondition(incident.Status.Conditions, common.ConditionTypeConfigurationError)
+	got := meta.FindStatusCondition(incident.Status.Conditions, conditionType)
 	if got == nil {
-		t.Fatalf("condition %s is not set", common.ConditionTypeConfigurationError)
+		t.Fatalf("condition %s is not set", conditionType)
 	}
 
 	if got.Status != want {
@@ -753,6 +1072,17 @@ func assertCondition(
 	if got.ObservedGeneration != incident.Generation {
 		t.Errorf("condition %s observed generation %d, want %d", got.Type, got.ObservedGeneration, incident.Generation)
 	}
+}
+
+func assertProfileCondition(
+	t *testing.T,
+	incident *v1alpha1.FencingFailedNodeState,
+	want metav1.ConditionStatus,
+	wantReason string,
+) {
+	t.Helper()
+
+	assertCondition(t, incident, common.ConditionTypeConfigurationError, want, wantReason)
 }
 
 func request(name string) ctrl.Request {
