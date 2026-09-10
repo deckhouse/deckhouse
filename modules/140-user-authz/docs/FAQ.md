@@ -261,8 +261,8 @@ Two metrics report the situation:
 
 | Metric | Description |
 |---|---|
-| `d8_user_authz_rule_needs_multitenancy{name,options}` | One series per affected rule, up to fifty, with the options that will not take effect. |
-| `d8_user_authz_rules_needing_multitenancy` | Total number of affected rules, including those past the first fifty. |
+| `d8_user_authz_rule_needs_multitenancy{name,options}` | One series per affected rule, up to 50, with the options that will not take effect. |
+| `d8_user_authz_rules_needing_multitenancy` | Total number of affected rules, including those past the first 50. |
 
 The `D8UserAuthzRuleNeedsMultiTenancy` alert names an individual rule, and `D8UserAuthzRulesNeedMultiTenancy` fires when there are more affected rules than the first alert names. Both belong to the `D8UserAuthzMisconfigured` group.
 

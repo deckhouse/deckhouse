@@ -43,7 +43,7 @@
       plk_grouped_by__d8_user_authz_misconfigured: "D8UserAuthzMisconfigured,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: More ClusterAuthorizationRules ask for namespace limits than the per-rule alert names.
       description: |-
-        `{{ $value }}` ClusterAuthorizationRules set `limitNamespaces`, `namespaceSelector` or `allowAccessToSystemNamespaces` while `userAuthz.enableMultiTenancy` is off. `D8UserAuthzRuleNeedsMultiTenancy` names the first fifty of them; this alert accounts for the rest.
+        `{{ $value }}` ClusterAuthorizationRules set `limitNamespaces`, `namespaceSelector` or `allowAccessToSystemNamespaces` while `userAuthz.enableMultiTenancy` is off. `D8UserAuthzRuleNeedsMultiTenancy` names the first 50 of them; this alert accounts for the rest.
 
         None of those rules is partially applied: the subjects named in each of them hold its access level in **every** namespace of the cluster, the system ones included.
 
