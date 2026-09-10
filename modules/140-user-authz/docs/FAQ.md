@@ -66,43 +66,30 @@ If there is a rule without the `namespaceSelector` option and `limitNamespaces` 
 
 ## What happens to the bindings when the cluster is updated to the release with the controller?
 
-Nothing is recreated, and no access is interrupted. The bindings the Helm chart used to render are
-adopted in place by `user-authz-controller`: the same objects, the same names, with the chart's
-metadata removed and an `ownerReference` to the rule added.
+Nothing is recreated and access is not interrupted. The `user-authz-controller` component adopts the bindings that the Helm chart used to render: the same objects with the same names, with an `ownerReference` to the rule added.
 
-The one thing to plan for is the **release that performs the migration**. A hook stamps
-`helm.sh/resource-policy: keep` on every live binding before Helm runs, so the release engine cannot
-delete them when they disappear from the rendered manifest — and then the engine makes one pass over
-the previous manifest, fetching every object in it to notice that it must be kept. That pass is
-proportional to the number of bindings and happens exactly once:
+Plan for the release that performs the migration: it processes every existing binding once, so it takes longer than usual. Subsequent releases are not affected.
 
 | Bindings in the release | What to expect |
 |---|---|
-| up to ~5000 | the release takes longer than usual and finishes on its own |
-| more than ~5000 | the pass can exceed the 20-minute module release timeout |
+| Up to 5000 | The release runs longer than usual and completes on its own. |
+| More than 5000 | The release can exceed the 20-minute module timeout and fail. |
 
-For a cluster above that size, do the upgrade with a raised timeout or on the previous release
-engine, and put it back afterwards:
-
-```bash
-# one of the two, for the duration of the upgrade
-d8 k -n d8-system set env deploy/deckhouse HELM_TIMEOUT=60m
-d8 k -n d8-system set env deploy/deckhouse USE_NELM=false
-```
-
-Count what you have before deciding:
+Count the bindings before you update:
 
 ```bash
 d8 k get clusterrolebindings -l heritage=deckhouse,module=user-authz --no-headers | wc -l
 d8 k get rolebindings -A -l heritage=deckhouse,module=user-authz --no-headers | wc -l
 ```
 
-If the hook cannot stamp every binding it fails and the release does not start, which leaves the
-bindings exactly as they were. That is deliberate: a release that ran without the marks would delete
-them.
+If there are more than 5000, raise the release timeout or switch to the previous release engine for the duration of the update, and revert the setting afterwards:
 
-The cost is one-time. Once the controller owns the bindings, the release no longer contains objects
-whose number depends on the number of rules, and its duration stops depending on them.
+```bash
+d8 k -n d8-system set env deploy/deckhouse HELM_TIMEOUT=60m
+d8 k -n d8-system set env deploy/deckhouse USE_NELM=false
+```
+
+If the migration cannot prepare every binding, the release does not start and the bindings stay as they were.
 
 ## How do I check that the controller keeps the bindings in sync?
 
@@ -188,11 +175,7 @@ When a rule stays `Ready=False` with `ApplyError` because a binding's `roleRef` 
 
 ## How do I check that the authorization webhook has the current rules?
 
-The authorization webhook and Permission Browser read the multi-tenancy options of the ClusterAuthorizationRules (parameters: `limitNamespaces`, `namespaceSelector`, `allowAccessToSystemNamespaces`) straight from the API through a shared informer, so a change reaches them within the informer's coalescing window rather than after a Helm render.
-
-**Ordering.** `user-authz-controller` writes the ClusterRoleBindings of a rule around the same time as the rule itself, and the two reach the webhook over independent watches, so the bindings can arrive first. A subject that a controller-managed binding binds to a rule the webhook has not observed naming it is denied every namespace until the rule arrives — a cluster-wide binding never grants more than its rule allows. The same guard applies to Permission Browser, so what it reports cannot be wider than what the API server enforces.
-
-**Health.** The webhook reports the state of its rules informer:
+The authorization webhook and Permission Browser read the multi-tenancy options of ClusterAuthorizationRules (`limitNamespaces`, `namespaceSelector`, `allowAccessToSystemNamespaces`) from the API, so a change reaches them within a few seconds.
 
 To check that the webhook Pods are running, run:
 
@@ -224,87 +207,66 @@ Example output:
 
 The `rules source: directory rebuilt from N rules` line shows the informer has listed the rules and how many it holds; `quarantined` counts the rules whose `limitNamespaces` patterns did not compile.
 
-**Metrics.** The webhook serves them on `127.0.0.1` inside its Pod; the `kube-rbac-proxy` sidecar exposes them on the node and the `PodMonitor` `user-authz-webhook` collects them (the `operator-prometheus` module must be enabled). There is one series per master.
+An instance that has not read the rules yet is not ready and answers authorization requests with an error instead of a denial. In the seconds between a rule being created and the webhook observing it, the subjects of that rule are denied access to all namespaces.
+
+The webhook exposes metrics through a `kube-rbac-proxy` sidecar; the PodMonitor `user-authz-webhook` collects them, and the `operator-prometheus` module must be enabled. There is one series per master node.
 
 | Metric | Description |
 |---|---|
-| `user_authz_webhook_rules_informer_synced` | `1` once the webhook has listed the `ClusterAuthorizationRules` at least once. While it is `0` the instance is unready and refuses authorization requests with an error rather than a denial, so the API server does not cache the refusal |
-| `user_authz_webhook_rules_observed` | Rules the current directory was built from |
-| `user_authz_webhook_rules_subjects` | Distinct subjects in the current directory |
-| `user_authz_webhook_rules_max_resource_version` | Highest `resourceVersion` among the observed rules — the watermark to compare against the cluster when measuring lag |
-| `user_authz_webhook_rules_quarantined` | Rules the directory could not fully use: a `limitNamespaces` pattern or `namespaceSelector` that does not compile — the broken filter is left out, so the subjects get a narrower scope than written — or a rule that could not be read at all, which applies nowhere and leaves its subjects denied every namespace until it can be read |
-| `user_authz_webhook_rules_directory_updated_timestamp_seconds` | Unix time of the last rebuild |
-| `user_authz_webhook_rules_directory_rebuilds_total`, `user_authz_webhook_rules_directory_rebuild_duration_seconds` | Number of rebuilds and the time they take |
-| `user_authz_webhook_rules_watch_errors_total` | List/watch errors of the rules informer |
+| `user_authz_webhook_rules_informer_synced` | `1` once the instance has read the ClusterAuthorizationRules at least once |
+| `user_authz_webhook_rules_observed` | Rules the instance currently uses |
+| `user_authz_webhook_rules_subjects` | Distinct subjects in those rules |
+| `user_authz_webhook_rules_max_resource_version` | Highest `resourceVersion` among the observed rules. Compare it with the cluster to measure the lag |
+| `user_authz_webhook_rules_quarantined` | Rules the instance could not fully use: a `limitNamespaces` pattern or `namespaceSelector` that does not compile, or a rule that cannot be read at all |
+| `user_authz_webhook_rules_directory_updated_timestamp_seconds` | Time of the last rules update |
+| `user_authz_webhook_rules_directory_rebuilds_total`, `user_authz_webhook_rules_directory_rebuild_duration_seconds` | Number of rules updates and their duration |
+| `user_authz_webhook_rules_watch_errors_total` | List and watch errors of the rules informer |
 
-Permission Browser exports the same set under the `user_authz_permission_browser` prefix. It serves them the same way, on a loopback endpoint behind a `kube-rbac-proxy` sidecar, collected by the `PodMonitor` `permission-browser-apiserver`; its own API server port stays behind the aggregation layer, which Prometheus cannot scrape. It has one alert of its own, `D8UserAuthzPermissionBrowserUnavailable`, which watches its replicas. It deliberately has no alert on its rules: unlisted or stale rules make it unready, unready takes it out of its Service, and that is what `Unavailable` already reports. A rule that does not compile, or a watch that keeps failing, is a property of the cluster rather than of one consumer, so the webhook alerts above cover it.
+Permission Browser exposes the same metrics with the `user_authz_permission_browser` prefix; the PodMonitor `permission-browser-apiserver` collects them.
 
-**Alerts** (in the `d8_user_authz` Prometheus rules, grouped as `D8UserAuthzWebhookMalfunctioning`):
+The module ships the following alerts for both components:
 
-- `D8UserAuthzWebhookTargetDown` when any instance has not been scraped for 5 minutes — any one of them, not all of them together, because on several masters one silent instance is the case worth knowing about (it is a single alert either way: the expression counts the silent instances rather than naming them).
-- `D8UserAuthzWebhookRulesQuarantined` when a rule does not compile for 10 minutes.
-- `D8UserAuthzWebhookRulesWatchErrors` on a sustained watch error rate for 10 minutes.
-
-There is deliberately no alert for "this instance has not listed the rules": that state makes the instance unready, and an unready instance is already visible as a held rollout and as `D8UserAuthzWebhookTargetDown` if it stops answering. Note that the `PodMonitor` does **not** drop unready pods — an instance whose watch has broken is exactly the one these alerts are about, so filtering it out would make them blind at the moment they became true.
-
-Two more watch the masters against each other, which single-instance metrics cannot: `D8UserAuthzWebhookDirectoryDiverged` when the instances have been built from different sets of rules for 10 minutes — the same request is then answered differently depending on which master takes it — and `D8UserAuthzRulePropagationLag` when the oldest instance has not rebuilt its directory for an hour while the newest has within it. The second condition is what keeps a quiet cluster silent: where nothing changes, every instance is equally old and the alert does not fire. Neither can fire on a single-master cluster, which is correct — there is nothing to compare.
+| Alert | Fires when |
+|---|---|
+| `D8UserAuthzWebhookTargetDown` | Prometheus has not scraped at least one webhook instance for 5 minutes. |
+| `D8UserAuthzWebhookRulesQuarantined` | A rule has not compiled for 10 minutes. |
+| `D8UserAuthzWebhookRulesWatchErrors` | The rules informer has been failing to watch the rules for 10 minutes. |
+| `D8UserAuthzWebhookDirectoryDiverged` | Instances have been using different sets of rules for 10 minutes, so the same request is answered differently depending on the master node that receives it. |
+| `D8UserAuthzRulePropagationLag` | One instance has not updated its rules for an hour while another one has. |
+| `D8UserAuthzPermissionBrowserUnavailable` | Permission Browser has unavailable replicas. |
 
 ## Why does a change to a ClusterAuthorizationRule take up to 30 seconds to take effect?
 
-Because the API server caches the webhook's answers. The `AuthorizationConfiguration` that `control-plane-manager` renders gives the webhook `authorizedTTL: 5m`, `unauthorizedTTL: 30s` and `timeout: 3s`; the cache key is the whole SubjectAccessReview, so a repeated identical request is answered from the cache without asking the webhook again.
+The API server caches the answers of the authorization webhook. In the `AuthorizationConfiguration` that `control-plane-manager` renders, the webhook has `authorizedTTL: 5m`, `unauthorizedTTL: 30s` and `timeout: 3s`. The cache key is the whole SubjectAccessReview, so an identical repeated request is answered from the cache.
 
-The webhook never allows. A rule says where an access level applies, not whether it grants the verb — that is RBAC's question, and answering it here would take RBAC out of the chain. So every answer the webhook gives is either a denial or no opinion, both of which are cached under `unauthorizedTTL`, and `authorizedTTL` never applies to it.
-
-What this costs is the no-opinion case. If a user made a request while nothing limited them, the API server remembers that no-opinion for 30 seconds, and during those 30 seconds RBAC alone answers the identical request. Creating a rule, or narrowing one, therefore takes effect for a given request within 30 seconds of the last time that exact request was made, and not within the informer's window:
+The webhook never allows a request: it either denies it or gives no opinion, and both answers are cached for `unauthorizedTTL`, which is 30 seconds. Creating a rule or narrowing an existing one therefore takes effect for a particular request within 30 seconds of the last identical request:
 
 ```bash
-# Immediately after creating a limiting rule, an identical request asked in the preceding
-# 30 seconds is still answered from the cache.
 d8 k auth can-i --as=user@example.com get pods -n other-namespace
 sleep 30
 d8 k auth can-i --as=user@example.com get pods -n other-namespace
 ```
 
-The window cannot be flushed without restarting `kube-apiserver`. It is also why the webhook answers `503` rather than a denial while its caches are still filling at startup: a denial would be remembered for 30 seconds after the webhook is ready to answer properly.
+The cache cannot be flushed without restarting `kube-apiserver`.
 
-A freshly installed CRD adds a second window on top of this one, and the two add up rather than
-overlap. To apply a namespace filter the webhook has to know whether the resource is namespaced,
-which it learns from discovery, and it lists an API group at most once every 10 seconds. A resource
-added to a group listed a moment ago is therefore unknown for up to those 10 seconds, and the answer
-computed from that is then cached by the API server for another 30 — about 40 seconds in the worst
-case between installing the CRD and multi-tenancy filtering requests for it. The rate limit is
-deliberate: the API group and the resource name come out of the request path, so without it any
-subject a rule covers could make every request they send cost the API server a discovery call.
-Installing a CRD requires far more privilege than those 40 seconds yield.
+For the resource of a CRD installed a moment ago, the delay reaches 40 seconds. The webhook learns whether a resource is namespaced from discovery, which it queries no more often than once every 10 seconds, and the API server then caches the answer for another 30 seconds.
 
-## What does it mean when a rule "needs multi-tenancy"?
+## Why is a rule reported as needing multi-tenancy?
 
-`limitNamespaces`, `namespaceSelector` and `allowAccessToSystemNamespaces` are enforced by the
-authorization webhook, and that webhook is deployed only when
-[`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy) is on. A rule that sets one
-of them while it is off is **not partially applied** — it is applied without its limits. The subjects
-named in it hold the rule's access level in every namespace of the cluster, the system ones
-included.
+The `limitNamespaces`, `namespaceSelector` and `allowAccessToSystemNamespaces` options are enforced by the authorization webhook, which is deployed only when [`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy) is enabled. A rule that uses these options while multi-tenancy is disabled is applied without them: the subjects named in the rule hold its access level in **every** namespace of the cluster, including the system ones.
 
-This used to be a `fail` in the chart, which stopped the whole module from rendering: one rule,
-writable by anyone allowed to create them, froze every other change to the module, and the message
-reached only whoever read the release logs. It is reported instead.
+Only options that ask for a limit are counted. A rule with `allowAccessToSystemNamespaces: false`, or with an empty `limitNamespaces` list, is not reported.
+
+Two metrics report the situation:
 
 | Metric | Description |
 |---|---|
 | `d8_user_authz_rule_needs_multitenancy{name,options}` | One series per affected rule, up to fifty, with the options that will not take effect. |
-| `d8_user_authz_rules_needing_multitenancy` | How many rules are affected in total, including those past the fifty named above. |
+| `d8_user_authz_rules_needing_multitenancy` | Total number of affected rules, including those past the first fifty. |
 
-Two alerts read them: `D8UserAuthzRuleNeedsMultiTenancy` names an individual rule, and
-`D8UserAuthzRulesNeedMultiTenancy` fires when there are more of them than the first alert will name.
-Both sit in the `D8UserAuthzMisconfigured` group — this is a statement about configuration, not
-about a component being unhealthy.
+The `D8UserAuthzRuleNeedsMultiTenancy` alert names an individual rule, and `D8UserAuthzRulesNeedMultiTenancy` fires when there are more affected rules than the first alert names. Both belong to the `D8UserAuthzMisconfigured` group.
 
-Only values that ask for something count: a rule that spells out `allowAccessToSystemNamespaces:
-false`, or whose `limitNamespaces` is an empty list, needs nothing the webhook would enforce and is
-not reported.
-
-Either turn multi-tenancy on, or take the options out of the rules so that they say what they do:
+To resolve the situation, either enable multi-tenancy, or remove the options from the rules:
 
 ```bash
 d8 k get moduleconfig user-authz -o jsonpath='{.spec.settings.enableMultiTenancy}'

@@ -20,7 +20,7 @@
 
         The rule is not partially applied. It is applied without its limits: the subjects named in it hold its access level in **every** namespace of the cluster, the system ones included.
 
-        Either turn multi-tenancy on, or take the options out of the rule so that it says what it does:
+        Either enable multi-tenancy, or remove the options from the rule:
 
         ```bash
         d8 k get clusterauthorizationrule {{ $labels.name }} -o yaml
@@ -43,11 +43,11 @@
       plk_grouped_by__d8_user_authz_misconfigured: "D8UserAuthzMisconfigured,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: More ClusterAuthorizationRules ask for namespace limits than the per-rule alert names.
       description: |-
-        `{{ $value }}` ClusterAuthorizationRules set `limitNamespaces`, `namespaceSelector` or `allowAccessToSystemNamespaces` while `userAuthz.enableMultiTenancy` is off. `D8UserAuthzRuleNeedsMultiTenancy` names the first fifty of them; this one accounts for the rest, which would otherwise be invisible.
+        `{{ $value }}` ClusterAuthorizationRules set `limitNamespaces`, `namespaceSelector` or `allowAccessToSystemNamespaces` while `userAuthz.enableMultiTenancy` is off. `D8UserAuthzRuleNeedsMultiTenancy` names the first fifty of them; this alert accounts for the rest.
 
-        The consequence is the same for every one of them and it is not a partial application: the subjects named in each rule hold its access level in **every** namespace of the cluster, the system ones included.
+        None of those rules is partially applied: the subjects named in each of them hold its access level in **every** namespace of the cluster, the system ones included.
 
-        At this count, listing the rules is the wrong first move — the question is whether multi-tenancy was meant to be on:
+        Check whether multi-tenancy was meant to be enabled, and list the affected rules:
 
         ```bash
         d8 k get moduleconfig user-authz -o jsonpath='{.spec.settings.enableMultiTenancy}'
