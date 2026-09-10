@@ -2,6 +2,7 @@
 .gitlab/ @nikolay.mordvintsev @maksim.khimchenko
 .gitlab-ci.yml @nikolay.mordvintsev @maksim.khimchenko
 .gitleaks.toml @nikolay.mordvintsev @maksim.khimchenko
+/Makefile @nikolay.mordvintsev @maksim.khimchenko
 000-common/ @denis.romanenko
 **/000-common/images/alt-p11 @nikolay.zykov @georgy.kargin
 **/000-common/images/check-kernel-version @andrey.polovov
