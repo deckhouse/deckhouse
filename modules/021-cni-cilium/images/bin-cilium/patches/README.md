@@ -55,3 +55,20 @@ the endpoint MTU updater, which would otherwise reset the devices.
 
 Upstream issue <https://github.com/cilium/cilium/issues/23711>
 Test `~/src/kind/d8-1.20-tests/003-mtu/`
+
+## 005-ebpf-dhcp-server.patch
+
+A DHCP server for pods, implemented in the datapath (`bpf/lib/dhcp.h`, hooked
+into `cil_from_container`). A VM inside a pod boots by DHCP, and there is no
+DHCP server on a cilium network, so the agent answers out of what it already
+knows: the endpoint's own address, the node gateway, and the configured DNS,
+search domain and MTU.
+
+    dhcpd-enabled: "true"
+    dhcpd-cluster-dns: "10.96.0.10"
+    dhcpd-cluster-domain: "cluster.local"
+
+Option 26 hands out `RouteMTU`, the same value `003-mtu.patch` puts on the
+devices. Only the `veth` datapath is covered.
+
+Test `~/src/kind/d8-1.20-tests/005-dhcp/`
