@@ -29,8 +29,10 @@
 //	  ├─ embedded-<module>-<deckhouse version>, complete: the metadata and
 //	  │  the settings/values schemas are filled from the module files on
 //	  │  disk, no repository ever serves it
-//	  └─ ModulePackage <module>, empty: the catalog entry no scan would
-//	     create, since no repository offers an embedded package
+//	  ├─ ModulePackage <module>, empty: the catalog entry no scan would
+//	  │  create, since no repository offers an embedded package
+//	  └─ Module <module>: the spec names the embedded package above, and the
+//	     embedded annotation marks where the module came from
 //
 //	global hooks dir (the running image)
 //	  ├─ embedded-global-<deckhouse version>, complete: the global module
@@ -137,14 +139,18 @@ func newSyncer(reader client.Reader, writer client.Client, dc dependency.Contain
 	}
 }
 
-// sync runs the passes in order: repositories first, so the version stubs
-// find them in place.
+// sync runs the passes in order: repositories first, so the version stubs find
+// them in place, and the modules last, so the packages they point at exist.
 func (s *syncer) sync(ctx context.Context) error {
 	if err := s.syncPackageRepositories(ctx); err != nil {
 		return err
 	}
 
-	return s.syncModulePackageVersions(ctx)
+	if err := s.syncModulePackageVersions(ctx); err != nil {
+		return err
+	}
+
+	return s.syncModules(ctx)
 }
 
 // PackageRepositoryNameForModuleSource maps a ModuleSource name to the name of the
