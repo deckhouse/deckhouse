@@ -43,7 +43,10 @@ properties:
     properties:
       enabled:
         type: boolean
-        description: Designate this cluster as a federation member. See [how to enable federation](./#enabling-the-federation).
+        description: |
+          Designate this cluster as a federation member. See [how to enable federation](./#enabling-the-federation).
+
+          Federation covers sidecar-mode workloads only. Ambient-mode workloads cannot take part in it. See [ambient mesh limitations](./#ambient-mesh-limitations).
         default: false
         x-examples: [true]
   multicluster:
@@ -56,7 +59,10 @@ properties:
     properties:
       enabled:
         type: boolean
-        description: Designate this cluster as a multicluster member. See [how to enable multicluster](./#enabling-the-multicluster).
+        description: |
+          Designate this cluster as a multicluster member. See [how to enable multicluster](./#enabling-the-multicluster).
+
+          Multicluster covers sidecar-mode workloads only. Ambient-mode workloads cannot take part in it. See [ambient mesh limitations](./#ambient-mesh-limitations).
         default: false
         x-examples: [true]
   alliance:
@@ -1189,6 +1195,8 @@ properties:
         default: false
         description: |
           Enable ambient mesh.
+
+          Ambient-mode workloads cannot take part in [federation](./#federation) or [multicluster](./#multicluster). Both remain functional for sidecar-mode workloads. See [ambient mesh limitations](./#ambient-mesh-limitations).
         x-experimental: true
         x-examples: [true]
       waypointController:
