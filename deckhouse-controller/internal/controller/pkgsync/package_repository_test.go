@@ -111,7 +111,7 @@ func TestSyncPackageRepositories(t *testing.T) {
 		stale.UID = "external-old-uid"
 		existing := &v1alpha1.PackageRepository{
 			ObjectMeta: metav1.ObjectMeta{Name: "external", OwnerReferences: []metav1.OwnerReference{stale}},
-			Spec:       v1alpha1.PackageRepositorySpec{Registry: registryFromModuleSource(source)},
+			Spec:       v1alpha1.PackageRepositorySpec{Registry: packageRepositoryRegistryFromModuleSource(source)},
 		}
 
 		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), existing, source)

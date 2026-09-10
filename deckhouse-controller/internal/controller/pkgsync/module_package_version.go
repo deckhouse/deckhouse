@@ -284,7 +284,7 @@ func (s *syncer) ensureFilledModulePackageVersion(ctx context.Context, name stri
 		return nil
 	}
 
-	if err := s.fillModulePackageVersionMetadata(ctx, mpv, meta, schemas); err != nil {
+	if err := s.fillModulePackageVersionStatus(ctx, mpv, meta, schemas); err != nil {
 		return err
 	}
 
@@ -354,8 +354,8 @@ func (s *syncer) createModulePackageVersionStub(ctx context.Context, name string
 	return mpv, nil
 }
 
-// fillModulePackageVersionMetadata writes the disk-sourced metadata and schemas into the version status.
-func (s *syncer) fillModulePackageVersionMetadata(ctx context.Context, mpv *v1alpha1.ModulePackageVersion, meta *v1alpha1.ModulePackageVersionStatusMetadata, schemas *v1alpha1.PackageVersionStatusSchemas) error {
+// fillModulePackageVersionStatus writes the disk-sourced metadata and schemas into the version status.
+func (s *syncer) fillModulePackageVersionStatus(ctx context.Context, mpv *v1alpha1.ModulePackageVersion, meta *v1alpha1.ModulePackageVersionStatusMetadata, schemas *v1alpha1.PackageVersionStatusSchemas) error {
 	original := mpv.DeepCopy()
 
 	mpv.Status.PackageMetadata = meta

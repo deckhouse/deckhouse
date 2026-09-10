@@ -66,7 +66,7 @@ func (s *syncer) syncPackageRepositories(ctx context.Context) error {
 // login, password) are never touched, so user edits to them survive a restart.
 func (s *syncer) ensurePackageRepository(ctx context.Context, source *v1alpha1.ModuleSource) error {
 	name := PackageRepositoryNameForModuleSource(source.Name)
-	desired := registryFromModuleSource(source)
+	desired := packageRepositoryRegistryFromModuleSource(source)
 	owner := moduleSourceOwnerReference(source)
 
 	repo := new(v1alpha1.PackageRepository)
@@ -104,7 +104,7 @@ func (s *syncer) ensurePackageRepository(ctx context.Context, source *v1alpha1.M
 	}
 
 	original := repo.DeepCopy()
-	changed := setModuleSourceOwner(repo, owner)
+	changed := setModuleSourceAsPackageRepositoryOwner(repo, owner)
 
 	current := repo.Spec.Registry
 	current.Login, current.Password = "", ""
@@ -138,11 +138,11 @@ func moduleSourceOwnerReference(source *v1alpha1.ModuleSource) metav1.OwnerRefer
 	}
 }
 
-// setModuleSourceOwner puts the module source among the owners of the repository. A reference to
+// setModuleSourceAsPackageRepositoryOwner puts the module source among the owners of the repository. A reference to
 // a source of the same name but another UID is one to a source deleted and created again: it
 // is replaced, or the garbage collector would take the repository away from the new source.
 // Reports whether anything changed.
-func setModuleSourceOwner(repo *v1alpha1.PackageRepository, owner metav1.OwnerReference) bool {
+func setModuleSourceAsPackageRepositoryOwner(repo *v1alpha1.PackageRepository, owner metav1.OwnerReference) bool {
 	for idx, ref := range repo.OwnerReferences {
 		if ref.Kind != owner.Kind || ref.APIVersion != owner.APIVersion || ref.Name != owner.Name {
 			continue
@@ -162,9 +162,9 @@ func setModuleSourceOwner(repo *v1alpha1.PackageRepository, owner metav1.OwnerRe
 	return true
 }
 
-// registryFromModuleSource maps the source registry block onto the repository shape.
+// packageRepositoryRegistryFromModuleSource maps the source registry block onto the repository shape.
 // Login and password have no source counterpart and stay zero.
-func registryFromModuleSource(source *v1alpha1.ModuleSource) v1alpha1.PackageRepositorySpecRegistry {
+func packageRepositoryRegistryFromModuleSource(source *v1alpha1.ModuleSource) v1alpha1.PackageRepositorySpecRegistry {
 	return v1alpha1.PackageRepositorySpecRegistry{
 		Scheme:    source.Spec.Registry.Scheme,
 		Repo:      source.Spec.Registry.Repo,
