@@ -3766,6 +3766,48 @@ alerts:
         A ClusterAuthorizationRule asks for namespace limits that nothing enforces.
       severity: "5"
       markupFormat: markdown
+    - name: D8UserAuthzRulePropagationLag
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        One instance of `user-authz-webhook` has not rebuilt its directory for over an hour while another one has. The rules are changing in the cluster and this instance is not seeing the changes.
+
+        This is the asymmetric case that `D8UserAuthzWebhookDirectoryDiverged` can miss: the instances can agree on the highest `resourceVersion` they have seen and still differ, if the one that is behind simply stopped receiving events rather than falling behind on a particular object. The second condition is what makes it an alert rather than a description of a quiet cluster — it fires only when some instance IS rebuilding, so a cluster whose rules genuinely never change stays silent.
+
+        ```bash
+        d8 k -n d8-user-authz get pods -l app=user-authz-webhook -o wide
+        d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100
+        ```
+
+        The instance's `/readyz` reports a directory that has stopped tracking the cluster once its watch has failed enough times in a row, so check whether the Pod is also unready — if it is, the rollout is already held and the cause is in the log above.
+      summary: |
+        One user-authz webhook instance stopped picking up rule changes.
+      severity: "6"
+      markupFormat: markdown
+    - name: D8UserAuthzWebhookDirectoryDiverged
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.yaml
+      moduleUrl: 140-user-authz
+      module: user-authz
+      edition: ce
+      description: |-
+        Instances of `user-authz-webhook` have been built from different sets of `ClusterAuthorizationRules` for 10 minutes. Every instance publishes the highest `resourceVersion` it has observed, and those numbers have not converged.
+
+        Each master authorizes the requests that reach it, so this means the same request is answered differently depending on which master takes it: a user can be inside their namespace limits on one and outside them on another, seemingly at random. It normally resolves in seconds — the alert waits ten minutes precisely so that ordinary propagation does not fire it.
+
+        Find the instance that is behind and look at why:
+
+        ```bash
+        d8 k -n d8-user-authz get pods -l app=user-authz-webhook -o wide
+        d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100 | grep -i 'list/watch'
+        ```
+
+        A growing `user_authz_webhook_rules_watch_errors_total` on one instance points at its watch; a `user_authz_webhook_rules_directory_updated_timestamp_seconds` that has stopped moving points at a directory that is no longer being rebuilt. Deleting the lagging Pod is the blunt fix, and the DaemonSet will bring it back — on a single-master cluster that briefly denies every request in the cluster, because this webhook is fail-closed.
+      summary: |
+        The masters disagree about the multi-tenancy rules.
+      severity: "6"
+      markupFormat: markdown
     - name: D8UserAuthzWebhookRulesNotSynced
       sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.yaml
       moduleUrl: 140-user-authz

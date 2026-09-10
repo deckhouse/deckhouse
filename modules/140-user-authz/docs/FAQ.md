@@ -247,6 +247,8 @@ Permission Browser exports the same set under the `user_authz_permission_browser
 - `D8UserAuthzWebhookRulesWatchErrors` on a sustained watch error rate for 15 minutes.
 - `D8UserAuthzWebhookRulesStale` when the directory has not been rebuilt for a day (expected in a cluster where the rules do not change).
 
+Two more watch the masters against each other, which single-instance metrics cannot: `D8UserAuthzWebhookDirectoryDiverged` when the instances have been built from different sets of rules for 10 minutes — the same request is then answered differently depending on which master takes it — and `D8UserAuthzRulePropagationLag` when one instance has not rebuilt its directory for an hour while another has, which is the asymmetric case where the two agree on the highest `resourceVersion` they have seen and still differ. The second condition of that one is what keeps a cluster whose rules genuinely never change from firing it.
+
 ## Why does a change to a ClusterAuthorizationRule take up to 30 seconds to take effect?
 
 Because the API server caches the webhook's answers. The `AuthorizationConfiguration` that `control-plane-manager` renders gives the webhook `authorizedTTL: 5m`, `unauthorizedTTL: 30s` and `timeout: 3s`; the cache key is the whole SubjectAccessReview, so a repeated identical request is answered from the cache without asking the webhook again.
