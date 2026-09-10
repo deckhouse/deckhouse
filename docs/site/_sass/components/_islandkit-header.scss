@@ -23,6 +23,7 @@ $header-ink: #262429; // текст пунктов меню и ряда прод
 $header-row2-bg: #f6fafe; // подложка второго ряда
 $header-accent-hover: #0040cc; // залитая кнопка под курсором
 $sheet-link-color: #3b426d; // ссылки в мобильном листе
+$sheet-desc-color: #787fa7; // подписи под ними
 
 // Вертикальные отступы ряда продукта, по ступеням. Числа дробные, потому что
 // у прежней шапки это проценты от размера шрифта.
@@ -88,6 +89,16 @@ $button-font-size-xl: 10.16px;
   // ширины: отступ = слот − 10.
   --ik-menu-trigger-gap: 9px;
 
+  // Панель «Продукты». Числа снятые: прежняя шапка раскладывает девять
+  // продуктов в три колонки по 290px от 1200 и в две по 300px ниже. Число
+  // колонок библиотека держит переменной именно поэтому — `auto-fit`
+  // переложил бы их «почти правильно», а дизайн фиксирует и количество, и
+  // ширину.
+  --ik-menu-grid-columns: repeat(3, 290px);
+  --ik-menu-grid-gap: 16px;
+  --ik-menu-list-padding: 17.6px 20px;
+  --ik-menu-card-gap: 5.6px 8px;
+
   // Кнопки правого блока.
   --ik-button-font-size: 14px;
   --ik-button-font-weight: 400;
@@ -125,11 +136,31 @@ $button-font-size-xl: 10.16px;
   --ik-nav-tree-section-text-transform: uppercase;
   --ik-nav-tree-color: #{$sheet-link-color};
   --ik-nav-tree-icon-display: none;
+
+  // Карточка продукта в листе: название, под ним подпись, оба от одного края.
+  //
+  // Одна колонка здесь обязательна именно потому, что иконка скрыта. По
+  // умолчанию строка — грид `auto 1fr`: иконка в первой колонке, название во
+  // второй, подпись под ними через `grid-column: 2 / -1`. Скрытая иконка
+  // выпадает из грида целиком, название переезжает в первую колонку, а
+  // подпись остаётся прибита ко второй — и встаёт сбоку от названия, а не под
+  // ним. Поэтому колонка одна, и подпись занимает её всю.
+  --ik-nav-tree-card-columns: 1fr;
+  --ik-nav-tree-description-column: 1 / -1;
+  --ik-nav-tree-card-gap: 2.4px 0;
+  --ik-nav-tree-description-font-size: 13px;
+  --ik-nav-tree-description-color: #{$sheet-desc-color};
+  --ik-nav-tree-description-max-width: none;
+
+  // Свёрнутый второй ряд: у прежней шапки от текста до стрелки 7px.
+  --ik-header-row2-trigger-gap: 7px;
 }
 
 // Самая просторная ступень.
 @include breakpoints.min-w(xxxl) {
   :root {
+    // На самой просторной ступени прежняя шапка разводит пункты на 20px.
+    --ik-header-nav-gap: 20px;
     --ik-header-nav-font-size: 16px;
     --ik-header-row2-link-font-size: 16px;
     --ik-header-row2-nav-gap: 12px 24px;
@@ -159,6 +190,9 @@ $button-font-size-xl: 10.16px;
     --ik-header-row1-padding-y-wide: 12px;
     --ik-header-nav-gap: 12px 16px;
     --ik-menu-trigger-gap: 2px; // слот 12 − стрелка 10
+    // Ниже 1200 панель продуктов складывается в две колонки пошире.
+    --ik-menu-grid-columns: repeat(2, 300px);
+    --ik-menu-grid-gap: 24px;
     --ik-header-right-gap: 8px;
     --ik-header-actions-gap: 8px;
     --ik-header-row2-padding: #{$row2-pad-xl} 0;
@@ -216,6 +250,17 @@ $button-font-size-xl: 10.16px;
 
 .ik-header__product-title {
   line-height: 19px;
+}
+
+// Заявка на переменную: `--ik-header-row2-trigger-align`.
+//
+// У триггера свёрнутого второго ряда `align-items: flex-end` объявлен в
+// компоненте без переменной, поэтому стрелка прижимается низом к нижней
+// границе строки — то есть ниже нижнего края букв. Замер на строке 16px:
+// у прежней шапки центр стрелки стоит на 73.7% высоты строки, здесь на 87%.
+// Разница — 2.1px, её и снимаем.
+.ik-header__row2-arrow {
+  margin-bottom: 2.1px;
 }
 
 @include breakpoints.max-w(xxl) {
