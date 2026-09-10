@@ -129,9 +129,13 @@ the patch did.
 Forcing random selection for HostPort was needed because HostPort
 pseudo-services had no Maglev table. In 1.20 they do: `SVCTypeHostPort` is in the
 list of service types `useMaglev()` provisions a LUT for
-(`pkg/loadbalancer/reconciler/bpf_reconciler.go`). Verified on the kind cluster
-with `bpf-lb-algorithm: maglev` on **unpatched** v1.20.1 -- a hostPort answers
-from its own node and from another node, and a NodePort service keeps working.
+(`pkg/loadbalancer/reconciler/bpf_reconciler.go`). Verified on the kind cluster against
+**unpatched** v1.20.1 across the whole matrix -- `bpf-lb-algorithm` random and
+maglev, each with `bpf-lb-algorithm-annotation` on and off, 24 checks, all
+passing: a hostPort answers from its own node and from another node, and a
+NodePort service keeps working. The annotation state matters because it switches
+`LB_SELECTION_PER_SERVICE`, which changes how `lb4_algorithm()` derives the
+algorithm; Deckhouse enables it via `extraLoadBalancerAlgorithmsEnabled`.
 
 Test kept as the evidence record: `~/src/kind/d8-1.20-tests/011-hostport-lb-algo/`
 (it passes on the unpatched image, which is the point).
