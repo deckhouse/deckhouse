@@ -40,10 +40,13 @@ package src
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/shirou/gopsutil/v3/process"
 )
 
 func FuzzNginxReload(f *testing.F) {
@@ -246,5 +249,116 @@ func TestNginxMasterSelection(t *testing.T) {
 		if got := isNginxMasterCmdline(c.cmdline); got != c.master {
 			t.Errorf("isNginxMasterCmdline(%q) = %v, expected %v", c.cmdline, got, c.master)
 		}
+	}
+}
+
+// fakeProcess is a process the scan can be handed, including one that has
+// already exited.
+type fakeProcess struct {
+	cmdline    string
+	cmdlineErr error
+	signalled  *[]string
+	signalErr  error
+}
+
+func (p fakeProcess) Cmdline() (string, error) {
+	if p.cmdlineErr != nil {
+		return "", p.cmdlineErr
+	}
+	return p.cmdline, nil
+}
+
+func (p fakeProcess) SendSignal(process.Signal) error {
+	if p.signalErr != nil {
+		return p.signalErr
+	}
+	*p.signalled = append(*p.signalled, p.cmdline)
+	return nil
+}
+
+// TestSignalNginxMasterSkipsUnreadableProcesses pins the scan against a process
+// that dies while it runs.
+//
+// process.Processes() returns a snapshot. Anything in it may be gone by the
+// time its command line is read, and /proc answers ENOENT -- for a process that
+// has nothing to do with nginx. Treating that as a fatal error abandons the scan
+// before the master is reached, and the consequence is not "this reload failed":
+// nginxReload has already copied nginx_new.conf over nginx.conf, so the two
+// files agree and every later event takes the "equal, skipping reload" branch.
+// nginx serves the old configuration until something restarts it, which is the
+// TM-21 outcome the master-selection check above exists to prevent.
+func TestSignalNginxMasterSkipsUnreadableProcesses(t *testing.T) {
+	master := "nginx: master process /opt/nginx-static/sbin/nginx -g daemon off;"
+
+	cases := []struct {
+		name      string
+		processes func(signalled *[]string) []signalTarget
+		expect    []string
+	}{
+		{
+			name: "a dead process listed before the master",
+			processes: func(s *[]string) []signalTarget {
+				return []signalTarget{
+					fakeProcess{cmdlineErr: fs.ErrNotExist, signalled: s},
+					fakeProcess{cmdline: master, signalled: s},
+				}
+			},
+			expect: []string{master},
+		},
+		{
+			name: "several dead processes and a worker before the master",
+			processes: func(s *[]string) []signalTarget {
+				return []signalTarget{
+					fakeProcess{cmdlineErr: fs.ErrNotExist, signalled: s},
+					fakeProcess{cmdline: "nginx: worker process", signalled: s},
+					fakeProcess{cmdlineErr: fs.ErrPermission, signalled: s},
+					fakeProcess{cmdline: master, signalled: s},
+				}
+			},
+			expect: []string{master},
+		},
+		{
+			name: "nothing to signal when no master is present",
+			processes: func(s *[]string) []signalTarget {
+				return []signalTarget{
+					fakeProcess{cmdlineErr: fs.ErrNotExist, signalled: s},
+					fakeProcess{cmdline: "nginx: worker process", signalled: s},
+				}
+			},
+			expect: nil,
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			var signalled []string
+			if err := signalNginxMaster(c.processes(&signalled)); err != nil {
+				t.Fatalf("signalNginxMaster returned %v; an unreadable process is not a failure", err)
+			}
+			if len(signalled) != len(c.expect) {
+				t.Fatalf("signalled %v, expected %v", signalled, c.expect)
+			}
+			for i := range c.expect {
+				if signalled[i] != c.expect[i] {
+					t.Errorf("signalled[%d] = %q, expected %q", i, signalled[i], c.expect[i])
+				}
+			}
+		})
+	}
+}
+
+// TestSignalNginxMasterReportsSignalFailure keeps the other direction: failing
+// to signal the master that was found is a real failure and must be reported.
+func TestSignalNginxMasterReportsSignalFailure(t *testing.T) {
+	var signalled []string
+	processes := []signalTarget{
+		fakeProcess{
+			cmdline:   "nginx: master process /opt/nginx-static/sbin/nginx -g daemon off;",
+			signalErr: fs.ErrPermission,
+			signalled: &signalled,
+		},
+	}
+	if err := signalNginxMaster(processes); err == nil {
+		t.Fatal("signalNginxMaster must report a failure to signal the master it found")
 	}
 }

@@ -257,16 +257,32 @@ func assertSameShape(t *testing.T, fuzzed, reference templateRenderer, dataKeyed
 func requireUTF8(t *testing.T, renderer templateRenderer, values ...string) {
 	t.Helper()
 
+	invalid := ""
 	for _, value := range values {
-		if utf8.ValidString(value) {
-			continue
+		if !utf8.ValidString(value) {
+			invalid = value
+			break
 		}
+	}
+	if invalid == "" {
+		return
+	}
 
-		if _, err := renderer.Render(); err == nil {
-			t.Fatalf("template rendered %q, which is not valid UTF-8, instead of refusing it", value)
-		}
+	// The property is about what reaches the file, not about what was offered.
+	// Every template here omits values conditionally -- the upstream credentials
+	// behind `{{- if .User }}`, the whole proxy environment behind
+	// `{{- if or .HTTP .HTTPS }}` -- and a value the template never prints
+	// cannot corrupt anything, so demanding a refusal for it would be demanding
+	// a refusal the product has no reason to make.
+	rendered, err := renderer.Render()
+	if err != nil {
 		t.Skip("value is not valid UTF-8: the renderer refuses it")
 	}
+	if !utf8.Valid(rendered) {
+		t.Fatalf("template rendered invalid UTF-8 from %q instead of refusing it:\n%q",
+			invalid, rendered)
+	}
+	t.Skip("value is not valid UTF-8 but this template does not emit it")
 }
 
 // inert returns a placeholder that cannot affect YAML structure, preserving

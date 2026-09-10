@@ -66,7 +66,7 @@ func TestEmptyIsValidEverywhere(t *testing.T) {
 		"EncodableString":           EncodableString,
 		"Port":                      Port,
 		"RegistryAccountName":       RegistryAccountName,
-		"RegistryHost":              RegistryHost,
+		"HostPort":              HostPort,
 		"IPPort":                    IPPort,
 		"ProxyEndpoint":             ProxyEndpoint,
 		"MirrorHost":                MirrorHost,
@@ -144,8 +144,8 @@ func TestURLPath(t *testing.T) {
 // perfectly good host. splitHostPort tries net.ParseIP first for exactly this.
 func TestRegistryHostIPv6WithoutPort(t *testing.T) {
 	for _, host := range []string{"::1", "fd00::1", "2001:db8::8a2e:370:7334", "::"} {
-		if err := RegistryHost(host); err != nil {
-			t.Errorf("RegistryHost(%q) must accept a bare IPv6 address: %v", host, err)
+		if err := HostPort(host); err != nil {
+			t.Errorf("HostPort(%q) must accept a bare IPv6 address: %v", host, err)
 		}
 		if err := MirrorHost(host); err != nil {
 			t.Errorf("MirrorHost(%q) must accept a bare IPv6 address: %v", host, err)
@@ -153,28 +153,34 @@ func TestRegistryHostIPv6WithoutPort(t *testing.T) {
 	}
 
 	// With a port it is the bracketed form, which SplitHostPort does read.
-	if err := RegistryHost("[fd00::1]:5001"); err != nil {
-		t.Errorf("RegistryHost(\"[fd00::1]:5001\") must accept: %v", err)
+	if err := HostPort("[fd00::1]:5001"); err != nil {
+		t.Errorf("HostPort(\"[fd00::1]:5001\") must accept: %v", err)
 	}
 
 	// An unbracketed value that looks like an address with a port is read as the
 	// address it is: "fd00::1:5001" is a valid IPv6 address, and there is no way
 	// to tell it from a host with a port. That is why net.JoinHostPort brackets,
 	// and why everything the module builds goes through it.
-	if err := RegistryHost("fd00::1:5001"); err != nil {
-		t.Errorf("RegistryHost(\"fd00::1:5001\") is a bare IPv6 address and must be "+
+	if err := HostPort("fd00::1:5001"); err != nil {
+		t.Errorf("HostPort(\"fd00::1:5001\") is a bare IPv6 address and must be "+
 			"accepted as one: %v", err)
 	}
 }
 
 func TestRegistryHost(t *testing.T) {
-	runRule(t, "RegistryHost", RegistryHost, []ruleCase{
+	runRule(t, "HostPort", HostPort, []ruleCase{
 		{in: "registry.example.com", accept: true, why: "a DNS name"},
 		{in: "registry.d8-system.svc:5001", accept: true, why: "the in-cluster address the module generates"},
 		{in: "127.0.0.1:5001", accept: true, why: "an IPv4 endpoint"},
 		{in: "10.0.0.1", accept: true, why: "a bare IPv4 address"},
 		{in: "fd00::1", accept: true, why: "a bare IPv6 address"},
 		{in: "[fd00::1]:5001", accept: true, why: "a bracketed IPv6 endpoint"},
+		{in: "registry.example.com.", accept: true, why: "the fully qualified form, which resolvers and container runtimes accept"},
+		{in: "registry.example.com.:5001", accept: true, why: "the fully qualified form with a port"},
+		{in: "registry.example.com..", why: "a second trailing dot is not a name"},
+		{in: ".registry.example.com", why: "a leading dot is not a label"},
+		{in: "-registry.example.com", why: "a leading hyphen reads as an option where the host becomes a command argument"},
+		{in: "registry.example.com-", why: "a trailing hyphen is not a valid label"},
 		{in: "a", accept: true, why: "a single-label host"},
 		{in: "registry.example.com/path", why: "a path separator; this value becomes a directory name"},
 		{in: "registry.example.com:0", why: "port 0"},
@@ -323,17 +329,17 @@ func TestEither(t *testing.T) {
 	rejects := validation.By(func(any) error { return errFixture("no") })
 	other := validation.By(func(any) error { return errFixture("nor this") })
 
-	if err := Either(accepts).Validate("x"); err != nil {
+	if err := either(accepts).Validate("x"); err != nil {
 		t.Errorf("Either with one accepting rule must accept: %v", err)
 	}
-	if err := Either(rejects, accepts).Validate("x"); err != nil {
+	if err := either(rejects, accepts).Validate("x"); err != nil {
 		t.Errorf("Either must accept when any rule does: %v", err)
 	}
-	if err := Either(accepts, rejects).Validate("x"); err != nil {
+	if err := either(accepts, rejects).Validate("x"); err != nil {
 		t.Errorf("Either must not consult later rules once one accepts: %v", err)
 	}
 
-	err := Either(rejects, other).Validate("x")
+	err := either(rejects, other).Validate("x")
 	if err == nil {
 		t.Fatal("Either must reject when no rule accepts")
 	}
@@ -349,7 +355,7 @@ func TestEither(t *testing.T) {
 
 	// No rules is vacuous rather than an error: a caller that built its rule
 	// list from a loop must not be told the value is bad.
-	if err := Either().Validate("x"); err != nil {
+	if err := either().Validate("x"); err != nil {
 		t.Errorf("Either with no rules must accept: %v", err)
 	}
 }

@@ -44,10 +44,21 @@ import (
 // value as valid, leaving presence to `validation.Required`.
 
 var (
-	// dnsNameRegexp matches a DNS name component of a registry host. Registry
-	// hosts are either an IP address or a DNS name, so no other character can
-	// legitimately appear.
-	dnsNameRegexp = regexp.MustCompile(`^[0-9A-Za-z]([0-9A-Za-z._-]*[0-9A-Za-z])?$`)
+	// dnsNameRegexp matches the DNS name form of a host. A host here is either an
+	// IP address or a DNS name, so no other character can legitimately appear.
+	//
+	// The optional trailing dot is the fully qualified form. "registry.example.com."
+	// is a valid absolute name, resolvers and container runtimes accept it, and
+	// an operator may well have written it -- so refusing it would reject a
+	// working configuration rather than a dangerous one. It stays safe as a
+	// directory name under /etc/containerd/registry.d, because a name that
+	// begins with an alphanumeric can never be "." or "..".
+	//
+	// A leading or trailing hyphen is still refused, and not only because RFC
+	// 1035 forbids it: the host becomes a directory name that shell commands in
+	// the bashible steps pass as an argument, where a leading "-" reads as an
+	// option.
+	dnsNameRegexp = regexp.MustCompile(`^[0-9A-Za-z]([0-9A-Za-z._-]*[0-9A-Za-z])?\.?$`)
 
 	// urlPathRegexp matches the repository path of a registry address. It is
 	// deliberately narrower than RFC 3986: the module only ever derives it from
@@ -72,9 +83,32 @@ var (
 	accountNameRegexp = regexp.MustCompile(`^[0-9A-Za-z]([0-9A-Za-z._-]*[0-9A-Za-z])?$`)
 )
 
-// maxAccountNameLength bounds a registry account name well below the 1024
-// character limit YAML places on a simple key.
-const maxAccountNameLength = 255
+const (
+	// NodeIPPlaceholder is the literal dhctl writes into the bashible registry
+	// configuration, in Proxy and Local mode, where a master node's own address
+	// belongs.
+	//
+	// During bootstrap there is no address to write. The registry that the node is
+	// about to pull from is the one it is about to start, and its address is only
+	// known on the node itself, so dhctl emits this placeholder and the bashible
+	// steps resolve it:
+	//
+	//	discovered_node_ip="$(bb-d8-node-ip)"
+	//
+	// The steps that consume it -- candi/bashible/common-steps/all/
+	// 001_configure_registry_proxy.sh.tpl and 030_configure_containerd_registry.sh.tpl
+	// -- therefore write their generated files through an *unquoted* heredoc, which
+	// is the only reason the substitution happens at all. That makes every value in
+	// those bodies subject to parameter and command substitution as root, and it is
+	// why ProxyEndpoint and MirrorHost exist: validation, not quoting, is what keeps
+	// a `$(...)` out of those files. This one literal is the sole exception, and it
+	// is compared exactly.
+	NodeIPPlaceholder = "${discovered_node_ip}"
+
+	// maxAccountNameLength bounds a registry account name well below the 1024
+	// character limit YAML places on a simple key.
+	maxAccountNameLength = 255
+)
 
 // stringValue extracts the string an ozzo rule was given.
 func stringValue(value any) (string, error) {
@@ -91,7 +125,7 @@ func stringValue(value any) (string, error) {
 	}
 }
 
-// checkString adapts a check on a string into an ozzo rule.
+// stringRule adapts a check on a string into an ozzo rule.
 //
 // Every rule in this file shares the same preamble -- take the string, treat an
 // absent value as valid, then check it -- so it lives here once. Empty is valid
@@ -99,31 +133,20 @@ func stringValue(value any) (string, error) {
 // composed with it. A field that may legitimately be absent (the path component
 // of an address, a proxy that is not configured, a CA on an HTTP upstream) would
 // otherwise need a second, weaker rule for the absent case.
-func checkString(value any, check func(string) error) error {
-	raw, err := stringValue(value)
-	if err != nil {
-		return err
-	}
-	if raw == "" {
-		return nil
-	}
-	return check(raw)
-}
-
-// encodable requires the value to survive the encoders before checking it
-// further. It wraps the checks whose value reaches a generated YAML or TOML
-// file, where a byte the encoder rewrites would change the configuration a node
-// applies.
-func encodable(check func(string) error) func(string) error {
-	return func(raw string) error {
-		if err := EncodableString(raw); err != nil {
+func stringRule(check func(string) error) validation.Rule {
+	return validation.By(func(value any) error {
+		raw, err := stringValue(value)
+		if err != nil {
 			return err
 		}
+		if raw == "" {
+			return nil
+		}
 		return check(raw)
-	}
+	})
 }
 
-// Either accepts a value that satisfies any one of the rules.
+// either accepts a value that satisfies any one of the rules.
 //
 // It exists for the fields that legitimately take more than one shape: a proxy
 // endpoint is an `<ip>:<port>` pair or the bootstrap placeholder, and a mirror
@@ -131,7 +154,7 @@ func encodable(check func(string) error) func(string) error {
 // out as separate rules keeps each one's own error message, and the combined
 // failure names all of them -- which matters here, because "not an IP:port" on
 // its own would send a reader looking for the wrong mistake.
-func Either(rules ...validation.Rule) validation.Rule {
+func either(rules ...validation.Rule) validation.Rule {
 	return validation.By(func(value any) error {
 		messages := make([]string, 0, len(rules))
 		for _, rule := range rules {
@@ -148,33 +171,19 @@ func Either(rules ...validation.Rule) validation.Rule {
 	})
 }
 
-// splitHostPort reads the three shapes a registry address takes: a bare host, a
-// bare IP address, and `host:port`.
+// and accepts a value that satisfies every rule.
 //
-// The bare IP case is separate because net.SplitHostPort rejects an unbracketed
-// IPv6 address -- "fd00::1" is a host, not a host and a port, and reading it as
-// the latter is how a legitimate address gets refused. The port is returned
-// empty when the value carries none.
-func splitHostPort(raw string) (string, string, error) {
-	// A bare IP address first, and before anything looks at the colons: "::" and
-	// "fd00::1" are addresses, and the IPv6 wildcard even ends with a colon.
-	if net.ParseIP(raw) != nil {
-		return raw, "", nil
-	}
-
-	if splitHost, splitPort, splitErr := net.SplitHostPort(raw); splitErr == nil {
-		// net.SplitHostPort reads "registry.example.com:" as a host with an
-		// empty port. That value is malformed rather than portless, and the
-		// difference is only visible here, so it is refused here.
-		if splitPort == "" {
-			return "", "", errors.New("has a trailing colon but no port")
+// A rule list is already a conjunction; this exists for the conjunctions that
+// have to sit inside another combinator, such as one branch of an Either.
+func and(rules ...validation.Rule) validation.Rule {
+	return validation.By(func(value any) error {
+		for _, rule := range rules {
+			if err := rule.Validate(value); err != nil {
+				return err
+			}
 		}
-		return splitHost, splitPort, nil
-	} else if strings.ContainsRune(raw, ':') {
-		return "", "", fmt.Errorf("is not a valid host:port pair: %w", splitErr)
-	}
-
-	return raw, "", nil
+		return nil
+	})
 }
 
 // EncodableString rejects values that cannot be represented in the YAML and TOML
@@ -207,7 +216,7 @@ func EncodableString(value any) error {
 
 // Port validates a TCP port in decimal form.
 func Port(value any) error {
-	return checkString(value, validPort)
+	return stringRule(validPort).Validate(value)
 }
 
 func validPort(raw string) error {
@@ -228,19 +237,6 @@ func validPort(raw string) error {
 	return nil
 }
 
-func validHostName(host string) error {
-	if host == "" {
-		return errors.New("host is empty")
-	}
-	if net.ParseIP(host) != nil {
-		return nil
-	}
-	if !dnsNameRegexp.MatchString(host) {
-		return fmt.Errorf("host %q is neither an IP address nor a DNS name", host)
-	}
-	return nil
-}
-
 // RegistryAccountName validates a registry account name.
 //
 // The name becomes a mapping key in the docker_auth configuration and the
@@ -250,7 +246,10 @@ func validHostName(host string) error {
 // below that. The module generates `ro`, `rw`, `mirror-puller` and
 // `mirror-pusher`.
 func RegistryAccountName(value any) error {
-	return checkString(value, encodable(registryAccountName))
+	return and(
+		validation.By(EncodableString),
+		stringRule(registryAccountName),
+	).Validate(value)
 }
 
 func registryAccountName(raw string) error {
@@ -263,15 +262,25 @@ func registryAccountName(raw string) error {
 	return nil
 }
 
-// RegistryHost validates `host` or `host:port`, where the host is an IP address
-// or a DNS name. The value becomes a directory name under
-// /etc/containerd/registry.d and a key in the generated hosts.toml, so it must
-// carry neither a path separator nor anything a shell would interpret.
-func RegistryHost(value any) error {
-	return checkString(value, encodable(registryHost))
+// HostPort validates `host` or `host:port`, where the host is an IP address or
+// a DNS name and the port is optional.
+//
+// It is not specific to a registry: the same shape is a registry host, the host
+// component of `imagesRepo`, and the authority of an HTTP proxy URL. The rule
+// is written for the strictest of those sinks -- a registry host becomes a
+// directory name under /etc/containerd/registry.d and a key in the generated
+// hosts.toml, so it must carry neither a path separator nor anything a shell
+// would interpret.
+//
+// The pair to it is IPPort, which requires a literal IP address and a port.
+func HostPort(value any) error {
+	return and(
+		validation.By(EncodableString),
+		stringRule(hostPort),
+	).Validate(value)
 }
 
-func registryHost(raw string) error {
+func hostPort(raw string) error {
 	if strings.ContainsRune(raw, '/') {
 		return errors.New("must not contain a path separator")
 	}
@@ -288,11 +297,56 @@ func registryHost(raw string) error {
 	return validHostName(host)
 }
 
+// splitHostPort reads the three shapes a registry address takes: a bare host, a
+// bare IP address, and `host:port`.
+//
+// The bare IP case is separate because net.SplitHostPort rejects an unbracketed
+// IPv6 address -- "fd00::1" is a host, not a host and a port, and reading it as
+// the latter is how a legitimate address gets refused. The port is returned
+// empty when the value carries none.
+func splitHostPort(raw string) (string, string, error) {
+	// A bare IP address first, and before anything looks at the colons: "::" and
+	// "fd00::1" are addresses, and the IPv6 wildcard even ends with a colon.
+	if net.ParseIP(raw) != nil {
+		return raw, "", nil
+	}
+
+	if splitHost, splitPort, splitErr := net.SplitHostPort(raw); splitErr == nil {
+		// net.SplitHostPort reads "registry.example.com:" as a host with an
+		// empty port. That value is malformed rather than portless, and the
+		// difference is only visible here, so it is refused here.
+		if splitPort == "" {
+			return "", "", errors.New("has a trailing colon but no port")
+		}
+		return splitHost, splitPort, nil
+	} else if strings.ContainsRune(raw, ':') {
+		return "", "", fmt.Errorf("is not a valid host:port pair: %w", splitErr)
+	}
+
+	return raw, "", nil
+}
+
+func validHostName(host string) error {
+	if host == "" {
+		return errors.New("host is empty")
+	}
+	if net.ParseIP(host) != nil {
+		return nil
+	}
+	if !dnsNameRegexp.MatchString(host) {
+		return fmt.Errorf("host %q is neither an IP address nor a DNS name", host)
+	}
+	return nil
+}
+
 // IPPort validates `<ip>:<port>` with a literal IP address. This is the only
 // shape the module generates for a proxy endpoint, and the NGINX `server`
 // directive that consumes it has no quoting of its own.
 func IPPort(value any) error {
-	return checkString(value, encodable(ipPort))
+	return and(
+		validation.By(EncodableString),
+		stringRule(ipPort),
+	).Validate(value)
 }
 
 func ipPort(raw string) error {
@@ -309,27 +363,6 @@ func ipPort(raw string) error {
 	return validPort(port)
 }
 
-// NodeIPPlaceholder is the literal dhctl writes into the bashible registry
-// configuration, in Proxy and Local mode, where a master node's own address
-// belongs.
-//
-// During bootstrap there is no address to write. The registry that the node is
-// about to pull from is the one it is about to start, and its address is only
-// known on the node itself, so dhctl emits this placeholder and the bashible
-// steps resolve it:
-//
-//	discovered_node_ip="$(bb-d8-node-ip)"
-//
-// The steps that consume it -- candi/bashible/common-steps/all/
-// 001_configure_registry_proxy.sh.tpl and 030_configure_containerd_registry.sh.tpl
-// -- therefore write their generated files through an *unquoted* heredoc, which
-// is the only reason the substitution happens at all. That makes every value in
-// those bodies subject to parameter and command substitution as root, and it is
-// why ProxyEndpoint and MirrorHost exist: validation, not quoting, is what keeps
-// a `$(...)` out of those files. This one literal is the sole exception, and it
-// is compared exactly.
-const NodeIPPlaceholder = "${discovered_node_ip}"
-
 // ProxyEndpoint validates one entry of `proxyEndpoints`.
 //
 // It is `<ip>:<port>`, or NodeIPPlaceholder in the host position during
@@ -337,12 +370,13 @@ const NodeIPPlaceholder = "${discovered_node_ip}"
 // balancer's NGINX configuration, which has no quoting of its own, and into an
 // unquoted heredoc that runs as root.
 func ProxyEndpoint(value any) error {
-	return checkString(value, encodable(func(raw string) error {
-		return Either(
+	return and(
+		validation.By(EncodableString),
+		either(
 			validation.By(IPPort),
 			validation.By(NodeIPPlaceholderEndpoint),
-		).Validate(raw)
-	}))
+		),
+	).Validate(value)
 }
 
 // MirrorHost validates the host of a mirror in the bashible configuration.
@@ -352,12 +386,13 @@ func ProxyEndpoint(value any) error {
 // /etc/containerd/registry.d/<host>/hosts.toml and part of the CA file name
 // beside it, both written through an unquoted heredoc that runs as root.
 func MirrorHost(value any) error {
-	return checkString(value, encodable(func(raw string) error {
-		return Either(
-			validation.By(RegistryHost),
+	return and(
+		validation.By(EncodableString),
+		either(
+			validation.By(HostPort),
 			validation.By(NodeIPPlaceholderEndpoint),
-		).Validate(raw)
-	}))
+		),
+	).Validate(value)
 }
 
 // NodeIPPlaceholderEndpoint accepts NodeIPPlaceholder followed by a port, and
@@ -369,23 +404,23 @@ func MirrorHost(value any) error {
 // ProxyEndpoint and MirrorHost read as two named rules rather than as a special
 // case buried in each.
 func NodeIPPlaceholderEndpoint(value any) error {
-	return checkString(value, func(raw string) error {
+	return stringRule(func(raw string) error {
 		host, port, err := net.SplitHostPort(raw)
 		if err != nil || host != NodeIPPlaceholder {
 			return fmt.Errorf("must be %s followed by a port", NodeIPPlaceholder)
 		}
 		return validPort(port)
-	})
+	}).Validate(value)
 }
 
 // IPAddress validates a bare IP address.
 func IPAddress(value any) error {
-	return checkString(value, func(raw string) error {
+	return stringRule(func(raw string) error {
 		if net.ParseIP(raw) == nil {
 			return fmt.Errorf("%q is not an IP address", raw)
 		}
 		return nil
-	})
+	}).Validate(value)
 }
 
 // URLScheme validates that a value is one of the two schemes the module supports.
@@ -393,23 +428,26 @@ func IPAddress(value any) error {
 // the upstream URL in the distribution configuration), so an unrecognised value
 // must not reach them.
 func URLScheme(value any) error {
-	return checkString(value, func(raw string) error {
+	return stringRule(func(raw string) error {
 		if raw != "http" && raw != "https" {
 			return fmt.Errorf("must be http or https, got %q", raw)
 		}
 		return nil
-	})
+	}).Validate(value)
 }
 
 // URLPath validates the repository path of a registry address.
 //
 // An absent path is valid, and deliberately so: `imagesRepo` may name a
 // registry with no repository under it, and SplitAddressAndPath then yields an
-// empty path. checkString returns before the pattern is consulted, so the
+// empty path. stringRule returns before the pattern is consulted, so the
 // pattern never sees an empty string -- it would match one, since every group
 // in it is optional, and the two agree rather than only appearing to.
 func URLPath(value any) error {
-	return checkString(value, encodable(urlPath))
+	return and(
+		validation.By(EncodableString),
+		stringRule(urlPath),
+	).Validate(value)
 }
 
 func urlPath(raw string) error {
@@ -437,7 +475,10 @@ func urlPath(raw string) error {
 // into the same filesystem paths and into the `remoteurl` of the distribution
 // configuration.
 func RegistryAddress(value any) error {
-	return checkString(value, encodable(registryAddress))
+	return and(
+		validation.By(EncodableString),
+		stringRule(registryAddress),
+	).Validate(value)
 }
 
 func registryAddress(raw string) error {
@@ -446,7 +487,7 @@ func registryAddress(raw string) error {
 	if host == "" {
 		return errors.New("has no host component")
 	}
-	if err := RegistryHost(host); err != nil {
+	if err := HostPort(host); err != nil {
 		return fmt.Errorf("host %q is not valid: %w", host, err)
 	}
 	if err := URLPath(path); err != nil {
@@ -464,17 +505,13 @@ func registryAddress(raw string) error {
 // who writes `http://proxy:8080/` has named the same proxy as
 // `http://proxy:8080`, and every HTTP client treats the two alike.
 func ProxyURL(value any) error {
-	raw, err := stringValue(value)
-	if err != nil {
-		return err
-	}
-	if raw == "" {
-		return nil
-	}
-	if err := EncodableString(raw); err != nil {
-		return err
-	}
+	return and(
+		validation.By(EncodableString),
+		stringRule(proxyURL),
+	).Validate(value)
+}
 
+func proxyURL(raw string) error {
 	parsed, err := url.Parse(raw)
 	if err != nil {
 		return fmt.Errorf("is not a URL: %w", err)
@@ -515,23 +552,19 @@ func ProxyURL(value any) error {
 		return fmt.Errorf("must be a canonical URL, got %q for %q", raw, canonical)
 	}
 
-	return RegistryHost(parsed.Host)
+	return HostPort(parsed.Host)
 }
 
 // NoProxyList validates a no_proxy value: a comma-separated list of hosts,
 // domain suffixes or CIDR blocks.
 func NoProxyList(value any) error {
-	raw, err := stringValue(value)
-	if err != nil {
-		return err
-	}
-	if raw == "" {
-		return nil
-	}
-	if err := EncodableString(raw); err != nil {
-		return err
-	}
+	return and(
+		validation.By(EncodableString),
+		stringRule(noProxyList),
+	).Validate(value)
+}
 
+func noProxyList(raw string) error {
 	for _, token := range strings.Split(raw, ",") {
 		token = strings.TrimSpace(token)
 		if token == "" {

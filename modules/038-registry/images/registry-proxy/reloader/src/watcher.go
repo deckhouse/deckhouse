@@ -94,16 +94,44 @@ func nginxReload() error {
 	return nil
 }
 
+// signalTarget is the part of a process that the scan below uses.
+//
+// It exists so the scan can be tested at all: the case that matters is a
+// process that dies between being listed and being read, and that cannot be
+// staged with real processes.
+type signalTarget interface {
+	Cmdline() (string, error)
+	SendSignal(sig process.Signal) error
+}
+
 // pkill -P vector SIGHUP
 func sendReloadSignal() error {
 	processes, err := process.Processes()
 	if err != nil {
 		return err
 	}
+	targets := make([]signalTarget, 0, len(processes))
+	for _, p := range processes {
+		targets = append(targets, p)
+	}
+	return signalNginxMaster(targets)
+}
+
+// signalNginxMaster sends SIGHUP to the first nginx master in the list.
+func signalNginxMaster(processes []signalTarget) error {
 	for _, p := range processes {
 		cmdline, err := p.Cmdline()
 		if err != nil {
-			return err
+			// The process table is a snapshot: a process listed by
+			// process.Processes() can be gone by the time its command line is
+			// read, and /proc then answers ENOENT. That says nothing about this
+			// process being the master, so the scan has to go on -- aborting
+			// here on an unrelated corpse is how the master never gets
+			// signalled. The copy has already happened by this point, so the
+			// files agree and every later event takes the "equal, skipping
+			// reload" branch: nginx would serve the old configuration until
+			// something restarts it.
+			continue
 		}
 
 		if isNginxMasterCmdline(cmdline) {
