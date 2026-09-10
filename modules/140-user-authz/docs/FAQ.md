@@ -93,7 +93,7 @@ If the migration cannot prepare every binding, the release does not start and th
 
 ## How do I check that the controller keeps the bindings in sync?
 
-The `user-authz-controller` component reconciles the ClusterRoleBindings and RoleBindings of every ClusterAuthorizationRule and AuthorizationRule, the `d8:use:dict` grants of the experimental role model, and the projections of manage-role bindings into namespaced use RoleBindings. Three sources tell whether it is healthy.
+The `user-authz-controller` component reconciles the `ClusterRoleBinding` and `RoleBinding` objects of every ClusterAuthorizationRule and AuthorizationRule, the `d8:use:dict` grants of the experimental role model, and the projections of manage-role bindings into namespaced use `RoleBinding` objects. Three sources tell whether it is healthy.
 
 **Object status.** Every rule carries a `Ready` condition and the number of its bindings:
 
@@ -158,7 +158,7 @@ Example output:
 | `d8_user_authz_bindings_apply_total{kind,op,result}` | Write operations issued by the controller (`op`: `create`, `update`, `delete`; `result`: `success`, `error`) |
 | `d8_user_authz_authorization_rules_invalid{kind,reason}` | Rules whose `Ready` condition is `False`, by kind and reason |
 | `d8_user_authz_authorization_rule_invalid{kind,name,rule_namespace,reason}` | `1` for every such rule (at most 50 rules are named; the aggregate above is always complete) |
-| `d8_user_authz_custom_cluster_roles{level}` | Custom ClusterRoles (annotated with `user-authz.deckhouse.io/access-level`) per access level |
+| `d8_user_authz_custom_cluster_roles{level}` | Custom `ClusterRole` objects (annotated with `user-authz.deckhouse.io/access-level`) per access level |
 | `d8_user_authz_custom_aggregation_missing{level}` | `1` when the aggregated ClusterRole `user-authz:<level>:custom` has no rules although custom roles it must aggregate exist |
 | `d8_user_authz_bindings_keep_stamped_total`, `d8_user_authz_keep_stamp_duration_seconds` | Work of the migration hook that protects chart-rendered bindings from being pruned by the release: objects stamped and the duration of its last run |
 | `controller_runtime_reconcile_total`, `controller_runtime_reconcile_errors_total`, `controller_runtime_reconcile_time_seconds` | Standard controller-runtime metrics per reconciler (`controller` label: `clusterauthorizationrule-bindings`, `authorizationrule-bindings`, `dict-bindings`, `manage-bindings`) |
