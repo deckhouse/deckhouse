@@ -30,9 +30,9 @@ import (
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
 	registry_const "github.com/deckhouse/deckhouse/go_lib/registry/const"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/app/options"
@@ -1061,7 +1061,7 @@ func TestPrepareGuardIsOffForLegacyProviderConfig(t *testing.T) {
 // A cluster whose NodeGroups lost their replica count must still be destroyable.
 func TestPrepareGuardIsOffForDestroy(t *testing.T) {
 	m := cloudMetaConfig("")
-	m.Operation = proto.OperationDestroy
+	m.Operation = string(validatev1.OperationDestroy)
 	m.CloudProviderVars = &CloudProviderVars{NodeGroups: map[string]map[string]interface{}{
 		"master": clusterNodeGroup(map[string]interface{}{"nodeType": "CloudPermanent"}),
 	}}

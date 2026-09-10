@@ -15,7 +15,7 @@
 package protocol
 
 import (
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 
 	cpapi "github.com/deckhouse/deckhouse/go_lib/cloud-provider/api"
 	cpval "github.com/deckhouse/deckhouse/go_lib/cloud-provider/validation"
@@ -67,7 +67,7 @@ type StateBuilder[
 }
 
 // Build decodes dhctl input and applies provider context from the builder configuration.
-func (b *StateBuilder[IC, S, PCC]) Build(input proto.ValidateInput) (*cpvalapi.State[IC, S, PCC], error) {
+func (b *StateBuilder[IC, S, PCC]) Build(input validatev1.Input) (*cpvalapi.State[IC, S, PCC], error) {
 	var err error
 
 	state := &cpvalapi.State[IC, S, PCC]{

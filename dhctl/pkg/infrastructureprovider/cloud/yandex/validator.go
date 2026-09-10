@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"regexp"
 
-	proto "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol"
+	validatev1 "github.com/deckhouse/deckhouse/go_lib/dhctl-provider-protocol/api/validate/v1"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
 	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
@@ -102,7 +102,7 @@ func (p *MetaConfigValidator) validateWithNATInstanceLayout(ctx context.Context,
 		return nil
 	}
 
-	if input.Operation != proto.OperationBootstrap {
+	if input.Operation != string(validatev1.OperationBootstrap) {
 		dhlog.FromContext(ctx).DebugContext(ctx, "Skip validate WithNATInstance layout. Validation disabled")
 		return nil
 	}
