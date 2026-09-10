@@ -87,3 +87,14 @@ not set.
 Remove once CES is stable, <https://github.com/cilium/cilium/issues/31904>.
 
 Test `~/src/kind/d8-1.20-tests/008-egw-with-ces/`
+
+## 013-ignore-egress-gateway-inactual-warning.patch
+
+Tolerate a `CiliumEgressGatewayPolicy` whose egress IP is not assigned to any
+interface on the gateway node. Deckhouse attaches such addresses out of band, so
+upstream's derive failure would log an error on every reconcile.
+
+Note this changes forwarding, not only logging: the policy is programmed with the
+configured egress IP, where unpatched the entry stays `0.0.0.0`.
+
+Test `~/src/kind/d8-1.20-tests/013-egw-unassigned-ip/`
