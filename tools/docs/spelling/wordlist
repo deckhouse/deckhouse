@@ -483,6 +483,7 @@ MVCC
 MYACCESSKEY
 MachineClass
 MachineClasses
+MachineConfig
 MachineControllerManager
 MachineDeployment
 MachineSet
@@ -826,6 +827,7 @@ TMPDIR
 TODO
 TOTP
 TaintToleration
+Talos
 TargetGroup
 Taskfile
 Terraform
@@ -1856,6 +1858,7 @@ zoneTagCategory
 Смаршрутизировать
 Создайте
 Сохраняеем
+Сохраняем
 Столярова
 Стрибог
 Терминация
@@ -2683,7 +2686,6 @@ zoneTagCategory
 соответствующий
 сопоставление
 сопоставления
-Сохраняем
 спанов
 спаны
 спецзаголовки
