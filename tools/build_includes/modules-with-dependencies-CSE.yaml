@@ -223,14 +223,6 @@
   stageDependencies:
     install:
         - '**/*'
-- add: /ee/be/modules/350-node-local-dns/hooks
-  to: /deckhouse/modules/350-node-local-dns/hooks
-  excludePaths:
-    - '**/*_test.go'
-    - '**/*.sh'
-  stageDependencies:
-    install:
-        - '**/*'
 - add: /ee/se/modules/380-metallb/hooks
   to: /deckhouse/modules/380-metallb/hooks
   excludePaths:

@@ -7,13 +7,13 @@ metadata:
     lastReconciliationTime: '2026-01-01T00:00:00Z'
   labels:
     heritage: deckhouse
-    k8s-version: "1.32"
-    max-k8s-version: "1.32"
+    k8s-version: "1.33"
+    max-k8s-version: "1.33"
   name: d8-cluster-kubernetes
   namespace: kube-system
 data:
   spec: |
-    desiredVersion: "1.35"
+    desiredVersion: "1.36"
     updateMode: Automatic
 ---
 apiVersion: v1
@@ -22,7 +22,7 @@ metadata:
   name: master-1
 status:
   nodeInfo:
-    kubeletVersion: v1.32.0
+    kubeletVersion: v1.33.0
 ---
 apiVersion: v1
 kind: Node
@@ -30,7 +30,7 @@ metadata:
   name: worker-1
 status:
   nodeInfo:
-    kubeletVersion: v1.32.0
+    kubeletVersion: v1.33.0
 ---
 apiVersion: v1
 kind: Pod
@@ -40,7 +40,7 @@ metadata:
   labels:
     component: kube-apiserver
   annotations:
-    control-plane-manager.deckhouse.io/kubernetes-version: v1.33.0
+    control-plane-manager.deckhouse.io/kubernetes-version: v1.34.0
 spec:
   nodeName: master-1
 status:
@@ -60,7 +60,7 @@ metadata:
   labels:
     component: kube-scheduler
   annotations:
-    control-plane-manager.deckhouse.io/kubernetes-version: v1.33.0
+    control-plane-manager.deckhouse.io/kubernetes-version: v1.34.0
 spec:
   nodeName: master-1
 status:
@@ -80,7 +80,7 @@ metadata:
   labels:
     component: kube-controller-manager
   annotations:
-    control-plane-manager.deckhouse.io/kubernetes-version: v1.33.0
+    control-plane-manager.deckhouse.io/kubernetes-version: v1.34.0
 spec:
   nodeName: master-1
 status:

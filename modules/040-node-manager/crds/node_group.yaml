@@ -144,11 +144,11 @@ spec:
                   type: string
                   x-doc-examples: ["1.33"]
                   enum:
-                    - "1.32"
                     - "1.33"
                     - "1.34"
                     - "1.35"
                     - "1.36"
+                    - "1.37"
                 cri:
                   type: object
                   description: |

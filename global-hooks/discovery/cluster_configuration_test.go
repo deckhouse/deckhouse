@@ -36,7 +36,7 @@ var _ = Describe("Global hooks :: discovery/clusterConfiguration ::", func() {
 	)
 
 	// Set default value for test purposes. Normally this var set to specific kube version on the build stage.
-	hooks.DefaultKubernetesVersion = "1.36"
+	hooks.DefaultKubernetesVersion = "1.35"
 
 	f := HookExecutionConfigInit(initValuesString, initConfigValuesString)
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)

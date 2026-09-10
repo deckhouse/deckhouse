@@ -34,8 +34,8 @@ import (
 )
 
 const (
-	kubeVersionBefore             = "1.32"
-	kubeVersionAfter              = "1.33"
+	kubeVersionBefore             = "1.33"
+	kubeVersionAfter              = "1.34"
 	clusterConfigurationStaticTmp = `
 apiVersion: deckhouse.io/v1
 kind: ClusterConfiguration

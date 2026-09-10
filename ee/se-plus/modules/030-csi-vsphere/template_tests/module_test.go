@@ -206,7 +206,7 @@ var _ = Describe("Module :: csi-vsphere :: helm template ::", func() {
 
 	Context("Vsphere", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.33", "1.33"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("csiVsphere", moduleValuesA)
 			f.HelmRender()
@@ -270,7 +270,7 @@ var _ = Describe("Module :: csi-vsphere :: helm template ::", func() {
 
 	Context("Vsphere", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.33", "1.33"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("csiVsphere", moduleValuesB)
 			f.HelmRender()
@@ -278,7 +278,7 @@ var _ = Describe("Module :: csi-vsphere :: helm template ::", func() {
 
 		Context("Unsupported Kubernetes version", func() {
 			BeforeEach(func() {
-				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
+				f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.33", "1.33"))
 				f.ValuesSet("global.modulesImages", GetModulesImages())
 				f.ValuesSetFromYaml("csiVsphere", moduleValuesA)
 				f.ValuesSet("global.discovery.kubernetesVersion", "1.17.8")
@@ -294,7 +294,7 @@ var _ = Describe("Module :: csi-vsphere :: helm template ::", func() {
 
 	Context("Vsphere: DatastoreCluster at index 0 is not rendered (defense-in-depth)", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.33", "1.33"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("csiVsphere", moduleValuesDCClusterFirst)
 			f.HelmRender()
@@ -315,7 +315,7 @@ var _ = Describe("Module :: csi-vsphere :: helm template ::", func() {
 
 	Context("Vsphere with default StorageClass specified", func() {
 		BeforeEach(func() {
-			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.32", "1.32"))
+			f.ValuesSetFromYaml("global", fmt.Sprintf(globalValues, "1.33", "1.33"))
 			f.ValuesSet("global.modulesImages", GetModulesImages())
 			f.ValuesSetFromYaml("csiVsphere", moduleValuesB)
 			f.ValuesSetFromYaml("global.discovery.defaultStorageClass", `mydsname2`)

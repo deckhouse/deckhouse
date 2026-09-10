@@ -1,14 +1,17 @@
 {{- $baseFeatureGates := list "RotateKubeletServerCertificate=true" -}}
-{{- if semverCompare ">=1.31 <1.36" .clusterConfiguration.kubernetesVersion }}
+{{- if semverCompare ">=1.33 <1.36" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "TopologyAwareHints=true" -}}
 {{- end }}
-{{- /* DynamicResourceAllocation: GA default=true since 1.34, explicitly enable for 1.32-1.33 */ -}}
-{{- if semverCompare ">=1.32 <1.34" .clusterConfiguration.kubernetesVersion }}
+{{- /* DynamicResourceAllocation: GA default=true since 1.34, explicitly enable for 1.33 */ -}}
+{{- if semverCompare ">=1.33 <1.34" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DynamicResourceAllocation=true" -}}
 {{- end }}
 {{- if semverCompare ">=1.34" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DRADeviceBindingConditions=true" -}}
   {{- $baseFeatureGates = append $baseFeatureGates "DRAConsumableCapacity=true" -}}
+{{- end }}
+{{- /* DRAExtendedResource: GA and locked to default=true since 1.37, no need to pass it explicitly */ -}}
+{{- if semverCompare ">=1.34 <1.37" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DRAExtendedResource=true" -}}
 {{- end }}
 {{- if semverCompare ">=1.33 <1.36" .clusterConfiguration.kubernetesVersion }}
@@ -16,9 +19,6 @@
 {{- end }}
 {{- if semverCompare ">=1.33" .clusterConfiguration.kubernetesVersion }}
   {{- $baseFeatureGates = append $baseFeatureGates "DRAPartitionableDevices=true" -}}
-{{- end }}
-{{- if semverCompare "<=1.32" .clusterConfiguration.kubernetesVersion }}
-  {{- $baseFeatureGates = append $baseFeatureGates "InPlacePodVerticalScaling=true" -}}
 {{- end }}
 {{- $schedulerFeatureGates := $baseFeatureGates -}}
 {{- if hasKey . "allowedFeatureGates" -}}

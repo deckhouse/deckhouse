@@ -1,49 +1,40 @@
 diff --git a/pkg/kubelet/kubelet.go b/pkg/kubelet/kubelet.go
-index 118bd0e9f89..149a80d9b0e 100644
+index bf127f88520..8ba7911fd8e 100644
 --- a/pkg/kubelet/kubelet.go
 +++ b/pkg/kubelet/kubelet.go
-@@ -1000,6 +1000,7 @@ func NewMainKubelet(kubeCfg *kubeletconfiginternal.KubeletConfiguration,
+@@ -1173,6 +1173,7 @@ func NewMainKubelet(ctx context.Context,
  		NodeRef:                          nodeRef,
  		GetPodsFunc:                      klet.GetActivePods,
- 		KillPodFunc:                      killPodNow(klet.podWorkers, kubeDeps.Recorder),
+ 		KillPodFunc:                      killPodNow(ctx, klet.podWorkers, kubeDeps.Recorder),
 +		GetNodeFunc:                      klet.GetNode,
  		SyncNodeStatusFunc:               klet.syncNodeStatus,
  		ShutdownGracePeriodRequested:     kubeCfg.ShutdownGracePeriod.Duration,
  		ShutdownGracePeriodCriticalPods:  kubeCfg.ShutdownGracePeriodCriticalPods.Duration,
 diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager.go
-index 40df3b0e08b..402772d3007 100644
+index bdfd6708dc1..56998d6db0e 100644
 --- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager.go
 +++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager.go
-@@ -56,6 +56,7 @@ type Config struct {
+@@ -54,6 +54,7 @@ type Config struct {
  	NodeRef                          *v1.ObjectReference
  	GetPodsFunc                      eviction.ActivePodsFunc
  	KillPodFunc                      eviction.KillPodFunc
-+	GetNodeFunc                      func() (*v1.Node, error)
- 	SyncNodeStatusFunc               func()
++	GetNodeFunc                      func(context.Context) (*v1.Node, error)
+ 	SyncNodeStatusFunc               func(context.Context)
  	ShutdownGracePeriodRequested     time.Duration
  	ShutdownGracePeriodCriticalPods  time.Duration
 diff --git a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
-index 989f0dc76e0..560a43d83a5 100644
+index 43b14002f77..8a9918239c5 100644
 --- a/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
 +++ b/pkg/kubelet/nodeshutdown/nodeshutdown_manager_linux.go
-@@ -21,7 +21,8 @@ limitations under the License.
- package nodeshutdown
- 
- import (
-+	"context"
- 	"errors"
- 	"fmt"
- 	"os"
- 	"path/filepath"
-@@ -38,6 +39,7 @@ import (
+@@ -40,6 +40,7 @@ import (
+ 	"k8s.io/kubernetes/pkg/kubelet/lifecycle"
  	"k8s.io/kubernetes/pkg/kubelet/metrics"
  	"k8s.io/kubernetes/pkg/kubelet/nodeshutdown/systemd"
- 	"k8s.io/kubernetes/pkg/kubelet/prober"
 +	"k8s.io/utils/clock"
  )
  
  const (
-@@ -70,6 +72,8 @@ type managerImpl struct {
+@@ -73,6 +74,8 @@ type managerImpl struct {
  	dbusCon     dbusInhibiter
  	inhibitLock systemd.InhibitLock
  
@@ -52,7 +43,7 @@ index 989f0dc76e0..560a43d83a5 100644
  	nodeShuttingDownMutex sync.Mutex
  	nodeShuttingDownNow   bool
  	podManager            *podManager
-@@ -106,6 +110,10 @@ func NewManager(conf *Config) Manager {
+@@ -109,6 +112,10 @@ func NewManager(conf *Config) Manager {
  			Path: filepath.Join(conf.StateDirectory, localStorageStateFile),
  		},
  	}
@@ -63,20 +54,21 @@ index 989f0dc76e0..560a43d83a5 100644
  	manager.logger.Info("Creating node shutdown manager",
  		"shutdownGracePeriodRequested", conf.ShutdownGracePeriodRequested,
  		"shutdownGracePeriodCriticalPods", conf.ShutdownGracePeriodCriticalPods,
-@@ -211,7 +219,7 @@ func (m *managerImpl) start() (chan struct{}, error) {
+@@ -267,7 +274,7 @@ func (m *managerImpl) start(ctx context.Context) (chan struct{}, error) {
  		return nil, err
  	}
  
--	events, err := m.dbusCon.MonitorShutdown()
-+	dbusEvents, err := m.dbusCon.MonitorShutdown()
+-	events, err := m.dbusCon.MonitorShutdown(m.logger)
++	dbusEvents, err := m.dbusCon.MonitorShutdown(m.logger)
  	if err != nil {
  		releaseErr := m.dbusCon.ReleaseInhibitLock(m.inhibitLock)
  		if releaseErr != nil {
-@@ -220,6 +228,30 @@ func (m *managerImpl) start() (chan struct{}, error) {
- 		return nil, fmt.Errorf("failed to monitor shutdown: %v", err)
+@@ -277,6 +284,31 @@ func (m *managerImpl) start(ctx context.Context) (chan struct{}, error) {
  	}
  
-+	shutdownAfterPostpone := m.conditionChecker.MonitorGracefulShutdownPostpone()
+ 	startSucceeded = true
++
++	shutdownAfterPostpone := m.conditionChecker.MonitorGracefulShutdownPostpone(ctx)
 +
 +	// Set capacity to 2 to not block our sources.
 +	shutdownEvents := make(chan bool, 2)
@@ -103,27 +95,32 @@ index 989f0dc76e0..560a43d83a5 100644
  	stop := make(chan struct{})
  	go func() {
  		// Monitor for shutdown events. This follows the logind Inhibit Delay pattern described on https://www.freedesktop.org/wiki/Software/systemd/inhibit/
-@@ -227,10 +259,12 @@ func (m *managerImpl) start() (chan struct{}, error) {
+@@ -284,13 +316,16 @@ func (m *managerImpl) start(ctx context.Context) (chan struct{}, error) {
  		// 2. When shutdown(true) event is received, process the shutdown and release the inhibit lock.
  		// 3. When shutdown(false) event is received, this indicates a previous shutdown was cancelled. In this case, acquire the inhibit lock again.
  		for {
 +			m.logger.V(1).Info("Blocking read from shutdownEvents")
  			select {
+ 			case <-ctx.Done():
++				m.conditionChecker.Cleanup()
+ 				close(stop)
+ 				return
 -			case isShuttingDown, ok := <-events:
 +			case isShuttingDown, ok := <-shutdownEvents:
  				if !ok {
- 					m.logger.Error(err, "Ended to watching the node for shutdown events")
+ 					m.logger.Error(nil, "Ended to watching the node for shutdown events")
 +					m.conditionChecker.Cleanup()
  					close(stop)
  					return
  				}
-@@ -249,6 +283,33 @@ func (m *managerImpl) start() (chan struct{}, error) {
+@@ -308,6 +343,34 @@ func (m *managerImpl) start(ctx context.Context) (chan struct{}, error) {
+ 				} else {
  					m.recorder.Event(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Shutdown manager detected shutdown cancellation")
  				}
- 
++
 +				// Check if shutdown is postponed by the condition and prevent setting m.nodeShuttingDownNow=true to keep Ready status for the Node.
 +				if isShuttingDown {
-+					postponeStatus, err := m.conditionChecker.PostponeStatus()
++					postponeStatus, err := m.conditionChecker.PostponeStatus(ctx)
 +					if err != nil {
 +						m.logger.Error(err, "Read postponed condition", "status", postponeStatus)
 +						m.recorder.Eventf(m.nodeRef, v1.EventTypeNormal, kubeletevents.NodeShutdown, "Fail to check GracefulShutdownPostpone condition: %v", err)
@@ -151,15 +148,14 @@ index 989f0dc76e0..560a43d83a5 100644
  				// Clean up memory manager state before shutdown
  				if isShuttingDown {
  					m.cleanupMemoryManagerState()
-@@ -347,3 +408,124 @@ func (m *managerImpl) cleanupMemoryManagerState() {
- 
- 	m.logger.Info("Successfully removed memory manager state file before shutdown", "path", memoryManagerStatePath)
+@@ -334,6 +397,127 @@ func (m *managerImpl) start(ctx context.Context) (chan struct{}, error) {
+ 	return stop, nil
  }
-+
+ 
 +type conditionChecker struct {
 +	logger klog.Logger
 +
-+	getNode func() (*v1.Node, error)
++	getNode func(context.Context) (*v1.Node, error)
 +
 +	events chan bool
 +	cancel context.CancelFunc
@@ -167,10 +163,10 @@ index 989f0dc76e0..560a43d83a5 100644
 +	actions chan string
 +}
 +
-+func (c *conditionChecker) MonitorGracefulShutdownPostpone() <-chan bool {
++func (c *conditionChecker) MonitorGracefulShutdownPostpone(parentCtx context.Context) <-chan bool {
 +	c.events = make(chan bool, 1)
 +	c.actions = make(chan string, 10)
-+	ctx, cancel := context.WithCancel(context.Background())
++	ctx, cancel := context.WithCancel(parentCtx)
 +	c.cancel = cancel
 +	go c.checkLoop(ctx)
 +	return c.events
@@ -223,7 +219,7 @@ index 989f0dc76e0..560a43d83a5 100644
 +		case <-ticker.C():
 +			// Check postpone condition if in the "started" state. If not postponed, send event to unpause shutdown sequence.
 +			if isStarted {
-+				postponeStatus, err := c.PostponeStatus()
++				postponeStatus, err := c.PostponeStatus(ctx)
 +				if err != nil {
 +					c.logger.V(1).Error(err, "Check postpone condition failed, will try later")
 +					break
@@ -251,8 +247,8 @@ index 989f0dc76e0..560a43d83a5 100644
 +}
 +
 +// PostponeStatus returns the raw status of the GracefulShutdownPostpone
-+func (c *conditionChecker) PostponeStatus() (v1.ConditionStatus, error) {
-+	node, err := c.getNode()
++func (c *conditionChecker) PostponeStatus(ctx context.Context) (v1.ConditionStatus, error) {
++	node, err := c.getNode(ctx)
 +	if err != nil {
 +		c.logger.V(1).Error(err, "Get node on shutdown event failed, will try later")
 +		return v1.ConditionFalse, fmt.Errorf("get node for postpone condition check: %v", err)
@@ -276,3 +272,7 @@ index 989f0dc76e0..560a43d83a5 100644
 +func isPostponed(status v1.ConditionStatus) bool {
 +	return status == v1.ConditionTrue || status == v1.ConditionUnknown
 +}
++
+ func (m *managerImpl) acquireInhibitLock() error {
+ 	lock, err := m.dbusCon.InhibitShutdown()
+ 	if err != nil {

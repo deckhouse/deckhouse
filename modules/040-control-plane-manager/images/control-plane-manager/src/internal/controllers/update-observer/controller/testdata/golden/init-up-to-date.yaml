@@ -1,36 +1,36 @@
 ---
 data:
   spec: |
-    desiredVersion: "1.35"
+    desiredVersion: "1.36"
     updateMode: Automatic
-    automaticVersion: "1.34"
+    automaticVersion: "1.35"
   status: |
-    currentVersion: "1.35"
+    currentVersion: "1.36"
     supportedVersions:
-    - "1.32"
     - "1.33"
     - "1.34"
     - "1.35"
     - "1.36"
+    - "1.37"
     availableVersions:
-    - "1.34"
     - "1.35"
     - "1.36"
-    maxUsedKubernetesVersion: "1.35"
+    - "1.37"
+    maxUsedKubernetesVersion: "1.36"
     phase: UpToDate
     controlPlane:
     - name: master-1
       phase: UpToDate
       components:
-        kube-apiserver: "1.35"
-        kube-controller-manager: "1.35"
-        kube-scheduler: "1.35"
+        kube-apiserver: "1.36"
+        kube-controller-manager: "1.36"
+        kube-scheduler: "1.36"
     - name: master-2
       phase: UpToDate
       components:
-        kube-apiserver: "1.35"
-        kube-controller-manager: "1.35"
-        kube-scheduler: "1.35"
+        kube-apiserver: "1.36"
+        kube-controller-manager: "1.36"
+        kube-scheduler: "1.36"
     nodes:
       desiredCount: 3
       upToDateCount: 3
@@ -40,8 +40,8 @@ metadata:
     lastReconciliationTime: "2000-01-01T00:00:00Z"
   labels:
     heritage: deckhouse
-    k8s-version: "1.35"
-    max-k8s-version: "1.35"
+    k8s-version: "1.36"
+    max-k8s-version: "1.36"
     name: d8-cluster-kubernetes
   name: d8-cluster-kubernetes
   namespace: kube-system

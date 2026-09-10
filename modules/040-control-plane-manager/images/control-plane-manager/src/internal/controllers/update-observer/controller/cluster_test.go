@@ -44,17 +44,17 @@ func setVersionEnv(t *testing.T, desired, updateMode, maxUsed string) {
 
 func TestDesiredConfiguration(t *testing.T) {
 	t.Run("builds the spec from the environment", func(t *testing.T) {
-		setVersionEnv(t, "1.35", "Manual", "1.35")
+		setVersionEnv(t, "1.36", "Manual", "1.36")
 
 		cfg, err := desiredConfiguration(makeCM(nil))
 		require.NoError(t, err)
-		assert.Equal(t, "1.35", cfg.DesiredVersion)
+		assert.Equal(t, "1.36", cfg.DesiredVersion)
 		assert.Equal(t, cluster.UpdateModeManual, cfg.UpdateMode)
-		assert.Equal(t, "1.35", cfg.MaxUsedVersion)
+		assert.Equal(t, "1.36", cfg.MaxUsedVersion)
 	})
 
 	t.Run("Automatic mode", func(t *testing.T) {
-		setVersionEnv(t, "1.34", "Automatic", "1.34")
+		setVersionEnv(t, "1.35", "Automatic", "1.35")
 
 		cfg, err := desiredConfiguration(makeCM(nil))
 		require.NoError(t, err)
@@ -62,56 +62,56 @@ func TestDesiredConfiguration(t *testing.T) {
 	})
 
 	t.Run("normalizes full semantic versions and surrounding whitespace", func(t *testing.T) {
-		setVersionEnv(t, " v1.35.4 ", " Manual ", " v1.36.0 ")
+		setVersionEnv(t, " v1.36.4 ", " Manual ", " v1.37.0 ")
 
 		cfg, err := desiredConfiguration(makeCM(nil))
 		require.NoError(t, err)
-		assert.Equal(t, "1.35", cfg.DesiredVersion)
+		assert.Equal(t, "1.36", cfg.DesiredVersion)
 		assert.Equal(t, cluster.UpdateModeManual, cfg.UpdateMode)
-		assert.Equal(t, "1.36", cfg.MaxUsedVersion)
+		assert.Equal(t, "1.37", cfg.MaxUsedVersion)
 	})
 
 	// The recorded maximum must never walk backwards. A Pod whose template still carries the
 	// previous value — mid-rollout, or after leadership moved to a not-yet-updated Pod — would
 	// otherwise lower the floor and hand a downgrade an extra minor of room.
 	t.Run("keeps the higher of the stored and the declared maxUsed", func(t *testing.T) {
-		setVersionEnv(t, "1.33", "Manual", "1.34")
+		setVersionEnv(t, "1.34", "Manual", "1.35")
+
+		cfg, err := desiredConfiguration(makeCM(map[string]string{
+			"status": "maxUsedKubernetesVersion: \"1.37\"\n",
+		}))
+		require.NoError(t, err)
+		assert.Equal(t, "1.37", cfg.MaxUsedVersion)
+	})
+
+	t.Run("raises the stored maxUsed when the environment is ahead", func(t *testing.T) {
+		setVersionEnv(t, "1.37", "Manual", "1.37")
 
 		cfg, err := desiredConfiguration(makeCM(map[string]string{
 			"status": "maxUsedKubernetesVersion: \"1.36\"\n",
 		}))
 		require.NoError(t, err)
-		assert.Equal(t, "1.36", cfg.MaxUsedVersion)
-	})
-
-	t.Run("raises the stored maxUsed when the environment is ahead", func(t *testing.T) {
-		setVersionEnv(t, "1.36", "Manual", "1.36")
-
-		cfg, err := desiredConfiguration(makeCM(map[string]string{
-			"status": "maxUsedKubernetesVersion: \"1.35\"\n",
-		}))
-		require.NoError(t, err)
-		assert.Equal(t, "1.36", cfg.MaxUsedVersion)
+		assert.Equal(t, "1.37", cfg.MaxUsedVersion)
 	})
 
 	t.Run("an unreadable stored spec does not block the reconcile that repairs it", func(t *testing.T) {
-		setVersionEnv(t, "1.35", "Manual", "1.35")
+		setVersionEnv(t, "1.36", "Manual", "1.36")
 
 		cfg, err := desiredConfiguration(makeCM(map[string]string{"status": "maxUsedKubernetesVersion: [broken\n"}))
 		require.NoError(t, err)
-		assert.Equal(t, "1.35", cfg.MaxUsedVersion)
+		assert.Equal(t, "1.36", cfg.MaxUsedVersion)
 	})
 
 	// Each of these would otherwise be written into the ConfigMap as if it were declared, and read
 	// back from there by node-controller, the release requirements check and two webhooks.
 	t.Run("rejects malformed environment instead of defaulting", func(t *testing.T) {
 		for name, env := range map[string][3]string{
-			"empty desiredVersion":   {"", "Manual", "1.35"},
-			"empty updateMode":       {"1.35", "", "1.35"},
-			"empty maxUsed":          {"1.35", "Manual", ""},
-			"unknown updateMode":     {"1.35", "automatic", "1.35"},
-			"invalid desiredVersion": {"not-a-version", "Manual", "1.35"},
-			"invalid maxUsed":        {"1.35", "Manual", "not-a-version"},
+			"empty desiredVersion":   {"", "Manual", "1.36"},
+			"empty updateMode":       {"1.36", "", "1.36"},
+			"empty maxUsed":          {"1.36", "Manual", ""},
+			"unknown updateMode":     {"1.36", "automatic", "1.36"},
+			"invalid desiredVersion": {"not-a-version", "Manual", "1.36"},
+			"invalid maxUsed":        {"1.36", "Manual", "not-a-version"},
 		} {
 			t.Run(name, func(t *testing.T) {
 				setVersionEnv(t, env[0], env[1], env[2])
@@ -126,20 +126,20 @@ func TestDesiredConfiguration(t *testing.T) {
 // The whole data.spec block is authored here now, so a hand edit must be corrected rather than
 // preserved — the opposite of the byte-for-byte passthrough this controller used to do.
 func TestFillConfigMapRewritesSpec(t *testing.T) {
-	cm := makeCM(map[string]string{"spec": "desiredVersion: \"1.32\"\nupdateMode: Automatic\n"})
+	cm := makeCM(map[string]string{"spec": "desiredVersion: \"1.33\"\nupdateMode: Automatic\n"})
 
 	got, err := fillConfigMap(cm, &cluster.State{
 		Spec: cluster.Spec{
-			DesiredVersion: "1.35",
+			DesiredVersion: "1.36",
 			UpdateMode:     cluster.UpdateModeManual,
-			MaxUsedVersion: "1.36",
+			MaxUsedVersion: "1.37",
 		},
 	}, ReconcileTriggerIdle)
 	require.NoError(t, err)
 
-	assert.Contains(t, got.Data["spec"], "desiredVersion: \"1.35\"")
+	assert.Contains(t, got.Data["spec"], "desiredVersion: \"1.36\"")
 	assert.Contains(t, got.Data["spec"], "updateMode: Manual")
-	assert.Contains(t, got.Data["status"], "maxUsedKubernetesVersion: \"1.36\"")
+	assert.Contains(t, got.Data["status"], "maxUsedKubernetesVersion: \"1.37\"")
 	assert.Equal(t, "d8-cluster-kubernetes", got.Labels["name"])
 	assert.Equal(t, "deckhouse", got.Labels["heritage"])
 }
@@ -151,11 +151,11 @@ func TestGetConfigMapSpecPredicate(t *testing.T) {
 
 	withData := func(data map[string]string) *corev1.ConfigMap { return makeCM(data) }
 
-	specA := map[string]string{"spec": "desiredVersion: \"1.35\"\nupdateMode: Manual\n", "status": "currentVersion: \"1.35\"\n"}
+	specA := map[string]string{"spec": "desiredVersion: \"1.36\"\nupdateMode: Manual\n", "status": "currentVersion: \"1.36\"\n"}
 
 	t.Run("ignores status-only changes so the controller does not retrigger itself", func(t *testing.T) {
 		older := withData(specA)
-		newer := withData(map[string]string{"spec": specA["spec"], "status": "currentVersion: \"1.34\"\n"})
+		newer := withData(map[string]string{"spec": specA["spec"], "status": "currentVersion: \"1.35\"\n"})
 		newer.Annotations = map[string]string{"lastReconciliationTime": "now"}
 
 		assert.False(t, pred.Update(event.UpdateEvent{ObjectOld: older, ObjectNew: newer}))
@@ -163,7 +163,7 @@ func TestGetConfigMapSpecPredicate(t *testing.T) {
 
 	t.Run("reacts to a spec change from the hook", func(t *testing.T) {
 		older := withData(specA)
-		newer := withData(map[string]string{"spec": "desiredVersion: \"1.36\"\nupdateMode: Manual\n", "status": specA["status"]})
+		newer := withData(map[string]string{"spec": "desiredVersion: \"1.37\"\nupdateMode: Manual\n", "status": specA["status"]})
 
 		assert.True(t, pred.Update(event.UpdateEvent{ObjectOld: older, ObjectNew: newer}))
 	})
@@ -179,7 +179,7 @@ func TestGetConfigMapSpecPredicate(t *testing.T) {
 
 	t.Run("ignores a same-named ConfigMap in another namespace", func(t *testing.T) {
 		older := withData(specA)
-		newer := withData(map[string]string{"spec": "desiredVersion: \"1.36\"\nupdateMode: Manual\n"})
+		newer := withData(map[string]string{"spec": "desiredVersion: \"1.37\"\nupdateMode: Manual\n"})
 		newer.Namespace = "default"
 
 		assert.False(t, pred.Update(event.UpdateEvent{ObjectOld: older, ObjectNew: newer}))
