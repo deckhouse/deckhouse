@@ -32,7 +32,7 @@
     {{- $stageLink := partial "helpers/rewrite-link" (dict "href" (T "module_lifecycle_stage_link") "inner" (T "module_lifecycle_stage")) }}
     {{- $content := printf "%s: <span data-tippy-content='%s' class='alert__info'>%s</span>" $stageLink (T (printf "module_alert_%s_long" $statusKey )) $moduleStage }}
     {{- if $hasRequirements }}
-      {{- $content = printf "%s <p>%s</p>" $content (T "requirements_for_alert") }}
+      {{- $content = printf "%s\n\n%s" $content (T "requirements_for_alert") }}
     {{- end }}
     {{- partial "alert" ( dict "level" $alertLevel "content" $content ) }}
   {{- end }}

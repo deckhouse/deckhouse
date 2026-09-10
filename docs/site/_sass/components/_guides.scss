@@ -27,6 +27,34 @@ div.alert__wrap {
     }
   }
 
+  // On module configuration and CRD pages the alert sits inside `ul.resources`,
+  // where `.resources li p` zeroes out paragraph margins. The alert takes its
+  // vertical rhythm from those margins, so without them it collapses onto its
+  // border and the 52px icon overflows it. Restore the spacing in that context
+  // only; selectors have to outweigh `.resources li p:not(.resources__attrs)`.
+  .resources & > div {
+    min-height: 24px;
+    padding-top: 14px;
+    padding-bottom: 14px;
+
+    & > p:not(.resources__attrs) {
+      margin: 0 0 14px;
+      padding: 0;
+
+      &:last-child {
+        margin-bottom: 0;
+      }
+    }
+
+    & > *:last-child {
+      margin-bottom: 0;
+    }
+
+    @include breakpoints.max-w(s) {
+      padding-top: 48px;
+    }
+  }
+
   & a {
     color: variables.$primary-700;
   }
