@@ -231,14 +231,24 @@ because a field the old snapshot never recorded compares as absent against its c
 the value in the cluster before widening the list, or pair the change with a release note.
 
 Leave it out unless you mean it. A cloud-provider config field applies to every NodeGroup in the
-cluster, so listing one turns a single edit into a fleet-wide rollout. Six of the seven migrated
-providers declare nothing here: their config feeds the machine, but changing it was never a reason
-to recreate one.
+cluster, so listing one turns a single edit into a fleet-wide rollout. Most migrated providers
+declare nothing here: their config feeds the machine, but changing it was never a reason to
+recreate one.
 
-List a field when a user-visible promise depends on it. The one in-tree example is vcd's
-`metadata`, which `VCDClusterConfiguration` documents as recreating CloudEphemeral nodes: the v1
-checksum hashed it, and leaving it out would have turned that promise into silence while the
-template kept rendering the new value into every machine created later.
+List a field when a user-visible promise depends on it. Two in-tree examples, and both promises are
+written in the provider's own `*ClusterConfiguration`:
+
+- vcd's `metadata`, which the schema documents as recreating CloudEphemeral nodes: the v1 checksum
+  hashed it, and leaving it out would have turned that promise into silence while the template kept
+  rendering the new value into every machine created later.
+- dynamix's `storagePolicy`, the cluster-wide default the machine template falls back to when a
+  DynamixInstanceClass names none. Dynamix places the boot disk when the VM is created and cannot
+  move it, so a node that outlived the edit would be running in a policy its configuration no
+  longer names.
+
+Note what the second one costs, because it is inherent to the mechanism rather than to dynamix: the
+comparison sees the config field, not the effective value, so the edit also recreates the machines
+of a NodeGroup whose InstanceClass overrides the field and whose rendered object does not change.
 
 ## machineDeployment.additionalFields
 
@@ -309,3 +319,4 @@ Self-check list:
 - [ ] `rolloutFields` covers everything the cloud cannot change on a live VM, and nothing that
       is not a property of the VM.
 - [ ] Parity fixture added, both parity tests green.
+- [ ] Every `postV1Fields` entry carries a reason, and `TestPostV1FieldsAreReal` is green.
