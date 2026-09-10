@@ -28,6 +28,14 @@ rules:
   - patch
   - delete
   - deletecollection
+# The spec of an operation is immutable, so update and patch would grant nothing.
+- apiGroups:
+  - deckhouse.io
+  resources:
+  - nodeoperations
+  verbs:
+  - create
+  - delete
 - apiGroups:
   - deckhouse.io
   resourceNames:
@@ -39,3 +47,13 @@ rules:
   - update
   - patch
   - delete
+# A rendered template carries a live bootstrap token, so reading one is the
+# right to join a machine to the cluster. It belongs with the write verbs, not
+# with the read-only role.
+- apiGroups:
+  - templates.internal.deckhouse.io
+  resources:
+  - nodeconfigtemplates
+  verbs:
+  - get
+  - list

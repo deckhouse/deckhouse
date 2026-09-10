@@ -8,7 +8,7 @@ searchable: false
 Каждый релиз Istio содержит:
 
 * Исполняемый файл `istioctl` с встроенными helm-чартами (для Deckhouse не используется при деплое, полезен для утилит).
-* Image с оператором и CR `IstioOperator` / `Istio` — **только для версий ниже 1.27.9** (`supportsOperator: true`).
+* Image с sail-оператором и CR `Istio` (`sailoperator.io/v1`) — **только для версий ниже 1.27.9** (`supportsOperator: true`), то есть сейчас только для Istio 1.25. Legacy-CR `IstioOperator` (`install.istio.io/v1alpha1`) больше не создаётся: он остался только для очистки объектов, унаследованных от снятой с поддержки версии 1.21.
 * Набор образов с компонентами Istio (istiod, proxyv2, cni, …).
 * helm-чарты upstream.
 
@@ -18,19 +18,27 @@ searchable: false
 
 1. Images в `images/` — по аналогии с предыдущим minor.
 2. Версия в `oss.yaml`.
-3. Общий набор CRD в `crds/vendor/`. Конфигурационные CRD берутся из Istio 1.29.6, а operator/Sail CRD сохраняются для совместимости с Istio 1.25. Для обновления из корня репозитория используйте `go run ./modules/110-istio/crds/update`; параметры описаны в [`crds/vendor/README.md`](../../crds/vendor/README.md).
-4. **Без оператора:** `_rules_v-<major>-<minor>.tpl` + ветка в `_istiod_clusterroles.tpl`.
-5. Grafana — [`istio-grafana-dashboards.sh`](istio-grafana-dashboards.sh).
-6. **Без оператора:** каталог `files/<revision>/` — см. ниже.
-7. [`template_tests/module_test.go`](../../template_tests/module_test.go).
+3. Общий набор CRD в `crds/vendor/`. Конфигурационные CRD берутся из Istio 1.29.6, а operator/Sail CRD сохраняются для совместимости с Istio 1.25. Для обновления выполните `go run ./update-crds` из `modules/110-istio/tools`; параметры описаны в [`crds/vendor/README.md`](../../crds/vendor/README.md).
+4. Проверка бандла CRD — обязательный шаг после любых изменений в `crds/vendor/`, в том числе после правки файлов вручную:
+
+   ```shell
+   cd modules/110-istio/tools
+   go run ./update-crds --check
+   ```
+
+   Проверка не ходит в сеть и валидирует уже закоммиченный бандл: по одному объекту на файл, полный набор имён CRD, ровно одна storage-версия у каждого CRD и сохранение legacy-версий в `served`.
+5. **Без оператора:** `_rules_v-<major>-<minor>.tpl` + ветка в `_istiod_clusterroles.tpl`.
+6. Grafana — [`istio-grafana-dashboards.sh`](istio-grafana-dashboards.sh).
+7. **Без оператора:** каталог `files/<revision>/` — см. ниже.
+8. [`template_tests/module_test.go`](../../template_tests/module_test.go).
 
 ---
 
 ## Версия без оператора: каталог `files/<revision>/`
 
-Читать только если `supportsOperator: false`. Иначе inject через IOP/Istio CR ([`istios.yaml`](../../templates/control-plane/istios.yaml)).
+Читать только если `supportsOperator: false`. Иначе inject через IOP/Istio CR ([`istios.yaml`](../../templates/control-plane/iop/istios.yaml)).
 
-`<revision>` = `versionMap.<ver>.revision` (1.27.x → `v1x27`).
+`<revision>` = `versionMap.<ver>.revision` (1.29.x → `v1x29`).
 
 ### Что это
 
@@ -46,28 +54,28 @@ files/<revision>/
 
 Mesh (`istio-<revision>`) — в [`configmap-mesh.yaml`](../../templates/control-plane/configmap-mesh.yaml), **не** в `files/`.
 
-Образец для копирования: **`files/v1x27/`**.
+Образец для копирования: **`files/v1x29/`**.
 
-### Как добавить новую revision (пример 1.28)
+### Как добавить новую revision (пример 1.30)
 
-**A. Модуль в целом** — images, oss, CRD, hooks, `_rules_v-1-28.tpl`, тесты (как в общих шагах выше).
+**A. Модуль в целом** — images, oss, CRD, hooks, `_rules_v-1-30.tpl`, тесты (как в общих шагах выше).
 
-**B. Каталог files/<revision>** — обычно 3 команды и всё
+**B. Каталог `files/<revision>`** — обычно 3 команды и всё
 
 ```bash
 # 1. Клон нужного тега Istio
-git clone --depth 1 --branch 1.28.0 <ISTIO_REPO.git> /tmp/istio
+git clone --depth 1 --branch 1.30.0 <ISTIO_REPO.git> /tmp/istio
 UP=/tmp/istio/manifests/charts/istio-control/istio-discovery
 
 # 2. Скопировать предыдущую revision целиком
-cp -r files/v1x27 files/v1x28
+cp -r files/v1x29 files/v1x30
 
 # 3. Заменить только upstream-тела шаблонов (без правок)
-cp "$UP/files/injection-template.yaml"         files/v1x28/static/sidecar-injection-template.yaml
-cp "$UP/files/gateway-injection-template.yaml" files/v1x28/static/gateway-injection-template.yaml
+cp "$UP/files/injection-template.yaml"         files/v1x30/static/sidecar-injection-template.yaml
+cp "$UP/files/gateway-injection-template.yaml" files/v1x30/static/gateway-injection-template.yaml
 ```
 
-**На этом для большинства minor bump достаточно.**  
+**На этом для большинства minor bump достаточно.**
 `templates/sidecar-injection-values.yaml` и `sidecar-injection-config.yaml` уже лежат в копии — **не трогаем**, если static не требует новых настроек.
 
 **C. Control plane** (не `files/`) — istiod, webhooks, mesh: шаблоны в `templates/control-plane/`, env в [`deployment.yaml`](../../templates/control-plane/deployment.yaml).
@@ -79,9 +87,9 @@ cp "$UP/files/gateway-injection-template.yaml" files/v1x28/static/gateway-inject
 | `sidecar-injection-values.yaml` | Новый static-шаблон ссылается на `.Values.…`, которого нет в нашем JSON. Или осознанно меняется D8-логика (образы, CNI, sidecar ranges). |
 | `sidecar-injection-config.yaml` | Upstream изменил `defaultTemplates`, селекторы inject, или нужны новые имена шаблонов. Блоки **`d8-*`** — только Deckhouse, обычно копируются как есть. |
 
-**Как проверить, нужен ли values:** после `cp` static откройте новые `static/*.yaml`, поищите `.Values.` — если поле используется без запасного default в шаблоне, добавьте его в `sidecar-injection-values.yaml` (с D8-хелперами, как в `v1x27`).
+**Как проверить, нужен ли values:** после `cp` static откройте новые `static/*.yaml`, поищите `.Values.` — если поле используется без запасного default в шаблоне, добавьте его в `sidecar-injection-values.yaml` (с D8-хелперами, как в `v1x29`).
 
-**Как проверить config:** откройте upstream  
+**Как проверить config:** откройте upstream
 `$UP/templates/istiod-injector-configmap.yaml`, секция `config:` (до `templates:`) — сравните с верхом нашего `sidecar-injection-config.yaml`. Если Istio не менял policy/селекторы — не трогайте.
 
 ### Важно: не сравнивать наш JSON с upstream JSON

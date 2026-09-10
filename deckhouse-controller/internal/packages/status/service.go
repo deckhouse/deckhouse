@@ -53,6 +53,9 @@ const (
 
 	// ConditionReasonApplyingManifests indicates that nelm is applying manifests to the cluster
 	ConditionReasonApplyingManifests ConditionReason = "ApplyingManifests"
+	// ConditionReasonDeleting indicates that the package is being torn down. The
+	// mappers keep their own copy (condmap.ReasonDeleting): same word by intent, not by reference.
+	ConditionReasonDeleting ConditionReason = "Deleting"
 
 	// appQueueName labels the application notification workqueue for metrics.
 	appQueueName = "application-status"
@@ -118,6 +121,10 @@ type Status struct {
 
 	// URLs are application endpoints collected from the rendered manifests.
 	URLs []URL `json:"urls,omitempty"`
+
+	// deleting freezes the status once a removal is accepted: the teardown cancels
+	// the context, and the tasks unwinding from it would undo the Deleting conditions.
+	deleting bool
 }
 
 // URL is a single application endpoint collected from the rendered manifests.
@@ -186,6 +193,18 @@ func (s *Service) Shutdown() {
 	s.moduleQueue.ShutDown()
 }
 
+// mutableStatus returns the status a mutator may write to. A frozen one is
+// reported as absent, so every mutator refuses it exactly as it refuses an
+// unknown package. The caller must hold s.mu.
+func (s *Service) mutableStatus(name string) (*Status, bool) {
+	status, ok := s.statuses[name]
+	if !ok || status.deleting {
+		return nil, false
+	}
+
+	return status, true
+}
+
 // GetStatus retrieves a copy of the current status for a package by name ("namespace.name")
 // Returns a copy to prevent race conditions with concurrent modifications
 func (s *Service) GetStatus(name string) Status {
@@ -242,7 +261,7 @@ func (s *Service) IsConditionStatusTrue(name string, condition ConditionType) bo
 // SetConditionTrue marks a condition as successful and notifies listeners if changed
 func (s *Service) SetConditionTrue(name string, condition ConditionType) {
 	s.mu.Lock()
-	status, ok := s.statuses[name]
+	status, ok := s.mutableStatus(name)
 	if !ok {
 		s.mu.Unlock()
 		return
@@ -260,7 +279,7 @@ func (s *Service) SetConditionTrue(name string, condition ConditionType) {
 // SetConditionFalse marks a condition as successful and notifies listeners if changed
 func (s *Service) SetConditionFalse(name string, condition ConditionType, reason, message string) {
 	s.mu.Lock()
-	status, ok := s.statuses[name]
+	status, ok := s.mutableStatus(name)
 	if !ok {
 		s.mu.Unlock()
 		return
@@ -280,10 +299,44 @@ func (s *Service) SetConditionFalse(name string, condition ConditionType, reason
 	}
 }
 
+// SetDeleting marks every condition as failed with the Deleting reason, freezes
+// the status against further writes and notifies listeners once if anything
+// changed. Messages are kept — they are the last record of what the package was
+// doing, and the debug dump still serves them.
+func (s *Service) SetDeleting(name string) {
+	s.mu.Lock()
+	status, ok := s.statuses[name]
+	if !ok {
+		s.mu.Unlock()
+		return
+	}
+
+	var notify bool
+
+	// Every type already exists, so setCondition never appends and the range
+	// stays valid while it rewrites the elements in place.
+	for _, cond := range status.Conditions {
+		if status.setCondition(Condition{
+			Type:    cond.Type,
+			Status:  metav1.ConditionFalse,
+			Reason:  ConditionReasonDeleting,
+			Message: cond.Message,
+		}) {
+			notify = true
+		}
+	}
+	status.deleting = true
+	s.mu.Unlock()
+
+	if notify {
+		s.queueFor(name).Add(name)
+	}
+}
+
 // UpdateVersion sets the current version of package
 func (s *Service) UpdateVersion(name string, version string) {
 	s.mu.Lock()
-	status, ok := s.statuses[name]
+	status, ok := s.mutableStatus(name)
 	if !ok {
 		s.mu.Unlock()
 		return
@@ -301,7 +354,7 @@ func (s *Service) UpdateVersion(name string, version string) {
 // If the package is not tracked by the service, the update is silently ignored.
 func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 	s.mu.Lock()
-	status, ok := s.statuses[name]
+	status, ok := s.mutableStatus(name)
 	if !ok {
 		s.mu.Unlock()
 		return
@@ -332,12 +385,26 @@ func (s *Service) UpdateTracking(name string, report progrep.ProgressReport) {
 	s.queueFor(name).Add(name)
 }
 
+// ResetTracking drops the progress report left by the previous apply. Listeners
+// are not notified: an empty report is not published to the resource.
+func (s *Service) ResetTracking(name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	status, ok := s.statuses[name]
+	if !ok {
+		return
+	}
+
+	status.Tracking = Tracking{}
+}
+
 // UpdateURLs stores application endpoint URLs collected from the rendered
 // manifests and notifies listeners if they changed.
 // If the package is not tracked by the service, the update is silently ignored.
 func (s *Service) UpdateURLs(name string, urls []URL) {
 	s.mu.Lock()
-	status, ok := s.statuses[name]
+	status, ok := s.mutableStatus(name)
 	if !ok {
 		s.mu.Unlock()
 		return
@@ -360,7 +427,7 @@ func (s *Service) UpdateSettings(name string, settings addonutils.Values) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	status, ok := s.statuses[name]
+	status, ok := s.mutableStatus(name)
 	if !ok {
 		return
 	}
@@ -385,6 +452,11 @@ func (s *Service) UpdateHealth(name string, event health.Event) {
 	status, ok := s.statuses[name]
 	if !ok {
 		s.pendingHealth[name] = event
+		s.mu.Unlock()
+		return
+	}
+
+	if status.deleting {
 		s.mu.Unlock()
 		return
 	}
@@ -425,7 +497,7 @@ func (s *Service) HandleError(name string, cond ConditionType, err error) {
 	}
 
 	s.mu.Lock()
-	status, ok := s.statuses[name]
+	status, ok := s.mutableStatus(name)
 	if !ok {
 		s.mu.Unlock()
 		return
@@ -493,11 +565,15 @@ func (s *Status) IsConditionTrue(condType ConditionType) bool {
 	return false
 }
 
-// NewStatus creates a new status or resets conditions. If a health event
-// was buffered by UpdateHealth before this name was registered, it is
+// NewStatus creates a new status or resets conditions. ConditionScaled is carried
+// over instead: the health monitor owns it and reports only on transitions, so a
+// reset would leave the workload unobserved until it next changes state. If a
+// health event was buffered by UpdateHealth before this name was registered, it is
 // applied here and the buffer entry is dropped.
 func (s *Service) NewStatus(name string) {
 	s.mu.Lock()
+
+	scaled := s.observedScaledLocked(name)
 
 	s.statuses[name] = &Status{
 		Conditions: []Condition{
@@ -506,7 +582,7 @@ func (s *Service) NewStatus(name string) {
 			{Type: ConditionLoaded, Status: metav1.ConditionUnknown},
 			{Type: ConditionHooksProcessed, Status: metav1.ConditionUnknown},
 			{Type: ConditionManifestsApplied, Status: metav1.ConditionUnknown},
-			{Type: ConditionScaled, Status: metav1.ConditionUnknown},
+			scaled,
 			{Type: ConditionConfigured, Status: metav1.ConditionUnknown},
 			{Type: ConditionPending, Status: metav1.ConditionUnknown},
 			{Type: ConditionCustomResourcesApplied, Status: metav1.ConditionUnknown},
@@ -527,4 +603,28 @@ func (s *Service) NewStatus(name string) {
 	if notify {
 		s.queueFor(name).Add(name)
 	}
+}
+
+// observedScaledLocked returns the ConditionScaled to seed a fresh status with:
+// the value the health monitor last reported, or an Unknown placeholder
+// when it has not reported for this package. The caller must hold s.mu.
+func (s *Service) observedScaledLocked(name string) Condition {
+	if status, ok := s.statuses[name]; ok {
+		if cond, found := status.condition(ConditionScaled); found {
+			return cond
+		}
+	}
+
+	return Condition{Type: ConditionScaled, Status: metav1.ConditionUnknown}
+}
+
+// condition returns the condition of the given type.
+func (s *Status) condition(condType ConditionType) (Condition, bool) {
+	for _, cond := range s.Conditions {
+		if cond.Type == condType {
+			return cond, true
+		}
+	}
+
+	return Condition{}, false
 }

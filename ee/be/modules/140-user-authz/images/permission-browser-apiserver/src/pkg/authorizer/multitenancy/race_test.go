@@ -152,17 +152,27 @@ func TestEngine_ConcurrentDirectoryUpdate(t *testing.T) {
 	wg.Wait()
 }
 
-// TestEngine_ConcurrentNamespacedCacheAccess tests that namespaced cache access doesn't race
-func TestEngine_ConcurrentNamespacedCacheAccess(t *testing.T) {
+// TestEngine_ConcurrentClusterScopedAuthorize exercises cluster-scoped
+// Authorize against a shared ResourceScope from many goroutines.
+func TestEngine_ConcurrentClusterScopedAuthorize(t *testing.T) {
 	e := &Engine{
 		directory: map[string]map[string]DirectoryEntry{
-			"User":           {},
+			"User": {
+				"restricted": {
+					LimitNamespaces:        []*regexp.Regexp{regexp.MustCompile("^allowed-.*$")},
+					NamespaceFiltersAbsent: false,
+				},
+			},
 			"Group":          {},
 			"ServiceAccount": {},
 		},
-		namespacedCache: make(map[string]bool),
+		resourceScope: staticResourceScope{
+			"/pods":  true,
+			"/nodes": false,
+		},
 	}
 
+	ctx := context.Background()
 	const goroutines = 100
 	const iterations = 100
 
@@ -174,19 +184,20 @@ func TestEngine_ConcurrentNamespacedCacheAccess(t *testing.T) {
 			defer wg.Done()
 
 			for j := 0; j < iterations; j++ {
-				cacheKey := "apps/v1/deployments"
-
-				// Read
-				e.namespacedCacheMu.RLock()
-				_ = e.namespacedCache[cacheKey]
-				e.namespacedCacheMu.RUnlock()
-
-				// Write (every 10th iteration)
-				if j%10 == 0 {
-					e.namespacedCacheMu.Lock()
-					e.namespacedCache[cacheKey] = true
-					e.namespacedCacheMu.Unlock()
+				resource := "pods"
+				if id%2 == 0 {
+					resource = "nodes"
 				}
+
+				attrs := &mockAttrs{
+					userInfo:   &mockUserInfo{name: "restricted"},
+					resource:   resource,
+					verb:       "list",
+					isResource: true,
+				}
+
+				_, _, err := e.Authorize(ctx, attrs)
+				require.NoError(t, err)
 			}
 		}(i)
 	}

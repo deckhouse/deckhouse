@@ -27,6 +27,8 @@ const (
 	clusterAuthRuleSnapshot = "cluster_authorization_rules"
 )
 
+// The values are consumed by the authorization webhook configuration; the bindings of the rules
+// are reconciled by user-authz-controller.
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	Queue: internal.Queue(clusterAuthRuleSnapshot),
 	Kubernetes: []go_hook.KubernetesConfig{

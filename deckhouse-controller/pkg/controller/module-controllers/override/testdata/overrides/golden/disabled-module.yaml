@@ -1,0 +1,26 @@
+---
+apiVersion: deckhouse.io/v1alpha2
+kind: ModulePullOverride
+metadata:
+  name: test-module
+  resourceVersion: "1000"
+spec:
+  imageTag: main
+  scanInterval: 15s
+status:
+  message: The module disabled
+  updatedAt: null
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: Module
+metadata:
+  name: test-module
+  resourceVersion: "999"
+properties:
+  source: dev
+status:
+  conditions:
+  - lastProbeTime: null
+    lastTransitionTime: null
+    status: "False"
+    type: EnabledByModuleConfig

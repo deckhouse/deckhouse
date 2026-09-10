@@ -95,10 +95,10 @@ func (s *Store) Update(name, version string, settingsVersion int, settings addon
 			settingsVersion: settingsVersion,
 			settings:        settings,
 			maintenance:     maintenance,
-			cancels:         make(map[int]context.CancelFunc),
+			cancels:         make(map[int]context.CancelCauseFunc),
 		}
 
-		ctx := s.packages[name].newContext(EventUpdate)
+		ctx := s.packages[name].newContext(EventUpdate, errVersionChanged)
 		return ctx
 	}
 
@@ -109,7 +109,7 @@ func (s *Store) Update(name, version string, settingsVersion int, settings addon
 		pkg.maintenance = maintenance
 		pkg.removing = false
 
-		ctx := pkg.newContext(EventUpdate)
+		ctx := pkg.newContext(EventUpdate, errVersionChanged)
 		return ctx
 	}
 
@@ -165,9 +165,11 @@ func (s *Store) UpdateSettings(name string, settingsVersion int, settings addonu
 // For EventRemove: clears version and settings before renewing context, so a
 // subsequent Update sees the package as new (enabling re-create after remove).
 //
+// cause is reported by the tasks this cancels — see [Package.newContext].
+//
 // Returns nil if the package doesn't exist in the store, or if EventSchedule
 // arrives after removal has started and must not supersede teardown.
-func (s *Store) HandleEvent(event int, name string) context.Context {
+func (s *Store) HandleEvent(event int, name string, cause error) context.Context {
 	pkg, ok := s.packages[name]
 	if !ok {
 		return nil
@@ -185,7 +187,7 @@ func (s *Store) HandleEvent(event int, name string) context.Context {
 		pkg.removing = true
 	}
 
-	return pkg.newContext(event)
+	return pkg.newContext(event, cause)
 }
 
 // GetPendingSettings returns the latest settings and their schema version stored

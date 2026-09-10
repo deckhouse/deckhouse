@@ -47,10 +47,39 @@ func (i *Image) GetPullReference() string {
 	return i.pullReference
 }
 
+// NewManifestResultFromBytes wraps raw manifest bytes.
+//
+// The descriptor is derived from the bytes rather than left unset: a manifest's
+// digest is by definition the hash of its own bytes, and its media type is a
+// field inside it. Without this, GetDescriptor returned nil and GetMediaType
+// returned "" for every result built this way - the in-memory fake, chiefly -
+// so callers reading a digest through the fake dereferenced nil instead of
+// getting the answer production gives them.
 func NewManifestResultFromBytes(manifestBytes []byte) *ManifestResult {
-	return &ManifestResult{
-		rawManifest: manifestBytes,
+	res := &ManifestResult{rawManifest: manifestBytes}
+
+	digest, size, err := v1.SHA256(bytes.NewReader(manifestBytes))
+	if err != nil {
+		// Hashing an in-memory slice cannot fail; on the impossible path leave
+		// the descriptor unset rather than inventing one.
+		return res
 	}
+
+	var probe struct {
+		MediaType types.MediaType `json:"mediaType"`
+	}
+
+	// A manifest without a mediaType is legal in older schemas; an empty media
+	// type is a truthful answer there, so a parse failure is not fatal either.
+	_ = json.Unmarshal(manifestBytes, &probe)
+
+	res.descriptor = &v1.Descriptor{
+		MediaType: probe.MediaType,
+		Size:      size,
+		Digest:    digest,
+	}
+
+	return res
 }
 
 type ManifestResult struct {
@@ -68,6 +97,11 @@ func (m *ManifestResult) IsIndex() bool {
 
 var ErrIsIndexManifest = fmt.Errorf("manifest is an index")
 var ErrIsNotIndexManifest = fmt.Errorf("manifest is not an index")
+
+// GetRaw returns the manifest bytes as served, without decoding them.
+func (m *ManifestResult) GetRaw() []byte {
+	return m.rawManifest
+}
 
 func (m *ManifestResult) GetDescriptor() registry.Descriptor {
 	if m.descriptor == nil {

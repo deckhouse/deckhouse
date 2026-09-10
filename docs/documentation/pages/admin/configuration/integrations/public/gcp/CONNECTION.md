@@ -10,6 +10,12 @@ To manage Google Cloud resources using Deckhouse Kubernetes Platform, you need t
 The provider supports working with only one disk in the virtual machine template. Make sure the template contains only one disk.
 {% endalert %}
 
+{% alert level="warning" %}
+Starting with version 1.77, new clusters in Google Cloud use the Cilium CNI by default with pod traffic tunneling over VXLAN. In existing clusters, the CNI stays unchanged.
+
+Make sure all nodes run Linux kernel 5.8 or newer and that firewall rules allow UDP traffic between nodes. For the list of ports, see [Network interaction of the platform components](../../../../reference/network_interaction.html); for CNI settings, see [Internal network configuration](../../../configuration/network/internal/configuration.html).
+{% endalert %}
+
 ## Creating a service account
 
 You can find detailed instructions on how to create a service account in the [official Google Cloud documentation](https://cloud.google.com/iam/docs/service-accounts).

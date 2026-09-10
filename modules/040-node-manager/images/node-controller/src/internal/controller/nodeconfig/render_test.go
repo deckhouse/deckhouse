@@ -18,10 +18,12 @@ package nodeconfig
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"os"
 	"strconv"
 	"strings"
 	"testing"
@@ -32,15 +34,26 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/utils/ptr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	sigsyaml "sigs.k8s.io/yaml"
 
 	v1 "github.com/deckhouse/node-controller/api/deckhouse.io/v1"
 	internalv1alpha1 "github.com/deckhouse/node-controller/api/internal.deckhouse.io/v1alpha1"
 	nodecommon "github.com/deckhouse/node-controller/internal/common"
 	"github.com/deckhouse/node-controller/internal/testenv"
+	"github.com/deckhouse/node-controller/internal/webhook"
 )
+
+// renderedStorage is what renderSpec always puts in the desired spec: the guess
+// the cluster makes when nothing else names a disk.
+func renderedStorage() internalv1alpha1.Storage {
+	return internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{
+		DiskSelector: &internalv1alpha1.DiskSelector{Size: systemDiskSelectorSize},
+	}}
+}
 
 // TestKeepBootstrapOnlyFields covers the first master's first day-2 render:
 // only fields with no answer in the cluster survive the wholesale patch.
@@ -62,40 +75,37 @@ func TestKeepBootstrapOnlyFields(t *testing.T) {
 		},
 		Kubelet: internalv1alpha1.Kubelet{
 			ServerTLSBootstrap:  ptr.To(false),
-			NodeIP:              "10.0.0.10",
 			ResourceReservation: &internalv1alpha1.ResourceReservation{Mode: "Auto"},
 		},
+		// The machine minted it and nothing in the cluster can reissue it.
+		StatusToken: "e3b0c44298fc1c14",
 	}
 
 	tests := []struct {
-		name        string
-		existing    internalv1alpha1.NodeSpec
-		reportedIPs []string
-		expStorage  internalv1alpha1.Storage
-		expNetwork  internalv1alpha1.Network
-		expNodeIP   string
+		name       string
+		existing   internalv1alpha1.NodeSpec
+		expStorage internalv1alpha1.Storage
+		expNetwork internalv1alpha1.Network
 	}{
 		{
-			name:        "bootstrapped master keeps only what the cluster cannot render",
-			existing:    bootstrapped,
-			reportedIPs: []string{"10.0.0.10"},
-			expStorage:  bootstrapped.Storage,
-			expNodeIP:   "10.0.0.10",
+			name:       "bootstrapped master keeps only what the cluster cannot render",
+			existing:   bootstrapped,
+			expStorage: bootstrapped.Storage,
 		},
 		{
 			name:       "worker with nothing to keep is left as rendered",
 			existing:   internalv1alpha1.NodeSpec{},
-			expStorage: internalv1alpha1.Storage{},
+			expStorage: renderedStorage(),
 		},
 		{
-			// A selector alone is a field this controller renders itself, so it
-			// is re-rendered rather than kept — otherwise the threshold could
+			// The guess this controller renders itself is not the operator's, so
+			// it is re-rendered rather than kept — otherwise the threshold could
 			// never be corrected on a node that already exists.
-			name: "a selector without mounts is re-rendered",
+			name: "a selector equal to the rendered guess is re-rendered",
 			existing: internalv1alpha1.NodeSpec{
-				Storage: internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{DiskSelector: &internalv1alpha1.DiskSelector{Size: ">=2Gi"}}},
+				Storage: renderedStorage(),
 			},
-			expStorage: internalv1alpha1.Storage{},
+			expStorage: renderedStorage(),
 		},
 		{
 			// A statically addressed machine: the render must not put it back
@@ -110,7 +120,7 @@ func TestKeepBootstrapOnlyFields(t *testing.T) {
 					}},
 				},
 			},
-			expStorage: internalv1alpha1.Storage{},
+			expStorage: renderedStorage(),
 			expNetwork: internalv1alpha1.Network{
 				Hostname: "master-0",
 				Interfaces: []internalv1alpha1.NetworkInterface{{
@@ -126,7 +136,7 @@ func TestKeepBootstrapOnlyFields(t *testing.T) {
 					Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}},
 				},
 			},
-			expStorage: internalv1alpha1.Storage{},
+			expStorage: renderedStorage(),
 			expNetwork: internalv1alpha1.Network{Hostname: "master-0", Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}}},
 		},
 		{
@@ -156,6 +166,22 @@ func TestKeepBootstrapOnlyFields(t *testing.T) {
 				Mode:              "0700",
 			}}},
 		},
+		{
+			// The webhook calls wipe machine-owned and refuses it from every
+			// other writer, so a render that drops it is the one write nobody
+			// is left able to undo.
+			name: "the wipe a machine published survives a storage it renders otherwise",
+			existing: internalv1alpha1.NodeSpec{
+				Storage: internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{
+					DiskSelector: &internalv1alpha1.DiskSelector{Size: systemDiskSelectorSize},
+					Wipe:         true,
+				}},
+			},
+			expStorage: internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{
+				DiskSelector: &internalv1alpha1.DiskSelector{Size: systemDiskSelectorSize},
+				Wipe:         true,
+			}},
+		},
 	}
 
 	for _, tc := range tests {
@@ -164,6 +190,7 @@ func TestKeepBootstrapOnlyFields(t *testing.T) {
 			desired := internalv1alpha1.NodeSpec{
 				NodeName: "master-0",
 				Registry: rendered,
+				Storage:  renderedStorage(),
 				Network: internalv1alpha1.Network{
 					Hostname:   "master-0",
 					Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}},
@@ -171,10 +198,10 @@ func TestKeepBootstrapOnlyFields(t *testing.T) {
 				Kubelet: internalv1alpha1.Kubelet{MaxPods: 120},
 			}
 
-			keepBootstrapOnlyFields(&desired, &tc.existing, tc.reportedIPs)
+			keepBootstrapOnlyFields(&desired, &tc.existing)
 
 			require.Equal(t, tc.expStorage, desired.Storage)
-			require.Equal(t, tc.expNodeIP, desired.Kubelet.NodeIP)
+			require.Equal(t, tc.existing.StatusToken, desired.StatusToken)
 			if tc.expNetwork.Hostname != "" {
 				require.Equal(t, tc.expNetwork, desired.Network)
 			}
@@ -212,50 +239,8 @@ func TestRenderKernelPublishesEveryKeyANodeMustKeep(t *testing.T) {
 		Kernel: internalv1alpha1.Kernel{Sysctl: map[string]internalv1alpha1.SysctlValue{"kernel.panic": "0"}},
 	}
 	desired := internalv1alpha1.NodeSpec{Kernel: renderKernel()}
-	keepBootstrapOnlyFields(&desired, &stale, nil)
+	keepBootstrapOnlyFields(&desired, &stale)
 	require.Equal(t, internalv1alpha1.SysctlValue("10"), desired.Kernel.Sysctl["kernel.panic"])
-}
-
-// Nothing but this carry-over ever writes kubelet.nodeIP, so a re-IPed node
-// (DHCP lease, migration, rebuilt VM) used to stay pinned forever to an
-// address the cluster no longer routes to it.
-func TestKeepBootstrapOnlyFieldsReleasesAStaleNodeIP(t *testing.T) {
-	tests := []struct {
-		name        string
-		reportedIPs []string
-		expNodeIP   string
-	}{
-		{
-			name:        "the node still reports the address it was given",
-			reportedIPs: []string{"10.0.0.10"},
-			expNodeIP:   "10.0.0.10",
-		},
-		{
-			name:        "the node reports a different address now",
-			reportedIPs: []string{"10.0.0.77"},
-			expNodeIP:   "",
-		},
-		{
-			name:        "the node reports several, one of them the pinned one",
-			reportedIPs: []string{"10.0.0.77", "10.0.0.10"},
-			expNodeIP:   "10.0.0.10",
-		},
-		{
-			name:      "the node reports no address at all, so nothing contradicts it",
-			expNodeIP: "10.0.0.10",
-		},
-	}
-
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			existing := internalv1alpha1.NodeSpec{Kubelet: internalv1alpha1.Kubelet{NodeIP: "10.0.0.10"}}
-			desired := internalv1alpha1.NodeSpec{}
-
-			keepBootstrapOnlyFields(&desired, &existing, tc.reportedIPs)
-
-			require.Equal(t, tc.expNodeIP, desired.Kubelet.NodeIP)
-		})
-	}
 }
 
 // kubelet exits when --node-labels carries a label it may not accept, so a node
@@ -292,7 +277,7 @@ func TestRenderNodeLabelsDropsWhatKubeletRefuses(t *testing.T) {
 
 // The Node watch drops updates that cannot change the rendered spec (kubelet
 // heartbeats) but must not drop ones that can: labels are compared whole,
-// because the render carries them onto the node's kubelet.
+// because a NodeExtensionRequest can select on any label at all.
 func TestNodeRenderInputsChanged(t *testing.T) {
 	node := func(mutate func(*corev1.Node)) *corev1.Node {
 		n := &corev1.Node{
@@ -334,8 +319,8 @@ func TestNodeRenderInputsChanged(t *testing.T) {
 		},
 		{
 			name: "the node reports a new address",
-			// Read from the API server when it is needed, and stripped from the
-			// cached object, so it cannot be seen here either way.
+			// The node picks its own address from spec.internalNetworkCIDRs, so
+			// nothing here reads one; the cache strips them anyway.
 			after: node(func(n *corev1.Node) {
 				n.Status.Addresses = []corev1.NodeAddress{{Type: corev1.NodeInternalIP, Address: "10.0.0.77"}}
 			}),
@@ -616,7 +601,7 @@ func TestKeepBootstrapOnlyFieldsKeepsRegistrationTaints(t *testing.T) {
 
 	registered := &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0", CreationTimestamp: metav1.Now()}}
 	dayTwo := renderSpec(ng, registered, clusterInputs{})
-	keepBootstrapOnlyFields(&dayTwo, &bootstrap, nil)
+	keepBootstrapOnlyFields(&dayTwo, &bootstrap)
 
 	require.Equal(t, bootstrap, dayTwo, "the node it was written for reads as up to date")
 }
@@ -665,6 +650,95 @@ func kubebuilderMarkers(t *testing.T, path string) map[string]map[string]string 
 	})
 	require.NotEmpty(t, markers, "no markers read from %s", path)
 	return markers
+}
+
+// The shipped CRD is what the API server enforces; the render applies the same
+// numbers itself, for the bootstrap file path that never reaches it. One that
+// drifts gives a bootstrapping node different values than a day-2 one.
+func TestRenderDefaultsMatchTheShippedCRD(t *testing.T) {
+	schema := nodeConfigCRDSchema(t)
+
+	kubelet := func(field string) map[string]any {
+		return crdField(t, schema, "spec", "kubelet", field)
+	}
+	require.Equal(t, float64(maxPodsCeiling), kubelet("maxPods")["maximum"])
+	require.Equal(t, float64(defaultMaxPodsFor(intstr.FromInt(defaultPodSubnetNodeCIDRPrefix))), kubelet("maxPods")["default"])
+	require.Equal(t, defaultContainerLogMaxSize, kubelet("containerLogMaxSize")["default"])
+	require.Equal(t, float64(defaultContainerLogMaxFiles), kubelet("containerLogMaxFiles")["default"])
+	require.Equal(t, float64(defaultMaxConcurrentDownloads),
+		crdField(t, schema, "spec", "containerRuntime", "maxConcurrentDownloads")["default"])
+}
+
+// nodeConfigCRDSchema reads the NodeConfig CRD the module ships, located the way
+// the envtest suites locate it, and returns its single version's schema.
+func nodeConfigCRDSchema(t *testing.T) map[string]any {
+	t.Helper()
+
+	paths := testenv.NodeManagerCRDPaths(testenv.NodeConfigCRDFile)
+	require.Len(t, paths, 1)
+	raw, err := os.ReadFile(paths[0])
+	require.NoError(t, err, "the shipped NodeConfig CRD must be readable at %s", paths[0])
+
+	var crd struct {
+		Spec struct {
+			Versions []struct {
+				Schema struct {
+					OpenAPIV3Schema map[string]any `json:"openAPIV3Schema"`
+				} `json:"schema"`
+			} `json:"versions"`
+		} `json:"spec"`
+	}
+	require.NoError(t, sigsyaml.Unmarshal(raw, &crd))
+	require.Len(t, crd.Spec.Versions, 1)
+	return crd.Spec.Versions[0].Schema.OpenAPIV3Schema
+}
+
+// crdField walks the schema down a property path to one field.
+func crdField(t *testing.T, schema map[string]any, path ...string) map[string]any {
+	t.Helper()
+
+	node := schema
+	for _, name := range path {
+		properties, ok := node["properties"].(map[string]any)
+		require.True(t, ok, "nothing above %s has properties", name)
+		node, ok = properties[name].(map[string]any)
+		require.True(t, ok, "the CRD has no %s", name)
+	}
+	return node
+}
+
+// A NodeGroup leaves a taint's effect optional (crds/node_group.yaml:1944) and
+// kubelet cannot register a node with an effectless taint — it exits, and the
+// node never joins. Such a taint is dropped and reported instead.
+func TestRenderTaintsDropsWhatKubeletCannotRegister(t *testing.T) {
+	ng := &v1.NodeGroup{
+		ObjectMeta: metav1.ObjectMeta{Name: "worker"},
+		Spec: v1.NodeGroupSpec{NodeTemplate: &v1.NodeTemplate{Taints: []corev1.Taint{
+			{Key: "dedicated", Value: "frontend"},
+			{Key: "ship-class", Value: "frigate", Effect: corev1.TaintEffectNoExecute},
+		}}},
+	}
+
+	// A machine that has not joined yet: registration taints are only rendered
+	// for one.
+	spec := renderSpec(ng, &corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0"}}, clusterInputs{})
+	require.Equal(t, []internalv1alpha1.Taint{
+		{Key: "ship-class", Value: "frigate", Effect: string(corev1.TaintEffectNoExecute)},
+	}, spec.Kubelet.RegisterWithTaints)
+
+	recorder := record.NewFakeRecorder(10)
+	r := &Reconciler{}
+	r.Recorder = recorder
+	r.recordClampedSettings(ng)
+	close(recorder.Events)
+
+	var messages []string
+	for event := range recorder.Events {
+		messages = append(messages, event)
+	}
+	require.Len(t, messages, 1, "the operator has to be told which taint the nodes do not get")
+	require.Contains(t, messages[0], "dedicated")
+	require.Contains(t, messages[0], settingClampedEvent)
 }
 
 // kubelet compares label namespaces by suffix. Equality here dropped legal
@@ -737,10 +811,16 @@ func TestRenderedSpecPassesTheAgentSchema(t *testing.T) {
 			}}},
 		},
 		{
-			// crds/node_group.yaml:1944: effect is not required, key and value are bare strings.
-			name: "taint with no effect and a long key",
+			// crds/node_group.yaml:1944: key and value are bare strings. A taint
+			// with no effect is not here — it never reaches the object, kubelet
+			// having no way to register one (TestRenderTaintsDropsWhatKubeletCannotRegister).
+			name: "taint with a long key and value",
 			spec: v1.NodeGroupSpec{NodeTemplate: &v1.NodeTemplate{Taints: []corev1.Taint{
-				{Key: "dedicated.example.com/" + strings.Repeat("a", 300), Value: strings.Repeat("b", 80)},
+				{
+					Key:    "dedicated.example.com/" + strings.Repeat("a", 300),
+					Value:  strings.Repeat("b", 80),
+					Effect: corev1.TaintEffectNoSchedule,
+				},
 			}}},
 		},
 		{
@@ -781,4 +861,130 @@ func TestRenderedSpecPassesTheAgentSchema(t *testing.T) {
 			require.NoError(t, c.Patch(context.Background(), config, client.RawPatch(types.MergePatchType, []byte(tt.patch))))
 		})
 	}
+}
+
+// The rendered network is a guess — eth0 with DHCP — so a machine that named
+// its own interfaces keeps them. A machine that named none keeps the guess:
+// blanking the section leaves the node without a network after a reboot.
+func TestKeepBootstrapOnlyFieldsKeepsAMachineNamedNetwork(t *testing.T) {
+	rendered := internalv1alpha1.Network{
+		Hostname:   "worker-0",
+		Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}},
+	}
+	machineNamed := internalv1alpha1.Network{
+		Hostname: "worker-0",
+		Interfaces: []internalv1alpha1.NetworkInterface{{
+			Name: "bond0", Addresses: []string{"192.0.2.10/24"}, Gateway: "192.0.2.1",
+		}},
+	}
+
+	tests := []struct {
+		name     string
+		existing internalv1alpha1.Network
+		exp      internalv1alpha1.Network
+	}{
+		{
+			name:     "the interfaces the machine named survive the render",
+			existing: machineNamed,
+			exp:      machineNamed,
+		},
+		{
+			name:     "a node that named no interfaces is left with the rendered eth0",
+			existing: internalv1alpha1.Network{},
+			exp:      rendered,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			desired := internalv1alpha1.NodeSpec{Network: rendered}
+			existing := internalv1alpha1.NodeSpec{Network: tc.existing}
+
+			keepBootstrapOnlyFields(&desired, &existing)
+
+			require.Equal(t, tc.exp, desired.Network)
+		})
+	}
+}
+
+// renderNetwork answers only a hostname and interfaces, so a machine that set
+// nothing but resolvers has a network that differs from the render in fields
+// the render never fills. Judging emptiness by interfaces alone would drop them.
+func TestKeepBootstrapOnlyFieldsKeepsAResolverOnlyNetwork(t *testing.T) {
+	existing := internalv1alpha1.NodeSpec{Network: internalv1alpha1.Network{
+		DNS: internalv1alpha1.DNS{Servers: []string{"10.0.0.10"}},
+	}}
+	desired := internalv1alpha1.NodeSpec{Network: internalv1alpha1.Network{
+		Hostname:   "master-0",
+		Interfaces: []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}},
+	}}
+
+	keepBootstrapOnlyFields(&desired, &existing)
+
+	require.Equal(t, []string{"10.0.0.10"}, desired.Network.DNS.Servers,
+		"the resolvers the machine was given were dropped")
+	// The machine named no interfaces, so the rendered one has to stand: the OS
+	// renders its network from this spec, and one with no interface at all is a
+	// node with no address after a reboot.
+	require.Equal(t, []internalv1alpha1.NetworkInterface{{Name: "eth0", DHCP: true}}, desired.Network.Interfaces)
+	require.Equal(t, "master-0", desired.Network.Hostname)
+}
+
+// A worker installed by hand has no etcd mount, so the document the operator
+// merges into the template names nothing but the disk they picked. The node
+// publishes it once and has no way to publish it again, so a render that
+// overwrites the selector loses that disk for good.
+func TestKeepBootstrapOnlyFieldsKeepsAnOperatorWrittenDiskSelector(t *testing.T) {
+	rendered := internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{
+		DiskSelector: &internalv1alpha1.DiskSelector{Size: systemDiskSelectorSize},
+	}}
+	operatorWritten := internalv1alpha1.Storage{Disk: internalv1alpha1.Disk{
+		DiskSelector: &internalv1alpha1.DiskSelector{Serial: "S3Z8NB0K700001"},
+	}}
+
+	tests := []struct {
+		name     string
+		existing internalv1alpha1.Storage
+		exp      internalv1alpha1.Storage
+	}{
+		{
+			name:     "the disk the operator named survives the render",
+			existing: operatorWritten,
+			exp:      operatorWritten,
+		},
+		{
+			name:     "a node carrying nothing but the rendered guess keeps being rendered",
+			existing: internalv1alpha1.Storage{},
+			exp:      rendered,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			desired := internalv1alpha1.NodeSpec{Storage: *rendered.DeepCopy()}
+			existing := internalv1alpha1.NodeSpec{Storage: tc.existing}
+
+			keepBootstrapOnlyFields(&desired, &existing)
+
+			require.Equal(t, tc.exp, desired.Storage)
+		})
+	}
+}
+
+// An explicit zero is containerd's "no limit"; it has to reach the object as a
+// zero, not vanish behind omitempty and come back as the CRD default.
+func TestAnExplicitZeroDownloadsReachesTheAPI(t *testing.T) {
+	ng := &v1.NodeGroup{Spec: v1.NodeGroupSpec{CRI: &v1.CRISpec{Containerd: &v1.ContainerdSpec{MaxConcurrentDownloads: ptr.To(0)}}}}
+	data, err := json.Marshal(renderContainerRuntime(ng, clusterInputs{}))
+	require.NoError(t, err)
+	require.Contains(t, string(data), `"maxConcurrentDownloads":0`)
+}
+
+// The NodeConfig webhook carves out exactly this NIC for a machine that named
+// none, from a copy of its own (webhook.ClusterFallbackInterfaces). Drift here
+// denies that node's config on every pass, permanently.
+func TestRenderedFallbackNICMatchesTheWebhookCarveOut(t *testing.T) {
+	rendered := renderNetwork(&corev1.Node{ObjectMeta: metav1.ObjectMeta{Name: "worker-0"}})
+
+	require.Equal(t, webhook.ClusterFallbackInterfaces(), rendered.Interfaces)
 }

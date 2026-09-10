@@ -58,6 +58,11 @@ module Jekyll
           end
       end
 
+      if doc_edition == 'cse'
+        not_avail_in_this_edition = false
+        avail_in_commercial_editions_only = false
+      end
+
       entry_with_lang = "/%s%s" % [lang, entry['url']]
       page_url = @context.registers[:page]['url'].sub(/\/index.html?$/, '/')
       sidebar_group_page = @context.registers[:page]['sidebar_group_page']

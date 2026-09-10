@@ -1,0 +1,17 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: D8GpuResourceRestriction
+metadata:
+  name: test-custom-patterns
+spec:
+  enforcementAction: "deny"
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]
+  parameters:
+    namespaceLabel:
+      key: "custom.io/gpu-allowed"
+      value: "yes"
+    gpuResourcePatterns:
+      - '^amd\.com/gpu$'
+      - '^intel\.com/gpu$'

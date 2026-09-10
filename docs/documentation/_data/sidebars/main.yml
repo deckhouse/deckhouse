@@ -574,6 +574,10 @@ entries:
                             ru: ALB средствами Kubernetes Gateway API
                           url: /admin/configuration/network/ingress/alb/alb-gateway-api.html
                         - title:
+                            en: Migrating from ingress-nginx to alb
+                            ru: Миграция с ingress-nginx на alb
+                          url: /admin/configuration/network/ingress/alb/migration.html
+                        - title:
                             en: ALB with Istio
                             ru: ALB средствами Istio
                           url: /admin/configuration/network/ingress/alb/istio.html
@@ -898,6 +902,18 @@ entries:
                     ru: Управление проектами
                   url: /admin/multitenancy/project-management.html
             - title:
+                en: Managed-services
+                ru: Managed-сервисы
+              folders:
+                - title:
+                    en: Overview
+                    ru: Обзор
+                  url: /admin/configuration/managed-services/
+                - title:
+                    en: Managed PostgreSQL
+                    ru: Managed PostgreSQL
+                  url: /admin/configuration/managed-services/postgres/
+            - title:
                 en: Backup and restore
                 ru: Резервное копирование и восстановление
               url: /admin/configuration/backup/backup-and-restore.html
@@ -1023,7 +1039,23 @@ entries:
                 - title:
                     en: ALB
                     ru: ALB
-                  url: /user/network/ingress/alb.html
+                  folders:
+                    - title:
+                        en: Overview
+                        ru: Обзор
+                      url: /user/network/ingress/alb/
+                    - title:
+                        en: Kubernetes Gateway API
+                        ru: Kubernetes Gateway API
+                      url: /user/network/ingress/alb/gateway-api.html
+                    - title:
+                        en: Ingress NGINX Controller
+                        ru: Ingress NGINX Controller
+                      url: /user/network/ingress/alb/nginx.html
+                    - title:
+                        en: Istio
+                        ru: Istio
+                      url: /user/network/ingress/alb/istio.html
             - title:
                 en: SDN
                 ru: SDN
@@ -1147,6 +1179,18 @@ entries:
             en: Multitenancy
             ru: Мультитенантность
           url: /user/multitenancy/
+        - title:
+            en: Managed-services
+            ru: Managed-сервисы
+          folders:
+            - title:
+                en: Overview
+                ru: Обзор
+              url: /user/managed-services/
+            - title:
+                en: Managed PostgreSQL
+                ru: Managed PostgreSQL
+              url: /user/managed-services/postgres/
         - title:
             en: Monitoring
             ru: Мониторинг
@@ -1401,7 +1445,7 @@ entries:
             - title:
                 en: Pod-reloader module
                 ru: Модуль pod-reloader
-              url: /architecture/kubernetes-and-scheduling/pod-reloader.html              
+              url: /architecture/kubernetes-and-scheduling/pod-reloader.html
         - title:
             en: Cluster & Infrastructure subsystem
             ru: Подсистема Cluster & Infrastructure
@@ -1507,6 +1551,10 @@ entries:
                     ru: Модуль gpu
                   url: /architecture/cluster-and-infrastructure/infrastructure/gpu.html
                 - title:
+                    en: Registry-packages-proxy module
+                    ru: Модуль registry-packages-proxy
+                  url: /architecture/cluster-and-infrastructure/infrastructure/registry-packages-proxy.html
+                - title:
                     en: Terraform-manager module
                     ru: Модуль terraform-manager
                   url: /architecture/cluster-and-infrastructure/infrastructure/terraform-manager.html
@@ -1585,7 +1633,7 @@ entries:
             - title:
                 en: Cilium-hubble module
                 ru: Модуль cilium-hubble
-              url: /architecture/network/cilium-hubble.html              
+              url: /architecture/network/cilium-hubble.html
             - title:
                 en: Ingress-nginx module
                 ru: Модуль ingress-nginx
@@ -1727,6 +1775,14 @@ entries:
                 ru: Модуль observability
               url: /architecture/observability/observability.html
             - title:
+                en: Extended-monitoring module
+                ru: Модуль extended-monitoring
+              url: /architecture/observability/extended-monitoring.html              
+            - title:
+                en: Monitoring-kubernetes module
+                ru: Модуль monitoring-kubernetes
+              url: /architecture/observability/monitoring-kubernetes.html
+            - title:
                 en: Upmeter module
                 ru: Модуль upmeter
               url: /architecture/observability/upmeter.html
@@ -1749,7 +1805,7 @@ entries:
             - title:
                 en: Managed-postgres module
                 ru: Модуль managed-postgres
-              url: /architecture/managed-services/managed-postgres.html   
+              url: /architecture/managed-services/managed-postgres.html
             - title:
                 en: Managed-valkey module
                 ru: Модуль managed-valkey

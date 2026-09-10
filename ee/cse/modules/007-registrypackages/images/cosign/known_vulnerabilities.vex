@@ -1,0 +1,32 @@
+{
+  "@context": "https://openvex.dev/ns/v0.2.0",
+  "@id": "https://openvex.dev/docs/public/vex-registrypackages-cosign-go-2026-5932",
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 1,
+  "statements": [
+    {
+      "vulnerability": {
+        "@id": "https://pkg.go.dev/vuln/GO-2026-5932",
+        "description": "The golang.org/x/crypto/openpgp package is unmaintained, unsafe by design, and has known security issues that will not be fixed.",
+        "name": "GO-2026-5932"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/golang.org/x/crypto"
+        },
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.55.0"
+        },
+        {
+          "@id": "pkg:golang/golang.org/x/crypto@v0.56.0"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "GO-2026-5932 affects unmaintained golang.org/x/crypto/openpgp with no fixed version. In usr/bin/cosign the openpgp package is pulled in transitively via github.com/sigstore/rekor/pkg/pki/pgp. In the registrypackages scenario cosign is used as an install/signing utility during node bootstrap; the Rekor PGP entry parsing path is not on the module execute path. Revisit if cosign/rekor is invoked with PGP verification.",
+      "timestamp": "2026-09-03T12:00:00Z"
+    }
+  ],
+  "timestamp": "2026-09-03T12:00:00Z",
+  "last_updated": "2026-09-03T12:00:00Z"
+}

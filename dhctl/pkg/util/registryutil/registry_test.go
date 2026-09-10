@@ -20,6 +20,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/stretchr/testify/require"
 )
 
@@ -108,6 +109,20 @@ func TestNewRegistryTransport_HTTP(t *testing.T) {
 func TestNewRegistryTransport_InvalidCA(t *testing.T) {
 	_, err := NewRegistryTransport(t.Context(), "HTTPS", "-----BEGIN CERTIFICATE-----")
 	require.EqualError(t, err, "invalid cert in CA PEM")
+}
+
+func TestNewCARegistryTransport_VerifiesWithoutCA(t *testing.T) {
+	transport, err := NewCARegistryTransport(t.Context(), "")
+	require.NoError(t, err)
+	require.False(t, transport.TLSClientConfig != nil && transport.TLSClientConfig.InsecureSkipVerify)
+}
+
+func TestNameOptions(t *testing.T) {
+	for scheme, want := range map[string]string{"HTTP": "http", "http": "http", "HTTPS": "https", "": "https"} {
+		ref, err := name.ParseReference("nexus.example.com/deckhouse/ee:v1", NameOptions(scheme)...)
+		require.NoError(t, err)
+		require.Equal(t, want, ref.Context().Registry.Scheme(), scheme)
+	}
 }
 
 func TestNewRegistryClient_WithCA(t *testing.T) {

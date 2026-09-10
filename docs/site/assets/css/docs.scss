@@ -1272,43 +1272,15 @@ a.comparison-table__module-proprietaryOkmeter::after {
 
 // For anchorjs-link offset
 .docs :target {
-  scroll-margin-top: 60px;
+  scroll-margin-top: calc(var(--header-offset) - 65px);
 
-  @include breakpoints.max-w(xxl) {
-    scroll-margin-top: 50px;
-  }
-
-  @include breakpoints.max-w(xl) {
-    scroll-margin-top: 55px;
-  }
-
-  @include breakpoints.max-w(l) {
-    scroll-margin-top: 45px;
-  }
-
-  @include breakpoints.max-w(xxs) {
-    scroll-margin-top: 65px;
+  @media (min-width: 1200px) and (max-width: 1228px) {
+    scroll-margin-top: calc(var(--header-offset) - 75px);
   }
 }
 
 .layout-sidebar__content--tile :target {
   scroll-margin-top: 90px;
-}
-
-.layout-sidebar__content--guides :target {
-  scroll-margin-top: 50px;
-
-  @media (max-width: 1225px) {
-    scroll-margin-top: 65px;
-  }
-
-  @include breakpoints.max-w(l) {
-    scroll-margin-top: 40px;
-  }
-
-  @include breakpoints.max-w(xxs) {
-    scroll-margin-top: 70px;
-  }
 }
 
 .docs ul.resources li::before {
@@ -1717,7 +1689,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
     text-decoration: none;
 }
 
-.docs a:not(.alert__info):hover {
+.docs a:not(.alert__info, .anchorjs-link):hover {
     text-decoration: underline;
 }
 
@@ -1785,6 +1757,7 @@ a.comparison-table__module-proprietaryOkmeter::after {
     padding: 2px 4px;
     background: #eef2ff;
     white-space: normal;
+    word-wrap: break-word;
     border-radius: 4px;
 
     @include breakpoints.max-w(s) {
@@ -1967,10 +1940,6 @@ a.comparison-table__module-proprietaryOkmeter::after {
     @include breakpoints.max-w(xs) {
       border-left: 2px solid #0066FF;
     }
-}
-
-.docs .anchorjs-link:hover {
-    text-decoration: none;
 }
 
 .docs {

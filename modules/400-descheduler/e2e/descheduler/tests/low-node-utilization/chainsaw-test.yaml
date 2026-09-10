@@ -10,12 +10,19 @@ spec:
     exec: 120s
 
   steps:
-    - name: assert-descheduler-ready
-      description: Verify that the descheduler deployment exists and is ready
+    - name: assert-module-installed
+      description: >-
+        Verify that the descheduler module is installed. The module renders the descheduler
+        Deployment only when at least one Descheduler CR exists, so the Deployment cannot be
+        asserted here: this test creates its own CR later and checks readiness after that.
       try:
-        - description: Check descheduler deployment has ready replicas
+        - description: Assert the Descheduler CRD exists
           assert:
-            file: ../common/asserts/assert-descheduler-ready.yaml
+            resource:
+              apiVersion: apiextensions.k8s.io/v1
+              kind: CustomResourceDefinition
+              metadata:
+                name: deschedulers.deckhouse.io
 
     - name: check-minimum-nodes
       description: Verify that the cluster has at least 2 worker nodes for the balancing test
@@ -165,6 +172,18 @@ spec:
     - name: wait-descheduler-ready
       description: Wait for descheduler deployment to be ready with the new policy
       try:
+        - description: >-
+            Assert the Deployment exists before waiting on it. Deckhouse creates it in
+            reaction to this test's CR, and the `wait` operation below shells out to
+            `kubectl wait`, which fails immediately on a missing object instead of retrying.
+          assert:
+            timeout: 120s
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: descheduler
+                namespace: d8-descheduler
         - description: Wait for descheduler deployment Available condition
           wait:
             apiVersion: apps/v1
