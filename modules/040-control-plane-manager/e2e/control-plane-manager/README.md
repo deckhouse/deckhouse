@@ -155,7 +155,9 @@ kubectl get controlplaneoperations -n kube-system
 control-plane-manager/
 ├── Makefile                   # SSH entrypoint (make install / make test)
 ├── .env.example               # SSH / remote path settings
-├── Taskfile.yaml              # local Task includes for all scenarios
+├── README.md
+├── FUNCTIONS.md               # functions.sh reference with usage examples
+├── Taskfile.yaml              # root Task includes for all scenarios
 ├── chainsaw-config.yaml       # shared timeouts and execution settings
 ├── functions.sh               # shared kubectl/CPO helpers
 ├── scripts/
@@ -163,16 +165,28 @@ control-plane-manager/
 │   ├── run-tests.sh           # rsync tests and run chainsaw over SSH
 │   └── ssh-opts.sh            # shared SSH / ProxyJump helpers
 └── tests/
+    ├── Taskfile.common.yml    # shared Task definitions, included (flattened) by each scenario's Taskfile.yml
     ├── basic-audit-policy/
     │   ├── chainsaw-test.yaml
+    │   ├── basic_audit_policy.md
     │   ├── manifests/
     │   ├── scripts/
     │   │   └── functions.sh   # symlink to ../../../functions.sh
     │   └── Taskfile.yml
     ├── basic-audit-policy-maintenance/
+    │   ├── chainsaw-test.yaml
+    │   ├── basic_audit_policy_maintenance.md
+    │   ├── manifests/
+    │   │   ├── moduleconfig-maintenance-only.yaml
+    │   │   └── moduleconfig-maintenance.yaml
+    │   ├── scripts/
+    │   │   └── functions.sh   # symlink to ../../../functions.sh
+    │   └── Taskfile.yml
     └── feature-gates/
         ├── chainsaw-test.yaml
+        ├── feature_gates.md
         ├── manifests/         # example only; runtime manifest is generated
+        ├── remote-fixtures    # repo files to stage into this test dir for SSH remote runs
         ├── scripts/
         │   ├── functions.sh   # symlink to ../../../functions.sh
         │   └── feature-gates.sh
@@ -193,6 +207,8 @@ Per-scenario details: `tests/basic-audit-policy/basic_audit_policy.md`, `tests/b
 - `snapshot_flag_state`, `assert_flag_state_matches`, `assert_no_new_component_cpo`, `remove_moduleconfig_maintenance` — maintenance-mode scenarios
 
 The `feature-gates` scenario adds `scripts/feature-gates.sh` for reading `candi/feature_gates_map.yml` and building `enabledFeatureGates` dynamically.
+
+Full reference for every function, with a real usage example pulled from each scenario: [FUNCTIONS.md](FUNCTIONS.md).
 
 ## Available Tests
 

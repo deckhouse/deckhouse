@@ -32,13 +32,14 @@ A [Kyverno Chainsaw](https://kyverno.github.io/chainsaw/) e2e test that validate
 | `scripts/functions.sh` | Symlink to shared kubectl/CPO helpers |
 | `scripts/feature-gates.sh` | Feature gates map parsing and ModuleConfig generation |
 | `manifests/moduleconfig-target.yaml` | Example only; the test generates the real manifest at runtime |
+| `remote-fixtures` | Lists repo files to stage into this test dir for SSH remote runs (here: `candi/feature_gates_map.yml`, staged to `fixtures/feature_gates_map.yml`) — see `../../README.md` |
 
 ## Dynamic ModuleConfig
 
 At runtime `prepare_feature_gates_test`:
 
 1. Reads Kubernetes minor version from the API server (`kubectl version`, e.g. `1.34`)
-2. Loads `../../../../../../candi/feature_gates_map.yml` (override with `CPM_E2E_FEATURE_GATES_MAP`)
+2. Resolves the feature gates map, in order: `$CPM_E2E_FEATURE_GATES_MAP` if set, then `./fixtures/feature_gates_map.yml` (staged for SSH remote runs via `remote-fixtures`), then `../../../../../../candi/feature_gates_map.yml` (a local Deckhouse repo checkout), then `/deckhouse/candi/feature_gates_map.yml` (a Deckhouse node path)
 3. Unions gates from `apiserver`, `kubeControllerManager`, `kubeScheduler`, and `kubelet`, excluding `forbidden` and `deprecated`
 4. Writes `${CPM_E2E_FG_STATE_DIR}/moduleconfig-target.yaml`
 
@@ -52,6 +53,9 @@ task run
 
 # From control-plane-manager e2e root
 task feature-gates:run
+
+# Or directly
+chainsaw test --test-dir . --config ../../chainsaw-config.yaml
 ```
 
 ## Pass/Fail Criteria
