@@ -112,3 +112,35 @@ Svace `DEREF_OF_NULL` finding in this build (see `SvaceBuildOptions` in
 
 Test `~/src/kind/d8-1.20-tests/018-icmp-nil-type/` (unit test; its negative
 control runs the same test against a pristine v1.20.1 worktree, where it panics)
+
+## Dropped
+
+Patches from the 1.17 stack that are not carried on 1.20, with the evidence:
+
+### 011-bpf-lb-use-random-lb-algo-for-hostport-serives-fixed.patch
+
+Both halves are obsolete.
+
+The `default:` arm of `lb{4,6}_select_backend_id()` used to `return 0` for an
+algorithm value it did not recognise, leaving the service with no backend.
+Upstream now falls back to `lb_default_algorithm()` there, which is exactly what
+the patch did.
+
+Forcing random selection for HostPort was needed because HostPort
+pseudo-services had no Maglev table. In 1.20 they do: `SVCTypeHostPort` is in the
+list of service types `useMaglev()` provisions a LUT for
+(`pkg/loadbalancer/reconciler/bpf_reconciler.go`). Verified on the kind cluster
+with `bpf-lb-algorithm: maglev` on **unpatched** v1.20.1 -- a hostPort answers
+from its own node and from another node, and a NodePort service keeps working.
+
+Test kept as the evidence record: `~/src/kind/d8-1.20-tests/011-hostport-lb-algo/`
+(it passes on the unpatched image, which is the point).
+
+### 019-ipcache-no-deadlock-on-label-injection.patch
+
+`IPCache.UpdatePolicyMaps()` was removed upstream (`cilium#39970`), so the
+deadlock the patch worked around cannot occur and the patch cannot apply.
+
+### 020-policy-nil-safe-selector-policy-detach.patch
+
+`pkg/policy/distillery.go` is gone and the nil check is present upstream.
