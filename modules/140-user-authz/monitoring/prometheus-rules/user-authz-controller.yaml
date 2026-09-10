@@ -208,30 +208,3 @@
         d8 k get clusterrole -o name | grep 'user-authz:.*:custom' | xargs -n1 d8 k get -o yaml
         d8 k -n kube-system logs -l component=kube-controller-manager --tail=200 | grep -i aggregat
         ```
-
-  - alert: D8UserAuthzRuleNeedsMultiTenancy
-    expr: |
-      max by (name, options) (d8_user_authz_rule_needs_multitenancy) > 0
-    for: 10m
-    labels:
-      severity_level: "5"
-      tier: cluster
-      d8_module: user-authz
-      d8_component: user-authz-controller
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_user_authz_controller_malfunctioning: "D8UserAuthzControllerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_user_authz_controller_malfunctioning: "D8UserAuthzControllerMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      summary: A ClusterAuthorizationRule asks for namespace limits that nothing enforces.
-      description: |-
-        The `ClusterAuthorizationRule` `{{ $labels.name }}` sets `{{ $labels.options }}`, but `userAuthz.enableMultiTenancy` is off, so the authorization webhook that enforces those options is not deployed.
-
-        The rule is not partially applied. It is applied without its limits: the subjects named in it hold its access level in **every** namespace of the cluster, the system ones included.
-
-        Either turn multi-tenancy on, or take the options out of the rule so that it says what it does:
-
-        ```bash
-        d8 k get clusterauthorizationrule {{ $labels.name }} -o yaml
-        d8 k get moduleconfig user-authz -o jsonpath='{.spec.settings.enableMultiTenancy}'
-        ```

@@ -228,7 +228,7 @@ The `rules source: directory rebuilt from N rules` line shows the informer has l
 
 | Metric | Description |
 |---|---|
-| `user_authz_webhook_rules_informer_synced` | `1` once the webhook has listed the `ClusterAuthorizationRules` at least once. While it is `0`, every subject bound by a rule binding is denied |
+| `user_authz_webhook_rules_informer_synced` | `1` once the webhook has listed the `ClusterAuthorizationRules` at least once. While it is `0` the instance is unready and refuses authorization requests with an error rather than a denial, so the API server does not cache the refusal |
 | `user_authz_webhook_rules_observed` | Rules the current directory was built from |
 | `user_authz_webhook_rules_subjects` | Distinct subjects in the current directory |
 | `user_authz_webhook_rules_max_resource_version` | Highest `resourceVersion` among the observed rules — the watermark to compare against the cluster when measuring lag |
@@ -237,17 +237,17 @@ The `rules source: directory rebuilt from N rules` line shows the informer has l
 | `user_authz_webhook_rules_directory_rebuilds_total`, `user_authz_webhook_rules_directory_rebuild_duration_seconds` | Number of rebuilds and the time they take |
 | `user_authz_webhook_rules_watch_errors_total` | List/watch errors of the rules informer |
 
-Permission Browser exports the same set under the `user_authz_permission_browser` prefix. It serves them the same way, on a loopback endpoint behind a `kube-rbac-proxy` sidecar, collected by the `PodMonitor` `permission-browser-apiserver`; its own API server port stays behind the aggregation layer, which Prometheus cannot scrape. Two alerts watch it: `D8UserAuthzPermissionBrowserTargetDown` and `D8UserAuthzPermissionBrowserRulesNotSynced`. A rule that does not compile, or a watch that keeps failing, is a property of the cluster rather than of one consumer, so the webhook alerts above already report it.
+Permission Browser exports the same set under the `user_authz_permission_browser` prefix. It serves them the same way, on a loopback endpoint behind a `kube-rbac-proxy` sidecar, collected by the `PodMonitor` `permission-browser-apiserver`; its own API server port stays behind the aggregation layer, which Prometheus cannot scrape. It has one alert of its own, `D8UserAuthzPermissionBrowserUnavailable`, which watches its replicas. It deliberately has no alert on its rules: unlisted or stale rules make it unready, unready takes it out of its Service, and that is what `Unavailable` already reports. A rule that does not compile, or a watch that keeps failing, is a property of the cluster rather than of one consumer, so the webhook alerts above cover it.
 
 **Alerts** (in the `d8_user_authz` Prometheus rules, grouped as `D8UserAuthzWebhookMalfunctioning`):
 
-- `D8UserAuthzWebhookTargetDown` when the webhook is not scraped for 5 minutes (while it is active the other alerts below cannot fire).
-- `D8UserAuthzWebhookRulesNotSynced` when an instance has not listed the rules for 10 minutes.
+- `D8UserAuthzWebhookTargetDown` when any instance has not been scraped for 5 minutes — per instance, not only when all of them are gone, because on several masters one silent instance is the case worth knowing about.
 - `D8UserAuthzWebhookRulesQuarantined` when a rule does not compile for 10 minutes.
-- `D8UserAuthzWebhookRulesWatchErrors` on a sustained watch error rate for 15 minutes.
-- `D8UserAuthzWebhookRulesStale` when the directory has not been rebuilt for a day (expected in a cluster where the rules do not change).
+- `D8UserAuthzWebhookRulesWatchErrors` on a sustained watch error rate for 10 minutes.
 
-Two more watch the masters against each other, which single-instance metrics cannot: `D8UserAuthzWebhookDirectoryDiverged` when the instances have been built from different sets of rules for 10 minutes — the same request is then answered differently depending on which master takes it — and `D8UserAuthzRulePropagationLag` when one instance has not rebuilt its directory for an hour while another has, which is the asymmetric case where the two agree on the highest `resourceVersion` they have seen and still differ. The second condition of that one is what keeps a cluster whose rules genuinely never change from firing it.
+There is deliberately no alert for "this instance has not listed the rules": that state makes the instance unready, and an unready instance is already visible as a held rollout and as `D8UserAuthzWebhookTargetDown` if it stops answering. Note that the `PodMonitor` does **not** drop unready pods — an instance whose watch has broken is exactly the one these alerts are about, so filtering it out would make them blind at the moment they became true.
+
+Two more watch the masters against each other, which single-instance metrics cannot: `D8UserAuthzWebhookDirectoryDiverged` when the instances have been built from different sets of rules for 10 minutes — the same request is then answered differently depending on which master takes it — and `D8UserAuthzRulePropagationLag` when the oldest instance has not rebuilt its directory for an hour while the newest has within it. The second condition is what keeps a quiet cluster silent: where nothing changes, every instance is equally old and the alert does not fire. Neither can fire on a single-master cluster, which is correct — there is nothing to compare.
 
 ## Why does a change to a ClusterAuthorizationRule take up to 30 seconds to take effect?
 
@@ -266,6 +266,40 @@ d8 k auth can-i --as=user@example.com get pods -n other-namespace
 ```
 
 The window cannot be flushed without restarting `kube-apiserver`. It is also why the webhook answers `503` rather than a denial while its caches are still filling at startup: a denial would be remembered for 30 seconds after the webhook is ready to answer properly.
+
+## What does it mean when a rule "needs multi-tenancy"?
+
+`limitNamespaces`, `namespaceSelector` and `allowAccessToSystemNamespaces` are enforced by the
+authorization webhook, and that webhook is deployed only when
+[`enableMultiTenancy`](configuration.html#parameters-enablemultitenancy) is on. A rule that sets one
+of them while it is off is **not partially applied** — it is applied without its limits. The subjects
+named in it hold the rule's access level in every namespace of the cluster, the system ones
+included.
+
+This used to be a `fail` in the chart, which stopped the whole module from rendering: one rule,
+writable by anyone allowed to create them, froze every other change to the module, and the message
+reached only whoever read the release logs. It is reported instead.
+
+| Metric | Description |
+|---|---|
+| `d8_user_authz_rule_needs_multitenancy{name,options}` | One series per affected rule, up to fifty, with the options that will not take effect. |
+| `d8_user_authz_rules_needing_multitenancy` | How many rules are affected in total, including those past the fifty named above. |
+
+Two alerts read them: `D8UserAuthzRuleNeedsMultiTenancy` names an individual rule, and
+`D8UserAuthzRulesNeedMultiTenancy` fires when there are more of them than the first alert will name.
+Both sit in the `D8UserAuthzMisconfigured` group — this is a statement about configuration, not
+about a component being unhealthy.
+
+Only values that ask for something count: a rule that spells out `allowAccessToSystemNamespaces:
+false`, or whose `limitNamespaces` is an empty list, needs nothing the webhook would enforce and is
+not reported.
+
+Either turn multi-tenancy on, or take the options out of the rules so that they say what they do:
+
+```bash
+d8 k get moduleconfig user-authz -o jsonpath='{.spec.settings.enableMultiTenancy}'
+d8 k get clusterauthorizationrule -o json | jq -r '.items[] | select((.spec.limitNamespaces // [] | length > 0) or (.spec.namespaceSelector != null) or (.spec.allowAccessToSystemNamespaces == true)) | .metadata.name'
+```
 
 ## How do I extend a role or create a new one?
 

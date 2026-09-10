@@ -140,16 +140,46 @@ func TestWrapRegex_AlternationDoesNotLeakASuffixMatch(t *testing.T) {
 	}
 }
 
+// The quoted-run hole, stated as the access it granted: a rule limited to `\Q(\E|x` used to open
+// every namespace whose name ended in "x".
+func TestWrapRegex_QuotedRunDoesNotHideAnAlternation(t *testing.T) {
+	t.Parallel()
+	c := newCompileCache()
+	m, err := c.compile(`\Q(\E|x`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, ns := range []string{"(", "x"} {
+		if !m.Matches(ns) {
+			t.Errorf("%q must be covered: it is one of the branches as written", ns)
+		}
+	}
+	if m.Matches("attacker-x") {
+		t.Error(`"attacker-x" must NOT be covered: the alternation inside a quoted run is still an alternation`)
+	}
+}
+
 func TestHasTopLevelAlternation(t *testing.T) {
 	t.Parallel()
 	for in, want := range map[string]bool{
-		"a|b":         true,
-		"^a|b$":       true,
-		"a":           false,
-		"(a|b)":       false,
-		"(a|b)|c":     true,
-		"[a|b]":       false,
-		"[a|b]|c":     true,
+		"a|b":     true,
+		"^a|b$":   true,
+		"a":       false,
+		"(a|b)":   false,
+		"(a|b)|c": true,
+		"[a|b]":   false,
+		"[a|b]|c": true,
+		// RE2 supports \Q...\E, and everything inside is literal - including a "(" that opens no
+		// group. A scanner that misses this believes it is inside a group at the "|", leaves the
+		// pattern anchored by concatenation, and the second branch then matches any name that
+		// merely ENDS in it.
+		`\Q(\E|x`:     true,
+		`\Q|\E`:       false,
+		`\Qa|b\E`:     false,
+		`\Qa|b\E|c`:   true,
+		`\Q[\E|x`:     true,
+		`\Q\E|x`:      true,
+		`a\Q(\Eb`:     false,
 		`a\|b`:        false,
 		`\[a|b`:       true,
 		"((a|b)|c)":   false,

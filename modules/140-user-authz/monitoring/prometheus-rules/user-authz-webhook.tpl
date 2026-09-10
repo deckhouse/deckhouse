@@ -11,7 +11,7 @@
   - alert: D8UserAuthzWebhookTargetDown
     expr: |
       (
-        sum(up{job="user-authz-webhook", namespace="d8-user-authz"}) == 0
+        count(up{job="user-authz-webhook", namespace="d8-user-authz"} == 0) > 0
         or
         absent(up{job="user-authz-webhook", namespace="d8-user-authz"})
       )
@@ -28,47 +28,15 @@
       plk_grouped_by__d8_user_authz_webhook_malfunctioning: "D8UserAuthzWebhookMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: Prometheus is unable to scrape the user-authz webhook.
       description: |-
-        Prometheus cannot collect metrics from `user-authz-webhook` in the `d8-user-authz` namespace.
+        Prometheus cannot collect metrics from at least one instance of `user-authz-webhook` in the `d8-user-authz` namespace. It fires per instance, not only when every one of them is gone: on a cluster with several masters, one silent instance is exactly the case worth knowing about, and summing across them would hide it.
 
-        The webhook keeps authorizing requests, but while this alert is active the other webhook alerts cannot fire: a webhook that has not listed the `ClusterAuthorizationRules`, or that quarantined a rule, will go unnoticed.
+        What that instance is doing with authorization is not knowable from here, and both possibilities matter. If it is running and only its metrics are unreachable, it keeps answering and the other alerts below cannot see it — a rule it quarantined, or rules it never listed, go unnoticed. If it is not running, or has not listed the rules yet, it answers `503` to every authorization request that reaches it, which the API server treats as a failure and denies, because the webhook is configured to fail closed.
 
         Check the DaemonSet, its metrics sidecar and the scrape target:
 
         ```bash
         d8 k -n d8-user-authz get pods -l app=user-authz-webhook -o wide
         d8 k -n d8-user-authz logs -l app=user-authz-webhook -c kube-rbac-proxy --tail=50
-        ```
-
-  - alert: D8UserAuthzWebhookRulesNotSynced
-    expr: |
-      count by (namespace) (
-        user_authz_webhook_rules_informer_synced{job="user-authz-webhook", namespace="d8-user-authz"} == 0
-      ) > 0
-    for: 10m
-    labels:
-      severity_level: "6"
-      tier: cluster
-      d8_module: user-authz
-      d8_component: user-authz-webhook
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_user_authz_webhook_malfunctioning: "D8UserAuthzWebhookMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_user_authz_webhook_malfunctioning: "D8UserAuthzWebhookMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      summary: The user-authz webhook has not listed the ClusterAuthorizationRules.
-      description: |-
-        For more than 10 minutes at least one `user-authz-webhook` instance has not listed the `ClusterAuthorizationRules` (its rules informer reports `synced=0`).
-
-        While the rules are not listed, the webhook keeps every subject that a controller-managed ClusterRoleBinding binds maximally restricted: those users are denied namespaced and cluster-scoped access until the rules arrive. The restriction lifts on its own once the informer syncs.
-
-        A cluster where the `ClusterAuthorizationRule` CRD does not exist at all also reports `synced=0`; in that case there are no rules and no rule bindings, so nobody is restricted.
-
-        Check the webhook and its access to the CRD:
-
-        ```bash
-        d8 k -n d8-user-authz get pods -l app=user-authz-webhook -o wide
-        d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100
-        d8 k get crd clusterauthorizationrules.deckhouse.io
         ```
 
   - alert: D8UserAuthzWebhookRulesQuarantined
@@ -103,7 +71,7 @@
       sum by (namespace) (
         rate(user_authz_webhook_rules_watch_errors_total{job="user-authz-webhook", namespace="d8-user-authz"}[5m])
       ) > 0
-    for: 15m
+    for: 10m
     labels:
       severity_level: "7"
       tier: cluster
@@ -123,35 +91,6 @@
         ```bash
         d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100
         d8 k auth can-i watch clusterauthorizationrules.deckhouse.io --as=system:serviceaccount:d8-user-authz:webhook
-        ```
-
-  - alert: D8UserAuthzWebhookRulesStale
-    expr: |
-      min by (namespace) (
-        time() - user_authz_webhook_rules_directory_updated_timestamp_seconds{job="user-authz-webhook", namespace="d8-user-authz"}
-      ) > 86400
-    for: 30m
-    labels:
-      severity_level: "8"
-      tier: cluster
-      d8_module: user-authz
-      d8_component: user-authz-webhook
-    annotations:
-      plk_protocol_version: "1"
-      plk_markup_format: "markdown"
-      plk_create_group_if_not_exists__d8_user_authz_webhook_malfunctioning: "D8UserAuthzWebhookMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      plk_grouped_by__d8_user_authz_webhook_malfunctioning: "D8UserAuthzWebhookMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
-      summary: The user-authz webhook has not rebuilt its rules directory for a day.
-      description: |-
-        The `user-authz-webhook` has not rebuilt its `ClusterAuthorizationRule` directory for more than 24 hours. That is normal in a cluster where nobody changes the rules, and expected where there are none.
-
-        It is worth a look only together with a change that should have arrived: if a rule was edited and this timestamp did not move, the webhook is serving a frozen directory and is enforcing the rules as they were.
-
-        Compare what the webhook holds with what the cluster has:
-
-        ```bash
-        d8 k get clusterauthorizationrules -o custom-columns=NAME:.metadata.name,RV:.metadata.resourceVersion
-        d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100
         ```
 
   - alert: D8UserAuthzWebhookDirectoryDiverged
@@ -190,11 +129,11 @@
   - alert: D8UserAuthzRulePropagationLag
     expr: |
       (
-        max(rate(user_authz_webhook_rules_directory_rebuilds_total{job="user-authz-webhook", namespace="d8-user-authz"}[1h])) > 0
+        time() - min(user_authz_webhook_rules_directory_updated_timestamp_seconds{job="user-authz-webhook", namespace="d8-user-authz"}) > 3600
       )
       and
       (
-        min(rate(user_authz_webhook_rules_directory_rebuilds_total{job="user-authz-webhook", namespace="d8-user-authz"}[1h])) == 0
+        time() - max(user_authz_webhook_rules_directory_updated_timestamp_seconds{job="user-authz-webhook", namespace="d8-user-authz"}) < 3600
       )
     for: 15m
     labels:
@@ -213,7 +152,9 @@
 
         This is the asymmetric case that `D8UserAuthzWebhookDirectoryDiverged` can miss: the instances can agree on the highest `resourceVersion` they have seen and still differ, if the one that is behind simply stopped receiving events rather than falling behind on a particular object.
 
-        Both halves are rates rather than counter values, and that is not cosmetic: `rebuilds_total` is a per-process counter that starts at zero, so comparing the values directly meant that one Pod restart left `max - min` permanently positive and the alert permanently on. The rate over an hour says what was actually meant — somebody is rebuilding, somebody is not — and it survives restarts. A cluster whose rules genuinely never change has every instance at rate zero and stays silent.
+        Both halves read the same gauge — when each instance last rebuilt — and compare it against the same hour. The oldest instance has not rebuilt within it and the newest has, which is the definition of one instance being left behind while the others move.
+
+        It is written that way on purpose. An earlier version compared `rebuilds_total` between instances, and that is a per-process counter which starts at zero: one Pod restart left `max - min` permanently positive, and on any quiet cluster the other half was true too, so the alert simply stayed on. A timestamp says the same thing without a value that a restart resets, and a cluster whose rules genuinely never change has every instance equally old, so the second condition is false and it stays silent.
 
         ```bash
         d8 k -n d8-user-authz get pods -l app=user-authz-webhook -o wide

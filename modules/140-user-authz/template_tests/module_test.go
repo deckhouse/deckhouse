@@ -303,7 +303,7 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 
 			rule := f.KubernetesResource("PrometheusRule", "d8-system", "user-authz-user-authz-webhook")
 			Expect(rule.Exists()).To(BeTrue())
-			Expect(rule.Field("spec.groups").String()).To(ContainSubstring("D8UserAuthzWebhookRulesNotSynced"))
+			Expect(rule.Field("spec.groups").String()).To(ContainSubstring("D8UserAuthzWebhookRulesQuarantined"))
 			// Field().String() hands back JSON, so the selector's quotes arrive escaped.
 			Expect(rule.Field("spec.groups").String()).To(ContainSubstring(`job=\"user-authz-webhook\"`))
 		})

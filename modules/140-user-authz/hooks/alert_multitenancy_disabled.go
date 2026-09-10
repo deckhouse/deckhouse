@@ -49,6 +49,12 @@ const (
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
+	// OnBeforeHelm as well as the watch. enableMultiTenancy lives in values, not in an object this
+	// hook subscribes to, so without it the metric is only ever recomputed when some
+	// ClusterAuthorizationRule happens to change: turning multi-tenancy ON left the alert firing
+	// until then, and turning it OFF left the cluster silent about rules that had just stopped
+	// being enforced. Both are wrong in the direction that matters.
+	OnBeforeHelm: &go_hook.OrderedConfig{Order: 10},
 	Kubernetes: []go_hook.KubernetesConfig{
 		{
 			Name:       multitenancySnapshot,
