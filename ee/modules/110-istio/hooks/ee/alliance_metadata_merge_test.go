@@ -174,6 +174,8 @@ status:
     private:
       ingressGateways:
       - {"address": "ddd", "port": 333}
+      ambientGateways:
+      - {"address": "eee", "port": 15008}
       apiHost: istio-api-0.example.com
       networkName: network-qqq-123
     public:
@@ -386,6 +388,14 @@ status:
   }
 ]
 `))
+			Expect(f.ValuesGet("istio.internal.multiclusters.0.ambientGateways").String()).To(MatchJSON(`
+[
+  {
+    "address": "eee",
+    "port": 15008
+  }
+]
+`))
 			Expect(f.ValuesGet("istio.internal.multiclusters.1.name").String()).To(Equal("multicluster-full-1"))
 			Expect(f.ValuesGet("istio.internal.multiclusters.1.spiffeEndpoint").String()).To(Equal("https://some-proper-host/public/spiffe-bundle-endpoint"))
 			Expect(f.ValuesGet("istio.internal.multiclusters.1.apiHost").String()).To(Equal("istio-api-1.example.com"))
@@ -396,6 +406,7 @@ status:
 			Expect(f.ValuesGet("istio.internal.multiclusters.1.rootCA").String()).To(Equal("abc-m1"))
 			Expect(f.ValuesGet("istio.internal.multiclusters.1.ingressGateways").Exists()).To(BeTrue())
 			Expect(f.ValuesGet("istio.internal.multiclusters.1.ingressGateways").Value()).To(BeNil())
+			Expect(f.ValuesGet("istio.internal.multiclusters.1.ambientGateways").Exists()).To(BeFalse())
 
 			Expect(f.ValuesGet("istio.internal.multiclusters.2").Exists()).To(BeFalse())
 

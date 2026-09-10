@@ -46,6 +46,7 @@ type IstioFederationMergeCrdInfo struct {
 }
 
 type IstioMulticlusterMergeCrdInfo struct {
+	AmbientGateways          *[]eeCrd.MulticlusterIngressGateways `json:"ambientGateways,omitempty"`
 	APIHost                  string                               `json:"apiHost"`
 	APIJWT                   string                               `json:"apiJWT"`
 	ClusterID                string                               `json:"clusterID"`
@@ -171,6 +172,7 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 
 	var (
 		igs         *[]eeCrd.MulticlusterIngressGateways
+		ambientGws  *[]eeCrd.MulticlusterIngressGateways
 		apiHost     string
 		clusterID   string
 		networkName string
@@ -183,6 +185,9 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 		if multicluster.Status.MetadataCache.Private.IngressGateways != nil {
 			igs = multicluster.Status.MetadataCache.Private.IngressGateways
 		}
+		if multicluster.Status.MetadataCache.Private.AmbientGateways != nil {
+			ambientGws = multicluster.Status.MetadataCache.Private.AmbientGateways
+		}
 		apiHost = multicluster.Status.MetadataCache.Private.APIHost
 		clusterID = multicluster.Status.MetadataCache.Private.ClusterIDOrDerived()
 		networkName = multicluster.Status.MetadataCache.Private.NetworkName
@@ -194,6 +199,7 @@ func applyMulticlusterMergeFilter(obj *unstructured.Unstructured) (go_hook.Filte
 	}
 
 	return IstioMulticlusterMergeCrdInfo{
+		AmbientGateways:          ambientGws,
 		APIHost:                  apiHost,
 		ClusterID:                clusterID,
 		ClusterUUID:              uuid,

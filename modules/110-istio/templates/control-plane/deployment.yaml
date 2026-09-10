@@ -6,6 +6,7 @@
   {{- $fullVersion := get $versionInfo "fullVersion" }}
   {{- $instance := printf "%s-istiod" $revision }}
   {{- $supportsAmbient := get $versionInfo "supportsAmbient" }}
+  {{- $supportsAmbientMulticluster := get $versionInfo "supportsAmbientMulticluster" }}
   {{- if ($.Values.global.enabledModules | has "vertical-pod-autoscaler") }}
 ---
 apiVersion: autoscaling.k8s.io/v1
@@ -148,6 +149,10 @@ spec:
         {{- end }}
         {{- if and $supportsAmbient $.Values.istio.ambient.enabled }}
         - name: PILOT_ENABLE_AMBIENT
+          value: "true"
+        {{- end }}
+        {{- if and $supportsAmbientMulticluster (include "istioAmbientMulticlusterEnabled" $) }}
+        - name: AMBIENT_ENABLE_MULTI_NETWORK
           value: "true"
         {{- end }}
         - name: ENABLE_NATIVE_SIDECARS

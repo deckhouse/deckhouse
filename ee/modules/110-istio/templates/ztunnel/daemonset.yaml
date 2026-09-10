@@ -80,6 +80,10 @@ spec:
           value: istiod-{{ include "istioGlobalRevision" . }}.d8-istio.svc:15012
         - name: XDS_ADDRESS
           value: istiod-{{ include "istioGlobalRevision" . }}.d8-istio.svc:15012
+        {{- if include "istioAmbientMulticlusterEnabled" . }}
+        - name: NETWORK
+          value: {{ include "istioNetworkName" . | quote }}
+        {{- end }}
         - name: RUST_LOG
           value: info
         - name: RUST_BACKTRACE

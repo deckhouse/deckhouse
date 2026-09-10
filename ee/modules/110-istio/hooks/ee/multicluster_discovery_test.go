@@ -10,9 +10,12 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"fmt"
 	"io"
 	"net/http"
+	"reflect"
 	"strings"
+	"testing"
 	"time"
 
 	. "github.com/onsi/ginkgo"
@@ -20,6 +23,7 @@ import (
 	"github.com/square/go-jose/v3"
 	"k8s.io/utils/ptr"
 
+	eeCrd "github.com/deckhouse/deckhouse/ee/modules/110-istio/hooks/ee/lib/crd"
 	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/pkg/metrics-storage/operation"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
@@ -103,6 +107,8 @@ status:
     private:
       ingressGateways:
       - {"address": "some-outdated.host", "port": 111} # must be overwritten by the new data
+      ambientGateways:
+      - {"address": "10.0.0.9", "port": 15008} # peer no longer publishes any, must be cleared
       apiHost: some-outdatad-api.host
       networkName: some-outdated-networkname
     public:
@@ -141,6 +147,9 @@ status:
 						  "ingressGateways": [
 							{"address": "a.b.c", "port": 123},
 							{"address": "1.2.3.4", "port": 234}
+						  ],
+						  "ambientGateways": [
+							{"address": "1.2.3.4", "port": 15008}
 						  ],
                           "apiHost": "api-host-0",
                           "clusterID": "cluster-id-0",
@@ -343,6 +352,14 @@ status:
 	             {"address": "some-actual.host-2", "port": 111}
 	           ]
 	`))
+
+			Expect(f.KubernetesGlobalResource("IstioMulticluster", "proper-multicluster-0").Field("status.metadataCache.private.ambientGateways").String()).To(MatchJSON(`
+	           [
+	             {"address": "1.2.3.4", "port": 15008}
+	           ]
+	`))
+			Expect(f.KubernetesGlobalResource("IstioMulticluster", "proper-multicluster-1").Field("status.metadataCache.private.ambientGateways").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("IstioMulticluster", "proper-multicluster-2").Field("status.metadataCache.private.ambientGateways").Exists()).To(BeFalse())
 
 			Expect(f.KubernetesGlobalResource("IstioMulticluster", "proper-multicluster-0").Field("status.metadataCache.private.apiHost").String()).To(Equal("api-host-0"))
 			Expect(f.KubernetesGlobalResource("IstioMulticluster", "proper-multicluster-1").Field("status.metadataCache.private.apiHost").String()).To(Equal("api-host-1"))
@@ -900,4 +917,282 @@ status:
 			})))
 		})
 	})
+
+	// Everything a peer publishes ends up in a rendered object: networkName as a label
+	// value on an istio-remote Gateway and as a key in meshNetworks, ambient addresses as
+	// spec.addresses whose CRD enforces format: ipv4|ipv6. One bad value applied would fail
+	// the release and take the module down in this cluster, so it is caught on the way in.
+	Context("Peer metadata that would not survive being rendered", func() {
+		BeforeEach(func() {
+			f.ValuesSet(`istio.multicluster.enabled`, true)
+			f.KubeStateSet(`
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: bad-network-name
+spec:
+  enableIngressGateway: true
+  metadataEndpoint: "https://bad-network-name/metadata/"
+status: {}
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: unusable-ambient
+spec:
+  enableIngressGateway: true
+  metadataEndpoint: "https://unusable-ambient/metadata/"
+status:
+  metadataCache:
+    private:
+      ambientGateways:
+      - {"address": "10.0.0.9", "port": 15008} # cached from when the peer published a usable one
+---
+apiVersion: deckhouse.io/v1alpha1
+kind: IstioMulticluster
+metadata:
+  name: mixed-ambient
+spec:
+  enableIngressGateway: true
+  metadataEndpoint: "https://mixed-ambient/metadata/"
+status: {}
+`)
+			f.BindingContexts.Set(f.GenerateScheduleContext("* * * * *"))
+
+			apiVersionsProbeBody := `{"kind":"APIVersions","versions":[]}`
+			publicMetadata := func(suffix string) string {
+				return `{
+				  "clusterUUID": "proper-uuid-` + suffix + `",
+				  "authnKeyPub": "proper-authn-` + suffix + `",
+				  "rootCA": "proper-root-ca-` + suffix + `"
+				}`
+			}
+
+			respMap := map[string]map[string]HTTPMockResponse{
+				"bad-network-name": {
+					"/metadata/public/public.json": {Response: publicMetadata("bnn"), Code: http.StatusOK},
+					"/metadata/private/multicluster.json": {
+						// 70 characters, over the 63 a label value allows.
+						Response: `{
+						  "ingressGateways": [{"address": "1.2.3.4", "port": 111}],
+						  "ambientGateways": [{"address": "10.0.0.1", "port": 15008}],
+						  "apiHost": "api-host-bnn",
+						  "networkName": "network-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+						}`,
+						Code: http.StatusOK,
+					},
+				},
+				"unusable-ambient": {
+					"/metadata/public/public.json": {Response: publicMetadata("ua"), Code: http.StatusOK},
+					"/metadata/private/multicluster.json": {
+						Response: `{
+						  "ingressGateways": [{"address": "1.2.3.4", "port": 111}],
+						  "ambientGateways": [
+						    {"address": "lb.example.com", "port": 15008},
+						    {"address": "999.999.999.999", "port": 15008},
+						    {"address": "10.0.0.1", "port": 0}
+						  ],
+						  "apiHost": "api-host-ua",
+						  "networkName": "network-name-ua"
+						}`,
+						Code: http.StatusOK,
+					},
+				},
+				"mixed-ambient": {
+					"/metadata/public/public.json": {Response: publicMetadata("ma"), Code: http.StatusOK},
+					"/metadata/private/multicluster.json": {
+						Response: `{
+						  "ingressGateways": [{"address": "1.2.3.4", "port": 111}],
+						  "ambientGateways": [
+						    {"address": "not-an-address", "port": 15008},
+						    {"address": "::ffff:10.0.0.2", "port": 15008}
+						  ],
+						  "apiHost": "api-host-ma",
+						  "networkName": "network-name-ma"
+						}`,
+						Code: http.StatusOK,
+					},
+				},
+				"api-host-bnn": {"/api": {Response: apiVersionsProbeBody, Code: http.StatusOK}},
+				"api-host-ua":  {"/api": {Response: apiVersionsProbeBody, Code: http.StatusOK}},
+				"api-host-ma":  {"/api": {Response: apiVersionsProbeBody, Code: http.StatusOK}},
+			}
+			dependency.TestDC.HTTPClient.DoMock.
+				Set(func(req *http.Request) (*http.Response, error) {
+					host := strings.Split(req.Host, ":")[0]
+					mockResponse := respMap[host][req.URL.Path]
+					return &http.Response{
+						Header:     map[string][]string{"Content-Type": {"application/json"}},
+						StatusCode: mockResponse.Code,
+						Body:       io.NopCloser(bytes.NewBufferString(mockResponse.Response)),
+					}, nil
+				})
+
+			f.RunHook()
+		})
+
+		// A networkName too long to be a label value costs the peer its ambient half and
+		// nothing else. Sidecar multicluster only ever puts networkName in meshNetworks,
+		// where the label syntax does not apply, so rejecting the peer over it would break
+		// a path that was working.
+		It("Keeps a peer whose networkName is not a valid label value, minus its ambient half", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			mc := f.KubernetesGlobalResource("IstioMulticluster", "bad-network-name")
+			Expect(mc.Field("status.metadataCache.private.ingressGateways").String()).To(MatchJSON(`
+			  [{"address": "1.2.3.4", "port": 111}]
+			`))
+			Expect(mc.Field("status.metadataCache.private.networkName").String()).To(Equal(
+				"network-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
+			Expect(mc.Field("status.metadataCache.private.ambientGateways").Exists()).To(BeFalse())
+
+			var conditions []discoveryConditionRow
+			Expect(json.Unmarshal([]byte(mc.Field("status.conditions").String()), &conditions)).To(Succeed())
+			Expect(discoveryConditionsByType(conditions)["PrivateMetadataExchangeReady"].Status).To(Equal("True"))
+		})
+
+		// An unusable ambient address costs the peer only its ambient half too: sidecar
+		// multicluster does not go through this gateway.
+		It("Keeps a peer whose ambient addresses are all unusable, minus its ambient half", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			mc := f.KubernetesGlobalResource("IstioMulticluster", "unusable-ambient")
+			Expect(mc.Field("status.metadataCache.private.ingressGateways").String()).To(MatchJSON(`
+			  [{"address": "1.2.3.4", "port": 111}]
+			`))
+			// Including the one cached from before, which must not outlive the peer's
+			// ability to serve it.
+			Expect(mc.Field("status.metadataCache.private.ambientGateways").Exists()).To(BeFalse())
+
+			var conditions []discoveryConditionRow
+			Expect(json.Unmarshal([]byte(mc.Field("status.conditions").String()), &conditions)).To(Succeed())
+			Expect(discoveryConditionsByType(conditions)["PrivateMetadataExchangeReady"].Status).To(Equal("True"))
+
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("dropping ambient gateway endpoints the ambient data plane cannot use"))
+			Expect(string(f.LoggerOutput.Contents())).To(ContainSubstring("lb.example.com:15008, 999.999.999.999:15008, 10.0.0.1:0"))
+		})
+
+		It("Keeps the usable addresses of a peer that published both, canonicalised", func() {
+			Expect(f).To(ExecuteSuccessfully())
+
+			Expect(f.KubernetesGlobalResource("IstioMulticluster", "mixed-ambient").
+				Field("status.metadataCache.private.ambientGateways").String()).To(MatchJSON(`
+			  [{"address": "10.0.0.2", "port": 15008}]
+			`))
+		})
+	})
 })
+
+func TestSanitizeAmbientGateways(t *testing.T) {
+	gw := func(address string, port uint) eeCrd.MulticlusterIngressGateways {
+		return eeCrd.MulticlusterIngressGateways{Address: address, Port: port}
+	}
+	list := func(gws ...eeCrd.MulticlusterIngressGateways) *[]eeCrd.MulticlusterIngressGateways {
+		return &gws
+	}
+
+	cases := []struct {
+		name        string
+		networkName string
+		in          *[]eeCrd.MulticlusterIngressGateways
+		wantKept    *[]eeCrd.MulticlusterIngressGateways
+		wantDropped []string
+	}{
+		{
+			name: "nothing published",
+			in:   nil,
+		},
+		{
+			name:     "IPv4 and IPv6 literals are kept",
+			in:       list(gw("10.0.0.1", 15008), gw("2001:db8::1", 15008)),
+			wantKept: list(gw("10.0.0.1", 15008), gw("2001:db8::1", 15008)),
+		},
+		{
+			// The ambient path writes the address straight into a Workload for ztunnel and
+			// never resolves it, so a DNS name is not a lesser address but a wrong one.
+			name:        "a DNS name is dropped",
+			in:          list(gw("lb.example.com", 15008)),
+			wantDropped: []string{"lb.example.com:15008"},
+		},
+		{
+			// Address-shaped but not an address: the octets are out of range. This is the
+			// case a regex in the template got wrong.
+			name:        "an out-of-range IPv4 is dropped",
+			in:          list(gw("999.999.999.999", 15008)),
+			wantDropped: []string{"999.999.999.999:15008"},
+		},
+		{
+			// Colons alone made it past the template's IPv6 matcher, and would then be
+			// rejected by the Gateway CRD's format: ipv6.
+			name:        "a colon-shaped non-address is dropped",
+			in:          list(gw("::::", 15008)),
+			wantDropped: []string{"[::::]:15008"},
+		},
+		{
+			name:        "port 0 is not a listener port",
+			in:          list(gw("10.0.0.1", 0)),
+			wantDropped: []string{"10.0.0.1:0"},
+		},
+		{
+			name:        "a port above the range is dropped",
+			in:          list(gw("10.0.0.1", 70000)),
+			wantDropped: []string{"10.0.0.1:70000"},
+		},
+		{
+			// Canonicalised, so the value matches what the Gateway CRD accepts and so the
+			// rendered object does not churn on an equivalent spelling.
+			name:     "an IPv4-mapped address is written as plain IPv4",
+			in:       list(gw("::ffff:10.0.0.2", 15008)),
+			wantKept: list(gw("10.0.0.2", 15008)),
+		},
+		{
+			name:        "one bad address does not cost the peer its good ones",
+			in:          list(gw("lb.example.com", 15008), gw("10.0.0.1", 15008)),
+			wantKept:    list(gw("10.0.0.1", 15008)),
+			wantDropped: []string{"lb.example.com:15008"},
+		},
+		{
+			// The networkName goes on the Gateway as a label value, so an unusable one
+			// costs the peer every ambient address, however well-formed. 70 characters,
+			// over the 63 a label value allows.
+			name:        "an unusable networkName costs the peer all of them",
+			networkName: "network-" + strings.Repeat("a", 62),
+			in:          list(gw("10.0.0.1", 15008), gw("2001:db8::1", 15008)),
+			wantDropped: []string{"10.0.0.1:15008", "[2001:db8::1]:15008"},
+		},
+		{
+			// The same peer with nothing ambient published is left entirely alone: only
+			// the ambient path renders networkName as a label value.
+			name:        "an unusable networkName alone is not this check's business",
+			networkName: "network-" + strings.Repeat("a", 62),
+			in:          nil,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			pm := eeCrd.MulticlusterPrivateMetadata{NetworkName: tc.networkName, AmbientGateways: tc.in}
+
+			dropped, reason := sanitizeAmbientGateways(&pm)
+
+			if len(dropped) > 0 && reason == "" {
+				t.Errorf("dropped %v without saying why", dropped)
+			}
+			if !reflect.DeepEqual(dropped, tc.wantDropped) {
+				t.Errorf("dropped = %#v, want %#v", dropped, tc.wantDropped)
+			}
+			if !reflect.DeepEqual(pm.AmbientGateways, tc.wantKept) {
+				t.Errorf("kept = %s, want %s", formatGateways(pm.AmbientGateways), formatGateways(tc.wantKept))
+			}
+		})
+	}
+}
+
+func formatGateways(gws *[]eeCrd.MulticlusterIngressGateways) string {
+	if gws == nil {
+		return "<nil>"
+	}
+
+	return fmt.Sprintf("%+v", *gws)
+}

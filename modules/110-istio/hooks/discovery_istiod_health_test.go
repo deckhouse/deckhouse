@@ -17,10 +17,14 @@ limitations under the License.
 package hooks
 
 import (
+	"encoding/json"
+	"strings"
+
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
 	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib"
+	"github.com/deckhouse/deckhouse/modules/110-istio/hooks/lib/istio_versions"
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
 
@@ -39,14 +43,15 @@ status:
   phase: {{ .Phase }}
 `
 
-const istioSidecarInjectorGlobalWebhook = `
+const istioSidecarInjectorGlobalWebhookTemplate = `
+---
 apiVersion: admissionregistration.k8s.io/v1
 kind: MutatingWebhookConfiguration
 metadata:
   name: d8-istio-sidecar-injector-global
   labels:
     module: istio
-    istio.deckhouse.io/full-version: 1.88.55
+    istio.deckhouse.io/full-version: {{ .FullVersion }}
 webhooks: []
 `
 
@@ -68,29 +73,60 @@ func podIstiodYaml(podParams PodIstiodTemplateParams) string {
 	return lib.TemplateToYAML(podIstiodTemplate, podParams)
 }
 
+func istioSidecarInjectorGlobalWebhookYaml(fullVersion string) string {
+	return lib.TemplateToYAML(istioSidecarInjectorGlobalWebhookTemplate, struct{ FullVersion string }{fullVersion})
+}
+
+// versionMapFixture builds a versionMap exactly the way versionsDiscovery does, so the
+// fixture can not drift from the version cutoffs in discovery_versions.go when they move.
+func versionMapFixture(imageAliases ...string) istio_versions.IstioVersionsMap {
+	versionMap := istio_versions.IstioVersionsMap{}
+	for _, img := range imageAliases {
+		ver, err := imageToIstioVersion(img)
+		if err != nil {
+			panic(err)
+		}
+		versionMap[ver.version] = ver.info
+	}
+	return versionMap
+}
+
+func mustMarshalJSON(value interface{}) string {
+	raw, err := json.Marshal(value)
+	if err != nil {
+		panic(err)
+	}
+	return string(raw)
+}
+
+// isReadyPath returns the values path of the isReady flag of the given Istio version,
+// escaping the dot inside the version key.
+func isReadyPath(version string) string {
+	return versionMapPath + "." + strings.ReplaceAll(version, ".", `\.`) + ".isReady"
+}
+
 var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
-	f := HookExecutionConfigInit(`
-{"istio":
-  {"internal":
-    { "versionMap":
-     {
-        "1.13": {
-          "revision": "v1x13",
-          "fullVersion": "1.13.55",
-          "supportsAmbient": false,
-          "supportsOperator": true
-       },
-       "1.88": {
-          "revision": "v1x88",
-          "fullVersion": "1.88.55",
-          "supportsAmbient": true,
-          "supportsOperator": false
-        }
-      }
-    }
-  }
-}`, "")
+	// The versions the module actually ships, see modules/110-istio/images/pilot-v1x*.
+	// 1.25 supports the operator, 1.27 does not, and 1.29 is the first one able to serve
+	// native ambient multicluster.
+	versionMap := versionMapFixture("pilotV1x25x2", "pilotV1x27x9", "pilotV1x29x6")
+
+	f := HookExecutionConfigInit(mustMarshalJSON(map[string]interface{}{
+		"istio": map[string]interface{}{
+			"internal": map[string]interface{}{
+				"versionMap": versionMap,
+			},
+		},
+	}), "")
 	f.RegisterCRD("deckhouse.io", "v1alpha1", "ModuleConfig", false)
+
+	// expectReadiness asserts the isReady flag the hook published for every version.
+	// The remaining fields belong to discovery_versions.go and are covered by its own test.
+	expectReadiness := func(expected map[string]bool) {
+		for ver, isReady := range expected {
+			Expect(f.ValuesGet(isReadyPath(ver)).Bool()).To(Equal(isReady), "unexpected readiness of version %s", ver)
+		}
+	}
 
 	Context("Empty cluster and minimal settings", func() {
 		BeforeEach(func() {
@@ -103,7 +139,7 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 
 	Context("Without istiod pods", func() {
 		BeforeEach(func() {
-			f.ValuesSet("istio.internal.globalVersion", "1.88")
+			f.ValuesSet("istio.internal.globalVersion", "1.29")
 			f.BindingContexts.Set(f.KubeStateSet(``))
 			f.RunHook()
 		})
@@ -116,7 +152,7 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 
 	Context("Without istiod pods but webhook exists", func() {
 		BeforeEach(func() {
-			f.ValuesSet("istio.internal.globalVersion", "1.88")
+			f.ValuesSet("istio.internal.globalVersion", "1.29")
 			f.BindingContexts.Set(f.KubeStateSet(validationWebHook))
 			f.RunHook()
 		})
@@ -130,9 +166,9 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 
 	Context("Istiod pods in `Failed` phase", func() {
 		BeforeEach(func() {
-			f.ValuesSet("istio.internal.globalVersion", "1.88")
+			f.ValuesSet("istio.internal.globalVersion", "1.29")
 			f.BindingContexts.Set(f.KubeStateSet(podIstiodYaml(PodIstiodTemplateParams{
-				Revision: "v1x88",
+				Revision: "v1x29",
 				Phase:    "Failed",
 			})))
 			f.RunHook()
@@ -141,58 +177,57 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Exists()).To(BeTrue())
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Bool()).To(BeFalse())
-			Expect(f.ValuesGet(versionMapPath).String()).To(MatchJSON(`{"1.13":{"fullVersion":"1.13.55","revision":"v1x13","imageSuffix":"","isReady":false,"supportsAmbient":false,"supportsOperator":true},"1.88":{"fullVersion":"1.88.55","revision":"v1x88","imageSuffix":"","isReady":false,"supportsAmbient":true,"supportsOperator":false}}`))
+			// The hook rewrites the whole map, so check once that it touches nothing but isReady.
+			Expect(f.ValuesGet(versionMapPath).String()).To(MatchJSON(mustMarshalJSON(versionMap)))
 		})
 	})
 
 	Context("Istiod pods in `Running` phase and injector webhook with actual full version", func() {
 		BeforeEach(func() {
-			f.ValuesSet("istio.internal.globalVersion", "1.88")
+			f.ValuesSet("istio.internal.globalVersion", "1.29")
 			f.BindingContexts.Set(f.KubeStateSet(podIstiodYaml(PodIstiodTemplateParams{
-				Revision: "v1x88",
+				Revision: "v1x29",
 				Phase:    "Running",
-			}) + "---" + istioSidecarInjectorGlobalWebhook))
+			}) + istioSidecarInjectorGlobalWebhookYaml("1.29.6")))
 			f.RunHook()
 		})
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Exists()).To(BeTrue())
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Bool()).To(BeTrue())
-			versionMap := f.ValuesGet(versionMapPath).Map()
-			Expect(versionMap["1.13"]).To(MatchJSON(`{"fullVersion": "1.13.55","revision": "v1x13","imageSuffix": "","isReady": false,"supportsAmbient":false,"supportsOperator":true}`))
-			Expect(versionMap["1.88"]).To(MatchJSON(`{"fullVersion": "1.88.55","revision": "v1x88","imageSuffix": "","isReady": true,"supportsAmbient":true,"supportsOperator":false}`))
+			expectReadiness(map[string]bool{"1.25": false, "1.27": false, "1.29": true})
 		})
 	})
 
-	Context("Istiod pods in `Running` phase and injector webhook with old full version", func() {
+	Context("Istiod pods in `Running` phase but injector webhook still has the pre-upgrade full version", func() {
 		BeforeEach(func() {
-			f.ValuesSet("istio.internal.globalVersion", "1.13")
+			f.ValuesSet("istio.internal.globalVersion", "1.29")
 			f.BindingContexts.Set(f.KubeStateSet(podIstiodYaml(PodIstiodTemplateParams{
-				Revision: "v1x13",
+				Revision: "v1x29",
 				Phase:    "Running",
-			}) + "---" + istioSidecarInjectorGlobalWebhook))
+			}) + istioSidecarInjectorGlobalWebhookYaml("1.27.9")))
 			f.RunHook()
 		})
 		It("Hook must execute successfully", func() {
 			Expect(f).To(ExecuteSuccessfully())
+			// The global revision is not ready until the injector webhook catches up with it,
+			// yet isGlobalVersionIstiodReady only looks at the running pod revision.
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Exists()).To(BeTrue())
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Bool()).To(BeTrue())
-			versionMap := f.ValuesGet(versionMapPath).Map()
-			Expect(versionMap["1.13"]).To(MatchJSON(`{"fullVersion": "1.13.55","revision": "v1x13","imageSuffix": "","isReady": false,"supportsAmbient":false,"supportsOperator":true}`))
-			Expect(versionMap["1.88"]).To(MatchJSON(`{"fullVersion": "1.88.55","revision": "v1x88","imageSuffix": "","isReady": false,"supportsAmbient":true,"supportsOperator":false}`))
+			expectReadiness(map[string]bool{"1.25": false, "1.27": false, "1.29": false})
 		})
 	})
 
 	Context("Both istiod pods with different revisions in `Running` phase", func() {
 		BeforeEach(func() {
-			f.ValuesSet("istio.internal.globalVersion", "1.88")
+			f.ValuesSet("istio.internal.globalVersion", "1.29")
 			f.BindingContexts.Set(f.KubeStateSet(
 				podIstiodYaml(PodIstiodTemplateParams{
-					Revision: "v1x88",
+					Revision: "v1x29",
 					Phase:    "Running",
-				}) + "---" +
+				}) +
 					podIstiodYaml(PodIstiodTemplateParams{
-						Revision: "v1x13",
+						Revision: "v1x27",
 						Phase:    "Running",
 					})))
 			f.RunHook()
@@ -201,17 +236,16 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Exists()).To(BeTrue())
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Bool()).To(BeTrue())
-			versionMap := f.ValuesGet(versionMapPath).Map()
-			Expect(versionMap["1.13"]).To(MatchJSON(`{"fullVersion": "1.13.55","revision": "v1x13","imageSuffix": "","isReady": true,"supportsAmbient":false,"supportsOperator":true}`))
-			Expect(versionMap["1.88"]).To(MatchJSON(`{"fullVersion": "1.88.55","revision": "v1x88","imageSuffix": "","isReady": false,"supportsAmbient":true,"supportsOperator":false}`))
+			// A non-global revision needs no injector webhook, the global one does.
+			expectReadiness(map[string]bool{"1.25": false, "1.27": true, "1.29": false})
 		})
 	})
 
 	Context("Istiod pods with `Running` phase and validation webhook exists", func() {
 		BeforeEach(func() {
-			f.ValuesSet("istio.internal.globalVersion", "1.88")
+			f.ValuesSet("istio.internal.globalVersion", "1.29")
 			f.BindingContexts.Set(f.KubeStateSet(validationWebHook + podIstiodYaml(PodIstiodTemplateParams{
-				Revision: "v1x88",
+				Revision: "v1x29",
 				Phase:    "Running",
 			})))
 			f.RunHook()
@@ -226,9 +260,9 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 
 	Context("Istiod pods with `Running` phase but with different revision", func() {
 		BeforeEach(func() {
-			f.ValuesSet("istio.internal.globalVersion", "1.13")
+			f.ValuesSet("istio.internal.globalVersion", "1.27")
 			f.BindingContexts.Set(f.KubeStateSet(podIstiodYaml(PodIstiodTemplateParams{
-				Revision: "v1x88",
+				Revision: "v1x29",
 				Phase:    "Running",
 			})))
 			f.RunHook()
@@ -237,6 +271,7 @@ var _ = Describe("Istio hooks :: discovery istiod health ::", func() {
 			Expect(f).To(ExecuteSuccessfully())
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Exists()).To(BeTrue())
 			Expect(f.ValuesGet(isGlobalVersionIstiodReadyPath).Bool()).To(BeFalse())
+			expectReadiness(map[string]bool{"1.25": false, "1.27": false, "1.29": true})
 		})
 	})
 

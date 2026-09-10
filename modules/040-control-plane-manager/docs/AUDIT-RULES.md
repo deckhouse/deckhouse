@@ -317,6 +317,7 @@ users:
   - system:serviceaccount:d8-istio:alliance-healthcheck
   - system:serviceaccount:d8-istio:alliance-ingressgateway
   - system:serviceaccount:d8-istio:alliance-metadata-exporter
+  - system:serviceaccount:d8-istio:ambientgateway
   - system:serviceaccount:d8-istio:cni
   - system:serviceaccount:d8-istio:config-analyzer
   - system:serviceaccount:d8-istio:ingress-gateway-controller
@@ -796,6 +797,7 @@ rules:
       - system:serviceaccount:d8-istio:alliance-healthcheck
       - system:serviceaccount:d8-istio:alliance-ingressgateway
       - system:serviceaccount:d8-istio:alliance-metadata-exporter
+      - system:serviceaccount:d8-istio:ambientgateway
       - system:serviceaccount:d8-istio:cni
       - system:serviceaccount:d8-istio:config-analyzer
       - system:serviceaccount:d8-istio:ingress-gateway-controller

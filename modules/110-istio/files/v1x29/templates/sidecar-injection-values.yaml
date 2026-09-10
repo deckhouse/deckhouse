@@ -64,6 +64,15 @@
       }
     },
     "revision": {{ $revision | quote }},
+    "waypoint": {
+      "affinity": {},
+      "topologySpreadConstraints": [],
+      "nodeSelector": {},
+      "tolerations": [],
+      "resources": {
+        "requests": {"cpu": "100m", "memory": "128Mi"}
+      }
+    },
     "logging": {"level": "default:info"},
     "logAsJson": false,
     "imagePullPolicy": "IfNotPresent",
@@ -74,5 +83,8 @@
     "cni": {
       "enabled": {{ eq $.Values.istio.dataPlane.trafficRedirectionSetupMode "CNIPlugin" }}
     }
+  },
+  "gateways": {
+    "seccompProfile": {"type": "RuntimeDefault"}
   }
 }

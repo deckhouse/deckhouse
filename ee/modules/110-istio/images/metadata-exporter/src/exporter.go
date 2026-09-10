@@ -13,10 +13,12 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -31,42 +33,60 @@ import (
 )
 
 type Exporter struct {
-	namespace                            string
-	labelSelector                        string
-	clientSet                            *kubernetes.Clientset
-	lwPods                               *cache.ListWatch
-	lwNodes                              *cache.ListWatch
-	lwService                            *cache.ListWatch
-	lwConfigMaps                         *cache.ListWatch
-	lwCertCAConfigMap                    *cache.ListWatch
-	lwPublicService                      *cache.ListWatch // for federation
-	lwdRemoteClustersPublicMetadata      *cache.ListWatch
-	lwRemoteAuthnKeypair                 *cache.ListWatch
-	serviceInformer                      cache.SharedInformer
-	podInformer                          cache.SharedInformer
-	nodeInformer                         cache.SharedInformer
-	configMapInformer                    cache.SharedInformer
-	certCAConfigMapInformer              cache.SharedInformer
-	publicServiceInformer                cache.SharedInformer // for federation
-	remoteClustersPublicMetadataInformer cache.SharedInformer
-	remoteAuthnKeypair                   cache.SharedInformer
-	inlet                                string
-	clusterDomain                        string
-	clusterUUID                          string
-	multiclusterClusterID                string
-	multicluserNetworkName               string
-	multiclusterAPIHost                  string
-	federationEnabled                    string
+	lwIngressGatewayServices           *cache.ListWatch
+	lwIngressGatewayPods               *cache.ListWatch
+	lwIngressGatewayAdvertiseConfigMap *cache.ListWatch
+	lwAmbientGatewayServices           *cache.ListWatch
+	lwAmbientGatewayPods               *cache.ListWatch
+	lwAmbientGatewayAdvertiseConfigMap *cache.ListWatch
+	lwNodes                            *cache.ListWatch
+	lwCertCAConfigMap                  *cache.ListWatch
+	lwPublicServices                   *cache.ListWatch // for federation
+	lwRemoteClustersPublicMetadata     *cache.ListWatch
+	lwRemoteAuthnKeypair               *cache.ListWatch
+
+	ingressGatewayServiceInformer            cache.SharedInformer
+	ingressGatewayPodInformer                cache.SharedInformer
+	ingressGatewayAdvertiseConfigMapInformer cache.SharedInformer
+	ambientGatewayServiceInformer            cache.SharedInformer
+	ambientGatewayPodInformer                cache.SharedInformer
+	ambientGatewayAdvertiseConfigMapInformer cache.SharedInformer
+	nodeInformer                             cache.SharedInformer
+	certCAConfigMapInformer                  cache.SharedInformer
+	publicServiceInformer                    cache.SharedInformer // for federation
+	remoteClustersPublicMetadataInformer     cache.SharedInformer
+	remoteAuthnKeypairInformer               cache.SharedInformer
+
+	ingressGatewayInlet     string
+	ambientGatewayInlet     string
+	clusterDomain           string
+	clusterUUID             string
+	multiclusterClusterID   string
+	multiclusterNetworkName string
+	multiclusterAPIHost     string
+	federationEnabled       string
 }
 
-func New(namespace string, labelSelector string) (*Exporter, error) {
+const (
+	ingressGatewayPortName = "tls"
+	ambientGatewayPortName = "hbone"
+
+	ingressGatewayAdvertiseConfigMapName = "metadata-exporter-ingressgateway-advertise"
+	ambientGatewayAdvertiseConfigMapName = "metadata-exporter-ambientgateway-advertise"
+
+	advertisedGatewaysKey           = "gateways.json"
+	deprecatedAdvertisedGatewaysKey = "ingressgateways-array.json" // drop in 1.79
+)
+
+func New(namespace string, ingressGatewayLabelSelector string, ambientGatewayLabelSelector string) (*Exporter, error) {
 	// Get environments
 
-	inlet := os.Getenv("INLET")
+	ingressGatewayInlet := os.Getenv("INLET")
+	ambientGatewayInlet := os.Getenv("AMBIENT_INLET")
 	clusterDomain := os.Getenv("CLUSTER_DOMAIN")
 	clusterUUID := os.Getenv("CLUSTER_UUID")
 	multiclusterClusterID := os.Getenv("MULTICLUSTER_CLUSTER_ID")
-	multicluserNetworkName := os.Getenv("MULTICLUSTER_NETWORK_NAME")
+	multiclusterNetworkName := os.Getenv("MULTICLUSTER_NETWORK_NAME")
 	multiclusterAPIHost := os.Getenv("MULTICLUSTER_API_HOST")
 	federationEnabled := os.Getenv("FEDERATION_ENABLED")
 
@@ -82,21 +102,39 @@ func New(namespace string, labelSelector string) (*Exporter, error) {
 		return nil, fmt.Errorf("[metadata-exporter] Error : %s", err)
 	}
 
-	lwService := cache.NewFilteredListWatchFromClient(
+	lwIngressGatewayServices := cache.NewFilteredListWatchFromClient(
 		clientSet.CoreV1().RESTClient(),
 		"services",
 		namespace,
 		func(options *metav1.ListOptions) {
-			options.LabelSelector = fmt.Sprintf("app=%s", labelSelector)
+			options.LabelSelector = fmt.Sprintf("app=%s", ingressGatewayLabelSelector)
 		},
 	)
 
-	lwPods := cache.NewFilteredListWatchFromClient(
+	lwAmbientGatewayServices := cache.NewFilteredListWatchFromClient(
+		clientSet.CoreV1().RESTClient(),
+		"services",
+		namespace,
+		func(options *metav1.ListOptions) {
+			options.LabelSelector = fmt.Sprintf("app=%s", ambientGatewayLabelSelector)
+		},
+	)
+
+	lwIngressGatewayPods := cache.NewFilteredListWatchFromClient(
 		clientSet.CoreV1().RESTClient(),
 		"pods",
 		namespace,
 		func(options *metav1.ListOptions) {
-			options.LabelSelector = fmt.Sprintf("app=%s", labelSelector)
+			options.LabelSelector = fmt.Sprintf("app=%s", ingressGatewayLabelSelector)
+		},
+	)
+
+	lwAmbientGatewayPods := cache.NewFilteredListWatchFromClient(
+		clientSet.CoreV1().RESTClient(),
+		"pods",
+		namespace,
+		func(options *metav1.ListOptions) {
+			options.LabelSelector = fmt.Sprintf("app=%s", ambientGatewayLabelSelector)
 		},
 	)
 
@@ -107,12 +145,21 @@ func New(namespace string, labelSelector string) (*Exporter, error) {
 		fields.Everything(),
 	)
 
-	lwConfigMap := cache.NewFilteredListWatchFromClient(
+	lwIngressGatewayAdvertiseConfigMap := cache.NewFilteredListWatchFromClient(
 		clientSet.CoreV1().RESTClient(),
 		"configmaps",
 		namespace,
 		func(options *metav1.ListOptions) {
-			options.FieldSelector = "metadata.name=metadata-exporter-ingressgateway-advertise"
+			options.FieldSelector = "metadata.name=" + ingressGatewayAdvertiseConfigMapName
+		},
+	)
+
+	lwAmbientGatewayAdvertiseConfigMap := cache.NewFilteredListWatchFromClient(
+		clientSet.CoreV1().RESTClient(),
+		"configmaps",
+		namespace,
+		func(options *metav1.ListOptions) {
+			options.FieldSelector = "metadata.name=" + ambientGatewayAdvertiseConfigMapName
 		},
 	)
 
@@ -153,53 +200,74 @@ func New(namespace string, labelSelector string) (*Exporter, error) {
 	)
 
 	return &Exporter{
-			namespace:                       namespace,
-			labelSelector:                   labelSelector,
-			clientSet:                       clientSet,
-			lwPods:                          lwPods,
-			lwNodes:                         lwNodes,
-			lwService:                       lwService,
-			lwConfigMaps:                    lwConfigMap,
-			lwPublicService:                 lwPublicServices,
-			lwCertCAConfigMap:               lwCertCAConfigMap,
-			lwdRemoteClustersPublicMetadata: lwRemoteClustersPublicMetadata,
-			lwRemoteAuthnKeypair:            lwRemoteAuthnKeypair,
-			inlet:                           inlet,
-			clusterDomain:                   clusterDomain,
-			clusterUUID:                     clusterUUID,
-			multiclusterClusterID:           multiclusterClusterID,
-			multicluserNetworkName:          multicluserNetworkName,
-			multiclusterAPIHost:             multiclusterAPIHost,
-			federationEnabled:               federationEnabled,
+			lwIngressGatewayServices:           lwIngressGatewayServices,
+			lwIngressGatewayPods:               lwIngressGatewayPods,
+			lwIngressGatewayAdvertiseConfigMap: lwIngressGatewayAdvertiseConfigMap,
+			lwAmbientGatewayServices:           lwAmbientGatewayServices,
+			lwAmbientGatewayPods:               lwAmbientGatewayPods,
+			lwAmbientGatewayAdvertiseConfigMap: lwAmbientGatewayAdvertiseConfigMap,
+			lwNodes:                            lwNodes,
+			lwCertCAConfigMap:                  lwCertCAConfigMap,
+			lwPublicServices:                   lwPublicServices,
+			lwRemoteClustersPublicMetadata:     lwRemoteClustersPublicMetadata,
+			lwRemoteAuthnKeypair:               lwRemoteAuthnKeypair,
+			ingressGatewayInlet:                ingressGatewayInlet,
+			ambientGatewayInlet:                ambientGatewayInlet,
+			clusterDomain:                      clusterDomain,
+			clusterUUID:                        clusterUUID,
+			multiclusterClusterID:              multiclusterClusterID,
+			multiclusterNetworkName:            multiclusterNetworkName,
+			multiclusterAPIHost:                multiclusterAPIHost,
+			federationEnabled:                  federationEnabled,
 		},
 		nil
 }
 
-func (exp *Exporter) watchIngressGateways(ctx context.Context) {
-	exp.serviceInformer = cache.NewSharedInformer(
-		exp.lwService,
+func (exp *Exporter) startInformers(ctx context.Context) {
+	exp.ingressGatewayServiceInformer = cache.NewSharedInformer(
+		exp.lwIngressGatewayServices,
 		&v1.Service{},
 		0,
 	)
-	exp.podInformer = cache.NewSharedInformer(
-		exp.lwPods,
+
+	exp.ambientGatewayServiceInformer = cache.NewSharedInformer(
+		exp.lwAmbientGatewayServices,
+		&v1.Service{},
+		0,
+	)
+
+	exp.ingressGatewayPodInformer = cache.NewSharedInformer(
+		exp.lwIngressGatewayPods,
 		&v1.Pod{},
 		0,
 	)
+
+	exp.ambientGatewayPodInformer = cache.NewSharedInformer(
+		exp.lwAmbientGatewayPods,
+		&v1.Pod{},
+		0,
+	)
+
 	exp.nodeInformer = cache.NewSharedInformer(
 		exp.lwNodes,
 		&v1.Node{},
 		0,
 	)
 
-	exp.configMapInformer = cache.NewSharedInformer(
-		exp.lwConfigMaps,
+	exp.ingressGatewayAdvertiseConfigMapInformer = cache.NewSharedInformer(
+		exp.lwIngressGatewayAdvertiseConfigMap,
+		&v1.ConfigMap{},
+		0,
+	)
+
+	exp.ambientGatewayAdvertiseConfigMapInformer = cache.NewSharedInformer(
+		exp.lwAmbientGatewayAdvertiseConfigMap,
 		&v1.ConfigMap{},
 		0,
 	)
 
 	exp.publicServiceInformer = cache.NewSharedInformer(
-		exp.lwPublicService,
+		exp.lwPublicServices,
 		&v1.Service{},
 		0,
 	)
@@ -211,83 +279,108 @@ func (exp *Exporter) watchIngressGateways(ctx context.Context) {
 	)
 
 	exp.remoteClustersPublicMetadataInformer = cache.NewSharedInformer(
-		exp.lwdRemoteClustersPublicMetadata,
+		exp.lwRemoteClustersPublicMetadata,
 		&v1.Secret{},
 		0,
 	)
 
-	exp.remoteAuthnKeypair = cache.NewSharedInformer(
+	exp.remoteAuthnKeypairInformer = cache.NewSharedInformer(
 		exp.lwRemoteAuthnKeypair,
 		&v1.Secret{},
 		0,
 	)
 
-	go exp.serviceInformer.Run(ctx.Done())
-	go exp.podInformer.Run(ctx.Done())
+	go exp.ingressGatewayServiceInformer.Run(ctx.Done())
+	go exp.ambientGatewayServiceInformer.Run(ctx.Done())
+	go exp.ingressGatewayPodInformer.Run(ctx.Done())
+	go exp.ambientGatewayPodInformer.Run(ctx.Done())
 	go exp.nodeInformer.Run(ctx.Done())
-	go exp.configMapInformer.Run(ctx.Done())
+	go exp.ingressGatewayAdvertiseConfigMapInformer.Run(ctx.Done())
+	go exp.ambientGatewayAdvertiseConfigMapInformer.Run(ctx.Done())
 	go exp.publicServiceInformer.Run(ctx.Done())
 	go exp.certCAConfigMapInformer.Run(ctx.Done())
 	go exp.remoteClustersPublicMetadataInformer.Run(ctx.Done())
-	go exp.remoteAuthnKeypair.Run(ctx.Done())
+	go exp.remoteAuthnKeypairInformer.Run(ctx.Done())
 
 	if !cache.WaitForCacheSync(ctx.Done(),
-		exp.serviceInformer.HasSynced,
-		exp.podInformer.HasSynced,
+		exp.ingressGatewayServiceInformer.HasSynced,
+		exp.ambientGatewayServiceInformer.HasSynced,
+		exp.ingressGatewayPodInformer.HasSynced,
+		exp.ambientGatewayPodInformer.HasSynced,
 		exp.nodeInformer.HasSynced,
-		exp.configMapInformer.HasSynced,
+		exp.ingressGatewayAdvertiseConfigMapInformer.HasSynced,
+		exp.ambientGatewayAdvertiseConfigMapInformer.HasSynced,
 		exp.publicServiceInformer.HasSynced,
 		exp.certCAConfigMapInformer.HasSynced,
 		exp.remoteClustersPublicMetadataInformer.HasSynced,
-		exp.remoteAuthnKeypair.HasSynced) {
+		exp.remoteAuthnKeypairInformer.HasSynced) {
 		fmt.Println("[ERROR] Failed to sync caches")
 		return
 	}
+
+	go exp.trackAmbientGatewayState(ctx)
 }
 
-func extractLoadBalancerInfo(services *v1.ServiceList) []IngressGateway {
-	var gateways = make([]IngressGateway, 0, len(services.Items))
+type lbAddressChoice bool
+
+const (
+	firstIngressEntry lbAddressChoice = false
+	anyEntryWithIP    lbAddressChoice = true
+)
+
+func loadBalancerAddress(ingresses []v1.LoadBalancerIngress, choice lbAddressChoice) string {
+	var hostname string
+
+	for _, ingress := range ingresses {
+		if ingress.IP != "" {
+			return ingress.IP
+		}
+
+		if hostname == "" {
+			hostname = ingress.Hostname
+		}
+
+		if choice == firstIngressEntry {
+			break
+		}
+	}
+
+	return hostname
+}
+
+func extractLoadBalancerInfo(services *v1.ServiceList, portName string, choice lbAddressChoice) []Gateway {
+	var gateways = make([]Gateway, 0, len(services.Items))
 
 	for _, svc := range services.Items {
-		if len(svc.Status.LoadBalancer.Ingress) == 0 {
-			continue
-		}
-
-		var address string
-		ingress := svc.Status.LoadBalancer.Ingress[0]
-		if ingress.IP != "" {
-			address = ingress.IP
-		} else if ingress.Hostname != "" {
-			address = ingress.Hostname
-		}
+		address := loadBalancerAddress(svc.Status.LoadBalancer.Ingress, choice)
 
 		var port int32
 		for _, p := range svc.Spec.Ports {
-			if p.Name == "tls" {
+			if p.Name == portName {
 				port = p.Port
 				break
 			}
 		}
 
 		if address != "" && port != 0 {
-			gateways = append(gateways, IngressGateway{Address: address, Port: port})
+			gateways = append(gateways, Gateway{Address: address, Port: port})
 		}
 	}
 
 	return gateways
 }
 
-func extractNodePortInfo(service *v1.Service, pods *v1.PodList, nodes *v1.NodeList) ([]IngressGateway, error) {
+func extractNodePortInfo(service *v1.Service, pods *v1.PodList, nodes *v1.NodeList, portName string) ([]Gateway, error) {
 	var port int32
 	for _, p := range service.Spec.Ports {
-		if p.Name == "tls" {
+		if p.Name == portName {
 			port = p.NodePort
 			break
 		}
 	}
 
 	if port == 0 {
-		return nil, fmt.Errorf("no tls port found")
+		return nil, fmt.Errorf("no %s port found", portName)
 	}
 
 	nodesWithPods := map[string]struct{}{}
@@ -295,7 +388,7 @@ func extractNodePortInfo(service *v1.Service, pods *v1.PodList, nodes *v1.NodeLi
 		nodesWithPods[pod.Spec.NodeName] = struct{}{}
 	}
 
-	gateways := make([]IngressGateway, 0)
+	gateways := make([]Gateway, 0)
 	for _, node := range nodes.Items {
 		if _, exists := nodesWithPods[node.Name]; !exists {
 			continue
@@ -318,7 +411,7 @@ func extractNodePortInfo(service *v1.Service, pods *v1.PodList, nodes *v1.NodeLi
 		}
 
 		if isNodeActive(&node) && address != "" {
-			gateways = append(gateways, IngressGateway{Address: address, Port: port})
+			gateways = append(gateways, Gateway{Address: address, Port: port})
 		}
 	}
 
@@ -341,87 +434,61 @@ func isNodeActive(node *v1.Node) bool {
 	return true
 }
 
-func extractIngressGatewaysFromCM(cm *v1.ConfigMap) ([]IngressGateway, error) {
-	data, exists := cm.Data["ingressgateways-array.json"]
+func extractAdvertisedGatewaysFromCM(cm *v1.ConfigMap) ([]Gateway, error) {
+	key := advertisedGatewaysKey
+	data, exists := cm.Data[key]
 	if !exists {
-		return nil, fmt.Errorf("ConfigMap does not contain ingressgateways-array.json")
+		key = deprecatedAdvertisedGatewaysKey
+		data, exists = cm.Data[key]
+	}
+	if !exists {
+		return nil, fmt.Errorf("ConfigMap contains neither %s nor %s", advertisedGatewaysKey, deprecatedAdvertisedGatewaysKey)
 	}
 
-	gateways := make([]IngressGateway, 0)
+	gateways := make([]Gateway, 0)
 	if err := json.Unmarshal([]byte(data), &gateways); err != nil {
-		return nil, fmt.Errorf("failed to parse ingressGatewaysArray: %w", err)
+		return nil, fmt.Errorf("failed to parse %s: %w", key, err)
 	}
 
 	return gateways, nil
 }
 
-// GetIngressGateways Main function to get all ingress gateways
-func (exp *Exporter) GetIngressGateways() ([]IngressGateway, error) {
-	inlet := exp.inlet
+// ingressGateways collects the addresses of this cluster's ingress gateway. It serves both
+// private metadata documents: for multicluster it is the east-west gateway the sidecar data
+// plane uses, whose ambient counterpart is ambientGateways; for federation it is the gateway
+// peers reach the published services through.
+func (exp *Exporter) ingressGateways() ([]Gateway, error) {
 	// debug
-	fmt.Printf("INLET=%s\n", inlet)
+	fmt.Printf("INLET=%s\n", exp.ingressGatewayInlet)
 
-	items := exp.serviceInformer.GetStore().List()
-	var ingressGateways = make([]IngressGateway, 0, len(items))
-	serviceList := &v1.ServiceList{}
-	for _, item := range items {
-		service, ok := item.(*v1.Service)
-		if !ok {
-			continue
-		}
-		serviceList.Items = append(serviceList.Items, *service)
+	serviceList := &v1.ServiceList{Items: listFromStore[v1.Service](exp.ingressGatewayServiceInformer)}
+	var ingressGateways = make([]Gateway, 0, len(serviceList.Items))
+
+	advertised, err := exp.advertisedGateways(exp.ingressGatewayAdvertiseConfigMapInformer)
+	if err != nil {
+		return nil, err
+	}
+	if len(advertised) > 0 {
+		logger.Printf("Found ingressGateways advertisements overriding config in ConfigMap: %s, %v", ingressGatewayAdvertiseConfigMapName, advertised)
+		sortGateways(advertised)
+
+		return advertised, nil
 	}
 
-	// Try get ConfigMap
-	// Prioritizes ConfigMap if it is present in the inlet Gateways is ignored
-	ingressGwFromCm := exp.configMapInformer.GetStore().List()
-	if len(ingressGwFromCm) > 0 {
-		cm := ingressGwFromCm[0].(*v1.ConfigMap)
-		ingressGatewaysConfigmap, err := extractIngressGatewaysFromCM(cm)
-		if err != nil {
-			return nil, fmt.Errorf("failed to extract gateways from cm: %w", err)
-		}
-		logger.Printf("Found ingresGateways advertisements overriding config in ConfigMap: %s, %v", cm.Name, ingressGatewaysConfigmap)
-		ingressGateways = append(ingressGateways, ingressGatewaysConfigmap...)
-		sort.Slice(ingressGateways, func(i, j int) bool {
-			if ingressGateways[i].Address != ingressGateways[j].Address {
-				return ingressGateways[i].Address < ingressGateways[j].Address
-			}
-			return ingressGateways[i].Port < ingressGateways[j].Port
-		})
-		return ingressGateways, nil
-	}
-
-	switch inlet {
+	switch exp.ingressGatewayInlet {
 	case "LoadBalancer":
-		ingressGatewaysLoadBalancer := extractLoadBalancerInfo(serviceList)
+		ingressGatewaysLoadBalancer := extractLoadBalancerInfo(serviceList, ingressGatewayPortName, firstIngressEntry)
 		fmt.Printf("ingressGatewaysLoadBalancer=%+v\n", ingressGatewaysLoadBalancer)
 		ingressGateways = append(ingressGateways, ingressGatewaysLoadBalancer...)
 
 	case "NodePort":
-		podsItems := exp.podInformer.GetStore().List()
-		podsList := &v1.PodList{}
-		for _, item := range podsItems {
-			pod, ok := item.(*v1.Pod)
-			if !ok {
-				continue
-			}
-			podsList.Items = append(podsList.Items, *pod)
-		}
-		nodesItems := exp.nodeInformer.GetStore().List()
-		nodesList := &v1.NodeList{}
-		for _, item := range nodesItems {
-			node, ok := item.(*v1.Node)
-			if !ok {
-				continue
-			}
-			nodesList.Items = append(nodesList.Items, *node)
-		}
+		podsList := &v1.PodList{Items: listFromStore[v1.Pod](exp.ingressGatewayPodInformer)}
+		nodesList := &v1.NodeList{Items: listFromStore[v1.Node](exp.nodeInformer)}
 
 		if len(serviceList.Items) == 0 {
 			return nil, fmt.Errorf("no services found in ingressgateways")
 		}
-		ingressGatewaysNodePort, err := extractNodePortInfo(&serviceList.Items[0], podsList, nodesList)
+		ingressGatewaysNodePort, err := extractNodePortInfo(&serviceList.Items[0], podsList, nodesList, ingressGatewayPortName)
 		if err != nil {
 			return nil, fmt.Errorf("failed to extract node port info: %w", err)
 		}
@@ -429,20 +496,170 @@ func (exp *Exporter) GetIngressGateways() ([]IngressGateway, error) {
 		fmt.Printf("ingressGatewaysNodePort=%+v\n", ingressGatewaysNodePort)
 		ingressGateways = append(ingressGateways, ingressGatewaysNodePort...)
 	default:
-		return nil, fmt.Errorf("unknown inlet type: %s", inlet)
+		return nil, fmt.Errorf("unknown ingress gateway inlet type: %q", exp.ingressGatewayInlet)
 	}
 
 	// debug
 	fmt.Printf("ingressGateways=%v\n", ingressGateways)
 
-	sort.Slice(ingressGateways, func(i, j int) bool {
-		if ingressGateways[i].Address != ingressGateways[j].Address {
-			return ingressGateways[i].Address < ingressGateways[j].Address
-		}
-		return ingressGateways[i].Port < ingressGateways[j].Port
-	})
+	sortGateways(ingressGateways)
 
 	return ingressGateways, nil
+}
+
+// ambientGateways collects the addresses of this cluster's ambient gateway, the east-west
+// gateway the ambient data plane uses. Its sidecar counterpart is ingressGateways.
+func (exp *Exporter) ambientGateways() ([]Gateway, error) {
+	serviceList := listFromStore[v1.Service](exp.ambientGatewayServiceInformer)
+	if len(serviceList) == 0 {
+		return nil, nil
+	}
+
+	service := &serviceList[0]
+
+	advertised, err := exp.advertisedGateways(exp.ambientGatewayAdvertiseConfigMapInformer)
+	if err != nil {
+		return nil, err
+	}
+
+	var gateways []Gateway
+
+	switch {
+	case len(advertised) > 0:
+		gateways = advertised
+	case exp.ambientGatewayInlet == "LoadBalancer":
+		gateways = extractLoadBalancerInfo(&v1.ServiceList{Items: serviceList}, ambientGatewayPortName, anyEntryWithIP)
+	case exp.ambientGatewayInlet == "NodePort":
+		podsList := &v1.PodList{Items: listFromStore[v1.Pod](exp.ambientGatewayPodInformer)}
+		nodesList := &v1.NodeList{Items: listFromStore[v1.Node](exp.nodeInformer)}
+
+		if gateways, err = extractNodePortInfo(service, podsList, nodesList, ambientGatewayPortName); err != nil {
+			return nil, err
+		}
+	default:
+		return nil, fmt.Errorf("unknown ambient gateway inlet type: %q", exp.ambientGatewayInlet)
+	}
+
+	gateways, dropped := keepIPAddresses(gateways)
+	if len(gateways) == 0 {
+		if len(dropped) == 0 {
+			return nil, fmt.Errorf("service %s has no external address and no node is running a gateway pod; check that the gateway pods are scheduled (alliance.ambientGateway.nodeSelector and .tolerations) and that the inlet can assign an address", service.Name)
+		}
+
+		return nil, fmt.Errorf("no address of service %s is an IP address the ambient path can use (%s); set alliance.ambientGateway.advertise to an IP address or use a load balancer that assigns one", service.Name, addressList(dropped))
+	}
+
+	sortGateways(gateways)
+
+	return gateways, nil
+}
+
+func sortGateways(gateways []Gateway) {
+	sort.Slice(gateways, func(i, j int) bool {
+		if gateways[i].Address != gateways[j].Address {
+			return gateways[i].Address < gateways[j].Address
+		}
+
+		return gateways[i].Port < gateways[j].Port
+	})
+}
+
+func listFromStore[T any](informer cache.SharedInformer) []T {
+	items := informer.GetStore().List()
+	out := make([]T, 0, len(items))
+	for _, item := range items {
+		object, ok := item.(*T)
+		if !ok {
+			continue
+		}
+		out = append(out, *object)
+	}
+
+	return out
+}
+
+func (exp *Exporter) advertisedGateways(informer cache.SharedInformer) ([]Gateway, error) {
+	items := informer.GetStore().List()
+	if len(items) == 0 {
+		return nil, nil
+	}
+
+	cm, ok := items[0].(*v1.ConfigMap)
+	if !ok {
+		return nil, nil
+	}
+
+	advertised, err := extractAdvertisedGatewaysFromCM(cm)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract gateways from cm %s: %w", cm.Name, err)
+	}
+
+	return advertised, nil
+}
+
+func keepIPAddresses(gateways []Gateway) ([]Gateway, []Gateway) {
+	kept := make([]Gateway, 0, len(gateways))
+	dropped := make([]Gateway, 0, len(gateways))
+
+	for _, gw := range gateways {
+		ip := net.ParseIP(gw.Address)
+		if ip == nil {
+			dropped = append(dropped, gw)
+			continue
+		}
+		gw.Address = ip.String()
+		kept = append(kept, gw)
+	}
+
+	return kept, dropped
+}
+
+func addressList(gateways []Gateway) string {
+	addresses := make([]string, 0, len(gateways))
+	for _, gw := range gateways {
+		addresses = append(addresses, strconv.Quote(gw.Address))
+	}
+
+	return strings.Join(addresses, ", ")
+}
+
+func (exp *Exporter) reportAmbientGatewayState() error {
+	if _, err := exp.ambientGateways(); err != nil {
+		ambientGatewayAddressUnusable.Set(1)
+
+		return err
+	}
+
+	ambientGatewayAddressUnusable.Set(0)
+
+	return nil
+}
+
+func (exp *Exporter) trackAmbientGatewayState(ctx context.Context) {
+	const interval = time.Minute
+
+	ticker := time.NewTicker(interval)
+	defer ticker.Stop()
+
+	reported := false
+
+	for {
+		err := exp.reportAmbientGatewayState()
+		switch {
+		case err != nil && !reported:
+			logger.Printf("No usable address for the ambient east-west gateway, publishing none: %v", err)
+			reported = true
+		case err == nil && reported:
+			logger.Print("The ambient east-west gateway has a usable address again")
+			reported = false
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-ticker.C:
+		}
+	}
 }
 
 // GetPublicServices main function for federation to get public services
@@ -549,7 +766,7 @@ func (exp *Exporter) ExtractRemotePublicMetadata() (RemotePublicMetadata, error)
 
 // ExtractAuthnKeyPub extract pub.pem from secret d8-remote-authn-keypair
 func (exp *Exporter) ExtractAuthnKeyPub() (string, error) {
-	items := exp.remoteAuthnKeypair.GetStore().List()
+	items := exp.remoteAuthnKeypairInformer.GetStore().List()
 	if len(items) == 0 {
 		return "", fmt.Errorf("no secrets found in d8-remote-authn-keypair")
 	}
@@ -659,19 +876,26 @@ func (exp *Exporter) CheckAuthn(header http.Header, scope string) (string, error
 func (exp *Exporter) RenderMulticlusterPrivateMetadataJSON() string {
 	var pm MulticlusterPrivateMetadata
 
-	ingressGateways, err := exp.GetIngressGateways()
+	ingressGateways, err := exp.ingressGateways()
 	if err != nil {
-		fmt.Printf("failed to get ingress gateways: %v", err)
+		logger.Printf("failed to get ingress gateways, publishing none: %v", err)
+	} else {
+		pm.IngressGateways = &ingressGateways
 	}
 
-	pm.IngressGateways = &ingressGateways
+	ambientGateways, err := exp.ambientGateways()
+	if err != nil {
+		logger.Printf("failed to get ambient gateways, publishing none: %v", err)
+	} else if len(ambientGateways) > 0 {
+		pm.AmbientGateways = &ambientGateways
+	}
 
 	pm.ClusterID = exp.multiclusterClusterID
 	if len(pm.ClusterID) == 0 {
 		panic("Error reading MULTICLUSTER_CLUSTER_ID from env")
 	}
 
-	pm.NetworkName = exp.multicluserNetworkName
+	pm.NetworkName = exp.multiclusterNetworkName
 	if len(pm.NetworkName) == 0 {
 		panic("Error reading MULTICLUSTER_NETWORK_NAME from env")
 	}
@@ -691,12 +915,12 @@ func (exp *Exporter) RenderMulticlusterPrivateMetadataJSON() string {
 func (exp *Exporter) RenderFederationPrivateMetadataJSON() string {
 	var pm FederationPrivateMetadata
 
-	ingressGateways, err := exp.GetIngressGateways()
+	ingressGateways, err := exp.ingressGateways()
 	if err != nil {
-		fmt.Printf("failed to get ingress gateways: %v", err)
+		logger.Printf("failed to get ingress gateways, publishing none: %v", err)
+	} else {
+		pm.IngressGateways = &ingressGateways
 	}
-
-	pm.IngressGateways = &ingressGateways
 
 	if exp.federationEnabled == "true" {
 		services := exp.GetPublicServices()
@@ -718,12 +942,12 @@ func (exp *Exporter) RenderPublicMetadataJSON() string {
 
 	authnKeyPubPem, err := exp.ExtractAuthnKeyPub()
 	if err != nil {
-		fmt.Printf("failed to extract authn key pub pem: %v", err)
+		logger.Printf("failed to extract authn key pub pem: %v", err)
 	}
 
 	rootCAPem, err := exp.ExtractRootCaCert()
 	if err != nil {
-		fmt.Printf("failed to extract root ca cert: %v", err)
+		logger.Printf("failed to extract root ca cert: %v", err)
 	}
 
 	pm := AlliancePublicMetadata{
