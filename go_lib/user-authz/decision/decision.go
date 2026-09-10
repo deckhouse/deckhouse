@@ -240,8 +240,13 @@ const (
 // NamespaceAccess folds a subject's entries into the question "which namespaces may they see".
 //
 // privileged is the caller's own policy for a subject no rule names. An authorizer must answer
-// NoOpinion there and let RBAC decide, but a report that filters a list has to choose, and the
-// choice belongs to the caller rather than to this package.
+// NoOpinion there and let RBAC decide; a report that filters a list may want to say something
+// else, and the choice belongs to the caller rather than to this package.
+//
+// Both consumers today pass false and then treat NoNamespaces exactly like AllNamespaces, because
+// a subject without a rule is the norm and hiding them from a report would disagree with what the
+// cluster enforces. The parameter stays because the choice is genuinely the caller's, but nothing
+// currently exercises the other branch - do not read it as a policy the product applies.
 func NamespaceAccess(src Sources, username string, groups []string, privileged bool) (AccessType, rules.Entry) {
 	entries := Entries(src, username, groups)
 	if len(entries) == 0 {

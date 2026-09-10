@@ -34,16 +34,18 @@ var _ user.Info = &mockUserInfo{}
 // nsAllowed mirrors how the namespace resolver consumes the engine:
 // classify the user via GetNamespaceAccessType, then apply the returned
 // filter. This is the only supported per-namespace check path.
+// nsAllowed mirrors resolver.isNamespaceAllowedByMultitenancy, which is the only production caller
+// of GetNamespaceAccessType. Mirroring it is the point: this helper used to map NoNamespacesAllowed
+// to "denied", which no caller does, so every case below asserted a deny-by-default policy that
+// nothing in the product applies. Only FilteredAccess - a subject a rule names AND limits -
+// restricts anything; a subject no rule names is not multi-tenancy's business, and the enforcement
+// webhook answers the same way for them.
 func nsAllowed(e *Engine, userInfo user.Info, namespace string) bool {
 	accessType, filter := e.GetNamespaceAccessType(userInfo)
-	switch accessType {
-	case AllNamespacesAllowed:
-		return true
-	case NoNamespacesAllowed:
-		return false
-	default:
+	if accessType == FilteredAccess {
 		return e.IsNamespaceAllowedWithFilter(namespace, filter)
 	}
+	return true
 }
 
 // swappableRules is a RulesProvider whose directory can be replaced while the engine serves, the
@@ -504,10 +506,10 @@ func TestEngine_NamespaceAccessFiltering(t *testing.T) {
 			name:      "unknown user without CAR - denied (deny-by-default)",
 			userInfo:  &mockUserInfo{name: "unknown-user"},
 			namespace: "any-ns",
-			expected:  false,
+			expected:  true, // no rule names them, so multi-tenancy has no opinion
 		},
 		{
-			name:      "system:masters user without CAR - allowed (privileged bypass)",
+			name:      "system:masters user without CAR - allowed, like any subject no rule names",
 			userInfo:  &mockUserInfo{name: "admin", groups: []string{"system:masters"}},
 			namespace: "any-ns",
 			expected:  true,
@@ -519,13 +521,13 @@ func TestEngine_NamespaceAccessFiltering(t *testing.T) {
 			expected:  true,
 		},
 		{
-			name:      "kubeadm:cluster-admins user without CAR - allowed (privileged bypass)",
+			name:      "kubeadm:cluster-admins user without CAR - allowed, like any subject no rule names",
 			userInfo:  &mockUserInfo{name: "kubeadm-admin", groups: []string{"kubeadm:cluster-admins"}},
 			namespace: "any-ns",
 			expected:  true,
 		},
 		{
-			name:      "superadmins user without CAR - allowed (privileged bypass)",
+			name:      "superadmins user without CAR - allowed, like any subject no rule names",
 			userInfo:  &mockUserInfo{name: "super-admin", groups: []string{"superadmins"}},
 			namespace: "any-ns",
 			expected:  true,
@@ -534,7 +536,7 @@ func TestEngine_NamespaceAccessFiltering(t *testing.T) {
 			name:      "regular authenticated user without CAR - denied",
 			userInfo:  &mockUserInfo{name: "random-user", groups: []string{"system:authenticated"}},
 			namespace: "any-ns",
-			expected:  false,
+			expected:  true, // likewise: being authenticated is not being named by a rule
 		},
 		{
 			name:      "group member - allowed namespace",
@@ -564,62 +566,6 @@ func TestEngine_NamespaceAccessFiltering(t *testing.T) {
 			}
 			result := nsAllowed(e, userInfo, tt.namespace)
 			assert.Equal(t, tt.expected, result, "unexpected result for %s", tt.name)
-		})
-	}
-}
-
-func TestIsPrivilegedUser(t *testing.T) {
-	tests := []struct {
-		name     string
-		groups   []string
-		expected bool
-	}{
-		{
-			name:     "system:masters is privileged",
-			groups:   []string{"system:masters"},
-			expected: true,
-		},
-		{
-			name:     "kubeadm:cluster-admins is privileged",
-			groups:   []string{"kubeadm:cluster-admins"},
-			expected: true,
-		},
-		{
-			name:     "superadmins is privileged",
-			groups:   []string{"superadmins"},
-			expected: true,
-		},
-		{
-			name:     "system:authenticated is not privileged",
-			groups:   []string{"system:authenticated"},
-			expected: false,
-		},
-		{
-			name:     "random group is not privileged",
-			groups:   []string{"developers", "viewers"},
-			expected: false,
-		},
-		{
-			name:     "mixed groups with one privileged",
-			groups:   []string{"system:authenticated", "system:masters", "developers"},
-			expected: true,
-		},
-		{
-			name:     "empty groups",
-			groups:   []string{},
-			expected: false,
-		},
-		{
-			name:     "nil groups",
-			groups:   nil,
-			expected: false,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			result := isPrivilegedUser(tt.groups)
-			assert.Equal(t, tt.expected, result)
 		})
 	}
 }
@@ -654,15 +600,19 @@ func TestEngine_GetNamespaceAccessType(t *testing.T) {
 			expectFilter:       false,
 		},
 		{
-			name:               "system:masters without CAR - all allowed (privileged bypass)",
+			name:               "system:masters without CAR is a subject no rule names",
 			userInfo:           &mockUserInfo{name: "admin", groups: []string{"system:masters"}},
-			expectedAccessType: AllNamespacesAllowed,
+			expectedAccessType: NoNamespacesAllowed,
 			expectFilter:       false,
 		},
 		{
-			name:               "superadmins without CAR - all allowed (privileged bypass)",
+			// No rule names this subject, and being in a group that sounds privileged does not
+			// change that. There used to be a list of such groups here answering AllNamespaces
+			// for them; it changed nothing, because both callers treat NoNamespacesAllowed the
+			// same way, and a policy that is implied but never applied is worse than none.
+			name:               "a group that sounds privileged is still a subject no rule names",
 			userInfo:           &mockUserInfo{name: "super", groups: []string{"superadmins"}},
-			expectedAccessType: AllNamespacesAllowed,
+			expectedAccessType: NoNamespacesAllowed,
 			expectFilter:       false,
 		},
 		{

@@ -403,7 +403,7 @@ func TestEngine_Authorize_CARCRBDoesNotSkipFilter(t *testing.T) {
 	assert.Equal(t, namespaceLimitedAccessReason, reason)
 }
 
-func TestEngine_GetNamespaceAccessType_PrivilegedDoesNotOverrideCAR(t *testing.T) {
+func TestEngine_GetNamespaceAccessType_ARuleFiltersWhateverGroupsTheSubjectCarries(t *testing.T) {
 	editor := engineWithConsoleScope(t, editorCARConfig)
 
 	access, filter := editor.GetNamespaceAccessType(&mockUserInfo{
@@ -415,11 +415,15 @@ func TestEngine_GetNamespaceAccessType_PrivilegedDoesNotOverrideCAR(t *testing.T
 	require.NotNil(t, filter)
 	assert.False(t, editor.IsNamespaceAllowedWithFilter("ns-out", filter))
 
+	// A subject no rule names, whatever groups they carry. There used to be a list of privileged
+	// groups here answering AllNamespaces for them; it changed nothing, because both production
+	// callers treat NoNamespacesAllowed identically to AllNamespacesAllowed - a subject without a
+	// rule is not multi-tenancy business and must not be zeroed out of a report.
 	access, filter = editor.GetNamespaceAccessType(&mockUserInfo{
 		name:   "nobody@example.io",
 		groups: []string{"system:masters"},
 	})
-	assert.Equal(t, AllNamespacesAllowed, access)
+	assert.Equal(t, NoNamespacesAllowed, access)
 	assert.Nil(t, filter)
 }
 

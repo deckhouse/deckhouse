@@ -27,25 +27,6 @@ const (
 	namespaceLimitedAccessReason = rules.NamespaceLimitedAccessReason
 )
 
-// privilegedGroups contains groups that bypass multi-tenancy restrictions.
-// Users in these groups are allowed full access even without ClusterAuthorizationRules.
-var privilegedGroups = map[string]struct{}{
-	"system:masters":         {},
-	"kubeadm:cluster-admins": {},
-	"superadmins":            {},
-}
-
-// isPrivilegedUser checks if the user belongs to any privileged group
-// that should bypass multi-tenancy restrictions.
-func isPrivilegedUser(groups []string) bool {
-	for _, group := range groups {
-		if _, ok := privilegedGroups[group]; ok {
-			return true
-		}
-	}
-	return false
-}
-
 // IndependentRBACChecker reports whether a request is allowed by RBAC grants
 // that exist independently of ClusterAuthorizationRules: RoleBindings in the
 // request's namespace and ClusterRoleBindings not generated from a CAR.
@@ -228,22 +209,33 @@ func (e *Engine) namespaceLabels() rules.NamespaceLabels {
 //   - accessType: AllNamespacesAllowed, NoNamespacesAllowed, or FilteredAccess
 //   - filter: the combined directory entry for filtering (only valid when accessType == FilteredAccess)
 //
-// The folding is the shared one; what stays here is this apiserver's own policy for a subject no
-// rule names. An authorizer must let RBAC decide that case, but a report that filters a list has to
-// choose, and it chooses deny-by-default unless the subject is in a privileged group.
+// The folding is the shared one. Only FilteredAccess restricts anything: a subject a rule names
+// and limits. A subject no rule names is not multi-tenancy's business — under the newer role model
+// most subjects are in that position, their access coming from RoleBindings — and the enforcement
+// webhook answers the same way for them, so a report that hid them would disagree with the cluster.
+//
+// This used to be documented as deny-by-default-unless-privileged, with a list of privileged
+// groups. Neither half was real: no caller ever denied on it, so the list decided nothing and the
+// documented policy described behaviour the product did not have.
 func (e *Engine) GetNamespaceAccessType(userInfo user.Info) (NamespaceAccessType, *DirectoryEntry) {
 	if userInfo == nil {
 		return AllNamespacesAllowed, nil
 	}
 
+	// Not privileged, ever. The library offers the caller a say in what a subject no rule names
+	// should mean, and there used to be a list of groups here - system:masters and friends - that
+	// answered "everything" for them. It changed nothing: both callers of this method treat
+	// "no namespaces" and "all namespaces" identically, because a subject without a
+	// ClusterAuthorizationRule is the norm under the newer role model and must not be zeroed out
+	// of a report. Keeping the list implied a policy that was not applied anywhere.
 	access, entry := decision.NamespaceAccess(e.sources(context.Background(), nil),
-		userInfo.GetName(), userInfo.GetGroups(), isPrivilegedUser(userInfo.GetGroups()))
+		userInfo.GetName(), userInfo.GetGroups(), false)
 
 	switch access {
 	case decision.AllNamespaces:
 		return AllNamespacesAllowed, nil
 	case decision.NoNamespaces:
-		klog.V(4).Infof("GetNamespaceAccessType: user=%s has no CAR and is not privileged (deny-by-default)", userInfo.GetName())
+		klog.V(4).Infof("GetNamespaceAccessType: user=%s is named by no ClusterAuthorizationRule, so multi-tenancy imposes no filter", userInfo.GetName())
 		return NoNamespacesAllowed, nil
 	default:
 		return FilteredAccess, &entry

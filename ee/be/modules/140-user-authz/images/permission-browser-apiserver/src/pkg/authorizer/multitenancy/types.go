@@ -11,11 +11,18 @@ import "github.com/deckhouse/deckhouse/go_lib/user-authz/rules"
 type NamespaceAccessType int
 
 const (
-	// AllNamespacesAllowed means user has no MT restrictions (privileged or no filters).
+	// AllNamespacesAllowed: a rule names this subject and imposes no namespace filter.
 	AllNamespacesAllowed NamespaceAccessType = iota
-	// NoNamespacesAllowed means user has no CAR and is not privileged (deny-by-default).
+	// NoNamespacesAllowed: no rule names this subject at all.
+	//
+	// The name reads as a verdict and is not one. Both callers treat it exactly like
+	// AllNamespacesAllowed, and deliberately: a subject without a ClusterAuthorizationRule is the
+	// norm under the newer role model, where access comes from RoleBindings, and zeroing them out
+	// of a report would hide access they genuinely have. Multi-tenancy simply has no opinion here,
+	// which is also what the enforcement webhook answers for the same subject.
 	NoNamespacesAllowed
-	// FilteredAccess means user has CAR with restrictions, each namespace must be checked.
+	// FilteredAccess: a rule names this subject and limits it, so each namespace must be checked
+	// against the returned entry.
 	FilteredAccess
 )
 
