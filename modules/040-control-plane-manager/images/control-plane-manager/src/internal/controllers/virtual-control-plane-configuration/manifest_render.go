@@ -201,7 +201,7 @@ func buildManifestReplacer(
 		"${IMAGE_CILIUM_OPERATOR}", images.CiliumOperator,
 		"${VCP_NAME}", vcp.Name,
 		"${NAMESPACE}", vcp.Namespace,
-		"${VCP_KONNECTIVITY_SERVER_COUNT}", fmt.Sprintf("%d", vcp.Spec.Replicas),
+		"${VCP_KONNECTIVITY_SERVER_COUNT}", fmt.Sprintf("%d", desiredCPNCount(vcp)),
 		"${CLUSTER_DOMAIN}", networking.ClusterDomain,
 		"${SERVICE_SUBNET_CIDR}", networking.ServiceSubnetCIDR,
 		"${POD_SUBNET_CIDR}", networking.PodSubnetCIDR,

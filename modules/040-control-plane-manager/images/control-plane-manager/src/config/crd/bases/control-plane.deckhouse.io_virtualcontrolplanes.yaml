@@ -21,10 +21,10 @@ spec:
       jsonPath: .spec.kubernetesVersion
       name: Version
       type: string
-    - description: Desired number of control plane replicas
-      jsonPath: .spec.replicas
-      name: Replicas
-      type: integer
+    - description: High availability mode
+      jsonPath: .spec.highAvailability
+      name: HA
+      type: boolean
     - description: Virtual control plane readiness
       jsonPath: .status.conditions[?(@.type=='Ready')].status
       name: Ready
@@ -79,6 +79,23 @@ spec:
                     - LoadBalancer
                     type: string
                 type: object
+              highAvailability:
+                default: false
+                description: |-
+                  HighAvailability makes the tenant control plane survive the loss of one management-cluster
+                  node: two ControlPlaneNodes on separate nodes, a PodDisruptionBudget per component, and a
+                  two-instance Postgres with asynchronous replication.
+
+                  It costs roughly twice the resources. Asynchronous replication means a primary failover can
+                  lose the last transactions (RPO > 0); synchronous was rejected because with two instances
+                  losing the replica would block writes entirely.
+
+                  Switching this on a running tenant is allowed but interrupts service: the component
+                  StatefulSets are recreated and the datastore is resized.
+
+                  Ignored for the datastore when datastoreRef is set: the availability of a shared datastore is
+                  not a property of one VirtualControlPlane. The ControlPlaneNode count still follows it.
+                type: boolean
               kubernetesVersion:
                 description: |-
                   KubernetesVersion is the desired Kubernetes version for the tenant control plane.
@@ -226,11 +243,6 @@ spec:
                   checksum and makes the module recreate the component StatefulSets. The tenant control plane
                   restarts.
                 type: object
-              replicas:
-                default: 1
-                description: Replicas is the desired number of control plane replicas.
-                format: int32
-                type: integer
               tolerations:
                 description: |-
                   Tolerations are applied to the same pods as NodeSelector. A dedicated node pool is normally

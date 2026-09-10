@@ -22,10 +22,10 @@ spec:
       jsonPath: .spec.kubernetesVersion
       name: Version
       type: string
-    - description: Desired number of control plane replicas.
-      jsonPath: .spec.replicas
-      name: Replicas
-      type: integer
+    - description: High availability mode.
+      jsonPath: .spec.highAvailability
+      name: HA
+      type: boolean
     - description: Published Kubernetes API endpoint.
       jsonPath: .status.endpoint
       name: Endpoint
@@ -84,6 +84,26 @@ spec:
                     - LoadBalancer
                     type: string
                 type: object
+              highAvailability:
+                default: false
+                description: |-
+                  High availability mode for the tenant control plane.
+
+                  When `true`: two ControlPlaneNodes on different management-cluster nodes,
+                  a PodDisruptionBudget per component, and a Postgres of two instances with
+                  asynchronous replication.
+
+                  Costs roughly twice the resources. Asynchronous replication means the last
+                  transactions can be lost on a primary failover. Synchronous replication is not
+                  used: with two instances the loss of the replica would block writes entirely.
+
+                  Warning! Switching this on a running tenant interrupts service: the component
+                  StatefulSets are recreated and the datastore is resized.
+
+                  Has no effect on the datastore when `datastoreRef` is set: the availability of a
+                  shared datastore is not a property of a single VirtualControlPlane. The
+                  ControlPlaneNode count still follows this parameter.
+                type: boolean
               kubernetesVersion:
                 description: |-
                   Desired Kubernetes version for the tenant control plane.
@@ -203,11 +223,6 @@ spec:
                   A dedicated node pool is almost always both labelled and tainted, so a `nodeSelector`
                   without matching `tolerations` leaves every pod Pending.
                 type: object
-              replicas:
-                default: 1
-                description: Desired number of control plane replicas.
-                minimum: 1
-                type: integer
               tolerations:
                 description: |-
                   Tolerations for the same pods as `nodeSelector`.

@@ -133,10 +133,22 @@ type VirtualControlPlaneSpec struct {
 	// +kubebuilder:validation:Enum="1.32";"1.33";"1.34";"1.35";"1.36"
 	KubernetesVersion string `json:"kubernetesVersion"`
 
-	// Replicas is the desired number of control plane replicas.
-	// +kubebuilder:default=1
+	// HighAvailability makes the tenant control plane survive the loss of one management-cluster
+	// node: two ControlPlaneNodes on separate nodes, a PodDisruptionBudget per component, and a
+	// two-instance Postgres with asynchronous replication.
+	//
+	// It costs roughly twice the resources. Asynchronous replication means a primary failover can
+	// lose the last transactions (RPO > 0); synchronous was rejected because with two instances
+	// losing the replica would block writes entirely.
+	//
+	// Switching this on a running tenant is allowed but interrupts service: the component
+	// StatefulSets are recreated and the datastore is resized.
+	//
+	// Ignored for the datastore when datastoreRef is set: the availability of a shared datastore is
+	// not a property of one VirtualControlPlane. The ControlPlaneNode count still follows it.
+	// +kubebuilder:default=false
 	// +optional
-	Replicas int32 `json:"replicas,omitempty"`
+	HighAvailability bool `json:"highAvailability,omitempty"`
 
 	// Networking is the tenant cluster's network configuration (Service/Pod CIDRs, cluster
 	// domain). Required so that the "clusterDomain" default always materialises and its
@@ -207,7 +219,7 @@ type VirtualControlPlaneStatus struct {
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:scope=Namespaced,shortName=vcp
 // +kubebuilder:printcolumn:name="Version",type="string",JSONPath=".spec.kubernetesVersion",description="Desired Kubernetes version"
-// +kubebuilder:printcolumn:name="Replicas",type="integer",JSONPath=".spec.replicas",description="Desired number of control plane replicas"
+// +kubebuilder:printcolumn:name="HA",type="boolean",JSONPath=".spec.highAvailability",description="High availability mode"
 // +kubebuilder:printcolumn:name="Ready",type="string",JSONPath=".status.conditions[?(@.type=='Ready')].status",description="Virtual control plane readiness"
 // +kubebuilder:printcolumn:name="Age",type="date",JSONPath=".metadata.creationTimestamp"
 type VirtualControlPlane struct {

@@ -24,6 +24,17 @@ spec:
       securityContext:
         seccompProfile:
           type: RuntimeDefault
+      # Each ControlPlaneNode owns a separate single-replica StatefulSet, so spreading replicas is a
+      # cross-StatefulSet concern and has to key off the VCP-wide label. Unconditional: outside HA
+      # only one pod matches, so the rule is a no-op.
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                app: kube-controller-manager
+                control-plane.deckhouse.io/vcp: ${VCP_NAME}
+            topologyKey: kubernetes.io/hostname
       nodeSelector: ${VCP_NODE_SELECTOR}
       tolerations: ${VCP_TOLERATIONS}
       containers:

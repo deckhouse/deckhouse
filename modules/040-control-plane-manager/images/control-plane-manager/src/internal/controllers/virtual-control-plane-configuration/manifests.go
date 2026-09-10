@@ -23,10 +23,14 @@ import (
 
 	"control-plane-manager/internal/constants"
 
+	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+
 	appsv1 "k8s.io/api/apps/v1"
+	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 )
@@ -89,6 +93,35 @@ func parseManifestDocs(raw []byte, defaultNamespace string) ([]*unstructured.Uns
 
 // applyObject creates target if absent, otherwise patches it. mutate builds the object to patch
 // from (current, target); returning ok=false skips the patch (no change needed).
+// applyParentManifests applies a multi-doc template into the parent cluster, owned by the VCP.
+func (r *reconciler) applyParentManifests(
+	ctx context.Context,
+	vcp *controlplanev1alpha1.VirtualControlPlane,
+	configSecret *corev1.Secret,
+	key string,
+) error {
+	raw, ok := configSecret.Data[key]
+	if !ok {
+		return fmt.Errorf("config Secret missing %q", key)
+	}
+
+	objects, err := parseManifestDocs(raw, "")
+	if err != nil {
+		return err
+	}
+
+	for _, target := range objects {
+		if err := ctrl.SetControllerReference(vcp, target, r.scheme); err != nil {
+			return err
+		}
+		if err := applyObject(ctx, r.client, target, patchWholeObject); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func applyObject(ctx context.Context, cl client.Client, target *unstructured.Unstructured, mutate func(current, target *unstructured.Unstructured) (client.Object, bool)) error {
 	current := &unstructured.Unstructured{}
 	current.SetGroupVersionKind(target.GroupVersionKind())

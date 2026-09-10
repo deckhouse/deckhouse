@@ -167,6 +167,10 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
+	if res, err := r.reconcilePDB(ctx, vcp, configSecret); err != nil || !res.IsZero() {
+		return res, err
+	}
+
 	return reconcile.Result{RequeueAfter: requeueInterval}, nil
 }
 
@@ -787,6 +791,15 @@ func (r *reconciler) reconcileControlPlaneNodes(
 	return r.reconcileStaleControlPlaneNodes(ctx, vcp, targetNames)
 }
 
+const haControlPlaneNodes int32 = 2
+
+func desiredCPNCount(vcp *controlplanev1alpha1.VirtualControlPlane) int32 {
+	if vcp.Spec.HighAvailability {
+		return haControlPlaneNodes
+	}
+	return 1
+}
+
 func buildTargetControlPlaneNodes(
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 	configSecret *corev1.Secret,
@@ -797,8 +810,9 @@ func buildTargetControlPlaneNodes(
 		return nil, err
 	}
 
-	targets := make([]*controlplanev1alpha1.ControlPlaneNode, 0, vcp.Spec.Replicas)
-	for ordinal := int32(0); ordinal < vcp.Spec.Replicas; ordinal++ {
+	count := desiredCPNCount(vcp)
+	targets := make([]*controlplanev1alpha1.ControlPlaneNode, 0, count)
+	for ordinal := int32(0); ordinal < count; ordinal++ {
 		targets = append(targets, buildTargetControlPlaneNode(vcp, ordinal, spec))
 	}
 

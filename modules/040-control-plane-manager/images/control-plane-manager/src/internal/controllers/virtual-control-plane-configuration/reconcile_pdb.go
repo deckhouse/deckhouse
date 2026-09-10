@@ -21,30 +21,34 @@ import (
 	"fmt"
 
 	controlplanev1alpha1 "control-plane-manager/api/v1alpha1"
+	"control-plane-manager/internal/constants"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	policyv1 "k8s.io/api/policy/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 )
 
-const ciliumOperatorManifestKey = "cilium-operator.yaml.tpl"
+const pdbManifestKey = "pdb.yaml.tpl"
 
-func (r *reconciler) reconcileCiliumOperator(
+// reconcilePDB applies the per-component PodDisruptionBudgets in HA mode and removes them when HA is
+// switched off - a stale maxUnavailable 1 PDB over a single replica blocks every node drain.
+func (r *reconciler) reconcilePDB(
 	ctx context.Context,
 	vcp *controlplanev1alpha1.VirtualControlPlane,
 	configSecret *corev1.Secret,
 ) (reconcile.Result, error) {
-	if err := r.applyParentManifests(ctx, vcp, configSecret, ciliumOperatorManifestKey); err != nil {
-		return reconcile.Result{}, fmt.Errorf("apply parent %s: %w", ciliumOperatorManifestKey, err)
+	if vcp.Spec.HighAvailability {
+		return reconcile.Result{}, r.applyParentManifests(ctx, vcp, configSecret, pdbManifestKey)
+	}
+
+	err := r.client.DeleteAllOf(ctx, &policyv1.PodDisruptionBudget{},
+		client.InNamespace(vcp.Namespace),
+		client.MatchingLabels{constants.VirtualControlPlaneScopeLabelKey: vcp.Name},
+	)
+	if err != nil {
+		return reconcile.Result{}, fmt.Errorf("delete PodDisruptionBudgets: %w", err)
 	}
 
 	return reconcile.Result{}, nil
-}
-
-// patchWholeObject patches the full target, carrying over the identity fields required by MergeFrom.
-func patchWholeObject(current, target *unstructured.Unstructured) (client.Object, bool) {
-	target.SetResourceVersion(current.GetResourceVersion())
-	target.SetUID(current.GetUID())
-	return target, true
 }
