@@ -134,11 +134,22 @@ func taintToString(t corev1.Taint) string {
 	return t.Key + "=" + t.Value + ":" + string(t.Effect)
 }
 
-func applyTemplateTaints(actual, template, lastApplied []corev1.Taint) ([]corev1.Taint, bool) {
-	if template == nil && lastApplied == nil {
-		return []corev1.Taint{}, true
+// ownedTaints lists the taints node-controller may remove from a node: the ones it applied from the
+// template before, or on the first reconcile of a master the control-plane taint cluster bootstrap puts
+// there (candi/bashible/common-steps/cluster-bootstrap/072_install_control_plane.sh.tpl).
+func ownedTaints(lastApplied *v1.NodeTemplate, nodeGroup *v1.NodeGroup) []corev1.Taint {
+	if lastApplied != nil {
+		return lastApplied.Taints
 	}
+	if nodeGroup.Name == "master" {
+		return []corev1.Taint{{Key: controlPlaneTaintKey, Effect: corev1.TaintEffectNoSchedule}}
+	}
+	return nil
+}
 
+// applyTemplateTaints merges template taints into the node taints. An owned taint that left the
+// template is dropped. Every other taint on the node (CCM, CSI, bashible, set by hand) is kept as is.
+func applyTemplateTaints(actual, template, owned []corev1.Taint) ([]corev1.Taint, bool) {
 	changed := false
 
 	// Build set of template keys
@@ -147,18 +158,17 @@ func applyTemplateTaints(actual, template, lastApplied []corev1.Taint) ([]corev1
 		templateKeys[t.Key] = struct{}{}
 	}
 
-	// Find keys to remove: in lastApplied but not in template
-	removeKeys := make(map[string]struct{})
-	for _, t := range lastApplied {
+	staleOwnedKeys := make(map[string]struct{})
+	for _, t := range owned {
 		if _, found := templateKeys[t.Key]; !found {
-			removeKeys[t.Key] = struct{}{}
+			staleOwnedKeys[t.Key] = struct{}{}
 		}
 	}
 
 	// Build result map keyed by taint.Key (one taint per key, like original)
 	newTaints := make(map[string]corev1.Taint, len(actual)+len(template))
 	for _, t := range actual {
-		if _, shouldRemove := removeKeys[t.Key]; shouldRemove {
+		if _, stale := staleOwnedKeys[t.Key]; stale {
 			changed = true
 			continue
 		}

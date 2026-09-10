@@ -93,11 +93,7 @@ func applyNodeTemplate(nodeObj *corev1.Node, nodeGroup *v1.NodeGroup) error {
 	}
 	newAnnotations[lastAppliedNodeTemplateAnnotation] = string(newLastApplied)
 
-	var lastTaints []corev1.Taint
-	if lastAppliedNodeTemplate != nil {
-		lastTaints = lastAppliedNodeTemplate.Taints
-	}
-	newTaints, taintsChanged := applyTemplateTaints(nodeObj.Spec.Taints, templateTaints, lastTaints)
+	newTaints, taintsChanged := applyTemplateTaints(nodeObj.Spec.Taints, templateTaints, ownedTaints(lastAppliedNodeTemplate, nodeGroup))
 	if taintSliceHasKey(newTaints, nodeUninitializedTaintKey) {
 		taintsChanged = true
 		newTaints = taintSliceWithoutKey(newTaints, nodeUninitializedTaintKey)

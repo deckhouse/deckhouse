@@ -81,6 +81,10 @@ func uninitializedTaint() corev1.Taint {
 	return corev1.Taint{Key: nodeUninitializedTaintKey, Effect: corev1.TaintEffectNoSchedule}
 }
 
+func ccmUninitializedTaint() corev1.Taint {
+	return corev1.Taint{Key: "node.cloudprovider.kubernetes.io/uninitialized", Value: "true", Effect: corev1.TaintEffectNoSchedule}
+}
+
 var _ = AfterEach(func() {
 	Eventually(func(g Gomega) {
 		nodeList := &corev1.NodeList{}
@@ -136,6 +140,24 @@ var _ = Describe("NodeTemplate controller applies the NodeGroup template to its 
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
+	// CCM sets providerID only while its own uninitialized taint is present.
+	It("keeps foreign taints on the first reconcile of a node in a group without template taints", func() {
+		ngName := testenv.UniqueName("frontend")
+		createNodeGroup(ngName, v1.NodeTypeCloudPermanent, nil)
+
+		ccmTaint := ccmUninitializedTaint()
+		bashibleTaint := corev1.Taint{Key: "node.deckhouse.io/bashible-uninitialized", Effect: corev1.TaintEffectNoSchedule}
+		nodeName := testenv.UniqueName("frontend-node")
+		createNode(nodeName, ngName, nil, nil, []corev1.Taint{ccmTaint, bashibleTaint, uninitializedTaint()})
+
+		Eventually(func(g Gomega) {
+			node := getNodeFromAPI(nodeName)
+			g.Expect(node.Annotations).To(HaveKey(lastAppliedNodeTemplateAnnotation))
+			g.Expect(node.Spec.Taints).To(ContainElements(ccmTaint, bashibleTaint))
+			g.Expect(taintSliceHasKey(node.Spec.Taints, nodeUninitializedTaintKey)).To(BeFalse())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
 	It("applies master role labels and removes the legacy master taint not present in the template", func() {
 		createNodeGroup("master", v1.NodeTypeCloudPermanent, nil)
 
@@ -150,6 +172,27 @@ var _ = Describe("NodeTemplate controller applies the NodeGroup template to its 
 			g.Expect(node.Labels).To(HaveKey(masterNodeRoleKey))
 			g.Expect(node.Labels).To(HaveKeyWithValue(nodeTypeLabel, string(v1.NodeTypeCloudPermanent)))
 			g.Expect(taintSliceHasKey(node.Spec.Taints, masterNodeRoleKey)).To(BeFalse())
+		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
+	})
+
+	// Bootstrap taints the first master with control-plane before any template exists.
+	It("drops the bootstrap control-plane taint on a master whose template has no taints and keeps foreign taints", func() {
+		createNodeGroup("master", v1.NodeTypeCloudPermanent, nil)
+
+		ccmTaint := ccmUninitializedTaint()
+		nodeName := testenv.UniqueName("master-node")
+		createNode(nodeName, "master", nil, nil, []corev1.Taint{
+			{Key: controlPlaneTaintKey, Effect: corev1.TaintEffectNoSchedule},
+			ccmTaint,
+			uninitializedTaint(),
+		})
+
+		Eventually(func(g Gomega) {
+			node := getNodeFromAPI(nodeName)
+			g.Expect(node.Annotations).To(HaveKey(lastAppliedNodeTemplateAnnotation))
+			g.Expect(node.Spec.Taints).To(ContainElements(ccmTaint))
+			g.Expect(taintSliceHasKey(node.Spec.Taints, controlPlaneTaintKey)).To(BeFalse())
+			g.Expect(taintSliceHasKey(node.Spec.Taints, nodeUninitializedTaintKey)).To(BeFalse())
 		}, testenv.EventuallyTimeout, testenv.EventuallyPoll).Should(Succeed())
 	})
 
