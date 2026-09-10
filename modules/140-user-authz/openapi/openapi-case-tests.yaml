@@ -5,12 +5,5 @@ positive:
         enabled: false
   values:
     - internal:
-        customClusterRoles:
-          user: []
-          privilegedUser: []
-          editor: []
-          admin: []
-          clusterEditor: []
-          clusterAdmin: []
         clusterAuthRuleCrds: []
         authRuleCrds: []
