@@ -551,8 +551,9 @@ func (c *NamespacedDiscoveryCache) noteNegative(apiGroup string, absent bool) {
 	c.negative[apiGroup] = negativeEntry{at: now, absent: absent}
 }
 
-// recentNegative reports what a recent listing of this group concluded, if there was one.
-func (c *NamespacedDiscoveryCache) recentNegative(apiGroup string) (absent, known bool) {
+// recentNegative reports what a recent listing of this group concluded, if there was one: the
+// first result says the group is not served, the second whether there was such a conclusion at all.
+func (c *NamespacedDiscoveryCache) recentNegative(apiGroup string) (bool, bool) {
 	c.muNegative.Lock()
 	defer c.muNegative.Unlock()
 	e, ok := c.negative[apiGroup]
