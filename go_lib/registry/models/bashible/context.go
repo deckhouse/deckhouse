@@ -93,7 +93,7 @@ func (c Context) Validate() error {
 		if host == "" {
 			return errors.New("hosts key validation failed: must not be empty")
 		}
-		if err := helpers.HostPort(host); err != nil {
+		if err := helpers.HostWithOptionalPort(host); err != nil {
 			return fmt.Errorf("hosts key %q validation failed: %w", host, err)
 		}
 	}

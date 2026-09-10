@@ -118,7 +118,7 @@ func FuzzRegistrySettingsValidate(f *testing.F) {
 		// at the halves that actually reach the sinks.
 		host, path := helpers.SplitAddressAndPath(imagesRepo)
 
-		if hostErr := helpers.HostPort(host); hostErr != nil {
+		if hostErr := helpers.HostWithOptionalPort(host); hostErr != nil {
 			t.Fatalf("Validate() accepted imagesRepo %q, whose host %q is not a registry host: %v; "+
 				"that host becomes a directory name under /etc/containerd/registry.d and a "+
 				"table key in hosts.toml", imagesRepo, host, hostErr)

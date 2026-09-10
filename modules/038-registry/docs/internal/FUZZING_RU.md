@@ -186,8 +186,9 @@ Harness'ы проверяют свойства; обеспечивают их д
 
 **Валидация ограничивает область значений.**
 `go_lib/registry/helpers/validate.go` содержит правила, применяемые моделями;
-для каждого задокументирован приёмник, который оно защищает: `RegistryHost`,
-`RegistryAddress`, `RegistryAccountName`, `IPPort`, `ProxyEndpoint`,
+для каждого задокументирован приёмник, который оно защищает:
+`HostWithOptionalPort`, `RegistryAddress`, `RegistryAccountName`, `IPWithPort`,
+`ProxyEndpoint`,
 `MirrorHost`, `IPAddress`, `URLScheme`, `URLPath`, `ProxyURL`, `NoProxyList` и
 `EncodableString`. Они используются в `models/node-services` (`ProxyConfig`,
 `LocalMode`, `UpstreamRegistry`, `User`), в `models/moduleconfig`

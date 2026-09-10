@@ -262,8 +262,8 @@ func registryAccountName(raw string) error {
 	return nil
 }
 
-// HostPort validates `host` or `host:port`, where the host is an IP address or
-// a DNS name and the port is optional.
+// HostWithOptionalPort validates `host` or `host:port`, where the host is an IP
+// address or a DNS name and the port is optional.
 //
 // It is not specific to a registry: the same shape is a registry host, the host
 // component of `imagesRepo`, and the authority of an HTTP proxy URL. The rule
@@ -272,15 +272,15 @@ func registryAccountName(raw string) error {
 // hosts.toml, so it must carry neither a path separator nor anything a shell
 // would interpret.
 //
-// The pair to it is IPPort, which requires a literal IP address and a port.
-func HostPort(value any) error {
+// The pair to it is IPWithPort, which requires a literal IP address and a port.
+func HostWithOptionalPort(value any) error {
 	return and(
 		validation.By(EncodableString),
-		stringRule(hostPort),
+		stringRule(hostWithOptionalPort),
 	).Validate(value)
 }
 
-func hostPort(raw string) error {
+func hostWithOptionalPort(raw string) error {
 	if strings.ContainsRune(raw, '/') {
 		return errors.New("must not contain a path separator")
 	}
@@ -339,17 +339,17 @@ func validHostName(host string) error {
 	return nil
 }
 
-// IPPort validates `<ip>:<port>` with a literal IP address. This is the only
+// IPWithPort validates `<ip>:<port>` with a literal IP address. This is the only
 // shape the module generates for a proxy endpoint, and the NGINX `server`
 // directive that consumes it has no quoting of its own.
-func IPPort(value any) error {
+func IPWithPort(value any) error {
 	return and(
 		validation.By(EncodableString),
-		stringRule(ipPort),
+		stringRule(ipWithPort),
 	).Validate(value)
 }
 
-func ipPort(raw string) error {
+func ipWithPort(raw string) error {
 	// A port is required here, so net.SplitHostPort is the right reader: a bare
 	// IPv6 address is not an endpoint the NGINX `server` directive can use
 	// without one.
@@ -373,8 +373,8 @@ func ProxyEndpoint(value any) error {
 	return and(
 		validation.By(EncodableString),
 		either(
-			validation.By(IPPort),
-			validation.By(NodeIPPlaceholderEndpoint),
+			validation.By(IPWithPort),
+			validation.By(NodeIPPlaceholderWithPort),
 		),
 	).Validate(value)
 }
@@ -389,13 +389,13 @@ func MirrorHost(value any) error {
 	return and(
 		validation.By(EncodableString),
 		either(
-			validation.By(HostPort),
-			validation.By(NodeIPPlaceholderEndpoint),
+			validation.By(HostWithOptionalPort),
+			validation.By(NodeIPPlaceholderWithPort),
 		),
 	).Validate(value)
 }
 
-// NodeIPPlaceholderEndpoint accepts NodeIPPlaceholder followed by a port, and
+// NodeIPPlaceholderWithPort accepts NodeIPPlaceholder followed by a port, and
 // nothing else.
 //
 // The placeholder is never generated bare: both producers build
@@ -403,7 +403,7 @@ func MirrorHost(value any) error {
 // the module actually emits. It is an exported rule so that the alternatives in
 // ProxyEndpoint and MirrorHost read as two named rules rather than as a special
 // case buried in each.
-func NodeIPPlaceholderEndpoint(value any) error {
+func NodeIPPlaceholderWithPort(value any) error {
 	return stringRule(func(raw string) error {
 		host, port, err := net.SplitHostPort(raw)
 		if err != nil || host != NodeIPPlaceholder {
@@ -487,7 +487,7 @@ func registryAddress(raw string) error {
 	if host == "" {
 		return errors.New("has no host component")
 	}
-	if err := HostPort(host); err != nil {
+	if err := HostWithOptionalPort(host); err != nil {
 		return fmt.Errorf("host %q is not valid: %w", host, err)
 	}
 	if err := URLPath(path); err != nil {
@@ -552,7 +552,7 @@ func proxyURL(raw string) error {
 		return fmt.Errorf("must be a canonical URL, got %q for %q", raw, canonical)
 	}
 
-	return HostPort(parsed.Host)
+	return HostWithOptionalPort(parsed.Host)
 }
 
 // NoProxyList validates a no_proxy value: a comma-separated list of hosts,

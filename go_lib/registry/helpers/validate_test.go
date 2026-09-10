@@ -66,11 +66,11 @@ func TestEmptyIsValidEverywhere(t *testing.T) {
 		"EncodableString":           EncodableString,
 		"Port":                      Port,
 		"RegistryAccountName":       RegistryAccountName,
-		"HostPort":              HostPort,
-		"IPPort":                    IPPort,
+		"HostWithOptionalPort":      HostWithOptionalPort,
+		"IPWithPort":                IPWithPort,
 		"ProxyEndpoint":             ProxyEndpoint,
 		"MirrorHost":                MirrorHost,
-		"NodeIPPlaceholderEndpoint": NodeIPPlaceholderEndpoint,
+		"NodeIPPlaceholderWithPort": NodeIPPlaceholderWithPort,
 		"IPAddress":                 IPAddress,
 		"URLScheme":                 URLScheme,
 		"URLPath":                   URLPath,
@@ -137,15 +137,15 @@ func TestURLPath(t *testing.T) {
 	})
 }
 
-// TestRegistryHostIPv6WithoutPort pins the case net.SplitHostPort cannot read.
+// TestHostWithOptionalPortIPv6 pins the case net.SplitHostPort cannot read.
 //
 // A bare IPv6 address contains colons, so SplitHostPort reports an error for it
 // and a rule that took that error as "malformed host:port" would refuse a
 // perfectly good host. splitHostPort tries net.ParseIP first for exactly this.
-func TestRegistryHostIPv6WithoutPort(t *testing.T) {
+func TestHostWithOptionalPortIPv6(t *testing.T) {
 	for _, host := range []string{"::1", "fd00::1", "2001:db8::8a2e:370:7334", "::"} {
-		if err := HostPort(host); err != nil {
-			t.Errorf("HostPort(%q) must accept a bare IPv6 address: %v", host, err)
+		if err := HostWithOptionalPort(host); err != nil {
+			t.Errorf("HostWithOptionalPort(%q) must accept a bare IPv6 address: %v", host, err)
 		}
 		if err := MirrorHost(host); err != nil {
 			t.Errorf("MirrorHost(%q) must accept a bare IPv6 address: %v", host, err)
@@ -153,22 +153,22 @@ func TestRegistryHostIPv6WithoutPort(t *testing.T) {
 	}
 
 	// With a port it is the bracketed form, which SplitHostPort does read.
-	if err := HostPort("[fd00::1]:5001"); err != nil {
-		t.Errorf("HostPort(\"[fd00::1]:5001\") must accept: %v", err)
+	if err := HostWithOptionalPort("[fd00::1]:5001"); err != nil {
+		t.Errorf("HostWithOptionalPort(\"[fd00::1]:5001\") must accept: %v", err)
 	}
 
 	// An unbracketed value that looks like an address with a port is read as the
 	// address it is: "fd00::1:5001" is a valid IPv6 address, and there is no way
 	// to tell it from a host with a port. That is why net.JoinHostPort brackets,
 	// and why everything the module builds goes through it.
-	if err := HostPort("fd00::1:5001"); err != nil {
-		t.Errorf("HostPort(\"fd00::1:5001\") is a bare IPv6 address and must be "+
+	if err := HostWithOptionalPort("fd00::1:5001"); err != nil {
+		t.Errorf("HostWithOptionalPort(\"fd00::1:5001\") is a bare IPv6 address and must be "+
 			"accepted as one: %v", err)
 	}
 }
 
-func TestRegistryHost(t *testing.T) {
-	runRule(t, "HostPort", HostPort, []ruleCase{
+func TestHostWithOptionalPort(t *testing.T) {
+	runRule(t, "HostWithOptionalPort", HostWithOptionalPort, []ruleCase{
 		{in: "registry.example.com", accept: true, why: "a DNS name"},
 		{in: "registry.d8-system.svc:5001", accept: true, why: "the in-cluster address the module generates"},
 		{in: "127.0.0.1:5001", accept: true, why: "an IPv4 endpoint"},
@@ -198,8 +198,8 @@ func TestRegistryHost(t *testing.T) {
 	})
 }
 
-func TestIPPort(t *testing.T) {
-	runRule(t, "IPPort", IPPort, []ruleCase{
+func TestIPWithPort(t *testing.T) {
+	runRule(t, "IPWithPort", IPWithPort, []ruleCase{
 		{in: "10.0.0.1:5001", accept: true, why: "the shape the module generates"},
 		{in: "127.0.0.1:5001", accept: true, why: "the loopback balancer"},
 		{in: "[fd00::1]:5001", accept: true, why: "IPv6 as net.JoinHostPort writes it"},
@@ -273,15 +273,15 @@ func TestMirrorHost(t *testing.T) {
 	})
 }
 
-func TestNodeIPPlaceholderEndpoint(t *testing.T) {
-	runRule(t, "NodeIPPlaceholderEndpoint", NodeIPPlaceholderEndpoint, []ruleCase{
+func TestNodeIPPlaceholderWithPort(t *testing.T) {
+	runRule(t, "NodeIPPlaceholderWithPort", NodeIPPlaceholderWithPort, []ruleCase{
 		{in: NodeIPPlaceholder + ":5001", accept: true, why: "what dhctl writes"},
 		{in: NodeIPPlaceholder + ":1", accept: true, why: "any valid port"},
 		{in: NodeIPPlaceholder, why: "a port is required"},
 		{in: NodeIPPlaceholder + ":", why: "an empty port"},
 		{in: NodeIPPlaceholder + ":0", why: "port 0"},
 		{in: NodeIPPlaceholder + ":abc", why: "a port that is not a number"},
-		{in: "10.0.0.1:5001", why: "a real address is IPPort's business"},
+		{in: "10.0.0.1:5001", why: "a real address is IPWithPort's business"},
 		{in: "${discovered_node_ip:-$(id)}:5001", why: "a near miss"},
 		{in: "${DISCOVERED_NODE_IP}:5001", why: "a different variable"},
 		{in: "$discovered_node_ip:5001", why: "the unbraced form is not what dhctl writes"},

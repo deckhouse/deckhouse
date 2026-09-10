@@ -70,7 +70,7 @@ func TestDeckhouseSettings_Merge(t *testing.T) {
 		expected DeckhouseSettings
 	}{
 		{
-			name: "empty mode",
+			name:  "empty mode",
 			input: DeckhouseSettings{},
 			expected: DeckhouseSettings{
 				Mode: constant.ModeDirect,

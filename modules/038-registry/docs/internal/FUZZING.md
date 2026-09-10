@@ -182,8 +182,8 @@ functions and every substitution goes through one of them:
 
 **Validation constrains the domain.** `go_lib/registry/helpers/validate.go`
 holds the rules the models apply, each documented with the sink it protects:
-`RegistryHost`, `RegistryAddress`, `RegistryAccountName`, `IPPort`,
-`ProxyEndpoint`, `MirrorHost`, `IPAddress`, `URLScheme`, `URLPath`, `ProxyURL`,
+`HostWithOptionalPort`, `RegistryAddress`, `RegistryAccountName`,
+`IPWithPort`, `ProxyEndpoint`, `MirrorHost`, `IPAddress`, `URLScheme`, `URLPath`, `ProxyURL`,
 `NoProxyList` and `EncodableString`. They are used by `models/node-services`
 (`ProxyConfig`, `LocalMode`, `UpstreamRegistry`, `User`), by `models/moduleconfig`
 (`RegistrySettings.ImagesRepo`) and by `models/bashible` (`Context`, `Config`,

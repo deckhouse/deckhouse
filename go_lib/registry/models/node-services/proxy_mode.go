@@ -55,7 +55,7 @@ type UpstreamRegistry struct {
 func (upstream UpstreamRegistry) Validate() error {
 	return validation.ValidateStruct(&upstream,
 		validation.Field(&upstream.Scheme, validation.Required, validation.By(helpers.URLScheme)),
-		validation.Field(&upstream.Host, validation.Required, validation.By(helpers.HostPort)),
+		validation.Field(&upstream.Host, validation.Required, validation.By(helpers.HostWithOptionalPort)),
 		validation.Field(&upstream.Path, validation.Required, validation.By(helpers.URLPath)),
 		// The credentials and the TTL are substituted into the distribution
 		// configuration through `quote`, which has no representation for
