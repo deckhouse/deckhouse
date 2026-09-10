@@ -54,6 +54,9 @@ spec:
               package d8.security_policies
 
               import data.lib.common.get_field
+              import data.lib.common.object_labels
+              import data.lib.common.object_namespace
+              import data.lib.common.pod_spec
               import data.lib.exception.path_value_resolved
               import data.lib.exception.resolve_spe_from_labels
               import data.lib.message.violation_message
@@ -61,19 +64,19 @@ spec:
               violation contains {"msg": msg, "details": {}} if {
                 not input.review.operation == "DELETE"
                 obj := input.review.object
-                labels := object.get(obj.metadata, "labels", {})
-                namespace := object.get(obj.metadata, "namespace", "")
+                labels := object_labels
+                namespace := object_namespace
                 spe := resolve_spe_from_labels(labels, namespace)
                 checks := [
                   {
-                    "field_path": ["spec", "hostPID"],
+                    "field_path": ["hostPID"],
                     "field_name": "hostPID",
                     "default_val": false,
                     "spe_path": ["spec", "network", "hostPID", "allowedValue"],
                     "param_field": "allowHostPID"
                   },
                   {
-                    "field_path": ["spec", "hostIPC"],
+                    "field_path": ["hostIPC"],
                     "field_name": "hostIPC",
                     "default_val": false,
                     "spe_path": ["spec", "network", "hostIPC", "allowedValue"],
@@ -81,7 +84,7 @@ spec:
                   }
                 ]
                 check := checks[_]
-                actual := get_field(obj, check.field_path, check.default_val)
+                actual := get_field(pod_spec, check.field_path, check.default_val)
                 param_allow := object.get(input.parameters, check.param_field, false)
                 spe_applied := path_value_resolved(spe, check.spe_path)
                 expected := object.get(spe, check.spe_path, false)
@@ -101,19 +104,19 @@ spec:
               violation contains {"msg": msg, "details": {}} if {
                 not input.review.operation == "DELETE"
                 obj := input.review.object
-                labels := object.get(obj.metadata, "labels", {})
-                namespace := object.get(obj.metadata, "namespace", "")
+                labels := object_labels
+                namespace := object_namespace
                 spe := resolve_spe_from_labels(labels, namespace)
                 checks := [
                   {
-                    "field_path": ["spec", "hostPID"],
+                    "field_path": ["hostPID"],
                     "field_name": "hostPID",
                     "default_val": false,
                     "spe_path": ["spec", "network", "hostPID", "allowedValue"],
                     "param_field": "allowHostPID"
                   },
                   {
-                    "field_path": ["spec", "hostIPC"],
+                    "field_path": ["hostIPC"],
                     "field_name": "hostIPC",
                     "default_val": false,
                     "spe_path": ["spec", "network", "hostIPC", "allowedValue"],
@@ -121,7 +124,7 @@ spec:
                   }
                 ]
                 check := checks[_]
-                actual := get_field(obj, check.field_path, check.default_val)
+                actual := get_field(pod_spec, check.field_path, check.default_val)
                 param_allow := object.get(input.parameters, check.param_field, false)
                 not path_value_resolved(spe, check.spe_path)
                 not param_allow

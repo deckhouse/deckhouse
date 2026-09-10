@@ -103,3 +103,55 @@ webhooks:
     - {{ .Values.global.clusterConfiguration.cloud.provider | lower }}instanceclasses
     scope: Cluster
 {{- end }}
+- name: nodeconfig.validation.node-controller.deckhouse.io
+  admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: {{ .Values.nodeManager.internal.nodeControllerWebhookCert.ca | b64enc }}
+    service:
+      name: node-controller-webhook
+      namespace: d8-cloud-instance-manager
+      path: /validate-internal-deckhouse-io-v1alpha1-nodeconfig
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  sideEffects: None
+  matchConditions:
+  # This webhook freezes what only the machine knows, against an operator
+  # editing it. node-controller renders those same fields onto every node it
+  # manages, and a denial of its own write is permanent: the node is never
+  # configured again. The same carve-out validation.yaml makes for kubelets.
+  - name: exclude-node-controller
+    expression: 'request.userInfo.username != "system:serviceaccount:d8-cloud-instance-manager:node-controller"'
+  rules:
+  - apiGroups:
+    - internal.deckhouse.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - UPDATE
+    resources:
+    - nodeconfigs
+    scope: Cluster
+- name: nodeextensionrequest.validation.node-controller.deckhouse.io
+  admissionReviewVersions:
+  - v1
+  clientConfig:
+    caBundle: {{ .Values.nodeManager.internal.nodeControllerWebhookCert.ca | b64enc }}
+    service:
+      name: node-controller-webhook
+      namespace: d8-cloud-instance-manager
+      path: /validate-deckhouse-io-v1alpha1-nodeextensionrequest
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  sideEffects: None
+  rules:
+  - apiGroups:
+    - deckhouse.io
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - nodeextensionrequests
+    scope: Cluster

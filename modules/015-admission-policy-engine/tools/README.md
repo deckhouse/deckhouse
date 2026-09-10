@@ -4,6 +4,10 @@
 > this module, read [`AGENTS.md`](AGENTS.md) first - it has the established
 > findings (what's already known, what was tried and rejected) so you don't
 > re-derive them from scratch.
+>
+> [`MEASUREMENTS.md`](MEASUREMENTS.md) is the record of what has already been
+> measured: which method answers which question, the pitfalls that invalidate a
+> measurement, and the current numbers with the cluster they came from.
 
 Two read-only scripts for a **running** admission-policy-engine (Gatekeeper)
 deployment:

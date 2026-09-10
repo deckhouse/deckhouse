@@ -27,13 +27,9 @@ import (
 
 // ValidateSysext reports whether the installer image carries the system
 // extensions an immutable node runs; a preflight check calls it to fail early.
+// Pure; the context is here for the package's uniform exported signature.
 func ValidateSysext(_ context.Context, metaConfig *config.MetaConfig) error {
-	clusterConfig, err := metaConfig.ClusterConfigMap()
-	if err != nil {
-		return fmt.Errorf("read the cluster configuration: %w", err)
-	}
-
-	version, err := kubernetesVersion(clusterConfig)
+	version, err := kubernetesVersion(metaConfig)
 	if err != nil {
 		return err
 	}
@@ -60,9 +56,9 @@ func sysextExtensions(images map[string]any, kubernetesVersion string) ([]extens
 	}
 	minor := strings.ReplaceAll(kubernetesVersion, ".", "")
 
-	// The set and the order must be node-controller's, which renders them in
-	// modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/sources.go: a node prunes every extension its
-	// document omits, and pruning nodelet stops the agent's own unit for good.
+	// The set and the order must be node-controller's, rendered in modules/040-node-manager/images/node-controller/src/internal/controller/nodeconfig/sources.go:
+	// a node prunes every extension its document omits, and pruning nodelet stops
+	// the agent's own unit for good.
 	extensions := []extension{
 		{Name: containerdExtension, Digest: containerd, RequestedBy: platformExtensionRequestedBy},
 		{Name: kubeletExtension, Digest: newestPatchDigest(packages, "kubeletSysext"+minor), RequestedBy: platformExtensionRequestedBy},
@@ -169,7 +165,7 @@ func digestGroup(images map[string]any, key string) (map[string]string, error) {
 	return group, nil
 }
 
-// osImageDigest picks the olcedar image of this release. Absent means the
+// osImageDigest picks the Deckhouse Engine image of this release. Absent means the
 // installer image did not ship it, and bootstrap stops here rather than at the
 // node: a config naming no OS image is one the node cannot install from.
 func osImageDigest(images map[string]any) (osImage, error) {

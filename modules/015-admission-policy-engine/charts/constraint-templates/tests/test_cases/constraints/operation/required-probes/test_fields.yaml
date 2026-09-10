@@ -4,6 +4,9 @@ metadata:
   name: required-probes
 spec:
   objectKind: Pod
+  objectKinds:
+    - Pod
+    - Deployment
   objectFields:
     - path: spec.containers[].readinessProbe
       level: container

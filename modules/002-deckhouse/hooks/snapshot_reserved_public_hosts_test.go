@@ -362,6 +362,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: snapshot reserved public host
 
 	Context("A cluster where the reservation has never been recorded", func() {
 		BeforeEach(func() {
+			f.ValuesSet("deckhouse.reservedPublicHosts.mode", "Template")
 			run("%s.example.com", tenantObjects)
 		})
 
@@ -413,6 +414,7 @@ var _ = Describe("Modules :: deckhouse :: hooks :: snapshot reserved public host
 
 	Context("A tenant already holds the wildcard of the platform's domain", func() {
 		BeforeEach(func() {
+			f.ValuesSet("deckhouse.reservedPublicHosts.mode", "Template")
 			run("%s.example.com", `
 ---
 apiVersion: v1
@@ -525,6 +527,20 @@ spec:
 		})
 	})
 
+	Context("A cluster that never set mode", func() {
+		BeforeEach(func() {
+			run("%s.example.com", tenantObjects)
+		})
+
+		It("records nothing, because unset mode is List", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(reservedPublicHostsValuePath).String()).To(MatchJSON(`{
+				"recorded": false,
+				"hosts": []
+			}`))
+		})
+	})
+
 	// The record is applied only under Template mode, so recording under List would snapshot a moment
 	// the reservation it feeds was not in force at: a cluster installed on List and switched to
 	// Template a year later would then find a record from its List days and grandfather nothing that
@@ -558,8 +574,24 @@ spec:
 		})
 	})
 
+	Context("A publicDomainTemplate whose %s is only a prefix of the first label", func() {
+		BeforeEach(func() {
+			f.ValuesSet("deckhouse.reservedPublicHosts.mode", "Template")
+			run("%s-cluster.example.com", tenantObjects)
+		})
+
+		It("records nothing, because Template does not apply and there is nothing to grandfather", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet(reservedPublicHostsValuePath).String()).To(MatchJSON(`{
+				"recorded": false,
+				"hosts": []
+			}`))
+		})
+	})
+
 	Context("The parameters exist but say the record has not been made", func() {
 		BeforeEach(func() {
+			f.ValuesSet("deckhouse.reservedPublicHosts.mode", "Template")
 			run("%s.example.com", tenantObjects+paramsConfigMap("false", ""))
 		})
 
@@ -594,6 +626,7 @@ spec:
 	// instead of guessing at a namespace.
 	Context("The template puts the service name inside the first label", func() {
 		BeforeEach(func() {
+			f.ValuesSet("deckhouse.reservedPublicHosts.mode", "Template")
 			run("kube-%s.company.my", `
 ---
 apiVersion: v1
@@ -628,6 +661,7 @@ spec:
 
 		BeforeEach(func() {
 			f.ValuesSet("global.modules.publicDomainTemplate", "%s.example.com")
+			f.ValuesSet("deckhouse.reservedPublicHosts.mode", "Template")
 			f.KubeStateSet(`
 ---
 apiVersion: v1
@@ -666,6 +700,7 @@ spec:
 
 		BeforeEach(func() {
 			f.ValuesSet("global.modules.publicDomainTemplate", "%s.example.com")
+			f.ValuesSet("deckhouse.reservedPublicHosts.mode", "Template")
 			f.KubeStateSet(`
 ---
 apiVersion: v1

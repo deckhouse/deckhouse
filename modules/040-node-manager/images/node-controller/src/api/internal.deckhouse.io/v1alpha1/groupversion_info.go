@@ -15,7 +15,7 @@ limitations under the License.
 */
 
 // Package v1alpha1 contains API Schema definitions for the internal.deckhouse.io
-// v1alpha1 API group. NodeConfig is the per-node desired state for olcedar
+// v1alpha1 API group. NodeConfig is the per-node desired state for Deckhouse Engine
 // nodes: rendered from a NodeGroup, watched and reported back by nodelet.
 // +kubebuilder:object:generate=true
 // +groupName=internal.deckhouse.io

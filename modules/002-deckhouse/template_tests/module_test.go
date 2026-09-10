@@ -148,6 +148,15 @@ var _ = Describe("Module :: deckhouse :: helm template ::", func() {
   - operator: Exists
 `))
 		})
+
+		It("Should configure Pod Security for d8-monitoring namespace", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			namespace := f.KubernetesGlobalResource("Namespace", "d8-monitoring")
+			Expect(namespace.Exists()).To(BeTrue())
+			Expect(namespace.Field(`metadata.labels.pod-security\.kubernetes\.io/enforce`).String()).To(Equal("privileged"))
+			Expect(namespace.Field(`metadata.labels.pod-security\.kubernetes\.io/enforce-version`).String()).To(Equal("latest"))
+		})
 	})
 
 	Context("Cluster with deckhouse on system node", func() {

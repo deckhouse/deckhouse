@@ -146,6 +146,13 @@ func initAuthorizers(init *initResult, configPath string, scopeCache *resolver.R
 		configPath = "/etc/user-authz-webhook/config.json"
 	}
 
+	// Same guard for the engine: a nil *ResourceScopeCache must arrive as a nil
+	// interface, not as a non-nil interface holding a nil pointer.
+	var resourceScope multitenancy.ResourceScope
+	if scopeCache != nil {
+		resourceScope = scopeCache
+	}
+
 	// Create multi-tenancy engine
 	var mtEngine *multitenancy.Engine
 	if init.clientset != nil {
@@ -154,7 +161,7 @@ func initAuthorizers(init *initResult, configPath string, scopeCache *resolver.R
 			configPath,
 			init.informerFactory.Core().V1().Namespaces().Lister(),
 			init.informerFactory.Core().V1().Namespaces().Informer().HasSynced,
-			init.clientset.Discovery(),
+			resourceScope,
 		)
 		if err != nil {
 			klog.Warningf("Failed to initialize multi-tenancy engine: %v. Multi-tenancy restrictions will not be applied.", err)

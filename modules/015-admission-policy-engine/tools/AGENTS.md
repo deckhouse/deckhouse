@@ -9,6 +9,7 @@ about this specific module, so you don't have to rediscover it.
 
 | Resource | Path | Purpose |
 |----------|------|---------|
+| Measurement record | [`MEASUREMENTS.md`](MEASUREMENTS.md) | Which method answers which question, the pitfalls that invalidate a measurement, and the current per-rule/per-cycle numbers with the cluster they came from. **Read this first** — it saves re-deriving figures and repeating known mistakes |
 | Live diagnostics | [`README.md`](README.md) | What each live script checks, how to read it, the CPU-scaling model, worked examples |
 | Broad live sweep | [`live_resource_check.sh`](live_resource_check.sh) | Pods, restarts, usage over time, Gatekeeper's own metrics, cluster-wide scale/events |
 | One-cycle cost | [`audit_cycle_cost.sh`](audit_cycle_cost.sh) | Exact CPU-seconds/allocations for one audit cycle, no `--enable-pprof` needed |
@@ -128,8 +129,34 @@ has changed since, or if the numbers don't match what you observe.
    (SecurityPolicyException) resolution builds and holds intermediate
    objects even when no exception applies. Memory spread across rules
    (~8x) is much narrower than time spread (~100x) - most rules share a
-   common per-eval allocation floor from OPA itself (~12,000 B/op, ~230
-   allocs/op) before any rule-specific logic runs.
+   common per-eval allocation floor before any rule-specific logic runs:
+   OPA's own floor plus the pod-spec/label resolution every converted
+   policy goes through (`lib.common`).
+
+   Controller-level checks did **not** raise that floor for Pod reviews:
+   measured on identical Pod fixtures, the cheap rules are unchanged
+   (`allowed-repos` allowed 231 -> 231 allocs/op, `priority-class` 239 ->
+   239, `allow-host-processes` 231 -> 231), and so are the two figures
+   `README.md` quotes for the most expensive templates
+   (`allowed-proc-mount` disallowed 1 933 -> 1 941, `allow-privileged`
+   disallowed 1 432 -> 1 439). ~12,000 B/op, ~230 allocs/op is still the
+   Pod floor; ~14,000 B/op, ~270 allocs/op is the floor for a *controller*
+   review, which is a new kind of review rather than a regression of an
+   existing one.
+
+   What did regress on the Pod path is a minority of rules: 23 of 78
+   same-fixture measurements moved by 5-70%, led by `allowed-users`
+   disallowed (250 -> 424 allocs/op), `vulnerable-images` (407 -> 587),
+   `allowed-host-paths` disallowed (925 -> 1 252) and
+   `verify-image-signature` (523 -> 630). The remaining 53 are unchanged
+   within 1%. The *ranking* above did not change.
+
+   **Do not compare `ns/op` between two runs of `rulebench`/`bench_rules.py`
+   on a workstation.** The same configuration varies by up to 7x between
+   runs (`deny-exec-heritage` disallowed measured 356k / 522k / 72k ns/op
+   across three consecutive runs with an identical 783 allocs/op). Compare
+   `allocs/op` and `B/op`, which reproduce to under 1%, and treat `ns/op`
+   as an order-of-magnitude signal only.
 
 5. **`--audit-interval` is currently `60`** in
    `../templates/audit-deployment.yaml` (upstream Gatekeeper's own default is
@@ -140,13 +167,38 @@ has changed since, or if the numbers don't match what you observe.
    as of this writing. Check the manifest yourself before assuming it's
    done, and update this note once it lands.
 
-6. **`automount-service-account-token`'s test fixtures don't build** in
-   `rulebench`/`bench_rules.py` - `data.lib.exclude_update.is_update` isn't
-   resolvable from the rendered test artifacts. This is a gap in the test
-   fixture generation, not in the production ConstraintTemplate. If you fix
-   it, remove this note.
+Every figure quoted above, together with the method and the cluster it was
+measured on, is recorded in [`MEASUREMENTS.md`](MEASUREMENTS.md). Update that
+document when you re-measure, so the numbers keep a single source of truth.
 
 ## Tooling notes worth knowing before you re-derive them
+
+- **Check which fixture a number was measured on before comparing it to
+  anything.** Both tools pick their "allowed"/"disallowed" samples by
+  filename convention from `rendered/test_samples/**`, walking the
+  subdirectories in sorted order - so `external-data/` and `other/` are
+  reached before `pods/`. Controller fixtures are the same trap: a file
+  named `001-controller-allowed-*.yaml` sorts first and contains "allowed",
+  so a constraint with controller test cases is benchmarked on a Deployment
+  review by default. To compare against a historical Pod number, move the
+  controller samples aside first:
+
+  ```bash
+  cd charts/constraint-templates/tests/test_cases/constraints
+  find . -path '*/rendered/test_samples/*' -name '*controller*.yaml' \
+    -exec sh -c 'mv "$1" "$1.aside"' _ {} \;
+  ../../tools/rulebench.sh .
+  find . -name '*.aside' -exec sh -c 'mv "$1" "${1%.aside}"' _ {} \;
+  ```
+ Several constraints therefore benchmark against a
+  document that is not a workload at all (`vulnerable-images` and
+  `verify-image-signature` pick an `ExternalDataInventory`; `allowed-users`
+  picked a `Namespace`), which exercises the unknown-kind fail-safe path
+  rather than a pod review. Numbers from different fixture families are not
+  comparable: the same change measured -20% on the Pod fixtures of those two
+  policies and +10% on their inventory fixtures. To compare against a
+  historical figure, isolate the same family (temporarily move the other
+  subdirectories aside, or read the fixture name the tool prints).
 
 - `rulebench` has its own `go.mod` (depends on OPA's Go SDK without
   touching the repo's root `go.mod`) - `go run` on a relative path to it

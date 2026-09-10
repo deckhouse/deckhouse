@@ -21,11 +21,7 @@ import (
 	"fmt"
 
 	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/ginkgo/extensions/table"
 	. "github.com/onsi/gomega"
-	corev1 "k8s.io/api/core/v1"
-	storagev1 "k8s.io/api/storage/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	. "github.com/deckhouse/deckhouse/testing/hooks"
 )
@@ -44,25 +40,54 @@ cloudProviderDvp:
   internal: {}
 `
 
-	const initValuesWithExclude = `
-cloudProviderDvp:
-  storageClass:
-    exclude:
-    - excluded-.*
-  internal:
-    defaultStorageClass: stale-default
-`
-
 	const initValuesWithExcludeAndProvider = `
 cloudProviderDvp:
   provider:
     parameters:
       namespace: test-ns
-  storageClass:
-    exclude:
-    - excluded-.*
+  storage:
+    parameters:
+      excludedStorageClasses:
+      - excluded-.*
   internal:
     defaultStorageClass: stale-default
+`
+
+	const initValuesWithExactExcludeAndProvider = `
+cloudProviderDvp:
+  provider:
+    parameters:
+      namespace: test-ns
+  storage:
+    parameters:
+      excludedStorageClasses:
+      - fast
+  internal: {}
+`
+
+	const initValuesWithDefaultExcludeAndProvider = `
+cloudProviderDvp:
+  provider:
+    parameters:
+      namespace: test-ns
+  storage:
+    parameters:
+      excludedStorageClasses:
+      - replicated
+  internal:
+    defaultStorageClass: replicated
+`
+
+	const initValuesWithBrokenExcludeAndProvider = `
+cloudProviderDvp:
+  provider:
+    parameters:
+      namespace: test-ns
+  storage:
+    parameters:
+      excludedStorageClasses:
+      - "excluded-([a-z"
+  internal: {}
 `
 
 	storageClassesOnly := `
@@ -94,6 +119,20 @@ provisioner: csi.dvp.deckhouse.io
 parameters:
   dvpStorageClass: secondary
 reclaimPolicy: Retain
+allowVolumeExpansion: false
+volumeBindingMode: WaitForFirstConsumer
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: excluded-legacy
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-dvp
+provisioner: csi.dvp.deckhouse.io
+parameters:
+  dvpStorageClass: Excluded Legacy
+reclaimPolicy: Delete
 allowVolumeExpansion: false
 volumeBindingMode: WaitForFirstConsumer
 `
@@ -178,6 +217,25 @@ allowVolumeExpansion: false
 volumeBindingMode: WaitForFirstConsumer
 `
 
+	// A StorageClass created by the module before it was added to excludedStorageClasses.
+	// It is absent from the discovery data, so it only reaches the values through the snapshots.
+	existingExcludedStorageClass := `
+---
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: excluded-legacy
+  labels:
+    heritage: deckhouse
+    module: cloud-provider-dvp
+provisioner: csi.dvp.deckhouse.io
+parameters:
+  dvpStorageClass: Excluded Legacy
+reclaimPolicy: Delete
+allowVolumeExpansion: false
+volumeBindingMode: WaitForFirstConsumer
+`
+
 	Context("When cluster state is empty", func() {
 		f := HookExecutionConfigInit(initValues, `{}`)
 		BeforeEach(func() {
@@ -204,6 +262,14 @@ volumeBindingMode: WaitForFirstConsumer
 			Expect(f.ValuesGet("cloudProviderDvp.internal.storageClasses").String()).To(MatchJSON(`
 [
   {
+    "name": "excluded-legacy",
+    "dvpStorageClass": "Excluded Legacy",
+    "volumeBindingMode": "WaitForFirstConsumer",
+    "reclaimPolicy": "Delete",
+    "allowVolumeExpansion": false,
+    "isDefault": false
+  },
+  {
     "name": "replicated",
     "dvpStorageClass": "replicated",
     "volumeBindingMode": "WaitForFirstConsumer",
@@ -227,12 +293,45 @@ volumeBindingMode: WaitForFirstConsumer
 		})
 	})
 
+	Context("When only managed StorageClass snapshots are present and excludes are set", func() {
+		f := HookExecutionConfigInit(initValuesWithExcludeAndProvider, `{}`)
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext(), f.KubeStateSet(storageClassesOnly))
+			f.RunHook()
+		})
+
+		It("Should apply excludes to the snapshot fallback as well", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cloudProviderDvp.internal.storageClasses").String()).To(MatchJSON(`
+[
+  {
+    "name": "replicated",
+    "dvpStorageClass": "replicated",
+    "volumeBindingMode": "WaitForFirstConsumer",
+    "reclaimPolicy": "Delete",
+    "allowVolumeExpansion": true,
+    "isDefault": true
+  },
+  {
+    "name": "secondary",
+    "dvpStorageClass": "secondary",
+    "volumeBindingMode": "WaitForFirstConsumer",
+    "reclaimPolicy": "Retain",
+    "allowVolumeExpansion": false,
+    "isDefault": false
+  }
+]
+`))
+			Expect(f.ValuesGet("cloudProviderDvp.internal.defaultStorageClass").String()).To(Equal("replicated"))
+		})
+	})
+
 	Context("When discovery data and managed StorageClasses are present", func() {
 		f := HookExecutionConfigInit(initValuesWithExcludeAndProvider, `{}`)
 		BeforeEach(func() {
 			f.BindingContexts.Set(
 				f.GenerateBeforeHelmContext(),
-				f.KubeStateSet(discoverySecret+existingStorageClass+existingRetainedStorageClass),
+				f.KubeStateSet(discoverySecret+existingStorageClass+existingRetainedStorageClass+existingExcludedStorageClass),
 			)
 			f.RunHook()
 		})
@@ -265,6 +364,109 @@ volumeBindingMode: WaitForFirstConsumer
 			Expect(f.ValuesGet("cloudProviderDvp.internal.defaultStorageClass").String()).To(Equal("replicated"))
 			Expect(f.KubernetesGlobalResource("StorageClass", "replicated").Exists()).To(BeFalse())
 			Expect(f.KubernetesGlobalResource("StorageClass", "retained").Exists()).To(BeTrue())
+		})
+	})
+
+	Context("When excludedStorageClasses contains a plain StorageClass name", func() {
+		similarlyNamedDiscoveryData := `
+{
+  "apiVersion": "deckhouse.io/v1",
+  "kind": "DVPCloudDiscoveryData",
+  "zones": ["default"],
+  "storageClasses": [
+    {
+      "name": "fast",
+      "volumeBindingMode": "Immediate",
+      "reclaimPolicy": "Delete",
+      "allowVolumeExpansion": false,
+      "isEnabled": true,
+      "isDefault": false
+    },
+    {
+      "name": "ultra-fast-ssd",
+      "volumeBindingMode": "Immediate",
+      "reclaimPolicy": "Delete",
+      "allowVolumeExpansion": false,
+      "isEnabled": true,
+      "isDefault": false
+    }
+  ]
+}
+`
+
+		similarlyNamedDiscoverySecret := fmt.Sprintf(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: d8-cloud-provider-discovery-data
+  namespace: kube-system
+data:
+  "discovery-data.json": %s
+`, base64.StdEncoding.EncodeToString([]byte(similarlyNamedDiscoveryData)))
+
+		f := HookExecutionConfigInit(initValuesWithExactExcludeAndProvider, `{}`)
+		BeforeEach(func() {
+			f.BindingContexts.Set(
+				f.GenerateBeforeHelmContext(),
+				f.KubeStateSet(similarlyNamedDiscoverySecret),
+			)
+			f.RunHook()
+		})
+
+		It("Should match the whole name and keep the classes it is only a part of", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cloudProviderDvp.internal.storageClasses").String()).To(MatchJSON(`
+[
+  {
+    "name": "ultra-fast-ssd",
+    "dvpStorageClass": "ultra-fast-ssd",
+    "volumeBindingMode": "WaitForFirstConsumer",
+    "reclaimPolicy": "Delete",
+    "allowVolumeExpansion": false,
+    "isDefault": false
+  }
+]
+`))
+		})
+	})
+
+	Context("When excludedStorageClasses contains the default StorageClass", func() {
+		f := HookExecutionConfigInit(initValuesWithDefaultExcludeAndProvider, `{}`)
+		BeforeEach(func() {
+			f.BindingContexts.Set(
+				f.GenerateBeforeHelmContext(),
+				f.KubeStateSet(discoverySecret+existingStorageClass),
+			)
+			f.RunHook()
+		})
+
+		It("Should exclude the default class and drop defaultStorageClass", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(f.ValuesGet("cloudProviderDvp.internal.storageClasses").String()).To(MatchJSON(`
+[
+  {
+    "name": "excluded-fast",
+    "dvpStorageClass": "Excluded Fast",
+    "volumeBindingMode": "WaitForFirstConsumer",
+    "reclaimPolicy": "Retain",
+    "allowVolumeExpansion": false,
+    "isDefault": false
+  }
+]
+`))
+			Expect(f.ValuesGet("cloudProviderDvp.internal.defaultStorageClass").Exists()).To(BeFalse())
+		})
+	})
+
+	Context("When excludedStorageClasses contains an invalid regular expression", func() {
+		f := HookExecutionConfigInit(initValuesWithBrokenExcludeAndProvider, `{}`)
+		BeforeEach(func() {
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext(), f.KubeStateSet(storageClassesOnly))
+			f.RunHook()
+		})
+
+		It("Should fail instead of panicking", func() {
+			Expect(f).To(Not(ExecuteSuccessfully()))
 		})
 	})
 
@@ -335,86 +537,4 @@ data:
 			Expect(f).To(Not(ExecuteSuccessfully()))
 		})
 	})
-
-	DescribeTable("getStorageClassName",
-		func(input, expected string) {
-			Expect(getStorageClassName(input)).To(Equal(expected))
-		},
-		Entry("keeps valid name", "replicated", "replicated"),
-		Entry("normalizes spaces and case", "Excluded Fast", "excluded-fast"),
-		Entry("removes invalid symbols and trims ends", "-Xx__$()? -foo-", "xx--foo"),
-		Entry("trims dots and dashes", ".. YY fast SSD-foo.-", "yy-fast-ssd-foo"),
-	)
-
-	DescribeTable("storageClassToStorageClassValue",
-		func(input *storagev1.StorageClass, expected storageClass) {
-			Expect(storageClassToStorageClassValue(input)).To(Equal(expected))
-		},
-		Entry("uses defaults for nil optional fields",
-			&storagev1.StorageClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "replicated",
-				},
-				Parameters: map[string]string{
-					"dvpStorageClass": "replicated",
-				},
-			},
-			storageClass{
-				Name:                 "replicated",
-				DVPStorageClass:      "replicated",
-				VolumeBindingMode:    string(defaultVolumeBindingMode),
-				ReclaimPolicy:        string(corev1.PersistentVolumeReclaimDelete),
-				AllowVolumeExpansion: false,
-				IsDefault:            false,
-			},
-		),
-		Entry("reads stable default annotation and optional fields",
-			&storagev1.StorageClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "stable-default",
-					Annotations: map[string]string{
-						stableDefaultAnnotation: "TrUe",
-					},
-				},
-				Parameters: map[string]string{
-					"dvpStorageClass": "stable-default",
-				},
-				ReclaimPolicy:        ptrTo(corev1.PersistentVolumeReclaimRetain),
-				AllowVolumeExpansion: ptrTo(true),
-			},
-			storageClass{
-				Name:                 "stable-default",
-				DVPStorageClass:      "stable-default",
-				VolumeBindingMode:    string(defaultVolumeBindingMode),
-				ReclaimPolicy:        string(corev1.PersistentVolumeReclaimRetain),
-				AllowVolumeExpansion: true,
-				IsDefault:            true,
-			},
-		),
-		Entry("reads beta default annotation",
-			&storagev1.StorageClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "beta-default",
-					Annotations: map[string]string{
-						betaDefaultAnnotation: "true",
-					},
-				},
-				Parameters: map[string]string{
-					"dvpStorageClass": "beta-default",
-				},
-			},
-			storageClass{
-				Name:                 "beta-default",
-				DVPStorageClass:      "beta-default",
-				VolumeBindingMode:    string(defaultVolumeBindingMode),
-				ReclaimPolicy:        string(corev1.PersistentVolumeReclaimDelete),
-				AllowVolumeExpansion: false,
-				IsDefault:            true,
-			},
-		),
-	)
 })
-
-func ptrTo[T any](v T) *T {
-	return &v
-}

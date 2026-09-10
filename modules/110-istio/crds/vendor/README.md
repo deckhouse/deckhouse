@@ -23,10 +23,11 @@ manually edit that status.
 
 ## Updating
 
-From the repository root, run:
+From the repository root:
 
 ```shell
-go run ./modules/110-istio/crds/update
+cd modules/110-istio/tools
+go run ./update-crds
 ```
 
 The updater downloads the Istio and Sail Operator CRDs at the versions listed
@@ -36,10 +37,12 @@ Remote sources are pinned rather than read from a moving branch such as `main`.
 When changing a source version, update its URL and checksum in the updater and
 carefully review the generated diff.
 
-Validate the checked-in bundle without downloading upstream sources with:
+Validate the checked-in bundle without downloading upstream sources, again from
+the repository root:
 
 ```shell
-go run ./modules/110-istio/crds/update --check
+cd modules/110-istio/tools
+go run ./update-crds --check
 ```
 
 The updater splits multi-document YAML without changing object semantics,

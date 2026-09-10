@@ -160,7 +160,14 @@ spec:
                       description: |
                         Если установлен в `true`, разрешает запуск только тех подов, у всех контейнеров которых корневая файловая система доступна только для чтения (в поле `securityContext` установлено `readOnlyRootFilesystem: true`). Подробнее в [документации Kubernetes](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.29/#securitycontext-v1-core).
                     automountServiceAccountToken:
-                      description: Разрешает запускать поды с автоматическим монтированием токена сервисного аккаунта.
+                      description: |
+                        Разрешает запускать поды с автоматическим монтированием токена сервисного аккаунта.
+
+                        При значении `false` под отклоняется, если в нём задано
+                        `spec.automountServiceAccountToken: true` либо какой-либо контейнер монтирует
+                        `/var/run/secrets/kubernetes.io/serviceaccount`.
+                        Монтирование проверяется независимо от значения флага, поэтому явное
+                        projected-монтирование токена сервисного аккаунта по этому пути также отклоняется.
                     seccompProfiles:
                       description: Задает список разрешенных seccomp-профилей для аннотаций подов и контейнеров.
                       properties:
