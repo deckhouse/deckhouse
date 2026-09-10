@@ -28,6 +28,11 @@ class TestLimitNamespacesPatternValidation(unittest.TestCase):
     Without this, such a rule is accepted and then quarantined at runtime: its subjects silently get
     LESS access than the author wrote, and the only trace is a metric nobody is looking at while
     they are typing kubectl apply.
+
+    The two directions of being wrong are not symmetric, and the tests are arranged around that.
+    Letting a bad pattern through costs a quarantine, which is the behaviour without this check at
+    all. Refusing a good one blocks an administrator from editing a rule that works. So the first
+    group below - patterns RE2 accepts and Python's own re does not - is the one that matters most.
     """
 
     def car(self, *patterns):
@@ -40,40 +45,60 @@ class TestLimitNamespacesPatternValidation(unittest.TestCase):
         errors, _ = multitenancy.validate_car_limit_namespaces_patterns(self.car(*patterns))
         return errors
 
-    def test_valid_patterns_pass(self):
-        for pattern in ["team-a", "team-.*", "team-[0-9]+", "team-.*|kube-system", "(a|b)-ns", ".*"]:
+    def test_patterns_valid_in_re2_but_not_in_python_are_accepted(self):
+        """These all raise re.error in Python and compile fine in Go.
+
+        Deciding validity by compiling with Python's re would refuse every one of them, and each
+        refusal is an administrator unable to save a rule the cluster is already running.
+        """
+        for pattern in [r"\z", r"\pL", r"\Q(\E", r"\Qa|b\E", r"\x{41}", "(?<name>a)", "(?U)a"]:
+            with self.subTest(pattern=pattern):
+                self.assertEqual([], self.errors_for(pattern), "must not be rejected: RE2 compiles it")
+
+    def test_ordinary_patterns_are_accepted(self):
+        for pattern in ["team-a", "team-.*", "team-[0-9]+", "team-.*|kube-system", "(a|b)-ns",
+                        ".*", "(?i)team", "(?is)team", "(?i:team)", "a{2,10}", "a{1000}"]:
             with self.subTest(pattern=pattern):
                 self.assertEqual([], self.errors_for(pattern))
 
-    def test_uncompilable_pattern_is_rejected(self):
-        for pattern in ["team-(", "team-[", "*-ns", "team-a{2,1}"]:
+    def test_structurally_broken_patterns_are_rejected(self):
+        for pattern, reason in [
+            ("team-(", "unclosed '('"),
+            ("team-[", "unclosed '['"),
+            ("team-a)", "unbalanced ')'"),
+        ]:
             with self.subTest(pattern=pattern):
                 errors = self.errors_for(pattern)
                 self.assertEqual(1, len(errors), errors)
-                self.assertIn("is not a valid regular expression", errors[0])
+                self.assertIn(reason, errors[0])
                 self.assertIn("team-a", errors[0])  # the rule is named
 
-    def test_constructs_go_does_not_support_are_rejected(self):
-        """Python's re accepts these; Go's RE2 does not.
-
-        Compiling the pattern here is therefore not enough on its own - a lookahead would sail
-        through admission and be quarantined by the webhook, which is the outcome being prevented.
-        """
+    def test_constructs_re2_does_not_have_are_rejected(self):
+        """Python accepts every one of these, so compiling would not catch them."""
         for pattern, description in [
             ("team-(?=a)", "lookahead"),
             ("team-(?!a)", "negative lookahead"),
             ("(?<=team-)a", "lookbehind"),
             ("(?<!team-)a", "negative lookbehind"),
-            ("(a)\\1", "backreference"),
+            ("(?>team)", "atomic group"),
+            ("(?#note)a", "inline comment"),
+            (r"(a)\1", "backreference"),
+            ("(?(1)a|b)", "conditional"),
+            ("a++", "possessive quantifier"),
+            ("(?x)team", "inline flag"),
+            ("(?a)team", "inline flag"),
+            ("a{1001}", "above RE2's limit"),
         ]:
             with self.subTest(pattern=pattern):
                 errors = self.errors_for(pattern)
                 self.assertEqual(1, len(errors), errors)
                 self.assertIn(description, errors[0])
-                self.assertIn("RE2", errors[0])
 
-    def test_an_escaped_backslash_before_a_digit_is_not_a_backreference(self):
-        self.assertEqual([], self.errors_for("team\\\\1"))
+    def test_a_metacharacter_inside_a_class_or_a_quote_is_a_literal(self):
+        """A scan that does not understand [...] and \Q...\E reports imbalance that is not there."""
+        for pattern in [r"[(]", r"[)]", r"[[]", r"\Q(\E", r"\Q)\E", r"\Q[\E", r"a\(b", r"a\)b"]:
+            with self.subTest(pattern=pattern):
+                self.assertEqual([], self.errors_for(pattern))
 
     def test_every_bad_pattern_is_named(self):
         errors = self.errors_for("team-a", "team-(", "ops-[")

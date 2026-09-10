@@ -138,10 +138,15 @@ type NamespacedDiscoveryCache struct {
 	muPv              sync.RWMutex
 	preferredVersions map[string]*preferredVersionCacheEntry
 
-	// muUnserved guards unserved, which remembers the API groups the API server answered 404 for.
-	// It is kept apart from data, and bounded, because its keys are attacker-chosen.
-	muUnserved sync.Mutex
-	unserved   map[string]time.Time
+	// muNegative guards negative, which remembers the groups a listing did not produce an answer
+	// for - either because the API server said it does not serve them, or because the attempt
+	// failed. It is kept apart from data, and bounded, because its keys are attacker-chosen.
+	muNegative sync.Mutex
+	negative   map[string]negativeEntry
+
+	// muInflight guards inflight, which collapses concurrent listings of the same group into one.
+	muInflight sync.Mutex
+	inflight   map[string]chan struct{}
 
 	now func() time.Time
 
@@ -162,7 +167,8 @@ func NewNamespacedDiscoveryCache(logger *log.Logger, apiAddress string) *Namespa
 		logger:            logger,
 		data:              make(map[string]*namespacedCacheEntry),
 		preferredVersions: make(map[string]*preferredVersionCacheEntry),
-		unserved:          make(map[string]time.Time),
+		negative:          make(map[string]negativeEntry),
+		inflight:          make(map[string]chan struct{}),
 		now:               time.Now,
 
 		kubernetesAPIAddress: apiAddress,
@@ -402,10 +408,15 @@ func (c *NamespacedDiscoveryCache) getFromCache(apiGroup string) (*namespacedCac
 func (c *NamespacedDiscoveryCache) Get(apiGroup, resource string) (bool, error) {
 	namespacedInfo, ok := c.getFromCache(apiGroup)
 
-	// A group the API server said it does not serve, recently enough to still believe it. Answered
-	// from the bounded negative cache rather than from another round trip.
-	if !ok && c.unservedRecently(apiGroup) {
-		return false, fmt.Errorf("api group %s is not served: %w", apiGroup, ErrResourceAbsent)
+	// A recent listing of this group already concluded something. Answered from the bounded
+	// negative cache rather than from another round trip.
+	if !ok {
+		if absent, known := c.recentNegative(apiGroup); known {
+			if absent {
+				return false, fmt.Errorf("api group %s is not served: %w", apiGroup, ErrResourceAbsent)
+			}
+			return false, fmt.Errorf("api group %s could not be listed recently", apiGroup)
+		}
 	}
 
 	switch {
@@ -414,27 +425,36 @@ func (c *NamespacedDiscoveryCache) Get(apiGroup, resource string) (bool, error) 
 		// authorization path, the caller chose the group, and the API server gives the whole
 		// webhook three seconds before it gives up and denies - retries past that only pile up
 		// work for an answer nobody is waiting for.
-		if err := c.renewCacheOnceNoRetry(apiGroup); err != nil {
-			// A group the API server 404s has to be remembered as empty, or the rate limit below
-			// never applies to it: the caller picks the group out of the request path, so an
-			// unknown group is the cheapest way to ask for a listing, and without an entry every
-			// request for one would produce a fresh round trip. An empty entry answers the same
-			// way - the resource is not in it - while the interval bounds the re-listing.
+		if err := c.listOnce(apiGroup); err != nil {
+			// Both outcomes are remembered, and for the same reason: the caller picks the group out
+			// of the request path, so without a record every request for one would produce a fresh
+			// round trip. What differs is the answer - a group the API server says it does not
+			// serve lets RBAC reply and the request 404s, a listing that failed denies.
+			c.noteNegative(apiGroup, errors.Is(err, ErrNotFound))
 			if errors.Is(err, ErrNotFound) {
-				c.noteUnserved(apiGroup)
 				return false, fmt.Errorf("api group %s is not served: %w", apiGroup, ErrResourceAbsent)
 			}
 			return false, err
 		}
 
-		namespacedInfo, _ = c.getFromCache(apiGroup)
+		namespacedInfo, ok = c.getFromCache(apiGroup)
+		if !ok {
+			// A concurrent listing concluded the group is not there, and recorded it.
+			if absent, known := c.recentNegative(apiGroup); known && absent {
+				return false, fmt.Errorf("api group %s is not served: %w", apiGroup, ErrResourceAbsent)
+			}
+			return false, fmt.Errorf("api group %s was not listed", apiGroup)
+		}
 	case c.isEntryExpired(namespacedInfo.cacheEntry):
-		// cache is expired
-		if err := c.renewCache(apiGroup); err != nil {
-			// if there is an error, we could just use stale cache
+		// The hourly TTL has passed. One attempt, like every other listing on this path: the retry
+		// loop this used to use took up to twenty seconds, and the API server gives the whole
+		// webhook three before it denies - so the retries only produced work for an answer that
+		// had already been decided without it. A failure here is harmless anyway, because a stale
+		// listing is still an answer.
+		if err := c.listOnce(apiGroup); err != nil {
 			c.logger.Println(err)
-		} else {
-			namespacedInfo, _ = c.getFromCache(apiGroup)
+		} else if refreshed, found := c.getFromCache(apiGroup); found {
+			namespacedInfo = refreshed
 		}
 	}
 
@@ -445,11 +465,13 @@ func (c *NamespacedDiscoveryCache) Get(apiGroup, resource string) (bool, error) 
 	namespaced, ok := namespacedInfo.Data[resource]
 	if !ok {
 		if c.now().Sub(namespacedInfo.AddTime) >= negativeRenewInterval {
-			if err := c.renewCacheOnceNoRetry(apiGroup); err != nil {
+			if err := c.listOnce(apiGroup); err != nil {
+				// Remembered either way, so a group whose listing keeps failing is not re-attempted
+				// on every request for the duration of the failure.
+				c.noteNegative(apiGroup, errors.Is(err, ErrNotFound))
 				// The group stopped being served since it was listed. That is an answer, not a
-				// failure to ask, and it is remembered for the same reason as above.
+				// failure to ask.
 				if errors.Is(err, ErrNotFound) {
-					c.noteUnserved(apiGroup)
 					c.forget(apiGroup)
 					return false, fmt.Errorf("api group %s is not served: %w", apiGroup, ErrResourceAbsent)
 				}
@@ -476,60 +498,105 @@ func (c *NamespacedDiscoveryCache) Get(apiGroup, resource string) (bool, error) 
 	return namespaced, nil
 }
 
-// noteUnserved remembers that the API server 404s this group, so the lookups that follow are
-// answered without another round trip until negativeRenewInterval has passed.
+// negativeEntry is what a listing that produced no answer left behind.
+type negativeEntry struct {
+	at time.Time
+	// absent distinguishes the two: the API server answered and said it does not serve this group,
+	// or the attempt failed and we know nothing. The first lets RBAC answer and the request 404s;
+	// the second denies.
+	absent bool
+}
+
+// noteNegative remembers that a listing of this group did not produce an answer, so the lookups
+// that follow are answered without another round trip until negativeRenewInterval has passed.
 //
-// The map is capped. When it is full, entries are dropped until there is room again - oldest first
-// among those the scan sees, which is enough: every entry carries the same answer, so evicting the
-// wrong one costs at most one extra round trip.
-func (c *NamespacedDiscoveryCache) noteUnserved(apiGroup string) {
+// Recording the FAILED attempts too is the half that was missing. Without it, a group whose listing
+// keeps failing was retried on every single request - the rate limit only ever applied to groups
+// that had answered - so an API server having a bad minute turned every authorization request into
+// another attempt against it.
+//
+// The map is capped. When it is full, entries are dropped until there is room again: everything
+// expired first, then the oldest of a bounded sample. Go's map iteration order is random, so the
+// sample is a fair one, and evicting the wrong entry costs at most one extra round trip.
+func (c *NamespacedDiscoveryCache) noteNegative(apiGroup string, absent bool) {
 	now := c.now()
 
-	c.muUnserved.Lock()
-	defer c.muUnserved.Unlock()
+	c.muNegative.Lock()
+	defer c.muNegative.Unlock()
 
-	if c.unserved == nil {
-		c.unserved = make(map[string]time.Time)
+	if c.negative == nil {
+		c.negative = make(map[string]negativeEntry)
 	}
 
-	if len(c.unserved) >= maxUnservedGroups {
-		// Drop everything that has expired anyway, and if that was not enough, the oldest of a
-		// bounded sample. Go's map iteration order is random, so the sample is a fair one.
-		for group, at := range c.unserved {
-			if now.Sub(at) >= negativeRenewInterval {
-				delete(c.unserved, group)
+	if len(c.negative) >= maxUnservedGroups {
+		for group, e := range c.negative {
+			if now.Sub(e.at) >= negativeRenewInterval {
+				delete(c.negative, group)
 			}
 		}
-		for len(c.unserved) >= maxUnservedGroups {
+		for len(c.negative) >= maxUnservedGroups {
 			oldest, oldestAt, seen := "", now, 0
-			for group, at := range c.unserved {
-				if oldest == "" || at.Before(oldestAt) {
-					oldest, oldestAt = group, at
+			for group, e := range c.negative {
+				if oldest == "" || e.at.Before(oldestAt) {
+					oldest, oldestAt = group, e.at
 				}
 				if seen++; seen >= 16 {
 					break
 				}
 			}
-			delete(c.unserved, oldest)
+			delete(c.negative, oldest)
 		}
 	}
 
-	c.unserved[apiGroup] = now
+	c.negative[apiGroup] = negativeEntry{at: now, absent: absent}
 }
 
-// unservedRecently reports whether this group was answered 404 within the interval.
-func (c *NamespacedDiscoveryCache) unservedRecently(apiGroup string) bool {
-	c.muUnserved.Lock()
-	defer c.muUnserved.Unlock()
-	at, ok := c.unserved[apiGroup]
+// recentNegative reports what a recent listing of this group concluded, if there was one.
+func (c *NamespacedDiscoveryCache) recentNegative(apiGroup string) (absent, known bool) {
+	c.muNegative.Lock()
+	defer c.muNegative.Unlock()
+	e, ok := c.negative[apiGroup]
 	if !ok {
-		return false
+		return false, false
 	}
-	if c.now().Sub(at) >= negativeRenewInterval {
-		delete(c.unserved, apiGroup)
-		return false
+	if c.now().Sub(e.at) >= negativeRenewInterval {
+		delete(c.negative, apiGroup)
+		return false, false
 	}
-	return true
+	return e.absent, true
+}
+
+// listOnce lists a group, collapsing concurrent calls for the same group into one round trip.
+//
+// Without this, a burst of authorization requests naming the same unlisted group produced one
+// listing each: the rate limit only applies once an attempt has finished, so everything that
+// arrives while the first is in flight goes out on its own. The cost of the miss is multiplied by
+// the concurrency of the authorization path, which is the whole cluster.
+func (c *NamespacedDiscoveryCache) listOnce(apiGroup string) error {
+	c.muInflight.Lock()
+	if c.inflight == nil {
+		c.inflight = make(map[string]chan struct{})
+	}
+	if done, running := c.inflight[apiGroup]; running {
+		c.muInflight.Unlock()
+		<-done
+		// The listing that was already running has finished; its result is in the caches, and the
+		// caller re-reads them. Reporting no error here is right: whatever it concluded is now
+		// recorded, and the caller's own re-read decides.
+		return nil
+	}
+	done := make(chan struct{})
+	c.inflight[apiGroup] = done
+	c.muInflight.Unlock()
+
+	err := c.renewCacheOnceNoRetry(apiGroup)
+
+	c.muInflight.Lock()
+	delete(c.inflight, apiGroup)
+	c.muInflight.Unlock()
+	close(done)
+
+	return err
 }
 
 // renewCacheOnceNoRetry lists a group exactly once. renewCache retries for up to twenty seconds,

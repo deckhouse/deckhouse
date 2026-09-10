@@ -13,6 +13,7 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -197,6 +198,100 @@ func TestCacheGetKeepsTheNegativeWhenTheRefreshFails(t *testing.T) {
 	}
 }
 
+// A listing that FAILS must be remembered too, not only one that answered.
+//
+// The rate limit used to key on the cache entry, which a failed listing never creates - so a group
+// whose listing kept failing was retried on every single request. An API server having a bad
+// minute then turned every authorization request in the cluster into another attempt against it,
+// which is the shape of an outage that feeds itself.
+func TestCacheFailedListingIsNotRetriedOnEveryRequest(t *testing.T) {
+	var attempts int32
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&attempts, 1)
+		w.WriteHeader(http.StatusInternalServerError)
+	}))
+	defer server.Close()
+
+	cache := NamespacedDiscoveryCache{
+		client:               server.Client(),
+		kubernetesAPIAddress: server.URL,
+		logger:               log.New(io.Discard, "", log.LstdFlags),
+		data:                 make(map[string]*namespacedCacheEntry),
+		preferredVersions:    make(map[string]*preferredVersionCacheEntry),
+		negative:             make(map[string]negativeEntry),
+		inflight:             make(map[string]chan struct{}),
+	}
+	now := time.Now()
+	cache.now = func() time.Time { return now }
+
+	for i := 0; i < 30; i++ {
+		if _, err := cache.Get("unreachable/v1", "things"); err == nil {
+			t.Fatalf("lookup %d: a listing that failed must not report success", i)
+		}
+		// And it must deny rather than let RBAC answer: a failure is not proof of absence.
+		if _, err := cache.Get("unreachable/v1", "things"); errors.Is(err, ErrResourceAbsent) {
+			t.Fatalf("lookup %d: a failed listing must not be reported as the resource being absent", i)
+		}
+	}
+	if got := atomic.LoadInt32(&attempts); got != 1 {
+		t.Errorf("60 lookups produced %d attempts against the API server, want 1", got)
+	}
+
+	// Once the interval passes it tries again, so a recovered API server is noticed.
+	cache.now = func() time.Time { return now.Add(negativeRenewInterval) }
+	_, _ = cache.Get("unreachable/v1", "things")
+	if got := atomic.LoadInt32(&attempts); got != 2 {
+		t.Errorf("after the interval: %d attempts in total, want 2", got)
+	}
+}
+
+// Concurrent lookups of the same group share one listing.
+//
+// The rate limit only applies once an attempt has finished, so without this everything that arrives
+// while the first listing is in flight goes out on its own - and the concurrency of this path is
+// the whole cluster's authorization traffic.
+func TestCacheConcurrentLookupsShareOneListing(t *testing.T) {
+	var listings int32
+	release := make(chan struct{})
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&listings, 1)
+		<-release // hold the first listing open so the others pile up behind it
+		w.Header().Add("Content-Type", "application/json")
+		w.Write([]byte(testResponse))
+	}))
+	defer server.Close()
+
+	cache := NamespacedDiscoveryCache{
+		client:               server.Client(),
+		kubernetesAPIAddress: server.URL,
+		logger:               log.New(io.Discard, "", log.LstdFlags),
+		data:                 make(map[string]*namespacedCacheEntry),
+		preferredVersions:    make(map[string]*preferredVersionCacheEntry),
+		negative:             make(map[string]negativeEntry),
+		inflight:             make(map[string]chan struct{}),
+	}
+	now := time.Now()
+	cache.now = func() time.Time { return now }
+
+	var wg sync.WaitGroup
+	for i := 0; i < 20; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, _ = cache.Get("test", "nodes")
+		}()
+	}
+
+	// Let the first listing through once the others have had time to arrive.
+	time.Sleep(100 * time.Millisecond)
+	close(release)
+	wg.Wait()
+
+	if got := atomic.LoadInt32(&listings); got > 2 {
+		t.Errorf("20 concurrent lookups of one group produced %d listings, want at most 2", got)
+	}
+}
+
 // The memory of unserved groups must be bounded. Its keys come out of the request path, so a
 // subject a rule covers can name a different made-up group on every request; remembering them all
 // would turn a rate limit into a way to grow the webhook's heap until the node reclaims it - on the
@@ -213,7 +308,7 @@ func TestCacheUnservedGroupsAreBounded(t *testing.T) {
 		logger:               log.New(io.Discard, "", log.LstdFlags),
 		data:                 make(map[string]*namespacedCacheEntry),
 		preferredVersions:    make(map[string]*preferredVersionCacheEntry),
-		unserved:             make(map[string]time.Time),
+		negative:             make(map[string]negativeEntry),
 	}
 	now := time.Now()
 	cache.now = func() time.Time { return now }
@@ -224,9 +319,9 @@ func TestCacheUnservedGroupsAreBounded(t *testing.T) {
 		}
 	}
 
-	cache.muUnserved.Lock()
-	unserved := len(cache.unserved)
-	cache.muUnserved.Unlock()
+	cache.muNegative.Lock()
+	unserved := len(cache.negative)
+	cache.muNegative.Unlock()
 	if unserved > maxUnservedGroups {
 		t.Errorf("the negative cache holds %d groups after %d distinct lookups, cap is %d",
 			unserved, maxUnservedGroups*4, maxUnservedGroups)

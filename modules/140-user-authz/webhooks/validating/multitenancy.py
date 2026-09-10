@@ -63,8 +63,6 @@
 #   effective value instead of treating it as "disabled".
 
 
-import re
-
 from deckhouse import hook
 from dotmap import DotMap
 
@@ -197,39 +195,155 @@ MULTITENANCY_RESTRICTED_FIELDS = {
     'limitNamespaces': "limitNamespaces option"
 }
 
-# RE2, the engine Go uses, has no backtracking and therefore no lookaround, no backreferences and no
-# atomic groups. Python's re accepts all of them, so compiling here is not enough on its own: a
-# pattern with a lookahead would pass admission and then be quarantined by the webhook at runtime,
-# which is the exact outcome this validation exists to prevent.
+# The authorization webhook compiles limitNamespaces with Go's regexp, which is RE2. This admission
+# check exists so that a pattern RE2 cannot compile is refused when it is written rather than
+# quarantined at runtime, where its only trace is a metric nobody is watching at the moment somebody
+# presses apply.
+#
+# It deliberately does NOT compile the pattern with Python's re to decide. The two dialects differ in
+# both directions, and only one of those directions is safe to be wrong about:
+#
+#   - Python accepts things RE2 refuses: lookaround, backreferences, atomic groups, conditionals,
+#     possessive quantifiers, inline comments, \Z, several inline flags, repeat counts above 1000.
+#     Missing one of these lets a rule through that will be quarantined - the status quo, tolerable.
+#   - Python REFUSES things RE2 accepts: \z, \pL, \Q...\E, \x{...}, (?<name>...), (?U). Rejecting
+#     one of these blocks an administrator from editing a rule that works. That is a regression, and
+#     it is the direction that must not happen.
+#
+# So the check is made of two parts that are true of RE2 specifically: a structural balance scan,
+# and a list of constructs RE2 does not have. Anything it is unsure about is allowed through, where
+# the runtime quarantine and its alert remain the backstop.
+
+# Constructs Python accepts and RE2 does not. Ordered so the longer prefixes match first.
 RE2_UNSUPPORTED = (
-    ("(?=", "lookahead"),
-    ("(?!", "negative lookahead"),
     ("(?<=", "lookbehind"),
     ("(?<!", "negative lookbehind"),
+    ("(?=", "lookahead"),
+    ("(?!", "negative lookahead"),
     ("(?>", "atomic group"),
+    ("(?#", "inline comment"),
     ("(?P=", "backreference"),
+    ("(?(", "conditional"),
 )
+
+# Inline flags RE2 knows. Anything else in a (?letters) group is a Python-only flag.
+RE2_INLINE_FLAGS = set("imsU-:")
+
+# RE2 refuses a repetition count above this.
+RE2_MAX_REPEAT = 1000
+
+
+def _spans(pattern: str):
+    """Yields (index, char, in_class, in_quote) with escapes resolved, so a scan can trust what it sees."""
+    i = 0
+    in_class = False
+    in_quote = False
+    while i < len(pattern):
+        ch = pattern[i]
+        if in_quote:
+            if ch == "\\" and i + 1 < len(pattern) and pattern[i + 1] == "E":
+                in_quote = False
+                i += 2
+                continue
+            i += 1
+            continue
+        if ch == "\\":
+            if i + 1 < len(pattern) and pattern[i + 1] == "Q":
+                in_quote = True
+                i += 2
+                continue
+            i += 2  # the escaped character is a literal, whatever it is
+            continue
+        if ch == "[" and not in_class:
+            in_class = True
+        elif ch == "]" and in_class:
+            in_class = False
+        yield i, ch, in_class, in_quote
+        i += 1
+
+
+def structural_error(pattern: str) -> str:
+    """Reports an imbalance RE2 would refuse. Only certainties - never a guess."""
+    depth = 0
+    in_class_at = None
+    for i, ch, in_class, _ in _spans(pattern):
+        if ch == "[" and in_class and in_class_at is None:
+            in_class_at = i
+            continue
+        if ch == "]" and not in_class:
+            in_class_at = None
+            continue
+        if in_class:
+            continue
+        if ch == "(":
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth < 0:
+                return "an unbalanced ')'"
+    if depth > 0:
+        return "an unclosed '('"
+    if in_class_at is not None:
+        return "an unclosed '['"
+    if pattern.endswith("\\") and not pattern.endswith("\\\\"):
+        return "a trailing backslash"
+    return ""
 
 
 def re2_unsupported_construct(pattern: str) -> str:
-    for token, description in RE2_UNSUPPORTED:
-        if token in pattern:
-            return description
-    # A backreference written as \1 .. \9. Skipped inside an escaped backslash, so that \\1 - a
-    # literal backslash followed by a digit - is not mistaken for one.
+    """Reports a construct RE2 does not have. Python accepts all of these, so compiling would not catch them."""
+    for i, ch, in_class, in_quote in _spans(pattern):
+        if in_class or in_quote:
+            continue
+        if ch == "\\":
+            continue
+        rest = pattern[i:]
+        for token, description in RE2_UNSUPPORTED:
+            if rest.startswith(token):
+                return description
+        # An inline flag group: (?letters) or (?letters:...). RE2 knows i, m, s and U.
+        if rest.startswith("(?"):
+            j = i + 2
+            flags = ""
+            while j < len(pattern) and pattern[j] not in ")::":
+                flags += pattern[j]
+                j += 1
+            if flags and all(c.isalpha() or c == "-" for c in flags):
+                unknown = [c for c in flags if c not in RE2_INLINE_FLAGS]
+                if unknown:
+                    return "the inline flag '%s', which RE2 does not have" % unknown[0]
+        # A repetition RE2 refuses for being too large.
+        if ch == "{":
+            close = pattern.find("}", i)
+            if close != -1:
+                body = pattern[i + 1:close]
+                for part in body.split(","):
+                    part = part.strip()
+                    if part.isdigit() and int(part) > RE2_MAX_REPEAT:
+                        return "a repetition of %s, above RE2's limit of %d" % (part, RE2_MAX_REPEAT)
+
+    # A backreference written as \1 .. \9. Scanned separately because _spans hides escapes.
     i = 0
     while i < len(pattern) - 1:
         if pattern[i] == "\\":
             if pattern[i + 1].isdigit() and pattern[i + 1] != "0":
-                return "backreference"
+                return "a backreference"
             i += 2
             continue
         i += 1
+
+    # A possessive quantifier: ++, *+, ?+, }+ . RE2 has no possessive form.
+    for i, ch, in_class, in_quote in _spans(pattern):
+        if in_class or in_quote or ch != "+":
+            continue
+        if i > 0 and pattern[i - 1] in "+*?}":
+            return "a possessive quantifier"
+
     return ""
 
 
 def validate_car_limit_namespaces_patterns(obj: DotMap) -> tuple[list[str], list[str]]:
-    """Rejects a limitNamespaces entry the authorization webhook would not be able to compile."""
+    """Refuses a limitNamespaces entry the authorization webhook would not be able to compile."""
     errors = []
     resource_name = obj.metadata.name
 
@@ -240,22 +354,13 @@ def validate_car_limit_namespaces_patterns(obj: DotMap) -> tuple[list[str], list
     for pattern in limit_namespaces:
         if not isinstance(pattern, str):
             continue
-        unsupported = re2_unsupported_construct(pattern)
-        if unsupported:
+        reason = structural_error(pattern) or re2_unsupported_construct(pattern)
+        if reason:
             errors.append(
                 f"limitNamespaces entry '{pattern}' in ClusterAuthorizationRule '{resource_name}' "
-                f"uses a {unsupported}, which the authorization webhook's regular expression engine "
-                f"(RE2) does not support. The rule would be quarantined and its subjects would get "
-                f"less access than written."
-            )
-            continue
-        try:
-            re.compile(pattern)
-        except re.error as err:
-            errors.append(
-                f"limitNamespaces entry '{pattern}' in ClusterAuthorizationRule '{resource_name}' "
-                f"is not a valid regular expression: {err}. The rule would be quarantined and its "
-                f"subjects would get less access than written."
+                f"has {reason}, which the authorization webhook's regular expression engine (RE2) "
+                f"cannot compile. The rule would be quarantined and its subjects would get less "
+                f"access than written."
             )
 
     return errors, []
