@@ -1,14 +1,17 @@
 #!/bin/bash
 
-if [[ -f /var/lib/bashible/bootstrap-token ]]; then
-  echo "The node already have bootstrap-token and under bashible."
-  exit 1
-fi
-
 checkBashible=$(systemctl is-active bashible.timer)
 if [[ "$checkBashible" == "active" ]]; then
   echo "The node already exists in the cluster and under bashible."
   exit 2
+fi
+
+if [[ -f /var/lib/bashible/bootstrap-token ]]; then
+  if [[ -f /etc/kubernetes/kubelet.conf ]]; then
+    echo "The node has already joined the cluster, its bootstrap cannot be resumed here."
+    exit 1
+  fi
+  echo "Bootstrap was interrupted before bashible took over, resuming it."
 fi
 
 mkdir -p /var/lib/bashible
