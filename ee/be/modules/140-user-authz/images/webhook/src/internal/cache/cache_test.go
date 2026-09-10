@@ -8,6 +8,7 @@ package cache
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -193,6 +194,51 @@ func TestCacheGetKeepsTheNegativeWhenTheRefreshFails(t *testing.T) {
 	// failure has to propagate and the decision fails closed.
 	if _, err := cache.Get("never-listed/v1", "things"); err == nil || errors.Is(err, ErrResourceAbsent) {
 		t.Fatalf("an unlisted group during an outage: got %v, want a plain error so the decision denies", err)
+	}
+}
+
+// The memory of unserved groups must be bounded. Its keys come out of the request path, so a
+// subject a rule covers can name a different made-up group on every request; remembering them all
+// would turn a rate limit into a way to grow the webhook's heap until the node reclaims it - on the
+// component every authorization request in the cluster is waiting for.
+func TestCacheUnservedGroupsAreBounded(t *testing.T) {
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	cache := NamespacedDiscoveryCache{
+		client:               server.Client(),
+		kubernetesAPIAddress: server.URL,
+		logger:               log.New(io.Discard, "", log.LstdFlags),
+		data:                 make(map[string]*namespacedCacheEntry),
+		preferredVersions:    make(map[string]*preferredVersionCacheEntry),
+		unserved:             make(map[string]time.Time),
+	}
+	now := time.Now()
+	cache.now = func() time.Time { return now }
+
+	for i := 0; i < maxUnservedGroups*4; i++ {
+		if _, err := cache.Get(fmt.Sprintf("made-up-%d.example.com/v1", i), "things"); !errors.Is(err, ErrResourceAbsent) {
+			t.Fatalf("lookup %d: got %v, want ErrResourceAbsent", i, err)
+		}
+	}
+
+	cache.muUnserved.Lock()
+	unserved := len(cache.unserved)
+	cache.muUnserved.Unlock()
+	if unserved > maxUnservedGroups {
+		t.Errorf("the negative cache holds %d groups after %d distinct lookups, cap is %d",
+			unserved, maxUnservedGroups*4, maxUnservedGroups)
+	}
+
+	// And the groups that ARE served stay out of it entirely, so the cap can never evict something
+	// a real request depends on.
+	cache.mu.RLock()
+	served := len(cache.data)
+	cache.mu.RUnlock()
+	if served != 0 {
+		t.Errorf("the positive cache grew to %d entries from lookups of groups that do not exist", served)
 	}
 }
 

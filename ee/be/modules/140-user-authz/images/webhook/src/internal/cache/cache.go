@@ -64,6 +64,16 @@ const (
 	// privilege-gated staleness window in exchange for closing an unbounded amplifier that any
 	// tenant can drive.
 	negativeRenewInterval = 10 * time.Second
+
+	// maxUnservedGroups bounds how many "this API group is not served" answers are remembered.
+	//
+	// The group comes out of the request path, which the caller writes, so remembering them in the
+	// same unbounded map as the real groups turned a rate limit into a memory sink: a subject a
+	// rule covers could name a different made-up group on every request and grow the map for as
+	// long as they cared to. Real clusters have a few dozen groups, so a cap in the hundreds never
+	// evicts anything a real request needs, and the eviction below is a bounded scan rather than a
+	// full LRU because the entries are interchangeable - every one of them says the same thing.
+	maxUnservedGroups = 256
 )
 
 type Cache interface {
@@ -128,6 +138,11 @@ type NamespacedDiscoveryCache struct {
 	muPv              sync.RWMutex
 	preferredVersions map[string]*preferredVersionCacheEntry
 
+	// muUnserved guards unserved, which remembers the API groups the API server answered 404 for.
+	// It is kept apart from data, and bounded, because its keys are attacker-chosen.
+	muUnserved sync.Mutex
+	unserved   map[string]time.Time
+
 	now func() time.Time
 
 	kubernetesAPIAddress string
@@ -147,6 +162,7 @@ func NewNamespacedDiscoveryCache(logger *log.Logger, apiAddress string) *Namespa
 		logger:            logger,
 		data:              make(map[string]*namespacedCacheEntry),
 		preferredVersions: make(map[string]*preferredVersionCacheEntry),
+		unserved:          make(map[string]time.Time),
 		now:               time.Now,
 
 		kubernetesAPIAddress: apiAddress,
@@ -386,6 +402,12 @@ func (c *NamespacedDiscoveryCache) getFromCache(apiGroup string) (*namespacedCac
 func (c *NamespacedDiscoveryCache) Get(apiGroup, resource string) (bool, error) {
 	namespacedInfo, ok := c.getFromCache(apiGroup)
 
+	// A group the API server said it does not serve, recently enough to still believe it. Answered
+	// from the bounded negative cache rather than from another round trip.
+	if !ok && c.unservedRecently(apiGroup) {
+		return false, fmt.Errorf("api group %s is not served: %w", apiGroup, ErrResourceAbsent)
+	}
+
 	switch {
 	case !ok:
 		// The group has never been listed. One attempt, not the retry loop: this is the
@@ -399,7 +421,7 @@ func (c *NamespacedDiscoveryCache) Get(apiGroup, resource string) (bool, error) 
 			// request for one would produce a fresh round trip. An empty entry answers the same
 			// way - the resource is not in it - while the interval bounds the re-listing.
 			if errors.Is(err, ErrNotFound) {
-				c.storeEmpty(apiGroup)
+				c.noteUnserved(apiGroup)
 				return false, fmt.Errorf("api group %s is not served: %w", apiGroup, ErrResourceAbsent)
 			}
 			return false, err
@@ -427,7 +449,8 @@ func (c *NamespacedDiscoveryCache) Get(apiGroup, resource string) (bool, error) 
 				// The group stopped being served since it was listed. That is an answer, not a
 				// failure to ask, and it is remembered for the same reason as above.
 				if errors.Is(err, ErrNotFound) {
-					c.storeEmpty(apiGroup)
+					c.noteUnserved(apiGroup)
+					c.forget(apiGroup)
 					return false, fmt.Errorf("api group %s is not served: %w", apiGroup, ErrResourceAbsent)
 				}
 				// Anything else is a failure to refresh, and it must not throw away what we
@@ -453,12 +476,60 @@ func (c *NamespacedDiscoveryCache) Get(apiGroup, resource string) (bool, error) 
 	return namespaced, nil
 }
 
-// storeEmpty remembers that a group carries nothing, so the lookups that follow are answered from
-// the entry and bounded by negativeRenewInterval like any other miss.
-func (c *NamespacedDiscoveryCache) storeEmpty(apiGroup string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.data[apiGroup] = newNamespacedCacheEntry(c.now())
+// noteUnserved remembers that the API server 404s this group, so the lookups that follow are
+// answered without another round trip until negativeRenewInterval has passed.
+//
+// The map is capped. When it is full, entries are dropped until there is room again - oldest first
+// among those the scan sees, which is enough: every entry carries the same answer, so evicting the
+// wrong one costs at most one extra round trip.
+func (c *NamespacedDiscoveryCache) noteUnserved(apiGroup string) {
+	now := c.now()
+
+	c.muUnserved.Lock()
+	defer c.muUnserved.Unlock()
+
+	if c.unserved == nil {
+		c.unserved = make(map[string]time.Time)
+	}
+
+	if len(c.unserved) >= maxUnservedGroups {
+		// Drop everything that has expired anyway, and if that was not enough, the oldest of a
+		// bounded sample. Go's map iteration order is random, so the sample is a fair one.
+		for group, at := range c.unserved {
+			if now.Sub(at) >= negativeRenewInterval {
+				delete(c.unserved, group)
+			}
+		}
+		for len(c.unserved) >= maxUnservedGroups {
+			oldest, oldestAt, seen := "", now, 0
+			for group, at := range c.unserved {
+				if oldest == "" || at.Before(oldestAt) {
+					oldest, oldestAt = group, at
+				}
+				if seen++; seen >= 16 {
+					break
+				}
+			}
+			delete(c.unserved, oldest)
+		}
+	}
+
+	c.unserved[apiGroup] = now
+}
+
+// unservedRecently reports whether this group was answered 404 within the interval.
+func (c *NamespacedDiscoveryCache) unservedRecently(apiGroup string) bool {
+	c.muUnserved.Lock()
+	defer c.muUnserved.Unlock()
+	at, ok := c.unserved[apiGroup]
+	if !ok {
+		return false
+	}
+	if c.now().Sub(at) >= negativeRenewInterval {
+		delete(c.unserved, apiGroup)
+		return false
+	}
+	return true
 }
 
 // renewCacheOnceNoRetry lists a group exactly once. renewCache retries for up to twenty seconds,
@@ -478,6 +549,14 @@ func (c *NamespacedDiscoveryCache) renewCacheOnceNoRetry(apiGroup string) error 
 	defer cancel()
 
 	return c.renewCacheOnce(apiGroup, req)
+}
+
+// forget drops a group that used to be served. Its entry in data would otherwise keep answering
+// from a listing of a group that no longer exists.
+func (c *NamespacedDiscoveryCache) forget(apiGroup string) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.data, apiGroup)
 }
 
 func (c *NamespacedDiscoveryCache) isEntryExpired(e *cacheEntry) bool {

@@ -3647,7 +3647,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: D8UserAuthzPermissionBrowserRulesNotSynced
-      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/permission-browser-apiserver.yaml
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/permission-browser-apiserver.tpl
       moduleUrl: 140-user-authz
       module: user-authz
       edition: ce
@@ -3670,7 +3670,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: D8UserAuthzPermissionBrowserTargetDown
-      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/permission-browser-apiserver.yaml
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/permission-browser-apiserver.tpl
       moduleUrl: 140-user-authz
       module: user-authz
       edition: ce
@@ -3690,7 +3690,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: D8UserAuthzPermissionBrowserUnavailable
-      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/permission-browser-apiserver.yaml
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/permission-browser-apiserver.tpl
       moduleUrl: 140-user-authz
       module: user-authz
       edition: ce
@@ -3770,14 +3770,16 @@ alerts:
       severity: "5"
       markupFormat: markdown
     - name: D8UserAuthzRulePropagationLag
-      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.yaml
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.tpl
       moduleUrl: 140-user-authz
       module: user-authz
       edition: ce
       description: |-
         One instance of `user-authz-webhook` has not rebuilt its directory for over an hour while another one has. The rules are changing in the cluster and this instance is not seeing the changes.
 
-        This is the asymmetric case that `D8UserAuthzWebhookDirectoryDiverged` can miss: the instances can agree on the highest `resourceVersion` they have seen and still differ, if the one that is behind simply stopped receiving events rather than falling behind on a particular object. The second condition is what makes it an alert rather than a description of a quiet cluster — it fires only when some instance IS rebuilding, so a cluster whose rules genuinely never change stays silent.
+        This is the asymmetric case that `D8UserAuthzWebhookDirectoryDiverged` can miss: the instances can agree on the highest `resourceVersion` they have seen and still differ, if the one that is behind simply stopped receiving events rather than falling behind on a particular object.
+
+        Both halves are rates rather than counter values, and that is not cosmetic: `rebuilds_total` is a per-process counter that starts at zero, so comparing the values directly meant that one Pod restart left `max - min` permanently positive and the alert permanently on. The rate over an hour says what was actually meant — somebody is rebuilding, somebody is not — and it survives restarts. A cluster whose rules genuinely never change has every instance at rate zero and stays silent.
 
         ```bash
         d8 k -n d8-user-authz get pods -l app=user-authz-webhook -o wide
@@ -3790,7 +3792,7 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: D8UserAuthzWebhookDirectoryDiverged
-      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.yaml
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.tpl
       moduleUrl: 140-user-authz
       module: user-authz
       edition: ce
@@ -3812,7 +3814,7 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: D8UserAuthzWebhookRulesNotSynced
-      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.yaml
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.tpl
       moduleUrl: 140-user-authz
       module: user-authz
       edition: ce
@@ -3835,7 +3837,7 @@ alerts:
       severity: "6"
       markupFormat: markdown
     - name: D8UserAuthzWebhookRulesQuarantined
-      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.yaml
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.tpl
       moduleUrl: 140-user-authz
       module: user-authz
       edition: ce
@@ -3853,7 +3855,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: D8UserAuthzWebhookRulesStale
-      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.yaml
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.tpl
       moduleUrl: 140-user-authz
       module: user-authz
       edition: ce
@@ -3873,7 +3875,7 @@ alerts:
       severity: "8"
       markupFormat: markdown
     - name: D8UserAuthzWebhookRulesWatchErrors
-      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.yaml
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.tpl
       moduleUrl: 140-user-authz
       module: user-authz
       edition: ce
@@ -3891,7 +3893,7 @@ alerts:
       severity: "7"
       markupFormat: markdown
     - name: D8UserAuthzWebhookTargetDown
-      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.yaml
+      sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.tpl
       moduleUrl: 140-user-authz
       module: user-authz
       edition: ce

@@ -1,3 +1,11 @@
+{{- if .Values.userAuthz.enableMultiTenancy }}
+{{- /*
+  The components these alerts watch - the authorization webhook and Permission Browser - are
+  rendered only when multi-tenancy is on, and this file used to be plain YAML, installed either way.
+  So on every cluster with the default enableMultiTenancy: false there was no target to scrape,
+  absent(up{...}) stayed true, and the TargetDown alert below fired permanently five minutes after
+  install. Gating the whole file is the fix: no components, no alerts about them.
+*/}}
 - name: d8.user-authz.webhook.rules
   rules:
   - alert: D8UserAuthzWebhookTargetDown
@@ -182,16 +190,12 @@
   - alert: D8UserAuthzRulePropagationLag
     expr: |
       (
-        time()
-        -
-        min(user_authz_webhook_rules_directory_updated_timestamp_seconds{job="user-authz-webhook", namespace="d8-user-authz"})
-      ) > 3600
+        max(rate(user_authz_webhook_rules_directory_rebuilds_total{job="user-authz-webhook", namespace="d8-user-authz"}[1h])) > 0
+      )
       and
       (
-        max(user_authz_webhook_rules_directory_rebuilds_total{job="user-authz-webhook", namespace="d8-user-authz"})
-        -
-        min(user_authz_webhook_rules_directory_rebuilds_total{job="user-authz-webhook", namespace="d8-user-authz"})
-      ) > 0
+        min(rate(user_authz_webhook_rules_directory_rebuilds_total{job="user-authz-webhook", namespace="d8-user-authz"}[1h])) == 0
+      )
     for: 15m
     labels:
       severity_level: "6"
@@ -207,7 +211,9 @@
       description: |-
         One instance of `user-authz-webhook` has not rebuilt its directory for over an hour while another one has. The rules are changing in the cluster and this instance is not seeing the changes.
 
-        This is the asymmetric case that `D8UserAuthzWebhookDirectoryDiverged` can miss: the instances can agree on the highest `resourceVersion` they have seen and still differ, if the one that is behind simply stopped receiving events rather than falling behind on a particular object. The second condition is what makes it an alert rather than a description of a quiet cluster — it fires only when some instance IS rebuilding, so a cluster whose rules genuinely never change stays silent.
+        This is the asymmetric case that `D8UserAuthzWebhookDirectoryDiverged` can miss: the instances can agree on the highest `resourceVersion` they have seen and still differ, if the one that is behind simply stopped receiving events rather than falling behind on a particular object.
+
+        Both halves are rates rather than counter values, and that is not cosmetic: `rebuilds_total` is a per-process counter that starts at zero, so comparing the values directly meant that one Pod restart left `max - min` permanently positive and the alert permanently on. The rate over an hour says what was actually meant — somebody is rebuilding, somebody is not — and it survives restarts. A cluster whose rules genuinely never change has every instance at rate zero and stays silent.
 
         ```bash
         d8 k -n d8-user-authz get pods -l app=user-authz-webhook -o wide
@@ -215,3 +221,4 @@
         ```
 
         The instance's `/readyz` reports a directory that has stopped tracking the cluster once its watch has failed enough times in a row, so check whether the Pod is also unready — if it is, the rollout is already held and the cause is in the log above.
+{{- end }}

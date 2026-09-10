@@ -164,6 +164,31 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 				Field("subjects.0.name").String()).To(Equal("controller"))
 		})
 
+		// The other half of "no component, no alerts": with multi-tenancy on, the components exist
+		// and so must the rules that watch them.
+		It("Should render the alerts of the components multi-tenancy deploys", func() {
+			webhook := f.KubernetesResource("PrometheusRule", "d8-system", "user-authz-user-authz-webhook")
+			Expect(webhook.Exists()).To(BeTrue())
+			Expect(webhook.Field("spec.groups").String()).To(ContainSubstring("D8UserAuthzWebhookTargetDown"))
+
+			browser := f.KubernetesResource("PrometheusRule", "d8-system", "user-authz-permission-browser-apiserver")
+			Expect(browser.Exists()).To(BeTrue())
+			Expect(browser.Field("spec.groups").String()).To(ContainSubstring("D8UserAuthzPermissionBrowserUnavailable"))
+		})
+
+		// An instance that is not ready is precisely the one the alerts are about — its rules are
+		// unlisted or no longer tracking the cluster. Dropping it from the scrape would leave
+		// RulesNotSynced, RulesWatchErrors, DirectoryDiverged and RulePropagationLag blind at the
+		// moment each became true.
+		It("Should scrape instances that are not ready", func() {
+			for _, name := range []string{"user-authz-webhook", "permission-browser-apiserver"} {
+				pm := f.KubernetesResource("PodMonitor", "d8-monitoring", name)
+				Expect(pm.Exists()).To(BeTrue())
+				Expect(pm.Field("spec.podMetricsEndpoints").String()).
+					NotTo(ContainSubstring("pod_ready"), "PodMonitor %s must not drop unready pods", name)
+			}
+		})
+
 		It("Should deploy authorization webhook and supporting objects", func() {
 			Expect(f.KubernetesResource("DaemonSet", "d8-user-authz", "user-authz-webhook").Exists()).To(BeTrue())
 			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "control-plane-configurator").Field("data.ca").Exists()).To(BeTrue())
@@ -488,10 +513,20 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 				Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:accessible-namespaces-reader:system-authenticated").Exists()).To(BeFalse())
 			})
 
-			It("Should render permission-browser availability alert", func() {
-				rule := f.KubernetesResource("PrometheusRule", "d8-system", "user-authz-permission-browser-apiserver")
-				Expect(rule.Exists()).To(BeTrue())
-				Expect(rule.Field("spec.groups").String()).To(ContainSubstring("D8UserAuthzPermissionBrowserUnavailable"))
+			// The alerts must NOT be installed here. Permission Browser and the authorization
+			// webhook are rendered only with multi-tenancy on, and these rules used to be plain
+			// YAML shipped either way — so on every cluster with the default
+			// enableMultiTenancy: false there was no target to scrape, absent(up{...}) stayed
+			// true, and TargetDown fired permanently five minutes after install. An alert about a
+			// component that is not deployed is noise by construction.
+			It("Should not render alerts about components multi-tenancy does not deploy", func() {
+				for _, name := range []string{
+					"user-authz-permission-browser-apiserver",
+					"user-authz-user-authz-webhook",
+				} {
+					Expect(f.KubernetesResource("PrometheusRule", "d8-system", name).Exists()).
+						To(BeFalse(), "PrometheusRule %s must not exist without multi-tenancy", name)
+				}
 			})
 		})
 

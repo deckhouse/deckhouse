@@ -19,6 +19,7 @@ package source
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strconv"
 	"sync"
 	"testing"
@@ -234,7 +235,8 @@ func TestSource_CRDMissing(t *testing.T) {
 	defer cancel()
 	go s.Run(ctx)
 
-	eventually(t, "the missing CRD to be noticed", func() bool { return rec.watchErrorCount() > 0 })
+	// It takes a streak, not one error: see TestSource_CRDMissingNeedsCorroboration for why.
+	eventually(t, "the missing CRD to be confirmed", func() bool { return rec.watchErrorCount() >= crdMissingConfirmations })
 
 	if got := s.State(); got != StateCRDMissing {
 		t.Errorf("state = %v, want %v", got, StateCRDMissing)
@@ -315,13 +317,62 @@ func TestSource_StaleAfterEnoughConsecutiveWatchErrors(t *testing.T) {
 		t.Error("going stale must not drop the rules already known")
 	}
 
-	// And a successful sync clears the count, so a source that recovers reports healthy again
-	// rather than staying stale for the life of the process.
-	s.mu.Lock()
-	s.consecutiveWatchErrors = 0
-	s.mu.Unlock()
+	// Recovery has to happen through the path a real cluster takes, not by reaching into the
+	// field. The first version of this test zeroed consecutiveWatchErrors by hand and therefore
+	// passed while the only reset in the code lived in awaitSync - which runs once, at the first
+	// sync, and never again. Watch errors are ordinary on a long-lived cluster; the count crept up
+	// until it crossed the threshold and then State() said Stale forever, holding both consumers
+	// unready on a cluster where nothing was wrong.
+	//
+	// What proves the watch is alive is the watch delivering something. Create a rule and wait for
+	// it to arrive.
+	if _, err := client.Resource(rules.GroupVersionResource).Create(context.Background(),
+		car("team-b", "2", []string{"bob"}, "team-b"), metav1.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	eventually(t, "the new rule to arrive", func() bool {
+		d := s.Directory()
+		return d != nil && d.KnowsRule("team-b")
+	})
+
 	if got := s.State(); got != StateSynced {
-		t.Errorf("state = %v after recovery, want %v", got, StateSynced)
+		t.Errorf("state = %v after the watch delivered again, want %v", got, StateSynced)
+	}
+	if err := s.LastError(); err != nil {
+		t.Errorf("LastError = %v after recovery, want nil", err)
+	}
+}
+
+// The streak must be consecutive. Errors spread out over the life of a process, with the watch
+// working in between - which is every long-lived cluster - must never add up to Stale.
+func TestSource_ScatteredWatchErrorsNeverAccumulate(t *testing.T) {
+	client := newClient(car("team-a", "1", []string{"alice"}, "team-a"))
+	s := New(client, Options{Debounce: 20 * time.Millisecond, DegradeAfterWatchErrors: 3, Logf: t.Logf})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go s.Run(ctx)
+
+	eventually(t, "the first directory", func() bool { return s.Directory() != nil })
+
+	for round := 0; round < 5; round++ {
+		// Two errors - one below the threshold - and then the watch delivers.
+		s.watchError(nil, errors.New("connection refused"))
+		s.watchError(nil, errors.New("connection refused"))
+
+		name := fmt.Sprintf("team-%d", round)
+		if _, err := client.Resource(rules.GroupVersionResource).Create(context.Background(),
+			car(name, fmt.Sprintf("%d", round+2), []string{"bob"}, name), metav1.CreateOptions{}); err != nil {
+			t.Fatal(err)
+		}
+		eventually(t, "the rule of round "+name, func() bool {
+			d := s.Directory()
+			return d != nil && d.KnowsRule(name)
+		})
+
+		if got := s.State(); got != StateSynced {
+			t.Fatalf("round %d: state = %v, want %v: two errors with a working watch in between "+
+				"must not add up across rounds", round, got, StateSynced)
+		}
 	}
 }
 
@@ -339,15 +390,52 @@ func TestSource_NeverListedStaysUnsynced(t *testing.T) {
 	}
 }
 
-// A missing CRD outranks staleness: there are no rules to track, so an empty directory is the
-// truth and the consumer must not be held unready for it.
-func TestSource_CRDMissingOutranksStale(t *testing.T) {
-	s := New(newClient(), Options{Debounce: 20 * time.Millisecond, DegradeAfterWatchErrors: 1, Logf: t.Logf})
+// A missing CRD outranks staleness: there are no rules to track, so an empty directory is the truth
+// and the consumer must not be held unready for it.
+//
+// But it takes more than one NotFound to say so. CRDMissing is the one state that OPENS the
+// webhook's serving gate, and reaching it wrongly on a cluster that does have rules opens that gate
+// with an empty directory - after which the ordering guard denies every subject a rule covers, each
+// denial cached by the API server for unauthorizedTTL.
+func TestSource_CRDMissingNeedsCorroboration(t *testing.T) {
+	s := New(newClient(), Options{Debounce: 20 * time.Millisecond, DegradeAfterWatchErrors: 50, Logf: t.Logf})
 	s.synced.Store(true)
-	s.watchError(nil, apierrors.NewNotFound(rules.GroupVersionResource.GroupResource(), ""))
+	notFound := apierrors.NewNotFound(rules.GroupVersionResource.GroupResource(), "")
 
+	for i := 1; i < crdMissingConfirmations; i++ {
+		s.watchError(nil, notFound)
+		if got := s.State(); got == StateCRDMissing {
+			t.Fatalf("state = %v after %d NotFound(s): a transient NotFound must not read as a missing CRD", got, i)
+		}
+	}
+
+	s.watchError(nil, notFound)
+	if got := s.State(); got != StateCRDMissing {
+		t.Errorf("state = %v after %d NotFounds, want %v", got, crdMissingConfirmations, StateCRDMissing)
+	}
+
+	// And once established it outranks staleness: an absent CRD is not a directory that stopped
+	// tracking, it is a cluster with nothing to track.
+	for i := 0; i < 60; i++ {
+		s.watchError(nil, notFound)
+	}
 	if got := s.State(); got != StateCRDMissing {
 		t.Errorf("state = %v, want %v", got, StateCRDMissing)
+	}
+}
+
+// The streak has to be consecutive, or an unlucky mix of unrelated failures would open the gate.
+func TestSource_CRDMissingStreakIsConsecutive(t *testing.T) {
+	s := New(newClient(), Options{Debounce: 20 * time.Millisecond, DegradeAfterWatchErrors: 50, Logf: t.Logf})
+	s.synced.Store(true)
+	notFound := apierrors.NewNotFound(rules.GroupVersionResource.GroupResource(), "")
+
+	for i := 0; i < crdMissingConfirmations*3; i++ {
+		s.watchError(nil, notFound)
+		s.watchError(nil, errors.New("connection refused"))
+		if got := s.State(); got == StateCRDMissing {
+			t.Fatalf("state = %v: NotFounds interleaved with other errors are not a missing CRD", got)
+		}
 	}
 }
 
