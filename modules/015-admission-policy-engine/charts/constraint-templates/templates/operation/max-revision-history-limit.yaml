@@ -24,13 +24,17 @@ spec:
               type: integer
   targets:
     - target: admission.k8s.gatekeeper.sh
-      rego: |
-        package d8.operation_policies
+      code:
+        - engine: Rego
+          source:
+            version: "v1"
+            rego: |
+              package d8.operation_policies
 
-        violation[{"msg": msg}] {
-          not input.review.operation == "DELETE"
-          current := input.review.object.spec.revisionHistoryLimit
-          desired := input.parameters.limit
-          current > desired
-          msg := sprintf("%v <%v> has .spec.revisionHistoryLimit: %v, required: %v", [input.review.object.kind, input.review.object.metadata.name, current, desired])
-        }
+              violation contains {"msg": msg} if {
+                not input.review.operation == "DELETE"
+                current := input.review.object.spec.revisionHistoryLimit
+                desired := input.parameters.limit
+                current > desired
+                msg := sprintf("%v <%v> has .spec.revisionHistoryLimit: %v, required: %v", [input.review.object.kind, input.review.object.metadata.name, current, desired])
+              }

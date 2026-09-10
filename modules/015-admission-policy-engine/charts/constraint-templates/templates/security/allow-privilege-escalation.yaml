@@ -8,6 +8,7 @@ metadata:
     security.deckhouse.io: security-policy
   annotations:
     metadata.gatekeeper.sh/title: "Allow Privilege Escalation in Container"
+    metadata.gatekeeper.sh/version: 1.0.0
     description: >-
       Controls restricting escalation to root privileges. Corresponds to the
       `allowPrivilegeEscalation` field in a PodSecurityPolicy. For more
@@ -48,6 +49,8 @@ spec:
 
               import data.lib.check_bool.check_container_bool
               import data.lib.common.input_containers
+              import data.lib.common.object_labels
+              import data.lib.common.object_namespace
               import data.lib.message.violation_message
 
               violation contains {"msg": msg, "details": {}} if {
@@ -60,8 +63,8 @@ spec:
                   false,
                   true,
                   ["spec", "securityContext", "allowPrivilegeEscalation", "allowedValue"],
-                  object.get(input.review.object, ["metadata", "labels"], {}),
-                  object.get(input.review.object, ["metadata", "namespace"], "")
+                  object_labels,
+                  object_namespace
                 )
                 not result.allowed
                 msg := violation_message("Privilege escalation container is not allowed", sprintf("container: %v", [c.name]), result.detail)

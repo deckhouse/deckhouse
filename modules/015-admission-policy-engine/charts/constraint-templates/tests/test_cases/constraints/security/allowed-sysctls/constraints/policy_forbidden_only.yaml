@@ -1,7 +1,10 @@
+# Denylist-only policy: the SecurityPolicy sets `forbiddenSysctls` and no
+# `allowedUnsafeSysctls`, so the Helm define renders no `allowedSysctls` key at
+# all. Everything the denylist does not name must stay allowed.
 apiVersion: constraints.gatekeeper.sh/v1beta1
-kind: D8PriorityClass
+kind: D8AllowedSysctls
 metadata:
-  name: test
+  name: test-forbidden-only
 spec:
   enforcementAction: "deny"
   match:
@@ -14,7 +17,9 @@ spec:
         kinds: ["ReplicationController"]
       - apiGroups: ["batch"]
         kinds: ["Job", "CronJob"]
+    namespaceSelector:
+      matchLabels:
+        custom-policy: example
   parameters:
-    priorityClassNames:
-      - "foo"
-      - "baz"
+    forbiddenSysctls:
+      - kernel.msg*

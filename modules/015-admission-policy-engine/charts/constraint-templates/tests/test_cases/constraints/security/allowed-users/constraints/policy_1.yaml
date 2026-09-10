@@ -9,7 +9,11 @@ spec:
       - apiGroups: [""]
         kinds: ["Pod"]
       - apiGroups: ["apps"]
-        kinds: ["Deployment", "DaemonSet"]
+        kinds: ["Deployment", "StatefulSet", "DaemonSet"]
+      - apiGroups: [""]
+        kinds: ["ReplicationController"]
+      - apiGroups: ["batch"]
+        kinds: ["Job", "CronJob"]
     namespaceSelector:
       matchLabels:
         custom-policy: example

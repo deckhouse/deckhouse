@@ -57,6 +57,8 @@ spec:
 
               import data.lib.check_set.check_value_in_set_with_wildcards
               import data.lib.common.has_field
+              import data.lib.common.pod_spec
+              import data.lib.common.review_kind
 
               violation contains {"msg": msg, "details": {}} if {
                 not input.review.operation == "DELETE"
@@ -64,10 +66,10 @@ spec:
                 allowed := [v.driver | v := input.parameters.allowedFlexVolumes[_]]
                 result := check_value_in_set_with_wildcards(volume.flexVolume.driver, allowed, [], {})
                 not result.allowed
-                msg := sprintf("FlexVolume %v is not allowed, pod: %v. Allowed drivers: %v", [volume, input.review.object.metadata.name, input.parameters.allowedFlexVolumes])
+                msg := sprintf("FlexVolume %v is not allowed, %v: %v. Allowed drivers: %v", [volume, review_kind, input.review.object.metadata.name, input.parameters.allowedFlexVolumes])
               }
 
               input_flexvolumes contains v if {
-                v := input.review.object.spec.volumes[_]
+                v := pod_spec.volumes[_]
                 has_field(v, "flexVolume")
               }

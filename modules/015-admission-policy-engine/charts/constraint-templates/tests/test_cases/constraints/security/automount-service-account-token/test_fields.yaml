@@ -4,6 +4,9 @@ metadata:
   name: automount-service-account-token
 spec:
   objectKind: Pod
+  objectKinds:
+    - Pod
+    - Deployment
   objectFields:
     - path: spec.automountServiceAccountToken
       level: pod

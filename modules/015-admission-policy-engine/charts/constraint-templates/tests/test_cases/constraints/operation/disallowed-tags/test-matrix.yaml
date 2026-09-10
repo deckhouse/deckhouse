@@ -7,7 +7,7 @@ spec:
   outputTestDirectory: rendered
   defaultObjectBase: admissionPod
   defaultInventory:
-    - ref: $TEST_ROOT/constraints/_test-samples/ns.yaml
+  - ref: $TEST_ROOT/constraints/_test-samples/ns.yaml
   bases:
     admissionPod:
       document:
@@ -17,45 +17,81 @@ spec:
           namespace: testns
         spec:
           containers:
-            - image: nginx
-              name: nginx
+          - image: nginx
+            name: nginx
+    admissionDeployment:
+      document:
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          namespace: testns
+        spec:
+          template:
+            spec:
+              containers:
+              - image: nginx
+                name: nginx
   namedExceptions: {}
   blocks:
-    - name: operation-policy
-      gatorBlock: operation-policy
-      defaultObjectBase: ""
-      template: ../../templates/operation/disallowed-tags.yaml
-      constraint: constraints/policy_1.yaml
-      cases:
-        - name: example-allowed
-          violations: "no"
-          assertionMessage: ""
-          fields: []
-          exception: ""
-          exceptionRef: ""
-          inventory: []
-          object:
-            base: admissionPod
-            merge:
-              metadata:
-                name: allowed
+  - name: operation-policy
+    gatorBlock: operation-policy
+    defaultObjectBase: ''
+    template: ../../templates/operation/disallowed-tags.yaml
+    constraint: constraints/policy_1.yaml
+    cases:
+    - name: example-allowed
+      violations: 'no'
+      assertionMessage: ''
+      fields: []
+      exception: ''
+      exceptionRef: ''
+      inventory: []
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: allowed
+          spec:
+            containers:
+            - name: foo
+              image: nginx:v1
+    - name: example-disallowed
+      violations: 'yes'
+      assertionMessage: ''
+      fields: []
+      exception: ''
+      exceptionRef: ''
+      inventory: []
+      object:
+        base: admissionPod
+        merge:
+          metadata:
+            name: disallowed
+          spec:
+            containers:
+            - name: foo
+              image: nginx:latest
+  - name: pss-controller-deployment
+    gatorBlock: pss-controller-deployment
+    template: ../rendered/constraint-template.yaml
+    constraint: constraints/policy_1.yaml
+    cases:
+    - name: controller-allowed-disallowed-tags
+      violations: 'no'
+      assertionMessage: ''
+      fields:
+      - path: spec.template.spec.containers[].image
+        scenario: positive
+      object:
+        base: admissionDeployment
+        merge:
+          metadata:
+            name: controller-allowed-disallowed-tags
+          spec:
+            template:
               spec:
                 containers:
-                  - name: foo
-                    image: nginx:v1
-        - name: example-disallowed
-          violations: "yes"
-          assertionMessage: ""
-          fields: []
-          exception: ""
-          exceptionRef: ""
-          inventory: []
-          object:
-            base: admissionPod
-            merge:
-              metadata:
-                name: disallowed
-              spec:
-                containers:
-                  - name: foo
-                    image: nginx:latest
+                - image: nginx:1.25
+                  name: nginx
+      exception: ''
+      exceptionRef: ''

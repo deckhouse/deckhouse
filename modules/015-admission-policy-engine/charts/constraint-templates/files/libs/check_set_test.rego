@@ -116,6 +116,66 @@ test_check_value_with_glob if {
   result.allowed == true
 }
 
+# Pod-level helpers resolve the path against the normalized pod object, so a
+# controller is read from its pod template and a Pod from its own spec. These
+# two tests pin that down, matching the equivalent pair in check_bool_test.rego.
+
+test_check_pod_value_in_set_pod_reads_own_spec if {
+  pod := {
+    "kind": "Pod",
+    "metadata": {"labels": {}, "namespace": "default"},
+    "spec": {"dnsPolicy": "None"},
+  }
+  result := check_set.check_pod_value_in_set(
+    pod,
+    ["spec", "dnsPolicy"],
+    "dnsPolicy",
+    ["ClusterFirst"],
+    ["spec", "dnsPolicy", "allowedValues"],
+  )
+  result.allowed == false
+}
+
+test_check_pod_value_in_set_controller_reads_pod_template if {
+  deployment := {
+    "kind": "Deployment",
+    "metadata": {"labels": {}, "namespace": "default"},
+    "spec": {"template": {
+      "metadata": {"labels": {}},
+      "spec": {"dnsPolicy": "None"},
+    }},
+  }
+  result := check_set.check_pod_value_in_set(
+    deployment,
+    ["spec", "dnsPolicy"],
+    "dnsPolicy",
+    ["ClusterFirst"],
+    ["spec", "dnsPolicy", "allowedValues"],
+  )
+  result.allowed == false
+}
+
+# A compliant pod template must not be reported, which also proves the
+# controller's own spec (which has no dnsPolicy at all) is not what was read.
+test_check_pod_value_in_set_controller_compliant_pod_template if {
+  deployment := {
+    "kind": "Deployment",
+    "metadata": {"labels": {}, "namespace": "default"},
+    "spec": {"template": {
+      "metadata": {"labels": {}},
+      "spec": {"dnsPolicy": "ClusterFirst"},
+    }},
+  }
+  result := check_set.check_pod_value_in_set(
+    deployment,
+    ["spec", "dnsPolicy"],
+    "dnsPolicy",
+    ["ClusterFirst"],
+    ["spec", "dnsPolicy", "allowedValues"],
+  )
+  result.allowed == true
+}
+
 inventory_spe := {
   "namespace": {
     "default": {

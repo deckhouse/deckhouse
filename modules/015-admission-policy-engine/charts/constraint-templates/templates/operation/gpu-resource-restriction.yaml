@@ -10,11 +10,11 @@ metadata:
     metadata.gatekeeper.sh/title: "GPU Resource Restriction"
     metadata.gatekeeper.sh/version: 1.0.0
     description: >-
-      Denies Pods that request GPU resources unless the namespace has the specified label.
+      Denies workloads that request GPU resources unless the namespace has the specified label.
 
       The `namespaceLabel` parameter defines the label key and value that must be present
       on the namespace. The `gpuResourcePatterns` parameter lists the regular expressions
-      matched against GPU resource names in Pod specs.
+      matched against GPU resource names in pod specs.
 spec:
   crd:
     spec:
@@ -37,7 +37,7 @@ spec:
                   description: "Expected label value."
             gpuResourcePatterns:
               type: array
-              description: "List of regular expressions matched against GPU resource names in Pod specs."
+              description: "List of regular expressions matched against GPU resource names in pod specs."
               items:
                 type: string
   targets:
@@ -59,10 +59,17 @@ spec:
 
               # Namespace of the reviewed object. The API server fills metadata.namespace before
               # admission, but fall back to review.namespace for requests that omit it.
+              # Both sources are checked for a non-empty value, so an unresolvable namespace
+              # ends as "", which never matches a cached Namespace and therefore fails closed.
               namespace_name := name if {
                 name := object.get(input.review, ["object", "metadata", "namespace"], "")
                 name != ""
-              } else := object.get(input.review, "namespace", "")
+              } else := name if {
+                name := object.get(input.review, "namespace", "")
+                name != ""
+              } else := "" if {
+                true
+              }
 
               # Namespace labels taken from the audit cache (requires Namespace in the Gatekeeper
               # Config syncOnly list). Missing namespace yields an empty label set, so the policy

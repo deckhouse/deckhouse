@@ -245,6 +245,19 @@ func analyzeConstraintCoverage(dir string, profiles map[string]profileDoc) (cons
 	if fields != nil {
 		cc.Fields = fields
 	}
+	// T1 + T6: Compute kind/operation coverage and name-inference count.
+	// This adds warnings for missing required object kinds (e.g. no Deployment
+	// case when objectKinds declares it) and for cases lacking explicit fields[].
+	fieldsPath := filepath.Join(dir, "test_fields.yaml")
+	if st, e := os.Stat(fieldsPath); e == nil && !st.IsDir() {
+		tfDoc, tfErr := loadTestFields(fieldsPath)
+		if tfErr == nil && tfDoc != nil {
+			kindCov, kindErr := computeKindCoverage(dir, tfDoc)
+			if kindErr == nil && kindCov != nil {
+				cc.Warnings = append(cc.Warnings, kindCoverageWarnings(kindCov)...)
+			}
+		}
+	}
 	if p, ok := profiles[name]; ok {
 		cc.Warnings = append(cc.Warnings, checkCoverageProfile(cc, p)...)
 	}
