@@ -122,6 +122,12 @@ type VirtualControlPlaneNetworking struct {
 
 type VirtualControlPlaneSpec struct {
 	// KubernetesVersion is the desired Kubernetes version for the tenant control plane.
+	//
+	// The enum must stay in sync with the EE ClusterConfiguration/ModuleConfig pins and with
+	// candi/version_map.yml; TestKubernetesVersionEnumValidation guards that. There is no
+	// "Default" here: a VCP has no version resolver, resolveImages needs an exact key in
+	// images.versioned.
+	// +kubebuilder:validation:Enum="1.32";"1.33";"1.34";"1.35";"1.36"
 	KubernetesVersion string `json:"kubernetesVersion"`
 
 	// Replicas is the desired number of control plane replicas.

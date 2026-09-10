@@ -16,6 +16,10 @@ spec:
               kubernetesVersion:
                 description: |
                   Желаемая версия Kubernetes для control plane тенанта.
+
+                  Допустимы только версии, для которых в текущей поставке DKP собраны образы
+                  компонентов control plane. Значения `Default` и `Automatic` не поддерживаются:
+                  у виртуального control plane нет механизма выбора версии по умолчанию.
               replicas:
                 description: |
                   Желаемое количество реплик control plane.
