@@ -18,6 +18,8 @@ package template_tests
 
 import (
 	"os"
+	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -33,13 +35,6 @@ func Test(t *testing.T) {
 }
 
 const (
-	customClusterRolesFlat = `---
-admin:
-  - cert-manager:user-authz:user
-editor:
-- cert-manager:user-authz:editor
-`
-
 	testCLusterRoleCRDsWithLimitNamespaces = `---
 - name: testenev
   spec:
@@ -76,29 +71,29 @@ editor:
 	// "crds", ARs in "ars".
 	testCLusterRoleCRDsWithCRDsKey = `---
 crds:
-  - name: testenev
-    spec:
-      accessLevel: Admin
-      allowScale: true
-      limitNamespaces:
-      - default
-      - .*
-      subjects:
-      - kind: User
-        name: Efrem Testenev
-      additionalRoles:
-      - apiGroup: rbac.authorization.k8s.io
-        kind: ClusterRole
-        name: cluster-write-all
+- name: testenev
+  spec:
+    accessLevel: Admin
+    allowScale: true
+    limitNamespaces:
+    - default
+    - .*
+    subjects:
+    - kind: User
+      name: Efrem Testenev
+    additionalRoles:
+    - apiGroup: rbac.authorization.k8s.io
+      kind: ClusterRole
+      name: cluster-write-all
 ars:
-  - name: testenev-namespaced
-    namespace: testenv
-    spec:
-      accessLevel: Editor
-      allowScale: true
-      subjects:
-      - kind: User
-        name: Namespace Testenev
+- name: testenev-namespaced
+  namespace: testenv
+  spec:
+    accessLevel: Editor
+    allowScale: true
+    subjects:
+    - kind: User
+      name: Namespace Testenev
 `
 
 	testRoleCRDs = `---
@@ -108,8 +103,8 @@ ars:
     accessLevel: Editor
     allowScale: true
     subjects:
-      - kind: User
-        name: Namespace Testenev
+    - kind: User
+      name: Namespace Testenev
 `
 )
 
@@ -118,17 +113,32 @@ var testCRDsWithCRDsKeyJSON, _ = ConvertYAMLToJSON([]byte(testCLusterRoleCRDsWit
 var _ = Describe("Module :: user-authz :: helm template ::", func() {
 	f := SetupHelmConfig(``)
 
+	// The BE-edition templates live under ee/be; link them into the module so the render covers
+	// them. Paths are derived from this file rather than from the hardcoded /deckhouse checkout
+	// path. Note that the suite still needs the CI layout: charts/helm_lib is a symlink to
+	// /deckhouse/helm_lib, which does not exist in a plain local checkout.
+	_, thisFile, _, _ := runtime.Caller(0)
+	moduleDir := filepath.Join(filepath.Dir(thisFile), "..")
+	repoRoot := filepath.Join(moduleDir, "..", "..")
+
+	// relink replaces whatever is at link (a symlink left by an interrupted run) with a symlink to
+	// target, so the suite does not fail on its own leftovers.
+	relink := func(target, link string) {
+		if err := os.Remove(link); err != nil && !os.IsNotExist(err) {
+			Expect(err).ShouldNot(HaveOccurred())
+		}
+		Expect(os.Symlink(target, link)).ShouldNot(HaveOccurred())
+	}
+
 	BeforeSuite(func() {
-		err := os.Symlink("/deckhouse/ee/be/modules/140-user-authz/templates/webhook", "/deckhouse/modules/140-user-authz/templates/webhook")
-		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Symlink("/deckhouse/ee/be/modules/140-user-authz/templates/permission-browser-apiserver", "/deckhouse/modules/140-user-authz/templates/permission-browser-apiserver")
-		Expect(err).ShouldNot(HaveOccurred())
+		relink(filepath.Join(repoRoot, "ee/be/modules/140-user-authz/templates/webhook"), filepath.Join(moduleDir, "templates/webhook"))
+		relink(filepath.Join(repoRoot, "ee/be/modules/140-user-authz/templates/permission-browser-apiserver"), filepath.Join(moduleDir, "templates/permission-browser-apiserver"))
 	})
 
 	AfterSuite(func() {
-		err := os.Remove("/deckhouse/modules/140-user-authz/templates/webhook")
+		err := os.Remove(filepath.Join(moduleDir, "templates/webhook"))
 		Expect(err).ShouldNot(HaveOccurred())
-		err = os.Remove("/deckhouse/modules/140-user-authz/templates/permission-browser-apiserver")
+		err = os.Remove(filepath.Join(moduleDir, "templates/permission-browser-apiserver"))
 		Expect(err).ShouldNot(HaveOccurred())
 	})
 
@@ -145,7 +155,6 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		// - webhook/secret.yaml requires webhookCertificate when enableMultiTenancy=true
 		f.ValuesSetFromYaml("userAuthz.internal.clusterAuthRuleCrds", `[]`)
 		f.ValuesSetFromYaml("userAuthz.internal.authRuleCrds", `[]`)
-		f.ValuesSetFromYaml("userAuthz.internal.customClusterRoles", `{}`)
 
 		f.ValuesSet("global.discovery.extensionAPIServerAuthenticationRequestheaderClientCA", "test")
 		f.ValuesSet("userAuthz.internal.webhookCertificate.ca", "test")
@@ -164,7 +173,6 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd"]`)
 			f.ValuesSetFromYaml("userAuthz.internal.clusterAuthRuleCrds", testCLusterRoleCRDsWithLimitNamespaces)
 			f.ValuesSetFromYaml("userAuthz.internal.authRuleCrds", testRoleCRDs)
-			f.ValuesSetFromYaml("userAuthz.internal.customClusterRoles", customClusterRolesFlat)
 
 			f.ValuesSet("userAuthz.enableMultiTenancy", true)
 			f.ValuesSet("userAuthz.controlPlaneConfigurator.enabled", true)
@@ -182,139 +190,52 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			f.HelmRender()
 		})
 
-		It("Should create a ClusterRoleBinding for each additionalRole", func() {
+		It("Should create aggregated custom ClusterRoles with cascading selectors and no rules of their own", func() {
+			levels := []string{"User", "PrivilegedUser", "Editor", "Admin", "ClusterEditor", "ClusterAdmin"}
+			names := []string{"user", "privileged-user", "editor", "admin", "cluster-editor", "cluster-admin"}
+			for i, name := range names {
+				role := f.KubernetesGlobalResource("ClusterRole", "user-authz:"+name+":custom")
+				Expect(role.Exists()).To(BeTrue(), name)
+				Expect(role.Field("rules").Exists()).To(BeFalse(), "%s: rules are owned by the aggregation controller", name)
+				selectors := role.Field("aggregationRule.clusterRoleSelectors").Array()
+				Expect(selectors).To(HaveLen(i+1), name)
+				for j, selector := range selectors {
+					Expect(selector.Get("matchLabels.user-authz\\.deckhouse\\.io/access-level").String()).To(Equal(levels[j]), name)
+				}
+			}
+		})
+
+		It("Should not render bindings for rules: user-authz-controller owns them", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:admin").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:admin:custom").Exists()).To(BeFalse())
+			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:additional-role:cluster-write-all").Exists()).To(BeFalse())
+			Expect(f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:editor").Exists()).To(BeFalse())
+		})
+
+		It("Should deploy user-authz-controller with its RBAC", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 
-			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:additional-role:cluster-write-all")
-			Expect(crb.Exists()).To(BeTrue())
+			deployment := f.KubernetesResource("Deployment", "d8-user-authz", "user-authz-controller")
+			Expect(deployment.Exists()).To(BeTrue())
+			Expect(deployment.Field("spec.template.spec.serviceAccountName").String()).To(Equal("controller"))
+			Expect(deployment.Field("spec.template.spec.containers.0.name").String()).To(Equal("user-authz-controller"))
+			Expect(f.KubernetesResource("ServiceAccount", "d8-user-authz", "controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("PodDisruptionBudget", "d8-user-authz", "user-authz-controller").Exists()).To(BeTrue())
+			// The alert rules select job="user-authz-controller": the PodMonitor takes the job name from
+			// the app label of the pods, so both must stay in place.
+			podMonitor := f.KubernetesResource("PodMonitor", "d8-monitoring", "user-authz-controller")
+			Expect(podMonitor.Exists()).To(BeTrue())
+			Expect(podMonitor.Field("spec.jobLabel").String()).To(Equal("app"))
+			Expect(deployment.Field("spec.template.metadata.labels.app").String()).To(Equal("user-authz-controller"))
+			Expect(deployment.Field("spec.template.spec.containers.0.env").String()).ToNot(ContainSubstring("HA_MODE"))
 
-			Expect(crb.Field("roleRef.name").String()).To(Equal("cluster-write-all"))
-			Expect(crb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
-			Expect(crb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
-		})
-
-		It("Should create a ClusterRoleBinding to an appropriate ClusterRole", func() {
-			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:admin")
-			Expect(crb.Exists()).To(BeTrue())
-
-			Expect(crb.Field("roleRef.name").String()).To(Equal("user-authz:admin"))
-			Expect(crb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
-			Expect(crb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
-		})
-
-		It("Should create a RoleBinding to an appropriate Role", func() {
-			rb := f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:editor")
-			Expect(rb.Exists()).To(BeTrue())
-
-			Expect(rb.Field("roleRef.name").String()).To(Equal("user-authz:editor"))
-			Expect(rb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
-			Expect(rb.Field("subjects.0.name").String()).To(Equal("Namespace Testenev"))
-		})
-
-		It("Should create additional ClusterRoleBinding for each ClusterRole with the \"user-authz.deckhouse.io/access-level\" annotation", func() {
-			crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:admin:custom-cluster-role:cert-manager:user-authz:user")
-			Expect(crb.Exists()).To(BeTrue())
-
-			Expect(crb.Field("roleRef.name").String()).To(Equal("cert-manager:user-authz:user"))
-			Expect(crb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
-			Expect(crb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
-		})
-
-		It("Should create additional RoleBinding for each ClusterRole with the \"user-authz.deckhouse.io/access-level\" annotation", func() {
-			rb := f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:editor:custom-cluster-role:cert-manager:user-authz:editor")
-			Expect(rb.Exists()).To(BeTrue())
-
-			Expect(rb.Field("roleRef.name").String()).To(Equal("cert-manager:user-authz:editor"))
-			Expect(rb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
-			Expect(rb.Field("subjects.0.name").String()).To(Equal("Namespace Testenev"))
-		})
-
-		Context("portForwarding option is set in a CAR", func() {
-			BeforeEach(func() {
-				f.ValuesSet("userAuthz.internal.clusterAuthRuleCrds.0.spec.portForwarding", true)
-				f.HelmRender()
-			})
-
-			It("Should create a port-forward ClusterRoleBinding", func() {
-				crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:port-forward")
-				Expect(crb.Exists()).To(BeTrue())
-
-				Expect(crb.Field("roleRef.name").String()).To(Equal("user-authz:port-forward"))
-				Expect(crb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
-				Expect(crb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
-			})
-		})
-
-		Context("portForwarding option is set in a AR", func() {
-			BeforeEach(func() {
-				f.ValuesSet("userAuthz.internal.authRuleCrds.0.spec.portForwarding", true)
-				f.HelmRender()
-			})
-
-			It("Should create a port-forward RoleBinding", func() {
-				rb := f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:port-forward")
-				Expect(rb.Exists()).To(BeTrue())
-
-				Expect(rb.Field("roleRef.name").String()).To(Equal("user-authz:port-forward"))
-				Expect(rb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
-				Expect(rb.Field("subjects.0.name").String()).To(Equal("Namespace Testenev"))
-			})
-		})
-
-		Context("allowScale option is set to true in a CAR", func() {
-			BeforeEach(func() {
-				f.ValuesSet("userAuthz.internal.clusterAuthRuleCrds.0.spec.allowScale", true)
-				f.HelmRender()
-			})
-
-			It("Should create a scale RoleBinding", func() {
-				crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:scale")
-				Expect(crb.Exists()).To(BeTrue())
-
-				Expect(crb.Field("roleRef.name").String()).To(Equal("user-authz:scale"))
-				Expect(crb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
-				Expect(crb.Field("subjects.0.name").String()).To(Equal("Efrem Testenev"))
-			})
-		})
-
-		Context("allowScale option is set to true in a AR", func() {
-			BeforeEach(func() {
-				f.ValuesSet("userAuthz.internal.authRuleCrds.0.spec.allowScale", true)
-				f.HelmRender()
-			})
-
-			It("Should create a scale RoleBinding", func() {
-				rb := f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev-namespaced:scale")
-				Expect(rb.Exists()).To(BeTrue())
-
-				Expect(rb.Field("roleRef.name").String()).To(Equal("user-authz:scale"))
-				Expect(rb.Field("roleRef.kind").String()).To(Equal("ClusterRole"))
-				Expect(rb.Field("subjects.0.name").String()).To(Equal("Namespace Testenev"))
-			})
-		})
-
-		Context("allowScale option is set to false in a CAR", func() {
-			BeforeEach(func() {
-				f.ValuesSet("userAuthz.internal.clusterAuthRuleCrds.0.spec.allowScale", false)
-				f.HelmRender()
-			})
-
-			It("Should not create a scale RoleBinding", func() {
-				crb := f.KubernetesGlobalResource("ClusterRoleBinding", "user-authz:testenev:scale")
-				Expect(crb.Exists()).To(BeFalse())
-			})
-		})
-
-		Context("allowScale option is set to false in a AR", func() {
-			BeforeEach(func() {
-				f.ValuesSet("userAuthz.internal.clusterAuthRuleCrds.0.spec.allowScale", false)
-				f.HelmRender()
-			})
-
-			It("Should not create a scale RoleBinding", func() {
-				rb := f.KubernetesResource("RoleBinding", "testenv", "user-authz:testenev:scale")
-				Expect(rb.Exists()).To(BeFalse())
-			})
+			role := f.KubernetesGlobalResource("ClusterRole", "d8:user-authz:controller")
+			Expect(role.Exists()).To(BeTrue())
+			Expect(role.Field("rules").String()).To(ContainSubstring("clusterauthorizationrules/status"))
+			Expect(role.Field("rules").String()).To(ContainSubstring(`"bind"`))
+			Expect(f.KubernetesGlobalResource("ClusterRoleBinding", "d8:user-authz:controller").Field("subjects.0.name").String()).To(Equal("controller"))
+			Expect(role.Field("rules").String()).To(ContainSubstring("leases"))
 		})
 
 		It("Should deploy authorization webhook and supporting objects", func() {
@@ -434,6 +355,31 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 		It("Helm should fail", func() {
 			Expect(f.RenderError).Should(HaveOccurred())
 			Expect(f.RenderError.Error()).Should(ContainSubstring("You must turn on userAuthz.enableMultiTenancy to use limitNamespaces option in your ClusterAuthorizationRule resources."))
+		})
+	})
+
+	Context("Without enabledMultiTenancy", func() {
+		BeforeEach(func() {
+			f.ValuesSetFromYaml("global.enabledModules", `["operator-prometheus", "operator-prometheus-crd"]`)
+			f.HelmRender()
+		})
+
+		// user-authz-controller is rendered whether or not MultiTenancy is on, so the objects
+		// it needs — the namespace it lives in and the secret it pulls its image with — have
+		// to be unconditional as well. While they were gated, the release could not converge:
+		// server-side apply rejected the controller with `namespaces "d8-user-authz" not found`.
+		It("Should create the namespace and registry secret the controller needs", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			Expect(f.KubernetesGlobalResource("Namespace", "d8-user-authz").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Secret", "d8-user-authz", "deckhouse-registry").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("Deployment", "d8-user-authz", "user-authz-controller").Exists()).To(BeTrue())
+			Expect(f.KubernetesResource("PodDisruptionBudget", "d8-user-authz", "user-authz-controller").Exists()).To(BeTrue())
+		})
+
+		It("Should not mirror the multitenancy state, so the webhook reads it as disabled", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+			Expect(f.KubernetesResource("ConfigMap", "d8-user-authz", "d8-user-authz-multitenancy-state").Exists()).To(BeFalse())
 		})
 	})
 
@@ -659,6 +605,24 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 				Expect(cr.Exists()).To(BeTrue())
 				Expect(cr.Field("rules").String()).NotTo(ContainSubstring(`"projects"`))
 			})
+		})
+	})
+
+	Context("namespaces/finalize access", func() {
+		BeforeEach(func() {
+			f.HelmRender()
+		})
+
+		It("user-authz:cluster-admin should have namespaces/finalize access", func() {
+			cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:cluster-admin")
+			Expect(cr.Exists()).To(BeTrue())
+			Expect(cr.Field("rules").String()).To(ContainSubstring("namespaces/finalize"))
+		})
+
+		It("user-authz:cluster-editor should not have namespaces/finalize access", func() {
+			cr := f.KubernetesGlobalResource("ClusterRole", "user-authz:cluster-editor")
+			Expect(cr.Exists()).To(BeTrue())
+			Expect(cr.Field("rules").String()).NotTo(ContainSubstring("namespaces/finalize"))
 		})
 	})
 

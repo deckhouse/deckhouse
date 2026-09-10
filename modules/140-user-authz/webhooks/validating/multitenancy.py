@@ -24,18 +24,20 @@
 # enableMultiTenancy defaults to true, and when the user has not set it
 # explicitly, the field is simply absent from ModuleConfig.spec.settings.
 #
-# templates/namespace.yaml bridges this gap: it's already gated on
-# `.Values.userAuthz.enableMultiTenancy` — the same defaults-merged value —
-# and it renders a small "d8-user-authz-multitenancy-state" ConfigMap in that
-# same block, alongside the d8-user-authz namespace itself. This hook reads
-# that ConfigMap instead of ModuleConfig or the Module CR.
+# templates/namespace.yaml bridges this gap: it renders a small
+# "d8-user-authz-multitenancy-state" ConfigMap behind a
+# `.Values.userAuthz.enableMultiTenancy` gate — the same defaults-merged
+# value. This hook reads that ConfigMap instead of ModuleConfig or the
+# Module CR.
 #
-# NB: d8-user-authz (and everything rendered in that block, including the
-# ConfigMap) only exists when enableMultiTenancy is true, so the ConfigMap is
-# simply absent when it's false — which is exactly the value we want to
-# assume in that case anyway. is_multitenancy_enabled() below treats "no
-# snapshot" the same as "enableMultiTenancy: false", so this falls out for
-# free, with no separate hook or bootstrap-ordering window to worry about.
+# NB: the ConfigMap is what carries the answer, not the namespace around it.
+# d8-user-authz itself is unconditional — user-authz-controller lives there
+# whether or not MultiTenancy is on — so its existence proves nothing. Only
+# the ConfigMap is gated, and it is simply absent when enableMultiTenancy is
+# false, which is exactly the value we want to assume in that case anyway.
+# is_multitenancy_enabled() below treats "no snapshot" the same as
+# "enableMultiTenancy: false", so this falls out for free, with no separate
+# hook or bootstrap-ordering window to worry about.
 #
 # (Do not go back to reading status.lastAppliedConfiguration from a Module CR
 # here — deckhouse.io/v1alpha2 Module is not a real, served API version for

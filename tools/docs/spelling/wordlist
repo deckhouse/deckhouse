@@ -209,6 +209,7 @@ DSS
 DVCR
 DVP
 DVPClusterConfiguration
+DVPInstanceClass
 DaemonSet
 DaemonSets
 Daemonset
@@ -1857,6 +1858,7 @@ zoneTagCategory
 Смаршрутизировать
 Создайте
 Сохраняеем
+Сохраняем
 Столярова
 Стрибог
 Терминация
@@ -2682,6 +2684,8 @@ zoneTagCategory
 сокеты
 соотвествущая
 соответствующий
+сопоставление
+сопоставления
 спанов
 спаны
 спецзаголовки

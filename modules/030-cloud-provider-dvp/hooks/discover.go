@@ -20,31 +20,19 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
-	"regexp"
-	"sort"
-	"strings"
-	"unicode"
 
 	"github.com/flant/addon-operator/pkg/module_manager/go_hook"
 	"github.com/flant/addon-operator/sdk"
 	"github.com/flant/shell-operator/pkg/kube_events_manager/types"
 	corev1 "k8s.io/api/core/v1"
-	storagev1 "k8s.io/api/storage/v1"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/utils/ptr"
 
 	"github.com/deckhouse/lib-dhctl/pkg/yaml/validation"
-	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
 	cloudDataV1 "github.com/deckhouse/deckhouse/go_lib/cloud-data/apis/v1"
-)
-
-const (
-	stableDefaultAnnotation  = "storageclass.kubernetes.io/is-default-class"
-	betaDefaultAnnotation    = "storageclass.beta.kubernetes.io/is-default-class"
-	defaultVolumeBindingMode = storagev1.VolumeBindingWaitForFirstConsumer
+	"github.com/deckhouse/deckhouse/modules/030-cloud-provider-dvp/hooks/internal"
 )
 
 var _ = sdk.RegisterFunc(&go_hook.HookConfig{
@@ -65,10 +53,10 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 			FilterFunc: applyCloudProviderDiscoveryDataSecretFilter,
 		},
 		{
-			Name:       "storage_classes",
+			Name:       internal.StorageClassesSnapshotName,
 			ApiVersion: "storage.k8s.io/v1",
 			Kind:       "StorageClass",
-			FilterFunc: applyStorageClassFilter,
+			FilterFunc: internal.ApplyStorageClassFilter,
 			LabelSelector: &meta.LabelSelector{
 				MatchLabels: map[string]string{
 					"heritage": "deckhouse",
@@ -90,16 +78,6 @@ func applyCloudProviderDiscoveryDataSecretFilter(obj *unstructured.Unstructured)
 	return secret, nil
 }
 
-func applyStorageClassFilter(obj *unstructured.Unstructured) (go_hook.FilterResult, error) {
-	storageClass := &storagev1.StorageClass{}
-	err := sdk.FromUnstructured(obj, storageClass)
-	if err != nil {
-		return nil, fmt.Errorf("failed to convert kubernetes object: %v", err)
-	}
-
-	return storageClass, nil
-}
-
 func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.HookInput) error {
 	// On fresh install without a ModuleConfig, nodes/provider are absent; any Values.Set
 	// triggers full-object schema validation which rejects the patch. Defer to OnBeforeHelm
@@ -109,34 +87,17 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 		return nil
 	}
 
-	if len(input.Snapshots.Get("cloud_provider_discovery_data")) == 0 {
+	secrets := input.Snapshots.Get("cloud_provider_discovery_data")
+	if len(secrets) == 0 {
 		input.Logger.Warn("failed to find secret 'd8-cloud-provider-discovery-data' in namespace 'kube-system'")
 
-		if len(input.Snapshots.Get("storage_classes")) == 0 {
+		if len(input.Snapshots.Get(internal.StorageClassesSnapshotName)) == 0 {
 			input.Logger.Warn("failed to find storage classes for dvp provisioner")
 
 			return nil
 		}
 
-		storageClassesSnapshots := input.Snapshots.Get("storage_classes")
-		storageClasses := make([]storageClass, 0, len(storageClassesSnapshots))
-
-		for storageClassSnapshot, err := range sdkobjectpatch.SnapshotIter[storagev1.StorageClass](storageClassesSnapshots) {
-			if err != nil {
-				return fmt.Errorf("failed to iterate over 'storage_classes' snapshots: %v", err)
-			}
-			deleteOldStorageClass(input, &storageClassSnapshot)
-			storageClasses = append(storageClasses, storageClassToStorageClassValue(&storageClassSnapshot))
-		}
-		input.Logger.Info("Found DVP storage classes using StorageClass snapshots: %v", storageClasses)
-
-		setStorageClassesValues(input, storageClasses)
-		return nil
-	}
-
-	secrets := input.Snapshots.Get("cloud_provider_discovery_data")
-	if len(secrets) == 0 {
-		return fmt.Errorf("'cloud_provider_discovery_data' snapshot is empty")
+		return internal.HandleStorageClassesFromSnapshots(input)
 	}
 
 	secret := new(corev1.Secret)
@@ -159,164 +120,9 @@ func handleCloudProviderDiscoveryDataSecret(_ context.Context, input *go_hook.Ho
 
 	input.Values.Set("cloudProviderDvp.internal.providerDiscoveryData", discoveryData)
 
-	err = handleDiscoveryDataStorageClasses(input, discoveryData.StorageClassList)
-	if err != nil {
+	if err = internal.HandleStorageClassesFromDiscoveryData(input, discoveryData.StorageClassList); err != nil {
 		return fmt.Errorf("failed to handle discovery data storage classes: %v", err)
 	}
 
 	return nil
-}
-
-func handleDiscoveryDataStorageClasses(
-	input *go_hook.HookInput,
-	dvpStorageClassList []cloudDataV1.DVPStorageClass,
-) error {
-	dvpstorageClass := make(map[string]cloudDataV1.DVPStorageClass, len(dvpStorageClassList))
-
-	for _, sc := range dvpStorageClassList {
-		if !sc.IsEnabled {
-			continue
-		}
-
-		dvpstorageClass[getStorageClassName(sc.Name)] = sc
-	}
-
-	storageClasses := make([]storageClass, 0, len(dvpStorageClassList))
-	for sc, err := range sdkobjectpatch.SnapshotIter[storagev1.StorageClass](input.Snapshots.Get("storage_classes")) {
-		if err != nil {
-			return fmt.Errorf("failed to iterate over 'storage_classes' snapshots: %v", err)
-		}
-
-		deleteOldStorageClass(input, &sc)
-
-		if _, ok := dvpstorageClass[sc.Name]; !ok {
-			storageClasses = append(storageClasses, storageClassToStorageClassValue(&sc))
-		}
-	}
-
-	storageClassExcludes, ok := input.Values.GetOk("cloudProviderDvp.storageClass.exclude")
-	if ok {
-		for _, esc := range storageClassExcludes.Array() {
-			rg := regexp.MustCompile("^(" + esc.String() + ")$")
-			for class := range dvpstorageClass {
-				if rg.MatchString(class) {
-					delete(dvpstorageClass, class)
-				}
-			}
-		}
-	}
-
-	for name, sc := range dvpstorageClass {
-		sc := storageClass{
-			Name:                 name,
-			DVPStorageClass:      sc.Name,
-			VolumeBindingMode:    string(defaultVolumeBindingMode),
-			ReclaimPolicy:        sc.ReclaimPolicy,
-			AllowVolumeExpansion: sc.AllowVolumeExpansion,
-			IsDefault:            sc.IsDefault,
-		}
-		storageClasses = append(storageClasses, sc)
-	}
-
-	sort.SliceStable(storageClasses, func(i, j int) bool {
-		return storageClasses[i].Name < storageClasses[j].Name
-	})
-
-	input.Logger.Info("Found DVP storage classes using StorageClass snapshots, StorageClasses from discovery data: %v", storageClasses)
-
-	setStorageClassesValues(input, storageClasses)
-	return nil
-}
-
-// Get StorageClass name from Volume type name to match Kubernetes restrictions from https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#dns-subdomain-names
-func getStorageClassName(value string) string {
-	mapFn := func(r rune) rune {
-		if r >= 'a' && r <= 'z' ||
-			r >= 'A' && r <= 'Z' ||
-			r >= '0' && r <= '9' ||
-			r == '-' || r == '.' {
-			return unicode.ToLower(r)
-		} else if r == ' ' {
-			return '-'
-		}
-		return rune(-1)
-	}
-
-	// a lowercase RFC 1123 subdomain must consist of lower case alphanumeric characters, '-' or '.'
-	value = strings.Map(mapFn, value)
-
-	// must start and end with an alphanumeric character
-	return strings.Trim(value, "-.")
-}
-
-func setStorageClassesValues(input *go_hook.HookInput, storageClasses []storageClass) {
-	input.Values.Set("cloudProviderDvp.internal.storageClasses", storageClasses)
-
-	// Find and set default StorageClass in module internal values
-	var defaultSC string
-	for _, sc := range storageClasses {
-		if sc.IsDefault {
-			defaultSC = sc.Name
-			break
-		}
-	}
-
-	if defaultSC != "" {
-		input.Values.Set("cloudProviderDvp.internal.defaultStorageClass", defaultSC)
-		input.Logger.Info("Discovered default storage class from DVP cloud provider", slog.String("storage_class", defaultSC))
-	} else {
-		input.Logger.Info("No default storage class found in parent DVP cluster")
-		input.Values.Remove("cloudProviderDvp.internal.defaultStorageClass")
-	}
-}
-
-type storageClass struct {
-	Name                 string `json:"name"`
-	DVPStorageClass      string `json:"dvpStorageClass"`
-	VolumeBindingMode    string `json:"volumeBindingMode"`
-	ReclaimPolicy        string `json:"reclaimPolicy"`
-	AllowVolumeExpansion bool   `json:"allowVolumeExpansion"`
-	IsDefault            bool   `json:"isDefault"`
-}
-
-func storageClassToStorageClassValue(sc *storagev1.StorageClass) storageClass {
-	reclaimPolicy := corev1.PersistentVolumeReclaimDelete
-	if sc.ReclaimPolicy != nil {
-		reclaimPolicy = *sc.ReclaimPolicy
-	}
-
-	allowVolumeExpansion := false
-	if sc.AllowVolumeExpansion != nil {
-		allowVolumeExpansion = *sc.AllowVolumeExpansion
-	}
-
-	isDefault := false
-	if sc.Annotations != nil {
-		if val, ok := sc.Annotations[stableDefaultAnnotation]; ok && strings.ToLower(val) == "true" {
-			isDefault = true
-		} else if val, ok := sc.Annotations[betaDefaultAnnotation]; ok && strings.ToLower(val) == "true" {
-			isDefault = true
-		}
-	}
-
-	return storageClass{
-		Name:                 sc.Name,
-		DVPStorageClass:      sc.Parameters["dvpStorageClass"],
-		VolumeBindingMode:    string(defaultVolumeBindingMode),
-		ReclaimPolicy:        string(reclaimPolicy),
-		AllowVolumeExpansion: allowVolumeExpansion,
-		IsDefault:            isDefault,
-	}
-}
-
-func deleteOldStorageClass(input *go_hook.HookInput, sc *storagev1.StorageClass) {
-	if sc.VolumeBindingMode != nil && *sc.VolumeBindingMode == defaultVolumeBindingMode {
-		return
-	}
-
-	input.Logger.Info(
-		"Deleting storage class because volumeBindingMode must be WaitForFirstConsumer.",
-		slog.String("storage_class", sc.Name),
-	)
-	input.PatchCollector.Delete("storage.k8s.io/v1", "StorageClass", "", sc.Name)
 }

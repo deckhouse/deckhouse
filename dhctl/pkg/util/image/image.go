@@ -370,7 +370,7 @@ func getOptsFromRegistryConfig(ctx context.Context, ref name.Reference, cfg *Reg
 	}
 	opts = append(opts, remote.WithAuth(auth))
 	if cfg.ca != "" {
-		transport, err := registryutil.NewRegistryTransport(ctx, cfg.scheme, cfg.ca)
+		transport, err := registryutil.NewCARegistryTransport(ctx, cfg.ca)
 		if err != nil {
 			return nil, err
 		}
@@ -388,7 +388,7 @@ func DownloadAndUnpackImage(ctx context.Context, imageRef, destDir, cacheDir str
 		otattribute.String("image.destDir", destDir),
 	)
 
-	ref, err := name.ParseReference(imageRef)
+	ref, err := name.ParseReference(imageRef, registryutil.NameOptions(regConfig.scheme)...)
 	if err != nil {
 		return fmt.Errorf("parsing image reference %q: %w", imageRef, err)
 	}
