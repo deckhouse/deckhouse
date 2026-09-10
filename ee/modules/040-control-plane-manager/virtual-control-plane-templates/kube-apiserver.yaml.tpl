@@ -141,6 +141,7 @@ spec:
         - --proxy-strategies=destHost,defaultRoute,default
         - --health-port=8134
         - --admin-port=8133
+        - --admin-bind-address=0.0.0.0
         - --uds-name=/etc/kubernetes/konnectivity-server/konnectivity-server.socket
         - --cluster-cert=/pki/apiserver.crt
         - --cluster-key=/pki/apiserver.key
@@ -151,6 +152,7 @@ spec:
         ports:
         - {containerPort: 8132, name: agent}
         - {containerPort: 8134, name: health}
+        - {containerPort: 8133, name: metrics-konn}
         livenessProbe:
           httpGet: {path: /healthz, port: 8134}
           initialDelaySeconds: 15

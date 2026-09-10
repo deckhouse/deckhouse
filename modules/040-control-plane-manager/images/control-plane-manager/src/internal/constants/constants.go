@@ -60,6 +60,7 @@ const (
 	VirtualControlPlaneNodeOrdinalLabelKey    = "control-plane.deckhouse.io/virtual-control-plane-node-ordinal"
 	VirtualControlPlaneScopeLabelKey          = "control-plane.deckhouse.io/virtual-control-plane"
 	VirtualExposeDomainSuffix                 = "vcp.local"
+	VirtualMetricsTokenSecretName             = "d8-metrics-token-virtual"
 
 	RegistryPackagesProxyPort          int32 = 4219
 	RegistryPackagesProxyBootstrapPort int32 = 4282

@@ -46,6 +46,8 @@ spec:
         - --authentication-kubeconfig=/kubeconfig/scheduler.conf
         - --authorization-kubeconfig=/kubeconfig/scheduler.conf
         - --leader-elect=true
+        ports:
+        - {containerPort: 10259, name: https-metrics, protocol: TCP}
         volumeMounts:
         - {name: pki, mountPath: /pki, readOnly: true}
         - {name: kubeconfig, mountPath: /kubeconfig, readOnly: true}

@@ -171,6 +171,10 @@ func (r *reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 		return res, err
 	}
 
+	if res, err := r.reconcileMonitoring(ctx, vcp, configSecret); err != nil || !res.IsZero() {
+		return res, err
+	}
+
 	return reconcile.Result{RequeueAfter: requeueInterval}, nil
 }
 

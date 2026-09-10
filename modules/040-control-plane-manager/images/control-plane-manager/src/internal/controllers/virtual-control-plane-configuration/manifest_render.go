@@ -221,6 +221,7 @@ func buildManifestReplacer(
 		"${DATASTORE_CREDS_SECRET_NAME}", constants.VirtualResourceName(constants.VirtualDatastoreCredsSecretName, vcp.Name),
 		"${CILIUM_CONFIG_NAME}", constants.VirtualResourceName("cilium-config", vcp.Name),
 		"${CILIUM_OPERATOR_NAME}", constants.VirtualResourceName("cilium-operator", vcp.Name),
+		"${METRICS_TOKEN_SECRET_NAME}", metricsTokenSecretName(vcp.Name),
 		"${VCP_NODE_SELECTOR}", nodeSelector,
 		"${VCP_TOLERATIONS}", tolerations,
 	), nil

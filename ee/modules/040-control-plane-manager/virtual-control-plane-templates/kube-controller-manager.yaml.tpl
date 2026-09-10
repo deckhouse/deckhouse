@@ -57,6 +57,8 @@ spec:
         - --use-service-account-credentials=true
         - --leader-elect=true
         - --controllers=*,bootstrapsigner,tokencleaner
+        ports:
+        - {containerPort: 10257, name: https-metrics, protocol: TCP}
         volumeMounts:
         - {name: pki, mountPath: /pki, readOnly: true}
         - {name: kubeconfig, mountPath: /kubeconfig, readOnly: true}
