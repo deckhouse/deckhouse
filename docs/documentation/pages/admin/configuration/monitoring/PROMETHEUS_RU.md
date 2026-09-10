@@ -56,7 +56,7 @@ spec:
 
 ## Использование параметра `global.modules.storageClass` для Prometheus
 
-Этот модуль использует глобальный параметр [`global.modules.storageClass`](/products/kubernetes-platform/documentation/v1/reference/api/global.html#parameters-modules-storageclass) как StorageClass по умолчанию при создании PersistentVolumeClaim (если в конфигурации модуля не указан параметр `storageClass`).
+Этот модуль использует глобальный параметр [`global.modules.storageClass`](../../../reference/api/global.html#parameters-modules-storageclass) как StorageClass по умолчанию при создании PersistentVolumeClaim (если в конфигурации модуля не указан параметр `storageClass`).
 
 **Изменение глобального параметра** не приводит к пересозданию существующих дисков — модуль продолжает использовать существующий PVC и его StorageClass.
 
