@@ -72,3 +72,18 @@ Option 26 hands out `RouteMTU`, the same value `003-mtu.patch` puts on the
 devices. Only the `veth` datapath is covered.
 
 Test `~/src/kind/d8-1.20-tests/005-dhcp/`
+
+## 008-hide-error-of-incompatibility-of-egw-with-ces.patch
+
+Upstream makes the agent fatal when the egress gateway and CiliumEndpointSlice
+are both enabled (commit `9768f15c9d`, <https://github.com/cilium/cilium/issues/24833>).
+Deckhouse runs both, so the agent would not start at all.
+
+Measured on 1.20: policies still resolve for local and remote pods, because the
+manager reads `CiliumEndpoint` objects directly and CES does not stop those being
+created. That would not hold with `disable-endpoint-crd`, which the module does
+not set.
+
+Remove once CES is stable, <https://github.com/cilium/cilium/issues/31904>.
+
+Test `~/src/kind/d8-1.20-tests/008-egw-with-ces/`
