@@ -279,23 +279,12 @@ func registerOnShutdown(title string, action onShutdownFunc) {
 	tomb.RegisterOnShutdown(title, action)
 }
 
-func isCompletionInvocation(args []string) bool {
-	return len(args) > 0 && strings.HasPrefix(args[0], "--completion")
-}
-
 func main() {
 	appContext := context.Background()
 
 	opts := options.New()
 
 	initGlobalVars()
-
-	if !isCompletionInvocation(os.Args[1:]) {
-		if err := telemetry.Bootstrap(appContext); err != nil {
-			fmt.Fprintln(os.Stderr, err.Error())
-			os.Exit(1)
-		}
-	}
 
 	registerOnShutdown("Restore terminal if needed", restoreTerminal())
 	registerOnShutdown("Leave alternate screen if needed", logger.RestoreTerminal)
@@ -342,6 +331,10 @@ func runApplication(ctx context.Context, kpApp *kingpin.Application, opts *optio
 		return kpcontext.SetContextToAction(
 			providerinitializer.WithKubeAuthMode(ctx, &opts.Kube),
 		)(c)
+	})
+
+	kpApp.Action(func(c *kingpin.ParseContext) error {
+		return telemetry.Bootstrap(kpcontext.ExtractContext(c))
 	})
 
 	kpApp.Action(kptelemetry.StartCommand)
