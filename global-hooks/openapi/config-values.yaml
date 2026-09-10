@@ -244,11 +244,16 @@ properties:
         type: string
         default: null
         description: |
-          The StorageClass to use with all Deckhouse Kubernetes Platform components (Prometheus, Grafana, OpenVPN, etc.).
+          The StorageClass to use with all Deckhouse Kubernetes Platform components (Prometheus, Grafana, OpenVPN, etc.) unless it is overridden in the module configuration.
 
-            * If the value is not specified, the [default StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass) set in the cluster is used.
+          If the value is not specified, the [default StorageClass](https://kubernetes.io/docs/concepts/storage/storage-classes/#default-storageclass) set in the cluster is used.
+
+          **Important notes:**
+
+            * If the module's configuration defines its own `storageClass` parameter, the module's value takes precedence and the global `modules.storageClass` is not used.
+            * If a PersistentVolumeClaim (PVC) for a module already exists, changing this parameter does not affect the existing PVC or require disk recreation. The module uses the existing PVC and its StorageClass. See the [prometheus module example](/modules/prometheus/configuration.html#parameters-storageclass) for more details on how this parameter is applied.
+            * This parameter is applied during module activation when creating new PVCs.
             * Use this parameter only in exceptional circumstances.
-            * This parameter is applied during module activation.
   applications:
     description: |
       Common parameters of the Deckhouse ecosystem applications.

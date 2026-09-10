@@ -4,11 +4,11 @@ permalink: en/admin/configuration/monitoring/prometheus.html
 description: "Configure Prometheus metrics collection and storage in Deckhouse Kubernetes Platform. Deckhouse Prom++ setup, metrics configuration, and monitoring system management."
 ---
 
-{% alert %}
+{% alert level="info" %}
 Starting from version 1.71, Deckhouse Kubernetes Platform uses [Deckhouse Prom++](/products/prompp/) instead of Prometheus.
 {% endalert %}
 
-## What does Prometheus do?
+## Prometheus capabilities
 
 Prometheus collects metrics and executes rules:
 
@@ -17,7 +17,7 @@ Prometheus collects metrics and executes rules:
   * it sends alerts;
   * or stores new metrics (result of rule execution) in its database.
 
-## How does Prometheus work?
+## Prometheus operation
 
 Prometheus is installed by the [`prometheus`](/modules/prometheus/) module of DKP, which performs the following functions:
 - Defines the following custom resources:
@@ -52,5 +52,17 @@ spec:
       operator: Equal
       value: monitoring
 ```
+
+## Using the `global.modules.storageClass` parameter for Prometheus
+
+This module uses the global [`global.modules.storageClass`](../../../reference/api/global.html#parameters-modules-storageclass) parameter as the default StorageClass when creating a new PersistentVolumeClaim (if the `storageClass` parameter is not specified in the module's configuration).
+
+If a Prometheus PVC already exists, changing the global parameter does not affect the existing PVC or trigger disk recreation. The module continues to use the existing PVC and its StorageClass.
+
+If the module configuration defines its own `storageClass` or `longtermStorageClass` value, the module-specific value takes precedence over the global default.
+
+{% alert level="warning" %}
+Changing the `storageClass` or `longtermStorageClass` parameter in the module configuration deletes and recreates the existing PVC. All data will be lost. Back up your data before making this change.
+{% endalert %}
 
 A complete description of all settings is available in the [prometheus module documentation](/modules/prometheus/configuration.html).
