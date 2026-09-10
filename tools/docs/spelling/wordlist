@@ -1,3 +1,4 @@
+
 1GB
 2GB
 5XX
@@ -643,6 +644,7 @@ hasn
 hdd
 healthcheck
 healthchecks
+healthz
 HEC
 helmignore
 helthcheck
@@ -779,8 +781,10 @@ ISP
 isSudoer
 IssueBasic
 issuerName
+IST
 istio
 istio-api-proxy
+istioctl
 istiod
 IstioFederation
 IstioMulticluster
@@ -1125,6 +1129,7 @@ OpenStackClusterConfiguration
 OpenStackEE
 OpenStackInstanceClass
 OpenStackInstanceClasses
+OpenTelemetry
 opentofu
 Opentofu
 OpenTofu
@@ -1142,6 +1147,7 @@ ORM
 os
 OSes
 OSI
+OTLP
 Outlier
 outlierDetection
 overprovisioned
@@ -1405,6 +1411,7 @@ ServiceAccountJSON
 ServiceAccounts
 serviceAccountUser
 serviceDesk
+ServiceEntries
 ServiceEntry
 servicemonitor
 ServiceMonitor
@@ -1423,6 +1430,7 @@ SIGTERM
 SimpleWithInternalNetwork
 Sitemap
 SizingPolicy
+SkyWalking
 SLA
 smokeMini
 snaphost
@@ -1711,6 +1719,10 @@ VzZS
 WaitingForDisruptiveApproval
 WaitingForShutdownSignal
 WAL
+waypoint
+Waypoint
+WaypointInstance
+waypoints
 WebAuthn
 webgraphviz
 webhook
@@ -1815,6 +1827,7 @@ ZvirtInstanceClass
 Алертинг
 алертинга
 алертов
+алертом
 алерту
 алерты
 Алерты
@@ -1934,6 +1947,7 @@ ZvirtInstanceClass
 внутренного
 внутрикластерное
 внутрикластерной
+внутрикластерный
 внутрикластерным
 воркеров
 выгрузок
@@ -2028,7 +2042,11 @@ ZvirtInstanceClass
 засчет
 захеширован
 захешированном
+зеркалирование
+зеркалировании
+зеркалирования
 зеркалированный
+зеркалировать
 иcпользовать
 ИБ
 иммутабельный
@@ -2188,6 +2206,9 @@ ZvirtInstanceClass
 медиафайлы
 межкластерная
 межкластерного
+межкластерное
+межкластерные
+Межкластерный
 межкластерных
 межузлового
 межузловой
@@ -2198,6 +2219,7 @@ ZvirtInstanceClass
 мержит
 Метадата
 метаинформацию
+МиБ
 мигрирована
 микросегментация
 микросервисов
@@ -2218,6 +2240,7 @@ ZvirtInstanceClass
 мультикластер
 Мультикластер
 мультикластера
+мультикластере
 мультикластерной
 мультикластерный
 мультикластерных
@@ -2364,6 +2387,7 @@ ZvirtInstanceClass
 перегенерации
 перегенерация
 перегенерировать
+перегенерируйте
 Перегенерируйте
 передеплоятся
 перезагрузится
@@ -2460,6 +2484,7 @@ ZvirtInstanceClass
 Пререквизиты
 прилинкованным
 применились
+применилось
 применится
 применятся
 примонтировав
@@ -2574,6 +2599,7 @@ ZvirtInstanceClass
 сайдкар
 Сайдкар
 сайдкара
+сайдкарами
 сайдкаров
 сайдкаром
 сайдкары
@@ -2649,6 +2675,8 @@ ZvirtInstanceClass
 сопоставление
 сопоставления
 Сохраняеем
+спанов
+спаны
 спецзаголовки
 спринты
 стейта
@@ -2672,6 +2700,7 @@ ZvirtInstanceClass
 таймауты
 тайминги
 таргетов
+таргеты
 тегирование
 тегирования
 тегируются
@@ -2816,12 +2845,3 @@ ZvirtInstanceClass
 юзера
 юнит
 юнита
-healthz
-МиБ
-внутрикластерный
-зеркалирование
-зеркалировании
-зеркалирования
-зеркалировать
-применилось
-таргеты

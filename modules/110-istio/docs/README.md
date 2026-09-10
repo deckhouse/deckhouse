@@ -247,6 +247,10 @@ Istio uses traffic analysis as follows:
 Istio operates in the [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) mode: pods from different clusters can only communicate through the Istio ingress gateway. Direct communication between pods of different clusters is not supported.
 {% endalert %}
 
+{% alert level="warning" %}
+Only sidecar-mode workloads can take part in a federation. For details, refer to [Ambient mesh limitations](#ambient-mesh-limitations).
+{% endalert %}
+
 #### General principles of federation
 
 - Federation requires mutual trust between clusters. Thereby, to use federation, you have to make sure that both clusters (say, A and B) trust each other. This is achieved by a mutual exchange of root certificates.
@@ -352,6 +356,10 @@ If service or pod IP addresses overlap between clusters, requests from pods in o
 Istio operates in the [multi-network](https://istio.io/latest/docs/ops/deployment/deployment-models/#multiple-networks) mode: pods from different clusters can only communicate through the Istio ingress gateway. Direct communication between pods of different clusters is not supported.
 {% endalert %}
 
+{% alert level="warning" %}
+Only sidecar-mode workloads can take part in a multicluster. For details, refer to [Ambient mesh limitations](#ambient-mesh-limitations).
+{% endalert %}
+
 #### General principles
 
 <div data-presentation="presentations/multicluster_common_principles_en.pdf"></div>
@@ -403,7 +411,7 @@ In case of issues when working with a multi-cluster, it is necessary to check in
 ## Ambient mesh
 
 {% alert level="warning" %}
-Available in Enterprise Edition only. Ambient mesh support is experimental and not recommended for production use.
+Available in Enterprise Edition and Certified Security Edition Pro only. Ambient mesh support is experimental and not recommended for production use.
 {% endalert %}
 
 Besides the classic sidecar mode, Istio can run the data plane in *ambient* mode. In this mode, the mesh functionality is split into two layers, and application pods no longer get a per-pod `istio-proxy` sidecar container:
@@ -427,6 +435,18 @@ To use the ambient mode, make sure to follow these requirements:
 - Use Istio 1.25 or newer (ambient mode is available starting with Istio 1.25).
 - Set [`dataPlane.trafficRedirectionSetupMode`](configuration.html#parameters-dataplane-trafficredirectionsetupmode) to `CNIPlugin`. Ambient mode requires the CNI plugin to set up traffic redirection.
 - Enable ambient mode via the [`ambient.enabled`](configuration.html#parameters-ambient-enabled) module parameter.
+
+### Ambient mesh limitations
+
+Ambient mode is compatible with [federation](#federation) and [multicluster](#multicluster) at the cluster level: you can enable ambient mode in a cluster that is a federation or multicluster member, and the existing inter-cluster interaction keeps working.
+
+The limitation applies to individual workloads: federation and multicluster cover sidecar-mode workloads only. Cross-cluster traffic to and from a workload enrolled in ambient mode does not work in either direction.
+
+{% alert level="warning" %}
+To let a workload take part in a federation or a multicluster, keep it in sidecar mode — do not add the `istio.io/dataplane-mode=ambient` label to the workload or its namespace.
+{% endalert %}
+
+Both data plane modes can coexist in the same cluster, so you can keep cross-cluster workloads in sidecar mode and enroll the rest of them in ambient mode.
 
 ### Enrolling workloads
 
