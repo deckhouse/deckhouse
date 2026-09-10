@@ -47,6 +47,7 @@ Prints `[e2e] <UTC timestamp> message` to stderr — shows up as `SCRIPT LOG` /
 and directly in test scripts for progress/diagnostic messages.
 
 Used in: `tests/basic-audit-policy/chainsaw-test.yaml`, step `assert-operation-complete`
+
 ```sh
 if [ ! -s "$CPM_E2E_NEW_CPO_FILE" ]; then
   e2e_log "new ControlPlaneOperation file is missing or empty: $CPM_E2E_NEW_CPO_FILE"
@@ -66,12 +67,14 @@ Returns non-zero on timeout. Called internally by `kubectl_run` (30s budget per
 attempt) and by `restore_moduleconfig` (120s, after restoring the spec).
 
 Used in: `tests/basic-audit-policy-maintenance/chainsaw-test.yaml`, step `enable-maintenance`
+
 ```sh
 apply_or_patch_moduleconfig "manifests/moduleconfig-maintenance-only.yaml"
 sleep 30
 wait_for_api
 snapshot_component_cpos kube-apiserver "$CPM_E2E_EXISTING_CPOS_FILE"
 ```
+
 (Here it's used directly, to make sure the API has stabilized after the
 maintenance-enter apply before taking the CPO snapshot the rest of the test
 relies on.)
@@ -95,6 +98,7 @@ Stdout only ever contains `kubectl`'s stdout (safe to pipe into `jq`/`pipe_jq`);
 warnings/errors go to stderr.
 
 Used in: `tests/basic-audit-policy/chainsaw-test.yaml`, `catch` block of step `assert-operation-complete`
+
 ```sh
 kubectl_run get controlplaneoperations -n kube-system \
   -l control-plane.deckhouse.io/component=kube-apiserver -o wide || true
@@ -113,6 +117,7 @@ makes `jq` parse failures in these tests debuggable instead of a bare "jq:
 error" with no context on what was being parsed.
 
 Used in: `tests/feature-gates/scripts/feature-gates.sh`, function `feature_gates_enabled_for_version`
+
 ```sh
 map_json=$(_feature_gates_map_json "$map_file") || return 1
 printf '%s' "$map_json" | pipe_jq "yq -o=json $map_file (feature gates for $version)" --arg ver "$version" '
@@ -139,6 +144,7 @@ building block behind `wait_for_new_component_cpo` — it isn't called directly
 from any `chainsaw-test.yaml`, only from other helpers in this file.
 
 Used internally in: `functions.sh`, `wait_for_new_component_cpo`
+
 ```sh
 wait_for_new_component_cpo() {
   ...
@@ -163,6 +169,7 @@ Always the first thing a scenario does, so `restore_moduleconfig` has
 something to put back in `cleanup`.
 
 Used in: `tests/basic-audit-policy/chainsaw-test.yaml`, step `backup-and-snapshot`
+
 ```sh
 backup_moduleconfig_spec "$CPM_E2E_BACKUP_FILE"
 snapshot_component_cpos kube-apiserver "$CPM_E2E_EXISTING_CPOS_FILE"
@@ -183,6 +190,7 @@ API to stabilize (`wait_for_api 120`). Always run from a step's `cleanup:`
 block so it runs even on failure.
 
 Used in: `tests/basic-audit-policy/chainsaw-test.yaml`, `cleanup` of step `backup-and-snapshot`
+
 ```sh
 restore_moduleconfig "$CPM_E2E_BACKUP_FILE"
 ```
@@ -200,6 +208,7 @@ this is what lets `basic-audit-policy-maintenance` layer a maintenance-only
 apply and a settings-only apply without either one clobbering the other).
 
 Used in: `tests/basic-audit-policy-maintenance/chainsaw-test.yaml`, steps `enable-maintenance` and `apply-settings-under-maintenance`
+
 ```sh
 # step: enable-maintenance — sets only spec.maintenance
 apply_or_patch_moduleconfig "manifests/moduleconfig-maintenance-only.yaml"
@@ -208,6 +217,7 @@ apply_or_patch_moduleconfig "manifests/moduleconfig-maintenance-only.yaml"
 # maintenance stays whatever it already was
 apply_or_patch_moduleconfig "manifests/moduleconfig-maintenance.yaml"
 ```
+
 Also used in `tests/basic-audit-policy/chainsaw-test.yaml` (`apply_or_patch_moduleconfig
 "manifests/moduleconfig-target.yaml"`) and in `tests/feature-gates/chainsaw-test.yaml`
 against the dynamically generated `$CPM_E2E_FG_STATE_DIR/moduleconfig-target.yaml`.
@@ -223,6 +233,7 @@ leaving every other setting (e.g. a settings change applied while under
 maintenance) in place so it can now reconcile.
 
 Used in: `tests/basic-audit-policy-maintenance/chainsaw-test.yaml`, step `remove-maintenance`
+
 ```sh
 remove_moduleconfig_maintenance
 ```
@@ -242,9 +253,11 @@ per line. This is the "before" picture that later lets `wait_for_new_component_c
 already existed.
 
 Used in: `tests/basic-audit-policy/chainsaw-test.yaml`, step `backup-and-snapshot`
+
 ```sh
 snapshot_component_cpos kube-apiserver "$CPM_E2E_EXISTING_CPOS_FILE"
 ```
+
 Also re-run (overwriting the same file) in `tests/basic-audit-policy-maintenance/chainsaw-test.yaml`'s
 `enable-maintenance` step, to re-baseline after the maintenance-enter transition
 settles — see `apply_or_patch_moduleconfig` above for why that transition is
@@ -263,6 +276,7 @@ counterpart to `snapshot_component_cpos`, used only by `feature-gates` since
 it's the only scenario touching all three components at once.
 
 Used in: `tests/feature-gates/chainsaw-test.yaml`, step `backup-and-prepare`
+
 ```sh
 backup_moduleconfig_spec "$CPM_E2E_BACKUP_FILE"
 snapshot_control_plane_cpos "$CPM_E2E_FG_STATE_DIR"
@@ -281,6 +295,7 @@ Polls (every 5s, via `wait_until`) for a `ControlPlaneOperation` on
 current CPOs for that component to stderr for diagnostics.
 
 Used in: `tests/basic-audit-policy/chainsaw-test.yaml`, step `wait-for-operation`
+
 ```sh
 wait_for_new_component_cpo kube-apiserver "$CPM_E2E_EXISTING_CPOS_FILE" "$CPM_E2E_NEW_CPO_FILE" 300
 ```
@@ -297,6 +312,7 @@ Calls `wait_for_new_component_cpo` for every component in
 `<state_dir>/new-cpo-<component>.txt` for each.
 
 Used in: `tests/feature-gates/chainsaw-test.yaml`, step `wait-for-operations`
+
 ```sh
 wait_for_new_control_plane_cpos "$CPM_E2E_FG_STATE_DIR" 300
 ```
@@ -313,6 +329,7 @@ Used to prove that a change was **not** reconciled (e.g. while
 `spec.maintenance: NoResourceReconciliation` is active).
 
 Used in: `tests/basic-audit-policy-maintenance/chainsaw-test.yaml`, step `assert-no-reconciliation`
+
 ```sh
 assert_no_new_component_cpo kube-apiserver "$CPM_E2E_EXISTING_CPOS_FILE" 60
 ```
@@ -334,6 +351,7 @@ snapshot/assert flag helpers below and `feature-gates.sh`'s
 `assert_feature_gates_in_component` are built on top of it.
 
 Used in: `tests/basic-audit-policy-maintenance/chainsaw-test.yaml`, step `assert-no-audit-policy`
+
 ```sh
 e2e_log "checking kube-apiserver pods for audit-policy-file flag"
 if is_flag_in_component kube-apiserver audit-policy-file; then
@@ -354,6 +372,7 @@ Records whether `needle` is currently present (`true`/`false`) in
 "before" CPO list.
 
 Used in: `tests/basic-audit-policy-maintenance/chainsaw-test.yaml`, step `backup-and-snapshot`
+
 ```sh
 snapshot_flag_state kube-apiserver audit-policy-file "$CPM_E2E_AUDIT_FLAG_STATE_FILE"
 ```
@@ -369,6 +388,7 @@ Asserts the *current* presence of `needle` still matches what
 presence didn't change while it shouldn't have (during maintenance).
 
 Used in: `tests/basic-audit-policy-maintenance/chainsaw-test.yaml`, step `assert-no-reconciliation`
+
 ```sh
 assert_flag_state_matches kube-apiserver audit-policy-file "$CPM_E2E_AUDIT_FLAG_STATE_FILE"
 ```
@@ -385,6 +405,7 @@ Returns the cluster's Kubernetes minor version as `<major>.<minor>` by parsing
 `kubectl version -o json` through `pipe_jq`.
 
 Used in: `tests/feature-gates/scripts/feature-gates.sh`, function `prepare_feature_gates_test`
+
 ```sh
 version=$(kubernetes_version)
 e2e_log "detected Kubernetes version $version"
