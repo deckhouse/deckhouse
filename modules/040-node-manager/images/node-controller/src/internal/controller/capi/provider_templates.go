@@ -35,7 +35,7 @@ const (
 )
 
 // readProviderTemplate returns a single template file (by its basename key, e.g.
-// "machine-class.yaml", "machine-template.yaml" or "cluster-template.yaml") from the cloud-provider template
+// "machine-class.yaml", "machine-template.yaml" or "cluster.yaml") from the cloud-provider template
 // Secret d8-cloud-provider-<type>-<engine>, served watch-fresh from the kube-system
 // Secret informer.
 func (b *BaseWithReader) readProviderTemplate(ctx context.Context, cloudType, engine, key string) ([]byte, error) {
@@ -51,8 +51,8 @@ func (b *BaseWithReader) readProviderTemplate(ctx context.Context, cloudType, en
 }
 
 // readProviderTemplateIfPresent is readProviderTemplate for a contract file whose absence is a
-// legitimate answer: the file is how a provider announces it has migrated, so "not there" selects
-// the legacy engine rather than failing the reconcile.
+// legitimate answer, such as capi/template.yaml while a provider still uses the legacy machine
+// template contract.
 func (b *BaseWithReader) readProviderTemplateIfPresent(ctx context.Context, cloudType, engine, key string) ([]byte, bool, error) {
 	if cloudType == "" {
 		return nil, false, fmt.Errorf("cloud type not set")

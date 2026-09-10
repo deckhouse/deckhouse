@@ -135,7 +135,7 @@ shell:
 #   Editions - $.Editions
 {{- define "dev_prebuild_setup_ln_node_manager" }}
 {{- $context := . -}}
-# Add capi and cloud-providers
+# Add cloud-instance-manager provider directories
 {{- $providers := list }}
 {{- range $_, $edition := $context.Editions }}
   {{- if $edition.terraformProviders }}
@@ -146,14 +146,8 @@ shell:
     {{- end }}
   {{- end }}
 {{- end }}
-{{- /* cloud-provider-dvp is external: it carries no terraform_versions.yml
-       entry, but it ships the capi templates node-manager links here. */}}
-{{- $providers = append $providers "dvp" }}
-rm /deckhouse/modules/040-node-manager/capi/* /deckhouse/modules/040-node-manager/cloud-providers/*
+rm /deckhouse/modules/040-node-manager/cloud-providers/*
 for item in {{ join " " $providers }}; do
-  if [ -d /deckhouse/modules/030-cloud-provider-${item}/capi ]; then
-    ln -s /deckhouse/modules/030-cloud-provider-${item}/capi /deckhouse/modules/040-node-manager/capi/${item}
-  fi
   if [ -d /deckhouse/modules/030-cloud-provider-${item}/cloud-instance-manager ]; then
     ln -s /deckhouse/modules/030-cloud-provider-${item}/cloud-instance-manager/ /deckhouse/modules/040-node-manager/cloud-providers/${item}
   fi

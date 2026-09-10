@@ -184,6 +184,11 @@ func (r *ClusterReconciler) ensureCloudCluster(ctx context.Context, clusterConfi
 		return err
 	}
 
+	controlPlane := deckhouseControlPlane(clusterName)
+	if err := r.applyClusterObject(ctx, controlPlane); err != nil {
+		return fmt.Errorf("apply DeckhouseControlPlane %s: %w", controlPlane.GetName(), err)
+	}
+
 	infraAPIGroup := infraAPIVersion
 	if idx := strings.LastIndex(infraAPIGroup, "/"); idx >= 0 {
 		infraAPIGroup = infraAPIGroup[:idx]
@@ -268,7 +273,7 @@ func (r *ClusterReconciler) ensureProviderInfrastructure(
 	expectedKind string,
 	expectedName string,
 ) error {
-	data, found, err := r.readProviderTemplateIfPresent(
+	data, err := r.readProviderTemplate(
 		ctx,
 		cloudType,
 		engineCAPITemplates,
@@ -280,11 +285,6 @@ func (r *ClusterReconciler) ensureProviderInfrastructure(
 			cloudType,
 			err,
 		)
-	}
-
-	if !found {
-		// Keep the legacy Helm path until the provider publishes cluster-template.yaml.
-		return nil
 	}
 
 	contract, err := parseClusterTemplateContract(data)
@@ -317,15 +317,7 @@ func (r *ClusterReconciler) ensureProviderInfrastructure(
 	}
 
 	for _, object := range objects {
-		prepareClusterTemplateObject(object)
-
-		if err := r.Client.Patch(
-			ctx,
-			object,
-			client.Apply,
-			client.FieldOwner("node-controller"),
-			client.ForceOwnership,
-		); err != nil {
+		if err := r.applyClusterObject(ctx, object); err != nil {
 			return fmt.Errorf(
 				"apply provider infrastructure %s %s: %w",
 				object.GetKind(),
@@ -336,6 +328,49 @@ func (r *ClusterReconciler) ensureProviderInfrastructure(
 	}
 
 	return nil
+}
+
+func (r *ClusterReconciler) applyClusterObject(ctx context.Context, object *unstructured.Unstructured) error {
+	prepareClusterTemplateObject(object)
+	if err := r.Client.Patch(
+		ctx,
+		object,
+		client.Apply,
+		client.FieldOwner("node-controller"),
+		client.ForceOwnership,
+	); err != nil {
+		return err
+	}
+
+	current := &unstructured.Unstructured{}
+	current.SetGroupVersionKind(object.GroupVersionKind())
+	// Provider kinds are discovered at runtime, and credential Secrets do not match
+	// node-controller's cache label selector. Read the just-applied object directly.
+	if err := r.APIReader.Get(ctx, client.ObjectKeyFromObject(object), current); err != nil {
+		return fmt.Errorf("read applied object for Helm handover: %w", err)
+	}
+	original := current.DeepCopy()
+	if !removeLegacyHelmMetadata(current) {
+		return nil
+	}
+	if err := r.Client.Patch(ctx, current, client.MergeFrom(original)); err != nil {
+		return fmt.Errorf("remove Helm ownership metadata: %w", err)
+	}
+	return nil
+}
+
+func deckhouseControlPlane(clusterName string) *unstructured.Unstructured {
+	return &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "infrastructure.cluster.x-k8s.io/v1alpha1",
+		"kind":       "DeckhouseControlPlane",
+		"metadata": map[string]interface{}{
+			"name":      clusterName + "-control-plane",
+			"namespace": capiNamespace,
+			"labels": map[string]interface{}{
+				"app": "capi-controller-manager",
+			},
+		},
+	}}
 }
 
 func (r *ClusterReconciler) buildClusterTemplateContext(

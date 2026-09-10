@@ -1,0 +1,10 @@
+apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
+kind: HuaweiCloudCluster
+metadata:
+  name: huaweicloud
+  namespace: d8-cloud-instance-manager
+  labels:
+    app: caphc-controller-manager
+    heritage: deckhouse
+    module: node-manager
+spec:

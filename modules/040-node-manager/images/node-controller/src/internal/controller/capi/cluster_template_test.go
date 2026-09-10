@@ -261,7 +261,7 @@ func TestBuildClusterTemplateContextReadsRuntimeSources(t *testing.T) {
 	assert.Equal(t, 6443, context.Cluster.MasterEndpoints[0]["kubeApiPort"])
 }
 
-func TestEnsureProviderInfrastructureKeepsLegacyHelmPathWithoutContract(t *testing.T) {
+func TestEnsureProviderInfrastructureRequiresClusterContract(t *testing.T) {
 	providerSecret := &corev1.Secret{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "d8-cloud-provider-dvp-capi",
@@ -273,7 +273,7 @@ func TestEnsureProviderInfrastructureKeepsLegacyHelmPathWithoutContract(t *testi
 
 	clusterReconciler := &ClusterReconciler{BaseWithReader: r.BaseWithReader}
 	clusterReconciler.APIReader = clusterReconciler.Client
-	require.NoError(t, clusterReconciler.ensureProviderInfrastructure(
+	err := clusterReconciler.ensureProviderInfrastructure(
 		t.Context(),
 		"dvp",
 		map[string]any{},
@@ -281,7 +281,83 @@ func TestEnsureProviderInfrastructureKeepsLegacyHelmPathWithoutContract(t *testi
 		"infrastructure.cluster.x-k8s.io/v1alpha1",
 		"DeckhouseCluster",
 		"dvp",
-	))
+	)
+	require.ErrorContains(t, err, `template "cluster.yaml" not found`)
+}
+
+func TestRemoveLegacyHelmMetadata(t *testing.T) {
+	object := clusterTemplateObject("v1", "Secret", capiNamespace, "credentials")
+	object.SetLabels(map[string]string{
+		"app":              "provider-controller",
+		helmManagedByLabel: "Helm",
+	})
+	object.SetAnnotations(map[string]string{
+		helmReleaseNameAnnotation:      "node-manager",
+		helmReleaseNamespaceAnnotation: "d8-system",
+		werfFailModeAnnotation:         "IgnoreAndContinueDeployProcess",
+		werfTrackTerminationAnnotation: "NonBlocking",
+		"helm.sh/resource-policy":      "keep",
+		"provider.example/key":         "value",
+	})
+
+	require.True(t, removeLegacyHelmMetadata(object))
+	assert.Equal(t, map[string]string{"app": "provider-controller"}, object.GetLabels())
+	assert.Equal(t, map[string]string{
+		"helm.sh/resource-policy": "keep",
+		"provider.example/key":    "value",
+	}, object.GetAnnotations())
+	require.False(t, removeLegacyHelmMetadata(object))
+}
+
+func TestApplyClusterObjectAdoptsHelmManagedObject(t *testing.T) {
+	existing := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "capi-user-credentials",
+			Namespace: capiNamespace,
+			Labels: map[string]string{
+				"app":              "provider-controller",
+				helmManagedByLabel: "Helm",
+			},
+			Annotations: map[string]string{
+				helmReleaseNameAnnotation:      "node-manager",
+				helmReleaseNamespaceAnnotation: "d8-system",
+				werfFailModeAnnotation:         "IgnoreAndContinueDeployProcess",
+				werfTrackTerminationAnnotation: "NonBlocking",
+				"helm.sh/resource-policy":      "keep",
+			},
+		},
+		Data: map[string][]byte{"token": []byte("old")},
+	}
+	r := fakeReconciler(t, existing)
+	clusterReconciler := &ClusterReconciler{BaseWithReader: r.BaseWithReader}
+	clusterReconciler.APIReader = clusterReconciler.Client
+
+	desired := clusterTemplateObject("v1", "Secret", capiNamespace, "capi-user-credentials")
+	desired.SetLabels(map[string]string{"app": "provider-controller"})
+	desired.Object["data"] = map[string]interface{}{"token": "bmV3"}
+
+	require.NoError(t, clusterReconciler.applyClusterObject(t.Context(), desired))
+	adopted := &corev1.Secret{}
+	require.NoError(t, clusterReconciler.Client.Get(t.Context(), types.NamespacedName{
+		Name:      "capi-user-credentials",
+		Namespace: capiNamespace,
+	}, adopted))
+	assert.Equal(t, []byte("new"), adopted.Data["token"])
+	assert.Equal(t, "node-manager", adopted.Labels["module"])
+	assert.NotContains(t, adopted.Labels, helmManagedByLabel)
+	assert.NotContains(t, adopted.Annotations, helmReleaseNameAnnotation)
+	assert.NotContains(t, adopted.Annotations, helmReleaseNamespaceAnnotation)
+	assert.NotContains(t, adopted.Annotations, werfFailModeAnnotation)
+	assert.NotContains(t, adopted.Annotations, werfTrackTerminationAnnotation)
+	assert.Equal(t, "keep", adopted.Annotations["helm.sh/resource-policy"])
+}
+
+func TestDeckhouseControlPlaneObject(t *testing.T) {
+	controlPlane := deckhouseControlPlane("openstack")
+	assert.Equal(t, "infrastructure.cluster.x-k8s.io/v1alpha1", controlPlane.GetAPIVersion())
+	assert.Equal(t, "DeckhouseControlPlane", controlPlane.GetKind())
+	assert.Equal(t, "openstack-control-plane", controlPlane.GetName())
+	assert.Equal(t, capiNamespace, controlPlane.GetNamespace())
 }
 
 func TestEnsureProviderInfrastructureRendersAndAppliesContract(t *testing.T) {

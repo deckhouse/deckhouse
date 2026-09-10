@@ -47,6 +47,23 @@ func testCRD(name string, storedVersions []string) *unstructured.Unstructured {
 	}}
 }
 
+func testProviderClusterCRD() *unstructured.Unstructured {
+	return &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "apiextensions.k8s.io/v1",
+		"kind":       "CustomResourceDefinition",
+		"metadata": map[string]interface{}{
+			"name": "openstackclusters.infrastructure.cluster.x-k8s.io",
+		},
+		"spec": map[string]interface{}{
+			"group": "infrastructure.cluster.x-k8s.io",
+			"names": map[string]interface{}{
+				"kind":   "OpenStackCluster",
+				"plural": "openstackclusters",
+			},
+		},
+	}}
+}
+
 func TestPickStoredVersion(t *testing.T) {
 	dyn := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme(),
 		testCRD("machinedeployments.machine.sapcloud.io", []string{"v1alpha1"}),
@@ -99,6 +116,30 @@ func TestCapiResourcesIncludeStaticMachineTemplates(t *testing.T) {
 	t.Fatal("StaticMachineTemplate must be kept from Helm prune during migration")
 }
 
+func TestResolveKeepResourceForProviderGVK(t *testing.T) {
+	dyn := dynamicfake.NewSimpleDynamicClient(runtime.NewScheme(), testProviderClusterCRD())
+
+	resource, found, err := resolveKeepResourceForGVK(
+		t.Context(),
+		dyn,
+		"infrastructure.cluster.x-k8s.io/v1beta1",
+		"OpenStackCluster",
+		"openstack",
+	)
+	if err != nil {
+		t.Fatalf("resolve provider resource: %v", err)
+	}
+	if !found {
+		t.Fatal("provider resource not found")
+	}
+	if resource.Group != "infrastructure.cluster.x-k8s.io" || resource.Resource != "openstackclusters" || resource.version != "v1beta1" {
+		t.Fatalf("unexpected resource: %#v", resource)
+	}
+	if resource.keepName == nil || !resource.keepName("openstack") || resource.keepName("other") {
+		t.Fatal("provider resource must select only the registered cluster name")
+	}
+}
+
 func TestIsConversionUnavailable(t *testing.T) {
 	if !isConversionUnavailable(apierrors.NewServiceUnavailable("conversion webhook unavailable")) {
 		t.Fatal("service unavailable must be treated as conversion unavailable")
@@ -138,8 +179,8 @@ metadata:
     module: node-manager
     app.kubernetes.io/managed-by: Helm
   annotations:
-    # _capi_bootstrap_secret.tpl:18-21 hard-codes it, so helm never produces this
-    # Secret without the annotation and the hook's patch of it is a no-op.
+    # The legacy CAPI bootstrap template already stamped this annotation, so the
+    # hook's patch of this Secret is a no-op.
     helm.sh/resource-policy: keep
 type: Opaque
 ---
@@ -262,6 +303,31 @@ var _ = Describe("node-manager :: hooks :: set_keep_policy_on_capi_resources ::"
 			Expect(f).To(ExecuteSuccessfully())
 
 			Expect(keepPolicy("manual-bootstrap-for-handmade")).To(BeEmpty())
+		})
+	})
+
+	Context("with provider credentials previously rendered by helm", func() {
+		BeforeEach(func() {
+			f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterKind", "OpenStackCluster")
+			f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterAPIVersion", "infrastructure.cluster.x-k8s.io/v1beta1")
+			f.ValuesSet("nodeManager.internal.cloudProvider.capiClusterName", "openstack")
+			f.KubeStateSet(`
+apiVersion: v1
+kind: Secret
+metadata:
+  name: capi-user-credentials
+  namespace: d8-cloud-instance-manager
+  labels:
+    app.kubernetes.io/managed-by: Helm
+type: Opaque
+`)
+			f.BindingContexts.Set(f.GenerateBeforeHelmContext())
+			f.RunHook()
+		})
+
+		It("protects the Secret before the old manifest is removed", func() {
+			Expect(f).To(ExecuteSuccessfully())
+			Expect(keepPolicy(capiCredentialsSecretName)).To(Equal("keep"))
 		})
 	})
 })
