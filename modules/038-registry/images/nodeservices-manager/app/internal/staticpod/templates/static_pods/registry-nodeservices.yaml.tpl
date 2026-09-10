@@ -27,6 +27,8 @@ spec:
   - name: distribution
     image: {{ .Images.Distribution }}
     imagePullPolicy: IfNotPresent
+    securityContext:
+      readOnlyRootFilesystem: true
     args:
       - serve
       - /config/config.yaml
@@ -85,6 +87,8 @@ spec:
   - name: auth
     image: {{ .Images.Auth }}
     imagePullPolicy: IfNotPresent
+    securityContext:
+      readOnlyRootFilesystem: true
     ports:
       - name: auth
         containerPort: 5051
@@ -120,6 +124,8 @@ spec:
   - name: mirrorer
     image: {{ .Images.Mirrorer }}
     imagePullPolicy: IfNotPresent
+    securityContext:
+      readOnlyRootFilesystem: true
     args:
       - /config/config.yaml
     volumeMounts:

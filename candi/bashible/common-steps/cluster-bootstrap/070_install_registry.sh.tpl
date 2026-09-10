@@ -199,6 +199,8 @@ spec:
   - name: distribution
     image: {{ $img_docker_distribution }}
     imagePullPolicy: IfNotPresent
+    securityContext:
+      readOnlyRootFilesystem: true
     args:
       - serve
       - /config/config.yaml
@@ -249,6 +251,8 @@ spec:
   - name: auth
     image: {{ $img_docker_auth }}
     imagePullPolicy: IfNotPresent
+    securityContext:
+      readOnlyRootFilesystem: true
     ports:
       - name: auth
         containerPort: 5051
