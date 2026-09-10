@@ -30,8 +30,13 @@ import (
 )
 
 const (
-	clusterTemplateContractKey     = "cluster-template.yaml"
+	clusterTemplateContractKey     = "cluster.yaml"
 	clusterTemplateContractVersion = "v1"
+	helmManagedByLabel             = "app.kubernetes.io/managed-by"
+	helmReleaseNameAnnotation      = "meta.helm.sh/release-name"
+	helmReleaseNamespaceAnnotation = "meta.helm.sh/release-namespace"
+	werfFailModeAnnotation         = "werf.io/fail-mode"
+	werfTrackTerminationAnnotation = "werf.io/track-termination-mode"
 )
 
 type clusterTemplateContract struct {
@@ -247,11 +252,43 @@ func prepareClusterTemplateObject(object *unstructured.Unstructured) {
 	labels["module"] = "node-manager"
 	object.SetLabels(labels)
 
-	// Keep adopted resources when the legacy Helm manifest is removed.
+	// The before-helm migration hook sets the same annotation on live objects before
+	// the old manifest is removed. Keeping it in the desired object closes the small
+	// window in which a freshly started node-controller can reconcile before Helm has
+	// finished pruning its previous release.
 	annotations := object.GetAnnotations()
 	if annotations == nil {
 		annotations = map[string]string{}
 	}
 	annotations["helm.sh/resource-policy"] = "keep"
 	object.SetAnnotations(annotations)
+}
+
+func removeLegacyHelmMetadata(object *unstructured.Unstructured) bool {
+	changed := false
+
+	labels := object.GetLabels()
+	if _, ok := labels[helmManagedByLabel]; ok {
+		delete(labels, helmManagedByLabel)
+		object.SetLabels(labels)
+		changed = true
+	}
+
+	annotations := object.GetAnnotations()
+	for _, key := range []string{
+		helmReleaseNameAnnotation,
+		helmReleaseNamespaceAnnotation,
+		werfFailModeAnnotation,
+		werfTrackTerminationAnnotation,
+	} {
+		if _, ok := annotations[key]; ok {
+			delete(annotations, key)
+			changed = true
+		}
+	}
+	if changed {
+		object.SetAnnotations(annotations)
+	}
+
+	return changed
 }

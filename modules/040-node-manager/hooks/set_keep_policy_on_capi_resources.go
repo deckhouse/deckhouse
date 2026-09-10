@@ -39,6 +39,7 @@ const (
 	capiNamespace                = "d8-cloud-instance-manager"
 	helmManagedSelector          = "app.kubernetes.io/managed-by=Helm"
 	manualBootstrapSecretPrefix  = "manual-bootstrap-for-"
+	capiCredentialsSecretName    = "capi-user-credentials"
 )
 
 // zoneHashedSecretName matches <ng>-<sha256(clusterUUID+zone)[:8]>, the name both the CAPI
@@ -49,6 +50,8 @@ var zoneHashedSecretName = regexp.MustCompile(`-[0-9a-f]{8}$`)
 type keepResource struct {
 	Group    string
 	Resource string
+	// version is used when the provider registration declares the exact served version.
+	version string
 	// versionPreference is tried in order; empty falls back to storedVersionPreference.
 	versionPreference []string
 	// keepName picks the objects of a resource whose namespace is shared with other
@@ -83,8 +86,9 @@ var _ = sdk.RegisterFunc(&go_hook.HookConfig{
 	OnBeforeHelm: &go_hook.OrderedConfig{Order: 5},
 }, dependency.WithExternalDependencies(setKeepPolicyOnCapiResources))
 
-// Remove in 1.81: the hook only protects objects adopted during the #21372 migration, and an
-// upgrade from a pre-migration release is impossible once 1.81 is the oldest supported hop.
+// Remove in 1.81: the hook only protects objects adopted during the #21372 and #22899
+// migrations, and an upgrade from a pre-migration release is impossible once 1.81 is the
+// oldest supported hop.
 func setKeepPolicyOnCapiResources(ctx context.Context, input *go_hook.HookInput, dc dependency.Container) error {
 	k8sClient, err := dc.GetK8sClient()
 	if err != nil {
@@ -103,6 +107,36 @@ func setKeepPolicyOnCapiResources(ctx context.Context, input *go_hook.HookInput,
 	// MCM MachineDeployment/MachineClass (machine.sapcloud.io/v1alpha1) are no longer
 	// rendered by helm after the get_crds→node-controller migration; keep them from prune.
 	resources := append([]keepResource(nil), capiResources...)
+	if clusterKind := input.Values.Get("nodeManager.internal.cloudProvider.capiClusterKind").String(); clusterKind != "" {
+		clusterName := input.Values.Get("nodeManager.internal.cloudProvider.capiClusterName").String()
+		if clusterName != "" {
+			resources = append(resources,
+				keepResource{
+					Group:             "infrastructure.cluster.x-k8s.io",
+					Resource:          "deckhousecontrolplanes",
+					versionPreference: []string{"v1alpha1"},
+					keepName:          keepExactName(clusterName + "-control-plane"),
+				},
+				keepResource{
+					Group:    "",
+					Resource: "secrets",
+					keepName: keepExactName(capiCredentialsSecretName),
+				},
+			)
+
+			apiVersion := input.Values.Get("nodeManager.internal.cloudProvider.capiClusterAPIVersion").String()
+			if apiVersion == "" {
+				apiVersion = "infrastructure.cluster.x-k8s.io/v1alpha1"
+			}
+			providerResource, found, err := resolveKeepResourceForGVK(ctx, dynClient, apiVersion, clusterKind, clusterName)
+			if err != nil {
+				return fmt.Errorf("resolve provider infrastructure resource: %w", err)
+			}
+			if found {
+				resources = append(resources, providerResource)
+			}
+		}
+	}
 	if machineClassKind := input.Values.Get("nodeManager.internal.cloudProvider.machineClassKind").String(); machineClassKind != "" {
 		resources = append(resources,
 			keepResource{Group: "machine.sapcloud.io", Resource: "machinedeployments", versionPreference: mcmStoredVersions},
@@ -180,10 +214,62 @@ func IsBootstrapSecretName(name string) bool {
 	return strings.HasPrefix(name, manualBootstrapSecretPrefix) || zoneHashedSecretName.MatchString(name)
 }
 
+func keepExactName(expected string) func(string) bool {
+	return func(name string) bool { return name == expected }
+}
+
+// resolveKeepResourceForGVK gets the provider resource plural from its CRD. The registration
+// contract exposes apiVersion and kind, while Kubernetes clients address resources by plural;
+// reading spec.names.plural avoids encoding provider names in node-manager.
+func resolveKeepResourceForGVK(
+	ctx context.Context,
+	dynClient dynamic.Interface,
+	apiVersion string,
+	kind string,
+	name string,
+) (keepResource, bool, error) {
+	gv, err := schema.ParseGroupVersion(apiVersion)
+	if err != nil {
+		return keepResource{}, false, fmt.Errorf("parse apiVersion %q: %w", apiVersion, err)
+	}
+
+	crds, err := dynClient.Resource(crdGVR).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return keepResource{}, false, fmt.Errorf("list CRDs: %w", err)
+	}
+	for _, crd := range crds.Items {
+		group, _, _ := unstructured.NestedString(crd.Object, "spec", "group")
+		crdKind, _, _ := unstructured.NestedString(crd.Object, "spec", "names", "kind")
+		if group != gv.Group || crdKind != kind {
+			continue
+		}
+
+		plural, found, err := unstructured.NestedString(crd.Object, "spec", "names", "plural")
+		if err != nil {
+			return keepResource{}, false, fmt.Errorf("read plural from CRD %s: %w", crd.GetName(), err)
+		}
+		if !found || plural == "" {
+			return keepResource{}, false, fmt.Errorf("CRD %s has no spec.names.plural", crd.GetName())
+		}
+
+		return keepResource{
+			Group:    gv.Group,
+			Resource: plural,
+			version:  gv.Version,
+			keepName: keepExactName(name),
+		}, true, nil
+	}
+
+	return keepResource{}, false, nil
+}
+
 // keepResourceVersion resolves the version to patch a resource through. A core
 // resource has no CRD to read a stored version from, and v1 is the only version
 // the group has ever served.
 func keepResourceVersion(ctx context.Context, dynClient dynamic.Interface, res keepResource) (string, bool, error) {
+	if res.version != "" {
+		return res.version, true, nil
+	}
 	if res.Group == "" {
 		return "v1", true, nil
 	}

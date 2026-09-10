@@ -163,11 +163,19 @@ rules:
   - infrastructure.cluster.x-k8s.io
   resources:
   - deckhousecontrolplanes
-  - deckhousecontrolplanes/status
   verbs:
   - get
   - list
   - watch
+  - create
+  - update
+  - patch
+- apiGroups:
+  - infrastructure.cluster.x-k8s.io
+  resources:
+  - deckhousecontrolplanes/status
+  verbs:
+  - get
   - patch
 - apiGroups:
   - infrastructure.cluster.x-k8s.io
