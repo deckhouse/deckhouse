@@ -28,9 +28,9 @@
       plk_grouped_by__d8_user_authz_webhook_malfunctioning: "D8UserAuthzWebhookMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: Prometheus is unable to scrape the user-authz webhook.
       description: |-
-        Prometheus cannot collect metrics from at least one instance of `user-authz-webhook` in the `d8-user-authz` namespace. One silent instance is enough to fire it: on a cluster with several masters that is exactly the case worth knowing about, and a condition that waited for all of them would hide it. It is one alert however many instances are silent — the expression counts them rather than keeping their labels, so the alert says that at least one is, and the query below says which.
+        Prometheus cannot collect metrics from at least one instance of `user-authz-webhook` in the `d8-user-authz` namespace. One instance without metrics is enough for the alert to fire.
 
-        What that instance is doing with authorization is not knowable from here, and both possibilities matter. If it is running and only its metrics are unreachable, it keeps answering and the other alerts below cannot see it — a rule it quarantined, or rules it never listed, go unnoticed. If it is not running, or has not listed the rules yet, it answers `503` to every authorization request that reaches it, which the API server treats as a failure and denies, because the webhook is configured to fail closed.
+        If the instance is running and only its metrics are unreachable, it keeps answering authorization requests, but the other alerts of the module cannot see its state. If it is not running or has not read the rules yet, it answers `503` to every authorization request, and the API server denies the request, because the webhook is configured with `failurePolicy: Deny`.
 
         Check the DaemonSet, its metrics sidecar and the scrape target:
 
@@ -57,9 +57,11 @@
       plk_grouped_by__d8_user_authz_webhook_malfunctioning: "D8UserAuthzWebhookMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: A ClusterAuthorizationRule cannot be compiled by the webhook.
       description: |-
-        For more than 10 minutes the `user-authz-webhook` has quarantined at least one `ClusterAuthorizationRule`. Either its `limitNamespaces` pattern or `namespaceSelector` did not compile — the rule is kept and the rest of it still applies, but the broken filter is left out, so its subjects get a narrower scope than written and are denied where the filter was meant to allow — or the rule could not be read at all, which the CRD schema is supposed to prevent, and then it applies nowhere and its subjects are denied every namespace until it can be read.
+        For more than 10 minutes the `user-authz-webhook` has quarantined at least one `ClusterAuthorizationRule`: its `limitNamespaces` pattern or `namespaceSelector` does not compile, or the rule cannot be read at all.
 
-        Find the offending rule (an invalid regular expression in `limitNamespaces` or a malformed `namespaceSelector`):
+        A rule with a broken filter is applied without that filter, so its subjects get a narrower scope than written and are denied where the filter was meant to allow. A rule that cannot be read is not applied at all, and its subjects are denied every namespace.
+
+        Find the rule:
 
         ```bash
         d8 k get clusterauthorizationrules -o custom-columns=NAME:.metadata.name,LIMIT:.spec.limitNamespaces,SELECTOR:.spec.namespaceSelector
@@ -113,9 +115,9 @@
       plk_grouped_by__d8_user_authz_webhook_malfunctioning: "D8UserAuthzWebhookMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The masters disagree about the multi-tenancy rules.
       description: |-
-        Instances of `user-authz-webhook` have been built from different sets of `ClusterAuthorizationRules` for 10 minutes. Every instance publishes the highest `resourceVersion` it has observed, and those numbers have not converged.
+        Instances of `user-authz-webhook` have been using different sets of `ClusterAuthorizationRules` for 10 minutes.
 
-        Each master authorizes the requests that reach it, so this means the same request is answered differently depending on which master takes it: a user can be inside their namespace limits on one and outside them on another, seemingly at random. It normally resolves in seconds — the alert waits ten minutes precisely so that ordinary propagation does not fire it.
+        Each master node authorizes the requests that reach it, so the same request is answered differently depending on the node: a user can be inside their namespace limits on one node and outside them on another.
 
         Find the instance that is behind and look at why:
 
@@ -124,7 +126,7 @@
         d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100 | grep -i 'list/watch'
         ```
 
-        A growing `user_authz_webhook_rules_watch_errors_total` on one instance points at its watch; a `user_authz_webhook_rules_directory_updated_timestamp_seconds` that has stopped moving points at a directory that is no longer being rebuilt. Deleting the lagging Pod is the blunt fix, and the DaemonSet will bring it back — on a single-master cluster that briefly denies every request in the cluster, because this webhook is fail-closed.
+        A growing `user_authz_webhook_rules_watch_errors_total` on one instance points at its watch; a `user_authz_webhook_rules_directory_updated_timestamp_seconds` that has stopped moving points at rules that are no longer updated. Deleting the lagging Pod is the last resort: the DaemonSet recreates it, and on a cluster with a single master node every request in the cluster is denied while the Pod restarts.
 
   - alert: D8UserAuthzRulePropagationLag
     expr: |
@@ -148,18 +150,14 @@
       plk_grouped_by__d8_user_authz_webhook_malfunctioning: "D8UserAuthzWebhookMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: One user-authz webhook instance stopped picking up rule changes.
       description: |-
-        One instance of `user-authz-webhook` has not rebuilt its directory for over an hour while another one has. The rules are changing in the cluster and this instance is not seeing the changes.
+        One instance of `user-authz-webhook` has not updated its rules for more than an hour while another instance has. The rules are changing in the cluster and this instance does not see the changes.
 
-        This is the asymmetric case that `D8UserAuthzWebhookDirectoryDiverged` can miss: the instances can agree on the highest `resourceVersion` they have seen and still differ, if the one that is behind simply stopped receiving events rather than falling behind on a particular object.
-
-        Both halves read the same gauge — when each instance last rebuilt — and compare it against the same hour. The oldest instance has not rebuilt within it and the newest has, which is the definition of one instance being left behind while the others move.
-
-        It is written that way on purpose. An earlier version compared `rebuilds_total` between instances, and that is a per-process counter which starts at zero: one Pod restart left `max - min` permanently positive, and on any quiet cluster the other half was true too, so the alert simply stayed on. A timestamp says the same thing without a value that a restart resets, and a cluster whose rules genuinely never change has every instance equally old, so the second condition is false and it stays silent.
+        Find the instance and check its log:
 
         ```bash
         d8 k -n d8-user-authz get pods -l app=user-authz-webhook -o wide
         d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100
         ```
 
-        The instance's `/readyz` reports a directory that has stopped tracking the cluster once its watch has failed enough times in a row, so check whether the Pod is also unready — if it is, the rollout is already held and the cause is in the log above.
+        An instance whose watch keeps failing becomes not ready, so check the readiness of the Pod as well.
 {{- end }}

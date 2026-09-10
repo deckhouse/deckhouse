@@ -285,8 +285,8 @@ groups:
   - ports: "4243"
     protocol: TCP
     description:
-      en: "`user-authz` authorization webhook metrics, the 127.0.0.1 upstream of its kube-rbac-proxy. No traffic crosses nodes on this port and no firewall rule is needed for it; it is listed because the webhook runs on the host network, so the number is taken on every master and must not be reused"
-      ru: "Метрики webhook авторизации модуля `user-authz`, upstream его kube-rbac-proxy на 127.0.0.1. Межузловой трафик по этому порту не идёт, и правило файрвола для него не нужно; он указан потому, что webhook работает в host network, поэтому номер занят на каждом master-узле и не должен переиспользоваться"
+      en: "`user-authz` authorization webhook metrics, the 127.0.0.1 upstream of its kube-rbac-proxy. The port carries no traffic between nodes and needs no firewall rule; it is listed because the webhook runs on the host network and occupies this port on every master node"
+      ru: "Метрики webhook авторизации модуля `user-authz`, upstream его kube-rbac-proxy на 127.0.0.1. Порт не используется для трафика между узлами, и правило файрвола для него не нужно; он указан потому, что webhook работает в host network и занимает этот порт на каждом master-узле"
   - ports: "4244"
     protocol: TCP
     description:
