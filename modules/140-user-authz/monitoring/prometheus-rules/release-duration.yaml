@@ -34,13 +34,6 @@
         d8 k get clusterrolebindings -l heritage=deckhouse,module=user-authz --no-headers | wc -l
         ```
 
-        Check the module queue and the Deckhouse log for the release:
-
-        ```bash
-        d8 s queue list
-        d8 k -n d8-system logs deploy/deckhouse | grep '"module":"user-authz"'
-        ```
-
   - alert: D8UserAuthzRenderSlow
     expr: |
       (

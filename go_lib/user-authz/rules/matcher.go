@@ -81,18 +81,35 @@ func WrapRegex(pattern string) string {
 }
 
 // hasTopLevelAlternation reports whether the pattern contains a "|" that separates whole branches,
-// as opposed to one nested in a group or inside a character class where it is a literal.
+// as opposed to one nested in a group, inside a character class, or inside a quoted run where it is
+// a literal.
+//
+// The quoted run is the subtle one. RE2 supports \Q...\E, everything between being literal text, so
+// a "(" in there opens no group - and a scanner that thinks it does will believe it is inside a
+// group when it reaches the "|", conclude there is no top-level alternation, and leave the pattern
+// anchored by concatenation. `\Q(\E|x` then compiles to (^\Q(\E)|(x$) and opens every namespace
+// whose name merely ends in "x".
 func hasTopLevelAlternation(pattern string) bool {
 	depth := 0
 	inClass := false
+	inQuote := false
 	for i := 0; i < len(pattern); i++ {
+		if inQuote {
+			// Only \E ends a quoted run; everything else in it, backslashes included, is literal.
+			if pattern[i] == '\\' && i+1 < len(pattern) && pattern[i+1] == 'E' {
+				inQuote = false
+				i++
+			}
+			continue
+		}
 		switch pattern[i] {
 		case '\\':
+			if i+1 < len(pattern) && pattern[i+1] == 'Q' {
+				inQuote = true
+			}
 			i++ // whatever follows is a literal, including "|", "[" and "("
 		case '[':
-			if !inClass {
-				inClass = true
-			}
+			inClass = true
 		case ']':
 			inClass = false
 		case '(':
