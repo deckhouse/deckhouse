@@ -41,6 +41,14 @@ const (
 	endpointServiceNameLabelKey = "kubernetes.io/service-name"
 	endpointControllerLabelKey  = "endpointslice.kubernetes.io/managed-by"
 	controllerName              = "servicewithhealthchecks"
+
+	// resyncPeriod bounds how long a ServiceWithHealthchecks may stay out of sync with the
+	// pods on this node. New target pods are learned from watch events only, and once the
+	// last target is gone there is no probe result left to wake the reconciliation up
+	// either — so a single missed event would otherwise keep the EndpointSlice empty until
+	// the cache resync (10h by default) or an agent restart. The resync is read-only in the
+	// steady state: neither the status nor the EndpointSlice is written when nothing changed.
+	resyncPeriod = time.Minute
 )
 
 // ServiceWithHealthchecksReconciler reconciles a ServiceWithHealthchecks object
@@ -146,14 +154,14 @@ func (r *ServiceWithHealthchecksReconciler) Reconcile(ctx context.Context, req c
 	kubernetes.SortConditions(serviceWithHC.Status.Conditions)
 
 	if reflect.DeepEqual(serviceWithHC.Status, updatedServiceWithHC.Status) {
-		return ctrl.Result{}, nil
+		return ctrl.Result{RequeueAfter: resyncPeriod}, nil
 	}
 
 	err = r.Status().Patch(ctx, updatedServiceWithHC, patch)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("unable to patch status of ServiceWithHealthchecks: %w", err)
 	}
-	return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: resyncPeriod}, nil
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -252,19 +260,26 @@ func (r *ServiceWithHealthchecksReconciler) getExposedServiceWithHCForPod(ctx co
 	// iterate over saved services specifications and check if it matches pod labels
 	r.servicesWithHealthchecks.Range(func(key, value any) bool {
 		svcWithHCName := key.(types.NamespacedName)
-		svcWithHCSpec := value.(networkv1alpha1.ServiceWithHealthchecksSpec)
-		podsLabels := pod.GetLabels()
 
-		if labels.ValidatedSetSelector(svcWithHCSpec.Selector).Matches(labels.Set(podsLabels)) {
-			requests = append(requests, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Name:      svcWithHCName.Name,
-					Namespace: svcWithHCName.Namespace,
-				},
-			})
+		// A ServiceWithHealthchecks only ever selects pods of its own namespace, see the List
+		// call in Reconcile. Checked before the spec is read out of the interface, so that an
+		// entry of another namespace costs a string comparison instead of a struct copy.
+		if svcWithHCName.Namespace != pod.GetNamespace() {
 			return true
 		}
-		return false
+
+		svcWithHCSpec := value.(networkv1alpha1.ServiceWithHealthchecksSpec)
+		if labels.ValidatedSetSelector(svcWithHCSpec.Selector).Matches(labels.Set(pod.GetLabels())) {
+			requests = append(requests, reconcile.Request{NamespacedName: svcWithHCName})
+		}
+
+		// Every stored ServiceWithHealthchecks has to be examined, so the iteration is never
+		// stopped: sync.Map.Range treats a false return as "stop", and stopping at the first
+		// non-matching entry silently drops the event for all the entries behind it. Range
+		// order is randomized, so a pod of the Nth ServiceWithHealthchecks would only be
+		// noticed when it happens to be visited first — and a missed pod creation leaves the
+		// EndpointSlice empty until something else triggers a reconciliation.
+		return true
 	})
 	return requests
 }
