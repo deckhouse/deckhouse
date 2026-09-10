@@ -232,7 +232,7 @@ The `rules source: directory rebuilt from N rules` line shows the informer has l
 | `user_authz_webhook_rules_observed` | Rules the current directory was built from |
 | `user_authz_webhook_rules_subjects` | Distinct subjects in the current directory |
 | `user_authz_webhook_rules_max_resource_version` | Highest `resourceVersion` among the observed rules — the watermark to compare against the cluster when measuring lag |
-| `user_authz_webhook_rules_quarantined` | Rules whose `limitNamespaces` pattern or `namespaceSelector` does not compile. The broken filter is left out, so the subjects get a narrower scope than written |
+| `user_authz_webhook_rules_quarantined` | Rules the directory could not fully use: a `limitNamespaces` pattern or `namespaceSelector` that does not compile — the broken filter is left out, so the subjects get a narrower scope than written — or a rule that could not be read at all, which applies nowhere and leaves its subjects denied every namespace until it can be read |
 | `user_authz_webhook_rules_directory_updated_timestamp_seconds` | Unix time of the last rebuild |
 | `user_authz_webhook_rules_directory_rebuilds_total`, `user_authz_webhook_rules_directory_rebuild_duration_seconds` | Number of rebuilds and the time they take |
 | `user_authz_webhook_rules_watch_errors_total` | List/watch errors of the rules informer |

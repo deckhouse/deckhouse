@@ -232,7 +232,7 @@ d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100
 | `user_authz_webhook_rules_observed` | Количество правил, из которых собран текущий каталог |
 | `user_authz_webhook_rules_subjects` | Количество различных субъектов в текущем каталоге |
 | `user_authz_webhook_rules_max_resource_version` | Наибольший `resourceVersion` среди наблюдаемых правил — отметка для сравнения с кластером при измерении отставания |
-| `user_authz_webhook_rules_quarantined` | Количество правил, у которых не компилируется паттерн `limitNamespaces` или `namespaceSelector`. Сломанный фильтр отбрасывается, поэтому субъекты получают более узкую область, чем записано |
+| `user_authz_webhook_rules_quarantined` | Количество правил, которые директория не смогла использовать полностью: не компилируется паттерн `limitNamespaces` или `namespaceSelector` (сломанный фильтр отбрасывается, поэтому субъекты получают более узкую область, чем записано) либо правило вообще не удалось прочитать — тогда оно не применяется нигде, а его субъектам закрыты все пространства имён, пока прочитать его не удастся |
 | `user_authz_webhook_rules_directory_updated_timestamp_seconds` | Unix-время последней пересборки |
 | `user_authz_webhook_rules_directory_rebuilds_total`, `user_authz_webhook_rules_directory_rebuild_duration_seconds` | Количество пересборок и время, которое они занимают |
 | `user_authz_webhook_rules_watch_errors_total` | Ошибки list/watch informer'а правил |

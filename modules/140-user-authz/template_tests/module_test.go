@@ -330,7 +330,12 @@ var _ = Describe("Module :: user-authz :: helm template ::", func() {
 			Expect(deployment.Field("spec.template.spec.containers.1.name").String()).To(Equal("kube-rbac-proxy"))
 			Expect(deployment.Field("spec.template.spec.containers.1.ports.0.containerPort").Int()).To(Equal(int64(4276)))
 			Expect(deployment.Field("spec.template.spec.containers.1.ports.0.name").String()).To(Equal("https-metrics"))
-			Expect(deployment.Field("spec.template.spec.containers.1.env").String()).To(ContainSubstring("http://127.0.0.1:4276/metrics"))
+			// The upstream is a different port from the one the sidecar listens on. They used to be
+			// the same number, which works only because one is bound to the pod IP and the other to
+			// loopback: a sidecar told to listen on 0.0.0.0 would collide with the apiserver's own
+			// listener and proxy to itself.
+			Expect(deployment.Field("spec.template.spec.containers.1.env").String()).To(ContainSubstring("http://127.0.0.1:4277/metrics"))
+			Expect(deployment.Field("spec.template.spec.containers.1.env").String()).NotTo(ContainSubstring("http://127.0.0.1:4276/metrics"))
 
 			role := f.KubernetesResource("Role", "d8-user-authz", "access-to-permission-browser-apiserver-prometheus-metrics")
 			Expect(role.Exists()).To(BeTrue())

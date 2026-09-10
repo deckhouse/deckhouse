@@ -51,8 +51,7 @@ func benchmarkBuild(b *testing.B, count int) {
 	rs := benchRules(count)
 	builder := NewBuilder()
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		builder.Build(rs)
 	}
 }
@@ -67,8 +66,7 @@ func benchmarkLookup(b *testing.B, count int) {
 	user := fmt.Sprintf("user-%d@example.com", count/2)
 	groups := []string{fmt.Sprintf("team-%d", (count/2)%50), "system:authenticated"}
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		entries := dir.Lookup(user, groups)
 		combined := Combine(entries)
 		if !combined.HasAnyFilters() {
@@ -104,8 +102,7 @@ func benchmarkNamespaceAllowed(b *testing.B, namespace string, want bool) {
 	}
 
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if _, err := NamespaceAllowed(&entry, namespace, nil); err != nil {
 			b.Fatal(err)
 		}
@@ -124,8 +121,7 @@ func BenchmarkScaleNamespaceAllowedMiss(b *testing.B) {
 func BenchmarkScaleRuleCovers(b *testing.B) {
 	dir, _ := NewBuilder().Build(benchRules(2000))
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if !dir.RuleCovers("rule-1000", "user-1000@example.com", nil) {
 			b.Fatal("the fixture rule names the subject")
 		}

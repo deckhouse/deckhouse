@@ -102,17 +102,17 @@ func TestScope_KnownVsUnknown(t *testing.T) {
 		},
 	}
 
-	namespaced, known := cache.Scope("", "pods")
-	assert.True(t, namespaced)
-	assert.True(t, known)
+	pods := cache.ScopeOf("", "pods")
+	assert.True(t, pods.Namespaced)
+	assert.True(t, pods.Known)
 
-	namespaced, known = cache.Scope("", "nodes")
-	assert.False(t, namespaced)
-	assert.True(t, known)
+	nodes := cache.ScopeOf("", "nodes")
+	assert.False(t, nodes.Namespaced)
+	assert.True(t, nodes.Known)
 
-	namespaced, known = cache.Scope("custom.example.com", "unknownresource")
-	assert.False(t, namespaced)
-	assert.False(t, known)
+	unknown := cache.ScopeOf("custom.example.com", "unknownresource")
+	assert.False(t, unknown.Namespaced)
+	assert.False(t, unknown.Known)
 	assert.False(t, cache.IsNamespaced("custom.example.com", "unknownresource"))
 }
 
@@ -213,32 +213,32 @@ func TestRefresh_PartialDiscoveryError_KeepsTheFailedGroups(t *testing.T) {
 
 	cache.refresh()
 
-	namespaced, known := cache.Scope("metrics.k8s.io", "nodes")
-	assert.True(t, known, "the failed group must keep its entries")
-	assert.False(t, namespaced)
-	_, known = cache.Scope("metrics.k8s.io", "pods")
-	assert.True(t, known)
+	metricsNodes := cache.ScopeOf("metrics.k8s.io", "nodes")
+	assert.True(t, metricsNodes.Known, "the failed group must keep its entries")
+	assert.False(t, metricsNodes.Namespaced)
+	assert.True(t, cache.ScopeOf("metrics.k8s.io", "pods").Known)
 
-	_, known = cache.Scope("apps", "deployments")
-	assert.True(t, known)
-	_, known = cache.Scope("apps", "gone-in-this-version")
-	assert.False(t, known, "a returned group is replaced by what discovery returned")
+	assert.True(t, cache.ScopeOf("apps", "deployments").Known)
+	assert.False(t, cache.ScopeOf("apps", "gone-in-this-version").Known, "a returned group is replaced by what discovery returned")
 
-	_, known = cache.Scope("removed.example.com", "widgets")
-	assert.False(t, known, "a group that discovery neither returned nor reported as failed has left the cluster")
+	assert.False(t, cache.ScopeOf("removed.example.com", "widgets").Known, "a group that discovery neither returned nor reported as failed has left the cluster")
 
-	// GroupUnavailable is how the multi-tenancy engine tells "this resource does not exist" from
-	// "we could not read this group". Getting it wrong is not a missing feature, it is a grant: a
-	// group whose entries were never read would look absent, absent means no opinion for a
-	// cluster-scoped request, and the rule's cluster-wide binding would then let RBAC serve a
-	// cluster-wide list of a namespaced resource to a subject limited to one namespace.
+	// Absent is how the multi-tenancy decision tells "this resource does not exist" from "we could
+	// not read this group". Getting it wrong is not a missing feature, it is a grant: a group whose
+	// entries were never read would look absent, absent means no opinion for a cluster-scoped
+	// request, and the rule's cluster-wide binding would then let RBAC serve a cluster-wide list of
+	// a namespaced resource to a subject limited to one namespace.
 	//
-	// Every test above uses a hand-written fake for it, so until this assertion the production
-	// implementation - the read side of unavailableGroups - was never called by anything.
-	assert.True(t, cache.GroupUnavailable("metrics.k8s.io"), "a group discovery reported as failed is unavailable")
-	assert.False(t, cache.GroupUnavailable("apps"), "a group discovery returned is available")
-	assert.False(t, cache.GroupUnavailable(""), "the core group is available")
-	assert.False(t, cache.GroupUnavailable("removed.example.com"), "a group that has left the cluster is absent, not unavailable")
+	// Asserted through the one method the decision calls. It used to be asserted through the
+	// separate predicate the caller combined itself, which is exactly the shape that let a test
+	// fake combine them differently and stay green.
+	assert.False(t, cache.ScopeOf("metrics.k8s.io", "never-heard-of").Absent,
+		"a group discovery could not read: a resource missing from it is missing because nobody looked")
+	assert.True(t, cache.ScopeOf("apps", "never-heard-of").Absent,
+		"a group discovery did read: a resource missing from it genuinely does not exist")
+	assert.True(t, cache.ScopeOf("", "never-heard-of").Absent, "the core group was read")
+	assert.True(t, cache.ScopeOf("removed.example.com", "widgets").Absent,
+		"a group that has left the cluster is absent, not unreadable")
 }
 
 // A healthy refresh must clear a group that was unavailable before, or the engine keeps denying
@@ -255,7 +255,7 @@ func TestGroupUnavailable_ClearedByAHealthyRefresh(t *testing.T) {
 	)
 	cache := &ResourceScopeCache{discoveryClient: failing, scopeMap: make(map[string]bool)}
 	cache.refresh()
-	assert.True(t, cache.GroupUnavailable("metrics.k8s.io"))
+	assert.False(t, cache.ScopeOf("metrics.k8s.io", "nodes").Absent, "the group could not be read, so nothing in it is known to be absent")
 
 	cache.discoveryClient = newMockDiscovery([]*metav1.APIResourceList{
 		{
@@ -269,17 +269,21 @@ func TestGroupUnavailable_ClearedByAHealthyRefresh(t *testing.T) {
 	}, nil)
 	cache.refresh()
 
-	assert.False(t, cache.GroupUnavailable("metrics.k8s.io"), "the group answered this time")
-	namespaced, known := cache.Scope("metrics.k8s.io", "nodes")
-	assert.True(t, known)
-	assert.False(t, namespaced)
+	nodes := cache.ScopeOf("metrics.k8s.io", "nodes")
+	assert.True(t, nodes.Known, "the group answered this time")
+	assert.False(t, nodes.Namespaced)
+	assert.True(t, cache.ScopeOf("metrics.k8s.io", "never-heard-of").Absent,
+		"and a resource missing from a group that answered is absent again, so cluster-scoped requests for it stop being denied")
 }
 
-// A typed nil handed to an interface value must answer like a nil interface, which is what the
-// three sibling methods promise and what engine.resourceScopeOf relies on.
-func TestGroupUnavailable_NilReceiver(t *testing.T) {
+// A typed nil handed to an interface value must answer like a nil interface, which is what
+// engine.resourceScopeOf relies on: nothing known, nothing absent, so the decision fails closed.
+func TestScopeOf_NilReceiver(t *testing.T) {
 	var cache *ResourceScopeCache
-	assert.False(t, cache.GroupUnavailable("anything"))
+	scope := cache.ScopeOf("anything", "at-all")
+	assert.False(t, scope.Known)
+	assert.False(t, scope.Absent)
+	assert.False(t, scope.Namespaced)
 }
 
 // TestRefresh_NonDiscoveryError_PreservesCache tests that an error other than a partial group
@@ -295,14 +299,24 @@ func TestRefresh_NonDiscoveryError_PreservesCache(t *testing.T) {
 
 	cache.refresh()
 
-	_, known := cache.Scope("", "nodes")
-	assert.True(t, known, "the previous snapshot must survive an unclassified discovery error")
-	_, known = cache.Scope("", "pods")
-	assert.False(t, known)
+	assert.True(t, cache.ScopeOf("", "nodes").Known, "the previous snapshot must survive an unclassified discovery error")
+	assert.False(t, cache.ScopeOf("", "pods").Known)
 }
 
 // TestNilCache_AnswersLikeEmpty tests that a nil *ResourceScopeCache, which a caller may hand to
 // an interface value by mistake, behaves like an empty cache instead of panicking.
+// waitForLoop waits until the refresh loop has started, which is what arms the miss trigger.
+func waitForLoop(t *testing.T, cache *ResourceScopeCache) {
+	t.Helper()
+	deadline := time.Now().Add(2 * time.Second)
+	for !cache.looping.Load() {
+		if time.Now().After(deadline) {
+			t.Fatal("the refresh loop did not start")
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
 // A resource the snapshot does not hold pulls the next refresh forward.
 //
 // The authorization webhook re-lists a group within ten seconds of being asked about something it
@@ -311,21 +325,33 @@ func TestRefresh_NonDiscoveryError_PreservesCache(t *testing.T) {
 func TestScopeOf_AMissPullsTheRefreshForward(t *testing.T) {
 	discovery := newMockDiscovery(testAPIResources(), nil)
 	cache := NewResourceScopeCache(discovery)
-	// Long enough that a test that passes cannot be passing because of the cycle.
+	// Long enough that a test that passes cannot be passing because of the cycle - the miss is
+	// the only thing that can refresh within the next hour. The loop still has to be running,
+	// because a miss pulls the next scheduled refresh forward and there is nothing to pull
+	// otherwise.
 	cache.refreshInterval = time.Hour
 	cache.bootstrapInterval = time.Hour
+	stop := make(chan struct{})
+	defer close(stop)
+	go cache.StartRefreshLoop(stop)
+	waitForLoop(t, cache)
 
-	if scope := cache.ScopeOf("example.com", "widgets"); scope.Known {
-		t.Fatalf("before the CRD exists: got %+v, want a miss", scope)
+	// Read the snapshot without going through ScopeOf, which would schedule the refresh this test
+	// is about and race with the line below it.
+	if cache.HasResource("example.com", "widgets") {
+		t.Fatal("before the CRD exists the snapshot must not carry it")
 	}
 
-	// The CRD is installed.
+	// The CRD is installed, and then somebody asks about it.
 	discovery.serve(append(testAPIResources(), &metav1.APIResourceList{
 		GroupVersion: "example.com/v1",
 		APIResources: []metav1.APIResource{{Name: "widgets", Namespaced: true}},
 	}))
+	if scope := cache.ScopeOf("example.com", "widgets"); scope.Known {
+		t.Fatalf("the snapshot cannot know it yet: got %+v", scope)
+	}
 
-	// The miss above scheduled the refresh; it converges without anybody waiting an hour.
+	// That miss scheduled the refresh; it converges without anybody waiting an hour.
 	deadline := time.Now().Add(5 * time.Second)
 	for {
 		if scope := cache.ScopeOf("example.com", "widgets"); scope.Known {
@@ -349,6 +375,10 @@ func TestScopeOf_MissesDoNotRefreshOnEveryLookup(t *testing.T) {
 	cache.bootstrapInterval = time.Hour
 	now := time.Now()
 	cache.now = func() time.Time { return now }
+	stop := make(chan struct{})
+	defer close(stop)
+	go cache.StartRefreshLoop(stop)
+	waitForLoop(t, cache)
 
 	after := func() int {
 		// The refresh a miss triggers runs in its own goroutine; give it room to finish before
@@ -377,9 +407,10 @@ func TestScopeOf_MissesDoNotRefreshOnEveryLookup(t *testing.T) {
 func TestNilCache_AnswersLikeEmpty(t *testing.T) {
 	var cache *ResourceScopeCache
 
-	namespaced, known := cache.Scope("", "pods")
-	assert.False(t, namespaced)
-	assert.False(t, known)
+	scope := cache.ScopeOf("", "pods")
+	assert.False(t, scope.Namespaced)
+	assert.False(t, scope.Known)
+	assert.False(t, scope.Absent, "a nil cache knows nothing, which is not the same as knowing the resource is gone")
 	assert.False(t, cache.HasData())
 	assert.False(t, cache.HasResource("", "pods"))
 }
