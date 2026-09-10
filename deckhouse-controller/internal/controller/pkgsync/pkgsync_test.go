@@ -25,7 +25,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -99,7 +98,7 @@ func writeOpenAPI(t *testing.T, dir, settings, values string) {
 
 func testModuleSource(name, repo string) *v1alpha1.ModuleSource {
 	return &v1alpha1.ModuleSource{
-		ObjectMeta: metav1.ObjectMeta{Name: name, UID: types.UID(name + "-uid")},
+		ObjectMeta: metav1.ObjectMeta{Name: name},
 		Spec: v1alpha1.ModuleSourceSpec{
 			Registry: v1alpha1.ModuleSourceSpecRegistry{
 				Scheme:    "HTTPS",

@@ -58,16 +58,15 @@ func (s *syncer) syncPackageRepositories(ctx context.Context) error {
 
 // ensurePackageRepository converges the repository serving the source registry
 // to the source: created if missing, the registry settings brought to what the
-// source holds, the source set as its owner. The module source stays the place
-// where users manage the credentials of a source-backed repository while the old
-// stack lives, and the repository goes with the source: the garbage collector
-// deletes it, and the package-repository controller then drops it from every
-// package it offered. The fields the source does not carry (scan interval,
-// login, password) are never touched, so user edits to them survive a restart.
+// source holds. The module source stays the place where users manage the
+// credentials of a source-backed repository while the old stack lives. The
+// repository is not owned by the source: the sync is a one-off migration, and
+// the repository outlives the source it was made from. The fields the source
+// does not carry (scan interval, login, password) are never touched, so user
+// edits to them survive a restart.
 func (s *syncer) ensurePackageRepository(ctx context.Context, source *v1alpha1.ModuleSource) error {
 	name := PackageRepositoryNameForModuleSource(source.Name)
 	desired := packageRepositoryRegistryFromModuleSource(source)
-	owner := moduleSourceOwnerReference(source)
 
 	repo := new(v1alpha1.PackageRepository)
 	err := s.reader.Get(ctx, client.ObjectKey{Name: name}, repo)
@@ -82,8 +81,7 @@ func (s *syncer) ensurePackageRepository(ctx context.Context, source *v1alpha1.M
 				Kind:       v1alpha1.PackageRepositoryKind,
 			},
 			ObjectMeta: metav1.ObjectMeta{
-				Name:            name,
-				OwnerReferences: []metav1.OwnerReference{owner},
+				Name: name,
 			},
 			Spec: v1alpha1.PackageRepositorySpec{Registry: desired},
 		}
@@ -103,63 +101,24 @@ func (s *syncer) ensurePackageRepository(ctx context.Context, source *v1alpha1.M
 		return nil
 	}
 
-	original := repo.DeepCopy()
-	changed := setModuleSourceAsPackageRepositoryOwner(repo, owner)
-
 	current := repo.Spec.Registry
 	current.Login, current.Password = "", ""
-	if current != desired {
-		desired.Login = repo.Spec.Registry.Login
-		desired.Password = repo.Spec.Registry.Password
-		repo.Spec.Registry = desired
-		changed = true
-	}
-
-	if !changed {
+	if current == desired {
 		return nil
 	}
+
+	original := repo.DeepCopy()
+	desired.Login = repo.Spec.Registry.Login
+	desired.Password = repo.Spec.Registry.Password
+	repo.Spec.Registry = desired
 
 	if err := s.writer.Patch(ctx, repo, client.MergeFrom(original)); err != nil {
 		return fmt.Errorf("patch package repository '%s': %w", name, err)
 	}
 
-	s.logger.Debug("package repository converged to the module source", slog.String("name", name))
+	s.logger.Debug("package repository registry refreshed from the module source", slog.String("name", name))
 
 	return nil
-}
-
-// moduleSourceOwnerReference names the module source as the owner of its repository.
-func moduleSourceOwnerReference(source *v1alpha1.ModuleSource) metav1.OwnerReference {
-	return metav1.OwnerReference{
-		APIVersion: v1alpha1.ModuleSourceGVK.GroupVersion().String(),
-		Kind:       v1alpha1.ModuleSourceKind,
-		Name:       source.Name,
-		UID:        source.UID,
-	}
-}
-
-// setModuleSourceAsPackageRepositoryOwner puts the module source among the owners of the repository. A reference to
-// a source of the same name but another UID is one to a source deleted and created again: it
-// is replaced, or the garbage collector would take the repository away from the new source.
-// Reports whether anything changed.
-func setModuleSourceAsPackageRepositoryOwner(repo *v1alpha1.PackageRepository, owner metav1.OwnerReference) bool {
-	for idx, ref := range repo.OwnerReferences {
-		if ref.Kind != owner.Kind || ref.APIVersion != owner.APIVersion || ref.Name != owner.Name {
-			continue
-		}
-
-		if ref.UID == owner.UID {
-			return false
-		}
-
-		repo.OwnerReferences[idx] = owner
-
-		return true
-	}
-
-	repo.OwnerReferences = append(repo.OwnerReferences, owner)
-
-	return true
 }
 
 // packageRepositoryRegistryFromModuleSource maps the source registry block onto the repository shape.
