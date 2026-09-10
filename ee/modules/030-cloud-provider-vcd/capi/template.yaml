@@ -9,8 +9,9 @@ rolloutFields:
   - placementPolicy
   - additionalMetadata
 
-# vcd is the only provider whose rollout decision reaches outside the InstanceClass: the v1
-# checksum hashed the metadata *merged* from the cloud-provider config and the class, and
+# vcd was the first provider whose rollout decision reaches outside the InstanceClass (dynamix's
+# storagePolicy is the other): the v1 checksum hashed the metadata *merged* from the
+# cloud-provider config and the class, and
 # VCDClusterConfiguration tells the user that changing `metadata` recreates CloudEphemeral nodes.
 # Dropping it here would turn that promise into silence — the template below still renders the new
 # value, so machines created later would quietly disagree with the ones already running.

@@ -723,6 +723,31 @@ func TestDynamixStoragePolicyRolls(t *testing.T) {
 				"changing the storage policy must create a new generation, which is what recreates the machines")
 		})
 	}
+
+	// Dropping the override is the third way the effective policy changes, and the only one where
+	// the InstanceClass field ends up absent rather than different: the machine moves to the
+	// cluster-wide policy, so it has to be recreated for exactly the same reason.
+	t.Run("dropping the override rolls too", func(t *testing.T) {
+		contract := loadContract(t, fixture.contractPath)
+
+		withOverride := deepCopySpec(t, fixture.instanceClass)
+		require.Contains(t, withOverride, "storagePolicy")
+		withoutOverride := deepCopySpec(t, withOverride)
+		delete(withoutOverride, "storagePolicy")
+
+		changes, err := Changes(withOverride, withoutOverride, contract.RolloutFields)
+		require.NoError(t, err)
+		require.Len(t, changes, 1)
+		assert.Equal(t, "storagePolicy", changes[0].Path)
+
+		before, err := renderV2Spec(fixture, contract, withOverride)
+		require.NoError(t, err)
+		after, err := renderV2Spec(fixture, contract, withoutOverride)
+		require.NoError(t, err)
+		assert.NotEqual(t, before, after,
+			"the machine template must follow the effective policy: same object here would mean the "+
+				"cluster-wide value never reached the machine")
+	})
 }
 
 func fixtureByName(t *testing.T, name string) providerFixture {

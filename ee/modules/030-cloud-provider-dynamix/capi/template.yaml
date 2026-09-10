@@ -18,13 +18,9 @@ rolloutFields:
 # field does — and DynamixClusterConfiguration promises the user exactly that. Nothing else the
 # module publishes into d8-node-manager-cloud-provider describes the VM.
 #
-# Two costs come with the entry, both accepted. The snapshot records only declared fields, so on the
-# first reconcile after this release the key reads as absent against its current value and every
-# CloudEphemeral node of the provider rolls once; Dynamix 4.6 breaks the configuration contract
-# anyway (`storagePolicy` is required in DynamixClusterConfiguration and there are no live
-# installations), so there is no cluster this can surprise. And the comparison cannot see the
-# override: an edit of the cluster-wide value also recreates the machines of a NodeGroup whose
-# InstanceClass names its own policy, where the rendered object does not change at all.
+# The comparison sees this field, not the effective policy, so the edit also recreates the machines
+# of a NodeGroup that overrides it and whose rendered object does not change. Accepted: the
+# alternative is an override that silently keeps a node in a policy nobody names any more.
 providerRolloutFields:
   - storagePolicy
 
@@ -46,7 +42,7 @@ template: |
         {{- if get .instanceClass "imageName" }}
         imageName: {{ .instanceClass.imageName | quote }}
         {{- end }}
-        storagePolicy: {{ get .instanceClass "storagePolicy" | default (get .provider "storagePolicy") | required "storagePolicy is set neither in the DynamixInstanceClass nor in the DynamixClusterConfiguration" | quote }}
+        storagePolicy: {{ get .instanceClass "storagePolicy" | default (get .provider "storagePolicy") | required "no storagePolicy: set it in the instance class, or cluster-wide in DynamixClusterConfiguration" | quote }}
         {{- if get .instanceClass "numCPUs" }}
         cpu: {{ .instanceClass.numCPUs }}
         {{- end }}
