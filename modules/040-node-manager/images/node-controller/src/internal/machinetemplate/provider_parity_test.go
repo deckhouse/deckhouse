@@ -19,6 +19,7 @@ package machinetemplate
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -56,6 +57,13 @@ const (
 	parityZone        = "zone-a"
 )
 
+// The three namespaces of a postV1Fields key — the axis the excluded path belongs to.
+const (
+	instanceClassNamespace = "instanceClass"
+	providerNamespace      = "provider"
+	renderedNamespace      = "rendered"
+)
+
 type providerFixture struct {
 	// name is the provider's cloud type, and also the testdata/v1 subdirectory.
 	name string
@@ -73,6 +81,19 @@ type providerFixture struct {
 	// with the reason as the value. Keep it empty unless the difference is understood and cannot
 	// roll an existing cluster.
 	rolloutExceptions map[string]string
+	// postV1Fields names the parts of the contract that did not exist when this provider's v1
+	// snapshot was taken, with the reason as the value. v1 has no answer about such a field — its
+	// template cannot render it and its checksum cannot hash it — so a comparison against v1 would
+	// report the feature itself as a difference. Keys are namespaced dot-paths:
+	//
+	//	instanceClass.<path> — an InstanceClass field: excluded from the rollout-parity loops
+	//	provider.<path>      — a cloud-provider config field: the same, on the provider axis
+	//	rendered.<path>      — a path in the rendered object: dropped from the v2 object before it
+	//	                       is compared with the v1 one
+	//
+	// Only the named path is excluded, so everything else about the provider is still compared, and
+	// TestPostV1FieldsAreReal fails on an entry that no longer names anything.
+	postV1Fields map[string]string
 	// manualRolloutIDIgnoredByV1 records that this provider's v1 checksum template never read
 	// manualRolloutID, so the operator's `manual-rollout-id` annotation did not roll its CAPI
 	// machines at all. v2 honours the lever for every provider, in node-controller rather than in
@@ -258,6 +279,26 @@ func (f providerFixture) legacyPath(file string) string {
 	return filepath.Join("testdata", "v1", f.name, file)
 }
 
+// postV1Reason reports whether one path of one axis is a field the v1 snapshot predates.
+func (f providerFixture) postV1Reason(namespace, path string) (string, bool) {
+	reason, excluded := f.postV1Fields[namespace+"."+path]
+	return reason, excluded
+}
+
+// withoutPostV1Fields drops the paths v1 never rendered from a v2 object, so that everything else
+// about it is still compared with the v1 render.
+func (f providerFixture) withoutPostV1Fields(t *testing.T, object map[string]any) map[string]any {
+	t.Helper()
+
+	out := deepCopySpec(t, object)
+	for key := range f.postV1Fields {
+		if path, isRendered := strings.CutPrefix(key, renderedNamespace+"."); isRendered {
+			deletePath(out, path)
+		}
+	}
+	return out
+}
+
 // TestProviderRenderParity renders every migrated provider through both engines and requires the
 // resulting objects to be identical.
 func TestProviderRenderParity(t *testing.T) {
@@ -277,7 +318,7 @@ func TestProviderRenderParity(t *testing.T) {
 
 			v1Object := renderLegacyTemplate(t, fixture)
 
-			assert.Equal(t, v1Object, v2Object,
+			assert.Equal(t, v1Object, fixture.withoutPostV1Fields(t, v2Object),
 				"v2 must render exactly what v1 rendered: a different object here means the migration "+
 					"changes machines, not just the contract")
 		})
@@ -297,6 +338,10 @@ func TestProviderRolloutParity(t *testing.T) {
 
 			for _, path := range mutationPaths(fixture, contract) {
 				t.Run(path, func(t *testing.T) {
+					if reason, excluded := fixture.postV1Reason(instanceClassNamespace, path); excluded {
+						t.Skip(reason)
+					}
+
 					mutated := mutateSpec(t, fixture.instanceClass, path)
 
 					v1Rolls := renderLegacyChecksum(t, fixture, checksumTemplate, mutated, "") != baseChecksum
@@ -332,6 +377,10 @@ func TestProviderConfigRolloutParity(t *testing.T) {
 			for _, path := range providerMutationPaths(fixture, contract) {
 				t.Run(path, func(t *testing.T) {
 					if reason, documented := fixture.rolloutExceptions[path]; documented {
+						t.Skip(reason)
+					}
+
+					if reason, excluded := fixture.postV1Reason(providerNamespace, path); excluded {
 						t.Skip(reason)
 					}
 
@@ -373,7 +422,7 @@ func TestProviderConfigRenderParity(t *testing.T) {
 					v2Object, err := renderV2Spec(mutated, contract, fixture.instanceClass)
 					require.NoError(t, err, "v2 template must still render")
 
-					assert.Equal(t, v1Object, v2Object,
+					assert.Equal(t, v1Object, fixture.withoutPostV1Fields(t, v2Object),
 						"changing provider config %s renders differently under v2: the migrated template "+
 							"reads a different set of provider inputs than the v1 one", path)
 				})
@@ -427,6 +476,80 @@ func TestProviderRolloutFieldsResolveInTheConfig(t *testing.T) {
 				assert.True(t, found,
 					"providerRolloutFields names %s, but the provider config publishes no such key — "+
 						"either the subtree was reshaped and the list was not, or the fixture is stale", field)
+			}
+		})
+	}
+}
+
+// TestPostV1FieldsAreReal is what keeps the postV1Fields escape hatch honest. Every entry both
+// narrows a comparison and makes a claim — "v1 has no answer about this path" — and the claim is
+// what is checked here, on the archived v1 files themselves: the checksum must ignore the field and
+// the v1 template must not render it. An entry about a field v1 does know would silently switch off
+// a real comparison, which is the one failure this hatch could cause.
+//
+// The path must also still name something on its own axis, so an entry cannot outlive the field it
+// excuses — a rename or a moved rendered path fails here rather than passing quietly.
+func TestPostV1FieldsAreReal(t *testing.T) {
+	for _, fixture := range providerFixtures() {
+		if len(fixture.postV1Fields) == 0 {
+			continue
+		}
+
+		t.Run(fixture.name, func(t *testing.T) {
+			contract := loadContract(t, fixture.contractPath)
+			checksumTemplate, err := os.ReadFile(fixture.legacyPath("instance-class.checksum"))
+			require.NoError(t, err)
+			baseChecksum := renderLegacyChecksum(t, fixture, checksumTemplate, fixture.instanceClass, "")
+
+			v1Object, err := renderLegacySpec(t, fixture, fixture.instanceClass)
+			require.NoError(t, err)
+			v2Object, err := renderV2Spec(fixture, contract, fixture.instanceClass)
+			require.NoError(t, err)
+			crdFields := crdSpecFields(t, fixture.crdPath)
+
+			for key, reason := range fixture.postV1Fields {
+				t.Run(key, func(t *testing.T) {
+					assert.NotEmpty(t, reason, "an exclusion must say why v1 has no answer about the field")
+
+					namespace, path, split := strings.Cut(key, ".")
+					require.True(t, split, "a postV1Fields key is <namespace>.<path>")
+					segments := strings.Split(path, ".")
+
+					switch namespace {
+					case instanceClassNamespace:
+						assert.True(t,
+							slices.ContainsFunc(crdFields, func(field crdField) bool { return field.path == path }),
+							"the provider InstanceClass CRD declares no %s", path)
+
+						mutated := mutateSpec(t, fixture.instanceClass, path)
+						assert.Equal(t, baseChecksum,
+							renderLegacyChecksum(t, fixture, checksumTemplate, mutated, ""),
+							"the v1 checksum does react to %s, so v1 does have an answer about it and the "+
+								"rollout comparison must not be excluded", path)
+					case providerNamespace:
+						_, found, err := unstructured.NestedFieldNoCopy(fixture.providerConfig, segments...)
+						require.NoError(t, err)
+						assert.True(t, found, "the provider config fixture publishes no %s", path)
+
+						mutated := mutateSpec(t, fixture.providerConfig, path)
+						assert.Equal(t, baseChecksum,
+							renderLegacyChecksumWithProvider(t, fixture, checksumTemplate, fixture.instanceClass, mutated, ""),
+							"the v1 checksum does react to provider config %s, so the rollout comparison "+
+								"must not be excluded", path)
+					case renderedNamespace:
+						_, found, err := unstructured.NestedFieldNoCopy(v2Object, segments...)
+						require.NoError(t, err)
+						assert.True(t, found, "the template renders no %s", path)
+
+						_, found, err = unstructured.NestedFieldNoCopy(v1Object, segments...)
+						require.NoError(t, err)
+						assert.False(t, found,
+							"the v1 template does render %s, so dropping it from the v2 object hides a real "+
+								"difference between the two engines", path)
+					default:
+						t.Fatalf("unknown postV1Fields namespace %q", namespace)
+					}
+				})
 			}
 		})
 	}
