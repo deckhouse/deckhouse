@@ -24,6 +24,8 @@ spec:
       securityContext:
         seccompProfile:
           type: RuntimeDefault
+      nodeSelector: ${VCP_NODE_SELECTOR}
+      tolerations: ${VCP_TOLERATIONS}
       containers:
       - name: kube-scheduler
         image: ${IMAGE_KUBE_SCHEDULER}

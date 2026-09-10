@@ -214,11 +214,68 @@ spec:
                     kube-apiserver, and neither knows about the other''s range'
                   rule: '!cidr(self.podSubnetCIDR).containsCIDR(self.serviceSubnetCIDR)
                     && !cidr(self.serviceSubnetCIDR).containsCIDR(self.podSubnetCIDR)'
+              nodeSelector:
+                additionalProperties:
+                  type: string
+                description: |-
+                  NodeSelector constrains every VirtualControlPlane pod that runs in the management cluster
+                  (the three control plane components, cilium-operator, bashible-apiserver and the tenant's
+                  deckhouse) to a subset of its nodes. Tenant-side pods are unaffected.
+
+                  Warning: changing this rewrites the rendered component manifests, which changes their config
+                  checksum and makes the module recreate the component StatefulSets. The tenant control plane
+                  restarts.
+                type: object
               replicas:
                 default: 1
                 description: Replicas is the desired number of control plane replicas.
                 format: int32
                 type: integer
+              tolerations:
+                description: |-
+                  Tolerations are applied to the same pods as NodeSelector. A dedicated node pool is normally
+                  both labelled and tainted, so without matching tolerations a nodeSelector pointing at it
+                  leaves every pod Pending.
+
+                  Warning: changing this restarts the tenant control plane, same as NodeSelector.
+                items:
+                  description: |-
+                    The pod this Toleration is attached to tolerates any taint that matches
+                    the triple <key,value,effect> using the matching operator <operator>.
+                  properties:
+                    effect:
+                      description: |-
+                        Effect indicates the taint effect to match. Empty means match all taint effects.
+                        When specified, allowed values are NoSchedule, PreferNoSchedule and NoExecute.
+                      type: string
+                    key:
+                      description: |-
+                        Key is the taint key that the toleration applies to. Empty means match all taint keys.
+                        If the key is empty, operator must be Exists; this combination means to match all values and all keys.
+                      type: string
+                    operator:
+                      description: |-
+                        Operator represents a key's relationship to the value.
+                        Valid operators are Exists, Equal, Lt, and Gt. Defaults to Equal.
+                        Exists is equivalent to wildcard for value, so that a pod can
+                        tolerate all taints of a particular category.
+                        Lt and Gt perform numeric comparisons (requires feature gate TaintTolerationComparisonOperators).
+                      type: string
+                    tolerationSeconds:
+                      description: |-
+                        TolerationSeconds represents the period of time the toleration (which must be
+                        of effect NoExecute, otherwise this field is ignored) tolerates the taint. By default,
+                        it is not set, which means tolerate the taint forever (do not evict). Zero and
+                        negative values will be treated as 0 (evict immediately) by the system.
+                      format: int64
+                      type: integer
+                    value:
+                      description: |-
+                        Value is the taint value the toleration matches to.
+                        If the operator is Exists, the value should be empty, otherwise just a regular string.
+                      type: string
+                  type: object
+                type: array
             required:
             - kubernetesVersion
             - networking

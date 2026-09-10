@@ -189,11 +189,50 @@ spec:
                   rule: int(self.podSubnetNodeCIDRPrefix) > cidr(self.podSubnetCIDR).prefixLength()
                 - message: "podSubnetCIDR and serviceSubnetCIDR must not overlap: Pod addresses are allocated by cilium and Service addresses by kube-apiserver, and neither knows about the other's range"
                   rule: '!cidr(self.podSubnetCIDR).containsCIDR(self.serviceSubnetCIDR) && !cidr(self.serviceSubnetCIDR).containsCIDR(self.podSubnetCIDR)'
+              nodeSelector:
+                additionalProperties:
+                  type: string
+                description: |-
+                  Node labels that constrain where the virtual control plane pods run in the management
+                  cluster: the three control plane components, `cilium-operator`, `bashible-apiserver`
+                  and the tenant's `deckhouse`. Pods inside the tenant cluster are not affected.
+
+                  Warning! Changing this parameter recreates the component StatefulSets, which means
+                  the tenant control plane restarts.
+
+                  A dedicated node pool is almost always both labelled and tainted, so a `nodeSelector`
+                  without matching `tolerations` leaves every pod Pending.
+                type: object
               replicas:
                 default: 1
                 description: Desired number of control plane replicas.
                 minimum: 1
                 type: integer
+              tolerations:
+                description: |-
+                  Tolerations for the same pods as `nodeSelector`.
+
+                  Warning! Changing this parameter restarts the tenant control plane.
+                items:
+                  properties:
+                    effect:
+                      description: Taint effect to match. Empty matches all effects.
+                      type: string
+                    key:
+                      description: Taint key the toleration applies to. Empty matches all keys.
+                      type: string
+                    operator:
+                      description: Key's relationship to the value. `Exists` or `Equal` (default).
+                      type: string
+                    tolerationSeconds:
+                      description: How long the pod tolerates a `NoExecute` taint. Unset means forever.
+                      format: int64
+                      type: integer
+                    value:
+                      description: Taint value the toleration matches. Empty when the operator is `Exists`.
+                      type: string
+                  type: object
+                type: array
             required:
             - kubernetesVersion
             - networking

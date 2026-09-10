@@ -16,7 +16,10 @@ limitations under the License.
 
 package v1alpha1
 
-import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+import (
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 type VirtualControlPlaneDatastoreRef struct {
 	// Name is the datastore configuration name used by the tenant control plane.
@@ -160,6 +163,24 @@ type VirtualControlPlaneSpec struct {
 	// Expose describes how the tenant Kubernetes API should be published.
 	// +optional
 	Expose *VirtualControlPlaneExpose `json:"expose,omitempty"`
+
+	// NodeSelector constrains every VirtualControlPlane pod that runs in the management cluster
+	// (the three control plane components, cilium-operator, bashible-apiserver and the tenant's
+	// deckhouse) to a subset of its nodes. Tenant-side pods are unaffected.
+	//
+	// Warning: changing this rewrites the rendered component manifests, which changes their config
+	// checksum and makes the module recreate the component StatefulSets. The tenant control plane
+	// restarts.
+	// +optional
+	NodeSelector map[string]string `json:"nodeSelector,omitempty"`
+
+	// Tolerations are applied to the same pods as NodeSelector. A dedicated node pool is normally
+	// both labelled and tainted, so without matching tolerations a nodeSelector pointing at it
+	// leaves every pod Pending.
+	//
+	// Warning: changing this restarts the tenant control plane, same as NodeSelector.
+	// +optional
+	Tolerations []corev1.Toleration `json:"tolerations,omitempty"`
 }
 
 type VirtualControlPlaneStatus struct {

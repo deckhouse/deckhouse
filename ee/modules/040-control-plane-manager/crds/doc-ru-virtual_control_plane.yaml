@@ -20,6 +20,22 @@ spec:
                   Допустимы только версии, для которых в текущей поставке DKP собраны образы
                   компонентов control plane. Значения `Default` и `Automatic` не поддерживаются:
                   у виртуального control plane нет механизма выбора версии по умолчанию.
+              nodeSelector:
+                description: |
+                  Метки узлов, ограничивающие размещение подов виртуального control plane в управляющем
+                  кластере: трёх компонентов control plane, `cilium-operator`, `bashible-apiserver` и
+                  `deckhouse` тенанта. На поды внутри кластера тенанта не влияет.
+
+                  Внимание! Изменение параметра пересоздаёт StatefulSet'ы компонентов, то есть
+                  перезапускает control plane тенанта.
+
+                  Выделенный пул узлов почти всегда помечен и меткой, и taint'ом, поэтому `nodeSelector`
+                  без соответствующих `tolerations` оставит все поды в состоянии Pending.
+              tolerations:
+                description: |
+                  Toleration'ы для тех же подов, что и `nodeSelector`.
+
+                  Внимание! Изменение параметра перезапускает control plane тенанта.
               replicas:
                 description: |
                   Желаемое количество реплик control plane.

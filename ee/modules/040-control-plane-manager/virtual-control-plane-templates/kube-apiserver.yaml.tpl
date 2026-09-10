@@ -31,6 +31,8 @@ spec:
         fsGroup: 64535
         seccompProfile:
           type: RuntimeDefault
+      nodeSelector: ${VCP_NODE_SELECTOR}
+      tolerations: ${VCP_TOLERATIONS}
       containers:
       - name: kube-apiserver
         image: ${IMAGE_KUBE_APISERVER}

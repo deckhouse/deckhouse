@@ -119,7 +119,7 @@ func renderManifests(
 		return nil, err
 	}
 
-	replacer := buildManifestReplacer(
+	replacer, err := buildManifestReplacer(
 		vcp,
 		images,
 		apiAdvertiseAddress,
@@ -127,6 +127,9 @@ func renderManifests(
 		egressDestinations,
 		vcp.Spec.Networking,
 	)
+	if err != nil {
+		return nil, err
+	}
 
 	rendered := make(map[string][]byte)
 	for key, value := range globalData {
@@ -173,7 +176,16 @@ func buildManifestReplacer(
 	clusterUUID string,
 	egressDestinations []string,
 	networking controlplanev1alpha1.VirtualControlPlaneNetworking,
-) *strings.Replacer {
+) (*strings.Replacer, error) {
+	nodeSelector, err := renderNodeSelector(vcp)
+	if err != nil {
+		return nil, err
+	}
+	tolerations, err := renderTolerations(vcp)
+	if err != nil {
+		return nil, err
+	}
+
 	return strings.NewReplacer(
 		"${VCP_API_VIP}", apiAdvertiseAddress,
 		"${VCP_CLUSTER_UUID}", clusterUUID,
@@ -209,7 +221,9 @@ func buildManifestReplacer(
 		"${DATASTORE_CREDS_SECRET_NAME}", constants.VirtualResourceName(constants.VirtualDatastoreCredsSecretName, vcp.Name),
 		"${CILIUM_CONFIG_NAME}", constants.VirtualResourceName("cilium-config", vcp.Name),
 		"${CILIUM_OPERATOR_NAME}", constants.VirtualResourceName("cilium-operator", vcp.Name),
-	)
+		"${VCP_NODE_SELECTOR}", nodeSelector,
+		"${VCP_TOLERATIONS}", tolerations,
+	), nil
 }
 
 // konnectivityagentCPIdentifiers builds:
