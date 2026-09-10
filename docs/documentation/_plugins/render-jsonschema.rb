@@ -11,6 +11,12 @@ module JSONSchemaRenderer
       '%' => '&#37;'
     }
 
+    # The `alert` Liquid block (see _plugins/alert.rb) with its content.
+    @@ALERT_BLOCK_REGEX = /\{%-?\s*alert(?:\s[^%]*?)?\s*-?%\}.*?\{%-?\s*endalert\s*-?%\}/m
+    # Temporary substitute of an alert in a description. Must survive the Markdown
+    # conversion and the escaping of the Liquid characters, hence letters and digits only.
+    @@ALERT_PLACEHOLDER = 'xjekyllalertplaceholder%dx'
+
     def convert(content)
       if @converter.nil?
         @converter = @site.find_converter_instance(::Jekyll::Converters::Markdown)
@@ -23,6 +29,44 @@ module JSONSchemaRenderer
         input = input.gsub(char, escaped_char)
       end
       input
+    end
+
+    # Converts a description of a resource or a parameter to HTML rendering the `alert`
+    # Liquid blocks it contains.
+    #
+    # A description can't be passed to Liquid as a whole, because it may contain Go
+    # templates (e.g. `{{ .projectName }}`) which have to be shown as is. That's why the
+    # alerts are cut out, rendered separately and put back after the Markdown conversion.
+    def convert_description(content)
+      alerts = []
+
+      content = content.to_s.gsub(@@ALERT_BLOCK_REGEX) do |block|
+        rendered = render_liquid_block(block)
+        # Leave the block as is if it can't be rendered.
+        next block if rendered.nil?
+
+        alerts.push(rendered)
+        # An alert is a block element, so isolate it from the surrounding text.
+        %Q(\n\n#{format(@@ALERT_PLACEHOLDER, alerts.length - 1)}\n\n)
+      end
+
+      result = escape_chars(convert(content))
+
+      alerts.each_with_index do |alert, index|
+        placeholder = format(@@ALERT_PLACEHOLDER, index)
+        # Get rid of the paragraph the placeholder has been wrapped into.
+        result = result.sub(%r{<p>\s*#{placeholder}\s*</p>}) { alert }
+        result = result.sub(placeholder) { alert }
+      end
+
+      result
+    end
+
+    def render_liquid_block(block)
+      Liquid::Template.parse(block).render!(@site.site_payload, { :registers => { :site => @site, :page => @page } })
+    rescue StandardError => e
+      puts "[WARN] Can't render the Liquid block in a description (#{@page ? @page['url'] : ''}): #{e.message}"
+      nil
     end
 
     # TODO: Refactor this according to the new data structure - x-doc-d8Editions instead of x-doc-d8Revision
@@ -477,7 +521,7 @@ module JSONSchemaRenderer
         end
 
         if attributes['description']
-          result.push(sprintf(%q(<div class="resources__prop_description">%s%s</div>),editionsString,escape_chars(convert(get_i18n_description(primaryLanguage, fallbackLanguage, attributes)))))
+          result.push(sprintf(%q(<div class="resources__prop_description">%s%s</div>),editionsString,convert_description(get_i18n_description(primaryLanguage, fallbackLanguage, attributes))))
 
         elsif editionsString and editionsString.size > 0
           result.push(sprintf(%q(<div class="resources__prop_description">%s</div>),editionsString))
@@ -1006,15 +1050,15 @@ module JSONSchemaRenderer
                    searchKeywords = get_search_keywords(input['i18n'][@lang],"spec","validation","openAPIV3Schema", input['i18n'][fallbackLanguageName],"spec","validation","openAPIV3Schema")
 
                    if get_hash_value(input['i18n'][@lang],"spec","validation","openAPIV3Schema","description") then
-                       description = escape_chars(convert(get_hash_value(input['i18n'][@lang],"spec","validation","openAPIV3Schema","description")))
+                       description = convert_description(get_hash_value(input['i18n'][@lang],"spec","validation","openAPIV3Schema","description"))
                        result.push(description)
                        AppendResource2Search(input["spec"]["names"]["kind"], @moduleName, @page["url"].sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
                    elsif get_hash_value(input['i18n'][fallbackLanguageName],"spec","validation","openAPIV3Schema","description") then
-                       description = escape_chars(convert(input['i18n'][fallbackLanguageName]["spec"]["validation"]["openAPIV3Schema"]["description"]))
+                       description = convert_description(input['i18n'][fallbackLanguageName]["spec"]["validation"]["openAPIV3Schema"]["description"])
                        result.push(description)
                        AppendResource2Search(input["spec"]["names"]["kind"], @moduleName, @page["url"].sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
                    else
-                       description = escape_chars(convert(input["spec"]["validation"]["openAPIV3Schema"]["description"]))
+                       description = convert_description(input["spec"]["validation"]["openAPIV3Schema"]["description"])
                        result.push(description)
                        AppendResource2Search(input["spec"]["names"]["kind"], @moduleName, @page["url"].sub(%r{^(/?ru/|/?en/)}, ''), '', description, searchKeywords)
                    end
@@ -1109,15 +1153,15 @@ module JSONSchemaRenderer
                        if    input['i18n'][@lang] and
                              get_hash_value(input['i18n'][@lang],"spec","versions") and
                              input['i18n'][@lang]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0] then
-                           description = convert(input['i18n'][@lang]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0]["schema"]["openAPIV3Schema"]["description"])
-                           result.push(escape_chars(description))
+                           description = convert_description(input['i18n'][@lang]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0]["schema"]["openAPIV3Schema"]["description"])
+                           result.push(description)
                        elsif input['i18n'][fallbackLanguageName] and
                              get_hash_value(input['i18n'][fallbackLanguageName],"spec","versions") and
                              input['i18n'][fallbackLanguageName]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0] then
-                           description = convert(input['i18n'][fallbackLanguageName]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0]["schema"]["openAPIV3Schema"]["description"])
-                           result.push(escape_chars(description))
+                           description = convert_description(input['i18n'][fallbackLanguageName]["spec"]["versions"].select {|i| i['name'].to_s == item['name'].to_s; }[0]["schema"]["openAPIV3Schema"]["description"])
+                           result.push(description)
                        else
-                           description = escape_chars(convert(item["schema"]["openAPIV3Schema"]["description"]))
+                           description = convert_description(item["schema"]["openAPIV3Schema"]["description"])
                            result.push('<div class="resources__prop_description">' + description + '</div>')
                        end
                     end
@@ -1351,13 +1395,13 @@ module JSONSchemaRenderer
           description = ''
           if get_hash_value(item, 'description')
              if get_hash_value(item['i18n'][@lang],"description") then
-                 description = convert(get_hash_value(item['i18n'][@lang],"description"))
+                 description = convert_description(get_hash_value(item['i18n'][@lang],"description"))
              elsif get_hash_value(item['i18n'][fallbackLanguageName],"description") then
-                 description = convert(item['i18n'][fallbackLanguageName]["description"])
+                 description = convert_description(item['i18n'][fallbackLanguageName]["description"])
              else
-                 description = convert(item["description"])
+                 description = convert_description(item["description"])
              end
-             result.push(escape_chars(description))
+             result.push(description)
           end
 
           searchKeywords = get_search_keywords(item['i18n'][@lang], item['i18n'][fallbackLanguageName])
