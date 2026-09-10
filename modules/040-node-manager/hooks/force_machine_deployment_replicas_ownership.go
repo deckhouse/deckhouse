@@ -68,10 +68,10 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/utils/ptr"
 
-	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/module-sdk/pkg"
 	sdkobjectpatch "github.com/deckhouse/module-sdk/pkg/object-patch"
 
+	"github.com/deckhouse/deckhouse/go_lib/dependency"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/capi/v1beta1"
 	"github.com/deckhouse/deckhouse/modules/040-node-manager/hooks/internal/mcm/v1alpha1"
 )
