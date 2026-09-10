@@ -276,6 +276,27 @@ storagePolicy: %s`, sc.storagePolicy)))
   - update`))
 		})
 
+		// The CAPI machine template falls back to the cluster-wide storage policy for every
+		// NodeGroup whose DynamixInstanceClass does not override it, and this secret is the only
+		// place it can read the value from: node-controller never sees the
+		// DynamixClusterConfiguration. The same key is what its providerRolloutFields compares to
+		// decide whether changing the policy recreates the machines.
+		It("must publish the cluster-wide storage policy for the machine template", func() {
+			Expect(f.RenderError).ShouldNot(HaveOccurred())
+
+			for _, name := range []string{
+				"d8-node-manager-cloud-provider",
+				fmt.Sprintf("d8-node-manager-cloud-provider-%s", providerID),
+			} {
+				secret := f.KubernetesResource("Secret", "kube-system", name)
+				Expect(secret.Exists()).To(BeTrue())
+
+				providerValues, err := base64.StdEncoding.DecodeString(secret.Field("data.dynamix").String())
+				Expect(err).ShouldNot(HaveOccurred())
+				Expect(gjson.GetBytes(providerValues, "storagePolicy").String()).To(Equal("storage_policy01"))
+			}
+		})
+
 		It("must not render security labels and SPE without admission-policy-engine", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 

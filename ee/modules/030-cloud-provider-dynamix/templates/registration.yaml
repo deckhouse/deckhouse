@@ -26,6 +26,10 @@ sshPublicKey: {{ b64enc $providerClusterConfiguration.sshPublicKey | quote }}
 {{- $_ := set $dynamixValues "oAuth2Url" $providerClusterConfiguration.provider.oAuth2Url }}
 {{- $_ := set $dynamixValues "controllerUrl" $providerClusterConfiguration.provider.controllerUrl }}
 {{- $_ := set $dynamixValues "insecure" $providerClusterConfiguration.provider.insecure }}
+{{- /* The cluster-wide storage policy: the CAPI machine template falls back to it for every
+NodeGroup whose DynamixInstanceClass does not override it, and node-controller compares it (the
+template declares it in providerRolloutFields) to decide whether the change recreates machines. */}}
+{{- $_ := set $dynamixValues "storagePolicy" $providerClusterConfiguration.storagePolicy }}
 
 dynamix: {{ $dynamixValues | toJson | b64enc | quote }}
 {{- end }}

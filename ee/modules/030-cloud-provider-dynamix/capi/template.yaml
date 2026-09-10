@@ -1,17 +1,42 @@
 version: v2
 
-# InstanceClass fields whose change requires recreating the machines, carried over one to one from
-# the v1 instance-class.checksum.
+# InstanceClass fields whose change requires recreating the machines. All but the last are carried
+# over one to one from the v1 instance-class.checksum; `storagePolicy` is new in Dynamix 4.6, and it
+# belongs here for the same reason as the disk size: the platform picks where the boot disk lives
+# when the VM is created and cannot move it afterwards, so a policy change reaches a node only by
+# recreating it.
 rolloutFields:
   - imageName
   - numCPUs
   - memory
   - rootDiskSizeGb
   - externalNetwork
+  - storagePolicy
 
-# Every field is optional in the CRD, so all of them are read with `get`: the sandbox runs with
-# missingkey=error, and `get` yields an empty value for an absent key — which is exactly the
+# The cluster-wide `storagePolicy` is the effective policy of every NodeGroup that does not override
+# it in its InstanceClass, so changing it must recreate those machines just as the InstanceClass
+# field does — and DynamixClusterConfiguration promises the user exactly that. Nothing else the
+# module publishes into d8-node-manager-cloud-provider describes the VM.
+#
+# Two costs come with the entry, both accepted. The snapshot records only declared fields, so on the
+# first reconcile after this release the key reads as absent against its current value and every
+# CloudEphemeral node of the provider rolls once; Dynamix 4.6 breaks the configuration contract
+# anyway (`storagePolicy` is required in DynamixClusterConfiguration and there are no live
+# installations), so there is no cluster this can surprise. And the comparison cannot see the
+# override: an edit of the cluster-wide value also recreates the machines of a NodeGroup whose
+# InstanceClass names its own policy, where the rendered object does not change at all.
+providerRolloutFields:
+  - storagePolicy
+
+# Every field the DynamixInstanceClass CRD does not require is read with `get`: the sandbox runs
+# with missingkey=error, and `get` yields an empty value for an absent key — which is exactly the
 # truthy test the v1 template did with a direct path.
+#
+# storagePolicy is rendered unconditionally instead, because the DynamixMachineTemplate CRD requires
+# it (Dynamix 4.6 refuses to create a VM without a storage policy): the InstanceClass override if
+# there is one, the cluster-wide value otherwise. With neither, `required` refuses the render — an
+# empty policy is a VM the platform will not create, and the refusal names the field in a message
+# node-controller completes with the NodeGroup, the InstanceClass and the zone.
 template: |
   apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
   kind: DynamixMachineTemplate
@@ -21,6 +46,7 @@ template: |
         {{- if get .instanceClass "imageName" }}
         imageName: {{ .instanceClass.imageName | quote }}
         {{- end }}
+        storagePolicy: {{ get .instanceClass "storagePolicy" | default (get .provider "storagePolicy") | required "storagePolicy is set neither in the DynamixInstanceClass nor in the DynamixClusterConfiguration" | quote }}
         {{- if get .instanceClass "numCPUs" }}
         cpu: {{ .instanceClass.numCPUs }}
         {{- end }}
