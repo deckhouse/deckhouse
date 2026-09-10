@@ -286,7 +286,20 @@ takes one fixture per provider and requires:
 2. the `rolloutFields` decision to match the v1 checksum decision for every mutated field, with
    every deliberate difference listed and justified in the test.
 
-Add your provider there before merging a migration. Self-check list:
+Add your provider there before merging a migration.
+
+**Adding a field after the migration.** The v1 side is a frozen snapshot, so it has no answer about
+a field that did not exist when it was taken: the archived template cannot render it and the
+archived checksum cannot hash it, and every comparison reports the new field itself as a
+difference. Name such a path in the fixture's `postV1Fields`, with the reason — one entry per axis
+it appears on (`instanceClass.`, `provider.`, `rendered.`), and nothing else about your provider
+stops being compared. The claim is verified, not taken on trust: `TestPostV1FieldsAreReal` reads the
+archived files and fails if the v1 checksum does react to the field or the v1 template does render
+it, so an entry cannot switch off a comparison v1 could have answered. Do not edit the v1 snapshot
+to match: it exists to outlive the v1 files, and mirroring the change into it would make parity pass
+by construction.
+
+Self-check list:
 
 - [ ] `version: v2`, non-empty `template`, non-empty `rolloutFields`.
 - [ ] No `metadata` in the rendered object.
