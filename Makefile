@@ -172,9 +172,6 @@ tests-webhooks: bin/yq ## Run python webhooks unit tests.
 ## No-op stub. The tests job runs on pull_request_target, so GitHub takes the
 ## workflow from the default branch while the checkout is this branch, and main
 ## calls `make tests-controller tests-modules test-crd-enricher`. pkg/crd-enricher
-## was added after 1.73 was cut, so without this target make aborts the whole job
-## with `No rule to make target`. Replace the body with the real invocation if the
-## module is ever backported here.
 .PHONY: test-crd-enricher
 test-crd-enricher: ## Stub for the crd-enricher tests: the module does not exist in this branch.
 	@echo "pkg/crd-enricher is absent in this branch, skipping test-crd-enricher."

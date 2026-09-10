@@ -19,8 +19,6 @@
 # The Validations workflow runs on pull_request_target, so GitHub takes it from
 # the default branch while the checkout is this branch. main calls this script
 # to verify that tools/docs/spelling/wordlist and dictionaries/dev_OPS.dic stay
-# in sync; the check landed after 1.73 was cut, so every pull request into this
-# branch died here with exit 127 over a validation the branch never carried.
 #
 # Keeping an executable stub lets the step succeed without pretending the check
 # ran. Replace it with the real script from main if the check is backported.
