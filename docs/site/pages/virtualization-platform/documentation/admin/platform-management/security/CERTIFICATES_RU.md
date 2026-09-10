@@ -73,45 +73,13 @@ DVP экспортирует метрики в Prometheus, что позволя
 таких как AWS Route53, Google Cloud DNS, Cloudflare и других.
 Полный перечень доступен [в официальной документации `cert-manager`](https://cert-manager.io/docs/configuration/acme/dns01/).
 
+Модуль `cert-manager` в Deckhouse может автоматически создавать ClusterIssuer для Cloudflare, Amazon Route53, DigitalOcean, Google Cloud DNS и Yandex Cloud DNS при заполнении соответствующих параметров модуля.
+Для Yandex Cloud DNS см. [Заказ wildcard-сертификата с DNS в Yandex Cloud DNS](/modules/cert-manager/usage.html#заказ-wildcard-сертификата-с-dns-в-yandex-cloud-dns).
+
 Если провайдер не поддерживается напрямую,
 можно настроить вебхук и разместить в кластере собственный обработчик ACME-запросов,
-который будет выполнять нужные операции для обновления DNS-записей.
-
-Данный пример основан на использовании сервиса Yandex Cloud DNS:
-
-1. Для обработки вебхука разместите в кластере сервис `Yandex Cloud DNS ACME webhook`
-   согласно [официальной документации](https://github.com/yandex-cloud/cert-manager-webhook-yandex).
-1. Создайте ресурс ClusterIssuer, следуя примеру:
-
-   ```yaml
-   apiVersion: cert-manager.io/v1
-   kind: ClusterIssuer
-   metadata:
-     name: yc-clusterissuer
-     namespace: default
-   spec:
-     acme:
-       # Заменить этот адрес электронной почты на свой собственный.
-       # Let's Encrypt будет использовать его, чтобы связаться с вами по поводу истекающих
-       # сертификатов и вопросов, связанных с вашей учетной записью.
-       email: your@email.com
-       server: https://acme-staging-v02.api.letsencrypt.org/directory
-       privateKeySecretRef:
-         # Ресурс секретов, который будет использоваться для хранения закрытого ключа аккаунта.
-         name: secret-ref
-       solvers:
-         - dns01:
-             webhook:
-               config:
-                 # Идентификатор папки, в которой расположена DNS-зона.
-                 folder: <your-folder-ID>
-                 # Секрет, используемый для доступа к учетной записи сервиса.
-                 serviceAccountSecretRef:
-                   name: cert-manager-secret
-                   key: iamkey.json
-               groupName: acme.cloud.yandex.com
-               solverName: yandex-cloud-dns
-   ```
+который будет выполнять нужные операции для обновления DNS-записей,
+а затем создать `ClusterIssuer` с настройками `dns01.webhook` согласно документации вебхука.
 
 ### Добавление ClusterIssuer, использующего собственный удостоверяющий центр (CA)
 
