@@ -230,7 +230,7 @@ Permission Browser отдаёт те же метрики с префиксом `
 |---|---|
 | `D8UserAuthzWebhookTargetDown` | Prometheus 5 минут не может собрать метрики хотя бы с одного экземпляра webhook'а. |
 | `D8UserAuthzWebhookRulesQuarantined` | Правило 10 минут не компилируется. |
-| `D8UserAuthzWebhookRulesWatchErrors` | Информер правил 10 минут не может следить за правилами. |
+| `D8UserAuthzWebhookRulesWatchErrors` | Webhook 10 минут не может следить за изменениями правил. |
 | `D8UserAuthzWebhookDirectoryDiverged` | Экземпляры 10 минут используют разные наборы правил, поэтому один и тот же запрос отвечается по-разному в зависимости от master-узла, на который он попал. |
 | `D8UserAuthzRulePropagationLag` | Один экземпляр час не обновлял правила, а другой обновлял. |
 | `D8UserAuthzPermissionBrowserUnavailable` | У Permission Browser есть недоступные реплики. |
