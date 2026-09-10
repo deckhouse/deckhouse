@@ -21,6 +21,7 @@ import (
 	"k8s.io/apiserver/pkg/authorization/authorizer"
 	genericapiserver "k8s.io/apiserver/pkg/server"
 	"k8s.io/apiserver/pkg/server/healthz"
+	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
@@ -119,6 +120,31 @@ type initResult struct {
 	dynamicClient   dynamic.Interface
 	informerFactory informers.SharedInformerFactory
 	restConfig      *rest.Config
+}
+
+// discoveryRefreshTimeout bounds one discovery listing by the scope cache.
+//
+// The in-cluster config sets no client timeout, and the refresh loop is sequential, so a single
+// connection that hangs stops the snapshot from ever updating again - with readiness still green,
+// because the check asks whether the cache has data and it does: the data is simply frozen. A
+// deadline turns that into a failed refresh, which the loop retries and the log reports.
+const discoveryRefreshTimeout = 30 * time.Second
+
+// discoveryClientWithDeadline is the discovery client for the scope cache: the shared one, but
+// with a deadline. Falls back to the shared client if the config cannot be copied, which leaves
+// the previous behaviour rather than starting without a scope cache at all.
+func discoveryClientWithDeadline(initRes *initResult) discovery.DiscoveryInterface {
+	if initRes.restConfig == nil {
+		return initRes.clientset.Discovery()
+	}
+	config := rest.CopyConfig(initRes.restConfig)
+	config.Timeout = discoveryRefreshTimeout
+	client, err := discovery.NewDiscoveryClientForConfig(config)
+	if err != nil {
+		klog.Warningf("Failed to build a discovery client with a %s deadline, using the shared one: %v", discoveryRefreshTimeout, err)
+		return initRes.clientset.Discovery()
+	}
+	return client
 }
 
 // initInformers initializes the Kubernetes clients and the shared informer factory.
@@ -251,8 +277,13 @@ func initAuthorizers(init *initResult, inputs *rulesInputs, scopeCache *resolver
 			resourceScope,
 		)
 		if err != nil {
-			klog.Warningf("Failed to initialize multi-tenancy engine: %v. Multi-tenancy restrictions will not be applied.", err)
-			mtEngine = nil
+			// Not a warning. NewEngine only refuses inputs it cannot decide with - a nil rules
+			// provider, a nil bindings index - which is a wiring mistake in this file, and
+			// carrying on without the engine means every answer this apiserver gives omits
+			// multi-tenancy: it would report namespaces the cluster does not let the user into,
+			// with nothing in the response to say so. A process that will not start is a visible
+			// failure; one that reports confidently wrong access is not.
+			return nil, nil, fmt.Errorf("multi-tenancy engine: %w", err)
 		}
 	}
 
@@ -329,7 +360,7 @@ func (c completedConfig) New() (*PermissionBrowserServer, error) {
 	// authorizers below consult it, so it has to exist before them.
 	var scopeCache *resolver.ResourceScopeCache
 	if initRes.clientset != nil {
-		scopeCache = resolver.NewResourceScopeCache(initRes.clientset.Discovery())
+		scopeCache = resolver.NewResourceScopeCache(discoveryClientWithDeadline(initRes))
 		go scopeCache.StartRefreshLoop(ctx.Done())
 		klog.Info("Resource scope cache initialized and refresh loop started")
 

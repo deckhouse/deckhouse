@@ -94,6 +94,9 @@ type Engine struct {
 	// explicitly granted by CAR-independent RBAC must not be denied by
 	// multi-tenancy filters.
 	independentRBAC IndependentRBACChecker
+
+	// restrictions bounds how often the ordering guard is logged.
+	restrictions decision.RestrictionLog
 }
 
 // SetIndependentRBACChecker wires the CAR-independent RBAC checker into the
@@ -177,7 +180,13 @@ func (e *Engine) sources(ctx context.Context, attrs authorizer.Attributes) decis
 		// logs the same line at default verbosity. A denial nobody can see the reason for is the
 		// hardest kind of support case.
 		Logf: klog.V(2).Infof,
+		// Not on every request: the guard is evaluated on all of them, and a rule binding whose
+		// rule never arrives would otherwise write a line for every request of every subject it
+		// names. The library decides when it is worth saying.
 		OnRestricted: func(username, rule string) {
+			if !e.restrictions.Allow(rule) {
+				return
+			}
 			klog.V(2).Infof("user %q is bound by rule %q not observed binding it (rules synced: %v); restricting until the rule arrives",
 				username, rule, e.rules.HasSynced())
 		},

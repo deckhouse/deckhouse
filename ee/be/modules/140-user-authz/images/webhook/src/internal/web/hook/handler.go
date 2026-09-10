@@ -11,7 +11,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"sync"
 
 	"k8s.io/apimachinery/pkg/labels"
 	corev1listers "k8s.io/client-go/listers/core/v1"
@@ -66,8 +65,8 @@ type Handler struct {
 	rules    RulesProvider
 	bindings RuleBindings
 
-	// reported remembers the (subject, rule) pairs the ordering guard has already logged.
-	reported sync.Map
+	// restrictions bounds how often the ordering guard is logged.
+	restrictions decision.RestrictionLog
 }
 
 // NewHandler wires the handler. rulesProvider and bindings are required: without the rules the
@@ -208,20 +207,11 @@ func absent(err error) bool {
 	return errors.Is(err, cache.ErrNotFound) || errors.Is(err, cache.ErrResourceAbsent)
 }
 
-// reportRestricted logs the ordering guard once per rule. The guard is evaluated on every request,
-// and an orphaned rule binding would otherwise log on every request of its subject, forever - on
-// the authorization path, behind the logger's process-wide lock.
-//
-// The memo is keyed on the rule alone, not on the subject. A rule binds a Group as readily as a
-// User, so keying on the username would add a permanent entry for every distinct authenticated user
-// in that group - on a large OIDC cluster, during exactly the window where the guard is firing for
-// everyone, in a DaemonSet on every master. The rule name is what an operator needs; the first
-// username to hit it is in the message.
+// reportRestricted logs the ordering guard, as often as it is worth saying and no more. When that
+// is - once when a rule starts restricting, hourly while it goes on, again when it happens afresh
+// - belongs with the guard itself, so it lives in the library and both consumers share it.
 func (h *Handler) reportRestricted(username, rule string) {
-	if _, seen := h.reported.Load(rule); seen {
-		return
-	}
-	if _, loaded := h.reported.LoadOrStore(rule, struct{}{}); loaded {
+	if !h.restrictions.Allow(rule) {
 		return
 	}
 	h.logger.Printf("rule %q binds subjects the webhook has not observed it naming (first seen for %q; rules synced: %v); restricting them until the rule arrives", rule, username, h.rules.HasSynced())
