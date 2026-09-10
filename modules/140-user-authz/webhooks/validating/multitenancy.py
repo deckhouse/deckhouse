@@ -63,6 +63,8 @@
 #   effective value instead of treating it as "disabled".
 
 
+import re
+
 from deckhouse import hook
 from dotmap import DotMap
 
@@ -141,11 +143,18 @@ def validate(ctx: DotMap) -> tuple[list[str], list[str]]:
     kind = req.kind.kind.lower()
 
     if kind == "clusterauthorizationrule":
-        # don't check ClusterAuthorizationRule if user-authz MultiTenancy option is enabled
-        if is_multitenancy_enabled(ctx):
-            return [], []
+        # A limitNamespaces pattern that does not compile is checked either way. It is a property of
+        # the rule, not of the module setting, and it is worth rejecting at admission: the webhook
+        # quarantines such a rule at runtime, which means its subjects silently get LESS access than
+        # the author wrote, reported only by a metric nobody is watching when they hit Apply.
+        errors, warnings = validate_car_limit_namespaces_patterns(req.object)
 
-        return validate_car_multitenancy_related_fields(req.object)
+        # don't check the multi-tenancy fields if user-authz MultiTenancy option is enabled
+        if is_multitenancy_enabled(ctx):
+            return errors, warnings
+
+        field_errors, field_warnings = validate_car_multitenancy_related_fields(req.object)
+        return errors + field_errors, warnings + field_warnings
     elif kind == "moduleconfig":
         settings = req.object.spec.settings
         field_present = "enableMultiTenancy" in settings
@@ -187,6 +196,70 @@ MULTITENANCY_RESTRICTED_FIELDS = {
     'namespaceSelector': "namespaceSelector option",
     'limitNamespaces': "limitNamespaces option"
 }
+
+# RE2, the engine Go uses, has no backtracking and therefore no lookaround, no backreferences and no
+# atomic groups. Python's re accepts all of them, so compiling here is not enough on its own: a
+# pattern with a lookahead would pass admission and then be quarantined by the webhook at runtime,
+# which is the exact outcome this validation exists to prevent.
+RE2_UNSUPPORTED = (
+    ("(?=", "lookahead"),
+    ("(?!", "negative lookahead"),
+    ("(?<=", "lookbehind"),
+    ("(?<!", "negative lookbehind"),
+    ("(?>", "atomic group"),
+    ("(?P=", "backreference"),
+)
+
+
+def re2_unsupported_construct(pattern: str) -> str:
+    for token, description in RE2_UNSUPPORTED:
+        if token in pattern:
+            return description
+    # A backreference written as \1 .. \9. Skipped inside an escaped backslash, so that \\1 - a
+    # literal backslash followed by a digit - is not mistaken for one.
+    i = 0
+    while i < len(pattern) - 1:
+        if pattern[i] == "\\":
+            if pattern[i + 1].isdigit() and pattern[i + 1] != "0":
+                return "backreference"
+            i += 2
+            continue
+        i += 1
+    return ""
+
+
+def validate_car_limit_namespaces_patterns(obj: DotMap) -> tuple[list[str], list[str]]:
+    """Rejects a limitNamespaces entry the authorization webhook would not be able to compile."""
+    errors = []
+    resource_name = obj.metadata.name
+
+    limit_namespaces = obj.spec.get("limitNamespaces") if "limitNamespaces" in obj.spec else None
+    if not isinstance(limit_namespaces, list):
+        return errors, []
+
+    for pattern in limit_namespaces:
+        if not isinstance(pattern, str):
+            continue
+        unsupported = re2_unsupported_construct(pattern)
+        if unsupported:
+            errors.append(
+                f"limitNamespaces entry '{pattern}' in ClusterAuthorizationRule '{resource_name}' "
+                f"uses a {unsupported}, which the authorization webhook's regular expression engine "
+                f"(RE2) does not support. The rule would be quarantined and its subjects would get "
+                f"less access than written."
+            )
+            continue
+        try:
+            re.compile(pattern)
+        except re.error as err:
+            errors.append(
+                f"limitNamespaces entry '{pattern}' in ClusterAuthorizationRule '{resource_name}' "
+                f"is not a valid regular expression: {err}. The rule would be quarantined and its "
+                f"subjects would get less access than written."
+            )
+
+    return errors, []
+
 
 def validate_car_multitenancy_related_fields(obj: DotMap) -> tuple[list[str], list[str]]:
     errors = []

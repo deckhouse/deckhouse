@@ -145,3 +145,73 @@
         d8 k get clusterauthorizationrules -o custom-columns=NAME:.metadata.name,RV:.metadata.resourceVersion
         d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100
         ```
+
+  - alert: D8UserAuthzWebhookDirectoryDiverged
+    expr: |
+      (
+        max(user_authz_webhook_rules_max_resource_version{job="user-authz-webhook", namespace="d8-user-authz"})
+        -
+        min(user_authz_webhook_rules_max_resource_version{job="user-authz-webhook", namespace="d8-user-authz"})
+      ) > 0
+    for: 10m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: user-authz
+      d8_component: user-authz-webhook
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_user_authz_webhook_malfunctioning: "D8UserAuthzWebhookMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_webhook_malfunctioning: "D8UserAuthzWebhookMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: The masters disagree about the multi-tenancy rules.
+      description: |-
+        Instances of `user-authz-webhook` have been built from different sets of `ClusterAuthorizationRules` for 10 minutes. Every instance publishes the highest `resourceVersion` it has observed, and those numbers have not converged.
+
+        Each master authorizes the requests that reach it, so this means the same request is answered differently depending on which master takes it: a user can be inside their namespace limits on one and outside them on another, seemingly at random. It normally resolves in seconds — the alert waits ten minutes precisely so that ordinary propagation does not fire it.
+
+        Find the instance that is behind and look at why:
+
+        ```bash
+        d8 k -n d8-user-authz get pods -l app=user-authz-webhook -o wide
+        d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100 | grep -i 'list/watch'
+        ```
+
+        A growing `user_authz_webhook_rules_watch_errors_total` on one instance points at its watch; a `user_authz_webhook_rules_directory_updated_timestamp_seconds` that has stopped moving points at a directory that is no longer being rebuilt. Deleting the lagging Pod is the blunt fix, and the DaemonSet will bring it back — on a single-master cluster that briefly denies every request in the cluster, because this webhook is fail-closed.
+
+  - alert: D8UserAuthzRulePropagationLag
+    expr: |
+      (
+        time()
+        -
+        min(user_authz_webhook_rules_directory_updated_timestamp_seconds{job="user-authz-webhook", namespace="d8-user-authz"})
+      ) > 3600
+      and
+      (
+        max(user_authz_webhook_rules_directory_rebuilds_total{job="user-authz-webhook", namespace="d8-user-authz"})
+        -
+        min(user_authz_webhook_rules_directory_rebuilds_total{job="user-authz-webhook", namespace="d8-user-authz"})
+      ) > 0
+    for: 15m
+    labels:
+      severity_level: "6"
+      tier: cluster
+      d8_module: user-authz
+      d8_component: user-authz-webhook
+    annotations:
+      plk_protocol_version: "1"
+      plk_markup_format: "markdown"
+      plk_create_group_if_not_exists__d8_user_authz_webhook_malfunctioning: "D8UserAuthzWebhookMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      plk_grouped_by__d8_user_authz_webhook_malfunctioning: "D8UserAuthzWebhookMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
+      summary: One user-authz webhook instance stopped picking up rule changes.
+      description: |-
+        One instance of `user-authz-webhook` has not rebuilt its directory for over an hour while another one has. The rules are changing in the cluster and this instance is not seeing the changes.
+
+        This is the asymmetric case that `D8UserAuthzWebhookDirectoryDiverged` can miss: the instances can agree on the highest `resourceVersion` they have seen and still differ, if the one that is behind simply stopped receiving events rather than falling behind on a particular object. The second condition is what makes it an alert rather than a description of a quiet cluster — it fires only when some instance IS rebuilding, so a cluster whose rules genuinely never change stays silent.
+
+        ```bash
+        d8 k -n d8-user-authz get pods -l app=user-authz-webhook -o wide
+        d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100
+        ```
+
+        The instance's `/readyz` reports a directory that has stopped tracking the cluster once its watch has failed enough times in a row, so check whether the Pod is also unready — if it is, the rollout is already held and the cause is in the log above.

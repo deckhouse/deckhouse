@@ -22,6 +22,68 @@ from deckhouse import hook, tests
 from dotmap import DotMap
 
 
+class TestLimitNamespacesPatternValidation(unittest.TestCase):
+    """A limitNamespaces pattern the authorization webhook cannot compile is rejected at admission.
+
+    Without this, such a rule is accepted and then quarantined at runtime: its subjects silently get
+    LESS access than the author wrote, and the only trace is a metric nobody is looking at while
+    they are typing kubectl apply.
+    """
+
+    def car(self, *patterns):
+        return DotMap({
+            "metadata": {"name": "team-a"},
+            "spec": {"limitNamespaces": list(patterns)},
+        })
+
+    def errors_for(self, *patterns):
+        errors, _ = multitenancy.validate_car_limit_namespaces_patterns(self.car(*patterns))
+        return errors
+
+    def test_valid_patterns_pass(self):
+        for pattern in ["team-a", "team-.*", "team-[0-9]+", "team-.*|kube-system", "(a|b)-ns", ".*"]:
+            with self.subTest(pattern=pattern):
+                self.assertEqual([], self.errors_for(pattern))
+
+    def test_uncompilable_pattern_is_rejected(self):
+        for pattern in ["team-(", "team-[", "*-ns", "team-a{2,1}"]:
+            with self.subTest(pattern=pattern):
+                errors = self.errors_for(pattern)
+                self.assertEqual(1, len(errors), errors)
+                self.assertIn("is not a valid regular expression", errors[0])
+                self.assertIn("team-a", errors[0])  # the rule is named
+
+    def test_constructs_go_does_not_support_are_rejected(self):
+        """Python's re accepts these; Go's RE2 does not.
+
+        Compiling the pattern here is therefore not enough on its own - a lookahead would sail
+        through admission and be quarantined by the webhook, which is the outcome being prevented.
+        """
+        for pattern, description in [
+            ("team-(?=a)", "lookahead"),
+            ("team-(?!a)", "negative lookahead"),
+            ("(?<=team-)a", "lookbehind"),
+            ("(?<!team-)a", "negative lookbehind"),
+            ("(a)\\1", "backreference"),
+        ]:
+            with self.subTest(pattern=pattern):
+                errors = self.errors_for(pattern)
+                self.assertEqual(1, len(errors), errors)
+                self.assertIn(description, errors[0])
+                self.assertIn("RE2", errors[0])
+
+    def test_an_escaped_backslash_before_a_digit_is_not_a_backreference(self):
+        self.assertEqual([], self.errors_for("team\\\\1"))
+
+    def test_every_bad_pattern_is_named(self):
+        errors = self.errors_for("team-a", "team-(", "ops-[")
+        self.assertEqual(2, len(errors), errors)
+
+    def test_a_rule_without_limit_namespaces_is_not_examined(self):
+        obj = DotMap({"metadata": {"name": "team-a"}, "spec": {"accessLevel": "User"}})
+        self.assertEqual(([], []), multitenancy.validate_car_limit_namespaces_patterns(obj))
+
+
 class TestMultiTenancyValidationForCarsAndModuleConfig(unittest.TestCase):
 
     def run_hook(self, context_json: str):
