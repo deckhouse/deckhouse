@@ -101,6 +101,13 @@ type providerFixture struct {
 	manualRolloutIDIgnoredByV1 bool
 }
 
+// dynamixStoragePolicyIsPostV1 is the reason behind the only postV1Fields entries so far. Dynamix
+// 4.6 made the storage policy the primary placement object and refuses to create a VM without one,
+// which is a change of the module's own contract rather than of the migration: the v1 template
+// rendered no such field and the v1 checksum hashed no such field, so there is nothing on the v1
+// side to compare with.
+const dynamixStoragePolicyIsPostV1 = "storagePolicy is new in Dynamix 4.6 — the v1 template and checksum predate it"
+
 func providerFixtures() []providerFixture {
 	return []providerFixture{
 		{
@@ -228,13 +235,21 @@ func providerFixtures() []providerFixture {
 
 			registrationPath: "../../../../../../../ee/modules/030-cloud-provider-dynamix/templates/registration.yaml",
 			contractPath:     "../../../../../../../ee/modules/030-cloud-provider-dynamix/capi/template.yaml",
-			providerConfig:   map[string]any{},
+			providerConfig: map[string]any{
+				"storagePolicy": "storage_policy01",
+			},
 			instanceClass: map[string]any{
 				"imageName":       "ubuntu-24-04",
 				"numCPUs":         float64(4),
 				"memory":          float64(8192),
 				"rootDiskSizeGb":  float64(40),
 				"externalNetwork": "extnet",
+				"storagePolicy":   "storage_policy02",
+			},
+			postV1Fields: map[string]string{
+				"instanceClass.storagePolicy":               dynamixStoragePolicyIsPostV1,
+				"provider.storagePolicy":                    dynamixStoragePolicyIsPostV1,
+				"rendered.spec.template.spec.storagePolicy": dynamixStoragePolicyIsPostV1,
 			},
 			manualRolloutIDIgnoredByV1: true,
 		},
@@ -604,6 +619,110 @@ func TestYandexDefaultDiskSizeDivergence(t *testing.T) {
 	require.NoError(t, err)
 	assert.Len(t, changes, 1, "v2 sees an added field as a change")
 	assert.Equal(t, "diskSizeGB", changes[0].Path)
+}
+
+// TestDynamixStoragePolicyFallback pins the one thing about the dynamix template the parity harness
+// cannot ask v1 about, because v1 had no such field: where the storage policy comes from. Dynamix
+// 4.6 creates no VM without one and the DynamixMachineTemplate CRD requires the field, so the
+// template must prefer the InstanceClass override, fall back to the cluster-wide value the module
+// publishes into the provider config, and refuse to render at all with neither — rendering an
+// object the API server rejects, or one silently placed in the wrong policy, are both worse.
+func TestDynamixStoragePolicyFallback(t *testing.T) {
+	fixture := fixtureByName(t, "dynamix")
+	contract := loadContract(t, fixture.contractPath)
+
+	// The smallest InstanceClass a user can create: the three fields DynamixInstanceClass requires.
+	baseInstanceClass := map[string]any{
+		"imageName": "ubuntu-24-04",
+		"numCPUs":   float64(4),
+		"memory":    float64(8192),
+	}
+	renderedPolicy := func(t *testing.T, override, clusterWide map[string]any) (string, error) {
+		t.Helper()
+
+		instanceClass := deepCopySpec(t, baseInstanceClass)
+		for key, value := range override {
+			instanceClass[key] = value
+		}
+
+		object, err := Render(contract, RenderContext{
+			InstanceClass: instanceClass,
+			Provider:      clusterWide,
+			Zone:          parityZone,
+			NodeGroupName: parityNodeGroup,
+			ClusterUUID:   parityClusterUUID,
+			PodSubnet:     parityPodSubnet,
+		})
+		if err != nil {
+			return "", err
+		}
+		policy, found, err := unstructured.NestedString(object, "spec", "template", "spec", "storagePolicy")
+		require.NoError(t, err)
+		require.True(t, found, "the CRD requires storagePolicy, so the template must always render it")
+		return policy, nil
+	}
+
+	clusterWide := map[string]any{"storagePolicy": "cluster-wide"}
+
+	t.Run("the InstanceClass override wins", func(t *testing.T) {
+		policy, err := renderedPolicy(t, map[string]any{"storagePolicy": "per-instance-class"}, clusterWide)
+		require.NoError(t, err)
+		assert.Equal(t, "per-instance-class", policy)
+	})
+
+	t.Run("without an override the cluster-wide policy is used", func(t *testing.T) {
+		policy, err := renderedPolicy(t, nil, clusterWide)
+		require.NoError(t, err)
+		assert.Equal(t, "cluster-wide", policy)
+	})
+
+	t.Run("an empty override is not a policy", func(t *testing.T) {
+		policy, err := renderedPolicy(t, map[string]any{"storagePolicy": ""}, clusterWide)
+		require.NoError(t, err)
+		assert.Equal(t, "cluster-wide", policy)
+	})
+
+	t.Run("neither is an error naming the field", func(t *testing.T) {
+		_, err := renderedPolicy(t, nil, map[string]any{})
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "storagePolicy")
+	})
+}
+
+// TestDynamixStoragePolicyRolls is the other half of what postV1Fields excludes. The parity loops
+// can only ask "did v1 roll for this too?", and v1 has no answer here — but the answer v2 must give
+// is the whole point of the field: Dynamix places the boot disk when the VM is created and cannot
+// move it, so a policy change that did not recreate the node would leave a node running in a policy
+// its configuration no longer names, silently. So this asks v2 alone, on both axes the effective
+// policy can come from.
+func TestDynamixStoragePolicyRolls(t *testing.T) {
+	fixture := fixtureByName(t, "dynamix")
+	contract := loadContract(t, fixture.contractPath)
+
+	for _, axis := range []struct {
+		name   string
+		spec   map[string]any
+		fields []string
+	}{
+		{name: "InstanceClass override", spec: fixture.instanceClass, fields: contract.RolloutFields},
+		{name: "cluster-wide value", spec: fixture.providerConfig, fields: contract.ProviderRolloutFields},
+	} {
+		t.Run(axis.name, func(t *testing.T) {
+			require.Contains(t, axis.fields, "storagePolicy")
+
+			before := deepCopySpec(t, axis.spec)
+			require.Contains(t, before, "storagePolicy", "the fixture must set the policy on this axis")
+
+			after := deepCopySpec(t, before)
+			after["storagePolicy"] = "another-policy"
+
+			changes, err := Changes(before, after, axis.fields)
+			require.NoError(t, err)
+			require.Len(t, changes, 1)
+			assert.Equal(t, "storagePolicy", changes[0].Path,
+				"changing the storage policy must create a new generation, which is what recreates the machines")
+		})
+	}
 }
 
 func fixtureByName(t *testing.T, name string) providerFixture {
