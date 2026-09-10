@@ -1,3 +1,11 @@
+{{- if .Values.userAuthz.enableMultiTenancy }}
+{{- /*
+  The components these alerts watch - the authorization webhook and Permission Browser - are
+  rendered only when multi-tenancy is on, and this file used to be plain YAML, installed either way.
+  So on every cluster with the default enableMultiTenancy: false there was no target to scrape,
+  absent(up{...}) stayed true, and the TargetDown alert below fired permanently five minutes after
+  install. Gating the whole file is the fix: no components, no alerts about them.
+*/}}
 - name: d8.user-authz.permission-browser-apiserver.availability
   rules:
   - alert: D8UserAuthzPermissionBrowserUnavailable
@@ -97,3 +105,4 @@
         d8 k -n d8-user-authz logs -l app=permission-browser-apiserver -c apiserver --tail=100
         d8 k get crd clusterauthorizationrules.deckhouse.io
         ```
+{{- end }}

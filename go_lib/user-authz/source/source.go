@@ -23,6 +23,7 @@ package source
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -116,6 +117,10 @@ const DefaultDebounce = 200 * time.Millisecond
 // experiment that would justify tightening it.
 const DefaultDegradeAfterWatchErrors = 20
 
+// crdMissingConfirmations is how many consecutive NotFound errors it takes to conclude that the
+// ClusterAuthorizationRule CRD is not served. See the reasoning in watchError.
+const crdMissingConfirmations = 3
+
 // Source is the informer-backed provider of a rules.Directory.
 type Source struct {
 	informer cache.SharedIndexInformer
@@ -137,6 +142,14 @@ type Source struct {
 	// sync and by every rebuild that the informer feeds.
 	consecutiveWatchErrors int
 	degradeAfter           int
+	// crdMissingStreak counts consecutive NotFound errors. One is not enough to conclude that the
+	// CRD is not served: see the comment in watchError.
+	crdMissingStreak int
+	// maxSeenResourceVersion is the highest resourceVersion this instance has OBSERVED, which is
+	// not the same as the highest the directory was built from: an update that changes nothing the
+	// directory reads is skipped, and skipping it must not make two instances look like they
+	// disagree. See noteResourceVersion.
+	maxSeenResourceVersion uint64
 }
 
 // New builds a Source over a dynamic client. Run must be called for it to do anything.
@@ -164,8 +177,14 @@ func New(client dynamic.Interface, opts Options) *Source {
 	_ = informer.SetWatchErrorHandler(s.watchError)
 	_ = informer.SetTransform(rules.Project)
 	_, _ = informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(interface{}) { s.markDirty() },
+		AddFunc: func(obj interface{}) { s.noteWatchAlive(); s.noteResourceVersion(obj); s.markDirty() },
 		UpdateFunc: func(oldObj, newObj interface{}) {
+			// Reaching this at all means the watch is delivering, so the error streak ends here
+			// even when the update itself changes nothing the directory reads. A reflector that
+			// re-lists after an error generates an update for every object it holds, which is what
+			// makes recovery observable on a cluster whose rules never change.
+			s.noteWatchAlive()
+			s.noteResourceVersion(newObj)
 			// Both objects have already been through Project, which keeps only the fields the
 			// directory reads. An update that leaves them equal (a label, an annotation, a
 			// re-list) would rebuild every map to the same result, so skip it.
@@ -174,7 +193,7 @@ func New(client dynamic.Interface, opts Options) *Source {
 			}
 			s.markDirty()
 		},
-		DeleteFunc: func(interface{}) { s.markDirty() },
+		DeleteFunc: func(obj interface{}) { s.noteWatchAlive(); s.noteResourceVersion(obj); s.markDirty() },
 	})
 	return s
 }
@@ -241,6 +260,7 @@ func (s *Source) awaitSync(ctx context.Context) {
 	}
 	s.mu.Lock()
 	s.crdGone = false
+	s.crdMissingStreak = 0
 	s.lastError = nil
 	s.consecutiveWatchErrors = 0
 	s.mu.Unlock()
@@ -275,6 +295,69 @@ func specUnchanged(oldObj, newObj interface{}) bool {
 	return equality.Semantic.DeepEqual(oldSpec, newSpec)
 }
 
+// noteWatchAlive ends the error streak that State() reads.
+//
+// The streak has to be *consecutive* for the threshold to mean anything, and the only reset used to
+// be in awaitSync - which runs once, at the first sync, and never again. Watch errors are a normal
+// part of a long-lived cluster: every API server restart produces some. So the count crept up over
+// days until it crossed the threshold, and then State() said Stale for the rest of the process's
+// life, holding both consumers unready forever - a DaemonSet rollout that never finishes and an
+// aggregated apiserver dropped from its Service, on a cluster where nothing was actually wrong.
+func (s *Source) noteWatchAlive() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if s.consecutiveWatchErrors == 0 && s.crdMissingStreak == 0 && s.lastError == nil && !s.crdGone {
+		return
+	}
+	recovered := s.consecutiveWatchErrors >= s.degradeAfter
+	s.consecutiveWatchErrors = 0
+	s.crdMissingStreak = 0
+	s.lastError = nil
+	s.crdGone = false
+	if recovered {
+		s.opts.Logf("rules source: the watch is delivering again; this instance is no longer stale")
+	}
+}
+
+// noteResourceVersion records the highest resourceVersion this instance has seen.
+//
+// The watermark is what an operator compares between masters to find the one that is behind, and it
+// used to be read off the directory - the highest version among the rules it was BUILT from. That
+// makes it a function of when each instance last rebuilt rather than of what each instance knows: a
+// metadata-only change bumps the version in the cluster and is deliberately skipped by the rebuild,
+// so an instance that restarted afterwards picks the new version up in its initial list while one
+// that did not keeps the old one. Two instances holding identical rules then report different
+// numbers, permanently, and the divergence alert fires on a cluster where nothing is wrong.
+//
+// Observed, not built-from, is the honest meaning and the one the alert needs.
+func (s *Source) noteResourceVersion(obj interface{}) {
+	u, ok := obj.(*unstructured.Unstructured)
+	if !ok {
+		if tombstone, isTombstone := obj.(cache.DeletedFinalStateUnknown); isTombstone {
+			u, ok = tombstone.Obj.(*unstructured.Unstructured)
+		}
+		if !ok {
+			return
+		}
+	}
+	rv, err := strconv.ParseUint(u.GetResourceVersion(), 10, 64)
+	if err != nil {
+		return
+	}
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if rv > s.maxSeenResourceVersion {
+		s.maxSeenResourceVersion = rv
+	}
+}
+
+// seenResourceVersion returns the watermark for the metrics.
+func (s *Source) seenResourceVersion() uint64 {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.maxSeenResourceVersion
+}
+
 func (s *Source) markDirty() {
 	select {
 	case s.dirty <- struct{}{}:
@@ -285,8 +368,23 @@ func (s *Source) markDirty() {
 func (s *Source) watchError(_ *cache.Reflector, err error) {
 	s.mu.Lock()
 	s.lastError = err
-	s.crdGone = apierrors.IsNotFound(err)
 	s.consecutiveWatchErrors++
+	// crdMissing needs corroboration. A single NotFound is not proof that the CRD is not served -
+	// the API server returns it during its own startup, and an aggregated layer returns it while a
+	// backend restarts - and concluding CRDMissing from one is expensive: it is the one state that
+	// OPENS the webhook's serving gate, on the reasoning that a cluster without the CRD has no
+	// rules to wait for. Reached wrongly on a cluster that does have rules, it opens the gate with
+	// an empty directory, and the ordering guard then denies every subject a rule covers, for
+	// unauthorizedTTL each.
+	//
+	// A CRD that genuinely is not served produces these continuously, so requiring a short streak
+	// costs a few seconds of bootstrap and rules out the transient case.
+	if apierrors.IsNotFound(err) {
+		s.crdMissingStreak++
+	} else {
+		s.crdMissingStreak = 0
+	}
+	s.crdGone = s.crdMissingStreak >= crdMissingConfirmations
 	degraded := s.synced.Load() && s.consecutiveWatchErrors == s.degradeAfter
 	s.mu.Unlock()
 
@@ -372,6 +470,13 @@ func (s *Source) rebuild() {
 	for name, err := range stats.Quarantined {
 		s.opts.Logf("rules source: rule %q quarantined: %v", name, err)
 	}
+	// The watermark reported to the metrics is what this instance has OBSERVED, not what the
+	// directory happened to be built from - see noteResourceVersion for why the difference matters
+	// to the divergence alert.
+	if seen := s.seenResourceVersion(); seen > stats.MaxResourceVersion {
+		stats.MaxResourceVersion = seen
+	}
+
 	if s.opts.Observer != nil {
 		s.opts.Observer.DirectoryRebuilt(stats, took)
 		if first {
