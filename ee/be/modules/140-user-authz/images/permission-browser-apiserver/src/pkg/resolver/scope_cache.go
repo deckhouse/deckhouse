@@ -27,6 +27,23 @@ const (
 	// This avoids keeping the apiserver not-ready for a long time if discovery
 	// fails transiently during startup.
 	bootstrapRefreshInterval = 10 * time.Second
+	// missRefreshInterval bounds how often a lookup the snapshot cannot answer may pull the next
+	// refresh forward.
+	//
+	// This exists because the two consumers of the shared decision were reading discovery on
+	// schedules an order of magnitude apart. The authorization webhook re-lists a group within ten
+	// seconds of being asked about something it does not hold; this cache waited out its five
+	// minute cycle. So for up to five minutes after a CRD was installed, what this apiserver
+	// reported and what the API server enforced were different answers to the same question - the
+	// exact drift the shared decision was written to end. The direction was the safe one (a
+	// resource nobody has heard of is treated like a namespaced one, so the report understates
+	// access rather than overstating it), but "safe" is not "the same".
+	//
+	// A miss now schedules one refresh, at most this often, and the request is answered from the
+	// snapshot in hand rather than waiting for it. The rate is what keeps this from becoming an
+	// amplifier: refresh() lists every group in the cluster, which is far heavier than the
+	// webhook's single-group listing.
+	missRefreshInterval = 30 * time.Second
 )
 
 // ResourceScopeCache provides O(1) lookups for whether a resource is namespaced or cluster-scoped.
@@ -47,6 +64,22 @@ type ResourceScopeCache struct {
 	// over from the previous snapshot. A resource missing from one of them is missing because we
 	// could not look, which is a different answer from "it does not exist".
 	unavailableGroups map[string]struct{}
+
+	// muMiss guards the miss-triggered refresh: when it last ran, and whether one is running now.
+	muMiss      sync.Mutex
+	lastMiss    time.Time
+	missPending bool
+
+	// now is the clock, so the interval above can be exercised without sleeping.
+	now func() time.Time
+}
+
+// clock reads the cache's clock, defaulting to the real one.
+func (c *ResourceScopeCache) clock() time.Time {
+	if c.now != nil {
+		return c.now()
+	}
+	return time.Now()
 }
 
 // NewResourceScopeCache creates a new cache and performs initial population from discovery.
@@ -201,6 +234,10 @@ func (c *ResourceScopeCache) GroupUnavailable(group string) bool {
 // It also took three separate read locks, so the three answers could come from either side of a
 // refresh: a resource could be reported missing from a snapshot while HasData described the next
 // one. One lock now, one snapshot, one answer.
+//
+// Version-agnostic, like the map behind it: see the ResourceScope interface in the multitenancy
+// package for why the webhook's per-version lookup and this one agree in every case the platform
+// produces.
 func (c *ResourceScopeCache) ScopeOf(group, resource string) rules.ResourceScope {
 	if c == nil {
 		return rules.ResourceScope{}
@@ -214,10 +251,42 @@ func (c *ResourceScopeCache) ScopeOf(group, resource string) rules.ResourceScope
 		return rules.ResourceScope{Known: true, Namespaced: namespaced}
 	}
 
-	// Not in the snapshot. That is an answer only if there IS a snapshot and it did read this
-	// group; otherwise nobody looked, and the caller has to keep failing closed.
+	// Not in the snapshot. Either the resource does not exist, or it was created since the last
+	// refresh - a CRD installed a minute ago - and the snapshot is simply behind. Ask for a
+	// refresh, rate-limited, and answer from what is held: waiting for discovery here would put a
+	// cluster-wide listing on the request path.
+	c.noteMiss()
+
+	// That is an answer only if there IS a snapshot and it did read this group; otherwise nobody
+	// looked, and the caller has to keep failing closed.
 	_, unavailable := c.unavailableGroups[group]
 	return rules.ResourceScope{Absent: len(c.scopeMap) > 0 && !unavailable}
+}
+
+// noteMiss schedules a refresh because a lookup asked about something the snapshot does not hold.
+//
+// It never blocks the caller and never runs two refreshes at once: the miss is a hint that the
+// snapshot is behind, not a request the caller waits on. ScopeOf holds a read lock when it calls
+// this, which is why the refresh runs in its own goroutine - refresh() takes the write lock at the
+// end.
+func (c *ResourceScopeCache) noteMiss() {
+	c.muMiss.Lock()
+	if c.missPending || c.clock().Sub(c.lastMiss) < missRefreshInterval {
+		c.muMiss.Unlock()
+		return
+	}
+	c.missPending = true
+	c.lastMiss = c.clock()
+	c.muMiss.Unlock()
+
+	go func() {
+		defer func() {
+			c.muMiss.Lock()
+			c.missPending = false
+			c.muMiss.Unlock()
+		}()
+		c.refresh()
+	}()
 }
 
 // HasData returns true if the cache has been populated with any entries.

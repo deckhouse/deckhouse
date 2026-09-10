@@ -28,7 +28,7 @@
       plk_grouped_by__d8_user_authz_webhook_malfunctioning: "D8UserAuthzWebhookMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: Prometheus is unable to scrape the user-authz webhook.
       description: |-
-        Prometheus cannot collect metrics from at least one instance of `user-authz-webhook` in the `d8-user-authz` namespace. It fires per instance, not only when every one of them is gone: on a cluster with several masters, one silent instance is exactly the case worth knowing about, and summing across them would hide it.
+        Prometheus cannot collect metrics from at least one instance of `user-authz-webhook` in the `d8-user-authz` namespace. One silent instance is enough to fire it: on a cluster with several masters that is exactly the case worth knowing about, and a condition that waited for all of them would hide it. It is one alert however many instances are silent — the expression counts them rather than keeping their labels, so the alert says that at least one is, and the query below says which.
 
         What that instance is doing with authorization is not knowable from here, and both possibilities matter. If it is running and only its metrics are unreachable, it keeps answering and the other alerts below cannot see it — a rule it quarantined, or rules it never listed, go unnoticed. If it is not running, or has not listed the rules yet, it answers `503` to every authorization request that reaches it, which the API server treats as a failure and denies, because the webhook is configured to fail closed.
 
@@ -84,7 +84,7 @@
       plk_grouped_by__d8_user_authz_webhook_malfunctioning: "D8UserAuthzWebhookMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: The user-authz webhook cannot watch the ClusterAuthorizationRules.
       description: |-
-        For more than 15 minutes the `user-authz-webhook` rules informer has been failing to watch the `ClusterAuthorizationRules` (a non-zero rate of watch errors). New or changed rules may not be reaching the webhook, so multi-tenancy decisions can lag behind what users configure.
+        For more than 10 minutes the `user-authz-webhook` rules informer has been failing to watch the `ClusterAuthorizationRules` (a non-zero rate of watch errors). New or changed rules may not be reaching the webhook, so multi-tenancy decisions can lag behind what users configure.
 
         Check the webhook's access to the API and its logs:
 

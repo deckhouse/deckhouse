@@ -455,6 +455,70 @@ func TestCacheGetAbsentResourceDoesNotRelistWithinTheInterval(t *testing.T) {
 	}
 }
 
+// The same rate limit has to hold for a resource missing from a group that IS listed.
+//
+// This is the sibling of the path above and it had the same hole from the other side: the failed
+// attempt was recorded but never read here, because this branch keys the rate limit on the age of
+// the last successful listing, which a failure does not move. So while the API server was
+// unreachable, every request naming an absent resource in a known group produced another attempt
+// against it - and the caller writes the resource name, so any subject a rule covers can pick one.
+func TestCacheAbsentResourceDoesNotRelistWhileTheListingKeepsFailing(t *testing.T) {
+	var listings int32
+	var fail atomic.Bool
+	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		atomic.AddInt32(&listings, 1)
+		if fail.Load() {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.Header().Add("Content-Type", "application/json")
+		w.Write([]byte(testResponse))
+	}))
+	defer server.Close()
+
+	cache := NamespacedDiscoveryCache{
+		client:               server.Client(),
+		kubernetesAPIAddress: server.URL,
+		logger:               log.New(io.Discard, "", log.LstdFlags),
+		data:                 make(map[string]*namespacedCacheEntry),
+		preferredVersions:    make(map[string]*preferredVersionCacheEntry),
+		negative:             make(map[string]negativeEntry),
+		inflight:             make(map[string]chan struct{}),
+	}
+	now := time.Now()
+	cache.now = func() time.Time { return now }
+
+	// One successful listing that does not carry the resource.
+	if _, err := cache.Get("test", "ghosts"); !errors.Is(err, ErrResourceAbsent) {
+		t.Fatalf("first lookup: got %v, want ErrResourceAbsent", err)
+	}
+	atomic.StoreInt32(&listings, 0)
+
+	// The interval passes and the API server stops answering. The refresh is attempted once; the
+	// requests that follow must be answered from the listing already held.
+	cache.now = func() time.Time { return now.Add(negativeRenewInterval) }
+	fail.Store(true)
+	for i := 0; i < 30; i++ {
+		if _, err := cache.Get("test", "ghosts"); !errors.Is(err, ErrResourceAbsent) {
+			t.Fatalf("lookup %d during the outage: got %v, want ErrResourceAbsent", i, err)
+		}
+	}
+	if got := atomic.LoadInt32(&listings); got != 1 {
+		t.Errorf("30 lookups during the outage produced %d attempts against the API server, want 1", got)
+	}
+
+	// Once the interval passes again, one more attempt is made, so a recovered API server and a
+	// resource installed meanwhile are noticed.
+	cache.now = func() time.Time { return now.Add(2 * negativeRenewInterval) }
+	fail.Store(false)
+	if _, err := cache.Get("test", "ghosts"); !errors.Is(err, ErrResourceAbsent) {
+		t.Fatalf("after the outage: got %v, want ErrResourceAbsent", err)
+	}
+	if got := atomic.LoadInt32(&listings); got != 2 {
+		t.Errorf("after the outage: %d attempts in total, want 2", got)
+	}
+}
+
 func TestCacheStale(t *testing.T) {
 	cache := newTestCache()
 

@@ -31,9 +31,6 @@ import (
 // Ensure mockUserInfo implements user.Info for namespace-access tests
 var _ user.Info = &mockUserInfo{}
 
-// nsAllowed mirrors how the namespace resolver consumes the engine:
-// classify the user via GetNamespaceAccessType, then apply the returned
-// filter. This is the only supported per-namespace check path.
 // nsAllowed mirrors resolver.isNamespaceAllowedByMultitenancy, which is the only production caller
 // of GetNamespaceAccessType. Mirroring it is the point: this helper used to map NoNamespacesAllowed
 // to "denied", which no caller does, so every case below asserted a deny-by-default policy that
@@ -394,6 +391,67 @@ func TestEngine_GroupBasedRestrictions(t *testing.T) {
 			assert.Equal(t, tt.expectedDecision, decision)
 		})
 	}
+}
+
+// The identities the API server never asks the webhook about are not limited here either.
+//
+// The rule below does not name them: it names system:authenticated, which every service account in
+// the cluster is in. That is how this arises in practice - not by somebody writing a rule about
+// kube-controller-manager, but by writing one about everybody. The API server excludes the control
+// plane's own identities from the webhook so a fail-closed authorizer cannot make a cluster
+// unrecoverable, so for them the rule's namespace limits are not enforced anywhere; reporting them
+// as limited would describe a cluster the operator does not have.
+func TestEngine_SubjectsTheWebhookIsNeverAskedAbout(t *testing.T) {
+	e := &Engine{
+		rules: mttest.Rules(
+			rules.Rule{
+				Name:            "everybody",
+				Subjects:        []rules.Subject{{Kind: "Group", Name: "system:authenticated"}},
+				LimitNamespaces: []string{"dev-.*"},
+			},
+		),
+		bindings: mttest.NoBindings(),
+	}
+
+	exempt := []string{
+		"system:kube-controller-manager",
+		"system:node:worker-1",
+		"system:serviceaccount:kube-system:coredns",
+		"system:serviceaccount:d8-system:deckhouse",
+	}
+	for _, username := range exempt {
+		t.Run(username, func(t *testing.T) {
+			userInfo := &mockUserInfo{name: username, groups: []string{"system:authenticated"}}
+
+			d, _, err := e.Authorize(context.Background(), &mockAttrs{
+				userInfo:   userInfo,
+				namespace:  "prod-backend",
+				resource:   "pods",
+				verb:       "get",
+				isResource: true,
+			})
+			require.NoError(t, err)
+			assert.Equal(t, authorizer.DecisionNoOpinion, d, "the API server does not consult the webhook for this subject, so nothing here may deny it")
+
+			accessType, _ := e.GetNamespaceAccessType(userInfo)
+			assert.Equal(t, AllNamespacesAllowed, accessType, "reporting a limit that is not enforced")
+			assert.True(t, nsAllowed(e, userInfo, "prod-backend"))
+		})
+	}
+
+	// A subject the webhook IS asked about is still limited by the same rule.
+	limited := &mockUserInfo{name: "system:serviceaccount:default:app", groups: []string{"system:authenticated"}}
+	d, _, err := e.Authorize(context.Background(), &mockAttrs{
+		userInfo:   limited,
+		namespace:  "prod-backend",
+		resource:   "pods",
+		verb:       "get",
+		isResource: true,
+	})
+	require.NoError(t, err)
+	assert.Equal(t, authorizer.DecisionDeny, d)
+	assert.False(t, nsAllowed(e, limited, "prod-backend"))
+	assert.True(t, nsAllowed(e, limited, "dev-frontend"))
 }
 
 func TestEngine_NonResourceRequest(t *testing.T) {

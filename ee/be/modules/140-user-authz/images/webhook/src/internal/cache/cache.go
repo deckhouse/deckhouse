@@ -58,11 +58,19 @@ const (
 	// group was listed, a resource added to it since - a freshly installed CRD - is reported as
 	// absent. For a cluster-scoped request that means no opinion rather than a denial, so a subject
 	// a rule limits to some namespaces could list a newly installed namespaced resource
-	// cluster-wide until the next listing. Installing a CRD already requires far more privilege
-	// than that yields, and the platform tolerates comparable windows elsewhere (the API server
-	// caches this webhook's answers for 30 seconds), so the trade is deliberate: a bounded,
-	// privilege-gated staleness window in exchange for closing an unbounded amplifier that any
-	// tenant can drive.
+	// cluster-wide until the next listing.
+	//
+	// The window the cluster sees is longer than this constant, and the two parts add up rather
+	// than overlap: an answer computed from a listing up to 10s stale is then cached by the API
+	// server for unauthorizedTTL, which is 30s - and it is unauthorizedTTL for every answer this
+	// webhook gives, because it never allows. So the worst case is about 40 seconds from the CRD
+	// being installed to the filter applying to a request that was already asked once. Nothing
+	// here can shorten the second half: the API server's cache is keyed on the whole
+	// SubjectAccessReview and there is no way to invalidate it from outside.
+	//
+	// The trade is still deliberate. Installing a CRD already requires far more privilege than
+	// those 40 seconds yield, and the alternative is an unbounded amplifier any tenant can drive
+	// against the component the whole cluster's authorization waits on.
 	negativeRenewInterval = 10 * time.Second
 
 	// maxUnservedGroups bounds how many "this API group is not served" answers are remembered.
@@ -464,7 +472,14 @@ func (c *NamespacedDiscoveryCache) Get(apiGroup, resource string) (bool, error) 
 	// name, so both the rate and the duration of the work have to be bounded.
 	namespaced, ok := namespacedInfo.Data[resource]
 	if !ok {
-		if c.now().Sub(namespacedInfo.AddTime) >= negativeRenewInterval {
+		// Two clocks bound the refresh, and both are needed. The age of the listing is the normal
+		// one. The memory of a failed attempt is the other: this branch keys on the age of the
+		// last SUCCESSFUL listing, which a failure does not move, so while the API server was
+		// unreachable every request naming an absent resource in a known group produced another
+		// attempt against it - the failure was recorded and never read here. The caller writes the
+		// resource name, so any subject a rule covers can pick one that is absent.
+		_, attemptedRecently := c.recentNegative(apiGroup)
+		if !attemptedRecently && c.now().Sub(namespacedInfo.AddTime) >= negativeRenewInterval {
 			if err := c.listOnce(apiGroup); err != nil {
 				// Remembered either way, so a group whose listing keeps failing is not re-attempted
 				// on every request for the duration of the failure.
@@ -483,10 +498,14 @@ func (c *NamespacedDiscoveryCache) Get(apiGroup, resource string) (bool, error) 
 				// installed since that listing, and a resource cannot be installed while the API
 				// server cannot be reached, so nothing is lost by keeping the negative.
 				c.logger.Printf("could not re-list %s to confirm that %s is absent, using the previous listing: %v", apiGroup, resource, err)
-			} else {
-				namespacedInfo, _ = c.getFromCache(apiGroup)
+			} else if refreshed, found := c.getFromCache(apiGroup); found {
+				namespacedInfo = refreshed
 				namespaced, ok = namespacedInfo.Data[resource]
 			}
+			// found being false means a concurrent lookup saw a 404 for the group and dropped the
+			// entry. Reading Data off the nil that getFromCache returns then panics, and this used
+			// to discard the second return value. The answer is the same either way - the resource
+			// is not there - so falling through with what we already hold is right.
 		}
 		if !ok {
 			// A listing of the group succeeded and does not carry the resource, so this is an
@@ -567,6 +586,14 @@ func (c *NamespacedDiscoveryCache) recentNegative(apiGroup string) (bool, bool) 
 	return e.absent, true
 }
 
+// clearNegative forgets what a previous listing of this group concluded, because a later one
+// answered.
+func (c *NamespacedDiscoveryCache) clearNegative(apiGroup string) {
+	c.muNegative.Lock()
+	defer c.muNegative.Unlock()
+	delete(c.negative, apiGroup)
+}
+
 // listOnce lists a group, collapsing concurrent calls for the same group into one round trip.
 //
 // Without this, a burst of authorization requests naming the same unlisted group produced one
@@ -591,6 +618,12 @@ func (c *NamespacedDiscoveryCache) listOnce(apiGroup string) error {
 	c.muInflight.Unlock()
 
 	err := c.renewCacheOnceNoRetry(apiGroup)
+	if err == nil {
+		// The group answers again, so what a previous attempt concluded about it is history. Left
+		// in place it would suppress the next refresh for up to an interval after a listing that
+		// actually succeeded.
+		c.clearNegative(apiGroup)
+	}
 
 	c.muInflight.Lock()
 	delete(c.inflight, apiGroup)
