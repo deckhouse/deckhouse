@@ -199,6 +199,50 @@ spec:
      - "*.domain.com"
    ```
 
+## Заказ wildcard-сертификата с DNS в Yandex Cloud DNS
+
+1. Создайте [сервисный аккаунт](https://yandex.cloud/ru/docs/iam/operations/sa/create) в Yandex Cloud и назначьте ему роль `dns.editor` (или эквивалентную) на каталог, в котором находится публичная DNS-зона.
+
+2. Создайте [авторизованный ключ](https://yandex.cloud/ru/docs/iam/operations/authorized-key/create) для сервисного аккаунта и закодируйте полученный JSON-файл в **base64**:
+
+   ```shell
+   base64 authorized_key.json
+   ```
+
+3. Укажите параметры модуля:
+
+   ```yaml
+   apiVersion: deckhouse.io/v1alpha1
+   kind: ModuleConfig
+   metadata:
+     name: cert-manager
+   spec:
+     version: 1
+     enabled: true
+     settings:
+       yandexFolderID: <ID каталога с DNS-зоной>
+       yandexServiceAccountJSON: <authorized_key.json в base64>
+   ```
+
+   После этого Deckhouse автоматически развернёт ACME webhook для Yandex Cloud DNS и создаст ClusterIssuer и Secret для Yandex в namespace `d8-cert-manager`.
+
+4. Создайте Certificate с валидацией через Yandex Cloud DNS:
+
+   ```yaml
+   apiVersion: cert-manager.io/v1
+   kind: Certificate
+   metadata:
+     name: domain-wildcard
+     namespace: app-namespace
+   spec:
+     secretName: tls-wildcard
+     issuerRef:
+       name: yandex
+       kind: ClusterIssuer
+     dnsNames:
+     - "*.domain.com"
+   ```
+
 ## Заказ self-signed-сертификата
 
 Все еще проще, чем с LetsEncrypt. Просто меняем `letsencrypt` на `selfsigned`:

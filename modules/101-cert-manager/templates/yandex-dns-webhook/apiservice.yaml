@@ -1,0 +1,17 @@
+{{- if and (hasKey .Values.certManager "yandexFolderID") (hasKey .Values.certManager "yandexServiceAccountJSON") }}
+---
+apiVersion: apiregistration.k8s.io/v1
+kind: APIService
+metadata:
+  name: v1alpha1.acme.cloud.yandex.com
+  {{- include "helm_lib_module_labels" (list . (dict "app" "yandex-dns-webhook")) | nindent 2 }}
+spec:
+  group: acme.cloud.yandex.com
+  groupPriorityMinimum: 1000
+  versionPriority: 15
+  version: v1alpha1
+  caBundle: {{ .Values.certManager.internal.yandexWebhookCert.ca | b64enc }}
+  service:
+    name: yandex-dns-webhook
+    namespace: d8-cert-manager
+{{- end }}

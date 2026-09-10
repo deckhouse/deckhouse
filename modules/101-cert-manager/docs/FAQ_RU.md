@@ -58,45 +58,12 @@ description: "Ответы на часто задаваемые вопросы �
 Пример использования AWS Route53 доступен в разделе [Как защитить учетные данные `cert-manager`](#как-защитить-учетные-данные-cert-manager).  
 Актуальный перечень всех возможных для создания `ClusterIssuer` доступен в [шаблонах модуля](https://github.com/deckhouse/deckhouse/tree/main/modules/101-cert-manager/templates/cert-manager).
 
-Использование сторонних DNS-провайдеров реализуется через метод `webhook`.  
+Встроенные провайдеры, настраиваемые через параметры модуля: Cloudflare, Amazon Route53, DigitalOcean, Google Cloud DNS и Yandex Cloud DNS.
+Для Yandex Cloud DNS см. [Заказ wildcard-сертификата с DNS в Yandex Cloud DNS](usage.html#заказ-wildcard-сертификата-с-dns-в-yandex-cloud-dns).
+
+Использование других сторонних DNS-провайдеров реализуется через метод `webhook`.  
 Когда `cert-manager` выполняет вызов `ACME` `DNS-01`, он отправляет запрос на вебхук-сервер, который затем выполняет нужные операции для обновления записи DNS.  
-При использовании данного метода требуется разместить сервис, который будет обрабатывать хук и осуществлять создание TXT-записи в DNS-провайдере.
-
-В качестве примера рассмотрим использование сервиса `Yandex Cloud DNS`.
-
-1. Для обработки вебхука предварительно разместите в кластере сервис `Yandex Cloud DNS ACME webhook` согласно [официальной документации](https://github.com/yandex-cloud/cert-manager-webhook-yandex).
-
-1. Затем создайте ресурс `ClusterIssuer`:
-
-   ```yaml
-   apiVersion: cert-manager.io/v1
-   kind: ClusterIssuer
-   metadata:
-     name: yc-clusterissuer
-     namespace: default
-   spec:
-     acme:
-       # Вы должны заменить этот адрес электронной почты на свой собственный.
-       # Let's Encrypt будет использовать его, чтобы связаться с вами по поводу истекающих
-       # сертификатов и вопросов, связанных с вашей учетной записью.
-       email: your@email.com
-       server: https://acme-staging-v02.api.letsencrypt.org/directory
-       privateKeySecretRef:
-         # Ресурс секретов, который будет использоваться для хранения закрытого ключа аккаунта.
-         name: secret-ref
-       solvers:
-         - dns01:
-             webhook:
-               config:
-                 # Идентификатор папки, в которой расположена DNS-зона
-                 folder: <your folder ID>
-                 # Это секрет, используемый для доступа к учетной записи сервиса
-                 serviceAccountSecretRef:
-                   name: cert-manager-secret
-                   key: iamkey.json
-               groupName: acme.cloud.yandex.com
-               solverName: yandex-cloud-dns
-   ```
+При использовании данного метода требуется разместить сервис, который будет обрабатывать хук и осуществлять создание TXT-записи в DNS-провайдере, а затем создать `ClusterIssuer` с настройками `dns01.webhook` согласно документации вебхука.
 
 ### Как добавить дополнительный `Issuer` и `ClusterIssuer`, использующий HashiCorp Vault для выпуска сертификатов?
 
