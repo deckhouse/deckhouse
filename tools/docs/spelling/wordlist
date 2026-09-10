@@ -150,10 +150,7 @@ ClusterObservabilityAlert
 ClusterPodLoggingConfig
 ClusterRole
 ClusterRoleBinding
-ClusterRoleBindings
-ClusterRoles
 ClusterVirtualImage
-ClusterXXXMetric
 CoC
 Colocating
 Colour
@@ -396,7 +393,6 @@ InfrastructureAccident
 InfrastructureMaintenance
 IngressClass
 IngressClassParameters
-IngressClasses
 IngressGateway
 IngressIstioController
 IngressNginxController
@@ -490,7 +486,6 @@ MachineClasses
 MachineControllerManager
 MachineDeployment
 MachineSet
-MachineSets
 MailRu
 Manilla
 Mattermost
@@ -598,7 +593,6 @@ OpenStackInstanceClasses
 OpenTelemetry
 OpenTofu
 OpenVPN
-OpenstackInstanceClasses
 Opentofu
 OperationPolicy
 OpsGenie
@@ -717,7 +711,6 @@ ResourceQuota
 Restic
 RockSolid
 RoleBinding
-RoleBindings
 RollingUpdate
 RootConf
 RuleGroup
@@ -1003,7 +996,6 @@ api
 apiGroup
 apiGroups
 apiVersion
-apiextensions
 apiserver
 app
 apparmor
@@ -1833,7 +1825,6 @@ zoneTagCategory
 Метадата
 МиБ
 Мультикластер
-Некомпилируемое
 ОK
 ООМ
 Опциональные
@@ -1904,7 +1895,6 @@ zoneTagCategory
 агрегаторе
 агрегаторов
 агрегаторы
-агрегируется
 агрегируются
 агрегирующей
 агрегирующую
@@ -1976,8 +1966,6 @@ zoneTagCategory
 биндинг
 биндинга
 биндинги
-биндингов
-биндингом
 биндятся
 блокирующе
 блокчейном
@@ -2014,7 +2002,6 @@ zoneTagCategory
 вебхуки
 вебхуков
 вебхуком
-вебхуку
 вендора
 вендором
 вендорской
@@ -2157,7 +2144,6 @@ zoneTagCategory
 интеграций
 интеграциях
 интегрировав
-информера
 инфраструктурно
 использов
 использовать
@@ -2167,11 +2153,9 @@ zoneTagCategory
 й
 кастомизации
 кастомизированные
-кастомная
 кастомного
 кастомной
 кастомном
-кастомную
 кастомные
 кастомный
 кастомным
@@ -2191,7 +2175,6 @@ zoneTagCategory
 кешировать
 кешироваться
 кеширует
-кешируются
 кеширующий
 киберугроз
 коммит
@@ -2340,7 +2323,6 @@ zoneTagCategory
 незапрошенных
 незашифрованном
 неизменяем
-неизменяемо
 неинтерактивном
 неймспейс
 неймспейса
@@ -2365,7 +2347,6 @@ zoneTagCategory
 неограничивающая
 неограничивающего
 неподдерживаемые
-неподдерживаемым
 неподдерживаемых
 неподнимающийся
 неподписанным
@@ -2386,7 +2367,6 @@ zoneTagCategory
 нешифрованные
 ноде
 нуть
-общесистемную
 ов
 оверпровижининг
 оверселлинг
@@ -2402,12 +2382,10 @@ zoneTagCategory
 оркестратора
 оркестрации
 оркестрацию
-отвечается
 отдебажить
 отмасштабировать
 отмасштабирует
 отмонтировать
-отрендеренные
 отрисовки
 офлайн
 п
@@ -2481,13 +2459,11 @@ zoneTagCategory
 переразмещение
 пересборка
 пересборке
-пересборки
 пересборку
 пересборок
 пересоберется
 пересоберётся
 пересобирает
-пересобирался
 пересоздаваться
 пересоздает
 пересоздается
@@ -2523,8 +2499,6 @@ zoneTagCategory
 подсетям
 подсетями
 подсетях
-подсистемной
-подсистемную
 покоммитное
 помотрим
 превью
@@ -2594,18 +2568,15 @@ zoneTagCategory
 реквестирован
 реквестов
 реквесты
-реконсилерам
 релейбл
 релизного
 релизные
 релизный
 релизных
-рендера
 рендере
 рендеринг
 рендеринга
 рендеринге
-рендерит
 рендерится
 репликационным
 реплицированного
@@ -2696,8 +2667,6 @@ zoneTagCategory
 скрейпер
 скрейпера
 скрейпит
-скрейпится
-скрейпить
 скриншоте
 скриншотом
 скриншоты
