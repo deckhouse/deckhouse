@@ -64,9 +64,9 @@ spec:
 Если есть правило без опции `namespaceSelector` и без опции `limitNamespaces` (устаревшая), это значит, что доступ разрешён во все пространства имён, кроме системных, что повлияет на результат вычисления доступных пространств имён для пользователя.
 {% endalert %}
 
-## Что произойдёт с биндингами при обновлении на релиз с контроллером?
+## Как обновление на релиз с контроллером влияет на биндинги?
 
-Ничего не пересоздаётся, доступ не прерывается. Компонент `user-authz-controller` принимает под управление биндинги, которые раньше создавал Helm-чарт: те же объекты с теми же именами, к ним добавляется `ownerReference` на правило.
+Ничего не создаётся заново, доступ не прерывается. Компонент `user-authz-controller` принимает под управление биндинги, которые раньше создавал Helm-чарт: те же объекты с теми же именами, к ним добавляется `ownerReference` на правило.
 
 Спланируйте релиз, в котором выполняется миграция: он один раз обрабатывает все существующие биндинги, поэтому идёт дольше обычного. На последующие релизы это не влияет.
 
@@ -93,9 +93,9 @@ d8 k -n d8-system set env deploy/deckhouse USE_NELM=false
 
 ## Как проверить, что контроллер поддерживает биндинги в актуальном состоянии?
 
-Компонент `user-authz-controller` синхронизирует ClusterRoleBinding и RoleBinding каждого ClusterAuthorizationRule и AuthorizationRule, выдачу `d8:use:dict` в экспериментальной ролевой модели и проекции биндингов manage-ролей в use-RoleBinding'и неймспейсов. О его состоянии говорят три источника: статус объекта, метрики и алерты.
+Компонент `user-authz-controller` синхронизирует ClusterRoleBinding и RoleBinding каждого ClusterAuthorizationRule и AuthorizationRule, выдачу `d8:use:dict` в экспериментальной ролевой модели и проекции manage-ролей в use-RoleBinding'и пространств имён. О его состоянии говорят три источника.
 
-**Статус объекта.** У каждого правила есть условие `Ready` и число его биндингов:
+**Статус объекта.** У каждого правила есть условие `Ready` и число созданных для него ClusterRoleBinding и RoleBinding:
 
 Чтобы получить список всех ClusterAuthorizationRule в кластере, выполните команду:
 
@@ -160,12 +160,12 @@ d8 k get clusterauthorizationrule <name> -o jsonpath='{.status.conditions}'
 | `d8_user_authz_authorization_rule_invalid{kind,name,rule_namespace,reason}` | `1` для каждого такого правила (по имени экспортируется не более 50 правил; агрегат выше всегда полный) |
 | `d8_user_authz_custom_cluster_roles{level}` | Кастомные ClusterRole (с аннотацией `user-authz.deckhouse.io/access-level`) по уровням доступа |
 | `d8_user_authz_custom_aggregation_missing{level}` | `1`, если у агрегированной ClusterRole `user-authz:<level>:custom` нет правил, хотя кастомные роли для неё существуют |
-| `d8_user_authz_bindings_keep_stamped_total`, `d8_user_authz_keep_stamp_duration_seconds` | Работа миграционного хука, защищающего отрендеренные чартом биндинги от удаления релизом: сколько объектов помечено и длительность последнего прогона |
-| `controller_runtime_reconcile_total`, `controller_runtime_reconcile_errors_total`, `controller_runtime_reconcile_time_seconds` | Стандартные метрики controller-runtime по реконсилерам (лейбл `controller`: `clusterauthorizationrule-bindings`, `authorizationrule-bindings`, `dict-bindings`, `manage-bindings`) |
+| `d8_user_authz_bindings_keep_stamped_total`, `d8_user_authz_keep_stamp_duration_seconds` | Работа миграционного хука, защищающего созданные чартом биндинги от удаления релизом: сколько объектов помечено и длительность последнего прогона |
+| `controller_runtime_reconcile_total`, `controller_runtime_reconcile_errors_total`, `controller_runtime_reconcile_time_seconds` | Стандартные метрики controller-runtime по каждому контроллеру (лейбл `controller`: `clusterauthorizationrule-bindings`, `authorizationrule-bindings`, `dict-bindings`, `manage-bindings`) |
 
 **Алерты** (в правилах Prometheus `d8_user_authz`):
 
-- `D8UserAuthzControllerUnavailable` и `D8UserAuthzControllerTargetDown` — у контроллера недоступные реплики или он не скрейпится 5 минут;
+- `D8UserAuthzControllerUnavailable` и `D8UserAuthzControllerTargetDown` — у контроллера недоступные реплики или его метрики не собираются 5 минут;
 - `D8UserAuthzControllerReconcileErrorsHigh` — устойчивый поток ошибок reconcile;
 - `D8UserAuthzBindingsDrift` — биндинги какого-то вида 15 минут не приводятся к желаемому состоянию;
 - `D8UserAuthzAuthorizationRulesInvalid` и `D8UserAuthzAuthorizationRuleInvalid` — число и имена правил, биндинги которых не применяются 10 минут;
@@ -220,7 +220,7 @@ d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100
 | `user_authz_webhook_rules_quarantined` | Правила, которые экземпляр не смог использовать полностью: не компилируется паттерн `limitNamespaces` или `namespaceSelector` либо правило не удалось прочитать |
 | `user_authz_webhook_rules_directory_updated_timestamp_seconds` | Время последнего обновления правил |
 | `user_authz_webhook_rules_directory_rebuilds_total`, `user_authz_webhook_rules_directory_rebuild_duration_seconds` | Число обновлений правил и их длительность |
-| `user_authz_webhook_rules_watch_errors_total` | Ошибки list и watch у информера правил |
+| `user_authz_webhook_rules_watch_errors_total` | Ошибки list и watch при чтении правил |
 
 Permission Browser отдаёт те же метрики с префиксом `user_authz_permission_browser`; их собирает PodMonitor `permission-browser-apiserver`.
 
@@ -231,15 +231,15 @@ Permission Browser отдаёт те же метрики с префиксом `
 | `D8UserAuthzWebhookTargetDown` | Prometheus 5 минут не может собрать метрики хотя бы с одного экземпляра webhook'а. |
 | `D8UserAuthzWebhookRulesQuarantined` | Правило 10 минут не компилируется. |
 | `D8UserAuthzWebhookRulesWatchErrors` | Webhook 10 минут не может следить за изменениями правил. |
-| `D8UserAuthzWebhookDirectoryDiverged` | Экземпляры 10 минут используют разные наборы правил, поэтому один и тот же запрос отвечается по-разному в зависимости от master-узла, на который он попал. |
+| `D8UserAuthzWebhookDirectoryDiverged` | Экземпляры 10 минут используют разные наборы правил, поэтому на один и тот же запрос приходит разный ответ в зависимости от master-узла, на который он попал. |
 | `D8UserAuthzRulePropagationLag` | Один экземпляр час не обновлял правила, а другой обновлял. |
 | `D8UserAuthzPermissionBrowserUnavailable` | У Permission Browser есть недоступные реплики. |
 
 ## Почему изменение ClusterAuthorizationRule применяется до 30 секунд?
 
-API-сервер кеширует ответы webhook'а авторизации. В ресурсе `AuthorizationConfiguration`, который создаёт `control-plane-manager`, для webhook'а заданы `authorizedTTL: 5m`, `unauthorizedTTL: 30s` и `timeout: 3s`. Ключ кеша — весь SubjectAccessReview, поэтому повторный идентичный запрос отвечается из кеша.
+API-сервер кеширует ответы webhook'а авторизации. В ресурсе `AuthorizationConfiguration`, который создаёт `control-plane-manager`, для webhook'а заданы `authorizedTTL: 5m`, `unauthorizedTTL: 30s` и `timeout: 3s`. Ключ кеша — весь SubjectAccessReview, поэтому ответ на повторный идентичный запрос приходит из кеша.
 
-Webhook никогда не разрешает запрос: он либо запрещает его, либо не имеет мнения, и оба ответа кешируются на `unauthorizedTTL`, то есть на 30 секунд. Поэтому создание правила или его сужение применяется к конкретному запросу в течение 30 секунд с момента последнего идентичного запроса:
+Webhook никогда не разрешает запрос: он либо запрещает его, либо не имеет мнения, и оба ответа API-сервер кеширует на `unauthorizedTTL`, то есть на 30 секунд. Поэтому создание правила или его сужение применяется к конкретному запросу в течение 30 секунд с момента последнего идентичного запроса:
 
 ```bash
 d8 k auth can-i --as=user@example.com get pods -n other-namespace
