@@ -8,6 +8,7 @@ package resolver
 import (
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"k8s.io/client-go/discovery"
@@ -62,8 +63,16 @@ type ResourceScopeCache struct {
 	scopeMap map[string]bool // true = namespaced, false = cluster-scoped
 	// unavailableGroups are the groups the last refresh could not read, whose entries were carried
 	// over from the previous snapshot. A resource missing from one of them is missing because we
-	// could not look, which is a different answer from "it does not exist".
+	// could not look, which is a different answer from "it does not exist". Only ScopeOf reads
+	// this: it and the map are two halves of one answer, and the accessors that used to expose
+	// each half separately are gone, because a caller that recombined them differently got a
+	// different security outcome from the same data.
 	unavailableGroups map[string]struct{}
+
+	// looping is set while StartRefreshLoop runs. A miss pulls the next scheduled refresh forward,
+	// so with no loop there is nothing to pull: a cache nobody is refreshing must not start
+	// spawning refreshes of its own because somebody read from it.
+	looping atomic.Bool
 
 	// muMiss guards the miss-triggered refresh: when it last ran, and whether one is running now.
 	muMiss      sync.Mutex
@@ -118,26 +127,6 @@ func (c *ResourceScopeCache) IsNamespaced(group, resource string) bool {
 		return false
 	}
 	return namespaced
-}
-
-// Scope reports whether the resource is namespaced and whether the snapshot
-// contains it. Unlike IsNamespaced, a miss is not coerced to cluster-scoped:
-// multi-tenancy uses !known as "treat like namespaced" so a discovery hole
-// cannot fail-open. IsNamespaced stays fail-closed-as-cluster-scoped for
-// AccessibleNamespaces (a false namespaced=true would list every namespace).
-//
-// A nil *ResourceScopeCache answers like an empty one, so a typed nil handed to an interface value
-// is as safe as a nil interface.
-func (c *ResourceScopeCache) Scope(group, resource string) (bool, bool) {
-	if c == nil {
-		return false, false
-	}
-
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-
-	namespaced, known := c.scopeMap[group+"/"+resource]
-	return namespaced, known
 }
 
 // HasResource reports whether the discovery snapshot serves the resource at
@@ -211,19 +200,6 @@ func matchesResource(ruleResources []string, resource string) bool {
 	return false
 }
 
-// GroupUnavailable reports whether the last refresh failed to read this group. A resource that is
-// not in the snapshot is only genuinely absent when its group was read successfully; otherwise the
-// snapshot has a hole there and the caller must keep failing closed.
-func (c *ResourceScopeCache) GroupUnavailable(group string) bool {
-	if c == nil {
-		return false
-	}
-	c.mu.RLock()
-	defer c.mu.RUnlock()
-	_, unavailable := c.unavailableGroups[group]
-	return unavailable
-}
-
 // ScopeOf answers the whole question the multi-tenancy decision asks, in the type it consumes.
 //
 // The derivation used to live in the caller, assembled from Scope, HasData and GroupUnavailable.
@@ -270,6 +246,10 @@ func (c *ResourceScopeCache) ScopeOf(group, resource string) rules.ResourceScope
 // this, which is why the refresh runs in its own goroutine - refresh() takes the write lock at the
 // end.
 func (c *ResourceScopeCache) noteMiss() {
+	if !c.looping.Load() {
+		return
+	}
+
 	c.muMiss.Lock()
 	if c.missPending || c.clock().Sub(c.lastMiss) < missRefreshInterval {
 		c.muMiss.Unlock()
@@ -304,6 +284,9 @@ func (c *ResourceScopeCache) HasData() bool {
 
 // StartRefreshLoop starts the background refresh loop. Blocks until stopCh is closed.
 func (c *ResourceScopeCache) StartRefreshLoop(stopCh <-chan struct{}) {
+	c.looping.Store(true)
+	defer c.looping.Store(false)
+
 	for {
 		interval := c.refreshInterval
 		bootstrap := c.bootstrapInterval

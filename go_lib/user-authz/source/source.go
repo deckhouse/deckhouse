@@ -71,8 +71,11 @@ func (s State) String() string {
 	return fmt.Sprintf("state(%d)", int(s))
 }
 
-// Observer receives the facts a consumer exports as metrics. Every method may be called from the
-// rebuild goroutine; implementations must be safe for that.
+// Observer receives the facts a consumer exports as metrics.
+//
+// The calls come from more than one goroutine, and not the one a reader would guess:
+// DirectoryRebuilt from the rebuild loop, WatchError from the reflector's, and SyncedChanged from
+// whichever of them last changed the state. Implementations must be safe for all of them.
 type Observer interface {
 	DirectoryRebuilt(stats rules.Stats, took time.Duration)
 	SyncedChanged(synced bool)

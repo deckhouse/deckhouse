@@ -52,7 +52,12 @@ const (
 	// sidecar fronts it on the pod IP for Prometheus, so the aggregated API server's own port stays
 	// behind the aggregation layer. The address is the loopback one, so nothing outside the Pod
 	// reaches it directly.
-	metricsListenAddr = "127.0.0.1:4276"
+	//
+	// 4277, not 4276: 4276 is where the sidecar listens for Prometheus. The two are different
+	// addresses in the same network namespace, so the pod does start - but a sidecar told to
+	// listen on 0.0.0.0 would collide with this listener and, worse, proxy to itself. The webhook
+	// has always kept the two apart (4233 outside, 4243 loopback); this one did not.
+	metricsListenAddr = "127.0.0.1:4277"
 )
 
 var (

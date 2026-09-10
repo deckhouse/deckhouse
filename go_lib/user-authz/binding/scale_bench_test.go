@@ -57,8 +57,7 @@ func benchmarkRulesFor(b *testing.B, count int) {
 	idx := benchIndex(count)
 	groups := []string{"team-7", "system:authenticated"}
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if len(idx.RulesFor("user-7@example.com", groups)) == 0 {
 			b.Fatal("the fixture subject is bound, the benchmark measures the wrong path")
 		}
@@ -72,8 +71,7 @@ func BenchmarkScaleRulesFor20k(b *testing.B) { benchmarkRulesFor(b, 20000) }
 func benchmarkIndexBuild(b *testing.B, count int) {
 	b.Helper()
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		benchIndex(count)
 	}
 }

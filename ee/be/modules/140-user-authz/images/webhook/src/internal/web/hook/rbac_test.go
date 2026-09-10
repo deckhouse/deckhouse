@@ -480,8 +480,7 @@ func BenchmarkIndependentCRB_IndexLookup(b *testing.B) {
 	}
 
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		if got := idx.forRequest("someone", []string{"target-group"}); len(got) != 1 {
 			b.Fatalf("expected the one binding, got %d", len(got))
 		}
@@ -495,8 +494,7 @@ func BenchmarkIndependentCRB_FullScan(b *testing.B) {
 	spec := &WebhookResourceSpec{User: "someone", Group: []string{"target-group"}}
 
 	b.ReportAllocs()
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		matched := 0
 		for _, crb := range all {
 			if isCARManagedClusterRoleBinding(crb) {

@@ -287,6 +287,18 @@ func TestBuild_NamespaceSelector(t *testing.T) {
 	if got, _ := NamespaceAllowed(&carol, "team-a", ns); got || !carol.HasAnyFilters() {
 		t.Errorf("an empty namespaceSelector must override limitNamespaces: %+v", carol)
 	}
+
+	// ...and the other half of that corner: with nothing for it to override, an empty selector is
+	// indistinguishable from an absent one, so the rule has no filters and opens every non-system
+	// namespace. The two outcomes look contradictory next to each other, which is exactly why
+	// they are written down.
+	d, _ = build(t, Rule{Name: "empty-alone", Subjects: []Subject{user("carol")}, NamespaceSelector: &NamespaceSelector{}})
+	carol = entryOf(t, d, "carol")
+	for name, want := range map[string]bool{"team-a": true, "other": true, "kube-system": false} {
+		if got, _ := NamespaceAllowed(&carol, name, ns); got != want {
+			t.Errorf("an empty namespaceSelector with no patterns: %s = %v, want %v", name, got, want)
+		}
+	}
 }
 
 func TestBuild_Quarantine(t *testing.T) {

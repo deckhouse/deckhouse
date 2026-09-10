@@ -49,7 +49,9 @@ const (
 	// MetricsListenAddr is a node-local plaintext listener that serves only /metrics. A
 	// kube-rbac-proxy sidecar fronts it on the pod IP for Prometheus; the authorization listener
 	// above stays mutually authenticated for the API server alone. The webhook runs on the host
-	// network, so this port must be free on the node (see the DaemonSet).
+	// network, so this port must be free on the node - it is not declared as a containerPort
+	// anywhere, being loopback-only; the DaemonSet names it once, in the sidecar's UPSTREAM_URL,
+	// and the two have to agree.
 	MetricsListenAddr = "127.0.0.1:4243"
 
 	metricsNamespace = "user_authz_webhook"
@@ -61,14 +63,14 @@ func buildTLSConfig() (*tls.Config, error) {
 	{ // kube-apiserver requests
 		clientCertBytes, err := os.ReadFile(authClientCA)
 		if err != nil {
-			return nil, fmt.Errorf("reading %s: %v", authClientCA, err)
+			return nil, fmt.Errorf("reading %s: %w", authClientCA, err)
 		}
 		clientCertPool.AppendCertsFromPEM(clientCertBytes)
 	}
 	{ // kubelet liveness probe requests
 		clientCertBytes, err := os.ReadFile(sslListenCert)
 		if err != nil {
-			return nil, fmt.Errorf("reading %s: %v", sslListenCert, err)
+			return nil, fmt.Errorf("reading %s: %w", sslListenCert, err)
 		}
 		clientCertPool.AppendCertsFromPEM(clientCertBytes)
 	}
@@ -344,7 +346,7 @@ func (s *Server) Run() error {
 	s.logger.Println("server is starting to listen on ", ListenAddr, "...")
 
 	if err = httpServer.ListenAndServeTLS(sslListenCert, sslListenKey); err != nil && err != http.ErrServerClosed {
-		return fmt.Errorf("could not listen on %s: %v", ListenAddr, err)
+		return fmt.Errorf("could not listen on %s: %w", ListenAddr, err)
 	}
 
 	return nil

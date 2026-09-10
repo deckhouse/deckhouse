@@ -696,7 +696,9 @@ func (c *NamespacedDiscoveryCache) execRequest(req *http.Request, logTag string,
 	}
 
 	if resp.StatusCode == http.StatusNotFound {
-		return ErrNotFound
+		// Wrapped like every other error here, so a log line says which request 404'd. Callers
+		// match it with errors.Is, which the wrapping preserves.
+		return fmt.Errorf("%s: %s: %w", logTag, req.URL.Path, ErrNotFound)
 	}
 
 	if resp.StatusCode/100 > 2 {

@@ -25,7 +25,11 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 
 	"github.com/deckhouse/deckhouse/go_lib/user-authz/rules"
+	"github.com/deckhouse/deckhouse/go_lib/user-authz/source"
 )
+
+// The source calls this as its Observer; asserted so the two cannot drift apart silently.
+var _ source.Observer = (*Metrics)(nil)
 
 // Metrics implements source.Observer with Prometheus collectors. Each consumer passes its own
 // metric namespace to New, which is what tells the webhook's series from permission-browser's.
@@ -49,6 +53,10 @@ func New(namespace string) *Metrics {
 			Namespace: namespace, Name: "rules_observed",
 			Help: "Number of ClusterAuthorizationRules the current directory was built from.",
 		}),
+		// A Prometheus gauge is a float64, so this carries the etcd revision exactly only up to
+		// 2^53. That is about nine thousand million million: a cluster reaching it would have to
+		// write a hundred thousand objects a second for three thousand years, and the alerts that
+		// read this compare instances of the same cluster, so both sides would round the same way.
 		maxResourceVersion: prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: namespace, Name: "rules_max_resource_version",
 			Help: "Highest resourceVersion among the rules of the current directory.",
@@ -59,7 +67,7 @@ func New(namespace string) *Metrics {
 		}),
 		quarantined: prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: namespace, Name: "rules_quarantined",
-			Help: "Number of rules whose limitNamespaces pattern or namespaceSelector does not compile; their subjects are limited to what the rest of the rule allows.",
+			Help: "Number of rules the directory could not fully use: a limitNamespaces pattern or namespaceSelector that does not compile (the rest of the rule still applies), or a rule that could not be read at all (it applies nowhere).",
 		}),
 		updatedTimestamp: prometheus.NewGauge(prometheus.GaugeOpts{
 			Namespace: namespace, Name: "rules_directory_updated_timestamp_seconds",
