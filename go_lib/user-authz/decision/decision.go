@@ -30,6 +30,7 @@ package decision
 
 import (
 	"sync"
+	"time"
 
 	"github.com/deckhouse/deckhouse/go_lib/user-authz/rules"
 )
@@ -37,6 +38,54 @@ import (
 // warnMissingBindings keeps the complaint in Entries to one line per process. It is on the
 // authorization path, so a consumer wired up wrongly would otherwise log on every request, forever.
 var warnMissingBindings sync.Once
+
+// nsLookupInterval is how often the namespace-lookup complaint may be written.
+const nsLookupInterval = 10 * time.Second
+
+// nsLookupComplaints throttles that complaint.
+//
+// The lookup fails for a namespace that does not exist just as it does for a broken cache, the
+// namespace name comes from the request, and the API server's answer cache is keyed on the whole
+// review - so a subject a rule limits can write a line to every master's log on every request
+// simply by varying the name. That is a log volume nobody chose, on the machines that can least
+// afford to run out of disk. Throttled, the operator still learns that lookups are failing and
+// how often, which is the whole diagnostic value of the line.
+var nsLookupComplaints = &throttle{every: nsLookupInterval}
+
+type throttle struct {
+	mu         sync.Mutex
+	every      time.Duration
+	last       time.Time
+	suppressed int
+}
+
+// allow reports whether to write the line now, and how many were suppressed since the last one.
+func (t *throttle) allow(now time.Time) (bool, int) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if !t.last.IsZero() && now.Sub(t.last) < t.every {
+		t.suppressed++
+		return false, 0
+	}
+	suppressed := t.suppressed
+	t.suppressed = 0
+	t.last = now
+	return true, suppressed
+}
+
+// logNamespaceLookupFailure reports that the namespace could not be looked up, at most once per
+// nsLookupInterval, saying how many complaints it swallowed in between.
+func (s Sources) logNamespaceLookupFailure(namespace string, err error) {
+	write, suppressed := nsLookupComplaints.allow(time.Now())
+	if !write {
+		return
+	}
+	if suppressed > 0 {
+		s.logf("namespace selector check for %q failed: %v (and %d more in the last %s)", namespace, err, suppressed, nsLookupInterval)
+		return
+	}
+	s.logf("namespace selector check for %q failed: %v", namespace, err)
+}
 
 // InternalErrorReason is the answer when the decision needed a fact that could not be fetched. It
 // is deliberately vague: the operator gets the detail from the log, the caller does not.
@@ -188,7 +237,7 @@ func namespaced(req Request, src Sources, entry *rules.Entry) Result {
 		// The lookup fails for a namespace that does not exist as well as for a genuine cache
 		// problem. Neither may reach the caller: naming the missing namespace in the denial turned
 		// the authorizer into an existence oracle for anyone a rule limits.
-		src.logf("namespace selector check for %q failed: %v", req.Namespace, err)
+		src.logNamespaceLookupFailure(req.Namespace, err)
 	}
 	if allowed {
 		return Result{Outcome: NoOpinion}
@@ -264,13 +313,21 @@ func NamespaceAccess(src Sources, username string, groups []string, privileged b
 }
 
 // NamespaceAllowed reports whether a filter from NamespaceAccess opens the namespace.
+//
+// A nil filter opens everything, and that is not a fallback for a caller that forgot one: it is
+// the answer for the two access types that carry no filter. NamespaceAccess returns a filter worth
+// applying only for Filtered - AllNamespaces has nothing to narrow, and NoNamespaces means no rule
+// names the subject, which both consumers treat as "not multi-tenancy's business" rather than as a
+// denial, because under the newer role model most subjects are in that position and the
+// enforcement webhook answers the same way for them. Handing this method a filter without checking
+// the access type it came with is therefore not a way to fail closed; check the access type.
 func NamespaceAllowed(src Sources, entry *rules.Entry, namespace string) bool {
 	if entry == nil {
 		return true
 	}
 	allowed, err := rules.NamespaceAllowed(entry, namespace, src.NamespaceLabels)
 	if err != nil {
-		src.logf("namespace selector check for %q failed: %v", namespace, err)
+		src.logNamespaceLookupFailure(namespace, err)
 	}
 	return allowed
 }

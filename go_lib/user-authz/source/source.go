@@ -150,6 +150,12 @@ type Source struct {
 	// directory reads is skipped, and skipping it must not make two instances look like they
 	// disagree. See noteResourceVersion.
 	maxSeenResourceVersion uint64
+
+	// muNotify serialises the state report to the observer, so two goroutines that change the
+	// state at the same time cannot deliver their answers in the wrong order.
+	muNotify sync.Mutex
+	// syncedReported is the last value handed to Observer.SyncedChanged; nil until the first one.
+	syncedReported *bool
 }
 
 // New builds a Source over a dynamic client. Run must be called for it to do anything.
@@ -177,13 +183,13 @@ func New(client dynamic.Interface, opts Options) *Source {
 	_ = informer.SetWatchErrorHandler(s.watchError)
 	_ = informer.SetTransform(rules.Project)
 	_, _ = informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		AddFunc: func(obj interface{}) { s.noteWatchAlive(); s.noteResourceVersion(obj); s.markDirty() },
+		AddFunc: func(obj interface{}) { s.noteWatchAliveAndReport(); s.noteResourceVersion(obj); s.markDirty() },
 		UpdateFunc: func(oldObj, newObj interface{}) {
 			// Reaching this at all means the watch is delivering, so the error streak ends here
 			// even when the update itself changes nothing the directory reads. A reflector that
 			// re-lists after an error generates an update for every object it holds, which is what
 			// makes recovery observable on a cluster whose rules never change.
-			s.noteWatchAlive()
+			s.noteWatchAliveAndReport()
 			s.noteResourceVersion(newObj)
 			// Both objects have already been through Project, which keeps only the fields the
 			// directory reads. An update that leaves them equal (a label, an annotation, a
@@ -193,7 +199,7 @@ func New(client dynamic.Interface, opts Options) *Source {
 			}
 			s.markDirty()
 		},
-		DeleteFunc: func(obj interface{}) { s.noteWatchAlive(); s.noteResourceVersion(obj); s.markDirty() },
+		DeleteFunc: func(obj interface{}) { s.noteWatchAliveAndReport(); s.noteResourceVersion(obj); s.markDirty() },
 	})
 	return s
 }
@@ -264,6 +270,7 @@ func (s *Source) awaitSync(ctx context.Context) {
 	s.lastError = nil
 	s.consecutiveWatchErrors = 0
 	s.mu.Unlock()
+	s.notifySynced()
 	// Publish the first directory at once. There is nothing to coalesce yet, and until it exists
 	// every subject of a rule is treated as restricted, so waiting out the debounce window would be
 	// pure added exposure.
@@ -317,6 +324,13 @@ func (s *Source) noteWatchAlive() {
 	if recovered {
 		s.opts.Logf("rules source: the watch is delivering again; this instance is no longer stale")
 	}
+}
+
+// noteWatchAliveAndReport is noteWatchAlive plus the state report. The report cannot happen inside
+// noteWatchAlive: that method holds the lock State() needs.
+func (s *Source) noteWatchAliveAndReport() {
+	s.noteWatchAlive()
+	s.notifySynced()
 }
 
 // noteResourceVersion records the highest resourceVersion this instance has seen.
@@ -395,7 +409,34 @@ func (s *Source) watchError(_ *cache.Reflector, err error) {
 	if s.opts.Observer != nil {
 		s.opts.Observer.WatchError(err)
 	}
+	s.notifySynced()
 	s.opts.Logf("rules source: list/watch error: %v", err)
+}
+
+// notifySynced tells the observer whether this source is currently tracking the cluster, whenever
+// that answer changes.
+//
+// It used to be reported once, on the first sync, and never again - so the gauge said "synced"
+// for the rest of the process's life, including while State() said Stale or CRDMissing and the
+// consumer was answering 503 to every request. The one metric an operator would reach for to see
+// that was the one metric that could not show it.
+//
+// The state is read and reported under the same lock, so two goroutines changing the state
+// concurrently cannot report their answers out of order.
+func (s *Source) notifySynced() {
+	if s.opts.Observer == nil {
+		return
+	}
+
+	s.muNotify.Lock()
+	defer s.muNotify.Unlock()
+
+	synced := s.State() == StateSynced
+	if s.syncedReported != nil && *s.syncedReported == synced {
+		return
+	}
+	s.syncedReported = &synced
+	s.opts.Observer.SyncedChanged(synced)
 }
 
 // rebuildLoop folds bursts of events into one build per debounce window.
@@ -448,6 +489,9 @@ func (s *Source) rebuild() {
 	started := time.Now()
 	objects := s.informer.GetStore().List()
 	list := make([]rules.Rule, 0, len(objects))
+	// unreadable are the rules that could not be projected at all, counted with the quarantined
+	// ones below.
+	var unreadable map[string]error
 	for _, obj := range objects {
 		u, ok := obj.(*unstructured.Unstructured)
 		if !ok {
@@ -458,11 +502,28 @@ func (s *Source) rebuild() {
 			// The CRD schema validates the spec, so this is a programming error rather than a user
 			// one; still, one rule must not take the directory down with it.
 			s.opts.Logf("rules source: skip %q: %v", u.GetName(), err)
+			if unreadable == nil {
+				unreadable = make(map[string]error)
+			}
+			unreadable[u.GetName()] = err
 			continue
 		}
 		list = append(list, rule)
 	}
 	dir, stats := s.builder.Build(list)
+
+	// A rule that could not be read at all stays out of the directory, which is the safe place for
+	// it: the ordering guard restricts every subject its bindings name until the rule appears. It
+	// used to stay out of the counting too, and that is not safe - the quarantine gauge read zero
+	// and its alert never fired while a rule sat there unapplied, so the one signal that says "a
+	// rule in this cluster is not doing what it says" was blind to the case where the rule cannot
+	// even be parsed.
+	for name, err := range unreadable {
+		if stats.Quarantined == nil {
+			stats.Quarantined = make(map[string]error, len(unreadable))
+		}
+		stats.Quarantined[name] = err
+	}
 	s.dir.Store(dir)
 	first := !s.synced.Swap(true)
 	took := time.Since(started)
@@ -479,10 +540,11 @@ func (s *Source) rebuild() {
 
 	if s.opts.Observer != nil {
 		s.opts.Observer.DirectoryRebuilt(stats, took)
-		if first {
-			s.opts.Observer.SyncedChanged(true)
-		}
 	}
+	if first {
+		s.opts.Logf("rules source: the first directory is published")
+	}
+	s.notifySynced()
 	if s.opts.OnUpdate != nil {
 		s.opts.OnUpdate(dir, stats)
 	}

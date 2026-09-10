@@ -57,7 +57,7 @@
       plk_grouped_by__d8_user_authz_webhook_malfunctioning: "D8UserAuthzWebhookMalfunctioning,tier=cluster,prometheus=deckhouse,kubernetes=~kubernetes"
       summary: A ClusterAuthorizationRule cannot be compiled by the webhook.
       description: |-
-        For more than 10 minutes the `user-authz-webhook` has quarantined at least one `ClusterAuthorizationRule`: its `limitNamespaces` pattern or `namespaceSelector` could not be compiled. The rule is kept and the rest of it still applies, but the broken filter is left out, so its subjects get a narrower scope than written and are denied where the filter was meant to allow.
+        For more than 10 minutes the `user-authz-webhook` has quarantined at least one `ClusterAuthorizationRule`. Either its `limitNamespaces` pattern or `namespaceSelector` did not compile — the rule is kept and the rest of it still applies, but the broken filter is left out, so its subjects get a narrower scope than written and are denied where the filter was meant to allow — or the rule could not be read at all, which the CRD schema is supposed to prevent, and then it applies nowhere and its subjects are denied every namespace until it can be read.
 
         Find the offending rule (an invalid regular expression in `limitNamespaces` or a malformed `namespaceSelector`):
 

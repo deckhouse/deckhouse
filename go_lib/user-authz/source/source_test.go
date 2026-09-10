@@ -77,6 +77,20 @@ func (r *recorder) WatchError(err error) {
 	r.watchErrors = append(r.watchErrors, err)
 }
 
+// lastSynced is the last value handed to SyncedChanged, as "true"/"false"/"none" so a test can
+// tell "not reported yet" from "reported false".
+func (r *recorder) lastSynced() string {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	if len(r.synced) == 0 {
+		return "none"
+	}
+	if r.synced[len(r.synced)-1] {
+		return "true"
+	}
+	return "false"
+}
+
 func (r *recorder) watchErrorCount() int {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -169,8 +183,19 @@ func TestSource_BuildsAndFollowsChanges(t *testing.T) {
 
 	rec.mu.Lock()
 	defer rec.mu.Unlock()
-	if len(rec.synced) != 1 || !rec.synced[0] {
-		t.Errorf("SyncedChanged must be reported once: %v", rec.synced)
+	// The report follows the state, and only its changes: a source that has listed the cluster
+	// and is following it reports true, and reports it once however many events arrive. Whether
+	// a false precedes it depends on whether the client produced a watch error before the first
+	// list, which is a property of the fake, not of the source - so what is pinned here is the
+	// end state and the absence of repeats.
+	if len(rec.synced) == 0 || !rec.synced[len(rec.synced)-1] {
+		t.Errorf("a source following the cluster must end up reported as synced: %v", rec.synced)
+	}
+	for i := 1; i < len(rec.synced); i++ {
+		if rec.synced[i] == rec.synced[i-1] {
+			t.Errorf("SyncedChanged is reported on changes only, got %v", rec.synced)
+			break
+		}
 	}
 	if len(rec.updates) < 3 {
 		t.Errorf("expected at least three rebuilds, got %d", len(rec.updates))
@@ -220,6 +245,51 @@ func TestSource_QuarantineIsReported(t *testing.T) {
 // A cluster without the ClusterAuthorizationRule CRD is a normal bootstrap state, not a failure:
 // the source must keep retrying, report it as such, and never publish an empty directory that a
 // consumer would mistake for "there are no rules".
+// A rule that cannot be read at all is counted with the quarantined ones.
+//
+// It stays out of the directory, which is right - the ordering guard then restricts every subject
+// its bindings name until the rule can be read - but it used to stay out of the counting too, so
+// the quarantine gauge read zero and its alert stayed silent while a rule sat in the cluster doing
+// nothing it says it does.
+func TestSource_ARuleThatCannotBeReadIsCounted(t *testing.T) {
+	// limitNamespaces has to be a list. The CRD schema rejects this, so reaching it means
+	// something upstream is broken - which is exactly when the operator needs to be told.
+	broken := &unstructured.Unstructured{Object: map[string]interface{}{
+		"apiVersion": "deckhouse.io/v1",
+		"kind":       "ClusterAuthorizationRule",
+		"metadata":   map[string]interface{}{"name": "broken", "resourceVersion": "2"},
+		"spec":       map[string]interface{}{"limitNamespaces": "team-a"},
+	}}
+
+	client := newClient(car("team-a", "1", []string{"alice"}, "team-a"), broken)
+	rec := &recorder{}
+	s := New(client, Options{Debounce: 20 * time.Millisecond, Observer: rec, Logf: t.Logf})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go s.Run(ctx)
+
+	eventually(t, "the first directory", func() bool { return s.Directory() != nil })
+
+	// The readable rule is served as usual.
+	if !s.Directory().KnowsRule("team-a") {
+		t.Error("one unreadable rule must not take the readable ones down with it")
+	}
+	// And the unreadable one is not silently gone.
+	if s.Directory().KnowsRule("broken") {
+		t.Error("a rule that cannot be read must not be in the directory: its subjects are restricted until it can be")
+	}
+
+	eventually(t, "the unreadable rule to be counted", func() bool {
+		rec.mu.Lock()
+		defer rec.mu.Unlock()
+		if len(rec.updates) == 0 {
+			return false
+		}
+		_, counted := rec.updates[len(rec.updates)-1].Quarantined["broken"]
+		return counted
+	})
+}
+
 func TestSource_CRDMissing(t *testing.T) {
 	client := newClient()
 	client.PrependReactor("list", "clusterauthorizationrules", func(k8stesting.Action) (bool, runtime.Object, error) {
@@ -341,6 +411,42 @@ func TestSource_StaleAfterEnoughConsecutiveWatchErrors(t *testing.T) {
 	if err := s.LastError(); err != nil {
 		t.Errorf("LastError = %v after recovery, want nil", err)
 	}
+}
+
+// Going stale is reported, and so is coming back.
+//
+// The observer used to hear about the first sync and nothing after it, so the gauge an operator
+// would reach for read "synced" for the life of the process - including while the source had
+// stopped tracking the cluster and the consumer was answering 503 to every request. The one
+// metric that could show it was the one metric that could not.
+func TestSource_SyncedIsReportedWhenTheStateChanges(t *testing.T) {
+	client := newClient(car("team-a", "1", []string{"alice"}, "team-a"))
+	rec := &recorder{}
+	s := New(client, Options{Debounce: 20 * time.Millisecond, DegradeAfterWatchErrors: 3, Observer: rec, Logf: t.Logf})
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	go s.Run(ctx)
+
+	eventually(t, "the first directory", func() bool { return s.Directory() != nil })
+	eventually(t, "the source to report itself synced", func() bool { return rec.lastSynced() == "true" })
+
+	s.watchError(nil, errors.New("connection refused"))
+	s.watchError(nil, errors.New("connection refused"))
+	if got := rec.lastSynced(); got != "true" {
+		t.Errorf("below the threshold the source is still synced, reported %s", got)
+	}
+
+	s.watchError(nil, errors.New("connection refused"))
+	if got := rec.lastSynced(); got != "false" {
+		t.Errorf("a stale source must be reported as not synced, reported %s", got)
+	}
+
+	// And the watch delivering again puts it back.
+	if _, err := client.Resource(rules.GroupVersionResource).Create(context.Background(),
+		car("team-b", "2", []string{"bob"}, "team-b"), metav1.CreateOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	eventually(t, "the source to report itself synced again", func() bool { return rec.lastSynced() == "true" })
 }
 
 // The streak must be consecutive. Errors spread out over the life of a process, with the watch

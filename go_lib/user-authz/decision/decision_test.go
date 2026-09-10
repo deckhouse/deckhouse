@@ -219,6 +219,54 @@ func TestAuthorize_OrderingGuard(t *testing.T) {
 	}
 }
 
+// The ordering guard restricts a subject it knows nothing about; it must not narrow one it does.
+//
+// The invariant is stated twice in the library - Restricted() is the zero entry and Combine is a
+// union, so a restricted marker beside an observed entry leaves that entry exactly as wide as its
+// rules make it - with a note telling the next reader not to "fix" Combine into a clamp. A note is
+// not a test. Clamping would deny access the observed rules legitimately grant, and it would do it
+// only while a second rule was in flight, which is the kind of bug that reaches production as
+// "sometimes it says no".
+func TestAuthorize_OrderingGuardDoesNotNarrowAnObservedEntry(t *testing.T) {
+	t.Parallel()
+	// alice has one observed rule, which opens team-a; a binding says a second rule, team-b, also
+	// binds her, and that one has not been observed.
+	src := Sources{
+		Directory: dir(limited("rule-a", "alice", "team-a")),
+		Bindings:  staticBindings{"alice": {"rule-a", "rule-b"}},
+	}
+
+	if got := Authorize(Request{User: "alice", Namespace: "team-a"}, src); got.Denied() {
+		t.Errorf("the observed rule still opens team-a while another rule is in flight, got %+v", got)
+	}
+	// And nothing the unobserved rule might say is granted early.
+	if got := Authorize(Request{User: "alice", Namespace: "team-b"}, src); !got.Denied() {
+		t.Errorf("an unobserved rule must not grant anything yet, got %+v", got)
+	}
+
+	// The same through the reporting path, which folds the entries itself.
+	access, filter := NamespaceAccess(src, "alice", nil, false)
+	if access != Filtered {
+		t.Fatalf("access = %v, want Filtered", access)
+	}
+	if !NamespaceAllowed(src, &filter, "team-a") {
+		t.Error("the reported filter must open team-a, the namespace the observed rule grants")
+	}
+	if NamespaceAllowed(src, &filter, "team-b") {
+		t.Error("and must not open a namespace only an unobserved rule might grant")
+	}
+}
+
+// A filter of nil opens everything, and that is the answer for the access types that carry no
+// filter - not a fallback for a caller that lost one. Pinned because it reads like a fail-open.
+func TestNamespaceAllowed_NilFilterOpensEverything(t *testing.T) {
+	t.Parallel()
+	src := Sources{Directory: dir(limited("team-a", "alice", "team-a")), Bindings: staticBindings{}}
+	if !NamespaceAllowed(src, nil, "anything") {
+		t.Error("no filter means nothing to narrow")
+	}
+}
+
 func TestAuthorize_NonResourceRequest(t *testing.T) {
 	t.Parallel()
 	src := Sources{
