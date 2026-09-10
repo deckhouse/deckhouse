@@ -1471,6 +1471,16 @@ entries:
             ru: TODO Катастрофоустойчивость
           draft: true
           url: /user/catastrophic-resistance.html
+    - title:
+        en: Modules
+        ru: Модули
+      external_url: /modules/
+      target: _self
+    - title:
+        en: Guides
+        ru: Руководства
+      external_url: /products/kubernetes-platform/guides/
+      target: _self
 # ------------- Architecture -------------
     - title:
         en: Architecture
@@ -1976,7 +1986,7 @@ entries:
             - title:
                 en: Extended-monitoring module
                 ru: Модуль extended-monitoring
-              url: /architecture/observability/extended-monitoring.html              
+              url: /architecture/observability/extended-monitoring.html
             - title:
                 en: Monitoring-kubernetes module
                 ru: Модуль monitoring-kubernetes

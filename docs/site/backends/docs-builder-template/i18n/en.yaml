@@ -102,7 +102,6 @@ channel_or_version: "Channel/version"
 channel_or_version_of_module: "Module channel/version"
 deckhouse: deckhouse
 documentation: documentation
-Documentation: Documentation
 modules_documentation: Modules documentation
 modules_list: Modules list
 filters: Filters
@@ -110,6 +109,8 @@ search_filter: Search by module name
 search_placeholder_text_filter: Search
 editions_filter: Edition
 editions_filter_all_selected: All editions
+extensions_filter: Extension
+extensions_filter_all_selected: All extensions
 certification_filter: Certification status
 certification_filter_all_selected: All statuses
 stage_filter: Lifecycle stage
@@ -166,6 +167,9 @@ module_is_available_in_ee_only: The module is available only in Deckhouse Enterp
 module_available_editions_prefix: Available in
 module_available_with_limitations_prefix: Available with limitations in
 module_available_without_limitations_prefix: Available without limitations in
+module_available_extensions_prefix: Included in extensions
+module_available_extensions_with_limitations_prefix: Included with limitations in extensions
+module_available_extensions_without_limitations_prefix: Included without limitations in extensions
 module_has_restions_short: with limitations
 module_alert_experimental: Experimental
 module_alert_preview: Preview

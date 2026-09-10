@@ -1,0 +1,81 @@
+{{- /*
+  Shows the list of extensions the module is included in (with or without restrictions).
+  Data: hugo.Data.modules_all[<module>].extensions / .extensionsWithRestrictions / .extensionsWithRestrictionsComments
+  Titles: hugo.Data.helpers.extensions[<id>].title[<lang>]
+*/}}
+{{- $moduleName := .moduleName }}
+{{- if not $moduleName }}{{ return }}{{ end }}
+{{- $moduleData := index hugo.Data.modules_all $moduleName }}
+{{- $extensionsData := hugo.Data.helpers.extensions }}
+{{- $lang := .lang }}
+
+{{- if and $moduleData $moduleData.extensions (gt (len $moduleData.extensions) 0) }}
+{{- $extensionsWithRestrictions := default slice $moduleData.extensionsWithRestrictions }}
+{{- $comments := default dict $moduleData.extensionsWithRestrictionsComments }}
+{{- $extensionsWithoutRestrictions := slice }}
+{{- range $moduleData.extensions }}
+  {{- if not (in $extensionsWithRestrictions .) }}
+    {{- $extensionsWithoutRestrictions = $extensionsWithoutRestrictions | append . }}
+  {{- end }}
+{{- end }}
+<div class="info alert__wrap">
+  <svg class="alert__icon icon--info">
+    <use xlink:href="/images/sprite.svg#info-icon"></use>
+  </svg>
+<div>
+{{- if gt (len $extensionsWithRestrictions) 0 }}
+    <p>
+      {{- $allComment := index $comments "all" }}
+      {{- if $allComment }}
+        <span data-tippy-content='{{ index $allComment $lang }}' class='alert__info'>
+          {{- T "module_available_extensions_with_limitations_prefix" -}}
+        </span>: 
+      {{- else }}
+        {{- T "module_available_extensions_with_limitations_prefix" }}:
+      {{- end }}
+    <strong>
+      {{- $lastIndex := sub (len $extensionsWithRestrictions) 1 }}
+      {{- range $index, $extension := $extensionsWithRestrictions }}
+        {{- $title := $extension }}
+        {{- with index $extensionsData $extension }}{{ $title = default .title.en (index .title $lang) }}{{ end }}
+        {{- $comment := index $comments $extension }}
+        {{- if $comment }}
+          <span style="border-bottom: 1px dotted #0064FF" data-tippy-content="{{ index $comment $lang }}" class="alert__info">{{ $title }}</span>
+        {{- else }}
+          {{ $title }}
+        {{- end }}
+        {{- if lt $index $lastIndex }}, {{ end }}
+      {{- end }}
+    </strong>
+    </p>
+    {{- if gt (len $extensionsWithoutRestrictions) 0 }}
+    <p>
+      {{- T "module_available_extensions_without_limitations_prefix" }}: 
+    <strong>
+      {{- $lastIndex := sub (len $extensionsWithoutRestrictions) 1 }}
+      {{- range $index, $extension := $extensionsWithoutRestrictions }}
+        {{- $title := $extension }}
+        {{- with index $extensionsData $extension }}{{ $title = default .title.en (index .title $lang) }}{{ end }}
+        {{ $title }}
+        {{- if lt $index $lastIndex }}, {{ end }}
+      {{- end }}
+    </strong>
+    </p>
+    {{- end }}
+{{- else }}
+    <p>
+      {{- T "module_available_extensions_prefix" }}: 
+    <strong>
+      {{- $lastIndex := sub (len $extensionsWithoutRestrictions) 1 }}
+      {{- range $index, $extension := $extensionsWithoutRestrictions }}
+        {{- $title := $extension }}
+        {{- with index $extensionsData $extension }}{{ $title = default .title.en (index .title $lang) }}{{ end }}
+        {{ $title }}
+        {{- if lt $index $lastIndex }}, {{ end }}
+      {{- end }}
+    </strong>
+    </p>
+{{- end }}
+</div>
+</div>
+{{- end }}
