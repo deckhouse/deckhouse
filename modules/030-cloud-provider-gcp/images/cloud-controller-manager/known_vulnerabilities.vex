@@ -1,8 +1,8 @@
 {
   "@context": "https://openvex.dev/ns/v0.2.0",
   "@id": "merged-vex-bb327eb922dfa6889807ef765ca3e40714b87c93dbdac3843dc2223d8d09ec3c",
-  "author": "Deckhouse \u003ccontact@deckhouse.io\u003e",
-  "version": 1,
+  "author": "Deckhouse <contact@deckhouse.io>",
+  "version": 2,
   "statements": [
     {
       "vulnerability": {
@@ -59,6 +59,20 @@
       "justification": "vulnerable_code_not_in_execute_path",
       "impact_statement": "Пакет golang.org/x/crypto/openpgp небезопасен по дизайну и не рекомендуется к использованию. Образ gcp cloud-controller-manager не использует и не вызывает функциональность OpenPGP — данный код недостижим в артефакте, поэтому уязвимость не эксплуатируется.",
       "timestamp": "2026-07-24T09:07:47.278794Z"
+    },
+    {
+      "vulnerability": {
+        "name": "GHSA-gcjh-h69q-9w9g"
+      },
+      "products": [
+        {
+          "@id": "pkg:golang/github.com/google/cel-go"
+        }
+      ],
+      "status": "not_affected",
+      "justification": "vulnerable_code_not_in_execute_path",
+      "impact_statement": "Затрагивает только сборку для Kubernetes 1.32 (ccm/v32.2.5), где cel-go остаётся на версии v0.22.0. Обновление до исправленной v0.29.0 в этой минорной линии невозможно: из-за директивы replace k8s.io/apiserver => v0.31.2 команда go mod tidy пересобирает граф зависимостей и опускает golang.org/x/net с v0.58.0 до v0.17.0, что вернуло бы в образ множество уязвимостей уровня HIGH. Образ gcp cloud-controller-manager не запускает CEL-вычислитель и не принимает CEL-выражения от пользователя, поэтому уязвимый код недостижим в данном бинарном файле. В сборках для Kubernetes 1.33-1.36 зависимость уже обновлена до v0.29.0.",
+      "timestamp": "2026-09-04T00:35:29.000000Z"
     }
   ],
   "timestamp": "2026-07-24T09:07:47Z"
