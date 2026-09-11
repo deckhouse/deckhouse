@@ -10,10 +10,6 @@ import:
   add: /coreutils/usr/bin/true
   to: /bin/true
   before: setup
-- image: common/pause
-  add: /pause
-  to: /pause
-  before: install
 {{- include "image mount points" . }}
 imageSpec:
   config:

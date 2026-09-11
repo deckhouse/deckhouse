@@ -4,23 +4,11 @@ linters-settings:
       liveness-probe:
         - kind: DaemonSet
           name: safe-agent-updater
-          container: pause-check-linux-kernel
-        - kind: DaemonSet
-          name: safe-agent-updater
           container: pause-cilium
-        - kind: DaemonSet
-          name: safe-agent-updater
-          container: pause-kube-rbac-proxy
       readiness-probe:
         - kind: DaemonSet
           name: safe-agent-updater
-          container: pause-check-linux-kernel
-        - kind: DaemonSet
-          name: safe-agent-updater
           container: pause-cilium
-        - kind: DaemonSet
-          name: safe-agent-updater
-          container: pause-kube-rbac-proxy
         - kind: Deployment
           name: operator
           container: operator

@@ -75,8 +75,8 @@ import:
     add: /relocate/sbin
     to: /sbin
     before: setup
-  - image: cni-cilium/agent-distroless
-    add: /usr/bin/cilium-dbg
+  - image: cni-cilium/bin-cilium
+    add: /out/usr/bin/cilium-dbg
     to: /sbin/cilium-dbg
     before: setup
 imageSpec:

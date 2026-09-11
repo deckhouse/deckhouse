@@ -1,5 +1,5 @@
 # Patches
 
-## 001-go-mod.patch
+## 000-go-mod.patch
 
 Update go.mod and tidy. Fix CVE.

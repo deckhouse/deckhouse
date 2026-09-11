@@ -1,11 +1,15 @@
-# #####################################################################
-# Build gops binaries
-# Based on https://github.com/cilium/cilium/blob/v1.17.4/images/runtime/Dockerfile (gops-cni-builder stage)
-# and https://github.com/cilium/cilium/blob/v1.17.4/images/runtime/build-gops.sh
-# #####################################################################
+{{/*
+Description: gops, a diagnostic tool for Go processes, used at runtime
+Target: agent, hubble-relay
+Sources:
+- cilium/cilium: images/runtime/Dockerfile (go-builder stage)
+- cilium/cilium: images/runtime/build-gops.sh
+*/}}
 ---
-image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
-fromImage: common/src-artifact
+{{- $gopsVersion := include "get_oss_version_by_id" (list "gops" $) }}
+---
+image: {{ .ModuleName }}/{{ .ImageName }}-src
+from: {{ index $.Images "builder/src" }}
 final: false
 git:
 - add: /{{ .ModulePath }}modules/{{ .ModulePriority }}-{{ .ModuleName }}/images/{{ .ImageName }}/patches
@@ -18,16 +22,16 @@ secrets:
   value: {{ .SOURCE_REPO }}
 shell:
   install:
-  - git clone --depth 1 --branch v{{ include "get_oss_version_by_id" (list "gops" $ ) }} $(cat /run/secrets/SOURCE_REPO)/google/gops.git /src/gops
-  - cd /src/gops
-  - ls /patches/*.patch >/dev/null 2>&1 && git apply --verbose --allow-empty /patches/*.patch
-  - rm -rf /src/gops/.git
+  - git clone --depth 1 --branch v{{ $gopsVersion }} $(cat /run/secrets/SOURCE_REPO)/google/gops.git /src
+  - cd /src
+  - git apply --verbose --allow-empty /patches/*.patch
+  - rm -rf /src/.git
 ---
-image: {{ .ModuleName }}/gops-artifact
+image: {{ .ModuleName }}/{{ .ImageName }}
 from: {{ index $.Images "builder/golang" }}
 final: false
 import:
-- image: {{ .ModuleName }}/{{ .ImageName }}-src-artifact
+- image: {{ .ModuleName }}/{{ .ImageName }}-src
   add: /src
   to: /src
   before: install
@@ -37,17 +41,13 @@ secrets:
 - id: GOPROXY
   value: {{ .GOPROXY }}
 shell:
-  beforeInstall:
-  - pm install bash git binutils
   install:
   - export GO_VERSION=${GOLANG_VERSION} GOPROXY=$(cat /run/secrets/GOPROXY)
   - export GOOS=linux GOARCH=amd64 CGO_ENABLED=0
-  - cd /src/gops
-  - mkdir -p "/out/linux/amd64/bin"
+  - cd /src
   - |
     {{- $buildContext := deepCopy $ -}}
     {{- $_ := set $buildContext "SvaceBuildOptions" "--enable-ptrace-all" -}}
-    {{- $_ := set $buildContext "BuildCommand" `go build -ldflags "-s -w" -o "/out/linux/amd64/bin/gops" github.com/google/gops` -}}
+    {{- $_ := set $buildContext "BuildCommand" `go build -ldflags "-s -w" -o /out/usr/bin/gops github.com/google/gops` -}}
     {{- include "image-build.build" $buildContext | indent 4 }}
-  - strip /out/linux/amd64/bin/gops
----
+  - go version -m /out/usr/bin/gops | grep -q "GOARCH=amd64"

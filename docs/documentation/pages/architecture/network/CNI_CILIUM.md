@@ -84,17 +84,14 @@ The module consists of the following components:
 
    * A set of init containers for prepulling new versions of images of the corresponding containers of the agent component:
 
+     * **prepull-image-cni-migration-init-checker**.
      * **prepull-image-cilium**.
      * **prepull-image-kube-rbac-proxy**.
+     * **prepull-image-vxlan-offloading-fixer** (VXLAN mode only).
 
    * **safe-agent-updater**: Init container that compares the values of special annotations in the DaemonSet manifest of the updated Cilium agent with the values of the corresponding annotations in the metadata of the agent pod running on the node. In particular, the `safe-agent-updater-daemonset-generation` annotation stores the hash sum of the agent image. If the hash sums do not match, safe-agent-updater deletes the running pod and waits until the pod with the new agent version enters the `Ready` state.
 
-   * A set of sidecar containers for prepulling new versions of images of the corresponding containers of the agent component. Containers are on pause and perform only the function of storing images:
-
-     * **pause-cilium**.
-     * **pause-check-linux-kernel**.
-     * **pause-kube-rbac-proxy**.
-     * **pause-pause-handle-vxlan-offload**.
+   * **pause-cilium**: The only regular container of the pod. A pod cannot consist of init containers alone, so it runs `pause`, which does nothing. It also keeps the agent image on the node: an image counts as in use as long as any container references it.
 
 ## Module interactions
 
