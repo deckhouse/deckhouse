@@ -19,6 +19,7 @@ shell:
   - cd /src
   - git apply /patches/*.patch --verbose
   - rm -rf tools
+  - rm -f go.work go.work.sum
   - rm -rf .git
 ---
 image: {{ .ModuleName }}/{{ .ImageName }}
