@@ -125,6 +125,30 @@ as CI-only.
 
 Test `~/src/kind/d8-1.20-tests/009-wireguard-port/`
 
+## 015-cleanup-conntrack-endpoints.patch
+
+Keep local clients' conntrack entries when an address migrates to another node.
+
+Tearing down an endpoint normally scrubs every conntrack entry whose source or
+destination is its address. For a VM that has live migrated away that resets the
+connections migration exists to preserve: clients still running on this node
+hold flows towards the address, now forwarded over the tunnel.
+`GCFilter.MigrationSafeCleanup` removes only the flows the departing address
+owned and keeps outbound entries where it is the destination.
+
+The endpoint detects the case from the datapath's own ipcache map: a tunnel
+endpoint is set only for an address owned by another node. The lookup happens
+once per teardown, not inside the GC filter, which runs for every conntrack
+entry.
+
+Test `~/src/kind/d8-1.20-tests/015-conntrack-cleanup/`. A live migration is
+imitated on the dev cluster by rewriting the datapath's ipcache entry for the pod
+so it carries a tunnel endpoint, which is what the address looks like once
+another node owns it, and holding that across the teardown -- the agent
+reconciles it back within about a second. Patched, the local client's outbound
+entries survive and the inbound ones go; unpatched, all of them go. A table test
+in `pkg/maps/ctmap` pins down the per-direction behaviour.
+
 ## Dropped
 
 Patches from the 1.17 stack that are not carried on 1.20, with the evidence:
