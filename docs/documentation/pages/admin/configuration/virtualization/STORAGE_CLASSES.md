@@ -1,6 +1,6 @@
 ---
 title: "Storage for virtual machine disks and images"
-permalink: en/admin/configuration/storage/vm-storage-classes.html
+permalink: en/admin/configuration/virtualization/storage-classes.html
 description: "Restricting the list of storage classes available for virtual machine disks and images, and choosing the default class."
 search: storage classes, StorageClass, allowedStorageClassSelector, VM disks
 ---

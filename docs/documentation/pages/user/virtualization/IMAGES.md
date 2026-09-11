@@ -169,7 +169,7 @@ To create disks from an image faster, store it in a PVC. The module can then clo
    EOF
    ```
 
-   If the [`.spec.persistentVolumeClaim.storageClassName`](/modules/virtualization/cr.html#virtualimage-v1alpha2-spec-persistentvolumeclaim-storageclassname) parameter isn't set, the module uses the cluster-wide default StorageClass or the class set for images in the [module settings](../../admin/configuration/storage/vm-storage-classes.html).
+   If the [`.spec.persistentVolumeClaim.storageClassName`](/modules/virtualization/cr.html#virtualimage-v1alpha2-spec-persistentvolumeclaim-storageclassname) parameter isn't set, the module uses the cluster-wide default StorageClass or the class set for images in the [module settings](../../admin/configuration/virtualization/storage-classes.html).
 
 1. Verify that the image is created:
 
@@ -364,7 +364,7 @@ You can also verify the uploaded file against a checksum. To do this, specify th
 
 ## Creating an image from a disk
 
-You can create an image from a [disk](../storage/vm-disks.html) if the disk isn't attached to any virtual machine, or if the machine it's attached to is powered off.
+You can create an image from a [disk](disks.html) if the disk isn't attached to any virtual machine, or if the machine it's attached to is powered off.
 
 {% tabs vi-from-disk %}
 
@@ -406,7 +406,7 @@ EOF
 
 ## Creating an image from a disk snapshot
 
-You can create an image from a [disk snapshot](../storage/vm-snapshots.html#creating-disk-snapshots) if the snapshot is in the `Ready` phase.
+You can create an image from a [disk snapshot](snapshots.html#creating-disk-snapshots) if the snapshot is in the `Ready` phase.
 
 {% tabs vi-from-snapshot %}
 

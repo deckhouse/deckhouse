@@ -1,6 +1,6 @@
 ---
 title: "Resizing and migrating virtual machine disks"
-permalink: en/user/storage/vm-disk-operations.html
+permalink: en/user/virtualization/disk-operations.html
 description: "Resizing a virtual machine disk and moving a disk to another storage by changing its storage class."
 search: disk resize, disk migration, storageClassName, disk expansion
 ---

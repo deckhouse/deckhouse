@@ -1,6 +1,6 @@
 ---
 title: "Exporting virtual machine disk data"
-permalink: en/user/storage/vm-data-export.html
+permalink: en/user/virtualization/data-export.html
 description: "Exporting the contents of a virtual machine disk or its snapshot to a file outside the cluster."
 search: disk export, data export, DataExport, d8 data export
 ---
@@ -29,7 +29,7 @@ d8 data export download -n <NAMESPACE> vds/<VD_SNAPSHOT_NAME> -o file.img
 
 If you export data from somewhere other than a cluster node (for example, from your local machine), use the `--publish` flag.
 
-> To import a downloaded disk back into the cluster, upload it as an [image](../virtualization/images.html#uploading-an-image-from-the-command-line) or as a [disk](vm-disks.html#uploading-a-disk-from-the-command-line).
+> To import a downloaded disk back into the cluster, upload it as an [image](images.html#uploading-an-image-from-the-command-line) or as a [disk](disks.html#uploading-a-disk-from-the-command-line).
 
 {% endtab %}
 

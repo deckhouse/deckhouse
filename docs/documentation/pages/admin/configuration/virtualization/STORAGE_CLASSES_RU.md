@@ -1,6 +1,6 @@
 ---
 title: "Хранилища для дисков и образов виртуальных машин"
-permalink: ru/admin/configuration/storage/vm-storage-classes.html
+permalink: ru/admin/configuration/virtualization/storage-classes.html
 description: "Ограничение списка классов хранения, доступных для дисков и образов виртуальных машин, и выбор класса по умолчанию."
 search: классы хранения, StorageClass, allowedStorageClassSelector, диски ВМ
 lang: ru

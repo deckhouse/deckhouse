@@ -170,7 +170,7 @@ EOF
    EOF
    ```
 
-   Если параметр [`.spec.persistentVolumeClaim.storageClassName`](/modules/virtualization/cr.html#virtualimage-v1alpha2-spec-persistentvolumeclaim-storageclassname) не указан, модуль возьмёт StorageClass по умолчанию на уровне кластера либо класс, заданный для образов в [настройках модуля](../../admin/configuration/storage/vm-storage-classes.html).
+   Если параметр [`.spec.persistentVolumeClaim.storageClassName`](/modules/virtualization/cr.html#virtualimage-v1alpha2-spec-persistentvolumeclaim-storageclassname) не указан, модуль возьмёт StorageClass по умолчанию на уровне кластера либо класс, заданный для образов в [настройках модуля](../../admin/configuration/virtualization/storage-classes.html).
 
 1. Проверьте, что образ создан:
 
@@ -365,7 +365,7 @@ EOF
 
 ## Создание образа из диска
 
-Образ можно создать из [диска](../storage/vm-disks.html), если диск не подключён ни к одной виртуальной машине либо машина, к которой он подключён, выключена.
+Образ можно создать из [диска](disks.html), если диск не подключён ни к одной виртуальной машине либо машина, к которой он подключён, выключена.
 
 {% tabs vi-from-disk %}
 
@@ -407,7 +407,7 @@ EOF
 
 ## Создание образа из снимка диска
 
-Образ можно создать из [снимка диска](../storage/vm-snapshots.html#создание-снимков-дисков), если снимок находится в фазе `Ready`.
+Образ можно создать из [снимка диска](snapshots.html#создание-снимков-дисков), если снимок находится в фазе `Ready`.
 
 {% tabs vi-from-snapshot %}
 

@@ -19,7 +19,7 @@ For a full description of virtual machine configuration parameters, see the [con
 
 ## Creating a virtual machine
 
-The following steps show how to start an Ubuntu 24.04 virtual machine on the disk you [created earlier](../storage/vm-disks.html#creating-a-disk-from-an-image). The cloud-init script installs the `qemu-guest-agent` agent and the `nginx` service, and creates the `cloud` user with the `cloud` password.
+The following steps show how to start an Ubuntu 24.04 virtual machine on the disk you [created earlier](disks.html#creating-a-disk-from-an-image). The cloud-init script installs the `qemu-guest-agent` agent and the `nginx` service, and creates the `cloud` user with the `cloud` password.
 
 {% tabs vm-create %}
 
