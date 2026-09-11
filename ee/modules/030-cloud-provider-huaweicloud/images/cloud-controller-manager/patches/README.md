@@ -29,3 +29,9 @@ Static nodes are registered with `providerID` set to `static://`, which does not
 ### 007-use-leases-resource-lock.patch
 
 Use `LeasesResourceLock`, which is supported by the patched Kubernetes client libraries.
+
+## 008-go-mod.patch
+
+Bump go.mod dependencies to fix known CVEs.
+Layered on top of 001-go-mod.patch, which already lifts the OpenTelemetry family
+past the removed monolithic exporter packages.
