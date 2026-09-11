@@ -96,7 +96,7 @@ func configureLocalExporter(ctx context.Context) (sdktrace.SpanExporter, sdkmetr
 		return nil, nil, nil, fmt.Errorf("failed to initialize trace exporter for %q: %w", traceFileName, err)
 	}
 
-	dhlog.FromContext(ctx).InfoContext(ctx, fmt.Sprintf("Trace file: %s", traceFileName))
+	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("Trace file: %s", traceFileName))
 
 	return exporters.Trace, exporters.Metric, exporters.Log, nil
 }
