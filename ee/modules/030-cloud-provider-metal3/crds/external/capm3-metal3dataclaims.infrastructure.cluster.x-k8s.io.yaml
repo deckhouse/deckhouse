@@ -1,0 +1,202 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    cert-manager.io/inject-ca-from: d8-cloud-provider-metal3/capm3-serving-cert
+    controller-gen.kubebuilder.io/version: v0.16.5
+  labels:
+    cluster.x-k8s.io/v1beta1: v1beta1
+  name: metal3dataclaims.infrastructure.cluster.x-k8s.io
+spec:
+  conversion:
+    strategy: Webhook
+    webhook:
+      clientConfig:
+        service:
+          name: capm3-webhook-service
+          namespace: d8-cloud-provider-metal3
+          path: /convert
+      conversionReviewVersions:
+      - v1
+      - v1beta1
+  group: infrastructure.cluster.x-k8s.io
+  names:
+    categories:
+    - cluster-api
+    kind: Metal3DataClaim
+    listKind: Metal3DataClaimList
+    plural: metal3dataclaims
+    shortNames:
+    - m3dc
+    - m3dataclaim
+    - m3dataclaims
+    - metal3dc
+    - metal3dataclaim
+    singular: metal3dataclaim
+  scope: Namespaced
+  versions:
+  - additionalPrinterColumns:
+    - description: Time duration since creation of Metal3DataClaim
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    name: v1beta1
+    schema:
+      openAPIV3Schema:
+        description: Metal3DataClaim is the Schema for the metal3datas API.
+        properties:
+          apiVersion:
+            description: 'APIVersion defines the versioned schema of this representation
+              of an object.
+
+              Servers should convert recognized schemas to the latest internal value,
+              and
+
+              may reject unrecognized values.
+
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+            type: string
+          kind:
+            description: 'Kind is a string value representing the REST resource this
+              object represents.
+
+              Servers may infer this from the endpoint the client submits requests
+              to.
+
+              Cannot be updated.
+
+              In CamelCase.
+
+              More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+            type: string
+          metadata:
+            type: object
+          spec:
+            description: Metal3DataClaimSpec defines the desired state of Metal3DataClaim.
+            properties:
+              template:
+                description: Template is the Metal3DataTemplate this was generated
+                  for.
+                properties:
+                  apiVersion:
+                    description: API version of the referent.
+                    type: string
+                  fieldPath:
+                    description: 'If referring to a piece of an object instead of
+                      an entire object, this string
+
+                      should contain a valid JSON/Go field access statement, such
+                      as desiredState.manifest.containers[2].
+
+                      For example, if the object reference is to a container within
+                      a pod, this would take on a value like:
+
+                      "spec.containers{name}" (where "name" refers to the name of
+                      the container that triggered
+
+                      the event) or if no container name is specified "spec.containers[2]"
+                      (container with
+
+                      index 2 in this pod). This syntax is chosen only to have some
+                      well-defined way of
+
+                      referencing a part of an object.'
+                    type: string
+                  kind:
+                    description: 'Kind of the referent.
+
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                    type: string
+                  name:
+                    description: 'Name of the referent.
+
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                    type: string
+                  namespace:
+                    description: 'Namespace of the referent.
+
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                    type: string
+                  resourceVersion:
+                    description: 'Specific resourceVersion to which this reference
+                      is made, if any.
+
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                    type: string
+                  uid:
+                    description: 'UID of the referent.
+
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
+            required:
+            - template
+            type: object
+          status:
+            description: Metal3DataClaimStatus defines the observed state of Metal3DataClaim.
+            properties:
+              errorMessage:
+                description: ErrorMessage contains the error message
+                type: string
+              renderedData:
+                description: RenderedData references the Metal3Data when ready
+                properties:
+                  apiVersion:
+                    description: API version of the referent.
+                    type: string
+                  fieldPath:
+                    description: 'If referring to a piece of an object instead of
+                      an entire object, this string
+
+                      should contain a valid JSON/Go field access statement, such
+                      as desiredState.manifest.containers[2].
+
+                      For example, if the object reference is to a container within
+                      a pod, this would take on a value like:
+
+                      "spec.containers{name}" (where "name" refers to the name of
+                      the container that triggered
+
+                      the event) or if no container name is specified "spec.containers[2]"
+                      (container with
+
+                      index 2 in this pod). This syntax is chosen only to have some
+                      well-defined way of
+
+                      referencing a part of an object.'
+                    type: string
+                  kind:
+                    description: 'Kind of the referent.
+
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+                    type: string
+                  name:
+                    description: 'Name of the referent.
+
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#names'
+                    type: string
+                  namespace:
+                    description: 'Namespace of the referent.
+
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/namespaces/'
+                    type: string
+                  resourceVersion:
+                    description: 'Specific resourceVersion to which this reference
+                      is made, if any.
+
+                      More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#concurrency-control-and-consistency'
+                    type: string
+                  uid:
+                    description: 'UID of the referent.
+
+                      More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/names/#uids'
+                    type: string
+                type: object
+                x-kubernetes-map-type: atomic
+            type: object
+        type: object
+    served: true
+    storage: true
+    subresources:
+      status: {}

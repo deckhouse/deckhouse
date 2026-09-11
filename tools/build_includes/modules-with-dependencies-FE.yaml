@@ -375,6 +375,14 @@
   stageDependencies:
     install:
         - '**/*'
+- add: /ee/modules/030-cloud-provider-metal3/hooks
+  to: /deckhouse/modules/030-cloud-provider-metal3/hooks
+  excludePaths:
+    - '**/*_test.go'
+    - '**/*.sh'
+  stageDependencies:
+    install:
+        - '**/*'
 - add: /ee/modules/030-cloud-provider-openstack/hooks
   to: /deckhouse/modules/030-cloud-provider-openstack/hooks
   excludePaths:
