@@ -79,6 +79,8 @@ func newKeepPolicyFakeClient(objs ...runtime.Object) *dynamicfake.FakeDynamicCli
 	gvrToListKind := map[schema.GroupVersionResource]string{
 		{Group: "rbac.authorization.k8s.io", Version: "v1", Resource: "clusterrolebindings"}: "ClusterRoleBindingList",
 		{Group: "rbac.authorization.k8s.io", Version: "v1", Resource: "rolebindings"}:        "RoleBindingList",
+		{Group: "deckhouse.io", Version: "v1", Resource: "clusterauthorizationrules"}:        "ClusterAuthorizationRuleList",
+		{Group: "deckhouse.io", Version: "v1alpha1", Resource: "authorizationrules"}:         "AuthorizationRuleList",
 	}
 	return dynamicfake.NewSimpleDynamicClientWithCustomListKinds(scheme, gvrToListKind, objs...)
 }
@@ -268,6 +270,18 @@ var _ = Describe("User Authz hooks :: keep policy on authorization bindings ::",
 
 		It("Stamps the policy before the release and lets it proceed", func() {
 			Expect(f).To(ExecuteSuccessfully())
+
+			var stamped, duration bool
+			for _, m := range f.MetricsCollector.CollectedMetrics() {
+				switch m.Name {
+				case keepStampedMetric:
+					stamped = m.Value != nil && *m.Value == 2
+				case keepDurationMetric:
+					duration = m.Value != nil
+				}
+			}
+			Expect(stamped).To(BeTrue(), "the number of stamped bindings must be reported")
+			Expect(duration).To(BeTrue(), "the duration must be reported")
 
 			crb, err := fakeClient.Resource(ruleBindingResources[0]).Get(context.Background(), "user-authz:dev:user", metav1.GetOptions{})
 			Expect(err).ShouldNot(HaveOccurred())

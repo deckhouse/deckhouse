@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/go-logr/logr"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -42,6 +43,7 @@ import (
 	v1 "user-authz-controller/api/v1"
 	"user-authz-controller/api/v1alpha1"
 	"user-authz-controller/internal/desired"
+	"user-authz-controller/internal/metrics"
 )
 
 var testSubjects = []rbacv1.Subject{{Kind: "User", Name: "jane"}}
@@ -189,11 +191,11 @@ func helmBinding(name, role string) *rbacv1.ClusterRoleBinding {
 }
 
 func clusterReconciler(c client.Client) *Reconciler {
-	return NewCluster(c, c, events.NewFakeRecorder(10), logr.Discard())
+	return NewCluster(c, c, events.NewFakeRecorder(10), metrics.New(), logr.Discard())
 }
 
 func namespacedReconciler(c client.Client) *Reconciler {
-	return NewNamespaced(c, c, events.NewFakeRecorder(10), logr.Discard())
+	return NewNamespaced(c, c, events.NewFakeRecorder(10), metrics.New(), logr.Discard())
 }
 
 func reconcileCluster(t *testing.T, c client.Client, name string) reconcile.Result {
@@ -448,7 +450,7 @@ func TestReconcile_CacheMissOnLiveRuleRequeuesInsteadOfDeleting(t *testing.T) {
 	cached := newClient(t, w, helmBinding("user-authz:dev:user", "user-authz:user")) // no rule in "cache"
 	live := newClient(t, &writes{}, rule)                                            // rule visible to the API reader
 
-	r := NewCluster(cached, live, events.NewFakeRecorder(10), logr.Discard())
+	r := NewCluster(cached, live, events.NewFakeRecorder(10), metrics.New(), logr.Discard())
 	_, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: "dev"}})
 	if err == nil || errors.Is(err, reconcile.TerminalError(nil)) {
 		t.Fatalf("err = %v: a live rule missing from the cache must be retried with backoff", err)
@@ -646,7 +648,7 @@ func TestReconcile_AlreadyExistsIsAdopted(t *testing.T) {
 		},
 	})
 
-	r := NewCluster(cached, reader, events.NewFakeRecorder(10), logr.Discard())
+	r := NewCluster(cached, reader, events.NewFakeRecorder(10), metrics.New(), logr.Discard())
 	if _, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: "dev"}}); err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
@@ -682,7 +684,7 @@ func TestReconcile_AlreadyExistsForeignObjectIsTerminal(t *testing.T) {
 		},
 	}, car("dev", desired.AccessLevelUser)).Build()
 
-	r := NewCluster(cached, live, events.NewFakeRecorder(10), logr.Discard())
+	r := NewCluster(cached, live, events.NewFakeRecorder(10), metrics.New(), logr.Discard())
 	_, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: "dev"}})
 	if !errors.Is(err, reconcile.TerminalError(nil)) {
 		t.Fatalf("err = %v, want a terminal error", err)
@@ -883,4 +885,98 @@ func keys(m map[string]rbacv1.ClusterRoleBinding) []string {
 		out = append(out, k)
 	}
 	return out
+}
+
+func TestReconcile_ReportsMetrics(t *testing.T) {
+	t.Parallel()
+	w := &writes{}
+	m := metrics.New()
+	c := newClient(t, w,
+		car("dev", desired.AccessLevelEditor),
+		helmBinding("user-authz:dev:editor", "user-authz:editor"),
+		helmBinding("user-authz:dev:editor:custom-cluster-role:d8:user-authz:istio:editor", "d8:user-authz:istio:editor"),
+	)
+	r := NewCluster(c, c, events.NewFakeRecorder(10), m, logr.Discard())
+	if _, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: "dev"}}); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+
+	// converged: desired == actual, no drift, one rule known
+	expected := `
+# HELP d8_user_authz_authorization_rules Reconciled objects known to the controller, by kind (1 for the singleton dict and manage reconcilers).
+# TYPE d8_user_authz_authorization_rules gauge
+d8_user_authz_authorization_rules{kind="ClusterAuthorizationRule"} 1
+# HELP d8_user_authz_bindings_actual Bindings of the reconciled objects of a kind after their last reconcile; equals desired once the controller converged.
+# TYPE d8_user_authz_bindings_actual gauge
+d8_user_authz_bindings_actual{kind="ClusterAuthorizationRule"} 2
+# HELP d8_user_authz_bindings_desired Bindings the reconciled objects of a kind must have.
+# TYPE d8_user_authz_bindings_desired gauge
+d8_user_authz_bindings_desired{kind="ClusterAuthorizationRule"} 2
+`
+	if err := testutil.CollectAndCompare(m, strings.NewReader(expected),
+		"d8_user_authz_authorization_rules", "d8_user_authz_bindings_desired", "d8_user_authz_bindings_actual"); err != nil {
+		t.Fatal(err)
+	}
+	if n := testutil.CollectAndCount(m, "d8_user_authz_authorization_rule_invalid"); n != 0 {
+		t.Errorf("invalid series = %d, want 0", n)
+	}
+	// one adoption update, one aggregated create, one legacy delete, one status patch
+	if got := w.snapshot(); len(got) != 4 {
+		t.Errorf("writes = %v", got)
+	}
+	if got := testutil.ToFloat64(m.ApplyTotal().WithLabelValues(metrics.KindClusterAuthorizationRule, metrics.OpDelete, metrics.ResultSuccess)); got != 1 {
+		t.Errorf("deletes = %v, want 1", got)
+	}
+
+	// the rule disappears: its series go away
+	if err := c.Delete(t.Context(), car("dev", desired.AccessLevelEditor)); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: "dev"}}); err != nil {
+		t.Fatalf("Reconcile after delete: %v", err)
+	}
+	gone := `
+# HELP d8_user_authz_authorization_rules Reconciled objects known to the controller, by kind (1 for the singleton dict and manage reconcilers).
+# TYPE d8_user_authz_authorization_rules gauge
+d8_user_authz_authorization_rules{kind="ClusterAuthorizationRule"} 0
+`
+	if err := testutil.CollectAndCompare(m, strings.NewReader(gone), "d8_user_authz_authorization_rules"); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// Drift is what is left wrong after the writes: the binding that could not be created and the
+// legacy binding kept in its place; the adoption update that went through is not drift.
+func TestReconcile_ReportsDriftAndInvalidOnApplyError(t *testing.T) {
+	t.Parallel()
+	w := &writes{}
+	m := metrics.New()
+	adopted := helmBinding("user-authz:dev:editor", "user-authz:editor")
+	legacy := helmBinding("user-authz:dev:editor:custom-cluster-role:d8:user-authz:istio:editor", "d8:user-authz:istio:editor")
+	c := newBuilder(t, w, interceptor.Funcs{
+		Create: func(_ context.Context, _ client.WithWatch, obj client.Object, _ ...client.CreateOption) error {
+			return apierrors.NewInvalid(rbacv1.SchemeGroupVersion.WithKind("ClusterRoleBinding").GroupKind(), obj.GetName(), nil)
+		},
+	}, car("dev", desired.AccessLevelEditor), adopted, legacy).Build()
+	r := NewCluster(c, c, events.NewFakeRecorder(10), m, logr.Discard())
+	if _, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: types.NamespacedName{Name: "dev"}}); err == nil {
+		t.Fatal("expected the invalid create to fail the reconcile")
+	}
+
+	expected := `
+# HELP d8_user_authz_authorization_rule_invalid Rules whose bindings cannot be applied (1 per rule, at most MaxInvalidSeries rules), with the reason of the Ready=False condition.
+# TYPE d8_user_authz_authorization_rule_invalid gauge
+d8_user_authz_authorization_rule_invalid{kind="ClusterAuthorizationRule",name="dev",reason="ApplyError",rule_namespace=""} 1
+# HELP d8_user_authz_bindings_drift Bindings still not in the desired state after the last reconcile, by reason (missing, extra, changed); above zero only while the controller fails to converge.
+# TYPE d8_user_authz_bindings_drift gauge
+d8_user_authz_bindings_drift{kind="ClusterAuthorizationRule",reason="changed"} 0
+d8_user_authz_bindings_drift{kind="ClusterAuthorizationRule",reason="extra"} 1
+d8_user_authz_bindings_drift{kind="ClusterAuthorizationRule",reason="missing"} 1
+`
+	if err := testutil.CollectAndCompare(m, strings.NewReader(expected), "d8_user_authz_authorization_rule_invalid", "d8_user_authz_bindings_drift"); err != nil {
+		t.Fatal(err)
+	}
+	if w.count("update") != 1 || w.count("delete") != 0 {
+		t.Errorf("writes = %v", w.snapshot())
+	}
 }

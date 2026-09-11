@@ -18,9 +18,11 @@ package managebindings
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/go-logr/logr"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	rbacv1 "k8s.io/api/rbac/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -29,6 +31,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+
+	"user-authz-controller/internal/metrics"
 )
 
 var testUser = []rbacv1.Subject{{Kind: "User", APIGroup: rbacv1.GroupName, Name: "test"}}
@@ -97,7 +101,7 @@ func newClient(t *testing.T, objs ...client.Object) client.Client {
 
 func reconcileOnce(t *testing.T, c client.Client) {
 	t.Helper()
-	r := New(c, logr.Discard())
+	r := New(c, metrics.New(), logr.Discard())
 	if _, err := r.Reconcile(t.Context(), reconcile.Request{NamespacedName: client.ObjectKey{Name: RequestName}}); err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
@@ -384,5 +388,38 @@ func TestAutomatedIndexValue(t *testing.T) {
 	rule := &rbacv1.RoleBinding{ObjectMeta: metav1.ObjectMeta{Name: "user-authz:rule:editor", Namespace: "ns", Labels: map[string]string{labelHeritage: "deckhouse", "module": "user-authz"}}}
 	if got := AutomatedIndexValue(rule); got != nil {
 		t.Errorf("a rule binding must not be indexed, got %v", got)
+	}
+}
+
+func TestReconcile_ReportsMetrics(t *testing.T) {
+	t.Parallel()
+	m := metrics.New()
+	c := newClient(t,
+		manageModuleRole("d8:manage:permission:module:test:edit", "others", "test-ns"),
+		manageModuleRole("d8:manage:permission:module:test2:edit", "others", "test2-ns"),
+		manageRole("d8:manage:others:manager", "subsystem", "others"),
+		manageBinding("test", "d8:manage:others:manager"),
+		automatedUseBinding("d8:use:admin:binding:orphan", "test-ns"),
+	)
+	if _, err := New(c, m, logr.Discard()).Reconcile(t.Context(), reconcile.Request{NamespacedName: client.ObjectKey{Name: RequestName}}); err != nil {
+		t.Fatalf("Reconcile: %v", err)
+	}
+
+	expected := `
+# HELP d8_user_authz_bindings_actual Bindings of the reconciled objects of a kind after their last reconcile; equals desired once the controller converged.
+# TYPE d8_user_authz_bindings_actual gauge
+d8_user_authz_bindings_actual{kind="manage"} 2
+# HELP d8_user_authz_bindings_desired Bindings the reconciled objects of a kind must have.
+# TYPE d8_user_authz_bindings_desired gauge
+d8_user_authz_bindings_desired{kind="manage"} 2
+`
+	if err := testutil.CollectAndCompare(m, strings.NewReader(expected), "d8_user_authz_bindings_desired", "d8_user_authz_bindings_actual"); err != nil {
+		t.Fatal(err)
+	}
+	if got := testutil.ToFloat64(m.ApplyTotal().WithLabelValues(metrics.KindManage, metrics.OpCreate, metrics.ResultSuccess)); got != 2 {
+		t.Errorf("creates = %v, want 2", got)
+	}
+	if got := testutil.ToFloat64(m.ApplyTotal().WithLabelValues(metrics.KindManage, metrics.OpDelete, metrics.ResultSuccess)); got != 1 {
+		t.Errorf("deletes = %v, want 1 (the orphan)", got)
 	}
 }
