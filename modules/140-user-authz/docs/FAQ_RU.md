@@ -83,7 +83,7 @@ NAME        ACCESS LEVEL   READY   BINDINGS   AGE
 my-rule     Admin          True    3          5d
 ```
 
-Чтобы получить список всех AuthorizationRule во всех пространствах имён кластера, выполните команду:
+Чтобы получить список всех AuthorizationRule во всех неймспейсах кластера, выполните команду:
 
 ```bash
 d8 k get authorizationrules -A
