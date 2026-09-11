@@ -15,8 +15,10 @@
 # limitations under the License.
 
 
-# Identity can-assign admission: User, Group, ClusterAuthorizationRule, and
-# can-assign-* labels on ClusterRole. Kernel is identity_assign.py.
+# Identity can-assign admission: User, Group, ClusterAuthorizationRule
+# (including DELETE), UserOperation, DexProvider, and can-assign-* labels
+# on ClusterRole.
+# Kernel is identity_assign.py.
 
 from typing import Any, List, Optional
 
@@ -55,7 +57,13 @@ CONFIG = f"""
 configVersion: v1
 kubernetesValidating:
 - name: d8-user-authz-identity-assign.deckhouse.io
-  includeSnapshotsFrom: ["{assign.CAR_SNAP}", "{assign.AR_SNAP}", "{assign.CRB_SNAP}", "{assign.CROLE_SNAP}"]
+  includeSnapshotsFrom:
+    - "{assign.CAR_SNAP}"
+    - "{assign.AR_SNAP}"
+    - "{assign.CRB_SNAP}"
+    - "{assign.CROLE_SNAP}"
+    - "{assign.USER_SNAP}"
+    - "{assign.GROUP_SNAP}"
 {MATCH_CONDITIONS}
   rules:
   - apiGroups:   ["deckhouse.io"]
@@ -70,8 +78,18 @@ kubernetesValidating:
     scope:       "Cluster"
   - apiGroups:   ["deckhouse.io"]
     apiVersions: ["*"]
-    operations:  ["CREATE", "UPDATE"]
+    operations:  ["CREATE", "UPDATE", "DELETE"]
     resources:   ["clusterauthorizationrules"]
+    scope:       "Cluster"
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE"]
+    resources:   ["useroperations"]
+    scope:       "Cluster"
+  - apiGroups:   ["deckhouse.io"]
+    apiVersions: ["*"]
+    operations:  ["CREATE", "UPDATE"]
+    resources:   ["dexproviders"]
     scope:       "Cluster"
   - apiGroups:   ["rbac.authorization.k8s.io"]
     apiVersions: ["*"]
@@ -134,6 +152,10 @@ def validate(ctx: DotMap) -> Optional[str]:
         return validate_group(req, ctx.snapshots, actor, catalog)
     if kind == "clusterauthorizationrule":
         return validate_car(req, actor, catalog)
+    if kind == "useroperation":
+        return validate_useroperation(req, ctx.snapshots, actor, catalog)
+    if kind == "dexprovider":
+        return validate_dexprovider(req, ctx.snapshots, actor, catalog)
     return None
 
 
@@ -153,6 +175,14 @@ def validate_user(req, snapshots, actor: List[str], catalog: dict) -> Optional[s
             emails.append(old_spec.get("email"))
             groups.extend(_spec_groups(old_spec))
 
+    user_names = [_meta_name(req.object), _meta_name(req.oldObject)]
+    extra_groups = list(groups)
+    for user_name in user_names:
+        extra_groups.extend(assign.membership_groups(snapshots, user_name=user_name))
+    for email in emails:
+        if isinstance(email, str) and email:
+            extra_groups.extend(assign.membership_groups(snapshots, email=email))
+
     targets: List[str] = []
     seen = set()
     display_email = ""
@@ -161,7 +191,7 @@ def validate_user(req, snapshots, actor: List[str], catalog: dict) -> Optional[s
             continue
         if not display_email:
             display_email = email
-        for role in assign.target_user_roles(snapshots, email, groups):
+        for role in assign.target_user_roles(snapshots, email, extra_groups):
             if role not in seen:
                 seen.add(role)
                 targets.append(role)
@@ -207,19 +237,89 @@ def validate_group(req, snapshots, actor: List[str], catalog: dict) -> Optional[
 
 
 def validate_car(req, actor: List[str], catalog: dict) -> Optional[str]:
-    spec = _spec(req.object)
-    targets = assign.car_target_roles(spec)
+    new_spec = _spec(req.object)
+    old_spec = _spec(req.oldObject)
+    if req.operation == "DELETE":
+        targets = assign.car_target_roles(old_spec)
+        obj = req.oldObject
+    elif req.operation == "UPDATE":
+        targets = []
+        seen = set()
+        for name in assign.car_target_roles(old_spec) + assign.car_target_roles(new_spec):
+            if name not in seen:
+                seen.add(name)
+                targets.append(name)
+        obj = req.object
+    else:
+        targets = assign.car_target_roles(new_spec)
+        obj = req.object
     leftover = assign.can_assign(actor, targets, catalog)
     if leftover is None:
         return None
     rng = assign.actor_range(actor, catalog)
-    return assign.deny_car_message(_meta_name(req.object) or "obj", leftover, rng)
+    return assign.deny_car_message(_meta_name(obj) or "obj", leftover, rng)
 
 
 def validate_clusterrole(req) -> Optional[str]:
-    if not assign.can_assign_labels_changed(req.oldObject, req.object):
+    if assign.can_assign_labels_changed(req.oldObject, req.object):
+        return assign.deny_label_message(_meta_name(req.object) or "obj")
+    if assign.claims_platform_ownership(req.object):
+        return assign.deny_heritage_message(_meta_name(req.object) or "obj")
+    return None
+
+
+def validate_useroperation(req, snapshots, actor: List[str], catalog: dict) -> Optional[str]:
+    username = (assign._dict(req.userInfo).get("username")) or ""
+    if username == assign.USER_API_SA:
         return None
-    return assign.deny_label_message(_meta_name(req.object) or "obj")
+
+    spec = _spec(req.object)
+    user_name = spec.get("user") if isinstance(spec.get("user"), str) else ""
+    target = assign._dict(spec.get("target"))
+    email = target.get("email") if isinstance(target.get("email"), str) else ""
+    extra = assign.membership_groups(snapshots, user_name=user_name, email=email)
+    rec = assign.user_record(snapshots, name=user_name, email=email)
+    if rec and not email:
+        rec_email = rec.get("email")
+        if isinstance(rec_email, str):
+            email = rec_email
+
+    targets = assign.target_user_roles(snapshots, email, extra) if email else []
+    if not email and extra:
+        for group in extra:
+            for role in assign.target_group_roles(snapshots, group):
+                if role not in targets:
+                    targets.append(role)
+    if not targets:
+        return None
+    leftover = assign.can_assign(actor, targets, catalog)
+    if leftover is None:
+        return None
+    rng = assign.actor_range(actor, catalog)
+    display = email or user_name or _meta_name(req.object) or "obj"
+    return assign.deny_uo_message(display, leftover, rng)
+
+
+def validate_dexprovider(req, snapshots, actor: List[str], catalog: dict) -> Optional[str]:
+    """Gate a provider by the identity space it can assert.
+
+    Targets are the roles already granted to identities inside that space
+    (spec.allowedIdentities plus the connector's own group filters); an open
+    axis reaches every grant on subjects of that kind. Credential rotation,
+    display fields, enabling and narrowing the space are admitted without a
+    check; any other change is measured as a fresh connection.
+    """
+    new_spec = _spec(req.object)
+    if req.operation == "UPDATE" and assign.dex_benign_update(_spec(req.oldObject), new_spec):
+        return None
+    targets = assign.dex_target_roles(new_spec, snapshots)
+    if not targets:
+        return None
+    leftover = assign.can_assign(actor, targets, catalog)
+    if leftover is None:
+        return None
+    rng = assign.actor_range(actor, catalog)
+    return assign.deny_dex_message(_meta_name(req.object) or "obj", leftover, rng)
 
 
 if __name__ == "__main__":

@@ -349,6 +349,21 @@ properties:
             enabled:
               type: boolean
               default: true
+            allowedIdentities:
+              type: object
+              properties:
+                emails:
+                  type: array
+                  items:
+                    type: string
+                emailDomains:
+                  type: array
+                  items:
+                    type: string
+                groups:
+                  type: array
+                  items:
+                    type: string
             crowd:
               type: object
               additionalProperties: true
