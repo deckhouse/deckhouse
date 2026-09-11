@@ -461,13 +461,26 @@ jobs:
             export WERF_SIGN_MANIFEST="0"
             echo "Fallback to WERF_SIGN_MANIFEST=$WERF_SIGN_MANIFEST"
           fi
+          # Statisctics added since werf 2.78.1
+          werf_major="$(werf version | cut -d. -f1)"
+          werf_minor="$(werf version | cut -d. -f2)"
+          werf_build_report_operations_arg=""
+          if (( werf_major >= 3 )); then
+            echo "Using build-report-operations, werf version >=3.0"
+            werf_build_report_operations_arg="--build-report-operations=true"
+          else
+            if (( werf_minor >= 78 )); then
+              echo "Using build-report-operations, werf version >=2.78"
+              werf_build_report_operations_arg="--build-report-operations=true"
+            fi
+          fi
 
           type werf && source $(werf ci-env github --verbose --as-file)
           werf build \
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
-            --build-report-operations=true \
-            --build-report-path images_tags_werf.json
+            --build-report-path images_tags_werf.json \
+            ${werf_build_report_operations_arg}
 
           # Publish images for Git branch.
           if [[ -n "${CI_COMMIT_BRANCH}" ]]; then
@@ -745,6 +758,20 @@ jobs:
           export REGISTRY_PATH="${DEV_REGISTRY_PATH}"
           export WERF_REPO="${DEV_REGISTRY_PATH}"
 
+          # Statisctics added since werf 2.78.1
+          werf_major="$(werf version | cut -d. -f1)"
+          werf_minor="$(werf version | cut -d. -f2)"
+          werf_build_report_operations_arg=""
+          if (( werf_major >= 3 )); then
+            echo "Using build-report-operations, werf version >=3.0"
+            werf_build_report_operations_arg="--build-report-operations=true"
+          else
+            if (( werf_minor >= 78 )); then
+              echo "Using build-report-operations, werf version >=2.78"
+              werf_build_report_operations_arg="--build-report-operations=true"
+            fi
+          fi
+
           type werf && source $(werf ci-env github --verbose --as-file)
           # Build only the `tests` image (and its transitive werf deps);
           # cache is shared with build_fe via WERF_REPO. The build report is
@@ -754,8 +781,8 @@ jobs:
             --parallel=true --parallel-tasks-limit=5 \
             --save-build-report=true \
             --final-images-only=true \
-            --build-report-operations=true \
-            --build-report-path images_tags_werf.json
+            --build-report-path images_tags_werf.json \
+            ${werf_build_report_operations_arg}
 
           TESTS_IMAGE_NAME="$(jq -r '.Images."tests".DockerImageName' images_tags_werf.json)"
           rm -f images_tags_werf.json
@@ -995,13 +1022,27 @@ jobs:
           echo "Building fuzz images:"
           echo "${FUZZ_IMAGES}"
 
+          # Statisctics added since werf 2.78.1
+          werf_major="$(werf version | cut -d. -f1)"
+          werf_minor="$(werf version | cut -d. -f2)"
+          werf_build_report_operations_arg=""
+          if (( werf_major >= 3 )); then
+            echo "Using build-report-operations, werf version >=3.0"
+            werf_build_report_operations_arg="--build-report-operations=true"
+          else
+            if (( werf_minor >= 78 )); then
+              echo "Using build-report-operations, werf version >=2.78"
+              werf_build_report_operations_arg="--build-report-operations=true"
+            fi
+          fi
+
           # shellcheck disable=SC2086
           werf build ${FUZZ_IMAGES} \
             --insecure-registry \
             --parallel=true --parallel-tasks-limit=10 \
             --save-build-report=true \
-            --build-report-operations=true \
-            --build-report-path images_fuzz_tags_werf.json
+            --build-report-path images_fuzz_tags_werf.json \
+            ${werf_build_report_operations_arg}
           command -v jq >/dev/null 2>&1 || {
             echo "jq is required"
             exit 1
