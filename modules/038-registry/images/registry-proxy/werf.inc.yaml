@@ -43,3 +43,7 @@ git:
 shell:
   install:
   - cd /src
+---
+{{- $_ := set . "FuzzEngine" "go" }}
+{{- $_ := set . "FuzzPackages" "./src" }}
+{{- include "fuzz image" . }}

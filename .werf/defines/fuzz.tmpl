@@ -1,9 +1,9 @@
 # Go fuzz image consumed by fuzzing-compliance.
 # The dedicated CI job sets FUZZ_S3_ENDPOINT, so regular Deckhouse builds do
 # not render these intermediate images.
-# Required caller fields: FuzzEngine and FuzzSrcImage.
-# Optional caller fields: FuzzPackages, FuzzCGOEnabled, FuzzImageName and
-# FuzzSrcAdd.
+# Required caller field: FuzzEngine.
+# Optional caller fields: FuzzSrcImage, FuzzPackages, FuzzCGOEnabled,
+# FuzzImageName and FuzzSrcAdd.
 {{- define "fuzz image" }}
 {{- if env "FUZZ_S3_ENDPOINT" "" }}
 {{- if not .FuzzEngine }}
@@ -30,11 +30,7 @@
   {{- else if hasSuffix $fuzzBase "-artifact" }}
     {{- $fuzzSrcImage = printf "%s%s" $prefix $fuzzBase }}
   {{- else }}
-    {{- $inc := "" }}
-    {{- if .Files }}
-      {{- $inc = .Files.Get (printf "images/%s/werf.inc.yaml" .ImageName) }}
-    {{- end }}
-    {{- if contains "-golang-artifact" $inc }}
+    {{- if contains "-golang-artifact" (.ImageBuildData | default "") }}
       {{- $fuzzSrcImage = printf "%s%s-golang-artifact" $prefix .ImageName }}
     {{- else }}
       {{- $fuzzSrcImage = printf "%s%s-artifact" $prefix .ImageName }}

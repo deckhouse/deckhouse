@@ -56,3 +56,8 @@ import:
 imageSpec:
   config:
     entrypoint: ["/manager"]
+---
+{{- $_ := set . "FuzzEngine" "go" }}
+{{- $_ := set . "FuzzSrcAdd" $appAbsPath }}
+{{- $_ := set . "FuzzPackages" "./internal/staticpod" }}
+{{- include "fuzz image" . }}

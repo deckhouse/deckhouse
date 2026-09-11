@@ -1023,7 +1023,7 @@ jobs:
           echo "${FUZZ_IMAGES}"
 
           # Statisctics added since werf 2.78.1
-          werf_major="$(werf version | cut -d. -f1)"
+          werf_major="$(werf version | cut -d. -f1 | sed 's/^v//')"
           werf_minor="$(werf version | cut -d. -f2)"
           werf_build_report_operations_arg=""
           if (( werf_major >= 3 )); then
