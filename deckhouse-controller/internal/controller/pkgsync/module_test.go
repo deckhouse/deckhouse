@@ -422,12 +422,23 @@ func TestSyncModulesReleaseChannel(t *testing.T) {
 		assert.Equal(t, "Alpha", getModule(t, cl, "echo").Spec.ReleaseChannel)
 	})
 
-	t.Run("a released module with no update policy follows no channel", func(t *testing.T) {
-		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(),
+	t.Run("a released module with no update policy follows Deckhouse", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), deckhouseConfig("EarlyAccess"),
 			testModuleRelease("echo", "example", "1.2.3", v1alpha1.ModuleReleasePhaseDeployed))
 		require.NoError(t, s.sync(ctx))
 
-		assert.Empty(t, getModule(t, cl, "echo").Spec.ReleaseChannel)
+		assert.Equal(t, "EarlyAccess", getModule(t, cl, "echo").Spec.ReleaseChannel,
+			"an empty update policy label means the embedded policy, not the absence of a channel")
+	})
+
+	t.Run("a released module naming a policy the cluster lost follows Deckhouse", func(t *testing.T) {
+		moduleRelease := testModuleRelease("echo", "example", "1.2.3", v1alpha1.ModuleReleasePhaseDeployed)
+		moduleRelease.Labels[v1alpha1.ModuleReleaseLabelUpdatePolicy] = "gone"
+
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), deckhouseConfig("EarlyAccess"), moduleRelease)
+		require.NoError(t, s.sync(ctx))
+
+		assert.Equal(t, "EarlyAccess", getModule(t, cl, "echo").Spec.ReleaseChannel)
 	})
 
 	t.Run("a dev copy comes off no channel", func(t *testing.T) {

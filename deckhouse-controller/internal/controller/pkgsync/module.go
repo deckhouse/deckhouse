@@ -113,7 +113,13 @@ func (s *syncer) syncModules(ctx context.Context) error {
 		repositoryName := PackageRepositoryNameForModuleSource(moduleRelease.GetModuleSource())
 
 		// a module from a repository follows the channel of the policy its release was fetched by
-		releaseChannel := releaseChannels[moduleRelease.Labels[v1alpha1.ModuleReleaseLabelUpdatePolicy]]
+		releaseChannel := deckhouseReleaseChannel
+
+		if updatePolicyName := moduleRelease.Labels[v1alpha1.ModuleReleaseLabelUpdatePolicy]; updatePolicyName != "" {
+			if channel, ok := releaseChannels[updatePolicyName]; ok {
+				releaseChannel = channel
+			}
+		}
 
 		// the version parses: deployedModuleReleasesByModule dropped the releases it does not
 		if err := s.ensureReleasedModule(ctx, moduleName, repositoryName, moduleRelease.GetModuleVersion(), releaseChannel, moduleConfigs[moduleName]); err != nil {
@@ -325,6 +331,8 @@ func (s *syncer) deckhouseReleaseChannel(moduleConfigs map[string]*v1alpha1.Modu
 }
 
 // releaseChannelsByUpdatePolicy reads the channel every module update policy follows.
+// A module that names no policy, or names one the cluster has lost, falls back to
+// the channel of Deckhouse itself, the same way GetUpdatePolicyByModule does.
 func (s *syncer) releaseChannelsByUpdatePolicy(ctx context.Context) (map[string]string, error) {
 	updatePolicyList := new(v1alpha2.ModuleUpdatePolicyList)
 	if err := s.reader.List(ctx, updatePolicyList); err != nil {
