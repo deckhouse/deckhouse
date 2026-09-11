@@ -548,7 +548,7 @@ func (r *reconciler) attachVersion(ctx context.Context, mpv *v1alpha1.ModulePack
 func (r *reconciler) attachPackage(ctx context.Context, module *v1alpha2.Module, pkg *v1alpha1.ModulePackage) error {
 	patch := client.MergeFrom(pkg.DeepCopy())
 
-	if !pkg.AddInstalledModule(module.Spec.PackageVersion) {
+	if !pkg.AddInstalledModule(module.Spec.PackageVersion, module.Spec.PackageRepositoryName) {
 		return nil
 	}
 

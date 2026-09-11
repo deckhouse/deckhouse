@@ -78,6 +78,9 @@ spec:
                     namespace:
                       description: Namespace where the application is installed.
                       type: string
+                    repositoryName:
+                      description: Used PackageRepository.
+                      type: string
                     version:
                       description: Version of the package used by this application.
                       type: string

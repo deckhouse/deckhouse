@@ -30,6 +30,9 @@ spec:
                   description: |
                     Информация о модуле, использующем этот пакет.
                   properties:
+                    repositoryName:
+                      description: Название PackageRepository, используемого этим модулем.
+                      type: string
                     version:
                       description: |
                         Версия пакета, используемая этим модулем.
