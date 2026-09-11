@@ -229,8 +229,20 @@ func envInt(logger logr.Logger, name string, def int) int {
 	return value
 }
 
-const cacheSyncCheckTimeout = 2 * time.Second
+const (
+	cacheSyncCheckTimeout = 2 * time.Second
+	// apiAccessCheckTimeout keeps the readiness check inside the probe's own budget (3 s).
+	apiAccessCheckTimeout = 2 * time.Second
+)
 
+// addHealthChecks wires the probes.
+//
+// Liveness is a plain ping: a restart cures nothing this controller can run into - a lost RBAC
+// grant, an unreachable API server - and it throws away a warm cache. Readiness carries the real
+// question, in two parts. cache-sync says the informers have caught up at least once. api-access
+// says the controller can read the API under its own identity right now: the informers stay
+// "synced" after the controller loses access, so with cache-sync alone a controller that created
+// no bindings for a new rule, and logged nothing, kept both probes at 200.
 func addHealthChecks(mgr manager.Manager) error {
 	if err := mgr.AddHealthzCheck("healthz", healthz.Ping); err != nil {
 		return fmt.Errorf("add healthz check: %w", err)
@@ -238,7 +250,25 @@ func addHealthChecks(mgr manager.Manager) error {
 	if err := mgr.AddReadyzCheck("cache-sync", cacheSyncCheck(mgr.GetCache())); err != nil {
 		return fmt.Errorf("add readyz check: %w", err)
 	}
+	if err := mgr.AddReadyzCheck("api-access", apiAccessCheck(mgr.GetAPIReader())); err != nil {
+		return fmt.Errorf("add readyz check: %w", err)
+	}
 	return nil
+}
+
+// apiAccessCheck reports whether the controller can read the rules it reconciles, bypassing the
+// cache: one list of one object, so the cost is a small request per probe and the answer is about
+// now, not about the last time a watch happened to work.
+func apiAccessCheck(reader client.Reader) healthz.Checker {
+	return func(req *http.Request) error {
+		ctx, cancel := context.WithTimeout(req.Context(), apiAccessCheckTimeout)
+		defer cancel()
+
+		if err := reader.List(ctx, &v1.ClusterAuthorizationRuleList{}, client.Limit(1)); err != nil {
+			return fmt.Errorf("list ClusterAuthorizationRules: %w", err)
+		}
+		return nil
+	}
 }
 
 var errCacheNotSynced = errors.New("informer cache is not synced")

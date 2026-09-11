@@ -30,15 +30,22 @@ func TestNewManagerOptions(t *testing.T) {
 		wantLeaderElectionID string
 		wantLeaderElectionNS string
 	}{
+		// Leader election does not depend on HA_MODE any more: without HA the Deployment keeps its
+		// default rolling update, so two pods run during every version change, and two of them
+		// writing the same UserAccounts and DexProviderChecks would fight over them.
 		{
-			name:               "ha mode unset",
-			haMode:             "",
-			wantLeaderElection: false,
+			name:                 "ha mode unset",
+			haMode:               "",
+			wantLeaderElection:   true,
+			wantLeaderElectionID: controllerName,
+			wantLeaderElectionNS: leaderElectionNamespace,
 		},
 		{
-			name:               "ha mode false",
-			haMode:             "false",
-			wantLeaderElection: false,
+			name:                 "ha mode false",
+			haMode:               "false",
+			wantLeaderElection:   true,
+			wantLeaderElectionID: controllerName,
+			wantLeaderElectionNS: leaderElectionNamespace,
 		},
 		{
 			name:                 "ha mode true",
@@ -57,6 +64,9 @@ func TestNewManagerOptions(t *testing.T) {
 
 			if opts.LeaderElection != tt.wantLeaderElection {
 				t.Errorf("LeaderElection = %v, want %v", opts.LeaderElection, tt.wantLeaderElection)
+			}
+			if !opts.LeaderElectionReleaseOnCancel {
+				t.Error("the lease must be released on shutdown, or the next pod waits out the lease duration")
 			}
 			if opts.LeaderElectionID != tt.wantLeaderElectionID {
 				t.Errorf("LeaderElectionID = %q, want %q", opts.LeaderElectionID, tt.wantLeaderElectionID)

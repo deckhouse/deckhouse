@@ -19,12 +19,15 @@ package main
 import (
 	"context"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"testing"
 	"time"
 
 	"github.com/go-logr/logr"
 	"go.uber.org/zap/zapcore"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/manager"
 )
 
@@ -112,4 +115,59 @@ func TestManagerOptionsAlwaysElectALeader(t *testing.T) {
 	if opts.Cache.DefaultTransform == nil {
 		t.Error("cached objects must be stripped of managedFields")
 	}
+}
+
+// stubReader is a client.Reader whose List answers with a fixed error.
+type stubReader struct {
+	client.Reader
+	err error
+}
+
+func (s stubReader) List(context.Context, client.ObjectList, ...client.ListOption) error {
+	return s.err
+}
+
+// Readiness has to say whether the controller can work now, not whether it warmed up once. With
+// its RBAC taken away the controller created no bindings for a new rule and logged nothing, while
+// both probes kept answering 200: the informers had synced before the loss and never un-sync.
+func TestAPIAccessCheck(t *testing.T) {
+	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+
+	if err := apiAccessCheck(stubReader{})(req); err != nil {
+		t.Fatalf("a reader that answers: %v", err)
+	}
+
+	forbidden := errors.New(`clusterauthorizationrules.deckhouse.io is forbidden`)
+	err := apiAccessCheck(stubReader{err: forbidden})(req)
+	if err == nil {
+		t.Fatal("a reader that is forbidden: want not ready")
+	}
+	if !errors.Is(err, forbidden) {
+		t.Errorf("the cause must be kept for the probe body, got %v", err)
+	}
+}
+
+// The check must not outlive the probe: the kubelet gives it three seconds.
+func TestAPIAccessCheckHonoursTheDeadline(t *testing.T) {
+	slow := stubReaderFunc(func(ctx context.Context) error {
+		<-ctx.Done()
+		return ctx.Err()
+	})
+	req := httptest.NewRequest(http.MethodGet, "/readyz", nil)
+	start := time.Now()
+	if err := apiAccessCheck(slow)(req); err == nil {
+		t.Fatal("a reader that hangs: want not ready")
+	}
+	if took := time.Since(start); took > apiAccessCheckTimeout+time.Second {
+		t.Errorf("the check waited %v, must give up after %v", took, apiAccessCheckTimeout)
+	}
+}
+
+type stubReaderFunc func(ctx context.Context) error
+
+func (f stubReaderFunc) Get(context.Context, client.ObjectKey, client.Object, ...client.GetOption) error {
+	return nil
+}
+func (f stubReaderFunc) List(ctx context.Context, _ client.ObjectList, _ ...client.ListOption) error {
+	return f(ctx)
 }

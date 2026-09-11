@@ -155,7 +155,8 @@ func NewServer(logger *log.Logger) (*Server, error) {
 		Logf:     logger.Printf,
 	})
 
-	h, err := hook.NewHandler(logger, c, nsInformer.Lister(), nsInformer.Informer().HasSynced, rbacEvaluator, rulesSource, ruleBindings)
+	logDecisions := hook.DecisionLogModeFrom(os.Getenv(hook.DecisionLogEnv), logger)
+	h, err := hook.NewHandler(logger, c, nsInformer.Lister(), nsInformer.Informer().HasSynced, rbacEvaluator, rulesSource, ruleBindings, logDecisions)
 	if err != nil {
 		return nil, err
 	}

@@ -49,16 +49,15 @@ metadata:
   namespace: d8-{{ .Chart.Name }}
   {{- include "helm_lib_module_labels" (list . (dict "app" "permission-browser-apiserver")) | nindent 2 }}
 spec:
-  replicas: {{ include "helm_lib_is_ha_to_value" (list . 2 1) }}
+  # Two replicas rolled one at a time in HA; one replica with the Deployment's default strategy
+  # without it. The default surges the new pod before the old one goes, which is what keeps the
+  # aggregated API served through a rollout: with maxSurge 0 the only pod was removed first and the
+  # APIService had no endpoints for the whole restart.
+  {{- include "helm_lib_deployment_strategy_and_replicas_for_ha" . | nindent 2 }}
   revisionHistoryLimit: 2
   selector:
     matchLabels:
       app: permission-browser-apiserver
-  strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxUnavailable: 1
-      maxSurge: 0
   template:
     metadata:
       labels:
