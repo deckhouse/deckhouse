@@ -3710,7 +3710,7 @@ alerts:
         ```
       summary: |
         A ClusterAuthorizationRule asks for namespace limits that nothing enforces.
-      severity: "5"
+      severity: "6"
       markupFormat: markdown
     - name: D8UserAuthzRulePropagationLag
       sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.tpl
@@ -3750,7 +3750,7 @@ alerts:
         ```
       summary: |
         More ClusterAuthorizationRules ask for namespace limits than the per-rule alert names.
-      severity: "5"
+      severity: "6"
       markupFormat: markdown
     - name: D8UserAuthzWebhookDirectoryDiverged
       sourceFile: modules/140-user-authz/monitoring/prometheus-rules/user-authz-webhook.tpl
