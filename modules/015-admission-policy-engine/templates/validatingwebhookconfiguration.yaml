@@ -1,13 +1,23 @@
+{{/*
+  validating.webhook.config renders the fields every webhook of this configuration shares.
+  Usage: include "validating.webhook.config" (list $context) — failurePolicy defaults to Fail;
+  pass it explicitly as the second element to override, as the warn-only webhook does.
+*/}}
 {{- define "validating.webhook.config" }}
+{{- $context := index . 0 }}
+{{- $failurePolicy := "Fail" }}
+{{- if gt (len .) 1 }}
+  {{- $failurePolicy = index . 1 }}
+{{- end }}
 admissionReviewVersions:
   - v1
 clientConfig:
-  caBundle: {{ .Values.admissionPolicyEngine.internal.webhook.ca | b64enc | quote }}
+  caBundle: {{ $context.Values.admissionPolicyEngine.internal.webhook.ca | b64enc | quote }}
   service:
     name: gatekeeper-webhook-service
     namespace: d8-admission-policy-engine
     path: /v1/admit
-failurePolicy: Fail
+failurePolicy: {{ $failurePolicy }}
 matchPolicy: Exact
 sideEffects: None
 {{- end }}
@@ -80,12 +90,6 @@ metadata:
 webhooks:
   {{- if (gt (len .Values.admissionPolicyEngine.internal.trackedConstraintResources) 0) }}
 - name: admission-policy-engine.deckhouse.io
-  namespaceSelector:
-    matchExpressions:
-    - key: heritage
-      operator: NotIn
-      values:
-        - deckhouse
   objectSelector:
     matchExpressions:
     - key: gatekeeper.sh/operation
@@ -104,67 +108,133 @@ webhooks:
     apiVersions: ["*"]
     resources: ["pods/ephemeralcontainers"]
     operations: ["UPDATE"]
-{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
   matchConditions:
+    {{/* System namespaces are routed to the webhooks below instead. The condition holds for
+         cluster-scoped resources too, whose request.namespace is empty. */}}
+    - name: 'exclude-system-namespaces'
+      expression: '!({{ include "system_namespaces_cel" . }})'
     - name: 'exclude-virtualization'
       expression: '!(request.userInfo.groups.exists(e, (e == "system:serviceaccounts:d8-virtualization")))'
-{{- end }}
   timeoutSeconds: 15
-  {{- include "validating.webhook.config" . | nindent 2 }}
+  {{- include "validating.webhook.config" (list .) | nindent 2 }}
 {{- end }}
 
-{{/* Webhook for deny-exec in namespaces whose names start with d8- or kube- (main webhook excludes them by heritage label) */}}
+{{/*
+  Webhook for system namespaces that have not opted into policy enforcement.
+
+  The webhook above skips every namespace named `d8-*` or `kube-*`, so without this one Gatekeeper
+  never sees their workloads. The constraints that match here run in warn mode only: Pod Security
+  Standards through `d8-pod-security-*-warn-system`, and user policies through their `-system-warn`
+  variant. Namespaces whose `security.deckhouse.io/enable-security-policy-check` label is `true`
+  are handled by `system-namespaces-enforce` below instead.
+
+  `failurePolicy: Ignore` is deliberate and follows from warn-only: an unavailable Gatekeeper must
+  never stop a system component from starting, which would otherwise deadlock cluster bootstrap and
+  recovery. The cost is that warnings are silently skipped while the webhook is down.
+
+  exec and attach are not listed here: `deny-exec-heritage` below already routes those subresources
+  for the same namespaces, and listing them twice would evaluate them twice.
+*/}}
+{{- if (gt (len .Values.admissionPolicyEngine.internal.trackedConstraintResources) 0) }}
+- name: system-namespaces.admission-policy-engine.deckhouse.io
+  namespaceSelector:
+    matchExpressions:
+    - key: security.deckhouse.io/enable-security-policy-check
+      operator: NotIn
+      values: ["true"]
+  {{- if include "trivy.provider.enabled" . }}
+    - key: security.deckhouse.io/trivy-provider
+      operator: DoesNotExist
+  {{- end }} # If trivy-provider is disabled, namespaces with the label should also be checked
+  objectSelector:
+    matchExpressions:
+    - key: gatekeeper.sh/operation
+      operator: NotIn
+      values:
+        - webhook
+  rules:
+  {{- include "validating.webhook.tracked.resources" . | nindent 2 }}
+  {{/* Ephemeral containers are attached through a subresource, which the `pods` rule does not match */}}
+  - apiGroups: [""]
+    apiVersions: ["*"]
+    resources: ["pods/ephemeralcontainers"]
+    operations: ["UPDATE"]
+  matchConditions:
+    - name: 'system-namespaces'
+      expression: '{{ include "system_namespaces_cel" . }}'
+    - name: 'exclude-virtualization'
+      expression: '!(request.userInfo.groups.exists(e, (e == "system:serviceaccounts:d8-virtualization")))'
+  timeoutSeconds: 15
+  {{- include "validating.webhook.config" (list . "Ignore") | nindent 2 }}
+{{- end }}
+
+{{/*
+  Webhook for system namespaces that opted into policy enforcement.
+
+  A namespace whose `security.deckhouse.io/enable-security-policy-check` label is `true` is served
+  by the enforcing constraints instead of the warn-only ones: Pod Security Standards through
+  `d8-pod-security-*-d8-default`, and user policies through their `d8-system-enforce-*` variant.
+  The label is matched by value, exactly as those constraints match it, so a namespace labeled with
+  anything else keeps the warn-only treatment of the webhook above rather than falling between them.
+
+  `failurePolicy: Ignore` holds here as well. Opting a system namespace into enforcement hardens it
+  while Gatekeeper is available; it must not turn an unavailable Gatekeeper into a cluster that
+  cannot start its own components. `deny-exec-heritage` below is the one deliberate exception, and
+  it blocks only exec and attach, never a workload.
+
+  exec and attach are not listed here for the same reason as in the webhook above.
+*/}}
+{{- if (gt (len .Values.admissionPolicyEngine.internal.trackedConstraintResources) 0) }}
+- name: system-namespaces-enforce.admission-policy-engine.deckhouse.io
+  namespaceSelector:
+    matchExpressions:
+    - key: security.deckhouse.io/enable-security-policy-check
+      operator: In
+      values: ["true"]
+  {{- if include "trivy.provider.enabled" . }}
+    - key: security.deckhouse.io/trivy-provider
+      operator: DoesNotExist
+  {{- end }} # If trivy-provider is disabled, namespaces with the label should also be checked
+  objectSelector:
+    matchExpressions:
+    - key: gatekeeper.sh/operation
+      operator: NotIn
+      values:
+        - webhook
+  rules:
+  {{- include "validating.webhook.tracked.resources" . | nindent 2 }}
+  {{/* Ephemeral containers are attached through a subresource, which the `pods` rule does not match */}}
+  - apiGroups: [""]
+    apiVersions: ["*"]
+    resources: ["pods/ephemeralcontainers"]
+    operations: ["UPDATE"]
+  matchConditions:
+    - name: 'system-namespaces'
+      expression: '{{ include "system_namespaces_cel" . }}'
+    - name: 'exclude-virtualization'
+      expression: '!(request.userInfo.groups.exists(e, (e == "system:serviceaccounts:d8-virtualization")))'
+  timeoutSeconds: 15
+  {{- include "validating.webhook.config" (list . "Ignore") | nindent 2 }}
+{{- end }}
+
+{{/*
+  Webhook for deny-exec in system namespaces, which the main webhook leaves out by name.
+
+  This is the only path that keeps `failurePolicy: Fail` in a system namespace: denying exec and
+  attach cannot stop a component from starting, so failing closed costs nothing at bootstrap.
+*/}}
 {{- if ne .Values.global.deckhouseVersion "dev" }}
 - name: deny-exec-heritage.admission-policy-engine.deckhouse.io
   matchConditions:
     - name: system-namespace-prefix
-      expression: 'request.namespace.startsWith("d8-") || request.namespace.startsWith("kube-")'
+      expression: '{{ include "system_namespaces_cel" . }}'
   rules:
   - apiGroups: [""]
     apiVersions: ["*"]
     resources: ["pods/exec", "pods/attach"]
     operations: ["CONNECT"]
   timeoutSeconds: 15
-  {{- include "validating.webhook.config" . | nindent 2 }}
+  {{- include "validating.webhook.config" (list .) | nindent 2 }}
 {{- end }}
-
-{{/* #### TODO: Remove after full migration to securityPolicyExceptions in all modules */}}
-  {{- if (gt (len .Values.admissionPolicyEngine.internal.trackedConstraintResources) 0) }}
-- name: security-policy-exception.admission-policy-engine.deckhouse.io
-  namespaceSelector:
-    matchExpressions:
-    - key: security.deckhouse.io/enable-security-policy-check
-      operator: Exists
-  {{- if include "trivy.provider.enabled" . }}
-    - key: security.deckhouse.io/trivy-provider
-      operator: DoesNotExist
-  {{- end }} # If trivy-provides is disabled, namespaces with the label should also be checked
-  objectSelector:
-    matchExpressions:
-    - key: gatekeeper.sh/operation
-      operator: NotIn
-      values:
-        - webhook
-  rules:
-  {{- include "validating.webhook.tracked.resources" . | nindent 2 }}
-  {{/* Always validate CONNECT for exec/attach subresources */}}
-  - apiGroups: [""]
-    apiVersions: ["*"]
-    resources: ["pods/exec", "pods/attach"]
-    operations: ["CONNECT"]
-  {{/* Ephemeral containers are attached through a subresource, which the `pods` rule does not match */}}
-  - apiGroups: [""]
-    apiVersions: ["*"]
-    resources: ["pods/ephemeralcontainers"]
-    operations: ["UPDATE"]
-{{- if semverCompare ">= 1.27" .Values.global.discovery.kubernetesVersion }}
-  matchConditions:
-    - name: 'exclude-virtualization'
-      expression: '!(request.userInfo.groups.exists(e, (e == "system:serviceaccounts:d8-virtualization")))'
-{{- end }}
-  timeoutSeconds: 15
-  {{- include "validating.webhook.config" . | nindent 2 }}
-{{- end }}
-{{/* #### end of TODO */}}
 
 {{- end }}

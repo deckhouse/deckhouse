@@ -335,11 +335,70 @@ var _ = Describe("Module :: admissionPolicyEngine :: helm template ::", func() {
 			Expect(f.RenderError).ShouldNot(HaveOccurred())
 		})
 
-		It("Renders ValidatingWebhookConfiguration with main webhook, deny-exec-heritage webhook and security-policy-exception webhook", func() {
+		It("Renders ValidatingWebhookConfiguration with main, the two system-namespace webhooks and deny-exec-heritage", func() {
 			mainRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["pods"]},{"apiGroups":["rbac.authorization.k8s.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["roles","rolebindings"]},{"apiGroups":["constraints.gatekeeper.sh"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["*"],"scope":"*"},{"apiGroups":[""],"apiVersions":["*"],"resources":["pods/exec","pods/attach"],"operations":["CONNECT"]},{"apiGroups":[""],"apiVersions":["*"],"resources":["pods/ephemeralcontainers"],"operations":["UPDATE"]}]`
+			// The system-namespaces webhook leaves out exec and attach: deny-exec-heritage already routes them.
+			systemNamespacesRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["pods"]},{"apiGroups":["rbac.authorization.k8s.io"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["roles","rolebindings"]},{"apiGroups":["constraints.gatekeeper.sh"],"apiVersions":["*"],"operations":["CREATE","UPDATE","DELETE"],"resources":["*"],"scope":"*"},{"apiGroups":[""],"apiVersions":["*"],"resources":["pods/ephemeralcontainers"],"operations":["UPDATE"]}]`
 			denyExecHeritageRules := `[{"apiGroups":[""],"apiVersions":["*"],"operations":["CONNECT"],"resources":["pods/exec","pods/attach"]}]`
-			securityPolicyExceptionRules := mainRules
-			checkVWC(f, 3, mainRules, denyExecHeritageRules, securityPolicyExceptionRules)
+			checkVWC(f, 4, mainRules, systemNamespacesRules, systemNamespacesRules, denyExecHeritageRules)
+
+			vw := f.KubernetesGlobalResource("ValidatingWebhookConfiguration", "d8-admission-policy-engine-config")
+			systemNamespacesExpr := `has(request.namespace) && (request.namespace.startsWith("d8-") || request.namespace.startsWith("kube-"))`
+
+			// The main webhook must leave the system namespaces to the two below it.
+			Expect(vw.Field("webhooks.0.namespaceSelector").Exists()).To(BeFalse())
+			Expect(vw.Field("webhooks.0.matchConditions.0.expression").String()).To(Equal("!(" + systemNamespacesExpr + ")"))
+			Expect(vw.Field("webhooks.0.failurePolicy").String()).To(Equal("Fail"))
+
+			Expect(vw.Field("webhooks.1.name").String()).To(Equal("system-namespaces.admission-policy-engine.deckhouse.io"))
+			Expect(vw.Field("webhooks.1.matchConditions.0.expression").String()).To(Equal(systemNamespacesExpr))
+			Expect(vw.Field("webhooks.2.name").String()).To(Equal("system-namespaces-enforce.admission-policy-engine.deckhouse.io"))
+			Expect(vw.Field("webhooks.2.matchConditions.0.expression").String()).To(Equal(systemNamespacesExpr))
+
+			// Neither system-namespace webhook may block a workload while Gatekeeper is unavailable.
+			Expect(vw.Field("webhooks.1.failurePolicy").String()).To(Equal("Ignore"))
+			Expect(vw.Field("webhooks.2.failurePolicy").String()).To(Equal("Ignore"))
+
+			// Both select on the label VALUE, exactly as the constraints they serve do, so a
+			// namespace labeled with anything but "true" cannot fall between them.
+			Expect(vw.Field("webhooks.1.namespaceSelector.matchExpressions").String()).To(MatchJSON(
+				`[{"key":"security.deckhouse.io/enable-security-policy-check","operator":"NotIn","values":["true"]}]`))
+			Expect(vw.Field("webhooks.2.namespaceSelector.matchExpressions").String()).To(MatchJSON(
+				`[{"key":"security.deckhouse.io/enable-security-policy-check","operator":"In","values":["true"]}]`))
+
+			// Exec and attach stay the one deliberate Fail path in system namespaces.
+			Expect(vw.Field("webhooks.3.name").String()).To(Equal("deny-exec-heritage.admission-policy-engine.deckhouse.io"))
+			Expect(vw.Field("webhooks.3.failurePolicy").String()).To(Equal("Fail"))
+		})
+
+		It("Guards every request.namespace reference against a cluster-scoped request", func() {
+			// A cluster-scoped AdmissionRequest carries no `namespace` key, and reading it raises
+			// `no such key: namespace`. A matchCondition that errors rejects the request under
+			// failurePolicy: Fail, so every expression touching request.namespace must test for it
+			// first. The webhooks here route cluster-scoped objects: `constraints.gatekeeper.sh`
+			// is matched with scope `*`.
+			for _, resource := range []string{"ValidatingWebhookConfiguration", "MutatingWebhookConfiguration"} {
+				wc := f.KubernetesGlobalResource(resource, "d8-admission-policy-engine-config")
+				Expect(wc.Exists()).To(BeTrue(), resource)
+				for i, webhook := range wc.Field("webhooks").Array() {
+					for j, condition := range webhook.Get("matchConditions").Array() {
+						expression := condition.Get("expression").String()
+						if !strings.Contains(expression, "request.namespace") {
+							continue
+						}
+						Expect(expression).To(ContainSubstring("has(request.namespace)"),
+							fmt.Sprintf("%s webhooks.%d.matchConditions.%d", resource, i, j))
+					}
+				}
+			}
+		})
+
+		It("Renders MutatingWebhookConfiguration that skips system namespaces", func() {
+			mw := f.KubernetesGlobalResource("MutatingWebhookConfiguration", "d8-admission-policy-engine-config")
+			Expect(mw.Exists()).To(BeTrue())
+			Expect(mw.Field("webhooks.0.namespaceSelector").Exists()).To(BeFalse())
+			Expect(mw.Field("webhooks.0.matchConditions.0.expression").String()).To(Equal(
+				`!(has(request.namespace) && (request.namespace.startsWith("d8-") || request.namespace.startsWith("kube-")))`))
 		})
 	})
 
