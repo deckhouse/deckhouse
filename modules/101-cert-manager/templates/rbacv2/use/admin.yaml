@@ -5,9 +5,16 @@ metadata:
   labels:
     heritage: deckhouse
     module: cert-manager
-    rbac.deckhouse.io/aggregate-to-kubernetes-as: admin
-    rbac.deckhouse.io/kind: use
-  name: d8:use:capability:module:cert-manager:admin
+    rbac.deckhouse.io/aggregate-to-namespace-as: admin
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "namespace-capability.cert-manager.admin"
+    rbac.deckhouse.io/scope: namespace
+  name: d8:namespace-capability:cert-manager:admin
+  annotations:
+    en.meta.deckhouse.io/title: "Module cert-manager: admin"
+    ru.meta.deckhouse.io/title: "Модуль cert-manager: администрирование"
+    en.meta.deckhouse.io/description: "Manage cert-manager Issuers in a namespace."
+    ru.meta.deckhouse.io/description: "Управление Issuer модуля cert-manager в пространстве имён."
 rules:
 - apiGroups:
   - cert-manager.io

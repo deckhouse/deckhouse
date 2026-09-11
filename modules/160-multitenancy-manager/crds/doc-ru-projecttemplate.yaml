@@ -45,3 +45,144 @@ spec:
                   description: Сообщение, указывающее на причину появления текущего статуса.
                 ready:
                   description: Готовность шаблона к использованию. Указывает на то, что шаблон успешно прошел проверку.
+    - name: v1alpha2
+      schema:
+        openAPIV3Schema:
+          description: |
+            Описывает шаблон проекта как набор структурированных декларативных полей.
+
+            На этот ресурс ссылается другой пользовательский ресурс — [Project](cr.html#project). Поля доступности кластерных ресурсов (`resources`, `grantPolicies`) материализуются в объекты [ClusterResourceGrantPolicy](cr.html#clusterresourcegrantpolicy), привязанные к проектам этого шаблона; остальные поля рендерятся в объекты внутри неймспейсов.
+          properties:
+            spec:
+              properties:
+                title:
+                  description: Краткое человекочитаемое имя шаблона.
+                description:
+                  description: |
+                    Произвольное описание назначения шаблона.
+                    
+                    Укажите пустую строку, если описание не требуется.
+                resources:
+                  description: |
+                    Встроенные правила выдачи кластерных ресурсов.
+                    
+                    Контроллер материализует их в управляемый ClusterResourceGrantPolicy, привязанный к проектам этого шаблона.
+                  items:
+                    description: |
+                      Одна запись allow-листа/дефолта для ресурса, ссылающаяся на GrantableClusterResourceDefinition.
+                    properties:
+                      resourceName:
+                        description: Имя GrantableClusterResourceDefinition, которую настраивает эта запись.
+                      allowed:
+                        description: Явный список выданных имён объектов (объединяется с allowedSelector).
+                      allowedSelector:
+                        description: Выдаёт все объекты выданного ресурса, чьи метки совпадают (объединяется с allowed).
+                      denied:
+                        description: Имена объектов, явно исключённые для подходящих проектов (перекрывает allowed).
+                      deniedSelector:
+                        description: Исключает выданные объекты, чьи метки совпадают (перекрывает allowed/allowedSelector).
+                      default:
+                        description: Имя дефолта для проекта (перекрывает defaultFrom регистрации).
+                      availabilityDefault:
+                        description: Перекрывает defaultAvailability ресурса (All/None) для подходящих проектов.
+                grantPolicies:
+                  description: |
+                    Ссылки на библиотечные объекты `ClusterResourceGrantPolicy` (созданные без `projectSelector`).
+
+                    Контроллер материализует по одной управляемой политике на каждую ссылку, копируя её ресурсы и привязывая их к проектам этого шаблона.
+                podSecurityStandard:
+                  description: |
+                    Профиль Pod Security Standard, применяемый к неймспейсам проекта.
+
+                    Возможные значения:
+
+                    - Privileged — неограниченная политика.
+                    - Baseline — минимально ограничивающая политика, предотвращающая известные эскалации привилегий.
+                    - Restricted — сильно ограниченная политика, актуальные практики hardening подов.
+
+                    Литеральная строка (`Privileged`/`Baseline`/`Restricted`) или ссылка на параметр
+                    `{fromParam: "<name>"}`, указывающая на свойство `parametersSchema`. Литеральное значение
+                    и параметр, на который дана ссылка, проверяются admission webhook.
+                networkPolicy:
+                  description: Сетевая изоляция неймспейсов проекта по умолчанию.
+                  properties:
+                    mode:
+                      description: |
+                        - Isolated — по умолчанию запрещать весь трафик, кроме внутрипроектного, DNS, сбора метрик Prometheus и ingress-nginx.
+                        - NotRestricted — по умолчанию разрешать весь трафик.
+
+                        Литеральная строка или ссылка на параметр `{fromParam: "<name>"}`.
+                nodeSelector:
+                  description: |
+                    Ограничивает поды проекта узлами с указанными метками. Литеральная карта меток или ссылка на параметр `{fromParam: "<name>"}`.
+                tolerations:
+                  description: |
+                    Tolerations по умолчанию, применяемые к подам проекта.
+                    
+                    Литеральный список tolerations или ссылка на параметр `{fromParam: "<name>"}`.
+                namespaceMetadata:
+                  description: Дополнительные метки и аннотации для неймспейсов проекта.
+                  properties:
+                    labels:
+                      description: |
+                        Литеральная карта меток или ссылка на параметр `{fromParam: "<name>"}`.
+                    annotations:
+                      description: |
+                        Литеральная карта аннотаций или ссылка на параметр `{fromParam: "<name>"}`.
+                features:
+                  description: Опциональные возможности проекта.
+                  properties:
+                    monitoring:
+                      description: |
+                        Включить расширенный мониторинг для проекта.
+                        
+                        Литеральное булево значение или ссылка на параметр `{fromParam: "<name>"}`.
+                    vulnerabilityScanning:
+                      description: |
+                        Включить периодическое сканирование уязвимостей (Trivy) для проекта.
+                        
+                        Литеральное булево значение или ссылка на параметр `{fromParam: "<name>"}`.
+                logShipping:
+                  description: Перенаправление логов проекта в кластерное хранилище логов.
+                  properties:
+                    clusterDestinationRef:
+                      description: |
+                        Имя ClusterLogDestination для отправки логов.
+                        
+                        Литеральная строка или ссылка на параметр `{fromParam: "<name>"}`.
+                allowedUIDs:
+                  description: |
+                    Диапазон идентификаторов пользователей, допустимых в контейнерах проекта.
+                    
+                    Литеральный объект `{min, max}` или ссылка на параметр `{fromParam: "<name>"}`.
+                allowedGIDs:
+                  description: |
+                    Диапазон идентификаторов групп, допустимых в контейнерах проекта.
+                    
+                    Литеральный объект `{min, max}` или
+                    ссылка на параметр `{fromParam: "<name>"}`.
+                runtimeAudit:
+                  description: Правила аудита обращений к ядру; действуют только при заданных allowedUIDs/allowedGIDs.
+                  properties:
+                    enabled:
+                      description: |
+                        Литеральное булево значение или ссылка на параметр `{fromParam: "<name>"}`.
+                parametersSchema:
+                  description: |
+                    Схема OpenAPI v3 для валидации [параметров](#project-v1alpha2-spec-parameters) проекта.
+                  properties:
+                    openAPIV3Schema:
+                      description: |
+                        Спецификация OpenAPI, используемая для проверки правильности параметров, передаваемых при создании нового проекта.
+                resourcesTemplate:
+                  description: |
+                    Устаревшая строка Helm-шаблона.
+
+                    Устарело: сохранено для обратной совместимости с `v1alpha1`. Структурированный путь
+                    используется только если `resourcesTemplate` пуст; непустая Helm-строка побеждает.
+            status:
+              properties:
+                message:
+                  description: Сообщение, указывающее на причину появления текущего статуса.
+                ready:
+                  description: Готовность шаблона к использованию. Указывает на то, что шаблон успешно прошел проверку.

@@ -6,16 +6,35 @@ metadata:
     heritage: deckhouse
     module: multitenancy-manager
     rbac.deckhouse.io/aggregate-to-deckhouse-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.multitenancy-manager.view"
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-multitenancy-manager
-  name: d8:manage:permission:module:multitenancy-manager:view
+  name: d8:system-capability:multitenancy-manager:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module multitenancy-manager: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль multitenancy-manager: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the multitenancy-manager module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля multitenancy-manager."
 rules:
 - apiGroups:
   - deckhouse.io
   resources:
+  # This is a cluster-wide grant on purpose: a platform operator manages the
+  # tenants and has to see all of them. It is also what puts such an operator
+  # outside the project visibility filter, which narrows a list to the projects
+  # the caller has a namespace in -- the filter only has something to narrow
+  # when the grant is not cluster-wide. Removing the grant here is what would
+  # subject this capability to the filter, and that is a product decision about
+  # the operator role, not an oversight of the filter.
   - projects
   - projecttemplates
+  - clusterprojectrolebindings
+  # Namespaced objects of a project are listed cluster-wide here: a platform
+  # operator has to see who is bound where and which namespaces a project owns
+  # without holding a role inside every project.
+  - projectrolebindings
+  - projectnamespaces
   verbs:
   - get
   - list

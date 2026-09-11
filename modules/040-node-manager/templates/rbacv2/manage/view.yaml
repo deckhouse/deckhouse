@@ -6,10 +6,16 @@ metadata:
     heritage: deckhouse
     module: node-manager
     rbac.deckhouse.io/aggregate-to-infrastructure-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.node-manager.view"
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-cloud-instance-manager
-  name: d8:manage:permission:module:node-manager:view
+  name: d8:system-capability:node-manager:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module node-manager: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль node-manager: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the node-manager module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля node-manager."
 rules:
 - apiGroups:
   - deckhouse.io

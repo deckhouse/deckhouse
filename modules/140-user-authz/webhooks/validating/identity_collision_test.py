@@ -102,8 +102,8 @@ class TestIdentityCollisionWithAuthorizationRules(unittest.TestCase):
             "groups.deckhouse.io", ".spec.name", group_name, factories.CLUSTER_RULE_DESCRIPTION))
 
     # Group.spec.name is not normalised anywhere between the Group object and the "groups" claim
-    # (modules/150-user-authn/hooks/get_dex_user_crds.go, makeUserGroupsMap builds the claim from
-    # group.Spec.Name verbatim), so a case-only difference is a genuinely different group and
+    # (user-authn-controller internal/controller/user/groups.go builds the claim from
+    # Group.spec.name verbatim), so a case-only difference is a genuinely different group and
     # reporting it either way round would be a false positive.
     def test_group_allowed_when_name_differs_from_the_subject_only_by_case(self):
         out = self.run_hook(factories.prepare_group_binding_context(
@@ -163,7 +163,7 @@ class TestIdentityCollisionWithAuthorizationRules(unittest.TestCase):
             "users.deckhouse.io", ".spec.email", email, factories.CLUSTER_RULE_DESCRIPTION))
 
     # Email case. Deckhouse lowercases spec.email before it reaches the Password object
-    # (modules/150-user-authn/hooks/get_dex_user_crds.go:276), and the username claim the API
+    # (user-authn-controller internal/controller/user/controller.go), and the username claim the API
     # server consumes is that email (modules/040-control-plane-manager/templates/
     # _authentication_configuration.tpl:18-20). The two directions are therefore not symmetric.
 

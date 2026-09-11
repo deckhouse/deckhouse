@@ -21,9 +21,29 @@ rules:
 - apiGroups: ["rbac.authorization.k8s.io"]
   resources: ["roles", "rolebindings", "clusterroles", "clusterrolebindings"]
   verbs: ["get", "list", "watch"]
+# Access to the user-authn catalog for resolving the groups a user belongs to.
+# SubjectAccessReport needs it because group membership lives in Group resources,
+# not in RBAC: a binding to a group applies to a user only if the identity
+# provider puts that group into the user's token. The resources are optional -
+# with user-authn disabled the report degrades to the groups it was given.
+- apiGroups: ["deckhouse.io"]
+  resources: ["groups", "users"]
+  verbs: ["get", "list", "watch"]
 # Access to discovery API for checking if resources are namespaced
 - nonResourceURLs: ["/version", "/api", "/api/*", "/apis", "/apis/*"]
   verbs: ["get"]
+# Access to CRD labels for attributing a resource to the module that ships it.
+# The coverage report groups by module, and the API group is not a substitute:
+# operator-trivy ships aquasecurity.github.io. Only metadata is ever read.
+- apiGroups: ["apiextensions.k8s.io"]
+  resources: ["customresourcedefinitions"]
+  verbs: ["get", "list", "watch"]
+# An aggregated API has no CRD, and its APIService names the module serving it:
+# authorization.deckhouse.io comes from user-authz, and "authorization" is not a
+# module at all.
+- apiGroups: ["apiregistration.k8s.io"]
+  resources: ["apiservices"]
+  verbs: ["get", "list", "watch"]
 # Access to admission webhooks for generic apiserver
 - apiGroups: ["admissionregistration.k8s.io"]
   resources: ["mutatingwebhookconfigurations", "validatingwebhookconfigurations", "validatingadmissionpolicies", "validatingadmissionpolicybindings"]
@@ -85,6 +105,88 @@ rules:
 - apiGroups: ["authorization.deckhouse.io"]
   resources: ["accessiblenamespaces"]
   verbs: ["get", "list"]
+---
+# ClusterRole for clients who can run reverse-RBAC ("who-can") queries.
+# WhoCan discloses which subjects are granted an action, so it is an elevated
+# capability: this ClusterRole is intentionally NOT bound to system:authenticated
+# and must be granted explicitly to trusted UI/service accounts or administrators.
+# WhoCan is cluster-scoped and DELIBERATELY BYPASSES multi-tenancy filtering: the
+# target namespace is carried in spec.resourceAttributes.namespace, so a grantee
+# can resolve the subjects of ANY namespace (including other tenants). For this
+# reason this ClusterRole must NEVER be bound to tenant-scoped (project) admins;
+# bind it only to cluster-trusted identities.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:user-authz:who-can-checker
+  {{- include "helm_lib_module_labels" (list . (dict "app" "permission-browser-apiserver")) | nindent 2 }}
+rules:
+- apiGroups: ["authorization.deckhouse.io"]
+  resources: ["whocans"]
+  verbs: ["create"]
+---
+# ClusterRole for clients who can build a SubjectAccessReport for ANOTHER
+# subject ("what is this user/group/ServiceAccount allowed to do").
+# The report discloses the full permission map of that subject, including
+# namespaces of other tenants, so - exactly like who-can-checker - it is an
+# elevated capability: intentionally NOT bound to system:authenticated, and it
+# must NEVER be bound to tenant-scoped (project) admins. Bind it only to
+# cluster-trusted identities.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:user-authz:subject-access-checker
+  {{- include "helm_lib_module_labels" (list . (dict "app" "permission-browser-apiserver")) | nindent 2 }}
+rules:
+- apiGroups: ["authorization.deckhouse.io"]
+  resources: ["subjectaccessreports"]
+  verbs: ["create"]
+- apiGroups: ["authorization.deckhouse.io"]
+  resources: ["subjectaccessreports/nonself"]
+  verbs: ["create"]
+---
+# ClusterRole for clients who export the role catalogue: what each role of the
+# model grants, in the form a security officer keeps and a regulator reads.
+# It reports on roles, never on subjects, and every row of it is already
+# readable in the ClusterRoles themselves -- so unlike the two above this is not
+# an elevated capability. It exists as a role of its own for identities that
+# should produce the export without being able to read the whole RBAC tree.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:user-authz:role-catalogue-reader
+  {{- include "helm_lib_module_labels" (list . (dict "app" "permission-browser-apiserver")) | nindent 2 }}
+rules:
+- apiGroups: ["authorization.deckhouse.io"]
+  resources: ["roleaccessreports"]
+  verbs: ["create"]
+---
+# ClusterRole for users who can only report on their own permissions (self
+# mode). Self reports disclose nothing the user cannot already discover with
+# SelfSubjectRulesReview, so this one is bound to every authenticated user.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: d8:user-authz:self-subject-access-checker
+  {{- include "helm_lib_module_labels" (list . (dict "app" "permission-browser-apiserver")) | nindent 2 }}
+rules:
+- apiGroups: ["authorization.deckhouse.io"]
+  resources: ["subjectaccessreports"]
+  verbs: ["create"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: d8:user-authz:self-subject-access-checker:system-authenticated
+  {{- include "helm_lib_module_labels" (list . (dict "app" "permission-browser-apiserver")) | nindent 2 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: d8:user-authz:self-subject-access-checker
+subjects:
+  - kind: Group
+    apiGroup: rbac.authorization.k8s.io
+    name: system:authenticated
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding

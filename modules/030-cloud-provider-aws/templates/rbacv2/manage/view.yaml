@@ -6,10 +6,16 @@ metadata:
     heritage: deckhouse
     module: cloud-provider-aws
     rbac.deckhouse.io/aggregate-to-infrastructure-as: viewer
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.cloud-provider-aws.view"
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-cloud-provider-aws
-  name: d8:manage:permission:module:cloud-provider-aws:view
+  name: d8:system-capability:cloud-provider-aws:view
+  annotations:
+    en.meta.deckhouse.io/title: "Module cloud-provider-aws: view configuration"
+    ru.meta.deckhouse.io/title: "Модуль cloud-provider-aws: просмотр конфигурации"
+    en.meta.deckhouse.io/description: "Read-only access to the cloud-provider-aws module configuration."
+    ru.meta.deckhouse.io/description: "Доступ только на чтение к конфигурации модуля cloud-provider-aws."
 rules:
 - apiGroups:
   - deckhouse.io

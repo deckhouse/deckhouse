@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+
+# Copyright 2026 Flant JSC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+source /shell_lib.sh
+
+# v1alpha1 is no longer served, but it is still a version of the CRD and still listed in
+# status.storedVersions, and the CRD still declares a conversion webhook -- so the apiserver keeps
+# asking for the conversion, and a CRD pointing at a webhook that cannot convert is a CRD whose
+# objects can stop being readable. Removing the hook made every such request fail: a live cluster
+# answered about one a second, all of them counted as conversion failures.
+#
+# The conversion is the version bump and nothing else. Both versions name description,
+# parametersSchema and resourcesTemplate identically, and the structured fields v1alpha2 added exist
+# only there -- they are pruned on the way down and cannot come back, which is precisely why v1alpha1
+# is not served: no client can write a template back through it and erase them.
+function __config__() {
+  cat <<EOF
+configVersion: v1
+kubernetesCustomResourceConversion:
+  - name: v1alpha1_to_v1alpha2
+    crdName: projecttemplates.deckhouse.io
+    conversions:
+    - fromVersion: deckhouse.io/v1alpha1
+      toVersion: deckhouse.io/v1alpha2
+  - name: v1alpha2_to_v1alpha1
+    crdName: projecttemplates.deckhouse.io
+    conversions:
+    - fromVersion: deckhouse.io/v1alpha2
+      toVersion: deckhouse.io/v1alpha1
+EOF
+}
+
+function __on_conversion::v1alpha1_to_v1alpha2() {
+  if converted=$(context::jq -rc '.review.request.objects//[] | map(
+     if .apiVersion == "deckhouse.io/v1alpha1" then .apiVersion = "deckhouse.io/v1alpha2" else . end
+  )'); then
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"convertedObjects": $converted}
+EOF
+  else
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"failedMessage":"Conversion of projecttemplates.deckhouse.io failed"}
+EOF
+  fi
+}
+
+# The two fields the v1alpha1 schema requires are backfilled when a structured template omits them:
+# the apiserver validates what a conversion returns, and a template that never had a resourcesTemplate
+# would otherwise come back as an object v1alpha1 cannot describe.
+function __on_conversion::v1alpha2_to_v1alpha1() {
+  if converted=$(context::jq -rc '.review.request.objects//[] | map(
+     if .apiVersion == "deckhouse.io/v1alpha2" then
+       .apiVersion = "deckhouse.io/v1alpha1" |
+       .spec = ((.spec // {})
+         | (.resourcesTemplate //= "")
+         | (.parametersSchema //= {"openAPIV3Schema": {}})
+         | (.parametersSchema.openAPIV3Schema //= {}))
+     else . end
+  )'); then
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"convertedObjects": $converted}
+EOF
+  else
+    cat <<EOF >"$CONVERSION_RESPONSE_PATH"
+{"failedMessage":"Conversion of projecttemplates.deckhouse.io failed"}
+EOF
+  fi
+}
+
+hook::run "$@"

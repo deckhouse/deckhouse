@@ -6,10 +6,16 @@ metadata:
     heritage: deckhouse
     module: admission-policy-engine
     rbac.deckhouse.io/aggregate-to-security-as: manager
-    rbac.deckhouse.io/kind: manage
-    rbac.deckhouse.io/level: module
+    rbac.deckhouse.io/kind: capability
+    rbac.deckhouse.io/capability: "system-capability.admission-policy-engine.edit"
+    rbac.deckhouse.io/scope: system
     rbac.deckhouse.io/namespace: d8-admission-policy-engine
-  name: d8:manage:permission:module:admission-policy-engine:edit
+  name: d8:system-capability:admission-policy-engine:edit
+  annotations:
+    en.meta.deckhouse.io/title: "Module admission-policy-engine: edit configuration"
+    ru.meta.deckhouse.io/title: "Модуль admission-policy-engine: управление конфигурацией"
+    en.meta.deckhouse.io/description: "Manage the admission-policy-engine module configuration."
+    ru.meta.deckhouse.io/description: "Управление конфигурацией модуля admission-policy-engine."
 rules:
 - apiGroups:
   - deckhouse.io

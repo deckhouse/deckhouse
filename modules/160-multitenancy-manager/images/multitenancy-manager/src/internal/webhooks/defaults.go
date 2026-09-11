@@ -63,7 +63,7 @@ func (m *DefaultsMutator) InstallInto(srv webhook.Server) { srv.Register("/defau
 
 func (m *DefaultsMutator) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	review := &admissionv1.AdmissionReview{}
-	if err := decodeReview(r, review); err != nil {
+	if err := decodeReview(w, r, review); err != nil {
 		http.Error(w, "invalid AdmissionReview: "+err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -91,7 +91,8 @@ func (m *DefaultsMutator) decide(ctx context.Context, req *admissionv1.Admission
 	// applied into project namespaces by the deckhouse-controller's Helm release, and with
 	// failurePolicy: Fail a slow/erroring defaulting call fails that apply and deadlocks the module's
 	// queue. The apiserver-level matchConditions already skip this webhook for those writers; this is
-	// the handler-level backstop. Mirrors is_granted.go / protect.go.
+	// the handler-level backstop. Same isSystemRequest set as protect.go; /is-granted uses the
+	// narrower isAutomatedSystemWriter instead.
 	if isSystemRequest(req) {
 		return allowedResponse(req.UID), nil
 	}

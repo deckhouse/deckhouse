@@ -6,9 +6,10 @@ Licensed under the Deckhouse Platform Enterprise Edition (EE) license. See https
 package hook
 
 import (
-	"fmt"
 	"log"
+	"slices"
 	"strings"
+	"sync"
 
 	rbacv1 "k8s.io/api/rbac/v1"
 	"k8s.io/apimachinery/pkg/labels"
@@ -62,6 +63,16 @@ type RBACEvaluator struct {
 	clusterRoleLister        rbaclisters.ClusterRoleLister
 	clusterRoleBindingLister rbaclisters.ClusterRoleBindingLister
 
+	// bindingsBySubject answers "which cluster-wide bindings name this
+	// subject" without walking the cluster. The check runs on the
+	// authorization path -- every cluster-scoped request of a tenant user
+	// reaches it -- and a Deckhouse cluster carries hundreds of
+	// ClusterRoleBindings before the first user is created.
+	bindingsBySubject *subjectIndex
+	// Serializes the listing that feeds the index, so a burst of requests on a
+	// cold process does not turn into a burst of full listings.
+	indexing sync.Mutex
+
 	synced []kcache.InformerSynced
 }
 
@@ -76,12 +87,13 @@ func NewRBACEvaluator(logger *log.Logger, informerFactory informers.SharedInform
 	clusterRoles := rbacInformers.ClusterRoles()
 	clusterRoleBindings := rbacInformers.ClusterRoleBindings()
 
-	return &RBACEvaluator{
+	evaluator := &RBACEvaluator{
 		logger:                   logger,
 		roleLister:               roles.Lister(),
 		roleBindingLister:        roleBindings.Lister(),
 		clusterRoleLister:        clusterRoles.Lister(),
 		clusterRoleBindingLister: clusterRoleBindings.Lister(),
+		bindingsBySubject:        newSubjectIndex(),
 		synced: []kcache.InformerSynced{
 			roles.Informer().HasSynced,
 			roleBindings.Informer().HasSynced,
@@ -89,6 +101,127 @@ func NewRBACEvaluator(logger *log.Logger, informerFactory informers.SharedInform
 			clusterRoleBindings.Informer().HasSynced,
 		},
 	}
+
+	// Rebuilding the whole index on every event is O(bindings), and bindings
+	// change when a module is deployed, not when a request arrives. Tracking
+	// deltas would buy nothing here and would have to get subject removal on
+	// update exactly right.
+	//
+	// While the informer is still filling, events are the initial listing --
+	// one per binding -- and rebuilding on each of them would make the sync
+	// itself quadratic. Those are skipped; the first read after the sync builds
+	// the index once (see indexedBindings).
+	synced := clusterRoleBindings.Informer().HasSynced
+	rebuild := func() {
+		if !synced() {
+			return
+		}
+
+		evaluator.reindex()
+	}
+
+	if _, err := clusterRoleBindings.Informer().AddEventHandler(kcache.ResourceEventHandlerFuncs{
+		AddFunc:    func(any) { rebuild() },
+		UpdateFunc: func(any, any) { rebuild() },
+		DeleteFunc: func(any) { rebuild() },
+	}); err != nil {
+		// Without the handler the index stays empty and every check answers
+		// "not granted independently" -- the multi-tenancy deny stays in place,
+		// which is the safe direction, but say it out loud.
+		logger.Printf("independent RBAC check: failed to watch ClusterRoleBindings, cluster-wide grants will not be seen: %v", err)
+	}
+
+	return evaluator
+}
+
+// subjectIndex maps a subject to the cluster-wide bindings naming it.
+//
+// ServiceAccount subjects are stored in the "system:serviceaccount:<ns>:<name>"
+// form the request carries, so a lookup never formats a string.
+type subjectIndex struct {
+	mu      sync.RWMutex
+	built   bool
+	byUser  map[string][]*rbacv1.ClusterRoleBinding
+	byGroup map[string][]*rbacv1.ClusterRoleBinding
+}
+
+func newSubjectIndex() *subjectIndex {
+	return &subjectIndex{
+		byUser:  map[string][]*rbacv1.ClusterRoleBinding{},
+		byGroup: map[string][]*rbacv1.ClusterRoleBinding{},
+	}
+}
+
+func (i *subjectIndex) rebuild(bindings []*rbacv1.ClusterRoleBinding) {
+	byUser := make(map[string][]*rbacv1.ClusterRoleBinding, len(bindings))
+	byGroup := make(map[string][]*rbacv1.ClusterRoleBinding, len(bindings))
+
+	for _, binding := range bindings {
+		// CAR-managed bindings are excluded once, at index time: the hot path
+		// should not re-derive what the cluster already told us.
+		if isCARManagedClusterRoleBinding(binding) {
+			continue
+		}
+
+		for _, subject := range binding.Subjects {
+			switch subject.Kind {
+			case rbacv1.UserKind:
+				byUser[subject.Name] = append(byUser[subject.Name], binding)
+			case rbacv1.GroupKind:
+				byGroup[subject.Name] = append(byGroup[subject.Name], binding)
+			case rbacv1.ServiceAccountKind:
+				if subject.Namespace == "" {
+					// A ClusterRoleBinding has no namespace to default to, so
+					// such a subject grants nothing and upstream ignores it.
+					continue
+				}
+				name := serviceAccountUsername(subject.Namespace, subject.Name)
+				byUser[name] = append(byUser[name], binding)
+			}
+		}
+	}
+
+	i.mu.Lock()
+	i.byUser = byUser
+	i.byGroup = byGroup
+	i.built = true
+	i.mu.Unlock()
+}
+
+// built reports whether the index holds a listing rather than its zero value.
+// An empty cluster and an unbuilt index look the same from bindingsFor, and
+// the difference decides whether a subject is denied.
+func (i *subjectIndex) isBuilt() bool {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
+	return i.built
+}
+
+// bindingsFor returns the bindings naming the user or any of the groups. The
+// same binding can name both, so the caller may see it twice -- evaluating a
+// rule set twice is cheaper than deduplicating on every request.
+func (i *subjectIndex) bindingsFor(user string, groups []string) []*rbacv1.ClusterRoleBinding {
+	i.mu.RLock()
+	defer i.mu.RUnlock()
+
+	matched := i.byUser[user]
+	for _, group := range groups {
+		if bindings := i.byGroup[group]; len(bindings) > 0 {
+			if matched == nil {
+				matched = bindings
+
+				continue
+			}
+			matched = append(slices.Clip(matched), bindings...)
+		}
+	}
+
+	return matched
+}
+
+func serviceAccountUsername(namespace, name string) string {
+	return "system:serviceaccount:" + namespace + ":" + name
 }
 
 // Synced reports whether all RBAC informer caches have synced.
@@ -130,21 +263,48 @@ func (e *RBACEvaluator) AllowsIndependently(spec *WebhookResourceSpec) bool {
 	return false
 }
 
-func (e *RBACEvaluator) clusterRoleBindingsAllow(spec *WebhookResourceSpec) bool {
-	bindings, err := e.clusterRoleBindingLister.List(labels.Everything())
-	if err != nil {
-		e.logger.Printf("independent RBAC check: failed to list ClusterRoleBindings: %v", err)
-		return false
+// reindex rebuilds the subject index from the current listing.
+func (e *RBACEvaluator) reindex() {
+	e.indexing.Lock()
+	defer e.indexing.Unlock()
+
+	e.buildIndex()
+}
+
+// reindexOnce builds the index if nothing has built it yet.
+//
+// The event handler ignores the initial listing, so on a fresh process the
+// first request is what puts the index together. Doing it here rather than in
+// Synced keeps the two independent: an index that failed to build must not
+// hold back readiness of a webhook whose other paths work.
+func (e *RBACEvaluator) reindexOnce() {
+	e.indexing.Lock()
+	defer e.indexing.Unlock()
+
+	if e.bindingsBySubject.isBuilt() {
+		return
 	}
 
-	for _, binding := range bindings {
-		if isCARManagedClusterRoleBinding(binding) {
-			continue
-		}
-		if !subjectsMatch(binding.Subjects, spec, "") {
-			continue
-		}
+	e.buildIndex()
+}
 
+func (e *RBACEvaluator) buildIndex() {
+	bindings, err := e.clusterRoleBindingLister.List(labels.Everything())
+	if err != nil {
+		// The index keeps its previous contents; a stale answer is closer to
+		// the truth than an empty one.
+		e.logger.Printf("independent RBAC check: failed to index ClusterRoleBindings: %v", err)
+
+		return
+	}
+
+	e.bindingsBySubject.rebuild(bindings)
+}
+
+func (e *RBACEvaluator) clusterRoleBindingsAllow(spec *WebhookResourceSpec) bool {
+	e.reindexOnce()
+
+	for _, binding := range e.bindingsBySubject.bindingsFor(spec.User, spec.Group) {
 		role, err := e.clusterRoleLister.Get(binding.RoleRef.Name)
 		if err != nil {
 			continue
@@ -215,7 +375,9 @@ func subjectsMatch(subjects []rbacv1.Subject, spec *WebhookResourceSpec, default
 			if saNamespace == "" {
 				saNamespace = defaultNamespace
 			}
-			if fmt.Sprintf("system:serviceaccount:%s:%s", saNamespace, subject.Name) == spec.User {
+			// Concatenation, not Sprintf: this runs per subject of per binding
+			// on the authorization path.
+			if serviceAccountUsername(saNamespace, subject.Name) == spec.User {
 				return true
 			}
 		}
