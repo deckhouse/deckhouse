@@ -33,8 +33,6 @@ function wait-kubelet-client-certificate() {
 if bb-flag? kubelet-need-restart; then
 
   bb-log-warning "kubelet-need-restart flag is set, restarting kubelet"
-  if [ -f /var/lib/kubelet/cpu_manager_state ]; then rm /var/lib/kubelet/cpu_manager_state; fi
-  if [ -f /var/lib/kubelet/memory_manager_state ]; then rm /var/lib/kubelet/memory_manager_state; fi
   {{ $kubernetesVersion := .kubernetesVersion | toString }}
   {{ if eq $kubernetesVersion "1.32" }}
   # https://github.com/kubernetes/kubernetes/blob/master/CHANGELOG/CHANGELOG-1.32.md#no-really-you-must-read-this-before-you-upgrade
