@@ -128,11 +128,7 @@ func (m *MetaConfig) Prepare(ctx context.Context, validatorProvider MetaConfigVa
 			return nil, fmt.Errorf("unable to parse cluster type from cluster configuration: %v", err)
 		}
 
-		// Resolved, not read straight from ClusterConfiguration: the field is deprecated and may live
-		// in ModuleConfig instead. Absent from both documents is not an error here — getDNSAddress
-		// already degrades to "" on an unparsable CIDR, and rejecting it is RequireNetwork's job,
-		// which only bootstrap calls. Failing here would break the in-cluster hook, which reaches
-		// Prepare with only the Secret contents and no ModuleConfig documents.
+		// ServiceSubnetCIDR is set via Network() from network.go, value could be in mc control-plane-manager as well as in deprecated cluster-configuration.
 		m.ClusterDNSAddress = getDNSAddress(ctx, m.Network().ServiceSubnetCIDR)
 
 		if err := json.Unmarshal(m.ClusterConfig["clusterDomain"], &m.ClusterDomain); err != nil {
@@ -1150,8 +1146,7 @@ func (m *MetaConfig) EnrichProxyData() (map[string]any, error) {
 		return nil, err
 	}
 
-	// Resolved: the two subnets are excluded from proxying, so reading the deprecated fields directly
-	// would leave in-cluster traffic going through the proxy on a migrated cluster.
+	// Network CIDRs are set via Network() from network.go, values could be in mc control-plane-manager as well as in deprecated cluster-configuration.
 	network := m.Network()
 
 	p.NoProxy = append(p.NoProxy, "127.0.0.1", "169.254.169.254", clusterDomain, network.PodSubnetCIDR, network.ServiceSubnetCIDR)

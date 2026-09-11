@@ -182,10 +182,7 @@ func generatePKIArtifacts(nodeName, nodeIP, controlPlaneEndpoint string, cfg *co
 		return fmt.Errorf("invalid node IP %q", nodeIP)
 	}
 
-	// Already resolved: MetaConfig.ClusterConfigMap substitutes the effective value (ModuleConfig
-	// spec.settings.network, else the deprecated ClusterConfiguration field) under this key, so
-	// reading cfg.Settings.network separately here would only give the two sources a chance to
-	// disagree about the SANs baked into the apiserver certificate.
+	// serviceSubnetCIDR in cfg.ClusterConfiguration is already set correctly from mc cpm/deprecated cluster-configuration.
 	serviceSubnetCIDR, _ := cfg.ClusterConfiguration["serviceSubnetCIDR"].(string)
 	if serviceSubnetCIDR == "" {
 		return fmt.Errorf("serviceSubnetCIDR is set neither in ModuleConfig control-plane-manager (spec.settings.network) nor in ClusterConfiguration")
