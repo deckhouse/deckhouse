@@ -93,6 +93,10 @@ const (
 	// packageNameGlobal is the reserved name of the global module, whose files
 	// live in the global hooks dir rather than under the embedded modules dir.
 	packageNameGlobal = "global"
+
+	// moduleNameDeckhouse is the module whose settings carry the release channel
+	// Deckhouse itself follows.
+	moduleNameDeckhouse = "deckhouse"
 )
 
 // syncer creates the missing package versions once at start, while the
@@ -105,7 +109,9 @@ type syncer struct {
 	writer client.Client
 	dc     dependency.Container
 
-	deckhouseVersion   string
+	deckhouseVersion      string
+	defaultReleaseChannel string
+
 	embeddedModulesDir string
 	globalHooksDir     string
 
@@ -120,18 +126,21 @@ type syncer struct {
 // files) is skipped with a warning; an API failure stops the sync. An embedded
 // module skipped here reconciles nowhere, since the Module reconciler resolves
 // the same version.
-func Sync(ctx context.Context, reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, embeddedModulesDir, globalHooksDir string, logger *log.Logger) error {
-	return newSyncer(reader, writer, dc, deckhouseVersion, embeddedModulesDir, globalHooksDir, logger).sync(ctx)
+func Sync(ctx context.Context, reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, defaultReleaseChannel, embeddedModulesDir, globalHooksDir string, logger *log.Logger) error {
+	return newSyncer(reader, writer, dc, deckhouseVersion, defaultReleaseChannel, embeddedModulesDir, globalHooksDir, logger).sync(ctx)
 }
 
-// newSyncer builds a syncer for the given Deckhouse version, embedded modules dir and global hooks dir.
-func newSyncer(reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, embeddedModulesDir, globalHooksDir string, logger *log.Logger) *syncer {
+// newSyncer builds a syncer for the given Deckhouse version, its release channel,
+// embedded modules dir and global hooks dir.
+func newSyncer(reader client.Reader, writer client.Client, dc dependency.Container, deckhouseVersion, defaultReleaseChannel, embeddedModulesDir, globalHooksDir string, logger *log.Logger) *syncer {
 	return &syncer{
 		reader: reader,
 		writer: writer,
 		dc:     dc,
 
-		deckhouseVersion:   deckhouseVersion,
+		deckhouseVersion:      deckhouseVersion,
+		defaultReleaseChannel: defaultReleaseChannel,
+
 		embeddedModulesDir: embeddedModulesDir,
 		globalHooksDir:     globalHooksDir,
 

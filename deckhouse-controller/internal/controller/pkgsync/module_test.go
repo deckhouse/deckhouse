@@ -374,6 +374,84 @@ func testModuleConfig(name string) *v1alpha1.ModuleConfig {
 	return &v1alpha1.ModuleConfig{ObjectMeta: metav1.ObjectMeta{Name: name}}
 }
 
+func TestSyncModulesReleaseChannel(t *testing.T) {
+	ctx := context.Background()
+
+	deckhouseConfig := func(releaseChannel string) *v1alpha1.ModuleConfig {
+		moduleConfig := testModuleConfig("deckhouse")
+		moduleConfig.Spec.Settings = &v1alpha1.MappedFields{Raw: []byte(`{"releaseChannel":"` + releaseChannel + `"}`)}
+
+		return moduleConfig
+	}
+
+	echoOnDisk := func(t *testing.T) string {
+		t.Helper()
+
+		dir := t.TempDir()
+		writeModuleYAML(t, filepath.Join(dir, "900-echo"), "name: echo\n")
+
+		return dir
+	}
+
+	t.Run("an embedded module follows the channel of the deckhouse config", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", echoOnDisk(t), deckhouseConfig("EarlyAccess"))
+		require.NoError(t, s.sync(ctx))
+
+		assert.Equal(t, "EarlyAccess", getModule(t, cl, "echo").Spec.ReleaseChannel)
+	})
+
+	t.Run("with no deckhouse config the build channel applies", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", echoOnDisk(t))
+		require.NoError(t, s.sync(ctx))
+
+		assert.Equal(t, "Stable", getModule(t, cl, "echo").Spec.ReleaseChannel)
+	})
+
+	t.Run("a released module follows the channel of its update policy", func(t *testing.T) {
+		moduleRelease := testModuleRelease("echo", "example", "1.2.3", v1alpha1.ModuleReleasePhaseDeployed)
+		moduleRelease.Labels[v1alpha1.ModuleReleaseLabelUpdatePolicy] = "nightly"
+
+		updatePolicy := &v1alpha2.ModuleUpdatePolicy{
+			ObjectMeta: metav1.ObjectMeta{Name: "nightly"},
+			Spec:       v1alpha2.ModuleUpdatePolicySpec{ReleaseChannel: "Alpha"},
+		}
+
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), moduleRelease, updatePolicy)
+		require.NoError(t, s.sync(ctx))
+
+		assert.Equal(t, "Alpha", getModule(t, cl, "echo").Spec.ReleaseChannel)
+	})
+
+	t.Run("a released module with no update policy follows no channel", func(t *testing.T) {
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(),
+			testModuleRelease("echo", "example", "1.2.3", v1alpha1.ModuleReleasePhaseDeployed))
+		require.NoError(t, s.sync(ctx))
+
+		assert.Empty(t, getModule(t, cl, "echo").Spec.ReleaseChannel)
+	})
+
+	t.Run("a dev copy comes off no channel", func(t *testing.T) {
+		pullOverride := &v1alpha2.ModulePullOverride{
+			ObjectMeta: metav1.ObjectMeta{Name: "echo"},
+			Spec:       v1alpha2.ModulePullOverrideSpec{ImageTag: "pr-1234"},
+			Status:     v1alpha2.ModulePullOverrideStatus{Message: v1alpha2.ModulePullOverrideMessageReady},
+		}
+
+		moduleConfig := testModuleConfig("echo")
+		moduleConfig.Spec.Source = "example"
+
+		existing := &v1alpha2.Module{
+			ObjectMeta: metav1.ObjectMeta{Name: "echo"},
+			Spec:       v1alpha2.ModuleSpec{ReleaseChannel: "Alpha"},
+		}
+
+		s, cl := newTestSyncer(t, "v1.80.0", t.TempDir(), existing, pullOverride, moduleConfig)
+		require.NoError(t, s.sync(ctx))
+
+		assert.Empty(t, getModule(t, cl, "echo").Spec.ReleaseChannel)
+	})
+}
+
 func listModuleNames(t *testing.T, cl client.Client) []string {
 	t.Helper()
 

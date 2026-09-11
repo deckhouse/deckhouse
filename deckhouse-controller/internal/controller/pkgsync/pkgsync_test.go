@@ -55,7 +55,7 @@ func newTestSyncerWithGlobal(t *testing.T, version, embeddedDir, globalDir strin
 		WithObjects(objects...).
 		Build()
 
-	return newSyncer(cl, cl, dependency.NewMockedContainer(), version, embeddedDir, globalDir, log.NewNop()), cl
+	return newSyncer(cl, cl, dependency.NewMockedContainer(), version, "Stable", embeddedDir, globalDir, log.NewNop()), cl
 }
 
 // writeLegacyOpenAPI writes the openapi files under the legacy config-values.yaml name the
