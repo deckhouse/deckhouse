@@ -148,7 +148,7 @@ When a rule stays `Ready=False` with `ApplyError` because a binding's `roleRef` 
 
 ## How do I check that the authorization webhook has the current rules?
 
-The authorization webhook and Permission Browser read the multi-tenancy options of the `ClusterAuthorizationRules` (`limitNamespaces`, `namespaceSelector`, `allowAccessToSystemNamespaces`) straight from the API through a shared informer, so a change reaches them within the informer's coalescing window rather than after a Helm render.
+The authorization webhook and Permission Browser read the multi-tenancy options of the ClusterAuthorizationRules (parameters: `limitNamespaces`, `namespaceSelector`, `allowAccessToSystemNamespaces`) straight from the API through a shared informer, so a change reaches them within the informer's coalescing window rather than after a Helm render.
 
 **Ordering.** `user-authz-controller` writes the ClusterRoleBindings of a rule around the same time as the rule itself, and the two reach the webhook over independent watches, so the bindings can arrive first. A subject that a controller-managed binding binds to a rule the webhook has not observed naming it is denied every namespace until the rule arrives — a cluster-wide binding never grants more than its rule allows. The same guard applies to Permission Browser, so what it reports cannot be wider than what the API server enforces.
 
@@ -163,18 +163,24 @@ d8 k -n d8-user-authz logs -l app=user-authz-webhook -c webhook --tail=100
 
 | Metric | Description |
 |---|---|
-| `user_authz_webhook_rules_informer_synced` | `1` once the webhook has listed the `ClusterAuthorizationRules` at least once. While it is `0`, every subject bound by a rule binding is denied. |
-| `user_authz_webhook_rules_observed` | Rules the current directory was built from. |
-| `user_authz_webhook_rules_subjects` | Distinct subjects in the current directory. |
-| `user_authz_webhook_rules_max_resource_version` | Highest `resourceVersion` among the observed rules — the watermark to compare against the cluster when measuring lag. |
-| `user_authz_webhook_rules_quarantined` | Rules whose `limitNamespaces` pattern or `namespaceSelector` does not compile. The broken filter is left out, so the subjects get a narrower scope than written. |
-| `user_authz_webhook_rules_directory_updated_timestamp_seconds` | Unix time of the last rebuild. |
-| `user_authz_webhook_rules_directory_rebuilds_total`, `user_authz_webhook_rules_directory_rebuild_duration_seconds` | Number of rebuilds and the time they take. |
-| `user_authz_webhook_rules_watch_errors_total` | List/watch errors of the rules informer. |
+| `user_authz_webhook_rules_informer_synced` | `1` once the webhook has listed the `ClusterAuthorizationRules` at least once. While it is `0`, every subject bound by a rule binding is denied |
+| `user_authz_webhook_rules_observed` | Rules the current directory was built from |
+| `user_authz_webhook_rules_subjects` | Distinct subjects in the current directory |
+| `user_authz_webhook_rules_max_resource_version` | Highest `resourceVersion` among the observed rules — the watermark to compare against the cluster when measuring lag |
+| `user_authz_webhook_rules_quarantined` | Rules whose `limitNamespaces` pattern or `namespaceSelector` does not compile. The broken filter is left out, so the subjects get a narrower scope than written |
+| `user_authz_webhook_rules_directory_updated_timestamp_seconds` | Unix time of the last rebuild |
+| `user_authz_webhook_rules_directory_rebuilds_total`, `user_authz_webhook_rules_directory_rebuild_duration_seconds` | Number of rebuilds and the time they take |
+| `user_authz_webhook_rules_watch_errors_total` | List/watch errors of the rules informer |
 
 Permission Browser exports the same set under the `user_authz_permission_browser` prefix. It serves them the same way, on a loopback endpoint behind a `kube-rbac-proxy` sidecar, collected by the `PodMonitor` `permission-browser-apiserver`; its own API server port stays behind the aggregation layer, which Prometheus cannot scrape. Two alerts watch it: `D8UserAuthzPermissionBrowserTargetDown` and `D8UserAuthzPermissionBrowserRulesNotSynced`. A rule that does not compile, or a watch that keeps failing, is a property of the cluster rather than of one consumer, so the webhook alerts above already report it.
 
-**Alerts** (in the `d8_user_authz` Prometheus rules, grouped as `D8UserAuthzWebhookMalfunctioning`): `D8UserAuthzWebhookTargetDown` when the webhook is not scraped for 5 minutes (while it is active the other alerts below cannot fire), `D8UserAuthzWebhookRulesNotSynced` when an instance has not listed the rules for 10 minutes, `D8UserAuthzWebhookRulesQuarantined` when a rule does not compile for 10 minutes, `D8UserAuthzWebhookRulesWatchErrors` on a sustained watch error rate for 15 minutes, and `D8UserAuthzWebhookRulesStale` when the directory has not been rebuilt for a day (expected in a cluster where the rules do not change).
+**Alerts** (in the `d8_user_authz` Prometheus rules, grouped as `D8UserAuthzWebhookMalfunctioning`):
+
+- `D8UserAuthzWebhookTargetDown` when the webhook is not scraped for 5 minutes (while it is active the other alerts below cannot fire).
+- `D8UserAuthzWebhookRulesNotSynced` when an instance has not listed the rules for 10 minutes.
+- `D8UserAuthzWebhookRulesQuarantined` when a rule does not compile for 10 minutes.
+- `D8UserAuthzWebhookRulesWatchErrors` on a sustained watch error rate for 15 minutes.
+- `D8UserAuthzWebhookRulesStale` when the directory has not been rebuilt for a day (expected in a cluster where the rules do not change).
 
 ## How do I extend a role or create a new one?
 
