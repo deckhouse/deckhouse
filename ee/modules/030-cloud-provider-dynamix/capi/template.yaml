@@ -24,15 +24,15 @@ rolloutFields:
 providerRolloutFields:
   - storagePolicy
 
-# Every field the DynamixInstanceClass CRD does not require is read with `get`: the sandbox runs
-# with missingkey=error, and `get` yields an empty value for an absent key — which is exactly the
-# truthy test the v1 template did with a direct path.
+# Every field below except storagePolicy is read with `get` and gated on what it returns: the
+# sandbox runs with missingkey=error, and `get` yields an empty value for an absent key — which is
+# exactly the truthy test the v1 template did with a direct path.
 #
-# storagePolicy is rendered unconditionally instead, because the DynamixMachineTemplate CRD requires
-# it (Dynamix 4.6 refuses to create a VM without a storage policy): the InstanceClass override if
-# there is one, the cluster-wide value otherwise. With neither, `required` refuses the render — an
-# empty policy is a VM the platform will not create, and the refusal names the field in a message
-# node-controller completes with the NodeGroup, the InstanceClass and the zone.
+# storagePolicy is the exception, rendered unconditionally, because the DynamixMachineTemplate CRD
+# requires it (Dynamix 4.6 refuses to create a VM without a storage policy): the InstanceClass
+# override if there is one, the cluster-wide value otherwise. With neither, `required` refuses the
+# render — an empty policy is a VM the platform will not create — and the message says where to set
+# the field, because node-controller wraps it with the NodeGroup and the zone and nothing else.
 template: |
   apiVersion: infrastructure.cluster.x-k8s.io/v1alpha1
   kind: DynamixMachineTemplate
