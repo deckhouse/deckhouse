@@ -18,6 +18,7 @@ import (
 	gocontext "context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/name212/govalue"
 
@@ -26,9 +27,11 @@ import (
 	"github.com/deckhouse/lib-connection/pkg/ssh/utils"
 	dhlog "github.com/deckhouse/lib-dhctl/pkg/logger"
 
+	"github.com/deckhouse/deckhouse/dhctl/pkg/config"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/global"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/infrastructure"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/actions/entity"
+	kubeapiserver "github.com/deckhouse/deckhouse/dhctl/pkg/kubernetes/apiserver"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/context"
 	"github.com/deckhouse/deckhouse/dhctl/pkg/operations/converge/infrastructure/hook/controlplane"
@@ -65,23 +68,8 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 		return nil
 	}
 
-	// An immutable master is addressed by name, never by SSH. The map still has to
-	// list the other masters: an empty one reads as "single-master cluster" and turns
-	// every destructive plan into the scale dance.
-	if c.immutable {
-		c.nodeToHost = make(map[string]string, len(c.state.State))
-		for nodeName := range c.state.State {
-			c.nodeToHost[nodeName] = ""
-		}
-
-		return nil
-	}
-
-	// A master that is not immutable is reached over SSH. Leaving the map unset makes an
-	// empty one, and an empty one reads as "single-master cluster": a destructive plan
-	// then scales 1→3→1 and destroys the masters that are healthy.
 	if ctx.SSHProviderInitializer == nil {
-		return fmt.Errorf("converge has no ssh connection configuration to reach the master nodes with")
+		return nil
 	}
 
 	var userPassedHosts []session.Host
@@ -104,7 +92,12 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 		nodesNames = append(nodesNames, nodeName)
 	}
 
-	nodeToHost, err := utils.CheckSSHHosts(userPassedHosts, nodesNames, string(c.convergeState.Phase), confirmOrProceed(ctx))
+	nodeToHost, err := utils.CheckSSHHosts(userPassedHosts, nodesNames, string(c.convergeState.Phase), func(msg string) bool {
+		if ctx.CommanderMode() || ctx.ChangesSettings().AutoApprove {
+			return true
+		}
+		return input.NewConfirmation().WithMessage(msg).Ask()
+	})
 	if err != nil {
 		return err
 	}
@@ -112,26 +105,6 @@ func (c *MasterNodeGroupController) populateNodeToHost(ctx *context.Context) err
 	c.nodeToHost = nodeToHost
 
 	return nil
-}
-
-// confirmOrProceed answers the questions converge asks before it recreates a master: the
-// node-to-host mapping, and whether to wait for each surviving master to be ready. With
-// no terminal the default "no" drops the very guard the question protects, so it is
-// accepted and logged instead; a destructive plan still has its own approval.
-func confirmOrProceed(ctx *context.Context) func(string) bool {
-	return func(msg string) bool {
-		if ctx.CommanderMode() || ctx.ChangesSettings().AutoApprove {
-			return true
-		}
-
-		if !input.IsTerminal() {
-			dhlog.FromContext(ctx.Ctx()).WarnContext(ctx.Ctx(),
-				fmt.Sprintf("Accepted without confirmation: no TTY.\n%s", msg))
-			return true
-		}
-
-		return input.NewConfirmation().WithMessage(msg).Ask()
-	}
 }
 
 func (c *MasterNodeGroupController) Run(ctx *context.Context) error {
@@ -267,7 +240,6 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 	var (
 		nodesToWait        []string
 		masterIPForSSHList []session.Host
-		nodeInternalIPList []string
 	)
 
 	kubeClient, err := ctx.KubeClientCtx(ctx.Ctx())
@@ -279,20 +251,12 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		candidateName := fmt.Sprintf("%s-%s-%v", metaConfig.ClusterPrefix, c.name, index)
 
 		if _, ok := c.state.State[candidateName]; !ok {
-			cloudConfig := c.cloudConfig
-			if c.immutable {
-				cloudConfig, err = immutableNodePayload(ctx, global.MasterNodeGroupName, candidateName)
-				if err != nil {
-					return err
-				}
-			}
-
 			output, err := operations.BootstrapAdditionalMasterNode(
 				ctx.Ctx(),
 				kubeClient,
 				metaConfig,
 				index,
-				cloudConfig,
+				c.cloudConfig,
 				ctx.InfrastructureContext(metaConfig),
 				c.globalOptions,
 			)
@@ -301,19 +265,10 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 			}
 
 			masterIPForSSHList = append(masterIPForSSHList, session.Host{Host: output.MasterIPForSSH, Name: candidateName})
-			nodeInternalIPList = append(nodeInternalIPList, output.NodeInternalIP)
 
 			count++
 			c.state.State[candidateName] = output.InfrastructureState
 			nodesToWait = append(nodesToWait, candidateName)
-
-			// One at a time: etcd admits a single learner, so the next machine must not
-			// start joining until control-plane-manager has this one voting.
-			if c.immutable {
-				if err := waitForImmutableMasterControlPlane(ctx, candidateName); err != nil {
-					return err
-				}
-			}
 		}
 		index++
 	}
@@ -323,20 +278,10 @@ func (c *MasterNodeGroupController) addNodes(ctx *context.Context) error {
 		return err
 	}
 
-	// An immutable node answers no sshd, and its payload comes from the cluster rather
-	// than from the group's bashible secret: registering it as an SSH host and waiting
-	// for that secret to list it would both stall on something that never happens.
-	if len(masterIPForSSHList) > 0 && !c.immutable {
+	if len(masterIPForSSHList) > 0 {
 		if err := c.addNewNodesToSSH(ctx, masterIPForSSHList); err != nil {
 			return err
 		}
-
-		// we hide deckhouse logs because we always have config
-		nodeCloudConfig, err := entity.GetCloudConfig(ctx.Ctx(), ctx, c.name, global.HideDeckhouseLogs, nodeInternalIPList...)
-		if err != nil {
-			return err
-		}
-		c.cloudConfig = nodeCloudConfig
 
 		c.addNewNodesToCache(ctx, masterIPForSSHList)
 	}
@@ -379,24 +324,7 @@ func (c *MasterNodeGroupController) addNewNodesToSSH(ctx *context.Context, maste
 	return nil
 }
 
-// sshProviderForHooks builds the provider the control-plane hooks reach nodes with.
-// An immutable master is never registered as an SSH host, so there is nothing to
-// build: the lookup fails on a master-hosts cache that was never written.
-func (c *MasterNodeGroupController) sshProviderForHooks(ctx *context.Context) (libcon.SSHProvider, error) {
-	if c.immutable {
-		return nil, nil
-	}
-
-	return ctx.SSHProviderInitializer.GetSSHProvider(ctx.Ctx())
-}
-
 func (c *MasterNodeGroupController) addNewNodesToCache(ctx *context.Context, masterIPForSSHList []session.Host) {
-	// An immutable node answers no sshd. A cached address makes every later converge
-	// see an SSH-reachable cluster and wait for bashible on a machine without it.
-	if c.immutable {
-		return
-	}
-
 	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Updating master hosts cache with %d new masters", len(masterIPForSSHList)))
 
 	// Get current master hosts from cache
@@ -424,7 +352,95 @@ func (c *MasterNodeGroupController) addNewNodesToCache(ctx *context.Context, mas
 	dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Successfully updated master hosts cache with %d new masters. hostsMap: %v", len(masterIPForSSHList), hostsMap))
 }
 
-func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName string, nodeIndex int) error {
+func (c *MasterNodeGroupController) survivingMasterNodeNames(
+	nodeName string,
+) []string {
+	nodeNames := make([]string, 0, len(c.state.State))
+
+	for candidateName := range c.state.State {
+		if candidateName == nodeName {
+			continue
+		}
+
+		nodeNames = append(nodeNames, candidateName)
+	}
+
+	slices.Sort(nodeNames)
+
+	return nodeNames
+}
+
+func (c *MasterNodeGroupController) makeMasterNodeVariablesRefresher(
+	ctx *context.Context,
+	metaConfig *config.MetaConfig,
+	nodeName string,
+	nodeIndex int,
+) infrastructure.VariablesRefresher {
+	survivingNodeNames := c.survivingMasterNodeNames(nodeName)
+
+	// A single-master destructive plan must first trigger the existing
+	// scale-to-multi-master workflow.
+	if len(survivingNodeNames) == 0 {
+		return nil
+	}
+
+	return func(refreshCtx gocontext.Context) ([]byte, error) {
+		kubeClient, err := ctx.KubeClientCtx(refreshCtx)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"get Kubernetes client before replacing master node %q: %w",
+				nodeName,
+				err,
+			)
+		}
+
+		apiServerHosts, err := kubeapiserver.GetReadyHostsForNodes(
+			refreshCtx,
+			kubeClient,
+			survivingNodeNames,
+		)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"get ready API server hosts before replacing master node %q: %w",
+				nodeName,
+				err,
+			)
+		}
+
+		dhlog.FromContext(refreshCtx).InfoContext(
+			refreshCtx,
+			fmt.Sprintf(
+				"Waiting for master cloud config with ready API server hosts: %v",
+				apiServerHosts,
+			),
+		)
+
+		nodeCloudConfig, err := entity.GetCloudConfig(
+			refreshCtx,
+			ctx,
+			c.name,
+			global.HideDeckhouseLogs,
+			apiServerHosts...,
+		)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"get refreshed cloud config before replacing master node %q: %w",
+				nodeName,
+				err,
+			)
+		}
+
+		c.cloudConfig = nodeCloudConfig
+
+		return metaConfig.NodeGroupConfig(
+			c.name,
+			nodeIndex,
+			nodeCloudConfig,
+		), nil
+	}
+}
+
+func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName string) error {
 	metaConfig, err := ctx.MetaConfig()
 	if err != nil {
 		return err
@@ -436,33 +452,33 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 		nodeState = c.state.State[nodeName]
 	}
 
-	hook, err := c.newHookForUpdatePipeline(ctx, nodeName)
+	nodeIndex, err := config.GetIndexFromNodeName(nodeName)
 	if err != nil {
-		return fmt.Errorf("build control plane hook for node %s: %w", nodeName, err)
+		dhlog.FromContext(ctx.Ctx()).ErrorContext(ctx.Ctx(), fmt.Sprintf("can't extract index from infrastructure state secret (%v), skipping %s", err, nodeName))
+		return nil
 	}
 
-	// The payload only reaches the machine when the VM is recreated: the cloud-init
-	// secret is immutable and its name carries the plan's destructive hash. Building
-	// it here means a recreated master joins with a live token and live apiservers.
-	cloudConfig := c.cloudConfig
-	if c.immutable {
-		cloudConfig, err = immutableNodePayload(ctx, global.MasterNodeGroupName, nodeName)
-		if err != nil {
-			return err
-		}
-	}
+	hook := c.newHookForUpdatePipeline(ctx, nodeName)
+
+	variablesRefresher := c.makeMasterNodeVariablesRefresher(
+		ctx,
+		metaConfig,
+		nodeName,
+		nodeIndex,
+	)
 
 	var nodeGroupSettingsFromConfig []byte
 
 	nodeRunner, err := ctx.InfrastructureContext(metaConfig).GetConvergeNodeRunner(ctx.Ctx(), metaConfig, infrastructure.NodeRunnerOptions{
-		NodeName:        nodeName,
-		NodeGroupName:   c.name,
-		NodeGroupStep:   c.layoutStep,
-		NodeIndex:       nodeIndex,
-		NodeState:       nodeState,
-		NodeCloudConfig: cloudConfig,
-		CommanderMode:   ctx.CommanderMode(),
-		StateCache:      ctx.StateCache(),
+		NodeName:           nodeName,
+		NodeGroupName:      c.name,
+		NodeGroupStep:      c.layoutStep,
+		NodeIndex:          nodeIndex,
+		NodeState:          nodeState,
+		NodeCloudConfig:    c.cloudConfig,
+		VariablesRefresher: variablesRefresher,
+		CommanderMode:      ctx.CommanderMode(),
+		StateCache:         ctx.StateCache(),
 		AdditionalStateSaverDestinations: []infrastructure.SaverDestination{
 			infrastructurestate.NewNodeStateSaver(ctx, nodeName, global.MasterNodeGroupName, nodeGroupSettingsFromConfig),
 		},
@@ -521,7 +537,29 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 
 	// Update master hosts IP cache after successful master node creation/update
 	if outputs.MasterIPForSSH != "" {
-		c.addNewNodesToCache(ctx, []session.Host{{Host: outputs.MasterIPForSSH, Name: nodeName}})
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Updating master hosts cache: node %s got IP %s", nodeName, outputs.MasterIPForSSH))
+
+		// Get current master hosts from cache
+		stateCache := ctx.StateCache()
+		currentHosts, err := state.GetMasterHostsIPs(ctx.Ctx(), stateCache)
+		if err != nil {
+			dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Could not load current master hosts from cache (this is OK for first master): %v", err))
+			currentHosts = []session.Host{}
+		}
+
+		// Create map from current hosts for easier manipulation
+		hostsMap := make(map[string]string)
+		for _, host := range currentHosts {
+			hostsMap[host.Name] = host.Host
+		}
+
+		hostsMap[nodeName] = outputs.MasterIPForSSH
+
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Saving updated master hosts to cache: %v", hostsMap))
+
+		state.SaveMasterHostsToCache(ctx.Ctx(), stateCache, hostsMap)
+
+		dhlog.FromContext(ctx.Ctx()).DebugContext(ctx.Ctx(), fmt.Sprintf("Successfully updated master hosts cache with node %s IP %s. hostsMap: %v", nodeName, outputs.MasterIPForSSH, hostsMap))
 	} else {
 		dhlog.FromContext(ctx.Ctx()).WarnContext(ctx.Ctx(), fmt.Sprintf("No SSH IP received for master node %s, cache not updated", nodeName))
 	}
@@ -529,21 +567,27 @@ func (c *MasterNodeGroupController) updateNode(ctx *context.Context, nodeName st
 	return entity.WaitForSingleNodeBecomeReady(ctx.Ctx(), kubeClient, nodeName)
 }
 
-// newHookForUpdatePipeline reports its failures instead of returning a nil hook:
-// the runner substitutes a DummyHook for a nil one, and a master VM would then be
-// recreated without removing its control plane role, its Node object or its etcd
-// membership.
-func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Context, convergedNode string) (infrastructure.InfraActionHook, error) {
+func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Context, convergedNode string) infrastructure.InfraActionHook {
 	err := c.populateNodeToHost(ctx)
 	if err != nil {
-		return nil, fmt.Errorf("collect master addresses: %w", err)
+		return nil
 	}
 
 	nodesToCheck := maputil.ExcludeKeys(c.nodeToHost, convergedNode)
 
-	sshProvider, err := c.sshProviderForHooks(ctx)
+	confirm := func(msg string) bool {
+		return input.NewConfirmation().WithMessage(msg).Ask()
+	}
+
+	if ctx.ChangesSettings().AutoApprove {
+		confirm = func(_ string) bool {
+			return true
+		}
+	}
+
+	sshProvider, err := ctx.SSHProviderInitializer.GetSSHProvider(ctx.Ctx())
 	if err != nil {
-		return nil, fmt.Errorf("get ssh provider: %w", err)
+		return nil
 	}
 
 	return controlplane.NewHookForUpdatePipeline(
@@ -552,12 +596,11 @@ func (c *MasterNodeGroupController) newHookForUpdatePipeline(ctx *context.Contex
 		nodesToCheck,
 		ctx.CommanderMode(),
 		c.skipChecks,
-		c.immutable,
 	).
 		WithSourceCommandName("converge").
 		WithNodeToConverge(convergedNode).
-		WithConfirm(confirmOrProceed(ctx)).
-		WithClientSwitcher(ctx.ClientSwitcher()), nil
+		WithConfirm(confirm).
+		WithClientSwitcher(ctx.ClientSwitcher())
 }
 
 func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDeleteInfo []nodeToDeleteInfo) error {
@@ -582,7 +625,7 @@ func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDel
 			nodesToDelete = append(nodesToDelete, nodeInfo.name)
 		}
 
-		sshProvider, err := c.sshProviderForHooks(ctx)
+		sshProvider, err := ctx.SSHProviderInitializer.GetSSHProvider(ctx.Ctx())
 		if err != nil {
 			return err
 		}
@@ -597,7 +640,6 @@ func (c *MasterNodeGroupController) deleteNodes(ctx *context.Context, nodesToDel
 					sshProvider,
 					nodeName,
 					ctx.CommanderMode(),
-					c.immutable,
 				)
 			},
 			func(nodeName string) {

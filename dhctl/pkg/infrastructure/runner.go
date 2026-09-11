@@ -61,7 +61,8 @@ If you want to drop the cache and continue, please run dhctl with "--yes-i-want-
 )
 
 type (
-	StateChecker func([]byte) error
+	StateChecker       func([]byte) error
+	VariablesRefresher func(context.Context) ([]byte, error)
 )
 
 type destructiveChangesReport struct {
@@ -102,8 +103,9 @@ type Runner struct {
 	hasVMDestruction       bool
 	stateCache             state.Cache
 
-	stateSaver   *StateSaver
-	stateChecker StateChecker
+	stateSaver         *StateSaver
+	stateChecker       StateChecker
+	variablesRefresher VariablesRefresher
 
 	confirm func() *input.Confirmation
 	stopped bool
@@ -245,6 +247,11 @@ func (r *Runner) WithVariables(variablesData []byte) *Runner {
 
 	dhlog.FromContext(ctx).DebugContext(ctx, fmt.Sprintf("tfvars path: %s", r.variablesPath))
 	r.variablesData = variablesData
+	return r
+}
+
+func (r *Runner) WithVariablesRefresher(refresher VariablesRefresher) *Runner {
+	r.variablesRefresher = refresher
 	return r
 }
 
@@ -440,6 +447,45 @@ func (r *Runner) isSkipChanges(ctx context.Context) (bool, error) {
 	return false, r.runBeforeActionAndWaitReady(ctx)
 }
 
+func (r *Runner) refreshVariablesAndReplanBeforeVMDestruction(ctx context.Context) error {
+	if r.variablesRefresher == nil ||
+		r.changesInPlan != plan.HasDestructiveChanges ||
+		!r.hasVMDestruction ||
+		r.changeSettings.AutoDismissDestructive {
+		return nil
+	}
+
+	variablesData, err := r.variablesRefresher(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to refresh infrastructure variables before VM destruction: %w", err)
+	}
+
+	if len(variablesData) == 0 {
+		return errors.New("refreshed infrastructure variables are empty")
+	}
+
+	if r.variablesPath == "" {
+		return errors.New("cannot refresh infrastructure variables: variables path is empty")
+	}
+
+	if err := os.WriteFile(r.variablesPath, variablesData, 0o600); err != nil {
+		return fmt.Errorf("failed to write refreshed infrastructure variables: %w", err)
+	}
+
+	r.variablesData = variablesData
+
+	dhlog.FromContext(ctx).InfoContext(
+		ctx,
+		"Infrastructure variables refreshed; rebuilding plan before VM destruction.",
+	)
+
+	if err := r.Plan(ctx, false, false); err != nil {
+		return fmt.Errorf("failed to rebuild infrastructure plan with refreshed variables: %w", err)
+	}
+
+	return nil
+}
+
 func (r *Runner) Apply(ctx context.Context) error {
 	if r.stopped {
 		return ErrRunnerStopped
@@ -454,6 +500,10 @@ func (r *Runner) Apply(ctx context.Context) error {
 	r.traceStateAndVars(span)
 
 	return dhlog.RunProcess(ctx, dhlog.FromContext(ctx), "infrastructure apply ...", func(ctx context.Context) error {
+		if err := r.refreshVariablesAndReplanBeforeVMDestruction(ctx); err != nil {
+			return err
+		}
+
 		skip, err := r.isSkipChanges(ctx)
 		if err != nil {
 			return err
@@ -535,6 +585,10 @@ func (r *Runner) Plan(ctx context.Context, destroy, noout bool) error {
 	if r.stopped {
 		return ErrRunnerStopped
 	}
+
+	r.changesInPlan = plan.HasNoChanges
+	r.planDestructiveChanges = nil
+	r.hasVMDestruction = false
 
 	ctx, span := telemetry.StartSpan(ctx, "runner.Plan")
 	defer span.End()
