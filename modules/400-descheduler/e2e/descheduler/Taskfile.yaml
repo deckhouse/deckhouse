@@ -16,6 +16,9 @@ includes:
   low-node-utilization:
     taskfile: ./tests/low-node-utilization/Taskfile.yml
     dir: ./tests/low-node-utilization
+  protected-storage-class-blocks-eviction:
+    taskfile: ./tests/protected-storage-class-blocks-eviction/Taskfile.yml
+    dir: ./tests/protected-storage-class-blocks-eviction
   statefulset-pdb-allows-one-disruption:
     taskfile: ./tests/statefulset-pdb-allows-one-disruption/Taskfile.yml
     dir: ./tests/statefulset-pdb-allows-one-disruption
@@ -38,6 +41,7 @@ tasks:
       - task: exclude-namespaces-from-processing:run
       - task: high-node-utilization:run
       - task: low-node-utilization:run
+      - task: protected-storage-class-blocks-eviction:run
       - task: statefulset-pdb-allows-one-disruption:run
       - task: statefulset-pdb-blocks-eviction:run
       - task: statefulset-remove-duplicates:run
@@ -51,6 +55,7 @@ tasks:
       - task: exclude-namespaces-from-processing:dry-run
       - task: high-node-utilization:dry-run
       - task: low-node-utilization:dry-run
+      - task: protected-storage-class-blocks-eviction:dry-run
       - task: statefulset-pdb-allows-one-disruption:dry-run
       - task: statefulset-pdb-blocks-eviction:dry-run
       - task: statefulset-remove-duplicates:dry-run

@@ -49,6 +49,14 @@ positive:
                   memory: 50
                   pods: 50
                   gpu: "gpuNode"
+          - name: test4
+            evictLocalStoragePods: true
+            protectedStorageClasses:
+              - local-path
+              - ceph-rbd
+            strategies:
+              removeDuplicates:
+                enabled: true
           - name: test3
             evictLocalStoragePods: false
             strategies:
@@ -65,6 +73,22 @@ positive:
                   gpu: "gpuNode"
 negative:
   values:
+    - internal:
+        deschedulers:
+          - name: test1
+            protectedStorageClasses: []
+            strategies:
+              removeDuplicates:
+                enabled: true
+    - internal:
+        deschedulers:
+          - name: test1
+            protectedStorageClasses:
+              - local-path
+              - local-path
+            strategies:
+              removeDuplicates:
+                enabled: true
     - deschedulingInterval: "invalid"
       internal:
         deschedulers: []
