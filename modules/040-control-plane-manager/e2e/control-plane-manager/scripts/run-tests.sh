@@ -139,11 +139,13 @@ rsync -az -e "${RSYNC_RSH}" \
 
 echo "Running tests on ${SSH_TARGET}: ${TEST_DIRS[*]}"
 # Single remote session: run all selected tests, then clean up.
+# ssh flattens every argv element after the hostname into one space-joined
+# string that the remote shell re-splits, so a multi-word TEST_DIRS value
+# passed as a separate `env NAME=value` argv (as this used to do) gets cut at
+# the first space by the remote `env`. Pre-quote both assignments with `%q`
+# and pass them as a single already-shell-safe argument instead.
 ssh "${SSH_BASE_OPTS[@]}" "${SSH_TARGET}" \
-  env \
-    "REMOTE_TEST_DIR=${REMOTE_TEST_DIR}" \
-    "TEST_DIRS=${TEST_DIRS[*]}" \
-    bash -s <<'REMOTE'
+  "REMOTE_TEST_DIR=$(printf '%q' "${REMOTE_TEST_DIR}") TEST_DIRS=$(printf '%q' "${TEST_DIRS[*]}") bash -s" <<'REMOTE'
 set -eu
 FAILED=0
 for name in ${TEST_DIRS}; do
