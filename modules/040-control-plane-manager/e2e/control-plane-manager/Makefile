@@ -17,7 +17,7 @@ help:
 	@echo "  Copy .env.example to .env and fill in the required variables."
 	@echo ""
 	@echo "Commands:"
-	@echo "  make install              - Install chainsaw (and jq/yq if missing) on the remote host"
+	@echo "  make install              - Install chainsaw (and Go from go.dev, if missing) on the remote host"
 	@echo "  make test                 - Run all tests on the remote host over SSH"
 	@echo "  make test TEST=<name>     - Run a single scenario (e.g. TEST=basic-audit-policy)"
 	@echo ""

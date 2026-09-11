@@ -50,7 +50,7 @@ cp .env.example .env
 ### Commands
 
 ```bash
-make install                 # install chainsaw, jq, yq on the remote host if missing
+make install                 # install chainsaw (and Go from go.dev) on the remote host if missing
 make test                    # run all scenarios over SSH
 make test TEST=basic-audit-policy   # run a single scenario
 ```
@@ -63,7 +63,7 @@ What `make test` does:
 4. Removes `${REMOTE_TEST_DIR}` when finished
 5. Closes the SSH master connection
 
-The remote host must already have working `kubectl` access for root (typical for a Deckhouse master; same environment as interactive `sudo -i`). The `feature-gates` test reads `/deckhouse/candi/feature_gates_map.yml` on that host.
+The remote host must already have working `kubectl` access for root (typical for a Deckhouse master; same environment as interactive `sudo -i`), and `jq`/`yq` already installed — `make install` does not install them, only `chainsaw` (and Go from go.dev, if `go` is missing). The `feature-gates` test reads `/deckhouse/candi/feature_gates_map.yml` on that host.
 
 ## Local run (Task)
 
