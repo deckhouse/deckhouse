@@ -57,7 +57,6 @@ imageSpec:
     entrypoint: ["/mirrorer"]
 ---
 {{- $_ := set . "FuzzEngine" "go" }}
-{{- $_ := set . "FuzzSrcImage" (printf "%s/%s-artifact" .ModuleName .ImageName) }}
 {{- $_ := set . "FuzzSrcAdd" $appAbsPath }}
 {{- $_ := set . "FuzzPackages" "./internal/config" }}
 {{- include "fuzz image" . }}
